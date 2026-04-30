@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog UI Demo - Dark Mode</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #050505;
+      --bg-secondary: #0f0f0f;
+      --bg-card: #111111;
+      --border: #1f1f1f;
+      --text-primary: #f5f5f5;
+      --text-secondary: #888888;
+      --text-muted: #555555;
+      --accent: #ff6b00;
+      --accent-light: #ff8534;
+      --accent-glow: rgba(255, 107, 0, 0.3);
+      --gradient-accent: linear-gradient(135deg, #ff6b00 0%, #ff8534 100%);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 400px;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 400px;
+      height: 100%;
+      background: linear-gradient(-90deg, rgba(255, 107, 0, 0.06) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto 60px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 32px;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .nav { display: flex; gap: 20px; }
+    .nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    .nav a:hover { color: var(--accent); }
+
+    .hero {
+      padding: 64px 24px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      letter-spacing: -1px;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin: 0 0 20px;
+    }
+
+    .hero .bio {
+      color: var(--text-muted);
+      max-width: 440px;
+      margin: 0 auto;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 0 0 16px;
+    }
+
+    .post-list {
+      padding: 28px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .post-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .post-item:last-child { border-bottom: none; }
+
+    .post-date {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .post-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .post-title:hover { color: var(--accent); }
+
+    .view-all { margin-top: 16px; }
+    .view-all a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .page-title { padding: 28px 24px 0; }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: var(--text-primary);
+    }
+    .page-title p { color: var(--text-secondary); margin: 0; font-size: 14px; }
+
+    .article-list { padding: 24px; }
+
+    .article-card {
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .article-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 107, 0, 0.12);
+    }
+
+    .article-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .article-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); }
+    .article-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    .article-tags { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag {
+      background: var(--bg-secondary);
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+    .article-card:hover .tag { border-color: var(--accent-light); color: var(--accent); }
+
+    .article-content { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+    .back-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      margin-bottom: 24px;
+      display: inline-block;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    .article-header { margin-bottom: 32px; }
+    .article-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+    .article-meta-row {
+      display: flex;
+      gap: 10px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .article-body { font-size: 16px; line-height: 1.75; color: var(--text-secondary); }
+    .article-body p { margin-bottom: 18px; }
+    .article-body h2 { font-size: 22px; font-weight: 600; margin: 32px 0 14px; color: var(--text-primary); }
+    .article-body code {
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+    .article-body pre {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      padding: 18px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    .article-body pre code { background: none; padding: 0; color: #e0e0e0; }
+
+    .admin-header {
+      padding: 18px 24px;
+      background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .admin-header .logo { color: var(--accent); }
+    .admin-nav { display: flex; gap: 20px; }
+    .admin-nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    .admin-nav a:hover, .admin-nav a.active { color: var(--accent); }
+    .admin-nav a.active { font-weight: 600; }
+
+    .admin-title {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .admin-title h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: var(--text-primary);
+    }
+    .admin-title p { color: var(--text-secondary); margin: 0; }
+
+    .admin-table { width: 100%; border-collapse: collapse; }
+    .admin-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+    }
+    .admin-table td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .admin-table tr:hover { background: var(--bg-secondary); }
+    .admin-table .title { font-weight: 600; font-size: 14px; }
+    .admin-table .date { color: var(--text-muted); font-size: 12px; }
+
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .status.published { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .status.draft { background: rgba(255, 107, 0, 0.15); color: var(--accent); }
+
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--gradient-accent); color: white; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--accent-glow); }
+    .btn-secondary { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .admin-editor { padding: 24px; }
+
+    .editor-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      height: 450px;
+    }
+    .editor-pane, .preview-pane {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .pane-header {
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .pane-content {
+      flex: 1;
+      overflow: auto;
+      padding: 14px;
+      background: var(--bg-primary);
+    }
+    .editor-textarea {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: "Monaco", "Menlo", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+    .preview-content {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+    .preview-content h1 { font-size: 22px; font-weight: 700; margin: 0 0 14px; color: var(--text-primary); }
+    .preview-content h2 { font-size: 18px; font-weight: 600; margin: 20px 0 10px; color: var(--text-primary); }
+    .preview-content p { margin-bottom: 12px; }
+    .preview-content code { background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px; color: var(--accent); font-size: 12px; }
+    .preview-content pre { background: var(--bg-secondary); padding: 14px; border-radius: 6px; margin: 14px 0; }
+    .preview-content pre code { background: none; padding: 0; color: #e0e0e0; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <h1>Page 1: Home</h1>
+  <div class="card">
+    <div class="header">
+      <div class="logo">Kurashizu</div>
+      <div class="nav">
+        <a href="#">Blog</a>
+        <a href="#">About</a>
+      </div>
+    </div>
+    <div class="hero">
+      <h1>Kurashizu</h1>
+      <p>Software Engineer / Writer</p>
+      <p class="bio">Building things with code. Writing about things I have learned.</p>
+    </div>
+    <div class="post-list">
+      <div class="section-title">Recent Posts</div>
+      <div class="post-item">
+        <div class="post-date">May 1, 2025</div>
+        <div class="post-title">Getting Started with Cloudflare Workers</div>
+      </div>
+      <div class="post-item">
+        <div class="post-date">Apr 28, 2025</div>
+        <div class="post-title">Building a Personal Blog from Scratch</div>
+      </div>
+      <div class="post-item">
+        <div class="post-date">Apr 20, 2025</div>
+        <div class="post-title">My Development Workflow</div>
+      </div>
+      <div class="view-all"><a href="#">View all posts →</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Page 2: Blog List</h1>
+  <div class="card">
+    <div class="header">
+      <div class="logo">Kurashizu</div>
+      <div class="nav">
+        <a href="#">Blog</a>
+        <a href="#">About</a>
+      </div>
+    </div>
+    <div class="page-title">
+      <h1>Blog</h1>
+      <p>A collection of thoughts and tutorials</p>
+    </div>
+    <div class="article-list">
+      <div class="article-card">
+        <div class="article-meta">May 1, 2025 · 5 min read</div>
+        <div class="article-title">Getting Started with Cloudflare Workers</div>
+        <div class="article-desc">A practical guide to building serverless functions on Cloudflare, from setup to deployment.</div>
+        <div class="article-tags">
+          <span class="tag">cloudflare</span>
+          <span class="tag">tutorial</span>
+        </div>
+      </div>
+      <div class="article-card">
+        <div class="article-meta">Apr 28, 2025 · 8 min read</div>
+        <div class="article-title">Building a Personal Blog from Scratch</div>
+        <div class="article-desc">Everything I learned building this blog from zero — the good, the bad, and the ugly.</div>
+        <div class="article-tags">
+          <span class="tag">meta</span>
+        </div>
+      </div>
+      <div class="article-card">
+        <div class="article-meta">Apr 15, 2025 · 12 min read</div>
+        <div class="article-title">TypeScript Best Practices in 2025</div>
+        <div class="article-desc">Advanced patterns and tips for writing better TypeScript code that scales.</div>
+        <div class="article-tags">
+          <span class="tag">typescript</span>
+          <span class="tag">coding</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Page 3: Article</h1>
+  <div class="card">
+    <div class="header">
+      <div class="logo">Kurashizu</div>
+      <div class="nav">
+        <a href="#">Blog</a>
+        <a href="#">About</a>
+      </div>
+    </div>
+    <div class="article-content">
+      <a href="#" class="back-link">← Back to blog</a>
+      <div class="article-header">
+        <h1>Getting Started with Cloudflare Workers</h1>
+        <div class="article-meta-row">
+          <span>May 1, 2025</span>
+          <span>·</span>
+          <span>5 min read</span>
+          <span>·</span>
+          <span>Kurashizu</span>
+        </div>
+        <div class="article-tags">
+          <span class="tag">cloudflare</span>
+          <span class="tag">tutorial</span>
+        </div>
+      </div>
+      <div class="article-body">
+        <p>Cloudflare Workers is a serverless platform that lets you run JavaScript at the edge, close to your users. In this tutorial, we will cover the basics of creating and deploying your first Worker.</p>
+        <h2>Prerequisites</h2>
+        <p>Before we start, make sure you have the Wrangler CLI installed and your Cloudflare account configured. You will also need Node.js 18 or later installed on your machine.</p>
+        <p>Run the following command to install Wrangler:</p>
+        <pre><code>npm install -g wrangler</code></pre>
+        <p>Once installed, authenticate with your Cloudflare account using <code>wrangler login</code>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Page 4: Admin Dashboard</h1>
+  <div class="card">
+    <div class="admin-header">
+      <div class="logo">Admin Panel</div>
+      <div class="admin-nav">
+        <a href="#" class="active">Posts</a>
+        <a href="#">Media</a>
+        <a href="#">Settings</a>
+      </div>
+    </div>
+    <div class="admin-title">
+      <h1>All Posts</h1>
+      <p>Manage your blog articles</p>
+    </div>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="title">Getting Started with Cloudflare Workers</td>
+          <td class="date">May 1, 2025</td>
+          <td><span class="status published">Published</span></td>
+          <td><button class="btn btn-secondary">Edit</button></td>
+        </tr>
+        <tr>
+          <td class="title">Building a Personal Blog from Scratch</td>
+          <td class="date">Apr 28, 2025</td>
+          <td><span class="status published">Published</span></td>
+          <td><button class="btn btn-secondary">Edit</button></td>
+        </tr>
+        <tr>
+          <td class="title">TypeScript Best Practices</td>
+          <td class="date">Apr 15, 2025</td>
+          <td><span class="status draft">Draft</span></td>
+          <td><button class="btn btn-secondary">Edit</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Page 5: Admin Editor with Live Preview</h1>
+  <div class="card">
+    <div class="admin-header">
+      <div class="logo">Admin Panel</div>
+      <div class="admin-nav">
+        <a href="#" class="active">Posts</a>
+        <a href="#">Media</a>
+        <a href="#">Settings</a>
+      </div>
+    </div>
+    <div class="admin-editor">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="font-size: 20px; font-weight: 700; margin: 0; color: var(--text-primary);">Edit Post</h1>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-danger">Delete</button>
+          <button class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" value="Getting Started with Cloudflare Workers">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Slug</label>
+          <input type="text" value="getting-started-with-cloudflare-workers">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="text" value="2025-05-01">
+        </div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Content</label>
+        <div class="editor-container">
+          <div class="editor-pane">
+            <div class="pane-header">Markdown</div>
+            <div class="pane-content">
+              <textarea class="editor-textarea" id="md-editor"># Getting Started with Cloudflare Workers
+
+Cloudflare Workers is a **serverless platform** that lets you run JavaScript at the edge.
+
+## What you will learn
+
+- How to set up Wrangler
+- Writing your first Worker
+- Deploying to production
+
+Just edit this text and see the preview on the right!</textarea>
+            </div>
+          </div>
+          <div class="preview-pane">
+            <div class="pane-header">Preview</div>
+            <div class="pane-content preview-content" id="preview">
+              <h1>Getting Started with Cloudflare Workers</h1>
+              <p>Cloudflare Workers is a <strong>serverless platform</strong> that lets you run JavaScript at the edge.</p>
+              <h2>What you will learn</h2>
+              <p>Just edit this text and see the preview on the right!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const editor = document.getElementById("md-editor");
+const preview = document.getElementById("preview");
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function parseMarkdown(text) {
+  const lines = text.split("
+");
+  let output = [];
+  let inList = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (inList) { output.push("</ul>"); inList = false; }
+      continue;
+    }
+    if (trimmed.startsWith("# ")) {
+      if (inList) { output.push("</ul>"); inList = false; }
+      output.push("<h1>" + escapeHtml(trimmed.slice(2)) + "</h1>");
+    } else if (trimmed.startsWith("## ")) {
+      if (inList) { output.push("</ul>"); inList = false; }
+      output.push("<h2>" + escapeHtml(trimmed.slice(3)) + "</h2>");
+    } else if (trimmed.startsWith("- ")) {
+      if (!inList) { output.push("<ul>"); inList = true; }
+      output.push("<li>" + escapeHtml(trimmed.slice(2)) + "</li>");
+    } else {
+      if (inList) { output.push("</ul>"); inList = false; }
+      let parsed = escapeHtml(trimmed).replace(/\*\*(.*?)\*\*/g, "<strong></strong>");
+      output.push("<p>" + parsed + "</p>");
+    }
+  }
+  if (inList) output.push("</ul>");
+  return output.join("");
+}
+
+editor.addEventListener("input", () => {
+  preview.innerHTML = parseMarkdown(editor.value) || "<p style="color: var(--text-muted);">Start typing...</p>";
+});
+</script>
+
+</body>
+</html>
