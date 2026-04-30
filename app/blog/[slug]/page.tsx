@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getPostBySlug, markdownToHtml, getAllPosts } from '@/lib/posts';
+import { getPostBySlug, markdownToHtml } from '@/lib/posts';
 import { formatDate } from '@/lib/utils';
 
 interface PageProps {
@@ -9,11 +9,12 @@ interface PageProps {
   }>;
 }
 
+export const dynamic = "force-dynamic";
+
 export async function generateStaticParams() {
-  const posts = await getAllPosts();
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
+  // Return empty array - params will be generated at runtime
+  // R2 binding is not available during build time
+  return [];
 }
 
 export default async function ArticlePage({ params }: PageProps) {
