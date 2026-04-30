@@ -3,9 +3,6 @@
  * Handles article CRUD operations with frontmatter parsing
  */
 
-// R2 API base URL - in production this comes from environment
-const R2_API_BASE = process.env.R2_API_BASE || '';
-
 /**
  * Parse YAML-like frontmatter from markdown content
  */
