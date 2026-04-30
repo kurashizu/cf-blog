@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
 import { getPostBySlug } from '@/lib/posts';
-import PostEditor from '../PostEditor';
+import PostEditor from '@/components/editor/PostEditor';
+
+// Force dynamic rendering - R2 client uses module-level state that can't be serialized
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{

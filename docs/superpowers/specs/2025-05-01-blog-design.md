@@ -1,41 +1,29 @@
-# Personal Blog on Cloudflare Pages — Design Spec
+# Personal Blog — Design Spec
 
 ## Overview
 
-A personal blog deployed to Cloudflare Pages with automatic deployments via GitHub Actions. Articles are stored in Cloudflare R2 and fetched at runtime. Built with Next.js (App Router).
+Personal blog on Cloudflare Workers with R2 storage, admin panel, and GitHub Actions deployment.
 
 ---
 
 ## 1. Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Author    │────▶│  GitHub     │────▶│  GitHub      │────▶│  Cloudflare │
-│  (writes MD)│     │  Repository │     │  Actions     │     │  Pages      │
-└─────────────┘     └─────────────┘     └──────────────┘     └─────────────┘
-                                                                   │
-                                                                   ▼
-                                                               ┌─────────┐
-                                                               │   R2    │
-                                                               │ (articles)│
-                                                               └─────────┘
+Author ──▶ GitHub ──▶ GitHub Actions ──▶ OpenNextjs-Cloudflare Workers ──▶ R2 (articles)
 ```
-
-- **Write:** Author edits MD files locally, pushes to GitHub
-- **Build:** GitHub Actions builds the Next.js site
-- **Deploy:** Cloudflare Pages serves the static parts + fetches articles from R2 at runtime
 
 ---
 
 ## 2. Tech Stack
 
-- **Framework:** Next.js 14+ (App Router)
-- **Language:** English (UI + code comments)
-- **Styling:** Tailwind CSS
-- **Content:** Markdown files stored in R2, fetched at runtime
-- **Deployment:** Cloudflare Pages + GitHub Actions
-- **Storage:** Cloudflare R2 for articles and dynamic media
-- **Accessibility:** WCAG 2.1 AA compliant
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 15 (App Router) |
+| Deployment | OpenNextjs-Cloudflare + Wrangler |
+| Styling | Tailwind CSS + CSS Variables |
+| Content | Markdown in R2 |
+| Storage | Cloudflare R2 |
+| Auth | Cloudflare Access (Zero Trust) |
 
 ---
 
@@ -43,64 +31,154 @@ A personal blog deployed to Cloudflare Pages with automatic deployments via GitH
 
 ```
 /
-├── .github/
-│   └── workflows/
-│       └── deploy.yml          # CI/CD pipeline
+├── .github/workflows/deploy.yml
 ├── app/
-│   ├── blog/
-│   │   ├── [slug]/
-│   │   │   └── page.tsx        # Article page
-│   │   ├── page.tsx            # Blog list page
-│   │   └── loading.tsx         # Loading skeleton
-│   ├── about/
-│   │   └── page.tsx
-│   ├── admin/                  # Admin Dashboard
-│   │   ├── page.tsx
-│   │   ├── editor/
-│   │   │   ├── new/
-│   │   │   │   └── page.tsx
-│   │   │   └── [slug]/
-│   │   │       └── page.tsx
-│   │   └── layout.tsx          # Admin layout with auth check
-│   ├── page.tsx                # Home page
-│   ├── layout.tsx
-│   └── globals.css
+│   ├── blog/[slug]/page.tsx, page.tsx, loading.tsx
+│   ├── about/page.tsx
+│   ├── admin/editor/[slug]/page.tsx, new/page.tsx, page.tsx, layout.tsx
+│   ├── page.tsx, layout.tsx, globals.css
 ├── components/
-│   ├── ui/                     # Reusable UI components
+│   ├── ui/                          # Reusable UI primitives
 │   │   ├── Button.tsx
 │   │   ├── Card.tsx
-│   │   └── ...
-│   ├── layout/                 # Layout components
+│   │   ├── Input.tsx
+│   │   ├── Textarea.tsx
+│   │   └── index.ts
+│   ├── layout/                       # Layout components
 │   │   ├── Header.tsx
 │   │   ├── Footer.tsx
-│   │   └── ...
-│   └── theme/                  # Theme tokens
-│       ├── colors.ts
-│       ├── typography.ts
-│       └── ...
+│   │   └── index.ts
+│   ├── theme/                        # Theme tokens & style constants
+│   │   ├── tokens.ts                 # Color/spacing CSS variable names
+│   │   ├── buttons.ts                # Button variant class strings
+│   │   ├── badges.ts                 # Status badge class strings
+│   │   ├── editor.ts                 # Editor pane/class strings
+│   │   ├── admin.ts                  # Admin layout class strings
+│   │   ├── form.ts                   # Form element class strings
+│   │   └── index.ts
+│   └── editor/                       # Editor feature components
+│       └── PostEditor.tsx           # Main editor (uses theme/editor.ts)
 ├── lib/
-│   ├── r2.ts                   # R2 read/write logic
-│   └── posts.ts                # Article fetching logic
-├── public/
-│   └── images/                 # Static images
-├── package.json
-├── tsconfig.json
-├── next.config.js
-└── tailwind.config.js
+│   ├── r2.ts, posts.ts, utils.ts, posts.test.ts, r2.test.ts
+├── package.json, tsconfig.json, tailwind.config.ts, wrangler.toml, postcss.config.js
 ```
 
 ---
 
-## 4. R2 Storage Structure
+## 4. Styling Architecture
 
-Key = file path, acts as slug.
+**Core Rule: All styles in `components/theme/`, zero hardcoded strings in pages.**
 
+### 4.1 globals.css (minimal)
+
+globals.css contains ONLY:
+1. `:root` — CSS variable declarations
+2. Base reset (`box-sizing: border-box`, `margin: 0`)
+3. Edge glow animation (`edge-glow::before`, `::after`)
+4. Focus states (`:focus-visible`, `:focus:not(:focus-visible)`)
+5. Custom scrollbar (`::-webkit-scrollbar-*`)
+
+**NO utility classes, NO component styles, NO hardcoded colors.**
+
+### 4.2 Theme Files (components/theme/)
+
+Each file exports class name constants — NOT runtime values:
+
+```ts
+// tokens.ts — CSS variable names (type-safe references)
+export const color = {
+  bg: { primary: 'var(--bg-primary)', secondary: 'var(--bg-secondary)', card: 'var(--bg-card)' },
+  border: 'var(--border)',
+  text: { primary: 'var(--text-primary)', secondary: 'var(--text-secondary)', muted: 'var(--text-muted)' },
+  accent: { DEFAULT: 'var(--accent)', light: 'var(--accent-light)' },
+} as const;
+
+export const spacing = { /* ... */ } as const;
 ```
-articles/2025/05/hello-world.md   → slug: "2025/05/hello-world"
-articles/tech/rust-intro.md         → slug: "tech/rust-intro"
+
+```ts
+// buttons.ts — Button variant class strings
+export const buttonVariants = {
+  primary: 'bg-accent text-white hover:bg-accent/90',
+  secondary: 'border border-border bg-transparent text-text-primary hover:bg-bg-secondary',
+  danger: 'bg-red-600 text-white hover:bg-red-700',
+} as const;
 ```
 
-### Article Format (Markdown)
+```ts
+// badges.ts — Status badge class strings
+export const badgeVariants = {
+  published: 'bg-green-500/10 text-green-400',
+  draft: 'bg-accent/10 text-accent',
+} as const;
+```
+
+```ts
+// editor.ts — Editor-specific class strings
+export const editorClasses = {
+  container: 'grid grid-cols-2 gap-5 h-[450px]',
+  pane: 'flex flex-col border border-border rounded-lg overflow-hidden',
+  paneHeader: 'px-3 py-2 bg-bg-secondary border-b border-border text-xs font-semibold uppercase tracking-wide text-text-muted',
+  paneContent: 'flex-1 overflow-auto p-3.5 bg-bg-primary',
+  textarea: 'w-full h-full border-0 bg-transparent text-text-primary font-mono text-sm leading-relaxed resize-none outline-none',
+} as const;
+```
+
+```ts
+// admin.ts — Admin layout class strings
+export const adminClasses = {
+  header: 'px-4 py-4 bg-gradient-to-b from-bg-secondary to-bg-card border-b border-border',
+  title: 'text-lg font-bold text-accent tracking-tight',
+  nav: 'flex gap-5',
+  navLink: 'text-sm text-text-muted hover:text-accent no-underline transition-colors',
+  navLinkActive: 'text-accent font-semibold',
+} as const;
+```
+
+```ts
+// form.ts — Form element class strings
+export const formClasses = {
+  group: 'mb-4',
+  row: 'grid grid-cols-2 gap-4',
+  label: 'block text-xs font-semibold text-text-muted uppercase tracking-wide mb-1.5',
+  input: 'w-full px-3 py-3 border border-border rounded-lg text-sm bg-bg-secondary text-text-primary transition-colors focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30',
+} as const;
+```
+
+### 4.3 Tailwind Config (tailwind.config.ts)
+
+Only defines color palette — NO arbitrary values:
+
+```ts
+colors: {
+  bg: { primary: "#050505", secondary: "#0f0f0f", card: "#111111" },
+  border: "#1f1f1f",
+  text: { primary: "#f5f5f5", secondary: "#888888", muted: "#555555" },
+  accent: { DEFAULT: "#ff6b00", light: "#ff8534" },
+}
+```
+
+### 4.4 Page Components
+
+Pages import from theme files, NOT hardcoded strings:
+
+```tsx
+// GOOD — imports from theme
+import { buttonVariants } from '@/components/theme/buttons';
+<Button className={buttonVariants.primary}>Submit</Button>
+
+// BAD — hardcoded in page
+<Button className="bg-accent text-white hover:bg-accent/90">Submit</Button>
+```
+
+---
+
+## 5. R2 Storage
+
+- Key = file path, acts as slug
+- Example: `articles/2025/05/hello-world.md` → slug: `2025/05/hello-world`
+
+### Article Frontmatter
 
 ```markdown
 ---
@@ -112,133 +190,85 @@ tags: [intro, tutorial]
 published: true
 coverImage: /images/covers/hello.png
 author: Kurashizu
-draft: false
 ---
 
 # Hello World
-
-Article content here...
+Article content...
 ```
 
 ---
 
-## 5. Key Pages
+## 6. Key Pages
 
-### Home Page (`/`)
-- Hero section with name/tagline
-- Recent posts list (latest 5)
-- About brief link
-
-### Blog List (`/blog`)
-- All published posts
-- Sorted by date (newest first)
-- Tag filtering (future)
-
-### Article Page (`/blog/[slug]`)
-- Article title, date, author, tags
-- Cover image (if exists)
-- MD content rendered to HTML
-- Back link to blog list
-
-### About (`/about`)
-- Static page with bio
-
-### Admin Dashboard (`/admin`)
-- Article list with status (published/draft)
-- Edit/Delete actions
-- Cloudflare Access authentication
-
-### Admin Editor (`/admin/editor/[slug]`)
-- Split view: Markdown editor + live preview
-- Frontmatter fields: title, slug, date, tags, published
-- Save to R2 on submit
+| Route | Description |
+|-------|-------------|
+| `/` | Hero + recent 5 posts |
+| `/blog` | All posts, newest first |
+| `/blog/[slug]` | Full article with rendered MD |
+| `/about` | Static bio page |
+| `/admin` | Post list with status |
+| `/admin/editor/[slug]` | Split editor + live preview |
 
 ---
 
-## 6. GitHub Actions Workflow
+## 7. Deployment
 
 ```yaml
-on:
-  push:
-    branches: [main]
+# .github/workflows/deploy.yml
+on: push to main
+steps: checkout → setup-node@v22 → npm ci --legacy-peer-deps → npm run build:cf → wrangler deploy
+env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+```
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+```toml
+# wrangler.toml
+name = "cf-blog"
+main = ".open-next/worker.js"
+compatibility_date = "2026-04-30"
+[[r2_buckets]] binding = "BUCKET", bucket_name = "cf-blog-bucket"
+[vars] TEAM_DOMAIN = "", POLICY_AUD = ""
+```
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install & Build
-        run: |
-          npm ci
-          npm run build
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: 'cf-blog'
-          directory: '.next'
+```bash
+npm run dev          # local dev
+npm run build:cf     # production build (OpenNextjs-Cloudflare)
+npx wrangler deploy  # deploy to Workers
 ```
 
 ---
 
-## 7. UI Style (Dark Theme)
+## 8. Authentication
 
-- **Aesthetic:** Dark mode, clean, modern, generous whitespace
-- **Colors:**
-  - Background: #050505 (primary), #0f0f0f (secondary), #111111 (card)
-  - Border: #1f1f1f
-  - Text: #f5f5f5 (primary), #888888 (secondary), #555555 (muted)
-  - Accent: #ff6b00 (orange), #ff8534 (orange light)
-- **Edge glow:** Subtle orange gradient on left/right edges only
-- **Typography:** Sans-serif, readable, hierarchy through weight/size
-- **Layout:** Centered max-width container, ample vertical rhythm
+- Admin routes protected by Cloudflare Access (Zero Trust)
+- `middleware.ts` — JWT verification via JWKS endpoint
+- `admin/layout.tsx` — Redirect to `/__auth/signin` if not authenticated
+- `TEAM_DOMAIN` and `POLICY_AUD` in wrangler.toml
 
 ---
 
-## 8. Accessibility (WCAG 2.1 AA)
+## 9. Code Standards
 
-- **Color contrast:** All text must meet 4.5:1 contrast ratio (normal text) or 3:1 (large text)
-- **Focus states:** All interactive elements must have visible focus indicators
-- **Keyboard navigation:** Full keyboard accessibility for all functionality
-- **Semantic HTML:** Proper heading hierarchy, landmarks, and ARIA labels
-- **Alt text:** All images must have descriptive alt attributes
-- **Form labels:** All form inputs must have associated labels
-- **Resizable text:** Support 200% zoom without horizontal scrolling
+### Styling Rules
+- **NO hardcoded style strings in page components** — use theme constants
+- **All reusable styles → components/theme/** — buttons, badges, editor, admin, form
+- **CSS variables for theme values** — never hardcode hex values in components
+- **Barrel exports** — each component group via `index.ts`
 
----
+### Component Organization
+| Directory | Contents |
+|-----------|----------|
+| `components/ui/` | Primitive UI (Button, Card, Input, Textarea) |
+| `components/layout/` | Page structure (Header, Footer) |
+| `components/theme/` | Style constants (tokens, buttons, badges, editor, admin, form) |
+| `components/editor/` | Feature components (PostEditor) |
 
-## 9. Authentication
-
-- **Admin:** Cloudflare Access (Zero Trust)
-- **Method:** Workers `getUserInfo()` API or similar
-- **Flow:** Unauthenticated users redirected to Cloudflare Access login
-
----
-
-## 10. TODO
-
-- [ ] Initialize Next.js project
-- [ ] Configure Tailwind CSS
-- [ ] Build UI components (WCAG compliant)
-- [ ] Implement R2 article fetching
-- [ ] Create pages (home, blog, article, about)
-- [ ] Build Admin dashboard with auth
-- [ ] Build Admin editor with live preview
-- [ ] Set up GitHub Actions workflow
-- [ ] Configure Cloudflare Pages
-- [ ] WCAG compliance verification
+### globals.css Contents (strict list)
+1. CSS variables (:root)
+2. Base reset
+3. Edge glow animation
+4. Focus states
+5. Custom scrollbar
 
 ---
 
-*Document version: 1.1*
-*Created: 2025-05-01*
-*Updated: 2025-05-01 — Added Admin section, WCAG compliance, darker theme*
+*Spec version: 2.0 — 2026-05-01*

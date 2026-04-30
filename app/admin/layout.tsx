@@ -1,70 +1,68 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 
-// TODO: Implement Cloudflare Access auth check
-export default function AdminLayout({
+/**
+ * Cloudflare Access authentication check
+ * Uses getUserInfo() API via headers for Zero Trust integration
+ * Returns user email if authenticated, null otherwise
+ */
+async function getCurrentUser(): Promise<{ email: string; name: string } | null> {
+  try {
+    const headersList = await headers();
+    const cfAccessAuthedUser = headersList.get('cf-access-authed-user');
+
+    if (!cfAccessAuthedUser) {
+      return null;
+    }
+
+    // Parse email from header (format: "email@example.com")
+    return {
+      email: cfAccessAuthedUser,
+      name: cfAccessAuthedUser.split('@')[0],
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getCurrentUser();
+
+  // Redirect to Cloudflare Access login if not authenticated
+  if (!user) {
+    const unauthorizedHtml = `
+      <!DOCTYPE html>
+      <html>
+        <body class="unauthorized-page">
+          <div class="unauthorized-content">
+            <h1>Authentication Required</h1>
+            <p>Please sign in with Cloudflare Access to continue.</p>
+            <a href="/__auth/signin" class="signin-button">Sign In</a>
+          </div>
+        </body>
+      </html>
+    `;
+    return new Response(unauthorizedHtml, {
+      status: 401,
+      headers: { 'Content-Type': 'text/html' },
+    });
+  }
+
   return (
     <div className="min-h-screen bg-bg-primary">
-      <header
-        style={{
-          padding: "18px 24px",
-          background: "linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-card) 100%)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "1px solid var(--border)",
-        }}
-        className="admin-header"
-      >
-        <h1
-          style={{
-            fontSize: "18px",
-            fontWeight: 700,
-            color: "var(--accent)",
-            letterSpacing: "-0.5px",
-            margin: 0,
-          }}
-        >
-          Admin Panel
-        </h1>
-        <nav className="admin-nav" style={{ display: "flex", gap: "20px" }}>
-          <Link
-            href="/admin"
-            style={{
-              color: "var(--text-muted)",
-              textDecoration: "none",
-              fontSize: "14px",
-              transition: "color 0.2s",
-            }}
-            className="active"
-          >
-            Posts
-          </Link>
-          <Link
-            href="/admin/editor/new"
-            style={{
-              color: "var(--text-muted)",
-              textDecoration: "none",
-              fontSize: "14px",
-              transition: "color 0.2s",
-            }}
-          >
-            New Post
-          </Link>
-          <Link
-            href="/"
-            style={{
-              color: "var(--text-muted)",
-              textDecoration: "none",
-              fontSize: "14px",
-              transition: "color 0.2s",
-            }}
-          >
-            ← Back to Site
-          </Link>
+      <header className="admin-header">
+        <div className="flex items-center gap-4">
+          <h1 className="admin-header-title">Admin Panel</h1>
+          <span className="text-xs text-text-muted">{user.email}</span>
+        </div>
+        <nav className="admin-nav">
+          <Link href="/admin" className="active">Posts</Link>
+          <Link href="/admin/editor/new">New Post</Link>
+          <Link href="/">← Back to Site</Link>
         </nav>
       </header>
       <main>{children}</main>

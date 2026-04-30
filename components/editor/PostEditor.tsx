@@ -49,9 +49,10 @@ interface PostData {
 interface PostEditorProps {
   initialData?: Partial<PostData>;
   onSubmit?: (data: PostData) => void;
+  isNewPost?: boolean;
 }
 
-export default function PostEditor({ initialData, onSubmit }: PostEditorProps) {
+export default function PostEditor({ initialData, onSubmit, isNewPost = false }: PostEditorProps) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [slug, setSlug] = useState(initialData?.slug || '');
   const [date, setDate] = useState(
@@ -63,6 +64,7 @@ export default function PostEditor({ initialData, onSubmit }: PostEditorProps) {
   const [content, setContent] = useState(initialData?.content || '');
   const [preview, setPreview] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Update preview when content changes
@@ -107,9 +109,13 @@ export default function PostEditor({ initialData, onSubmit }: PostEditorProps) {
     }
 
     // Default behavior: submit to API
+    const isEditing = !!initialData?.slug;
+    const endpoint = isEditing ? `/api/posts/${slug}` : '/api/posts';
+    const method = isEditing ? 'PUT' : 'POST';
+
     try {
-      const response = await fetch('/api/posts', {
-        method: 'POST',
+      const response = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(postData),
       });
@@ -133,15 +139,45 @@ export default function PostEditor({ initialData, onSubmit }: PostEditorProps) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!slug || !confirm('Are you sure you want to delete this post?')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/posts/${slug}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        window.location.href = '/admin';
+      } else {
+        const error = await response.json();
+        setMessage({ type: 'error', text: error.message || 'Failed to delete post' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to delete post' });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="admin-editor">
       {/* Header with title and actions */}
       <div className="mb-5 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-text-primary">Edit Post</h1>
+        <h1 className="text-xl font-bold text-text-primary">
+          {isNewPost ? 'New Post' : 'Edit Post'}
+        </h1>
         <div className="flex gap-2.5">
-          <Button type="button" variant="secondary" className="btn-danger">
-            Delete
-          </Button>
+          {!isNewPost && (
+            <Button type="button" variant="secondary" className="btn-danger" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>

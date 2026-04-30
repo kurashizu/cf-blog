@@ -24,85 +24,34 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
       {/* Hero Section */}
-      <section className="mb-10 text-center" style={{ padding: "64px 0 0" }}>
-        <h1
-          className="mb-3"
-          style={{
-            fontSize: "42px",
-            fontWeight: 700,
-            letterSpacing: "-1px",
-            margin: "0 0 12px",
-            color: "var(--text-primary)",
-          }}
-        >
-          Kurashizu
-        </h1>
-        <p
-          style={{
-            fontSize: "16px",
-            color: "var(--text-secondary)",
-            margin: "0 0 20px",
-          }}
-        >
-          Software Engineer / Writer
-        </p>
-        <p
-          style={{
-            fontSize: "14px",
-            color: "var(--text-muted)",
-            maxWidth: "440px",
-            margin: "0 auto 0",
-            lineHeight: 1.6,
-          }}
-        >
+      <section className="hero-section">
+        <h1 className="hero-title">Kurashizu</h1>
+        <p className="hero-subtitle">Software Engineer / Writer</p>
+        <p className="hero-bio">
           Building things with code. Writing about things I have learned.
         </p>
       </section>
 
       {/* Recent Posts Section */}
       <section className="mt-10">
-        <div
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            margin: "0 0 16px",
-          }}
-        >
-          Recent Posts
-        </div>
+        <div className="section-title">Recent Posts</div>
 
         {error ? (
-          <div className="rounded-lg border border-border bg-bg-card p-8 text-center text-text-muted text-sm">
+          <div className="empty-state">
             {error}
           </div>
         ) : recentPosts.length === 0 ? (
-          <div className="rounded-lg border border-border bg-bg-card p-8 text-center text-text-muted text-sm">
+          <div className="empty-state">
             <p className="mb-4">No posts yet. Check back soon!</p>
-            <Link
-              href="/admin/editor/new"
-              className="text-accent hover:text-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
-            >
+            <Link href="/admin/editor/new" className="text-accent hover:text-accent-light transition-colors">
               Write the first post
             </Link>
           </div>
         ) : (
           <div>
             {recentPosts.map((post) => (
-              <article
-                key={post.slug}
-                className="border-b border-border last:border-b-0"
-                style={{ padding: "12px 0" }}
-              >
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--text-muted)",
-                    marginBottom: "4px",
-                  }}
-                >
+              <article key={post.slug} className="post-item">
+                <div className="post-date">
                   <time dateTime={post.date}>
                     {new Date(post.date).toLocaleDateString("en-US", {
                       year: "numeric",
@@ -111,35 +60,18 @@ export default async function HomePage() {
                     })}
                   </time>
                 </div>
-                <h3
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: 600,
-                    color: "var(--text-primary)",
-                    margin: 0,
-                  }}
-                >
+                <h3 className="post-title">
                   <Link
                     href={`/blog/${post.slug}`}
-                    className="hover:!text-accent transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
-                    style={{ color: "inherit", textDecoration: "none" }}
+                    className="post-title-link"
                   >
                     {post.title}
                   </Link>
                 </h3>
               </article>
             ))}
-            <div style={{ marginTop: "16px" }}>
-              <Link
-                href="/blog"
-                style={{
-                  color: "var(--accent)",
-                  textDecoration: "none",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                }}
-                className="hover:!text-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-              >
+            <div className="mt-4">
+              <Link href="/blog" className="view-all-link">
                 View all posts →
               </Link>
             </div>

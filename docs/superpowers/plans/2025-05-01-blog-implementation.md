@@ -152,7 +152,7 @@ Steps:
 Files: .github/workflows/deploy.yml
 
 Steps:
-- [ ] Create deploy.yml — on push to main, checkout, setup-node, npm ci, npm run build, cloudflare/pages-action
+- [ ] Create deploy.yml — on push to main, checkout, setup-node, npm ci, npm run build:cf, wrangler deploy
 - [ ] Commit: "ci: add GitHub Actions deploy workflow"
 
 ---
@@ -170,13 +170,15 @@ Steps:
 
 ## Verification
 
-- [ ] npm run dev starts without errors
-- [ ] npm run build completes
-- [ ] All pages render (home, blog, article, about, admin)
+- [ ] GitHub Actions build passes (npm ci --legacy-peer-deps, npm run build:cf, wrangler deploy)
+- [ ] Site renders correctly on Cloudflare Workers
+- [ ] All pages accessible (home, blog, article, about, admin)
 - [ ] Admin editor live preview works
 - [ ] WCAG focus states visible
-- [ ] GitHub Actions workflow correct
+- [ ] Cloudflare Access auth redirects unauthenticated users
 
 ---
+
+*Note: Local development uses `npm run dev`. Production builds only via GitHub Actions pipeline.*
 
 *Plan: 2025-05-01, 12 tasks*

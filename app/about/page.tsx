@@ -6,30 +6,10 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1
-        style={{
-          fontSize: "28px",
-          fontWeight: 700,
-          margin: "0 0 32px",
-          color: "var(--text-primary)",
-        }}
-      >
-        About Me
-      </h1>
+      <h1 className="page-title">About Me</h1>
 
       <section className="mb-12">
-        <h2
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            margin: "0 0 16px",
-          }}
-        >
-          Hello, I&apos;m Kurashizu
-        </h2>
+        <h2 className="section-title">Hello, I&apos;m Kurashizu</h2>
         <div className="space-y-4 text-text-secondary">
           <p>
             I&apos;m a software engineer with a passion for building tools and
@@ -46,18 +26,7 @@ export default function AboutPage() {
       </section>
 
       <section className="mb-12">
-        <h2
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            margin: "0 0 16px",
-          }}
-        >
-          Technical Interests
-        </h2>
+        <h2 className="section-title">Technical Interests</h2>
         <ul className="space-y-3">
           <li className="flex items-center gap-2 text-text-secondary">
             <span style={{ color: "var(--accent)" }} aria-hidden="true">
@@ -87,18 +56,7 @@ export default function AboutPage() {
       </section>
 
       <section className="mb-12">
-        <h2
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            margin: "0 0 16px",
-          }}
-        >
-          This Blog
-        </h2>
+        <h2 className="section-title">This Blog</h2>
         <div className="space-y-4 text-text-secondary">
           <p>
             This blog is built with Next.js and deployed on Cloudflare Pages.
@@ -115,18 +73,7 @@ export default function AboutPage() {
       </section>
 
       <section>
-        <h2
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            margin: "0 0 16px",
-          }}
-        >
-          Get in Touch
-        </h2>
+        <h2 className="section-title">Get in Touch</h2>
         <p className="text-text-secondary">
           Feel free to reach out if you&apos;d like to connect, collaborate, or
           just say hello. I&apos;m always interested in hearing about interesting
