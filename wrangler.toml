@@ -3,10 +3,14 @@ main = ".open-next/worker.js"
 compatibility_date = "2026-04-30"
 compatibility_flags = ["nodejs_compat"]
 
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "cf-blog-bucket"
 
 [vars]
-TEAM_DOMAIN = "" # Set your Cloudflare Access team domain (e.g., your-team.cloudflareaccess.com)
-POLICY_AUD = "" # Set your Cloudflare Access policy audience
+TEAM_DOMAIN = ""
+POLICY_AUD = ""
