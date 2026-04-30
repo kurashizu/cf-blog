@@ -6,3 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "cf-blog-bucket"
+
+[vars]
+TEAM_DOMAIN = "" # Set your Cloudflare Access team domain (e.g., your-team.cloudflareaccess.com)
+POLICY_AUD = "" # Set your Cloudflare Access policy audience

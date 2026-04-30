@@ -10,25 +10,19 @@ interface BlogPostCardProps {
 function BlogPostCard({ post }: BlogPostCardProps) {
   return (
     <Link href={`/blog/${post.slug}`}>
-      <Card className="transition-all hover:border-accent/50 hover:shadow-lg hover:shadow-accent/5">
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <h2 className="text-xl font-semibold text-text-primary">
-              {post.title}
-            </h2>
-            <span className="whitespace-nowrap text-sm text-text-muted">
-              {formatDate(post.date)}
-            </span>
-          </div>
+      <Card className="article-card transition-all hover:border-accent hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(255,107,0,0.12)]">
+        <CardHeader className="pb-2">
+          <span className="article-meta">{formatDate(post.date)}</span>
         </CardHeader>
-        <CardContent>
-          <p className="text-text-secondary line-clamp-2">{post.description}</p>
+        <CardContent className="pt-0">
+          <h2 className="article-title mb-1">{post.title}</h2>
+          <p className="article-desc mb-3">{post.description}</p>
           {post.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="article-tags">
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-accent/10 px-3 py-1 text-xs text-accent"
+                  className="tag"
                 >
                   {tag}
                 </span>
@@ -45,12 +39,15 @@ export default async function BlogPage() {
   const posts = await getAllPosts();
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-12">
-      <h1 className="mb-8 text-3xl font-bold text-text-primary">Blog</h1>
+    <div className="container mx-auto max-w-4xl px-4 pb-[60px]">
+      <div className="page-title">
+        <h1 className="mb-1 text-[28px] font-bold text-text-primary">Blog</h1>
+        <p className="text-text-secondary text-sm">A collection of thoughts and tutorials</p>
+      </div>
       {posts.length === 0 ? (
-        <p className="text-text-muted">No posts yet.</p>
+        <p className="text-text-muted mt-6">No posts yet.</p>
       ) : (
-        <div className="space-y-4">
+        <div className="article-list mt-6">
           {posts.map((post) => (
             <BlogPostCard key={post.slug} post={post} />
           ))}

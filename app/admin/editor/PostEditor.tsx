@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
@@ -136,37 +134,89 @@ export default function PostEditor({ initialData, onSubmit }: PostEditorProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex h-[calc(100vh-200px)] gap-6">
-      {/* Editor Panel */}
-      <div className="flex-1 space-y-4 overflow-y-auto pr-4">
-        <h2 className="text-lg font-semibold text-text-primary">Edit Post</h2>
+    <form onSubmit={handleSubmit} className="admin-editor">
+      {/* Header with title and actions */}
+      <div className="mb-5 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-text-primary">Edit Post</h1>
+        <div className="flex gap-2.5">
+          <Button type="button" variant="secondary" className="btn-danger">
+            Delete
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </div>
 
-        <Input
-          label="Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Post title"
-          required
-        />
-
-        <Input
-          label="Slug"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder="post-slug"
-          required
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+      {/* Form fields */}
+      <div className="space-y-4">
+        <div className="form-group">
+          <label htmlFor="title" className="form-label">Title</label>
+          <input
+            id="title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Post title"
+            className="form-input"
             required
           />
+        </div>
 
-          <div className="flex items-center gap-2 pt-6">
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="slug" className="form-label">Slug</label>
+            <input
+              id="slug"
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="post-slug"
+              className="form-input"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="date" className="form-label">Date</label>
+            <input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="form-input"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="tags" className="form-label">Tags (comma-separated)</label>
+          <input
+            id="tags"
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="tech, tutorial, guide"
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="coverImage" className="form-label">Cover Image URL</label>
+          <input
+            id="coverImage"
+            type="url"
+            value={coverImage}
+            onChange={(e) => setCoverImage(e.target.value)}
+            placeholder="https://..."
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <div className="mb-2 flex items-center gap-2">
+            <label htmlFor="published" className="form-label mb-0">Publish</label>
             <input
               type="checkbox"
               id="published"
@@ -174,69 +224,55 @@ export default function PostEditor({ initialData, onSubmit }: PostEditorProps) {
               onChange={(e) => setPublished(e.target.checked)}
               className="h-4 w-4 rounded border-border bg-bg-secondary text-accent focus:ring-accent"
             />
-            <label htmlFor="published" className="text-sm text-text-secondary">
-              Published
-            </label>
           </div>
         </div>
-
-        <Input
-          label="Tags (comma-separated)"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          placeholder="tech, tutorial, guide"
-        />
-
-        <Input
-          label="Cover Image URL"
-          value={coverImage}
-          onChange={(e) => setCoverImage(e.target.value)}
-          placeholder="https://..."
-        />
-
-        <Textarea
-          label="Content (Markdown)"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your post content here..."
-          className="min-h-[400px] font-mono"
-          required
-        />
-
-        <div className="flex gap-4">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Post'}
-          </Button>
-        </div>
-
-        {message && (
-          <div
-            className={cn(
-              'rounded-lg p-4',
-              message.type === 'success'
-                ? 'bg-green-500/10 text-green-400'
-                : 'bg-red-500/10 text-red-400'
-            )}
-          >
-            {message.text}
-          </div>
-        )}
       </div>
 
-      {/* Preview Panel */}
-      <div className="flex-1 overflow-y-auto border-l border-border pl-4">
-        <h2 className="mb-4 text-lg font-semibold text-text-primary">Preview</h2>
-        <div className="rounded-lg bg-bg-card p-6">
-          {preview ? (
-            <div
-              className="prose prose-invert max-w-none prose-headings:text-text-primary prose-p:text-text-secondary prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-code:text-accent prose-code:bg-bg-secondary prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-bg-secondary"
-              dangerouslySetInnerHTML={{ __html: preview }}
-            />
-          ) : (
-            <p className="text-text-muted">Start typing to see preview...</p>
+      {/* Split Editor/Preview */}
+      <div className="mt-6">
+        <label className="form-label mb-4">Content</label>
+        <div className="editor-container">
+          <div className="editor-pane">
+            <div className="pane-header">Markdown</div>
+            <div className="pane-content">
+              <textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your post content here..."
+                className="editor-textarea"
+                required
+              />
+            </div>
+          </div>
+          <div className="preview-pane">
+            <div className="pane-header">Preview</div>
+            <div className="pane-content">
+              {preview ? (
+                <div
+                  className="preview-content"
+                  dangerouslySetInnerHTML={{ __html: preview }}
+                />
+              ) : (
+                <p className="text-text-muted">Start typing to see preview...</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {message && (
+        <div
+          className={cn(
+            'mt-4 rounded-lg p-4',
+            message.type === 'success'
+              ? 'bg-green-500/10 text-green-400'
+              : 'bg-red-500/10 text-red-400'
           )}
+        >
+          {message.text}
         </div>
-      </div>
+      )}
     </form>
   );
 }

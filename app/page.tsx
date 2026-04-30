@@ -24,50 +24,62 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
       {/* Hero Section */}
-      <section className="mb-16 text-center">
-        <h1 className="mb-4 text-5xl font-bold tracking-tight text-text-primary">
-          Hi, I&apos;m <span className="text-accent">Kurashizu</span>
+      <section className="mb-10 text-center" style={{ padding: "64px 0 0" }}>
+        <h1
+          className="mb-3"
+          style={{
+            fontSize: "42px",
+            fontWeight: 700,
+            letterSpacing: "-1px",
+            margin: "0 0 12px",
+            color: "var(--text-primary)",
+          }}
+        >
+          Kurashizu
         </h1>
-        <p className="mx-auto mb-8 max-w-2xl text-lg text-text-secondary">
-          Software engineer, writer, and builder. This is where I share thoughts
-          on technology, programming, and whatever else I&apos;m exploring.
+        <p
+          style={{
+            fontSize: "16px",
+            color: "var(--text-secondary)",
+            margin: "0 0 20px",
+          }}
+        >
+          Software Engineer / Writer
         </p>
-        <div className="flex justify-center gap-4">
-          <Link
-            href="/blog"
-            className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent/90 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-          >
-            Read the Blog
-          </Link>
-          <Link
-            href="/about"
-            className="inline-flex items-center justify-center rounded-md border border-border bg-transparent px-6 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-bg-secondary focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-          >
-            About Me
-          </Link>
-        </div>
+        <p
+          style={{
+            fontSize: "14px",
+            color: "var(--text-muted)",
+            maxWidth: "440px",
+            margin: "0 auto 0",
+            lineHeight: 1.6,
+          }}
+        >
+          Building things with code. Writing about things I have learned.
+        </p>
       </section>
 
       {/* Recent Posts Section */}
-      <section>
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-text-primary">
-            Recent Posts
-          </h2>
-          <Link
-            href="/blog"
-            className="text-sm text-accent hover:text-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
-          >
-            View all &rarr;
-          </Link>
+      <section className="mt-10">
+        <div
+          style={{
+            fontSize: "11px",
+            fontWeight: 600,
+            color: "var(--text-muted)",
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            margin: "0 0 16px",
+          }}
+        >
+          Recent Posts
         </div>
 
         {error ? (
-          <div className="rounded-lg border border-border bg-bg-card p-8 text-center text-text-secondary">
+          <div className="rounded-lg border border-border bg-bg-card p-8 text-center text-text-muted text-sm">
             {error}
           </div>
         ) : recentPosts.length === 0 ? (
-          <div className="rounded-lg border border-border bg-bg-card p-8 text-center text-text-secondary">
+          <div className="rounded-lg border border-border bg-bg-card p-8 text-center text-text-muted text-sm">
             <p className="mb-4">No posts yet. Check back soon!</p>
             <Link
               href="/admin/editor/new"
@@ -77,13 +89,20 @@ export default async function HomePage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div>
             {recentPosts.map((post) => (
               <article
                 key={post.slug}
-                className="rounded-lg border border-border bg-bg-card p-6 transition-colors hover:border-accent/30"
+                className="border-b border-border last:border-b-0"
+                style={{ padding: "12px 0" }}
               >
-                <div className="mb-2 flex items-center gap-2 text-sm text-text-muted">
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--text-muted)",
+                    marginBottom: "4px",
+                  }}
+                >
                   <time dateTime={post.date}>
                     {new Date(post.date).toLocaleDateString("en-US", {
                       year: "numeric",
@@ -91,37 +110,39 @@ export default async function HomePage() {
                       day: "numeric",
                     })}
                   </time>
-                  {post.tags && post.tags.length > 0 && (
-                    <>
-                      <span aria-hidden="true">&bull;</span>
-                      <span className="flex gap-2">
-                        {post.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded bg-bg-secondary px-2 py-0.5 text-xs text-text-secondary"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </span>
-                    </>
-                  )}
                 </div>
-                <h3 className="mb-2 text-xl font-semibold text-text-primary">
+                <h3
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                    margin: 0,
+                  }}
+                >
                   <Link
                     href={`/blog/${post.slug}`}
-                    className="hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
+                    className="hover:!text-accent transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
+                    style={{ color: "inherit", textDecoration: "none" }}
                   >
                     {post.title}
                   </Link>
                 </h3>
-                {post.description && (
-                  <p className="text-text-secondary line-clamp-2">
-                    {post.description}
-                  </p>
-                )}
               </article>
             ))}
+            <div style={{ marginTop: "16px" }}>
+              <Link
+                href="/blog"
+                style={{
+                  color: "var(--accent)",
+                  textDecoration: "none",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                }}
+                className="hover:!text-accent-light transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+              >
+                View all posts →
+              </Link>
+            </div>
           </div>
         )}
       </section>

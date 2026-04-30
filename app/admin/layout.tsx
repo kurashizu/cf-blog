@@ -1,45 +1,71 @@
 import Link from 'next/link';
 
 // TODO: Implement Cloudflare Access auth check
-// For now, this is a placeholder that would redirect to login
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // TODO: Implement Cloudflare Access auth check
-  // In production, use getUserInfo() from Workers SDK or check session token
-
   return (
     <div className="min-h-screen bg-bg-primary">
-      <header className="border-b border-border bg-bg-secondary">
-        <div className="container mx-auto max-w-6xl px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-text-primary">
-              Admin Dashboard
-            </h1>
-            <nav className="flex gap-4">
-              <Link
-                href="/admin"
-                className="text-sm text-text-secondary hover:text-accent transition-colors focus:outline-none focus:ring-2 focus:ring-accent rounded px-2 py-1"
-              >
-                Posts
-              </Link>
-              <Link
-                href="/admin/editor/new"
-                className="text-sm text-text-secondary hover:text-accent transition-colors focus:outline-none focus:ring-2 focus:ring-accent rounded px-2 py-1"
-              >
-                New Post
-              </Link>
-              <Link
-                href="/"
-                className="text-sm text-text-muted hover:text-text-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-accent rounded px-2 py-1"
-              >
-                ← Back to Site
-              </Link>
-            </nav>
-          </div>
-        </div>
+      <header
+        style={{
+          padding: "18px 24px",
+          background: "linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-card) 100%)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          borderBottom: "1px solid var(--border)",
+        }}
+        className="admin-header"
+      >
+        <h1
+          style={{
+            fontSize: "18px",
+            fontWeight: 700,
+            color: "var(--accent)",
+            letterSpacing: "-0.5px",
+            margin: 0,
+          }}
+        >
+          Admin Panel
+        </h1>
+        <nav className="admin-nav" style={{ display: "flex", gap: "20px" }}>
+          <Link
+            href="/admin"
+            style={{
+              color: "var(--text-muted)",
+              textDecoration: "none",
+              fontSize: "14px",
+              transition: "color 0.2s",
+            }}
+            className="active"
+          >
+            Posts
+          </Link>
+          <Link
+            href="/admin/editor/new"
+            style={{
+              color: "var(--text-muted)",
+              textDecoration: "none",
+              fontSize: "14px",
+              transition: "color 0.2s",
+            }}
+          >
+            New Post
+          </Link>
+          <Link
+            href="/"
+            style={{
+              color: "var(--text-muted)",
+              textDecoration: "none",
+              fontSize: "14px",
+              transition: "color 0.2s",
+            }}
+          >
+            ← Back to Site
+          </Link>
+        </nav>
       </header>
       <main>{children}</main>
     </div>
