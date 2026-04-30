@@ -98,7 +98,7 @@ export async function PUT(
  * DELETE /api/posts/[slug] - Delete a post
  */
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {

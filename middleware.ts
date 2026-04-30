@@ -30,7 +30,6 @@ async function verifyJWT(token: string, issuer: string, audience: string): Promi
   const [headerB64, payloadB64, signatureB64] = token.split(".");
 
   // Decode header
-  const headerJson = JSON.parse(atob(headerB64.replace(/-/g, "+").replace(/_/g, "/")));
   const payload: JWTPayload = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
 
   // Check expiration

@@ -102,15 +102,11 @@ export interface R2ClientOptions {
 
 export class R2Client {
   private accountId: string;
-  private accessKeyId: string;
-  private secretAccessKey: string;
   private bucket: string;
   private endpoint: string;
 
   constructor(options: R2ClientOptions) {
     this.accountId = options.accountId;
-    this.accessKeyId = options.accessKeyId;
-    this.secretAccessKey = options.secretAccessKey;
     this.bucket = options.bucket;
     this.endpoint = `https://${this.accountId}.r2.cloudflarestorage.com`;
   }
@@ -221,7 +217,7 @@ export class R2Client {
    * Generate AWS Signature Version 4 authorization header
    * Simplified version for R2-compatible API
    */
-  private getAuthHeader(method: string, path: string): string {
+  private getAuthHeader(_method: string, _path: string): string {
     // In Cloudflare Pages, R2 is accessed via bindings, not signed requests
     // This method is kept for compatibility with external R2 API access
     // For Pages Functions, use R2 binding directly
