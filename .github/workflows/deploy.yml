@@ -16,12 +16,11 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - run: npm ci
+      - name: Build
+        run: npm run build:cf
 
-      - run: npm run build:cf
-
-      - name: Deploy to Cloudflare Pages
-        run: npx wrangler pages deploy .open-next/assets --project-name cf-blog
+      - name: Deploy
+        run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
