@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getPostBySlug, markdownToHtml } from '@/lib/posts';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { createArticlesRepo, markdownToHtml } from '@/lib/articles';
 import { formatDate } from '@/lib/utils';
 
 interface PageProps {
@@ -12,14 +13,14 @@ interface PageProps {
 export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
-  // Return empty array - params will be generated at runtime
-  // R2 binding is not available during build time
   return [];
 }
 
 export default async function ArticlePage({ params }: PageProps) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const { env } = getCloudflareContext();
+  const repo = createArticlesRepo(env);
+  const post = await repo.getBySlug(slug);
 
   if (!post) {
     notFound();
@@ -63,8 +64,6 @@ export default async function ArticlePage({ params }: PageProps) {
         )}
       </header>
 
-      {/* Content rendered from trusted markdown authored by site owner */}
-      {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, react/no-danger */}
       <div
         className="article-body"
         dangerouslySetInnerHTML={{ __html: content }}

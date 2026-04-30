@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { getRecentPosts } from "@/lib/posts";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { createArticlesRepo } from "@/lib/articles";
 
-// Force dynamic rendering since posts come from R2 at runtime
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
@@ -15,7 +15,9 @@ export default async function HomePage() {
   let error: string | null = null;
 
   try {
-    recentPosts = await getRecentPosts(5);
+    const { env } = getCloudflareContext();
+    const repo = createArticlesRepo(env);
+    recentPosts = await repo.getRecent(5);
   } catch (e) {
     error = "Unable to load posts at this time.";
     console.error("Failed to load recent posts:", e);
@@ -23,7 +25,6 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      {/* Hero Section */}
       <section className="hero-section">
         <h1 className="hero-title">Kurashizu</h1>
         <p className="hero-subtitle">Software Engineer / Writer</p>
@@ -32,7 +33,6 @@ export default async function HomePage() {
         </p>
       </section>
 
-      {/* Recent Posts Section */}
       <section className="mt-10">
         <div className="section-title">Recent Posts</div>
 

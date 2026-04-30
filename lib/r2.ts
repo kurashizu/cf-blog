@@ -1,232 +1,56 @@
-/**
- * R2 Client for Cloudflare R2 storage operations
- * Handles article CRUD operations with frontmatter parsing
- */
+import { r2Paths } from './r2-paths';
 
-/**
- * Parse YAML-like frontmatter from markdown content
- */
-export function parseFrontmatter(content: string): { data: Record<string, unknown>; body: string } {
-  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
-  const match = content.match(frontmatterRegex);
-
-  if (!match) {
-    return { data: {}, body: content };
-  }
-
-  const frontmatterStr = match[1];
-  const body = match[2];
-  const data: Record<string, unknown> = {};
-
-  // Simple YAML-like parser for our frontmatter format
-  const lines = frontmatterStr.split('\n');
-  let currentKey = '';
-  let currentArray: string[] = [];
-
-  for (const line of lines) {
-    // Array item (starts with -)
-    if (line.trimStart().startsWith('- ')) {
-      const value = line.trimStart().substring(2).trim();
-      if (value) currentArray.push(value);
-      continue;
-    }
-
-    // Flush array if we have one
-    if (currentArray.length > 0 && !line.includes(':')) {
-      data[currentKey] = [...currentArray];
-      currentArray = [];
-    }
-
-    // Key-value pair
-    const colonIndex = line.indexOf(':');
-    if (colonIndex > 0) {
-      const key = line.substring(0, colonIndex).trim();
-      const value = line.substring(colonIndex + 1).trim();
-
-      // Flush any pending array
-      if (currentArray.length > 0) {
-        data[currentKey] = [...currentArray];
-        currentArray = [];
-      }
-
-      if (value === '') {
-        // Start of array
-        currentKey = key;
-      } else {
-        // Regular value
-        data[key] = value;
-        currentKey = '';
-      }
-    }
-  }
-
-  // Flush any remaining array
-  if (currentArray.length > 0) {
-    data[currentKey] = currentArray;
-  }
-
-  return { data, body };
+export interface R2Client {
+  get(key: string): Promise<string>;
+  list(prefix?: string): Promise<string[]>;
+  put(key: string, content: string): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 
-/**
- * Build YAML frontmatter string from data object
- */
-export function buildFrontmatter(data: Record<string, unknown>): string {
-  const lines: string[] = ['---'];
-
-  for (const [key, value] of Object.entries(data)) {
-    if (Array.isArray(value)) {
-      lines.push(`${key}:`);
-      for (const item of value) {
-        lines.push(`  - ${item}`);
-      }
-    } else if (typeof value === 'boolean') {
-      lines.push(`${key}: ${value}`);
-    } else if (typeof value === 'number') {
-      lines.push(`${key}: ${value}`);
-    } else if (value !== undefined && value !== null) {
-      lines.push(`${key}: ${value}`);
-    }
-  }
-
-  lines.push('---');
-  return lines.join('\n');
+export interface R2Bucket {
+  get(key: string): Promise<{ text(): Promise<string> } | null>;
+  list(options?: { prefix?: string; cursor?: string }): Promise<{ objects: { key: string }[]; truncated?: boolean; cursor?: string }>;
+  put(key: string, value: string, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
+  delete(key: string): Promise<void>;
 }
 
-export interface R2ClientOptions {
-  accountId: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  bucket: string;
+export interface Env {
+  BUCKET: R2Bucket;
 }
 
-export class R2Client {
-  private accountId: string;
-  private bucket: string;
-  private endpoint: string;
+export function createR2Client(env: Env): R2Client {
+  const bucket = env.BUCKET;
 
-  constructor(options: R2ClientOptions) {
-    this.accountId = options.accountId;
-    this.bucket = options.bucket;
-    this.endpoint = `https://${this.accountId}.r2.cloudflarestorage.com`;
-  }
+  return {
+    async get(key: string): Promise<string> {
+      const object = await bucket.get(key);
+      if (!object) throw new Error(`Not found: ${key}`);
+      return await object.text();
+    },
 
-  /**
-   * Get article content by key (slug)
-   */
-  async getArticle(key: string): Promise<string> {
-    // For SSR/Edge, use direct R2 fetch
-    // In Cloudflare Pages Functions, we can use R2 bindings directly
-    // For now, return empty - actual implementation uses Cloudflare Workers/R2 API
+    async list(prefix: string = r2Paths.articlesPrefix): Promise<string[]> {
+      let cursor: string | undefined;
+      const keys: string[] = [];
 
-    // Using S3-compatible API via fetch
-    const url = `${this.endpoint}/${this.bucket}/${key}`;
+      do {
+        const result = await bucket.list({ prefix, cursor });
+        keys.push(...result.objects.map((o) => o.key));
+        cursor = result.truncated ? result.cursor : undefined;
+      } while (cursor);
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': this.getAuthHeader('GET', key),
-        'Content-Type': 'text/markdown',
-      },
-    });
+      return keys;
+    },
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(`Article not found: ${key}`);
-      }
-      throw new Error(`Failed to get article: ${response.statusText}`);
-    }
+    async put(key: string, content: string): Promise<void> {
+      await bucket.put(key, content, {
+        httpMetadata: {
+          contentType: 'text/markdown',
+        },
+      });
+    },
 
-    return response.text();
-  }
-
-  /**
-   * List all article keys with optional prefix
-   */
-  async listArticles(prefix: string = 'articles/'): Promise<string[]> {
-    // List objects using S3-compatible API
-    const url = `${this.endpoint}/${this.bucket}/?prefix=${encodeURIComponent(prefix)}`;
-
-    // Use ListObjectsV2
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': this.getAuthHeader('GET', '/'),
-        'Content-Type': 'application/xml',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to list articles: ${response.statusText}`);
-    }
-
-    const xml = await response.text();
-    const keys: string[] = [];
-
-    // Parse XML response for object keys
-    const keyMatches = xml.match(/<Key>([^<]+)<\/Key>/g);
-    if (keyMatches) {
-      for (const match of keyMatches) {
-        const key = match.replace('<Key>', '').replace('</Key>', '');
-        keys.push(key);
-      }
-    }
-
-    return keys;
-  }
-
-  /**
-   * Save article content to R2
-   */
-  async saveArticle(key: string, content: string): Promise<void> {
-    const url = `${this.endpoint}/${this.bucket}/${key}`;
-
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Authorization': this.getAuthHeader('PUT', key),
-        'Content-Type': 'text/markdown',
-      },
-      body: content,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to save article: ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Delete article from R2
-   */
-  async deleteArticle(key: string): Promise<void> {
-    const url = `${this.endpoint}/${this.bucket}/${key}`;
-
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': this.getAuthHeader('DELETE', key),
-      },
-    });
-
-    if (!response.ok && response.status !== 404) {
-      throw new Error(`Failed to delete article: ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Generate AWS Signature Version 4 authorization header
-   * Simplified version for R2-compatible API
-   */
-  private getAuthHeader(_method: string, _path: string): string {
-    // In Cloudflare Pages, R2 is accessed via bindings, not signed requests
-    // This method is kept for compatibility with external R2 API access
-    // For Pages Functions, use R2 binding directly
-
-    // Return empty - actual auth handled by Workers runtime
-    return '';
-  }
-
-  // Static methods for frontmatter
-  static parseFrontmatter = parseFrontmatter;
-  static buildFrontmatter = buildFrontmatter;
+    async delete(key: string): Promise<void> {
+      await bucket.delete(key);
+    },
+  };
 }

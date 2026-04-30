@@ -1,39 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { marked } from 'marked';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { adminApi } from '@/lib/api';
 
-// Simple markdown to HTML converter for preview
 function markdownToHtml(md: string): string {
   if (!md) return '';
-
-  let html = md
-    // Headings
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Code blocks
-    .replace(/```([\s\S]+?)```/g, '<pre><code>$1</code></pre>')
-    // Inline code
-    .replace(/`(.+?)`/g, '<code>$1</code>')
-    // Links
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
-    // Line breaks (paragraphs)
-    .replace(/\n\n/g, '</p><p>')
-    // Single line breaks
-    .replace(/\n/g, '<br>');
-
-  // Wrap in paragraph tags if not already wrapped
-  if (!html.startsWith('<')) {
-    html = '<p>' + html + '</p>';
-  }
-
-  return html;
+  const result = marked.parse(md, { gfm: true, breaks: true });
+  return typeof result === 'string' ? result : '';
 }
 
 interface PostData {
@@ -110,7 +86,7 @@ export default function PostEditor({ initialData, onSubmit, isNewPost = false }:
 
     // Default behavior: submit to API
     const isEditing = !!initialData?.slug;
-    const endpoint = isEditing ? `/api/posts/${slug}` : '/api/posts';
+    const endpoint = isEditing ? adminApi.post(slug) : adminApi.posts;
     const method = isEditing ? 'PUT' : 'POST';
 
     try {
@@ -128,8 +104,12 @@ export default function PostEditor({ initialData, onSubmit, isNewPost = false }:
         setContent('');
         setTags('');
         setCoverImage('');
+        // Redirect to admin list for new posts
+        if (!isEditing) {
+          setTimeout(() => { window.location.href = '/admin'; }, 1500);
+        }
       } else {
-        const error = await response.json();
+        const error = await response.json() as { message?: string };
         setMessage({ type: 'error', text: error.message || 'Failed to save post' });
       }
     } catch {
@@ -148,14 +128,14 @@ export default function PostEditor({ initialData, onSubmit, isNewPost = false }:
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/posts/${slug}`, {
+      const response = await fetch(adminApi.post(slug), {
         method: 'DELETE',
       });
 
       if (response.ok) {
         window.location.href = '/admin';
       } else {
-        const error = await response.json();
+        const error = await response.json() as { message?: string };
         setMessage({ type: 'error', text: error.message || 'Failed to delete post' });
       }
     } catch {

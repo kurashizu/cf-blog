@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import { getPostBySlug } from '@/lib/posts';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { createArticlesRepo } from '@/lib/articles';
 import PostEditor from '@/components/editor/PostEditor';
 
-// Force dynamic rendering - R2 client uses module-level state that can't be serialized
 export const dynamic = "force-dynamic";
 
 interface PageProps {
@@ -13,13 +13,14 @@ interface PageProps {
 
 export default async function EditPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const { env } = getCloudflareContext();
+  const repo = createArticlesRepo(env);
+  const post = await repo.getBySlug(slug);
 
   if (!post) {
     notFound();
   }
 
-  // Convert tags array to comma-separated string for the form
   const tagsString = post.tags.join(', ');
 
   return (

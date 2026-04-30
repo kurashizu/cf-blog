@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "@/components/theme/styles.css";
 import Link from "next/link";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -39,14 +40,6 @@ function Header() {
               className="text-text-secondary hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
             >
               About
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/admin"
-              className="text-text-secondary hover:text-accent transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm"
-            >
-              Admin
             </Link>
           </li>
         </ul>

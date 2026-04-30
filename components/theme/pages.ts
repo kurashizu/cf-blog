@@ -1,0 +1,20 @@
+// Page-specific class strings
+export const pageClasses = {
+  sectionTitle: 'section-title',
+  pageTitle: 'page-title',
+  heroSection: 'hero-section',
+  heroTitle: 'hero-title',
+  heroSubtitle: 'hero-subtitle',
+  heroBio: 'hero-bio',
+  postItem: 'post-item',
+  postDate: 'post-date',
+  postTitle: 'post-title',
+  postTitleLink: 'post-title-link',
+  viewAllLink: 'view-all-link',
+  emptyState: 'empty-state',
+  articleList: 'article-list',
+  articleCard: 'article-card',
+  articleTitle: 'article-title',
+  articleDesc: 'article-desc',
+  articleMeta: 'article-meta',
+} as const;

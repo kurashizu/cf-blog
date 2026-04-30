@@ -1,13 +1,15 @@
 import Link from 'next/link';
-import { getAllPosts } from '@/lib/posts';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { createArticlesRepo } from '@/lib/articles';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
-// Force dynamic rendering - R2 calls at request time
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const posts = await getAllPosts();
+  const { env } = getCloudflareContext();
+  const repo = createArticlesRepo(env);
+  const posts = await repo.getAll();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">

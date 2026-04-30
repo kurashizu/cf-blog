@@ -59,7 +59,10 @@ Author ──▶ GitHub ──▶ GitHub Actions ──▶ OpenNextjs-Cloudflare
 │   └── editor/                       # Editor feature components
 │       └── PostEditor.tsx           # Main editor (uses theme/editor.ts)
 ├── lib/
-│   ├── r2.ts, posts.ts, utils.ts, posts.test.ts, r2.test.ts
+│   ├── r2.ts                              # R2 driver (CRUD via S3-compatible API)
+│   ├── r2-paths.ts                       # R2 storage path constants
+│   ├── frontmatter.ts                    # YAML frontmatter parse/build
+│   ├── articles.ts                       # Article business logic (Post type, markdownToHtml, CRUD)
 ├── package.json, tsconfig.json, tailwind.config.ts, wrangler.toml, postcss.config.js
 ```
 
@@ -240,8 +243,7 @@ npx wrangler deploy  # deploy to Workers
 ## 8. Authentication
 
 - Admin routes protected by Cloudflare Access (Zero Trust)
-- `middleware.ts` — JWT verification via JWKS endpoint
-- `admin/layout.tsx` — Redirect to `/__auth/signin` if not authenticated
+- `admin/layout.tsx` — Redirect to `/__auth/signin` if not authenticated via `cf-access-authed-user` header
 - `TEAM_DOMAIN` and `POLICY_AUD` in wrangler.toml
 
 ---
@@ -253,6 +255,44 @@ npx wrangler deploy  # deploy to Workers
 - **All reusable styles → components/theme/** — buttons, badges, editor, admin, form
 - **CSS variables for theme values** — never hardcode hex values in components
 - **Barrel exports** — each component group via `index.ts`
+
+### API Endpoint Constants
+- **All API endpoints defined in `lib/api.ts`** — no hardcoded URL strings
+- **Public routes** (if any) use `publicApi` object
+- **Admin routes** use `adminApi` object for all `/admin/api/*` endpoints
+- Example:
+```ts
+// lib/api.ts
+export const publicApi = {
+  // Add public API endpoints here when needed
+} as const;
+
+export const adminApi = {
+  posts: '/admin/api/posts',
+  post: (slug: string) => `/admin/api/posts/${slug}`,
+} as const;
+```
+
+### R2 Storage Path Constants
+- **All R2 key paths defined in `lib/r2-paths.ts`** — no hardcoded path strings
+- **R2Client class in `lib/r2.ts`** — CRUD driver for R2 operations
+- Example:
+```ts
+// lib/r2-paths.ts
+export const r2Paths = {
+  articlesPrefix: 'articles/',
+  article: (slug: string) => `articles/${slug}.md`,
+} as const;
+```
+
+### Frontmatter
+- **Frontmatter parse/build in `lib/frontmatter.ts`** — YAML frontmatter utilities
+- Independent of R2 — only parses/builds markdown metadata
+```tsx
+// Usage in components
+import { adminApi } from '@/lib/api';
+const endpoint = isEditing ? adminApi.post(slug) : adminApi.posts;
+```
 
 ### Component Organization
 | Directory | Contents |

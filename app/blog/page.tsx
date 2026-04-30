@@ -1,10 +1,13 @@
 import Link from 'next/link';
-import { getAllPosts, Post } from '@/lib/posts';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { createArticlesRepo } from '@/lib/articles';
 import { formatDate } from '@/lib/utils';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 
+export const dynamic = "force-dynamic";
+
 interface BlogPostCardProps {
-  post: Post;
+  post: Awaited<ReturnType<ReturnType<typeof createArticlesRepo>['getAll']>>[number];
 }
 
 function BlogPostCard({ post }: BlogPostCardProps) {
@@ -20,10 +23,7 @@ function BlogPostCard({ post }: BlogPostCardProps) {
           {post.tags.length > 0 && (
             <div className="article-tags">
               {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="tag"
-                >
+                <span key={tag} className="tag">
                   {tag}
                 </span>
               ))}
@@ -36,7 +36,9 @@ function BlogPostCard({ post }: BlogPostCardProps) {
 }
 
 export default async function BlogPage() {
-  const posts = await getAllPosts();
+  const { env } = getCloudflareContext();
+  const repo = createArticlesRepo(env);
+  const posts = await repo.getAll();
 
   return (
     <div className="container mx-auto max-w-4xl px-4 pb-[60px]">
