@@ -35,6 +35,7 @@ A personal blog deployed to Cloudflare Pages with automatic deployments via GitH
 - **Content:** Markdown files stored in R2, fetched at runtime
 - **Deployment:** Cloudflare Pages + GitHub Actions
 - **Storage:** Cloudflare R2 for articles and dynamic media
+- **Accessibility:** WCAG 2.1 AA compliant
 
 ---
 
@@ -53,6 +54,14 @@ A personal blog deployed to Cloudflare Pages with automatic deployments via GitH
 │   │   └── loading.tsx         # Loading skeleton
 │   ├── about/
 │   │   └── page.tsx
+│   ├── admin/                  # Admin Dashboard
+│   │   ├── page.tsx
+│   │   ├── editor/
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx
+│   │   │   └── [slug]/
+│   │   │       └── page.tsx
+│   │   └── layout.tsx          # Admin layout with auth check
 │   ├── page.tsx                # Home page
 │   ├── layout.tsx
 │   └── globals.css
@@ -88,7 +97,7 @@ Key = file path, acts as slug.
 
 ```
 articles/2025/05/hello-world.md   → slug: "2025/05/hello-world"
-articles/tech/rust-intro.md       → slug: "tech/rust-intro"
+articles/tech/rust-intro.md         → slug: "tech/rust-intro"
 ```
 
 ### Article Format (Markdown)
@@ -102,7 +111,7 @@ description: A gentle introduction
 tags: [intro, tutorial]
 published: true
 coverImage: /images/covers/hello.png
-author: Author Name
+author: Kurashizu
 draft: false
 ---
 
@@ -133,6 +142,16 @@ Article content here...
 
 ### About (`/about`)
 - Static page with bio
+
+### Admin Dashboard (`/admin`)
+- Article list with status (published/draft)
+- Edit/Delete actions
+- Cloudflare Access authentication
+
+### Admin Editor (`/admin/editor/[slug]`)
+- Split view: Markdown editor + live preview
+- Frontmatter fields: title, slug, date, tags, published
+- Save to R2 on submit
 
 ---
 
@@ -171,26 +190,55 @@ jobs:
 
 ---
 
-## 7. UI Style (Claude-inspired)
+## 7. UI Style (Dark Theme)
 
-- **Aesthetic:** Clean, modern, generous whitespace
-- **Colors:** Neutral base with subtle accent (e.g., slate/zinc palette)
+- **Aesthetic:** Dark mode, clean, modern, generous whitespace
+- **Colors:**
+  - Background: #050505 (primary), #0f0f0f (secondary), #111111 (card)
+  - Border: #1f1f1f
+  - Text: #f5f5f5 (primary), #888888 (secondary), #555555 (muted)
+  - Accent: #ff6b00 (orange), #ff8534 (orange light)
+- **Edge glow:** Subtle orange gradient on left/right edges only
 - **Typography:** Sans-serif, readable, hierarchy through weight/size
 - **Layout:** Centered max-width container, ample vertical rhythm
 
 ---
 
-## 8. TODO
+## 8. Accessibility (WCAG 2.1 AA)
 
-- [ ] Initialize Next.js project
-- [ ] Configure Tailwind CSS
-- [ ] Build UI components
-- [ ] Implement R2 article fetching
-- [ ] Create pages (home, blog, article, about)
-- [ ] Set up GitHub Actions workflow
-- [ ] Configure Cloudflare Pages
+- **Color contrast:** All text must meet 4.5:1 contrast ratio (normal text) or 3:1 (large text)
+- **Focus states:** All interactive elements must have visible focus indicators
+- **Keyboard navigation:** Full keyboard accessibility for all functionality
+- **Semantic HTML:** Proper heading hierarchy, landmarks, and ARIA labels
+- **Alt text:** All images must have descriptive alt attributes
+- **Form labels:** All form inputs must have associated labels
+- **Resizable text:** Support 200% zoom without horizontal scrolling
 
 ---
 
-*Document version: 1.0*
+## 9. Authentication
+
+- **Admin:** Cloudflare Access (Zero Trust)
+- **Method:** Workers `getUserInfo()` API or similar
+- **Flow:** Unauthenticated users redirected to Cloudflare Access login
+
+---
+
+## 10. TODO
+
+- [ ] Initialize Next.js project
+- [ ] Configure Tailwind CSS
+- [ ] Build UI components (WCAG compliant)
+- [ ] Implement R2 article fetching
+- [ ] Create pages (home, blog, article, about)
+- [ ] Build Admin dashboard with auth
+- [ ] Build Admin editor with live preview
+- [ ] Set up GitHub Actions workflow
+- [ ] Configure Cloudflare Pages
+- [ ] WCAG compliance verification
+
+---
+
+*Document version: 1.1*
 *Created: 2025-05-01*
+*Updated: 2025-05-01 — Added Admin section, WCAG compliance, darker theme*
