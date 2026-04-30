@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cf": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js build",
-    "preview:cf": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js dev",
-    "deploy:cf": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js deploy",
+    "build:cf": "npx @opennextjs/cloudflare build",
+    "preview:cf": "npx @opennextjs/cloudflare dev",
+    "deploy:cf": "npx @opennextjs/cloudflare deploy",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.19.0",
     "@tailwindcss/typography": "^0.5.19",
     "clsx": "^2.1.1",
     "esbuild": "^0.28.0",
@@ -24,7 +25,6 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.19.0",
     "@types/node": "^20.19.39",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
