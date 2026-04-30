@@ -7,10 +7,10 @@ import { buildFrontmatter } from '@/lib/r2';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params;
+    const { slug } = await params;
     const post = await getPostBySlug(slug);
 
     if (!post) {
@@ -35,10 +35,10 @@ export async function GET(
  */
 export async function PUT(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params;
+    const { slug } = await params;
     const body = await request.json();
     const { title, content, date, description, tags, coverImage, author, draft, published } = body;
 
@@ -99,10 +99,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params;
+    const { slug } = await params;
 
     // Check if post exists
     const existingPost = await getPostBySlug(slug);
