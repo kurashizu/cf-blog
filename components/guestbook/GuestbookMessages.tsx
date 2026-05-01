@@ -143,9 +143,9 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                                             <img
                                                 src={getAvatarSrc(msg)}
                                                 alt={msg.name}
-                                                className="w-14 h-14 rounded-full object-cover shrink-0 m-1"
+                                                className="w-14 h-14 rounded-full object-cover shrink-0"
                                             />
-                                            <div className="flex-1 min-w-0 py-1">
+                                            <div className="flex-1 min-w-0 flex flex-col items-end">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className="font-medium text-text-primary text-sm">
                                                         {msg.name}
@@ -154,7 +154,7 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                                                         {formatDate(msg.timestamp)}
                                                     </span>
                                                 </div>
-                                                <p className="text-text-secondary text-sm whitespace-pre-wrap break-words">
+                                                <p className="text-text-secondary text-sm whitespace-pre-wrap break-words text-right">
                                                     {msg.content}
                                                 </p>
                                             </div>
