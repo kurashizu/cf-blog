@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "@/components/theme/styles.css";
+import "@/components/theme/variables.css";
+import "@/components/theme/pages.css";
+import "@/components/theme/article.css";
+import "@/components/theme/admin.css";
+import "@/components/theme/editor.css";
+import "@/components/theme/form.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 

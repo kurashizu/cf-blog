@@ -1,0 +1,85 @@
+.admin-header {
+  padding: 18px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-header-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 20px;
+}
+
+.admin-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.admin-nav a:hover,
+.admin-nav a.active {
+  color: var(--accent);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.admin-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table tr:hover {
+  background: var(--bg-secondary);
+}
+
+.post-title-cell {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.post-slug {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.post-date-cell {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.status-published {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.status-draft {
+  background: rgba(255, 107, 0, 0.15);
+  color: var(--accent);
+}
+
+.admin-editor {
+  padding: 24px;
+}
