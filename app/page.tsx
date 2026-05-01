@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get, r2Put } from "@/lib/r2";
+import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,14 @@ export default async function HomePage() {
           )}
         </section>
       </div>
+
+      {/* Guestbook section */}
+      <section className="mt-12">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="section-title mb-0">Guestbook</h2>
+        </div>
+        <GuestbookMessages />
+      </section>
     </div>
   );
 }

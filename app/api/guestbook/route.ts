@@ -65,10 +65,10 @@ export async function POST(request: Request) {
     const body = await request.json() as {
       name?: string;
       content?: string;
-      avatar?: string;
+      email?: string;
       website?: string;
     };
-    const { name, content, avatar, website } = body;
+    const { name, content, email, website } = body;
 
     // Honeypot check
     if (website) {
@@ -78,6 +78,9 @@ export async function POST(request: Request) {
     // Validation
     if (!name || name.trim().length < 1 || name.trim().length > 100) {
       return NextResponse.json({ error: 'Name must be 1-100 characters' }, { status: 400 });
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
     }
     if (!content || content.trim().length < 1 || content.trim().length > 2000) {
       return NextResponse.json({ error: 'Content must be 1-2000 characters' }, { status: 400 });
@@ -99,7 +102,7 @@ export async function POST(request: Request) {
     const message = await repo.add({
       name: sanitize(name),
       content: sanitize(content),
-      avatar: avatar?.trim() || undefined,
+      email: email?.trim(),
     });
 
     await setRateLimit(clientIP);
