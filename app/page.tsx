@@ -26,12 +26,22 @@ async function getGitHubRepos(): Promise<GitHubRepo[]> {
   try {
     const res = await fetch(
       "https://api.github.com/users/kurashizu/repos?sort=stars&per_page=6&type=public",
-      { next: { revalidate: 3600 } }
+      {
+        headers: {
+          "User-Agent": "Kurashizu-Blog",
+          "Accept": "application/vnd.github.v3+json",
+        },
+        next: { revalidate: 3600 }
+      }
     );
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error("GitHub API error:", res.status, res.statusText);
+      return [];
+    }
     const repos = await res.json() as GitHubRepo[];
     return repos.filter((r) => !r.fork).slice(0, 6);
-  } catch {
+  } catch (e) {
+    console.error("GitHub fetch error:", e);
     return [];
   }
 }
