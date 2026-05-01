@@ -78,7 +78,7 @@ export default async function HomePage() {
           <Link href="/blog" className="inline-flex items-center px-5 py-2.5 bg-accent/80 text-white rounded-lg font-medium hover:bg-accent-hover transition-all hover:-translate-y-0.5">
             Explore Posts
           </Link>
-          <Link href="/about" className="inline-flex items-center px-5 py-2.5 bg-bg-card border border-border text-text-primary rounded-lg font-medium hover:border-accent hover:text-accent transition-all">
+          <Link href="/about" className="inline-flex items-center px-5 py-2.5 bg-bg-card/60 backdrop-blur-sm border border-border text-text-primary rounded-lg font-medium hover:border-accent hover:text-accent transition-all">
             About Me
           </Link>
         </div>
@@ -110,7 +110,7 @@ export default async function HomePage() {
                     </span>
                   </div>
                   {repo.description && (
-                    <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{repo.description}</p>
+                    <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-[70%]">{repo.description}</p>
                   )}
                 </MiniCard>
               </a>

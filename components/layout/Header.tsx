@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
@@ -17,24 +18,29 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-bg-primary/80 border-b border-border/50">
       <nav className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="group flex flex-col items-center">
-          <span
-            className="text-xl font-bold italic tracking-wide"
-            style={{
-              fontFamily: "'Playfair Display', 'Georgia', serif",
-              background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 50%, var(--text-primary) 100%)',
-              backgroundSize: '200% 200%',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              animation: 'gradient-flow 4s ease infinite',
-            }}
-          >
-            Kurashizu Blog
-          </span>
-          <span className="text-[10px] font-medium text-text-muted tracking-widest uppercase -mt-1">
-            where ideas flow
-          </span>
+        <Link href="/" className="group flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50">
+            <Image src="/icon2_128.png" alt="logo" width={32} height={32} className="object-cover" />
+          </div>
+          <div className="flex flex-col">
+            <span
+              className="text-xl font-bold italic tracking-wide"
+              style={{
+                fontFamily: "'Playfair Display', 'Georgia', serif",
+                background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 50%, var(--text-primary) 100%)',
+                backgroundSize: '200% 200%',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                animation: 'gradient-flow 4s ease infinite',
+              }}
+            >
+              Kurashizu Blog
+            </span>
+            <span className="text-[10px] font-medium text-text-muted tracking-widest uppercase -mt-1">
+              where ideas flow
+            </span>
+          </div>
           <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-transparent via-accent to-transparent transition-all duration-500 group-hover:w-full" />
         </Link>
 
