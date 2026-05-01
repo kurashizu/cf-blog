@@ -90,22 +90,28 @@ export default async function HomePage() {
 
       <section className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="text-center">
-          <CardContent>
-            <div className="text-3xl mb-2">☁️</div>
+          <CardContent className="flex flex-col items-center py-6">
+            <svg className="w-8 h-8 text-accent mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 15a4 4 0 004 4h9a5 5 0 10-.9-10m5.5 4.5L12 12m0 0l5.5-5.5M12 12l-5.5 5.5" />
+            </svg>
             <h3 className="font-semibold text-text-primary mb-1">Cloud Native</h3>
             <p className="text-sm text-text-muted">Built on Cloudflare Pages with R2 storage</p>
           </CardContent>
         </Card>
         <Card className="text-center">
-          <CardContent>
-            <div className="text-3xl mb-2">⚡</div>
+          <CardContent className="flex flex-col items-center py-6">
+            <svg className="w-8 h-8 text-accent mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
             <h3 className="font-semibold text-text-primary mb-1">Fast & Light</h3>
             <p className="text-sm text-text-muted">Minimal JavaScript, optimized for edge</p>
           </CardContent>
         </Card>
         <Card className="text-center">
-          <CardContent>
-            <div className="text-3xl mb-2">✍️</div>
+          <CardContent className="flex flex-col items-center py-6">
+            <svg className="w-8 h-8 text-accent mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
             <h3 className="font-semibold text-text-primary mb-1">Markdown</h3>
             <p className="text-sm text-text-muted">Write in MD, powered by Next.js</p>
           </CardContent>
