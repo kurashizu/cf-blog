@@ -1,16 +1,36 @@
 import Link from "next/link";
 import { createArticlesRepo } from "@/lib/articles";
+import { formatDate } from "@/lib/utils";
+import { Card, CardHeader, CardContent } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
 
+interface Post {
+  slug: string;
+  title: string;
+  date: string;
+  description?: string;
+  tags?: string[];
+}
+
+function PostCard({ post }: { post: Post }) {
+  return (
+    <Link href={`/blog/${post.slug}`}>
+      <Card className="article-card transition-all hover:border-accent hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(255,107,0,0.12)]">
+        <CardHeader className="pb-2">
+          <span className="article-meta">{formatDate(post.date)}</span>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <h3 className="article-title mb-1">{post.title}</h3>
+          {post.description && <p className="article-desc">{post.description}</p>}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
 export default async function HomePage() {
-  let recentPosts: Array<{
-    slug: string;
-    title: string;
-    date: string;
-    description?: string;
-    tags?: string[];
-  }> = [];
+  let recentPosts: Post[] = [];
   let error: string | null = null;
 
   try {
@@ -35,44 +55,26 @@ export default async function HomePage() {
         <div className="section-title">Recent Posts</div>
 
         {error ? (
-          <div className="empty-state">
-            {error}
-          </div>
+          <Card>
+            <CardContent>{error}</CardContent>
+          </Card>
         ) : recentPosts.length === 0 ? (
-          <div className="empty-state">
-            <p className="mb-4">No posts yet. Check back soon!</p>
-            <Link href="/admin/editor/new" className="text-accent hover:text-accent-light transition-colors">
-              Write the first post
-            </Link>
-          </div>
-        ) : (
-          <div>
-            {recentPosts.map((post) => (
-              <article key={post.slug} className="post-item">
-                <div className="post-date">
-                  <time dateTime={post.date}>
-                    {new Date(post.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </time>
-                </div>
-                <h3 className="post-title">
-                  <Link
-                    href={`/blog/${post.slug}`}
-                    className="post-title-link"
-                  >
-                    {post.title}
-                  </Link>
-                </h3>
-              </article>
-            ))}
-            <div className="mt-4">
-              <Link href="/blog" className="view-all-link">
-                View all posts →
+          <Card>
+            <CardContent>
+              <p className="mb-4">No posts yet. Check back soon!</p>
+              <Link href="/admin/editor/new" className="text-accent hover:text-accent-light transition-colors">
+                Write the first post
               </Link>
-            </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="article-list">
+            {recentPosts.map((post) => (
+              <PostCard key={post.slug} post={post} />
+            ))}
+            <Link href="/blog" className="view-all-link">
+              View all posts →
+            </Link>
           </div>
         )}
       </section>
