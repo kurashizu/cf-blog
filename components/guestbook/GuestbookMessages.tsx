@@ -75,22 +75,22 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
         <>
             {/* Flow layout - tags style */}
             <div className="max-w-xl mx-auto">
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-wrap gap-3 justify-center">
                     {messages.map((msg) => (
                         <div
                             key={msg.id}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-bg-card/60 backdrop-blur-sm border border-border rounded-full hover:border-accent/50 transition-colors cursor-pointer"
+                            className="flex items-center gap-3 px-5 py-3 bg-bg-card/80 backdrop-blur-sm border border-border rounded-full hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] transition-all cursor-pointer"
                             onClick={() => { setShowAll(true); setPage(1); }}
                         >
                             <img
                                 src={getAvatarSrc(msg)}
                                 alt={msg.name}
-                                className="w-6 h-6 rounded-full object-cover shrink-0"
+                                className="w-8 h-8 rounded-full object-cover shrink-0"
                             />
-                            <span className="text-xs text-text-primary font-medium shrink-0">
+                            <span className="text-sm text-text-primary font-medium shrink-0">
                                 {msg.name}
                             </span>
-                            <span className="text-xs text-text-muted max-w-[100px] truncate">
+                            <span className="text-sm text-text-secondary max-w-[150px] truncate">
                                 {msg.content}
                             </span>
                         </div>
