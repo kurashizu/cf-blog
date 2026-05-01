@@ -37,11 +37,23 @@ body::before {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 107, 0, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255, 107, 0, 0.05) 0%, transparent 40%),
-    radial-gradient(ellipse 50% 30% at 0% 80%, rgba(255, 107, 0, 0.03) 0%, transparent 30%);
+    radial-gradient(ellipse 100% 60% at 50% -10%, rgba(255, 107, 0, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(255, 107, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 90%, rgba(255, 107, 0, 0.08) 0%, transparent 40%);
   pointer-events: none;
   z-index: -1;
+  animation: gradient-shift 15s ease-in-out infinite alternate;
+}
+
+@keyframes gradient-shift {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }
 
 :focus-visible {
