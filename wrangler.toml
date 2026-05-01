@@ -14,6 +14,7 @@ bucket_name = "cf-blog-bucket"
 [vars]
 TEAM_DOMAIN = ""
 POLICY_AUD = ""
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 
 [observability]
 enabled = false
