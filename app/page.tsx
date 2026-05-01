@@ -3,7 +3,6 @@ import { createArticlesRepo } from "@/lib/articles";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
-import { Tag } from "@/components/ui/Tag";
 
 export const dynamic = "force-dynamic";
 
