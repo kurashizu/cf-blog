@@ -1,6 +1,14 @@
 import Link from "next/link";
 
-const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE || new Date().toISOString().split("T")[0];
+function formatBuildDate(): string {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = String(now.getFullYear()).slice(-2);
+  return `build-${day}-${month}-${year}`;
+}
+
+const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE || formatBuildDate();
 
 export function Footer() {
   return (
