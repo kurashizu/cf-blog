@@ -21,19 +21,20 @@ export default async function EditPostPage({ params }: PageProps) {
     notFound();
   }
 
-  const tagsString = post.tags.join(', ');
+  const safePost = JSON.parse(JSON.stringify(post));
+  const tagsString = safePost.tags.join(', ');
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
       <PostEditor
         initialData={{
-          title: post.title,
-          slug: post.slug,
-          date: post.date,
+          title: safePost.title,
+          slug: safePost.slug,
+          date: safePost.date,
           tags: tagsString,
-          published: post.published,
-          coverImage: post.coverImage || '',
-          content: post.content,
+          published: safePost.published,
+          coverImage: safePost.coverImage || '',
+          content: safePost.content,
         }}
       />
     </div>
