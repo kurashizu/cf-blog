@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "@/components/theme/global.css";
+import "@/components/theme/background.css";
 import "@/components/theme/chat.css";
 import "@/components/theme/layout.css";
 import "@/components/theme/article.css";
@@ -11,6 +12,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/ui/ChatWidget";
+import { ParticleBackground } from "@/components/ui/ParticleBackground";
 
 const inter = Inter({ subsets: ["latin"] });
 const playfair = Playfair_Display({ subsets: ["latin"] });
@@ -33,6 +35,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${inter.className} flex min-h-screen flex-col bg-bg-primary text-text-primary`}>
         <ThemeProvider>
+          <ParticleBackground />
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
