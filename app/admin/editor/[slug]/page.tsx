@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createArticlesRepo } from '@/lib/articles';
 import PostEditor from '@/components/editor/PostEditor';
 
@@ -13,8 +12,7 @@ interface PageProps {
 
 export default async function EditPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const { env } = getCloudflareContext();
-  const repo = createArticlesRepo(env);
+  const repo = createArticlesRepo();
   const post = await repo.getBySlug(slug);
 
   if (!post) {

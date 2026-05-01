@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createArticlesRepo } from '@/lib/articles';
 import { buildFrontmatter } from '@/lib/frontmatter';
 
@@ -9,8 +8,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const { env } = getCloudflareContext();
-    const repo = createArticlesRepo(env);
+    const repo = createArticlesRepo();
     const post = await repo.getBySlug(slug);
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
@@ -45,8 +43,7 @@ export async function PUT(
       return NextResponse.json({ error: 'At least one field is required' }, { status: 400 });
     }
 
-    const { env } = getCloudflareContext();
-    const repo = createArticlesRepo(env);
+    const repo = createArticlesRepo();
     const existingPost = await repo.getBySlug(slug);
     if (!existingPost) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
@@ -72,7 +69,6 @@ export async function PUT(
 
     await repo.save(newSlug, fullContent);
 
-    // Delete old article if slug changed
     if (newSlug !== oldSlug) {
       await repo.delete(oldSlug);
     }
@@ -90,8 +86,7 @@ export async function DELETE(
 ) {
   try {
     const { slug } = await params;
-    const { env } = getCloudflareContext();
-    const repo = createArticlesRepo(env);
+    const repo = createArticlesRepo();
     const existingPost = await repo.getBySlug(slug);
     if (!existingPost) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });

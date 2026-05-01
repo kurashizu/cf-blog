@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createArticlesRepo } from "@/lib/articles";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +14,7 @@ export default async function HomePage() {
   let error: string | null = null;
 
   try {
-    const { env } = getCloudflareContext();
-    const repo = createArticlesRepo(env);
+    const repo = createArticlesRepo();
     recentPosts = await repo.getRecent(5);
   } catch (e) {
     error = "Unable to load posts at this time.";

@@ -1,7 +1,7 @@
 import { marked } from 'marked';
-import { createR2Client, type R2Client, type Env } from './r2';
 import { parseFrontmatter } from './frontmatter';
 import { r2Paths } from './r2-paths';
+import { r2Get, r2List, r2Put, r2Delete } from './r2';
 
 export interface Post {
   slug: string;
@@ -38,14 +38,12 @@ function parsePost(slug: string, content: string, key?: string): Post {
   };
 }
 
-export function createArticlesRepo(env: Env) {
-  const client: R2Client = createR2Client(env);
-
+export function createArticlesRepo() {
   return {
     async getBySlug(slug: string): Promise<Post | null> {
       try {
         const key = r2Paths.article(slug);
-        const content = await client.get(key);
+        const content = await r2Get(key);
         return parsePost(slug, content, key);
       } catch {
         return null;
@@ -54,13 +52,13 @@ export function createArticlesRepo(env: Env) {
 
     async getAll(): Promise<Post[]> {
       try {
-        const keys = await client.list(r2Paths.articlesPrefix);
+        const keys = await r2List(r2Paths.articlesPrefix);
         const posts: Post[] = [];
 
         for (const key of keys) {
           if (!key.endsWith('.md')) continue;
           try {
-            const content = await client.get(key);
+            const content = await r2Get(key);
             const post = parsePost('', content, key);
             if (post.draft || !post.published) continue;
             posts.push(post);
@@ -83,12 +81,12 @@ export function createArticlesRepo(env: Env) {
 
     async save(slug: string, content: string): Promise<void> {
       const key = r2Paths.article(slug);
-      await client.put(key, content);
+      await r2Put(key, content);
     },
 
     async delete(slug: string): Promise<void> {
       const key = r2Paths.article(slug);
-      await client.delete(key);
+      await r2Delete(key);
     },
   };
 }

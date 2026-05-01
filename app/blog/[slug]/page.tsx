@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createArticlesRepo, markdownToHtml } from '@/lib/articles';
 import { formatDate } from '@/lib/utils';
 
@@ -18,8 +17,7 @@ export async function generateStaticParams() {
 
 export default async function ArticlePage({ params }: PageProps) {
   const { slug } = await params;
-  const { env } = getCloudflareContext();
-  const repo = createArticlesRepo(env);
+  const repo = createArticlesRepo();
   const post = await repo.getBySlug(slug);
 
   if (!post) {

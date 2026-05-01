@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createArticlesRepo } from '@/lib/articles';
 import { formatDate } from '@/lib/utils';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
@@ -36,8 +35,7 @@ function BlogPostCard({ post }: BlogPostCardProps) {
 }
 
 export default async function BlogPage() {
-  const { env } = getCloudflareContext();
-  const repo = createArticlesRepo(env);
+  const repo = createArticlesRepo();
   const posts = await repo.getAll();
 
   return (

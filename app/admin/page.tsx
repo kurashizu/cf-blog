@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createArticlesRepo } from '@/lib/articles';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -7,8 +6,7 @@ import { Button } from '@/components/ui/Button';
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const { env } = getCloudflareContext();
-  const repo = createArticlesRepo(env);
+  const repo = createArticlesRepo();
   const posts = await repo.getAll();
 
   return (

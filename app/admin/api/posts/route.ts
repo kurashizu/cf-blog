@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createArticlesRepo } from '@/lib/articles';
 import { buildFrontmatter } from '@/lib/frontmatter';
 
@@ -40,8 +39,7 @@ export async function POST(request: Request) {
     const frontmatter = buildFrontmatter(postData);
     const fullContent = `${frontmatter}\n\n${content}`;
 
-    const { env } = getCloudflareContext();
-    const repo = createArticlesRepo(env);
+    const repo = createArticlesRepo();
     await repo.save(slug, fullContent);
 
     return NextResponse.json({ success: true });
