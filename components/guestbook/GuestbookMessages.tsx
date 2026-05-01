@@ -134,9 +134,9 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                                             <img
                                                 src={getAvatarSrc(msg)}
                                                 alt={msg.name}
-                                                className="w-10 h-10 rounded-full object-cover shrink-0"
+                                                className="w-14 h-14 rounded-full object-cover shrink-0 m-1"
                                             />
-                                            <div className="flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0 py-1">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className="font-medium text-text-primary text-sm">
                                                         {msg.name}
