@@ -5,7 +5,7 @@ function formatBuildDate(): string {
   const day = String(now.getDate()).padStart(2, "0");
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = String(now.getFullYear()).slice(-2);
-  return `build-${day}-${month}-${year}`;
+  return `build-${day}.${month}.${year}`;
 }
 
 const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE || formatBuildDate();
