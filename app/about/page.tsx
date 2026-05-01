@@ -6,6 +6,12 @@ export const metadata = {
   description: "About Kurashizu - software engineer and writer.",
 };
 
+const techStack = [
+  { category: "OS", items: ["NixOS", "Arch Linux"] },
+  { category: "Editor", items: ["Zed", "Neovim"] },
+  { category: "Shell", items: ["Zsh", "Fish"] },
+];
+
 const socialLinks = [
   {
     name: "GitHub",
@@ -44,18 +50,15 @@ export default function AboutPage() {
       </div>
 
       <section className="mb-12">
-        <h2 className="section-title">Hello</h2>
+        <h2 className="section-title">What I Do</h2>
         <div className="space-y-4 text-text-secondary">
           <p>
-            I&apos;m Kurashizu, a software engineer passionate about building tools and
-            systems that make developers&apos; lives easier. I work extensively with
-            cloud infrastructure, automation, and developer tools.
+            I build systems and tools that push the boundaries of automation and human-computer interaction.
+            My focus areas include cloud infrastructure, AI/ML systems, and developer tooling.
           </p>
           <p>
-            When I&apos;m not coding, you&apos;ll find me writing about technology,
-            experimenting with new frameworks, or exploring the intersection of
-            software and human creativity. I believe in learning in public and
-            sharing what I discover along the way.
+            Currently pursuing an IT Master&apos;s degree while building agentic workflows and exploring HPC.
+            I believe in learning in public and sharing discoveries along the way.
           </p>
         </div>
       </section>
@@ -65,6 +68,8 @@ export default function AboutPage() {
         <ul className="space-y-3">
           {[
             "Cloud infrastructure and serverless architectures",
+            "AI/ML systems and agentic workflows",
+            "High-performance computing and optimization",
             "Developer tools and productivity automation",
             "Programming languages and runtime environments",
             "Web performance and accessibility",
@@ -78,27 +83,27 @@ export default function AboutPage() {
       </section>
 
       <section className="mb-12">
-        <h2 className="section-title">This Blog</h2>
-        <div className="space-y-4 text-text-secondary">
-          <p>
-            This blog is built with Next.js and deployed on Cloudflare Pages.
-            Articles are stored in Cloudflare R2 and fetched at runtime. The
-            design prioritizes minimalism, performance, and accessibility.
-          </p>
-          <p>
-            I write about things I&apos;m learning, building, or thinking about.
-            Topics range from technical deep-dives to general observations
-            about the software industry.
-          </p>
+        <h2 className="section-title">Current Stack</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {techStack.map((group) => (
+            <Card key={group.category}>
+              <CardContent className="pt-4">
+                <code className="text-xs text-text-muted uppercase tracking-wider mb-3 block">{group.category}</code>
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <span key={item} className="block text-sm text-text-primary font-mono">{item}</span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
       <section>
         <h2 className="section-title">Connect</h2>
         <p className="text-text-secondary mb-6">
-          Feel free to reach out if you&apos;d like to connect, collaborate, or
-          just say hello. I&apos;m always interested in hearing about interesting
-          projects and ideas.
+          Interested in collaborating, or just want to say hello — feel free to reach out.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
