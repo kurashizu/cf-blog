@@ -2,7 +2,7 @@
 
 ## Overview
 
-Personal blog on Cloudflare Workers with R2 storage, admin panel, and GitHub Actions deployment.
+Personal blog on Cloudflare Workers with R2 storage, admin panel, and GitHub Actions deployment. Features theme switching (dark/deep-blue), Gemini AI assistant integration, and modular CSS design system.
 
 ---
 
@@ -10,6 +10,8 @@ Personal blog on Cloudflare Workers with R2 storage, admin panel, and GitHub Act
 
 ```
 Author ──▶ GitHub ──▶ GitHub Actions ──▶ OpenNextjs-Cloudflare Workers ──▶ R2 (articles)
+                                                                              │
+                                                                       Gemini API (LLM)
 ```
 
 ---
@@ -24,6 +26,7 @@ Author ──▶ GitHub ──▶ GitHub Actions ──▶ OpenNextjs-Cloudflare
 | Content | Markdown in R2 |
 | Storage | Cloudflare R2 |
 | Auth | Cloudflare Access (Zero Trust) |
+| AI | Google Gemini API via `/api/llm` |
 
 ---
 
@@ -33,150 +36,108 @@ Author ──▶ GitHub ──▶ GitHub Actions ──▶ OpenNextjs-Cloudflare
 /
 ├── .github/workflows/deploy.yml
 ├── app/
-│   ├── blog/[slug]/page.tsx, page.tsx, loading.tsx
-│   ├── about/page.tsx
-│   ├── admin/editor/[slug]/page.tsx, new/page.tsx, page.tsx, layout.tsx
-│   ├── page.tsx, layout.tsx, globals.css
+│   ├── page.tsx                    # Homepage (hero, projects, recent posts)
+│   ├── layout.tsx                  # Root layout with ThemeProvider
+│   ├── about/page.tsx              # About page
+│   ├── blog/
+│   │   ├── page.tsx               # Blog listing
+│   │   ├── [slug]/page.tsx        # Article page
+│   │   └── loading.tsx
+│   ├── admin/
+│   │   ├── page.tsx               # Admin dashboard
+│   │   └── editor/[slug]/page.tsx # Post editor
+│   └── api/llm/route.ts           # Gemini proxy endpoint
 ├── components/
-│   ├── ui/                          # Reusable UI primitives
-│   │   ├── Button.tsx
-│   │   ├── Card.tsx
-│   │   ├── Input.tsx
-│   │   ├── Textarea.tsx
-│   │   └── index.ts
-│   ├── layout/                       # Layout components
-│   │   ├── Header.tsx
-│   │   ├── Footer.tsx
-│   │   └── index.ts
-│   ├── theme/                        # Theme tokens & style constants
-│   │   ├── tokens.ts                 # Color/spacing CSS variable names
-│   │   ├── buttons.ts                # Button variant class strings
-│   │   ├── badges.ts                 # Status badge class strings
-│   │   ├── editor.ts                 # Editor pane/class strings
-│   │   ├── admin.ts                  # Admin layout class strings
-│   │   ├── form.ts                   # Form element class strings
-│   │   └── index.ts
-│   └── editor/                       # Editor feature components
-│       └── PostEditor.tsx           # Main editor (uses theme/editor.ts)
+│   ├── ui/
+│   │   ├── Button.tsx             # Button with variants
+│   │   ├── Card.tsx               # Card (CardHeader, CardContent, CardFooter)
+│   │   └── Tag.tsx                # Tag/badge component
+│   ├── layout/
+│   │   ├── Header.tsx             # Header with nav and theme toggle
+│   │   └── Footer.tsx
+│   ├── theme/                     # CSS design system
+│   │   ├── global.css             # Tokens, base styles, animations
+│   │   ├── layout.css             # Hero, section-title, page-title
+│   │   ├── article.css            # Article content styles
+│   │   ├── admin.css              # Admin table styles
+│   │   ├── form.css               # Form input styles
+│   │   └── editor.css             # Split pane editor
+│   └── providers/
+│       └── ThemeProvider.tsx      # Theme context with localStorage
 ├── lib/
-│   ├── r2.ts                              # R2 driver (CRUD via S3-compatible API)
-│   ├── r2-paths.ts                       # R2 storage path constants
-│   ├── frontmatter.ts                    # YAML frontmatter parse/build
-│   ├── articles.ts                       # Article business logic (Post type, markdownToHtml, CRUD)
-├── package.json, tsconfig.json, tailwind.config.ts, wrangler.toml, postcss.config.js
+│   ├── r2.ts                      # R2 operations
+│   ├── r2-paths.ts                # R2 path constants
+│   ├── frontmatter.ts             # YAML frontmatter parse/build
+│   ├── articles.ts                # Article business logic
+│   ├── gemini.ts                  # Gemini API wrapper + SYSTEM_PROMPT
+│   └── utils.ts                   # Utilities (cn, formatDate)
+├── wrangler.toml
+├── tailwind.config.ts
+└── package.json
 ```
 
 ---
 
-## 4. Styling Architecture
+## 4. Theme System
 
-**Core Rule: All styles in `components/theme/`, zero hardcoded strings in pages.**
+### Theme Variants
 
-### 4.1 globals.css (minimal)
+| Theme | Accent Color | Use Case |
+|-------|-------------|----------|
+| `dark` | Orange (#ff6b35) | Default |
+| `deep-blue` | Blue (#4a9eff) | Alternate |
 
-globals.css contains ONLY:
-1. `:root` — CSS variable declarations
-2. Base reset (`box-sizing: border-box`, `margin: 0`)
-3. Edge glow animation (`edge-glow::before`, `::after`)
-4. Focus states (`:focus-visible`, `:focus:not(:focus-visible)`)
-5. Custom scrollbar (`::-webkit-scrollbar-*`)
+### CSS Variables (global.css)
 
-**NO utility classes, NO component styles, NO hardcoded colors.**
+```css
+:root, [data-theme="dark"] {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #1a1a24;
+  --accent: #ff6b35;
+  --accent-hover: #ff8555;
+  /* ... */
+}
 
-### 4.2 Theme Files (components/theme/)
-
-Each file exports class name constants — NOT runtime values:
-
-```ts
-// tokens.ts — CSS variable names (type-safe references)
-export const color = {
-  bg: { primary: 'var(--bg-primary)', secondary: 'var(--bg-secondary)', card: 'var(--bg-card)' },
-  border: 'var(--border)',
-  text: { primary: 'var(--text-primary)', secondary: 'var(--text-secondary)', muted: 'var(--text-muted)' },
-  accent: { DEFAULT: 'var(--accent)', light: 'var(--accent-light)' },
-} as const;
-
-export const spacing = { /* ... */ } as const;
-```
-
-```ts
-// buttons.ts — Button variant class strings
-export const buttonVariants = {
-  primary: 'bg-accent text-white hover:bg-accent/90',
-  secondary: 'border border-border bg-transparent text-text-primary hover:bg-bg-secondary',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
-} as const;
-```
-
-```ts
-// badges.ts — Status badge class strings
-export const badgeVariants = {
-  published: 'bg-green-500/10 text-green-400',
-  draft: 'bg-accent/10 text-accent',
-} as const;
-```
-
-```ts
-// editor.ts — Editor-specific class strings
-export const editorClasses = {
-  container: 'grid grid-cols-2 gap-5 h-[450px]',
-  pane: 'flex flex-col border border-border rounded-lg overflow-hidden',
-  paneHeader: 'px-3 py-2 bg-bg-secondary border-b border-border text-xs font-semibold uppercase tracking-wide text-text-muted',
-  paneContent: 'flex-1 overflow-auto p-3.5 bg-bg-primary',
-  textarea: 'w-full h-full border-0 bg-transparent text-text-primary font-mono text-sm leading-relaxed resize-none outline-none',
-} as const;
-```
-
-```ts
-// admin.ts — Admin layout class strings
-export const adminClasses = {
-  header: 'px-4 py-4 bg-gradient-to-b from-bg-secondary to-bg-card border-b border-border',
-  title: 'text-lg font-bold text-accent tracking-tight',
-  nav: 'flex gap-5',
-  navLink: 'text-sm text-text-muted hover:text-accent no-underline transition-colors',
-  navLinkActive: 'text-accent font-semibold',
-} as const;
-```
-
-```ts
-// form.ts — Form element class strings
-export const formClasses = {
-  group: 'mb-4',
-  row: 'grid grid-cols-2 gap-4',
-  label: 'block text-xs font-semibold text-text-muted uppercase tracking-wide mb-1.5',
-  input: 'w-full px-3 py-3 border border-border rounded-lg text-sm bg-bg-secondary text-text-primary transition-colors focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30',
-} as const;
-```
-
-### 4.3 Tailwind Config (tailwind.config.ts)
-
-Only defines color palette — NO arbitrary values:
-
-```ts
-colors: {
-  bg: { primary: "#050505", secondary: "#0f0f0f", card: "#111111" },
-  border: "#1f1f1f",
-  text: { primary: "#f5f5f5", secondary: "#888888", muted: "#555555" },
-  accent: { DEFAULT: "#ff6b00", light: "#ff8534" },
+[data-theme="deep-blue"] {
+  --bg-primary: #0c0c1a;
+  --accent: #4a9eff;
+  /* ... */
 }
 ```
 
-### 4.4 Page Components
+### Theme Persistence
 
-Pages import from theme files, NOT hardcoded strings:
-
-```tsx
-// GOOD — imports from theme
-import { buttonVariants } from '@/components/theme/buttons';
-<Button className={buttonVariants.primary}>Submit</Button>
-
-// BAD — hardcoded in page
-<Button className="bg-accent text-white hover:bg-accent/90">Submit</Button>
-```
+Theme stored in `localStorage` key `theme`, restored on page load via `ThemeProvider`.
 
 ---
 
-## 5. R2 Storage
+## 5. Styling Architecture
+
+**Core Rule: All styles in `components/theme/`, CSS variables for theming.**
+
+### 5.1 global.css
+
+Contains CSS variables (tokens), base reset, background glow animations, focus states, scrollbar.
+
+### 5.2 Theme CSS Files
+
+| File | Contents |
+|------|----------|
+| `global.css` | CSS variables, animations, base |
+| `layout.css` | `.hero-title`, `.hero-subtitle`, `.section-title`, `.page-title` |
+| `article.css` | Article content, metadata, title, description |
+| `admin.css` | Admin table styles |
+| `form.css` | Form input styles |
+| `editor.css` | Split pane editor |
+
+### 5.3 Tailwind Config
+
+Extends with CSS variable-based colors, custom borderRadius, transitionDuration.
+
+---
+
+## 6. R2 Storage
 
 - Key = file path, acts as slug
 - Example: `articles/2025/05/hello-world.md` → slug: `2025/05/hello-world`
@@ -191,8 +152,6 @@ slug: hello-world
 description: A gentle introduction
 tags: [intro, tutorial]
 published: true
-coverImage: /images/covers/hello.png
-author: Kurashizu
 ---
 
 # Hello World
@@ -201,25 +160,56 @@ Article content...
 
 ---
 
-## 6. Key Pages
+## 7. API Endpoints
+
+### /api/llm
+
+Gemini API proxy with system prompt prepended.
+
+**POST** — Generate content
+```json
+{
+  "messages": [{"role": "user", "parts": [{"text": "..."}]}],
+  "stream": false,
+  "options": {"temperature": 0.9}
+}
+```
+
+**Response**
+```json
+{
+  "text": "Generated response...",
+  "usage": {"promptTokens": 8, "candidatesTokens": 12, "totalTokens": 20}
+}
+```
+
+**Stream** — Set `stream: true`, returns SSE text chunks.
+
+### /admin/api/posts
+
+CRUD for blog posts via R2.
+
+---
+
+## 8. Key Pages
 
 | Route | Description |
 |-------|-------------|
-| `/` | Hero + recent 5 posts |
+| `/` | Hero + projects + recent 3 posts |
 | `/blog` | All posts, newest first |
 | `/blog/[slug]` | Full article with rendered MD |
-| `/about` | Static bio page |
+| `/about` | Bio, tech stack, social links |
 | `/admin` | Post list with status |
 | `/admin/editor/[slug]` | Split editor + live preview |
 
 ---
 
-## 7. Deployment
+## 9. Deployment
 
 ```yaml
 # .github/workflows/deploy.yml
 on: push to main
-steps: checkout → setup-node@v22 → npm ci --legacy-peer-deps → npm run build:cf → wrangler deploy
+steps: checkout → setup-node@v22 → npm ci --legacy-peer-deps → npm run build → wrangler deploy
 env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 ```
 
@@ -229,86 +219,69 @@ name = "cf-blog"
 main = ".open-next/worker.js"
 compatibility_date = "2026-04-30"
 [[r2_buckets]] binding = "BUCKET", bucket_name = "cf-blog-bucket"
-[vars] TEAM_DOMAIN = "", POLICY_AUD = ""
+[vars]
+TEAM_DOMAIN = ""
+POLICY_AUD = ""
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 ```
+
+**Secrets Required:**
+- `GEMINI_API_KEY` — Gemini API key (Cloudflare Worker Secret)
+- `GEMINI_MODEL` — Model name (optional, defaults to gemini-2.5-flash-lite)
+
+---
+
+## 10. Authentication
+
+- Admin routes protected by Cloudflare Access (Zero Trust)
+- Redirect to `/__auth/signin` if not authenticated via `cf-access-authed-user` header
+
+---
+
+## 11. Component Catalog
+
+### UI Components (`components/ui/`)
+
+| Component | Description |
+|-----------|-------------|
+| `Button` | Variants: primary, secondary, ghost, danger |
+| `Card` | Hover glow border, lift effect. Sub-components: CardHeader, CardContent, CardFooter |
+| `Tag` | Pill-style tags, status badges |
+
+### Layout Components (`components/layout/`)
+
+| Component | Description |
+|-----------|-------------|
+| `Header` | Gradient logo (Playfair Display), nav links, theme toggle |
+| `Footer` | Admin links |
+
+### Providers (`components/providers/`)
+
+| Component | Description |
+|-----------|-------------|
+| `ThemeProvider` | React context, localStorage persistence, `useTheme()` hook |
+
+---
+
+## 12. Gemini AI Assistant
+
+System prompt in `lib/gemini.ts` (`SYSTEM_PROMPT`) defines the assistant's identity as Kurashizu's AI assistant with context about:
+
+- Background: IT Master's student, software engineer
+- Interests: AI & Infrastructure, HPC, automation, clean UI
+- Tech Stack: NixOS, Arch Linux, Zed, Neovim, Zsh, Fish
+- Projects: llama-proxy, PodWeaver, YoutubeStreamer
+
+---
+
+## 13. Deployment Commands
 
 ```bash
 npm run dev          # local dev
-npm run build:cf     # production build (OpenNextjs-Cloudflare)
-npx wrangler deploy  # deploy to Workers
+npm run build       # production build
+git push            # triggers GitHub Actions deploy
 ```
 
 ---
 
-## 8. Authentication
-
-- Admin routes protected by Cloudflare Access (Zero Trust)
-- `admin/layout.tsx` — Redirect to `/__auth/signin` if not authenticated via `cf-access-authed-user` header
-- `TEAM_DOMAIN` and `POLICY_AUD` in wrangler.toml
-
----
-
-## 9. Code Standards
-
-### Styling Rules
-- **NO hardcoded style strings in page components** — use theme constants
-- **All reusable styles → components/theme/** — buttons, badges, editor, admin, form
-- **CSS variables for theme values** — never hardcode hex values in components
-- **Barrel exports** — each component group via `index.ts`
-
-### API Endpoint Constants
-- **All API endpoints defined in `lib/api.ts`** — no hardcoded URL strings
-- **Public routes** (if any) use `publicApi` object
-- **Admin routes** use `adminApi` object for all `/admin/api/*` endpoints
-- Example:
-```ts
-// lib/api.ts
-export const publicApi = {
-  // Add public API endpoints here when needed
-} as const;
-
-export const adminApi = {
-  posts: '/admin/api/posts',
-  post: (slug: string) => `/admin/api/posts/${slug}`,
-} as const;
-```
-
-### R2 Storage Path Constants
-- **All R2 key paths defined in `lib/r2-paths.ts`** — no hardcoded path strings
-- **R2Client class in `lib/r2.ts`** — CRUD driver for R2 operations
-- Example:
-```ts
-// lib/r2-paths.ts
-export const r2Paths = {
-  articlesPrefix: 'articles/',
-  article: (slug: string) => `articles/${slug}.md`,
-} as const;
-```
-
-### Frontmatter
-- **Frontmatter parse/build in `lib/frontmatter.ts`** — YAML frontmatter utilities
-- Independent of R2 — only parses/builds markdown metadata
-```tsx
-// Usage in components
-import { adminApi } from '@/lib/api';
-const endpoint = isEditing ? adminApi.post(slug) : adminApi.posts;
-```
-
-### Component Organization
-| Directory | Contents |
-|-----------|----------|
-| `components/ui/` | Primitive UI (Button, Card, Input, Textarea) |
-| `components/layout/` | Page structure (Header, Footer) |
-| `components/theme/` | Style constants (tokens, buttons, badges, editor, admin, form) |
-| `components/editor/` | Feature components (PostEditor) |
-
-### globals.css Contents (strict list)
-1. CSS variables (:root)
-2. Base reset
-3. Edge glow animation
-4. Focus states
-5. Custom scrollbar
-
----
-
-*Spec version: 2.0 — 2026-05-01*
+*Spec version: 3.0 — 2026-05-01*
