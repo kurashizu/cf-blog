@@ -6,8 +6,12 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-bg-primary">
       <header className="admin-header">
-        <div className="mx-auto max-w-6xl px-4">
+        <div className="mx-auto max-w-6xl px-4 flex items-center justify-between">
           <h1 className="admin-header-title">Admin Panel</h1>
+          <nav className="flex gap-4">
+            <a href="/admin" className="text-sm text-text-muted hover:text-accent transition-colors">Posts</a>
+            <a href="/admin/guestbook" className="text-sm text-text-muted hover:text-accent transition-colors">Messages</a>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
