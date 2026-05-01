@@ -203,8 +203,10 @@ export default async function HomePage() {
 
       {/* Guestbook section */}
       <section className="mt-12">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="section-title mb-0">Guestbook</h2>
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          <h2 className="section-title mb-0 shrink-0 px-2">Guestbook</h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         </div>
         <GuestbookMessages />
       </section>
