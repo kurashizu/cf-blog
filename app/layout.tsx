@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/ui/ChatWidget";
+import { GuestbookWidget } from "@/components/guestbook/GuestbookWidget";
 import { ParticleBackground } from "@/components/ui/ParticleBackground";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -40,6 +41,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <ChatWidget />
+          <GuestbookWidget />
         </ThemeProvider>
       </body>
     </html>

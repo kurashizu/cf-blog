@@ -20,8 +20,6 @@ export function Header() {
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-bg-primary/80 border-b border-border/50">
       <nav className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="group flex items-center gap-2">
-import icon2 from '@/app/icon2_128.png'
-
           <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50">
             <Image src={icon2} alt="logo" width={32} height={32} className="object-cover" />
           </div>

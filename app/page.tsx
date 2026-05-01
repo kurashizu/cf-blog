@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get, r2Put } from "@/lib/r2";
-import { GuestbookSection } from "./guestbook/GuestbookSection";
 
 export const dynamic = "force-dynamic";
 
@@ -200,8 +199,6 @@ export default async function HomePage() {
           )}
         </section>
       </div>
-
-      <GuestbookSection />
     </div>
   );
 }
