@@ -50,22 +50,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const type = searchParams.get('type') || 'chat';
-
-  if (type === 'models') {
-    return NextResponse.json({
-      models: [
-        'gemini-2.5-flash-lite',
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'gemini-3-pro',
-        'gemini-3-flash',
-      ],
-    });
-  }
-
-  return NextResponse.json({ error: 'Unknown type. Use: models' }, { status: 400 });
-}
