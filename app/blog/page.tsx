@@ -41,7 +41,7 @@ export default async function BlogPage() {
   const posts = await repo.getAll();
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 pb-[60px]">
+    <div>
       <div className="page-title">
         <h1 className="mb-1 text-[28px] font-bold text-text-primary">Blog</h1>
         <p className="text-text-secondary text-sm">A collection of thoughts and tutorials</p>

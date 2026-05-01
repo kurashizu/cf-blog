@@ -25,7 +25,7 @@ function BlogPostCardSkeleton() {
 
 export default function Loading() {
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-12">
+    <div>
       <div className="mb-8 h-8 w-24 rounded bg-bg-secondary animate-pulse" />
       <div className="space-y-4">
         <BlogPostCardSkeleton />
