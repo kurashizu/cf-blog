@@ -2,17 +2,17 @@
 
 import { useEffect, useRef } from "react";
 
-const CHARS = ["k", "u", "r", "a", "s", "h", "i", "z", "u"];
-const FONT_SIZE = 16;
-const OPACITY_MIN = 0.03;
-const OPACITY_MAX = 0.08;
-const SPEED_MIN = 0.3;
-const SPEED_MAX = 0.8;
+const GROUPS = ["ku", "ra", "shi", "zu"];
+const FONT_SIZE = 20;
+const OPACITY_MIN = 0.1;
+const OPACITY_MAX = 0.18;
+const SPEED_MIN = 0.4;
+const SPEED_MAX = 1.0;
 
 interface Particle {
   x: number;
   y: number;
-  char: string;
+  text: string;
   speed: number;
   opacity: number;
   opacityDir: number;
@@ -39,7 +39,7 @@ export function ParticleBackground() {
     const createParticle = (x?: number, y?: number): Particle => ({
       x: x ?? Math.random() * canvas.width,
       y: y ?? -FONT_SIZE,
-      char: CHARS[Math.floor(Math.random() * CHARS.length)],
+      text: GROUPS[Math.floor(Math.random() * GROUPS.length)],
       speed: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
       opacity: OPACITY_MIN + Math.random() * (OPACITY_MAX - OPACITY_MIN),
       opacityDir: Math.random() > 0.5 ? 1 : -1,
@@ -47,10 +47,12 @@ export function ParticleBackground() {
 
     const initParticles = () => {
       particles.length = 0;
-      const cols = Math.ceil(canvas.width / (FONT_SIZE * 8));
+      const cols = Math.ceil(canvas.width / (FONT_SIZE * 6));
       for (let i = 0; i < cols; i++) {
-        const p = createParticle(i * (FONT_SIZE * 8) + Math.random() * FONT_SIZE * 4, -FONT_SIZE * (Math.random() * 50));
-        p.y = p.y; // spread initial positions
+        const p = createParticle(
+          i * (FONT_SIZE * 6) + Math.random() * FONT_SIZE * 3,
+          -FONT_SIZE * (Math.random() * 30)
+        );
         particles.push(p);
       }
     };
@@ -58,14 +60,13 @@ export function ParticleBackground() {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Semi-transparent overlay for frosted glass effect
-      ctx.fillStyle = "rgba(10, 10, 15, 0.85)";
+      // Frosted glass overlay - darker to make particles more visible
+      ctx.fillStyle = "rgba(8, 8, 12, 0.95)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       for (const p of particles) {
-        // Update position
         p.y += p.speed;
-        p.opacity += p.opacityDir * 0.0005;
+        p.opacity += p.opacityDir * 0.0008;
 
         if (p.opacity <= OPACITY_MIN) {
           p.opacity = OPACITY_MIN;
@@ -75,16 +76,14 @@ export function ParticleBackground() {
           p.opacityDir = -1;
         }
 
-        // Reset if off screen
-        if (p.y > canvas.height + FONT_SIZE) {
-          p.y = -FONT_SIZE;
+        if (p.y > canvas.height + FONT_SIZE * 2) {
+          p.y = -FONT_SIZE * 2;
           p.x = Math.random() * canvas.width;
         }
 
-        // Draw character
         ctx.font = `${FONT_SIZE}px monospace`;
         ctx.fillStyle = `rgba(255, 107, 53, ${p.opacity})`;
-        ctx.fillText(p.char, p.x, p.y);
+        ctx.fillText(p.text, p.x, p.y);
       }
 
       animationId = requestAnimationFrame(draw);
@@ -109,7 +108,7 @@ export function ParticleBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 w-full h-full pointer-events-none -z-10"
-      style={{ opacity: 0.6 }}
+      style={{ opacity: 1 }}
     />
   );
 }
