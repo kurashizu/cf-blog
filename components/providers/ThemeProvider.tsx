@@ -17,12 +17,12 @@ const ThemeContext = createContext<ThemeContextValue>({
 const STORAGE_KEY = "theme";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("deep-green");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    if (stored === "dark" || stored === "deep-blue") {
+    if (stored === "dark" || stored === "deep-blue" || stored === "deep-green") {
       setTheme(stored);
     }
     setMounted(true);

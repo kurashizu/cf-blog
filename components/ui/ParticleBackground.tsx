@@ -7,8 +7,8 @@ const FONT_SIZE_BASE = 16;
 const FONT_SIZE_VARIANCE = 12;
 const OPACITY_MIN = 0.05;
 const OPACITY_MAX = 0.25;
-const SPEED_MIN = 0.3;
-const SPEED_MAX = 1.0;
+const SPEED_MIN = 0.2;
+const SPEED_MAX = 1.5;
 const ROTATION_MIN = -30;
 const ROTATION_MAX = 30;
 
