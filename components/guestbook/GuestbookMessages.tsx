@@ -83,23 +83,23 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
     return (
         <>
             {/* Flow layout - tags style */}
-            <div className="max-w-xl mx-auto">
-                <div className="flex flex-wrap gap-3 justify-center">
+            <div className="max-w-4xl mx-auto">
+                <div className="flex flex-wrap gap-2 justify-center">
                     {messages.map((msg) => (
                         <div
                             key={msg.id}
-                            className="flex items-center gap-3 px-4 py-1.5 bg-bg-card/80 backdrop-blur-sm border border-border rounded-full hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] transition-all cursor-pointer"
+                            className="flex items-center gap-2 px-3 py-1 bg-bg-card/80 backdrop-blur-sm border border-border rounded-full hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] transition-all cursor-pointer"
                             onClick={() => { setShowAll(true); setPage(1); }}
                         >
                             <img
                                 src={getAvatarSrc(msg)}
                                 alt={msg.name}
-                                className="w-12 h-12 rounded-full object-cover shrink-0 my-0.5"
+                                className="w-9 h-9 rounded-full object-cover shrink-0"
                             />
-                            <span className="text-sm text-text-primary font-medium shrink-0">
+                            <span className="text-xs text-text-primary font-medium shrink-0">
                                 {msg.name}
                             </span>
-                            <span className="text-sm text-text-secondary max-w-[150px] truncate">
+                            <span className="text-xs text-text-secondary max-w-[100px] truncate">
                                 {msg.content}
                             </span>
                         </div>
@@ -135,32 +135,30 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                                 </svg>
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
                             {paginatedMessages.map((msg) => (
-                                <Card key={msg.id}>
-                                    <CardContent className="p-4">
-                                        <div className="flex items-start gap-3">
-                                            <img
-                                                src={getAvatarSrc(msg)}
-                                                alt={msg.name}
-                                                className="w-14 h-14 rounded-full object-cover shrink-0"
-                                            />
-                                            <div className="flex-1 min-w-0 flex flex-col items-end">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-medium text-text-primary text-sm">
-                                                        {msg.name}
-                                                    </span>
-                                                    <span className="text-xs text-text-muted">
-                                                        {formatDate(msg.timestamp)}
-                                                    </span>
-                                                </div>
-                                                <p className="text-text-secondary text-sm whitespace-pre-wrap break-words text-right">
-                                                    {msg.content}
-                                                </p>
+                                <div key={msg.id} className="w-full p-4 bg-bg-card/60 backdrop-blur-sm border border-border rounded-xl">
+                                    <div className="flex items-start gap-3">
+                                        <img
+                                            src={getAvatarSrc(msg)}
+                                            alt={msg.name}
+                                            className="w-14 h-14 rounded-full object-cover shrink-0"
+                                        />
+                                        <div className="flex-1 min-w-0 flex flex-col items-end">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-medium text-text-primary text-sm">
+                                                    {msg.name}
+                                                </span>
+                                                <span className="text-xs text-text-muted">
+                                                    {formatDate(msg.timestamp)}
+                                                </span>
                                             </div>
+                                            <p className="text-text-secondary text-sm whitespace-pre-wrap break-words text-right">
+                                                {msg.content}
+                                            </p>
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                         {totalPages > 1 && (
