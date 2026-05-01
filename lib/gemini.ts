@@ -27,6 +27,38 @@ Communication style:
 
 When asked about yourself or Kurashizu, refer to this context. If you don't know something, say so honestly.`;
 
+const DEFAULT_SYSTEM = SYSTEM_PROMPT;
+
+function buildContents(messages: GeminiMessage[]) {
+  return messages.map((m) => ({
+    role: m.role,
+    parts: m.parts,
+  }));
+}
+
+function buildBody(contents: ReturnType<typeof buildContents>, systemInstruction?: string, options?: GeminiGenerateOptions) {
+  const body: Record<string, unknown> = {
+    contents,
+  };
+
+  if (systemInstruction) {
+    body.systemInstruction = {
+      parts: [{ text: systemInstruction }],
+    };
+  }
+
+  if (options) {
+    body.generationConfig = {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxTokens,
+      topP: options.topP,
+      topK: options.topK,
+    };
+  }
+
+  return body;
+}
+
 export interface GeminiMessage {
   role: 'user' | 'model';
   parts: { text: string }[];
@@ -91,20 +123,8 @@ export async function generateContent(
   messages: GeminiMessage[],
   options?: GeminiGenerateOptions
 ): Promise<GeminiGenerateResult> {
-  const contents = messages.map((m) => ({
-    role: m.role,
-    parts: m.parts,
-  }));
-
-  const body = {
-    contents,
-    generationConfig: {
-      temperature: options?.temperature,
-      maxOutputTokens: options?.maxTokens,
-      topP: options?.topP,
-      topK: options?.topK,
-    },
-  };
+  const contents = buildContents(messages);
+  const body = buildBody(contents, DEFAULT_SYSTEM, options);
 
   const data = await fetchAI<{
     candidates?: { content: { parts: { text: string }[] } }[];
@@ -139,20 +159,8 @@ export async function* generateContentStream(
   const apiKey = getApiKey();
   const model = getCurrentModel();
 
-  const contents = messages.map((m) => ({
-    role: m.role,
-    parts: m.parts,
-  }));
-
-  const body = {
-    contents,
-    generationConfig: {
-      temperature: options?.temperature,
-      maxOutputTokens: options?.maxTokens,
-      topP: options?.topP,
-      topK: options?.topK,
-    },
-  };
+  const contents = buildContents(messages);
+  const body = buildBody(contents, DEFAULT_SYSTEM, options);
 
   const url = `${GEMINI_API_BASE}/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
 
@@ -207,33 +215,26 @@ export async function chat(
   prompt: string,
   options?: GeminiGenerateOptions
 ): Promise<GeminiGenerateResult> {
-  return generateContentWithContext([{ role: 'user', parts: [{ text: prompt }] }], options);
+  const messages: GeminiMessage[] = [{ role: 'user', parts: [{ text: prompt }] }];
+  return generateContent(messages, options);
 }
 
 /**
- * Generate content with system prompt prepended to conversation
+ * Generate content - system prompt is applied by default via generateContent/generateContentStream
  */
 export async function generateContentWithContext(
   messages: GeminiMessage[],
   options?: GeminiGenerateOptions
 ): Promise<GeminiGenerateResult> {
-  const systemMessage: GeminiMessage = { role: 'user', parts: [{ text: SYSTEM_PROMPT }] };
-  const modelAck: GeminiMessage = { role: 'model', parts: [{ text: 'Understood. I am now equipped with context about Kurashizu.' }] };
-
-  const allMessages = [systemMessage, modelAck, ...messages];
-  return generateContent(allMessages, options);
+  return generateContent(messages, options);
 }
 
 /**
- * Generate content with streaming, with system prompt prepended
+ * Generate content with streaming - system prompt is applied by default via generateContentStream
  */
 export async function* generateContentStreamWithContext(
   messages: GeminiMessage[],
   options?: GeminiGenerateOptions
 ): AsyncGenerator<string> {
-  const systemMessage: GeminiMessage = { role: 'user', parts: [{ text: SYSTEM_PROMPT }] };
-  const modelAck: GeminiMessage = { role: 'model', parts: [{ text: 'Understood. I am now equipped with context about Kurashizu.' }] };
-
-  const allMessages = [systemMessage, modelAck, ...messages];
-  yield* generateContentStream(allMessages, options);
+  yield* generateContentStream(messages, options);
 }
