@@ -12,7 +12,7 @@ export default async function AdminDashboard() {
   const posts = await repo.getAll();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div>
       <div className="admin-title">
         <h1>All Posts</h1>
         <p>Manage your blog articles</p>
