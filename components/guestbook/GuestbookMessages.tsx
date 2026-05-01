@@ -79,15 +79,18 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                     {messages.map((msg) => (
                         <div
                             key={msg.id}
-                            className="flex items-center gap-2 px-3 py-2 bg-bg-card/60 backdrop-blur-sm border border-border rounded-full hover:border-accent/50 transition-colors cursor-pointer"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-bg-card/60 backdrop-blur-sm border border-border rounded-full hover:border-accent/50 transition-colors cursor-pointer"
                             onClick={() => { setShowAll(true); setPage(1); }}
                         >
                             <img
                                 src={getAvatarSrc(msg)}
                                 alt={msg.name}
-                                className="w-5 h-5 rounded-full object-cover shrink-0"
+                                className="w-6 h-6 rounded-full object-cover shrink-0"
                             />
-                            <span className="text-xs text-text-secondary max-w-[120px] truncate">
+                            <span className="text-xs text-text-primary font-medium shrink-0">
+                                {msg.name}
+                            </span>
+                            <span className="text-xs text-text-muted max-w-[100px] truncate">
                                 {msg.content}
                             </span>
                         </div>
