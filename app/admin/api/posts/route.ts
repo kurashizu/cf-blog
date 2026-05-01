@@ -4,6 +4,12 @@ import { buildFrontmatter } from '@/lib/frontmatter';
 
 export const dynamic = "force-dynamic";
 
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function isValidSlug(slug: string): boolean {
+  return SLUG_REGEX.test(slug) && slug.length >= 1 && slug.length <= 200;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json() as {
@@ -22,6 +28,18 @@ export async function POST(request: Request) {
 
     if (!slug || !content || !title) {
       return NextResponse.json({ error: 'Missing required fields: title, slug, content' }, { status: 400 });
+    }
+
+    if (!isValidSlug(slug)) {
+      return NextResponse.json({ error: 'Invalid slug format (use lowercase letters, numbers, and hyphens only)' }, { status: 400 });
+    }
+
+    if (content.length > 500000) {
+      return NextResponse.json({ error: 'Content too large (max 500KB)' }, { status: 400 });
+    }
+
+    if (title.length > 300) {
+      return NextResponse.json({ error: 'Title too long (max 300 characters)' }, { status: 400 });
     }
 
     const postData = {

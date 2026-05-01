@@ -2,12 +2,23 @@ import { NextResponse } from 'next/server';
 import { createArticlesRepo } from '@/lib/articles';
 import { buildFrontmatter } from '@/lib/frontmatter';
 
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function isValidSlug(slug: string): boolean {
+  return SLUG_REGEX.test(slug) && slug.length >= 1 && slug.length <= 200;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const { slug } = await params;
+
+    if (!isValidSlug(slug)) {
+      return NextResponse.json({ error: 'Invalid slug format' }, { status: 400 });
+    }
+
     const repo = createArticlesRepo();
     const post = await repo.getBySlug(slug);
     if (!post) {
@@ -26,6 +37,11 @@ export async function PUT(
 ) {
   try {
     const { slug } = await params;
+
+    if (!isValidSlug(slug)) {
+      return NextResponse.json({ error: 'Invalid slug format' }, { status: 400 });
+    }
+
     const body = await request.json() as {
       title?: string;
       content?: string;
@@ -38,6 +54,16 @@ export async function PUT(
       published?: boolean;
     };
     const { title, content, date, description, tags, coverImage, author, draft, published } = body;
+
+    // Validate content length
+    if (content && content.length > 500000) {
+      return NextResponse.json({ error: 'Content too large (max 500KB)' }, { status: 400 });
+    }
+
+    // Validate title length
+    if (title && title.length > 300) {
+      return NextResponse.json({ error: 'Title too long (max 300 characters)' }, { status: 400 });
+    }
 
     if (!title && !content) {
       return NextResponse.json({ error: 'At least one field is required' }, { status: 400 });
@@ -86,6 +112,11 @@ export async function DELETE(
 ) {
   try {
     const { slug } = await params;
+
+    if (!isValidSlug(slug)) {
+      return NextResponse.json({ error: 'Invalid slug format' }, { status: 400 });
+    }
+
     const repo = createArticlesRepo();
     const existingPost = await repo.getBySlug(slug);
     if (!existingPost) {
