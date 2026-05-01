@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateContent, generateContentStream, type GeminiMessage, type GeminiGenerateOptions } from '@/lib/gemini';
 
-export const runtime = 'edge';
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
