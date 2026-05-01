@@ -75,6 +75,26 @@
   --glow-color: rgba(74, 158, 255, 0.05);
 }
 
+[data-theme="deep-green"] {
+  --bg-primary: #0a1a0f;
+  --bg-secondary: #122218;
+  --bg-card: #182e22;
+  --bg-elevated: #203828;
+  --border: #2a3a32;
+  --border-hover: #3a4a42;
+
+  --text-primary: #e0f0e8;
+  --text-secondary: #88a898;
+  --text-muted: #506858;
+
+  --accent: #35ff6b;
+  --accent-hover: #55ff85;
+  --accent-glow: rgba(53, 255, 107, 0.25);
+  --accent-subtle: rgba(53, 255, 107, 0.08);
+
+  --glow-color: rgba(53, 255, 107, 0.05);
+}
+
 /* ===========================================
    BASE - Reset & Global Styles
    =========================================== */

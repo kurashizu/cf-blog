@@ -31,6 +31,8 @@ export function ParticleBackground() {
         accentColorRef.current = "255, 107, 53";
       } else if (accent.includes("#4a9eff")) {
         accentColorRef.current = "74, 158, 255";
+      } else if (accent.includes("#35ff6b")) {
+        accentColorRef.current = "53, 255, 107";
       }
     };
 

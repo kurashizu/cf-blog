@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "deep-blue";
+type Theme = "dark" | "deep-blue" | "deep-green";
 
 interface ThemeContextValue {
   theme: Theme;
@@ -37,7 +37,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme, mounted]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "deep-blue" : "dark"));
+    setTheme((prev) => {
+      if (prev === "dark") return "deep-blue";
+      if (prev === "deep-blue") return "deep-green";
+      return "dark";
+    });
   };
 
   return (

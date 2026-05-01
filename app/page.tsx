@@ -69,10 +69,10 @@ export default async function HomePage() {
       {/* Hero section */}
       <section className="text-center mb-12">
         <h1 className="hero-title mb-3">Hello, I&apos;m kurashizu</h1>
-        <p className="hero-subtitle mb-4">The AI &amp; Infrastructure</p>
+        <p className="hero-subtitle mb-4">Vibe Coding & AI Agent</p>
         <p className="hero-bio max-w-xl mx-auto">
-          An IT Master&apos;s student obsessed with automation, performance, and clean UI.
-          Building agentic workflows, exploring HPC, and pushing the boundaries of human-computer interaction.
+          Building tools that amplify human creativity. Exploring agentic workflows,
+          LLM orchestration, and the future of human-AI collaboration. Ships code that matters.
         </p>
         <div className="flex justify-center gap-3 mt-6">
           <Link href="/blog" className="inline-flex items-center px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:bg-accent-hover transition-all hover:-translate-y-0.5">
