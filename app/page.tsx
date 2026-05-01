@@ -37,15 +37,21 @@ async function getGitHubRepos(): Promise<GitHubRepo[]> {
 }
 
 function FeaturedPost({ post }: { post: Post }) {
+  const excerpt = post.description?.slice(0, 20) || "";
   return (
     <Link href={`/blog/${post.slug}`} className="block">
       <Card className="h-full group">
-        <div className="p-3 pb-1.5 shrink-0">
-          <span className="text-xs text-text-muted">{formatDate(post.date)}</span>
+        <div className="p-3 flex flex-col justify-between h-full">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors line-clamp-1">{post.title}</h3>
+            {excerpt && (
+              <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-[70%]">{excerpt}...</p>
+            )}
+          </div>
+          <div className="flex justify-end mt-1">
+            <span className="text-xs text-text-muted">{formatDate(post.date)}</span>
+          </div>
         </div>
-        <CardContent className="flex-1 p-3 pt-1.5 flex items-start justify-center">
-          <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors line-clamp-1 text-center">{post.title}</h3>
-        </CardContent>
       </Card>
     </Link>
   );
