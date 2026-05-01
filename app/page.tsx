@@ -94,7 +94,17 @@ export default async function HomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* GitHub repos - left column */}
         <section>
-          <h2 className="section-title mb-3">GitHub Projects</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="section-title mb-0">GitHub Projects</h2>
+            <a
+              href="https://github.com/kurashizu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-text-muted hover:text-accent transition-colors"
+            >
+              View all on GitHub
+            </a>
+          </div>
           <div className="space-y-3">
             {repos.slice(0, 5).map((repo) => (
               <a
@@ -122,14 +132,6 @@ export default async function HomePage() {
               </a>
             ))}
           </div>
-          <a
-            href="https://github.com/kurashizu"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="view-all-link mt-3 inline-block"
-          >
-            View all on GitHub
-          </a>
         </section>
 
         {/* Recent posts - right column */}
