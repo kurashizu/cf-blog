@@ -65,7 +65,7 @@ export default async function HomePage() {
   const repos = await getGitHubRepos();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-12">
       {/* Hero section */}
       <section className="text-center mb-12">
         <h1 className="hero-title mb-3">Hello, I&apos;m kurashizu</h1>
@@ -75,7 +75,7 @@ export default async function HomePage() {
           LLM orchestration, and the future of human-AI collaboration. Ships code that matters.
         </p>
         <div className="flex justify-center gap-3 mt-6">
-          <Link href="/blog" className="inline-flex items-center px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:bg-accent-hover transition-all hover:-translate-y-0.5">
+          <Link href="/blog" className="inline-flex items-center px-5 py-2.5 bg-accent/80 text-white rounded-lg font-medium hover:bg-accent-hover transition-all hover:-translate-y-0.5">
             Explore Posts
           </Link>
           <Link href="/about" className="inline-flex items-center px-5 py-2.5 bg-bg-card border border-border text-text-primary rounded-lg font-medium hover:border-accent hover:text-accent transition-all">

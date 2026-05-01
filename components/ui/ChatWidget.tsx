@@ -87,7 +87,7 @@ export function ChatWidget() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-accent hover:bg-accent-hover rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-accent/80 hover:bg-accent-hover rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50"
         aria-label="Chat with AI"
       >
         {isOpen ? (
