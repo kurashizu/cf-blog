@@ -10,6 +10,7 @@ interface Message {
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +89,8 @@ export function ChatWidget() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50 overflow-hidden"
         style={{ padding: 0 }}
         aria-label="Chat with AI"
@@ -100,11 +103,11 @@ export function ChatWidget() {
           </div>
         ) : (
           <Image
-            src="/icon3_128.png"
+            src={isHovered ? "/icon2_128.png" : "/icon3_128.png"}
             alt="Chat"
             width={56}
             height={56}
-            className="object-cover"
+            className="object-cover transition-opacity duration-200"
           />
         )}
       </button>
