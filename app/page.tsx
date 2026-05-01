@@ -86,11 +86,11 @@ export default async function HomePage() {
       </section>
 
       {/* Bottom two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* GitHub repos - left column */}
         <section>
           <h2 className="section-title mb-3">GitHub Projects</h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {repos.slice(0, 5).map((repo) => (
               <a
                 key={repo.name}
