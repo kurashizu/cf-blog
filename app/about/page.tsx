@@ -29,25 +29,25 @@ export default function AboutPage() {
         <h2 className="section-title">Technical Interests</h2>
         <ul className="space-y-3">
           <li className="flex items-center gap-2 text-text-secondary">
-            <span style={{ color: "var(--accent)" }} aria-hidden="true">
+            <span className="arrow-icon" aria-hidden="true">
               →
             </span>
             Cloud infrastructure and serverless architectures
           </li>
           <li className="flex items-center gap-2 text-text-secondary">
-            <span style={{ color: "var(--accent)" }} aria-hidden="true">
+            <span className="arrow-icon" aria-hidden="true">
               →
             </span>
             Developer tools and productivity automation
           </li>
           <li className="flex items-center gap-2 text-text-secondary">
-            <span style={{ color: "var(--accent)" }} aria-hidden="true">
+            <span className="arrow-icon" aria-hidden="true">
               →
             </span>
             Programming languages and runtime environments
           </li>
           <li className="flex items-center gap-2 text-text-secondary">
-            <span style={{ color: "var(--accent)" }} aria-hidden="true">
+            <span className="arrow-icon" aria-hidden="true">
               →
             </span>
             Web performance and accessibility
