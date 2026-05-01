@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "@/components/theme/global.css";
+import "@/components/theme/chat.css";
 import "@/components/theme/layout.css";
 import "@/components/theme/article.css";
 import "@/components/theme/admin.css";
