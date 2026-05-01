@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateContent, generateContentStream, type GeminiMessage, type GeminiGenerateOptions } from '@/lib/gemini';
+import {
+  generateContentWithContext,
+  generateContentStreamWithContext,
+  type GeminiMessage,
+  type GeminiGenerateOptions,
+} from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +27,7 @@ export async function POST(request: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            for await (const chunk of generateContentStream(messages, options)) {
+            for await (const chunk of generateContentStreamWithContext(messages, options)) {
               controller.enqueue(encoder.encode(chunk));
             }
             controller.close();
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const result = await generateContent(messages, options);
+    const result = await generateContentWithContext(messages, options);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

@@ -5,6 +5,28 @@
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
+/**
+ * System prompt for kurashizu's AI assistant
+ */
+export const SYSTEM_PROMPT = `You are Kurashizu's AI assistant. Kurashizu is an IT Master's student and software engineer passionate about:
+
+- AI & Infrastructure: building agentic workflows, exploring HPC, pushing human-computer interaction boundaries
+- Automation and performance optimization
+- Clean UI design
+
+Background:
+- Currently pursuing an IT Master's degree
+- Strong focus on cloud infrastructure, serverless architectures, and developer tooling
+- Experienced with NixOS, Arch Linux, Zed, Neovim, Zsh, Fish
+- Building projects like llama-proxy (cache proxy for llama.cpp), PodWeaver (AI podcast pipeline), YoutubeStreamer (VRChat streaming tool)
+
+Communication style:
+- Helpful, technical, concise
+- Can discuss programming, cloud infrastructure, AI/ML, developer tools
+- Share knowledge in a clear, accessible way
+
+When asked about yourself or Kurashizu, refer to this context. If you don't know something, say so honestly.`;
+
 export interface GeminiMessage {
   role: 'user' | 'model';
   parts: { text: string }[];
@@ -179,21 +201,39 @@ export async function* generateContentStream(
 }
 
 /**
- * Simple chat helper - takes a single prompt string
+ * Simple chat helper - takes a single prompt string with system prompt prepended
  */
 export async function chat(
   prompt: string,
-  system?: string,
   options?: GeminiGenerateOptions
 ): Promise<GeminiGenerateResult> {
-  const messages: GeminiMessage[] = [];
+  return generateContentWithContext([{ role: 'user', parts: [{ text: prompt }] }], options);
+}
 
-  if (system) {
-    messages.push({ role: 'user', parts: [{ text: system }] });
-    messages.push({ role: 'model', parts: [{ text: 'Understood.' }] });
-  }
+/**
+ * Generate content with system prompt prepended to conversation
+ */
+export async function generateContentWithContext(
+  messages: GeminiMessage[],
+  options?: GeminiGenerateOptions
+): Promise<GeminiGenerateResult> {
+  const systemMessage: GeminiMessage = { role: 'user', parts: [{ text: SYSTEM_PROMPT }] };
+  const modelAck: GeminiMessage = { role: 'model', parts: [{ text: 'Understood. I am now equipped with context about Kurashizu.' }] };
 
-  messages.push({ role: 'user', parts: [{ text: prompt }] });
+  const allMessages = [systemMessage, modelAck, ...messages];
+  return generateContent(allMessages, options);
+}
 
-  return generateContent(messages, options);
+/**
+ * Generate content with streaming, with system prompt prepended
+ */
+export async function* generateContentStreamWithContext(
+  messages: GeminiMessage[],
+  options?: GeminiGenerateOptions
+): AsyncGenerator<string> {
+  const systemMessage: GeminiMessage = { role: 'user', parts: [{ text: SYSTEM_PROMPT }] };
+  const modelAck: GeminiMessage = { role: 'model', parts: [{ text: 'Understood. I am now equipped with context about Kurashizu.' }] };
+
+  const allMessages = [systemMessage, modelAck, ...messages];
+  yield* generateContentStream(allMessages, options);
 }
