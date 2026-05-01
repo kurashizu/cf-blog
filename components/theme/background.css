@@ -99,3 +99,116 @@ body::after {
   0% { text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-subtle); }
   100% { text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-subtle), 0 0 60px var(--accent-subtle); }
 }
+
+/* ===========================================
+   WAVE EFFECT (bottom half)
+   =========================================== */
+.wave-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40%;
+  pointer-events: none;
+  z-index: -2;
+  overflow: hidden;
+}
+
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  opacity: 0.15;
+  animation: wave-flow 15s linear infinite;
+}
+
+.wave::before,
+.wave::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 40% 45% 35% 40%;
+}
+
+.wave::before {
+  animation: wave-motion 8s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.wave::after {
+  animation: wave-motion 10s ease-in-out infinite reverse;
+  opacity: 0.4;
+  transform: translateX(-20%);
+}
+
+@keyframes wave-flow {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes wave-motion {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15%) rotate(5deg); }
+}
+
+/* ===========================================
+   CLOUD EFFECT (top half)
+   =========================================== */
+.cloud-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  pointer-events: none;
+  z-index: -2;
+  overflow: hidden;
+}
+
+.cloud {
+  position: absolute;
+  background: var(--accent-subtle);
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.3;
+}
+
+.cloud:nth-child(1) {
+  width: 300px;
+  height: 100px;
+  top: 10%;
+  animation: cloud-drift 35s linear infinite;
+}
+
+.cloud:nth-child(2) {
+  width: 250px;
+  height: 80px;
+  top: 20%;
+  animation: cloud-drift 28s linear infinite;
+  animation-delay: -10s;
+}
+
+.cloud:nth-child(3) {
+  width: 400px;
+  height: 120px;
+  top: 30%;
+  animation: cloud-drift 42s linear infinite;
+  animation-delay: -20s;
+}
+
+.cloud:nth-child(4) {
+  width: 200px;
+  height: 60px;
+  top: 5%;
+  animation: cloud-drift 25s linear infinite;
+  animation-delay: -5s;
+}
+
+@keyframes cloud-drift {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(calc(100vw + 100%)); }
+}
