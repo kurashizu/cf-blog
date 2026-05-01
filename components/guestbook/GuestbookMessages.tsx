@@ -88,13 +88,13 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                     {messages.map((msg) => (
                         <div
                             key={msg.id}
-                            className="flex items-center gap-3 px-5 py-3 bg-bg-card/80 backdrop-blur-sm border border-border rounded-full hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] transition-all cursor-pointer"
+                            className="flex items-center gap-3 px-4 py-1.5 bg-bg-card/80 backdrop-blur-sm border border-border rounded-full hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] transition-all cursor-pointer"
                             onClick={() => { setShowAll(true); setPage(1); }}
                         >
                             <img
                                 src={getAvatarSrc(msg)}
                                 alt={msg.name}
-                                className="w-8 h-8 rounded-full object-cover shrink-0"
+                                className="w-12 h-12 rounded-full object-cover shrink-0 my-0.5"
                             />
                             <span className="text-sm text-text-primary font-medium shrink-0">
                                 {msg.name}
