@@ -3,6 +3,8 @@ import { createArticlesRepo } from "@/lib/articles";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
+import { r2Paths } from "@/lib/r2-paths";
+import { r2Get, r2Put } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,16 @@ interface GitHubRepo {
 }
 
 async function getGitHubRepos(): Promise<GitHubRepo[]> {
+  const cached = await r2Get(r2Paths.githubReposCache);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached) as GitHubRepo[];
+      if (parsed.length > 0) return parsed;
+    } catch {
+      // ignore parse errors
+    }
+  }
+
   try {
     const res = await fetch(
       "https://api.github.com/users/kurashizu/repos?sort=stars&per_page=6&type=public",
@@ -39,7 +51,11 @@ async function getGitHubRepos(): Promise<GitHubRepo[]> {
       return [];
     }
     const repos = await res.json() as GitHubRepo[];
-    return repos.filter((r) => !r.fork).slice(0, 6);
+    const filtered = repos.filter((r) => !r.fork).slice(0, 6);
+
+    await r2Put(r2Paths.githubReposCache, JSON.stringify(filtered));
+
+    return filtered;
   } catch (e) {
     console.error("GitHub fetch error:", e);
     return [];

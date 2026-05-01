@@ -6,4 +6,6 @@
 export const r2Paths = {
   articlesPrefix: 'articles/',
   article: (slug: string) => `articles/${slug}.md`,
+  cachePrefix: 'cache/',
+  githubReposCache: 'cache/github-repos.json',
 } as const;
