@@ -88,7 +88,7 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                     {messages.map((msg) => (
                         <div
                             key={msg.id}
-                            className="flex items-center gap-2 px-3 py-1 bg-bg-card/80 backdrop-blur-sm border border-border rounded-full hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] transition-all cursor-pointer"
+                            className="flex items-center gap-2 px-3 py-1 bg-bg-card/80 backdrop-blur-sm border border-border rounded-full overflow-hidden hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] transition-all cursor-pointer"
                             onClick={() => { setShowAll(true); setPage(1); }}
                         >
                             <img
@@ -138,7 +138,7 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
                             {paginatedMessages.map((msg) => (
                                 <div key={msg.id} className="w-full p-4 bg-bg-card/60 backdrop-blur-sm border border-border rounded-xl">
-                                    <div className="flex items-start gap-3">
+                                    <div className="flex items-start gap-3 overflow-hidden">
                                         <img
                                             src={getAvatarSrc(msg)}
                                             alt={msg.name}
