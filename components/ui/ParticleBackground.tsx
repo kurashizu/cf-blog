@@ -3,11 +3,14 @@
 import { useEffect, useRef } from "react";
 
 const GROUPS = ["ku", "ra", "shi", "zu"];
-const FONT_SIZE = 18;
-const OPACITY_MIN = 0.08;
-const OPACITY_MAX = 0.16;
-const SPEED_MIN = 0.5;
-const SPEED_MAX = 1.2;
+const FONT_SIZE_BASE = 16;
+const FONT_SIZE_VARIANCE = 12;
+const OPACITY_MIN = 0.05;
+const OPACITY_MAX = 0.25;
+const SPEED_MIN = 0.3;
+const SPEED_MAX = 1.0;
+const ROTATION_MIN = -30;
+const ROTATION_MAX = 30;
 
 interface Particle {
   x: number;
@@ -17,7 +20,12 @@ interface Particle {
   opacity: number;
   opacityDir: number;
   phase: number;
+  rotation: number;
+  fontSize: number;
+  fontStyle: string;
 }
+
+const FONTS = ["monospace", "serif", "sans-serif", "cursive", "fantasy"];
 
 export function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,23 +64,30 @@ export function ParticleBackground() {
       canvas.height = window.innerHeight;
     };
 
-    const createParticle = (x?: number, y?: number): Particle => ({
-      x: x ?? Math.random() * canvas.width,
-      y: y ?? -FONT_SIZE,
-      text: GROUPS[Math.floor(Math.random() * GROUPS.length)],
-      speed: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
-      opacity: OPACITY_MIN + Math.random() * (OPACITY_MAX - OPACITY_MIN),
-      opacityDir: Math.random() > 0.5 ? 1 : -1,
-      phase: Math.random() * Math.PI * 2,
-    });
+    const createParticle = (x?: number, y?: number): Particle => {
+      const fontSize = FONT_SIZE_BASE + Math.random() * FONT_SIZE_VARIANCE;
+      return {
+        x: x ?? Math.random() * canvas.width,
+        y: y ?? -fontSize,
+        text: GROUPS[Math.floor(Math.random() * GROUPS.length)],
+        speed: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
+        opacity: OPACITY_MIN + Math.random() * (OPACITY_MAX - OPACITY_MIN),
+        opacityDir: Math.random() > 0.5 ? 1 : -1,
+        phase: Math.random() * Math.PI * 2,
+        rotation: ROTATION_MIN + Math.random() * (ROTATION_MAX - ROTATION_MIN),
+        fontSize,
+        fontStyle: FONTS[Math.floor(Math.random() * FONTS.length)],
+      };
+    };
 
     const initParticles = () => {
       particles.length = 0;
-      const cols = Math.ceil(canvas.width / (FONT_SIZE * 5));
+      const avgSize = FONT_SIZE_BASE + FONT_SIZE_VARIANCE / 2;
+      const cols = Math.ceil(canvas.width / (avgSize * 5));
       for (let i = 0; i < cols; i++) {
         const p = createParticle(
-          i * (FONT_SIZE * 5) + Math.random() * FONT_SIZE * 2,
-          -FONT_SIZE * (5 + Math.random() * 40)
+          i * (avgSize * 5) + Math.random() * avgSize * 2,
+          -avgSize * (5 + Math.random() * 40)
         );
         particles.push(p);
       }
@@ -99,15 +114,19 @@ export function ParticleBackground() {
           p.opacityDir = -1;
         }
 
-        if (p.y > canvas.height + FONT_SIZE * 2) {
-          p.y = -FONT_SIZE * 2;
+        if (p.y > canvas.height + p.fontSize * 2) {
+          p.y = -p.fontSize * 2;
           p.x = Math.random() * canvas.width;
         }
 
-        const wobble = Math.sin(p.phase) * 2;
-        ctx.font = `${FONT_SIZE}px monospace`;
+        const wobble = Math.sin(p.phase) * 3;
+        ctx.save();
+        ctx.translate(p.x + wobble, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.font = `${p.fontSize}px ${p.fontStyle}`;
         ctx.fillStyle = `rgba(${accent}, ${p.opacity})`;
-        ctx.fillText(p.text, p.x + wobble, p.y);
+        ctx.fillText(p.text, 0, 0);
+        ctx.restore();
       }
 
       animationId = requestAnimationFrame(draw);

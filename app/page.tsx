@@ -104,7 +104,7 @@ export default async function HomePage() {
                     </code>
                     <span className="text-xs text-text-muted shrink-0 flex items-center gap-1">
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 0l-1.45 1.45.85.85 1.6-1.6 1.6 1.6.85-.85L12 0zm0 4.8L8.8 7.6 10.4 9l-1.6 1.6 1.4 1.4 1.6-1.6 1.6 1.6.85-.85L12 4.8zm-2 5.7v1.5l-.7.7-.7-.7v-1.5l.7-.7.7.7zm-3 5.5l.5.8-.8.5-.8-.5.5-.8.8.5-.5.8.8.5-.8.5-.5-.8-.5.8.8.5-.8.5-.5-.8-.5.8.8.5-.8.5-.5-.8-.5.8.8.5-.8.5-.5-.8z"/>
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                       </svg>
                       {repo.stargazers_count}
                     </span>
