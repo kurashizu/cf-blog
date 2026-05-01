@@ -24,12 +24,18 @@ export function markdownToHtml(md: string): string {
 function parsePost(slug: string, content: string, key?: string): Post {
   const { data, body } = parseFrontmatter(content);
   const postSlug = key ? key.replace('articles/', '').replace('.md', '') : slug;
+  const tagsValue = data.tags;
+  const tags: string[] = Array.isArray(tagsValue)
+    ? tagsValue.filter((t): t is string => typeof t === 'string')
+    : typeof tagsValue === 'string'
+      ? tagsValue.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
   return {
     slug: postSlug,
     title: (data.title as string) || '',
     date: (data.date as string) || '',
     description: (data.description as string) || '',
-    tags: (data.tags as string[]) || [],
+    tags,
     published: data.published !== 'false',
     coverImage: data.coverImage as string | undefined,
     author: (data.author as string) || 'Kurashizu',
