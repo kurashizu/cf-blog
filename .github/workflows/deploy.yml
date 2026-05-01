@@ -21,6 +21,8 @@ jobs:
 
       - name: Build
         run: npm run build:cf
+        env:
+          NEXT_PUBLIC_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
 
       - name: Deploy
         run: npx wrangler deploy

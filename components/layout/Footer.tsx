@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE || new Date().toISOString().split("T")[0];
+
 export function Footer() {
   return (
     <footer className="border-t border-border/50 mt-auto">
@@ -20,9 +22,11 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
             <span className="text-xs text-text-muted">Powered by Cloudflare</span>
+            <span className="text-xs text-text-muted/50">·</span>
+            <span className="text-xs text-text-muted">{BUILD_DATE}</span>
           </div>
         </div>
       </div>
