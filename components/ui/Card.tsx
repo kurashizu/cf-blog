@@ -8,7 +8,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     <div
       ref={ref}
       className={cn(
-        "group relative flex flex-col bg-bg-card border border-border rounded-xl transition-all duration-300",
+        "group relative flex flex-col min-h-[180px] bg-bg-card border border-border rounded-xl transition-all duration-300",
         "hover:border-accent/50 hover:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_50px_var(--accent-subtle)]",
         "hover:-translate-y-1",
         className
@@ -24,14 +24,14 @@ Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-5 pb-2 text-center shrink-0", className)} {...props} />
+    <div ref={ref} className={cn("p-5 pb-2 shrink-0 flex items-center justify-center", className)} {...props} />
   )
 );
 CardHeader.displayName = "CardHeader";
 
 const CardContent = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-5 pt-0 text-center flex-1 flex flex-col justify-center", className)} {...props} />
+    <div ref={ref} className={cn("p-5 pt-0 flex-1 flex flex-col justify-center items-center", className)} {...props} />
   )
 );
 CardContent.displayName = "CardContent";
