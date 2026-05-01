@@ -86,11 +86,11 @@
   gap: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--text-muted);
   transition: all var(--transition-base);
 }
 
 .view-all-link:hover {
-  color: var(--accent-hover);
+  color: var(--accent);
   gap: 0.75rem;
 }
