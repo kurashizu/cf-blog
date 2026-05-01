@@ -1,30 +1,33 @@
-import Link from 'next/link';
-import { createArticlesRepo } from '@/lib/articles';
-import { formatDate } from '@/lib/utils';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import Link from "next/link";
+import { createArticlesRepo } from "@/lib/articles";
+import { formatDate } from "@/lib/utils";
+import { Card, CardHeader, CardContent } from "@/components/ui/Card";
+import { Tag } from "@/components/ui/Tag";
 
 export const dynamic = "force-dynamic";
 
-interface BlogPostCardProps {
-  post: Awaited<ReturnType<ReturnType<typeof createArticlesRepo>['getAll']>>[number];
+interface Post {
+  slug: string;
+  title: string;
+  date: string;
+  description?: string;
+  tags?: string[];
 }
 
-function BlogPostCard({ post }: BlogPostCardProps) {
+function PostCard({ post }: { post: Post }) {
   return (
-    <Link href={`/blog/${post.slug}`}>
-      <Card className="article-card transition-all hover:border-accent hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(255,107,0,0.12)]">
+    <Link href={`/blog/${post.slug}`} className="block">
+      <Card>
         <CardHeader className="pb-2">
           <span className="article-meta">{formatDate(post.date)}</span>
         </CardHeader>
         <CardContent className="pt-0">
-          <h2 className="article-title mb-1">{post.title}</h2>
-          <p className="article-desc mb-3">{post.description}</p>
-          {post.tags.length > 0 && (
-            <div className="article-tags">
+          <h2 className="article-title">{post.title}</h2>
+          {post.description && <p className="article-desc">{post.description}</p>}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
               {post.tags.map((tag) => (
-                <span key={tag} className="tag">
-                  {tag}
-                </span>
+                <Tag key={tag} variant="default">{tag}</Tag>
               ))}
             </div>
           )}
@@ -39,17 +42,18 @@ export default async function BlogPage() {
   const posts = await repo.getAll();
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto px-4 pb-12">
       <div className="page-title">
-        <h1 className="mb-1 text-[28px] font-bold text-text-primary">Blog</h1>
-        <p className="text-text-secondary text-sm">A collection of thoughts and tutorials</p>
+        <h1>Blog</h1>
+        <p className="text-sm text-text-secondary">A collection of thoughts and tutorials</p>
       </div>
+
       {posts.length === 0 ? (
-        <p className="text-text-muted mt-6">No posts yet.</p>
+        <p className="text-text-muted">No posts yet.</p>
       ) : (
-        <div className="article-list mt-6">
+        <div className="article-list">
           {posts.map((post) => (
-            <BlogPostCard key={post.slug} post={post} />
+            <PostCard key={post.slug} post={post} />
           ))}
         </div>
       )}

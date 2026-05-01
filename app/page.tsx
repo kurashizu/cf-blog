@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createArticlesRepo } from "@/lib/articles";
 import { formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/Card";
+import { Tag } from "@/components/ui/Tag";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +16,21 @@ interface Post {
 
 function PostCard({ post }: { post: Post }) {
   return (
-    <Link href={`/blog/${post.slug}`}>
-      <Card className="article-card transition-all hover:border-accent hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(255,107,0,0.12)]">
+    <Link href={`/blog/${post.slug}`} className="block">
+      <Card>
         <CardHeader className="pb-2">
           <span className="article-meta">{formatDate(post.date)}</span>
         </CardHeader>
         <CardContent className="pt-0">
-          <h3 className="article-title mb-1">{post.title}</h3>
+          <h3 className="article-title">{post.title}</h3>
           {post.description && <p className="article-desc">{post.description}</p>}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {post.tags.slice(0, 3).map((tag) => (
+                <Tag key={tag} variant="default">{tag}</Tag>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>
@@ -42,8 +50,8 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
-      <section className="hero-section">
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <section className="hero">
         <h1 className="hero-title">Kurashizu</h1>
         <p className="hero-subtitle">Software Engineer / Writer</p>
         <p className="hero-bio">
@@ -51,22 +59,20 @@ export default async function HomePage() {
         </p>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-12">
         <div className="section-title">Recent Posts</div>
 
         {error ? (
-          <Card>
-            <CardContent>{error}</CardContent>
-          </Card>
+          <div className="empty-state">
+            <p>{error}</p>
+          </div>
         ) : recentPosts.length === 0 ? (
-          <Card>
-            <CardContent>
-              <p className="mb-4">No posts yet. Check back soon!</p>
-              <Link href="/admin/editor/new" className="text-accent hover:text-accent-light transition-colors">
-                Write the first post
-              </Link>
-            </CardContent>
-          </Card>
+          <div className="empty-state">
+            <p>No posts yet. Check back soon!</p>
+            <Link href="/admin/editor/new" className="text-accent hover:text-accent-hover transition-colors">
+              Write the first post
+            </Link>
+          </div>
         ) : (
           <div className="article-list">
             {recentPosts.map((post) => (

@@ -9,24 +9,39 @@ const config: Config = {
     extend: {
       colors: {
         bg: {
-          primary: "#050505",
-          secondary: "#0f0f0f",
-          card: "#111111",
+          primary: "var(--bg-primary)",
+          secondary: "var(--bg-secondary)",
+          card: "var(--bg-card)",
+          elevated: "var(--bg-elevated)",
         },
-        border: "#1f1f1f",
+        border: {
+          DEFAULT: "var(--border)",
+          hover: "var(--border-hover)",
+        },
         text: {
-          primary: "#f5f5f5",
-          secondary: "#888888",
-          muted: "#555555",
+          primary: "var(--text-primary)",
+          secondary: "var(--text-secondary)",
+          muted: "var(--text-muted)",
         },
         accent: {
-          DEFAULT: "#ff6b00",
-          light: "#ff8534",
+          DEFAULT: "var(--accent)",
+          hover: "var(--accent-hover)",
         },
+      },
+      borderRadius: {
+        sm: "var(--radius-sm)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+      },
+      transitionDuration: {
+        fast: "150ms",
+        base: "200ms",
+        slow: "300ms",
       },
     },
   },
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [require("@tailwindcss/typography")],
 };
 
 export default config;

@@ -1,85 +1,115 @@
+/* ===========================================
+   ADMIN STYLES
+   =========================================== */
+
 .admin-header {
-  padding: 18px 24px;
+  padding: 1.25rem 1.5rem;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
 }
 
-.admin-header-title {
-  font-size: 18px;
+.admin-header h1 {
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--accent);
-  margin: 0;
 }
 
-.admin-nav {
-  display: flex;
-  gap: 20px;
+.admin-container {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
 }
 
-.admin-nav a {
+.admin-title {
+  margin-bottom: 1.5rem;
+}
+
+.admin-title h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.admin-title p {
+  font-size: 0.875rem;
   color: var(--text-muted);
-  text-decoration: none;
-  font-size: 14px;
-  transition: color 0.2s;
+  margin-top: 0.25rem;
 }
 
-.admin-nav a:hover,
-.admin-nav a.active {
-  color: var(--accent);
-}
-
+/* Admin Table */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .admin-table th {
   text-align: left;
-  padding: 12px 16px;
-  font-size: 11px;
+  padding: 0.875rem 1rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
   background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
 }
 
 .admin-table td {
-  padding: 16px;
+  padding: 1rem;
   border-bottom: 1px solid var(--border);
 }
 
-.admin-table tr:hover {
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tr:hover td {
   background: var(--bg-secondary);
 }
 
-.post-title-cell {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.post-slug {
-  margin-left: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.post-date-cell {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
+/* Status Badges */
 .status-published {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .status-draft {
-  background: rgba(255, 107, 0, 0.15);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  background: var(--accent-subtle);
   color: var(--accent);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
-.admin-editor {
-  padding: 24px;
+/* Post Meta */
+.post-title-cell {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.post-slug {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.post-date-cell {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
 }

@@ -2,16 +2,28 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border mt-auto">
-      <div className="max-w-4xl mx-auto px-6 py-6 text-center">
-        <div className="flex flex-col gap-2 text-sm">
-          <p className="text-text-muted">
-            &copy; {new Date().getFullYear()} Kurashizu. All rights reserved.
-          </p>
-          <nav className="flex justify-center gap-4 text-text-muted">
-            <Link href="/admin" className="hover:text-accent transition-colors">Admin</Link>
-            <Link href="/admin/editor/new" className="hover:text-accent transition-colors">New Post</Link>
-          </nav>
+    <footer className="border-t border-border/50 mt-auto">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col items-center sm:items-start gap-1">
+            <p className="text-sm text-text-muted">
+              &copy; {new Date().getFullYear()} Kurashizu. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4 text-xs text-text-muted">
+              <Link href="/admin" className="hover:text-accent transition-colors">
+                Admin
+              </Link>
+              <span>·</span>
+              <Link href="/admin/editor/new" className="hover:text-accent transition-colors">
+                New Post
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+            <span className="text-xs text-text-muted">Powered by Cloudflare</span>
+          </div>
         </div>
       </div>
     </footer>
