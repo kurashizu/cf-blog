@@ -25,14 +25,14 @@ interface GitHubRepo {
 }
 
 async function getGitHubRepos(): Promise<GitHubRepo[]> {
-  const cached = await r2Get(r2Paths.githubReposCache);
-  if (cached) {
-    try {
+  try {
+    const cached = await r2Get(r2Paths.githubReposCache);
+    if (cached) {
       const parsed = JSON.parse(cached) as GitHubRepo[];
       if (parsed.length > 0) return parsed;
-    } catch {
-      // ignore parse errors
     }
+  } catch {
+    // cache miss or parse error, fetch from GitHub
   }
 
   try {
