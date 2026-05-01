@@ -140,6 +140,17 @@ body::after {
   50% { transform: translate(-45%, -55%) scale(1.1); }
 }
 
+@keyframes gradient-flow {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: brightness(1.1);
+  }
+}
+
 /* Focus States */
 :focus-visible {
   outline: 2px solid var(--accent);

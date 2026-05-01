@@ -17,11 +17,25 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-bg-primary/80 border-b border-border/50">
       <nav className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="relative group">
-          <span className="text-xl font-bold bg-gradient-to-r from-accent to-accent-hover bg-clip-text text-transparent">
-            Kurashizu
+        <Link href="/" className="group flex flex-col items-center">
+          <span
+            className="text-xl font-bold italic tracking-wide"
+            style={{
+              fontFamily: "'Playfair Display', 'Georgia', serif",
+              background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 50%, var(--text-primary) 100%)',
+              backgroundSize: '200% 200%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: 'gradient-flow 4s ease infinite',
+            }}
+          >
+            Kurashizu Blog
           </span>
-          <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all duration-300 group-hover:w-full" />
+          <span className="text-[10px] font-medium text-text-muted tracking-widest uppercase -mt-1">
+            where ideas flow
+          </span>
+          <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-transparent via-accent to-transparent transition-all duration-500 group-hover:w-full" />
         </Link>
 
         <div className="flex items-center gap-4">
