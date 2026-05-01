@@ -20,9 +20,10 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Build
-        run: npm run build:cf
-        env:
-          NEXT_PUBLIC_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
+        run: |
+          BUILD_DATE=$(date +'build-%y%m%d-%H%M')
+          echo "NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+          npm run build:cf
 
       - name: Deploy
         run: npx wrangler deploy
