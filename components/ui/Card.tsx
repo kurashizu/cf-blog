@@ -1,15 +1,19 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  selected?: boolean;
+}
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, ...props }, ref) => (
+  ({ className, selected, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
         "group relative flex flex-col bg-bg-card border border-border rounded-xl transition-all duration-300",
-        "hover:border-accent/50 hover:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_50px_var(--accent-subtle)]",
+        selected
+          ? "border-accent animate-glow-border"
+          : "hover:border-accent/50 hover:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_50px_var(--accent-subtle)]",
         "hover:-translate-y-1",
         className
       )}

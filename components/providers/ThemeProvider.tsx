@@ -32,6 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (mounted) {
       document.documentElement.setAttribute("data-theme", theme);
       localStorage.setItem(STORAGE_KEY, theme);
+      window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
     }
   }, [theme, mounted]);
 
