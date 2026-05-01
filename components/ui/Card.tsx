@@ -21,14 +21,14 @@ Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-5 pb-3", className)} {...props} />
+    <div ref={ref} className={cn("p-5 pb-2 text-center", className)} {...props} />
   )
 );
 CardHeader.displayName = "CardHeader";
 
 const CardContent = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-5 pt-0", className)} {...props} />
+    <div ref={ref} className={cn("p-5 pt-0 text-center", className)} {...props} />
   )
 );
 CardContent.displayName = "CardContent";

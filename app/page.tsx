@@ -18,10 +18,10 @@ function FeaturedPost({ post }: { post: Post }) {
   return (
     <Link href={`/blog/${post.slug}`} className="block">
       <Card className="h-full group">
-        <CardHeader className="pb-2">
+        <CardHeader>
           <span className="article-meta">{formatDate(post.date)}</span>
         </CardHeader>
-        <CardContent className="pt-0 flex-1">
+        <CardContent className="flex-1">
           <h3 className="article-title group-hover:text-accent transition-colors">{post.title}</h3>
           {post.description && (
             <p className="article-desc mt-1">{post.description}</p>

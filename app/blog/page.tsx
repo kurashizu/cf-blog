@@ -18,12 +18,12 @@ function PostCard({ post }: { post: Post }) {
   return (
     <Link href={`/blog/${post.slug}`} className="block">
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader>
           <span className="article-meta">{formatDate(post.date)}</span>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
           <h2 className="article-title">{post.title}</h2>
-          {post.description && <p className="article-desc">{post.description}</p>}
+          {post.description && <p className="article-desc mt-1">{post.description}</p>}
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
               {post.tags.map((tag) => (
