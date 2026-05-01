@@ -9,3 +9,4 @@ export { adminClasses, adminTableClasses } from './admin';
 export { formClasses } from './form';
 export { pageClasses } from './pages';
 export { articleClasses } from './article';
+export { animations, animationDelays, delayClass } from './animations';
