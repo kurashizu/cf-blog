@@ -25,17 +25,7 @@ interface GitHubRepo {
 }
 
 async function getGitHubRepos(): Promise<GitHubRepo[]> {
-  try {
-    const cached = await r2Get(r2Paths.githubReposCache);
-    if (cached) {
-      const parsed = JSON.parse(cached) as GitHubRepo[];
-      if (parsed.length > 0) return parsed;
-    }
-  } catch {
-    // cache miss or parse error, fetch from GitHub
-  }
-
-  try {
+  const fetchFromGitHub = async (): Promise<GitHubRepo[]> => {
     const res = await fetch(
       "https://api.github.com/users/kurashizu/repos?sort=stars&per_page=6&type=public",
       {
@@ -51,15 +41,33 @@ async function getGitHubRepos(): Promise<GitHubRepo[]> {
       return [];
     }
     const repos = await res.json() as GitHubRepo[];
-    const filtered = repos.filter((r) => !r.fork).slice(0, 6);
+    return repos.filter((r) => !r.fork).slice(0, 6);
+  };
 
-    await r2Put(r2Paths.githubReposCache, JSON.stringify(filtered));
-
-    return filtered;
-  } catch (e) {
-    console.error("GitHub fetch error:", e);
-    return [];
+  try {
+    const cached = await r2Get(r2Paths.githubReposCache);
+    if (cached) {
+      const parsed = JSON.parse(cached) as GitHubRepo[];
+      if (parsed.length > 0) {
+        fetchFromGitHub().then(async (repos) => {
+          if (repos.length > 0) {
+            await r2Put(r2Paths.githubReposCache, JSON.stringify(repos));
+          }
+        }).catch((e) => {
+          console.error("Background GitHub fetch failed:", e);
+        });
+        return parsed;
+      }
+    }
+  } catch {
+    // cache miss, proceed to fetch
   }
+
+  const repos = await fetchFromGitHub();
+  if (repos.length > 0) {
+    await r2Put(r2Paths.githubReposCache, JSON.stringify(repos));
+  }
+  return repos;
 }
 
 function FeaturedPost({ post }: { post: Post }) {
