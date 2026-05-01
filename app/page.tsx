@@ -110,7 +110,7 @@ export default async function HomePage() {
               href="https://github.com/kurashizu"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-text-muted hover:text-accent transition-colors"
+              className="view-all-link"
             >
               View all on GitHub
             </a>
