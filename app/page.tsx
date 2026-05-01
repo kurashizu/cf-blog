@@ -52,10 +52,13 @@ export default async function HomePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <section className="hero">
-        <h1 className="hero-title">Kurashizu</h1>
-        <p className="hero-subtitle">Software Engineer / Writer</p>
+        <h1 className="hero-title">Kurashizu Blog</h1>
+        <p className="hero-subtitle">Software Engineer & Technical Writer</p>
         <p className="hero-bio">
-          Building things with code. Writing about things I have learned.
+          A personal space where I share what I learn — from cloud infrastructure
+          and serverless architectures to developer tools and productivity hacks.
+          Sometimes I write about the weird bugs I encounter, sometimes about
+          elegant solutions. Welcome to my corner of the internet.
         </p>
       </section>
 
@@ -83,6 +86,30 @@ export default async function HomePage() {
             </Link>
           </div>
         )}
+      </section>
+
+      <section className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="text-center">
+          <CardContent>
+            <div className="text-3xl mb-2">☁️</div>
+            <h3 className="font-semibold text-text-primary mb-1">Cloud Native</h3>
+            <p className="text-sm text-text-muted">Built on Cloudflare Pages with R2 storage</p>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent>
+            <div className="text-3xl mb-2">⚡</div>
+            <h3 className="font-semibold text-text-primary mb-1">Fast & Light</h3>
+            <p className="text-sm text-text-muted">Minimal JavaScript, optimized for edge</p>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent>
+            <div className="text-3xl mb-2">✍️</div>
+            <h3 className="font-semibold text-text-primary mb-1">Markdown</h3>
+            <p className="text-sm text-text-muted">Write in MD, powered by Next.js</p>
+          </CardContent>
+        </Card>
       </section>
     </div>
   );
