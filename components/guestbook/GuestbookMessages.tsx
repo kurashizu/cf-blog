@@ -73,36 +73,29 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
 
     return (
         <>
-            <div className="max-w-xl mx-auto space-y-3">
-                {messages.slice(0, 5).map((msg) => (
-                    <Card key={msg.id}>
-                        <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                                <img
-                                    src={getAvatarSrc(msg)}
-                                    alt={msg.name}
-                                    className="w-10 h-10 rounded-full object-cover shrink-0"
-                                />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-medium text-text-primary text-sm">
-                                            {msg.name}
-                                        </span>
-                                        <span className="text-xs text-text-muted">
-                                            {formatDate(msg.timestamp)}
-                                        </span>
-                                    </div>
-                                    <p className="text-text-secondary text-sm whitespace-pre-wrap break-words">
-                                        {msg.content}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-                {messages.length > 5 && (
-                    <div className="text-center">
-                        <Button variant="secondary" onClick={() => { setShowAll(true); setPage(1); }}>
+            {/* Flow layout - tags style */}
+            <div className="max-w-xl mx-auto">
+                <div className="flex flex-wrap gap-2 justify-center">
+                    {messages.map((msg) => (
+                        <div
+                            key={msg.id}
+                            className="flex items-center gap-2 px-3 py-2 bg-bg-card/60 backdrop-blur-sm border border-border rounded-full hover:border-accent/50 transition-colors cursor-pointer"
+                            onClick={() => { setShowAll(true); setPage(1); }}
+                        >
+                            <img
+                                src={getAvatarSrc(msg)}
+                                alt={msg.name}
+                                className="w-5 h-5 rounded-full object-cover shrink-0"
+                            />
+                            <span className="text-xs text-text-secondary max-w-[120px] truncate">
+                                {msg.content}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+                {messages.length >= 3 && (
+                    <div className="text-center mt-3">
+                        <Button variant="secondary" size="sm" onClick={() => { setShowAll(true); setPage(1); }}>
                             View all ({messages.length})
                         </Button>
                     </div>
