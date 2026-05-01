@@ -31,8 +31,17 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
     const [messages, setMessages] = useState<GuestbookMessage[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAll, setShowAll] = useState(false);
+    const [closing, setClosing] = useState(false);
     const [refreshKey, setRefreshKey] = useState(initialRefreshKey ?? 0);
     const [page, setPage] = useState(1);
+
+    const handleClose = () => {
+        setClosing(true);
+        setTimeout(() => {
+            setShowAll(false);
+            setClosing(false);
+        }, 200);
+    };
 
     useEffect(() => {
         const handlePosted = () => setRefreshKey((k) => k + 1);
@@ -110,15 +119,15 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-md"
-                        onClick={() => setShowAll(false)}
+                        onClick={handleClose}
                     />
-                    <div className="relative w-full max-w-2xl max-h-[80vh] bg-bg-card/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slideUp">
+                    <div className={`relative w-full max-w-2xl max-h-[80vh] bg-bg-card/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden ${closing ? 'animate-slideDown' : 'animate-slideUp'}`}>
                         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-bg-secondary">
                             <h3 className="text-sm font-semibold text-text-primary">
                                 All Messages ({messages.length})
                             </h3>
                             <button
-                                onClick={() => setShowAll(false)}
+                                onClick={handleClose}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
                             >
                                 <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
