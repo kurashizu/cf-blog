@@ -55,6 +55,7 @@ export function GuestbookForm({ onSuccess }: GuestbookFormProps) {
             setName("");
             setContent("");
             setEmail("");
+            window.dispatchEvent(new CustomEvent('guestbook-posted'));
             onSuccess?.();
         } catch {
             setError("Network error. Please try again.");
