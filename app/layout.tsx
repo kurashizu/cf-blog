@@ -14,6 +14,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/ui/ChatWidget";
 import { GuestbookWidget } from "@/components/guestbook/GuestbookWidget";
 import { ParticleBackground } from "@/components/ui/ParticleBackground";
+import { MouseTrail } from "@/components/ui/MouseTrail";
 
 const inter = Inter({ subsets: ["latin"] });
 const playfair = Playfair_Display({ subsets: ["latin"] });
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className={`${inter.className} flex min-h-screen flex-col bg-bg-primary text-text-primary`}>
         <ThemeProvider>
           <ParticleBackground />
+          <MouseTrail />
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
