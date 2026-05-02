@@ -19,14 +19,28 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Build
+      - name: Build cf-blog
         run: |
           BUILD_DATE=$(date +'build-%y%m%d-%H%M')
           echo "NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
           npm run build:cf
 
-      - name: Deploy
+      - name: Build cf-agent
+        run: |
+          cd agent-worker
+          npm ci --legacy-peer-deps
+          npm run build:cf
+
+      - name: Deploy cf-blog
         run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy cf-agent
+        run: |
+          cd agent-worker
+          npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
