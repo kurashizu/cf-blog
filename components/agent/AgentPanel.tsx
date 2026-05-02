@@ -17,6 +17,7 @@ interface SessionMeta {
 }
 
 const AGENT_API = "https://agent.022025.xyz/api/chat";
+const LLM_API = "/api/llm";
 const SESSIONS_KEY = "agent_sessions";
 const ACTIVE_KEY = "agent_active_session";
 const MAX_SESSIONS = 10;
@@ -168,6 +169,31 @@ export function AgentPanel() {
     });
   }, [activeSessionId]);
 
+  const generateTitle = useCallback(async (userMessage: string) => {
+    try {
+      const response = await fetch(LLM_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "user", parts: [{ text: `Based on this conversation start, generate a short title (max 10 Chinese characters or 5 English words) for this chat session. Respond with ONLY the title, no explanation:\n\n${userMessage}` }] }
+          ],
+          options: { maxTokens: 50, temperature: 0.9 },
+        }),
+      });
+      if (!response.ok) return;
+      const data = await response.json() as { text?: string };
+      if (data.text) {
+        const generatedTitle = data.text.slice(0, 20).trim();
+        if (generatedTitle) {
+          updateSessionActivity(generatedTitle);
+        }
+      }
+    } catch {
+      // Silently fail - title generation is not critical
+    }
+  }, [updateSessionActivity]);
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
     let sessionId = activeSessionId;
@@ -178,12 +204,12 @@ export function AgentPanel() {
     const userMessage: Message = { role: "user", parts: [{ text: input }] };
     setMessages((prev) => [...prev, userMessage]);
     const currentInput = input;
-    const messageTitle = currentInput.slice(0, 40);
     setInput("");
     setIsLoading(true);
 
-    // Update session title on first message
-    updateSessionActivity(messageTitle);
+    // Generate title on first message if session title is still "New conversation"
+    const isFirstMessage = sessions.find(s => s.id === sessionId)?.title === "New conversation";
+    const titleToGenerate = isFirstMessage ? currentInput : undefined;
 
     try {
       const response = await fetch(AGENT_API, {
@@ -242,6 +268,9 @@ export function AgentPanel() {
     } finally {
       setIsLoading(false);
       updateSessionActivity();
+      if (titleToGenerate) {
+        generateTitle(titleToGenerate);
+      }
     }
   };
 
@@ -345,6 +374,13 @@ export function AgentPanel() {
                   <h3 className="text-sm font-semibold text-text-primary">KurAgent</h3>
                   <p className="text-xs text-text-muted">kurashizu makes thinking act</p>
                 </div>
+              </div>
+
+              {/* Session title - centered */}
+              <div className="flex-1 flex justify-center px-4">
+                <span className="text-sm text-text-secondary truncate max-w-[300px]" title={sessions.find(s => s.id === activeSessionId)?.title}>
+                  {sessions.find(s => s.id === activeSessionId)?.title || "New conversation"}
+                </span>
               </div>
 
               <div className="flex items-center gap-2">
