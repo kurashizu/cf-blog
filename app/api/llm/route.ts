@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  generateContentWithContext,
-  generateContentStreamWithContext,
-  type GeminiMessage,
-  type GeminiGenerateOptions,
-} from '@/lib/gemini';
+import { type GeminiMessage, type GeminiGenerateOptions, SYSTEM_PROMPT } from '@/lib/gemini';
 import { checkBurst, checkDailyKV, getIP } from '@/lib/ratelimiter';
+import { callWithFallback, streamWithFallback, getModelPool, getDefaultModel } from '@/lib/model-pool';
 
 const MAX_MESSAGE_LENGTH = 10000;
 const MAX_MESSAGES = 50;
@@ -42,6 +38,8 @@ export async function POST(request: NextRequest) {
     const env = ctx.env as {
       LLM_RATE_LIMIT?: RateLimit;
       SESSION_KV: KVNamespace;
+      GEMINI_API_KEY: string;
+      GEMINI_MODELS?: string;
     };
 
     const ip = getIP(request);
@@ -85,40 +83,97 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitizedOptions = sanitizeOptions(options);
+    const modelPool = getModelPool(env);
+    const defaultModel = getDefaultModel(env);
+    const contents = sanitizedMessages.map((m) => ({ role: m.role, parts: m.parts }));
 
     if (stream) {
-      const encoder = new TextEncoder();
-      const stream2 = new ReadableStream({
-        async start(controller) {
-          try {
-            for await (const chunk of generateContentStreamWithContext(sanitizedMessages, sanitizedOptions)) {
-              controller.enqueue(encoder.encode(chunk));
+      const { response: streamResp } = await streamWithFallback(
+        env.GEMINI_API_KEY,
+        modelPool,
+        contents,
+        { ...sanitizedOptions, model: sanitizedOptions?.model || defaultModel },
+        env.SESSION_KV,
+        SYSTEM_PROMPT
+      );
+
+      if (!streamResp.ok) {
+        const errBody = await streamResp.clone().json().catch(() => ({}));
+        return NextResponse.json(
+          { error: `Gemini API error ${streamResp.status}: ${JSON.stringify(errBody)}` },
+          { status: 500 }
+        );
+      }
+
+      const geminiBody = streamResp.body;
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            if (!geminiBody) { controller.close(); return; }
+            const reader = geminiBody.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const raw = decoder.decode(value, { stream: true });
+              const lines = raw.split('\n').filter((l) => l.startsWith('data: '));
+              for (const line of lines) {
+                try {
+                  const json = JSON.parse(line.slice(6));
+                  const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+                  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`));
+                } catch {
+                  // Skip malformed lines
+                }
+              }
             }
             controller.close();
-          } catch (error) {
-            controller.error(error);
-          }
-        },
-      });
-
-      return new Response(stream2, {
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-        },
-      });
+          },
+        }),
+        {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        }
+      );
     }
 
-    try {
-      const result = await generateContentWithContext(sanitizedMessages, sanitizedOptions);
-      return NextResponse.json(result);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      console.error('LLM API error:', msg);
+    const { response: resp, model } = await callWithFallback(
+      env.GEMINI_API_KEY,
+      modelPool,
+      contents,
+      { ...sanitizedOptions, model: sanitizedOptions?.model || defaultModel },
+      env.SESSION_KV,
+      SYSTEM_PROMPT
+    );
+
+    if (!resp.ok) {
+      const errBody = await resp.clone().json().catch(() => ({}));
       return NextResponse.json(
-        { error: msg },
+        { error: `Gemini API error ${resp.status}: ${JSON.stringify(errBody)}` },
         { status: 500 }
       );
     }
+
+    const data = await resp.json() as {
+      candidates?: { content: { parts: { text?: string }[] } }[];
+      usageMetadata?: { promptTokenCount: number; candidatesTokenCount: number; totalTokenCount: number };
+    };
+
+    const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text ?? '';
+
+    return NextResponse.json({
+      text,
+      model,
+      usage: data.usageMetadata ? {
+        promptTokens: data.usageMetadata.promptTokenCount,
+        candidatesTokens: data.usageMetadata.candidatesTokenCount,
+        totalTokens: data.usageMetadata.totalTokenCount,
+      } : undefined,
+    });
   } catch (error) {
     console.error('LLM route error:', error);
     return NextResponse.json(
