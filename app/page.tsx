@@ -300,9 +300,9 @@ export default async function HomePage() {
         {/* Agent — right bottom */}
         <section className="flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="section-title mb-0">WIP</h2>
+            <h2 className="section-title mb-0">Agent</h2>
           </div>
-          <Card className="flex-1 p-0 overflow-hidden">
+          <Card className="flex-1 p-0">
             <AgentPanel />
           </Card>
         </section>

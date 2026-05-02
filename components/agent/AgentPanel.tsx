@@ -142,7 +142,7 @@ export function AgentPanel() {
           onClick={handleExpand}
           className="w-full h-full flex flex-col items-center justify-center gap-3 py-8 px-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
         >
-          {/* Agent icon */}
+          {/* Brain icon */}
           <div className="relative">
             <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center group-hover:bg-accent/15 group-hover:border-accent/30 transition-all duration-300">
               <svg
@@ -159,18 +159,15 @@ export function AgentPanel() {
                 />
               </svg>
             </div>
-            {/* Subtle glow on hover */}
-            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           </div>
 
           <div className="text-center">
-            <p className="text-sm font-medium text-text-primary">Agent</p>
-            <p className="text-xs text-text-muted mt-0.5">Interactive AI assistant</p>
+            <p className="text-sm font-semibold text-text-primary">KurAgent</p>
+            <p className="text-xs text-text-muted mt-0.5">kurashizu makes thinking act</p>
           </div>
 
-          {/* Tap hint */}
           <div className="flex items-center gap-1 text-text-muted">
-            <span className="text-[10px] uppercase tracking-widest">Click to launch</span>
+            <span className="text-[10px] uppercase tracking-widest">Click to chat</span>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
             </svg>
@@ -178,7 +175,7 @@ export function AgentPanel() {
         </button>
       )}
 
-      {/* Full-screen overlay */}
+      {/* Full-screen overlay — rendered at root level, outside overflow containers */}
       {expanded && (
         <div
           ref={overlayRef}
@@ -219,8 +216,8 @@ export function AgentPanel() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-text-primary">Agent</h3>
-                  <p className="text-xs text-text-muted">Powered by cf-agent</p>
+                  <h3 className="text-sm font-semibold text-text-primary">KurAgent</h3>
+                  <p className="text-xs text-text-muted">kurashizu makes thinking act</p>
                 </div>
               </div>
 
@@ -283,7 +280,7 @@ export function AgentPanel() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-text-primary">Agent ready</p>
+                    <p className="text-sm font-medium text-text-primary">KurAgent ready</p>
                     <p className="text-xs text-text-muted mt-1 max-w-[240px]">
                       Try asking about time, web content, or calculations
                     </p>
@@ -340,7 +337,7 @@ export function AgentPanel() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask the agent..."
+                  placeholder="Ask KurAgent..."
                   className="flex-1 bg-bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent/60 transition-colors"
                   rows={1}
                   disabled={isLoading}
