@@ -5,13 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Deploy
 
 ```bash
-npm run dev          # Local development (cf-blog only)
-npm run build:cf    # Build for Cloudflare Workers (cf-blog)
-
-cd agent-worker && npm ci && npm run build:cf  # Build cf-agent separately
-
-git push origin main  # Push to GitHub to trigger CI — both cf-blog AND cf-agent deploy
+npm run dev          # Local development (Next.js on localhost)
+npm run build        # Next.js production build
+npm run build:cf    # Build for Cloudflare Workers via @opennextjs/cloudflare
+npm run lint         # ESLint check
+npm run deploy:cf   # Direct deploy (bypasses CI, use git push instead)
 ```
+
+## Rate Limiting
+
+Two-layer rate limiting via CF Rate Limiter (burst) + Durable Object (daily):
+- **LLM API**: 2 requests/10s burst, 100/day
+- **Guestbook API**: 2 requests/10s burst, 5/day
+
+`lib/ratelimiter.ts` exports `checkRateLimit(key, type)` — handles both layers.
 
 ## Dual-Worker CI
 
@@ -19,12 +26,20 @@ GitHub Actions deploys two workers in parallel:
 - `cf-blog` — main blog at `cf-blog.kurashizu.workers.dev`
 - `cf-agent` — agent worker at `cf-agent.kurashizu.workers.dev`
 
+Push to `main` to trigger deployment (via GitHub Actions, not direct wrangler deploy). `cf-agent` builds from `agent-worker/` directory.
+
+**Direct deploy for cf-agent** (faster than CI):
+```bash
+cd agent-worker && npm run build:cf && npx wrangler deploy
+```
+
 ## Architecture
 
 ### Cloudflare Deployment
 - Uses `@opennextjs/cloudflare` to deploy Next.js to Cloudflare Workers
 - R2 bucket (`cf-blog-bucket`) stores articles as markdown files
 - R2 paths: `articles/{slug}.md`
+- Wrangler bindings: R2 bucket, rate limiters (LLM/GUESTBOOK), Durable Object (RATE_LIMIT_DO)
 
 ### Article System
 - Articles stored in R2 with YAML frontmatter
@@ -32,6 +47,11 @@ GitHub Actions deploys two workers in parallel:
 - `tags` can be array or comma-separated string (handled by `parsePost`)
 - `lib/articles.ts` provides `createArticlesRepo()` with `getAll()`, `getRecent()`, `getBySlug()`, `save()`, `delete()`
 - Markdown rendered via `marked` library
+
+### Rate Limiting
+- `lib/ratelimiter.ts` — RateLimitDO (Durable Object) + checkRateLimit driver
+- CF Rate Limiter handles burst (10s), DO handles daily reset at midnight
+- Durable Object alarm clears stale entries; TTL 7 days on storage
 
 ### Theme System
 - Three themes: `dark` (orange accent), `deep-blue` (blue accent), `deep-green` (green accent)
@@ -64,9 +84,10 @@ npx wrangler r2 object list cf-blog-bucket --prefix=articles/
 ## Key Files
 
 - `lib/articles.ts` - Article repository with R2 backend
-- `lib/r2.ts` - R2 client using `@opennextjs/cloudflare`
+- `lib/r2.ts` - R2 client using `@opennextjs/cloudflare` (getCloudflareContext pattern)
 - `lib/gemini.ts` - Gemini API wrapper with system prompt
 - `lib/frontmatter.ts` - YAML frontmatter parser/builder
+- `lib/ratelimiter.ts` - Rate limiting (CF Rate Limiter + Durable Object)
 - `components/ui/ParticleBackground.tsx` - Canvas particle animation
 - `components/providers/ThemeProvider.tsx` - Theme context
 
@@ -98,10 +119,66 @@ lib/                 # Backend logic
   utils.ts          # Utility functions
   guestbook.ts       # Guestbook repository
   r2-paths.ts       # R2 key paths
+  ratelimiter.ts     # Rate limiting (DO class + checkRateLimit)
 
-agent-worker/        # Separate Next.js Worker (cf-agent)
-  app/              # Minimal Next.js app (stub for now)
+agent-worker/        # Separate Cloudflare Worker (cf-agent)
+  lib/
+    tools/           # Tool implementations (eval-expression, fetch-webpage, get-time)
+      index.ts     # Tool registry — exports TOOLS, FUNCTION_DECLARATIONS, executeTool()
+      eval-expression.ts
+      fetch-webpage.ts
+      get-time.ts
+    evaluator.ts    # Safe JS expression evaluator
+    html-to-md.ts  # HTML to Markdown converter
+  app/
+    api/
+      tool/         # GET list tools, POST execute tool
+      chat/        # Gemini tool-calling loop
+  wrangler.toml     # Worker config (GEMINI_API_KEY secret)
 ```
+
+## cf-agent Tool System
+
+### Tool Structure
+
+Each tool in `lib/tools/` follows this interface:
+
+```typescript
+interface Tool {
+  name: string;           // "eval_expression"
+  description: string;
+  example: string;
+  parameters: object;      // JSON Schema
+  execute(args: Record<string, unknown>): Promise<unknown>;
+}
+```
+
+### /api/tool Endpoint
+
+```json
+// GET /api/tool → list all tools
+{
+  "tools": [
+    { "name": "eval_expression", "description": "...", "example": "..." },
+    { "name": "fetch_webpage", "description": "...", "example": "..." },
+    { "name": "get_time", "description": "...", "example": "..." }
+  ],
+  "functionDeclarations": [...]  // Gemini format
+}
+
+// POST /api/tool → execute a tool directly
+{ "name": "eval_expression", "args": { "code": "1+2" } }
+
+// Response
+{ "success": true, "result": "3", "tool": "eval_expression" }
+```
+
+### /api/chat Tool Loop
+
+1. Send `tools: { functionDeclarations }` to Gemini
+2. If response has `functionCall` → `executeTool(name, args)` → Gemini with `functionResponse`
+3. Max 5 iterations to prevent infinite loops
+4. Default model: `gemma-4-31b-it`
 
 ## Code Style
 
