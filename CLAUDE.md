@@ -5,14 +5,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Deploy
 
 ```bash
-npm run dev          # Local development
-npm run build        # Production build (Next.js) 
-npm run build:cf    # Build for Cloudflare Workers (NEVER use this, as we use GitHub Actions for deployment)
-npm run deploy:cf   # Deploy to Cloudflare (NEVER use this, as we use GitHub Actions for deployment)
-npm run preview:cf  # Preview Cloudflare deployment (NEVER use this, as we use GitHub Actions for deployment)
+npm run dev          # Local development (cf-blog only)
+npm run build:cf    # Build for Cloudflare Workers (cf-blog)
 
-git push origin main  # Push to GitHub to trigger Cloudflare deployment (DO THIS FOR DEPLOYMENT)
+cd agent-worker && npm ci && npm run build:cf  # Build cf-agent separately
+
+git push origin main  # Push to GitHub to trigger CI — both cf-blog AND cf-agent deploy
 ```
+
+## Dual-Worker CI
+
+GitHub Actions deploys two workers in parallel:
+- `cf-blog` — main blog at `cf-blog.kurashizu.workers.dev`
+- `cf-agent` — agent worker at `cf-agent.kurashizu.workers.dev`
 
 ## Architecture
 
@@ -69,18 +74,21 @@ npx wrangler r2 object list cf-blog-bucket --prefix=articles/
 
 ```
 app/                    # Next.js App Router pages
-  page.tsx            # Homepage (hero + GitHub repos + recent posts)
+  page.tsx            # Homepage (hero + 4-section grid + guestbook)
   layout.tsx           # Root layout with ThemeProvider
   blog/               # Blog pages
   admin/              # Admin pages (editor, API)
   api/                # Public API routes
     llm/             # Gemini proxy
+    guestbook/       # Guestbook API
 
 components/
   ui/                # Reusable UI components (Card, MiniCard, Button, Tag)
   layout/            # Header, Footer
   providers/         # Context providers (ThemeProvider)
   theme/             # CSS files (global.css, layout.css, etc.)
+  guestbook/         # Guestbook components
+  agent/             # Agent components (future)
 
 lib/                 # Backend logic
   articles.ts        # Article repository
@@ -88,6 +96,11 @@ lib/                 # Backend logic
   gemini.ts          # Gemini API wrapper
   frontmatter.ts     # YAML frontmatter parser/builder
   utils.ts          # Utility functions
+  guestbook.ts       # Guestbook repository
+  r2-paths.ts       # R2 key paths
+
+agent-worker/        # Separate Next.js Worker (cf-agent)
+  app/              # Minimal Next.js app (stub for now)
 ```
 
 ## Code Style
