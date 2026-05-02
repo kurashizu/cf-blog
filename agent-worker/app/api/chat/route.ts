@@ -88,6 +88,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      // Retry on 500 errors only
+      if (res.status >= 500 && attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+        continue;
+      }
+      return res;
+    } catch (e) {
+      lastError = e as Error;
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
+  }
+  throw lastError ?? new Error('Request failed after retries');
+}
+
 async function handleSessionChat(
   body: {
     session_id: string;
@@ -132,91 +153,11 @@ async function handleSessionChat(
 
   const contents = messages.map((m) => ({ role: m.role, parts: m.parts }));
 
-  // Streaming path — tool loop not yet supported in stream mode
-  // TODO: streaming + tool combo: run tool loop synchronously, then streamGenerateContent for final text
-  if (stream) {
-    const generationConfig: Record<string, unknown> = {
-      temperature: body.options?.temperature ?? 0.9,
-      maxOutputTokens: body.options?.maxTokens ?? 8192,
-      topP: body.options?.topP ?? 0.95,
-      topK: body.options?.topK ?? 40,
-    };
-
-    const url = `${GEMINI_API_BASE}/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
-
-    const geminiRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents, tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }], generationConfig }),
-    });
-
-    if (!geminiRes.ok) {
-      const error = await geminiRes.text();
-      return NextResponse.json({ error: `Gemini API error ${geminiRes.status}: ${error}` }, { status: 500 });
-    }
-
-    let fullText = '';
-    const geminiBody = geminiRes.body ?? null;
-
-    const response = new Response(
-      new ReadableStream({
-        async start(controller) {
-          if (!geminiBody) { controller.close(); return; }
-          const reader = geminiBody.getReader();
-          const decoder = new TextDecoder();
-          const sseDecoder = new TextDecoder();
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const raw = decoder.decode(value, { stream: true });
-            const lines = raw.split('\n').filter((l) => l.startsWith('data: '));
-            for (const line of lines) {
-              try {
-                const json = JSON.parse(line.slice(6));
-                const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-                fullText += text;
-                controller.enqueue(
-                  new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`)
-                );
-              } catch {
-                // Skip malformed lines
-              }
-            }
-          }
-          controller.close();
-        },
-        async cancel() {
-          // Stream cancelled — do NOT write KV, preserve clean history
-        },
-      }),
-      {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      }
-    );
-
-    // After stream completes successfully, save to KV
-    // We need to wait for the stream to finish before saving
-    // For now, save after stream setup (actual write happens async)
-    const assistantMsg: Message = { role: 'model', parts: [{ text: fullText }] };
-    const updatedMessages = trimHistory([...messages, assistantMsg]);
-    sessionKv.put(body.session_id, JSON.stringify({ messages: updatedMessages, version: version + 1 }), {
-      expirationTtl: SESSION_TTL,
-    });
-
-    return response;
-  }
-
-  // Non-streaming: tool loop
+  // Tool loop always runs synchronously (non-streaming generateContent)
   const toolCallLog: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
   let iteration = 0;
+  let finalText = '';
+  let hitIterationLimit = false;
 
   while (iteration < MAX_TOOL_CALLS) {
     iteration++;
@@ -230,7 +171,7 @@ async function handleSessionChat(
 
     const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -275,88 +216,133 @@ async function handleSessionChat(
     }
 
     if (textPart?.text) {
-      const assistantMsg: Message = { role: 'model', parts: [{ text: textPart.text }] };
-      const updatedMessages = trimHistory([...messages, assistantMsg]);
-
-      await sessionKv.put(
-        body.session_id,
-        JSON.stringify({ messages: updatedMessages, version: version + 1 }),
-        { expirationTtl: SESSION_TTL }
-      );
-
-      return NextResponse.json({
-        session_id: body.session_id,
-        text: textPart.text,
-        model,
-        usage: data.usageMetadata ? {
-          promptTokens: data.usageMetadata.promptTokenCount,
-          candidatesTokens: data.usageMetadata.candidatesTokenCount,
-          totalTokens: data.usageMetadata.totalTokenCount,
-        } : undefined,
-        toolCalls: toolCallLog.length > 0 ? toolCallLog : undefined,
-      });
+      finalText = textPart.text;
+      break;
     }
 
-    const assistantMsg: Message = { role: 'model', parts: [{ text: '' }] };
-    const updatedMessages = trimHistory([...messages, assistantMsg]);
+    finalText = '';
+    break;
+  }
 
-    await sessionKv.put(
-      body.session_id,
-      JSON.stringify({ messages: updatedMessages, version: version + 1 }),
-      { expirationTtl: SESSION_TTL }
+  // Max iterations exceeded — force answer without tools
+  if (!finalText && iteration >= MAX_TOOL_CALLS) {
+    hitIterationLimit = true;
+    contents.push({
+      role: 'user',
+      parts: [{
+        text: 'Please provide your answer based on the tool results gathered so far. Do not call any more tools.',
+      }],
+    });
+
+    const forcedConfig: Record<string, unknown> = {
+      temperature: body.options?.temperature ?? 0.9,
+      maxOutputTokens: body.options?.maxTokens ?? 8192,
+      topP: body.options?.topP ?? 0.95,
+      topK: body.options?.topK ?? 40,
+    };
+
+    const finalRes = await fetchWithRetry(
+      `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents, generationConfig: forcedConfig }),
+      }
     );
 
-    return NextResponse.json({
-      session_id: body.session_id,
-      text: '',
-      model,
-      toolCalls: toolCallLog.length > 0 ? toolCallLog : undefined,
-    });
+    if (!finalRes.ok) {
+      return NextResponse.json({ error: `Gemini API error ${finalRes.status}` }, { status: 500 });
+    }
+
+    const finalData = await finalRes.json();
+    finalText = finalData.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text ?? '';
   }
 
-  // Max iterations exceeded — force answer
-  contents.push({
-    role: 'user',
-    parts: [{
-      text: 'Please provide your answer based on the tool results gathered so far. Do not call any more tools.',
-    }],
-  });
-
-  const forcedConfig: Record<string, unknown> = {
-    temperature: body.options?.temperature ?? 0.9,
-    maxOutputTokens: body.options?.maxTokens ?? 8192,
-    topP: body.options?.topP ?? 0.95,
-    topK: body.options?.topK ?? 40,
-  };
-
-  const finalRes = await fetch(`${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents, generationConfig: forcedConfig }),
-  });
-
-  if (!finalRes.ok) {
-    return NextResponse.json({ error: `Gemini API error ${finalRes.status}` }, { status: 500 });
-  }
-
-  const finalData = await finalRes.json();
-  const finalText = finalData.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text ?? '';
-
+  // Save session state before streaming response
   const assistantMsg: Message = { role: 'model', parts: [{ text: finalText }] };
   const updatedMessages = trimHistory([...messages, assistantMsg]);
+  sessionKv.put(body.session_id, JSON.stringify({ messages: updatedMessages, version: version + 1 }), {
+    expirationTtl: SESSION_TTL,
+  });
 
-  await sessionKv.put(
-    body.session_id,
-    JSON.stringify({ messages: updatedMessages, version: version + 1 }),
-    { expirationTtl: SESSION_TTL }
-  );
+  // Streaming: final text output via streamGenerateContent (no tools)
+  if (stream) {
+    const generationConfig: Record<string, unknown> = {
+      temperature: body.options?.temperature ?? 0.9,
+      maxOutputTokens: body.options?.maxTokens ?? 8192,
+      topP: body.options?.topP ?? 0.95,
+      topK: body.options?.topK ?? 40,
+    };
 
+    const streamUrl = `${GEMINI_API_BASE}/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
+
+    // Use contents with the assistant message included for streaming
+    const streamContents = messages.map((m) => ({ role: m.role, parts: m.parts }));
+    streamContents.push({ role: 'model', parts: [{ text: finalText }] });
+
+    const geminiRes = await fetchWithRetry(streamUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: streamContents, generationConfig }),
+    });
+
+    if (!geminiRes.ok) {
+      const error = await geminiRes.text();
+      return NextResponse.json({ error: `Gemini API error ${geminiRes.status}: ${error}` }, { status: 500 });
+    }
+
+    const geminiBody = geminiRes.body ?? null;
+
+    return new Response(
+      new ReadableStream({
+        async start(controller) {
+          if (!geminiBody) { controller.close(); return; }
+          const reader = geminiBody.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const raw = decoder.decode(value, { stream: true });
+            const lines = raw.split('\n').filter((l) => l.startsWith('data: '));
+            for (const line of lines) {
+              try {
+                const json = JSON.parse(line.slice(6));
+                const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+                controller.enqueue(
+                  new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`)
+                );
+              } catch {
+                // Skip malformed lines
+              }
+            }
+          }
+          controller.close();
+        },
+        async cancel() {
+          // Stream cancelled — preserve clean history (already saved above)
+        },
+      }),
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      }
+    );
+  }
+
+  // Non-streaming response
   return NextResponse.json({
     session_id: body.session_id,
     text: finalText,
     model,
-    toolCalls: toolCallLog,
-    hitIterationLimit: true,
+    toolCalls: toolCallLog.length > 0 ? toolCallLog : undefined,
+    hitIterationLimit,
   });
 }
 
@@ -391,11 +377,11 @@ async function handleLegacyChat(
 
   const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents, tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }], generationConfig }),
-  });
+    const response = await fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents, tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }], generationConfig }),
+    });
 
   if (!response.ok) {
     const error = await response.text();
