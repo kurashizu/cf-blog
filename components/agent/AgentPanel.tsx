@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -25,7 +26,6 @@ export function AgentPanel() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -57,7 +57,6 @@ export function AgentPanel() {
     const currentInput = input;
     setInput("");
     setIsLoading(true);
-    setIsStreaming(true);
 
     try {
       const response = await fetch(AGENT_API, {
@@ -115,7 +114,6 @@ export function AgentPanel() {
       ]);
     } finally {
       setIsLoading(false);
-      setIsStreaming(false);
     }
   };
 
@@ -136,7 +134,7 @@ export function AgentPanel() {
 
   return (
     <>
-      {/* Compact view — inside WIP section Card */}
+      {/* Compact view — inside Agent section Card */}
       {!expanded && (
         <button
           onClick={handleExpand}
@@ -175,8 +173,8 @@ export function AgentPanel() {
         </button>
       )}
 
-      {/* Full-screen overlay — rendered at root level, outside overflow containers */}
-      {expanded && (
+      {/* Full-screen overlay — portal to body, outside Card overflow */}
+      {expanded && typeof document !== "undefined" && createPortal(
         <div
           ref={overlayRef}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
@@ -364,7 +362,8 @@ export function AgentPanel() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
