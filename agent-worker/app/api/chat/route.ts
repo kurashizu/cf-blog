@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { executeTool } from '@/lib/tools';
+import { executeTool, FUNCTION_DECLARATIONS } from '@/lib/tools';
 import { checkBurst, checkDailyKV, getIP } from '@/lib/ratelimiter';
 import { callWithFallback, streamWithFallback, getModelPool, getDefaultModel } from '@/lib/model-pool';
 
@@ -168,7 +168,9 @@ async function handleSessionChat(
       modelPool,
       contents,
       { ...options, model: options?.model || defaultModel },
-      env.SESSION_KV
+      env.SESSION_KV,
+      undefined, // no system instruction
+      [{ functionDeclarations: FUNCTION_DECLARATIONS }]
     );
     selectedModel = model;
 
@@ -225,7 +227,9 @@ async function handleSessionChat(
       modelPool,
       contents,
       options,
-      env.SESSION_KV
+      env.SESSION_KV,
+      undefined, // no system instruction
+      undefined  // no tools — we explicitly told model not to call more
     );
 
     if (!finalRes.ok) {
@@ -263,7 +267,9 @@ async function handleSessionChat(
           const { response: resp, model } = await callWithFallback(
             env.GEMINI_API_KEY, modelPool, localContents,
             { ...options, model: options?.model || defaultModel },
-            env.SESSION_KV
+            env.SESSION_KV,
+            undefined,
+            [{ functionDeclarations: FUNCTION_DECLARATIONS }]
           );
           selectedModel = model;
 
@@ -319,7 +325,9 @@ async function handleSessionChat(
           env.GEMINI_API_KEY, modelPool,
           localContents,
           { ...options, model: selectedModel },
-          env.SESSION_KV
+          env.SESSION_KV,
+          undefined, // no system instruction
+          [{ functionDeclarations: FUNCTION_DECLARATIONS }]
         );
 
         if (!streamResp.ok) {
@@ -415,7 +423,9 @@ async function handleLegacyChat(
     modelPool,
     contents,
     { ...options, model: options?.model || defaultModel },
-    undefined // no KV for legacy chat
+    undefined, // no KV for legacy chat
+    undefined, // no system instruction
+    [{ functionDeclarations: FUNCTION_DECLARATIONS }]
   );
 
   if (!resp.ok) {

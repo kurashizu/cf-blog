@@ -117,7 +117,8 @@ async function fetchGemini(
   model: string,
   contents: object[],
   options?: CallOptions,
-  systemInstruction?: string
+  systemInstruction?: string,
+  tools?: object[]
 ): Promise<Response> {
   const generationConfig: Record<string, unknown> = {
     temperature: options?.temperature ?? 0.9,
@@ -129,6 +130,9 @@ async function fetchGemini(
   const body: Record<string, unknown> = { contents, generationConfig };
   if (systemInstruction) {
     body.systemInstruction = { parts: [{ text: systemInstruction }] };
+  }
+  if (tools && tools.length > 0) {
+    body.tools = tools;
   }
 
   const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
@@ -149,7 +153,8 @@ export async function callWithFallback(
   contents: object[],
   options?: CallOptions,
   kv?: KVNamespace,
-  systemInstruction?: string
+  systemInstruction?: string,
+  tools?: object[]
 ): Promise<{ response: Response; model: string; hitIterationLimit?: boolean }> {
   let hitIterationLimit = false;
 
@@ -157,14 +162,14 @@ export async function callWithFallback(
     if (await isModelExhausted(model, kv)) continue;
 
     // First attempt
-    let resp = await fetchGemini(apiKey, model, contents, options, systemInstruction);
+    let resp = await fetchGemini(apiKey, model, contents, options, systemInstruction, tools);
 
     // RPM 429: retry same model once after 1s
     if (resp.status === 429) {
       const errBody = await resp.clone().json().catch(() => ({}));
       if (!isTPDLimit(errBody)) {
         await sleep(1000);
-        resp = await fetchGemini(apiKey, model, contents, options, systemInstruction);
+        resp = await fetchGemini(apiKey, model, contents, options, systemInstruction, tools);
       }
     }
 
@@ -201,7 +206,8 @@ export async function streamWithFallback(
   contents: object[],
   options?: CallOptions,
   kv?: KVNamespace,
-  systemInstruction?: string
+  systemInstruction?: string,
+  tools?: object[]
 ): Promise<{ response: Response; model: string }> {
   for (const model of models) {
     if (await isModelExhausted(model, kv)) continue;
@@ -216,6 +222,9 @@ export async function streamWithFallback(
     const body: Record<string, unknown> = { contents, generationConfig };
     if (systemInstruction) {
       body.systemInstruction = { parts: [{ text: systemInstruction }] };
+    }
+    if (tools && tools.length > 0) {
+      body.tools = tools;
     }
 
     const streamUrl = `${GEMINI_API_BASE}/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
