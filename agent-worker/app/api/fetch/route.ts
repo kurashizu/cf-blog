@@ -1,3 +1,5 @@
+// @tool fetch - Fetch URL and convert HTML to Markdown
+// @tool-example fetch https://example.com
 import { NextRequest, NextResponse } from "next/server";
 import { htmlToMarkdown } from "@/lib/html-to-md";
 

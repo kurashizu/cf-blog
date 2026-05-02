@@ -1,3 +1,5 @@
+// @tool js - Safe expression evaluator (math, JSON, Date, String, Array)
+// @tool-example js 1+2*3
 import { NextRequest, NextResponse } from "next/server";
 import { evaluate } from "@/lib/evaluator";
 

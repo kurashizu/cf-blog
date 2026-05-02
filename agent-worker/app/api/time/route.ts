@@ -1,3 +1,5 @@
+// @tool time - Get current time in timezone (tz param, e.g. Australia/Sydney)
+// @tool-example time?tz=Sydney
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";

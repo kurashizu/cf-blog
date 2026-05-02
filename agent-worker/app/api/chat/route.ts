@@ -1,3 +1,5 @@
+// @tool chat - Chat with AI model (default: gemma-4-31b-it)
+// @tool-example chat [{"role":"user","parts":[{"text":"Hello!"}]}]
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 

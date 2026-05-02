@@ -1,4 +1,4 @@
-const { initOpenNextCloudflareForDev } = require('@opennextjs/cloudflare');
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 
 if (process.env.NODE_ENV === 'development') {
   initOpenNextCloudflareForDev();
@@ -9,4 +9,4 @@ const nextConfig = {
   output: 'standalone',
 };
 
-module.exports = nextConfig;
+export default nextConfig;
