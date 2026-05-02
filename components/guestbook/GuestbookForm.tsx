@@ -104,7 +104,7 @@ export function GuestbookForm({ onSuccess }: GuestbookFormProps) {
             {error && (
                 <p className="text-xs text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>
             )}
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" disabled={loading} className="w-full bg-accent/80 hover:bg-accent/90 hover:shadow-[0_0_20px_var(--accent-glow)] hover:-translate-y-0.5">
                 {loading ? "Posting..." : "Post Message"}
             </Button>
         </form>
