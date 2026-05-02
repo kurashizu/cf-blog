@@ -9,16 +9,47 @@ interface Message {
   parts: { text: string }[];
 }
 
-const AGENT_API = "https://agent.022025.xyz/api/chat";
+interface SessionMeta {
+  id: string;
+  createdAt: number;
+  lastActiveAt: number;
+  title: string;
+}
 
-function getOrCreateSessionId(): string {
-  if (typeof window === "undefined") return "";
-  let id = localStorage.getItem("agent_session_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("agent_session_id", id);
+const AGENT_API = "https://agent.022025.xyz/api/chat";
+const SESSIONS_KEY = "agent_sessions";
+const ACTIVE_KEY = "agent_active_session";
+const MAX_SESSIONS = 10;
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
+
+function loadSessions(): SessionMeta[] {
+  try {
+    const raw = localStorage.getItem(SESSIONS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
-  return id;
+}
+
+function saveSessions(sessions: SessionMeta[]): void {
+  localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
 }
 
 export function AgentPanel() {
@@ -26,9 +57,13 @@ export function AgentPanel() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sessions, setSessions] = useState<SessionMeta[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string>("");
+  const [showDropdown, setShowDropdown] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,6 +72,26 @@ export function AgentPanel() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  // Load sessions on mount
+  useEffect(() => {
+    const loaded = loadSessions();
+    setSessions(loaded);
+    const active = localStorage.getItem(ACTIVE_KEY) || "";
+    setActiveSessionId(active);
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showDropdown]);
 
   // Close on Escape
   useEffect(() => {
@@ -47,16 +102,88 @@ export function AgentPanel() {
     return () => window.removeEventListener("keydown", handler);
   }, [expanded]);
 
+  const createNewSession = useCallback(() => {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    const newSession: SessionMeta = {
+      id,
+      createdAt: now,
+      lastActiveAt: now,
+      title: "New conversation",
+    };
+    setSessions((prev) => {
+      const updated = [newSession, ...prev].slice(0, MAX_SESSIONS);
+      saveSessions(updated);
+      return updated;
+    });
+    setActiveSessionId(id);
+    localStorage.setItem(ACTIVE_KEY, id);
+    setMessages([]);
+    setShowDropdown(false);
+    return id;
+  }, []);
+
+  const deleteSession = useCallback((id: string) => {
+    setSessions((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      saveSessions(updated);
+      return updated;
+    });
+    if (activeSessionId === id) {
+      setMessages([]);
+      if (sessions.length > 1) {
+        const next = sessions.find((s) => s.id !== id);
+        if (next) {
+          setActiveSessionId(next.id);
+          localStorage.setItem(ACTIVE_KEY, next.id);
+        } else {
+          createNewSession();
+        }
+      } else {
+        createNewSession();
+      }
+    }
+  }, [activeSessionId, sessions, createNewSession]);
+
+  const switchSession = useCallback((id: string) => {
+    setActiveSessionId(id);
+    localStorage.setItem(ACTIVE_KEY, id);
+    setMessages([]);
+    setShowDropdown(false);
+  }, []);
+
+  const updateSessionActivity = useCallback((title?: string) => {
+    setSessions((prev) => {
+      const updated = prev.map((s) =>
+        s.id === activeSessionId
+          ? {
+              ...s,
+              lastActiveAt: Date.now(),
+              title: title || (s.title === "New conversation" ? "" : s.title),
+            }
+          : s
+      );
+      saveSessions(updated);
+      return updated;
+    });
+  }, [activeSessionId]);
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
-    const sessionId = getOrCreateSessionId();
-    if (!sessionId) return;
+    let sessionId = activeSessionId;
+    if (!sessionId) {
+      sessionId = createNewSession();
+    }
 
     const userMessage: Message = { role: "user", parts: [{ text: input }] };
     setMessages((prev) => [...prev, userMessage]);
     const currentInput = input;
+    const messageTitle = currentInput.slice(0, 40);
     setInput("");
     setIsLoading(true);
+
+    // Update session title on first message
+    updateSessionActivity(messageTitle);
 
     try {
       const response = await fetch(AGENT_API, {
@@ -114,6 +241,7 @@ export function AgentPanel() {
       ]);
     } finally {
       setIsLoading(false);
+      updateSessionActivity();
     }
   };
 
@@ -220,31 +348,84 @@ export function AgentPanel() {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Session dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setShowDropdown((v) => !v)}
+                    className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors text-sm"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h8M8 17h5" />
+                    </svg>
+                    <span className="hidden sm:inline">Sessions</span>
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {showDropdown && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-scaleIn">
+                      <div className="px-3 py-2 border-b border-border">
+                        <button
+                          onClick={() => {
+                            createNewSession();
+                          }}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          New session
+                        </button>
+                      </div>
+                      <div className="py-1 max-h-64 overflow-y-auto">
+                        {sessions.length === 0 && (
+                          <p className="px-3 py-2 text-xs text-text-muted">No sessions yet</p>
+                        )}
+                        {sessions.map((session) => (
+                          <div
+                            key={session.id}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-2 hover:bg-bg-elevated transition-colors cursor-pointer",
+                              session.id === activeSessionId && "bg-accent/10"
+                            )}
+                            onClick={() => switchSession(session.id)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-text-primary truncate">{session.title}</p>
+                              <p className="text-xs text-text-muted">{formatRelativeTime(session.lastActiveAt)}</p>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteSession(session.id);
+                              }}
+                              className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+                              title="Delete session"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Clear button */}
                 {messages.length > 0 && (
                   <button
-                    onClick={() => {
-                      setMessages([]);
-                      localStorage.removeItem("agent_session_id");
-                    }}
+                    onClick={() => deleteSession(activeSessionId)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
-                    title="New conversation"
+                    title="Clear conversation"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 )}
-
-                {/* Collapse button */}
-                <button
-                  onClick={handleCollapse}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9L20.25 3.75M15 15h4.5M15 15V4.5M15 15l5.25 5.25" />
-                  </svg>
-                </button>
 
                 {/* Close button */}
                 <button
