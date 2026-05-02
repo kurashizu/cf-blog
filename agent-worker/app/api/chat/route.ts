@@ -245,59 +245,138 @@ async function handleSessionChat(
 
   // Streaming
   if (options?.stream) {
-    const { response: streamResp } = await streamWithFallback(
-      env.GEMINI_API_KEY,
-      modelPool,
-      messages.map((m) => ({ role: m.role, parts: m.parts })),
-      { ...options, model: selectedModel },
-      env.SESSION_KV
-    );
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        const enqueue = (obj: object) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+        };
 
-    if (!streamResp.ok) {
-      const error = await streamResp.text();
-      return NextResponse.json({ error: `Gemini API error ${streamResp.status}: ${error}` }, { status: 500 });
-    }
+        // Run tool loop inside stream — enqueue tool_start/tool_result events
+        const localContents = [...contents];
+        let iter = 0;
+        let text = '';
+        let hitIterLimit = false;
 
-    const geminiBody = streamResp.body ?? null;
+        while (iter < MAX_TOOL_CALLS) {
+          iter++;
+          const { response: resp, model } = await callWithFallback(
+            env.GEMINI_API_KEY, modelPool, localContents,
+            { ...options, model: options?.model || defaultModel },
+            env.SESSION_KV
+          );
+          selectedModel = model;
 
-    return new Response(
-      new ReadableStream({
-        async start(controller) {
-          if (!geminiBody) { controller.close(); return; }
-          const reader = geminiBody.getReader();
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const raw = decoder.decode(value, { stream: true });
-            const lines = raw.split('\n').filter((l) => l.startsWith('data: '));
-            for (const line of lines) {
-              try {
-                const json = JSON.parse(line.slice(6));
-                const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-                controller.enqueue(
-                  new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`)
-                );
-              } catch {
-                // Skip malformed lines
-              }
-            }
+          if (!resp.ok) {
+            enqueue({ type: 'error', error: await resp.text() });
+            controller.close();
+            return;
           }
+
+          const data = await resp.json() as {
+            candidates?: {
+              content: { parts: { text?: string; functionCall?: { name: string; args: Record<string, unknown> } }[] };
+            }[];
+          };
+          const parts = data.candidates?.[0]?.content?.parts || [];
+          const fcPart = parts.find((p) => p.functionCall);
+          const txtPart = parts.find((p) => p.text);
+
+          if (fcPart) {
+            const fc = fcPart.functionCall!;
+            enqueue({ type: 'tool_start', tool: fc.name, args: fc.args, iteration: iter });
+            const result = await executeTool(fc.name, fc.args);
+            enqueue({ type: 'tool_result', tool: fc.name, result, success: true, iteration: iter });
+            toolCallLog.push({ name: fc.name, args: fc.args, result });
+
+            // Gemini function calling format — use functionCall/functionResponse parts
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            localContents.push({ role: 'model', parts: [{ functionCall: { name: fc.name, args: fc.args } } as any] });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            localContents.push({ role: 'user', parts: [{ functionResponse: { name: fc.name, response: { result } } } as any] });
+            continue;
+          }
+
+          if (txtPart?.text) {
+            text = txtPart.text;
+            break;
+          }
+          text = '';
+          break;
+        }
+
+        // Max iterations exceeded
+        if (!text && iter >= MAX_TOOL_CALLS) {
+          hitIterLimit = true;
+          localContents.push({
+            role: 'user',
+            parts: [{ text: 'Please provide your answer based on the tool results gathered so far. Do not call any more tools.' }],
+          });
+        }
+
+        // Stream final text from localContents (includes tool results)
+        const { response: streamResp } = await streamWithFallback(
+          env.GEMINI_API_KEY, modelPool,
+          localContents,
+          { ...options, model: selectedModel },
+          env.SESSION_KV
+        );
+
+        if (!streamResp.ok) {
+          enqueue({ type: 'error', error: await streamResp.text() });
           controller.close();
-        },
-      }),
-      {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      }
-    );
+          return;
+        }
+
+        const geminiBody = streamResp.body;
+        if (!geminiBody) { controller.close(); return; }
+        const reader = geminiBody.getReader();
+        const decoder = new TextDecoder();
+
+        let streamedText = '';  // accumulate streamed text for KV write
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const raw = decoder.decode(value, { stream: true });
+          const lines = raw.split('\n').filter((l) => l.startsWith('data: '));
+          for (const line of lines) {
+            try {
+              const json = JSON.parse(line.slice(6));
+              const chunk = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+              if (chunk) {
+                streamedText += chunk;
+                enqueue({ type: 'text', text: chunk });
+              }
+            } catch { /* skip malformed */ }
+          }
+        }
+
+        enqueue({ type: 'done', hitIterationLimit: hitIterLimit, toolCalls: toolCallLog });
+
+        // Write session to KV on stream completion — use streamedText (actual complete output)
+        const assistantText = streamedText || text;
+        if (assistantText) {
+          messages.push({ role: 'model', parts: [{ text: assistantText }] });
+          await env.SESSION_KV.put(session_id, JSON.stringify({
+            messages: trimHistory(messages),
+            version: version + 1,
+          }), { expirationTtl: SESSION_TTL });
+        }
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
   }
 
   // Non-streaming response
