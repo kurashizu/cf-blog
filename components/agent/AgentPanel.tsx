@@ -186,13 +186,13 @@ export function AgentPanel() {
         >
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-bg-primary/80 backdrop-blur-md animate-fadeIn"
+            className="absolute inset-0 bg-bg-primary/95 backdrop-blur-md animate-fadeIn"
             onClick={handleCollapse}
           />
 
           {/* Panel */}
           <div
-            className="relative w-[min(90vw,900px)] h-[min(85vh,700px)] bg-bg-card/90 backdrop-blur-xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn"
+            className="relative w-[min(85vw,1100px)] h-[min(85vh,800px)] bg-bg-card/95 backdrop-blur-2xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn"
             style={{
               boxShadow: "0 25px 80px rgba(0,0,0,0.6), 0 0 60px var(--accent-subtle, rgba(255,107,53,0.1))",
             }}
