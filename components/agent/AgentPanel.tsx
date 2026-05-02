@@ -179,20 +179,20 @@ export function AgentPanel() {
       {expanded && (
         <div
           ref={overlayRef}
-          className="fixed inset-0 z-[100] flex items-center justify-center"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
           onClick={(e) => {
             if (e.target === overlayRef.current) handleCollapse();
           }}
         >
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-bg-primary/95 backdrop-blur-md animate-fadeIn"
+            className="absolute inset-0 bg-bg-primary/95 backdrop-blur-md animate-fadeIn z-0"
             onClick={handleCollapse}
           />
 
           {/* Panel */}
           <div
-            className="relative w-[min(85vw,1100px)] h-[min(85vh,800px)] bg-bg-card/95 backdrop-blur-2xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn"
+            className="relative w-full h-full max-w-[1100px] max-h-[800px] bg-bg-card/95 backdrop-blur-2xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn z-10"
             style={{
               boxShadow: "0 25px 80px rgba(0,0,0,0.6), 0 0 60px var(--accent-subtle, rgba(255,107,53,0.1))",
             }}
