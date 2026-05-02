@@ -12,7 +12,7 @@ binding = "SESSION_KV"
 id = "757683a8bedf4c53bd20854f6e0f27bb"
 preview_id = "d299a8b14f4a4fc0993a319e091111e9"
 
-# Rate Limiting — CF Rate Limiter (burst) + KV-based daily counter
+# Rate Limiting — CF Rate Limiter (burst) + KV (daily)
 # Agent: /api/chat 2/10s burst, 100/day | /api/tool 10/10s burst, 200/day
 
 [[ratelimits]]

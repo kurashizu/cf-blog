@@ -1,9 +1,9 @@
 /**
  * Rate limiting utilities for Cloudflare Workers
- * Two-layer: CF Rate Limiter (burst) + KV-based daily counter (date-keyed)
+ * Two-layer: CF Rate Limiter (burst) + KV (daily)
  *
  * Usage:
- * - checkBurst(): CF Rate Limiter burst check (10s window)
+ * - checkBurst(): CF Rate Limiter burst check (fast, no network call)
  * - checkDailyKV(): KV-based daily counter per IP (date-keyed, auto-expiry)
  *
  * Error response shape:
@@ -38,10 +38,6 @@ function getTodayUTC(): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString().slice(0, 10);
 }
 
-function kvDailyLimitKey(endpoint: string, ip: string): string {
-  return `ratelimit:${endpoint}:${hashIP(ip)}:${getTodayUTC()}`;
-}
-
 /**
  * CF Rate Limiter burst check — fast path, no network call.
  * Returns 429 Response if exceeded, null if OK.
@@ -66,7 +62,7 @@ export async function checkBurst(
 
 /**
  * KV-based daily rate limit check.
- * Key format: ratelimit:{endpoint}:{ipHash}:{YYYY-MM-DD}
+ * Key format: ratelimit:daily:{endpoint}:{ipHash}:{YYYY-MM-DD}
  * TTL: 86400s (24h) — auto-expires after midnight.
  * Returns 429 Response if exceeded, null if OK.
  */
@@ -78,7 +74,7 @@ export async function checkDailyKV(
 ): Promise<Response | null> {
   if (!kv) return null;
 
-  const key = kvDailyLimitKey(endpoint, ip);
+  const key = `ratelimit:daily:${endpoint}:${hashIP(ip)}:${getTodayUTC()}`;
 
   const raw = await kv.get(key);
   const count = Number(raw ?? 0);
