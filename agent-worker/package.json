@@ -5,8 +5,8 @@
     "type": "module",
     "scripts": {
         "dev": "next dev",
-        "build": "node scripts/generate-tools.js && next build",
-        "build:cf": "node scripts/generate-tools.js && ./node_modules/.bin/opennextjs-cloudflare build",
+        "build": "next build",
+        "build:cf": "./node_modules/.bin/opennextjs-cloudflare build",
         "preview:cf": "./node_modules/.bin/opennextjs-cloudflare preview",
         "deploy:cf": "./node_modules/.bin/opennextjs-cloudflare deploy",
         "start": "next start"
