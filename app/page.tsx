@@ -6,6 +6,7 @@ import { MiniCard } from "@/components/ui/MiniCard";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get, r2Put } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
+import { AgentPanel } from "@/components/agent/AgentPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -296,15 +297,13 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Placeholder - right bottom */}
+        {/* Agent — right bottom */}
         <section className="flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <h2 className="section-title mb-0">WIP</h2>
           </div>
-          <Card className="flex-1">
-            <CardContent className="text-center text-text-muted p-4">
-              <p className="text-sm">More coming soon...</p>
-            </CardContent>
+          <Card className="flex-1 p-0 overflow-hidden">
+            <AgentPanel />
           </Card>
         </section>
 

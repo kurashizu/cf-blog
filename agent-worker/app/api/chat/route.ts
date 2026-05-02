@@ -40,6 +40,16 @@ function trimHistory(messages: Message[]): Message[] {
   return messages.slice(-limit);
 }
 
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as {
@@ -152,13 +162,27 @@ async function handleSessionChat(
       new ReadableStream({
         async start(controller) {
           if (!geminiBody) { controller.close(); return; }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          for await (const chunk of geminiBody as any) {
-            const text = chunk.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-            fullText += text;
-            controller.enqueue(
-              new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`)
-            );
+          const reader = geminiBody.getReader();
+          const decoder = new TextDecoder();
+          const sseDecoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const raw = decoder.decode(value, { stream: true });
+            const lines = raw.split('\n').filter((l) => l.startsWith('data: '));
+            for (const line of lines) {
+              try {
+                const json = JSON.parse(line.slice(6));
+                const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+                fullText += text;
+                controller.enqueue(
+                  new TextEncoder().encode(`data: ${JSON.stringify({ text })}\n\n`)
+                );
+              } catch {
+                // Skip malformed lines
+              }
+            }
           }
           controller.close();
         },
@@ -171,6 +195,9 @@ async function handleSessionChat(
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
         },
       }
     );
