@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createGuestbookRepo } from '@/lib/guestbook';
-import { r2Paths } from '@/lib/r2-paths';
-import { r2Get, r2Put } from '@/lib/r2';
+import { checkBurst, checkDailyKV, getIP } from '@/lib/ratelimiter';
 
-const RATE_LIMIT_SECONDS = 300;
+const BURST_LIMIT = 2;
+const BURST_PERIOD = 10;
+const DAILY_LIMIT = 5;
 
 function sanitize(str: string): string {
   return str
@@ -11,42 +12,6 @@ function sanitize(str: string): string {
     .replace(/javascript:/gi, '')
     .replace(/on\w+=/gi, '')
     .trim();
-}
-
-async function hashIP(ip: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + 'guestbook-salt');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-async function checkRateLimit(ip: string): Promise<{ allowed: boolean; retryAfter?: number }> {
-  try {
-    const ipHash = await hashIP(ip);
-    const key = r2Paths.guestbookRateLimit(ipHash);
-    const lastPost = await r2Get(key);
-    if (lastPost) {
-      const elapsed = (Date.now() - new Date(lastPost).getTime()) / 1000;
-      if (elapsed < RATE_LIMIT_SECONDS) {
-        return { allowed: false, retryAfter: Math.ceil(RATE_LIMIT_SECONDS - elapsed) };
-      }
-    }
-    return { allowed: true };
-  } catch {
-    return { allowed: true };
-  }
-}
-
-async function setRateLimit(ip: string): Promise<void> {
-  try {
-    const ipHash = await hashIP(ip);
-    const key = r2Paths.guestbookRateLimit(ipHash);
-    await r2Put(key, new Date().toISOString());
-  } catch {
-    // ignore rate limit set errors
-  }
 }
 
 export async function GET() {
@@ -60,8 +25,25 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = (await import('@opennextjs/cloudflare')).getCloudflareContext() as any;
+    const env = ctx.env as {
+      GUESTBOOK_RATE_LIMIT?: RateLimit;
+      SESSION_KV: KVNamespace;
+    };
+
+    const ip = getIP(request);
+
+    // 1. CF Rate Limiter burst check (2/10s)
+    const burstResp = await checkBurst(env.GUESTBOOK_RATE_LIMIT, ip, BURST_LIMIT, BURST_PERIOD);
+    if (burstResp) return burstResp;
+
+    // 2. KV daily check (5/IP)
+    const dailyResp = await checkDailyKV(env.SESSION_KV, 'guestbook', ip, DAILY_LIMIT);
+    if (dailyResp) return dailyResp;
+
     const body = await request.json() as {
       name?: string;
       content?: string;
@@ -86,26 +68,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Content must be 1-2000 characters' }, { status: 400 });
     }
 
-    // Rate limit
-    const clientIP = request.headers.get('cf-connecting-ip') ||
-                     request.headers.get('x-forwarded-for')?.split(',')[0] ||
-                     'unknown';
-    const rateCheck = await checkRateLimit(clientIP);
-    if (!rateCheck.allowed) {
-      return NextResponse.json(
-        { error: `Rate limited. Please wait ${rateCheck.retryAfter} seconds before posting again.` },
-        { status: 429 }
-      );
-    }
-
     const repo = createGuestbookRepo();
     const message = await repo.add({
       name: sanitize(name),
       content: sanitize(content),
       email: email?.trim(),
     });
-
-    await setRateLimit(clientIP);
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {

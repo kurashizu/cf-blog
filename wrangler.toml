@@ -11,9 +11,30 @@ binding = "ASSETS"
 binding = "BUCKET"
 bucket_name = "cf-blog-bucket"
 
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "757683a8bedf4c53bd20854f6e0f27bb"
+preview_id = "d299a8b14f4a4fc0993a319e091111e9"
+
+# Rate Limiting — CF Rate Limiter (burst) + KV-based daily counter
+# Blog: /api/llm 2/10s burst, 200/day | /api/guestbook 2/10s burst, 5/day
+
+[[ratelimits]]
+name = "LLM_RATE_LIMIT"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 2
+  period = 10
+
+[[ratelimits]]
+name = "GUESTBOOK_RATE_LIMIT"
+namespace_id = "1002"
+  [ratelimits.simple]
+  limit = 2
+  period = 10
+
 [vars]
-TEAM_DOMAIN = ""
-POLICY_AUD = ""
+GEMINI_MODELS = '["gemma-4-31b-it", "gemma-4-26b-a4b-it"]'
 
 [observability]
 enabled = false

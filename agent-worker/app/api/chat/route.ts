@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { FUNCTION_DECLARATIONS, executeTool } from '@/lib/tools';
+import { executeTool } from '@/lib/tools';
+import { checkBurst, checkDailyKV, getIP } from '@/lib/ratelimiter';
+import { callWithFallback, streamWithFallback, getModelPool, getDefaultModel } from '@/lib/model-pool';
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = 'gemma-4-31b-it';
 const MAX_TOOL_CALLS = 5;
 const MAX_HISTORY_TURNS = 20;
 const SESSION_TTL = 3600;
+const BURST_LIMIT = 2;
+const BURST_PERIOD = 10;
+const DAILY_LIMIT = 100;
 
 interface Message {
   role: 'user' | 'model' | 'system';
@@ -52,6 +55,29 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = getCloudflareContext() as any;
+    const env = ctx.env as {
+      GEMINI_API_KEY: string;
+      SESSION_KV: KVNamespace;
+      CHAT_RATE_LIMIT?: RateLimit;
+      GEMINI_MODELS?: string;
+    };
+
+    if (!env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
+    }
+
+    const ip = getIP(request);
+
+    // 1. CF Rate Limiter burst check (2/10s)
+    const burstResp = await checkBurst(env.CHAT_RATE_LIMIT, ip, BURST_LIMIT, BURST_PERIOD);
+    if (burstResp) return burstResp;
+
+    // 2. KV daily check (100/IP)
+    const dailyResp = await checkDailyKV(env.SESSION_KV, 'chat', ip, DAILY_LIMIT);
+    if (dailyResp) return dailyResp;
+
     const body = await request.json() as {
       session_id?: string;
       message?: string;
@@ -62,6 +88,7 @@ export async function POST(request: NextRequest) {
     // New API: session_id + message
     if (body.session_id && body.message) {
       return handleSessionChat({
+        env,
         session_id: body.session_id,
         message: body.message,
         options: body.options,
@@ -71,6 +98,7 @@ export async function POST(request: NextRequest) {
     // Legacy API: messages array
     if (body.messages && Array.isArray(body.messages)) {
       return handleLegacyChat({
+        env,
         messages: body.messages,
         options: body.options,
       });
@@ -88,54 +116,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2): Promise<Response> {
-  let lastError: Error | null = null;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const res = await fetch(url, options);
-      // Retry on 500 errors only
-      if (res.status >= 500 && attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-        continue;
-      }
-      return res;
-    } catch (e) {
-      lastError = e as Error;
-      if (attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-      }
-    }
-  }
-  throw lastError ?? new Error('Request failed after retries');
-}
-
 async function handleSessionChat(
   body: {
+    env: {
+      GEMINI_API_KEY: string;
+      SESSION_KV: KVNamespace;
+      GEMINI_MODELS?: string;
+    };
     session_id: string;
     message: string;
     options?: { model?: string; temperature?: number; maxTokens?: number; topP?: number; topK?: number; stream?: boolean };
   }
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ctx = getCloudflareContext() as any;
-  const apiKey = ctx.env?.GEMINI_API_KEY as string | undefined;
-  const sessionKv = ctx.env?.SESSION_KV;
-
-  if (!apiKey) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
-  }
-
-  if (!sessionKv) {
-    return NextResponse.json({ error: 'SESSION_KV not configured' }, { status: 500 });
-  }
-
-  const model = body.options?.model || DEFAULT_MODEL;
-  const stream = body.options?.stream ?? false;
+  const { env, session_id, message, options } = body;
+  const modelPool = getModelPool(env);
+  const defaultModel = getDefaultModel(env);
 
   // Load session history from KV
   let stored: KVSession | null = null;
   try {
-    const raw = await sessionKv.get(body.session_id, 'json');
+    const raw = await env.SESSION_KV.get(session_id, 'json');
     if (raw) stored = raw as KVSession;
   } catch {
     // KV read failure — start fresh
@@ -147,54 +147,40 @@ async function handleSessionChat(
   // Append user message
   const userMsg: Message = {
     role: 'user',
-    parts: [{ text: String(body.message).slice(0, 10000) }],
+    parts: [{ text: String(message).slice(0, 10000) }],
   };
   messages.push(userMsg);
 
   const contents = messages.map((m) => ({ role: m.role, parts: m.parts }));
 
-  // Tool loop always runs synchronously (non-streaming generateContent)
+  // Tool loop
   const toolCallLog: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
   let iteration = 0;
   let finalText = '';
   let hitIterationLimit = false;
+  let selectedModel = defaultModel;
 
   while (iteration < MAX_TOOL_CALLS) {
     iteration++;
 
-    const generationConfig: Record<string, unknown> = {
-      temperature: body.options?.temperature ?? 0.9,
-      maxOutputTokens: body.options?.maxTokens ?? 8192,
-      topP: body.options?.topP ?? 0.95,
-      topK: body.options?.topK ?? 40,
-    };
+    const { response: resp, model } = await callWithFallback(
+      env.GEMINI_API_KEY,
+      modelPool,
+      contents,
+      { ...options, model: options?.model || defaultModel },
+      env.SESSION_KV
+    );
+    selectedModel = model;
 
-    const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
-
-    const response = await fetchWithRetry(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }],
-        generationConfig,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      return NextResponse.json({ error: `Gemini API error ${response.status}: ${error}` }, { status: 500 });
+    if (!resp.ok) {
+      const error = await resp.text();
+      return NextResponse.json({ error: `Gemini API error ${resp.status}: ${error}` }, { status: 500 });
     }
 
-    const data = (await response.json()) as {
+    const data = (await resp.json()) as {
       candidates?: {
         content: { parts: { text?: string; functionCall?: { name: string; args: Record<string, unknown> } }[] };
       }[];
-      usageMetadata?: {
-        promptTokenCount: number;
-        candidatesTokenCount: number;
-        totalTokenCount: number;
-      };
     };
 
     const parts = data.candidates?.[0]?.content?.parts || [];
@@ -234,64 +220,45 @@ async function handleSessionChat(
       }],
     });
 
-    const forcedConfig: Record<string, unknown> = {
-      temperature: body.options?.temperature ?? 0.9,
-      maxOutputTokens: body.options?.maxTokens ?? 8192,
-      topP: body.options?.topP ?? 0.95,
-      topK: body.options?.topK ?? 40,
-    };
-
-    const finalRes = await fetchWithRetry(
-      `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents, generationConfig: forcedConfig }),
-      }
+    const { response: finalRes } = await callWithFallback(
+      env.GEMINI_API_KEY,
+      modelPool,
+      contents,
+      options,
+      env.SESSION_KV
     );
 
     if (!finalRes.ok) {
       return NextResponse.json({ error: `Gemini API error ${finalRes.status}` }, { status: 500 });
     }
 
-    const finalData = await finalRes.json();
-    finalText = finalData.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text ?? '';
+    const finalData = await finalRes.json() as { candidates?: { content: { parts: { text?: string }[] } }[] };
+    finalText = finalData.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text ?? '';
   }
 
-  // Save session state before streaming response
+  // Save session state
   const assistantMsg: Message = { role: 'model', parts: [{ text: finalText }] };
   const updatedMessages = trimHistory([...messages, assistantMsg]);
-  sessionKv.put(body.session_id, JSON.stringify({ messages: updatedMessages, version: version + 1 }), {
+  env.SESSION_KV.put(session_id, JSON.stringify({ messages: updatedMessages, version: version + 1 }), {
     expirationTtl: SESSION_TTL,
   });
 
-  // Streaming: final text output via streamGenerateContent (no tools)
-  if (stream) {
-    const generationConfig: Record<string, unknown> = {
-      temperature: body.options?.temperature ?? 0.9,
-      maxOutputTokens: body.options?.maxTokens ?? 8192,
-      topP: body.options?.topP ?? 0.95,
-      topK: body.options?.topK ?? 40,
-    };
+  // Streaming
+  if (options?.stream) {
+    const { response: streamResp } = await streamWithFallback(
+      env.GEMINI_API_KEY,
+      modelPool,
+      messages.map((m) => ({ role: m.role, parts: m.parts })),
+      { ...options, model: selectedModel },
+      env.SESSION_KV
+    );
 
-    const streamUrl = `${GEMINI_API_BASE}/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
-
-    // Use contents with the assistant message included for streaming
-    const streamContents = messages.map((m) => ({ role: m.role, parts: m.parts }));
-    streamContents.push({ role: 'model', parts: [{ text: finalText }] });
-
-    const geminiRes = await fetchWithRetry(streamUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: streamContents, generationConfig }),
-    });
-
-    if (!geminiRes.ok) {
-      const error = await geminiRes.text();
-      return NextResponse.json({ error: `Gemini API error ${geminiRes.status}: ${error}` }, { status: 500 });
+    if (!streamResp.ok) {
+      const error = await streamResp.text();
+      return NextResponse.json({ error: `Gemini API error ${streamResp.status}: ${error}` }, { status: 500 });
     }
 
-    const geminiBody = geminiRes.body ?? null;
+    const geminiBody = streamResp.body ?? null;
 
     return new Response(
       new ReadableStream({
@@ -319,9 +286,6 @@ async function handleSessionChat(
           }
           controller.close();
         },
-        async cancel() {
-          // Stream cancelled — preserve clean history (already saved above)
-        },
       }),
       {
         headers: {
@@ -338,9 +302,9 @@ async function handleSessionChat(
 
   // Non-streaming response
   return NextResponse.json({
-    session_id: body.session_id,
+    session_id,
     text: finalText,
-    model,
+    model: selectedModel,
     toolCalls: toolCallLog.length > 0 ? toolCallLog : undefined,
     hitIterationLimit,
   });
@@ -348,48 +312,40 @@ async function handleSessionChat(
 
 async function handleLegacyChat(
   body: {
+    env: {
+      GEMINI_API_KEY: string;
+      GEMINI_MODELS?: string;
+    };
     messages?: Message[];
     options?: { model?: string; temperature?: number; maxTokens?: number; topP?: number; topK?: number; stream?: boolean };
   }
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ctx = getCloudflareContext() as any;
-  const apiKey = ctx.env?.GEMINI_API_KEY as string | undefined;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
-  }
+  const { env, messages, options } = body;
+  const modelPool = getModelPool(env);
+  const defaultModel = getDefaultModel(env);
 
-  const messages = (body.messages ?? []).map(sanitizeMessage).filter((m) => m.parts.length > 0);
-  if (messages.length === 0) {
+  const sanitizedMessages = (messages ?? []).map(sanitizeMessage).filter((m) => m.parts.length > 0);
+  if (sanitizedMessages.length === 0) {
     return NextResponse.json({ error: 'At least one valid message is required' }, { status: 400 });
   }
 
-  const model = body.options?.model || DEFAULT_MODEL;
-  const contents = messages.map((m) => ({ role: m.role, parts: m.parts }));
+  const contents = sanitizedMessages.map((m) => ({ role: m.role, parts: m.parts }));
 
-  // Simple non-streaming path for legacy API
-  const generationConfig: Record<string, unknown> = {
-    temperature: body.options?.temperature ?? 0.9,
-    maxOutputTokens: body.options?.maxTokens ?? 8192,
-    topP: body.options?.topP ?? 0.95,
-    topK: body.options?.topK ?? 40,
-  };
+  const { response: resp } = await callWithFallback(
+    env.GEMINI_API_KEY,
+    modelPool,
+    contents,
+    { ...options, model: options?.model || defaultModel },
+    undefined // no KV for legacy chat
+  );
 
-  const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
-
-    const response = await fetchWithRetry(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents, tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }], generationConfig }),
-    });
-
-  if (!response.ok) {
-    const error = await response.text();
-    return NextResponse.json({ error: `Gemini API error ${response.status}: ${error}` }, { status: 500 });
+  if (!resp.ok) {
+    const error = await resp.text();
+    return NextResponse.json({ error: `Gemini API error ${resp.status}: ${error}` }, { status: 500 });
   }
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text ?? '';
+  const data = await resp.json() as { candidates?: { content: { parts: { text?: string }[] } }[] };
+  const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text ?? '';
 
-  return NextResponse.json({ text, model });
+  return NextResponse.json({ text, model: defaultModel });
 }
