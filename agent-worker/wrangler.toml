@@ -7,5 +7,3 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-[vars]
-GEMINI_API_KEY = "dummy"
