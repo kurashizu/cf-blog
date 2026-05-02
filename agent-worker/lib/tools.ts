@@ -20,4 +20,9 @@ export const TOOLS: Tool[] = [
     description: 'Get current time',
     example: 'time?tz=Sydney',
   },
+  {
+    name: 'chat',
+    description: 'Chat with AI model (default: gemma-4-31b-it)',
+    example: 'chat [{"role":"user","parts":[{"text":"Hello!"}]}]',
+  },
 ];
