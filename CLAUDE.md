@@ -23,8 +23,8 @@ Two-layer rate limiting via CF Rate Limiter (burst) + Durable Object (daily):
 ## Dual-Worker CI
 
 GitHub Actions deploys two workers in parallel:
-- `cf-blog` — main blog at `cf-blog.kurashizu.workers.dev`
-- `cf-agent` — agent worker at `cf-agent.kurashizu.workers.dev`
+- `cf-blog` — main blog at `blog.022025.xyz` (also `cf-blog.kurashizu.workers.dev`)
+- `cf-agent` — agent worker at `agent.022025.xyz` (also `cf-agent.kurashizu123.workers.dev`)
 
 Push to `main` to trigger deployment (via GitHub Actions, not direct wrangler deploy). `cf-agent` builds from `agent-worker/` directory.
 

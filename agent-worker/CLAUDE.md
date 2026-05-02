@@ -21,7 +21,7 @@ Separate Next.js Cloudflare Worker (`cf-agent`) — identical `@opennextjs/cloud
 
 ### Deployment
 - Worker name: `cf-agent`
-- URL: `https://cf-agent.kurashizu.workers.dev`
+- URL: `https://agent.022025.xyz`
 - CI deploys both `cf-blog` and `cf-agent` in parallel via parent repo's GitHub Actions
 
 ### Comparison with cf-blog
