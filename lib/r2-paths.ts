@@ -8,6 +8,7 @@ export const r2Paths = {
   article: (slug: string) => `articles/${slug}.md`,
   cachePrefix: 'cache/',
   githubReposCache: 'cache/github-repos.json',
+  githubStarredCache: 'cache/github-starred.json',
   guestbookMessages: 'guestbook/messages.json',
   guestbookRateLimit: (ipHash: string) => `guestbook/ratelimit/${ipHash}`,
 } as const;
