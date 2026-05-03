@@ -334,7 +334,8 @@ export function AgentPanel({
                                             ...updated[idx],
                                             thinkContent: fullThinkText,
                                             isThinking: true,
-                                            parts: [{ text: fullText }],
+                                            // Don't overwrite parts with fullText during think
+                                            // Keep whatever text has been accumulated
                                             toolSteps:
                                                 updated[idx].toolSteps ??
                                                 streamingToolSteps,
@@ -401,8 +402,12 @@ export function AgentPanel({
                                 setIsLoading(false);
                                 fullText += data.text || "";
                                 setMessages((prev) => {
+                                    // Prefer message with thinkContent (the thinking message)
+                                    // or message with non-empty parts, or the last model message
                                     const idx = prev.findIndex(
-                                        (m) => m.role === "model",
+                                        (m) =>
+                                            m.role === "model" &&
+                                            m.thinkContent !== undefined,
                                     );
                                     if (idx !== -1) {
                                         const updated = [...prev];
@@ -412,6 +417,24 @@ export function AgentPanel({
                                             isThinking: false,
                                             toolSteps:
                                                 updated[idx].toolSteps ??
+                                                streamingToolSteps,
+                                        };
+                                        return updated;
+                                    }
+                                    // Fallback: find message with non-empty parts
+                                    const fallbackIdx = prev.findIndex(
+                                        (m) =>
+                                            m.role === "model" &&
+                                            m.parts[0]?.text,
+                                    );
+                                    if (fallbackIdx !== -1) {
+                                        const updated = [...prev];
+                                        updated[fallbackIdx] = {
+                                            ...updated[fallbackIdx],
+                                            parts: [{ text: fullText }],
+                                            isThinking: false,
+                                            toolSteps:
+                                                updated[fallbackIdx].toolSteps ??
                                                 streamingToolSteps,
                                         };
                                         return updated;
