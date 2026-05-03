@@ -378,6 +378,23 @@ export function AgentPanel() {
                 />
               </div>
             ))}
+
+            {/* Hover overlay — shows _1 on group hover */}
+            <div
+              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ transitionDuration: "200ms" }}
+            >
+              <Image
+                src={`/images/kuragent/${prefix}_1.png`}
+                alt="KurAgent hover"
+                width={400}
+                height={400}
+                className="w-full h-full object-contain"
+                style={{
+                  filter: "blur(0.5px) drop-shadow(0 0 6px var(--accent))",
+                }}
+              />
+            </div>
           </div>
 
           {/* Floating text with glow */}
