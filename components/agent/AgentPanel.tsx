@@ -359,7 +359,7 @@ export function AgentPanel() {
           className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer"
         >
           {/* All theme images — crossfade on theme change */}
-          <div className="absolute inset-0 flex items-center justify-center p-[15%]">
+          <div className="absolute inset-0 flex items-center justify-center p-[20%]">
             {ALL_PREFIXES.map((p) => (
               <div
                 key={p}
