@@ -295,7 +295,9 @@ export function AgentPanel({
                                             ...updated[existingIdx],
                                             thinkContent: fullThinkText,
                                             isThinking: true,
-                                            parts: [{ text: fullText }],
+                                            parts: updated[existingIdx].parts[0]?.text
+                                                ? updated[existingIdx].parts
+                                                : [{ text: "" }],
                                             toolSteps:
                                                 updated[existingIdx].toolSteps ??
                                                 streamingToolSteps,
