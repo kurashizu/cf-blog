@@ -368,8 +368,8 @@ export function AgentPanel() {
           onClick={handleExpand}
           className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer"
         >
-          {/* Full-bleed cover image - 80% height */}
-          <div className="absolute inset-0 w-full h-full" style={{ paddingBottom: "80%" }}>
+          {/* Cover image — 80% height, centered */}
+          <div className="absolute left-0 right-0 top-0 h-[80%]">
             <Image
               src={`/images/kuragent/${prefix}_0.png`}
               alt="KurAgent"
@@ -377,19 +377,17 @@ export function AgentPanel() {
               className="object-cover"
               style={{ opacity: imgOpacity, transition: "opacity 200ms ease-out" }}
             />
+            {/* Bottom fade into card */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg-card/80" />
           </div>
 
-          {/* Blur edge + gradient overlay for smooth blend */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            background: "radial-gradient(circle at center, transparent 30%, var(--bg-card) 100%)",
-            backdropFilter: "blur(2px)",
-          }} />
-
-          {/* Text at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col items-center">
+          {/* Text overlay with glow */}
+          <div className="absolute bottom-0 left-0 right-0 h-[20%] flex flex-col items-center justify-center pb-2" style={{
+            textShadow: "0 0 20px var(--accent), 0 0 40px var(--accent-subtle, var(--accent))",
+          }}>
             <p className="text-sm font-semibold text-text-primary">KurAgent</p>
             <p className="text-xs text-text-muted mt-0.5">kurashizu makes thinking act</p>
-            <div className="flex items-center gap-1 text-text-muted mt-1">
+            <div className="flex items-center gap-1 text-text-muted mt-0.5">
               <span className="text-[10px] uppercase tracking-widest">Click to chat</span>
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
