@@ -11,7 +11,6 @@ interface Gadget {
     title: string;
     slogan: string;
     isPlaceholder?: boolean;
-    onClick?: () => void;
 }
 
 const themeMap: Record<string, string> = {
@@ -27,22 +26,68 @@ const gadgets: Gadget[] = [
     { id: "tool3", title: "Coming Soon", slogan: "Stay tuned", isPlaceholder: true },
 ];
 
+function PlaceholderSVG({ index }: { index: number }) {
+    if (index === 0) {
+        return (
+            <svg viewBox="0 0 100 100" className="w-full h-full" style={{ opacity: 0.3 }}>
+                <polygon
+                    points="50,8 58,38 90,38 64,58 73,88 50,70 27,88 36,58 10,38 42,38"
+                    fill="none"
+                    stroke="var(--accent)"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                    opacity="0.6"
+                />
+                <circle cx="50" cy="50" r="28" fill="none" stroke="var(--accent)" strokeWidth="1" opacity="0.3" />
+                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fill="var(--accent)" fontSize="7" opacity="0.5">?</text>
+            </svg>
+        );
+    }
+    if (index === 1) {
+        return (
+            <svg viewBox="0 0 100 100" className="w-full h-full" style={{ opacity: 0.3 }}>
+                <polygon
+                    points="50,10 86,28 86,68 50,86 14,68 14,28"
+                    fill="none"
+                    stroke="var(--accent)"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                    opacity="0.6"
+                />
+                <circle cx="50" cy="48" r="18" fill="none" stroke="var(--accent)" strokeWidth="1" opacity="0.3" />
+                <line x1="50" y1="30" x2="50" y2="66" stroke="var(--accent)" strokeWidth="1" opacity="0.25" />
+                <line x1="32" y1="48" x2="68" y2="48" stroke="var(--accent)" strokeWidth="1" opacity="0.25" />
+            </svg>
+        );
+    }
+    return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" style={{ opacity: 0.3 }}>
+            <polygon
+                points="50,10 85,50 50,90 15,50"
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                opacity="0.6"
+            />
+            <polygon
+                points="50,25 70,50 50,75 30,50"
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth="1"
+                strokeLinejoin="round"
+                opacity="0.3"
+            />
+            <circle cx="50" cy="50" r="6" fill="var(--accent)" opacity="0.2" />
+        </svg>
+    );
+}
+
 export function GadgetsPanel() {
     const { theme } = useTheme();
     const prefix = themeMap[theme] ?? "r";
     const [hoveredId, setHoveredId] = useState<string | null>("agent");
-    const prevPrefixRef = useRef(prefix);
-    const [imgOpacity, setImgOpacity] = useState(1);
     const [showAgent, setShowAgent] = useState(false);
-
-    useEffect(() => {
-        if (prevPrefixRef.current !== prefix) {
-            prevPrefixRef.current = prefix;
-            setImgOpacity(0);
-            const timer = setTimeout(() => setImgOpacity(1), 300);
-            return () => clearTimeout(timer);
-        }
-    }, [prefix]);
 
     const currentGadget = gadgets.find((g) => g.id === hoveredId) ?? gadgets[0];
 
@@ -51,7 +96,7 @@ export function GadgetsPanel() {
             <AgentPanel expanded={showAgent} onCollapse={() => setShowAgent(false)} />
             {/* 4 gadgets grid */}
             <div className="grid grid-cols-2 gap-3">
-                {gadgets.map((gadget) => (
+                {gadgets.map((gadget, idx) => (
                     <button
                         key={gadget.id}
                         className={cn(
@@ -69,38 +114,7 @@ export function GadgetsPanel() {
                         }}
                     >
                         {gadget.isPlaceholder ? (
-                            <svg
-                                viewBox="0 0 100 100"
-                                className="w-full h-full"
-                                style={{ opacity: 0.3 }}
-                            >
-                                <defs>
-                                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.5" />
-                                        <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.1" />
-                                    </linearGradient>
-                                </defs>
-                                <polygon
-                                    points="50,8 58,38 90,38 64,58 73,88 50,70 27,88 36,58 10,38 42,38"
-                                    fill="none"
-                                    stroke="var(--accent)"
-                                    strokeWidth="2"
-                                    strokeLinejoin="round"
-                                    opacity="0.6"
-                                />
-                                <circle cx="50" cy="50" r="28" fill="none" stroke="var(--accent)" strokeWidth="1" opacity="0.3" />
-                                <text
-                                    x="50"
-                                    y="50"
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    fill="var(--accent)"
-                                    fontSize="7"
-                                    opacity="0.5"
-                                >
-                                    ?
-                                </text>
-                            </svg>
+                            <PlaceholderSVG index={idx - 1 >= 0 ? idx - 1 : 0} />
                         ) : (
                             <Image
                                 src={`/images/kuragent/${prefix}_0.png`}
@@ -108,11 +122,8 @@ export function GadgetsPanel() {
                                 fill
                                 className="object-contain rounded-xl"
                                 style={{
-                                    opacity: imgOpacity,
-                                    transition: "opacity 300ms ease-out",
                                     transform: hoveredId === gadget.id ? "scale(1.05)" : "scale(1)",
-                                    transitionProperty: "opacity, transform",
-                                    transitionDuration: "200ms, 200ms",
+                                    transition: "transform 200ms ease-out",
                                     filter: "drop-shadow(0 0 10px var(--accent))",
                                 }}
                             />
@@ -121,17 +132,15 @@ export function GadgetsPanel() {
                 ))}
             </div>
 
-            {/* Info panel — bottom, with fade transition */}
-            <div className="mt-4 flex flex-col items-center flex-1 justify-center relative">
+            {/* Info panel — bottom */}
+            <div className="mt-4 flex flex-col items-center flex-1 justify-center">
                 <div
                     key={currentGadget.id}
-                    className="flex flex-col items-center"
-                    style={{
-                        animation: "fadeInUp 300ms ease-out forwards",
-                    }}
+                    className="w-full flex flex-col items-center px-4"
+                    style={{ animation: "fadeInUp 200ms ease-out forwards" }}
                 >
                     <p
-                        className="text-2xl font-bold text-text-primary"
+                        className="text-2xl font-bold text-text-primary w-full text-center truncate"
                         style={{
                             fontFamily: "Pacifico, cursive",
                             background: "linear-gradient(90deg, #ff0000, #00ff00, #0000ff, #ff0000)",
@@ -145,7 +154,7 @@ export function GadgetsPanel() {
                         {currentGadget.title}
                     </p>
                     <p
-                        className="text-sm text-text-muted mt-1"
+                        className="text-sm text-text-muted mt-1 w-full text-center truncate"
                         style={{ fontFamily: "Pacifico, cursive" }}
                     >
                         {currentGadget.slogan}

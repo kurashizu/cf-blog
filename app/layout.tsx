@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Pacifico } from "next/font/google";
 import "@/components/theme/global.css";
 import "@/components/theme/background.css";
 import "@/components/theme/chat.css";

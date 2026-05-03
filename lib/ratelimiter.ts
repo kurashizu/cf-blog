@@ -10,6 +10,8 @@
  * { error: string, type: "burst"|"daily", limit: number, period?: number, retryAfter?: number, resetAt?: string }
  */
 
+import { getTodayUTC } from '@/lib/utils';
+
 export interface RateLimitError {
   error: string;
   type: "burst" | "daily";
@@ -31,11 +33,6 @@ export function hashIP(ip: string): string {
 export function getNextMidnightUTC(): number {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)).getTime();
-}
-
-function getTodayUTC(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString().slice(0, 10);
 }
 
 /**

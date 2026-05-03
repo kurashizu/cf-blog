@@ -23,7 +23,7 @@ export function markdownToHtml(md: string): string {
 
 function parsePost(slug: string, content: string, key?: string): Post {
   const { data, body } = parseFrontmatter(content);
-  const postSlug = key ? key.replace('articles/', '').replace('.md', '') : slug;
+  const postSlug = key ? r2Paths.extractSlug(key) : slug;
   const tagsValue = data.tags;
   const tags: string[] = Array.isArray(tagsValue)
     ? tagsValue.filter((t): t is string => typeof t === 'string')

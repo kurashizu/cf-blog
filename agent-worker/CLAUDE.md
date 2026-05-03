@@ -73,12 +73,24 @@ Execute a tool directly: `{ "name": "eval_expression", "args": { "code": "1+2" }
 Returns `{ "success": true, "result": "3", "tool": "eval_expression" }`
 
 ### POST /api/chat
-Gemini tool-calling loop:
+Gemini tool-calling loop with streaming SSE events:
 1. Send message with `tools: { functionDeclarations }`
-2. Model may respond with `functionCall` parts
-3. Execute via `executeTool(name, args)`, return `functionResponse`
-4. Max 5 iterations to prevent infinite loops
-5. Default model: `gemma-4-31b-it`
+2. Model may respond with `functionCall` → emit `tool_start` event
+3. Execute via `executeTool(name, args)` → emit `tool_result` event
+4. Stream final text with `text` events
+5. Emit `done` with `hitIterationLimit` and full `toolCalls` log
+6. Max 5 iterations to prevent infinite loops
+7. Default model: `gemma-4-31b-it`
+
+SSE format:
+```
+data: {"type":"tool_start","tool":"get_time","args":{"timezone":"Asia/Tokyo"},"iteration":1}
+data: {"type":"tool_result","tool":"get_time","result":{...},"success":true,"iteration":1}
+data: {"type":"text","text":"The current time in Tokyo is..."}
+data: {"type":"done","hitIterationLimit":false,"toolCalls":[...]}
+```
+
+Non-streaming returns JSON: `{ session_id, text, model, toolCalls, hitIterationLimit }`
 
 ## Key Files
 

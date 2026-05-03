@@ -26,10 +26,7 @@ export interface CallOptions {
   topK?: number;
 }
 
-function getTodayUTC(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString().slice(0, 10);
-}
+import { getTodayUTC } from '@/lib/utils';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));

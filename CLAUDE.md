@@ -7,61 +7,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev          # Local development (Next.js on localhost)
 npm run build        # Next.js production build
-npm run build:cf    # Build for Cloudflare Workers via @opennextjs/cloudflare
+npm run build:cf      # Build for Cloudflare Workers via @opennextjs/cloudflare
 npm run lint         # ESLint check
-npm run deploy:cf   # Direct deploy (bypasses CI, use git push instead)
 ```
+
+**Direct deploy** (bypasses CI):
+- cf-blog: `npx wrangler deploy`
+- cf-agent: `cd agent-worker && npm run build:cf && npx wrangler deploy`
 
 ## Rate Limiting
 
-Two-layer rate limiting via CF Rate Limiter (burst) + Durable Object (daily):
-- **LLM API**: 2 requests/10s burst, 100/day
-- **Guestbook API**: 2 requests/10s burst, 5/day
+Two-layer: CF Rate Limiter (burst) + KV (daily).
 
-`lib/ratelimiter.ts` exports `checkRateLimit(key, type)` — handles both layers.
+| Worker | Endpoint | Burst | Daily |
+|---|---|---|---|
+| cf-blog | `/api/llm` | 2/10s | 200/IP |
+| cf-blog | `/api/guestbook` | 2/10s | 5/IP |
+| cf-agent | `/api/chat` | 2/10s | 100/IP |
+| cf-agent | `/api/tool` | 10/10s | 200/IP |
+
+`lib/ratelimiter.ts` exports `checkBurst(binding, key, limit, period)` for CF Rate Limiter and `checkDailyKV(kv, endpoint, ip, dailyLimit)` for KV daily counters.
 
 ## Dual-Worker CI
 
 GitHub Actions deploys two workers in parallel:
-- `cf-blog` — main blog at `blog.022025.xyz` (also `cf-blog.kurashizu.workers.dev`)
-- `cf-agent` — agent worker at `agent.022025.xyz` (also `cf-agent.kurashizu123.workers.dev`)
+- `cf-blog` — main blog (also `cf-blog.kurashizu123.workers.dev`)
+- `cf-agent` — agent worker (also `agent.kurashizu123.workers.dev`)
 
-Push to `main` to trigger deployment (via GitHub Actions, not direct wrangler deploy). `cf-agent` builds from `agent-worker/` directory.
-
-**Direct deploy for cf-agent** (faster than CI):
-```bash
-cd agent-worker && npm run build:cf && npx wrangler deploy
-```
+Push to `main` to trigger CI deploy. `cf-agent` builds from `agent-worker/` directory.
 
 ## Architecture
 
 ### Cloudflare Deployment
 - Uses `@opennextjs/cloudflare` to deploy Next.js to Cloudflare Workers
-- R2 bucket (`cf-blog-bucket`) stores articles as markdown files
-- R2 paths: `articles/{slug}.md`
-- Wrangler bindings: R2 bucket, rate limiters (LLM/GUESTBOOK), Durable Object (RATE_LIMIT_DO)
-
-### Article System
-- Articles stored in R2 with YAML frontmatter
-- Frontmatter fields: `title`, `date`, `slug`, `description`, `tags`, `published`, `coverImage`, `author`, `draft`
-- `tags` can be array or comma-separated string (handled by `parsePost`)
-- `lib/articles.ts` provides `createArticlesRepo()` with `getAll()`, `getRecent()`, `getBySlug()`, `save()`, `delete()`
-- Markdown rendered via `marked` library
-
-### Rate Limiting
-- `lib/ratelimiter.ts` — RateLimitDO (Durable Object) + checkRateLimit driver
-- CF Rate Limiter handles burst (10s), DO handles daily reset at midnight
-- Durable Object alarm clears stale entries; TTL 7 days on storage
-
-### Theme System
-- Three themes: `dark` (orange accent), `deep-blue` (blue accent), `deep-green` (green accent)
-- ThemeProvider with localStorage persistence + custom `themechange` event
-- CSS variables in `components/theme/global.css`
-
-### API Routes
-- `/api/llm` - Gemini API proxy (public, see robustness notes)
-- `/admin/api/posts` - CRUD for articles (Cloudflare access protected)
-- `/admin/api/posts/[slug]` - Single article CRUD (Cloudflare access protected)
+- R2 bucket (`cf-blog-bucket`) stores articles as markdown files; paths: `articles/{slug}.md`
+- Wrangler bindings: R2 bucket, rate limiters, KV namespace for sessions
+- KV keys for rate limiting: `ratelimit:daily:{endpoint}:{ipHash}:{YYYY-MM-DD}`
 
 ### UI Components
 - `Card` / `MiniCard` - Frosted glass cards with glow animations
@@ -85,11 +66,11 @@ npx wrangler r2 object list cf-blog-bucket --prefix=articles/
 
 - `lib/articles.ts` - Article repository with R2 backend
 - `lib/r2.ts` - R2 client using `@opennextjs/cloudflare` (getCloudflareContext pattern)
-- `lib/gemini.ts` - Gemini API wrapper with system prompt
+- `lib/gemini.ts` - Gemini API wrapper
+- `lib/model-pool.ts` - Model pool with quota fallback (`callWithFallback`, `streamWithFallback`)
 - `lib/frontmatter.ts` - YAML frontmatter parser/builder
-- `lib/ratelimiter.ts` - Rate limiting (CF Rate Limiter + Durable Object)
-- `components/ui/ParticleBackground.tsx` - Canvas particle animation
-- `components/providers/ThemeProvider.tsx` - Theme context
+- `lib/ratelimiter.ts` - Rate limiting (`checkBurst`, `checkDailyKV`)
+- `lib/llm.ts` - LLM API route handlers
 
 ## File Structure
 
@@ -119,7 +100,7 @@ lib/                 # Backend logic
   utils.ts          # Utility functions
   guestbook.ts       # Guestbook repository
   r2-paths.ts       # R2 key paths
-  ratelimiter.ts     # Rate limiting (DO class + checkRateLimit)
+  ratelimiter.ts     # Rate limiting (`checkBurst`, `checkDailyKV`)
 
 agent-worker/        # Separate Cloudflare Worker (cf-agent)
   lib/
@@ -157,28 +138,22 @@ interface Tool {
 
 ```json
 // GET /api/tool → list all tools
-{
-  "tools": [
-    { "name": "eval_expression", "description": "...", "example": "..." },
-    { "name": "fetch_webpage", "description": "...", "example": "..." },
-    { "name": "get_time", "description": "...", "example": "..." }
-  ],
-  "functionDeclarations": [...]  // Gemini format
-}
-
-// POST /api/tool → execute a tool directly
-{ "name": "eval_expression", "args": { "code": "1+2" } }
-
-// Response
-{ "success": true, "result": "3", "tool": "eval_expression" }
+// POST /api/tool → execute a tool: { "name": "eval_expression", "args": { "code": "1+2" } }
+// Response: { "success": true, "result": "3", "tool": "eval_expression" }
 ```
 
-### /api/chat Tool Loop
+### /api/chat Endpoint
 
-1. Send `tools: { functionDeclarations }` to Gemini
-2. If response has `functionCall` → `executeTool(name, args)` → Gemini with `functionResponse`
-3. Max 5 iterations to prevent infinite loops
-4. Default model: `gemma-4-31b-it`
+Tool-calling loop with streaming SSE events:
+
+```
+data: {"type":"tool_start","tool":"get_time","args":{"timezone":"Asia/Tokyo"},"iteration":1}
+data: {"type":"tool_result","tool":"get_time","result":{...},"success":true,"iteration":1}
+data: {"type":"text","text":"The current time in Tokyo is..."}
+data: {"type":"done","hitIterationLimit":false,"toolCalls":[...]}
+```
+
+Non-streaming returns JSON: `{ session_id, text, model, toolCalls, hitIterationLimit }`
 
 ## Code Style
 
