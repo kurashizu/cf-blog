@@ -82,6 +82,8 @@ function formatToolResult(result: unknown): string {
 export function AgentPanel() {
   const { theme } = useTheme();
   const prefix = themeMap[theme] ?? "r";
+  const [imgOpacity, setImgOpacity] = useState(1);
+  const prevThemeRef = useRef(theme);
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -130,6 +132,16 @@ export function AgentPanel() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [expanded]);
+
+  // Fade transition on theme change
+  useEffect(() => {
+    if (prevThemeRef.current !== theme) {
+      prevThemeRef.current = theme;
+      setImgOpacity(0);
+      const timer = setTimeout(() => setImgOpacity(1), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [theme]);
 
   const createNewSession = useCallback(() => {
     const id = crypto.randomUUID();
@@ -354,34 +366,35 @@ export function AgentPanel() {
       {!expanded && (
         <button
           onClick={handleExpand}
-          className="w-full h-full flex flex-col items-center justify-center gap-3 py-8 px-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
+          className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer"
         >
-          {/* Cover image */}
-          <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0">
+          {/* Full-bleed cover image - 80% height */}
+          <div className="absolute inset-0 w-full h-full" style={{ paddingBottom: "80%" }}>
             <Image
               src={`/images/kuragent/${prefix}_0.png`}
               alt="KurAgent"
               fill
-              className="object-cover transition-opacity group-hover:opacity-0"
-            />
-            <Image
-              src={`/images/kuragent/${prefix}_1.png`}
-              alt="KurAgent"
-              fill
-              className="object-cover opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0"
+              className="object-cover"
+              style={{ opacity: imgOpacity, transition: "opacity 200ms ease-out" }}
             />
           </div>
 
-          <div className="text-center">
+          {/* Blur edge + gradient overlay for smooth blend */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: "radial-gradient(circle at center, transparent 30%, var(--bg-card) 100%)",
+            backdropFilter: "blur(2px)",
+          }} />
+
+          {/* Text at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col items-center">
             <p className="text-sm font-semibold text-text-primary">KurAgent</p>
             <p className="text-xs text-text-muted mt-0.5">kurashizu makes thinking act</p>
-          </div>
-
-          <div className="flex items-center gap-1 text-text-muted">
-            <span className="text-[10px] uppercase tracking-widest">Click to chat</span>
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-            </svg>
+            <div className="flex items-center gap-1 text-text-muted mt-1">
+              <span className="text-[10px] uppercase tracking-widest">Click to chat</span>
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+              </svg>
+            </div>
           </div>
         </button>
       )}
