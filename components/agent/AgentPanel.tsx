@@ -284,19 +284,38 @@ export function AgentPanel({
                                 setIsLoading(true);
                                 break;
                             case "start_think": {
-                                hasModelMessage = true;
                                 fullThinkText = data.content || "";
-                                setMessages((prev) => [
-                                    ...prev,
-                                    {
-                                        role: "model" as const,
-                                        parts: [{ text: "" }],
-                                        toolSteps: [],
-                                        thinkContent: fullThinkText,
-                                        isThinking: true,
-                                        error: undefined,
-                                    },
-                                ]);
+                                setMessages((prev) => {
+                                    const existingIdx = prev.findIndex(
+                                        (m) => m.role === "model",
+                                    );
+                                    if (existingIdx !== -1) {
+                                        const updated = [...prev];
+                                        updated[existingIdx] = {
+                                            ...updated[existingIdx],
+                                            thinkContent: fullThinkText,
+                                            isThinking: true,
+                                            parts: [{ text: fullText }],
+                                            toolSteps:
+                                                updated[existingIdx].toolSteps ??
+                                                streamingToolSteps,
+                                        };
+                                        hasModelMessage = true;
+                                        return updated;
+                                    }
+                                    hasModelMessage = true;
+                                    return [
+                                        ...prev,
+                                        {
+                                            role: "model" as const,
+                                            parts: [{ text: "" }],
+                                            toolSteps: [],
+                                            thinkContent: fullThinkText,
+                                            isThinking: true,
+                                            error: undefined,
+                                        },
+                                    ];
+                                });
                                 break;
                             }
                             case "think": {
