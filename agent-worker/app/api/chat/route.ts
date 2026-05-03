@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { executeTool, FUNCTION_DECLARATIONS } from '@/lib/tools';
 import { checkBurst, checkDailyKV, getIP } from '@/lib/ratelimiter';
 import { callWithFallback, streamWithFallback, getModelPool, getDefaultModel } from '@/lib/model-pool';
+import { executeTool, FUNCTION_DECLARATIONS } from '@/lib/tools';
 
 const MAX_TOOL_CALLS = 5;
 const MAX_HISTORY_TURNS = 20;
@@ -21,15 +21,12 @@ interface KVSession {
   version: number;
 }
 
-function sanitizeMessage(msg: Message): Message {
-  return {
-    role: msg.role === 'user' || msg.role === 'model' || msg.role === 'system' ? msg.role : 'user',
-    parts: Array.isArray(msg.parts)
-      ? msg.parts.filter((p) => p && typeof p.text === 'string').map((p) => ({
-          text: String(p.text).slice(0, 10000),
-        }))
-      : [],
-  };
+enum State {
+  START = 'START',
+  THINK = 'THINK',
+  TEXT = 'TEXT',
+  TOOL = 'TOOL',
+  END = 'END',
 }
 
 function trimHistory(messages: Message[]): Message[] {
@@ -41,6 +38,83 @@ function trimHistory(messages: Message[]): Message[] {
     return [first, ...rest.slice(-(limit - 1))];
   }
   return messages.slice(-limit);
+}
+
+function emitEvent(controller: ReadableStreamDefaultController, type: string, content: string) {
+  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type, content })}\n\n`));
+}
+
+function emitStateEnd(controller: ReadableStreamDefaultController, state: State) {
+  if (state === State.THINK) emitEvent(controller, 'end_think', '');
+  if (state === State.TEXT) emitEvent(controller, 'end_text', '');
+  if (state === State.TOOL) emitEvent(controller, 'end_tool', 'tool executed');
+}
+
+function handlePart(
+  part: { thought?: boolean; text?: string },
+  state: { current: State },
+  controller: ReadableStreamDefaultController,
+  acc: { value: string }
+): void {
+  if (part.thought === true) {
+    const content = (part.text ?? '').trim();
+    if (!content) return;
+    if (state.current !== State.THINK) {
+      emitStateEnd(controller, state.current);
+      emitEvent(controller, 'start_think', part.text ?? '');
+      state.current = State.THINK;
+    } else {
+      emitEvent(controller, 'think', part.text ?? '');
+    }
+  } else if (part.text !== undefined && part.thought === undefined) {
+    const filtered = part.text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    if (!filtered) return;
+    if (state.current !== State.TEXT) {
+      emitStateEnd(controller, state.current);
+      emitEvent(controller, 'start_text', filtered);
+      state.current = State.TEXT;
+    } else {
+      emitEvent(controller, 'text', filtered);
+    }
+    acc.value += filtered;
+  }
+}
+
+async function parseSSEStream(
+  response: Response,
+  state: { current: State },
+  controller: ReadableStreamDefaultController
+): Promise<string> {
+  const body = response.body;
+  if (!body) throw new Error('No response body');
+
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let lineBuffer = '';
+  const acc = { value: '' };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    lineBuffer += decoder.decode(value, { stream: true });
+
+    const lines = lineBuffer.split('\n');
+    lineBuffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const json = JSON.parse(line.slice(6));
+        const parts = json.candidates?.[0]?.content?.parts;
+        if (!Array.isArray(parts)) continue;
+        for (const part of parts) {
+          handlePart(part, state, controller, acc);
+        }
+      } catch { /* skip malformed */ }
+    }
+  }
+
+  return acc.value;
 }
 
 export async function OPTIONS() {
@@ -69,374 +143,183 @@ export async function POST(request: NextRequest) {
     }
 
     const ip = getIP(request);
-
-    // 1. CF Rate Limiter burst check (2/10s)
     const burstResp = await checkBurst(env.CHAT_RATE_LIMIT, ip, BURST_LIMIT, BURST_PERIOD);
     if (burstResp) return burstResp;
 
-    // 2. KV daily check (100/IP)
     const dailyResp = await checkDailyKV(env.SESSION_KV, 'chat', ip, DAILY_LIMIT);
     if (dailyResp) return dailyResp;
 
     const body = await request.json() as {
       session_id?: string;
       message?: string;
-      messages?: Message[];
       options?: { model?: string; temperature?: number; maxTokens?: number; topP?: number; topK?: number; stream?: boolean };
     };
 
-    // New API: session_id + message
     if (body.session_id && body.message) {
-      return handleSessionChat({
-        env,
-        session_id: body.session_id,
-        message: body.message,
-        options: body.options,
-      });
+      return handleSessionChat(env, body.session_id, body.message, body.options);
     }
 
-    // Legacy API: messages array
-    if (body.messages && Array.isArray(body.messages)) {
-      return handleLegacyChat({
-        env,
-        messages: body.messages,
-        options: body.options,
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'Either { session_id, message } or { messages } is required' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: '{ session_id, message } is required' }, { status: 400 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
 
-async function handleSessionChat(
-  body: {
-    env: {
-      GEMINI_API_KEY: string;
-      SESSION_KV: KVNamespace;
-      GEMINI_MODELS?: string;
-    };
-    session_id: string;
-    message: string;
-    options?: { model?: string; temperature?: number; maxTokens?: number; topP?: number; topK?: number; stream?: boolean };
-  }
-) {
-  const { env, session_id, message, options } = body;
-  const modelPool = getModelPool(env);
-  const defaultModel = getDefaultModel(env);
+// ─── Session-based chat ───────────────────────────────────────────────────────
 
-  // Load session history from KV
+async function handleSessionChat(
+  env: { GEMINI_API_KEY: string; SESSION_KV: KVNamespace; GEMINI_MODELS?: string },
+  session_id: string,
+  message: string,
+  options?: { model?: string; temperature?: number; maxTokens?: number; topP?: number; topK?: number; stream?: boolean }
+) {
   let stored: KVSession | null = null;
   try {
     const raw = await env.SESSION_KV.get(session_id, 'json');
     if (raw) stored = raw as KVSession;
-  } catch {
-    // KV read failure — start fresh
-  }
+  } catch { /* KV read failure — start fresh */ }
 
   const messages: Message[] = stored?.messages ?? [];
   const version = stored?.version ?? 0;
 
-  // Append user message
-  const userMsg: Message = {
-    role: 'user',
-    parts: [{ text: String(message).slice(0, 10000) }],
-  };
-  messages.push(userMsg);
-
+  messages.push({ role: 'user', parts: [{ text: String(message).slice(0, 10000) }] });
   const contents = messages.map((m) => ({ role: m.role, parts: m.parts }));
 
-  // Non-streaming: run tool loop, save KV, return JSON
-  if (!options?.stream) {
-    const toolCallLog: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
-    let iteration = 0;
-    let finalText = '';
-    let hitIterationLimit = false;
-    let selectedModel = defaultModel;
+  const stream = new ReadableStream({
+    async start(controller) {
+      const toolCalls: { name: string; args: Record<string, unknown>; result: unknown }[] = [];
+      const state = { current: State.START };
+      const modelPool = getModelPool(env);
+      const defaultModel = options?.model || getDefaultModel(env);
 
-    while (iteration < MAX_TOOL_CALLS) {
-      iteration++;
+      emitEvent(controller, 'start_process', '');
 
-      const { response: resp, model } = await callWithFallback(
-        env.GEMINI_API_KEY,
-        modelPool,
-        contents,
-        { ...options, model: options?.model || defaultModel },
-        env.SESSION_KV,
-        undefined,
-        [{ functionDeclarations: FUNCTION_DECLARATIONS }]
-      );
-      selectedModel = model;
-
-      if (!resp.ok) {
-        return NextResponse.json({ error: `Gemini API error ${resp.status}: ${await resp.text()}` }, { status: 500 });
-      }
-
-      const data = (await resp.json()) as {
-        candidates?: {
-          content: { parts: { text?: string; functionCall?: { name: string; args: Record<string, unknown> } }[] };
-        }[];
-      };
-
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const functionCallPart = parts.find((p) => p.functionCall);
-      const textPart = parts.find((p) => p.text);
-
-      if (functionCallPart) {
-        const fc = functionCallPart.functionCall!;
-        const result = await executeTool(fc.name, fc.args);
-        toolCallLog.push({ name: fc.name, args: fc.args, result });
-
-        contents.push({ role: 'model', parts: [{ text: '' }] });
-        contents.push({
-          role: 'user',
-          parts: [{ text: JSON.stringify({ name: fc.name, args: fc.args, result }) }],
-        });
-
-        continue;
-      }
-
-      if (textPart?.text) {
-        finalText = textPart.text;
-        break;
-      }
-
-      finalText = '';
-      break;
-    }
-
-    // Max iterations exceeded — force answer without tools
-    if (!finalText && iteration >= MAX_TOOL_CALLS) {
-      hitIterationLimit = true;
-      contents.push({
-        role: 'user',
-        parts: [{
-          text: 'Please provide your answer based on the tool results gathered so far. Do not call any more tools.',
-        }],
-      });
-
-      const { response: finalRes } = await callWithFallback(
-        env.GEMINI_API_KEY,
-        modelPool,
-        contents,
-        options,
-        env.SESSION_KV,
-        undefined,
-        undefined
-      );
-
-      if (!finalRes.ok) {
-        return NextResponse.json({ error: `Gemini API error ${finalRes.status}` }, { status: 500 });
-      }
-
-      const finalData = await finalRes.json() as { candidates?: { content: { parts: { text?: string }[] } }[] };
-      finalText = finalData.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text ?? '';
-    }
-
-    // Save session state
-    const assistantMsg: Message = { role: 'model', parts: [{ text: finalText }] };
-    const updatedMessages = trimHistory([...messages, assistantMsg]);
-    await env.SESSION_KV.put(session_id, JSON.stringify({ messages: updatedMessages, version: version + 1 }), {
-      expirationTtl: SESSION_TTL,
-    });
-
-    return NextResponse.json({
-      session_id,
-      text: finalText,
-      model: selectedModel,
-      toolCalls: toolCallLog.length > 0 ? toolCallLog : undefined,
-      hitIterationLimit,
-    });
-  }
-
-  // Streaming: tool loop + SSE events run inside ReadableStream.start()
-  if (options?.stream) {
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        const enqueue = (obj: object) => {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-        };
-
-        // Run tool loop inside stream — enqueue tool_start/tool_result events
-        const localContents = [...contents];
-        const toolCallLog: Array<{ name: string; args: Record<string, unknown>; result: unknown }> = [];
-        let iter = 0;
-        let text = '';
-        let hitIterLimit = false;
-        let selectedModel = defaultModel;
-
-        while (iter < MAX_TOOL_CALLS) {
-          iter++;
-          const { response: resp, model } = await callWithFallback(
-            env.GEMINI_API_KEY, modelPool, localContents,
-            { ...options, model: options?.model || defaultModel },
-            env.SESSION_KV,
+      try {
+        for (let iteration = 0; iteration < MAX_TOOL_CALLS; iteration++) {
+          const { response: resp } = await callWithFallback(
+            env.GEMINI_API_KEY,
+            modelPool,
+            contents,
+            { ...options, model: defaultModel },
+            undefined,
             undefined,
             [{ functionDeclarations: FUNCTION_DECLARATIONS }]
           );
-          selectedModel = model;
 
-          if (!resp.ok) {
-            enqueue({ type: 'error', error: await resp.text() });
-            controller.close();
-            return;
-          }
+          if (!resp.ok) throw new Error(`Gemini API error ${resp.status}: ${await resp.text()}`);
 
-          const data = await resp.json() as {
+          const data = (await resp.json()) as {
             candidates?: {
-              content: { parts: { text?: string; functionCall?: { name: string; args: Record<string, unknown> } }[] };
+              content: { parts: { thought?: boolean; text?: string; functionCall?: { name: string; args: Record<string, unknown> } }[] };
             }[];
           };
+
           const parts = data.candidates?.[0]?.content?.parts || [];
-          const fcPart = parts.find((p) => p.functionCall);
-          const txtPart = parts.find((p) => p.text);
+          let hasToolCall = false;
 
-          if (fcPart) {
-            const fc = fcPart.functionCall!;
-            enqueue({ type: 'tool_start', tool: fc.name, args: fc.args, iteration: iter });
-            const result = await executeTool(fc.name, fc.args);
-            enqueue({ type: 'tool_result', tool: fc.name, result, success: true, iteration: iter });
-            toolCallLog.push({ name: fc.name, args: fc.args, result });
-
-            // Gemini function calling format — use functionCall/functionResponse parts
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            localContents.push({ role: 'model', parts: [{ functionCall: { name: fc.name, args: fc.args } } as any] });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            localContents.push({ role: 'user', parts: [{ functionResponse: { name: fc.name, response: { result } } } as any] });
-            continue;
+          for (const part of parts) {
+            // functionCall handled separately
+            if (part.functionCall) {
+              if (state.current !== State.TOOL) {
+                emitStateEnd(controller, state.current);
+                emitEvent(controller, 'start_tool', `${part.functionCall.name}(${JSON.stringify(part.functionCall.args)})`);
+                const result = await executeTool(part.functionCall.name, part.functionCall.args);
+                emitEvent(controller, 'end_tool', 'tool executed successfully');
+                toolCalls.push({ name: part.functionCall.name, args: part.functionCall.args, result });
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                contents.push({ role: 'model', parts: [{ functionCall: { name: part.functionCall.name, args: part.functionCall.args } } as any] });
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                contents.push({ role: 'user', parts: [{ functionResponse: { name: part.functionCall.name, response: { result } } } as any] });
+                state.current = State.START;
+              }
+              hasToolCall = true;
+              break;
+            }
           }
 
-          if (txtPart?.text) {
-            text = txtPart.text;
-            break;
-          }
-          text = '';
-          break;
-        }
+          if (hasToolCall) continue;
 
-        // Max iterations exceeded
-        if (!text && iter >= MAX_TOOL_CALLS) {
-          hitIterLimit = true;
-          localContents.push({
+          // No tool call — stream final text
+          // Reset state to START so parseSSEStream starts fresh
+          state.current = State.START;
+
+          // Add instruction to prevent model from re-thinking or calling more tools
+          contents.push({
             role: 'user',
-            parts: [{ text: 'Please provide your answer based on the tool results gathered so far. Do not call any more tools.' }],
+            parts: [{ text: 'Based on the tool results above, provide your final answer directly. Do not call any more tools.' }],
           });
-        }
 
-        // Stream final text from localContents (includes tool results)
-        const { response: streamResp } = await streamWithFallback(
-          env.GEMINI_API_KEY, modelPool,
-          localContents,
-          { ...options, model: selectedModel },
-          env.SESSION_KV,
-          undefined, // no system instruction
-          [{ functionDeclarations: FUNCTION_DECLARATIONS }]
-        );
+          const { response: streamResp } = await streamWithFallback(
+            env.GEMINI_API_KEY,
+            modelPool,
+            contents,
+            { ...options, model: defaultModel },
+            undefined,
+            undefined,
+            undefined
+          );
 
-        if (!streamResp.ok) {
-          enqueue({ type: 'error', error: await streamResp.text() });
+          if (!streamResp.ok) throw new Error(`Stream error ${streamResp.status}: ${await streamResp.text()}`);
+
+          const finalText = await parseSSEStream(streamResp, state, controller);
+
+          const hitIterationLimit = iteration >= MAX_TOOL_CALLS - 1;
+          emitEvent(controller, 'end_process', `done, hitIterationLimit: ${hitIterationLimit}, toolCalls: ${toolCalls.length}`);
+
+          if (finalText) {
+            messages.push({ role: 'model', parts: [{ text: finalText }] });
+            await env.SESSION_KV.put(session_id, JSON.stringify({ messages: trimHistory(messages), version: version + 1 }), { expirationTtl: SESSION_TTL });
+          }
+
           controller.close();
           return;
         }
 
-        const geminiBody = streamResp.body;
-        if (!geminiBody) { controller.close(); return; }
-        const reader = geminiBody.getReader();
-        const decoder = new TextDecoder();
+        // Hit iteration limit
+        emitStateEnd(controller, state.current);
+        messages.push({
+          role: 'user',
+          parts: [{ text: 'Please provide your answer based on the tool results gathered so far. Do not call any more tools.' }],
+        });
+        const { response: finalRes } = await streamWithFallback(
+          env.GEMINI_API_KEY,
+          modelPool,
+          contents,
+          options,
+          undefined,
+          undefined,
+          undefined
+        );
+        if (!finalRes.ok) throw new Error(`Stream error ${finalRes.status}: ${await finalRes.text()}`);
 
-        let streamedText = '';  // accumulate streamed text for KV write
+        // Reset state and parse final text via SSE
+        state.current = State.START;
+        const acc = { value: '' };
+        await parseSSEStream(finalRes, state, controller);
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const raw = decoder.decode(value, { stream: true });
-          const lines = raw.split('\n').filter((l) => l.startsWith('data: '));
-          for (const line of lines) {
-            try {
-              const json = JSON.parse(line.slice(6));
-              const chunk = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-              if (chunk) {
-                streamedText += chunk;
-                enqueue({ type: 'text', text: chunk });
-              }
-            } catch { /* skip malformed */ }
-          }
+        emitEvent(controller, 'end_process', `done, hitIterationLimit: true, toolCalls: ${toolCalls.length}`);
+
+        if (acc.value) {
+          messages.push({ role: 'model', parts: [{ text: acc.value }] });
+          await env.SESSION_KV.put(session_id, JSON.stringify({ messages: trimHistory(messages), version: version + 1 }), { expirationTtl: SESSION_TTL });
         }
 
-        enqueue({ type: 'done', hitIterationLimit: hitIterLimit, toolCalls: toolCallLog });
-
-        // Write session to KV on stream completion — use streamedText (actual complete output)
-        const assistantText = streamedText || text;
-        if (assistantText) {
-          messages.push({ role: 'model', parts: [{ text: assistantText }] });
-          await env.SESSION_KV.put(session_id, JSON.stringify({
-            messages: trimHistory(messages),
-            version: version + 1,
-          }), { expirationTtl: SESSION_TTL });
-        }
         controller.close();
-      },
-    });
+      } catch (err) {
+        emitEvent(controller, 'error', err instanceof Error ? err.message : 'Unknown error');
+        controller.close();
+      }
+    },
+  });
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
-  }
-}
-
-async function handleLegacyChat(
-  body: {
-    env: {
-      GEMINI_API_KEY: string;
-      GEMINI_MODELS?: string;
-    };
-    messages?: Message[];
-    options?: { model?: string; temperature?: number; maxTokens?: number; topP?: number; topK?: number; stream?: boolean };
-  }
-) {
-  const { env, messages, options } = body;
-  const modelPool = getModelPool(env);
-  const defaultModel = getDefaultModel(env);
-
-  const sanitizedMessages = (messages ?? []).map(sanitizeMessage).filter((m) => m.parts.length > 0);
-  if (sanitizedMessages.length === 0) {
-    return NextResponse.json({ error: 'At least one valid message is required' }, { status: 400 });
-  }
-
-  const contents = sanitizedMessages.map((m) => ({ role: m.role, parts: m.parts }));
-
-  const { response: resp } = await callWithFallback(
-    env.GEMINI_API_KEY,
-    modelPool,
-    contents,
-    { ...options, model: options?.model || defaultModel },
-    undefined, // no KV for legacy chat
-    undefined, // no system instruction
-    [{ functionDeclarations: FUNCTION_DECLARATIONS }]
-  );
-
-  if (!resp.ok) {
-    const error = await resp.text();
-    return NextResponse.json({ error: `Gemini API error ${resp.status}: ${error}` }, { status: 500 });
-  }
-
-  const data = await resp.json() as { candidates?: { content: { parts: { text?: string }[] } }[] };
-  const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text ?? '';
-
-  return NextResponse.json({ text, model: defaultModel });
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
