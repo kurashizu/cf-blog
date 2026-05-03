@@ -10,6 +10,9 @@ interface Message {
     role: "user" | "model";
     parts: { text: string }[];
     toolSteps?: ToolStep[];
+    thinkContent?: string;
+    isThinking?: boolean;
+    error?: string;
 }
 
 interface ToolStep {
@@ -81,10 +84,18 @@ function formatToolResult(result: unknown): string {
     return JSON.stringify(result).slice(0, 50);
 }
 
-export function AgentPanel() {
+export function AgentPanel({
+    expanded: externalExpanded,
+    onCollapse,
+}: {
+    expanded?: boolean;
+    onCollapse?: () => void;
+}) {
     const { theme } = useTheme();
     const prefix = themeMap[theme] ?? "r";
-    const [expanded, setExpanded] = useState(false);
+    const [internalExpanded, setInternalExpanded] = useState(false);
+    const expanded = externalExpanded ?? internalExpanded;
+    const setExpanded = onCollapse ? () => {} : setInternalExpanded;
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -249,14 +260,11 @@ export function AgentPanel() {
 
             const decoder = new TextDecoder();
             let fullText = "";
+            let fullThinkText = "";
             let buffer = "";
             const streamingToolSteps: ToolStep[] = [];
-
-            const modelMessage: Message = {
-                role: "model",
-                parts: [{ text: "" }],
-            };
-            setMessages((prev) => [...prev, modelMessage]);
+            let hasModelMessage = false;
+            let currentError: string | undefined;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -272,23 +280,161 @@ export function AgentPanel() {
                     try {
                         const data = JSON.parse(raw);
                         switch (data.type) {
-                            case "tool_start": {
-                                streamingToolSteps.push({
-                                    tool: data.tool,
-                                    args: data.args,
-                                    status: "in_progress",
-                                    iteration: data.iteration,
-                                });
+                            case "start_process":
+                                setIsLoading(true);
+                                break;
+                            case "start_think": {
+                                hasModelMessage = true;
+                                fullThinkText = data.content || "";
+                                setMessages((prev) => [
+                                    ...prev,
+                                    {
+                                        role: "model" as const,
+                                        parts: [{ text: "" }],
+                                        toolSteps: [],
+                                        thinkContent: fullThinkText,
+                                        isThinking: true,
+                                        error: undefined,
+                                    },
+                                ]);
+                                break;
+                            }
+                            case "think": {
+                                fullThinkText += data.content || "";
                                 setMessages((prev) => {
                                     const updated = [...prev];
-                                    updated[updated.length - 1] = {
-                                        role: "model",
-                                        parts: [{ text: fullText }],
-                                        toolSteps: [...streamingToolSteps],
-                                    };
+                                    const idx = updated.findIndex(
+                                        (m) =>
+                                            m.role === "model" &&
+                                            m.isThinking === true,
+                                    );
+                                    if (idx !== -1) {
+                                        updated[idx] = {
+                                            ...updated[idx],
+                                            thinkContent: fullThinkText,
+                                            isThinking: true,
+                                            parts: [{ text: fullText }],
+                                            toolSteps:
+                                                updated[idx].toolSteps ??
+                                                streamingToolSteps,
+                                        };
+                                    }
                                     return updated;
                                 });
-                                // Yield to event loop so React can render in_progress spinner before tool_result arrives
+                                break;
+                            }
+                            case "end_think": {
+                                setMessages((prev) => {
+                                    const idx = prev.findIndex(
+                                        (m) =>
+                                            m.role === "model" &&
+                                            m.thinkContent !== undefined,
+                                    );
+                                    if (idx !== -1) {
+                                        const updated = [...prev];
+                                        updated[idx] = {
+                                            ...updated[idx],
+                                            isThinking: false,
+                                        };
+                                        return updated;
+                                    }
+                                    return prev;
+                                });
+                                break;
+                            }
+                            case "start_text": {
+                                hasModelMessage = true;
+                                fullText = data.content || "";
+                                // Find existing model message (possibly with thinkContent) or create new
+                                setMessages((prev) => {
+                                    const existingIdx = prev.findIndex(
+                                        (m) => m.role === "model",
+                                    );
+                                    if (existingIdx !== -1) {
+                                        const updated = [...prev];
+                                        updated[existingIdx] = {
+                                            ...updated[existingIdx],
+                                            parts: [{ text: fullText }],
+                                            isThinking: false,
+                                            toolSteps:
+                                                updated[existingIdx].toolSteps ??
+                                                streamingToolSteps,
+                                        };
+                                        return updated;
+                                    }
+                                    return [
+                                        ...prev,
+                                        {
+                                            role: "model" as const,
+                                            parts: [{ text: fullText }],
+                                            toolSteps: [...streamingToolSteps],
+                                            thinkContent: fullThinkText,
+                                            isThinking: false,
+                                            error: undefined,
+                                        },
+                                    ];
+                                });
+                                break;
+                            }
+                            case "text": {
+                                setIsLoading(false);
+                                fullText += data.text || "";
+                                setMessages((prev) => {
+                                    const idx = prev.findIndex(
+                                        (m) => m.role === "model",
+                                    );
+                                    if (idx !== -1) {
+                                        const updated = [...prev];
+                                        updated[idx] = {
+                                            ...updated[idx],
+                                            parts: [{ text: fullText }],
+                                            isThinking: false,
+                                            toolSteps:
+                                                updated[idx].toolSteps ??
+                                                streamingToolSteps,
+                                        };
+                                        return updated;
+                                    }
+                                    return prev;
+                                });
+                                break;
+                            }
+                            case "start_tool":
+                            case "tool_start": {
+                                if (!hasModelMessage) {
+                                    hasModelMessage = true;
+                                    setMessages((prev) => [
+                                        ...prev,
+                                        {
+                                            role: "model" as const,
+                                            parts: [{ text: "" }],
+                                            toolSteps: [],
+                                            thinkContent: undefined,
+                                            isThinking: false,
+                                            error: undefined,
+                                        },
+                                    ]);
+                                }
+                                streamingToolSteps.push({
+                                    tool: data.tool,
+                                    args: data.args || {},
+                                    status: "in_progress",
+                                    iteration: data.iteration ?? 0,
+                                });
+                                setMessages((prev) => {
+                                    const idx = prev.findIndex(
+                                        (m) => m.role === "model",
+                                    );
+                                    if (idx !== -1) {
+                                        const updated = [...prev];
+                                        updated[idx] = {
+                                            ...updated[idx],
+                                            toolSteps: [...streamingToolSteps],
+                                        };
+                                        return updated;
+                                    }
+                                    return prev;
+                                });
                                 await new Promise((r) => setTimeout(r, 50));
                                 break;
                             }
@@ -307,38 +453,59 @@ export function AgentPanel() {
                                     };
                                 }
                                 setMessages((prev) => {
-                                    const updated = [...prev];
-                                    updated[updated.length - 1] = {
-                                        role: "model",
-                                        parts: [{ text: fullText }],
-                                        toolSteps: [...streamingToolSteps],
-                                    };
-                                    return updated;
+                                    const idx = prev.findIndex(
+                                        (m) => m.role === "model",
+                                    );
+                                    if (idx !== -1) {
+                                        const updated = [...prev];
+                                        updated[idx] = {
+                                            ...updated[idx],
+                                            toolSteps: [...streamingToolSteps],
+                                        };
+                                        return updated;
+                                    }
+                                    return prev;
                                 });
                                 break;
                             }
-                            case "text": {
+                            case "end_tool":
+                            case "end_process":
+                            case "done":
                                 setIsLoading(false);
-                                fullText += data.text;
+                                break;
+                            case "error":
+                                currentError = data.content || data.message || "Unknown error";
+                                setIsLoading(false);
                                 setMessages((prev) => {
                                     const updated = [...prev];
-                                    updated[updated.length - 1] = {
-                                        role: "model",
-                                        parts: [{ text: fullText }],
-                                        toolSteps: [...streamingToolSteps],
-                                    };
+                                    if (updated.length > 0) {
+                                        updated[updated.length - 1] = {
+                                            ...updated[updated.length - 1],
+                                            error: currentError,
+                                        };
+                                    }
                                     return updated;
                                 });
-                                break;
-                            }
-                            case "done":
-                            case "error":
                                 break;
                         }
                     } catch {
                         // Skip malformed SSE lines
                     }
                 }
+            }
+
+            if (!hasModelMessage && !currentError) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "model" as const,
+                        parts: [{ text: fullText || "No response received." }],
+                        toolSteps: streamingToolSteps.length > 0 ? streamingToolSteps : undefined,
+                        thinkContent: fullThinkText || undefined,
+                        isThinking: false,
+                        error: currentError,
+                    },
+                ]);
             }
         } catch {
             setMessages((prev) => [
@@ -366,7 +533,11 @@ export function AgentPanel() {
     };
 
     const handleCollapse = () => {
-        setExpanded(false);
+        if (onCollapse) {
+            onCollapse();
+        } else {
+            setExpanded(false);
+        }
     };
 
     return (
@@ -377,63 +548,45 @@ export function AgentPanel() {
                     onClick={handleExpand}
                     className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer"
                 >
-                    {/* Blur backdrop behind image */}
-                    <div
-                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                        style={{
-                            backdropFilter: "blur(12px)",
-                            maskImage: "radial-gradient(circle, black 40%, transparent 75%)",
-                            WebkitMaskImage: "radial-gradient(circle, black 40%, transparent 75%)",
-                        }}
-                    />
+                    {/* Large title & slogan — top center */}
+                    <div className="absolute left-0 right-0 top-0 flex flex-col items-center z-20 group-hover:opacity-0 group-hover:translate-y-[-8px] transition-all duration-300 pt-6">
+                        <p className="text-3xl font-bold text-text-primary" style={{ fontFamily: "Pacifico, cursive" }}>KurAgent</p>
+                        <p className="text-base text-text-muted mt-1">kurashizu makes thinking act</p>
+                    </div>
 
-                    {/* Images — 60% of card, centered, crossfade on theme + hover */}
+                    {/* Images — 30% height → 75% on hover, centered */}
                     <div className="absolute inset-0 flex items-center justify-center z-10">
                         {ALL_PREFIXES.map((p) => (
                             <div
                                 key={p}
-                                className="w-[60%] h-[60%] flex items-center justify-center absolute"
+                                className="h-[30%] aspect-[264/235] flex items-center justify-center absolute overflow-hidden rounded-2xl group-hover:h-[75%] transition-all duration-300 ease-out"
                                 style={{
+                                    boxShadow: "0 0 8px 3px var(--accent)",
                                     opacity: p === prefix ? 1 : 0,
-                                    transition: "opacity 350ms ease-out",
                                     pointerEvents: p === prefix ? "auto" : "none",
                                 }}
                             >
-                                {/* Default state */}
                                 <Image
                                     src={`/images/kuragent/${p}_0.png`}
                                     alt=""
                                     fill
-                                    className="object-contain group-hover:opacity-0"
-                                    style={{ transition: "opacity 200ms ease-out" }}
+                                    className="object-contain rounded-xl group-hover:opacity-0 transition-opacity duration-200"
                                 />
-                                {/* Hover state */}
                                 <Image
                                     src={`/images/kuragent/${p}_1.png`}
                                     alt=""
                                     fill
-                                    className="object-contain absolute inset-0 opacity-0 group-hover:opacity-100"
-                                    style={{ transition: "opacity 200ms ease-out" }}
+                                    className="object-contain rounded-xl absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                                 />
                             </div>
                         ))}
                     </div>
 
-                    {/* Title — above image */}
-                    <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-4">
-                        <p className="text-base font-bold text-text-primary">KurAgent</p>
-                    </div>
-
-                    {/* Slogan — below title */}
-                    <div className="absolute top-10 left-0 right-0 flex flex-col items-center">
-                        <p className="text-sm text-text-muted">kurashizu makes thinking act</p>
-                    </div>
-
-                    {/* Click to chat — below image */}
-                    <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-4">
+                    {/* Click to chat — below image, only on hover */}
+                    <div className="absolute left-0 right-0 flex flex-col items-center z-30 opacity-0 group-hover:opacity-100 transition-all duration-300" style={{ top: "78%" }}>
                         <div className="flex items-center gap-1 text-text-muted">
-                            <span className="text-xs uppercase tracking-widest">Click to chat</span>
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <span className="text-sm uppercase tracking-widest">Click to chat</span>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
                             </svg>
                         </div>
@@ -820,6 +973,26 @@ export function AgentPanel() {
                                                                 </div>
                                                             ),
                                                         )}
+                                                    </div>
+                                                )}
+                                                {msg.thinkContent && (
+                                                    <details className="mt-2 rounded-lg bg-bg-secondary/30 border-l-2 border-accent/40 overflow-hidden">
+                                                        <summary className="px-3 py-2 text-xs text-text-muted cursor-pointer hover:text-text-primary select-none">
+                                                            💭 Show reasoning
+                                                        </summary>
+                                                        <div className="px-3 py-2 font-mono text-xs text-text-muted whitespace-pre-wrap border-t border-border/30">
+                                                            {msg.thinkContent}
+                                                        </div>
+                                                    </details>
+                                                )}
+                                                {msg.isThinking && !msg.thinkContent && (
+                                                    <div className="mt-2 px-3 py-2 text-xs text-text-muted">
+                                                        <span className="animate-pulse">💭 Thinking...</span>
+                                                    </div>
+                                                )}
+                                                {msg.error && (
+                                                    <div className="mt-2 px-3 py-2 text-xs text-red-400 bg-red-400/10 rounded-lg">
+                                                        ⚠️ {msg.error}
                                                     </div>
                                                 )}
                                             {msg.parts[0].text && (

@@ -6,7 +6,7 @@ import { MiniCard } from "@/components/ui/MiniCard";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get, r2Put } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
-import { AgentPanel } from "@/components/agent/AgentPanel";
+import { GadgetsPanel } from "@/components/ui/GadgetsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -265,7 +265,7 @@ export default async function HomePage() {
             </a>
           </div>
           <div className="flex-1 space-y-3">
-            {starredRepos.slice(0, 5).map((repo) => (
+            {starredRepos.slice(0, 7).map((repo) => (
               <a
                 key={`${repo.owner.login}/${repo.name}`}
                 href={repo.html_url}
@@ -297,13 +297,13 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Agent — right bottom */}
+        {/* Gadgets — right bottom */}
         <section className="flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="section-title mb-0">Agent</h2>
+            <h2 className="section-title mb-0">Gadgets</h2>
           </div>
-          <Card className="flex-1 p-0 group">
-            <AgentPanel />
+          <Card className="flex-1 p-4 h-full">
+            <GadgetsPanel />
           </Card>
         </section>
 
