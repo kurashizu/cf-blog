@@ -31,7 +31,6 @@ const AGENT_API = "https://agent.022025.xyz/api/chat";
 const SESSIONS_KEY = "agent_sessions";
 const ACTIVE_KEY = "agent_active_session";
 const MAX_SESSIONS = 10;
-const GLOW_FILTER = "blur(0.5px) drop-shadow(0 0 6px var(--accent))";
 
 const themeMap = {
     dark: "r",
@@ -378,8 +377,18 @@ export function AgentPanel() {
                     onClick={handleExpand}
                     className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer"
                 >
+                    {/* Blur backdrop behind image */}
+                    <div
+                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                        style={{
+                            backdropFilter: "blur(12px)",
+                            maskImage: "radial-gradient(circle, black 40%, transparent 75%)",
+                            WebkitMaskImage: "radial-gradient(circle, black 40%, transparent 75%)",
+                        }}
+                    />
+
                     {/* Images — 60% of card, centered, crossfade on theme + hover */}
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center z-10">
                         {ALL_PREFIXES.map((p) => (
                             <div
                                 key={p}
@@ -396,7 +405,7 @@ export function AgentPanel() {
                                     alt=""
                                     fill
                                     className="object-contain group-hover:opacity-0"
-                                    style={{ filter: GLOW_FILTER, transition: "opacity 200ms ease-out" }}
+                                    style={{ transition: "opacity 200ms ease-out" }}
                                 />
                                 {/* Hover state */}
                                 <Image
@@ -404,24 +413,26 @@ export function AgentPanel() {
                                     alt=""
                                     fill
                                     className="object-contain absolute inset-0 opacity-0 group-hover:opacity-100"
-                                    style={{ filter: GLOW_FILTER, transition: "opacity 200ms ease-out" }}
+                                    style={{ transition: "opacity 200ms ease-out" }}
                                 />
                             </div>
                         ))}
                     </div>
 
-                    {/* Text — bottom overlay with glow */}
-                    <div
-                        className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-4"
-                        style={{
-                            background: "linear-gradient(to top, rgba(var(--bg-card-rgb,31,31,35),0.6) 0%, transparent 100%)",
-                            textShadow: "0 0 8px var(--accent), 0 0 16px var(--accent)",
-                        }}
-                    >
-                        <p className="text-sm font-semibold text-text-primary">KurAgent</p>
-                        <p className="text-xs text-text-muted mt-0.5">kurashizu makes thinking act</p>
-                        <div className="flex items-center gap-1 text-text-muted mt-0.5">
-                            <span className="text-[10px] uppercase tracking-widest">Click to chat</span>
+                    {/* Title — above image */}
+                    <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-4">
+                        <p className="text-base font-bold text-text-primary">KurAgent</p>
+                    </div>
+
+                    {/* Slogan — below title */}
+                    <div className="absolute top-10 left-0 right-0 flex flex-col items-center">
+                        <p className="text-sm text-text-muted">kurashizu makes thinking act</p>
+                    </div>
+
+                    {/* Click to chat — below image */}
+                    <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-4">
+                        <div className="flex items-center gap-1 text-text-muted">
+                            <span className="text-xs uppercase tracking-widest">Click to chat</span>
                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
                             </svg>
