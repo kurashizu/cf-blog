@@ -32,6 +32,7 @@ const LLM_API = "/api/llm";
 const SESSIONS_KEY = "agent_sessions";
 const ACTIVE_KEY = "agent_active_session";
 const MAX_SESSIONS = 10;
+const GLOW_FILTER = "blur(0.5px) drop-shadow(0 0 6px var(--accent))";
 
 const themeMap = {
   dark: "r",
@@ -371,30 +372,19 @@ export function AgentPanel() {
                   alt={`KurAgent theme ${p}`}
                   width={400}
                   height={400}
-                  className="w-full h-full object-contain"
-                  style={{
-                    filter: "blur(0.5px) drop-shadow(0 0 6px var(--accent))",
-                  }}
+                  className="w-full h-full object-contain group-hover:opacity-0"
+                  style={{ filter: GLOW_FILTER, transition: "opacity 200ms ease-out" }}
+                />
+                <Image
+                  src={`/images/kuragent/${p}_1.png`}
+                  alt={`KurAgent theme ${p} hover`}
+                  width={400}
+                  height={400}
+                  className="w-full h-full object-contain absolute inset-0 opacity-0 group-hover:opacity-100"
+                  style={{ filter: GLOW_FILTER, transition: "opacity 200ms ease-out" }}
                 />
               </div>
             ))}
-
-            {/* Hover overlay — shows _1 on group hover */}
-            <div
-              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ transitionDuration: "200ms" }}
-            >
-              <Image
-                src={`/images/kuragent/${prefix}_1.png`}
-                alt="KurAgent hover"
-                width={400}
-                height={400}
-                className="w-full h-full object-contain"
-                style={{
-                  filter: "blur(0.5px) drop-shadow(0 0 6px var(--accent))",
-                }}
-              />
-            </div>
           </div>
 
           {/* Floating text with glow */}
