@@ -2,11 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 interface Message {
   role: "user" | "model";
   parts: { text: string }[];
+  toolSteps?: ToolStep[];
+}
+
+interface ToolStep {
+  tool: string;
+  args: Record<string, unknown>;
+  status: "pending" | "in_progress" | "completed" | "error";
+  result?: unknown;
+  iteration: number;
 }
 
 interface SessionMeta {
@@ -21,6 +32,12 @@ const LLM_API = "/api/llm";
 const SESSIONS_KEY = "agent_sessions";
 const ACTIVE_KEY = "agent_active_session";
 const MAX_SESSIONS = 10;
+
+const themeMap = {
+  dark: "r",
+  "deep-blue": "b",
+  "deep-green": "g",
+} as const;
 
 function formatRelativeTime(timestamp: number): string {
   const now = Date.now();
@@ -53,7 +70,18 @@ function saveSessions(sessions: SessionMeta[]): void {
   localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
 }
 
+function formatToolResult(result: unknown): string {
+  if (!result || typeof result !== "object") return String(result ?? "");
+  const obj = result as Record<string, unknown>;
+  if (obj.success === true && typeof obj.time === "string") return obj.time;
+  if (obj.success === true && typeof obj.result === "string") return obj.result;
+  if (obj.output !== undefined) return String(obj.output);
+  return JSON.stringify(result).slice(0, 50);
+}
+
 export function AgentPanel() {
+  const { theme } = useTheme();
+  const prefix = themeMap[theme] ?? "r";
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -229,6 +257,8 @@ export function AgentPanel() {
 
       const decoder = new TextDecoder();
       let fullText = "";
+      let buffer = "";
+      const streamingToolSteps: ToolStep[] = [];
 
       const modelMessage: Message = { role: "model", parts: [{ text: "" }] };
       setMessages((prev) => [...prev, modelMessage]);
@@ -237,23 +267,52 @@ export function AgentPanel() {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter((l) => l.startsWith("data: "));
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
         for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
           const raw = line.slice(6);
           try {
             const data = JSON.parse(raw);
-            if (data.text !== undefined) {
-              fullText += data.text;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1] = {
-                  role: "model",
-                  parts: [{ text: fullText }],
-                };
-                return updated;
-              });
+            switch (data.type) {
+              case "tool_start": {
+                streamingToolSteps.push({ tool: data.tool, args: data.args, status: "in_progress", iteration: data.iteration });
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: "model", parts: [{ text: fullText }], toolSteps: [...streamingToolSteps] };
+                  return updated;
+                });
+                // Yield to event loop so React can render in_progress spinner before tool_result arrives
+                await new Promise((r) => setTimeout(r, 50));
+                break;
+              }
+              case "tool_result": {
+                const idx = streamingToolSteps.findIndex((s) => s.status === "in_progress");
+                if (idx !== -1) {
+                  streamingToolSteps[idx] = { ...streamingToolSteps[idx], status: data.success !== false ? "completed" : "error", result: data.result };
+                }
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: "model", parts: [{ text: fullText }], toolSteps: [...streamingToolSteps] };
+                  return updated;
+                });
+                break;
+              }
+              case "text": {
+                setIsLoading(false);
+                fullText += data.text;
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: "model", parts: [{ text: fullText }], toolSteps: [...streamingToolSteps] };
+                  return updated;
+                });
+                break;
+              }
+              case "done":
+              case "error":
+                break;
             }
           } catch {
             // Skip malformed SSE lines
@@ -297,23 +356,20 @@ export function AgentPanel() {
           onClick={handleExpand}
           className="w-full h-full flex flex-col items-center justify-center gap-3 py-8 px-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer group"
         >
-          {/* Brain icon */}
-          <div className="relative">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center group-hover:bg-accent/15 group-hover:border-accent/30 transition-all duration-300">
-              <svg
-                className="w-7 h-7 text-accent"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
-            </div>
+          {/* Cover image */}
+          <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0">
+            <Image
+              src={`/images/kuragent/${prefix}_0.png`}
+              alt="KurAgent"
+              fill
+              className="object-cover transition-opacity group-hover:opacity-0"
+            />
+            <Image
+              src={`/images/kuragent/${prefix}_1.png`}
+              alt="KurAgent"
+              fill
+              className="object-cover opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0"
+            />
           </div>
 
           <div className="text-center">
@@ -511,15 +567,53 @@ export function AgentPanel() {
                     msg.role === "user" ? "justify-end" : "justify-start"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                      msg.role === "user"
-                        ? "bg-accent text-white rounded-br-md"
-                        : "bg-bg-secondary text-text-secondary rounded-bl-md"
+                  <div className="flex flex-col gap-1.5 max-w-[80%]">
+                    {msg.toolSteps && msg.toolSteps.length > 0 && (
+                      <div className="flex flex-col gap-1 px-3 py-2 bg-bg-secondary/50 border border-border/50 rounded-xl">
+                        {msg.toolSteps.map((step, sIdx) => (
+                          <div key={sIdx} className="flex items-center gap-2 text-xs">
+                            {step.status === "in_progress" && (
+                              <>
+                                <span className="w-3 h-3 border border-accent/40 border-t-accent rounded-full animate-spin" />
+                                <span className="text-text-muted">using {step.tool}...</span>
+                              </>
+                            )}
+                            {step.status === "completed" && (
+                              <>
+                                <span className="w-3 h-3 bg-accent/20 rounded-full flex items-center justify-center shrink-0">
+                                  <svg className="w-2 h-2 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </span>
+                                <span className="text-text-secondary">{step.tool}: {formatToolResult(step.result)}</span>
+                              </>
+                            )}
+                            {step.status === "error" && (
+                              <>
+                                <span className="w-3 h-3 bg-red-500/20 rounded-full flex items-center justify-center shrink-0">
+                                  <svg className="w-2 h-2 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </span>
+                                <span className="text-text-muted">{step.tool}: failed</span>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  >
-                    {msg.parts[0].text}
+                    {msg.parts[0].text && (
+                      <div
+                        className={cn(
+                          "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                          msg.role === "user"
+                            ? "bg-accent text-white rounded-br-md"
+                            : "bg-bg-secondary text-text-secondary rounded-bl-md"
+                        )}
+                      >
+                        {msg.parts[0].text}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

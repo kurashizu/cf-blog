@@ -302,7 +302,7 @@ export default async function HomePage() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="section-title mb-0">Agent</h2>
           </div>
-          <Card className="flex-1 p-0">
+          <Card className="flex-1 p-0 group">
             <AgentPanel />
           </Card>
         </section>
