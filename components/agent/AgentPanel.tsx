@@ -39,6 +39,8 @@ const themeMap = {
   "deep-green": "g",
 } as const;
 
+const ALL_PREFIXES = ["r", "g", "b"] as const;
+
 function formatRelativeTime(timestamp: number): string {
   const now = Date.now();
   const diff = now - timestamp;
@@ -82,8 +84,6 @@ function formatToolResult(result: unknown): string {
 export function AgentPanel() {
   const { theme } = useTheme();
   const prefix = themeMap[theme] ?? "r";
-  const [imgOpacity, setImgOpacity] = useState(1);
-  const prevThemeRef = useRef(theme);
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -132,16 +132,6 @@ export function AgentPanel() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [expanded]);
-
-  // Fade transition on theme change
-  useEffect(() => {
-    if (prevThemeRef.current !== theme) {
-      prevThemeRef.current = theme;
-      setImgOpacity(0);
-      const timer = setTimeout(() => setImgOpacity(1), 150);
-      return () => clearTimeout(timer);
-    }
-  }, [theme]);
 
   const createNewSession = useCallback(() => {
     const id = crypto.randomUUID();
@@ -368,22 +358,31 @@ export function AgentPanel() {
           onClick={handleExpand}
           className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer"
         >
-          {/* Cover image — 80% height, centered */}
-          <div className="absolute left-0 right-0 top-0 h-[80%]">
-            <Image
-              src={`/images/kuragent/${prefix}_0.png`}
-              alt="KurAgent"
-              fill
-              className="object-cover"
-              style={{ opacity: imgOpacity, transition: "opacity 200ms ease-out" }}
-            />
-            {/* Bottom fade into card */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg-card/80" />
+          {/* All theme images — crossfade on theme change */}
+          <div className="absolute inset-0 flex items-center justify-center p-[15%]">
+            {ALL_PREFIXES.map((p) => (
+              <div
+                key={p}
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ opacity: p === prefix ? 1 : 0, transition: "opacity 350ms ease-out" }}
+              >
+                <Image
+                  src={`/images/kuragent/${p}_0.png`}
+                  alt={`KurAgent theme ${p}`}
+                  width={400}
+                  height={400}
+                  className="w-full h-full object-contain"
+                  style={{
+                    filter: "blur(0.5px) drop-shadow(0 0 6px var(--accent))",
+                  }}
+                />
+              </div>
+            ))}
           </div>
 
-          {/* Text overlay with glow */}
-          <div className="absolute bottom-0 left-0 right-0 h-[20%] flex flex-col items-center justify-center pb-2" style={{
-            textShadow: "0 0 20px var(--accent), 0 0 40px var(--accent-subtle, var(--accent))",
+          {/* Floating text with glow */}
+          <div className="absolute inset-0 flex flex-col items-center justify-end pb-4" style={{
+            textShadow: "0 0 8px var(--accent), 0 0 16px var(--accent)",
           }}>
             <p className="text-sm font-semibold text-text-primary">KurAgent</p>
             <p className="text-xs text-text-muted mt-0.5">kurashizu makes thinking act</p>
