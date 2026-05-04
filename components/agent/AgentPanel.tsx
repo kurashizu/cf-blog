@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
@@ -996,7 +998,15 @@ export function AgentPanel({
                                                             : "bg-bg-secondary text-text-secondary rounded-bl-md",
                                                     )}
                                                 >
-                                                    {msg.parts[0].text}
+                                                    {msg.role === "model" ? (
+                                                        <div className="markdown-content">
+                                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                                {msg.parts[0].text}
+                                                            </ReactMarkdown>
+                                                        </div>
+                                                    ) : (
+                                                        msg.parts[0].text
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
