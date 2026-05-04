@@ -6,21 +6,22 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
-interface Message {
-    role: "user" | "model";
-    parts: { text: string }[];
-    toolSteps?: ToolStep[];
-    thinkContent?: string;
-    isThinking?: boolean;
-    error?: string;
-}
-
 interface ToolStep {
     tool: string;
     args: Record<string, unknown>;
     status: "pending" | "in_progress" | "completed" | "error";
     result?: unknown;
     iteration: number;
+}
+
+interface Message {
+    id: string; // unique client-generated ID
+    role: "user" | "model";
+    parts: { text: string }[];
+    toolSteps?: ToolStep[];
+    thinkContent?: string;
+    isThinking?: boolean;
+    error?: string;
 }
 
 interface SessionMeta {
@@ -30,7 +31,7 @@ interface SessionMeta {
     title: string;
 }
 
-const AGENT_API = "https://agent.022025.xyz/api/chat";
+const AGENT_API = "https://cf-agent.kurashizu123.workers.dev/api/chat";
 const SESSIONS_KEY = "agent_sessions";
 const ACTIVE_KEY = "agent_active_session";
 const MAX_SESSIONS = 10;
@@ -42,6 +43,11 @@ const themeMap = {
 } as const;
 
 const ALL_PREFIXES = ["r", "g", "b"] as const;
+
+let idCounter = 0;
+function genId(): string {
+    return `msg_${Date.now()}_${++idCounter}`;
+}
 
 function formatRelativeTime(timestamp: number): string {
     const now = Date.now();
@@ -74,6 +80,21 @@ function saveSessions(sessions: SessionMeta[]): void {
     localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
 }
 
+function loadMessages(sessionId: string): Message[] {
+    try {
+        const raw = localStorage.getItem(`agent_messages:${sessionId}`);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveMessages(sessionId: string, messages: Message[]): void {
+    localStorage.setItem(`agent_messages:${sessionId}`, JSON.stringify(messages));
+}
+
 function formatToolResult(result: unknown): string {
     if (!result || typeof result !== "object") return String(result ?? "");
     const obj = result as Record<string, unknown>;
@@ -87,9 +108,11 @@ function formatToolResult(result: unknown): string {
 export function AgentPanel({
     expanded: externalExpanded,
     onCollapse,
+    onExpand,
 }: {
     expanded?: boolean;
     onCollapse?: () => void;
+    onExpand?: () => void;
 }) {
     const { theme } = useTheme();
     const prefix = themeMap[theme] ?? "r";
@@ -102,10 +125,15 @@ export function AgentPanel({
     const [sessions, setSessions] = useState<SessionMeta[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<string>("");
     const [showDropdown, setShowDropdown] = useState(false);
+    const [showToolPicker, setShowToolPicker] = useState(false);
+    const [availableTools, setAvailableTools] = useState<{name: string; description: string}[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Current model message ID being streamed — used to update the right message
+    const modelIdRef = useRef<string>("");
 
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,7 +149,17 @@ export function AgentPanel({
         setSessions(loaded);
         const active = localStorage.getItem(ACTIVE_KEY) || "";
         setActiveSessionId(active);
+        if (active) {
+            setMessages(loadMessages(active));
+        }
     }, []);
+
+    // Persist messages to localStorage whenever they change
+    useEffect(() => {
+        if (activeSessionId) {
+            saveMessages(activeSessionId, messages);
+        }
+    }, [messages, activeSessionId]);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -137,6 +175,21 @@ export function AgentPanel({
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [showDropdown]);
+
+    // Fetch available tools when panel expands
+    useEffect(() => {
+        if (expanded && availableTools.length === 0) {
+            fetch(`${AGENT_API.replace('/chat', '/tool')}`)
+                .then(r => r.json())
+                .then((data) => {
+                    const tools = (data as { tools?: {name: string; description: string}[] })?.tools;
+                    if (tools && Array.isArray(tools)) {
+                        setAvailableTools(tools);
+                    }
+                })
+                .catch(() => {});
+        }
+    }, [expanded]);
 
     // Close on Escape
     useEffect(() => {
@@ -170,6 +223,7 @@ export function AgentPanel({
 
     const deleteSession = useCallback(
         (id: string) => {
+            localStorage.removeItem(`agent_messages:${id}`);
             setSessions((prev) => {
                 const updated = prev.filter((s) => s.id !== id);
                 saveSessions(updated);
@@ -182,6 +236,7 @@ export function AgentPanel({
                     if (next) {
                         setActiveSessionId(next.id);
                         localStorage.setItem(ACTIVE_KEY, next.id);
+                        setMessages(loadMessages(next.id));
                     } else {
                         createNewSession();
                     }
@@ -196,7 +251,7 @@ export function AgentPanel({
     const switchSession = useCallback((id: string) => {
         setActiveSessionId(id);
         localStorage.setItem(ACTIVE_KEY, id);
-        setMessages([]);
+        setMessages(loadMessages(id));
         setShowDropdown(false);
     }, []);
 
@@ -230,7 +285,7 @@ export function AgentPanel({
             sessionId = createNewSession();
         }
 
-        const userMessage: Message = { role: "user", parts: [{ text: input }] };
+        const userMessage: Message = { id: genId(), role: "user", parts: [{ text: input }] };
         setMessages((prev) => [...prev, userMessage]);
         const currentInput = input;
         setInput("");
@@ -241,6 +296,22 @@ export function AgentPanel({
             sessions.find((s) => s.id === sessionId)?.title ===
             "New conversation";
         const titleToGenerate = isFirstMessage ? currentInput : undefined;
+
+        // Generate a unique ID for this model response — we'll update messages by this ID
+        const thisModelId = genId();
+        modelIdRef.current = thisModelId;
+
+        // Create a placeholder model message immediately so it appears in DOM
+        const modelPlaceholder: Message = {
+            id: thisModelId,
+            role: "model",
+            parts: [{ text: "" }],
+            toolSteps: [],
+            thinkContent: undefined,
+            isThinking: false,
+            error: undefined,
+        };
+        setMessages((prev) => [...prev, modelPlaceholder]);
 
         try {
             const response = await fetch(AGENT_API, {
@@ -262,9 +333,17 @@ export function AgentPanel({
             let fullText = "";
             let fullThinkText = "";
             let buffer = "";
-            const streamingToolSteps: ToolStep[] = [];
-            let hasModelMessage = false;
+            let currentToolSteps: ToolStep[] = [];
             let currentError: string | undefined;
+
+            // Helper: update model message by ID
+            const updateModelMsg = (updates: Partial<Message>) => {
+                setMessages((prev) =>
+                    prev.map((m) =>
+                        m.id === thisModelId ? { ...m, ...updates } : m,
+                    ),
+                );
+            };
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -280,257 +359,106 @@ export function AgentPanel({
                     try {
                         const data = JSON.parse(raw);
                         switch (data.type) {
-                            case "start_process":
-                                setIsLoading(true);
-                                break;
                             case "start_think": {
                                 fullThinkText = data.content || "";
-                                setMessages((prev) => {
-                                    const existingIdx = prev.findIndex(
-                                        (m) => m.role === "model",
-                                    );
-                                    if (existingIdx !== -1) {
-                                        const updated = [...prev];
-                                        updated[existingIdx] = {
-                                            ...updated[existingIdx],
-                                            thinkContent: fullThinkText,
-                                            isThinking: true,
-                                            parts: updated[existingIdx].parts[0]?.text
-                                                ? updated[existingIdx].parts
-                                                : [{ text: "" }],
-                                            toolSteps:
-                                                updated[existingIdx].toolSteps ??
-                                                streamingToolSteps,
-                                        };
-                                        hasModelMessage = true;
-                                        return updated;
-                                    }
-                                    hasModelMessage = true;
-                                    return [
-                                        ...prev,
-                                        {
-                                            role: "model" as const,
-                                            parts: [{ text: "" }],
-                                            toolSteps: [],
-                                            thinkContent: fullThinkText,
-                                            isThinking: true,
-                                            error: undefined,
-                                        },
-                                    ];
+                                fullText = "";
+                                updateModelMsg({
+                                    thinkContent: fullThinkText,
+                                    isThinking: true,
+                                    parts: [{ text: "" }],
                                 });
                                 break;
                             }
                             case "think": {
                                 fullThinkText += data.content || "";
-                                setMessages((prev) => {
-                                    const updated = [...prev];
-                                    const idx = updated.findIndex(
-                                        (m) =>
-                                            m.role === "model" &&
-                                            m.isThinking === true,
-                                    );
-                                    if (idx !== -1) {
-                                        updated[idx] = {
-                                            ...updated[idx],
-                                            thinkContent: fullThinkText,
-                                            isThinking: true,
-                                            // Don't overwrite parts with fullText during think
-                                            // Keep whatever text has been accumulated
-                                            toolSteps:
-                                                updated[idx].toolSteps ??
-                                                streamingToolSteps,
-                                        };
-                                    }
-                                    return updated;
-                                });
+                                updateModelMsg({ thinkContent: fullThinkText });
                                 break;
                             }
                             case "end_think": {
-                                setMessages((prev) => {
-                                    const idx = prev.findIndex(
-                                        (m) =>
-                                            m.role === "model" &&
-                                            m.thinkContent !== undefined,
-                                    );
-                                    if (idx !== -1) {
-                                        const updated = [...prev];
-                                        updated[idx] = {
-                                            ...updated[idx],
-                                            isThinking: false,
-                                        };
-                                        return updated;
-                                    }
-                                    return prev;
-                                });
+                                updateModelMsg({ isThinking: false });
                                 break;
                             }
                             case "start_text": {
-                                hasModelMessage = true;
                                 fullText = data.content || "";
-                                // Find existing model message (possibly with thinkContent) or create new
-                                setMessages((prev) => {
-                                    const existingIdx = prev.findIndex(
-                                        (m) => m.role === "model",
-                                    );
-                                    if (existingIdx !== -1) {
-                                        const updated = [...prev];
-                                        updated[existingIdx] = {
-                                            ...updated[existingIdx],
-                                            parts: [{ text: fullText }],
-                                            isThinking: false,
-                                            toolSteps:
-                                                updated[existingIdx].toolSteps ??
-                                                streamingToolSteps,
-                                        };
-                                        return updated;
-                                    }
-                                    return [
-                                        ...prev,
-                                        {
-                                            role: "model" as const,
-                                            parts: [{ text: fullText }],
-                                            toolSteps: [...streamingToolSteps],
-                                            thinkContent: fullThinkText,
-                                            isThinking: false,
-                                            error: undefined,
-                                        },
-                                    ];
+                                updateModelMsg({
+                                    parts: [{ text: fullText }],
+                                    isThinking: false,
                                 });
                                 break;
                             }
                             case "text": {
-                                setIsLoading(false);
-                                fullText += data.text || "";
-                                setMessages((prev) => {
-                                    // Prefer message with thinkContent (the thinking message)
-                                    // or message with non-empty parts, or the last model message
-                                    const idx = prev.findIndex(
-                                        (m) =>
-                                            m.role === "model" &&
-                                            m.thinkContent !== undefined,
-                                    );
-                                    if (idx !== -1) {
-                                        const updated = [...prev];
-                                        updated[idx] = {
-                                            ...updated[idx],
-                                            parts: [{ text: fullText }],
-                                            isThinking: false,
-                                            toolSteps:
-                                                updated[idx].toolSteps ??
-                                                streamingToolSteps,
-                                        };
-                                        return updated;
-                                    }
-                                    // Fallback: find message with non-empty parts
-                                    const fallbackIdx = prev.findIndex(
-                                        (m) =>
-                                            m.role === "model" &&
-                                            m.parts[0]?.text,
-                                    );
-                                    if (fallbackIdx !== -1) {
-                                        const updated = [...prev];
-                                        updated[fallbackIdx] = {
-                                            ...updated[fallbackIdx],
-                                            parts: [{ text: fullText }],
-                                            isThinking: false,
-                                            toolSteps:
-                                                updated[fallbackIdx].toolSteps ??
-                                                streamingToolSteps,
-                                        };
-                                        return updated;
-                                    }
-                                    return prev;
+                                fullText += data.content || "";
+                                updateModelMsg({
+                                    parts: [{ text: fullText }],
+                                    isThinking: false,
                                 });
                                 break;
                             }
                             case "start_tool":
                             case "tool_start": {
-                                if (!hasModelMessage) {
-                                    hasModelMessage = true;
-                                    setMessages((prev) => [
-                                        ...prev,
-                                        {
-                                            role: "model" as const,
-                                            parts: [{ text: "" }],
-                                            toolSteps: [],
-                                            thinkContent: undefined,
-                                            isThinking: false,
-                                            error: undefined,
-                                        },
-                                    ]);
-                                }
-                                streamingToolSteps.push({
+                                const step: ToolStep = {
                                     tool: data.tool,
                                     args: data.args || {},
                                     status: "in_progress",
                                     iteration: data.iteration ?? 0,
-                                });
-                                setMessages((prev) => {
-                                    const idx = prev.findIndex(
-                                        (m) => m.role === "model",
-                                    );
-                                    if (idx !== -1) {
-                                        const updated = [...prev];
-                                        updated[idx] = {
-                                            ...updated[idx],
-                                            toolSteps: [...streamingToolSteps],
-                                        };
-                                        return updated;
-                                    }
-                                    return prev;
-                                });
+                                };
+                                currentToolSteps = [...currentToolSteps, step];
+                                updateModelMsg({ toolSteps: currentToolSteps });
                                 await new Promise((r) => setTimeout(r, 50));
                                 break;
                             }
                             case "tool_result": {
-                                const idx = streamingToolSteps.findIndex(
+                                const idx = currentToolSteps.findIndex(
                                     (s) => s.status === "in_progress",
                                 );
                                 if (idx !== -1) {
-                                    streamingToolSteps[idx] = {
-                                        ...streamingToolSteps[idx],
-                                        status:
-                                            data.success !== false
-                                                ? "completed"
-                                                : "error",
-                                        result: data.result,
-                                    };
-                                }
-                                setMessages((prev) => {
-                                    const idx = prev.findIndex(
-                                        (m) => m.role === "model",
+                                    currentToolSteps = currentToolSteps.map(
+                                        (s, i) =>
+                                            i === idx
+                                                ? {
+                                                      ...s,
+                                                      status:
+                                                          data.success !== false
+                                                              ? "completed"
+                                                              : "error",
+                                                      result: data.result,
+                                                  }
+                                                : s,
                                     );
-                                    if (idx !== -1) {
-                                        const updated = [...prev];
-                                        updated[idx] = {
-                                            ...updated[idx],
-                                            toolSteps: [...streamingToolSteps],
-                                        };
-                                        return updated;
-                                    }
-                                    return prev;
-                                });
+                                }
+                                updateModelMsg({ toolSteps: currentToolSteps });
                                 break;
                             }
-                            case "end_tool":
+                            case "end_tool": {
+                                // mark in_progress tool as completed
+                                currentToolSteps = currentToolSteps.map((s) =>
+                                    s.status === "in_progress"
+                                        ? { ...s, status: "completed" as const }
+                                        : s,
+                                );
+                                updateModelMsg({ toolSteps: currentToolSteps });
+                                break;
+                            }
                             case "end_process":
-                            case "done":
+                            case "done": {
                                 setIsLoading(false);
+                                // Ensure any remaining in_progress tools are marked completed
+                                if (currentToolSteps.some((s) => s.status === "in_progress")) {
+                                    currentToolSteps = currentToolSteps.map((s) =>
+                                        s.status === "in_progress"
+                                            ? { ...s, status: "completed" as const }
+                                            : s,
+                                    );
+                                    updateModelMsg({ toolSteps: currentToolSteps });
+                                }
                                 break;
-                            case "error":
+                            }
+                            case "error": {
                                 currentError = data.content || data.message || "Unknown error";
+                                updateModelMsg({ error: currentError });
                                 setIsLoading(false);
-                                setMessages((prev) => {
-                                    const updated = [...prev];
-                                    if (updated.length > 0) {
-                                        updated[updated.length - 1] = {
-                                            ...updated[updated.length - 1],
-                                            error: currentError,
-                                        };
-                                    }
-                                    return updated;
-                                });
                                 break;
+                            }
                         }
                     } catch {
                         // Skip malformed SSE lines
@@ -538,29 +466,42 @@ export function AgentPanel({
                 }
             }
 
-            if (!hasModelMessage && !currentError) {
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: "model" as const,
-                        parts: [{ text: fullText || "No response received." }],
-                        toolSteps: streamingToolSteps.length > 0 ? streamingToolSteps : undefined,
-                        thinkContent: fullThinkText || undefined,
-                        isThinking: false,
-                        error: currentError,
-                    },
-                ]);
-            }
+            // If no model message was created at all (e.g., empty response), create a fallback
+            setMessages((prev) => {
+                if (!prev.find((m) => m.id === thisModelId)) {
+                    return [
+                        ...prev,
+                        {
+                            id: thisModelId,
+                            role: "model" as const,
+                            parts: [{ text: fullText || "No response received." }],
+                            toolSteps:
+                                currentToolSteps.length > 0
+                                    ? currentToolSteps
+                                    : undefined,
+                            thinkContent: fullThinkText || undefined,
+                            isThinking: false,
+                            error: currentError,
+                        },
+                    ];
+                }
+                return prev;
+            });
         } catch {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: "model",
-                    parts: [{ text: "Sorry, something went wrong." }],
-                },
-            ]);
+            setMessages((prev) =>
+                prev.map((m) =>
+                    m.id === thisModelId
+                        ? {
+                              ...m,
+                              parts: [{ text: "Sorry, something went wrong." }],
+                              error: "Network error",
+                          }
+                        : m,
+                ),
+            );
         } finally {
             setIsLoading(false);
+            modelIdRef.current = "";
             updateSessionActivity(titleToGenerate);
         }
     };
@@ -573,11 +514,18 @@ export function AgentPanel({
     };
 
     const handleExpand = () => {
-        setExpanded(true);
+        if (onExpand) {
+            onExpand();
+        } else if (onCollapse) {
+            onCollapse();
+        } else {
+            setInternalExpanded(true);
+        }
     };
 
     const handleCollapse = () => {
         if (onCollapse) {
+            // Controlled by parent — signal collapse (set showAgent=false)
             onCollapse();
         } else {
             setExpanded(false);
@@ -919,9 +867,9 @@ export function AgentPanel({
                                     </div>
                                 )}
 
-                                {messages.map((msg, idx) => (
+                                {messages.map((msg) => (
                                     <div
-                                        key={idx}
+                                        key={msg.id}
                                         className={cn(
                                             "flex",
                                             msg.role === "user"
@@ -991,7 +939,7 @@ export function AgentPanel({
                                                                                 <svg
                                                                                     className="w-2 h-2 text-red-400"
                                                                                     fill="none"
-                                                                                    viewBox="0 0 24 24"
+                                                                                                            viewBox="0 0 24 24"
                                                                                     stroke="currentColor"
                                                                                 >
                                                                                     <path
@@ -1039,7 +987,7 @@ export function AgentPanel({
                                                         ⚠️ {msg.error}
                                                     </div>
                                                 )}
-                                            {msg.parts[0].text && (
+                                            {msg.parts[0]?.text && (
                                                 <div
                                                     className={cn(
                                                         "rounded-2xl px-4 py-3 text-sm leading-relaxed",
@@ -1079,7 +1027,38 @@ export function AgentPanel({
 
                             {/* Input */}
                             <div className="px-5 py-4 border-t border-border shrink-0">
-                                <div className="flex items-center gap-2">
+                                <div className="relative flex items-center gap-2">
+                                    <button
+                                        onClick={() => setShowToolPicker(v => !v)}
+                                        className="w-10 h-10 bg-bg-secondary hover:bg-bg-elevated border border-border hover:border-accent/60 rounded-xl flex items-center justify-center transition-all shrink-0"
+                                        title="Available tools"
+                                    >
+                                        <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                    </button>
+                                    {showToolPicker && (
+                                        <div className="absolute bottom-full left-0 mb-2 w-64 bg-bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
+                                            <div className="px-3 py-2 border-b border-border text-xs text-text-muted font-medium">Available Tools</div>
+                                            <div className="max-h-48 overflow-y-auto">
+                                                {availableTools.map(tool => (
+                                                    <button
+                                                        key={tool.name}
+                                                        onClick={() => {
+                                                            setInput(prev => prev + `@${tool.name} `);
+                                                            setShowToolPicker(false);
+                                                            textareaRef.current?.focus();
+                                                        }}
+                                                        className="w-full px-3 py-2 text-left hover:bg-bg-secondary transition-colors"
+                                                    >
+                                                        <div className="text-sm text-text-primary font-medium">@{tool.name}</div>
+                                                        <div className="text-xs text-text-muted truncate">{tool.description}</div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                     <textarea
                                         ref={textareaRef}
                                         value={input}

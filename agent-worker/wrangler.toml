@@ -30,4 +30,4 @@ namespace_id = "1004"
   period = 10
 
 [vars]
-GEMINI_MODELS = '["gemma-4-31b-it", "gemma-4-26b-a4b-it"]'
+GEMINI_MODELS = '["MiniMax-M2.7", "gemma-4-31b-it", "gemma-4-26b-a4b-it"]'

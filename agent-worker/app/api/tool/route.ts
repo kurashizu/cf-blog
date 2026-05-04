@@ -12,10 +12,17 @@ const DAILY_LIMIT = 200;
  * GET /api/tool — list all tools
  */
 export async function GET() {
-  return NextResponse.json({
-    tools: TOOLS,
-    functionDeclarations: FUNCTION_DECLARATIONS,
-  });
+  return NextResponse.json(
+    {
+      tools: TOOLS,
+      functionDeclarations: FUNCTION_DECLARATIONS,
+    },
+    {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      },
+    }
+  );
 }
 
 /**

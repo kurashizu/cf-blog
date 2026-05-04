@@ -59,8 +59,8 @@ interface Tool {
 
 | Tool | Description | Parameters |
 |---|---|---|
-| `eval_expression` | Safe JS expression evaluator | `{ code: string }` |
-| `fetch_webpage` | Fetch URL, convert HTML→Markdown | `{ url: string }` |
+| `eval_expression` | Safe JS expression evaluator (recursive-descent, no eval/Function) | `{ code: string }` |
+| `web_search` | Brave Search API for web queries | `{ q: string }` |
 | `get_time` | Get current time in timezone | `{ timezone?: string }` |
 
 ## API Endpoints
@@ -73,24 +73,11 @@ Execute a tool directly: `{ "name": "eval_expression", "args": { "code": "1+2" }
 Returns `{ "success": true, "result": "3", "tool": "eval_expression" }`
 
 ### POST /api/chat
-Gemini tool-calling loop with streaming SSE events:
-1. Send message with `tools: { functionDeclarations }`
-2. Model may respond with `functionCall` → emit `tool_start` event
-3. Execute via `executeTool(name, args)` → emit `tool_result` event
-4. Stream final text with `text` events
-5. Emit `done` with `hitIterationLimit` and full `toolCalls` log
-6. Max 5 iterations to prevent infinite loops
-7. Default model: `gemma-4-31b-it`
+MiniMax/Gemini tool-calling loop with streaming SSE. Default model: `MiniMax-M2.7`.
 
-SSE format:
-```
-data: {"type":"tool_start","tool":"get_time","args":{"timezone":"Asia/Tokyo"},"iteration":1}
-data: {"type":"tool_result","tool":"get_time","result":{...},"success":true,"iteration":1}
-data: {"type":"text","text":"The current time in Tokyo is..."}
-data: {"type":"done","hitIterationLimit":false,"toolCalls":[...]}
-```
+SSE events: `start_process` → optional tool calls (`tool_start`/`tool_result`/`end_tool`) → `start_text`/`text`/`end_text` → `end_process`
 
-Non-streaming returns JSON: `{ session_id, text, model, toolCalls, hitIterationLimit }`
+Max 5 tool call iterations to prevent infinite loops.
 
 ## Key Files
 
@@ -99,24 +86,20 @@ agent-worker/
   lib/
     tools/
       index.ts           # exports TOOLS, FUNCTION_DECLARATIONS, executeTool()
-      eval-expression.ts # JS eval tool (safe recursive-descent parser, no eval/Function)
-      fetch-webpage.ts   # HTTP fetch + HTML→Markdown (500KB max, 10s timeout)
-      get-time.ts        # Timezone time (UTC fallback)
+      eval-expression.ts # JS eval (recursive-descent parser, no eval/Function)
+      web-search.ts      # Brave Search API
+      get-time.ts        # Timezone time
     evaluator.ts         # Safe expression parser
-    html-to-md.ts        # Regex-based HTML→Markdown converter
-  app/
-    api/
-      tool/route.ts      # GET list tools, POST execute tool
-      chat/route.ts     # Gemini tool-calling loop
-  wrangler.toml          # GEMINI_API_KEY secret binding
+    model-pool.ts        # MiniMax primary + Gemini fallback, OpenAI↔Gemini format conversion
+  app/api/
+    tool/route.ts        # GET list tools, POST execute tool
+    chat/route.ts        # Streaming chat with tool-calling loop, filters <think>...</think>
+  wrangler.toml          # GEMINI_MODELS env var, KV/rate limit bindings
 ```
 
 ## CI/CD
 
-Both workers built and deployed in parallel via `.github/workflows/deploy.yml` in parent repo (`cf-blog`):
+GitHub Actions builds cf-blog then cf-agent sequentially. Deploys in parallel:
 1. Build cf-blog
 2. Build cf-agent (`cd agent-worker && npm ci && npm run build:cf`)
-3. Deploy cf-blog
-4. Deploy cf-agent
-
-Direct deploy bypasses CI: `cd agent-worker && npm run build:cf && npx wrangler deploy`
+3. Deploy cf-blog + cf-agent in parallel

@@ -93,7 +93,7 @@ export function GadgetsPanel() {
 
     return (
         <div className="w-full h-full flex flex-col">
-            <AgentPanel expanded={showAgent} onCollapse={() => setShowAgent(false)} />
+            <AgentPanel expanded={showAgent} onCollapse={() => setShowAgent(false)} onExpand={() => setShowAgent(true)} />
             {/* 4 gadgets grid */}
             <div className="grid grid-cols-2 gap-3">
                 {gadgets.map((gadget, idx) => (

@@ -3,7 +3,7 @@
  */
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { evalExpressionTool } from './eval-expression';
-import { fetchWebpageTool } from './fetch-webpage';
+import { webSearchTool } from './web-search';
 import { getTimeTool } from './get-time';
 
 export interface Tool {
@@ -16,7 +16,7 @@ export interface Tool {
 
 const TOOL_LIST: Tool[] = [
   evalExpressionTool,
-  fetchWebpageTool,
+  webSearchTool,
   getTimeTool,
 ];
 

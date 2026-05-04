@@ -67,7 +67,7 @@ npx wrangler r2 object list cf-blog-bucket --prefix=articles/
 - `lib/articles.ts` - Article repository with R2 backend
 - `lib/r2.ts` - R2 client using `@opennextjs/cloudflare` (getCloudflareContext pattern)
 - `lib/gemini.ts` - Gemini API wrapper
-- `lib/model-pool.ts` - Model pool with quota fallback (`callWithFallback`, `streamWithFallback`)
+- `lib/model-pool.ts` - Model pool with MiniMax (OpenAI API) primary + Gemini fallback; handles format conversion between OpenAI and Gemini
 - `lib/frontmatter.ts` - YAML frontmatter parser/builder
 - `lib/ratelimiter.ts` - Rate limiting (`checkBurst`, `checkDailyKV`)
 - `lib/llm.ts` - LLM API route handlers
@@ -104,18 +104,18 @@ lib/                 # Backend logic
 
 agent-worker/        # Separate Cloudflare Worker (cf-agent)
   lib/
-    tools/           # Tool implementations (eval-expression, fetch-webpage, get-time)
-      index.ts     # Tool registry — exports TOOLS, FUNCTION_DECLARATIONS, executeTool()
-      eval-expression.ts
-      fetch-webpage.ts
-      get-time.ts
-    evaluator.ts    # Safe JS expression evaluator
-    html-to-md.ts  # HTML to Markdown converter
-  app/
-    api/
-      tool/         # GET list tools, POST execute tool
-      chat/        # Gemini tool-calling loop
-  wrangler.toml     # Worker config (GEMINI_API_KEY secret)
+    tools/           # Tool implementations
+      index.ts       # Tool registry — exports TOOLS, FUNCTION_DECLARATIONS, executeTool()
+      eval-expression.ts  # Safe JS expression evaluator (no eval/Function)
+      web-search.ts      # Brave Search API for web queries
+      get-time.ts        # Timezone time (UTC fallback)
+    evaluator.ts    # Recursive descent expression parser
+    html-to-md.ts   # Regex-based HTML→Markdown converter
+    model-pool.ts   # Model pool with MiniMax primary + Gemini fallback
+  app/api/
+    tool/           # GET list tools, POST execute tool
+    chat/           # Streaming chat with tool-calling loop
+  wrangler.toml     # Worker config, GEMINI_MODELS env var
 ```
 
 ## cf-agent Tool System
@@ -144,16 +144,17 @@ interface Tool {
 
 ### /api/chat Endpoint
 
-Tool-calling loop with streaming SSE events:
+Tool-calling loop with streaming SSE events. Streams text chunks between `start_text`/`end_text` events. Think blocks (`<think>...</think>`) are filtered out before text is emitted.
 
 ```
-data: {"type":"tool_start","tool":"get_time","args":{"timezone":"Asia/Tokyo"},"iteration":1}
-data: {"type":"tool_result","tool":"get_time","result":{...},"success":true,"iteration":1}
-data: {"type":"text","text":"The current time in Tokyo is..."}
-data: {"type":"done","hitIterationLimit":false,"toolCalls":[...]}
+data: {"type":"start_process","content":""}
+data: {"type":"start_text","content":"Hello"}
+data: {"type":"end_process","content":"done, hitIterationLimit: false, toolCalls: 0"}
 ```
 
-Non-streaming returns JSON: `{ session_id, text, model, toolCalls, hitIterationLimit }`
+Tool calls emit `tool_start` → `tool_result` → `end_tool` → final `start_text`/`text`/`end_text` events.
+
+Max 5 tool call iterations. Session messages stored in KV with 1-hour TTL.
 
 ## Code Style
 
