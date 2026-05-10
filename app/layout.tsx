@@ -8,6 +8,7 @@ import "@/components/theme/article.css";
 import "@/components/theme/admin.css";
 import "@/components/theme/form.css";
 import "@/components/theme/editor.css";
+import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";

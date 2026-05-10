@@ -138,6 +138,44 @@
   border-bottom-color: var(--accent);
 }
 
+/* Tables */
+.article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+.article-body th,
+.article-body td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.article-body th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.article-body tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+/* Mermaid diagrams */
+.article-body .mermaid {
+  margin: 1.5rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.article-body .mermaid svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+}
+
 /* Article Card Styles */
 .article-meta {
   font-size: 0.75rem;
