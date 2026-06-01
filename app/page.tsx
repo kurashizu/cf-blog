@@ -7,7 +7,7 @@ import { r2Get } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/ui/GadgetsPanel";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 interface Post {
   slug: string;
