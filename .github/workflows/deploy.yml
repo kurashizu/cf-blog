@@ -19,6 +19,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Restore .open-next cache
+        uses: actions/cache@v4
+        with:
+          path: .open-next
+          key: opennext-${{ hashFiles('package-lock.json') }}-${{ hashFiles('open-next.config.ts') }}
+
       - name: Build
         run: |
           BUILD_DATE=$(date +'build-%y%m%d-%H%M')
@@ -39,12 +45,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        id: cache-agent
+        with:
+          path: agent-worker/node_modules
+          key: agent-node-${{ hashFiles('agent-worker/package-lock.json') }}
 
       - name: Install dependencies
+        if: steps.cache-agent.outputs.cache-hit != 'true'
         run: |
           cd agent-worker
           npm ci --legacy-peer-deps
+
+      - name: Restore .open-next cache
+        uses: actions/cache@v4
+        with:
+          path: agent-worker/.open-next
+          key: opennext-agent-${{ hashFiles('agent-worker/package-lock.json') }}-${{ hashFiles('agent-worker/open-next.config.ts') }}
 
       - name: Build
         run: |
@@ -67,9 +86,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        id: cache-cache
+        with:
+          path: cache-worker/node_modules
+          key: cache-node-${{ hashFiles('cache-worker/package-lock.json') }}
 
       - name: Install dependencies
+        if: steps.cache-cache.outputs.cache-hit != 'true'
         run: |
           cd cache-worker
           npm ci --legacy-peer-deps
