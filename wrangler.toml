@@ -1,0 +1,55 @@
+name = "cf-blog"
+main = ".open-next/worker.js"
+compatibility_date = "2026-04-30"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "cf-blog-bucket"
+
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "757683a8bedf4c53bd20854f6e0f27bb"
+preview_id = "d299a8b14f4a4fc0993a319e091111e9"
+
+# Rate Limiting — CF Rate Limiter (burst) + KV (daily)
+# Blog: /api/llm 2/10s burst, 200/day | /api/guestbook 2/10s burst, 5/day
+
+[[ratelimits]]
+name = "LLM_RATE_LIMIT"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 2
+  period = 10
+
+[[ratelimits]]
+name = "GUESTBOOK_RATE_LIMIT"
+namespace_id = "1002"
+  [ratelimits.simple]
+  limit = 2
+  period = 10
+
+[vars]
+GEMINI_MODELS = '["gemma-4-31b-it", "gemma-4-26b-a4b-it"]'
+
+# Cache refresh cron: set CRON_SECRET via `npx wrangler secret put CRON_SECRET`
+# and add CRON_SECRET as a GitHub Actions secret for hourly cache refresh.
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1

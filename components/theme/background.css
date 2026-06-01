@@ -1,0 +1,101 @@
+/* ===========================================
+   BACKGROUND EFFECTS
+   =========================================== */
+
+/* Frosted glass overlay + Particle canvas */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Animated gradient orbs */
+body::after {
+  content: '';
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  width: 100vw;
+  height: 100vh;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, var(--glow-color) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: -1;
+  animation: bg-drift 25s ease-in-out infinite;
+}
+
+@keyframes bg-drift {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-45%, -55%) scale(1.1); }
+}
+
+@keyframes bg-breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes gradient-flow {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: brightness(1.1);
+  }
+}
+
+/* ===========================================
+   GLOW ANIMATIONS
+   =========================================== */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px var(--accent-glow),
+      0 0 40px var(--accent-subtle),
+      inset 0 0 20px var(--accent-subtle);
+    border-color: var(--accent);
+  }
+  50% {
+    box-shadow:
+      0 0 35px var(--accent-glow),
+      0 0 70px var(--accent-subtle),
+      inset 0 0 35px var(--accent-subtle);
+    border-color: var(--accent-hover);
+  }
+}
+
+@keyframes glow-border {
+  0%, 100% {
+    border-color: var(--accent);
+    box-shadow:
+      0 0 15px var(--accent-glow),
+      0 0 30px var(--accent-subtle);
+  }
+  50% {
+    border-color: var(--accent-hover);
+    box-shadow:
+      0 0 25px var(--accent-glow),
+      0 0 50px var(--accent-subtle);
+  }
+}
+
+.animate-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-glow-border {
+  animation: glow-border 2.5s ease-in-out infinite;
+}
+
+.animate-glow-text {
+  text-shadow: 0 0 10px var(--accent-glow);
+  animation: text-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes text-glow {
+  0% { text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-subtle); }
+  100% { text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-subtle), 0 0 60px var(--accent-subtle); }
+}

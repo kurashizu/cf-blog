@@ -1,0 +1,33 @@
+name = "cf-agent"
+main = ".open-next/worker.js"
+compatibility_date = "2026-04-30"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "757683a8bedf4c53bd20854f6e0f27bb"
+preview_id = "d299a8b14f4a4fc0993a319e091111e9"
+
+# Rate Limiting — CF Rate Limiter (burst) + KV (daily)
+# Agent: /api/chat 2/10s burst, 100/day | /api/tool 10/10s burst, 200/day
+
+[[ratelimits]]
+name = "CHAT_RATE_LIMIT"
+namespace_id = "1003"
+  [ratelimits.simple]
+  limit = 2
+  period = 10
+
+[[ratelimits]]
+name = "TOOL_RATE_LIMIT"
+namespace_id = "1004"
+  [ratelimits.simple]
+  limit = 10
+  period = 10
+
+[vars]
+GEMINI_MODELS = '["MiniMax-M2.7", "gemma-4-31b-it", "gemma-4-26b-a4b-it"]'
