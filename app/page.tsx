@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { createArticlesRepo } from "@/lib/articles";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
@@ -60,20 +59,13 @@ function FeaturedPost({ post }: { post: Post }) {
 }
 
 export default async function HomePage() {
-  let recentPosts: Post[] = [];
-  let error: string | null = null;
-
-  try {
-    const repo = createArticlesRepo();
-    recentPosts = await repo.getRecent(4);
-  } catch (e) {
-    error = "Unable to load posts at this time.";
-  }
-
-  const [repos, starredRepos] = await Promise.all([
+  const [repos, starredRepos, allPosts] = await Promise.all([
     readCache<GitHubRepo>(r2Paths.githubReposCache),
     readCache<GitHubRepo>(r2Paths.githubStarredCache),
+    readCache<Post>(r2Paths.articlesIndexCache),
   ]);
+
+  const recentPosts = allPosts.slice(0, 4);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
@@ -149,11 +141,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {error ? (
-            <Card className="flex-1">
-              <CardContent className="text-center text-text-muted p-4">{error}</CardContent>
-            </Card>
-          ) : recentPosts.length === 0 ? (
+          {recentPosts.length === 0 ? (
             <Card className="flex-1">
               <CardContent className="text-center p-4">
                 <p className="text-text-muted mb-2 text-sm">No posts yet.</p>
