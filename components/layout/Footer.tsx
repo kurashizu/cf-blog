@@ -27,6 +27,10 @@ export function Footer() {
               <Link href="/admin/editor/new" className="hover:text-accent transition-colors">
                 New Post
               </Link>
+              <span>·</span>
+              <a href="https://stats.uptimerobot.com/niOvUS14zB" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">
+                Service Status
+              </a>
             </div>
           </div>
 
