@@ -25,10 +25,13 @@ npm run lint         # ESLint check
 | `cache/github-repos.json` | Fetches top 6 non-fork repos from GitHub API |
 | `cache/github-starred.json` | Fetches top 10 starred repos from GitHub API |
 | `cache/articles-index.json` | Lists articles in R2, parses frontmatter, builds sorted index |
+| `cache/llm-leaderboard.json` | Fetches all LLM models from Artificial Analysis API, sorted by `artificial_analysis_intelligence_index` desc. Requires `ARTIFICIAL_ANALYSIS_API_KEY` secret. |
 
 The homepage reads these directly from R2 — no GitHub API calls on user requests.
 
 Manual trigger: `curl -X POST https://cf-blog-cache.kurashizu123.workers.dev/__refresh -H "Authorization: Bearer $CRON_SECRET"`
+
+Response: `{ success: bool, logs: string }` — `logs` contains per-cache `OK/FAILED/SKIPPED` lines (e.g. `llm-leaderboard: OK (N models)`). Useful for diagnosing cron failures without `wrangler tail`.
 
 ## Rate Limiting
 
@@ -82,10 +85,13 @@ npx wrangler r2 object list cf-blog-bucket --prefix=articles/
 
 - `lib/articles.ts` - Article repository with R2 backend
 - `lib/r2.ts` - R2 client using `@opennextjs/cloudflare` (getCloudflareContext pattern)
+- `lib/r2-paths.ts` - R2 key path constants (cache files, guestbook messages, etc.)
 - `lib/llm-prompt.ts` - System prompt and Gemini message types for `/api/llm`
 - `lib/model-pool.ts` - Model pool with Gemini fallback (TPD/RPM 429 handling)
 - `lib/frontmatter.ts` - YAML frontmatter parser/builder (wraps gray-matter)
 - `lib/ratelimiter.ts` - Rate limiting (`checkBurst`, `checkDailyKV`)
+- `components/ui/GadgetsPanel.tsx` - 2x2 gadgets grid (KurAgent + LLM Board + 2 placeholders); onClick dispatches to the matching panel based on `gadget.panel` field
+- `components/llm/LLMLeaderboardPanel.tsx` - LLM leaderboard portal (expanded = full-screen table of top 50 models; no compact view to avoid flex-col overlap with AgentPanel)
 
 ## File Structure
 
@@ -100,12 +106,13 @@ app/                    # Next.js App Router pages
     guestbook/       # Guestbook API
 
 components/
-  ui/                # Reusable UI components (Card, MiniCard, Button, Tag)
+  ui/                # Reusable UI components (Card, MiniCard, Button, Tag, GadgetsPanel)
   layout/            # Header, Footer
   providers/         # Context providers (ThemeProvider)
   theme/             # CSS files (global.css, layout.css, etc.)
   guestbook/         # Guestbook components
-  agent/             # Agent components (future)
+  agent/             # Agent components (AgentPanel — KurAgent chat UI)
+  llm/               # LLM leaderboard components (LLMLeaderboardPanel)
 
 lib/                 # Backend logic
   articles.ts        # Article repository
