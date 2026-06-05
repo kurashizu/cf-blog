@@ -40,8 +40,6 @@ function extractResponseText(parts: GeminiPart[] | undefined): string {
     return text;
 }
 
-let debugLogged = false;
-
 function sanitizeMessage(msg: GeminiMessage): GeminiMessage {
     return {
         role: msg.role === "user" || msg.role === "model" ? msg.role : "user",
@@ -157,7 +155,12 @@ export async function POST(request: NextRequest) {
         }));
 
         if (stream) {
-            const { response: streamResp } = await streamWithFallback(
+            // Make a single non-streaming call to the model (matches the
+            // structure KurAgent uses for its first call) and forward the
+            // final reply text as one SSE event. This avoids the streaming
+            // path where Gemma 4's known thought-channel bug can leave the
+            // client with no text to show.
+            const { response: resp, model } = await callWithFallback(
                 env.GEMINI_API_KEY,
                 modelPool,
                 contents,
@@ -169,60 +172,38 @@ export async function POST(request: NextRequest) {
                 SYSTEM_PROMPT,
             );
 
-            if (!streamResp.ok) {
-                const errBody = await streamResp
+            if (!resp.ok) {
+                const errBody = await resp
                     .clone()
                     .json()
                     .catch(() => ({}));
                 return NextResponse.json(
                     {
-                        error: `Gemini API error ${streamResp.status}: ${JSON.stringify(errBody)}`,
+                        error: `Gemini API error ${resp.status}: ${JSON.stringify(errBody)}`,
                     },
                     { status: 500 },
                 );
             }
 
-            const geminiBody = streamResp.body;
+            const data = (await resp.json()) as {
+                candidates?: { content: { parts: GeminiPart[] } }[];
+            };
+
+            const text = extractResponseText(
+                data.candidates?.[0]?.content?.parts,
+            );
+
+            // Return SSE with a single event. The client appends `text` to
+            // its own accumulator, so this works just like a streamed reply.
             return new Response(
                 new ReadableStream({
-                    async start(controller) {
-                        if (!geminiBody) {
-                            controller.close();
-                            return;
-                        }
-                        const reader = geminiBody.getReader();
-                        const decoder = new TextDecoder();
-
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-                            const raw = decoder.decode(value, { stream: true });
-                            const lines = raw
-                                .split("\n")
-                                .filter((l) => l.startsWith("data: "));
-                            for (const line of lines) {
-                                try {
-                                    const json = JSON.parse(line.slice(6));
-                                    const parts =
-                                        json.candidates?.[0]?.content?.parts;
-                                    if (parts && !debugLogged) {
-                                        // eslint-disable-next-line no-console
-                                        console.log(
-                                            "[llm-debug] first chunk parts:",
-                                            JSON.stringify(parts),
-                                        );
-                                        debugLogged = true;
-                                    }
-                                    const text = extractResponseText(parts);
-                                    controller.enqueue(
-                                        new TextEncoder().encode(
-                                            `data: ${JSON.stringify({ text })}\n\n`,
-                                        ),
-                                    );
-                                } catch {
-                                    // Skip malformed lines
-                                }
-                            }
+                    start(controller) {
+                        if (text) {
+                            controller.enqueue(
+                                new TextEncoder().encode(
+                                    `data: ${JSON.stringify({ text })}\n\n`,
+                                ),
+                            );
                         }
                         controller.close();
                     },

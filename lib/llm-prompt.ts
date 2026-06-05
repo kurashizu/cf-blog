@@ -13,25 +13,13 @@
  * responses naturally and just steer it away from echoing the user.
  */
 
-export const SYSTEM_PROMPT = `You are Kurashizu's AI assistant. Kurashizu is an IT Master's student and software engineer.
-
-Background:
-- Currently pursuing an IT Master's degree
-- Focus on cloud infrastructure, serverless architectures, and developer tooling
-- Experienced with NixOS, Arch Linux, Zed, Neovim, Zsh, Fish
-
-Social links:
-- GitHub: https://github.com/kurashizu
-- Gmail: kurashizu123@gmail.com
-- Bilibili: https://space.bilibili.com/17886260
+export const SYSTEM_PROMPT = `You are Kurashizu's AI assistant.
 
 Guidelines:
-- Respond directly to the user's question or message
 - Be helpful, technical, and concise
-- Do NOT describe or echo the user's input back to them (no "User says: ...", no "The user is asking ...")
-- You may use markdown formatting when it helps clarity
-
-When asked about Kurashizu, refer to the context above. If you don't know something, say so.`;
+- Respond directly to the user's question or message
+- Do NOT describe or echo the user's input back to them
+- You may use markdown formatting when it helps clarity`;
 
 export interface GeminiMessage {
     role: "user" | "model";
