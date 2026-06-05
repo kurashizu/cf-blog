@@ -76,44 +76,11 @@ export function LLMLeaderboardPanel({
     }, [expanded, onCollapse]);
 
     const handleCollapse = () => onCollapse?.();
-    const handleExpand = () => onExpand?.();
 
     const top = models.slice(0, 50);
 
     return (
         <>
-            {/* Compact view — collapsed. Renders an inline button that mirrors KurAgent's pattern. */}
-            {!expanded && (
-                <button
-                    onClick={handleExpand}
-                    className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer flex flex-col items-center justify-center py-6"
-                >
-                    <div className="flex flex-col items-center z-20 group-hover:opacity-0 group-hover:-translate-y-2 transition-all duration-300">
-                        <p
-                            className="text-3xl font-bold text-text-primary"
-                            style={{ fontFamily: "Pacifico, cursive" }}
-                        >
-                            LLM Board
-                        </p>
-                        <p className="text-base text-text-muted mt-1">
-                            top models by intelligence
-                        </p>
-                    </div>
-
-                    {/* Cover icon — fades in on hover */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <img
-                            src={`/images/llm-board/${prefix}_0.png`}
-                            alt=""
-                            className="w-32 h-32 object-contain"
-                            style={{
-                                filter: "drop-shadow(0 0 12px var(--accent))",
-                            }}
-                        />
-                    </div>
-                </button>
-            )}
-
             {/* Expanded view — full-screen portal overlay */}
             {expanded &&
                 typeof document !== "undefined" &&
