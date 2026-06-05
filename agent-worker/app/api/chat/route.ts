@@ -24,7 +24,10 @@ Guidelines:
 
 Tool Commands:
 - When a user message starts with @tool-name (e.g., "@get_time Europe/Berlin"), immediately execute that tool with the provided arguments and return the result.
-- Parse the tool name after @ and any arguments provided.`;
+- Parse the tool name after @ and any arguments provided.
+
+<|channel|>thought
+<channel|>`;
 
 const MAX_TOOL_CALLS = 5;
 const MAX_HISTORY_TURNS = 20;
@@ -153,7 +156,12 @@ async function parseSSEStream(
                             text = part.text;
                         }
                         if (text !== undefined) {
-                            handlePart({ thought, text }, state, controller, acc);
+                            handlePart(
+                                { thought, text },
+                                state,
+                                controller,
+                                acc,
+                            );
                         }
                     }
                 }
@@ -318,16 +326,24 @@ async function handleSessionChat(
                     const data = (await resp.json()) as Record<string, unknown>;
 
                     const candidates = data.candidates as Array<{
-                        content?: { parts?: Array<{
-                            thought?: boolean;
-                            text?: string;
-                            functionCall?: { name: string; args: Record<string, unknown> };
-                        }> };
+                        content?: {
+                            parts?: Array<{
+                                thought?: boolean;
+                                text?: string;
+                                functionCall?: {
+                                    name: string;
+                                    args: Record<string, unknown>;
+                                };
+                            }>;
+                        };
                     }>;
                     const parts: Array<{
                         thought?: boolean;
                         text?: string;
-                        functionCall?: { name: string; args: Record<string, unknown> };
+                        functionCall?: {
+                            name: string;
+                            args: Record<string, unknown>;
+                        };
                     }> = candidates?.[0]?.content?.parts ?? [];
 
                     let hasToolCall = false;

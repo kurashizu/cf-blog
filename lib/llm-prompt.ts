@@ -29,17 +29,20 @@ Communication style:
 - Can discuss programming, cloud infrastructure, AI/ML, developer tools
 - Share knowledge in a clear, accessible way
 
-When asked about Kurashizu or yourself, refer to this context. If you don't know something, say so honestly.`;
+When asked about Kurashizu or yourself, refer to this context. If you don't know something, say so honestly.
+
+<|channel|>thought
+<channel|>`;
 
 export interface GeminiMessage {
-  role: 'user' | 'model';
-  parts: { text: string }[];
+    role: "user" | "model";
+    parts: { text: string }[];
 }
 
 export interface GeminiGenerateOptions {
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  topP?: number;
-  topK?: number;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+    topK?: number;
 }
