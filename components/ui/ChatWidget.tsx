@@ -51,6 +51,7 @@ export function ChatWidget() {
 
             const decoder = new TextDecoder();
             let fullText = "";
+            let buffer = "";
 
             const modelMessage: Message = {
                 role: "model",
@@ -62,7 +63,22 @@ export function ChatWidget() {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                fullText += decoder.decode(value, { stream: true });
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() ?? "";
+
+                for (const line of lines) {
+                    if (!line.startsWith("data: ")) continue;
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        if (typeof data.text === "string") {
+                            fullText += data.text;
+                        }
+                    } catch {
+                        // Skip malformed SSE lines
+                    }
+                }
+
                 setMessages((prev) => {
                     const updated = [...prev];
                     updated[updated.length - 1] = {
