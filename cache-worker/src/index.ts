@@ -19,9 +19,46 @@ interface PostListItem {
   draft: boolean;
 }
 
+interface AAEvaluations {
+  artificial_analysis_intelligence_index?: number;
+  artificial_analysis_coding_index?: number;
+  artificial_analysis_math_index?: number;
+  mmlu_pro?: number;
+  gpqa?: number;
+  hle?: number;
+  livecodebench?: number;
+  scicode?: number;
+  math_500?: number;
+  aime?: number;
+}
+
+interface AAPricing {
+  price_1m_blended_3_to_1?: number;
+  price_1m_input_tokens?: number;
+  price_1m_output_tokens?: number;
+}
+
+interface AAModel {
+  id: string;
+  name: string;
+  slug: string;
+  model_creator: { id: string; name: string; slug: string };
+  evaluations: AAEvaluations;
+  pricing: AAPricing;
+  median_output_tokens_per_second?: number;
+  median_time_to_first_token_seconds?: number;
+  median_time_to_first_answer_token?: number;
+}
+
+interface AALeaderboardResponse {
+  status: number;
+  data: AAModel[];
+}
+
 interface Env {
   BUCKET: R2Bucket;
   CRON_SECRET?: string;
+  ARTIFICIAL_ANALYSIS_API_KEY?: string;
 }
 
 function parseFrontmatter(content: string): { data: Record<string, unknown>; body: string } {
@@ -100,6 +137,21 @@ async function fetchStarredRepos(): Promise<GitHubRepo[]> {
   return await res.json<GitHubRepo[]>();
 }
 
+async function fetchLLMLeaderboard(apiKey: string): Promise<AAModel[]> {
+  const res = await fetch(
+    "https://artificialanalysis.ai/api/v2/data/llms/models",
+    { headers: { "x-api-key": apiKey, "Accept": "application/json", "User-Agent": "Kurashizu-Blog-Cache" } }
+  );
+  if (!res.ok) throw new Error(`AA API ${res.status}`);
+  const json = await res.json<AALeaderboardResponse>();
+  // Sort by intelligence index descending so the cache is already ranked.
+  return json.data.sort((a, b) => {
+    const ai = a.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
+    const bi = b.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
+    return bi - ai;
+  });
+}
+
 async function buildArticleIndex(bucket: R2Bucket): Promise<PostListItem[]> {
   let cursor: string | undefined;
   const keys: string[] = [];
@@ -153,6 +205,22 @@ async function refreshCache(env: Env): Promise<void> {
     results.push(`articles-index: OK (${posts.length} posts)`);
   } catch (e) {
     results.push(`articles-index: FAILED (${e})`);
+  }
+
+  try {
+    if (!env.ARTIFICIAL_ANALYSIS_API_KEY) {
+      results.push("llm-leaderboard: SKIPPED (ARTIFICIAL_ANALYSIS_API_KEY not set)");
+    } else {
+      const models = await fetchLLMLeaderboard(env.ARTIFICIAL_ANALYSIS_API_KEY);
+      if (models.length > 0) {
+        await env.BUCKET.put("cache/llm-leaderboard.json", JSON.stringify(models));
+        results.push(`llm-leaderboard: OK (${models.length} models)`);
+      } else {
+        results.push("llm-leaderboard: SKIPPED (empty response)");
+      }
+    }
+  } catch (e) {
+    results.push(`llm-leaderboard: FAILED (${e})`);
   }
 
   console.log("Cache refresh:", results.join(" | "));

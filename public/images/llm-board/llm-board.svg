@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <style>
+    .llm-stroke { stroke: var(--accent, #f59e0b); }
+    .llm-fill { fill: var(--accent, #f59e0b); }
+  </style>
+
+  <!-- Podium: 2nd, 1st, 3rd -->
+  <g class="llm-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8" y="58" width="24" height="34" rx="2" />
+    <rect x="38" y="42" width="24" height="50" rx="2" />
+    <rect x="68" y="68" width="24" height="24" rx="2" />
+  </g>
+
+  <!-- Stars above podiums -->
+  <g class="llm-fill">
+    <text x="20" y="52" text-anchor="middle" font-size="14" font-family="sans-serif" font-weight="bold">★</text>
+    <text x="50" y="36" text-anchor="middle" font-size="18" font-family="sans-serif" font-weight="bold">★</text>
+    <text x="80" y="62" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="bold">★</text>
+  </g>
+
+  <!-- Decorative baseline -->
+  <line x1="4" y1="94" x2="96" y2="94" class="llm-stroke" stroke-width="1.5" stroke-linecap="round" opacity="0.5" />
+</svg>
