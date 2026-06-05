@@ -155,12 +155,11 @@ export async function POST(request: NextRequest) {
         }));
 
         if (stream) {
-            // Make a single non-streaming call to the model (matches the
-            // structure KurAgent uses for its first call) and forward the
-            // final reply text as one SSE event. This avoids the streaming
-            // path where Gemma 4's known thought-channel bug can leave the
-            // client with no text to show.
-            const { response: resp, model } = await callWithFallback(
+            // Mirror KurAgent's flow: streaming call, then parse the SSE
+            // stream with a state machine that only forwards non-thought
+            // text to the client. This keeps the streaming UX while
+            // suppressing the model's internal monologue.
+            const { response: streamResp } = await streamWithFallback(
                 env.GEMINI_API_KEY,
                 modelPool,
                 contents,
@@ -172,38 +171,83 @@ export async function POST(request: NextRequest) {
                 SYSTEM_PROMPT,
             );
 
-            if (!resp.ok) {
-                const errBody = await resp
+            if (!streamResp.ok) {
+                const errBody = await streamResp
                     .clone()
                     .json()
                     .catch(() => ({}));
                 return NextResponse.json(
                     {
-                        error: `Gemini API error ${resp.status}: ${JSON.stringify(errBody)}`,
+                        error: `Gemini API error ${streamResp.status}: ${JSON.stringify(errBody)}`,
                     },
                     { status: 500 },
                 );
             }
 
-            const data = (await resp.json()) as {
-                candidates?: { content: { parts: GeminiPart[] } }[];
-            };
-
-            const text = extractResponseText(
-                data.candidates?.[0]?.content?.parts,
-            );
-
-            // Return SSE with a single event. The client appends `text` to
-            // its own accumulator, so this works just like a streamed reply.
+            const streamBody = streamResp.body;
             return new Response(
                 new ReadableStream({
-                    start(controller) {
-                        if (text) {
-                            controller.enqueue(
-                                new TextEncoder().encode(
-                                    `data: ${JSON.stringify({ text })}\n\n`,
-                                ),
-                            );
+                    async start(controller) {
+                        if (!streamBody) {
+                            controller.close();
+                            return;
+                        }
+                        const reader = streamBody.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = "";
+                        // State machine: only text emitted to client.
+                        // mode "text" → accumulating the final reply
+                        // mode "skip" → previous chunks had only thought
+                        //               parts, the next non-thought text
+                        //               part will be the start of the
+                        //               reply
+                        let mode: "skip" | "text" = "skip";
+                        let fullText = "";
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, {
+                                stream: true,
+                            });
+                            const lines = buffer.split("\n");
+                            buffer = lines.pop() ?? "";
+
+                            for (const line of lines) {
+                                if (!line.startsWith("data: ")) continue;
+                                try {
+                                    const json = JSON.parse(line.slice(6));
+                                    const candidates =
+                                        json.candidates?.[0]?.content?.parts;
+                                    if (!Array.isArray(candidates)) continue;
+
+                                    for (const part of candidates) {
+                                        if (part?.thought === true) {
+                                            mode = "skip";
+                                            continue;
+                                        }
+                                        if (typeof part?.text !== "string")
+                                            continue;
+                                        // First non-thought text after
+                                        // thought(s) resets the accumulator
+                                        // so we don't leak a thought chunk
+                                        // into the reply.
+                                        if (mode === "skip") {
+                                            mode = "text";
+                                            fullText = part.text;
+                                        } else {
+                                            fullText += part.text;
+                                        }
+                                        controller.enqueue(
+                                            new TextEncoder().encode(
+                                                `data: ${JSON.stringify({ text: fullText })}\n\n`,
+                                            ),
+                                        );
+                                    }
+                                } catch {
+                                    // Skip malformed lines
+                                }
+                            }
                         }
                         controller.close();
                     },
