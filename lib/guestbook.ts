@@ -3,8 +3,9 @@
  * eliminate the read-modify-write race that the previous single-file design had.
  *
  * Key layout:   guestbook/messages/{id}.json
- * The previous `guestbook/messages.json` is ignored; if any legacy data exists
- * there, it can be deleted manually.
+ *
+ * The previous single-file layout (`guestbook/messages.json`) is migrated
+ * lazily on the first read after deploy — see `migrateLegacyStore()`.
  */
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { r2Get, r2List, r2Put, r2Delete } from "./r2";
@@ -20,11 +21,63 @@ export interface GuestbookMessage {
     approved: boolean;
 }
 
+interface LegacyStore {
+    messages: GuestbookMessage[];
+    version: number;
+}
+
 const GUESTBOOK_AVATAR_COUNT = 9;
 const GUESTBOOK_MSG_PREFIX = "guestbook/messages/";
+const LEGACY_KEY = "guestbook/messages.json";
 
 function msgKey(id: string): string {
     return `${GUESTBOOK_MSG_PREFIX}${id}.json`;
+}
+
+/**
+ * One-shot lazy migration from the legacy single-file store. Memoized at
+ * module scope so concurrent reads share the same promise.
+ */
+let migrationPromise: Promise<void> | null = null;
+
+async function migrateLegacyStore(): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { env } = getCloudflareContext() as any;
+    const bucket = env.BUCKET;
+    let legacy: LegacyStore | null = null;
+    try {
+        const obj = await bucket.get(LEGACY_KEY);
+        if (obj) {
+            legacy = JSON.parse(await obj.text()) as LegacyStore;
+        }
+    } catch {
+        return; // no legacy file or unreadable — nothing to do
+    }
+    if (
+        !legacy ||
+        !Array.isArray(legacy.messages) ||
+        legacy.messages.length === 0
+    ) {
+        return;
+    }
+    // Idempotent: each put is a new key (UUID) and re-running produces the
+    // same files. Concurrent migrations are safe — last writer wins, and the
+    // payload is identical across attempts.
+    await Promise.all([
+        ...legacy.messages.map((msg) =>
+            r2Put(msgKey(msg.id), JSON.stringify(msg)),
+        ),
+        r2Delete(LEGACY_KEY).catch(() => {
+            /* ignore */
+        }),
+    ]);
+}
+
+function ensureMigrated(): Promise<void> {
+    if (!migrationPromise) {
+        migrationPromise = migrateLegacyStore();
+    }
+    return migrationPromise;
 }
 
 async function fetchAllMessages(): Promise<GuestbookMessage[]> {
@@ -45,6 +98,7 @@ async function fetchAllMessages(): Promise<GuestbookMessage[]> {
 export function createGuestbookRepo() {
     return {
         async getAll(): Promise<GuestbookMessage[]> {
+            await ensureMigrated();
             const messages = await fetchAllMessages();
             return messages
                 .filter((m) => m.approved)
@@ -52,6 +106,7 @@ export function createGuestbookRepo() {
         },
 
         async getAllForAdmin(): Promise<GuestbookMessage[]> {
+            await ensureMigrated();
             const messages = await fetchAllMessages();
             return messages.sort((a, b) =>
                 b.timestamp.localeCompare(a.timestamp),

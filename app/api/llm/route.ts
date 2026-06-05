@@ -20,6 +20,25 @@ const BURST_LIMIT = 2;
 const BURST_PERIOD = 10;
 const DAILY_LIMIT = 200;
 
+interface GeminiPart {
+    thought?: boolean;
+    text?: string;
+}
+
+/**
+ * Concatenate text from Gemini response parts, skipping `thought` parts
+ * (the model's internal monologue that appears when thinking is enabled).
+ */
+function extractResponseText(parts: GeminiPart[] | undefined): string {
+    if (!Array.isArray(parts)) return "";
+    let text = "";
+    for (const part of parts) {
+        if (part?.thought === true) continue;
+        if (typeof part?.text === "string") text += part.text;
+    }
+    return text;
+}
+
 function sanitizeMessage(msg: GeminiMessage): GeminiMessage {
     return {
         role: msg.role === "user" || msg.role === "model" ? msg.role : "user",
@@ -181,9 +200,9 @@ export async function POST(request: NextRequest) {
                             for (const line of lines) {
                                 try {
                                     const json = JSON.parse(line.slice(6));
-                                    const text =
-                                        json.candidates?.[0]?.content
-                                            ?.parts?.[0]?.text ?? "";
+                                    const text = extractResponseText(
+                                        json.candidates?.[0]?.content?.parts,
+                                    );
                                     controller.enqueue(
                                         new TextEncoder().encode(
                                             `data: ${JSON.stringify({ text })}\n\n`,
@@ -233,7 +252,7 @@ export async function POST(request: NextRequest) {
         }
 
         const data = (await resp.json()) as {
-            candidates?: { content: { parts: { text?: string }[] } }[];
+            candidates?: { content: { parts: GeminiPart[] } }[];
             usageMetadata?: {
                 promptTokenCount: number;
                 candidatesTokenCount: number;
@@ -241,9 +260,7 @@ export async function POST(request: NextRequest) {
             };
         };
 
-        const text =
-            data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text ??
-            "";
+        const text = extractResponseText(data.candidates?.[0]?.content?.parts);
 
         return NextResponse.json({
             text,
