@@ -244,19 +244,18 @@ export async function POST(request: NextRequest) {
                                         }
                                         if (typeof part?.text !== "string")
                                             continue;
-                                        // First non-thought text after
-                                        // thought(s) resets the accumulator
-                                        // so we don't leak a thought chunk
-                                        // into the reply.
                                         if (mode === "skip") {
                                             mode = "text";
-                                            fullText = part.text;
-                                        } else {
-                                            fullText += part.text;
                                         }
+                                        // Send only the delta (the new
+                                        // chunk's text). The client
+                                        // appends, so sending the full
+                                        // accumulated server-side text
+                                        // would duplicate the prefix on
+                                        // every event.
                                         controller.enqueue(
                                             new TextEncoder().encode(
-                                                `data: ${JSON.stringify({ text: fullText })}\n\n`,
+                                                `data: ${JSON.stringify({ text: part.text })}\n\n`,
                                             ),
                                         );
                                     }
