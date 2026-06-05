@@ -149,10 +149,26 @@ export async function POST(request: NextRequest) {
         const sanitizedOptions = sanitizeOptions(options);
         const modelPool = getModelPool(env);
         const defaultModel = getDefaultModel(env);
-        const contents = sanitizedMessages.map((m) => ({
-            role: m.role,
-            parts: m.parts,
-        }));
+
+        // Gemma 4 26B/31B is unstable in single-turn conversations — without
+        // any prior turns the model often emits only a thought part and no
+        // reply. Inject a brief synthetic opener so the model treats the
+        // request as a continuation of a real conversation.
+        const contents: Array<{ role: string; parts: { text: string }[] }> = [
+            { role: "user", parts: [{ text: "Hi" }] },
+            {
+                role: "model",
+                parts: [
+                    {
+                        text: "Hi! I'm Kurashizu's AI assistant. How can I help you today?",
+                    },
+                ],
+            },
+            ...sanitizedMessages.map((m) => ({
+                role: m.role,
+                parts: m.parts,
+            })),
+        ];
 
         if (stream) {
             // Mirror KurAgent's flow: streaming call, then parse the SSE
