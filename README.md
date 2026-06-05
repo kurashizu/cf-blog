@@ -14,7 +14,7 @@ A personal blog powered by Cloudflare Workers, featuring an AI agent with tool-c
 - Next.js (App Router) deployed to Cloudflare Workers via `@opennextjs/cloudflare`
 - Cloudflare R2 for article storage
 - Cloudflare KV for session management and rate limiting
-- MiniMax-M2.7 (OpenAI API) as primary model, Gemini for fallback
+- Gemini models with quota-based fallback (TPD 429 → next model)
 
 ## Projects
 

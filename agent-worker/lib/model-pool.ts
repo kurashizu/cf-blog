@@ -10,7 +10,6 @@
  */
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const OPENAI_API_BASE = 'https://ai.022025.xyz/v1';
 const QUOTA_TTL = 25 * 3600; // 25 hours TTL for quota entries
 
 export interface ModelQuota {
@@ -112,112 +111,6 @@ export function isTPDLimit(errBody: unknown): boolean {
   return lower.includes('quota') || lower.includes('exhausted') || lower.includes('daily') || lower.includes('tpd');
 }
 
-/** Check if model uses OpenAI-compatible API */
-function isOpenAIModel(model: string): boolean {
-  return model.toLowerCase().startsWith('minimax');
-}
-
-/** Convert Gemini-style contents to OpenAI messages format */
-function convertToOpenAIMessages(
-  contents: object[],
-  systemInstruction?: string,
-): { role: string; content: string | null; tool_call_id?: string; name?: string; tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }> }[] {
-  const messages: { role: string; content: string | null; tool_call_id?: string; name?: string; tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }> }[] = [];
-
-  if (systemInstruction) {
-    messages.push({ role: 'system', content: systemInstruction });
-  }
-
-  for (const c of contents as any[]) {
-    if (c.role === 'system') continue;
-    // Map 'model' role to 'assistant' for OpenAI compatibility
-    let role = c.role === 'model' ? 'assistant' : c.role;
-
-    if (Array.isArray(c.parts)) {
-      for (const p of c.parts) {
-        if (p.functionResponse) {
-          // Gemini functionResponse -> OpenAI tool message
-          const funcResp = p.functionResponse;
-          messages.push({
-            role: 'tool',
-            content: typeof funcResp.response === 'string'
-              ? funcResp.response
-              : JSON.stringify(funcResp.response),
-            tool_call_id: funcResp.name,
-            name: funcResp.name,
-          });
-        } else if (p.functionCall) {
-          // Gemini functionCall -> OpenAI assistant message with tool_calls
-          // Use function name as tool_call_id so tool response can reference it
-          messages.push({
-            role: 'assistant',
-            content: null,
-            tool_calls: [{
-              id: p.functionCall.name,
-              type: 'function',
-              function: {
-                name: p.functionCall.name,
-                arguments: JSON.stringify(p.functionCall.args),
-              },
-            }],
-          });
-        } else if (p.text) {
-          messages.push({ role, content: p.text });
-        }
-      }
-    } else if (c.content) {
-      messages.push({ role, content: c.content });
-    }
-  }
-
-  return messages;
-}
-
-/** Convert Gemini-style function declarations to OpenAI tools format */
-function convertToOpenAITools(functionDeclarations: object[] | undefined): object[] | undefined {
-  if (!functionDeclarations || functionDeclarations.length === 0) return undefined;
-  // Extract functionDeclarations array from Gemini's { functionDeclarations: [...] } wrapper
-  const declarations = (functionDeclarations[0] as any)?.functionDeclarations ?? functionDeclarations;
-  return declarations.map((decl: any) => ({
-    type: 'function',
-    function: {
-      name: decl.name,
-      description: decl.description,
-      parameters: decl.parameters,
-    },
-  }));
-}
-
-/** Make a single OpenAI-compatible API call */
-async function fetchOpenAI(
-  apiKey: string,
-  model: string,
-  contents: object[],
-  options?: CallOptions,
-  systemInstruction?: string,
-  tools?: object[]
-): Promise<Response> {
-  // Convert Gemini-style contents/messages to OpenAI format
-  const messages = convertToOpenAIMessages(contents, systemInstruction);
-  const openaiTools = convertToOpenAITools(tools);
-
-  const body: Record<string, unknown> = {
-    model,
-    messages,
-    temperature: options?.temperature ?? 0.9,
-    max_tokens: options?.maxTokens ?? 8192,
-    top_p: options?.topP ?? 0.95,
-  };
-  if (openaiTools && openaiTools.length > 0) body.tools = openaiTools;
-
-  const url = `${OPENAI_API_BASE}/chat/completions`;
-  return fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-  });
-}
-
 /** Make a single Gemini API call */
 async function fetchGemini(
   apiKey: string,
@@ -251,13 +144,11 @@ async function fetchGemini(
 }
 
 /**
- * Call with model pool fallback.
- * Routes to OpenAI API for MiniMax models, Gemini API for others.
- * On 429: retries same model once after 1s for RPM, marks exhausted for TPD and tries next.
+ * Call Gemini with model pool fallback.
+ * Cycles through models on TPD 429, retries same model once on RPM 429.
  */
 export async function callWithFallback(
   apiKey: string,
-  openaiApiKey: string,
   models: string[],
   contents: object[],
   options?: CallOptions,
@@ -270,19 +161,15 @@ export async function callWithFallback(
   for (const model of models) {
     if (await isModelExhausted(model, kv)) continue;
 
-    // Route to OpenAI or Gemini based on model
-    const fetcher = isOpenAIModel(model) ? fetchOpenAI : fetchGemini;
-    const key = isOpenAIModel(model) ? openaiApiKey : apiKey;
-
     // First attempt
-    let resp = await fetcher(key, model, contents, options, systemInstruction, tools);
+    let resp = await fetchGemini(apiKey, model, contents, options, systemInstruction, tools);
 
     // RPM 429: retry same model once after 1s
     if (resp.status === 429) {
       const errBody = await resp.clone().json().catch(() => ({}));
       if (!isTPDLimit(errBody)) {
         await sleep(1000);
-        resp = await fetcher(key, model, contents, options, systemInstruction, tools);
+        resp = await fetchGemini(apiKey, model, contents, options, systemInstruction, tools);
       }
     }
 
@@ -312,41 +199,9 @@ export async function callWithFallback(
   };
 }
 
-/** Make a single OpenAI-compatible streaming API call */
-async function streamOpenAI(
-  apiKey: string,
-  model: string,
-  contents: object[],
-  options?: CallOptions,
-  systemInstruction?: string,
-  tools?: object[]
-): Promise<Response> {
-  // Convert Gemini-style contents/messages and tools to OpenAI format
-  const messages = convertToOpenAIMessages(contents, systemInstruction);
-  const openaiTools = convertToOpenAITools(tools);
-
-  const body: Record<string, unknown> = {
-    model,
-    messages,
-    stream: true,
-    temperature: options?.temperature ?? 0.9,
-    max_tokens: options?.maxTokens ?? 8192,
-    top_p: options?.topP ?? 0.95,
-  };
-  if (openaiTools && openaiTools.length > 0) body.tools = openaiTools;
-
-  const url = `${OPENAI_API_BASE}/chat/completions`;
-  return fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-  });
-}
-
 /** Streaming variant — uses streamGenerateContent but cycles models on TPD 429 */
 export async function streamWithFallback(
   apiKey: string,
-  openaiApiKey: string,
   models: string[],
   contents: object[],
   options?: CallOptions,
@@ -357,26 +212,6 @@ export async function streamWithFallback(
   for (const model of models) {
     if (await isModelExhausted(model, kv)) continue;
 
-    // Route to OpenAI or Gemini based on model
-    if (isOpenAIModel(model)) {
-      const resp = await streamOpenAI(openaiApiKey, model, contents, options, systemInstruction, tools);
-
-      if (resp.status === 429) {
-        const errBody = await resp.clone().json().catch(() => ({}));
-        if (isTPDLimit(errBody)) {
-          await markModelExhausted(model, kv);
-          continue;
-        }
-      }
-
-      if (resp.ok) {
-        await incrementQuota(model, kv);
-      }
-
-      return { response: resp, model };
-    }
-
-    // Gemini streaming
     const generationConfig: Record<string, unknown> = {
       temperature: options?.temperature ?? 0.9,
       maxOutputTokens: options?.maxTokens ?? 8192,

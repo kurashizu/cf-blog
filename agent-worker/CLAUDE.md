@@ -73,7 +73,7 @@ Execute a tool directly: `{ "name": "eval_expression", "args": { "code": "1+2" }
 Returns `{ "success": true, "result": "3", "tool": "eval_expression" }`
 
 ### POST /api/chat
-MiniMax/Gemini tool-calling loop with streaming SSE. Default model: `MiniMax-M2.7`.
+Gemini tool-calling loop with streaming SSE. Default model: `gemma-4-31b-it`.
 
 SSE events: `start_process` → optional tool calls (`tool_start`/`tool_result`/`end_tool`) → `start_text`/`text`/`end_text` → `end_process`
 
@@ -90,7 +90,7 @@ agent-worker/
       web-search.ts      # Brave Search API
       get-time.ts        # Timezone time
     evaluator.ts         # Safe expression parser
-    model-pool.ts        # MiniMax primary + Gemini fallback, OpenAI↔Gemini format conversion
+    model-pool.ts        # Gemini model pool with TPD/RPM fallback
   app/api/
     tool/route.ts        # GET list tools, POST execute tool
     chat/route.ts        # Streaming chat with tool-calling loop, filters <think>...</think>

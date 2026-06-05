@@ -126,9 +126,6 @@ async function parseSSEStream(
     const decoder = new TextDecoder();
     let lineBuffer = "";
     const acc = { value: "" };
-    // Buffer to accumulate think content between chunks
-    let thinkBuffer = "";
-    let inThinkMode = false;
 
     while (true) {
         const { done, value } = await reader.read();
@@ -143,7 +140,6 @@ async function parseSSEStream(
             try {
                 const json = JSON.parse(line.slice(6));
 
-                // Try Gemini format first
                 let text: string | undefined;
                 let thought: boolean | undefined;
 
@@ -158,104 +154,6 @@ async function parseSSEStream(
                         }
                         if (text !== undefined) {
                             handlePart({ thought, text }, state, controller, acc);
-                        }
-                    }
-                    continue;
-                }
-
-                // OpenAI format: choices[0].delta.content
-                const delta = json.choices?.[0]?.delta?.content;
-                if (delta) {
-                    const chunk = thinkBuffer + delta;
-                    thinkBuffer = "";
-
-                    if (!inThinkMode) {
-                        // Not currently in think mode
-                        const thinkStart = chunk.indexOf('<think>');
-                        if (thinkStart === -1) {
-                            // No think block in this chunk - output as-is
-                            const filtered = chunk
-                                .replace(/<begin_ thoughts>[\s\S]*?<\/think>/g, "")
-                                .replace(/<begin_ thoughts>[\s\S]*?<end_ thoughts>/g, "")
-                                .replace(/\n{3,}/g, "\n\n")
-                                .trim();
-                            if (filtered) {
-                                handlePart({ text: filtered }, state, controller, acc);
-                            }
-                        } else {
-                            // Think block starts in this chunk
-                            const beforeThink = chunk.slice(0, thinkStart);
-                            if (beforeThink) {
-                                const filtered = beforeThink
-                                    .replace(/<begin_ thoughts>[\s\S]*?<\/think>/g, "")
-                                    .replace(/<begin_ thoughts>[\s\S]*?<end_ thoughts>/g, "")
-                                    .replace(/\n{3,}/g, "\n\n")
-                                    .trim();
-                                if (filtered) {
-                                    handlePart({ text: filtered }, state, controller, acc);
-                                }
-                            }
-                            const afterStart = chunk.slice(thinkStart + '<think>'.length);
-                            const thinkEnd = afterStart.indexOf('</think>');
-                            if (thinkEnd === -1) {
-                                // Think block not closed yet - buffer content, emit start_think when entering
-                                emitStateEnd(controller, state.current);
-                                emitEvent(controller, "start_think", "");
-                                state.current = State.THINK;
-                                thinkBuffer = afterStart;
-                                inThinkMode = true;
-                            } else {
-                                // Think block closes in same chunk - emit start_think, think, end_think
-                                emitStateEnd(controller, state.current);
-                                emitEvent(controller, "start_think", "");
-                                state.current = State.THINK;
-                                const thinkContent = afterStart.slice(0, thinkEnd);
-                                if (thinkContent) {
-                                    emitEvent(controller, "think", thinkContent);
-                                }
-                                emitEvent(controller, "end_think", "think completed");
-                                state.current = State.TEXT;
-                                const afterThink = afterStart.slice(thinkEnd + '</think>'.length);
-                                if (afterThink) {
-                                    const filtered = afterThink
-                                        .replace(/<begin_ thoughts>[\s\S]*?<\/think>/g, "")
-                                        .replace(/<begin_ thoughts>[\s\S]*?<end_ thoughts>/g, "")
-                                        .replace(/\n{3,}/g, "\n\n")
-                                        .trim();
-                                    if (filtered) {
-                                        handlePart({ text: filtered }, state, controller, acc);
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Currently inside a think block - look for </think> to exit
-                        const thinkEnd = chunk.indexOf('</think>');
-                        if (thinkEnd === -1) {
-                            // Still in think mode, just buffer (don't emit yet)
-                            thinkBuffer = chunk;
-                        } else {
-                            // Think block ends
-                            const accumulatedThink = thinkBuffer + chunk.slice(0, thinkEnd);
-                            if (accumulatedThink) {
-                                emitEvent(controller, "think", accumulatedThink);
-                            }
-                            emitEvent(controller, "end_think", "think completed");
-                            state.current = State.TEXT;
-                            inThinkMode = false;
-                            thinkBuffer = "";
-                            const afterThink = chunk.slice(thinkEnd + '</think>'.length);
-                            // Process remaining content after </think> (recursively handles any new think block)
-                            if (afterThink) {
-                                const filtered = afterThink
-                                    .replace(/<begin_ thoughts>[\s\S]*?<\/think>/g, "")
-                                    .replace(/<begin_ thoughts>[\s\S]*?<end_ thoughts>/g, "")
-                                    .replace(/\n{3,}/g, "\n\n")
-                                    .trim();
-                                if (filtered) {
-                                    handlePart({ text: filtered }, state, controller, acc);
-                                }
-                            }
                         }
                     }
                 }
@@ -284,15 +182,14 @@ export async function POST(request: NextRequest) {
         const ctx = getCloudflareContext() as any;
         const env = ctx.env as {
             GEMINI_API_KEY: string;
-            OPENAI_API_KEY: string;
             SESSION_KV: KVNamespace;
             CHAT_RATE_LIMIT?: RateLimit;
             GEMINI_MODELS?: string;
         };
 
-        if (!env.GEMINI_API_KEY || !env.OPENAI_API_KEY) {
+        if (!env.GEMINI_API_KEY) {
             return NextResponse.json(
-                { error: "GEMINI_API_KEY or OPENAI_API_KEY not configured" },
+                { error: "GEMINI_API_KEY not configured" },
                 { status: 500 },
             );
         }
@@ -353,7 +250,6 @@ export async function POST(request: NextRequest) {
 async function handleSessionChat(
     env: {
         GEMINI_API_KEY: string;
-        OPENAI_API_KEY: string;
         SESSION_KV: KVNamespace;
         GEMINI_MODELS?: string;
     },
@@ -406,7 +302,6 @@ async function handleSessionChat(
                 ) {
                     const { response: resp } = await callWithFallback(
                         env.GEMINI_API_KEY,
-                        env.OPENAI_API_KEY,
                         modelPool,
                         contents,
                         { ...options, model: defaultModel },
@@ -422,52 +317,18 @@ async function handleSessionChat(
 
                     const data = (await resp.json()) as Record<string, unknown>;
 
-                    // Check if response is OpenAI format (MiniMax)
-                    const isOpenAIFormat = 'choices' in data;
-                    let parts: Array<{
+                    const candidates = data.candidates as Array<{
+                        content?: { parts?: Array<{
+                            thought?: boolean;
+                            text?: string;
+                            functionCall?: { name: string; args: Record<string, unknown> };
+                        }> };
+                    }>;
+                    const parts: Array<{
                         thought?: boolean;
                         text?: string;
                         functionCall?: { name: string; args: Record<string, unknown> };
-                    }> = [];
-
-                    if (isOpenAIFormat) {
-                        // OpenAI/MiniMax format: data.choices[0].message
-                        const choices = data.choices as Array<{
-                            message?: {
-                                role?: string;
-                                content?: string;
-                                name?: string;
-                                tool_calls?: Array<{
-                                    id?: string;
-                                    type?: string;
-                                    function?: { name?: string; arguments?: string };
-                                }>;
-                            };
-                            finish_reason?: string;
-                        }>;
-                        const message = choices?.[0]?.message;
-                        if (message?.tool_calls && message.tool_calls.length > 0) {
-                            const toolCall = message.tool_calls[0];
-                            if (toolCall?.function) {
-                                parts = [{
-                                    functionCall: {
-                                        name: toolCall.function.name ?? '',
-                                        args: JSON.parse(toolCall.function.arguments ?? '{}'),
-                                    },
-                                }];
-                            }
-                        }
-                    } else {
-                        // Gemini format
-                        const candidates = data.candidates as Array<{
-                            content?: { parts?: Array<{
-                                thought?: boolean;
-                                text?: string;
-                                functionCall?: { name: string; args: Record<string, unknown> };
-                            }> };
-                        }>;
-                        parts = candidates?.[0]?.content?.parts ?? [];
-                    }
+                    }> = candidates?.[0]?.content?.parts ?? [];
 
                     let hasToolCall = false;
 
@@ -563,7 +424,6 @@ async function handleSessionChat(
 
                     const { response: streamResp } = await streamWithFallback(
                         env.GEMINI_API_KEY,
-                        env.OPENAI_API_KEY,
                         modelPool,
                         contents,
                         { ...options, model: defaultModel },
@@ -621,7 +481,6 @@ async function handleSessionChat(
                 });
                 const { response: finalRes } = await streamWithFallback(
                     env.GEMINI_API_KEY,
-                    env.OPENAI_API_KEY,
                     modelPool,
                     contents,
                     options,

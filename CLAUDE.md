@@ -83,7 +83,7 @@ npx wrangler r2 object list cf-blog-bucket --prefix=articles/
 - `lib/articles.ts` - Article repository with R2 backend
 - `lib/r2.ts` - R2 client using `@opennextjs/cloudflare` (getCloudflareContext pattern)
 - `lib/gemini.ts` - Gemini API wrapper
-- `lib/model-pool.ts` - Model pool with MiniMax (OpenAI API) primary + Gemini fallback; handles format conversion between OpenAI and Gemini
+- `lib/model-pool.ts` - Model pool with Gemini fallback (TPD/RPM 429 handling)
 - `lib/frontmatter.ts` - YAML frontmatter parser/builder
 - `lib/ratelimiter.ts` - Rate limiting (`checkBurst`, `checkDailyKV`)
 - `lib/llm.ts` - LLM API route handlers
@@ -127,7 +127,7 @@ agent-worker/        # Separate Cloudflare Worker (cf-agent)
       get-time.ts        # Timezone time (UTC fallback)
     evaluator.ts    # Recursive descent expression parser
     html-to-md.ts   # Regex-based HTML→Markdown converter
-    model-pool.ts   # Model pool with MiniMax primary + Gemini fallback
+    model-pool.ts   # Model pool with Gemini fallback
   app/api/
     tool/           # GET list tools, POST execute tool
     chat/           # Streaming chat with tool-calling loop
