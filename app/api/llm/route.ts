@@ -28,16 +28,27 @@ interface GeminiPart {
 /**
  * Concatenate text from Gemini response parts, skipping `thought` parts
  * (the model's internal monologue that appears when thinking is enabled).
+ *
+ * Falls back to thought text if the model emits only thoughts. Some Gemma
+ * variants wrap every response in a thought part and never emit a regular
+ * text part, in which case returning "" would leave the chat silently empty.
  */
 function extractResponseText(parts: GeminiPart[] | undefined): string {
     if (!Array.isArray(parts)) return "";
     let text = "";
+    let thoughtText = "";
     for (const part of parts) {
-        if (part?.thought === true) continue;
-        if (typeof part?.text === "string") text += part.text;
+        if (typeof part?.text !== "string") continue;
+        if (part.thought === true) {
+            thoughtText += part.text;
+        } else {
+            text += part.text;
+        }
     }
-    return text;
+    return text || thoughtText;
 }
+
+let debugLogged = false;
 
 function sanitizeMessage(msg: GeminiMessage): GeminiMessage {
     return {
@@ -200,9 +211,17 @@ export async function POST(request: NextRequest) {
                             for (const line of lines) {
                                 try {
                                     const json = JSON.parse(line.slice(6));
-                                    const text = extractResponseText(
-                                        json.candidates?.[0]?.content?.parts,
-                                    );
+                                    const parts =
+                                        json.candidates?.[0]?.content?.parts;
+                                    if (parts && !debugLogged) {
+                                        // eslint-disable-next-line no-console
+                                        console.log(
+                                            "[llm-debug] first chunk parts:",
+                                            JSON.stringify(parts),
+                                        );
+                                        debugLogged = true;
+                                    }
+                                    const text = extractResponseText(parts);
                                     controller.enqueue(
                                         new TextEncoder().encode(
                                             `data: ${JSON.stringify({ text })}\n\n`,
