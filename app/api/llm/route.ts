@@ -26,26 +26,18 @@ interface GeminiPart {
 }
 
 /**
- * Concatenate text from Gemini response parts, skipping `thought` parts
- * (the model's internal monologue that appears when thinking is enabled).
- *
- * Falls back to thought text if the model emits only thoughts. Some Gemma
- * variants wrap every response in a thought part and never emit a regular
- * text part, in which case returning "" would leave the chat silently empty.
+ * Concatenate text from Gemini response parts. Skips `thought: true` parts
+ * (the model's internal monologue) so the Kurashizu AI chat only ever shows
+ * the final reply — never the model's "thinking out loud" text.
  */
 function extractResponseText(parts: GeminiPart[] | undefined): string {
     if (!Array.isArray(parts)) return "";
     let text = "";
-    let thoughtText = "";
     for (const part of parts) {
-        if (typeof part?.text !== "string") continue;
-        if (part.thought === true) {
-            thoughtText += part.text;
-        } else {
-            text += part.text;
-        }
+        if (part?.thought === true) continue;
+        if (typeof part?.text === "string") text += part.text;
     }
-    return text || thoughtText;
+    return text;
 }
 
 let debugLogged = false;
