@@ -68,7 +68,7 @@
 
 /* ===========================================
    TOP LANGUAGES DONUT (sidebar element)
-   120x120 SVG, sits in the hero right column.
+   100x100 SVG, sits in the hero right column.
    =========================================== */
 
 .donut-chart {
@@ -76,69 +76,16 @@
 }
 
 .donut-center-name {
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
     fill: var(--text-primary);
     font-family: inherit;
 }
 
 .donut-center-label {
-    font-size: 7px;
+    font-size: 6px;
     font-weight: 600;
     fill: var(--text-muted);
     letter-spacing: 0.12em;
     font-family: inherit;
-}
-
-/* ===========================================
-   TOP LANGUAGES SHARE BAR
-   Single horizontal stacked bar + compact legend.
-   Same visual weight as the contributions ribbon.
-   =========================================== */
-
-.top-languages {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    max-width: 824px;
-    margin: 32px auto 0;
-}
-
-.top-languages-bar {
-    display: flex;
-    width: 100%;
-    height: 18px;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.top-languages-bar-segment {
-    height: 100%;
-    transition: filter 0.15s ease;
-}
-
-.top-languages-bar-segment:hover {
-    filter: brightness(1.3);
-}
-
-.top-languages-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 14px;
-    font-size: 0.6875rem;
-    color: var(--text-secondary);
-}
-
-.top-languages-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.top-languages-legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    display: inline-block;
 }

@@ -39,8 +39,7 @@
 .hero-bio {
     font-size: 0.9375rem;
     color: var(--text-muted);
-    max-width: 28rem;
-    margin: 0 auto;
+    max-width: 32rem;
     line-height: 1.6;
 }
 
