@@ -2,13 +2,13 @@ import { r2Get } from "./r2";
 import { r2Paths } from "./r2-paths";
 
 export interface ContributionDay {
-    date: string; // ISO YYYY-MM-DD
+    date: string;
     count: number;
 }
 
 export interface ContributionsCache {
     username: string;
-    fetchedAt: string; // ISO timestamp
+    fetchedAt: string;
     totalContributions: number;
     days: ContributionDay[];
 }
@@ -35,11 +35,9 @@ export interface HeatmapView {
     height: number;
 }
 
-// Layout constants shared between the cache-side math and the SVG renderer
-export const HEATMAP_CELL_SIZE = 12;
+export const HEATMAP_CELL_SIZE = 14;
 export const HEATMAP_CELL_GAP = 2;
-export const HEATMAP_STRIDE = HEATMAP_CELL_SIZE + HEATMAP_CELL_GAP; // 17
-export const HEATMAP_DAY_LABEL_W = 30;
+export const HEATMAP_STRIDE = HEATMAP_CELL_SIZE + HEATMAP_CELL_GAP;
 export const HEATMAP_MONTH_LABEL_H = 16;
 export const HEATMAP_PADDING_X = 2;
 export const HEATMAP_PADDING_Y = 2;
@@ -58,8 +56,6 @@ const MONTH_ABBR = [
     "Nov",
     "Dec",
 ];
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-const DISPLAY_DAY_INDICES = [1, 3, 5] as const; // Mon, Wed, Fri
 
 export function getLevel(count: number): HeatLevel {
     if (count <= 0) return 0;
@@ -78,81 +74,65 @@ export async function getContributions(): Promise<ContributionsCache | null> {
     }
 }
 
+/**
+ * Build a single-row ribbon heatmap that fills `targetWidth` pixels.
+ * The number of days is derived from the available width and the cell
+ * stride — "however many days the screen can show".
+ */
 export function buildHeatmap(
     cache: ContributionsCache,
-    windowDays = 90,
+    targetWidth: number,
+    cellSize: number = HEATMAP_CELL_SIZE,
+    cellGap: number = HEATMAP_CELL_GAP,
 ): HeatmapView {
     const sorted = [...cache.days].sort((a, b) => a.date.localeCompare(b.date));
-    const slice = sorted.slice(-windowDays);
 
-    if (slice.length === 0) {
+    if (sorted.length === 0) {
         return emptyView();
     }
 
-    const firstDate = new Date(slice[0].date);
-    const lastDate = new Date(slice[slice.length - 1].date);
-    const padBefore = firstDate.getUTCDay();
-    const padAfter = 6 - lastDate.getUTCDay();
-    const totalCells = padBefore + slice.length + padAfter;
-    const cols = Math.ceil(totalCells / 7);
+    const stride = cellSize + cellGap;
+    const availableWidth = targetWidth - HEATMAP_PADDING_X * 2;
+    const days = Math.max(1, Math.floor(availableWidth / stride));
 
-    const cells: HeatmapCell[] = [];
-    for (let i = padBefore; i < padBefore + slice.length; i++) {
-        const day = slice[i - padBefore];
-        const dow = new Date(day.date).getUTCDay();
-        cells.push({
-            row: dow,
-            col: Math.floor(i / 7),
-            date: day.date,
-            count: day.count,
-            level: getLevel(day.count),
-        });
-    }
+    const slice = sorted.slice(-days);
 
-    // Month labels appear at the first non-empty cell of each column whose month
-    // changes. Avoids dumping "Mar" on every column.
+    const cells: HeatmapCell[] = slice.map((day, i) => ({
+        row: 0,
+        col: i,
+        date: day.date,
+        count: day.count,
+        level: getLevel(day.count),
+    }));
+
     const monthLabels: { col: number; label: string }[] = [];
     let prevMonth = -1;
-    for (let c = 0; c < cols; c++) {
-        const colCells = cells.filter((cell) => cell.col === c);
-        if (colCells.length === 0) continue;
-        const first = colCells[0];
-        const m = new Date(first.date).getUTCMonth();
+    for (const cell of cells) {
+        const m = new Date(cell.date).getUTCMonth();
         if (m !== prevMonth) {
-            monthLabels.push({ col: c, label: MONTH_ABBR[m] });
+            monthLabels.push({ col: cell.col, label: MONTH_ABBR[m] });
             prevMonth = m;
         }
     }
 
-    const dayLabels = DISPLAY_DAY_INDICES.map((row) => ({
-        row,
-        label: DAY_LABELS[row],
-    }));
+    const dayLabels: { row: number; label: string }[] = [];
 
     const totalLast90 = slice.reduce((sum, d) => sum + d.count, 0);
     const totalLast365 = cache.days.reduce((sum, d) => sum + d.count, 0);
 
-    // Current streak: walk backwards from the most recent day, stop on first 0
     let streak = 0;
     for (let i = slice.length - 1; i >= 0; i--) {
         if (slice[i].count > 0) streak++;
         else break;
     }
 
-    const width =
-        HEATMAP_PADDING_X * 2 +
-        HEATMAP_DAY_LABEL_W +
-        cols * HEATMAP_STRIDE -
-        HEATMAP_CELL_GAP;
+    const width = HEATMAP_PADDING_X * 2 + cells.length * stride - cellGap;
     const height =
-        HEATMAP_PADDING_Y * 2 +
-        HEATMAP_MONTH_LABEL_H +
-        7 * HEATMAP_STRIDE -
-        HEATMAP_CELL_GAP;
+        HEATMAP_PADDING_Y * 2 + HEATMAP_MONTH_LABEL_H + stride - cellGap;
 
     return {
         cells,
-        cols,
+        cols: cells.length,
         monthLabels,
         dayLabels,
         totalLast90,

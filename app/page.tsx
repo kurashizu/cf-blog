@@ -91,28 +91,19 @@ export default async function HomePage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
             {/* Hero section */}
-            <section className="mb-12">
-                <div className="flex flex-col md:flex-row md:items-center gap-8">
-                    <div className="flex-1 text-center">
-                        <h1 className="hero-title mb-3">
-                            Hello, I'm kurashizu
-                        </h1>
-                        <p className="hero-subtitle mb-4">
-                            Vibe Coding & AI Agent
-                        </p>
-                        <p className="hero-bio max-w-xl mx-auto md:max-w-none md:mx-0">
-                            Building tools that amplify human creativity.
-                            Exploring agentic workflows, LLM orchestration, and
-                            the future of human-AI collaboration. Ships code
-                            that matters.
-                        </p>
+            <section className="text-center mb-12">
+                <h1 className="hero-title mb-3">Hello, I'm kurashizu</h1>
+                <p className="hero-subtitle mb-4">Vibe Coding & AI Agent</p>
+                <p className="hero-bio max-w-xl mx-auto">
+                    Building tools that amplify human creativity. Exploring
+                    agentic workflows, LLM orchestration, and the future of
+                    human-AI collaboration. Ships code that matters.
+                </p>
+                {contributions && (
+                    <div className="mt-8">
+                        <ContributionsCard data={contributions} />
                     </div>
-                    {contributions && (
-                        <div className="shrink-0 mx-auto md:mx-0">
-                            <ContributionsCard data={contributions} />
-                        </div>
-                    )}
-                </div>
+                )}
             </section>
 
             {/* 4-section grid layout */}
