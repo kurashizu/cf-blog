@@ -67,6 +67,30 @@
 }
 
 /* ===========================================
+   TOP LANGUAGES DONUT (sidebar element)
+   120x120 SVG, sits in the hero right column.
+   =========================================== */
+
+.donut-chart {
+    display: block;
+}
+
+.donut-center-name {
+    font-size: 11px;
+    font-weight: 700;
+    fill: var(--text-primary);
+    font-family: inherit;
+}
+
+.donut-center-label {
+    font-size: 7px;
+    font-weight: 600;
+    fill: var(--text-muted);
+    letter-spacing: 0.12em;
+    font-family: inherit;
+}
+
+/* ===========================================
    TOP LANGUAGES SHARE BAR
    Single horizontal stacked bar + compact legend.
    Same visual weight as the contributions ribbon.
