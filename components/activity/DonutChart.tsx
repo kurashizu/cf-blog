@@ -32,55 +32,68 @@ export function DonutChart({ languages }: DonutChartProps) {
     const top = segments[0];
 
     return (
-        <svg
-            className="donut-chart"
-            width={SIZE}
-            height={SIZE}
-            viewBox={`0 0 ${SIZE} ${SIZE}`}
-            role="img"
-            aria-label={`Top languages: ${segments
-                .map((s) => `${s.name} ${s.percentage}%`)
-                .join(", ")}`}
-        >
-            <g transform={`rotate(-90 ${CENTER} ${CENTER})`}>
-                <circle
-                    cx={CENTER}
-                    cy={CENTER}
-                    r={RADIUS}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.06)"
-                    strokeWidth={STROKE_WIDTH}
-                />
-                {segments.map((seg) => (
+        <div className="donut-with-legend">
+            <svg
+                className="donut-chart"
+                width={SIZE}
+                height={SIZE}
+                viewBox={`0 0 ${SIZE} ${SIZE}`}
+                role="img"
+                aria-label={`Top languages: ${segments
+                    .map((s) => `${s.name} ${s.percentage}%`)
+                    .join(", ")}`}
+            >
+                <g transform={`rotate(-90 ${CENTER} ${CENTER})`}>
                     <circle
-                        key={seg.name}
                         cx={CENTER}
                         cy={CENTER}
                         r={RADIUS}
                         fill="none"
-                        stroke={seg.color}
+                        stroke="rgba(255,255,255,0.06)"
                         strokeWidth={STROKE_WIDTH}
-                        strokeDasharray={seg.dashArray}
-                        strokeDashoffset={seg.dashOffset}
                     />
+                    {segments.map((seg) => (
+                        <circle
+                            key={seg.name}
+                            cx={CENTER}
+                            cy={CENTER}
+                            r={RADIUS}
+                            fill="none"
+                            stroke={seg.color}
+                            strokeWidth={STROKE_WIDTH}
+                            strokeDasharray={seg.dashArray}
+                            strokeDashoffset={seg.dashOffset}
+                        />
+                    ))}
+                </g>
+                <text
+                    x={CENTER}
+                    y={CENTER - 1}
+                    textAnchor="middle"
+                    className="donut-center-name"
+                >
+                    {top.name}
+                </text>
+                <text
+                    x={CENTER}
+                    y={CENTER + 13}
+                    textAnchor="middle"
+                    className="donut-center-label"
+                >
+                    TOP
+                </text>
+            </svg>
+            <div className="donut-legend">
+                {languages.map((lang) => (
+                    <div key={lang.name} className="donut-legend-item">
+                        <span
+                            className="donut-legend-dot"
+                            style={{ backgroundColor: lang.color }}
+                        />
+                        <span className="donut-legend-name">{lang.name}</span>
+                    </div>
                 ))}
-            </g>
-            <text
-                x={CENTER}
-                y={CENTER - 1}
-                textAnchor="middle"
-                className="donut-center-name"
-            >
-                {top.name}
-            </text>
-            <text
-                x={CENTER}
-                y={CENTER + 13}
-                textAnchor="middle"
-                className="donut-center-label"
-            >
-                TOP
-            </text>
-        </svg>
+            </div>
+        </div>
     );
 }

@@ -89,3 +89,35 @@
     letter-spacing: 0.12em;
     font-family: inherit;
 }
+
+.donut-with-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.donut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.donut-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+}
+
+.donut-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.donut-legend-name {
+    color: var(--text-primary);
+    font-weight: 500;
+}
