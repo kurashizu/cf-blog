@@ -12,3 +12,4 @@ crons = ["*/30 * * * *"]
 
 [vars]
 CRON_SECRET = ""
+GH_USERNAME = "kurashizu"

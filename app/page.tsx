@@ -7,6 +7,8 @@ import { r2Get } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/ui/GadgetsPanel";
 import { type LLMModel } from "@/components/llm/LLMLeaderboardPanel";
+import { type ContributionsCache } from "@/lib/contributions";
+import { ContributionsCard } from "@/components/activity/ContributionsCard";
 
 export const revalidate = 300;
 
@@ -38,6 +40,15 @@ async function readCache<T>(path: string): Promise<T[]> {
     }
 }
 
+async function readContributions(): Promise<ContributionsCache | null> {
+    try {
+        const data = await r2Get(r2Paths.githubContributionsCache);
+        return JSON.parse(data) as ContributionsCache;
+    } catch {
+        return null;
+    }
+}
+
 function FeaturedPost({ post }: { post: Post }) {
     const excerpt = post.description?.slice(0, 20) || "";
     return (
@@ -66,12 +77,14 @@ function FeaturedPost({ post }: { post: Post }) {
 }
 
 export default async function HomePage() {
-    const [repos, starredRepos, allPosts, llmModels] = await Promise.all([
-        readCache<GitHubRepo>(r2Paths.githubReposCache),
-        readCache<GitHubRepo>(r2Paths.githubStarredCache),
-        readCache<Post>(r2Paths.articlesIndexCache),
-        readCache<LLMModel>(r2Paths.llmLeaderboardCache),
-    ]);
+    const [repos, starredRepos, allPosts, llmModels, contributions] =
+        await Promise.all([
+            readCache<GitHubRepo>(r2Paths.githubReposCache),
+            readCache<GitHubRepo>(r2Paths.githubStarredCache),
+            readCache<Post>(r2Paths.articlesIndexCache),
+            readCache<LLMModel>(r2Paths.llmLeaderboardCache),
+            readContributions(),
+        ]);
 
     const recentPosts = allPosts.slice(0, 4);
 
@@ -86,20 +99,11 @@ export default async function HomePage() {
                     agentic workflows, LLM orchestration, and the future of
                     human-AI collaboration. Ships code that matters.
                 </p>
-                <div className="flex justify-center gap-3 mt-6">
-                    <Link
-                        href="/blog"
-                        className="inline-flex items-center px-5 py-2.5 bg-accent/80 text-white rounded-lg font-medium hover:bg-accent-hover transition-all hover:-translate-y-0.5"
-                    >
-                        Explore Posts
-                    </Link>
-                    <Link
-                        href="/about"
-                        className="inline-flex items-center px-5 py-2.5 bg-bg-card/60 backdrop-blur-sm border border-border text-text-primary rounded-lg font-medium hover:border-accent hover:text-accent transition-all"
-                    >
-                        About Me
-                    </Link>
-                </div>
+                {contributions && (
+                    <div className="mt-8 flex justify-center">
+                        <ContributionsCard data={contributions} />
+                    </div>
+                )}
             </section>
 
             {/* 4-section grid layout */}

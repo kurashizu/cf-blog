@@ -1,0 +1,134 @@
+/* ===========================================
+   CODING ACTIVITY HEATMAP
+   =========================================== */
+
+.contributions-card {
+  display: inline-block;
+  text-align: left;
+  background: color-mix(in srgb, var(--bg-card) 60%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.contributions-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.contributions-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.contributions-header .section-title {
+  margin-bottom: 0;
+}
+
+.contributions-stats {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.contributions-stats .stat-num {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.contributions-stats .stat-dot {
+  margin: 0 8px;
+  opacity: 0.4;
+}
+
+.contributions-svg-wrap {
+  display: block;
+  overflow-x: auto;
+}
+
+.contributions-svg {
+  display: block;
+}
+
+.contributions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.heat-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.heat-legend-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.heat-month-label {
+  font-size: 10px;
+  fill: var(--text-muted);
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.heat-day-label {
+  font-size: 10px;
+  fill: var(--text-muted);
+  font-weight: 500;
+  font-family: inherit;
+  dominant-baseline: middle;
+}
+
+.heat-cell {
+  transition: transform 0.1s ease, filter 0.15s ease;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.heat-cell:hover {
+  transform: scale(1.5);
+  filter: brightness(1.2);
+  stroke: var(--text-primary);
+  stroke-width: 0.5;
+}
+
+.heat-0 { fill: rgba(255, 255, 255, 0.06); }
+.heat-1 { fill: color-mix(in srgb, var(--accent) 22%, transparent); }
+.heat-2 { fill: color-mix(in srgb, var(--accent) 45%, transparent); }
+.heat-3 { fill: color-mix(in srgb, var(--accent) 72%, transparent); }
+.heat-4 { fill: var(--accent); }
+
+@media (max-width: 640px) {
+  .contributions-card {
+    padding: 14px 16px;
+  }
+  .heat-month-label,
+  .heat-day-label {
+    font-size: 9px;
+  }
+  .contributions-stats {
+    font-size: 0.75rem;
+  }
+}

@@ -65,6 +65,33 @@ interface Env {
     BUCKET: R2Bucket;
     CRON_SECRET?: string;
     ARTIFICIAL_ANALYSIS_API_KEY?: string;
+    GITHUB_PERSONAL_ACCESS_TOKEN?: string;
+    GH_USERNAME?: string;
+}
+
+interface ContributionDayRaw {
+    date: string;
+    contributionCount: number;
+}
+
+interface ContributionsGraphQLResponse {
+    data?: {
+        user?: {
+            contributionsCollection: {
+                contributionCalendar: {
+                    totalContributions: number;
+                    weeks: { contributionDays: ContributionDayRaw[] }[];
+                };
+            };
+        };
+    };
+}
+
+interface ContributionsCache {
+    username: string;
+    fetchedAt: string;
+    totalContributions: number;
+    days: { date: string; count: number }[];
 }
 
 // Shape written to R2. Slimmed-down projection of AAModel:
@@ -269,6 +296,52 @@ async function fetchLLMLeaderboard(apiKey: string): Promise<SlimModel[]> {
     });
 }
 
+async function fetchContributions(
+    token: string,
+    username: string,
+): Promise<ContributionsCache> {
+    const query = `
+        query($login: String!) {
+            user(login: $login) {
+                contributionsCollection {
+                    contributionCalendar {
+                        totalContributions
+                        weeks {
+                            contributionDays {
+                                date
+                                contributionCount
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    `;
+    const res = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            "User-Agent": "Kurashizu-Blog-Cache",
+        },
+        body: JSON.stringify({ query, variables: { login: username } }),
+    });
+    if (!res.ok) throw new Error(`GitHub GraphQL ${res.status}`);
+    const json = (await res.json()) as ContributionsGraphQLResponse;
+    const calendar =
+        json.data?.user?.contributionsCollection.contributionCalendar;
+    if (!calendar) throw new Error("No contributionCalendar in response");
+    const days = calendar.weeks
+        .flatMap((w) => w.contributionDays)
+        .map((d) => ({ date: d.date, count: d.contributionCount }));
+    return {
+        username,
+        fetchedAt: new Date().toISOString(),
+        totalContributions: calendar.totalContributions,
+        days,
+    };
+}
+
 async function buildArticleIndex(bucket: R2Bucket): Promise<PostListItem[]> {
     let cursor: string | undefined;
     const keys: string[] = [];
@@ -358,6 +431,30 @@ async function refreshCache(env: Env): Promise<void> {
         }
     } catch (e) {
         results.push(`llm-leaderboard: FAILED (${e})`);
+    }
+
+    try {
+        if (!env.GITHUB_PERSONAL_ACCESS_TOKEN) {
+            results.push(
+                "github-contributions: SKIPPED (GITHUB_PERSONAL_ACCESS_TOKEN not set)",
+            );
+        } else if (!env.GH_USERNAME) {
+            results.push("github-contributions: SKIPPED (GH_USERNAME not set)");
+        } else {
+            const data = await fetchContributions(
+                env.GITHUB_PERSONAL_ACCESS_TOKEN,
+                env.GH_USERNAME,
+            );
+            await env.BUCKET.put(
+                "cache/github-contributions.json",
+                JSON.stringify(data),
+            );
+            results.push(
+                `github-contributions: OK (${data.days.length} days, ${data.totalContributions} total)`,
+            );
+        }
+    } catch (e) {
+        results.push(`github-contributions: FAILED (${e})`);
     }
 
     console.log("Cache refresh:", results.join(" | "));

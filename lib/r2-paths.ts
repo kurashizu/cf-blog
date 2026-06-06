@@ -4,14 +4,16 @@
  */
 
 export const r2Paths = {
-  articlesPrefix: 'articles/',
-  article: (slug: string) => `articles/${slug}.md`,
-  extractSlug: (key: string) => key.replace(r2Paths.articlesPrefix, '').replace('.md', ''),
-  cachePrefix: 'cache/',
-  githubReposCache: 'cache/github-repos.json',
-  githubStarredCache: 'cache/github-starred.json',
-  articlesIndexCache: 'cache/articles-index.json',
-  llmLeaderboardCache: 'cache/llm-leaderboard.json',
-  guestbookMessages: 'guestbook/messages.json',
-  guestbookRateLimit: (ipHash: string) => `guestbook/ratelimit/${ipHash}`,
+    articlesPrefix: "articles/",
+    article: (slug: string) => `articles/${slug}.md`,
+    extractSlug: (key: string) =>
+        key.replace(r2Paths.articlesPrefix, "").replace(".md", ""),
+    cachePrefix: "cache/",
+    githubReposCache: "cache/github-repos.json",
+    githubStarredCache: "cache/github-starred.json",
+    articlesIndexCache: "cache/articles-index.json",
+    llmLeaderboardCache: "cache/llm-leaderboard.json",
+    githubContributionsCache: "cache/github-contributions.json",
+    guestbookMessages: "guestbook/messages.json",
+    guestbookRateLimit: (ipHash: string) => `guestbook/ratelimit/${ipHash}`,
 } as const;
