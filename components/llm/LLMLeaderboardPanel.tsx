@@ -126,12 +126,25 @@ export function LLMLeaderboardPanel({
     const [sortDir, setSortDir] = useState<SortDir>("desc");
     const [selectedModel, setSelectedModel] = useState<LLMModel | null>(null);
 
-    // Unique creators, sorted alphabetically with "All" first.
-    const creators = useMemo(() => {
-        const set = new Set<string>();
-        models.forEach((m) => set.add(m.model_creator.name));
-        return ["All", ...Array.from(set).sort()];
+    // Creator chips: top 8 by model count (most-relevant first), rest hidden
+    // behind a "More (N)" dropdown. Alphabetical when tied.
+    const { topCreators, moreCreators } = useMemo(() => {
+        const counts = new Map<string, number>();
+        models.forEach((m) =>
+            counts.set(
+                m.model_creator.name,
+                (counts.get(m.model_creator.name) ?? 0) + 1,
+            ),
+        );
+        const sorted = Array.from(counts.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+        return {
+            topCreators: sorted.slice(0, 8),
+            moreCreators: sorted.slice(8),
+        };
     }, [models]);
+    const [showMoreCreators, setShowMoreCreators] = useState(false);
 
     const filtered = useMemo(() => {
         let arr: LLMModel[] = models;
@@ -273,24 +286,117 @@ export function LLMLeaderboardPanel({
                                                 setQuery(e.target.value)
                                             }
                                             placeholder="Search model, creator, or slug…"
-                                            className="w-full bg-bg-secondary/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+                                            className="w-full bg-bg-elevated border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
                                         />
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {creators.map((c) => (
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <button
+                                            onClick={() => setCreator("All")}
+                                            className={cn(
+                                                "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                                                creator === "All"
+                                                    ? "bg-accent text-bg-primary"
+                                                    : "bg-bg-elevated text-text-muted hover:text-text-primary",
+                                            )}
+                                        >
+                                            All
+                                            <span className="ml-1.5 opacity-60">
+                                                {models.length}
+                                            </span>
+                                        </button>
+                                        {topCreators.map((c) => (
                                             <button
-                                                key={c}
-                                                onClick={() => setCreator(c)}
+                                                key={c.name}
+                                                onClick={() =>
+                                                    setCreator(c.name)
+                                                }
                                                 className={cn(
                                                     "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
-                                                    creator === c
+                                                    creator === c.name
                                                         ? "bg-accent text-bg-primary"
-                                                        : "bg-bg-secondary/60 text-text-muted hover:text-text-primary hover:bg-bg-secondary",
+                                                        : "bg-bg-elevated text-text-muted hover:text-text-primary",
                                                 )}
                                             >
-                                                {c}
+                                                {c.name}
+                                                <span className="ml-1.5 opacity-60">
+                                                    {c.count}
+                                                </span>
                                             </button>
                                         ))}
+                                        {moreCreators.length > 0 && (
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() =>
+                                                        setShowMoreCreators(
+                                                            (v) => !v,
+                                                        )
+                                                    }
+                                                    className={cn(
+                                                        "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                                                        showMoreCreators ||
+                                                            moreCreators.some(
+                                                                (c) =>
+                                                                    c.name ===
+                                                                    creator,
+                                                            )
+                                                            ? "bg-accent text-bg-primary"
+                                                            : "bg-bg-elevated text-text-muted hover:text-text-primary",
+                                                    )}
+                                                >
+                                                    More ({moreCreators.length})
+                                                    ▾
+                                                </button>
+                                                {showMoreCreators && (
+                                                    <>
+                                                        <div
+                                                            className="fixed inset-0 z-10"
+                                                            onClick={() =>
+                                                                setShowMoreCreators(
+                                                                    false,
+                                                                )
+                                                            }
+                                                        />
+                                                        <div className="absolute left-0 top-full mt-1.5 z-20 max-h-72 overflow-y-auto bg-bg-elevated border border-border rounded-lg shadow-xl p-1.5 grid grid-cols-2 gap-1 min-w-[280px]">
+                                                            {moreCreators.map(
+                                                                (c) => (
+                                                                    <button
+                                                                        key={
+                                                                            c.name
+                                                                        }
+                                                                        onClick={() => {
+                                                                            setCreator(
+                                                                                c.name,
+                                                                            );
+                                                                            setShowMoreCreators(
+                                                                                false,
+                                                                            );
+                                                                        }}
+                                                                        className={cn(
+                                                                            "px-2 py-1 rounded text-xs text-left transition-colors flex items-center justify-between gap-2",
+                                                                            creator ===
+                                                                                c.name
+                                                                                ? "bg-accent text-bg-primary"
+                                                                                : "text-text-muted hover:text-text-primary hover:bg-bg-secondary",
+                                                                        )}
+                                                                    >
+                                                                        <span className="truncate">
+                                                                            {
+                                                                                c.name
+                                                                            }
+                                                                        </span>
+                                                                        <span className="opacity-60 shrink-0">
+                                                                            {
+                                                                                c.count
+                                                                            }
+                                                                        </span>
+                                                                    </button>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
