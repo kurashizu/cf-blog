@@ -8,7 +8,7 @@ import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/ui/GadgetsPanel";
 import { type LLMModel } from "@/components/llm/LLMLeaderboardPanel";
 import { type ContributionsCache } from "@/lib/contributions";
-import { ContributionsCard } from "@/components/activity/ContributionsCard";
+import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
 
 export const revalidate = 300;
 
@@ -101,7 +101,7 @@ export default async function HomePage() {
                 </p>
                 {contributions && (
                     <div className="mt-8">
-                        <ContributionsCard data={contributions} />
+                        <ContributionsRibbon data={contributions} />
                     </div>
                 )}
             </section>

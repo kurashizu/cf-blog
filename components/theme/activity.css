@@ -1,36 +1,14 @@
 /* ===========================================
    CODING ACTIVITY RIBBON
-   Single-row heatmap that fills its container
-   width. No card wrapper beyond a frosted tint.
+   Single transparent strip, no card chrome,
+   no stats, no link — just the data.
    =========================================== */
 
-.contributions-flat {
+.contributions-ribbon {
     display: block;
-    text-align: left;
-    text-decoration: none;
-    color: inherit;
-    background: color-mix(in srgb, var(--bg-card) 30%, transparent);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid transparent;
-    border-radius: 12px;
-    padding: 16px 20px;
     width: 100%;
-    max-width: 864px;
+    max-width: 824px;
     margin: 0 auto;
-    transition:
-        background 0.3s ease,
-        border-color 0.3s ease,
-        transform 0.3s ease,
-        box-shadow 0.3s ease;
-    cursor: pointer;
-}
-
-.contributions-flat:hover {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--bg-card) 50%, transparent);
-    transform: scale(1.01) translateY(-2px);
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .contributions-svg-wrap {
@@ -41,30 +19,7 @@
     display: block;
     max-width: 100%;
     height: auto;
-}
-
-.contributions-flat-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-    font-size: 0.8125rem;
-    color: var(--text-secondary);
-    font-variant-numeric: tabular-nums;
-}
-
-.contributions-flat-stats {
-    font-weight: 500;
-}
-
-.contributions-flat-stats .stat-num {
-    color: var(--text-primary);
-    font-weight: 700;
-}
-
-.contributions-flat-stats .stat-dot {
-    margin: 0 8px;
-    opacity: 0.4;
+    overflow: visible;
 }
 
 .heat-month-label {
@@ -106,13 +61,7 @@
 }
 
 @media (max-width: 640px) {
-    .contributions-flat {
-        padding: 12px 14px;
-    }
     .heat-month-label {
         font-size: 9px;
-    }
-    .contributions-flat-footer {
-        font-size: 0.75rem;
     }
 }
