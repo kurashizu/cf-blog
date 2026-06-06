@@ -108,13 +108,19 @@ export default async function HomePage() {
                     agentic workflows, LLM orchestration, and the future of
                     human-AI collaboration. Ships code that matters.
                 </p>
-                {contributions && (
-                    <div className="mt-8">
-                        <ContributionsRibbon data={contributions} />
+                {(contributions || topLanguages.length > 0) && (
+                    <div className="mt-8 flex flex-col md:flex-row gap-6 md:gap-8">
+                        {contributions && (
+                            <div className="flex-1 min-w-0">
+                                <ContributionsRibbon data={contributions} />
+                            </div>
+                        )}
+                        {topLanguages.length > 0 && (
+                            <div className="flex-1 min-w-0">
+                                <TopLanguages languages={topLanguages} />
+                            </div>
+                        )}
                     </div>
-                )}
-                {topLanguages.length > 0 && (
-                    <TopLanguages languages={topLanguages} />
                 )}
             </section>
 
