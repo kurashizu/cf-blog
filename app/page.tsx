@@ -93,7 +93,7 @@ export default async function HomePage() {
             {/* Hero section */}
             <section className="mb-12">
                 <div className="flex flex-col md:flex-row md:items-center gap-8">
-                    <div className="flex-1 text-center md:text-left">
+                    <div className="flex-1 text-center">
                         <h1 className="hero-title mb-3">
                             Hello, I'm kurashizu
                         </h1>

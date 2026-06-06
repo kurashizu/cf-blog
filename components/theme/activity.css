@@ -10,7 +10,7 @@
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid transparent;
     border-radius: 12px;
-    padding: 20px 24px;
+    padding: 16px 20px;
     color: var(--text-primary);
     text-decoration: none;
     transition:
@@ -24,7 +24,7 @@
 .contributions-card:hover {
     border-color: var(--accent);
     background: color-mix(in srgb, var(--bg-card) 60%, transparent);
-    transform: translateY(-2px);
+    transform: scale(1.08) translateY(-2px);
     box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
@@ -115,7 +115,7 @@
 }
 
 .heat-cell:hover {
-    transform: scale(1.5);
+    transform: scale(1.3);
     filter: brightness(1.2);
     stroke: var(--text-primary);
     stroke-width: 0.5;
