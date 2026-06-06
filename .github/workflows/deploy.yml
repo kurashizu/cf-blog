@@ -37,14 +37,6 @@ jobs:
               if: steps.cache-blog.outputs.cache-hit != 'true'
               run: npm ci --legacy-peer-deps
 
-            - name: Restore .open-next cache
-              uses: actions/cache@v4
-              with:
-                  path: .open-next
-                  key: opennext-${{ hashFiles('package-lock.json') }}-${{ hashFiles('open-next.config.ts') }}
-                  restore-keys: |
-                      opennext-
-
             - name: Build
               run: |
                   BUILD_DATE=$(date +'build-%y%m%d-%H%M')
@@ -80,14 +72,6 @@ jobs:
               run: |
                   cd agent-worker
                   npm ci --legacy-peer-deps
-
-            - name: Restore .open-next cache
-              uses: actions/cache@v4
-              with:
-                  path: agent-worker/.open-next
-                  key: opennext-agent-${{ hashFiles('agent-worker/package-lock.json') }}-${{ hashFiles('agent-worker/open-next.config.ts') }}
-                  restore-keys: |
-                      opennext-agent-
 
             - name: Build
               run: |
