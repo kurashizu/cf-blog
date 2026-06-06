@@ -39,7 +39,7 @@ export interface HeatmapView {
 export const HEATMAP_CELL_SIZE = 12;
 export const HEATMAP_CELL_GAP = 2;
 export const HEATMAP_STRIDE = HEATMAP_CELL_SIZE + HEATMAP_CELL_GAP; // 17
-export const HEATMAP_DAY_LABEL_W = 22;
+export const HEATMAP_DAY_LABEL_W = 30;
 export const HEATMAP_MONTH_LABEL_H = 16;
 export const HEATMAP_PADDING_X = 2;
 export const HEATMAP_PADDING_Y = 2;
