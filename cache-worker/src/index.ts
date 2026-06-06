@@ -20,34 +20,40 @@ interface PostListItem {
 }
 
 interface AAEvaluations {
-    artificial_analysis_intelligence_index?: number;
-    artificial_analysis_coding_index?: number;
-    artificial_analysis_math_index?: number;
-    mmlu_pro?: number;
-    gpqa?: number;
-    hle?: number;
-    livecodebench?: number;
-    scicode?: number;
-    math_500?: number;
-    aime?: number;
+    artificial_analysis_intelligence_index?: number | null;
+    artificial_analysis_coding_index?: number | null;
+    artificial_analysis_math_index?: number | null;
+    mmlu_pro?: number | null;
+    gpqa?: number | null;
+    hle?: number | null;
+    livecodebench?: number | null;
+    scicode?: number | null;
+    math_500?: number | null;
+    aime?: number | null;
+    aime_25?: number | null;
+    ifbench?: number | null;
+    lcr?: number | null;
+    terminalbench_hard?: number | null;
+    tau2?: number | null;
 }
 
 interface AAPricing {
-    price_1m_blended_3_to_1?: number;
-    price_1m_input_tokens?: number;
-    price_1m_output_tokens?: number;
+    price_1m_blended_3_to_1?: number | null;
+    price_1m_input_tokens?: number | null;
+    price_1m_output_tokens?: number | null;
 }
 
 interface AAModel {
     id: string;
     name: string;
     slug: string;
+    release_date?: string;
     model_creator: { id: string; name: string; slug: string };
     evaluations: AAEvaluations;
     pricing: AAPricing;
-    median_output_tokens_per_second?: number;
-    median_time_to_first_token_seconds?: number;
-    median_time_to_first_answer_token?: number;
+    median_output_tokens_per_second?: number | null;
+    median_time_to_first_token_seconds?: number | null;
+    median_time_to_first_answer_token?: number | null;
 }
 
 interface AALeaderboardResponse {
@@ -59,6 +65,88 @@ interface Env {
     BUCKET: R2Bucket;
     CRON_SECRET?: string;
     ARTIFICIAL_ANALYSIS_API_KEY?: string;
+}
+
+// Shape written to R2. Slimmed-down projection of AAModel:
+//   - Drops model UUID, creator UUID/slug, and unused evaluation fields
+//   - Rounds 0–1 decimal benchmarks to 3 decimal places
+//   - Converts null → undefined so JSON.stringify omits them entirely
+interface SlimModel {
+    name: string;
+    slug: string;
+    release_date?: string;
+    model_creator: { name: string };
+    evaluations: {
+        artificial_analysis_intelligence_index?: number;
+        artificial_analysis_coding_index?: number;
+        artificial_analysis_math_index?: number;
+        gpqa?: number;
+        hle?: number;
+        livecodebench?: number;
+        scicode?: number;
+        math_500?: number;
+        aime?: number;
+        aime_25?: number;
+        ifbench?: number;
+        lcr?: number;
+        terminalbench_hard?: number;
+        tau2?: number;
+    };
+    pricing: {
+        price_1m_blended_3_to_1?: number;
+        price_1m_input_tokens?: number;
+        price_1m_output_tokens?: number;
+    };
+    median_output_tokens_per_second?: number;
+    median_time_to_first_token_seconds?: number;
+}
+
+const opt = <T>(v: T | null | undefined): T | undefined =>
+    v === undefined || v === null ? undefined : v;
+
+const round3 = (n: number | null | undefined): number | undefined => {
+    if (n === undefined || n === null) return undefined;
+    return Math.round(n * 1000) / 1000;
+};
+
+function projectModel(m: AAModel): SlimModel {
+    return {
+        name: m.name,
+        slug: m.slug,
+        release_date: opt(m.release_date),
+        model_creator: { name: m.model_creator.name },
+        evaluations: {
+            artificial_analysis_intelligence_index: opt(
+                m.evaluations.artificial_analysis_intelligence_index,
+            ),
+            artificial_analysis_coding_index: opt(
+                m.evaluations.artificial_analysis_coding_index,
+            ),
+            artificial_analysis_math_index: opt(
+                m.evaluations.artificial_analysis_math_index,
+            ),
+            gpqa: round3(m.evaluations.gpqa),
+            hle: round3(m.evaluations.hle),
+            livecodebench: round3(m.evaluations.livecodebench),
+            scicode: round3(m.evaluations.scicode),
+            math_500: round3(m.evaluations.math_500),
+            aime: round3(m.evaluations.aime),
+            aime_25: round3(m.evaluations.aime_25),
+            ifbench: round3(m.evaluations.ifbench),
+            lcr: round3(m.evaluations.lcr),
+            terminalbench_hard: round3(m.evaluations.terminalbench_hard),
+            tau2: round3(m.evaluations.tau2),
+        },
+        pricing: {
+            price_1m_blended_3_to_1: opt(m.pricing.price_1m_blended_3_to_1),
+            price_1m_input_tokens: opt(m.pricing.price_1m_input_tokens),
+            price_1m_output_tokens: opt(m.pricing.price_1m_output_tokens),
+        },
+        median_output_tokens_per_second: opt(m.median_output_tokens_per_second),
+        median_time_to_first_token_seconds: opt(
+            m.median_time_to_first_token_seconds,
+        ),
+    };
 }
 
 function parseFrontmatter(content: string): {
@@ -157,7 +245,7 @@ async function fetchStarredRepos(): Promise<GitHubRepo[]> {
     return await res.json<GitHubRepo[]>();
 }
 
-async function fetchLLMLeaderboard(apiKey: string): Promise<AAModel[]> {
+async function fetchLLMLeaderboard(apiKey: string): Promise<SlimModel[]> {
     const res = await fetch(
         "https://artificialanalysis.ai/api/v2/data/llms/models",
         {
@@ -170,8 +258,9 @@ async function fetchLLMLeaderboard(apiKey: string): Promise<AAModel[]> {
     );
     if (!res.ok) throw new Error(`AA API ${res.status}`);
     const json = await res.json<AALeaderboardResponse>();
-    // Sort by intelligence index descending so the cache is already ranked.
-    return json.data.sort((a, b) => {
+    // Project (drop unused fields, round 0–1 benchmarks, null → undefined)
+    // then sort by intelligence index descending so the cache is already ranked.
+    return json.data.map(projectModel).sort((a, b) => {
         const ai =
             a.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
         const bi =
