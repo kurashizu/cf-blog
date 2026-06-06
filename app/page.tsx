@@ -8,7 +8,9 @@ import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/ui/GadgetsPanel";
 import { type LLMModel } from "@/components/llm/LLMLeaderboardPanel";
 import { type ContributionsCache } from "@/lib/contributions";
+import { type Language, getTopLanguages } from "@/lib/languages";
 import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
+import { TopLanguages } from "@/components/activity/TopLanguages";
 
 export const revalidate = 300;
 
@@ -77,14 +79,21 @@ function FeaturedPost({ post }: { post: Post }) {
 }
 
 export default async function HomePage() {
-    const [repos, starredRepos, allPosts, llmModels, contributions] =
-        await Promise.all([
-            readCache<GitHubRepo>(r2Paths.githubReposCache),
-            readCache<GitHubRepo>(r2Paths.githubStarredCache),
-            readCache<Post>(r2Paths.articlesIndexCache),
-            readCache<LLMModel>(r2Paths.llmLeaderboardCache),
-            readContributions(),
-        ]);
+    const [
+        repos,
+        starredRepos,
+        allPosts,
+        llmModels,
+        contributions,
+        topLanguages,
+    ] = await Promise.all([
+        readCache<GitHubRepo>(r2Paths.githubReposCache),
+        readCache<GitHubRepo>(r2Paths.githubStarredCache),
+        readCache<Post>(r2Paths.articlesIndexCache),
+        readCache<LLMModel>(r2Paths.llmLeaderboardCache),
+        readContributions(),
+        getTopLanguages(5),
+    ]);
 
     const recentPosts = allPosts.slice(0, 4);
 
@@ -103,6 +112,9 @@ export default async function HomePage() {
                     <div className="mt-8">
                         <ContributionsRibbon data={contributions} />
                     </div>
+                )}
+                {topLanguages.length > 0 && (
+                    <TopLanguages languages={topLanguages} />
                 )}
             </section>
 
