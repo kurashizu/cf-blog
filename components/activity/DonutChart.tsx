@@ -13,15 +13,21 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 export function DonutChart({ languages }: DonutChartProps) {
     if (languages.length === 0) return null;
 
-    // Offset each segment to its midpoint so the visual gap between segments
-    // lands exactly at the boundary between two arcs.
-    let cumulativePct = 0;
+    // Carve a small visible gap (GAP_UNITS) between every two arcs so the
+    // segments stay visually distinguishable even when their colors are
+    // close (GitHub's official palette has TypeScript #3178c6 and Python
+    // #3572A5 as basically-the-same blue).
+    const GAP_UNITS = 2;
+    const N = languages.length;
+    const visibleCircumference = CIRCUMFERENCE - N * GAP_UNITS;
+
+    let cumulativeVisible = 0;
     const segments = languages.map((lang) => {
-        const dashLength = (lang.percentage / 100) * CIRCUMFERENCE;
-        const gapLength = CIRCUMFERENCE - dashLength;
-        const offset =
-            -((cumulativePct + lang.percentage / 2) / 100) * CIRCUMFERENCE;
-        cumulativePct += lang.percentage;
+        const segmentLength = (lang.percentage / 100) * visibleCircumference;
+        const dashLength = segmentLength;
+        const gapLength = CIRCUMFERENCE - segmentLength;
+        const offset = -cumulativeVisible;
+        cumulativeVisible += segmentLength + GAP_UNITS;
         return {
             ...lang,
             dashArray: `${dashLength} ${gapLength}`,
