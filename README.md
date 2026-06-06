@@ -1,43 +1,81 @@
 # cf-blog
 
-A personal blog powered by Cloudflare Workers, featuring an AI agent with tool-calling capabilities.
+A personal blog + AI agent deployed to Cloudflare Workers. The homepage has a real-time activity dashboard (GitHub contributions + top languages) refreshed every 30 min by a cron worker.
 
 ## Features
 
-- **Blog** - Markdown articles stored in Cloudflare R2
-- **KurAgent** - AI assistant with tool calling (web search, code execution, timezone queries)
-- **Dark Theme** - Claude-style aesthetic with particle background
-- **Multi-language** - English and Japanese support
+- **Blog** — Markdown articles in R2, syntax-highlighted code, Japanese + English
+- **GitHub Contributions Heatmap** — Real-time activity ribbon in the hero
+- **Top Languages Donut** — 5-segment SVG donut with legend (hero sidebar)
+- **KurAgent** — AI assistant with tool calling (web search, time, JS eval) at `agent.022025.xyz`
+- **LLM Leaderboard** — Full-screen modal showing top 50 models from Artificial Analysis
+- **Guestbook** — Per-visitor message bubble
+- **Particle Background** — Canvas character rain (ku/ra/shi/zu)
+- **Three Themes** — dark / deep-blue / deep-green, toggle in the header
+
+## Architecture
+
+Three Cloudflare Workers, deployed in parallel by GitHub Actions on push to `main`:
+
+| Worker | Path | URL | Purpose |
+|---|---|---|---|
+| `cf-blog` | `./` | https://blog.022025.xyz | Main blog (Next.js) |
+| `cf-agent` | `agent-worker/` | https://agent.022025.xyz | AI agent with tool calling |
+| `cf-blog-cache` | `cache-worker/` | (cron-only) | Refreshes homepage cache every 30 min |
+
+The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches everything into R2; the homepage just reads from R2. Cold cache = empty hero; ISR revalidates every 5 min.
 
 ## Tech Stack
 
-- Next.js (App Router) deployed to Cloudflare Workers via `@opennextjs/cloudflare`
-- Cloudflare R2 for article storage
-- Cloudflare KV for session management and rate limiting
-- Gemini models with quota-based fallback (TPD 429 → next model)
-
-## Projects
-
-| Worker | URL | Purpose |
-|--------|-----|---------|
-| cf-blog | https://blog.022025.xyz | Main blog |
-| cf-agent | https://agent.022025.xyz | AI agent |
+- **Frontend**: Next.js 15 (App Router) + React 19
+- **Styling**: Tailwind CSS + CSS variables for theming; custom animations in `components/theme/*.css`
+- **Storage**: Cloudflare R2 (articles, cache, guestbook) + Cloudflare KV (sessions, rate limits)
+- **AI**: Gemini (with quota-based model fallback for TPD/RPM 429s)
+- **Deploy**: Cloudflare Workers via `@opennextjs/cloudflare`
 
 ## Development
 
 ```bash
-npm run dev          # Local development
-npm run build        # Production build
-npm run build:cf     # Cloudflare Workers build
+npm ci --legacy-peer-deps    # Install
+npm run dev                  # Local dev server on :3000
+npm run build:cf             # Build for Cloudflare Workers
+npm run lint                 # ESLint
+```
+
+Direct deploy (skips CI):
+
+```bash
+npx wrangler deploy                                       # cf-blog
+cd agent-worker && npm run build:cf && npx wrangler deploy   # cf-agent
+cd cache-worker && npx wrangler deploy                    # cf-blog-cache
 ```
 
 ## AI Agent (cf-agent)
 
-KurAgent supports:
-- `@web_search <query>` - Search the web
-- `@get_time <timezone>` - Get current time
-- `@eval_expression <code>` - Execute JavaScript code
+KurAgent supports three tools via the `/api/tool` and `/api/chat` endpoints:
 
-## Deploy
+- `@web_search <query>` — Brave Search API
+- `@get_time <timezone>` — Current time in any IANA timezone
+- `@eval_expression <code>` — Safe JS expression evaluator (recursive-descent parser, no `eval`/`Function`)
 
-Push to `main` to trigger CI deployment via GitHub Actions.
+Default model: `gemma-4-31b-it`. Streams via SSE. Max 5 tool-call iterations per turn.
+
+## Project Structure
+
+```
+.                         # cf-blog (main blog)
+├── app/                  # Next.js App Router
+├── components/           # React components (UI, activity, agent, llm, theme, layout, providers)
+├── lib/                  # Backend logic (R2, articles, guestbook, rate limit, model pool, languages)
+├── public/               # Static assets served by Next.js
+├── agent-worker/         # cf-agent (separate Next.js worker)
+├── cache-worker/         # cf-blog-cache (cron refresher)
+├── CLAUDE.md             # Detailed agent context (Claude Code)
+└── AGENTS.md             # AI agent orientation
+```
+
+## See Also
+
+- `CLAUDE.md` — Build commands, rate limits, R2 ops, file structure
+- `AGENTS.md` — Multi-worker architecture, hero features, conventions
+- `agent-worker/CLAUDE.md` — cf-agent specifics (tool system, streaming, deploy)
