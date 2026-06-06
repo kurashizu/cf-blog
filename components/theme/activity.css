@@ -67,92 +67,54 @@
 }
 
 /* ===========================================
-   TOP LANGUAGES DONUT + LEGEND
-   Placed below the contributions ribbon.
-   Same transparent-strip aesthetic.
+   TOP LANGUAGES SHARE BAR
+   Single horizontal stacked bar + compact legend.
+   Same visual weight as the contributions ribbon.
    =========================================== */
 
 .top-languages {
     display: flex;
-    align-items: center;
-    gap: 32px;
+    flex-direction: column;
+    gap: 8px;
     width: 100%;
     max-width: 824px;
     margin: 32px auto 0;
 }
 
-.top-languages-donut {
-    flex-shrink: 0;
+.top-languages-bar {
+    display: flex;
+    width: 100%;
+    height: 18px;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
-.donut-center-name {
-    font-size: 16px;
-    font-weight: 700;
-    fill: var(--text-primary);
-    font-family: inherit;
+.top-languages-bar-segment {
+    height: 100%;
+    transition: filter 0.15s ease;
 }
 
-.donut-center-label {
-    font-size: 9px;
-    font-weight: 600;
-    fill: var(--text-muted);
-    letter-spacing: 0.12em;
-    font-family: inherit;
+.top-languages-bar-segment:hover {
+    filter: brightness(1.3);
 }
 
 .top-languages-legend {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex: 1;
-    min-width: 0;
-}
-
-.top-languages-row {
-    display: grid;
-    grid-template-columns: 14px minmax(80px, auto) 1fr 40px;
-    gap: 12px;
-    align-items: center;
-    font-size: 0.8125rem;
-}
-
-.top-languages-swatch {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    display: inline-block;
-}
-
-.top-languages-name {
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.top-languages-bar {
-    height: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 3px;
-    overflow: hidden;
-    display: block;
-}
-
-.top-languages-bar-fill {
-    display: block;
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.3s ease;
-}
-
-.top-languages-pct {
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 0.6875rem;
     color: var(--text-secondary);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
 }
 
-@media (max-width: 640px) {
-    .top-languages {
-        flex-direction: column;
-        gap: 20px;
-    }
+.top-languages-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.top-languages-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
 }
