@@ -35,11 +35,12 @@
 
 .contributions-svg-wrap {
     display: block;
-    overflow-x: auto;
 }
 
 .contributions-svg {
     display: block;
+    max-width: 100%;
+    height: auto;
 }
 
 .contributions-flat-footer {

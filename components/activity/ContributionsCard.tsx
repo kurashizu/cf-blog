@@ -1,7 +1,7 @@
 import { type ContributionsCache, buildHeatmap } from "@/lib/contributions";
 import { ContributionsHeatmap } from "./ContributionsHeatmap";
 
-const TARGET_WIDTH = 864; // max-w-4xl content area
+const TARGET_WIDTH = 824; // max-w-4xl (864) minus card padding (20*2)
 
 function FlameIcon() {
     return (
