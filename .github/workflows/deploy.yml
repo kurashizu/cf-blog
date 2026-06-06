@@ -1,109 +1,135 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - main
+    push:
+        branches:
+            - main
+
+# Cancel any in-progress deploys when a new commit is pushed to the same ref.
+# Avoids racing deploys and wasting CI minutes on stale commits.
+concurrency:
+    group: deploy-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  deploy-cf-blog:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    deploy-cf-blog:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
 
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+            - name: Cache node_modules
+              uses: actions/cache@v4
+              id: cache-blog
+              with:
+                  path: node_modules
+                  key: blog-node-${{ hashFiles('package-lock.json') }}
+                  # Partial-match fallback: when the lockfile changes (e.g. one new
+                  # package added), restore the most recent node_modules so `npm ci`
+                  # only has to install the diff instead of every package.
+                  restore-keys: |
+                      blog-node-
 
-      - name: Restore .open-next cache
-        uses: actions/cache@v4
-        with:
-          path: .open-next
-          key: opennext-${{ hashFiles('package-lock.json') }}-${{ hashFiles('open-next.config.ts') }}
+            - name: Install dependencies
+              if: steps.cache-blog.outputs.cache-hit != 'true'
+              run: npm ci --legacy-peer-deps
 
-      - name: Build
-        run: |
-          BUILD_DATE=$(date +'build-%y%m%d-%H%M')
-          echo "NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
-          npm run build:cf
+            - name: Restore .open-next cache
+              uses: actions/cache@v4
+              with:
+                  path: .open-next
+                  key: opennext-${{ hashFiles('package-lock.json') }}-${{ hashFiles('open-next.config.ts') }}
+                  restore-keys: |
+                      opennext-
 
-      - name: Deploy
-        run: npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            - name: Build
+              run: |
+                  BUILD_DATE=$(date +'build-%y%m%d-%H%M')
+                  echo "NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+                  npm run build:cf
 
-  deploy-cf-agent:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+            - name: Deploy
+              run: npx wrangler deploy
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+    deploy-cf-agent:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: cache-agent
-        with:
-          path: agent-worker/node_modules
-          key: agent-node-${{ hashFiles('agent-worker/package-lock.json') }}
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
 
-      - name: Install dependencies
-        if: steps.cache-agent.outputs.cache-hit != 'true'
-        run: |
-          cd agent-worker
-          npm ci --legacy-peer-deps
+            - name: Cache node_modules
+              uses: actions/cache@v4
+              id: cache-agent
+              with:
+                  path: agent-worker/node_modules
+                  key: agent-node-${{ hashFiles('agent-worker/package-lock.json') }}
+                  restore-keys: |
+                      agent-node-
 
-      - name: Restore .open-next cache
-        uses: actions/cache@v4
-        with:
-          path: agent-worker/.open-next
-          key: opennext-agent-${{ hashFiles('agent-worker/package-lock.json') }}-${{ hashFiles('agent-worker/open-next.config.ts') }}
+            - name: Install dependencies
+              if: steps.cache-agent.outputs.cache-hit != 'true'
+              run: |
+                  cd agent-worker
+                  npm ci --legacy-peer-deps
 
-      - name: Build
-        run: |
-          cd agent-worker
-          npm run build:cf
+            - name: Restore .open-next cache
+              uses: actions/cache@v4
+              with:
+                  path: agent-worker/.open-next
+                  key: opennext-agent-${{ hashFiles('agent-worker/package-lock.json') }}-${{ hashFiles('agent-worker/open-next.config.ts') }}
+                  restore-keys: |
+                      opennext-agent-
 
-      - name: Deploy
-        run: |
-          cd agent-worker
-          npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            - name: Build
+              run: |
+                  cd agent-worker
+                  npm run build:cf
 
-  deploy-cache-worker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+            - name: Deploy
+              run: |
+                  cd agent-worker
+                  npx wrangler deploy
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+    deploy-cache-worker:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: cache-cache
-        with:
-          path: cache-worker/node_modules
-          key: cache-node-${{ hashFiles('cache-worker/package-lock.json') }}
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
 
-      - name: Install dependencies
-        if: steps.cache-cache.outputs.cache-hit != 'true'
-        run: |
-          cd cache-worker
-          npm ci --legacy-peer-deps
+            - name: Cache node_modules
+              uses: actions/cache@v4
+              id: cache-cache
+              with:
+                  path: cache-worker/node_modules
+                  key: cache-node-${{ hashFiles('cache-worker/package-lock.json') }}
+                  restore-keys: |
+                      cache-node-
 
-      - name: Deploy
-        run: |
-          cd cache-worker
-          npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            - name: Install dependencies
+              if: steps.cache-cache.outputs.cache-hit != 'true'
+              run: |
+                  cd cache-worker
+                  npm ci --legacy-peer-deps
+
+            - name: Deploy
+              run: |
+                  cd cache-worker
+                  npx wrangler deploy
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
