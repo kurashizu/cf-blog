@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents; deeper per-worker context lives inline in each worker directory.
+Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents; per-worker details follow in dedicated sections below.
 
 ## Workers
 
@@ -10,8 +10,7 @@ Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents
 | `cf-agent` | `agent-worker/` | https://agent.022025.xyz | AI agent with tool calling (Next.js) |
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Refreshes homepage cache into R2 every 30 min |
 
-Per-worker guidance:
-- `cf-agent` → `agent-worker/CLAUDE.md` (tool system, streaming SSE, deploy)
+
 
 ## Cache Worker
 
@@ -31,6 +30,84 @@ curl -X POST https://cf-blog-cache.kurashizu123.workers.dev/__refresh \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 Response is `{ success, logs }` with one `OK/FAILED/SKIPPED` line per cache. Useful for diagnosing cron failures without `wrangler tail`.
+
+## Agent Worker (cf-agent)
+
+Separate Next.js Cloudflare Worker using the same `@opennextjs/cloudflare` build as `cf-blog`. URL: https://agent.022025.xyz. No R2 — talks to Gemini directly for chat + tool calling. Default model: `gemma-4-31b-it`.
+
+### Build & Deploy
+
+```bash
+cd agent-worker
+npm ci --legacy-peer-deps    # package-lock.json required
+npm run dev                   # Local dev
+npm run build:cf              # Build for Cloudflare Workers
+npx wrangler deploy           # Direct deploy (skips CI)
+```
+
+Bindings in `wrangler.toml`: `GEMINI_MODELS` env var, KV namespace (1-hour session TTL), rate limiters.
+
+### Tool System
+
+All tools live under `lib/tools/` and are **manually imported** — `fs.readdirSync` does NOT work in Cloudflare Workers.
+
+**To add a new tool:**
+1. Create `lib/tools/<tool-name>.ts` implementing the `Tool` interface
+2. Import and register in `lib/tools/index.ts` `TOOL_LIST`
+3. No other changes — `/api/tool` and `/api/chat` auto-discover via the registry
+
+```typescript
+interface Tool {
+    name: string;            // "eval_expression"
+    description: string;     // Human-readable, sent to Gemini
+    example: string;         // Example usage JSON
+    parameters: object;      // JSON Schema → functionDeclaration
+    execute(args: Record<string, unknown>): Promise<unknown>;
+}
+```
+
+| Tool | Description | Parameters |
+|---|---|---|
+| `eval_expression` | Safe JS expression evaluator (recursive-descent, no `eval`/`Function`) | `{ code: string }` |
+| `web_search` | Brave Search API | `{ q: string }` |
+| `get_time` | Current time in timezone (UTC fallback) | `{ timezone?: string }` |
+
+### API Endpoints
+
+- `GET /api/tool` — list all tools with names, descriptions, examples, and Gemini `functionDeclarations`
+- `POST /api/tool` — execute a tool: `{ name, args }` → `{ success, result, tool }`
+- `POST /api/chat` — streaming chat with tool-calling loop
+
+**SSE event order** for `/api/chat`:
+```
+start_process
+  ↓ (optional tool iterations, max 5)
+tool_start → tool_result → end_tool
+  ↓
+start_text → text → end_text
+  ↓
+end_process
+```
+
+Think blocks (`<think>...</think>`) are filtered before text is emitted. Session messages stored in KV with 1-hour TTL.
+
+### Key Files
+
+```
+agent-worker/
+  lib/
+    tools/
+      index.ts           # TOOLS, FUNCTION_DECLARATIONS, executeTool()
+      eval-expression.ts # recursive-descent JS eval (safe)
+      web-search.ts      # Brave Search
+      get-time.ts        # Timezone time
+    evaluator.ts         # Standalone safe expression parser
+    model-pool.ts        # Gemini pool with TPD/RPM fallback
+  app/api/
+    tool/route.ts        # GET list, POST execute
+    chat/route.ts        # Streaming chat w/ tool loop
+  wrangler.toml          # GEMINI_MODELS, KV, rate limits
+```
 
 ## Hero Data Widgets (cf-blog)
 
