@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
@@ -124,7 +125,7 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
             </div>
 
             {/* Modal */}
-            {showAll && (
+            {showAll && typeof document !== "undefined" && createPortal(
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-md"
@@ -194,7 +195,8 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );
