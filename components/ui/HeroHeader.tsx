@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { type VisitorInfo as VisitorInfoType } from "@/lib/visitor";
+import { VisitorInfo } from "./VisitorInfo";
 
 interface HeroHeaderProps {
     title: string;
-    subtitle: string;
-    bio: string;
+    subtitle?: string;
+    bio?: string;
+    /** When provided, replaces the subtitle+bio with a visitor info block. */
+    visitorInfo?: VisitorInfoType | null;
 }
 
 const SCRAMBLE_CHARSET = "!<>-_/[]{}—=+*^?#01";
@@ -150,18 +154,23 @@ function useTypewriter(
  * animated text is overlaid via absolute positioning, so it never causes
  * the hero to reflow. All animations respect `prefers-reduced-motion`.
  */
-export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
+export function HeroHeader({
+    title,
+    subtitle,
+    bio,
+    visitorInfo,
+}: HeroHeaderProps) {
     const displayTitle = useScramble(title, {
         durationMs: 1100,
         startDelayMs: 0,
     });
 
-    const displaySubtitle = useTypewriter(subtitle, {
+    const displaySubtitle = useTypewriter(subtitle ?? "", {
         startDelayMs: 700,
         charDelayMs: 30,
     });
 
-    const displayBio = useTypewriter(bio, {
+    const displayBio = useTypewriter(bio ?? "", {
         startDelayMs: 1400,
         charDelayMs: 12,
     });
@@ -175,20 +184,26 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
             >
                 {displayTitle}
             </h1>
-            <p
-                className="hero-subtitle mb-4 animate-fade-up"
-                style={{ animationDelay: "80ms", minHeight: "1.75rem" }}
-                aria-label={subtitle}
-            >
-                {displaySubtitle}
-            </p>
-            <p
-                className="hero-bio animate-fade-up whitespace-pre-line"
-                style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
-                aria-label={bio}
-            >
-                {displayBio}
-            </p>
+            {visitorInfo ? (
+                <VisitorInfo info={visitorInfo} />
+            ) : (
+                <>
+                    <p
+                        className="hero-subtitle mb-4 animate-fade-up"
+                        style={{ animationDelay: "80ms", minHeight: "1.75rem" }}
+                        aria-label={subtitle}
+                    >
+                        {displaySubtitle}
+                    </p>
+                    <p
+                        className="hero-bio animate-fade-up whitespace-pre-line"
+                        style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
+                        aria-label={bio}
+                    >
+                        {displayBio}
+                    </p>
+                </>
+            )}
         </>
     );
 }

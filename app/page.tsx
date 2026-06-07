@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
 import { HeroHeader } from "@/components/ui/HeroHeader";
+import { getVisitorInfo } from "@/lib/visitor";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
@@ -13,7 +15,9 @@ import { type Language, getTopLanguages } from "@/lib/languages";
 import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
 import { DonutChart } from "@/components/activity/DonutChart";
 
-export const revalidate = 300;
+// Page is rendered on every request (not cached via ISR) so the visitor
+// info block can be per-visitor. The R2 reads in HomePage are already
+// fast (~10ms each) and the cache-worker keeps them warm every 30 min.
 
 interface Post {
     slug: string;
@@ -100,6 +104,18 @@ export default async function HomePage() {
         getTopLanguages(5),
     ]);
 
+    // Visitor geolocation from ip-api.com. The page is rendered on every
+    // request (no ISR) so this is per-visitor. Falls back to null on
+    // lookup failure (private IPs, rate limit, timeout) and the hero
+    // renders the original subtitle + bio instead.
+    const headerList = await headers();
+    const ip =
+        headerList.get("cf-connecting-ip") ??
+        headerList.get("x-real-ip") ??
+        headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        "";
+    const visitorInfo = await getVisitorInfo(ip);
+
     const recentPosts = allPosts.slice(0, 4);
 
     return (
@@ -110,10 +126,19 @@ export default async function HomePage() {
                     <div className="flex-1 text-center md:text-left">
                         <HeroHeader
                             title="Hello, I'm kurashizu"
-                            subtitle="Vibe Coding & AI Agent"
-                            bio={`Building tools that amplify human creativity.
+                            subtitle={
+                                visitorInfo
+                                    ? undefined
+                                    : "Vibe Coding & AI Agent"
+                            }
+                            bio={
+                                visitorInfo
+                                    ? undefined
+                                    : `Building tools that amplify human creativity.
 Exploring agentic workflows, LLM orchestration, and the
-future of human-AI collaboration. Ships code that matters.`}
+future of human-AI collaboration. Ships code that matters.`
+                            }
+                            visitorInfo={visitorInfo}
                         />
                     </div>
                     {topLanguages.length > 0 && (
