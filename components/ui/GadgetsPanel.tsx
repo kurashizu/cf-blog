@@ -184,7 +184,7 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
     };
 
     return (
-        <div className="w-full flex flex-col">
+        <div className="w-full h-full flex flex-col justify-center">
             <AgentPanel
                 expanded={showAgent}
                 onCollapse={() => setShowAgent(false)}
@@ -197,6 +197,8 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
                 onCollapse={() => setShowLlmBoard(false)}
             />
             {/* 4 gadgets grid */}
+            <div className="flex flex-col my-auto w-full">
+
             <div className="grid grid-cols-2 gap-3">
                 {gadgets.map((gadget, idx) => (
                     <button
@@ -265,7 +267,7 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
                         {currentGadget.slogan}
                     </p>
                 </div>
-            </div>
+            </div>            </div>
 
             <style>{`
                 @keyframes rgbFlow {

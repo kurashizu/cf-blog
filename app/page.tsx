@@ -315,7 +315,7 @@ export default async function HomePage() {
                         <h2 className="section-title mb-0">Gadgets</h2>
                     </div>
                     <Card
-                        className="p-4 animate-fade-zoom"
+                        className="flex-1 p-4 h-full animate-fade-zoom"
                         style={{ animationDelay: "600ms" }}
                     >
                         <GadgetsPanel llmModels={llmModels} />
