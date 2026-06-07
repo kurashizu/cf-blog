@@ -119,8 +119,8 @@ export function ContributionsHeatmap({ view }: ContributionsHeatmapProps) {
                 <div
                     className="heat-tooltip"
                     style={{
-                        left: tooltip.x + 14,
-                        top: tooltip.y - 10,
+                        left: tooltip.x,
+                        top: tooltip.y,
                     }}
                 >
                     <div className="heat-tooltip-date">{formatDate(tooltip.date)}</div>
