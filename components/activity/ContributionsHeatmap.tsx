@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useCallback } from "react";
 import {
     type HeatmapView,
     HEATMAP_CELL_SIZE,
@@ -11,7 +14,58 @@ interface ContributionsHeatmapProps {
     view: HeatmapView;
 }
 
+interface TooltipState {
+    x: number;
+    y: number;
+    date: string;
+    count: number;
+    level: number;
+}
+
+function formatDate(dateStr: string): string {
+    const d = new Date(dateStr + "T00:00:00Z");
+    return d.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        timeZone: "UTC",
+    });
+}
+
+const LEVEL_LABELS = ["None", "Low", "Moderate", "High", "Very High"];
+
 export function ContributionsHeatmap({ view }: ContributionsHeatmapProps) {
+    const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+
+    const showTooltip = useCallback(
+        (e: React.MouseEvent<SVGRectElement>, cell: HeatmapView["cells"][number]) => {
+            setTooltip({
+                x: e.clientX,
+                y: e.clientY,
+                date: cell.date,
+                count: cell.count,
+                level: cell.level,
+            });
+        },
+        [],
+    );
+
+    const moveTooltip = useCallback(
+        (e: React.MouseEvent<SVGRectElement>, cell: HeatmapView["cells"][number]) => {
+            setTooltip((prev) =>
+                prev && prev.date === cell.date
+                    ? { ...prev, x: e.clientX, y: e.clientY }
+                    : prev,
+            );
+        },
+        [],
+    );
+
+    const hideTooltip = useCallback(() => {
+        setTooltip(null);
+    }, []);
+
     if (view.cols === 0) return null;
 
     return (
@@ -47,6 +101,9 @@ export function ContributionsHeatmap({ view }: ContributionsHeatmapProps) {
                             height={HEATMAP_CELL_SIZE}
                             rx={3}
                             className={`heat-cell heat-${cell.level}`}
+                            onMouseEnter={(e) => showTooltip(e, cell)}
+                            onMouseMove={(e) => moveTooltip(e, cell)}
+                            onMouseLeave={hideTooltip}
                         >
                             <title>
                                 {cell.count === 0
@@ -57,6 +114,29 @@ export function ContributionsHeatmap({ view }: ContributionsHeatmapProps) {
                     );
                 })}
             </svg>
+
+            {tooltip && (
+                <div
+                    className="heat-tooltip"
+                    style={{
+                        left: tooltip.x + 14,
+                        top: tooltip.y - 10,
+                    }}
+                >
+                    <div className="heat-tooltip-date">{formatDate(tooltip.date)}</div>
+                    <div className="heat-tooltip-count">
+                        {tooltip.count}{" "}
+                        {tooltip.count === 1 ? "contribution" : "contributions"}
+                    </div>
+                    <div className="heat-tooltip-bar">
+                        <span
+                            className={`heat-tooltip-level heat-tooltip-level-${tooltip.level}`}
+                        >
+                            {LEVEL_LABELS[tooltip.level]}
+                        </span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

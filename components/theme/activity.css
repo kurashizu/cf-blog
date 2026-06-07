@@ -60,9 +60,80 @@
     fill: var(--accent);
 }
 
+.heat-tooltip {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    transform: translateY(-100%);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+.heat-tooltip-date {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.heat-tooltip-count {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.heat-tooltip-bar {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.heat-tooltip-level {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+.heat-tooltip-level-0 {
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.heat-tooltip-level-1 {
+    color: color-mix(in srgb, var(--accent) 70%, transparent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.heat-tooltip-level-2 {
+    color: color-mix(in srgb, var(--accent) 70%, transparent);
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.heat-tooltip-level-3 {
+    color: color-mix(in srgb, var(--accent) 85%, transparent);
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.heat-tooltip-level-4 {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
 @media (max-width: 640px) {
     .heat-month-label {
         font-size: 9px;
+    }
+
+    .heat-tooltip {
+        display: none;
     }
 }
 
