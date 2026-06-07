@@ -552,7 +552,7 @@ export function AgentPanel({
                         {ALL_PREFIXES.map((p) => (
                             <div
                                 key={p}
-                                className="h-[30%] aspect-[264/185] flex items-center justify-center absolute overflow-hidden rounded-2xl group-hover:h-[75%] transition-all duration-300 ease-out"
+                                className="h-[30%] aspect-[264/235] flex items-center justify-center absolute overflow-hidden rounded-2xl group-hover:h-[75%] transition-all duration-300 ease-out"
                                 style={{
                                     boxShadow: "0 0 8px 3px var(--accent)",
                                     opacity: p === prefix ? 1 : 0,
@@ -563,13 +563,13 @@ export function AgentPanel({
                                     src={`/images/kuragent/${p}_0.png`}
                                     alt=""
                                     fill
-                                    className="object-cover object-top rounded-xl group-hover:opacity-0 transition-opacity duration-200"
+                                    className="object-cover scale-[1.265] origin-top rounded-xl group-hover:opacity-0 transition-opacity duration-200"
                                 />
                                 <Image
                                     src={`/images/kuragent/${p}_1.png`}
                                     alt=""
                                     fill
-                                    className="object-cover object-top rounded-xl absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                    className="object-cover scale-[1.265] origin-top rounded-xl absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                                 />
                             </div>
                         ))}

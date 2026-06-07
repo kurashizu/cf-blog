@@ -204,7 +204,7 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
                     <button
                         key={gadget.id}
                         className={cn(
-                            "relative aspect-[264/185] flex items-center justify-center rounded-xl overflow-hidden transition-all duration-200",
+                            "relative aspect-[264/235] flex items-center justify-center rounded-xl overflow-hidden transition-all duration-200",
                             hoveredId === gadget.id
                                 ? "ring-1 ring-accent/40"
                                 : "hover:ring-1 hover:ring-border",
@@ -222,7 +222,7 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
                                 src={`/images/${gadget.imageDir ?? "kuragent"}/${prefix}_0.png`}
                                 alt={gadget.title}
                                 fill
-                                className="object-cover object-top rounded-xl"
+                                className="object-cover scale-[1.265] origin-top rounded-xl"
                                 unoptimized={gadget.imageDir === "llm-board"}
                                 style={{
                                     transform:
