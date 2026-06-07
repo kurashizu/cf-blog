@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents; deeper per-worker context lives in the `CLAUDE.md` files and the cache worker's inline comments.
+Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents; deeper per-worker context lives inline in each worker directory.
 
 ## Workers
 
@@ -11,7 +11,6 @@ Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Refreshes homepage cache into R2 every 30 min |
 
 Per-worker guidance:
-- `cf-blog` → `CLAUDE.md` (build, deploy, R2 ops, file structure, rate limits)
 - `cf-agent` → `agent-worker/CLAUDE.md` (tool system, streaming SSE, deploy)
 
 ## Cache Worker
