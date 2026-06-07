@@ -535,8 +535,8 @@ export function AgentPanel({
 
     return (
         <>
-            {/* Compact view — inside Agent section Card */}
-            {!expanded && (
+            {/* Compact view (disabled in GadgetsPanel context — the 2x2 grid is the entry point) */}
+            {false && (
                 <button
                     onClick={handleExpand}
                     className="w-full h-full relative overflow-hidden rounded-xl group cursor-pointer"
