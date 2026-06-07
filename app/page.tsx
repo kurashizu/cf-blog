@@ -111,7 +111,9 @@ export default async function HomePage() {
                         <HeroHeader
                             title="Hello, I'm kurashizu"
                             subtitle="Vibe Coding & AI Agent"
-                            bio="Building tools that amplify human creativity. Exploring agentic workflows, LLM orchestration, and the future of human-AI collaboration. Ships code that matters."
+                            bio={`Building tools that amplify human creativity.
+Exploring agentic workflows, LLM orchestration, and the
+future of human-AI collaboration. Ships code that matters.`}
                         />
                     </div>
                     {topLanguages.length > 0 && (

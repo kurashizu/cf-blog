@@ -169,40 +169,25 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
     return (
         <>
             <h1
-                className="hero-title mb-3 animate-fade-up relative"
-                style={{ animationDelay: "0ms" }}
+                className="hero-title mb-3 animate-fade-up"
+                style={{ animationDelay: "0ms", minHeight: "3.3rem" }}
                 aria-label={title}
             >
-                <span style={{ visibility: "hidden" }} aria-hidden="true">
-                    {title}
-                </span>
-                <span className="absolute inset-0" aria-hidden="true">
-                    {displayTitle}
-                </span>
+                {displayTitle}
             </h1>
             <p
-                className="hero-subtitle mb-4 animate-fade-up relative"
-                style={{ animationDelay: "80ms" }}
+                className="hero-subtitle mb-4 animate-fade-up"
+                style={{ animationDelay: "80ms", minHeight: "1.75rem" }}
                 aria-label={subtitle}
             >
-                <span style={{ visibility: "hidden" }} aria-hidden="true">
-                    {subtitle}
-                </span>
-                <span className="absolute inset-0" aria-hidden="true">
-                    {displaySubtitle}
-                </span>
+                {displaySubtitle}
             </p>
             <p
-                className="hero-bio animate-fade-up relative"
-                style={{ animationDelay: "160ms" }}
+                className="hero-bio animate-fade-up whitespace-pre-line"
+                style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
                 aria-label={bio}
             >
-                <span style={{ visibility: "hidden" }} aria-hidden="true">
-                    {bio}
-                </span>
-                <span className="absolute inset-0" aria-hidden="true">
-                    {displayBio}
-                </span>
+                {displayBio}
             </p>
         </>
     );
