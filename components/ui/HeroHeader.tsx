@@ -5,33 +5,115 @@ import { useEffect, useState } from "react";
 interface HeroHeaderProps {
     title: string;
     subtitle: string;
-    /** Delay (ms) after mount before the typing animation begins. */
-    typingDelayMs?: number;
-    /** Delay (ms) between each typed character. */
-    charDelayMs?: number;
+    bio: string;
+}
+
+const SCRAMBLE_CHARSET = "!<>-_/[]{}—=+*^?#01";
+
+interface UseScrambleOptions {
+    durationMs: number;
+    startDelayMs: number;
+    charset?: string;
+    flipIntervalMs?: number;
+    settleMs?: number;
 }
 
 /**
- * Hacker-style hero header: title with a blinking block cursor,
- * subtitle that types out one character at a time.
- *
- * Respects `prefers-reduced-motion`: skips both typing and blinking,
- * and renders the full subtitle immediately.
+ * Scramble-decode: each character flips through random chars from
+ * `charset` until it settles on the real character. A left-to-right
+ * "decryption" wave propagates across the text. `settleMs` controls
+ * how long each char spends flipping; `durationMs` is the total time
+ * (last char settles at `durationMs`).
  */
-export function HeroHeader({
-    title,
-    subtitle,
-    typingDelayMs = 600,
-    charDelayMs = 50,
-}: HeroHeaderProps) {
-    const [typedLength, setTypedLength] = useState(0);
+function useScramble(
+    target: string,
+    {
+        durationMs,
+        startDelayMs,
+        charset = SCRAMBLE_CHARSET,
+        flipIntervalMs = 50,
+        settleMs = 150,
+    }: UseScrambleOptions,
+): string {
+    const [display, setDisplay] = useState("");
 
     useEffect(() => {
         if (typeof window === "undefined") return;
 
         const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
         if (mq.matches) {
-            setTypedLength(subtitle.length);
+            setDisplay(target);
+            return;
+        }
+
+        const n = target.length;
+        if (n === 0) {
+            setDisplay(target);
+            return;
+        }
+
+        const waveSpan = Math.max(0, durationMs - settleMs);
+        const startTime = performance.now() + startDelayMs;
+        let rafId = 0;
+        let cancelled = false;
+
+        const tick = (now: number) => {
+            if (cancelled) return;
+            if (now < startTime) {
+                setDisplay("");
+                rafId = requestAnimationFrame(tick);
+                return;
+            }
+            const elapsed = now - startTime;
+            let result = "";
+            for (let i = 0; i < n; i++) {
+                const charStart = (i / Math.max(1, n - 1)) * waveSpan;
+                const charEnd = charStart + settleMs;
+                if (elapsed >= charEnd) {
+                    result += target[i];
+                } else {
+                    const flipIndex =
+                        Math.floor(elapsed / flipIntervalMs) + i * 13;
+                    result += charset[Math.abs(flipIndex) % charset.length];
+                }
+            }
+            setDisplay(result);
+
+            if (elapsed >= durationMs) {
+                setDisplay(target);
+                return;
+            }
+            rafId = requestAnimationFrame(tick);
+        };
+
+        rafId = requestAnimationFrame(tick);
+        return () => {
+            cancelled = true;
+            cancelAnimationFrame(rafId);
+        };
+    }, [target, durationMs, startDelayMs, charset, flipIntervalMs, settleMs]);
+
+    return display;
+}
+
+interface UseTypewriterOptions {
+    startDelayMs: number;
+    charDelayMs: number;
+}
+
+/** Plain typewriter: types `target` char by char after a delay. */
+function useTypewriter(
+    target: string,
+    { startDelayMs, charDelayMs }: UseTypewriterOptions,
+): string {
+    const [display, setDisplay] = useState("");
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+        if (mq.matches) {
+            setDisplay(target);
             return;
         }
 
@@ -40,36 +122,87 @@ export function HeroHeader({
             let i = 0;
             interval = setInterval(() => {
                 i += 1;
-                setTypedLength(i);
-                if (i >= subtitle.length && interval) {
+                setDisplay(target.slice(0, i));
+                if (i >= target.length && interval) {
                     clearInterval(interval);
                     interval = null;
                 }
             }, charDelayMs);
-        }, typingDelayMs);
+        }, startDelayMs);
 
         return () => {
             clearTimeout(startTimer);
             if (interval) clearInterval(interval);
         };
-    }, [subtitle, typingDelayMs, charDelayMs]);
+    }, [target, startDelayMs, charDelayMs]);
 
-    const typed = subtitle.slice(0, typedLength);
+    return display;
+}
+
+/**
+ * Hero header with three different entrance animations:
+ *  - Title: scramble-decode wave (~1.1s)
+ *  - Subtitle: fast typewriter (~600ms)
+ *  - Bio: slow typewriter (~2s)
+ *
+ * Each line is rendered with an invisible full-text placeholder so the
+ * container reserves its final height from the very first paint. The
+ * animated text is overlaid via absolute positioning, so it never causes
+ * the hero to reflow. All animations respect `prefers-reduced-motion`.
+ */
+export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
+    const displayTitle = useScramble(title, {
+        durationMs: 1100,
+        startDelayMs: 0,
+    });
+
+    const displaySubtitle = useTypewriter(subtitle, {
+        startDelayMs: 700,
+        charDelayMs: 30,
+    });
+
+    const displayBio = useTypewriter(bio, {
+        startDelayMs: 1400,
+        charDelayMs: 12,
+    });
 
     return (
         <>
             <h1
-                className="hero-title mb-3 animate-fade-up"
+                className="hero-title mb-3 animate-fade-up relative"
                 style={{ animationDelay: "0ms" }}
+                aria-label={title}
             >
-                {title}
+                <span style={{ visibility: "hidden" }} aria-hidden="true">
+                    {title}
+                </span>
+                <span className="absolute inset-0" aria-hidden="true">
+                    {displayTitle}
+                </span>
             </h1>
             <p
-                className="hero-subtitle mb-4 animate-fade-up"
+                className="hero-subtitle mb-4 animate-fade-up relative"
                 style={{ animationDelay: "80ms" }}
                 aria-label={subtitle}
             >
-                <span aria-hidden="true">{typed}</span>
+                <span style={{ visibility: "hidden" }} aria-hidden="true">
+                    {subtitle}
+                </span>
+                <span className="absolute inset-0" aria-hidden="true">
+                    {displaySubtitle}
+                </span>
+            </p>
+            <p
+                className="hero-bio animate-fade-up relative"
+                style={{ animationDelay: "160ms" }}
+                aria-label={bio}
+            >
+                <span style={{ visibility: "hidden" }} aria-hidden="true">
+                    {bio}
+                </span>
+                <span className="absolute inset-0" aria-hidden="true">
+                    {displayBio}
+                </span>
             </p>
         </>
     );
