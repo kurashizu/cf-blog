@@ -217,13 +217,13 @@ export function LLMLeaderboardPanel({
                 createPortal(
                     <div
                         ref={overlayRef}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-sm"
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-sm animate-fadeIn"
                         onClick={(e) => {
                             if (e.target === overlayRef.current) handleClose();
                         }}
                     >
                         <div
-                            className="bg-bg-card/95 border border-border rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col overflow-hidden"
+                            className="bg-bg-card/95 border border-border rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col overflow-hidden animate-scaleIn"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <header className="flex items-start justify-between p-5 border-b border-border shrink-0">
