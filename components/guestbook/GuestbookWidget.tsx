@@ -6,12 +6,29 @@ import { Button } from "@/components/ui/Button";
 
 export function GuestbookWidget() {
     const [isOpen, setIsOpen] = useState(false);
+    const [closing, setClosing] = useState(false);
+
+    const handleClose = () => {
+        setClosing(true);
+        setTimeout(() => {
+            setIsOpen(false);
+            setClosing(false);
+        }, 200);
+    };
+
+    const toggleOpen = () => {
+        if (isOpen) {
+            handleClose();
+        } else {
+            setIsOpen(true);
+        }
+    };
 
     return (
         <>
             {/* Floating button */}
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleOpen}
                 className="fixed bottom-6 left-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50 overflow-hidden"
                 style={{ padding: 0 }}
                 aria-label="Leave a message"
@@ -52,15 +69,15 @@ export function GuestbookWidget() {
             </button>
 
             {/* Form panel */}
-            {isOpen && (
-                <div className="fixed bottom-24 left-6 w-80 sm:w-96 bg-bg-card border border-border rounded-2xl shadow-2xl overflow-hidden z-50 animate-slideUp">
+            {(isOpen || closing) && (
+                <div className={`fixed bottom-24 left-6 w-80 sm:w-96 bg-bg-card border border-border rounded-2xl shadow-2xl overflow-hidden z-50 ${closing ? 'animate-slideDown' : 'animate-slideUp'}`}>
                     <div className="p-4 border-b border-border bg-bg-secondary">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-semibold text-text-primary">
                                 Leave a Message
                             </h3>
                             <button
-                                onClick={() => setIsOpen(false)}
+                                onClick={handleClose}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
                             >
                                 <svg

@@ -211,6 +211,15 @@ body {
   animation: fadeIn 0.25s ease-out forwards;
 }
 
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.2s ease-out forwards;
+}
+
 .animate-scaleIn {
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -385,8 +394,10 @@ body {
   .animate-fade-up-sm,
   .animate-fade-zoom,
   .animate-fadeIn,
+  .animate-fadeOut,
   .animate-scaleIn,
-  .animate-slideUp {
+  .animate-slideUp,
+  .animate-slideDown {
     animation: none;
     opacity: 1;
     transform: none;

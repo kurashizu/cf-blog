@@ -12,6 +12,7 @@ interface Message {
 
 export function ChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
+    const [closing, setClosing] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
@@ -101,6 +102,22 @@ export function ChatWidget() {
         }
     };
 
+    const handleClose = () => {
+        setClosing(true);
+        setTimeout(() => {
+            setIsOpen(false);
+            setClosing(false);
+        }, 200);
+    };
+
+    const toggleOpen = () => {
+        if (isOpen) {
+            handleClose();
+        } else {
+            setIsOpen(true);
+        }
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -112,7 +129,7 @@ export function ChatWidget() {
         <>
             {/* Floating button */}
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleOpen}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50 overflow-hidden"
@@ -147,8 +164,8 @@ export function ChatWidget() {
             </button>
 
             {/* Chat panel */}
-            {isOpen && (
-                <div className="fixed bottom-24 right-6 w-80 sm:w-96 h-[28rem] bg-bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 animate-slideUp">
+            {(isOpen || closing) && (
+                <div className={`fixed bottom-24 right-6 w-80 sm:w-96 h-[28rem] bg-bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 ${closing ? 'animate-slideDown' : 'animate-slideUp'}`}>
                     {/* Header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-bg-secondary">
                         <div className="flex items-center gap-3">
@@ -177,7 +194,7 @@ export function ChatWidget() {
                             </div>
                         </div>
                         <button
-                            onClick={() => setIsOpen(false)}
+                            onClick={handleClose}
                             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bg-elevated transition-colors"
                         >
                             <svg

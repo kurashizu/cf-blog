@@ -125,6 +125,8 @@ export function LLMLeaderboardPanel({
     const [sortKey, setSortKey] = useState<SortKey>("intelligence");
     const [sortDir, setSortDir] = useState<SortDir>("desc");
     const [selectedModel, setSelectedModel] = useState<LLMModel | null>(null);
+    const [closingExpanded, setClosingExpanded] = useState(false);
+    const [closingDetail, setClosingDetail] = useState(false);
 
     // Creator chips: top 8 by model count (most-relevant first), rest hidden
     // behind a "More (N)" dropdown. Alphabetical when tied.
@@ -180,8 +182,8 @@ export function LLMLeaderboardPanel({
         if (!expanded) return;
         const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
-                if (selectedModel) setSelectedModel(null);
-                else onCollapse?.();
+                if (selectedModel) handleCloseDetail();
+                else handleClose();
             }
         };
         window.addEventListener("keydown", handler);
@@ -202,8 +204,22 @@ export function LLMLeaderboardPanel({
         }
     };
 
-    const handleClose = () => onCollapse?.();
-    const handleCloseDetail = () => setSelectedModel(null);
+    const handleClose = () => {
+        if (closingExpanded) return;
+        setClosingExpanded(true);
+        setTimeout(() => {
+            setClosingExpanded(false);
+            onCollapse?.();
+        }, 200);
+    };
+    const handleCloseDetail = () => {
+        if (closingDetail) return;
+        setClosingDetail(true);
+        setTimeout(() => {
+            setClosingDetail(false);
+            setSelectedModel(null);
+        }, 200);
+    };
     const clearFilters = () => {
         setQuery("");
         setCreator("All");
@@ -212,18 +228,18 @@ export function LLMLeaderboardPanel({
     return (
         <>
             {/* Main expanded view */}
-            {expanded &&
+            {(expanded || closingExpanded) &&
                 typeof document !== "undefined" &&
                 createPortal(
                     <div
                         ref={overlayRef}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-sm animate-fadeIn"
+                        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-sm ${closingExpanded ? 'animate-fadeOut' : 'animate-fadeIn'}`}
                         onClick={(e) => {
                             if (e.target === overlayRef.current) handleClose();
                         }}
                     >
                         <div
-                            className="bg-bg-card/95 border border-border rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col overflow-hidden animate-scaleIn"
+                            className={`bg-bg-card/95 border border-border rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col overflow-hidden ${closingExpanded ? 'animate-slideDown' : 'animate-scaleIn'}`}
                             onClick={(e) => e.stopPropagation()}
                         >
                             <header className="flex items-start justify-between p-5 border-b border-border shrink-0">
@@ -585,20 +601,19 @@ export function LLMLeaderboardPanel({
                 )}
 
             {/* Detail modal */}
-            {expanded &&
-                selectedModel &&
+            {selectedModel &&
                 typeof document !== "undefined" &&
                 createPortal(
                     <div
                         ref={detailRef}
-                        className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                        className={`fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm ${closingDetail ? 'animate-fadeOut' : ''}`}
                         onClick={(e) => {
                             if (e.target === detailRef.current)
                                 handleCloseDetail();
                         }}
                     >
                         <div
-                            className="bg-bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+                            className={`bg-bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden ${closingDetail ? 'animate-slideDown' : ''}`}
                             onClick={(e) => e.stopPropagation()}
                         >
                             <header className="flex items-start justify-between p-5 border-b border-border shrink-0 gap-3">
