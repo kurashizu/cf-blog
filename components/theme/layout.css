@@ -133,3 +133,46 @@
 .site-footer::before {
     top: 0;
 }
+
+/* ===========================================
+   TERMINAL CURSOR (HACKER AESTHETIC)
+   Blinking block cursor on the title and a
+   typing caret on the subtitle. Override the
+   gradient `-webkit-text-fill-color: transparent`
+   inherited from .hero-title so the cursor reads
+   as a solid green block.
+   =========================================== */
+
+.terminal-cursor {
+    color: #22c55e;
+    -webkit-text-fill-color: #22c55e;
+    margin-left: 0.05em;
+    text-shadow:
+        0 0 4px rgba(34, 197, 94, 0.6),
+        0 0 12px rgba(34, 197, 94, 0.25);
+    animation: terminal-blink 1.05s steps(1, end) infinite;
+}
+
+.terminal-cursor--caret {
+    color: #22c55e;
+    -webkit-text-fill-color: #22c55e;
+    text-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+    margin-left: 0.02em;
+}
+
+@keyframes terminal-blink {
+    0%,
+    49% {
+        opacity: 1;
+    }
+    50%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .terminal-cursor {
+        animation: none;
+    }
+}

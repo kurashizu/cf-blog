@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
+import { HeroHeader } from "@/components/ui/HeroHeader";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
@@ -107,18 +108,10 @@ export default async function HomePage() {
             <section className="mb-12">
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
                     <div className="flex-1 text-center md:text-left">
-                        <h1
-                            className="hero-title mb-3 animate-fade-up"
-                            style={{ animationDelay: "0ms" }}
-                        >
-                            Hello, I&rsquo;m kurashizu
-                        </h1>
-                        <p
-                            className="hero-subtitle mb-4 animate-fade-up"
-                            style={{ animationDelay: "80ms" }}
-                        >
-                            Vibe Coding & AI Agent
-                        </p>
+                        <HeroHeader
+                            title="Hello, I'm kurashizu"
+                            subtitle="Vibe Coding & AI Agent"
+                        />
                         <p
                             className="hero-bio animate-fade-up"
                             style={{ animationDelay: "160ms" }}
