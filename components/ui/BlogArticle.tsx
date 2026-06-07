@@ -21,11 +21,11 @@ interface BlogArticleProps {
 export function BlogArticle({ post }: BlogArticleProps) {
   return (
     <article className="article-content">
-      <Link href="/blog" className="back-link">
+      <Link href="/blog" className="back-link animate-fade-up" style={{ animationDelay: "0ms" }}>
         ← Back to blog
       </Link>
 
-      <header className="article-header">
+      <header className="article-header animate-fade-up" style={{ animationDelay: "80ms" }}>
         {post.coverImage && (
           <div className="mb-8 aspect-video w-full overflow-hidden rounded-lg">
             <img

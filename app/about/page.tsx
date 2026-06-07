@@ -58,11 +58,11 @@ const socialLinks = [
 export default function AboutPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
-            <div className="page-title">
+            <div className="page-title animate-fade-up" style={{ animationDelay: "0ms" }}>
                 <h1>About Me</h1>
             </div>
 
-            <section className="mb-12">
+            <section className="mb-12 animate-fade-up" style={{ animationDelay: "80ms" }}>
                 <h2 className="section-title">What I Do</h2>
                 <div className="space-y-4 text-text-secondary">
                     <p>
@@ -80,7 +80,7 @@ export default function AboutPage() {
                 </div>
             </section>
 
-            <section className="mb-12">
+            <section className="mb-12 animate-fade-up" style={{ animationDelay: "160ms" }}>
                 <h2 className="section-title">Technical Interests</h2>
                 <ul className="space-y-3">
                     {[
@@ -102,32 +102,38 @@ export default function AboutPage() {
                 </ul>
             </section>
 
-            <section className="mb-12">
+            <section className="mb-12 animate-fade-up" style={{ animationDelay: "240ms" }}>
                 <h2 className="section-title">Current Stack</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {techStack.map((group) => (
-                        <Card key={group.category}>
-                            <CardContent className="pt-4">
-                                <code className="text-xs text-text-muted uppercase tracking-wider mb-3 block">
-                                    {group.category}
-                                </code>
-                                <div className="space-y-1">
-                                    {group.items.map((item) => (
-                                        <span
-                                            key={item}
-                                            className="block text-sm text-text-primary font-mono"
-                                        >
-                                            {item}
-                                        </span>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
+                    {techStack.map((group, i) => (
+                        <div
+                            key={group.category}
+                            className="animate-fade-up-sm"
+                            style={{ animationDelay: `${300 + i * 50}ms` }}
+                        >
+                            <Card>
+                                <CardContent className="pt-4">
+                                    <code className="text-xs text-text-muted uppercase tracking-wider mb-3 block">
+                                        {group.category}
+                                    </code>
+                                    <div className="space-y-1">
+                                        {group.items.map((item) => (
+                                            <span
+                                                key={item}
+                                                className="block text-sm text-text-primary font-mono"
+                                            >
+                                                {item}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     ))}
                 </div>
             </section>
 
-            <section>
+            <section className="animate-fade-up" style={{ animationDelay: "380ms" }}>
                 <h2 className="section-title">Connect</h2>
                 <p className="text-text-secondary mb-6">
                     Interested in collaborating, or just want to say hello —
@@ -135,12 +141,14 @@ export default function AboutPage() {
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {socialLinks.map((link) => (
+                    {socialLinks.map((link, i) => (
                         <Link
                             key={link.name}
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            className="animate-fade-up-sm"
+                            style={{ animationDelay: `${440 + i * 50}ms` }}
                         >
                             <Card className="text-center h-full transition-all hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
                                 <CardContent className="flex flex-col items-center py-6">
