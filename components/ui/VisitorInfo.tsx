@@ -117,8 +117,9 @@ export function VisitorInfo({ info }: VisitorInfoCardProps) {
                 <span>{location || "Unknown location"}</span>
             </p>
 
-            {/* Divider */}
-            <div className="border-t border-border/40 mb-3" />
+            {/* Divider — matches the gradient style used elsewhere on the page
+                (site header/footer, guestbook section) for visual consistency. */}
+            <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent mb-3" />
 
             {/* Details — hero-bio style */}
             <div className="hero-bio space-y-1">
