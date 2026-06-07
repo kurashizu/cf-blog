@@ -126,6 +126,7 @@ export function AgentPanel({
     const [sessions, setSessions] = useState<SessionMeta[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<string>("");
     const [showDropdown, setShowDropdown] = useState(false);
+    const [closing, setClosing] = useState(false);
     const [showToolPicker, setShowToolPicker] = useState(false);
     const [availableTools, setAvailableTools] = useState<{name: string; description: string}[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -525,12 +526,16 @@ export function AgentPanel({
     };
 
     const handleCollapse = () => {
-        if (onCollapse) {
-            // Controlled by parent — signal collapse (set showAgent=false)
-            onCollapse();
-        } else {
-            setExpanded(false);
-        }
+        if (closing) return;
+        setClosing(true);
+        setTimeout(() => {
+            setClosing(false);
+            if (onCollapse) {
+                onCollapse();
+            } else {
+                setExpanded(false);
+            }
+        }, 200);
     };
 
     return (
@@ -588,12 +593,12 @@ export function AgentPanel({
             )}
 
             {/* Full-screen overlay — portal to body, outside Card overflow */}
-            {expanded &&
+            {(expanded || closing) &&
                 typeof document !== "undefined" &&
                 createPortal(
                     <div
                         ref={overlayRef}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+                        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 ${closing ? 'animate-fadeOut' : ''}`}
                         onClick={(e) => {
                             if (e.target === overlayRef.current)
                                 handleCollapse();
@@ -601,13 +606,13 @@ export function AgentPanel({
                     >
                         {/* Backdrop */}
                         <div
-                            className="absolute inset-0 bg-bg-primary/95 backdrop-blur-md animate-fadeIn z-0"
+                            className={`absolute inset-0 bg-bg-primary/95 backdrop-blur-md z-0 ${closing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
                             onClick={handleCollapse}
                         />
 
                         {/* Panel */}
                         <div
-                            className="relative w-full h-full max-w-[1100px] max-h-[800px] bg-bg-card/95 backdrop-blur-2xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn z-10"
+                            className={`relative w-full h-full max-w-[1100px] max-h-[800px] bg-bg-card/95 backdrop-blur-2xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 ${closing ? 'animate-slideDown' : 'animate-scaleIn'}`}
                             style={{
                                 boxShadow:
                                     "0 25px 80px rgba(0,0,0,0.6), 0 0 60px var(--accent-subtle, rgba(255,107,53,0.1))",
