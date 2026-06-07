@@ -184,7 +184,7 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
     };
 
     return (
-        <div className="w-full h-full flex flex-col">
+        <div className="w-full flex flex-col">
             <AgentPanel
                 expanded={showAgent}
                 onCollapse={() => setShowAgent(false)}
@@ -237,7 +237,7 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
             </div>
 
             {/* Info panel — bottom */}
-            <div className="mt-4 flex flex-col items-center flex-1 justify-center">
+            <div className="mt-4 flex flex-col items-center justify-center">
                 <div
                     key={currentGadget.id}
                     className="w-full flex flex-col items-center px-4"
