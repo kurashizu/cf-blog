@@ -87,11 +87,12 @@ const ClockIcon = () => (
  *
  *   [flag] You are visiting from: City, Country
  *   [wifi] ISP
- *   [hash] IP · [clock] Timezone
+ *   [hash] IP
  *
  * The label "You are visiting from:" is muted; the city/country is the
  * primary info (text-text-primary). The remaining lines inherit the
- * hero-bio muted color.
+ * hero-bio muted color. The IANA timezone (e.g. "Australia/Sydney") is
+ * intentionally omitted — it duplicates the city/country on line 1.
  */
 export function VisitorInfo({ info }: VisitorInfoCardProps) {
     const location = [info.city, info.country].filter(Boolean).join(", ");
@@ -134,24 +135,11 @@ export function VisitorInfo({ info }: VisitorInfoCardProps) {
                 </div>
             )}
 
-            {/* Line 3 — IP + Timezone */}
-            {(info.ip || info.timezone) && (
-                <div className="flex items-center gap-2 flex-wrap">
-                    {info.ip && (
-                        <>
-                            <HashIcon />
-                            <span className="font-mono">{info.ip}</span>
-                        </>
-                    )}
-                    {info.ip && info.timezone && (
-                        <span className="text-text-muted/50">·</span>
-                    )}
-                    {info.timezone && (
-                        <>
-                            <ClockIcon />
-                            <span>{info.timezone}</span>
-                        </>
-                    )}
+            {/* Line 3 — IP (timezone omitted; would duplicate the city/country on line 1) */}
+            {info.ip && (
+                <div className="flex items-center gap-2">
+                    <HashIcon />
+                    <span className="font-mono">{info.ip}</span>
                 </div>
             )}
         </div>
