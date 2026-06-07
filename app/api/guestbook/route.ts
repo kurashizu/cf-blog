@@ -27,7 +27,6 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ctx = (await import('@opennextjs/cloudflare')).getCloudflareContext() as any;
     const env = ctx.env as {
       GUESTBOOK_RATE_LIMIT?: RateLimit;

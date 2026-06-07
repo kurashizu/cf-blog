@@ -41,7 +41,6 @@ function msgKey(id: string): string {
 let migrationPromise: Promise<void> | null = null;
 
 async function migrateLegacyStore(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { env } = getCloudflareContext() as any;
     const bucket = env.BUCKET;
     let legacy: LegacyStore | null = null;
