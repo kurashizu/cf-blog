@@ -83,14 +83,15 @@ const ClockIcon = () => (
 );
 
 /**
- * Visitor info block — replaces the hero subtitle + bio.
+ * Visitor info block — 3 lines, sits below the slogan + divider.
  *
- * Layout (4 lines, total height ≈ 7.5rem, matches original ~7.25rem):
- *   [flag] City, Country       ← hero-subtitle style (1.125rem)
- *   ─────────
+ *   [flag] You are visiting from: City, Country
  *   [wifi] ISP
- *   [hash] IP
- *   [clock] Timezone
+ *   [hash] IP · [clock] Timezone
+ *
+ * The label "You are visiting from:" is muted; the city/country is the
+ * primary info (text-text-primary). The remaining lines inherit the
+ * hero-bio muted color.
  */
 export function VisitorInfo({ info }: VisitorInfoCardProps) {
     const location = [info.city, info.country].filter(Boolean).join(", ");
@@ -99,49 +100,60 @@ export function VisitorInfo({ info }: VisitorInfoCardProps) {
         : null;
 
     return (
-        <div className="animate-fade-up" style={{ animationDelay: "80ms" }}>
-            {/* Location — hero-subtitle style */}
-            <p className="hero-subtitle mb-3 flex items-center gap-1.5">
+        <div
+            className="hero-bio animate-fade-up space-y-1"
+            style={{ animationDelay: "1500ms" }}
+        >
+            {/* Line 1 — location with label */}
+            <div className="flex items-center gap-1.5">
                 {flagUrl ? (
                     <img
                         src={flagUrl}
                         alt=""
-                        className="inline-block w-5 h-[15px] rounded-sm object-cover bg-bg-card"
-                        width={20}
-                        height={15}
+                        className="inline-block w-4 h-3 rounded-sm object-cover bg-bg-card shrink-0"
+                        width={16}
+                        height={12}
                         loading="lazy"
                     />
                 ) : (
                     <GlobeIcon />
                 )}
-                <span>{location || "Unknown location"}</span>
-            </p>
-
-            {/* Divider — matches the gradient style used elsewhere on the page
-                (site header/footer, guestbook section) for visual consistency. */}
-            <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent mb-3" />
-
-            {/* Details — hero-bio style */}
-            <div className="hero-bio space-y-1">
-                {info.isp && (
-                    <div className="flex items-center gap-2">
-                        <WifiIcon />
-                        <span>{info.isp}</span>
-                    </div>
-                )}
-                {info.ip && (
-                    <div className="flex items-center gap-2">
-                        <HashIcon />
-                        <span className="font-mono">{info.ip}</span>
-                    </div>
-                )}
-                {info.timezone && (
-                    <div className="flex items-center gap-2">
-                        <ClockIcon />
-                        <span>{info.timezone}</span>
-                    </div>
-                )}
+                <span>
+                    You are visiting from:{" "}
+                    <span className="text-text-primary">
+                        {location || "Unknown"}
+                    </span>
+                </span>
             </div>
+
+            {/* Line 2 — ISP */}
+            {info.isp && (
+                <div className="flex items-center gap-2">
+                    <WifiIcon />
+                    <span>{info.isp}</span>
+                </div>
+            )}
+
+            {/* Line 3 — IP + Timezone */}
+            {(info.ip || info.timezone) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    {info.ip && (
+                        <>
+                            <HashIcon />
+                            <span className="font-mono">{info.ip}</span>
+                        </>
+                    )}
+                    {info.ip && info.timezone && (
+                        <span className="text-text-muted/50">·</span>
+                    )}
+                    {info.timezone && (
+                        <>
+                            <ClockIcon />
+                            <span>{info.timezone}</span>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

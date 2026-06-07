@@ -184,17 +184,25 @@ export function HeroHeader({
             >
                 {displayTitle}
             </h1>
+            {subtitle && (
+                <p
+                    className="hero-subtitle mb-3 animate-fade-up"
+                    style={{ animationDelay: "80ms", minHeight: "1.75rem" }}
+                    aria-label={subtitle}
+                >
+                    {displaySubtitle}
+                </p>
+            )}
             {visitorInfo ? (
-                <VisitorInfo info={visitorInfo} />
-            ) : (
                 <>
-                    <p
-                        className="hero-subtitle mb-4 animate-fade-up"
-                        style={{ animationDelay: "80ms", minHeight: "1.75rem" }}
-                        aria-label={subtitle}
-                    >
-                        {displaySubtitle}
-                    </p>
+                    <div
+                        className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent mb-3 animate-fade-up"
+                        style={{ animationDelay: "1400ms" }}
+                    />
+                    <VisitorInfo info={visitorInfo} />
+                </>
+            ) : (
+                bio && (
                     <p
                         className="hero-bio animate-fade-up whitespace-pre-line"
                         style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
@@ -202,7 +210,7 @@ export function HeroHeader({
                     >
                         {displayBio}
                     </p>
-                </>
+                )
             )}
         </>
     );

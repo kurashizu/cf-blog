@@ -126,11 +126,7 @@ export default async function HomePage() {
                     <div className="flex-1 text-center md:text-left">
                         <HeroHeader
                             title="Hello, I'm kurashizu"
-                            subtitle={
-                                visitorInfo
-                                    ? undefined
-                                    : "Vibe Coding & AI Agent"
-                            }
+                            subtitle="Vibe Coding & AI Agent"
                             bio={
                                 visitorInfo
                                     ? undefined
