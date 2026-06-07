@@ -166,7 +166,7 @@ export default async function HomePage() {
                             View all on GitHub
                         </a>
                     </div>
-                    <div className="flex-1 space-y-3">
+                    <div className="space-y-3">
                         {repos.slice(0, 5).map((repo, i) => (
                             <a
                                 key={repo.name}
@@ -233,7 +233,7 @@ export default async function HomePage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <div className="flex-1 space-y-2">
+                        <div className="space-y-3">
                             {recentPosts.map((post, i) => (
                                 <FeaturedPost
                                     key={post.slug}
@@ -261,8 +261,8 @@ export default async function HomePage() {
                             View all on GitHub
                         </a>
                     </div>
-                    <div className="flex-1 space-y-3">
-                        {starredRepos.slice(0, 7).map((repo, i) => (
+                    <div className="space-y-3">
+                        {starredRepos.slice(0, 6).map((repo, i) => (
                             <a
                                 key={`${repo.owner.login}/${repo.name}`}
                                 href={repo.html_url}
