@@ -219,7 +219,7 @@ export function ChatWidget() {
                                     Ask me anything!
                                 </p>
                                 <p className="text-xs text-text-muted mt-1">
-                                    I know about kurashizu's projects and
+                                    I know about kurashizu&rsquo;s projects and
                                     interests
                                 </p>
                             </div>

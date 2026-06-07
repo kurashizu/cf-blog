@@ -111,7 +111,7 @@ export default async function HomePage() {
                             className="hero-title mb-3 animate-fade-up"
                             style={{ animationDelay: "0ms" }}
                         >
-                            Hello, I'm kurashizu
+                            Hello, I&rsquo;m kurashizu
                         </h1>
                         <p
                             className="hero-subtitle mb-4 animate-fade-up"

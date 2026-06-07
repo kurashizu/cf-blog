@@ -2,6 +2,7 @@
 
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { formatDate } from "@/lib/utils";
+import Link from "next/link";
 
 interface Post {
   slug: string;
@@ -20,9 +21,9 @@ interface BlogArticleProps {
 export function BlogArticle({ post }: BlogArticleProps) {
   return (
     <article className="article-content">
-      <a href="/blog" className="back-link">
+      <Link href="/blog" className="back-link">
         ← Back to blog
-      </a>
+      </Link>
 
       <header className="article-header">
         {post.coverImage && (
