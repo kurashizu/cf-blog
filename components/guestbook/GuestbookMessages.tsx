@@ -44,6 +44,15 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
     };
 
     useEffect(() => {
+        if (showAll) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => { document.body.style.overflow = ""; };
+    }, [showAll]);
+
+    useEffect(() => {
         const handlePosted = () => setRefreshKey((k) => k + 1);
         window.addEventListener('guestbook-posted', handlePosted);
         return () => window.removeEventListener('guestbook-posted', handlePosted);
@@ -116,7 +125,7 @@ export function GuestbookMessages({ initialRefreshKey }: GuestbookMessagesProps)
 
             {/* Modal */}
             {showAll && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-md"
                         onClick={handleClose}
