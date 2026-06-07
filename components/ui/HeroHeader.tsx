@@ -63,9 +63,6 @@ export function HeroHeader({
                 style={{ animationDelay: "0ms" }}
             >
                 {title}
-                <span className="terminal-cursor" aria-hidden="true">
-                    {"\u2588"}
-                </span>
             </h1>
             <p
                 className="hero-subtitle mb-4 animate-fade-up"
@@ -73,12 +70,6 @@ export function HeroHeader({
                 aria-label={subtitle}
             >
                 <span aria-hidden="true">{typed}</span>
-                <span
-                    className="terminal-cursor terminal-cursor--caret"
-                    aria-hidden="true"
-                >
-                    {"\u258C"}
-                </span>
             </p>
         </>
     );
