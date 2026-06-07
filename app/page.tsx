@@ -51,10 +51,14 @@ async function readContributions(): Promise<ContributionsCache | null> {
     }
 }
 
-function FeaturedPost({ post }: { post: Post }) {
+function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
     const excerpt = post.description?.slice(0, 20) || "";
     return (
-        <Link href={`/blog/${post.slug}`} className="block">
+        <Link
+            href={`/blog/${post.slug}`}
+            className="block animate-fade-up-sm"
+            style={{ animationDelay: `${delayMs}ms` }}
+        >
             <Card className="h-full group">
                 <div className="p-3 flex flex-col justify-between h-full">
                     <div>
@@ -103,13 +107,22 @@ export default async function HomePage() {
             <section className="mb-12">
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
                     <div className="flex-1 text-center md:text-left">
-                        <h1 className="hero-title mb-3">
+                        <h1
+                            className="hero-title mb-3 animate-fade-up"
+                            style={{ animationDelay: "0ms" }}
+                        >
                             Hello, I'm kurashizu
                         </h1>
-                        <p className="hero-subtitle mb-4">
+                        <p
+                            className="hero-subtitle mb-4 animate-fade-up"
+                            style={{ animationDelay: "80ms" }}
+                        >
                             Vibe Coding & AI Agent
                         </p>
-                        <p className="hero-bio">
+                        <p
+                            className="hero-bio animate-fade-up"
+                            style={{ animationDelay: "160ms" }}
+                        >
                             Building tools that amplify human creativity.
                             Exploring agentic workflows, LLM orchestration, and
                             the future of human-AI collaboration. Ships code
@@ -117,13 +130,19 @@ export default async function HomePage() {
                         </p>
                     </div>
                     {topLanguages.length > 0 && (
-                        <div className="shrink-0 mx-auto md:mx-0">
+                        <div
+                            className="shrink-0 mx-auto md:mx-0 animate-fade-zoom"
+                            style={{ animationDelay: "200ms" }}
+                        >
                             <DonutChart languages={topLanguages} />
                         </div>
                     )}
                 </div>
                 {contributions && (
-                    <div className="mt-8">
+                    <div
+                        className="mt-8 animate-fade-up"
+                        style={{ animationDelay: "280ms" }}
+                    >
                         <ContributionsRibbon data={contributions} />
                     </div>
                 )}
@@ -133,7 +152,10 @@ export default async function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* GitHub Projects - left top */}
                 <section className="flex flex-col">
-                    <div className="flex items-center justify-between mb-3">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "360ms" }}
+                    >
                         <h2 className="section-title mb-0">GitHub Projects</h2>
                         <a
                             href="https://github.com/kurashizu"
@@ -145,12 +167,14 @@ export default async function HomePage() {
                         </a>
                     </div>
                     <div className="flex-1 space-y-3">
-                        {repos.slice(0, 5).map((repo) => (
+                        {repos.slice(0, 5).map((repo, i) => (
                             <a
                                 key={repo.name}
                                 href={repo.html_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                className="block animate-fade-up-sm"
+                                style={{ animationDelay: `${420 + i * 50}ms` }}
                             >
                                 <MiniCard className="group">
                                     <div className="flex items-center justify-between gap-2">
@@ -181,7 +205,10 @@ export default async function HomePage() {
 
                 {/* Recent Posts - right top */}
                 <section className="flex flex-col">
-                    <div className="flex items-center justify-between mb-3">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "360ms" }}
+                    >
                         <h2 className="section-title mb-0">Recent Posts</h2>
                         <Link href="/blog" className="view-all-link">
                             All posts
@@ -189,7 +216,10 @@ export default async function HomePage() {
                     </div>
 
                     {recentPosts.length === 0 ? (
-                        <Card className="flex-1">
+                        <Card
+                            className="flex-1 animate-fade-up-sm"
+                            style={{ animationDelay: "420ms" }}
+                        >
                             <CardContent className="text-center p-4">
                                 <p className="text-text-muted mb-2 text-sm">
                                     No posts yet.
@@ -204,8 +234,12 @@ export default async function HomePage() {
                         </Card>
                     ) : (
                         <div className="flex-1 space-y-2">
-                            {recentPosts.map((post) => (
-                                <FeaturedPost key={post.slug} post={post} />
+                            {recentPosts.map((post, i) => (
+                                <FeaturedPost
+                                    key={post.slug}
+                                    post={post}
+                                    delayMs={420 + i * 50}
+                                />
                             ))}
                         </div>
                     )}
@@ -213,7 +247,10 @@ export default async function HomePage() {
 
                 {/* Fav Repos - left bottom */}
                 <section className="flex flex-col">
-                    <div className="flex items-center justify-between mb-3">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "520ms" }}
+                    >
                         <h2 className="section-title mb-0">Fav Repos</h2>
                         <a
                             href="https://github.com/kurashizu?tab=stars"
@@ -225,12 +262,14 @@ export default async function HomePage() {
                         </a>
                     </div>
                     <div className="flex-1 space-y-3">
-                        {starredRepos.slice(0, 7).map((repo) => (
+                        {starredRepos.slice(0, 7).map((repo, i) => (
                             <a
                                 key={`${repo.owner.login}/${repo.name}`}
                                 href={repo.html_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                className="block animate-fade-up-sm"
+                                style={{ animationDelay: `${580 + i * 50}ms` }}
                             >
                                 <MiniCard className="group">
                                     <div className="flex items-center justify-between gap-2">
@@ -269,10 +308,16 @@ export default async function HomePage() {
 
                 {/* Gadgets — right bottom */}
                 <section className="flex flex-col">
-                    <div className="flex items-center justify-between mb-3">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "520ms" }}
+                    >
                         <h2 className="section-title mb-0">Gadgets</h2>
                     </div>
-                    <Card className="flex-1 p-4 h-full">
+                    <Card
+                        className="flex-1 p-4 h-full animate-fade-zoom"
+                        style={{ animationDelay: "600ms" }}
+                    >
                         <GadgetsPanel llmModels={llmModels} />
                     </Card>
                 </section>
@@ -280,14 +325,22 @@ export default async function HomePage() {
 
             {/* Guestbook section */}
             <section className="mt-12">
-                <div className="flex items-center gap-4 mb-4">
+                <div
+                    className="flex items-center gap-4 mb-4 animate-fade-up"
+                    style={{ animationDelay: "700ms" }}
+                >
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                     <h2 className="section-title mb-0 shrink-0 px-2">
                         Guestbook
                     </h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                 </div>
-                <GuestbookMessages />
+                <div
+                    className="animate-fade-up"
+                    style={{ animationDelay: "780ms" }}
+                >
+                    <GuestbookMessages />
+                </div>
             </section>
         </div>
     );

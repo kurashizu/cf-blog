@@ -344,3 +344,51 @@ body {
 .markdown-content tr:nth-child(even) {
   background: rgba(0, 0, 0, 0.1);
 }
+
+/* ===========================================
+   HOMEPAGE ENTRANCE ANIMATIONS
+   Staggered fade+rise on initial page load.
+   Use with inline `style={{ animationDelay: '<n>ms' }}`
+   to cascade children into view.
+   =========================================== */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-up-sm {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-zoom {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s var(--transition-spring) both;
+}
+
+.animate-fade-up-sm {
+  animation: fade-up-sm 0.4s ease-out both;
+}
+
+.animate-fade-zoom {
+  animation: fade-zoom 0.45s var(--transition-spring) both;
+}
+
+/* Respect users who prefer less motion. Applies to every
+   entrance animation declared in this stylesheet. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-sm,
+  .animate-fade-zoom,
+  .animate-fadeIn,
+  .animate-scaleIn,
+  .animate-slideUp {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
