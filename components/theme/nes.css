@@ -1,0 +1,627 @@
+/* ===========================================
+   NES EMULATOR — Screen, controls, picker
+   =========================================== */
+
+/* --- Screen frame --- */
+.nes-screen {
+    position: relative;
+    width: 100%;
+    max-width: 512px;
+    aspect-ratio: 256 / 240;
+    background: #000;
+    border-radius: 12px;
+    border: 4px solid var(--bg-elevated);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 0 0 2px #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nes-screen-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.nes-screen-canvas canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* Subtle scanlines overlay */
+.nes-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.18) 0px,
+        rgba(0, 0, 0, 0.18) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
+.nes-screen-title {
+    position: absolute;
+    left: 8px;
+    bottom: 6px;
+    font-size: 10px;
+    font-family: monospace;
+    color: var(--accent);
+    background: rgba(0, 0, 0, 0.6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    pointer-events: none;
+    max-width: calc(100% - 16px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nes-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.78);
+    color: var(--text-muted);
+    font-size: 12px;
+    z-index: 2;
+}
+
+.nes-loading-error {
+    color: #ff6b6b;
+    padding: 12px;
+    text-align: center;
+}
+
+/* --- Toolbar (Reset / Pause / Reload / Save / Load) --- */
+.nes-toolbar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.nes-toast {
+    text-align: center;
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 6px;
+    min-height: 14px;
+    animation: fadeIn 200ms ease-out;
+}
+
+.nes-toolbar-btn {
+    padding: 4px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+        background 100ms,
+        color 100ms,
+        border-color 100ms;
+}
+
+.nes-toolbar-btn:hover:not(:disabled) {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.nes-toolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- On-screen controller --- */
+.nes-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 12px 8px;
+    width: 100%;
+    max-width: 360px;
+}
+
+.nes-dpad {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    display: grid;
+    grid-template-areas:
+        ".    up    ."
+        "left ctr  right"
+        ".    down  .";
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.nes-dpad-btn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    transition:
+        background 100ms,
+        color 100ms,
+        transform 80ms;
+    font-family: system-ui, sans-serif;
+}
+
+.nes-dpad-btn[data-area="up"] {
+    grid-area: up;
+}
+.nes-dpad-btn[data-area="down"] {
+    grid-area: down;
+}
+.nes-dpad-btn[data-area="left"] {
+    grid-area: left;
+}
+.nes-dpad-btn[data-area="right"] {
+    grid-area: right;
+}
+.nes-dpad-btn[data-area="center"] {
+    grid-area: ctr;
+    background: transparent;
+    border: 1px dashed var(--border);
+    cursor: default;
+    opacity: 0.5;
+}
+
+.nes-dpad-btn:active:not(:disabled),
+.nes-dpad-btn.is-pressed {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    transform: scale(0.94);
+}
+
+.nes-dpad-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.nes-ab {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.nes-ab-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    transition:
+        background 100ms,
+        color 100ms,
+        transform 80ms;
+    font-family: system-ui, sans-serif;
+}
+
+.nes-ab-btn.is-b {
+    transform: translateY(10px);
+}
+
+.nes-ab-btn:active:not(:disabled),
+.nes-ab-btn.is-pressed {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.nes-ab-btn:active:not(:disabled),
+.nes-ab-btn.is-pressed {
+    transform: scale(0.92);
+}
+
+.nes-ab-btn.is-b:active:not(:disabled),
+.nes-ab-btn.is-b.is-pressed {
+    transform: translateY(10px) scale(0.92);
+}
+
+.nes-ab-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.nes-meta {
+    display: flex;
+    gap: 16px;
+    align-self: center;
+}
+
+.nes-meta-btn {
+    padding: 4px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    transition:
+        background 100ms,
+        color 100ms;
+    font-family: system-ui, sans-serif;
+}
+
+.nes-meta-btn:active:not(:disabled),
+.nes-meta-btn.is-pressed {
+    background: var(--accent-subtle);
+    color: var(--accent);
+}
+
+.nes-meta-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- ROM picker --- */
+.nes-picker {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.nes-picker-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 0 0 8px;
+}
+
+.nes-rom-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.nes-rom-section + .nes-rom-section {
+    margin-top: 10px;
+}
+
+.nes-rom-section-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin: 0 0 6px;
+}
+
+.nes-rom-item {
+    padding: 8px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition:
+        background 100ms,
+        border-color 100ms;
+    text-align: left;
+    width: 100%;
+    color: inherit;
+    font: inherit;
+}
+
+.nes-rom-item:hover:not(:disabled) {
+    background: var(--bg-elevated);
+    border-color: var(--border-hover);
+}
+
+.nes-rom-item.is-active {
+    background: var(--accent-subtle);
+    border-color: var(--accent);
+}
+
+.nes-rom-item:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.nes-rom-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.nes-rom-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nes-rom-item.is-active .nes-rom-title {
+    color: var(--accent);
+}
+
+.nes-rom-desc {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nes-rom-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: monospace;
+}
+
+.nes-rom-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    background: var(--bg-primary);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    line-height: 1.5;
+}
+
+.nes-rom-empty code {
+    background: var(--bg-elevated);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--accent);
+}
+
+.nes-upload {
+    margin-top: 8px;
+    padding: 10px;
+    background: var(--bg-primary);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+        background 100ms,
+        border-color 100ms,
+        color 100ms;
+    display: block;
+    width: 100%;
+}
+
+.nes-upload:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
+.nes-upload input {
+    display: none;
+}
+
+/* --- Status grid (right column) --- */
+.nes-status-grid {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 4px 12px;
+    font-size: 11px;
+    align-items: center;
+}
+
+.nes-status-label {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.nes-status-value {
+    color: var(--text-primary);
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --- Saves panel (5 slots) --- */
+.nes-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nes-slot-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 11px;
+    min-height: 28px;
+}
+
+.nes-slot-row.is-filled {
+    border-color: var(--border-hover);
+}
+
+.nes-slot-num {
+    color: var(--text-muted);
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 600;
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.nes-slot-status {
+    color: var(--text-secondary);
+    font-size: 10px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.nes-slot-row:not(.is-filled) .nes-slot-status {
+    color: var(--text-muted);
+    font-style: italic;
+    opacity: 0.6;
+}
+
+.nes-slot-btn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0;
+    transition:
+        background 100ms,
+        opacity 100ms,
+        border-color 100ms;
+    flex-shrink: 0;
+}
+
+.nes-slot-btn:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    border-color: var(--border-hover);
+}
+
+.nes-slot-btn:active:not(:disabled) {
+    transform: scale(0.92);
+}
+
+.nes-slot-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* --- Controls help panel (sidebar) --- */
+.nes-controls-help {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nes-controls-help-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.nes-controls-help-action {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.nes-controls-help-keys {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.nes-controls-help-or {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin: 0 2px;
+    font-style: italic;
+}
+
+.nes-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-hover);
+    border-bottom: 2px solid var(--border-hover);
+    border-radius: 3px;
+    color: var(--text-primary);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.nes-kbd.nes-kbd-wide {
+    min-width: 0;
+    padding: 0 8px;
+}

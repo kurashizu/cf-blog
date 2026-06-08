@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -16,7 +17,8 @@ interface Gadget {
     slogan: string;
     isPlaceholder?: boolean;
     imageDir?: string;
-    panel?: "agent" | "llm-board";
+    panel?: "agent" | "llm-board" | "nes";
+    iconKind?: "image" | "controller";
 }
 
 const themeMap: Record<string, string> = {
@@ -41,10 +43,11 @@ const gadgets: Gadget[] = [
         panel: "llm-board",
     },
     {
-        id: "tool2",
-        title: "Coming Soon",
-        slogan: "Stay tuned",
-        isPlaceholder: true,
+        id: "nes",
+        title: "NES Emulator",
+        slogan: "8-bit nostalgia in browser",
+        panel: "nes",
+        iconKind: "controller",
     },
     {
         id: "tool3",
@@ -53,6 +56,25 @@ const gadgets: Gadget[] = [
         isPlaceholder: true,
     },
 ];
+
+// jsnes + NESPanel live in a separate chunk. We only mount the component
+// when the user actually opens the NES gadget (gated by `showNes` below),
+// so the jsnes bundle is never fetched on the home page's initial load.
+const NESPanel = dynamic(
+    () => import("@/components/nes").then((m) => m.NESPanel),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-sm animate-fadeIn">
+                <div className="bg-bg-card/95 border border-border rounded-2xl shadow-2xl px-8 py-6">
+                    <p className="text-text-primary text-sm font-medium">
+                        Loading NES emulator…
+                    </p>
+                </div>
+            </div>
+        ),
+    },
+);
 
 function PlaceholderSVG({ index }: { index: number }) {
     if (index === 0) {
@@ -165,12 +187,70 @@ function PlaceholderSVG({ index }: { index: number }) {
     );
 }
 
+function ControllerIcon({ hovered }: { hovered: boolean }) {
+    return (
+        <svg
+            viewBox="0 0 100 100"
+            className="w-full h-full"
+            style={{
+                transform: hovered ? "scale(1.05)" : "scale(1)",
+                transition: "transform 200ms ease-out",
+                filter: "drop-shadow(0 0 10px var(--accent))",
+            }}
+        >
+            {/* Cable */}
+            <path
+                d="M 50 38 Q 50 28 62 20"
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth="1.5"
+                opacity="0.5"
+            />
+            {/* Body */}
+            <rect
+                x="15"
+                y="38"
+                width="70"
+                height="30"
+                rx="13"
+                fill="var(--accent-subtle)"
+                stroke="var(--accent)"
+                strokeWidth="2"
+            />
+            {/* D-pad (cross) */}
+            <rect
+                x="24"
+                y="49.5"
+                width="16"
+                height="5"
+                rx="1"
+                fill="var(--accent)"
+                opacity="0.65"
+            />
+            <rect
+                x="29.5"
+                y="44"
+                width="5"
+                height="16"
+                rx="1"
+                fill="var(--accent)"
+                opacity="0.65"
+            />
+            {/* A (top-right) */}
+            <circle cx="66" cy="49" r="4" fill="var(--accent)" opacity="0.75" />
+            {/* B (bottom-right) */}
+            <circle cx="76" cy="58" r="4" fill="var(--accent)" opacity="0.75" />
+        </svg>
+    );
+}
+
 export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
     const { theme } = useTheme();
     const prefix = themeMap[theme] ?? "r";
     const [hoveredId, setHoveredId] = useState<string | null>("agent");
     const [showAgent, setShowAgent] = useState(false);
     const [showLlmBoard, setShowLlmBoard] = useState(false);
+    const [showNes, setShowNes] = useState(false);
 
     const currentGadget = gadgets.find((g) => g.id === hoveredId) ?? gadgets[0];
 
@@ -178,6 +258,8 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
         if (gadget.isPlaceholder) return;
         if (gadget.panel === "llm-board") {
             setShowLlmBoard(true);
+        } else if (gadget.panel === "nes") {
+            setShowNes(true);
         } else {
             setShowAgent(true);
         }
@@ -196,78 +278,96 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
                 onExpand={() => setShowLlmBoard(true)}
                 onCollapse={() => setShowLlmBoard(false)}
             />
+            {/* NESPanel is mounted only when the user opens the NES tile.
+                Because next/dynamic defers the import until mount, jsnes
+                (and the rest of components/nes/) is never fetched on the
+                home page's initial load. */}
+            {showNes && (
+                <NESPanel
+                    expanded={showNes}
+                    onExpand={() => setShowNes(true)}
+                    onCollapse={() => setShowNes(false)}
+                />
+            )}
             {/* 4 gadgets grid */}
             <div className="flex flex-col my-auto w-full">
-
-            <div className="grid grid-cols-2 gap-3">
-                {gadgets.map((gadget, idx) => (
-                    <button
-                        key={gadget.id}
-                        className={cn(
-                            "relative aspect-[264/235] flex items-center justify-center rounded-xl overflow-hidden transition-all duration-200",
-                            hoveredId === gadget.id
-                                ? "ring-1 ring-accent/40"
-                                : "hover:ring-1 hover:ring-border",
-                        )}
-                        onMouseEnter={() => setHoveredId(gadget.id)}
-                        onMouseLeave={() => setHoveredId(null)}
-                        onClick={() => handleClick(gadget)}
-                    >
-                        {gadget.isPlaceholder ? (
-                            <PlaceholderSVG
-                                index={idx - 1 >= 0 ? idx - 1 : 0}
-                            />
-                        ) : (
-                            <Image
-                                src={`/images/${gadget.imageDir ?? "kuragent"}/${prefix}_0.png`}
-                                alt={gadget.title}
-                                fill
-                                className="object-cover scale-[1.265] origin-top rounded-xl"
-                                unoptimized={gadget.imageDir === "llm-board"}
-                                style={{
-                                    transform:
-                                        hoveredId === gadget.id
-                                            ? "scale(1.05)"
-                                            : "scale(1)",
-                                    transition: "transform 200ms ease-out",
-                                    filter: "drop-shadow(0 0 10px var(--accent))",
-                                }}
-                            />
-                        )}
-                    </button>
-                ))}
-            </div>
-
-            {/* Info panel — bottom */}
-            <div className="mt-4 flex flex-col items-center justify-center">
-                <div
-                    key={currentGadget.id}
-                    className="w-full flex flex-col items-center px-4"
-                    style={{ animation: "fadeInUp 200ms ease-out forwards" }}
-                >
-                    <p
-                        className="text-2xl font-bold text-text-primary w-full text-center truncate"
+                <div className="grid grid-cols-2 gap-3">
+                    {gadgets.map((gadget, idx) => (
+                        <button
+                            key={gadget.id}
+                            className={cn(
+                                "relative aspect-[264/235] flex items-center justify-center rounded-xl overflow-hidden transition-all duration-200",
+                                hoveredId === gadget.id
+                                    ? "ring-1 ring-accent/40"
+                                    : "hover:ring-1 hover:ring-border",
+                            )}
+                            onMouseEnter={() => setHoveredId(gadget.id)}
+                            onMouseLeave={() => setHoveredId(null)}
+                            onClick={() => handleClick(gadget)}
+                        >
+                            {gadget.isPlaceholder ? (
+                                <PlaceholderSVG
+                                    index={idx - 1 >= 0 ? idx - 1 : 0}
+                                />
+                            ) : gadget.iconKind === "controller" ? (
+                                <ControllerIcon
+                                    hovered={hoveredId === gadget.id}
+                                />
+                            ) : (
+                                <Image
+                                    src={`/images/${gadget.imageDir ?? "kuragent"}/${prefix}_0.png`}
+                                    alt={gadget.title}
+                                    fill
+                                    className="object-cover scale-[1.265] origin-top rounded-xl"
+                                    unoptimized={
+                                        gadget.imageDir === "llm-board"
+                                    }
+                                    style={{
+                                        transform:
+                                            hoveredId === gadget.id
+                                                ? "scale(1.05)"
+                                                : "scale(1)",
+                                        transition: "transform 200ms ease-out",
+                                        filter: "drop-shadow(0 0 10px var(--accent))",
+                                    }}
+                                />
+                            )}
+                        </button>
+                    ))}
+                </div>
+                {/* Info panel — bottom */}
+                <div className="mt-4 flex flex-col items-center justify-center">
+                    <div
+                        key={currentGadget.id}
+                        className="w-full flex flex-col items-center px-4"
                         style={{
-                            fontFamily: "Pacifico, cursive",
-                            background:
-                                "linear-gradient(90deg, #ff0000, #00ff00, #0000ff, #ff0000)",
-                            backgroundSize: "300% 100%",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            backgroundClip: "text",
-                            animation: "rgbFlow 6s linear infinite",
+                            animation: "fadeInUp 200ms ease-out forwards",
                         }}
                     >
-                        {currentGadget.title}
-                    </p>
-                    <p
-                        className="text-sm text-text-muted mt-1 w-full text-center truncate"
-                        style={{ fontFamily: "Pacifico, cursive" }}
-                    >
-                        {currentGadget.slogan}
-                    </p>
-                </div>
-            </div>            </div>
+                        <p
+                            className="text-2xl font-bold text-text-primary w-full text-center truncate"
+                            style={{
+                                fontFamily: "Pacifico, cursive",
+                                background:
+                                    "linear-gradient(90deg, #ff0000, #00ff00, #0000ff, #ff0000)",
+                                backgroundSize: "300% 100%",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                backgroundClip: "text",
+                                animation: "rgbFlow 6s linear infinite",
+                            }}
+                        >
+                            {currentGadget.title}
+                        </p>
+                        <p
+                            className="text-sm text-text-muted mt-1 w-full text-center truncate"
+                            style={{ fontFamily: "Pacifico, cursive" }}
+                        >
+                            {currentGadget.slogan}
+                        </p>
+                    </div>
+                </div>{" "}
+            </div>
 
             <style>{`
                 @keyframes rgbFlow {

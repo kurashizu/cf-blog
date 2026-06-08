@@ -3,6 +3,9 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
+        "generate-roms": "node scripts/generate-rom-manifest.mjs",
+        "prebuild": "npm run generate-roms",
+        "predev": "npm run generate-roms",
         "dev": "next dev",
         "build": "next build",
         "build:cf": "./node_modules/.bin/opennextjs-cloudflare build",
@@ -17,6 +20,7 @@
         "@types/mermaid": "^9.1.0",
         "clsx": "^2.1.1",
         "gray-matter": "^4.0.3",
+        "jsnes": "^2.1.0",
         "marked": "^12.0.0",
         "mermaid": "^11.14.0",
         "next": "15.3.3",

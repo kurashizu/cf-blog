@@ -9,6 +9,7 @@ import "@/components/theme/admin.css";
 import "@/components/theme/form.css";
 import "@/components/theme/editor.css";
 import "@/components/theme/activity.css";
+import "@/components/theme/nes.css";
 import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Header } from "@/components/layout/Header";
