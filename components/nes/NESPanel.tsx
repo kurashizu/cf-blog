@@ -94,9 +94,6 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
     // time.
     const handleSaveSlotRef = useRef<((n: number) => void) | null>(null);
     const handleLoadSlotRef = useRef<((n: number) => void) | null>(null);
-    // Most-recently-used slot. The `,` / `.` shortcuts target this slot
-    // so quick-save always lands in the slot the user just saved to.
-    const lastUsedSlotRef = useRef(1);
 
     // Spin up the Browser when the modal opens, tear it down on close.
     // JSNES attaches a document-level keyboard listener in its constructor
@@ -143,21 +140,12 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                 return;
             }
 
-            // Quick save / quick load shortcuts (fire only on keydown,
-            // not on keyup or auto-repeat). Routed through refs so we
-            // always call the latest closure even though this listener
-            // is registered only once per `expanded` flip.
+            // Number keys 1–5 / F1–F5 → save / load that slot.
+            // Routed through refs so we always call the latest closure
+            // even though this listener is registered only once per
+            // `expanded` flip. Fire only on keydown, not on keyup or
+            // auto-repeat.
             if (pressed && !e.repeat) {
-                if (e.code === "Comma") {
-                    e.preventDefault();
-                    handleSaveSlotRef.current?.(lastUsedSlotRef.current);
-                    return;
-                }
-                if (e.code === "Period") {
-                    e.preventDefault();
-                    handleLoadSlotRef.current?.(lastUsedSlotRef.current);
-                    return;
-                }
                 // Number keys 1–5 → save to that slot.
                 const digitMatch = /^Digit([1-5])$/.exec(e.code);
                 if (digitMatch) {
@@ -379,7 +367,6 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                     next[slotNum - 1] = { ts: payload.ts };
                     return next;
                 });
-                lastUsedSlotRef.current = slotNum;
                 showToast(`✓ Saved to slot ${slotNum}`);
             } catch {
                 showToast("✗ Save failed");
@@ -404,7 +391,6 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                 if (wasRunning) browserRef.current.stop();
                 browserRef.current.nes.fromJSON(parsed.state);
                 if (wasRunning) browserRef.current.start();
-                lastUsedSlotRef.current = slotNum;
                 showToast(`✓ Loaded from slot ${slotNum}`);
             } catch {
                 showToast("✗ Load failed");
@@ -622,15 +608,6 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                             <kbd className="nes-kbd">F3</kbd>
                                             <kbd className="nes-kbd">F4</kbd>
                                             <kbd className="nes-kbd">F5</kbd>
-                                        </span>
-                                    </div>
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            Quick save / load
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">,</kbd>
-                                            <kbd className="nes-kbd">.</kbd>
                                         </span>
                                     </div>
                                 </div>

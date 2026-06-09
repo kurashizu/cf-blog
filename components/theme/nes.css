@@ -267,7 +267,7 @@
 .nes-meta {
     display: flex;
     gap: 16px;
-    align-self: center;
+    margin-top: 12px;
 }
 
 .nes-meta-btn {
