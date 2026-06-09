@@ -67,11 +67,18 @@ function main() {
         const metaPath = path.join(dirPath, "metadata.json");
         let title = dir;
         let description = undefined;
+        let author = undefined;
         if (fs.existsSync(metaPath)) {
             try {
                 const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
                 if (meta.title) title = meta.title;
                 if (meta.description) description = meta.description;
+                if (meta.author && meta.author.name && meta.author.url) {
+                    author = {
+                        name: meta.author.name,
+                        url: meta.author.url,
+                    };
+                }
             } catch (err) {
                 console.log(
                     `  ⚠  ${dir}/metadata.json — parse failed: ${err.message}`,
@@ -79,7 +86,14 @@ function main() {
             }
         }
 
-        roms.push({ id: dir, title, description, url, sizeBytes: stat.size });
+        roms.push({
+            id: dir,
+            title,
+            description,
+            author,
+            url,
+            sizeBytes: stat.size,
+        });
         console.log(`  ✓  ${dir}/ — ${stat.size} bytes (${title})`);
     }
 
@@ -107,10 +121,13 @@ function writeGeneratedFile(roms) {
         const desc = rom.description
             ? `\n        description: ${JSON.stringify(rom.description)},`
             : "";
+        const author = rom.author
+            ? `\n        author: { name: ${JSON.stringify(rom.author.name)}, url: ${JSON.stringify(rom.author.url)} },`
+            : "";
         lines.push(
             `    {\n` +
                 `        id: ${JSON.stringify(rom.id)},\n` +
-                `        title: ${JSON.stringify(rom.title)},${desc}\n` +
+                `        title: ${JSON.stringify(rom.title)},${desc}${author}\n` +
                 `        url: ${JSON.stringify(rom.url)},\n` +
                 `        sizeBytes: ${rom.sizeBytes},\n` +
                 `    },`,

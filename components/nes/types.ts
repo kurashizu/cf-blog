@@ -14,6 +14,8 @@ export interface Rom {
     url: string;
     /** File size in bytes, if known. Used for the meta line in the picker. */
     sizeBytes?: number;
+    /** Optional attribution shown in the picker as a link. */
+    author?: { name: string; url: string };
 }
 
 /** Status of a ROM load attempt. */

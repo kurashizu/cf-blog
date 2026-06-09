@@ -250,44 +250,50 @@ export function NESControls({
                 <div className="nes-dpad-btn" data-area="center" aria-hidden />
             </div>
 
-            <div className="nes-ab">
-                <CircleButton
-                    label="B"
-                    buttonKey={Controller.BUTTON_B}
-                    variant="b"
-                    disabled={disabled}
-                    isPressed={pressedKeys?.has(Controller.BUTTON_B) ?? false}
-                    onPressChange={send}
-                />
-                <CircleButton
-                    label="A"
-                    buttonKey={Controller.BUTTON_A}
-                    variant="a"
-                    disabled={disabled}
-                    isPressed={pressedKeys?.has(Controller.BUTTON_A) ?? false}
-                    onPressChange={send}
-                />
-            </div>
+            <div className="nes-right">
+                <div className="nes-ab">
+                    <CircleButton
+                        label="B"
+                        buttonKey={Controller.BUTTON_B}
+                        variant="b"
+                        disabled={disabled}
+                        isPressed={
+                            pressedKeys?.has(Controller.BUTTON_B) ?? false
+                        }
+                        onPressChange={send}
+                    />
+                    <CircleButton
+                        label="A"
+                        buttonKey={Controller.BUTTON_A}
+                        variant="a"
+                        disabled={disabled}
+                        isPressed={
+                            pressedKeys?.has(Controller.BUTTON_A) ?? false
+                        }
+                        onPressChange={send}
+                    />
+                </div>
 
-            <div className="nes-meta">
-                <MetaButton
-                    label="Select"
-                    buttonKey={Controller.BUTTON_SELECT}
-                    disabled={disabled}
-                    isPressed={
-                        pressedKeys?.has(Controller.BUTTON_SELECT) ?? false
-                    }
-                    onPressChange={send}
-                />
-                <MetaButton
-                    label="Start"
-                    buttonKey={Controller.BUTTON_START}
-                    disabled={disabled}
-                    isPressed={
-                        pressedKeys?.has(Controller.BUTTON_START) ?? false
-                    }
-                    onPressChange={send}
-                />
+                <div className="nes-meta">
+                    <MetaButton
+                        label="Select"
+                        buttonKey={Controller.BUTTON_SELECT}
+                        disabled={disabled}
+                        isPressed={
+                            pressedKeys?.has(Controller.BUTTON_SELECT) ?? false
+                        }
+                        onPressChange={send}
+                    />
+                    <MetaButton
+                        label="Start"
+                        buttonKey={Controller.BUTTON_START}
+                        disabled={disabled}
+                        isPressed={
+                            pressedKeys?.has(Controller.BUTTON_START) ?? false
+                        }
+                        onPressChange={send}
+                    />
+                </div>
             </div>
         </div>
     );

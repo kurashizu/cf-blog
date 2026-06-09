@@ -17,20 +17,7 @@ export { LOCAL_ROMS };
  * License: only add ROMs you own or that are freely licensed
  * (public domain, homebrew, etc.). Don't ship commercial ROMs.
  */
-export const REMOTE_ROMS: Rom[] = [
-    {
-        id: "nestest",
-        title: "Nestest",
-        description: "Public-domain CPU test ROM (raw.githubusercontent.com).",
-        url: "https://raw.githubusercontent.com/christopherpow/nes-test-roms/master/other/nestest.nes",
-    },
-    {
-        id: "instr-basics",
-        title: "instr_test-v5 — basics",
-        description: "Blargg's instruction test, official variant.",
-        url: "https://raw.githubusercontent.com/christopherpow/nes-test-roms/master/instr_test-v5/rom_singles/01-basics.nes",
-    },
-];
+export const REMOTE_ROMS: Rom[] = [];
 
 /** Combined list shown in the ROM picker. */
 export const ROMS: Rom[] = [...LOCAL_ROMS, ...REMOTE_ROMS];

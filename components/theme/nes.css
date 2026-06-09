@@ -400,6 +400,26 @@
     text-overflow: ellipsis;
 }
 
+.nes-rom-author {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nes-rom-author a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--text-muted);
+}
+
+.nes-rom-author a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
 .nes-rom-meta {
     font-size: 10px;
     color: var(--text-muted);
@@ -527,6 +547,14 @@
     color: var(--text-muted);
     font-style: italic;
     opacity: 0.6;
+}
+
+.nes-slot-keys {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    margin-left: 2px;
 }
 
 .nes-slot-btn {

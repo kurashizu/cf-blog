@@ -7,6 +7,7 @@ import { NESBrowser } from "./NESBrowser";
 import { NESControls } from "./NESControls";
 import { NESRomPicker } from "./NESRomPicker";
 import type { Rom, LoadStatus } from "./types";
+import { findRom } from "./roms";
 
 interface NESPanelProps {
     /** Whether the modal is open. Fully controlled — see GadgetsPanel. */
@@ -36,12 +37,19 @@ const KEY_MAP: Record<string, ButtonKey> = {
     KeyS: Controller.BUTTON_DOWN,
     KeyD: Controller.BUTTON_RIGHT,
     KeyK: Controller.BUTTON_A,
-    KeyL: Controller.BUTTON_B,
+    KeyJ: Controller.BUTTON_B,
     KeyI: Controller.BUTTON_START,
-    KeyO: Controller.BUTTON_SELECT,
+    KeyU: Controller.BUTTON_SELECT,
 };
 
 const SLOT_COUNT = 5;
+
+/**
+ * ROM that gets loaded automatically the first time the panel opens each
+ * session, so visitors see something running without having to dig through
+ * the picker. Override or set to `null` to disable.
+ */
+const DEFAULT_ROM_ID: string | null = "nova";
 
 type SlotEntry = { ts: number } | null;
 
@@ -139,7 +147,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
             // not on keyup or auto-repeat). Routed through refs so we
             // always call the latest closure even though this listener
             // is registered only once per `expanded` flip.
-            if (pressed) {
+            if (pressed && !e.repeat) {
                 if (e.code === "Comma") {
                     e.preventDefault();
                     handleSaveSlotRef.current?.(lastUsedSlotRef.current);
@@ -148,6 +156,21 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                 if (e.code === "Period") {
                     e.preventDefault();
                     handleLoadSlotRef.current?.(lastUsedSlotRef.current);
+                    return;
+                }
+                // Number keys 1–5 → save to that slot.
+                const digitMatch = /^Digit([1-5])$/.exec(e.code);
+                if (digitMatch) {
+                    e.preventDefault();
+                    handleSaveSlotRef.current?.(Number(digitMatch[1]));
+                    return;
+                }
+                // F1–F5 → load that slot. preventDefault to suppress the
+                // browser's F1 help / F12 devtools behavior.
+                const fMatch = /^F([1-5])$/.exec(e.code);
+                if (fMatch) {
+                    e.preventDefault();
+                    handleLoadSlotRef.current?.(Number(fMatch[1]));
                     return;
                 }
             }
@@ -195,8 +218,11 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
             // Drop any keys the user was holding when the modal closed,
             // so the on-screen buttons don't appear stuck on reopen.
             setPressedButtons(new Set());
+            // Forget the previously loaded ROM so the auto-load effect
+            // below fires again on next open.
+            setCurrentRom(null);
         }
-    }, [expanded, status.kind]);
+    }, [expanded]);
 
     // ESC to close.
     useEffect(() => {
@@ -274,6 +300,18 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
             setStatus({ kind: "ready" });
         });
     }, []);
+
+    // Auto-load the default ROM the first time the panel opens each
+    // session. Declared after `loadRom` (and after the Browser-creating
+    // effect above) so `browserRef.current` is already populated and
+    // `loadRom` is in scope by the time this effect runs.
+    useEffect(() => {
+        if (!expanded || !DEFAULT_ROM_ID) return;
+        if (!browserRef.current) return;
+        if (currentRom) return; // user already picked one this session
+        const rom = findRom(DEFAULT_ROM_ID);
+        if (rom) loadRom(rom);
+    }, [expanded, currentRom, loadRom]);
 
     const handleSelectFile = useCallback((filename: string, data: string) => {
         if (!browserRef.current) return;
@@ -543,7 +581,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                             B
                                         </span>
                                         <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">L</kbd>
+                                            <kbd className="nes-kbd">J</kbd>
                                         </span>
                                     </div>
                                     <div className="nes-controls-help-row">
@@ -559,7 +597,40 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                             Select
                                         </span>
                                         <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">O</kbd>
+                                            <kbd className="nes-kbd">U</kbd>
+                                        </span>
+                                    </div>
+                                    <div className="nes-controls-help-row">
+                                        <span className="nes-controls-help-action">
+                                            Save slot
+                                        </span>
+                                        <span className="nes-controls-help-keys">
+                                            <kbd className="nes-kbd">1</kbd>
+                                            <kbd className="nes-kbd">2</kbd>
+                                            <kbd className="nes-kbd">3</kbd>
+                                            <kbd className="nes-kbd">4</kbd>
+                                            <kbd className="nes-kbd">5</kbd>
+                                        </span>
+                                    </div>
+                                    <div className="nes-controls-help-row">
+                                        <span className="nes-controls-help-action">
+                                            Load slot
+                                        </span>
+                                        <span className="nes-controls-help-keys">
+                                            <kbd className="nes-kbd">F1</kbd>
+                                            <kbd className="nes-kbd">F2</kbd>
+                                            <kbd className="nes-kbd">F3</kbd>
+                                            <kbd className="nes-kbd">F4</kbd>
+                                            <kbd className="nes-kbd">F5</kbd>
+                                        </span>
+                                    </div>
+                                    <div className="nes-controls-help-row">
+                                        <span className="nes-controls-help-action">
+                                            Quick save / load
+                                        </span>
+                                        <span className="nes-controls-help-keys">
+                                            <kbd className="nes-kbd">,</kbd>
+                                            <kbd className="nes-kbd">.</kbd>
                                         </span>
                                     </div>
                                 </div>
@@ -600,7 +671,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                                         handleSaveSlot(slotNum)
                                                     }
                                                     disabled={!isReady}
-                                                    title={`Save to slot ${slotNum}`}
+                                                    title={`Save to slot ${slotNum} (press ${slotNum})`}
                                                 >
                                                     💾
                                                 </button>
@@ -613,12 +684,20 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                                     disabled={!isReady || !slot}
                                                     title={
                                                         slot
-                                                            ? `Load slot ${slotNum}`
+                                                            ? `Load slot ${slotNum} (press F${slotNum})`
                                                             : `Slot ${slotNum} is empty`
                                                     }
                                                 >
                                                     📂
                                                 </button>
+                                                <span className="nes-slot-keys">
+                                                    <kbd className="nes-kbd">
+                                                        {slotNum}
+                                                    </kbd>
+                                                    <kbd className="nes-kbd">
+                                                        F{slotNum}
+                                                    </kbd>
+                                                </span>
                                             </div>
                                         );
                                     })}
@@ -627,6 +706,20 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                         </div>
                     </div>
                 </div>
+
+                <footer className="px-5 py-2.5 border-t border-border shrink-0 flex items-center justify-center">
+                    <p className="text-[11px] text-text-muted">
+                        powered by{" "}
+                        <a
+                            href="https://github.com/bfirsh/jsnes"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-text-secondary hover:text-accent transition-colors underline-offset-2 hover:underline"
+                        >
+                            jsnes
+                        </a>
+                    </p>
+                </footer>
             </div>
         </div>,
         document.body,

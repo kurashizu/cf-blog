@@ -132,6 +132,19 @@ function RomSection({
                                     {rom.description}
                                 </div>
                             )}
+                            {rom.author && (
+                                <div className="nes-rom-author">
+                                    by{" "}
+                                    <a
+                                        href={rom.author.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {rom.author.name}
+                                    </a>
+                                </div>
+                            )}
                         </div>
                         {rom.sizeBytes !== undefined ? (
                             <span className="nes-rom-meta">

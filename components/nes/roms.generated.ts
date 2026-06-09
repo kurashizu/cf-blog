@@ -10,4 +10,12 @@
 import type { Rom } from "./types";
 
 export const LOCAL_ROMS: Rom[] = [
+    {
+        id: "nova",
+        title: "Nova the Squirrel",
+        description: "A cute homebrew platformer starring a blue squirrel.",
+        author: { name: "NovaSquirrel", url: "https://github.com/NovaSquirrel/NovaTheSquirrel" },
+        url: "/roms/nova/nova.nes",
+        sizeBytes: 262160,
+    },
 ];
