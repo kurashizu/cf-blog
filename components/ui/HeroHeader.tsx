@@ -103,14 +103,7 @@ interface UseTypewriterOptions {
     charDelayMs: number;
 }
 
-/**
- * Plain typewriter: types `target` char by char after a delay.
- *
- * @deprecated The character-by-character setState approach can trigger
- * layout shifts in narrow viewports (a long line wraps partway through
- * typing). HeroHeader no longer calls this — it uses CSS-driven reveal
- * animations instead so the DOM is stable from SSR onward.
- */
+/** Plain typewriter: types `target` char by char after a delay. */
 function useTypewriter(
     target: string,
     { startDelayMs, charDelayMs }: UseTypewriterOptions,
@@ -218,6 +211,16 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
         startDelayMs: 0,
     });
 
+    const displaySubtitle = useTypewriter(subtitle ?? "", {
+        startDelayMs: 700,
+        charDelayMs: 30,
+    });
+
+    const displayBio = useTypewriter(bio ?? "", {
+        startDelayMs: 1400,
+        charDelayMs: 12,
+    });
+
     return (
         <>
             <h1
@@ -228,72 +231,38 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
                 {displayTitle}
             </h1>
             {subtitle && (
-                // Render the full subtitle text from SSR (no typewriter
-                // or character-by-character reveal). The element keeps
-                // a fixed min-height so the layout is rock-stable from
-                // the first paint onward — nothing below it ever shifts.
-                // The animate-fade-up entrance uses only opacity +
-                // transform, neither of which affects layout.
                 <p
                     className="hero-subtitle mb-3 animate-fade-up"
                     style={{ animationDelay: "80ms", minHeight: "1.5rem" }}
                     aria-label={subtitle}
                 >
-                    {subtitle}
+                    {displaySubtitle}
                 </p>
             )}
             {visitorInfo ? (
-                <>
-                    <div
-                        className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent mb-3 animate-fade-up"
-                        style={{ animationDelay: "1400ms" }}
-                    />
-                    <VisitorInfo info={visitorInfo} />
-                </>
+                <VisitorInfo info={visitorInfo} />
             ) : bio ? (
                 <p
                     className="hero-bio animate-fade-up whitespace-pre-line"
                     style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
                     aria-label={bio}
                 >
-                    {bio}
+                    {displayBio}
                 </p>
             ) : (
-                // Placeholder mirrors VisitorInfo's DOM exactly so the
-                // reserved height matches the real block on every screen
-                // width — a fixed min-height would shift content on mobile
-                // where a long IPv6 wraps to a second line. `invisible`
-                // keeps the layout space but hides the text; aria-hidden
-                // skips it for screen readers.
+                // Fixed-height placeholder. The exact real block may
+                // render 3 to 4 lines depending on how the long IPv6
+                // and the ISP/location string wrap on the current
+                // viewport, so 5.5rem gives enough headroom for every
+                // case while keeping the element a single, opaque
+                // reservation. The visitor info fade-in replaces this
+                // div; since both occupy the same reserved space, the
+                // sections below the hero don't reflow.
                 <div
-                    className="hero-bio space-y-1 invisible"
+                    className="hero-bio"
+                    style={{ minHeight: "5.5rem" }}
                     aria-hidden="true"
-                >
-                    <div>&nbsp;</div>
-                    <div>&nbsp;</div>
-                    <div className="flex items-center gap-2">
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="inline-block shrink-0"
-                            aria-hidden="true"
-                        >
-                            <line x1="4" y1="9" x2="20" y2="9"></line>
-                            <line x1="4" y1="15" x2="20" y2="15"></line>
-                            <line x1="10" y1="3" x2="8" y2="21"></line>
-                            <line x1="16" y1="3" x2="14" y2="21"></line>
-                        </svg>
-                        <span className="font-mono">
-                            0000:0000:0000:0000:0000:0000:0000:0000
-                        </span>
-                    </div>
-                </div>
+                />
             )}
         </>
     );
