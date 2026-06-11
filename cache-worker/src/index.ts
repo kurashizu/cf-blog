@@ -420,9 +420,16 @@ async function refreshCache(env: Env): Promise<void> {
                 env.ARTIFICIAL_ANALYSIS_API_KEY,
             );
             if (models.length > 0) {
+                // Wrap with fetchedAt so the client can show "last update: 5 min ago"
+                // without an extra R2 round-trip. Old bare-array caches are still
+                // readable (see /api/llm-leaderboard) until the next refresh.
+                const payload = {
+                    fetchedAt: new Date().toISOString(),
+                    models,
+                };
                 await env.BUCKET.put(
                     "cache/llm-leaderboard.json",
-                    JSON.stringify(models),
+                    JSON.stringify(payload),
                 );
                 results.push(`llm-leaderboard: OK (${models.length} models)`);
             } else {

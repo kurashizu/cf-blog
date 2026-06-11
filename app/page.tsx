@@ -9,7 +9,6 @@ import { r2Paths } from "@/lib/r2-paths";
 import { r2Get } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/ui/GadgetsPanel";
-import { type LLMModel } from "@/components/llm/LLMLeaderboardPanel";
 import { type ContributionsCache } from "@/lib/contributions";
 import { type Language, getTopLanguages } from "@/lib/languages";
 import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
@@ -88,21 +87,14 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
 }
 
 export default async function HomePage() {
-    const [
-        repos,
-        starredRepos,
-        allPosts,
-        llmModels,
-        contributions,
-        topLanguages,
-    ] = await Promise.all([
-        readCache<GitHubRepo>(r2Paths.githubReposCache),
-        readCache<GitHubRepo>(r2Paths.githubStarredCache),
-        readCache<Post>(r2Paths.articlesIndexCache),
-        readCache<LLMModel>(r2Paths.llmLeaderboardCache),
-        readContributions(),
-        getTopLanguages(5),
-    ]);
+    const [repos, starredRepos, allPosts, contributions, topLanguages] =
+        await Promise.all([
+            readCache<GitHubRepo>(r2Paths.githubReposCache),
+            readCache<GitHubRepo>(r2Paths.githubStarredCache),
+            readCache<Post>(r2Paths.articlesIndexCache),
+            readContributions(),
+            getTopLanguages(5),
+        ]);
 
     // Visitor geolocation from ip-api.com. The page is rendered on every
     // request (no ISR) so this is per-visitor. Falls back to null on
@@ -326,7 +318,7 @@ future of human-AI collaboration. Ships code that matters.`
                         className="flex-1 p-4 h-full animate-fade-zoom"
                         style={{ animationDelay: "600ms" }}
                     >
-                        <GadgetsPanel llmModels={llmModels} />
+                        <GadgetsPanel />
                     </Card>
                 </section>
             </div>

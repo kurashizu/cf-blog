@@ -42,11 +42,17 @@ type SortKey = "intelligence" | "coding" | "math" | "speed" | "price";
 type SortDir = "asc" | "desc";
 
 interface Props {
-    models: LLMModel[];
+    // Optional: callers can pass models in (legacy path). When omitted the
+    // panel lazy-fetches from /api/llm-leaderboard the first time the user
+    // opens the modal, so the ~300 KB payload never lands in the initial
+    // home-page HTML.
+    models?: LLMModel[];
     expanded: boolean;
     onExpand?: () => void;
     onCollapse?: () => void;
 }
+
+type FetchStatus = "idle" | "loading" | "loaded" | "error";
 
 const isMissing = (n: number | null | undefined): n is null | undefined =>
     n === undefined || n === null || Number.isNaN(n);
@@ -90,6 +96,25 @@ const fmtDateAgo = (s: string | undefined): string => {
     return `${Math.floor(days / 365)} years ago`;
 };
 
+// Finer-grained version for sub-day timestamps (used in the "last update"
+// label, which refreshes every 30 min and would always read "today" with
+// fmtDateAgo). Falls back to fmtDateAgo for anything older than a day.
+const fmtTimeAgo = (s: string | undefined): string => {
+    if (!s) return "";
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return "";
+    const ms = Date.now() - d.getTime();
+    if (ms < 0) return "upcoming";
+    const mins = Math.floor(ms / 60_000);
+    if (mins < 1) return "just now";
+    if (mins === 1) return "1 min ago";
+    if (mins < 60) return `${mins} min ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours === 1) return "1 hour ago";
+    if (hours < 24) return `${hours} hours ago`;
+    return fmtDateAgo(s);
+};
+
 // Scores/speed: higher is better (default desc). Price: cheaper is better (default asc).
 const defaultDir = (key: SortKey): SortDir =>
     key === "price" ? "asc" : "desc";
@@ -113,13 +138,50 @@ const getSortValue = (m: LLMModel, key: SortKey): number | undefined => {
 };
 
 export function LLMLeaderboardPanel({
-    models,
+    models: initialModels,
     expanded,
     onExpand,
     onCollapse,
 }: Props) {
     const overlayRef = useRef<HTMLDivElement>(null);
     const detailRef = useRef<HTMLDivElement>(null);
+
+    // Lazy-load the leaderboard on first open. The home page never fetches
+    // this in SSR, so the ~300 KB payload stays out of the initial HTML.
+    // If the parent ever does pass models in (e.g. from another server
+    // component), we treat them as the initial value and skip the fetch.
+    const [models, setModels] = useState<LLMModel[]>(initialModels ?? []);
+    const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+    const [status, setStatus] = useState<FetchStatus>(
+        initialModels ? "loaded" : "idle",
+    );
+
+    useEffect(() => {
+        if (!expanded) return;
+        if (status !== "idle") return;
+        const ctrl = new AbortController();
+        setStatus("loading");
+        fetch("/api/llm-leaderboard", { signal: ctrl.signal })
+            .then((r) =>
+                r.ok
+                    ? (r.json() as Promise<{
+                          models?: LLMModel[];
+                          fetchedAt?: string | null;
+                      }>)
+                    : Promise.reject(new Error(`HTTP ${r.status}`)),
+            )
+            .then((data) => {
+                setModels(data.models ?? []);
+                setFetchedAt(data.fetchedAt ?? null);
+                setStatus("loaded");
+            })
+            .catch((e) => {
+                if (e?.name === "AbortError") return;
+                setStatus("error");
+            });
+        return () => ctrl.abort();
+    }, [expanded, status]);
+
     const [query, setQuery] = useState("");
     const [creator, setCreator] = useState<string>("All");
     const [sortKey, setSortKey] = useState<SortKey>("intelligence");
@@ -254,8 +316,10 @@ export function LLMLeaderboardPanel({
                                     </h2>
                                     <p className="text-sm text-text-muted mt-0.5">
                                         top models by intelligence ·{" "}
-                                        {models.length} models · refreshes every
-                                        30 min
+                                        {models.length} models
+                                        {fetchedAt
+                                            ? ` · last update: ${fmtTimeAgo(fetchedAt)}`
+                                            : ""}
                                     </p>
                                 </div>
                                 <button
@@ -277,6 +341,32 @@ export function LLMLeaderboardPanel({
                                     </svg>
                                 </button>
                             </header>
+
+                            {/* Fetch state — only shown when we have no
+                                cached data yet (i.e. the very first open).
+                                On subsequent opens the data is in state, so
+                                we render the table straight away. */}
+                            {models.length === 0 &&
+                                (status === "loading" ? (
+                                    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-text-muted">
+                                        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                                        <p className="text-sm">
+                                            Loading leaderboard…
+                                        </p>
+                                    </div>
+                                ) : status === "error" ? (
+                                    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-text-muted">
+                                        <p className="text-sm">
+                                            Failed to load leaderboard.
+                                        </p>
+                                        <button
+                                            onClick={() => setStatus("idle")}
+                                            className="text-xs text-accent hover:text-accent-hover"
+                                        >
+                                            Retry
+                                        </button>
+                                    </div>
+                                ) : null)}
 
                             {/* Toolbar: search + creator chips */}
                             {models.length > 0 && (

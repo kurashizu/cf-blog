@@ -6,10 +6,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { AgentPanel } from "@/components/agent/AgentPanel";
-import {
-    LLMLeaderboardPanel,
-    type LLMModel,
-} from "@/components/llm/LLMLeaderboardPanel";
+import { LLMLeaderboardPanel } from "@/components/llm/LLMLeaderboardPanel";
 
 interface Gadget {
     id: string;
@@ -244,7 +241,7 @@ function ControllerIcon({ hovered }: { hovered: boolean }) {
     );
 }
 
-export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
+export function GadgetsPanel() {
     const { theme } = useTheme();
     const prefix = themeMap[theme] ?? "r";
     const [hoveredId, setHoveredId] = useState<string | null>("agent");
@@ -273,7 +270,6 @@ export function GadgetsPanel({ llmModels = [] }: { llmModels?: LLMModel[] }) {
                 onExpand={() => setShowAgent(true)}
             />
             <LLMLeaderboardPanel
-                models={llmModels}
                 expanded={showLlmBoard}
                 onExpand={() => setShowLlmBoard(true)}
                 onCollapse={() => setShowLlmBoard(false)}
