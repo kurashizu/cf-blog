@@ -155,10 +155,23 @@ export function LLMLeaderboardPanel({
     const [status, setStatus] = useState<FetchStatus>(
         initialModels ? "loaded" : "idle",
     );
+    // Bumping this counter re-triggers the fetch effect (used by the Retry
+    // button on transient errors). It's a separate dep from `status` so
+    // the effect doesn't deadlock on its own state change — see the
+    // explanatory comment in the effect below.
+    const [retryCount, setRetryCount] = useState(0);
 
     useEffect(() => {
         if (!expanded) return;
-        if (status !== "idle") return;
+        // Don't gate on `status` here. Doing that creates a self-deadlock:
+        //   1. effect runs with status=idle, passes the check
+        //   2. setStatus("loading") re-triggers the effect
+        //   3. effect runs with status=loading, returns early
+        //   4. React calls the previous effect's cleanup, which aborts
+        //      the in-flight fetch — so it never resolves and the UI
+        //      stays on the loading spinner forever.
+        // `retryCount` is the only re-trigger we want; expand-only and
+        // retry-only are the two legitimate ways to start a fetch.
         const ctrl = new AbortController();
         setStatus("loading");
         fetch("/api/llm-leaderboard", { signal: ctrl.signal })
@@ -180,7 +193,7 @@ export function LLMLeaderboardPanel({
                 setStatus("error");
             });
         return () => ctrl.abort();
-    }, [expanded, status]);
+    }, [expanded, retryCount]);
 
     const [query, setQuery] = useState("");
     const [creator, setCreator] = useState<string>("All");
@@ -360,7 +373,9 @@ export function LLMLeaderboardPanel({
                                             Failed to load leaderboard.
                                         </p>
                                         <button
-                                            onClick={() => setStatus("idle")}
+                                            onClick={() =>
+                                                setRetryCount((n) => n + 1)
+                                            }
                                             className="text-xs text-accent hover:text-accent-hover"
                                         >
                                             Retry
