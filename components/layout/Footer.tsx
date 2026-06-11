@@ -1,5 +1,15 @@
 import Link from "next/link";
 
+function formatVersion(): string {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = String(now.getFullYear()).slice(-2);
+    return `${day}.${month}.${year}`;
+}
+
+const VERSION = process.env.NEXT_PUBLIC_VERSION || formatVersion();
+
 export function Footer() {
     return (
         <footer className="site-footer mt-auto">
@@ -36,10 +46,14 @@ export function Footer() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
                         <span className="text-xs text-text-muted">
                             Powered by Cloudflare
+                        </span>
+                        <span className="text-xs text-text-muted/50">·</span>
+                        <span className="text-xs text-text-muted">
+                            v{VERSION}
                         </span>
                     </div>
                 </div>
