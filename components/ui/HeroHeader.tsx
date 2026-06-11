@@ -228,21 +228,15 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
                 {displayTitle}
             </h1>
             {subtitle && (
-                // The full subtitle text is in the DOM from SSR. The
-                // typewriter effect is purely visual, done by sliding an
-                // opaque-to-transparent mask over the text. This keeps
-                // the element height stable across viewports so it
-                // never reflows when the character count passes a
-                // wrap boundary mid-animation.
+                // Render the full subtitle text from SSR (no typewriter
+                // or character-by-character reveal). The element keeps
+                // a fixed min-height so the layout is rock-stable from
+                // the first paint onward — nothing below it ever shifts.
+                // The animate-fade-up entrance uses only opacity +
+                // transform, neither of which affects layout.
                 <p
-                    className="hero-subtitle hero-reveal mb-3 animate-fade-up"
-                    style={
-                        {
-                            animationDelay: "80ms",
-                            "--reveal-delay": "700ms",
-                            "--reveal-duration": "660ms",
-                        } as React.CSSProperties
-                    }
+                    className="hero-subtitle mb-3 animate-fade-up"
+                    style={{ animationDelay: "80ms", minHeight: "1.5rem" }}
                     aria-label={subtitle}
                 >
                     {subtitle}
