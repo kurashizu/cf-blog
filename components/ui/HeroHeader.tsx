@@ -8,8 +8,6 @@ interface HeroHeaderProps {
     title: string;
     subtitle?: string;
     bio?: string;
-    /** When provided, replaces the subtitle+bio with a visitor info block. */
-    visitorInfo?: VisitorInfoType | null;
 }
 
 const SCRAMBLE_CHARSET = "!<>-_/[]{}—=+*^?#01";
@@ -154,12 +152,61 @@ function useTypewriter(
  * animated text is overlaid via absolute positioning, so it never causes
  * the hero to reflow. All animations respect `prefers-reduced-motion`.
  */
-export function HeroHeader({
-    title,
-    subtitle,
-    bio,
-    visitorInfo,
-}: HeroHeaderProps) {
+export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
+    // Visitor info is fetched lazily after the page has loaded, so the SSR
+    // critical path is never blocked by the third-party ip-api.com call.
+    // Initial paint shows the static bio; once the request resolves the
+    // bio is replaced with the visitor block. The /api/visitor-info route
+    // sets Cache-Control: private, max-age=3600, so a returning visitor
+    // triggers no external API call at all.
+    const [visitorInfo, setVisitorInfo] = useState<VisitorInfoType | null>(
+        null,
+    );
+    useEffect(() => {
+        // Defer the request until the browser is idle (or after a short
+        // timeout), so it never competes with the hydration or the
+        // scramble/typewriter animations for the main thread.
+        const ctrl = new AbortController();
+        const start = () => {
+            fetch("/api/visitor-info", { signal: ctrl.signal })
+                .then((r) =>
+                    r.ok
+                        ? (r.json() as Promise<{
+                              visitorInfo?: VisitorInfoType | null;
+                          }>)
+                        : Promise.reject(new Error(`HTTP ${r.status}`)),
+                )
+                .then((data) => {
+                    if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
+                })
+                .catch((e) => {
+                    if (e?.name === "AbortError") return;
+                    // Silent failure — the static bio is a perfectly fine
+                    // fallback and we don't want to spam the console for
+                    // every visitor on a transient ip-api.com error.
+                });
+        };
+        const idle = window as unknown as {
+            requestIdleCallback?: (
+                cb: () => void,
+                opts?: { timeout: number },
+            ) => number;
+            cancelIdleCallback?: (id: number) => void;
+        };
+        if (idle.requestIdleCallback) {
+            const id = idle.requestIdleCallback(start, { timeout: 2000 });
+            return () => {
+                idle.cancelIdleCallback?.(id);
+                ctrl.abort();
+            };
+        }
+        const timer = setTimeout(start, 1500);
+        return () => {
+            clearTimeout(timer);
+            ctrl.abort();
+        };
+    }, []);
+
     const displayTitle = useScramble(title, {
         durationMs: 1100,
         startDelayMs: 0,

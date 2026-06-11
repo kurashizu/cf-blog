@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
 import { HeroHeader } from "@/components/ui/HeroHeader";
-import { getVisitorInfo } from "@/lib/visitor";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get } from "@/lib/r2";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
@@ -14,9 +12,10 @@ import { type Language, getTopLanguages } from "@/lib/languages";
 import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
 import { DonutChart } from "@/components/activity/DonutChart";
 
-// Page is rendered on every request (not cached via ISR) so the visitor
-// info block can be per-visitor. The R2 reads in HomePage are already
-// fast (~10ms each) and the cache-worker keeps them warm every 30 min.
+// The home page is fully dynamic (R2 reads on every request) so the R2
+// cache-worker only needs to refresh every 30 min. Visitor geolocation is
+// fetched client-side from /api/visitor-info *after* the page loads (see
+// HeroHeader), so SSR is never blocked by a third-party API call.
 
 interface Post {
     slug: string;
@@ -96,17 +95,10 @@ export default async function HomePage() {
             getTopLanguages(5),
         ]);
 
-    // Visitor geolocation from ip-api.com. The page is rendered on every
-    // request (no ISR) so this is per-visitor. Falls back to null on
-    // lookup failure (private IPs, rate limit, timeout) and the hero
-    // renders the original subtitle + bio instead.
-    const headerList = await headers();
-    const ip =
-        headerList.get("cf-connecting-ip") ??
-        headerList.get("x-real-ip") ??
-        headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        "";
-    const visitorInfo = await getVisitorInfo(ip);
+    // Visitor geolocation is fetched client-side from /api/visitor-info
+    // after the page loads (see HeroHeader). Doing it here in SSR used to
+    // block the first byte on a third-party API (ip-api.com, 3 s timeout)
+    // and force the whole page into dynamic rendering.
 
     const recentPosts = allPosts.slice(0, 4);
 
@@ -119,14 +111,9 @@ export default async function HomePage() {
                         <HeroHeader
                             title="Hello, I'm kurashizu"
                             subtitle="Vibe Coding & AI Agent"
-                            bio={
-                                visitorInfo
-                                    ? undefined
-                                    : `Building tools that amplify human creativity.
+                            bio={`Building tools that amplify human creativity.
 Exploring agentic workflows, LLM orchestration, and the
-future of human-AI collaboration. Ships code that matters.`
-                            }
-                            visitorInfo={visitorInfo}
+future of human-AI collaboration. Ships code that matters.`}
                         />
                     </div>
                     {topLanguages.length > 0 && (
