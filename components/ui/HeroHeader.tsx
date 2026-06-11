@@ -248,16 +248,25 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
                     />
                     <VisitorInfo info={visitorInfo} />
                 </>
+            ) : bio ? (
+                <p
+                    className="hero-bio animate-fade-up whitespace-pre-line"
+                    style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
+                    aria-label={bio}
+                >
+                    {displayBio}
+                </p>
             ) : (
-                bio && (
-                    <p
-                        className="hero-bio animate-fade-up whitespace-pre-line"
-                        style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
-                        aria-label={bio}
-                    >
-                        {displayBio}
-                    </p>
-                )
+                // Placeholder reserves vertical space so the visitor info
+                // block, which fades in after the client-side fetch,
+                // doesn't push the sections below it down. The 5 rem
+                // height matches VisitorInfo's 3-line layout (IP label,
+                // ISP + location, IP + hash icon) plus its space-y-1 gaps.
+                <div
+                    className="hero-bio"
+                    style={{ minHeight: "5rem" }}
+                    aria-hidden="true"
+                />
             )}
         </>
     );
