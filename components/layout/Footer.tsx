@@ -53,7 +53,7 @@ export function Footer() {
                         </span>
                         <span className="text-xs text-text-muted/50">·</span>
                         <span className="text-xs text-text-muted">
-                            v{VERSION}
+                            {VERSION}
                         </span>
                     </div>
                 </div>
