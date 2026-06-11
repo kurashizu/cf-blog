@@ -1,15 +1,5 @@
 import Link from "next/link";
 
-function formatBuildDate(): string {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = String(now.getFullYear()).slice(-2);
-    return `build-${day}.${month}.${year}`;
-}
-
-const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE || formatBuildDate();
-
 export function Footer() {
     return (
         <footer className="site-footer mt-auto">
@@ -46,14 +36,10 @@ export function Footer() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
                         <span className="text-xs text-text-muted">
                             Powered by Cloudflare
-                        </span>
-                        <span className="text-xs text-text-muted/50">·</span>
-                        <span className="text-xs text-text-muted">
-                            {BUILD_DATE}
                         </span>
                     </div>
                 </div>
