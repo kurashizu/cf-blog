@@ -401,19 +401,21 @@ body {
 }
 .hero-reveal::after {
   content: "";
+  display: block;
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
   background: var(--bg-primary);
-  transform-origin: left center;
-  transform: scaleX(1);
   animation: hero-reveal-mask var(--reveal-duration, 600ms)
     var(--reveal-delay, 0ms) var(--transition-spring, ease-out) both;
   z-index: 1;
   pointer-events: none;
 }
 @keyframes hero-reveal-mask {
-  from { transform: scaleX(1); }
-  to   { transform: scaleX(0); }
+  from { width: 100%; }
+  to   { width: 0; }
 }
 
 /* Respect users who prefer less motion. Applies to every
@@ -433,6 +435,6 @@ body {
   }
   .hero-reveal::after {
     animation: none;
-    transform: scaleX(0);
+    width: 0;
   }
 }
