@@ -103,7 +103,14 @@ interface UseTypewriterOptions {
     charDelayMs: number;
 }
 
-/** Plain typewriter: types `target` char by char after a delay. */
+/**
+ * Plain typewriter: types `target` char by char after a delay.
+ *
+ * @deprecated The character-by-character setState approach can trigger
+ * layout shifts in narrow viewports (a long line wraps partway through
+ * typing). HeroHeader no longer calls this — it uses CSS-driven reveal
+ * animations instead so the DOM is stable from SSR onward.
+ */
 function useTypewriter(
     target: string,
     { startDelayMs, charDelayMs }: UseTypewriterOptions,
@@ -131,7 +138,6 @@ function useTypewriter(
                 }
             }, charDelayMs);
         }, startDelayMs);
-
         return () => {
             clearTimeout(startTimer);
             if (interval) clearInterval(interval);
@@ -212,16 +218,6 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
         startDelayMs: 0,
     });
 
-    const displaySubtitle = useTypewriter(subtitle ?? "", {
-        startDelayMs: 700,
-        charDelayMs: 30,
-    });
-
-    const displayBio = useTypewriter(bio ?? "", {
-        startDelayMs: 1400,
-        charDelayMs: 12,
-    });
-
     return (
         <>
             <h1
@@ -232,12 +228,24 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
                 {displayTitle}
             </h1>
             {subtitle && (
+                // The full subtitle text is in the DOM from SSR. The
+                // typewriter effect is purely visual, done by sliding an
+                // opaque-to-transparent mask over the text. This keeps
+                // the element height stable across viewports so it
+                // never reflows when the character count passes a
+                // wrap boundary mid-animation.
                 <p
-                    className="hero-subtitle mb-3 animate-fade-up"
-                    style={{ animationDelay: "80ms", minHeight: "1.75rem" }}
+                    className="hero-subtitle hero-reveal mb-3 animate-fade-up"
+                    style={
+                        {
+                            animationDelay: "80ms",
+                            "--reveal-delay": "700ms",
+                            "--reveal-duration": "660ms",
+                        } as React.CSSProperties
+                    }
                     aria-label={subtitle}
                 >
-                    {displaySubtitle}
+                    {subtitle}
                 </p>
             )}
             {visitorInfo ? (
@@ -254,7 +262,7 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
                     style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
                     aria-label={bio}
                 >
-                    {displayBio}
+                    {bio}
                 </p>
             ) : (
                 // Placeholder mirrors VisitorInfo's DOM exactly so the

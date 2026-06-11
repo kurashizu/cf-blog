@@ -387,6 +387,35 @@ body {
   animation: fade-zoom 0.45s var(--transition-spring) both;
 }
 
+/* Typewriter-reveal: a clipping mask slides left-to-right to reveal the
+   element's text. Used in places where a JS character-by-character
+   setState would risk layout shifts (e.g. when a line wraps mid-typing
+   in a narrow viewport). The DOM is stable from SSR; only the mask
+   animates. */
+.hero-reveal {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  isolation: isolate;
+}
+.hero-reveal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--bg-primary);
+  transform-origin: left center;
+  transform: scaleX(1);
+  animation: hero-reveal-mask var(--reveal-duration, 600ms)
+    var(--reveal-delay, 0ms) var(--transition-spring, ease-out) both;
+  z-index: 1;
+  pointer-events: none;
+}
+@keyframes hero-reveal-mask {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
 /* Respect users who prefer less motion. Applies to every
    entrance animation declared in this stylesheet. */
 @media (prefers-reduced-motion: reduce) {
@@ -401,5 +430,9 @@ body {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+  .hero-reveal::after {
+    animation: none;
+    transform: scaleX(0);
   }
 }
