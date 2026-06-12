@@ -71,7 +71,6 @@ export function AgentPanel({
     // surfaces the first user input via onFirstMessage so we can update the
     // session title.
     const { send, resetFirstFlag } = useAgentStream({
-        getMessages: () => activeMessages,
         setMessages: (updater) => setActiveMessages((prev) => updater(prev)),
         setIsLoading: setIsLoading,
         onFirstMessage: (userInput) => {

@@ -16,8 +16,6 @@ import { AGENT_API } from "../config";
 import type { Message, StreamEvent, ToolStep } from "../types";
 
 interface UseAgentStreamOptions {
-    /** Read the current messages snapshot — used to append + update in place. */
-    getMessages: () => Message[];
     setMessages: (updater: (prev: Message[]) => Message[]) => void;
     /** Set the loading flag in the parent component. */
     setIsLoading: (loading: boolean) => void;
@@ -27,7 +25,6 @@ interface UseAgentStreamOptions {
 }
 
 export function useAgentStream({
-    getMessages,
     setMessages,
     setIsLoading,
     onFirstMessage,
@@ -178,7 +175,11 @@ export function useAgentStream({
                         case "end_process":
                         case "done":
                             setIsLoading(false);
-                            if (toolSteps.some((s) => s.status === "in_progress")) {
+                            if (
+                                toolSteps.some(
+                                    (s) => s.status === "in_progress",
+                                )
+                            ) {
                                 toolSteps = toolSteps.map((s) =>
                                     s.status === "in_progress"
                                         ? { ...s, status: "completed" as const }
@@ -213,7 +214,9 @@ export function useAgentStream({
                     for (const line of lines) {
                         if (!line.startsWith("data: ")) continue;
                         try {
-                            const data = JSON.parse(line.slice(6)) as StreamEvent;
+                            const data = JSON.parse(
+                                line.slice(6),
+                            ) as StreamEvent;
                             applyEvent(data);
                         } catch {
                             /* skip malformed lines */
@@ -222,22 +225,29 @@ export function useAgentStream({
                 }
 
                 // Empty-response fallback: keep the placeholder we created.
-                if (!getMessages().find((m) => m.id === modelId)) {
-                    setMessages((prev) => [
+                // Use a functional setter so we read the latest state — the
+                // model placeholder was added via setMessages at the top of
+                // this function but React may not have flushed yet.
+                setMessages((prev) => {
+                    if (prev.find((m) => m.id === modelId)) return prev;
+                    return [
                         ...prev,
                         {
                             id: modelId,
                             role: "model",
                             parts: [
-                                { text: fullText || "No response received." },
+                                {
+                                    text: fullText || "No response received.",
+                                },
                             ],
-                            toolSteps: toolSteps.length ? toolSteps : undefined,
+                            toolSteps:
+                                toolSteps.length > 0 ? toolSteps : undefined,
                             thinkContent: fullThink || undefined,
                             isThinking: false,
                             error: currentError,
                         },
-                    ]);
-                }
+                    ];
+                });
             } catch (err) {
                 const message =
                     err instanceof Error ? err.message : "Network error";
@@ -250,8 +260,12 @@ export function useAgentStream({
                 setStreamingMessageId("");
             }
         },
-        [genId, getMessages, setMessages, setIsLoading, onFirstMessage],
+        [genId, setMessages, setIsLoading, onFirstMessage],
     );
 
-    return { send, streamingMessageId, resetFirstFlag: () => (isFirstResponseRef.current = false) };
+    return {
+        send,
+        streamingMessageId,
+        resetFirstFlag: () => (isFirstResponseRef.current = false),
+    };
 }
