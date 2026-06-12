@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import icon2 from "@/components/layout/icon2_128.png";
+import icon2 from "@/public/icons/icon2_128.png";
 
 const navLinks = [
     { href: "/", label: "Home" },

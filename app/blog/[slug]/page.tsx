@@ -1,4 +1,4 @@
-import { BlogArticle } from "@/components/ui/BlogArticle";
+import { BlogArticle } from "@/components/blog/BlogArticle";
 import { createArticlesRepo } from "@/lib/articles";
 import { notFound } from "next/navigation";
 

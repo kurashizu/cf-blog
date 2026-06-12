@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { type VisitorInfo as VisitorInfoType } from "@/lib/visitor";
-import { VisitorInfo } from "./VisitorInfo";
+import { VisitorInfo } from "@/components/visitor/VisitorInfo";
 
 interface HeroHeaderProps {
     title: string;

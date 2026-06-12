@@ -14,10 +14,10 @@ import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { ChatWidget } from "@/components/ui/ChatWidget";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import { GuestbookWidget } from "@/components/guestbook/GuestbookWidget";
-import { ParticleBackground } from "@/components/ui/ParticleBackground";
-import { MouseTrail } from "@/components/ui/MouseTrail";
+import { ParticleBackground } from "@/components/effects/ParticleBackground";
+import { MouseTrail } from "@/components/effects/MouseTrail";
 
 const inter = Inter({ subsets: ["latin"] });
 const playfair = Playfair_Display({ subsets: ["latin"] });

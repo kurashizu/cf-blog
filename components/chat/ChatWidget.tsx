@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import icon2Hover from "@/components/layout/icon2_128.png";
-import icon3Hover from "@/components/layout/icon3_128.png";
+import icon2Hover from "@/public/icons/icon2_128.png";
+import icon3Hover from "@/public/icons/icon3_128.png";
 
 interface Message {
     role: "user" | "model";

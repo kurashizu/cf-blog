@@ -1,6 +1,6 @@
 "use client";
 
-import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 
