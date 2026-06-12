@@ -17,6 +17,29 @@ export interface Post {
 
 export type PostListItem = Omit<Post, "content">;
 
+/** Normalise a date value from gray-matter to a YYYY-MM-DD string.
+ *  gray-matter parses YAML dates like `2025-01-15` into Date objects;
+ *  the bare `as string` cast in parsePost / parsePostMeta doesn't
+ *  actually convert the runtime value, so JSON.stringify would serialise
+ *  it as an ISO timestamp ("2025-01-15T00:00:00.000Z").
+ */
+function normaliseDate(v: unknown): string {
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === "string") return v;
+    return "";
+}
+
+/** Normalise a boolean-like value from YAML (which may be a real bool
+ *  or a string like "true" / "false").
+ */
+function normaliseBool(v: unknown, defaultVal: boolean): boolean {
+    if (v === undefined || v === null) return defaultVal;
+    if (v === true || v === false) return v;
+    if (v === "true") return true;
+    if (v === "false") return false;
+    return defaultVal;
+}
+
 function parsePost(slug: string, content: string, key?: string): Post {
     const { data, body } = parseFrontmatter(content);
     const postSlug = key ? r2Paths.extractSlug(key) : slug;
@@ -32,13 +55,13 @@ function parsePost(slug: string, content: string, key?: string): Post {
     return {
         slug: postSlug,
         title: (data.title as string) || "",
-        date: (data.date as string) || "",
+        date: normaliseDate(data.date),
         description: (data.description as string) || "",
         tags,
-        published: data.published !== "false",
+        published: normaliseBool(data.published, true),
         coverImage: data.coverImage as string | undefined,
         author: (data.author as string) || "Kurashizu",
-        draft: data.draft === "true",
+        draft: normaliseBool(data.draft, false),
         content: body,
     };
 }
@@ -58,13 +81,13 @@ function parsePostMeta(content: string, key: string): PostListItem | null {
     const post = {
         slug,
         title: (data.title as string) || "",
-        date: (data.date as string) || "",
+        date: normaliseDate(data.date),
         description: (data.description as string) || "",
         tags,
-        published: data.published !== "false",
+        published: normaliseBool(data.published, true),
         coverImage: data.coverImage as string | undefined,
         author: (data.author as string) || "Kurashizu",
-        draft: data.draft === "true",
+        draft: normaliseBool(data.draft, false),
     };
     if (post.draft || !post.published) return null;
     return post;

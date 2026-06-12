@@ -10,13 +10,16 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a date string for display
+ * Format a date string for display.
+ * Returns "" instead of "Invalid Date" when the input is empty or unparseable.
  */
 export function formatDate(date: string | Date): string {
+    if (!date) return "";
     const d = typeof date === "string" ? new Date(date) : date;
+    if (Number.isNaN(d.getTime())) return "";
     return d.toLocaleDateString("en-US", {
         year: "numeric",
-        month: "long",
+        month: "short",
         day: "numeric",
     });
 }
