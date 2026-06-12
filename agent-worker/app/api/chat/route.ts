@@ -8,6 +8,7 @@ import {
     getDefaultModel,
 } from "@/lib/model-pool";
 import { executeTool, FUNCTION_DECLARATIONS } from "@/lib/tools";
+import type { AgentEnv } from "../../../../lib/types/env";
 
 const SYSTEM_PROMPT = `You are KurAgent, an AI assistant powered by kurashizu, running on Cloudflare.
 
@@ -184,14 +185,8 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ctx = getCloudflareContext() as any;
-        const env = ctx.env as {
-            GEMINI_API_KEY: string;
-            SESSION_KV: KVNamespace;
-            CHAT_RATE_LIMIT?: RateLimit;
-            GEMINI_MODELS?: string;
-        };
+        const ctx = getCloudflareContext();
+        const env = ctx.env as unknown as AgentEnv;
 
         if (!env.GEMINI_API_KEY) {
             return NextResponse.json(

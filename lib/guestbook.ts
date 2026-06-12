@@ -41,8 +41,8 @@ function msgKey(id: string): string {
 let migrationPromise: Promise<void> | null = null;
 
 async function migrateLegacyStore(): Promise<void> {
-    const { env } = getCloudflareContext() as any;
-    const bucket = env.BUCKET;
+    const { env } = getCloudflareContext();
+    const bucket = env.BUCKET as R2Bucket;
     let legacy: LegacyStore | null = null;
     try {
         const obj = await bucket.get(LEGACY_KEY);
@@ -161,7 +161,3 @@ export function createGuestbookRepo() {
         },
     };
 }
-
-// Suppress unused-import lint for getCloudflareContext — kept available for
-// future migrations that may need to call admin APIs or other bindings.
-void getCloudflareContext;

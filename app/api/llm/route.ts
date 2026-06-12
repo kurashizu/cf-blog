@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
     type GeminiMessage,
     type GeminiGenerateOptions,
@@ -11,6 +12,7 @@ import {
     getModelPool,
     getDefaultModel,
 } from "@/lib/model-pool";
+import type { BlogEnv } from "@/lib/types/env";
 
 const MAX_MESSAGE_LENGTH = 10000;
 const MAX_MESSAGES = 50;
@@ -81,15 +83,8 @@ function sanitizeOptions(
 
 export async function POST(request: NextRequest) {
     try {
-        const ctx = (
-            await import("@opennextjs/cloudflare")
-        ).getCloudflareContext() as any;
-        const env = ctx.env as {
-            LLM_RATE_LIMIT?: RateLimit;
-            SESSION_KV: KVNamespace;
-            GEMINI_API_KEY: string;
-            GEMINI_MODELS?: string;
-        };
+        const ctx = getCloudflareContext();
+        const env = ctx.env as unknown as BlogEnv;
 
         const ip = getIP(request);
 
