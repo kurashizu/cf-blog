@@ -12,7 +12,9 @@
         "preview:cf": "./node_modules/.bin/opennextjs-cloudflare preview",
         "deploy:cf": "./node_modules/.bin/opennextjs-cloudflare deploy",
         "start": "next start",
-        "lint": "next lint"
+        "lint": "next lint",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "dependencies": {
         "@opennextjs/cloudflare": "^1.19.0",

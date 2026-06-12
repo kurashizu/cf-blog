@@ -37,6 +37,9 @@ jobs:
               if: steps.cache-blog.outputs.cache-hit != 'true'
               run: npm ci --legacy-peer-deps
 
+            - name: Test
+              run: npm test
+
             - name: Build
               run: |
                   BUILD_DATE=$(date +'build-%y%m%d-%H%M')
@@ -109,6 +112,11 @@ jobs:
               run: |
                   cd cache-worker
                   npm ci --legacy-peer-deps
+
+            - name: Test
+              run: |
+                  cd cache-worker
+                  npm test
 
             - name: Deploy
               run: |
