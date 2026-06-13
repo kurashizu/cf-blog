@@ -21,8 +21,12 @@
     background: linear-gradient(
         135deg,
         var(--text-primary) 0%,
-        var(--accent) 100%
+        var(--text-primary) 25%,
+        var(--accent) 50%,
+        var(--text-primary) 75%,
+        var(--text-primary) 100%
     );
+    background-size: 200% 100%;
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -30,10 +34,26 @@
     min-height: 1.8rem;
 }
 
+.hero-title--animated {
+    animation: hero-gradient 4s ease-in-out infinite;
+}
+
 @media (min-width: 640px) {
     .hero-title {
         font-size: 2.25rem;
         min-height: 2.6rem;
+    }
+}
+
+@keyframes hero-gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
     }
 }
 
