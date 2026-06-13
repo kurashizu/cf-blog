@@ -7,6 +7,7 @@ interface HNStory {
     url: string | null;
     score: number;
     by: string;
+    time: number;
     descendants: number;
     domain: string | null;
     summary: string;
@@ -43,6 +44,15 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
                                     {story.domain}
                                 </p>
                             )}
+                            <div className="flex items-center justify-end gap-2 mt-1.5">
+                                <span className="text-[10px] text-text-muted">
+                                    {new Date(story.time * 1000).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                    })}
+                                </span>
+                                <span className="text-[10px] text-text-muted">by {story.by}</span>
+                            </div>
                         </MiniCard>
                     </Link>
                 ))}

@@ -69,6 +69,7 @@ async function readContributions(): Promise<ContributionsCache | null> {
 
 function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
     const excerpt = post.description?.slice(0, 20) || "";
+    const tags = Array.isArray(post.tags) ? post.tags : [];
     return (
         <Link
             href={`/blog/${post.slug}`}
@@ -87,8 +88,18 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
                             </p>
                         )}
                     </div>
-                    <div className="flex justify-end mt-1">
-                        <span className="text-xs text-text-muted">
+                    <div className="flex items-end justify-between gap-2 mt-1">
+                        <div className="flex flex-wrap gap-1.5 min-w-0">
+                            {tags.slice(0, 2).map((tag) => (
+                                <span
+                                    key={tag}
+                                    className="text-[10px] px-1.5 py-0.5 rounded bg-bg-card border border-border text-text-muted"
+                                >
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                        <span className="text-xs text-text-muted shrink-0">
                             {formatDate(post.date)}
                         </span>
                     </div>

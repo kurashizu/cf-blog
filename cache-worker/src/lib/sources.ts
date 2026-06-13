@@ -249,7 +249,7 @@ export async function generateItemRewrite(
         articleContent = `Title: ${story.title}`;
     }
 
-    const prompt = `Rewrite this article in your own words, preserving all content, details, and nuance. Output must be roughly the same length as the original. Use rich Markdown formatting: headings, bullet lists, inline code, emphasis, and images where appropriate. You may also include simple Mermaid diagrams in \`\`\`mermaid code blocks when it helps explain a concept or flow. Do not wrap the entire output in a code block.\n\n${articleContent}`;
+    const prompt = `Rewrite this article in your own words, preserving all content, details, and nuance. Output must be roughly the same length as the original. Use every Markdown feature that fits: headings, bold, italic, lists, tables, blockquotes, inline code, code blocks, images, Mermaid diagrams (\`\`\`mermaid), strikethrough, task lists, and LaTeX math where appropriate. Do not wrap the entire output in a code block.\n\n${articleContent}`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
     const res = await fetch(url, {

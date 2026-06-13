@@ -38,9 +38,9 @@ export function BlogArticle({ post }: BlogArticleProps) {
 
         <h1>{post.title}</h1>
 
-        <div className="article-meta-row mb-3">
+        <div className="article-meta mb-3">
           <span>{formatDate(post.date)}</span>
-          <span>·</span>
+          <span className="article-meta-separator">|</span>
           <span>{post.author}</span>
         </div>
 
