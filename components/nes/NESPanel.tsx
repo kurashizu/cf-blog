@@ -38,8 +38,8 @@ const KEY_MAP: Record<string, ButtonKey> = {
     KeyD: Controller.BUTTON_RIGHT,
     KeyK: Controller.BUTTON_A,
     KeyJ: Controller.BUTTON_B,
-    KeyI: Controller.BUTTON_START,
-    KeyU: Controller.BUTTON_SELECT,
+    Enter: Controller.BUTTON_START,
+    Backslash: Controller.BUTTON_SELECT,
 };
 
 const SLOT_COUNT = 5;
@@ -575,7 +575,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                             Start
                                         </span>
                                         <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">I</kbd>
+                                            <kbd className="nes-kbd nes-kbd-wide">Enter</kbd>
                                         </span>
                                     </div>
                                     <div className="nes-controls-help-row">
@@ -583,7 +583,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                             Select
                                         </span>
                                         <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">U</kbd>
+                                            <kbd className="nes-kbd">\</kbd>
                                         </span>
                                     </div>
                                     <div className="nes-controls-help-row">
