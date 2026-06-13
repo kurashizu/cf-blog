@@ -39,19 +39,23 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
                                     {story.title}
                                 </span>
                             </div>
-                            {story.domain && (
-                                <p className="text-xs text-text-muted mt-0.5">
-                                    {story.domain}
-                                </p>
-                            )}
-                            <div className="flex items-center justify-end gap-2 mt-1.5">
-                                <span className="text-[10px] text-text-muted">
-                                    {new Date(story.time * 1000).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                    })}
-                                </span>
-                                <span className="text-[10px] text-text-muted">by {story.by}</span>
+                            <div className="flex items-center justify-between gap-2 mt-1">
+                                {story.domain ? (
+                                    <span className="text-xs text-text-muted truncate">
+                                        {story.domain}
+                                    </span>
+                                ) : (
+                                    <span />
+                                )}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[10px] text-text-muted">
+                                        {new Date(story.time * 1000).toLocaleDateString("en-US", {
+                                            month: "short",
+                                            day: "numeric",
+                                        })}
+                                    </span>
+                                    <span className="text-[10px] text-text-muted">by {story.by}</span>
+                                </div>
                             </div>
                         </MiniCard>
                     </Link>
