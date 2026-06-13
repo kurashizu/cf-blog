@@ -1,9 +1,5 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/Card";
-import { NewsPanel } from "./NewsPanel";
 
 interface HNStory {
     id: number;
@@ -26,8 +22,6 @@ export function NewsArchiveView({
     page: number;
     totalPages: number;
 }) {
-    const [selectedStory, setSelectedStory] = useState<HNStory | null>(null);
-
     return (
         <>
             {stories.length === 0 ? (
@@ -35,10 +29,10 @@ export function NewsArchiveView({
             ) : (
                 <div className="article-list">
                     {stories.map((story, i) => (
-                        <button
+                        <Link
                             key={story.id}
-                            onClick={() => setSelectedStory(story)}
-                            className="block w-full text-left animate-fade-up-sm"
+                            href={`/news/${story.id}`}
+                            className="block animate-fade-up-sm"
                             style={{ animationDelay: `${80 + i * 50}ms` }}
                         >
                             <Card className="group cursor-pointer">
@@ -68,7 +62,7 @@ export function NewsArchiveView({
                                     </p>
                                 </CardContent>
                             </Card>
-                        </button>
+                        </Link>
                     ))}
                 </div>
             )}
@@ -100,11 +94,6 @@ export function NewsArchiveView({
                     )}
                 </nav>
             )}
-
-            <NewsPanel
-                story={selectedStory}
-                onClose={() => setSelectedStory(null)}
-            />
         </>
     );
 }

@@ -60,7 +60,7 @@ export default async function BlogPage({
 
     const [rows, countRow] = await Promise.all([
         db.prepare(
-            `SELECT slug_en as slug, title_en as title, excerpt_en as description,
+            `SELECT slug, title, excerpt as description,
                     published_at as date, tags, cover_image
              FROM posts
              WHERE status = 'published'
@@ -72,7 +72,10 @@ export default async function BlogPage({
         ).first(),
     ]);
 
-    const posts = (rows.results ?? []) as unknown as Post[];
+    const posts = ((rows.results ?? []) as unknown as Post[]).map((p) => ({
+        ...p,
+        tags: typeof p.tags === "string" ? JSON.parse(p.tags as string) : p.tags,
+    }));
     const total = (countRow?.total as number) ?? 0;
     const totalPages = Math.ceil(total / LIMIT);
 

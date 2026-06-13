@@ -170,7 +170,7 @@ export function createArticlesRepo() {
                 const db = getDB();
                 await db.prepare(`
                     INSERT OR REPLACE INTO posts
-                        (id, slug_en, title_en, excerpt_en, content_r2_key_en,
+                        (id, slug, title, excerpt, content_r2_key,
                          cover_image, category, tags, status, published_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).bind(
