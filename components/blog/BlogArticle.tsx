@@ -1,63 +1,68 @@
-"use client";
-
 import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 
 interface Post {
-  slug: string;
-  title: string;
-  content: string;
-  date: string;
-  author: string;
-  tags: string[];
-  coverImage?: string;
+    slug: string;
+    title: string;
+    content: string;
+    date: string;
+    author: string;
+    tags: string[];
+    coverImage?: string;
 }
 
 interface BlogArticleProps {
-  post: Post;
+    post: Post;
 }
 
 export function BlogArticle({ post }: BlogArticleProps) {
-  return (
-    <article className="article-content">
-      <Link href="/blog" className="back-link animate-fade-up" style={{ animationDelay: "0ms" }}>
-        ← Back to blog
-      </Link>
+    return (
+        <article className="article-content">
+            <Link
+                href="/blog"
+                className="back-link animate-fade-up"
+                style={{ animationDelay: "0ms" }}
+            >
+                ← Back to blog
+            </Link>
 
-      <header className="article-header animate-fade-up" style={{ animationDelay: "80ms" }}>
-        {post.coverImage && (
-          <div className="mb-8 aspect-video w-full overflow-hidden rounded-lg">
-            <img
-              src={post.coverImage}
-              alt={post.title}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        )}
+            <header
+                className="article-header animate-fade-up"
+                style={{ animationDelay: "80ms" }}
+            >
+                {post.coverImage && (
+                    <div className="mb-8 aspect-video w-full overflow-hidden rounded-lg">
+                        <img
+                            src={post.coverImage}
+                            alt={post.title}
+                            className="h-full w-full object-cover"
+                        />
+                    </div>
+                )}
 
-        <h1>{post.title}</h1>
+                <h1>{post.title}</h1>
 
-        <div className="article-meta mb-3">
-          <span>{formatDate(post.date)}</span>
-          <span className="article-meta-separator">|</span>
-          <span>{post.author}</span>
-        </div>
+                <div className="article-meta mb-3">
+                    <span>{formatDate(post.date)}</span>
+                    <span className="article-meta-separator">|</span>
+                    <span>{post.author}</span>
+                </div>
 
-        {post.tags.length > 0 && (
-          <div className="article-tags">
-            {post.tags.map((tag) => (
-              <span key={tag} className="tag">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </header>
+                {post.tags.length > 0 && (
+                    <div className="article-tags">
+                        {post.tags.map((tag) => (
+                            <span key={tag} className="tag">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </header>
 
-      <MarkdownRenderer className="article-body">
-        {post.content}
-      </MarkdownRenderer>
-    </article>
-  );
+            <MarkdownRenderer className="article-body">
+                {post.content}
+            </MarkdownRenderer>
+        </article>
+    );
 }
