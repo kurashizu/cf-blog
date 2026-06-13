@@ -13,6 +13,7 @@ import { type ContributionsCache } from "@/lib/contributions";
 import { type Language, getTopLanguages } from "@/lib/languages";
 import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
 import { DonutChart } from "@/components/activity/DonutChart";
+import { VisitorTerminal } from "@/components/visitor/VisitorTerminal";
 
 // The home page is fully dynamic (R2 reads on every request) so the R2
 // cache-worker only needs to refresh every 30 min. Visitor geolocation is
@@ -141,9 +142,16 @@ export default async function HomePage() {
         <div className="max-w-4xl mx-auto px-4 py-6 md:py-12">
             {/* Hero section */}
             <section className="mb-8 md:mb-12">
+                <div className="text-center mb-6 md:mb-8">
+                    <HeroHeader title="Inside the Mind of Kurashizu" />
+                </div>
+
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
-                    <div className="flex-1 text-center md:text-left">
-                        <HeroHeader title="Inside the Mind of Kurashizu" />
+                    <div
+                        className="flex-1 animate-fade-up"
+                        style={{ animationDelay: "200ms" }}
+                    >
+                        <VisitorTerminal />
                     </div>
                     {topLanguages.length > 0 && (
                         <div
@@ -154,6 +162,7 @@ export default async function HomePage() {
                         </div>
                     )}
                 </div>
+
                 {contributions && (
                     <div
                         className="mt-8 animate-fade-up"
@@ -232,7 +241,7 @@ export default async function HomePage() {
                         </a>
                     </div>
                     <div className="space-y-3">
-                        {repos.slice(0, 5).map((repo, i) => (
+                        {repos.slice(0, 6).map((repo, i) => (
                             <a
                                 key={repo.name}
                                 href={repo.html_url}

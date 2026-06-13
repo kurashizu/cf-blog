@@ -15,14 +15,14 @@ jobs:
     deploy-cf-blog:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v6
               with:
                   node-version: "22"
 
             - name: Cache node_modules
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               id: cache-blog
               with:
                   path: node_modules
@@ -55,14 +55,14 @@ jobs:
     deploy-cf-agent:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v6
               with:
                   node-version: "22"
 
             - name: Cache node_modules
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               id: cache-agent
               with:
                   path: agent-worker/node_modules
@@ -92,14 +92,14 @@ jobs:
     deploy-cache-worker:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
 
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v6
               with:
                   node-version: "22"
 
             - name: Cache node_modules
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               id: cache-cache
               with:
                   path: cache-worker/node_modules

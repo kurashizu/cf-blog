@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { VisitorInfo as VisitorInfoType } from "@/lib/visitor";
-import { VisitorTerminal } from "@/components/visitor/VisitorTerminal";
 
 interface HeroHeaderProps {
     title: string;
@@ -51,80 +49,18 @@ function useTypewriter(
 }
 
 /**
- * Hero header with typewriter title + terminal-style visitor info.
+ * Hero header with typewriter animation on the title.
  * Respects `prefers-reduced-motion`.
  */
 export function HeroHeader({ title }: HeroHeaderProps) {
-    const [visitorInfo, setVisitorInfo] = useState<VisitorInfoType | null>(
-        null,
-    );
-
-    useEffect(() => {
-        const ctrl = new AbortController();
-        const start = () => {
-            fetch("/api/visitor-info", { signal: ctrl.signal })
-                .then((r) =>
-                    r.ok
-                        ? (r.json() as Promise<{
-                              visitorInfo?: VisitorInfoType | null;
-                          }>)
-                        : Promise.reject(new Error(`HTTP ${r.status}`)),
-                )
-                .then((data) => {
-                    if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
-                })
-                .catch((e) => {
-                    if (e?.name === "AbortError") return;
-                });
-        };
-
-        const idle = window as unknown as {
-            requestIdleCallback?: (
-                cb: () => void,
-                opts?: { timeout: number },
-            ) => number;
-            cancelIdleCallback?: (id: number) => void;
-        };
-        if (idle.requestIdleCallback) {
-            const id = idle.requestIdleCallback(start, { timeout: 2000 });
-            return () => {
-                idle.cancelIdleCallback?.(id);
-                ctrl.abort();
-            };
-        }
-        const timer = setTimeout(start, 1500);
-        return () => {
-            clearTimeout(timer);
-            ctrl.abort();
-        };
-    }, []);
-
     const displayTitle = useTypewriter(title, {
         startDelayMs: 0,
         charDelayMs: 60,
     });
 
     return (
-        <>
-            <h1
-                className="hero-title mb-3 animate-fade-up"
-                style={{ animationDelay: "0ms", minHeight: "3.3rem" }}
-                aria-label={title}
-            >
-                {displayTitle}
-            </h1>
-            {visitorInfo && (
-                <div
-                    className="animate-fade-up"
-                    style={{ animationDelay: "400ms" }}
-                >
-                    <VisitorTerminal
-                        info={visitorInfo}
-                        startDelayMs={0}
-                        charDelayMs={16}
-                    />
-                </div>
-            )}
-        </>
+        <h1 className="hero-title" aria-label={title}>
+            {displayTitle}
+        </h1>
     );
 }

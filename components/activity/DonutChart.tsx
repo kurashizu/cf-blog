@@ -4,8 +4,8 @@ interface DonutChartProps {
     languages: Language[];
 }
 
-const SIZE = 100;
-const STROKE_WIDTH = 12;
+const SIZE = 130;
+const STROKE_WIDTH = 14;
 const CENTER = SIZE / 2;
 const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -17,7 +17,7 @@ export function DonutChart({ languages }: DonutChartProps) {
     // segments stay visually distinguishable even when their colors are
     // close (GitHub's official palette has TypeScript #3178c6 and Python
     // #3572A5 as basically-the-same blue).
-    const GAP_UNITS = 2;
+    const GAP_UNITS = 3;
     const N = languages.length;
     const visibleCircumference = CIRCUMFERENCE - N * GAP_UNITS;
 
@@ -74,7 +74,7 @@ export function DonutChart({ languages }: DonutChartProps) {
                 </g>
                 <text
                     x={CENTER}
-                    y={CENTER - 1}
+                    y={CENTER - 2}
                     textAnchor="middle"
                     className="donut-center-name"
                 >
@@ -82,7 +82,7 @@ export function DonutChart({ languages }: DonutChartProps) {
                 </text>
                 <text
                     x={CENTER}
-                    y={CENTER + 13}
+                    y={CENTER + 16}
                     textAnchor="middle"
                     className="donut-center-label"
                 >

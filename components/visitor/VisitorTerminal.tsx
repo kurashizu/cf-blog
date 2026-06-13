@@ -3,12 +3,6 @@
 import { useEffect, useState } from "react";
 import type { VisitorInfo } from "@/lib/visitor";
 
-interface VisitorTerminalProps {
-    info: VisitorInfo;
-    startDelayMs: number;
-    charDelayMs: number;
-}
-
 function maskIP(ip: string): string {
     const ipv4 = ip.match(/^(\d+\.\d+)\.\d+\.\d+$/);
     if (ipv4) return `${ipv4[1]}.x.x`;
@@ -19,44 +13,79 @@ function maskIP(ip: string): string {
 
 function buildTerminalOutput(info: VisitorInfo): string {
     const loc = [info.city, info.country].filter(Boolean).join(", ");
-    return `$ curl -s https://blog.022025.xyz/trace\n{\n  "ip": "${maskIP(info.ip)}",\n  "loc": "${loc}",\n  "isp": "${info.isp}",\n  "status": "authorized"\n}`;
+    return `$ curl -s https://blog.022025.xyz/api/visitor-info\n{\n  "ip": "${maskIP(info.ip)}",\n  "loc": "${loc}",\n  "isp": "${info.isp}",\n  "status": "authorized"\n}`;
 }
 
-export function VisitorTerminal({
-    info,
-    startDelayMs,
-    charDelayMs,
-}: VisitorTerminalProps) {
-    const output = buildTerminalOutput(info);
+export function VisitorTerminal() {
+    const [visitorInfo, setVisitorInfo] = useState<VisitorInfo | null>(null);
     const [display, setDisplay] = useState("");
     const [done, setDone] = useState(false);
 
+    // Fetch visitor info once
     useEffect(() => {
-        if (typeof window === "undefined") return;
+        const ctrl = new AbortController();
+        const start = () => {
+            fetch("/api/visitor-info", { signal: ctrl.signal })
+                .then((r) =>
+                    r.ok
+                        ? (r.json() as Promise<{
+                              visitorInfo?: VisitorInfo | null;
+                          }>)
+                        : Promise.reject(new Error(`HTTP ${r.status}`)),
+                )
+                .then((data) => {
+                    if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
+                })
+                .catch((e) => {
+                    if (e?.name === "AbortError") return;
+                });
+        };
+        const idle = window as unknown as {
+            requestIdleCallback?: (
+                cb: () => void,
+                opts?: { timeout: number },
+            ) => number;
+            cancelIdleCallback?: (id: number) => void;
+        };
+        if (idle.requestIdleCallback) {
+            const id = idle.requestIdleCallback(start, { timeout: 2000 });
+            return () => {
+                idle.cancelIdleCallback?.(id);
+                ctrl.abort();
+            };
+        }
+        const timer = setTimeout(start, 1500);
+        return () => {
+            clearTimeout(timer);
+            ctrl.abort();
+        };
+    }, []);
 
-        const startTimer = setTimeout(() => {
-            let i = 0;
-            const interval = setInterval(() => {
-                i++;
-                setDisplay(output.slice(0, i));
-                if (i >= output.length) {
-                    clearInterval(interval);
-                    setDone(true);
-                }
-            }, charDelayMs);
-            return () => clearInterval(interval);
-        }, startDelayMs);
+    // Typewriter effect
+    const output = visitorInfo ? buildTerminalOutput(visitorInfo) : null;
+    useEffect(() => {
+        if (!output) return;
 
-        return () => clearTimeout(startTimer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [startDelayMs, charDelayMs]);
+        let i = 0;
+        const interval = setInterval(() => {
+            i++;
+            setDisplay(output.slice(0, i));
+            if (i >= output.length) {
+                clearInterval(interval);
+                setDone(true);
+            }
+        }, 16);
+        return () => clearInterval(interval);
+    }, [output]);
 
     return (
-        <pre className="terminal-output">
-            <code>
-                {display}
-                {!done && <span className="terminal-cursor" />}
-            </code>
-        </pre>
+        <div className="terminal-output">
+            <pre>
+                <code>
+                    {output ? display : ""}
+                    {output && !done && <span className="terminal-cursor" />}
+                </code>
+            </pre>
+        </div>
     );
 }
