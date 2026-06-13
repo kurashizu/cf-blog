@@ -188,11 +188,24 @@ export async function fetchHNNews(): Promise<HNStory[]> {
 
 const GEMINI_MODEL = "gemma-4-31b-it";
 
-function extractPageText(html: string): string {
+function extractPageContent(html: string): { text: string; images: string[] } {
     const withoutScripts = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ");
     const withoutStyles = withoutScripts.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
     const withoutNav = withoutStyles.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, " ");
     const withoutFooter = withoutNav.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, " ");
+
+    const imageRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+    const images: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = imageRegex.exec(withoutFooter)) !== null) {
+        const src = m[1];
+        if (src.startsWith("http") && !images.includes(src)) {
+            const altMatch = m[0].match(/alt=["']([^"']*)["']/i);
+            const alt = altMatch ? altMatch[1] : "";
+            images.push(`![${alt}](${src})`);
+        }
+    }
+
     const text = withoutFooter
         .replace(/<[^>]+>/g, " ")
         .replace(/&[a-z]+;/g, " ")
@@ -200,7 +213,10 @@ function extractPageText(html: string): string {
         .trim();
     const lines = text.split(/(?<=[.!?])\s+/);
     const substantial = lines.filter((l) => l.length > 60);
-    return substantial.length > 3 ? substantial.join("\n\n") : text;
+    return {
+        text: substantial.length > 3 ? substantial.join("\n\n") : text,
+        images: images.slice(0, 10),
+    };
 }
 
 export async function generateItemRewrite(
@@ -217,8 +233,12 @@ export async function generateItemRewrite(
             });
             if (res.ok) {
                 const html = await res.text();
-                const text = extractPageText(html).slice(0, 8000);
-                articleContent = `Title: ${story.title}\n\n${text}`;
+                const { text, images } = extractPageContent(html);
+                const textPart = text.slice(0, 6000);
+                const imagePart = images.length > 0
+                    ? `\n\nImages from the article:\n${images.join("\n")}`
+                    : "";
+                articleContent = `Title: ${story.title}\n\n${textPart}${imagePart}`;
             } else {
                 articleContent = `Title: ${story.title}`;
             }
@@ -229,7 +249,7 @@ export async function generateItemRewrite(
         articleContent = `Title: ${story.title}`;
     }
 
-    const prompt = `Rewrite this article in your own words, preserving all content, details, and nuance. Output must be roughly the same length as the original, in Markdown paragraphs.\n\n${articleContent}`;
+    const prompt = `Rewrite this article in your own words, preserving all content, details, and nuance. Output must be roughly the same length as the original. Use rich Markdown formatting: headings, bullet lists, inline code, emphasis, and images where appropriate. You may also include simple Mermaid diagrams in \`\`\`mermaid code blocks when it helps explain a concept or flow. Do not wrap the entire output in a code block.\n\n${articleContent}`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
     const res = await fetch(url, {
