@@ -18,6 +18,7 @@ export interface BaseEnv {
 
 /** cf-blog worker bindings. */
 export interface BlogEnv extends BaseEnv {
+    DB: D1Database;
     LLM_RATE_LIMIT?: RateLimit;
     GUESTBOOK_RATE_LIMIT?: RateLimit;
     SESSION_KV: KVNamespace;

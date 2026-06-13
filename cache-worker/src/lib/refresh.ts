@@ -10,8 +10,8 @@ import { buildArticleIndex } from "./articles";
 import {
     fetchContributions,
     fetchGithubRepos,
+    fetchHNNews,
     fetchLLMLeaderboard,
-    fetchStarredRepos,
 } from "./sources";
 import type { Env } from "../types";
 
@@ -35,22 +35,34 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
         return `${repos.length} repos`;
     });
 
-    await runStep(results, "github-starred", async () => {
-        const starred = await fetchStarredRepos();
-        if (starred.length === 0) throw new Error("empty response");
-        await env.BUCKET.put(
-            "cache/github-starred.json",
-            JSON.stringify(starred),
-        );
-        return `${starred.length} repos`;
-    });
-
     await runStep(results, "articles-index", async () => {
         const posts = await buildArticleIndex(env.BUCKET);
+        // Keep R2 cache for backward compatibility
         await env.BUCKET.put(
             "cache/articles-index.json",
             JSON.stringify(posts),
         );
+        // Sync to D1
+        const db = env.DB;
+        for (const post of posts) {
+            await db.prepare(`
+                INSERT OR REPLACE INTO posts
+                    (id, slug_en, title_en, excerpt_en, content_r2_key_en,
+                     cover_image, category, tags, status, published_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                post.slug,
+                post.slug,
+                post.title,
+                post.description,
+                `articles/${post.slug}.md`,
+                post.coverImage ?? "",
+                "",
+                JSON.stringify(post.tags),
+                "published",
+                post.date,
+            ).run();
+        }
         return `${posts.length} posts`;
     });
 
@@ -74,6 +86,48 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
             JSON.stringify(payload),
         );
         return `${models.length} models`;
+    });
+
+    await runStep(results, "hn-news", async () => {
+        if (!env.GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY not set");
+        }
+        const stories = await fetchHNNews(env.GEMINI_API_KEY);
+        if (stories.length === 0) throw new Error("empty response");
+
+        // Write to R2 for homepage backward compatibility
+        await env.BUCKET.put("cache/hn-news.json", JSON.stringify(stories));
+
+        // Write to D1 — skip if already fetched today
+        const today = new Date().toISOString().slice(0, 10);
+        const db = env.DB;
+        const existing = await db.prepare(
+            "SELECT date FROM news_fetch_log WHERE date = ?",
+        ).bind(today).first();
+        if (!existing) {
+            for (const story of stories) {
+                await db.prepare(`
+                    INSERT OR REPLACE INTO news_items
+                        (id, title, url, score, by, time, descendants, domain, summary)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).bind(
+                    story.id,
+                    story.title,
+                    story.url,
+                    story.score,
+                    story.by,
+                    story.time,
+                    story.descendants,
+                    story.domain,
+                    story.summary,
+                ).run();
+            }
+            await db.prepare(
+                "INSERT INTO news_fetch_log (date, count) VALUES (?, ?)",
+            ).bind(today, stories.length).run();
+            return `${stories.length} stories (fresh)`;
+        }
+        return `${stories.length} stories (cached)`;
     });
 
     await runStep(results, "github-contributions", async () => {

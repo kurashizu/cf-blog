@@ -12,17 +12,27 @@ Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents
 
 
 
+## D1 Database
+
+| Table | Purpose |
+|---|---|
+| `posts` | Blog article index (slug, title, excerpt, tags, status, published_at) |
+| `news_items` | HN news archive (id, title, url, score, summary, etc.) |
+| `news_fetch_log` | Tracks which days have been fetched (prevents cron duplicates) |
+
+Both `cf-blog` and `cf-blog-cache` have `DB` binding to the same D1. Cache-worker syncs from R2 → D1; cf-blog reads from D1 directly.
+
 ## Cache Worker
 
-`cache-worker/` is a cron-triggered Cloudflare Worker that pre-fetches all external data into R2. The homepage never calls GitHub / Artificial Analysis on user requests — everything is served from R2.
+`cache-worker/` is a cron-triggered Cloudflare Worker that pre-fetches all external data into R2 + D1. The homepage never calls GitHub / Artificial Analysis on user requests.
 
-| Cache key | Source | Notes |
-|---|---|---|
-| `cache/github-repos.json` | GitHub API | Top 6 non-fork repos |
-| `cache/github-starred.json` | GitHub API | Top 10 starred |
-| `cache/articles-index.json` | R2 scan of `articles/*.md` | Parsed frontmatter, sorted by date |
-| `cache/llm-leaderboard.json` | Artificial Analysis API | Needs `ARTIFICIAL_ANALYSIS_API_KEY` secret |
-| `cache/github-contributions.json` | GitHub GraphQL | Needs `GITHUB_PERSONAL_ACCESS_TOKEN` secret |
+| Cache key | Storage | Source | Notes |
+|---|---|---|---|
+| `cache/github-repos.json` | R2 | GitHub API | Top 6 non-fork repos |
+| `cache/articles-index.json` | R2 + D1 `posts` | R2 scan of `articles/*.md` | Parsed frontmatter, sorted by date |
+| `cache/hn-news.json` | R2 + D1 `news_items` | HN API + Gemini summaries | Latest 5 in R2, full history in D1 |
+| `cache/llm-leaderboard.json` | R2 | Artificial Analysis API | Needs `ARTIFICIAL_ANALYSIS_API_KEY` secret |
+| `cache/github-contributions.json` | R2 | GitHub GraphQL | Needs `GITHUB_PERSONAL_ACCESS_TOKEN` secret |
 
 Manual trigger:
 ```bash

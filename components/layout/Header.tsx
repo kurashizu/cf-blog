@@ -8,6 +8,7 @@ import icon2 from "@/public/icons/icon2_128.png";
 
 const navLinks = [
     { href: "/", label: "Home" },
+    { href: "/news", label: "News" },
     { href: "/blog", label: "Blog" },
     { href: "/about", label: "About" },
 ];

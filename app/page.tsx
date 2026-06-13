@@ -5,8 +5,10 @@ import { MiniCard } from "@/components/ui/MiniCard";
 import { HeroHeader } from "@/components/hero/HeroHeader";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get } from "@/lib/r2";
+import { getDB } from "@/lib/d1";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/gadgets/GadgetsPanel";
+import { NewsSection } from "@/components/news/NewsSection";
 import { type ContributionsCache } from "@/lib/contributions";
 import { type Language, getTopLanguages } from "@/lib/languages";
 import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
@@ -34,6 +36,17 @@ interface GitHubRepo {
     owner: {
         login: string;
     };
+}
+
+interface HNStory {
+    id: number;
+    title: string;
+    url: string | null;
+    score: number;
+    by: string;
+    descendants: number;
+    domain: string | null;
+    summary: string;
 }
 
 async function readCache<T>(path: string): Promise<T[]> {
@@ -86,21 +99,32 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
 }
 
 export default async function HomePage() {
-    const [repos, starredRepos, allPosts, contributions, topLanguages] =
+    const [repos, allPosts, contributions, topLanguages] =
         await Promise.all([
             readCache<GitHubRepo>(r2Paths.githubReposCache),
-            readCache<GitHubRepo>(r2Paths.githubStarredCache),
             readCache<Post>(r2Paths.articlesIndexCache),
             readContributions(),
             getTopLanguages(5),
         ]);
+
+    const hnNews: HNStory[] = await (async () => {
+        try {
+            const db = getDB();
+            const rows = await db.prepare(
+                "SELECT * FROM news_items ORDER BY time DESC LIMIT 5",
+            ).all();
+            return (rows.results ?? []) as unknown as HNStory[];
+        } catch {
+            return [];
+        }
+    })();
 
     // Visitor geolocation is fetched client-side from /api/visitor-info
     // after the page loads (see HeroHeader). Doing it here in SSR used to
     // block the first byte on a third-party API (ip-api.com, 3 s timeout)
     // and force the whole page into dynamic rendering.
 
-    const recentPosts = allPosts.slice(0, 4);
+    const recentPosts = allPosts.slice(0, 5);
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
@@ -134,61 +158,15 @@ export default async function HomePage() {
 
             {/* 4-section grid layout */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* GitHub Projects - left top */}
-                <section className="flex flex-col">
-                    <div
-                        className="flex items-center justify-between mb-3 animate-fade-up"
-                        style={{ animationDelay: "360ms" }}
-                    >
-                        <h2 className="section-title mb-0">GitHub Projects</h2>
-                        <a
-                            href="https://github.com/kurashizu"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="view-all-link"
-                        >
-                            View all on GitHub
-                        </a>
+                {/* News - left top */}
+                {hnNews.length > 0 && (
+                    <div className="h-full">
+                        <NewsSection stories={hnNews} />
                     </div>
-                    <div className="space-y-3">
-                        {repos.slice(0, 5).map((repo, i) => (
-                            <a
-                                key={repo.name}
-                                href={repo.html_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block animate-fade-up-sm"
-                                style={{ animationDelay: `${420 + i * 50}ms` }}
-                            >
-                                <MiniCard className="group">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <code className="text-sm text-accent font-mono group-hover:text-accent-hover transition-colors truncate">
-                                            {repo.name}
-                                        </code>
-                                        <span className="text-xs text-text-muted shrink-0 flex items-center gap-1.5">
-                                            <svg
-                                                className="w-3.5 h-3.5"
-                                                fill="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                            </svg>
-                                            {repo.stargazers_count}
-                                        </span>
-                                    </div>
-                                    {repo.description && (
-                                        <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-[70%]">
-                                            {repo.description}
-                                        </p>
-                                    )}
-                                </MiniCard>
-                            </a>
-                        ))}
-                    </div>
-                </section>
+                )}
 
                 {/* Recent Posts - right top */}
-                <section className="flex flex-col">
+                <section className="flex flex-col h-full">
                     <div
                         className="flex items-center justify-between mb-3 animate-fade-up"
                         style={{ animationDelay: "360ms" }}
@@ -229,15 +207,15 @@ export default async function HomePage() {
                     )}
                 </section>
 
-                {/* Fav Repos - left bottom */}
-                <section className="flex flex-col">
+                {/* GitHub Projects - left bottom */}
+                <section className="flex flex-col h-full">
                     <div
                         className="flex items-center justify-between mb-3 animate-fade-up"
                         style={{ animationDelay: "520ms" }}
                     >
-                        <h2 className="section-title mb-0">Fav Repos</h2>
+                        <h2 className="section-title mb-0">GitHub Projects</h2>
                         <a
-                            href="https://github.com/kurashizu?tab=stars"
+                            href="https://github.com/kurashizu"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="view-all-link"
@@ -246,9 +224,9 @@ export default async function HomePage() {
                         </a>
                     </div>
                     <div className="space-y-3">
-                        {starredRepos.slice(0, 6).map((repo, i) => (
+                        {repos.slice(0, 5).map((repo, i) => (
                             <a
-                                key={`${repo.owner.login}/${repo.name}`}
+                                key={repo.name}
                                 href={repo.html_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -257,17 +235,9 @@ export default async function HomePage() {
                             >
                                 <MiniCard className="group">
                                     <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <code className="text-sm text-accent font-mono group-hover:text-accent-hover transition-colors truncate">
-                                                {repo.name}
-                                            </code>
-                                            <span className="text-xs text-text-muted shrink-0">
-                                                /
-                                            </span>
-                                            <span className="text-xs text-text-muted shrink-0 truncate">
-                                                {repo.owner.login}
-                                            </span>
-                                        </div>
+                                        <code className="text-sm text-accent font-mono group-hover:text-accent-hover transition-colors truncate">
+                                            {repo.name}
+                                        </code>
                                         <span className="text-xs text-text-muted shrink-0 flex items-center gap-1.5">
                                             <svg
                                                 className="w-3.5 h-3.5"
@@ -291,7 +261,7 @@ export default async function HomePage() {
                 </section>
 
                 {/* Gadgets — right bottom */}
-                <section className="flex flex-col">
+                <section className="flex flex-col h-full">
                     <div
                         className="flex items-center justify-between mb-3 animate-fade-up"
                         style={{ animationDelay: "520ms" }}

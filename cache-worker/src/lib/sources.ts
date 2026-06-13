@@ -12,6 +12,7 @@ import type {
     ContributionsCache,
     ContributionsGraphQLResponse,
     GitHubRepo,
+    HNStory,
     SlimModel,
 } from "../types";
 
@@ -128,6 +129,117 @@ export async function fetchLLMLeaderboard(
                 -Infinity;
             return bi - ai;
         });
+}
+
+// ---------- Hacker News + Gemini Summarization ----------
+
+function extractDomain(url: string | null): string | null {
+    if (!url) return null;
+    try {
+        const u = new URL(url);
+        return u.hostname.replace(/^www\./, "");
+    } catch {
+        return null;
+    }
+}
+
+interface HNItemRaw {
+    id: number;
+    title?: string;
+    url?: string;
+    score?: number;
+    by?: string;
+    time?: number;
+    descendants?: number;
+}
+
+const GEMINI_MODEL = "gemma-4-31b-it";
+
+async function generateSummaries(
+    stories: { id: number; title: string; domain: string | null }[],
+    apiKey: string,
+): Promise<Map<number, string>> {
+    const storyLines = stories
+        .map((s) => `${s.id}. ${s.title}${s.domain ? ` (${s.domain})` : ""}`)
+        .join("\n");
+
+    const prompt = `Summarize each of the following 5 Hacker News stories in 2-3 sentences of Markdown. Return ONLY a Markdown document with one section per story — heading level 3 (###) with the story ID as anchor, then the summary paragraph. No intro, no outro.
+
+${storyLines}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 1024,
+            },
+        }),
+    });
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Gemini ${res.status}: ${body}`);
+    }
+    const json = (await res.json()) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    const text =
+        json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    if (!text) throw new Error("Gemini returned empty response");
+
+    // Parse Gemini output: ### id\n summary
+    const summaryMap = new Map<number, string>();
+    const sectionRe = /###\s+(\d+)\s*\n([\s\S]*?)(?=\n###\s+\d+|$)/g;
+    let match: RegExpExecArray | null;
+    while ((match = sectionRe.exec(text)) !== null) {
+        const id = parseInt(match[1], 10);
+        const summary = match[2].trim();
+        if (summary) summaryMap.set(id, summary);
+    }
+    return summaryMap;
+}
+
+export async function fetchHNNews(apiKey: string): Promise<HNStory[]> {
+    const idsRes = await fetch(
+        "https://hacker-news.firebaseio.com/v0/topstories.json",
+    );
+    if (!idsRes.ok) throw new Error(`HN topstories ${idsRes.status}`);
+    const allIds = (await idsRes.json()) as number[];
+    const topIds = allIds.slice(0, 5);
+
+    const items = await Promise.all(
+        topIds.map(async (id) => {
+            const itemRes = await fetch(
+                `https://hacker-news.firebaseio.com/v0/item/${id}.json`,
+            );
+            if (!itemRes.ok) throw new Error(`HN item ${id}: ${itemRes.status}`);
+            return (await itemRes.json()) as HNItemRaw;
+        }),
+    );
+
+    const stories: Omit<HNStory, "summary">[] = items.map((item) => ({
+        id: item.id,
+        title: item.title ?? "(no title)",
+        url: item.url ?? null,
+        score: item.score ?? 0,
+        by: item.by ?? "unknown",
+        time: item.time ?? 0,
+        descendants: item.descendants ?? 0,
+        domain: extractDomain(item.url ?? null),
+    }));
+
+    const summaryMap = await generateSummaries(
+        stories.map((s) => ({ id: s.id, title: s.title, domain: s.domain })),
+        apiKey,
+    );
+
+    return stories.map((s) => ({
+        ...s,
+        summary: summaryMap.get(s.id) ?? "Summary not available.",
+    }));
 }
 
 // ---------- GitHub GraphQL (contributions) ----------

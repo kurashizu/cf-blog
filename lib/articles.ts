@@ -1,6 +1,7 @@
 import { parseFrontmatter } from "./frontmatter";
 import { r2Paths } from "./r2-paths";
 import { r2Get, r2List, r2Put, r2Delete } from "./r2";
+import { getDB } from "./d1";
 
 export interface Post {
     slug: string;
@@ -156,6 +157,39 @@ export function createArticlesRepo() {
         async save(slug: string, content: string): Promise<void> {
             const key = r2Paths.article(slug);
             await r2Put(key, content);
+
+            // Sync to D1
+            try {
+                const { data } = parseFrontmatter(content);
+                const tagsValue = data.tags;
+                const tags: string[] = Array.isArray(tagsValue)
+                    ? tagsValue.filter((t): t is string => typeof t === "string")
+                    : typeof tagsValue === "string"
+                      ? tagsValue.split(",").map((t) => t.trim()).filter(Boolean)
+                      : [];
+                const db = getDB();
+                await db.prepare(`
+                    INSERT OR REPLACE INTO posts
+                        (id, slug_en, title_en, excerpt_en, content_r2_key_en,
+                         cover_image, category, tags, status, published_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).bind(
+                    slug,
+                    slug,
+                    (data.title as string) || "",
+                    (data.description as string) || "",
+                    key,
+                    (data.coverImage as string) || (data.cover_image as string) || "",
+                    (data.category as string) || "",
+                    JSON.stringify(tags),
+                    normaliseBool(data.draft, false) ? "draft" : "published",
+                    normaliseDate(data.date) || null,
+                ).run();
+            } catch (e) {
+                console.error("D1 sync failed:", e);
+            }
+
+            // Invalidate old R2 cache index
             try {
                 await r2Delete(r2Paths.articlesIndexCache);
             } catch {

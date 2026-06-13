@@ -70,12 +70,26 @@ export interface AALeaderboardResponse {
     data: AAModel[];
 }
 
+export interface HNStory {
+    id: number;
+    title: string;
+    url: string | null;
+    score: number;
+    by: string;
+    time: number;
+    descendants: number;
+    domain: string | null;
+    summary: string;
+}
+
 export interface Env {
+    DB: D1Database;
     BUCKET: R2Bucket;
     CRON_SECRET?: string;
     ARTIFICIAL_ANALYSIS_API_KEY?: string;
     GITHUB_PERSONAL_ACCESS_TOKEN?: string;
     GH_USERNAME?: string;
+    GEMINI_API_KEY?: string;
 }
 
 export interface ContributionDayRaw {

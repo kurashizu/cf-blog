@@ -11,6 +11,7 @@ export const r2Paths = {
     cachePrefix: "cache/",
     githubReposCache: "cache/github-repos.json",
     githubStarredCache: "cache/github-starred.json",
+    hnNewsCache: "cache/hn-news.json",
     articlesIndexCache: "cache/articles-index.json",
     llmLeaderboardCache: "cache/llm-leaderboard.json",
     githubContributionsCache: "cache/github-contributions.json",
