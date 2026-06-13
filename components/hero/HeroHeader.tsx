@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type VisitorInfo as VisitorInfoType } from "@/lib/visitor";
-import { VisitorInfo } from "@/components/visitor/VisitorInfo";
 
 interface HeroHeaderProps {
     title: string;
-    subtitle?: string;
-    bio?: string;
 }
 
 const SCRAMBLE_CHARSET = "!<>-_/[]{}—=+*^?#01";
@@ -98,127 +94,14 @@ function useScramble(
     return display;
 }
 
-interface UseTypewriterOptions {
-    startDelayMs: number;
-    charDelayMs: number;
-}
-
-/** Plain typewriter: types `target` char by char after a delay. */
-function useTypewriter(
-    target: string,
-    { startDelayMs, charDelayMs }: UseTypewriterOptions,
-): string {
-    const [display, setDisplay] = useState("");
-
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-
-        const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-        if (mq.matches) {
-            setDisplay(target);
-            return;
-        }
-
-        let interval: ReturnType<typeof setInterval> | null = null;
-        const startTimer = setTimeout(() => {
-            let i = 0;
-            interval = setInterval(() => {
-                i += 1;
-                setDisplay(target.slice(0, i));
-                if (i >= target.length && interval) {
-                    clearInterval(interval);
-                    interval = null;
-                }
-            }, charDelayMs);
-        }, startDelayMs);
-        return () => {
-            clearTimeout(startTimer);
-            if (interval) clearInterval(interval);
-        };
-    }, [target, startDelayMs, charDelayMs]);
-
-    return display;
-}
-
 /**
- * Hero header with three different entrance animations:
- *  - Title: scramble-decode wave (~1.1s)
- *  - Subtitle: fast typewriter (~600ms)
- *  - Bio: slow typewriter (~2s)
- *
- * Each line is rendered with an invisible full-text placeholder so the
- * container reserves its final height from the very first paint. The
- * animated text is overlaid via absolute positioning, so it never causes
- * the hero to reflow. All animations respect `prefers-reduced-motion`.
+ * Hero header with scramble-decode animation on the title.
+ * Respects `prefers-reduced-motion`.
  */
-export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
-    // Visitor info is fetched lazily after the page has loaded, so the SSR
-    // critical path is never blocked by the third-party ip-api.com call.
-    // Initial paint shows the static bio; once the request resolves the
-    // bio is replaced with the visitor block. The /api/visitor-info route
-    // sets Cache-Control: private, max-age=3600, so a returning visitor
-    // triggers no external API call at all.
-    const [visitorInfo, setVisitorInfo] = useState<VisitorInfoType | null>(
-        null,
-    );
-    useEffect(() => {
-        // Defer the request until the browser is idle (or after a short
-        // timeout), so it never competes with the hydration or the
-        // scramble/typewriter animations for the main thread.
-        const ctrl = new AbortController();
-        const start = () => {
-            fetch("/api/visitor-info", { signal: ctrl.signal })
-                .then((r) =>
-                    r.ok
-                        ? (r.json() as Promise<{
-                              visitorInfo?: VisitorInfoType | null;
-                          }>)
-                        : Promise.reject(new Error(`HTTP ${r.status}`)),
-                )
-                .then((data) => {
-                    if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
-                })
-                .catch((e) => {
-                    if (e?.name === "AbortError") return;
-                    // Silent failure — the static bio is a perfectly fine
-                    // fallback and we don't want to spam the console for
-                    // every visitor on a transient ip-api.com error.
-                });
-        };
-        const idle = window as unknown as {
-            requestIdleCallback?: (
-                cb: () => void,
-                opts?: { timeout: number },
-            ) => number;
-            cancelIdleCallback?: (id: number) => void;
-        };
-        if (idle.requestIdleCallback) {
-            const id = idle.requestIdleCallback(start, { timeout: 2000 });
-            return () => {
-                idle.cancelIdleCallback?.(id);
-                ctrl.abort();
-            };
-        }
-        const timer = setTimeout(start, 1500);
-        return () => {
-            clearTimeout(timer);
-            ctrl.abort();
-        };
-    }, []);
-
+export function HeroHeader({ title }: HeroHeaderProps) {
     const displayTitle = useScramble(title, {
         durationMs: 1100,
         startDelayMs: 0,
-    });
-
-    const displaySubtitle = useTypewriter(subtitle ?? "", {
-        startDelayMs: 700,
-        charDelayMs: 30,
-    });
-
-    const displayBio = useTypewriter(bio ?? "", {
-        startDelayMs: 1400,
-        charDelayMs: 12,
     });
 
     return (
@@ -230,40 +113,6 @@ export function HeroHeader({ title, subtitle, bio }: HeroHeaderProps) {
             >
                 {displayTitle}
             </h1>
-            {subtitle && (
-                <p
-                    className="hero-subtitle mb-3 animate-fade-up"
-                    style={{ animationDelay: "80ms", minHeight: "1.5rem" }}
-                    aria-label={subtitle}
-                >
-                    {displaySubtitle}
-                </p>
-            )}
-            {visitorInfo ? (
-                <VisitorInfo info={visitorInfo} />
-            ) : bio ? (
-                <p
-                    className="hero-bio animate-fade-up whitespace-pre-line"
-                    style={{ animationDelay: "160ms", minHeight: "4.5rem" }}
-                    aria-label={bio}
-                >
-                    {displayBio}
-                </p>
-            ) : (
-                // Fixed-height placeholder. The exact real block may
-                // render 3 to 4 lines depending on how the long IPv6
-                // and the ISP/location string wrap on the current
-                // viewport, so 5.5rem gives enough headroom for every
-                // case while keeping the element a single, opaque
-                // reservation. The visitor info fade-in replaces this
-                // div; since both occupy the same reserved space, the
-                // sections below the hero don't reflow.
-                <div
-                    className="hero-bio"
-                    style={{ minHeight: "5.5rem" }}
-                    aria-hidden="true"
-                />
-            )}
         </>
     );
 }

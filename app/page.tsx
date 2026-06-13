@@ -111,20 +111,19 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
 }
 
 export default async function HomePage() {
-    const [repos, allPosts, contributions, topLanguages] =
-        await Promise.all([
-            readCache<GitHubRepo>(r2Paths.githubReposCache),
-            readCache<Post>(r2Paths.articlesIndexCache),
-            readContributions(),
-            getTopLanguages(5),
-        ]);
+    const [repos, allPosts, contributions, topLanguages] = await Promise.all([
+        readCache<GitHubRepo>(r2Paths.githubReposCache),
+        readCache<Post>(r2Paths.articlesIndexCache),
+        readContributions(),
+        getTopLanguages(5),
+    ]);
 
     const hnNews: HNStory[] = await (async () => {
         try {
             const db = getDB();
-            const rows = await db.prepare(
-                "SELECT * FROM news_items ORDER BY time DESC LIMIT 5",
-            ).all();
+            const rows = await db
+                .prepare("SELECT * FROM news_items ORDER BY time DESC LIMIT 5")
+                .all();
             return (rows.results ?? []) as unknown as HNStory[];
         } catch {
             return [];
@@ -144,10 +143,7 @@ export default async function HomePage() {
             <section className="mb-8 md:mb-12">
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
                     <div className="flex-1 text-center md:text-left">
-                        <HeroHeader
-                            title="Hello, I'm kurashizu"
-                            subtitle="Vibe Coding & AI Agent"
-                        />
+                        <HeroHeader title="Hello, I'm kurashizu" />
                     </div>
                     {topLanguages.length > 0 && (
                         <div
