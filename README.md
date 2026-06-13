@@ -4,12 +4,14 @@ A personal blog + AI agent deployed to Cloudflare Workers. The homepage has a re
 
 ## Features
 
-- **Blog** — Markdown articles in R2, syntax-highlighted code, Japanese + English
+- **Blog** — Markdown articles in R2, syntax-highlighted code
+- **HN News Archive** — Top 5 HN stories fetched every 30 min, with full-length AI rewrites (Gemma 4 via 3-min heartbeat cron)
 - **GitHub Contributions Heatmap** — Real-time activity ribbon in the hero
 - **Top Languages Donut** — 5-segment SVG donut with legend (hero sidebar)
 - **KurAgent** — AI assistant with tool calling (web search, time, JS eval) at `agent.022025.xyz`
 - **LLM Leaderboard** — Full-screen modal showing top 50 models from Artificial Analysis
-- **Guestbook** — Per-visitor message bubble
+- **Guestbook** — Per-visitor message at `/guestbook`
+- **News Archive** — Paginated HN news index at `/news` with full-text AI rewrites
 - **Particle Background** — Canvas character rain (ku/ra/shi/zu)
 - **Three Themes** — dark / deep-blue / deep-green, toggle in the header
 
@@ -21,7 +23,7 @@ Three Cloudflare Workers, deployed in parallel by GitHub Actions on push to `mai
 |---|---|---|---|
 | `cf-blog` | `./` | https://blog.022025.xyz | Main blog (Next.js) |
 | `cf-agent` | `agent-worker/` | https://agent.022025.xyz | AI agent with tool calling |
-| `cf-blog-cache` | `cache-worker/` | (cron-only) | Refreshes homepage cache every 30 min |
+| `cf-blog-cache` | `cache-worker/` | (cron-only) | Homepage cache refresh (30-min) + News rewrite heartbeat (3-min) |
 
 The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches everything into R2; the homepage just reads from R2. Cold cache = empty hero; ISR revalidates every 5 min.
 
@@ -29,7 +31,7 @@ The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog
 
 - **Frontend**: Next.js 15 (App Router) + React 19
 - **Styling**: Tailwind CSS + CSS variables for theming; custom animations in `components/theme/*.css`
-- **Storage**: Cloudflare R2 (articles, cache, guestbook) + Cloudflare KV (sessions, rate limits)
+- **Storage**: Cloudflare R2 (articles, cache, guestbook) + D1 (post index, news archive) + Cloudflare KV (sessions, rate limits)
 - **AI**: Gemini (with quota-based model fallback for TPD/RPM 429s)
 - **Deploy**: Cloudflare Workers via `@opennextjs/cloudflare`
 
