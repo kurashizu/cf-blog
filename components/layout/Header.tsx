@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -16,12 +17,21 @@ const navLinks = [
 export function Header() {
     const pathname = usePathname();
     const { theme, toggleTheme } = useTheme();
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const onResize = () => {
+            if (window.innerWidth >= 768) setMobileMenuOpen(false);
+        };
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
 
     return (
         <header className="site-header sticky top-0 z-50 backdrop-blur-xl bg-bg-primary/80">
-            <nav className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-                <Link href="/" className="group flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50">
+            <nav className="max-w-4xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+                <Link href="/" className="group flex items-center gap-2 shrink-0">
+                    <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50 shrink-0">
                         <Image
                             src={icon2}
                             alt="logo"
@@ -30,9 +40,9 @@ export function Header() {
                             className="object-cover"
                         />
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col min-w-0">
                         <span
-                            className="text-xl font-bold italic tracking-wide"
+                            className="text-lg md:text-xl font-bold italic tracking-wide truncate"
                             style={{
                                 fontFamily:
                                     "'Playfair Display', 'Georgia', serif",
@@ -47,15 +57,14 @@ export function Header() {
                         >
                             Kurashizu Blog
                         </span>
-                        <span className="text-[10px] font-medium text-text-muted tracking-widest uppercase -mt-1">
+                        <span className="text-[10px] font-medium text-text-muted tracking-widest uppercase -mt-1 hidden sm:block">
                             where ideas flow
                         </span>
                     </div>
-                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-transparent via-accent to-transparent transition-all duration-500 group-hover:w-full" />
                 </Link>
 
-                <div className="flex items-center gap-4">
-                    <ul className="flex items-center gap-1">
+                <div className="flex items-center gap-1 md:gap-2">
+                    <ul className="hidden md:flex items-center gap-1">
                         {navLinks.map((link) => {
                             const isActive = pathname === link.href;
                             return (
@@ -63,7 +72,7 @@ export function Header() {
                                     <Link
                                         href={link.href}
                                         className={`
-                      relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
+                      relative px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200
                       ${
                           isActive
                               ? "text-accent"
@@ -83,7 +92,7 @@ export function Header() {
 
                     <button
                         onClick={toggleTheme}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-bg-card border border-border hover:border-accent transition-all duration-200"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-bg-card border border-border hover:border-accent transition-all duration-200 shrink-0"
                         title={`Switch theme (current: ${theme})`}
                     >
                         {theme === "dark" ? (
@@ -130,8 +139,49 @@ export function Header() {
                             </svg>
                         )}
                     </button>
+
+                    <button
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-bg-card border border-border hover:border-accent transition-all duration-200 shrink-0"
+                        aria-label="Toggle menu"
+                    >
+                        {mobileMenuOpen ? (
+                            <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        ) : (
+                            <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        )}
+                    </button>
                 </div>
             </nav>
+
+            {mobileMenuOpen && (
+                <div className="md:hidden border-t border-border bg-bg-primary/95 backdrop-blur-xl">
+                    <ul className="flex flex-col px-4 py-2">
+                        {navLinks.map((link) => {
+                            const isActive = pathname === link.href;
+                            return (
+                                <li key={link.href}>
+                                    <Link
+                                        href={link.href}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className={`block px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                                            isActive
+                                                ? "text-accent"
+                                                : "text-text-secondary hover:text-accent"
+                                        }`}
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
         </header>
     );
 }

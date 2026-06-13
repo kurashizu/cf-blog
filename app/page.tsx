@@ -84,7 +84,7 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
                             {post.title}
                         </h3>
                         {excerpt && (
-                            <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-[70%]">
+                            <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-full sm:max-w-[70%]">
                                 {excerpt}...
                             </p>
                         )}
@@ -139,9 +139,9 @@ export default async function HomePage() {
     const recentPosts = allPosts.slice(0, 5);
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto px-4 py-6 md:py-12">
             {/* Hero section */}
-            <section className="mb-12">
+            <section className="mb-8 md:mb-12">
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
                     <div className="flex-1 text-center md:text-left">
                         <HeroHeader
@@ -169,7 +169,7 @@ export default async function HomePage() {
             </section>
 
             {/* 4-section grid layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                 {/* News - left top */}
                 {hnNews.length > 0 && (
                     <div className="h-full">
@@ -262,7 +262,7 @@ export default async function HomePage() {
                                         </span>
                                     </div>
                                     {repo.description && (
-                                        <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-[70%]">
+                                        <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-full sm:max-w-[70%]">
                                             {repo.description}
                                         </p>
                                     )}
@@ -290,7 +290,7 @@ export default async function HomePage() {
             </div>
 
             {/* Guestbook section */}
-            <section className="mt-12">
+            <section className="mt-8 md:mt-12">
                 <div
                     className="flex items-center gap-4 mb-4 animate-fade-up"
                     style={{ animationDelay: "700ms" }}

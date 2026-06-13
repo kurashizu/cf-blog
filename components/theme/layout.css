@@ -16,7 +16,7 @@
 }
 
 .hero-title {
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: 800;
     background: linear-gradient(
         135deg,
@@ -30,10 +30,22 @@
     margin-bottom: 0.75rem;
 }
 
+@media (min-width: 640px) {
+    .hero-title {
+        font-size: 3rem;
+    }
+}
+
 .hero-subtitle {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: var(--text-secondary);
     margin-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+    .hero-subtitle {
+        font-size: 1.125rem;
+    }
 }
 
 .hero-bio {
