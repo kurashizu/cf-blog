@@ -131,7 +131,7 @@ export async function fetchLLMLeaderboard(
         });
 }
 
-// ---------- Hacker News + Gemini Summarization ----------
+// ---------- Hacker News Fetching ----------
 
 function extractDomain(url: string | null): string | null {
     if (!url) return null;
@@ -153,56 +153,7 @@ interface HNItemRaw {
     descendants?: number;
 }
 
-const GEMINI_MODEL = "gemma-4-31b-it";
-
-async function generateSummaries(
-    stories: { id: number; title: string; domain: string | null }[],
-    apiKey: string,
-): Promise<Map<number, string>> {
-    const storyLines = stories
-        .map((s) => `${s.id}. ${s.title}${s.domain ? ` (${s.domain})` : ""}`)
-        .join("\n");
-
-    const prompt = `Summarize each of the following 5 Hacker News stories in 2-3 sentences of Markdown. Return ONLY a Markdown document with one section per story — heading level 3 (###) with the story ID as anchor, then the summary paragraph. No intro, no outro.
-
-${storyLines}`;
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
-                temperature: 0.3,
-                maxOutputTokens: 1024,
-            },
-        }),
-    });
-    if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`Gemini ${res.status}: ${body}`);
-    }
-    const json = (await res.json()) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const text =
-        json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    if (!text) throw new Error("Gemini returned empty response");
-
-    // Parse Gemini output: ### id\n summary
-    const summaryMap = new Map<number, string>();
-    const sectionRe = /###\s+(\d+)\s*\n([\s\S]*?)(?=\n###\s+\d+|$)/g;
-    let match: RegExpExecArray | null;
-    while ((match = sectionRe.exec(text)) !== null) {
-        const id = parseInt(match[1], 10);
-        const summary = match[2].trim();
-        if (summary) summaryMap.set(id, summary);
-    }
-    return summaryMap;
-}
-
-export async function fetchHNNews(apiKey: string): Promise<HNStory[]> {
+export async function fetchHNNews(): Promise<HNStory[]> {
     const idsRes = await fetch(
         "https://hacker-news.firebaseio.com/v0/topstories.json",
     );
@@ -220,7 +171,7 @@ export async function fetchHNNews(apiKey: string): Promise<HNStory[]> {
         }),
     );
 
-    const stories: Omit<HNStory, "summary">[] = items.map((item) => ({
+    return items.map((item) => ({
         id: item.id,
         title: item.title ?? "(no title)",
         url: item.url ?? null,
@@ -229,17 +180,85 @@ export async function fetchHNNews(apiKey: string): Promise<HNStory[]> {
         time: item.time ?? 0,
         descendants: item.descendants ?? 0,
         domain: extractDomain(item.url ?? null),
+        summary: "",
     }));
+}
 
-    const summaryMap = await generateSummaries(
-        stories.map((s) => ({ id: s.id, title: s.title, domain: s.domain })),
-        apiKey,
-    );
+// ---------- Single-item LLM Rewrite ----------
 
-    return stories.map((s) => ({
-        ...s,
-        summary: summaryMap.get(s.id) ?? "Summary not available.",
-    }));
+const GEMINI_MODEL = "gemma-4-31b-it";
+
+function extractPageText(html: string): string {
+    const withoutScripts = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ");
+    const withoutStyles = withoutScripts.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
+    const withoutNav = withoutStyles.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, " ");
+    const withoutFooter = withoutNav.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, " ");
+    const text = withoutFooter
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&[a-z]+;/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const lines = text.split(/(?<=[.!?])\s+/);
+    const substantial = lines.filter((l) => l.length > 60);
+    return substantial.length > 3 ? substantial.join("\n\n") : text;
+}
+
+export async function generateItemRewrite(
+    story: HNStory,
+    apiKey: string,
+): Promise<string> {
+    let articleContent: string;
+
+    if (story.url) {
+        try {
+            const res = await fetch(story.url, {
+                headers: { "User-Agent": "Mozilla/5.0 (compatible; Kurashizu-Bot)" },
+                signal: AbortSignal.timeout(10000),
+            });
+            if (res.ok) {
+                const html = await res.text();
+                const text = extractPageText(html).slice(0, 8000);
+                articleContent = `Title: ${story.title}\n\n${text}`;
+            } else {
+                articleContent = `Title: ${story.title}`;
+            }
+        } catch {
+            articleContent = `Title: ${story.title}`;
+        }
+    } else {
+        articleContent = `Title: ${story.title}`;
+    }
+
+    const prompt = `Rewrite this article in your own words, preserving all content, details, and nuance. Output must be roughly the same length as the original, in Markdown paragraphs.\n\n${articleContent}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 4096,
+            },
+        }),
+    });
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Gemini ${res.status}: ${body}`);
+    }
+    const json = (await res.json()) as {
+        candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
+    };
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    const text = parts
+        .filter((p) => !p.thought)
+        .map((p) => p.text ?? "")
+        .join("")
+        .trim();
+    if (!text) throw new Error("Gemini returned empty response");
+
+    return text;
 }
 
 // ---------- GitHub GraphQL (contributions) ----------

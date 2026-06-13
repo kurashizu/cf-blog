@@ -89,10 +89,7 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     });
 
     await runStep(results, "hn-news", async () => {
-        if (!env.GEMINI_API_KEY) {
-            throw new Error("GEMINI_API_KEY not set");
-        }
-        const stories = await fetchHNNews(env.GEMINI_API_KEY);
+        const stories = await fetchHNNews();
         if (stories.length === 0) throw new Error("empty response");
 
         // Write to R2 for homepage backward compatibility
@@ -119,7 +116,7 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
                     story.time,
                     story.descendants,
                     story.domain,
-                    story.summary,
+                    "",
                 ).run();
             }
             await db.prepare(

@@ -2,16 +2,19 @@
  * HTTP handler — accepts:
  *  `POST /__refresh`             full refresh (all caches)
  *  `POST /__refresh-articles`    article-index only (fast, no external API)
+ *  `POST /__heartbeat`           process one pending news item rewrite
  *  anything else                 health check
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>`
  */
 import { buildArticleIndex } from "../lib/articles";
 import { refreshCache } from "../lib/refresh";
+import { handleHeartbeat } from "../lib/heartbeat";
 import type { Env } from "../types";
 
 const REFRESH_PATH = "/__refresh";
 const ARTICLES_ONLY_PATH = "/__refresh-articles";
+const HEARTBEAT_PATH = "/__heartbeat";
 
 export async function handleFetch(
     request: Request,
@@ -85,6 +88,20 @@ export async function handleFetch(
             JSON.stringify({ success, logs: logs.join("\n") }, null, 2),
             { headers: { "Content-Type": "application/json" } },
         );
+    }
+
+    // ── Heartbeat (process one pending rewrite) ──
+    if (request.method === "POST" && url.pathname === HEARTBEAT_PATH) {
+        const auth = request.headers.get("Authorization");
+        if (env.CRON_SECRET && auth !== `Bearer ${env.CRON_SECRET}`) {
+            return new Response("Unauthorized", { status: 401 });
+        }
+
+        const result = await handleHeartbeat(env);
+        return new Response(JSON.stringify(result), {
+            status: result.ok ? 200 : 500,
+            headers: { "Content-Type": "application/json" },
+        });
     }
 
     // ── Health check ──

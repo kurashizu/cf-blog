@@ -1,22 +1,23 @@
-/**
- * cf-blog-cache entrypoint. Wires the two worker entrypoints (cron + http)
- * to their respective handlers. The data, sources, and orchestrator live
- * under `lib/`; the per-trigger adapters under `handlers/`.
- */
 import { handleFetch } from "./handlers/fetch";
 import { handleScheduled } from "./handlers/scheduled";
+import { handleHeartbeatCron } from "./handlers/heartbeat";
+import type { Env } from "./types";
 
 export default {
     async scheduled(
-        _event: ScheduledEvent,
-        env: import("./types").Env,
+        event: ScheduledEvent,
+        env: Env,
     ): Promise<void> {
-        await handleScheduled(env);
+        if (event.cron === "*/3 * * * *") {
+            await handleHeartbeatCron(env);
+        } else {
+            await handleScheduled(env);
+        }
     },
 
     async fetch(
         request: Request,
-        env: import("./types").Env,
+        env: Env,
     ): Promise<Response> {
         return handleFetch(request, env);
     },

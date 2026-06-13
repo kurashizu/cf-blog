@@ -45,7 +45,7 @@ function PostCard({ post, delayMs }: { post: Post; delayMs: number }) {
     );
 }
 
-const LIMIT = 20;
+const LIMIT = 10;
 
 export default async function BlogPage({
     searchParams,

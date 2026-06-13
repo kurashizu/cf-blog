@@ -13,7 +13,7 @@ binding = "BUCKET"
 bucket_name = "cf-blog-bucket"
 
 [triggers]
-crons = ["*/30 * * * *"]
+crons = ["*/30 * * * *", "*/3 * * * *"]
 
 [vars]
 CRON_SECRET = ""

@@ -3,7 +3,7 @@ import { NewsArchiveView } from "@/components/news/NewsArchiveView";
 
 export const dynamic = "force-dynamic";
 
-const LIMIT = 20;
+const LIMIT = 10;
 
 interface HNStory {
     id: number;
