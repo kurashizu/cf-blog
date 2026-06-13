@@ -44,6 +44,7 @@ interface HNStory {
     url: string | null;
     score: number;
     by: string;
+    time: number;
     descendants: number;
     domain: string | null;
     summary: string;
