@@ -58,7 +58,9 @@ export function NewsArchiveView({
                                         <span className="mx-1.5">•</span>
                                         <span>{story.score} points</span>
                                         <span className="mx-1.5">•</span>
-                                        <span>{story.descendants} comments</span>
+                                        <span>
+                                            {story.descendants} comments
+                                        </span>
                                     </p>
                                 </CardContent>
                             </Card>
@@ -82,6 +84,26 @@ export function NewsArchiveView({
                     <span className="text-sm text-text-muted">
                         Page {page} of {totalPages}
                     </span>
+                    <form
+                        action="/news"
+                        method="GET"
+                        className="flex items-center gap-1"
+                    >
+                        <input
+                            type="number"
+                            name="page"
+                            min={1}
+                            max={totalPages}
+                            placeholder="Go to"
+                            className="w-16 rounded border border-border bg-bg-card px-1.5 py-1 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
+                        />
+                        <button
+                            type="submit"
+                            className="rounded bg-accent px-2 py-1 text-xs text-white transition-colors hover:bg-accent-hover"
+                        >
+                            Go
+                        </button>
+                    </form>
                     {page < totalPages ? (
                         <Link
                             href={`/news?page=${page + 1}`}

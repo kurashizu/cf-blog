@@ -23,7 +23,9 @@ function PostCard({ post, delayMs }: { post: Post; delayMs: number }) {
         >
             <Card>
                 <CardHeader>
-                    <span className="article-meta">{formatDate(post.date)}</span>
+                    <span className="article-meta">
+                        {formatDate(post.date)}
+                    </span>
                 </CardHeader>
                 <CardContent>
                     <h2 className="article-title">{post.title}</h2>
@@ -59,22 +61,28 @@ export default async function BlogPage({
     const offset = (page - 1) * LIMIT;
 
     const [rows, countRow] = await Promise.all([
-        db.prepare(
-            `SELECT slug, title, excerpt as description,
+        db
+            .prepare(
+                `SELECT slug, title, excerpt as description,
                     published_at as date, tags, cover_image
              FROM posts
              WHERE status = 'published'
              ORDER BY published_at DESC
              LIMIT ? OFFSET ?`,
-        ).bind(LIMIT, offset).all(),
-        db.prepare(
-            "SELECT COUNT(*) as total FROM posts WHERE status = 'published'",
-        ).first(),
+            )
+            .bind(LIMIT, offset)
+            .all(),
+        db
+            .prepare(
+                "SELECT COUNT(*) as total FROM posts WHERE status = 'published'",
+            )
+            .first(),
     ]);
 
     const posts = ((rows.results ?? []) as unknown as Post[]).map((p) => ({
         ...p,
-        tags: typeof p.tags === "string" ? JSON.parse(p.tags as string) : p.tags,
+        tags:
+            typeof p.tags === "string" ? JSON.parse(p.tags as string) : p.tags,
     }));
     const total = (countRow?.total as number) ?? 0;
     const totalPages = Math.ceil(total / LIMIT);
@@ -120,6 +128,26 @@ export default async function BlogPage({
                     <span className="text-sm text-text-muted">
                         Page {page} of {totalPages}
                     </span>
+                    <form
+                        action="/blog"
+                        method="GET"
+                        className="flex items-center gap-1"
+                    >
+                        <input
+                            type="number"
+                            name="page"
+                            min={1}
+                            max={totalPages}
+                            placeholder="Go to"
+                            className="w-16 rounded border border-border bg-bg-card px-1.5 py-1 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
+                        />
+                        <button
+                            type="submit"
+                            className="rounded bg-accent px-2 py-1 text-xs text-white transition-colors hover:bg-accent-hover"
+                        >
+                            Go
+                        </button>
+                    </form>
                     {page < totalPages ? (
                         <Link
                             href={`/blog?page=${page + 1}`}
