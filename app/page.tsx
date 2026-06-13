@@ -143,7 +143,7 @@ export default async function HomePage() {
             <section className="mb-8 md:mb-12">
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
                     <div className="flex-1 text-center md:text-left">
-                        <HeroHeader title="Hello, I'm kurashizu" />
+                        <HeroHeader title="Inside the Mind of Kurashizu" />
                     </div>
                     {topLanguages.length > 0 && (
                         <div

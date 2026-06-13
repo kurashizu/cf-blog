@@ -1,37 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { VisitorInfo as VisitorInfoType } from "@/lib/visitor";
+import { VisitorTerminal } from "@/components/visitor/VisitorTerminal";
 
 interface HeroHeaderProps {
     title: string;
 }
 
-const SCRAMBLE_CHARSET = "!<>-_/[]{}—=+*^?#01";
-
-interface UseScrambleOptions {
-    durationMs: number;
+interface UseTypewriterOptions {
     startDelayMs: number;
-    charset?: string;
-    flipIntervalMs?: number;
-    settleMs?: number;
+    charDelayMs: number;
 }
 
-/**
- * Scramble-decode: each character flips through random chars from
- * `charset` until it settles on the real character. A left-to-right
- * "decryption" wave propagates across the text. `settleMs` controls
- * how long each char spends flipping; `durationMs` is the total time
- * (last char settles at `durationMs`).
- */
-function useScramble(
+/** Plain typewriter: types `target` char by char after a delay. */
+function useTypewriter(
     target: string,
-    {
-        durationMs,
-        startDelayMs,
-        charset = SCRAMBLE_CHARSET,
-        flipIntervalMs = 50,
-        settleMs = 150,
-    }: UseScrambleOptions,
+    { startDelayMs, charDelayMs }: UseTypewriterOptions,
 ): string {
     const [display, setDisplay] = useState("");
 
@@ -44,64 +29,79 @@ function useScramble(
             return;
         }
 
-        const n = target.length;
-        if (n === 0) {
-            setDisplay(target);
-            return;
-        }
-
-        const waveSpan = Math.max(0, durationMs - settleMs);
-        const startTime = performance.now() + startDelayMs;
-        let rafId = 0;
-        let cancelled = false;
-
-        const tick = (now: number) => {
-            if (cancelled) return;
-            if (now < startTime) {
-                setDisplay("");
-                rafId = requestAnimationFrame(tick);
-                return;
-            }
-            const elapsed = now - startTime;
-            let result = "";
-            for (let i = 0; i < n; i++) {
-                const charStart = (i / Math.max(1, n - 1)) * waveSpan;
-                const charEnd = charStart + settleMs;
-                if (elapsed >= charEnd) {
-                    result += target[i];
-                } else {
-                    const flipIndex =
-                        Math.floor(elapsed / flipIntervalMs) + i * 13;
-                    result += charset[Math.abs(flipIndex) % charset.length];
+        let interval: ReturnType<typeof setInterval> | null = null;
+        const startTimer = setTimeout(() => {
+            let i = 0;
+            interval = setInterval(() => {
+                i += 1;
+                setDisplay(target.slice(0, i));
+                if (i >= target.length && interval) {
+                    clearInterval(interval);
+                    interval = null;
                 }
-            }
-            setDisplay(result);
-
-            if (elapsed >= durationMs) {
-                setDisplay(target);
-                return;
-            }
-            rafId = requestAnimationFrame(tick);
-        };
-
-        rafId = requestAnimationFrame(tick);
+            }, charDelayMs);
+        }, startDelayMs);
         return () => {
-            cancelled = true;
-            cancelAnimationFrame(rafId);
+            clearTimeout(startTimer);
+            if (interval) clearInterval(interval);
         };
-    }, [target, durationMs, startDelayMs, charset, flipIntervalMs, settleMs]);
+    }, [target, startDelayMs, charDelayMs]);
 
     return display;
 }
 
 /**
- * Hero header with scramble-decode animation on the title.
+ * Hero header with typewriter title + terminal-style visitor info.
  * Respects `prefers-reduced-motion`.
  */
 export function HeroHeader({ title }: HeroHeaderProps) {
-    const displayTitle = useScramble(title, {
-        durationMs: 1100,
+    const [visitorInfo, setVisitorInfo] = useState<VisitorInfoType | null>(
+        null,
+    );
+
+    useEffect(() => {
+        const ctrl = new AbortController();
+        const start = () => {
+            fetch("/api/visitor-info", { signal: ctrl.signal })
+                .then((r) =>
+                    r.ok
+                        ? (r.json() as Promise<{
+                              visitorInfo?: VisitorInfoType | null;
+                          }>)
+                        : Promise.reject(new Error(`HTTP ${r.status}`)),
+                )
+                .then((data) => {
+                    if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
+                })
+                .catch((e) => {
+                    if (e?.name === "AbortError") return;
+                });
+        };
+
+        const idle = window as unknown as {
+            requestIdleCallback?: (
+                cb: () => void,
+                opts?: { timeout: number },
+            ) => number;
+            cancelIdleCallback?: (id: number) => void;
+        };
+        if (idle.requestIdleCallback) {
+            const id = idle.requestIdleCallback(start, { timeout: 2000 });
+            return () => {
+                idle.cancelIdleCallback?.(id);
+                ctrl.abort();
+            };
+        }
+        const timer = setTimeout(start, 1500);
+        return () => {
+            clearTimeout(timer);
+            ctrl.abort();
+        };
+    }, []);
+
+    const displayTitle = useTypewriter(title, {
         startDelayMs: 0,
+        charDelayMs: 60,
     });
 
     return (
@@ -113,6 +113,18 @@ export function HeroHeader({ title }: HeroHeaderProps) {
             >
                 {displayTitle}
             </h1>
+            {visitorInfo && (
+                <div
+                    className="animate-fade-up"
+                    style={{ animationDelay: "400ms" }}
+                >
+                    <VisitorTerminal
+                        info={visitorInfo}
+                        startDelayMs={0}
+                        charDelayMs={16}
+                    />
+                </div>
+            )}
         </>
     );
 }
