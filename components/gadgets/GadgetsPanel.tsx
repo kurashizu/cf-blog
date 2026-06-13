@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { AgentPanel } from "@/components/agent/AgentPanel";
 import { LLMLeaderboardPanel } from "@/components/llm/LLMLeaderboardPanel";
 
 interface Gadget {
@@ -54,9 +53,11 @@ const gadgets: Gadget[] = [
     },
 ];
 
-// jsnes + NESPanel live in a separate chunk. We only mount the component
-// when the user actually opens the NES gadget (gated by `showNes` below),
-// so the jsnes bundle is never fetched on the home page's initial load.
+const AgentPanel = dynamic(
+    () => import("@/components/agent/AgentPanel").then((m) => m.AgentPanel),
+    { ssr: false },
+);
+
 const NESPanel = dynamic(
     () => import("@/components/nes").then((m) => m.NESPanel),
     {
@@ -264,11 +265,13 @@ export function GadgetsPanel() {
 
     return (
         <div className="w-full h-full flex flex-col justify-center">
-            <AgentPanel
-                expanded={showAgent}
-                onCollapse={() => setShowAgent(false)}
-                onExpand={() => setShowAgent(true)}
-            />
+            {showAgent && (
+                <AgentPanel
+                    expanded={showAgent}
+                    onCollapse={() => setShowAgent(false)}
+                    onExpand={() => setShowAgent(true)}
+                />
+            )}
             <LLMLeaderboardPanel
                 expanded={showLlmBoard}
                 onExpand={() => setShowLlmBoard(true)}
