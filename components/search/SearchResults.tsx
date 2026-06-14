@@ -151,11 +151,11 @@ function ScoreLabel({ score }: { score: number }) {
 
     let className: string;
     if (pct >= 80) {
-        className = "text-sm font-bold text-accent";
+        className = "text-sm font-bold italic text-accent";
     } else if (pct >= 60) {
-        className = "text-[13px] font-medium text-accent/60";
+        className = "text-[13px] italic text-accent/70";
     } else {
-        className = "text-xs font-normal text-text-muted";
+        className = "text-xs italic text-accent/50";
     }
 
     return <span className={`${className}`}>{label}</span>;
