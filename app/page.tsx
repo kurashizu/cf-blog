@@ -6,12 +6,11 @@ import { HeroHeader } from "@/components/hero/HeroHeader";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get } from "@/lib/r2";
 import { getDB } from "@/lib/d1";
-import { getLanguageColor } from "@/lib/languages";
+import { getLanguageColor, type Language } from "@/lib/languages";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/gadgets/GadgetsPanel";
 import { NewsSection } from "@/components/news/NewsSection";
 import { type ContributionsCache } from "@/lib/contributions";
-import { type Language, getTopLanguages } from "@/lib/languages";
 import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
 import { DonutChart } from "@/components/activity/DonutChart";
 import { VisitorTerminal } from "@/components/visitor/VisitorTerminal";
@@ -56,17 +55,50 @@ interface HNStory {
     summary: string;
 }
 
-async function readGithubRepos(): Promise<GitHubRepo[]> {
+interface RepoRow {
+    id: number;
+    name: string;
+    description: string | null;
+    html_url: string;
+    stargazers_count: number;
+    fork: number;
+    language: string | null;
+    languages_json: string;
+}
+
+async function readReposAndLanguages(limit = 5) {
     try {
         const db = getDB();
         const rows = await db
             .prepare(
-                "SELECT id, name, description, html_url, stargazers_count, fork, languages_json FROM github_repos WHERE fork = 0 ORDER BY stargazers_count DESC LIMIT 6",
+                "SELECT id, name, description, html_url, stargazers_count, fork, language, languages_json FROM github_repos WHERE fork = 0 ORDER BY stargazers_count DESC",
             )
             .all();
-        return (rows.results ?? []) as unknown as GitHubRepo[];
+        const all = (rows.results ?? []) as unknown as RepoRow[];
+
+        // Top 6 repos for display
+        const repos: GitHubRepo[] = all.slice(0, 6);
+
+        // Language stats from ALL repos
+        const counts: Record<string, number> = {};
+        for (const r of all) {
+            if (!r.language) continue;
+            counts[r.language] = (counts[r.language] || 0) + 1;
+        }
+        const total = Object.values(counts).reduce((s, c) => s + c, 0);
+        const languages: Language[] = Object.entries(counts)
+            .map(([name, count]) => ({
+                name,
+                count,
+                percentage: Math.round((count / total) * 100),
+                color: getLanguageColor(name),
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, limit);
+
+        return { repos, languages };
     } catch {
-        return [];
+        return { repos: [] as GitHubRepo[], languages: [] as Language[] };
     }
 }
 
@@ -182,49 +214,38 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
 }
 
 export default async function HomePage() {
-    const [repos, contributions, topLanguages] = await Promise.all([
-        readGithubRepos(),
-        readContributions(),
-        getTopLanguages(5),
-    ]);
+    const db = getDB();
 
-    const [hnNews, recentPosts] = await (async () => {
-        try {
-            const db = getDB();
-            const [newsRows, postRows] = await Promise.all([
-                db
-                    .prepare(
-                        "SELECT * FROM news_items ORDER BY time DESC LIMIT 5",
-                    )
-                    .all(),
-                db
-                    .prepare(
-                        `SELECT slug, title, excerpt as description,
-                            published_at as date, tags, cover_image
+    const [{ repos, languages }, contributions, newsRows, postRows] =
+        await Promise.all([
+            readReposAndLanguages(5),
+            readContributions(),
+            db
+                .prepare("SELECT * FROM news_items ORDER BY time DESC LIMIT 5")
+                .all()
+                .then((r) => (r.results ?? []) as unknown as HNStory[])
+                .catch(() => [] as HNStory[]),
+            db
+                .prepare(
+                    `SELECT slug, title, excerpt as description,
+                        published_at as date, tags, cover_image
                      FROM posts
                      WHERE status = 'published'
                      ORDER BY published_at DESC
                      LIMIT 5`,
-                    )
-                    .all(),
-            ]);
-            const posts = ((postRows.results ?? []) as unknown as Post[]).map(
-                (p) => ({
-                    ...p,
-                    tags:
-                        typeof p.tags === "string"
-                            ? JSON.parse(p.tags as string)
-                            : p.tags,
-                }),
-            );
-            return [
-                (newsRows.results ?? []) as unknown as HNStory[],
-                posts,
-            ] as [HNStory[], Post[]];
-        } catch {
-            return [[], []] as [HNStory[], Post[]];
-        }
-    })();
+                )
+                .all()
+                .then((r) =>
+                    ((r.results ?? []) as unknown as Post[]).map((p) => ({
+                        ...p,
+                        tags:
+                            typeof p.tags === "string"
+                                ? JSON.parse(p.tags as string)
+                                : p.tags,
+                    })),
+                )
+                .catch(() => [] as Post[]),
+        ]);
 
     // Visitor geolocation is fetched client-side from /api/visitor-info
     // after the page loads (see HeroHeader). Doing it here in SSR used to
@@ -243,12 +264,12 @@ export default async function HomePage() {
                     <div className="flex-1">
                         <VisitorTerminal />
                     </div>
-                    {topLanguages.length > 0 && (
+                    {languages.length > 0 && (
                         <div
                             className="shrink-0 mx-auto md:mx-0 animate-fade-up"
                             style={{ animationDelay: "0ms" }}
                         >
-                            <DonutChart languages={topLanguages} />
+                            <DonutChart languages={languages} />
                         </div>
                     )}
                 </div>
@@ -266,9 +287,9 @@ export default async function HomePage() {
             {/* 4-section grid layout */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                 {/* News - left top */}
-                {hnNews.length > 0 && (
+                {newsRows.length > 0 && (
                     <div className="h-full">
-                        <NewsSection stories={hnNews} />
+                        <NewsSection stories={newsRows} />
                     </div>
                 )}
 
@@ -284,7 +305,7 @@ export default async function HomePage() {
                         </Link>
                     </div>
 
-                    {recentPosts.length === 0 ? (
+                    {postRows.length === 0 ? (
                         <Card className="flex-1">
                             <CardContent className="text-center p-4">
                                 <p className="text-text-muted mb-2 text-sm">
@@ -300,7 +321,7 @@ export default async function HomePage() {
                         </Card>
                     ) : (
                         <div className="space-y-3">
-                            {recentPosts.map((post, i) => (
+                            {postRows.map((post, i) => (
                                 <FeaturedPost
                                     key={post.slug}
                                     post={post}
