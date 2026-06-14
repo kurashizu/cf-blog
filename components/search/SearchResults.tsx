@@ -262,7 +262,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                         <div className="flex items-center gap-1.5 ml-auto shrink-0">
                             <div className="w-12 h-1 rounded-full bg-bg-primary overflow-hidden">
                                 <div
-                                    className="h-full rounded-full bg-accent transition-all duration-300"
+                                    className="h-full rounded-full bg-accent transition-all duration-300 ml-auto"
                                     style={{
                                         width: `${Math.round(result.score * 100)}%`,
                                     }}
