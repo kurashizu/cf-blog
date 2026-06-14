@@ -378,23 +378,8 @@ body {
     background: rgba(0, 0, 0, 0.1);
 }
 
-/* ===========================================
-   PAGE TRANSITIONS
-   Global page-level exit / enter animations.
-   Driven by <PageTransition> in the root layout.
-   =========================================== */
-
-@keyframes page-exit {
-    from {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-}
-
+/* PageTransition uses inline styles now; these classes are kept for
+   reference in case a future consumer needs a standalone enter animation. */
 @keyframes page-enter {
     from {
         opacity: 0;
@@ -404,10 +389,6 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-.animate-page-exit {
-    animation: page-exit 0.18s ease-in both;
 }
 
 .animate-page-enter {
@@ -477,7 +458,6 @@ body {
     .animate-scaleIn,
     .animate-slideUp,
     .animate-slideDown,
-    .animate-page-exit,
     .animate-page-enter {
         animation: none;
         opacity: 1;
