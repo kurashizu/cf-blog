@@ -14,7 +14,7 @@ interface SearchEnv {
 export interface SearchHit {
     id: string;
     score: number;
-    source: string;
+    source: "blog" | "news";
     type: string;
     title: string;
     heading: string | null;
@@ -57,7 +57,7 @@ export async function performSearch(
         return {
             id: match.id,
             score: match.score,
-            source: meta.source as string,
+            source: meta.source as "blog" | "news",
             type: meta.type as string,
             title: meta.title as string,
             heading: (meta.heading as string) ?? null,
