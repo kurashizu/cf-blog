@@ -79,3 +79,22 @@ CREATE INDEX IF NOT EXISTS idx_github_repos_language
     ON github_repos(language);
 CREATE INDEX IF NOT EXISTS idx_github_repos_fork
     ON github_repos(fork);
+
+-- ============================================
+-- Guestbook messages
+-- ============================================
+CREATE TABLE IF NOT EXISTS guestbook_messages (
+    id            TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    content       TEXT NOT NULL,
+    email         TEXT DEFAULT '',
+    timestamp     TEXT NOT NULL,
+    avatar        TEXT DEFAULT '',
+    avatar_index  INTEGER DEFAULT 0,
+    approved      INTEGER DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_guestbook_timestamp
+    ON guestbook_messages(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_guestbook_approved
+    ON guestbook_messages(approved);

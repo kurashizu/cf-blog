@@ -1,14 +1,4 @@
-/**
- * Guestbook repository — stores each message as an individual R2 object to
- * eliminate the read-modify-write race that the previous single-file design had.
- *
- * Key layout:   guestbook/messages/{id}.json
- *
- * The previous single-file layout (`guestbook/messages.json`) is migrated
- * lazily on the first read after deploy — see `migrateLegacyStore()`.
- */
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { r2Get, r2List, r2Put, r2Delete } from "./r2";
+import { getDB } from "./d1";
 
 export interface GuestbookMessage {
     id: string;
@@ -21,95 +11,77 @@ export interface GuestbookMessage {
     approved: boolean;
 }
 
-interface LegacyStore {
-    messages: GuestbookMessage[];
-    version: number;
-}
-
 const GUESTBOOK_AVATAR_COUNT = 9;
-const GUESTBOOK_MSG_PREFIX = "guestbook/messages/";
-const LEGACY_KEY = "guestbook/messages.json";
 
-function msgKey(id: string): string {
-    return `${GUESTBOOK_MSG_PREFIX}${id}.json`;
-}
-
-/**
- * One-shot lazy migration from the legacy single-file store. Memoized at
- * module scope so concurrent reads share the same promise.
- */
-let migrationPromise: Promise<void> | null = null;
-
-async function migrateLegacyStore(): Promise<void> {
-    const { env } = getCloudflareContext();
-    const bucket = env.BUCKET as R2Bucket;
-    let legacy: LegacyStore | null = null;
-    try {
-        const obj = await bucket.get(LEGACY_KEY);
-        if (obj) {
-            legacy = JSON.parse(await obj.text()) as LegacyStore;
-        }
-    } catch {
-        return; // no legacy file or unreadable — nothing to do
-    }
-    if (
-        !legacy ||
-        !Array.isArray(legacy.messages) ||
-        legacy.messages.length === 0
-    ) {
-        return;
-    }
-    // Idempotent: each put is a new key (UUID) and re-running produces the
-    // same files. Concurrent migrations are safe — last writer wins, and the
-    // payload is identical across attempts.
-    await Promise.all([
-        ...legacy.messages.map((msg) =>
-            r2Put(msgKey(msg.id), JSON.stringify(msg)),
-        ),
-        r2Delete(LEGACY_KEY).catch(() => {
-            /* ignore */
-        }),
-    ]);
-}
-
-function ensureMigrated(): Promise<void> {
-    if (!migrationPromise) {
-        migrationPromise = migrateLegacyStore();
-    }
-    return migrationPromise;
-}
-
-async function fetchAllMessages(): Promise<GuestbookMessage[]> {
-    const keys = await r2List(GUESTBOOK_MSG_PREFIX);
-    const results = await Promise.all(
-        keys.map(async (key) => {
-            try {
-                const text = await r2Get(key);
-                return JSON.parse(text) as GuestbookMessage;
-            } catch {
-                return null;
-            }
-        }),
-    );
-    return results.filter((m): m is GuestbookMessage => m !== null);
+function rowToMessage(row: {
+    id: string;
+    name: string;
+    content: string;
+    email: string | null;
+    timestamp: string;
+    avatar: string | null;
+    avatarIndex: number | null;
+    approved: number;
+}): GuestbookMessage {
+    return {
+        id: row.id,
+        name: row.name,
+        content: row.content,
+        timestamp: row.timestamp,
+        email: row.email || undefined,
+        avatar: row.avatar || undefined,
+        avatarIndex: row.avatarIndex ?? undefined,
+        approved: row.approved === 1,
+    };
 }
 
 export function createGuestbookRepo() {
     return {
         async getAll(): Promise<GuestbookMessage[]> {
-            await ensureMigrated();
-            const messages = await fetchAllMessages();
-            return messages
-                .filter((m) => m.approved)
-                .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            const db = getDB();
+            const result = await db
+                .prepare(
+                    `SELECT id, name, content, email, timestamp, avatar,
+                            avatar_index AS avatarIndex, approved
+                     FROM guestbook_messages
+                     WHERE approved = 1
+                     ORDER BY timestamp DESC`,
+                )
+                .all();
+            const rows = (result.results ?? []) as unknown as {
+                id: string;
+                name: string;
+                content: string;
+                email: string | null;
+                timestamp: string;
+                avatar: string | null;
+                avatarIndex: number | null;
+                approved: number;
+            }[];
+            return rows.map(rowToMessage);
         },
 
         async getAllForAdmin(): Promise<GuestbookMessage[]> {
-            await ensureMigrated();
-            const messages = await fetchAllMessages();
-            return messages.sort((a, b) =>
-                b.timestamp.localeCompare(a.timestamp),
-            );
+            const db = getDB();
+            const result = await db
+                .prepare(
+                    `SELECT id, name, content, email, timestamp, avatar,
+                            avatar_index AS avatarIndex, approved
+                     FROM guestbook_messages
+                     ORDER BY timestamp DESC`,
+                )
+                .all();
+            const rows = (result.results ?? []) as unknown as {
+                id: string;
+                name: string;
+                content: string;
+                email: string | null;
+                timestamp: string;
+                avatar: string | null;
+                avatarIndex: number | null;
+                approved: number;
+            }[];
+            return rows.map(rowToMessage);
         },
 
         async add(
@@ -118,6 +90,7 @@ export function createGuestbookRepo() {
                 "name" | "content" | "email" | "avatar"
             >,
         ): Promise<GuestbookMessage> {
+            const db = getDB();
             const newMessage: GuestbookMessage = {
                 id: crypto.randomUUID(),
                 name: data.name,
@@ -130,34 +103,44 @@ export function createGuestbookRepo() {
                     : Math.floor(Math.random() * GUESTBOOK_AVATAR_COUNT),
                 approved: true,
             };
-            // Single-object write — atomic, no read-modify-write race.
-            await r2Put(msgKey(newMessage.id), JSON.stringify(newMessage));
+            await db
+                .prepare(
+                    `INSERT INTO guestbook_messages
+                     (id, name, content, email, timestamp, avatar, avatar_index, approved)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                )
+                .bind(
+                    newMessage.id,
+                    newMessage.name,
+                    newMessage.content,
+                    newMessage.email ?? null,
+                    newMessage.timestamp,
+                    newMessage.avatar ?? null,
+                    newMessage.avatarIndex ?? null,
+                    newMessage.approved ? 1 : 0,
+                )
+                .run();
             return newMessage;
         },
 
         async approve(id: string): Promise<boolean> {
-            const key = msgKey(id);
-            let msg: GuestbookMessage;
-            try {
-                msg = JSON.parse(await r2Get(key)) as GuestbookMessage;
-            } catch {
-                return false;
-            }
-            msg.approved = true;
-            await r2Put(key, JSON.stringify(msg));
-            return true;
+            const db = getDB();
+            const result = await db
+                .prepare(
+                    "UPDATE guestbook_messages SET approved = 1 WHERE id = ?",
+                )
+                .bind(id)
+                .run();
+            return (result.meta.changes ?? 0) > 0;
         },
 
         async delete(id: string): Promise<boolean> {
-            const key = msgKey(id);
-            // Verify existence before deleting so we return a meaningful false.
-            try {
-                await r2Get(key);
-            } catch {
-                return false;
-            }
-            await r2Delete(key);
-            return true;
+            const db = getDB();
+            const result = await db
+                .prepare("DELETE FROM guestbook_messages WHERE id = ?")
+                .bind(id)
+                .run();
+            return (result.meta.changes ?? 0) > 0;
         },
     };
 }

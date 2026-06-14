@@ -12,6 +12,4 @@ export const r2Paths = {
     articlesIndexCache: "cache/articles-index.json",
     llmLeaderboardCache: "cache/llm-leaderboard.json",
     githubContributionsCache: "cache/github-contributions.json",
-    guestbookMessages: "guestbook/messages.json",
-    guestbookRateLimit: (ipHash: string) => `guestbook/ratelimit/${ipHash}`,
 } as const;
