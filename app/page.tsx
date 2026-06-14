@@ -15,6 +15,8 @@ import { ContributionsRibbon } from "@/components/activity/ContributionsRibbon";
 import { DonutChart } from "@/components/activity/DonutChart";
 import { VisitorTerminal } from "@/components/visitor/VisitorTerminal";
 
+export const dynamic = "force-dynamic";
+
 // The home page is fully dynamic (R2 reads on every request) so the R2
 // cache-worker only needs to refresh every 30 min. Visitor geolocation is
 // fetched client-side from /api/visitor-info *after* the page loads (see
