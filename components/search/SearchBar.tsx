@@ -85,7 +85,8 @@ export function SearchBar({
                     className="w-full h-8 rounded-lg bg-bg-card border border-border
                                pl-8 pr-3 text-xs text-text-primary
                                placeholder:text-text-muted
-                               focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/60
+                               focus:outline-none focus-visible:outline-none
+                               focus:border-accent/60
                                transition-all duration-300"
                 />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 flex items-center justify-center">
@@ -110,7 +111,8 @@ export function SearchBar({
                 className="w-full max-w-md h-10 rounded-xl bg-bg-card border border-border
                        px-4 pl-10 text-sm text-text-primary
                        placeholder:text-text-muted
-                       focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-accent/60
+                       focus:outline-none focus-visible:outline-none
+                       focus:border-accent/60
                        transition-all duration-300"
             />
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center">
