@@ -92,6 +92,7 @@ export default async function BlogPage({
             <div
                 className="page-title animate-fade-up"
                 style={{ animationDelay: "0ms" }}
+            >
                 <h1>Blog</h1>
                 <p className="text-sm text-text-secondary">
                     A collection of thoughts and tutorials

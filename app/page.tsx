@@ -147,6 +147,7 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
             href={`/blog/${post.slug}`}
             className="block animate-fade-up-sm"
             style={{ animationDelay: `${delayMs}ms` }}
+        >
             <Card className="h-full group">
                 <div className="p-3 flex flex-col justify-between h-full">
                     <div>
