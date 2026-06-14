@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { SearchBar } from "@/components/search/SearchBar";
 
 interface SearchResult {
@@ -20,7 +21,14 @@ interface SearchResultsProps {
     query: string;
     results: SearchResult[];
     error?: string;
+    sourceFilter: "all" | "blog" | "news";
 }
+
+const FILTER_OPTIONS: { value: "all" | "blog" | "news"; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "blog", label: "Blog" },
+    { value: "news", label: "News" },
+];
 
 function formatDate(dateStr: string): string {
     if (!dateStr) return "";
@@ -36,7 +44,20 @@ function formatDate(dateStr: string): string {
     }
 }
 
-export function SearchResults({ query, results, error }: SearchResultsProps) {
+export function SearchResults({
+    query,
+    results,
+    error,
+    sourceFilter,
+}: SearchResultsProps) {
+    const router = useRouter();
+
+    function handleFilterChange(value: "all" | "blog" | "news") {
+        const params = new URLSearchParams({ q: query });
+        if (value !== "all") params.set("source", value);
+        router.push(`/search?${params.toString()}`);
+    }
+
     return (
         <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12 animate-fadeIn">
             <div
@@ -46,13 +67,42 @@ export function SearchResults({ query, results, error }: SearchResultsProps) {
                 <h1 className="page-title text-2xl font-bold mb-2">
                     Search Results
                 </h1>
-                <SearchBar variant="inline" initialQuery={query} />
+
+                {/* Search bar + filter pills */}
+                <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                        <SearchBar variant="inline" initialQuery={query} />
+                    </div>
+                    <div className="flex shrink-0 rounded-lg border border-border bg-bg-card p-0.5">
+                        {FILTER_OPTIONS.map((opt) => {
+                            const isActive = sourceFilter === opt.value;
+                            return (
+                                <button
+                                    key={opt.value}
+                                    onClick={() =>
+                                        handleFilterChange(opt.value)
+                                    }
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                                        isActive
+                                            ? "bg-accent text-white shadow-sm"
+                                            : "text-text-secondary hover:text-text-primary hover:bg-bg-primary"
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <p className="text-sm text-text-secondary mt-2">
                     {results.length > 0
                         ? `Found ${results.length} result${results.length === 1 ? "" : "s"} for "${query}"`
                         : error
                           ? `Search failed: ${error}`
                           : `No results for "${query}"`}
+                    {sourceFilter !== "all" &&
+                        ` in ${sourceFilter === "blog" ? "blog posts" : "news"}`}
                 </p>
             </div>
 
@@ -97,7 +147,41 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                                 : "bg-green-500/10 text-green-500"
                         }`}
                     >
-                        {isBlog ? "📝 Blog" : "📰 News"}
+                        {isBlog ? (
+                            <>
+                                <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                </svg>
+                                Blog
+                            </>
+                        ) : (
+                            <>
+                                <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 8h6v4H7V8z"
+                                    />
+                                </svg>
+                                News
+                            </>
+                        )}
                     </span>
                     {result.type === "overview" && (
                         <span className="text-[10px] text-text-muted">

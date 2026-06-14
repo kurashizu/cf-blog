@@ -33,6 +33,7 @@ export interface SearchResult {
 export async function performSearch(
     query: string,
     topK: number = 15,
+    sourceFilter?: "blog" | "news",
 ): Promise<SearchResult> {
     const { env } = getCloudflareContext();
     const cfEnv = env as unknown as SearchEnv;
@@ -45,11 +46,15 @@ export async function performSearch(
     const queryVector = await embedSearchQuery(query, cfEnv.GEMINI_API_KEY);
 
     // 2. Search Vectorize
-    const matches = await cfEnv.SEARCH_INDEX.query(queryVector, {
+    const queryOpts: VectorizeQueryOptions = {
         topK,
         returnValues: false,
         returnMetadata: "all",
-    });
+    };
+    if (sourceFilter) {
+        queryOpts.filter = { source: sourceFilter };
+    }
+    const matches = await cfEnv.SEARCH_INDEX.query(queryVector, queryOpts);
 
     // 3. Format results
     const results: SearchHit[] = (matches.matches ?? []).map((match) => {

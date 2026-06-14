@@ -20,10 +20,12 @@ export const metadata: Metadata = {
 export default async function SearchPage({
     searchParams,
 }: {
-    searchParams: Promise<{ q?: string }>;
+    searchParams: Promise<{ q?: string; source?: string }>;
 }) {
-    const { q } = await searchParams;
+    const { q, source } = await searchParams;
     const query = (q ?? "").trim();
+    const sourceFilter =
+        source === "blog" || source === "news" ? source : undefined;
 
     if (!query) {
         return (
@@ -45,11 +47,18 @@ export default async function SearchPage({
     let error: string | undefined;
 
     try {
-        const result = await performSearch(query);
+        const result = await performSearch(query, 15, sourceFilter);
         results = result.results;
     } catch (e) {
         error = e instanceof Error ? e.message : String(e);
     }
 
-    return <SearchResults query={query} results={results} error={error} />;
+    return (
+        <SearchResults
+            query={query}
+            results={results}
+            error={error}
+            sourceFilter={sourceFilter ?? "all"}
+        />
+    );
 }
