@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchBar } from "@/components/search/SearchBar";
 
@@ -153,7 +154,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
         : `/blog/${result.slug}${result.heading ? `#${result.heading.toLowerCase().replace(/\s+/g, "-")}` : ""}`;
 
     return (
-        <a
+        <Link
             href={href}
             className="block rounded-xl border border-border bg-bg-card
                        hover:border-accent/50 hover:bg-bg-card/80
@@ -256,6 +257,6 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                     )}
                 </div>
             </div>
-        </a>
+        </Link>
     );
 }
