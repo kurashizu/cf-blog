@@ -152,18 +152,16 @@ function ScoreLabel({ score }: { score: number }) {
 
     let className: string;
     if (pct >= 85) {
-        className = "text-xs font-bold bg-accent/15 text-accent";
+        className = "text-sm font-bold text-accent";
     } else if (pct >= 70) {
-        className = "text-[11px] font-semibold bg-accent/10 text-accent/85";
+        className = "text-[13px] font-semibold text-accent/85";
     } else if (pct >= 55) {
-        className = "text-[11px] font-medium bg-accent/5 text-accent/60";
+        className = "text-[13px] font-medium text-accent/60";
     } else {
-        className = "text-[10px] font-normal text-text-muted";
+        className = "text-xs font-normal text-text-muted";
     }
 
-    return (
-        <span className={`px-1.5 py-0.5 rounded ${className}`}>{label}</span>
-    );
+    return <span className={`${className}`}>{label}</span>;
 }
 
 function SearchResultCard({ result }: { result: SearchResult }) {
@@ -281,7 +279,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                     </div>
                     {result.score !== undefined && (
                         <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                            <div className="w-20 h-1.5 rounded-full bg-bg-primary overflow-hidden">
+                            <div className="w-24 h-2 rounded-full bg-bg-primary overflow-hidden">
                                 <div
                                     className="h-full rounded-full bg-accent transition-all duration-300 ml-auto"
                                     style={{
@@ -289,7 +287,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                                     }}
                                 />
                             </div>
-                            <span className="text-[13px] font-bold font-mono text-accent/85">
+                            <span className="text-[15px] font-bold font-mono text-accent">
                                 {Math.round(result.score * 100)}%
                             </span>
                             <ScoreLabel score={result.score} />
