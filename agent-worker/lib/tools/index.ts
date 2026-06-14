@@ -6,7 +6,16 @@ import type { AgentEnv } from "../../../lib/types/env";
 import { evalExpressionTool } from "./eval-expression";
 import { webSearchTool } from "./web-search";
 import { getTimeTool } from "./get-time";
+import { blogSearchTool } from "./blog-search";
+import { blogReadTool } from "./blog-read";
 
+const TOOL_LIST: Tool[] = [
+    evalExpressionTool,
+    webSearchTool,
+    getTimeTool,
+    blogSearchTool,
+    blogReadTool,
+];
 export interface Tool {
     name: string;
     description: string;
@@ -14,8 +23,6 @@ export interface Tool {
     parameters: object;
     execute(args: Record<string, unknown>): Promise<unknown>;
 }
-
-const TOOL_LIST: Tool[] = [evalExpressionTool, webSearchTool, getTimeTool];
 
 export const TOOLS = TOOL_LIST.map((t) => ({
     name: t.name,

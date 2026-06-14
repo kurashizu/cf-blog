@@ -149,6 +149,8 @@ interface Tool {
 | `eval_expression` | Safe JS expression evaluator (recursive-descent, no `eval`/`Function`) | `{ code: string }` |
 | `web_search` | Brave Search API | `{ q: string }` |
 | `get_time` | Current time in timezone (UTC fallback) | `{ timezone?: string }` |
+| `blog_search` | Blog semantic search (Vectorize + Gemini Embedding) | `{ q: string, topK?: number, source?: "all" | "blog" | "news" }` |
+| `blog_read` | Read full article Markdown by slug | `{ slug: string, maxLength?: number }` |
 
 ### API Endpoints
 
