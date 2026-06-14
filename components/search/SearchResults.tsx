@@ -212,12 +212,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                             (overview match)
                         </span>
                     )}
-                    {result.score && (
-                        <span className="text-[10px] font-mono text-accent/70">
-                            {(result.score * 100).toFixed(0)}%
-                        </span>
-                    )}
-                    <span className="text-[10px] text-text-muted ml-1.5">
+                    <span className="text-[10px] text-text-muted ml-auto">
                         {formatDate(result.published_at)}
                     </span>
                 </div>
@@ -243,23 +238,40 @@ function SearchResultCard({ result }: { result: SearchResult }) {
 
                 {/* Meta footer */}
                 <div className="flex items-center gap-3 mt-2 text-[10px] text-text-muted">
-                    {isNews && result.by && <span>by {result.by}</span>}
-                    {isNews && result.url && (
-                        <a
-                            href={result.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-accent transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            Original source →
-                        </a>
-                    )}
-                    {isBlog && result.tags && result.tags.length > 0 && (
-                        <span>
-                            {result.tags.slice(0, 3).join(" · ")}
-                            {result.tags.length > 3 && " …"}
-                        </span>
+                    <div className="flex items-center gap-3 min-w-0 truncate">
+                        {isNews && result.by && <span>by {result.by}</span>}
+                        {isNews && result.url && (
+                            <a
+                                href={result.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-accent transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                Original source →
+                            </a>
+                        )}
+                        {isBlog && result.tags && result.tags.length > 0 && (
+                            <span>
+                                {result.tags.slice(0, 3).join(" · ")}
+                                {result.tags.length > 3 && " …"}
+                            </span>
+                        )}
+                    </div>
+                    {result.score !== undefined && (
+                        <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                            <div className="w-12 h-1 rounded-full bg-bg-primary overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-accent transition-all duration-300"
+                                    style={{
+                                        width: `${Math.round(result.score * 100)}%`,
+                                    }}
+                                />
+                            </div>
+                            <span className="font-mono text-accent/70">
+                                {Math.round(result.score * 100)}%
+                            </span>
+                        </div>
                     )}
                 </div>
             </div>
