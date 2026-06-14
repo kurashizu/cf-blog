@@ -5,13 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { embedSearchQuery } from "@/lib/embeddings";
-
-interface SearchEnv {
-    SEARCH_INDEX: VectorizeIndex;
-    GEMINI_API_KEY: string;
-}
+import { performSearch } from "@/lib/search";
 
 export async function GET(request: NextRequest) {
     const q = request.nextUrl.searchParams.get("q");
@@ -25,51 +19,8 @@ export async function GET(request: NextRequest) {
     );
 
     try {
-        const { env } = getCloudflareContext();
-        const cfEnv = env as unknown as {
-            SEARCH_INDEX: VectorizeIndex;
-            GEMINI_API_KEY: string;
-        };
-
-        if (!cfEnv.GEMINI_API_KEY) {
-            return NextResponse.json(
-                { error: "GEMINI_API_KEY not configured" },
-                { status: 500 },
-            );
-        }
-
-        // 1. Embed the query
-        const queryVector = await embedSearchQuery(
-            q.trim(),
-            cfEnv.GEMINI_API_KEY,
-        );
-
-        // 2. Search Vectorize
-        const matches = await cfEnv.SEARCH_INDEX.query(queryVector, {
-            topK,
-            returnValues: false,
-            returnMetadata: "all",
-        });
-
-        // 3. Format results
-        const results = (matches.matches ?? []).map((match) => {
-            const meta = match.metadata as Record<string, unknown>;
-            return {
-                id: match.id,
-                score: match.score,
-                source: meta.source as string,
-                type: meta.type as string,
-                title: meta.title as string,
-                heading: (meta.heading as string) ?? null,
-                excerpt: meta.excerpt as string,
-                tags: meta.tags as string[] | undefined,
-                url: (meta.url as string) ?? null,
-                by: (meta.by as string) ?? null,
-                published_at: meta.published_at as string,
-            };
-        });
-
-        return NextResponse.json({ results, query: q.trim() });
+        const result = await performSearch(q.trim(), topK);
+        return NextResponse.json(result);
     } catch (e) {
         console.error("Search error:", e);
         return NextResponse.json(

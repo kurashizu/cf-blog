@@ -1,9 +1,11 @@
 /**
- * Search results page — SSR, calls /api/search via a server-side fetch.
+ * Search results page — SSR, directly invokes the search logic.
  *
  * If no query is provided, renders an empty search page with just the search bar.
  */
 
+import { performSearch } from "@/lib/search";
+import type { SearchHit } from "@/lib/search";
 import { SearchResults } from "@/components/search/SearchResults";
 import { SearchBar } from "@/components/search/SearchBar";
 import type { Metadata } from "next";
@@ -14,20 +16,6 @@ export const metadata: Metadata = {
     title: "Search",
     description: "Search articles and news on Kurashizu's Blog",
 };
-
-interface SearchResult {
-    id: string;
-    score: number;
-    source: "blog" | "news";
-    type: string;
-    title: string;
-    heading: string | null;
-    excerpt: string;
-    tags?: string[];
-    url: string | null;
-    by: string | null;
-    published_at: string;
-}
 
 export default async function SearchPage({
     searchParams,
@@ -53,33 +41,15 @@ export default async function SearchPage({
         );
     }
 
-    // Server-side fetch to /api/search
-    let results: SearchResult[] = [];
+    let results: SearchHit[] = [];
     let error: string | undefined;
 
     try {
-        // Construct the absolute URL for the internal API call.
-        // In Cloudflare Workers, we use the request URL origin.
-        const origin = process.env.NEXT_PUBLIC_URL ?? "https://blog.022025.xyz";
-        const res = await fetch(
-            `${origin}/api/search?q=${encodeURIComponent(query)}&topK=15`,
-            { headers: { Accept: "application/json" } },
-        );
-        if (!res.ok) {
-            const body = await res.text().catch(() => "");
-            error = `API ${res.status}: ${body}`;
-        } else {
-            const data = (await res.json()) as {
-                results: SearchResult[];
-                query: string;
-            };
-            results = data.results;
-        }
+        const result = await performSearch(query);
+        results = result.results;
     } catch (e) {
         error = e instanceof Error ? e.message : String(e);
     }
 
-    return (
-        <SearchResults query={query} results={results} error={error} />
-    );
+    return <SearchResults query={query} results={results} error={error} />;
 }
