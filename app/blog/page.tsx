@@ -14,9 +14,13 @@ interface Post {
     tags?: string[];
 }
 
-function PostCard({ post }: { post: Post }) {
+function PostCard({ post, delayMs }: { post: Post; delayMs: number }) {
     return (
-        <Link href={`/blog/${post.slug}`} className="block">
+        <Link
+            href={`/blog/${post.slug}`}
+            className="block animate-fade-up-sm"
+            style={{ animationDelay: `${delayMs}ms` }}
+        >
             <Card>
                 <CardHeader>
                     <span className="article-meta">
@@ -85,7 +89,9 @@ export default async function BlogPage({
 
     return (
         <>
-            <div className="page-title">
+            <div
+                className="page-title animate-fade-up"
+                style={{ animationDelay: "0ms" }}
                 <h1>Blog</h1>
                 <p className="text-sm text-text-secondary">
                     A collection of thoughts and tutorials
@@ -97,7 +103,11 @@ export default async function BlogPage({
             ) : (
                 <div className="article-list">
                     {posts.map((post, i) => (
-                        <PostCard key={post.slug} post={post} />
+                        <PostCard
+                            key={post.slug}
+                            post={post}
+                            delayMs={80 + i * 50}
+                        />
                     ))}
                 </div>
             )}

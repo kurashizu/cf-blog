@@ -107,17 +107,6 @@
     background: var(--accent);
     vertical-align: text-bottom;
     margin-left: 1px;
-    animation: terminal-blink 1s step-end infinite;
-}
-
-@keyframes terminal-blink {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0;
-    }
 }
 
 /* Section Title */

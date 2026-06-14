@@ -139,11 +139,14 @@ function LanguageBadge({ languagesJson }: { languagesJson: string }) {
     );
 }
 
-function FeaturedPost({ post }: { post: Post }) {
+function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
     const excerpt = post.description?.slice(0, 20) || "";
     const tags = Array.isArray(post.tags) ? post.tags : [];
     return (
-        <Link href={`/blog/${post.slug}`} className="block">
+        <Link
+            href={`/blog/${post.slug}`}
+            className="block animate-fade-up-sm"
+            style={{ animationDelay: `${delayMs}ms` }}
             <Card className="h-full group">
                 <div className="p-3 flex flex-col justify-between h-full">
                     <div>
@@ -236,18 +239,24 @@ export default async function HomePage() {
                 </div>
 
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
-                    <div className="flex-1">
+                    <div
+                        className="flex-1"
+                    >
                         <VisitorTerminal />
                     </div>
                     {topLanguages.length > 0 && (
-                        <div className="shrink-0 mx-auto md:mx-0">
+                        <div
+                            className="shrink-0 mx-auto md:mx-0 animate-fade-up"
+                            style={{ animationDelay: "0ms" }}
                             <DonutChart languages={topLanguages} />
                         </div>
                     )}
                 </div>
 
                 {contributions && (
-                    <div className="mt-8">
+                    <div
+                        className="mt-8 animate-fade-up"
+                        style={{ animationDelay: "0ms" }}
                         <ContributionsRibbon data={contributions} />
                     </div>
                 )}
@@ -264,7 +273,10 @@ export default async function HomePage() {
 
                 {/* Recent Posts - right top */}
                 <section className="flex flex-col h-full">
-                    <div className="flex items-center justify-between mb-3">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "0ms" }}
+                    >
                         <h2 className="section-title mb-0">Recent Posts</h2>
                         <Link href="/blog" className="view-all-link">
                             All posts
@@ -287,8 +299,12 @@ export default async function HomePage() {
                         </Card>
                     ) : (
                         <div className="space-y-3">
-                            {recentPosts.map((post) => (
-                                <FeaturedPost key={post.slug} post={post} />
+                            {recentPosts.map((post, i) => (
+                                <FeaturedPost
+                                    key={post.slug}
+                                    post={post}
+                                    delayMs={60 + i * 40}
+                                />
                             ))}
                         </div>
                     )}
@@ -296,17 +312,25 @@ export default async function HomePage() {
 
                 {/* Gadgets — left bottom */}
                 <section className="flex flex-col h-full">
-                    <div className="flex items-center justify-between mb-3">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "0ms" }}
+                    >
                         <h2 className="section-title mb-0">Gadgets</h2>
                     </div>
-                    <Card className="flex-1 p-4 h-full">
+                    <Card
+                        className="flex-1 p-4 h-full animate-fade-up"
+                        style={{ animationDelay: "60ms" }}
                         <GadgetsPanel />
                     </Card>
                 </section>
 
                 {/* GitHub Projects - right bottom */}
                 <section className="flex flex-col h-full">
-                    <div className="flex items-center justify-between mb-3">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "0ms" }}
+                    >
                         <h2 className="section-title mb-0">GitHub Projects</h2>
                         <a
                             href="https://github.com/kurashizu"
@@ -363,14 +387,16 @@ export default async function HomePage() {
 
             {/* Guestbook section */}
             <section className="mt-8 md:mt-12">
-                <div className="flex items-center gap-4 mb-4">
+                <div
+                    className="flex items-center gap-4 mb-4 animate-fade-up"
+                    style={{ animationDelay: "0ms" }}
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                     <h2 className="section-title mb-0 shrink-0 px-2">
                         Guestbook
                     </h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                 </div>
-                <div>
+                <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
                     <GuestbookMessages />
                 </div>
             </section>
