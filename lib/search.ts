@@ -79,18 +79,16 @@ export async function performSearch(
     const queryVector = await embedSearchQuery(query, cfEnv.GEMINI_API_KEY);
 
     // 2. Search Vectorize
-    const queryOpts: VectorizeQueryOptions = {
-        topK,
+    // Fetch extra results when filtering so we still have enough after client-side filter.
+    const fetchTopK = sourceFilter ? topK * 3 : topK;
+    const matches = await cfEnv.SEARCH_INDEX.query(queryVector, {
+        topK: fetchTopK,
         returnValues: false,
         returnMetadata: "all",
-    };
-    if (sourceFilter) {
-        queryOpts.filter = { source: sourceFilter };
-    }
-    const matches = await cfEnv.SEARCH_INDEX.query(queryVector, queryOpts);
+    });
 
-    // 3. Format results
-    const results: SearchHit[] = (matches.matches ?? []).map((match) => {
+    // 3. Format + filter results
+    let results: SearchHit[] = (matches.matches ?? []).map((match) => {
         const meta = match.metadata as Record<string, unknown>;
         const metaId = (meta.id as string) ?? "";
         // meta.id is the slug for blog, or "news-{id}" — strip prefix for news
@@ -111,6 +109,15 @@ export async function performSearch(
             published_at: meta.published_at as string,
         };
     });
+
+    if (sourceFilter) {
+        results = results.filter((r) => r.source === sourceFilter);
+    }
+
+    // Trim to requested topK
+    if (results.length > topK) {
+        results = results.slice(0, topK);
+    }
 
     return { results, query };
 }
