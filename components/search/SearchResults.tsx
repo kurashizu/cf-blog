@@ -147,15 +147,12 @@ export function SearchResults({
 
 function ScoreLabel({ score }: { score: number }) {
     const pct = Math.round(score * 100);
-    const label =
-        pct >= 85 ? "High" : pct >= 70 ? "Good" : pct >= 55 ? "Fair" : "Low";
+    const label = pct >= 80 ? "High" : pct >= 60 ? "Fair" : "Low";
 
     let className: string;
-    if (pct >= 85) {
+    if (pct >= 80) {
         className = "text-sm font-bold text-accent";
-    } else if (pct >= 70) {
-        className = "text-[13px] font-semibold text-accent/85";
-    } else if (pct >= 55) {
+    } else if (pct >= 60) {
         className = "text-[13px] font-medium text-accent/60";
     } else {
         className = "text-xs font-normal text-text-muted";
