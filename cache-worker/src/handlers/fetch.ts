@@ -3,6 +3,7 @@
  *  `POST /__refresh`         full refresh (all caches)
  *  `POST /__heartbeat`       process one pending news item rewrite
  *  `POST /__search-index`    force one search indexing tick
+ *  `POST /__hn-cron`         force one daily HN top-30 fetch
  *  anything else             health check
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>`
@@ -10,11 +11,13 @@
 import { refreshCache } from "../lib/refresh";
 import { handleHeartbeat } from "../lib/heartbeat";
 import { handleSearchIndexing } from "./search-index";
+import { handleHNCron } from "./hn-cron";
 import type { Env } from "../types";
 
 const REFRESH_PATH = "/__refresh";
 const HEARTBEAT_PATH = "/__heartbeat";
 const SEARCH_INDEX_PATH = "/__search-index";
+const HN_CRON_PATH = "/__hn-cron";
 
 export async function handleFetch(
     request: Request,
@@ -82,6 +85,33 @@ export async function handleFetch(
             status: result.ok ? 200 : 500,
             headers: { "Content-Type": "application/json" },
         });
+    }
+
+    // ── HN cron (force one daily top-30 fetch) ──
+    if (request.method === "POST" && url.pathname === HN_CRON_PATH) {
+        const auth = request.headers.get("Authorization");
+        if (env.CRON_SECRET && auth !== `Bearer ${env.CRON_SECRET}`) {
+            return new Response("Unauthorized", { status: 401 });
+        }
+
+        try {
+            await handleHNCron(env);
+            return new Response(
+                JSON.stringify({ success: true, message: "HN cron completed" }),
+                { headers: { "Content-Type": "application/json" } },
+            );
+        } catch (e) {
+            return new Response(
+                JSON.stringify({
+                    success: false,
+                    error: e instanceof Error ? e.message : String(e),
+                }),
+                {
+                    status: 500,
+                    headers: { "Content-Type": "application/json" },
+                },
+            );
+        }
     }
 
     // ── Health check ──
