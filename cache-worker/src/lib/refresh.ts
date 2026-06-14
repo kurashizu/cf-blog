@@ -10,7 +10,6 @@ import { parseFrontmatter } from "./articles";
 import {
     fetchContributions,
     fetchGithubRepos,
-    fetchHNNews,
     fetchLLMLeaderboard,
     fetchRepoLanguages,
 } from "./sources";
@@ -220,51 +219,6 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
             JSON.stringify(payload),
         );
         return `${models.length} models`;
-    });
-
-    await runStep(results, "hn-news", async () => {
-        const stories = await fetchHNNews();
-        if (stories.length === 0) throw new Error("empty response");
-
-        // Write to D1 — skip if already fetched today
-        const today = new Date().toISOString().slice(0, 10);
-        const db = env.DB;
-        const existing = await db
-            .prepare("SELECT date FROM news_fetch_log WHERE date = ?")
-            .bind(today)
-            .first();
-        if (!existing) {
-            for (const story of stories) {
-                await db
-                    .prepare(
-                        `
-                    INSERT OR REPLACE INTO news_items
-                        (id, title, url, score, by, time, descendants, domain, summary)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `,
-                    )
-                    .bind(
-                        story.id,
-                        story.title,
-                        story.url,
-                        story.score,
-                        story.by,
-                        story.time,
-                        story.descendants,
-                        story.domain,
-                        "",
-                    )
-                    .run();
-            }
-            await db
-                .prepare(
-                    "INSERT INTO news_fetch_log (date, count) VALUES (?, ?)",
-                )
-                .bind(today, stories.length)
-                .run();
-            return `${stories.length} stories (fresh)`;
-        }
-        return `${stories.length} stories (cached)`;
     });
 
     await runStep(results, "github-contributions", async () => {

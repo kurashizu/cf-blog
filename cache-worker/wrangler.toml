@@ -17,7 +17,10 @@ binding = "SEARCH_INDEX"
 index_name = "blog-search"
 
 [triggers]
-crons = ["*/30 * * * *", "*/3 * * * *"]
+# 30-min: cache refresh (repos, articles, leaderboard, contributions)
+# 3-min: heartbeat (one news summary rewrite + one search-index tick)
+# Daily 05:00 UTC: HN top-30 fetch
+crons = ["*/30 * * * *", "*/3 * * * *", "0 5 * * *"]
 
 [vars]
 CRON_SECRET = ""

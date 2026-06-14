@@ -1,11 +1,12 @@
 -- D1 database schema for cf-blog
 -- Apply with: wrangler d1 execute cf-blog-db --file=database/schema.sql
+--
+-- All CREATE statements use IF NOT EXISTS so the file is idempotent.
+-- DROP statements (one-time migrations) are kept at the bottom.
 
 -- ============================================
 -- Blog articles index
 -- ============================================
-DROP TABLE IF EXISTS posts;
-
 CREATE TABLE IF NOT EXISTS posts (
     id                TEXT PRIMARY KEY,
     slug              TEXT NOT NULL,
@@ -29,24 +30,18 @@ CREATE TABLE IF NOT EXISTS news_items (
     id                INTEGER PRIMARY KEY,
     title             TEXT NOT NULL,
     url               TEXT,
-    score             INTEGER DEFAULT 0,
-    by                TEXT DEFAULT '',
-    time              INTEGER DEFAULT 0,
-    descendants       INTEGER DEFAULT 0,
+    score             INTEGER NOT NULL DEFAULT 0,
+    by                TEXT NOT NULL DEFAULT 'unknown',
+    time              INTEGER NOT NULL,
+    descendants       INTEGER NOT NULL DEFAULT 0,
     domain            TEXT,
-    summary           TEXT DEFAULT '',
+    summary           TEXT NOT NULL DEFAULT '',
+    fetched_at        TEXT NOT NULL DEFAULT (datetime('now')),
     search_updated_at TEXT
 );
 
--- ============================================
--- HN fetch dedup log (prevents cron duplicates)
--- ============================================
-CREATE TABLE IF NOT EXISTS news_fetch_log (
-    date  TEXT PRIMARY KEY,
-    count INTEGER DEFAULT 0
-);
-
 CREATE INDEX IF NOT EXISTS idx_news_time ON news_items(time DESC);
+CREATE INDEX IF NOT EXISTS idx_news_fetched_at ON news_items(fetched_at DESC);
 
 -- ============================================
 -- GitHub repos cache (full list)
@@ -101,3 +96,11 @@ CREATE INDEX IF NOT EXISTS idx_guestbook_timestamp
     ON guestbook_messages(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_guestbook_approved
     ON guestbook_messages(approved);
+
+-- ============================================
+-- One-time migrations
+-- ============================================
+-- 2026-06-15: drop HN fetch dedup log. The HN cron is now daily (max 30
+-- stories) and uses INSERT OR REPLACE on the same id, so dedup is no
+-- longer needed.
+DROP TABLE IF EXISTS news_fetch_log;

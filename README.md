@@ -4,7 +4,7 @@ A personal blog + AI agent deployed to Cloudflare Workers. The homepage has a re
 
 ## Features
 
-- **Blog** — Markdown articles in R2, syntax-highlighted code
+- **Blog** — Markdown articles in D1, syntax-highlighted code
 - **HN News Archive** — Top 5 HN stories fetched every 30 min, with full-length AI rewrites (Gemma 4 via 3-min heartbeat cron)
 - **GitHub Contributions Heatmap** — Real-time activity ribbon in the hero
 - **Top Languages Donut** — 5-segment SVG donut with hover interaction (shows language name + percentage in center), color-coded legend (hero sidebar)
@@ -26,7 +26,7 @@ Three Cloudflare Workers, deployed in parallel by GitHub Actions on push to `mai
 | `cf-agent` | `agent-worker/` | https://agent.022025.xyz | AI agent with tool calling |
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Homepage cache refresh (30-min) + News rewrite heartbeat (3-min) |
 
-The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches data into R2 + D1; the homepage reads from D1 for posts, news, and GitHub repos, and from R2 for contributions and LLM leaderboard. Cold cache = empty hero; ISR revalidates every 5 min.
+The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches data into D1 (posts, news, github_repos) and into a couple of read-only R2 caches (contributions, LLM leaderboard); the homepage reads from D1 for posts, news, and GitHub repos, and from R2 for contributions and LLM leaderboard. Cold cache = empty hero; ISR revalidates every 5 min.
 
 CI runs on push to `main`: **migrate-db** (`database/schema.sql`) first, then deploys all three workers in parallel.
 
@@ -34,7 +34,7 @@ CI runs on push to `main`: **migrate-db** (`database/schema.sql`) first, then de
 
 - **Frontend**: Next.js 15 (App Router) + React 19
 - **Styling**: Tailwind CSS + CSS variables for theming; custom animations in `components/theme/*.css`
-- **Storage**: Cloudflare R2 (articles, cache, guestbook) + D1 (post index, news archive, github repos) + Cloudflare KV (sessions, rate limits)
+- **Storage**: Cloudflare D1 (articles, news, github_repos, guestbook) + Cloudflare R2 (contributions + LLM leaderboard caches) + Cloudflare KV (sessions, rate limits)
 - **AI**: Gemini (with quota-based model fallback for TPD/RPM 429s)
 - **Deploy**: Cloudflare Workers via `@opennextjs/cloudflare`
 
@@ -71,17 +71,14 @@ Default model: `gemma-4-31b-it`. Streams via SSE. Max 5 tool-call iterations per
 .                         # cf-blog (main blog)
 ├── app/                  # Next.js App Router
 ├── components/           # React components (UI, activity, agent, llm, theme, layout, providers)
-├── lib/                  # Backend logic (R2, articles, guestbook, rate limit, model pool, languages)
+├── lib/                  # Backend logic (D1, articles, guestbook, rate limit, model pool, languages)
 ├── database/             # D1 schema (schema.sql — all tables: posts, news_items, github_repos, etc.)
 ├── public/               # Static assets served by Next.js
 ├── agent-worker/         # cf-agent (separate Next.js worker)
 ├── cache-worker/         # cf-blog-cache (cron refresher)
-├── CLAUDE.md             # Detailed agent context (Claude Code)
 └── AGENTS.md             # AI agent orientation
 ```
 
 ## See Also
 
-- `CLAUDE.md` — Build commands, rate limits, R2 ops, file structure
-- `AGENTS.md` — Multi-worker architecture, hero features, conventions
-- `agent-worker/CLAUDE.md` — cf-agent specifics (tool system, streaming, deploy)
+- `AGENTS.md` — Multi-worker architecture, hero features, conventions, D1/R2 storage layout

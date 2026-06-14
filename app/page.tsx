@@ -223,7 +223,11 @@ export default async function HomePage() {
             readReposAndLanguages(5),
             readContributions(),
             db
-                .prepare("SELECT * FROM news_items ORDER BY time DESC LIMIT 5")
+                .prepare(
+                    `SELECT * FROM news_items
+                     WHERE date(fetched_at) = date('now')
+                     ORDER BY time DESC LIMIT 5`,
+                )
                 .all()
                 .then((r) => (r.results ?? []) as unknown as HNStory[])
                 .catch(() => [] as HNStory[]),

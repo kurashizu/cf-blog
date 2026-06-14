@@ -168,13 +168,13 @@ interface HNItemRaw {
     descendants?: number;
 }
 
-export async function fetchHNNews(): Promise<HNStory[]> {
+export async function fetchHNNews(count: number = 5): Promise<HNStory[]> {
     const idsRes = await fetch(
         "https://hacker-news.firebaseio.com/v0/topstories.json",
     );
     if (!idsRes.ok) throw new Error(`HN topstories ${idsRes.status}`);
     const allIds = (await idsRes.json()) as number[];
-    const topIds = allIds.slice(0, 5);
+    const topIds = allIds.slice(0, count);
 
     const items = await Promise.all(
         topIds.map(async (id) => {
