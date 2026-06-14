@@ -79,6 +79,41 @@ async function readContributions(): Promise<ContributionsCache | null> {
     }
 }
 
+const LANG_ABBR: Record<string, string> = {
+    TypeScript: "TS",
+    JavaScript: "JS",
+    Python: "PY",
+    Go: "GO",
+    Rust: "RS",
+    Java: "JV",
+    "C++": "C++",
+    C: "C",
+    "C#": "C#",
+    Ruby: "RB",
+    PHP: "PHP",
+    Swift: "SW",
+    Kotlin: "KT",
+    HTML: "HTML",
+    CSS: "CSS",
+    Shell: "SH",
+    Lua: "LUA",
+    Elixir: "EX",
+    Haskell: "HS",
+    Dart: "DR",
+    Vue: "VUE",
+    Svelte: "SVT",
+    Nix: "NIX",
+    Zig: "ZIG",
+    Solid: "SOL",
+    Dockerfile: "DKR",
+    Procfile: "PROC",
+    Makefile: "MKE",
+};
+
+function langAbbr(name: string): string {
+    return LANG_ABBR[name] || name.slice(0, 3).toUpperCase();
+}
+
 function LanguageBadge({ languagesJson }: { languagesJson: string }) {
     let langs: RepoLanguage[] = [];
     try {
@@ -89,13 +124,14 @@ function LanguageBadge({ languagesJson }: { languagesJson: string }) {
     if (langs.length === 0) return null;
 
     return (
-        <span className="text-xs text-text-muted shrink-0 flex items-center gap-2">
+        <span className="text-xs text-text-muted shrink-0 flex items-center gap-2.5">
             {langs.map((l) => (
                 <span key={l.name} className="flex items-center gap-1">
                     <span
                         className="w-2 h-2 rounded-sm"
                         style={{ backgroundColor: getLanguageColor(l.name) }}
                     />
+                    <span className="font-medium">{langAbbr(l.name)}</span>
                     {l.pct}%
                 </span>
             ))}

@@ -19,59 +19,51 @@ const ENTER_MS = 500;
  * change: exit (shrink + fade out) → swap content → enter (fade up).
  *
  * Usage: place once in the root layout around `<main>{children}</main>`.
- * Individual pages no longer need hardcoded `animate-fade-up` classes.
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const [phase, setPhase] = useState<Phase>("enter");
-  const [displayChildren, setDisplayChildren] = useState(children);
-  const prevPathname = useRef(pathname);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+    const pathname = usePathname();
+    const [phase, setPhase] = useState<Phase>("enter");
+    const [displayChildren, setDisplayChildren] = useState(children);
+    const prevPathname = useRef(pathname);
+    const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  useEffect(() => {
-    // Clear any in-flight timers from a previous transition
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
-
-    if (prevPathname.current === pathname) {
-      // Same route – this is either the first render or a search-param-only
-      // change.  If we're still in the "enter" phase (first load), schedule
-      // the transition to idle so the enter animation plays exactly once.
-      if (phase === "enter") {
+    // First mount: play enter animation, then settle to idle
+    useEffect(() => {
         const t = setTimeout(() => setPhase("idle"), ENTER_MS);
-        timers.current.push(t);
-      }
-      return;
-    }
+        return () => clearTimeout(t);
+    }, []);
 
-    // --- Route changed ---
+    // Route changes: exit → swap → enter → idle
+    useEffect(() => {
+        // Clear any in-flight timers from a previous transition so rapid
+        // successive navigations don't let stale timers overwrite state.
+        timers.current.forEach(clearTimeout);
+        timers.current = [];
 
-    // Remember the new route immediately so rapid successive navigations
-    // don't confuse the check above.
-    prevPathname.current = pathname;
+        if (pathname === prevPathname.current) return;
 
-    // 1) Exit: current content plays shrink + fade-out
-    setPhase("exit");
+        // Route changed
+        prevPathname.current = pathname;
+        setPhase("exit");
 
-    const exitTimer = setTimeout(() => {
-      // 2) Swap to the new page content
-      setDisplayChildren(children);
-      setPhase("enter");
+        const exitTimer = setTimeout(() => {
+            // Swap to the new page content
+            setDisplayChildren(children);
+            setPhase("enter");
 
-      // 3) Enter: new content fades up
-      const enterTimer = setTimeout(() => {
-        setPhase("idle");
-      }, ENTER_MS);
+            const enterTimer = setTimeout(() => {
+                setPhase("idle");
+            }, ENTER_MS);
 
-      timers.current.push(enterTimer);
-    }, EXIT_MS);
+            timers.current.push(enterTimer);
+        }, EXIT_MS);
 
-    timers.current.push(exitTimer);
-  }, [pathname, children, phase]);
+        timers.current.push(exitTimer);
+    }, [pathname, children]);
 
-  let className = "";
-  if (phase === "exit") className = "animate-page-exit";
-  else if (phase === "enter") className = "animate-page-enter";
+    let className = "";
+    if (phase === "exit") className = "animate-page-exit";
+    else if (phase === "enter") className = "animate-page-enter";
 
-  return <div className={className}>{displayChildren}</div>;
+    return <div className={className}>{displayChildren}</div>;
 }
