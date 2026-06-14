@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchBar } from "@/components/search/SearchBar";
 
@@ -100,9 +99,9 @@ export function SearchResults({
                 </div>
 
                 {isRateLimited ? (
-                    <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-accent/10 border border-accent/20">
                         <svg
-                            className="w-4 h-4 text-amber-500 shrink-0"
+                            className="w-4 h-4 text-accent shrink-0"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -114,7 +113,7 @@ export function SearchResults({
                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
                             />
                         </svg>
-                        <p className="text-xs text-amber-600">{error}</p>
+                        <p className="text-xs text-text-secondary">{error}</p>
                     </div>
                 ) : (
                     <p className="text-sm text-text-secondary mt-2">
@@ -154,8 +153,10 @@ function SearchResultCard({ result }: { result: SearchResult }) {
         : `/blog/${result.slug}${result.heading ? `#${result.heading.toLowerCase().replace(/\s+/g, "-")}` : ""}`;
 
     return (
-        <Link
+        <a
             href={href}
+            target="_blank"
+            rel="noopener noreferrer"
             className="block rounded-xl border border-border bg-bg-card
                        hover:border-accent/50 hover:bg-bg-card/80
                        transition-all duration-200 group"
@@ -167,7 +168,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                         className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
                             isBlog
                                 ? "bg-accent/10 text-accent"
-                                : "bg-green-500/10 text-green-500"
+                                : "bg-accent/20 text-accent"
                         }`}
                     >
                         {isBlog ? (
@@ -257,6 +258,6 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                     )}
                 </div>
             </div>
-        </Link>
+        </a>
     );
 }
