@@ -314,10 +314,11 @@ export function GadgetsPanel() {
                                 />
                             ) : (
                                 <Image
-                                    src={`/images/${gadget.imageDir ?? "kuragent"}/${prefix}_0.png`}
+                                    src={`/images/${gadget.imageDir ?? "kuragent"}/${prefix}_0.avif`}
                                     alt={gadget.title}
                                     fill
                                     className="object-cover scale-[1.265] origin-top rounded-xl"
+                                    unoptimized
                                     style={{
                                         transform:
                                             hoveredId === gadget.id

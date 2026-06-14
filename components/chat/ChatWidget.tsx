@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import icon2Hover from "@/public/icons/icon2_128.png";
-import icon3Hover from "@/public/icons/icon3_128.png";
+import icon2Hover from "@/public/icons/icon2_128.avif";
+import icon3Hover from "@/public/icons/icon3_128.avif";
 
 interface Message {
     role: "user" | "model";
@@ -165,7 +165,9 @@ export function ChatWidget() {
 
             {/* Chat panel */}
             {(isOpen || closing) && (
-                <div className={`fixed bottom-24 right-6 w-80 sm:w-96 h-[28rem] bg-bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 ${closing ? 'animate-slideDown' : 'animate-slideUp'}`}>
+                <div
+                    className={`fixed bottom-24 right-6 w-80 sm:w-96 h-[28rem] bg-bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 ${closing ? "animate-slideDown" : "animate-slideUp"}`}
+                >
                     {/* Header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-bg-secondary">
                         <div className="flex items-center gap-3">
