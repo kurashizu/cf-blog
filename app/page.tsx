@@ -240,15 +240,14 @@ export default async function HomePage() {
                 </div>
 
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
-                    <div
-                        className="flex-1"
-                    >
+                    <div className="flex-1">
                         <VisitorTerminal />
                     </div>
                     {topLanguages.length > 0 && (
                         <div
                             className="shrink-0 mx-auto md:mx-0 animate-fade-up"
                             style={{ animationDelay: "0ms" }}
+                        >
                             <DonutChart languages={topLanguages} />
                         </div>
                     )}
@@ -258,6 +257,7 @@ export default async function HomePage() {
                     <div
                         className="mt-8 animate-fade-up"
                         style={{ animationDelay: "0ms" }}
+                    >
                         <ContributionsRibbon data={contributions} />
                     </div>
                 )}
@@ -322,6 +322,7 @@ export default async function HomePage() {
                     <Card
                         className="flex-1 p-4 h-full animate-fade-up"
                         style={{ animationDelay: "60ms" }}
+                    >
                         <GadgetsPanel />
                     </Card>
                 </section>
@@ -391,13 +392,17 @@ export default async function HomePage() {
                 <div
                     className="flex items-center gap-4 mb-4 animate-fade-up"
                     style={{ animationDelay: "0ms" }}
+                >
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                     <h2 className="section-title mb-0 shrink-0 px-2">
                         Guestbook
                     </h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                 </div>
-                <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
+                <div
+                    className="animate-fade-up"
+                    style={{ animationDelay: "60ms" }}
+                >
                     <GuestbookMessages />
                 </div>
             </section>
