@@ -407,11 +407,11 @@ body {
 }
 
 .animate-page-exit {
-    animation: page-exit 0.2s ease-out forwards;
+    animation: page-exit 0.2s ease-out both;
 }
 
 .animate-page-enter {
-    animation: page-enter 0.5s var(--transition-spring) forwards;
+    animation: page-enter 0.5s var(--transition-spring) both;
 }
 
 /* Staggered entrance for child elements (optional use).

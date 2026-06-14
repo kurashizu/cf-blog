@@ -5,20 +5,20 @@ import { useEffect, useRef, useState } from "react";
 
 type Phase = "enter" | "idle" | "exit";
 
-/**
- * Must match the CSS animation durations in global.css.
- * Keep these in sync if you tweak the @keyframes.
- */
 const EXIT_MS = 200;
 const ENTER_MS = 500;
 
 /**
  * PageTransition
  *
- * Wraps page content and orchestrates a two-phase animation on every route
- * change: exit (shrink + fade out) → swap content → enter (fade up).
+ * Wraps page content and orchestrates page-level exit/enter animations.
  *
- * Usage: place once in the root layout around `<main>{children}</main>`.
+ * - **First load**: enter animation → idle
+ * - **Route changes** (different pathname): exit → swap → enter → idle
+ * - **Search-param only** (same pathname, different children): instant swap,
+ *   then enter animation (no exit)
+ * - **Rapid successive navigation**: in-flight timers are cancelled before
+ *   starting the new transition.
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -27,27 +27,35 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
     const prevPathname = useRef(pathname);
     const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-    // First mount: play enter animation, then settle to idle
+    // ── First mount: enter → idle ──
     useEffect(() => {
         const t = setTimeout(() => setPhase("idle"), ENTER_MS);
         return () => clearTimeout(t);
     }, []);
 
-    // Route changes: exit → swap → enter → idle
+    // ── Route / children changes ──
     useEffect(() => {
-        // Clear any in-flight timers from a previous transition so rapid
-        // successive navigations don't let stale timers overwrite state.
+        // Cancel any in-flight transition timers
         timers.current.forEach(clearTimeout);
         timers.current = [];
 
-        if (pathname === prevPathname.current) return;
+        if (pathname === prevPathname.current) {
+            // Same pathname — likely a search-param-only change.
+            // Swap content instantly, then play enter animation.
+            prevPathname.current = pathname;
+            setDisplayChildren(children);
+            setPhase("enter");
 
-        // Route changed
+            const t = setTimeout(() => setPhase("idle"), ENTER_MS);
+            timers.current.push(t);
+            return;
+        }
+
+        // ── Route changed ──
         prevPathname.current = pathname;
         setPhase("exit");
 
         const exitTimer = setTimeout(() => {
-            // Swap to the new page content
             setDisplayChildren(children);
             setPhase("enter");
 
