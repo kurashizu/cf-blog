@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Phase = "enter" | "idle" | "exit";
 
@@ -34,7 +34,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
     }, []);
 
     // ── Route / children changes ──
-    useEffect(() => {
+    useLayoutEffect(() => {
         // Cancel any in-flight transition timers
         timers.current.forEach(clearTimeout);
         timers.current = [];
