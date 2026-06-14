@@ -13,19 +13,6 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
-    async headers() {
-        return [
-            {
-                source: "/",
-                headers: [
-                    {
-                        key: "Cache-Control",
-                        value: "public, s-maxage=60, stale-while-revalidate=300",
-                    },
-                ],
-            },
-        ];
-    },
     images: {
         remotePatterns: [
             {
