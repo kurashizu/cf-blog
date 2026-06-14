@@ -4,15 +4,18 @@
 -- ============================================
 -- Blog articles index
 -- ============================================
+DROP TABLE IF EXISTS posts;
+
 CREATE TABLE IF NOT EXISTS posts (
     id                TEXT PRIMARY KEY,
     slug              TEXT NOT NULL,
     title             TEXT NOT NULL,
     excerpt           TEXT,
-    content_r2_key    TEXT,
+    content           TEXT NOT NULL DEFAULT '',
     cover_image       TEXT DEFAULT '',
     category          TEXT DEFAULT '',
     tags              TEXT DEFAULT '[]',
+    author            TEXT DEFAULT 'Kurashizu',
     status            TEXT DEFAULT 'published',
     published_at      TEXT,
     content_hash      TEXT,

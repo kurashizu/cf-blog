@@ -2,6 +2,9 @@
  * Article content API — returns full Markdown for a blog post by slug.
  *
  * GET /api/articles/{slug}?offset=0&maxLength=16000
+ *
+ * Reads content from D1 `posts.content` (frontmatter already stripped).
+ * The agent's blog_read tool uses this endpoint.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -30,52 +33,46 @@ export async function GET(
 
     try {
         const { env } = getCloudflareContext();
-        const cfEnv = env as unknown as { BUCKET: R2Bucket };
+        const cfEnv = env as unknown as { DB: D1Database };
 
-        const obj = await cfEnv.BUCKET.get(`articles/${slug}.md`);
-        if (!obj) {
+        const row = await cfEnv.DB.prepare(
+            `SELECT slug, title, excerpt, content, tags, published_at
+             FROM posts WHERE id = ?`,
+        )
+            .bind(slug)
+            .first<{
+                slug: string;
+                title: string;
+                excerpt: string;
+                content: string;
+                tags: string;
+                published_at: string;
+            }>();
+
+        if (!row) {
             return NextResponse.json(
                 { error: "Article not found" },
                 { status: 404 },
             );
         }
 
-        const fullContent = await obj.text();
-
-        // Parse frontmatter (title, date, etc.)
-        const frontmatterMatch = fullContent.match(
-            /^---\n([\s\S]*?)\n---\n([\s\S]*)$/,
-        );
-        let frontmatter: Record<string, string> = {};
-        let body = fullContent;
-
-        if (frontmatterMatch) {
-            const raw = frontmatterMatch[1];
-            body = frontmatterMatch[2];
-            for (const line of raw.split("\n")) {
-                const sep = line.indexOf(":");
-                if (sep > 0) {
-                    const key = line.slice(0, sep).trim();
-                    const val = line
-                        .slice(sep + 1)
-                        .trim()
-                        .replace(/^["']|["']$/g, "");
-                    frontmatter[key] = val;
-                }
-            }
-        }
-
+        const body = row.content || "";
         const slice = body.slice(offset, offset + maxLength);
         const has_more = offset + maxLength < body.length;
 
+        let tags: string[] = [];
+        try {
+            tags = JSON.parse(row.tags);
+        } catch {
+            tags = [];
+        }
+
         return NextResponse.json({
-            slug,
-            title: frontmatter.title || slug,
-            description: frontmatter.description || "",
-            tags: frontmatter.tags
-                ? frontmatter.tags.split(",").map((t: string) => t.trim())
-                : [],
-            published_at: frontmatter.date || frontmatter.published_at || "",
+            slug: row.slug,
+            title: row.title || slug,
+            description: row.excerpt || "",
+            tags,
+            published_at: row.published_at || "",
             content: slice,
             offset,
             max_length: maxLength,

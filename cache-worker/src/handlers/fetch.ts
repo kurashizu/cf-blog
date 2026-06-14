@@ -1,21 +1,18 @@
 /**
  * HTTP handler — accepts:
- *  `POST /__refresh`             full refresh (all caches)
- *  `POST /__refresh-articles`    article-index only (fast, no external API)
- *  `POST /__heartbeat`           process one pending news item rewrite
- *  `POST /__search-index`        force one search indexing tick
- *  anything else                 health check
+ *  `POST /__refresh`         full refresh (all caches)
+ *  `POST /__heartbeat`       process one pending news item rewrite
+ *  `POST /__search-index`    force one search indexing tick
+ *  anything else             health check
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>`
  */
-import { buildArticleIndex } from "../lib/articles";
 import { refreshCache } from "../lib/refresh";
 import { handleHeartbeat } from "../lib/heartbeat";
 import { handleSearchIndexing } from "./search-index";
 import type { Env } from "../types";
 
 const REFRESH_PATH = "/__refresh";
-const ARTICLES_ONLY_PATH = "/__refresh-articles";
 const HEARTBEAT_PATH = "/__heartbeat";
 const SEARCH_INDEX_PATH = "/__search-index";
 
@@ -24,36 +21,6 @@ export async function handleFetch(
     env: Env,
 ): Promise<Response> {
     const url = new URL(request.url);
-
-    // ── Articles-only rebuild (fast, no external calls) ──
-    if (request.method === "POST" && url.pathname === ARTICLES_ONLY_PATH) {
-        const auth = request.headers.get("Authorization");
-        if (env.CRON_SECRET && auth !== `Bearer ${env.CRON_SECRET}`) {
-            return new Response("Unauthorized", { status: 401 });
-        }
-        try {
-            const posts = await buildArticleIndex(env.BUCKET);
-            return new Response(
-                JSON.stringify({
-                    success: true,
-                    count: posts.length,
-                    message: "Articles index rebuilt",
-                }),
-                { headers: { "Content-Type": "application/json" } },
-            );
-        } catch (e) {
-            return new Response(
-                JSON.stringify({
-                    success: false,
-                    error: e instanceof Error ? e.message : String(e),
-                }),
-                {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
-        }
-    }
 
     // ── Full refresh ──
     if (request.method === "POST" && url.pathname === REFRESH_PATH) {

@@ -119,20 +119,6 @@ export async function fetchRepoLanguages(
         .sort((a, b) => b.bytes - a.bytes);
 }
 
-export async function fetchStarredRepos(): Promise<GitHubRepo[]> {
-    const res = await fetch(
-        "https://api.github.com/users/kurashizu/starred?per_page=10&sort=stars",
-        {
-            headers: {
-                "User-Agent": USER_AGENT,
-                Accept: "application/vnd.github.v3+json",
-            },
-        },
-    );
-    if (!res.ok) throw new Error(`GitHub starred API ${res.status}`);
-    return (await res.json()) as GitHubRepo[];
-}
-
 // ---------- Artificial Analysis ----------
 
 export async function fetchLLMLeaderboard(

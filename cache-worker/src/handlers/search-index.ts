@@ -28,7 +28,7 @@ export async function handleSearchIndexing(
 
     // ── Step 1: Try a dirty blog post ──
     const dirtyPost = await env.DB.prepare(
-        `SELECT id, slug, title, excerpt, tags, published_at, content_r2_key
+        `SELECT id, slug, title, excerpt, content, tags, published_at
          FROM posts
          WHERE status = 'published'
            AND search_updated_at IS NULL
@@ -39,9 +39,9 @@ export async function handleSearchIndexing(
         slug: string;
         title: string;
         excerpt: string;
+        content: string;
         tags: string;
         published_at: string | null;
-        content_r2_key: string;
     }>();
 
     if (dirtyPost) {
@@ -80,9 +80,9 @@ interface DirtyPostRow {
     slug: string;
     title: string;
     excerpt: string;
+    content: string;
     tags: string;
     published_at: string | null;
-    content_r2_key: string;
 }
 
 async function indexBlogPost(
@@ -91,28 +91,20 @@ async function indexBlogPost(
 ): Promise<SearchIndexResult> {
     const tags: string[] = parseTags(row.tags);
 
-    // Read full markdown from R2
-    let markdown: string;
-    try {
-        const obj = await env.BUCKET.get(row.content_r2_key);
-        if (!obj) {
-            // File missing, mark as indexed so we don't retry
-            await markClean(env, "posts", row.slug);
-            return {
-                ok: true,
-                detail: `${row.slug}: content missing, skipped`,
-            };
-        }
-        markdown = await obj.text();
-    } catch (e) {
-        return { ok: false, detail: `${row.slug}: R2 read failed - ${e}` };
+    if (!row.content) {
+        // No content, mark as indexed so we don't retry
+        await markClean(env, "posts", row.slug);
+        return {
+            ok: true,
+            detail: `${row.slug}: content empty, skipped`,
+        };
     }
 
     const item: IndexableItem = {
         source: "blog",
         id: row.slug,
         title: row.title,
-        content: stripFrontmatter(markdown),
+        content: row.content,
         description: row.excerpt,
         tags,
         published_at: row.published_at ?? "",
@@ -209,37 +201,31 @@ async function cleanupSearchIndex(env: Env): Promise<SearchIndexResult> {
 
         // Blog posts
         const posts = await env.DB.prepare(
-            `SELECT slug, title, excerpt, tags, published_at, content_r2_key
+            `SELECT slug, title, excerpt, content, tags, published_at
              FROM posts WHERE status = 'published'`,
         ).all<{
             slug: string;
             title: string;
             excerpt: string;
+            content: string;
             tags: string;
             published_at: string | null;
-            content_r2_key: string;
         }>();
 
         for (const post of posts.results ?? []) {
-            try {
-                const obj = await env.BUCKET.get(post.content_r2_key);
-                if (!obj) continue;
-                const markdown = await obj.text();
-                const item: IndexableItem = {
-                    source: "blog",
-                    id: post.slug,
-                    title: post.title,
-                    content: stripFrontmatter(markdown),
-                    description: post.excerpt,
-                    tags: parseTags(post.tags),
-                    published_at: post.published_at ?? "",
-                };
-                const chunks = chunkItem(item);
-                for (const c of chunks) {
-                    expectedIds.add(chunkVectorId(c));
-                }
-            } catch {
-                // Skip corrupt post
+            if (!post.content) continue;
+            const item: IndexableItem = {
+                source: "blog",
+                id: post.slug,
+                title: post.title,
+                content: post.content,
+                description: post.excerpt,
+                tags: parseTags(post.tags),
+                published_at: post.published_at ?? "",
+            };
+            const chunks = chunkItem(item);
+            for (const c of chunks) {
+                expectedIds.add(chunkVectorId(c));
             }
         }
 
@@ -317,15 +303,6 @@ async function markClean(
     )
         .bind(idField)
         .run();
-}
-
-function stripFrontmatter(markdown: string): string {
-    // Remove YAML frontmatter (--- ... ---)
-    const match = markdown.match(/^---\n[\s\S]*?\n---\n/);
-    if (match) {
-        return markdown.slice(match[0].length);
-    }
-    return markdown;
 }
 
 function parseTags(tags: string | string[]): string[] {

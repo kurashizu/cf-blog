@@ -6,7 +6,7 @@
  * suitable for log scraping. The same orchestrator is used by the cron
  * trigger and the manual POST /__refresh endpoint.
  */
-import { buildArticleIndex } from "./articles";
+import { parseFrontmatter } from "./articles";
 import {
     fetchContributions,
     fetchGithubRepos,
@@ -97,45 +97,76 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     });
 
     await runStep(results, "articles-index", async () => {
-        const posts = await buildArticleIndex(env.BUCKET);
-        // Sync to D1 with content-hash tracking for search index
+        // Scan ALL R2 articles (including drafts) and sync to D1
         const db = env.DB;
-        let changed = 0;
-        for (const post of posts) {
-            // Compute content hash from title + excerpt + body preview
-            let bodyPreview = "";
+        let cursor: string | undefined;
+        const keys: string[] = [];
+        do {
+            const result = await env.BUCKET.list({
+                prefix: "articles/",
+                cursor,
+            });
+            keys.push(...result.objects.map((o) => o.key));
+            cursor = result.truncated ? result.cursor : undefined;
+        } while (cursor);
+
+        let upserted = 0;
+        for (const key of keys) {
+            if (!key.endsWith(".md")) continue;
+
+            let fullContent: string;
             try {
-                const obj = await env.BUCKET.get(`articles/${post.slug}.md`);
-                if (obj) {
-                    const content = await obj.text();
-                    // Strip frontmatter, take first 500 chars of body
-                    const body = content.replace(/^---[\s\S]*?\n---\n/, "");
-                    bodyPreview = body.slice(0, 500);
-                }
+                const obj = await env.BUCKET.get(key);
+                if (!obj) continue;
+                fullContent = await obj.text();
             } catch {
-                /* best-effort */
+                continue;
             }
+
+            const { data, body } = parseFrontmatter(fullContent);
+            const slug = key.replace("articles/", "").replace(".md", "");
+
+            // Normalise frontmatter fields
+            const rawDate = data.date;
+            const date =
+                rawDate instanceof Date
+                    ? rawDate.toISOString().slice(0, 10)
+                    : (rawDate as string) || "";
+            const draft = data.draft === true || data.draft === "true";
+            const status = draft ? "draft" : "published";
+            const tv = data.tags;
+            const tags: string[] = Array.isArray(tv)
+                ? tv.filter((t): t is string => typeof t === "string")
+                : typeof tv === "string"
+                  ? tv
+                        .split(",")
+                        .map((t) => t.trim())
+                        .filter(Boolean)
+                  : [];
+
+            // Compute content hash from title + excerpt + first 500 body chars
+            const bodyPreview = body.slice(0, 500);
             const newHash = await sha256Hex(
-                `${post.title}|${post.description}|${bodyPreview}`,
+                `${data.title as string}|${data.description as string}|${bodyPreview}`,
             );
 
-            // Upsert with conditional dirty-marking
             await db
                 .prepare(
                     `
                 INSERT INTO posts
-                    (id, slug, title, excerpt, content_r2_key,
-                     cover_image, category, tags, status, published_at,
+                    (id, slug, title, excerpt, content,
+                     cover_image, category, tags, author, status, published_at,
                      content_hash, search_updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     slug = excluded.slug,
                     title = excluded.title,
                     excerpt = excluded.excerpt,
-                    content_r2_key = excluded.content_r2_key,
+                    content = excluded.content,
                     cover_image = excluded.cover_image,
                     category = excluded.category,
                     tags = excluded.tags,
+                    author = excluded.author,
                     status = excluded.status,
                     published_at = excluded.published_at,
                     content_hash = excluded.content_hash,
@@ -147,23 +178,26 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
             `,
                 )
                 .bind(
-                    post.slug,
-                    post.slug,
-                    post.title,
-                    post.description,
-                    `articles/${post.slug}.md`,
-                    post.coverImage ?? "",
-                    "",
-                    JSON.stringify(post.tags),
-                    "published",
-                    post.date,
+                    slug,
+                    slug,
+                    (data.title as string) || "",
+                    (data.description as string) || "",
+                    body,
+                    (data.coverImage as string) ||
+                        (data.cover_image as string) ||
+                        "",
+                    (data.category as string) || "",
+                    JSON.stringify(tags),
+                    (data.author as string) || "Kurashizu",
+                    status,
+                    date || null,
                     newHash,
-                    null, // search_updated_at: null for insert, CASE handles update
+                    null,
                 )
                 .run();
-            changed++;
+            upserted++;
         }
-        return `${posts.length} posts (${changed} upserted)`;
+        return `${keys.length} articles (${upserted} upserted)`;
     });
 
     await runStep(results, "llm-leaderboard", async () => {
@@ -191,9 +225,6 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     await runStep(results, "hn-news", async () => {
         const stories = await fetchHNNews();
         if (stories.length === 0) throw new Error("empty response");
-
-        // Write to R2 for homepage backward compatibility
-        await env.BUCKET.put("cache/hn-news.json", JSON.stringify(stories));
 
         // Write to D1 — skip if already fetched today
         const today = new Date().toISOString().slice(0, 10);

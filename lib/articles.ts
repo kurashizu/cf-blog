@@ -1,6 +1,4 @@
 import { parseFrontmatter } from "./frontmatter";
-import { r2Paths } from "./r2-paths";
-import { r2Get, r2List, r2Put, r2Delete } from "./r2";
 import { getDB } from "./d1";
 
 export interface Post {
@@ -18,21 +16,14 @@ export interface Post {
 
 export type PostListItem = Omit<Post, "content">;
 
-/** Normalise a date value from gray-matter to a YYYY-MM-DD string.
- *  gray-matter parses YAML dates like `2025-01-15` into Date objects;
- *  the bare `as string` cast in parsePost / parsePostMeta doesn't
- *  actually convert the runtime value, so JSON.stringify would serialise
- *  it as an ISO timestamp ("2025-01-15T00:00:00.000Z").
- */
+/** Normalise a date value from gray-matter to a YYYY-MM-DD string. */
 function normaliseDate(v: unknown): string {
     if (v instanceof Date) return v.toISOString().slice(0, 10);
     if (typeof v === "string") return v;
     return "";
 }
 
-/** Normalise a boolean-like value from YAML (which may be a real bool
- *  or a string like "true" / "false").
- */
+/** Normalise a boolean-like value from YAML. */
 function normaliseBool(v: unknown, defaultVal: boolean): boolean {
     if (v === undefined || v === null) return defaultVal;
     if (v === true || v === false) return v;
@@ -41,11 +32,8 @@ function normaliseBool(v: unknown, defaultVal: boolean): boolean {
     return defaultVal;
 }
 
-function parsePost(slug: string, content: string, key?: string): Post {
-    const { data, body } = parseFrontmatter(content);
-    const postSlug = key ? r2Paths.extractSlug(key) : slug;
-    const tagsValue = data.tags;
-    const tags: string[] = Array.isArray(tagsValue)
+function parseTags(tagsValue: unknown): string[] {
+    return Array.isArray(tagsValue)
         ? tagsValue.filter((t): t is string => typeof t === "string")
         : typeof tagsValue === "string"
           ? tagsValue
@@ -53,76 +41,57 @@ function parsePost(slug: string, content: string, key?: string): Post {
                 .map((t) => t.trim())
                 .filter(Boolean)
           : [];
+}
+
+function rowToPost(row: Record<string, unknown>): Post {
+    const tags: string[] =
+        typeof row.tags === "string"
+            ? JSON.parse(row.tags as string)
+            : (row.tags as string[]) || [];
     return {
-        slug: postSlug,
-        title: (data.title as string) || "",
-        date: normaliseDate(data.date),
-        description: (data.description as string) || "",
+        slug: row.slug as string,
+        title: (row.title as string) || "",
+        date: (row.published_at as string) || "",
+        description: (row.excerpt as string) || "",
         tags,
-        published: normaliseBool(data.published, true),
-        coverImage: data.coverImage as string | undefined,
-        author: (data.author as string) || "Kurashizu",
-        draft: normaliseBool(data.draft, false),
-        content: body,
+        published: (row.status as string) === "published",
+        coverImage: (row.cover_image as string) || undefined,
+        author: (row.author as string) || "Kurashizu",
+        draft: (row.status as string) === "draft",
+        content: (row.content as string) || "",
     };
 }
 
-function parsePostMeta(content: string, key: string): PostListItem | null {
-    const { data } = parseFrontmatter(content);
-    const slug = r2Paths.extractSlug(key);
-    const tagsValue = data.tags;
-    const tags: string[] = Array.isArray(tagsValue)
-        ? tagsValue.filter((t): t is string => typeof t === "string")
-        : typeof tagsValue === "string"
-          ? tagsValue
-                .split(",")
-                .map((t) => t.trim())
-                .filter(Boolean)
-          : [];
-    const post = {
-        slug,
-        title: (data.title as string) || "",
-        date: normaliseDate(data.date),
-        description: (data.description as string) || "",
+function rowToPostListItem(row: Record<string, unknown>): PostListItem {
+    const tags: string[] =
+        typeof row.tags === "string"
+            ? JSON.parse(row.tags as string)
+            : (row.tags as string[]) || [];
+    return {
+        slug: row.slug as string,
+        title: (row.title as string) || "",
+        date: (row.published_at as string) || "",
+        description: (row.excerpt as string) || "",
         tags,
-        published: normaliseBool(data.published, true),
-        coverImage: data.coverImage as string | undefined,
-        author: (data.author as string) || "Kurashizu",
-        draft: normaliseBool(data.draft, false),
+        published: (row.status as string) === "published",
+        coverImage: (row.cover_image as string) || undefined,
+        author: (row.author as string) || "Kurashizu",
+        draft: (row.status as string) === "draft",
     };
-    if (post.draft || !post.published) return null;
-    return post;
-}
-
-export async function buildArticleIndex(): Promise<PostListItem[]> {
-    const keys = await r2List(r2Paths.articlesPrefix);
-    const posts: PostListItem[] = [];
-
-    for (const key of keys) {
-        if (!key.endsWith(".md")) continue;
-        try {
-            const content = await r2Get(key);
-            const meta = parsePostMeta(content, key);
-            if (meta) posts.push(meta);
-        } catch {
-            continue;
-        }
-    }
-
-    posts.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    );
-    await r2Put(r2Paths.articlesIndexCache, JSON.stringify(posts));
-    return posts;
 }
 
 export function createArticlesRepo() {
+    const db = getDB();
+
     return {
         async getBySlug(slug: string): Promise<Post | null> {
             try {
-                const key = r2Paths.article(slug);
-                const content = await r2Get(key);
-                return parsePost(slug, content, key);
+                const row = await db
+                    .prepare(`SELECT * FROM posts WHERE id = ?`)
+                    .bind(slug)
+                    .first<Record<string, unknown>>();
+                if (!row) return null;
+                return rowToPost(row);
             } catch {
                 return null;
             }
@@ -130,23 +99,19 @@ export function createArticlesRepo() {
 
         async getAll(): Promise<PostListItem[]> {
             try {
-                const cached = await r2Get(r2Paths.articlesIndexCache);
-                if (cached) {
-                    const parsed = JSON.parse(cached) as PostListItem[];
-                    if (parsed.length > 0) {
-                        buildArticleIndex().catch((e) =>
-                            console.error(
-                                "Background index rebuild failed:",
-                                e,
-                            ),
-                        );
-                        return parsed;
-                    }
-                }
+                const rows = await db
+                    .prepare(
+                        `SELECT slug, title, excerpt as description,
+                            cover_image, tags, status, published_at as date,
+                            author
+                     FROM posts
+                     ORDER BY published_at DESC`,
+                    )
+                    .all<Record<string, unknown>>();
+                return (rows.results ?? []).map(rowToPostListItem);
             } catch {
-                // cache miss
+                return [];
             }
-            return buildArticleIndex();
         },
 
         async getRecent(limit: number = 5): Promise<PostListItem[]> {
@@ -154,57 +119,39 @@ export function createArticlesRepo() {
             return posts.slice(0, limit);
         },
 
-        async save(slug: string, content: string): Promise<void> {
-            const key = r2Paths.article(slug);
-            await r2Put(key, content);
+        async save(slug: string, fullContent: string): Promise<void> {
+            const { data, body } = parseFrontmatter(fullContent);
+            const tags = parseTags(data.tags);
 
-            // Sync to D1
-            try {
-                const { data } = parseFrontmatter(content);
-                const tagsValue = data.tags;
-                const tags: string[] = Array.isArray(tagsValue)
-                    ? tagsValue.filter((t): t is string => typeof t === "string")
-                    : typeof tagsValue === "string"
-                      ? tagsValue.split(",").map((t) => t.trim()).filter(Boolean)
-                      : [];
-                const db = getDB();
-                await db.prepare(`
-                    INSERT OR REPLACE INTO posts
-                        (id, slug, title, excerpt, content_r2_key,
-                         cover_image, category, tags, status, published_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `).bind(
+            await db
+                .prepare(
+                    `
+                INSERT OR REPLACE INTO posts
+                    (id, slug, title, excerpt, content,
+                     cover_image, category, tags, author, status, published_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+                )
+                .bind(
                     slug,
                     slug,
                     (data.title as string) || "",
                     (data.description as string) || "",
-                    key,
-                    (data.coverImage as string) || (data.cover_image as string) || "",
+                    body,
+                    (data.coverImage as string) ||
+                        (data.cover_image as string) ||
+                        "",
                     (data.category as string) || "",
                     JSON.stringify(tags),
+                    (data.author as string) || "Kurashizu",
                     normaliseBool(data.draft, false) ? "draft" : "published",
                     normaliseDate(data.date) || null,
-                ).run();
-            } catch (e) {
-                console.error("D1 sync failed:", e);
-            }
-
-            // Invalidate old R2 cache index
-            try {
-                await r2Delete(r2Paths.articlesIndexCache);
-            } catch {
-                /* ignore */
-            }
+                )
+                .run();
         },
 
         async delete(slug: string): Promise<void> {
-            const key = r2Paths.article(slug);
-            await r2Delete(key);
-            try {
-                await r2Delete(r2Paths.articlesIndexCache);
-            } catch {
-                /* ignore */
-            }
+            await db.prepare("DELETE FROM posts WHERE id = ?").bind(slug).run();
         },
     };
 }
