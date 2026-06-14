@@ -14,9 +14,7 @@ const ENTER_MS = 280;
  * Wraps page content and orchestrates page-level exit/enter animations.
  *
  * - **First load**: enter animation → idle
- * - **Route changes** (different pathname): exit → swap → enter → idle
- * - **Search-param only** (same pathname, different children): instant swap,
- *   then enter animation (no exit)
+ * - **Route changes**: exit → swap → enter → idle
  * - **Rapid successive navigation**: in-flight timers are cancelled before
  *   starting the new transition.
  */
@@ -25,7 +23,11 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
     const [phase, setPhase] = useState<Phase>("enter");
     const [displayChildren, setDisplayChildren] = useState(children);
     const prevPathname = useRef(pathname);
+    const pendingChildren = useRef(children);
     const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+    // Keep ref in sync with latest children without triggering effect re-run
+    pendingChildren.current = children;
 
     // ── First mount: enter → idle ──
     useEffect(() => {
@@ -33,30 +35,19 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
         return () => clearTimeout(t);
     }, []);
 
-    // ── Route / children changes ──
+    // ── Route changes only (pathname-driven) ──
     useLayoutEffect(() => {
+        if (pathname === prevPathname.current) return;
+
         // Cancel any in-flight transition timers
         timers.current.forEach(clearTimeout);
         timers.current = [];
 
-        if (pathname === prevPathname.current) {
-            // Same pathname — likely a search-param-only change.
-            // Swap content instantly, then play enter animation.
-            prevPathname.current = pathname;
-            setDisplayChildren(children);
-            setPhase("enter");
-
-            const t = setTimeout(() => setPhase("idle"), ENTER_MS);
-            timers.current.push(t);
-            return;
-        }
-
-        // ── Route changed ──
         prevPathname.current = pathname;
         setPhase("exit");
 
         const exitTimer = setTimeout(() => {
-            setDisplayChildren(children);
+            setDisplayChildren(pendingChildren.current);
             setPhase("enter");
 
             const enterTimer = setTimeout(() => {
@@ -67,7 +58,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
         }, EXIT_MS);
 
         timers.current.push(exitTimer);
-    }, [pathname, children]);
+    }, [pathname]);
 
     let className = "";
     if (phase === "exit") className = "animate-page-exit";
