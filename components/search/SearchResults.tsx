@@ -149,18 +149,20 @@ function ScoreLabel({ score }: { score: number }) {
     const pct = Math.round(score * 100);
     const label =
         pct >= 85 ? "High" : pct >= 70 ? "Good" : pct >= 55 ? "Fair" : "Low";
-    const color =
-        pct >= 85
-            ? "bg-accent/15 text-accent"
-            : pct >= 70
-              ? "bg-accent/10 text-accent/80"
-              : "text-text-muted";
+
+    let className: string;
+    if (pct >= 85) {
+        className = "text-xs font-bold bg-accent/15 text-accent";
+    } else if (pct >= 70) {
+        className = "text-[11px] font-semibold bg-accent/10 text-accent/85";
+    } else if (pct >= 55) {
+        className = "text-[11px] font-medium bg-accent/5 text-accent/60";
+    } else {
+        className = "text-[10px] font-normal text-text-muted";
+    }
+
     return (
-        <span
-            className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${color}`}
-        >
-            {label}
-        </span>
+        <span className={`px-1.5 py-0.5 rounded ${className}`}>{label}</span>
     );
 }
 
@@ -287,7 +289,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                                     }}
                                 />
                             </div>
-                            <span className="text-xs font-semibold font-mono text-accent/80">
+                            <span className="text-[13px] font-bold font-mono text-accent/85">
                                 {Math.round(result.score * 100)}%
                             </span>
                             <ScoreLabel score={result.score} />
