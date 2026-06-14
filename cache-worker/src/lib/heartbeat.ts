@@ -22,8 +22,10 @@ export async function handleHeartbeat(
         const rewrite = await generateItemRewrite(story, env.GEMINI_API_KEY);
 
         await env.DB.prepare(
-            "UPDATE news_items SET summary = ? WHERE id = ?",
-        ).bind(rewrite, story.id).run();
+            "UPDATE news_items SET summary = ?, search_updated_at = NULL WHERE id = ?",
+        )
+            .bind(rewrite, story.id)
+            .run();
 
         return {
             ok: true,

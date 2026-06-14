@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { SearchBar } from "@/components/search/SearchBar";
 import icon2 from "@/public/icons/icon2_128.png";
 
 const navLinks = [
@@ -30,7 +31,10 @@ export function Header() {
     return (
         <header className="site-header sticky top-0 z-50 backdrop-blur-xl bg-bg-primary/80">
             <nav className="max-w-4xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-                <Link href="/" className="group flex items-center gap-2 shrink-0">
+                <Link
+                    href="/"
+                    className="group flex items-center gap-2 shrink-0"
+                >
                     <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50 shrink-0">
                         <Image
                             src={icon2}
@@ -64,6 +68,9 @@ export function Header() {
                 </Link>
 
                 <div className="flex items-center gap-1 md:gap-2">
+                    <div className="hidden md:block">
+                        <SearchBar variant="icon" />
+                    </div>
                     <ul className="hidden md:flex items-center gap-1">
                         {navLinks.map((link) => {
                             const isActive = pathname === link.href;
@@ -89,6 +96,10 @@ export function Header() {
                             );
                         })}
                     </ul>
+
+                    <div className="md:hidden">
+                        <SearchBar variant="icon" />
+                    </div>
 
                     <button
                         onClick={toggleTheme}
@@ -146,12 +157,32 @@ export function Header() {
                         aria-label="Toggle menu"
                     >
                         {mobileMenuOpen ? (
-                            <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                                className="w-4 h-4 text-accent"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
                             </svg>
                         ) : (
-                            <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            <svg
+                                className="w-4 h-4 text-accent"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 6h16M4 12h16M4 18h16"
+                                />
                             </svg>
                         )}
                     </button>

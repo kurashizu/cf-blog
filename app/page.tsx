@@ -112,22 +112,47 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
 }
 
 export default async function HomePage() {
-    const [repos, allPosts, contributions, topLanguages] = await Promise.all([
+    const [repos, contributions, topLanguages] = await Promise.all([
         readCache<GitHubRepo>(r2Paths.githubReposCache),
-        readCache<Post>(r2Paths.articlesIndexCache),
         readContributions(),
         getTopLanguages(5),
     ]);
 
-    const hnNews: HNStory[] = await (async () => {
+    const [hnNews, recentPosts] = await (async () => {
         try {
             const db = getDB();
-            const rows = await db
-                .prepare("SELECT * FROM news_items ORDER BY time DESC LIMIT 5")
-                .all();
-            return (rows.results ?? []) as unknown as HNStory[];
+            const [newsRows, postRows] = await Promise.all([
+                db
+                    .prepare(
+                        "SELECT * FROM news_items ORDER BY time DESC LIMIT 5",
+                    )
+                    .all(),
+                db
+                    .prepare(
+                        `SELECT slug, title, excerpt as description,
+                            published_at as date, tags, cover_image
+                     FROM posts
+                     WHERE status = 'published'
+                     ORDER BY published_at DESC
+                     LIMIT 5`,
+                    )
+                    .all(),
+            ]);
+            const posts = ((postRows.results ?? []) as unknown as Post[]).map(
+                (p) => ({
+                    ...p,
+                    tags:
+                        typeof p.tags === "string"
+                            ? JSON.parse(p.tags as string)
+                            : p.tags,
+                }),
+            );
+            return [
+                (newsRows.results ?? []) as unknown as HNStory[],
+                posts,
+            ] as [HNStory[], Post[]];
         } catch {
-            return [];
+            return [[], []] as [HNStory[], Post[]];
         }
     })();
 
@@ -135,8 +160,6 @@ export default async function HomePage() {
     // after the page loads (see HeroHeader). Doing it here in SSR used to
     // block the first byte on a third-party API (ip-api.com, 3 s timeout)
     // and force the whole page into dynamic rendering.
-
-    const recentPosts = allPosts.slice(0, 5);
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 md:py-12">

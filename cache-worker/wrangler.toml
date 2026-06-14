@@ -12,6 +12,10 @@ database_id = "f763e00a-1c8b-42d4-ad4f-65d0136cabd2"
 binding = "BUCKET"
 bucket_name = "cf-blog-bucket"
 
+[[vectorize]]
+binding = "SEARCH_INDEX"
+index_name = "blog-search"
+
 [triggers]
 crons = ["*/30 * * * *", "*/3 * * * *"]
 
