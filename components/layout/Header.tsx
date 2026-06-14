@@ -195,6 +195,9 @@ export function Header() {
 
             {mobileMenuOpen && (
                 <div className="md:hidden border-t border-border bg-bg-primary/95 backdrop-blur-xl">
+                    <div className="px-4 pt-3 pb-1">
+                        <SearchBar variant="icon" />
+                    </div>
                     <ul className="flex flex-col px-4 py-2">
                         {navLinks.map((link) => {
                             const isActive = pathname === link.href;
