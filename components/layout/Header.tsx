@@ -105,10 +105,6 @@ export function Header() {
                         })}
                     </ul>
 
-                    <div className="md:hidden flex items-center">
-                        <SearchBar variant="icon" />
-                    </div>
-
                     <button
                         onClick={toggleTheme}
                         className="w-9 h-9 flex items-center justify-center rounded-xl bg-bg-card border border-border hover:border-accent hover:bg-accent/5 active:scale-90 transition-all duration-200 shrink-0"

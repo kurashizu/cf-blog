@@ -38,8 +38,11 @@ function formatDate(dateStr: string): string {
 
 export function SearchResults({ query, results, error }: SearchResultsProps) {
     return (
-        <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12">
-            <div className="mb-8">
+        <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12 animate-fadeIn">
+            <div
+                className="mb-8 animate-fade-up"
+                style={{ animationDelay: "0ms" }}
+            >
                 <h1 className="page-title text-2xl font-bold mb-2">
                     Search Results
                 </h1>
@@ -55,8 +58,14 @@ export function SearchResults({ query, results, error }: SearchResultsProps) {
 
             {results.length > 0 && (
                 <div className="space-y-4">
-                    {results.map((r) => (
-                        <SearchResultCard key={r.id} result={r} />
+                    {results.map((r, i) => (
+                        <div
+                            key={r.id}
+                            className="animate-fade-up-sm"
+                            style={{ animationDelay: `${80 + i * 50}ms` }}
+                        >
+                            <SearchResultCard result={r} />
+                        </div>
                     ))}
                 </div>
             )}
@@ -121,9 +130,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
 
                 {/* Meta footer */}
                 <div className="flex items-center gap-3 mt-2 text-[10px] text-text-muted">
-                    {isNews && result.by && (
-                        <span>by {result.by}</span>
-                    )}
+                    {isNews && result.by && <span>by {result.by}</span>}
                     {isNews && result.url && (
                         <a
                             href={result.url}
