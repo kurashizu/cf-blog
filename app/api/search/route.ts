@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { performSearch } from "@/lib/search";
+import { performSearch, RateLimitError } from "@/lib/search";
+import { getIP } from "@/shared/ratelimiter";
 
 export async function GET(request: NextRequest) {
     const q = request.nextUrl.searchParams.get("q");
@@ -19,16 +20,21 @@ export async function GET(request: NextRequest) {
     );
 
     try {
-        const result = await performSearch(q.trim(), topK);
+        const clientIP = getIP(request);
+        const result = await performSearch(q.trim(), {
+            topK,
+            clientIP,
+        });
         return NextResponse.json(result);
     } catch (e) {
         console.error("Search error:", e);
+        const status = e instanceof RateLimitError ? 429 : 500;
         return NextResponse.json(
             {
                 error: e instanceof Error ? e.message : String(e),
                 results: [],
             },
-            { status: 500 },
+            { status },
         );
     }
 }

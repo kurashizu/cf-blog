@@ -4,10 +4,11 @@
  * If no query is provided, renders an empty search page with just the search bar.
  */
 
-import { performSearch } from "@/lib/search";
+import { performSearch, RateLimitError } from "@/lib/search";
 import type { SearchHit } from "@/lib/search";
 import { SearchResults } from "@/components/search/SearchResults";
 import { SearchBar } from "@/components/search/SearchBar";
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -45,12 +46,24 @@ export default async function SearchPage({
 
     let results: SearchHit[] = [];
     let error: string | undefined;
+    let isRateLimited = false;
 
     try {
-        const result = await performSearch(query, 15, sourceFilter);
+        const headersList = await headers();
+        const clientIP = headersList.get("CF-Connecting-IP") ?? undefined;
+        const result = await performSearch(query, {
+            topK: 15,
+            sourceFilter,
+            clientIP,
+        });
         results = result.results;
     } catch (e) {
-        error = e instanceof Error ? e.message : String(e);
+        if (e instanceof RateLimitError) {
+            isRateLimited = true;
+            error = "Too many searches. Please try again later.";
+        } else {
+            error = e instanceof Error ? e.message : String(e);
+        }
     }
 
     return (
@@ -59,6 +72,7 @@ export default async function SearchPage({
             results={results}
             error={error}
             sourceFilter={sourceFilter ?? "all"}
+            isRateLimited={isRateLimited}
         />
     );
 }

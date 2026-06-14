@@ -22,6 +22,7 @@ interface SearchResultsProps {
     results: SearchResult[];
     error?: string;
     sourceFilter: "all" | "blog" | "news";
+    isRateLimited?: boolean;
 }
 
 const FILTER_OPTIONS: { value: "all" | "blog" | "news"; label: string }[] = [
@@ -49,6 +50,7 @@ export function SearchResults({
     results,
     error,
     sourceFilter,
+    isRateLimited = false,
 }: SearchResultsProps) {
     const router = useRouter();
 
@@ -95,15 +97,34 @@ export function SearchResults({
                     </div>
                 </div>
 
-                <p className="text-sm text-text-secondary mt-2">
-                    {results.length > 0
-                        ? `Found ${results.length} result${results.length === 1 ? "" : "s"} for "${query}"`
-                        : error
-                          ? `Search failed: ${error}`
-                          : `No results for "${query}"`}
-                    {sourceFilter !== "all" &&
-                        ` in ${sourceFilter === "blog" ? "blog posts" : "news"}`}
-                </p>
+                {isRateLimited ? (
+                    <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <svg
+                            className="w-4 h-4 text-amber-500 shrink-0"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+                            />
+                        </svg>
+                        <p className="text-xs text-amber-600">{error}</p>
+                    </div>
+                ) : (
+                    <p className="text-sm text-text-secondary mt-2">
+                        {results.length > 0
+                            ? `Found ${results.length} result${results.length === 1 ? "" : "s"} for "${query}"`
+                            : error
+                              ? `Search failed: ${error}`
+                              : `No results for "${query}"`}
+                        {sourceFilter !== "all" &&
+                            ` in ${sourceFilter === "blog" ? "blog posts" : "news"}`}
+                    </p>
+                )}
             </div>
 
             {results.length > 0 && (

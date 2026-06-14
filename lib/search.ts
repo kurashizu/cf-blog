@@ -5,10 +5,12 @@
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { embedSearchQuery } from "@/lib/embeddings";
+import { checkDailyKV } from "@/shared/ratelimiter";
 
 interface SearchEnv {
     SEARCH_INDEX: VectorizeIndex;
     GEMINI_API_KEY: string;
+    SESSION_KV: KVNamespace;
 }
 
 export interface SearchHit {
@@ -25,21 +27,49 @@ export interface SearchHit {
     published_at: string;
 }
 
+export class RateLimitError extends Error {
+    constructor(msg: string) {
+        super(msg);
+        this.name = "RateLimitError";
+    }
+}
+
 export interface SearchResult {
     results: SearchHit[];
     query: string;
 }
 
+export interface SearchOptions {
+    topK?: number;
+    sourceFilter?: "blog" | "news";
+    /** IP address for rate limiting. If omitted, rate limiting is skipped. */
+    clientIP?: string;
+}
+
 export async function performSearch(
     query: string,
-    topK: number = 15,
-    sourceFilter?: "blog" | "news",
+    options: SearchOptions = {},
 ): Promise<SearchResult> {
+    const { topK = 15, sourceFilter, clientIP } = options;
     const { env } = getCloudflareContext();
     const cfEnv = env as unknown as SearchEnv;
 
     if (!cfEnv.GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY not configured");
+    }
+
+    // Rate limiting (daily KV)
+    if (clientIP && cfEnv.SESSION_KV) {
+        const dailyResp = await checkDailyKV(
+            cfEnv.SESSION_KV,
+            "search",
+            clientIP,
+            100,
+        );
+        if (dailyResp) {
+            const body = (await dailyResp.json()) as { error: string };
+            throw new RateLimitError(body.error);
+        }
     }
 
     // 1. Embed the query
