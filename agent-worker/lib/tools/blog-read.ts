@@ -68,7 +68,19 @@ export const blogReadTool: Tool = {
                 };
             }
 
-            const data = await resp.json();
+            const data = (await resp.json()) as {
+                title: string;
+                slug: string;
+                description: string;
+                tags: string[];
+                published_at: string;
+                content: string;
+                offset: number;
+                max_length: number;
+                total_length: number;
+                has_more: boolean;
+                next_offset?: number;
+            };
 
             return {
                 success: true,
