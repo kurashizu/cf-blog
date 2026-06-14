@@ -29,12 +29,13 @@ export default async function NewsPage({
     const offset = (page - 1) * LIMIT;
 
     const [rows, countRow] = await Promise.all([
-        db.prepare(
-            "SELECT * FROM news_items ORDER BY time DESC LIMIT ? OFFSET ?",
-        ).bind(LIMIT, offset).all(),
-        db.prepare(
-            "SELECT COUNT(*) as total FROM news_items",
-        ).first(),
+        db
+            .prepare(
+                "SELECT * FROM news_items ORDER BY time DESC LIMIT ? OFFSET ?",
+            )
+            .bind(LIMIT, offset)
+            .all(),
+        db.prepare("SELECT COUNT(*) as total FROM news_items").first(),
     ]);
 
     const stories = (rows.results ?? []) as unknown as HNStory[];
@@ -42,14 +43,14 @@ export default async function NewsPage({
     const totalPages = Math.ceil(total / LIMIT);
 
     return (
-        <div className="max-w-4xl mx-auto px-4 pb-12">
+        <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12">
             <div
                 className="page-title animate-fade-up"
                 style={{ animationDelay: "0ms" }}
             >
                 <h1>News</h1>
                 <p className="text-sm text-text-secondary">
-                    Daily HN highlights with AI-generated summaries
+                    Daily tech news with AI-generated summaries
                 </p>
             </div>
 

@@ -21,44 +21,24 @@ export function VisitorTerminal() {
     const [display, setDisplay] = useState("");
     const [done, setDone] = useState(false);
 
-    // Fetch visitor info once
+    // Fetch visitor info immediately
     useEffect(() => {
         const ctrl = new AbortController();
-        const start = () => {
-            fetch("/api/visitor-info", { signal: ctrl.signal })
-                .then((r) =>
-                    r.ok
-                        ? (r.json() as Promise<{
-                              visitorInfo?: VisitorInfo | null;
-                          }>)
-                        : Promise.reject(new Error(`HTTP ${r.status}`)),
-                )
-                .then((data) => {
-                    if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
-                })
-                .catch((e) => {
-                    if (e?.name === "AbortError") return;
-                });
-        };
-        const idle = window as unknown as {
-            requestIdleCallback?: (
-                cb: () => void,
-                opts?: { timeout: number },
-            ) => number;
-            cancelIdleCallback?: (id: number) => void;
-        };
-        if (idle.requestIdleCallback) {
-            const id = idle.requestIdleCallback(start, { timeout: 2000 });
-            return () => {
-                idle.cancelIdleCallback?.(id);
-                ctrl.abort();
-            };
-        }
-        const timer = setTimeout(start, 1500);
-        return () => {
-            clearTimeout(timer);
-            ctrl.abort();
-        };
+        fetch("/api/visitor-info", { signal: ctrl.signal })
+            .then((r) =>
+                r.ok
+                    ? (r.json() as Promise<{
+                          visitorInfo?: VisitorInfo | null;
+                      }>)
+                    : Promise.reject(new Error(`HTTP ${r.status}`)),
+            )
+            .then((data) => {
+                if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
+            })
+            .catch((e) => {
+                if (e?.name === "AbortError") return;
+            });
+        return () => ctrl.abort();
     }, []);
 
     // Typewriter effect

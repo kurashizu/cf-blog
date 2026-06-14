@@ -88,7 +88,7 @@ export default async function BlogPage({
     const totalPages = Math.ceil(total / LIMIT);
 
     return (
-        <div className="max-w-4xl mx-auto px-4 pb-12">
+        <>
             <div
                 className="page-title animate-fade-up"
                 style={{ animationDelay: "0ms" }}
@@ -160,6 +160,6 @@ export default async function BlogPage({
                     )}
                 </nav>
             )}
-        </div>
+        </>
     );
 }

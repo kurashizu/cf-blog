@@ -224,7 +224,23 @@ export default async function HomePage() {
                     )}
                 </section>
 
-                {/* GitHub Projects - left bottom */}
+                {/* Gadgets — left bottom */}
+                <section className="flex flex-col h-full">
+                    <div
+                        className="flex items-center justify-between mb-3 animate-fade-up"
+                        style={{ animationDelay: "520ms" }}
+                    >
+                        <h2 className="section-title mb-0">Gadgets</h2>
+                    </div>
+                    <Card
+                        className="flex-1 p-4 h-full animate-fade-zoom"
+                        style={{ animationDelay: "600ms" }}
+                    >
+                        <GadgetsPanel />
+                    </Card>
+                </section>
+
+                {/* GitHub Projects - right bottom */}
                 <section className="flex flex-col h-full">
                     <div
                         className="flex items-center justify-between mb-3 animate-fade-up"
@@ -275,22 +291,6 @@ export default async function HomePage() {
                             </a>
                         ))}
                     </div>
-                </section>
-
-                {/* Gadgets — right bottom */}
-                <section className="flex flex-col h-full">
-                    <div
-                        className="flex items-center justify-between mb-3 animate-fade-up"
-                        style={{ animationDelay: "520ms" }}
-                    >
-                        <h2 className="section-title mb-0">Gadgets</h2>
-                    </div>
-                    <Card
-                        className="flex-1 p-4 h-full animate-fade-zoom"
-                        style={{ animationDelay: "600ms" }}
-                    >
-                        <GadgetsPanel />
-                    </Card>
                 </section>
             </div>
 

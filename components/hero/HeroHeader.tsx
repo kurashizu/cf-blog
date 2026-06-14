@@ -8,7 +8,11 @@ interface HeroHeaderProps {
  */
 export function HeroHeader({ title }: HeroHeaderProps) {
     return (
-        <h1 className="hero-title hero-title--animated" aria-label={title}>
+        <h1
+            className="hero-title hero-title--animated animate-fade-up"
+            style={{ animationDelay: "0ms" }}
+            aria-label={title}
+        >
             {title}
         </h1>
     );
