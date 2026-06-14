@@ -212,7 +212,12 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                             (overview match)
                         </span>
                     )}
-                    <span className="text-[10px] text-text-muted ml-auto">
+                    {result.score && (
+                        <span className="text-[10px] font-mono text-accent/70">
+                            {(result.score * 100).toFixed(0)}%
+                        </span>
+                    )}
+                    <span className="text-[10px] text-text-muted ml-1.5">
                         {formatDate(result.published_at)}
                     </span>
                 </div>
