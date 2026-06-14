@@ -8,6 +8,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { embedSearchQuery } from "@/lib/embeddings";
 
+interface SearchEnv {
+    SEARCH_INDEX: VectorizeIndex;
+    GEMINI_API_KEY: string;
+}
+
 export async function GET(request: NextRequest) {
     const q = request.nextUrl.searchParams.get("q");
     if (!q || q.trim().length === 0) {
