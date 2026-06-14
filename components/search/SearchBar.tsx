@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 interface SearchBarProps {
     variant?: "icon" | "inline";
@@ -16,11 +16,13 @@ export function SearchBar({
 }: SearchBarProps) {
     const router = useRouter();
     const inputRef = useRef<HTMLInputElement>(null);
+    const [loading, setLoading] = useState(false);
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         const trimmed = inputRef.current?.value.trim();
         if (!trimmed) return;
+        setLoading(true);
         onSearch?.(trimmed);
         router.push(`/search?q=${encodeURIComponent(trimmed)}`);
     }
@@ -43,20 +45,42 @@ export function SearchBar({
                                focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent
                                transition-all duration-300"
                 />
-                <svg
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted
-                               transition-colors duration-300 group-focus-within:text-accent"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                </svg>
+                {loading ? (
+                    <svg
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-accent animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                        />
+                        <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                    </svg>
+                ) : (
+                    <svg
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted
+                                   transition-colors duration-300 group-focus-within:text-accent"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                    </svg>
+                )}
             </form>
         );
     }
@@ -75,20 +99,42 @@ export function SearchBar({
                            focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent
                            transition-all duration-300"
             />
-            <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted
-                           transition-colors duration-300 group-focus-within:text-accent"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-            >
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-            </svg>
+            {loading ? (
+                <svg
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-accent animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                    />
+                    <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                </svg>
+            ) : (
+                <svg
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted
+                               transition-colors duration-300 group-focus-within:text-accent"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                </svg>
+            )}
         </form>
     );
 }
