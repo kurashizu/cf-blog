@@ -145,6 +145,25 @@ export function SearchResults({
     );
 }
 
+function ScoreLabel({ score }: { score: number }) {
+    const pct = Math.round(score * 100);
+    const label =
+        pct >= 85 ? "High" : pct >= 70 ? "Good" : pct >= 55 ? "Fair" : "Low";
+    const color =
+        pct >= 85
+            ? "bg-accent/15 text-accent"
+            : pct >= 70
+              ? "bg-accent/10 text-accent/80"
+              : "text-text-muted";
+    return (
+        <span
+            className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${color}`}
+        >
+            {label}
+        </span>
+    );
+}
+
 function SearchResultCard({ result }: { result: SearchResult }) {
     const isBlog = result.source === "blog";
     const isNews = result.source === "news";
@@ -260,7 +279,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                     </div>
                     {result.score !== undefined && (
                         <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                            <div className="w-12 h-1 rounded-full bg-bg-primary overflow-hidden">
+                            <div className="w-20 h-1.5 rounded-full bg-bg-primary overflow-hidden">
                                 <div
                                     className="h-full rounded-full bg-accent transition-all duration-300 ml-auto"
                                     style={{
@@ -268,9 +287,10 @@ function SearchResultCard({ result }: { result: SearchResult }) {
                                     }}
                                 />
                             </div>
-                            <span className="font-mono text-accent/70">
+                            <span className="text-xs font-semibold font-mono text-accent/80">
                                 {Math.round(result.score * 100)}%
                             </span>
+                            <ScoreLabel score={result.score} />
                         </div>
                     )}
                 </div>
