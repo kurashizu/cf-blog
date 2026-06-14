@@ -7,7 +7,8 @@ A personal blog + AI agent deployed to Cloudflare Workers. The homepage has a re
 - **Blog** — Markdown articles in R2, syntax-highlighted code
 - **HN News Archive** — Top 5 HN stories fetched every 30 min, with full-length AI rewrites (Gemma 4 via 3-min heartbeat cron)
 - **GitHub Contributions Heatmap** — Real-time activity ribbon in the hero
-- **Top Languages Donut** — 5-segment SVG donut with legend (hero sidebar)
+- **Top Languages Donut** — 5-segment SVG donut with hover interaction (shows language name + percentage in center), color-coded legend (hero sidebar)
+- **Visitor Terminal** — Typewriter effect showing your IP/location/ISP at the top of the hero
 - **KurAgent** — AI assistant with tool calling (web search, time, JS eval) at `agent.022025.xyz`
 - **LLM Leaderboard** — Full-screen modal showing top 50 models from Artificial Analysis
 - **Guestbook** — Per-visitor message at `/guestbook`
@@ -26,6 +27,8 @@ Three Cloudflare Workers, deployed in parallel by GitHub Actions on push to `mai
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Homepage cache refresh (30-min) + News rewrite heartbeat (3-min) |
 
 The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches data into R2 + D1; the homepage reads from D1 for posts, news, and GitHub repos, and from R2 for contributions and LLM leaderboard. Cold cache = empty hero; ISR revalidates every 5 min.
+
+CI runs on push to `main`: **migrate-db** (`database/schema.sql`) first, then deploys all three workers in parallel.
 
 ## Tech Stack
 
