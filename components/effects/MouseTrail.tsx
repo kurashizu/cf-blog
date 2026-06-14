@@ -47,7 +47,7 @@ export function MouseTrail() {
                 x: e.clientX + (Math.random() - 0.5) * 4,
                 y: e.clientY + (Math.random() - 0.5) * 4,
                 opacity: 1,
-                size: 3 + Math.random() * 3,
+                size: 1.5 + Math.random() * 1.5,
                 vx: (Math.random() - 0.5) * 0.5,
                 vy: (Math.random() - 0.5) * 0.5,
             });
@@ -81,7 +81,7 @@ export function MouseTrail() {
 
                 // Glow layer (larger, faint) — replaces shadowBlur
                 ctx.beginPath();
-                ctx.arc(x, y, size * 2.5, 0, Math.PI * 2);
+                ctx.arc(x, y, size * 2, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(${rgb}, ${opacity * 0.15})`;
                 ctx.fill();
 
