@@ -300,10 +300,14 @@ function makeParagraphChunk(text: string, item: IndexableItem): Chunk {
     };
 }
 
-/** Generate the vector ID for a chunk. */
+/** Generate the vector ID for a chunk. Max 64 bytes (Vectorize limit). */
 export function chunkVectorId(chunk: Chunk): string {
     const m = chunk.metadata;
-    // Normalise slug/id to avoid special chars
     const safeId = m.id.replace(/[^a-zA-Z0-9_-]/g, "_");
-    return `${m.source}-${safeId}-${m.type}`;
+    const raw = `${m.source}-${safeId}-${m.type}`;
+    // Truncate to 64 bytes to avoid VECTOR_UPSERT_ERROR (code=40008)
+    if (raw.length > 64) {
+        return raw.slice(0, 64);
+    }
+    return raw;
 }
