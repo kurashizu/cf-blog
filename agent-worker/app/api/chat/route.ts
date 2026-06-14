@@ -172,7 +172,7 @@ async function parseSSEStream(
                             );
                         } else if (part.text !== undefined && !functionCall) {
                             handlePart(
-                                { thought: false, text: part.text },
+                                { text: part.text },
                                 state,
                                 controller,
                                 acc,
