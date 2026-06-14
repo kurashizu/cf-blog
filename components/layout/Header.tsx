@@ -87,13 +87,13 @@ export function Header() {
                                     <Link
                                         href={link.href}
                                         className={`
-                      relative px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200
-                      ${
-                          isActive
-                              ? "text-accent"
-                              : "text-text-secondary hover:text-accent hover:bg-accent-subtle"
-                      }
-                    `}
+                                      relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200
+                                      ${
+                                          isActive
+                                              ? "text-accent"
+                                              : "text-text-secondary hover:text-accent hover:bg-accent-subtle"
+                                      }
+                                    `}
                                     >
                                         {link.label}
                                         {isActive && (
