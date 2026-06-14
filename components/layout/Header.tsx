@@ -30,47 +30,55 @@ export function Header() {
 
     return (
         <header className="site-header sticky top-0 z-50 backdrop-blur-xl bg-bg-primary/80">
-            <nav className="max-w-4xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-                <Link
-                    href="/"
-                    className="group flex items-center gap-2 shrink-0"
-                >
-                    <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50 shrink-0">
-                        <Image
-                            src={icon2}
-                            alt="logo"
-                            width={32}
-                            height={32}
-                            className="object-cover"
-                        />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                        <span
-                            className="text-lg md:text-xl font-bold italic tracking-wide truncate"
-                            style={{
-                                fontFamily:
-                                    "'Playfair Display', 'Georgia', serif",
-                                background:
-                                    "linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 50%, var(--text-primary) 100%)",
-                                backgroundSize: "200% 200%",
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                backgroundClip: "text",
-                                animation: "gradient-flow 4s ease infinite",
-                            }}
-                        >
-                            Kurashizu Blog
-                        </span>
-                        <span className="text-[10px] font-medium text-text-muted tracking-widest uppercase -mt-1 hidden sm:block">
-                            where ideas flow
-                        </span>
-                    </div>
-                </Link>
+            <nav className="max-w-4xl mx-auto px-4 md:px-6 h-16 flex items-center">
+                {/* Left: logo */}
+                <div className="flex-1 flex justify-start">
+                    <Link
+                        href="/"
+                        className="group flex items-center gap-2 shrink-0"
+                    >
+                        <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50 shrink-0">
+                            <Image
+                                src={icon2}
+                                alt="logo"
+                                width={32}
+                                height={32}
+                                className="object-cover"
+                            />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span
+                                className="text-lg md:text-xl font-bold italic tracking-wide truncate"
+                                style={{
+                                    fontFamily:
+                                        "'Playfair Display', 'Georgia', serif",
+                                    background:
+                                        "linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 50%, var(--text-primary) 100%)",
+                                    backgroundSize: "200% 200%",
+                                    WebkitBackgroundClip: "text",
+                                    WebkitTextFillColor: "transparent",
+                                    backgroundClip: "text",
+                                    animation: "gradient-flow 4s ease infinite",
+                                }}
+                            >
+                                Kurashizu Blog
+                            </span>
+                            <span className="text-[10px] font-medium text-text-muted tracking-widest uppercase -mt-1 hidden sm:block">
+                                where ideas flow
+                            </span>
+                        </div>
+                    </Link>
+                </div>
 
-                <div className="flex items-center gap-1 md:gap-2">
+                {/* Center: search */}
+                <div className="flex-1 flex justify-center">
                     <div className="hidden md:block">
                         <SearchBar variant="icon" />
                     </div>
+                </div>
+
+                {/* Right: nav + controls */}
+                <div className="flex-1 flex items-center justify-end gap-1 md:gap-2">
                     <ul className="hidden md:flex items-center gap-1">
                         {navLinks.map((link) => {
                             const isActive = pathname === link.href;
@@ -97,13 +105,13 @@ export function Header() {
                         })}
                     </ul>
 
-                    <div className="md:hidden">
+                    <div className="md:hidden flex items-center">
                         <SearchBar variant="icon" />
                     </div>
 
                     <button
                         onClick={toggleTheme}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-bg-card border border-border hover:border-accent transition-all duration-200 shrink-0"
+                        className="w-9 h-9 flex items-center justify-center rounded-xl bg-bg-card border border-border hover:border-accent hover:bg-accent/5 active:scale-90 transition-all duration-200 shrink-0"
                         title={`Switch theme (current: ${theme})`}
                     >
                         {theme === "dark" ? (
@@ -153,7 +161,7 @@ export function Header() {
 
                     <button
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                        className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-bg-card border border-border hover:border-accent transition-all duration-200 shrink-0"
+                        className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-bg-card border border-border hover:border-accent active:scale-90 transition-all duration-200 shrink-0"
                         aria-label="Toggle menu"
                     >
                         {mobileMenuOpen ? (
