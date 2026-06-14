@@ -6,6 +6,7 @@ import { HeroHeader } from "@/components/hero/HeroHeader";
 import { r2Paths } from "@/lib/r2-paths";
 import { r2Get } from "@/lib/r2";
 import { getDB } from "@/lib/d1";
+import { getLanguageColor } from "@/lib/languages";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/gadgets/GadgetsPanel";
 import { NewsSection } from "@/components/news/NewsSection";
@@ -29,14 +30,18 @@ interface Post {
 }
 
 interface GitHubRepo {
+    id: number;
     name: string;
     description: string | null;
     html_url: string;
     stargazers_count: number;
-    fork: boolean;
-    owner: {
-        login: string;
-    };
+    fork: number;
+    languages_json: string;
+}
+
+interface RepoLanguage {
+    name: string;
+    pct: number;
 }
 
 interface HNStory {
@@ -51,10 +56,15 @@ interface HNStory {
     summary: string;
 }
 
-async function readCache<T>(path: string): Promise<T[]> {
+async function readGithubRepos(): Promise<GitHubRepo[]> {
     try {
-        const data = await r2Get(path);
-        return JSON.parse(data) as T[];
+        const db = getDB();
+        const rows = await db
+            .prepare(
+                "SELECT id, name, description, html_url, stargazers_count, fork, languages_json FROM github_repos WHERE fork = 0 ORDER BY stargazers_count DESC LIMIT 6",
+            )
+            .all();
+        return (rows.results ?? []) as unknown as GitHubRepo[];
     } catch {
         return [];
     }
@@ -69,15 +79,35 @@ async function readContributions(): Promise<ContributionsCache | null> {
     }
 }
 
-function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
+function LanguageBadge({ languagesJson }: { languagesJson: string }) {
+    let langs: RepoLanguage[] = [];
+    try {
+        langs = JSON.parse(languagesJson);
+    } catch {
+        /* ignore */
+    }
+    if (langs.length === 0) return null;
+
+    return (
+        <span className="text-xs text-text-muted shrink-0 flex items-center gap-2">
+            {langs.map((l) => (
+                <span key={l.name} className="flex items-center gap-1">
+                    <span
+                        className="w-2 h-2 rounded-sm"
+                        style={{ backgroundColor: getLanguageColor(l.name) }}
+                    />
+                    {l.pct}%
+                </span>
+            ))}
+        </span>
+    );
+}
+
+function FeaturedPost({ post }: { post: Post }) {
     const excerpt = post.description?.slice(0, 20) || "";
     const tags = Array.isArray(post.tags) ? post.tags : [];
     return (
-        <Link
-            href={`/blog/${post.slug}`}
-            className="block animate-fade-up-sm"
-            style={{ animationDelay: `${delayMs}ms` }}
-        >
+        <Link href={`/blog/${post.slug}`} className="block">
             <Card className="h-full group">
                 <div className="p-3 flex flex-col justify-between h-full">
                     <div>
@@ -113,7 +143,7 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
 
 export default async function HomePage() {
     const [repos, contributions, topLanguages] = await Promise.all([
-        readCache<GitHubRepo>(r2Paths.githubReposCache),
+        readGithubRepos(),
         readContributions(),
         getTopLanguages(5),
     ]);
@@ -170,27 +200,18 @@ export default async function HomePage() {
                 </div>
 
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
-                    <div
-                        className="flex-1 animate-fade-up"
-                        style={{ animationDelay: "200ms" }}
-                    >
+                    <div className="flex-1">
                         <VisitorTerminal />
                     </div>
                     {topLanguages.length > 0 && (
-                        <div
-                            className="shrink-0 mx-auto md:mx-0 animate-fade-zoom"
-                            style={{ animationDelay: "200ms" }}
-                        >
+                        <div className="shrink-0 mx-auto md:mx-0">
                             <DonutChart languages={topLanguages} />
                         </div>
                     )}
                 </div>
 
                 {contributions && (
-                    <div
-                        className="mt-8 animate-fade-up"
-                        style={{ animationDelay: "280ms" }}
-                    >
+                    <div className="mt-8">
                         <ContributionsRibbon data={contributions} />
                     </div>
                 )}
@@ -207,10 +228,7 @@ export default async function HomePage() {
 
                 {/* Recent Posts - right top */}
                 <section className="flex flex-col h-full">
-                    <div
-                        className="flex items-center justify-between mb-3 animate-fade-up"
-                        style={{ animationDelay: "360ms" }}
-                    >
+                    <div className="flex items-center justify-between mb-3">
                         <h2 className="section-title mb-0">Recent Posts</h2>
                         <Link href="/blog" className="view-all-link">
                             All posts
@@ -218,10 +236,7 @@ export default async function HomePage() {
                     </div>
 
                     {recentPosts.length === 0 ? (
-                        <Card
-                            className="flex-1 animate-fade-up-sm"
-                            style={{ animationDelay: "420ms" }}
-                        >
+                        <Card className="flex-1">
                             <CardContent className="text-center p-4">
                                 <p className="text-text-muted mb-2 text-sm">
                                     No posts yet.
@@ -236,12 +251,8 @@ export default async function HomePage() {
                         </Card>
                     ) : (
                         <div className="space-y-3">
-                            {recentPosts.map((post, i) => (
-                                <FeaturedPost
-                                    key={post.slug}
-                                    post={post}
-                                    delayMs={420 + i * 50}
-                                />
+                            {recentPosts.map((post) => (
+                                <FeaturedPost key={post.slug} post={post} />
                             ))}
                         </div>
                     )}
@@ -249,26 +260,17 @@ export default async function HomePage() {
 
                 {/* Gadgets — left bottom */}
                 <section className="flex flex-col h-full">
-                    <div
-                        className="flex items-center justify-between mb-3 animate-fade-up"
-                        style={{ animationDelay: "520ms" }}
-                    >
+                    <div className="flex items-center justify-between mb-3">
                         <h2 className="section-title mb-0">Gadgets</h2>
                     </div>
-                    <Card
-                        className="flex-1 p-4 h-full animate-fade-zoom"
-                        style={{ animationDelay: "600ms" }}
-                    >
+                    <Card className="flex-1 p-4 h-full">
                         <GadgetsPanel />
                     </Card>
                 </section>
 
                 {/* GitHub Projects - right bottom */}
                 <section className="flex flex-col h-full">
-                    <div
-                        className="flex items-center justify-between mb-3 animate-fade-up"
-                        style={{ animationDelay: "520ms" }}
-                    >
+                    <div className="flex items-center justify-between mb-3">
                         <h2 className="section-title mb-0">GitHub Projects</h2>
                         <a
                             href="https://github.com/kurashizu"
@@ -286,17 +288,28 @@ export default async function HomePage() {
                                 href={repo.html_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block animate-fade-up-sm"
-                                style={{ animationDelay: `${580 + i * 50}ms` }}
+                                className="block"
                             >
                                 <MiniCard className="group">
                                     <div className="flex items-center justify-between gap-2">
                                         <code className="text-sm text-accent font-mono group-hover:text-accent-hover transition-colors truncate">
                                             {repo.name}
                                         </code>
-                                        <span className="text-xs text-text-muted shrink-0 flex items-center gap-1.5">
+                                        <LanguageBadge
+                                            languagesJson={repo.languages_json}
+                                        />
+                                    </div>
+                                    <div className="flex items-end justify-between gap-2 mt-0.5">
+                                        {repo.description ? (
+                                            <p className="text-xs text-text-muted line-clamp-1 min-w-0">
+                                                {repo.description}
+                                            </p>
+                                        ) : (
+                                            <span />
+                                        )}
+                                        <span className="text-xs text-text-muted shrink-0 flex items-center gap-1">
                                             <svg
-                                                className="w-3.5 h-3.5"
+                                                className="w-3 h-3"
                                                 fill="currentColor"
                                                 viewBox="0 0 24 24"
                                             >
@@ -305,11 +318,6 @@ export default async function HomePage() {
                                             {repo.stargazers_count}
                                         </span>
                                     </div>
-                                    {repo.description && (
-                                        <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-full sm:max-w-[70%]">
-                                            {repo.description}
-                                        </p>
-                                    )}
                                 </MiniCard>
                             </a>
                         ))}
@@ -319,20 +327,14 @@ export default async function HomePage() {
 
             {/* Guestbook section */}
             <section className="mt-8 md:mt-12">
-                <div
-                    className="flex items-center gap-4 mb-4 animate-fade-up"
-                    style={{ animationDelay: "700ms" }}
-                >
+                <div className="flex items-center gap-4 mb-4">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                     <h2 className="section-title mb-0 shrink-0 px-2">
                         Guestbook
                     </h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
                 </div>
-                <div
-                    className="animate-fade-up"
-                    style={{ animationDelay: "780ms" }}
-                >
+                <div>
                     <GuestbookMessages />
                 </div>
             </section>

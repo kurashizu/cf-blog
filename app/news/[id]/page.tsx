@@ -38,18 +38,11 @@ export default async function NewsDetailPage({
     return (
         <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12">
             <article className="article-content">
-                <Link
-                    href="/news"
-                    className="back-link animate-fade-up"
-                    style={{ animationDelay: "0ms" }}
-                >
+                <Link href="/news" className="back-link">
                     ← Back to news
                 </Link>
 
-                <header
-                    className="article-header animate-fade-up"
-                    style={{ animationDelay: "80ms" }}
-                >
+                <header className="article-header">
                     <h1 className="text-2xl font-bold">{story.title}</h1>
 
                     <div className="flex items-center gap-3 mt-3">

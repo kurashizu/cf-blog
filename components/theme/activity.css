@@ -192,3 +192,42 @@
     color: var(--text-primary);
     font-weight: 500;
 }
+
+.donut-legend-pct {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    margin-left: auto;
+}
+
+/* Arc hover effects */
+.donut-arc {
+    transition:
+        opacity 0.15s ease,
+        stroke-width 0.15s ease;
+}
+
+.donut-arc:hover {
+    stroke-width: 18;
+    filter: brightness(1.2);
+}
+
+.donut-arc.dimmed {
+    opacity: 0.25;
+}
+
+.donut-arc.dimmed:hover {
+    opacity: 1;
+}
+
+.donut-legend-item {
+    transition: opacity 0.15s ease;
+    cursor: default;
+}
+
+.donut-legend-item.dimmed {
+    opacity: 0.3;
+}
+
+.donut-legend-item.dimmed:hover {
+    opacity: 1;
+}

@@ -44,10 +44,7 @@ export default async function NewsPage({
 
     return (
         <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12">
-            <div
-                className="page-title animate-fade-up"
-                style={{ animationDelay: "0ms" }}
-            >
+            <div className="page-title">
                 <h1>News</h1>
                 <p className="text-sm text-text-secondary">
                     Daily tech news with AI-generated summaries

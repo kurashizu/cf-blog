@@ -60,9 +60,7 @@ function projectModel(m: AAModel): SlimModel {
             price_1m_input_tokens: opt(m.pricing.price_1m_input_tokens),
             price_1m_output_tokens: opt(m.pricing.price_1m_output_tokens),
         },
-        median_output_tokens_per_second: opt(
-            m.median_output_tokens_per_second,
-        ),
+        median_output_tokens_per_second: opt(m.median_output_tokens_per_second),
         median_time_to_first_token_seconds: opt(
             m.median_time_to_first_token_seconds,
         ),
@@ -71,9 +69,42 @@ function projectModel(m: AAModel): SlimModel {
 
 // ---------- GitHub REST ----------
 
+/**
+ * Fetch ALL public repos for the configured user.
+ * Handles pagination: GitHub returns 100 per page max, so most accounts
+ * finish in 1-2 pages.
+ */
 export async function fetchGithubRepos(): Promise<GitHubRepo[]> {
+    const all: GitHubRepo[] = [];
+    let page = 1;
+    for (;;) {
+        const res = await fetch(
+            `https://api.github.com/users/kurashizu/repos?per_page=100&page=${page}&type=public`,
+            {
+                headers: {
+                    "User-Agent": USER_AGENT,
+                    Accept: "application/vnd.github.v3+json",
+                },
+            },
+        );
+        if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+        const repos = (await res.json()) as GitHubRepo[];
+        if (repos.length === 0) break;
+        all.push(...repos);
+        page++;
+    }
+    return all;
+}
+
+/**
+ * Fetch per-repo language breakdown from GitHub.
+ * Returns sorted array of { name, bytes } descending by bytes.
+ */
+export async function fetchRepoLanguages(
+    fullName: string,
+): Promise<{ name: string; bytes: number }[]> {
     const res = await fetch(
-        "https://api.github.com/users/kurashizu/repos?sort=stars&per_page=6&type=public",
+        `https://api.github.com/repos/${fullName}/languages`,
         {
             headers: {
                 "User-Agent": USER_AGENT,
@@ -81,9 +112,11 @@ export async function fetchGithubRepos(): Promise<GitHubRepo[]> {
             },
         },
     );
-    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-    const repos = (await res.json()) as GitHubRepo[];
-    return repos.filter((r) => !r.fork).slice(0, 6);
+    if (!res.ok) throw new Error(`GitHub languages API ${res.status}`);
+    const raw = (await res.json()) as Record<string, number>;
+    return Object.entries(raw)
+        .map(([name, bytes]) => ({ name, bytes }))
+        .sort((a, b) => b.bytes - a.bytes);
 }
 
 export async function fetchStarredRepos(): Promise<GitHubRepo[]> {
@@ -118,17 +151,13 @@ export async function fetchLLMLeaderboard(
     if (!res.ok) throw new Error(`AA API ${res.status}`);
     const json = (await res.json()) as AALeaderboardResponse;
     // Project + sort by intelligence index so the cache is already ranked.
-    return json.data
-        .map(projectModel)
-        .sort((a, b) => {
-            const ai =
-                a.evaluations.artificial_analysis_intelligence_index ??
-                -Infinity;
-            const bi =
-                b.evaluations.artificial_analysis_intelligence_index ??
-                -Infinity;
-            return bi - ai;
-        });
+    return json.data.map(projectModel).sort((a, b) => {
+        const ai =
+            a.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
+        const bi =
+            b.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
+        return bi - ai;
+    });
 }
 
 // ---------- Hacker News Fetching ----------
@@ -166,7 +195,8 @@ export async function fetchHNNews(): Promise<HNStory[]> {
             const itemRes = await fetch(
                 `https://hacker-news.firebaseio.com/v0/item/${id}.json`,
             );
-            if (!itemRes.ok) throw new Error(`HN item ${id}: ${itemRes.status}`);
+            if (!itemRes.ok)
+                throw new Error(`HN item ${id}: ${itemRes.status}`);
             return (await itemRes.json()) as HNItemRaw;
         }),
     );
@@ -189,10 +219,22 @@ export async function fetchHNNews(): Promise<HNStory[]> {
 const GEMINI_MODEL = "gemma-4-31b-it";
 
 function extractPageContent(html: string): { text: string; images: string[] } {
-    const withoutScripts = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ");
-    const withoutStyles = withoutScripts.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
-    const withoutNav = withoutStyles.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, " ");
-    const withoutFooter = withoutNav.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, " ");
+    const withoutScripts = html.replace(
+        /<script[^>]*>[\s\S]*?<\/script>/gi,
+        " ",
+    );
+    const withoutStyles = withoutScripts.replace(
+        /<style[^>]*>[\s\S]*?<\/style>/gi,
+        " ",
+    );
+    const withoutNav = withoutStyles.replace(
+        /<nav[^>]*>[\s\S]*?<\/nav>/gi,
+        " ",
+    );
+    const withoutFooter = withoutNav.replace(
+        /<footer[^>]*>[\s\S]*?<\/footer>/gi,
+        " ",
+    );
 
     const imageRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
     const images: string[] = [];
@@ -228,16 +270,19 @@ export async function generateItemRewrite(
     if (story.url) {
         try {
             const res = await fetch(story.url, {
-                headers: { "User-Agent": "Mozilla/5.0 (compatible; Kurashizu-Bot)" },
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (compatible; Kurashizu-Bot)",
+                },
                 signal: AbortSignal.timeout(10000),
             });
             if (res.ok) {
                 const html = await res.text();
                 const { text, images } = extractPageContent(html);
                 const textPart = text.slice(0, 6000);
-                const imagePart = images.length > 0
-                    ? `\n\nImages from the article:\n${images.join("\n")}`
-                    : "";
+                const imagePart =
+                    images.length > 0
+                        ? `\n\nImages from the article:\n${images.join("\n")}`
+                        : "";
                 articleContent = `Title: ${story.title}\n\n${textPart}${imagePart}`;
             } else {
                 articleContent = `Title: ${story.title}`;
@@ -268,7 +313,9 @@ export async function generateItemRewrite(
         throw new Error(`Gemini ${res.status}: ${body}`);
     }
     const json = (await res.json()) as {
-        candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
+        candidates?: {
+            content?: { parts?: { text?: string; thought?: boolean }[] };
+        }[];
     };
     const parts = json.candidates?.[0]?.content?.parts ?? [];
     const text = parts

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { type Language } from "@/lib/languages";
 
 interface DonutChartProps {
@@ -11,6 +14,8 @@ const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function DonutChart({ languages }: DonutChartProps) {
+    const [hovered, setHovered] = useState<string | null>(null);
+
     if (languages.length === 0) return null;
 
     // Carve a small visible gap (GAP_UNITS) between every two arcs so the
@@ -36,6 +41,7 @@ export function DonutChart({ languages }: DonutChartProps) {
     });
 
     const top = segments[0];
+    const active = hovered ? segments.find((s) => s.name === hovered) : null;
 
     return (
         <div className="donut-with-legend">
@@ -69,7 +75,17 @@ export function DonutChart({ languages }: DonutChartProps) {
                             strokeWidth={STROKE_WIDTH}
                             strokeDasharray={seg.dashArray}
                             strokeDashoffset={seg.dashOffset}
-                        />
+                            className={
+                                hovered && hovered !== seg.name
+                                    ? "donut-arc dimmed"
+                                    : "donut-arc"
+                            }
+                            onMouseEnter={() => setHovered(seg.name)}
+                            onMouseLeave={() => setHovered(null)}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <title>{`${seg.name}: ${seg.percentage}%`}</title>
+                        </circle>
                     ))}
                 </g>
                 <text
@@ -78,7 +94,7 @@ export function DonutChart({ languages }: DonutChartProps) {
                     textAnchor="middle"
                     className="donut-center-name"
                 >
-                    {top.name}
+                    {active ? active.name : top.name}
                 </text>
                 <text
                     x={CENTER}
@@ -86,17 +102,29 @@ export function DonutChart({ languages }: DonutChartProps) {
                     textAnchor="middle"
                     className="donut-center-label"
                 >
-                    TOP
+                    {active ? `${active.percentage}%` : "TOP"}
                 </text>
             </svg>
             <div className="donut-legend">
                 {languages.map((lang) => (
-                    <div key={lang.name} className="donut-legend-item">
+                    <div
+                        key={lang.name}
+                        className={
+                            hovered && hovered !== lang.name
+                                ? "donut-legend-item dimmed"
+                                : "donut-legend-item"
+                        }
+                        onMouseEnter={() => setHovered(lang.name)}
+                        onMouseLeave={() => setHovered(null)}
+                    >
                         <span
                             className="donut-legend-dot"
                             style={{ backgroundColor: lang.color }}
                         />
                         <span className="donut-legend-name">{lang.name}</span>
+                        <span className="donut-legend-pct">
+                            {lang.percentage}%
+                        </span>
                     </div>
                 ))}
             </div>

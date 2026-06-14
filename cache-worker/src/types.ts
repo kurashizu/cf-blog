@@ -7,12 +7,27 @@
  *  - The `Env` interface that wrangler.toml binds into the handler context.
  */
 
+/** Raw GitHub API repo object — fields we need from GET /users/*/repos */
 export interface GitHubRepo {
+    id: number;
     name: string;
+    full_name: string;
     description: string | null;
     html_url: string;
+    homepage: string | null;
+    language: string | null;
+    topics: string[];
     stargazers_count: number;
+    forks_count: number;
+    open_issues_count: number;
     fork: boolean;
+    archived: boolean;
+    disabled: boolean;
+    license: { spdx_id: string } | null;
+    size: number;
+    pushed_at: string;
+    created_at: string;
+    updated_at: string;
     owner: { login: string };
 }
 

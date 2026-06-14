@@ -25,13 +25,13 @@ Three Cloudflare Workers, deployed in parallel by GitHub Actions on push to `mai
 | `cf-agent` | `agent-worker/` | https://agent.022025.xyz | AI agent with tool calling |
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Homepage cache refresh (30-min) + News rewrite heartbeat (3-min) |
 
-The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches everything into R2; the homepage just reads from R2. Cold cache = empty hero; ISR revalidates every 5 min.
+The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches data into R2 + D1; the homepage reads from D1 for posts, news, and GitHub repos, and from R2 for contributions and LLM leaderboard. Cold cache = empty hero; ISR revalidates every 5 min.
 
 ## Tech Stack
 
 - **Frontend**: Next.js 15 (App Router) + React 19
 - **Styling**: Tailwind CSS + CSS variables for theming; custom animations in `components/theme/*.css`
-- **Storage**: Cloudflare R2 (articles, cache, guestbook) + D1 (post index, news archive) + Cloudflare KV (sessions, rate limits)
+- **Storage**: Cloudflare R2 (articles, cache, guestbook) + D1 (post index, news archive, github repos) + Cloudflare KV (sessions, rate limits)
 - **AI**: Gemini (with quota-based model fallback for TPD/RPM 429s)
 - **Deploy**: Cloudflare Workers via `@opennextjs/cloudflare`
 
@@ -69,6 +69,7 @@ Default model: `gemma-4-31b-it`. Streams via SSE. Max 5 tool-call iterations per
 ├── app/                  # Next.js App Router
 ├── components/           # React components (UI, activity, agent, llm, theme, layout, providers)
 ├── lib/                  # Backend logic (R2, articles, guestbook, rate limit, model pool, languages)
+├── database/             # D1 schema (schema.sql — all tables: posts, news_items, github_repos, etc.)
 ├── public/               # Static assets served by Next.js
 ├── agent-worker/         # cf-agent (separate Next.js worker)
 ├── cache-worker/         # cf-blog-cache (cron refresher)

@@ -12,6 +12,7 @@ import {
     fetchGithubRepos,
     fetchHNNews,
     fetchLLMLeaderboard,
+    fetchRepoLanguages,
 } from "./sources";
 import type { Env } from "../types";
 
@@ -37,7 +38,89 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     await runStep(results, "github-repos", async () => {
         const repos = await fetchGithubRepos();
         if (repos.length === 0) throw new Error("empty response");
-        await env.BUCKET.put("cache/github-repos.json", JSON.stringify(repos));
+
+        // Ensure table exists
+        await env.DB.prepare(
+            `CREATE TABLE IF NOT EXISTS github_repos (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                full_name TEXT NOT NULL,
+                owner_login TEXT NOT NULL DEFAULT '',
+                description TEXT,
+                html_url TEXT NOT NULL,
+                homepage TEXT DEFAULT '',
+                language TEXT,
+                topics TEXT DEFAULT '[]',
+                stargazers_count INTEGER DEFAULT 0,
+                forks_count INTEGER DEFAULT 0,
+                open_issues_count INTEGER DEFAULT 0,
+                fork INTEGER DEFAULT 0,
+                archived INTEGER DEFAULT 0,
+                disabled INTEGER DEFAULT 0,
+                license_spdx_id TEXT,
+                languages_json TEXT DEFAULT '[]',
+                size INTEGER DEFAULT 0,
+                pushed_at TEXT,
+                created_at TEXT,
+                updated_at TEXT,
+                fetched_at TEXT NOT NULL
+            )`,
+        ).run();
+
+        const fetchedAt = new Date().toISOString();
+        const stmt = env.DB.prepare(
+            `INSERT OR REPLACE INTO github_repos
+                (id, name, full_name, owner_login, description, html_url,
+                 homepage, language, topics, languages_json, stargazers_count,
+                 forks_count, open_issues_count, fork, archived, disabled,
+                 license_spdx_id, size, pushed_at, created_at, updated_at,
+                 fetched_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        );
+
+        for (const repo of repos) {
+            // Fetch per-repo language breakdown
+            let languagesJson = "[]";
+            try {
+                const langs = await fetchRepoLanguages(repo.full_name);
+                const total = langs.reduce((s, l) => s + l.bytes, 0);
+                const top3 = langs.slice(0, 3).map((l) => ({
+                    name: l.name,
+                    pct: Math.round((l.bytes / total) * 100),
+                }));
+                languagesJson = JSON.stringify(top3);
+            } catch {
+                // Non-fatal: leave as empty array
+            }
+
+            await stmt
+                .bind(
+                    repo.id,
+                    repo.name,
+                    repo.full_name,
+                    repo.owner.login,
+                    repo.description ?? null,
+                    repo.html_url,
+                    repo.homepage ?? "",
+                    repo.language ?? null,
+                    JSON.stringify(repo.topics ?? []),
+                    languagesJson,
+                    repo.stargazers_count,
+                    repo.forks_count,
+                    repo.open_issues_count,
+                    repo.fork ? 1 : 0,
+                    repo.archived ? 1 : 0,
+                    repo.disabled ? 1 : 0,
+                    repo.license?.spdx_id ?? null,
+                    repo.size,
+                    repo.pushed_at,
+                    repo.created_at,
+                    repo.updated_at,
+                    fetchedAt,
+                )
+                .run();
+        }
+
         return `${repos.length} repos`;
     });
 

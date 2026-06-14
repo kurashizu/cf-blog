@@ -14,6 +14,7 @@ import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { GuestbookWidget } from "@/components/guestbook/GuestbookWidget";
 import { ParticleBackground } from "@/components/effects/ParticleBackground";
@@ -45,7 +46,9 @@ export default function RootLayout({
                     <ParticleBackground />
                     <MouseTrail />
                     <Header />
-                    <main className="flex-1">{children}</main>
+                    <main className="flex-1">
+                        <PageTransition>{children}</PageTransition>
+                    </main>
                     <Footer />
                     <ChatWidget />
                     <GuestbookWidget />
