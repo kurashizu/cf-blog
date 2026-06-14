@@ -18,7 +18,7 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
         <section className="flex flex-col">
             <div
                 className="flex items-center justify-between mb-3 animate-fade-up"
-                style={{ animationDelay: "360ms" }}
+                style={{ animationDelay: "0ms" }}
             >
                 <h2 className="section-title mb-0">News</h2>
                 <Link href="/news" className="view-all-link">
@@ -31,7 +31,7 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
                         key={story.id}
                         href={`/news/${story.id}`}
                         className="block animate-fade-up-sm"
-                        style={{ animationDelay: `${420 + i * 50}ms` }}
+                        style={{ animationDelay: `${i * 40}ms` }}
                     >
                         <MiniCard className="group">
                             <div className="flex items-center justify-between gap-2">
@@ -49,12 +49,16 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
                                 )}
                                 <div className="flex items-center gap-2 shrink-0">
                                     <span className="text-[10px] text-text-muted">
-                                        {new Date(story.time * 1000).toLocaleDateString("en-US", {
+                                        {new Date(
+                                            story.time * 1000,
+                                        ).toLocaleDateString("en-US", {
                                             month: "short",
                                             day: "numeric",
                                         })}
                                     </span>
-                                    <span className="text-[10px] text-text-muted">by {story.by}</span>
+                                    <span className="text-[10px] text-text-muted">
+                                        by {story.by}
+                                    </span>
                                 </div>
                             </div>
                         </MiniCard>
