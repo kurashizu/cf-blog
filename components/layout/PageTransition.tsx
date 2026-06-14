@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 type Phase = "enter" | "idle" | "exit";
 
-const EXIT_MS = 200;
-const ENTER_MS = 500;
+const EXIT_MS = 180;
+const ENTER_MS = 280;
 
 /**
  * PageTransition
