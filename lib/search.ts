@@ -14,7 +14,10 @@ interface SearchEnv {
 }
 
 export interface SearchHit {
+    /** Vector ID (e.g. "blog-my-post-overview") — not used for navigation. */
     id: string;
+    /** Content slug (e.g. "my-post" for blog, "43928174" for news). */
+    slug: string;
     score: number;
     source: "blog" | "news";
     type: string;
@@ -89,8 +92,13 @@ export async function performSearch(
     // 3. Format results
     const results: SearchHit[] = (matches.matches ?? []).map((match) => {
         const meta = match.metadata as Record<string, unknown>;
+        const metaId = (meta.id as string) ?? "";
+        // meta.id is the slug for blog, or "news-{id}" — strip prefix for news
+        const slug =
+            meta.source === "news" ? metaId.replace(/^news-/, "") : metaId;
         return {
             id: match.id,
+            slug,
             score: match.score,
             source: meta.source as "blog" | "news",
             type: meta.type as string,

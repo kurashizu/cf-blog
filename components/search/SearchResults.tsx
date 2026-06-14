@@ -5,6 +5,7 @@ import { SearchBar } from "@/components/search/SearchBar";
 
 interface SearchResult {
     id: string;
+    slug: string;
     score: number;
     source: "blog" | "news";
     type: string;
@@ -148,8 +149,8 @@ function SearchResultCard({ result }: { result: SearchResult }) {
     const isBlog = result.source === "blog";
     const isNews = result.source === "news";
     const href = isNews
-        ? `/news/${result.id.replace("news-", "")}`
-        : `/blog/${result.id}${result.heading ? `#${result.heading.toLowerCase().replace(/\s+/g, "-")}` : ""}`;
+        ? `/news/${result.slug}`
+        : `/blog/${result.slug}${result.heading ? `#${result.heading.toLowerCase().replace(/\s+/g, "-")}` : ""}`;
 
     return (
         <a

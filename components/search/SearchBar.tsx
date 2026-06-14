@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useRef, useState, useEffect } from "react";
 
 interface SearchBarProps {
     variant?: "icon" | "inline";
@@ -15,8 +15,14 @@ export function SearchBar({
     onSearch,
 }: SearchBarProps) {
     const router = useRouter();
+    const pathname = usePathname();
     const inputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(false);
+
+    // Reset loading state on navigation
+    useEffect(() => {
+        setLoading(false);
+    }, [pathname]);
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
