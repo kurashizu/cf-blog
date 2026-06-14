@@ -318,9 +318,6 @@ export function GadgetsPanel() {
                                     alt={gadget.title}
                                     fill
                                     className="object-cover scale-[1.265] origin-top rounded-xl"
-                                    unoptimized={
-                                        gadget.imageDir === "llm-board"
-                                    }
                                     style={{
                                         transform:
                                             hoveredId === gadget.id
