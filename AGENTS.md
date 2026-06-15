@@ -17,7 +17,7 @@ Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents
 | Table | Purpose |
 |---|---|
 | `posts` | Blog articles — frontmatter fields (slug, title, excerpt, cover_image, tags, author, status, published_at) **plus the full body** in the `content` column (frontmatter stripped). Also tracks `content_hash` and `search_updated_at` for the search pipeline. |
-| `news_items` | HN news archive (id, title, url, score, by, time, descendants, domain, summary, fetched_at, search_updated_at) — `fetched_at` is set by the daily cron; homepage filters `date(fetched_at) = date('now')` |
+| `news_items` | HN news archive (id, title, url, score, by, time, descendants, domain, summary, fetched_at, search_updated_at) — `fetched_at` is set by the daily cron |
 | `github_repos` | Full list of public GitHub repos with per-repo language breakdown (top 3 langs with %) |
 
 Both `cf-blog` and `cf-blog-cache` have `DB` binding to the same D1. Cache-worker syncs from GitHub API → D1; cf-blog reads from D1 directly. Blog content is the source of truth in D1 — there is no R2 mirror.
@@ -121,7 +121,7 @@ A `0 5 * * *` cron calls `handleHNCron()` which:
 2. `INSERT OR REPLACE` into `news_items` (the same id on subsequent days just overwrites)
 3. `fetched_at` is auto-stamped via the column DEFAULT `(datetime('now'))`
 
-The homepage filters to today's batch: `WHERE date(fetched_at) = date('now') ORDER BY time DESC LIMIT 5`. The `/news` archive shows the full history regardless of fetch date.
+The homepage reads the top 5 by HN time: `ORDER BY time DESC LIMIT 5`. The `/news` archive shows the full history.
 
 ## Agent Worker (cf-agent)
 

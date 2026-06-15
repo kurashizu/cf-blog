@@ -225,7 +225,6 @@ export default async function HomePage() {
             db
                 .prepare(
                     `SELECT * FROM news_items
-                     WHERE date(fetched_at) = date('now')
                      ORDER BY time DESC LIMIT 5`,
                 )
                 .all()

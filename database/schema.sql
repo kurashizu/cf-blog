@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS news_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_news_time ON news_items(time DESC);
-CREATE INDEX IF NOT EXISTS idx_news_fetched_at ON news_items(fetched_at DESC);
 
 -- ============================================
 -- GitHub repos cache (full list)
