@@ -12,7 +12,7 @@ export interface VisitorInfo {
     os: string;
     deviceType: string;
     deviceName: string;
-    logo: string;
+    logoFile: string;
 }
 
 const FIELDS = "status,country,countryCode,regionName,city,timezone,isp,query";
@@ -141,7 +141,7 @@ export async function getVisitorInfo(
         timezone,
         isp,
         ...device,
-        logo: "", // filled in by the route handler
+        logoFile: getLogoFilename(device.os),
     };
 }
 

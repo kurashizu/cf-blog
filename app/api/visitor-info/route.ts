@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVisitorInfo, getLogoFilename } from "@/lib/visitor";
+import { getVisitorInfo } from "@/lib/visitor";
 
 /**
  * Returns geolocation and device info for the calling visitor.
@@ -14,27 +14,9 @@ import { getVisitorInfo, getLogoFilename } from "@/lib/visitor";
  * visitors each get their own cache entry, so cache hits don't leak data.
  *
  * Response body is `{ visitorInfo }` with geo fields, device fields, and
- * the raw ASCII logo text (fastfetch small format with $N color markers).
+ * logoFile (the filename to fetch from /fastfetch-logos/).
  */
 const BROWSER_CACHE_SECONDS = 3600;
-
-/**
- * Fetch a small logo text file from the public directory.
- */
-async function loadLogo(
-    filename: string,
-    request: NextRequest,
-): Promise<string> {
-    if (!filename) return "";
-    try {
-        const url = new URL(`/fastfetch-logos/${filename}`, request.url);
-        const res = await fetch(url.toString());
-        if (!res.ok) return "";
-        return await res.text();
-    } catch {
-        return "";
-    }
-}
 
 export async function GET(request: NextRequest) {
     const ip =
@@ -44,12 +26,7 @@ export async function GET(request: NextRequest) {
         "";
 
     const ua = request.headers.get("user-agent") ?? "";
-
     const visitorInfo = await getVisitorInfo(ip, ua);
-
-    // Load the matching small logo ASCII art
-    const logoFilename = getLogoFilename(visitorInfo.os);
-    visitorInfo.logo = await loadLogo(logoFilename, request);
 
     return NextResponse.json(
         { visitorInfo },
