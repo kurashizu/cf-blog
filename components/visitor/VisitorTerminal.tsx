@@ -15,8 +15,7 @@ function cap(s: string, maxLen: number): string {
 function maskIP(ip: string): string {
     const ipv4 = ip.match(/^(\d+\.\d+)\.\d+\.\d+$/);
     if (ipv4) return `${ipv4[1]}.x.x`;
-    const ipv6 = ip.match(/^([0-9a-f]{1,4}:[0-9a-f]{1,4})/i);
-    if (ipv6) return `${ipv6[1]}:...`;
+    // IPv6 is not masked here — cap() in buildDisplay handles truncation with …
     return ip;
 }
 
