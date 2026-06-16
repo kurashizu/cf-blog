@@ -15,26 +15,18 @@ function cap(s: string, maxLen: number): string {
 function maskIP(ip: string): string {
     const ipv4 = ip.match(/^(\d+\.\d+)\.\d+\.\d+$/);
     if (ipv4) return `${ipv4[1]}.x.x`;
-    // IPv6 is not masked here — cap() in buildDisplay handles truncation with …
     return ip;
 }
 
-/**
- * Parse a raw logo string (with $N color markers) into an array of
- * character-level display entries. Non-`$N` characters inherit the
- * most recent active colour; `$N` markers set the colour for subsequent
- * chars and are not emitted as visible characters.
- */
 interface CharEntry {
     ch: string;
-    css: string; // CSS class name or ""
+    css: string;
 }
 
 function parseLogoToEntries(logo: string): CharEntry[] {
     const out: CharEntry[] = [];
     let active = "";
     for (let i = 0; i < logo.length; i++) {
-        // Detect $1 … $5 markers
         if (
             logo[i] === "$" &&
             i + 1 < logo.length &&
@@ -42,7 +34,7 @@ function parseLogoToEntries(logo: string): CharEntry[] {
             logo[i + 1] <= "5"
         ) {
             active = `logo-c${logo[i + 1]}`;
-            i++; // skip the digit
+            i++;
             continue;
         }
         out.push({ ch: logo[i], css: active });
@@ -50,71 +42,64 @@ function parseLogoToEntries(logo: string): CharEntry[] {
     return out;
 }
 
-/**
- * Build the full display: left column (coloured ASCII logo) + right
- * column (fastfetch-style key-value info).
- */
-interface BuildResult {
-    entries: CharEntry[];
-    totalChars: number;
-}
+const DESKTOP_MAX_RIGHT = 42;
+const MIN_TERMINAL_CHARS = 55;
+const MAX_TERMINAL_CHARS = 67;
 
-const MAX_RIGHT = 42;
-
-function buildDisplay(info: VisitorInfo, logoText: string): BuildResult {
-    // ── right-column info lines (exactly 7) ──────────────────────
+function buildDisplay(
+    info: VisitorInfo,
+    logoText: string,
+    maxRight: number,
+): { entries: CharEntry[]; totalChars: number } {
+    // ── info lines ────────────────────────────────────────────────
     const loc = [info.city, info.country].filter(Boolean).join(", ") || "Earth";
     const isp = info.isp || "Interdimensional Proxy";
     const device =
         [info.browser, info.os].filter(Boolean).join(" / ") ||
         "Ancient Artifact";
 
+    const separatorLen = Math.min(30, maxRight);
     const infoLines: string[] = [
-        cap("visitor@kurashizu-blog", MAX_RIGHT),
-        "─".repeat(30),
-        cap(`IP        ${maskIP(info.ip)}`, MAX_RIGHT),
-        cap(`Location  ${loc}`, MAX_RIGHT),
-        cap(`ISP       ${isp}`, MAX_RIGHT),
-        cap(`Device    ${device}`, MAX_RIGHT),
-        cap(`Status    authorized`, MAX_RIGHT),
+        cap("visitor@kurashizu-blog", maxRight),
+        "─".repeat(separatorLen),
+        cap(`IP        ${maskIP(info.ip)}`, maxRight),
+        cap(`Location  ${loc}`, maxRight),
+        cap(`ISP       ${isp}`, maxRight),
+        cap(`Device    ${device}`, maxRight),
+        cap(`Status    authorized`, maxRight),
     ];
 
-    // ── left-column logo lines (exactly 7, or empty) ─────────────
+    // ── logo lines ────────────────────────────────────────────────
     const logoLines = logoText ? logoText.split("\n") : [];
     const padded: string[] = [];
     for (let i = 0; i < 7; i++) {
         padded[i] = i < logoLines.length ? logoLines[i] : "";
     }
 
-    // Measure the widest cleaned line to set the column gap and width
     const cleanedWidths = padded.map((l) => l.replace(/\$\d/g, "").length);
     const maxLogoWidth = Math.max(...cleanedWidths, 0);
     const colGap = maxLogoWidth > 0 ? 4 : 0;
 
-    // Total width in characters: logo + gap + info
-    const totalChars = maxLogoWidth + colGap + MAX_RIGHT;
+    const totalChars = Math.min(
+        Math.max(maxLogoWidth + colGap + maxRight, MIN_TERMINAL_CHARS),
+        MAX_TERMINAL_CHARS,
+    );
 
     // ── interleave ───────────────────────────────────────────────
     const entries: CharEntry[] = [];
-
     for (let line = 0; line < 7; line++) {
-        // 1) logo part
-        const logoLine = padded[line];
-        entries.push(...parseLogoToEntries(logoLine));
+        entries.push(...parseLogoToEntries(padded[line]));
 
-        // 2) padding
-        const actualWidth = logoLine.replace(/\$\d/g, "").length;
+        const actualWidth = padded[line].replace(/\$\d/g, "").length;
         const padCount = maxLogoWidth - actualWidth + colGap;
         for (let p = 0; p < padCount; p++) {
             entries.push({ ch: " ", css: "" });
         }
 
-        // 3) info part
         for (const ch of infoLines[line] ?? "") {
             entries.push({ ch, css: "" });
         }
 
-        // 4) newline (except after last line)
         if (line < 6) {
             entries.push({ ch: "\n", css: "" });
         }
@@ -130,63 +115,73 @@ export function VisitorTerminal() {
     const [revealed, setRevealed] = useState(0);
     const [done, setDone] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
-    const innerRef = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState(1);
 
-    // Measure actual content width and scale to fit the wrapper
-    useEffect(() => {
-        const wrapper = wrapperRef.current;
-        const inner = innerRef.current;
-        if (!wrapper || !inner) return;
-
-        const fit = () => {
-            const wrapperW = wrapper.clientWidth;
-            const innerW = inner.scrollWidth;
-            const newScale =
-                innerW > 0 && innerW > wrapperW ? wrapperW / innerW : 1;
-            setScale((prev) =>
-                Math.abs(prev - newScale) > 0.001 ? newScale : prev,
-            );
-        };
-
-        fit();
-        const observer = new ResizeObserver(fit);
-        observer.observe(wrapper);
-        return () => observer.disconnect();
-    });
-
-    // Fetch visitor info on mount
-    useEffect(() => {
-        const ctrl = new AbortController();
-        fetch("/api/visitor-info", { signal: ctrl.signal })
-            .then((r) =>
-                r.ok
-                    ? (r.json() as Promise<{ visitorInfo: VisitorInfo }>)
-                    : Promise.reject(new Error(`HTTP ${r.status}`)),
-            )
-            .then((data) => setVisitorInfo(data.visitorInfo))
-            .catch((e) => {
-                if (e?.name === "AbortError") return;
-            });
-        return () => ctrl.abort();
-    }, []);
-
-    // Resolve logo text synchronously from the bundled map
+    // Resolved logo text (sync from bundled map)
     const logoText = useMemo(
         () => (visitorInfo ? getLogoText(visitorInfo.logoFile) : ""),
         [visitorInfo],
     );
 
-    // Build character-level display
-    const { entries, totalChars } = useMemo<BuildResult>(
+    // Logo's widest line width (cleaned)
+    const maxLogoWidth = useMemo(() => {
+        if (!logoText) return 0;
+        return Math.max(
+            ...logoText.split("\n").map((l) => l.replace(/\$\d/g, "").length),
+            0,
+        );
+    }, [logoText]);
+
+    // Determine mode: fill screen on mobile, content-width on desktop
+    const [effectiveMaxRight, setEffectiveMaxRight] =
+        useState(DESKTOP_MAX_RIGHT);
+
+    useEffect(() => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper || maxLogoWidth === 0) return;
+
+        const measure = () => {
+            // Measure the actual pixel width of one character
+            const probe = document.createElement("span");
+            probe.style.cssText =
+                "font-size:0.8125rem;font-weight:500;position:absolute;visibility:hidden";
+            probe.textContent = "0";
+            document.body.appendChild(probe);
+            const chW = probe.getBoundingClientRect().width;
+            document.body.removeChild(probe);
+
+            const wrapperW = wrapper.clientWidth;
+            const availableChars = Math.floor(wrapperW / chW);
+            const naturalChars = maxLogoWidth + 4 + DESKTOP_MAX_RIGHT;
+
+            if (availableChars >= naturalChars) {
+                // Desktop: plenty of room — use standard 42-char info
+                setEffectiveMaxRight(DESKTOP_MAX_RIGHT);
+            } else {
+                // Mobile: fill screen, shrink info column to fit
+                const infoChars = Math.max(
+                    18,
+                    availableChars - maxLogoWidth - 4,
+                );
+                setEffectiveMaxRight(infoChars);
+            }
+        };
+
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(wrapper);
+        return () => ro.disconnect();
+    }, [maxLogoWidth]);
+
+    // Build display with the effective maxRight
+    const { entries, totalChars } = useMemo(
         () =>
             visitorInfo
-                ? buildDisplay(visitorInfo, logoText)
+                ? buildDisplay(visitorInfo, logoText, effectiveMaxRight)
                 : { entries: [], totalChars: 0 },
-        [visitorInfo, logoText],
+        [visitorInfo, logoText, effectiveMaxRight],
     );
 
-    // Typewriter effect
+    // Typewriter
     useEffect(() => {
         if (entries.length === 0) return;
         setRevealed(0);
@@ -204,20 +199,14 @@ export function VisitorTerminal() {
     }, [entries]);
 
     const visible = entries.slice(0, revealed);
+    const isFill = effectiveMaxRight < DESKTOP_MAX_RIGHT;
 
     return (
-        <div
-            ref={wrapperRef}
-            className="overflow-hidden w-full"
-            style={{ height: scale < 1 ? `${11 * scale}rem` : "auto" }}
-        >
+        <div ref={wrapperRef} className="w-full">
             <div
-                ref={innerRef}
                 className="terminal-output"
                 style={{
-                    width: totalChars > 0 ? `${totalChars}ch` : undefined,
-                    transform: scale < 1 ? `scale(${scale})` : undefined,
-                    transformOrigin: "top left",
+                    width: isFill ? "100%" : `${totalChars}ch`,
                 }}
             >
                 <pre>
