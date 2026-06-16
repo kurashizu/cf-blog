@@ -20,6 +20,7 @@ import { GuestbookWidget } from "@/components/guestbook/GuestbookWidget";
 import { ParticleBackground } from "@/components/effects/ParticleBackground";
 import { MouseTrail } from "@/components/effects/MouseTrail";
 import { ConsoleEasterEgg } from "@/components/effects/ConsoleEasterEgg";
+import { StayEasterEgg } from "@/components/effects/StayEasterEgg";
 
 const inter = Inter({ subsets: ["latin"] });
 const playfair = Playfair_Display({ subsets: ["latin"] });
@@ -48,6 +49,7 @@ export default function RootLayout({
                     <ParticleBackground />
                     <MouseTrail />
                     <ConsoleEasterEgg />
+                    <StayEasterEgg />
                     <Header />
                     <main className="flex-1">
                         <PageTransition>{children}</PageTransition>
