@@ -206,7 +206,12 @@ export function VisitorTerminal() {
             <div
                 className="terminal-output"
                 style={{
-                    width: isFill ? "100%" : `${totalChars}ch`,
+                    width: isFill
+                        ? "100%"
+                        : totalChars
+                          ? `${totalChars}ch`
+                          : undefined,
+                    minWidth: isFill ? "0" : undefined,
                 }}
             >
                 <pre>

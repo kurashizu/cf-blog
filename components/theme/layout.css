@@ -90,6 +90,7 @@
     line-height: 1.65;
     color: var(--text-secondary);
     overflow: hidden;
+    min-width: 520px;
     height: 11rem;
 }
 
