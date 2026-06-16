@@ -109,6 +109,23 @@
     margin-left: 1px;
 }
 
+/* Logo color placeholders ($1-$5) for fastfetch ASCII art */
+.logo-c1 {
+    color: #00d4aa;
+} /* teal — primary accent */
+.logo-c2 {
+    color: #4ade80;
+} /* green */
+.logo-c3 {
+    color: #facc15;
+} /* yellow */
+.logo-c4 {
+    color: #f472b6;
+} /* pink/magenta */
+.logo-c5 {
+    color: #60a5fa;
+} /* blue */
+
 /* Section Title */
 .section-title {
     font-size: 0.6875rem;

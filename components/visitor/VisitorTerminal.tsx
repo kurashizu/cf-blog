@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { VisitorInfo } from "@/lib/visitor";
+
+// ── helpers ──────────────────────────────────────────────────────────
 
 function maskIP(ip: string): string {
     const ipv4 = ip.match(/^(\d+\.\d+)\.\d+\.\d+$/);
@@ -11,29 +13,123 @@ function maskIP(ip: string): string {
     return ip;
 }
 
-function buildTerminalOutput(info: VisitorInfo): string {
-    const loc = [info.city, info.country].filter(Boolean).join(", ");
-    return `$ curl -s https://blog.022025.xyz/api/visitor-info\n{\n  "ip": "${maskIP(info.ip)}",\n  "loc": "${loc}",\n  "isp": "${info.isp}",\n  "status": "authorized"\n}`;
+/**
+ * Parse a raw logo string (with $N color markers) into an array of
+ * character-level display entries. Non-`$N` characters inherit the
+ * most recent active colour; `$N` markers set the colour for subsequent
+ * chars and are not emitted as visible characters.
+ */
+interface CharEntry {
+    ch: string;
+    css: string; // CSS class name or ""
 }
+
+function parseLogoToEntries(logo: string): CharEntry[] {
+    const out: CharEntry[] = [];
+    let active = "";
+    for (let i = 0; i < logo.length; i++) {
+        // Detect $1 … $5 markers
+        if (
+            logo[i] === "$" &&
+            i + 1 < logo.length &&
+            logo[i + 1] >= "1" &&
+            logo[i + 1] <= "5"
+        ) {
+            active = `logo-c${logo[i + 1]}`;
+            i++; // skip the digit
+            continue;
+        }
+        out.push({ ch: logo[i], css: active });
+    }
+    return out;
+}
+
+/**
+ * Build the full display: left column (coloured ASCII logo) + right
+ * column (fastfetch-style key-value info).
+ */
+interface BuildResult {
+    entries: CharEntry[];
+}
+
+function buildDisplay(info: VisitorInfo): BuildResult {
+    // ── right-column info lines (exactly 7) ──────────────────────
+    const loc = [info.city, info.country].filter(Boolean).join(", ");
+    const device = [info.browser, info.os].filter(Boolean).join(" / ");
+
+    const infoLines = [
+        "visitor@kurashizu-blog",
+        "─────────────────────",
+        `IP        ${maskIP(info.ip)}`,
+        `Location  ${loc}`,
+        `ISP       ${info.isp}`,
+        `Device    ${device}`,
+        `Status    authorized`,
+    ];
+
+    // ── left-column logo lines (exactly 7, or empty) ─────────────
+    const rawLogo = info.logo ?? "";
+    const logoLines = rawLogo ? rawLogo.split("\n") : [];
+    // Pad / truncate to 7 lines
+    const padded: string[] = [];
+    for (let i = 0; i < 7; i++) {
+        padded[i] = i < logoLines.length ? logoLines[i] : "";
+    }
+
+    // Measure the widest cleaned line to set the column gap
+    const cleanedWidths = padded.map((l) => l.replace(/\$\d/g, "").length);
+    const maxLogoWidth = Math.max(...cleanedWidths, 0);
+    const colGap = maxLogoWidth > 0 ? 4 : 0; // minimum gap between columns
+
+    // ── interleave: logo char-by-char then info chars ────────────
+    const entries: CharEntry[] = [];
+
+    for (let line = 0; line < 7; line++) {
+        // 1) logo part
+        const logoLine = padded[line];
+        const logoEntries = parseLogoToEntries(logoLine);
+        entries.push(...logoEntries);
+
+        // 2) padding to reach colGap beyond the logo column width
+        const actualLogoWidth = logoLine.replace(/\$\d/g, "").length;
+        const padCount = maxLogoWidth - actualLogoWidth + colGap;
+        for (let p = 0; p < padCount; p++) {
+            entries.push({ ch: " ", css: "" });
+        }
+
+        // 3) info part
+        const infoLine = infoLines[line] ?? "";
+        for (const ch of infoLine) {
+            entries.push({ ch, css: "" });
+        }
+
+        // 4) newline (except after the last line)
+        if (line < 6) {
+            entries.push({ ch: "\n", css: "" });
+        }
+    }
+
+    return { entries };
+}
+
+// ── component ────────────────────────────────────────────────────────
 
 export function VisitorTerminal() {
     const [visitorInfo, setVisitorInfo] = useState<VisitorInfo | null>(null);
-    const [display, setDisplay] = useState("");
+    const [revealed, setRevealed] = useState(0);
     const [done, setDone] = useState(false);
 
-    // Fetch visitor info immediately
+    // Fetch visitor info on mount
     useEffect(() => {
         const ctrl = new AbortController();
         fetch("/api/visitor-info", { signal: ctrl.signal })
             .then((r) =>
                 r.ok
-                    ? (r.json() as Promise<{
-                          visitorInfo?: VisitorInfo | null;
-                      }>)
+                    ? (r.json() as Promise<{ visitorInfo: VisitorInfo }>)
                     : Promise.reject(new Error(`HTTP ${r.status}`)),
             )
             .then((data) => {
-                if (data.visitorInfo) setVisitorInfo(data.visitorInfo);
+                setVisitorInfo(data.visitorInfo);
             })
             .catch((e) => {
                 if (e?.name === "AbortError") return;
@@ -41,29 +137,52 @@ export function VisitorTerminal() {
         return () => ctrl.abort();
     }, []);
 
-    // Typewriter effect
-    const output = visitorInfo ? buildTerminalOutput(visitorInfo) : null;
-    useEffect(() => {
-        if (!output) return;
+    // Build character-level display once visitorInfo is available
+    const { entries } = useMemo<BuildResult>(
+        () => (visitorInfo ? buildDisplay(visitorInfo) : { entries: [] }),
+        [visitorInfo],
+    );
 
+    // Typewriter effect
+    useEffect(() => {
+        if (entries.length === 0) return;
+        setRevealed(0);
+        setDone(false);
         let i = 0;
         const interval = setInterval(() => {
             i++;
-            setDisplay(output.slice(0, i));
-            if (i >= output.length) {
+            setRevealed(i);
+            if (i >= entries.length) {
                 clearInterval(interval);
                 setDone(true);
             }
         }, 16);
         return () => clearInterval(interval);
-    }, [output]);
+    }, [entries]);
+
+    const visible = entries.slice(0, revealed);
 
     return (
         <div className="terminal-output">
             <pre>
                 <code>
-                    {output ? display : ""}
-                    {output && !done && <span className="terminal-cursor" />}
+                    {visible.map((e, i) => {
+                        if (e.ch === "\n") return <br key={i} />;
+                        if (e.ch === " ")
+                            return (
+                                <span key={i} className={e.css}>
+                                    &nbsp;
+                                </span>
+                            );
+                        return (
+                            <span key={i} className={e.css}>
+                                {e.ch}
+                            </span>
+                        );
+                    })}
+                    {entries.length > 0 && !done && (
+                        <span className="terminal-cursor" />
+                    )}
                 </code>
             </pre>
         </div>
