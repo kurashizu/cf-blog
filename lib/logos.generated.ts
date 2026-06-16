@@ -21,12 +21,13 @@ $2//      $1\\  \\
 ///    \\  \\
 //      \\  \\
          \\`,
-  "android_small.txt": `  ;,           ,;
-   ';,.-----.,;'
-  ,'           ',
- /    O     O    \\
-|                 |
-'-----------------'`,
+  "android_small.txt": `  ;,      ,;
+  ';,.--.,;'
+ ,'        ',
+/    O  O    \\
+|            |
+'------------'
+`,
   "aoscosretro_small.txt": `$2    _____   $1_____$2
   -'     '-$1|     |$2
  /     ___ $1|     |$2
@@ -581,13 +582,14 @@ UU |===| UU
 \\\\  ^~^  //
  \`0PpppP'
    \`\`\`\`\``,
-  "windows_11_small.txt": `$1lllllll  $2lllllll
-$1lllllll  $2lllllll
-$1lllllll  $2lllllll
+  "windows_11_small.txt": `$1llllll  $2llllll
+$1llllll  $2llllll
+$1llllll  $2llllll
 
-$3lllllll  $4lllllll
-$3lllllll  $4lllllll
-$3lllllll  $4lllllll`,
+$3llllll  $4llllll
+$3llllll  $4llllll
+$3llllll  $4llllll
+`,
 } as const;
 
 export function getLogoText(filename: string): string {
