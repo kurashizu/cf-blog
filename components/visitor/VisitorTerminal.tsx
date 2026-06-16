@@ -71,7 +71,7 @@ function buildDisplay(info: VisitorInfo, logoText: string): BuildResult {
 
     const infoLines: string[] = [
         cap("visitor@kurashizu-blog", MAX_RIGHT),
-        "─".repeat("visitor@kurashizu-blog".length),
+        "─".repeat(30),
         cap(`IP        ${maskIP(info.ip)}`, MAX_RIGHT),
         cap(`Location  ${loc}`, MAX_RIGHT),
         cap(`ISP       ${isp}`, MAX_RIGHT),
