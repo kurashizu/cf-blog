@@ -2,6 +2,13 @@
 
 import { useEffect, useState, useMemo } from "react";
 import type { VisitorInfo } from "@/lib/visitor";
+import { getLogoText } from "@/lib/logos.generated";
+
+/** If a string exceeds maxLen, truncate and replace the last 3 chars with … */
+function cap(s: string, maxLen: number): string {
+    if (s.length <= maxLen) return s;
+    return s.slice(0, maxLen - 1) + "…";
+}
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -63,13 +70,13 @@ function buildDisplay(info: VisitorInfo, logoText: string): BuildResult {
         "Ancient Artifact";
 
     const infoLines: string[] = [
-        "visitor@kurashizu-blog".slice(0, MAX_RIGHT),
+        cap("visitor@kurashizu-blog", MAX_RIGHT),
         "─".repeat(MAX_RIGHT),
-        `IP        ${maskIP(info.ip)}`.slice(0, MAX_RIGHT),
-        `Location  ${loc}`.slice(0, MAX_RIGHT),
-        `ISP       ${isp}`.slice(0, MAX_RIGHT),
-        `Device    ${device}`.slice(0, MAX_RIGHT),
-        `Status    authorized`.slice(0, MAX_RIGHT),
+        cap(`IP        ${maskIP(info.ip)}`, MAX_RIGHT),
+        cap(`Location  ${loc}`, MAX_RIGHT),
+        cap(`ISP       ${isp}`, MAX_RIGHT),
+        cap(`Device    ${device}`, MAX_RIGHT),
+        cap(`Status    authorized`, MAX_RIGHT),
     ];
 
     // ── left-column logo lines (exactly 7, or empty) ─────────────
@@ -117,8 +124,6 @@ function buildDisplay(info: VisitorInfo, logoText: string): BuildResult {
 
 export function VisitorTerminal() {
     const [visitorInfo, setVisitorInfo] = useState<VisitorInfo | null>(null);
-    const [logoText, setLogoText] = useState("");
-    const [logoLoaded, setLogoLoaded] = useState(false);
     const [revealed, setRevealed] = useState(0);
     const [done, setDone] = useState(false);
 
@@ -131,37 +136,24 @@ export function VisitorTerminal() {
                     ? (r.json() as Promise<{ visitorInfo: VisitorInfo }>)
                     : Promise.reject(new Error(`HTTP ${r.status}`)),
             )
-            .then((data) => {
-                setVisitorInfo(data.visitorInfo);
-                // Fetch the logo file from the public directory
-                const filename = data.visitorInfo.logoFile;
-                if (filename) {
-                    fetch(`/fastfetch-logos/${filename}`, {
-                        signal: ctrl.signal,
-                    })
-                        .then((r) => (r.ok ? r.text() : ""))
-                        .then((text) => {
-                            setLogoText(text);
-                            setLogoLoaded(true);
-                        })
-                        .catch(() => setLogoLoaded(true));
-                } else {
-                    setLogoLoaded(true);
-                }
-            })
+            .then((data) => setVisitorInfo(data.visitorInfo))
             .catch((e) => {
                 if (e?.name === "AbortError") return;
             });
         return () => ctrl.abort();
     }, []);
 
-    // Build character-level display once both info and logo are ready
+    // Resolve logo text synchronously from the bundled map
+    const logoText = useMemo(
+        () => (visitorInfo ? getLogoText(visitorInfo.logoFile) : ""),
+        [visitorInfo],
+    );
+
+    // Build character-level display
     const { entries } = useMemo<BuildResult>(
         () =>
-            visitorInfo && logoLoaded
-                ? buildDisplay(visitorInfo, logoText)
-                : { entries: [] },
-        [visitorInfo, logoText, logoLoaded],
+            visitorInfo ? buildDisplay(visitorInfo, logoText) : { entries: [] },
+        [visitorInfo, logoText],
     );
 
     // Typewriter effect

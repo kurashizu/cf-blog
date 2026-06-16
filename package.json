@@ -4,8 +4,9 @@
     "private": true,
     "scripts": {
         "generate-roms": "node scripts/generate-rom-manifest.mjs",
-        "prebuild": "npm run generate-roms",
-        "predev": "npm run generate-roms",
+        "generate-logos": "node scripts/generate-logos.mjs",
+        "prebuild": "npm run generate-roms && npm run generate-logos",
+        "predev": "npm run generate-roms && npm run generate-logos",
         "dev": "next dev",
         "build": "next build",
         "build:cf": "./node_modules/.bin/opennextjs-cloudflare build",
