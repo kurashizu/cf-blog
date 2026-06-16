@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import type { VisitorInfo } from "@/lib/visitor";
 import { getLogoText } from "@/lib/logos.generated";
 
@@ -125,6 +125,20 @@ export function VisitorTerminal() {
     const [visitorInfo, setVisitorInfo] = useState<VisitorInfo | null>(null);
     const [revealed, setRevealed] = useState(0);
     const [done, setDone] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const [scale, setScale] = useState(1);
+
+    // Proportionally shrink the terminal when the container is < 520px
+    useEffect(() => {
+        const el = wrapperRef.current;
+        if (!el) return;
+        const observer = new ResizeObserver(([entry]) => {
+            const w = entry.contentRect.width;
+            setScale(w >= 520 ? 1 : w / 520);
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
 
     // Fetch visitor info on mount
     useEffect(() => {
@@ -175,28 +189,40 @@ export function VisitorTerminal() {
     const visible = entries.slice(0, revealed);
 
     return (
-        <div className="terminal-output">
-            <pre>
-                <code>
-                    {visible.map((e, i) => {
-                        if (e.ch === "\n") return <br key={i} />;
-                        if (e.ch === " ")
+        <div
+            ref={wrapperRef}
+            className="overflow-hidden w-full"
+            style={{ height: scale < 1 ? `${11 * scale}rem` : "auto" }}
+        >
+            <div
+                className="terminal-output"
+                style={{
+                    transform: scale < 1 ? `scale(${scale})` : undefined,
+                    transformOrigin: "top left",
+                }}
+            >
+                <pre>
+                    <code>
+                        {visible.map((e, i) => {
+                            if (e.ch === "\n") return <br key={i} />;
+                            if (e.ch === " ")
+                                return (
+                                    <span key={i} className={e.css}>
+                                        &nbsp;
+                                    </span>
+                                );
                             return (
                                 <span key={i} className={e.css}>
-                                    &nbsp;
+                                    {e.ch}
                                 </span>
                             );
-                        return (
-                            <span key={i} className={e.css}>
-                                {e.ch}
-                            </span>
-                        );
-                    })}
-                    {entries.length > 0 && !done && (
-                        <span className="terminal-cursor" />
-                    )}
-                </code>
-            </pre>
+                        })}
+                        {entries.length > 0 && !done && (
+                            <span className="terminal-cursor" />
+                        )}
+                    </code>
+                </pre>
+            </div>
         </div>
     );
 }
