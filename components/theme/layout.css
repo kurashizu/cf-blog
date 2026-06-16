@@ -83,7 +83,9 @@
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     font-family:
-        "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+        "IBM Plex Mono", "JetBrains Mono", "Fira Code", "Cascadia Code",
+        "Consolas", monospace;
+    font-weight: 500;
     font-size: 0.8125rem;
     line-height: 1.65;
     color: var(--text-secondary);

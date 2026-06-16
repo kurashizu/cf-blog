@@ -60,14 +60,17 @@ function buildDisplay(info: VisitorInfo): BuildResult {
         [info.browser, info.os].filter(Boolean).join(" / ") ||
         "Ancient Artifact";
 
+    // Each info line is capped at 42 characters so the right panel
+    // has a predictable width regardless of content length.
+    const MAX_RIGHT = 42;
     const infoLines = [
-        "visitor@kurashizu-blog",
-        "─────────────────────",
-        `IP        ${maskIP(info.ip)}`,
-        `Location  ${loc}`,
-        `ISP       ${isp}`,
-        `Device    ${device}`,
-        `Status    authorized`,
+        "visitor@kurashizu-blog".slice(0, MAX_RIGHT),
+        "─".repeat(MAX_RIGHT),
+        `IP        ${maskIP(info.ip)}`.slice(0, MAX_RIGHT),
+        `Location  ${loc}`.slice(0, MAX_RIGHT),
+        `ISP       ${isp}`.slice(0, MAX_RIGHT),
+        `Device    ${device}`.slice(0, MAX_RIGHT),
+        `Status    authorized`.slice(0, MAX_RIGHT),
     ];
 
     // ── left-column logo lines (exactly 7, or empty) ─────────────
