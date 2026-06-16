@@ -54,15 +54,18 @@ interface BuildResult {
 
 function buildDisplay(info: VisitorInfo): BuildResult {
     // ── right-column info lines (exactly 7) ──────────────────────
-    const loc = [info.city, info.country].filter(Boolean).join(", ");
-    const device = [info.browser, info.os].filter(Boolean).join(" / ");
+    const loc = [info.city, info.country].filter(Boolean).join(", ") || "Earth";
+    const isp = info.isp || "Interdimensional Proxy";
+    const device =
+        [info.browser, info.os].filter(Boolean).join(" / ") ||
+        "Ancient Artifact";
 
     const infoLines = [
         "visitor@kurashizu-blog",
         "─────────────────────",
         `IP        ${maskIP(info.ip)}`,
         `Location  ${loc}`,
-        `ISP       ${info.isp}`,
+        `ISP       ${isp}`,
         `Device    ${device}`,
         `Status    authorized`,
     ];
