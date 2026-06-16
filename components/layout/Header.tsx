@@ -193,8 +193,14 @@ export function Header() {
                 </div>
             </nav>
 
-            {mobileMenuOpen && (
-                <div className="md:hidden border-t border-border bg-bg-primary/95 backdrop-blur-xl">
+            <div
+                className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+                    mobileMenuOpen
+                        ? "max-h-96 opacity-100"
+                        : "max-h-0 opacity-0"
+                }`}
+            >
+                <div className="border-t border-border bg-bg-primary/95 backdrop-blur-xl">
                     <div className="px-4 pt-3 pb-1">
                         <SearchBar variant="icon" />
                     </div>
@@ -219,7 +225,7 @@ export function Header() {
                         })}
                     </ul>
                 </div>
-            )}
+            </div>
         </header>
     );
 }
