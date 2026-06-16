@@ -56,6 +56,7 @@ function parseLogoToEntries(logo: string): CharEntry[] {
  */
 interface BuildResult {
     entries: CharEntry[];
+    totalChars: number;
 }
 
 const MAX_RIGHT = 42;
@@ -85,10 +86,13 @@ function buildDisplay(info: VisitorInfo, logoText: string): BuildResult {
         padded[i] = i < logoLines.length ? logoLines[i] : "";
     }
 
-    // Measure the widest cleaned line to set the column gap
+    // Measure the widest cleaned line to set the column gap and width
     const cleanedWidths = padded.map((l) => l.replace(/\$\d/g, "").length);
     const maxLogoWidth = Math.max(...cleanedWidths, 0);
     const colGap = maxLogoWidth > 0 ? 4 : 0;
+
+    // Total width in characters: logo + gap + info
+    const totalChars = maxLogoWidth + colGap + MAX_RIGHT;
 
     // ── interleave ───────────────────────────────────────────────
     const entries: CharEntry[] = [];
@@ -116,7 +120,7 @@ function buildDisplay(info: VisitorInfo, logoText: string): BuildResult {
         }
     }
 
-    return { entries };
+    return { entries, totalChars };
 }
 
 // ── component ────────────────────────────────────────────────────────
@@ -126,19 +130,30 @@ export function VisitorTerminal() {
     const [revealed, setRevealed] = useState(0);
     const [done, setDone] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const innerRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
 
-    // Proportionally shrink the terminal when the container is < 520px
+    // Measure actual content width and scale to fit the wrapper
     useEffect(() => {
-        const el = wrapperRef.current;
-        if (!el) return;
-        const observer = new ResizeObserver(([entry]) => {
-            const w = entry.contentRect.width;
-            setScale(w >= 520 ? 1 : w / 520);
-        });
-        observer.observe(el);
+        const wrapper = wrapperRef.current;
+        const inner = innerRef.current;
+        if (!wrapper || !inner) return;
+
+        const fit = () => {
+            const wrapperW = wrapper.clientWidth;
+            const innerW = inner.scrollWidth;
+            const newScale =
+                innerW > 0 && innerW > wrapperW ? wrapperW / innerW : 1;
+            setScale((prev) =>
+                Math.abs(prev - newScale) > 0.001 ? newScale : prev,
+            );
+        };
+
+        fit();
+        const observer = new ResizeObserver(fit);
+        observer.observe(wrapper);
         return () => observer.disconnect();
-    }, []);
+    });
 
     // Fetch visitor info on mount
     useEffect(() => {
@@ -163,9 +178,11 @@ export function VisitorTerminal() {
     );
 
     // Build character-level display
-    const { entries } = useMemo<BuildResult>(
+    const { entries, totalChars } = useMemo<BuildResult>(
         () =>
-            visitorInfo ? buildDisplay(visitorInfo, logoText) : { entries: [] },
+            visitorInfo
+                ? buildDisplay(visitorInfo, logoText)
+                : { entries: [], totalChars: 0 },
         [visitorInfo, logoText],
     );
 
@@ -195,8 +212,10 @@ export function VisitorTerminal() {
             style={{ height: scale < 1 ? `${11 * scale}rem` : "auto" }}
         >
             <div
+                ref={innerRef}
                 className="terminal-output"
                 style={{
+                    width: totalChars > 0 ? `${totalChars}ch` : undefined,
                     transform: scale < 1 ? `scale(${scale})` : undefined,
                     transformOrigin: "top left",
                 }}
