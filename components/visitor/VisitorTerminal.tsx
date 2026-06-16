@@ -168,7 +168,7 @@ export function VisitorTerminal() {
                 clearInterval(interval);
                 setDone(true);
             }
-        }, 16);
+        }, 10);
         return () => clearInterval(interval);
     }, [entries]);
 
