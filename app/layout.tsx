@@ -1,10 +1,5 @@
 import type { Metadata } from "next";
-import {
-    Inter,
-    Playfair_Display,
-    Pacifico,
-    IBM_Plex_Mono,
-} from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "@/components/theme/global.css";
 import "@/components/theme/background.css";
 import "@/components/theme/chat.css";
@@ -29,11 +24,6 @@ import { StayEasterEgg } from "@/components/effects/StayEasterEgg";
 
 const inter = Inter({ subsets: ["latin"] });
 const playfair = Playfair_Display({ subsets: ["latin"] });
-const ibmPlexMono = IBM_Plex_Mono({
-    weight: ["400", "500", "600"],
-    subsets: ["latin"],
-    variable: "--font-mono",
-});
 
 export const metadata: Metadata = {
     metadataBase: new URL("https://blog.022025.xyz"),
@@ -53,7 +43,7 @@ export default function RootLayout({
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
             <body
-                className={`${inter.className} ${ibmPlexMono.variable} flex min-h-screen flex-col bg-bg-primary text-text-primary`}
+                className={`${inter.className} flex min-h-screen flex-col bg-bg-primary text-text-primary`}
             >
                 <ThemeProvider>
                     <ParticleBackground />

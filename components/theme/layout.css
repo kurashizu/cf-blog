@@ -83,14 +83,14 @@
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     font-family:
-        var(--font-mono), "JetBrains Mono", "Fira Code", "Cascadia Code",
-        "Consolas", monospace;
+        "Menlo", "Consolas", "JetBrains Mono", "Fira Code", "Cascadia Code",
+        monospace;
     font-weight: 500;
     font-size: 0.8125rem;
     line-height: 1.65;
     color: var(--text-secondary);
     overflow: hidden;
-    width: 500px;
+    width: 520px;
     max-width: 100%;
     height: 11rem;
 }
