@@ -23,6 +23,7 @@ export function Footer() {
                         <div className="flex items-center gap-4 text-xs text-text-muted">
                             <Link
                                 href="/admin"
+                                prefetch={false}
                                 className="hover:text-accent transition-colors"
                             >
                                 Admin
@@ -30,6 +31,7 @@ export function Footer() {
                             <span>·</span>
                             <Link
                                 href="/admin/editor/new"
+                                prefetch={false}
                                 className="hover:text-accent transition-colors"
                             >
                                 New Post

@@ -318,6 +318,7 @@ export default async function HomePage() {
                                 </p>
                                 <Link
                                     href="/admin/editor/new"
+                                    prefetch={false}
                                     className="text-accent hover:text-accent-hover transition-colors text-sm"
                                 >
                                     Write the first post

@@ -19,11 +19,13 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 import { GuestbookWidget } from "@/components/guestbook/GuestbookWidget";
 import { ParticleBackground } from "@/components/effects/ParticleBackground";
 import { MouseTrail } from "@/components/effects/MouseTrail";
+import { ConsoleEasterEgg } from "@/components/effects/ConsoleEasterEgg";
 
 const inter = Inter({ subsets: ["latin"] });
 const playfair = Playfair_Display({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+    metadataBase: new URL("https://blog.022025.xyz"),
     title: {
         default: "Kurashizu's Blog",
         template: "%s | Kurashizu's Blog",
@@ -45,6 +47,7 @@ export default function RootLayout({
                 <ThemeProvider>
                     <ParticleBackground />
                     <MouseTrail />
+                    <ConsoleEasterEgg />
                     <Header />
                     <main className="flex-1">
                         <PageTransition>{children}</PageTransition>

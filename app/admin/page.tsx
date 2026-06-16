@@ -57,7 +57,7 @@ export default async function AdminDashboard() {
       )}
 
       <div className="mt-6 flex justify-end">
-        <Link href="/admin/editor/new">
+        <Link href="/admin/editor/new" prefetch={false}>
           <Button>New Post</Button>
         </Link>
       </div>
