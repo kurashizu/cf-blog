@@ -90,6 +90,8 @@
     line-height: 1.65;
     color: var(--text-secondary);
     overflow: hidden;
+    width: 500px;
+    max-width: 100%;
     height: 11rem;
 }
 
