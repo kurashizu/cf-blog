@@ -6,6 +6,7 @@
  *  - Throws on non-2xx so the orchestrator (`refresh.ts`) can record the failure
  *  - Returns only the public fields the cache actually needs
  */
+import { validateMarkdown } from "./validate-markdown";
 import type {
     AALeaderboardResponse,
     AAModel,
@@ -311,6 +312,7 @@ export async function generateItemRewrite(
         .trim();
     if (!text) throw new Error("Gemini returned empty response");
 
+    await validateMarkdown(text);
     return text;
 }
 
