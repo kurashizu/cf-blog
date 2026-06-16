@@ -50,7 +50,7 @@ function buildDisplay(info: VisitorInfo, logoText: string) {
 
     const infoLines: string[] = [
         cap("visitor@kurashizu-blog", DESKTOP_MAX_RIGHT),
-        "─".repeat(30),
+        "─".repeat("visitor@kurashizu-blog".length),
         cap(`IP        ${maskIP(info.ip)}`, DESKTOP_MAX_RIGHT),
         cap(`Location  ${loc}`, DESKTOP_MAX_RIGHT),
         cap(`ISP       ${isp}`, DESKTOP_MAX_RIGHT),
