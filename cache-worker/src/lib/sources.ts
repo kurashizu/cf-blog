@@ -305,14 +305,14 @@ export async function generateItemRewrite(
         }[];
     };
     const parts = json.candidates?.[0]?.content?.parts ?? [];
-    const text = parts
+    let text = parts
         .filter((p) => !p.thought)
         .map((p) => p.text ?? "")
         .join("")
         .trim();
     if (!text) throw new Error("Gemini returned empty response");
 
-    await validateMarkdown(text);
+    text = await validateMarkdown(text);
     return text;
 }
 

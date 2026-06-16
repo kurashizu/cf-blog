@@ -30,8 +30,37 @@ const VALID_MERMAID_TYPES = new Set([
 ]);
 
 const MERMAID_BLOCK_RE = /```mermaid\n?([\s\S]*?)```/g;
+const MERMAID_PIPE_LABELS_RE = /\|.+\|/;
 
-export async function validateMarkdown(text: string): Promise<void> {
+function sanitizeMermaidBody(body: string, diagramType: string): string {
+    if (diagramType !== "graph" && diagramType !== "flowchart") {
+        return body;
+    }
+    if (!MERMAID_PIPE_LABELS_RE.test(body)) {
+        return body;
+    }
+    return body.split("\n")
+        .map((line) => {
+            let inPipe = false;
+            let out = "";
+            for (const ch of line) {
+                if (ch === "|") {
+                    inPipe = !inPipe;
+                    out += ch;
+                } else if (ch === '"' && inPipe) {
+                    out += "'";
+                } else {
+                    out += ch;
+                }
+            }
+            return out;
+        })
+        .join("\n");
+}
+
+export async function validateMarkdown(text: string): Promise<string> {
+    let sanitized = text;
+
     for (const match of text.matchAll(MERMAID_BLOCK_RE)) {
         const body = match[1].trim();
         if (!body) continue;
@@ -51,10 +80,15 @@ export async function validateMarkdown(text: string): Promise<void> {
                 `Empty mermaid diagram body for type "${diagramType}"`,
             );
         }
+
+        const sanitizedBody = sanitizeMermaidBody(body, diagramType);
+        if (sanitizedBody !== body) {
+            sanitized = sanitized.replace(match[0], `\`\`\`mermaid\n${sanitizedBody}\n\`\`\``);
+        }
     }
 
     const results = lint({
-        strings: { text },
+        strings: { text: sanitized },
         config: {
             MD013: false,
             MD033: false,
@@ -99,4 +133,6 @@ export async function validateMarkdown(text: string): Promise<void> {
             .join("\n");
         throw new Error(`Markdown lint errors:\n${summary}`);
     }
+
+    return sanitized;
 }

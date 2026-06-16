@@ -37,7 +37,8 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "agent-worker"
+    "agent-worker",
+    "cache-worker",
+    "node_modules"
   ]
 }
