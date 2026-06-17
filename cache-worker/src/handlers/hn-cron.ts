@@ -1,7 +1,7 @@
 /**
  * Daily HN fetch cron.
  *
- * `wrangler.toml` schedules this at `0 5 * * *` (05:00 UTC every day).
+ * `wrangler.toml` schedules this at `0 18 * * *` (18:00 UTC, which is 05:00 AEDT).
  * Pulls up to 30 top stories from Hacker News and upserts them into D1.
  * INSERT OR REPLACE on the same id keeps the table free of duplicates;
  * a fresh `fetched_at = datetime('now')` marks today's batch.

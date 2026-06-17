@@ -7,7 +7,7 @@ import type { Env } from "./types";
 
 // Cron schedule → handler routing. Keep these in sync with wrangler.toml
 // [triggers] crons.
-const DAILY_HN_CRON = "0 5 * * *";
+const DAILY_HN_CRON = "0 18 * * *";
 const HEARTBEAT_CRON = "*/3 * * * *";
 
 export default {
