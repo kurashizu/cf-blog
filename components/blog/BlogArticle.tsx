@@ -18,17 +18,17 @@ interface BlogArticleProps {
 
 export function BlogArticle({ post }: BlogArticleProps) {
     return (
-        <article className="article-content">
+        <article className="max-w-3xl mx-auto px-4 py-10 pb-16">
             <Link
                 href="/blog"
-                className="back-link animate-fade-up"
+                className="inline-flex items-center gap-2 text-sm text-text-muted mb-6 transition-colors hover:text-accent animate-fade-up"
                 style={{ animationDelay: "0ms" }}
             >
                 ← Back to blog
             </Link>
 
             <header
-                className="article-header animate-fade-up"
+                className="mb-10 pb-6 border-b border-border animate-fade-up"
                 style={{ animationDelay: "80ms" }}
             >
                 {post.coverImage && (
@@ -41,16 +41,18 @@ export function BlogArticle({ post }: BlogArticleProps) {
                     </div>
                 )}
 
-                <h1>{post.title}</h1>
+                <h1 className="text-[1.5rem] sm:text-[2rem] font-bold text-text-primary leading-tight mb-4">
+                    {post.title}
+                </h1>
 
-                <div className="article-meta mb-3">
+                <div className="flex items-center flex-wrap gap-2 text-[0.8125rem] text-text-muted mb-3">
                     <span>{formatDate(post.date)}</span>
-                    <span className="article-meta-separator">|</span>
+                    <span className="text-border">|</span>
                     <span>{post.author}</span>
                 </div>
 
                 {post.tags.length > 0 && (
-                    <div className="article-tags">
+                    <div className="flex flex-wrap gap-2 mt-3">
                         {post.tags.map((tag) => (
                             <span key={tag} className="tag">
                                 {tag}
@@ -60,7 +62,7 @@ export function BlogArticle({ post }: BlogArticleProps) {
                 )}
             </header>
 
-            <MarkdownRenderer className="article-body">
+            <MarkdownRenderer className="prose prose-invert prose-lg max-w-none">
                 {post.content}
             </MarkdownRenderer>
         </article>

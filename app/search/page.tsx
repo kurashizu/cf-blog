@@ -32,7 +32,7 @@ export default async function SearchPage({
         return (
             <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12">
                 <div className="mb-8">
-                    <h1 className="page-title text-2xl font-bold mb-4">
+                    <h1 className="text-2xl font-bold mb-4">
                         Search
                     </h1>
                     <SearchBar variant="inline" />

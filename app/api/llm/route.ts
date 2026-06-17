@@ -5,7 +5,7 @@ import {
     type GeminiGenerateOptions,
     SYSTEM_PROMPT,
 } from "@/lib/llm-prompt";
-import { checkBurst, checkDailyKV, getIP } from "@/lib/ratelimiter";
+import { checkBurst, checkDailyKV, getIP } from "@/shared/ratelimiter";
 import {
     callWithFallback,
     streamWithFallback,

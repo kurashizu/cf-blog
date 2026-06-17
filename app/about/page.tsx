@@ -58,12 +58,14 @@ const socialLinks = [
 export default function AboutPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
-            <div className="page-title">
+            <div className="text-[1.75rem] font-bold text-text-primary mb-8">
                 <h1>About Me</h1>
             </div>
 
             <section className="mb-12">
-                <h2 className="section-title">What I Do</h2>
+                <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
+                    What I Do
+                </h2>
                 <div className="space-y-4 text-text-secondary">
                     <p>
                         I build systems and tools that push the boundaries of
@@ -81,7 +83,9 @@ export default function AboutPage() {
             </section>
 
             <section className="mb-12">
-                <h2 className="section-title">Technical Interests</h2>
+                <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
+                    Technical Interests
+                </h2>
                 <ul className="space-y-3">
                     {[
                         "Cloud infrastructure and serverless architectures",
@@ -103,7 +107,9 @@ export default function AboutPage() {
             </section>
 
             <section className="mb-12">
-                <h2 className="section-title">Current Stack</h2>
+                <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
+                    Current Stack
+                </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {techStack.map((group, i) => (
                         <div key={group.category}>
@@ -130,7 +136,9 @@ export default function AboutPage() {
             </section>
 
             <section>
-                <h2 className="section-title">Connect</h2>
+                <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
+                    Connect
+                </h2>
                 <p className="text-text-secondary mb-6">
                     Interested in collaborating, or just want to say hello —
                     feel free to reach out.

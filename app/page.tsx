@@ -1,3 +1,4 @@
+import "@/components/activity/activity.css";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -304,8 +305,13 @@ export default async function HomePage() {
                         className="flex items-center justify-between mb-3 animate-fade-up"
                         style={{ animationDelay: "0ms" }}
                     >
-                        <h2 className="section-title mb-0">Recent Posts</h2>
-                        <Link href="/blog" className="view-all-link">
+                        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-0">
+                            Recent Posts
+                        </h2>
+                        <Link
+                            href="/blog"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-text-muted hover:text-accent hover:gap-3 transition-all"
+                        >
                             All posts
                         </Link>
                     </div>
@@ -344,7 +350,9 @@ export default async function HomePage() {
                         className="flex items-center justify-between mb-3 animate-fade-up"
                         style={{ animationDelay: "0ms" }}
                     >
-                        <h2 className="section-title mb-0">Gadgets</h2>
+                        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-0">
+                            Gadgets
+                        </h2>
                     </div>
                     <Card
                         className="flex-1 p-4 h-full animate-fade-up"
@@ -360,12 +368,14 @@ export default async function HomePage() {
                         className="flex items-center justify-between mb-3 animate-fade-up"
                         style={{ animationDelay: "0ms" }}
                     >
-                        <h2 className="section-title mb-0">GitHub Projects</h2>
+                        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-0">
+                            GitHub Projects
+                        </h2>
                         <a
                             href="https://github.com/kurashizu"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="view-all-link"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-text-muted hover:text-accent hover:gap-3 transition-all"
                         >
                             View all on GitHub
                         </a>
@@ -421,7 +431,7 @@ export default async function HomePage() {
                     style={{ animationDelay: "0ms" }}
                 >
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                    <h2 className="section-title mb-0 shrink-0 px-2">
+                    <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-0 shrink-0 px-2">
                         Guestbook
                     </h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />

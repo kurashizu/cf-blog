@@ -27,7 +27,7 @@ export function NewsArchiveView({
             {stories.length === 0 ? (
                 <p className="text-text-muted">No news yet.</p>
             ) : (
-                <div className="article-list">
+                <div className="flex flex-col gap-4">
                     {stories.map((story, i) => (
                         <Link
                             key={story.id}

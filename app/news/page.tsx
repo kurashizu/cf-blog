@@ -44,7 +44,7 @@ export default async function NewsPage({
 
     return (
         <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12">
-            <div className="page-title">
+            <div className="text-[1.75rem] font-bold text-text-primary mb-8">
                 <h1>News</h1>
                 <p className="text-sm text-text-secondary">
                     Daily tech news with AI-generated summaries

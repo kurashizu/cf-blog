@@ -223,7 +223,7 @@ Two-layer: Cloudflare Rate Limiter (burst) + KV (daily).
 | cf-agent | `/api/chat` | 2/10s | 100/IP |
 | cf-agent | `/api/tool` | 10/10s | 200/IP |
 
-`lib/ratelimiter.ts` exports `checkBurst(binding, key, limit, period)` and `checkDailyKV(kv, endpoint, ip, dailyLimit)`.
+`shared/ratelimiter.ts` exports `checkBurst(binding, key, limit, period)` and `checkDailyKV(kv, endpoint, ip, dailyLimit)`.
 
 ## Triple-Worker CI
 
@@ -240,7 +240,8 @@ Direct deploy (skips CI):
 
 - All Next.js workers use `@opennextjs/cloudflare` (not `next start`).
 - Static assets go in `public/`. Blog article markdown lives in D1, not the repo (R2 markdown backups were removed in the D1 migration).
-- Theme colors via CSS variables in `components/theme/global.css`. Tailwind utilities map to these (`bg-bg-card`, `text-text-muted`, etc.).
+- Theme colors via CSS variables in `components/theme/tokens.css`. Tailwind utilities map to these (`bg-bg-card`, `text-text-muted`, etc.).
+- CSS is split by scope: `components/theme/tokens.css` (variables) + `components/theme/base.css` (reset + body effects + terminal/logo + `prefers-reduced-motion`) are global in `app/layout.tsx`. Page-specific CSS is co-located with components (`components/activity/activity.css`, `components/nes/nes.css`) and imported only where needed. All other styling uses Tailwind utility classes directly in JSX.
 - Component files: one per file, filename matches component name. `"use client"` only when needed.
 - For R2 operations, use the Cloudflare REST API or `wrangler r2 object` (the Cloudflare MCP API has known issues, and current wrangler versions don't ship a `list` subcommand — use a Worker with `env.BUCKET.list()` to enumerate, or the REST API).
 - Delete obsolete code completely — no commented-out blocks, no `_unused` files, no half-removed components. If a file is dead, `git rm` it.

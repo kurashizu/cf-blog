@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createGuestbookRepo } from "@/lib/guestbook";
-import { checkBurst, checkDailyKV, getIP } from "@/lib/ratelimiter";
+import { checkBurst, checkDailyKV, getIP } from "@/shared/ratelimiter";
 import type { BlogEnv } from "@/lib/types/env";
 
 const BURST_LIMIT = 2;

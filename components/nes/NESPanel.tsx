@@ -7,6 +7,7 @@ import { NESBrowser } from "./NESBrowser";
 import { NESControls } from "./NESControls";
 import { NESRomPicker } from "./NESRomPicker";
 import type { Rom, LoadStatus } from "./types";
+import "@/components/nes/nes.css";
 import { findRom } from "./roms";
 
 interface NESPanelProps {
@@ -575,7 +576,9 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                             Start
                                         </span>
                                         <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd nes-kbd-wide">Enter</kbd>
+                                            <kbd className="nes-kbd nes-kbd-wide">
+                                                Enter
+                                            </kbd>
                                         </span>
                                     </div>
                                     <div className="nes-controls-help-row">

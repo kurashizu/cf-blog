@@ -1,0 +1,96 @@
+/* ===========================================
+   TOKENS - Design System Variables
+   =========================================== */
+:root,
+[data-theme="dark"] {
+    /* Colors */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-card: #1a1a24;
+    --bg-elevated: #22222e;
+    --border: #2a2a3a;
+    --border-hover: #3a3a4f;
+
+    --text-primary: #e8e8ed;
+    --text-secondary: #9090a0;
+    --text-muted: #606070;
+
+    --accent: #ff6b35;
+    --accent-hover: #ff8555;
+    --accent-glow: rgba(255, 107, 53, 0.25);
+    --accent-subtle: rgba(255, 107, 53, 0.08);
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 30px var(--accent-glow);
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 9999px;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 200ms ease;
+    --transition-slow: 300ms ease;
+    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Glow Color */
+    --glow-color: rgba(255, 107, 53, 0.05);
+}
+
+[data-theme="deep-blue"] {
+    --bg-primary: #0c0c1a;
+    --bg-secondary: #12122a;
+    --bg-card: #181832;
+    --bg-elevated: #20203e;
+    --border: #2a2a4a;
+    --border-hover: #3a3a5f;
+
+    --text-primary: #e0e0f0;
+    --text-secondary: #8888a8;
+    --text-muted: #505068;
+
+    --accent: #4a9eff;
+    --accent-hover: #6ab0ff;
+    --accent-glow: rgba(74, 158, 255, 0.25);
+    --accent-subtle: rgba(74, 158, 255, 0.08);
+
+    --glow-color: rgba(74, 158, 255, 0.05);
+}
+
+[data-theme="deep-green"] {
+    --bg-primary: #0a1a0f;
+    --bg-secondary: #122218;
+    --bg-card: #182e22;
+    --bg-elevated: #203828;
+    --border: #2a3a32;
+    --border-hover: #3a4a42;
+
+    --text-primary: #e0f0e8;
+    --text-secondary: #88a898;
+    --text-muted: #506858;
+
+    --accent: #35ff6b;
+    --accent-hover: #55ff85;
+    --accent-glow: rgba(53, 255, 107, 0.25);
+    --accent-subtle: rgba(53, 255, 107, 0.08);
+
+    --glow-color: rgba(53, 255, 107, 0.05);
+}

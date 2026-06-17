@@ -23,14 +23,18 @@ function PostCard({ post, delayMs }: { post: Post; delayMs: number }) {
         >
             <Card>
                 <CardHeader>
-                    <span className="article-meta">
+                    <span className="text-xs text-text-muted">
                         {formatDate(post.date)}
                     </span>
                 </CardHeader>
                 <CardContent>
-                    <h2 className="article-title">{post.title}</h2>
+                    <h2 className="text-xl font-semibold text-text-primary leading-tight mt-2">
+                        {post.title}
+                    </h2>
                     {post.description && (
-                        <p className="article-desc mt-1">{post.description}</p>
+                        <p className="text-sm text-text-secondary leading-relaxed mt-1">
+                            {post.description}
+                        </p>
                     )}
                     {post.tags && post.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-3">
@@ -90,7 +94,7 @@ export default async function BlogPage({
     return (
         <>
             <div
-                className="page-title animate-fade-up"
+                className="text-[1.75rem] font-bold text-text-primary mb-8 animate-fade-up"
                 style={{ animationDelay: "0ms" }}
             >
                 <h1>Blog</h1>
@@ -102,7 +106,7 @@ export default async function BlogPage({
             {posts.length === 0 ? (
                 <p className="text-text-muted">No posts yet.</p>
             ) : (
-                <div className="article-list">
+                <div className="flex flex-col gap-4">
                     {posts.map((post, i) => (
                         <PostCard
                             key={post.slug}

@@ -80,7 +80,7 @@ export function HeroHeader({ title: fallback }: HeroHeaderProps) {
 
     return (
         <h1
-            className="hero-title hero-title--animated animate-fade-up"
+            className="text-[1.5rem] sm:text-[2.25rem] font-extrabold leading-tight min-h-[1.8rem] sm:min-h-[2.6rem] bg-gradient-to-r from-text-primary via-text-primary via-[25%] via-accent via-50% via-text-primary via-75% to-text-primary bg-[length:200%_100%] bg-clip-text text-transparent animate-hero-gradient animate-fade-up"
             style={{ animationDelay: "0ms" }}
             aria-label={title}
         >

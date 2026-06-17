@@ -20,8 +20,8 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
                 className="flex items-center justify-between mb-3 animate-fade-up"
                 style={{ animationDelay: "0ms" }}
             >
-                <h2 className="section-title mb-0">News</h2>
-                <Link href="/news" className="view-all-link">
+                <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-0">News</h2>
+                <Link href="/news" className="inline-flex items-center gap-2 text-sm font-medium text-text-muted hover:text-accent hover:gap-3 transition-all">
                     All news
                 </Link>
             </div>

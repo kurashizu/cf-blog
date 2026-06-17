@@ -33,7 +33,7 @@ CI runs on push to `main`: **migrate-db** (`database/schema.sql`) first, then de
 ## Tech Stack
 
 - **Frontend**: Next.js 15 (App Router) + React 19
-- **Styling**: Tailwind CSS + CSS variables for theming; custom animations in `components/theme/*.css`
+- **Styling**: Tailwind CSS (utility classes in JSX) + `tokens.css`/`base.css` (CSS variables + body effects) + component-level CSS (`activity.css`, `nes.css`) where `color-mix()`/pseudo-elements can't be expressed in Tailwind
 - **Storage**: Cloudflare D1 (articles, news, github_repos, guestbook) + Cloudflare R2 (contributions + LLM leaderboard caches) + Cloudflare KV (sessions, rate limits)
 - **AI**: Gemini (with quota-based model fallback for TPD/RPM 429s)
 - **Deploy**: Cloudflare Workers via `@opennextjs/cloudflare`
@@ -71,7 +71,7 @@ Default model: `gemma-4-31b-it`. Streams via SSE. Max 5 tool-call iterations per
 .                         # cf-blog (main blog)
 ├── app/                  # Next.js App Router
 ├── components/           # React components (UI, activity, agent, llm, theme, layout, providers)
-├── lib/                  # Backend logic (D1, articles, guestbook, rate limit, model pool, languages)
+├── lib/                  # Backend logic (D1, articles, guestbook, model pool, languages)
 ├── database/             # D1 schema (schema.sql — all tables: posts, news_items, github_repos, etc.)
 ├── public/               # Static assets served by Next.js
 ├── agent-worker/         # cf-agent (separate Next.js worker)

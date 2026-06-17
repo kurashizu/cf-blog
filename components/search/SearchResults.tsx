@@ -67,7 +67,7 @@ export function SearchResults({
                 className="mb-8 animate-fade-up"
                 style={{ animationDelay: "0ms" }}
             >
-                <h1 className="page-title text-2xl font-bold mb-2">
+                <h1 className="text-2xl font-bold mb-2">
                     Search Results
                 </h1>
 

@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
-import "@/components/theme/global.css";
-import "@/components/theme/background.css";
-import "@/components/theme/chat.css";
-import "@/components/theme/layout.css";
-import "@/components/theme/article.css";
-import "@/components/theme/admin.css";
-import "@/components/theme/form.css";
-import "@/components/theme/editor.css";
-import "@/components/theme/activity.css";
-import "@/components/theme/nes.css";
-import "katex/dist/katex.min.css";
+import "@/components/theme/tokens.css";
+import "@/components/theme/base.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
