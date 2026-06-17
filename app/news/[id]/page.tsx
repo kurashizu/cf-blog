@@ -37,12 +37,15 @@ export default async function NewsDetailPage({
 
     return (
         <div className="max-w-4xl mx-auto px-4 pb-12 pt-8 md:pt-12">
-            <article className="article-content">
-                <Link href="/news" className="back-link">
+            <article className="max-w-3xl mx-auto">
+                <Link
+                    href="/news"
+                    className="inline-flex items-center gap-2 text-sm text-text-muted mb-6 transition-colors hover:text-accent"
+                >
                     ← Back to news
                 </Link>
 
-                <header className="article-header">
+                <header className="mb-10 pb-6 border-b border-border">
                     <h1 className="text-2xl font-bold">{story.title}</h1>
 
                     <div className="flex items-center gap-3 mt-3">
@@ -69,21 +72,19 @@ export default async function NewsDetailPage({
                         </a>
                     </div>
 
-                    <div className="article-meta mb-3 mt-2">
+                    <div className="flex items-center flex-wrap gap-2 text-[0.8125rem] text-text-muted mt-2 mb-3">
                         {story.domain && (
                             <>
                                 <span>{story.domain}</span>
-                                <span className="article-meta-separator">
-                                    |
-                                </span>
+                                <span className="text-border">|</span>
                             </>
                         )}
                         <span>{story.score} points</span>
-                        <span className="article-meta-separator">|</span>
+                        <span className="text-border">|</span>
                         <span>{story.descendants} comments</span>
-                        <span className="article-meta-separator">|</span>
+                        <span className="text-border">|</span>
                         <span>by {story.by}</span>
-                        <span className="article-meta-separator">|</span>
+                        <span className="text-border">|</span>
                         <span>
                             {new Date(story.time * 1000).toLocaleDateString(
                                 "en-US",
@@ -97,7 +98,7 @@ export default async function NewsDetailPage({
                     </div>
                 </header>
 
-                <MarkdownRenderer className="article-body">
+                <MarkdownRenderer className="prose prose-invert prose-lg max-w-none">
                     {story.summary}
                 </MarkdownRenderer>
             </article>

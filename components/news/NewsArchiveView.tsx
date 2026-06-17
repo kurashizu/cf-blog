@@ -37,7 +37,7 @@ export function NewsArchiveView({
                         >
                             <Card className="group cursor-pointer">
                                 <CardHeader>
-                                    <span className="article-meta">
+                                    <span className="text-xs text-text-muted">
                                         {new Date(
                                             story.time * 1000,
                                         ).toLocaleDateString("en-US", {
