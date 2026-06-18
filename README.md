@@ -55,6 +55,35 @@ cd agent-worker && npm run build:cf && npx wrangler deploy   # cf-agent
 cd cache-worker && npx wrangler deploy                    # cf-blog-cache
 ```
 
+## Upload API
+
+`POST /api/upload` — 生成 presigned URL 直传 `public-files` R2 bucket，文件可公开访问 `https://bucket.022025.xyz/<filename>`
+
+```bash
+# 获取上传链接
+curl -X POST https://blog.022025.xyz/api/upload \
+  -H "Authorization: Bearer <UPLOAD_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"filename":"avatar.png","contentType":"image/png"}'
+
+# 响应
+# { "url": "...", "key": "avatar.png", "publicUrl": "https://bucket.022025.xyz/avatar.png", "expiresIn": 300 }
+
+# 直传 R2（URL 5 分钟有效）
+curl -X PUT "<url>" -H "Content-Type: image/png" --data-binary @avatar.png
+```
+
+`GET /api/upload` — 列出 bucket 中的文件
+
+```bash
+curl https://blog.022025.xyz/api/upload \
+  -H "Authorization: Bearer <UPLOAD_API_KEY>"
+
+# 可选前缀筛选
+curl "https://blog.022025.xyz/api/upload?prefix=images/" \
+  -H "Authorization: Bearer <UPLOAD_API_KEY>"
+```
+
 ## AI Agent (cf-agent)
 
 KurAgent supports three tools via the `/api/tool` and `/api/chat` endpoints:

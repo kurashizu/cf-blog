@@ -212,6 +212,19 @@ The homepage hero has two data widgets, both transparent (no card chrome):
 
 Contributions powered by `cf-blog-cache` cron → R2, rendered server-side via `getContributions()`. Languages read from D1 `github_repos` table (all non-fork repos, not just top 6) via `getTopLanguages()` from `lib/languages.ts`.
 
+## Upload API (cf-blog)
+
+`app/api/upload/route.ts` — R2 `public-files` bucket 的上传与列表接口。绑定自定义域名 `bucket.022025.xyz`。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `POST` | `/api/upload` | 生成 presigned PUT URL（5 分钟有效），文件直传 R2 |
+| `GET` | `/api/upload` | 列出 bucket 中的文件（支持 `?prefix=` 筛选） |
+
+鉴权：`Authorization: Bearer <UPLOAD_API_KEY>`（Worker secret，`npx wrangler secret put UPLOAD_API_KEY`）
+
+依赖：`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`
+
 ## Rate Limiting
 
 Two-layer: Cloudflare Rate Limiter (burst) + KV (daily).
