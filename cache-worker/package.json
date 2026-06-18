@@ -9,7 +9,6 @@
         "test": "vitest run"
     },
     "dependencies": {
-        "gray-matter": "^4.0.3",
         "markdownlint": "^0.41.0"
     },
     "devDependencies": {

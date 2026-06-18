@@ -97,9 +97,10 @@ CREATE INDEX IF NOT EXISTS idx_guestbook_approved
     ON guestbook_messages(approved);
 
 -- ============================================
--- One-time migrations
+-- Generic cache key-value store (replaces R2 bucket for small caches)
 -- ============================================
--- 2026-06-15: drop HN fetch dedup log. The HN cron is now daily (max 30
--- stories) and uses INSERT OR REPLACE on the same id, so dedup is no
--- longer needed.
-DROP TABLE IF EXISTS news_fetch_log;
+CREATE TABLE IF NOT EXISTS cache_entries (
+    key       TEXT PRIMARY KEY,
+    value     TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+);

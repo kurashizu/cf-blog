@@ -4,9 +4,7 @@ import { formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { MiniCard } from "@/components/ui/MiniCard";
 import { HeroHeader } from "@/components/hero/HeroHeader";
-import { r2Paths } from "@/lib/r2-paths";
-import { r2Get } from "@/lib/r2";
-import { getDB } from "@/lib/d1";
+import { getDB, getCacheEntry } from "@/lib/d1";
 import { getLanguageColor, type Language } from "@/lib/languages";
 import { GuestbookMessages } from "@/components/guestbook/GuestbookMessages";
 import { GadgetsPanel } from "@/components/gadgets/GadgetsPanel";
@@ -106,12 +104,7 @@ async function readReposAndLanguages(limit = 5) {
 }
 
 async function readContributions(): Promise<ContributionsCache | null> {
-    try {
-        const data = await r2Get(r2Paths.githubContributionsCache);
-        return JSON.parse(data) as ContributionsCache;
-    } catch {
-        return null;
-    }
+    return getCacheEntry<ContributionsCache>("github-contributions");
 }
 
 const LANG_ABBR: Record<string, string> = {

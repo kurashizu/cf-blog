@@ -80,6 +80,15 @@ function rowToPostListItem(row: Record<string, unknown>): PostListItem {
     };
 }
 
+/** SHA-256 hex digest using the Web Crypto API. */
+async function sha256Hex(input: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export function createArticlesRepo() {
     const db = getDB();
 
@@ -123,13 +132,37 @@ export function createArticlesRepo() {
             const { data, body } = parseFrontmatter(fullContent);
             const tags = parseTags(data.tags);
 
+            // Compute content hash from title + description + first 500 body chars
+            const bodyPreview = body.slice(0, 500);
+            const contentHash = await sha256Hex(
+                `${(data.title as string) || ""}|${(data.description as string) || ""}|${bodyPreview}`,
+            );
+
             await db
                 .prepare(
                     `
-                INSERT OR REPLACE INTO posts
+                INSERT INTO posts
                     (id, slug, title, excerpt, content,
-                     cover_image, category, tags, author, status, published_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     cover_image, category, tags, author, status, published_at,
+                     content_hash, search_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    slug = excluded.slug,
+                    title = excluded.title,
+                    excerpt = excluded.excerpt,
+                    content = excluded.content,
+                    cover_image = excluded.cover_image,
+                    category = excluded.category,
+                    tags = excluded.tags,
+                    author = excluded.author,
+                    status = excluded.status,
+                    published_at = excluded.published_at,
+                    content_hash = excluded.content_hash,
+                    search_updated_at = CASE
+                        WHEN posts.content_hash IS NULL THEN NULL
+                        WHEN posts.content_hash != excluded.content_hash THEN NULL
+                        ELSE posts.search_updated_at
+                    END
             `,
                 )
                 .bind(
@@ -146,6 +179,8 @@ export function createArticlesRepo() {
                     (data.author as string) || "Kurashizu",
                     normaliseBool(data.draft, false) ? "draft" : "published",
                     normaliseDate(data.date) || null,
+                    contentHash,
+                    null,
                 )
                 .run();
         },

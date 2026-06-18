@@ -13,10 +13,6 @@ database_name = "cf-blog-db"
 database_id = "f763e00a-1c8b-42d4-ad4f-65d0136cabd2"
 
 [[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "cf-blog-bucket"
-
-[[r2_buckets]]
 binding = "PUBLIC_BUCKET"
 bucket_name = "public-files"
 

@@ -4,7 +4,6 @@
 declare namespace Cloudflare {
     interface Env {
         SESSION_KV: KVNamespace;
-        BUCKET: R2Bucket;
         PUBLIC_BUCKET: R2Bucket;
         DB: D1Database;
         R2_ACCESS_KEY_ID: string;

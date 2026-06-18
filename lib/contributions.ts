@@ -1,5 +1,4 @@
-import { r2Get } from "./r2";
-import { r2Paths } from "./r2-paths";
+import { getCacheEntry } from "./d1";
 
 export interface ContributionDay {
     date: string;
@@ -66,12 +65,7 @@ export function getLevel(count: number): HeatLevel {
 }
 
 export async function getContributions(): Promise<ContributionsCache | null> {
-    try {
-        const data = await r2Get(r2Paths.githubContributionsCache);
-        return JSON.parse(data) as ContributionsCache;
-    } catch {
-        return null;
-    }
+    return getCacheEntry<ContributionsCache>("github-contributions");
 }
 
 /**

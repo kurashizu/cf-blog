@@ -99,7 +99,6 @@ export interface HNStory {
 
 export interface Env {
     DB: D1Database;
-    BUCKET: R2Bucket;
     SEARCH_INDEX: VectorizeIndex;
     CRON_SECRET?: string;
     ARTIFICIAL_ANALYSIS_API_KEY?: string;

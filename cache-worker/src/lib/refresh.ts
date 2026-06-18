@@ -6,7 +6,6 @@
  * suitable for log scraping. The same orchestrator is used by the cron
  * trigger and the manual POST /__refresh endpoint.
  */
-import { parseFrontmatter } from "./articles";
 import {
     fetchContributions,
     fetchGithubRepos,
@@ -14,15 +13,6 @@ import {
     fetchRepoLanguages,
 } from "./sources";
 import type { Env } from "../types";
-
-/** SHA-256 hex digest using the Web Crypto API (available in Workers). */
-async function sha256Hex(input: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(input);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 export interface RefreshResult {
     line: string;
@@ -95,110 +85,6 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
         return `${repos.length} repos`;
     });
 
-    await runStep(results, "articles-index", async () => {
-        // Scan ALL R2 articles (including drafts) and sync to D1
-        const db = env.DB;
-        let cursor: string | undefined;
-        const keys: string[] = [];
-        do {
-            const result = await env.BUCKET.list({
-                prefix: "articles/",
-                cursor,
-            });
-            keys.push(...result.objects.map((o) => o.key));
-            cursor = result.truncated ? result.cursor : undefined;
-        } while (cursor);
-
-        let upserted = 0;
-        for (const key of keys) {
-            if (!key.endsWith(".md")) continue;
-
-            let fullContent: string;
-            try {
-                const obj = await env.BUCKET.get(key);
-                if (!obj) continue;
-                fullContent = await obj.text();
-            } catch {
-                continue;
-            }
-
-            const { data, body } = parseFrontmatter(fullContent);
-            const slug = key.replace("articles/", "").replace(".md", "");
-
-            // Normalise frontmatter fields
-            const rawDate = data.date;
-            const date =
-                rawDate instanceof Date
-                    ? rawDate.toISOString().slice(0, 10)
-                    : (rawDate as string) || "";
-            const draft = data.draft === true || data.draft === "true";
-            const status = draft ? "draft" : "published";
-            const tv = data.tags;
-            const tags: string[] = Array.isArray(tv)
-                ? tv.filter((t): t is string => typeof t === "string")
-                : typeof tv === "string"
-                  ? tv
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean)
-                  : [];
-
-            // Compute content hash from title + excerpt + first 500 body chars
-            const bodyPreview = body.slice(0, 500);
-            const newHash = await sha256Hex(
-                `${data.title as string}|${data.description as string}|${bodyPreview}`,
-            );
-
-            await db
-                .prepare(
-                    `
-                INSERT INTO posts
-                    (id, slug, title, excerpt, content,
-                     cover_image, category, tags, author, status, published_at,
-                     content_hash, search_updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    slug = excluded.slug,
-                    title = excluded.title,
-                    excerpt = excluded.excerpt,
-                    content = excluded.content,
-                    cover_image = excluded.cover_image,
-                    category = excluded.category,
-                    tags = excluded.tags,
-                    author = excluded.author,
-                    status = excluded.status,
-                    published_at = excluded.published_at,
-                    content_hash = excluded.content_hash,
-                    search_updated_at = CASE
-                        WHEN posts.content_hash IS NULL THEN NULL
-                        WHEN posts.content_hash != excluded.content_hash THEN NULL
-                        ELSE posts.search_updated_at
-                    END
-            `,
-                )
-                .bind(
-                    slug,
-                    slug,
-                    (data.title as string) || "",
-                    (data.description as string) || "",
-                    body,
-                    (data.coverImage as string) ||
-                        (data.cover_image as string) ||
-                        "",
-                    (data.category as string) || "",
-                    JSON.stringify(tags),
-                    (data.author as string) || "Kurashizu",
-                    status,
-                    date || null,
-                    newHash,
-                    null,
-                )
-                .run();
-            upserted++;
-        }
-        return `${keys.length} articles (${upserted} upserted)`;
-    });
-
     await runStep(results, "llm-leaderboard", async () => {
         if (!env.ARTIFICIAL_ANALYSIS_API_KEY) {
             throw new Error("ARTIFICIAL_ANALYSIS_API_KEY not set");
@@ -207,17 +93,13 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
             env.ARTIFICIAL_ANALYSIS_API_KEY,
         );
         if (models.length === 0) throw new Error("empty response");
-        // Wrap with fetchedAt so the client can show "last update: 5 min ago"
-        // without an extra R2 round-trip. Old bare-array caches are still
-        // readable (see /api/llm-leaderboard) until the next refresh.
-        const payload = {
-            fetchedAt: new Date().toISOString(),
-            models,
-        };
-        await env.BUCKET.put(
-            "cache/llm-leaderboard.json",
-            JSON.stringify(payload),
-        );
+        const fetchedAt = new Date().toISOString();
+        const payload = { fetchedAt, models };
+        await env.DB.prepare(
+            `INSERT OR REPLACE INTO cache_entries (key, value, fetched_at) VALUES (?, ?, ?)`,
+        )
+            .bind("llm-leaderboard", JSON.stringify(payload), fetchedAt)
+            .run();
         return `${models.length} models`;
     });
 
@@ -232,10 +114,16 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
             env.GITHUB_PERSONAL_ACCESS_TOKEN,
             env.GH_USERNAME,
         );
-        await env.BUCKET.put(
-            "cache/github-contributions.json",
-            JSON.stringify(data),
-        );
+        const fetchedAt = new Date().toISOString();
+        await env.DB.prepare(
+            `INSERT OR REPLACE INTO cache_entries (key, value, fetched_at) VALUES (?, ?, ?)`,
+        )
+            .bind(
+                "github-contributions",
+                JSON.stringify({ ...data, fetchedAt }),
+                fetchedAt,
+            )
+            .run();
         return `${data.days.length} days, ${data.totalContributions} total`;
     });
 
