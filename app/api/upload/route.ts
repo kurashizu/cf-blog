@@ -6,17 +6,6 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 const BUCKET_NAME = "public-files";
 const UPLOAD_URL_EXPIRES_IN = 300; // 5 分钟
 
-function isSecretsStoreSecret(val: unknown): val is { get(): Promise<string> } {
-    return typeof val === "object" && val !== null && "get" in val;
-}
-
-async function getSecret(env: unknown, key: string): Promise<string> {
-    const val = (env as Record<string, unknown>)[key];
-    if (isSecretsStoreSecret(val)) return val.get();
-    if (typeof val === "string") return Promise.resolve(val);
-    throw new Error(`Missing credential: ${key}`);
-}
-
 export async function POST(request: Request) {
     const { env } = getCloudflareContext();
 
@@ -43,12 +32,12 @@ export async function POST(request: Request) {
         );
     }
 
-    // ── Read credentials from Secrets Store ──
-    const [accessKeyId, secretAccessKey, accountId] = await Promise.all([
-        getSecret(env, "R2_ACCESS_KEY_ID"),
-        getSecret(env, "R2_SECRET_ACCESS_KEY"),
-        getSecret(env, "R2_ACCOUNT_ID"),
-    ]);
+    // ── Read R2 credentials ──
+    const {
+        R2_ACCESS_KEY_ID: accessKeyId,
+        R2_SECRET_ACCESS_KEY: secretAccessKey,
+        R2_ACCOUNT_ID: accountId,
+    } = env;
 
     // ── Create S3 client pointed at R2 ──
     const s3 = new S3Client({

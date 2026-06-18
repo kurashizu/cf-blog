@@ -7,9 +7,9 @@ declare namespace Cloudflare {
         BUCKET: R2Bucket;
         PUBLIC_BUCKET: R2Bucket;
         DB: D1Database;
-        R2_ACCESS_KEY_ID: SecretsStoreSecret;
-        R2_SECRET_ACCESS_KEY: SecretsStoreSecret;
-        R2_ACCOUNT_ID: SecretsStoreSecret;
+        R2_ACCESS_KEY_ID: string;
+        R2_SECRET_ACCESS_KEY: string;
+        R2_ACCOUNT_ID: string;
         SEARCH_INDEX: VectorizeIndex;
         LLM_RATE_LIMIT: RateLimit;
         GUESTBOOK_RATE_LIMIT: RateLimit;
