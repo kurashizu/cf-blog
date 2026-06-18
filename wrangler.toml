@@ -16,6 +16,10 @@ database_id = "f763e00a-1c8b-42d4-ad4f-65d0136cabd2"
 binding = "BUCKET"
 bucket_name = "cf-blog-bucket"
 
+[[r2_buckets]]
+binding = "PUBLIC_BUCKET"
+bucket_name = "public-files"
+
 [[kv_namespaces]]
 binding = "SESSION_KV"
 id = "757683a8bedf4c53bd20854f6e0f27bb"
@@ -41,6 +45,21 @@ namespace_id = "1002"
   [ratelimits.simple]
   limit = 2
   period = 10
+
+[[secrets_store_bindings]]
+binding = "R2_ACCESS_KEY_ID"
+store_id = "373347de38764bbb815b8bc2ede4332d"
+secret_name = "R2_ACCESS_KEY_ID"
+
+[[secrets_store_bindings]]
+binding = "R2_SECRET_ACCESS_KEY"
+store_id = "373347de38764bbb815b8bc2ede4332d"
+secret_name = "R2_SECRET_ACCESS_KEY"
+
+[[secrets_store_bindings]]
+binding = "R2_ACCOUNT_ID"
+store_id = "373347de38764bbb815b8bc2ede4332d"
+secret_name = "R2_ACCOUNT_ID"
 
 [vars]
 GEMINI_MODELS = '["gemma-4-31b-it", "gemma-4-26b-a4b-it"]'
