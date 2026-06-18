@@ -214,16 +214,17 @@ Contributions powered by `cf-blog-cache` cron → R2, rendered server-side via `
 
 ## Upload API (cf-blog)
 
-`app/api/upload/route.ts` — R2 `public-files` bucket 的上传与列表接口。绑定自定义域名 `bucket.022025.xyz`。
+`app/api/upload/route.ts` — Upload and list API for the R2 `public-files` bucket. Bound to custom domain `bucket.022025.xyz`.
 
-| 方法 | 路径 | 说明 |
+| Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/upload` | 生成 presigned PUT URL（5 分钟有效），文件直传 R2 |
-| `GET` | `/api/upload` | 列出 bucket 中的文件（支持 `?prefix=` 筛选） |
+| `POST` | `/api/upload` | Generate a presigned PUT URL (5 min expiry), uploads go directly to R2 |
+| `GET` | `/api/upload` | List files in the bucket (supports `?prefix=` filter) |
+| `DELETE` | `/api/upload?filename=` | Delete a file from the bucket |
 
-鉴权：`Authorization: Bearer <UPLOAD_API_KEY>`（Worker secret，`npx wrangler secret put UPLOAD_API_KEY`）
+Auth: `Authorization: Bearer <UPLOAD_API_KEY>` (Worker secret, set via `npx wrangler secret put UPLOAD_API_KEY`)
 
-依赖：`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`
+Dependencies: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`
 
 ## Rate Limiting
 

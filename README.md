@@ -57,29 +57,29 @@ cd cache-worker && npx wrangler deploy                    # cf-blog-cache
 
 ## Upload API
 
-`POST /api/upload` — 生成 presigned URL 直传 `public-files` R2 bucket，文件可公开访问 `https://bucket.022025.xyz/<filename>`
+`POST /api/upload` — Generate a presigned URL to upload directly to the `public-files` R2 bucket. Files are publicly accessible at `https://bucket.022025.xyz/<filename>`
 
 ```bash
-# 获取上传链接
+# Get an upload link
 curl -X POST https://blog.022025.xyz/api/upload \
   -H "Authorization: Bearer <UPLOAD_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"filename":"avatar.png","contentType":"image/png"}'
 
-# 响应
+# Response
 # { "url": "...", "key": "avatar.png", "publicUrl": "https://bucket.022025.xyz/avatar.png", "expiresIn": 300 }
 
-# 直传 R2（URL 5 分钟有效）
+# Upload directly to R2 (URL valid for 5 minutes)
 curl -X PUT "<url>" -H "Content-Type: image/png" --data-binary @avatar.png
 ```
 
-`GET /api/upload` — 列出 bucket 中的文件
+`GET /api/upload` — List files in the bucket
 
 ```bash
 curl https://blog.022025.xyz/api/upload \
   -H "Authorization: Bearer <UPLOAD_API_KEY>"
 
-# 可选前缀筛选
+# Optional prefix filter
 curl "https://blog.022025.xyz/api/upload?prefix=images/" \
   -H "Authorization: Bearer <UPLOAD_API_KEY>"
 ```
