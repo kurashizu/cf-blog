@@ -1,19 +1,74 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+    S3Client,
+    PutObjectCommand,
+    ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const BUCKET_NAME = "public-files";
 const UPLOAD_URL_EXPIRES_IN = 300; // 5 分钟
 
-export async function POST(request: Request) {
-    const { env } = getCloudflareContext();
-
-    // ── API key check ──
+function checkAuth(
+    request: Request,
+    env: { UPLOAD_API_KEY: string },
+): NextResponse | null {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || authHeader !== `Bearer ${env.UPLOAD_API_KEY}`) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    return null;
+}
+
+function createS3Client(env: {
+    R2_ACCESS_KEY_ID: string;
+    R2_SECRET_ACCESS_KEY: string;
+    R2_ACCOUNT_ID: string;
+}) {
+    return new S3Client({
+        region: "auto",
+        endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        credentials: {
+            accessKeyId: env.R2_ACCESS_KEY_ID,
+            secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+        },
+    });
+}
+
+export async function GET(request: Request) {
+    const { env } = getCloudflareContext();
+
+    const authError = checkAuth(request, env);
+    if (authError) return authError;
+
+    const { searchParams } = new URL(request.url);
+    const prefix = searchParams.get("prefix") ?? "";
+
+    const s3 = createS3Client(env);
+
+    const command = new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: prefix,
+    });
+
+    const result = await s3.send(command);
+
+    const files = (result.Contents ?? []).map((obj) => ({
+        key: obj.Key,
+        size: obj.Size,
+        lastModified: obj.LastModified?.toISOString(),
+        publicUrl: obj.Key ? `https://bucket.022025.xyz/${obj.Key}` : null,
+    }));
+
+    return NextResponse.json({ files });
+}
+
+export async function POST(request: Request) {
+    const { env } = getCloudflareContext();
+
+    const authError = checkAuth(request, env);
+    if (authError) return authError;
 
     // ── Parse body ──
     let filename = "";
@@ -38,22 +93,7 @@ export async function POST(request: Request) {
         );
     }
 
-    // ── Read R2 credentials ──
-    const {
-        R2_ACCESS_KEY_ID: accessKeyId,
-        R2_SECRET_ACCESS_KEY: secretAccessKey,
-        R2_ACCOUNT_ID: accountId,
-    } = env;
-
-    // ── Create S3 client pointed at R2 ──
-    const s3 = new S3Client({
-        region: "auto",
-        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-        credentials: {
-            accessKeyId,
-            secretAccessKey,
-        },
-    });
+    const s3 = createS3Client(env);
 
     // ── Generate presigned PUT URL ──
     const command = new PutObjectCommand({
