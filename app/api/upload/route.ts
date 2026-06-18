@@ -4,6 +4,7 @@ import {
     S3Client,
     PutObjectCommand,
     ListObjectsV2Command,
+    DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -62,6 +63,33 @@ export async function GET(request: Request) {
     }));
 
     return NextResponse.json({ files });
+}
+
+export async function DELETE(request: Request) {
+    const { env } = getCloudflareContext();
+
+    const authError = checkAuth(request, env);
+    if (authError) return authError;
+
+    const { searchParams } = new URL(request.url);
+    const filename = searchParams.get("filename");
+    if (!filename) {
+        return NextResponse.json(
+            { error: "filename query param is required" },
+            { status: 400 },
+        );
+    }
+
+    const s3 = createS3Client(env);
+
+    await s3.send(
+        new DeleteObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: filename,
+        }),
+    );
+
+    return NextResponse.json({ deleted: filename });
 }
 
 export async function POST(request: Request) {
