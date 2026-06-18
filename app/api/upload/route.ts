@@ -9,6 +9,12 @@ const UPLOAD_URL_EXPIRES_IN = 300; // 5 分钟
 export async function POST(request: Request) {
     const { env } = getCloudflareContext();
 
+    // ── API key check ──
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || authHeader !== `Bearer ${env.UPLOAD_API_KEY}`) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // ── Parse body ──
     let filename = "";
     let contentType = "application/octet-stream";
