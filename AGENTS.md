@@ -242,8 +242,8 @@ Two-layer: Cloudflare Rate Limiter (burst) + KV (daily).
 ## Triple-Worker CI
 
 `.github/workflows/deploy.yml` runs on push to `main`:
-1. **Phase 1 (build)** — `build-{cf-blog,cf-agent,cache-worker}` run in parallel with no dependencies
-2. **Phase 2 (deploy)** — after all builds succeed, `update-db` + `deploy-{cf-blog,cf-agent,cache-worker}` run in parallel
+1. **deploy-{cf-blog,cf-agent,cache-worker}** — install + build + deploy, run in parallel with no dependencies
+2. **update-db** — runs in parallel with the deploy jobs
 
 Direct deploy (skips CI):
 - `npx wrangler deploy` (cf-blog)
