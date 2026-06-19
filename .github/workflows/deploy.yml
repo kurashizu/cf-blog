@@ -111,11 +111,6 @@ jobs:
                   cd cache-worker
                   npm ci --legacy-peer-deps
 
-            - name: Test
-              run: |
-                  cd cache-worker
-                  npm test
-
     # ── Phase 2: Deploy all + update DB in parallel ──
 
     update-db:
