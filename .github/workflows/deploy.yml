@@ -85,7 +85,7 @@ jobs:
                   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
                   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-deploy-cache-worker:
+    deploy-cache-worker:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
@@ -101,7 +101,7 @@ deploy-cache-worker:
                   path: cache-worker/node_modules
                   key: cache-node-${{ hashFiles('cache-worker/package-lock.json') }}
                   restore-keys: |
-                  cache-node-
+                      cache-node-
 
             - name: Install dependencies
               if: steps.cache-cache.outputs.cache-hit != 'true'
@@ -133,7 +133,7 @@ deploy-cache-worker:
                   path: landing-worker/node_modules
                   key: landing-node-${{ hashFiles('landing-worker/package-lock.json') }}
                   restore-keys: |
-                  landing-node-
+                      landing-node-
 
             - name: Install dependencies
               if: steps.cache-landing.outputs.cache-hit != 'true'
