@@ -5,10 +5,11 @@ Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents
 ## Workers
 
 | Worker | Path | URL | Purpose |
-|---|---|---|---|---|
+|---|---|---|---|
 | `cf-blog` | `./` | https://blog.022025.xyz | Main blog (Next.js) |
 | `cf-agent` | `agent-worker/` | https://agent.022025.xyz | AI agent with tool calling (Next.js) |
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Refreshes caches every 30 min + heartbeat every 3 min + daily HN top-30 fetch |
+| `cf-landing` | `landing-worker/` | https://022025.xyz / https://www.022025.xyz | Full-screen scroll-driven portal page linking to blog/agent (Next.js, no D1/R2/KV/Vectorize) |
 
 
 
@@ -253,6 +254,7 @@ Direct deploy (skips CI):
 ## Conventions
 
 - All Next.js workers use `@opennextjs/cloudflare` (not `next start`).
+- `landing-worker/` uses the same `@opennextjs/cloudflare` stack but has no D1/R2/KV/Vectorize bindings — pure static SSR with CSS scroll-driven animations. Custom domains for `022025.xyz` and `www.022025.xyz` are configured in the Cloudflare Dashboard (not in `wrangler.toml`).
 - Static assets go in `public/`. Blog article markdown lives in D1, not the repo (R2 markdown backups were removed in the D1 migration).
 - Theme colors via CSS variables in `components/theme/tokens.css`. Tailwind utilities map to these (`bg-bg-card`, `text-text-muted`, etc.).
 - CSS is split by scope: `components/theme/tokens.css` (variables) + `components/theme/base.css` (reset + body effects + terminal/logo + `prefers-reduced-motion`) are global in `app/layout.tsx`. Page-specific CSS is co-located with components (`components/activity/activity.css`, `components/nes/nes.css`) and imported only where needed. All other styling uses Tailwind utility classes directly in JSX.

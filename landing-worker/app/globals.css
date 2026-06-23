@@ -1,0 +1,162 @@
+:root {
+    --bg: #0a0a14;
+    --text: #ffffff;
+    --muted: #c8c8d0;
+    --accent: #ff6b35;
+    --accent-glow: rgba(255, 107, 53, 0.45);
+}
+
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+    background: var(--accent);
+    color: white;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+}
+
+/* =====================================================
+   AURORA — single fixed layer, GPU-friendly animation
+   Uses transform (compositor-only) + opacity; no layout/paint thrash.
+   ===================================================== */
+.aurora {
+    position: fixed;
+    inset: -10%;
+    z-index: 0;
+    pointer-events: none;
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(
+            circle at 28% 32%,
+            rgba(255, 107, 53, 0.65) 0%,
+            transparent 38%
+        ),
+        radial-gradient(
+            circle at 72% 68%,
+            rgba(74, 158, 255, 0.5) 0%,
+            transparent 38%
+        ),
+        radial-gradient(
+            circle at 50% 50%,
+            rgba(168, 85, 247, 0.4) 0%,
+            transparent 42%
+        );
+    background-size: 120% 120%;
+    background-position: center;
+    will-change: transform, background-position;
+    animation: aurora-drift 24s ease-in-out infinite;
+    /* Hint compositor to keep it on its own layer */
+    transform: translateZ(0);
+}
+
+@keyframes aurora-drift {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        background-position: 50% 50%;
+    }
+    50% {
+        transform: translate3d(-1.5%, -1%, 0) scale(1.04);
+        background-position: 55% 45%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aurora {
+        animation: none;
+    }
+}
+
+/* =====================================================
+   HERO TITLE — solid white + soft glow
+   ===================================================== */
+.hero-title {
+    font-family: var(--font-playfair), "Playfair Display", "Georgia", serif;
+    font-style: italic;
+    font-weight: 900;
+    font-size: clamp(3.5rem, 14vw, 11rem);
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+    text-align: center;
+    text-shadow:
+        0 0 40px var(--accent-glow),
+        0 0 80px rgba(255, 107, 53, 0.25);
+}
+
+.hero-subtitle {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-top: 1.25rem;
+    text-align: center;
+}
+
+/* =====================================================
+   ENTER BUTTON — subtle micro-interaction on hover
+   Only transform + box-shadow animate (compositor-friendly).
+   ===================================================== */
+.enter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.05rem 3rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: rgba(20, 20, 30, 0.7);
+    border: 1px solid var(--accent);
+    border-radius: 9999px;
+    cursor: pointer;
+    text-decoration: none;
+    margin-top: 3rem;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(255, 107, 53, 0.2);
+    transition:
+        transform 200ms ease,
+        box-shadow 200ms ease,
+        background 200ms ease;
+    will-change: transform;
+}
+
+.enter-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(30, 30, 45, 0.85);
+    box-shadow:
+        0 6px 28px rgba(0, 0, 0, 0.5),
+        0 0 50px var(--accent-glow),
+        0 0 100px rgba(255, 107, 53, 0.2);
+}
+
+.enter-btn:active {
+    transform: translateY(0) scale(0.98);
+    transition-duration: 80ms;
+}
