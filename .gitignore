@@ -8,4 +8,5 @@ superpowers/
 .opencode/
 # Blog post markdown — lives in D1, not in the repo
 articles/*.md
+docs/drafts/
 local/
