@@ -4,19 +4,107 @@
  * Usage:
  *   node scripts/publish-post.mjs docs/drafts/your-post.md
  *
+ * Zero external dependencies — parses frontmatter manually.
  * The script:
- *   1. Reads the markdown file
- *   2. Parses the YAML frontmatter
- *   3. Extracts the body content
- *   4. Generates an INSERT SQL statement (matching lib/articles.ts save() logic)
- *   5. Executes it via `npx wrangler d1 execute --file`
+ *   1. Reads the markdown file, parses YAML frontmatter
+ *   2. Generates an INSERT SQL statement (matching lib/articles.ts save() logic)
+ *   3. Executes it via `npx wrangler d1 execute --file`
  */
 
 import { readFileSync, writeFileSync, unlinkSync } from "fs";
 import { execSync } from "child_process";
-import matter from "gray-matter";
 
-// --------------- helpers ---------------
+// --------------- YAML frontmatter parser (no deps) ---------------
+
+/**
+ * Split markdown on `---` fence and extract frontmatter + body.
+ * Returns { data: Record<string, unknown>, content: string }.
+ */
+function parseFrontmatter(raw) {
+    const lines = raw.split(/\r?\n/);
+    if (lines[0]?.trim() !== "---") {
+        return { data: {}, content: raw };
+    }
+
+    const endIdx = lines.indexOf("---", 1);
+    if (endIdx === -1) {
+        return { data: {}, content: raw };
+    }
+
+    const fmLines = lines.slice(1, endIdx);
+    const body = lines
+        .slice(endIdx + 1)
+        .join("\n")
+        .trimStart();
+
+    return { data: parseYaml(fmLines), content: body };
+}
+
+/**
+ * Minimal YAML key-value parser.
+ * Handles: scalar strings, numbers, booleans, inline arrays [...], null.
+ * Ignores lines starting with `#` (not inside quotes).
+ */
+function parseYaml(lines) {
+    const data = {};
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+
+        const colonIdx = trimmed.indexOf(":");
+        if (colonIdx === -1) continue;
+
+        const key = trimmed.slice(0, colonIdx).trim();
+        let val = trimmed.slice(colonIdx + 1).trim();
+
+        if (!key) continue;
+
+        data[key] = coerceYamlValue(val);
+    }
+    return data;
+}
+
+function coerceYamlValue(raw) {
+    if (!raw || raw === "~" || raw === "null") return null;
+
+    // Inline array: [a, b, c]
+    if (raw.startsWith("[") && raw.endsWith("]")) {
+        const inner = raw.slice(1, -1).trim();
+        if (!inner) return [];
+        return inner.split(",").map((s) => {
+            const v = s.trim();
+            // Strip surrounding quotes
+            if (
+                (v.startsWith('"') && v.endsWith('"')) ||
+                (v.startsWith("'") && v.endsWith("'"))
+            ) {
+                return v.slice(1, -1);
+            }
+            return v;
+        });
+    }
+
+    // Strip surrounding quotes
+    if (
+        (raw.startsWith('"') && raw.endsWith('"')) ||
+        (raw.startsWith("'") && raw.endsWith("'"))
+    ) {
+        return raw.slice(1, -1);
+    }
+
+    // Booleans
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+
+    // Numbers
+    if (/^-?\d+(\.\d+)?$/.test(raw)) {
+        return raw.includes(".") ? parseFloat(raw) : parseInt(raw, 10);
+    }
+
+    return raw;
+}
+
+// --------------- SQL helpers ---------------
 
 function die(msg) {
     console.error(`\n❌ ${msg}`);
@@ -39,7 +127,6 @@ function normaliseBool(v, defaultVal) {
 
 function escapeSql(val) {
     if (val === null || val === undefined) return "NULL";
-    // Double single quotes for SQL string escaping
     const s = String(val).replace(/'/g, "''");
     return `'${s}'`;
 }
@@ -51,7 +138,6 @@ if (!filePath) {
     die("Usage: node scripts/publish-post.mjs <path-to-markdown-file>");
 }
 
-// Read and parse the markdown file
 let raw;
 try {
     raw = readFileSync(filePath, "utf-8");
@@ -59,9 +145,8 @@ try {
     die(`Cannot read file: ${filePath}\n${err.message}`);
 }
 
-const { data, content } = matter(raw);
+const { data, content } = parseFrontmatter(raw);
 
-// Validate required fields
 if (!data.title) die("Missing required frontmatter field: title");
 if (!data.slug) die("Missing required frontmatter field: slug");
 
@@ -97,7 +182,7 @@ const contentHash = hashArray
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-// Build the SQL
+// Build the SQL (matches lib/articles.ts save() exactly)
 const sql = `
 INSERT INTO posts
     (id, slug, title, excerpt, content,
@@ -144,17 +229,14 @@ console.log(`   Tags:       ${tags}`);
 console.log(`   Body size:  ${body.length} chars`);
 console.log(`   Content hash: ${contentHash}\n`);
 
-// Write SQL to a temp file (avoids shell escaping issues with large content)
+// Write to temp SQL file to avoid shell escaping issues
 const tmpFile = `/tmp/publish-${slug}.sql`;
 writeFileSync(tmpFile, sql, "utf-8");
 
 try {
     const output = execSync(
         `npx wrangler d1 execute cf-blog-db --file="${tmpFile}" --remote 2>&1`,
-        {
-            encoding: "utf-8",
-            stdio: "pipe",
-        },
+        { encoding: "utf-8", stdio: "pipe", timeout: 60000 },
     );
     console.log("✅ Published successfully!");
     console.log(output.trim());
@@ -166,6 +248,6 @@ try {
     try {
         unlinkSync(tmpFile);
     } catch {
-        // ignore cleanup errors
+        // ignore
     }
 }
