@@ -104,3 +104,28 @@ CREATE TABLE IF NOT EXISTS cache_entries (
     value     TEXT NOT NULL,
     fetched_at TEXT NOT NULL
 );
+
+-- ============================================
+-- About page quick links (managed via D1, rendered on /about)
+-- ============================================
+CREATE TABLE IF NOT EXISTS about_links (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    url         TEXT NOT NULL,
+    icon        TEXT NOT NULL DEFAULT 'link',
+    description TEXT NOT NULL DEFAULT '',
+    group_name  TEXT NOT NULL DEFAULT 'products',
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    visible     INTEGER NOT NULL DEFAULT 1,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_about_links_visible_sort
+    ON about_links(visible, group_name, sort_order);
+
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('share', 'Share', 'https://share.022025.xyz', 'share-2',
+     'Temporary file sharing · 5GB max', 'products', 10);
