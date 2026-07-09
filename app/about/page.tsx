@@ -1,8 +1,14 @@
 import Link from "next/link";
 import {
     ArrowUpRight,
+    Cloud,
+    Cpu,
+    Film,
     Link as LinkIcon,
     type LucideIcon,
+    Package,
+    Server,
+    Terminal,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { createAboutLinksRepo, type AboutLink } from "@/lib/about-links";
@@ -21,6 +27,7 @@ export const dynamic = "force-dynamic";
 type TechItem = string;
 type TechGroup = {
     category: string;
+    icon: LucideIcon;
     items: TechItem[];
     sublabel?: string;
     subitems?: TechItem[];
@@ -29,19 +36,22 @@ type TechGroup = {
 const techStack: TechGroup[] = [
     {
         category: "Edge",
-        items: ["Cloudflare Workers", "cloudflared"],
+        icon: Cloud,
+        items: ["Cloudflare Workers", "cloudflared", "OpenNext"],
         sublabel: "Bindings",
         subitems: ["D1", "R2", "KV", "Vectorize"],
     },
     {
         category: "Local",
+        icon: Server,
         items: ["Arch Linux", "MacOS", "KDE Plasma"],
         sublabel: "System",
         subitems: ["btrfs", "zram", "zstd"],
     },
     {
         category: "Inference",
-        items: ["llama.cpp", "ROCm (AMD GPU)"],
+        icon: Cpu,
+        items: ["llama.cpp", "ROCm (AMD GPU)", "gguf"],
         sublabel: "Models",
         subitems: [
             "gemma-4-31b-it",
@@ -52,16 +62,21 @@ const techStack: TechGroup[] = [
     },
     {
         category: "Media",
-        items: ["FFmpeg", "VAAPI"],
+        icon: Film,
+        items: ["FFmpeg", "VAAPI", "yt-dlp"],
         sublabel: "Codecs",
         subitems: ["AV1", "AVIF", "Opus"],
     },
     {
         category: "Editor",
-        items: ["Zed", "Vim", "tmux", "konsole", "Bash"],
+        icon: Terminal,
+        items: ["Zed", "Vim", "OpenCode"],
+        sublabel: "Shell",
+        subitems: ["tmux", "konsole", "Bash"],
     },
     {
         category: "Toolchain",
+        icon: Package,
         items: ["uv", "cargo", "npm"],
     },
 ];
@@ -121,62 +136,64 @@ export default async function AboutPage() {
                     Stack
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                    {techStack.map((group) => (
-                        <div key={group.category} className="h-full">
-                            <Card
-                                className={`group h-full min-h-[180px] transition-all hover:border-accent ${
-                                    group.sublabel
-                                        ? "cursor-default"
-                                        : ""
-                                }`}
-                            >
-                                <CardContent className="pt-4">
-                                    <code className="text-xs text-text-muted uppercase tracking-wider mb-3 block">
-                                        {group.category}
-                                    </code>
-                                    <div className="space-y-1">
-                                        {group.items.map((item) => (
-                                            <span
-                                                key={item}
-                                                className="block text-sm text-text-primary font-mono"
-                                            >
-                                                {item}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    {group.sublabel && group.subitems && (
-                                        <div
-                                            className="invisible max-h-0 overflow-hidden opacity-0
-                                                       group-hover:visible group-hover:max-h-[500px] group-hover:opacity-100
-                                                       group-hover:mt-3 group-hover:pt-3 group-hover:border-t group-hover:border-border
-                                                       transition-all duration-200 ease-out"
-                                        >
-                                            <code className="text-[0.6rem] text-text-muted uppercase tracking-wider mb-2 block">
-                                                {group.sublabel}
-                                            </code>
-                                            <div className="flex flex-wrap gap-x-1.5 gap-y-1 text-xs font-mono text-text-muted">
-                                                {group.subitems.map(
-                                                    (item, i) => (
-                                                        <span
-                                                            key={item}
-                                                            className="inline-flex items-center"
-                                                        >
-                                                            {i > 0 && (
-                                                                <span className="text-text-muted/50 mr-1.5">
-                                                                    ·
-                                                                </span>
-                                                            )}
-                                                            {item}
-                                                        </span>
-                                                    ),
-                                                )}
-                                            </div>
+                    {techStack.map((group) => {
+                        const Icon = group.icon;
+                        return (
+                            <div key={group.category} className="h-full">
+                                <Card
+                                    className="group h-full min-h-[210px] transition-all hover:border-accent"
+                                >
+                                    <CardContent className="pt-5 flex flex-col h-full">
+                                        <div className="mb-3 text-text-muted group-hover:text-accent transition-colors">
+                                            <Icon size={28} strokeWidth={1.5} />
                                         </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
-                    ))}
+                                        <code className="text-xs text-text-muted uppercase tracking-wider mb-3 block">
+                                            {group.category}
+                                        </code>
+                                        <div className="space-y-1">
+                                            {group.items.map((item) => (
+                                                <span
+                                                    key={item}
+                                                    className="block text-sm text-text-primary font-mono"
+                                                >
+                                                    {item}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        {group.sublabel && group.subitems && (
+                                            <div
+                                                className="max-h-0 overflow-hidden opacity-0
+                                                           group-hover:max-h-[300px] group-hover:opacity-100
+                                                           group-hover:mt-3 group-hover:pt-3 group-hover:border-t group-hover:border-border
+                                                           transition-all duration-300 ease-out"
+                                            >
+                                                <code className="text-[0.6rem] text-text-muted uppercase tracking-wider mb-2 block">
+                                                    {group.sublabel}
+                                                </code>
+                                                <div className="flex flex-wrap gap-x-1.5 gap-y-1 text-xs font-mono text-text-muted">
+                                                    {group.subitems.map(
+                                                        (item, i) => (
+                                                            <span
+                                                                key={item}
+                                                                className="inline-flex items-center"
+                                                            >
+                                                                {i > 0 && (
+                                                                    <span className="text-text-muted/50 mr-1.5">
+                                                                        ·
+                                                                    </span>
+                                                                )}
+                                                                {item}
+                                                            </span>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        );
+                    })}
                 </div>
             </section>
 
