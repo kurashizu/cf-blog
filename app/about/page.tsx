@@ -13,6 +13,11 @@ export const metadata = {
     description: "About Kurashizu - software engineer and writer.",
 };
 
+// /about reads from D1 (via lib/about-links). Next.js would otherwise try
+// to prerender it as static, which fails because getCloudflareContext
+// isn't available at build time. Mark it dynamic so it renders at request time.
+export const dynamic = "force-dynamic";
+
 const techStack = [
     { category: "OS", items: ["MacOS", "Arch Linux"] },
     { category: "Desktop", items: ["KDE Plasma"] },
