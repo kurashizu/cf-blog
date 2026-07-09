@@ -29,11 +29,9 @@ type TechGroup = {
 const techStack: TechGroup[] = [
     {
         category: "Edge",
-        items: [
-            "Cloudflare Workers",
-            "D1 / R2 / KV / Vectorize",
-            "cloudflared",
-        ],
+        items: ["Cloudflare Workers", "cloudflared"],
+        sublabel: "Bindings",
+        subitems: ["D1", "R2", "KV", "Vectorize"],
     },
     {
         category: "Local",
@@ -44,6 +42,13 @@ const techStack: TechGroup[] = [
     {
         category: "Inference",
         items: ["llama.cpp", "ROCm (AMD GPU)"],
+        sublabel: "Models",
+        subitems: [
+            "gemma-4-31b-it",
+            "Gemini Embedding 2",
+            "Llama-3.2-1B",
+            "Qwen3-1.7B",
+        ],
     },
     {
         category: "Media",
@@ -53,7 +58,7 @@ const techStack: TechGroup[] = [
     },
     {
         category: "Editor",
-        items: ["Zed", "Vim"],
+        items: ["Zed", "Vim", "tmux", "konsole", "Bash"],
     },
     {
         category: "Toolchain",
@@ -115,10 +120,16 @@ export default async function AboutPage() {
                 <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
                     Stack
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
                     {techStack.map((group) => (
                         <div key={group.category} className="h-full">
-                            <Card className="h-full">
+                            <Card
+                                className={`group h-full min-h-[180px] transition-all hover:border-accent ${
+                                    group.sublabel
+                                        ? "cursor-default"
+                                        : ""
+                                }`}
+                            >
                                 <CardContent className="pt-4">
                                     <code className="text-xs text-text-muted uppercase tracking-wider mb-3 block">
                                         {group.category}
@@ -134,7 +145,12 @@ export default async function AboutPage() {
                                         ))}
                                     </div>
                                     {group.sublabel && group.subitems && (
-                                        <div className="mt-3 pt-3 border-t border-border">
+                                        <div
+                                            className="invisible max-h-0 overflow-hidden opacity-0
+                                                       group-hover:visible group-hover:max-h-[500px] group-hover:opacity-100
+                                                       group-hover:mt-3 group-hover:pt-3 group-hover:border-t group-hover:border-border
+                                                       transition-all duration-200 ease-out"
+                                        >
                                             <code className="text-[0.6rem] text-text-muted uppercase tracking-wider mb-2 block">
                                                 {group.sublabel}
                                             </code>
