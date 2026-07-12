@@ -73,7 +73,7 @@ export function Header() {
                 {/* Center: search */}
                 <div className="flex-1 flex justify-center">
                     <div className="hidden md:block">
-                        <SearchBar variant="icon" />
+                        <SearchBar />
                     </div>
                 </div>
 
@@ -202,7 +202,7 @@ export function Header() {
             >
                 <div className="border-t border-border bg-bg-primary/95 backdrop-blur-xl">
                     <div className="px-4 pt-3 pb-1">
-                        <SearchBar variant="icon" />
+                        <SearchBar />
                     </div>
                     <ul className="flex flex-col px-4 py-2">
                         {navLinks.map((link) => {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { SearchBar } from "@/components/search/SearchBar";
 
 interface SearchResult {
     id: string;
@@ -71,31 +70,26 @@ export function SearchResults({
                     Search Results
                 </h1>
 
-                {/* Search bar + filter pills */}
-                <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                        <SearchBar variant="inline" initialQuery={query} />
-                    </div>
-                    <div className="flex shrink-0 rounded-lg border border-border bg-bg-card p-0.5">
-                        {FILTER_OPTIONS.map((opt) => {
-                            const isActive = sourceFilter === opt.value;
-                            return (
-                                <button
-                                    key={opt.value}
-                                    onClick={() =>
-                                        handleFilterChange(opt.value)
-                                    }
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                                        isActive
-                                            ? "bg-accent text-white shadow-sm"
-                                            : "text-text-secondary hover:text-text-primary hover:bg-bg-primary"
-                                    }`}
-                                >
-                                    {opt.label}
-                                </button>
-                            );
-                        })}
-                    </div>
+                {/* Filter pills */}
+                <div className="flex shrink-0 rounded-lg border border-border bg-bg-card p-0.5">
+                    {FILTER_OPTIONS.map((opt) => {
+                        const isActive = sourceFilter === opt.value;
+                        return (
+                            <button
+                                key={opt.value}
+                                onClick={() =>
+                                    handleFilterChange(opt.value)
+                                }
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                                    isActive
+                                        ? "bg-accent text-white shadow-sm"
+                                        : "text-text-secondary hover:text-text-primary hover:bg-bg-primary"
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {isRateLimited ? (
@@ -117,13 +111,11 @@ export function SearchResults({
                     </div>
                 ) : (
                     <p className="text-sm text-text-secondary mt-2">
-                        {results.length > 0
-                            ? `Found ${results.length} result${results.length === 1 ? "" : "s"} for "${query}"`
-                            : error
-                              ? `Search failed: ${error}`
-                              : `No results for "${query}"`}
-                        {sourceFilter !== "all" &&
-                            ` in ${sourceFilter === "blog" ? "blog posts" : "news"}`}
+                        {error
+                            ? `Search failed: ${error}`
+                            : results.length > 0
+                              ? `Results for "${query}" found.`
+                              : `No results for "${query}".`}
                     </p>
                 )}
             </div>
