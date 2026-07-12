@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BLOG_URL } from "../../shared/site-config";
 
 export default function NotFound() {
     return (
@@ -33,7 +34,7 @@ export default function NotFound() {
                 This page wandered off into the void.
             </p>
             <Link
-                href="https://blog.022025.xyz"
+                href={BLOG_URL}
                 className="enter-btn"
                 style={{ textDecoration: "none" }}
             >

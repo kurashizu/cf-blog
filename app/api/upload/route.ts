@@ -7,6 +7,7 @@ import {
     DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { BUCKET_URL } from "@/shared/site-config";
 
 const BUCKET_NAME = "public-files";
 const UPLOAD_URL_EXPIRES_IN = 300; // 5 分钟
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
         key: obj.Key,
         size: obj.Size,
         lastModified: obj.LastModified?.toISOString(),
-        publicUrl: obj.Key ? `https://bucket.022025.xyz/${obj.Key}` : null,
+        publicUrl: obj.Key ? `${BUCKET_URL}/${obj.Key}` : null,
     }));
 
     return NextResponse.json({ files });
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
         url,
         key: filename,
-        publicUrl: `https://bucket.022025.xyz/${filename}`,
+        publicUrl: `${BUCKET_URL}/${filename}`,
         expiresIn: UPLOAD_URL_EXPIRES_IN,
     });
 }

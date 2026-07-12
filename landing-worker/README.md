@@ -1,6 +1,6 @@
 # cf-landing
 
-Minimal portal page deployed to `022025.xyz` and `www.022025.xyz`. Single full-screen view with an animated aurora background and one CTA button.
+Minimal portal page deployed to the apex domain (e.g. `krsz.in` and `www.krsz.in`). Single full-screen view with an animated aurora background and one CTA button.
 
 ## Stack
 
@@ -34,10 +34,7 @@ Or push to `main` — the `deploy-landing` GitHub Actions job handles it automat
 
 ## Custom Domains
 
-Configure in the Cloudflare Dashboard (Workers → cf-landing → Settings → Triggers → Custom Domains):
-
-- `022025.xyz`
-- `www.022025.xyz`
+Configure in the Cloudflare Dashboard (Workers → cf-landing → Settings → Triggers → Custom Domains). The apex domain is centralized in `shared/site-config.ts` (`LANDING_URL`, `LANDING_WWW_URL`) — bind the apex and `www.apex` for whatever `APEX_DOMAIN` resolves to.
 
 The `wrangler.toml` does **not** declare routes on purpose — domain routing is dashboard-managed.
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import { LANDING_URL } from "../../shared/site-config";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
@@ -11,7 +12,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-    metadataBase: new URL("https://022025.xyz"),
+    metadataBase: new URL(LANDING_URL),
     title: "Kurashizu",
     description: "where ideas flow",
     authors: [{ name: "Kurashizu" }],

@@ -1,3 +1,5 @@
+import { BLOG_URL } from "../../shared/site-config";
+
 export default function HomePage() {
     return (
         <>
@@ -17,7 +19,7 @@ export default function HomePage() {
                 <h1 className="hero-title">KURASHIZU</h1>
                 <p className="hero-subtitle">where ideas flow</p>
                 <a
-                    href="https://blog.022025.xyz"
+                    href={BLOG_URL}
                     className="enter-btn"
                     style={{ textDecoration: "none" }}
                 >

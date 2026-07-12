@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getDB } from "@/lib/d1";
+import { BLOG_URL } from "@/shared/site-config";
 
-const SITE_URL = "https://blog.022025.xyz";
+const SITE_URL = BLOG_URL;
 
 export const dynamic = "force-dynamic";
 

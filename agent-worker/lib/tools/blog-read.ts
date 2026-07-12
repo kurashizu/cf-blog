@@ -1,6 +1,7 @@
 import type { Tool } from "./index";
+import { BLOG_URL } from "../../../shared/site-config";
 
-const ARTICLE_API = "https://blog.022025.xyz/api/articles";
+const ARTICLE_API = `${BLOG_URL}/api/articles`;
 
 export const blogReadTool: Tool = {
     name: "blog_read",

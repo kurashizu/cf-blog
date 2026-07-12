@@ -127,5 +127,18 @@ CREATE INDEX IF NOT EXISTS idx_about_links_visible_sort
 INSERT OR IGNORE INTO about_links
     (id, name, url, icon, description, group_name, sort_order)
 VALUES
-    ('share', 'Share', 'https://share.022025.xyz', 'share-2',
+    ('share', 'Share', 'https://share.krsz.in', 'share-2',
      'Temporary file sharing · 5GB max', 'products', 10);
+
+-- NOTE: The `INSERT OR IGNORE` above only takes effect when no row with
+-- `id = 'share'` exists yet. If you already have the row in D1 (e.g. from
+-- a prior deployment on `*.022025.xyz`), re-running this file will NOT
+-- update the URL. To migrate existing data, run the UPDATE manually:
+--
+--   UPDATE about_links
+--      SET url = 'https://share.krsz.in'
+--    WHERE id = 'share';
+--
+-- The apex domain for new rows is also tracked in `shared/site-config.ts`
+-- (SHARE_URL) — keep that constant and the SQL above in sync when migrating
+-- to a new domain.

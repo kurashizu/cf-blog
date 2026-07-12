@@ -12,12 +12,13 @@ import { ParticleBackground } from "@/components/effects/ParticleBackground";
 import { MouseTrail } from "@/components/effects/MouseTrail";
 import { ConsoleEasterEgg } from "@/components/effects/ConsoleEasterEgg";
 import { StayEasterEgg } from "@/components/effects/StayEasterEgg";
+import { BLOG_URL } from "@/shared/site-config";
 
 const inter = Inter({ subsets: ["latin"] });
 const playfair = Playfair_Display({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    metadataBase: new URL("https://blog.022025.xyz"),
+    metadataBase: new URL(BLOG_URL),
     title: {
         default: "Kurashizu's Blog",
         template: "%s | Kurashizu's Blog",

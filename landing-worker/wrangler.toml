@@ -7,8 +7,9 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-# Custom domains (022025.xyz, www.022025.xyz) are configured in the
-# Cloudflare Dashboard — not declared here on purpose.
+# Custom domains (apex + www.apex, e.g. `krsz.in` + `www.krsz.in`) are
+# configured in the Cloudflare Dashboard — not declared here on purpose.
+# Apex domain is centralized in `shared/site-config.ts` (APEX_DOMAIN).
 
 [observability]
 enabled = false

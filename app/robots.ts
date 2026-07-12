@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { BLOG_URL } from "@/shared/site-config";
 
 export default function robots(): MetadataRoute.Robots {
     return {
@@ -6,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             userAgent: "*",
             allow: "/",
         },
-        sitemap: "https://blog.022025.xyz/sitemap.xml",
+        sitemap: `${BLOG_URL}/sitemap.xml`,
     };
 }

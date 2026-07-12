@@ -1,6 +1,7 @@
 import type { Tool } from "./index";
+import { BLOG_URL } from "../../../shared/site-config";
 
-const BLOG_SEARCH_API = "https://blog.022025.xyz/api/search";
+const BLOG_SEARCH_API = `${BLOG_URL}/api/search`;
 
 interface SearchHit {
     title: string;
@@ -120,7 +121,7 @@ export const blogSearchTool: Tool = {
                 ...(r.source === "news" && r.url
                     ? { original_url: r.url }
                     : {}),
-                url: `https://blog.022025.xyz/${r.source === "blog" ? "blog" : "news"}/${r.slug}`,
+                url: `${BLOG_URL}/${r.source === "blog" ? "blog" : "news"}/${r.slug}`,
             }));
 
             return { success: true, result: formatted };

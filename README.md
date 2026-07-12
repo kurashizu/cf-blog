@@ -9,7 +9,7 @@ A personal blog + AI agent deployed to Cloudflare Workers. The homepage has a re
 - **GitHub Contributions Heatmap** — Real-time activity ribbon in the hero
 - **Top Languages Donut** — 5-segment SVG donut with hover interaction (shows language name + percentage in center), color-coded legend (hero sidebar)
 - **Visitor Terminal** — Typewriter effect showing your IP/location/ISP at the top of the hero
-- **KurAgent** — AI assistant with tool calling (web search, time, JS eval) at `agent.022025.xyz`
+- **KurAgent** — AI assistant with tool calling (web search, time, JS eval) at `agent.krsz.in`
 - **LLM Leaderboard** — Full-screen modal showing top 50 models from Artificial Analysis
 - **Guestbook** — Per-visitor message at `/guestbook`
 - **News Archive** — Paginated HN news index at `/news` with full-text AI rewrites
@@ -22,9 +22,13 @@ Three Cloudflare Workers, deployed in parallel by GitHub Actions on push to `mai
 
 | Worker | Path | URL | Purpose |
 |---|---|---|---|
-| `cf-blog` | `./` | https://blog.022025.xyz | Main blog (Next.js) |
-| `cf-agent` | `agent-worker/` | https://agent.022025.xyz | AI agent with tool calling |
+| `cf-blog` | `./` | https://blog.krsz.in | Main blog (Next.js) |
+| `cf-agent` | `agent-worker/` | https://agent.krsz.in | AI agent with tool calling |
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Homepage cache refresh (30-min) + News rewrite heartbeat (3-min) |
+
+> Apex domain is centralized in `shared/site-config.ts` (`APEX_DOMAIN`,
+> currently `krsz.in`). All worker URLs fan out from a single constant — change
+> one line to migrate to a new apex.
 
 The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches data into D1 (posts, news, github_repos) and into a couple of read-only R2 caches (contributions, LLM leaderboard); the homepage reads from D1 for posts, news, and GitHub repos, and from R2 for contributions and LLM leaderboard. Cold cache = empty hero; ISR revalidates every 5 min.
 
@@ -57,17 +61,17 @@ cd cache-worker && npx wrangler deploy                    # cf-blog-cache
 
 ## Upload API
 
-`POST /api/upload` — Generate a presigned URL to upload directly to the `public-files` R2 bucket. Files are publicly accessible at `https://bucket.022025.xyz/<filename>`
+`POST /api/upload` — Generate a presigned URL to upload directly to the `public-files` R2 bucket. Files are publicly accessible at `https://bucket.krsz.in/<filename>` (driven by `BUCKET_URL` in `shared/site-config.ts`).
 
 ```bash
 # Get an upload link
-curl -X POST https://blog.022025.xyz/api/upload \
+curl -X POST https://blog.krsz.in/api/upload \
   -H "Authorization: Bearer <UPLOAD_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"filename":"avatar.png","contentType":"image/png"}'
 
 # Response
-# { "url": "...", "key": "avatar.png", "publicUrl": "https://bucket.022025.xyz/avatar.png", "expiresIn": 300 }
+# { "url": "...", "key": "avatar.png", "publicUrl": "https://bucket.krsz.in/avatar.png", "expiresIn": 300 }
 
 # Upload directly to R2 (URL valid for 5 minutes)
 curl -X PUT "<url>" -H "Content-Type: image/png" --data-binary @avatar.png
@@ -76,11 +80,11 @@ curl -X PUT "<url>" -H "Content-Type: image/png" --data-binary @avatar.png
 `GET /api/upload` — List files in the bucket
 
 ```bash
-curl https://blog.022025.xyz/api/upload \
+curl https://blog.krsz.in/api/upload \
   -H "Authorization: Bearer <UPLOAD_API_KEY>"
 
 # Optional prefix filter
-curl "https://blog.022025.xyz/api/upload?prefix=images/" \
+curl "https://blog.krsz.in/api/upload?prefix=images/" \
   -H "Authorization: Bearer <UPLOAD_API_KEY>"
 ```
 

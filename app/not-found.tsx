@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BLOG_URL } from "@/shared/site-config";
 
 export default function NotFound() {
     return (
@@ -7,7 +8,7 @@ export default function NotFound() {
                 <div className="rounded-xl border border-border bg-black/40 p-6 font-mono text-sm leading-relaxed">
                     <div className="text-text-secondary">
                         <span className="text-accent">$</span> curl -s{" "}
-                        <span className="text-text-muted">https://blog.022025.xyz/</span>
+                        <span className="text-text-muted">{BLOG_URL}/</span>
                         <span className="animate-glow-text text-accent">lost-path</span>
                     </div>
 
