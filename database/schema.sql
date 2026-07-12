@@ -130,15 +130,12 @@ VALUES
     ('share', 'Share', 'https://share.krsz.in', 'share-2',
      'Temporary file sharing · 5GB max', 'products', 10);
 
--- NOTE: The `INSERT OR IGNORE` above only takes effect when no row with
--- `id = 'share'` exists yet. If you already have the row in D1 (e.g. from
--- a prior deployment on `*.022025.xyz`), re-running this file will NOT
--- update the URL. To migrate existing data, run the UPDATE manually:
+-- NOTE: `INSERT OR IGNORE` only seeds the row on first apply — subsequent
+-- migrations DO NOT update the URL of an existing row. To re-point an
+-- existing row to a new apex domain, run an explicit UPDATE against the
+-- remote D1:
 --
---   UPDATE about_links
---      SET url = 'https://share.krsz.in'
---    WHERE id = 'share';
+--   npx wrangler d1 execute cf-blog-db --remote --command \
+--     "UPDATE about_links SET url = 'https://share.<NEW_APEX>' WHERE id = 'share'"
 --
--- The apex domain for new rows is also tracked in `shared/site-config.ts`
--- (SHARE_URL) — keep that constant and the SQL above in sync when migrating
--- to a new domain.
+-- Keep the URL above in sync with `SHARE_URL` in `shared/site-config.ts`.
