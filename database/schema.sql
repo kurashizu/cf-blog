@@ -128,7 +128,7 @@ INSERT OR IGNORE INTO about_links
     (id, name, url, icon, description, group_name, sort_order)
 VALUES
     ('share', 'Share', 'https://share.krsz.in', 'share-2',
-     'Temporary file sharing · 5GB max', 'products', 10);
+     'Temporary file sharing · 5GB max', 'quick-links', 10);
 
 -- NOTE: `INSERT OR IGNORE` only seeds the row on first apply — subsequent
 -- migrations DO NOT update the URL of an existing row. To re-point an
@@ -139,3 +139,24 @@ VALUES
 --     "UPDATE about_links SET url = 'https://share.<NEW_APEX>' WHERE id = 'share'"
 --
 -- Keep the URL above in sync with `SHARE_URL` in `shared/site-config.ts`.
+
+-- ============================================
+-- Idempotent migrations for about_links
+-- Re-running schema.sql on an existing DB should converge on the same state.
+-- ============================================
+
+-- Migration: rename seed group from legacy 'products' to 'quick-links'.
+-- The 'share' row was originally seeded with group_name='products'; rename it
+-- so it lands in the Quick Links section on /about. Safe to re-run.
+UPDATE about_links
+SET group_name = 'quick-links'
+WHERE id = 'share'
+  AND group_name = 'products';
+
+-- Migration: seed the first Friends entry. INSERT OR IGNORE so re-running
+-- the schema doesn't clobber an existing row.
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('2xnz', '二叉树树', 'https://2x.nz', 'globe',
+     'IT/互联网技术分享与实践', 'friends', 10);

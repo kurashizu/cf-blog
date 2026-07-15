@@ -1,14 +1,26 @@
 import Link from "next/link";
 import {
     ArrowUpRight,
+    BookOpen,
+    Bot,
     Cloud,
+    Code,
     Cpu,
     Film,
+    Globe,
+    Home,
     Link as LinkIcon,
-    type LucideIcon,
+    Mail,
+    MessageCircle,
+    MessageSquare,
+    Newspaper,
     Package,
+    Rss,
     Server,
+    Share2,
     Terminal,
+    Tv,
+    type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { createAboutLinksRepo, type AboutLink } from "@/lib/about-links";
@@ -83,13 +95,36 @@ const techStack: TechGroup[] = [
 
 // Map of icon name (stored in D1) -> lucide component.
 // Falls back to LinkIcon for any unknown name so missing icons don't crash the page.
+// NOTE: lucide-react 1.24 doesn't ship brand icons (Github / Twitter), so
+// `github` and `twitter` key off generic semantic icons (Code / MessageCircle).
 const ICON_MAP: Record<string, LucideIcon> = {
+    // Default fallback
     link: LinkIcon,
-    "share-2": LinkIcon,
-    bot: LinkIcon,
-    home: LinkIcon,
-    newspaper: LinkIcon,
-    "message-square": LinkIcon,
+
+    // Websites / blogs
+    globe: Globe,
+    home: Home,
+    newspaper: Newspaper,
+    book: BookOpen,
+
+    // Code / projects
+    github: Code,
+    code: Code,
+    bot: Bot,
+
+    // Communication
+    mail: Mail,
+    twitter: MessageCircle,
+    mastodon: MessageCircle,
+    "message-square": MessageSquare,
+
+    // Media
+    tv: Tv,
+    rss: Rss,
+    "rss-feed": Rss,
+
+    // Sharing
+    "share-2": Share2,
 };
 
 function resolveIcon(name: string): LucideIcon {
