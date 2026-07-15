@@ -97,7 +97,11 @@ function resolveIcon(name: string): LucideIcon {
 }
 
 export default async function AboutPage() {
-    const links = await createAboutLinksRepo().getVisible();
+    const repo = createAboutLinksRepo();
+    const [quickLinks, friends] = await Promise.all([
+        repo.getVisibleByGroup("quick-links"),
+        repo.getVisibleByGroup("friends"),
+    ]);
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
@@ -197,9 +201,10 @@ export default async function AboutPage() {
                 </div>
             </section>
 
+            {/* SOCIAL — hardcoded */}
             <section>
                 <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
-                    Links
+                    Social
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {SOCIAL_LINKS.map((link) => (
@@ -228,42 +233,84 @@ export default async function AboutPage() {
                             </Card>
                         </Link>
                     ))}
-                    {links.map((link: AboutLink) => {
-                        const Icon = resolveIcon(link.icon);
-                        return (
-                            <Link
-                                key={link.id}
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <Card className="group text-center h-full transition-all hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
-                                    <CardContent className="flex flex-col items-center py-6">
-                                        <span className="text-accent mb-3">
-                                            <Icon size={24} />
-                                        </span>
-                                        <span className="font-medium text-text-primary">
-                                            {link.name}
-                                        </span>
-                                        {link.description && (
-                                            <span className="text-xs text-text-muted mt-1">
-                                                {link.description}
-                                            </span>
-                                        )}
-                                        <span className="mt-3 text-text-muted inline-flex items-center gap-1 text-xs">
-                                            Visit
-                                            <ArrowUpRight
-                                                size={12}
-                                                className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                                            />
-                                        </span>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        );
-                    })}
                 </div>
             </section>
+
+            {/* QUICK LINKS — group_name = 'quick-links' (medium cards) */}
+            {quickLinks.length > 0 && (
+                <section className="mt-12">
+                    <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
+                        Quick Links
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {quickLinks.map((link: AboutLink) => {
+                            const Icon = resolveIcon(link.icon);
+                            return (
+                                <Link
+                                    key={link.id}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <Card className="group text-center h-full transition-all hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
+                                        <CardContent className="flex flex-col items-center py-6">
+                                            <span className="text-accent mb-3">
+                                                <Icon size={24} />
+                                            </span>
+                                            <span className="font-medium text-text-primary">
+                                                {link.name}
+                                            </span>
+                                            {link.description && (
+                                                <span className="text-xs text-text-muted mt-1">
+                                                    {link.description}
+                                                </span>
+                                            )}
+                                            <span className="mt-3 text-text-muted inline-flex items-center gap-1 text-xs">
+                                                Visit
+                                                <ArrowUpRight
+                                                    size={12}
+                                                    className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                                                />
+                                            </span>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </section>
+            )}
+
+            {/* FRIENDS — group_name = 'friends' (mini rows) */}
+            {friends.length > 0 && (
+                <section className="mt-12">
+                    <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-text-muted mb-4">
+                        Friends
+                    </h2>
+                    <ul className="flex flex-wrap gap-x-4 gap-y-2">
+                        {friends.map((link: AboutLink) => {
+                            const Icon = resolveIcon(link.icon);
+                            return (
+                                <li key={link.id}>
+                                    <Link
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="group inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-accent transition-colors"
+                                    >
+                                        <Icon size={14} strokeWidth={1.75} />
+                                        <span>{link.name}</span>
+                                        <ArrowUpRight
+                                            size={11}
+                                            className="opacity-50 group-hover:opacity-100 transition-opacity"
+                                        />
+                                    </Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </section>
+            )}
         </div>
     );
 }
