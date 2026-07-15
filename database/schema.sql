@@ -160,3 +160,13 @@ INSERT OR IGNORE INTO about_links
 VALUES
     ('2xnz', '二叉树树', 'https://2x.nz', 'globe',
      'IT/互联网技术分享与实践', 'friends', 10);
+
+-- Migration: seed Quick Links rows added after the initial 'share' seed.
+-- INSERT OR IGNORE so existing rows are preserved.
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('router', 'Router', 'https://router.krsz.in', 'tv',
+     'Edge router & reverse proxy dashboard', 'quick-links', 20),
+    ('skill',  'Skill',  'https://skill.krsz.in',  'code',
+     'Skills & tools registry', 'quick-links', 30);
