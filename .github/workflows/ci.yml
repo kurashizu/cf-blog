@@ -13,6 +13,9 @@ concurrency:
 jobs:
     cf-blog-check:
         runs-on: ubuntu-latest
+        # Lock down permissions so a fork PR can't escalate access via GITHUB_TOKEN.
+        permissions:
+            contents: read
         steps:
             - uses: actions/checkout@v6
 
@@ -44,6 +47,9 @@ jobs:
 
     cf-agent-check:
         runs-on: ubuntu-latest
+        # Lock down permissions so a fork PR can't escalate access via GITHUB_TOKEN.
+        permissions:
+            contents: read
         steps:
             - uses: actions/checkout@v6
 
