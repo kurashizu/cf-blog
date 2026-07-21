@@ -117,11 +117,12 @@ export function ApiDocs() {
     let cancelled = false;
     fetch("/api/tool")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data: ToolListResponse) => {
+      .then((data: unknown) => {
         if (cancelled) return;
-        setTools(data.tools ?? []);
+        const list = data as ToolListResponse;
+        setTools(list.tools ?? []);
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (cancelled) return;
         setToolError(e instanceof Error ? e.message : "Failed to load");
       });
