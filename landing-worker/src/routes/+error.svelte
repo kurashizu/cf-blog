@@ -20,15 +20,20 @@
 </div>
 
 <style>
-    :global(body) {
-        background-image: none !important;
-    }
+    /*
+     * The body's blueprint grid stays — we just paint a full-screen
+     * solid backdrop on top of it. Avoids `:global(body)` overrides
+     * which would leak onto the main page and kill the grid there.
+     */
     .error {
-        height: 100%;
+        position: fixed;
+        inset: 0;
+        z-index: 50;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 2rem;
+        background: var(--bg);
     }
     .frame {
         position: relative;
