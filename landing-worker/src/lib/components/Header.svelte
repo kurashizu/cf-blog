@@ -98,10 +98,17 @@
         to { opacity: 1; }
     }
     @media (max-width: 820px) {
-        .header { padding: 24px 24px; }
+        .header { padding: 24px; }
         .sub { display: none; }
     }
     @media (max-width: 540px) {
+        .header {
+            position: absolute;
+            padding: max(20px, env(safe-area-inset-top))
+                max(20px, env(safe-area-inset-right)) 16px
+                max(20px, env(safe-area-inset-left));
+        }
+        .project { font-size: 1.05rem; }
         .header-right { display: none; }
     }
 </style>

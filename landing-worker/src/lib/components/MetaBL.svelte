@@ -41,4 +41,18 @@
             font-size: 0.55rem;
         }
     }
+    @media (max-width: 540px) {
+        .meta-bl {
+            position: relative;
+            left: auto;
+            bottom: auto;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 max(16px, env(safe-area-inset-right))
+                max(24px, env(safe-area-inset-bottom))
+                max(16px, env(safe-area-inset-left));
+            letter-spacing: 0.1em;
+        }
+    }
 </style>

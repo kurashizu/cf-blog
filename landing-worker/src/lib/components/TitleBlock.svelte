@@ -64,4 +64,19 @@
             padding: 4px 8px;
         }
     }
+    @media (max-width: 540px) {
+        .titleblock {
+            position: relative;
+            right: auto;
+            bottom: auto;
+            width: auto;
+            margin: 0 max(16px, env(safe-area-inset-right)) 16px
+                max(16px, env(safe-area-inset-left));
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+            background: rgba(6, 18, 41, 0.38);
+        }
+        .titleblock > div {
+            padding: 7px 10px;
+        }
+    }
 </style>

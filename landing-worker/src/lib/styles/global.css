@@ -63,6 +63,22 @@ body {
     color: var(--bg-deep);
 }
 
+@media (max-width: 820px) {
+    html,
+    body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: none;
+    }
+
+    body {
+        min-height: 100svh;
+        background-attachment: local;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

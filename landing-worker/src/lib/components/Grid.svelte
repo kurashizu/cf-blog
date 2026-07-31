@@ -75,13 +75,15 @@
         }
         .grid::before,
         .grid::after,
-        .grid .center-mark {
+        .center-mark {
             display: none;
         }
     }
     @media (max-width: 540px) {
         .grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: none;
+            gap: 14px;
         }
     }
 </style>

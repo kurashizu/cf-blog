@@ -85,4 +85,9 @@
         height: 22px;
         opacity: 1;
     }
+    @media (hover: none), (pointer: coarse) {
+        .cursor-dot {
+            display: none;
+        }
+    }
 </style>

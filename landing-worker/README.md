@@ -42,6 +42,18 @@ npx wrangler deploy
 
 Or push to `main` — the `deploy-landing` GitHub Actions job handles it automatically.
 
+## Responsive Design
+
+The schematic adapts at two breakpoints:
+
+| Breakpoint | Layout |
+|---|---|
+| `> 820px` (desktop) | Full schematic: 2×2 portal grid, fixed header / title block / meta / corner crosshairs / edge ruler ticks / side axis labels, custom cursor dot |
+| `≤ 820px` (tablet) | Smaller header padding, hidden axis labels / sub-label, 1×1 grid (single column) |
+| `≤ 540px` (mobile) | Single-column stack, header / corner crosshairs / edge ticks / cursor dot hidden, title block + meta drop out of `position: fixed` into document flow at the bottom, all decorative chrome simplified. Safe-area insets (`env(safe-area-inset-*)`) respected on iOS. Vertical scrolling enabled; touch states replace hover states. |
+
+Touch devices get `:active` feedback on the portal modules instead of `:hover`, and `@media (hover: none)` globally suppresses hover styles. The custom cursor dot is hidden via `@media (hover: none), (pointer: coarse)`.
+
 ## Custom Domains
 
 Configured in the Cloudflare Dashboard (Workers → cf-landing → Settings → Triggers → Custom Domains). The apex domain is centralized in `shared/site-config.ts` (`APEX_DOMAIN`, `LANDING_URL`, `LANDING_WWW_URL`) — bind the apex and `www.apex` for whatever `APEX_DOMAIN` resolves to.

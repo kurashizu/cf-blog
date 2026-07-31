@@ -45,4 +45,9 @@
     .tr { top: 16px; right: 16px; transform: scaleX(-1); }
     .bl { bottom: 16px; left: 16px; transform: scaleY(-1); }
     .br { bottom: 16px; right: 16px; transform: scale(-1, -1); }
+    @media (max-width: 540px) {
+        .crosshair {
+            display: none;
+        }
+    }
 </style>

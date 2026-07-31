@@ -55,7 +55,17 @@
     }
     @media (max-width: 820px) {
         main {
-            padding: 88px 20px 200px;
+            height: auto;
+            min-height: 100svh;
+            align-items: flex-start;
+            padding: 96px 20px 180px;
+        }
+    }
+    @media (max-width: 540px) {
+        main {
+            min-height: 0;
+            padding: 84px max(16px, env(safe-area-inset-right)) 28px
+                max(16px, env(safe-area-inset-left));
         }
     }
 </style>

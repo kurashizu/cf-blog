@@ -75,4 +75,9 @@
     }
     .ticks.left { left: 0; }
     .ticks.right { right: 0; }
+    @media (max-width: 540px) {
+        .ticks {
+            display: none;
+        }
+    }
 </style>
