@@ -63,19 +63,28 @@ body {
     color: var(--bg-deep);
 }
 
+/*
+ * Mobile: switch from the desktop "html is the viewport, body fills it,
+ * overflow: hidden" pattern to default document scrolling. The desktop
+ * pattern sets `height: 100%` on both html and body, which makes the
+ * html element exactly viewport-height. If we just change `height` to
+ * `auto` and add `overflow-y: auto`, html also becomes `auto` and
+ * shrinks to fit content — so neither html nor body can ever overflow
+ * and the page becomes unscrollable. Fix: leave html's height alone
+ * (let it stay at 100% so it remains the scroll container) and reset
+ * body's overflow so content escapes into the html scroll container.
+ */
 @media (max-width: 820px) {
-    html,
-    body {
-        height: auto;
-        min-height: 100%;
+    html {
+        height: 100%;
         overflow-x: hidden;
         overflow-y: auto;
         overscroll-behavior-y: none;
     }
-
     body {
+        height: auto;
         min-height: 100svh;
-        background-attachment: local;
+        overflow: visible;
     }
 }
 
