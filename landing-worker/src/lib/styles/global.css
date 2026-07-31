@@ -1,0 +1,74 @@
+:root {
+    --bg: #0a1f3d;
+    --bg-deep: #061229;
+    --ink: #c8e0ff;
+    --ink-2: #6cb4ff;
+    --ink-3: #4a8bc7;
+    --ink-4: #2a5a8a;
+    --line: rgba(108, 180, 255, 0.28);
+    --line-faint: rgba(108, 180, 255, 0.08);
+    --accent: #ff8b3d;
+    --accent-glow: rgba(255, 139, 61, 0.35);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family:
+        "Inter Tight",
+        -apple-system,
+        BlinkMacSystemFont,
+        system-ui,
+        sans-serif;
+    font-feature-settings:
+        "ss01" on,
+        "cv11" on;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.01em;
+}
+
+body {
+    background-image:
+        linear-gradient(to right, var(--line-faint) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--line-faint) 1px, transparent 1px),
+        linear-gradient(
+            to right,
+            rgba(108, 180, 255, 0.04) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            to bottom,
+            rgba(108, 180, 255, 0.04) 1px,
+            transparent 1px
+        );
+    background-size:
+        80px 80px,
+        80px 80px,
+        20px 20px,
+        20px 20px;
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--bg-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

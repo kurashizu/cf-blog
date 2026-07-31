@@ -10,6 +10,7 @@
  *   - `bucket.APEX_DOMAIN` — R2 public-files custom domain
  *   - `agent.APEX_DOMAIN`  — AI agent (cf-agent)
  *   - `share.APEX_DOMAIN`  — share worker (separate repo, referenced from D1)
+ *   - `mail.APEX_DOMAIN`   — mail worker (cf-mail, separate repo, referenced from D1)
  *   - `APEX_DOMAIN` / `www.APEX_DOMAIN` — landing (cf-landing)
  *
  * Override per environment via the `APEX_DOMAIN` env var (build-time
@@ -27,6 +28,7 @@ export const BLOG_URL = `https://blog.${APEX_DOMAIN}`;
 export const BUCKET_URL = `https://bucket.${APEX_DOMAIN}`;
 export const AGENT_URL = `https://agent.${APEX_DOMAIN}`;
 export const SHARE_URL = `https://share.${APEX_DOMAIN}`;
+export const MAIL_URL = `https://mail.${APEX_DOMAIN}`;
 
 /** Landing (cf-landing) — apex + www. */
 export const LANDING_URL = `https://${APEX_DOMAIN}`;
