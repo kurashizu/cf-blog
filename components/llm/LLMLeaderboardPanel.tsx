@@ -15,19 +15,7 @@ export interface LLMModel {
         // AA composite indices (0–100 scale)
         artificial_analysis_intelligence_index?: number | null;
         artificial_analysis_coding_index?: number | null;
-        artificial_analysis_math_index?: number | null;
-        // Raw benchmarks (0–1 in AA API, rounded to 3 decimals in cache, displayed as 0–100%)
-        gpqa?: number | null;
-        hle?: number | null;
-        livecodebench?: number | null;
-        scicode?: number | null;
-        math_500?: number | null;
-        aime?: number | null;
-        aime_25?: number | null;
-        ifbench?: number | null;
-        lcr?: number | null;
-        terminalbench_hard?: number | null;
-        tau2?: number | null;
+        artificial_analysis_agentic_index?: number | null;
     };
     pricing: {
         price_1m_blended_3_to_1?: number | null;
@@ -38,7 +26,7 @@ export interface LLMModel {
     median_time_to_first_token_seconds?: number | null;
 }
 
-type SortKey = "intelligence" | "coding" | "math" | "speed" | "price";
+type SortKey = "intelligence" | "coding" | "agentic" | "speed" | "price";
 type SortDir = "asc" | "desc";
 
 interface Props {
@@ -59,9 +47,6 @@ const isMissing = (n: number | null | undefined): n is null | undefined =>
 
 const fmtScore = (n: number | null | undefined): string =>
     isMissing(n) ? "—" : Math.round(n).toString();
-
-const fmtPct = (n: number | null | undefined): string =>
-    isMissing(n) ? "—" : `${(n * 100).toFixed(1)}%`;
 
 const fmtPrice = (n: number | null | undefined): string =>
     isMissing(n) ? "—" : `$${n.toFixed(2)}`;
@@ -97,7 +82,7 @@ const fmtDateAgo = (s: string | undefined): string => {
 };
 
 // Finer-grained version for sub-day timestamps (used in the "last update"
-// label, which refreshes every 30 min and would always read "today" with
+// label, which refreshes every two hours and would always read "today" with
 // fmtDateAgo). Falls back to fmtDateAgo for anything older than a day.
 const fmtTimeAgo = (s: string | undefined): string => {
     if (!s) return "";
@@ -126,8 +111,8 @@ const getSortValue = (m: LLMModel, key: SortKey): number | undefined => {
                 return m.evaluations.artificial_analysis_intelligence_index;
             case "coding":
                 return m.evaluations.artificial_analysis_coding_index;
-            case "math":
-                return m.evaluations.artificial_analysis_math_index;
+            case "agentic":
+                return m.evaluations.artificial_analysis_agentic_index;
             case "speed":
                 return m.median_output_tokens_per_second;
             case "price":
@@ -152,6 +137,8 @@ export function LLMLeaderboardPanel({
     // component), we treat them as the initial value and skip the fetch.
     const [models, setModels] = useState<LLMModel[]>(initialModels ?? []);
     const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+    const [intelligenceIndexVersion, setIntelligenceIndexVersion] =
+        useState<number | null>(null);
     const [status, setStatus] = useState<FetchStatus>(
         initialModels ? "loaded" : "idle",
     );
@@ -180,12 +167,16 @@ export function LLMLeaderboardPanel({
                     ? (r.json() as Promise<{
                           models?: LLMModel[];
                           fetchedAt?: string | null;
+                          intelligenceIndexVersion?: number | null;
                       }>)
                     : Promise.reject(new Error(`HTTP ${r.status}`)),
             )
             .then((data) => {
                 setModels(data.models ?? []);
                 setFetchedAt(data.fetchedAt ?? null);
+                setIntelligenceIndexVersion(
+                    data.intelligenceIndexVersion ?? null,
+                );
                 setStatus("loaded");
             })
             .catch((e) => {
@@ -328,8 +319,11 @@ export function LLMLeaderboardPanel({
                                         LLM Board
                                     </h2>
                                     <p className="text-sm text-text-muted mt-0.5">
-                                        top models by intelligence ·{" "}
-                                        {models.length} models
+                                        top models by Intelligence Index
+                                        {intelligenceIndexVersion !== null
+                                            ? ` v${intelligenceIndexVersion}`
+                                            : ""}{" "}
+                                        · {models.length} models
                                         {fetchedAt
                                             ? ` · last update: ${fmtTimeAgo(fetchedAt)}`
                                             : ""}
@@ -529,7 +523,7 @@ export function LLMLeaderboardPanel({
                                         <span>No data yet.</span>
                                         <span className="text-xs">
                                             The cache worker populates this
-                                            every 30 min.
+                                            every two hours.
                                         </span>
                                     </div>
                                 ) : top.length === 0 ? (
@@ -589,14 +583,17 @@ export function LLMLeaderboardPanel({
                                                 <th className="text-right py-3 px-4 font-medium hidden sm:table-cell">
                                                     <SortHeader
                                                         active={
-                                                            sortKey === "math"
+                                                            sortKey ===
+                                                            "agentic"
                                                         }
                                                         dir={sortDir}
                                                         onClick={() =>
-                                                            handleSort("math")
+                                                            handleSort(
+                                                                "agentic",
+                                                            )
                                                         }
                                                     >
-                                                        Math
+                                                        Agentic
                                                     </SortHeader>
                                                 </th>
                                                 <th className="text-right py-3 px-4 font-medium hidden lg:table-cell">
@@ -663,7 +660,7 @@ export function LLMLeaderboardPanel({
                                                     <td className="py-2.5 px-4 text-right text-text-muted font-mono hidden sm:table-cell">
                                                         {fmtScore(
                                                             m.evaluations
-                                                                .artificial_analysis_math_index,
+                                                                .artificial_analysis_agentic_index,
                                                         )}
                                                     </td>
                                                     <td className="py-2.5 px-4 text-right text-text-muted font-mono hidden lg:table-cell">
@@ -790,13 +787,18 @@ export function LLMLeaderboardPanel({
                                         </div>
                                         <div className="text-xs text-text-muted mt-0.5">
                                             Artificial Analysis composite
+                                            {intelligenceIndexVersion !== null
+                                                ? ` v${intelligenceIndexVersion}`
+                                                : ""}{" "}
                                             (0–100)
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Grouped benchmarks */}
-                                <Benchmarks evals={selectedModel.evaluations} />
+                                {/* Headline composite indices */}
+                                <CompositeIndices
+                                    evals={selectedModel.evaluations}
+                                />
 
                                 {/* Pricing + Performance side by side */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -928,49 +930,28 @@ function SortHeader({
     );
 }
 
-function Benchmarks({ evals }: { evals: LLMModel["evaluations"] }) {
+function CompositeIndices({
+    evals,
+}: {
+    evals: LLMModel["evaluations"];
+}) {
     return (
-        <div className="space-y-3.5">
-            <BenchmarkGroup title="Reasoning">
-                <BenchmarkRow label="GPQA" value={fmtPct(evals.gpqa)} />
-                <BenchmarkRow
-                    label="HLE (Humanity's Last Exam)"
-                    value={fmtPct(evals.hle)}
-                />
-            </BenchmarkGroup>
-            <BenchmarkGroup title="Coding">
-                <BenchmarkRow
-                    label="AA Coding Index"
-                    value={fmtScore(evals.artificial_analysis_coding_index)}
-                />
-                <BenchmarkRow label="SciCode" value={fmtPct(evals.scicode)} />
-                <BenchmarkRow
-                    label="TerminalBench-Hard"
-                    value={fmtPct(evals.terminalbench_hard)}
-                />
-                <BenchmarkRow
-                    label="LiveCodeBench"
-                    value={fmtPct(evals.livecodebench)}
-                />
-            </BenchmarkGroup>
-            <BenchmarkGroup title="Tool Use">
-                <BenchmarkRow label="τ²-bench" value={fmtPct(evals.tau2)} />
-                <BenchmarkRow label="IFBench" value={fmtPct(evals.ifbench)} />
-                <BenchmarkRow
-                    label="LCR (Long-Context Retrieval)"
-                    value={fmtPct(evals.lcr)}
-                />
-            </BenchmarkGroup>
-            <BenchmarkGroup title="Math">
-                <BenchmarkRow
-                    label="AA Math Index"
-                    value={fmtScore(evals.artificial_analysis_math_index)}
-                />
-                <BenchmarkRow label="MATH-500" value={fmtPct(evals.math_500)} />
-                <BenchmarkRow label="AIME" value={fmtPct(evals.aime)} />
-                <BenchmarkRow label="AIME-25" value={fmtPct(evals.aime_25)} />
-            </BenchmarkGroup>
-        </div>
+        <BenchmarkGroup title="Composite indices">
+            <BenchmarkRow
+                label="AA Intelligence Index"
+                value={fmtScore(
+                    evals.artificial_analysis_intelligence_index,
+                )}
+            />
+            <BenchmarkRow
+                label="AA Coding Index"
+                value={fmtScore(evals.artificial_analysis_coding_index)}
+            />
+            <BenchmarkRow
+                label="AA Agentic Index"
+                value={fmtScore(evals.artificial_analysis_agentic_index)}
+            />
+        </BenchmarkGroup>
     );
 }
 

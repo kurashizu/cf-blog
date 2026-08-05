@@ -10,7 +10,7 @@ A personal blog + AI agent deployed to Cloudflare Workers. The homepage has a re
 - **Top Languages Donut** — 5-segment SVG donut with hover interaction (shows language name + percentage in center), color-coded legend (hero sidebar)
 - **Visitor Terminal** — Typewriter effect showing your IP/location/ISP at the top of the hero
 - **KurAgent** — AI assistant with tool calling (web search, time, JS eval) at `agent.krsz.in`
-- **LLM Leaderboard** — Full-screen modal showing top 50 models from Artificial Analysis
+- **LLM Leaderboard** — Full-screen modal showing top 50 models from Artificial Analysis (V2 Free endpoint, refreshed at most every 2 h to respect the 100 req/day quota)
 - **Guestbook** — Per-visitor message at `/guestbook`
 - **News Archive** — Paginated HN news index at `/news` with full-text AI rewrites
 - **Particle Background** — Canvas character rain (ku/ra/shi/zu)
@@ -30,7 +30,7 @@ Three Cloudflare Workers, deployed in parallel by GitHub Actions on push to `mai
 > currently `krsz.in`). All worker URLs fan out from a single constant — change
 > one line to migrate to a new apex.
 
-The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches data into D1 (posts, news, github_repos) and into a couple of read-only R2 caches (contributions, LLM leaderboard); the homepage reads from D1 for posts, news, and GitHub repos, and from R2 for contributions and LLM leaderboard. Cold cache = empty hero; ISR revalidates every 5 min.
+The homepage never calls GitHub / Artificial Analysis on user requests. `cf-blog-cache` pre-fetches data into D1 (posts, news, github_repos, leaderboard, contributions); the homepage reads everything from D1. Cold cache = empty hero; ISR revalidates every 5 min.
 
 CI runs on push to `main`: **migrate-db** (`database/schema.sql`) first, then deploys all three workers in parallel.
 
@@ -38,7 +38,7 @@ CI runs on push to `main`: **migrate-db** (`database/schema.sql`) first, then de
 
 - **Frontend**: Next.js 15 (App Router) + React 19
 - **Styling**: Tailwind CSS (utility classes in JSX) + `tokens.css`/`base.css` (CSS variables + body effects) + component-level CSS (`activity.css`, `nes.css`) where `color-mix()`/pseudo-elements can't be expressed in Tailwind
-- **Storage**: Cloudflare D1 (articles, news, github_repos, guestbook) + Cloudflare R2 (contributions + LLM leaderboard caches) + Cloudflare KV (sessions, rate limits)
+- **Storage**: Cloudflare D1 (articles, news, github_repos, leaderboard, contributions, guestbook) + Cloudflare KV (sessions, rate limits)
 - **AI**: Gemini (with quota-based model fallback for TPD/RPM 429s)
 - **Deploy**: Cloudflare Workers via `@opennextjs/cloudflare`
 

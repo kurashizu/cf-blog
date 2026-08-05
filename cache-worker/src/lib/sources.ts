@@ -22,10 +22,17 @@ const USER_AGENT = "Kurashizu-Blog-Cache";
 const opt = <T>(v: T | null | undefined): T | undefined =>
   v === undefined || v === null ? undefined : v;
 
-const round3 = (n: number | null | undefined): number | undefined => {
-  if (n === undefined || n === null) return undefined;
-  return Math.round(n * 1000) / 1000;
-};
+/**
+ * The Free V2 endpoint does not return the old blended-price field. Recreate
+ * the documented 3:1 input/output blend so the public cache keeps the price
+ * sort and display used by the leaderboard.
+ */
+function blendedPrice3To1(pricing: AAModel["pricing"]): number | undefined {
+  const input = opt(pricing.price_1m_input_tokens);
+  const output = opt(pricing.price_1m_output_tokens);
+  if (input === undefined || output === undefined) return undefined;
+  return (input * 3 + output) / 4;
+}
 
 /** Project an AAModel down to the public SlimModel shape. */
 function projectModel(m: AAModel): SlimModel {
@@ -33,7 +40,7 @@ function projectModel(m: AAModel): SlimModel {
     name: m.name,
     slug: m.slug,
     release_date: opt(m.release_date),
-    model_creator: { name: m.model_creator.name },
+    model_creator: { name: m.model_creator?.name ?? "Unknown" },
     evaluations: {
       artificial_analysis_intelligence_index: opt(
         m.evaluations.artificial_analysis_intelligence_index,
@@ -41,29 +48,20 @@ function projectModel(m: AAModel): SlimModel {
       artificial_analysis_coding_index: opt(
         m.evaluations.artificial_analysis_coding_index,
       ),
-      artificial_analysis_math_index: opt(
-        m.evaluations.artificial_analysis_math_index,
+      artificial_analysis_agentic_index: opt(
+        m.evaluations.artificial_analysis_agentic_index,
       ),
-      gpqa: round3(m.evaluations.gpqa),
-      hle: round3(m.evaluations.hle),
-      livecodebench: round3(m.evaluations.livecodebench),
-      scicode: round3(m.evaluations.scicode),
-      math_500: round3(m.evaluations.math_500),
-      aime: round3(m.evaluations.aime),
-      aime_25: round3(m.evaluations.aime_25),
-      ifbench: round3(m.evaluations.ifbench),
-      lcr: round3(m.evaluations.lcr),
-      terminalbench_hard: round3(m.evaluations.terminalbench_hard),
-      tau2: round3(m.evaluations.tau2),
     },
     pricing: {
-      price_1m_blended_3_to_1: opt(m.pricing.price_1m_blended_3_to_1),
+      price_1m_blended_3_to_1: blendedPrice3To1(m.pricing),
       price_1m_input_tokens: opt(m.pricing.price_1m_input_tokens),
       price_1m_output_tokens: opt(m.pricing.price_1m_output_tokens),
     },
-    median_output_tokens_per_second: opt(m.median_output_tokens_per_second),
+    median_output_tokens_per_second: opt(
+      m.performance.median_output_tokens_per_second,
+    ),
     median_time_to_first_token_seconds: opt(
-      m.median_time_to_first_token_seconds,
+      m.performance.median_time_to_first_token_seconds,
     ),
   };
 }
@@ -123,29 +121,122 @@ export async function fetchRepoLanguages(
 
 // ---------- Artificial Analysis ----------
 
+const AA_MODELS_URL =
+  "https://artificialanalysis.ai/api/v2/language/models/free";
+const MAX_AA_PAGES = 20;
+
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null;
+}
+
+function isAAResponse(value: unknown): value is AALeaderboardResponse {
+  if (!isRecord(value)) return false;
+  const pagination = value.pagination;
+  return (
+    (value.tier === "free" ||
+      value.tier === "pro" ||
+      value.tier === "commercial") &&
+    typeof value.intelligence_index_version === "number" &&
+    Array.isArray(value.data) &&
+    isRecord(pagination) &&
+    typeof pagination.page === "number" &&
+    typeof pagination.page_size === "number" &&
+    typeof pagination.total_pages === "number" &&
+    typeof pagination.has_more === "boolean"
+  );
+}
+
+async function fetchAAPage(
+  apiKey: string,
+  page: number,
+): Promise<AALeaderboardResponse> {
+  const url = new URL(AA_MODELS_URL);
+  url.searchParams.set("page", String(page));
+  const res = await fetch(url, {
+    headers: {
+      "x-api-key": apiKey,
+      Accept: "application/json",
+      "User-Agent": USER_AGENT,
+    },
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = (await res.json()) as UnknownRecord;
+      if (typeof body.error === "string") detail = `: ${body.error}`;
+    } catch {
+      // Keep the status-only error when the upstream body is not JSON.
+    }
+    const retryAfter = res.headers.get("Retry-After");
+    if (retryAfter) detail += ` (Retry-After: ${retryAfter})`;
+    throw new Error(`AA API ${res.status}${detail}`);
+  }
+  const json: unknown = await res.json();
+  if (!isAAResponse(json)) {
+    throw new Error(`AA API returned an invalid response for page ${page}`);
+  }
+  if (json.pagination.page !== page) {
+    throw new Error(
+      `AA API returned page ${json.pagination.page}; expected ${page}`,
+    );
+  }
+  if (
+    !Number.isInteger(json.pagination.total_pages) ||
+    json.pagination.total_pages < page ||
+    json.pagination.total_pages > MAX_AA_PAGES
+  ) {
+    throw new Error(`AA API returned invalid pagination on page ${page}`);
+  }
+  return json;
+}
+
+/**
+ * Fetch the complete Free-shape V2 language-model list.
+ *
+ * The legacy endpoint returned one unpaginated array. V2 uses 200-item pages,
+ * so follow `has_more` rather than silently caching only the first page.
+ */
 export async function fetchLLMLeaderboard(
   apiKey: string,
-): Promise<SlimModel[]> {
-  const res = await fetch(
-    "https://artificialanalysis.ai/api/v2/data/llms/models",
-    {
-      headers: {
-        "x-api-key": apiKey,
-        Accept: "application/json",
-        "User-Agent": USER_AGENT,
-      },
-    },
-  );
-  if (!res.ok) throw new Error(`AA API ${res.status}`);
-  const json = (await res.json()) as AALeaderboardResponse;
-  // Project + sort by intelligence index so the cache is already ranked.
-  return json.data.map(projectModel).sort((a, b) => {
-    const ai =
-      a.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
-    const bi =
-      b.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
-    return bi - ai;
-  });
+): Promise<{ models: SlimModel[]; intelligenceIndexVersion: number }> {
+  const rawModels: AAModel[] = [];
+  let page = 1;
+  let intelligenceIndexVersion: number | undefined;
+
+  for (;;) {
+    const response = await fetchAAPage(apiKey, page);
+    intelligenceIndexVersion ??= response.intelligence_index_version;
+    if (response.intelligence_index_version !== intelligenceIndexVersion) {
+      throw new Error("AA API changed Intelligence Index version while paging");
+    }
+    rawModels.push(...response.data);
+    if (!response.pagination.has_more) break;
+    page++;
+    if (page > MAX_AA_PAGES) {
+      throw new Error(`AA API exceeded the ${MAX_AA_PAGES}-page safety limit`);
+    }
+  }
+
+  const models = rawModels
+    // A model should occur once, but de-duplicating protects against a live
+    // catalog change between page requests.
+    .filter(
+      (model, index, all) =>
+        all.findIndex((candidate) => candidate.slug === model.slug) === index,
+    )
+    .map(projectModel)
+    .sort((a, b) => {
+      const ai =
+        a.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
+      const bi =
+        b.evaluations.artificial_analysis_intelligence_index ?? -Infinity;
+      return bi - ai;
+    });
+
+  if (models.length === 0) throw new Error("AA API returned an empty response");
+  return { models, intelligenceIndexVersion: intelligenceIndexVersion! };
 }
 
 // ---------- Hacker News Fetching ----------
