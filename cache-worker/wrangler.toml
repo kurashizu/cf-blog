@@ -19,5 +19,4 @@ index_name = "blog-search"
 crons = ["*/30 * * * *", "*/3 * * * *", "0 18 * * *"]
 
 [vars]
-CRON_SECRET = ""
 GH_USERNAME = "kurashizu"
