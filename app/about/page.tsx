@@ -120,6 +120,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
     // Media
     tv: Tv,
+    film: Film,
     rss: Rss,
     "rss-feed": Rss,
 

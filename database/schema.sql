@@ -169,4 +169,14 @@ VALUES
     ('router', 'Router', 'https://router.krsz.in', 'tv',
      'Edge router & reverse proxy dashboard', 'quick-links', 20),
     ('skill',  'Skill',  'https://skill.krsz.in',  'code',
-     'Skills & tools registry', 'quick-links', 30);
+     'Skills & tools registry', 'quick-links', 30),
+    ('mail',   'Mail',   'https://mail.krsz.in',   'mail',
+     'Webmail', 'quick-links', 40);
+
+-- Migration: seed the sharetube quick link. INSERT OR IGNORE so re-running
+-- the schema doesn't clobber an existing row.
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('sharetube', 'ShareTube', 'https://sharetube.krsz.in', 'film',
+     'Paste a video URL to download, transcode & share', 'quick-links', 50);
