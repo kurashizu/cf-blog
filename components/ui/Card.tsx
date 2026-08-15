@@ -11,10 +11,12 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       ref={ref}
       className={cn(
         "group relative flex flex-col bg-bg-card/60 backdrop-blur-sm border border-border rounded-xl transition-all duration-300",
+        // Resting shadow — card already floats above the surface at rest.
+        "shadow-[0_4px_20px_rgba(0,0,0,0.45)]",
         selected
           ? "border-accent animate-glow-border"
-          : "hover:border-accent/50 hover:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_50px_var(--accent-subtle)]",
-        "hover:-translate-y-1",
+          : "hover:border-accent/50 hover:shadow-[0_18px_50px_rgba(0,0,0,0.65),0_0_60px_var(--accent-subtle)]",
+        "hover:-translate-y-2",
         className
       )}
       style={{
