@@ -132,62 +132,62 @@ export function ApiDocs() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] text-[#e8e8ed]">
+    <main className="min-h-screen bg-[#1a1714] text-[#e6dfd2]">
       <div className="mx-auto max-w-5xl px-6 py-16">
         {/* Header */}
         <header className="mb-12">
           <div className="flex items-center gap-3">
-            <span className="h-3 w-3 rounded-full bg-[#ff6b35] shadow-[0_0_12px_#ff6b35]" />
+            <span className="h-3 w-3 rounded-full bg-[#a8865a] shadow-[0_0_12px_#a8865a]" />
             <h1 className="text-3xl font-bold tracking-tight">
-              <span className="text-[#ff6b35]">cf-agent</span>{" "}
-              <span className="text-[#e8e8ed]/80">· API documentation</span>
+              <span className="text-[#a8865a]">cf-agent</span>{" "}
+              <span className="text-[#e6dfd2]/80">· API documentation</span>
             </h1>
           </div>
-          <p className="mt-3 text-[#e8e8ed]/60">
-            Cloudflare Worker hosting <strong className="text-[#e8e8ed]">KurAgent</strong>,
+          <p className="mt-3 text-[#e6dfd2]/60">
+            Cloudflare Worker hosting <strong className="text-[#e6dfd2]">KurAgent</strong>,
             an AI assistant with tool calling. All endpoints accept JSON, return JSON
             or Server-Sent Events, and are rate-limited per IP.
           </p>
-          <div className="mt-4 inline-flex items-center gap-2 rounded border border-[#ff6b35]/30 bg-[#ff6b35]/5 px-3 py-1.5 text-sm">
-            <span className="text-[#e8e8ed]/50">Base URL</span>
-            <code className="text-[#ff6b35]">https://agent.krsz.in</code>
+          <div className="mt-4 inline-flex items-center gap-2 rounded border border-[#a8865a]/30 bg-[#a8865a]/5 px-3 py-1.5 text-sm">
+            <span className="text-[#e6dfd2]/50">Base URL</span>
+            <code className="text-[#a8865a]">https://agent.krsz.in</code>
           </div>
         </header>
 
         {/* Try it interactively */}
-        <aside className="mb-12 rounded border border-[#ff6b35]/30 bg-gradient-to-br from-[#ff6b35]/10 to-transparent p-5">
+        <aside className="mb-12 rounded border border-[#a8865a]/30 bg-gradient-to-br from-[#a8865a]/10 to-transparent p-5">
           <div className="flex flex-wrap items-start gap-4">
             <div className="flex-1 min-w-[240px]">
               <div className="flex items-center gap-2">
-                <span className="rounded bg-[#ff6b35]/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#ff6b35]">
+                <span className="rounded bg-[#a8865a]/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#a8865a]">
                   Try it
                 </span>
-                <h3 className="text-base font-semibold text-[#e8e8ed]">
+                <h3 className="text-base font-semibold text-[#e6dfd2]">
                   Want a chat UI instead of curl?
                 </h3>
               </div>
-              <p className="mt-2 text-sm text-[#e8e8ed]/70">
+              <p className="mt-2 text-sm text-[#e6dfd2]/70">
                 Open{" "}
                 <a
                   href="https://blog.krsz.in"
-                  className="text-[#ff6b35] underline decoration-[#ff6b35]/40 underline-offset-2 hover:decoration-[#ff6b35]"
+                  className="text-[#a8865a] underline decoration-[#a8865a]/40 underline-offset-2 hover:decoration-[#a8865a]"
                 >
                   blog.krsz.in
                 </a>
-                , scroll to the <strong className="text-[#e8e8ed]">Gadgets</strong>{" "}
+                , scroll to the <strong className="text-[#e6dfd2]">Gadgets</strong>{" "}
                 section, and click the{" "}
-                <strong className="text-[#e8e8ed]">KurAgent</strong> card. It opens
+                <strong className="text-[#e6dfd2]">KurAgent</strong> card. It opens
                 a full-screen chat with the same tools and session memory — no
                 setup required.
               </p>
-              <p className="mt-2 text-xs text-[#e8e8ed]/50">
+              <p className="mt-2 text-xs text-[#e6dfd2]/50">
                 This page is for integrating the API into your own apps. The blog
                 UI is for trying it out.
               </p>
             </div>
             <a
               href="https://blog.krsz.in"
-              className="inline-flex items-center gap-2 rounded bg-[#ff6b35] px-4 py-2 text-sm font-semibold text-[#0a0a0f] transition-colors hover:bg-[#ff7d4d]"
+              className="inline-flex items-center gap-2 rounded bg-[#a8865a] px-4 py-2 text-sm font-semibold text-[#1a1714] transition-colors hover:bg-[#b8956a]"
             >
               Open KurAgent
               <span aria-hidden>→</span>
@@ -201,12 +201,12 @@ export function ApiDocs() {
             {STACK.map((s) => (
               <div
                 key={s.label}
-                className="rounded border border-[#e8e8ed]/10 bg-[#e8e8ed]/[0.02] px-4 py-3"
+                className="rounded border border-[#e6dfd2]/10 bg-[#e6dfd2]/[0.02] px-4 py-3"
               >
-                <dt className="text-xs uppercase tracking-wider text-[#e8e8ed]/40">
+                <dt className="text-xs uppercase tracking-wider text-[#e6dfd2]/40">
                   {s.label}
                 </dt>
-                <dd className="mt-1 text-sm text-[#e8e8ed]">{s.value}</dd>
+                <dd className="mt-1 text-sm text-[#e6dfd2]">{s.value}</dd>
               </div>
             ))}
           </dl>
@@ -223,29 +223,29 @@ export function ApiDocs() {
 
         {/* SSE events */}
         <Section title="SSE event order (/api/chat)" id="sse">
-          <p className="mb-4 text-sm text-[#e8e8ed]/60">
+          <p className="mb-4 text-sm text-[#e6dfd2]/60">
             Events are JSON-encoded on lines starting with{" "}
-            <code className="text-[#ff6b35]">data:</code>. The stream always ends
-            with <code className="text-[#ff6b35]">end_process</code> or{" "}
-            <code className="text-[#ff6b35]">error</code>.
+            <code className="text-[#a8865a]">data:</code>. The stream always ends
+            with <code className="text-[#a8865a]">end_process</code> or{" "}
+            <code className="text-[#a8865a]">error</code>.
           </p>
-          <div className="overflow-hidden rounded border border-[#e8e8ed]/10">
+          <div className="overflow-hidden rounded border border-[#e6dfd2]/10">
             <table className="w-full text-sm">
-              <thead className="bg-[#e8e8ed]/[0.04] text-left text-xs uppercase tracking-wider text-[#e8e8ed]/50">
+              <thead className="bg-[#e6dfd2]/[0.04] text-left text-xs uppercase tracking-wider text-[#e6dfd2]/50">
                 <tr>
                   <th className="px-4 py-2 font-medium">Event</th>
                   <th className="px-4 py-2 font-medium">When</th>
                   <th className="px-4 py-2 font-medium">Description</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e8e8ed]/5">
+              <tbody className="divide-y divide-[#e6dfd2]/5">
                 {SSE_EVENTS.map((e) => (
-                  <tr key={e.type} className="hover:bg-[#e8e8ed]/[0.02]">
-                    <td className="px-4 py-2 font-mono text-xs text-[#ff6b35]">
+                  <tr key={e.type} className="hover:bg-[#e6dfd2]/[0.02]">
+                    <td className="px-4 py-2 font-mono text-xs text-[#a8865a]">
                       {e.type}
                     </td>
-                    <td className="px-4 py-2 text-[#e8e8ed]/60">{e.when}</td>
-                    <td className="px-4 py-2 text-[#e8e8ed]/80">{e.desc}</td>
+                    <td className="px-4 py-2 text-[#e6dfd2]/60">{e.when}</td>
+                    <td className="px-4 py-2 text-[#e6dfd2]/80">{e.desc}</td>
                   </tr>
                 ))}
               </tbody>
@@ -255,13 +255,13 @@ export function ApiDocs() {
 
         {/* Tools */}
         <Section title="Available tools" id="tools">
-          <p className="mb-4 text-sm text-[#e8e8ed]/60">
+          <p className="mb-4 text-sm text-[#e6dfd2]/60">
             Loaded live from{" "}
-            <code className="text-[#ff6b35]">GET /api/tool</code>. Tools run with a
+            <code className="text-[#a8865a]">GET /api/tool</code>. Tools run with a
             5 s default timeout and may invoke external services (Brave Search, etc.).
           </p>
           {tools === null && !toolError && (
-            <div className="rounded border border-[#e8e8ed]/10 bg-[#e8e8ed]/[0.02] px-4 py-6 text-center text-sm text-[#e8e8ed]/50">
+            <div className="rounded border border-[#e6dfd2]/10 bg-[#e6dfd2]/[0.02] px-4 py-6 text-center text-sm text-[#e6dfd2]/50">
               Loading tools…
             </div>
           )}
@@ -271,7 +271,7 @@ export function ApiDocs() {
             </div>
           )}
           {tools && tools.length === 0 && (
-            <div className="rounded border border-[#e8e8ed]/10 bg-[#e8e8ed]/[0.02] px-4 py-6 text-center text-sm text-[#e8e8ed]/50">
+            <div className="rounded border border-[#e6dfd2]/10 bg-[#e6dfd2]/[0.02] px-4 py-6 text-center text-sm text-[#e6dfd2]/50">
               No tools registered.
             </div>
           )}
@@ -285,11 +285,11 @@ export function ApiDocs() {
         </Section>
 
         {/* Footer */}
-        <footer className="mt-16 border-t border-[#e8e8ed]/10 pt-6 text-xs text-[#e8e8ed]/40">
+        <footer className="mt-16 border-t border-[#e6dfd2]/10 pt-6 text-xs text-[#e6dfd2]/40">
           <p>
             cf-agent · Cloudflare Workers ·{" "}
             <a
-              className="text-[#ff6b35] hover:underline"
+              className="text-[#a8865a] hover:underline"
               href="/api/tool"
               target="_blank"
               rel="noreferrer"
@@ -316,7 +316,7 @@ function Section({
   return (
     <section id={id} className="mb-12 scroll-mt-6">
       <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-        <span className="h-px w-6 bg-[#ff6b35]" />
+        <span className="h-px w-6 bg-[#a8865a]" />
         {title}
       </h2>
       {children}
@@ -333,22 +333,22 @@ function EndpointCard(props: {
   response: string;
 }) {
   return (
-    <article className="rounded border border-[#e8e8ed]/10 bg-[#e8e8ed]/[0.02]">
-      <header className="flex flex-wrap items-center gap-3 border-b border-[#e8e8ed]/10 px-4 py-3">
+    <article className="rounded border border-[#e6dfd2]/10 bg-[#e6dfd2]/[0.02]">
+      <header className="flex flex-wrap items-center gap-3 border-b border-[#e6dfd2]/10 px-4 py-3">
         <span
           className={`rounded px-2 py-0.5 font-mono text-xs font-bold ${
             props.method === "GET"
               ? "bg-blue-500/15 text-blue-300"
-              : "bg-[#ff6b35]/15 text-[#ff6b35]"
+              : "bg-[#a8865a]/15 text-[#a8865a]"
           }`}
         >
           {props.method}
         </span>
-        <code className="font-mono text-sm text-[#e8e8ed]">{props.path}</code>
-        <span className="ml-auto text-xs text-[#e8e8ed]/50">{props.rateLimit}</span>
+        <code className="font-mono text-sm text-[#e6dfd2]">{props.path}</code>
+        <span className="ml-auto text-xs text-[#e6dfd2]/50">{props.rateLimit}</span>
       </header>
-      <div className="px-4 py-3 text-sm text-[#e8e8ed]/80">{props.summary}</div>
-      <div className="grid gap-px border-t border-[#e8e8ed]/10 bg-[#e8e8ed]/10 sm:grid-cols-2">
+      <div className="px-4 py-3 text-sm text-[#e6dfd2]/80">{props.summary}</div>
+      <div className="grid gap-px border-t border-[#e6dfd2]/10 bg-[#e6dfd2]/10 sm:grid-cols-2">
         <CodeBlock label="Request" code={props.request} />
         <CodeBlock label="Response" code={props.response} />
       </div>
@@ -358,15 +358,15 @@ function EndpointCard(props: {
 
 function ToolCard({ tool }: { tool: ToolSummary }) {
   return (
-    <article className="rounded border border-[#e8e8ed]/10 bg-[#e8e8ed]/[0.02] p-4">
+    <article className="rounded border border-[#e6dfd2]/10 bg-[#e6dfd2]/[0.02] p-4">
       <div className="flex items-center gap-2">
-        <code className="font-mono text-sm font-semibold text-[#ff6b35]">
+        <code className="font-mono text-sm font-semibold text-[#a8865a]">
           {tool.name}
         </code>
       </div>
-      <p className="mt-1 text-sm text-[#e8e8ed]/70">{tool.description}</p>
+      <p className="mt-1 text-sm text-[#e6dfd2]/70">{tool.description}</p>
       {tool.example && (
-        <pre className="mt-3 overflow-x-auto rounded bg-[#0a0a0f] px-3 py-2 font-mono text-xs text-[#e8e8ed]/80">
+        <pre className="mt-3 overflow-x-auto rounded bg-[#1a1714] px-3 py-2 font-mono text-xs text-[#e6dfd2]/80">
           {tool.example}
         </pre>
       )}
@@ -376,11 +376,11 @@ function ToolCard({ tool }: { tool: ToolSummary }) {
 
 function CodeBlock({ label, code }: { label: string; code: string }) {
   return (
-    <div className="bg-[#0a0a0f]">
-      <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#e8e8ed]/40">
+    <div className="bg-[#1a1714]">
+      <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#e6dfd2]/40">
         {label}
       </div>
-      <pre className="overflow-x-auto px-3 pb-3 font-mono text-xs text-[#e8e8ed]/85">
+      <pre className="overflow-x-auto px-3 pb-3 font-mono text-xs text-[#e6dfd2]/85">
         {code}
       </pre>
     </div>

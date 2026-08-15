@@ -35,12 +35,12 @@ export function ParticleBackground() {
     const updateAccentColor = () => {
       const style = getComputedStyle(document.documentElement);
       const accent = style.getPropertyValue("--accent").trim();
-      if (accent.includes("#ff6b35")) {
-        accentColorRef.current = "255, 107, 53";
-      } else if (accent.includes("#4a9eff")) {
-        accentColorRef.current = "74, 158, 255";
-      } else if (accent.includes("#35ff6b")) {
-        accentColorRef.current = "53, 255, 107";
+      if (accent.includes("#a8865a")) {
+        accentColorRef.current = "168, 134, 90";
+      } else if (accent.includes("#6e8298")) {
+        accentColorRef.current = "110, 130, 152";
+      } else if (accent.includes("#708e6c")) {
+        accentColorRef.current = "112, 142, 108";
       }
     };
 

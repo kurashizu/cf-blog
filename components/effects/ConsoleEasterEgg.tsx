@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 
-const ACCENT = "#ff6b35";
-const MUTED = "#606070";
-const WHITE = "#e8e8ed";
+const ACCENT = "#a8865a";
+const MUTED = "#6b6459";
+const WHITE = "#e6dfd2";
 
 export function ConsoleEasterEgg() {
     useEffect(() => {
