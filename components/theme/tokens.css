@@ -7,11 +7,11 @@
    =========================================== */
 :root,
 [data-theme="dark"] {
-    /* Colors — Sepia Kraft Paper (warm dark) */
-    --bg-primary: #1a1714;
-    --bg-secondary: #221e1a;
-    --bg-card: #2a2521;
-    --bg-elevated: #34302a;
+    /* Colors — Sepia Kraft Paper (deep warm dark) */
+    --bg-primary: #13110e;
+    --bg-secondary: #1b1814;
+    --bg-card: #23201b;
+    --bg-elevated: #2c2823;
     --border: #3d3833;
     --border-hover: #504a42;
 
@@ -60,11 +60,11 @@
 }
 
 [data-theme="deep-blue"] {
-    /* Colors — Slate Paper (cool dark) */
-    --bg-primary: #181b21;
-    --bg-secondary: #1f2329;
-    --bg-card: #262a31;
-    --bg-elevated: #2f343c;
+    /* Colors — Slate Paper (deep cool dark) */
+    --bg-primary: #14161b;
+    --bg-secondary: #1a1d22;
+    --bg-card: #20232a;
+    --bg-elevated: #292d35;
     --border: #383d47;
     --border-hover: #4a505c;
 
@@ -81,11 +81,11 @@
 }
 
 [data-theme="deep-green"] {
-    /* Colors — Moss Paper (cool dark, sage) */
-    --bg-primary: #161a17;
-    --bg-secondary: #1d221e;
-    --bg-card: #252a26;
-    --bg-elevated: #2e3530;
+    /* Colors — Moss Paper (deep cool dark, sage) */
+    --bg-primary: #121512;
+    --bg-secondary: #181c19;
+    --bg-card: #1f2421;
+    --bg-elevated: #272d29;
     --border: #353c37;
     --border-hover: #47504b;
 

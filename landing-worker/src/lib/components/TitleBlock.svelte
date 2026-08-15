@@ -27,7 +27,7 @@
         letter-spacing: 0.12em;
         text-transform: uppercase;
         border: 1px solid var(--ink-2);
-        background: rgba(26, 23, 20, 0.7);
+        background: rgba(19, 17, 14, 0.78);
         animation: draw 800ms 700ms both;
     }
     .titleblock > div {
@@ -73,7 +73,7 @@
             margin: 0 max(16px, env(safe-area-inset-right)) 16px
                 max(16px, env(safe-area-inset-left));
             grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
-            background: rgba(26, 23, 20, 0.55);
+            background: rgba(19, 17, 14, 0.6);
         }
         .titleblock > div {
             padding: 7px 10px;

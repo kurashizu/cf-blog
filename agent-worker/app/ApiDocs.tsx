@@ -132,7 +132,7 @@ export function ApiDocs() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#1a1714] text-[#e6dfd2]">
+    <main className="min-h-screen bg-[#13110e] text-[#e6dfd2]">
       <div className="mx-auto max-w-5xl px-6 py-16">
         {/* Header */}
         <header className="mb-12">
@@ -187,7 +187,7 @@ export function ApiDocs() {
             </div>
             <a
               href="https://blog.krsz.in"
-              className="inline-flex items-center gap-2 rounded bg-[#a8865a] px-4 py-2 text-sm font-semibold text-[#1a1714] transition-colors hover:bg-[#b8956a]"
+              className="inline-flex items-center gap-2 rounded bg-[#a8865a] px-4 py-2 text-sm font-semibold text-[#13110e] transition-colors hover:bg-[#b8956a]"
             >
               Open KurAgent
               <span aria-hidden>→</span>
@@ -366,7 +366,7 @@ function ToolCard({ tool }: { tool: ToolSummary }) {
       </div>
       <p className="mt-1 text-sm text-[#e6dfd2]/70">{tool.description}</p>
       {tool.example && (
-        <pre className="mt-3 overflow-x-auto rounded bg-[#1a1714] px-3 py-2 font-mono text-xs text-[#e6dfd2]/80">
+        <pre className="mt-3 overflow-x-auto rounded bg-[#13110e] px-3 py-2 font-mono text-xs text-[#e6dfd2]/80">
           {tool.example}
         </pre>
       )}
@@ -376,7 +376,7 @@ function ToolCard({ tool }: { tool: ToolSummary }) {
 
 function CodeBlock({ label, code }: { label: string; code: string }) {
   return (
-    <div className="bg-[#1a1714]">
+    <div className="bg-[#13110e]">
       <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#e6dfd2]/40">
         {label}
       </div>
