@@ -120,9 +120,9 @@
 
     .module:hover {
         border-color: var(--accent);
-        background: rgba(255, 139, 61, 0.04);
+        background: rgba(168, 134, 90, 0.06);
         transform: translate(-2px, -2px);
-        box-shadow: 6px 6px 0 rgba(255, 139, 61, 0.15);
+        box-shadow: 6px 6px 0 rgba(168, 134, 90, 0.18);
     }
     .module:hover::before {
         border-color: var(--accent);
@@ -292,7 +292,7 @@
         }
         .module:active {
             border-color: var(--accent);
-            background: rgba(255, 139, 61, 0.06);
+            background: rgba(168, 134, 90, 0.08);
             transform: translateY(1px);
         }
         .top-row {
