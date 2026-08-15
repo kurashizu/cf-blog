@@ -1,14 +1,14 @@
 :root {
-    --bg: #13110e;
-    --bg-deep: #0c0a08;
-    --ink: #e6dfd2;
-    --ink-2: #b8956a;
-    --ink-3: #a59d8c;
-    --ink-4: #6b6459;
-    --line: rgba(184, 149, 106, 0.28);
-    --line-faint: rgba(184, 149, 106, 0.08);
-    --accent: #a8865a;
-    --accent-glow: rgba(168, 134, 90, 0.16);
+    --bg: #1d0e11;
+    --bg-deep: #14090b;
+    --ink: #ecd5d0;
+    --ink-2: #c47a85;
+    --ink-3: #a88591;
+    --ink-4: #6e4f55;
+    --line: rgba(196, 122, 133, 0.28);
+    --line-faint: rgba(196, 122, 133, 0.08);
+    --accent: #a04856;
+    --accent-glow: rgba(160, 72, 86, 0.18);
 }
 
 * {
@@ -43,12 +43,12 @@ body {
         linear-gradient(to bottom, var(--line-faint) 1px, transparent 1px),
         linear-gradient(
             to right,
-            rgba(184, 149, 106, 0.04) 1px,
+            rgba(196, 122, 133, 0.04) 1px,
             transparent 1px
         ),
         linear-gradient(
             to bottom,
-            rgba(184, 149, 106, 0.04) 1px,
+            rgba(196, 122, 133, 0.04) 1px,
             transparent 1px
         );
     background-size:
