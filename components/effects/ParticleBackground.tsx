@@ -5,8 +5,8 @@ import { useEffect, useRef } from "react";
 const GROUPS = ["ku", "ra", "shi", "zu"];
 const FONT_SIZE_BASE = 16;
 const FONT_SIZE_VARIANCE = 12;
-const OPACITY_MIN = 0.05;
-const OPACITY_MAX = 0.25;
+const OPACITY_MIN = 0.18;
+const OPACITY_MAX = 0.48;
 const SPEED_MIN = 0.2;
 const SPEED_MAX = 1.5;
 const ROTATION_MIN = -30;
@@ -29,24 +29,40 @@ const FONTS = ["monospace", "serif", "sans-serif", "cursive", "fantasy"];
 
 export function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const accentColorRef = useRef("255, 107, 53");
+  const accentColorRef = useRef("184, 149, 106");
+  const bgColorRef = useRef("26, 23, 20");
 
   useEffect(() => {
-    const updateAccentColor = () => {
+    const parseHex = (hex: string): string => {
+      const h = hex.replace("#", "").trim();
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      return `${r}, ${g}, ${b}`;
+    };
+
+    const updateColors = () => {
       const style = getComputedStyle(document.documentElement);
-      const accent = style.getPropertyValue("--accent").trim();
-      if (accent.includes("#a8865a")) {
-        accentColorRef.current = "168, 134, 90";
-      } else if (accent.includes("#6e8298")) {
-        accentColorRef.current = "110, 130, 152";
-      } else if (accent.includes("#708e6c")) {
-        accentColorRef.current = "112, 142, 108";
+      // Particles use --accent-hover (one shade lighter) so they read on the
+      // muted dark paper without fluorescing.
+      const accentHover = style.getPropertyValue("--accent-hover").trim();
+      if (accentHover.startsWith("#")) {
+        accentColorRef.current = parseHex(accentHover);
+      } else {
+        // Fallback: match --accent directly.
+        const accent = style.getPropertyValue("--accent").trim();
+        if (accent.startsWith("#")) accentColorRef.current = parseHex(accent);
+      }
+      // Canvas clear tracks --bg-primary so trails blend into the page bg.
+      const bgPrimary = style.getPropertyValue("--bg-primary").trim();
+      if (bgPrimary.startsWith("#")) {
+        bgColorRef.current = parseHex(bgPrimary);
       }
     };
 
-    updateAccentColor();
-    window.addEventListener("themechange", updateAccentColor);
-    return () => window.removeEventListener("themechange", updateAccentColor);
+    updateColors();
+    window.addEventListener("themechange", updateColors);
+    return () => window.removeEventListener("themechange", updateColors);
   }, []);
 
   useEffect(() => {
@@ -96,7 +112,7 @@ export function ParticleBackground() {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "rgba(8, 8, 12, 0.93)";
+      ctx.fillStyle = `rgba(${bgColorRef.current}, 0.92)`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const accent = accentColorRef.current;
