@@ -29,7 +29,7 @@ export function Header() {
     }, []);
 
     return (
-        <header className="site-header sticky top-0 z-50 backdrop-blur-xl bg-bg-primary/80">
+        <header className="site-header sticky top-0 z-50 bg-bg-primary/95">
             <nav className="max-w-4xl mx-auto px-4 md:px-6 h-16 flex items-center">
                 {/* Left: logo */}
                 <div className="flex-1 flex justify-start">
@@ -58,7 +58,6 @@ export function Header() {
                                     WebkitBackgroundClip: "text",
                                     WebkitTextFillColor: "transparent",
                                     backgroundClip: "text",
-                                    animation: "gradient-flow 4s ease infinite",
                                 }}
                             >
                                 Kurashizu Blog
@@ -200,7 +199,7 @@ export function Header() {
                         : "max-h-0 opacity-0"
                 }`}
             >
-                <div className="border-t border-border bg-bg-primary/95 backdrop-blur-xl">
+                <div className="border-t border-border bg-bg-primary">
                     <div className="px-4 pt-3 pb-1">
                         <SearchBar />
                     </div>

@@ -11,6 +11,8 @@ interface TrailDot {
     vy: number;
 }
 
+const MAX_DOTS = 50;
+
 export function MouseTrail() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const dotsRef = useRef<TrailDot[]>([]);
@@ -18,102 +20,91 @@ export function MouseTrail() {
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d")!;
+        const context = canvas?.getContext("2d");
+        if (!canvas || !context) return;
 
         const parseAccent = () => {
-            const c = getComputedStyle(document.documentElement)
-                .getPropertyValue("--accent")
-                .trim();
-            if (c.startsWith("#")) {
-                const hex = c.slice(1);
-                const r = parseInt(hex.slice(0, 2), 16);
-                const g = parseInt(hex.slice(2, 4), 16);
-                const b = parseInt(hex.slice(4, 6), 16);
-                accentRef.current = `${r}, ${g}, ${b}`;
+            const value = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+            const hex = value.replace("#", "");
+            if (/^[0-9a-f]{6}$/i.test(hex)) {
+                accentRef.current = [0, 2, 4]
+                    .map((offset) => parseInt(hex.slice(offset, offset + 2), 16))
+                    .join(", ");
             }
         };
-        parseAccent();
-
         const resize = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         };
-        resize();
-        window.addEventListener("resize", resize);
 
-        const onMove = (e: MouseEvent) => {
+        let animationId: number | null = null;
+        const cancelLoop = () => {
+            if (animationId !== null) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        };
+        const schedule = () => {
+            if (animationId === null && !document.hidden) {
+                animationId = requestAnimationFrame(animate);
+            }
+        };
+        const animate = () => {
+            animationId = null;
+            if (document.hidden) return;
+
+            const dots = dotsRef.current;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            let writeIndex = 0;
+            for (const dot of dots) {
+                dot.x += dot.vx;
+                dot.y += dot.vy;
+                dot.opacity -= 0.025;
+                dot.size *= 0.97;
+                if (dot.opacity <= 0) continue;
+
+                context.beginPath();
+                context.arc(dot.x, dot.y, dot.size * 2, 0, Math.PI * 2);
+                context.fillStyle = `rgba(${accentRef.current}, ${dot.opacity * 0.15})`;
+                context.fill();
+                context.beginPath();
+                context.arc(dot.x, dot.y, dot.size, 0, Math.PI * 2);
+                context.fillStyle = `rgba(${accentRef.current}, ${dot.opacity * 0.6})`;
+                context.fill();
+                dots[writeIndex++] = dot;
+            }
+            dots.length = Math.min(writeIndex, MAX_DOTS);
+            if (dots.length > 0) schedule();
+        };
+        const handleMove = (event: MouseEvent) => {
             dotsRef.current.push({
-                x: e.clientX + (Math.random() - 0.5) * 4,
-                y: e.clientY + (Math.random() - 0.5) * 4,
+                x: event.clientX + (Math.random() - 0.5) * 4,
+                y: event.clientY + (Math.random() - 0.5) * 4,
                 opacity: 1,
                 size: 1.5 + Math.random() * 1.5,
                 vx: (Math.random() - 0.5) * 0.5,
                 vy: (Math.random() - 0.5) * 0.5,
             });
+            if (dotsRef.current.length > MAX_DOTS) dotsRef.current.splice(0, dotsRef.current.length - MAX_DOTS);
+            schedule();
         };
-        window.addEventListener("mousemove", onMove);
+        const handleVisibility = () => (document.hidden ? cancelLoop() : schedule());
 
-        const onThemeChange = () => parseAccent();
-        window.addEventListener("themechange", onThemeChange);
-
-        const MAX_DOTS = 50;
-
-        let animId: number;
-        const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const dots = dotsRef.current;
-            const rgb = accentRef.current;
-
-            // Update + draw + compact in a single pass
-            let writeIdx = 0;
-            for (let i = 0; i < dots.length; i++) {
-                const dot = dots[i];
-                dot.x += dot.vx;
-                dot.y += dot.vy;
-                dot.opacity -= 0.025;
-                dot.size *= 0.97;
-
-                if (dot.opacity <= 0) continue;
-
-                const { x, y, opacity, size } = dot;
-
-                // Glow layer (larger, faint) — replaces shadowBlur
-                ctx.beginPath();
-                ctx.arc(x, y, size * 2, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(${rgb}, ${opacity * 0.15})`;
-                ctx.fill();
-
-                // Core layer (smaller, opaque)
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(${rgb}, ${opacity * 0.6})`;
-                ctx.fill();
-
-                // Keep this dot (compact in-place)
-                dots[writeIdx++] = dot;
-            }
-
-            // Trim to max and drop dead dots
-            dots.length = Math.min(writeIdx, MAX_DOTS);
-
-            animId = requestAnimationFrame(animate);
-        };
-        animId = requestAnimationFrame(animate);
+        parseAccent();
+        resize();
+        window.addEventListener("resize", resize);
+        window.addEventListener("mousemove", handleMove, { passive: true });
+        window.addEventListener("themechange", parseAccent);
+        document.addEventListener("visibilitychange", handleVisibility);
 
         return () => {
+            cancelLoop();
             window.removeEventListener("resize", resize);
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("themechange", onThemeChange);
-            cancelAnimationFrame(animId);
+            window.removeEventListener("mousemove", handleMove);
+            window.removeEventListener("themechange", parseAccent);
+            document.removeEventListener("visibilitychange", handleVisibility);
         };
     }, []);
 
-    return (
-        <canvas
-            ref={canvasRef}
-            className="fixed inset-0 pointer-events-none z-[100]"
-        />
-    );
+    return <canvas ref={canvasRef} aria-hidden="true" className="fixed inset-0 pointer-events-none z-[100]" />;
 }

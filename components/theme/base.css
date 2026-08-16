@@ -101,7 +101,6 @@ body::after {
     );
     pointer-events: none;
     z-index: -1;
-    animation: bg-drift 25s ease-in-out infinite;
 }
 
 /* Background keyframes used by body::after and Header gradient */
