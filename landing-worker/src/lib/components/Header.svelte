@@ -13,6 +13,7 @@
             KURASHIZU<span class="slash">/</span>PORTAL
         </div>
         <div class="sub">PERSONAL SCHEMATIC · 4 DESTINATIONS</div>
+        <div class="serverless">ALL WEB SERVICES · SERVERLESS ARCHITECTURE</div>
     </div>
     <div class="header-right">
         <div class="row">
@@ -62,12 +63,19 @@
         margin: 0 6px;
         font-weight: 400;
     }
-    .sub {
+    .sub,
+    .serverless {
         font-family: "JetBrains Mono", monospace;
         font-size: 0.7rem;
         color: var(--ink-3);
         letter-spacing: 0.18em;
         text-transform: uppercase;
+        white-space: nowrap;
+    }
+    .serverless {
+        color: var(--accent);
+        font-size: 0.62rem;
+        letter-spacing: 0.14em;
     }
     .header-right {
         display: flex;
@@ -100,6 +108,7 @@
     @media (max-width: 820px) {
         .header { padding: 24px; }
         .sub { display: none; }
+        .serverless { font-size: 0.58rem; }
     }
     @media (max-width: 540px) {
         .header {
