@@ -51,7 +51,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 100px 56px 150px;
+        padding: 100px 56px 80px;
     }
     @media (max-width: 820px) {
         main {
