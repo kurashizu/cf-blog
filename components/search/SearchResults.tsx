@@ -165,9 +165,9 @@ function SearchResultCard({ result }: { result: SearchResult }) {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-xl border border-border bg-bg-card
-                       hover:border-accent/50 hover:bg-bg-card/80
-                       transition-all duration-200 group"
+            className="block rounded-xl border border-border bg-bg-card shadow-[0_4px_18px_rgba(0,0,0,0.36)]
+                       hover:border-accent/50 hover:bg-bg-card/80 hover:shadow-[0_8px_28px_rgba(0,0,0,0.48)] hover:-translate-y-0.5
+                       transition-[transform,border-color,background-color] duration-200 group"
         >
             <div className="p-4">
                 {/* Source badge */}
