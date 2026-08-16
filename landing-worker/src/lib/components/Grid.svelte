@@ -4,7 +4,6 @@
 </script>
 
 <div class="grid">
-    <span class="center-mark" aria-hidden="true"></span>
     {#each PORTALS as portal, i}
         <Module {portal} index={i} />
     {/each}
@@ -14,76 +13,39 @@
     .grid {
         position: relative;
         width: 100%;
-        max-width: 1100px;
+        max-width: 1160px;
+        height: clamp(390px, calc(100vh - 300px), 500px);
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        gap: 36px 60px;
+        grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.9fr);
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+        gap: 20px 28px;
     }
-    .grid::before,
-    .grid::after {
-        content: "";
-        position: absolute;
-        background: var(--line);
-        pointer-events: none;
-    }
-    .grid::before {
-        top: 50%;
-        left: -32px;
-        right: -32px;
-        height: 1px;
-    }
-    .grid::after {
-        left: 50%;
-        top: -32px;
-        bottom: -32px;
-        width: 1px;
-    }
-    .center-mark {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 14px;
-        height: 14px;
-        pointer-events: none;
-        z-index: 2;
-    }
-    .center-mark::before,
-    .center-mark::after {
-        content: "";
-        position: absolute;
-        background: var(--ink-2);
-    }
-    .center-mark::before {
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        transform: translateY(-50%);
-    }
-    .center-mark::after {
-        left: 50%;
-        top: 0;
-        bottom: 0;
-        width: 1px;
-        transform: translateX(-50%);
-    }
+
     @media (max-width: 820px) {
         .grid {
-            gap: 24px 20px;
+            height: auto;
+            max-width: 680px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: auto;
+            gap: 18px 16px;
         }
-        .grid::before,
-        .grid::after,
-        .center-mark {
-            display: none;
+        .grid :global(.module.featured) {
+            grid-column: 1 / -1;
+            min-height: 330px;
+        }
+        .grid :global(.module:last-child) {
+            grid-column: 1 / -1;
         }
     }
+
     @media (max-width: 540px) {
         .grid {
             grid-template-columns: minmax(0, 1fr);
-            grid-template-rows: none;
             gap: 14px;
+        }
+        .grid :global(.module.featured),
+        .grid :global(.module:last-child) {
+            grid-column: auto;
         }
     }
 </style>

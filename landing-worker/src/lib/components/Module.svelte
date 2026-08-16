@@ -14,6 +14,7 @@
 
 <a
     class="module"
+    class:featured={portal.id === "01"}
     href={portal.url}
     style="--delay: {delay};"
 >
@@ -25,6 +26,9 @@
             <span>ONLINE</span>
         </span>
     </div>
+    {#if portal.id === "01"}
+        <span class="role">PRIMARY NODE / ARTICLE SYSTEM</span>
+    {/if}
     <PortalIcon icon={portal.icon} />
     <div class="name">{portal.name}</div>
     <div class="desc">{portal.desc}</div>
@@ -41,9 +45,11 @@
         text-decoration: none;
         color: inherit;
         cursor: pointer;
-        padding: 26px 28px 24px;
-        background: transparent;
+        min-height: 0;
+        padding: 16px 20px 14px;
+        background: rgba(20, 9, 11, 0.3);
         border: 1px solid var(--ink-2);
+        box-shadow: 0 8px 22px rgba(10, 3, 5, 0.24);
         transition:
             border-color 250ms ease,
             background 250ms ease,
@@ -122,7 +128,22 @@
         border-color: var(--accent);
         background: rgba(160, 72, 86, 0.07);
         transform: translate(-2px, -2px);
-        box-shadow: 6px 6px 0 rgba(160, 72, 86, 0.22);
+        box-shadow: 6px 6px 0 rgba(160, 72, 86, 0.22),
+            0 12px 28px rgba(10, 3, 5, 0.28);
+    }
+    .module.featured {
+        grid-row: 1 / -1;
+        padding: 30px 36px 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        background: rgba(160, 72, 86, 0.06);
+        box-shadow: 0 12px 32px rgba(10, 3, 5, 0.34);
+    }
+    .module.featured:hover {
+        background: rgba(160, 72, 86, 0.11);
+        box-shadow: 8px 8px 0 rgba(160, 72, 86, 0.25),
+            0 18px 38px rgba(10, 3, 5, 0.38);
     }
     .module:hover::before {
         border-color: var(--accent);
@@ -172,6 +193,14 @@
                 top right / 1px 100% no-repeat;
     }
 
+    .role {
+        margin-bottom: 18px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.62rem;
+        color: var(--accent);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
     .top-row {
         display: flex;
         justify-content: space-between;
@@ -181,7 +210,10 @@
         color: var(--ink-3);
         letter-spacing: 0.14em;
         text-transform: uppercase;
-        margin-bottom: 18px;
+        margin-bottom: 10px;
+    }
+    .module.featured .top-row {
+        margin-bottom: 0;
     }
     .num {
         color: var(--ink);
@@ -212,30 +244,36 @@
     .name {
         font-family: "Inter Tight", sans-serif;
         font-weight: 700;
-        font-size: clamp(1.4rem, 2.4vw, 2rem);
+        font-size: clamp(1.3rem, 2.1vw, 1.7rem);
         letter-spacing: -0.025em;
         color: var(--ink);
         line-height: 1;
         text-transform: lowercase;
     }
     .desc {
-        margin-top: 8px;
+        margin-top: 5px;
         font-family: "JetBrains Mono", monospace;
-        font-size: 0.7rem;
+        font-size: 0.64rem;
         color: var(--ink-3);
-        letter-spacing: 0.06em;
-        line-height: 1.5;
-        min-height: 2.5em;
+        letter-spacing: 0.05em;
+        line-height: 1.45;
+        min-height: 0;
+    }
+    .module.featured .desc {
+        max-width: 34rem;
+        margin-top: 10px;
+        font-size: 0.78rem;
+        line-height: 1.6;
     }
     .url {
-        margin-top: 14px;
-        padding-top: 12px;
+        margin-top: auto;
+        padding-top: 10px;
         border-top: 1px dashed var(--line);
         display: flex;
         justify-content: space-between;
         align-items: center;
         font-family: "JetBrains Mono", monospace;
-        font-size: 0.68rem;
+        font-size: 0.62rem;
         color: var(--ink-3);
         letter-spacing: 0.04em;
     }
@@ -264,8 +302,25 @@
         pointer-events: none;
     }
     .dim.t {
-        top: -22px;
+        top: -20px;
         left: 0;
+    }
+    .module.featured .dim.t {
+        top: -22px;
+    }
+    .module:not(.featured) :global(.icon) {
+        width: 30px;
+        height: 30px;
+        margin: 0 0 10px;
+    }
+    .module.featured :global(.icon) {
+        width: 56px;
+        height: 56px;
+        margin: 26px 0 24px;
+    }
+    .module.featured .name {
+        font-size: clamp(2.5rem, 5vw, 4.5rem);
+        line-height: 0.92;
     }
     .module:hover .dim {
         color: var(--accent);
@@ -275,6 +330,9 @@
         .module {
             min-width: 0;
             padding: 18px 18px 16px;
+        }
+        .module.featured {
+            padding: 24px 26px 22px;
         }
         .name {
             font-size: 1.3rem;
@@ -289,6 +347,13 @@
             padding: 18px 20px 16px;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
+        }
+        .module.featured {
+            min-height: 300px;
+            padding: 22px 20px 20px;
+        }
+        .module.featured .name {
+            font-size: 3rem;
         }
         .module:active {
             border-color: var(--accent);
@@ -326,9 +391,13 @@
     @media (hover: none) {
         .module:hover {
             border-color: var(--ink-2);
-            background: transparent;
+            background: rgba(20, 9, 11, 0.3);
             transform: none;
-            box-shadow: none;
+            box-shadow: 0 8px 22px rgba(10, 3, 5, 0.24);
+        }
+        .module.featured:hover {
+            background: rgba(160, 72, 86, 0.06);
+            box-shadow: 0 12px 32px rgba(10, 3, 5, 0.34);
         }
     }
 </style>
