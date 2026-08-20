@@ -1,8 +1,7 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { getBlogEnv } from "./types/env";
 
 export function getDB(): D1Database {
-    const { env } = getCloudflareContext();
-    return (env as unknown as { DB: D1Database }).DB;
+    return getBlogEnv().DB;
 }
 
 /** Read a JSON value from the cache_entries table by key. */

@@ -4,7 +4,7 @@
  * If no query is provided, renders an empty search page with just the search bar.
  */
 
-import { performSearch, RateLimitError } from "@/lib/search";
+import { performSearch, RateLimitError, EmbeddingQuotaError } from "@/lib/search";
 import type { SearchHit } from "@/lib/search";
 import { SearchResults } from "@/components/search/SearchResults";
 import { headers } from "next/headers";
@@ -60,8 +60,11 @@ export default async function SearchPage({
         if (e instanceof RateLimitError) {
             isRateLimited = true;
             error = "Too many searches. Please try again later.";
+        } else if (e instanceof EmbeddingQuotaError) {
+            isRateLimited = true;
+            error = "Search service is currently busy. Please try again in a few minutes.";
         } else {
-            error = e instanceof Error ? e.message : String(e);
+            error = "Search is temporarily unavailable. Please try again later.";
         }
     }
 

@@ -115,6 +115,7 @@ export function GuestbookMessages({
                                 setPage(1);
                             }}
                         >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={getAvatarSrc(msg)}
                                 alt={msg.name}
@@ -187,6 +188,7 @@ export function GuestbookMessages({
                                         className="w-full p-4 bg-bg-card/85 border border-border rounded-xl shadow-[0_3px_14px_rgba(0,0,0,0.34)]"
                                     >
                                         <div className="flex items-start gap-3 overflow-hidden">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img
                                                 src={getAvatarSrc(msg)}
                                                 alt={msg.name}

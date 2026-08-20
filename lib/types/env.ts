@@ -11,6 +11,8 @@
  *   await env.SESSION_KV.get(...)
  */
 
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+
 export interface BaseEnv {
     /** Cloudflare KV binding used for daily rate limiting + sessions. */
     SESSION_KV?: KVNamespace;
@@ -36,4 +38,14 @@ export interface AgentEnv extends BaseEnv {
     TOOL_TIMEOUT_MS?: string;
     BRAVE_SEARCH_API_KEY?: string;
     BRAVE_API_KEY?: string;
+}
+
+export function getBlogEnv(): BlogEnv {
+    const ctx = getCloudflareContext();
+    return ctx.env as unknown as BlogEnv;
+}
+
+export function getAgentEnv(): AgentEnv {
+    const ctx = getCloudflareContext();
+    return ctx.env as unknown as AgentEnv;
 }

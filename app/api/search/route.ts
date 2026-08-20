@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { performSearch, RateLimitError } from "@/lib/search";
+import { performSearch, RateLimitError, EmbeddingQuotaError } from "@/lib/search";
 import { getIP } from "@/shared/ratelimiter";
 
 export async function GET(request: NextRequest) {
@@ -28,10 +28,19 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(result);
     } catch (e) {
         console.error("Search error:", e);
+        if (e instanceof EmbeddingQuotaError) {
+            return NextResponse.json(
+                {
+                    error: "Search service is currently busy. Please try again in a few minutes.",
+                    results: [],
+                },
+                { status: 429 },
+            );
+        }
         const status = e instanceof RateLimitError ? 429 : 500;
         return NextResponse.json(
             {
-                error: e instanceof Error ? e.message : String(e),
+                error: "Search temporarily unavailable. Please try again later.",
                 results: [],
             },
             { status },
