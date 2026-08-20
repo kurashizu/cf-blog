@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -243,6 +243,24 @@ export function LLMLeaderboardPanel({
     const top = filtered.slice(0, 50);
     const hasFilters = creator !== "All" || query.trim() !== "";
 
+    const handleClose = useCallback(() => {
+        if (closingExpanded) return;
+        setClosingExpanded(true);
+        setTimeout(() => {
+            setClosingExpanded(false);
+            onCollapse?.();
+        }, 200);
+    }, [closingExpanded, onCollapse]);
+
+    const handleCloseDetail = useCallback(() => {
+        if (closingDetail) return;
+        setClosingDetail(true);
+        setTimeout(() => {
+            setClosingDetail(false);
+            setSelectedModel(null);
+        }, 200);
+    }, [closingDetail]);
+
     // ESC: close detail first, then main modal.
     useEffect(() => {
         if (!expanded) return;
@@ -254,7 +272,7 @@ export function LLMLeaderboardPanel({
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [expanded, onCollapse, selectedModel]);
+    }, [expanded, handleClose, handleCloseDetail, selectedModel]);
 
     // Clear selected model when the main panel is closed so it doesn't reappear on reopen.
     useEffect(() => {
@@ -268,23 +286,6 @@ export function LLMLeaderboardPanel({
             setSortKey(key);
             setSortDir(defaultDir(key));
         }
-    };
-
-    const handleClose = () => {
-        if (closingExpanded) return;
-        setClosingExpanded(true);
-        setTimeout(() => {
-            setClosingExpanded(false);
-            onCollapse?.();
-        }, 200);
-    };
-    const handleCloseDetail = () => {
-        if (closingDetail) return;
-        setClosingDetail(true);
-        setTimeout(() => {
-            setClosingDetail(false);
-            setSelectedModel(null);
-        }, 200);
     };
     const clearFilters = () => {
         setQuery("");

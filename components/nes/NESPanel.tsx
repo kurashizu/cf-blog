@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Browser, Controller, type ButtonKey } from "jsnes";
+import { Controller, type ButtonKey } from "jsnes";
+import { NESBrowserEngine } from "./emulator";
 import { NESBrowser } from "./NESBrowser";
 import { NESControls } from "./NESControls";
 import { NESRomPicker } from "./NESRomPicker";
@@ -73,7 +74,7 @@ function formatRelativeTime(ts: number): string {
 
 export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const browserRef = useRef<Browser | null>(null);
+    const browserRef = useRef<NESBrowserEngine | null>(null);
     const [currentRom, setCurrentRom] = useState<Rom | null>(null);
     const [status, setStatus] = useState<LoadStatus>({ kind: "idle" });
     const [paused, setPaused] = useState(false);
@@ -97,12 +98,9 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
     const handleLoadSlotRef = useRef<((n: number) => void) | null>(null);
 
     // Spin up the Browser when the modal opens, tear it down on close.
-    // JSNES attaches a document-level keyboard listener in its constructor
-    // and an AudioContext in start(), so we MUST destroy() on unmount or we
-    // leak both.
     useEffect(() => {
         if (!expanded || !containerRef.current) return;
-        const browser = new Browser({
+        const browser = new NESBrowserEngine({
             container: containerRef.current,
             onError: (e) => setStatus({ kind: "error", message: e.message }),
         });
@@ -211,7 +209,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
             // below fires again on next open.
             setCurrentRom(null);
         }
-    }, [expanded]);
+    }, [expanded, status.kind]);
 
     // ESC to close.
     useEffect(() => {
@@ -277,7 +275,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
         setCurrentRom(rom);
         setStatus({ kind: "loading" });
         setPaused(false);
-        Browser.loadROMFromURL(rom.url, (err, data) => {
+        NESBrowserEngine.loadROMFromURL(rom.url, (err, data) => {
             if (err || !data) {
                 setStatus({
                     kind: "error",

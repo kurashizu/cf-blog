@@ -33,6 +33,7 @@ export function BlogArticle({ post }: BlogArticleProps) {
             >
                 {post.coverImage && (
                     <div className="mb-8 aspect-video w-full overflow-hidden rounded-lg">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={post.coverImage}
                             alt={post.title}

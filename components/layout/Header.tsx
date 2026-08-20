@@ -6,7 +6,6 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { SearchBar } from "@/components/search/SearchBar";
-import icon2 from "@/public/icons/icon2_128.avif";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -39,7 +38,7 @@ export function Header() {
                     >
                         <div className="w-8 h-8 rounded-full overflow-hidden border border-accent/50 shrink-0">
                             <Image
-                                src={icon2}
+                                src="/icons/icon2_128.avif"
                                 alt="logo"
                                 width={32}
                                 height={32}

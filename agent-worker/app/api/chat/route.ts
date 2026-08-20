@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { checkBurst, checkDailyKV, getIP } from "@/lib/ratelimiter";
 import {
     streamWithFallback,
@@ -7,7 +6,7 @@ import {
     getDefaultModel,
 } from "@/lib/model-pool";
 import { executeTool, FUNCTION_DECLARATIONS } from "@/lib/tools";
-import type { AgentEnv } from "../../../../lib/types/env";
+import { getAgentEnv } from "@/lib/env";
 
 const SYSTEM_PROMPT = `You are KurAgent, an AI assistant powered by kurashizu, running on Cloudflare.
 
@@ -201,8 +200,7 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
     try {
-        const ctx = getCloudflareContext();
-        const env = ctx.env as unknown as AgentEnv;
+        const env = getAgentEnv();
 
         if (!env.GEMINI_API_KEY) {
             return NextResponse.json(

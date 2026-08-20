@@ -2,8 +2,6 @@
 
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import icon2Hover from "@/public/icons/icon2_128.avif";
-import icon3Hover from "@/public/icons/icon3_128.avif";
 
 interface Message {
     role: "user" | "model";
@@ -154,7 +152,11 @@ export function ChatWidget() {
                     </div>
                 ) : (
                     <Image
-                        src={isHovered ? icon2Hover : icon3Hover}
+                        src={
+                            isHovered
+                                ? "/icons/icon2_128.avif"
+                                : "/icons/icon3_128.avif"
+                        }
                         alt="Chat"
                         width={56}
                         height={56}

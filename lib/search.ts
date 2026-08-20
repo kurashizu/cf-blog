@@ -4,8 +4,10 @@
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { embedSearchQuery } from "@/lib/embeddings";
+import { embedSearchQuery, EmbeddingQuotaError } from "@/lib/embeddings";
 import { checkDailyKV } from "@/shared/ratelimiter";
+
+export { EmbeddingQuotaError };
 
 interface SearchEnv {
     SEARCH_INDEX: VectorizeIndex;

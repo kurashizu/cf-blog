@@ -15,6 +15,13 @@ interface EmbedContentResponse {
  * The query is prefixed with the "search result" task instruction as recommended
  * by the Gemini Embedding 2 docs.
  */
+export class EmbeddingQuotaError extends Error {
+    constructor(msg = "Search service is currently busy. Please try again later.") {
+        super(msg);
+        this.name = "EmbeddingQuotaError";
+    }
+}
+
 export async function embedSearchQuery(
     query: string,
     apiKey: string,
@@ -40,7 +47,17 @@ export async function embedSearchQuery(
 
     if (!res.ok) {
         const body = await res.text().catch(() => "");
-        throw new Error(`Gemini Embedding API ${res.status}: ${body}`);
+        const lowerBody = body.toLowerCase();
+        if (
+            res.status === 429 ||
+            lowerBody.includes("429") ||
+            lowerBody.includes("quota") ||
+            lowerBody.includes("resource_exhausted") ||
+            lowerBody.includes("exhausted")
+        ) {
+            throw new EmbeddingQuotaError();
+        }
+        throw new Error(`Embedding service unavailable (${res.status})`);
     }
 
     const json = (await res.json()) as EmbedContentResponse;

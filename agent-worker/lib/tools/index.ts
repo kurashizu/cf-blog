@@ -1,8 +1,7 @@
 /**
  * Tool registry — exports all tools and their Gemini function declarations
  */
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import type { AgentEnv } from "../../../lib/types/env";
+import { getAgentEnv } from "../env";
 import { evalExpressionTool } from "./eval-expression";
 import { webSearchTool } from "./web-search";
 import { getTimeTool } from "./get-time";
@@ -49,8 +48,7 @@ export async function executeTool(
         return { success: false, error: `Tool "${name}" not found` };
     }
 
-    const ctx = getCloudflareContext();
-    const env = ctx.env as unknown as AgentEnv;
+    const env = getAgentEnv();
     const timeoutMs = parseInt(
         env.TOOL_TIMEOUT_MS ?? String(DEFAULT_TIMEOUT_MS),
     );
