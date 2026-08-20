@@ -124,7 +124,7 @@ describe("evaluate — sandbox enforcement", () => {
         ["do-while", "do {} while (true)"],
         ["switch", "switch (1) { default: }"],
         ["with()", "with (obj) {}"],
-    ])("blocks %s", (_name, code) => {
+    ])("blocks %s", (_name: string, code: string) => {
         const r = evaluate(code);
         expect(r.success).toBe(false);
     });
