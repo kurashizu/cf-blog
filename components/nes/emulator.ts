@@ -1,7 +1,12 @@
-import NES from "jsnes/src/nes.js";
-import Screen from "jsnes/src/browser/screen.js";
-import KeyboardController from "jsnes/src/browser/keyboard.js";
-import GamepadController from "jsnes/src/browser/gamepad.js";
+import * as jsnes from "jsnes";
+
+const jsnesAny = jsnes as any;
+const NES = jsnesAny.NES ?? jsnesAny.default?.NES ?? jsnesAny;
+const Screen = jsnesAny.Screen ?? jsnesAny.default?.Screen;
+const KeyboardController =
+    jsnesAny.KeyboardController ?? jsnesAny.default?.KeyboardController;
+const GamepadController =
+    jsnesAny.GamepadController ?? jsnesAny.default?.GamepadController;
 
 const NES_FPS = 60.098;
 const FRAME_DURATION = 1000 / NES_FPS; // ~16.639ms
@@ -429,7 +434,10 @@ export class NESBrowserEngine {
             );
         }
         if (this._gamepadPolling) {
-            this._gamepadPolling.stop();
+            const polling = this._gamepadPolling as any;
+            if (typeof polling.stop === "function") {
+                polling.stop();
+            }
         }
         this._screen.destroy();
     }
@@ -441,15 +449,16 @@ export class NESBrowserEngine {
         const req = new XMLHttpRequest();
         req.open("GET", url);
         req.overrideMimeType("text/plain; charset=x-user-defined");
-        req.onerror = () =>
+        const handleError = () =>
             callback(new Error(`Error loading ${url}: ${req.statusText}`));
+        req.onerror = handleError;
         req.onload = function () {
             if (this.status === 200) {
                 callback(null, req.responseText);
             } else if (this.status === 0) {
                 // Aborted
             } else {
-                req.onerror(new ProgressEvent("error"));
+                handleError();
             }
         };
         req.send();

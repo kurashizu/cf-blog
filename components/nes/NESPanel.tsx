@@ -74,7 +74,7 @@ function formatRelativeTime(ts: number): string {
 
 export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const browserRef = useRef<Browser | null>(null);
+    const browserRef = useRef<NESBrowserEngine | null>(null);
     const [currentRom, setCurrentRom] = useState<Rom | null>(null);
     const [status, setStatus] = useState<LoadStatus>({ kind: "idle" });
     const [paused, setPaused] = useState(false);
