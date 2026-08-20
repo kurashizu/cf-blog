@@ -6,7 +6,7 @@ import {
     getDefaultModel,
 } from "@/lib/model-pool";
 import { executeTool, FUNCTION_DECLARATIONS } from "@/lib/tools";
-import { getAgentEnv } from "../../../../lib/types/env";
+import { getAgentEnv } from "@/lib/env";
 
 const SYSTEM_PROMPT = `You are KurAgent, an AI assistant powered by kurashizu, running on Cloudflare.
 

@@ -1,7 +1,7 @@
 /**
  * Tool registry — exports all tools and their Gemini function declarations
  */
-import { getAgentEnv } from "../../../lib/types/env";
+import { getAgentEnv } from "../env";
 import { evalExpressionTool } from "./eval-expression";
 import { webSearchTool } from "./web-search";
 import { getTimeTool } from "./get-time";

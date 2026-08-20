@@ -1,4 +1,10 @@
-import { getBlogEnv } from "./types/env";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type { BlogEnv } from "./types/env";
+
+export function getBlogEnv(): BlogEnv {
+    const { env } = getCloudflareContext();
+    return env as unknown as BlogEnv;
+}
 
 export function getDB(): D1Database {
     return getBlogEnv().DB;
