@@ -21,10 +21,43 @@ Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents
 | `news_items` | HN news archive (id, title, url, score, by, time, descendants, domain, summary, fetched_at, search_updated_at) — `fetched_at` is set by the daily cron |
 | `github_repos` | Full list of public GitHub repos with per-repo language breakdown (top 3 langs with %) |
 | `cache_entries` | Generic key-value cache (replaces R2 for small caches). Stores LLM leaderboard and GitHub contributions. |
+| `audit_log` | Fire-and-forget audit trail of every external API call from cache-worker (Gemini Embedding / generateContent, Vectorize upsert, GitHub, HN). Auto-pruned to 30 days. |
 
 Both `cf-blog` and `cf-blog-cache` have `DB` binding to the same D1. Cache-worker syncs GitHub repos, LLM leaderboard, and contributions into D1; cf-blog reads from D1 directly. Blog content is the source of truth in D1 — written directly by the admin API, no R2 mirror.
 
 Schema reference: `database/schema.sql`
+
+## Audit Log (`audit_log` table)
+
+Every external API call from cache-worker is recorded in the `audit_log` D1 table — Gemini Embedding / generateContent, Vectorize upsert, GitHub, HN. Writes are fire-and-forget; audit failures must never affect the main flow.
+
+| Field | Purpose |
+|---|---|
+| `ts` | UTC timestamp (auto) |
+| `category` | `embedding` / `vectorize` / `gemini_generate` / `github` / `aa` / `hn` / `refresh` |
+| `operation` | e.g. `batch_embed`, `upsert`, `summary_rewrite`, `fetch_repos`, `fetch_top30` |
+| `target` | Item id, slug, cache key, or empty for global |
+| `status` | `ok` / `failed` / `skipped` |
+| `http_status` | HTTP code if applicable |
+| `latency_ms` | Wall-clock duration |
+| `request_count` | Batch size (e.g. chunks in `batchEmbed`) — **this is what counts against daily quotas** |
+| `input_tokens` | Gemini `usageMetadata.promptTokenCount` |
+| `error_code` / `error_message` | On failure |
+
+Helper module: `cache-worker/src/lib/audit.ts` exposes `recordAudit(env, entry)` and `withAudit(env, category, operation, target, fn)` — wrap any external call with the latter to get timing + status + error capture for free.
+
+**Daily quota summary (Gemini Embedding 2 free tier = 1000/day):**
+```sql
+SELECT date(ts) AS day,
+       SUM(request_count) AS chunks_embedded,
+       SUM(CASE WHEN status='failed' THEN request_count ELSE 0 END) AS failed_chunks
+FROM audit_log
+WHERE category='embedding'
+GROUP BY day ORDER BY day DESC LIMIT 7;
+```
+Failed requests can still count against quotas depending on the API's quota model — sum both ok and failed to be safe.
+
+Auto-pruned to 30 days by the 30-min refresh cron (`audit-cleanup` step).
 
 ## Site-Wide Search (Vectorize + Gemini Embedding 2)
 
@@ -54,6 +87,17 @@ Blog and news content both go through `chunkItem()` in `cache-worker/src/lib/chu
 - **Section** chunks: split by `##` headings
 - **Paragraph** chunks: if a section exceeds 1200 chars, split by `###` → paragraphs → sentences
 - Each chunk is formatted: `"title: {title} | text: {content}"` (Gemini Embedding 2 document format)
+- **Hard cap**: `MAX_CHUNKS_PER_ITEM = 5` — oversized items are trimmed to the first 5 chunks and an `embedding / truncate` audit row is written. Prevents a single summary from burning 14+ quota per batch.
+
+### Dirty-queue safeguards
+
+The 3-min cron processes one dirty item per tick. Without safeguards, a single oversized / failing item can stall the entire backlog (e.g. item 49022663 in mid-2026 blocked 783 items for 22 days). Three safeguards are in place in `search-index.ts`:
+
+1. **Smallest-first ordering**: `ORDER BY length(summary) ASC, time ASC` — short summaries that produce 1-3 chunks get processed first instead of a giant 14-chunk summary wasting daily quota.
+2. **Retry limit**: `retry_count` + `last_failed_at` columns on `news_items`. After 5 consecutive failures (`MAX_NEWS_RETRIES`), the SQL filter `AND retry_count < 5` skips the item so the queue can advance.
+3. **Chunk cap**: see `MAX_CHUNKS_PER_ITEM` above. Even a non-truncated oversized item still costs at most 5 quota per attempt instead of 14+.
+
+`bumpRetry()` is called in the indexItem catch block; `markClean()` resets `retry_count = 0` on success so a later re-dirty starts fresh.
 
 ### Vector metadata schema
 

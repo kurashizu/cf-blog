@@ -1,4 +1,5 @@
 import { generateItemRewrite } from "./sources";
+import { withAudit } from "./audit";
 import type { Env, HNStory } from "../types";
 
 export async function handleHeartbeat(
@@ -19,7 +20,13 @@ export async function handleHeartbeat(
     const story = row as unknown as HNStory;
 
     try {
-        const rewrite = await generateItemRewrite(story, env.GEMINI_API_KEY);
+        const rewrite = await withAudit(
+            env,
+            "gemini_generate",
+            "summary_rewrite",
+            `news-${story.id}`,
+            () => generateItemRewrite(story, env.GEMINI_API_KEY!),
+        );
 
         await env.DB.prepare(
             "UPDATE news_items SET summary = ?, search_updated_at = NULL WHERE id = ?",

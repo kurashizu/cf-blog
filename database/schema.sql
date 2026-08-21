@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS news_items (
     domain            TEXT,
     summary           TEXT NOT NULL DEFAULT '',
     fetched_at        TEXT NOT NULL DEFAULT (datetime('now')),
-    search_updated_at TEXT
+    search_updated_at TEXT,
+    retry_count       INTEGER NOT NULL DEFAULT 0,
+    last_failed_at    TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_news_time ON news_items(time DESC);
@@ -104,3 +106,43 @@ CREATE TABLE IF NOT EXISTS cache_entries (
     value     TEXT NOT NULL,
     fetched_at TEXT NOT NULL
 );
+
+-- ============================================
+-- Audit log — records every external API call and key operation
+-- from the cache-worker (Gemini Embedding, Vectorize upsert, GitHub,
+-- HN fetch, etc.). Fire-and-forget writes; failures must never affect
+-- the main flow. Auto-pruned to 30 days by the 30-min refresh cron.
+--
+-- Schema is intentionally narrow: each row = one API call (or one
+-- wrapped operation). batchEmbedContents with N chunks still counts
+-- as ONE row with request_count=N (so quota usage is easy to sum).
+-- ============================================
+CREATE TABLE IF NOT EXISTS audit_log (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL DEFAULT (datetime('now')),
+    category      TEXT NOT NULL,        -- 'embedding' | 'vectorize' | 'gemini_generate' | 'github' | 'aa' | 'hn' | 'refresh'
+    operation     TEXT NOT NULL,        -- 'batch_embed' | 'vector_upsert' | 'summary_rewrite' | 'fetch_top30' | etc.
+    target        TEXT DEFAULT '',      -- news id, post slug, cache key, '' for global
+    status        TEXT NOT NULL,        -- 'ok' | 'failed' | 'skipped'
+    http_status   INTEGER,              -- HTTP status code if applicable
+    latency_ms    INTEGER,              -- wall-clock duration of the operation
+    request_count INTEGER,              -- batch size (e.g., chunks in batchEmbed)
+    input_tokens  INTEGER,              -- Gemini usageMetadata.promptTokenCount
+    error_code    TEXT,                 -- 'RESOURCE_EXHAUSTED' etc
+    error_message TEXT,                 -- short error message (truncated)
+    metadata      TEXT DEFAULT '{}'     -- JSON extras (retry_after_s, model, etc.)
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_category_ts ON audit_log(category, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_status_ts ON audit_log(status, ts DESC);
+
+-- ============================================
+-- One-time migrations (already applied to existing DBs)
+-- ============================================
+-- These are kept here for documentation. Running them again on an
+-- already-migrated DB will error with "duplicate column" — that's
+-- expected. Use `pragma table_info(news_items)` to verify state.
+--
+-- ALTER TABLE news_items ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0;
+-- ALTER TABLE news_items ADD COLUMN last_failed_at TEXT;

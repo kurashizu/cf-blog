@@ -12,6 +12,7 @@ import {
   fetchLLMLeaderboard,
   fetchRepoLanguages,
 } from "./sources";
+import { withAudit } from "./audit";
 import type { Env } from "../types";
 
 export interface RefreshResult {
@@ -25,7 +26,13 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
 
   // Each step is its own try/catch so one failure doesn't poison the rest.
   await runStep(results, "github-repos", async () => {
-    const repos = await fetchGithubRepos(env.GITHUB_PERSONAL_ACCESS_TOKEN);
+    const repos = await withAudit(
+      env,
+      "github",
+      "fetch_repos",
+      "kurashizu",
+      () => fetchGithubRepos(env.GITHUB_PERSONAL_ACCESS_TOKEN),
+    );
     if (repos.length === 0) throw new Error("empty response");
 
     const fetchedAt = new Date().toISOString();
@@ -103,7 +110,13 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     if (!env.ARTIFICIAL_ANALYSIS_API_KEY) {
       throw new Error("ARTIFICIAL_ANALYSIS_API_KEY not set");
     }
-    const models = await fetchLLMLeaderboard(env.ARTIFICIAL_ANALYSIS_API_KEY);
+    const models = await withAudit(
+      env,
+      "aa",
+      "fetch_leaderboard",
+      "artificial-analysis",
+      () => fetchLLMLeaderboard(env.ARTIFICIAL_ANALYSIS_API_KEY!),
+    );
     if (models.length === 0) throw new Error("empty response");
     const fetchedAt = new Date().toISOString();
     const payload = { fetchedAt, models };
@@ -122,9 +135,16 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     if (!env.GH_USERNAME) {
       throw new Error("GH_USERNAME not set");
     }
-    const data = await fetchContributions(
-      env.GITHUB_PERSONAL_ACCESS_TOKEN,
+    const data = await withAudit(
+      env,
+      "github",
+      "fetch_contributions",
       env.GH_USERNAME,
+      () =>
+        fetchContributions(
+          env.GITHUB_PERSONAL_ACCESS_TOKEN!,
+          env.GH_USERNAME!,
+        ),
     );
     const fetchedAt = new Date().toISOString();
     await env.DB.prepare(
@@ -137,6 +157,15 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
       )
       .run();
     return `${data.days.length} days, ${data.totalContributions} total`;
+  });
+
+  // ── Audit log cleanup (keep last 30 days) ──
+  await runStep(results, "audit-cleanup", async () => {
+    const result = await env.DB.prepare(
+      `DELETE FROM audit_log WHERE ts < datetime('now', '-30 days')`,
+    ).run();
+    const deleted = result.meta?.changes ?? 0;
+    return `${deleted} old rows pruned`;
   });
 
   return results;

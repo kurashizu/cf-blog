@@ -6,11 +6,17 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { embedSearchQuery } from "@/lib/embeddings";
 import { checkDailyKV } from "@/shared/ratelimiter";
+import {
+    recordAudit,
+    extractErrorCode,
+    extractErrorMessage,
+} from "@/lib/audit";
 
 interface SearchEnv {
     SEARCH_INDEX: VectorizeIndex;
     GEMINI_API_KEY: string;
     SESSION_KV: KVNamespace;
+    DB: D1Database;
 }
 
 export interface SearchHit {
@@ -75,8 +81,36 @@ export async function performSearch(
         }
     }
 
-    // 1. Embed the query
-    const queryVector = await embedSearchQuery(query, cfEnv.GEMINI_API_KEY);
+    // 1. Embed the query — audited so we can see how much quota cf-blog's
+    //    user-driven searches consume (they compete with cache-worker's
+    //    indexing for the same Gemini free-tier 1000 RPD budget).
+    const embedStart = Date.now();
+    let queryVector: number[];
+    try {
+        queryVector = await embedSearchQuery(query, cfEnv.GEMINI_API_KEY);
+        await recordAudit(cfEnv, {
+            category: "embedding",
+            operation: "search_query",
+            target: query,
+            status: "ok",
+            latencyMs: Date.now() - embedStart,
+            requestCount: 1,
+            metadata: { model: "gemini-embedding-2", source: "cf-blog" },
+        });
+    } catch (e) {
+        await recordAudit(cfEnv, {
+            category: "embedding",
+            operation: "search_query",
+            target: query,
+            status: "failed",
+            latencyMs: Date.now() - embedStart,
+            requestCount: 1,
+            errorCode: extractErrorCode(e),
+            errorMessage: extractErrorMessage(e),
+            metadata: { model: "gemini-embedding-2", source: "cf-blog" },
+        });
+        throw e;
+    }
 
     // 2. Search Vectorize
     // Fetch extra results when filtering so we still have enough after client-side filter.

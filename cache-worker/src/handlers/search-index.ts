@@ -10,6 +10,7 @@
 import { chunkItem } from "../lib/chunker";
 import type { IndexableItem } from "../lib/chunker";
 import { embedBatch, buildVectors } from "../lib/embeddings";
+import { recordAudit, extractErrorCode, extractErrorMessage } from "../lib/audit";
 import type { Env } from "../types";
 
 export interface SearchIndexResult {
@@ -30,7 +31,7 @@ export async function handleSearchIndexing(
          FROM posts
          WHERE status = 'published'
            AND search_updated_at IS NULL
-         ORDER BY published_at ASC
+         ORDER BY length(content) ASC, published_at ASC
          LIMIT 1`,
     ).first<{
         id: string;
@@ -47,20 +48,31 @@ export async function handleSearchIndexing(
     }
 
     // ── Step 2: Try a dirty news item ──
+    // - ORDER BY length(summary) ASC: small news first (cheap, unlikely to
+    //   blow the per-item chunk limit), so a single oversized item can't
+    //   block the queue.
+    // - retry_count < MAX_RETRIES: give up after N consecutive failures
+    //   instead of retrying the same item forever. Otherwise a transient
+    //   429 / oversized summary can stall the entire dirty backlog.
+    const MAX_NEWS_RETRIES = 5;
     const dirtyNews = await env.DB.prepare(
-        `SELECT id, title, url, by, summary, time
+        `SELECT id, title, url, by, summary, time, retry_count
          FROM news_items
          WHERE summary != ''
            AND search_updated_at IS NULL
-         ORDER BY time ASC
+           AND retry_count < ?
+         ORDER BY length(summary) ASC, time ASC
          LIMIT 1`,
-    ).first<{
+    )
+        .bind(MAX_NEWS_RETRIES)
+        .first<{
         id: number;
         title: string;
         url: string | null;
         by: string;
         summary: string;
         time: number;
+        retry_count: number;
     }>();
 
     if (dirtyNews) {
@@ -120,6 +132,7 @@ interface DirtyNewsRow {
     by: string;
     summary: string;
     time: number;
+    retry_count: number;
 }
 
 async function indexNewsItem(
@@ -139,7 +152,7 @@ async function indexNewsItem(
         published_at: new Date(row.time * 1000).toISOString().slice(0, 10),
     };
 
-    return indexItem(item, env, "news_items", id);
+    return indexItem(item, env, "news_items", id, row.retry_count);
 }
 
 // ── Shared indexing ──
@@ -149,26 +162,123 @@ async function indexItem(
     env: Env,
     table: string,
     idField: string,
+    retryCount: number = 0,
 ): Promise<SearchIndexResult> {
+    const start = Date.now();
     try {
-        const chunks = chunkItem(item);
+        const { chunks, truncated, totalBeforeTruncation } = chunkItem(item);
+        if (truncated) {
+            // Audit the oversize so we can see which items routinely blow
+            // the per-item chunk budget. The truncation itself is silent
+            // for search users; they just get fewer vectors per item.
+            await recordAudit(env, {
+                category: "embedding",
+                operation: "truncate",
+                target: `${item.source}:${idField}`,
+                status: "ok",
+                metadata: {
+                    kept: chunks.length,
+                    total: totalBeforeTruncation,
+                },
+            });
+        }
         if (chunks.length === 0) {
             await markClean(env, table, idField);
+            await recordAudit(env, {
+                category: "embedding",
+                operation: "batch_embed",
+                target: `${item.source}:${idField}`,
+                status: "skipped",
+                latencyMs: Date.now() - start,
+                metadata: { reason: "0 chunks" },
+            });
             return { ok: true, detail: `${idField}: 0 chunks, skipped` };
         }
 
         const texts = chunks.map((c) => c.text);
-        const embeddings = await embedBatch(texts, env.GEMINI_API_KEY!);
-        const vectors = buildVectors(chunks, embeddings);
 
-        await env.SEARCH_INDEX.upsert(vectors);
-        await markClean(env, table, idField);
+        // ── Gemini Embedding API call ──
+        let inputTokens = 0;
+        try {
+            const embedResult = await embedBatch(texts, env.GEMINI_API_KEY!);
+            inputTokens = embedResult.inputTokens;
+            await recordAudit(env, {
+                category: "embedding",
+                operation: "batch_embed",
+                target: `${item.source}:${idField}`,
+                status: "ok",
+                latencyMs: Date.now() - start,
+                requestCount: texts.length,
+                inputTokens,
+                metadata: { model: "gemini-embedding-2" },
+            });
+            const vectors = buildVectors(chunks, embedResult.vectors);
 
-        return {
-            ok: true,
-            detail: `${idField}: ${vectors.length} vectors indexed`,
-        };
+            // ── Vectorize upsert ──
+            const upsertStart = Date.now();
+            try {
+                await env.SEARCH_INDEX.upsert(vectors);
+                await recordAudit(env, {
+                    category: "vectorize",
+                    operation: "upsert",
+                    target: `${item.source}:${idField}`,
+                    status: "ok",
+                    latencyMs: Date.now() - upsertStart,
+                    requestCount: vectors.length,
+                });
+            } catch (e) {
+                await recordAudit(env, {
+                    category: "vectorize",
+                    operation: "upsert",
+                    target: `${item.source}:${idField}`,
+                    status: "failed",
+                    latencyMs: Date.now() - upsertStart,
+                    requestCount: vectors.length,
+                    errorCode: extractErrorCode(e),
+                    errorMessage: extractErrorMessage(e),
+                });
+                throw e;
+            }
+
+            await markClean(env, table, idField);
+
+            return {
+                ok: true,
+                detail: `${idField}: ${vectors.length} vectors indexed`,
+            };
+        } catch (embedErr) {
+            // embedBatch threw — log audit row, then rethrow so outer
+            // catch marks the whole indexItem as failed.
+            await recordAudit(env, {
+                category: "embedding",
+                operation: "batch_embed",
+                target: `${item.source}:${idField}`,
+                status: "failed",
+                latencyMs: Date.now() - start,
+                requestCount: texts.length,
+                errorCode: extractErrorCode(embedErr),
+                errorMessage: extractErrorMessage(embedErr),
+            });
+            throw embedErr;
+        }
     } catch (e) {
+        // Track failed retries so the same item doesn't block the queue
+        // forever. After MAX_NEWS_RETRIES the SQL filter will skip it
+        // entirely, and we still record an audit row.
+        //
+        // Quota errors (429 / RESOURCE_EXHAUSTED) are NOT counted toward
+        // the retry budget — they're an external resource issue that
+        // resolves when the daily Gemini quota resets, not a problem with
+        // the item itself. We still bump last_failed_at so we know when
+        // it last failed, but retry_count stays at 0 so the item gets
+        // retried as soon as quota is available again.
+        if (table === "news_items") {
+            await bumpRetry(env, idField, retryCount, e);
+        }
+        console.error(
+            `search-index failed for ${item.source}:${idField}:`,
+            e instanceof Error ? e.message : String(e),
+        );
         return {
             ok: false,
             detail: `${idField}: failed - ${e instanceof Error ? e.message : String(e)}`,
@@ -184,10 +294,59 @@ async function markClean(
     idField: string,
 ): Promise<void> {
     const column = table === "news_items" ? "id" : "slug";
+    // Reset retry tracking on success — if this item later gets re-dirtied
+    // (e.g. summary regenerated), it gets a fresh budget.
+    if (table === "news_items") {
+        await env.DB.prepare(
+            `UPDATE news_items
+             SET search_updated_at = datetime('now'),
+                 retry_count = 0,
+                 last_failed_at = NULL
+             WHERE id = ?`,
+        )
+            .bind(idField)
+            .run();
+    } else {
+        await env.DB.prepare(
+            `UPDATE ${table} SET search_updated_at = datetime('now') WHERE ${column} = ?`,
+        )
+            .bind(idField)
+            .run();
+    }
+}
+
+async function bumpRetry(
+    env: Env,
+    idField: string,
+    currentRetryCount: number,
+    error: unknown,
+): Promise<void> {
+    const errCode = extractErrorCode(error);
+    const isQuotaError =
+        errCode === "429" ||
+        errCode === "RESOURCE_EXHAUSTED" ||
+        errCode === "8"; // 8 = RESOURCE_EXHAUSTED gRPC code, just in case
+    if (isQuotaError) {
+        // Quota issue — don't count toward retry budget; just record the
+        // last failure time so we can see when the item last hit 429.
+        // The item will be retried normally as soon as the daily quota
+        // resets, so we MUST NOT mark it as exhausted.
+        await env.DB.prepare(
+            `UPDATE news_items
+             SET last_failed_at = datetime('now')
+             WHERE id = ?`,
+        )
+            .bind(idField)
+            .run();
+        return;
+    }
+    const next = currentRetryCount + 1;
     await env.DB.prepare(
-        `UPDATE ${table} SET search_updated_at = datetime('now') WHERE ${column} = ?`,
+        `UPDATE news_items
+         SET retry_count = ?, last_failed_at = datetime('now')
+         WHERE id = ?`,
     )
-        .bind(idField)
+        .bind(next, idField)
         .run();
 }
 

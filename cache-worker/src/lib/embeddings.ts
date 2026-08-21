@@ -30,6 +30,12 @@ interface GeminiBatchEmbedResponse {
     usageMetadata?: { promptTokenCount: number };
 }
 
+/** Returned by `embedBatch` so callers can audit token usage. */
+export interface EmbedBatchResult {
+    vectors: number[][];
+    inputTokens: number;
+}
+
 /**
  * Embed a single text string.
  */
@@ -57,13 +63,15 @@ export async function embedText(
 
 /**
  * Embed multiple texts in a single batch API call.
- * Returns embeddings in the same order as inputs.
+ * Returns embeddings in the same order as inputs, plus the
+ * `promptTokenCount` from Gemini's `usageMetadata` so callers can audit
+ * quota consumption.
  */
 export async function embedBatch(
     texts: string[],
     apiKey: string,
-): Promise<number[][]> {
-    if (texts.length === 0) return [];
+): Promise<EmbedBatchResult> {
+    if (texts.length === 0) return { vectors: [], inputTokens: 0 };
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_EMBED_MODEL}:batchEmbedContents?key=${apiKey}`;
     const requests: GeminiEmbedContentRequest[] = texts.map((t) => ({
@@ -85,7 +93,10 @@ export async function embedBatch(
         throw new Error(`Gemini Batch Embed ${res.status}: ${body}`);
     }
     const json = (await res.json()) as GeminiBatchEmbedResponse;
-    return json.embeddings.map((e) => e.values);
+    return {
+        vectors: json.embeddings.map((e) => e.values),
+        inputTokens: json.usageMetadata?.promptTokenCount ?? 0,
+    };
 }
 
 /**

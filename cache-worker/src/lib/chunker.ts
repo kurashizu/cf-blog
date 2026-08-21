@@ -12,6 +12,14 @@
 
 const MAX_CHUNK_SIZE = 1200;
 
+/**
+ * Hard cap on chunks per item. A summary > ~6000 chars would otherwise
+ * split into 14+ chunks, blowing a single batch's quota usage and risking
+ * 429s. We trim to the first MAX_CHUNKS_PER_ITEM chunks and audit-log
+ * the truncation so we can revisit / extend if search recall suffers.
+ */
+const MAX_CHUNKS_PER_ITEM = 5;
+
 export interface Chunk {
     /** Text to send to the embedding model (includes title prefix). */
     text: string;
@@ -43,8 +51,15 @@ export interface IndexableItem {
     published_at: string;
 }
 
+/** Result of `chunkItem` — chunks may be truncated to MAX_CHUNKS_PER_ITEM. */
+export interface ChunkResult {
+    chunks: Chunk[];
+    truncated: boolean;
+    totalBeforeTruncation: number;
+}
+
 /** Generate all chunks for a single indexable item. */
-export function chunkItem(item: IndexableItem): Chunk[] {
+export function chunkItem(item: IndexableItem): ChunkResult {
     const chunks: Chunk[] = [];
 
     // ── Blog overview chunk ──
@@ -109,7 +124,15 @@ export function chunkItem(item: IndexableItem): Chunk[] {
         }
     }
 
-    return chunks;
+    const totalBeforeTruncation = chunks.length;
+    if (chunks.length > MAX_CHUNKS_PER_ITEM) {
+        return {
+            chunks: chunks.slice(0, MAX_CHUNKS_PER_ITEM),
+            truncated: true,
+            totalBeforeTruncation,
+        };
+    }
+    return { chunks, truncated: false, totalBeforeTruncation };
 }
 
 interface HeadingSection {

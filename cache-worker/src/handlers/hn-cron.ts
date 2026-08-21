@@ -11,12 +11,19 @@
  * shows the full history regardless of fetch date.
  */
 import { fetchHNNews } from "../lib/sources";
+import { withAudit } from "../lib/audit";
 import type { Env } from "../types";
 
 const DAILY_HN_COUNT = 30;
 
 export async function handleHNCron(env: Env): Promise<void> {
-    const stories = await fetchHNNews(DAILY_HN_COUNT);
+    const stories = await withAudit(
+        env,
+        "hn",
+        "fetch_top30",
+        "",
+        () => fetchHNNews(DAILY_HN_COUNT),
+    );
     if (stories.length === 0) {
         console.log("HN cron: empty response, skipping");
         return;
