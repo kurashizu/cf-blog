@@ -203,18 +203,15 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
                             </svg>
                         )}
                     </div>
-                    <div className="flex items-end justify-between gap-2 mt-0.5">
-                        <div className="flex flex-wrap gap-1.5 min-w-0">
-                            {tags.slice(0, 2).map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="text-[10px] px-1.5 py-0.5 rounded bg-bg-card border border-border text-text-muted"
-                                >
-                                    {tag}
-                                </span>
-                            ))}
-                        </div>
-                        <span className="text-xs text-text-muted shrink-0">
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                        {tags.length > 0 ? (
+                            <span className="text-[10px] text-text-muted truncate min-w-0">
+                                {tags.slice(0, 2).join(" · ")}
+                            </span>
+                        ) : (
+                            <span />
+                        )}
+                        <span className="text-[10px] text-text-muted shrink-0">
                             {formatDate(post.date)}
                         </span>
                     </div>
