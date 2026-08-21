@@ -16,6 +16,7 @@ interface PostData {
     title: string;
     slug: string;
     date: string;
+    description: string;
     tags: string;
     published: boolean;
     coverImage: string;
@@ -43,6 +44,7 @@ export function PostEditor({
     const [published, setPublished] = useState(initialData?.published ?? true);
     const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
     const [externalUrl, setExternalUrl] = useState(initialData?.externalUrl || "");
+    const [description, setDescription] = useState(initialData?.description || "");
     const [content, setContent] = useState(initialData?.content || "");
     const [preview, setPreview] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,6 +84,7 @@ export function PostEditor({
             title,
             slug,
             date,
+            description,
             tags,
             published,
             coverImage,
@@ -118,6 +121,7 @@ export function PostEditor({
                 setTags("");
                 setCoverImage("");
                 setExternalUrl("");
+                setDescription("");
                 // Redirect to admin list for new posts
                 if (!isEditing) {
                     setTimeout(() => {
@@ -247,6 +251,23 @@ export function PostEditor({
                             required
                         />
                     </div>
+                </div>
+
+                <div>
+                    <label
+                        htmlFor="description"
+                        className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
+                    >
+                        Description <span className="text-text-muted/70 normal-case font-normal">(short summary shown on /blog list cards)</span>
+                    </label>
+                    <textarea
+                        id="description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="A one-line summary of this post"
+                        rows={2}
+                        className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all resize-y"
+                    />
                 </div>
 
                 <div>

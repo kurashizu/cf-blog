@@ -29,6 +29,7 @@ export default async function EditPostPage({ params }: PageProps) {
                     title: safePost.title,
                     slug: safePost.slug,
                     date: safePost.date,
+                    description: safePost.description || "",
                     tags: tagsString,
                     published: safePost.published,
                     coverImage: safePost.coverImage || "",
