@@ -23,6 +23,12 @@ export default async function AdminLayout({
                         >
                             Messages
                         </a>
+                        <a
+                            href="/admin/audit"
+                            className="text-sm text-text-muted hover:text-accent transition-colors"
+                        >
+                            Audit
+                        </a>
                     </nav>
                 </div>
             </header>
