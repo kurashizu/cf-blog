@@ -20,11 +20,12 @@ export async function POST(request: Request) {
       description?: string;
       tags?: string[];
       coverImage?: string;
+      externalUrl?: string;
       author?: string;
       draft?: boolean;
       published?: boolean;
     };
-    const { title, slug, content, date, description, tags, coverImage, author, draft, published } = body;
+    const { title, slug, content, date, description, tags, coverImage, externalUrl, author, draft, published } = body;
 
     if (!slug || !content || !title) {
       return NextResponse.json({ error: 'Missing required fields: title, slug, content' }, { status: 400 });
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
       tags: tags || [],
       published: published ?? false,
       coverImage: coverImage || '',
+      externalUrl: externalUrl || '',
       author: author || 'Kurashizu',
       draft: draft ?? false,
     };

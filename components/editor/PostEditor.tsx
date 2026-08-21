@@ -19,6 +19,7 @@ interface PostData {
     tags: string;
     published: boolean;
     coverImage: string;
+    externalUrl: string;
     content: string;
 }
 
@@ -41,6 +42,7 @@ export function PostEditor({
     const [tags, setTags] = useState(initialData?.tags || "");
     const [published, setPublished] = useState(initialData?.published ?? true);
     const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
+    const [externalUrl, setExternalUrl] = useState(initialData?.externalUrl || "");
     const [content, setContent] = useState(initialData?.content || "");
     const [preview, setPreview] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,6 +85,7 @@ export function PostEditor({
             tags,
             published,
             coverImage,
+            externalUrl,
             content,
         };
 
@@ -114,6 +117,7 @@ export function PostEditor({
                 setContent("");
                 setTags("");
                 setCoverImage("");
+                setExternalUrl("");
                 // Redirect to admin list for new posts
                 if (!isEditing) {
                     setTimeout(() => {
@@ -274,6 +278,23 @@ export function PostEditor({
                         type="url"
                         value={coverImage}
                         onChange={(e) => setCoverImage(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
+                    />
+                </div>
+
+                <div>
+                    <label
+                        htmlFor="externalUrl"
+                        className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
+                    >
+                        External URL <span className="text-text-muted/70 normal-case font-normal">(optional — opens in new tab from cards)</span>
+                    </label>
+                    <input
+                        id="externalUrl"
+                        type="url"
+                        value={externalUrl}
+                        onChange={(e) => setExternalUrl(e.target.value)}
                         placeholder="https://..."
                         className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
                     />

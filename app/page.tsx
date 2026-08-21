@@ -27,6 +27,7 @@ interface Post {
     date: string;
     description?: string;
     tags?: string[];
+    externalUrl?: string;
 }
 
 interface GitHubRepo {
@@ -170,18 +171,41 @@ function LanguageBadge({ languagesJson }: { languagesJson: string }) {
 function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
     const excerpt = post.description?.slice(0, 20) || "";
     const tags = Array.isArray(post.tags) ? post.tags : [];
+    const isExternal = !!post.externalUrl && /^https?:\/\//.test(post.externalUrl);
+    const href = isExternal ? (post.externalUrl as string) : `/blog/${post.slug}`;
     return (
         <Link
-            href={`/blog/${post.slug}`}
+            href={href}
+            target={isExternal ? "_blank" : undefined}
+            rel={isExternal ? "noopener noreferrer" : undefined}
             className="block animate-fade-up-sm"
             style={{ animationDelay: `${delayMs}ms` }}
         >
             <Card className="h-full group">
                 <div className="p-3 flex flex-col justify-between h-full">
                     <div>
-                        <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors line-clamp-1">
-                            {post.title}
-                        </h3>
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors line-clamp-1 min-w-0">
+                                {post.title}
+                            </h3>
+                            {isExternal && (
+                                <svg
+                                    className="w-3 h-3 text-accent shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    viewBox="0 0 24 24"
+                                    aria-label="Opens in new tab"
+                                    title="Opens in new tab"
+                                >
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                    <polyline points="15 3 21 3 21 9" />
+                                    <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                            )}
+                        </div>
                         {excerpt && (
                             <p className="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-full sm:max-w-[70%]">
                                 {excerpt}...
@@ -227,7 +251,7 @@ export default async function HomePage() {
             db
                 .prepare(
                     `SELECT slug, title, excerpt as description,
-                        published_at as date, tags, cover_image
+                        published_at as date, tags, cover_image, external_url
                      FROM posts
                      WHERE status = 'published'
                      ORDER BY published_at DESC

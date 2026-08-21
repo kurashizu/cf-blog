@@ -49,11 +49,12 @@ export async function PUT(
       description?: string;
       tags?: string[];
       coverImage?: string;
+      externalUrl?: string;
       author?: string;
       draft?: boolean;
       published?: boolean;
     };
-    const { title, content, date, description, tags, coverImage, author, draft, published } = body;
+    const { title, content, date, description, tags, coverImage, externalUrl, author, draft, published } = body;
 
     // Validate content length
     if (content && content.length > 500000) {
@@ -86,6 +87,7 @@ export async function PUT(
       tags: tags || existingPost.tags,
       published: published !== undefined ? published : existingPost.published,
       coverImage: coverImage || existingPost.coverImage || '',
+      externalUrl: externalUrl || existingPost.externalUrl || '',
       author: author || existingPost.author,
       draft: draft !== undefined ? draft : existingPost.draft,
     };

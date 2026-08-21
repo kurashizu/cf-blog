@@ -9,6 +9,7 @@ export interface Post {
     tags: string[];
     published: boolean;
     coverImage?: string;
+    externalUrl?: string;
     author: string;
     draft: boolean;
     content: string;
@@ -56,6 +57,7 @@ function rowToPost(row: Record<string, unknown>): Post {
         tags,
         published: (row.status as string) === "published",
         coverImage: (row.cover_image as string) || undefined,
+        externalUrl: (row.external_url as string) || undefined,
         author: (row.author as string) || "Kurashizu",
         draft: (row.status as string) === "draft",
         content: (row.content as string) || "",
@@ -75,6 +77,7 @@ function rowToPostListItem(row: Record<string, unknown>): PostListItem {
         tags,
         published: (row.status as string) === "published",
         coverImage: (row.cover_image as string) || undefined,
+        externalUrl: (row.external_url as string) || undefined,
         author: (row.author as string) || "Kurashizu",
         draft: (row.status as string) === "draft",
     };
@@ -111,8 +114,8 @@ export function createArticlesRepo() {
                 const rows = await db
                     .prepare(
                         `SELECT slug, title, excerpt as description,
-                            cover_image, tags, status, published_at as date,
-                            author
+                            cover_image, external_url, tags, status,
+                            published_at as date, author
                      FROM posts
                      ORDER BY published_at DESC`,
                     )
@@ -143,15 +146,16 @@ export function createArticlesRepo() {
                     `
                 INSERT INTO posts
                     (id, slug, title, excerpt, content,
-                     cover_image, category, tags, author, status, published_at,
-                     content_hash, search_updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     cover_image, external_url, category, tags, author, status,
+                     published_at, content_hash, search_updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     slug = excluded.slug,
                     title = excluded.title,
                     excerpt = excluded.excerpt,
                     content = excluded.content,
                     cover_image = excluded.cover_image,
+                    external_url = excluded.external_url,
                     category = excluded.category,
                     tags = excluded.tags,
                     author = excluded.author,
@@ -173,6 +177,9 @@ export function createArticlesRepo() {
                     body,
                     (data.coverImage as string) ||
                         (data.cover_image as string) ||
+                        "",
+                    (data.externalUrl as string) ||
+                        (data.external_url as string) ||
                         "",
                     (data.category as string) || "",
                     JSON.stringify(tags),

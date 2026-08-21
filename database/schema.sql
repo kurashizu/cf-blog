@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS posts (
     excerpt           TEXT,
     content           TEXT NOT NULL DEFAULT '',
     cover_image       TEXT DEFAULT '',
+    external_url      TEXT DEFAULT '',
     category          TEXT DEFAULT '',
     tags              TEXT DEFAULT '[]',
     author            TEXT DEFAULT 'Kurashizu',
@@ -147,6 +148,8 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_status_ts ON audit_log(status, ts DESC)
 --
 -- ALTER TABLE news_items ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0;
 -- ALTER TABLE news_items ADD COLUMN last_failed_at TEXT;
+--
+-- ALTER TABLE posts ADD COLUMN external_url TEXT DEFAULT '';
 
 -- ============================================
 -- About page quick links (managed via D1, rendered on /about)
