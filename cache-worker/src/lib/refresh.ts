@@ -47,6 +47,7 @@ export async function refreshCache(
       "fetch_repos",
       "kurashizu",
       () => fetchGithubRepos(env.GITHUB_PERSONAL_ACCESS_TOKEN),
+      { metadata: { source: "cache-worker" } },
     );
     if (repos.length === 0) throw new Error("empty response");
 
@@ -138,6 +139,7 @@ export async function refreshCache(
       "fetch_leaderboard",
       "artificial-analysis",
       () => fetchLLMLeaderboard(env.ARTIFICIAL_ANALYSIS_API_KEY!),
+      { metadata: { source: "cache-worker" } },
     );
     if (models.length === 0) throw new Error("empty response");
     const fetchedAt = new Date().toISOString();
@@ -167,6 +169,7 @@ export async function refreshCache(
           env.GITHUB_PERSONAL_ACCESS_TOKEN!,
           env.GH_USERNAME!,
         ),
+      { metadata: { source: "cache-worker" } },
     );
     const fetchedAt = new Date().toISOString();
     await env.DB.prepare(

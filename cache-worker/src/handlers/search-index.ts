@@ -177,6 +177,7 @@ async function indexItem(
                 target: `${item.source}:${idField}`,
                 status: "ok",
                 metadata: {
+                    source: "cache-worker",
                     kept: chunks.length,
                     total: totalBeforeTruncation,
                 },
@@ -190,7 +191,7 @@ async function indexItem(
                 target: `${item.source}:${idField}`,
                 status: "skipped",
                 latencyMs: Date.now() - start,
-                metadata: { reason: "0 chunks" },
+                metadata: { source: "cache-worker", reason: "0 chunks" },
             });
             return { ok: true, detail: `${idField}: 0 chunks, skipped` };
         }
@@ -210,7 +211,7 @@ async function indexItem(
                 latencyMs: Date.now() - start,
                 requestCount: texts.length,
                 inputTokens,
-                metadata: { model: "gemini-embedding-2" },
+                metadata: { source: "cache-worker", model: "gemini-embedding-2" },
             });
             const vectors = buildVectors(chunks, embedResult.vectors);
 
@@ -225,6 +226,7 @@ async function indexItem(
                     status: "ok",
                     latencyMs: Date.now() - upsertStart,
                     requestCount: vectors.length,
+                    metadata: { source: "cache-worker" },
                 });
             } catch (e) {
                 await recordAudit(env, {
@@ -236,6 +238,7 @@ async function indexItem(
                     requestCount: vectors.length,
                     errorCode: extractErrorCode(e),
                     errorMessage: extractErrorMessage(e),
+                    metadata: { source: "cache-worker" },
                 });
                 throw e;
             }
@@ -258,6 +261,7 @@ async function indexItem(
                 requestCount: texts.length,
                 errorCode: extractErrorCode(embedErr),
                 errorMessage: extractErrorMessage(embedErr),
+                metadata: { source: "cache-worker", model: "gemini-embedding-2" },
             });
             throw embedErr;
         }

@@ -26,6 +26,7 @@ export async function handleHeartbeat(
             "summary_rewrite",
             `news-${story.id}`,
             () => generateItemRewrite(story, env.GEMINI_API_KEY!),
+            { metadata: { source: "cache-worker" } },
         );
 
         await env.DB.prepare(

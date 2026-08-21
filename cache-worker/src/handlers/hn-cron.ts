@@ -23,6 +23,7 @@ export async function handleHNCron(env: Env): Promise<void> {
         "fetch_top30",
         "",
         () => fetchHNNews(DAILY_HN_COUNT),
+        { metadata: { source: "cache-worker" } },
     );
     if (stories.length === 0) {
         console.log("HN cron: empty response, skipping");
