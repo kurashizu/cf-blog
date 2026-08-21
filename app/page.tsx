@@ -180,7 +180,7 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
             className="block animate-fade-up-sm"
             style={{ animationDelay: `${delayMs}ms` }}
         >
-            <Card className="h-full group min-h-[80px]">
+            <Card className="h-full group">
                 <div className="p-3 flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between gap-2">
                         <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors line-clamp-1 min-w-0">

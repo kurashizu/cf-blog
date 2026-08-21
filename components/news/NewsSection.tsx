@@ -33,7 +33,7 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
                         className="block animate-fade-up-sm"
                         style={{ animationDelay: `${i * 40}ms` }}
                     >
-                        <MiniCard className="group min-h-[80px]">
+                        <MiniCard className="group">
                             <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm text-accent font-mono group-hover:text-accent-hover transition-colors truncate">
                                     {story.title}
