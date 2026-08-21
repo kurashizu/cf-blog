@@ -39,7 +39,7 @@ export function NewsSection({ stories }: { stories: HNStory[] }) {
                                     {story.title}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 mt-1">
+                            <div className="flex items-center justify-between gap-2 mt-0.5">
                                 {story.domain ? (
                                     <span className="text-xs text-text-muted truncate">
                                         {story.domain}

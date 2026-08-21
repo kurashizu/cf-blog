@@ -203,7 +203,7 @@ function FeaturedPost({ post, delayMs }: { post: Post; delayMs: number }) {
                             </svg>
                         )}
                     </div>
-                    <div className="flex items-end justify-between gap-2 mt-2">
+                    <div className="flex items-end justify-between gap-2 mt-0.5">
                         <div className="flex flex-wrap gap-1.5 min-w-0">
                             {tags.slice(0, 2).map((tag) => (
                                 <span
