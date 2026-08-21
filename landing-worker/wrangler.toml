@@ -1,18 +1,18 @@
 name = "cf-landing"
-main = ".open-next/worker.js"
-compatibility_date = "2026-04-30"
+compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
+main = ".svelte-kit/cloudflare/_worker.js"
 
 [assets]
-directory = ".open-next/assets"
+directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
 
-# Custom domains (022025.xyz, www.022025.xyz) are configured in the
-# Cloudflare Dashboard — not declared here on purpose.
+# Custom domains (apex + www.apex, e.g. `krsz.in` + `www.krsz.in`) are
+# configured in the Cloudflare Dashboard — not declared here on purpose.
+# Apex domain is centralized in `shared/site-config.ts` (APEX_DOMAIN).
 
 [observability]
 enabled = false
-head_sampling_rate = 1
 
 [observability.logs]
 enabled = true

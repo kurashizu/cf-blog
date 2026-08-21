@@ -39,6 +39,7 @@
   "exclude": [
     "agent-worker",
     "cache-worker",
+    "landing-worker",
     "node_modules"
   ]
 }

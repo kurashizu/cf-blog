@@ -2,158 +2,207 @@
 
 import { useEffect, useRef } from "react";
 
-const GROUPS = ["ku", "ra", "shi", "zu"];
-const FONT_SIZE_BASE = 16;
-const FONT_SIZE_VARIANCE = 12;
-const OPACITY_MIN = 0.05;
-const OPACITY_MAX = 0.25;
+const GROUPS = ["ku", "ra", "shi", "zu"] as const;
+const FONTS = ["monospace", "serif", "sans-serif", "cursive", "fantasy"] as const;
+const FRAME_MS = 33; // ~30 FPS is enough for ambient background motion.
+const MAX_PARTICLES = 80;
+const FONT_SIZE_MIN = 16;
+const FONT_SIZE_RANGE = 12;
+const OPACITY_MIN = 0.18;
+const OPACITY_MAX = 0.48;
 const SPEED_MIN = 0.2;
-const SPEED_MAX = 1.5;
-const ROTATION_MIN = -30;
-const ROTATION_MAX = 30;
+const SPEED_RANGE = 1.3;
+const SIDE_DRIFT_MIN = 0.25;
+const SIDE_DRIFT_RANGE = 0.45;
+const COLOR_SHIFT = 22;
+
+type SpawnEdge = "top" | "left" | "right";
+type Rgb = [number, number, number];
 
 interface Particle {
-  x: number;
-  y: number;
-  text: string;
-  speed: number;
-  opacity: number;
-  opacityDir: number;
-  phase: number;
-  rotation: number;
-  fontSize: number;
-  fontStyle: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    text: string;
+    color: string;
+    opacity: number;
+    opacityDirection: 1 | -1;
+    phase: number;
+    rotation: number;
+    font: string;
 }
 
-const FONTS = ["monospace", "serif", "sans-serif", "cursive", "fantasy"];
+function parseHex(value: string, fallback: Rgb): Rgb {
+    const hex = value.replace("#", "").trim();
+    if (!/^[0-9a-f]{6}$/i.test(hex)) return fallback;
+    return [
+        parseInt(hex.slice(0, 2), 16),
+        parseInt(hex.slice(2, 4), 16),
+        parseInt(hex.slice(4, 6), 16),
+    ];
+}
+
+function rgba([r, g, b]: Rgb, alpha: number): string {
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export function ParticleBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const accentColorRef = useRef("255, 107, 53");
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    const updateAccentColor = () => {
-      const style = getComputedStyle(document.documentElement);
-      const accent = style.getPropertyValue("--accent").trim();
-      if (accent.includes("#ff6b35")) {
-        accentColorRef.current = "255, 107, 53";
-      } else if (accent.includes("#4a9eff")) {
-        accentColorRef.current = "74, 158, 255";
-      } else if (accent.includes("#35ff6b")) {
-        accentColorRef.current = "53, 255, 107";
-      }
-    };
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext("2d", { alpha: false });
+        if (!canvas || !context) return;
 
-    updateAccentColor();
-    window.addEventListener("themechange", updateAccentColor);
-    return () => window.removeEventListener("themechange", updateAccentColor);
-  }, []);
+        let accent: Rgb = [184, 149, 106];
+        let background: Rgb = [26, 23, 20];
+        let timer: ReturnType<typeof setInterval> | null = null;
+        const particles: Particle[] = [];
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+        const updateColors = () => {
+            const styles = getComputedStyle(document.documentElement);
+            const accentValue = styles.getPropertyValue("--accent-hover").trim() || styles.getPropertyValue("--accent").trim();
+            const backgroundValue = styles.getPropertyValue("--bg-primary").trim();
+            accent = parseHex(accentValue, accent);
+            background = parseHex(backgroundValue, background);
+        };
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+        const chooseEdge = (): SpawnEdge => {
+            const value = Math.random();
+            return value < 0.55 ? "top" : value < 0.775 ? "left" : "right";
+        };
 
-    let animationId: number;
-    const particles: Particle[] = [];
+        const resetParticle = (particle: Particle, edge: SpawnEdge = chooseEdge()) => {
+            const fontSize = FONT_SIZE_MIN + Math.random() * FONT_SIZE_RANGE;
+            particle.text = GROUPS[Math.floor(Math.random() * GROUPS.length)];
+            particle.font = `${fontSize}px ${FONTS[Math.floor(Math.random() * FONTS.length)]}`;
+            particle.vy = SPEED_MIN + Math.random() * SPEED_RANGE;
+            particle.vx = 0;
+            particle.rotation = (-30 + Math.random() * 60) * (Math.PI / 180);
+            particle.opacity = OPACITY_MIN + Math.random() * (OPACITY_MAX - OPACITY_MIN);
+            particle.opacityDirection = Math.random() > 0.5 ? 1 : -1;
+            particle.phase = Math.random() * Math.PI * 2;
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
+            const size = fontSize;
+            if (edge === "top") {
+                particle.x = Math.random() * canvas.width;
+                particle.y = -size * (5 + Math.random() * 40);
+            } else if (edge === "left") {
+                particle.x = -size * (2 + Math.random() * 4);
+                particle.y = -size * 2 + Math.random() * (canvas.height + size * 4);
+                particle.vx = SIDE_DRIFT_MIN + Math.random() * SIDE_DRIFT_RANGE;
+            } else {
+                particle.x = canvas.width + size * (2 + Math.random() * 4);
+                particle.y = -size * 2 + Math.random() * (canvas.height + size * 4);
+                particle.vx = -(SIDE_DRIFT_MIN + Math.random() * SIDE_DRIFT_RANGE);
+            }
 
-    const createParticle = (x?: number, y?: number): Particle => {
-      const fontSize = FONT_SIZE_BASE + Math.random() * FONT_SIZE_VARIANCE;
-      return {
-        x: x ?? Math.random() * canvas.width,
-        y: y ?? -fontSize,
-        text: GROUPS[Math.floor(Math.random() * GROUPS.length)],
-        speed: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
-        opacity: OPACITY_MIN + Math.random() * (OPACITY_MAX - OPACITY_MIN),
-        opacityDir: Math.random() > 0.5 ? 1 : -1,
-        phase: Math.random() * Math.PI * 2,
-        rotation: ROTATION_MIN + Math.random() * (ROTATION_MAX - ROTATION_MIN),
-        fontSize,
-        fontStyle: FONTS[Math.floor(Math.random() * FONTS.length)],
-      };
-    };
+            const color: Rgb = accent.map((channel) =>
+                Math.max(0, Math.min(255, channel + (Math.random() - 0.5) * COLOR_SHIFT * 2)),
+            ) as Rgb;
+            particle.color = `rgb(${color.join(",")})`;
+        };
 
-    const initParticles = () => {
-      particles.length = 0;
-      const avgSize = FONT_SIZE_BASE + FONT_SIZE_VARIANCE / 2;
-      const cols = Math.ceil(canvas.width / (avgSize * 5));
-      for (let i = 0; i < cols; i++) {
-        const p = createParticle(
-          i * (avgSize * 5) + Math.random() * avgSize * 2,
-          -avgSize * (5 + Math.random() * 40)
-        );
-        particles.push(p);
-      }
-    };
+        const createParticle = (): Particle => {
+            const particle = {
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                text: "",
+                color: "",
+                opacity: 0,
+                opacityDirection: 1 as const,
+                phase: 0,
+                rotation: 0,
+                font: "16px monospace",
+            } satisfies Particle;
+            resetParticle(particle);
+            return particle;
+        };
 
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            particles.length = 0;
+            const averageFontSize = FONT_SIZE_MIN + FONT_SIZE_RANGE / 2;
+            const count = Math.min(
+                MAX_PARTICLES,
+                Math.ceil(canvas.width / (averageFontSize * 2.4)),
+            );
+            for (let i = 0; i < count; i++) particles.push(createParticle());
+        };
 
-      ctx.fillStyle = "rgba(8, 8, 12, 0.93)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const draw = () => {
+            context.fillStyle = rgba(background, 0.92);
+            context.fillRect(0, 0, canvas.width, canvas.height);
 
-      const accent = accentColorRef.current;
+            for (const particle of particles) {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.phase += 0.02;
+                particle.opacity += particle.opacityDirection * 0.0006;
 
-      for (const p of particles) {
-        p.y += p.speed;
-        p.opacity += p.opacityDir * 0.0006;
-        p.phase += 0.02;
+                if (particle.opacity <= OPACITY_MIN) {
+                    particle.opacity = OPACITY_MIN;
+                    particle.opacityDirection = 1;
+                } else if (particle.opacity >= OPACITY_MAX) {
+                    particle.opacity = OPACITY_MAX;
+                    particle.opacityDirection = -1;
+                }
 
-        if (p.opacity <= OPACITY_MIN) {
-          p.opacity = OPACITY_MIN;
-          p.opacityDir = 1;
-        } else if (p.opacity >= OPACITY_MAX) {
-          p.opacity = OPACITY_MAX;
-          p.opacityDir = -1;
-        }
+                if (
+                    particle.y > canvas.height + 32 ||
+                    particle.x < -64 ||
+                    particle.x > canvas.width + 64
+                ) {
+                    resetParticle(particle);
+                    continue;
+                }
 
-        if (p.y > canvas.height + p.fontSize * 2) {
-          p.y = -p.fontSize * 2;
-          p.x = Math.random() * canvas.width;
-        }
+                context.save();
+                context.globalAlpha = particle.opacity;
+                context.translate(particle.x + Math.sin(particle.phase) * 3, particle.y);
+                context.rotate(particle.rotation);
+                context.font = particle.font;
+                context.fillStyle = particle.color;
+                context.fillText(particle.text, 0, 0);
+                context.restore();
+            }
+        };
 
-        const wobble = Math.sin(p.phase) * 3;
-        ctx.save();
-        ctx.translate(p.x + wobble, p.y);
-        ctx.rotate((p.rotation * Math.PI) / 180);
-        ctx.font = `${p.fontSize}px ${p.fontStyle}`;
-        ctx.fillStyle = `rgba(${accent}, ${p.opacity})`;
-        ctx.fillText(p.text, 0, 0);
-        ctx.restore();
-      }
+        const start = () => {
+            if (timer === null && !document.hidden && !reducedMotion.matches) timer = setInterval(draw, FRAME_MS);
+        };
+        const stop = () => {
+            if (timer !== null) {
+                clearInterval(timer);
+                timer = null;
+            }
+        };
+        const handleVisibility = () => (document.hidden ? stop() : start());
+        const handleResize = () => {
+            resize();
+            draw();
+        };
 
-      animationId = requestAnimationFrame(draw);
-    };
+        updateColors();
+        resize();
+        draw();
+        if (!reducedMotion.matches) start();
+        window.addEventListener("resize", handleResize);
+        window.addEventListener("themechange", updateColors);
+        document.addEventListener("visibilitychange", handleVisibility);
 
-    resize();
-    initParticles();
-    draw();
+        return () => {
+            stop();
+            window.removeEventListener("resize", handleResize);
+            window.removeEventListener("themechange", updateColors);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, []);
 
-    const handleResize = () => {
-      resize();
-      initParticles();
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 w-full h-full pointer-events-none -z-10"
-      style={{ opacity: 1 }}
-    />
-  );
+    return <canvas ref={canvasRef} aria-hidden="true" className="fixed inset-0 w-full h-full pointer-events-none -z-10" />;
 }

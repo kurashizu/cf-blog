@@ -78,7 +78,7 @@ This will:
 Check the post on the blog:
 
 ```bash
-curl https://blog.022025.xyz/blog/your-post-slug
+curl https://blog.krsz.in/blog/your-post-slug
 ```
 
 Or query the database directly:

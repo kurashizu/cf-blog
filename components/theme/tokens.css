@@ -1,30 +1,34 @@
 /* ===========================================
    TOKENS - Design System Variables
+   Paper · Dark · Matte
+   - No fluorescence. Muted, desaturated tones.
+   - Warm/cool undertones (sepia · slate · moss).
+   - Slight grain via global body::before overlay.
    =========================================== */
 :root,
 [data-theme="dark"] {
-    /* Colors */
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #12121a;
-    --bg-card: #1a1a24;
-    --bg-elevated: #22222e;
-    --border: #2a2a3a;
-    --border-hover: #3a3a4f;
+    /* Colors — Sepia Kraft Paper (deep warm dark) */
+    --bg-primary: #13110e;
+    --bg-secondary: #1b1814;
+    --bg-card: #23201b;
+    --bg-elevated: #2c2823;
+    --border: #3d3833;
+    --border-hover: #504a42;
 
-    --text-primary: #e8e8ed;
-    --text-secondary: #9090a0;
-    --text-muted: #606070;
+    --text-primary: #e6dfd2;
+    --text-secondary: #a59d8c;
+    --text-muted: #6b6459;
 
-    --accent: #ff6b35;
-    --accent-hover: #ff8555;
-    --accent-glow: rgba(255, 107, 53, 0.25);
-    --accent-subtle: rgba(255, 107, 53, 0.08);
+    --accent: #a8865a;
+    --accent-hover: #b8956a;
+    --accent-glow: rgba(168, 134, 90, 0.16);
+    --accent-subtle: rgba(168, 134, 90, 0.07);
 
-    /* Shadows */
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 30px var(--accent-glow);
+    /* Shadows — deeper for matte absorption */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.65);
+    --shadow-glow: 0 0 24px var(--accent-glow);
 
     /* Spacing */
     --space-1: 4px;
@@ -52,45 +56,47 @@
     --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
     /* Glow Color */
-    --glow-color: rgba(255, 107, 53, 0.05);
+    --glow-color: rgba(168, 134, 90, 0.035);
 }
 
 [data-theme="deep-blue"] {
-    --bg-primary: #0c0c1a;
-    --bg-secondary: #12122a;
-    --bg-card: #181832;
-    --bg-elevated: #20203e;
-    --border: #2a2a4a;
-    --border-hover: #3a3a5f;
+    /* Colors — Slate Paper (deep cool dark) */
+    --bg-primary: #14161b;
+    --bg-secondary: #1a1d22;
+    --bg-card: #20232a;
+    --bg-elevated: #292d35;
+    --border: #383d47;
+    --border-hover: #4a505c;
 
-    --text-primary: #e0e0f0;
-    --text-secondary: #8888a8;
-    --text-muted: #505068;
+    --text-primary: #dde0e6;
+    --text-secondary: #959ba3;
+    --text-muted: #5d6168;
 
-    --accent: #4a9eff;
-    --accent-hover: #6ab0ff;
-    --accent-glow: rgba(74, 158, 255, 0.25);
-    --accent-subtle: rgba(74, 158, 255, 0.08);
+    --accent: #6e8298;
+    --accent-hover: #8297ad;
+    --accent-glow: rgba(110, 130, 152, 0.16);
+    --accent-subtle: rgba(110, 130, 152, 0.07);
 
-    --glow-color: rgba(74, 158, 255, 0.05);
+    --glow-color: rgba(110, 130, 152, 0.035);
 }
 
 [data-theme="deep-green"] {
-    --bg-primary: #0a1a0f;
-    --bg-secondary: #122218;
-    --bg-card: #182e22;
-    --bg-elevated: #203828;
-    --border: #2a3a32;
-    --border-hover: #3a4a42;
+    /* Colors — Moss Paper (deep cool dark, sage) */
+    --bg-primary: #121512;
+    --bg-secondary: #181c19;
+    --bg-card: #1f2421;
+    --bg-elevated: #272d29;
+    --border: #353c37;
+    --border-hover: #47504b;
 
-    --text-primary: #e0f0e8;
-    --text-secondary: #88a898;
-    --text-muted: #506858;
+    --text-primary: #dde0d9;
+    --text-secondary: #979d96;
+    --text-muted: #5e645e;
 
-    --accent: #35ff6b;
-    --accent-hover: #55ff85;
-    --accent-glow: rgba(53, 255, 107, 0.25);
-    --accent-subtle: rgba(53, 255, 107, 0.08);
+    --accent: #708e6c;
+    --accent-hover: #84a280;
+    --accent-glow: rgba(112, 142, 108, 0.16);
+    --accent-subtle: rgba(112, 142, 108, 0.07);
 
-    --glow-color: rgba(53, 255, 107, 0.05);
+    --glow-color: rgba(112, 142, 108, 0.035);
 }

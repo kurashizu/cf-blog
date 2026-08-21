@@ -192,8 +192,10 @@ function ControllerIcon({ hovered }: { hovered: boolean }) {
             className="w-full h-full"
             style={{
                 transform: hovered ? "scale(1.05)" : "scale(1)",
-                transition: "transform 200ms ease-out",
-                filter: "drop-shadow(0 0 10px var(--accent))",
+                transition: "transform 200ms ease-out, filter 200ms ease-out",
+                filter: hovered
+                    ? "drop-shadow(0 0 10px var(--accent))"
+                    : "none",
             }}
         >
             {/* Cable */}
@@ -324,8 +326,12 @@ export function GadgetsPanel() {
                                             hoveredId === gadget.id
                                                 ? "scale(1.05)"
                                                 : "scale(1)",
-                                        transition: "transform 200ms ease-out",
-                                        filter: "drop-shadow(0 0 10px var(--accent))",
+                                        transition:
+                                            "transform 200ms ease-out, filter 200ms ease-out",
+                                        filter:
+                                            hoveredId === gadget.id
+                                                ? "drop-shadow(0 0 10px var(--accent))"
+                                                : "none",
                                     }}
                                 />
                             )}

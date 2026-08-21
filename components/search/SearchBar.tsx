@@ -4,13 +4,11 @@ import { useRouter } from "next/navigation";
 import { useRef, useTransition } from "react";
 
 interface SearchBarProps {
-    variant?: "icon" | "inline";
     initialQuery?: string;
     onSearch?: (q: string) => void;
 }
 
 export function SearchBar({
-    variant = "icon",
     initialQuery = "",
     onSearch,
 }: SearchBarProps) {
@@ -70,56 +68,28 @@ export function SearchBar({
         );
     }
 
-    // ── Navbar: always-expanded input ──
-    if (variant === "icon") {
-        return (
-            <form
-                onSubmit={handleSubmit}
-                className="relative group w-full max-w-[200px]"
-            >
-                <input
-                    ref={inputRef}
-                    type="search"
-                    defaultValue={initialQuery}
-                    placeholder="Search..."
-                    className="w-full h-8 rounded-lg bg-bg-card border border-border
-                               pl-8 pr-3 text-xs text-text-primary
-                               placeholder:text-text-muted
-                               focus:outline-none focus-visible:outline-none
-                               focus:border-accent/60
-                               transition-all duration-300"
-                />
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 flex items-center justify-center">
-                    {isPending ? (
-                        <Spinner className="w-3.5 h-3.5 text-accent" />
-                    ) : (
-                        <SearchIcon className="w-3.5 h-3.5 text-text-muted transition-colors duration-300 group-focus-within:text-accent" />
-                    )}
-                </span>
-            </form>
-        );
-    }
-
-    // ── Inline (full-width input on /search page) ──
     return (
-        <form onSubmit={handleSubmit} className="relative group">
+        <form
+            onSubmit={handleSubmit}
+            className="relative group w-full max-w-[200px]"
+        >
             <input
                 ref={inputRef}
                 type="search"
                 defaultValue={initialQuery}
-                placeholder="Search articles & news..."
-                className="w-full max-w-md h-10 rounded-xl bg-bg-card border border-border
-                       px-4 pl-10 text-sm text-text-primary
-                       placeholder:text-text-muted
-                       focus:outline-none focus-visible:outline-none
-                       focus:border-accent/60
-                       transition-all duration-300"
+                placeholder="Semantic Search..."
+                className="w-full h-8 rounded-lg bg-bg-card border border-border
+                           pl-8 pr-3 text-xs text-text-primary
+                           placeholder:text-text-muted
+                           focus:outline-none focus-visible:outline-none
+                           focus:border-accent/60
+                           transition-all duration-300"
             />
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 flex items-center justify-center">
                 {isPending ? (
-                    <Spinner className="w-4 h-4 text-accent" />
+                    <Spinner className="w-3.5 h-3.5 text-accent" />
                 ) : (
-                    <SearchIcon className="w-4 h-4 text-text-muted transition-colors duration-300 group-focus-within:text-accent" />
+                    <SearchIcon className="w-3.5 h-3.5 text-text-muted transition-colors duration-300 group-focus-within:text-accent" />
                 )}
             </span>
         </form>

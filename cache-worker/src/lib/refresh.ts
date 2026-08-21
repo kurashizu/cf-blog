@@ -21,7 +21,22 @@ export interface RefreshResult {
   skipped?: boolean;
 }
 
-export async function refreshCache(env: Env): Promise<RefreshResult[]> {
+type StepResult = string | { detail: string; skipped: true };
+
+export interface RefreshOptions {
+  /** Bypass the AA freshness guard for an authenticated manual refresh. */
+  forceLLM?: boolean;
+}
+
+// The Free AA endpoint is paginated (currently three pages for this catalog)
+// and allows 100 requests/day. The worker still runs every 30 minutes for the
+// other caches, but refreshes the leaderboard at most once every two hours.
+const LLM_MIN_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
+
+export async function refreshCache(
+  env: Env,
+  options: RefreshOptions = {},
+): Promise<RefreshResult[]> {
   const results: RefreshResult[] = [];
 
   // Each step is its own try/catch so one failure doesn't poison the rest.
@@ -110,7 +125,14 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     if (!env.ARTIFICIAL_ANALYSIS_API_KEY) {
       throw new Error("ARTIFICIAL_ANALYSIS_API_KEY not set");
     }
-    const models = await withAudit(
+    if (
+      !options.forceLLM &&
+      (await isLLMCacheFresh(env.DB, LLM_MIN_REFRESH_INTERVAL_MS))
+    ) {
+      return { detail: "fresh cache; upstream request skipped", skipped: true };
+    }
+
+    const { models, intelligenceIndexVersion } = await withAudit(
       env,
       "aa",
       "fetch_leaderboard",
@@ -119,13 +141,13 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
     );
     if (models.length === 0) throw new Error("empty response");
     const fetchedAt = new Date().toISOString();
-    const payload = { fetchedAt, models };
+    const payload = { fetchedAt, intelligenceIndexVersion, models };
     await env.DB.prepare(
       `INSERT OR REPLACE INTO cache_entries (key, value, fetched_at) VALUES (?, ?, ?)`,
     )
       .bind("llm-leaderboard", JSON.stringify(payload), fetchedAt)
       .run();
-    return `${models.length} models`;
+    return `${models.length} models (Index v${intelligenceIndexVersion})`;
   });
 
   await runStep(results, "github-contributions", async () => {
@@ -171,14 +193,35 @@ export async function refreshCache(env: Env): Promise<RefreshResult[]> {
   return results;
 }
 
+async function isLLMCacheFresh(
+  db: D1Database,
+  minAgeMs: number,
+): Promise<boolean> {
+  const entry = await db
+    .prepare("SELECT fetched_at FROM cache_entries WHERE key = ?")
+    .bind("llm-leaderboard")
+    .first<{ fetched_at: string }>();
+  if (!entry?.fetched_at) return false;
+  const fetchedAt = Date.parse(entry.fetched_at);
+  return Number.isFinite(fetchedAt) && Date.now() - fetchedAt < minAgeMs;
+}
+
 async function runStep(
   out: RefreshResult[],
   name: string,
-  step: () => Promise<string>,
+  step: () => Promise<StepResult>,
 ): Promise<void> {
   try {
     const detail = await step();
-    out.push({ line: `${name}: OK (${detail})`, ok: true });
+    if (typeof detail === "object") {
+      out.push({
+        line: `${name}: SKIPPED (${detail.detail})`,
+        ok: true,
+        skipped: true,
+      });
+    } else {
+      out.push({ line: `${name}: OK (${detail})`, ok: true });
+    }
   } catch (e) {
     out.push({
       line: `${name}: FAILED (${e instanceof Error ? e.message : String(e)})`,

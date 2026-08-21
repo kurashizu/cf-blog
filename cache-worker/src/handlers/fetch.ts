@@ -1,6 +1,6 @@
 /**
  * HTTP handler — accepts:
- *  `POST /__refresh`         full refresh (all caches)
+ *  `POST /__refresh`         full refresh (add `?force=1` to bypass AA freshness when authenticated)
  *  `POST /__heartbeat`       process one pending news item rewrite
  *  `POST /__search-index`    force one search indexing tick
  *  `POST /__hn-cron`         force one daily HN top-30 fetch
@@ -28,7 +28,10 @@ export async function handleFetch(
     // ── Full refresh ──
     if (request.method === "POST" && url.pathname === REFRESH_PATH) {
         const auth = request.headers.get("Authorization");
-        if (env.CRON_SECRET && auth !== `Bearer ${env.CRON_SECRET}`) {
+        const authenticated = Boolean(
+            env.CRON_SECRET && auth === `Bearer ${env.CRON_SECRET}`,
+        );
+        if (env.CRON_SECRET && !authenticated) {
             return new Response("Unauthorized", { status: 401 });
         }
 
@@ -44,7 +47,12 @@ export async function handleFetch(
 
         let success = true;
         try {
-            const results = await refreshCache(env);
+            const results = await refreshCache(env, {
+                // Never allow an unauthenticated caller to bypass the
+                // two-hour upstream quota guard.
+                forceLLM:
+                    authenticated && url.searchParams.get("force") === "1",
+            });
             logs.push("Cache refresh:", results.map((r) => r.line).join(" | "));
         } catch (e) {
             success = false;

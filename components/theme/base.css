@@ -70,6 +70,8 @@ body {
 
 /* ===========================================
    BODY BACKGROUND EFFECTS
+   Paper grain texture + barely-perceptible tint.
+   Matte: no fluorescent glow, no radial halo.
    =========================================== */
 body::before {
     content: "";
@@ -77,6 +79,11 @@ body::before {
     inset: 0;
     pointer-events: none;
     z-index: -1;
+    /* Subtle paper-fiber noise. Warm dark tint (kraft) instead of pure
+       black so the grain reads as paper fiber, not as digital noise. */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.10  0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0.85 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.11;
+    mix-blend-mode: overlay;
 }
 
 body::after {
@@ -94,7 +101,6 @@ body::after {
     );
     pointer-events: none;
     z-index: -1;
-    animation: bg-drift 25s ease-in-out infinite;
 }
 
 /* Background keyframes used by body::after and Header gradient */
@@ -212,19 +218,19 @@ body::after {
 }
 
 .logo-c1 {
-    color: #00d4aa;
+    color: #9c8456;
 }
 .logo-c2 {
-    color: #4ade80;
+    color: #7e9163;
 }
 .logo-c3 {
-    color: #facc15;
+    color: #b59060;
 }
 .logo-c4 {
-    color: #f472b6;
+    color: #9c6f60;
 }
 .logo-c5 {
-    color: #60a5fa;
+    color: #6e7c8a;
 }
 
 /* Reduced motion — disable all animations */

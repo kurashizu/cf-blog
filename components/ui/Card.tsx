@@ -10,7 +10,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     <div
       ref={ref}
       className={cn(
-        "group relative flex flex-col bg-bg-card/60 backdrop-blur-sm border border-border rounded-xl transition-all duration-300",
+        "group relative flex flex-col bg-bg-card/85 border border-border rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.42)] transition-[transform,border-color,background-color] duration-300",
         selected
           ? "border-accent animate-glow-border"
           : "hover:border-accent/50 hover:shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_50px_var(--accent-subtle)]",
@@ -18,7 +18,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         className
       )}
       style={{
-        transition: "all 0.3s ease, box-shadow 0.5s ease, border-color 0.5s ease",
+        transition: "transform 0.3s ease, box-shadow 0s, border-color 0.3s ease, background-color 0.3s ease",
       }}
       {...props}
     />

@@ -1,6 +1,6 @@
 # Upload API
 
-Upload, list, and delete files in the `public-files` R2 bucket. Files are publicly accessible at `https://bucket.022025.xyz/<key>`.
+Upload, list, and delete files in the `public-files` R2 bucket. Files are publicly accessible at `https://bucket.krsz.in/<key>` (driven by `BUCKET_URL` in `shared/site-config.ts`).
 
 ## Authentication
 
@@ -25,7 +25,7 @@ Generate a presigned PUT URL to upload a file directly to R2 (valid for 5 minute
 ### Request
 
 ```bash
-curl -X POST https://blog.022025.xyz/api/upload \
+curl -X POST https://blog.krsz.in/api/upload \
   -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"filename":"avatar.png","contentType":"image/png"}'
@@ -44,7 +44,7 @@ curl -X POST https://blog.022025.xyz/api/upload \
 {
   "url": "https://...r2.cloudflarestorage.com/public-files/avatar.png?...",
   "key": "avatar.png",
-  "publicUrl": "https://bucket.022025.xyz/avatar.png",
+  "publicUrl": "https://bucket.krsz.in/avatar.png",
   "expiresIn": 300
 }
 ```
@@ -70,10 +70,10 @@ List files in the bucket. Supports prefix filtering.
 ### Request
 
 ```bash
-curl https://blog.022025.xyz/api/upload \
+curl https://blog.krsz.in/api/upload \
   -H "Authorization: Bearer <TOKEN>"
 
-curl "https://blog.022025.xyz/api/upload?prefix=images/" \
+curl "https://blog.krsz.in/api/upload?prefix=images/" \
   -H "Authorization: Bearer <TOKEN>"
 ```
 
@@ -92,7 +92,7 @@ curl "https://blog.022025.xyz/api/upload?prefix=images/" \
       "key": "avatar.png",
       "size": 100482,
       "lastModified": "2026-06-23T10:00:00.000Z",
-      "publicUrl": "https://bucket.022025.xyz/avatar.png"
+      "publicUrl": "https://bucket.krsz.in/avatar.png"
     }
   ]
 }
@@ -107,7 +107,7 @@ Delete a file from the bucket.
 ### Request
 
 ```bash
-curl -X DELETE "https://blog.022025.xyz/api/upload?filename=avatar.png" \
+curl -X DELETE "https://blog.krsz.in/api/upload?filename=avatar.png" \
   -H "Authorization: Bearer <TOKEN>"
 ```
 

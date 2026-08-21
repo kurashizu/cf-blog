@@ -110,8 +110,9 @@ CREATE TABLE IF NOT EXISTS cache_entries (
 -- ============================================
 -- Audit log — records every external API call and key operation
 -- from the cache-worker (Gemini Embedding, Vectorize upsert, GitHub,
--- HN fetch, etc.). Fire-and-forget writes; failures must never affect
--- the main flow. Auto-pruned to 30 days by the 30-min refresh cron.
+-- HN fetch, etc.) and from cf-blog's /api/search. Fire-and-forget
+-- writes; failures must never affect the main flow. Auto-pruned to
+-- 30 days by the 30-min refresh cron.
 --
 -- Schema is intentionally narrow: each row = one API call (or one
 -- wrapped operation). batchEmbedContents with N chunks still counts
@@ -121,16 +122,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     ts            TEXT NOT NULL DEFAULT (datetime('now')),
     category      TEXT NOT NULL,        -- 'embedding' | 'vectorize' | 'gemini_generate' | 'github' | 'aa' | 'hn' | 'refresh'
-    operation     TEXT NOT NULL,        -- 'batch_embed' | 'vector_upsert' | 'summary_rewrite' | 'fetch_top30' | etc.
-    target        TEXT DEFAULT '',      -- news id, post slug, cache key, '' for global
+    operation     TEXT NOT NULL,        -- 'batch_embed' | 'vector_upsert' | 'summary_rewrite' | 'search_query' | etc.
+    target        TEXT DEFAULT '',      -- news id, post slug, query text, cache key, '' for global
     status        TEXT NOT NULL,        -- 'ok' | 'failed' | 'skipped'
     http_status   INTEGER,              -- HTTP status code if applicable
     latency_ms    INTEGER,              -- wall-clock duration of the operation
-    request_count INTEGER,              -- batch size (e.g., chunks in batchEmbed)
+    request_count INTEGER,              -- batch size (e.g., chunks in batchEmbed); 1 for single-text
     input_tokens  INTEGER,              -- Gemini usageMetadata.promptTokenCount
-    error_code    TEXT,                 -- 'RESOURCE_EXHAUSTED' etc
+    error_code    TEXT,                 -- 'RESOURCE_EXHAUSTED' / '429' etc
     error_message TEXT,                 -- short error message (truncated)
-    metadata      TEXT DEFAULT '{}'     -- JSON extras (retry_after_s, model, etc.)
+    metadata      TEXT DEFAULT '{}'     -- JSON extras (retry_after_s, model, source worker, etc.)
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(ts DESC);
@@ -146,3 +147,79 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_status_ts ON audit_log(status, ts DESC)
 --
 -- ALTER TABLE news_items ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0;
 -- ALTER TABLE news_items ADD COLUMN last_failed_at TEXT;
+
+-- ============================================
+-- About page quick links (managed via D1, rendered on /about)
+-- ============================================
+CREATE TABLE IF NOT EXISTS about_links (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    url         TEXT NOT NULL,
+    icon        TEXT NOT NULL DEFAULT 'link',
+    description TEXT NOT NULL DEFAULT '',
+    group_name  TEXT NOT NULL DEFAULT 'products',
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    visible     INTEGER NOT NULL DEFAULT 1,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_about_links_visible_sort
+    ON about_links(visible, group_name, sort_order);
+
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('share', 'Share', 'https://share.krsz.in', 'share-2',
+     'Temporary file sharing · 5GB max', 'quick-links', 10);
+
+-- NOTE: `INSERT OR IGNORE` only seeds the row on first apply — subsequent
+-- migrations DO NOT update the URL of an existing row. To re-point an
+-- existing row to a new apex domain, run an explicit UPDATE against the
+-- remote D1:
+--
+--   npx wrangler d1 execute cf-blog-db --remote --command \
+--     "UPDATE about_links SET url = 'https://share.<NEW_APEX>' WHERE id = 'share'"
+--
+-- Keep the URL above in sync with `SHARE_URL` in `shared/site-config.ts`.
+
+-- ============================================
+-- Idempotent migrations for about_links
+-- Re-running schema.sql on an existing DB should converge on the same state.
+-- ============================================
+
+-- Migration: rename seed group from legacy 'products' to 'quick-links'.
+-- The 'share' row was originally seeded with group_name='products'; rename it
+-- so it lands in the Quick Links section on /about. Safe to re-run.
+UPDATE about_links
+SET group_name = 'quick-links'
+WHERE id = 'share'
+  AND group_name = 'products';
+
+-- Migration: seed the first Friends entry. INSERT OR IGNORE so re-running
+-- the schema doesn't clobber an existing row.
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('2xnz', '二叉树树', 'https://2x.nz', 'globe',
+     'IT/互联网技术分享与实践', 'friends', 10);
+
+-- Migration: seed Quick Links rows added after the initial 'share' seed.
+-- INSERT OR IGNORE so existing rows are preserved.
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('router', 'Router', 'https://router.krsz.in', 'tv',
+     'Edge router & reverse proxy dashboard', 'quick-links', 20),
+    ('skill',  'Skill',  'https://skill.krsz.in',  'code',
+     'Skills & tools registry', 'quick-links', 30),
+    ('mail',   'Mail',   'https://mail.krsz.in',   'mail',
+     'Webmail', 'quick-links', 40);
+
+-- Migration: seed the sharetube quick link. INSERT OR IGNORE so re-running
+-- the schema doesn't clobber an existing row.
+INSERT OR IGNORE INTO about_links
+    (id, name, url, icon, description, group_name, sort_order)
+VALUES
+    ('sharetube', 'ShareTube', 'https://sharetube.krsz.in', 'film',
+     'Paste a video URL to download, transcode & share', 'quick-links', 50);

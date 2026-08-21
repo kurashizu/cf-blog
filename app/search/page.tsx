@@ -7,7 +7,6 @@
 import { performSearch, RateLimitError } from "@/lib/search";
 import type { SearchHit } from "@/lib/search";
 import { SearchResults } from "@/components/search/SearchResults";
-import { SearchBar } from "@/components/search/SearchBar";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 
@@ -35,9 +34,9 @@ export default async function SearchPage({
                     <h1 className="text-2xl font-bold mb-4">
                         Search
                     </h1>
-                    <SearchBar variant="inline" />
-                    <p className="text-sm text-text-secondary mt-2">
-                        Enter a query to search articles and news.
+                    <p className="text-sm text-text-secondary">
+                        Use the search bar in the header above to run a
+                        semantic search across blog articles and news.
                     </p>
                 </div>
             </div>

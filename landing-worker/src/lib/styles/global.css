@@ -1,0 +1,99 @@
+:root {
+    --bg: #1d0e11;
+    --bg-deep: #14090b;
+    --ink: #ecd5d0;
+    --ink-2: #c47a85;
+    --ink-3: #a88591;
+    --ink-4: #6e4f55;
+    --line: rgba(196, 122, 133, 0.28);
+    --line-faint: rgba(196, 122, 133, 0.08);
+    --accent: #a04856;
+    --accent-glow: rgba(160, 72, 86, 0.18);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family:
+        "Inter Tight",
+        -apple-system,
+        BlinkMacSystemFont,
+        system-ui,
+        sans-serif;
+    font-feature-settings:
+        "ss01" on,
+        "cv11" on;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.01em;
+}
+
+body {
+    background-image:
+        linear-gradient(to right, var(--line-faint) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--line-faint) 1px, transparent 1px),
+        linear-gradient(
+            to right,
+            rgba(196, 122, 133, 0.04) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            to bottom,
+            rgba(196, 122, 133, 0.04) 1px,
+            transparent 1px
+        );
+    background-size:
+        80px 80px,
+        80px 80px,
+        20px 20px,
+        20px 20px;
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--bg-deep);
+}
+
+/*
+ * Mobile: switch from the desktop "html is the viewport, body fills it,
+ * overflow: hidden" pattern to default document scrolling. The desktop
+ * pattern sets `height: 100%` on both html and body, which makes the
+ * html element exactly viewport-height. If we just change `height` to
+ * `auto` and add `overflow-y: auto`, html also becomes `auto` and
+ * shrinks to fit content — so neither html nor body can ever overflow
+ * and the page becomes unscrollable. Fix: leave html's height alone
+ * (let it stay at 100% so it remains the scroll container) and reset
+ * body's overflow so content escapes into the html scroll container.
+ */
+@media (max-width: 820px) {
+    html {
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: none;
+    }
+    body {
+        height: auto;
+        min-height: 100svh;
+        overflow: visible;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
