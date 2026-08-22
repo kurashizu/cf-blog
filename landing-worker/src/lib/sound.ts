@@ -65,9 +65,11 @@ class SoundEngine {
       try {
         this.ctx = new AudioContextClass();
         this.analyser = this.ctx.createAnalyser();
-        this.analyser.fftSize = 64;
-        this.analyser.smoothingTimeConstant = 0.8;
+        this.analyser.fftSize = 256;
+        this.analyser.smoothingTimeConstant = 0.75;
         this.visualizerDataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.visualizerFreqArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.visualizerTimeArray = new Uint8Array(this.analyser.fftSize);
 
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.setValueAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime);
@@ -608,6 +610,8 @@ class SoundEngine {
   }
   private analyser: AnalyserNode | null = null;
   private visualizerDataArray: Uint8Array | null = null;
+  private visualizerFreqArray: Uint8Array | null = null;
+  private visualizerTimeArray: Uint8Array | null = null;
 
   public getAnalyser(): AnalyserNode | null {
     this.init();
@@ -615,9 +619,21 @@ class SoundEngine {
   }
 
   public getVisualizerData(): Uint8Array | null {
-    if (this.analyser && this.visualizerDataArray) {
-      this.analyser.getByteFrequencyData(this.visualizerDataArray as unknown as Uint8Array<ArrayBuffer>);
-      return this.visualizerDataArray;
+    return this.getByteFrequencyData();
+  }
+
+  public getByteFrequencyData(): Uint8Array | null {
+    if (this.analyser && this.visualizerFreqArray) {
+      this.analyser.getByteFrequencyData(this.visualizerFreqArray as unknown as Uint8Array<ArrayBuffer>);
+      return this.visualizerFreqArray;
+    }
+    return null;
+  }
+
+  public getByteTimeDomainData(): Uint8Array | null {
+    if (this.analyser && this.visualizerTimeArray) {
+      this.analyser.getByteTimeDomainData(this.visualizerTimeArray as unknown as Uint8Array<ArrayBuffer>);
+      return this.visualizerTimeArray;
     }
     return null;
   }
@@ -796,6 +812,8 @@ export const sound = {
   playSynthPad: (note?: NoteName, duration?: number) => soundEngine.synthPad(note, duration),
   playPad: (padIndex: number) => soundEngine.playPad(padIndex),
   getVisualizerData: () => soundEngine.getVisualizerData(),
+  getByteFrequencyData: () => soundEngine.getByteFrequencyData(),
+  getByteTimeDomainData: () => soundEngine.getByteTimeDomainData(),
   getAnalyser: () => soundEngine.getAnalyser(),
   toggleMute: () => soundEngine.toggleMute(),
   setMuted: (muted: boolean) => soundEngine.setMuted(muted),

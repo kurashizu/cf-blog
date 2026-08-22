@@ -470,6 +470,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [synthDelayFeedback, setSynthDelayFeedback] = useState<number>(0.32);
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
   const [synthDrive, setSynthDrive] = useState<number>(0.0);
+  const [scopeMode, setScopeMode] = useState<'dual' | 'fft' | 'wave'>('dual');
   const [octaveScope, setOctaveScope] = useState<'all' | 7 | 6 | 5 | 4 | 3 | 2 | 1>(4);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
@@ -858,7 +859,7 @@ export const TmuxWorkspace: React.FC = () => {
     }
   };
 
-  // Canvas oscilloscope for Master Audio
+  // High-Resolution Logarithmic Spectrum Analyzer & Real-Time Waveform Oscilloscope
   useEffect(() => {
     if (activeTab !== 4) return;
     const canvas = canvasRef.current;
@@ -867,35 +868,120 @@ export const TmuxWorkspace: React.FC = () => {
     if (!ctx) return;
 
     let animId: number;
+    const minLog = Math.log10(20);
+    const maxLog = Math.log10(20000);
+    const logRange = maxLog - minLog;
+
     const render = () => {
       animId = requestAnimationFrame(render);
-      const data = sound.getVisualizerData();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
 
-      ctx.strokeStyle = themeStyles.cursorColor;
-      ctx.lineWidth = 1.8;
+      // CRT Dark Background Grid
+      ctx.fillStyle = 'rgba(10, 12, 16, 0.95)';
+      ctx.fillRect(0, 0, w, h);
+
+      // Log Frequency Coordinates: 100Hz, 1kHz, 10kHz Grid lines
+      const tick100 = ((Math.log10(100) - minLog) / logRange) * w;
+      const tick1k = ((Math.log10(1000) - minLog) / logRange) * w;
+      const tick10k = ((Math.log10(10000) - minLog) / logRange) * w;
+
+      ctx.save();
+      ctx.setLineDash([2, 3]);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 1;
+
+      for (const tx of [tick100, tick1k, tick10k]) {
+        ctx.beginPath();
+        ctx.moveTo(tx, 0);
+        ctx.lineTo(tx, h);
+        ctx.stroke();
+      }
+
+      // Horizontal zero baseline
       ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+      ctx.restore();
 
-      if (data && !isMuted) {
-        const sliceWidth = canvas.width / data.length;
-        let x = 0;
-        for (let i = 0; i < data.length; i++) {
-          const v = data[i] / 128.0;
-          const y = (v * canvas.height) / 2;
+      // Log Grid Text Markers
+      ctx.font = '8px monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillText('100', tick100 - 8, 9);
+      ctx.fillText('1k', tick1k - 6, 9);
+      ctx.fillText('10k', tick10k - 8, 9);
+
+      const freqData = sound.getByteFrequencyData();
+      const timeData = sound.getByteTimeDomainData();
+
+      // 1. Logarithmic Frequency Spectrum Analyzer (20Hz - 20kHz)
+      if ((scopeMode === 'dual' || scopeMode === 'fft') && freqData && !isMuted) {
+        const binCount = freqData.length;
+        const nyquist = 22050; // AudioContext standard half-sample-rate
+
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#e5c07b');
+        grad.addColorStop(0.5, '#c678dd');
+        grad.addColorStop(1, '#56b6c2');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+
+        const stepX = 2;
+        for (let x = 0; x <= w; x += stepX) {
+          const f = Math.pow(10, minLog + (x / w) * logRange);
+          const binIdx = Math.min(binCount - 1, Math.max(0, (f / nyquist) * binCount));
+          const idxLow = Math.floor(binIdx);
+          const idxHigh = Math.min(binCount - 1, idxLow + 1);
+          const frac = binIdx - idxLow;
+          const amp = (freqData[idxLow] * (1 - frac) + freqData[idxHigh] * frac) / 255.0;
+
+          const barH = amp * (h - 6);
+          ctx.lineTo(x, h - barH);
+        }
+
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.globalAlpha = scopeMode === 'dual' ? 0.35 : 0.75;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+
+      // 2. Real-Time Oscilloscope Waveform Trace
+      if ((scopeMode === 'dual' || scopeMode === 'wave') && timeData && !isMuted) {
+        ctx.save();
+        ctx.strokeStyle = '#98c379';
+        ctx.lineWidth = 1.6;
+        ctx.shadowColor = '#98c379';
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+
+        const len = timeData.length;
+        for (let i = 0; i < len; i++) {
+          const v = timeData[i] / 128.0;
+          const y = (v * h) / 2;
+          const x = (i / (len - 1)) * w;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
-          x += sliceWidth;
         }
-      } else {
-        ctx.moveTo(0, canvas.height / 2);
-        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+        ctx.restore();
+      } else if (scopeMode === 'wave' || scopeMode === 'dual') {
+        ctx.strokeStyle = 'rgba(152, 195, 121, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
       }
-      ctx.stroke();
     };
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [activeTab, isMuted, theme]);
+  }, [activeTab, isMuted, theme, scopeMode]);
 
   // Theme palettes (Rich Multi-Color Matte)
   const themeStyles = {
@@ -2427,11 +2513,25 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 7: MASTER OUT & CRT SCOPE */}
+                  {/* MODULE 7: MASTER OUT & DUAL LOG SPECTRUM / CRT SCOPE */}
                   <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
+                    <div className="flex items-center justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
                       <span>7. MASTER OUT</span>
-                      <span className="text-[#98c379] font-mono text-[10px]">60 FPS</span>
+                      <div className="flex items-center gap-0.5 text-[8px] font-mono">
+                        {(['dual', 'fft', 'wave'] as ('dual' | 'fft' | 'wave')[]).map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => { setScopeMode(m); playSound('click'); }}
+                            className={`px-1 py-0.2 rounded-xs border cursor-pointer font-bold ${
+                              scopeMode === m
+                                ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            {m.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Master Pan & Volume Knobs */}
@@ -2459,9 +2559,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       />
                     </div>
 
-                    {/* Real-time Oscilloscope Canvas Display */}
-                    <div className="border border-white/15 bg-black/80 relative h-9 rounded-xs overflow-hidden flex items-center">
-                      <canvas ref={canvasRef} width={180} height={36} className="w-full h-full block" />
+                    {/* Real-time Dual Logarithmic Spectrum & Oscilloscope Display */}
+                    <div className="border border-white/15 bg-black/90 relative h-11 rounded-xs overflow-hidden flex flex-col justify-between">
+                      <canvas ref={canvasRef} width={200} height={44} className="w-full h-full block" />
                     </div>
                   </div>
 
