@@ -585,6 +585,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
   const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
   const [seqCurrentStep, setSeqCurrentStep] = useState<number>(0);
+  const [cursorStep, setCursorStep] = useState<number>(0);
   const [totalPatternSteps, setTotalPatternSteps] = useState<number>(modularSynth.getTotalSteps());
   const [activeStepPage, setActiveStepPage] = useState<number>(0);
   const [pageFollow, setPageFollow] = useState<boolean>(true);
@@ -1928,21 +1929,87 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0">
                 {/* Left: Play/Stop + Tempo Slider + METER + Mute */}
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <button
-                    onClick={() => {
-                      const playing = modularSynth.toggleSequencer();
-                      setIsSeqPlaying(playing);
-                      playSound('click');
-                    }}
-                    title="Play / Stop Sequencer — Toggles real-time 8-track polyphonic audio loop playback [Spacebar]" className={`px-3 py-0.5 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1.5 ${
-                      isSeqPlaying
-                        ? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
-                        : 'bg-[#98c379] text-black hover:opacity-90'
-                    }`}
-                  >
-                    <span>{isSeqPlaying ? '■ STOP' : '► PLAY'}</span>
-                    <span className="text-xs opacity-80 font-mono">[{synthBpm} BPM]</span>
-                  </button>
+                  {/* Transport Controls: REWIND, PREV BAR, PLAY/STOP, NEXT BAR, GOTO CURSOR */}
+                  <div className="flex items-center gap-1">
+                    {/* Rewind to 0 */}
+                    <button
+                      onClick={() => {
+                        modularSynth.setPlaybackStep(0);
+                        setCursorStep(0);
+                        setSeqCurrentStep(0);
+                        playSound('click');
+                      }}
+                      className="px-1.5 py-0.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                      title="Rewind to Beginning (Step 1 / Bar 1.1) [Hotkey: Home]"
+                    >
+                      |◄
+                    </button>
+
+                    {/* 1 Bar Backward */}
+                    <button
+                      onClick={() => {
+                        const barSteps = METER_SPECS[timeMeter]?.stepsPerBar || 32;
+                        const cur = modularSynth.getCurrentStep() || 0;
+                        const prev = Math.max(0, cur - barSteps);
+                        modularSynth.setPlaybackStep(prev);
+                        setCursorStep(prev);
+                        setSeqCurrentStep(prev);
+                        playSound('click');
+                      }}
+                      className="px-1.5 py-0.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                      title="Step 1 Bar Backward (◄◄)"
+                    >
+                      ◄◄
+                    </button>
+
+                    {/* PLAY / STOP */}
+                    <button
+                      onClick={() => {
+                        const playing = modularSynth.toggleSequencer(cursorStep);
+                        setIsSeqPlaying(playing);
+                        playSound('click');
+                      }}
+                      title="Play / Stop Sequencer (Starts from timeline cursor position) [Spacebar]"
+                      className={`px-3 py-0.5 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1.5 ${
+                        isSeqPlaying
+                          ? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
+                          : 'bg-[#98c379] text-black hover:opacity-90'
+                      }`}
+                    >
+                      <span>{isSeqPlaying ? '■ STOP' : '► PLAY'}</span>
+                      <span className="text-xs opacity-80 font-mono">[{synthBpm} BPM]</span>
+                    </button>
+
+                    {/* 1 Bar Forward */}
+                    <button
+                      onClick={() => {
+                        const barSteps = METER_SPECS[timeMeter]?.stepsPerBar || 32;
+                        const cur = modularSynth.getCurrentStep() || 0;
+                        const next = Math.min(totalPatternSteps - 1, cur + barSteps);
+                        modularSynth.setPlaybackStep(next);
+                        setCursorStep(next);
+                        setSeqCurrentStep(next);
+                        playSound('click');
+                      }}
+                      className="px-1.5 py-0.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                      title="Step 1 Bar Forward (►►)"
+                    >
+                      ►►
+                    </button>
+
+                    {/* Jump to Cursor */}
+                    <button
+                      onClick={() => {
+                        modularSynth.setPlaybackStep(cursorStep);
+                        setSeqCurrentStep(cursorStep);
+                        playSound('click');
+                      }}
+                      className="px-1.5 py-0.5 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                      title={`Jump Playhead to Cursor (Step ${cursorStep + 1})`}
+                    >
+                      ⤹ CUR
+                    </button>
+                  </div>
 
                   {/* Hardware BPM Fader */}
                   <div className="flex items-center gap-1 border-l border-white/15 pl-2">
@@ -2101,7 +2168,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (SNAP, DUR, LEN, PAGE NAVIGATION) */}
+              {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (PATCH, PRESETS, SNAP, DUR, PAGE NAVIGATION) */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1">
@@ -2114,6 +2181,31 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                   <div className="w-px h-4 bg-white/15 mx-1" />
 
+                  {/* Sound Design Presets (Left of SNAP with divider) */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-white/50 font-bold text-xs">PRESETS:</span>
+                    {[
+                      { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
+                      { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
+                      { name: 'BRASS', preset: { osc1Waveform: 'sawtooth' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 12, cutoff: 2400, resonance: 2.0, ampAttack: 0.04, ampDecay: 0.25, ampSustain: 0.8, ampRelease: 0.2, filterAttack: 0.06, filterDecay: 0.2, filterSustain: 0.5, filterRelease: 0.15, filterEnvAmount: 0.55 } },
+                      { name: 'LEAD', preset: { osc1Waveform: 'pulse' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 8, cutoff: 6500, resonance: 2.8, ampAttack: 0.005, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.18, filterAttack: 0.005, filterDecay: 0.25, filterSustain: 0.6, filterRelease: 0.12, filterEnvAmount: 0.4 } },
+                      { name: 'HI-HAT', preset: { osc1Waveform: 'noise' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, osc2Gain: 0.0, filterType: 'highpass' as FilterType, cutoff: 40, resonance: 0.0, envFilterMod: 0.0, ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.0, ampRelease: 0.04, filterAttack: 0.001, filterDecay: 0.05, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.0, pitchEnvAmount: 0.0, pitchAttack: 0.001, pitchDecay: 0.03 } },
+                    ].map((p) => (
+                      <button
+                        key={p.name}
+                        onClick={() => {
+                          handleTrackParamChange(p.preset);
+                          playSound('toggle');
+                        }}
+                        title={PRESET_TOOLTIPS[p.name] || p.name}
+                        className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="w-px h-4 bg-white/15 mx-1" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Grid Snap / Quantization Alignment (SNAP) */}
@@ -2508,67 +2600,29 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             PIANO ROLL // {currentTrack.name}
                           </span>
                           <span className="text-xs text-[#98c379] font-mono font-bold">
-                            BAR {Math.floor(seqCurrentStep / (METER_SPECS[timeMeter]?.stepsPerBar || 32)) + 1}.{Math.floor(((seqCurrentStep % (METER_SPECS[timeMeter]?.stepsPerBar || 32)) / ((METER_SPECS[timeMeter]?.stepsPerBar || 32) / (METER_SPECS[timeMeter]?.beatsPerBar || 4)))) + 1} (STEP {seqCurrentStep + 1} / {totalPatternSteps})
+                            BAR {Math.floor(seqCurrentStep / (METER_SPECS[timeMeter]?.stepsPerBar || 32)) + 1}.{Math.floor(((seqCurrentStep % (METER_SPECS[timeMeter]?.stepsPerBar || 32)) / ((METER_SPECS[timeMeter]?.stepsPerBar || 32) / (METER_SPECS[timeMeter]?.beatsPerBar || 4)))) + 1} (STEP {seqCurrentStep + 1}/{totalPatternSteps})
+                          </span>
+                          <span className="text-xs text-[#56b6c2] font-mono font-bold bg-[#56b6c2]/15 px-1.5 py-0.2 rounded-xs" title={`Timeline Playback Cursor: Step ${cursorStep + 1} (Click any column on the ruler below to move cursor)`}>
+                            CUR: STEP {cursorStep + 1}
                           </span>
                         </div>
 
-                        {/* Sound Design Presets */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-white/50 font-bold text-xs">PRESETS:</span>
-                          {[
-                            { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
-                            { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
-                            { name: 'BRASS', preset: { osc1Waveform: 'sawtooth' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 12, cutoff: 2400, resonance: 2.0, ampAttack: 0.04, ampDecay: 0.25, ampSustain: 0.8, ampRelease: 0.2, filterAttack: 0.06, filterDecay: 0.2, filterSustain: 0.5, filterRelease: 0.15, filterEnvAmount: 0.55 } },
-                            { name: 'LEAD', preset: { osc1Waveform: 'pulse' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 8, cutoff: 6500, resonance: 2.8, ampAttack: 0.005, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.18, filterAttack: 0.005, filterDecay: 0.25, filterSustain: 0.6, filterRelease: 0.12, filterEnvAmount: 0.4 } },
-                            { name: 'HI-HAT', preset: { osc1Waveform: 'noise' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, osc2Gain: 0.0, filterType: 'highpass' as FilterType, cutoff: 7500, resonance: 1.5, envFilterMod: 0.6, ampAttack: 0.001, ampDecay: 0.06, ampSustain: 0.0, ampRelease: 0.04, filterAttack: 0.001, filterDecay: 0.05, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.4, pitchEnvAmount: 1.5, pitchAttack: 0.001, pitchDecay: 0.03 } },
-                          ].map((p) => (
-                            <button
-                              key={p.name}
-                              onClick={() => {
-                                handleTrackParamChange(p.preset);
-                                playSound('toggle');
-                              }}
-                              title={PRESET_TOOLTIPS[p.name] || p.name} className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
-                            >
-                              {p.name}
-                            </button>
-                          ))}
-                        </div>
-
                         <div className="flex items-center gap-1.5 text-xs">
-                          {/* Quick Presets */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                const root = 48 + Math.floor(Math.random() * 12);
-                                for (let i = 0; i < 32; i += 4) {
-                                  const actualStep = activeStepPage * 32 + i;
-                                  const chord = Math.random() > 0.4 ? [root, root + 4, root + 7].filter((n) => n < 88) : [];
-                                  modularSynth.setTrackStepNotes(activeTrackId, actualStep, chord);
-                                }
-                                setTracksState([...modularSynth.getTracks()]);
-                                playSound('toggle');
-                              }}
-                              title="Algorithmic Randomizer (RND) — Generates a randomized melodic and chord pattern for this page" className="border border-white/20 px-2 py-0.5 rounded-xs hover:border-white/60 cursor-pointer text-xs font-bold"
-                            >
-                              🎲 RND
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                for (let i = 0; i < 32; i++) {
-                                  const actualStep = activeStepPage * 32 + i;
-                                  modularSynth.clearTrackStep(activeTrackId, actualStep);
-                                }
-                                setTracksState([...modularSynth.getTracks()]);
-                                playSound('click');
-                              }}
-                              className="border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold"
-                              title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track"
-                            >
-                              ✕ CLR
-                            </button>
-                          </div>
+                          {/* Clear Page Tool */}
+                          <button
+                            onClick={() => {
+                              for (let i = 0; i < 32; i++) {
+                                const actualStep = activeStepPage * 32 + i;
+                                modularSynth.clearTrackStep(activeTrackId, actualStep);
+                              }
+                              setTracksState([...modularSynth.getTracks()]);
+                              playSound('click');
+                            }}
+                            className="border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold"
+                            title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track"
+                          >
+                            ✕ CLR
+                          </button>
 
                           <span className="opacity-30">|</span>
 
@@ -2639,11 +2693,12 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         </div>
                       </div>
 
-                      {/* Scrollable Matrix Container */}
-                      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar flex flex-col">
-                        <div className="min-w-[480px] sm:min-w-0 flex-1 flex flex-col space-y-0.5">
-                          {/* Top 16-Column Timeline Bar / Ruler with Real-Time Meter & Bar Position */}
-                          <div className="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0">
+                      {/* Piano Roll Main Matrix Body: Fixed Top Ruler, Scrollable Note Rows, Fixed Bottom ACC */}
+                      <div className="flex-1 min-h-0 overflow-x-auto no-scrollbar flex flex-col">
+                        <div className="min-w-[480px] sm:min-w-0 flex-1 min-h-0 flex flex-col justify-between">
+
+                          {/* 1. Fixed Timeline Ruler at Top with Cursor Selection */}
+                          <div className="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0 select-none">
                             <div
                               className="flex-1 gap-0.5"
                               style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
@@ -2657,6 +2712,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 const isBarStart = colInBar === 0;
                                 const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
                                 const isCurrent = isSeqPlaying && Math.floor(seqCurrentStep / 2) === globalCol;
+                                const isCursorCol = Math.floor(cursorStep / 2) === globalCol;
 
                                 return (
                                   <div key={colIdx} className="h-full">
@@ -2665,39 +2721,70 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                         {[0, 1].map((subCol) => {
                                           const step = globalCol * 2 + subCol;
                                           const isSubCurrent = isSeqPlaying && seqCurrentStep === step;
+                                          const isSubCursor = cursorStep === step;
                                           return (
-                                            <div
+                                            <button
                                               key={subCol}
-                                              className={`flex-1 text-center py-0.5 rounded-xs transition-colors ${
+                                              type="button"
+                                              onClick={() => {
+                                                setCursorStep(step);
+                                                if (!isSeqPlaying) {
+                                                  modularSynth.setPlaybackStep(step);
+                                                  setSeqCurrentStep(step);
+                                                }
+                                                playSound('click');
+                                              }}
+                                              className={`flex-1 text-center py-0.5 rounded-xs transition-colors cursor-pointer select-none font-bold relative ${
                                                 isSubCurrent
                                                   ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
+                                                  : isSubCursor
+                                                  ? 'bg-[#56b6c2]/40 text-[#56b6c2] border border-[#56b6c2] font-black'
                                                   : isBarStart && subCol === 0
                                                   ? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
                                                   : isBeatStart && subCol === 0
                                                   ? 'bg-white/15 text-white font-bold'
-                                                  : 'text-white/30'
+                                                  : 'text-white/30 hover:bg-white/10 hover:text-white/70'
                                               }`}
+                                              title={`Click to set Playback Cursor to Step ${step + 1} (Bar ${barNum}.${beatNum})`}
                                             >
+                                              {isSubCursor && !isSubCurrent && (
+                                                <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[8px] text-[#56b6c2] leading-none">▼</span>
+                                              )}
                                               {subCol === 0 ? (isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`) : '+'}
-                                            </div>
+                                            </button>
                                           );
                                         })}
                                       </div>
                                     ) : (
-                                      <div
-                                        className={`text-center py-0.5 rounded-xs transition-colors font-bold text-xs ${
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const step = globalCol * 2;
+                                          setCursorStep(step);
+                                          if (!isSeqPlaying) {
+                                            modularSynth.setPlaybackStep(step);
+                                            setSeqCurrentStep(step);
+                                          }
+                                          playSound('click');
+                                        }}
+                                        className={`w-full text-center py-0.5 rounded-xs transition-colors font-bold text-xs cursor-pointer select-none relative ${
                                           isCurrent
                                             ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
+                                            : isCursorCol
+                                            ? 'bg-[#56b6c2]/40 text-[#56b6c2] border border-[#56b6c2] font-black'
                                             : isBarStart
                                             ? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
                                             : isBeatStart
                                             ? 'bg-white/15 text-white'
-                                            : 'text-white/30'
+                                            : 'text-white/30 hover:bg-white/10 hover:text-white/70'
                                         }`}
-                                        title={`Bar ${barNum}, Beat ${beatNum} (Column ${colIdx + 1})`}
+                                        title={`Click to set Playback Cursor to Column ${colIdx + 1} (Step ${globalCol * 2 + 1}, Bar ${barNum}.${beatNum})`}
                                       >
+                                        {isCursorCol && !isCurrent && (
+                                          <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[8px] text-[#56b6c2] leading-none">▼</span>
+                                        )}
                                         {isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
-                                      </div>
+                                      </button>
                                     )}
                                   </div>
                                 );
@@ -2705,7 +2792,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             </div>
                           </div>
 
-                          {/* Chromatic Pitch Rows x 16 Grid Columns (Scrollable in Selected Octave Range) */}
+                          {/* 2. Middle Scrollable Note Rows (ONLY this area scrolls vertically) */}
                           <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col overflow-y-auto custom-scrollbar">
                             {PIANO_ROLL_NOTES.map((nInfo, actualIdx) => {
                               if (nInfo.oct < octaveFrom || nInfo.oct > octaveTo) return null;
@@ -2724,7 +2811,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                   snapDiv={snapDiv}
                                   totalPatternSteps={totalPatternSteps}
                                   onAudition={(idx) => {
-                                    modularSynth.triggerTrackVoice(activeTrackId, idx, false);
+                                    modularSynth.triggerTrackVoice(activeTrackId, idx, 0);
                                     playSound('click');
                                   }}
                                   onCellClick={handlePianoRollCellClick}
@@ -2734,50 +2821,57 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             })}
                           </div>
 
-                          {/* 100% Full-Width Aligned Accent (ACC) Track */}
-                          <div className="flex items-center gap-1 pt-0.5 border-t border-white/10 text-xs font-mono shrink-0">
-                            <div className="w-9 text-right pr-1 font-black text-[#e06c75] shrink-0 select-none text-xs">ACC</div>
+                          {/* 3. Fixed ACC (Accent) Track at Bottom — 3-LEVEL CYCLE (+3dB Amber, +6dB Red) */}
+                          <div className="flex items-center gap-1 pt-1 border-t border-white/10 text-xs font-mono shrink-0 select-none">
+                            <div className="w-9 text-right pr-1 font-black text-[#e06c75] shrink-0 select-none text-xs flex items-center justify-end">
+                              <span title="Accent Velocity Track — 3-Level Cycle: OFF (0dB) -> Amber (+3dB) -> Red (+6dB)">ACC</span>
+                            </div>
                             <div
                               className="flex-1 gap-0.5"
                               style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
                             >
                               {Array.from({ length: 16 }).map((_, colIdx) => {
                                 const globalCol = viewportStartCol + colIdx;
-                                const step0 = globalCol * 2;
-                                const step1 = globalCol * 2 + 1;
-                                const isAccent = (currentTrack.accents[step0] || currentTrack.accents[step1]) || false;
-                                const isCurrent = isSeqPlaying && Math.floor(seqCurrentStep / 2) === globalCol;
-                                
                                 const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
                                 const colInBar = globalCol % meterSpec.colsPerBar;
                                 const isBarStart = colInBar === 0;
 
                                 return (
                                   <div key={colIdx} className="h-full">
-                                      <div className="flex h-full gap-0.5">
-                                        {[0, 1].map((subCol) => {
-                                          const step = globalCol * 2 + subCol;
-                                          const isSubAccent = currentTrack.accents[step] || false;
-                                          const isSubCurrent = isSeqPlaying && seqCurrentStep === step;
-                                          return (
-                                            <button
-                                              key={subCol}
-                                              onClick={() => handleAccentSubCellClick(colIdx, subCol)}
-                                              title={`Step ${step + 1} Accent (${subCol === 0 ? 'Left' : 'Right'} half) — Toggles +3dB velocity boost and envelope transient punch`} className={`flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all ${
-                                                isSubCurrent
-                                                  ? 'border-white bg-white text-black'
-                                                  : isSubAccent
-                                                  ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
-                                                  : isBarStart && subCol === 0
-                                                  ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
-                                                  : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
-                                              }`}
-                                            >
-                                              {subCol === 0 ? colIdx + 1 : '·'}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
+                                    <div className="flex h-full gap-0.5">
+                                      {[0, 1].map((subCol) => {
+                                        const step = globalCol * 2 + subCol;
+                                        const accVal = Number(currentTrack.accents[step] || 0);
+                                        const isSubCurrent = isSeqPlaying && seqCurrentStep === step;
+
+                                        return (
+                                          <button
+                                            key={subCol}
+                                            onClick={() => {
+                                              modularSynth.cycleTrackAccent(activeTrackId, step);
+                                              setTracksState([...modularSynth.getTracks()]);
+                                              playSound('click');
+                                            }}
+                                            className={`flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all ${
+                                              isSubCurrent
+                                                ? 'border-white bg-white text-black font-black shadow-[0_0_8px_#fff]'
+                                                : accVal === 2
+                                                ? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-[0_0_6px_#e06c75]'
+                                                : accVal === 1
+                                                ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-xs'
+                                                : isBarStart && subCol === 0
+                                                ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
+                                                : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
+                                            }`}
+                                            title={`Step ${step + 1} Accent: ${
+                                              accVal === 0 ? 'OFF (0dB)' : accVal === 1 ? 'Level 1 (+3dB Boost)' : 'Level 2 (+6dB Hard Accent)'
+                                            } — Click to cycle (OFF -> +3dB -> +6dB)`}
+                                          >
+                                            {accVal === 2 ? '+6' : accVal === 1 ? '+3' : subCol === 0 ? colIdx + 1 : '·'}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
                                 );
                               })}

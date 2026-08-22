@@ -138,9 +138,9 @@ export interface TrackData {
   // Modular Modulation Matrix Routing
   modRoutes: ModRoute[];
 
-  // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes) & Accents
-  grid: number[][];    // 64 steps, each containing active note indices [0-35]
-  accents: boolean[];  // 64 steps
+  // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes) & Accents (0 = Off, 1 = +3dB, 2 = +6dB)
+  grid: number[][];
+  accents: (number | boolean)[];
 }
 
 export const PIANO_ROLL_NOTES = [
@@ -2099,10 +2099,18 @@ class ModularSynth {
     }
   }
 
-  public toggleTrackAccent(trackId: number, stepIndex: number) {
-    if (this.tracks[trackId]) {
-      this.tracks[trackId].accents[stepIndex] = !this.tracks[trackId].accents[stepIndex];
+  public cycleTrackAccent(trackId: number, stepIndex: number): number {
+    if (this.tracks[trackId] && this.tracks[trackId].accents) {
+      const current = Number(this.tracks[trackId].accents[stepIndex] || 0);
+      const next = (current + 1) % 3; // 0 (Off) -> 1 (+3dB) -> 2 (+6dB) -> 0
+      this.tracks[trackId].accents[stepIndex] = next;
+      return next;
     }
+    return 0;
+  }
+
+  public toggleTrackAccent(trackId: number, stepIndex: number) {
+    this.cycleTrackAccent(trackId, stepIndex);
   }
 
   public toggleTrackMute(trackId: number) {
@@ -2204,12 +2212,14 @@ class ModularSynth {
   /*                      COMPLETE MODULAR SIGNAL FLOW DSP                      */
   /* -------------------------------------------------------------------------- */
 
-  public triggerTrackVoice(trackId: number, noteIndex: number, isAccent = false, startTime?: number, durationSec?: number) {
+  public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number) {
     const track = this.tracks[trackId];
     if (!track || soundEngine.isMuted()) return;
 
     const noteInfo = PIANO_ROLL_NOTES[noteIndex];
     if (!noteInfo) return;
+
+    const acc = typeof accentLevel === 'boolean' ? (accentLevel ? 1 : 0) : (accentLevel || 0);
 
     const ctx = soundEngine.init();
     if (!ctx) return;
@@ -2354,15 +2364,18 @@ class ModularSynth {
 
     for (const route of (track.modRoutes || [])) {
       if (!route.enabled) continue;
-      if (route.source === 'velocity' && isAccent) {
-        if (route.dest === 'cutoff') dynamicCutoffBase += route.amount * 3500;
-        if (route.dest === 'resonance') dynamicResonance = Math.max(0.2, dynamicResonance + route.amount * 4);
+      if (route.source === 'velocity' && acc > 0) {
+        const velMod = acc === 2 ? 1.5 : 1.0;
+        if (route.dest === 'cutoff') dynamicCutoffBase += route.amount * 3500 * velMod;
+        if (route.dest === 'resonance') dynamicResonance = Math.max(0.2, dynamicResonance + route.amount * 4 * velMod);
       }
     }
 
-    if (isAccent) {
-      dynamicCutoffBase = Math.min(16000, dynamicCutoffBase * 1.25);
-      dynamicResonance = Math.min(16.0, dynamicResonance * 1.2);
+    if (acc > 0) {
+      const cutoffMult = acc === 2 ? 1.45 : 1.25;
+      const resMult = acc === 2 ? 1.35 : 1.2;
+      dynamicCutoffBase = Math.min(16000, dynamicCutoffBase * cutoffMult);
+      dynamicResonance = Math.min(16.0, dynamicResonance * resMult);
     }
 
     const baseCutoff = Math.max(40, Math.min(16000, dynamicCutoffBase));
@@ -2381,8 +2394,9 @@ class ModularSynth {
     filter.frequency.exponentialRampToValueAtTime(sustainCutoff, t + vcfAtt + vcfDec);
     filter.Q.setValueAtTime(dynamicResonance, t);
 
-    // AMP Dynamic Envelope
-    const peakGain = (isAccent ? 0.35 : 0.24) * track.volume;
+    // AMP Dynamic Envelope (+3dB = ~1.41x, +6dB = 2.0x)
+    const gainBase = acc === 2 ? 0.48 : acc === 1 ? 0.34 : 0.24;
+    const peakGain = gainBase * track.volume;
     const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(0.0001, t);
@@ -2507,11 +2521,11 @@ class ModularSynth {
     return this.isSequencerPlaying;
   }
 
-  public toggleSequencer(): boolean {
+  public toggleSequencer(fromStep?: number): boolean {
     if (this.isSequencerPlaying) {
       this.stopSequencer();
     } else {
-      this.startSequencer();
+      this.startSequencer(fromStep);
     }
     return this.isSequencerPlaying;
   }
@@ -2522,10 +2536,14 @@ class ModularSynth {
   private scheduleAheadSec = 0.12; // 120ms Web Audio Lookahead
   private scheduledStepQueue: { step: number; time: number }[] = [];
 
-  public startSequencer() {
+  public startSequencer(fromStep?: number) {
     if (this.isSequencerPlaying) return;
     this.isSequencerPlaying = true;
-    this.currentStep = 0;
+    if (fromStep !== undefined && fromStep >= 0 && fromStep < this.totalSteps) {
+      this.currentStep = fromStep;
+    } else if (this.currentStep >= this.totalSteps) {
+      this.currentStep = 0;
+    }
     this.scheduledStepQueue = [];
 
     const ctx = soundEngine.init();
@@ -2537,6 +2555,16 @@ class ModularSynth {
     }
 
     this.startLookaheadTimers();
+  }
+
+  public setPlaybackStep(step: number) {
+    this.currentStep = Math.max(0, Math.min(this.totalSteps - 1, step));
+    this.scheduledStepQueue = [];
+    const ctx = soundEngine.init();
+    if (ctx) {
+      this.nextStepTime = ctx.currentTime + 0.05;
+    }
+    this.onStepListeners.forEach((fn) => fn(this.currentStep));
   }
 
   public stopSequencer() {
@@ -2601,7 +2629,7 @@ class ModularSynth {
       const stepNotes = track.grid[step] || [];
       const prevStep = (step - 1 + this.totalSteps) % this.totalSteps;
       const prevStepNotes = track.grid[prevStep] || [];
-      const isAccent = track.accents[step] || false;
+      const isAccent = track.accents[step] || 0;
 
       stepNotes.forEach((noteIdx) => {
         if (noteIdx !== null && noteIdx !== undefined && PIANO_ROLL_NOTES[noteIdx]) {
