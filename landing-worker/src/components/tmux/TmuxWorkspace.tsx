@@ -1040,10 +1040,12 @@ export const TmuxWorkspace: React.FC = () => {
           waveCtx.shadowBlur = 3;
           waveCtx.beginPath();
 
+          const vGain = 2.5; // Vertical amplification for visible waveform
           for (let i = 0; i < windowSize; i++) {
             const raw = timeData[startIdx + i];
-            const v = (raw !== undefined ? raw : 128) / 128.0;
-            const y = (v * h) / 2;
+            const normalized = ((raw !== undefined ? raw : 128) - 128) / 128.0; // -1 to +1
+            const amplified = Math.max(-1, Math.min(1, normalized * vGain)); // clamp after gain
+            const y = (1 - amplified) * h / 2; // map to canvas: center=h/2, top=0, bottom=h
             const x = (i / (windowSize - 1)) * w;
             if (i === 0) waveCtx.moveTo(x, y);
             else waveCtx.lineTo(x, y);
