@@ -2585,10 +2585,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 6: MASTER FX & DYNAMICS RACK */}
+                  {/* MODULE 6: FX & DYNAMICS RACK */}
                   <div className="border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex justify-between font-bold text-[#e06c75] text-xs border-b border-white/10 pb-0.5">
-                      <span>6. MASTER FX</span>
+                      <span>6. FX</span>
                       <span className="text-white/40">──►</span>
                     </div>
 
@@ -2676,10 +2676,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 7: MASTER OUT & DUAL SEPARATED VISUALIZERS */}
+                  {/* MODULE 7: OUT & DUAL SEPARATED VISUALIZERS */}
                   <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex items-center justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
-                      <span>7. MASTER OUT</span>
+                      <span>7. OUT</span>
                       <span className="text-[#98c379] font-mono text-[9px]">60 FPS DUAL</span>
                     </div>
 
