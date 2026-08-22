@@ -1168,6 +1168,91 @@ export const TmuxWorkspace: React.FC = () => {
           waveCtx.stroke();
         }
       }
+
+      // ─────────────────────────────────────────────────────────────
+      // SCREEN 3: RMS LOUDNESS METER / HISTORY GRAPH
+      // ─────────────────────────────────────────────────────────────
+      const loudCanvas = loudnessCanvasRef.current;
+      const loudCtx = loudCanvas?.getContext('2d');
+      if (loudCanvas && loudCtx) {
+        const w = loudCanvas.width;
+        const h = loudCanvas.height;
+        loudCtx.clearRect(0, 0, w, h);
+
+        loudCtx.fillStyle = 'rgba(10, 12, 16, 0.95)';
+        loudCtx.fillRect(0, 0, w, h);
+
+        let sum = 0;
+        if (timeData && !isMuted) {
+          for (let i = 0; i < timeData.length; i++) {
+            const val = (timeData[i] - 128) / 128;
+            sum += val * val;
+          }
+        }
+        const rms = Math.sqrt(sum / (timeData?.length || 1));
+        const db = isMuted ? -100 : (rms > 0 ? 20 * Math.log10(rms) : -100);
+        
+        loudnessHistory.push(db);
+        if (loudnessHistory.length > w) loudnessHistory.shift();
+
+        // Draw -12dB, -6dB, 0dB lines
+        loudCtx.save();
+        loudCtx.setLineDash([2, 3]);
+        loudCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        loudCtx.lineWidth = 1;
+        
+        const mapDbToY = (val: number) => {
+          const maxDb = 6;
+          const minDb = -60;
+          return h - Math.max(0, Math.min(1, (val - minDb) / (maxDb - minDb))) * h;
+        };
+
+        const y0 = mapDbToY(0);
+        const y6 = mapDbToY(-6);
+        const y12 = mapDbToY(-12);
+        
+        for (const y of [y0, y6, y12]) {
+          loudCtx.beginPath();
+          loudCtx.moveTo(0, y);
+          loudCtx.lineTo(w, y);
+          loudCtx.stroke();
+        }
+        loudCtx.restore();
+
+        loudCtx.font = '7px monospace';
+        loudCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        loudCtx.fillText('0dB', 2, y0 - 2);
+        loudCtx.fillText('-6', 2, y6 - 2);
+        loudCtx.fillText('-12', 2, y12 - 2);
+
+        loudCtx.beginPath();
+        for (let i = 0; i < loudnessHistory.length; i++) {
+          const x = i;
+          const y = mapDbToY(loudnessHistory[i]);
+          if (i === 0) loudCtx.moveTo(x, y);
+          else loudCtx.lineTo(x, y);
+        }
+        
+        loudCtx.strokeStyle = '#e06c75';
+        loudCtx.lineWidth = 1.5;
+        loudCtx.stroke();
+        
+        // Fill gradient below line
+        const grad = loudCtx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, 'rgba(224, 108, 117, 0.6)');
+        grad.addColorStop(1, 'rgba(224, 108, 117, 0.0)');
+        
+        loudCtx.lineTo(w, h);
+        loudCtx.lineTo(0, h);
+        loudCtx.fillStyle = grad;
+        loudCtx.fill();
+        
+        // Draw Peak VU Bar on the right
+        const curDb = loudnessHistory[loudnessHistory.length - 1];
+        const barH = h - mapDbToY(curDb);
+        loudCtx.fillStyle = curDb > 0 ? 'rgba(255, 0, 0, 0.8)' : 'rgba(152, 195, 121, 0.8)';
+        loudCtx.fillRect(w - 6, h - barH, 6, barH);
+      }
     };
 
     render();
