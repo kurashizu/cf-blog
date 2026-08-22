@@ -496,6 +496,7 @@ export const TmuxWorkspace: React.FC = () => {
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [timeBase, setTimeBase] = useState<'0.25x' | '0.5x' | '1x' | '2x' | '4x'>('1x');
   const [activeEnvTab, setActiveEnvTab] = useState<'amp' | 'vcf'>('amp');
+  const [rackPage, setRackPage] = useState<1 | 2>(1);
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
 
   // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow & rAF Batching
@@ -2124,9 +2125,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               
               );})()}
 
-                                                                      {/* 3. HARDWARE SYNTHESIZER CHANNEL STRIP & DSP MODULATION MATRIX */}
+                                                                                    {/* 3. HARDWARE SYNTHESIZER CHANNEL STRIP & DSP MODULATION MATRIX (PAGED) */}
               <div className="border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col gap-2 shrink-0">
-                {/* Channel Strip Header: Active Track Selector & Sound Presets */}
+                {/* Channel Strip Header: Active Track Selector, Sound Presets & Rack Paging */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="font-bold tracking-wider" style={{ color: currentTrack.color }}>
@@ -2159,595 +2160,630 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </button>
                     ))}
                   </div>
+
+                  {/* Rack Module Paging Tabs */}
+                  <div className="flex items-center gap-1 bg-black/60 px-1 py-0.5 rounded-xs border border-white/20 font-mono">
+                    <span className="text-white/50 font-bold text-[10px] pl-0.5">RACK:</span>
+                    <button
+                      onClick={() => { setRackPage(1); playSound('toggle'); }}
+                      className={`px-2 py-0.5 rounded-xs border text-[10px] font-bold cursor-pointer transition-all ${
+                        rackPage === 1
+                          ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-sm'
+                          : 'border-white/20 text-white/70 hover:bg-white/10'
+                      }`}
+                    >
+                      [1] SOUND ENGINE (1~4)
+                    </button>
+                    <button
+                      onClick={() => { setRackPage(2); playSound('toggle'); }}
+                      className={`px-2 py-0.5 rounded-xs border text-[10px] font-bold cursor-pointer transition-all ${
+                        rackPage === 2
+                          ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-sm'
+                          : 'border-white/20 text-white/70 hover:bg-white/10'
+                      }`}
+                    >
+                      [2] MOD &amp; MASTER (5~7)
+                    </button>
+                  </div>
                 </div>
 
-                {/* Hardware Modular Rack: 7 Studio Modules (Responsive 1/2/3/4/7 Grid) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-1.5 text-xs">
-                  
-                  {/* MODULE 1: DUAL OSCILLATORS (VCO) */}
-                  <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex justify-between font-bold text-[#e5c07b] text-xs border-b border-white/10 pb-0.5">
-                      <span>1. DUAL OSC</span>
-                      <span className="text-white/40">──►</span>
-                    </div>
+                {/* PAGE 1: SOUND ENGINE & ENVELOPES (MODULES 1 ~ 4) */}
+                {rackPage === 1 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                    
+                    {/* MODULE 1: DUAL OSCILLATORS (VCO) */}
+                    <div className="border border-[#e5c07b]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                      <div className="flex justify-between font-bold text-[#e5c07b] text-xs border-b border-white/10 pb-0.5">
+                        <span>1. DUAL OSC</span>
+                        <span className="text-white/40">──►</span>
+                      </div>
 
-                    <div className="space-y-1">
-                      {/* OSC 1 (Primary) */}
-                      <div className="space-y-0.5">
-                        <div className="flex items-center justify-between text-[9px] text-white/60 font-bold">
-                          <span>OSC 1</span>
-                          <span className="font-mono text-[#e5c07b]">{getWaveformAbbr(currentTrack.osc1Waveform)}</span>
+                      <div className="space-y-1.5">
+                        {/* OSC 1 (Primary) */}
+                        <div className="space-y-0.5">
+                          <div className="flex items-center justify-between text-[10px] text-white/60 font-bold">
+                            <span>OSC 1</span>
+                            <span className="font-mono text-[#e5c07b]">{getWaveformAbbr(currentTrack.osc1Waveform)}</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-0.5">
+                            {(['square', 'sawtooth', 'triangle', 'sine', 'noise'] as SynthWaveform[]).map((w) => (
+                              <button
+                                key={w}
+                                onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
+                                className={`py-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                                  currentTrack.osc1Waveform === w
+                                    ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                                    : 'border-white/20 text-white/70 hover:bg-white/10'
+                                }`}
+                              >
+                                {getWaveformAbbr(w)}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-5 gap-0.5">
-                          {(['square', 'sawtooth', 'triangle', 'sine', 'noise'] as SynthWaveform[]).map((w) => (
-                            <button
-                              key={w}
-                              onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
-                              className={`py-0.5 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors ${
-                                currentTrack.osc1Waveform === w
-                                  ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
-                                  : 'border-white/20 text-white/70 hover:bg-white/10'
-                              }`}
-                            >
-                              {getWaveformAbbr(w)}
-                            </button>
-                          ))}
+
+                        {/* OSC 2 (Secondary) */}
+                        <div className="space-y-0.5">
+                          <div className="flex items-center justify-between text-[10px] text-white/60 font-bold">
+                            <span>OSC 2</span>
+                            <span className="font-mono text-[#56b6c2]">{getWaveformAbbr(currentTrack.osc2Waveform)}</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-0.5">
+                            {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
+                              <button
+                                key={w}
+                                onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
+                                className={`py-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                                  currentTrack.osc2Waveform === w
+                                    ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                    : 'border-white/20 text-white/70 hover:bg-white/10'
+                                }`}
+                              >
+                                {getWaveformAbbr(w)}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
-                      {/* OSC 2 (Secondary) */}
-                      <div className="space-y-0.5">
-                        <div className="flex items-center justify-between text-[9px] text-white/60 font-bold">
-                          <span>OSC 2</span>
-                          <span className="font-mono text-[#56b6c2]">{getWaveformAbbr(currentTrack.osc2Waveform)}</span>
-                        </div>
-                        <div className="grid grid-cols-5 gap-0.5">
-                          {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
-                            <button
-                              key={w}
-                              onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
-                              className={`py-0.5 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors ${
-                                currentTrack.osc2Waveform === w
-                                  ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
-                                  : 'border-white/20 text-white/70 hover:bg-white/10'
-                              }`}
-                            >
-                              {getWaveformAbbr(w)}
-                            </button>
-                          ))}
-                        </div>
+                      {/* Dual Osc Knobs */}
+                      <div className="grid grid-cols-4 gap-1 pt-1 border-t border-white/10">
+                        <RotaryKnob
+                          label="OSC1"
+                          value={Math.round(currentTrack.osc1Gain * 100)}
+                          min={0}
+                          max={100}
+                          unit="%"
+                          color="#e5c07b"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="OSC2"
+                          value={Math.round(currentTrack.osc2Gain * 100)}
+                          min={0}
+                          max={100}
+                          unit="%"
+                          color="#56b6c2"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="DETUNE"
+                          value={currentTrack.detuneCents}
+                          min={-50}
+                          max={50}
+                          step={2}
+                          unit="c"
+                          color="#e06c75"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ detuneCents: v })}
+                        />
+                        <RotaryKnob
+                          label="PHASE"
+                          value={currentTrack.phaseOffset}
+                          min={0}
+                          max={360}
+                          step={15}
+                          unit="°"
+                          color="#98c379"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
+                        />
                       </div>
                     </div>
 
-                    {/* Dual Osc Knobs */}
-                    <div className="grid grid-cols-4 gap-0.5 pt-0.5 border-t border-white/10">
-                      <RotaryKnob
-                        label="OSC1"
-                        value={Math.round(currentTrack.osc1Gain * 100)}
-                        min={0}
-                        max={100}
-                        unit="%"
-                        color="#e5c07b"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
-                      />
-                      <RotaryKnob
-                        label="OSC2"
-                        value={Math.round(currentTrack.osc2Gain * 100)}
-                        min={0}
-                        max={100}
-                        unit="%"
-                        color="#56b6c2"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
-                      />
-                      <RotaryKnob
-                        label="DETUNE"
-                        value={currentTrack.detuneCents}
-                        min={-50}
-                        max={50}
-                        step={2}
-                        unit="c"
-                        color="#e06c75"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ detuneCents: v })}
-                      />
-                      <RotaryKnob
-                        label="PHASE"
-                        value={currentTrack.phaseOffset}
-                        min={0}
-                        max={360}
-                        step={15}
-                        unit="°"
-                        color="#98c379"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* MODULE 2: TIMBRE FUSION & MORPH */}
-                  <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
-                      <span>2. FUSION</span>
-                      <span className="text-white/40">──►</span>
-                    </div>
-
-                    {/* Blend Mode Buttons */}
-                    <div className="grid grid-cols-2 gap-0.5">
-                      {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
-                          className={`py-1 text-[10px] border rounded-xs font-bold cursor-pointer transition-colors ${
-                            currentTrack.blendMode === mode
-                              ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
-                              : 'border-white/20 text-white/70 hover:bg-white/10'
-                          }`}
-                        >
-                          {mode === 'layer' ? 'LAYER ⊕' : mode === 'fm' ? 'FM ⨉' : mode === 'ring' ? 'RING ⊗' : 'SYNC ⚡'}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Fusion Knobs */}
-                    <div className="grid grid-cols-2 gap-1 pt-0.5 border-t border-white/10">
-                      <RotaryKnob
-                        label="MORPH"
-                        value={Math.round(currentTrack.morphAmount * 100)}
-                        min={0}
-                        max={100}
-                        unit="%"
-                        color="#c678dd"
-                        size={24}
-                        onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
-                      />
-                      <RotaryKnob
-                        label="RATIO"
-                        value={currentTrack.osc2Ratio}
-                        min={0.5}
-                        max={4}
-                        step={0.5}
-                        unit="x"
-                        color="#56b6c2"
-                        size={24}
-                        onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* MODULE 3: MULTI-MODE VCF RESONANT FILTER */}
-                  <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex justify-between font-bold text-[#56b6c2] text-xs border-b border-white/10 pb-0.5">
-                      <span>3. VCF FILTER</span>
-                      <span className="text-white/40">──►</span>
-                    </div>
-
-                    {/* Filter Type Buttons */}
-                    <div className="grid grid-cols-4 gap-0.5">
-                      {(['lowpass', 'bandpass', 'highpass', 'notch'] as FilterType[]).map((f) => (
-                        <button
-                          key={f}
-                          onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
-                          className={`py-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors ${
-                            currentTrack.filterType === f
-                              ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
-                              : 'border-white/20 text-white/70 hover:bg-white/10'
-                          }`}
-                        >
-                          {f === 'lowpass' ? 'LPF' : f === 'bandpass' ? 'BPF' : f === 'highpass' ? 'HPF' : 'NOTCH'}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Filter Knobs */}
-                    <div className="grid grid-cols-3 gap-0.5 pt-0.5 border-t border-white/10">
-                      <RotaryKnob
-                        label="CUTOFF"
-                        value={currentTrack.cutoff}
-                        min={40}
-                        max={12000}
-                        step={50}
-                        unit="Hz"
-                        color="#56b6c2"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ cutoff: v })}
-                      />
-                      <RotaryKnob
-                        label="RES (Q)"
-                        value={currentTrack.resonance}
-                        min={0.2}
-                        max={14}
-                        step={0.2}
-                        color="#e5c07b"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ resonance: v })}
-                      />
-                      <RotaryKnob
-                        label="ENV AMT"
-                        value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
-                        min={-100}
-                        max={100}
-                        unit="%"
-                        color="#98c379"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (AMP ENV + VCF ENV) */}
-                  <div className="border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex items-center justify-between font-bold text-xs border-b border-white/10 pb-0.5">
-                      {/* Dual Envelope Tab Selector */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => { setActiveEnvTab('amp'); playSound('click'); }}
-                          className={`px-1.5 py-0.2 text-[9px] rounded-xs border font-bold cursor-pointer transition-colors ${
-                            activeEnvTab === 'amp'
-                              ? 'border-[#98c379] bg-[#98c379] text-black font-black'
-                              : 'border-white/20 text-white/60 hover:text-white'
-                          }`}
-                        >
-                          AMP ENV
-                        </button>
-                        <button
-                          onClick={() => { setActiveEnvTab('vcf'); playSound('click'); }}
-                          className={`px-1.5 py-0.2 text-[9px] rounded-xs border font-bold cursor-pointer transition-colors ${
-                            activeEnvTab === 'vcf'
-                              ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
-                              : 'border-white/20 text-white/60 hover:text-white'
-                          }`}
-                        >
-                          VCF ENV
-                        </button>
+                    {/* MODULE 2: TIMBRE FUSION & MORPH */}
+                    <div className="border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                      <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
+                        <span>2. FUSION</span>
+                        <span className="text-white/40">──►</span>
                       </div>
-                      <span className="text-white/40 font-mono text-[9px]">──►</span>
-                    </div>
 
-                    {/* Real-time Dynamic SVG ADSR Curve Display (Reacts to Active Tab) */}
-                    <AdsrVisualizer
-                      attack={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
-                      decay={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : currentTrack.filterDecay}
-                      sustain={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : currentTrack.filterSustain}
-                      release={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : currentTrack.filterRelease}
-                      color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                    />
-
-                    {/* 4 Precision Hardware Faders (Edits Selected Active Envelope) */}
-                    <div className="flex items-center justify-around gap-0.5 pt-0.5 border-t border-white/10">
-                      <HardwareFader
-                        label="A"
-                        value={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
-                        min={0.003}
-                        max={0.8}
-                        step={0.01}
-                        color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                        height={34}
-                        onChange={(v) => {
-                          if (activeEnvTab === 'amp') handleTrackParamChange({ ampAttack: v, attack: v });
-                          else handleTrackParamChange({ filterAttack: v });
-                        }}
-                      />
-                      <HardwareFader
-                        label="D"
-                        value={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : currentTrack.filterDecay}
-                        min={0.01}
-                        max={1.0}
-                        step={0.01}
-                        color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                        height={34}
-                        onChange={(v) => {
-                          if (activeEnvTab === 'amp') handleTrackParamChange({ ampDecay: v, decay: v });
-                          else handleTrackParamChange({ filterDecay: v });
-                        }}
-                      />
-                      <HardwareFader
-                        label="S"
-                        value={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : currentTrack.filterSustain}
-                        min={0}
-                        max={1.0}
-                        step={0.02}
-                        color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                        height={34}
-                        onChange={(v) => {
-                          if (activeEnvTab === 'amp') handleTrackParamChange({ ampSustain: v, sustain: v });
-                          else handleTrackParamChange({ filterSustain: v });
-                        }}
-                      />
-                      <HardwareFader
-                        label="R"
-                        value={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : currentTrack.filterRelease}
-                        min={0.01}
-                        max={1.5}
-                        step={0.02}
-                        color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                        height={34}
-                        onChange={(v) => {
-                          if (activeEnvTab === 'amp') handleTrackParamChange({ ampRelease: v, release: v });
-                          else handleTrackParamChange({ filterRelease: v });
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* MODULE 5: MOD MATRIX (ROUTING MATRIX & LFO) */}
-                  <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
-                      <span>5. MOD MATRIX</span>
-                      <span className="text-white/40">──►</span>
-                    </div>
-
-                    {/* LFO Master Section */}
-                    <div className="flex items-center justify-between gap-1 bg-black/40 p-1 rounded-xs border border-white/10">
-                      <div className="flex items-center gap-0.5">
-                        <span className="text-[8px] text-white/50 font-bold">LFO:</span>
-                        {(['sine', 'triangle', 'square', 'sawtooth'] as LfoWaveform[]).map((w) => (
+                      {/* Blend Mode Buttons */}
+                      <div className="grid grid-cols-2 gap-1">
+                        {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
                           <button
-                            key={w}
-                            onClick={() => { handleTrackParamChange({ lfoWaveform: w }); playSound('click'); }}
-                            className={`px-1 py-0.2 text-[8px] border rounded-xs font-bold cursor-pointer ${
-                              currentTrack.lfoWaveform === w ? 'border-[#c678dd] bg-[#c678dd] text-black font-black' : 'border-white/15 text-white/60'
+                            key={mode}
+                            onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
+                            className={`py-1 text-[11px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                              currentTrack.blendMode === mode
+                                ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
+                                : 'border-white/20 text-white/70 hover:bg-white/10'
                             }`}
                           >
-                            {w === 'sine' ? 'SIN' : w === 'triangle' ? 'TRI' : w === 'square' ? 'SQR' : 'SAW'}
+                            {mode === 'layer' ? 'LAYER ⊕' : mode === 'fm' ? 'FM ⨉' : mode === 'ring' ? 'RING ⊗' : 'SYNC ⚡'}
                           </button>
                         ))}
                       </div>
-                      <RotaryKnob
-                        label="RATE"
-                        value={currentTrack.lfoRate}
-                        min={0.1}
-                        max={20}
-                        step={0.2}
-                        unit="Hz"
-                        color="#c678dd"
-                        size={20}
-                        onChange={(v) => handleTrackParamChange({ lfoRate: v })}
-                      />
+
+                      {/* Fusion Knobs */}
+                      <div className="grid grid-cols-2 gap-1 pt-1 border-t border-white/10">
+                        <RotaryKnob
+                          label="MORPH"
+                          value={Math.round(currentTrack.morphAmount * 100)}
+                          min={0}
+                          max={100}
+                          unit="%"
+                          color="#c678dd"
+                          size={26}
+                          onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="RATIO"
+                          value={currentTrack.osc2Ratio}
+                          min={0.5}
+                          max={4}
+                          step={0.5}
+                          unit="x"
+                          color="#56b6c2"
+                          size={26}
+                          onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
+                        />
+                      </div>
                     </div>
 
-                    {/* Mod Matrix Routing Slots (3 Interactive Routes) */}
-                    <div className="space-y-1 pt-0.5 border-t border-white/10">
-                      {(currentTrack.modRoutes || [
-                        { id: 'r1', source: 'lfo' as ModSource, dest: 'cutoff' as ModDest, amount: 0.25, enabled: true },
-                        { id: 'r2', source: 'vcf_env' as ModSource, dest: 'cutoff' as ModDest, amount: 0.60, enabled: true },
-                        { id: 'r3', source: 'velocity' as ModSource, dest: 'cutoff' as ModDest, amount: 0.40, enabled: true },
-                      ]).slice(0, 3).map((route, rIdx) => (
-                        <div key={route.id || rIdx} className="flex items-center justify-between gap-1 text-[8px] font-mono bg-black/30 px-1 py-0.5 rounded-xs border border-white/10">
-                          {/* Source Cycle Button */}
+                    {/* MODULE 3: MULTI-MODE VCF RESONANT FILTER */}
+                    <div className="border border-[#56b6c2]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                      <div className="flex justify-between font-bold text-[#56b6c2] text-xs border-b border-white/10 pb-0.5">
+                        <span>3. VCF FILTER</span>
+                        <span className="text-white/40">──►</span>
+                      </div>
+
+                      {/* Filter Type Buttons */}
+                      <div className="grid grid-cols-4 gap-0.5">
+                        {(['lowpass', 'bandpass', 'highpass', 'notch'] as FilterType[]).map((f) => (
                           <button
-                            onClick={() => {
-                              const sources: ModSource[] = ['lfo', 'vcf_env', 'amp_env', 'velocity'];
-                              const nextSrc = sources[(sources.indexOf(route.source) + 1) % sources.length];
-                              const newRoutes = [...(currentTrack.modRoutes || [])];
-                              newRoutes[rIdx] = { ...route, source: nextSrc };
-                              handleTrackParamChange({ modRoutes: newRoutes });
-                              playSound('click');
-                            }}
-                            className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-bold cursor-pointer border border-white/15"
-                            title="Click to cycle modulation source"
-                          >
-                            {route.source === 'lfo' ? 'LFO' : route.source === 'vcf_env' ? 'VCF' : route.source === 'amp_env' ? 'AMP' : 'VEL'}
-                          </button>
-
-                          <span className="text-white/40">─►</span>
-
-                          {/* Destination Cycle Button */}
-                          <button
-                            onClick={() => {
-                              const dests: ModDest[] = ['cutoff', 'pitch', 'morph', 'pan', 'resonance'];
-                              const nextDest = dests[(dests.indexOf(route.dest) + 1) % dests.length];
-                              const newRoutes = [...(currentTrack.modRoutes || [])];
-                              newRoutes[rIdx] = { ...route, dest: nextDest };
-                              handleTrackParamChange({ modRoutes: newRoutes });
-                              playSound('click');
-                            }}
-                            className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-bold cursor-pointer border border-white/15"
-                            title="Click to cycle modulation destination"
-                          >
-                            {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
-                          </button>
-
-                          {/* Bipolar Depth Slider */}
-                          <input
-                            type="range"
-                            min="-100"
-                            max="100"
-                            step="5"
-                            value={Math.round(route.amount * 100)}
-                            onChange={(e) => {
-                              const newAmount = parseInt(e.target.value, 10) / 100;
-                              const newRoutes = [...(currentTrack.modRoutes || [])];
-                              newRoutes[rIdx] = { ...route, amount: newAmount };
-                              handleTrackParamChange({ modRoutes: newRoutes });
-                            }}
-                            className="w-12 h-1 accent-[#98c379] cursor-pointer"
-                            title={`Mod Depth: ${Math.round(route.amount * 100)}%`}
-                          />
-
-                          {/* Enable / Bypass Toggle */}
-                          <button
-                            onClick={() => {
-                              const newRoutes = [...(currentTrack.modRoutes || [])];
-                              newRoutes[rIdx] = { ...route, enabled: !route.enabled };
-                              handleTrackParamChange({ modRoutes: newRoutes });
-                              playSound('click');
-                            }}
-                            className={`w-3.5 h-3.5 rounded-xs border text-[7px] font-black flex items-center justify-center cursor-pointer ${
-                              route.enabled ? 'border-[#98c379] bg-[#98c379] text-black' : 'border-white/20 text-white/30'
+                            key={f}
+                            onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
+                            className={`py-0.5 text-[10px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                              currentTrack.filterType === f
+                                ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                : 'border-white/20 text-white/70 hover:bg-white/10'
                             }`}
                           >
-                            {route.enabled ? '✓' : '×'}
+                            {f === 'lowpass' ? 'LPF' : f === 'bandpass' ? 'BPF' : f === 'highpass' ? 'HPF' : 'NOTCH'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Filter Knobs */}
+                      <div className="grid grid-cols-3 gap-0.5 pt-1 border-t border-white/10">
+                        <RotaryKnob
+                          label="CUTOFF"
+                          value={currentTrack.cutoff}
+                          min={40}
+                          max={12000}
+                          step={50}
+                          unit="Hz"
+                          color="#56b6c2"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ cutoff: v })}
+                        />
+                        <RotaryKnob
+                          label="RES (Q)"
+                          value={currentTrack.resonance}
+                          min={0.2}
+                          max={14}
+                          step={0.2}
+                          color="#e5c07b"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ resonance: v })}
+                        />
+                        <RotaryKnob
+                          label="ENV AMT"
+                          value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
+                          min={-100}
+                          max={100}
+                          unit="%"
+                          color="#98c379"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (AMP ENV + VCF ENV) */}
+                    <div className="border border-[#98c379]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                      <div className="flex items-center justify-between font-bold text-xs border-b border-white/10 pb-0.5">
+                        {/* Dual Envelope Tab Selector */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setActiveEnvTab('amp'); playSound('click'); }}
+                            className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-bold cursor-pointer transition-colors ${
+                              activeEnvTab === 'amp'
+                                ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            AMP ENV
+                          </button>
+                          <button
+                            onClick={() => { setActiveEnvTab('vcf'); playSound('click'); }}
+                            className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-bold cursor-pointer transition-colors ${
+                              activeEnvTab === 'vcf'
+                                ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            VCF ENV
                           </button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* MODULE 6: FX & DYNAMICS RACK */}
-                  <div className="border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex justify-between font-bold text-[#e06c75] text-xs border-b border-white/10 pb-0.5">
-                      <span>6. FX</span>
-                      <span className="text-white/40">──►</span>
-                    </div>
-
-                    {/* Delay Knobs */}
-                    <div className="grid grid-cols-3 gap-0.5">
-                      <RotaryKnob
-                        label="D-TIME"
-                        value={Math.round(synthDelayTime * 1000)}
-                        min={50}
-                        max={800}
-                        step={10}
-                        unit="ms"
-                        color="#e06c75"
-                        size={22}
-                        onChange={(v) => {
-                          const t = v / 1000;
-                          setSynthDelayTime(t);
-                          modularSynth.setDelayTime(t);
-                        }}
-                      />
-                      <RotaryKnob
-                        label="D-FDBK"
-                        value={Math.round(synthDelayFeedback * 100)}
-                        min={0}
-                        max={85}
-                        step={5}
-                        unit="%"
-                        color="#e06c75"
-                        size={22}
-                        onChange={(v) => {
-                          const fb = v / 100;
-                          setSynthDelayFeedback(fb);
-                          modularSynth.setDelayFeedback(fb);
-                        }}
-                      />
-                      <RotaryKnob
-                        label="D-MIX"
-                        value={Math.round(synthDelayMix * 100)}
-                        min={0}
-                        max={100}
-                        step={5}
-                        unit="%"
-                        color="#e06c75"
-                        size={22}
-                        onChange={(v) => {
-                          const m = v / 100;
-                          setSynthDelayMix(m);
-                          modularSynth.setDelayMix(m);
-                        }}
-                      />
-                    </div>
-
-                    {/* Reverb & Drive Knobs */}
-                    <div className="grid grid-cols-2 gap-1 pt-0.5 border-t border-white/10">
-                      <RotaryKnob
-                        label="R-MIX"
-                        value={Math.round(synthReverbMix * 100)}
-                        min={0}
-                        max={100}
-                        step={5}
-                        unit="%"
-                        color="#c678dd"
-                        size={22}
-                        onChange={(v) => {
-                          const rm = v / 100;
-                          setSynthReverbMix(rm);
-                          modularSynth.setReverbMix(rm);
-                        }}
-                      />
-                      <RotaryKnob
-                        label="DRIVE"
-                        value={Math.round(synthDrive * 100)}
-                        min={0}
-                        max={100}
-                        step={5}
-                        unit="%"
-                        color="#e5c07b"
-                        size={22}
-                        onChange={(v) => {
-                          const d = v / 100;
-                          setSynthDrive(d);
-                          modularSynth.setDrive(d);
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* MODULE 7: OUT & DUAL SEPARATED VISUALIZERS */}
-                  <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
-                    <div className="flex items-center justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
-                      <span>7. OUT</span>
-                      <span className="text-[#98c379] font-mono text-[9px]">60 FPS DUAL</span>
-                    </div>
-
-                    {/* Master Pan & Volume Knobs */}
-                    <div className="grid grid-cols-2 gap-1">
-                      <RotaryKnob
-                        label="PAN"
-                        value={Math.round(currentTrack.pan * 100)}
-                        min={-100}
-                        max={100}
-                        step={5}
-                        unit=""
-                        color="#56b6c2"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
-                      />
-                      <RotaryKnob
-                        label="VOL"
-                        value={Math.round(currentTrack.volume * 100)}
-                        min={0}
-                        max={100}
-                        unit="%"
-                        color="#98c379"
-                        size={22}
-                        onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
-                      />
-                    </div>
-
-                    {/* SCREEN 1: LOGARITHMIC FREQUENCY SPECTRUM (对数坐标频谱图) */}
-                    <div className="border border-white/15 bg-black/90 rounded-xs p-1 flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between text-[8px] font-mono text-white/50 px-0.5">
-                        <span className="text-[#56b6c2] font-bold">FFT SPECTRUM (LOG)</span>
-                        <span>20Hz - 20kHz</span>
+                        <span className="text-white/40 font-mono text-xs">──►</span>
                       </div>
-                      <div className="relative h-8 rounded-xs overflow-hidden">
-                        <canvas ref={fftCanvasRef} width={200} height={32} className="w-full h-full block" />
+
+                      {/* Real-time Dynamic SVG ADSR Curve Display */}
+                      <AdsrVisualizer
+                        attack={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
+                        decay={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : currentTrack.filterDecay}
+                        sustain={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : currentTrack.filterSustain}
+                        release={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : currentTrack.filterRelease}
+                        color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                      />
+
+                      {/* 4 Precision Hardware Faders */}
+                      <div className="flex items-center justify-around gap-1 pt-1 border-t border-white/10">
+                        <HardwareFader
+                          label="A"
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
+                          min={0.003}
+                          max={0.8}
+                          step={0.01}
+                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          height={36}
+                          onChange={(v) => {
+                            if (activeEnvTab === 'amp') handleTrackParamChange({ ampAttack: v, attack: v });
+                            else handleTrackParamChange({ filterAttack: v });
+                          }}
+                        />
+                        <HardwareFader
+                          label="D"
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : currentTrack.filterDecay}
+                          min={0.01}
+                          max={1.0}
+                          step={0.01}
+                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          height={36}
+                          onChange={(v) => {
+                            if (activeEnvTab === 'amp') handleTrackParamChange({ ampDecay: v, decay: v });
+                            else handleTrackParamChange({ filterDecay: v });
+                          }}
+                        />
+                        <HardwareFader
+                          label="S"
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : currentTrack.filterSustain}
+                          min={0}
+                          max={1.0}
+                          step={0.02}
+                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          height={36}
+                          onChange={(v) => {
+                            if (activeEnvTab === 'amp') handleTrackParamChange({ ampSustain: v, sustain: v });
+                            else handleTrackParamChange({ filterSustain: v });
+                          }}
+                        />
+                        <HardwareFader
+                          label="R"
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : currentTrack.filterRelease}
+                          min={0.01}
+                          max={1.5}
+                          step={0.02}
+                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          height={36}
+                          onChange={(v) => {
+                            if (activeEnvTab === 'amp') handleTrackParamChange({ ampRelease: v, release: v });
+                            else handleTrackParamChange({ filterRelease: v });
+                          }}
+                        />
                       </div>
                     </div>
 
-                    {/* SCREEN 2: REAL-TIME OSCILLOSCOPE (实时波形图 + 时间粒度调节) */}
-                    <div className="border border-white/15 bg-black/90 rounded-xs p-1 flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between text-[8px] font-mono text-white/50 px-0.5">
-                        <span className="text-[#98c379] font-bold">OSCILLOSCOPE</span>
-                        {/* Timebase / Time Resolution Granularity Selector */}
+                  </div>
+                )}
+
+                {/* PAGE 2: MOD MATRIX, FX & OUTPUT (MODULES 5 ~ 7) */}
+                {rackPage === 2 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-2 text-xs">
+                    
+                    {/* MODULE 5: MOD MATRIX (ROUTING MATRIX & LFO) */}
+                    <div className="border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                      <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
+                        <span>5. MOD MATRIX</span>
+                        <span className="text-white/40">──►</span>
+                      </div>
+
+                      {/* LFO Master Section */}
+                      <div className="flex items-center justify-between gap-1 bg-black/40 p-1.5 rounded-xs border border-white/10">
                         <div className="flex items-center gap-0.5">
-                          <span className="text-[7px] text-white/40">TIME:</span>
-                          {(['0.25x', '0.5x', '1x', '2x', '4x'] as const).map((tb) => (
+                          <span className="text-[10px] text-white/50 font-bold">LFO:</span>
+                          {(['sine', 'triangle', 'square', 'sawtooth'] as LfoWaveform[]).map((w) => (
                             <button
-                              key={tb}
-                              onClick={() => { setTimeBase(tb); playSound('click'); }}
-                              className={`px-0.5 py-0.2 rounded-xs border text-[7px] cursor-pointer font-bold ${
-                                timeBase === tb
-                                  ? 'border-[#98c379] bg-[#98c379] text-black font-black'
-                                  : 'border-white/20 text-white/60 hover:text-white'
+                              key={w}
+                              onClick={() => { handleTrackParamChange({ lfoWaveform: w }); playSound('click'); }}
+                              className={`px-1.5 py-0.5 text-[9px] border rounded-xs font-bold cursor-pointer ${
+                                currentTrack.lfoWaveform === w ? 'border-[#c678dd] bg-[#c678dd] text-black font-black' : 'border-white/15 text-white/60 hover:text-white'
                               }`}
                             >
-                              {tb}
+                              {w === 'sine' ? 'SIN' : w === 'triangle' ? 'TRI' : w === 'square' ? 'SQR' : 'SAW'}
                             </button>
                           ))}
                         </div>
+                        <RotaryKnob
+                          label="RATE"
+                          value={currentTrack.lfoRate}
+                          min={0.1}
+                          max={20}
+                          step={0.2}
+                          unit="Hz"
+                          color="#c678dd"
+                          size={24}
+                          onChange={(v) => handleTrackParamChange({ lfoRate: v })}
+                        />
                       </div>
-                      <div className="relative h-8 rounded-xs overflow-hidden">
-                        <canvas ref={waveCanvasRef} width={200} height={32} className="w-full h-full block" />
+
+                      {/* Mod Matrix Routing Slots */}
+                      <div className="space-y-1 pt-0.5 border-t border-white/10">
+                        {(currentTrack.modRoutes || [
+                          { id: 'r1', source: 'lfo' as ModSource, dest: 'cutoff' as ModDest, amount: 0.25, enabled: true },
+                          { id: 'r2', source: 'vcf_env' as ModSource, dest: 'cutoff' as ModDest, amount: 0.60, enabled: true },
+                          { id: 'r3', source: 'velocity' as ModSource, dest: 'cutoff' as ModDest, amount: 0.40, enabled: true },
+                        ]).slice(0, 3).map((route, rIdx) => (
+                          <div key={route.id || rIdx} className="flex items-center justify-between gap-1 text-[9px] font-mono bg-black/40 px-1.5 py-1 rounded-xs border border-white/10">
+                            {/* Source Cycle Button */}
+                            <button
+                              onClick={() => {
+                                const sources: ModSource[] = ['lfo', 'vcf_env', 'amp_env', 'velocity'];
+                                const nextSrc = sources[(sources.indexOf(route.source) + 1) % sources.length];
+                                const newRoutes = [...(currentTrack.modRoutes || [])];
+                                newRoutes[rIdx] = { ...route, source: nextSrc };
+                                handleTrackParamChange({ modRoutes: newRoutes });
+                                playSound('click');
+                              }}
+                              className="px-1.5 py-0.5 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-bold cursor-pointer border border-white/15"
+                              title="Click to cycle modulation source"
+                            >
+                              {route.source === 'lfo' ? 'LFO' : route.source === 'vcf_env' ? 'VCF' : route.source === 'amp_env' ? 'AMP' : 'VEL'}
+                            </button>
+
+                            <span className="text-white/40">─►</span>
+
+                            {/* Destination Cycle Button */}
+                            <button
+                              onClick={() => {
+                                const dests: ModDest[] = ['cutoff', 'pitch', 'morph', 'pan', 'resonance'];
+                                const nextDest = dests[(dests.indexOf(route.dest) + 1) % dests.length];
+                                const newRoutes = [...(currentTrack.modRoutes || [])];
+                                newRoutes[rIdx] = { ...route, dest: nextDest };
+                                handleTrackParamChange({ modRoutes: newRoutes });
+                                playSound('click');
+                              }}
+                              className="px-1.5 py-0.5 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-bold cursor-pointer border border-white/15"
+                              title="Click to cycle modulation destination"
+                            >
+                              {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
+                            </button>
+
+                            {/* Bipolar Depth Slider */}
+                            <input
+                              type="range"
+                              min="-100"
+                              max="100"
+                              step="5"
+                              value={Math.round(route.amount * 100)}
+                              onChange={(e) => {
+                                const newAmount = parseInt(e.target.value, 10) / 100;
+                                const newRoutes = [...(currentTrack.modRoutes || [])];
+                                newRoutes[rIdx] = { ...route, amount: newAmount };
+                                handleTrackParamChange({ modRoutes: newRoutes });
+                              }}
+                              className="w-16 h-1.5 accent-[#98c379] cursor-pointer"
+                              title={`Mod Depth: ${Math.round(route.amount * 100)}%`}
+                            />
+
+                            {/* Enable / Bypass Toggle */}
+                            <button
+                              onClick={() => {
+                                const newRoutes = [...(currentTrack.modRoutes || [])];
+                                newRoutes[rIdx] = { ...route, enabled: !route.enabled };
+                                handleTrackParamChange({ modRoutes: newRoutes });
+                                playSound('click');
+                              }}
+                              className={`w-4 h-4 rounded-xs border text-[8px] font-black flex items-center justify-center cursor-pointer ${
+                                route.enabled ? 'border-[#98c379] bg-[#98c379] text-black' : 'border-white/20 text-white/30'
+                              }`}
+                            >
+                              {route.enabled ? '✓' : '×'}
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
 
-                </div>
+                    {/* MODULE 6: FX (TAPE DELAY, REVERB & ANALOG DRIVE) */}
+                    <div className="border border-[#e06c75]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                      <div className="flex justify-between font-bold text-[#e06c75] text-xs border-b border-white/10 pb-0.5">
+                        <span>6. FX</span>
+                        <span className="text-white/40">──►</span>
+                      </div>
+
+                      {/* Delay Knobs */}
+                      <div className="grid grid-cols-3 gap-1">
+                        <RotaryKnob
+                          label="D-TIME"
+                          value={Math.round(synthDelayTime * 1000)}
+                          min={50}
+                          max={800}
+                          step={10}
+                          unit="ms"
+                          color="#e06c75"
+                          size={26}
+                          onChange={(v) => {
+                            const t = v / 1000;
+                            setSynthDelayTime(t);
+                            modularSynth.setDelayTime(t);
+                          }}
+                        />
+                        <RotaryKnob
+                          label="D-FDBK"
+                          value={Math.round(synthDelayFeedback * 100)}
+                          min={0}
+                          max={85}
+                          step={5}
+                          unit="%"
+                          color="#e06c75"
+                          size={26}
+                          onChange={(v) => {
+                            const fb = v / 100;
+                            setSynthDelayFeedback(fb);
+                            modularSynth.setDelayFeedback(fb);
+                          }}
+                        />
+                        <RotaryKnob
+                          label="D-MIX"
+                          value={Math.round(synthDelayMix * 100)}
+                          min={0}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          color="#e06c75"
+                          size={26}
+                          onChange={(v) => {
+                            const m = v / 100;
+                            setSynthDelayMix(m);
+                            modularSynth.setDelayMix(m);
+                          }}
+                        />
+                      </div>
+
+                      {/* Reverb & Drive Knobs */}
+                      <div className="grid grid-cols-2 gap-1 pt-1 border-t border-white/10">
+                        <RotaryKnob
+                          label="R-MIX"
+                          value={Math.round(synthReverbMix * 100)}
+                          min={0}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          color="#c678dd"
+                          size={26}
+                          onChange={(v) => {
+                            const rm = v / 100;
+                            setSynthReverbMix(rm);
+                            modularSynth.setReverbMix(rm);
+                          }}
+                        />
+                        <RotaryKnob
+                          label="DRIVE"
+                          value={Math.round(synthDrive * 100)}
+                          min={0}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          color="#e5c07b"
+                          size={26}
+                          onChange={(v) => {
+                            const d = v / 100;
+                            setSynthDrive(d);
+                            modularSynth.setDrive(d);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* MODULE 7: OUT & DUAL DEDICATED VISUALIZERS */}
+                    <div className="border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                      <div className="flex items-center justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
+                        <span>7. OUT</span>
+                        <span className="text-[#98c379] font-mono text-[9px]">60 FPS DUAL</span>
+                      </div>
+
+                      {/* Master Pan & Volume Knobs */}
+                      <div className="grid grid-cols-2 gap-1">
+                        <RotaryKnob
+                          label="PAN"
+                          value={Math.round(currentTrack.pan * 100)}
+                          min={-100}
+                          max={100}
+                          step={5}
+                          unit=""
+                          color="#56b6c2"
+                          size={26}
+                          onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="VOL"
+                          value={Math.round(currentTrack.volume * 100)}
+                          min={0}
+                          max={100}
+                          unit="%"
+                          color="#98c379"
+                          size={26}
+                          onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
+                        />
+                      </div>
+
+                      {/* SCREEN 1: LOGARITHMIC FREQUENCY SPECTRUM (对数坐标频谱图) */}
+                      <div className="border border-white/15 bg-black/90 rounded-xs p-1 flex flex-col gap-0.5">
+                        <div className="flex items-center justify-between text-[8px] font-mono text-white/50 px-0.5">
+                          <span className="text-[#56b6c2] font-bold">FFT SPECTRUM (LOG)</span>
+                          <span>20Hz - 20kHz</span>
+                        </div>
+                        <div className="relative h-9 rounded-xs overflow-hidden">
+                          <canvas ref={fftCanvasRef} width={220} height={36} className="w-full h-full block" />
+                        </div>
+                      </div>
+
+                      {/* SCREEN 2: REAL-TIME OSCILLOSCOPE (实时波形图 + 时间粒度调节) */}
+                      <div className="border border-white/15 bg-black/90 rounded-xs p-1 flex flex-col gap-0.5">
+                        <div className="flex items-center justify-between text-[8px] font-mono text-white/50 px-0.5">
+                          <span className="text-[#98c379] font-bold">OSCILLOSCOPE</span>
+                          {/* Timebase / Time Resolution Granularity Selector */}
+                          <div className="flex items-center gap-0.5">
+                            <span className="text-[8px] text-white/40">TIME:</span>
+                            {(['0.25x', '0.5x', '1x', '2x', '4x'] as const).map((tb) => (
+                              <button
+                                key={tb}
+                                onClick={() => { setTimeBase(tb); playSound('click'); }}
+                                className={`px-1 py-0.2 rounded-xs border text-[8px] cursor-pointer font-bold ${
+                                  timeBase === tb
+                                    ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                    : 'border-white/20 text-white/60 hover:text-white'
+                                }`}
+                              >
+                                {tb}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="relative h-9 rounded-xs overflow-hidden">
+                          <canvas ref={waveCanvasRef} width={220} height={36} className="w-full h-full block" />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
               </div>
 
 
