@@ -574,8 +574,8 @@ export const TmuxWorkspace: React.FC = () => {
   const [octaveFrom, setOctaveFrom] = useState<number>(3);
   const [octaveTo, setOctaveTo] = useState<number>(5);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
-  const [isOverlayMode, setIsOverlayMode] = useState<boolean>(false);
-  const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0]);
+  const [isOverlayMode, setIsOverlayMode] = useState<boolean>(true);
+  const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0, 1, 2, 3]);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
   const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
   const [seqCurrentStep, setSeqCurrentStep] = useState<number>(0);
