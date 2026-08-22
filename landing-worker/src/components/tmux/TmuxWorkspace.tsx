@@ -1967,7 +1967,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               
               );})()}
 
-                                          {/* 3. HARDWARE SYNTHESIZER CHANNEL STRIP & DSP MODULATION MATRIX */}
+                                                        {/* 3. HARDWARE SYNTHESIZER CHANNEL STRIP & DSP MODULATION MATRIX */}
               <div className="border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col gap-2 shrink-0">
                 {/* Channel Strip Header: Active Track Selector & Sound Presets */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5 text-xs">
@@ -2004,41 +2004,66 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                 </div>
 
-                {/* Hardware Modular Rack: 6 Studio Modules */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                {/* Hardware Modular Rack: 7 Studio Modules */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-1.5 text-xs">
                   
-                  {/* MODULE 1: DUAL OSCILLATORS & TIMBRE */}
-                  <div className="border border-[#e5c07b]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                  {/* MODULE 1: DUAL OSCILLATORS (VCO) */}
+                  <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex justify-between font-bold text-[#e5c07b] text-xs border-b border-white/10 pb-0.5">
-                      <span>1. OSCILLATORS</span>
+                      <span>1. DUAL OSC</span>
                       <span className="text-white/40">──►</span>
                     </div>
 
-                    {/* Waveform Toggles for Osc 1 */}
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-white/60 font-bold">
-                        <span>OSC 1 (PRIMARY)</span>
-                        <span className="font-mono text-[#e5c07b]">{currentTrack.osc1Waveform.toUpperCase()}</span>
+                      {/* OSC 1 (Primary) */}
+                      <div className="space-y-0.5">
+                        <div className="flex items-center justify-between text-[9px] text-white/60 font-bold">
+                          <span>OSC 1</span>
+                          <span className="font-mono text-[#e5c07b]">{getWaveformAbbr(currentTrack.osc1Waveform)}</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-0.5">
+                          {(['square', 'sawtooth', 'triangle', 'sine', 'noise'] as SynthWaveform[]).map((w) => (
+                            <button
+                              key={w}
+                              onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
+                              className={`py-0.5 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                                currentTrack.osc1Waveform === w
+                                  ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                                  : 'border-white/20 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {getWaveformAbbr(w)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-0.5">
-                        {(['square', 'sawtooth', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
-                          <button
-                            key={w}
-                            onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
-                            className={`py-0.5 text-[10px] border rounded-xs font-bold cursor-pointer transition-colors ${
-                              currentTrack.osc1Waveform === w
-                                ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
-                                : 'border-white/20 text-white/70 hover:bg-white/10'
-                            }`}
-                          >
-                            {getWaveformAbbr(w)}
-                          </button>
-                        ))}
+
+                      {/* OSC 2 (Secondary) */}
+                      <div className="space-y-0.5">
+                        <div className="flex items-center justify-between text-[9px] text-white/60 font-bold">
+                          <span>OSC 2</span>
+                          <span className="font-mono text-[#56b6c2]">{getWaveformAbbr(currentTrack.osc2Waveform)}</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-0.5">
+                          {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
+                            <button
+                              key={w}
+                              onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
+                              className={`py-0.5 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                                currentTrack.osc2Waveform === w
+                                  ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                  : 'border-white/20 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {getWaveformAbbr(w)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Rotary Knobs */}
-                    <div className="grid grid-cols-3 gap-1 pt-1 border-t border-white/10">
+                    {/* Dual Osc Knobs */}
+                    <div className="grid grid-cols-4 gap-0.5 pt-0.5 border-t border-white/10">
                       <RotaryKnob
                         label="OSC1"
                         value={Math.round(currentTrack.osc1Gain * 100)}
@@ -2046,7 +2071,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={100}
                         unit="%"
                         color="#e5c07b"
-                        size={26}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
                       />
                       <RotaryKnob
@@ -2056,7 +2081,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={100}
                         unit="%"
                         color="#56b6c2"
-                        size={26}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
                       />
                       <RotaryKnob
@@ -2067,26 +2092,37 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={2}
                         unit="c"
                         color="#e06c75"
-                        size={26}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ detuneCents: v })}
+                      />
+                      <RotaryKnob
+                        label="PHASE"
+                        value={currentTrack.phaseOffset}
+                        min={0}
+                        max={360}
+                        step={15}
+                        unit="°"
+                        color="#98c379"
+                        size={22}
+                        onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
                       />
                     </div>
                   </div>
 
                   {/* MODULE 2: TIMBRE FUSION & MORPH */}
-                  <div className="border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                  <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
                       <span>2. FUSION</span>
                       <span className="text-white/40">──►</span>
                     </div>
 
                     {/* Blend Mode Buttons */}
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="grid grid-cols-2 gap-0.5">
                       {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
                         <button
                           key={mode}
                           onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
-                          className={`py-1 text-[11px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                          className={`py-1 text-[10px] border rounded-xs font-bold cursor-pointer transition-colors ${
                             currentTrack.blendMode === mode
                               ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
                               : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2098,7 +2134,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* Fusion Knobs */}
-                    <div className="grid grid-cols-2 gap-1 pt-1 border-t border-white/10">
+                    <div className="grid grid-cols-2 gap-1 pt-0.5 border-t border-white/10">
                       <RotaryKnob
                         label="MORPH"
                         value={Math.round(currentTrack.morphAmount * 100)}
@@ -2106,7 +2142,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={100}
                         unit="%"
                         color="#c678dd"
-                        size={26}
+                        size={24}
                         onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
                       />
                       <RotaryKnob
@@ -2117,14 +2153,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={0.5}
                         unit="x"
                         color="#56b6c2"
-                        size={26}
+                        size={24}
                         onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
                       />
                     </div>
                   </div>
 
                   {/* MODULE 3: MULTI-MODE VCF RESONANT FILTER */}
-                  <div className="border border-[#56b6c2]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                  <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex justify-between font-bold text-[#56b6c2] text-xs border-b border-white/10 pb-0.5">
                       <span>3. VCF FILTER</span>
                       <span className="text-white/40">──►</span>
@@ -2136,7 +2172,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         <button
                           key={f}
                           onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
-                          className={`py-0.5 text-[10px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                          className={`py-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors ${
                             currentTrack.filterType === f
                               ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                               : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2148,7 +2184,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* Filter Knobs */}
-                    <div className="grid grid-cols-3 gap-0.5 pt-1 border-t border-white/10">
+                    <div className="grid grid-cols-3 gap-0.5 pt-0.5 border-t border-white/10">
                       <RotaryKnob
                         label="CUTOFF"
                         value={currentTrack.cutoff}
@@ -2157,7 +2193,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={50}
                         unit="Hz"
                         color="#56b6c2"
-                        size={26}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ cutoff: v })}
                       />
                       <RotaryKnob
@@ -2167,7 +2203,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={14}
                         step={0.2}
                         color="#e5c07b"
-                        size={26}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ resonance: v })}
                       />
                       <RotaryKnob
@@ -2177,14 +2213,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={100}
                         unit="%"
                         color="#98c379"
-                        size={26}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ envFilterMod: v / 100 })}
                       />
                     </div>
                   </div>
 
                   {/* MODULE 4: ADSR ENVELOPE & REAL-TIME CURVE VISUALIZER */}
-                  <div className="border border-[#98c379]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                  <div className="border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex justify-between font-bold text-[#98c379] text-xs border-b border-white/10 pb-0.5">
                       <span>4. ADSR ENVELOPE</span>
                       <span className="text-white/40">──►</span>
@@ -2200,7 +2236,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     />
 
                     {/* 4 Precision Hardware Faders */}
-                    <div className="flex items-center justify-around gap-1 pt-1 border-t border-white/10">
+                    <div className="flex items-center justify-around gap-0.5 pt-0.5 border-t border-white/10">
                       <HardwareFader
                         label="A"
                         value={currentTrack.attack}
@@ -2208,7 +2244,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={0.8}
                         step={0.01}
                         color="#98c379"
-                        height={36}
+                        height={34}
                         onChange={(v) => handleTrackParamChange({ attack: v })}
                       />
                       <HardwareFader
@@ -2218,7 +2254,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={1.0}
                         step={0.01}
                         color="#98c379"
-                        height={36}
+                        height={34}
                         onChange={(v) => handleTrackParamChange({ decay: v })}
                       />
                       <HardwareFader
@@ -2228,7 +2264,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={1.0}
                         step={0.02}
                         color="#98c379"
-                        height={36}
+                        height={34}
                         onChange={(v) => handleTrackParamChange({ sustain: v })}
                       />
                       <HardwareFader
@@ -2238,21 +2274,77 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={1.5}
                         step={0.02}
                         color="#98c379"
-                        height={36}
+                        height={34}
                         onChange={(v) => handleTrackParamChange({ release: v })}
                       />
                     </div>
                   </div>
 
-                  {/* MODULE 5: MASTER FX & DYNAMICS RACK (BEFORE MASTER OUT) */}
-                  <div className="border border-[#e06c75]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
-                    <div className="flex justify-between font-bold text-[#e06c75] text-xs border-b border-white/10 pb-0.5">
-                      <span>5. MASTER FX</span>
+                  {/* MODULE 5: LFO MODULATION MATRIX */}
+                  <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
+                    <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
+                      <span>5. LFO MOD</span>
                       <span className="text-white/40">──►</span>
                     </div>
 
-                    {/* FX Knobs */}
-                    <div className="grid grid-cols-3 gap-1">
+                    {/* LFO Target Select */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[9px] text-white/60 font-bold">
+                        <span>TARGET</span>
+                        <span className="font-mono text-[#c678dd]">{currentTrack.lfoTarget.toUpperCase()}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-0.5">
+                        {(['filter', 'pitch', 'amp', 'pan'] as LfoTarget[]).map((tgt) => (
+                          <button
+                            key={tgt}
+                            onClick={() => { handleTrackParamChange({ lfoTarget: tgt }); playSound('click'); }}
+                            className={`py-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors ${
+                              currentTrack.lfoTarget === tgt
+                                ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
+                                : 'border-white/20 text-white/70 hover:bg-white/10'
+                            }`}
+                          >
+                            {tgt === 'filter' ? 'VCF' : tgt === 'pitch' ? 'PIT' : tgt.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* LFO Knobs */}
+                    <div className="grid grid-cols-2 gap-1 pt-0.5 border-t border-white/10">
+                      <RotaryKnob
+                        label="RATE"
+                        value={currentTrack.lfoRate}
+                        min={0.1}
+                        max={20}
+                        step={0.2}
+                        unit="Hz"
+                        color="#c678dd"
+                        size={24}
+                        onChange={(v) => handleTrackParamChange({ lfoRate: v })}
+                      />
+                      <RotaryKnob
+                        label="DEPTH"
+                        value={Math.round(currentTrack.lfoDepth * 100)}
+                        min={0}
+                        max={100}
+                        unit="%"
+                        color="#98c379"
+                        size={24}
+                        onChange={(v) => handleTrackParamChange({ lfoDepth: v / 100 })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* MODULE 6: MASTER FX & DYNAMICS RACK */}
+                  <div className="border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
+                    <div className="flex justify-between font-bold text-[#e06c75] text-xs border-b border-white/10 pb-0.5">
+                      <span>6. MASTER FX</span>
+                      <span className="text-white/40">──►</span>
+                    </div>
+
+                    {/* Delay Knobs */}
+                    <div className="grid grid-cols-3 gap-0.5">
                       <RotaryKnob
                         label="D-TIME"
                         value={Math.round(synthDelayTime * 1000)}
@@ -2261,7 +2353,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={10}
                         unit="ms"
                         color="#e06c75"
-                        size={24}
+                        size={22}
                         onChange={(v) => {
                           const t = v / 1000;
                           setSynthDelayTime(t);
@@ -2276,7 +2368,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={5}
                         unit="%"
                         color="#e06c75"
-                        size={24}
+                        size={22}
                         onChange={(v) => {
                           const fb = v / 100;
                           setSynthDelayFeedback(fb);
@@ -2291,7 +2383,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={5}
                         unit="%"
                         color="#e06c75"
-                        size={24}
+                        size={22}
                         onChange={(v) => {
                           const m = v / 100;
                           setSynthDelayMix(m);
@@ -2300,7 +2392,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-1 pt-1 border-t border-white/10">
+                    {/* Reverb & Drive Knobs */}
+                    <div className="grid grid-cols-2 gap-1 pt-0.5 border-t border-white/10">
                       <RotaryKnob
                         label="R-MIX"
                         value={Math.round(synthReverbMix * 100)}
@@ -2309,7 +2402,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={5}
                         unit="%"
                         color="#c678dd"
-                        size={24}
+                        size={22}
                         onChange={(v) => {
                           const rm = v / 100;
                           setSynthReverbMix(rm);
@@ -2324,7 +2417,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={5}
                         unit="%"
                         color="#e5c07b"
-                        size={24}
+                        size={22}
                         onChange={(v) => {
                           const d = v / 100;
                           setSynthDrive(d);
@@ -2334,11 +2427,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 6: MASTER OUT & CRT SCOPE */}
-                  <div className="border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                  {/* MODULE 7: MASTER OUT & CRT SCOPE */}
+                  <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
-                      <span>6. MASTER OUT</span>
-                      <span className="text-[#98c379] font-mono text-xs">60 FPS</span>
+                      <span>7. MASTER OUT</span>
+                      <span className="text-[#98c379] font-mono text-[10px]">60 FPS</span>
                     </div>
 
                     {/* Master Pan & Volume Knobs */}
@@ -2351,7 +2444,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={5}
                         unit=""
                         color="#56b6c2"
-                        size={26}
+                        size={24}
                         onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
                       />
                       <RotaryKnob
@@ -2361,19 +2454,20 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={100}
                         unit="%"
                         color="#98c379"
-                        size={26}
+                        size={24}
                         onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
                       />
                     </div>
 
                     {/* Real-time Oscilloscope Canvas Display */}
-                    <div className="border border-white/15 bg-black/80 relative h-10 rounded-xs overflow-hidden flex items-center">
-                      <canvas ref={canvasRef} width={180} height={40} className="w-full h-full block" />
+                    <div className="border border-white/15 bg-black/80 relative h-9 rounded-xs overflow-hidden flex items-center">
+                      <canvas ref={canvasRef} width={180} height={36} className="w-full h-full block" />
                     </div>
                   </div>
 
                 </div>
               </div>
+
 
             </div>
           )}
