@@ -2501,18 +2501,18 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 5: MOD MATRIX (LEFT: LFO 2x2+RATE 30px, RIGHT: 3 MOD ROUTES - NO DIVIDER) */}
-                  <div className="xl:col-span-4 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  {/* MODULE 5: MOD MATRIX (NARROWED TO xl:col-span-3, INTERNAL 1:2 SPLIT, NO DIVIDER) */}
+                  <div className="xl:col-span-3 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     {/* Header */}
                     <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <span>5. MOD MATRIX</span>
                       <span className="text-white/40 font-mono text-xs">──►</span>
                     </div>
 
-                    {/* Left/Right Horizontal Split */}
-                    <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
-                      {/* Left: LFO 2x2 Grid + RATE Knob 32px (No Divider) */}
-                      <div className="col-span-4 flex flex-col justify-between items-center gap-1 pr-1 h-full py-0.5">
+                    {/* Left/Right Horizontal Split in 1 : 2 Ratio (Left: col-span-4, Right: col-span-8) */}
+                    <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
+                      {/* Left: 1 Part (33.3% width) - LFO 2x2 Grid + RATE Knob 28px */}
+                      <div className="col-span-4 flex flex-col justify-between items-center gap-1 pr-0.5 h-full py-0.5">
                         <div className="grid grid-cols-2 gap-0.5 w-full">
                           {(['sine', 'triangle', 'square', 'sawtooth'] as LfoWaveform[]).map((w) => (
                             <button
@@ -2534,19 +2534,19 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={0.2}
                           unit="Hz"
                           color="#c678dd"
-                          size={32}
+                          size={28}
                           onChange={(v) => handleTrackParamChange({ lfoRate: v })}
                         />
                       </div>
 
-                      {/* Right: 3 Modulation Routing Slots */}
+                      {/* Right: 2 Parts (66.7% width) - 3 Modulation Routing Slots */}
                       <div className="col-span-8 space-y-1 h-full flex flex-col justify-around py-0.5">
                         {(currentTrack.modRoutes || [
                           { id: 'r1', source: 'lfo' as ModSource, dest: 'cutoff' as ModDest, amount: 0.25, enabled: true },
                           { id: 'r2', source: 'vcf_env' as ModSource, dest: 'cutoff' as ModDest, amount: 0.60, enabled: true },
                           { id: 'r3', source: 'velocity' as ModSource, dest: 'cutoff' as ModDest, amount: 0.40, enabled: true },
                         ]).slice(0, 3).map((route, rIdx) => (
-                          <div key={route.id || rIdx} className="flex items-center justify-between gap-1 text-[10px] sm:text-xs font-mono bg-black/40 px-1.5 py-0.5 rounded-xs border border-white/10">
+                          <div key={route.id || rIdx} className="flex items-center justify-between gap-0.5 text-[10px] sm:text-xs font-mono bg-black/40 px-1 py-0.5 rounded-xs border border-white/10">
                             <button
                               onClick={() => {
                                 const sources: ModSource[] = ['lfo', 'vcf_env', 'amp_env', 'velocity'];
@@ -2556,13 +2556,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className="px-1.5 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
+                              className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
                               title="Mod source"
                             >
                               {route.source === 'lfo' ? 'LFO' : route.source === 'vcf_env' ? 'VCF' : route.source === 'amp_env' ? 'AMP' : 'VEL'}
                             </button>
 
-                            <span className="text-white/40 font-mono text-[9px]">►</span>
+                            <span className="text-white/40 font-mono text-[8px]">►</span>
 
                             <button
                               onClick={() => {
@@ -2573,7 +2573,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className="px-1.5 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
+                              className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
                               title="Mod dest"
                             >
                               {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
@@ -2584,7 +2584,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               min={-100}
                               max={100}
                               step={5}
-                              width={48}
+                              width={40}
                               showValue={true}
                               bipolar={true}
                               unit="%"
@@ -2707,8 +2707,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 7: OUT (LEFT: PAN & VOL VERTICAL 28px, RIGHT: TABBED SINGLE GRAPH - FFT OR SCOPE) */}
-                  <div className="xl:col-span-3 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  {/* MODULE 7: OUT (EXPANDED TO xl:col-span-4 -> WIDE SCREEN GRAPH VISUALIZER) */}
+                  <div className="xl:col-span-4 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     <div className="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <span className="text-white text-xs font-black">7. OUT</span>
@@ -2738,10 +2738,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <span className="text-[10px] font-mono text-white/50">60 FPS</span>
                     </div>
 
-                    {/* Left / Right 2-Column Split */}
+                    {/* Left / Right 2-Column Split (Left: col-span-3, Right: col-span-9 Wide Screen) */}
                     <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
                       {/* Left: PAN and VOL Stacked Vertically (Large 28px) */}
-                      <div className="col-span-4 flex flex-col justify-around items-center border-r border-white/10 pr-1 h-full py-0.5">
+                      <div className="col-span-3 flex flex-col justify-around items-center border-r border-white/10 pr-1 h-full py-0.5">
                         <RotaryKnob
                           label="PAN"
                           value={Math.round(currentTrack.pan * 100)}
@@ -2765,8 +2765,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         />
                       </div>
 
-                      {/* Right: Full-Screen High-Resolution Single Visualizer Canvas */}
-                      <div className="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
+                      {/* Right: Full-Screen Ultra-Wide High-Resolution Single Visualizer Canvas */}
+                      <div className="col-span-9 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
                         <div className="flex items-center justify-between text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
                           <span className={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : 'text-[#98c379] font-black'}>
                             {activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : 'OSCILLOSCOPE WAVE'}
@@ -2795,13 +2795,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         <div className="relative flex-1 min-h-[46px] rounded-xs overflow-hidden mt-0.5">
                           <canvas
                             ref={fftCanvasRef}
-                            width={260}
+                            width={360}
                             height={46}
                             className={`w-full h-full ${activeOutVisualizer === 'fft' ? 'block' : 'hidden'}`}
                           />
                           <canvas
                             ref={waveCanvasRef}
-                            width={260}
+                            width={360}
                             height={46}
                             className={`w-full h-full ${activeOutVisualizer === 'scope' ? 'block' : 'hidden'}`}
                           />
