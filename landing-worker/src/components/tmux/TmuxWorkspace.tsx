@@ -166,6 +166,8 @@ interface PianoRollRowProps {
   activeTrackColor: string;
   activeTrackGrid: number[][];
   viewportStartCol: number;
+  activeCol: number;
+  activeSubCol: number;
   timeMeter: TimeSignature;
   snapDiv: NoteDurationDiv;
   totalPatternSteps: number;
@@ -181,6 +183,8 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
   activeTrackColor,
   activeTrackGrid,
   viewportStartCol,
+  activeCol,
+  activeSubCol,
   timeMeter,
   snapDiv,
   totalPatternSteps,
@@ -225,6 +229,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
           const step0 = globalCol * 2;
           const step1 = globalCol * 2 + 1;
           const isSelected = (activeTrackGrid[step0]?.includes(actualIdx) || activeTrackGrid[step1]?.includes(actualIdx)) || false;
+          const isColActive = activeCol === colIdx;
 
           const colInBar = globalCol % meterSpec.colsPerBar;
           const isBarStart = colInBar === 0;
@@ -238,20 +243,26 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                   {[0, 1].map((subCol) => {
                     const step = globalCol * 2 + subCol;
                     const isSubSelected = activeTrackGrid[step]?.includes(actualIdx) || false;
+                    const isSubCurrent = isColActive && activeSubCol === subCol;
+                    const isPrevConnected = subCol === 1 && (activeTrackGrid[step - 1]?.includes(actualIdx) || false);
+                    const isNextConnected = subCol === 0 && (activeTrackGrid[step + 1]?.includes(actualIdx) || false);
+
                     return (
                       <button
                         key={subCol}
                         onClick={() => onSubCellClick(actualIdx, colIdx, subCol)}
-                        className={`flex-1 h-full rounded-xs transition-all cursor-pointer border ${
+                        className={`flex-1 h-full cursor-pointer border ${
                           isSubSelected
-                            ? 'shadow-sm scale-[1.02]'
+                            ? `shadow-sm ${isNextConnected ? 'rounded-l-xs rounded-r-none border-r-0' : isPrevConnected ? 'rounded-r-xs rounded-l-none border-l-0' : 'rounded-xs'} ${isSubCurrent ? 'brightness-125 ring-1 ring-white' : ''}`
+                            : isSubCurrent
+                            ? 'rounded-xs border-white/70 bg-white/30'
                             : isBarStart && subCol === 0
-                            ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                            ? 'rounded-xs border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
                             : isBeatStart && subCol === 0
-                            ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                            ? 'rounded-xs border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
                             : subCol === 1
-                            ? 'border-l border-white/10 bg-black/40 hover:bg-white/10'
-                            : 'border-white/5 bg-black/40 hover:bg-white/10'
+                            ? 'rounded-xs border-l border-white/10 bg-black/40 hover:bg-white/10'
+                            : 'rounded-xs border-white/5 bg-black/40 hover:bg-white/10'
                         }`}
                         style={{
                           backgroundColor: isSubSelected ? activeTrackColor : undefined,
@@ -265,9 +276,11 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
               ) : (
                 <button
                   onClick={() => onCellClick(actualIdx, colIdx)}
-                  className={`w-full h-full rounded-xs transition-all cursor-pointer border ${
+                  className={`w-full h-full rounded-xs cursor-pointer border ${
                     isSelected
-                      ? 'shadow-sm scale-[1.02]'
+                      ? `shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`
+                      : isColActive
+                      ? 'border-white/60 bg-white/25'
                       : isBarStart
                       ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
                       : isBeatStart
@@ -1284,10 +1297,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
           {activeTab === 4 && (
             <div className="space-y-1.5 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
               
-              {/* 1. ROW 1: MASTER PLAYBACK TRANSPORT & MULTI-TRACK MIXER DECK */}
+                            {/* 1. ROW 1: MASTER PLAYBACK TRANSPORT & MULTI-TRACK MIXER DECK */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0">
-                {/* Left: Play/Stop + Tempo Slider + Mute */}
-                <div className="flex items-center gap-2 text-xs">
+                {/* Left: Play/Stop + Tempo Slider + METER + Mute */}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
                   <button
                     onClick={() => {
                       const playing = modularSynth.toggleSequencer();
@@ -1304,6 +1317,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <span className="text-xs opacity-80 font-mono">[{synthBpm} BPM]</span>
                   </button>
 
+                  {/* BPM Slider */}
                   <div className="flex items-center gap-1.5 border-l border-white/15 pl-2">
                     <span className="opacity-70 font-bold">BPM:</span>
                     <input
@@ -1321,6 +1335,30 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <span className="text-[#98c379] font-bold font-mono w-7 text-right">{synthBpm}</span>
                   </div>
 
+                  {/* METER Time Signature (Semantically Co-located with BPM & Transport) */}
+                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
+                    <span className="opacity-70 font-bold" title="Time Signature / Meter">METER:</span>
+                    {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
+                      <button
+                        key={sig}
+                        onClick={() => {
+                          setTimeMeter(sig);
+                          modularSynth.setMeter(sig);
+                          playSound('click');
+                        }}
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          timeMeter === sig
+                            ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                        title={METER_SPECS[sig].name}
+                      >
+                        {sig}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Mute Button */}
                   <button
                     onClick={() => {
                       const m = sound.toggleMute();
@@ -1392,7 +1430,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-                            {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (SNAP, DUR, METER, LEN, PAGE NAVIGATION) */}
+              {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (SNAP, DUR, LEN, PAGE NAVIGATION) */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Grid Snap / Quantization Alignment (SNAP) */}
@@ -1435,29 +1473,6 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         title={`Placed Note Length: ${d === '4' ? 'Whole Note (16 cells)' : d === '2' ? 'Half Note (8 cells)' : d === '1' ? 'Quarter Note (4 cells)' : d === '1/2' ? 'Eighth Note (2 cells)' : d === '1/4' ? '16th Note (1 cell)' : '32nd Note (1/2 cell)'}`}
                       >
                         {d}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Meter / Time Signature (4/4, 3/4, 2/4, 5/4, 6/8, 7/8) */}
-                  <div className="flex items-center gap-1 border-l border-white/15 pl-1.5">
-                    <span className="opacity-60 font-bold" title="Time Signature / Meter">METER:</span>
-                    {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
-                      <button
-                        key={sig}
-                        onClick={() => {
-                          setTimeMeter(sig);
-                          modularSynth.setMeter(sig);
-                          playSound('click');
-                        }}
-                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          timeMeter === sig
-                            ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
-                            : 'border-white/20 text-white/70 hover:border-white/50'
-                        }`}
-                        title={METER_SPECS[sig].name}
-                      >
-                        {sig}
                       </button>
                     ))}
                   </div>
@@ -1704,19 +1719,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
                     </div>
 
-                                        {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
-                    <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col relative">
-                      {/* Hardware-Accelerated Single Playhead Overlay Cursor (Instant Step-by-Step Snap) */}
-                      {isSeqPlaying && activeCol >= 0 && activeCol < 16 && (
-                        <div
-                          className="absolute top-0 bottom-0 pointer-events-none z-10 rounded-xs border-x border-white/90 bg-white/25 shadow-[0_0_6px_rgba(255,255,255,0.5)]"
-                          style={{
-                            left: `calc(36px + 4px + (${activeCol} + ${activeSubCol > 0 ? 0.5 : 0}) * ((100% - 40px) / 16))`,
-                            width: snapDiv === '1/8' ? `calc((100% - 40px) / 32)` : `calc((100% - 40px) / 16)`,
-                          }}
-                        />
-                      )}
-
+                                                            {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
+                    <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col">
                       {PIANO_ROLL_NOTES.map((nInfo, actualIdx) => {
                         if (octaveScope !== 'all' && nInfo.oct !== octaveScope) return null;
 
@@ -1729,6 +1733,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             activeTrackColor={currentTrack.color}
                             activeTrackGrid={currentTrack.grid}
                             viewportStartCol={viewportStartCol}
+                            activeCol={activeCol}
+                            activeSubCol={activeSubCol}
                             timeMeter={timeMeter}
                             snapDiv={snapDiv}
                             totalPatternSteps={totalPatternSteps}

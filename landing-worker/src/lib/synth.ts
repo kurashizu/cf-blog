@@ -1807,7 +1807,7 @@ class ModularSynth {
   /*                      COMPLETE MODULAR SIGNAL FLOW DSP                      */
   /* -------------------------------------------------------------------------- */
 
-  public triggerTrackVoice(trackId: number, noteIndex: number, isAccent = false, startTime?: number) {
+  public triggerTrackVoice(trackId: number, noteIndex: number, isAccent = false, startTime?: number, durationSec?: number) {
     const track = this.tracks[trackId];
     if (!track || soundEngine.isMuted()) return;
 
@@ -1932,12 +1932,17 @@ class ModularSynth {
     const gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(0.0001, t);
 
-    gainNode.gain.linearRampToValueAtTime(peakGain, t + Math.max(0.005, track.attack));
-    gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + track.attack + Math.max(0.01, track.decay));
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.0001,
-      t + track.attack + track.decay + Math.max(0.02, track.release)
-    );
+    const actualAttack = Math.max(0.005, track.attack);
+    const actualDecay = Math.max(0.01, track.decay);
+    const actualRelease = Math.max(0.02, track.release);
+    const holdSec = durationSec !== undefined ? Math.max(0.02, durationSec) : (60 / this.bpm / 8);
+
+    gainNode.gain.linearRampToValueAtTime(peakGain, t + actualAttack);
+    gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + actualAttack + actualDecay);
+    
+    const releaseStartTime = Math.max(t + actualAttack + actualDecay, t + holdSec);
+    gainNode.gain.setValueAtTime(sustainGain, releaseStartTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseStartTime + actualRelease);
 
     let lfo: OscillatorNode | undefined;
     let lfoGain: GainNode | undefined;
@@ -1994,7 +1999,7 @@ class ModularSynth {
       if (this.reverbConvolver && this.reverbMix > 0) gainNode.connect(this.reverbConvolver);
     }
 
-    const stopTime = t + track.attack + track.decay + track.release + 0.1;
+    const stopTime = releaseStartTime + actualRelease + 0.1;
     if (osc1) osc1.stop(stopTime);
     if (osc2) osc2.stop(stopTime);
     if (noiseSource) noiseSource.stop(stopTime);
@@ -2134,17 +2139,36 @@ class ModularSynth {
 
   private scheduleStepAudio(step: number, time: number) {
     const hasSolo = this.tracks.some((t) => t.solo);
+    const stepDuration = 60 / this.bpm / 8; // 1/8 beat in seconds
 
     this.tracks.forEach((track) => {
       if (track.muted) return;
       if (hasSolo && !track.solo) return;
 
       const stepNotes = track.grid[step] || [];
+      const prevStep = (step - 1 + this.totalSteps) % this.totalSteps;
+      const prevStepNotes = track.grid[prevStep] || [];
       const isAccent = track.accents[step] || false;
 
       stepNotes.forEach((noteIdx) => {
         if (noteIdx !== null && noteIdx !== undefined && PIANO_ROLL_NOTES[noteIdx]) {
-          this.triggerTrackVoice(track.id, noteIdx, isAccent, time);
+          // If this note was ALREADY ringing on the previous step, it is a sustained continuation:
+          // Do NOT re-trigger the voice attack!
+          if (step > 0 && prevStepNotes.includes(noteIdx)) {
+            return;
+          }
+
+          // Measure note duration across consecutive steps
+          let durSteps = 1;
+          while (
+            (step + durSteps) < this.totalSteps &&
+            track.grid[step + durSteps]?.includes(noteIdx)
+          ) {
+            durSteps++;
+          }
+          const noteHoldSec = durSteps * stepDuration;
+
+          this.triggerTrackVoice(track.id, noteIdx, isAccent, time, noteHoldSec);
         }
       });
     });
