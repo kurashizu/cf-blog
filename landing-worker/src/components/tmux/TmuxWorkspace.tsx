@@ -502,9 +502,10 @@ export const TmuxWorkspace: React.FC = () => {
   const [isMuted, setIsMuted] = useState(sound.getMuted());
   const fftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const loudnessCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [timeBase, setTimeBase] = useState<'0.25x' | '0.5x' | '1x' | '2x' | '4x' | '8x' | '16x'>('1x');
   const [activeEnvTab, setActiveEnvTab] = useState<'amp' | 'vcf' | 'pit'>('amp');
-  const [activeOutVisualizer, setActiveOutVisualizer] = useState<'fft' | 'scope'>('fft');
+  const [activeOutVisualizer, setActiveOutVisualizer] = useState<'fft' | 'scope' | 'loudness'>('fft');
   const [rackPage, setRackPage] = useState<1 | 2>(1);
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -989,6 +990,7 @@ export const TmuxWorkspace: React.FC = () => {
     const fftCtx = fftCanvas?.getContext('2d');
     const waveCtx = waveCanvas?.getContext('2d');
 
+    let loudnessHistory: number[] = new Array(360).fill(-100);
     let animId: number;
     const minLog = Math.log10(20);
     const maxLog = Math.log10(20000);
@@ -2933,6 +2935,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           >
                             SCOPE
                           </button>
+                          <button
+                            onClick={() => { setActiveOutVisualizer('loudness'); playSound('click'); }}
+                            className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                              activeOutVisualizer === 'loudness'
+                                ? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            LOUD
+                          </button>
                         </div>
                       </div>
                       <span className="text-[10px] font-mono text-white/50">60 FPS</span>
@@ -2968,11 +2980,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       {/* Right: Full-Screen Ultra-Wide High-Resolution Single Visualizer Canvas */}
                       <div className="col-span-9 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
                         <div className="flex items-center justify-between text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
-                          <span className={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : 'text-[#98c379] font-black'}>
-                            {activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : 'OSCILLOSCOPE WAVE'}
+                          <span className={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : activeOutVisualizer === 'scope' ? 'text-[#98c379] font-black' : 'text-[#e06c75] font-black'}>
+                            {activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : activeOutVisualizer === 'scope' ? 'OSCILLOSCOPE WAVE' : 'RMS LOUDNESS GRAPH'}
                           </span>
                           {activeOutVisualizer === 'fft' ? (
                             <span className="text-[9px] text-white/50 font-bold">20Hz-20k</span>
+                          ) : activeOutVisualizer === 'loudness' ? (
+                            <span className="text-[9px] text-white/50 font-bold">-60dB to +6dB</span>
                           ) : (
                             <div className="flex items-center gap-0.5">
                               {(['0.5x', '1x', '2x', '4x', '8x', '16x'] as const).map((tb) => (
@@ -3004,6 +3018,12 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             width={360}
                             height={46}
                             className={`w-full h-full ${activeOutVisualizer === 'scope' ? 'block' : 'hidden'}`}
+                          />
+                          <canvas
+                            ref={loudnessCanvasRef}
+                            width={360}
+                            height={46}
+                            className={`w-full h-full ${activeOutVisualizer === 'loudness' ? 'block' : 'hidden'}`}
                           />
                         </div>
                       </div>
