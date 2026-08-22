@@ -271,7 +271,6 @@ const AdsrVisualizer: React.FC<AdsrVisualizerProps> = ({
 interface PianoRollRowProps {
   nInfo: { note: string; freq: number; isBlack: boolean; oct: number };
   actualIdx: number;
-  octaveScope: string | number;
   activeTrackColor: string;
   activeTrackGrid: number[][];
   viewportStartCol: number;
@@ -288,7 +287,6 @@ interface PianoRollRowProps {
 const PianoRollRow = React.memo<PianoRollRowProps>(({
   nInfo,
   actualIdx,
-  octaveScope,
   activeTrackColor,
   activeTrackGrid,
   viewportStartCol,
@@ -308,9 +306,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
 
   return (
     <div
-      className={`flex items-center gap-1 shrink-0 ${
-        octaveScope === 'all' ? 'min-h-[16px] h-4.5' : 'flex-1 min-h-[18px]'
-      }`}
+      className="flex items-center gap-1 shrink-0 min-h-[18px] h-[18px]"
     >
       {/* Playable Interactive Note Key Badge */}
       <button
@@ -583,7 +579,8 @@ export const TmuxWorkspace: React.FC = () => {
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
   const [synthDrive, setSynthDrive] = useState<number>(0.0);
   const [scopeMode, setScopeMode] = useState<'dual' | 'fft' | 'wave'>('dual');
-  const [octaveScope, setOctaveScope] = useState<'all' | 7 | 6 | 5 | 4 | 3 | 2 | 1>(4);
+  const [octaveFrom, setOctaveFrom] = useState<number>(3);
+  const [octaveTo, setOctaveTo] = useState<number>(5);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
   const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
@@ -2575,22 +2572,69 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                           <span className="opacity-30">|</span>
 
-                          {/* Octave Scope Quick Selectors */}
-                          <div className="flex items-center gap-1">
-                            <span className="opacity-60 text-xs font-bold">OCT:</span>
-                            {(['all', 6, 5, 4, 3, 2, 1] as const).map((sc) => (
+                          {/* Octave Range Selector (FROM - TO) */}
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className="opacity-60 text-xs font-bold" title="Octave Scope Range (FROM - TO) — Limits visible pitch range in the piano roll without altering grid cell dimensions">OCT:</span>
+
+                            {/* FROM Control */}
+                            <div className="flex items-center gap-0.5">
+                              <span className="text-white/50 text-[10px] font-bold">FROM</span>
                               <button
-                                key={sc}
-                                onClick={() => { setOctaveScope(sc); playSound('click'); }}
-                                title={sc === 'all' ? 'Octave Scope: ALL — Display full 7-octave piano roll matrix (C1 to B7)' : `Octave Scope: Octave ${sc} — Focus piano roll exclusively on Octave ${sc} (C${sc} to B${sc})`} className={`px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors text-xs ${
-                                  octaveScope === sc
-                                    ? 'border-white bg-white/20 text-white shadow-sm font-black'
-                                    : 'border-white/20 text-[#eceff4] opacity-70 hover:opacity-100'
-                                }`}
+                                onClick={() => {
+                                  setOctaveFrom((prev) => Math.max(1, prev - 1));
+                                  playSound('click');
+                                }}
+                                disabled={octaveFrom <= 1}
+                                className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                title="Lower starting octave (Octave down)"
                               >
-                                {sc === 'all' ? 'ALL' : `${sc}`}
+                                ◄
                               </button>
-                            ))}
+                              <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center" title={`Starting Octave: Octave ${octaveFrom} (C${octaveFrom})`}>
+                                {octaveFrom}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setOctaveFrom((prev) => Math.min(octaveTo, prev + 1));
+                                  playSound('click');
+                                }}
+                                disabled={octaveFrom >= octaveTo}
+                                className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                title="Raise starting octave (Octave up)"
+                              >
+                                ►
+                              </button>
+                            </div>
+
+                            {/* TO Control */}
+                            <div className="flex items-center gap-0.5 ml-1">
+                              <span className="text-white/50 text-[10px] font-bold">TO</span>
+                              <button
+                                onClick={() => {
+                                  setOctaveTo((prev) => Math.max(octaveFrom, prev - 1));
+                                  playSound('click');
+                                }}
+                                disabled={octaveTo <= octaveFrom}
+                                className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                title="Lower ending octave"
+                              >
+                                ◄
+                              </button>
+                              <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#e5c07b] min-w-[20px] text-center" title={`Ending Octave: Octave ${octaveTo} (B${octaveTo})`}>
+                                {octaveTo}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setOctaveTo((prev) => Math.min(7, prev + 1));
+                                  playSound('click');
+                                }}
+                                disabled={octaveTo >= 7}
+                                className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                title="Raise ending octave"
+                              >
+                                ►
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2661,17 +2705,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             </div>
                           </div>
 
-                          {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
-                          <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col">
+                          {/* Chromatic Pitch Rows x 16 Grid Columns (Scrollable in Selected Octave Range) */}
+                          <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col overflow-y-auto custom-scrollbar">
                             {PIANO_ROLL_NOTES.map((nInfo, actualIdx) => {
-                              if (octaveScope !== 'all' && nInfo.oct !== octaveScope) return null;
+                              if (nInfo.oct < octaveFrom || nInfo.oct > octaveTo) return null;
 
                               return (
                                 <PianoRollRow
                                   key={nInfo.note}
                                   nInfo={nInfo}
                                   actualIdx={actualIdx}
-                                  octaveScope={octaveScope}
                                   activeTrackColor={currentTrack.color}
                                   activeTrackGrid={currentTrack.grid}
                                   viewportStartCol={viewportStartCol}
