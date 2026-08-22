@@ -9,7 +9,7 @@ interface RotaryKnobProps {
   step?: number;
   unit?: string;
   color?: string;
-  size?: number; // diameter in px (default 22)
+  size?: number; // diameter in px (default 26)
   onChange: (val: number) => void;
 }
 
@@ -21,7 +21,7 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
   step = 1,
   unit = '',
   color = '#56b6c2',
-  size = 22,
+  size = 26,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -78,7 +78,7 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
     <div
       onWheel={handleWheel}
       className="flex flex-col items-center select-none group cursor-ns-resize shrink-0 min-w-0 leading-none"
-      title={`${label}: ${value}${unit} (Drag up/down or scroll wheel)`}
+      title={`${label}: ${formatDisplay(value)}${unit} (Drag up/down or scroll wheel)`}
     >
       {/* Rotary Cap with LED Indicator Needle */}
       <div
@@ -95,7 +95,7 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
           style={{ transform: `rotate(${angle}deg)` }}
         >
           <div
-            className="w-0.5 h-2 rounded-full absolute top-0.5"
+            className="w-0.5 h-2.5 rounded-full absolute top-0.5"
             style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }}
           />
         </div>
@@ -103,12 +103,22 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
         <div className="w-1.5 h-1.5 rounded-full bg-white/30 pointer-events-none" />
       </div>
 
-      {/* Label & Numeric Readout (Compact, Zero Overflow) */}
-      <div className="text-center mt-0.5 leading-none w-full">
-        <span className="text-[10px] opacity-85 uppercase font-mono block font-bold truncate leading-tight">{label}</span>
-        <span className="text-[10px] font-black font-mono block leading-tight truncate mt-0.5" style={{ color }}>
-          {formatDisplay(value)}{unit}
-        </span>
+      {/* Label normally, swapped to Value on hover or while dragging */}
+      <div className="text-center mt-1 leading-none w-full h-3 flex items-center justify-center">
+        {isDragging ? (
+          <span className="text-xs font-black font-mono truncate leading-none" style={{ color }}>
+            {formatDisplay(value)}{unit}
+          </span>
+        ) : (
+          <>
+            <span className="text-xs opacity-85 uppercase font-mono font-bold group-hover:hidden truncate leading-none">
+              {label}
+            </span>
+            <span className="hidden group-hover:block text-xs font-black font-mono truncate leading-none" style={{ color }}>
+              {formatDisplay(value)}{unit}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
@@ -122,7 +132,7 @@ interface HardwareFaderProps {
   step?: number;
   unit?: string;
   color?: string;
-  height?: number; // fader track height in px (default 36)
+  height?: number; // fader track height in px (default 44)
   onChange: (val: number) => void;
 }
 
@@ -134,7 +144,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
   step = 0.01,
   unit = '',
   color = '#e5c07b',
-  height = 36,
+  height = 44,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -214,10 +224,10 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
   return (
     <div
       onWheel={handleWheel}
-      className="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none"
+      className="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none h-full justify-between py-0.5"
       title={`${label}: ${formatDisplay(value)} (Click, drag up/down, or scroll wheel)`}
     >
-      <span className="text-[10px] sm:text-xs opacity-85 uppercase font-black block mb-0.5 group-hover:text-white transition-colors leading-none">
+      <span className="text-xs opacity-85 uppercase font-black block group-hover:text-white transition-colors leading-none">
         {label}
       </span>
 
@@ -256,7 +266,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
         </div>
       </div>
 
-      <span className="text-[10px] sm:text-xs font-black mt-0.5 text-center truncate max-w-[42px] leading-tight" style={{ color }}>
+      <span className="text-[10px] sm:text-xs font-black text-center truncate max-w-[42px] leading-none" style={{ color }}>
         {formatDisplay(value)}
       </span>
     </div>
