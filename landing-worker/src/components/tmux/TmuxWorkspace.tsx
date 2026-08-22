@@ -219,7 +219,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
         {nInfo.note}
       </button>
 
-      {/* 16 Step Horizontal Grid with Seamless Connected Note Blocks */}
+      {/* 16 Step Horizontal Grid with Seamless Connected Note Blocks Across All Steps & Columns */}
       <div
         className="flex-1 h-full gap-0.5"
         style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
@@ -239,25 +239,30 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
           const isDivBlockStart = colIdx % spanInt === 0;
 
           return (
-            <div key={colIdx} className="h-full">
+            <div key={colIdx} className="h-full relative flex">
               {snapDiv === '1/8' ? (
-                <div className={`flex h-full ${is0 && is1 ? 'gap-0' : 'gap-0.5'}`}>
+                <div className={`flex h-full w-full ${is0 && is1 ? 'gap-0' : 'gap-0.5'}`}>
                   {[0, 1].map((subCol) => {
                     const step = globalCol * 2 + subCol;
                     const isSubSelected = subCol === 0 ? is0 : is1;
                     const isSubCurrent = isColActive && activeSubCol === subCol;
 
-                    const isPrevConnected = subCol === 1 ? is0 : (activeTrackGrid[step - 1]?.includes(actualIdx) || false);
-                    const isNextConnected = subCol === 0 ? is1 : (activeTrackGrid[step + 1]?.includes(actualIdx) || false);
+                    const isPrevConnected = isSubSelected && (subCol === 1 ? is0 : (activeTrackGrid[step - 1]?.includes(actualIdx) || false));
+                    const isNextConnected = isSubSelected && (subCol === 0 ? is1 : (activeTrackGrid[step + 1]?.includes(actualIdx) || false));
 
                     let roundedClass = 'rounded-xs';
+                    let spanClass = '';
+
                     if (isSubSelected) {
                       if (isPrevConnected && isNextConnected) {
                         roundedClass = 'rounded-none border-x-0';
+                        spanClass = subCol === 1 ? '-mr-[3px] z-[2]' : '-mr-[2px] z-[1]';
                       } else if (isNextConnected) {
                         roundedClass = 'rounded-l-xs rounded-r-none border-r-0';
+                        spanClass = subCol === 1 ? '-mr-[3px] z-[2]' : '-mr-[2px] z-[1]';
                       } else if (isPrevConnected) {
                         roundedClass = 'rounded-r-xs rounded-l-none border-l-0';
+                        spanClass = 'z-[1]';
                       }
                     }
 
@@ -265,7 +270,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                       <button
                         key={subCol}
                         onClick={() => onSubCellClick(actualIdx, colIdx, subCol)}
-                        className={`flex-1 h-full cursor-pointer border ${roundedClass} ${
+                        className={`flex-1 h-full cursor-pointer border ${roundedClass} ${spanClass} ${
                           isSubSelected
                             ? `shadow-sm ${isSubCurrent ? 'brightness-125 ring-1 ring-white' : ''}`
                             : isSubCurrent
@@ -293,20 +298,25 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                   const isNextColConnected = isSelected && (activeTrackGrid[step1 + 1]?.includes(actualIdx) || false);
 
                   let roundedClass = 'rounded-xs';
+                  let spanClass = '';
+
                   if (isSelected) {
                     if (isPrevColConnected && isNextColConnected) {
                       roundedClass = 'rounded-none border-x-0';
+                      spanClass = '-mr-[3px] z-[2]';
                     } else if (isNextColConnected) {
                       roundedClass = 'rounded-l-xs rounded-r-none border-r-0';
+                      spanClass = '-mr-[3px] z-[2]';
                     } else if (isPrevColConnected) {
                       roundedClass = 'rounded-r-xs rounded-l-none border-l-0';
+                      spanClass = 'z-[1]';
                     }
                   }
 
                   return (
                     <button
                       onClick={() => onCellClick(actualIdx, colIdx)}
-                      className={`w-full h-full cursor-pointer border ${roundedClass} ${
+                      className={`w-full h-full cursor-pointer border ${roundedClass} ${spanClass} ${
                         isSelected
                           ? `shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`
                           : isColActive
