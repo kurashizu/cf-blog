@@ -1901,7 +1901,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-1.5 flex-1 min-h-0 overflow-hidden">
                   
                   {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING) */}
-                  <div className="lg:col-span-1 grid grid-rows-3 gap-1.5 min-w-0 h-full overflow-hidden">
+                  <div className="lg:col-span-1 grid gap-1.5 min-w-0 h-full overflow-hidden" style={{ gridTemplateRows: '2fr 1fr 1fr' }}>
                     
                     {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID - ENLARGED 24px) */}
                     <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
@@ -1951,7 +1951,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </div>
                         </div>
 
-                        {/* Right: 4 Knobs Arranged in a 2x2 GRID (Large 24px with Hover-Only Value) */}
+                        {/* Right: 4 Knobs Arranged in a 2x2 GRID (Large 28px with Hover-Only Value) */}
                         <div className="col-span-6 grid grid-cols-2 gap-1 border-l border-white/10 pl-1.5 h-full items-center justify-around py-0.5">
                           <RotaryKnob
                             label="OSC1"
@@ -1960,7 +1960,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#e5c07b"
-                            size={24}
+                            size={28}
                             onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -1970,7 +1970,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#56b6c2"
-                            size={24}
+                            size={28}
                             onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -1981,7 +1981,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={2}
                             unit="c"
                             color="#e06c75"
-                            size={24}
+                            size={28}
                             onChange={(v) => handleTrackParamChange({ detuneCents: v })}
                           />
                           <RotaryKnob
@@ -1992,7 +1992,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={15}
                             unit="°"
                             color="#98c379"
-                            size={24}
+                            size={28}
                             onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
                           />
                         </div>
