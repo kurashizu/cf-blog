@@ -1595,7 +1595,7 @@ class ModularSynth {
   private bpm: number = 105;
   private meter: TimeSignature = '4/4';
   private editNoteDiv: NoteDurationDiv = '1/8';
-  private delayMix: number = 0.18;
+  private delayMix: number = 0.0;
   private delayTime: number = 0.22;
   private delayFeedback: number = 0.32;
   private reverbMix: number = 0.15;

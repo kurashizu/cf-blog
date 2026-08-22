@@ -312,7 +312,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [snapDiv, setSnapDiv] = useState<NoteDurationDiv>('1/4');
   const [noteDur, setNoteDur] = useState<NoteDurationDiv>('1/4');
   const [timeMeter, setTimeMeter] = useState<TimeSignature>(modularSynth.getMeter());
-  const [synthDelayMix, setSynthDelayMix] = useState<number>(0.18);
+  const [synthDelayMix, setSynthDelayMix] = useState<number>(0.0);
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
   const [octaveScope, setOctaveScope] = useState<'all' | 7 | 6 | 5 | 4 | 3 | 2 | 1>(4);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
@@ -335,7 +335,7 @@ export const TmuxWorkspace: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Subscribe to Multi-Track Sequencer Tick with requestAnimationFrame Throttling
+  // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow & rAF Batching
   useEffect(() => {
     let animId: number = 0;
     let pendingStep: number | null = null;
@@ -347,6 +347,10 @@ export const TmuxWorkspace: React.FC = () => {
           animId = 0;
           if (pendingStep !== null) {
             setSeqCurrentStep(pendingStep);
+            if (pageFollow) {
+              const p = Math.floor(pendingStep / 32);
+              setActiveStepPage(p);
+            }
             pendingStep = null;
           }
         });
@@ -357,7 +361,7 @@ export const TmuxWorkspace: React.FC = () => {
       unsub();
       if (animId) cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [pageFollow]);
 
   // Real-Time Clock & Animation Loop
   useEffect(() => {
@@ -428,9 +432,7 @@ export const TmuxWorkspace: React.FC = () => {
     const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
     const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
 
-    const viewportStartCol = (isSeqPlaying && pageFollow)
-      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
-      : activeStepPage * 16;
+    const viewportStartCol = activeStepPage * 16;
     const globalCol = viewportStartCol + snappedCol;
     const startStep = globalCol * 2;
     const track = modularSynth.getTrack(activeTrackId);
@@ -480,9 +482,7 @@ export const TmuxWorkspace: React.FC = () => {
     const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
     const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
 
-    const viewportStartCol = (isSeqPlaying && pageFollow)
-      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
-      : activeStepPage * 16;
+    const viewportStartCol = activeStepPage * 16;
     const globalCol = viewportStartCol + snappedCol;
     const step0 = globalCol * 2;
     const step1 = globalCol * 2 + 1;
@@ -502,9 +502,7 @@ export const TmuxWorkspace: React.FC = () => {
   };
 
   const handlePianoRollSubCellClick = (noteIndex: number, colIndex: number, subCol: number) => {
-    const viewportStartCol = (isSeqPlaying && pageFollow)
-      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
-      : activeStepPage * 16;
+    const viewportStartCol = activeStepPage * 16;
     const globalCol = viewportStartCol + colIndex;
     const startStep = globalCol * 2 + subCol;
     const track = modularSynth.getTrack(activeTrackId);
@@ -549,9 +547,7 @@ export const TmuxWorkspace: React.FC = () => {
   };
 
   const handleAccentSubCellClick = (colIndex: number, subCol: number) => {
-    const viewportStartCol = (isSeqPlaying && pageFollow)
-      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
-      : activeStepPage * 16;
+    const viewportStartCol = activeStepPage * 16;
     const globalCol = viewportStartCol + colIndex;
     const step = globalCol * 2 + subCol;
     const track = modularSynth.getTrack(activeTrackId);
@@ -1531,7 +1527,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       ◄
                     </button>
                     <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-white shrink-0">
-                      {((isSeqPlaying && pageFollow) ? Math.floor(Math.max(0, Math.floor(seqCurrentStep / 2) - 3) / 16) : activeStepPage) + 1} / {Math.max(1, Math.ceil(totalPatternSteps / 32))}
+                      {activeStepPage + 1} / {Math.max(1, Math.ceil(totalPatternSteps / 32))}
                     </span>
                     <button
                       onClick={() => {
@@ -1566,11 +1562,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
               {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & DIV QUANTIZATION */}
               {(() => {
-                const viewportStartCol = (isSeqPlaying && pageFollow)
-                  ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
-                  : activeStepPage * 16;
-                const activeCol = (isSeqPlaying && Math.floor(seqCurrentStep / 2) >= viewportStartCol && Math.floor(seqCurrentStep / 2) < viewportStartCol + 16)
-                  ? Math.floor(seqCurrentStep / 2) - viewportStartCol
+                const viewportStartCol = activeStepPage * 16;
+                const activeCol = (isSeqPlaying && Math.floor(seqCurrentStep / 32) === activeStepPage)
+                  ? Math.floor((seqCurrentStep % 32) / 2)
                   : -1;
                 const activeSubCol = isSeqPlaying ? (seqCurrentStep % 2) : -1;
 
