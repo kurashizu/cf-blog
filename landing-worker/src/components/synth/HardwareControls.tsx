@@ -9,7 +9,7 @@ interface RotaryKnobProps {
   step?: number;
   unit?: string;
   color?: string;
-  size?: number; // diameter in px (default 32)
+  size?: number; // diameter in px (default 24)
   onChange: (val: number) => void;
 }
 
@@ -21,14 +21,13 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
   step = 1,
   unit = '',
   color = '#56b6c2',
-  size = 32,
+  size = 22,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
   const startVal = useRef(value);
 
-  // Map value to angle (-135 deg to +135 deg -> 270 deg range)
   const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
   const angle = -135 + pct * 270;
 
@@ -41,7 +40,7 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaY = dragStartY.current - moveEvent.clientY;
       const range = max - min;
-      const sensitivity = range / 120; // 120px full travel
+      const sensitivity = range / 100;
       const rawNew = startVal.current + deltaY * sensitivity;
       const stepped = Math.round(rawNew / step) * step;
       const clamped = Math.max(min, Math.min(max, stepped));
@@ -72,13 +71,13 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
   const formatDisplay = (v: number) => {
     if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
     if (Number.isInteger(v)) return `${v}`;
-    return v.toFixed(2);
+    return v.toFixed(1);
   };
 
   return (
     <div
       onWheel={handleWheel}
-      className="flex flex-col items-center select-none group cursor-ns-resize"
+      className="flex flex-col items-center select-none group cursor-ns-resize shrink-0"
       title={`${label}: ${value}${unit} (Drag up/down or scroll wheel)`}
     >
       {/* Rotary Cap with LED Indicator Needle */}
@@ -89,29 +88,25 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
           isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
         }`}
       >
-        {/* Subtle Outer Tick Ring */}
         <div className="absolute inset-0.5 rounded-full border border-dashed border-white/10 pointer-events-none" />
 
-        {/* Center Cap with Marker Notch */}
         <div
           className="w-full h-full rounded-full flex items-center justify-center relative"
           style={{ transform: `rotate(${angle}deg)` }}
         >
-          {/* Needle Indicator */}
           <div
-            className="w-0.5 h-3 rounded-full absolute top-1"
-            style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }}
+            className="w-0.5 h-2 rounded-full absolute top-0.5"
+            style={{ backgroundColor: color, boxShadow: `0 0 3px ${color}` }}
           />
         </div>
 
-        {/* Center Screw Accent */}
-        <div className="w-1.5 h-1.5 rounded-full bg-white/20 pointer-events-none" />
+        <div className="w-1 h-1 rounded-full bg-white/20 pointer-events-none" />
       </div>
 
       {/* Label & Numeric Readout */}
-      <div className="text-center mt-1 leading-tight">
-        <span className="text-xs opacity-75 uppercase font-mono block font-semibold">{label}</span>
-        <span className="text-xs font-bold font-mono block" style={{ color }}>
+      <div className="text-center mt-0.5 leading-none">
+        <span className="text-[8px] opacity-75 uppercase font-mono block font-bold leading-tight">{label}</span>
+        <span className="text-[8px] font-bold font-mono block leading-tight truncate max-w-[34px]" style={{ color }}>
           {formatDisplay(value)}{unit}
         </span>
       </div>
@@ -127,7 +122,7 @@ interface HardwareFaderProps {
   step?: number;
   unit?: string;
   color?: string;
-  height?: number; // fader track height in px (default 46)
+  height?: number; // fader track height in px (default 24)
   onChange: (val: number) => void;
 }
 
@@ -139,7 +134,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
   step = 0.01,
   unit = '',
   color = '#e5c07b',
-  height = 46,
+  height = 24,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -219,11 +214,10 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
   return (
     <div
       onWheel={handleWheel}
-      className="flex flex-col items-center select-none font-mono cursor-ns-resize group"
+      className="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0"
       title={`${label}: ${formatDisplay(value)} (Click, drag up/down, or scroll wheel)`}
     >
-      {/* Label */}
-      <span className="text-[10px] opacity-75 uppercase font-bold block mb-0.5 group-hover:text-white transition-colors">
+      <span className="text-[8px] opacity-75 uppercase font-bold block mb-0.5 group-hover:text-white transition-colors leading-none">
         {label}
       </span>
 
@@ -233,40 +227,36 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{ height }}
-        className={`w-5 bg-black/80 border rounded-xs relative cursor-ns-resize flex items-center justify-center p-0.5 transition-colors ${
-          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
+        className={`w-4 bg-black/80 border rounded-xs relative cursor-ns-resize flex items-center justify-center p-0.5 transition-colors ${
+          isDragging ? 'border-white shadow-[0_0_6px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
         }`}
       >
-        {/* Center Groove Line */}
         <div className="w-0.5 h-full bg-white/15 rounded-full pointer-events-none" />
 
-        {/* Level Fill Indicator Bar */}
         <div
-          className="absolute bottom-0 left-1 right-1 rounded-xs pointer-events-none opacity-25"
+          className="absolute bottom-0 left-0.5 right-0.5 rounded-xs pointer-events-none opacity-25"
           style={{
             height: `${pct * 100}%`,
             backgroundColor: color,
           }}
         />
 
-        {/* Illuminated Fader Cap / Thumb */}
+        {/* Illuminated Fader Cap */}
         <div
-          className={`absolute w-4 h-2.5 rounded-xs border border-white/80 shadow-md flex items-center justify-center pointer-events-none ${
-            isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''
+          className={`absolute w-3 h-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none ${
+            isDragging ? 'shadow-[0_0_6px_#fff] brightness-125' : ''
           }`}
           style={{
-            bottom: `calc(${pct * 100}% - 5px)`,
+            bottom: `calc(${pct * 100}% - 4px)`,
             backgroundColor: color,
-            boxShadow: isDragging ? `0 0 10px ${color}` : `0 0 4px ${color}88`,
+            boxShadow: isDragging ? `0 0 8px ${color}` : `0 0 3px ${color}88`,
           }}
         >
-          {/* Cap Grip Notch */}
-          <div className="w-2.5 h-0.5 bg-black/90 rounded-full" />
+          <div className="w-1.5 h-0.5 bg-black/90 rounded-full" />
         </div>
       </div>
 
-      {/* Value Readout */}
-      <span className="text-[10px] font-bold mt-1 text-center truncate max-w-[36px]" style={{ color }}>
+      <span className="text-[8px] font-bold mt-0.5 text-center truncate max-w-[30px] leading-none" style={{ color }}>
         {formatDisplay(value)}
       </span>
     </div>
@@ -281,9 +271,9 @@ interface HorizontalHardwareFaderProps {
   step?: number;
   unit?: string;
   color?: string;
-  width?: number | string; // e.g. 72 or '100%'
+  width?: number | string;
   showValue?: boolean;
-  bipolar?: boolean; // if true, center is 0
+  bipolar?: boolean;
   onChange: (val: number) => void;
 }
 
@@ -295,7 +285,7 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
   step = 1,
   unit = '',
   color = '#98c379',
-  width = 68,
+  width = 50,
   showValue = false,
   bipolar = false,
   onChange,
@@ -375,11 +365,11 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
   return (
     <div
       onWheel={handleWheel}
-      className="flex items-center gap-1.5 select-none font-mono cursor-ew-resize group"
+      className="flex items-center gap-1 select-none font-mono cursor-ew-resize group shrink-0"
       title={`${label ? `${label}: ` : ''}${formatDisplay(value)} (Click, drag left/right, or scroll wheel)`}
     >
       {label && (
-        <span className="text-[10px] opacity-75 uppercase font-bold group-hover:text-white transition-colors">
+        <span className="text-[9px] opacity-75 uppercase font-bold group-hover:text-white transition-colors">
           {label}
         </span>
       )}
@@ -390,17 +380,15 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{ width }}
-        className={`h-4.5 bg-black/80 border rounded-xs relative cursor-ew-resize flex items-center justify-center p-0.5 transition-colors ${
-          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
+        className={`h-3.5 bg-black/80 border rounded-xs relative cursor-ew-resize flex items-center justify-center p-0.5 transition-colors ${
+          isDragging ? 'border-white shadow-[0_0_6px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
         }`}
       >
-        {/* Center Groove Line */}
         <div className="h-0.5 w-full bg-white/15 rounded-full pointer-events-none" />
 
-        {/* Level Fill Indicator Bar */}
         {bipolar ? (
           <div
-            className="absolute top-1 bottom-1 rounded-xs pointer-events-none opacity-30"
+            className="absolute top-0.5 bottom-0.5 rounded-xs pointer-events-none opacity-30"
             style={{
               left: value >= 0 ? '50%' : `${pct * 100}%`,
               width: `${Math.abs(pct - 0.5) * 100}%`,
@@ -409,7 +397,7 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
           />
         ) : (
           <div
-            className="absolute top-1 bottom-1 left-0.5 rounded-xs pointer-events-none opacity-30"
+            className="absolute top-0.5 bottom-0.5 left-0.5 rounded-xs pointer-events-none opacity-30"
             style={{
               width: `${pct * 100}%`,
               backgroundColor: color,
@@ -417,29 +405,27 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
           />
         )}
 
-        {/* Center Zero Tick for Bipolar Fader */}
         {bipolar && (
           <div className="absolute top-0.5 bottom-0.5 left-1/2 w-0.5 bg-white/30 pointer-events-none" />
         )}
 
-        {/* Illuminated Fader Cap / Thumb */}
+        {/* Illuminated Fader Cap */}
         <div
-          className={`absolute h-3.5 w-2.5 rounded-xs border border-white/80 shadow-md flex items-center justify-center pointer-events-none ${
-            isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''
+          className={`absolute h-2.5 w-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none ${
+            isDragging ? 'shadow-[0_0_6px_#fff] brightness-125' : ''
           }`}
           style={{
-            left: `calc(${pct * 100}% - 5px)`,
+            left: `calc(${pct * 100}% - 4px)`,
             backgroundColor: color,
-            boxShadow: isDragging ? `0 0 10px ${color}` : `0 0 4px ${color}88`,
+            boxShadow: isDragging ? `0 0 8px ${color}` : `0 0 3px ${color}88`,
           }}
         >
-          {/* Cap Grip Notch (Vertical) */}
-          <div className="h-2 w-0.5 bg-black/90 rounded-full" />
+          <div className="h-1.5 w-0.5 bg-black/90 rounded-full" />
         </div>
       </div>
 
       {showValue && (
-        <span className="text-[10px] font-bold text-right min-w-[28px]" style={{ color }}>
+        <span className="text-[8px] font-bold text-right min-w-[24px]" style={{ color }}>
           {formatDisplay(value)}
         </span>
       )}
