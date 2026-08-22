@@ -29,6 +29,7 @@ import {
   divToStepSpan,
   TimeSignature,
   METER_SPECS,
+  getWaveformAbbr,
 } from '../../lib/synth';
 import { RotaryKnob, HardwareFader } from '../synth/HardwareControls';
 import { evaluateSafeJS } from '../../lib/evaluator';
@@ -1516,42 +1517,48 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <span className="text-xs opacity-60">IN ──►</span>
                     </div>
 
-                    {/* Waveform Selectors */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="opacity-80 font-semibold">OSC A</span>
-                        <div className="flex gap-0.5">
-                          {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
-                            <button
-                              key={w}
-                              onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
-                              className={`px-1.5 py-0.5 text-xs border rounded-xs cursor-pointer ${
-                                currentTrack.osc1Waveform === w ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-bold' : 'border-white/20'
-                              }`}
-                            >
-                              {w === 'sawtooth' ? '/|' : w === 'square' ? '⊓' : w === 'sine' ? '~' : w === 'triangle' ? '/\\' : '▒'}
-                            </button>
-                          ))}
+                      {/* Waveform Selectors */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="opacity-80 font-semibold">OSC A</span>
+                          <div className="flex gap-0.5">
+                            {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
+                              <button
+                                key={w}
+                                onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
+                                className={`px-1 py-0.5 text-xs font-mono font-bold border rounded-xs cursor-pointer transition-colors ${
+                                  currentTrack.osc1Waveform === w
+                                    ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                                    : 'border-white/20 text-white/70 hover:border-white/50'
+                                }`}
+                                title={w.toUpperCase()}
+                              >
+                                {getWaveformAbbr(w)}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="opacity-80 font-semibold">OSC B</span>
-                        <div className="flex gap-0.5">
-                          {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
-                            <button
-                              key={w}
-                              onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
-                              className={`px-1.5 py-0.5 text-xs border rounded-xs cursor-pointer ${
-                                currentTrack.osc2Waveform === w ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-bold' : 'border-white/20'
-                              }`}
-                            >
-                              {w === 'sawtooth' ? '/|' : w === 'square' ? '⊓' : w === 'sine' ? '~' : w === 'triangle' ? '/\\' : '▒'}
-                            </button>
-                          ))}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="opacity-80 font-semibold">OSC B</span>
+                          <div className="flex gap-0.5">
+                            {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
+                              <button
+                                key={w}
+                                onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
+                                className={`px-1 py-0.5 text-xs font-mono font-bold border rounded-xs cursor-pointer transition-colors ${
+                                  currentTrack.osc2Waveform === w
+                                    ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                    : 'border-white/20 text-white/70 hover:border-white/50'
+                                }`}
+                                title={w.toUpperCase()}
+                              >
+                                {getWaveformAbbr(w)}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
                     {/* Hardware Knobs for Level, Ratio, Phase, Detune */}
                     <div className="grid grid-cols-4 gap-1 pt-0.5 border-t border-white/10">

@@ -1,6 +1,17 @@
 import { soundEngine } from './sound';
 
 export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
+
+export function getWaveformAbbr(w: SynthWaveform): string {
+  switch (w) {
+    case 'sawtooth': return 'SAW';
+    case 'square': return 'SQR';
+    case 'sine': return 'SIN';
+    case 'triangle': return 'TRI';
+    case 'noise': return 'NOI';
+    default: return 'SIN';
+  }
+}
 export type BlendMode = 'layer' | 'fm' | 'ring' | 'sync';
 export type FilterType = 'lowpass' | 'bandpass' | 'highpass' | 'notch';
 export type LfoWaveform = 'sine' | 'triangle' | 'square' | 'sawtooth';
