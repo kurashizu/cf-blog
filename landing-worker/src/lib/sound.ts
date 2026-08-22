@@ -65,7 +65,7 @@ class SoundEngine {
       try {
         this.ctx = new AudioContextClass();
         this.analyser = this.ctx.createAnalyser();
-        this.analyser.fftSize = 256;
+        this.analyser.fftSize = 1024;
         this.analyser.smoothingTimeConstant = 0.75;
         this.visualizerDataArray = new Uint8Array(this.analyser.frequencyBinCount);
         this.visualizerFreqArray = new Uint8Array(this.analyser.frequencyBinCount);

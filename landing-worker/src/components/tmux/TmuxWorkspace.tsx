@@ -489,7 +489,9 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Audio Engine Visualizer
   const [isMuted, setIsMuted] = useState(sound.getMuted());
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fftCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [timeBase, setTimeBase] = useState<'0.25x' | '0.5x' | '1x' | '2x' | '4x'>('1x');
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
 
   // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow & rAF Batching
@@ -859,13 +861,15 @@ export const TmuxWorkspace: React.FC = () => {
     }
   };
 
-  // High-Resolution Logarithmic Spectrum Analyzer & Real-Time Waveform Oscilloscope
+  // Dual Independent Visualizers: Logarithmic Spectrum Analyzer + Adjustable Timebase Oscilloscope
   useEffect(() => {
     if (activeTab !== 4) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const fftCanvas = fftCanvasRef.current;
+    const waveCanvas = waveCanvasRef.current;
+    if (!fftCanvas && !waveCanvas) return;
+
+    const fftCtx = fftCanvas?.getContext('2d');
+    const waveCtx = waveCanvas?.getContext('2d');
 
     let animId: number;
     const minLog = Math.log10(20);
@@ -874,114 +878,177 @@ export const TmuxWorkspace: React.FC = () => {
 
     const render = () => {
       animId = requestAnimationFrame(render);
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      // CRT Dark Background Grid
-      ctx.fillStyle = 'rgba(10, 12, 16, 0.95)';
-      ctx.fillRect(0, 0, w, h);
-
-      // Log Frequency Coordinates: 100Hz, 1kHz, 10kHz Grid lines
-      const tick100 = ((Math.log10(100) - minLog) / logRange) * w;
-      const tick1k = ((Math.log10(1000) - minLog) / logRange) * w;
-      const tick10k = ((Math.log10(10000) - minLog) / logRange) * w;
-
-      ctx.save();
-      ctx.setLineDash([2, 3]);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      ctx.lineWidth = 1;
-
-      for (const tx of [tick100, tick1k, tick10k]) {
-        ctx.beginPath();
-        ctx.moveTo(tx, 0);
-        ctx.lineTo(tx, h);
-        ctx.stroke();
-      }
-
-      // Horizontal zero baseline
-      ctx.beginPath();
-      ctx.moveTo(0, h / 2);
-      ctx.lineTo(w, h / 2);
-      ctx.stroke();
-      ctx.restore();
-
-      // Log Grid Text Markers
-      ctx.font = '8px monospace';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.fillText('100', tick100 - 8, 9);
-      ctx.fillText('1k', tick1k - 6, 9);
-      ctx.fillText('10k', tick10k - 8, 9);
-
       const freqData = sound.getByteFrequencyData();
       const timeData = sound.getByteTimeDomainData();
 
-      // 1. Logarithmic Frequency Spectrum Analyzer (20Hz - 20kHz)
-      if ((scopeMode === 'dual' || scopeMode === 'fft') && freqData && !isMuted) {
-        const binCount = freqData.length;
-        const nyquist = 22050; // AudioContext standard half-sample-rate
+      // ─────────────────────────────────────────────────────────────
+      // SCREEN 1: LOGARITHMIC FREQUENCY SPECTRUM ANALYZER (20Hz - 20kHz)
+      // ─────────────────────────────────────────────────────────────
+      if (fftCanvas && fftCtx) {
+        const w = fftCanvas.width;
+        const h = fftCanvas.height;
+        fftCtx.clearRect(0, 0, w, h);
 
-        const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, '#e5c07b');
-        grad.addColorStop(0.5, '#c678dd');
-        grad.addColorStop(1, '#56b6c2');
+        // Dark Screen Background
+        fftCtx.fillStyle = 'rgba(10, 12, 16, 0.95)';
+        fftCtx.fillRect(0, 0, w, h);
 
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.moveTo(0, h);
+        // Log Frequency Grid Lines: 100Hz, 1kHz, 10kHz
+        const tick100 = ((Math.log10(100) - minLog) / logRange) * w;
+        const tick1k = ((Math.log10(1000) - minLog) / logRange) * w;
+        const tick10k = ((Math.log10(10000) - minLog) / logRange) * w;
 
-        const stepX = 2;
-        for (let x = 0; x <= w; x += stepX) {
-          const f = Math.pow(10, minLog + (x / w) * logRange);
-          const binIdx = Math.min(binCount - 1, Math.max(0, (f / nyquist) * binCount));
-          const idxLow = Math.floor(binIdx);
-          const idxHigh = Math.min(binCount - 1, idxLow + 1);
-          const frac = binIdx - idxLow;
-          const amp = (freqData[idxLow] * (1 - frac) + freqData[idxHigh] * frac) / 255.0;
+        fftCtx.save();
+        fftCtx.setLineDash([2, 3]);
+        fftCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        fftCtx.lineWidth = 1;
 
-          const barH = amp * (h - 6);
-          ctx.lineTo(x, h - barH);
+        for (const tx of [tick100, tick1k, tick10k]) {
+          fftCtx.beginPath();
+          fftCtx.moveTo(tx, 0);
+          fftCtx.lineTo(tx, h);
+          fftCtx.stroke();
         }
 
-        ctx.lineTo(w, h);
-        ctx.closePath();
-        ctx.globalAlpha = scopeMode === 'dual' ? 0.35 : 0.75;
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
+        // Horizontal Grid Lines
+        fftCtx.beginPath();
+        fftCtx.moveTo(0, h * 0.5);
+        fftCtx.lineTo(w, h * 0.5);
+        fftCtx.stroke();
+        fftCtx.restore();
+
+        // Log Grid Text Markers
+        fftCtx.font = '7px monospace';
+        fftCtx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        fftCtx.fillText('100', tick100 - 6, 8);
+        fftCtx.fillText('1k', tick1k - 4, 8);
+        fftCtx.fillText('10k', tick10k - 6, 8);
+
+        if (freqData && !isMuted) {
+          const binCount = freqData.length;
+          const nyquist = 22050;
+
+          const grad = fftCtx.createLinearGradient(0, 0, 0, h);
+          grad.addColorStop(0, '#e5c07b');
+          grad.addColorStop(0.5, '#c678dd');
+          grad.addColorStop(1, '#56b6c2');
+
+          fftCtx.fillStyle = grad;
+          fftCtx.beginPath();
+          fftCtx.moveTo(0, h);
+
+          const stepX = 2;
+          for (let x = 0; x <= w; x += stepX) {
+            const f = Math.pow(10, minLog + (x / w) * logRange);
+            const binIdx = Math.min(binCount - 1, Math.max(0, (f / nyquist) * binCount));
+            const idxLow = Math.floor(binIdx);
+            const idxHigh = Math.min(binCount - 1, idxLow + 1);
+            const frac = binIdx - idxLow;
+            const amp = (freqData[idxLow] * (1 - frac) + freqData[idxHigh] * frac) / 255.0;
+
+            const barH = amp * (h - 4);
+            fftCtx.lineTo(x, h - barH);
+          }
+
+          fftCtx.lineTo(w, h);
+          fftCtx.closePath();
+          fftCtx.globalAlpha = 0.85;
+          fftCtx.fill();
+          fftCtx.globalAlpha = 1.0;
+        }
       }
 
-      // 2. Real-Time Oscilloscope Waveform Trace
-      if ((scopeMode === 'dual' || scopeMode === 'wave') && timeData && !isMuted) {
-        ctx.save();
-        ctx.strokeStyle = '#98c379';
-        ctx.lineWidth = 1.6;
-        ctx.shadowColor = '#98c379';
-        ctx.shadowBlur = 4;
-        ctx.beginPath();
+      // ─────────────────────────────────────────────────────────────
+      // SCREEN 2: REAL-TIME TIME-DOMAIN OSCILLOSCOPE (ADJUSTABLE TIMEBASE)
+      // ─────────────────────────────────────────────────────────────
+      if (waveCanvas && waveCtx) {
+        const w = waveCanvas.width;
+        const h = waveCanvas.height;
+        waveCtx.clearRect(0, 0, w, h);
 
-        const len = timeData.length;
-        for (let i = 0; i < len; i++) {
-          const v = timeData[i] / 128.0;
-          const y = (v * h) / 2;
-          const x = (i / (len - 1)) * w;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+        // Dark Screen Background
+        waveCtx.fillStyle = 'rgba(10, 12, 16, 0.95)';
+        waveCtx.fillRect(0, 0, w, h);
+
+        // CRT Scope Voltage Grids
+        waveCtx.save();
+        waveCtx.setLineDash([2, 3]);
+        waveCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        waveCtx.lineWidth = 1;
+
+        // Vertical Grids (4 Divisions)
+        for (let i = 1; i < 4; i++) {
+          const gx = (w / 4) * i;
+          waveCtx.beginPath();
+          waveCtx.moveTo(gx, 0);
+          waveCtx.lineTo(gx, h);
+          waveCtx.stroke();
         }
-        ctx.stroke();
-        ctx.restore();
-      } else if (scopeMode === 'wave' || scopeMode === 'dual') {
-        ctx.strokeStyle = 'rgba(152, 195, 121, 0.4)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, h / 2);
-        ctx.lineTo(w, h / 2);
-        ctx.stroke();
+
+        // Center Baseline & Voltage Rails
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, h / 2);
+        waveCtx.lineTo(w, h / 2);
+        waveCtx.moveTo(0, h * 0.2);
+        waveCtx.lineTo(w, h * 0.2);
+        waveCtx.moveTo(0, h * 0.8);
+        waveCtx.lineTo(w, h * 0.8);
+        waveCtx.stroke();
+        waveCtx.restore();
+
+        if (timeData && !isMuted) {
+          // Determine sample window span based on selected timeBase
+          let windowSize = 256;
+          if (timeBase === '0.25x') windowSize = 64;
+          else if (timeBase === '0.5x') windowSize = 128;
+          else if (timeBase === '1x') windowSize = 256;
+          else if (timeBase === '2x') windowSize = 512;
+          else if (timeBase === '4x') windowSize = 1024;
+
+          windowSize = Math.min(timeData.length, windowSize);
+
+          // Zero-Crossing Trigger Search for Rock-Solid Stability
+          let startIdx = 0;
+          const maxSearch = Math.min(256, timeData.length - windowSize);
+          for (let i = 0; i < maxSearch; i++) {
+            if (timeData[i] < 128 && timeData[i + 1] >= 128) {
+              startIdx = i;
+              break;
+            }
+          }
+
+          waveCtx.save();
+          waveCtx.strokeStyle = '#98c379';
+          waveCtx.lineWidth = 1.6;
+          waveCtx.shadowColor = '#98c379';
+          waveCtx.shadowBlur = 3;
+          waveCtx.beginPath();
+
+          for (let i = 0; i < windowSize; i++) {
+            const raw = timeData[startIdx + i];
+            const v = (raw !== undefined ? raw : 128) / 128.0;
+            const y = (v * h) / 2;
+            const x = (i / (windowSize - 1)) * w;
+            if (i === 0) waveCtx.moveTo(x, y);
+            else waveCtx.lineTo(x, y);
+          }
+
+          waveCtx.stroke();
+          waveCtx.restore();
+        } else {
+          waveCtx.strokeStyle = 'rgba(152, 195, 121, 0.4)';
+          waveCtx.lineWidth = 1;
+          waveCtx.beginPath();
+          waveCtx.moveTo(0, h / 2);
+          waveCtx.lineTo(w, h / 2);
+          waveCtx.stroke();
+        }
       }
     };
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [activeTab, isMuted, theme, scopeMode]);
+  }, [activeTab, isMuted, theme, timeBase]);
 
   // Theme palettes (Rich Multi-Color Matte)
   const themeStyles = {
@@ -2513,25 +2580,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 7: MASTER OUT & DUAL LOG SPECTRUM / CRT SCOPE */}
+                                    {/* MODULE 7: MASTER OUT & DUAL SEPARATED VISUALIZERS */}
                   <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between space-y-1">
                     <div className="flex items-center justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
                       <span>7. MASTER OUT</span>
-                      <div className="flex items-center gap-0.5 text-[8px] font-mono">
-                        {(['dual', 'fft', 'wave'] as ('dual' | 'fft' | 'wave')[]).map((m) => (
-                          <button
-                            key={m}
-                            onClick={() => { setScopeMode(m); playSound('click'); }}
-                            className={`px-1 py-0.2 rounded-xs border cursor-pointer font-bold ${
-                              scopeMode === m
-                                ? 'border-[#98c379] bg-[#98c379] text-black font-black'
-                                : 'border-white/20 text-white/60 hover:text-white'
-                            }`}
-                          >
-                            {m.toUpperCase()}
-                          </button>
-                        ))}
-                      </div>
+                      <span className="text-[#98c379] font-mono text-[9px]">60 FPS DUAL</span>
                     </div>
 
                     {/* Master Pan & Volume Knobs */}
@@ -2544,7 +2597,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         step={5}
                         unit=""
                         color="#56b6c2"
-                        size={24}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
                       />
                       <RotaryKnob
@@ -2554,18 +2607,49 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         max={100}
                         unit="%"
                         color="#98c379"
-                        size={24}
+                        size={22}
                         onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
                       />
                     </div>
 
-                    {/* Real-time Dual Logarithmic Spectrum & Oscilloscope Display */}
-                    <div className="border border-white/15 bg-black/90 relative h-11 rounded-xs overflow-hidden flex flex-col justify-between">
-                      <canvas ref={canvasRef} width={200} height={44} className="w-full h-full block" />
+                    {/* SCREEN 1: LOGARITHMIC FREQUENCY SPECTRUM (对数坐标频谱图) */}
+                    <div className="border border-white/15 bg-black/90 rounded-xs p-1 flex flex-col gap-0.5">
+                      <div className="flex items-center justify-between text-[8px] font-mono text-white/50 px-0.5">
+                        <span className="text-[#56b6c2] font-bold">FFT SPECTRUM (LOG)</span>
+                        <span>20Hz - 20kHz</span>
+                      </div>
+                      <div className="relative h-8 rounded-xs overflow-hidden">
+                        <canvas ref={fftCanvasRef} width={200} height={32} className="w-full h-full block" />
+                      </div>
                     </div>
-                  </div>
 
-                </div>
+                    {/* SCREEN 2: REAL-TIME OSCILLOSCOPE (实时波形图 + 时间粒度调节) */}
+                    <div className="border border-white/15 bg-black/90 rounded-xs p-1 flex flex-col gap-0.5">
+                      <div className="flex items-center justify-between text-[8px] font-mono text-white/50 px-0.5">
+                        <span className="text-[#98c379] font-bold">OSCILLOSCOPE</span>
+                        {/* Timebase / Time Resolution Granularity Selector */}
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-[7px] text-white/40">TIME:</span>
+                          {(['0.25x', '0.5x', '1x', '2x', '4x'] as const).map((tb) => (
+                            <button
+                              key={tb}
+                              onClick={() => { setTimeBase(tb); playSound('click'); }}
+                              className={`px-0.5 py-0.2 rounded-xs border text-[7px] cursor-pointer font-bold ${
+                                timeBase === tb
+                                  ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                  : 'border-white/20 text-white/60 hover:text-white'
+                              }`}
+                            >
+                              {tb}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="relative h-8 rounded-xs overflow-hidden">
+                        <canvas ref={waveCanvasRef} width={200} height={32} className="w-full h-full block" />
+                      </div>
+                    </div>
+                  </div>                </div>
               </div>
 
 
