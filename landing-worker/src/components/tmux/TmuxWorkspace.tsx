@@ -1890,7 +1890,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-2 flex-1 min-h-0 overflow-hidden">
                   
                   {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING) */}
-                  <div className="lg:col-span-1 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-0.5">
+                  <div className="lg:col-span-1 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-1.5 overflow-y-auto custom-scrollbar pr-0.5 min-w-0">
                     
                     {/* MODULE 1: DUAL OSCILLATORS (VCO) */}
                     <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col space-y-1 shrink-0">
@@ -1948,7 +1948,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
 
                       {/* Dual Osc Knobs */}
-                      <div className="grid grid-cols-4 gap-0.5 pt-1 border-t border-white/10">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-0.5 pt-1 border-t border-white/10">
                         <RotaryKnob
                           label="OSC1"
                           value={Math.round(currentTrack.osc1Gain * 100)}
@@ -2395,7 +2395,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* 4-MODULE HORIZONTAL RACK (MODULES 4, 5, 6, 7) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-1.5 sm:gap-2 text-xs min-w-0">
                     
                     {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (AMP ENV + VCF ENV) */}
                     <div className="border border-[#98c379]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5 h-full">
