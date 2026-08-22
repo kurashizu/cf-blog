@@ -1896,7 +1896,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>1. DUAL OSC</span>
-                        <span className="text-white/40 font-mono text-xs">──►</span>
+                        <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
                       <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
@@ -1992,7 +1992,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
-                        <span className="text-white/40 font-mono text-xs">──►</span>
+                        <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
                       <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
@@ -2044,7 +2044,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
-                        <span className="text-white/40 font-mono text-xs">──►</span>
+                        <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
                       <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
