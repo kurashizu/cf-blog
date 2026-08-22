@@ -50,384 +50,496 @@ export interface TrackData {
 }
 
 export const PIANO_ROLL_NOTES = [
-  // OCTAVE 5 (High Lead / Arp) - Index 0 to 11
-  { note: 'B5', freq: 987.77, isBlack: false, oct: 5 },  // 0
-  { note: 'A#5', freq: 932.33, isBlack: true, oct: 5 },  // 1
-  { note: 'A5', freq: 880.00, isBlack: false, oct: 5 },  // 2
-  { note: 'G#5', freq: 830.61, isBlack: true, oct: 5 },  // 3
-  { note: 'G5', freq: 783.99, isBlack: false, oct: 5 },  // 4
-  { note: 'F#5', freq: 739.99, isBlack: true, oct: 5 },  // 5
-  { note: 'F5', freq: 698.46, isBlack: false, oct: 5 },  // 6
-  { note: 'E5', freq: 659.25, isBlack: false, oct: 5 },  // 7
-  { note: 'D#5', freq: 622.25, isBlack: true, oct: 5 },  // 8
-  { note: 'D5', freq: 587.33, isBlack: false, oct: 5 },  // 9
-  { note: 'C#5', freq: 554.37, isBlack: true, oct: 5 },  // 10
-  { note: 'C5', freq: 523.25, isBlack: false, oct: 5 },  // 11
-
-  // OCTAVE 4 (Mid Lead / Chords) - Index 12 to 23
-  { note: 'B4', freq: 493.88, isBlack: false, oct: 4 },  // 12
-  { note: 'A#4', freq: 466.16, isBlack: true, oct: 4 },  // 13
-  { note: 'A4', freq: 440.00, isBlack: false, oct: 4 },  // 14
-  { note: 'G#4', freq: 415.30, isBlack: true, oct: 4 },  // 15
-  { note: 'G4', freq: 392.00, isBlack: false, oct: 4 },  // 16
-  { note: 'F#4', freq: 369.99, isBlack: true, oct: 4 },  // 17
-  { note: 'F4', freq: 349.23, isBlack: false, oct: 4 },  // 18
-  { note: 'E4', freq: 329.63, isBlack: false, oct: 4 },  // 19
-  { note: 'D#4', freq: 311.13, isBlack: true, oct: 4 },  // 20
-  { note: 'D4', freq: 293.66, isBlack: false, oct: 4 },  // 21
-  { note: 'C#4', freq: 277.18, isBlack: true, oct: 4 },  // 22
-  { note: 'C4', freq: 261.63, isBlack: false, oct: 4 },  // 23
-
-  // OCTAVE 3 (Deep Bass / Roots) - Index 24 to 35
-  { note: 'B3', freq: 246.94, isBlack: false, oct: 3 },  // 24
-  { note: 'A#3', freq: 233.08, isBlack: true, oct: 3 },  // 25
-  { note: 'A3', freq: 220.00, isBlack: false, oct: 3 },  // 26
-  { note: 'G#3', freq: 207.65, isBlack: true, oct: 3 },  // 27
-  { note: 'G3', freq: 196.00, isBlack: false, oct: 3 },  // 28
-  { note: 'F#3', freq: 185.00, isBlack: true, oct: 3 },  // 29
-  { note: 'F3', freq: 174.61, isBlack: false, oct: 3 },  // 30
-  { note: 'E3', freq: 164.81, isBlack: false, oct: 3 },  // 31
-  { note: 'D#3', freq: 155.56, isBlack: true, oct: 3 },  // 32
-  { note: 'D3', freq: 146.83, isBlack: false, oct: 3 },  // 33
-  { note: 'C#3', freq: 138.59, isBlack: true, oct: 3 },  // 34
-  { note: 'C3', freq: 130.81, isBlack: false, oct: 3 },  // 35
+  { note: 'C8', freq: 4186.01, isBlack: false, oct: 8 },  // 0
+  { note: 'B7', freq: 3951.07, isBlack: false, oct: 7 },  // 1
+  { note: 'A#7', freq: 3729.31, isBlack: true, oct: 7 },  // 2
+  { note: 'A7', freq: 3520.0, isBlack: false, oct: 7 },  // 3
+  { note: 'G#7', freq: 3322.44, isBlack: true, oct: 7 },  // 4
+  { note: 'G7', freq: 3135.96, isBlack: false, oct: 7 },  // 5
+  { note: 'F#7', freq: 2959.96, isBlack: true, oct: 7 },  // 6
+  { note: 'F7', freq: 2793.83, isBlack: false, oct: 7 },  // 7
+  { note: 'E7', freq: 2637.02, isBlack: false, oct: 7 },  // 8
+  { note: 'D#7', freq: 2489.02, isBlack: true, oct: 7 },  // 9
+  { note: 'D7', freq: 2349.32, isBlack: false, oct: 7 },  // 10
+  { note: 'C#7', freq: 2217.46, isBlack: true, oct: 7 },  // 11
+  { note: 'C7', freq: 2093.0, isBlack: false, oct: 7 },  // 12
+  { note: 'B6', freq: 1975.53, isBlack: false, oct: 6 },  // 13
+  { note: 'A#6', freq: 1864.66, isBlack: true, oct: 6 },  // 14
+  { note: 'A6', freq: 1760.0, isBlack: false, oct: 6 },  // 15
+  { note: 'G#6', freq: 1661.22, isBlack: true, oct: 6 },  // 16
+  { note: 'G6', freq: 1567.98, isBlack: false, oct: 6 },  // 17
+  { note: 'F#6', freq: 1479.98, isBlack: true, oct: 6 },  // 18
+  { note: 'F6', freq: 1396.91, isBlack: false, oct: 6 },  // 19
+  { note: 'E6', freq: 1318.51, isBlack: false, oct: 6 },  // 20
+  { note: 'D#6', freq: 1244.51, isBlack: true, oct: 6 },  // 21
+  { note: 'D6', freq: 1174.66, isBlack: false, oct: 6 },  // 22
+  { note: 'C#6', freq: 1108.73, isBlack: true, oct: 6 },  // 23
+  { note: 'C6', freq: 1046.5, isBlack: false, oct: 6 },  // 24
+  { note: 'B5', freq: 987.77, isBlack: false, oct: 5 },  // 25
+  { note: 'A#5', freq: 932.33, isBlack: true, oct: 5 },  // 26
+  { note: 'A5', freq: 880.0, isBlack: false, oct: 5 },  // 27
+  { note: 'G#5', freq: 830.61, isBlack: true, oct: 5 },  // 28
+  { note: 'G5', freq: 783.99, isBlack: false, oct: 5 },  // 29
+  { note: 'F#5', freq: 739.99, isBlack: true, oct: 5 },  // 30
+  { note: 'F5', freq: 698.46, isBlack: false, oct: 5 },  // 31
+  { note: 'E5', freq: 659.26, isBlack: false, oct: 5 },  // 32
+  { note: 'D#5', freq: 622.25, isBlack: true, oct: 5 },  // 33
+  { note: 'D5', freq: 587.33, isBlack: false, oct: 5 },  // 34
+  { note: 'C#5', freq: 554.37, isBlack: true, oct: 5 },  // 35
+  { note: 'C5', freq: 523.25, isBlack: false, oct: 5 },  // 36
+  { note: 'B4', freq: 493.88, isBlack: false, oct: 4 },  // 37
+  { note: 'A#4', freq: 466.16, isBlack: true, oct: 4 },  // 38
+  { note: 'A4', freq: 440.0, isBlack: false, oct: 4 },  // 39
+  { note: 'G#4', freq: 415.3, isBlack: true, oct: 4 },  // 40
+  { note: 'G4', freq: 392.0, isBlack: false, oct: 4 },  // 41
+  { note: 'F#4', freq: 369.99, isBlack: true, oct: 4 },  // 42
+  { note: 'F4', freq: 349.23, isBlack: false, oct: 4 },  // 43
+  { note: 'E4', freq: 329.63, isBlack: false, oct: 4 },  // 44
+  { note: 'D#4', freq: 311.13, isBlack: true, oct: 4 },  // 45
+  { note: 'D4', freq: 293.66, isBlack: false, oct: 4 },  // 46
+  { note: 'C#4', freq: 277.18, isBlack: true, oct: 4 },  // 47
+  { note: 'C4', freq: 261.63, isBlack: false, oct: 4 },  // 48
+  { note: 'B3', freq: 246.94, isBlack: false, oct: 3 },  // 49
+  { note: 'A#3', freq: 233.08, isBlack: true, oct: 3 },  // 50
+  { note: 'A3', freq: 220.0, isBlack: false, oct: 3 },  // 51
+  { note: 'G#3', freq: 207.65, isBlack: true, oct: 3 },  // 52
+  { note: 'G3', freq: 196.0, isBlack: false, oct: 3 },  // 53
+  { note: 'F#3', freq: 185.0, isBlack: true, oct: 3 },  // 54
+  { note: 'F3', freq: 174.61, isBlack: false, oct: 3 },  // 55
+  { note: 'E3', freq: 164.81, isBlack: false, oct: 3 },  // 56
+  { note: 'D#3', freq: 155.56, isBlack: true, oct: 3 },  // 57
+  { note: 'D3', freq: 146.83, isBlack: false, oct: 3 },  // 58
+  { note: 'C#3', freq: 138.59, isBlack: true, oct: 3 },  // 59
+  { note: 'C3', freq: 130.81, isBlack: false, oct: 3 },  // 60
+  { note: 'B2', freq: 123.47, isBlack: false, oct: 2 },  // 61
+  { note: 'A#2', freq: 116.54, isBlack: true, oct: 2 },  // 62
+  { note: 'A2', freq: 110.0, isBlack: false, oct: 2 },  // 63
+  { note: 'G#2', freq: 103.83, isBlack: true, oct: 2 },  // 64
+  { note: 'G2', freq: 98.0, isBlack: false, oct: 2 },  // 65
+  { note: 'F#2', freq: 92.5, isBlack: true, oct: 2 },  // 66
+  { note: 'F2', freq: 87.31, isBlack: false, oct: 2 },  // 67
+  { note: 'E2', freq: 82.41, isBlack: false, oct: 2 },  // 68
+  { note: 'D#2', freq: 77.78, isBlack: true, oct: 2 },  // 69
+  { note: 'D2', freq: 73.42, isBlack: false, oct: 2 },  // 70
+  { note: 'C#2', freq: 69.3, isBlack: true, oct: 2 },  // 71
+  { note: 'C2', freq: 65.41, isBlack: false, oct: 2 },  // 72
+  { note: 'B1', freq: 61.74, isBlack: false, oct: 1 },  // 73
+  { note: 'A#1', freq: 58.27, isBlack: true, oct: 1 },  // 74
+  { note: 'A1', freq: 55.0, isBlack: false, oct: 1 },  // 75
+  { note: 'G#1', freq: 51.91, isBlack: true, oct: 1 },  // 76
+  { note: 'G1', freq: 49.0, isBlack: false, oct: 1 },  // 77
+  { note: 'F#1', freq: 46.25, isBlack: true, oct: 1 },  // 78
+  { note: 'F1', freq: 43.65, isBlack: false, oct: 1 },  // 79
+  { note: 'E1', freq: 41.2, isBlack: false, oct: 1 },  // 80
+  { note: 'D#1', freq: 38.89, isBlack: true, oct: 1 },  // 81
+  { note: 'D1', freq: 36.71, isBlack: false, oct: 1 },  // 82
+  { note: 'C#1', freq: 34.65, isBlack: true, oct: 1 },  // 83
+  { note: 'C1', freq: 32.7, isBlack: false, oct: 1 },  // 84
+  { note: 'B0', freq: 30.87, isBlack: false, oct: 0 },  // 85
+  { note: 'A#0', freq: 29.14, isBlack: true, oct: 0 },  // 86
+  { note: 'A0', freq: 27.5, isBlack: false, oct: 0 },  // 87
 ];
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*    ICONIC SUPER MARIO BROS (OVERWORLD THEME) COMPLETE 512-STEP NES SCORE    */
-/* ────────────────────────────────────────────────────────────────────────── */
-
-// Track 1: Pulse 1 (Lead Melody / 50% Duty Square Wave - 512 Steps / 32 Bars)
 const MARIO_TRK1_GRID: number[][] = [
-  // BAR 1: Intro Stabs (E5-E5-E5-C5-E5-G5... G4)
-  [7], [7], [], [7], [], [11], [7], [], [4], [], [], [], [16], [], [], [],
-  // BAR 2: Intro Stabs Hold & Transition
+  // BAR 1
+  [32], [], [32], [], [], [32], [], [36], [32], [], [], [29], [], [], [], [41],
+  // BAR 2
   [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
-  // BAR 3: Main Verse 1 (A1: C5-G4-E4-A4-B4-Bb4-A4)
-  [11], [], [], [16], [], [], [19], [], [], [14], [], [12], [], [13], [14], [],
-  // BAR 4: Main Verse 1 (A2: G4-E5-G5-A5-F5-G5-E5-C5-D5-B4)
-  [16], [7], [4], [2], [], [6], [4], [], [7], [], [11], [9], [12], [], [], [],
-  // BAR 5: Main Verse 1 (A3: Repeat A1)
-  [11], [], [], [16], [], [], [19], [], [], [14], [], [12], [], [13], [14], [],
-  // BAR 6: Main Verse 1 (A4: Cadence resolving to C5)
-  [16], [7], [4], [2], [], [6], [4], [], [7], [], [11], [9], [12], [], [11], [],
-  // BAR 7: B Section (B1: Chromatic Arp Jump 1)
-  [4], [5], [6], [8], [7], [], [15], [14], [11], [], [14], [11], [9], [], [], [],
-  // BAR 8: B Section (B2: Chromatic Arp Jump 2 - Triple High Stabs)
-  [4], [5], [6], [8], [7], [], [0], [0], [0], [], [], [], [], [], [], [],
-  // BAR 9: B Section (B3: Chromatic Arp Jump 3)
-  [4], [5], [6], [8], [7], [], [15], [14], [11], [], [14], [11], [9], [], [], [],
-  // BAR 10: B Section (B4: Chromatic Descending Turnaround)
-  [8], [], [], [9], [], [], [11], [], [], [], [], [], [], [], [], [],
-  // BAR 11: B Section Repeat 1
-  [4], [5], [6], [8], [7], [], [15], [14], [11], [], [14], [11], [9], [], [], [],
-  // BAR 12: B Section Repeat 2 (High Stabs)
-  [4], [5], [6], [8], [7], [], [0], [0], [0], [], [], [], [], [], [], [],
-  // BAR 13: C Section (C1: Underground/Castle Staccato Groove Part 1)
-  [11], [11], [], [11], [], [11], [9], [], [7], [11], [], [14], [16], [], [], [],
-  // BAR 14: C Section (C2: Underground/Castle Staccato Groove Part 2)
-  [11], [11], [], [11], [], [11], [9], [7], [], [], [], [], [], [], [], [],
-  // BAR 15: C Section (C3: Underground/Castle Staccato Groove Part 3)
-  [11], [11], [], [11], [], [11], [9], [], [7], [11], [], [14], [16], [], [], [],
-  // BAR 16: C Section (C4: Fanfare Break)
-  [7], [7], [], [7], [], [11], [7], [], [4], [], [], [], [16], [], [], [],
-  // BAR 17: Theme Reprise (Verse A1 with octave lift)
-  [11], [], [], [16], [], [], [19], [], [], [14], [], [12], [], [13], [14], [],
-  // BAR 18: Theme Reprise (Verse A2 Arps)
-  [16], [7], [4], [2], [], [6], [4], [], [7], [], [11], [9], [12], [], [], [],
-  // BAR 19: Theme Reprise (Verse A3)
-  [11], [], [], [16], [], [], [19], [], [], [14], [], [12], [], [13], [14], [],
-  // BAR 20: Theme Reprise (Verse A4 Cadence)
-  [16], [7], [4], [2], [], [6], [4], [], [7], [], [11], [9], [12], [], [11], [],
-  // BAR 21: Starman Invincible Theme (High-energy arps 1)
-  [7], [], [7], [], [9], [], [9], [], [11], [], [11], [], [9], [], [7], [],
-  // BAR 22: Starman Invincible Theme (High-energy arps 2)
-  [7], [], [7], [], [9], [], [9], [], [11], [], [11], [], [9], [], [7], [],
-  // BAR 23: Starman Invincible Theme (High-energy arps 3 - Shift)
-  [9], [], [9], [], [11], [], [11], [], [12], [], [12], [], [11], [], [9], [],
-  // BAR 24: Starman Invincible Theme (High-energy arps 4 - Resolving)
-  [7], [], [7], [], [9], [], [9], [], [11], [], [11], [], [9], [], [7], [],
-  // BAR 25: Castle / Underground Funk Arp 1
-  [23], [11], [24], [12], [26], [14], [], [23], [11], [24], [12], [26], [14], [], [], [],
-  // BAR 26: Castle / Underground Funk Arp 2
-  [22], [10], [23], [11], [25], [13], [], [22], [10], [23], [11], [25], [13], [], [], [],
-  // BAR 27: Flagpole Fanfare (Victory Ascent 1)
-  [16], [11], [7], [4], [0], [4], [0], [4], [0], [], [], [], [0], [], [], [],
-  // BAR 28: Flagpole Fanfare (Victory Ascent 2)
-  [15], [10], [6], [3], [], [3], [], [3], [], [], [], [], [3], [], [], [],
-  // BAR 29: Level Clear Fanfare (Victory Chords)
-  [13], [9], [5], [1], [], [1], [], [1], [], [], [], [], [0], [], [0], [],
-  // BAR 30: Victory Resolution Hold
-  [0], [], [], [], [0], [], [], [], [0], [], [], [], [], [], [], [],
-  // BAR 31: Outro Turnaround
-  [11], [], [11], [], [9], [], [7], [], [14], [], [12], [], [16], [], [], [],
-  // BAR 32: Final Fanfare Stabs (Smooth loop to Bar 1)
-  [7], [7], [], [7], [], [11], [7], [], [4], [], [], [], [16], [], [], [],
+  // BAR 3
+  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  // BAR 4
+  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [], [],
+  // BAR 5
+  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  // BAR 6
+  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [36], [],
+  // BAR 7
+  [], [], [29], [30], [31], [33], [32], [], [40], [39], [36], [], [39], [36], [34], [],
+  // BAR 8
+  [], [], [29], [30], [31], [33], [32], [], [24], [], [24], [24], [], [], [], [],
+  // BAR 9
+  [], [], [29], [30], [31], [33], [32], [], [40], [39], [36], [], [39], [36], [34], [],
+  // BAR 10
+  [], [], [33], [], [], [34], [], [], [36], [], [], [], [], [], [], [],
+  // BAR 11
+  [], [], [29], [30], [31], [33], [32], [], [40], [39], [36], [], [39], [36], [34], [],
+  // BAR 12
+  [], [], [29], [30], [31], [33], [32], [], [24], [], [24], [24], [], [], [], [],
+  // BAR 13
+  [36], [36], [], [36], [], [36], [34], [], [32], [36], [], [39], [41], [], [], [],
+  // BAR 14
+  [36], [36], [], [36], [], [36], [34], [32], [], [], [], [], [], [], [], [],
+  // BAR 15
+  [36], [36], [], [36], [], [36], [34], [], [32], [36], [], [39], [41], [], [], [],
+  // BAR 16
+  [32], [], [32], [], [], [32], [], [36], [32], [], [], [29], [], [], [], [41],
+  // BAR 17
+  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  // BAR 18
+  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [], [],
+  // BAR 19
+  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  // BAR 20
+  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [36], [],
+  // BAR 21
+  [32], [], [32], [], [34], [], [34], [], [36], [], [36], [], [34], [], [32], [],
+  // BAR 22
+  [32], [], [32], [], [34], [], [34], [], [36], [], [36], [], [34], [], [32], [],
+  // BAR 23
+  [34], [], [34], [], [36], [], [36], [], [37], [], [37], [], [36], [], [34], [],
+  // BAR 24
+  [32], [], [32], [], [34], [], [34], [], [36], [], [36], [], [34], [], [32], [],
+  // BAR 25
+  [48], [36], [47], [35], [46], [34], [], [48], [36], [47], [35], [46], [34], [], [], [],
+  // BAR 26
+  [49], [37], [48], [36], [47], [35], [], [49], [37], [48], [36], [47], [35], [], [], [],
+  // BAR 27
+  [41], [36], [32], [29], [24], [20], [17], [20], [17], [], [], [], [17], [], [], [],
+  // BAR 28
+  [40], [36], [33], [28], [24], [21], [16], [21], [], [], [], [], [16], [], [], [],
+  // BAR 29
+  [38], [34], [31], [26], [22], [19], [14], [19], [], [], [], [], [12], [], [12], [],
+  // BAR 30
+  [12], [], [], [], [12], [], [], [], [12], [], [], [], [], [], [], [],
+  // BAR 31
+  [36], [], [36], [], [34], [], [32], [], [39], [], [37], [], [41], [], [], [],
+  // BAR 32
+  [32], [], [32], [], [], [32], [], [36], [32], [], [], [29], [], [], [], [41],
 ];
 
 const MARIO_TRK1_ACCENTS: boolean[] = [
-  // BARS 1-4
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
-  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, false, false,
-  // BARS 5-8
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, true, false,
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, false, false, false, false, false, false,
-  // BARS 9-12
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, false, false, true, false, false, true, false, false, false, false, false, false, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, false, false, false, false, false, false,
-  // BARS 13-16
-  true, true, false, true, false, true, true, false, true, true, false, true, true, false, false, false,
-  true, true, false, true, false, true, true, true, false, false, false, false, false, false, false, false,
-  true, true, false, true, false, true, true, false, true, true, false, true, true, false, false, false,
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
-  // BARS 17-20
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, false, false,
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, true, false,
-  // BARS 21-24 (Starman)
+  // BAR 1
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 2
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 3
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 4
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
-  // BARS 25-28 (Underground / Flagpole)
-  true, true, true, true, true, true, false, true, true, true, true, true, true, false, false, false,
-  true, true, true, true, true, true, false, true, true, true, true, true, true, false, false, false,
-  true, true, true, true, true, true, true, true, true, false, false, false, true, false, false, false,
-  true, true, true, true, false, true, false, true, false, false, false, false, true, false, false, false,
-  // BARS 29-32 (Victory Fanfare & Outro)
-  true, true, true, true, false, true, false, true, false, false, false, false, true, false, true, false,
-  true, false, false, false, true, false, false, false, true, false, false, false, false, false, false, false,
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, false,
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
+  // BAR 5
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 6
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 7
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 8
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 9
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 10
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 11
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 12
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 13
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 14
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 15
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 16
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 17
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 18
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 19
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 20
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 21
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 22
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 23
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 24
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 25
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 26
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 27
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 28
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 29
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 30
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 31
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 32
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
 ];
 
-// Track 2: Pulse 2 (Harmony Chords / 25% Duty Square Wave - 512 Steps / 32 Bars)
 const MARIO_TRK2_GRID: number[][] = [
-  // BAR 1: Intro Harmony [D4, F#4] Stabs
-  [17, 21], [17, 21], [], [17, 21], [], [18, 23], [17, 21], [], [19, 24], [], [], [], [28], [], [], [],
-  // BAR 2: Hold & Transition
+  // BAR 1
+  [42, 46], [], [42, 46], [], [], [42, 46], [], [44, 48], [42, 46], [], [], [37, 41], [], [], [], [49, 53],
+  // BAR 2
   [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
-  // BAR 3: Harmony Thirds/Sixths under melody
-  [19], [], [], [23], [], [], [28], [], [], [23], [], [21], [], [22], [23], [],
-  // BAR 4: Harmony Run
-  [19], [11], [7], [6], [], [9], [7], [], [11], [], [14], [12], [16], [], [], [],
-  // BAR 5: Harmony Repeat
-  [19], [], [], [23], [], [], [28], [], [], [23], [], [21], [], [22], [23], [],
-  // BAR 6: Harmony Cadence
-  [19], [11], [7], [6], [], [9], [7], [], [11], [], [14], [12], [16], [], [19], [],
-  // BAR 7: B Section Harmony 1
-  [7], [8], [9], [11], [10], [], [18], [17], [14], [], [17], [14], [12], [], [], [],
-  // BAR 8: B Section Harmony 2 (Triple Stabs)
-  [7], [8], [9], [11], [10], [], [4, 7], [4, 7], [4, 7], [], [], [], [], [], [], [],
-  // BAR 9: B Section Harmony 3
-  [7], [8], [9], [11], [10], [], [18], [17], [14], [], [17], [14], [12], [], [], [],
-  // BAR 10: B Section Harmony Turnaround
-  [11], [], [], [12], [], [], [14], [], [], [], [], [], [], [], [], [],
-  // BAR 11: B Section Harmony Repeat 1
-  [7], [8], [9], [11], [10], [], [18], [17], [14], [], [17], [14], [12], [], [], [],
-  // BAR 12: B Section Harmony Repeat 2
-  [7], [8], [9], [11], [10], [], [4, 7], [4, 7], [4, 7], [], [], [], [], [], [], [],
-  // BAR 13: C Section Harmony 1
-  [19], [19], [], [19], [], [19], [21], [], [19], [19], [], [23], [24], [], [], [],
-  // BAR 14: C Section Harmony 2
-  [19], [19], [], [19], [], [19], [21], [19], [], [], [], [], [], [], [], [],
-  // BAR 15: C Section Harmony 3
-  [19], [19], [], [19], [], [19], [21], [], [19], [19], [], [23], [24], [], [], [],
-  // BAR 16: C Section Turnaround
-  [17, 21], [17, 21], [], [17, 21], [], [18, 23], [17, 21], [], [19, 24], [], [], [], [28], [], [], [],
-  // BAR 17: Reprise Harmony 1
-  [19], [], [], [23], [], [], [28], [], [], [23], [], [21], [], [22], [23], [],
-  // BAR 18: Reprise Harmony 2
-  [19], [11], [7], [6], [], [9], [7], [], [11], [], [14], [12], [16], [], [], [],
-  // BAR 19: Reprise Harmony 3
-  [19], [], [], [23], [], [], [28], [], [], [23], [], [21], [], [22], [23], [],
-  // BAR 20: Reprise Harmony 4
-  [19], [11], [7], [6], [], [9], [7], [], [11], [], [14], [12], [16], [], [19], [],
-  // BAR 21: Starman Harmony 1
-  [11], [], [11], [], [14], [], [14], [], [16], [], [16], [], [14], [], [11], [],
-  // BAR 22: Starman Harmony 2
-  [11], [], [11], [], [14], [], [14], [], [16], [], [16], [], [14], [], [11], [],
-  // BAR 23: Starman Harmony 3
-  [14], [], [14], [], [16], [], [16], [], [18], [], [18], [], [16], [], [14], [],
-  // BAR 24: Starman Harmony 4
-  [11], [], [11], [], [14], [], [14], [], [16], [], [16], [], [14], [], [11], [],
-  // BAR 25: Castle Harmony 1
-  [16], [], [], [16], [], [], [16], [], [16], [], [], [16], [], [], [], [],
-  // BAR 26: Castle Harmony 2
-  [15], [], [], [15], [], [], [15], [], [15], [], [], [15], [], [], [], [],
-  // BAR 27: Flagpole Harmony 1
-  [7], [4], [0], [4], [0], [4], [0], [4], [0], [], [], [], [0], [], [], [],
-  // BAR 28: Flagpole Harmony 2
-  [6], [3], [], [3], [], [3], [], [3], [], [], [], [], [3], [], [], [],
-  // BAR 29: Level Clear Harmony 1
-  [5], [1], [], [1], [], [1], [], [1], [], [], [], [], [0], [], [0], [],
-  // BAR 30: Level Clear Harmony 2
-  [4, 7], [], [], [], [4, 7], [], [], [], [4, 7], [], [], [], [], [], [], [],
-  // BAR 31: Outro Harmony 1
-  [19], [], [19], [], [21], [], [19], [], [23], [], [24], [], [28], [], [], [],
-  // BAR 32: Final Harmony Fanfare
-  [17, 21], [17, 21], [], [17, 21], [], [18, 23], [17, 21], [], [19, 24], [], [], [], [28], [], [], [],
+  // BAR 3
+  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  // BAR 4
+  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [], [],
+  // BAR 5
+  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  // BAR 6
+  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [44], [],
+  // BAR 7
+  [], [], [32], [33], [34], [37], [36], [], [44], [43], [39], [], [43], [39], [37], [],
+  // BAR 8
+  [], [], [32], [33], [34], [37], [36], [], [29, 32], [], [29, 32], [29, 32], [], [], [], [],
+  // BAR 9
+  [], [], [32], [33], [34], [37], [36], [], [44], [43], [39], [], [43], [39], [37], [],
+  // BAR 10
+  [], [], [37], [], [], [38], [], [], [39], [], [], [], [], [], [], [],
+  // BAR 11
+  [], [], [32], [33], [34], [37], [36], [], [44], [43], [39], [], [43], [39], [37], [],
+  // BAR 12
+  [], [], [32], [33], [34], [37], [36], [], [29, 32], [], [29, 32], [29, 32], [], [], [], [],
+  // BAR 13
+  [41], [41], [], [41], [], [41], [39], [], [36], [41], [], [43], [44], [], [], [],
+  // BAR 14
+  [41], [41], [], [41], [], [41], [39], [36], [], [], [], [], [], [], [], [],
+  // BAR 15
+  [41], [41], [], [41], [], [41], [39], [], [36], [41], [], [43], [44], [], [], [],
+  // BAR 16
+  [42, 46], [], [42, 46], [], [], [42, 46], [], [44, 48], [42, 46], [], [], [37, 41], [], [], [], [49, 53],
+  // BAR 17
+  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  // BAR 18
+  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [], [],
+  // BAR 19
+  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  // BAR 20
+  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [44], [],
+  // BAR 21
+  [36], [], [36], [], [37], [], [37], [], [39], [], [39], [], [37], [], [36], [],
+  // BAR 22
+  [36], [], [36], [], [37], [], [37], [], [39], [], [39], [], [37], [], [36], [],
+  // BAR 23
+  [37], [], [37], [], [39], [], [39], [], [41], [], [41], [], [39], [], [37], [],
+  // BAR 24
+  [36], [], [36], [], [37], [], [37], [], [39], [], [39], [], [37], [], [36], [],
+  // BAR 25
+  [53], [], [52], [], [51], [], [], [53], [], [52], [], [51], [], [], [], [],
+  // BAR 26
+  [54], [], [53], [], [52], [], [], [54], [], [53], [], [52], [], [], [], [],
+  // BAR 27
+  [44], [41], [36], [32], [29], [24], [20], [24], [20], [], [], [], [20], [], [], [],
+  // BAR 28
+  [43], [40], [36], [31], [28], [24], [19], [24], [], [], [], [], [19], [], [], [],
+  // BAR 29
+  [43], [38], [34], [31], [26], [22], [19], [22], [], [], [], [], [20, 24], [], [20, 24], [],
+  // BAR 30
+  [20, 24], [], [], [], [20, 24], [], [], [], [20, 24], [], [], [], [], [], [], [],
+  // BAR 31
+  [44], [], [44], [], [43], [], [41], [], [43], [], [41], [], [44], [], [], [],
+  // BAR 32
+  [42, 46], [], [42, 46], [], [], [42, 46], [], [44, 48], [42, 46], [], [], [37, 41], [], [], [], [49, 53],
 ];
 
 const MARIO_TRK2_ACCENTS: boolean[] = [
-  // BARS 1-4
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
-  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, false, false,
-  // BARS 5-8
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, true, false,
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, false, false, false, false, false, false,
-  // BARS 9-12
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, false, false, true, false, false, true, false, false, false, false, false, false, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, false, false, false, false, false, false,
-  // BARS 13-16
-  true, true, false, true, false, true, true, false, true, true, false, true, true, false, false, false,
-  true, true, false, true, false, true, true, true, false, false, false, false, false, false, false, false,
-  true, true, false, true, false, true, true, false, true, true, false, true, true, false, false, false,
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
-  // BARS 17-20
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, false, false,
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, true, false,
-  // BARS 21-24 (Starman)
+  // BAR 1
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 2
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 3
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 4
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
-  // BARS 25-28 (Underground / Flagpole)
-  true, false, false, true, false, false, true, false, true, false, false, true, false, false, false, false,
-  true, false, false, true, false, false, true, false, true, false, false, true, false, false, false, false,
-  true, true, true, true, true, true, true, true, true, false, false, false, true, false, false, false,
-  true, true, true, true, false, true, false, true, false, false, false, false, true, false, false, false,
-  // BARS 29-32 (Victory Fanfare & Outro)
-  true, true, true, true, false, true, false, true, false, false, false, false, true, false, true, false,
-  true, false, false, false, true, false, false, false, true, false, false, false, false, false, false, false,
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, false,
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
+  // BAR 5
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 6
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 7
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 8
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 9
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 10
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 11
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 12
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 13
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 14
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 15
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 16
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 17
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 18
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 19
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 20
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 21
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 22
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 23
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 24
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 25
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 26
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 27
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 28
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 29
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 30
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 31
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 32
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
 ];
 
-// Track 3: Triangle (Walking Sub-Bassline - 512 Steps / 32 Bars)
 const MARIO_TRK3_GRID: number[][] = [
-  // BAR 1: Intro Bass (D3-D3-D3-D3-D3-G3... G3)
-  [33], [33], [], [33], [], [33], [33], [], [28], [], [], [], [28], [], [], [],
-  // BAR 2: Intro Bass Hold
+  // BAR 1
+  [58], [], [58], [], [], [58], [], [58], [58], [], [], [53], [], [], [], [65],
+  // BAR 2
   [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
-  // BAR 3: Walking Bass Groove 1
-  [35], [], [], [28], [], [], [31], [], [], [26], [], [24], [], [25], [26], [],
-  // BAR 4: Bouncy Triangle Arp 1
-  [28], [35], [31], [30], [], [33], [31], [], [35], [], [26], [24], [28], [], [], [],
-  // BAR 5: Walking Bass Groove 2
-  [35], [], [], [28], [], [], [31], [], [], [26], [], [24], [], [25], [26], [],
-  // BAR 6: Walking Bass Cadence
-  [28], [35], [31], [30], [], [33], [31], [], [35], [], [26], [24], [28], [], [35], [],
-  // BAR 7: B Section Bass 1
-  [35], [], [], [28], [], [], [35], [], [], [26], [], [], [33], [], [], [],
-  // BAR 8: B Section Bass 2 (Triple Stabs)
-  [35], [], [], [28], [], [], [35], [35], [35], [], [], [], [28], [], [], [],
-  // BAR 9: B Section Bass 3
-  [35], [], [], [28], [], [], [35], [], [], [26], [], [], [33], [], [], [],
-  // BAR 10: B Section Bass Turnaround
-  [32], [], [], [33], [], [], [35], [], [], [28], [], [], [35], [], [], [],
-  // BAR 11: B Section Bass Repeat 1
-  [35], [], [], [28], [], [], [35], [], [], [26], [], [], [33], [], [], [],
-  // BAR 12: B Section Bass Repeat 2
-  [35], [], [], [28], [], [], [35], [35], [35], [], [], [], [28], [], [], [],
-  // BAR 13: C Section Bass 1
-  [35], [35], [], [35], [], [35], [33], [], [31], [35], [], [26], [28], [], [], [],
-  // BAR 14: C Section Bass 2
-  [35], [35], [], [35], [], [35], [33], [31], [], [], [], [], [28], [], [], [],
-  // BAR 15: C Section Bass 3
-  [35], [35], [], [35], [], [35], [33], [], [31], [35], [], [26], [28], [], [], [],
-  // BAR 16: C Section Bass Turnaround
-  [33], [33], [], [33], [], [33], [33], [], [28], [], [], [], [28], [], [], [],
-  // BAR 17: Reprise Bass 1
-  [35], [], [], [28], [], [], [31], [], [], [26], [], [24], [], [25], [26], [],
-  // BAR 18: Reprise Bass 2
-  [28], [35], [31], [30], [], [33], [31], [], [35], [], [26], [24], [28], [], [], [],
-  // BAR 19: Reprise Bass 3
-  [35], [], [], [28], [], [], [31], [], [], [26], [], [24], [], [25], [26], [],
-  // BAR 20: Reprise Bass Cadence
-  [28], [35], [31], [30], [], [33], [31], [], [35], [], [26], [24], [28], [], [35], [],
-  // BAR 21: Starman Bass Octave Pump 1
-  [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23],
-  // BAR 22: Starman Bass Octave Pump 2
-  [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23],
-  // BAR 23: Starman Bass Octave Pump 3
-  [33], [21], [33], [21], [33], [21], [33], [21], [33], [21], [33], [21], [33], [21], [33], [21],
-  // BAR 24: Starman Bass Octave Pump 4
-  [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23], [35], [23],
-  // BAR 25: Castle Sub Bass 1
-  [35], [], [], [35], [], [], [35], [], [35], [], [], [35], [], [], [], [],
-  // BAR 26: Castle Sub Bass 2
-  [34], [], [], [34], [], [], [34], [], [34], [], [], [34], [], [], [], [],
-  // BAR 27: Flagpole Bass 1
-  [28], [35], [31], [28], [35], [28], [35], [28], [35], [], [], [], [35], [], [], [],
-  // BAR 28: Flagpole Bass 2
-  [27], [34], [30], [27], [], [27], [], [27], [], [], [], [], [27], [], [], [],
-  // BAR 29: Level Clear Bass 1
-  [25], [32], [28], [25], [], [25], [], [25], [], [], [], [], [35], [], [35], [],
-  // BAR 30: Level Clear Bass 2
-  [35], [], [], [], [35], [], [], [], [35], [], [], [], [], [], [], [],
-  // BAR 31: Outro Walking Bass
-  [35], [], [35], [], [33], [], [31], [], [26], [], [24], [], [28], [], [], [],
-  // BAR 32: Final Bass Fanfare
-  [33], [33], [], [33], [], [33], [33], [], [28], [], [], [], [28], [], [], [],
+  // BAR 3
+  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  // BAR 4
+  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [], [],
+  // BAR 5
+  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  // BAR 6
+  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [60], [],
+  // BAR 7
+  [60], [], [65], [], [60], [], [65], [], [60], [], [67], [], [60], [], [67], [],
+  // BAR 8
+  [60], [], [65], [], [60], [], [65], [], [60], [], [60], [60], [], [], [], [],
+  // BAR 9
+  [60], [], [65], [], [60], [], [65], [], [60], [], [67], [], [60], [], [67], [],
+  // BAR 10
+  [], [], [64], [], [], [62], [], [], [60], [], [], [], [], [], [], [],
+  // BAR 11
+  [60], [], [65], [], [60], [], [65], [], [60], [], [67], [], [60], [], [67], [],
+  // BAR 12
+  [60], [], [65], [], [60], [], [65], [], [60], [], [60], [60], [], [], [], [],
+  // BAR 13
+  [60], [60], [], [60], [], [60], [58], [], [56], [60], [], [63], [65], [], [], [],
+  // BAR 14
+  [60], [60], [], [60], [], [60], [58], [56], [], [], [], [], [], [], [], [],
+  // BAR 15
+  [60], [60], [], [60], [], [60], [58], [], [56], [60], [], [63], [65], [], [], [],
+  // BAR 16
+  [58], [], [58], [], [], [58], [], [58], [58], [], [], [53], [], [], [], [65],
+  // BAR 17
+  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  // BAR 18
+  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [], [],
+  // BAR 19
+  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  // BAR 20
+  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [60], [],
+  // BAR 21
+  [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72],
+  // BAR 22
+  [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72],
+  // BAR 23
+  [62], [74], [62], [74], [62], [74], [62], [74], [62], [74], [62], [74], [62], [74], [62], [74],
+  // BAR 24
+  [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72],
+  // BAR 25
+  [60], [], [59], [], [58], [], [], [60], [], [59], [], [58], [], [], [], [],
+  // BAR 26
+  [61], [], [60], [], [59], [], [], [61], [], [60], [], [59], [], [], [], [],
+  // BAR 27
+  [60], [56], [53], [48], [44], [41], [36], [41], [36], [], [], [], [36], [], [], [],
+  // BAR 28
+  [64], [60], [57], [52], [48], [45], [40], [45], [], [], [], [], [40], [], [], [],
+  // BAR 29
+  [62], [58], [55], [50], [46], [43], [38], [43], [], [], [], [], [48], [], [48], [],
+  // BAR 30
+  [48], [], [], [], [48], [], [], [], [48], [], [], [], [], [], [], [],
+  // BAR 31
+  [60], [], [60], [], [58], [], [56], [], [67], [], [65], [], [60], [], [], [],
+  // BAR 32
+  [58], [], [58], [], [], [58], [], [58], [58], [], [], [53], [], [], [], [65],
 ];
 
 const MARIO_TRK3_ACCENTS: boolean[] = [
-  // BARS 1-4
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
-  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, false, false,
-  // BARS 5-8
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, true, false,
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, false, false, false, false, false, false,
-  // BARS 9-12
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, false, false, true, false, false, true, false, false, false, false, false, false, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, true, true, true, false, false, false,
-  true, true, true, true, true, false, true, true, true, false, false, false, false, false, false, false,
-  // BARS 13-16
-  true, true, false, true, false, true, true, false, true, true, false, true, true, false, false, false,
-  true, true, false, true, false, true, true, true, false, false, false, false, false, false, false, false,
-  true, true, false, true, false, true, true, false, true, true, false, true, true, false, false, false,
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
-  // BARS 17-20
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, false, false,
-  true, false, false, true, false, false, true, false, false, true, false, true, false, true, true, false,
-  true, true, true, true, false, true, true, false, true, false, true, true, true, false, true, false,
-  // BARS 21-24 (Starman)
+  // BAR 1
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 2
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 3
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 4
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
-  // BARS 25-28 (Underground / Flagpole)
-  true, false, false, true, false, false, true, false, true, false, false, true, false, false, false, false,
-  true, false, false, true, false, false, true, false, true, false, false, true, false, false, false, false,
-  true, true, true, true, true, true, true, true, true, false, false, false, true, false, false, false,
-  true, true, true, true, false, true, false, true, false, false, false, false, true, false, false, false,
-  // BARS 29-32 (Victory Fanfare & Outro)
-  true, true, true, true, false, true, false, true, false, false, false, false, true, false, true, false,
-  true, false, false, false, true, false, false, false, true, false, false, false, false, false, false, false,
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, false, false,
-  true, true, false, true, false, true, true, false, true, false, false, false, true, false, false, false,
+  // BAR 5
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 6
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 7
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 8
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 9
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 10
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 11
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 12
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 13
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 14
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 15
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 16
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 17
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 18
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 19
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 20
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 21
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 22
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 23
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 24
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 25
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 26
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 27
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 28
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 29
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 30
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 31
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  // BAR 32
+  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
 ];
 
 export const INITIAL_TRACKS: TrackData[] = [

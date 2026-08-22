@@ -172,7 +172,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [synthBpm, setSynthBpm] = useState<number>(modularSynth.getBpm());
   const [synthDelayMix, setSynthDelayMix] = useState<number>(0.18);
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
-  const [octaveScope, setOctaveScope] = useState<'all' | 5 | 4 | 3>(4);
+  const [octaveScope, setOctaveScope] = useState<'all' | 7 | 6 | 5 | 4 | 3 | 2 | 1>(4);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
   const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(false);
@@ -1177,8 +1177,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           // Random Chord Arp
                           for (let i = 0; i < 16; i++) {
                             const actualStep = activeStepPage * 16 + i;
-                            const root = Math.floor(Math.random() * 16) + 12;
-                            const chord = Math.random() > 0.4 ? [root, root + 4, root + 7].filter((n) => n < 36) : [];
+                            const root = Math.floor(Math.random() * 24) + 24;
+                            const chord = Math.random() > 0.4 ? [root, root + 4, root + 7].filter((n) => n < 88) : [];
                             modularSynth.setTrackStepNotes(activeTrackId, actualStep, chord);
                           }
                           setTracksState([...modularSynth.getTracks()]);
@@ -1207,20 +1207,20 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                     <span className="opacity-30">|</span>
 
-                    {/* Octave Scope Quick Selectors */}
+                    {/* Octave Scope Quick Selectors (Full 88 Piano Keys) */}
                     <div className="flex items-center gap-1">
                       <span className="opacity-60">OCTAVES:</span>
-                      {(['all', 5, 4, 3] as const).map((sc) => (
+                      {(['all', 6, 5, 4, 3, 2, 1] as const).map((sc) => (
                         <button
                           key={sc}
                           onClick={() => { setOctaveScope(sc); playSound('click'); }}
-                          className={`px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
                             octaveScope === sc
                               ? 'border-white bg-white/20 text-white shadow-sm'
                               : 'border-white/20 text-[#eceff4] opacity-70 hover:opacity-100'
                           }`}
                         >
-                          {sc === 'all' ? 'ALL 36' : `OCT ${sc}`}
+                          {sc === 'all' ? 'ALL 88' : `OCT ${sc}`}
                         </button>
                       ))}
                     </div>
