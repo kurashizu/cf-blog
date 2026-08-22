@@ -2112,13 +2112,19 @@ class ModularSynth {
     }
 
     const baseCutoff = Math.max(40, Math.min(16000, dynamicCutoffBase));
-    const peakCutoff = Math.max(40, Math.min(18000, baseCutoff + vcfAmount * (14000 - baseCutoff)));
-    const sustainCutoff = Math.max(40, Math.min(18000, baseCutoff + vcfAmount * vcfSus * (14000 - baseCutoff)));
+    
+    // Correctly scale positive and negative VCF envelope amounts
+    const peakDelta = vcfAmount >= 0 
+      ? vcfAmount * (16000 - baseCutoff) 
+      : vcfAmount * (baseCutoff - 40);
+      
+    const peakCutoff = Math.max(40, Math.min(20000, baseCutoff + peakDelta));
+    const sustainCutoff = Math.max(40, Math.min(20000, baseCutoff + peakDelta * vcfSus));
 
     // VCF Dynamic Sweep
-    filter.frequency.setValueAtTime(Math.max(40, baseCutoff * 0.7), t);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(40, peakCutoff), t + vcfAtt);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(40, sustainCutoff), t + vcfAtt + vcfDec);
+    filter.frequency.setValueAtTime(baseCutoff, t);
+    filter.frequency.exponentialRampToValueAtTime(peakCutoff, t + vcfAtt);
+    filter.frequency.exponentialRampToValueAtTime(sustainCutoff, t + vcfAtt + vcfDec);
     filter.Q.setValueAtTime(dynamicResonance, t);
 
     // AMP Dynamic Envelope
@@ -2135,7 +2141,7 @@ class ModularSynth {
     gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseStartTime + ampRel);
 
     filter.frequency.setValueAtTime(sustainCutoff, releaseStartTime);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(40, baseCutoff * 0.5), releaseStartTime + vcfRel);
+    filter.frequency.exponentialRampToValueAtTime(baseCutoff, releaseStartTime + vcfRel);
 
     const totalDuration = Math.max(0.2, (releaseStartTime - t) + Math.max(ampRel, vcfRel) + 0.1);
 

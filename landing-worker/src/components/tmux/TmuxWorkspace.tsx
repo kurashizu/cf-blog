@@ -508,6 +508,10 @@ export const TmuxWorkspace: React.FC = () => {
   const [rackPage, setRackPage] = useState<1 | 2>(1);
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Patch Management State
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
   // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow & rAF Batching
   useEffect(() => {
     let animId: number = 0;
@@ -535,6 +539,106 @@ export const TmuxWorkspace: React.FC = () => {
       if (animId) cancelAnimationFrame(animId);
     };
   }, [pageFollow]);
+
+  // --- Patch Management ---
+  const STORAGE_KEY = 'krsz-synth-patch-v1';
+
+  interface SynthPatchData {
+    tracks: Partial<TrackData>[];
+    bpm: number;
+    meter: TimeSignature;
+    totalSteps: number;
+  }
+
+  const gatherPatchData = (): SynthPatchData => ({
+    tracks: modularSynth.getTracks(),
+    bpm: synthBpm,
+    meter: timeMeter,
+    totalSteps: totalPatternSteps,
+  });
+
+  const applyPatchData = (data: SynthPatchData) => {
+    if (data.bpm) {
+      setSynthBpm(data.bpm);
+      modularSynth.setBpm(data.bpm);
+    }
+    if (data.meter) {
+      setTimeMeter(data.meter);
+      modularSynth.setMeter(data.meter);
+    }
+    if (data.totalSteps) {
+      setTotalPatternSteps(data.totalSteps);
+      modularSynth.setTotalSteps(data.totalSteps);
+    }
+    if (data.tracks && Array.isArray(data.tracks)) {
+      data.tracks.forEach((tData) => {
+        if (tData.id !== undefined) modularSynth.updateTrack(tData.id, tData);
+      });
+      setTracksState([...modularSynth.getTracks()]);
+    }
+  };
+
+  const showSaveStatus = (msg: string) => {
+    setSaveStatus(msg);
+    setTimeout(() => setSaveStatus(null), 2000);
+  };
+
+  const handleSavePatch = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(gatherPatchData()));
+      showSaveStatus('✓ SAVED');
+      playSound('click');
+    } catch (err) {
+      showSaveStatus('X ERR');
+    }
+  };
+
+  const handleLoadPatch = () => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        applyPatchData(JSON.parse(stored));
+        showSaveStatus('✓ LOADED');
+        playSound('toggle');
+      } else {
+        showSaveStatus('X EMPTY');
+      }
+    } catch (err) {
+      showSaveStatus('X ERR');
+    }
+  };
+
+  const handleExportPatch = () => {
+    const patch = gatherPatchData();
+    const blob = new Blob([JSON.stringify(patch, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `krsz-patch-export.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    playSound('click');
+  };
+
+  const handleImportPatch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        applyPatchData(parsed);
+        showSaveStatus('✓ IMPORTED');
+        playSound('toggle');
+      } catch (err) {
+        showSaveStatus('X INVALID');
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // Real-Time Clock & Animation Loop
   useEffect(() => {
@@ -1649,6 +1753,60 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     />
                   </div>
 
+                  {/* Sequence Length: Presets (16..512) + Custom Step Input */}
+                  <div className="flex items-center gap-1">
+                    <span className="opacity-60 font-bold" title="Pattern Total Steps">LEN:</span>
+                    {([16, 32, 64, 128, 256, 512] as const).map((len) => (
+                      <button
+                        key={len}
+                        onClick={() => {
+                          setTotalPatternSteps(len);
+                          modularSynth.setTotalSteps(len);
+                          const maxPages = Math.max(1, Math.ceil(len / 32));
+                          if (activeStepPage >= maxPages) setActiveStepPage(0);
+                          playSound('click');
+                        }}
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          totalPatternSteps === len
+                            ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                      >
+                        {len}
+                      </button>
+                    ))}
+                    {/* Custom Input for steps > 512 or arbitrary lengths (clean, no spin arrows) */}
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={totalPatternSteps || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
+                          if (!isNaN(val)) {
+                            const clamped = Math.max(1, Math.min(4096, val));
+                            setTotalPatternSteps(clamped);
+                            modularSynth.setTotalSteps(clamped);
+                          } else if (e.target.value === '') {
+                            setTotalPatternSteps(0);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!totalPatternSteps || totalPatternSteps < 8) {
+                            setTotalPatternSteps(8);
+                            modularSynth.setTotalSteps(8);
+                          }
+                        }}
+                        className={`w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          ![16, 32, 64, 128, 256, 512].includes(totalPatternSteps)
+                            ? 'border-[#98c379] text-[#98c379]'
+                            : 'border-white/20 text-white/70 focus:border-white/60'
+                        }`}
+                        title="Custom step length (e.g. 1184 for Mario theme)"
+                      />
+                    </div>
+                  </div>
+
                   {/* METER Time Signature (Semantically Co-located with BPM & Transport) */}
                   <div className="flex items-center gap-1 border-l border-white/15 pl-2">
                     <span className="opacity-70 font-bold" title="Time Signature / Meter">METER:</span>
@@ -1747,6 +1905,39 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (SNAP, DUR, LEN, PAGE NAVIGATION) */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
                 <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <input type="file" ref={fileInputRef} onChange={handleImportPatch} accept=".json" className="hidden" />
+                    <button onClick={handleSavePatch} className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors">SAVE</button>
+                    <button onClick={handleLoadPatch} className="px-2 py-0.5 border border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20 rounded-xs font-bold transition-colors">LOAD</button>
+                    <button onClick={handleExportPatch} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Export patch as JSON">EXP</button>
+                    <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Import JSON patch">IMP</button>
+                    {saveStatus && <span className="text-[#98c379] font-bold ml-1">{saveStatus}</span>}
+                  </div>
+                  <div className="w-px h-4 bg-white/15 mx-1" />
+                          {/* Sound Design Presets */}
+                          <div className="flex items-center gap-1">
+                            <span className="text-white/50 font-bold text-xs">PRESETS:</span>
+                            {[
+                              { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
+                              { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
+                              { name: 'BRASS', preset: { osc1Waveform: 'sawtooth' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 12, cutoff: 2400, resonance: 2.0, ampAttack: 0.04, ampDecay: 0.25, ampSustain: 0.8, ampRelease: 0.2, filterAttack: 0.06, filterDecay: 0.2, filterSustain: 0.5, filterRelease: 0.15, filterEnvAmount: 0.55 } },
+                              { name: 'LEAD', preset: { osc1Waveform: 'pulse' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 8, cutoff: 6500, resonance: 2.8, ampAttack: 0.005, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.18, filterAttack: 0.005, filterDecay: 0.25, filterSustain: 0.6, filterRelease: 0.12, filterEnvAmount: 0.4 } },
+                              { name: 'NOISE', preset: { osc1Waveform: 'noise' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 2200, resonance: 4.8, ampAttack: 0.002, ampDecay: 0.05, ampSustain: 0.0, ampRelease: 0.035, filterAttack: 0.002, filterDecay: 0.04, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.8 } },
+                            ].map((p) => (
+                              <button
+                                key={p.name}
+                                onClick={() => {
+                                  handleTrackParamChange(p.preset);
+                                  playSound('toggle');
+                                }}
+                                className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
+                              >
+                                {p.name}
+                              </button>
+                            ))}
+                          </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   {/* Grid Snap / Quantization Alignment (SNAP) */}
                   <div className="flex items-center gap-1">
                     <span className="opacity-60 font-bold" title="Grid Quantization / Snap Alignment">SNAP:</span>
@@ -1794,59 +1985,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                 {/* Right: Sequence Length Presets + Custom Input + Page Navigation */}
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Sequence Length: Presets (16..512) + Custom Step Input */}
-                  <div className="flex items-center gap-1">
-                    <span className="opacity-60 font-bold" title="Pattern Total Steps">LEN:</span>
-                    {([16, 32, 64, 128, 256, 512] as const).map((len) => (
-                      <button
-                        key={len}
-                        onClick={() => {
-                          setTotalPatternSteps(len);
-                          modularSynth.setTotalSteps(len);
-                          const maxPages = Math.max(1, Math.ceil(len / 32));
-                          if (activeStepPage >= maxPages) setActiveStepPage(0);
-                          playSound('click');
-                        }}
-                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          totalPatternSteps === len
-                            ? 'border-[#98c379] bg-[#98c379] text-black font-black'
-                            : 'border-white/20 text-white/70 hover:border-white/50'
-                        }`}
-                      >
-                        {len}
-                      </button>
-                    ))}
-                    {/* Custom Input for steps > 512 or arbitrary lengths (clean, no spin arrows) */}
-                    <div className="flex items-center gap-0.5">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={totalPatternSteps || ''}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
-                          if (!isNaN(val)) {
-                            const clamped = Math.max(1, Math.min(4096, val));
-                            setTotalPatternSteps(clamped);
-                            modularSynth.setTotalSteps(clamped);
-                          } else if (e.target.value === '') {
-                            setTotalPatternSteps(0);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!totalPatternSteps || totalPatternSteps < 8) {
-                            setTotalPatternSteps(8);
-                            modularSynth.setTotalSteps(8);
-                          }
-                        }}
-                        className={`w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          ![16, 32, 64, 128, 256, 512].includes(totalPatternSteps)
-                            ? 'border-[#98c379] text-[#98c379]'
-                            : 'border-white/20 text-white/70 focus:border-white/60'
-                        }`}
-                        title="Custom step length (e.g. 1184 for Mario theme)"
-                      />
-                    </div>
-                  </div>
+
 
                   {/* Compact DAW Page Navigation (16 columns = 32 physical sub-steps per page) */}
                   <div className="flex items-center gap-1 border-l border-white/15 pl-1.5">
@@ -1897,16 +2036,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
 
                                                                                                                                                           {/* L-SHAPE SYNTHESIZER & PIANO ROLL WORKSTATION TOPOLOGY */}
-              <div className="flex-1 min-h-0 flex flex-col gap-1.5 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-5 lg:grid-rows-[minmax(0,1fr)_155px] gap-1.5">
                 
                 {/* UPPER L-SHAPE: LEFT (MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO] */}
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-1.5 flex-1 min-h-0 overflow-hidden">
+                <div className="contents">
                   
                   {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING) */}
-                  <div className="lg:col-span-1 grid gap-1.5 min-w-0 h-full overflow-hidden" style={{ gridTemplateRows: '2fr 1fr 1fr' }}>
+                  <div className="order-1 lg:order-1 lg:col-span-1 flex flex-col lg:grid gap-1.5 min-w-0 lg:h-full lg:overflow-hidden" style={{ gridTemplateRows: '2fr 1fr 1fr' }}>
                     
                     {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID - ENLARGED 24px) */}
-                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[160px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>1. DUAL OSC</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2044,7 +2183,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 LARGE HORIZONTAL KNOBS 32px) */}
-                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[100px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2077,7 +2216,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#c678dd"
-                            size={32}
+                          size={40}
                             onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
                           />
                           <RotaryKnob
@@ -2096,7 +2235,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 上2下1 KNOBS 28px, No Divider) */}
-                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[120px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2173,7 +2312,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* RIGHT COLUMN: PIANO ROLL MATRIX WORKSPACE (4/5 RATIO) */}
-                  <div className="lg:col-span-4 flex flex-col h-full min-h-0 overflow-hidden">
+                  <div className="order-3 lg:order-2 lg:col-span-4 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & INTEGRATED PRESETS */}
                     {(() => {
                       const viewportStartCol = activeStepPage * 16;
@@ -2391,7 +2530,6 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                                 return (
                                   <div key={colIdx} className="h-full">
-                                    {snapDiv === '1/8' ? (
                                       <div className="flex h-full gap-0.5">
                                         {[0, 1].map((subCol) => {
                                           const step = globalCol * 2 + subCol;
@@ -2416,22 +2554,6 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                           );
                                         })}
                                       </div>
-                                    ) : (
-                                      <button
-                                        onClick={() => handleAccentCellClick(colIdx)}
-                                        className={`w-full py-0.5 text-center font-bold rounded-xs cursor-pointer border transition-all text-xs ${
-                                          isCurrent
-                                            ? 'border-white bg-white text-black'
-                                            : isAccent
-                                            ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
-                                            : isBarStart
-                                            ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
-                                            : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
-                                        }`}
-                                      >
-                                        {colIdx + 1}
-                                      </button>
-                                    )}
                                   </div>
                                 );
                               })}
@@ -2447,10 +2569,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
 
                 {/* BOTTOM L-SHAPE BASE: COMPACT h-[155px], TALL ENVELOPE CURVE & FADERS, ZERO OVERFLOW (MODULES 4, 5, 6, 7) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-1.5 text-xs h-[155px] shrink-0">
+                <div className="order-2 lg:order-3 lg:col-span-5 lg:row-span-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-1.5 text-xs lg:h-[155px] shrink-0">
                   
                   {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (2:1 RATIO -> LEFT 2 COLS: TALL SVG CURVE, RIGHT 1 COL: 4 TALL ADSR FADERS) */}
-                  <div className="xl:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  <div className="xl:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-2">
@@ -2587,7 +2709,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={0.2}
                           unit="Hz"
                           color="#c678dd"
-                          size={32}
+                          size={40}
                           onChange={(v) => handleTrackParamChange({ lfoRate: v })}
                         />
                       </div>
@@ -2688,7 +2810,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={10}
                             unit="ms"
                             color="#e06c75"
-                            size={32}
+                            size={40}
                             onChange={(v) => {
                               const t = v / 1000;
                               setSynthDelayTime(t);
@@ -2705,7 +2827,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#e06c75"
-                            size={32}
+                            size={40}
                             onChange={(v) => {
                               const fb = v / 100;
                               setSynthDelayFeedback(fb);
@@ -2722,7 +2844,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#e06c75"
-                            size={32}
+                            size={40}
                             onChange={(v) => {
                               const m = v / 100;
                               setSynthDelayMix(m);
@@ -2743,7 +2865,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#c678dd"
-                            size={32}
+                          size={40}
                             onChange={(v) => {
                               const rm = v / 100;
                               setSynthReverbMix(rm);
@@ -2760,7 +2882,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#e5c07b"
-                            size={32}
+                            size={40}
                             onChange={(v) => {
                               const d = v / 100;
                               setSynthDrive(d);
@@ -2773,7 +2895,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* MODULE 7: OUT (EXPANDED TO xl:col-span-4 -> WIDE SCREEN GRAPH VISUALIZER) */}
-                  <div className="xl:col-span-4 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  <div className="xl:col-span-4 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     <div className="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <span className="text-white text-xs font-black">7. OUT</span>
