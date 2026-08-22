@@ -126,6 +126,10 @@ export interface TrackData {
   filterRelease: number;
   filterEnvAmount: number; // -1.0 to +1.0
 
+  pitchAttack?: number;
+  pitchDecay?: number;
+  pitchEnvAmount?: number; // Amount in octaves (e.g. 0 to 4)
+
   lfoWaveform: LfoWaveform;
   lfoRate: number;      // 0.1 to 20.0 Hz
   lfoDepth: number;     // 0.0 to 1.0
@@ -1618,9 +1622,9 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 3,
-    name: 'TRK 4: NOISE (PERCUSSION)',
+    name: 'TRK 4: DRUM (SNARE/HAT)',
     color: '#e06c75',
-    volume: 0.9,
+    volume: 1.0,
     pan: 0.05,
     muted: false,
     solo: false,
@@ -1628,7 +1632,7 @@ export const INITIAL_TRACKS: TrackData[] = [
     osc1Waveform: 'noise',
     osc1Gain: 0.95,
     osc2Waveform: 'triangle',
-    osc2Gain: 0.15,
+    osc2Gain: 0.55,
     osc2Ratio: 1.0,
     detuneCents: 0,
     phaseOffset: 0,
@@ -1640,25 +1644,29 @@ export const INITIAL_TRACKS: TrackData[] = [
     blendMode: 'layer',
     morphAmount: 0.0,
 
-    filterType: 'bandpass',
-    cutoff: 6500,
-    resonance: 3.2,
-    envFilterMod: 0.4,
+    filterType: 'highpass',
+    cutoff: 800,
+    resonance: 1.5,
+    envFilterMod: 0.5,
 
-    attack: 0.002,
-    decay: 0.05,
+    attack: 0.001,
+    decay: 0.18,
     sustain: 0.0,
-    release: 0.035,
-    ampAttack: 0.002,
-    ampDecay: 0.05,
+    release: 0.15,
+    ampAttack: 0.001,
+    ampDecay: 0.18,
     ampSustain: 0.0,
-    ampRelease: 0.035,
+    ampRelease: 0.15,
 
-    filterAttack: 0.002,
-    filterDecay: 0.04,
+    filterAttack: 0.001,
+    filterDecay: 0.12,
     filterSustain: 0.0,
-    filterRelease: 0.03,
-    filterEnvAmount: 0.7,
+    filterRelease: 0.1,
+    filterEnvAmount: 0.5,
+
+    pitchEnvAmount: 3.5, // +3.5 octaves punch
+    pitchAttack: 0.001,
+    pitchDecay: 0.04,
 
     lfoWaveform: 'square',
     lfoRate: 10.0,
@@ -2004,11 +2012,21 @@ class ModularSynth {
     const startT1 = t;
     const startT2 = t + Math.min(0.01, phaseDelaySec);
 
+    const pEnvAmt = track.pitchEnvAmount ?? 0;
+    const pAtt = Math.max(0.001, track.pitchAttack ?? 0.002);
+    const pDec = Math.max(0.005, track.pitchDecay ?? 0.05);
+    const pRatio = Math.pow(2, pEnvAmt);
+
     if (track.osc1Waveform === 'noise' && track.osc2Waveform === 'noise') {
       if (!this.noiseBuffer) this.initNoiseBuffer();
       noiseSource = ctx.createBufferSource();
       noiseSource.buffer = this.noiseBuffer;
       noiseSource.loop = true;
+      if (pEnvAmt !== 0) {
+        noiseSource.playbackRate.setValueAtTime(1.0, t);
+        noiseSource.playbackRate.exponentialRampToValueAtTime(pRatio, t + pAtt);
+        noiseSource.playbackRate.exponentialRampToValueAtTime(1.0, t + pAtt + pDec);
+      }
       noiseSource.connect(voiceMix);
       noiseSource.start(startT1);
     } else {
@@ -2017,6 +2035,11 @@ class ModularSynth {
         noiseSource = ctx.createBufferSource();
         noiseSource.buffer = this.noiseBuffer;
         noiseSource.loop = true;
+        if (pEnvAmt !== 0) {
+          noiseSource.playbackRate.setValueAtTime(1.0, t);
+          noiseSource.playbackRate.exponentialRampToValueAtTime(pRatio, t + pAtt);
+          noiseSource.playbackRate.exponentialRampToValueAtTime(1.0, t + pAtt + pDec);
+        }
         const g1 = ctx.createGain();
         g1.gain.setValueAtTime(track.osc1Gain, t);
         noiseSource.connect(g1);
@@ -2026,12 +2049,20 @@ class ModularSynth {
         osc1 = ctx.createOscillator();
         osc1.type = track.osc1Waveform;
         osc1.frequency.setValueAtTime(baseFreq, t);
+        if (pEnvAmt !== 0) {
+          osc1.frequency.exponentialRampToValueAtTime(baseFreq * pRatio, t + pAtt);
+          osc1.frequency.exponentialRampToValueAtTime(baseFreq, t + pAtt + pDec);
+        }
       }
 
       const osc2Freq = baseFreq * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200);
       osc2 = ctx.createOscillator();
       osc2.type = track.osc2Waveform === 'noise' ? 'sawtooth' : track.osc2Waveform;
       osc2.frequency.setValueAtTime(osc2Freq, t);
+      if (pEnvAmt !== 0) {
+        osc2.frequency.exponentialRampToValueAtTime(osc2Freq * pRatio, t + pAtt);
+        osc2.frequency.exponentialRampToValueAtTime(osc2Freq, t + pAtt + pDec);
+      }
 
       if (track.blendMode === 'fm' && osc1) {
         const fmGain = ctx.createGain();

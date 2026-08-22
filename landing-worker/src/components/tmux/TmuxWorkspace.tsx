@@ -503,7 +503,7 @@ export const TmuxWorkspace: React.FC = () => {
   const fftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [timeBase, setTimeBase] = useState<'0.25x' | '0.5x' | '1x' | '2x' | '4x' | '8x' | '16x'>('1x');
-  const [activeEnvTab, setActiveEnvTab] = useState<'amp' | 'vcf'>('amp');
+  const [activeEnvTab, setActiveEnvTab] = useState<'amp' | 'vcf' | 'pit'>('amp');
   const [activeOutVisualizer, setActiveOutVisualizer] = useState<'fft' | 'scope'>('fft');
   const [rackPage, setRackPage] = useState<1 | 2>(1);
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
@@ -2598,6 +2598,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           >
                             VCF
                           </button>
+<button
+                            onClick={() => { setActiveEnvTab('pit'); playSound('click'); }}
+                            className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                              activeEnvTab === 'pit'
+                                ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            PIT
+                          </button>
                         </div>
                       </div>
                       <span className="text-white/40 font-mono text-xs">──►</span>
@@ -2609,11 +2619,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <div className="col-span-2 flex flex-col justify-between h-full py-0.5">
                         <div className="flex-1 flex items-center justify-center">
                           <AdsrVisualizer
-                            attack={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
-                            decay={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : currentTrack.filterDecay}
-                            sustain={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : currentTrack.filterSustain}
-                            release={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : currentTrack.filterRelease}
-                            color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                            attack={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : activeEnvTab === 'vcf' ? currentTrack.filterAttack : (currentTrack.pitchAttack ?? 0.01)}
+                            decay={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : activeEnvTab === 'vcf' ? currentTrack.filterDecay : (currentTrack.pitchDecay ?? 0.1)}
+                            sustain={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : activeEnvTab === 'vcf' ? currentTrack.filterSustain : 0}
+                            release={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : activeEnvTab === 'vcf' ? currentTrack.filterRelease : 0.01}
+                            color={activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b'}
                           />
                         </div>
                       </div>
@@ -2622,54 +2632,57 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <div className="col-span-1 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5">
                         <HardwareFader
                           label="A"
-                          value={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
-                          min={0.003}
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : activeEnvTab === 'vcf' ? currentTrack.filterAttack : (currentTrack.pitchAttack ?? 0.01)}
+                          min={0.001}
                           max={0.8}
                           step={0.01}
-                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          color={activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b'}
                           height={46}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampAttack: v, attack: v });
-                            else handleTrackParamChange({ filterAttack: v });
+                            else if (activeEnvTab === 'vcf') handleTrackParamChange({ filterAttack: v });
+                            else handleTrackParamChange({ pitchAttack: v });
                           }}
                         />
                         <HardwareFader
                           label="D"
-                          value={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : currentTrack.filterDecay}
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampDecay ?? currentTrack.decay) : activeEnvTab === 'vcf' ? currentTrack.filterDecay : (currentTrack.pitchDecay ?? 0.1)}
                           min={0.01}
                           max={1.0}
                           step={0.01}
-                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          color={activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b'}
                           height={46}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampDecay: v, decay: v });
-                            else handleTrackParamChange({ filterDecay: v });
+                            else if (activeEnvTab === 'vcf') handleTrackParamChange({ filterDecay: v });
+                            else handleTrackParamChange({ pitchDecay: v });
                           }}
                         />
                         <HardwareFader
-                          label="S"
-                          value={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : currentTrack.filterSustain}
-                          min={0}
-                          max={1.0}
-                          step={0.02}
-                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          label={activeEnvTab === 'pit' ? 'AMT' : 'S'}
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampSustain ?? currentTrack.sustain) : activeEnvTab === 'vcf' ? currentTrack.filterSustain : (currentTrack.pitchEnvAmount ?? 0)}
+                          min={activeEnvTab === 'pit' ? -4 : 0}
+                          max={activeEnvTab === 'pit' ? 4 : 1.0}
+                          step={activeEnvTab === 'pit' ? 0.1 : 0.02}
+                          color={activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b'}
                           height={46}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampSustain: v, sustain: v });
-                            else handleTrackParamChange({ filterSustain: v });
+                            else if (activeEnvTab === 'vcf') handleTrackParamChange({ filterSustain: v });
+                            else handleTrackParamChange({ pitchEnvAmount: v });
                           }}
                         />
                         <HardwareFader
-                          label="R"
-                          value={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : currentTrack.filterRelease}
-                          min={0.01}
+                          label={activeEnvTab === 'pit' ? '-' : 'R'}
+                          value={activeEnvTab === 'amp' ? (currentTrack.ampRelease ?? currentTrack.release) : activeEnvTab === 'vcf' ? currentTrack.filterRelease : 0}
+                          min={0}
                           max={1.5}
                           step={0.02}
-                          color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
+                          color={activeEnvTab === 'pit' ? '#333' : activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
                           height={46}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampRelease: v, release: v });
-                            else handleTrackParamChange({ filterRelease: v });
+                            else if (activeEnvTab === 'vcf') handleTrackParamChange({ filterRelease: v });
                           }}
                         />
                       </div>
