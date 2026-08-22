@@ -178,7 +178,7 @@ const AdsrVisualizer: React.FC<AdsrVisualizerProps> = ({
   color = '#98c379',
 }) => {
   const width = 110;
-  const height = 44;
+  const height = 34;
   const padX = 3;
   const padY = 3;
   const usableW = width - padX * 2;
@@ -213,7 +213,7 @@ const AdsrVisualizer: React.FC<AdsrVisualizerProps> = ({
     <div className="w-full bg-black/70 border border-white/15 rounded-xs p-1 flex flex-col items-center">
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-12 overflow-visible select-none"
+        className="w-full h-9 overflow-visible select-none"
       >
         <defs>
           <linearGradient id="adsrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -249,7 +249,7 @@ const AdsrVisualizer: React.FC<AdsrVisualizerProps> = ({
       </svg>
 
       {/* Real-time Precision Readouts */}
-      <div className="w-full flex justify-between text-xs font-mono font-black text-white/80 px-1 border-t border-white/10 pt-0.5">
+      <div className="w-full flex justify-between text-[10px] sm:text-xs font-mono font-black text-white/80 px-0.5 border-t border-white/10 pt-0.5 leading-none">
         <span style={{ color }}>A: {Math.round(attack * 1000)}ms</span>
         <span>D: {Math.round(decay * 1000)}ms</span>
         <span>S: {Math.round(sustain * 100)}%</span>
@@ -1884,7 +1884,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               </div>
 
 
-                                                                                                                              {/* L-SHAPE SYNTHESIZER & PIANO ROLL WORKSTATION TOPOLOGY */}
+                                                                                                                                            {/* L-SHAPE SYNTHESIZER & PIANO ROLL WORKSTATION TOPOLOGY */}
               <div className="flex-1 min-h-0 flex flex-col gap-1.5 overflow-hidden">
                 
                 {/* UPPER L-SHAPE: LEFT (MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO] */}
@@ -1893,7 +1893,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING) */}
                   <div className="lg:col-span-1 grid grid-rows-3 gap-1.5 min-w-0 h-full overflow-hidden">
                     
-                    {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID - ENLARGED) */}
+                    {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID - ZERO OVERFLOW) */}
                     <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>1. DUAL OSC</span>
@@ -1903,13 +1903,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
                         {/* Left: OSC 1 (5 Waveforms Vertically Stacked) */}
                         <div className="col-span-3 flex flex-col justify-between h-full py-0.5">
-                          <span className="text-xs text-white/60 font-black text-center mb-0.5">OSC1</span>
+                          <span className="text-[10px] text-white/60 font-black text-center mb-0.5 leading-none">OSC1</span>
                           <div className="flex flex-col gap-0.5 flex-1 justify-between">
                             {(['square', 'sawtooth', 'triangle', 'sine', 'noise'] as SynthWaveform[]).map((w) => (
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
-                                className={`py-0.5 text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                                className={`flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                   currentTrack.osc1Waveform === w
                                     ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -1923,13 +1923,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                         {/* Center: OSC 2 (5 Waveforms Vertically Stacked) */}
                         <div className="col-span-3 flex flex-col justify-between h-full py-0.5">
-                          <span className="text-xs text-white/60 font-black text-center mb-0.5">OSC2</span>
+                          <span className="text-[10px] text-white/60 font-black text-center mb-0.5 leading-none">OSC2</span>
                           <div className="flex flex-col gap-0.5 flex-1 justify-between">
                             {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
-                                className={`py-0.5 text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                                className={`flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                   currentTrack.osc2Waveform === w
                                     ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -1941,8 +1941,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </div>
                         </div>
 
-                        {/* Right: 4 Knobs Arranged in a 2x2 GRID (ENLARGED) */}
-                        <div className="col-span-6 grid grid-cols-2 gap-1 border-l border-white/10 pl-1.5 h-full items-center justify-around">
+                        {/* Right: 4 Knobs Arranged in a 2x2 GRID (Compact & Zero Overflow) */}
+                        <div className="col-span-6 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1 h-full items-center justify-around py-0.5">
                           <RotaryKnob
                             label="OSC1"
                             value={Math.round(currentTrack.osc1Gain * 100)}
@@ -1950,7 +1950,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#e5c07b"
-                            size={24}
+                            size={18}
                             onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -1960,7 +1960,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#56b6c2"
-                            size={24}
+                            size={18}
                             onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -1971,7 +1971,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={2}
                             unit="c"
                             color="#e06c75"
-                            size={24}
+                            size={18}
                             onChange={(v) => handleTrackParamChange({ detuneCents: v })}
                           />
                           <RotaryKnob
@@ -1982,21 +1982,21 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={15}
                             unit="°"
                             color="#98c379"
-                            size={24}
+                            size={18}
                             onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 LARGE HORIZONTAL KNOBS) */}
+                    {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 HORIZONTAL KNOBS) */}
                     <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
-                      <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
+                      <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
                         {/* Left: 4 Blend Mode Buttons in a 2x2 GRID (Equal Size, Pure Text, Stretched to Fill Height) */}
                         <div className="col-span-6 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
                           {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
@@ -2014,8 +2014,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 2 Knobs Arranged HORIZONTALLY Side-by-Side (ENLARGED) */}
-                        <div className="col-span-6 flex items-center justify-around border-l border-white/10 pl-2 h-full">
+                        {/* Right: 2 Knobs Arranged HORIZONTALLY Side-by-Side */}
+                        <div className="col-span-6 flex items-center justify-around border-l border-white/10 pl-1 h-full py-0.5">
                           <RotaryKnob
                             label="MORPH"
                             value={Math.round(currentTrack.morphAmount * 100)}
@@ -2023,7 +2023,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#c678dd"
-                            size={28}
+                            size={24}
                             onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
                           />
                           <RotaryKnob
@@ -2034,21 +2034,21 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={0.5}
                             unit="x"
                             color="#56b6c2"
-                            size={28}
+                            size={24}
                             onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 上2下1 KNOBS ENLARGED) */}
+                    {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 上2下1 KNOBS - ZERO OVERFLOW) */}
                     <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
-                      <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
+                      <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
                         {/* Left: 4 Filter Mode Buttons in a 2x2 GRID (Stretched to Fill Height) */}
                         <div className="col-span-5 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
                           {(['lowpass', 'bandpass', 'highpass', 'notch'] as FilterType[]).map((f) => (
@@ -2066,8 +2066,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 3 Knobs Arranged TOP 2, BOTTOM 1 (上2下1) */}
-                        <div className="col-span-7 flex flex-col justify-around border-l border-white/10 pl-2 h-full gap-1">
+                        {/* Right: 3 Knobs Arranged TOP 2, BOTTOM 1 (上2下1 - ZERO OVERFLOW) */}
+                        <div className="col-span-7 flex flex-col justify-between border-l border-white/10 pl-1 h-full py-0.5">
                           {/* Top 2 Knobs: CUTOFF & RES (Q) */}
                           <div className="flex items-center justify-around">
                             <RotaryKnob
@@ -2078,7 +2078,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               step={50}
                               unit="Hz"
                               color="#56b6c2"
-                              size={24}
+                              size={18}
                               onChange={(v) => handleTrackParamChange({ cutoff: v })}
                             />
                             <RotaryKnob
@@ -2088,7 +2088,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               max={14}
                               step={0.2}
                               color="#e5c07b"
-                              size={24}
+                              size={18}
                               onChange={(v) => handleTrackParamChange({ resonance: v })}
                             />
                           </div>
@@ -2101,7 +2101,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               max={100}
                               unit="%"
                               color="#98c379"
-                              size={24}
+                              size={18}
                               onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
                             />
                           </div>
@@ -2385,19 +2385,19 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                 </div>
 
-                {/* BOTTOM L-SHAPE BASE: 2:3 RATIO FOR MODULE 4, FULLY OCCUPIED HEIGHT (h-[165px]) (MODULES 4, 5, 6, 7) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-1.5 text-xs h-[165px] shrink-0">
+                {/* BOTTOM L-SHAPE BASE: COMPACT h-[145px], HIGH RESOLUTION, ZERO OVERFLOW (MODULES 4, 5, 6, 7) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-1.5 text-xs h-[145px] shrink-0">
                   
                   {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (2:3 RATIO -> LEFT 2 COLS: SVG CURVE, RIGHT 3 COLS: 4 ADSR FADERS) */}
-                  <div className="xl:col-span-3 border border-[#98c379]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  <div className="xl:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between font-black text-xs border-b border-white/10 pb-1 shrink-0">
+                    <div className="flex items-center justify-between font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[#98c379] text-xs font-black">4. ENVELOPES</span>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => { setActiveEnvTab('amp'); playSound('click'); }}
-                            className={`px-2 py-0.5 text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                            className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeEnvTab === 'amp'
                                 ? 'border-[#98c379] bg-[#98c379] text-black font-black'
                                 : 'border-white/20 text-white/60 hover:text-white'
@@ -2407,7 +2407,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                           <button
                             onClick={() => { setActiveEnvTab('vcf'); playSound('click'); }}
-                            className={`px-2 py-0.5 text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                            className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeEnvTab === 'vcf'
                                 ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                 : 'border-white/20 text-white/60 hover:text-white'
@@ -2421,8 +2421,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* Left/Right Horizontal Split in 2 : 3 Ratio */}
-                    <div className="grid grid-cols-5 gap-2 items-center flex-1 min-h-0 my-auto">
-                      {/* Left: 2 Cols (40% width) - Dynamic SVG ADSR Curve Display (TALLER HEIGHT) */}
+                    <div className="grid grid-cols-5 gap-1.5 items-center flex-1 min-h-0 my-auto">
+                      {/* Left: 2 Cols (40% width) - Dynamic SVG ADSR Curve Display */}
                       <div className="col-span-2 flex flex-col justify-between h-full py-0.5">
                         <div className="flex-1 flex items-center justify-center">
                           <AdsrVisualizer
@@ -2435,8 +2435,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         </div>
                       </div>
 
-                      {/* Right: 3 Cols (60% width) - 4 Precision Hardware Faders (TALLER HEIGHT, FILLS WINDOW) */}
-                      <div className="col-span-3 flex items-center justify-around gap-1 border-l border-white/10 pl-2 h-full py-0.5">
+                      {/* Right: 3 Cols (60% width) - 4 Precision Hardware Faders */}
+                      <div className="col-span-3 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1.5 h-full py-0.5">
                         <HardwareFader
                           label="A"
                           value={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
@@ -2444,7 +2444,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           max={0.8}
                           step={0.01}
                           color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                          height={46}
+                          height={36}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampAttack: v, attack: v });
                             else handleTrackParamChange({ filterAttack: v });
@@ -2457,7 +2457,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           max={1.0}
                           step={0.01}
                           color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                          height={46}
+                          height={36}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampDecay: v, decay: v });
                             else handleTrackParamChange({ filterDecay: v });
@@ -2470,7 +2470,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           max={1.0}
                           step={0.02}
                           color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                          height={46}
+                          height={36}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampSustain: v, sustain: v });
                             else handleTrackParamChange({ filterSustain: v });
@@ -2483,7 +2483,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           max={1.5}
                           step={0.02}
                           color={activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-                          height={46}
+                          height={36}
                           onChange={(v) => {
                             if (activeEnvTab === 'amp') handleTrackParamChange({ ampRelease: v, release: v });
                             else handleTrackParamChange({ filterRelease: v });
@@ -2494,23 +2494,23 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* MODULE 5: MOD MATRIX (LEFT: LFO 2x2+RATE, RIGHT: 3 MOD ROUTES) */}
-                  <div className="xl:col-span-4 border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  <div className="xl:col-span-4 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     {/* Header */}
-                    <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-1 shrink-0">
+                    <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <span>5. MOD MATRIX</span>
                       <span className="text-white/40 font-mono text-xs">──►</span>
                     </div>
 
                     {/* Left/Right Horizontal Split */}
-                    <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
+                    <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
                       {/* Left: LFO 2x2 Grid + RATE Knob */}
-                      <div className="col-span-4 flex flex-col justify-between items-center gap-1.5 border-r border-white/10 pr-1.5 h-full py-0.5">
-                        <div className="grid grid-cols-2 gap-1 w-full">
+                      <div className="col-span-4 flex flex-col justify-between items-center gap-1 border-r border-white/10 pr-1 h-full py-0.5">
+                        <div className="grid grid-cols-2 gap-0.5 w-full">
                           {(['sine', 'triangle', 'square', 'sawtooth'] as LfoWaveform[]).map((w) => (
                             <button
                               key={w}
                               onClick={() => { handleTrackParamChange({ lfoWaveform: w }); playSound('click'); }}
-                              className={`py-1.5 text-xs border rounded-xs font-black cursor-pointer leading-none text-center ${
+                              className={`py-1 text-[10px] sm:text-xs border rounded-xs font-black cursor-pointer leading-none text-center ${
                                 currentTrack.lfoWaveform === w ? 'border-[#c678dd] bg-[#c678dd] text-black font-black' : 'border-white/20 text-white/60 hover:text-white'
                               }`}
                             >
@@ -2526,19 +2526,19 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={0.2}
                           unit="Hz"
                           color="#c678dd"
-                          size={24}
+                          size={20}
                           onChange={(v) => handleTrackParamChange({ lfoRate: v })}
                         />
                       </div>
 
                       {/* Right: 3 Modulation Routing Slots */}
-                      <div className="col-span-8 space-y-1.5 h-full flex flex-col justify-around">
+                      <div className="col-span-8 space-y-1 h-full flex flex-col justify-around py-0.5">
                         {(currentTrack.modRoutes || [
                           { id: 'r1', source: 'lfo' as ModSource, dest: 'cutoff' as ModDest, amount: 0.25, enabled: true },
                           { id: 'r2', source: 'vcf_env' as ModSource, dest: 'cutoff' as ModDest, amount: 0.60, enabled: true },
                           { id: 'r3', source: 'velocity' as ModSource, dest: 'cutoff' as ModDest, amount: 0.40, enabled: true },
                         ]).slice(0, 3).map((route, rIdx) => (
-                          <div key={route.id || rIdx} className="flex items-center justify-between gap-1 text-xs font-mono bg-black/40 px-2 py-1 rounded-xs border border-white/10">
+                          <div key={route.id || rIdx} className="flex items-center justify-between gap-1 text-[10px] sm:text-xs font-mono bg-black/40 px-1.5 py-0.5 rounded-xs border border-white/10">
                             <button
                               onClick={() => {
                                 const sources: ModSource[] = ['lfo', 'vcf_env', 'amp_env', 'velocity'];
@@ -2548,13 +2548,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className="px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-black cursor-pointer border border-white/15 leading-none text-xs"
+                              className="px-1.5 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
                               title="Mod source"
                             >
                               {route.source === 'lfo' ? 'LFO' : route.source === 'vcf_env' ? 'VCF' : route.source === 'amp_env' ? 'AMP' : 'VEL'}
                             </button>
 
-                            <span className="text-white/40 font-mono text-xs">►</span>
+                            <span className="text-white/40 font-mono text-[9px]">►</span>
 
                             <button
                               onClick={() => {
@@ -2565,7 +2565,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className="px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-black cursor-pointer border border-white/15 leading-none text-xs"
+                              className="px-1.5 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
                               title="Mod dest"
                             >
                               {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
@@ -2576,7 +2576,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               min={-100}
                               max={100}
                               step={5}
-                              width={54}
+                              width={48}
                               showValue={true}
                               bipolar={true}
                               unit="%"
@@ -2595,7 +2595,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className={`w-4.5 h-4.5 rounded-xs border text-xs font-black flex items-center justify-center cursor-pointer ${
+                              className={`w-3.5 h-3.5 rounded-xs border text-[9px] font-black flex items-center justify-center cursor-pointer ${
                                 route.enabled ? 'border-[#98c379] bg-[#98c379] text-black' : 'border-white/20 text-white/30'
                               }`}
                             >
@@ -2608,15 +2608,15 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* MODULE 6: FX (5 LARGE ROTARY KNOBS FILLING THE ENTIRE SPACE) */}
-                  <div className="xl:col-span-2 border border-[#e06c75]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
-                    <div className="flex justify-between items-center font-black text-[#e06c75] text-xs border-b border-white/10 pb-1 shrink-0">
+                  <div className="xl:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                    <div className="flex justify-between items-center font-black text-[#e06c75] text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <span>6. FX</span>
                       <span className="text-white/40 font-mono text-xs">──►</span>
                     </div>
 
                     {/* 5 Hardware FX Knobs with Substantial Proportions (3 on top, 2 on bottom) */}
-                    <div className="space-y-1 my-auto flex flex-col justify-around h-full">
-                      <div className="grid grid-cols-3 gap-1 items-center">
+                    <div className="space-y-1 my-auto flex flex-col justify-around h-full py-0.5">
+                      <div className="grid grid-cols-3 gap-0.5 items-center">
                         <RotaryKnob
                           label="TIME"
                           value={Math.round(synthDelayTime * 1000)}
@@ -2625,7 +2625,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={10}
                           unit="ms"
                           color="#e06c75"
-                          size={26}
+                          size={22}
                           onChange={(v) => {
                             const t = v / 1000;
                             setSynthDelayTime(t);
@@ -2640,7 +2640,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={5}
                           unit="%"
                           color="#e06c75"
-                          size={26}
+                          size={22}
                           onChange={(v) => {
                             const fb = v / 100;
                             setSynthDelayFeedback(fb);
@@ -2655,7 +2655,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={5}
                           unit="%"
                           color="#e06c75"
-                          size={26}
+                          size={22}
                           onChange={(v) => {
                             const m = v / 100;
                             setSynthDelayMix(m);
@@ -2664,7 +2664,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 items-center pt-1 border-t border-white/10">
+                      <div className="grid grid-cols-2 gap-1 items-center pt-0.5 border-t border-white/10">
                         <RotaryKnob
                           label="R-MIX"
                           value={Math.round(synthReverbMix * 100)}
@@ -2673,7 +2673,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={5}
                           unit="%"
                           color="#c678dd"
-                          size={26}
+                          size={22}
                           onChange={(v) => {
                             const rm = v / 100;
                             setSynthReverbMix(rm);
@@ -2688,7 +2688,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={5}
                           unit="%"
                           color="#e5c07b"
-                          size={26}
+                          size={22}
                           onChange={(v) => {
                             const d = v / 100;
                             setSynthDrive(d);
@@ -2700,14 +2700,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* MODULE 7: OUT (LEFT: PAN & VOL VERTICAL, RIGHT: TABBED SINGLE GRAPH - FFT OR SCOPE) */}
-                  <div className="xl:col-span-3 border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
-                    <div className="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-1 shrink-0">
+                  <div className="xl:col-span-3 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                    <div className="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <span className="text-white text-xs font-black">7. OUT</span>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => { setActiveOutVisualizer('fft'); playSound('click'); }}
-                            className={`px-2 py-0.5 text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                            className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeOutVisualizer === 'fft'
                                 ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                 : 'border-white/20 text-white/60 hover:text-white'
@@ -2717,7 +2717,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                           <button
                             onClick={() => { setActiveOutVisualizer('scope'); playSound('click'); }}
-                            className={`px-2 py-0.5 text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                            className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeOutVisualizer === 'scope'
                                 ? 'border-[#98c379] bg-[#98c379] text-black font-black'
                                 : 'border-white/20 text-white/60 hover:text-white'
@@ -2727,13 +2727,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                         </div>
                       </div>
-                      <span className="text-xs font-mono text-white/50">60 FPS</span>
+                      <span className="text-[10px] font-mono text-white/50">60 FPS</span>
                     </div>
 
                     {/* Left / Right 2-Column Split */}
-                    <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
+                    <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
                       {/* Left: PAN and VOL Stacked Vertically */}
-                      <div className="col-span-4 flex flex-col justify-around items-center border-r border-white/10 pr-1.5 h-full py-0.5">
+                      <div className="col-span-4 flex flex-col justify-around items-center border-r border-white/10 pr-1 h-full py-0.5">
                         <RotaryKnob
                           label="PAN"
                           value={Math.round(currentTrack.pan * 100)}
@@ -2742,7 +2742,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={5}
                           unit=""
                           color="#56b6c2"
-                          size={24}
+                          size={20}
                           onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
                         />
                         <RotaryKnob
@@ -2752,26 +2752,26 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           max={100}
                           unit="%"
                           color="#98c379"
-                          size={24}
+                          size={20}
                           onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
                         />
                       </div>
 
                       {/* Right: Full-Screen High-Resolution Single Visualizer Canvas */}
                       <div className="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
-                        <div className="flex items-center justify-between text-xs font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
+                        <div className="flex items-center justify-between text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
                           <span className={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : 'text-[#98c379] font-black'}>
                             {activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : 'OSCILLOSCOPE WAVE'}
                           </span>
                           {activeOutVisualizer === 'fft' ? (
-                            <span className="text-[10px] text-white/50 font-bold">20Hz-20k</span>
+                            <span className="text-[9px] text-white/50 font-bold">20Hz-20k</span>
                           ) : (
                             <div className="flex items-center gap-0.5">
                               {(['0.5x', '1x', '2x'] as const).map((tb) => (
                                 <button
                                   key={tb}
                                   onClick={() => { setTimeBase(tb); playSound('click'); }}
-                                  className={`px-1 py-0.2 rounded-xs border text-[9px] cursor-pointer font-black leading-none ${
+                                  className={`px-1 py-0.2 rounded-xs border text-[8px] cursor-pointer font-black leading-none ${
                                     timeBase === tb
                                       ? 'border-[#98c379] bg-[#98c379] text-black font-black'
                                       : 'border-white/20 text-white/60 hover:text-white'
@@ -2784,17 +2784,17 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           )}
                         </div>
 
-                        <div className="relative flex-1 min-h-[46px] rounded-xs overflow-hidden mt-0.5">
+                        <div className="relative flex-1 min-h-[42px] rounded-xs overflow-hidden mt-0.5">
                           <canvas
                             ref={fftCanvasRef}
                             width={260}
-                            height={46}
+                            height={42}
                             className={`w-full h-full ${activeOutVisualizer === 'fft' ? 'block' : 'hidden'}`}
                           />
                           <canvas
                             ref={waveCanvasRef}
                             width={260}
-                            height={46}
+                            height={42}
                             className={`w-full h-full ${activeOutVisualizer === 'scope' ? 'block' : 'hidden'}`}
                           />
                         </div>
