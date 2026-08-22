@@ -4,6 +4,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "dist"
+not_found_handling = "single-page-application"
+
 
 # Custom domains (apex + www.apex, e.g. `krsz.in` + `www.krsz.in`) are
 # configured in the Cloudflare Dashboard — not declared here on purpose.

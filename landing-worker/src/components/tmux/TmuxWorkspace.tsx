@@ -464,9 +464,65 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
 PianoRollRow.displayName = 'PianoRollRow';
 
 
+const TAB_ROUTES: Record<number, string> = {
+  0: '/cluster',
+  1: '/modules',
+  2: '/topology',
+  3: '/guestbook',
+  4: '/synth',
+};
+
+const TAB_TITLES: Record<number, string> = {
+  0: 'KRSZ™ // 0:cluster — Serverless Edge Portal',
+  1: 'KRSZ™ // 1:modules — Specs & Architecture',
+  2: 'KRSZ™ // 2:topology — Edge PoP Network',
+  3: 'KRSZ™ // 3:guestbook — Edge Packet Messenger',
+  4: 'KRSZ™ // 4:synth — WebAudio Modular Synthesizer',
+};
+
+const getTabFromPathname = (pathname: string): number => {
+  const clean = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+  if (clean === 'synth') return 4;
+  if (clean === 'guestbook') return 3;
+  if (clean === 'topology') return 2;
+  if (clean === 'modules') return 1;
+  if (clean === 'cluster' || clean === 'overview' || clean === '') return 0;
+  return 0;
+};
+
 export const TmuxWorkspace: React.FC = () => {
   const [theme, setTheme] = useState<WorkspaceTheme>('tokyo-matte');
-  const [activeTab, setActiveTab] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      return getTabFromPathname(window.location.pathname);
+    }
+    return 0;
+  });
+
+  const navigateToTab = (tabId: number, updateHistory = true) => {
+    setActiveTab(tabId);
+    if (updateHistory && typeof window !== 'undefined') {
+      const targetPath = TAB_ROUTES[tabId] || '/cluster';
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ tabId }, '', targetPath);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const tab = getTabFromPathname(window.location.pathname);
+      setActiveTab(tab);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = TAB_TITLES[activeTab] || 'KRSZ™ — Serverless Edge Portal';
+    }
+  }, [activeTab]);
   const [selectedModule, setSelectedModule] = useState<ModuleSpec>(MODULES[0]);
   const [commandInput, setCommandInput] = useState<string>('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -687,11 +743,11 @@ export const TmuxWorkspace: React.FC = () => {
       if (isInput) return;
 
       const key = e.key.toLowerCase();
-      if (key === '0') { setActiveTab(0); playSound('click'); return; }
-      if (key === '1') { setActiveTab(1); playSound('click'); return; }
-      if (key === '2') { setActiveTab(2); playSound('click'); return; }
-      if (key === '3') { setActiveTab(3); playSound('click'); return; }
-      if (key === '4') { setActiveTab(4); playSound('click'); return; }
+      if (key === '0') { navigateToTab(0); playSound('click'); return; }
+      if (key === '1') { navigateToTab(1); playSound('click'); return; }
+      if (key === '2') { navigateToTab(2); playSound('click'); return; }
+      if (key === '3') { navigateToTab(3); playSound('click'); return; }
+      if (key === '4') { navigateToTab(4); playSound('click'); return; }
       if (key === 't') { cycleTheme(); return; }
     };
 
@@ -866,6 +922,12 @@ export const TmuxWorkspace: React.FC = () => {
     const parts = raw.split(' ');
     const cmd = parts[0].toLowerCase();
     const args = parts.slice(1).join(' ');
+
+        if (cmd === '0' || cmd === 'cluster' || cmd === 'overview') { navigateToTab(0); setCommandOutput('Navigated to 0:cluster [/cluster]'); return; }
+    if (cmd === '1' || cmd === 'modules' || cmd === 'specs') { navigateToTab(1); setCommandOutput('Navigated to 1:modules [/modules]'); return; }
+    if (cmd === '2' || cmd === 'topology' || cmd === 'edge') { navigateToTab(2); setCommandOutput('Navigated to 2:topology [/topology]'); return; }
+    if (cmd === '3' || cmd === 'guestbook' || cmd === 'packets') { navigateToTab(3); setCommandOutput('Navigated to 3:guestbook [/guestbook]'); return; }
+    if (cmd === '4' || cmd === 'synth' || cmd === 'audio') { navigateToTab(4); setCommandOutput('Navigated to 4:synth [/synth]'); return; }
 
     if (cmd === 'eval' || cmd === 'calc' || cmd === 'js') {
       setCommandOutput(`=> ${evaluateSafeJS(args)}`);
@@ -1340,11 +1402,11 @@ export const TmuxWorkspace: React.FC = () => {
             <span>[tmux:edge]</span>
           </span>
 
-          <button onClick={() => { setActiveTab(0); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
-          <button onClick={() => { setActiveTab(1); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
-          <button onClick={() => { setActiveTab(2); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
-          <button onClick={() => { setActiveTab(3); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
-          <button onClick={() => { setActiveTab(4); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
+          <button onClick={() => { navigateToTab(0); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
+          <button onClick={() => { navigateToTab(1); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
+          <button onClick={() => { navigateToTab(2); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
+          <button onClick={() => { navigateToTab(3); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
+          <button onClick={() => { navigateToTab(4); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
@@ -1495,7 +1557,7 @@ export const TmuxWorkspace: React.FC = () => {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); playSound('click'); }}
+                    onClick={() => { navigateToTab(tab.id); playSound('click'); }}
                     className={`border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group relative overflow-hidden ${
                       isActive
                         ? 'border-white bg-white/20 text-white shadow-md'
@@ -1629,7 +1691,7 @@ export const TmuxWorkspace: React.FC = () => {
                       key={m.id}
                       onMouseEnter={() => { setHoveredCard(m.id); playSound('hover'); }}
                       onMouseLeave={() => setHoveredCard(null)}
-                      onClick={() => { setSelectedModule(m); setActiveTab(1); playSound('click'); }}
+                      onClick={() => { setSelectedModule(m); navigateToTab(1); playSound('click'); }}
                       style={{ backgroundColor: m.bgTint, borderColor: m.borderColor }}
                       className="border p-3.5 rounded-xs cursor-pointer transition-all hover:scale-[1.015] hover:brightness-110 flex flex-col justify-between h-40 group relative overflow-hidden"
                     >
