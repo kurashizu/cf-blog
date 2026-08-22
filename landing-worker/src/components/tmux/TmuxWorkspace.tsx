@@ -488,36 +488,36 @@ export const TmuxWorkspace: React.FC = () => {
     <div className={`w-full min-h-screen font-mono text-sm sm:text-base ${themeStyles.bg} ${themeStyles.text} flex flex-col justify-between select-none p-1.5 sm:p-3 md:p-4 transition-colors duration-200`}>
       
       {/* 1. TOP STATUS BAR */}
-      <header className={`w-full ${themeStyles.headerBg} px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border ${themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2`}>
-        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+      <header className={`w-full max-w-full ${themeStyles.headerBg} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border ${themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5`}>
+        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
           <span className="bg-black/40 px-2 sm:px-2.5 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-1.5 shrink-0">
             <span className="text-[#e5c07b] font-mono">{SPINNER_FRAMES[spinnerFrame]}</span>
             <span>[tmux:edge]</span>
           </span>
 
-          <button onClick={() => { setActiveTab(0); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
-          <button onClick={() => { setActiveTab(1); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
-          <button onClick={() => { setActiveTab(2); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
-          <button onClick={() => { setActiveTab(3); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
-          <button onClick={() => { setActiveTab(4); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
+          <button onClick={() => { setActiveTab(0); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
+          <button onClick={() => { setActiveTab(1); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
+          <button onClick={() => { setActiveTab(2); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
+          <button onClick={() => { setActiveTab(3); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
+          <button onClick={() => { setActiveTab(4); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-xs sm:text-sm pl-2">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
           <span className="text-[#c678dd] hidden xl:inline font-mono">{renderBrailleSpark(0)}</span>
           <button onClick={cycleTheme} className="hover:underline cursor-pointer hidden sm:inline text-[#e5c07b]">[THEME: {theme.toUpperCase()}]</button>
-          <span className="tabular-nums text-[#98c379] shrink-0">SYDNEY {sydneyTime || '12:14:00'}</span>
+          <span className="tabular-nums text-[#98c379] shrink-0 text-[11px] sm:text-xs">SYDNEY {sydneyTime || '12:14:00'}</span>
           <span className="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden lg:inline">100%_SERVERLESS</span>
         </div>
       </header>
 
       {/* 2. MAIN MULTI-PANE WORKSPACE */}
-      <div className="grid grid-cols-12 gap-1.5 sm:gap-2 flex-1 min-h-0">
+      <div className="grid grid-cols-12 gap-1.5 sm:gap-2 flex-1 min-h-0 w-full max-w-full">
         
         {/* LEFT PANE: IDENTITY, TELEMETRY & SYSTEM RADAR (4 Cols, Scrollable without Content Collision) */}
-        <div className={`col-span-12 lg:col-span-4 border ${themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 ${themeStyles.cardBg} rounded-sm min-h-0 overflow-y-auto custom-scrollbar`}>
+        <div className={`col-span-12 lg:col-span-4 border ${themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 ${themeStyles.cardBg} rounded-sm min-h-0 max-w-full overflow-y-auto custom-scrollbar`}>
           
           {/* 1. ASCII BRAND & ACRONYM BREAKDOWN */}
-          <div className="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5">
+          <div className="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden">
             <div className="text-xs sm:text-sm font-bold text-[#56b6c2] flex items-center justify-between border-b border-white/10 pb-0.5">
               <span>┌─[ SYS_BANNER // KRSZ.IN ]─┐</span>
               <span className="text-[#98c379] font-mono text-xs flex items-center gap-1">
@@ -543,7 +543,7 @@ export const TmuxWorkspace: React.FC = () => {
           </div>
 
           {/* 2. REAL-TIME EDGE TELEMETRY & ISOLATE METRICS */}
-          <div className="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono">
+          <div className="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">
             <div className="text-xs sm:text-sm font-bold text-[#98c379] flex items-center justify-between border-b border-white/10 pb-1 shrink-0">
               <span>┌─[ EDGE_TELEMETRY ]─┐</span>
               <span className="text-white/50 text-xs font-mono">{sydneyTime} AEST</span>
@@ -576,14 +576,14 @@ export const TmuxWorkspace: React.FC = () => {
               </div>
             </div>
 
-            <div className="border-t border-white/10 pt-1 text-xs text-white/50 flex justify-between shrink-0 font-mono">
+            <div className="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-white/50 flex flex-wrap items-center justify-between gap-1 shrink-0 font-mono">
               <span>REGION: AP-SOUTHEAST-2 (SYD)</span>
               <span>ISOLATE: #4902-ACTIVE</span>
             </div>
           </div>
 
           {/* 3. OPERATOR SPECS & PHILOSOPHY (CLEAN & NON-OVERLAPPING) */}
-          <div className="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono">
+          <div className="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">
             <div className="text-xs sm:text-sm font-bold text-[#61afef] flex items-center justify-between border-b border-white/10 pb-1 shrink-0">
               <span>┌─[ OPERATOR_PROFILE ]─┐</span>
               <span className="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs">VERIFIED</span>
@@ -610,7 +610,7 @@ export const TmuxWorkspace: React.FC = () => {
                 <span className="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</span>
               </div>
             </div>
-            <div className="border-t border-white/10 pt-1 text-xs text-[#98c379] shrink-0 font-bold flex items-center justify-between">
+            <div className="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1">
               <span>STATUS: OPEN FOR RESEARCH</span>
               <span>AVAILABLE NOW</span>
             </div>
@@ -799,9 +799,11 @@ export const TmuxWorkspace: React.FC = () => {
                 })}
               </div>
 
-              <div className="border border-white/10 p-3.5 bg-black/30 font-mono text-xs sm:text-sm leading-relaxed rounded-xs">
-                <div className="font-bold text-xs text-[#e5c07b] mb-1">┌─[ ANYCAST PIPELINE MAP ]─────────────────────────────────────────┐</div>
-                <pre className="text-xs sm:text-sm text-[#d8dee9] opacity-90 overflow-x-auto whitespace-pre">
+              <div className="border border-white/10 p-3.5 bg-black/30 font-mono text-xs sm:text-sm leading-relaxed rounded-xs max-w-full overflow-hidden">
+                <div className="font-bold text-xs text-[#e5c07b] mb-1 flex items-center justify-between border-b border-white/10 pb-0.5">
+                  <span>┌─[ ANYCAST PIPELINE MAP ]─┐</span>
+                </div>
+                <pre className="text-xs sm:text-sm text-[#d8dee9] opacity-90 overflow-x-auto whitespace-pre max-w-full">
 {`CLIENT ──> ANYCAST CDN ──> CF WORKERS (V8) ──> [ D1 SQL | VECTORIZE | R2 | KV ]
                                ▲                     │
 GITHUB ACTIONS (CI RUNNER) ────┘                     ▼
@@ -1227,138 +1229,143 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                 </div>
 
-                {/* Top 16-Step Timeline Bar / Ruler for Current Bar */}
-                <div className="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0">
-                  <div
-                    className="flex-1 gap-0.5"
-                    style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
-                  >
-                    {Array.from({ length: 16 }).map((_, colIdx) => {
-                      const actualStep = activeStepPage * 16 + colIdx;
-                      const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
-                      const isDownbeat = colIdx % 4 === 0;
-                      const barNum = activeStepPage + 1;
-                      const beatNum = Math.floor(colIdx / 4) + 1;
-                      return (
-                        <div
-                          key={colIdx}
-                          className={`text-center py-0.5 rounded-xs transition-colors ${
-                            isCurrent
-                              ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
-                              : isDownbeat
-                              ? 'bg-white/15 text-white font-bold'
-                              : 'text-white/40'
-                          }`}
-                        >
-                          {isDownbeat ? `${barNum}.${beatNum}` : actualStep + 1}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 36 / 12 Chromatic Pitch Rows x 16 Steps Grid (Polyphonic up to 8 notes) */}
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5 font-mono text-xs pr-0.5 flex flex-col">
-                  {PIANO_ROLL_NOTES.filter((n) => octaveScope === 'all' || n.oct === octaveScope).map((nInfo) => {
-                    const actualIdx = PIANO_ROLL_NOTES.findIndex((p) => p.note === nInfo.note);
-                    const isRootC = nInfo.note.startsWith('C') && !nInfo.note.includes('#');
-
-                    return (
+                {/* Scrollable Matrix Container (Enables horizontal pan on mobile for comfortable 16-step editing without squishing) */}
+                <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar flex flex-col">
+                  <div className="min-w-[480px] sm:min-w-0 flex-1 flex flex-col space-y-0.5">
+                    {/* Top 16-Step Timeline Bar / Ruler for Current Bar */}
+                    <div className="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0">
                       <div
-                        key={nInfo.note}
-                        className={`flex items-center gap-1 shrink-0 ${
-                          octaveScope === 'all' ? 'min-h-[16px] h-4.5' : 'flex-1 min-h-[18px]'
-                        }`}
+                        className="flex-1 gap-0.5"
+                        style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
                       >
-                        {/* Playable Interactive Note Key Badge */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            modularSynth.triggerTrackVoice(activeTrackId, actualIdx, false);
-                            playSound('click');
-                          }}
-                          title={`Audition ${nInfo.note} (${Math.round(nInfo.freq)}Hz)`}
-                          className={`w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 ${
-                            isRootC
-                              ? 'bg-[#56b6c2]/30 text-[#56b6c2] border border-[#56b6c2]/40 hover:bg-[#56b6c2]/50'
-                              : nInfo.isBlack
-                              ? 'bg-black/90 text-[#e5c07b] border-r border-white/20 hover:bg-neutral-900'
-                              : 'bg-white/10 text-[#eceff4] hover:bg-white/20'
-                          }`}
-                        >
-                          {nInfo.note}
-                        </button>
-
-                        {/* 16 Step Horizontal Grid Cells (Polyphonic Multi-Voice Selection) */}
-                        <div
-                          className="flex-1 h-full gap-0.5"
-                          style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
-                        >
-                          {Array.from({ length: 16 }).map((_, colIdx) => {
-                            const actualStep = activeStepPage * 16 + colIdx;
-                            const stepNotes = currentTrack.grid[actualStep] || [];
-                            const isSelected = stepNotes.includes(actualIdx);
-                            const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
-                            const isBarStart = colIdx % 4 === 0;
-
-                            return (
-                              <button
-                                key={colIdx}
-                                onClick={() => handlePianoRollCellClick(actualIdx, colIdx)}
-                                className={`h-full rounded-xs transition-all cursor-pointer border ${
-                                  isSelected
-                                    ? 'shadow-sm scale-[1.02]'
-                                    : isCurrent
-                                    ? 'border-white/60 bg-white/25'
-                                    : isBarStart
-                                    ? 'border-white/15 bg-white/[0.05] hover:bg-white/20'
-                                    : 'border-white/5 bg-black/40 hover:bg-white/10'
-                                }`}
-                                style={{
-                                  backgroundColor: isSelected ? currentTrack.color : undefined,
-                                  borderColor: isSelected ? currentTrack.color : undefined,
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
+                        {Array.from({ length: 16 }).map((_, colIdx) => {
+                          const actualStep = activeStepPage * 16 + colIdx;
+                          const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
+                          const isDownbeat = colIdx % 4 === 0;
+                          const barNum = activeStepPage + 1;
+                          const beatNum = Math.floor(colIdx / 4) + 1;
+                          return (
+                            <div
+                              key={colIdx}
+                              className={`text-center py-0.5 rounded-xs transition-colors ${
+                                isCurrent
+                                  ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
+                                  : isDownbeat
+                                  ? 'bg-white/15 text-white font-bold'
+                                  : 'text-white/40'
+                              }`}
+                            >
+                              {isDownbeat ? `${barNum}.${beatNum}` : actualStep + 1}
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
 
-                {/* 100% Full-Width Aligned Accent (ACC) Track */}
-                <div className="flex items-center gap-1 pt-0.5 border-t border-white/10 text-xs font-mono shrink-0">
-                  <div className="w-9 text-right pr-1 font-bold text-[#e06c75] shrink-0 select-none">ACC</div>
-                  <div
-                    className="flex-1 gap-0.5"
-                    style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
-                  >
-                    {Array.from({ length: 16 }).map((_, colIdx) => {
-                      const actualStep = activeStepPage * 16 + colIdx;
-                      const isAccent = currentTrack.accents[actualStep];
-                      const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
+                    {/* 88 / 12 Chromatic Pitch Rows x 16 Steps Grid (Polyphonic up to 8 notes) */}
+                    <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col">
+                      {PIANO_ROLL_NOTES.filter((n) => octaveScope === 'all' || n.oct === octaveScope).map((nInfo) => {
+                        const actualIdx = PIANO_ROLL_NOTES.findIndex((p) => p.note === nInfo.note);
+                        const isRootC = nInfo.note.startsWith('C') && !nInfo.note.includes('#');
 
-                      return (
-                        <button
-                          key={colIdx}
-                          onClick={() => {
-                            modularSynth.toggleTrackAccent(activeTrackId, actualStep);
-                            setTracksState([...modularSynth.getTracks()]);
-                            playSound('click');
-                          }}
-                          className={`py-0.5 text-center font-bold rounded-xs cursor-pointer border transition-all ${
-                            isCurrent
-                              ? 'border-white bg-white text-black'
-                              : isAccent
-                              ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
-                              : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
-                          }`}
-                        >
-                          {actualStep + 1}
-                        </button>
-                      );
-                    })}
+                        return (
+                          <div
+                            key={nInfo.note}
+                            className={`flex items-center gap-1 shrink-0 ${
+                              octaveScope === 'all' ? 'min-h-[16px] h-4.5' : 'flex-1 min-h-[18px]'
+                            }`}
+                          >
+                            {/* Playable Interactive Note Key Badge */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                modularSynth.triggerTrackVoice(activeTrackId, actualIdx, false);
+                                playSound('click');
+                              }}
+                              title={`Audition ${nInfo.note} (${Math.round(nInfo.freq)}Hz)`}
+                              className={`w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 ${
+                                isRootC
+                                  ? 'bg-[#56b6c2]/30 text-[#56b6c2] border border-[#56b6c2]/40 hover:bg-[#56b6c2]/50'
+                                  : nInfo.isBlack
+                                  ? 'bg-black/90 text-[#e5c07b] border-r border-white/20 hover:bg-neutral-900'
+                                  : 'bg-white/10 text-[#eceff4] hover:bg-white/20'
+                              }`}
+                            >
+                              {nInfo.note}
+                            </button>
+
+                            {/* 16 Step Horizontal Grid Cells (Polyphonic Multi-Voice Selection) */}
+                            <div
+                              className="flex-1 h-full gap-0.5"
+                              style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+                            >
+                              {Array.from({ length: 16 }).map((_, colIdx) => {
+                                const actualStep = activeStepPage * 16 + colIdx;
+                                const stepNotes = currentTrack.grid[actualStep] || [];
+                                const isSelected = stepNotes.includes(actualIdx);
+                                const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
+                                const isBarStart = colIdx % 4 === 0;
+
+                                return (
+                                  <button
+                                    key={colIdx}
+                                    onClick={() => handlePianoRollCellClick(actualIdx, colIdx)}
+                                    className={`h-full rounded-xs transition-all cursor-pointer border ${
+                                      isSelected
+                                        ? 'shadow-sm scale-[1.02]'
+                                        : isCurrent
+                                        ? 'border-white/60 bg-white/25'
+                                        : isBarStart
+                                        ? 'border-white/15 bg-white/[0.05] hover:bg-white/20'
+                                        : 'border-white/5 bg-black/40 hover:bg-white/10'
+                                    }`}
+                                    style={{
+                                      backgroundColor: isSelected ? currentTrack.color : undefined,
+                                      borderColor: isSelected ? currentTrack.color : undefined,
+                                    }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* 100% Full-Width Aligned Accent (ACC) Track */}
+                    <div className="flex items-center gap-1 pt-0.5 border-t border-white/10 text-xs font-mono shrink-0">
+                      <div className="w-9 text-right pr-1 font-bold text-[#e06c75] shrink-0 select-none">ACC</div>
+                      <div
+                        className="flex-1 gap-0.5"
+                        style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+                      >
+                        {Array.from({ length: 16 }).map((_, colIdx) => {
+                          const actualStep = activeStepPage * 16 + colIdx;
+                          const isAccent = currentTrack.accents[actualStep];
+                          const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
+
+                          return (
+                            <button
+                              key={colIdx}
+                              onClick={() => {
+                                modularSynth.toggleTrackAccent(activeTrackId, actualStep);
+                                setTracksState([...modularSynth.getTracks()]);
+                                playSound('click');
+                              }}
+                              className={`py-0.5 text-center font-bold rounded-xs cursor-pointer border transition-all ${
+                                isCurrent
+                                  ? 'border-white bg-white text-black'
+                                  : isAccent
+                                  ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
+                                  : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
+                              }`}
+                            >
+                              {actualStep + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1583,7 +1590,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <span className="text-xs opacity-60">──►</span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1">
+                    <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1">
                       {/* 4 Vertical ADSR Faders */}
                       <div className="flex items-center gap-1.5 flex-1 justify-around">
                         <HardwareFader
@@ -1728,7 +1735,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             <form
               onSubmit={handleCommandSubmit}
               onClick={() => cmdInputRef.current?.focus()}
-              className="flex items-center gap-2 sm:gap-2.5 border border-white/25 bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px]"
+              className="flex items-center gap-2 sm:gap-2.5 border border-white/25 bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px] max-w-full"
             >
               <span className="font-black text-sm select-none" style={{ color: themeStyles.cursorColor }}>:</span>
               
@@ -1772,17 +1779,17 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
       </div>
 
       {/* 3. BOTTOM HARDWARE TELEMETRY FOOTER */}
-      <footer className={`w-full ${themeStyles.headerBg} px-3 py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wide border ${themeStyles.border} rounded-b-sm mt-2`}>
-        <div className="flex items-center gap-3">
+      <footer className={`w-full max-w-full ${themeStyles.headerBg} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-wrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border ${themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 gap-1.5`}>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <span>[0] 0:krsz.in*</span>
           <span className="opacity-70 text-[#98c379] hidden sm:inline">1:v8-workers</span>
           <span className="opacity-70 text-[#56b6c2] hidden sm:inline">2:d1-sql</span>
           <span className="opacity-70 text-[#e5c07b] hidden md:inline">3:vectorize</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-[#e06c75] hidden sm:inline">"krsz-edge-node"</span>
-          <span className="text-[#98c379]">STATUS: 0ms COLD START</span>
+          <span className="text-[#98c379] text-[11px] sm:text-xs">STATUS: 0ms COLD START</span>
         </div>
       </footer>
 
