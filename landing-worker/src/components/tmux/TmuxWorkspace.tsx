@@ -177,9 +177,9 @@ const AdsrVisualizer: React.FC<AdsrVisualizerProps> = ({
   release = 0.1,
   color = '#98c379',
 }) => {
-  const width = 110;
-  const height = 34;
-  const padX = 3;
+  const width = 160;
+  const height = 36;
+  const padX = 4;
   const padY = 3;
   const usableW = width - padX * 2;
   const usableH = height - padY * 2;
@@ -2420,9 +2420,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <span className="text-white/40 font-mono text-xs">──►</span>
                     </div>
 
-                    {/* Left/Right Horizontal Split in 2 : 3 Ratio */}
-                    <div className="grid grid-cols-5 gap-1.5 items-center flex-1 min-h-0 my-auto">
-                      {/* Left: 2 Cols (40% width) - Dynamic SVG ADSR Curve Display */}
+                    {/* Left/Right Horizontal Split in 2 : 1 Ratio (Envelope Graph 2 parts : ADSR Faders 1 part) */}
+                    <div className="grid grid-cols-3 gap-1.5 items-center flex-1 min-h-0 my-auto">
+                      {/* Left: 2 Cols (66.7% width) - Dynamic SVG ADSR Curve Display with Spacious Parameters */}
                       <div className="col-span-2 flex flex-col justify-between h-full py-0.5">
                         <div className="flex-1 flex items-center justify-center">
                           <AdsrVisualizer
@@ -2435,8 +2435,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         </div>
                       </div>
 
-                      {/* Right: 3 Cols (60% width) - 4 Precision Hardware Faders */}
-                      <div className="col-span-3 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1.5 h-full py-0.5">
+                      {/* Right: 1 Col (33.3% width) - 4 Precision Hardware Faders */}
+                      <div className="col-span-1 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5">
                         <HardwareFader
                           label="A"
                           value={activeEnvTab === 'amp' ? (currentTrack.ampAttack ?? currentTrack.attack) : currentTrack.filterAttack}
