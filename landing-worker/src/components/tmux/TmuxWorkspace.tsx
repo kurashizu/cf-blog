@@ -425,10 +425,8 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                   return (
                     <button
                       onClick={() => onCellClick(actualIdx, colIdx)}
-                      className={`w-full h-full cursor-pointer border ${roundedClass} ${spanClass} ${
-                        isSelected
-                          ? `shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`
-                          : isColActive
+                      className={`relative w-full h-full cursor-pointer border ${roundedClass} ${spanClass} ${
+                        isColActive
                           ? 'border-white/60 bg-white/25'
                           : isBarStart
                           ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
@@ -438,11 +436,21 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                           ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
                           : 'border-white/5 bg-black/40 hover:bg-white/10'
                       }`}
-                      style={{
-                        backgroundColor: isSelected ? activeTrackColor : undefined,
-                        borderColor: isSelected ? activeTrackColor : undefined,
-                      }}
-                    />
+                    >
+                      {/* Accurate Duration Fill */}
+                      {is0 && (
+                        <div
+                          className={`absolute left-0 top-0 h-full ${is1 ? 'w-full' : 'w-[50%]'} ${roundedClass} shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`}
+                          style={{ backgroundColor: activeTrackColor }}
+                        />
+                      )}
+                      {!is0 && is1 && (
+                        <div
+                          className={`absolute right-0 top-0 h-full w-[50%] ${roundedClass} shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`}
+                          style={{ backgroundColor: activeTrackColor }}
+                        />
+                      )}
+                    </button>
                   );
                 })()
               )}
