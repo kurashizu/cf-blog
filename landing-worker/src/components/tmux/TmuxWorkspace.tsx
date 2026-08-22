@@ -2839,58 +2839,60 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             </div>
           )}
 
-          {/* BOTTOM COMMAND PROMPT WITH FLAT MATTE RECTANGLE TERMINAL BLOCK CURSOR */}
-          <div className="border-t border-white/10 pt-3 space-y-2">
-            {commandHistory.length > 0 && (
-              <div className="text-xs sm:text-sm opacity-60 space-y-0.5">
-                {commandHistory.map((h, i) => (
-                  <div key={i}>{h}</div>
-                ))}
-              </div>
-            )}
-            <div className="text-xs sm:text-sm text-[#98c379] font-bold">{commandOutput}</div>
+          {/* BOTTOM COMMAND PROMPT (DISPLAYED ONLY ON NON-SYNTH TABS 0-3) */}
+          {activeTab !== 4 && (
+            <div className="border-t border-white/10 pt-3 space-y-2 shrink-0">
+              {commandHistory.length > 0 && (
+                <div className="text-xs sm:text-sm opacity-60 space-y-0.5">
+                  {commandHistory.map((h, i) => (
+                    <div key={i}>{h}</div>
+                  ))}
+                </div>
+              )}
+              <div className="text-xs sm:text-sm text-[#98c379] font-bold">{commandOutput}</div>
 
-            <form
-              onSubmit={handleCommandSubmit}
-              onClick={() => cmdInputRef.current?.focus()}
-              className="flex items-center gap-2 sm:gap-2.5 border border-white/25 bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px] max-w-full"
-            >
-              <span className="font-black text-sm select-none" style={{ color: themeStyles.cursorColor }}>:</span>
-              
-              <div className="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden">
-                <span className="whitespace-pre">{commandInput}</span>
-                <span
-                  className="inline-block w-[9px] h-[18px] ml-0.5 align-middle shrink-0 transition-opacity duration-75"
-                  style={{
-                    backgroundColor: themeStyles.cursorColor,
-                    opacity: pulseStep % 6 < 4 ? 0.95 : 0.15,
-                  }}
-                />
-                {!commandInput && (
-                  <span className="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">
-                    Type command (e.g. 'eval 2**16', 'seq play', 'bpm 100', 'help')...
-                  </span>
-                )}
-
-                <input
-                  ref={cmdInputRef}
-                  type="text"
-                  value={commandInput}
-                  onChange={(e) => setCommandInput(e.target.value)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-text outline-none font-mono z-10"
-                  autoFocus
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80"
-                style={{ color: themeStyles.cursorColor }}
+              <form
+                onSubmit={handleCommandSubmit}
+                onClick={() => cmdInputRef.current?.focus()}
+                className="flex items-center gap-2 sm:gap-2.5 border border-white/25 bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px] max-w-full"
               >
-                [EXEC]
-              </button>
-            </form>
-          </div>
+                <span className="font-black text-sm select-none" style={{ color: themeStyles.cursorColor }}>:</span>
+                
+                <div className="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden">
+                  <span className="whitespace-pre">{commandInput}</span>
+                  <span
+                    className="inline-block w-[9px] h-[18px] ml-0.5 align-middle shrink-0 transition-opacity duration-75"
+                    style={{
+                      backgroundColor: themeStyles.cursorColor,
+                      opacity: pulseStep % 6 < 4 ? 0.95 : 0.15,
+                    }}
+                  />
+                  {!commandInput && (
+                    <span className="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">
+                      Type command (e.g. 'eval 2**16', 'seq play', 'bpm 100', 'help')...
+                    </span>
+                  )}
+
+                  <input
+                    ref={cmdInputRef}
+                    type="text"
+                    value={commandInput}
+                    onChange={(e) => setCommandInput(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-text outline-none font-mono z-10"
+                    autoFocus
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80"
+                  style={{ color: themeStyles.cursorColor }}
+                >
+                  [EXEC]
+                </button>
+              </form>
+            </div>
+          )}
 
         </div>
 
