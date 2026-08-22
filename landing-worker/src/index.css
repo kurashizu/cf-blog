@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --matte-bg: #090a0c;
+    --matte-card: #111317;
+    --matte-card-hover: #16191f;
+    --matte-border: rgba(255, 255, 255, 0.08);
+    --matte-border-hover: rgba(255, 255, 255, 0.22);
+    --matte-text: #f1f5f9;
+    --matte-muted: #94a3b8;
+    --matte-faint: #475569;
+    --matte-accent: #38bdf8;
+    --matte-accent-glow: rgba(56, 189, 248, 0.15);
+    --matte-tag: rgba(255, 255, 255, 0.04);
+    --matte-highlight: #38bdf8;
+  }
+
+  body {
+    background-color: var(--matte-bg);
+    color: var(--matte-text);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Tactile Dotted Grid Background */
+.bg-grid-pattern {
+  background-size: 24px 24px;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+}
+
+.bg-grid-dense {
+  background-size: 16px 16px;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+}
+
+/* Subtle Matte Card Hover & Dotted Frame */
+.bento-card {
+  position: relative;
+  background-color: var(--matte-card);
+  border: 1px dashed var(--matte-border);
+  border-radius: 1rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.bento-card:hover {
+  background-color: var(--matte-card-hover);
+  border-color: var(--matte-border-hover);
+  box-shadow: 0 0 25px -5px var(--matte-accent-glow), 0 8px 16px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* Scrollbar Minimal */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

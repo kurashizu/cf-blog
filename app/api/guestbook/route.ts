@@ -8,6 +8,12 @@ const BURST_LIMIT = 2;
 const BURST_PERIOD = 10;
 const DAILY_LIMIT = 5;
 
+const CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 function sanitize(str: string): string {
     return str
         .replace(/<[^>]*>/g, "")
@@ -16,16 +22,20 @@ function sanitize(str: string): string {
         .trim();
 }
 
+export async function OPTIONS() {
+    return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function GET() {
     try {
         const repo = createGuestbookRepo();
         const messages = await repo.getAll();
-        return NextResponse.json({ messages });
+        return NextResponse.json({ messages }, { headers: CORS_HEADERS });
     } catch (error) {
         console.error("Guestbook GET error:", error);
         return NextResponse.json(
             { error: "Failed to fetch messages" },
-            { status: 500 },
+            { status: 500, headers: CORS_HEADERS },
         );
     }
 }
@@ -67,7 +77,7 @@ export async function POST(request: NextRequest) {
         if (website) {
             return NextResponse.json(
                 { error: "Invalid submission" },
-                { status: 400 },
+                { status: 400, headers: CORS_HEADERS },
             );
         }
 
@@ -75,13 +85,13 @@ export async function POST(request: NextRequest) {
         if (!name || name.trim().length < 1 || name.trim().length > 100) {
             return NextResponse.json(
                 { error: "Name must be 1-100 characters" },
-                { status: 400 },
+                { status: 400, headers: CORS_HEADERS },
             );
         }
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return NextResponse.json(
                 { error: "Valid email is required" },
-                { status: 400 },
+                { status: 400, headers: CORS_HEADERS },
             );
         }
         if (
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest) {
         ) {
             return NextResponse.json(
                 { error: "Content must be 1-2000 characters" },
-                { status: 400 },
+                { status: 400, headers: CORS_HEADERS },
             );
         }
 
@@ -102,12 +112,12 @@ export async function POST(request: NextRequest) {
             email: email?.trim(),
         });
 
-        return NextResponse.json({ message }, { status: 201 });
+        return NextResponse.json({ message }, { status: 201, headers: CORS_HEADERS });
     } catch (error) {
         console.error("Guestbook POST error:", error);
         return NextResponse.json(
             { error: "Failed to post message" },
-            { status: 500 },
+            { status: 500, headers: CORS_HEADERS },
         );
     }
 }
