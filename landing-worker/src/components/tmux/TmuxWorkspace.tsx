@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   PixelTerminal,
   PixelBlog,
@@ -268,11 +268,17 @@ const AdsrVisualizer: React.FC<AdsrVisualizerProps> = ({
 };
 
 
+interface VisibleTrackItem {
+  id: number;
+  color: string;
+  grid: number[][];
+  isPrimary: boolean;
+}
+
 interface PianoRollRowProps {
   nInfo: { note: string; freq: number; isBlack: boolean; oct: number };
   actualIdx: number;
-  activeTrackColor: string;
-  activeTrackGrid: number[][];
+  visibleTracks: VisibleTrackItem[];
   viewportStartCol: number;
   activeCol: number;
   activeSubCol: number;
@@ -287,8 +293,7 @@ interface PianoRollRowProps {
 const PianoRollRow = React.memo<PianoRollRowProps>(({
   nInfo,
   actualIdx,
-  activeTrackColor,
-  activeTrackGrid,
+  visibleTracks,
   viewportStartCol,
   activeCol,
   activeSubCol,
@@ -333,9 +338,6 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
           const globalCol = viewportStartCol + colIdx;
           const step0 = globalCol * 2;
           const step1 = globalCol * 2 + 1;
-          const is0 = activeTrackGrid[step0]?.includes(actualIdx) || false;
-          const is1 = activeTrackGrid[step1]?.includes(actualIdx) || false;
-          const isSelected = is0 || is1;
           const isColActive = activeCol === colIdx;
 
           const colInBar = globalCol % meterSpec.colsPerBar;
@@ -346,37 +348,23 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
           return (
             <div key={colIdx} className="h-full relative flex">
               {snapDiv === '1/8' ? (
-                <div className={`flex h-full w-full ${is0 && is1 ? 'gap-0' : 'gap-0.5'}`}>
+                <div className="flex h-full w-full gap-0.5">
                   {[0, 1].map((subCol) => {
                     const step = globalCol * 2 + subCol;
-                    const isSubSelected = subCol === 0 ? is0 : is1;
                     const isSubCurrent = isColActive && activeSubCol === subCol;
 
-                    const isPrevConnected = isSubSelected && (subCol === 1 ? is0 : (activeTrackGrid[step - 1]?.includes(actualIdx) || false));
-                    const isNextConnected = isSubSelected && (subCol === 0 ? is1 : (activeTrackGrid[step + 1]?.includes(actualIdx) || false));
-
-                    let roundedClass = 'rounded-xs';
-                    let spanClass = '';
-
-                    if (isSubSelected) {
-                      if (isPrevConnected && isNextConnected) {
-                        roundedClass = 'rounded-none border-x-0';
-                        spanClass = subCol === 1 ? '-mr-[3px] z-[2]' : '-mr-[2px] z-[1]';
-                      } else if (isNextConnected) {
-                        roundedClass = 'rounded-l-xs rounded-r-none border-r-0';
-                        spanClass = subCol === 1 ? '-mr-[3px] z-[2]' : '-mr-[2px] z-[1]';
-                      } else if (isPrevConnected) {
-                        roundedClass = 'rounded-r-xs rounded-l-none border-l-0';
-                        spanClass = 'z-[1]';
-                      }
-                    }
+                    const tracksWithNote = visibleTracks.filter((t) => t.grid[step]?.includes(actualIdx));
+                    const hasNote = tracksWithNote.length > 0;
+                    const primaryTrackWithNote = tracksWithNote.find((t) => t.isPrimary);
+                    const displayColor = primaryTrackWithNote ? primaryTrackWithNote.color : (tracksWithNote[0]?.color || '#fff');
+                    const isPrimaryNote = Boolean(primaryTrackWithNote);
 
                     return (
                       <button
                         key={subCol}
                         onClick={() => onSubCellClick(actualIdx, colIdx, subCol)}
-                        className={`flex-1 h-full cursor-pointer border ${roundedClass} ${spanClass} ${
-                          isSubSelected
+                        className={`flex-1 h-full cursor-pointer border rounded-xs transition-colors relative overflow-hidden ${
+                          hasNote
                             ? `shadow-sm ${isSubCurrent ? 'brightness-125 ring-1 ring-white' : ''}`
                             : isSubCurrent
                             ? 'border-white/70 bg-white/30'
@@ -389,66 +377,70 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                             : 'border-white/5 bg-black/40 hover:bg-white/10'
                         }`}
                         style={{
-                          backgroundColor: isSubSelected ? activeTrackColor : undefined,
-                          borderColor: isSubSelected ? activeTrackColor : undefined,
+                          backgroundColor: hasNote ? displayColor : undefined,
+                          borderColor: hasNote ? displayColor : undefined,
+                          opacity: hasNote && !isPrimaryNote ? 0.75 : 1,
                         }}
-                        title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)`}
+                        title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)${hasNote ? ` — ${tracksWithNote.length} note(s)` : ''}`}
                       />
                     );
                   })}
                 </div>
               ) : (
-                (() => {
-                  const isPrevColConnected = isSelected && (activeTrackGrid[step0 - 1]?.includes(actualIdx) || false);
-                  const isNextColConnected = isSelected && (activeTrackGrid[step1 + 1]?.includes(actualIdx) || false);
+                <button
+                  onClick={() => onCellClick(actualIdx, colIdx)}
+                  className={`relative w-full h-full cursor-pointer border rounded-xs overflow-hidden ${
+                    isColActive
+                      ? 'border-white/60 bg-white/25'
+                      : isBarStart
+                      ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                      : isBeatStart
+                      ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                      : isDivBlockStart
+                      ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
+                      : 'border-white/5 bg-black/40 hover:bg-white/10'
+                  }`}
+                >
+                  {/* Multi-Track Overlaid Note Bars */}
+                  {visibleTracks.map((t) => {
+                    const is0 = t.grid[step0]?.includes(actualIdx) || false;
+                    const is1 = t.grid[step1]?.includes(actualIdx) || false;
+                    if (!is0 && !is1) return null;
 
-                  let roundedClass = 'rounded-xs';
-                  let spanClass = '';
+                    const isPrevConnected = (is0 || is1) && (t.grid[step0 - 1]?.includes(actualIdx) || false);
+                    const isNextConnected = (is0 || is1) && (t.grid[step1 + 1]?.includes(actualIdx) || false);
 
-                  if (isSelected) {
-                    if (isPrevColConnected && isNextColConnected) {
-                      roundedClass = 'rounded-none border-x-0';
-                      spanClass = '-mr-[3px] z-[2]';
-                    } else if (isNextColConnected) {
-                      roundedClass = 'rounded-l-xs rounded-r-none border-r-0';
-                      spanClass = '-mr-[3px] z-[2]';
-                    } else if (isPrevColConnected) {
-                      roundedClass = 'rounded-r-xs rounded-l-none border-l-0';
-                      spanClass = 'z-[1]';
+                    let roundedClass = 'rounded-xs';
+                    if (isPrevConnected && isNextConnected) {
+                      roundedClass = 'rounded-none';
+                    } else if (isNextConnected) {
+                      roundedClass = 'rounded-l-xs rounded-r-none';
+                    } else if (isPrevConnected) {
+                      roundedClass = 'rounded-r-xs rounded-l-none';
                     }
-                  }
 
-                  return (
-                    <button
-                      onClick={() => onCellClick(actualIdx, colIdx)}
-                      className={`relative w-full h-full cursor-pointer border ${roundedClass} ${spanClass} ${
-                        isColActive
-                          ? 'border-white/60 bg-white/25'
-                          : isBarStart
-                          ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-                          : isBeatStart
-                          ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-                          : isDivBlockStart
-                          ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
-                          : 'border-white/5 bg-black/40 hover:bg-white/10'
-                      }`}
-                    >
-                      {/* Accurate Duration Fill */}
-                      {is0 && (
-                        <div
-                          className={`absolute left-0 top-0 h-full ${is1 ? 'w-full' : 'w-[50%]'} ${roundedClass} shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`}
-                          style={{ backgroundColor: activeTrackColor }}
-                        />
-                      )}
-                      {!is0 && is1 && (
-                        <div
-                          className={`absolute right-0 top-0 h-full w-[50%] ${roundedClass} shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`}
-                          style={{ backgroundColor: activeTrackColor }}
-                        />
-                      )}
-                    </button>
-                  );
-                })()
+                    return (
+                      <React.Fragment key={t.id}>
+                        {is0 && (
+                          <div
+                            className={`absolute left-0 top-0 h-full ${is1 ? 'w-full' : 'w-[50%]'} ${roundedClass} shadow-sm ${
+                              t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-75'
+                            } ${isColActive && t.isPrimary ? 'brightness-125 ring-1 ring-white' : ''}`}
+                            style={{ backgroundColor: t.color }}
+                          />
+                        )}
+                        {!is0 && is1 && (
+                          <div
+                            className={`absolute right-0 top-0 h-full w-[50%] ${roundedClass} shadow-sm ${
+                              t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-75'
+                            } ${isColActive && t.isPrimary ? 'brightness-125 ring-1 ring-white' : ''}`}
+                            style={{ backgroundColor: t.color }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </button>
               )}
             </div>
           );
@@ -582,6 +574,8 @@ export const TmuxWorkspace: React.FC = () => {
   const [octaveFrom, setOctaveFrom] = useState<number>(3);
   const [octaveTo, setOctaveTo] = useState<number>(5);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
+  const [isOverlayMode, setIsOverlayMode] = useState<boolean>(false);
+  const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0]);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
   const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
   const [seqCurrentStep, setSeqCurrentStep] = useState<number>(0);
@@ -1424,7 +1418,28 @@ export const TmuxWorkspace: React.FC = () => {
     return BRAILLE_WAVES.map((_, i) => BRAILLE_WAVES[(i + pulseStep + offset) % BRAILLE_WAVES.length]).join('');
   };
 
-  const currentTrack = tracksState[activeTrackId];
+  const currentTrack = tracksState[activeTrackId] || tracksState[0];
+
+  const visibleTracks: VisibleTrackItem[] = useMemo(() => {
+    if (isOverlayMode) {
+      return tracksState
+        .filter((trk) => overlayTrackIds.includes(trk.id))
+        .map((trk) => ({
+          id: trk.id,
+          color: trk.color,
+          grid: trk.grid,
+          isPrimary: trk.id === activeTrackId,
+        }));
+    }
+    return [
+      {
+        id: currentTrack.id,
+        color: currentTrack.color,
+        grid: currentTrack.grid,
+        isPrimary: true,
+      },
+    ];
+  }, [isOverlayMode, overlayTrackIds, tracksState, activeTrackId, currentTrack]);
 
   return (
     <div className={`w-full min-h-screen font-mono text-sm sm:text-base ${themeStyles.bg} ${themeStyles.text} flex flex-col justify-between select-none p-1.5 sm:p-3 md:p-4 transition-colors duration-200`}>
@@ -2132,25 +2147,87 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   {saveStatus && <span className="text-[#98c379] font-bold ml-1">{saveStatus}</span>}
                 </div>
 
-                {/* Right: 8-Track Channel Selectors with Inline Mute/Solo (Right-aligned) */}
-                <div className="flex items-center gap-1 text-xs overflow-x-auto no-scrollbar ml-auto">
+                {/* Right: Overlay Toggle + 8-Track Channel Selectors with Inline Mute/Solo (Right-aligned) */}
+                <div className="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar ml-auto">
+                  {/* Multi-Track Overlay Toggle (to the left of TRK 1) */}
+                  <button
+                    onClick={() => {
+                      const next = !isOverlayMode;
+                      setIsOverlayMode(next);
+                      if (!next) {
+                        setOverlayTrackIds([activeTrackId]);
+                      } else {
+                        if (!overlayTrackIds.includes(activeTrackId)) {
+                          setOverlayTrackIds([activeTrackId]);
+                        }
+                      }
+                      playSound('toggle');
+                    }}
+                    className={`px-2 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0 ${
+                      isOverlayMode
+                        ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_rgba(86,182,194,0.5)]'
+                        : 'border-white/20 text-white/60 hover:text-white hover:border-white/50'
+                    }`}
+                    title={
+                      isOverlayMode
+                        ? 'Multi-Track Overlay Mode: ACTIVE — Click TRKs to multi-select and layer on Piano Roll'
+                        : 'Multi-Track Overlay Mode: OFF — Click to enable multi-track layered view on Piano Roll'
+                    }
+                  >
+                    <span>⧉</span>
+                    <span>OVERLAY</span>
+                  </button>
+
+                  <div className="w-px h-3.5 bg-white/15 mx-0.5 shrink-0" />
+
+                  {/* 8 Track Chips */}
                   {tracksState.map((trk) => {
-                    const isSelected = activeTrackId === trk.id;
+                    const isSelected = isOverlayMode
+                      ? overlayTrackIds.includes(trk.id)
+                      : activeTrackId === trk.id;
+                    const isPrimary = activeTrackId === trk.id;
+
                     return (
                       <div
                         key={trk.id}
                         className={`flex items-center border rounded-xs transition-all ${
                           isSelected
-                            ? 'border-white bg-white/20 text-white shadow-sm'
-                            : 'border-white/20 text-[#eceff4] opacity-80 hover:opacity-100'
+                            ? isPrimary
+                              ? 'border-white bg-white/25 text-white shadow-sm ring-1 ring-white/60'
+                              : 'border-white/50 bg-white/10 text-white'
+                            : 'border-white/15 text-[#eceff4] opacity-50 hover:opacity-90'
                         }`}
                       >
                         <button
-                          onClick={() => { setActiveTrackId(trk.id); playSound('click'); }}
+                          onClick={() => {
+                            if (isOverlayMode) {
+                              if (overlayTrackIds.includes(trk.id)) {
+                                if (overlayTrackIds.length > 1) {
+                                  const next = overlayTrackIds.filter((id) => id !== trk.id);
+                                  setOverlayTrackIds(next);
+                                  if (activeTrackId === trk.id) {
+                                    setActiveTrackId(next[0]);
+                                  }
+                                }
+                              } else {
+                                setOverlayTrackIds([...overlayTrackIds, trk.id]);
+                                setActiveTrackId(trk.id);
+                              }
+                            } else {
+                              setActiveTrackId(trk.id);
+                              setOverlayTrackIds([trk.id]);
+                            }
+                            playSound('click');
+                          }}
                           className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
                           style={{ color: isSelected ? trk.color : undefined }}
+                          title={
+                            isOverlayMode
+                              ? `${trk.name} — Click to toggle overlay visibility. Active Editing Track: ${activeTrackId === trk.id ? 'YES' : 'NO'}`
+                              : `Select ${trk.name}`
+                          }
                         >
-                          <span className="w-2 h-2 inline-block shrink-0" style={{ backgroundColor: trk.color }} />
+                          <span className="w-2 h-2 inline-block shrink-0 rounded-[1px]" style={{ backgroundColor: trk.color }} />
                           <span>{trk.name.split(':')[0]}</span>
                         </button>
 
@@ -2801,8 +2878,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                   key={nInfo.note}
                                   nInfo={nInfo}
                                   actualIdx={actualIdx}
-                                  activeTrackColor={currentTrack.color}
-                                  activeTrackGrid={currentTrack.grid}
+                                  visibleTracks={visibleTracks}
                                   viewportStartCol={viewportStartCol}
                                   activeCol={activeCol}
                                   activeSubCol={activeSubCol}
