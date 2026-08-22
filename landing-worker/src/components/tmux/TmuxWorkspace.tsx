@@ -496,6 +496,7 @@ export const TmuxWorkspace: React.FC = () => {
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [timeBase, setTimeBase] = useState<'0.25x' | '0.5x' | '1x' | '2x' | '4x'>('1x');
   const [activeEnvTab, setActiveEnvTab] = useState<'amp' | 'vcf'>('amp');
+  const [activeOutVisualizer, setActiveOutVisualizer] = useState<'fft' | 'scope'>('fft');
   const [rackPage, setRackPage] = useState<1 | 2>(1);
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -2698,17 +2699,41 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 7: OUT (LEFT: PAN & VOL VERTICAL, MIDDLE: FFT SPECTRUM, RIGHT: WAVE SCOPE) */}
+                  {/* MODULE 7: OUT (LEFT: PAN & VOL VERTICAL, RIGHT: TABBED SINGLE GRAPH - FFT OR SCOPE) */}
                   <div className="xl:col-span-3 border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     <div className="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-1 shrink-0">
-                      <span>7. OUT &amp; ANALYSIS</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-xs font-black">7. OUT</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setActiveOutVisualizer('fft'); playSound('click'); }}
+                            className={`px-2 py-0.5 text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                              activeOutVisualizer === 'fft'
+                                ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            FFT
+                          </button>
+                          <button
+                            onClick={() => { setActiveOutVisualizer('scope'); playSound('click'); }}
+                            className={`px-2 py-0.5 text-xs rounded-xs border font-black cursor-pointer transition-colors ${
+                              activeOutVisualizer === 'scope'
+                                ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            SCOPE
+                          </button>
+                        </div>
+                      </div>
                       <span className="text-xs font-mono text-white/50">60 FPS</span>
                     </div>
 
-                    {/* Left / Middle / Right 3-Column Split */}
-                    <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
+                    {/* Left / Right 2-Column Split */}
+                    <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
                       {/* Left: PAN and VOL Stacked Vertically */}
-                      <div className="col-span-3 flex flex-col justify-around items-center border-r border-white/10 pr-1.5 h-full py-0.5">
+                      <div className="col-span-4 flex flex-col justify-around items-center border-r border-white/10 pr-1.5 h-full py-0.5">
                         <RotaryKnob
                           label="PAN"
                           value={Math.round(currentTrack.pan * 100)}
@@ -2717,7 +2742,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={5}
                           unit=""
                           color="#56b6c2"
-                          size={22}
+                          size={24}
                           onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
                         />
                         <RotaryKnob
@@ -2727,44 +2752,51 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           max={100}
                           unit="%"
                           color="#98c379"
-                          size={22}
+                          size={24}
                           onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
                         />
                       </div>
 
-                      {/* Middle: Logarithmic Frequency Spectrum */}
-                      <div className="col-span-4 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
-                        <div className="flex items-center justify-between text-xs font-mono text-white/50 px-0.5">
-                          <span className="text-[#56b6c2] font-black">FFT (LOG)</span>
-                          <span className="text-[10px]">20Hz-20k</span>
+                      {/* Right: Full-Screen High-Resolution Single Visualizer Canvas */}
+                      <div className="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
+                        <div className="flex items-center justify-between text-xs font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
+                          <span className={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : 'text-[#98c379] font-black'}>
+                            {activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : 'OSCILLOSCOPE WAVE'}
+                          </span>
+                          {activeOutVisualizer === 'fft' ? (
+                            <span className="text-[10px] text-white/50 font-bold">20Hz-20k</span>
+                          ) : (
+                            <div className="flex items-center gap-0.5">
+                              {(['0.5x', '1x', '2x'] as const).map((tb) => (
+                                <button
+                                  key={tb}
+                                  onClick={() => { setTimeBase(tb); playSound('click'); }}
+                                  className={`px-1 py-0.2 rounded-xs border text-[9px] cursor-pointer font-black leading-none ${
+                                    timeBase === tb
+                                      ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                      : 'border-white/20 text-white/60 hover:text-white'
+                                  }`}
+                                >
+                                  {tb}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="relative flex-1 min-h-[44px] rounded-xs overflow-hidden">
-                          <canvas ref={fftCanvasRef} width={120} height={44} className="w-full h-full block" />
-                        </div>
-                      </div>
 
-                      {/* Right: Real-Time Oscilloscope */}
-                      <div className="col-span-5 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
-                        <div className="flex items-center justify-between text-xs font-mono text-white/50 px-0.5">
-                          <span className="text-[#98c379] font-black">WAVE</span>
-                          <div className="flex items-center gap-0.5">
-                            {(['0.5x', '1x', '2x'] as const).map((tb) => (
-                              <button
-                                key={tb}
-                                onClick={() => { setTimeBase(tb); playSound('click'); }}
-                                className={`px-1 py-0.2 rounded-xs border text-[9px] cursor-pointer font-black leading-none ${
-                                  timeBase === tb
-                                    ? 'border-[#98c379] bg-[#98c379] text-black font-black'
-                                    : 'border-white/20 text-white/60 hover:text-white'
-                                }`}
-                              >
-                                {tb}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="relative flex-1 min-h-[44px] rounded-xs overflow-hidden">
-                          <canvas ref={waveCanvasRef} width={140} height={44} className="w-full h-full block" />
+                        <div className="relative flex-1 min-h-[46px] rounded-xs overflow-hidden mt-0.5">
+                          <canvas
+                            ref={fftCanvasRef}
+                            width={260}
+                            height={46}
+                            className={`w-full h-full ${activeOutVisualizer === 'fft' ? 'block' : 'hidden'}`}
+                          />
+                          <canvas
+                            ref={waveCanvasRef}
+                            width={260}
+                            height={46}
+                            className={`w-full h-full ${activeOutVisualizer === 'scope' ? 'block' : 'hidden'}`}
+                          />
                         </div>
                       </div>
                     </div>
