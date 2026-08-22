@@ -1442,6 +1442,9 @@ const MARIO_TRK4_ACCENTS: boolean[] = [
   false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
 ];
 
+const EMPTY_GRID: number[][] = Array.from({ length: 64 }, () => []);
+const EMPTY_ACCENTS: boolean[] = Array.from({ length: 64 }, () => false);
+
 export const INITIAL_TRACKS: TrackData[] = [
   {
     id: 0,
@@ -1681,6 +1684,226 @@ export const INITIAL_TRACKS: TrackData[] = [
     grid: MARIO_TRK4_GRID,
     accents: MARIO_TRK4_ACCENTS,
   },
+  {
+    id: 4,
+    name: 'TRK 5: CHORD (PAD)',
+    color: '#d19a66',
+    volume: 0.8,
+    pan: -0.2,
+    muted: false,
+    solo: false,
+
+    osc1Waveform: 'sawtooth',
+    osc1Gain: 0.8,
+    osc2Waveform: 'sawtooth',
+    osc2Gain: 0.8,
+    osc2Ratio: 1.0,
+    detuneCents: 15,
+    phaseOffset: 0,
+    osc2Semitone: 0,
+    pulseWidth: 50,
+    subOscGain: 0,
+    noiseGain: 0.0,
+
+    blendMode: 'layer',
+    morphAmount: 0.0,
+
+    filterType: 'lowpass',
+    cutoff: 1500,
+    resonance: 1.2,
+    envFilterMod: 0.3,
+
+    attack: 0.1,
+    decay: 0.5,
+    sustain: 0.8,
+    release: 0.8,
+    ampAttack: 0.1,
+    ampDecay: 0.5,
+    ampSustain: 0.8,
+    ampRelease: 0.8,
+
+    filterAttack: 0.2,
+    filterDecay: 0.4,
+    filterSustain: 0.5,
+    filterRelease: 0.6,
+    filterEnvAmount: 0.4,
+
+    lfoWaveform: 'sine',
+    lfoRate: 0.5,
+    lfoDepth: 0.2,
+    lfoTarget: 'filter',
+
+    modRoutes: [],
+    grid: EMPTY_GRID,
+    accents: EMPTY_ACCENTS,
+  },
+  {
+    id: 5,
+    name: 'TRK 6: CHORD (KEYS)',
+    color: '#c678dd',
+    volume: 0.8,
+    pan: 0.2,
+    muted: false,
+    solo: false,
+
+    osc1Waveform: 'square',
+    osc1Gain: 0.8,
+    osc2Waveform: 'triangle',
+    osc2Gain: 0.6,
+    osc2Ratio: 1.0,
+    detuneCents: 5,
+    phaseOffset: 0,
+    osc2Semitone: 0,
+    pulseWidth: 30,
+    subOscGain: 0,
+    noiseGain: 0.0,
+
+    blendMode: 'layer',
+    morphAmount: 0.0,
+
+    filterType: 'lowpass',
+    cutoff: 3000,
+    resonance: 1.5,
+    envFilterMod: 0.6,
+
+    attack: 0.01,
+    decay: 0.3,
+    sustain: 0.2,
+    release: 0.3,
+    ampAttack: 0.01,
+    ampDecay: 0.3,
+    ampSustain: 0.2,
+    ampRelease: 0.3,
+
+    filterAttack: 0.01,
+    filterDecay: 0.2,
+    filterSustain: 0.1,
+    filterRelease: 0.2,
+    filterEnvAmount: 0.5,
+
+    lfoWaveform: 'sine',
+    lfoRate: 4.0,
+    lfoDepth: 0.0,
+    lfoTarget: 'pitch',
+
+    modRoutes: [],
+    grid: EMPTY_GRID,
+    accents: EMPTY_ACCENTS,
+  },
+  {
+    id: 6,
+    name: 'TRK 7: DRUM (KICK)',
+    color: '#98c379',
+    volume: 1.2,
+    pan: 0.0,
+    muted: false,
+    solo: false,
+
+    osc1Waveform: 'sine',
+    osc1Gain: 1.0,
+    osc2Waveform: 'triangle',
+    osc2Gain: 1.0,
+    osc2Ratio: 1.0,
+    detuneCents: 0,
+    phaseOffset: 0,
+    osc2Semitone: 0,
+    pulseWidth: 50,
+    subOscGain: 0,
+    noiseGain: 0.0,
+
+    blendMode: 'layer',
+    morphAmount: 0.0,
+
+    filterType: 'lowpass',
+    cutoff: 80,
+    resonance: 1.2,
+    envFilterMod: 0.5,
+
+    attack: 0.001,
+    decay: 0.3,
+    sustain: 0.0,
+    release: 0.2,
+    ampAttack: 0.001,
+    ampDecay: 0.3,
+    ampSustain: 0.0,
+    ampRelease: 0.2,
+
+    filterAttack: 0.001,
+    filterDecay: 0.15,
+    filterSustain: 0.0,
+    filterRelease: 0.1,
+    filterEnvAmount: 0.5,
+
+    pitchEnvAmount: 3.5,
+    pitchAttack: 0.001,
+    pitchDecay: 0.06,
+
+    lfoWaveform: 'sine',
+    lfoRate: 1.0,
+    lfoDepth: 0.0,
+    lfoTarget: 'pitch',
+
+    modRoutes: [],
+    grid: EMPTY_GRID,
+    accents: EMPTY_ACCENTS,
+  },
+  {
+    id: 7,
+    name: 'TRK 8: DRUM (SNARE)',
+    color: '#56b6c2',
+    volume: 1.0,
+    pan: 0.0,
+    muted: false,
+    solo: false,
+
+    osc1Waveform: 'noise',
+    osc1Gain: 0.9,
+    osc2Waveform: 'triangle',
+    osc2Gain: 0.8,
+    osc2Ratio: 1.0,
+    detuneCents: 0,
+    phaseOffset: 0,
+    osc2Semitone: 0,
+    pulseWidth: 50,
+    subOscGain: 0,
+    noiseGain: 0.8,
+
+    blendMode: 'layer',
+    morphAmount: 0.0,
+
+    filterType: 'bandpass',
+    cutoff: 1200,
+    resonance: 1.5,
+    envFilterMod: 0.7,
+
+    attack: 0.001,
+    decay: 0.2,
+    sustain: 0.0,
+    release: 0.15,
+    ampAttack: 0.001,
+    ampDecay: 0.2,
+    ampSustain: 0.0,
+    ampRelease: 0.15,
+
+    filterAttack: 0.001,
+    filterDecay: 0.12,
+    filterSustain: 0.0,
+    filterRelease: 0.1,
+    filterEnvAmount: 0.7,
+
+    pitchEnvAmount: 2.0,
+    pitchAttack: 0.001,
+    pitchDecay: 0.05,
+
+    lfoWaveform: 'sine',
+    lfoRate: 1.0,
+    lfoDepth: 0.0,
+    lfoTarget: 'pitch',
+
+    modRoutes: [],
+    grid: EMPTY_GRID,
+    accents: EMPTY_ACCENTS,
+  }
 ];
 
 interface ActiveVoice {
