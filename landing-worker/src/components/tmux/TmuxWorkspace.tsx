@@ -513,8 +513,8 @@ export const TmuxWorkspace: React.FC = () => {
       {/* 2. MAIN MULTI-PANE WORKSPACE */}
       <div className="grid grid-cols-12 gap-1.5 sm:gap-2 flex-1 min-h-0">
         
-        {/* LEFT PANE: IDENTITY, TELEMETRY & SYSTEM RADAR (4 Cols) */}
-        <div className={`col-span-12 lg:col-span-4 border ${themeStyles.border} p-2 sm:p-3 flex flex-col gap-2 ${themeStyles.cardBg} rounded-sm min-h-0 overflow-hidden`}>
+        {/* LEFT PANE: IDENTITY, TELEMETRY & SYSTEM RADAR (4 Cols, Scrollable without Content Collision) */}
+        <div className={`col-span-12 lg:col-span-4 border ${themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 ${themeStyles.cardBg} rounded-sm min-h-0 overflow-y-auto custom-scrollbar`}>
           
           {/* 1. ASCII BRAND & ACRONYM BREAKDOWN */}
           <div className="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5">
@@ -542,14 +542,14 @@ export const TmuxWorkspace: React.FC = () => {
             </div>
           </div>
 
-          {/* 2. REAL-TIME EDGE TELEMETRY & ISOLATE METRICS (ENLARGED TYPOGRAPHY & COMFORTABLE RHYTHM) */}
-          <div className="border border-white/15 p-3 sm:p-3.5 bg-black/40 rounded-xs flex-1 min-h-0 flex flex-col justify-between text-xs sm:text-sm font-mono">
+          {/* 2. REAL-TIME EDGE TELEMETRY & ISOLATE METRICS */}
+          <div className="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono">
             <div className="text-xs sm:text-sm font-bold text-[#98c379] flex items-center justify-between border-b border-white/10 pb-1 shrink-0">
               <span>┌─[ EDGE_TELEMETRY ]─┐</span>
               <span className="text-white/50 text-xs font-mono">{sydneyTime} AEST</span>
             </div>
             
-            <div className="space-y-2 py-1.5 text-xs sm:text-sm">
+            <div className="space-y-1.5 py-1 text-xs sm:text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-white/70 font-semibold">V8 ISOLATE RAM:</span>
                 <span className="text-[#56b6c2] font-bold flex items-center gap-1.5">
@@ -576,19 +576,19 @@ export const TmuxWorkspace: React.FC = () => {
               </div>
             </div>
 
-            <div className="border-t border-white/10 pt-1.5 text-xs text-white/50 flex justify-between shrink-0 font-mono">
+            <div className="border-t border-white/10 pt-1 text-xs text-white/50 flex justify-between shrink-0 font-mono">
               <span>REGION: AP-SOUTHEAST-2 (SYD)</span>
               <span>ISOLATE: #4902-ACTIVE</span>
             </div>
           </div>
 
-          {/* 3. OPERATOR SPECS & PHILOSOPHY (ENLARGED TYPOGRAPHY & COMFORTABLE RHYTHM) */}
-          <div className="border border-white/15 p-3 sm:p-3.5 bg-black/40 rounded-xs flex-1 min-h-0 flex flex-col justify-between text-xs sm:text-sm font-mono">
+          {/* 3. OPERATOR SPECS & PHILOSOPHY (CLEAN & NON-OVERLAPPING) */}
+          <div className="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono">
             <div className="text-xs sm:text-sm font-bold text-[#61afef] flex items-center justify-between border-b border-white/10 pb-1 shrink-0">
               <span>┌─[ OPERATOR_PROFILE ]─┐</span>
               <span className="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs">VERIFIED</span>
             </div>
-            <div className="space-y-2 py-1.5 text-xs sm:text-sm leading-relaxed">
+            <div className="space-y-1.5 py-1 text-xs sm:text-sm leading-relaxed">
               <div className="flex items-baseline gap-2">
                 <span className="text-[#e5c07b] font-bold shrink-0">[OPERATOR]</span>
                 <span className="text-[#eceff4] font-medium">kurashizu (IT Masters @ UNSW)</span>
@@ -610,21 +610,21 @@ export const TmuxWorkspace: React.FC = () => {
                 <span className="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</span>
               </div>
             </div>
-            <div className="border-t border-white/10 pt-1.5 text-xs text-[#98c379] shrink-0 font-bold flex items-center justify-between">
+            <div className="border-t border-white/10 pt-1 text-xs text-[#98c379] shrink-0 font-bold flex items-center justify-between">
               <span>STATUS: OPEN FOR RESEARCH</span>
               <span>AVAILABLE NOW</span>
             </div>
           </div>
 
           {/* 4. INTERACTIVE HOTKEYS QUICK-SWITCH PANEL (TACTILE SQUARE LAUNCHPAD TILES) */}
-          <div className="border border-white/15 p-2 bg-black/40 rounded-xs flex-1 min-h-0 flex flex-col justify-between text-xs">
+          <div className="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
             <div className="text-xs font-bold text-[#e5c07b] flex items-center justify-between border-b border-white/10 pb-0.5 shrink-0">
               <span>┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
               <span className="text-white/50 text-xs">[0-4, T]</span>
             </div>
 
             {/* 3x2 Tactile Square Launchpad Grid */}
-            <div className="grid grid-cols-3 gap-1.5 py-1 flex-1 min-h-0">
+            <div className="grid grid-cols-3 gap-1.5 py-1">
               {[
                 { id: 0, key: '0', title: 'OVERVIEW', desc: 'Cluster', color: '#56b6c2', icon: '⊞' },
                 { id: 1, key: '1', title: 'MODULES', desc: 'Specs', color: '#e5c07b', icon: '◈' },
@@ -742,7 +742,7 @@ export const TmuxWorkspace: React.FC = () => {
         </div>
 
         {/* RIGHT PANE: ACTIVE WORKBENCH WINDOW (8 Cols) */}
-        <div className={`col-span-12 lg:col-span-8 border ${themeStyles.border} ${activeTab === 4 ? 'p-2 sm:p-3 space-y-1.5' : 'p-3 sm:p-4 space-y-2'} flex flex-col justify-between ${themeStyles.cardBg} rounded-sm min-h-0 overflow-hidden`}>
+        <div className={`col-span-12 lg:col-span-8 border ${themeStyles.border} ${activeTab === 4 ? 'p-2 sm:p-3 space-y-1.5' : 'p-2.5 sm:p-3.5 space-y-2'} flex flex-col justify-between ${themeStyles.cardBg} rounded-sm min-h-0 overflow-y-auto custom-scrollbar`}>
           
           {/* TAB 0: CLUSTER OVERVIEW */}
           {activeTab === 0 && (
