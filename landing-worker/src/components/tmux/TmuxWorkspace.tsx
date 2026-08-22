@@ -1706,10 +1706,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                                         {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
                     <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col relative">
-                      {/* Hardware-Accelerated Single Playhead Overlay Cursor */}
+                      {/* Hardware-Accelerated Single Playhead Overlay Cursor (Instant Step-by-Step Snap) */}
                       {isSeqPlaying && activeCol >= 0 && activeCol < 16 && (
                         <div
-                          className="absolute top-0 bottom-0 pointer-events-none z-10 rounded-xs border-x border-white/80 bg-white/20 shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-75"
+                          className="absolute top-0 bottom-0 pointer-events-none z-10 rounded-xs border-x border-white/90 bg-white/25 shadow-[0_0_6px_rgba(255,255,255,0.5)]"
                           style={{
                             left: `calc(36px + 4px + (${activeCol} + ${activeSubCol > 0 ? 0.5 : 0}) * ((100% - 40px) / 16))`,
                             width: snapDiv === '1/8' ? `calc((100% - 40px) / 32)` : `calc((100% - 40px) / 16)`,
