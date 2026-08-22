@@ -169,7 +169,7 @@ interface PianoRollRowProps {
   activeCol: number;
   activeSubCol: number;
   timeMeter: TimeSignature;
-  noteDiv: NoteDurationDiv;
+  snapDiv: NoteDurationDiv;
   totalPatternSteps: number;
   onAudition: (noteIdx: number) => void;
   onCellClick: (noteIdx: number, colIdx: number) => void;
@@ -186,7 +186,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
   activeCol,
   activeSubCol,
   timeMeter,
-  noteDiv,
+  snapDiv,
   totalPatternSteps,
   onAudition,
   onCellClick,
@@ -194,7 +194,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
 }) => {
   const isRootC = nInfo.note.startsWith('C') && !nInfo.note.includes('#');
   const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
-  const colSpan = divToColumnSpan(noteDiv);
+  const colSpan = divToColumnSpan(snapDiv);
   const spanInt = Math.max(1, Math.floor(colSpan));
 
   return (
@@ -238,7 +238,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
 
           return (
             <div key={colIdx} className="h-full">
-              {noteDiv === '1/8' ? (
+              {snapDiv === '1/8' ? (
                 <div className="flex h-full gap-0.5">
                   {[0, 1].map((subCol) => {
                     const step = globalCol * 2 + subCol;
@@ -319,7 +319,8 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Master Synthesizer & Sequencer State (Polyphonic + Dynamic 64-Step)
   const [synthBpm, setSynthBpm] = useState<number>(modularSynth.getBpm());
-  const [noteDiv, setNoteDiv] = useState<NoteDurationDiv>(modularSynth.getEditNoteDiv());
+  const [snapDiv, setSnapDiv] = useState<NoteDurationDiv>('1/4');
+  const [noteDur, setNoteDur] = useState<NoteDurationDiv>('1/4');
   const [timeMeter, setTimeMeter] = useState<TimeSignature>(modularSynth.getMeter());
   const [synthDelayMix, setSynthDelayMix] = useState<number>(0.18);
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
@@ -421,58 +422,66 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Toggle Note in Polyphonic Piano Roll (Up to 8 notes per step across dynamic pages)
   const handlePianoRollCellClick = (noteIndex: number, colIndex: number) => {
+    const snapSpanCols = divToColumnSpan(snapDiv);
+    const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
+    const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
+
     const viewportStartCol = (isSeqPlaying && pageFollow)
       ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
       : activeStepPage * 16;
-    const globalCol = viewportStartCol + colIndex;
-    const step0 = globalCol * 2;
-    const step1 = globalCol * 2 + 1;
+    const globalCol = viewportStartCol + snappedCol;
+    const startStep = globalCol * 2;
     const track = modularSynth.getTrack(activeTrackId);
-    if (!track || step0 >= totalPatternSteps) return;
+    if (!track || startStep >= totalPatternSteps) return;
 
-    const isAlreadyOn = (track.grid[step0]?.includes(noteIndex) || track.grid[step1]?.includes(noteIndex)) || false;
+    // Check if a note already exists at startStep
+    const isAlreadyOn = track.grid[startStep]?.includes(noteIndex) || false;
 
     if (isAlreadyOn) {
-      // Toggle OFF: remove note from this column
-      for (const s of [step0, step1]) {
-        if (s < totalPatternSteps) {
-          const notes = track.grid[s] || [];
-          if (notes.includes(noteIndex)) {
-            modularSynth.setTrackStepNotes(
-              activeTrackId,
-              s,
-              notes.filter((n) => n !== noteIndex)
-            );
-          }
-        }
+      // Toggle OFF: Remove note starting at startStep
+      let s = startStep;
+      while (s < totalPatternSteps && track.grid[s]?.includes(noteIndex)) {
+        const notes = track.grid[s] || [];
+        modularSynth.setTrackStepNotes(
+          activeTrackId,
+          s,
+          notes.filter((n) => n !== noteIndex)
+        );
+        s++;
       }
       setTracksState([...modularSynth.getTracks()]);
       playSound('click');
     } else {
-      // Toggle ON: add note to this column
-      for (const s of [step0, step1]) {
-        if (s < totalPatternSteps) {
-          const notes = track.grid[s] || [];
-          if (!notes.includes(noteIndex) && notes.length < 8) {
-            modularSynth.setTrackStepNotes(
-              activeTrackId,
-              s,
-              [...notes, noteIndex].sort((a, b) => a - b)
-            );
-          }
+      // Toggle ON: Place note with duration noteDur
+      const durSpanCols = divToColumnSpan(noteDur);
+      const durSteps = Math.max(1, Math.round(durSpanCols * 2));
+      const endStep = Math.min(totalPatternSteps, startStep + durSteps);
+
+      for (let s = startStep; s < endStep; s++) {
+        const notes = track.grid[s] || [];
+        if (!notes.includes(noteIndex) && notes.length < 8) {
+          modularSynth.setTrackStepNotes(
+            activeTrackId,
+            s,
+            [...notes, noteIndex].sort((a, b) => a - b)
+          );
         }
       }
       setTracksState([...modularSynth.getTracks()]);
-      const isAccent = tracksState[activeTrackId]?.accents[step0] || false;
+      const isAccent = tracksState[activeTrackId]?.accents[startStep] || false;
       modularSynth.triggerTrackVoice(activeTrackId, noteIndex, isAccent);
     }
   };
 
   const handleAccentCellClick = (colIndex: number) => {
+    const snapSpanCols = divToColumnSpan(snapDiv);
+    const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
+    const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
+
     const viewportStartCol = (isSeqPlaying && pageFollow)
       ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
       : activeStepPage * 16;
-    const globalCol = viewportStartCol + colIndex;
+    const globalCol = viewportStartCol + snappedCol;
     const step0 = globalCol * 2;
     const step1 = globalCol * 2 + 1;
     const track = modularSynth.getTrack(activeTrackId);
@@ -495,31 +504,44 @@ export const TmuxWorkspace: React.FC = () => {
       ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
       : activeStepPage * 16;
     const globalCol = viewportStartCol + colIndex;
-    const step = globalCol * 2 + subCol;
+    const startStep = globalCol * 2 + subCol;
     const track = modularSynth.getTrack(activeTrackId);
-    if (!track || step >= totalPatternSteps) return;
+    if (!track || startStep >= totalPatternSteps) return;
 
-    const currentNotes = track.grid[step] || [];
-    const isAlreadyOn = currentNotes.includes(noteIndex);
+    const isAlreadyOn = track.grid[startStep]?.includes(noteIndex) || false;
 
     if (isAlreadyOn) {
-      modularSynth.setTrackStepNotes(
-        activeTrackId,
-        step,
-        currentNotes.filter((n) => n !== noteIndex)
-      );
+      // Toggle OFF
+      let s = startStep;
+      while (s < totalPatternSteps && track.grid[s]?.includes(noteIndex)) {
+        const notes = track.grid[s] || [];
+        modularSynth.setTrackStepNotes(
+          activeTrackId,
+          s,
+          notes.filter((n) => n !== noteIndex)
+        );
+        s++;
+      }
       setTracksState([...modularSynth.getTracks()]);
       playSound('click');
     } else {
-      if (currentNotes.length < 8) {
-        modularSynth.setTrackStepNotes(
-          activeTrackId,
-          step,
-          [...currentNotes, noteIndex].sort((a, b) => a - b)
-        );
+      // Toggle ON: Place note with duration noteDur
+      const durSpanCols = divToColumnSpan(noteDur);
+      const durSteps = Math.max(1, Math.round(durSpanCols * 2));
+      const endStep = Math.min(totalPatternSteps, startStep + durSteps);
+
+      for (let s = startStep; s < endStep; s++) {
+        const notes = track.grid[s] || [];
+        if (!notes.includes(noteIndex) && notes.length < 8) {
+          modularSynth.setTrackStepNotes(
+            activeTrackId,
+            s,
+            [...notes, noteIndex].sort((a, b) => a - b)
+          );
+        }
       }
       setTracksState([...modularSynth.getTracks()]);
-      const isAccent = tracksState[activeTrackId]?.accents[step] || false;
+      const isAccent = tracksState[activeTrackId]?.accents[startStep] || false;
       modularSynth.triggerTrackVoice(activeTrackId, noteIndex, isAccent);
     }
   };
@@ -579,13 +601,25 @@ export const TmuxWorkspace: React.FC = () => {
       return;
     }
 
-    if (cmd === 'div' || cmd === 'len' || cmd === 'notelen') {
+    if (cmd === 'snap' || cmd === 'grid') {
       const valid = ['4', '2', '1', '1/2', '1/4', '1/8'];
       if (valid.includes(args.trim())) {
         const d = args.trim() as NoteDurationDiv;
-        setNoteDiv(d);
+        setSnapDiv(d);
+        setCommandOutput(`Grid snap quantization set to ${d} beat.`);
+      } else {
+        setCommandOutput(`Invalid snap: "${args}". Valid: 4, 2, 1, 1/2, 1/4, 1/8`);
+      }
+      return;
+    }
+
+    if (cmd === 'dur' || cmd === 'notelen' || cmd === 'div') {
+      const valid = ['4', '2', '1', '1/2', '1/4', '1/8'];
+      if (valid.includes(args.trim())) {
+        const d = args.trim() as NoteDurationDiv;
+        setNoteDur(d);
         modularSynth.setEditNoteDiv(d);
-        setCommandOutput(`Note input duration set to ${d} beat.`);
+        setCommandOutput(`Placed note duration set to ${d} beat.`);
       } else {
         setCommandOutput(`Invalid duration: "${args}". Valid: 4, 2, 1, 1/2, 1/4, 1/8`);
       }
@@ -1360,26 +1394,47 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (DIV, METER, LEN, PAGE NAVIGATION) */}
+                            {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (SNAP, DUR, METER, LEN, PAGE NAVIGATION) */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Note Duration Tool (DIV: 4 Whole=16 cells, 2 Half=8 cells, 1 Quarter=4 cells, 1/2 8th=2 cells, 1/4 16th=1 cell, 1/8 32nd=1/2 cell) */}
+                  {/* Grid Snap / Quantization Alignment (SNAP) */}
                   <div className="flex items-center gap-1">
-                    <span className="opacity-60 font-bold" title="Note Editing Granularity (Grid Cells)">DIV:</span>
+                    <span className="opacity-60 font-bold" title="Grid Quantization / Snap Alignment">SNAP:</span>
                     {(['4', '2', '1', '1/2', '1/4', '1/8'] as NoteDurationDiv[]).map((d) => (
                       <button
                         key={d}
                         onClick={() => {
-                          setNoteDiv(d);
-                          modularSynth.setEditNoteDiv(d);
+                          setSnapDiv(d);
                           playSound('click');
                         }}
                         className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          noteDiv === d
+                          snapDiv === d
                             ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
                         }`}
-                        title={`Note Duration: ${d === '4' ? 'Whole (16 cells / 4 beats)' : d === '2' ? 'Half (8 cells / 2 beats)' : d === '1' ? 'Quarter (4 cells / 1 beat)' : d === '1/2' ? 'Eighth (2 cells / 1/2 beat)' : d === '1/4' ? '16th (1 cell / 1/4 beat)' : '32nd (1/2 cell / 1/8 beat)'}`}
+                        title={`Grid Snap Alignment: ${d}`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Note Duration / Length (DUR) */}
+                  <div className="flex items-center gap-1 border-l border-white/15 pl-1.5">
+                    <span className="opacity-60 font-bold" title="Placed Note Duration / Length">DUR:</span>
+                    {(['4', '2', '1', '1/2', '1/4', '1/8'] as NoteDurationDiv[]).map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => {
+                          setNoteDur(d);
+                          playSound('click');
+                        }}
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          noteDur === d
+                            ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                        title={`Placed Note Length: ${d === '4' ? 'Whole Note (16 cells)' : d === '2' ? 'Half Note (8 cells)' : d === '1' ? 'Quarter Note (4 cells)' : d === '1/2' ? 'Eighth Note (2 cells)' : d === '1/4' ? '16th Note (1 cell)' : '32nd Note (1/2 cell)'}`}
                       >
                         {d}
                       </button>
@@ -1506,6 +1561,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
+
               {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & DIV QUANTIZATION */}
               {(() => {
                 const viewportStartCol = (isSeqPlaying && pageFollow)
@@ -1607,7 +1663,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                           return (
                             <div key={colIdx} className="h-full">
-                              {noteDiv === '1/8' ? (
+                              {snapDiv === '1/8' ? (
                                 <div className="flex h-full gap-0.5 text-[10px]">
                                   {[0, 1].map((subCol) => {
                                     const step = globalCol * 2 + subCol;
@@ -1671,7 +1727,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             activeCol={activeCol}
                             activeSubCol={activeSubCol}
                             timeMeter={timeMeter}
-                            noteDiv={noteDiv}
+                            snapDiv={snapDiv}
                             totalPatternSteps={totalPatternSteps}
                             onAudition={(idx) => {
                               modularSynth.triggerTrackVoice(activeTrackId, idx, false);
@@ -1704,7 +1760,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                           return (
                             <div key={colIdx} className="h-full">
-                              {noteDiv === '1/8' ? (
+                              {snapDiv === '1/8' ? (
                                 <div className="flex h-full gap-0.5">
                                   {[0, 1].map((subCol) => {
                                     const step = globalCol * 2 + subCol;
