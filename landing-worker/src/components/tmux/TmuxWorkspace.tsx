@@ -2191,10 +2191,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              {/* 3. ROW 3: PRESETS (LEFT), SNAP & DUR (CENTER), PAGE NAVIGATION (RIGHT) */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
+              {/* 3. ROW 3: PRESETS (LEFT), SNAP & DUR (CENTER), PAGE NAVIGATION (RIGHT) - EQUALLY SPACED */}
+              <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
                 {/* Left: Sound Design Presets */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 justify-start">
                   <span className="text-white/50 font-bold text-xs">PRESETS:</span>
                   {[
                     { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
@@ -2217,8 +2217,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   ))}
                 </div>
 
-                {/* Center: SNAP & DUR */}
-                <div className="flex flex-wrap items-center gap-2">
+                {/* Center: SNAP & DUR (Centered in Middle Third) */}
+                <div className="flex items-center justify-center gap-2">
                   {/* Grid Snap / Quantization Alignment (SNAP) */}
                   <div className="flex items-center gap-1">
                     <span className="opacity-60 font-bold" title="Grid Quantization / Snap Alignment">SNAP:</span>
@@ -2264,8 +2264,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                 </div>
 
-                {/* Right: 16-Step Viewport Page Flipping */}
-                <div className="flex items-center gap-1 border-l border-white/15 pl-1.5 ml-auto">
+                {/* Right: 16-Step Viewport Page Flipping (Aligned to Right Third) */}
+                <div className="flex items-center justify-end gap-1">
                   <span className="opacity-60 font-bold" title="Step Page Navigation">PAGE:</span>
                   <button
                     onClick={() => {
