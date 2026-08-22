@@ -485,36 +485,36 @@ export const TmuxWorkspace: React.FC = () => {
   const currentTrack = tracksState[activeTrackId];
 
   return (
-    <div className={`w-full min-h-screen font-mono text-sm sm:text-base ${themeStyles.bg} ${themeStyles.text} flex flex-col justify-between select-none p-2 sm:p-4 transition-colors duration-200`}>
+    <div className={`w-full min-h-screen font-mono text-sm sm:text-base ${themeStyles.bg} ${themeStyles.text} flex flex-col justify-between select-none p-1.5 sm:p-3 md:p-4 transition-colors duration-200`}>
       
       {/* 1. TOP STATUS BAR */}
-      <header className={`w-full ${themeStyles.headerBg} px-3 py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border ${themeStyles.border} rounded-t-sm mb-2`}>
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar">
-          <span className="bg-black/40 px-2.5 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-2">
+      <header className={`w-full ${themeStyles.headerBg} px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border ${themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2`}>
+        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <span className="bg-black/40 px-2 sm:px-2.5 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-1.5 shrink-0">
             <span className="text-[#e5c07b] font-mono">{SPINNER_FRAMES[spinnerFrame]}</span>
-            <span>[tmux:krsz-edge]</span>
+            <span>[tmux:edge]</span>
           </span>
 
-          <button onClick={() => { setActiveTab(0); playSound('click'); }} className={`px-3 py-1 cursor-pointer rounded transition-colors ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
-          <button onClick={() => { setActiveTab(1); playSound('click'); }} className={`px-3 py-1 cursor-pointer rounded transition-colors ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
-          <button onClick={() => { setActiveTab(2); playSound('click'); }} className={`px-3 py-1 cursor-pointer rounded transition-colors ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
-          <button onClick={() => { setActiveTab(3); playSound('click'); }} className={`px-3 py-1 cursor-pointer rounded transition-colors ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
-          <button onClick={() => { setActiveTab(4); playSound('click'); }} className={`px-3 py-1 cursor-pointer rounded transition-colors ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
+          <button onClick={() => { setActiveTab(0); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
+          <button onClick={() => { setActiveTab(1); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
+          <button onClick={() => { setActiveTab(2); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
+          <button onClick={() => { setActiveTab(3); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
+          <button onClick={() => { setActiveTab(4); playSound('click'); }} className={`px-2.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-xs sm:text-sm">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-xs sm:text-sm pl-2">
           <span className="text-[#c678dd] hidden xl:inline font-mono">{renderBrailleSpark(0)}</span>
-          <button onClick={cycleTheme} className="hover:underline cursor-pointer hidden md:inline text-[#e5c07b]">[THEME: {theme.toUpperCase()}]</button>
-          <span className="tabular-nums text-[#98c379]">SYDNEY {sydneyTime || '12:14:00'}</span>
+          <button onClick={cycleTheme} className="hover:underline cursor-pointer hidden sm:inline text-[#e5c07b]">[THEME: {theme.toUpperCase()}]</button>
+          <span className="tabular-nums text-[#98c379] shrink-0">SYDNEY {sydneyTime || '12:14:00'}</span>
           <span className="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden lg:inline">100%_SERVERLESS</span>
         </div>
       </header>
 
       {/* 2. MAIN MULTI-PANE WORKSPACE */}
-      <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
+      <div className="grid grid-cols-12 gap-1.5 sm:gap-2 flex-1 min-h-0">
         
         {/* LEFT PANE: IDENTITY, TELEMETRY & SYSTEM RADAR (4 Cols) */}
-        <div className={`col-span-12 lg:col-span-4 border ${themeStyles.border} p-2.5 sm:p-3 flex flex-col gap-2 ${themeStyles.cardBg} rounded-sm min-h-0 overflow-hidden`}>
+        <div className={`col-span-12 lg:col-span-4 border ${themeStyles.border} p-2 sm:p-3 flex flex-col gap-2 ${themeStyles.cardBg} rounded-sm min-h-0 overflow-hidden`}>
           
           {/* 1. ASCII BRAND & ACRONYM BREAKDOWN */}
           <div className="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5">
@@ -525,7 +525,7 @@ export const TmuxWorkspace: React.FC = () => {
               </span>
             </div>
             
-            <pre className="text-xs leading-none font-black tracking-tight text-[#e5c07b] overflow-x-hidden select-none py-0.5">
+            <pre className="text-[8px] sm:text-xs leading-none font-black tracking-tight text-[#e5c07b] overflow-x-auto select-none py-0.5">
 {` ██╗  ██╗██████╗ ███████╗███████╗
  ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝
  █████╔╝ ██████╔╝███████╗  ███╔╝ 
@@ -746,9 +746,9 @@ export const TmuxWorkspace: React.FC = () => {
           
           {/* TAB 0: CLUSTER OVERVIEW */}
           {activeTab === 0 && (
-            <div className="space-y-4 flex-1">
+            <div className="space-y-3 sm:space-y-4 flex-1">
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <pre className="text-xs font-black tracking-tight text-[#56b6c2] leading-tight">
+                <pre className="text-[7px] sm:text-[10px] md:text-xs font-black tracking-tight text-[#56b6c2] leading-tight overflow-x-auto select-none">
 {`██████╗██╗     ██╗   ██╗███████╗████████╗███████╗██████╗ 
 ██╔════╝██║     ██║   ██║██╔════╝╚══██╔══╝██╔════╝██╔══██╗
 ██║     ██║     ██║   ██║███████╗   ██║   █████╗  ██████╔╝
@@ -813,9 +813,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
           {/* TAB 1: MODULES SPEC INSPECTOR */}
           {activeTab === 1 && (
-            <div className="space-y-4 flex-1">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <pre className="text-xs font-black tracking-tight text-[#e5c07b] leading-tight">
+            <div className="space-y-3 sm:space-y-4 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                <pre className="text-[7px] sm:text-[10px] md:text-xs font-black tracking-tight text-[#e5c07b] leading-tight overflow-x-auto select-none">
 {`███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
 ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
 ██╔████╔██║██║   ██║██║  ██║██║   ██║██║     █████╗  ███████╗
@@ -830,24 +830,24 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              <div style={{ backgroundColor: selectedModule.bgTint, borderColor: selectedModule.borderColor }} className="border p-5 rounded-sm space-y-4">
+              <div style={{ backgroundColor: selectedModule.bgTint, borderColor: selectedModule.borderColor }} className="border p-3.5 sm:p-5 rounded-sm space-y-3 sm:space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="text-xs opacity-70 font-bold" style={{ color: selectedModule.color }}>NODE_ID // {selectedModule.badge}</span>
-                    <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 mt-0.5">
+                    <h3 className="text-base sm:text-xl font-bold flex items-center gap-2 mt-0.5">
                       <span style={{ color: selectedModule.color }}>{selectedModule.name}</span>
                       <span className="text-xs font-normal border border-current px-2 py-0.5 rounded-xs">{selectedModule.tag}</span>
                     </h3>
                   </div>
-                  <a href={selectedModule.url} target="_blank" rel="noopener noreferrer" onClick={() => playSound('click')} style={{ backgroundColor: selectedModule.color }} className="px-4 py-2 rounded-xs text-black font-bold text-xs sm:text-sm flex items-center gap-1.5 hover:opacity-90 transition-opacity">
+                  <a href={selectedModule.url} target="_blank" rel="noopener noreferrer" onClick={() => playSound('click')} style={{ backgroundColor: selectedModule.color }} className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xs text-black font-bold text-xs sm:text-sm flex items-center gap-1.5 hover:opacity-90 transition-opacity shrink-0">
                     <span>LAUNCH</span>
                     <PixelArrowUpRight size={16} />
                   </a>
                 </div>
-                <p className="text-sm sm:text-base leading-relaxed text-[#eceff4]">{selectedModule.desc}</p>
-                <div className="grid grid-cols-3 gap-3 text-xs sm:text-sm">
+                <p className="text-xs sm:text-base leading-relaxed text-[#eceff4]">{selectedModule.desc}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 text-xs sm:text-sm">
                   {selectedModule.metrics.map((m, i) => (
-                    <div key={i} className="border border-white/10 p-3 bg-black/40 rounded-xs">
+                    <div key={i} className="border border-white/10 p-2.5 sm:p-3 bg-black/40 rounded-xs">
                       <div className="text-xs opacity-70 uppercase font-bold">{m.label}</div>
                       <div className="font-bold text-sm sm:text-base mt-0.5" style={{ color: selectedModule.color }}>{m.value}</div>
                       <div className="mt-1">{renderProgressBar(m.pct, selectedModule.color)}</div>
@@ -860,9 +860,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
           {/* TAB 2: SYSTEM TOPOLOGY */}
           {activeTab === 2 && (
-            <div className="space-y-3.5 flex-1">
+            <div className="space-y-3 sm:space-y-3.5 flex-1">
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <pre className="text-xs font-black tracking-tight text-[#98c379] leading-tight overflow-x-hidden">
+                <pre className="text-[7px] sm:text-[10px] md:text-xs font-black tracking-tight text-[#98c379] leading-tight overflow-x-auto select-none">
 {`████████╗ ██████╗ ██████╗  ██████╗ ██╗      ██████╗  ██████╗ ██╗   ██╗
 ╚══██╔══╝██╔═══██╗██╔══██╗██╔═══██╗██║     ██╔═══██╗██╔════╝ ╚██╗ ██╔╝
    ██║   ██║   ██║██████╔╝██║   ██║██║     ██║   ██║██║  ███╗ ╚████╔╝ 
@@ -875,7 +875,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </span>
               </div>
 
-              <div className="border border-[#98c379]/30 p-4 bg-black/40 overflow-x-auto font-mono text-xs sm:text-sm leading-tight rounded-xs">
+              <div className="border border-[#98c379]/30 p-2.5 sm:p-4 bg-black/40 overflow-x-auto font-mono text-[10px] sm:text-xs md:text-sm leading-tight rounded-xs">
                 <pre className="text-[#eceff4] whitespace-pre">
 {`┌────────────────────────┐         ┌─────────────────────────────────────┐
 │  CLIENT HTTP/3 (0-RTT) │────────>│     CLOUDFLARE WORKERS V8 ENGINE    │
@@ -907,9 +907,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
           {/* TAB 3: GUESTBOOK */}
           {activeTab === 3 && (
-            <div className="space-y-3.5 flex-1">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <pre className="text-xs font-black tracking-tight text-[#e06c75] leading-tight overflow-x-hidden">
+            <div className="space-y-3 sm:space-y-3.5 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                <pre className="text-[7px] sm:text-[10px] md:text-xs font-black tracking-tight text-[#e06c75] leading-tight overflow-x-auto select-none">
 {` ██████╗ ██╗   ██╗███████╗███████╗████████╗██████╗  ██████╗  ██████╗ ██╗  ██╗
 ██╔════╝ ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔═══██╗██║ ██╔╝
 ██║  ███╗██║   ██║█████╗  ███████╗   ██║   ██████╔╝██║   ██║██║   ██║█████╔╝ 
@@ -917,9 +917,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 ╚██████╔╝╚██████╔╝███████╗███████║   ██║   ██████╔╝╚██████╔╝╚██████╔╝██║  ██╗
  ╚═════╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝`}
                 </pre>
-                <div className="flex items-center gap-2 text-xs sm:text-sm shrink-0">
-                  <button onClick={() => handleCopy('krsz.dev@gmail.com')} className="border border-[#e06c75] px-2.5 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[krsz.dev@gmail.com]</button>
-                  <button onClick={() => handleCopy('admin@krsz.in')} className="border border-[#e06c75] px-2.5 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[admin@krsz.in]</button>
+                <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm shrink-0">
+                  <button onClick={() => handleCopy('krsz.dev@gmail.com')} className="border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[krsz.dev@gmail.com]</button>
+                  <button onClick={() => handleCopy('admin@krsz.in')} className="border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[admin@krsz.in]</button>
                 </div>
               </div>
 
@@ -1374,11 +1374,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </span>
                 </div>
 
-                {/* 5-Node Interactive Flowchart Grid */}
-                <div className="grid grid-cols-12 gap-1.5 text-xs items-stretch pt-0.5">
+                {/* 5-Node Interactive Flowchart Grid (Responsive Mobile Stacking & Desktop Flow) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-1.5 text-xs items-stretch pt-0.5">
                   
                   {/* NODE 1: DUAL INPUT OSCILLATORS */}
-                  <div className="col-span-12 lg:col-span-3 border border-[#e5c07b]/40 p-1 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-3 border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
                     <div className="flex justify-between font-bold text-[#e5c07b] text-xs border-b border-white/10 pb-0.5">
                       <span>1. DUAL OSC</span>
                       <span className="text-xs opacity-60">IN ──►</span>
@@ -1469,7 +1469,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* NODE 2: TIMBRE FUSION NODE */}
-                  <div className="col-span-12 lg:col-span-2 border border-[#c678dd]/40 p-1 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
+                  <div className="col-span-1 sm:col-span-1 lg:col-span-2 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
                     <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
                       <span>2. FUSION</span>
                       <span className="text-xs opacity-60">──►</span>
@@ -1519,7 +1519,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* NODE 3: MULTI-MODE VCF RESONANT FILTER */}
-                  <div className="col-span-12 lg:col-span-2 border border-[#56b6c2]/40 p-1 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
+                  <div className="col-span-1 sm:col-span-1 lg:col-span-2 border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
                     <div className="flex justify-between font-bold text-[#56b6c2] text-xs border-b border-white/10 pb-0.5">
                       <span>3. VCF FILTER</span>
                       <span className="text-xs opacity-60">──►</span>
@@ -1577,7 +1577,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* NODE 4: ADSR HARDWARE FADERS & LFO MODULATION */}
-                  <div className="col-span-12 lg:col-span-3 border border-[#98c379]/40 p-1 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
                     <div className="flex justify-between font-bold text-[#98c379] text-xs border-b border-white/10 pb-0.5">
                       <span>4. ADSR &amp; LFO MOD</span>
                       <span className="text-xs opacity-60">──►</span>
@@ -1671,7 +1671,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* NODE 5: MASTER OUTPUT & FFT VISUALIZER */}
-                  <div className="col-span-12 lg:col-span-2 border border-white/20 p-1 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-2 border border-white/20 p-1.5 bg-black/60 rounded-xs space-y-1 flex flex-col justify-between">
                     <div className="flex justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
                       <span>5. MASTER OUT</span>
                       <span className="text-[#98c379] text-xs">60 FPS</span>
@@ -1728,11 +1728,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             <form
               onSubmit={handleCommandSubmit}
               onClick={() => cmdInputRef.current?.focus()}
-              className="flex items-center gap-2.5 border border-white/25 bg-black/60 px-3 py-2 rounded-xs cursor-text relative min-h-[42px]"
+              className="flex items-center gap-2 sm:gap-2.5 border border-white/25 bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px]"
             >
               <span className="font-black text-sm select-none" style={{ color: themeStyles.cursorColor }}>:</span>
               
-              <div className="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px]">
+              <div className="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden">
                 <span className="whitespace-pre">{commandInput}</span>
                 <span
                   className="inline-block w-[9px] h-[18px] ml-0.5 align-middle shrink-0 transition-opacity duration-75"
@@ -1742,8 +1742,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   }}
                 />
                 {!commandInput && (
-                  <span className="text-xs opacity-40 ml-2 select-none pointer-events-none">
-                    Type command (e.g. 'eval 2**16', 'seq play', 'bpm 130', 'blend fm', 'help')...
+                  <span className="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">
+                    Type command (e.g. 'eval 2**16', 'seq play', 'bpm 100', 'help')...
                   </span>
                 )}
 
