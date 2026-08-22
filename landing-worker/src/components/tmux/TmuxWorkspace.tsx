@@ -166,8 +166,6 @@ interface PianoRollRowProps {
   activeTrackColor: string;
   activeTrackGrid: number[][];
   viewportStartCol: number;
-  activeCol: number;
-  activeSubCol: number;
   timeMeter: TimeSignature;
   snapDiv: NoteDurationDiv;
   totalPatternSteps: number;
@@ -183,8 +181,6 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
   activeTrackColor,
   activeTrackGrid,
   viewportStartCol,
-  activeCol,
-  activeSubCol,
   timeMeter,
   snapDiv,
   totalPatternSteps,
@@ -229,7 +225,6 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
           const step0 = globalCol * 2;
           const step1 = globalCol * 2 + 1;
           const isSelected = (activeTrackGrid[step0]?.includes(actualIdx) || activeTrackGrid[step1]?.includes(actualIdx)) || false;
-          const isColActive = activeCol === colIdx;
 
           const colInBar = globalCol % meterSpec.colsPerBar;
           const isBarStart = colInBar === 0;
@@ -243,7 +238,6 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                   {[0, 1].map((subCol) => {
                     const step = globalCol * 2 + subCol;
                     const isSubSelected = activeTrackGrid[step]?.includes(actualIdx) || false;
-                    const isSubCurrent = isColActive && activeSubCol === subCol;
                     return (
                       <button
                         key={subCol}
@@ -251,8 +245,6 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                         className={`flex-1 h-full rounded-xs transition-all cursor-pointer border ${
                           isSubSelected
                             ? 'shadow-sm scale-[1.02]'
-                            : isSubCurrent
-                            ? 'border-white/60 bg-white/30'
                             : isBarStart && subCol === 0
                             ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
                             : isBeatStart && subCol === 0
@@ -276,8 +268,6 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                   className={`w-full h-full rounded-xs transition-all cursor-pointer border ${
                     isSelected
                       ? 'shadow-sm scale-[1.02]'
-                      : isColActive
-                      ? 'border-white/60 bg-white/25'
                       : isBarStart
                       ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
                       : isBeatStart
@@ -345,17 +335,29 @@ export const TmuxWorkspace: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cmdInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow
+  // Subscribe to Multi-Track Sequencer Tick with requestAnimationFrame Throttling
   useEffect(() => {
+    let animId: number = 0;
+    let pendingStep: number | null = null;
+
     const unsub = modularSynth.subscribeStep((step) => {
-      setSeqCurrentStep(step);
-      if (pageFollow) {
-        const p = Math.floor(step / 32);
-        setActiveStepPage(p);
+      pendingStep = step;
+      if (!animId) {
+        animId = requestAnimationFrame(() => {
+          animId = 0;
+          if (pendingStep !== null) {
+            setSeqCurrentStep(pendingStep);
+            pendingStep = null;
+          }
+        });
       }
     });
-    return () => unsub();
-  }, [pageFollow]);
+
+    return () => {
+      unsub();
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, []);
 
   // Real-Time Clock & Animation Loop
   useEffect(() => {
@@ -1708,12 +1710,21 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
                     </div>
 
-                    {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
-                    <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col">
+                                        {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
+                    <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col relative">
+                      {/* Hardware-Accelerated Single Playhead Overlay Cursor */}
+                      {isSeqPlaying && activeCol >= 0 && activeCol < 16 && (
+                        <div
+                          className="absolute top-0 bottom-0 pointer-events-none z-10 rounded-xs border-x border-white/80 bg-white/20 shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-75"
+                          style={{
+                            left: `calc(36px + 4px + (${activeCol} + ${activeSubCol > 0 ? 0.5 : 0}) * ((100% - 40px) / 16))`,
+                            width: snapDiv === '1/8' ? `calc((100% - 40px) / 32)` : `calc((100% - 40px) / 16)`,
+                          }}
+                        />
+                      )}
+
                       {PIANO_ROLL_NOTES.map((nInfo, actualIdx) => {
                         if (octaveScope !== 'all' && nInfo.oct !== octaveScope) return null;
-                        
-
 
                         return (
                           <PianoRollRow
@@ -1724,8 +1735,6 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             activeTrackColor={currentTrack.color}
                             activeTrackGrid={currentTrack.grid}
                             viewportStartCol={viewportStartCol}
-                            activeCol={activeCol}
-                            activeSubCol={activeSubCol}
                             timeMeter={timeMeter}
                             snapDiv={snapDiv}
                             totalPatternSteps={totalPatternSteps}
@@ -1739,6 +1748,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         );
                       })}
                     </div>
+
 
                     {/* 100% Full-Width Aligned Accent (ACC) Track */}
                     <div className="flex items-center gap-1 pt-0.5 border-t border-white/10 text-xs font-mono shrink-0">
