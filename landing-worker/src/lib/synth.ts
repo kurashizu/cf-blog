@@ -1647,7 +1647,7 @@ export const INITIAL_TRACKS: TrackData[] = [
     blendMode: 'layer',
     morphAmount: 0.0,
 
-    filterType: 'lowpass',
+    filterType: 'highpass',
     cutoff: 40,
     resonance: 0.0,
     envFilterMod: 0.0,
