@@ -9,7 +9,7 @@ interface RotaryKnobProps {
   step?: number;
   unit?: string;
   color?: string;
-  size?: number; // diameter in px (default 24)
+  size?: number; // diameter in px (default 26)
   onChange: (val: number) => void;
 }
 
@@ -21,7 +21,7 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
   step = 1,
   unit = '',
   color = '#56b6c2',
-  size = 22,
+  size = 26,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -84,29 +84,29 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
       <div
         onMouseDown={handleMouseDown}
         style={{ width: size, height: size }}
-        className={`relative rounded-full bg-[#16191f] border transition-shadow flex items-center justify-center ${
-          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
+        className={`relative rounded-full bg-[#14171d] border transition-shadow flex items-center justify-center ${
+          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/30 hover:border-white/70'
         }`}
       >
-        <div className="absolute inset-0.5 rounded-full border border-dashed border-white/10 pointer-events-none" />
+        <div className="absolute inset-0.5 rounded-full border border-dashed border-white/15 pointer-events-none" />
 
         <div
           className="w-full h-full rounded-full flex items-center justify-center relative"
           style={{ transform: `rotate(${angle}deg)` }}
         >
           <div
-            className="w-0.5 h-2 rounded-full absolute top-0.5"
-            style={{ backgroundColor: color, boxShadow: `0 0 3px ${color}` }}
+            className="w-0.5 h-2.5 rounded-full absolute top-0.5"
+            style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }}
           />
         </div>
 
-        <div className="w-1 h-1 rounded-full bg-white/20 pointer-events-none" />
+        <div className="w-1.5 h-1.5 rounded-full bg-white/30 pointer-events-none" />
       </div>
 
-      {/* Label & Numeric Readout */}
-      <div className="text-center mt-0.5 leading-none">
-        <span className="text-[9px] opacity-80 uppercase font-mono block font-bold leading-tight">{label}</span>
-        <span className="text-[9px] font-bold font-mono block leading-tight truncate max-w-[34px]" style={{ color }}>
+      {/* Label & Numeric Readout (Clear & Crisp) */}
+      <div className="text-center mt-1 leading-none">
+        <span className="text-[10px] opacity-85 uppercase font-mono block font-bold tracking-tight">{label}</span>
+        <span className="text-[10px] font-black font-mono block mt-0.5 truncate max-w-[42px]" style={{ color }}>
           {formatDisplay(value)}{unit}
         </span>
       </div>
@@ -122,7 +122,7 @@ interface HardwareFaderProps {
   step?: number;
   unit?: string;
   color?: string;
-  height?: number; // fader track height in px (default 24)
+  height?: number; // fader track height in px (default 36)
   onChange: (val: number) => void;
 }
 
@@ -134,7 +134,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
   step = 0.01,
   unit = '',
   color = '#e5c07b',
-  height = 24,
+  height = 34,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -217,7 +217,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
       className="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0"
       title={`${label}: ${formatDisplay(value)} (Click, drag up/down, or scroll wheel)`}
     >
-      <span className="text-[9px] opacity-80 uppercase font-bold block mb-0.5 group-hover:text-white transition-colors leading-none">
+      <span className="text-[10px] opacity-85 uppercase font-black block mb-0.5 group-hover:text-white transition-colors leading-none">
         {label}
       </span>
 
@@ -227,14 +227,14 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{ height }}
-        className={`w-4 bg-black/80 border rounded-xs relative cursor-ns-resize flex items-center justify-center p-0.5 transition-colors ${
-          isDragging ? 'border-white shadow-[0_0_6px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
+        className={`w-4.5 bg-black/80 border rounded-xs relative cursor-ns-resize flex items-center justify-center p-0.5 transition-colors ${
+          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/30 hover:border-white/70'
         }`}
       >
-        <div className="w-0.5 h-full bg-white/15 rounded-full pointer-events-none" />
+        <div className="w-0.5 h-full bg-white/20 rounded-full pointer-events-none" />
 
         <div
-          className="absolute bottom-0 left-0.5 right-0.5 rounded-xs pointer-events-none opacity-25"
+          className="absolute bottom-0 left-0.5 right-0.5 rounded-xs pointer-events-none opacity-30"
           style={{
             height: `${pct * 100}%`,
             backgroundColor: color,
@@ -243,20 +243,20 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
 
         {/* Illuminated Fader Cap */}
         <div
-          className={`absolute w-3 h-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none ${
-            isDragging ? 'shadow-[0_0_6px_#fff] brightness-125' : ''
+          className={`absolute w-3.5 h-2.5 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none ${
+            isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''
           }`}
           style={{
-            bottom: `calc(${pct * 100}% - 4px)`,
+            bottom: `calc(${pct * 100}% - 5px)`,
             backgroundColor: color,
-            boxShadow: isDragging ? `0 0 8px ${color}` : `0 0 3px ${color}88`,
+            boxShadow: isDragging ? `0 0 8px ${color}` : `0 0 4px ${color}88`,
           }}
         >
-          <div className="w-1.5 h-0.5 bg-black/90 rounded-full" />
+          <div className="w-2 h-0.5 bg-black/90 rounded-full" />
         </div>
       </div>
 
-      <span className="text-[9px] font-bold mt-0.5 text-center truncate max-w-[30px] leading-none" style={{ color }}>
+      <span className="text-[10px] font-black mt-1 text-center truncate max-w-[36px] leading-none" style={{ color }}>
         {formatDisplay(value)}
       </span>
     </div>
@@ -285,7 +285,7 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
   step = 1,
   unit = '',
   color = '#98c379',
-  width = 50,
+  width = 60,
   showValue = false,
   bipolar = false,
   onChange,
@@ -365,11 +365,11 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
   return (
     <div
       onWheel={handleWheel}
-      className="flex items-center gap-1 select-none font-mono cursor-ew-resize group shrink-0"
+      className="flex items-center gap-1.5 select-none font-mono cursor-ew-resize group shrink-0"
       title={`${label ? `${label}: ` : ''}${formatDisplay(value)} (Click, drag left/right, or scroll wheel)`}
     >
       {label && (
-        <span className="text-[9px] opacity-75 uppercase font-bold group-hover:text-white transition-colors">
+        <span className="text-[10px] opacity-85 uppercase font-bold group-hover:text-white transition-colors">
           {label}
         </span>
       )}
@@ -380,11 +380,11 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{ width }}
-        className={`h-3.5 bg-black/80 border rounded-xs relative cursor-ew-resize flex items-center justify-center p-0.5 transition-colors ${
-          isDragging ? 'border-white shadow-[0_0_6px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
+        className={`h-4 bg-black/80 border rounded-xs relative cursor-ew-resize flex items-center justify-center p-0.5 transition-colors ${
+          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/30 hover:border-white/70'
         }`}
       >
-        <div className="h-0.5 w-full bg-white/15 rounded-full pointer-events-none" />
+        <div className="h-0.5 w-full bg-white/20 rounded-full pointer-events-none" />
 
         {bipolar ? (
           <div
@@ -411,21 +411,21 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
 
         {/* Illuminated Fader Cap */}
         <div
-          className={`absolute h-2.5 w-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none ${
-            isDragging ? 'shadow-[0_0_6px_#fff] brightness-125' : ''
+          className={`absolute h-3 w-2.5 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none ${
+            isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''
           }`}
           style={{
-            left: `calc(${pct * 100}% - 4px)`,
+            left: `calc(${pct * 100}% - 5px)`,
             backgroundColor: color,
-            boxShadow: isDragging ? `0 0 8px ${color}` : `0 0 3px ${color}88`,
+            boxShadow: isDragging ? `0 0 8px ${color}` : `0 0 4px ${color}88`,
           }}
         >
-          <div className="h-1.5 w-0.5 bg-black/90 rounded-full" />
+          <div className="h-2 w-0.5 bg-black/90 rounded-full" />
         </div>
       </div>
 
       {showValue && (
-        <span className="text-[9px] font-bold text-right min-w-[24px]" style={{ color }}>
+        <span className="text-[10px] font-black text-right min-w-[32px]" style={{ color }}>
           {formatDisplay(value)}
         </span>
       )}
