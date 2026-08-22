@@ -142,404 +142,404 @@ export const PIANO_ROLL_NOTES = [
 
 const MARIO_TRK1_GRID: number[][] = [
   // BAR 1
-  [32], [], [32], [], [], [32], [], [36], [32], [], [], [29], [], [], [], [41],
+  [32], [], [32], [], [], [32], [], [36], [], [32], [], [], [29], [], [], [],
   // BAR 2
-  [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  [], [], [], [], [], [], [], [], [41], [], [], [], [], [], [], [],
   // BAR 3
-  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  [36], [], [], [], [], [], [41], [], [], [], [], [], [44], [], [], [],
   // BAR 4
-  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [], [],
+  [], [], [39], [], [], [], [37], [], [], [38], [39], [], [], [], [], [],
   // BAR 5
-  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  [41], [], [], [32], [], [], [29], [], [27], [], [], [], [31], [], [29], [],
   // BAR 6
-  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [36], [],
+  [], [], [32], [], [], [], [36], [], [34], [], [37], [], [], [], [], [],
   // BAR 7
-  [], [], [29], [30], [31], [33], [32], [], [40], [39], [36], [], [39], [36], [34], [],
+  [36], [], [], [], [], [], [41], [], [], [], [], [], [44], [], [], [],
   // BAR 8
-  [], [], [29], [30], [31], [33], [32], [], [24], [], [24], [24], [], [], [], [],
+  [], [], [39], [], [], [], [37], [], [], [38], [39], [], [], [], [], [],
   // BAR 9
-  [], [], [29], [30], [31], [33], [32], [], [40], [39], [36], [], [39], [36], [34], [],
+  [41], [], [], [32], [], [], [29], [], [27], [], [], [], [31], [], [29], [],
   // BAR 10
-  [], [], [33], [], [], [34], [], [], [36], [], [], [], [], [], [], [],
+  [], [], [32], [], [], [], [36], [], [34], [], [37], [], [], [], [], [],
   // BAR 11
-  [], [], [29], [30], [31], [33], [32], [], [40], [39], [36], [], [39], [36], [34], [],
+  [], [], [29], [30], [31], [], [33], [], [32], [], [], [], [40], [39], [36], [],
   // BAR 12
-  [], [], [29], [30], [31], [33], [32], [], [24], [], [24], [24], [], [], [], [],
+  [], [39], [36], [], [34], [], [], [], [29], [30], [31], [], [33], [], [32], [],
   // BAR 13
-  [36], [36], [], [36], [], [36], [34], [], [32], [36], [], [39], [41], [], [], [],
+  [], [], [24], [], [], [], [24], [], [24], [], [], [], [], [], [], [],
   // BAR 14
-  [36], [36], [], [36], [], [36], [34], [32], [], [], [], [], [], [], [], [],
+  [], [], [29], [30], [31], [], [33], [], [32], [], [], [], [40], [39], [36], [],
   // BAR 15
-  [36], [36], [], [36], [], [36], [34], [], [32], [36], [], [39], [41], [], [], [],
+  [], [39], [36], [], [34], [], [], [], [33], [], [], [], [34], [], [], [],
   // BAR 16
-  [32], [], [32], [], [], [32], [], [36], [32], [], [], [29], [], [], [], [41],
+  [36], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
   // BAR 17
-  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  [36], [], [36], [], [], [36], [], [], [36], [], [34], [], [32], [], [], [],
   // BAR 18
-  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [], [],
+  [36], [], [39], [], [], [], [41], [], [], [], [], [], [], [], [], [],
   // BAR 19
-  [36], [], [], [41], [], [], [44], [], [], [39], [], [37], [], [38], [39], [],
+  [36], [], [36], [], [], [36], [], [], [36], [], [34], [], [32], [], [], [],
   // BAR 20
-  [41], [32], [29], [27], [], [31], [29], [], [32], [], [36], [34], [37], [], [36], [],
+  [36], [], [], [], [34], [], [], [], [32], [], [], [], [36], [], [], [],
   // BAR 21
-  [32], [], [32], [], [34], [], [34], [], [36], [], [36], [], [34], [], [32], [],
+  [32], [], [36], [], [41], [], [], [], [40], [], [39], [], [31], [], [31], [39],
   // BAR 22
-  [32], [], [32], [], [34], [], [34], [], [36], [], [36], [], [34], [], [32], [],
+  [37], [], [27], [], [27], [], [27], [], [29], [], [31], [], [32], [], [36], [],
   // BAR 23
-  [34], [], [34], [], [36], [], [36], [], [37], [], [37], [], [36], [], [34], [],
+  [39], [], [41], [], [], [], [32], [], [36], [], [41], [], [40], [], [], [],
   // BAR 24
-  [32], [], [32], [], [34], [], [34], [], [36], [], [36], [], [34], [], [32], [],
+  [39], [], [31], [], [31], [], [39], [], [37], [], [31], [], [31], [], [31], [],
   // BAR 25
-  [48], [36], [47], [35], [46], [34], [], [48], [36], [47], [35], [46], [34], [], [], [],
+  [32], [], [34], [], [36], [], [41], [], [41], [], [], [], [44], [], [], [],
   // BAR 26
-  [49], [37], [48], [36], [47], [35], [], [49], [37], [48], [36], [47], [35], [], [], [],
+  [39], [], [37], [], [36], [], [34], [], [32], [], [], [], [41], [], [], [],
   // BAR 27
-  [41], [36], [32], [29], [24], [20], [17], [20], [17], [], [], [], [17], [], [], [],
+  [36], [], [34], [], [32], [], [36], [], [34], [], [37], [], [], [], [], [],
   // BAR 28
-  [40], [36], [33], [28], [24], [21], [16], [21], [], [], [], [], [16], [], [], [],
+  [36], [], [], [], [36], [], [], [], [41], [], [], [], [44], [], [], [],
   // BAR 29
-  [38], [34], [31], [26], [22], [19], [14], [19], [], [], [], [], [12], [], [12], [],
+  [36], [], [], [], [41], [], [], [], [44], [], [], [], [39], [], [], [],
   // BAR 30
-  [12], [], [], [], [12], [], [], [], [12], [], [], [], [], [], [], [],
+  [37], [], [], [], [38], [], [], [], [39], [], [], [], [41], [], [], [],
   // BAR 31
-  [36], [], [36], [], [34], [], [32], [], [39], [], [37], [], [41], [], [], [],
+  [32], [], [], [], [29], [], [], [], [27], [], [], [], [31], [], [], [],
   // BAR 32
-  [32], [], [32], [], [], [32], [], [36], [32], [], [], [29], [], [], [], [41],
+  [29], [], [], [], [32], [], [], [], [36], [], [], [], [34], [], [37], [],
 ];
 
 const MARIO_TRK1_ACCENTS: boolean[] = [
   // BAR 1
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, false, false, false, false, false, false, true, false, false, false,
   // BAR 2
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
   // BAR 3
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false,
   // BAR 4
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, false, false, true, false, false, false, false, false,
   // BAR 5
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 6
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, true, false, true, false, false, false, false, false,
   // BAR 7
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false,
   // BAR 8
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, false, false, true, false, false, false, false, false,
   // BAR 9
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 10
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, true, false, true, false, false, false, false, false,
   // BAR 11
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 12
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, false, false, true, false, true, false, true, false, true, false,
   // BAR 13
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, true, false, false, false, false, false, false, false,
   // BAR 14
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 15
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 16
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
   // BAR 17
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, false, false, true, false, true, false, true, false, false, false,
   // BAR 18
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, true, false, false, false, false, false, false, false, false, false,
   // BAR 19
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, false, false, true, false, true, false, true, false, false, false,
   // BAR 20
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 21
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, false, false, true, false, true, false, true, false, true, false,
   // BAR 22
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
   // BAR 23
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, true, false, true, false, true, false, true, false, false, false,
   // BAR 24
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
   // BAR 25
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, true, false, true, false, false, false, true, false, false, false,
   // BAR 26
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, true, false, true, false, false, false, true, false, false, false,
   // BAR 27
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, true, false, true, false, true, false, false, false, false, false,
   // BAR 28
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 29
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 30
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 31
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 32
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, true, false,
 ];
 
 const MARIO_TRK2_GRID: number[][] = [
   // BAR 1
-  [42, 46], [], [42, 46], [], [], [42, 46], [], [44, 48], [42, 46], [], [], [37, 41], [], [], [], [49, 53],
+  [46,42], [], [46,42], [], [], [46,42], [], [46,42], [], [46,42], [], [], [37], [], [], [],
   // BAR 2
-  [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  [], [], [], [], [], [], [], [], [53,49], [], [], [], [], [], [], [],
   // BAR 3
-  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  [44], [], [], [], [], [], [48], [], [], [], [], [], [53], [], [], [],
   // BAR 4
-  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [], [],
+  [], [], [48], [], [], [], [46], [], [], [47], [48], [], [], [], [], [],
   // BAR 5
-  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  [49], [], [], [36], [], [], [32], [], [31], [], [], [], [34], [], [32], [],
   // BAR 6
-  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [44], [],
+  [], [], [36], [], [], [], [39], [], [37], [], [41], [], [], [], [], [],
   // BAR 7
-  [], [], [32], [33], [34], [37], [36], [], [44], [43], [39], [], [43], [39], [37], [],
+  [44], [], [], [], [], [], [48], [], [], [], [], [], [53], [], [], [],
   // BAR 8
-  [], [], [32], [33], [34], [37], [36], [], [29, 32], [], [29, 32], [29, 32], [], [], [], [],
+  [], [], [48], [], [], [], [46], [], [], [47], [48], [], [], [], [], [],
   // BAR 9
-  [], [], [32], [33], [34], [37], [36], [], [44], [43], [39], [], [43], [39], [37], [],
+  [49], [], [], [36], [], [], [32], [], [31], [], [], [], [34], [], [32], [],
   // BAR 10
-  [], [], [37], [], [], [38], [], [], [39], [], [], [], [], [], [], [],
+  [], [], [36], [], [], [], [39], [], [37], [], [41], [], [], [], [], [],
   // BAR 11
-  [], [], [32], [33], [34], [37], [36], [], [44], [43], [39], [], [43], [39], [37], [],
+  [], [], [32], [33], [34], [], [37], [], [36], [], [], [], [44], [43], [39], [],
   // BAR 12
-  [], [], [32], [33], [34], [37], [36], [], [29, 32], [], [29, 32], [29, 32], [], [], [], [],
+  [], [43], [39], [], [37], [], [], [], [32], [33], [34], [], [37], [], [36], [],
   // BAR 13
-  [41], [41], [], [41], [], [41], [39], [], [36], [41], [], [43], [44], [], [], [],
+  [], [], [27], [], [], [], [27], [], [27], [], [], [], [], [], [], [],
   // BAR 14
-  [41], [41], [], [41], [], [41], [39], [36], [], [], [], [], [], [], [], [],
+  [], [], [32], [33], [34], [], [37], [], [36], [], [], [], [44], [43], [39], [],
   // BAR 15
-  [41], [41], [], [41], [], [41], [39], [], [36], [41], [], [43], [44], [], [], [],
+  [], [43], [39], [], [37], [], [], [], [36], [], [], [], [38], [], [], [],
   // BAR 16
-  [42, 46], [], [42, 46], [], [], [42, 46], [], [44, 48], [42, 46], [], [], [37, 41], [], [], [], [49, 53],
+  [41], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
   // BAR 17
-  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  [41], [], [41], [], [], [41], [], [], [41], [], [37], [], [36], [], [], [],
   // BAR 18
-  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [], [],
+  [41], [], [43], [], [], [], [44], [], [], [], [], [], [], [], [], [],
   // BAR 19
-  [44], [], [], [44], [], [], [48], [], [], [43], [], [41], [], [42], [43], [],
+  [41], [], [41], [], [], [41], [], [], [41], [], [37], [], [36], [], [], [],
   // BAR 20
-  [44], [36], [32], [31], [], [34], [32], [], [36], [], [39], [37], [41], [], [44], [],
+  [41], [], [], [], [37], [], [], [], [36], [], [], [], [41], [], [], [],
   // BAR 21
-  [36], [], [36], [], [37], [], [37], [], [39], [], [39], [], [37], [], [36], [],
+  [36], [], [41], [], [44], [], [], [], [44], [], [43], [], [34], [], [34], [43],
   // BAR 22
-  [36], [], [36], [], [37], [], [37], [], [39], [], [39], [], [37], [], [36], [],
+  [41], [], [31], [], [31], [], [31], [], [32], [], [34], [], [36], [], [41], [],
   // BAR 23
-  [37], [], [37], [], [39], [], [39], [], [41], [], [41], [], [39], [], [37], [],
+  [43], [], [44], [], [], [], [36], [], [41], [], [44], [], [44], [], [], [],
   // BAR 24
-  [36], [], [36], [], [37], [], [37], [], [39], [], [39], [], [37], [], [36], [],
+  [43], [], [34], [], [34], [], [43], [], [41], [], [34], [], [34], [], [34], [],
   // BAR 25
-  [53], [], [52], [], [51], [], [], [53], [], [52], [], [51], [], [], [], [],
+  [36], [], [37], [], [39], [], [44], [], [44], [], [], [], [48], [], [], [],
   // BAR 26
-  [54], [], [53], [], [52], [], [], [54], [], [53], [], [52], [], [], [], [],
+  [43], [], [41], [], [39], [], [37], [], [36], [], [], [], [44], [], [], [],
   // BAR 27
-  [44], [41], [36], [32], [29], [24], [20], [24], [20], [], [], [], [20], [], [], [],
+  [39], [], [37], [], [36], [], [39], [], [37], [], [41], [], [], [], [], [],
   // BAR 28
-  [43], [40], [36], [31], [28], [24], [19], [24], [], [], [], [], [19], [], [], [],
+  [44], [], [], [], [44], [], [], [], [48], [], [], [], [53], [], [], [],
   // BAR 29
-  [43], [38], [34], [31], [26], [22], [19], [22], [], [], [], [], [20, 24], [], [20, 24], [],
+  [44], [], [], [], [48], [], [], [], [53], [], [], [], [48], [], [], [],
   // BAR 30
-  [20, 24], [], [], [], [20, 24], [], [], [], [20, 24], [], [], [], [], [], [], [],
+  [46], [], [], [], [47], [], [], [], [48], [], [], [], [49], [], [], [],
   // BAR 31
-  [44], [], [44], [], [43], [], [41], [], [43], [], [41], [], [44], [], [], [],
+  [36], [], [], [], [32], [], [], [], [31], [], [], [], [34], [], [], [],
   // BAR 32
-  [42, 46], [], [42, 46], [], [], [42, 46], [], [44, 48], [42, 46], [], [], [37, 41], [], [], [], [49, 53],
+  [32], [], [], [], [36], [], [], [], [39], [], [], [], [37], [], [41], [],
 ];
 
 const MARIO_TRK2_ACCENTS: boolean[] = [
   // BAR 1
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, false, false, false, false, false, false, true, false, false, false,
   // BAR 2
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
   // BAR 3
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false,
   // BAR 4
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, false, false, true, false, false, false, false, false,
   // BAR 5
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 6
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, true, false, true, false, false, false, false, false,
   // BAR 7
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, false, false, false, false, true, false, false, false,
   // BAR 8
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, false, false, true, false, false, false, false, false,
   // BAR 9
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 10
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, true, false, true, false, false, false, false, false,
   // BAR 11
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 12
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, false, false, true, false, true, false, true, false, true, false,
   // BAR 13
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, false, false, true, false, true, false, false, false, false, false, false, false,
   // BAR 14
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, true, false, true, false, false, false, true, false, true, false,
   // BAR 15
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, true, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 16
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
   // BAR 17
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, false, false, true, false, true, false, true, false, false, false,
   // BAR 18
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, true, false, false, false, false, false, false, false, false, false,
   // BAR 19
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, false, false, true, false, true, false, true, false, false, false,
   // BAR 20
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 21
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, false, false, true, false, true, false, true, false, true, false,
   // BAR 22
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
   // BAR 23
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, true, false, true, false, true, false, true, false, false, false,
   // BAR 24
   true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
   // BAR 25
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, true, false, true, false, false, false, true, false, false, false,
   // BAR 26
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, true, false, true, false, false, false, true, false, false, false,
   // BAR 27
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, true, false, true, false, true, false, true, false, false, false, false, false,
   // BAR 28
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 29
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 30
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 31
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 32
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, true, false,
 ];
 
 const MARIO_TRK3_GRID: number[][] = [
   // BAR 1
-  [58], [], [58], [], [], [58], [], [58], [58], [], [], [53], [], [], [], [65],
+  [58], [], [58], [], [], [58], [], [58], [], [58], [], [], [53], [], [], [],
   // BAR 2
-  [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  [], [], [], [], [], [], [], [], [65], [], [], [], [], [], [], [],
   // BAR 3
-  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [56], [], [], [],
   // BAR 4
-  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [], [],
+  [55], [], [], [], [60], [], [], [], [55], [], [], [], [54], [], [], [],
   // BAR 5
-  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  [53], [], [], [], [56], [], [], [], [53], [], [], [], [48], [], [], [],
   // BAR 6
-  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [60], [],
+  [51], [], [], [], [55], [], [], [], [53], [], [], [], [65], [], [], [],
   // BAR 7
-  [60], [], [65], [], [60], [], [65], [], [60], [], [67], [], [60], [], [67], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [56], [], [], [],
   // BAR 8
-  [60], [], [65], [], [60], [], [65], [], [60], [], [60], [60], [], [], [], [],
+  [55], [], [], [], [60], [], [], [], [55], [], [], [], [54], [], [], [],
   // BAR 9
-  [60], [], [65], [], [60], [], [65], [], [60], [], [67], [], [60], [], [67], [],
+  [53], [], [], [], [56], [], [], [], [53], [], [], [], [48], [], [], [],
   // BAR 10
-  [], [], [64], [], [], [62], [], [], [60], [], [], [], [], [], [], [],
+  [51], [], [], [], [55], [], [], [], [53], [], [], [], [65], [], [], [],
   // BAR 11
-  [60], [], [65], [], [60], [], [65], [], [60], [], [67], [], [60], [], [67], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [60], [], [], [],
   // BAR 12
-  [60], [], [65], [], [60], [], [65], [], [60], [], [60], [60], [], [], [], [],
+  [55], [], [], [], [60], [], [], [], [55], [], [], [], [60], [], [], [],
   // BAR 13
-  [60], [60], [], [60], [], [60], [58], [], [56], [60], [], [63], [65], [], [], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [56], [], [], [],
   // BAR 14
-  [60], [60], [], [60], [], [60], [58], [56], [], [], [], [], [], [], [], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [60], [], [], [],
   // BAR 15
-  [60], [60], [], [60], [], [60], [58], [], [56], [60], [], [63], [65], [], [], [],
+  [55], [], [], [], [60], [], [], [], [52], [], [], [], [50], [], [], [],
   // BAR 16
-  [58], [], [58], [], [], [58], [], [58], [58], [], [], [53], [], [], [], [65],
+  [60], [], [], [], [65], [], [], [], [60], [], [], [], [], [], [], [],
   // BAR 17
-  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [56], [], [], [],
   // BAR 18
-  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [], [],
+  [55], [], [], [], [60], [], [], [], [53], [], [], [], [60], [], [], [],
   // BAR 19
-  [60], [], [], [65], [], [], [68], [], [], [63], [], [61], [], [62], [63], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [56], [], [], [],
   // BAR 20
-  [65], [60], [56], [55], [], [58], [56], [], [60], [], [63], [61], [65], [], [60], [],
+  [55], [], [], [], [53], [], [], [], [60], [], [], [], [65], [], [], [],
   // BAR 21
-  [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72],
+  [60], [], [], [], [56], [], [], [], [55], [], [], [], [51], [], [], [],
   // BAR 22
-  [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72],
+  [53], [], [], [], [55], [], [], [], [56], [], [], [], [60], [], [], [],
   // BAR 23
-  [62], [74], [62], [74], [62], [74], [62], [74], [62], [74], [62], [74], [62], [74], [62], [74],
+  [55], [], [], [], [60], [], [], [], [60], [], [], [], [56], [], [], [],
   // BAR 24
-  [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72], [60], [72],
+  [55], [], [], [], [51], [], [], [], [53], [], [], [], [49], [], [], [],
   // BAR 25
-  [60], [], [59], [], [58], [], [], [60], [], [59], [], [58], [], [], [], [],
+  [60], [], [], [], [65], [], [], [], [60], [], [], [], [65], [], [], [],
   // BAR 26
-  [61], [], [60], [], [59], [], [], [61], [], [60], [], [59], [], [], [], [],
+  [67], [], [], [], [65], [], [], [], [63], [], [], [], [61], [], [], [],
   // BAR 27
-  [60], [56], [53], [48], [44], [41], [36], [41], [36], [], [], [], [36], [], [], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [65], [], [], [],
   // BAR 28
-  [64], [60], [57], [52], [48], [45], [40], [45], [], [], [], [], [40], [], [], [],
+  [60], [], [], [], [65], [], [], [], [60], [], [], [], [72], [], [], [],
   // BAR 29
-  [62], [58], [55], [50], [46], [43], [38], [43], [], [], [], [], [48], [], [48], [],
+  [60], [], [], [], [53], [], [], [], [60], [], [], [], [55], [], [], [],
   // BAR 30
-  [48], [], [], [], [48], [], [], [], [48], [], [], [], [], [], [], [],
+  [53], [], [], [], [54], [], [], [], [55], [], [], [], [56], [], [], [],
   // BAR 31
-  [60], [], [60], [], [58], [], [56], [], [67], [], [65], [], [60], [], [], [],
+  [48], [], [], [], [56], [], [], [], [55], [], [], [], [58], [], [], [],
   // BAR 32
-  [58], [], [58], [], [], [58], [], [58], [58], [], [], [53], [], [], [], [65],
+  [53], [], [], [], [60], [], [], [], [55], [], [], [], [53], [], [65], [],
 ];
 
 const MARIO_TRK3_ACCENTS: boolean[] = [
   // BAR 1
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, true, false, false, false, false, false, false, false, false, false, true, false, false, false,
   // BAR 2
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
   // BAR 3
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 4
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 5
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 6
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 7
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 8
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 9
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 10
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 11
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 12
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 13
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 14
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 15
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 16
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, false, false, false, false,
   // BAR 17
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 18
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 19
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 20
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 21
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 22
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 23
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 24
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 25
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 26
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 27
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 28
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 29
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 30
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 31
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false,
   // BAR 32
-  true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false,
+  true, false, false, false, true, false, false, false, true, false, false, false, true, false, true, false,
 ];
 
 export const INITIAL_TRACKS: TrackData[] = [
