@@ -165,7 +165,7 @@ interface PianoRollRowProps {
   octaveScope: string | number;
   activeTrackColor: string;
   activeTrackGrid: number[][];
-  activeStepPage: number;
+  viewportStartCol: number;
   activeCol: number;
   activeSubCol: number;
   timeMeter: TimeSignature;
@@ -182,7 +182,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
   octaveScope,
   activeTrackColor,
   activeTrackGrid,
-  activeStepPage,
+  viewportStartCol,
   activeCol,
   activeSubCol,
   timeMeter,
@@ -225,7 +225,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
         style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
       >
         {Array.from({ length: 16 }).map((_, colIdx) => {
-          const globalCol = activeStepPage * 16 + colIdx;
+          const globalCol = viewportStartCol + colIdx;
           const step0 = globalCol * 2;
           const step1 = globalCol * 2 + 1;
           const isSelected = (activeTrackGrid[step0]?.includes(actualIdx) || activeTrackGrid[step1]?.includes(actualIdx)) || false;
@@ -421,7 +421,10 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Toggle Note in Polyphonic Piano Roll (Up to 8 notes per step across dynamic pages)
   const handlePianoRollCellClick = (noteIndex: number, colIndex: number) => {
-    const globalCol = activeStepPage * 16 + colIndex;
+    const viewportStartCol = (isSeqPlaying && pageFollow)
+      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
+      : activeStepPage * 16;
+    const globalCol = viewportStartCol + colIndex;
     const step0 = globalCol * 2;
     const step1 = globalCol * 2 + 1;
     const track = modularSynth.getTrack(activeTrackId);
@@ -466,7 +469,10 @@ export const TmuxWorkspace: React.FC = () => {
   };
 
   const handleAccentCellClick = (colIndex: number) => {
-    const globalCol = activeStepPage * 16 + colIndex;
+    const viewportStartCol = (isSeqPlaying && pageFollow)
+      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
+      : activeStepPage * 16;
+    const globalCol = viewportStartCol + colIndex;
     const step0 = globalCol * 2;
     const step1 = globalCol * 2 + 1;
     const track = modularSynth.getTrack(activeTrackId);
@@ -485,7 +491,10 @@ export const TmuxWorkspace: React.FC = () => {
   };
 
   const handlePianoRollSubCellClick = (noteIndex: number, colIndex: number, subCol: number) => {
-    const globalCol = activeStepPage * 16 + colIndex;
+    const viewportStartCol = (isSeqPlaying && pageFollow)
+      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
+      : activeStepPage * 16;
+    const globalCol = viewportStartCol + colIndex;
     const step = globalCol * 2 + subCol;
     const track = modularSynth.getTrack(activeTrackId);
     if (!track || step >= totalPatternSteps) return;
@@ -516,7 +525,10 @@ export const TmuxWorkspace: React.FC = () => {
   };
 
   const handleAccentSubCellClick = (colIndex: number, subCol: number) => {
-    const globalCol = activeStepPage * 16 + colIndex;
+    const viewportStartCol = (isSeqPlaying && pageFollow)
+      ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
+      : activeStepPage * 16;
+    const globalCol = viewportStartCol + colIndex;
     const step = globalCol * 2 + subCol;
     const track = modularSynth.getTrack(activeTrackId);
     if (!track || step >= totalPatternSteps) return;
@@ -1462,7 +1474,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       ◄
                     </button>
                     <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-white shrink-0">
-                      {activeStepPage + 1} / {Math.max(1, Math.ceil(totalPatternSteps / 32))}
+                      {((isSeqPlaying && pageFollow) ? Math.floor(Math.max(0, Math.floor(seqCurrentStep / 2) - 3) / 16) : activeStepPage) + 1} / {Math.max(1, Math.ceil(totalPatternSteps / 32))}
                     </span>
                     <button
                       onClick={() => {
@@ -1495,6 +1507,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               </div>
 
               {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & DIV QUANTIZATION */}
+              {(() => {
+                const viewportStartCol = (isSeqPlaying && pageFollow)
+                  ? Math.max(0, Math.floor(seqCurrentStep / 2) - 3)
+                  : activeStepPage * 16;
+                const activeCol = (isSeqPlaying && Math.floor(seqCurrentStep / 2) >= viewportStartCol && Math.floor(seqCurrentStep / 2) < viewportStartCol + 16)
+                  ? Math.floor(seqCurrentStep / 2) - viewportStartCol
+                  : -1;
+                const activeSubCol = isSeqPlaying ? (seqCurrentStep % 2) : -1;
+
+                return (
               <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
                 {/* Header with Title, Playhead Tracker, Octaves & Quick Tools */}
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
@@ -1574,7 +1596,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
                       >
                         {Array.from({ length: 16 }).map((_, colIdx) => {
-                          const globalCol = activeStepPage * 16 + colIdx;
+                          const globalCol = viewportStartCol + colIdx;
                           const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
                           const barNum = Math.floor(globalCol / meterSpec.colsPerBar) + 1;
                           const colInBar = globalCol % meterSpec.colsPerBar;
@@ -1635,10 +1657,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       {PIANO_ROLL_NOTES.map((nInfo, actualIdx) => {
                         if (octaveScope !== 'all' && nInfo.oct !== octaveScope) return null;
                         
-                        const activeCol = (isSeqPlaying && Math.floor(seqCurrentStep / 32) === activeStepPage)
-                          ? Math.floor((seqCurrentStep % 32) / 2)
-                          : -1;
-                        const activeSubCol = isSeqPlaying ? (seqCurrentStep % 2) : -1;
+
 
                         return (
                           <PianoRollRow
@@ -1648,7 +1667,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             octaveScope={octaveScope}
                             activeTrackColor={currentTrack.color}
                             activeTrackGrid={currentTrack.grid}
-                            activeStepPage={activeStepPage}
+                            viewportStartCol={viewportStartCol}
                             activeCol={activeCol}
                             activeSubCol={activeSubCol}
                             timeMeter={timeMeter}
@@ -1673,7 +1692,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
                       >
                         {Array.from({ length: 16 }).map((_, colIdx) => {
-                          const globalCol = activeStepPage * 16 + colIdx;
+                          const globalCol = viewportStartCol + colIdx;
                           const step0 = globalCol * 2;
                           const step1 = globalCol * 2 + 1;
                           const isAccent = (currentTrack.accents[step0] || currentTrack.accents[step1]) || false;
@@ -1735,6 +1754,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                 </div>
               </div>
+
+              
+              );})()}
 
               {/* 3. MODULAR DSP SIGNAL FLOWCHART RACK (5 CONNECTED HARDWARE NODES) */}
               <div className="border border-white/15 p-1.5 bg-black/50 rounded-xs space-y-1 shrink-0 overflow-x-auto no-scrollbar">
