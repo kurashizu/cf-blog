@@ -248,12 +248,20 @@ const AdsrVisualizer: React.FC<AdsrVisualizerProps> = ({
         <circle cx={x3} cy={y3} r="2" fill="#fff" />
       </svg>
 
-      {/* Real-time Precision Readouts */}
-      <div className="w-full flex justify-between text-[10px] sm:text-xs font-mono font-black text-white/80 px-0.5 border-t border-white/10 pt-0.5 leading-none">
-        <span style={{ color }}>A: {Math.round(attack * 1000)}ms</span>
-        <span>D: {Math.round(decay * 1000)}ms</span>
-        <span>S: {Math.round(sustain * 100)}%</span>
-        <span style={{ color }}>R: {Math.round(release * 1000)}ms</span>
+      {/* Real-time Precision Readouts: Row 1 = A D S R, Row 2 = Values */}
+      <div className="w-full flex flex-col gap-0.5 border-t border-white/10 pt-0.5 font-mono leading-none">
+        <div className="grid grid-cols-4 text-center text-xs font-black text-white/60">
+          <span>A</span>
+          <span>D</span>
+          <span>S</span>
+          <span>R</span>
+        </div>
+        <div className="grid grid-cols-4 text-center text-xs font-black">
+          <span style={{ color }}>{Math.round(attack * 1000)}ms</span>
+          <span className="text-white/90">{Math.round(decay * 1000)}ms</span>
+          <span className="text-white/90">{Math.round(sustain * 100)}%</span>
+          <span style={{ color }}>{Math.round(release * 1000)}ms</span>
+        </div>
       </div>
     </div>
   );
