@@ -1647,17 +1647,17 @@ export const INITIAL_TRACKS: TrackData[] = [
     blendMode: 'layer',
     morphAmount: 0.0,
 
-    filterType: 'highpass',
-    cutoff: 7500,
-    resonance: 1.5,
-    envFilterMod: 0.6,
+    filterType: 'lowpass',
+    cutoff: 40,
+    resonance: 0.0,
+    envFilterMod: 0.0,
 
     attack: 0.001,
-    decay: 0.06,
+    decay: 0.2,
     sustain: 0.0,
     release: 0.04,
     ampAttack: 0.001,
-    ampDecay: 0.06,
+    ampDecay: 0.2,
     ampSustain: 0.0,
     ampRelease: 0.04,
 
@@ -1665,9 +1665,9 @@ export const INITIAL_TRACKS: TrackData[] = [
     filterDecay: 0.05,
     filterSustain: 0.0,
     filterRelease: 0.03,
-    filterEnvAmount: 0.4,
+    filterEnvAmount: 0.0,
 
-    pitchEnvAmount: 1.5, // Slight pitch snap for transient click
+    pitchEnvAmount: 0.0,
     pitchAttack: 0.001,
     pitchDecay: 0.03,
 
