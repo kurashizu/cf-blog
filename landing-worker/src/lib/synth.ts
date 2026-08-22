@@ -93,6 +93,10 @@ export interface TrackData {
   osc2Ratio: number;    // 0.5, 1, 1.5, 2, 3, 4
   detuneCents: number;  // -50 to +50 cents
   phaseOffset: number;  // 0 to 360 degrees
+  osc2Semitone: number; // -24 to +24 semitones (OSC2 transpose)
+  pulseWidth: number;   // 5 to 95 percent (square wave duty cycle)
+  subOscGain: number;   // 0.0 to 1.0 (sub-oscillator one octave below)
+  noiseGain: number;    // 0.0 to 1.0 (noise generator mix level)
 
   // Node 2: Timbre Fusion Node
   blendMode: BlendMode; // 'layer' | 'fm' | 'ring' | 'sync'
@@ -1451,6 +1455,10 @@ export const INITIAL_TRACKS: TrackData[] = [
     osc2Ratio: 1.0,
     detuneCents: 2,
     phaseOffset: 0,
+    osc2Semitone: 0,
+    pulseWidth: 50,
+    subOscGain: 0,
+    noiseGain: 0,
 
     blendMode: 'layer',
     morphAmount: 0.1,
@@ -1507,6 +1515,10 @@ export const INITIAL_TRACKS: TrackData[] = [
     osc2Ratio: 1.0,
     detuneCents: -2,
     phaseOffset: 45,
+    osc2Semitone: 7,
+    pulseWidth: 50,
+    subOscGain: 0.1,
+    noiseGain: 0,
 
     blendMode: 'layer',
     morphAmount: 0.1,
@@ -1562,6 +1574,10 @@ export const INITIAL_TRACKS: TrackData[] = [
     osc2Ratio: 1.0,
     detuneCents: 0,
     phaseOffset: 0,
+    osc2Semitone: -12,
+    pulseWidth: 50,
+    subOscGain: 0.3,
+    noiseGain: 0,
 
     blendMode: 'layer',
     morphAmount: 0.05,
@@ -1616,6 +1632,10 @@ export const INITIAL_TRACKS: TrackData[] = [
     osc2Ratio: 1.0,
     detuneCents: 0,
     phaseOffset: 0,
+    osc2Semitone: 0,
+    pulseWidth: 50,
+    subOscGain: 0,
+    noiseGain: 0.8,
 
     blendMode: 'layer',
     morphAmount: 0.0,

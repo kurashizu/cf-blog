@@ -1953,8 +1953,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </div>
                         </div>
 
-                        {/* Right: 4 Knobs Arranged in a 2x2 GRID (Large 28px with Hover-Only Value) */}
-                        <div className="col-span-6 grid grid-cols-2 gap-1 border-l border-white/10 pl-1.5 h-full items-center justify-around py-0.5">
+                        {/* Right: 8 Knobs in 4×2 Grid (28px, Hover-Only Value) */}
+                        <div className="col-span-6 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
                           <RotaryKnob
                             label="OSC1"
                             value={Math.round(currentTrack.osc1Gain * 100)}
@@ -1962,7 +1962,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#e5c07b"
-                            size={28}
+                            size={24}
                             onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -1972,7 +1972,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#56b6c2"
-                            size={28}
+                            size={24}
                             onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -1983,8 +1983,30 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={2}
                             unit="c"
                             color="#e06c75"
-                            size={28}
+                            size={24}
                             onChange={(v) => handleTrackParamChange({ detuneCents: v })}
+                          />
+                          <RotaryKnob
+                            label="SEMI"
+                            value={currentTrack.osc2Semitone ?? 0}
+                            min={-24}
+                            max={24}
+                            step={1}
+                            unit="st"
+                            color="#c678dd"
+                            size={24}
+                            onChange={(v) => handleTrackParamChange({ osc2Semitone: v })}
+                          />
+                          <RotaryKnob
+                            label="PW"
+                            value={currentTrack.pulseWidth ?? 50}
+                            min={5}
+                            max={95}
+                            step={5}
+                            unit="%"
+                            color="#d19a66"
+                            size={24}
+                            onChange={(v) => handleTrackParamChange({ pulseWidth: v })}
                           />
                           <RotaryKnob
                             label="PHS"
@@ -1994,8 +2016,28 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={15}
                             unit="°"
                             color="#98c379"
-                            size={28}
+                            size={24}
                             onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
+                          />
+                          <RotaryKnob
+                            label="SUB"
+                            value={Math.round((currentTrack.subOscGain ?? 0) * 100)}
+                            min={0}
+                            max={100}
+                            unit="%"
+                            color="#61afef"
+                            size={24}
+                            onChange={(v) => handleTrackParamChange({ subOscGain: v / 100 })}
+                          />
+                          <RotaryKnob
+                            label="NOISE"
+                            value={Math.round((currentTrack.noiseGain ?? 0) * 100)}
+                            min={0}
+                            max={100}
+                            unit="%"
+                            color="#abb2bf"
+                            size={24}
+                            onChange={(v) => handleTrackParamChange({ noiseGain: v / 100 })}
                           />
                         </div>
                       </div>
@@ -2545,7 +2587,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           step={0.2}
                           unit="Hz"
                           color="#c678dd"
-                          size={28}
+                          size={32}
                           onChange={(v) => handleTrackParamChange({ lfoRate: v })}
                         />
                       </div>
@@ -2646,7 +2688,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={10}
                             unit="ms"
                             color="#e06c75"
-                            size={28}
+                            size={32}
                             onChange={(v) => {
                               const t = v / 1000;
                               setSynthDelayTime(t);
@@ -2663,7 +2705,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#e06c75"
-                            size={28}
+                            size={32}
                             onChange={(v) => {
                               const fb = v / 100;
                               setSynthDelayFeedback(fb);
@@ -2680,7 +2722,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#e06c75"
-                            size={28}
+                            size={32}
                             onChange={(v) => {
                               const m = v / 100;
                               setSynthDelayMix(m);
@@ -2701,7 +2743,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#c678dd"
-                            size={28}
+                            size={32}
                             onChange={(v) => {
                               const rm = v / 100;
                               setSynthReverbMix(rm);
@@ -2718,7 +2760,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#e5c07b"
-                            size={28}
+                            size={32}
                             onChange={(v) => {
                               const d = v / 100;
                               setSynthDrive(d);
