@@ -464,6 +464,43 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
 PianoRollRow.displayName = 'PianoRollRow';
 
 
+const WAVE_TOOLTIPS: Record<string, string> = {
+  square: 'Square Waveform — Hollow timbre rich in odd harmonics, ideal for retro 8-bit leads and chiptune bass',
+  sawtooth: 'Sawtooth Waveform — Bright, buzzy timbre with all harmonics, ideal for aggressive leads, brass, and thick pads',
+  triangle: 'Triangle Waveform — Soft, warm timbre with gentle odd harmonics, ideal for warm basslines and flute sounds',
+  sine: 'Sine Waveform — Pure fundamental frequency without overtones, ideal for deep sub bass and clean tones',
+  noise: 'White Noise Generator — Equal energy across all frequencies, ideal for drums, percussive transients, and sound effects',
+};
+
+const BLEND_TOOLTIPS: Record<string, string> = {
+  layer: 'Blend Mode: Layer — Sums Oscillator 1 and Oscillator 2 in parallel for thick dual-oscillator tones',
+  fm: 'Blend Mode: FM (Frequency Modulation) — Oscillator 2 modulates the frequency of Oscillator 1 for rich metallic/bell harmonic timbres',
+  ring: 'Blend Mode: Ring Modulation — Multiplies Oscillator 1 and 2 signals together creating complex inharmonic textures',
+  sync: 'Blend Mode: Hard Sync — Resets Oscillator 2 phase whenever Oscillator 1 completes a cycle for cutting sync lead sweeps',
+};
+
+const FILTER_TOOLTIPS: Record<string, string> = {
+  lowpass: 'Filter Mode: Low-Pass Filter (LPF) — Allows low frequencies below cutoff to pass through, attenuating highs',
+  highpass: 'Filter Mode: High-Pass Filter (HPF) — Allows high frequencies above cutoff to pass through, attenuating lows',
+  bandpass: 'Filter Mode: Band-Pass Filter (BPF) — Passes a resonant narrow band around the cutoff frequency, attenuating lows and highs',
+  notch: 'Filter Mode: Notch / Band-Reject Filter (BRF) — Attenuates a narrow band at cutoff while letting both lows and highs pass',
+};
+
+const LFO_TOOLTIPS: Record<string, string> = {
+  sine: 'Sine Wave LFO — Smooth, continuous cyclical modulation',
+  triangle: 'Triangle Wave LFO — Linear ramp up and down modulation',
+  square: 'Square Wave LFO — Stepped on/off binary modulation pulse',
+  sawtooth: 'Sawtooth Wave LFO — Linear ramp with sharp instantaneous drop',
+};
+
+const PRESET_TOOLTIPS: Record<string, string> = {
+  '8-BIT BASS': 'Preset: 8-Bit Bass — Retro chiptune square/triangle bass with snappy VCF filter envelope',
+  'PLUCK': 'Preset: Pluck — Short transient acoustic/electronic synth pluck with fast filter decay',
+  'BRASS': 'Preset: Brass — Dual detuned sawtooth oscillators with dynamic filter sweep',
+  'LEAD': 'Preset: Lead — Cutting pulse/sawtooth sync lead with resonant filter and full sustain',
+  'HI-HAT': 'Preset: Hi-Hat — Highpass filtered white noise percussive transient',
+};
+
 const TAB_ROUTES: Record<number, string> = {
   0: '/cluster',
   1: '/modules',
@@ -1402,11 +1439,11 @@ export const TmuxWorkspace: React.FC = () => {
             <span>[tmux:edge]</span>
           </span>
 
-          <button onClick={() => { navigateToTab(0); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
-          <button onClick={() => { navigateToTab(1); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
-          <button onClick={() => { navigateToTab(2); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
-          <button onClick={() => { navigateToTab(3); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
-          <button onClick={() => { navigateToTab(4); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
+          <button onClick={() => { navigateToTab(0); playSound('click'); }} title="View 0: Cluster — Global Multi-Worker Infrastructure & Quick Launchpad [Hotkey: 0]" className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 0 ? 'bg-[#56b6c2] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>0:cluster</button>
+          <button onClick={() => { navigateToTab(1); playSound('click'); }} title="View 1: Modules — Technical System Specifications & Architecture Deep Dives [Hotkey: 1]" className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 1 ? 'bg-[#e5c07b] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>1:modules</button>
+          <button onClick={() => { navigateToTab(2); playSound('click'); }} title="View 2: Topology — Cloudflare Global Edge Anycast PoPs & Routing Map [Hotkey: 2]" className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
+          <button onClick={() => { navigateToTab(3); playSound('click'); }} title="View 3: Guestbook — Distributed Edge Packet Messenger [Hotkey: 3]" className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
+          <button onClick={() => { navigateToTab(4); playSound('click'); }} title="View 4: Synth — 8-Track WebAudio Modular Synthesizer & Sequencer [Hotkey: 4]" className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
@@ -1417,7 +1454,7 @@ export const TmuxWorkspace: React.FC = () => {
               setIsMuted(m);
               if (!m) playSound('click');
             }}
-            className={`px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border ${
+            title="Master Audio Output Toggle — Mute or Unmute all WebAudio sound generation" className={`px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border ${
               isMuted
                 ? 'border-[#e06c75] text-[#e06c75] hover:bg-[#e06c75] hover:text-black'
                 : 'border-[#98c379] text-[#98c379] hover:bg-[#98c379] hover:text-black'
@@ -1425,9 +1462,9 @@ export const TmuxWorkspace: React.FC = () => {
           >
             {isMuted ? '[UNMUTE]' : '[MUTE]'}
           </button>
-          <button onClick={cycleTheme} className="hover:underline cursor-pointer hidden sm:inline text-[#e5c07b]">[THEME: {theme.toUpperCase()}]</button>
-          <span className="tabular-nums text-[#98c379] shrink-0 text-[11px] sm:text-xs">SYDNEY {sydneyTime || '12:14:00'}</span>
-          <span className="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden lg:inline">100%_SERVERLESS</span>
+          <button onClick={cycleTheme} title="Color Theme Switcher — Cycle palette (Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]" className="hover:underline cursor-pointer hidden sm:inline text-[#e5c07b]">[THEME: {theme.toUpperCase()}]</button>
+          <span title="Real-Time System Clock — Australian Eastern Standard Time (Sydney Edge Node UTC+10)" className="tabular-nums text-[#98c379] shrink-0 text-[11px] sm:text-xs">SYDNEY {sydneyTime || '12:14:00'}</span>
+          <span title="Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers" className="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden lg:inline">100%_SERVERLESS</span>
         </div>
       </header>
 
@@ -1547,18 +1584,18 @@ export const TmuxWorkspace: React.FC = () => {
             {/* 3x2 Tactile Square Launchpad Grid */}
             <div className="grid grid-cols-3 gap-1.5 py-1">
               {[
-                { id: 0, key: '0', title: 'OVERVIEW', desc: 'Cluster', color: '#56b6c2', icon: '⊞' },
-                { id: 1, key: '1', title: 'MODULES', desc: 'Specs', color: '#e5c07b', icon: '◈' },
-                { id: 2, key: '2', title: 'TOPOLOGY', desc: 'Edge PoP', color: '#98c379', icon: '☊' },
-                { id: 3, key: '3', title: 'GUESTBOOK', desc: 'Packets', color: '#e06c75', icon: '✉' },
-                { id: 4, key: '4', title: 'SYNTH', desc: 'WebAudio', color: '#c678dd', icon: '♫' },
+                { id: 0, key: '0', title: 'OVERVIEW', desc: 'Cluster', color: '#56b6c2', icon: '⊞', tooltip: '0: Overview — Global Multi-Worker Cluster Status [Hotkey: 0]' },
+                { id: 1, key: '1', title: 'MODULES', desc: 'Specs', color: '#e5c07b', icon: '◈', tooltip: '1: Modules — Architecture Specifications & Subdomains [Hotkey: 1]' },
+                { id: 2, key: '2', title: 'TOPOLOGY', desc: 'Edge PoP', color: '#98c379', icon: '☊', tooltip: '2: Topology — Cloudflare Edge PoP Network & Anycast Routing [Hotkey: 2]' },
+                { id: 3, key: '3', title: 'GUESTBOOK', desc: 'Packets', color: '#e06c75', icon: '✉', tooltip: '3: Guestbook — Send message packets across edge workers [Hotkey: 3]' },
+                { id: 4, key: '4', title: 'SYNTH', desc: 'WebAudio', color: '#c678dd', icon: '♫', tooltip: '4: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: 4]' },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => { navigateToTab(tab.id); playSound('click'); }}
-                    className={`border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group relative overflow-hidden ${
+                    title={tab.tooltip} className={`border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group relative overflow-hidden ${
                       isActive
                         ? 'border-white bg-white/20 text-white shadow-md'
                         : 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5'
@@ -1624,7 +1661,7 @@ export const TmuxWorkspace: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => playSound('click')}
-              className="hover:underline flex items-center gap-1 text-[#61afef] hover:text-[#98c379] transition-colors text-xs"
+              title="GitHub Profile — Open https://github.com/kurashizu in a new tab" className="hover:underline flex items-center gap-1 text-[#61afef] hover:text-[#98c379] transition-colors text-xs"
             >
               <PixelGitHub size={14} />
               <span>gh/kurashizu</span>
@@ -1634,7 +1671,7 @@ export const TmuxWorkspace: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => playSound('click')}
-              className="hover:underline flex items-center gap-1 text-[#e5c07b] hover:text-[#e06c75] transition-colors text-xs"
+              title="Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab" className="hover:underline flex items-center gap-1 text-[#e5c07b] hover:text-[#e06c75] transition-colors text-xs"
             >
               <PixelHuggingFace size={14} />
               <span>hf/kurashizu</span>
@@ -1644,7 +1681,7 @@ export const TmuxWorkspace: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => playSound('click')}
-              className="hover:underline flex items-center gap-1 text-[#e06c75] hover:text-[#56b6c2] transition-colors text-xs"
+              title="OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab" className="hover:underline flex items-center gap-1 text-[#e06c75] hover:text-[#56b6c2] transition-colors text-xs"
             >
               <PixelHardware size={14} />
               <span>oshwhub</span>
@@ -1654,7 +1691,7 @@ export const TmuxWorkspace: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => playSound('click')}
-              className="hover:underline flex items-center gap-1 text-[#98c379] hover:text-[#56b6c2] transition-colors text-xs"
+              title="Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab" className="hover:underline flex items-center gap-1 text-[#98c379] hover:text-[#56b6c2] transition-colors text-xs"
             >
               <PixelRules size={14} />
               <span>rules</span>
@@ -1692,7 +1729,7 @@ export const TmuxWorkspace: React.FC = () => {
                       onMouseEnter={() => { setHoveredCard(m.id); playSound('hover'); }}
                       onMouseLeave={() => setHoveredCard(null)}
                       onClick={() => { setSelectedModule(m); navigateToTab(1); playSound('click'); }}
-                      style={{ backgroundColor: m.bgTint, borderColor: m.borderColor }}
+                      title={`Inspect ${m.name} (${m.tag}) — View technical architecture, live metrics, and endpoints`} style={{ backgroundColor: m.bgTint, borderColor: m.borderColor }}
                       className="border p-3.5 rounded-xs cursor-pointer transition-all hover:scale-[1.015] hover:brightness-110 flex flex-col justify-between h-40 group relative overflow-hidden"
                     >
                       <div>
@@ -1748,7 +1785,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </pre>
                 <div className="flex items-center gap-1.5 text-xs sm:text-sm overflow-x-auto no-scrollbar">
                   {MODULES.map((m) => (
-                    <button key={m.id} onClick={() => { setSelectedModule(m); playSound('click'); }} className={`px-2.5 py-1 border rounded-xs cursor-pointer transition-colors ${selectedModule.id === m.id ? 'border-white bg-white/20 text-white font-bold' : 'border-white/20 hover:border-white/60 opacity-70'}`} style={{ color: selectedModule.id === m.id ? m.color : undefined }}>{m.id}</button>
+                    <button key={m.id} onClick={() => { setSelectedModule(m); playSound('click'); }} title={`Inspect Module: ${m.name} (${m.tag})`} className={`px-2.5 py-1 border rounded-xs cursor-pointer transition-colors ${selectedModule.id === m.id ? 'border-white bg-white/20 text-white font-bold' : 'border-white/20 hover:border-white/60 opacity-70'}`} style={{ color: selectedModule.id === m.id ? m.color : undefined }}>{m.id}</button>
                   ))}
                 </div>
               </div>
@@ -1762,7 +1799,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <span className="text-xs font-normal border border-current px-2 py-0.5 rounded-xs">{selectedModule.tag}</span>
                     </h3>
                   </div>
-                  <a href={selectedModule.url} target="_blank" rel="noopener noreferrer" onClick={() => playSound('click')} style={{ backgroundColor: selectedModule.color }} className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xs text-black font-bold text-xs sm:text-sm flex items-center gap-1.5 hover:opacity-90 transition-opacity shrink-0">
+                  <a href={selectedModule.url} target="_blank" rel="noopener noreferrer" onClick={() => playSound('click')} title={`Launch ${selectedModule.url} in a new tab`} style={{ backgroundColor: selectedModule.color }} className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xs text-black font-bold text-xs sm:text-sm flex items-center gap-1.5 hover:opacity-90 transition-opacity shrink-0">
                     <span>LAUNCH</span>
                     <PixelArrowUpRight size={16} />
                   </a>
@@ -1900,7 +1937,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       setIsSeqPlaying(playing);
                       playSound('click');
                     }}
-                    className={`px-3 py-0.5 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1.5 ${
+                    title="Play / Stop Sequencer — Toggles real-time 8-track polyphonic audio loop playback [Spacebar]" className={`px-3 py-0.5 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1.5 ${
                       isSeqPlaying
                         ? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
                         : 'bg-[#98c379] text-black hover:opacity-90'
@@ -1930,7 +1967,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                   {/* Sequence Length: Presets (16..512) + Custom Step Input */}
                   <div className="flex items-center gap-1">
-                    <span className="opacity-60 font-bold" title="Pattern Total Steps">LEN:</span>
+                    <span className="opacity-60 font-bold" title="Pattern Total Steps (LEN) — Total active sequence steps before looping">LEN:</span>
                     {([16, 32, 64, 128, 256, 512] as const).map((len) => (
                       <button
                         key={len}
@@ -1977,14 +2014,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             ? 'border-[#98c379] text-[#98c379]'
                             : 'border-white/20 text-white/70 focus:border-white/60'
                         }`}
-                        title="Custom step length (e.g. 1184 for Mario theme)"
+                        title="Custom Step Length — Set arbitrary loop duration (e.g. 1184 steps for the complete Mario theme)"
                       />
                     </div>
                   </div>
 
                   {/* METER Time Signature (Semantically Co-located with BPM & Transport) */}
                   <div className="flex items-center gap-1 border-l border-white/15 pl-2">
-                    <span className="opacity-70 font-bold" title="Time Signature / Meter">METER:</span>
+                    <span className="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
                     {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
                       <button
                         key={sig}
@@ -2072,10 +2109,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1">
                     <input type="file" ref={fileInputRef} onChange={handleImportPatch} accept=".json" className="hidden" />
-                    <button onClick={handleSavePatch} className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors">SAVE</button>
-                    <button onClick={handleLoadPatch} className="px-2 py-0.5 border border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20 rounded-xs font-bold transition-colors">LOAD</button>
-                    <button onClick={handleExportPatch} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Export patch as JSON">EXP</button>
-                    <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Import JSON patch">IMP</button>
+                    <button onClick={handleSavePatch} title="Save Patch — Store all 8-track synth parameters and sequencer notes into browser LocalStorage" className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors">SAVE</button>
+                    <button onClick={handleLoadPatch} title="Load Patch — Restore saved synth parameters and sequencer patterns from browser LocalStorage" className="px-2 py-0.5 border border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20 rounded-xs font-bold transition-colors">LOAD</button>
+                    <button onClick={handleExportPatch} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file">EXP</button>
+                    <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Import Patch — Load a previously exported JSON synthesizer patch file">IMP</button>
                     {saveStatus && <span className="text-[#98c379] font-bold ml-1">{saveStatus}</span>}
                   </div>
                   <div className="w-px h-4 bg-white/15 mx-1" />
@@ -2097,7 +2134,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
                         }`}
-                        title={`Grid Snap Alignment: ${d}`}
+                        title={`Grid Snap Quantization: ${d} beat (${d === '4' ? 'Whole note = 16 cells' : d === '2' ? 'Half note = 8 cells' : d === '1' ? 'Quarter note = 4 cells' : d === '1/2' ? '8th note = 2 cells' : d === '1/4' ? '16th note = 1 cell' : '32nd note = 1/2 cell'})` }
                       >
                         {d}
                       </button>
@@ -2204,7 +2241,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
-                                className={`flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                                title={`Oscillator 1 Waveform: ${WAVE_TOOLTIPS[w] || w}`} className={`flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                   currentTrack.osc1Waveform === w
                                     ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2224,7 +2261,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
-                                className={`flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                                title={`Oscillator 2 Waveform: ${WAVE_TOOLTIPS[w] || w}`} className={`flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                   currentTrack.osc2Waveform === w
                                     ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2340,7 +2377,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             <button
                               key={mode}
                               onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
-                              className={`h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                              title={BLEND_TOOLTIPS[mode] || mode} className={`h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                 currentTrack.blendMode === mode
                                   ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
                                   : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2392,7 +2429,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             <button
                               key={f}
                               onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
-                              className={`h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                              title={FILTER_TOOLTIPS[f] || f} className={`h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                 currentTrack.filterType === f
                                   ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                   : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2494,7 +2531,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange(p.preset);
                                 playSound('toggle');
                               }}
-                              className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
+                              title={PRESET_TOOLTIPS[p.name] || p.name} className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
                             >
                               {p.name}
                             </button>
@@ -2515,7 +2552,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 setTracksState([...modularSynth.getTracks()]);
                                 playSound('toggle');
                               }}
-                              className="border border-white/20 px-2 py-0.5 rounded-xs hover:border-white/60 cursor-pointer text-xs font-bold"
+                              title="Algorithmic Randomizer (RND) — Generates a randomized melodic and chord pattern for this page" className="border border-white/20 px-2 py-0.5 rounded-xs hover:border-white/60 cursor-pointer text-xs font-bold"
                             >
                               🎲 RND
                             </button>
@@ -2530,7 +2567,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 playSound('click');
                               }}
                               className="border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold"
-                              title="Clear current page"
+                              title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track"
                             >
                               ✕ CLR
                             </button>
@@ -2545,7 +2582,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               <button
                                 key={sc}
                                 onClick={() => { setOctaveScope(sc); playSound('click'); }}
-                                className={`px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors text-xs ${
+                                title={sc === 'all' ? 'Octave Scope: ALL — Display full 7-octave piano roll matrix (C1 to B7)' : `Octave Scope: Octave ${sc} — Focus piano roll exclusively on Octave ${sc} (C${sc} to B${sc})`} className={`px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors text-xs ${
                                   octaveScope === sc
                                     ? 'border-white bg-white/20 text-white shadow-sm font-black'
                                     : 'border-white/20 text-[#eceff4] opacity-70 hover:opacity-100'
@@ -2683,7 +2720,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                             <button
                                               key={subCol}
                                               onClick={() => handleAccentSubCellClick(colIdx, subCol)}
-                                              className={`flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all ${
+                                              title={`Step ${step + 1} Accent (${subCol === 0 ? 'Left' : 'Right'} half) — Toggles +3dB velocity boost and envelope transient punch`} className={`flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all ${
                                                 isSubCurrent
                                                   ? 'border-white bg-white text-black'
                                                   : isSubAccent
@@ -2724,6 +2761,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => { setActiveEnvTab('amp'); playSound('click'); }}
+                            title="Amplitude Envelope (AMP) — Shapes volume and loudness contour over time via ADSR"
                             className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeEnvTab === 'amp'
                                 ? 'border-[#98c379] bg-[#98c379] text-black font-black'
@@ -2734,6 +2772,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                           <button
                             onClick={() => { setActiveEnvTab('vcf'); playSound('click'); }}
+                            title="Filter Envelope (VCF) — Sweeps filter cutoff frequency over time via ADSR"
                             className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeEnvTab === 'vcf'
                                 ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
@@ -2744,6 +2783,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
 <button
                             onClick={() => { setActiveEnvTab('pit'); playSound('click'); }}
+                            title="Pitch Envelope (PIT) — Modulates transient oscillator pitch over time (ideal for punchy kick drums and laser FX)"
                             className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeEnvTab === 'pit'
                                 ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
@@ -2850,7 +2890,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             <button
                               key={w}
                               onClick={() => { handleTrackParamChange({ lfoWaveform: w }); playSound('click'); }}
-                              className={`py-1 text-[10px] sm:text-xs border rounded-xs font-black cursor-pointer leading-none text-center ${
+                              title={LFO_TOOLTIPS[w] || w} className={`py-1 text-[10px] sm:text-xs border rounded-xs font-black cursor-pointer leading-none text-center ${
                                 currentTrack.lfoWaveform === w ? 'border-[#c678dd] bg-[#c678dd] text-black font-black' : 'border-white/20 text-white/60 hover:text-white'
                               }`}
                             >
@@ -2889,7 +2929,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 playSound('click');
                               }}
                               className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
-                              title="Mod source"
+                              title={`Modulation Source: ${route.source === 'lfo' ? 'Low Frequency Oscillator (LFO)' : route.source === 'vcf_env' ? 'Filter Envelope (VCF ADSR)' : route.source === 'amp_env' ? 'Amplitude Envelope (AMP ADSR)' : 'Note Velocity / Accent Dynamics'} — Click to cycle` }
                             >
                               {route.source === 'lfo' ? 'LFO' : route.source === 'vcf_env' ? 'VCF' : route.source === 'amp_env' ? 'AMP' : 'VEL'}
                             </button>
@@ -2906,7 +2946,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 playSound('click');
                               }}
                               className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
-                              title="Mod dest"
+                              title={`Modulation Destination: ${route.dest === 'cutoff' ? 'Filter Cutoff Frequency' : route.dest === 'pitch' ? 'Pitch / Detune Offset' : route.dest === 'morph' ? 'Waveform Morph Crossfade' : route.dest === 'pan' ? 'Stereo Panning' : 'Filter Resonance (Q-Factor)'} — Click to cycle` }
                             >
                               {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
                             </button>
@@ -2935,7 +2975,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className={`w-3.5 h-3.5 rounded-xs border text-[9px] font-black flex items-center justify-center cursor-pointer ${
+                              title={route.enabled ? 'Modulation Route Active (Click to bypass)' : 'Modulation Route Bypassed (Click to enable)'} className={`w-3.5 h-3.5 rounded-xs border text-[9px] font-black flex items-center justify-center cursor-pointer ${
                                 route.enabled ? 'border-[#98c379] bg-[#98c379] text-black' : 'border-white/20 text-white/30'
                               }`}
                             >
@@ -3059,6 +3099,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => { setActiveOutVisualizer('fft'); playSound('click'); }}
+                            title="Visualizer Mode: FFT Log Spectrum Analyzer — Shows frequency distribution across 20Hz to 20kHz"
                             className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeOutVisualizer === 'fft'
                                 ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
@@ -3069,6 +3110,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                           <button
                             onClick={() => { setActiveOutVisualizer('scope'); playSound('click'); }}
+                            title="Visualizer Mode: Oscilloscope Waveform — Real-time time-domain audio wave display"
                             className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeOutVisualizer === 'scope'
                                 ? 'border-[#98c379] bg-[#98c379] text-black font-black'
@@ -3079,6 +3121,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                           <button
                             onClick={() => { setActiveOutVisualizer('loudness'); playSound('click'); }}
+                            title="Visualizer Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)"
                             className={`px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors ${
                               activeOutVisualizer === 'loudness'
                                 ? 'border-[#e06c75] bg-[#e06c75] text-black font-black'

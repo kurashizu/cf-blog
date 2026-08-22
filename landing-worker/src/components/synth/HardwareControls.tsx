@@ -1,6 +1,48 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { playSound } from '../../lib/sound';
 
+export const PARAM_DESCRIPTIONS: Record<string, string> = {
+  // Oscillators
+  'VOL': 'Volume / Output Gain Level',
+  'LVL': 'Level / Output Gain',
+  'PW': 'Pulse Width — Duty cycle of square pulse waveform (narrow spike to symmetric square)',
+  'SUB': 'Sub-Oscillator Gain — Adds 1-octave-down sine wave for extra low-end sub bass',
+  'NOISE': 'White Noise Level — Adds breath, transient impact click, or airy percussive sizzle',
+  'DET': 'Fine Detune in Cents — ±50 cents pitch shift for rich analog chorus thickness',
+  'SEMI': 'Semitone Pitch Offset — Transposes pitch by ±24 semitones (up to ±2 full octaves)',
+  'RATIO': 'FM Harmonic Multiplier — Frequency ratio (1x to 4x) for Frequency Modulation',
+  'PHASE': 'Phase Angle Offset — Waveform starting phase from 0° to 360° for stereo widening',
+  'MRP': 'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
+  'MORPH': 'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
+
+  // Filter
+  'CUT': 'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
+  'CUTOFF': 'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
+  'RES': 'Resonance / Q-Factor — Emphasizes and boosts frequencies around the cutoff point',
+  'MOD': 'Envelope Modulation — Bipolar depth of envelope sweeping the filter cutoff frequency',
+
+  // Envelopes
+  'A': 'Attack Time — Time taken for envelope to ramp up from zero to peak level',
+  'D': 'Decay Time — Time taken for envelope to drop from peak to steady sustain level',
+  'S': 'Sustain Level — Constant holding level while note continues to be held down',
+  'R': 'Release Time — Time taken to fade out to silence after the note is released',
+  'AMT': 'Modulation Amount — Overall intensity/depth of the envelope applied to the sound engine',
+  'ENV': 'Envelope Amount — Overall modulation intensity of the envelope',
+
+  // LFO
+  'RATE': 'LFO Speed / Frequency — Rate of modulation oscillation in Hertz (0.1Hz to 20Hz)',
+  'DEP': 'LFO Depth — Intensity/magnitude of modulation applied to the selected target',
+  'DEPTH': 'LFO Depth — Intensity/magnitude of modulation applied to the selected target',
+
+  // Master FX & Mixer
+  'PAN': 'Stereo Panning — Position audio in the stereo field (100% Left to 100% Right)',
+  'DRIVE': 'Analog Overdrive / Saturation — Soft-clipping distortion adding warmth and punch',
+  'D.TIME': 'Delay Echo Time — Time delay between echo repeats (10ms to 1000ms)',
+  'D.FDBK': 'Delay Feedback — Amount of output fed back to input for sustaining echoes',
+  'D.MIX': 'Delay Wet/Dry Mix — Balance between dry un-effected sound and wet echo signal',
+  'REV': 'Reverb Space Mix — Wet level of spatial convolution acoustic space reverberation',
+};
+
 interface RotaryKnobProps {
   label: string;
   value: number;
@@ -10,6 +52,7 @@ interface RotaryKnobProps {
   unit?: string;
   color?: string;
   size?: number; // diameter in px (default 26)
+  description?: string;
   onChange: (val: number) => void;
 }
 
@@ -22,6 +65,7 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
   unit = '',
   color = '#56b6c2',
   size = 26,
+  description,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -115,11 +159,14 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
   const largeArc = pct > 0.666 ? 1 : 0;
   const arcPath = pct > 0.005 ? `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}` : '';
 
+  const desc = description || PARAM_DESCRIPTIONS[label.toUpperCase()] || '';
+  const tooltipText = `${label}${desc ? ` (${desc})` : ''}: ${formatDisplay(value)}${unit} — Drag up/down or scroll wheel to adjust`;
+
   return (
     <div
       onWheel={handleWheel}
       className="flex flex-col items-center select-none group cursor-ns-resize shrink-0 min-w-0 leading-none"
-      title={`${label}: ${formatDisplay(value)}${unit} (Drag up/down or scroll wheel)`}
+      title={tooltipText}
     >
       {/* Precision Mathematically Centered SVG Rotary Knob */}
       <div
@@ -229,6 +276,7 @@ interface HardwareFaderProps {
   unit?: string;
   color?: string;
   height?: number; // fader track height in px (default 44)
+  description?: string;
   onChange: (val: number) => void;
 }
 
@@ -241,6 +289,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
   unit = '',
   color = '#e5c07b',
   height = 44,
+  description,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -317,11 +366,14 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
     return v.toFixed(2);
   };
 
+  const desc = description || PARAM_DESCRIPTIONS[label.toUpperCase()] || '';
+  const tooltipText = `${label}${desc ? ` (${desc})` : ''}: ${formatDisplay(value)}${unit && unit !== 'ms' ? unit : ''} — Click, drag up/down, or scroll wheel`;
+
   return (
     <div
       onWheel={handleWheel}
       className="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none h-full justify-between py-0.5"
-      title={`${label}: ${formatDisplay(value)} (Click, drag up/down, or scroll wheel)`}
+      title={tooltipText}
     >
       <span className="text-xs opacity-85 uppercase font-black block group-hover:text-white transition-colors leading-none">
         {label}
@@ -380,6 +432,7 @@ interface HorizontalHardwareFaderProps {
   width?: number | string;
   showValue?: boolean;
   bipolar?: boolean;
+  description?: string;
   onChange: (val: number) => void;
 }
 
@@ -394,6 +447,7 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
   width = 60,
   showValue = false,
   bipolar = false,
+  description,
   onChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -468,11 +522,14 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
     return `${v}${unit}`;
   };
 
+  const desc = description || (label ? PARAM_DESCRIPTIONS[label.toUpperCase()] : '') || '';
+  const tooltipText = `${label ? `${label}${desc ? ` (${desc})` : ''}: ` : ''}${formatDisplay(value)}${unit} — Click, drag left/right, or scroll wheel`;
+
   return (
     <div
       onWheel={handleWheel}
       className="flex items-center gap-1.5 select-none font-mono cursor-ew-resize group shrink-0 min-w-0 leading-none"
-      title={`${label ? `${label}: ` : ''}${formatDisplay(value)} (Click, drag left/right, or scroll wheel)`}
+      title={tooltipText}
     >
       {label && (
         <span className="text-xs opacity-85 uppercase font-bold group-hover:text-white transition-colors">
