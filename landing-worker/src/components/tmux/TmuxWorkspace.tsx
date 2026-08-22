@@ -1883,7 +1883,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               </div>
 
 
-                                                                                    {/* L-SHAPE SYNTHESIZER & PIANO ROLL WORKSTATION TOPOLOGY */}
+                                                                                                  {/* L-SHAPE SYNTHESIZER & PIANO ROLL WORKSTATION TOPOLOGY */}
               <div className="flex-1 min-h-0 flex flex-col gap-1.5 overflow-hidden">
                 
                 {/* UPPER L-SHAPE: LEFT (MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO] */}
@@ -1892,23 +1892,23 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING) */}
                   <div className="lg:col-span-1 grid grid-rows-3 gap-1.5 min-w-0 h-full overflow-hidden">
                     
-                    {/* MODULE 1: DUAL OSCILLATORS (VCO) */}
+                    {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID) */}
                     <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-[10px] border-b border-white/10 pb-0.5 shrink-0">
                         <span>1. DUAL OSC</span>
                         <span className="text-white/40 font-mono text-[9px]">──►</span>
                       </div>
 
-                      <div className="space-y-1 my-auto shrink-0">
-                        {/* OSC 1 */}
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-[8px] text-white/60 font-black shrink-0">OSC1</span>
-                          <div className="grid grid-cols-5 gap-0.5 flex-1">
+                      <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
+                        {/* Left: OSC 1 (5 Waveforms Vertically Stacked) */}
+                        <div className="col-span-3 flex flex-col justify-between h-full py-0.5">
+                          <span className="text-[7.5px] text-white/60 font-black text-center mb-0.5">OSC1</span>
+                          <div className="flex flex-col gap-0.5 flex-1 justify-between">
                             {(['square', 'sawtooth', 'triangle', 'sine', 'noise'] as SynthWaveform[]).map((w) => (
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
-                                className={`py-0.5 text-[8.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none ${
+                                className={`py-0.5 text-[7.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                   currentTrack.osc1Waveform === w
                                     ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -1920,15 +1920,15 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </div>
                         </div>
 
-                        {/* OSC 2 */}
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-[8px] text-white/60 font-black shrink-0">OSC2</span>
-                          <div className="grid grid-cols-5 gap-0.5 flex-1">
+                        {/* Center: OSC 2 (5 Waveforms Vertically Stacked) */}
+                        <div className="col-span-3 flex flex-col justify-between h-full py-0.5">
+                          <span className="text-[7.5px] text-white/60 font-black text-center mb-0.5">OSC2</span>
+                          <div className="flex flex-col gap-0.5 flex-1 justify-between">
                             {(['sawtooth', 'square', 'sine', 'triangle', 'noise'] as SynthWaveform[]).map((w) => (
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
-                                className={`py-0.5 text-[8.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none ${
+                                className={`py-0.5 text-[7.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                   currentTrack.osc2Waveform === w
                                     ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -1939,162 +1939,166 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             ))}
                           </div>
                         </div>
-                      </div>
 
-                      {/* 4 Dual Osc Knobs */}
-                      <div className="grid grid-cols-4 gap-0.5 pt-0.5 border-t border-white/10 shrink-0">
-                        <RotaryKnob
-                          label="OSC1"
-                          value={Math.round(currentTrack.osc1Gain * 100)}
-                          min={0}
-                          max={100}
-                          unit="%"
-                          color="#e5c07b"
-                          size={18}
-                          onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
-                        />
-                        <RotaryKnob
-                          label="OSC2"
-                          value={Math.round(currentTrack.osc2Gain * 100)}
-                          min={0}
-                          max={100}
-                          unit="%"
-                          color="#56b6c2"
-                          size={18}
-                          onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
-                        />
-                        <RotaryKnob
-                          label="DET"
-                          value={currentTrack.detuneCents}
-                          min={-50}
-                          max={50}
-                          step={2}
-                          unit="c"
-                          color="#e06c75"
-                          size={18}
-                          onChange={(v) => handleTrackParamChange({ detuneCents: v })}
-                        />
-                        <RotaryKnob
-                          label="PHS"
-                          value={currentTrack.phaseOffset}
-                          min={0}
-                          max={360}
-                          step={15}
-                          unit="°"
-                          color="#98c379"
-                          size={18}
-                          onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
-                        />
+                        {/* Right: 4 Knobs Arranged in a 2x2 GRID */}
+                        <div className="col-span-6 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1 h-full items-center justify-around">
+                          <RotaryKnob
+                            label="OSC1"
+                            value={Math.round(currentTrack.osc1Gain * 100)}
+                            min={0}
+                            max={100}
+                            unit="%"
+                            color="#e5c07b"
+                            size={16}
+                            onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
+                          />
+                          <RotaryKnob
+                            label="OSC2"
+                            value={Math.round(currentTrack.osc2Gain * 100)}
+                            min={0}
+                            max={100}
+                            unit="%"
+                            color="#56b6c2"
+                            size={16}
+                            onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
+                          />
+                          <RotaryKnob
+                            label="DET"
+                            value={currentTrack.detuneCents}
+                            min={-50}
+                            max={50}
+                            step={2}
+                            unit="c"
+                            color="#e06c75"
+                            size={16}
+                            onChange={(v) => handleTrackParamChange({ detuneCents: v })}
+                          />
+                          <RotaryKnob
+                            label="PHS"
+                            value={currentTrack.phaseOffset}
+                            min={0}
+                            max={360}
+                            step={15}
+                            unit="°"
+                            color="#98c379"
+                            size={16}
+                            onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    {/* MODULE 2: TIMBRE FUSION & MORPH */}
+                    {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 HORIZONTAL KNOBS) */}
                     <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-[10px] border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
                         <span className="text-white/40 font-mono text-[9px]">──►</span>
                       </div>
 
-                      {/* 4 Blend Mode Buttons in 1 Row */}
-                      <div className="grid grid-cols-4 gap-0.5 my-auto shrink-0">
-                        {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
-                          <button
-                            key={mode}
-                            onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
-                            className={`py-1 text-[8.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none ${
-                              currentTrack.blendMode === mode
-                                ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
-                                : 'border-white/20 text-white/70 hover:bg-white/10'
-                            }`}
-                          >
-                            {mode === 'layer' ? 'LAYER ⊕' : mode === 'fm' ? 'FM ⨉' : mode === 'ring' ? 'RING ⊗' : 'SYNC ⚡'}
-                          </button>
-                        ))}
-                      </div>
+                      <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
+                        {/* Left: 4 Blend Mode Buttons in a 2x2 GRID */}
+                        <div className="col-span-6 grid grid-cols-2 gap-0.5 h-full items-center">
+                          {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
+                            <button
+                              key={mode}
+                              onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
+                              className={`py-1.5 text-[8.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                                currentTrack.blendMode === mode
+                                  ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
+                                  : 'border-white/20 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {mode === 'layer' ? 'LAYER ⊕' : mode === 'fm' ? 'FM ⨉' : mode === 'ring' ? 'RING ⊗' : 'SYNC ⚡'}
+                            </button>
+                          ))}
+                        </div>
 
-                      {/* Fusion Knobs */}
-                      <div className="grid grid-cols-2 gap-1 pt-0.5 border-t border-white/10 shrink-0">
-                        <RotaryKnob
-                          label="MORPH"
-                          value={Math.round(currentTrack.morphAmount * 100)}
-                          min={0}
-                          max={100}
-                          unit="%"
-                          color="#c678dd"
-                          size={20}
-                          onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
-                        />
-                        <RotaryKnob
-                          label="RATIO"
-                          value={currentTrack.osc2Ratio}
-                          min={0.5}
-                          max={4}
-                          step={0.5}
-                          unit="x"
-                          color="#56b6c2"
-                          size={20}
-                          onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
-                        />
+                        {/* Right: 2 Knobs Arranged HORIZONTALLY Side-by-Side */}
+                        <div className="col-span-6 flex items-center justify-around border-l border-white/10 pl-1 h-full">
+                          <RotaryKnob
+                            label="MORPH"
+                            value={Math.round(currentTrack.morphAmount * 100)}
+                            min={0}
+                            max={100}
+                            unit="%"
+                            color="#c678dd"
+                            size={20}
+                            onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
+                          />
+                          <RotaryKnob
+                            label="RATIO"
+                            value={currentTrack.osc2Ratio}
+                            min={0.5}
+                            max={4}
+                            step={0.5}
+                            unit="x"
+                            color="#56b6c2"
+                            size={20}
+                            onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    {/* MODULE 3: MULTI-MODE VCF RESONANT FILTER */}
+                    {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 3 HORIZONTAL KNOBS) */}
                     <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-[10px] border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40 font-mono text-[9px]">──►</span>
                       </div>
 
-                      {/* 4 Filter Type Buttons in 1 Row */}
-                      <div className="grid grid-cols-4 gap-0.5 my-auto shrink-0">
-                        {(['lowpass', 'bandpass', 'highpass', 'notch'] as FilterType[]).map((f) => (
-                          <button
-                            key={f}
-                            onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
-                            className={`py-1 text-[8.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none ${
-                              currentTrack.filterType === f
-                                ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
-                                : 'border-white/20 text-white/70 hover:bg-white/10'
-                            }`}
-                          >
-                            {f === 'lowpass' ? 'LPF' : f === 'bandpass' ? 'BPF' : f === 'highpass' ? 'HPF' : 'NOTCH'}
-                          </button>
-                        ))}
-                      </div>
+                      <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
+                        {/* Left: 4 Filter Mode Buttons in a 2x2 GRID */}
+                        <div className="col-span-5 grid grid-cols-2 gap-0.5 h-full items-center">
+                          {(['lowpass', 'bandpass', 'highpass', 'notch'] as FilterType[]).map((f) => (
+                            <button
+                              key={f}
+                              onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
+                              className={`py-1.5 text-[8.5px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                                currentTrack.filterType === f
+                                  ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                  : 'border-white/20 text-white/70 hover:bg-white/10'
+                              }`}
+                            >
+                              {f === 'lowpass' ? 'LPF' : f === 'bandpass' ? 'BPF' : f === 'highpass' ? 'HPF' : 'NOTCH'}
+                            </button>
+                          ))}
+                        </div>
 
-                      {/* Filter Knobs */}
-                      <div className="grid grid-cols-3 gap-0.5 pt-0.5 border-t border-white/10 shrink-0">
-                        <RotaryKnob
-                          label="CUTOFF"
-                          value={currentTrack.cutoff}
-                          min={40}
-                          max={12000}
-                          step={50}
-                          unit="Hz"
-                          color="#56b6c2"
-                          size={18}
-                          onChange={(v) => handleTrackParamChange({ cutoff: v })}
-                        />
-                        <RotaryKnob
-                          label="RES (Q)"
-                          value={currentTrack.resonance}
-                          min={0.2}
-                          max={14}
-                          step={0.2}
-                          color="#e5c07b"
-                          size={18}
-                          onChange={(v) => handleTrackParamChange({ resonance: v })}
-                        />
-                        <RotaryKnob
-                          label="ENV AMT"
-                          value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
-                          min={-100}
-                          max={100}
-                          unit="%"
-                          color="#98c379"
-                          size={18}
-                          onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
-                        />
+                        {/* Right: 3 Knobs Arranged HORIZONTALLY Side-by-Side */}
+                        <div className="col-span-7 grid grid-cols-3 gap-0.5 border-l border-white/10 pl-1 h-full items-center justify-around">
+                          <RotaryKnob
+                            label="CUTOFF"
+                            value={currentTrack.cutoff}
+                            min={40}
+                            max={12000}
+                            step={50}
+                            unit="Hz"
+                            color="#56b6c2"
+                            size={16}
+                            onChange={(v) => handleTrackParamChange({ cutoff: v })}
+                          />
+                          <RotaryKnob
+                            label="RES (Q)"
+                            value={currentTrack.resonance}
+                            min={0.2}
+                            max={14}
+                            step={0.2}
+                            color="#e5c07b"
+                            size={16}
+                            onChange={(v) => handleTrackParamChange({ resonance: v })}
+                          />
+                          <RotaryKnob
+                            label="ENV AMT"
+                            value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
+                            min={-100}
+                            max={100}
+                            unit="%"
+                            color="#98c379"
+                            size={16}
+                            onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -2123,7 +2127,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </span>
                         </div>
 
-                        {/* Sound Design Presets Moved Here (Clean, Uncluttered, Direct Signal Flow 3 -> 4) */}
+                        {/* Sound Design Presets Moved Here */}
                         <div className="flex items-center gap-1">
                           <span className="text-white/40 font-bold text-[9px]">PRESETS:</span>
                           {[
