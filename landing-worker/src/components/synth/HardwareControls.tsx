@@ -9,7 +9,7 @@ interface RotaryKnobProps {
   step?: number;
   unit?: string;
   color?: string;
-  size?: number; // diameter in px (default 36)
+  size?: number; // diameter in px (default 32)
   onChange: (val: number) => void;
 }
 
@@ -127,7 +127,7 @@ interface HardwareFaderProps {
   step?: number;
   unit?: string;
   color?: string;
-  height?: number; // fader track height in px (default 54)
+  height?: number; // fader track height in px (default 46)
   onChange: (val: number) => void;
 }
 
@@ -142,48 +142,132 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
   height = 46,
   onChange,
 }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
   const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
 
-  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickY = e.clientY - rect.top;
+  const updateFromPointerY = useCallback((clientY: number) => {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    const clickY = clientY - rect.top;
     const clickPct = 1 - Math.max(0, Math.min(1, clickY / rect.height));
     const raw = min + clickPct * (max - min);
     const stepped = Math.round(raw / step) * step;
-    onChange(Math.max(min, Math.min(max, stepped)));
+    const clamped = Math.max(min, Math.min(max, stepped));
+    onChange(clamped);
+  }, [min, max, step, onChange]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    updateFromPointerY(e.clientY);
+    playSound('click');
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      updateFromPointerY(moveEvent.clientY);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    setIsDragging(true);
+    updateFromPointerY(e.touches[0].clientY);
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length === 1) {
+        updateFromPointerY(moveEvent.touches[0].clientY);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const dir = e.deltaY < 0 ? 1 : -1;
+    const delta = (max - min) * 0.05 * dir;
+    const rawNew = value + delta;
+    const stepped = Math.round(rawNew / step) * step;
+    const clamped = Math.max(min, Math.min(max, stepped));
+    onChange(clamped);
     playSound('click');
   };
 
+  const formatDisplay = (v: number) => {
+    if (unit === 'ms') return `${Math.round(v * 1000)}ms`;
+    if (v <= 1 && max <= 1) return `${Math.round(v * 100)}%`;
+    if (Number.isInteger(v)) return `${v}`;
+    return v.toFixed(2);
+  };
+
   return (
-    <div className="flex flex-col items-center select-none font-mono">
+    <div
+      onWheel={handleWheel}
+      className="flex flex-col items-center select-none font-mono cursor-ns-resize group"
+      title={`${label}: ${formatDisplay(value)} (Click, drag up/down, or scroll wheel)`}
+    >
       {/* Label */}
-      <span className="text-xs opacity-75 uppercase font-semibold block mb-0.5">{label}</span>
+      <span className="text-[10px] opacity-75 uppercase font-bold block mb-0.5 group-hover:text-white transition-colors">
+        {label}
+      </span>
 
       {/* Vertical Fader Track */}
       <div
-        onClick={handleTrackClick}
+        ref={trackRef}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         style={{ height }}
-        className="w-4 bg-black/60 border border-white/20 rounded-xs relative cursor-pointer flex items-center justify-center p-0.5"
+        className={`w-5 bg-black/80 border rounded-xs relative cursor-ns-resize flex items-center justify-center p-0.5 transition-colors ${
+          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
+        }`}
       >
         {/* Center Groove Line */}
-        <div className="w-0.5 h-full bg-white/10 rounded-full pointer-events-none" />
+        <div className="w-0.5 h-full bg-white/15 rounded-full pointer-events-none" />
+
+        {/* Level Fill Indicator Bar */}
+        <div
+          className="absolute bottom-0 left-1 right-1 rounded-xs pointer-events-none opacity-25"
+          style={{
+            height: `${pct * 100}%`,
+            backgroundColor: color,
+          }}
+        />
 
         {/* Illuminated Fader Cap / Thumb */}
         <div
-          className="absolute w-3.5 h-2 rounded-xs border border-white/60 shadow-md cursor-grab active:cursor-grabbing flex items-center justify-center transition-all"
+          className={`absolute w-4 h-2.5 rounded-xs border border-white/80 shadow-md flex items-center justify-center pointer-events-none ${
+            isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''
+          }`}
           style={{
-            bottom: `calc(${pct * 100}% - 4px)`,
+            bottom: `calc(${pct * 100}% - 5px)`,
             backgroundColor: color,
-            boxShadow: `0 0 6px ${color}88`,
+            boxShadow: isDragging ? `0 0 10px ${color}` : `0 0 4px ${color}88`,
           }}
         >
-          <div className="w-2 h-0.5 bg-black/80 rounded-full" />
+          {/* Cap Grip Notch */}
+          <div className="w-2.5 h-0.5 bg-black/90 rounded-full" />
         </div>
       </div>
 
       {/* Value Readout */}
-      <span className="text-xs font-bold mt-1" style={{ color }}>
-        {Math.round(value >= 1 ? value : value * 100)}{unit || (value <= 1 ? '%' : '')}
+      <span className="text-[10px] font-bold mt-1 text-center truncate max-w-[36px]" style={{ color }}>
+        {formatDisplay(value)}
       </span>
     </div>
   );
