@@ -272,3 +272,177 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
     </div>
   );
 };
+
+interface HorizontalHardwareFaderProps {
+  label?: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  color?: string;
+  width?: number | string; // e.g. 72 or '100%'
+  showValue?: boolean;
+  bipolar?: boolean; // if true, center is 0
+  onChange: (val: number) => void;
+}
+
+export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = ({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit = '',
+  color = '#98c379',
+  width = 68,
+  showValue = false,
+  bipolar = false,
+  onChange,
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
+
+  const updateFromPointerX = useCallback((clientX: number) => {
+    if (!trackRef.current) return;
+    const rect = trackRef.current.getBoundingClientRect();
+    const clickX = clientX - rect.left;
+    const clickPct = Math.max(0, Math.min(1, clickX / rect.width));
+    const raw = min + clickPct * (max - min);
+    const stepped = Math.round(raw / step) * step;
+    const clamped = Math.max(min, Math.min(max, stepped));
+    onChange(clamped);
+  }, [min, max, step, onChange]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    updateFromPointerX(e.clientX);
+    playSound('click');
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      updateFromPointerX(moveEvent.clientX);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    setIsDragging(true);
+    updateFromPointerX(e.touches[0].clientX);
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length === 1) {
+        updateFromPointerX(moveEvent.touches[0].clientX);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const dir = e.deltaY < 0 ? 1 : -1;
+    const delta = (max - min) * 0.05 * dir;
+    const rawNew = value + delta;
+    const stepped = Math.round(rawNew / step) * step;
+    const clamped = Math.max(min, Math.min(max, stepped));
+    onChange(clamped);
+    playSound('click');
+  };
+
+  const formatDisplay = (v: number) => {
+    if (bipolar && v > 0) return `+${v}${unit}`;
+    return `${v}${unit}`;
+  };
+
+  return (
+    <div
+      onWheel={handleWheel}
+      className="flex items-center gap-1.5 select-none font-mono cursor-ew-resize group"
+      title={`${label ? `${label}: ` : ''}${formatDisplay(value)} (Click, drag left/right, or scroll wheel)`}
+    >
+      {label && (
+        <span className="text-[10px] opacity-75 uppercase font-bold group-hover:text-white transition-colors">
+          {label}
+        </span>
+      )}
+
+      {/* Horizontal Fader Track */}
+      <div
+        ref={trackRef}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        style={{ width }}
+        className={`h-4.5 bg-black/80 border rounded-xs relative cursor-ew-resize flex items-center justify-center p-0.5 transition-colors ${
+          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/25 hover:border-white/60'
+        }`}
+      >
+        {/* Center Groove Line */}
+        <div className="h-0.5 w-full bg-white/15 rounded-full pointer-events-none" />
+
+        {/* Level Fill Indicator Bar */}
+        {bipolar ? (
+          <div
+            className="absolute top-1 bottom-1 rounded-xs pointer-events-none opacity-30"
+            style={{
+              left: value >= 0 ? '50%' : `${pct * 100}%`,
+              width: `${Math.abs(pct - 0.5) * 100}%`,
+              backgroundColor: color,
+            }}
+          />
+        ) : (
+          <div
+            className="absolute top-1 bottom-1 left-0.5 rounded-xs pointer-events-none opacity-30"
+            style={{
+              width: `${pct * 100}%`,
+              backgroundColor: color,
+            }}
+          />
+        )}
+
+        {/* Center Zero Tick for Bipolar Fader */}
+        {bipolar && (
+          <div className="absolute top-0.5 bottom-0.5 left-1/2 w-0.5 bg-white/30 pointer-events-none" />
+        )}
+
+        {/* Illuminated Fader Cap / Thumb */}
+        <div
+          className={`absolute h-3.5 w-2.5 rounded-xs border border-white/80 shadow-md flex items-center justify-center pointer-events-none ${
+            isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''
+          }`}
+          style={{
+            left: `calc(${pct * 100}% - 5px)`,
+            backgroundColor: color,
+            boxShadow: isDragging ? `0 0 10px ${color}` : `0 0 4px ${color}88`,
+          }}
+        >
+          {/* Cap Grip Notch (Vertical) */}
+          <div className="h-2 w-0.5 bg-black/90 rounded-full" />
+        </div>
+      </div>
+
+      {showValue && (
+        <span className="text-[10px] font-bold text-right min-w-[28px]" style={{ color }}>
+          {formatDisplay(value)}
+        </span>
+      )}
+    </div>
+  );
+};

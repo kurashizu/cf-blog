@@ -35,7 +35,7 @@ import {
   METER_SPECS,
   getWaveformAbbr,
 } from '../../lib/synth';
-import { RotaryKnob, HardwareFader } from '../synth/HardwareControls';
+import { RotaryKnob, HardwareFader, HorizontalHardwareFader } from '../synth/HardwareControls';
 import { evaluateSafeJS } from '../../lib/evaluator';
 
 export type WorkspaceTheme = 'tokyo-matte' | 'gruvbox-dark' | 'nord-terminal' | 'cyber-amber';
@@ -1618,22 +1618,22 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <span className="text-xs opacity-80 font-mono">[{synthBpm} BPM]</span>
                   </button>
 
-                  {/* BPM Slider */}
-                  <div className="flex items-center gap-1.5 border-l border-white/15 pl-2">
-                    <span className="opacity-70 font-bold">BPM:</span>
-                    <input
-                      type="range"
-                      min="60"
-                      max="220"
+                  {/* Hardware BPM Fader */}
+                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
+                    <HorizontalHardwareFader
+                      label="BPM:"
                       value={synthBpm}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
+                      min={40}
+                      max={240}
+                      step={1}
+                      width={74}
+                      showValue={true}
+                      color="#98c379"
+                      onChange={(val) => {
                         setSynthBpm(val);
                         modularSynth.setBpm(val);
                       }}
-                      className="w-16 accent-[#98c379] h-1 cursor-pointer"
                     />
-                    <span className="text-[#98c379] font-bold font-mono w-7 text-right">{synthBpm}</span>
                   </div>
 
                   {/* METER Time Signature (Semantically Co-located with BPM & Transport) */}
@@ -1803,22 +1803,29 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         {len}
                       </button>
                     ))}
-                    {/* Custom Input for steps > 512 or arbitrary lengths */}
+                    {/* Custom Input for steps > 512 or arbitrary lengths (clean, no spin arrows) */}
                     <div className="flex items-center gap-0.5">
                       <input
-                        type="number"
-                        min="8"
-                        max="4096"
-                        step="8"
-                        value={totalPatternSteps}
+                        type="text"
+                        inputMode="numeric"
+                        value={totalPatternSteps || ''}
                         onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (!isNaN(val) && val >= 8) {
-                            setTotalPatternSteps(val);
-                            modularSynth.setTotalSteps(val);
+                          const val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
+                          if (!isNaN(val)) {
+                            const clamped = Math.max(1, Math.min(4096, val));
+                            setTotalPatternSteps(clamped);
+                            modularSynth.setTotalSteps(clamped);
+                          } else if (e.target.value === '') {
+                            setTotalPatternSteps(0);
                           }
                         }}
-                        className={`w-14 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors ${
+                        onBlur={() => {
+                          if (!totalPatternSteps || totalPatternSteps < 8) {
+                            setTotalPatternSteps(8);
+                            modularSynth.setTotalSteps(8);
+                          }
+                        }}
+                        className={`w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           ![16, 32, 64, 128, 256, 512].includes(totalPatternSteps)
                             ? 'border-[#98c379] text-[#98c379]'
                             : 'border-white/20 text-white/70 focus:border-white/60'
@@ -2189,10 +2196,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                 {/* PAGE 1: SOUND ENGINE & ENVELOPES (MODULES 1 ~ 4) */}
                 {rackPage === 1 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs h-[184px] min-h-[184px] max-h-[184px]">
                     
                     {/* MODULE 1: DUAL OSCILLATORS (VCO) */}
-                    <div className="border border-[#e5c07b]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                    <div className="border border-[#e5c07b]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1 h-full">
                       <div className="flex justify-between font-bold text-[#e5c07b] text-xs border-b border-white/10 pb-0.5">
                         <span>1. DUAL OSC</span>
                         <span className="text-white/40">──►</span>
@@ -2294,7 +2301,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 2: TIMBRE FUSION & MORPH */}
-                    <div className="border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                    <div className="border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1 h-full">
                       <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
                         <span>2. FUSION</span>
                         <span className="text-white/40">──►</span>
@@ -2344,7 +2351,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 3: MULTI-MODE VCF RESONANT FILTER */}
-                    <div className="border border-[#56b6c2]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                    <div className="border border-[#56b6c2]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1 h-full">
                       <div className="flex justify-between font-bold text-[#56b6c2] text-xs border-b border-white/10 pb-0.5">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40">──►</span>
@@ -2404,7 +2411,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (AMP ENV + VCF ENV) */}
-                    <div className="border border-[#98c379]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                    <div className="border border-[#98c379]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1 h-full">
                       <div className="flex items-center justify-between font-bold text-xs border-b border-white/10 pb-0.5">
                         {/* Dual Envelope Tab Selector */}
                         <div className="flex items-center gap-1">
@@ -2503,10 +2510,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                 {/* PAGE 2: MOD MATRIX, FX & OUTPUT (MODULES 5 ~ 7) */}
                 {rackPage === 2 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-2 text-xs h-[184px] min-h-[184px] max-h-[184px]">
                     
                     {/* MODULE 5: MOD MATRIX (ROUTING MATRIX & LFO) */}
-                    <div className="border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                    <div className="border border-[#c678dd]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1 h-full">
                       <div className="flex justify-between font-bold text-[#c678dd] text-xs border-b border-white/10 pb-0.5">
                         <span>5. MOD MATRIX</span>
                         <span className="text-white/40">──►</span>
@@ -2583,21 +2590,22 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
                             </button>
 
-                            {/* Bipolar Depth Slider */}
-                            <input
-                              type="range"
-                              min="-100"
-                              max="100"
-                              step="5"
+                            {/* Hardware Bipolar Depth Fader */}
+                            <HorizontalHardwareFader
                               value={Math.round(route.amount * 100)}
-                              onChange={(e) => {
-                                const newAmount = parseInt(e.target.value, 10) / 100;
+                              min={-100}
+                              max={100}
+                              step={5}
+                              width={58}
+                              showValue={true}
+                              bipolar={true}
+                              unit="%"
+                              color="#98c379"
+                              onChange={(v) => {
                                 const newRoutes = [...(currentTrack.modRoutes || [])];
-                                newRoutes[rIdx] = { ...route, amount: newAmount };
+                                newRoutes[rIdx] = { ...route, amount: v / 100 };
                                 handleTrackParamChange({ modRoutes: newRoutes });
                               }}
-                              className="w-16 h-1.5 accent-[#98c379] cursor-pointer"
-                              title={`Mod Depth: ${Math.round(route.amount * 100)}%`}
                             />
 
                             {/* Enable / Bypass Toggle */}
@@ -2620,7 +2628,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 6: FX (TAPE DELAY, REVERB & ANALOG DRIVE) */}
-                    <div className="border border-[#e06c75]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                    <div className="border border-[#e06c75]/40 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1 h-full">
                       <div className="flex justify-between font-bold text-[#e06c75] text-xs border-b border-white/10 pb-0.5">
                         <span>6. FX</span>
                         <span className="text-white/40">──►</span>
@@ -2711,7 +2719,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 7: OUT & DUAL DEDICATED VISUALIZERS */}
-                    <div className="border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1.5">
+                    <div className="border border-white/20 p-2 bg-black/60 rounded-xs flex flex-col justify-between space-y-1 h-full">
                       <div className="flex items-center justify-between font-bold text-white text-xs border-b border-white/10 pb-0.5">
                         <span>7. OUT</span>
                         <span className="text-[#98c379] font-mono text-[9px]">60 FPS DUAL</span>
