@@ -1927,189 +1927,98 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               
                             {/* 1. ROW 1: MASTER PLAYBACK TRANSPORT & MULTI-TRACK MIXER DECK */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0">
-                {/* Left: Play/Stop + Tempo Slider + METER + Mute */}
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  {/* Transport Controls: REWIND, PREV BAR, PLAY/STOP, NEXT BAR, GOTO CURSOR */}
-                  <div className="flex items-center gap-1">
-                    {/* Rewind to 0 */}
-                    <button
-                      onClick={() => {
-                        modularSynth.setPlaybackStep(0);
-                        setCursorStep(0);
-                        setSeqCurrentStep(0);
-                        playSound('click');
-                      }}
-                      className="px-1.5 py-0.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
-                      title="Rewind to Beginning (Step 1 / Bar 1.1) [Hotkey: Home]"
-                    >
-                      |◄
-                    </button>
+                {/* Left: Transport Controls (Rewind, Prev Bar, Play, Next Bar, CUR) */}
+                <div className="flex items-center gap-1">
+                  {/* Rewind to 0 (Pixel-perfect SVG) */}
+                  <button
+                    onClick={() => {
+                      modularSynth.setPlaybackStep(0);
+                      setCursorStep(0);
+                      setSeqCurrentStep(0);
+                      playSound('click');
+                    }}
+                    className="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
+                    title="Rewind to Beginning (Step 1 / Bar 1.1) [Hotkey: Home]"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                      <rect x="2" y="2.5" width="2" height="11" rx="0.5" />
+                      <polygon points="14,2.5 5,8 14,13.5" />
+                    </svg>
+                  </button>
 
-                    {/* 1 Bar Backward */}
-                    <button
-                      onClick={() => {
-                        const barSteps = METER_SPECS[timeMeter]?.stepsPerBar || 32;
-                        const cur = modularSynth.getCurrentStep() || 0;
-                        const prev = Math.max(0, cur - barSteps);
-                        modularSynth.setPlaybackStep(prev);
-                        setCursorStep(prev);
-                        setSeqCurrentStep(prev);
-                        playSound('click');
-                      }}
-                      className="px-1.5 py-0.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
-                      title="Step 1 Bar Backward (◄◄)"
-                    >
-                      ◄◄
-                    </button>
+                  {/* 1 Bar Backward */}
+                  <button
+                    onClick={() => {
+                      const barSteps = METER_SPECS[timeMeter]?.stepsPerBar || 32;
+                      const cur = modularSynth.getCurrentStep() || 0;
+                      const prev = Math.max(0, cur - barSteps);
+                      modularSynth.setPlaybackStep(prev);
+                      setCursorStep(prev);
+                      setSeqCurrentStep(prev);
+                      playSound('click');
+                    }}
+                    className="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
+                    title="Step 1 Bar Backward (◄◄)"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                      <polygon points="8,2.5 2,8 8,13.5" />
+                      <polygon points="14,2.5 8,8 14,13.5" />
+                    </svg>
+                  </button>
 
-                    {/* PLAY / STOP */}
-                    <button
-                      onClick={() => {
-                        const playing = modularSynth.toggleSequencer(cursorStep);
-                        setIsSeqPlaying(playing);
-                        playSound('click');
-                      }}
-                      title="Play / Stop Sequencer (Starts from timeline cursor position) [Spacebar]"
-                      className={`px-3 py-0.5 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1.5 ${
-                        isSeqPlaying
-                          ? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
-                          : 'bg-[#98c379] text-black hover:opacity-90'
-                      }`}
-                    >
-                      <span>{isSeqPlaying ? '■ STOP' : '► PLAY'}</span>
-                      <span className="text-xs opacity-80 font-mono">[{synthBpm} BPM]</span>
-                    </button>
+                  {/* PLAY / STOP (No BPM text!) */}
+                  <button
+                    onClick={() => {
+                      const playing = modularSynth.toggleSequencer(cursorStep);
+                      setIsSeqPlaying(playing);
+                      playSound('click');
+                    }}
+                    title="Play / Stop Sequencer (Starts from timeline cursor position) [Spacebar]"
+                    className={`h-6 px-3 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center justify-center ${
+                      isSeqPlaying
+                        ? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
+                        : 'bg-[#98c379] text-black hover:opacity-90'
+                    }`}
+                  >
+                    <span>{isSeqPlaying ? '■ STOP' : '► PLAY'}</span>
+                  </button>
 
-                    {/* 1 Bar Forward */}
-                    <button
-                      onClick={() => {
-                        const barSteps = METER_SPECS[timeMeter]?.stepsPerBar || 32;
-                        const cur = modularSynth.getCurrentStep() || 0;
-                        const next = Math.min(totalPatternSteps - 1, cur + barSteps);
-                        modularSynth.setPlaybackStep(next);
-                        setCursorStep(next);
-                        setSeqCurrentStep(next);
-                        playSound('click');
-                      }}
-                      className="px-1.5 py-0.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
-                      title="Step 1 Bar Forward (►►)"
-                    >
-                      ►►
-                    </button>
+                  {/* 1 Bar Forward */}
+                  <button
+                    onClick={() => {
+                      const barSteps = METER_SPECS[timeMeter]?.stepsPerBar || 32;
+                      const cur = modularSynth.getCurrentStep() || 0;
+                      const next = Math.min(totalPatternSteps - 1, cur + barSteps);
+                      modularSynth.setPlaybackStep(next);
+                      setCursorStep(next);
+                      setSeqCurrentStep(next);
+                      playSound('click');
+                    }}
+                    className="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
+                    title="Step 1 Bar Forward (►►)"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                      <polygon points="8,2.5 14,8 8,13.5" />
+                      <polygon points="2,2.5 8,8 2,13.5" />
+                    </svg>
+                  </button>
 
-                    {/* Jump to Cursor */}
-                    <button
-                      onClick={() => {
-                        modularSynth.setPlaybackStep(cursorStep);
-                        setSeqCurrentStep(cursorStep);
-                        playSound('click');
-                      }}
-                      className="px-1.5 py-0.5 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs"
-                      title={`Jump Playhead to Cursor (Step ${cursorStep + 1})`}
-                    >
-                      ⤹ CUR
-                    </button>
-                  </div>
-
-                  {/* Hardware BPM Fader */}
-                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
-                    <HorizontalHardwareFader
-                      label="BPM:"
-                      value={synthBpm}
-                      min={40}
-                      max={240}
-                      step={1}
-                      width={74}
-                      showValue={true}
-                      color="#98c379"
-                      onChange={(val) => {
-                        setSynthBpm(val);
-                        modularSynth.setBpm(val);
-                      }}
-                    />
-                  </div>
-
-                  {/* Sequence Length: Presets (16..512) + Custom Step Input */}
-                  <div className="flex items-center gap-1">
-                    <span className="opacity-60 font-bold" title="Pattern Total Steps (LEN) — Total active sequence steps before looping">LEN:</span>
-                    {([16, 32, 64, 128, 256, 512] as const).map((len) => (
-                      <button
-                        key={len}
-                        onClick={() => {
-                          setTotalPatternSteps(len);
-                          modularSynth.setTotalSteps(len);
-                          const maxPages = Math.max(1, Math.ceil(len / 32));
-                          if (activeStepPage >= maxPages) setActiveStepPage(0);
-                          playSound('click');
-                        }}
-                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          totalPatternSteps === len
-                            ? 'border-[#98c379] bg-[#98c379] text-black font-black'
-                            : 'border-white/20 text-white/70 hover:border-white/50'
-                        }`}
-                      >
-                        {len}
-                      </button>
-                    ))}
-                    {/* Custom Input for steps > 512 or arbitrary lengths (clean, no spin arrows) */}
-                    <div className="flex items-center gap-0.5">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={totalPatternSteps || ''}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
-                          if (!isNaN(val)) {
-                            const clamped = Math.max(1, Math.min(4096, val));
-                            setTotalPatternSteps(clamped);
-                            modularSynth.setTotalSteps(clamped);
-                          } else if (e.target.value === '') {
-                            setTotalPatternSteps(0);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!totalPatternSteps || totalPatternSteps < 8) {
-                            setTotalPatternSteps(8);
-                            modularSynth.setTotalSteps(8);
-                          }
-                        }}
-                        className={`w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          ![16, 32, 64, 128, 256, 512].includes(totalPatternSteps)
-                            ? 'border-[#98c379] text-[#98c379]'
-                            : 'border-white/20 text-white/70 focus:border-white/60'
-                        }`}
-                        title="Custom Step Length — Set arbitrary loop duration (e.g. 1184 steps for the complete Mario theme)"
-                      />
-                    </div>
-                  </div>
-
-                  {/* METER Time Signature (Semantically Co-located with BPM & Transport) */}
-                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
-                    <span className="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
-                    {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
-                      <button
-                        key={sig}
-                        onClick={() => {
-                          setTimeMeter(sig);
-                          modularSynth.setMeter(sig);
-                          playSound('click');
-                        }}
-                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          timeMeter === sig
-                            ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
-                            : 'border-white/20 text-white/70 hover:border-white/50'
-                        }`}
-                        title={METER_SPECS[sig].name}
-                      >
-                        {sig}
-                      </button>
-                    ))}
-                  </div>
-
-
+                  {/* Jump to Cursor with Cursor Step Number */}
+                  <button
+                    onClick={() => {
+                      modularSynth.setPlaybackStep(cursorStep);
+                      setSeqCurrentStep(cursorStep);
+                      playSound('click');
+                    }}
+                    className="h-6 px-2 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0"
+                    title={`Jump Playhead to Cursor (Step ${cursorStep + 1}) — Click to jump`}
+                  >
+                    <span>⤹ CUR:</span>
+                    <span className="font-mono font-black">{cursorStep + 1}</span>
+                  </button>
                 </div>
 
-                {/* Right: 4-Track Channel Selectors with Inline Mute/Solo */}
+                {/* Center: 8-Track Channel Selectors with Inline Mute/Solo */}
                 <div className="flex items-center gap-1 text-xs overflow-x-auto no-scrollbar">
                   {tracksState.map((trk) => {
                     const isSelected = activeTrackId === trk.id;
@@ -2165,6 +2074,103 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Right: BPM, LEN, METER (Right-aligned) */}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {/* Hardware BPM Fader */}
+                  <div className="flex items-center gap-1">
+                    <HorizontalHardwareFader
+                      label="BPM:"
+                      value={synthBpm}
+                      min={40}
+                      max={240}
+                      step={1}
+                      width={74}
+                      showValue={true}
+                      color="#98c379"
+                      onChange={(val) => {
+                        setSynthBpm(val);
+                        modularSynth.setBpm(val);
+                      }}
+                    />
+                  </div>
+
+                  {/* Sequence Length: Presets (16..512) + Custom Step Input */}
+                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
+                    <span className="opacity-60 font-bold" title="Pattern Total Steps (LEN) — Total active sequence steps before looping">LEN:</span>
+                    {([16, 32, 64, 128, 256, 512] as const).map((len) => (
+                      <button
+                        key={len}
+                        onClick={() => {
+                          setTotalPatternSteps(len);
+                          modularSynth.setTotalSteps(len);
+                          const maxPages = Math.max(1, Math.ceil(len / 32));
+                          if (activeStepPage >= maxPages) setActiveStepPage(0);
+                          playSound('click');
+                        }}
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          totalPatternSteps === len
+                            ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                      >
+                        {len}
+                      </button>
+                    ))}
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={totalPatternSteps || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
+                          if (!isNaN(val)) {
+                            const clamped = Math.max(1, Math.min(4096, val));
+                            setTotalPatternSteps(clamped);
+                            modularSynth.setTotalSteps(clamped);
+                          } else if (e.target.value === '') {
+                            setTotalPatternSteps(0);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!totalPatternSteps || totalPatternSteps < 8) {
+                            setTotalPatternSteps(8);
+                            modularSynth.setTotalSteps(8);
+                          }
+                        }}
+                        className={`w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          ![16, 32, 64, 128, 256, 512].includes(totalPatternSteps)
+                            ? 'border-[#98c379] text-[#98c379]'
+                            : 'border-white/20 text-white/70 focus:border-white/60'
+                        }`}
+                        title="Custom Step Length — Set arbitrary loop duration (e.g. 1184 steps for the complete Mario theme)"
+                      />
+                    </div>
+                  </div>
+
+                  {/* METER Time Signature */}
+                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
+                    <span className="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
+                    {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
+                      <button
+                        key={sig}
+                        onClick={() => {
+                          setTimeMeter(sig);
+                          modularSynth.setMeter(sig);
+                          playSound('click');
+                        }}
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          timeMeter === sig
+                            ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                        title={METER_SPECS[sig].name}
+                      >
+                        {sig}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -2602,9 +2608,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           <span className="text-xs text-[#98c379] font-mono font-bold">
                             BAR {Math.floor(seqCurrentStep / (METER_SPECS[timeMeter]?.stepsPerBar || 32)) + 1}.{Math.floor(((seqCurrentStep % (METER_SPECS[timeMeter]?.stepsPerBar || 32)) / ((METER_SPECS[timeMeter]?.stepsPerBar || 32) / (METER_SPECS[timeMeter]?.beatsPerBar || 4)))) + 1} (STEP {seqCurrentStep + 1}/{totalPatternSteps})
                           </span>
-                          <span className="text-xs text-[#56b6c2] font-mono font-bold bg-[#56b6c2]/15 px-1.5 py-0.2 rounded-xs" title={`Timeline Playback Cursor: Step ${cursorStep + 1} (Click any column on the ruler below to move cursor)`}>
-                            CUR: STEP {cursorStep + 1}
-                          </span>
+                          
                         </div>
 
                         <div className="flex items-center gap-1.5 text-xs">
