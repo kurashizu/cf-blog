@@ -57,6 +57,34 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    setIsDragging(true);
+    dragStartY.current = e.touches[0].clientY;
+    startVal.current = value;
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length === 1) {
+        const deltaY = dragStartY.current - moveEvent.touches[0].clientY;
+        const range = max - min;
+        const sensitivity = range / 100;
+        const rawNew = startVal.current + deltaY * sensitivity;
+        const stepped = Math.round(rawNew / step) * step;
+        const clamped = Math.max(min, Math.min(max, stepped));
+        onChange(clamped);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const dir = e.deltaY < 0 ? 1 : -1;
@@ -74,33 +102,101 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
     return v.toFixed(1);
   };
 
+  // SVG Arc Calculation for 100% Precision
+  const r = 40;
+  const cx = 50;
+  const cy = 50;
+  const startRad = (-135 * Math.PI) / 180;
+  const currentRad = (angle * Math.PI) / 180;
+  const x0 = cx + r * Math.sin(startRad);
+  const y0 = cy - r * Math.cos(startRad);
+  const x1 = cx + r * Math.sin(currentRad);
+  const y1 = cy - r * Math.cos(currentRad);
+  const largeArc = pct > 0.666 ? 1 : 0;
+  const arcPath = pct > 0.005 ? `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}` : '';
+
   return (
     <div
       onWheel={handleWheel}
       className="flex flex-col items-center select-none group cursor-ns-resize shrink-0 min-w-0 leading-none"
       title={`${label}: ${formatDisplay(value)}${unit} (Drag up/down or scroll wheel)`}
     >
-      {/* Rotary Cap with LED Indicator Needle */}
+      {/* Precision Mathematically Centered SVG Rotary Knob */}
       <div
         onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         style={{ width: size, height: size }}
-        className={`relative rounded-full bg-[#14171d] border transition-shadow flex items-center justify-center shrink-0 ${
-          isDragging ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-white/30 hover:border-white/70'
+        className={`relative rounded-full transition-transform active:scale-95 ${
+          isDragging ? 'shadow-[0_0_8px_rgba(255,255,255,0.4)]' : ''
         }`}
       >
-        <div className="absolute inset-0.5 rounded-full border border-dashed border-white/15 pointer-events-none" />
-
-        <div
-          className="w-full h-full rounded-full flex items-center justify-center relative"
-          style={{ transform: `rotate(${angle}deg)` }}
+        <svg
+          viewBox="0 0 100 100"
+          className="w-full h-full overflow-visible select-none pointer-events-none"
         >
-          <div
-            className="w-0.5 h-2.5 rounded-full absolute top-0.5"
-            style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }}
+          {/* Outer Bezel & Base Circle */}
+          <circle
+            cx="50"
+            cy="50"
+            r="46"
+            fill="#12151a"
+            stroke="rgba(255,255,255,0.25)"
+            strokeWidth="3"
+            className="group-hover:stroke-white/60 transition-colors"
           />
-        </div>
 
-        <div className="w-1.5 h-1.5 rounded-full bg-white/30 pointer-events-none" />
+          {/* Background Track Arc (-135° to +135°) */}
+          <path
+            d="M 21.72 78.28 A 40 40 0 1 1 78.28 78.28"
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+
+          {/* Active Value Colored Arc */}
+          {arcPath && (
+            <path
+              d={arcPath}
+              fill="none"
+              stroke={color}
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 3px ${color}88)` }}
+            />
+          )}
+
+          {/* Precision Indicator Pointer Rotating Strictly Around (50, 50) */}
+          <g transform={`rotate(${angle} 50 50)`}>
+            <line
+              x1="50"
+              y1="14"
+              x2="50"
+              y2="34"
+              stroke={color}
+              strokeWidth="7"
+              strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 4px ${color})` }}
+            />
+            <circle cx="50" cy="16" r="2" fill="#ffffff" />
+          </g>
+
+          {/* Center Hardware Hub / Cap */}
+          <circle
+            cx="50"
+            cy="50"
+            r="16"
+            fill="#1a1e24"
+            stroke="rgba(255,255,255,0.2)"
+            strokeWidth="2"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="5"
+            fill="rgba(255,255,255,0.35)"
+          />
+        </svg>
       </div>
 
       {/* Label normally, swapped to Value on hover or while dragging */}
