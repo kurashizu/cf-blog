@@ -1996,19 +1996,19 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
 
                       <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
-                        {/* Left: 4 Blend Mode Buttons in a 2x2 GRID */}
-                        <div className="col-span-6 grid grid-cols-2 gap-1 h-full items-center">
+                        {/* Left: 4 Blend Mode Buttons in a 2x2 GRID (Equal Size, Pure Text, Stretched to Fill Height) */}
+                        <div className="col-span-6 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
                           {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
                             <button
                               key={mode}
                               onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
-                              className={`py-2 text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                              className={`h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                 currentTrack.blendMode === mode
                                   ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
                                   : 'border-white/20 text-white/70 hover:bg-white/10'
                               }`}
                             >
-                              {mode === 'layer' ? 'LAYER ⊕' : mode === 'fm' ? 'FM ⨉' : mode === 'ring' ? 'RING ⊗' : 'SYNC ⚡'}
+                              {mode.toUpperCase()}
                             </button>
                           ))}
                         </div>
@@ -2048,13 +2048,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
 
                       <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
-                        {/* Left: 4 Filter Mode Buttons in a 2x2 GRID */}
-                        <div className="col-span-5 grid grid-cols-2 gap-1 h-full items-center">
+                        {/* Left: 4 Filter Mode Buttons in a 2x2 GRID (Stretched to Fill Height) */}
+                        <div className="col-span-5 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
                           {(['lowpass', 'bandpass', 'highpass', 'notch'] as FilterType[]).map((f) => (
                             <button
                               key={f}
                               onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
-                              className={`py-2 text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
+                              className={`h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center ${
                                 currentTrack.filterType === f
                                   ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                   : 'border-white/20 text-white/70 hover:bg-white/10'
