@@ -25,7 +25,10 @@ import {
   PIANO_ROLL_NOTES,
   TrackData,
   INITIAL_TRACKS,
-  StepGranularity,
+  NoteDurationDiv,
+  divToStepSpan,
+  TimeSignature,
+  METER_SPECS,
 } from '../../lib/synth';
 import { RotaryKnob, HardwareFader } from '../synth/HardwareControls';
 import { evaluateSafeJS } from '../../lib/evaluator';
@@ -171,7 +174,8 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Master Synthesizer & Sequencer State (Polyphonic + Dynamic 64-Step)
   const [synthBpm, setSynthBpm] = useState<number>(modularSynth.getBpm());
-  const [synthGranularity, setSynthGranularity] = useState<StepGranularity>(modularSynth.getGranularity());
+  const [noteDiv, setNoteDiv] = useState<NoteDurationDiv>(modularSynth.getEditNoteDiv());
+  const [timeMeter, setTimeMeter] = useState<TimeSignature>(modularSynth.getMeter());
   const [synthDelayMix, setSynthDelayMix] = useState<number>(0.18);
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
   const [octaveScope, setOctaveScope] = useState<'all' | 7 | 6 | 5 | 4 | 3 | 2 | 1>(4);
@@ -272,15 +276,33 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Toggle Note in Polyphonic Piano Roll (Up to 8 notes per step across dynamic pages)
   const handlePianoRollCellClick = (noteIndex: number, colIndex: number) => {
-    const actualStep = activeStepPage * 16 + colIndex;
-    modularSynth.toggleTrackCell(activeTrackId, actualStep, noteIndex);
-    setTracksState([...modularSynth.getTracks()]);
+    const stepSize = divToStepSpan(noteDiv);
+    const baseStep = (activeStepPage * 16 + colIndex) * stepSize;
+    const track = modularSynth.getTrack(activeTrackId);
+    if (!track) return;
 
-    const activeNotes = modularSynth.getTrack(activeTrackId)?.grid[actualStep] || [];
-    if (activeNotes.includes(noteIndex)) {
-      modularSynth.triggerTrackVoice(activeTrackId, noteIndex, tracksState[activeTrackId].accents[actualStep] || false);
-    } else {
+    let isAlreadyOn = false;
+    for (let s = baseStep; s < Math.min(totalPatternSteps, baseStep + stepSize); s++) {
+      if (track.grid[s]?.includes(noteIndex)) {
+        isAlreadyOn = true;
+        break;
+      }
+    }
+
+    if (isAlreadyOn) {
+      for (let s = baseStep; s < Math.min(totalPatternSteps, baseStep + stepSize); s++) {
+        const notes = track.grid[s] || [];
+        if (notes.includes(noteIndex)) {
+          modularSynth.setTrackStepNotes(activeTrackId, s, notes.filter((n) => n !== noteIndex));
+        }
+      }
+      setTracksState([...modularSynth.getTracks()]);
       playSound('click');
+    } else {
+      modularSynth.toggleTrackCell(activeTrackId, baseStep, noteIndex);
+      setTracksState([...modularSynth.getTracks()]);
+      const isAccent = tracksState[activeTrackId]?.accents[baseStep] || false;
+      modularSynth.triggerTrackVoice(activeTrackId, noteIndex, isAccent);
     }
   };
 
@@ -325,15 +347,28 @@ export const TmuxWorkspace: React.FC = () => {
       return;
     }
 
-    if (cmd === 'div' || cmd === 'grid' || cmd === 'rate') {
+    if (cmd === 'div' || cmd === 'len' || cmd === 'notelen') {
       const valid = ['4', '2', '1', '1/2', '1/4', '1/8'];
       if (valid.includes(args.trim())) {
-        const g = args.trim() as StepGranularity;
-        setSynthGranularity(g);
-        modularSynth.setGranularity(g);
-        setCommandOutput(`Step time division set to ${g} beat.`);
+        const d = args.trim() as NoteDurationDiv;
+        setNoteDiv(d);
+        modularSynth.setEditNoteDiv(d);
+        setCommandOutput(`Note input duration set to ${d} beat.`);
       } else {
-        setCommandOutput(`Invalid division: "${args}". Valid options: 4, 2, 1, 1/2, 1/4, 1/8`);
+        setCommandOutput(`Invalid duration: "${args}". Valid: 4, 2, 1, 1/2, 1/4, 1/8`);
+      }
+      return;
+    }
+
+    if (cmd === 'meter' || cmd === 'timesig' || cmd === 'sig') {
+      const valid = ['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'];
+      if (valid.includes(args.trim())) {
+        const m = args.trim() as TimeSignature;
+        setTimeMeter(m);
+        modularSynth.setMeter(m);
+        setCommandOutput(`Time signature set to ${m} (${METER_SPECS[m].name}).`);
+      } else {
+        setCommandOutput(`Invalid meter: "${args}". Valid: 4/4, 3/4, 2/4, 5/4, 6/8, 7/8`);
       }
       return;
     }
@@ -1066,50 +1101,97 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                 {/* Dynamic Pattern Length (16/32/64/128/256/512) & Bar Page Navigation */}
                 <div className="flex items-center gap-2 text-xs">
-                  {/* Step Time Granularity / Resolution (4, 2, 1, 1/2, 1/4, 1/8) */}
+                  {/* Note Duration Tool (DIV: 4 Whole, 2 Half, 1 Quarter, 1/2 8th, 1/4 16th, 1/8 32nd) */}
                   <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
-                    <span className="opacity-60">DIV:</span>
-                    {(['4', '2', '1', '1/2', '1/4', '1/8'] as StepGranularity[]).map((g) => (
+                    <span className="opacity-60 font-bold" title="Input Note Duration / Length">DIV:</span>
+                    {(['4', '2', '1', '1/2', '1/4', '1/8'] as NoteDurationDiv[]).map((d) => (
                       <button
-                        key={g}
+                        key={d}
                         onClick={() => {
-                          setSynthGranularity(g);
-                          modularSynth.setGranularity(g);
+                          setNoteDiv(d);
+                          modularSynth.setEditNoteDiv(d);
                           playSound('click');
                         }}
                         className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          synthGranularity === g
+                          noteDiv === d
                             ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
                         }`}
-                        title={`Set step time granularity to ${g} beat`}
+                        title={`Note Length: ${d === '4' ? 'Whole (4 Beats)' : d === '2' ? 'Half (2 Beats)' : d === '1' ? 'Quarter (1 Beat)' : d === '1/2' ? 'Eighth (1/2 Beat)' : d === '1/4' ? '16th (1/4 Beat)' : '32nd (1/8 Beat)'}`}
                       >
-                        {g}
+                        {d}
                       </button>
                     ))}
                   </div>
 
-                  {/* Sequence Length */}
+                  {/* Meter / Time Signature (2/4, 3/4, 4/4, 5/4, 6/8, 7/8) */}
                   <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
-                    <span className="opacity-60">LEN:</span>
-                    {([16, 32, 64, 128, 256, 512, 1184] as const).map((len) => (
+                    <span className="opacity-60 font-bold" title="Time Signature / Meter">METER:</span>
+                    {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
+                      <button
+                        key={sig}
+                        onClick={() => {
+                          setTimeMeter(sig);
+                          modularSynth.setMeter(sig);
+                          playSound('click');
+                        }}
+                        className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          timeMeter === sig
+                            ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                        title={METER_SPECS[sig].name}
+                      >
+                        {sig}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sequence Length: Presets (16..512) + Custom Step Input */}
+                  <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
+                    <span className="opacity-60 font-bold" title="Pattern Total Steps">LEN:</span>
+                    {([16, 32, 64, 128, 256, 512] as const).map((len) => (
                       <button
                         key={len}
                         onClick={() => {
                           setTotalPatternSteps(len);
                           modularSynth.setTotalSteps(len);
-                          if (activeStepPage >= Math.ceil(len / 16)) setActiveStepPage(0);
+                          const maxPages = Math.max(1, Math.ceil(len / (16 * divToStepSpan(noteDiv))));
+                          if (activeStepPage >= maxPages) setActiveStepPage(0);
                           playSound('click');
                         }}
-                        className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer ${
+                        className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
                           totalPatternSteps === len
-                            ? 'border-[#98c379] bg-[#98c379] text-black'
+                            ? 'border-[#98c379] bg-[#98c379] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
                         }`}
                       >
-                        {len === 1184 ? 'ALL' : len}
+                        {len}
                       </button>
                     ))}
+                    {/* Custom Input for steps > 512 or arbitrary lengths */}
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        min="8"
+                        max="4096"
+                        step="8"
+                        value={totalPatternSteps}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val) && val >= 8) {
+                            setTotalPatternSteps(val);
+                            modularSynth.setTotalSteps(val);
+                          }
+                        }}
+                        className={`w-14 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors ${
+                          ![16, 32, 64, 128, 256, 512].includes(totalPatternSteps)
+                            ? 'border-[#98c379] text-[#98c379]'
+                            : 'border-white/20 text-white/70 focus:border-white/60'
+                        }`}
+                        title="Custom step length (e.g. 1184 for Mario theme)"
+                      />
+                    </div>
                   </div>
 
                   {/* Bar / Page Tabs (Supports up to 74 Pages for 1184 Steps) */}
@@ -1184,7 +1266,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       PIANO ROLL // {currentTrack.name} (8-VOICE POLY)
                     </span>
                     <span className="text-xs text-[#98c379] font-mono">
-                      PLAYHEAD: STEP {seqCurrentStep + 1} / {totalPatternSteps} (BAR {Math.floor(seqCurrentStep / 16) + 1} • {(seqCurrentStep % 16) + 1})
+                      PLAYHEAD: STEP {seqCurrentStep + 1} / {totalPatternSteps} (BAR {Math.floor(seqCurrentStep / (METER_SPECS[timeMeter]?.stepsPerBar || 32)) + 1} • {Math.floor((seqCurrentStep % (METER_SPECS[timeMeter]?.stepsPerBar || 32)) / (METER_SPECS[timeMeter]?.downbeatInterval || 8)) + 1})
                     </span>
                   </div>
 
@@ -1204,8 +1286,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           setTotalPatternSteps(1184);
                           setSynthBpm(105);
                           modularSynth.setBpm(105);
-                          setSynthGranularity('1/8');
-                          modularSynth.setGranularity('1/8');
+                          setNoteDiv('1/8');
+                          modularSynth.setEditNoteDiv('1/8');
+                          setTimeMeter('4/4');
+                          modularSynth.setMeter('4/4');
                           setTracksState([...modularSynth.getTracks()]);
                           playSound('power');
                         }}
