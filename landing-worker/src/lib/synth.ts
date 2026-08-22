@@ -17,6 +17,17 @@ export type FilterType = 'lowpass' | 'bandpass' | 'highpass' | 'notch';
 export type LfoWaveform = 'sine' | 'triangle' | 'square' | 'sawtooth';
 export type LfoTarget = 'filter' | 'pitch' | 'amp' | 'morph' | 'pan';
 
+export type ModSource = 'lfo' | 'vcf_env' | 'amp_env' | 'velocity';
+export type ModDest = 'cutoff' | 'pitch' | 'morph' | 'pan' | 'resonance';
+
+export interface ModRoute {
+  id: string;
+  source: ModSource;
+  dest: ModDest;
+  amount: number; // -1.0 to +1.0
+  enabled: boolean;
+}
+
 export type NoteDurationDiv = '4' | '2' | '1' | '1/2' | '1/4' | '1/8';
 
 export function divToStepSpan(div: NoteDurationDiv): number {
@@ -94,14 +105,30 @@ export interface TrackData {
   envFilterMod: number; // 0.0 to 1.0 (Envelope to VCF cutoff sweep)
 
   // Node 4: Envelope & LFO Modulation Matrix
-  attack: number;       // 0.005 to 1.2s
+  attack: number;       // 0.005 to 1.2s (legacy / ampAttack alias)
   decay: number;        // 0.01 to 1.5s
   sustain: number;      // 0.0 to 1.0
   release: number;      // 0.01 to 2.5s
+
+  // Dual Envelope Architecture (AMP ENV + VCF ENV)
+  ampAttack: number;
+  ampDecay: number;
+  ampSustain: number;
+  ampRelease: number;
+
+  filterAttack: number;
+  filterDecay: number;
+  filterSustain: number;
+  filterRelease: number;
+  filterEnvAmount: number; // -1.0 to +1.0
+
   lfoWaveform: LfoWaveform;
   lfoRate: number;      // 0.1 to 20.0 Hz
   lfoDepth: number;     // 0.0 to 1.0
   lfoTarget: LfoTarget; // 'filter' | 'pitch' | 'amp' | 'morph' | 'pan'
+
+  // Modular Modulation Matrix Routing
+  modRoutes: ModRoute[];
 
   // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes) & Accents
   grid: number[][];    // 64 steps, each containing active note indices [0-35]
@@ -1417,7 +1444,6 @@ export const INITIAL_TRACKS: TrackData[] = [
     muted: false,
     solo: false,
 
-    // Node 1: Authentic NES 2A03 50%/25% Pulse Lead
     osc1Waveform: 'square',
     osc1Gain: 0.95,
     osc2Waveform: 'square',
@@ -1426,25 +1452,41 @@ export const INITIAL_TRACKS: TrackData[] = [
     detuneCents: 2,
     phaseOffset: 0,
 
-    // Node 2: Layer Timbre
     blendMode: 'layer',
     morphAmount: 0.1,
 
-    // Node 3: Punchy Chiptune Lowpass
     filterType: 'lowpass',
     cutoff: 8500,
     resonance: 1.8,
     envFilterMod: 0.35,
 
-    // Node 4: Snappy 8-Bit Envelope
+    // Dual Envelopes
     attack: 0.003,
     decay: 0.12,
     sustain: 0.45,
     release: 0.08,
+    ampAttack: 0.003,
+    ampDecay: 0.12,
+    ampSustain: 0.45,
+    ampRelease: 0.08,
+
+    filterAttack: 0.005,
+    filterDecay: 0.18,
+    filterSustain: 0.25,
+    filterRelease: 0.1,
+    filterEnvAmount: 0.6,
+
     lfoWaveform: 'sine',
     lfoRate: 4.5,
     lfoDepth: 0.05,
     lfoTarget: 'pitch',
+
+    modRoutes: [
+      { id: 'r1', source: 'lfo', dest: 'cutoff', amount: 0.25, enabled: true },
+      { id: 'r2', source: 'vcf_env', dest: 'cutoff', amount: 0.60, enabled: true },
+      { id: 'r3', source: 'velocity', dest: 'cutoff', amount: 0.40, enabled: true },
+      { id: 'r4', source: 'lfo', dest: 'pitch', amount: 0.15, enabled: true },
+    ],
 
     grid: MARIO_TRK1_GRID,
     accents: MARIO_TRK1_ACCENTS,
@@ -1458,7 +1500,6 @@ export const INITIAL_TRACKS: TrackData[] = [
     muted: false,
     solo: false,
 
-    // Node 1: Authentic NES 2A03 Pulse 2 Harmony
     osc1Waveform: 'square',
     osc1Gain: 0.9,
     osc2Waveform: 'square',
@@ -1467,25 +1508,40 @@ export const INITIAL_TRACKS: TrackData[] = [
     detuneCents: -2,
     phaseOffset: 45,
 
-    // Node 2: Layer Timbre
     blendMode: 'layer',
     morphAmount: 0.1,
 
-    // Node 3: Lowpass Filter
     filterType: 'lowpass',
     cutoff: 7200,
     resonance: 1.5,
     envFilterMod: 0.25,
 
-    // Node 4: Chiptune Envelope
     attack: 0.003,
     decay: 0.14,
     sustain: 0.4,
     release: 0.08,
+    ampAttack: 0.003,
+    ampDecay: 0.14,
+    ampSustain: 0.4,
+    ampRelease: 0.08,
+
+    filterAttack: 0.005,
+    filterDecay: 0.2,
+    filterSustain: 0.3,
+    filterRelease: 0.1,
+    filterEnvAmount: 0.45,
+
     lfoWaveform: 'triangle',
     lfoRate: 4.0,
     lfoDepth: 0.04,
     lfoTarget: 'pitch',
+
+    modRoutes: [
+      { id: 'r1', source: 'lfo', dest: 'cutoff', amount: 0.20, enabled: true },
+      { id: 'r2', source: 'vcf_env', dest: 'cutoff', amount: 0.50, enabled: true },
+      { id: 'r3', source: 'velocity', dest: 'cutoff', amount: 0.30, enabled: true },
+      { id: 'r4', source: 'lfo', dest: 'pan', amount: 0.20, enabled: false },
+    ],
 
     grid: MARIO_TRK2_GRID,
     accents: MARIO_TRK2_ACCENTS,
@@ -1499,7 +1555,6 @@ export const INITIAL_TRACKS: TrackData[] = [
     muted: false,
     solo: false,
 
-    // Node 1: Authentic NES 2A03 Pure Triangle Bass
     osc1Waveform: 'triangle',
     osc1Gain: 1.0,
     osc2Waveform: 'sine',
@@ -1508,25 +1563,39 @@ export const INITIAL_TRACKS: TrackData[] = [
     detuneCents: 0,
     phaseOffset: 0,
 
-    // Node 2: Pure Sub Layer
     blendMode: 'layer',
     morphAmount: 0.05,
 
-    // Node 3: Lowpass Sub-Bass
     filterType: 'lowpass',
     cutoff: 3500,
     resonance: 1.0,
     envFilterMod: 0.15,
 
-    // Node 4: Bouncy Bass Gating
     attack: 0.003,
     decay: 0.2,
     sustain: 0.7,
     release: 0.06,
+    ampAttack: 0.003,
+    ampDecay: 0.2,
+    ampSustain: 0.7,
+    ampRelease: 0.06,
+
+    filterAttack: 0.003,
+    filterDecay: 0.15,
+    filterSustain: 0.4,
+    filterRelease: 0.08,
+    filterEnvAmount: 0.35,
+
     lfoWaveform: 'sine',
     lfoRate: 3.0,
     lfoDepth: 0.0,
     lfoTarget: 'filter',
+
+    modRoutes: [
+      { id: 'r1', source: 'vcf_env', dest: 'cutoff', amount: 0.40, enabled: true },
+      { id: 'r2', source: 'velocity', dest: 'cutoff', amount: 0.40, enabled: true },
+      { id: 'r3', source: 'lfo', dest: 'cutoff', amount: 0.0, enabled: false },
+    ],
 
     grid: MARIO_TRK3_GRID,
     accents: MARIO_TRK3_ACCENTS,
@@ -1540,7 +1609,6 @@ export const INITIAL_TRACKS: TrackData[] = [
     muted: false,
     solo: false,
 
-    // Node 1: Authentic NES 2A03 White Noise Percussion
     osc1Waveform: 'noise',
     osc1Gain: 0.95,
     osc2Waveform: 'triangle',
@@ -1549,25 +1617,38 @@ export const INITIAL_TRACKS: TrackData[] = [
     detuneCents: 0,
     phaseOffset: 0,
 
-    // Node 2: Percussive Mode
     blendMode: 'layer',
     morphAmount: 0.0,
 
-    // Node 3: Bandpass Snare / Hi-Hat Filter
     filterType: 'bandpass',
     cutoff: 6500,
     resonance: 3.2,
     envFilterMod: 0.4,
 
-    // Node 4: Ultra-Fast Percussion Envelope
     attack: 0.002,
     decay: 0.05,
     sustain: 0.0,
     release: 0.035,
+    ampAttack: 0.002,
+    ampDecay: 0.05,
+    ampSustain: 0.0,
+    ampRelease: 0.035,
+
+    filterAttack: 0.002,
+    filterDecay: 0.04,
+    filterSustain: 0.0,
+    filterRelease: 0.03,
+    filterEnvAmount: 0.7,
+
     lfoWaveform: 'square',
     lfoRate: 10.0,
     lfoDepth: 0.0,
     lfoTarget: 'amp',
+
+    modRoutes: [
+      { id: 'r1', source: 'vcf_env', dest: 'cutoff', amount: 0.60, enabled: true },
+      { id: 'r2', source: 'velocity', dest: 'cutoff', amount: 0.50, enabled: true },
+    ],
 
     grid: MARIO_TRK4_GRID,
     accents: MARIO_TRK4_ACCENTS,
@@ -1976,64 +2057,97 @@ class ModularSynth {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // NODE 3: MULTI-MODE VCF RESONANT FILTER (LPF / BPF / HPF / NOTCH)
+    // NODE 3 & 4: DUAL INDEPENDENT ENVELOPES (AMP + VCF) & MODULATION MATRIX
     // ──────────────────────────────────────────────────────────────────────────
     const filter = ctx.createBiquadFilter();
     filter.type = track.filterType;
-    const baseCutoff = isAccent ? Math.min(14000, track.cutoff * 1.5) : track.cutoff;
-    filter.frequency.setValueAtTime(Math.max(40, baseCutoff * (1.0 - track.envFilterMod * 0.7)), t);
-    filter.frequency.exponentialRampToValueAtTime(baseCutoff, t + Math.max(0.005, track.attack));
-    filter.frequency.exponentialRampToValueAtTime(
-      Math.max(40, baseCutoff * (0.3 + (1.0 - track.envFilterMod) * 0.5)),
-      t + track.attack + Math.max(0.02, track.decay)
-    );
-    filter.Q.setValueAtTime(isAccent ? track.resonance * 1.3 : track.resonance, t);
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // NODE 4: ADSR AMPLITUDE ENVELOPE & LFO MODULATION MATRIX
-    // ──────────────────────────────────────────────────────────────────────────
+    // 1. Dual Envelope Parameters
+    const ampAtt = Math.max(0.003, track.ampAttack ?? track.attack ?? 0.005);
+    const ampDec = Math.max(0.01, track.ampDecay ?? track.decay ?? 0.15);
+    const ampSus = Math.max(0.0001, track.ampSustain ?? track.sustain ?? 0.5);
+    const ampRel = Math.max(0.01, track.ampRelease ?? track.release ?? 0.1);
+
+    const vcfAtt = Math.max(0.003, track.filterAttack ?? 0.005);
+    const vcfDec = Math.max(0.01, track.filterDecay ?? 0.18);
+    const vcfSus = Math.max(0.0, track.filterSustain ?? 0.25);
+    const vcfRel = Math.max(0.01, track.filterRelease ?? 0.1);
+    const vcfAmount = track.filterEnvAmount !== undefined ? track.filterEnvAmount : (track.envFilterMod ?? 0.5);
+
+    // 2. Mod Matrix Velocity & Static Target Calculations
+    let dynamicCutoffBase = track.cutoff;
+    let dynamicResonance = track.resonance;
+
+    for (const route of (track.modRoutes || [])) {
+      if (!route.enabled) continue;
+      if (route.source === 'velocity' && isAccent) {
+        if (route.dest === 'cutoff') dynamicCutoffBase += route.amount * 3500;
+        if (route.dest === 'resonance') dynamicResonance = Math.max(0.2, dynamicResonance + route.amount * 4);
+      }
+    }
+
+    if (isAccent) {
+      dynamicCutoffBase = Math.min(16000, dynamicCutoffBase * 1.25);
+      dynamicResonance = Math.min(16.0, dynamicResonance * 1.2);
+    }
+
+    const baseCutoff = Math.max(40, Math.min(16000, dynamicCutoffBase));
+    const peakCutoff = Math.max(40, Math.min(18000, baseCutoff + vcfAmount * (14000 - baseCutoff)));
+    const sustainCutoff = Math.max(40, Math.min(18000, baseCutoff + vcfAmount * vcfSus * (14000 - baseCutoff)));
+
+    // VCF Dynamic Sweep
+    filter.frequency.setValueAtTime(Math.max(40, baseCutoff * 0.7), t);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(40, peakCutoff), t + vcfAtt);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(40, sustainCutoff), t + vcfAtt + vcfDec);
+    filter.Q.setValueAtTime(dynamicResonance, t);
+
+    // AMP Dynamic Envelope
     const peakGain = (isAccent ? 0.35 : 0.24) * track.volume;
-    const sustainGain = Math.max(0.0001, peakGain * track.sustain);
+    const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(0.0001, t);
+    gainNode.gain.linearRampToValueAtTime(peakGain, t + ampAtt);
+    gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + ampAtt + ampDec);
 
-    const actualAttack = Math.max(0.005, track.attack);
-    const actualDecay = Math.max(0.01, track.decay);
-    const actualRelease = Math.max(0.02, track.release);
     const holdSec = durationSec !== undefined ? Math.max(0.02, durationSec) : (60 / this.bpm / 8);
-
-    gainNode.gain.linearRampToValueAtTime(peakGain, t + actualAttack);
-    gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + actualAttack + actualDecay);
-    
-    const releaseStartTime = Math.max(t + actualAttack + actualDecay, t + holdSec);
+    const releaseStartTime = Math.max(t + ampAtt + ampDec, t + holdSec);
     gainNode.gain.setValueAtTime(sustainGain, releaseStartTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseStartTime + actualRelease);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseStartTime + ampRel);
 
+    filter.frequency.setValueAtTime(sustainCutoff, releaseStartTime);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(40, baseCutoff * 0.5), releaseStartTime + vcfRel);
+
+    const totalDuration = Math.max(0.2, (releaseStartTime - t) + Math.max(ampRel, vcfRel) + 0.1);
+
+    // Modulation Matrix LFO Routing
+    const lfoRoutes = (track.modRoutes || []).filter((r) => r.enabled && r.source === 'lfo');
     let lfo: OscillatorNode | undefined;
-    let lfoGain: GainNode | undefined;
-    if (track.lfoDepth > 0) {
+
+    if (lfoRoutes.length > 0 && track.lfoRate > 0) {
       lfo = ctx.createOscillator();
       lfo.type = track.lfoWaveform;
       lfo.frequency.setValueAtTime(track.lfoRate, t);
 
-      lfoGain = ctx.createGain();
-      if (track.lfoTarget === 'filter') {
-        const modAmount = track.lfoDepth * baseCutoff * 0.6;
-        lfoGain.gain.setValueAtTime(modAmount, t);
-        lfo.connect(lfoGain);
-        lfoGain.connect(filter.frequency);
-      } else if (track.lfoTarget === 'pitch' && osc1) {
-        const pitchMod = track.lfoDepth * 35;
-        lfoGain.gain.setValueAtTime(pitchMod, t);
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc1.detune);
-      } else if (track.lfoTarget === 'amp') {
-        const ampMod = track.lfoDepth * 0.25;
-        lfoGain.gain.setValueAtTime(ampMod, t);
-        lfo.connect(lfoGain);
-        lfoGain.connect(gainNode.gain);
+      for (const r of lfoRoutes) {
+        const lfoGain = ctx.createGain();
+        if (r.dest === 'cutoff') {
+          lfoGain.gain.setValueAtTime(r.amount * 2200, t);
+          lfo.connect(lfoGain);
+          lfoGain.connect(filter.frequency);
+        } else if (r.dest === 'pitch') {
+          lfoGain.gain.setValueAtTime(r.amount * (baseFreq * 0.08), t);
+          lfo.connect(lfoGain);
+          if (osc1) lfoGain.connect(osc1.frequency);
+          if (osc2) lfoGain.connect(osc2.frequency);
+        } else if (r.dest === 'resonance') {
+          lfoGain.gain.setValueAtTime(r.amount * 4, t);
+          lfo.connect(lfoGain);
+          lfoGain.connect(filter.Q);
+        }
       }
+
       lfo.start(t);
+      lfo.stop(t + totalDuration);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -2043,11 +2157,6 @@ class ModularSynth {
     if (ctx.createStereoPanner) {
       panner = ctx.createStereoPanner();
       panner.pan.setValueAtTime(track.pan, t);
-      if (track.lfoTarget === 'pan' && lfo && lfoGain) {
-        lfoGain.gain.setValueAtTime(track.lfoDepth * 0.8, t);
-        lfo.connect(lfoGain);
-        lfoGain.connect(panner.pan);
-      }
     }
 
     voiceMix.connect(filter);
@@ -2064,7 +2173,7 @@ class ModularSynth {
       if (this.reverbConvolver && this.reverbMix > 0) gainNode.connect(this.reverbConvolver);
     }
 
-    const stopTime = releaseStartTime + actualRelease + 0.1;
+    const stopTime = releaseStartTime + ampRel + 0.1;
     if (osc1) osc1.stop(stopTime);
     if (osc2) osc2.stop(stopTime);
     if (noiseSource) noiseSource.stop(stopTime);
@@ -2077,7 +2186,6 @@ class ModularSynth {
       filter,
       gain: gainNode,
       lfo,
-      lfoGain,
       panNode: panner,
       startTime: t,
     });
