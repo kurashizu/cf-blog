@@ -2120,108 +2120,104 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              {/* 1.5 ROW 2: 8-TRACK DECK & SEQUENCER CONFIGURATION */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
-                {/* Left: 8-Track Channel Selectors with Inline Mute/Solo + Patch Tools + Presets */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {/* 8 Tracks Selectors */}
-                  <div className="flex items-center gap-1 text-xs overflow-x-auto no-scrollbar">
-                    {tracksState.map((trk) => {
-                      const isSelected = activeTrackId === trk.id;
-                      return (
-                        <div
-                          key={trk.id}
-                          className={`flex items-center border rounded-xs transition-all ${
-                            isSelected
-                              ? 'border-white bg-white/20 text-white shadow-sm'
-                              : 'border-white/20 text-[#eceff4] opacity-80 hover:opacity-100'
-                          }`}
-                        >
-                          <button
-                            onClick={() => { setActiveTrackId(trk.id); playSound('click'); }}
-                            className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
-                            style={{ color: isSelected ? trk.color : undefined }}
-                          >
-                            <span className="w-2 h-2 inline-block shrink-0" style={{ backgroundColor: trk.color }} />
-                            <span>{trk.name.split(':')[0]}</span>
-                          </button>
-
-                          {/* Inline Mute & Solo Toggles */}
-                          <div className="flex items-center border-l border-white/15 px-1 gap-0.5">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                modularSynth.toggleTrackMute(trk.id);
-                                setTracksState([...modularSynth.getTracks()]);
-                                playSound('click');
-                              }}
-                              className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
-                                trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'
-                              }`}
-                              title={`Mute ${trk.name}`}
-                            >
-                              M
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                modularSynth.toggleTrackSolo(trk.id);
-                                setTracksState([...modularSynth.getTracks()]);
-                                playSound('click');
-                              }}
-                              className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
-                                trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'
-                              }`}
-                              title={`Solo ${trk.name}`}
-                            >
-                              S
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="w-px h-4 bg-white/15 mx-1" />
-
-                  {/* Patch Storage Tools */}
-                  <div className="flex items-center gap-1">
-                    <input type="file" ref={fileInputRef} onChange={handleImportPatch} accept=".json" className="hidden" />
-                    <button onClick={handleSavePatch} title="Save Patch — Store all 8-track synth parameters and sequencer notes into browser LocalStorage" className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors">SAVE</button>
-                    <button onClick={handleLoadPatch} title="Load Patch — Restore saved synth parameters and sequencer patterns from browser LocalStorage" className="px-2 py-0.5 border border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20 rounded-xs font-bold transition-colors">LOAD</button>
-                    <button onClick={handleExportPatch} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file">EXP</button>
-                    <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Import Patch — Load a previously exported JSON synthesizer patch file">IMP</button>
-                    {saveStatus && <span className="text-[#98c379] font-bold ml-1">{saveStatus}</span>}
-                  </div>
-
-                  <div className="w-px h-4 bg-white/15 mx-1" />
-
-                  {/* Sound Design Presets (Left of SNAP with divider) */}
-                  <div className="flex items-center gap-1">
-                    <span className="text-white/50 font-bold text-xs">PRESETS:</span>
-                    {[
-                      { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
-                      { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
-                      { name: 'BRASS', preset: { osc1Waveform: 'sawtooth' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 12, cutoff: 2400, resonance: 2.0, ampAttack: 0.04, ampDecay: 0.25, ampSustain: 0.8, ampRelease: 0.2, filterAttack: 0.06, filterDecay: 0.2, filterSustain: 0.5, filterRelease: 0.15, filterEnvAmount: 0.55 } },
-                      { name: 'LEAD', preset: { osc1Waveform: 'pulse' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 8, cutoff: 6500, resonance: 2.8, ampAttack: 0.005, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.18, filterAttack: 0.005, filterDecay: 0.25, filterSustain: 0.6, filterRelease: 0.12, filterEnvAmount: 0.4 } },
-                      { name: 'HI-HAT', preset: { osc1Waveform: 'noise' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, osc2Gain: 0.0, filterType: 'highpass' as FilterType, cutoff: 40, resonance: 0.0, envFilterMod: 0.0, ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.0, ampRelease: 0.04, filterAttack: 0.001, filterDecay: 0.05, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.0, pitchEnvAmount: 0.0, pitchAttack: 0.001, pitchDecay: 0.03 } },
-                    ].map((p) => (
-                      <button
-                        key={p.name}
-                        onClick={() => {
-                          handleTrackParamChange(p.preset);
-                          playSound('toggle');
-                        }}
-                        title={PRESET_TOOLTIPS[p.name] || p.name}
-                        className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="w-px h-4 bg-white/15 mx-1" />
+              {/* 2. ROW 2: SAVE/LOAD TOOLS (LEFT) & TRK CHANNEL DECK (RIGHT) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/30 px-2 py-1 rounded-xs text-xs shrink-0">
+                {/* Left: Patch Storage Tools (SAVE/LOAD/EXP/IMP) */}
+                <div className="flex items-center gap-1">
+                  <input type="file" ref={fileInputRef} onChange={handleImportPatch} accept=".json" className="hidden" />
+                  <button onClick={handleSavePatch} title="Save Patch — Store all 8-track synth parameters and sequencer notes into browser LocalStorage" className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors cursor-pointer">SAVE</button>
+                  <button onClick={handleLoadPatch} title="Load Patch — Restore saved synth parameters and sequencer patterns from browser LocalStorage" className="px-2 py-0.5 border border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20 rounded-xs font-bold transition-colors cursor-pointer">LOAD</button>
+                  <button onClick={handleExportPatch} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer" title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file">EXP</button>
+                  <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer" title="Import Patch — Load a previously exported JSON synthesizer patch file">IMP</button>
+                  {saveStatus && <span className="text-[#98c379] font-bold ml-1">{saveStatus}</span>}
                 </div>
+
+                {/* Right: 8-Track Channel Selectors with Inline Mute/Solo (Right-aligned) */}
+                <div className="flex items-center gap-1 text-xs overflow-x-auto no-scrollbar ml-auto">
+                  {tracksState.map((trk) => {
+                    const isSelected = activeTrackId === trk.id;
+                    return (
+                      <div
+                        key={trk.id}
+                        className={`flex items-center border rounded-xs transition-all ${
+                          isSelected
+                            ? 'border-white bg-white/20 text-white shadow-sm'
+                            : 'border-white/20 text-[#eceff4] opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <button
+                          onClick={() => { setActiveTrackId(trk.id); playSound('click'); }}
+                          className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
+                          style={{ color: isSelected ? trk.color : undefined }}
+                        >
+                          <span className="w-2 h-2 inline-block shrink-0" style={{ backgroundColor: trk.color }} />
+                          <span>{trk.name.split(':')[0]}</span>
+                        </button>
+
+                        {/* Inline Mute & Solo Toggles */}
+                        <div className="flex items-center border-l border-white/15 px-1 gap-0.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              modularSynth.toggleTrackMute(trk.id);
+                              setTracksState([...modularSynth.getTracks()]);
+                              playSound('click');
+                            }}
+                            className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
+                              trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'
+                            }`}
+                            title={`Mute ${trk.name}`}
+                          >
+                            M
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              modularSynth.toggleTrackSolo(trk.id);
+                              setTracksState([...modularSynth.getTracks()]);
+                              playSound('click');
+                            }}
+                            className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
+                              trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'
+                            }`}
+                            title={`Solo ${trk.name}`}
+                          >
+                            S
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. ROW 3: PRESETS (LEFT), SNAP & DUR (CENTER), PAGE NAVIGATION (RIGHT) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
+                {/* Left: Sound Design Presets */}
+                <div className="flex items-center gap-1">
+                  <span className="text-white/50 font-bold text-xs">PRESETS:</span>
+                  {[
+                    { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
+                    { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
+                    { name: 'BRASS', preset: { osc1Waveform: 'sawtooth' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 12, cutoff: 2400, resonance: 2.0, ampAttack: 0.04, ampDecay: 0.25, ampSustain: 0.8, ampRelease: 0.2, filterAttack: 0.06, filterDecay: 0.2, filterSustain: 0.5, filterRelease: 0.15, filterEnvAmount: 0.55 } },
+                    { name: 'LEAD', preset: { osc1Waveform: 'pulse' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 8, cutoff: 6500, resonance: 2.8, ampAttack: 0.005, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.18, filterAttack: 0.005, filterDecay: 0.25, filterSustain: 0.6, filterRelease: 0.12, filterEnvAmount: 0.4 } },
+                    { name: 'HI-HAT', preset: { osc1Waveform: 'noise' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, osc2Gain: 0.0, filterType: 'highpass' as FilterType, cutoff: 40, resonance: 0.0, envFilterMod: 0.0, ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.0, ampRelease: 0.04, filterAttack: 0.001, filterDecay: 0.05, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.0, pitchEnvAmount: 0.0, pitchAttack: 0.001, pitchDecay: 0.03 } },
+                  ].map((p) => (
+                    <button
+                      key={p.name}
+                      onClick={() => {
+                        handleTrackParamChange(p.preset);
+                        playSound('toggle');
+                      }}
+                      title={PRESET_TOOLTIPS[p.name] || p.name}
+                      className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Center: SNAP & DUR */}
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Grid Snap / Quantization Alignment (SNAP) */}
                   <div className="flex items-center gap-1">
@@ -2238,7 +2234,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
                         }`}
-                        title={`Grid Snap Quantization: ${d} beat (${d === '4' ? 'Whole note = 16 cells' : d === '2' ? 'Half note = 8 cells' : d === '1' ? 'Quarter note = 4 cells' : d === '1/2' ? '8th note = 2 cells' : d === '1/4' ? '16th note = 1 cell' : '32nd note = 1/2 cell'})` }
+                        title={`Grid Snap Quantization: ${d} beat (${d === '4' ? 'Whole note = 16 cells' : d === '2' ? 'Half note = 8 cells' : d === '1' ? 'Quarter note = 4 cells' : d === '1/2' ? '8th note = 2 cells' : d === '1/4' ? '16th note = 1 cell' : '32nd note = 1/2 cell'})`}
                       >
                         {d}
                       </button>
@@ -2268,54 +2264,44 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                 </div>
 
-                {/* Right: Sequence Length Presets + Custom Input + Page Navigation */}
-                <div className="flex flex-wrap items-center gap-2">
-
-
-                  {/* Compact DAW Page Navigation (16 columns = 32 physical sub-steps per page) */}
-                  <div className="flex items-center gap-1 border-l border-white/15 pl-1.5">
-                    <span className="opacity-60 font-bold shrink-0">PAGE:</span>
-                    <button
-                      onClick={() => {
-                        setActiveStepPage((prev) => Math.max(0, prev - 1));
-                        playSound('click');
-                      }}
-                      disabled={activeStepPage === 0}
-                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed"
-                      title="Previous page"
-                    >
-                      ◄
-                    </button>
-                    <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-white shrink-0">
-                      {activeStepPage + 1} / {Math.max(1, Math.ceil(totalPatternSteps / 32))}
-                    </span>
-                    <button
-                      onClick={() => {
-                        const maxPages = Math.max(1, Math.ceil(totalPatternSteps / 32));
-                        setActiveStepPage((prev) => Math.min(maxPages - 1, prev + 1));
-                        playSound('click');
-                      }}
-                      disabled={activeStepPage >= Math.max(1, Math.ceil(totalPatternSteps / 32)) - 1}
-                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed"
-                      title="Next page"
-                    >
-                      ►
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPageFollow(!pageFollow);
-                        playSound('click');
-                      }}
-                      className={`px-1.5 py-0.5 border rounded-xs text-xs font-bold cursor-pointer shrink-0 transition-colors ${
-                        pageFollow
-                          ? 'border-[#98c379] text-[#98c379] bg-[#98c379]/15'
-                          : 'border-white/20 text-white/40 hover:text-white'
-                      }`}
-                      title="Auto-follow playhead page"
-                    >
-                      FLW
-                    </button>
-                  </div>
+                {/* Right: 16-Step Viewport Page Flipping */}
+                <div className="flex items-center gap-1 border-l border-white/15 pl-1.5 ml-auto">
+                  <span className="opacity-60 font-bold" title="Step Page Navigation">PAGE:</span>
+                  <button
+                    onClick={() => {
+                      setActiveStepPage((prev) => Math.max(0, prev - 1));
+                      playSound('click');
+                    }}
+                    disabled={activeStepPage === 0}
+                    className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                    title="Previous Page (◄)"
+                  >
+                    ◄
+                  </button>
+                  <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs" title={`Active 16-Step Page: Page ${activeStepPage + 1} of ${Math.max(1, Math.ceil(totalPatternSteps / 32))} (Steps ${activeStepPage * 32 + 1} to ${Math.min(totalPatternSteps, (activeStepPage + 1) * 32)})`}>
+                    {activeStepPage + 1}/{Math.max(1, Math.ceil(totalPatternSteps / 32))}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const maxPages = Math.max(1, Math.ceil(totalPatternSteps / 32));
+                      setActiveStepPage((prev) => Math.min(maxPages - 1, prev + 1));
+                      playSound('click');
+                    }}
+                    disabled={activeStepPage >= Math.max(1, Math.ceil(totalPatternSteps / 32)) - 1}
+                    className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                    title="Next Page (►)"
+                  >
+                    ►
+                  </button>
+                  <button
+                    onClick={() => { setPageFollow(!pageFollow); playSound('toggle'); }}
+                    className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs ${
+                      pageFollow ? 'border-[#98c379] bg-[#98c379] text-black font-black' : 'border-white/20 text-white/50'
+                    }`}
+                    title="Follow Playhead Mode (FLW) — Automatically turns pages as the sequencer plays"
+                  >
+                    FLW
+                  </button>
                 </div>
               </div>
 
