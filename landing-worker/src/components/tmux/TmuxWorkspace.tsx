@@ -1890,10 +1890,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-1.5 flex-1 min-h-0 overflow-hidden">
                   
                   {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING - COMPACT & COMPLETE) */}
-                  <div className="lg:col-span-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 min-w-0">
+                  <div className="lg:col-span-1 flex flex-col gap-1.5 min-w-0 h-full justify-between overflow-hidden">
                     
                     {/* MODULE 1: DUAL OSCILLATORS (VCO) */}
-                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col space-y-0.5 shrink-0">
+                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between flex-1 min-h-0">
                       <div className="flex justify-between font-bold text-[#e5c07b] text-[10px] border-b border-white/10 pb-0.5">
                         <span>1. DUAL OSC</span>
                         <span className="text-white/40 font-mono text-[9px]">──►</span>
@@ -1908,7 +1908,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc1Waveform: w }); playSound('click'); }}
-                                className={`py-0.2 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors leading-tight ${
+                                className={`py-0.5 px-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors leading-none ${
                                   currentTrack.osc1Waveform === w
                                     ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -1928,7 +1928,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               <button
                                 key={w}
                                 onClick={() => { handleTrackParamChange({ osc2Waveform: w }); playSound('click'); }}
-                                className={`py-0.2 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors leading-tight ${
+                                className={`py-0.5 px-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors leading-none ${
                                   currentTrack.osc2Waveform === w
                                     ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                     : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -1989,7 +1989,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 2: TIMBRE FUSION & MORPH */}
-                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col space-y-0.5 shrink-0">
+                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between flex-1 min-h-0">
                       <div className="flex justify-between font-bold text-[#c678dd] text-[10px] border-b border-white/10 pb-0.5">
                         <span>2. FUSION</span>
                         <span className="text-white/40 font-mono text-[9px]">──►</span>
@@ -2001,7 +2001,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           <button
                             key={mode}
                             onClick={() => { handleTrackParamChange({ blendMode: mode }); playSound('click'); }}
-                            className={`py-0.5 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors leading-tight ${
+                            className={`py-0.5 px-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors leading-none ${
                               currentTrack.blendMode === mode
                                 ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
                                 : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2039,7 +2039,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 3: MULTI-MODE VCF RESONANT FILTER */}
-                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col space-y-0.5 shrink-0">
+                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between flex-1 min-h-0">
                       <div className="flex justify-between font-bold text-[#56b6c2] text-[10px] border-b border-white/10 pb-0.5">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40 font-mono text-[9px]">──►</span>
@@ -2051,7 +2051,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           <button
                             key={f}
                             onClick={() => { handleTrackParamChange({ filterType: f }); playSound('click'); }}
-                            className={`py-0.5 text-[8px] border rounded-xs font-bold cursor-pointer transition-colors leading-tight ${
+                            className={`py-0.5 px-0.5 text-[9px] border rounded-xs font-bold cursor-pointer transition-colors leading-none ${
                               currentTrack.filterType === f
                                 ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                 : 'border-white/20 text-white/70 hover:bg-white/10'
@@ -2399,7 +2399,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           <div className="flex items-center gap-0.5">
                             <button
                               onClick={() => { setActiveEnvTab('amp'); playSound('click'); }}
-                              className={`px-1 py-0.2 text-[8px] rounded-xs border font-bold cursor-pointer transition-colors ${
+                              className={`px-1.5 py-0.5 text-[9px] rounded-xs border font-bold cursor-pointer transition-colors ${
                                 activeEnvTab === 'amp'
                                   ? 'border-[#98c379] bg-[#98c379] text-black font-black'
                                   : 'border-white/20 text-white/60 hover:text-white'
@@ -2409,7 +2409,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             </button>
                             <button
                               onClick={() => { setActiveEnvTab('vcf'); playSound('click'); }}
-                              className={`px-1 py-0.2 text-[8px] rounded-xs border font-bold cursor-pointer transition-colors ${
+                              className={`px-1.5 py-0.5 text-[9px] rounded-xs border font-bold cursor-pointer transition-colors ${
                                 activeEnvTab === 'vcf'
                                   ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                                   : 'border-white/20 text-white/60 hover:text-white'
@@ -2503,7 +2503,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             <button
                               key={w}
                               onClick={() => { handleTrackParamChange({ lfoWaveform: w }); playSound('click'); }}
-                              className={`px-1 py-0.2 text-[8px] border rounded-xs font-bold cursor-pointer leading-none ${
+                              className={`px-1.5 py-0.5 text-[9px] border rounded-xs font-bold cursor-pointer leading-none ${
                                 currentTrack.lfoWaveform === w ? 'border-[#c678dd] bg-[#c678dd] text-black font-black' : 'border-white/15 text-white/60 hover:text-white'
                               }`}
                             >
@@ -2541,7 +2541,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-bold cursor-pointer border border-white/15 leading-none"
+                              className="px-1.5 py-0.5 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-bold cursor-pointer border border-white/15 leading-none"
                               title="Mod source"
                             >
                               {route.source === 'lfo' ? 'LFO' : route.source === 'vcf_env' ? 'VCF' : route.source === 'amp_env' ? 'AMP' : 'VEL'}
@@ -2558,7 +2558,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-bold cursor-pointer border border-white/15 leading-none"
+                              className="px-1.5 py-0.5 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-bold cursor-pointer border border-white/15 leading-none"
                               title="Mod dest"
                             >
                               {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
@@ -2588,7 +2588,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 handleTrackParamChange({ modRoutes: newRoutes });
                                 playSound('click');
                               }}
-                              className={`w-3.5 h-3.5 rounded-xs border text-[7px] font-black flex items-center justify-center cursor-pointer ${
+                              className={`w-4 h-4 rounded-xs border text-[8px] font-black flex items-center justify-center cursor-pointer ${
                                 route.enabled ? 'border-[#98c379] bg-[#98c379] text-black' : 'border-white/20 text-white/30'
                               }`}
                             >
@@ -2735,7 +2735,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               <button
                                 key={tb}
                                 onClick={() => { setTimeBase(tb); playSound('click'); }}
-                                className={`px-0.5 py-0.1 rounded-xs border text-[6px] cursor-pointer font-bold leading-none ${
+                                className={`px-1 py-0.5 rounded-xs border text-[8px] cursor-pointer font-bold leading-none ${
                                   timeBase === tb
                                     ? 'border-[#98c379] bg-[#98c379] text-black font-black'
                                     : 'border-white/20 text-white/60 hover:text-white'

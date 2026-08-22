@@ -105,8 +105,8 @@ export const RotaryKnob: React.FC<RotaryKnobProps> = ({
 
       {/* Label & Numeric Readout */}
       <div className="text-center mt-0.5 leading-none">
-        <span className="text-[8px] opacity-75 uppercase font-mono block font-bold leading-tight">{label}</span>
-        <span className="text-[8px] font-bold font-mono block leading-tight truncate max-w-[34px]" style={{ color }}>
+        <span className="text-[9px] opacity-80 uppercase font-mono block font-bold leading-tight">{label}</span>
+        <span className="text-[9px] font-bold font-mono block leading-tight truncate max-w-[34px]" style={{ color }}>
           {formatDisplay(value)}{unit}
         </span>
       </div>
@@ -217,7 +217,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
       className="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0"
       title={`${label}: ${formatDisplay(value)} (Click, drag up/down, or scroll wheel)`}
     >
-      <span className="text-[8px] opacity-75 uppercase font-bold block mb-0.5 group-hover:text-white transition-colors leading-none">
+      <span className="text-[9px] opacity-80 uppercase font-bold block mb-0.5 group-hover:text-white transition-colors leading-none">
         {label}
       </span>
 
@@ -256,7 +256,7 @@ export const HardwareFader: React.FC<HardwareFaderProps> = ({
         </div>
       </div>
 
-      <span className="text-[8px] font-bold mt-0.5 text-center truncate max-w-[30px] leading-none" style={{ color }}>
+      <span className="text-[9px] font-bold mt-0.5 text-center truncate max-w-[30px] leading-none" style={{ color }}>
         {formatDisplay(value)}
       </span>
     </div>
@@ -425,7 +425,7 @@ export const HorizontalHardwareFader: React.FC<HorizontalHardwareFaderProps> = (
       </div>
 
       {showValue && (
-        <span className="text-[8px] font-bold text-right min-w-[24px]" style={{ color }}>
+        <span className="text-[9px] font-bold text-right min-w-[24px]" style={{ color }}>
           {formatDisplay(value)}
         </span>
       )}
