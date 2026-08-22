@@ -502,7 +502,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [isMuted, setIsMuted] = useState(sound.getMuted());
   const fftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [timeBase, setTimeBase] = useState<'0.25x' | '0.5x' | '1x' | '2x' | '4x'>('1x');
+  const [timeBase, setTimeBase] = useState<'0.25x' | '0.5x' | '1x' | '2x' | '4x' | '8x' | '16x'>('1x');
   const [activeEnvTab, setActiveEnvTab] = useState<'amp' | 'vcf'>('amp');
   const [activeOutVisualizer, setActiveOutVisualizer] = useState<'fft' | 'scope'>('fft');
   const [rackPage, setRackPage] = useState<1 | 2>(1);
@@ -1018,6 +1018,8 @@ export const TmuxWorkspace: React.FC = () => {
           else if (timeBase === '1x') windowSize = 256;
           else if (timeBase === '2x') windowSize = 512;
           else if (timeBase === '4x') windowSize = 1024;
+          else if (timeBase === '8x') windowSize = 2048;
+          else if (timeBase === '16x') windowSize = 4096;
 
           windowSize = Math.min(timeData.length, windowSize);
 
@@ -2794,7 +2796,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             <span className="text-[9px] text-white/50 font-bold">20Hz-20k</span>
                           ) : (
                             <div className="flex items-center gap-0.5">
-                              {(['0.5x', '1x', '2x'] as const).map((tb) => (
+                              {(['0.5x', '1x', '2x', '4x', '8x', '16x'] as const).map((tb) => (
                                 <button
                                   key={tb}
                                   onClick={() => { setTimeBase(tb); playSound('click'); }}
