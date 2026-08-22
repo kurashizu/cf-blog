@@ -2018,68 +2018,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </button>
                 </div>
 
-                {/* Center: 8-Track Channel Selectors with Inline Mute/Solo */}
-                <div className="flex items-center gap-1 text-xs overflow-x-auto no-scrollbar">
-                  {tracksState.map((trk) => {
-                    const isSelected = activeTrackId === trk.id;
-                    return (
-                      <div
-                        key={trk.id}
-                        className={`flex items-center border rounded-xs transition-all ${
-                          isSelected
-                            ? 'border-white bg-white/20 text-white shadow-sm'
-                            : 'border-white/20 text-[#eceff4] opacity-80 hover:opacity-100'
-                        }`}
-                      >
-                        <button
-                          onClick={() => { setActiveTrackId(trk.id); playSound('click'); }}
-                          className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
-                          style={{ color: isSelected ? trk.color : undefined }}
-                        >
-                          <span className="w-2 h-2 inline-block shrink-0" style={{ backgroundColor: trk.color }} />
-                          <span>{trk.name.split(':')[0]}</span>
-                        </button>
-
-                        {/* Inline Mute & Solo Toggles */}
-                        <div className="flex items-center border-l border-white/15 px-1 gap-0.5">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              modularSynth.toggleTrackMute(trk.id);
-                              setTracksState([...modularSynth.getTracks()]);
-                              playSound('click');
-                            }}
-                            className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
-                              trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'
-                            }`}
-                            title={`Mute ${trk.name}`}
-                          >
-                            M
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              modularSynth.toggleTrackSolo(trk.id);
-                              setTracksState([...modularSynth.getTracks()]);
-                              playSound('click');
-                            }}
-                            className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
-                              trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'
-                            }`}
-                            title={`Solo ${trk.name}`}
-                          >
-                            S
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Right: BPM, LEN, METER (Right-aligned) */}
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <div className="w-px h-4 bg-white/15 mx-0.5 hidden sm:block" />
-
+                {/* Right: BPM, LEN, METER (Right-aligned in Row 1) */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs ml-auto">
                   {/* Hardware BPM Fader */}
                   <div className="flex items-center gap-1">
                     <HorizontalHardwareFader
@@ -2180,9 +2120,71 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (PATCH, PRESETS, SNAP, DUR, PAGE NAVIGATION) */}
+              {/* 1.5 ROW 2: 8-TRACK DECK & SEQUENCER CONFIGURATION */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
-                <div className="flex flex-wrap items-center gap-2">
+                {/* Left: 8-Track Channel Selectors with Inline Mute/Solo + Patch Tools + Presets */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* 8 Tracks Selectors */}
+                  <div className="flex items-center gap-1 text-xs overflow-x-auto no-scrollbar">
+                    {tracksState.map((trk) => {
+                      const isSelected = activeTrackId === trk.id;
+                      return (
+                        <div
+                          key={trk.id}
+                          className={`flex items-center border rounded-xs transition-all ${
+                            isSelected
+                              ? 'border-white bg-white/20 text-white shadow-sm'
+                              : 'border-white/20 text-[#eceff4] opacity-80 hover:opacity-100'
+                          }`}
+                        >
+                          <button
+                            onClick={() => { setActiveTrackId(trk.id); playSound('click'); }}
+                            className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
+                            style={{ color: isSelected ? trk.color : undefined }}
+                          >
+                            <span className="w-2 h-2 inline-block shrink-0" style={{ backgroundColor: trk.color }} />
+                            <span>{trk.name.split(':')[0]}</span>
+                          </button>
+
+                          {/* Inline Mute & Solo Toggles */}
+                          <div className="flex items-center border-l border-white/15 px-1 gap-0.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                modularSynth.toggleTrackMute(trk.id);
+                                setTracksState([...modularSynth.getTracks()]);
+                                playSound('click');
+                              }}
+                              className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
+                                trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'
+                              }`}
+                              title={`Mute ${trk.name}`}
+                            >
+                              M
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                modularSynth.toggleTrackSolo(trk.id);
+                                setTracksState([...modularSynth.getTracks()]);
+                                playSound('click');
+                              }}
+                              className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
+                                trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'
+                              }`}
+                              title={`Solo ${trk.name}`}
+                            >
+                              S
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="w-px h-4 bg-white/15 mx-1" />
+
+                  {/* Patch Storage Tools */}
                   <div className="flex items-center gap-1">
                     <input type="file" ref={fileInputRef} onChange={handleImportPatch} accept=".json" className="hidden" />
                     <button onClick={handleSavePatch} title="Save Patch — Store all 8-track synth parameters and sequencer notes into browser LocalStorage" className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors">SAVE</button>
@@ -2191,6 +2193,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors" title="Import Patch — Load a previously exported JSON synthesizer patch file">IMP</button>
                     {saveStatus && <span className="text-[#98c379] font-bold ml-1">{saveStatus}</span>}
                   </div>
+
                   <div className="w-px h-4 bg-white/15 mx-1" />
 
                   {/* Sound Design Presets (Left of SNAP with divider) */}
