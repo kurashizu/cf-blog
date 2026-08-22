@@ -25,6 +25,7 @@ import {
   PIANO_ROLL_NOTES,
   TrackData,
   INITIAL_TRACKS,
+  StepGranularity,
 } from '../../lib/synth';
 import { RotaryKnob, HardwareFader } from '../synth/HardwareControls';
 import { evaluateSafeJS } from '../../lib/evaluator';
@@ -170,6 +171,7 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Master Synthesizer & Sequencer State (Polyphonic + Dynamic 64-Step)
   const [synthBpm, setSynthBpm] = useState<number>(modularSynth.getBpm());
+  const [synthGranularity, setSynthGranularity] = useState<StepGranularity>(modularSynth.getGranularity());
   const [synthDelayMix, setSynthDelayMix] = useState<number>(0.18);
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
   const [octaveScope, setOctaveScope] = useState<'all' | 7 | 6 | 5 | 4 | 3 | 2 | 1>(4);
@@ -317,7 +319,21 @@ export const TmuxWorkspace: React.FC = () => {
       const val = parseInt(args, 10);
       if (!isNaN(val) && val >= 40 && val <= 300) {
         setSynthBpm(val);
+        modularSynth.setBpm(val);
         setCommandOutput(`BPM set to ${val}.`);
+      }
+      return;
+    }
+
+    if (cmd === 'div' || cmd === 'grid' || cmd === 'rate') {
+      const valid = ['4', '2', '1', '1/2', '1/4', '1/8'];
+      if (valid.includes(args.trim())) {
+        const g = args.trim() as StepGranularity;
+        setSynthGranularity(g);
+        modularSynth.setGranularity(g);
+        setCommandOutput(`Step time division set to ${g} beat.`);
+      } else {
+        setCommandOutput(`Invalid division: "${args}". Valid options: 4, 2, 1, 1/2, 1/4, 1/8`);
       }
       return;
     }
@@ -1050,8 +1066,31 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                 {/* Dynamic Pattern Length (16/32/64/128/256/512) & Bar Page Navigation */}
                 <div className="flex items-center gap-2 text-xs">
+                  {/* Step Time Granularity / Resolution (4, 2, 1, 1/2, 1/4, 1/8) */}
+                  <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
+                    <span className="opacity-60">DIV:</span>
+                    {(['4', '2', '1', '1/2', '1/4', '1/8'] as StepGranularity[]).map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => {
+                          setSynthGranularity(g);
+                          modularSynth.setGranularity(g);
+                          playSound('click');
+                        }}
+                        className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          synthGranularity === g
+                            ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                        title={`Set step time granularity to ${g} beat`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Sequence Length */}
-                  <div className="flex items-center gap-1 text-xs">
+                  <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
                     <span className="opacity-60">LEN:</span>
                     {([16, 32, 64, 128, 256, 512] as const).map((len) => (
                       <button
@@ -1155,7 +1194,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => {
-                          // Reload Super Mario Theme Score (Authentic Complete 512-Step NES Score)
+                          // Reload Super Mario Theme Score (Exact MIDI-Aligned 512-Step 1/8 Beat NES Score)
                           INITIAL_TRACKS.forEach((initT, trkId) => {
                             initT.grid.forEach((notes, sIdx) => {
                               modularSynth.setTrackStepNotes(trkId, sIdx, notes);
@@ -1163,13 +1202,15 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           });
                           modularSynth.setTotalSteps(512);
                           setTotalPatternSteps(512);
-                          setSynthBpm(100);
-                          modularSynth.setBpm(100);
+                          setSynthBpm(105);
+                          modularSynth.setBpm(105);
+                          setSynthGranularity('1/8');
+                          modularSynth.setGranularity('1/8');
                           setTracksState([...modularSynth.getTracks()]);
                           playSound('power');
                         }}
                         className="border border-[#e06c75] bg-[#e06c75]/20 text-[#e06c75] px-1.5 py-0.5 rounded-xs hover:bg-[#e06c75] hover:text-black cursor-pointer font-black flex items-center gap-1"
-                        title="Load Super Mario Bros Overworld 512-Step Complete Score"
+                        title="Load Super Mario Bros Overworld 512-Step Complete Score (1/8 Beat Granularity)"
                       >
                         <span>🍄 MARIO</span>
                       </button>
