@@ -2074,44 +2074,51 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 3 Knobs Arranged TOP 2, BOTTOM 1 (上2下1 - Large 28px, No Divider) */}
-                        <div className="col-span-7 flex flex-col justify-between pl-1.5 h-full py-0.5">
-                          {/* Top 2 Knobs: CUTOFF & RES (Q) */}
-                          <div className="flex items-center justify-around">
-                            <RotaryKnob
-                              label="CUTOFF"
-                              value={currentTrack.cutoff}
-                              min={40}
-                              max={12000}
-                              step={50}
-                              unit="Hz"
-                              color="#56b6c2"
-                              size={28}
-                              onChange={(v) => handleTrackParamChange({ cutoff: v })}
-                            />
-                            <RotaryKnob
-                              label="RES (Q)"
-                              value={currentTrack.resonance}
-                              min={0.2}
-                              max={14}
-                              step={0.2}
-                              color="#e5c07b"
-                              size={28}
-                              onChange={(v) => handleTrackParamChange({ resonance: v })}
-                            />
+                        {/* Right: 3 Knobs Arranged in Triangular Close Packing (最密堆积: 上2下1, No Divider) */}
+                        <div className="col-span-7 flex flex-col justify-around border-l border-white/10 pl-1.5 h-full py-0.5">
+                          {/* Top Row: 2 Knobs (CUTOFF, RES) */}
+                          <div className="grid grid-cols-4 gap-0.5 items-center">
+                            <div className="col-span-2 flex justify-center">
+                              <RotaryKnob
+                                label="CUTOFF"
+                                value={currentTrack.cutoff}
+                                min={40}
+                                max={12000}
+                                step={50}
+                                unit="Hz"
+                                color="#56b6c2"
+                                size={28}
+                                onChange={(v) => handleTrackParamChange({ cutoff: v })}
+                              />
+                            </div>
+                            <div className="col-span-2 flex justify-center">
+                              <RotaryKnob
+                                label="RES (Q)"
+                                value={currentTrack.resonance}
+                                min={0.2}
+                                max={14}
+                                step={0.2}
+                                color="#e5c07b"
+                                size={28}
+                                onChange={(v) => handleTrackParamChange({ resonance: v })}
+                              />
+                            </div>
                           </div>
-                          {/* Bottom 1 Knob: ENV AMT */}
-                          <div className="flex items-center justify-center pt-0.5">
-                            <RotaryKnob
-                              label="ENV AMT"
-                              value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
-                              min={-100}
-                              max={100}
-                              unit="%"
-                              color="#98c379"
-                              size={28}
-                              onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
-                            />
+
+                          {/* Bottom Row: 1 Knob (ENV AMT) Nested in the Interstice */}
+                          <div className="grid grid-cols-4 gap-0.5 items-center">
+                            <div className="col-start-2 col-span-2 flex justify-center">
+                              <RotaryKnob
+                                label="ENV AMT"
+                                value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
+                                min={-100}
+                                max={100}
+                                unit="%"
+                                color="#98c379"
+                                size={28}
+                                onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2501,7 +2508,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 5: MOD MATRIX (NARROWED TO xl:col-span-3, INTERNAL 1:2 SPLIT, NO DIVIDER) */}
+                  {/* MODULE 5: MOD MATRIX (NARROWED TO xl:col-span-3, INTERNAL 1:2 SPLIT, DIVIDER RESTORED) */}
                   <div className="xl:col-span-3 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     {/* Header */}
                     <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
@@ -2511,8 +2518,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                     {/* Left/Right Horizontal Split in 1 : 2 Ratio (Left: col-span-4, Right: col-span-8) */}
                     <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
-                      {/* Left: 1 Part (33.3% width) - LFO 2x2 Grid + RATE Knob 28px */}
-                      <div className="col-span-4 flex flex-col justify-between items-center gap-1 pr-0.5 h-full py-0.5">
+                      {/* Left: 1 Part (33.3% width) - LFO 2x2 Grid + RATE Knob 28px (Divider Restored) */}
+                      <div className="col-span-4 flex flex-col justify-between items-center gap-1 border-r border-white/10 pr-1 h-full py-0.5">
                         <div className="grid grid-cols-2 gap-0.5 w-full">
                           {(['sine', 'triangle', 'square', 'sawtooth'] as LfoWaveform[]).map((w) => (
                             <button
@@ -2615,94 +2622,106 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 6: FX (5 LARGE ROTARY KNOBS 28px FILLING THE ENTIRE SPACE) */}
+                  {/* MODULE 6: FX (5 LARGE ROTARY KNOBS IN HEXAGONAL CLOSE PACKING - 最密堆积: 上3下2交错嵌套, NO DIVIDER) */}
                   <div className="xl:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     <div className="flex justify-between items-center font-black text-[#e06c75] text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <span>6. FX</span>
                       <span className="text-white/40 font-mono text-xs">──►</span>
                     </div>
 
-                    {/* 5 Hardware FX Knobs with Substantial Proportions (3 on top, 2 on bottom - 28px) */}
-                    <div className="space-y-1 my-auto flex flex-col justify-around h-full py-0.5">
-                      <div className="grid grid-cols-3 gap-0.5 items-center">
-                        <RotaryKnob
-                          label="TIME"
-                          value={Math.round(synthDelayTime * 1000)}
-                          min={50}
-                          max={800}
-                          step={10}
-                          unit="ms"
-                          color="#e06c75"
-                          size={28}
-                          onChange={(v) => {
-                            const t = v / 1000;
-                            setSynthDelayTime(t);
-                            modularSynth.setDelayTime(t);
-                          }}
-                        />
-                        <RotaryKnob
-                          label="FDBK"
-                          value={Math.round(synthDelayFeedback * 100)}
-                          min={0}
-                          max={85}
-                          step={5}
-                          unit="%"
-                          color="#e06c75"
-                          size={28}
-                          onChange={(v) => {
-                            const fb = v / 100;
-                            setSynthDelayFeedback(fb);
-                            modularSynth.setDelayFeedback(fb);
-                          }}
-                        />
-                        <RotaryKnob
-                          label="D-MIX"
-                          value={Math.round(synthDelayMix * 100)}
-                          min={0}
-                          max={100}
-                          step={5}
-                          unit="%"
-                          color="#e06c75"
-                          size={28}
-                          onChange={(v) => {
-                            const m = v / 100;
-                            setSynthDelayMix(m);
-                            modularSynth.setDelayMix(m);
-                          }}
-                        />
+                    {/* 5 Hardware FX Knobs in Hexagonal Close Packing (最密堆积: 上3下2交错嵌套, No Divider) */}
+                    <div className="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
+                      {/* Top Row: 3 Knobs (TIME, FDBK, D-MIX) */}
+                      <div className="grid grid-cols-6 gap-0.5 items-center">
+                        <div className="col-span-2 flex justify-center">
+                          <RotaryKnob
+                            label="TIME"
+                            value={Math.round(synthDelayTime * 1000)}
+                            min={50}
+                            max={800}
+                            step={10}
+                            unit="ms"
+                            color="#e06c75"
+                            size={28}
+                            onChange={(v) => {
+                              const t = v / 1000;
+                              setSynthDelayTime(t);
+                              modularSynth.setDelayTime(t);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-2 flex justify-center">
+                          <RotaryKnob
+                            label="FDBK"
+                            value={Math.round(synthDelayFeedback * 100)}
+                            min={0}
+                            max={85}
+                            step={5}
+                            unit="%"
+                            color="#e06c75"
+                            size={28}
+                            onChange={(v) => {
+                              const fb = v / 100;
+                              setSynthDelayFeedback(fb);
+                              modularSynth.setDelayFeedback(fb);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-2 flex justify-center">
+                          <RotaryKnob
+                            label="D-MIX"
+                            value={Math.round(synthDelayMix * 100)}
+                            min={0}
+                            max={100}
+                            step={5}
+                            unit="%"
+                            color="#e06c75"
+                            size={28}
+                            onChange={(v) => {
+                              const m = v / 100;
+                              setSynthDelayMix(m);
+                              modularSynth.setDelayMix(m);
+                            }}
+                          />
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-1 items-center pt-0.5 border-t border-white/10">
-                        <RotaryKnob
-                          label="R-MIX"
-                          value={Math.round(synthReverbMix * 100)}
-                          min={0}
-                          max={100}
-                          step={5}
-                          unit="%"
-                          color="#c678dd"
-                          size={28}
-                          onChange={(v) => {
-                            const rm = v / 100;
-                            setSynthReverbMix(rm);
-                            modularSynth.setReverbMix(rm);
-                          }}
-                        />
-                        <RotaryKnob
-                          label="DRIVE"
-                          value={Math.round(synthDrive * 100)}
-                          min={0}
-                          max={100}
-                          step={5}
-                          unit="%"
-                          color="#e5c07b"
-                          size={28}
-                          onChange={(v) => {
-                            const d = v / 100;
-                            setSynthDrive(d);
-                            modularSynth.setDrive(d);
-                          }}
-                        />
+                      {/* Bottom Row: 2 Knobs (R-MIX, DRIVE) Nested in the Interstices */}
+                      <div className="grid grid-cols-6 gap-0.5 items-center">
+                        <div className="col-start-2 col-span-2 flex justify-center">
+                          <RotaryKnob
+                            label="R-MIX"
+                            value={Math.round(synthReverbMix * 100)}
+                            min={0}
+                            max={100}
+                            step={5}
+                            unit="%"
+                            color="#c678dd"
+                            size={28}
+                            onChange={(v) => {
+                              const rm = v / 100;
+                              setSynthReverbMix(rm);
+                              modularSynth.setReverbMix(rm);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-2 flex justify-center">
+                          <RotaryKnob
+                            label="DRIVE"
+                            value={Math.round(synthDrive * 100)}
+                            min={0}
+                            max={100}
+                            step={5}
+                            unit="%"
+                            color="#e5c07b"
+                            size={28}
+                            onChange={(v) => {
+                              const d = v / 100;
+                              setSynthDrive(d);
+                              modularSynth.setDrive(d);
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
