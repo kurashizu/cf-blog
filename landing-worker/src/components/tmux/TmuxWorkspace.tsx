@@ -159,6 +159,149 @@ const MODULES: ModuleSpec[] = [
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 const BRAILLE_WAVES = ['⣀', '⣄', '⣤', '⣦', '⣶', '⣷', '⣿', '⣶', '⣦', '⣤', '⣄'];
 
+interface PianoRollRowProps {
+  nInfo: { note: string; freq: number; isBlack: boolean; oct: number };
+  actualIdx: number;
+  octaveScope: string | number;
+  activeTrackColor: string;
+  activeTrackGrid: number[][];
+  activeStepPage: number;
+  activeCol: number;
+  activeSubCol: number;
+  timeMeter: TimeSignature;
+  noteDiv: NoteDurationDiv;
+  totalPatternSteps: number;
+  onAudition: (noteIdx: number) => void;
+  onCellClick: (noteIdx: number, colIdx: number) => void;
+  onSubCellClick: (noteIdx: number, colIdx: number, subCol: number) => void;
+}
+
+const PianoRollRow = React.memo<PianoRollRowProps>(({
+  nInfo,
+  actualIdx,
+  octaveScope,
+  activeTrackColor,
+  activeTrackGrid,
+  activeStepPage,
+  activeCol,
+  activeSubCol,
+  timeMeter,
+  noteDiv,
+  totalPatternSteps,
+  onAudition,
+  onCellClick,
+  onSubCellClick,
+}) => {
+  const isRootC = nInfo.note.startsWith('C') && !nInfo.note.includes('#');
+  const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+  const colSpan = divToColumnSpan(noteDiv);
+  const spanInt = Math.max(1, Math.floor(colSpan));
+
+  return (
+    <div
+      className={`flex items-center gap-1 shrink-0 ${
+        octaveScope === 'all' ? 'min-h-[16px] h-4.5' : 'flex-1 min-h-[18px]'
+      }`}
+    >
+      {/* Playable Interactive Note Key Badge */}
+      <button
+        type="button"
+        onClick={() => onAudition(actualIdx)}
+        title={`Audition ${nInfo.note} (${Math.round(nInfo.freq)}Hz)`}
+        className={`w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 ${
+          isRootC
+            ? 'bg-[#56b6c2]/30 text-[#56b6c2] border border-[#56b6c2]/40 hover:bg-[#56b6c2]/50'
+            : nInfo.isBlack
+            ? 'bg-black/90 text-[#e5c07b] border-r border-white/20 hover:bg-neutral-900'
+            : 'bg-white/10 text-[#eceff4] hover:bg-white/20'
+        }`}
+      >
+        {nInfo.note}
+      </button>
+
+      {/* 16 Step Horizontal Grid Cells */}
+      <div
+        className="flex-1 h-full gap-0.5"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+      >
+        {Array.from({ length: 16 }).map((_, colIdx) => {
+          const globalCol = activeStepPage * 16 + colIdx;
+          const step0 = globalCol * 2;
+          const step1 = globalCol * 2 + 1;
+          const isSelected = (activeTrackGrid[step0]?.includes(actualIdx) || activeTrackGrid[step1]?.includes(actualIdx)) || false;
+          const isColActive = activeCol === colIdx;
+
+          const colInBar = globalCol % meterSpec.colsPerBar;
+          const isBarStart = colInBar === 0;
+          const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
+          const isDivBlockStart = colIdx % spanInt === 0;
+
+          return (
+            <div key={colIdx} className="h-full">
+              {noteDiv === '1/8' ? (
+                <div className="flex h-full gap-0.5">
+                  {[0, 1].map((subCol) => {
+                    const step = globalCol * 2 + subCol;
+                    const isSubSelected = activeTrackGrid[step]?.includes(actualIdx) || false;
+                    const isSubCurrent = isColActive && activeSubCol === subCol;
+                    return (
+                      <button
+                        key={subCol}
+                        onClick={() => onSubCellClick(actualIdx, colIdx, subCol)}
+                        className={`flex-1 h-full rounded-xs transition-all cursor-pointer border ${
+                          isSubSelected
+                            ? 'shadow-sm scale-[1.02]'
+                            : isSubCurrent
+                            ? 'border-white/60 bg-white/30'
+                            : isBarStart && subCol === 0
+                            ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                            : isBeatStart && subCol === 0
+                            ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                            : subCol === 1
+                            ? 'border-l border-white/10 bg-black/40 hover:bg-white/10'
+                            : 'border-white/5 bg-black/40 hover:bg-white/10'
+                        }`}
+                        style={{
+                          backgroundColor: isSubSelected ? activeTrackColor : undefined,
+                          borderColor: isSubSelected ? activeTrackColor : undefined,
+                        }}
+                        title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)`}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <button
+                  onClick={() => onCellClick(actualIdx, colIdx)}
+                  className={`w-full h-full rounded-xs transition-all cursor-pointer border ${
+                    isSelected
+                      ? 'shadow-sm scale-[1.02]'
+                      : isColActive
+                      ? 'border-white/60 bg-white/25'
+                      : isBarStart
+                      ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                      : isBeatStart
+                      ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                      : isDivBlockStart
+                      ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
+                      : 'border-white/5 bg-black/40 hover:bg-white/10'
+                  }`}
+                  style={{
+                    backgroundColor: isSelected ? activeTrackColor : undefined,
+                    borderColor: isSelected ? activeTrackColor : undefined,
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+PianoRollRow.displayName = 'PianoRollRow';
+
+
 export const TmuxWorkspace: React.FC = () => {
   const [theme, setTheme] = useState<WorkspaceTheme>('tokyo-matte');
   const [activeTab, setActiveTab] = useState<number>(0);
@@ -206,7 +349,7 @@ export const TmuxWorkspace: React.FC = () => {
     const unsub = modularSynth.subscribeStep((step) => {
       setSeqCurrentStep(step);
       if (pageFollow) {
-        const p = Math.floor(step / 16);
+        const p = Math.floor(step / 32);
         setActiveStepPage(p);
       }
     });
@@ -278,102 +421,62 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Toggle Note in Polyphonic Piano Roll (Up to 8 notes per step across dynamic pages)
   const handlePianoRollCellClick = (noteIndex: number, colIndex: number) => {
-    const colSpan = divToColumnSpan(noteDiv);
     const globalCol = activeStepPage * 16 + colIndex;
+    const step0 = globalCol * 2;
+    const step1 = globalCol * 2 + 1;
     const track = modularSynth.getTrack(activeTrackId);
-    if (!track) return;
+    if (!track || step0 >= totalPatternSteps) return;
 
-    let startStep: number;
-    let endStep: number;
-
-    if (colSpan < 1) {
-      // DIV = 1/8 (1/2 column = 1 physical step)
-      startStep = globalCol * 2;
-      endStep = startStep + 1;
-    } else {
-      const spanInt = Math.max(1, Math.floor(colSpan));
-      const startCol = Math.floor(colIndex / spanInt) * spanInt;
-      startStep = (activeStepPage * 16 + startCol) * 2;
-      endStep = startStep + (spanInt * 2);
-    }
-
-    const actualEndStep = Math.min(totalPatternSteps, endStep);
-    if (startStep >= totalPatternSteps) return;
-
-    // Check if any step in [startStep, actualEndStep) contains noteIndex
-    let isAlreadyOn = false;
-    for (let s = startStep; s < actualEndStep; s++) {
-      if (track.grid[s]?.includes(noteIndex)) {
-        isAlreadyOn = true;
-        break;
-      }
-    }
+    const isAlreadyOn = (track.grid[step0]?.includes(noteIndex) || track.grid[step1]?.includes(noteIndex)) || false;
 
     if (isAlreadyOn) {
-      // Toggle OFF
-      for (let s = startStep; s < actualEndStep; s++) {
-        const notes = track.grid[s] || [];
-        if (notes.includes(noteIndex)) {
-          modularSynth.setTrackStepNotes(
-            activeTrackId,
-            s,
-            notes.filter((n) => n !== noteIndex)
-          );
+      // Toggle OFF: remove note from this column
+      for (const s of [step0, step1]) {
+        if (s < totalPatternSteps) {
+          const notes = track.grid[s] || [];
+          if (notes.includes(noteIndex)) {
+            modularSynth.setTrackStepNotes(
+              activeTrackId,
+              s,
+              notes.filter((n) => n !== noteIndex)
+            );
+          }
         }
       }
       setTracksState([...modularSynth.getTracks()]);
       playSound('click');
     } else {
-      // Toggle ON
-      for (let s = startStep; s < actualEndStep; s++) {
-        const notes = track.grid[s] || [];
-        if (!notes.includes(noteIndex) && notes.length < 8) {
-          modularSynth.setTrackStepNotes(
-            activeTrackId,
-            s,
-            [...notes, noteIndex].sort((a, b) => a - b)
-          );
+      // Toggle ON: add note to this column
+      for (const s of [step0, step1]) {
+        if (s < totalPatternSteps) {
+          const notes = track.grid[s] || [];
+          if (!notes.includes(noteIndex) && notes.length < 8) {
+            modularSynth.setTrackStepNotes(
+              activeTrackId,
+              s,
+              [...notes, noteIndex].sort((a, b) => a - b)
+            );
+          }
         }
       }
       setTracksState([...modularSynth.getTracks()]);
-      const isAccent = tracksState[activeTrackId]?.accents[startStep] || false;
+      const isAccent = tracksState[activeTrackId]?.accents[step0] || false;
       modularSynth.triggerTrackVoice(activeTrackId, noteIndex, isAccent);
     }
   };
 
   const handleAccentCellClick = (colIndex: number) => {
-    const colSpan = divToColumnSpan(noteDiv);
     const globalCol = activeStepPage * 16 + colIndex;
+    const step0 = globalCol * 2;
+    const step1 = globalCol * 2 + 1;
     const track = modularSynth.getTrack(activeTrackId);
-    if (!track) return;
+    if (!track || step0 >= totalPatternSteps) return;
 
-    let startStep: number;
-    let endStep: number;
-
-    if (colSpan < 1) {
-      startStep = globalCol * 2;
-      endStep = startStep + 1;
-    } else {
-      const spanInt = Math.max(1, Math.floor(colSpan));
-      const startCol = Math.floor(colIndex / spanInt) * spanInt;
-      startStep = (activeStepPage * 16 + startCol) * 2;
-      endStep = startStep + (spanInt * 2);
-    }
-
-    const actualEndStep = Math.min(totalPatternSteps, endStep);
-    if (startStep >= totalPatternSteps) return;
-
-    let isAlreadyAccent = false;
-    for (let s = startStep; s < actualEndStep; s++) {
-      if (track.accents[s]) {
-        isAlreadyAccent = true;
-        break;
-      }
-    }
-
+    const isAlreadyAccent = (track.accents[step0] || track.accents[step1]) || false;
     const nextState = !isAlreadyAccent;
-    for (let s = startStep; s < actualEndStep; s++) {
-      if (track.accents[s] !== nextState) {
+
+    for (const s of [step0, step1]) {
+      if (s < totalPatternSteps && track.accents[s] !== nextState) {
         modularSynth.toggleTrackAccent(activeTrackId, s);
       }
     }
@@ -1529,118 +1632,35 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                     {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
                     <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col">
-                      {PIANO_ROLL_NOTES.filter((n) => octaveScope === 'all' || n.oct === octaveScope).map((nInfo) => {
-                        const actualIdx = PIANO_ROLL_NOTES.findIndex((p) => p.note === nInfo.note);
-                        const isRootC = nInfo.note.startsWith('C') && !nInfo.note.includes('#');
+                      {PIANO_ROLL_NOTES.map((nInfo, actualIdx) => {
+                        if (octaveScope !== 'all' && nInfo.oct !== octaveScope) return null;
+                        
+                        const activeCol = (isSeqPlaying && Math.floor(seqCurrentStep / 32) === activeStepPage)
+                          ? Math.floor((seqCurrentStep % 32) / 2)
+                          : -1;
+                        const activeSubCol = isSeqPlaying ? (seqCurrentStep % 2) : -1;
 
                         return (
-                          <div
+                          <PianoRollRow
                             key={nInfo.note}
-                            className={`flex items-center gap-1 shrink-0 ${
-                              octaveScope === 'all' ? 'min-h-[16px] h-4.5' : 'flex-1 min-h-[18px]'
-                            }`}
-                          >
-                            {/* Playable Interactive Note Key Badge */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                modularSynth.triggerTrackVoice(activeTrackId, actualIdx, false);
-                                playSound('click');
-                              }}
-                              title={`Audition ${nInfo.note} (${Math.round(nInfo.freq)}Hz)`}
-                              className={`w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 ${
-                                isRootC
-                                  ? 'bg-[#56b6c2]/30 text-[#56b6c2] border border-[#56b6c2]/40 hover:bg-[#56b6c2]/50'
-                                  : nInfo.isBlack
-                                  ? 'bg-black/90 text-[#e5c07b] border-r border-white/20 hover:bg-neutral-900'
-                                  : 'bg-white/10 text-[#eceff4] hover:bg-white/20'
-                              }`}
-                            >
-                              {nInfo.note}
-                            </button>
-
-                            {/* 16 Step Horizontal Grid Cells (Dynamic DIV & METER Quantization) */}
-                            <div
-                              className="flex-1 h-full gap-0.5"
-                              style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
-                            >
-                              {Array.from({ length: 16 }).map((_, colIdx) => {
-                                const globalCol = activeStepPage * 16 + colIdx;
-                                const step0 = globalCol * 2;
-                                const step1 = globalCol * 2 + 1;
-                                const isSelected = (currentTrack.grid[step0]?.includes(actualIdx) || currentTrack.grid[step1]?.includes(actualIdx)) || false;
-                                const isCurrent = isSeqPlaying && Math.floor(seqCurrentStep / 2) === globalCol;
-                                
-                                const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
-                                const colInBar = globalCol % meterSpec.colsPerBar;
-                                const isBarStart = colInBar === 0;
-                                const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
-
-                                const colSpan = divToColumnSpan(noteDiv);
-                                const spanInt = Math.max(1, Math.floor(colSpan));
-                                const isDivBlockStart = colIdx % spanInt === 0;
-
-                                return (
-                                  <div key={colIdx} className="h-full">
-                                    {noteDiv === '1/8' ? (
-                                      <div className="flex h-full gap-0.5">
-                                        {[0, 1].map((subCol) => {
-                                          const step = globalCol * 2 + subCol;
-                                          const isSubSelected = currentTrack.grid[step]?.includes(actualIdx) || false;
-                                          const isSubCurrent = isSeqPlaying && seqCurrentStep === step;
-                                          return (
-                                            <button
-                                              key={subCol}
-                                              onClick={() => handlePianoRollSubCellClick(actualIdx, colIdx, subCol)}
-                                              className={`flex-1 h-full rounded-xs transition-all cursor-pointer border ${
-                                                isSubSelected
-                                                  ? 'shadow-sm scale-[1.02]'
-                                                  : isSubCurrent
-                                                  ? 'border-white/60 bg-white/30'
-                                                  : isBarStart && subCol === 0
-                                                  ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-                                                  : isBeatStart && subCol === 0
-                                                  ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-                                                  : subCol === 1
-                                                  ? 'border-l border-white/10 bg-black/40 hover:bg-white/10'
-                                                  : 'border-white/5 bg-black/40 hover:bg-white/10'
-                                              }`}
-                                              style={{
-                                                backgroundColor: isSubSelected ? currentTrack.color : undefined,
-                                                borderColor: isSubSelected ? currentTrack.color : undefined,
-                                              }}
-                                              title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)`}
-                                            />
-                                          );
-                                        })}
-                                      </div>
-                                    ) : (
-                                      <button
-                                        onClick={() => handlePianoRollCellClick(actualIdx, colIdx)}
-                                        className={`w-full h-full rounded-xs transition-all cursor-pointer border ${
-                                          isSelected
-                                            ? 'shadow-sm scale-[1.02]'
-                                            : isCurrent
-                                            ? 'border-white/60 bg-white/25'
-                                            : isBarStart
-                                            ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-                                            : isBeatStart
-                                            ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-                                            : isDivBlockStart
-                                            ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
-                                            : 'border-white/5 bg-black/40 hover:bg-white/10'
-                                        }`}
-                                        style={{
-                                          backgroundColor: isSelected ? currentTrack.color : undefined,
-                                          borderColor: isSelected ? currentTrack.color : undefined,
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
+                            nInfo={nInfo}
+                            actualIdx={actualIdx}
+                            octaveScope={octaveScope}
+                            activeTrackColor={currentTrack.color}
+                            activeTrackGrid={currentTrack.grid}
+                            activeStepPage={activeStepPage}
+                            activeCol={activeCol}
+                            activeSubCol={activeSubCol}
+                            timeMeter={timeMeter}
+                            noteDiv={noteDiv}
+                            totalPatternSteps={totalPatternSteps}
+                            onAudition={(idx) => {
+                              modularSynth.triggerTrackVoice(activeTrackId, idx, false);
+                              playSound('click');
+                            }}
+                            onCellClick={handlePianoRollCellClick}
+                            onSubCellClick={handlePianoRollSubCellClick}
+                          />
                         );
                       })}
                     </div>

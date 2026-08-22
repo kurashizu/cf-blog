@@ -1807,7 +1807,7 @@ class ModularSynth {
   /*                      COMPLETE MODULAR SIGNAL FLOW DSP                      */
   /* -------------------------------------------------------------------------- */
 
-  public triggerTrackVoice(trackId: number, noteIndex: number, isAccent = false) {
+  public triggerTrackVoice(trackId: number, noteIndex: number, isAccent = false, startTime?: number) {
     const track = this.tracks[trackId];
     if (!track || soundEngine.isMuted()) return;
 
@@ -1822,7 +1822,7 @@ class ModularSynth {
 
     const voiceKey = `trk_${trackId}_${noteIndex}_${Math.random().toString(36).slice(2, 6)}`;
 
-    const t = ctx.currentTime;
+    const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
     const baseFreq = noteInfo.freq;
     const masterGain = (soundEngine as any).masterGain || ctx.destination;
 
@@ -2058,51 +2058,116 @@ class ModularSynth {
     return this.isSequencerPlaying;
   }
 
+  private lookaheadTimer: number | null = null;
+  private uiTimer: number | null = null;
+  private nextStepTime = 0;
+  private scheduleAheadSec = 0.12; // 120ms Web Audio Lookahead
+  private scheduledStepQueue: { step: number; time: number }[] = [];
+
   public startSequencer() {
     if (this.isSequencerPlaying) return;
     this.isSequencerPlaying = true;
     this.currentStep = 0;
-    this.restartSequencerTimer();
+    this.scheduledStepQueue = [];
+
+    const ctx = soundEngine.init();
+    if (ctx) {
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      this.nextStepTime = ctx.currentTime + 0.05;
+    } else {
+      this.nextStepTime = 0;
+    }
+
+    this.startLookaheadTimers();
   }
 
   public stopSequencer() {
     this.isSequencerPlaying = false;
-    if (this.sequencerTimer) {
-      clearInterval(this.sequencerTimer);
-      this.sequencerTimer = null;
+    if (this.lookaheadTimer) {
+      clearInterval(this.lookaheadTimer);
+      this.lookaheadTimer = null;
     }
+    if (this.uiTimer) {
+      clearInterval(this.uiTimer);
+      this.uiTimer = null;
+    }
+    this.scheduledStepQueue = [];
     this.stopAll();
   }
 
   private restartSequencerTimer() {
-    if (this.sequencerTimer) clearInterval(this.sequencerTimer);
-    // Clock interval is fixed at 1/8 beat (12 MIDI ticks = 1/8 beat)
-    const intervalMs = (60 / this.bpm / 8) * 1000;
-
-    this.sequencerTimer = setInterval(() => {
-      this.tickSequencer();
-    }, intervalMs);
+    if (this.isSequencerPlaying) {
+      this.startLookaheadTimers();
+    }
   }
 
-  private tickSequencer() {
+  private startLookaheadTimers() {
+    if (this.lookaheadTimer) clearInterval(this.lookaheadTimer);
+    if (this.uiTimer) clearInterval(this.uiTimer);
+
+    // Audio thread scheduling lookahead (runs every 25ms)
+    this.lookaheadTimer = window.setInterval(() => {
+      this.schedulerLoop();
+    }, 25);
+
+    // UI sync loop (runs every 16ms to update playhead position)
+    this.uiTimer = window.setInterval(() => {
+      this.checkUIQueue();
+    }, 16);
+  }
+
+  private schedulerLoop() {
+    if (!this.isSequencerPlaying) return;
+    const ctx = soundEngine.init();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+    const stepDuration = 60 / this.bpm / 8; // 1/8 beat
+
+    while (this.nextStepTime < ctx.currentTime + this.scheduleAheadSec) {
+      this.scheduleStepAudio(this.currentStep, this.nextStepTime);
+      this.scheduledStepQueue.push({ step: this.currentStep, time: this.nextStepTime });
+      this.nextStepTime += stepDuration;
+      this.currentStep = (this.currentStep + 1) % this.totalSteps;
+    }
+  }
+
+  private scheduleStepAudio(step: number, time: number) {
     const hasSolo = this.tracks.some((t) => t.solo);
 
     this.tracks.forEach((track) => {
       if (track.muted) return;
       if (hasSolo && !track.solo) return;
 
-      const stepNotes = track.grid[this.currentStep] || [];
-      const isAccent = track.accents[this.currentStep] || false;
+      const stepNotes = track.grid[step] || [];
+      const isAccent = track.accents[step] || false;
 
       stepNotes.forEach((noteIdx) => {
         if (noteIdx !== null && noteIdx !== undefined && PIANO_ROLL_NOTES[noteIdx]) {
-          this.triggerTrackVoice(track.id, noteIdx, isAccent);
+          this.triggerTrackVoice(track.id, noteIdx, isAccent, time);
         }
       });
     });
+  }
 
-    this.onStepListeners.forEach((fn) => fn(this.currentStep));
-    this.currentStep = (this.currentStep + 1) % this.totalSteps;
+  private checkUIQueue() {
+    if (!this.isSequencerPlaying) return;
+    const ctx = soundEngine.init();
+    if (!ctx) return;
+
+    const currentTime = ctx.currentTime;
+    let latestStep: number | null = null;
+
+    while (this.scheduledStepQueue.length > 0 && this.scheduledStepQueue[0].time <= currentTime) {
+      const current = this.scheduledStepQueue.shift();
+      if (current) {
+        latestStep = current.step;
+      }
+    }
+
+    if (latestStep !== null) {
+      this.onStepListeners.forEach((fn) => fn(latestStep!));
+    }
   }
 }
 
