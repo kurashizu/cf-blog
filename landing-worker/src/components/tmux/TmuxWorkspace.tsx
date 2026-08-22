@@ -381,6 +381,48 @@ export const TmuxWorkspace: React.FC = () => {
     playSound('click');
   };
 
+  const handlePianoRollSubCellClick = (noteIndex: number, colIndex: number, subCol: number) => {
+    const globalCol = activeStepPage * 16 + colIndex;
+    const step = globalCol * 2 + subCol;
+    const track = modularSynth.getTrack(activeTrackId);
+    if (!track || step >= totalPatternSteps) return;
+
+    const currentNotes = track.grid[step] || [];
+    const isAlreadyOn = currentNotes.includes(noteIndex);
+
+    if (isAlreadyOn) {
+      modularSynth.setTrackStepNotes(
+        activeTrackId,
+        step,
+        currentNotes.filter((n) => n !== noteIndex)
+      );
+      setTracksState([...modularSynth.getTracks()]);
+      playSound('click');
+    } else {
+      if (currentNotes.length < 8) {
+        modularSynth.setTrackStepNotes(
+          activeTrackId,
+          step,
+          [...currentNotes, noteIndex].sort((a, b) => a - b)
+        );
+      }
+      setTracksState([...modularSynth.getTracks()]);
+      const isAccent = tracksState[activeTrackId]?.accents[step] || false;
+      modularSynth.triggerTrackVoice(activeTrackId, noteIndex, isAccent);
+    }
+  };
+
+  const handleAccentSubCellClick = (colIndex: number, subCol: number) => {
+    const globalCol = activeStepPage * 16 + colIndex;
+    const step = globalCol * 2 + subCol;
+    const track = modularSynth.getTrack(activeTrackId);
+    if (!track || step >= totalPatternSteps) return;
+
+    modularSynth.toggleTrackAccent(activeTrackId, step);
+    setTracksState([...modularSynth.getTracks()]);
+    playSound('click');
+  };
+
   const handleTrackParamChange = (partial: Partial<TrackData>) => {
     modularSynth.updateTrack(activeTrackId, partial);
     setTracksState([...modularSynth.getTracks()]);
@@ -1422,7 +1464,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 {/* Scrollable Matrix Container */}
                 <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar flex flex-col">
                   <div className="min-w-[480px] sm:min-w-0 flex-1 flex flex-col space-y-0.5">
-                    {/* Top 16-Column Timeline Bar / Ruler with Real-Time Meter & Bar Position */}
+                                        {/* Top 16-Column Timeline Bar / Ruler with Real-Time Meter & Bar Position */}
                     <div className="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0">
                       <div
                         className="flex-1 gap-0.5"
@@ -1439,20 +1481,46 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           const isCurrent = isSeqPlaying && Math.floor(seqCurrentStep / 2) === globalCol;
 
                           return (
-                            <div
-                              key={colIdx}
-                              className={`text-center py-0.5 rounded-xs transition-colors font-bold ${
-                                isCurrent
-                                  ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
-                                  : isBarStart
-                                  ? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
-                                  : isBeatStart
-                                  ? 'bg-white/15 text-white'
-                                  : 'text-white/30'
-                              }`}
-                              title={`Bar ${barNum}, Beat ${beatNum} (Column ${colIdx + 1})`}
-                            >
-                              {isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
+                            <div key={colIdx} className="h-full">
+                              {noteDiv === '1/8' ? (
+                                <div className="flex h-full gap-0.5 text-[10px]">
+                                  {[0, 1].map((subCol) => {
+                                    const step = globalCol * 2 + subCol;
+                                    const isSubCurrent = isSeqPlaying && seqCurrentStep === step;
+                                    return (
+                                      <div
+                                        key={subCol}
+                                        className={`flex-1 text-center py-0.5 rounded-xs transition-colors ${
+                                          isSubCurrent
+                                            ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
+                                            : isBarStart && subCol === 0
+                                            ? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
+                                            : isBeatStart && subCol === 0
+                                            ? 'bg-white/15 text-white'
+                                            : 'text-white/30'
+                                        }`}
+                                      >
+                                        {subCol === 0 ? (isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`) : '+'}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div
+                                  className={`text-center py-0.5 rounded-xs transition-colors font-bold ${
+                                    isCurrent
+                                      ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
+                                      : isBarStart
+                                      ? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
+                                      : isBeatStart
+                                      ? 'bg-white/15 text-white'
+                                      : 'text-white/30'
+                                  }`}
+                                  title={`Bar ${barNum}, Beat ${beatNum} (Column ${colIdx + 1})`}
+                                >
+                                  {isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1513,27 +1581,62 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 const isDivBlockStart = colIdx % spanInt === 0;
 
                                 return (
-                                  <button
-                                    key={colIdx}
-                                    onClick={() => handlePianoRollCellClick(actualIdx, colIdx)}
-                                    className={`h-full rounded-xs transition-all cursor-pointer border ${
-                                      isSelected
-                                        ? 'shadow-sm scale-[1.02]'
-                                        : isCurrent
-                                        ? 'border-white/60 bg-white/25'
-                                        : isBarStart
-                                        ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-                                        : isBeatStart
-                                        ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-                                        : isDivBlockStart
-                                        ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
-                                        : 'border-white/5 bg-black/40 hover:bg-white/10'
-                                    }`}
-                                    style={{
-                                      backgroundColor: isSelected ? currentTrack.color : undefined,
-                                      borderColor: isSelected ? currentTrack.color : undefined,
-                                    }}
-                                  />
+                                  <div key={colIdx} className="h-full">
+                                    {noteDiv === '1/8' ? (
+                                      <div className="flex h-full gap-0.5">
+                                        {[0, 1].map((subCol) => {
+                                          const step = globalCol * 2 + subCol;
+                                          const isSubSelected = currentTrack.grid[step]?.includes(actualIdx) || false;
+                                          const isSubCurrent = isSeqPlaying && seqCurrentStep === step;
+                                          return (
+                                            <button
+                                              key={subCol}
+                                              onClick={() => handlePianoRollSubCellClick(actualIdx, colIdx, subCol)}
+                                              className={`flex-1 h-full rounded-xs transition-all cursor-pointer border ${
+                                                isSubSelected
+                                                  ? 'shadow-sm scale-[1.02]'
+                                                  : isSubCurrent
+                                                  ? 'border-white/60 bg-white/30'
+                                                  : isBarStart && subCol === 0
+                                                  ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                                                  : isBeatStart && subCol === 0
+                                                  ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                                                  : subCol === 1
+                                                  ? 'border-l border-white/10 bg-black/40 hover:bg-white/10'
+                                                  : 'border-white/5 bg-black/40 hover:bg-white/10'
+                                              }`}
+                                              style={{
+                                                backgroundColor: isSubSelected ? currentTrack.color : undefined,
+                                                borderColor: isSubSelected ? currentTrack.color : undefined,
+                                              }}
+                                              title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)`}
+                                            />
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => handlePianoRollCellClick(actualIdx, colIdx)}
+                                        className={`w-full h-full rounded-xs transition-all cursor-pointer border ${
+                                          isSelected
+                                            ? 'shadow-sm scale-[1.02]'
+                                            : isCurrent
+                                            ? 'border-white/60 bg-white/25'
+                                            : isBarStart
+                                            ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                                            : isBeatStart
+                                            ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                                            : isDivBlockStart
+                                            ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
+                                            : 'border-white/5 bg-black/40 hover:bg-white/10'
+                                        }`}
+                                        style={{
+                                          backgroundColor: isSelected ? currentTrack.color : undefined,
+                                          borderColor: isSelected ? currentTrack.color : undefined,
+                                        }}
+                                      />
+                                    )}
+                                  </div>
                                 );
                               })}
                             </div>
@@ -1561,31 +1664,59 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           const isBarStart = colInBar === 0;
 
                           return (
-                            <button
-                              key={colIdx}
-                              onClick={() => handleAccentCellClick(colIdx)}
-                              className={`py-0.5 text-center font-bold rounded-xs cursor-pointer border transition-all ${
-                                isCurrent
-                                  ? 'border-white bg-white text-black'
-                                  : isAccent
-                                  ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
-                                  : isBarStart
-                                  ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
-                                  : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
-                              }`}
-                            >
-                              {colIdx + 1}
-                            </button>
+                            <div key={colIdx} className="h-full">
+                              {noteDiv === '1/8' ? (
+                                <div className="flex h-full gap-0.5">
+                                  {[0, 1].map((subCol) => {
+                                    const step = globalCol * 2 + subCol;
+                                    const isSubAccent = currentTrack.accents[step] || false;
+                                    const isSubCurrent = isSeqPlaying && seqCurrentStep === step;
+                                    return (
+                                      <button
+                                        key={subCol}
+                                        onClick={() => handleAccentSubCellClick(colIdx, subCol)}
+                                        className={`flex-1 py-0.5 text-center text-[10px] font-bold rounded-xs cursor-pointer border transition-all ${
+                                          isSubCurrent
+                                            ? 'border-white bg-white text-black'
+                                            : isSubAccent
+                                            ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
+                                            : isBarStart && subCol === 0
+                                            ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
+                                            : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
+                                        }`}
+                                      >
+                                        {subCol === 0 ? colIdx + 1 : '·'}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleAccentCellClick(colIdx)}
+                                  className={`w-full py-0.5 text-center font-bold rounded-xs cursor-pointer border transition-all ${
+                                    isCurrent
+                                      ? 'border-white bg-white text-black'
+                                      : isAccent
+                                      ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
+                                      : isBarStart
+                                      ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
+                                      : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
+                                  }`}
+                                >
+                                  {colIdx + 1}
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
                     </div>
+
                   </div>
                 </div>
               </div>
 
-              
-{/* 3. MODULAR DSP SIGNAL FLOWCHART RACK (5 CONNECTED HARDWARE NODES) */}
+              {/* 3. MODULAR DSP SIGNAL FLOWCHART RACK (5 CONNECTED HARDWARE NODES) */}
               <div className="border border-white/15 p-1.5 bg-black/50 rounded-xs space-y-1 shrink-0 overflow-x-auto no-scrollbar">
                 <div className="flex items-center justify-between text-xs border-b border-white/10 pb-0.5 font-bold">
                   <span style={{ color: currentTrack.color }}>
