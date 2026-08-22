@@ -220,6 +220,90 @@ const MARIO_TRK1_GRID: number[][] = [
   [36], [], [36], [], [], [], [36], [], [], [], [36], [], [34], [], [], [],
   // BAR 16B (Steps 496..511)
   [32], [], [36], [], [], [], [39], [], [41], [], [], [], [], [], [], [],
+  // BAR 17A (Steps 512..527)
+  [32], [], [32], [], [], [], [32], [], [], [], [36], [], [32], [], [], [],
+  // BAR 17B (Steps 528..543)
+  [29], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  // BAR 18A (Steps 544..559)
+  [36], [], [], [], [], [], [41], [], [], [], [], [], [44], [], [], [],
+  // BAR 18B (Steps 560..575)
+  [], [], [39], [], [], [], [37], [], [], [], [38], [], [39], [], [], [],
+  // BAR 19A (Steps 576..591)
+  [41], [], [32], [], [], [29], [], [], [27], [], [], [], [31], [], [29], [],
+  // BAR 19B (Steps 592..607)
+  [], [], [32], [], [], [], [36], [], [34], [], [37], [], [], [], [], [],
+  // BAR 20A (Steps 608..623)
+  [36], [], [], [], [], [], [41], [], [], [], [], [], [44], [], [], [],
+  // BAR 20B (Steps 624..639)
+  [], [], [39], [], [], [], [37], [], [], [], [38], [], [39], [], [], [],
+  // BAR 21A (Steps 640..655)
+  [41], [], [32], [], [], [29], [], [], [27], [], [], [], [31], [], [29], [],
+  // BAR 21B (Steps 656..671)
+  [], [], [32], [], [], [], [36], [], [34], [], [37], [], [], [], [], [],
+  // BAR 22A (Steps 672..687)
+  [32], [], [36], [], [], [], [41], [], [], [], [], [], [40], [], [], [],
+  // BAR 22B (Steps 688..703)
+  [39], [], [31], [], [], [], [31], [], [39], [], [], [], [], [], [], [],
+  // BAR 23A (Steps 704..719)
+  [37], [], [27], [], [], [27], [], [], [27], [], [29], [], [], [31], [], [],
+  // BAR 23B (Steps 720..735)
+  [32], [], [36], [], [], [], [39], [], [41], [], [], [], [], [], [], [],
+  // BAR 24A (Steps 736..751)
+  [32], [], [36], [], [], [], [41], [], [], [], [], [], [40], [], [], [],
+  // BAR 24B (Steps 752..767)
+  [39], [], [31], [], [], [], [31], [], [39], [], [], [], [], [], [], [],
+  // BAR 25A (Steps 768..783)
+  [37], [], [31], [], [], [], [31], [], [31], [], [32], [], [], [34], [], [],
+  // BAR 25B (Steps 784..799)
+  [36], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  // BAR 26A (Steps 800..815)
+  [32], [], [36], [], [], [], [41], [], [], [], [], [], [40], [], [], [],
+  // BAR 26B (Steps 816..831)
+  [39], [], [31], [], [], [], [31], [], [39], [], [], [], [], [], [], [],
+  // BAR 27A (Steps 832..847)
+  [37], [], [27], [], [], [27], [], [], [27], [], [29], [], [], [31], [], [],
+  // BAR 27B (Steps 848..863)
+  [32], [], [36], [], [], [], [39], [], [41], [], [], [], [], [], [], [],
+  // BAR 28A (Steps 864..879)
+  [32], [], [36], [], [], [], [41], [], [], [], [], [], [40], [], [], [],
+  // BAR 28B (Steps 880..895)
+  [39], [], [31], [], [], [], [31], [], [39], [], [], [], [], [], [], [],
+  // BAR 29A (Steps 896..911)
+  [37], [], [31], [], [], [], [31], [], [31], [], [32], [], [], [34], [], [],
+  // BAR 29B (Steps 912..927)
+  [36], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  // BAR 30A (Steps 928..943)
+  [36], [], [36], [], [], [], [36], [], [], [], [36], [], [34], [], [], [],
+  // BAR 30B (Steps 944..959)
+  [32], [], [36], [], [], [], [39], [], [41], [], [], [], [], [], [], [],
+  // BAR 31A (Steps 960..975)
+  [36], [], [36], [], [], [], [36], [], [], [], [36], [], [34], [], [32], [],
+  // BAR 31B (Steps 976..991)
+  [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  // BAR 32A (Steps 992..1007)
+  [36], [], [36], [], [], [], [36], [], [], [], [36], [], [34], [], [], [],
+  // BAR 32B (Steps 1008..1023)
+  [32], [], [36], [], [], [], [39], [], [41], [], [], [], [], [], [], [],
+  // BAR 33A (Steps 1024..1039)
+  [32], [], [32], [], [], [], [32], [], [], [], [36], [], [32], [], [], [],
+  // BAR 33B (Steps 1040..1055)
+  [29], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  // BAR 34A (Steps 1056..1071)
+  [32], [], [36], [], [], [], [41], [], [], [], [], [], [40], [], [], [],
+  // BAR 34B (Steps 1072..1087)
+  [39], [], [31], [], [], [], [31], [], [39], [], [], [], [], [], [], [],
+  // BAR 35A (Steps 1088..1103)
+  [37], [], [27], [], [], [27], [], [], [27], [], [29], [], [], [31], [], [],
+  // BAR 35B (Steps 1104..1119)
+  [32], [], [36], [], [], [], [39], [], [41], [], [], [], [], [], [], [],
+  // BAR 36A (Steps 1120..1135)
+  [32], [], [36], [], [], [], [41], [], [], [], [], [], [40], [], [], [],
+  // BAR 36B (Steps 1136..1151)
+  [39], [], [31], [], [], [], [31], [], [39], [], [], [], [], [], [], [],
+  // BAR 37A (Steps 1152..1167)
+  [37], [], [31], [], [], [], [31], [], [31], [], [32], [], [], [34], [], [],
+  // BAR 37B (Steps 1168..1183)
+  [36], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
 ];
 
 const MARIO_TRK1_ACCENTS: boolean[] = [
@@ -287,6 +371,90 @@ const MARIO_TRK1_ACCENTS: boolean[] = [
   true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
   // BAR 16B (Steps 496..511)
   true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 17A (Steps 512..527)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 17B (Steps 528..543)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 18A (Steps 544..559)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 18B (Steps 560..575)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 19A (Steps 576..591)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 19B (Steps 592..607)
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 20A (Steps 608..623)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 20B (Steps 624..639)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 21A (Steps 640..655)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 21B (Steps 656..671)
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 22A (Steps 672..687)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 22B (Steps 688..703)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 23A (Steps 704..719)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 23B (Steps 720..735)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 24A (Steps 736..751)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 24B (Steps 752..767)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 25A (Steps 768..783)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 25B (Steps 784..799)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 26A (Steps 800..815)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 26B (Steps 816..831)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 27A (Steps 832..847)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 27B (Steps 848..863)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 28A (Steps 864..879)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 28B (Steps 880..895)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 29A (Steps 896..911)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 29B (Steps 912..927)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 30A (Steps 928..943)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 30B (Steps 944..959)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 31A (Steps 960..975)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 31B (Steps 976..991)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 32A (Steps 992..1007)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 32B (Steps 1008..1023)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 33A (Steps 1024..1039)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 33B (Steps 1040..1055)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 34A (Steps 1056..1071)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 34B (Steps 1072..1087)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 35A (Steps 1088..1103)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 35B (Steps 1104..1119)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 36A (Steps 1120..1135)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 36B (Steps 1136..1151)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 37A (Steps 1152..1167)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 37B (Steps 1168..1183)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
 ];
 
 const MARIO_TRK2_GRID: number[][] = [
@@ -353,6 +521,90 @@ const MARIO_TRK2_GRID: number[][] = [
   // BAR 16A (Steps 480..495)
   [40], [], [40], [], [], [], [40], [], [], [], [40], [], [38], [], [], [],
   // BAR 16B (Steps 496..511)
+  [41], [], [44], [], [], [], [44], [], [48], [], [], [], [], [], [], [],
+  // BAR 17A (Steps 512..527)
+  [42], [], [42], [], [], [], [42], [], [], [], [42], [], [42], [], [], [],
+  // BAR 17B (Steps 528..543)
+  [37], [], [], [], [], [], [], [], [41], [], [], [], [], [], [], [],
+  // BAR 18A (Steps 544..559)
+  [44], [], [], [], [], [], [48], [], [], [], [], [], [53], [], [], [],
+  // BAR 18B (Steps 560..575)
+  [], [], [48], [], [], [], [46], [], [], [], [47], [], [48], [], [], [],
+  // BAR 19A (Steps 576..591)
+  [48], [], [41], [], [], [37], [], [], [36], [], [], [], [39], [], [37], [],
+  // BAR 19B (Steps 592..607)
+  [], [], [39], [], [], [], [44], [], [43], [], [46], [], [], [], [], [],
+  // BAR 20A (Steps 608..623)
+  [44], [], [], [], [], [], [48], [], [], [], [], [], [53], [], [], [],
+  // BAR 20B (Steps 624..639)
+  [], [], [48], [], [], [], [46], [], [], [], [47], [], [48], [], [], [],
+  // BAR 21A (Steps 640..655)
+  [48], [], [41], [], [], [37], [], [], [36], [], [], [], [39], [], [37], [],
+  // BAR 21B (Steps 656..671)
+  [], [], [39], [], [], [], [44], [], [43], [], [46], [], [], [], [], [],
+  // BAR 22A (Steps 672..687)
+  [36], [], [39], [], [], [], [44], [], [], [], [], [], [44], [], [], [],
+  // BAR 22B (Steps 688..703)
+  [43], [], [36], [], [], [], [36], [], [43], [], [], [], [], [], [], [],
+  // BAR 23A (Steps 704..719)
+  [41], [], [31], [], [], [31], [], [], [31], [], [32], [], [], [34], [], [],
+  // BAR 23B (Steps 720..735)
+  [36], [], [39], [], [], [], [43], [], [44], [], [], [], [], [], [], [],
+  // BAR 24A (Steps 736..751)
+  [36], [], [39], [], [], [], [44], [], [], [], [], [], [44], [], [], [],
+  // BAR 24B (Steps 752..767)
+  [43], [], [36], [], [], [], [36], [], [43], [], [], [], [], [], [], [],
+  // BAR 25A (Steps 768..783)
+  [41], [], [34], [], [], [], [34], [], [34], [], [36], [], [], [37], [], [],
+  // BAR 25B (Steps 784..799)
+  [41], [], [44], [], [], [], [44], [], [48], [], [], [], [], [], [], [],
+  // BAR 26A (Steps 800..815)
+  [36], [], [39], [], [], [], [44], [], [], [], [], [], [44], [], [], [],
+  // BAR 26B (Steps 816..831)
+  [43], [], [36], [], [], [], [36], [], [43], [], [], [], [], [], [], [],
+  // BAR 27A (Steps 832..847)
+  [41], [], [31], [], [], [31], [], [], [31], [], [32], [], [], [34], [], [],
+  // BAR 27B (Steps 848..863)
+  [36], [], [39], [], [], [], [43], [], [44], [], [], [], [], [], [], [],
+  // BAR 28A (Steps 864..879)
+  [36], [], [39], [], [], [], [44], [], [], [], [], [], [44], [], [], [],
+  // BAR 28B (Steps 880..895)
+  [43], [], [36], [], [], [], [36], [], [43], [], [], [], [], [], [], [],
+  // BAR 29A (Steps 896..911)
+  [41], [], [34], [], [], [], [34], [], [34], [], [36], [], [], [37], [], [],
+  // BAR 29B (Steps 912..927)
+  [41], [], [44], [], [], [], [44], [], [48], [], [], [], [], [], [], [],
+  // BAR 30A (Steps 928..943)
+  [40], [], [40], [], [], [], [40], [], [], [], [40], [], [38], [], [], [],
+  // BAR 30B (Steps 944..959)
+  [41], [], [44], [], [], [], [44], [], [48], [], [], [], [], [], [], [],
+  // BAR 31A (Steps 960..975)
+  [40], [], [40], [], [], [], [40], [], [], [], [40], [], [38], [], [41], [],
+  // BAR 31B (Steps 976..991)
+  [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [],
+  // BAR 32A (Steps 992..1007)
+  [40], [], [40], [], [], [], [40], [], [], [], [40], [], [38], [], [], [],
+  // BAR 32B (Steps 1008..1023)
+  [41], [], [44], [], [], [], [44], [], [48], [], [], [], [], [], [], [],
+  // BAR 33A (Steps 1024..1039)
+  [42], [], [42], [], [], [], [42], [], [], [], [42], [], [42], [], [], [],
+  // BAR 33B (Steps 1040..1055)
+  [37], [], [], [], [], [], [], [], [41], [], [], [], [], [], [], [],
+  // BAR 34A (Steps 1056..1071)
+  [36], [], [39], [], [], [], [44], [], [], [], [], [], [44], [], [], [],
+  // BAR 34B (Steps 1072..1087)
+  [43], [], [36], [], [], [], [36], [], [43], [], [], [], [], [], [], [],
+  // BAR 35A (Steps 1088..1103)
+  [41], [], [31], [], [], [31], [], [], [31], [], [32], [], [], [34], [], [],
+  // BAR 35B (Steps 1104..1119)
+  [36], [], [39], [], [], [], [43], [], [44], [], [], [], [], [], [], [],
+  // BAR 36A (Steps 1120..1135)
+  [36], [], [39], [], [], [], [44], [], [], [], [], [], [44], [], [], [],
+  // BAR 36B (Steps 1136..1151)
+  [43], [], [36], [], [], [], [36], [], [43], [], [], [], [], [], [], [],
+  // BAR 37A (Steps 1152..1167)
+  [41], [], [34], [], [], [], [34], [], [34], [], [36], [], [], [37], [], [],
+  // BAR 37B (Steps 1168..1183)
   [41], [], [44], [], [], [], [44], [], [48], [], [], [], [], [], [], [],
 ];
 
@@ -421,6 +673,90 @@ const MARIO_TRK2_ACCENTS: boolean[] = [
   true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
   // BAR 16B (Steps 496..511)
   true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 17A (Steps 512..527)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 17B (Steps 528..543)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 18A (Steps 544..559)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 18B (Steps 560..575)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 19A (Steps 576..591)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 19B (Steps 592..607)
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 20A (Steps 608..623)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 20B (Steps 624..639)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 21A (Steps 640..655)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 21B (Steps 656..671)
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 22A (Steps 672..687)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 22B (Steps 688..703)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 23A (Steps 704..719)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 23B (Steps 720..735)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 24A (Steps 736..751)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 24B (Steps 752..767)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 25A (Steps 768..783)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 25B (Steps 784..799)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 26A (Steps 800..815)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 26B (Steps 816..831)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 27A (Steps 832..847)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 27B (Steps 848..863)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 28A (Steps 864..879)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 28B (Steps 880..895)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 29A (Steps 896..911)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 29B (Steps 912..927)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 30A (Steps 928..943)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 30B (Steps 944..959)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 31A (Steps 960..975)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 31B (Steps 976..991)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 32A (Steps 992..1007)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 32B (Steps 1008..1023)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 33A (Steps 1024..1039)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 33B (Steps 1040..1055)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 34A (Steps 1056..1071)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 34B (Steps 1072..1087)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 35A (Steps 1088..1103)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 35B (Steps 1104..1119)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 36A (Steps 1120..1135)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 36B (Steps 1136..1151)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 37A (Steps 1152..1167)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 37B (Steps 1168..1183)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
 ];
 
 const MARIO_TRK3_GRID: number[][] = [
@@ -488,6 +824,90 @@ const MARIO_TRK3_GRID: number[][] = [
   [64], [], [], [], [], [], [57], [], [], [], [], [], [52], [], [], [],
   // BAR 16B (Steps 496..511)
   [53], [], [], [], [], [], [60], [], [], [], [], [], [65], [], [], [],
+  // BAR 17A (Steps 512..527)
+  [58], [], [58], [], [], [], [58], [], [], [], [58], [], [58], [], [], [],
+  // BAR 17B (Steps 528..543)
+  [41], [], [], [], [], [], [], [], [53], [], [], [], [], [], [], [],
+  // BAR 18A (Steps 544..559)
+  [53], [], [], [], [], [], [56], [], [], [], [], [], [60], [], [], [],
+  // BAR 18B (Steps 560..575)
+  [], [], [55], [], [], [], [53], [], [], [], [54], [], [55], [], [], [],
+  // BAR 19A (Steps 576..591)
+  [56], [], [48], [], [], [44], [], [], [43], [], [], [], [46], [], [44], [],
+  // BAR 19B (Steps 592..607)
+  [], [], [48], [], [], [], [51], [], [49], [], [53], [], [], [], [], [],
+  // BAR 20A (Steps 608..623)
+  [53], [], [], [], [], [], [56], [], [], [], [], [], [60], [], [], [],
+  // BAR 20B (Steps 624..639)
+  [], [], [55], [], [], [], [53], [], [], [], [54], [], [55], [], [], [],
+  // BAR 21A (Steps 640..655)
+  [56], [], [48], [], [], [44], [], [], [43], [], [], [], [46], [], [44], [],
+  // BAR 21B (Steps 656..671)
+  [], [], [48], [], [], [], [51], [], [49], [], [53], [], [], [], [], [],
+  // BAR 22A (Steps 672..687)
+  [60], [], [], [], [], [], [54], [], [53], [], [], [], [48], [], [], [],
+  // BAR 22B (Steps 688..703)
+  [55], [], [], [], [55], [], [], [], [48], [], [48], [], [55], [], [], [],
+  // BAR 23A (Steps 704..719)
+  [58], [], [], [], [], [], [55], [], [53], [], [], [], [49], [], [], [],
+  // BAR 23B (Steps 720..735)
+  [53], [], [], [], [53], [], [], [], [48], [], [48], [], [53], [], [], [],
+  // BAR 24A (Steps 736..751)
+  [60], [], [], [], [], [], [54], [], [53], [], [], [], [48], [], [], [],
+  // BAR 24B (Steps 752..767)
+  [55], [], [], [], [55], [], [], [], [48], [], [48], [], [55], [], [], [],
+  // BAR 25A (Steps 768..783)
+  [53], [], [53], [], [], [], [53], [], [53], [], [51], [], [], [49], [], [],
+  // BAR 25B (Steps 784..799)
+  [48], [], [], [], [53], [], [], [], [60], [], [], [], [], [], [], [],
+  // BAR 26A (Steps 800..815)
+  [60], [], [], [], [], [], [54], [], [53], [], [], [], [48], [], [], [],
+  // BAR 26B (Steps 816..831)
+  [55], [], [], [], [55], [], [], [], [48], [], [48], [], [55], [], [], [],
+  // BAR 27A (Steps 832..847)
+  [58], [], [], [], [], [], [55], [], [53], [], [], [], [49], [], [], [],
+  // BAR 27B (Steps 848..863)
+  [53], [], [], [], [53], [], [], [], [48], [], [48], [], [53], [], [], [],
+  // BAR 28A (Steps 864..879)
+  [60], [], [], [], [], [], [54], [], [53], [], [], [], [48], [], [], [],
+  // BAR 28B (Steps 880..895)
+  [55], [], [], [], [55], [], [], [], [48], [], [48], [], [55], [], [], [],
+  // BAR 29A (Steps 896..911)
+  [53], [], [53], [], [], [], [53], [], [53], [], [51], [], [], [49], [], [],
+  // BAR 29B (Steps 912..927)
+  [48], [], [], [], [53], [], [], [], [60], [], [], [], [], [], [], [],
+  // BAR 30A (Steps 928..943)
+  [64], [], [], [], [], [], [57], [], [], [], [], [], [52], [], [], [],
+  // BAR 30B (Steps 944..959)
+  [53], [], [], [], [], [], [60], [], [], [], [], [], [65], [], [], [],
+  // BAR 31A (Steps 960..975)
+  [64], [], [], [], [], [], [57], [], [], [], [], [], [52], [], [], [],
+  // BAR 31B (Steps 976..991)
+  [53], [], [], [], [], [], [60], [], [], [], [], [], [65], [], [], [],
+  // BAR 32A (Steps 992..1007)
+  [64], [], [], [], [], [], [57], [], [], [], [], [], [52], [], [], [],
+  // BAR 32B (Steps 1008..1023)
+  [53], [], [], [], [], [], [60], [], [], [], [], [], [65], [], [], [],
+  // BAR 33A (Steps 1024..1039)
+  [58], [], [58], [], [], [], [58], [], [], [], [58], [], [58], [], [], [],
+  // BAR 33B (Steps 1040..1055)
+  [41], [], [], [], [], [], [], [], [53], [], [], [], [], [], [], [],
+  // BAR 34A (Steps 1056..1071)
+  [60], [], [], [], [], [], [54], [], [53], [], [], [], [48], [], [], [],
+  // BAR 34B (Steps 1072..1087)
+  [55], [], [], [], [55], [], [], [], [48], [], [48], [], [55], [], [], [],
+  // BAR 35A (Steps 1088..1103)
+  [58], [], [], [], [], [], [55], [], [53], [], [], [], [49], [], [], [],
+  // BAR 35B (Steps 1104..1119)
+  [53], [], [], [], [53], [], [], [], [48], [], [48], [], [53], [], [], [],
+  // BAR 36A (Steps 1120..1135)
+  [60], [], [], [], [], [], [54], [], [53], [], [], [], [48], [], [], [],
+  // BAR 36B (Steps 1136..1151)
+  [55], [], [], [], [55], [], [], [], [48], [], [48], [], [55], [], [], [],
+  // BAR 37A (Steps 1152..1167)
+  [53], [], [53], [], [], [], [53], [], [53], [], [51], [], [], [49], [], [],
+  // BAR 37B (Steps 1168..1183)
+  [48], [], [], [], [53], [], [], [], [60], [], [], [], [], [], [], [],
 ];
 
 const MARIO_TRK3_ACCENTS: boolean[] = [
@@ -555,6 +975,392 @@ const MARIO_TRK3_ACCENTS: boolean[] = [
   true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
   // BAR 16B (Steps 496..511)
   true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 17A (Steps 512..527)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 17B (Steps 528..543)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 18A (Steps 544..559)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 18B (Steps 560..575)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 19A (Steps 576..591)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 19B (Steps 592..607)
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 20A (Steps 608..623)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 20B (Steps 624..639)
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 21A (Steps 640..655)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 21B (Steps 656..671)
+  false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 22A (Steps 672..687)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 22B (Steps 688..703)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 23A (Steps 704..719)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 23B (Steps 720..735)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 24A (Steps 736..751)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 24B (Steps 752..767)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 25A (Steps 768..783)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 25B (Steps 784..799)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 26A (Steps 800..815)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 26B (Steps 816..831)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 27A (Steps 832..847)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 27B (Steps 848..863)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 28A (Steps 864..879)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 28B (Steps 880..895)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 29A (Steps 896..911)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 29B (Steps 912..927)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 30A (Steps 928..943)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 30B (Steps 944..959)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 31A (Steps 960..975)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 31B (Steps 976..991)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 32A (Steps 992..1007)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 32B (Steps 1008..1023)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 33A (Steps 1024..1039)
+  true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  // BAR 33B (Steps 1040..1055)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 34A (Steps 1056..1071)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 34B (Steps 1072..1087)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 35A (Steps 1088..1103)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 35B (Steps 1104..1119)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 36A (Steps 1120..1135)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 36B (Steps 1136..1151)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 37A (Steps 1152..1167)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+  // BAR 37B (Steps 1168..1183)
+  true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false,
+];
+
+const MARIO_TRK4_GRID: number[][] = [
+  // BAR 1A (Steps 0..15)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 1B (Steps 16..31)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 2A (Steps 32..47)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 2B (Steps 48..63)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 3A (Steps 64..79)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 3B (Steps 80..95)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 4A (Steps 96..111)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 4B (Steps 112..127)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 5A (Steps 128..143)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 5B (Steps 144..159)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 6A (Steps 160..175)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 6B (Steps 176..191)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 7A (Steps 192..207)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 7B (Steps 208..223)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 8A (Steps 224..239)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 8B (Steps 240..255)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 9A (Steps 256..271)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 9B (Steps 272..287)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 10A (Steps 288..303)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 10B (Steps 304..319)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 11A (Steps 320..335)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 11B (Steps 336..351)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 12A (Steps 352..367)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 12B (Steps 368..383)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 13A (Steps 384..399)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 13B (Steps 400..415)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 14A (Steps 416..431)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 14B (Steps 432..447)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 15A (Steps 448..463)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 15B (Steps 464..479)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 16A (Steps 480..495)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 16B (Steps 496..511)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 17A (Steps 512..527)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 17B (Steps 528..543)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 18A (Steps 544..559)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 18B (Steps 560..575)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 19A (Steps 576..591)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 19B (Steps 592..607)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 20A (Steps 608..623)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 20B (Steps 624..639)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 21A (Steps 640..655)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 21B (Steps 656..671)
+  [48], [], [], [], [48], [], [48], [], [48], [], [], [], [48], [], [48], [],
+  // BAR 22A (Steps 672..687)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 22B (Steps 688..703)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 23A (Steps 704..719)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 23B (Steps 720..735)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 24A (Steps 736..751)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 24B (Steps 752..767)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 25A (Steps 768..783)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 25B (Steps 784..799)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 26A (Steps 800..815)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 26B (Steps 816..831)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 27A (Steps 832..847)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 27B (Steps 848..863)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 28A (Steps 864..879)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 28B (Steps 880..895)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 29A (Steps 896..911)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 29B (Steps 912..927)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 30A (Steps 928..943)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 30B (Steps 944..959)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 31A (Steps 960..975)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 31B (Steps 976..991)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 32A (Steps 992..1007)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 32B (Steps 1008..1023)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 33A (Steps 1024..1039)
+  [48], [], [], [], [48], [], [48], [], [], [], [48], [], [48], [], [], [],
+  // BAR 33B (Steps 1040..1055)
+  [48], [], [], [], [], [], [48], [], [], [], [48], [], [48], [], [48], [],
+  // BAR 34A (Steps 1056..1071)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 34B (Steps 1072..1087)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 35A (Steps 1088..1103)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 35B (Steps 1104..1119)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 36A (Steps 1120..1135)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 36B (Steps 1136..1151)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 37A (Steps 1152..1167)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+  // BAR 37B (Steps 1168..1183)
+  [48], [], [], [], [], [], [48], [], [48], [], [], [], [48], [], [], [],
+];
+
+const MARIO_TRK4_ACCENTS: boolean[] = [
+  // BAR 1A (Steps 0..15)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 1B (Steps 16..31)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 2A (Steps 32..47)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 2B (Steps 48..63)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 3A (Steps 64..79)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 3B (Steps 80..95)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 4A (Steps 96..111)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 4B (Steps 112..127)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 5A (Steps 128..143)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 5B (Steps 144..159)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 6A (Steps 160..175)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 6B (Steps 176..191)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 7A (Steps 192..207)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 7B (Steps 208..223)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 8A (Steps 224..239)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 8B (Steps 240..255)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 9A (Steps 256..271)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 9B (Steps 272..287)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 10A (Steps 288..303)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 10B (Steps 304..319)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 11A (Steps 320..335)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 11B (Steps 336..351)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 12A (Steps 352..367)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 12B (Steps 368..383)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 13A (Steps 384..399)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 13B (Steps 400..415)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 14A (Steps 416..431)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 14B (Steps 432..447)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 15A (Steps 448..463)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 15B (Steps 464..479)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 16A (Steps 480..495)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 16B (Steps 496..511)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 17A (Steps 512..527)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 17B (Steps 528..543)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 18A (Steps 544..559)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 18B (Steps 560..575)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 19A (Steps 576..591)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 19B (Steps 592..607)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 20A (Steps 608..623)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 20B (Steps 624..639)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 21A (Steps 640..655)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 21B (Steps 656..671)
+  true, false, false, false, true, false, true, false, true, false, false, false, true, false, true, false,
+  // BAR 22A (Steps 672..687)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 22B (Steps 688..703)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 23A (Steps 704..719)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 23B (Steps 720..735)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 24A (Steps 736..751)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 24B (Steps 752..767)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 25A (Steps 768..783)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 25B (Steps 784..799)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 26A (Steps 800..815)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 26B (Steps 816..831)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 27A (Steps 832..847)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 27B (Steps 848..863)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 28A (Steps 864..879)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 28B (Steps 880..895)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 29A (Steps 896..911)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 29B (Steps 912..927)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 30A (Steps 928..943)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 30B (Steps 944..959)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 31A (Steps 960..975)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 31B (Steps 976..991)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 32A (Steps 992..1007)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 32B (Steps 1008..1023)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 33A (Steps 1024..1039)
+  true, false, false, false, true, false, true, false, false, false, true, false, true, false, false, false,
+  // BAR 33B (Steps 1040..1055)
+  true, false, false, false, false, false, true, false, false, false, true, false, true, false, true, false,
+  // BAR 34A (Steps 1056..1071)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 34B (Steps 1072..1087)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 35A (Steps 1088..1103)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 35B (Steps 1104..1119)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 36A (Steps 1120..1135)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 36B (Steps 1136..1151)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 37A (Steps 1152..1167)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
+  // BAR 37B (Steps 1168..1183)
+  true, false, false, false, false, false, true, false, true, false, false, false, true, false, false, false,
 ];
 
 export const INITIAL_TRACKS: TrackData[] = [
@@ -567,33 +1373,33 @@ export const INITIAL_TRACKS: TrackData[] = [
     muted: false,
     solo: false,
 
-    // Node 1: Crisp Chiptune Pulse
+    // Node 1: Authentic NES 2A03 50%/25% Pulse Lead
     osc1Waveform: 'square',
-    osc1Gain: 0.9,
-    osc2Waveform: 'sawtooth',
-    osc2Gain: 0.25,
+    osc1Gain: 0.95,
+    osc2Waveform: 'square',
+    osc2Gain: 0.15,
     osc2Ratio: 1.0,
-    detuneCents: 3,
+    detuneCents: 2,
     phaseOffset: 0,
 
     // Node 2: Layer Timbre
     blendMode: 'layer',
-    morphAmount: 0.2,
+    morphAmount: 0.1,
 
-    // Node 3: Open Punchy VCF Filter
+    // Node 3: Punchy Chiptune Lowpass
     filterType: 'lowpass',
-    cutoff: 6200,
-    resonance: 2.8,
-    envFilterMod: 0.45,
+    cutoff: 8500,
+    resonance: 1.8,
+    envFilterMod: 0.35,
 
-    // Node 4: Snappy 8-Bit ADSR Envelope
-    attack: 0.008,
+    // Node 4: Snappy 8-Bit Envelope
+    attack: 0.003,
     decay: 0.12,
-    sustain: 0.4,
-    release: 0.14,
+    sustain: 0.45,
+    release: 0.08,
     lfoWaveform: 'sine',
     lfoRate: 4.5,
-    lfoDepth: 0.1,
+    lfoDepth: 0.05,
     lfoTarget: 'pitch',
 
     grid: MARIO_TRK1_GRID,
@@ -604,37 +1410,37 @@ export const INITIAL_TRACKS: TrackData[] = [
     name: 'TRK 2: PULSE 2 (HARMONY)',
     color: '#56b6c2',
     volume: 0.85,
-    pan: 0.25,
+    pan: 0.2,
     muted: false,
     solo: false,
 
-    // Node 1: Dual Polyphonic Square / Sine Voice
+    // Node 1: Authentic NES 2A03 Pulse 2 Harmony
     osc1Waveform: 'square',
-    osc1Gain: 0.8,
-    osc2Waveform: 'triangle',
-    osc2Gain: 0.5,
+    osc1Gain: 0.9,
+    osc2Waveform: 'square',
+    osc2Gain: 0.1,
     osc2Ratio: 1.0,
-    detuneCents: -4,
+    detuneCents: -2,
     phaseOffset: 45,
 
     // Node 2: Layer Timbre
     blendMode: 'layer',
-    morphAmount: 0.25,
+    morphAmount: 0.1,
 
-    // Node 3: Warm Lowpass
+    // Node 3: Lowpass Filter
     filterType: 'lowpass',
-    cutoff: 5200,
-    resonance: 2.4,
-    envFilterMod: 0.35,
+    cutoff: 7200,
+    resonance: 1.5,
+    envFilterMod: 0.25,
 
-    // Node 4: Chime ADSR
-    attack: 0.008,
+    // Node 4: Chiptune Envelope
+    attack: 0.003,
     decay: 0.14,
     sustain: 0.4,
-    release: 0.16,
+    release: 0.08,
     lfoWaveform: 'triangle',
-    lfoRate: 5.0,
-    lfoDepth: 0.12,
+    lfoRate: 4.0,
+    lfoDepth: 0.04,
     lfoTarget: 'pitch',
 
     grid: MARIO_TRK2_GRID,
@@ -644,42 +1450,83 @@ export const INITIAL_TRACKS: TrackData[] = [
     id: 2,
     name: 'TRK 3: TRIANGLE (BASS)',
     color: '#c678dd',
-    volume: 0.95,
+    volume: 1.0,
     pan: 0.0,
     muted: false,
     solo: false,
 
-    // Node 1: Deep Triangle Sub-Bass
+    // Node 1: Authentic NES 2A03 Pure Triangle Bass
     osc1Waveform: 'triangle',
-    osc1Gain: 0.95,
+    osc1Gain: 1.0,
     osc2Waveform: 'sine',
-    osc2Gain: 0.4,
+    osc2Gain: 0.2,
     osc2Ratio: 1.0,
     detuneCents: 0,
     phaseOffset: 0,
 
     // Node 2: Pure Sub Layer
     blendMode: 'layer',
-    morphAmount: 0.1,
+    morphAmount: 0.05,
 
     // Node 3: Lowpass Sub-Bass
     filterType: 'lowpass',
-    cutoff: 3200,
-    resonance: 1.5,
-    envFilterMod: 0.2,
+    cutoff: 3500,
+    resonance: 1.0,
+    envFilterMod: 0.15,
 
-    // Node 4: Bouncy Bass Envelope
-    attack: 0.008,
+    // Node 4: Bouncy Bass Gating
+    attack: 0.003,
     decay: 0.2,
-    sustain: 0.6,
-    release: 0.15,
+    sustain: 0.7,
+    release: 0.06,
     lfoWaveform: 'sine',
     lfoRate: 3.0,
-    lfoDepth: 0.05,
+    lfoDepth: 0.0,
     lfoTarget: 'filter',
 
     grid: MARIO_TRK3_GRID,
     accents: MARIO_TRK3_ACCENTS,
+  },
+  {
+    id: 3,
+    name: 'TRK 4: NOISE (PERCUSSION)',
+    color: '#e06c75',
+    volume: 0.9,
+    pan: 0.05,
+    muted: false,
+    solo: false,
+
+    // Node 1: Authentic NES 2A03 White Noise Percussion
+    osc1Waveform: 'noise',
+    osc1Gain: 0.95,
+    osc2Waveform: 'triangle',
+    osc2Gain: 0.15,
+    osc2Ratio: 1.0,
+    detuneCents: 0,
+    phaseOffset: 0,
+
+    // Node 2: Percussive Mode
+    blendMode: 'layer',
+    morphAmount: 0.0,
+
+    // Node 3: Bandpass Snare / Hi-Hat Filter
+    filterType: 'bandpass',
+    cutoff: 6500,
+    resonance: 3.2,
+    envFilterMod: 0.4,
+
+    // Node 4: Ultra-Fast Percussion Envelope
+    attack: 0.002,
+    decay: 0.05,
+    sustain: 0.0,
+    release: 0.035,
+    lfoWaveform: 'square',
+    lfoRate: 10.0,
+    lfoDepth: 0.0,
+    lfoTarget: 'amp',
+
+    grid: MARIO_TRK4_GRID,
+    accents: MARIO_TRK4_ACCENTS,
   },
 ];
 
@@ -701,7 +1548,7 @@ class ModularSynth {
   private noiseBuffer: AudioBuffer | null = null;
 
   // Master Global Params (100 BPM for Authentic Original NES Super Mario Bros Groove)
-  private bpm: number = 100;
+  private bpm: number = 105;
   private granularity: StepGranularity = '1/8';
   private delayMix: number = 0.18;
   private delayTime: number = 0.22;
@@ -718,7 +1565,7 @@ class ModularSynth {
   // Sequencer Engine (512 Steps, 32 Bars)
   private isSequencerPlaying: boolean = false;
   private currentStep: number = 0;
-  private totalSteps: number = 512; // Default 512 steps (32 Bars), configurable: 16, 32, 64, 128, 256, 512
+  private totalSteps: number = 1184; // Default 512 steps (32 Bars), configurable: 16, 32, 64, 128, 256, 512
   private sequencerTimer: any = null;
   private onStepListeners: Set<(step: number) => void> = new Set();
 

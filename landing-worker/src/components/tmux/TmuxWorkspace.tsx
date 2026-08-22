@@ -1092,7 +1092,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   {/* Sequence Length */}
                   <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
                     <span className="opacity-60">LEN:</span>
-                    {([16, 32, 64, 128, 256, 512] as const).map((len) => (
+                    {([16, 32, 64, 128, 256, 512, 1184] as const).map((len) => (
                       <button
                         key={len}
                         onClick={() => {
@@ -1107,12 +1107,12 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             : 'border-white/20 text-white/70 hover:border-white/50'
                         }`}
                       >
-                        {len}
+                        {len === 1184 ? 'ALL' : len}
                       </button>
                     ))}
                   </div>
 
-                  {/* Bar / Page Tabs (Supports up to 32 Bars for 512 Steps) */}
+                  {/* Bar / Page Tabs (Supports up to 74 Pages for 1184 Steps) */}
                   <div className="flex items-center gap-0.5 text-xs border-l border-white/15 pl-1.5 max-w-[180px] sm:max-w-[340px] overflow-x-auto no-scrollbar">
                     <span className="opacity-60 shrink-0">BAR:</span>
                     {Array.from({ length: Math.ceil(totalPatternSteps / 16) }).map((_, pIdx) => {
@@ -1175,7 +1175,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              {/* 2. FULL-BLEED 3-OCTAVE PIANO ROLL MATRIX (8-VOICE POLYPHONIC + DYNAMIC 512 STEPS) */}
+              {/* 2. FULL-BLEED 3-OCTAVE PIANO ROLL MATRIX (8-VOICE POLYPHONIC + DYNAMIC 1184 STEPS) */}
               <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
                 {/* Header with Title, Playhead Tracker, Octaves & Presets */}
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
@@ -1194,14 +1194,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => {
-                          // Reload Super Mario Theme Score (Exact MIDI-Aligned 512-Step 1/8 Beat NES Score)
+                          // Reload Super Mario Theme Score (Exact 100% Complete 1184-Step 4-Track NES Score)
                           INITIAL_TRACKS.forEach((initT, trkId) => {
                             initT.grid.forEach((notes, sIdx) => {
                               modularSynth.setTrackStepNotes(trkId, sIdx, notes);
                             });
                           });
-                          modularSynth.setTotalSteps(512);
-                          setTotalPatternSteps(512);
+                          modularSynth.setTotalSteps(1184);
+                          setTotalPatternSteps(1184);
                           setSynthBpm(105);
                           modularSynth.setBpm(105);
                           setSynthGranularity('1/8');
@@ -1210,7 +1210,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           playSound('power');
                         }}
                         className="border border-[#e06c75] bg-[#e06c75]/20 text-[#e06c75] px-1.5 py-0.5 rounded-xs hover:bg-[#e06c75] hover:text-black cursor-pointer font-black flex items-center gap-1"
-                        title="Load Super Mario Bros Overworld 512-Step Complete Score (1/8 Beat Granularity)"
+                        title="Load Super Mario Bros Overworld Complete 1184-Step 4-Track Score (Exact overworld.mid)"
                       >
                         <span>🍄 MARIO</span>
                       </button>
