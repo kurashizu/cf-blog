@@ -1599,6 +1599,7 @@ class ModularSynth {
   private delayTime: number = 0.22;
   private delayFeedback: number = 0.32;
   private reverbMix: number = 0.15;
+  private driveAmount: number = 0.0;
 
   // Master Audio FX Nodes
   private delayNode: DelayNode | null = null;
@@ -1606,6 +1607,7 @@ class ModularSynth {
   private delayWetGain: GainNode | null = null;
   private reverbConvolver: ConvolverNode | null = null;
   private reverbWetGain: GainNode | null = null;
+  private waveShaper: WaveShaperNode | null = null;
 
   // Sequencer Engine (512 Steps, 32 Bars)
   private isSequencerPlaying: boolean = false;
@@ -1671,6 +1673,28 @@ class ModularSynth {
 
     this.reverbConvolver.connect(this.reverbWetGain);
     this.reverbWetGain.connect(masterGain);
+
+    // Master Warm Tape Overdrive / WaveShaper Saturation
+    this.waveShaper = ctx.createWaveShaper();
+    (this.waveShaper as any).curve = this.makeDistortionCurve(this.driveAmount);
+    this.waveShaper.oversample = '2x';
+    this.waveShaper.connect(masterGain);
+  }
+
+  private makeDistortionCurve(amount: number): Float32Array {
+    const k = typeof amount === 'number' ? amount * 50 : 0;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+      if (k === 0) {
+        curve[i] = x;
+      } else {
+        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+      }
+    }
+    return curve;
   }
 
   
@@ -1801,6 +1825,47 @@ class ModularSynth {
     if (this.reverbWetGain) {
       this.reverbWetGain.gain.setValueAtTime(mix, 0);
     }
+  }
+
+  public getDelayMix(): number {
+    return this.delayMix;
+  }
+
+  public getReverbMix(): number {
+    return this.reverbMix;
+  }
+
+  public setDelayTime(t: number) {
+    this.delayTime = Math.max(0.01, Math.min(2.0, t));
+    if (this.delayNode) {
+      this.delayNode.delayTime.setValueAtTime(this.delayTime, 0);
+    }
+  }
+
+  public getDelayTime(): number {
+    return this.delayTime;
+  }
+
+  public setDelayFeedback(fb: number) {
+    this.delayFeedback = Math.max(0.0, Math.min(0.9, fb));
+    if (this.delayFeedbackGain) {
+      this.delayFeedbackGain.gain.setValueAtTime(this.delayFeedback, 0);
+    }
+  }
+
+  public getDelayFeedback(): number {
+    return this.delayFeedback;
+  }
+
+  public setDrive(drive: number) {
+    this.driveAmount = Math.max(0.0, Math.min(1.0, drive));
+    if (this.waveShaper) {
+      (this.waveShaper as any).curve = this.makeDistortionCurve(this.driveAmount);
+    }
+  }
+
+  public getDrive(): number {
+    return this.driveAmount;
   }
 
   /* -------------------------------------------------------------------------- */
