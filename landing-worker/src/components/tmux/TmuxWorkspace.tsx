@@ -197,6 +197,29 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
   const colSpan = divToColumnSpan(snapDiv);
   const spanInt = Math.max(1, Math.floor(colSpan));
 
+  // Extract contiguous note runs within the current 32-step viewport page
+  const pageStartStep = viewportStartCol * 2;
+  const runs = React.useMemo(() => {
+    const res: { startInPage: number; lengthInPage: number }[] = [];
+    let curStart: number | null = null;
+    for (let i = 0; i < 32; i++) {
+      const s = pageStartStep + i;
+      const has = activeTrackGrid[s]?.includes(actualIdx) || false;
+      if (has) {
+        if (curStart === null) curStart = i;
+      } else {
+        if (curStart !== null) {
+          res.push({ startInPage: curStart, lengthInPage: i - curStart });
+          curStart = null;
+        }
+      }
+    }
+    if (curStart !== null) {
+      res.push({ startInPage: curStart, lengthInPage: 32 - curStart });
+    }
+    return res;
+  }, [activeTrackGrid, pageStartStep, actualIdx]);
+
   return (
     <div
       className={`flex items-center gap-1 shrink-0 ${
@@ -219,81 +242,92 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
         {nInfo.note}
       </button>
 
-      {/* 16 Step Horizontal Grid Cells */}
-      <div
-        className="flex-1 h-full gap-0.5"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
-      >
-        {Array.from({ length: 16 }).map((_, colIdx) => {
-          const globalCol = viewportStartCol + colIdx;
-          const step0 = globalCol * 2;
-          const step1 = globalCol * 2 + 1;
-          const isSelected = (activeTrackGrid[step0]?.includes(actualIdx) || activeTrackGrid[step1]?.includes(actualIdx)) || false;
-          const isColActive = activeCol === colIdx;
+      {/* 16 Step Horizontal Grid with Seamless Contiguous Note Bar Overlay */}
+      <div className="flex-1 h-full relative">
+        {/* Layer 1: Interactive Background Grid Cells */}
+        <div
+          className="w-full h-full gap-0.5"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+        >
+          {Array.from({ length: 16 }).map((_, colIdx) => {
+            const globalCol = viewportStartCol + colIdx;
+            const isColActive = activeCol === colIdx;
 
-          const colInBar = globalCol % meterSpec.colsPerBar;
-          const isBarStart = colInBar === 0;
-          const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
-          const isDivBlockStart = colIdx % spanInt === 0;
+            const colInBar = globalCol % meterSpec.colsPerBar;
+            const isBarStart = colInBar === 0;
+            const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
+            const isDivBlockStart = colIdx % spanInt === 0;
+
+            return (
+              <div key={colIdx} className="h-full">
+                {snapDiv === '1/8' ? (
+                  <div className="flex h-full gap-0.5">
+                    {[0, 1].map((subCol) => {
+                      const step = globalCol * 2 + subCol;
+                      const isSubCurrent = isColActive && activeSubCol === subCol;
+
+                      return (
+                        <button
+                          key={subCol}
+                          onClick={() => onSubCellClick(actualIdx, colIdx, subCol)}
+                          className={`flex-1 h-full cursor-pointer border rounded-xs transition-colors ${
+                            isSubCurrent
+                              ? 'border-white/70 bg-white/25'
+                              : isBarStart && subCol === 0
+                              ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                              : isBeatStart && subCol === 0
+                              ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                              : subCol === 1
+                              ? 'border-l border-white/10 bg-black/40 hover:bg-white/10'
+                              : 'border-white/5 bg-black/40 hover:bg-white/10'
+                          }`}
+                          title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)`}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onCellClick(actualIdx, colIdx)}
+                    className={`w-full h-full rounded-xs cursor-pointer border transition-colors ${
+                      isColActive
+                        ? 'border-white/60 bg-white/20'
+                        : isBarStart
+                        ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                        : isBeatStart
+                        ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                        : isDivBlockStart
+                        ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
+                        : 'border-white/5 bg-black/40 hover:bg-white/10'
+                    }`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Layer 2: Seamless Continuous Note Bars (合二为一的完整长条音符) */}
+        {runs.map((run, rIdx) => {
+          const currentStepInPage = (activeCol >= 0 && activeCol < 16)
+            ? (activeCol * 2 + (activeSubCol >= 0 ? activeSubCol : 0))
+            : -1;
+          const isNotePlaying = currentStepInPage >= run.startInPage && currentStepInPage < (run.startInPage + run.lengthInPage);
 
           return (
-            <div key={colIdx} className="h-full">
-              {snapDiv === '1/8' ? (
-                <div className="flex h-full gap-0.5">
-                  {[0, 1].map((subCol) => {
-                    const step = globalCol * 2 + subCol;
-                    const isSubSelected = activeTrackGrid[step]?.includes(actualIdx) || false;
-                    const isSubCurrent = isColActive && activeSubCol === subCol;
-                    const isPrevConnected = subCol === 1 && (activeTrackGrid[step - 1]?.includes(actualIdx) || false);
-                    const isNextConnected = subCol === 0 && (activeTrackGrid[step + 1]?.includes(actualIdx) || false);
-
-                    return (
-                      <button
-                        key={subCol}
-                        onClick={() => onSubCellClick(actualIdx, colIdx, subCol)}
-                        className={`flex-1 h-full cursor-pointer border ${
-                          isSubSelected
-                            ? `shadow-sm ${isNextConnected ? 'rounded-l-xs rounded-r-none border-r-0' : isPrevConnected ? 'rounded-r-xs rounded-l-none border-l-0' : 'rounded-xs'} ${isSubCurrent ? 'brightness-125 ring-1 ring-white' : ''}`
-                            : isSubCurrent
-                            ? 'rounded-xs border-white/70 bg-white/30'
-                            : isBarStart && subCol === 0
-                            ? 'rounded-xs border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-                            : isBeatStart && subCol === 0
-                            ? 'rounded-xs border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-                            : subCol === 1
-                            ? 'rounded-xs border-l border-white/10 bg-black/40 hover:bg-white/10'
-                            : 'rounded-xs border-white/5 bg-black/40 hover:bg-white/10'
-                        }`}
-                        style={{
-                          backgroundColor: isSubSelected ? activeTrackColor : undefined,
-                          borderColor: isSubSelected ? activeTrackColor : undefined,
-                        }}
-                        title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)`}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <button
-                  onClick={() => onCellClick(actualIdx, colIdx)}
-                  className={`w-full h-full rounded-xs cursor-pointer border ${
-                    isSelected
-                      ? `shadow-sm ${isColActive ? 'brightness-125 ring-1 ring-white' : ''}`
-                      : isColActive
-                      ? 'border-white/60 bg-white/25'
-                      : isBarStart
-                      ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-                      : isBeatStart
-                      ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-                      : isDivBlockStart
-                      ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
-                      : 'border-white/5 bg-black/40 hover:bg-white/10'
-                  }`}
-                  style={{
-                    backgroundColor: isSelected ? activeTrackColor : undefined,
-                    borderColor: isSelected ? activeTrackColor : undefined,
-                  }}
-                />
+            <div
+              key={rIdx}
+              className={`absolute top-[1px] bottom-[1px] rounded-xs pointer-events-none z-[2] shadow-sm border border-white/40 flex items-center px-1 text-[9px] font-black text-black select-none ${
+                isNotePlaying ? 'brightness-125 ring-1 ring-white shadow-[0_0_8px_rgba(255,255,255,0.7)]' : ''
+              }`}
+              style={{
+                left: `calc(${(run.startInPage / 32) * 100}% + 1px)`,
+                width: `calc(${(run.lengthInPage / 32) * 100}% - 2px)`,
+                backgroundColor: activeTrackColor,
+              }}
+            >
+              {run.lengthInPage >= 4 && (
+                <span className="opacity-90 truncate">{nInfo.note}</span>
               )}
             </div>
           );
