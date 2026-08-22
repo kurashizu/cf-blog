@@ -2077,7 +2077,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
 
                 {/* Right: BPM, LEN, METER (Right-aligned) */}
-                <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <div className="w-px h-4 bg-white/15 mx-0.5 hidden sm:block" />
+
                   {/* Hardware BPM Fader */}
                   <div className="flex items-center gap-1">
                     <HorizontalHardwareFader
@@ -2096,8 +2098,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     />
                   </div>
 
+                  <div className="w-px h-4 bg-white/15 mx-1" />
+
                   {/* Sequence Length: Presets (16..512) + Custom Step Input */}
-                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
+                  <div className="flex items-center gap-1">
                     <span className="opacity-60 font-bold" title="Pattern Total Steps (LEN) — Total active sequence steps before looping">LEN:</span>
                     {([16, 32, 64, 128, 256, 512] as const).map((len) => (
                       <button
@@ -2149,8 +2153,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
+                  <div className="w-px h-4 bg-white/15 mx-1" />
+
                   {/* METER Time Signature */}
-                  <div className="flex items-center gap-1 border-l border-white/15 pl-2">
+                  <div className="flex items-center gap-1">
                     <span className="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
                     {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
                       <button
