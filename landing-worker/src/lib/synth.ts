@@ -31,6 +31,18 @@ export function divToStepSpan(div: NoteDurationDiv): number {
   }
 }
 
+export function divToColumnSpan(div: NoteDurationDiv): number {
+  switch (div) {
+    case '4': return 16; // Whole note: 16 visual columns (4 beats)
+    case '2': return 8;  // Half note: 8 visual columns (2 beats)
+    case '1': return 4;  // Quarter note: 4 visual columns (1 beat)
+    case '1/2': return 2;// Eighth note: 2 visual columns (1/2 beat)
+    case '1/4': return 1;// Sixteenth note: 1 visual column (1/4 beat)
+    case '1/8': return 0.5; // 32nd note: 1/2 visual column (1/8 beat)
+    default: return 1;
+  }
+}
+
 export type TimeSignature = '4/4' | '3/4' | '2/4' | '5/4' | '6/8' | '7/8';
 
 export interface MeterSpec {
@@ -38,17 +50,19 @@ export interface MeterSpec {
   label: string;
   name: string;
   beatsPerBar: number;
+  colsPerBar: number;
+  colsPerBeat: number;
   stepsPerBar: number;      // total 1/8-beat steps per measure
   downbeatInterval: number; // steps per primary beat
 }
 
 export const METER_SPECS: Record<TimeSignature, MeterSpec> = {
-  '4/4': { sig: '4/4', label: '4/4', name: '4 拍子 (Common)', beatsPerBar: 4, stepsPerBar: 32, downbeatInterval: 8 },
-  '3/4': { sig: '3/4', label: '3/4', name: '3 拍子 (Waltz)', beatsPerBar: 3, stepsPerBar: 24, downbeatInterval: 8 },
-  '2/4': { sig: '2/4', label: '2/4', name: '2 拍子 (March)', beatsPerBar: 2, stepsPerBar: 16, downbeatInterval: 8 },
-  '5/4': { sig: '5/4', label: '5/4', name: '5 拍子 (Take Five)', beatsPerBar: 5, stepsPerBar: 40, downbeatInterval: 8 },
-  '6/8': { sig: '6/8', label: '6/8', name: '6 拍子 (Compound)', beatsPerBar: 6, stepsPerBar: 24, downbeatInterval: 4 },
-  '7/8': { sig: '7/8', label: '7/8', name: '7 拍子 (Complex)', beatsPerBar: 7, stepsPerBar: 28, downbeatInterval: 4 },
+  '4/4': { sig: '4/4', label: '4/4', name: '4/4 Common Time', beatsPerBar: 4, colsPerBar: 16, colsPerBeat: 4, stepsPerBar: 32, downbeatInterval: 8 },
+  '3/4': { sig: '3/4', label: '3/4', name: '3/4 Waltz Time', beatsPerBar: 3, colsPerBar: 12, colsPerBeat: 4, stepsPerBar: 24, downbeatInterval: 8 },
+  '2/4': { sig: '2/4', label: '2/4', name: '2/4 March Time', beatsPerBar: 2, colsPerBar: 8, colsPerBeat: 4, stepsPerBar: 16, downbeatInterval: 8 },
+  '5/4': { sig: '5/4', label: '5/4', name: '5/4 Odd Meter', beatsPerBar: 5, colsPerBar: 20, colsPerBeat: 4, stepsPerBar: 40, downbeatInterval: 8 },
+  '6/8': { sig: '6/8', label: '6/8', name: '6/8 Compound Time', beatsPerBar: 6, colsPerBar: 12, colsPerBeat: 2, stepsPerBar: 24, downbeatInterval: 4 },
+  '7/8': { sig: '7/8', label: '7/8', name: '7/8 Complex Time', beatsPerBar: 7, colsPerBar: 14, colsPerBeat: 2, stepsPerBar: 28, downbeatInterval: 4 },
 };
 
 export interface TrackData {

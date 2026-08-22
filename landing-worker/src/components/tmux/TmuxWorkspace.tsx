@@ -27,6 +27,7 @@ import {
   INITIAL_TRACKS,
   NoteDurationDiv,
   divToStepSpan,
+  divToColumnSpan,
   TimeSignature,
   METER_SPECS,
   getWaveformAbbr,
@@ -277,13 +278,31 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Toggle Note in Polyphonic Piano Roll (Up to 8 notes per step across dynamic pages)
   const handlePianoRollCellClick = (noteIndex: number, colIndex: number) => {
-    const stepSize = divToStepSpan(noteDiv);
-    const baseStep = (activeStepPage * 16 + colIndex) * stepSize;
+    const colSpan = divToColumnSpan(noteDiv);
+    const globalCol = activeStepPage * 16 + colIndex;
     const track = modularSynth.getTrack(activeTrackId);
     if (!track) return;
 
+    let startStep: number;
+    let endStep: number;
+
+    if (colSpan < 1) {
+      // DIV = 1/8 (1/2 column = 1 physical step)
+      startStep = globalCol * 2;
+      endStep = startStep + 1;
+    } else {
+      const spanInt = Math.max(1, Math.floor(colSpan));
+      const startCol = Math.floor(colIndex / spanInt) * spanInt;
+      startStep = (activeStepPage * 16 + startCol) * 2;
+      endStep = startStep + (spanInt * 2);
+    }
+
+    const actualEndStep = Math.min(totalPatternSteps, endStep);
+    if (startStep >= totalPatternSteps) return;
+
+    // Check if any step in [startStep, actualEndStep) contains noteIndex
     let isAlreadyOn = false;
-    for (let s = baseStep; s < Math.min(totalPatternSteps, baseStep + stepSize); s++) {
+    for (let s = startStep; s < actualEndStep; s++) {
       if (track.grid[s]?.includes(noteIndex)) {
         isAlreadyOn = true;
         break;
@@ -291,20 +310,75 @@ export const TmuxWorkspace: React.FC = () => {
     }
 
     if (isAlreadyOn) {
-      for (let s = baseStep; s < Math.min(totalPatternSteps, baseStep + stepSize); s++) {
+      // Toggle OFF
+      for (let s = startStep; s < actualEndStep; s++) {
         const notes = track.grid[s] || [];
         if (notes.includes(noteIndex)) {
-          modularSynth.setTrackStepNotes(activeTrackId, s, notes.filter((n) => n !== noteIndex));
+          modularSynth.setTrackStepNotes(
+            activeTrackId,
+            s,
+            notes.filter((n) => n !== noteIndex)
+          );
         }
       }
       setTracksState([...modularSynth.getTracks()]);
       playSound('click');
     } else {
-      modularSynth.toggleTrackCell(activeTrackId, baseStep, noteIndex);
+      // Toggle ON
+      for (let s = startStep; s < actualEndStep; s++) {
+        const notes = track.grid[s] || [];
+        if (!notes.includes(noteIndex) && notes.length < 8) {
+          modularSynth.setTrackStepNotes(
+            activeTrackId,
+            s,
+            [...notes, noteIndex].sort((a, b) => a - b)
+          );
+        }
+      }
       setTracksState([...modularSynth.getTracks()]);
-      const isAccent = tracksState[activeTrackId]?.accents[baseStep] || false;
+      const isAccent = tracksState[activeTrackId]?.accents[startStep] || false;
       modularSynth.triggerTrackVoice(activeTrackId, noteIndex, isAccent);
     }
+  };
+
+  const handleAccentCellClick = (colIndex: number) => {
+    const colSpan = divToColumnSpan(noteDiv);
+    const globalCol = activeStepPage * 16 + colIndex;
+    const track = modularSynth.getTrack(activeTrackId);
+    if (!track) return;
+
+    let startStep: number;
+    let endStep: number;
+
+    if (colSpan < 1) {
+      startStep = globalCol * 2;
+      endStep = startStep + 1;
+    } else {
+      const spanInt = Math.max(1, Math.floor(colSpan));
+      const startCol = Math.floor(colIndex / spanInt) * spanInt;
+      startStep = (activeStepPage * 16 + startCol) * 2;
+      endStep = startStep + (spanInt * 2);
+    }
+
+    const actualEndStep = Math.min(totalPatternSteps, endStep);
+    if (startStep >= totalPatternSteps) return;
+
+    let isAlreadyAccent = false;
+    for (let s = startStep; s < actualEndStep; s++) {
+      if (track.accents[s]) {
+        isAlreadyAccent = true;
+        break;
+      }
+    }
+
+    const nextState = !isAlreadyAccent;
+    for (let s = startStep; s < actualEndStep; s++) {
+      if (track.accents[s] !== nextState) {
+        modularSynth.toggleTrackAccent(activeTrackId, s);
+      }
+    }
+    setTracksState([...modularSynth.getTracks()]);
+    playSound('click');
   };
 
   const handleTrackParamChange = (partial: Partial<TrackData>) => {
@@ -1021,10 +1095,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
           {activeTab === 4 && (
             <div className="space-y-1.5 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
               
-              {/* 1. TOP MASTER TRANSPORT & MULTI-TRACK MIXER DECK (WITH INLINE MUTE/SOLO & BAR NAVIGATION) */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/30 p-1 rounded-xs shrink-0">
-                {/* Transport & Track Selectors */}
-                <div className="flex items-center gap-2">
+              {/* 1. ROW 1: MASTER PLAYBACK TRANSPORT & MULTI-TRACK MIXER DECK */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0">
+                {/* Left: Play/Stop + Tempo Slider + Mute */}
+                <div className="flex items-center gap-2 text-xs">
                   <button
                     onClick={() => {
                       const playing = modularSynth.toggleSequencer();
@@ -1041,70 +1115,100 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <span className="text-xs opacity-80 font-mono">[{synthBpm} BPM]</span>
                   </button>
 
-                  {/* Multi-Track Channel Selectors with Inline Mute/Solo */}
-                  <div className="flex items-center gap-1">
-                    {tracksState.map((trk) => {
-                      const isSelected = activeTrackId === trk.id;
-                      return (
-                        <div
-                          key={trk.id}
-                          className={`flex items-center border rounded-xs transition-all ${
-                            isSelected
-                              ? 'border-white bg-white/20 text-white shadow-sm'
-                              : 'border-white/20 text-[#eceff4] opacity-80 hover:opacity-100'
-                          }`}
-                        >
-                          <button
-                            onClick={() => { setActiveTrackId(trk.id); playSound('click'); }}
-                            className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
-                            style={{ color: isSelected ? trk.color : undefined }}
-                          >
-                            <span className="w-2 h-2 inline-block shrink-0" style={{ backgroundColor: trk.color }} />
-                            <span>{trk.name.split(':')[0]}</span>
-                          </button>
-
-                          {/* Inline Mute & Solo Toggles */}
-                          <div className="flex items-center border-l border-white/15 px-1 gap-0.5">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                modularSynth.toggleTrackMute(trk.id);
-                                setTracksState([...modularSynth.getTracks()]);
-                                playSound('click');
-                              }}
-                              className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
-                                trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'
-                              }`}
-                              title={`Mute ${trk.name}`}
-                            >
-                              M
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                modularSynth.toggleTrackSolo(trk.id);
-                                setTracksState([...modularSynth.getTracks()]);
-                                playSound('click');
-                              }}
-                              className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
-                                trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'
-                              }`}
-                              title={`Solo ${trk.name}`}
-                            >
-                              S
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-center gap-1.5 border-l border-white/15 pl-2">
+                    <span className="opacity-70 font-bold">BPM:</span>
+                    <input
+                      type="range"
+                      min="60"
+                      max="220"
+                      value={synthBpm}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setSynthBpm(val);
+                        modularSynth.setBpm(val);
+                      }}
+                      className="w-16 accent-[#98c379] h-1 cursor-pointer"
+                    />
+                    <span className="text-[#98c379] font-bold font-mono w-7 text-right">{synthBpm}</span>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      const m = sound.toggleMute();
+                      setIsMuted(m);
+                      if (!m) playSound('click');
+                    }}
+                    className="border border-[#c678dd] px-2 py-0.5 rounded-xs text-xs font-bold text-[#c678dd] hover:bg-[#c678dd] hover:text-black cursor-pointer transition-colors shrink-0"
+                  >
+                    [{isMuted ? 'UNMUTE' : 'MUTE'}]
+                  </button>
                 </div>
 
-                {/* Dynamic Pattern Length (16/32/64/128/256/512) & Bar Page Navigation */}
-                <div className="flex items-center gap-2 text-xs">
-                  {/* Note Duration Tool (DIV: 4 Whole, 2 Half, 1 Quarter, 1/2 8th, 1/4 16th, 1/8 32nd) */}
-                  <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
-                    <span className="opacity-60 font-bold" title="Input Note Duration / Length">DIV:</span>
+                {/* Right: 4-Track Channel Selectors with Inline Mute/Solo */}
+                <div className="flex items-center gap-1 text-xs overflow-x-auto no-scrollbar">
+                  {tracksState.map((trk) => {
+                    const isSelected = activeTrackId === trk.id;
+                    return (
+                      <div
+                        key={trk.id}
+                        className={`flex items-center border rounded-xs transition-all ${
+                          isSelected
+                            ? 'border-white bg-white/20 text-white shadow-sm'
+                            : 'border-white/20 text-[#eceff4] opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <button
+                          onClick={() => { setActiveTrackId(trk.id); playSound('click'); }}
+                          className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
+                          style={{ color: isSelected ? trk.color : undefined }}
+                        >
+                          <span className="w-2 h-2 inline-block shrink-0" style={{ backgroundColor: trk.color }} />
+                          <span>{trk.name.split(':')[0]}</span>
+                        </button>
+
+                        {/* Inline Mute & Solo Toggles */}
+                        <div className="flex items-center border-l border-white/15 px-1 gap-0.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              modularSynth.toggleTrackMute(trk.id);
+                              setTracksState([...modularSynth.getTracks()]);
+                              playSound('click');
+                            }}
+                            className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
+                              trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'
+                            }`}
+                            title={`Mute ${trk.name}`}
+                          >
+                            M
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              modularSynth.toggleTrackSolo(trk.id);
+                              setTracksState([...modularSynth.getTracks()]);
+                              playSound('click');
+                            }}
+                            className={`px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer ${
+                              trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'
+                            }`}
+                            title={`Solo ${trk.name}`}
+                          >
+                            S
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 1.5 ROW 2: SEQUENCER CONFIGURATION (DIV, METER, LEN, PAGE NAVIGATION) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Note Duration Tool (DIV: 4 Whole=16 cells, 2 Half=8 cells, 1 Quarter=4 cells, 1/2 8th=2 cells, 1/4 16th=1 cell, 1/8 32nd=1/2 cell) */}
+                  <div className="flex items-center gap-1">
+                    <span className="opacity-60 font-bold" title="Note Editing Granularity (Grid Cells)">DIV:</span>
                     {(['4', '2', '1', '1/2', '1/4', '1/8'] as NoteDurationDiv[]).map((d) => (
                       <button
                         key={d}
@@ -1113,20 +1217,20 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           modularSynth.setEditNoteDiv(d);
                           playSound('click');
                         }}
-                        className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
                           noteDiv === d
                             ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
                         }`}
-                        title={`Note Length: ${d === '4' ? 'Whole (4 Beats)' : d === '2' ? 'Half (2 Beats)' : d === '1' ? 'Quarter (1 Beat)' : d === '1/2' ? 'Eighth (1/2 Beat)' : d === '1/4' ? '16th (1/4 Beat)' : '32nd (1/8 Beat)'}`}
+                        title={`Note Duration: ${d === '4' ? 'Whole (16 cells / 4 beats)' : d === '2' ? 'Half (8 cells / 2 beats)' : d === '1' ? 'Quarter (4 cells / 1 beat)' : d === '1/2' ? 'Eighth (2 cells / 1/2 beat)' : d === '1/4' ? '16th (1 cell / 1/4 beat)' : '32nd (1/2 cell / 1/8 beat)'}`}
                       >
                         {d}
                       </button>
                     ))}
                   </div>
 
-                  {/* Meter / Time Signature (2/4, 3/4, 4/4, 5/4, 6/8, 7/8) */}
-                  <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
+                  {/* Meter / Time Signature (4/4, 3/4, 2/4, 5/4, 6/8, 7/8) */}
+                  <div className="flex items-center gap-1 border-l border-white/15 pl-1.5">
                     <span className="opacity-60 font-bold" title="Time Signature / Meter">METER:</span>
                     {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
                       <button
@@ -1136,7 +1240,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           modularSynth.setMeter(sig);
                           playSound('click');
                         }}
-                        className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
                           timeMeter === sig
                             ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
@@ -1147,9 +1251,12 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </button>
                     ))}
                   </div>
+                </div>
 
+                {/* Right: Sequence Length Presets + Custom Input + Page Navigation */}
+                <div className="flex flex-wrap items-center gap-2">
                   {/* Sequence Length: Presets (16..512) + Custom Step Input */}
-                  <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
+                  <div className="flex items-center gap-1">
                     <span className="opacity-60 font-bold" title="Pattern Total Steps">LEN:</span>
                     {([16, 32, 64, 128, 256, 512] as const).map((len) => (
                       <button
@@ -1157,11 +1264,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         onClick={() => {
                           setTotalPatternSteps(len);
                           modularSynth.setTotalSteps(len);
-                          const maxPages = Math.max(1, Math.ceil(len / (16 * divToStepSpan(noteDiv))));
+                          const maxPages = Math.max(1, Math.ceil(len / 32));
                           if (activeStepPage >= maxPages) setActiveStepPage(0);
                           playSound('click');
                         }}
-                        className={`px-1 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
                           totalPatternSteps === len
                             ? 'border-[#98c379] bg-[#98c379] text-black font-black'
                             : 'border-white/20 text-white/70 hover:border-white/50'
@@ -1195,117 +1302,74 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* Bar / Page Tabs (Supports up to 74 Pages for 1184 Steps) */}
-                  <div className="flex items-center gap-0.5 text-xs border-l border-white/15 pl-1.5 max-w-[180px] sm:max-w-[340px] overflow-x-auto no-scrollbar">
-                    <span className="opacity-60 shrink-0">BAR:</span>
-                    {Array.from({ length: Math.ceil(totalPatternSteps / 16) }).map((_, pIdx) => {
-                      const isPlayingThis = isSeqPlaying && Math.floor(seqCurrentStep / 16) === pIdx;
-                      const isViewing = activeStepPage === pIdx;
-                      return (
-                        <button
-                          key={pIdx}
-                          onClick={() => { setActiveStepPage(pIdx); playSound('click'); }}
-                          className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-all flex items-center gap-1 shrink-0 ${
-                            isViewing
-                              ? 'border-white bg-white/25 text-white shadow-sm'
-                              : 'border-white/20 text-white/50 hover:text-white'
-                          }`}
-                        >
-                          <span>{pIdx + 1}</span>
-                          {isPlayingThis && <span className="w-1.5 h-1.5 bg-[#98c379] inline-block animate-pulse shrink-0" />}
-                        </button>
-                      );
-                    })}
+                  {/* Compact DAW Page Navigation (16 columns = 32 physical sub-steps per page) */}
+                  <div className="flex items-center gap-1 border-l border-white/15 pl-1.5">
+                    <span className="opacity-60 font-bold shrink-0">PAGE:</span>
                     <button
-                      onClick={() => { setPageFollow(!pageFollow); playSound('click'); }}
-                      className={`px-1.5 py-0.5 border rounded-xs text-xs font-bold cursor-pointer shrink-0 ${
-                        pageFollow ? 'border-[#98c379] text-[#98c379] bg-[#98c379]/15' : 'border-white/20 text-white/40'
+                      onClick={() => {
+                        setActiveStepPage((prev) => Math.max(0, prev - 1));
+                        playSound('click');
+                      }}
+                      disabled={activeStepPage === 0}
+                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed"
+                      title="Previous page"
+                    >
+                      ◄
+                    </button>
+                    <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-white shrink-0">
+                      {activeStepPage + 1} / {Math.max(1, Math.ceil(totalPatternSteps / 32))}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const maxPages = Math.max(1, Math.ceil(totalPatternSteps / 32));
+                        setActiveStepPage((prev) => Math.min(maxPages - 1, prev + 1));
+                        playSound('click');
+                      }}
+                      disabled={activeStepPage >= Math.max(1, Math.ceil(totalPatternSteps / 32)) - 1}
+                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed"
+                      title="Next page"
+                    >
+                      ►
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPageFollow(!pageFollow);
+                        playSound('click');
+                      }}
+                      className={`px-1.5 py-0.5 border rounded-xs text-xs font-bold cursor-pointer shrink-0 transition-colors ${
+                        pageFollow
+                          ? 'border-[#98c379] text-[#98c379] bg-[#98c379]/15'
+                          : 'border-white/20 text-white/40 hover:text-white'
                       }`}
-                      title="Auto-follow playhead bar"
+                      title="Auto-follow playhead page"
                     >
                       FLW
                     </button>
                   </div>
-
-                  {/* Tempo & Mute */}
-                  <div className="flex items-center gap-1 text-xs border-l border-white/15 pl-1.5">
-                    <span className="opacity-70">BPM:</span>
-                    <input
-                      type="range"
-                      min="60"
-                      max="220"
-                      value={synthBpm}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        setSynthBpm(val);
-                        modularSynth.setBpm(val);
-                      }}
-                      className="w-12 accent-[#98c379] h-1"
-                    />
-                    <span className="text-[#98c379] font-bold font-mono">{synthBpm}</span>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      const m = sound.toggleMute();
-                      setIsMuted(m);
-                      if (!m) playSound('click');
-                    }}
-                    className="border border-[#c678dd] px-2 py-0.5 rounded-xs text-xs font-bold text-[#c678dd] hover:bg-[#c678dd] hover:text-black cursor-pointer transition-colors"
-                  >
-                    [{isMuted ? 'UNMUTE' : 'MUTE'}]
-                  </button>
                 </div>
               </div>
 
-              {/* 2. FULL-BLEED 3-OCTAVE PIANO ROLL MATRIX (8-VOICE POLYPHONIC + DYNAMIC 1184 STEPS) */}
+              {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & DIV QUANTIZATION */}
               <div className="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
-                {/* Header with Title, Playhead Tracker, Octaves & Presets */}
+                {/* Header with Title, Playhead Tracker, Octaves & Quick Tools */}
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
                   <div className="flex items-center gap-2">
                     <span style={{ color: currentTrack.color }}>
                       PIANO ROLL // {currentTrack.name} (8-VOICE POLY)
                     </span>
                     <span className="text-xs text-[#98c379] font-mono">
-                      PLAYHEAD: STEP {seqCurrentStep + 1} / {totalPatternSteps} (BAR {Math.floor(seqCurrentStep / (METER_SPECS[timeMeter]?.stepsPerBar || 32)) + 1} • {Math.floor((seqCurrentStep % (METER_SPECS[timeMeter]?.stepsPerBar || 32)) / (METER_SPECS[timeMeter]?.downbeatInterval || 8)) + 1})
+                      PLAYHEAD: BAR {Math.floor(seqCurrentStep / (METER_SPECS[timeMeter]?.stepsPerBar || 32)) + 1}.{Math.floor(((seqCurrentStep % (METER_SPECS[timeMeter]?.stepsPerBar || 32)) / ((METER_SPECS[timeMeter]?.stepsPerBar || 32) / (METER_SPECS[timeMeter]?.beatsPerBar || 4)))) + 1} (STEP {seqCurrentStep + 1} / {totalPatternSteps})
                     </span>
                   </div>
 
-                  {/* Right Header Toolbar: Pattern Presets & Octave Scope */}
-                  <div className="flex items-center gap-2 text-xs">
-                    {/* Quick Pattern Presets */}
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {/* Quick Presets */}
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => {
-                          // Reload Super Mario Theme Score (Exact 100% Complete 1184-Step 4-Track NES Score)
-                          INITIAL_TRACKS.forEach((initT, trkId) => {
-                            initT.grid.forEach((notes, sIdx) => {
-                              modularSynth.setTrackStepNotes(trkId, sIdx, notes);
-                            });
-                          });
-                          modularSynth.setTotalSteps(1184);
-                          setTotalPatternSteps(1184);
-                          setSynthBpm(105);
-                          modularSynth.setBpm(105);
-                          setNoteDiv('1/8');
-                          modularSynth.setEditNoteDiv('1/8');
-                          setTimeMeter('4/4');
-                          modularSynth.setMeter('4/4');
-                          setTracksState([...modularSynth.getTracks()]);
-                          playSound('power');
-                        }}
-                        className="border border-[#e06c75] bg-[#e06c75]/20 text-[#e06c75] px-1.5 py-0.5 rounded-xs hover:bg-[#e06c75] hover:text-black cursor-pointer font-black flex items-center gap-1"
-                        title="Load Super Mario Bros Overworld Complete 1184-Step 4-Track Score (Exact overworld.mid)"
-                      >
-                        <span>🍄 MARIO</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          // Random Chord Arp
-                          for (let i = 0; i < 16; i++) {
-                            const actualStep = activeStepPage * 16 + i;
-                            const root = Math.floor(Math.random() * 24) + 24;
+                          const root = 48 + Math.floor(Math.random() * 12);
+                          for (let i = 0; i < 32; i += 4) {
+                            const actualStep = activeStepPage * 32 + i;
                             const chord = Math.random() > 0.4 ? [root, root + 4, root + 7].filter((n) => n < 88) : [];
                             modularSynth.setTrackStepNotes(activeTrackId, actualStep, chord);
                           }
@@ -1319,15 +1383,15 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                       <button
                         onClick={() => {
-                          for (let i = 0; i < 16; i++) {
-                            const actualStep = activeStepPage * 16 + i;
+                          for (let i = 0; i < 32; i++) {
+                            const actualStep = activeStepPage * 32 + i;
                             modularSynth.clearTrackStep(activeTrackId, actualStep);
                           }
                           setTracksState([...modularSynth.getTracks()]);
                           playSound('click');
                         }}
                         className="border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer"
-                        title="Clear current bar"
+                        title="Clear current page"
                       >
                         ✕ CLR
                       </button>
@@ -1355,40 +1419,47 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                 </div>
 
-                {/* Scrollable Matrix Container (Enables horizontal pan on mobile for comfortable 16-step editing without squishing) */}
+                {/* Scrollable Matrix Container */}
                 <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar flex flex-col">
                   <div className="min-w-[480px] sm:min-w-0 flex-1 flex flex-col space-y-0.5">
-                    {/* Top 16-Step Timeline Bar / Ruler for Current Bar */}
+                    {/* Top 16-Column Timeline Bar / Ruler with Real-Time Meter & Bar Position */}
                     <div className="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0">
                       <div
                         className="flex-1 gap-0.5"
                         style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
                       >
                         {Array.from({ length: 16 }).map((_, colIdx) => {
-                          const actualStep = activeStepPage * 16 + colIdx;
-                          const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
-                          const isDownbeat = colIdx % 4 === 0;
-                          const barNum = activeStepPage + 1;
-                          const beatNum = Math.floor(colIdx / 4) + 1;
+                          const globalCol = activeStepPage * 16 + colIdx;
+                          const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+                          const barNum = Math.floor(globalCol / meterSpec.colsPerBar) + 1;
+                          const colInBar = globalCol % meterSpec.colsPerBar;
+                          const beatNum = Math.floor(colInBar / meterSpec.colsPerBeat) + 1;
+                          const isBarStart = colInBar === 0;
+                          const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
+                          const isCurrent = isSeqPlaying && Math.floor(seqCurrentStep / 2) === globalCol;
+
                           return (
                             <div
                               key={colIdx}
-                              className={`text-center py-0.5 rounded-xs transition-colors ${
+                              className={`text-center py-0.5 rounded-xs transition-colors font-bold ${
                                 isCurrent
                                   ? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
-                                  : isDownbeat
-                                  ? 'bg-white/15 text-white font-bold'
-                                  : 'text-white/40'
+                                  : isBarStart
+                                  ? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
+                                  : isBeatStart
+                                  ? 'bg-white/15 text-white'
+                                  : 'text-white/30'
                               }`}
+                              title={`Bar ${barNum}, Beat ${beatNum} (Column ${colIdx + 1})`}
                             >
-                              {isDownbeat ? `${barNum}.${beatNum}` : actualStep + 1}
+                              {isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
                             </div>
                           );
                         })}
                       </div>
                     </div>
 
-                    {/* 88 / 12 Chromatic Pitch Rows x 16 Steps Grid (Polyphonic up to 8 notes) */}
+                    {/* 88 / 12 Chromatic Pitch Rows x 16 Grid Columns */}
                     <div className="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col">
                       {PIANO_ROLL_NOTES.filter((n) => octaveScope === 'all' || n.oct === octaveScope).map((nInfo) => {
                         const actualIdx = PIANO_ROLL_NOTES.findIndex((p) => p.note === nInfo.note);
@@ -1420,17 +1491,26 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               {nInfo.note}
                             </button>
 
-                            {/* 16 Step Horizontal Grid Cells (Polyphonic Multi-Voice Selection) */}
+                            {/* 16 Step Horizontal Grid Cells (Dynamic DIV & METER Quantization) */}
                             <div
                               className="flex-1 h-full gap-0.5"
                               style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
                             >
                               {Array.from({ length: 16 }).map((_, colIdx) => {
-                                const actualStep = activeStepPage * 16 + colIdx;
-                                const stepNotes = currentTrack.grid[actualStep] || [];
-                                const isSelected = stepNotes.includes(actualIdx);
-                                const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
-                                const isBarStart = colIdx % 4 === 0;
+                                const globalCol = activeStepPage * 16 + colIdx;
+                                const step0 = globalCol * 2;
+                                const step1 = globalCol * 2 + 1;
+                                const isSelected = (currentTrack.grid[step0]?.includes(actualIdx) || currentTrack.grid[step1]?.includes(actualIdx)) || false;
+                                const isCurrent = isSeqPlaying && Math.floor(seqCurrentStep / 2) === globalCol;
+                                
+                                const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+                                const colInBar = globalCol % meterSpec.colsPerBar;
+                                const isBarStart = colInBar === 0;
+                                const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
+
+                                const colSpan = divToColumnSpan(noteDiv);
+                                const spanInt = Math.max(1, Math.floor(colSpan));
+                                const isDivBlockStart = colIdx % spanInt === 0;
 
                                 return (
                                   <button
@@ -1442,7 +1522,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                         : isCurrent
                                         ? 'border-white/60 bg-white/25'
                                         : isBarStart
-                                        ? 'border-white/15 bg-white/[0.05] hover:bg-white/20'
+                                        ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                                        : isBeatStart
+                                        ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                                        : isDivBlockStart
+                                        ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
                                         : 'border-white/5 bg-black/40 hover:bg-white/10'
                                     }`}
                                     style={{
@@ -1466,27 +1550,31 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
                       >
                         {Array.from({ length: 16 }).map((_, colIdx) => {
-                          const actualStep = activeStepPage * 16 + colIdx;
-                          const isAccent = currentTrack.accents[actualStep];
-                          const isCurrent = isSeqPlaying && seqCurrentStep === actualStep;
+                          const globalCol = activeStepPage * 16 + colIdx;
+                          const step0 = globalCol * 2;
+                          const step1 = globalCol * 2 + 1;
+                          const isAccent = (currentTrack.accents[step0] || currentTrack.accents[step1]) || false;
+                          const isCurrent = isSeqPlaying && Math.floor(seqCurrentStep / 2) === globalCol;
+                          
+                          const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+                          const colInBar = globalCol % meterSpec.colsPerBar;
+                          const isBarStart = colInBar === 0;
 
                           return (
                             <button
                               key={colIdx}
-                              onClick={() => {
-                                modularSynth.toggleTrackAccent(activeTrackId, actualStep);
-                                setTracksState([...modularSynth.getTracks()]);
-                                playSound('click');
-                              }}
+                              onClick={() => handleAccentCellClick(colIdx)}
                               className={`py-0.5 text-center font-bold rounded-xs cursor-pointer border transition-all ${
                                 isCurrent
                                   ? 'border-white bg-white text-black'
                                   : isAccent
                                   ? 'border-[#e06c75] bg-[#e06c75] text-black shadow-sm'
+                                  : isBarStart
+                                  ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
                                   : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
                               }`}
                             >
-                              {actualStep + 1}
+                              {colIdx + 1}
                             </button>
                           );
                         })}
@@ -1496,7 +1584,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               </div>
 
-              {/* 3. MODULAR DSP SIGNAL FLOWCHART RACK (5 CONNECTED HARDWARE NODES) */}
+              
+{/* 3. MODULAR DSP SIGNAL FLOWCHART RACK (5 CONNECTED HARDWARE NODES) */}
               <div className="border border-white/15 p-1.5 bg-black/50 rounded-xs space-y-1 shrink-0 overflow-x-auto no-scrollbar">
                 <div className="flex items-center justify-between text-xs border-b border-white/10 pb-0.5 font-bold">
                   <span style={{ color: currentTrack.color }}>
