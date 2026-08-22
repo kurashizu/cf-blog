@@ -1448,7 +1448,7 @@ const EMPTY_ACCENTS: boolean[] = Array.from({ length: 64 }, () => false);
 export const INITIAL_TRACKS: TrackData[] = [
   {
     id: 0,
-    name: 'TRK 1: PULSE 1 (LEAD)',
+    name: 'TRK 1',
     color: '#e5c07b',
     volume: 0.95,
     pan: -0.15,
@@ -1508,7 +1508,7 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 1,
-    name: 'TRK 2: PULSE 2 (HARMONY)',
+    name: 'TRK 2',
     color: '#56b6c2',
     volume: 0.85,
     pan: 0.2,
@@ -1567,7 +1567,7 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 2,
-    name: 'TRK 3: TRIANGLE (BASS)',
+    name: 'TRK 3',
     color: '#c678dd',
     volume: 1.0,
     pan: 0.0,
@@ -1625,7 +1625,7 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 3,
-    name: 'TRK 4: DRUM (HI-HAT)',
+    name: 'TRK 4',
     color: '#e06c75',
     volume: 1.5,
     pan: 0.05,
@@ -1686,7 +1686,7 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 4,
-    name: 'TRK 5: CHORD (PAD)',
+    name: 'TRK 5',
     color: '#d19a66',
     volume: 0.8,
     pan: -0.2,
@@ -1739,7 +1739,7 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 5,
-    name: 'TRK 6: CHORD (KEYS)',
+    name: 'TRK 6',
     color: '#c678dd',
     volume: 0.8,
     pan: 0.2,
@@ -1792,7 +1792,7 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 6,
-    name: 'TRK 7: DRUM (KICK)',
+    name: 'TRK 7',
     color: '#98c379',
     volume: 1.2,
     pan: 0.0,
@@ -1849,7 +1849,7 @@ export const INITIAL_TRACKS: TrackData[] = [
   },
   {
     id: 7,
-    name: 'TRK 8: DRUM (SNARE)',
+    name: 'TRK 8',
     color: '#56b6c2',
     volume: 1.0,
     pan: 0.0,

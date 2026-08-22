@@ -485,7 +485,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [octaveScope, setOctaveScope] = useState<'all' | 7 | 6 | 5 | 4 | 3 | 2 | 1>(4);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
-  const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(false);
+  const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
   const [seqCurrentStep, setSeqCurrentStep] = useState<number>(0);
   const [totalPatternSteps, setTotalPatternSteps] = useState<number>(modularSynth.getTotalSteps());
   const [activeStepPage, setActiveStepPage] = useState<number>(0);
@@ -515,6 +515,10 @@ export const TmuxWorkspace: React.FC = () => {
 
   // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow & rAF Batching
   useEffect(() => {
+    // Autoplay sequencer on load
+    if (!modularSynth.isPlayingSeq()) {
+      modularSynth.startSequencer();
+    }
     let animId: number = 0;
     let pendingStep: number | null = null;
 
@@ -1333,13 +1337,17 @@ export const TmuxWorkspace: React.FC = () => {
           <button onClick={() => { setActiveTab(2); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 2 ? 'bg-[#98c379] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>2:topology</button>
           <button onClick={() => { setActiveTab(3); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 3 ? 'bg-[#e06c75] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>3:guestbook</button>
           <button onClick={() => { setActiveTab(4); playSound('click'); }} className={`px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 ${activeTab === 4 ? 'bg-[#c678dd] text-black font-black' : 'hover:bg-white/10 text-[#d8dee9]'}`}>4:synth</button>
-          <button
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
+          <span className="text-[#c678dd] hidden xl:inline font-mono">{renderBrailleSpark(0)}</span>
+                    <button
             onClick={() => {
               const m = sound.toggleMute();
               setIsMuted(m);
               if (!m) playSound('click');
             }}
-            className={`ml-1 px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border ${
+            className={`px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border ${
               isMuted
                 ? 'border-[#e06c75] text-[#e06c75] hover:bg-[#e06c75] hover:text-black'
                 : 'border-[#98c379] text-[#98c379] hover:bg-[#98c379] hover:text-black'
@@ -1347,10 +1355,6 @@ export const TmuxWorkspace: React.FC = () => {
           >
             {isMuted ? '[UNMUTE]' : '[MUTE]'}
           </button>
-        </div>
-
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
-          <span className="text-[#c678dd] hidden xl:inline font-mono">{renderBrailleSpark(0)}</span>
           <button onClick={cycleTheme} className="hover:underline cursor-pointer hidden sm:inline text-[#e5c07b]">[THEME: {theme.toUpperCase()}]</button>
           <span className="tabular-nums text-[#98c379] shrink-0 text-[11px] sm:text-xs">SYDNEY {sydneyTime || '12:14:00'}</span>
           <span className="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden lg:inline">100%_SERVERLESS</span>
