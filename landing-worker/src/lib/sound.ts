@@ -618,6 +618,39 @@ class SoundEngine {
     return this.analyser;
   }
 
+  public getFftSize(): number {
+    return this.analyser ? this.analyser.fftSize : 4096;
+  }
+
+  public setFftSize(size: number) {
+    if (!this.analyser) this.init();
+    if (this.analyser) {
+      this.analyser.fftSize = size;
+      this.visualizerDataArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.visualizerFreqArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.visualizerTimeArray = new Uint8Array(this.analyser.fftSize);
+    }
+  }
+
+  public getFftSmoothing(): number {
+    return this.analyser ? this.analyser.smoothingTimeConstant : 0.75;
+  }
+
+  public setFftSmoothing(val: number) {
+    if (!this.analyser) this.init();
+    if (this.analyser) {
+      this.analyser.smoothingTimeConstant = Math.max(0.0, Math.min(0.99, val));
+    }
+  }
+
+  public getAudioSampleRate(): number {
+    return this.ctx ? this.ctx.sampleRate : 44100;
+  }
+
+  public getAudioContextState(): string {
+    return this.ctx ? this.ctx.state : 'uninitialized';
+  }
+
   public getVisualizerData(): Uint8Array | null {
     return this.getByteFrequencyData();
   }

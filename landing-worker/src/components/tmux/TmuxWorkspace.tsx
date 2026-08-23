@@ -14,7 +14,7 @@ import {
   PixelHuggingFace,
   PixelHardware,
 } from '../pixel/PixelIcons';
-import { sound, playSound } from '../../lib/sound';
+import { sound, playSound, soundEngine } from '../../lib/sound';
 import {
   modularSynth,
   SynthWaveform,
@@ -679,19 +679,30 @@ export const TmuxWorkspace: React.FC = () => {
   const [activeStepPage, setActiveStepPage] = useState<number>(0);
   const [pageFollow, setPageFollow] = useState<boolean>(true);
 
-  // Synthesizer Advanced Settings Modal State
+  // System Hardware, Audio Output & MIDI Settings Modal State
   const [isSynthSettingsOpen, setIsSynthSettingsOpen] = useState<boolean>(false);
-  const [synthSettingsTab, setSynthSettingsTab] = useState<'dsp' | 'voice' | 'midi' | 'master'>('dsp');
+  const [synthSettingsTab, setSynthSettingsTab] = useState<'dsp' | 'audio_hw' | 'midi' | 'voice'>('dsp');
   const [noiseDurationSetting, setNoiseDurationSetting] = useState<number>(modularSynth.getNoiseBufferDuration());
   const [noiseColorSetting, setNoiseColorSetting] = useState<'white' | 'pink' | 'brown'>(modularSynth.getNoiseColor());
   const [reverbDurationSetting, setReverbDurationSetting] = useState<number>(modularSynth.getReverbDuration());
   const [reverbDecaySetting, setReverbDecaySetting] = useState<number>(modularSynth.getReverbDecayRate());
+  
+  // Audio Hardware & Output Specs
+  const [audioSampleRate] = useState<number>(soundEngine.getAudioSampleRate());
+  const [fftSizeSetting, setFftSizeSetting] = useState<number>(soundEngine.getFftSize());
+  const [fftSmoothingSetting, setFftSmoothingSetting] = useState<number>(soundEngine.getFftSmoothing());
+  const [latencyHintSetting, setLatencyHintSetting] = useState<'interactive' | 'balanced' | 'playback'>(modularSynth.getLatencyHintMode());
+  const [masterLimiterSetting, setMasterLimiterSetting] = useState<boolean>(modularSynth.isMasterLimiterEnabled());
+
+  // MIDI Devices & Routing
+  const [midiDevices, setMidiDevices] = useState<{ id: string; name: string }[]>([]);
+  const [selectedMidiDevice, setSelectedMidiDevice] = useState<string>(modularSynth.getMidiSelectedDeviceId());
+  const [midiOmniSetting, setMidiOmniSetting] = useState<boolean>(modularSynth.isMidiOmniMode());
+
+  // Voice Engine Specs
   const [masterTuningSetting, setMasterTuningSetting] = useState<number>(modularSynth.getMasterTuningFreq());
   const [maxPolyphonySetting, setMaxPolyphonySetting] = useState<number>(modularSynth.getMaxPolyphony());
-  const [portamentoSetting, setPortamentoSetting] = useState<number>(modularSynth.getPortamentoTime());
-  const [pitchBendSetting, setPitchBendSetting] = useState<number>(modularSynth.getPitchBendRange());
-  const [midiOmniSetting, setMidiOmniSetting] = useState<boolean>(modularSynth.isMidiOmniMode());
-  const [saturationSetting, setSaturationSetting] = useState<'tape' | 'tube' | 'hard'>(modularSynth.getSaturationCurveType());
+  const [voiceStealingSetting, setVoiceStealingSetting] = useState<'oldest' | 'quietest' | 'lowest'>(modularSynth.getVoiceStealingMode());
 
   // Compute Active Ringing Notes for Piano Keyboard:
   // Combines: 1) Currently playing sequencer step notes across tracks, 2) Manually held keys/MIDI notes
@@ -810,23 +821,31 @@ export const TmuxWorkspace: React.FC = () => {
     let midiAccess: any = null;
 
     const handleMIDIMessage = (event: any) => {
+      const selectedDevId = modularSynth.getMidiSelectedDeviceId();
+      if (selectedDevId !== 'all' && event.target?.id && event.target.id !== selectedDevId) {
+        return;
+      }
+
       const data = event.data;
       if (!data || data.length < 2) return;
       const cmd = data[0] >> 4;
       const noteNumber = data[1];
       const velocity = data.length > 2 ? data[2] : 0;
-      const targetTrk = activeTrackIdRef.current;
+      const isOmni = modularSynth.isMidiOmniMode();
+      const targetTracks = isOmni ? [0, 1, 2, 3, 4, 5] : [activeTrackIdRef.current];
 
       // Note On: cmd === 9 (with velocity > 0)
       if (cmd === 9 && velocity > 0) {
         // Convert MIDI note number (0-127, Middle C = C4 = 60) to PIANO_ROLL_NOTES index
         const noteIdx = 108 - noteNumber;
         if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
-          modularSynth.noteOn(targetTrk, noteIdx, velocity);
-          setManualHeldNotes((prev) => {
-            const next = new Map(prev);
-            next.set(`${targetTrk}-${noteIdx}`, { trackId: targetTrk, noteIdx });
-            return next;
+          targetTracks.forEach((trkId) => {
+            modularSynth.noteOn(trkId, noteIdx, velocity);
+            setManualHeldNotes((prev) => {
+              const next = new Map(prev);
+              next.set(`${trkId}-${noteIdx}`, { trackId: trkId, noteIdx });
+              return next;
+            });
           });
         }
       }
@@ -834,11 +853,13 @@ export const TmuxWorkspace: React.FC = () => {
       else if (cmd === 8 || (cmd === 9 && velocity === 0)) {
         const noteIdx = 108 - noteNumber;
         if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
-          modularSynth.noteOff(targetTrk, noteIdx);
-          setManualHeldNotes((prev) => {
-            const next = new Map(prev);
-            next.delete(`${targetTrk}-${noteIdx}`);
-            return next;
+          targetTracks.forEach((trkId) => {
+            modularSynth.noteOff(trkId, noteIdx);
+            setManualHeldNotes((prev) => {
+              const next = new Map(prev);
+              next.delete(`${trkId}-${noteIdx}`);
+              return next;
+            });
           });
         }
       }
@@ -850,11 +871,15 @@ export const TmuxWorkspace: React.FC = () => {
     };
 
     const attachInputs = (access: any) => {
+      const devList: { id: string; name: string }[] = [];
       let firstDeviceName: string | null = null;
       for (const input of access.inputs.values()) {
         input.onmidimessage = handleMIDIMessage;
-        if (!firstDeviceName) firstDeviceName = input.name || 'MIDI Device';
+        const name = input.name || `MIDI Device (${input.id})`;
+        devList.push({ id: input.id, name });
+        if (!firstDeviceName) firstDeviceName = name;
       }
+      setMidiDevices(devList);
       setMidiConnectedDevice(firstDeviceName);
     };
 
@@ -4460,10 +4485,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             {/* Modal Tabs Navigation */}
             <div className="flex items-center gap-1 px-3 py-1.5 bg-black/40 border-b border-white/10 shrink-0 text-xs">
               {[
-                { id: 'dsp', label: '1. DSP & BUFFERS', color: '#56b6c2' },
-                { id: 'voice', label: '2. VOICE & TUNING', color: '#98c379' },
-                { id: 'midi', label: '3. MIDI & VELOCITY', color: '#e5c07b' },
-                { id: 'master', label: '4. MASTER FX & LIMITER', color: '#e06c75' },
+                { id: 'audio_hw', label: '1. AUDIO & HARDWARE', color: '#56b6c2' },
+                { id: 'dsp', label: '2. BUFFER & IR SPECS', color: '#c678dd' },
+                { id: 'midi', label: '3. MIDI & CONTROLLERS', color: '#e5c07b' },
+                { id: 'voice', label: '4. VOICE & TUNING', color: '#98c379' },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -4489,21 +4514,180 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
             {/* Modal Body / Tab Content */}
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-4 text-xs font-mono">
-              {/* TAB 1: DSP & BUFFERS */}
-              {synthSettingsTab === 'dsp' && (
+              {/* TAB 1: AUDIO OUTPUT & HARDWARE SPECS */}
+              {synthSettingsTab === 'audio_hw' && (
                 <div className="space-y-4">
-                  {/* Noise Buffer Config */}
+                  {/* System Audio Output Info */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#56b6c2] font-black">AUDIO CONTEXT & HARDWARE SAMPLE RATE</span>
+                      <span className="text-white/40 text-[10px]">Web Audio API</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div className="p-2 border border-white/10 bg-black/30 rounded-xs">
+                        <div className="text-white/40 text-[10px] uppercase">DAC Sample Rate</div>
+                        <div className="text-white font-bold text-sm">{audioSampleRate} Hz</div>
+                        <div className="text-white/50 text-[10px] mt-0.5">Device Native Audio Clock</div>
+                      </div>
+
+                      <div className="p-2 border border-white/10 bg-black/30 rounded-xs">
+                        <div className="text-white/40 text-[10px] uppercase">AudioContext Engine State</div>
+                        <div className="text-[#98c379] font-bold text-sm uppercase">
+                          {soundEngine.getAudioContextState()}
+                        </div>
+                        <div className="text-white/50 text-[10px] mt-0.5">Direct Destination Routing</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Audio Engine Latency Hint */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#56b6c2] font-black">WHITE / PINK / BROWN NOISE BUFFER</span>
-                      <span className="text-white/40 text-[10px]">AudioBufferSourceNode</span>
+                      <span className="text-[#56b6c2] font-black">AUDIO LATENCY BUFFER TARGET</span>
+                      <span className="text-white/40 text-[10px]">Buffer Tradeoff</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      {[
+                        { id: 'interactive', label: 'INTERACTIVE', desc: 'Lowest Latency (~5ms)' },
+                        { id: 'balanced', label: 'BALANCED', desc: 'Glitch-free (~20ms)' },
+                        { id: 'playback', label: 'PLAYBACK', desc: 'Power-saving (~50ms)' },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setLatencyHintSetting(item.id as any);
+                            modularSynth.setLatencyHintMode(item.id as any);
+                            playSound('click');
+                          }}
+                          className={`p-2 rounded-xs border text-left cursor-pointer transition-all ${
+                            latencyHintSetting === item.id
+                              ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                              : 'border-white/10 bg-white/5 text-white/70 hover:text-white'
+                          }`}
+                        >
+                          <div className="font-bold">{item.label}</div>
+                          <div className={`text-[9px] ${latencyHintSetting === item.id ? 'text-black/80' : 'text-white/40'}`}>
+                            {item.desc}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* FFT Visualizer Resolution & Smoothing */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#56b6c2] font-black">FFT SPECTRUM ANALYSER RESOLUTION</span>
+                      <span className="text-white/40 text-[10px]">AnalyserNode Spec</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                       <div>
                         <div className="flex justify-between text-white/70 mb-1">
-                          <span>Noise Buffer Length:</span>
-                          <span className="text-[#56b6c2] font-bold">{noiseDurationSetting.toFixed(1)}s</span>
+                          <span>FFT Size (Frequency Bins):</span>
+                          <span className="text-[#56b6c2] font-bold">{fftSizeSetting} ({fftSizeSetting / 2} bins)</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-1">
+                          {[1024, 2048, 4096, 8192].map((size) => (
+                            <button
+                              key={size}
+                              onClick={() => {
+                                setFftSizeSetting(size);
+                                soundEngine.setFftSize(size);
+                                playSound('click');
+                              }}
+                              className={`py-1 rounded-xs border text-center font-bold text-[11px] transition-all ${
+                                fftSizeSetting === size
+                                  ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                  : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-white/70 mb-1">
+                          <span>Time Smoothing Constant:</span>
+                          <span className="text-[#56b6c2] font-bold">{fftSmoothingSetting.toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.1}
+                          max={0.95}
+                          step={0.05}
+                          value={fftSmoothingSetting}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            setFftSmoothingSetting(v);
+                            soundEngine.setFftSmoothing(v);
+                          }}
+                          className="w-full accent-[#56b6c2] cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[9px] text-white/40 mt-0.5">
+                          <span>0.10 (Instant/Fast)</span>
+                          <span>0.75 (Default)</span>
+                          <span>0.95 (Smooth Cinema)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Brickwall Soft Limiter */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#56b6c2] font-black">MASTER BRICKWALL PEAK LIMITER</span>
+                      <span className="text-white/40 text-[10px]">Output Protection</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold">
+                          {masterLimiterSetting ? 'Brickwall Safety Limiter: ACTIVE' : 'Safety Limiter: BYPASSED'}
+                        </p>
+                        <p className="text-white/40 text-[10px]">
+                          Prevents hardware clipping and DAC overload distortion when multiple tracks layer
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const next = !masterLimiterSetting;
+                          setMasterLimiterSetting(next);
+                          modularSynth.setMasterLimiterEnabled(next);
+                          playSound('toggle');
+                        }}
+                        className={`px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all ${
+                          masterLimiterSetting
+                            ? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_8px_#98c379]'
+                            : 'border-white/20 bg-white/5 text-white/60 hover:text-white'
+                        }`}
+                      >
+                        {masterLimiterSetting ? 'LIMITER: ON' : 'LIMITER: OFF'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: BUFFER & IR SPECS */}
+              {synthSettingsTab === 'dsp' && (
+                <div className="space-y-4">
+                  {/* Noise Buffer Config */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#c678dd] font-black">NOISE GENERATOR PCM AUDIO BUFFER</span>
+                      <span className="text-white/40 text-[10px]">AudioBuffer Allocation</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <div className="flex justify-between text-white/70 mb-1">
+                          <span>PCM Buffer Length:</span>
+                          <span className="text-[#c678dd] font-bold">{noiseDurationSetting.toFixed(1)}s ({(noiseDurationSetting * audioSampleRate).toLocaleString()} samples)</span>
                         </div>
                         <input
                           type="range"
@@ -4516,19 +4700,19 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             setNoiseDurationSetting(v);
                             modularSynth.setNoiseBufferDuration(v);
                           }}
-                          className="w-full accent-[#56b6c2] cursor-pointer"
+                          className="w-full accent-[#c678dd] cursor-pointer"
                         />
                         <div className="flex justify-between text-[9px] text-white/40 mt-0.5">
-                          <span>0.5s (Compact)</span>
+                          <span>0.5s (22k samples)</span>
                           <span>2.0s (Default)</span>
-                          <span>5.0s (Long)</span>
+                          <span>5.0s (220k samples)</span>
                         </div>
                       </div>
 
                       <div>
                         <div className="flex justify-between text-white/70 mb-1">
                           <span>Noise Color Spectrum:</span>
-                          <span className="text-[#56b6c2] font-bold uppercase">{noiseColorSetting}</span>
+                          <span className="text-[#c678dd] font-bold uppercase">{noiseColorSetting}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-1 mt-1">
                           {(['white', 'pink', 'brown'] as const).map((col) => (
@@ -4541,7 +4725,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               }}
                               className={`py-1 rounded-xs border text-center font-bold uppercase transition-all ${
                                 noiseColorSetting === col
-                                  ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                  ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
                                   : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
                               }`}
                             >
@@ -4556,15 +4740,15 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   {/* Convolution Space Reverb Buffer */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#c678dd] font-black">CONVOLUTION REVERB IMPULSE RESPONSE</span>
-                      <span className="text-white/40 text-[10px]">ConvolverNode DSP</span>
+                      <span className="text-[#c678dd] font-black">CONVOLUTION REVERB IMPULSE RESPONSE BUFFER</span>
+                      <span className="text-white/40 text-[10px]">Stereo IR Buffer</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                       <div>
                         <div className="flex justify-between text-white/70 mb-1">
-                          <span>Reverb RT60 Duration:</span>
-                          <span className="text-[#c678dd] font-bold">{reverbDurationSetting.toFixed(1)}s</span>
+                          <span>Impulse Duration (RT60):</span>
+                          <span className="text-[#c678dd] font-bold">{reverbDurationSetting.toFixed(1)}s ({(reverbDurationSetting * audioSampleRate * 2).toLocaleString()} stereo samples)</span>
                         </div>
                         <input
                           type="range"
@@ -4615,14 +4799,118 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
               )}
 
-              {/* TAB 2: VOICE & TUNING */}
+              {/* TAB 3: MIDI CONTROLLER & DEVICE ROUTING */}
+              {synthSettingsTab === 'midi' && (
+                <div className="space-y-4">
+                  {/* MIDI Input Device Selector */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#e5c07b] font-black">CONNECTED MIDI HARDWARE DEVICE</span>
+                      <span className="text-white/40 text-[10px]">Device Input Selector</span>
+                    </div>
+
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/60">Active Input:</span>
+                        <span className="text-[#e5c07b] font-bold">
+                          {midiConnectedDevice || 'No physical MIDI device detected'}
+                        </span>
+                      </div>
+
+                      {midiDevices.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                          <button
+                            onClick={() => {
+                              setSelectedMidiDevice('all');
+                              modularSynth.setMidiSelectedDeviceId('all');
+                              playSound('click');
+                            }}
+                            className={`p-2 border rounded-xs text-left cursor-pointer transition-all ${
+                              selectedMidiDevice === 'all'
+                                ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                                : 'border-white/10 bg-white/5 text-white/70 hover:text-white'
+                            }`}
+                          >
+                            <div>ALL CONNECTED DEVICES (OMNI)</div>
+                            <div className={`text-[9px] ${selectedMidiDevice === 'all' ? 'text-black/80' : 'text-white/40'}`}>
+                              Accept input from any attached MIDI keyboard
+                            </div>
+                          </button>
+                          {midiDevices.map((dev) => (
+                            <button
+                              key={dev.id}
+                              onClick={() => {
+                                setSelectedMidiDevice(dev.id);
+                                modularSynth.setMidiSelectedDeviceId(dev.id);
+                                playSound('click');
+                              }}
+                              className={`p-2 border rounded-xs text-left cursor-pointer transition-all ${
+                                selectedMidiDevice === dev.id
+                                  ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                                  : 'border-white/10 bg-white/5 text-white/70 hover:text-white'
+                              }`}
+                            >
+                              <div className="font-bold truncate">{dev.name}</div>
+                              <div className={`text-[9px] ${selectedMidiDevice === dev.id ? 'text-black/80' : 'text-white/40'}`}>
+                                ID: {dev.id}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-3 border border-white/5 bg-black/20 rounded-xs text-white/40 text-[11px]">
+                          Plug in any USB/Bluetooth MIDI keyboard or controller. Chrome/Edge/Firefox will automatically detect and bind inputs without driver installation.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* MIDI Channel Routing */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#e5c07b] font-black">CHANNEL DISPATCH ROUTING</span>
+                      <span className="text-white/40 text-[10px]">Track Filtering</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold">
+                          {midiOmniSetting ? 'Omni Mode (All 6 Tracks Layered)' : 'Focused Active Track Only (Strict)'}
+                        </p>
+                        <p className="text-white/40 text-[10px]">
+                          {midiOmniSetting
+                            ? 'Incoming MIDI notes broadcast to all 6 tracks simultaneously'
+                            : 'Incoming MIDI notes trigger strictly the active focused track only'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const next = !midiOmniSetting;
+                          setMidiOmniSetting(next);
+                          modularSynth.setMidiOmniMode(next);
+                          playSound('toggle');
+                        }}
+                        className={`px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all ${
+                          midiOmniSetting
+                            ? 'border-[#e5c07b] bg-[#e5c07b] text-black shadow-[0_0_8px_#e5c07b]'
+                            : 'border-white/20 bg-white/5 text-white/60 hover:text-white'
+                        }`}
+                      >
+                        {midiOmniSetting ? 'OMNI: ON' : 'OMNI: OFF'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: VOICE ARCHITECTURE & TUNING */}
               {synthSettingsTab === 'voice' && (
                 <div className="space-y-4">
                   {/* Master Concert Tuning */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#98c379] font-black">MASTER CONCERT TUNING (A4)</span>
-                      <span className="text-white/40 text-[10px]">Reference Standard</span>
+                      <span className="text-[#98c379] font-black">MASTER CONCERT TUNING (A4 STANDARD)</span>
+                      <span className="text-white/40 text-[10px]">Oscillator Reference Calibration</span>
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
@@ -4655,14 +4943,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   {/* Polyphony Allocation */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#98c379] font-black">POLYPHONY & VOICE ALLOCATION</span>
-                      <span className="text-white/40 text-[10px]">Per-Track Voices</span>
+                      <span className="text-[#98c379] font-black">POLYPHONY VOICE ALLOCATION LIMIT</span>
+                      <span className="text-white/40 text-[10px]">Max Simultaneous Voices</span>
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
                       <div>
                         <p className="text-white/80 font-bold">Max Concurrent Voices: {maxPolyphonySetting}</p>
-                        <p className="text-white/40 text-[10px]">Prevents clipping and voice distortion</p>
+                        <p className="text-white/40 text-[10px]">Protects Web Audio thread from CPU overload</p>
                       </div>
                       <div className="flex items-center gap-1">
                         {[4, 6, 8, 12, 16].map((p) => (
@@ -4686,203 +4974,38 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* Global Portamento Glide */}
+                  {/* Voice Stealing Algorithm */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#98c379] font-black">GLOBAL LEGATO GLIDE (PORTAMENTO)</span>
-                      <span className="text-white/40 text-[10px]">Pitch Transition</span>
+                      <span className="text-[#98c379] font-black">VOICE STEALING PRIORITY ALGORITHM</span>
+                      <span className="text-white/40 text-[10px]">Voice Recycling</span>
                     </div>
 
-                    <div className="pt-1">
-                      <div className="flex justify-between text-white/70 mb-1">
-                        <span>Glide Time:</span>
-                        <span className="text-[#98c379] font-bold">
-                          {portamentoSetting === 0 ? 'OFF (Instant)' : `${portamentoSetting} ms`}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={250}
-                        step={10}
-                        value={portamentoSetting}
-                        onChange={(e) => {
-                          const v = parseInt(e.target.value, 10);
-                          setPortamentoSetting(v);
-                          modularSynth.setPortamentoTime(v);
-                        }}
-                        className="w-full accent-[#98c379] cursor-pointer"
-                      />
-                      <div className="flex justify-between text-[9px] text-white/40 mt-0.5">
-                        <span>0ms (Instant)</span>
-                        <span>100ms (Smooth Lead)</span>
-                        <span>250ms (Deep Glide)</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: MIDI & CONTROLLER */}
-              {synthSettingsTab === 'midi' && (
-                <div className="space-y-4">
-                  {/* MIDI Channel Routing */}
-                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#e5c07b] font-black">MIDI CHANNEL ROUTING (OMNI MODE)</span>
-                      <span className="text-white/40 text-[10px]">Web MIDI API</span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <div>
-                        <p className="text-white/80 font-bold">
-                          {midiOmniSetting ? 'Omni Mode (All Tracks)' : 'Active Track Only (Strict)'}
-                        </p>
-                        <p className="text-white/40 text-[10px]">
-                          {midiOmniSetting
-                            ? 'Incoming MIDI notes trigger all unlocked channels simultaneously'
-                            : 'Incoming MIDI notes trigger strictly the active focused track only'}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const next = !midiOmniSetting;
-                          setMidiOmniSetting(next);
-                          modularSynth.setMidiOmniMode(next);
-                          playSound('toggle');
-                        }}
-                        className={`px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all ${
-                          midiOmniSetting
-                            ? 'border-[#e5c07b] bg-[#e5c07b] text-black shadow-[0_0_8px_#e5c07b]'
-                            : 'border-white/20 bg-white/5 text-white/60 hover:text-white'
-                        }`}
-                      >
-                        {midiOmniSetting ? 'OMNI: ON' : 'OMNI: OFF'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Pitch Bend Range */}
-                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#e5c07b] font-black">MIDI PITCH BEND WHEEL RANGE</span>
-                      <span className="text-white/40 text-[10px]">Wheel Sensitivity</span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <div>
-                        <p className="text-white/80 font-bold">±{pitchBendSetting} Semitones</p>
-                        <p className="text-white/40 text-[10px]">
-                          {pitchBendSetting === 2 ? 'Standard 2 Semitones (1 Whole Tone)' : pitchBendSetting === 12 ? 'Full 1 Octave Sweep' : `±${pitchBendSetting} Semitone Pitch Bend Range`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 4, 7, 12].map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => {
-                              setPitchBendSetting(s);
-                              modularSynth.setPitchBendRange(s);
-                              playSound('click');
-                            }}
-                            className={`px-2 py-1 rounded-xs border text-xs font-bold transition-all ${
-                              pitchBendSetting === s
-                                ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
-                                : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
-                            }`}
-                          >
-                            ±{s}st
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 4: MASTER FX & DSP RESTORE */}
-              {synthSettingsTab === 'master' && (
-                <div className="space-y-4">
-                  {/* Saturation Distortion Curve Model */}
-                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#e06c75] font-black">OVERDRIVE SATURATION ALGORITHM</span>
-                      <span className="text-white/40 text-[10px]">WaveShaper Transfer</span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <div>
-                        <p className="text-white/80 font-bold uppercase">{saturationSetting} Model</p>
-                        <p className="text-white/40 text-[10px]">
-                          {saturationSetting === 'tape'
-                            ? 'Warm soft tape compression curve with subtle harmonics'
-                            : saturationSetting === 'tube'
-                            ? 'Asymmetric vacuum tube triode model with rich even harmonics'
-                            : 'Hard diode digital clipping for aggressive distortion'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {(['tape', 'tube', 'hard'] as const).map((mode) => (
-                          <button
-                            key={mode}
-                            onClick={() => {
-                              setSaturationSetting(mode);
-                              modularSynth.setSaturationCurveType(mode);
-                              playSound('toggle');
-                            }}
-                            className={`px-2.5 py-1 rounded-xs border text-xs font-bold uppercase transition-all ${
-                              saturationSetting === mode
-                                ? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
-                                : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reset Synthesizer DSP Defaults */}
-                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#e06c75] font-black">RESET SYNTHESIZER TO DEFAULT</span>
-                      <span className="text-white/40 text-[10px]">Clean Restore</span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <div>
-                        <p className="text-white/80 font-bold">Restore Factory DSP Defaults</p>
-                        <p className="text-white/40 text-[10px]">Resets all DSP buffer lengths, pitch tuning, glide, and audio routing</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setNoiseDurationSetting(2.0);
-                          modularSynth.setNoiseBufferDuration(2.0);
-                          setNoiseColorSetting('white');
-                          modularSynth.setNoiseColor('white');
-                          setReverbDurationSetting(1.8);
-                          modularSynth.setReverbDuration(1.8);
-                          setReverbDecaySetting(0.6);
-                          modularSynth.setReverbDecayRate(0.6);
-                          setMasterTuningSetting(440.0);
-                          modularSynth.setMasterTuningFreq(440.0);
-                          setMaxPolyphonySetting(8);
-                          modularSynth.setMaxPolyphony(8);
-                          setPortamentoSetting(0);
-                          modularSynth.setPortamentoTime(0);
-                          setPitchBendSetting(2);
-                          modularSynth.setPitchBendRange(2);
-                          setMidiOmniSetting(false);
-                          modularSynth.setMidiOmniMode(false);
-                          setSaturationSetting('tape');
-                          modularSynth.setSaturationCurveType('tape');
-                          playSound('power');
-                        }}
-                        className="px-3 py-1 rounded-xs border border-red-500/40 hover:border-red-500 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-black font-black text-xs cursor-pointer transition-all"
-                      >
-                        ↺ RESET DSP
-                      </button>
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      {[
+                        { id: 'oldest', label: 'OLDEST', desc: 'Steals oldest active voice' },
+                        { id: 'quietest', label: 'QUIETEST', desc: 'Steals lowest amplitude voice' },
+                        { id: 'lowest', label: 'LOWEST PITCH', desc: 'Preserves high melody notes' },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setVoiceStealingSetting(item.id as any);
+                            modularSynth.setVoiceStealingMode(item.id as any);
+                            playSound('click');
+                          }}
+                          className={`p-2 rounded-xs border text-left cursor-pointer transition-all ${
+                            voiceStealingSetting === item.id
+                              ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                              : 'border-white/10 bg-white/5 text-white/70 hover:text-white'
+                          }`}
+                        >
+                          <div className="font-bold">{item.label}</div>
+                          <div className={`text-[9px] ${voiceStealingSetting === item.id ? 'text-black/80' : 'text-white/40'}`}>
+                            {item.desc}
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -4891,7 +5014,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
             {/* Modal Footer */}
             <div className="flex items-center justify-between px-4 py-2 bg-black/60 border-t border-white/10 shrink-0 text-xs">
-              <span className="text-white/40 text-[11px]">All parameter changes take effect immediately in Web Audio DSP graph.</span>
+              <span className="text-white/40 text-[11px]">Hardware & buffer parameters apply immediately to Web Audio engine graph.</span>
               <button
                 onClick={() => {
                   setIsSynthSettingsOpen(false);
