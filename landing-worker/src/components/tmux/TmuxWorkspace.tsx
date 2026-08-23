@@ -655,6 +655,8 @@ export const TmuxWorkspace: React.FC = () => {
   const [scopeMode, setScopeMode] = useState<'dual' | 'fft' | 'wave'>('dual');
   const [octaveFrom, setOctaveFrom] = useState<number>(3);
   const [octaveTo, setOctaveTo] = useState<number>(5);
+  const [kbOctaveFrom, setKbOctaveFrom] = useState<number>(3);
+  const [kbOctaveTo, setKbOctaveTo] = useState<number>(4);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [isOverlayMode, setIsOverlayMode] = useState<boolean>(true);
   const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0, 1, 2, 3]);
@@ -3283,14 +3285,83 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               })}
                             </div>
                           </div>
-                          {/* 4. REAL-TIME INTERACTIVE PIANO KEYBOARD & MIDI DISPLAY (2-Octave Full Visual Piano C3 to B4) */}
+                          {/* 4. REAL-TIME INTERACTIVE PIANO KEYBOARD & MIDI DISPLAY (Configurable Octave Scope Range) */}
                           <div className="pt-1.5 border-t border-white/10 flex flex-col gap-1 shrink-0 select-none">
-                            <div className="flex items-center justify-between text-xs font-mono">
+                            <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-mono">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-black text-[#56b6c2]">PIANO KEYBOARD</span>
-                                <span className="text-white/40 text-[10px] hidden sm:inline">| C3 - B4 INTERACTIVE AUDITION</span>
+                                <span className="text-white/40 text-[10px] hidden sm:inline">| C{kbOctaveFrom} - B{kbOctaveTo} AUDITION</span>
                               </div>
-                              <div className="flex items-center gap-1.5">
+
+                              <div className="flex items-center gap-2">
+                                {/* Octave Range Selector (FROM - TO) */}
+                                <div className="flex items-center gap-1 text-xs">
+                                  <span className="opacity-60 text-xs font-bold" title="Keyboard Octave Range (FROM - TO) — Changes visible keybed range">OCT:</span>
+
+                                  {/* FROM Control */}
+                                  <div className="flex items-center gap-0.5">
+                                    <span className="text-white/50 text-[10px] font-bold">FROM</span>
+                                    <button
+                                      onClick={() => {
+                                        setKbOctaveFrom((prev) => Math.max(1, prev - 1));
+                                        playSound('click');
+                                      }}
+                                      disabled={kbOctaveFrom <= 1}
+                                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                      title="Lower starting octave"
+                                    >
+                                      ◄
+                                    </button>
+                                    <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center">
+                                      {kbOctaveFrom}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        setKbOctaveFrom((prev) => Math.min(kbOctaveTo, prev + 1));
+                                        playSound('click');
+                                      }}
+                                      disabled={kbOctaveFrom >= kbOctaveTo}
+                                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                      title="Raise starting octave"
+                                    >
+                                      ►
+                                    </button>
+                                  </div>
+
+                                  {/* TO Control */}
+                                  <div className="flex items-center gap-0.5">
+                                    <span className="text-white/50 text-[10px] font-bold">TO</span>
+                                    <button
+                                      onClick={() => {
+                                        setKbOctaveTo((prev) => Math.max(kbOctaveFrom, prev - 1));
+                                        playSound('click');
+                                      }}
+                                      disabled={kbOctaveTo <= kbOctaveFrom}
+                                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                      title="Lower ending octave"
+                                    >
+                                      ◄
+                                    </button>
+                                    <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center">
+                                      {kbOctaveTo}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        setKbOctaveTo((prev) => Math.min(7, prev + 1));
+                                        playSound('click');
+                                      }}
+                                      disabled={kbOctaveTo >= 7}
+                                      className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                                      title="Raise ending octave"
+                                    >
+                                      ►
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <span className="opacity-30">|</span>
+
+                                {/* MIDI Hardware Status Badge */}
                                 <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold ${
                                   midiConnectedDevice 
                                     ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' 
@@ -3302,37 +3373,51 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               </div>
                             </div>
 
-                            {/* Piano Keyboard Keybed (C3 = noteIdx 60 to B4 = noteIdx 37, 24 semitones) */}
+                            {/* Piano Keyboard Keybed (Dynamically rendered based on kbOctaveFrom - kbOctaveTo) */}
                             <div className="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden">
                               {(() => {
-                                // 14 White Keys in 2 Octaves (C3, D3, E3, F3, G3, A3, B3, C4, D4, E4, F4, G4, A4, B4)
-                                const whiteKeyNotes = [
-                                  { note: 'C3', idx: 60 }, { note: 'D3', idx: 58 }, { note: 'E3', idx: 56 },
-                                  { note: 'F3', idx: 55 }, { note: 'G3', idx: 53 }, { note: 'A3', idx: 51 }, { note: 'B3', idx: 49 },
-                                  { note: 'C4', idx: 48 }, { note: 'D4', idx: 46 }, { note: 'E4', idx: 44 },
-                                  { note: 'F4', idx: 43 }, { note: 'G4', idx: 41 }, { note: 'A4', idx: 39 }, { note: 'B4', idx: 37 },
-                                ];
+                                const whiteKeys: { note: string; idx: number }[] = [];
+                                const blackKeys: { note: string; idx: number; whiteKeyIndexBefore: number }[] = [];
 
-                                // 10 Black Keys relative position offsets (% based on 14 white keys: 100/14 = 7.1428%)
-                                // Offsets: C#3, D#3, F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4
-                                const blackKeyNotes = [
-                                  { note: 'C#3', idx: 59, leftPct: 7.14 * 1 - 2.2 },
-                                  { note: 'D#3', idx: 57, leftPct: 7.14 * 2 - 2.0 },
-                                  { note: 'F#3', idx: 54, leftPct: 7.14 * 4 - 2.2 },
-                                  { note: 'G#3', idx: 52, leftPct: 7.14 * 5 - 2.1 },
-                                  { note: 'A#3', idx: 50, leftPct: 7.14 * 6 - 2.0 },
-                                  { note: 'C#4', idx: 47, leftPct: 7.14 * 8 - 2.2 },
-                                  { note: 'D#4', idx: 45, leftPct: 7.14 * 9 - 2.0 },
-                                  { note: 'F#4', idx: 42, leftPct: 7.14 * 11 - 2.2 },
-                                  { note: 'G#4', idx: 40, leftPct: 7.14 * 12 - 2.1 },
-                                  { note: 'A#4', idx: 38, leftPct: 7.14 * 13 - 2.0 },
-                                ];
+                                // Build octave by octave from kbOctaveFrom up to kbOctaveTo
+                                for (let oct = kbOctaveFrom; oct <= kbOctaveTo; oct++) {
+                                  // White keys in order: C, D, E, F, G, A, B
+                                  const wNoteNames = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+                                  wNoteNames.forEach((n) => {
+                                    const fullName = `${n}${oct}`;
+                                    const idx = PIANO_ROLL_NOTES.findIndex((p) => p.note === fullName);
+                                    if (idx >= 0) whiteKeys.push({ note: fullName, idx });
+                                  });
+                                }
+
+                                const totalWhiteKeys = whiteKeys.length;
+                                if (totalWhiteKeys === 0) return null;
+
+                                // Build black keys corresponding to white key intervals
+                                for (let oct = kbOctaveFrom; oct <= kbOctaveTo; oct++) {
+                                  const bSpecs = [
+                                    { name: `C#${oct}`, afterWhite: `C${oct}` },
+                                    { name: `D#${oct}`, afterWhite: `D${oct}` },
+                                    { name: `F#${oct}`, afterWhite: `F${oct}` },
+                                    { name: `G#${oct}`, afterWhite: `G${oct}` },
+                                    { name: `A#${oct}`, afterWhite: `A${oct}` },
+                                  ];
+                                  bSpecs.forEach((b) => {
+                                    const idx = PIANO_ROLL_NOTES.findIndex((p) => p.note === b.name);
+                                    const wIdx = whiteKeys.findIndex((w) => w.note === b.afterWhite);
+                                    if (idx >= 0 && wIdx >= 0) {
+                                      blackKeys.push({ note: b.name, idx, whiteKeyIndexBefore: wIdx });
+                                    }
+                                  });
+                                }
+
+                                const keyWidthPct = 100 / totalWhiteKeys;
 
                                 return (
                                   <>
                                     {/* White Keys Row */}
                                     <div className="flex w-full h-full gap-0.5">
-                                      {whiteKeyNotes.map((wk) => {
+                                      {whiteKeys.map((wk) => {
                                         const isPlaying = activePlayingNotes.has(wk.idx);
                                         const noteTrack = isPlaying ? activePlayingNotes.get(wk.idx)?.trackId : null;
                                         const keyColor = noteTrack !== null && noteTrack !== undefined && tracksState[noteTrack] 
@@ -3361,12 +3446,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                     </div>
 
                                     {/* Black Keys Row (Floating Over White Keys) */}
-                                    {blackKeyNotes.map((bk) => {
+                                    {blackKeys.map((bk) => {
                                       const isPlaying = activePlayingNotes.has(bk.idx);
                                       const noteTrack = isPlaying ? activePlayingNotes.get(bk.idx)?.trackId : null;
                                       const keyColor = noteTrack !== null && noteTrack !== undefined && tracksState[noteTrack] 
                                         ? tracksState[noteTrack].color 
                                         : currentTrack.color;
+
+                                      // Place black key right over the boundary of its parent white key
+                                      const leftPos = (bk.whiteKeyIndexBefore + 1) * keyWidthPct - (keyWidthPct * 0.32);
+                                      const bWidth = keyWidthPct * 0.64;
 
                                       return (
                                         <button
@@ -3376,13 +3465,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                             modularSynth.triggerTrackVoice(activeTrackId, bk.idx, 1);
                                             playSound('click');
                                           }}
-                                          className={`absolute top-0 h-[62%] w-[4.4%] rounded-b-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer z-10 transition-all border ${
+                                          className={`absolute top-0 h-[62%] rounded-b-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer z-10 transition-all border ${
                                             isPlaying
                                               ? 'shadow-[0_0_10px_currentColor]'
                                               : 'bg-[#181a1f] hover:bg-[#282c34] text-white/60 border-black'
                                           }`}
                                           style={{
-                                            left: `${bk.leftPct}%`,
+                                            left: `${leftPos}%`,
+                                            width: `${bWidth}%`,
                                             ...(isPlaying ? { backgroundColor: keyColor, borderColor: keyColor, color: '#000' } : {})
                                           }}
                                           title={`Play ${bk.note} (${PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1)} Hz)`}
