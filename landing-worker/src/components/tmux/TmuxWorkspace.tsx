@@ -688,7 +688,10 @@ export const TmuxWorkspace: React.FC = () => {
   const [reverbDecaySetting, setReverbDecaySetting] = useState<number>(modularSynth.getReverbDecayRate());
   const [masterTuningSetting, setMasterTuningSetting] = useState<number>(modularSynth.getMasterTuningFreq());
   const [maxPolyphonySetting, setMaxPolyphonySetting] = useState<number>(modularSynth.getMaxPolyphony());
+  const [portamentoSetting, setPortamentoSetting] = useState<number>(modularSynth.getPortamentoTime());
+  const [pitchBendSetting, setPitchBendSetting] = useState<number>(modularSynth.getPitchBendRange());
   const [midiOmniSetting, setMidiOmniSetting] = useState<boolean>(modularSynth.isMidiOmniMode());
+  const [saturationSetting, setSaturationSetting] = useState<'tape' | 'tube' | 'hard'>(modularSynth.getSaturationCurveType());
 
   // Compute Active Ringing Notes for Piano Keyboard:
   // Combines: 1) Currently playing sequencer step notes across tracks, 2) Manually held keys/MIDI notes
@@ -4615,6 +4618,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
               {/* TAB 2: VOICE & TUNING */}
               {synthSettingsTab === 'voice' && (
                 <div className="space-y-4">
+                  {/* Master Concert Tuning */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
                       <span className="text-[#98c379] font-black">MASTER CONCERT TUNING (A4)</span>
@@ -4648,6 +4652,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
+                  {/* Polyphony Allocation */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
                       <span className="text-[#98c379] font-black">POLYPHONY & VOICE ALLOCATION</span>
@@ -4680,12 +4685,48 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
                     </div>
                   </div>
+
+                  {/* Global Portamento Glide */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#98c379] font-black">GLOBAL LEGATO GLIDE (PORTAMENTO)</span>
+                      <span className="text-white/40 text-[10px]">Pitch Transition</span>
+                    </div>
+
+                    <div className="pt-1">
+                      <div className="flex justify-between text-white/70 mb-1">
+                        <span>Glide Time:</span>
+                        <span className="text-[#98c379] font-bold">
+                          {portamentoSetting === 0 ? 'OFF (Instant)' : `${portamentoSetting} ms`}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={250}
+                        step={10}
+                        value={portamentoSetting}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value, 10);
+                          setPortamentoSetting(v);
+                          modularSynth.setPortamentoTime(v);
+                        }}
+                        className="w-full accent-[#98c379] cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[9px] text-white/40 mt-0.5">
+                        <span>0ms (Instant)</span>
+                        <span>100ms (Smooth Lead)</span>
+                        <span>250ms (Deep Glide)</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* TAB 3: MIDI & VELOCITY */}
+              {/* TAB 3: MIDI & CONTROLLER */}
               {synthSettingsTab === 'midi' && (
                 <div className="space-y-4">
+                  {/* MIDI Channel Routing */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
                       <span className="text-[#e5c07b] font-black">MIDI CHANNEL ROUTING (OMNI MODE)</span>
@@ -4699,8 +4740,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         </p>
                         <p className="text-white/40 text-[10px]">
                           {midiOmniSetting
-                            ? 'Incoming MIDI notes trigger all unlocked channels'
-                            : 'Incoming MIDI notes trigger strictly the active focused track'}
+                            ? 'Incoming MIDI notes trigger all unlocked channels simultaneously'
+                            : 'Incoming MIDI notes trigger strictly the active focused track only'}
                         </p>
                       </div>
                       <button
@@ -4721,67 +4762,88 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
+                  {/* Pitch Bend Range */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#e5c07b] font-black">VELOCITY DYNAMICS CURVE</span>
-                      <span className="text-white/40 text-[10px]">Dynamic Scaling</span>
+                      <span className="text-[#e5c07b] font-black">MIDI PITCH BEND WHEEL RANGE</span>
+                      <span className="text-white/40 text-[10px]">Wheel Sensitivity</span>
                     </div>
 
-                    <div className="grid grid-cols-5 gap-1.5 pt-1">
-                      {(['EXP', 'LINEAR', 'LOG', 'HARD', 'OFF'] as VelocityCurve[]).map((vc) => (
-                        <button
-                          key={vc}
-                          onClick={() => {
-                            setVelocityCurve(vc);
-                            modularSynth.setVelocityCurve(vc);
-                            playSound('click');
-                          }}
-                          className={`py-1.5 px-1 text-center rounded-xs border font-black text-xs transition-all ${
-                            velocityCurve === vc
-                              ? 'border-[#e5c07b] bg-[#e5c07b] text-black shadow-xs'
-                              : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
-                          }`}
-                        >
-                          {vc}
-                        </button>
-                      ))}
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold">±{pitchBendSetting} Semitones</p>
+                        <p className="text-white/40 text-[10px]">
+                          {pitchBendSetting === 2 ? 'Standard 2 Semitones (1 Whole Tone)' : pitchBendSetting === 12 ? 'Full 1 Octave Sweep' : `±${pitchBendSetting} Semitone Pitch Bend Range`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 4, 7, 12].map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => {
+                              setPitchBendSetting(s);
+                              modularSynth.setPitchBendRange(s);
+                              playSound('click');
+                            }}
+                            className={`px-2 py-1 rounded-xs border text-xs font-bold transition-all ${
+                              pitchBendSetting === s
+                                ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+                                : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            ±{s}st
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* TAB 4: MASTER FX & LIMITER */}
+              {/* TAB 4: MASTER FX & DSP RESTORE */}
               {synthSettingsTab === 'master' && (
                 <div className="space-y-4">
+                  {/* Saturation Distortion Curve Model */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
-                      <span className="text-[#e06c75] font-black">MASTER 6-BAND GRAPHIC EQUALIZER</span>
-                      <span className="text-white/40 text-[10px]">Biquad Filter Array</span>
+                      <span className="text-[#e06c75] font-black">OVERDRIVE SATURATION ALGORITHM</span>
+                      <span className="text-white/40 text-[10px]">WaveShaper Transfer</span>
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
                       <div>
-                        <p className="text-white/80 font-bold">Master Equalizer Status: {isEqEnabled ? 'ACTIVE (ON)' : 'BYPASS (OFF)'}</p>
-                        <p className="text-white/40 text-[10px]">80Hz, 250Hz, 800Hz, 2.5kHz, 6kHz, 12kHz cascading chain</p>
+                        <p className="text-white/80 font-bold uppercase">{saturationSetting} Model</p>
+                        <p className="text-white/40 text-[10px]">
+                          {saturationSetting === 'tape'
+                            ? 'Warm soft tape compression curve with subtle harmonics'
+                            : saturationSetting === 'tube'
+                            ? 'Asymmetric vacuum tube triode model with rich even harmonics'
+                            : 'Hard diode digital clipping for aggressive distortion'}
+                        </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const next = !isEqEnabled;
-                          setIsEqEnabled(next);
-                          modularSynth.setEqEnabled(next);
-                          playSound('toggle');
-                        }}
-                        className={`px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all ${
-                          isEqEnabled
-                            ? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_8px_#98c379]'
-                            : 'border-white/20 bg-white/5 text-white/60 hover:text-white'
-                        }`}
-                      >
-                        {isEqEnabled ? 'EQ: ENABLED' : 'EQ: DISABLED'}
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {(['tape', 'tube', 'hard'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => {
+                              setSaturationSetting(mode);
+                              modularSynth.setSaturationCurveType(mode);
+                              playSound('toggle');
+                            }}
+                            className={`px-2.5 py-1 rounded-xs border text-xs font-bold uppercase transition-all ${
+                              saturationSetting === mode
+                                ? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
+                                : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
+                  {/* Reset Synthesizer DSP Defaults */}
                   <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-white/10 pb-1">
                       <span className="text-[#e06c75] font-black">RESET SYNTHESIZER TO DEFAULT</span>
@@ -4791,7 +4853,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="flex items-center justify-between pt-1">
                       <div>
                         <p className="text-white/80 font-bold">Restore Factory DSP Defaults</p>
-                        <p className="text-white/40 text-[10px]">Resets all DSP buffer lengths, pitch tuning, and audio routing</p>
+                        <p className="text-white/40 text-[10px]">Resets all DSP buffer lengths, pitch tuning, glide, and audio routing</p>
                       </div>
                       <button
                         onClick={() => {
@@ -4807,8 +4869,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           modularSynth.setMasterTuningFreq(440.0);
                           setMaxPolyphonySetting(8);
                           modularSynth.setMaxPolyphony(8);
+                          setPortamentoSetting(0);
+                          modularSynth.setPortamentoTime(0);
+                          setPitchBendSetting(2);
+                          modularSynth.setPitchBendRange(2);
                           setMidiOmniSetting(false);
                           modularSynth.setMidiOmniMode(false);
+                          setSaturationSetting('tape');
+                          modularSynth.setSaturationCurveType('tape');
                           playSound('power');
                         }}
                         className="px-3 py-1 rounded-xs border border-red-500/40 hover:border-red-500 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-black font-black text-xs cursor-pointer transition-all"

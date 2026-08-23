@@ -1887,10 +1887,13 @@ class ModularSynth {
   private noiseColor: 'white' | 'pink' | 'brown' = 'white';
   private reverbDuration: number = 1.8;      // 0.2s to 6.0s
   private reverbDecayRate: number = 0.6;     // 0.1 to 2.0 (High Frequency Air Absorption)
-  private masterTuningFreq: number = 440.0;  // 432Hz to 444Hz
+  private masterTuningFreq: number = 440.0;  // 430Hz to 450Hz
   private maxPolyphony: number = 8;          // 1 to 16 voices per track
+  private portamentoTime: number = 0.0;      // 0 to 250ms (Glide / Portamento)
+  private pitchBendSemi: number = 2;         // 1 to 12 semitones
   private midiOmniMode: boolean = false;     // false = active track only, true = all tracks (Omni)
   private delayPingPong: boolean = false;    // Stereo offset ping-pong effect
+  private saturationCurveType: 'tape' | 'tube' | 'hard' = 'tape';
 
   // Sequencer Engine (512 Steps, 32 Bars)
   private isSequencerPlaying: boolean = false;
@@ -2043,11 +2046,28 @@ class ModularSynth {
     const n_samples = 44100;
     const curve = new Float32Array(n_samples);
     const deg = Math.PI / 180;
+
     for (let i = 0; i < n_samples; ++i) {
       const x = (i * 2) / n_samples - 1;
       if (k === 0) {
         curve[i] = x;
+      } else if (this.saturationCurveType === 'hard') {
+        // Hard Digital Diode Clipping
+        const threshold = Math.max(0.08, 1 - (amount * 0.85));
+        curve[i] = Math.max(-threshold, Math.min(threshold, x * (1 + amount * 3))) / threshold;
+      } else if (this.saturationCurveType === 'tube') {
+        // Warm Asymmetric Vacuum Tube Saturation
+        if (x < -1) {
+          curve[i] = -1;
+        } else if (x > 1) {
+          curve[i] = 1;
+        } else {
+          // Asymmetric hyperbolic tangent curve with even harmonics
+          const driveX = x * (1 + amount * 4);
+          curve[i] = Math.tanh(driveX) + 0.1 * Math.pow(Math.tanh(driveX), 2);
+        }
       } else {
+        // Warm Analog Tape Soft Saturation (Default)
         curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
       }
     }
@@ -2364,6 +2384,33 @@ class ModularSynth {
     this.midiOmniMode = omni;
   }
 
+  public getSaturationCurveType(): 'tape' | 'tube' | 'hard' {
+    return this.saturationCurveType;
+  }
+
+  public setSaturationCurveType(type: 'tape' | 'tube' | 'hard') {
+    this.saturationCurveType = type;
+    if (this.waveShaper) {
+      (this.waveShaper as any).curve = this.makeDistortionCurve(this.driveAmount);
+    }
+  }
+
+  public getPortamentoTime(): number {
+    return this.portamentoTime;
+  }
+
+  public setPortamentoTime(ms: number) {
+    this.portamentoTime = Math.max(0, Math.min(250, ms));
+  }
+
+  public getPitchBendRange(): number {
+    return this.pitchBendSemi;
+  }
+
+  public setPitchBendRange(semi: number) {
+    this.pitchBendSemi = Math.max(1, Math.min(12, semi));
+  }
+
   /* -------------------------------------------------------------------------- */
   /*                      COMPLETE MODULAR SIGNAL FLOW DSP                      */
   /* -------------------------------------------------------------------------- */
@@ -2448,7 +2495,7 @@ class ModularSynth {
         g1.connect(voiceMix);
         noiseSource.start(startT1);
       } else {
-        const glideSec = (track.glideTime ?? 0) / 1000;
+        const glideSec = ((track.glideTime ?? 0) || this.portamentoTime) / 1000;
         const lastFreq = this.lastTrackFreqs.get(track.id);
         const lastTime = this.lastTrackNoteTimes.get(track.id) ?? 0;
         const isLegato = (t - lastTime) < 1.5; // Within 1.5s interval
@@ -2467,7 +2514,7 @@ class ModularSynth {
       }
 
       const osc2Freq = baseFreq * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200);
-      const glideSec2 = (track.glideTime ?? 0) / 1000;
+      const glideSec2 = ((track.glideTime ?? 0) || this.portamentoTime) / 1000;
       const lastFreq2 = this.lastTrackFreqs.get(track.id);
       const lastTime2 = this.lastTrackNoteTimes.get(track.id) ?? 0;
       const isLegato2 = (t - lastTime2) < 1.5;
