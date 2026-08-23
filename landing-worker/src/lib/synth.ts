@@ -150,6 +150,8 @@ export interface TrackData {
   lfoPitchAmt?: number;    // 0.0 to 1.0 (Vibrato / Pitch modulation depth)
   lfoCutoffAmt?: number;   // 0.0 to 1.0 (Wah / Filter sweep modulation depth)
   lfoPanAmt?: number;      // 0.0 to 1.0 (Auto-Pan modulation depth)
+  lfoAmpAmt?: number;      // 0.0 to 1.0 (Tremolo / Amplitude modulation depth)
+  lfoFadeTime?: number;    // 0 to 2000 ms (LFO Fade-in attack delay)
   lfoDepth?: number;       // legacy alias
   lfoTarget?: LfoTarget;   // legacy alias
 
@@ -2447,9 +2449,11 @@ class ModularSynth {
     const pitchModAmt = track.lfoPitchAmt !== undefined ? track.lfoPitchAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'pitch')?.amount ?? (track.lfoTarget === 'pitch' ? (track.lfoDepth || 0) : 0));
     const cutoffModAmt = track.lfoCutoffAmt !== undefined ? track.lfoCutoffAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'cutoff')?.amount ?? (track.lfoTarget === 'filter' ? (track.lfoDepth || 0) : 0));
     const panModAmt = track.lfoPanAmt !== undefined ? track.lfoPanAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'pan')?.amount ?? (track.lfoTarget === 'pan' ? (track.lfoDepth || 0) : 0));
+    const ampModAmt = track.lfoAmpAmt !== undefined ? track.lfoAmpAmt : (track.lfoTarget === 'amp' ? (track.lfoDepth || 0) : 0);
+    const lfoFadeSec = (track.lfoFadeTime ?? 0) / 1000;
 
     let lfo: OscillatorNode | undefined;
-    if ((pitchModAmt > 0 || cutoffModAmt > 0 || panModAmt > 0) && track.lfoRate > 0) {
+    if ((pitchModAmt > 0 || cutoffModAmt > 0 || panModAmt > 0 || ampModAmt > 0) && track.lfoRate > 0) {
       lfo = ctx.createOscillator();
       lfo.type = track.lfoWaveform;
       lfo.frequency.setValueAtTime(track.lfoRate, t);
@@ -2457,7 +2461,13 @@ class ModularSynth {
       // 1. Vibrato (Pitch modulation)
       if (pitchModAmt > 0) {
         const pitchGain = ctx.createGain();
-        pitchGain.gain.setValueAtTime(pitchModAmt * baseFreq * 0.12, t);
+        const targetPitchGain = pitchModAmt * baseFreq * 0.12;
+        if (lfoFadeSec > 0) {
+          pitchGain.gain.setValueAtTime(0.0001, t);
+          pitchGain.gain.linearRampToValueAtTime(targetPitchGain, t + lfoFadeSec);
+        } else {
+          pitchGain.gain.setValueAtTime(targetPitchGain, t);
+        }
         lfo.connect(pitchGain);
         if (osc1) pitchGain.connect(osc1.frequency);
         if (osc2) pitchGain.connect(osc2.frequency);
@@ -2466,7 +2476,13 @@ class ModularSynth {
       // 2. Wah-Wah / Filter sweep modulation
       if (cutoffModAmt > 0) {
         const filterGain = ctx.createGain();
-        filterGain.gain.setValueAtTime(cutoffModAmt * 2800, t);
+        const targetFilterGain = cutoffModAmt * 2800;
+        if (lfoFadeSec > 0) {
+          filterGain.gain.setValueAtTime(0.0001, t);
+          filterGain.gain.linearRampToValueAtTime(targetFilterGain, t + lfoFadeSec);
+        } else {
+          filterGain.gain.setValueAtTime(targetFilterGain, t);
+        }
         lfo.connect(filterGain);
         filterGain.connect(filter.frequency);
       }
@@ -2474,9 +2490,29 @@ class ModularSynth {
       // 3. Auto-Pan modulation
       if (panModAmt > 0 && panner) {
         const panGain = ctx.createGain();
-        panGain.gain.setValueAtTime(panModAmt * 0.8, t);
+        const targetPanGain = panModAmt * 0.8;
+        if (lfoFadeSec > 0) {
+          panGain.gain.setValueAtTime(0.0001, t);
+          panGain.gain.linearRampToValueAtTime(targetPanGain, t + lfoFadeSec);
+        } else {
+          panGain.gain.setValueAtTime(targetPanGain, t);
+        }
         lfo.connect(panGain);
         panGain.connect(panner.pan);
+      }
+
+      // 4. Tremolo / Volume amplitude modulation
+      if (ampModAmt > 0) {
+        const ampGain = ctx.createGain();
+        const targetAmpGain = ampModAmt * 0.45 * track.volume;
+        if (lfoFadeSec > 0) {
+          ampGain.gain.setValueAtTime(0.0001, t);
+          ampGain.gain.linearRampToValueAtTime(targetAmpGain, t + lfoFadeSec);
+        } else {
+          ampGain.gain.setValueAtTime(targetAmpGain, t);
+        }
+        lfo.connect(ampGain);
+        ampGain.connect(gainNode.gain);
       }
 
       lfo.start(t);

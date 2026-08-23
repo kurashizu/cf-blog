@@ -3861,41 +3861,82 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         />
                       </div>
 
-                      {/* Right: 2 Parts (66.7% width) - 3 Direct Modulation Destination Knobs */}
-                      <div className="col-span-8 flex items-center justify-around h-full py-0.5">
-                        <RotaryKnob
-                          label="PITCH"
-                          value={Math.round((currentTrack.lfoPitchAmt ?? 0) * 100)}
-                          min={0}
-                          max={100}
-                          step={5}
-                          unit="%"
-                          color="#e5c07b"
-                          size={40}
-                          onChange={(v) => handleTrackParamChange({ lfoPitchAmt: v / 100 })}
-                        />
-                        <RotaryKnob
-                          label="CUTOFF"
-                          value={Math.round((currentTrack.lfoCutoffAmt ?? 0) * 100)}
-                          min={0}
-                          max={100}
-                          step={5}
-                          unit="%"
-                          color="#56b6c2"
-                          size={40}
-                          onChange={(v) => handleTrackParamChange({ lfoCutoffAmt: v / 100 })}
-                        />
-                        <RotaryKnob
-                          label="PAN"
-                          value={Math.round((currentTrack.lfoPanAmt ?? 0) * 100)}
-                          min={0}
-                          max={100}
-                          step={5}
-                          unit="%"
-                          color="#98c379"
-                          size={40}
-                          onChange={(v) => handleTrackParamChange({ lfoPanAmt: v / 100 })}
-                        />
+                      {/* Right: 2 Parts (66.7% width) - 5 Direct Modulation Destination Knobs in Hexagonal Packing (Top 3, Bottom 2) */}
+                      <div className="col-span-8 flex flex-col justify-around h-full py-0.5 my-auto">
+                        {/* Top Row: 3 Knobs (PITCH, CUTOFF, AMP) */}
+                        <div className="grid grid-cols-6 gap-0.5 items-center">
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="PITCH"
+                              value={Math.round((currentTrack.lfoPitchAmt ?? 0) * 100)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              unit="%"
+                              color="#e5c07b"
+                              size={32}
+                              onChange={(v) => handleTrackParamChange({ lfoPitchAmt: v / 100 })}
+                            />
+                          </div>
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="CUTOFF"
+                              value={Math.round((currentTrack.lfoCutoffAmt ?? 0) * 100)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              unit="%"
+                              color="#56b6c2"
+                              size={32}
+                              onChange={(v) => handleTrackParamChange({ lfoCutoffAmt: v / 100 })}
+                            />
+                          </div>
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="AMP"
+                              value={Math.round((currentTrack.lfoAmpAmt ?? 0) * 100)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              unit="%"
+                              color="#d19a66"
+                              size={32}
+                              onChange={(v) => handleTrackParamChange({ lfoAmpAmt: v / 100 })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Bottom Row: 2 Knobs (PAN, FADE) Staggered Center-Interleaved */}
+                        <div className="grid grid-cols-6 gap-0.5 items-center">
+                          <div className="col-span-1" />
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="PAN"
+                              value={Math.round((currentTrack.lfoPanAmt ?? 0) * 100)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              unit="%"
+                              color="#98c379"
+                              size={32}
+                              onChange={(v) => handleTrackParamChange({ lfoPanAmt: v / 100 })}
+                            />
+                          </div>
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="FADE"
+                              value={currentTrack.lfoFadeTime ?? 0}
+                              min={0}
+                              max={2000}
+                              step={50}
+                              unit="ms"
+                              color="#c678dd"
+                              size={32}
+                              onChange={(v) => handleTrackParamChange({ lfoFadeTime: v })}
+                            />
+                          </div>
+                          <div className="col-span-1" />
+                        </div>
                       </div>
                     </div>
                   </div>
