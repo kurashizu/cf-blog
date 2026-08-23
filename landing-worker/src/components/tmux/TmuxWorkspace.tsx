@@ -2581,22 +2581,22 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
 
                                                                                                                                                           {/* L-SHAPE SYNTHESIZER & PIANO ROLL WORKSTATION TOPOLOGY */}
-              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar 2xl:overflow-hidden flex flex-col 2xl:grid 2xl:grid-cols-5 2xl:grid-rows-[minmax(0,1fr)_155px] gap-1.5">
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-5 lg:grid-rows-[minmax(0,1fr)_155px] gap-1.5">
                 
-                {/* UPPER L-SHAPE: LEFT (MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO ON 2XL, STACKED ON <2XL] */}
+                {/* UPPER L-SHAPE: LEFT (GROUPED MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO] */}
                 <div className="contents">
                   
-                  {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING - 5:3:3 RATIO ON 2XL) */}
-                  <div className="order-1 2xl:order-1 2xl:col-span-1 grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-1 2xl:grid-rows-[5fr_3fr_3fr] gap-1.5 min-w-0 2xl:h-full 2xl:overflow-hidden">
+                  {/* LEFT COLUMN: MODULES 1, 2, 3 GROUPED TOGETHER (WITH AUTO-SCROLLBAR IF LOW RESOLUTION, PREVENTING COMPRESSION) */}
+                  <div className="order-1 lg:order-1 lg:col-span-1 flex flex-col gap-1.5 min-w-[260px] lg:min-w-0 lg:h-full lg:overflow-y-auto custom-scrollbar pr-0.5">
                     
                     {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 4×2 KNOBS GRID 32px) */}
-                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[170px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
+                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[175px] shrink-0">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>1. DUAL OSC</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
-                      <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
+                      <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto py-1">
                         {/* Left: OSC 1 (5 Waveforms Vertically Stacked) */}
                         <div className="col-span-3 flex flex-col justify-between h-full py-0.5">
                           <span className="text-[10px] text-white/60 font-black text-center mb-0.5 leading-none">OSC1</span>
@@ -2728,13 +2728,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 HORIZONTAL KNOBS 32px) */}
-                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[110px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
+                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
-                      <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
+                      <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto py-1">
                         {/* Left: 4 Blend Mode Buttons in a 2x2 GRID (Equal Size, Pure Text, Stretched to Fill Height) */}
                         <div className="col-span-6 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
                           {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
@@ -2780,13 +2780,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 3 KNOBS 32px, No Divider) */}
-                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[110px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
+                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
                       </div>
 
-                      <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto">
+                      <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto py-1">
                         {/* Left: 4 Filter Mode Buttons in a 2x2 GRID (Stretched to Fill Height) */}
                         <div className="col-span-5 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
                           {(['lowpass', 'bandpass', 'highpass', 'notch'] as FilterType[]).map((f) => (
@@ -2856,8 +2856,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                   </div>
 
-                  {/* RIGHT COLUMN: PIANO ROLL MATRIX WORKSPACE (4/5 RATIO ON 2XL, FULL WIDTH ON <2XL) */}
-                  <div className="order-2 2xl:order-2 2xl:col-span-4 flex flex-col min-h-[420px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
+                  {/* RIGHT COLUMN: PIANO ROLL MATRIX WORKSPACE (4/5 RATIO) */}
+                  <div className="order-2 lg:order-2 lg:col-span-4 flex flex-col min-h-[420px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & INTEGRATED PRESETS */}
                     {(() => {
                       const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
