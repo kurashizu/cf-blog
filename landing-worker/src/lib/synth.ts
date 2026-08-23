@@ -2060,6 +2060,7 @@ class ModularSynth {
   }
 
   public loadBuiltInSong(songName: string = 'OVERWORLD') {
+    this.stopAll();
     if (songName === 'OVERWORLD') {
       this.tracks = JSON.parse(JSON.stringify(INITIAL_TRACKS));
       this.totalSteps = 1184;
@@ -2071,9 +2072,17 @@ class ModularSynth {
       this.bpm = 100;
       this.meter = '6/8';
     }
+    this.currentStep = 0;
+    this.scheduledStepQueue = [];
+    const ctx = soundEngine.init();
+    if (ctx) {
+      this.nextStepTime = ctx.currentTime + 0.05;
+    }
+    this.onStepListeners.forEach((fn) => fn(0));
   }
 
   public resetToBlank(steps: number = 64) {
+    this.stopAll();
     this.tracks = INITIAL_TRACKS.map((t) => ({
       ...JSON.parse(JSON.stringify(t)),
       grid: Array.from({ length: 4096 }, () => []),
@@ -2082,6 +2091,13 @@ class ModularSynth {
     this.totalSteps = steps;
     this.bpm = 120;
     this.meter = '4/4';
+    this.currentStep = 0;
+    this.scheduledStepQueue = [];
+    const ctx = soundEngine.init();
+    if (ctx) {
+      this.nextStepTime = ctx.currentTime + 0.05;
+    }
+    this.onStepListeners.forEach((fn) => fn(0));
   }
 
   public getTrack(trackId: number): TrackData | undefined {

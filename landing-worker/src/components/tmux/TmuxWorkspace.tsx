@@ -714,6 +714,7 @@ export const TmuxWorkspace: React.FC = () => {
     setSeqCurrentStep(0);
     setActiveStepPage(0);
     setTracksState([...modularSynth.getTracks()]);
+    setIsSeqPlaying(modularSynth.isPlayingSeq());
     showSaveStatus('✓ NEW');
     playSound('click');
   };
@@ -721,6 +722,7 @@ export const TmuxWorkspace: React.FC = () => {
   const handleLoadBuiltinSong = (idx: number) => {
     const song = BUILTIN_SONGS[idx];
     if (!song) return;
+    setBuiltinSongIdx(idx);
     modularSynth.loadBuiltInSong(song.id);
     setTotalPatternSteps(song.steps);
     setSynthBpm(song.bpm);
@@ -731,6 +733,7 @@ export const TmuxWorkspace: React.FC = () => {
     setIsOverlayMode(true);
     setOverlayTrackIds([0, 1, 2, 3]);
     setTracksState([...modularSynth.getTracks()]);
+    setIsSeqPlaying(modularSynth.isPlayingSeq());
     showSaveStatus(`✓ ${song.name}`);
     playSound('toggle');
   };
@@ -742,7 +745,8 @@ export const TmuxWorkspace: React.FC = () => {
       : LEN_PRESETS[0];
     setTotalPatternSteps(nextLen);
     modularSynth.setTotalSteps(nextLen);
-    const maxPages = Math.max(1, Math.ceil(nextLen / 32));
+    const stepsCount = (METER_SPECS[timeMeter] || METER_SPECS['4/4']).stepsPerBar;
+    const maxPages = Math.max(1, Math.ceil(nextLen / stepsCount));
     if (activeStepPage >= maxPages) setActiveStepPage(0);
     playSound('click');
   };
