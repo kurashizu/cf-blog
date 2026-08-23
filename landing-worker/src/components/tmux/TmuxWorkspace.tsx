@@ -654,6 +654,11 @@ export const TmuxWorkspace: React.FC = () => {
   const [synthDelayFeedback, setSynthDelayFeedback] = useState<number>(0.32);
   const [synthReverbMix, setSynthReverbMix] = useState<number>(0.15);
   const [synthDrive, setSynthDrive] = useState<number>(0.0);
+  const [activeFxTab, setActiveFxTab] = useState<'fx' | 'eq'>('fx');
+  const [isEqEnabled, setIsEqEnabled] = useState<boolean>(modularSynth.isEqEnabled());
+  const [eqLowGain, setEqLowGain] = useState<number>(modularSynth.getEqLow());
+  const [eqMidGain, setEqMidGain] = useState<number>(modularSynth.getEqMid());
+  const [eqHighGain, setEqHighGain] = useState<number>(modularSynth.getEqHigh());
   const [scopeMode, setScopeMode] = useState<'dual' | 'fft' | 'wave'>('dual');
   const [octaveFrom, setOctaveFrom] = useState<number>(3);
   const [octaveTo, setOctaveTo] = useState<number>(5);
@@ -3941,108 +3946,206 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 6: FX (5 LARGE ROTARY KNOBS IN HEXAGONAL CLOSE PACKING - 最密堆积: 上3下2交错嵌套, NO DIVIDER) */}
+                  {/* MODULE 6: MASTER FX & PARAMETRIC EQ (TABS: FX / EQ) */}
                   <div className="lg:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
-                    <div className="flex justify-between items-center font-black text-[#e06c75] text-xs border-b border-white/10 pb-0.5 shrink-0">
-                      <span>6. FX</span>
-                      <span className="text-white/40 font-mono text-xs">──►</span>
+                    <div className="flex justify-between items-center font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[#e06c75] font-black">6.</span>
+                        <button
+                          onClick={() => { setActiveFxTab('fx'); playSound('click'); }}
+                          className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors ${
+                            activeFxTab === 'fx'
+                              ? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
+                              : 'border-white/20 text-white/60 hover:text-white'
+                          }`}
+                          title="Master FX: Tape Delay, Convolution Reverb & Tape Overdrive Saturation"
+                        >
+                          FX
+                        </button>
+                        <button
+                          onClick={() => { setActiveFxTab('eq'); playSound('click'); }}
+                          className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors ${
+                            activeFxTab === 'eq'
+                              ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                              : 'border-white/20 text-white/60 hover:text-white'
+                          }`}
+                          title="Master 3-Band Parametric EQ: Low Shelf, Mid Peaking & High Shelf Equalizer"
+                        >
+                          EQ
+                        </button>
+                      </div>
+                      {activeFxTab === 'eq' ? (
+                        <button
+                          onClick={() => {
+                            const next = !isEqEnabled;
+                            setIsEqEnabled(next);
+                            modularSynth.setEqEnabled(next);
+                            playSound('toggle');
+                          }}
+                          className={`px-1.5 py-0.2 text-[9px] rounded-xs border font-bold cursor-pointer transition-colors ${
+                            isEqEnabled
+                              ? 'border-[#98c379] bg-[#98c379] text-black font-black shadow-[0_0_6px_#98c379]'
+                              : 'border-white/20 bg-white/5 text-white/40 hover:text-white'
+                          }`}
+                          title="Toggle Master EQ (Default: OFF)"
+                        >
+                          {isEqEnabled ? 'ON' : 'OFF'}
+                        </button>
+                      ) : (
+                        <span className="text-white/40 font-mono text-xs">──►</span>
+                      )}
                     </div>
 
-                    {/* 5 Hardware FX Knobs in Hexagonal Close Packing (最密堆积: 上3下2交错嵌套, No Divider) */}
-                    <div className="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
-                      {/* Top Row: 3 Knobs (TIME, FDBK, D-MIX) */}
-                      <div className="grid grid-cols-6 gap-0.5 items-center">
-                        <div className="col-span-2 flex justify-center">
-                          <RotaryKnob
-                            label="TIME"
-                            value={Math.round(synthDelayTime * 1000)}
-                            min={50}
-                            max={800}
-                            step={10}
-                            unit="ms"
-                            color="#e06c75"
-                            size={40}
-                            onChange={(v) => {
-                              const t = v / 1000;
-                              setSynthDelayTime(t);
-                              modularSynth.setDelayTime(t);
-                            }}
-                          />
+                    {activeFxTab === 'fx' ? (
+                      /* 5 Hardware FX Knobs in Hexagonal Close Packing (最密堆积: 上3下2交错嵌套, No Divider) */
+                      <div className="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
+                        {/* Top Row: 3 Knobs (TIME, FDBK, D-MIX) */}
+                        <div className="grid grid-cols-6 gap-0.5 items-center">
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="TIME"
+                              value={Math.round(synthDelayTime * 1000)}
+                              min={50}
+                              max={800}
+                              step={10}
+                              unit="ms"
+                              color="#e06c75"
+                              size={40}
+                              onChange={(v) => {
+                                const t = v / 1000;
+                                setSynthDelayTime(t);
+                                modularSynth.setDelayTime(t);
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="FDBK"
+                              value={Math.round(synthDelayFeedback * 100)}
+                              min={0}
+                              max={85}
+                              step={5}
+                              unit="%"
+                              color="#e06c75"
+                              size={40}
+                              onChange={(v) => {
+                                const fb = v / 100;
+                                setSynthDelayFeedback(fb);
+                                modularSynth.setDelayFeedback(fb);
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="D-MIX"
+                              value={Math.round(synthDelayMix * 100)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              unit="%"
+                              color="#e06c75"
+                              size={40}
+                              onChange={(v) => {
+                                const m = v / 100;
+                                setSynthDelayMix(m);
+                                modularSynth.setDelayMix(m);
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="col-span-2 flex justify-center">
-                          <RotaryKnob
-                            label="FDBK"
-                            value={Math.round(synthDelayFeedback * 100)}
-                            min={0}
-                            max={85}
-                            step={5}
-                            unit="%"
-                            color="#e06c75"
-                            size={40}
-                            onChange={(v) => {
-                              const fb = v / 100;
-                              setSynthDelayFeedback(fb);
-                              modularSynth.setDelayFeedback(fb);
-                            }}
-                          />
-                        </div>
-                        <div className="col-span-2 flex justify-center">
-                          <RotaryKnob
-                            label="D-MIX"
-                            value={Math.round(synthDelayMix * 100)}
-                            min={0}
-                            max={100}
-                            step={5}
-                            unit="%"
-                            color="#e06c75"
-                            size={40}
-                            onChange={(v) => {
-                              const m = v / 100;
-                              setSynthDelayMix(m);
-                              modularSynth.setDelayMix(m);
-                            }}
-                          />
+
+                        {/* Bottom Row: 2 Knobs (R-MIX, DRIVE) Nested in the Interstices */}
+                        <div className="grid grid-cols-6 gap-0.5 items-center">
+                          <div className="col-start-2 col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="R-MIX"
+                              value={Math.round(synthReverbMix * 100)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              unit="%"
+                              color="#c678dd"
+                              size={40}
+                              onChange={(v) => {
+                                const rm = v / 100;
+                                setSynthReverbMix(rm);
+                                modularSynth.setReverbMix(rm);
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-2 flex justify-center">
+                            <RotaryKnob
+                              label="DRIVE"
+                              value={Math.round(synthDrive * 100)}
+                              min={0}
+                              max={100}
+                              step={5}
+                              unit="%"
+                              color="#e5c07b"
+                              size={40}
+                              onChange={(v) => {
+                                const d = v / 100;
+                                setSynthDrive(d);
+                                modularSynth.setDrive(d);
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
-
-                      {/* Bottom Row: 2 Knobs (R-MIX, DRIVE) Nested in the Interstices */}
-                      <div className="grid grid-cols-6 gap-0.5 items-center">
-                        <div className="col-start-2 col-span-2 flex justify-center">
+                    ) : (
+                      /* Master 3-Band Parametric EQ Tab View (LOW 100Hz, MID 1kHz, HIGH 8kHz in 40px Knobs) */
+                      <div className="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
+                        <div className="flex items-center justify-around h-full py-0.5">
                           <RotaryKnob
-                            label="R-MIX"
-                            value={Math.round(synthReverbMix * 100)}
-                            min={0}
-                            max={100}
-                            step={5}
-                            unit="%"
-                            color="#c678dd"
-                          size={40}
+                            label="LOW"
+                            value={eqLowGain}
+                            min={-12}
+                            max={12}
+                            step={1}
+                            unit="dB"
+                            color="#56b6c2"
+                            size={40}
                             onChange={(v) => {
-                              const rm = v / 100;
-                              setSynthReverbMix(rm);
-                              modularSynth.setReverbMix(rm);
+                              setEqLowGain(v);
+                              modularSynth.setEqLow(v);
                             }}
                           />
-                        </div>
-                        <div className="col-span-2 flex justify-center">
                           <RotaryKnob
-                            label="DRIVE"
-                            value={Math.round(synthDrive * 100)}
-                            min={0}
-                            max={100}
-                            step={5}
-                            unit="%"
+                            label="MID"
+                            value={eqMidGain}
+                            min={-12}
+                            max={12}
+                            step={1}
+                            unit="dB"
                             color="#e5c07b"
                             size={40}
                             onChange={(v) => {
-                              const d = v / 100;
-                              setSynthDrive(d);
-                              modularSynth.setDrive(d);
+                              setEqMidGain(v);
+                              modularSynth.setEqMid(v);
+                            }}
+                          />
+                          <RotaryKnob
+                            label="HIGH"
+                            value={eqHighGain}
+                            min={-12}
+                            max={12}
+                            step={1}
+                            unit="dB"
+                            color="#98c379"
+                            size={40}
+                            onChange={(v) => {
+                              setEqHighGain(v);
+                              modularSynth.setEqHigh(v);
                             }}
                           />
                         </div>
+                        <div className="flex justify-between items-center text-[9px] font-mono text-white/40 px-2 pt-0.5 border-t border-white/10">
+                          <span>100Hz</span>
+                          <span>1.0kHz</span>
+                          <span>8.0kHz</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* MODULE 7: OUT (EXPANDED TO lg:col-span-4 -> WIDE SCREEN GRAPH VISUALIZER) */}
@@ -4089,41 +4192,59 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <span className="text-[10px] font-mono text-white/50">60 FPS</span>
                     </div>
 
-                    {/* Left / Right 2-Column Split (Left: col-span-3, Right: col-span-9 Wide Screen) */}
+                    {/* Left / Right 2-Column Split (Left: col-span-4 for 2x2 40px Knobs, Right: col-span-8 Wide Screen) */}
                     <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
-                      {/* Left: PAN (Top-Left 40px) and VOL (Bottom-Right 34px) Diagonal Staggered Layout */}
-                      <div className="col-span-3 flex flex-col justify-around border-r border-white/10 pr-1 h-full py-0.5">
-                        {/* Top-Left: PAN (40px) */}
-                        <div className="flex justify-start pl-1">
-                          <RotaryKnob
-                            label="PAN"
-                            value={Math.round(currentTrack.pan * 100)}
-                            min={-100}
-                            max={100}
-                            step={5}
-                            unit=""
-                            color="#56b6c2"
-                            size={40}
-                            onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
-                          />
-                        </div>
-                        {/* Bottom-Right: VOL (34px, slightly smaller) */}
-                        <div className="flex justify-end pr-1">
-                          <RotaryKnob
-                            label="VOL"
-                            value={Math.round(currentTrack.volume * 100)}
-                            min={0}
-                            max={100}
-                            unit="%"
-                            color="#98c379"
-                            size={34}
-                            onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
-                          />
-                        </div>
+                      {/* Left: 4 Knobs in 2x2 Grid (PAN, AIR, VOL, WIDTH, all 40px) */}
+                      <div className="col-span-4 grid grid-cols-2 gap-0.5 border-r border-white/10 pr-1 h-full items-center py-0.5">
+                        <RotaryKnob
+                          label="PAN"
+                          value={Math.round(currentTrack.pan * 100)}
+                          min={-100}
+                          max={100}
+                          step={5}
+                          unit=""
+                          color="#56b6c2"
+                          size={40}
+                          onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="AIR"
+                          value={Math.round((currentTrack.airGain ?? 0) * 100)}
+                          min={-100}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          color="#e5c07b"
+                          size={40}
+                          description="Air Shelf EQ — Boosts/cuts high-end brilliance (±8dB @ 10kHz)"
+                          onChange={(v) => handleTrackParamChange({ airGain: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="VOL"
+                          value={Math.round(currentTrack.volume * 100)}
+                          min={0}
+                          max={100}
+                          unit="%"
+                          color="#98c379"
+                          size={40}
+                          onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="WIDTH"
+                          value={100}
+                          min={0}
+                          max={200}
+                          step={5}
+                          unit="%"
+                          color="#c678dd"
+                          size={40}
+                          description="Stereo Soundstage Width"
+                          onChange={() => {}}
+                        />
                       </div>
 
                       {/* Right: Full-Screen Ultra-Wide High-Resolution Single Visualizer Canvas */}
-                      <div className="col-span-9 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
+                      <div className="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
                         <div className="flex items-center justify-between text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
                           <span className={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : activeOutVisualizer === 'scope' ? 'text-[#98c379] font-black' : 'text-[#e06c75] font-black'}>
                             {activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : activeOutVisualizer === 'scope' ? 'OSCILLOSCOPE WAVE' : 'RMS LOUDNESS GRAPH'}

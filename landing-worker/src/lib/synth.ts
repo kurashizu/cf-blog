@@ -155,6 +155,9 @@ export interface TrackData {
   lfoDepth?: number;       // legacy alias
   lfoTarget?: LfoTarget;   // legacy alias
 
+  // Node 7: Master Output Channel Strip
+  airGain?: number;        // -1.0 to +1.0 (Air Shelf EQ / Tone Shaping, ±8dB at 10kHz)
+
   // Modular Modulation Matrix Routing (Optional legacy support)
   modRoutes?: ModRoute[];
 
@@ -1857,6 +1860,15 @@ class ModularSynth {
   private reverbWetGain: GainNode | null = null;
   private waveShaper: WaveShaperNode | null = null;
 
+  // Master 3-Band Parametric Equalizer (EQ) Nodes & State (Default: OFF)
+  private eqEnabled: boolean = false;
+  private eqLowGain: number = 0;   // -12dB to +12dB (Low Shelf @ 100Hz)
+  private eqMidGain: number = 0;   // -12dB to +12dB (Peaking Mid @ 1000Hz)
+  private eqHighGain: number = 0;  // -12dB to +12dB (High Shelf @ 8000Hz)
+  private eqLowFilter: BiquadFilterNode | null = null;
+  private eqMidFilter: BiquadFilterNode | null = null;
+  private eqHighFilter: BiquadFilterNode | null = null;
+
   // Sequencer Engine (512 Steps, 32 Bars)
   private isSequencerPlaying: boolean = false;
   private currentStep: number = 0;
@@ -1917,17 +1929,41 @@ class ModularSynth {
     this.reverbConvolver.buffer = impulse;
 
     const masterGain = (soundEngine as any).masterGain || ctx.destination;
+
+    // Master 3-Band Parametric Equalizer (EQ) Chain: LowShelf (100Hz) -> Peaking (1000Hz) -> HighShelf (8000Hz) -> MasterGain
+    this.eqLowFilter = ctx.createBiquadFilter();
+    this.eqLowFilter.type = 'lowshelf';
+    this.eqLowFilter.frequency.setValueAtTime(100, ctx.currentTime);
+    this.eqLowFilter.gain.setValueAtTime(this.eqEnabled ? this.eqLowGain : 0, ctx.currentTime);
+
+    this.eqMidFilter = ctx.createBiquadFilter();
+    this.eqMidFilter.type = 'peaking';
+    this.eqMidFilter.frequency.setValueAtTime(1000, ctx.currentTime);
+    this.eqMidFilter.Q.setValueAtTime(1.0, ctx.currentTime);
+    this.eqMidFilter.gain.setValueAtTime(this.eqEnabled ? this.eqMidGain : 0, ctx.currentTime);
+
+    this.eqHighFilter = ctx.createBiquadFilter();
+    this.eqHighFilter.type = 'highshelf';
+    this.eqHighFilter.frequency.setValueAtTime(8000, ctx.currentTime);
+    this.eqHighFilter.gain.setValueAtTime(this.eqEnabled ? this.eqHighGain : 0, ctx.currentTime);
+
+    this.eqLowFilter.connect(this.eqMidFilter);
+    this.eqMidFilter.connect(this.eqHighFilter);
+    this.eqHighFilter.connect(masterGain);
+
+    const eqInputNode = this.eqLowFilter;
+
     this.delayNode.connect(this.delayWetGain);
-    this.delayWetGain.connect(masterGain);
+    this.delayWetGain.connect(eqInputNode);
 
     this.reverbConvolver.connect(this.reverbWetGain);
-    this.reverbWetGain.connect(masterGain);
+    this.reverbWetGain.connect(eqInputNode);
 
     // Master Warm Tape Overdrive / WaveShaper Saturation
     this.waveShaper = ctx.createWaveShaper();
     (this.waveShaper as any).curve = this.makeDistortionCurve(this.driveAmount);
     this.waveShaper.oversample = '2x';
-    this.waveShaper.connect(masterGain);
+    this.waveShaper.connect(eqInputNode);
   }
 
   private makeDistortionCurve(amount: number): Float32Array {
@@ -2164,6 +2200,51 @@ class ModularSynth {
 
   public getDrive(): number {
     return this.driveAmount;
+  }
+
+  // Master Parametric 3-Band EQ Controls
+  public setEqEnabled(enabled: boolean) {
+    this.eqEnabled = enabled;
+    if (this.eqLowFilter) this.eqLowFilter.gain.setValueAtTime(enabled ? this.eqLowGain : 0, 0);
+    if (this.eqMidFilter) this.eqMidFilter.gain.setValueAtTime(enabled ? this.eqMidGain : 0, 0);
+    if (this.eqHighFilter) this.eqHighFilter.gain.setValueAtTime(enabled ? this.eqHighGain : 0, 0);
+  }
+
+  public isEqEnabled(): boolean {
+    return this.eqEnabled;
+  }
+
+  public setEqLow(gainDb: number) {
+    this.eqLowGain = Math.max(-12, Math.min(12, gainDb));
+    if (this.eqLowFilter && this.eqEnabled) {
+      this.eqLowFilter.gain.setValueAtTime(this.eqLowGain, 0);
+    }
+  }
+
+  public getEqLow(): number {
+    return this.eqLowGain;
+  }
+
+  public setEqMid(gainDb: number) {
+    this.eqMidGain = Math.max(-12, Math.min(12, gainDb));
+    if (this.eqMidFilter && this.eqEnabled) {
+      this.eqMidFilter.gain.setValueAtTime(this.eqMidGain, 0);
+    }
+  }
+
+  public getEqMid(): number {
+    return this.eqMidGain;
+  }
+
+  public setEqHigh(gainDb: number) {
+    this.eqHighGain = Math.max(-12, Math.min(12, gainDb));
+    if (this.eqHighFilter && this.eqEnabled) {
+      this.eqHighFilter.gain.setValueAtTime(this.eqHighGain, 0);
+    }
+  }
+
+  public getEqHigh(): number {
+    return this.eqHighGain;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -2544,15 +2625,28 @@ class ModularSynth {
     voiceMix.connect(filter);
     filter.connect(gainNode);
 
+    // Node 7: Air Shelf Filter (±8dB high shelf @ 10kHz per track)
+    let finalVoiceNode: AudioNode = gainNode;
+    if (track.airGain !== undefined && Math.abs(track.airGain) > 0.01) {
+      const airFilter = ctx.createBiquadFilter();
+      airFilter.type = 'highshelf';
+      airFilter.frequency.setValueAtTime(10000, t);
+      airFilter.gain.setValueAtTime(track.airGain * 8, t); // ±8dB
+      gainNode.connect(airFilter);
+      finalVoiceNode = airFilter;
+    }
+
+    const eqInputNode: AudioNode = this.eqLowFilter || masterGain;
+
     if (panner) {
-      gainNode.connect(panner);
-      panner.connect(masterGain);
+      finalVoiceNode.connect(panner);
+      panner.connect(eqInputNode);
       if (this.delayNode && this.delayMix > 0) panner.connect(this.delayNode);
-      if (this.reverbConvolver && this.reverbMix > 0) gainNode.connect(this.reverbConvolver);
+      if (this.reverbConvolver && this.reverbMix > 0) finalVoiceNode.connect(this.reverbConvolver);
     } else {
-      gainNode.connect(masterGain);
-      if (this.delayNode && this.delayMix > 0) gainNode.connect(this.delayNode);
-      if (this.reverbConvolver && this.reverbMix > 0) gainNode.connect(this.reverbConvolver);
+      finalVoiceNode.connect(eqInputNode);
+      if (this.delayNode && this.delayMix > 0) finalVoiceNode.connect(this.delayNode);
+      if (this.reverbConvolver && this.reverbMix > 0) finalVoiceNode.connect(this.reverbConvolver);
     }
 
     this.activeVoices.set(voiceKey, {
