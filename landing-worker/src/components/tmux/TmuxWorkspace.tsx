@@ -306,6 +306,7 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
 }) => {
   const isRootC = nInfo.note.startsWith('C') && !nInfo.note.includes('#');
   const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+  const colsCount = meterSpec.colsPerBar;
   const colSpan = divToColumnSpan(snapDiv);
   const spanInt = Math.max(1, Math.floor(colSpan));
 
@@ -329,12 +330,12 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
         {nInfo.note}
       </button>
 
-      {/* 16 Step Horizontal Grid with Seamless Connected Note Blocks Across All Steps & Columns */}
+      {/* Dynamic Metric Columns Grid with Seamless Connected Note Blocks */}
       <div
         className="flex-1 h-full gap-0.5"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${colsCount}, minmax(0, 1fr))` }}
       >
-        {Array.from({ length: 16 }).map((_, colIdx) => {
+        {Array.from({ length: colsCount }).map((_, colIdx) => {
           const globalCol = viewportStartCol + colIdx;
           const step0 = globalCol * 2;
           const step1 = globalCol * 2 + 1;
@@ -359,13 +360,33 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                     const displayColor = primaryTrackWithNote ? primaryTrackWithNote.color : (tracksWithNote[0]?.color || '#fff');
                     const isPrimaryNote = Boolean(primaryTrackWithNote);
 
+                    const isPrevConnected = hasNote && visibleTracks.some((t) => t.grid[step]?.includes(actualIdx) && (t.grid[step - 1]?.includes(actualIdx) || false));
+                    const isNextConnected = hasNote && visibleTracks.some((t) => t.grid[step]?.includes(actualIdx) && (t.grid[step + 1]?.includes(actualIdx) || false));
+
+                    let roundedClass = 'rounded-xs';
+                    let spanMargin = '';
+                    if (hasNote) {
+                      if (isPrevConnected && isNextConnected) {
+                        roundedClass = 'rounded-none border-x-0';
+                        spanMargin = '-mx-[1.5px] z-[2]';
+                      } else if (isPrevConnected) {
+                        roundedClass = 'rounded-l-none rounded-r-xs border-l-0';
+                        spanMargin = '-ml-[1.5px] z-[2]';
+                      } else if (isNextConnected) {
+                        roundedClass = 'rounded-r-none rounded-l-xs border-r-0 border-l-2 border-white/70';
+                        spanMargin = '-mr-[1.5px] z-[2]';
+                      } else {
+                        roundedClass = 'rounded-xs border-l-2 border-white/70';
+                      }
+                    }
+
                     return (
                       <button
                         key={subCol}
                         onClick={() => onSubCellClick(actualIdx, colIdx, subCol)}
-                        className={`flex-1 h-full cursor-pointer border rounded-xs transition-colors relative overflow-hidden ${
+                        className={`flex-1 h-full cursor-pointer border ${roundedClass} ${spanMargin} transition-colors relative ${
                           hasNote
-                            ? `shadow-sm ${isSubCurrent ? 'brightness-125 ring-1 ring-white' : ''}`
+                            ? `shadow-xs ${isSubCurrent ? 'brightness-125 ring-1 ring-white' : ''}`
                             : isSubCurrent
                             ? 'border-white/70 bg-white/30'
                             : isBarStart && subCol === 0
@@ -389,55 +410,90 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
               ) : (
                 <button
                   onClick={() => onCellClick(actualIdx, colIdx)}
-                  className={`relative w-full h-full cursor-pointer border rounded-xs overflow-hidden ${
+                  className={`relative w-full h-full cursor-pointer rounded-xs ${
                     isColActive
-                      ? 'border-white/60 bg-white/25'
+                      ? 'bg-white/20'
                       : isBarStart
                       ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
                       : isBeatStart
                       ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
                       : isDivBlockStart
                       ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
-                      : 'border-white/5 bg-black/40 hover:bg-white/10'
+                      : 'border-l border-white/5 bg-black/40 hover:bg-white/10'
                   }`}
                 >
-                  {/* Multi-Track Overlaid Note Bars */}
+                  {/* Multi-Track Overlaid Continuous Note Bars */}
                   {visibleTracks.map((t) => {
                     const is0 = t.grid[step0]?.includes(actualIdx) || false;
                     const is1 = t.grid[step1]?.includes(actualIdx) || false;
                     if (!is0 && !is1) return null;
 
-                    const isPrevConnected = (is0 || is1) && (t.grid[step0 - 1]?.includes(actualIdx) || false);
-                    const isNextConnected = (is0 || is1) && (t.grid[step1 + 1]?.includes(actualIdx) || false);
+                    const isPrevConnected = is0 && (t.grid[step0 - 1]?.includes(actualIdx) || false);
+                    const isNextConnected = is1 && (t.grid[step1 + 1]?.includes(actualIdx) || false);
 
-                    let roundedClass = 'rounded-xs';
-                    if (isPrevConnected && isNextConnected) {
-                      roundedClass = 'rounded-none';
-                    } else if (isNextConnected) {
-                      roundedClass = 'rounded-l-xs rounded-r-none';
-                    } else if (isPrevConnected) {
-                      roundedClass = 'rounded-r-xs rounded-l-none';
+                    let leftClass = 'left-0 rounded-l-xs';
+                    let rightClass = 'right-0 rounded-r-xs';
+                    let widthStyle: string = '100%';
+                    let leftStyle: string | undefined = undefined;
+
+                    if (is0 && is1) {
+                      if (isPrevConnected && isNextConnected) {
+                        leftClass = '-left-[2px] rounded-none';
+                        rightClass = '-right-[2px]';
+                        widthStyle = 'calc(100% + 4px)';
+                        leftStyle = '-2px';
+                      } else if (isPrevConnected) {
+                        leftClass = '-left-[2px] rounded-l-none';
+                        rightClass = 'right-0 rounded-r-xs';
+                        widthStyle = 'calc(100% + 2px)';
+                        leftStyle = '-2px';
+                      } else if (isNextConnected) {
+                        leftClass = 'left-0 rounded-l-xs border-l-2 border-white/80';
+                        rightClass = '-right-[2px] rounded-r-none';
+                        widthStyle = 'calc(100% + 2px)';
+                        leftStyle = '0px';
+                      } else {
+                        leftClass = 'left-0 rounded-xs border-l-2 border-white/80';
+                        rightClass = 'right-0';
+                        widthStyle = '100%';
+                        leftStyle = '0px';
+                      }
+                    } else if (is0 && !is1) {
+                      if (isPrevConnected) {
+                        leftClass = '-left-[2px] rounded-l-none';
+                        rightClass = 'rounded-r-xs';
+                        widthStyle = 'calc(50% + 2px)';
+                        leftStyle = '-2px';
+                      } else {
+                        leftClass = 'left-0 rounded-xs border-l-2 border-white/80';
+                        widthStyle = '50%';
+                        leftStyle = '0px';
+                      }
+                    } else if (!is0 && is1) {
+                      if (isNextConnected) {
+                        leftClass = 'rounded-l-xs border-l-2 border-white/80';
+                        rightClass = '-right-[2px] rounded-r-none';
+                        widthStyle = 'calc(50% + 2px)';
+                        leftStyle = '50%';
+                      } else {
+                        leftClass = 'rounded-xs border-l-2 border-white/80';
+                        widthStyle = '50%';
+                        leftStyle = '50%';
+                      }
                     }
 
                     return (
-                      <React.Fragment key={t.id}>
-                        {is0 && (
-                          <div
-                            className={`absolute left-0 top-0 h-full ${is1 ? 'w-full' : 'w-[50%]'} ${roundedClass} shadow-sm ${
-                              t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-75'
-                            } ${isColActive && t.isPrimary ? 'brightness-125 ring-1 ring-white' : ''}`}
-                            style={{ backgroundColor: t.color }}
-                          />
-                        )}
-                        {!is0 && is1 && (
-                          <div
-                            className={`absolute right-0 top-0 h-full w-[50%] ${roundedClass} shadow-sm ${
-                              t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-75'
-                            } ${isColActive && t.isPrimary ? 'brightness-125 ring-1 ring-white' : ''}`}
-                            style={{ backgroundColor: t.color }}
-                          />
-                        )}
-                      </React.Fragment>
+                      <div
+                        key={t.id}
+                        className={`absolute top-0 h-full ${leftClass} ${rightClass} shadow-xs ${
+                          t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-75'
+                        } ${isColActive && t.isPrimary ? 'brightness-125 ring-1 ring-white' : ''}`}
+                        style={{
+                          backgroundColor: t.color,
+                          left: leftStyle,
+                          width: widthStyle,
+                        }}
+                      />
                     );
                   })}
                 </button>
@@ -623,7 +679,8 @@ export const TmuxWorkspace: React.FC = () => {
           if (pendingStep !== null) {
             setSeqCurrentStep(pendingStep);
             if (pageFollow) {
-              const p = Math.floor(pendingStep / 32);
+              const meterSteps = (METER_SPECS[timeMeter] || METER_SPECS['4/4']).stepsPerBar;
+              const p = Math.floor(pendingStep / meterSteps);
               setActiveStepPage(p);
             }
             pendingStep = null;
@@ -636,13 +693,13 @@ export const TmuxWorkspace: React.FC = () => {
       unsub();
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [pageFollow]);
+  }, [pageFollow, timeMeter]);
 
   // --- Patch & Built-in Song Management ---
   const STORAGE_KEY = 'krsz-synth-patch-v1';
   const BUILTIN_SONGS = [
     { id: 'OVERWORLD', name: 'OVERWORLD', steps: 1184, bpm: 105, meter: '4/4' as TimeSignature },
-    { id: 'UNDERWATER', name: 'UNDERWATER', steps: 1536, bpm: 210, meter: '3/4' as TimeSignature },
+    { id: 'UNDERWATER', name: 'UNDERWATER', steps: 1536, bpm: 100, meter: '3/4' as TimeSignature },
   ];
   const LEN_PRESETS = [16, 32, 64, 128, 256, 512] as const;
 
@@ -856,7 +913,8 @@ export const TmuxWorkspace: React.FC = () => {
     const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
     const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
 
-    const viewportStartCol = activeStepPage * 16;
+    const meterCols = (METER_SPECS[timeMeter] || METER_SPECS['4/4']).colsPerBar;
+    const viewportStartCol = activeStepPage * meterCols;
     const globalCol = viewportStartCol + snappedCol;
     const startStep = globalCol * 2;
     const track = modularSynth.getTrack(activeTrackId);
@@ -906,7 +964,8 @@ export const TmuxWorkspace: React.FC = () => {
     const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
     const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
 
-    const viewportStartCol = activeStepPage * 16;
+    const meterCols = (METER_SPECS[timeMeter] || METER_SPECS['4/4']).colsPerBar;
+    const viewportStartCol = activeStepPage * meterCols;
     const globalCol = viewportStartCol + snappedCol;
     const step0 = globalCol * 2;
     const step1 = globalCol * 2 + 1;
@@ -926,7 +985,8 @@ export const TmuxWorkspace: React.FC = () => {
   };
 
   const handlePianoRollSubCellClick = (noteIndex: number, colIndex: number, subCol: number) => {
-    const viewportStartCol = activeStepPage * 16;
+    const meterCols = (METER_SPECS[timeMeter] || METER_SPECS['4/4']).colsPerBar;
+    const viewportStartCol = activeStepPage * meterCols;
     const globalCol = viewportStartCol + colIndex;
     const startStep = globalCol * 2 + subCol;
     const track = modularSynth.getTrack(activeTrackId);
@@ -971,7 +1031,8 @@ export const TmuxWorkspace: React.FC = () => {
   };
 
   const handleAccentSubCellClick = (colIndex: number, subCol: number) => {
-    const viewportStartCol = activeStepPage * 16;
+    const meterCols = (METER_SPECS[timeMeter] || METER_SPECS['4/4']).colsPerBar;
+    const viewportStartCol = activeStepPage * meterCols;
     const globalCol = viewportStartCol + colIndex;
     const step = globalCol * 2 + subCol;
     const track = modularSynth.getTrack(activeTrackId);
@@ -2464,45 +2525,52 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
                 </div>
 
-                {/* Right: 16-Step Viewport Page Flipping (Aligned to Right Third) */}
-                <div className="flex items-center justify-end gap-1">
-                  <span className="opacity-60 font-bold" title="Step Page Navigation">PAGE:</span>
-                  <button
-                    onClick={() => {
-                      setActiveStepPage((prev) => Math.max(0, prev - 1));
-                      playSound('click');
-                    }}
-                    disabled={activeStepPage === 0}
-                    className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
-                    title="Previous Page (◄)"
-                  >
-                    ◄
-                  </button>
-                  <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs" title={`Active 16-Step Page: Page ${activeStepPage + 1} of ${Math.max(1, Math.ceil(totalPatternSteps / 32))} (Steps ${activeStepPage * 32 + 1} to ${Math.min(totalPatternSteps, (activeStepPage + 1) * 32)})`}>
-                    {activeStepPage + 1}/{Math.max(1, Math.ceil(totalPatternSteps / 32))}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const maxPages = Math.max(1, Math.ceil(totalPatternSteps / 32));
-                      setActiveStepPage((prev) => Math.min(maxPages - 1, prev + 1));
-                      playSound('click');
-                    }}
-                    disabled={activeStepPage >= Math.max(1, Math.ceil(totalPatternSteps / 32)) - 1}
-                    className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
-                    title="Next Page (►)"
-                  >
-                    ►
-                  </button>
-                  <button
-                    onClick={() => { setPageFollow(!pageFollow); playSound('toggle'); }}
-                    className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs ${
-                      pageFollow ? 'border-[#98c379] bg-[#98c379] text-black font-black' : 'border-white/20 text-white/50'
-                    }`}
-                    title="Follow Playhead Mode (FLW) — Automatically turns pages as the sequencer plays"
-                  >
-                    FLW
-                  </button>
-                </div>
+                {/* Right: Metric-Aware Viewport Page Flipping (Aligned to Right Third) */}
+                {(() => {
+                  const currentMeterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+                  const stepsPerPage = currentMeterSpec.stepsPerBar;
+                  const totalPages = Math.max(1, Math.ceil(totalPatternSteps / stepsPerPage));
+
+                  return (
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="opacity-60 font-bold" title="Step Page Navigation">PAGE:</span>
+                      <button
+                        onClick={() => {
+                          setActiveStepPage((prev) => Math.max(0, prev - 1));
+                          playSound('click');
+                        }}
+                        disabled={activeStepPage === 0}
+                        className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                        title="Previous Page (◄)"
+                      >
+                        ◄
+                      </button>
+                      <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs" title={`Active Measure Page: Page ${activeStepPage + 1} of ${totalPages} (Steps ${activeStepPage * stepsPerPage + 1} to ${Math.min(totalPatternSteps, (activeStepPage + 1) * stepsPerPage)})`}>
+                        {activeStepPage + 1}/{totalPages}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setActiveStepPage((prev) => Math.min(totalPages - 1, prev + 1));
+                          playSound('click');
+                        }}
+                        disabled={activeStepPage >= totalPages - 1}
+                        className="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+                        title="Next Page (►)"
+                      >
+                        ►
+                      </button>
+                      <button
+                        onClick={() => { setPageFollow(!pageFollow); playSound('toggle'); }}
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs ${
+                          pageFollow ? 'border-[#98c379] bg-[#98c379] text-black font-black' : 'border-white/20 text-white/50'
+                        }`}
+                        title="Follow Playhead Mode (FLW) — Automatically turns pages as the sequencer plays"
+                      >
+                        FLW
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
 
 
@@ -2786,9 +2854,12 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   <div className="order-3 lg:order-2 lg:col-span-4 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & INTEGRATED PRESETS */}
                     {(() => {
-                      const viewportStartCol = activeStepPage * 16;
-                      const activeCol = (isSeqPlaying && Math.floor(seqCurrentStep / 32) === activeStepPage)
-                        ? Math.floor((seqCurrentStep % 32) / 2)
+                      const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+                      const colsPerPage = meterSpec.colsPerBar;
+                      const stepsPerPage = meterSpec.stepsPerBar;
+                      const viewportStartCol = activeStepPage * colsPerPage;
+                      const activeCol = (isSeqPlaying && Math.floor(seqCurrentStep / stepsPerPage) === activeStepPage)
+                        ? Math.floor((seqCurrentStep % stepsPerPage) / 2)
                         : -1;
                       const activeSubCol = isSeqPlaying ? (seqCurrentStep % 2) : -1;
 
@@ -2801,7 +2872,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             PIANO ROLL // {currentTrack.name}
                           </span>
                           <span className="text-xs text-[#98c379] font-mono font-bold">
-                            BAR {Math.floor(seqCurrentStep / (METER_SPECS[timeMeter]?.stepsPerBar || 32)) + 1}.{Math.floor(((seqCurrentStep % (METER_SPECS[timeMeter]?.stepsPerBar || 32)) / ((METER_SPECS[timeMeter]?.stepsPerBar || 32) / (METER_SPECS[timeMeter]?.beatsPerBar || 4)))) + 1} (STEP {seqCurrentStep + 1}/{totalPatternSteps})
+                            BAR {Math.floor(seqCurrentStep / stepsPerPage) + 1}.{Math.floor(((seqCurrentStep % stepsPerPage) / (stepsPerPage / meterSpec.beatsPerBar))) + 1} (STEP {seqCurrentStep + 1}/{totalPatternSteps})
                           </span>
                           
                         </div>
@@ -2810,8 +2881,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           {/* Clear Page Tool */}
                           <button
                             onClick={() => {
-                              for (let i = 0; i < 32; i++) {
-                                const actualStep = activeStepPage * 32 + i;
+                              for (let i = 0; i < stepsPerPage; i++) {
+                                const actualStep = activeStepPage * stepsPerPage + i;
                                 modularSynth.clearTrackStep(activeTrackId, actualStep);
                               }
                               setTracksState([...modularSynth.getTracks()]);
@@ -2900,11 +2971,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           <div className="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0 select-none">
                             <div
                               className="flex-1 gap-0.5"
-                              style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+                              style={{ display: 'grid', gridTemplateColumns: `repeat(${colsPerPage}, minmax(0, 1fr))` }}
                             >
-                              {Array.from({ length: 16 }).map((_, colIdx) => {
+                              {Array.from({ length: colsPerPage }).map((_, colIdx) => {
                                 const globalCol = viewportStartCol + colIdx;
-                                const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
                                 const barNum = Math.floor(globalCol / meterSpec.colsPerBar) + 1;
                                 const colInBar = globalCol % meterSpec.colsPerBar;
                                 const beatNum = Math.floor(colInBar / meterSpec.colsPerBeat) + 1;
@@ -3026,11 +3096,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             </div>
                             <div
                               className="flex-1 gap-0.5"
-                              style={{ display: 'grid', gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
+                              style={{ display: 'grid', gridTemplateColumns: `repeat(${colsPerPage}, minmax(0, 1fr))` }}
                             >
-                              {Array.from({ length: 16 }).map((_, colIdx) => {
+                              {Array.from({ length: colsPerPage }).map((_, colIdx) => {
                                 const globalCol = viewportStartCol + colIdx;
-                                const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
                                 const colInBar = globalCol % meterSpec.colsPerBar;
                                 const isBarStart = colInBar === 0;
 
@@ -3061,11 +3130,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                                 ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
                                                 : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
                                             }`}
-                                            title={`Step ${step + 1} Accent: ${
-                                              accVal === 0 ? 'OFF (0dB)' : accVal === 1 ? 'Level 1 (+3dB Boost)' : 'Level 2 (+6dB Hard Accent)'
-                                            } — Click to cycle (OFF -> +3dB -> +6dB)`}
+                                            title={`Step ${step + 1} (${subCol === 0 ? 'L' : 'R'}) Accent: ${
+                                              accVal === 2 ? '+6dB Red' : accVal === 1 ? '+3dB Amber' : 'OFF (0dB)'
+                                            } — Click to cycle`}
                                           >
-                                            {accVal === 2 ? '+6' : accVal === 1 ? '+3' : subCol === 0 ? colIdx + 1 : '·'}
+                                            {accVal === 2 ? '••' : accVal === 1 ? '•' : ''}
                                           </button>
                                         );
                                       })}
