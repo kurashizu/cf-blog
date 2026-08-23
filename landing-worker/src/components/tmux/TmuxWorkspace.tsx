@@ -2637,7 +2637,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </div>
                         </div>
 
-                        {/* Right: 8 Knobs in 4×2 Grid (28px, Hover-Only Value) */}
+                        {/* Right: 8 Knobs in 4×2 Grid (Enlarged to 40px, matching Module 6 FX) */}
                         <div className="col-span-6 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
                           <RotaryKnob
                             label="OSC1"
@@ -2646,7 +2646,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#e5c07b"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -2656,7 +2656,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#56b6c2"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -2667,7 +2667,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={2}
                             unit="c"
                             color="#e06c75"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ detuneCents: v })}
                           />
                           <RotaryKnob
@@ -2678,7 +2678,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={1}
                             unit="st"
                             color="#c678dd"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ osc2Semitone: v })}
                           />
                           <RotaryKnob
@@ -2689,7 +2689,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#d19a66"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ pulseWidth: v })}
                           />
                           <RotaryKnob
@@ -2700,7 +2700,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={15}
                             unit="°"
                             color="#98c379"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
                           />
                           <RotaryKnob
@@ -2710,7 +2710,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#61afef"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ subOscGain: v / 100 })}
                           />
                           <RotaryKnob
@@ -2720,7 +2720,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#abb2bf"
-                            size={24}
+                            size={40}
                             onChange={(v) => handleTrackParamChange({ noiseGain: v / 100 })}
                           />
                         </div>
