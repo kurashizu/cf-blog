@@ -3163,10 +3163,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
 
                 {/* BOTTOM L-SHAPE BASE: COMPACT h-[155px], TALL ENVELOPE CURVE & FADERS, ZERO OVERFLOW (MODULES 4, 5, 6, 7) */}
-                <div className="order-2 lg:order-3 lg:col-span-5 lg:row-span-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-1.5 text-xs lg:h-[155px] shrink-0">
+                <div className="order-2 lg:order-3 lg:col-span-5 lg:row-span-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-1.5 text-xs lg:h-[155px] shrink-0">
                   
                   {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (2:1 RATIO -> LEFT 2 COLS: TALL SVG CURVE, RIGHT 1 COL: 4 TALL ADSR FADERS) */}
-                  <div className="xl:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] lg:min-h-0 lg:h-full lg:overflow-hidden">
+                  <div className="lg:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-2">
@@ -3287,7 +3287,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* MODULE 5: LFO MOD (1:2 RATIO: LEFT WAVE+RATE, RIGHT 3 DIRECT TARGET KNOBS PITCH/CUT/PAN) */}
-                  <div className="xl:col-span-3 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  <div className="lg:col-span-3 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     {/* Header */}
                     <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <span>5. LFO MOD</span>
@@ -3365,7 +3365,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   </div>
 
                   {/* MODULE 6: FX (5 LARGE ROTARY KNOBS IN HEXAGONAL CLOSE PACKING - 最密堆积: 上3下2交错嵌套, NO DIVIDER) */}
-                  <div className="xl:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                  <div className="lg:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     <div className="flex justify-between items-center font-black text-[#e06c75] text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <span>6. FX</span>
                       <span className="text-white/40 font-mono text-xs">──►</span>
@@ -3468,8 +3468,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 7: OUT (EXPANDED TO xl:col-span-4 -> WIDE SCREEN GRAPH VISUALIZER) */}
-                  <div className="xl:col-span-4 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] lg:min-h-0 lg:h-full lg:overflow-hidden">
+                  {/* MODULE 7: OUT (EXPANDED TO lg:col-span-4 -> WIDE SCREEN GRAPH VISUALIZER) */}
+                  <div className="lg:col-span-4 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     <div className="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <span className="text-white text-xs font-black">7. OUT</span>
