@@ -131,13 +131,17 @@ export interface TrackData {
   pitchDecay?: number;
   pitchEnvAmount?: number; // Amount in octaves (e.g. 0 to 4)
 
+  // Node 5: LFO Modulation Engine (Pure & Self-consistent)
   lfoWaveform: LfoWaveform;
-  lfoRate: number;      // 0.1 to 20.0 Hz
-  lfoDepth: number;     // 0.0 to 1.0
-  lfoTarget: LfoTarget; // 'filter' | 'pitch' | 'amp' | 'morph' | 'pan'
+  lfoRate: number;         // 0.1 to 20.0 Hz
+  lfoPitchAmt?: number;    // 0.0 to 1.0 (Vibrato / Pitch modulation depth)
+  lfoCutoffAmt?: number;   // 0.0 to 1.0 (Wah / Filter sweep modulation depth)
+  lfoPanAmt?: number;      // 0.0 to 1.0 (Auto-Pan modulation depth)
+  lfoDepth?: number;       // legacy alias
+  lfoTarget?: LfoTarget;   // legacy alias
 
-  // Modular Modulation Matrix Routing
-  modRoutes: ModRoute[];
+  // Modular Modulation Matrix Routing (Optional legacy support)
+  modRoutes?: ModRoute[];
 
   // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes) & Accents (0 = Off, 1 = +3dB, 2 = +6dB)
   grid: number[][];
@@ -2455,37 +2459,6 @@ class ModularSynth {
 
     const totalDuration = Math.max(0.2, (releaseStartTime - t) + Math.max(ampRel, vcfRel) + 0.1);
 
-    // Modulation Matrix LFO Routing
-    const lfoRoutes = (track.modRoutes || []).filter((r) => r.enabled && r.source === 'lfo');
-    let lfo: OscillatorNode | undefined;
-
-    if (lfoRoutes.length > 0 && track.lfoRate > 0) {
-      lfo = ctx.createOscillator();
-      lfo.type = track.lfoWaveform;
-      lfo.frequency.setValueAtTime(track.lfoRate, t);
-
-      for (const r of lfoRoutes) {
-        const lfoGain = ctx.createGain();
-        if (r.dest === 'cutoff') {
-          lfoGain.gain.setValueAtTime(r.amount * 2200, t);
-          lfo.connect(lfoGain);
-          lfoGain.connect(filter.frequency);
-        } else if (r.dest === 'pitch') {
-          lfoGain.gain.setValueAtTime(r.amount * (baseFreq * 0.08), t);
-          lfo.connect(lfoGain);
-          if (osc1) lfoGain.connect(osc1.frequency);
-          if (osc2) lfoGain.connect(osc2.frequency);
-        } else if (r.dest === 'resonance') {
-          lfoGain.gain.setValueAtTime(r.amount * 4, t);
-          lfo.connect(lfoGain);
-          lfoGain.connect(filter.Q);
-        }
-      }
-
-      lfo.start(t);
-      lfo.stop(t + totalDuration);
-    }
-
     // ──────────────────────────────────────────────────────────────────────────
     // NODE 5: STEREO PAN & MASTER FX ROUTING
     // ──────────────────────────────────────────────────────────────────────────
@@ -2493,6 +2466,46 @@ class ModularSynth {
     if (ctx.createStereoPanner) {
       panner = ctx.createStereoPanner();
       panner.pan.setValueAtTime(track.pan, t);
+    }
+
+    // Node 5 LFO Modulation Routing (Direct, self-consistent DSP flow)
+    const pitchModAmt = track.lfoPitchAmt !== undefined ? track.lfoPitchAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'pitch')?.amount ?? (track.lfoTarget === 'pitch' ? (track.lfoDepth || 0) : 0));
+    const cutoffModAmt = track.lfoCutoffAmt !== undefined ? track.lfoCutoffAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'cutoff')?.amount ?? (track.lfoTarget === 'filter' ? (track.lfoDepth || 0) : 0));
+    const panModAmt = track.lfoPanAmt !== undefined ? track.lfoPanAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'pan')?.amount ?? (track.lfoTarget === 'pan' ? (track.lfoDepth || 0) : 0));
+
+    let lfo: OscillatorNode | undefined;
+    if ((pitchModAmt > 0 || cutoffModAmt > 0 || panModAmt > 0) && track.lfoRate > 0) {
+      lfo = ctx.createOscillator();
+      lfo.type = track.lfoWaveform;
+      lfo.frequency.setValueAtTime(track.lfoRate, t);
+
+      // 1. Vibrato (Pitch modulation)
+      if (pitchModAmt > 0) {
+        const pitchGain = ctx.createGain();
+        pitchGain.gain.setValueAtTime(pitchModAmt * (baseFreq * 0.08), t);
+        lfo.connect(pitchGain);
+        if (osc1) pitchGain.connect(osc1.frequency);
+        if (osc2) pitchGain.connect(osc2.frequency);
+      }
+
+      // 2. Wah-Wah / Filter sweep modulation
+      if (cutoffModAmt > 0) {
+        const cutoffGain = ctx.createGain();
+        cutoffGain.gain.setValueAtTime(cutoffModAmt * 2800, t);
+        lfo.connect(cutoffGain);
+        cutoffGain.connect(filter.frequency);
+      }
+
+      // 3. Auto-Pan modulation
+      if (panModAmt > 0 && panner) {
+        const panGain = ctx.createGain();
+        panGain.gain.setValueAtTime(panModAmt * 0.8, t);
+        lfo.connect(panGain);
+        panGain.connect(panner.pan);
+      }
+
+      lfo.start(t);
+      lfo.stop(t + totalDuration);
     }
 
     voiceMix.connect(filter);

@@ -3286,24 +3286,25 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 5: MOD MATRIX (NARROWED TO xl:col-span-3, INTERNAL 1:2 SPLIT, DIVIDER RESTORED) */}
+                  {/* MODULE 5: LFO MOD (1:2 RATIO: LEFT WAVE+RATE, RIGHT 3 DIRECT TARGET KNOBS PITCH/CUT/PAN) */}
                   <div className="xl:col-span-3 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
                     {/* Header */}
                     <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
-                      <span>5. MOD MATRIX</span>
+                      <span>5. LFO MOD</span>
                       <span className="text-white/40 font-mono text-xs">──►</span>
                     </div>
 
                     {/* Left/Right Horizontal Split in 1 : 2 Ratio (Left: col-span-4, Right: col-span-8) */}
                     <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto">
-                      {/* Left: 1 Part (33.3% width) - LFO 2x2 Grid + RATE Knob 28px (Divider Restored) */}
+                      {/* Left: 1 Part (33.3% width) - LFO 2x2 Waveform Grid + RATE Knob */}
                       <div className="col-span-4 flex flex-col justify-between items-center gap-1 border-r border-white/10 pr-1 h-full py-0.5">
                         <div className="grid grid-cols-2 gap-0.5 w-full">
                           {(['sine', 'triangle', 'square', 'sawtooth'] as LfoWaveform[]).map((w) => (
                             <button
                               key={w}
                               onClick={() => { handleTrackParamChange({ lfoWaveform: w }); playSound('click'); }}
-                              title={LFO_TOOLTIPS[w] || w} className={`py-1 text-[10px] sm:text-xs border rounded-xs font-black cursor-pointer leading-none text-center ${
+                              title={LFO_TOOLTIPS[w] || w}
+                              className={`py-1 text-[10px] sm:text-xs border rounded-xs font-black cursor-pointer leading-none text-center ${
                                 currentTrack.lfoWaveform === w ? 'border-[#c678dd] bg-[#c678dd] text-black font-black' : 'border-white/20 text-white/60 hover:text-white'
                               }`}
                             >
@@ -3324,78 +3325,41 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         />
                       </div>
 
-                      {/* Right: 2 Parts (66.7% width) - 3 Modulation Routing Slots */}
-                      <div className="col-span-8 space-y-1 h-full flex flex-col justify-around py-0.5">
-                        {(currentTrack.modRoutes || [
-                          { id: 'r1', source: 'lfo' as ModSource, dest: 'cutoff' as ModDest, amount: 0.25, enabled: true },
-                          { id: 'r2', source: 'vcf_env' as ModSource, dest: 'cutoff' as ModDest, amount: 0.60, enabled: true },
-                          { id: 'r3', source: 'velocity' as ModSource, dest: 'cutoff' as ModDest, amount: 0.40, enabled: true },
-                        ]).slice(0, 3).map((route, rIdx) => (
-                          <div key={route.id || rIdx} className="flex items-center justify-between gap-0.5 text-[10px] sm:text-xs font-mono bg-black/40 px-1 py-0.5 rounded-xs border border-white/10">
-                            <button
-                              onClick={() => {
-                                const sources: ModSource[] = ['lfo', 'vcf_env', 'amp_env', 'velocity'];
-                                const nextSrc = sources[(sources.indexOf(route.source) + 1) % sources.length];
-                                const newRoutes = [...(currentTrack.modRoutes || [])];
-                                newRoutes[rIdx] = { ...route, source: nextSrc };
-                                handleTrackParamChange({ modRoutes: newRoutes });
-                                playSound('click');
-                              }}
-                              className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#c678dd] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
-                              title={`Modulation Source: ${route.source === 'lfo' ? 'Low Frequency Oscillator (LFO)' : route.source === 'vcf_env' ? 'Filter Envelope (VCF ADSR)' : route.source === 'amp_env' ? 'Amplitude Envelope (AMP ADSR)' : 'Note Velocity / Accent Dynamics'} — Click to cycle` }
-                            >
-                              {route.source === 'lfo' ? 'LFO' : route.source === 'vcf_env' ? 'VCF' : route.source === 'amp_env' ? 'AMP' : 'VEL'}
-                            </button>
-
-                            <span className="text-white/40 font-mono text-[8px]">►</span>
-
-                            <button
-                              onClick={() => {
-                                const dests: ModDest[] = ['cutoff', 'pitch', 'morph', 'pan', 'resonance'];
-                                const nextDest = dests[(dests.indexOf(route.dest) + 1) % dests.length];
-                                const newRoutes = [...(currentTrack.modRoutes || [])];
-                                newRoutes[rIdx] = { ...route, dest: nextDest };
-                                handleTrackParamChange({ modRoutes: newRoutes });
-                                playSound('click');
-                              }}
-                              className="px-1 py-0.2 bg-white/10 hover:bg-white/20 rounded-xs text-[#56b6c2] font-black cursor-pointer border border-white/15 leading-none text-[10px] sm:text-xs"
-                              title={`Modulation Destination: ${route.dest === 'cutoff' ? 'Filter Cutoff Frequency' : route.dest === 'pitch' ? 'Pitch / Detune Offset' : route.dest === 'morph' ? 'Waveform Morph Crossfade' : route.dest === 'pan' ? 'Stereo Panning' : 'Filter Resonance (Q-Factor)'} — Click to cycle` }
-                            >
-                              {route.dest === 'cutoff' ? 'CUT' : route.dest === 'pitch' ? 'PIT' : route.dest === 'morph' ? 'MRP' : route.dest === 'pan' ? 'PAN' : 'RES'}
-                            </button>
-
-                            <HorizontalHardwareFader
-                              value={Math.round(route.amount * 100)}
-                              min={-100}
-                              max={100}
-                              step={5}
-                              width={40}
-                              showValue={true}
-                              bipolar={true}
-                              unit="%"
-                              color="#98c379"
-                              onChange={(v) => {
-                                const newRoutes = [...(currentTrack.modRoutes || [])];
-                                newRoutes[rIdx] = { ...route, amount: v / 100 };
-                                handleTrackParamChange({ modRoutes: newRoutes });
-                              }}
-                            />
-
-                            <button
-                              onClick={() => {
-                                const newRoutes = [...(currentTrack.modRoutes || [])];
-                                newRoutes[rIdx] = { ...route, enabled: !route.enabled };
-                                handleTrackParamChange({ modRoutes: newRoutes });
-                                playSound('click');
-                              }}
-                              title={route.enabled ? 'Modulation Route Active (Click to bypass)' : 'Modulation Route Bypassed (Click to enable)'} className={`w-3.5 h-3.5 rounded-xs border text-[9px] font-black flex items-center justify-center cursor-pointer ${
-                                route.enabled ? 'border-[#98c379] bg-[#98c379] text-black' : 'border-white/20 text-white/30'
-                              }`}
-                            >
-                              {route.enabled ? '✓' : '×'}
-                            </button>
-                          </div>
-                        ))}
+                      {/* Right: 2 Parts (66.7% width) - 3 Direct Modulation Destination Knobs */}
+                      <div className="col-span-8 flex items-center justify-around h-full py-0.5">
+                        <RotaryKnob
+                          label="PITCH"
+                          value={Math.round((currentTrack.lfoPitchAmt ?? 0) * 100)}
+                          min={0}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          color="#e5c07b"
+                          size={40}
+                          onChange={(v) => handleTrackParamChange({ lfoPitchAmt: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="CUTOFF"
+                          value={Math.round((currentTrack.lfoCutoffAmt ?? 0) * 100)}
+                          min={0}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          color="#56b6c2"
+                          size={40}
+                          onChange={(v) => handleTrackParamChange({ lfoCutoffAmt: v / 100 })}
+                        />
+                        <RotaryKnob
+                          label="PAN"
+                          value={Math.round((currentTrack.lfoPanAmt ?? 0) * 100)}
+                          min={0}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          color="#98c379"
+                          size={40}
+                          onChange={(v) => handleTrackParamChange({ lfoPanAmt: v / 100 })}
+                        />
                       </div>
                     </div>
                   </div>
