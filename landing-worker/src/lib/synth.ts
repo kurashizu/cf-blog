@@ -1891,7 +1891,7 @@ class ModularSynth {
   private maxPolyphony: number = 8;          // 1 to 16 voices per track
   private midiOmniMode: boolean = false;     // false = active track only, true = all tracks (Omni)
   private midiSelectedDeviceId: string = 'all'; // 'all' or specific MIDI device ID
-  private latencyHintMode: 'interactive' | 'balanced' | 'playback' = 'interactive';
+  private latencyHintMode: 'interactive' | 'balanced' | 'playback' = 'balanced';
   private masterLimiterEnabled: boolean = true; // Brickwall Soft Peak Limiter
   private voiceStealingMode: 'oldest' | 'quietest' | 'lowest' = 'oldest';
 

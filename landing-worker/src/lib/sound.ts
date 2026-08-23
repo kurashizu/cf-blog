@@ -52,6 +52,16 @@ class SoundEngine {
     }
   }
 
+  private latencyHint: AudioContextLatencyCategory | number = 'balanced';
+
+  public setLatencyHint(hint: AudioContextLatencyCategory | number) {
+    this.latencyHint = hint;
+  }
+
+  public getLatencyHint(): AudioContextLatencyCategory | number {
+    return this.latencyHint;
+  }
+
   /**
    * Safe lazy initialization of AudioContext on first user interaction.
    */
@@ -63,7 +73,7 @@ class SoundEngine {
       if (!AudioContextClass) return null;
 
       try {
-        this.ctx = new AudioContextClass();
+        this.ctx = new AudioContextClass({ latencyHint: this.latencyHint });
         this.analyser = this.ctx.createAnalyser();
         this.analyser.fftSize = 4096;
         this.analyser.smoothingTimeConstant = 0.75;

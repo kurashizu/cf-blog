@@ -4550,9 +4550,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                     <div className="grid grid-cols-3 gap-2 pt-1">
                       {[
-                        { id: 'interactive', label: 'INTERACTIVE', desc: 'Lowest Latency (~5ms)' },
-                        { id: 'balanced', label: 'BALANCED', desc: 'Glitch-free (~20ms)' },
-                        { id: 'playback', label: 'PLAYBACK', desc: 'Power-saving (~50ms)' },
+                        { id: 'balanced', label: 'BALANCED (DEFAULT)', desc: 'Stable & Glitch-free (~20ms)' },
+                        { id: 'interactive', label: 'INTERACTIVE', desc: 'Ultra-low Latency (~5ms)' },
+                        { id: 'playback', label: 'PLAYBACK', desc: 'Maximum Buffer (~50ms)' },
                       ].map((item) => (
                         <button
                           key={item.id}
