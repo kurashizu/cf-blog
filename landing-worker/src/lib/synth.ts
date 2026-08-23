@@ -55,6 +55,16 @@ export function divToColumnSpan(div: NoteDurationDiv): number {
   }
 }
 
+export type VelocityCurve = 'OFF' | 'LINEAR' | 'EXP' | 'LOG' | 'HARD';
+
+export interface VelocityCurveSpec {
+  id: VelocityCurve;
+  name: string;
+  calcGainScale: (rawVel: number) => number;
+}
+
+export const VELOCITY_CURVES: VelocityCurve[] = ['EXP', 'LINEAR', 'LOG', 'HARD', 'OFF'];
+
 export type TimeSignature = '4/4' | '3/4' | '2/4' | '5/4' | '6/8' | '7/8';
 
 export interface MeterSpec {
@@ -1825,7 +1835,7 @@ class ModularSynth {
   private trackHeldVoices: Map<string, string> = new Map(); // key: `${trackId}-${noteIndex}` -> voiceKey
   private isSustainPedalDown: boolean = false;
   private sustainedVoiceKeys: Set<string> = new Set();
-  private isVelocitySensitivityEnabled: boolean = true;
+  private velocityCurve: VelocityCurve = 'EXP';
 
   // Master Global Params (100 BPM for Authentic Original NES Super Mario Bros Groove)
   private bpm: number = 105;
@@ -2391,11 +2401,29 @@ class ModularSynth {
     // AMP Dynamic Envelope (+3dB = ~1.41x, +6dB = 2.0x)
     let gainBase = acc === 2 ? 0.48 : acc === 1 ? 0.34 : 0.24;
 
-    // Apply MIDI Velocity Sensitivity if enabled and rawVelocity is provided (1..127)
-    if (this.isVelocitySensitivityEnabled && rawVelocity !== undefined && rawVelocity > 0) {
-      // Exponential musical velocity curve (0.05 min volume up to 1.35 max)
-      const velNorm = Math.max(1, Math.min(127, rawVelocity)) / 127;
-      const velGainScale = 0.08 + Math.pow(velNorm, 1.6) * 1.25;
+    // Apply MIDI Velocity Sensitivity based on the active velocity curve (EXP / LINEAR / LOG / HARD / OFF)
+    if (this.velocityCurve !== 'OFF' && rawVelocity !== undefined && rawVelocity > 0) {
+      const v = Math.max(1, Math.min(127, rawVelocity)) / 127;
+      let velGainScale = 1.0;
+
+      switch (this.velocityCurve) {
+        case 'EXP':
+          // Exponential / Natural Piano: deep dynamic range, soft pianissimo & punchy fortissimo
+          velGainScale = 0.06 + Math.pow(v, 1.8) * 1.35;
+          break;
+        case 'LINEAR':
+          // Linear: direct 1:1 proportional tracking (0.15 to 1.25)
+          velGainScale = 0.15 + v * 1.10;
+          break;
+        case 'LOG':
+          // Logarithmic / Soft: easy to play loudly with lighter touch
+          velGainScale = 0.20 + Math.sqrt(v) * 1.05;
+          break;
+        case 'HARD':
+          // Hard / Aggressive: requires very firm strike to reach full volume
+          velGainScale = 0.04 + Math.pow(v, 3.0) * 1.50;
+          break;
+      }
       gainBase = 0.28 * velGainScale;
     }
 
@@ -2557,12 +2585,19 @@ class ModularSynth {
     return this.isSustainPedalDown;
   }
 
-  public setVelocitySensitivityEnabled(enabled: boolean) {
-    this.isVelocitySensitivityEnabled = enabled;
+  public setVelocityCurve(curve: VelocityCurve) {
+    this.velocityCurve = curve;
   }
 
-  public isVelocitySensitivityActive(): boolean {
-    return this.isVelocitySensitivityEnabled;
+  public getVelocityCurve(): VelocityCurve {
+    return this.velocityCurve;
+  }
+
+  public cycleVelocityCurve(): VelocityCurve {
+    const idx = VELOCITY_CURVES.indexOf(this.velocityCurve);
+    const next = VELOCITY_CURVES[(idx + 1) % VELOCITY_CURVES.length];
+    this.velocityCurve = next;
+    return next;
   }
 
   private releaseVoice(voiceKey: string) {

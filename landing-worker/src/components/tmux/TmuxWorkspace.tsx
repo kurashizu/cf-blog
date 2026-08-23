@@ -34,6 +34,8 @@ import {
   TimeSignature,
   METER_SPECS,
   getWaveformAbbr,
+  VelocityCurve,
+  VELOCITY_CURVES,
 } from '../../lib/synth';
 import { RotaryKnob, HardwareFader, HorizontalHardwareFader } from '../synth/HardwareControls';
 import { evaluateSafeJS } from '../../lib/evaluator';
@@ -661,6 +663,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [isOverlayMode, setIsOverlayMode] = useState<boolean>(true);
   const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0, 1, 2, 3]);
   const [manualHeldNotes, setManualHeldNotes] = useState<Map<string, { trackId: number; noteIdx: number }>>(new Map());
+  const [velocityCurve, setVelocityCurve] = useState<VelocityCurve>(modularSynth.getVelocityCurve());
 
   // Real-time Visual Keyboard & Web MIDI Engine
   const [midiConnectedDevice, setMidiConnectedDevice] = useState<string | null>(null);
@@ -3447,21 +3450,27 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                                 <span className="opacity-30">|</span>
 
-                                {/* Velocity Sensitivity Toggle Button (Controls Volume by Note Velocity) */}
+                                {/* Velocity Curve Cycle Selector (EXP -> LIN -> LOG -> HARD -> OFF -> EXP) */}
                                 <button
                                   onClick={() => {
-                                    const next = !modularSynth.isVelocitySensitivityActive();
-                                    modularSynth.setVelocitySensitivityEnabled(next);
+                                    const next = modularSynth.cycleVelocityCurve();
+                                    setVelocityCurve(next);
                                     playSound('toggle');
                                   }}
                                   className={`px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all ${
-                                    modularSynth.isVelocitySensitivityActive()
+                                    velocityCurve === 'EXP'
                                       ? 'border-[#61afef] bg-[#61afef] text-black font-black shadow-[0_0_6px_#61afef]'
-                                      : 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'
+                                      : velocityCurve === 'LINEAR'
+                                      ? 'border-[#98c379] bg-[#98c379] text-black font-black shadow-[0_0_6px_#98c379]'
+                                      : velocityCurve === 'LOG'
+                                      ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-[0_0_6px_#e5c07b]'
+                                      : velocityCurve === 'HARD'
+                                      ? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-[0_0_6px_#e06c75]'
+                                      : 'border-white/20 bg-white/5 text-white/40 hover:text-white hover:border-white/40'
                                   }`}
-                                  title="Velocity Sensitivity (VEL) — Scales note volume dynamically based on MIDI key strike force"
+                                  title={`MIDI Velocity Curve: ${velocityCurve} (Click to cycle: EXP [Natural Piano] → LIN [Linear 1:1] → LOG [Soft Touch] → HARD [Aggressive] → OFF [Fixed Volume])`}
                                 >
-                                  VEL: {modularSynth.isVelocitySensitivityActive() ? 'ON' : 'OFF'}
+                                  VEL: {velocityCurve === 'LINEAR' ? 'LIN' : velocityCurve}
                                 </button>
 
                                 <span className="opacity-30">|</span>
