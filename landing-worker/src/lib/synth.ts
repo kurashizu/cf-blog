@@ -2269,7 +2269,7 @@ class ModularSynth {
 
     this.initMasterFX(ctx);
 
-    const voiceKey = `trk_${trackId}_${noteIndex}_${Math.random().toString(36).slice(2, 6)}`;
+    const voiceKey = `v${++this._voiceSeq}`;
 
     const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
     const baseFreq = noteInfo.freq;
@@ -2526,10 +2526,11 @@ class ModularSynth {
       startTime: t,
     });
 
-    // Auto cleanup voice from map
-    setTimeout(() => {
+    // Schedule voice cleanup timed to the audio stopTime (accurate, low GC pressure)
+    const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
+    void window.setTimeout(() => {
       this.activeVoices.delete(voiceKey);
-    }, (track.attack + track.decay + track.release + 0.2) * 1000);
+    }, cleanupMs);
   }
 
   public stopVoice(voiceKey: string) {
@@ -2575,8 +2576,9 @@ class ModularSynth {
   private lookaheadTimer: number | null = null;
   private uiTimer: number | null = null;
   private nextStepTime = 0;
-  private scheduleAheadSec = 0.12; // 120ms Web Audio Lookahead
+  private scheduleAheadSec = 0.2; // 200ms lookahead — wider buffer against main thread jank
   private scheduledStepQueue: { step: number; time: number }[] = [];
+  private _voiceSeq = 0; // monotonic voice counter — avoids Math.random() hot-path allocation
 
   public startSequencer(fromStep?: number) {
     if (this.isSequencerPlaying) return;
@@ -2633,10 +2635,10 @@ class ModularSynth {
     if (this.lookaheadTimer) clearInterval(this.lookaheadTimer);
     if (this.uiTimer) clearInterval(this.uiTimer);
 
-    // Audio thread scheduling lookahead (runs every 25ms)
+    // Audio thread scheduling lookahead (runs every 40ms — 200ms buffer is ample)
     this.lookaheadTimer = window.setInterval(() => {
       this.schedulerLoop();
-    }, 25);
+    }, 40);
 
     // UI sync loop (runs every 16ms to update playhead position)
     this.uiTimer = window.setInterval(() => {

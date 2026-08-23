@@ -662,12 +662,23 @@ export const TmuxWorkspace: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow & rAF Batching
+  // Autoplay sequencer once on initial mount only
   useEffect(() => {
-    // Autoplay sequencer on load
     if (!modularSynth.isPlayingSeq()) {
       modularSynth.startSequencer();
+      setIsSeqPlaying(true);
     }
+  }, []);
+
+  // Use refs for the hot-path values to avoid step subscription re-mounting on every meter/pageFollow change
+  const pageFollowRef = useRef(pageFollow);
+  const timeMeterRef = useRef(timeMeter);
+  useEffect(() => { pageFollowRef.current = pageFollow; }, [pageFollow]);
+  useEffect(() => { timeMeterRef.current = timeMeter; }, [timeMeter]);
+
+  // Subscribe to Multi-Track Sequencer Tick with Auto Page-Follow & rAF Batching
+  // Runs ONCE on mount — uses refs to read latest values without re-subscribing
+  useEffect(() => {
     let animId: number = 0;
     let pendingStep: number | null = null;
 
@@ -678,8 +689,8 @@ export const TmuxWorkspace: React.FC = () => {
           animId = 0;
           if (pendingStep !== null) {
             setSeqCurrentStep(pendingStep);
-            if (pageFollow) {
-              const meterSteps = (METER_SPECS[timeMeter] || METER_SPECS['4/4']).stepsPerBar;
+            if (pageFollowRef.current) {
+              const meterSteps = (METER_SPECS[timeMeterRef.current] || METER_SPECS['4/4']).stepsPerBar;
               const p = Math.floor(pendingStep / meterSteps);
               setActiveStepPage(p);
             }
@@ -693,7 +704,7 @@ export const TmuxWorkspace: React.FC = () => {
       unsub();
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [pageFollow, timeMeter]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Patch & Built-in Song Management ---
   const STORAGE_KEY = 'krsz-synth-patch-v1';
