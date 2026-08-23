@@ -642,6 +642,7 @@ export const TmuxWorkspace: React.FC = () => {
   const STORAGE_KEY = 'krsz-synth-patch-v1';
   const BUILTIN_SONGS = [
     { id: 'OVERWORLD', name: 'OVERWORLD', steps: 1184, bpm: 105, meter: '4/4' as TimeSignature },
+    { id: 'UNDERWATER', name: 'UNDERWATER', steps: 1536, bpm: 210, meter: '3/4' as TimeSignature },
   ];
   const LEN_PRESETS = [16, 32, 64, 128, 256, 512] as const;
 

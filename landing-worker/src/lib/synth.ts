@@ -1,4 +1,5 @@
 import { soundEngine } from './sound';
+import { UNDERWATER_TRACKS } from './songs/underwater';
 
 export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
 
@@ -2064,6 +2065,11 @@ class ModularSynth {
       this.totalSteps = 1184;
       this.bpm = 105;
       this.meter = '4/4';
+    } else if (songName === 'UNDERWATER') {
+      this.tracks = JSON.parse(JSON.stringify(UNDERWATER_TRACKS));
+      this.totalSteps = 1536;
+      this.bpm = 210;
+      this.meter = '3/4';
     }
   }
 
