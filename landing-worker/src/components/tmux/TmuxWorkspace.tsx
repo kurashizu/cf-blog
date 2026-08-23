@@ -3874,7 +3874,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               step={5}
                               unit="%"
                               color="#e5c07b"
-                              size={32}
+                              size={40}
                               onChange={(v) => handleTrackParamChange({ lfoPitchAmt: v / 100 })}
                             />
                           </div>
@@ -3887,7 +3887,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               step={5}
                               unit="%"
                               color="#56b6c2"
-                              size={32}
+                              size={40}
                               onChange={(v) => handleTrackParamChange({ lfoCutoffAmt: v / 100 })}
                             />
                           </div>
@@ -3900,7 +3900,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               step={5}
                               unit="%"
                               color="#d19a66"
-                              size={32}
+                              size={40}
                               onChange={(v) => handleTrackParamChange({ lfoAmpAmt: v / 100 })}
                             />
                           </div>
@@ -3918,7 +3918,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               step={5}
                               unit="%"
                               color="#98c379"
-                              size={32}
+                              size={40}
                               onChange={(v) => handleTrackParamChange({ lfoPanAmt: v / 100 })}
                             />
                           </div>
@@ -3931,7 +3931,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               step={50}
                               unit="ms"
                               color="#c678dd"
-                              size={32}
+                              size={40}
                               onChange={(v) => handleTrackParamChange({ lfoFadeTime: v })}
                             />
                           </div>
@@ -4091,29 +4091,35 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                     {/* Left / Right 2-Column Split (Left: col-span-3, Right: col-span-9 Wide Screen) */}
                     <div className="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
-                      {/* Left: PAN and VOL Stacked Vertically (Large 28px) */}
-                      <div className="col-span-3 flex flex-col justify-around items-center border-r border-white/10 pr-1 h-full py-0.5">
-                        <RotaryKnob
-                          label="PAN"
-                          value={Math.round(currentTrack.pan * 100)}
-                          min={-100}
-                          max={100}
-                          step={5}
-                          unit=""
-                          color="#56b6c2"
-                          size={28}
-                          onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
-                        />
-                        <RotaryKnob
-                          label="VOL"
-                          value={Math.round(currentTrack.volume * 100)}
-                          min={0}
-                          max={100}
-                          unit="%"
-                          color="#98c379"
-                          size={28}
-                          onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
-                        />
+                      {/* Left: PAN (Top-Left 40px) and VOL (Bottom-Right 34px) Diagonal Staggered Layout */}
+                      <div className="col-span-3 flex flex-col justify-around border-r border-white/10 pr-1 h-full py-0.5">
+                        {/* Top-Left: PAN (40px) */}
+                        <div className="flex justify-start pl-1">
+                          <RotaryKnob
+                            label="PAN"
+                            value={Math.round(currentTrack.pan * 100)}
+                            min={-100}
+                            max={100}
+                            step={5}
+                            unit=""
+                            color="#56b6c2"
+                            size={40}
+                            onChange={(v) => handleTrackParamChange({ pan: v / 100 })}
+                          />
+                        </div>
+                        {/* Bottom-Right: VOL (34px, slightly smaller) */}
+                        <div className="flex justify-end pr-1">
+                          <RotaryKnob
+                            label="VOL"
+                            value={Math.round(currentTrack.volume * 100)}
+                            min={0}
+                            max={100}
+                            unit="%"
+                            color="#98c379"
+                            size={34}
+                            onChange={(v) => handleTrackParamChange({ volume: v / 100 })}
+                          />
+                        </div>
                       </div>
 
                       {/* Right: Full-Screen Ultra-Wide High-Resolution Single Visualizer Canvas */}
