@@ -2581,16 +2581,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
 
                                                                                                                                                           {/* L-SHAPE SYNTHESIZER & PIANO ROLL WORKSTATION TOPOLOGY */}
-              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar lg:overflow-hidden flex flex-col lg:grid lg:grid-cols-5 lg:grid-rows-[minmax(0,1fr)_155px] gap-1.5">
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar 2xl:overflow-hidden flex flex-col 2xl:grid 2xl:grid-cols-5 2xl:grid-rows-[minmax(0,1fr)_155px] gap-1.5">
                 
-                {/* UPPER L-SHAPE: LEFT (MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO] */}
+                {/* UPPER L-SHAPE: LEFT (MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO ON 2XL, STACKED ON <2XL] */}
                 <div className="contents">
                   
                   {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING) */}
-                  <div className="order-1 lg:order-1 lg:col-span-1 flex flex-col lg:grid gap-1.5 min-w-0 lg:h-full lg:overflow-hidden" style={{ gridTemplateRows: '2fr 1fr 1fr' }}>
+                  <div className="order-1 2xl:order-1 2xl:col-span-1 grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-1 gap-1.5 min-w-0 2xl:h-full 2xl:overflow-hidden" style={{ gridTemplateRows: 'repeat(1, minmax(0, 1fr))' }}>
                     
-                    {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID - ENLARGED 24px) */}
-                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[160px] lg:min-h-0 lg:h-full lg:overflow-hidden">
+                    {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID - ENLARGED 40px) */}
+                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[160px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>1. DUAL OSC</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2728,7 +2728,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 LARGE HORIZONTAL KNOBS 32px) */}
-                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[100px] lg:min-h-0 lg:h-full lg:overflow-hidden">
+                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[100px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2780,7 +2780,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
 
                     {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 上2下1 KNOBS 28px, No Divider) */}
-                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[120px] lg:min-h-0 lg:h-full lg:overflow-hidden">
+                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[120px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2856,8 +2856,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                   </div>
 
-                  {/* RIGHT COLUMN: PIANO ROLL MATRIX WORKSPACE (4/5 RATIO) */}
-                  <div className="order-3 lg:order-2 lg:col-span-4 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full lg:overflow-hidden">
+                  {/* RIGHT COLUMN: PIANO ROLL MATRIX WORKSPACE (4/5 RATIO ON 2XL, FULL WIDTH ON <2XL) */}
+                  <div className="order-2 2xl:order-2 2xl:col-span-4 flex flex-col min-h-[420px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
                     {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & INTEGRATED PRESETS */}
                     {(() => {
                       const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
