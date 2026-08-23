@@ -390,12 +390,26 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                             : isSubCurrent
                             ? 'border-white/70 bg-white/30'
                             : isBarStart && subCol === 0
-                            ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                            ? isRootC
+                              ? 'border-l-2 border-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+                              : nInfo.isBlack
+                              ? 'border-l-2 border-[#56b6c2]/70 bg-black/60 hover:bg-white/10'
+                              : 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
                             : isBeatStart && subCol === 0
-                            ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                            ? isRootC
+                              ? 'border-l border-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
+                              : nInfo.isBlack
+                              ? 'border-l border-white/25 bg-black/60 hover:bg-white/10'
+                              : 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                            : isRootC
+                            ? 'border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
+                            : nInfo.isBlack
+                            ? subCol === 1
+                              ? 'border-l border-black/20 bg-black/60 hover:bg-white/10'
+                              : 'border-black/20 bg-black/60 hover:bg-white/10'
                             : subCol === 1
-                            ? 'border-l border-white/10 bg-black/40 hover:bg-white/10'
-                            : 'border-white/5 bg-black/40 hover:bg-white/10'
+                            ? 'border-l border-white/10 bg-white/[0.03] hover:bg-white/10'
+                            : 'border-white/5 bg-white/[0.03] hover:bg-white/10'
                         }`}
                         style={{
                           backgroundColor: hasNote ? displayColor : undefined,
@@ -414,12 +428,24 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
                     isColActive
                       ? 'border-white/70 bg-white/25 shadow-xs'
                       : isBarStart
-                      ? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-white/[0.08] hover:bg-white/20'
+                      ? isRootC
+                        ? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+                        : nInfo.isBlack
+                        ? 'border-y border-r border-white/10 border-l-2 border-l-[#56b6c2]/80 bg-black/60 hover:bg-white/10'
+                        : 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-white/[0.08] hover:bg-white/20'
                       : isBeatStart
-                      ? 'border-y border-r border-white/15 border-l border-l-white/40 bg-white/[0.04] hover:bg-white/20'
+                      ? isRootC
+                        ? 'border-y border-r border-white/15 border-l border-l-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
+                        : nInfo.isBlack
+                        ? 'border-y border-r border-white/10 border-l border-l-white/30 bg-black/60 hover:bg-white/10'
+                        : 'border-y border-r border-white/15 border-l border-l-white/40 bg-white/[0.04] hover:bg-white/20'
+                      : isRootC
+                      ? 'border border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
+                      : nInfo.isBlack
+                      ? 'border border-black/20 bg-black/55 hover:bg-white/10'
                       : isDivBlockStart
-                      ? 'border border-white/20 bg-black/40 hover:bg-white/10'
-                      : 'border border-white/10 bg-black/40 hover:bg-white/10'
+                      ? 'border border-white/20 bg-white/[0.03] hover:bg-white/10'
+                      : 'border border-white/10 bg-white/[0.03] hover:bg-white/10'
                   }`}
                 >
                   {/* Multi-Track Overlaid Continuous Note Bars */}
