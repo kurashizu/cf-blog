@@ -1843,6 +1843,7 @@ class ModularSynth {
   private totalSteps: number = 1184; // Default 512 steps (32 Bars), configurable: 16, 32, 64, 128, 256, 512
   private sequencerTimer: any = null;
   private onStepListeners: Set<(step: number) => void> = new Set();
+  private onNoteListeners: Set<(trackId: number, noteIndex: number, noteName: string, durationMs: number) => void> = new Set();
 
   constructor() {
     this.initNoiseBuffer();
@@ -2178,6 +2179,19 @@ class ModularSynth {
     let osc2: OscillatorNode | undefined;
     let noiseSource: AudioBufferSourceNode | undefined;
 
+    // Notify realtime visual keyboard listeners
+    if (this.onNoteListeners.size > 0) {
+      const durMs = Math.round((durationSec ?? (60 / this.bpm / 8)) * 1000);
+      const delayMs = Math.max(0, Math.round((t - ctx.currentTime) * 1000));
+      if (delayMs <= 5) {
+        this.onNoteListeners.forEach((fn) => fn(trackId, noteIndex, noteInfo.note, durMs));
+      } else {
+        window.setTimeout(() => {
+          this.onNoteListeners.forEach((fn) => fn(trackId, noteIndex, noteInfo.note, durMs));
+        }, delayMs);
+      }
+    }
+
     const phaseDelaySec = (track.phaseOffset / 360) * (1 / baseFreq);
     const startT1 = t;
     const startT2 = t + Math.min(0.01, phaseDelaySec);
@@ -2497,6 +2511,11 @@ class ModularSynth {
   public subscribeStep(listener: (step: number) => void): () => void {
     this.onStepListeners.add(listener);
     return () => this.onStepListeners.delete(listener);
+  }
+
+  public subscribeNote(listener: (trackId: number, noteIndex: number, noteName: string, durationMs: number) => void): () => void {
+    this.onNoteListeners.add(listener);
+    return () => this.onNoteListeners.delete(listener);
   }
 
   public isPlayingSeq(): boolean {

@@ -658,6 +658,10 @@ export const TmuxWorkspace: React.FC = () => {
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [isOverlayMode, setIsOverlayMode] = useState<boolean>(true);
   const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0, 1, 2, 3]);
+
+  // Real-time Visual Keyboard & Web MIDI Engine
+  const [activePlayingNotes, setActivePlayingNotes] = useState<Map<number, { trackId: number; time: number }>>(new Map());
+  const [midiConnectedDevice, setMidiConnectedDevice] = useState<string | null>(null);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
   const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
   const [seqCurrentStep, setSeqCurrentStep] = useState<number>(0);
@@ -731,6 +735,88 @@ export const TmuxWorkspace: React.FC = () => {
       if (animId) cancelAnimationFrame(animId);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Subscribe to real-time note voice triggers for the visual piano keyboard
+  useEffect(() => {
+    const unsub = modularSynth.subscribeNote((trackId, noteIndex, _name, durationMs) => {
+      const now = Date.now();
+      setActivePlayingNotes((prev) => {
+        const next = new Map(prev);
+        next.set(noteIndex, { trackId, time: now + Math.max(120, durationMs) });
+        return next;
+      });
+
+      // Clear after duration
+      window.setTimeout(() => {
+        setActivePlayingNotes((prev) => {
+          const entry = prev.get(noteIndex);
+          if (entry && Date.now() >= entry.time - 20) {
+            const next = new Map(prev);
+            next.delete(noteIndex);
+            return next;
+          }
+          return prev;
+        });
+      }, Math.max(120, durationMs) + 30);
+    });
+
+    return () => unsub();
+  }, []);
+
+  // Web MIDI API Initialization & Message Listener
+  useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.requestMIDIAccess) return;
+
+    let midiAccess: any = null;
+
+    const handleMIDIMessage = (event: any) => {
+      const data = event.data;
+      if (!data || data.length < 2) return;
+      const cmd = data[0] >> 4;
+      const noteNumber = data[1];
+      const velocity = data.length > 2 ? data[2] : 0;
+
+      // Note On: 0x9 (with velocity > 0)
+      if (cmd === 9 && velocity > 0) {
+        // Convert MIDI note number (0-127, Middle C = C4 = 60) to PIANO_ROLL_NOTES index
+        // In PIANO_ROLL_NOTES, C8 (108) is idx 0, C4 (60) is idx 48, A0 (21) is idx 87
+        const noteIdx = 108 - noteNumber;
+        if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
+          const accent = velocity > 100 ? 2 : velocity > 75 ? 1 : 0;
+          modularSynth.triggerTrackVoice(activeTrackId, noteIdx, accent);
+        }
+      }
+    };
+
+    const attachInputs = (access: any) => {
+      let firstDeviceName: string | null = null;
+      for (const input of access.inputs.values()) {
+        input.onmidimessage = handleMIDIMessage;
+        if (!firstDeviceName) firstDeviceName = input.name || 'MIDI Device';
+      }
+      setMidiConnectedDevice(firstDeviceName);
+    };
+
+    navigator.requestMIDIAccess({ sysex: false })
+      .then((access) => {
+        midiAccess = access;
+        attachInputs(access);
+        access.onstatechange = () => attachInputs(access);
+      })
+      .catch(() => {
+        // MIDI not permitted or unsupported
+      });
+
+    return () => {
+      if (midiAccess) {
+        try {
+          for (const input of midiAccess.inputs.values()) {
+            input.onmidimessage = null;
+          }
+        } catch {}
+      }
+    };
+  }, [activeTrackId]);
 
   // --- Patch & Built-in Song Management ---
   const STORAGE_KEY = 'krsz-synth-patch-v1';
@@ -3195,6 +3281,119 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                   </div>
                                 );
                               })}
+                            </div>
+                          </div>
+                          {/* 4. REAL-TIME INTERACTIVE PIANO KEYBOARD & MIDI DISPLAY (2-Octave Full Visual Piano C3 to B4) */}
+                          <div className="pt-1.5 border-t border-white/10 flex flex-col gap-1 shrink-0 select-none">
+                            <div className="flex items-center justify-between text-xs font-mono">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-black text-[#56b6c2]">PIANO KEYBOARD</span>
+                                <span className="text-white/40 text-[10px] hidden sm:inline">| C3 - B4 INTERACTIVE AUDITION</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold ${
+                                  midiConnectedDevice 
+                                    ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' 
+                                    : 'border-white/20 bg-white/5 text-white/40'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${midiConnectedDevice ? 'bg-[#98c379] animate-pulse' : 'bg-white/30'}`} />
+                                  <span>MIDI: {midiConnectedDevice ? midiConnectedDevice.toUpperCase() : 'STANDBY'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Piano Keyboard Keybed (C3 = noteIdx 60 to B4 = noteIdx 37, 24 semitones) */}
+                            <div className="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden">
+                              {(() => {
+                                // 14 White Keys in 2 Octaves (C3, D3, E3, F3, G3, A3, B3, C4, D4, E4, F4, G4, A4, B4)
+                                const whiteKeyNotes = [
+                                  { note: 'C3', idx: 60 }, { note: 'D3', idx: 58 }, { note: 'E3', idx: 56 },
+                                  { note: 'F3', idx: 55 }, { note: 'G3', idx: 53 }, { note: 'A3', idx: 51 }, { note: 'B3', idx: 49 },
+                                  { note: 'C4', idx: 48 }, { note: 'D4', idx: 46 }, { note: 'E4', idx: 44 },
+                                  { note: 'F4', idx: 43 }, { note: 'G4', idx: 41 }, { note: 'A4', idx: 39 }, { note: 'B4', idx: 37 },
+                                ];
+
+                                // 10 Black Keys relative position offsets (% based on 14 white keys: 100/14 = 7.1428%)
+                                // Offsets: C#3, D#3, F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4
+                                const blackKeyNotes = [
+                                  { note: 'C#3', idx: 59, leftPct: 7.14 * 1 - 2.2 },
+                                  { note: 'D#3', idx: 57, leftPct: 7.14 * 2 - 2.0 },
+                                  { note: 'F#3', idx: 54, leftPct: 7.14 * 4 - 2.2 },
+                                  { note: 'G#3', idx: 52, leftPct: 7.14 * 5 - 2.1 },
+                                  { note: 'A#3', idx: 50, leftPct: 7.14 * 6 - 2.0 },
+                                  { note: 'C#4', idx: 47, leftPct: 7.14 * 8 - 2.2 },
+                                  { note: 'D#4', idx: 45, leftPct: 7.14 * 9 - 2.0 },
+                                  { note: 'F#4', idx: 42, leftPct: 7.14 * 11 - 2.2 },
+                                  { note: 'G#4', idx: 40, leftPct: 7.14 * 12 - 2.1 },
+                                  { note: 'A#4', idx: 38, leftPct: 7.14 * 13 - 2.0 },
+                                ];
+
+                                return (
+                                  <>
+                                    {/* White Keys Row */}
+                                    <div className="flex w-full h-full gap-0.5">
+                                      {whiteKeyNotes.map((wk) => {
+                                        const isPlaying = activePlayingNotes.has(wk.idx);
+                                        const noteTrack = isPlaying ? activePlayingNotes.get(wk.idx)?.trackId : null;
+                                        const keyColor = noteTrack !== null && noteTrack !== undefined && tracksState[noteTrack] 
+                                          ? tracksState[noteTrack].color 
+                                          : currentTrack.color;
+
+                                        return (
+                                          <button
+                                            key={wk.note}
+                                            onMouseDown={() => {
+                                              modularSynth.triggerTrackVoice(activeTrackId, wk.idx, 1);
+                                              playSound('click');
+                                            }}
+                                            className={`flex-1 h-full rounded-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer transition-all border ${
+                                              isPlaying
+                                                ? 'shadow-[0_0_10px_currentColor]'
+                                                : 'bg-[#e8e6e1] hover:bg-white text-black/70 border-black/30'
+                                            }`}
+                                            style={isPlaying ? { backgroundColor: keyColor, borderColor: keyColor, color: '#000' } : {}}
+                                            title={`Play ${wk.note} (${PIANO_ROLL_NOTES[wk.idx]?.freq.toFixed(1)} Hz)`}
+                                          >
+                                            <span className="text-[9px] font-mono font-black opacity-70 leading-none">{wk.note}</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Black Keys Row (Floating Over White Keys) */}
+                                    {blackKeyNotes.map((bk) => {
+                                      const isPlaying = activePlayingNotes.has(bk.idx);
+                                      const noteTrack = isPlaying ? activePlayingNotes.get(bk.idx)?.trackId : null;
+                                      const keyColor = noteTrack !== null && noteTrack !== undefined && tracksState[noteTrack] 
+                                        ? tracksState[noteTrack].color 
+                                        : currentTrack.color;
+
+                                      return (
+                                        <button
+                                          key={bk.note}
+                                          onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                            modularSynth.triggerTrackVoice(activeTrackId, bk.idx, 1);
+                                            playSound('click');
+                                          }}
+                                          className={`absolute top-0 h-[62%] w-[4.4%] rounded-b-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer z-10 transition-all border ${
+                                            isPlaying
+                                              ? 'shadow-[0_0_10px_currentColor]'
+                                              : 'bg-[#181a1f] hover:bg-[#282c34] text-white/60 border-black'
+                                          }`}
+                                          style={{
+                                            left: `${bk.leftPct}%`,
+                                            ...(isPlaying ? { backgroundColor: keyColor, borderColor: keyColor, color: '#000' } : {})
+                                          }}
+                                          title={`Play ${bk.note} (${PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1)} Hz)`}
+                                        >
+                                          <span className="text-[8px] font-mono font-bold leading-none">{bk.note.replace('#', '')}#</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
 
