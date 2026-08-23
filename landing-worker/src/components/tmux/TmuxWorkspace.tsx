@@ -3709,7 +3709,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             className="hover:underline flex items-center gap-1 text-[#61afef] hover:text-[#98c379] transition-colors"
           >
             <PixelGitHub size={13} />
-            <span>gh/kurashizu</span>
+            <span>1:gh/kurashizu</span>
           </a>
           <a
             href="https://huggingface.co/kurashizu"
@@ -3720,7 +3720,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             className="hover:underline flex items-center gap-1 text-[#e5c07b] hover:text-[#e06c75] transition-colors"
           >
             <PixelHuggingFace size={13} />
-            <span>hf/kurashizu</span>
+            <span>2:hf/kurashizu</span>
           </a>
           <a
             href="https://oshwhub.com/Kurashizu"
@@ -3731,7 +3731,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             className="hover:underline flex items-center gap-1 text-[#e06c75] hover:text-[#56b6c2] transition-colors"
           >
             <PixelHardware size={13} />
-            <span>oshwhub</span>
+            <span>3:oshwhub</span>
           </a>
           <a
             href="https://skill.krsz.in/rules"
@@ -3742,7 +3742,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
             className="hover:underline flex items-center gap-1 text-[#98c379] hover:text-[#56b6c2] transition-colors"
           >
             <PixelRules size={13} />
-            <span>rules</span>
+            <span>4:rules</span>
           </a>
         </div>
 
