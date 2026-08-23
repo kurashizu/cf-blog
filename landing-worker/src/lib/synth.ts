@@ -63,6 +63,23 @@ export interface VelocityCurveSpec {
   calcGainScale: (rawVel: number) => number;
 }
 
+export interface EqBandSpec {
+  id: number;
+  label: string;
+  freq: number;
+  type: BiquadFilterType;
+  color: string;
+}
+
+export const EQ_6_BANDS: EqBandSpec[] = [
+  { id: 0, label: '80', freq: 80, type: 'lowshelf', color: '#56b6c2' },
+  { id: 1, label: '250', freq: 250, type: 'peaking', color: '#56b6c2' },
+  { id: 2, label: '800', freq: 800, type: 'peaking', color: '#e5c07b' },
+  { id: 3, label: '2.5k', freq: 2500, type: 'peaking', color: '#e5c07b' },
+  { id: 4, label: '6k', freq: 6000, type: 'peaking', color: '#98c379' },
+  { id: 5, label: '12k', freq: 12000, type: 'highshelf', color: '#98c379' },
+];
+
 export const VELOCITY_CURVES: VelocityCurve[] = ['EXP', 'LINEAR', 'LOG', 'HARD', 'OFF'];
 
 export type TimeSignature = '4/4' | '3/4' | '2/4' | '5/4' | '6/8' | '7/8';
@@ -1860,17 +1877,10 @@ class ModularSynth {
   private reverbWetGain: GainNode | null = null;
   private waveShaper: WaveShaperNode | null = null;
 
-  // Master 3-Band Parametric Equalizer (EQ) Nodes & State (Default: OFF)
+  // Master 6-Band Graphic Equalizer (EQ) Nodes & State (Default: OFF)
   private eqEnabled: boolean = false;
-  private eqLowGain: number = 0;   // -12dB to +12dB (Low Shelf @ 100Hz)
-  private eqMidGain: number = 0;   // -12dB to +12dB (Peaking Mid @ 1000Hz)
-  private eqHighGain: number = 0;  // -12dB to +12dB (High Shelf @ 8000Hz)
-  private eqLowFreq: number = 100; // 30Hz to 800Hz
-  private eqMidFreq: number = 1000;// 200Hz to 6000Hz
-  private eqHighFreq: number = 8000;// 2000Hz to 18000Hz
-  private eqLowFilter: BiquadFilterNode | null = null;
-  private eqMidFilter: BiquadFilterNode | null = null;
-  private eqHighFilter: BiquadFilterNode | null = null;
+  private eqGains: number[] = [0, 0, 0, 0, 0, 0]; // -12dB to +12dB for 6 bands (80Hz, 250Hz, 800Hz, 2.5kHz, 6kHz, 12kHz)
+  private eqFilters: BiquadFilterNode[] = [];
 
   // Sequencer Engine (512 Steps, 32 Bars)
   private isSequencerPlaying: boolean = false;
@@ -1933,28 +1943,27 @@ class ModularSynth {
 
     const masterGain = (soundEngine as any).masterGain || ctx.destination;
 
-    // Master 3-Band Parametric Equalizer (EQ) Chain: LowShelf (100Hz) -> Peaking (1000Hz) -> HighShelf (8000Hz) -> MasterGain
-    this.eqLowFilter = ctx.createBiquadFilter();
-    this.eqLowFilter.type = 'lowshelf';
-    this.eqLowFilter.frequency.setValueAtTime(this.eqLowFreq, ctx.currentTime);
-    this.eqLowFilter.gain.setValueAtTime(this.eqEnabled ? this.eqLowGain : 0, ctx.currentTime);
+    // Master 6-Band Parametric/Graphic Equalizer (EQ) Chain: 80Hz -> 250Hz -> 800Hz -> 2.5kHz -> 6kHz -> 12kHz -> MasterGain
+    this.eqFilters = EQ_6_BANDS.map((band, idx) => {
+      const filter = ctx.createBiquadFilter();
+      filter.type = band.type;
+      filter.frequency.setValueAtTime(band.freq, ctx.currentTime);
+      if (band.type === 'peaking') {
+        filter.Q.setValueAtTime(1.2, ctx.currentTime);
+      }
+      filter.gain.setValueAtTime(this.eqEnabled ? (this.eqGains[idx] ?? 0) : 0, ctx.currentTime);
+      return filter;
+    });
 
-    this.eqMidFilter = ctx.createBiquadFilter();
-    this.eqMidFilter.type = 'peaking';
-    this.eqMidFilter.frequency.setValueAtTime(this.eqMidFreq, ctx.currentTime);
-    this.eqMidFilter.Q.setValueAtTime(1.0, ctx.currentTime);
-    this.eqMidFilter.gain.setValueAtTime(this.eqEnabled ? this.eqMidGain : 0, ctx.currentTime);
+    // Cascade connect 6 filters: [0] -> [1] -> [2] -> [3] -> [4] -> [5] -> masterGain
+    for (let i = 0; i < this.eqFilters.length - 1; i++) {
+      this.eqFilters[i].connect(this.eqFilters[i + 1]);
+    }
+    if (this.eqFilters.length > 0) {
+      this.eqFilters[this.eqFilters.length - 1].connect(masterGain);
+    }
 
-    this.eqHighFilter = ctx.createBiquadFilter();
-    this.eqHighFilter.type = 'highshelf';
-    this.eqHighFilter.frequency.setValueAtTime(this.eqHighFreq, ctx.currentTime);
-    this.eqHighFilter.gain.setValueAtTime(this.eqEnabled ? this.eqHighGain : 0, ctx.currentTime);
-
-    this.eqLowFilter.connect(this.eqMidFilter);
-    this.eqMidFilter.connect(this.eqHighFilter);
-    this.eqHighFilter.connect(masterGain);
-
-    const eqInputNode = this.eqLowFilter;
+    const eqInputNode = this.eqFilters.length > 0 ? this.eqFilters[0] : masterGain;
 
     this.delayNode.connect(this.delayWetGain);
     this.delayWetGain.connect(eqInputNode);
@@ -2205,82 +2214,33 @@ class ModularSynth {
     return this.driveAmount;
   }
 
-  // Master Parametric 3-Band EQ Controls
+  // Master 6-Band Graphic Equalizer Controls
   public setEqEnabled(enabled: boolean) {
     this.eqEnabled = enabled;
-    if (this.eqLowFilter) this.eqLowFilter.gain.setValueAtTime(enabled ? this.eqLowGain : 0, 0);
-    if (this.eqMidFilter) this.eqMidFilter.gain.setValueAtTime(enabled ? this.eqMidGain : 0, 0);
-    if (this.eqHighFilter) this.eqHighFilter.gain.setValueAtTime(enabled ? this.eqHighGain : 0, 0);
+    this.eqFilters.forEach((filter, idx) => {
+      filter.gain.setValueAtTime(enabled ? (this.eqGains[idx] ?? 0) : 0, 0);
+    });
   }
 
   public isEqEnabled(): boolean {
     return this.eqEnabled;
   }
 
-  public setEqLow(gainDb: number) {
-    this.eqLowGain = Math.max(-12, Math.min(12, gainDb));
-    if (this.eqLowFilter && this.eqEnabled) {
-      this.eqLowFilter.gain.setValueAtTime(this.eqLowGain, 0);
+  public setEqBandGain(bandIdx: number, gainDb: number) {
+    if (bandIdx < 0 || bandIdx >= 6) return;
+    const clamped = Math.max(-12, Math.min(12, gainDb));
+    this.eqGains[bandIdx] = clamped;
+    if (this.eqFilters[bandIdx] && this.eqEnabled) {
+      this.eqFilters[bandIdx].gain.setValueAtTime(clamped, 0);
     }
   }
 
-  public getEqLow(): number {
-    return this.eqLowGain;
+  public getEqBandGain(bandIdx: number): number {
+    return this.eqGains[bandIdx] ?? 0;
   }
 
-  public setEqMid(gainDb: number) {
-    this.eqMidGain = Math.max(-12, Math.min(12, gainDb));
-    if (this.eqMidFilter && this.eqEnabled) {
-      this.eqMidFilter.gain.setValueAtTime(this.eqMidGain, 0);
-    }
-  }
-
-  public getEqMid(): number {
-    return this.eqMidGain;
-  }
-
-  public setEqHigh(gainDb: number) {
-    this.eqHighGain = Math.max(-12, Math.min(12, gainDb));
-    if (this.eqHighFilter && this.eqEnabled) {
-      this.eqHighFilter.gain.setValueAtTime(this.eqHighGain, 0);
-    }
-  }
-
-  public getEqHigh(): number {
-    return this.eqHighGain;
-  }
-
-  public setEqLowFreq(freq: number) {
-    this.eqLowFreq = Math.max(20, Math.min(1000, freq));
-    if (this.eqLowFilter) {
-      this.eqLowFilter.frequency.setValueAtTime(this.eqLowFreq, 0);
-    }
-  }
-
-  public getEqLowFreq(): number {
-    return this.eqLowFreq;
-  }
-
-  public setEqMidFreq(freq: number) {
-    this.eqMidFreq = Math.max(100, Math.min(8000, freq));
-    if (this.eqMidFilter) {
-      this.eqMidFilter.frequency.setValueAtTime(this.eqMidFreq, 0);
-    }
-  }
-
-  public getEqMidFreq(): number {
-    return this.eqMidFreq;
-  }
-
-  public setEqHighFreq(freq: number) {
-    this.eqHighFreq = Math.max(1000, Math.min(20000, freq));
-    if (this.eqHighFilter) {
-      this.eqHighFilter.frequency.setValueAtTime(this.eqHighFreq, 0);
-    }
-  }
-
-  public getEqHighFreq(): number {
-    return this.eqHighFreq;
+  public getEqGains(): number[] {
+    return [...this.eqGains];
   }
 
   /* -------------------------------------------------------------------------- */
@@ -2672,7 +2632,7 @@ class ModularSynth {
       finalVoiceNode = airFilter;
     }
 
-    const eqInputNode: AudioNode = this.eqLowFilter || masterGain;
+    const eqInputNode: AudioNode = (this.eqFilters && this.eqFilters.length > 0) ? this.eqFilters[0] : masterGain;
 
     if (panner) {
       finalVoiceNode.connect(panner);
