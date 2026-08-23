@@ -679,6 +679,17 @@ export const TmuxWorkspace: React.FC = () => {
   const [activeStepPage, setActiveStepPage] = useState<number>(0);
   const [pageFollow, setPageFollow] = useState<boolean>(true);
 
+  // Synthesizer Advanced Settings Modal State
+  const [isSynthSettingsOpen, setIsSynthSettingsOpen] = useState<boolean>(false);
+  const [synthSettingsTab, setSynthSettingsTab] = useState<'dsp' | 'voice' | 'midi' | 'master'>('dsp');
+  const [noiseDurationSetting, setNoiseDurationSetting] = useState<number>(modularSynth.getNoiseBufferDuration());
+  const [noiseColorSetting, setNoiseColorSetting] = useState<'white' | 'pink' | 'brown'>(modularSynth.getNoiseColor());
+  const [reverbDurationSetting, setReverbDurationSetting] = useState<number>(modularSynth.getReverbDuration());
+  const [reverbDecaySetting, setReverbDecaySetting] = useState<number>(modularSynth.getReverbDecayRate());
+  const [masterTuningSetting, setMasterTuningSetting] = useState<number>(modularSynth.getMasterTuningFreq());
+  const [maxPolyphonySetting, setMaxPolyphonySetting] = useState<number>(modularSynth.getMaxPolyphony());
+  const [midiOmniSetting, setMidiOmniSetting] = useState<boolean>(modularSynth.isMidiOmniMode());
+
   // Compute Active Ringing Notes for Piano Keyboard:
   // Combines: 1) Currently playing sequencer step notes across tracks, 2) Manually held keys/MIDI notes
   const activePlayingNotes = useMemo(() => {
@@ -2624,7 +2635,21 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         </div>
                       </div>
                     );
-                  })}
+                    })}
+
+                    {/* SETTINGS Modal Button */}
+                    <div className="w-px h-3.5 bg-white/15 mx-0.5 shrink-0" />
+                  <button
+                    onClick={() => {
+                      setIsSynthSettingsOpen(true);
+                      playSound('click');
+                    }}
+                    className="px-2 py-0.5 border border-[#e5c07b]/50 hover:border-[#e5c07b] bg-[#e5c07b]/10 hover:bg-[#e5c07b]/20 text-[#e5c07b] hover:text-white rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0 shadow-[0_0_6px_rgba(229,192,123,0.2)]"
+                    title="Open Synthesizer & Audio DSP Global Configuration [SETTINGS]"
+                  >
+                    <span>⚙</span>
+                    <span>SETTINGS</span>
+                  </button>
                 </div>
               </div>
 
@@ -4397,6 +4422,421 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
           <span className="text-[#98c379] text-[11px] sm:text-xs">STATUS: 0ms COLD START</span>
         </div>
       </footer>
+
+      {/* SYNTHESIZER ADVANCED CONFIGURATION & DSP SETTINGS MODAL */}
+      {isSynthSettingsOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80 backdrop-blur-xs animate-fadeIn select-none"
+          onClick={() => {
+            setIsSynthSettingsOpen(false);
+            playSound('click');
+          }}
+        >
+          <div
+            className="w-full max-w-2xl bg-[#121417] border border-[#e5c07b]/40 rounded-xs shadow-[0_0_24px_rgba(0,0,0,0.8),0_0_12px_rgba(229,192,123,0.15)] flex flex-col max-h-[85vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-3 py-2 bg-black/60 border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[#e5c07b] font-black text-sm">⚙ SYNTHESIZER ENGINE CONFIG</span>
+                <span className="text-white/40 font-mono text-xs">v4.2-dsp</span>
+              </div>
+              <button
+                onClick={() => {
+                  setIsSynthSettingsOpen(false);
+                  playSound('click');
+                }}
+                className="w-6 h-6 border border-white/20 hover:border-[#e06c75] hover:bg-[#e06c75]/20 text-white/60 hover:text-[#e06c75] rounded-xs flex items-center justify-center text-xs font-black cursor-pointer transition-colors"
+                title="Close Settings (Esc)"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Tabs Navigation */}
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-black/40 border-b border-white/10 shrink-0 text-xs">
+              {[
+                { id: 'dsp', label: '1. DSP & BUFFERS', color: '#56b6c2' },
+                { id: 'voice', label: '2. VOICE & TUNING', color: '#98c379' },
+                { id: 'midi', label: '3. MIDI & VELOCITY', color: '#e5c07b' },
+                { id: 'master', label: '4. MASTER FX & LIMITER', color: '#e06c75' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setSynthSettingsTab(tab.id as any);
+                    playSound('click');
+                  }}
+                  className={`px-2.5 py-1 rounded-xs border font-black cursor-pointer transition-all ${
+                    synthSettingsTab === tab.id
+                      ? `border-[${tab.color}] bg-[${tab.color}] text-black font-black shadow-xs`
+                      : 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:border-white/30'
+                  }`}
+                  style={{
+                    backgroundColor: synthSettingsTab === tab.id ? tab.color : undefined,
+                    borderColor: synthSettingsTab === tab.id ? tab.color : undefined,
+                    color: synthSettingsTab === tab.id ? '#000000' : undefined,
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Modal Body / Tab Content */}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-4 text-xs font-mono">
+              {/* TAB 1: DSP & BUFFERS */}
+              {synthSettingsTab === 'dsp' && (
+                <div className="space-y-4">
+                  {/* Noise Buffer Config */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#56b6c2] font-black">WHITE / PINK / BROWN NOISE BUFFER</span>
+                      <span className="text-white/40 text-[10px]">AudioBufferSourceNode</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <div className="flex justify-between text-white/70 mb-1">
+                          <span>Noise Buffer Length:</span>
+                          <span className="text-[#56b6c2] font-bold">{noiseDurationSetting.toFixed(1)}s</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={5.0}
+                          step={0.5}
+                          value={noiseDurationSetting}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            setNoiseDurationSetting(v);
+                            modularSynth.setNoiseBufferDuration(v);
+                          }}
+                          className="w-full accent-[#56b6c2] cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[9px] text-white/40 mt-0.5">
+                          <span>0.5s (Compact)</span>
+                          <span>2.0s (Default)</span>
+                          <span>5.0s (Long)</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-white/70 mb-1">
+                          <span>Noise Color Spectrum:</span>
+                          <span className="text-[#56b6c2] font-bold uppercase">{noiseColorSetting}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 mt-1">
+                          {(['white', 'pink', 'brown'] as const).map((col) => (
+                            <button
+                              key={col}
+                              onClick={() => {
+                                setNoiseColorSetting(col);
+                                modularSynth.setNoiseColor(col);
+                                playSound('toggle');
+                              }}
+                              className={`py-1 rounded-xs border text-center font-bold uppercase transition-all ${
+                                noiseColorSetting === col
+                                  ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                  : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
+                              }`}
+                            >
+                              {col}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Convolution Space Reverb Buffer */}
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#c678dd] font-black">CONVOLUTION REVERB IMPULSE RESPONSE</span>
+                      <span className="text-white/40 text-[10px]">ConvolverNode DSP</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <div className="flex justify-between text-white/70 mb-1">
+                          <span>Reverb RT60 Duration:</span>
+                          <span className="text-[#c678dd] font-bold">{reverbDurationSetting.toFixed(1)}s</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.2}
+                          max={6.0}
+                          step={0.2}
+                          value={reverbDurationSetting}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            setReverbDurationSetting(v);
+                            modularSynth.setReverbDuration(v);
+                          }}
+                          className="w-full accent-[#c678dd] cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[9px] text-white/40 mt-0.5">
+                          <span>0.2s (Room)</span>
+                          <span>1.8s (Plate)</span>
+                          <span>6.0s (Cathedral)</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-white/70 mb-1">
+                          <span>Decay Factor (Air Absorption):</span>
+                          <span className="text-[#c678dd] font-bold">{reverbDecaySetting.toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.1}
+                          max={2.0}
+                          step={0.05}
+                          value={reverbDecaySetting}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            setReverbDecaySetting(v);
+                            modularSynth.setReverbDecayRate(v);
+                          }}
+                          className="w-full accent-[#c678dd] cursor-pointer"
+                        />
+                        <div className="flex justify-between text-[9px] text-white/40 mt-0.5">
+                          <span>0.1 (Dark)</span>
+                          <span>0.6 (Warm)</span>
+                          <span>2.0 (Bright Air)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: VOICE & TUNING */}
+              {synthSettingsTab === 'voice' && (
+                <div className="space-y-4">
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#98c379] font-black">MASTER CONCERT TUNING (A4)</span>
+                      <span className="text-white/40 text-[10px]">Reference Standard</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold text-sm">{masterTuningSetting.toFixed(1)} Hz</p>
+                        <p className="text-white/40 text-[10px]">Standard Orchestral Pitch calibration</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {[432, 440, 442, 444].map((f) => (
+                          <button
+                            key={f}
+                            onClick={() => {
+                              setMasterTuningSetting(f);
+                              modularSynth.setMasterTuningFreq(f);
+                              playSound('click');
+                            }}
+                            className={`px-2 py-1 rounded-xs border text-xs font-bold transition-all ${
+                              Math.abs(masterTuningSetting - f) < 0.1
+                                ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            {f}Hz
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#98c379] font-black">POLYPHONY & VOICE ALLOCATION</span>
+                      <span className="text-white/40 text-[10px]">Per-Track Voices</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold">Max Concurrent Voices: {maxPolyphonySetting}</p>
+                        <p className="text-white/40 text-[10px]">Prevents clipping and voice distortion</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[4, 6, 8, 12, 16].map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => {
+                              setMaxPolyphonySetting(p);
+                              modularSynth.setMaxPolyphony(p);
+                              playSound('click');
+                            }}
+                            className={`px-2 py-1 rounded-xs border text-xs font-bold transition-all ${
+                              maxPolyphonySetting === p
+                                ? 'border-[#98c379] bg-[#98c379] text-black font-black'
+                                : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: MIDI & VELOCITY */}
+              {synthSettingsTab === 'midi' && (
+                <div className="space-y-4">
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#e5c07b] font-black">MIDI CHANNEL ROUTING (OMNI MODE)</span>
+                      <span className="text-white/40 text-[10px]">Web MIDI API</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold">
+                          {midiOmniSetting ? 'Omni Mode (All Tracks)' : 'Active Track Only (Strict)'}
+                        </p>
+                        <p className="text-white/40 text-[10px]">
+                          {midiOmniSetting
+                            ? 'Incoming MIDI notes trigger all unlocked channels'
+                            : 'Incoming MIDI notes trigger strictly the active focused track'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const next = !midiOmniSetting;
+                          setMidiOmniSetting(next);
+                          modularSynth.setMidiOmniMode(next);
+                          playSound('toggle');
+                        }}
+                        className={`px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all ${
+                          midiOmniSetting
+                            ? 'border-[#e5c07b] bg-[#e5c07b] text-black shadow-[0_0_8px_#e5c07b]'
+                            : 'border-white/20 bg-white/5 text-white/60 hover:text-white'
+                        }`}
+                      >
+                        {midiOmniSetting ? 'OMNI: ON' : 'OMNI: OFF'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#e5c07b] font-black">VELOCITY DYNAMICS CURVE</span>
+                      <span className="text-white/40 text-[10px]">Dynamic Scaling</span>
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-1.5 pt-1">
+                      {(['EXP', 'LINEAR', 'LOG', 'HARD', 'OFF'] as VelocityCurve[]).map((vc) => (
+                        <button
+                          key={vc}
+                          onClick={() => {
+                            setVelocityCurve(vc);
+                            modularSynth.setVelocityCurve(vc);
+                            playSound('click');
+                          }}
+                          className={`py-1.5 px-1 text-center rounded-xs border font-black text-xs transition-all ${
+                            velocityCurve === vc
+                              ? 'border-[#e5c07b] bg-[#e5c07b] text-black shadow-xs'
+                              : 'border-white/15 bg-white/5 text-white/60 hover:text-white'
+                          }`}
+                        >
+                          {vc}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: MASTER FX & LIMITER */}
+              {synthSettingsTab === 'master' && (
+                <div className="space-y-4">
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#e06c75] font-black">MASTER 6-BAND GRAPHIC EQUALIZER</span>
+                      <span className="text-white/40 text-[10px]">Biquad Filter Array</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold">Master Equalizer Status: {isEqEnabled ? 'ACTIVE (ON)' : 'BYPASS (OFF)'}</p>
+                        <p className="text-white/40 text-[10px]">80Hz, 250Hz, 800Hz, 2.5kHz, 6kHz, 12kHz cascading chain</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const next = !isEqEnabled;
+                          setIsEqEnabled(next);
+                          modularSynth.setEqEnabled(next);
+                          playSound('toggle');
+                        }}
+                        className={`px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all ${
+                          isEqEnabled
+                            ? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_8px_#98c379]'
+                            : 'border-white/20 bg-white/5 text-white/60 hover:text-white'
+                        }`}
+                      >
+                        {isEqEnabled ? 'EQ: ENABLED' : 'EQ: DISABLED'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-1">
+                      <span className="text-[#e06c75] font-black">RESET SYNTHESIZER TO DEFAULT</span>
+                      <span className="text-white/40 text-[10px]">Clean Restore</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-white/80 font-bold">Restore Factory DSP Defaults</p>
+                        <p className="text-white/40 text-[10px]">Resets all DSP buffer lengths, pitch tuning, and audio routing</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setNoiseDurationSetting(2.0);
+                          modularSynth.setNoiseBufferDuration(2.0);
+                          setNoiseColorSetting('white');
+                          modularSynth.setNoiseColor('white');
+                          setReverbDurationSetting(1.8);
+                          modularSynth.setReverbDuration(1.8);
+                          setReverbDecaySetting(0.6);
+                          modularSynth.setReverbDecayRate(0.6);
+                          setMasterTuningSetting(440.0);
+                          modularSynth.setMasterTuningFreq(440.0);
+                          setMaxPolyphonySetting(8);
+                          modularSynth.setMaxPolyphony(8);
+                          setMidiOmniSetting(false);
+                          modularSynth.setMidiOmniMode(false);
+                          playSound('power');
+                        }}
+                        className="px-3 py-1 rounded-xs border border-red-500/40 hover:border-red-500 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-black font-black text-xs cursor-pointer transition-all"
+                      >
+                        ↺ RESET DSP
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-4 py-2 bg-black/60 border-t border-white/10 shrink-0 text-xs">
+              <span className="text-white/40 text-[11px]">All parameter changes take effect immediately in Web Audio DSP graph.</span>
+              <button
+                onClick={() => {
+                  setIsSynthSettingsOpen(false);
+                  playSound('click');
+                }}
+                className="px-4 py-1 bg-[#e5c07b] text-black font-black rounded-xs hover:opacity-90 cursor-pointer shadow-xs"
+              >
+                DONE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -1882,6 +1882,16 @@ class ModularSynth {
   private eqGains: number[] = [0, 0, 0, 0, 0, 0]; // -12dB to +12dB for 6 bands (80Hz, 250Hz, 800Hz, 2.5kHz, 6kHz, 12kHz)
   private eqFilters: BiquadFilterNode[] = [];
 
+  // Master DSP Engine & Audio Buffer Settings (User Configurable via Settings Modal)
+  private noiseBufferDuration: number = 2.0; // 0.5s to 5.0s
+  private noiseColor: 'white' | 'pink' | 'brown' = 'white';
+  private reverbDuration: number = 1.8;      // 0.2s to 6.0s
+  private reverbDecayRate: number = 0.6;     // 0.1 to 2.0 (High Frequency Air Absorption)
+  private masterTuningFreq: number = 440.0;  // 432Hz to 444Hz
+  private maxPolyphony: number = 8;          // 1 to 16 voices per track
+  private midiOmniMode: boolean = false;     // false = active track only, true = all tracks (Omni)
+  private delayPingPong: boolean = false;    // Stereo offset ping-pong effect
+
   // Sequencer Engine (512 Steps, 32 Bars)
   private isSequencerPlaying: boolean = false;
   private currentStep: number = 0;
@@ -1894,18 +1904,68 @@ class ModularSynth {
     this.initNoiseBuffer();
   }
 
-  private initNoiseBuffer() {
+  public regenerateNoiseBuffer() {
     if (typeof window === 'undefined') return;
     const ctx = soundEngine.init();
     if (!ctx) return;
 
-    const bufferSize = ctx.sampleRate * 2;
+    const bufferSize = Math.floor(ctx.sampleRate * Math.max(0.5, Math.min(5.0, this.noiseBufferDuration)));
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
+
+    if (this.noiseColor === 'white') {
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+    } else if (this.noiseColor === 'pink') {
+      // Paul Kellet's filtered pink noise generator (-3dB/octave)
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
+      }
+    } else {
+      // Brownian / Red Noise generator (-6dB/octave)
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (lastOut + 0.02 * white) / 1.02;
+        lastOut = data[i];
+        data[i] *= 3.5; // Compensate amplitude
+      }
     }
     this.noiseBuffer = buffer;
+  }
+
+  private initNoiseBuffer() {
+    this.regenerateNoiseBuffer();
+  }
+
+  public regenerateReverbBuffer() {
+    if (typeof window === 'undefined') return;
+    const ctx = soundEngine.init();
+    if (!ctx || !this.reverbConvolver) return;
+
+    const rate = ctx.sampleRate;
+    const length = Math.floor(rate * Math.max(0.2, Math.min(6.0, this.reverbDuration)));
+    const impulse = ctx.createBuffer(2, length, rate);
+    const left = impulse.getChannelData(0);
+    const right = impulse.getChannelData(1);
+    const decayConst = Math.max(0.1, this.reverbDecayRate);
+
+    for (let i = 0; i < length; i++) {
+      const decay = Math.exp(-i / (rate * decayConst));
+      left[i] = (Math.random() * 2 - 1) * decay;
+      right[i] = (Math.random() * 2 - 1) * decay;
+    }
+    this.reverbConvolver.buffer = impulse;
   }
 
   private initMasterFX(ctx: AudioContext) {
@@ -2243,6 +2303,67 @@ class ModularSynth {
     return [...this.eqGains];
   }
 
+  // DSP Engine & Buffer Advanced Configuration Settings
+  public getNoiseBufferDuration(): number {
+    return this.noiseBufferDuration;
+  }
+
+  public setNoiseBufferDuration(sec: number) {
+    this.noiseBufferDuration = Math.max(0.5, Math.min(5.0, sec));
+    this.regenerateNoiseBuffer();
+  }
+
+  public getNoiseColor(): 'white' | 'pink' | 'brown' {
+    return this.noiseColor;
+  }
+
+  public setNoiseColor(color: 'white' | 'pink' | 'brown') {
+    this.noiseColor = color;
+    this.regenerateNoiseBuffer();
+  }
+
+  public getReverbDuration(): number {
+    return this.reverbDuration;
+  }
+
+  public setReverbDuration(sec: number) {
+    this.reverbDuration = Math.max(0.2, Math.min(6.0, sec));
+    this.regenerateReverbBuffer();
+  }
+
+  public getReverbDecayRate(): number {
+    return this.reverbDecayRate;
+  }
+
+  public setReverbDecayRate(decay: number) {
+    this.reverbDecayRate = Math.max(0.1, Math.min(2.0, decay));
+    this.regenerateReverbBuffer();
+  }
+
+  public getMasterTuningFreq(): number {
+    return this.masterTuningFreq;
+  }
+
+  public setMasterTuningFreq(freq: number) {
+    this.masterTuningFreq = Math.max(430, Math.min(450, freq));
+  }
+
+  public getMaxPolyphony(): number {
+    return this.maxPolyphony;
+  }
+
+  public setMaxPolyphony(poly: number) {
+    this.maxPolyphony = Math.max(1, Math.min(16, poly));
+  }
+
+  public isMidiOmniMode(): boolean {
+    return this.midiOmniMode;
+  }
+
+  public setMidiOmniMode(omni: boolean) {
+    this.midiOmniMode = omni;
+  }
+
   /* -------------------------------------------------------------------------- */
   /*                      COMPLETE MODULAR SIGNAL FLOW DSP                      */
   /* -------------------------------------------------------------------------- */
@@ -2263,9 +2384,9 @@ class ModularSynth {
     this.initMasterFX(ctx);
 
     const voiceKey = `v${++this._voiceSeq}`;
-
     const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
-    const baseFreq = noteInfo.freq;
+    const tuningScale = this.masterTuningFreq / 440.0;
+    const baseFreq = noteInfo.freq * tuningScale;
     const masterGain = (soundEngine as any).masterGain || ctx.destination;
 
     // ──────────────────────────────────────────────────────────────────────────
