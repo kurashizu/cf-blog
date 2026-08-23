@@ -2587,7 +2587,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 <div className="contents">
                   
                   {/* LEFT COLUMN: MODULES 1, 2, 3 GROUPED TOGETHER (WITH AUTO-SCROLLBAR IF LOW RESOLUTION, PREVENTING COMPRESSION) */}
-                  <div className="order-1 lg:order-1 lg:col-span-1 flex flex-col gap-1.5 min-w-[260px] lg:min-w-0 lg:h-full lg:overflow-y-auto custom-scrollbar pr-0.5">
+                  <div className="order-2 lg:order-1 lg:col-span-1 flex flex-col gap-1.5 min-w-[260px] lg:min-w-0 lg:h-full lg:overflow-y-auto custom-scrollbar pr-0.5">
                     
                     {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 4×2 KNOBS GRID 32px) */}
                     <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[175px] shrink-0">
@@ -2856,8 +2856,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                   </div>
 
-                  {/* RIGHT COLUMN: PIANO ROLL MATRIX WORKSPACE (4/5 RATIO) */}
-                  <div className="order-2 lg:order-2 lg:col-span-4 flex flex-col min-h-[420px] lg:min-h-0 lg:h-full lg:overflow-hidden">
+                  {/* RIGHT COLUMN: PIANO ROLL MATRIX WORKSPACE (TOP ON MOBILE/LOW-RES, RIGHT ON DESKTOP) */}
+                  <div className="order-1 lg:order-2 lg:col-span-4 flex flex-col min-h-[420px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                     {/* 2. FULL-BLEED PIANO ROLL MATRIX WITH DYNAMIC METER TIMELINE & INTEGRATED PRESETS */}
                     {(() => {
                       const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
@@ -3163,7 +3163,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 </div>
 
                 {/* BOTTOM L-SHAPE BASE: COMPACT h-[155px], TALL ENVELOPE CURVE & FADERS, ZERO OVERFLOW (MODULES 4, 5, 6, 7) */}
-                <div className="order-2 lg:order-3 lg:col-span-5 lg:row-span-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-1.5 text-xs lg:h-[155px] shrink-0">
+                <div className="order-3 lg:order-3 lg:col-span-5 lg:row-span-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-1.5 text-xs lg:h-[155px] shrink-0">
                   
                   {/* MODULE 4: DUAL INDEPENDENT ENVELOPES (2:1 RATIO -> LEFT 2 COLS: TALL SVG CURVE, RIGHT 1 COL: 4 TALL ADSR FADERS) */}
                   <div className="lg:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] lg:min-h-0 lg:h-full lg:overflow-hidden">
