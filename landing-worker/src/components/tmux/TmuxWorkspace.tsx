@@ -738,9 +738,17 @@ export const TmuxWorkspace: React.FC = () => {
     { id: 'OVERWORLD', name: 'OVERWORLD', steps: 1184, bpm: 105, meter: '4/4' as TimeSignature },
     { id: 'UNDERWATER', name: 'UNDERWATER', steps: 768, bpm: 100, meter: '6/8' as TimeSignature },
   ];
+  const SOUND_PRESETS = [
+    { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
+    { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
+    { name: 'BRASS', preset: { osc1Waveform: 'sawtooth' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 12, cutoff: 2400, resonance: 2.0, ampAttack: 0.04, ampDecay: 0.25, ampSustain: 0.8, ampRelease: 0.2, filterAttack: 0.06, filterDecay: 0.2, filterSustain: 0.5, filterRelease: 0.15, filterEnvAmount: 0.55 } },
+    { name: 'LEAD', preset: { osc1Waveform: 'pulse' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 8, cutoff: 6500, resonance: 2.8, ampAttack: 0.005, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.18, filterAttack: 0.005, filterDecay: 0.25, filterSustain: 0.6, filterRelease: 0.12, filterEnvAmount: 0.4 } },
+    { name: 'HI-HAT', preset: { osc1Waveform: 'noise' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, osc2Gain: 0.0, filterType: 'highpass' as FilterType, cutoff: 40, resonance: 0.0, envFilterMod: 0.0, ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.0, ampRelease: 0.04, filterAttack: 0.001, filterDecay: 0.05, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.0, pitchEnvAmount: 0.0, pitchAttack: 0.001, pitchDecay: 0.03 } },
+  ];
   const LEN_PRESETS = [16, 32, 64, 128, 256, 512] as const;
 
   const [builtinSongIdx, setBuiltinSongIdx] = useState<number>(0);
+  const [soundPresetIdx, setSoundPresetIdx] = useState<number>(0);
 
   const handleNewProject = () => {
     modularSynth.stopSequencer();
@@ -2460,28 +2468,44 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
               {/* 3. ROW 3: PRESETS (LEFT), SNAP & DUR (CENTER), PAGE NAVIGATION (RIGHT) - EQUALLY SPACED */}
               <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
-                {/* Left: Sound Design Presets */}
-                <div className="flex items-center gap-1 justify-start">
-                  <span className="text-white/50 font-bold text-xs">PRESETS:</span>
-                  {[
-                    { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
-                    { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
-                    { name: 'BRASS', preset: { osc1Waveform: 'sawtooth' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 12, cutoff: 2400, resonance: 2.0, ampAttack: 0.04, ampDecay: 0.25, ampSustain: 0.8, ampRelease: 0.2, filterAttack: 0.06, filterDecay: 0.2, filterSustain: 0.5, filterRelease: 0.15, filterEnvAmount: 0.55 } },
-                    { name: 'LEAD', preset: { osc1Waveform: 'pulse' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, detuneCents: 8, cutoff: 6500, resonance: 2.8, ampAttack: 0.005, ampDecay: 0.2, ampSustain: 0.8, ampRelease: 0.18, filterAttack: 0.005, filterDecay: 0.25, filterSustain: 0.6, filterRelease: 0.12, filterEnvAmount: 0.4 } },
-                    { name: 'HI-HAT', preset: { osc1Waveform: 'noise' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, osc2Gain: 0.0, filterType: 'highpass' as FilterType, cutoff: 40, resonance: 0.0, envFilterMod: 0.0, ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.0, ampRelease: 0.04, filterAttack: 0.001, filterDecay: 0.05, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.0, pitchEnvAmount: 0.0, pitchAttack: 0.001, pitchDecay: 0.03 } },
-                  ].map((p) => (
-                    <button
-                      key={p.name}
-                      onClick={() => {
-                        handleTrackParamChange(p.preset);
+                {/* Left: Sound Design Presets (◄ / ► Cycle Selector, Click Name to Load) */}
+                <div className="flex items-center gap-0.5 justify-start text-xs">
+                  <span className="text-white/60 font-bold text-[11px] pl-0.5">PRESET:</span>
+                  <button
+                    onClick={() => {
+                      const prev = (soundPresetIdx - 1 + SOUND_PRESETS.length) % SOUND_PRESETS.length;
+                      setSoundPresetIdx(prev);
+                      playSound('click');
+                    }}
+                    className="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none"
+                    title="Previous Sound Preset"
+                  >
+                    ◄
+                  </button>
+                  <button
+                    onClick={() => {
+                      const sel = SOUND_PRESETS[soundPresetIdx];
+                      if (sel) {
+                        handleTrackParamChange(sel.preset);
                         playSound('toggle');
-                      }}
-                      title={PRESET_TOOLTIPS[p.name] || p.name}
-                      className="px-2 py-0.5 border border-white/20 hover:border-white/60 bg-white/5 hover:bg-white/15 rounded-xs text-white/80 hover:text-white font-bold cursor-pointer transition-colors text-xs"
-                    >
-                      {p.name}
-                    </button>
-                  ))}
+                      }
+                    }}
+                    className="px-1.5 py-0.5 border border-white/20 hover:border-[#56b6c2] bg-white/5 hover:bg-white/15 rounded-xs font-bold text-white hover:text-[#56b6c2] cursor-pointer transition-colors"
+                    title={`Click to load preset: ${PRESET_TOOLTIPS[SOUND_PRESETS[soundPresetIdx]?.name] || SOUND_PRESETS[soundPresetIdx]?.name}`}
+                  >
+                    {SOUND_PRESETS[soundPresetIdx]?.name}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const next = (soundPresetIdx + 1) % SOUND_PRESETS.length;
+                      setSoundPresetIdx(next);
+                      playSound('click');
+                    }}
+                    className="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none"
+                    title="Next Sound Preset"
+                  >
+                    ►
+                  </button>
                 </div>
 
                 {/* Center: SNAP & DUR (Centered in Middle Third) */}
