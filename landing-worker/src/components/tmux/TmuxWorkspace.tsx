@@ -776,7 +776,13 @@ export const TmuxWorkspace: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // Web MIDI API Initialization & Message Listener
+  // Use ref for activeTrackId to ensure MIDI listener callbacks never suffer from stale closures
+  const activeTrackIdRef = useRef(activeTrackId);
+  useEffect(() => {
+    activeTrackIdRef.current = activeTrackId;
+  }, [activeTrackId]);
+
+  // Web MIDI API Initialization & Message Listener (Runs once, always reads latest activeTrackIdRef)
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.requestMIDIAccess) return;
 
@@ -788,16 +794,17 @@ export const TmuxWorkspace: React.FC = () => {
       const cmd = data[0] >> 4;
       const noteNumber = data[1];
       const velocity = data.length > 2 ? data[2] : 0;
+      const targetTrk = activeTrackIdRef.current;
 
       // Note On: cmd === 9 (with velocity > 0)
       if (cmd === 9 && velocity > 0) {
         // Convert MIDI note number (0-127, Middle C = C4 = 60) to PIANO_ROLL_NOTES index
         const noteIdx = 108 - noteNumber;
         if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
-          modularSynth.noteOn(activeTrackId, noteIdx, velocity);
+          modularSynth.noteOn(targetTrk, noteIdx, velocity);
           setManualHeldNotes((prev) => {
             const next = new Map(prev);
-            next.set(`${activeTrackId}-${noteIdx}`, { trackId: activeTrackId, noteIdx });
+            next.set(`${targetTrk}-${noteIdx}`, { trackId: targetTrk, noteIdx });
             return next;
           });
         }
@@ -806,10 +813,10 @@ export const TmuxWorkspace: React.FC = () => {
       else if (cmd === 8 || (cmd === 9 && velocity === 0)) {
         const noteIdx = 108 - noteNumber;
         if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
-          modularSynth.noteOff(activeTrackId, noteIdx);
+          modularSynth.noteOff(targetTrk, noteIdx);
           setManualHeldNotes((prev) => {
             const next = new Map(prev);
-            next.delete(`${activeTrackId}-${noteIdx}`);
+            next.delete(`${targetTrk}-${noteIdx}`);
             return next;
           });
         }
@@ -849,7 +856,7 @@ export const TmuxWorkspace: React.FC = () => {
         } catch {}
       }
     };
-  }, [activeTrackId]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Patch & Built-in Song Management ---
   const STORAGE_KEY = 'krsz-synth-patch-v1';
