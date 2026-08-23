@@ -660,9 +660,9 @@ export const TmuxWorkspace: React.FC = () => {
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [isOverlayMode, setIsOverlayMode] = useState<boolean>(true);
   const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0, 1, 2, 3]);
+  const [manualHeldNotes, setManualHeldNotes] = useState<Map<string, { trackId: number; noteIdx: number }>>(new Map());
 
   // Real-time Visual Keyboard & Web MIDI Engine
-  const [activePlayingNotes, setActivePlayingNotes] = useState<Map<number, { trackId: number; time: number }>>(new Map());
   const [midiConnectedDevice, setMidiConnectedDevice] = useState<string | null>(null);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
   const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
@@ -671,6 +671,35 @@ export const TmuxWorkspace: React.FC = () => {
   const [totalPatternSteps, setTotalPatternSteps] = useState<number>(modularSynth.getTotalSteps());
   const [activeStepPage, setActiveStepPage] = useState<number>(0);
   const [pageFollow, setPageFollow] = useState<boolean>(true);
+
+  // Compute Active Ringing Notes for Piano Keyboard:
+  // Combines: 1) Currently playing sequencer step notes across tracks, 2) Manually held keys/MIDI notes
+  const activePlayingNotes = useMemo(() => {
+    const activeMap = new Map<number, { trackId: number }>();
+
+    // 1. Sequencer step notes (when playing)
+    if (isSeqPlaying) {
+      const hasSolo = tracksState.some((t) => t.solo);
+      tracksState.forEach((trk) => {
+        if (trk.muted) return;
+        if (hasSolo && !trk.solo) return;
+
+        const stepNotes = trk.grid[seqCurrentStep] || [];
+        stepNotes.forEach((nIdx) => {
+          if (nIdx !== null && nIdx !== undefined) {
+            activeMap.set(nIdx, { trackId: trk.id });
+          }
+        });
+      });
+    }
+
+    // 2. Manual / MIDI held notes
+    manualHeldNotes.forEach((entry) => {
+      activeMap.set(entry.noteIdx, { trackId: entry.trackId });
+    });
+
+    return activeMap;
+  }, [isSeqPlaying, seqCurrentStep, tracksState, manualHeldNotes]);
 
   // Guestbook Form State & Focus
   const [gbName, setGbName] = useState('');
@@ -694,9 +723,9 @@ export const TmuxWorkspace: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  // Autoplay sequencer once on initial mount only
+  // Auto-Start Sequencer on initial mount
   useEffect(() => {
-    if (!modularSynth.isPlayingSeq()) {
+    if (activeTab === 4) {
       modularSynth.startSequencer();
       setIsSeqPlaying(true);
     }
@@ -741,25 +770,7 @@ export const TmuxWorkspace: React.FC = () => {
   // Subscribe to real-time note voice triggers for the visual piano keyboard
   useEffect(() => {
     const unsub = modularSynth.subscribeNote((trackId, noteIndex, _name, durationMs) => {
-      const now = Date.now();
-      setActivePlayingNotes((prev) => {
-        const next = new Map(prev);
-        next.set(noteIndex, { trackId, time: now + Math.max(120, durationMs) });
-        return next;
-      });
-
-      // Clear after duration
-      window.setTimeout(() => {
-        setActivePlayingNotes((prev) => {
-          const entry = prev.get(noteIndex);
-          if (entry && Date.now() >= entry.time - 20) {
-            const next = new Map(prev);
-            next.delete(noteIndex);
-            return next;
-          }
-          return prev;
-        });
-      }, Math.max(120, durationMs) + 30);
+      // Note: activePlayingNotes is now handled by the useMemo sequencer subscription logic
     });
 
     return () => unsub();
@@ -784,6 +795,11 @@ export const TmuxWorkspace: React.FC = () => {
         const noteIdx = 108 - noteNumber;
         if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
           modularSynth.noteOn(activeTrackId, noteIdx, velocity);
+          setManualHeldNotes((prev) => {
+            const next = new Map(prev);
+            next.set(`${activeTrackId}-${noteIdx}`, { trackId: activeTrackId, noteIdx });
+            return next;
+          });
         }
       }
       // Note Off: cmd === 8 or (cmd === 9 with velocity === 0)
@@ -791,6 +807,11 @@ export const TmuxWorkspace: React.FC = () => {
         const noteIdx = 108 - noteNumber;
         if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
           modularSynth.noteOff(activeTrackId, noteIdx);
+          setManualHeldNotes((prev) => {
+            const next = new Map(prev);
+            next.delete(`${activeTrackId}-${noteIdx}`);
+            return next;
+          });
         }
       }
       // Control Change: cmd === 11 (CC 64 = Sustain Damper Pedal)
@@ -3492,15 +3513,46 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                             key={wk.note}
                                             onMouseDown={() => {
                                               modularSynth.noteOn(activeTrackId, wk.idx, 80);
+                                              setManualHeldNotes((prev) => {
+                                                const next = new Map(prev);
+                                                next.set(`${activeTrackId}-${wk.idx}`, { trackId: activeTrackId, noteIdx: wk.idx });
+                                                return next;
+                                              });
                                               playSound('click');
                                             }}
-                                            onMouseUp={() => modularSynth.noteOff(activeTrackId, wk.idx)}
-                                            onMouseLeave={() => modularSynth.noteOff(activeTrackId, wk.idx)}
+                                            onMouseUp={() => {
+                                              modularSynth.noteOff(activeTrackId, wk.idx);
+                                              setManualHeldNotes((prev) => {
+                                                const next = new Map(prev);
+                                                next.delete(`${activeTrackId}-${wk.idx}`);
+                                                return next;
+                                              });
+                                            }}
+                                            onMouseLeave={() => {
+                                              modularSynth.noteOff(activeTrackId, wk.idx);
+                                              setManualHeldNotes((prev) => {
+                                                const next = new Map(prev);
+                                                next.delete(`${activeTrackId}-${wk.idx}`);
+                                                return next;
+                                              });
+                                            }}
                                             onTouchStart={(e) => {
                                               e.preventDefault();
                                               modularSynth.noteOn(activeTrackId, wk.idx, 80);
+                                              setManualHeldNotes((prev) => {
+                                                const next = new Map(prev);
+                                                next.set(`${activeTrackId}-${wk.idx}`, { trackId: activeTrackId, noteIdx: wk.idx });
+                                                return next;
+                                              });
                                             }}
-                                            onTouchEnd={() => modularSynth.noteOff(activeTrackId, wk.idx)}
+                                            onTouchEnd={() => {
+                                              modularSynth.noteOff(activeTrackId, wk.idx);
+                                              setManualHeldNotes((prev) => {
+                                                const next = new Map(prev);
+                                                next.delete(`${activeTrackId}-${wk.idx}`);
+                                                return next;
+                                              });
+                                            }}
                                             className={`flex-1 h-full rounded-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer transition-all border ${
                                               isPlaying
                                                 ? 'shadow-[0_0_10px_currentColor]'
@@ -3538,21 +3590,48 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                           onMouseDown={(e) => {
                                             e.stopPropagation();
                                             modularSynth.noteOn(activeTrackId, bk.idx, 80);
+                                            setManualHeldNotes((prev) => {
+                                              const next = new Map(prev);
+                                              next.set(`${activeTrackId}-${bk.idx}`, { trackId: activeTrackId, noteIdx: bk.idx });
+                                              return next;
+                                            });
                                             playSound('click');
                                           }}
                                           onMouseUp={(e) => {
                                             e.stopPropagation();
                                             modularSynth.noteOff(activeTrackId, bk.idx);
+                                            setManualHeldNotes((prev) => {
+                                              const next = new Map(prev);
+                                              next.delete(`${activeTrackId}-${bk.idx}`);
+                                              return next;
+                                            });
                                           }}
-                                          onMouseLeave={() => modularSynth.noteOff(activeTrackId, bk.idx)}
+                                          onMouseLeave={() => {
+                                            modularSynth.noteOff(activeTrackId, bk.idx);
+                                            setManualHeldNotes((prev) => {
+                                              const next = new Map(prev);
+                                              next.delete(`${activeTrackId}-${bk.idx}`);
+                                              return next;
+                                            });
+                                          }}
                                           onTouchStart={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             modularSynth.noteOn(activeTrackId, bk.idx, 80);
+                                            setManualHeldNotes((prev) => {
+                                              const next = new Map(prev);
+                                              next.set(`${activeTrackId}-${bk.idx}`, { trackId: activeTrackId, noteIdx: bk.idx });
+                                              return next;
+                                            });
                                           }}
                                           onTouchEnd={(e) => {
                                             e.stopPropagation();
                                             modularSynth.noteOff(activeTrackId, bk.idx);
+                                            setManualHeldNotes((prev) => {
+                                              const next = new Map(prev);
+                                              next.delete(`${activeTrackId}-${bk.idx}`);
+                                              return next;
+                                            });
                                           }}
                                           className={`absolute top-0 h-[62%] rounded-b-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer z-10 transition-all border ${
                                             isPlaying
