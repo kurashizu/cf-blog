@@ -2058,6 +2058,26 @@ class ModularSynth {
     return this.tracks;
   }
 
+  public loadBuiltInSong(songName: string = 'OVERWORLD') {
+    if (songName === 'OVERWORLD') {
+      this.tracks = JSON.parse(JSON.stringify(INITIAL_TRACKS));
+      this.totalSteps = 1184;
+      this.bpm = 105;
+      this.meter = '4/4';
+    }
+  }
+
+  public resetToBlank(steps: number = 64) {
+    this.tracks = INITIAL_TRACKS.map((t) => ({
+      ...JSON.parse(JSON.stringify(t)),
+      grid: Array.from({ length: 4096 }, () => []),
+      accents: Array.from({ length: 4096 }, () => 0),
+    }));
+    this.totalSteps = steps;
+    this.bpm = 120;
+    this.meter = '4/4';
+  }
+
   public getTrack(trackId: number): TrackData | undefined {
     return this.tracks[trackId];
   }

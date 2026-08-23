@@ -638,8 +638,56 @@ export const TmuxWorkspace: React.FC = () => {
     };
   }, [pageFollow]);
 
-  // --- Patch Management ---
+  // --- Patch & Built-in Song Management ---
   const STORAGE_KEY = 'krsz-synth-patch-v1';
+  const BUILTIN_SONGS = [
+    { id: 'OVERWORLD', name: 'OVERWORLD', steps: 1184, bpm: 105, meter: '4/4' as TimeSignature },
+  ];
+  const LEN_PRESETS = [16, 32, 64, 128, 256, 512] as const;
+
+  const [builtinSongIdx, setBuiltinSongIdx] = useState<number>(0);
+
+  const handleNewProject = () => {
+    modularSynth.resetToBlank(64);
+    setTotalPatternSteps(64);
+    setSynthBpm(120);
+    setTimeMeter('4/4');
+    setCursorStep(0);
+    setSeqCurrentStep(0);
+    setActiveStepPage(0);
+    setTracksState([...modularSynth.getTracks()]);
+    showSaveStatus('✓ NEW');
+    playSound('click');
+  };
+
+  const handleLoadBuiltinSong = (idx: number) => {
+    const song = BUILTIN_SONGS[idx];
+    if (!song) return;
+    modularSynth.loadBuiltInSong(song.id);
+    setTotalPatternSteps(song.steps);
+    setSynthBpm(song.bpm);
+    setTimeMeter(song.meter);
+    setCursorStep(0);
+    setSeqCurrentStep(0);
+    setActiveStepPage(0);
+    setIsOverlayMode(true);
+    setOverlayTrackIds([0, 1, 2, 3]);
+    setTracksState([...modularSynth.getTracks()]);
+    showSaveStatus(`✓ ${song.name}`);
+    playSound('toggle');
+  };
+
+  const handleCycleLen = () => {
+    const currentIdx = LEN_PRESETS.indexOf(totalPatternSteps as any);
+    const nextLen = currentIdx >= 0 && currentIdx < LEN_PRESETS.length - 1
+      ? LEN_PRESETS[currentIdx + 1]
+      : LEN_PRESETS[0];
+    setTotalPatternSteps(nextLen);
+    modularSynth.setTotalSteps(nextLen);
+    const maxPages = Math.max(1, Math.ceil(nextLen / 32));
+    if (activeStepPage >= maxPages) setActiveStepPage(0);
+    playSound('click');
+  };
 
   interface SynthPatchData {
     tracks: Partial<TrackData>[];
@@ -1940,9 +1988,197 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
           {activeTab === 4 && (
             <div className="space-y-1.5 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
               
-                            {/* 1. ROW 1: MASTER PLAYBACK TRANSPORT & MULTI-TRACK MIXER DECK */}
+                            {/* 1. ROW 1: KRSZ SYNTH LOGO, PROJECT MANAGEMENT (NEW/SAVE/LOAD/IMP/EXP) & MASTER METRICS */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0">
-                {/* Left: Transport Controls (Rewind, Prev Bar, Play, Next Bar, CUR) */}
+                {/* Left: KRSZ Synth Logo & Project Management */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* KRSZ Synth Logo Badge */}
+                  <div className="flex items-center gap-1.5 bg-[#c678dd]/20 border border-[#c678dd]/60 px-2 py-0.5 rounded-xs mr-0.5 select-none shadow-[0_0_8px_rgba(198,120,221,0.25)]">
+                    <PixelAudio className="w-3.5 h-3.5 text-[#c678dd]" />
+                    <span className="font-black text-xs text-white tracking-wider">KRSZ SYNTH</span>
+                  </div>
+
+                  <input type="file" ref={fileInputRef} onChange={handleImportPatch} accept=".json" className="hidden" />
+
+                  {/* NEW */}
+                  <button
+                    onClick={handleNewProject}
+                    title="New Project — Clear all tracks and reset to blank 64-step sequencer"
+                    className="px-2 py-0.5 border border-white/20 text-white/80 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                  >
+                    NEW
+                  </button>
+
+                  {/* SAVE */}
+                  <button
+                    onClick={handleSavePatch}
+                    title="Save Patch — Store all 8-track synth parameters and sequencer notes into browser LocalStorage"
+                    className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                  >
+                    SAVE
+                  </button>
+
+                  {/* LOAD (LOCAL / BUILT-IN) */}
+                  <div className="flex items-center border border-[#56b6c2]/50 bg-[#56b6c2]/10 rounded-xs p-0.5 gap-1">
+                    <button
+                      onClick={handleLoadPatch}
+                      title="Load Local Patch — Restore saved synth parameters and sequencer patterns from browser LocalStorage"
+                      className="px-1.5 py-0.2 text-[#56b6c2] hover:bg-[#56b6c2]/30 rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                    >
+                      LOAD (LOCAL)
+                    </button>
+
+                    <span className="text-white/20 select-none">/</span>
+
+                    {/* BUILT-IN with ◄ / ► Selector */}
+                    <div className="flex items-center gap-0.5 text-xs">
+                      <span className="text-white/60 font-bold text-[11px] pl-0.5">BUILT-IN:</span>
+                      <button
+                        onClick={() => {
+                          const prev = (builtinSongIdx - 1 + BUILTIN_SONGS.length) % BUILTIN_SONGS.length;
+                          setBuiltinSongIdx(prev);
+                          handleLoadBuiltinSong(prev);
+                        }}
+                        className="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none"
+                        title="Previous Built-in Song"
+                      >
+                        ◄
+                      </button>
+                      <button
+                        onClick={() => handleLoadBuiltinSong(builtinSongIdx)}
+                        className="px-1 font-bold text-white hover:text-[#56b6c2] cursor-pointer"
+                        title="Load Built-in Song"
+                      >
+                        {BUILTIN_SONGS[builtinSongIdx].name}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const next = (builtinSongIdx + 1) % BUILTIN_SONGS.length;
+                          setBuiltinSongIdx(next);
+                          handleLoadBuiltinSong(next);
+                        }}
+                        className="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none"
+                        title="Next Built-in Song"
+                      >
+                        ►
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* IMP */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                    title="Import Patch — Load a previously exported JSON synthesizer patch file"
+                  >
+                    IMP
+                  </button>
+
+                  {/* EXP */}
+                  <button
+                    onClick={handleExportPatch}
+                    className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+                    title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file"
+                  >
+                    EXP
+                  </button>
+
+                  {saveStatus && <span className="text-[#98c379] font-bold text-xs ml-1">{saveStatus}</span>}
+                </div>
+
+                {/* Right: BPM Fader + LEN (Cycle/Custom) + METER */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs ml-auto">
+                  {/* Hardware BPM Fader */}
+                  <div className="flex items-center gap-1">
+                    <HorizontalHardwareFader
+                      label="BPM:"
+                      value={synthBpm}
+                      min={40}
+                      max={240}
+                      step={1}
+                      width={74}
+                      showValue={true}
+                      color="#98c379"
+                      onChange={(val) => {
+                        setSynthBpm(val);
+                        modularSynth.setBpm(val);
+                      }}
+                    />
+                  </div>
+
+                  <div className="w-px h-4 bg-white/15 mx-1" />
+
+                  {/* Sequence Length: Cycle Preset (16..512) OR Custom Step Input */}
+                  <div className="flex items-center gap-1">
+                    <span className="opacity-60 font-bold" title="Pattern Total Steps (LEN) — Total active sequence steps before looping">LEN:</span>
+                    <button
+                      onClick={handleCycleLen}
+                      className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1"
+                      title="Cycle through step lengths: 16 → 32 → 64 → 128 → 256 → 512 → 16"
+                    >
+                      <span>{LEN_PRESETS.includes(totalPatternSteps as any) ? totalPatternSteps : 64}</span>
+                      <span className="text-[10px] opacity-70">⟳</span>
+                    </button>
+                    <span className="text-white/40 text-[10px] font-bold px-0.5 select-none">OR</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={totalPatternSteps || ''}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
+                        if (!isNaN(val)) {
+                          const clamped = Math.max(1, Math.min(4096, val));
+                          setTotalPatternSteps(clamped);
+                          modularSynth.setTotalSteps(clamped);
+                        } else if (e.target.value === '') {
+                          setTotalPatternSteps(0);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!totalPatternSteps || totalPatternSteps < 8) {
+                          setTotalPatternSteps(8);
+                          modularSynth.setTotalSteps(8);
+                        }
+                      }}
+                      className={`w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        !LEN_PRESETS.includes(totalPatternSteps as any)
+                          ? 'border-[#98c379] text-[#98c379]'
+                          : 'border-white/20 text-white/70 focus:border-white/60'
+                      }`}
+                      title="Custom Step Length — Set arbitrary loop duration (e.g. 1184 steps for the complete Mario theme)"
+                    />
+                  </div>
+
+                  <div className="w-px h-4 bg-white/15 mx-1" />
+
+                  {/* METER Time Signature */}
+                  <div className="flex items-center gap-1">
+                    <span className="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
+                    {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
+                      <button
+                        key={sig}
+                        onClick={() => {
+                          setTimeMeter(sig);
+                          modularSynth.setMeter(sig);
+                          playSound('click');
+                        }}
+                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
+                          timeMeter === sig
+                            ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
+                            : 'border-white/20 text-white/70 hover:border-white/50'
+                        }`}
+                        title={METER_SPECS[sig].name}
+                      >
+                        {sig}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. ROW 2: PLAYBACK TRANSPORT CONTROLS (LEFT) & TRK CHANNEL MIXER (RIGHT) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/30 px-2 py-1 rounded-xs text-xs shrink-0">
+                {/* Left: Transport Playback Controls (Rewind, Prev Bar, Play, Next Bar, CUR) */}
                 <div className="flex items-center gap-1">
                   {/* Rewind to 0 (Pixel-perfect SVG) */}
                   <button
@@ -1981,7 +2217,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </svg>
                   </button>
 
-                  {/* PLAY / STOP (No BPM text!) */}
+                  {/* PLAY / STOP */}
                   <button
                     onClick={() => {
                       const playing = modularSynth.toggleSequencer(cursorStep);
@@ -2031,120 +2267,6 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <span>⤹ CUR:</span>
                     <span className="font-mono font-black">{cursorStep + 1}</span>
                   </button>
-                </div>
-
-                {/* Right: BPM, LEN, METER (Right-aligned in Row 1) */}
-                <div className="flex flex-wrap items-center gap-1.5 text-xs ml-auto">
-                  {/* Hardware BPM Fader */}
-                  <div className="flex items-center gap-1">
-                    <HorizontalHardwareFader
-                      label="BPM:"
-                      value={synthBpm}
-                      min={40}
-                      max={240}
-                      step={1}
-                      width={74}
-                      showValue={true}
-                      color="#98c379"
-                      onChange={(val) => {
-                        setSynthBpm(val);
-                        modularSynth.setBpm(val);
-                      }}
-                    />
-                  </div>
-
-                  <div className="w-px h-4 bg-white/15 mx-1" />
-
-                  {/* Sequence Length: Presets (16..512) + Custom Step Input */}
-                  <div className="flex items-center gap-1">
-                    <span className="opacity-60 font-bold" title="Pattern Total Steps (LEN) — Total active sequence steps before looping">LEN:</span>
-                    {([16, 32, 64, 128, 256, 512] as const).map((len) => (
-                      <button
-                        key={len}
-                        onClick={() => {
-                          setTotalPatternSteps(len);
-                          modularSynth.setTotalSteps(len);
-                          const maxPages = Math.max(1, Math.ceil(len / 32));
-                          if (activeStepPage >= maxPages) setActiveStepPage(0);
-                          playSound('click');
-                        }}
-                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          totalPatternSteps === len
-                            ? 'border-[#98c379] bg-[#98c379] text-black font-black'
-                            : 'border-white/20 text-white/70 hover:border-white/50'
-                        }`}
-                      >
-                        {len}
-                      </button>
-                    ))}
-                    <div className="flex items-center gap-0.5">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={totalPatternSteps || ''}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
-                          if (!isNaN(val)) {
-                            const clamped = Math.max(1, Math.min(4096, val));
-                            setTotalPatternSteps(clamped);
-                            modularSynth.setTotalSteps(clamped);
-                          } else if (e.target.value === '') {
-                            setTotalPatternSteps(0);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!totalPatternSteps || totalPatternSteps < 8) {
-                            setTotalPatternSteps(8);
-                            modularSynth.setTotalSteps(8);
-                          }
-                        }}
-                        className={`w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          ![16, 32, 64, 128, 256, 512].includes(totalPatternSteps)
-                            ? 'border-[#98c379] text-[#98c379]'
-                            : 'border-white/20 text-white/70 focus:border-white/60'
-                        }`}
-                        title="Custom Step Length — Set arbitrary loop duration (e.g. 1184 steps for the complete Mario theme)"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="w-px h-4 bg-white/15 mx-1" />
-
-                  {/* METER Time Signature */}
-                  <div className="flex items-center gap-1">
-                    <span className="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
-                    {(['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'] as TimeSignature[]).map((sig) => (
-                      <button
-                        key={sig}
-                        onClick={() => {
-                          setTimeMeter(sig);
-                          modularSynth.setMeter(sig);
-                          playSound('click');
-                        }}
-                        className={`px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors ${
-                          timeMeter === sig
-                            ? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
-                            : 'border-white/20 text-white/70 hover:border-white/50'
-                        }`}
-                        title={METER_SPECS[sig].name}
-                      >
-                        {sig}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. ROW 2: SAVE/LOAD TOOLS (LEFT) & TRK CHANNEL DECK (RIGHT) */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/30 px-2 py-1 rounded-xs text-xs shrink-0">
-                {/* Left: Patch Storage Tools (SAVE/LOAD/EXP/IMP) */}
-                <div className="flex items-center gap-1">
-                  <input type="file" ref={fileInputRef} onChange={handleImportPatch} accept=".json" className="hidden" />
-                  <button onClick={handleSavePatch} title="Save Patch — Store all 8-track synth parameters and sequencer notes into browser LocalStorage" className="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors cursor-pointer">SAVE</button>
-                  <button onClick={handleLoadPatch} title="Load Patch — Restore saved synth parameters and sequencer patterns from browser LocalStorage" className="px-2 py-0.5 border border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20 rounded-xs font-bold transition-colors cursor-pointer">LOAD</button>
-                  <button onClick={handleExportPatch} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer" title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file">EXP</button>
-                  <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer" title="Import Patch — Load a previously exported JSON synthesizer patch file">IMP</button>
-                  {saveStatus && <span className="text-[#98c379] font-bold ml-1">{saveStatus}</span>}
                 </div>
 
                 {/* Right: Overlay Toggle + 8-Track Channel Selectors with Inline Mute/Solo (Right-aligned) */}
