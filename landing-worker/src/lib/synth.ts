@@ -1825,6 +1825,7 @@ class ModularSynth {
   private trackHeldVoices: Map<string, string> = new Map(); // key: `${trackId}-${noteIndex}` -> voiceKey
   private isSustainPedalDown: boolean = false;
   private sustainedVoiceKeys: Set<string> = new Set();
+  private isVelocitySensitivityEnabled: boolean = true;
 
   // Master Global Params (100 BPM for Authentic Original NES Super Mario Bros Groove)
   private bpm: number = 105;
@@ -2157,7 +2158,7 @@ class ModularSynth {
   /*                      COMPLETE MODULAR SIGNAL FLOW DSP                      */
   /* -------------------------------------------------------------------------- */
 
-  public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number) {
+  public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number, rawVelocity?: number) {
     const track = this.tracks[trackId];
     if (!track || soundEngine.isMuted()) return;
 
@@ -2388,7 +2389,16 @@ class ModularSynth {
     filter.Q.setValueAtTime(dynamicResonance, t);
 
     // AMP Dynamic Envelope (+3dB = ~1.41x, +6dB = 2.0x)
-    const gainBase = acc === 2 ? 0.48 : acc === 1 ? 0.34 : 0.24;
+    let gainBase = acc === 2 ? 0.48 : acc === 1 ? 0.34 : 0.24;
+
+    // Apply MIDI Velocity Sensitivity if enabled and rawVelocity is provided (1..127)
+    if (this.isVelocitySensitivityEnabled && rawVelocity !== undefined && rawVelocity > 0) {
+      // Exponential musical velocity curve (0.05 min volume up to 1.35 max)
+      const velNorm = Math.max(1, Math.min(127, rawVelocity)) / 127;
+      const velGainScale = 0.08 + Math.pow(velNorm, 1.6) * 1.25;
+      gainBase = 0.28 * velGainScale;
+    }
+
     const peakGain = gainBase * track.volume;
     const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
@@ -2474,7 +2484,7 @@ class ModularSynth {
       gainNode.connect(panner);
       panner.connect(masterGain);
       if (this.delayNode && this.delayMix > 0) panner.connect(this.delayNode);
-      if (this.reverbConvolver && this.reverbMix > 0) panner.connect(this.reverbConvolver);
+      if (this.reverbConvolver && this.reverbMix > 0) gainNode.connect(this.reverbConvolver);
     } else {
       gainNode.connect(masterGain);
       if (this.delayNode && this.delayMix > 0) gainNode.connect(this.delayNode);
@@ -2508,8 +2518,8 @@ class ModularSynth {
     }
 
     const accent = velocity > 100 ? 2 : velocity > 70 ? 1 : 0;
-    // Pass durationSec = 0 to indicate continuous hold until noteOff
-    const voiceKey = this.triggerTrackVoice(trackId, noteIndex, accent, undefined, 0);
+    // Pass durationSec = 0 to indicate continuous hold until noteOff, and pass raw velocity
+    const voiceKey = this.triggerTrackVoice(trackId, noteIndex, accent, undefined, 0, velocity);
     if (voiceKey) {
       this.trackHeldVoices.set(key, voiceKey);
     }
@@ -2545,6 +2555,14 @@ class ModularSynth {
 
   public isSustainActive(): boolean {
     return this.isSustainPedalDown;
+  }
+
+  public setVelocitySensitivityEnabled(enabled: boolean) {
+    this.isVelocitySensitivityEnabled = enabled;
+  }
+
+  public isVelocitySensitivityActive(): boolean {
+    return this.isVelocitySensitivityEnabled;
   }
 
   private releaseVoice(voiceKey: string) {

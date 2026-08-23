@@ -3447,6 +3447,25 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                                 <span className="opacity-30">|</span>
 
+                                {/* Velocity Sensitivity Toggle Button (Controls Volume by Note Velocity) */}
+                                <button
+                                  onClick={() => {
+                                    const next = !modularSynth.isVelocitySensitivityActive();
+                                    modularSynth.setVelocitySensitivityEnabled(next);
+                                    playSound('toggle');
+                                  }}
+                                  className={`px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all ${
+                                    modularSynth.isVelocitySensitivityActive()
+                                      ? 'border-[#61afef] bg-[#61afef] text-black font-black shadow-[0_0_6px_#61afef]'
+                                      : 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'
+                                  }`}
+                                  title="Velocity Sensitivity (VEL) — Scales note volume dynamically based on MIDI key strike force"
+                                >
+                                  VEL: {modularSynth.isVelocitySensitivityActive() ? 'ON' : 'OFF'}
+                                </button>
+
+                                <span className="opacity-30">|</span>
+
                                 {/* MIDI Hardware Status Badge */}
                                 <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold ${
                                   midiConnectedDevice 
