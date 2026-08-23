@@ -1826,50 +1826,6 @@ export const TmuxWorkspace: React.FC = () => {
               <span>HOTKEY [0-4, T]</span>
             </div>
           </div>
-
-          {/* 5. VERIFIED EXTERNAL HUB GATEWAYS */}
-          <div className="border border-white/15 p-2 bg-black/40 rounded-xs flex flex-wrap items-center justify-between gap-1.5 text-xs shrink-0">
-            <a
-              href="https://github.com/kurashizu"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => playSound('click')}
-              title="GitHub Profile — Open https://github.com/kurashizu in a new tab" className="hover:underline flex items-center gap-1 text-[#61afef] hover:text-[#98c379] transition-colors text-xs"
-            >
-              <PixelGitHub size={14} />
-              <span>gh/kurashizu</span>
-            </a>
-            <a
-              href="https://huggingface.co/kurashizu"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => playSound('click')}
-              title="Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab" className="hover:underline flex items-center gap-1 text-[#e5c07b] hover:text-[#e06c75] transition-colors text-xs"
-            >
-              <PixelHuggingFace size={14} />
-              <span>hf/kurashizu</span>
-            </a>
-            <a
-              href="https://oshwhub.com/Kurashizu"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => playSound('click')}
-              title="OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab" className="hover:underline flex items-center gap-1 text-[#e06c75] hover:text-[#56b6c2] transition-colors text-xs"
-            >
-              <PixelHardware size={14} />
-              <span>oshwhub</span>
-            </a>
-            <a
-              href="https://skill.krsz.in/rules"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => playSound('click')}
-              title="Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab" className="hover:underline flex items-center gap-1 text-[#98c379] hover:text-[#56b6c2] transition-colors text-xs"
-            >
-              <PixelRules size={14} />
-              <span>rules</span>
-            </a>
-          </div>
         </div>
 
         {/* RIGHT PANE: ACTIVE WORKBENCH WINDOW (8 Cols) */}
@@ -3743,9 +3699,51 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
       <footer className={`w-full max-w-full ${themeStyles.headerBg} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-wrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border ${themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 gap-1.5`}>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <span>[0] 0:krsz.in*</span>
-          <span className="opacity-70 text-[#98c379] hidden sm:inline">1:v8-workers</span>
-          <span className="opacity-70 text-[#56b6c2] hidden sm:inline">2:d1-sql</span>
-          <span className="opacity-70 text-[#e5c07b] hidden md:inline">3:vectorize</span>
+          <span className="opacity-40 text-white/30 hidden sm:inline">|</span>
+          <a
+            href="https://github.com/kurashizu"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => playSound('click')}
+            title="GitHub Profile — Open https://github.com/kurashizu in a new tab"
+            className="hover:underline flex items-center gap-1 text-[#61afef] hover:text-[#98c379] transition-colors"
+          >
+            <PixelGitHub size={13} />
+            <span>gh/kurashizu</span>
+          </a>
+          <a
+            href="https://huggingface.co/kurashizu"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => playSound('click')}
+            title="Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab"
+            className="hover:underline flex items-center gap-1 text-[#e5c07b] hover:text-[#e06c75] transition-colors"
+          >
+            <PixelHuggingFace size={13} />
+            <span>hf/kurashizu</span>
+          </a>
+          <a
+            href="https://oshwhub.com/Kurashizu"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => playSound('click')}
+            title="OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab"
+            className="hover:underline flex items-center gap-1 text-[#e06c75] hover:text-[#56b6c2] transition-colors"
+          >
+            <PixelHardware size={13} />
+            <span>oshwhub</span>
+          </a>
+          <a
+            href="https://skill.krsz.in/rules"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => playSound('click')}
+            title="Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab"
+            className="hover:underline flex items-center gap-1 text-[#98c379] hover:text-[#56b6c2] transition-colors"
+          >
+            <PixelRules size={13} />
+            <span>rules</span>
+          </a>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
