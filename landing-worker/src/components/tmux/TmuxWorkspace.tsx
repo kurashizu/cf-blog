@@ -2586,11 +2586,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                 {/* UPPER L-SHAPE: LEFT (MODULES 1, 2, 3 VERTICAL) + RIGHT (PIANO ROLL MATRIX) [1:4 RATIO ON 2XL, STACKED ON <2XL] */}
                 <div className="contents">
                   
-                  {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING) */}
-                  <div className="order-1 2xl:order-1 2xl:col-span-1 grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-1 gap-1.5 min-w-0 2xl:h-full 2xl:overflow-hidden" style={{ gridTemplateRows: 'repeat(1, minmax(0, 1fr))' }}>
+                  {/* LEFT COLUMN: MODULES 1, 2, 3 (SIGNAL GENERATION & FILTERING - 5:3:3 RATIO ON 2XL) */}
+                  <div className="order-1 2xl:order-1 2xl:col-span-1 grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-1 2xl:grid-rows-[5fr_3fr_3fr] gap-1.5 min-w-0 2xl:h-full 2xl:overflow-hidden">
                     
-                    {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 2x2 KNOBS GRID - ENLARGED 40px) */}
-                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[160px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
+                    {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 4×2 KNOBS GRID 32px) */}
+                    <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[170px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>1. DUAL OSC</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2637,7 +2637,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </div>
                         </div>
 
-                        {/* Right: 8 Knobs in 4×2 Grid (Enlarged to 40px, matching Module 6 FX) */}
+                        {/* Right: 8 Knobs in 4×2 Grid (32px, Crisp & Balanced) */}
                         <div className="col-span-6 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
                           <RotaryKnob
                             label="OSC1"
@@ -2646,7 +2646,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#e5c07b"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ osc1Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -2656,7 +2656,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#56b6c2"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ osc2Gain: v / 100 })}
                           />
                           <RotaryKnob
@@ -2667,7 +2667,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={2}
                             unit="c"
                             color="#e06c75"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ detuneCents: v })}
                           />
                           <RotaryKnob
@@ -2678,7 +2678,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={1}
                             unit="st"
                             color="#c678dd"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ osc2Semitone: v })}
                           />
                           <RotaryKnob
@@ -2689,7 +2689,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={5}
                             unit="%"
                             color="#d19a66"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ pulseWidth: v })}
                           />
                           <RotaryKnob
@@ -2700,7 +2700,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             step={15}
                             unit="°"
                             color="#98c379"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ phaseOffset: v })}
                           />
                           <RotaryKnob
@@ -2710,7 +2710,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#61afef"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ subOscGain: v / 100 })}
                           />
                           <RotaryKnob
@@ -2720,15 +2720,15 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#abb2bf"
-                            size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ noiseGain: v / 100 })}
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 LARGE HORIZONTAL KNOBS 32px) */}
-                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[100px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
+                    {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 HORIZONTAL KNOBS 32px) */}
+                    <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[110px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2752,7 +2752,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 2 Knobs Arranged HORIZONTALLY Side-by-Side (Large 32px) */}
+                        {/* Right: 2 Knobs Arranged HORIZONTALLY Side-by-Side (32px) */}
                         <div className="col-span-6 flex items-center justify-around border-l border-white/10 pl-2 h-full py-0.5">
                           <RotaryKnob
                             label="MORPH"
@@ -2761,7 +2761,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             max={100}
                             unit="%"
                             color="#c678dd"
-                          size={40}
+                            size={32}
                             onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
                           />
                           <RotaryKnob
@@ -2779,8 +2779,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
                     </div>
 
-                    {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 上2下1 KNOBS 28px, No Divider) */}
-                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[120px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
+                    {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 3 KNOBS 32px, No Divider) */}
+                    <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[110px] 2xl:min-h-0 2xl:h-full 2xl:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
                         <span className="text-white/40 font-mono text-xs">──▼</span>
@@ -2804,7 +2804,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 3 Knobs Arranged in Triangular Close Packing (最密堆积: 上2下1, No Divider) */}
+                        {/* Right: 3 Knobs Arranged in Triangular Close Packing (32px, No Divider) */}
                         <div className="col-span-7 flex flex-col justify-around border-l border-white/10 pl-1.5 h-full py-0.5">
                           {/* Top Row: 2 Knobs (CUTOFF, RES) */}
                           <div className="grid grid-cols-4 gap-0.5 items-center">
@@ -2817,7 +2817,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 step={50}
                                 unit="Hz"
                                 color="#56b6c2"
-                                size={28}
+                                size={32}
                                 onChange={(v) => handleTrackParamChange({ cutoff: v })}
                               />
                             </div>
@@ -2829,7 +2829,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 max={14}
                                 step={0.2}
                                 color="#e5c07b"
-                                size={28}
+                                size={32}
                                 onChange={(v) => handleTrackParamChange({ resonance: v })}
                               />
                             </div>
@@ -2845,7 +2845,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 max={100}
                                 unit="%"
                                 color="#98c379"
-                                size={28}
+                                size={32}
                                 onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
                               />
                             </div>
