@@ -2760,7 +2760,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                       <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto py-0.5">
                         {/* Left: 4 Blend Mode Buttons in a 2x2 GRID (Equal Size, Pure Text, Stretched to Fill Height) */}
-                        <div className="col-span-6 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
+                        <div className="col-span-5 grid grid-cols-2 grid-rows-2 gap-1 h-full py-0.5">
                           {(['layer', 'fm', 'ring', 'sync'] as BlendMode[]).map((mode) => (
                             <button
                               key={mode}
@@ -2776,40 +2776,53 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 3 Knobs Arranged HORIZONTALLY Side-by-Side (MORPH, RATIO, GLIDE 32px) */}
-                        <div className="col-span-6 grid grid-cols-3 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
-                          <RotaryKnob
-                            label="MORPH"
-                            value={Math.round(currentTrack.morphAmount * 100)}
-                            min={0}
-                            max={100}
-                            unit="%"
-                            color="#c678dd"
-                            size={32}
-                            onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
-                          />
-                          <RotaryKnob
-                            label="RATIO"
-                            value={currentTrack.osc2Ratio}
-                            min={0.5}
-                            max={4}
-                            step={0.5}
-                            unit="x"
-                            color="#56b6c2"
-                            size={32}
-                            onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
-                          />
-                          <RotaryKnob
-                            label="GLIDE"
-                            value={currentTrack.glideTime ?? 0}
-                            min={0}
-                            max={300}
-                            step={10}
-                            unit="ms"
-                            color="#e5c07b"
-                            size={32}
-                            onChange={(v) => handleTrackParamChange({ glideTime: v })}
-                          />
+                        {/* Right: 3 Knobs Arranged in Triangular Close Packing (Top 2: MORPH, RATIO; Bottom 1: GLIDE 32px) */}
+                        <div className="col-span-7 flex flex-col justify-around border-l border-white/10 pl-1.5 h-full py-0.5">
+                          {/* Top Row: 2 Knobs (MORPH, RATIO) */}
+                          <div className="grid grid-cols-4 gap-0.5 items-center">
+                            <div className="col-span-2 flex justify-center">
+                              <RotaryKnob
+                                label="MORPH"
+                                value={Math.round(currentTrack.morphAmount * 100)}
+                                min={0}
+                                max={100}
+                                unit="%"
+                                color="#c678dd"
+                                size={32}
+                                onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
+                              />
+                            </div>
+                            <div className="col-span-2 flex justify-center">
+                              <RotaryKnob
+                                label="RATIO"
+                                value={currentTrack.osc2Ratio}
+                                min={0.5}
+                                max={4}
+                                step={0.5}
+                                unit="x"
+                                color="#56b6c2"
+                                size={32}
+                                onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Bottom Row: 1 Knob (GLIDE) Nested in the Interstice */}
+                          <div className="grid grid-cols-4 gap-0.5 items-center">
+                            <div className="col-start-2 col-span-2 flex justify-center">
+                              <RotaryKnob
+                                label="GLIDE"
+                                value={currentTrack.glideTime ?? 0}
+                                min={0}
+                                max={300}
+                                step={10}
+                                unit="ms"
+                                color="#e5c07b"
+                                size={32}
+                                onChange={(v) => handleTrackParamChange({ glideTime: v })}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
