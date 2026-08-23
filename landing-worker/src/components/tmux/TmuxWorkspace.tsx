@@ -410,16 +410,16 @@ const PianoRollRow = React.memo<PianoRollRowProps>(({
               ) : (
                 <button
                   onClick={() => onCellClick(actualIdx, colIdx)}
-                  className={`relative w-full h-full cursor-pointer rounded-xs ${
+                  className={`relative w-full h-full cursor-pointer rounded-xs border transition-colors ${
                     isColActive
-                      ? 'bg-white/20'
+                      ? 'border-white/70 bg-white/25 shadow-xs'
                       : isBarStart
-                      ? 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+                      ? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-white/[0.08] hover:bg-white/20'
                       : isBeatStart
-                      ? 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+                      ? 'border-y border-r border-white/15 border-l border-l-white/40 bg-white/[0.04] hover:bg-white/20'
                       : isDivBlockStart
-                      ? 'border-l border-white/15 bg-black/40 hover:bg-white/10'
-                      : 'border-l border-white/5 bg-black/40 hover:bg-white/10'
+                      ? 'border border-white/20 bg-black/40 hover:bg-white/10'
+                      : 'border border-white/10 bg-black/40 hover:bg-white/10'
                   }`}
                 >
                   {/* Multi-Track Overlaid Continuous Note Bars */}
@@ -699,7 +699,7 @@ export const TmuxWorkspace: React.FC = () => {
   const STORAGE_KEY = 'krsz-synth-patch-v1';
   const BUILTIN_SONGS = [
     { id: 'OVERWORLD', name: 'OVERWORLD', steps: 1184, bpm: 105, meter: '4/4' as TimeSignature },
-    { id: 'UNDERWATER', name: 'UNDERWATER', steps: 1536, bpm: 100, meter: '3/4' as TimeSignature },
+    { id: 'UNDERWATER', name: 'UNDERWATER', steps: 1536, bpm: 200, meter: '3/4' as TimeSignature },
   ];
   const LEN_PRESETS = [16, 32, 64, 128, 256, 512] as const;
 
@@ -3102,6 +3102,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 const globalCol = viewportStartCol + colIdx;
                                 const colInBar = globalCol % meterSpec.colsPerBar;
                                 const isBarStart = colInBar === 0;
+                                const isBeatStart = colInBar % meterSpec.colsPerBeat === 0;
 
                                 return (
                                   <div key={colIdx} className="h-full">
@@ -3127,14 +3128,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                                 : accVal === 1
                                                 ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-xs'
                                                 : isBarStart && subCol === 0
-                                                ? 'border-l-2 border-[#56b6c2]/70 bg-black/50 text-white/60 hover:border-white/40'
-                                                : 'border-white/10 bg-black/40 text-white/40 hover:border-white/30'
+                                                ? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-black/50 text-white/70 hover:border-white/40'
+                                                : isBeatStart && subCol === 0
+                                                ? 'border-y border-r border-white/15 border-l border-l-white/40 bg-black/50 text-white/50 hover:border-white/40'
+                                                : 'border border-white/10 bg-black/40 text-white/40 hover:border-white/30'
                                             }`}
                                             title={`Step ${step + 1} (${subCol === 0 ? 'L' : 'R'}) Accent: ${
                                               accVal === 2 ? '+6dB Red' : accVal === 1 ? '+3dB Amber' : 'OFF (0dB)'
                                             } — Click to cycle`}
                                           >
-                                            {accVal === 2 ? '••' : accVal === 1 ? '•' : ''}
+                                            {accVal === 2 ? '+6' : accVal === 1 ? '+3' : subCol === 0 ? `${colIdx + 1}` : '·'}
                                           </button>
                                         );
                                       })}
