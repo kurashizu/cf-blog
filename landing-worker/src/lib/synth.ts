@@ -2067,9 +2067,9 @@ class ModularSynth {
       this.meter = '4/4';
     } else if (songName === 'UNDERWATER') {
       this.tracks = JSON.parse(JSON.stringify(UNDERWATER_TRACKS));
-      this.totalSteps = 1536;
-      this.bpm = 200;
-      this.meter = '3/4';
+      this.totalSteps = 768;
+      this.bpm = 100;
+      this.meter = '6/8';
     }
   }
 
