@@ -3447,8 +3447,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                     {/* White Keys Row */}
                                     <div className="flex w-full h-full gap-0.5">
                                       {whiteKeys.map((wk) => {
-                                        const isPlaying = activePlayingNotes.has(wk.idx);
-                                        const noteTrack = isPlaying ? activePlayingNotes.get(wk.idx)?.trackId : null;
+                                        const noteEntry = activePlayingNotes.get(wk.idx);
+                                        const isPlaying = !!noteEntry && (
+                                          isOverlayMode 
+                                            ? overlayTrackIds.includes(noteEntry.trackId)
+                                            : noteEntry.trackId === activeTrackId
+                                        );
+                                        const noteTrack = isPlaying ? noteEntry.trackId : null;
                                         const keyColor = noteTrack !== null && noteTrack !== undefined && tracksState[noteTrack] 
                                           ? tracksState[noteTrack].color 
                                           : currentTrack.color;
@@ -3483,8 +3488,13 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                                     {/* Black Keys Row (Floating Over White Keys) */}
                                     {blackKeys.map((bk) => {
-                                      const isPlaying = activePlayingNotes.has(bk.idx);
-                                      const noteTrack = isPlaying ? activePlayingNotes.get(bk.idx)?.trackId : null;
+                                      const noteEntry = activePlayingNotes.get(bk.idx);
+                                      const isPlaying = !!noteEntry && (
+                                        isOverlayMode 
+                                          ? overlayTrackIds.includes(noteEntry.trackId)
+                                          : noteEntry.trackId === activeTrackId
+                                      );
+                                      const noteTrack = isPlaying ? noteEntry.trackId : null;
                                       const keyColor = noteTrack !== null && noteTrack !== undefined && tracksState[noteTrack] 
                                         ? tracksState[noteTrack].color 
                                         : currentTrack.color;
