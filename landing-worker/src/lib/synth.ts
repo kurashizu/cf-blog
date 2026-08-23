@@ -103,12 +103,14 @@ export interface TrackData {
   blendMode: BlendMode; // 'layer' | 'fm' | 'ring' | 'sync'
   morphAmount: number;  // 0.0 to 1.0 (Blend / FM modulation depth)
   glideTime?: number;   // 0 to 300ms (Portamento / Glide slide time)
+  xfade?: number;       // 0.0 to 1.0 (OSC1 to OSC2 Crossfade Balance, default 0.5)
 
   // Node 3: Multi-Mode VCF Resonant Filter Node
   filterType: FilterType; // 'lowpass' | 'bandpass' | 'highpass' | 'notch'
   cutoff: number;       // 40Hz to 14000Hz
   resonance: number;    // 0.1 to 16.0
   envFilterMod: number; // 0.0 to 1.0 (Envelope to VCF cutoff sweep)
+  keyTracking?: number; // 0.0 to 1.0 (Keyboard Pitch to Cutoff Tracking)
 
   // Node 4: Envelope & LFO Modulation Matrix
   attack: number;       // 0.005 to 1.2s (legacy / ampAttack alias)
@@ -2255,15 +2257,20 @@ class ModularSynth {
       this.lastTrackFreqs.set(track.id, baseFreq);
       this.lastTrackNoteTimes.set(track.id, t);
 
+      // Crossfade balance weighting (xfade: 0 = 100% OSC1, 0.5 = 50/50, 1.0 = 100% OSC2)
+      const xf = track.xfade ?? 0.5;
+      const osc1Bal = Math.cos(xf * 0.5 * Math.PI) * Math.SQRT2;
+      const osc2Bal = Math.sin(xf * 0.5 * Math.PI) * Math.SQRT2;
+
       if (track.blendMode === 'fm' && osc1) {
         const fmGain = ctx.createGain();
-        const fmIndex = track.morphAmount * baseFreq * 3.5 * track.osc2Gain;
+        const fmIndex = track.morphAmount * baseFreq * 3.5 * track.osc2Gain * osc2Bal;
         fmGain.gain.setValueAtTime(fmIndex, t);
         osc2.connect(fmGain);
         fmGain.connect(osc1.frequency);
 
         const osc1GainNode = ctx.createGain();
-        osc1GainNode.gain.setValueAtTime(track.osc1Gain, t);
+        osc1GainNode.gain.setValueAtTime(track.osc1Gain * osc1Bal, t);
         osc1.connect(osc1GainNode);
         osc1GainNode.connect(voiceMix);
       } else if (track.blendMode === 'ring' && osc1) {
@@ -2275,8 +2282,8 @@ class ModularSynth {
       } else if (track.blendMode === 'sync' && osc1) {
         const g1 = ctx.createGain();
         const g2 = ctx.createGain();
-        g1.gain.setValueAtTime(track.osc1Gain * (1.0 - track.morphAmount * 0.4), t);
-        g2.gain.setValueAtTime(track.osc2Gain * track.morphAmount * 0.9, t);
+        g1.gain.setValueAtTime(track.osc1Gain * osc1Bal * (1.0 - track.morphAmount * 0.4), t);
+        g2.gain.setValueAtTime(track.osc2Gain * osc2Bal * track.morphAmount * 0.9, t);
         osc1.connect(g1);
         osc2.connect(g2);
         g1.connect(voiceMix);
@@ -2284,12 +2291,12 @@ class ModularSynth {
       } else {
         if (osc1) {
           const g1 = ctx.createGain();
-          g1.gain.setValueAtTime(track.osc1Gain * (1.0 - track.morphAmount * 0.6), t);
+          g1.gain.setValueAtTime(track.osc1Gain * osc1Bal * (1.0 - track.morphAmount * 0.6), t);
           osc1.connect(g1);
           g1.connect(voiceMix);
         }
         const g2 = ctx.createGain();
-        g2.gain.setValueAtTime(track.osc2Gain * (0.2 + track.morphAmount * 0.8), t);
+        g2.gain.setValueAtTime(track.osc2Gain * osc2Bal * (0.2 + track.morphAmount * 0.8), t);
         osc2.connect(g2);
         g2.connect(voiceMix);
       }
@@ -2316,9 +2323,16 @@ class ModularSynth {
     const vcfRel = Math.max(0.01, track.filterRelease ?? 0.1);
     const vcfAmount = track.filterEnvAmount !== undefined ? track.filterEnvAmount : (track.envFilterMod ?? 0.5);
 
-    // 2. Mod Matrix Velocity & Static Target Calculations
+    // 2. Mod Matrix Velocity & Keyboard Tracking Target Calculations
     let dynamicCutoffBase = track.cutoff;
     let dynamicResonance = track.resonance;
+
+    // Key Tracking: scale cutoff proportional to note pitch relative to Middle C (C4 = 261.63Hz)
+    const keyTrk = track.keyTracking ?? 0.0;
+    if (keyTrk > 0) {
+      const pitchRatio = Math.max(0.2, baseFreq / 261.63);
+      dynamicCutoffBase = dynamicCutoffBase * Math.pow(pitchRatio, keyTrk);
+    }
 
     for (const route of (track.modRoutes || [])) {
       if (!route.enabled) continue;

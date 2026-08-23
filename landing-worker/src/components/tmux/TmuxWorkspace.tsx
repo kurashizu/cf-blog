@@ -2751,7 +2751,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </div>
                     </div>
 
-                    {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2 HORIZONTAL KNOBS 32px) */}
+                    {/* MODULE 2: TIMBRE FUSION (LEFT: 2x2 BUTTONS GRID, RIGHT: 2x2 KNOBS GRID 32px) */}
                     <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
@@ -2776,58 +2776,56 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 3 Knobs Arranged in Triangular Close Packing (Top 2: MORPH, RATIO; Bottom 1: GLIDE 32px) */}
-                        <div className="col-span-7 flex flex-col justify-around border-l border-white/10 pl-1.5 h-full py-0.5">
-                          {/* Top Row: 2 Knobs (MORPH, RATIO) */}
-                          <div className="grid grid-cols-4 gap-0.5 items-center">
-                            <div className="col-span-2 flex justify-center">
-                              <RotaryKnob
-                                label="MORPH"
-                                value={Math.round(currentTrack.morphAmount * 100)}
-                                min={0}
-                                max={100}
-                                unit="%"
-                                color="#c678dd"
-                                size={32}
-                                onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
-                              />
-                            </div>
-                            <div className="col-span-2 flex justify-center">
-                              <RotaryKnob
-                                label="RATIO"
-                                value={currentTrack.osc2Ratio}
-                                min={0.5}
-                                max={4}
-                                step={0.5}
-                                unit="x"
-                                color="#56b6c2"
-                                size={32}
-                                onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Bottom Row: 1 Knob (GLIDE) Nested in the Interstice */}
-                          <div className="grid grid-cols-4 gap-0.5 items-center">
-                            <div className="col-start-2 col-span-2 flex justify-center">
-                              <RotaryKnob
-                                label="GLIDE"
-                                value={currentTrack.glideTime ?? 0}
-                                min={0}
-                                max={300}
-                                step={10}
-                                unit="ms"
-                                color="#e5c07b"
-                                size={32}
-                                onChange={(v) => handleTrackParamChange({ glideTime: v })}
-                              />
-                            </div>
-                          </div>
+                        {/* Right: 4 Knobs Arranged in a 2×2 GRID (Top: MORPH, RATIO; Bottom: X-FADE, GLIDE 32px) */}
+                        <div className="col-span-7 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
+                          <RotaryKnob
+                            label="MORPH"
+                            value={Math.round(currentTrack.morphAmount * 100)}
+                            min={0}
+                            max={100}
+                            unit="%"
+                            color="#c678dd"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ morphAmount: v / 100 })}
+                          />
+                          <RotaryKnob
+                            label="RATIO"
+                            value={currentTrack.osc2Ratio}
+                            min={0.5}
+                            max={4}
+                            step={0.5}
+                            unit="x"
+                            color="#56b6c2"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
+                          />
+                          <RotaryKnob
+                            label="X-FADE"
+                            value={Math.round((currentTrack.xfade ?? 0.5) * 100)}
+                            min={0}
+                            max={100}
+                            step={5}
+                            unit="%"
+                            color="#d19a66"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ xfade: v / 100 })}
+                          />
+                          <RotaryKnob
+                            label="GLIDE"
+                            value={currentTrack.glideTime ?? 0}
+                            min={0}
+                            max={300}
+                            step={10}
+                            unit="ms"
+                            color="#e5c07b"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ glideTime: v })}
+                          />
                         </div>
                       </div>
                     </div>
 
-                    {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 3 KNOBS 32px, No Divider) */}
+                    {/* MODULE 3: MULTI-MODE VCF (LEFT: 2x2 BUTTONS GRID, RIGHT: 2x2 KNOBS GRID 32px) */}
                     <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
@@ -2852,52 +2850,50 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 3 Knobs Arranged in Triangular Close Packing (32px, No Divider) */}
-                        <div className="col-span-7 flex flex-col justify-around border-l border-white/10 pl-1.5 h-full py-0.5">
-                          {/* Top Row: 2 Knobs (CUTOFF, RES) */}
-                          <div className="grid grid-cols-4 gap-0.5 items-center">
-                            <div className="col-span-2 flex justify-center">
-                              <RotaryKnob
-                                label="CUTOFF"
-                                value={currentTrack.cutoff}
-                                min={40}
-                                max={12000}
-                                step={50}
-                                unit="Hz"
-                                color="#56b6c2"
-                                size={32}
-                                onChange={(v) => handleTrackParamChange({ cutoff: v })}
-                              />
-                            </div>
-                            <div className="col-span-2 flex justify-center">
-                              <RotaryKnob
-                                label="RES (Q)"
-                                value={currentTrack.resonance}
-                                min={0.2}
-                                max={14}
-                                step={0.2}
-                                color="#e5c07b"
-                                size={32}
-                                onChange={(v) => handleTrackParamChange({ resonance: v })}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Bottom Row: 1 Knob (ENV AMT) Nested in the Interstice */}
-                          <div className="grid grid-cols-4 gap-0.5 items-center">
-                            <div className="col-start-2 col-span-2 flex justify-center">
-                              <RotaryKnob
-                                label="ENV AMT"
-                                value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
-                                min={-100}
-                                max={100}
-                                unit="%"
-                                color="#98c379"
-                                size={32}
-                                onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
-                              />
-                            </div>
-                          </div>
+                        {/* Right: 4 Knobs Arranged in a 2×2 GRID (Top: CUTOFF, RES; Bottom: KEY TRK, ENV AMT 32px) */}
+                        <div className="col-span-7 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
+                          <RotaryKnob
+                            label="CUTOFF"
+                            value={currentTrack.cutoff}
+                            min={40}
+                            max={12000}
+                            step={50}
+                            unit="Hz"
+                            color="#56b6c2"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ cutoff: v })}
+                          />
+                          <RotaryKnob
+                            label="RES (Q)"
+                            value={currentTrack.resonance}
+                            min={0.2}
+                            max={14}
+                            step={0.2}
+                            color="#e5c07b"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ resonance: v })}
+                          />
+                          <RotaryKnob
+                            label="KEY TRK"
+                            value={Math.round((currentTrack.keyTracking ?? 0.0) * 100)}
+                            min={0}
+                            max={100}
+                            step={5}
+                            unit="%"
+                            color="#61afef"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ keyTracking: v / 100 })}
+                          />
+                          <RotaryKnob
+                            label="ENV AMT"
+                            value={Math.round((currentTrack.filterEnvAmount ?? currentTrack.envFilterMod ?? 0.5) * 100)}
+                            min={-100}
+                            max={100}
+                            unit="%"
+                            color="#98c379"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
+                          />
                         </div>
                       </div>
                     </div>
