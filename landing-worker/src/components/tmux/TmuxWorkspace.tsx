@@ -659,6 +659,9 @@ export const TmuxWorkspace: React.FC = () => {
   const [eqLowGain, setEqLowGain] = useState<number>(modularSynth.getEqLow());
   const [eqMidGain, setEqMidGain] = useState<number>(modularSynth.getEqMid());
   const [eqHighGain, setEqHighGain] = useState<number>(modularSynth.getEqHigh());
+  const [eqLowFreq, setEqLowFreq] = useState<number>(modularSynth.getEqLowFreq());
+  const [eqMidFreq, setEqMidFreq] = useState<number>(modularSynth.getEqMidFreq());
+  const [eqHighFreq, setEqHighFreq] = useState<number>(modularSynth.getEqHighFreq());
   const [scopeMode, setScopeMode] = useState<'dual' | 'fft' | 'wave'>('dual');
   const [octaveFrom, setOctaveFrom] = useState<number>(3);
   const [octaveTo, setOctaveTo] = useState<number>(5);
@@ -3946,58 +3949,42 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </div>
                   </div>
 
-                  {/* MODULE 6: MASTER FX & PARAMETRIC EQ (TABS: FX / EQ) */}
+                  {/* MODULE 6: MASTER FX & PARAMETRIC EQ (HEADER: 6. FX [MAIN][EQ] ──►, EQ PANEL: [ON/OFF] + 3 FADERS WITH FREQ INPUTS) */}
                   <div className="lg:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
+                    {/* Header: Consistent 6. FX Title + Subtab Pill Buttons + Consistent ──► Arrow */}
                     <div className="flex justify-between items-center font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
-                      <div className="flex items-center gap-1">
-                        <span className="text-[#e06c75] font-black">6.</span>
-                        <button
-                          onClick={() => { setActiveFxTab('fx'); playSound('click'); }}
-                          className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors ${
-                            activeFxTab === 'fx'
-                              ? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
-                              : 'border-white/20 text-white/60 hover:text-white'
-                          }`}
-                          title="Master FX: Tape Delay, Convolution Reverb & Tape Overdrive Saturation"
-                        >
-                          FX
-                        </button>
-                        <button
-                          onClick={() => { setActiveFxTab('eq'); playSound('click'); }}
-                          className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors ${
-                            activeFxTab === 'eq'
-                              ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
-                              : 'border-white/20 text-white/60 hover:text-white'
-                          }`}
-                          title="Master 3-Band Parametric EQ: Low Shelf, Mid Peaking & High Shelf Equalizer"
-                        >
-                          EQ
-                        </button>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[#e06c75] font-black">6. FX</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setActiveFxTab('fx'); playSound('click'); }}
+                            className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors ${
+                              activeFxTab === 'fx'
+                                ? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                            title="Main FX: Tape Delay, Space Reverb & Tape Overdrive Saturation"
+                          >
+                            MAIN
+                          </button>
+                          <button
+                            onClick={() => { setActiveFxTab('eq'); playSound('click'); }}
+                            className={`px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors ${
+                              activeFxTab === 'eq'
+                                ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+                                : 'border-white/20 text-white/60 hover:text-white'
+                            }`}
+                            title="Master Parametric EQ: 3-Band Equalizer with Custom Frequency Sliders"
+                          >
+                            EQ
+                          </button>
+                        </div>
                       </div>
-                      {activeFxTab === 'eq' ? (
-                        <button
-                          onClick={() => {
-                            const next = !isEqEnabled;
-                            setIsEqEnabled(next);
-                            modularSynth.setEqEnabled(next);
-                            playSound('toggle');
-                          }}
-                          className={`px-1.5 py-0.2 text-[9px] rounded-xs border font-bold cursor-pointer transition-colors ${
-                            isEqEnabled
-                              ? 'border-[#98c379] bg-[#98c379] text-black font-black shadow-[0_0_6px_#98c379]'
-                              : 'border-white/20 bg-white/5 text-white/40 hover:text-white'
-                          }`}
-                          title="Toggle Master EQ (Default: OFF)"
-                        >
-                          {isEqEnabled ? 'ON' : 'OFF'}
-                        </button>
-                      ) : (
-                        <span className="text-white/40 font-mono text-xs">──►</span>
-                      )}
+                      <span className="text-white/40 font-mono text-xs">──►</span>
                     </div>
 
                     {activeFxTab === 'fx' ? (
-                      /* 5 Hardware FX Knobs in Hexagonal Close Packing (最密堆积: 上3下2交错嵌套, No Divider) */
+                      /* Main FX View: 5 Hardware FX Knobs in Hexagonal Close Packing (最密堆积: 上3下2交错嵌套, No Divider) */
                       <div className="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
                         {/* Top Row: 3 Knobs (TIME, FDBK, D-MIX) */}
                         <div className="grid grid-cols-6 gap-0.5 items-center">
@@ -4093,56 +4080,138 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         </div>
                       </div>
                     ) : (
-                      /* Master 3-Band Parametric EQ Tab View (LOW 100Hz, MID 1kHz, HIGH 8kHz in 40px Knobs) */
-                      <div className="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
-                        <div className="flex items-center justify-around h-full py-0.5">
-                          <RotaryKnob
-                            label="LOW"
-                            value={eqLowGain}
-                            min={-12}
-                            max={12}
-                            step={1}
-                            unit="dB"
-                            color="#56b6c2"
-                            size={40}
-                            onChange={(v) => {
-                              setEqLowGain(v);
-                              modularSynth.setEqLow(v);
+                      /* EQ Submenu View: In-panel [ON/OFF] Button + 3 Vertical Faders with Editable Frequency Input Boxes */
+                      <div className="flex-1 min-h-0 flex flex-col justify-between py-1">
+                        {/* Top Sub-Bar: EQ Title & In-Panel Toggle Button */}
+                        <div className="flex items-center justify-between px-1 pb-1 border-b border-white/10 shrink-0">
+                          <span className="text-[10px] font-bold text-white/50">3-BAND EQ</span>
+                          <button
+                            onClick={() => {
+                              const next = !isEqEnabled;
+                              setIsEqEnabled(next);
+                              modularSynth.setEqEnabled(next);
+                              playSound('toggle');
                             }}
-                          />
-                          <RotaryKnob
-                            label="MID"
-                            value={eqMidGain}
-                            min={-12}
-                            max={12}
-                            step={1}
-                            unit="dB"
-                            color="#e5c07b"
-                            size={40}
-                            onChange={(v) => {
-                              setEqMidGain(v);
-                              modularSynth.setEqMid(v);
-                            }}
-                          />
-                          <RotaryKnob
-                            label="HIGH"
-                            value={eqHighGain}
-                            min={-12}
-                            max={12}
-                            step={1}
-                            unit="dB"
-                            color="#98c379"
-                            size={40}
-                            onChange={(v) => {
-                              setEqHighGain(v);
-                              modularSynth.setEqHigh(v);
-                            }}
-                          />
+                            className={`px-2 py-0.2 text-[9px] rounded-xs border font-black cursor-pointer transition-all ${
+                              isEqEnabled
+                                ? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_6px_#98c379]'
+                                : 'border-white/20 bg-white/5 text-white/40 hover:text-white'
+                            }`}
+                            title="Toggle Master 3-Band Parametric EQ (Default: OFF)"
+                          >
+                            EQ: {isEqEnabled ? 'ON' : 'OFF'}
+                          </button>
                         </div>
-                        <div className="flex justify-between items-center text-[9px] font-mono text-white/40 px-2 pt-0.5 border-t border-white/10">
-                          <span>100Hz</span>
-                          <span>1.0kHz</span>
-                          <span>8.0kHz</span>
+
+                        {/* 3 Vertical Faders (LOW, MID, HIGH) with Dynamic Frequency Inputs */}
+                        <div className="grid grid-cols-3 gap-1.5 items-end flex-1 min-h-0 pt-1 px-1">
+                          {/* LOW Band */}
+                          <div className="flex flex-col items-center justify-between h-full">
+                            <HardwareFader
+                              label="LOW"
+                              value={eqLowGain}
+                              min={-12}
+                              max={12}
+                              step={0.5}
+                              unit="dB"
+                              color="#56b6c2"
+                              height={42}
+                              onChange={(v) => {
+                                setEqLowGain(v);
+                                modularSynth.setEqLow(v);
+                              }}
+                            />
+                            <div className="flex items-center mt-1">
+                              <input
+                                type="number"
+                                value={eqLowFreq}
+                                min={20}
+                                max={1000}
+                                step={10}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (!isNaN(val)) {
+                                    setEqLowFreq(val);
+                                    modularSynth.setEqLowFreq(val);
+                                  }
+                                }}
+                                className="w-11 text-[9px] font-mono text-center bg-black/80 border border-white/20 rounded-xs text-[#56b6c2] py-0.2 focus:border-[#56b6c2] focus:outline-none"
+                                title="Low Shelf Center Frequency (Hz)"
+                              />
+                            </div>
+                          </div>
+
+                          {/* MID Band */}
+                          <div className="flex flex-col items-center justify-between h-full">
+                            <HardwareFader
+                              label="MID"
+                              value={eqMidGain}
+                              min={-12}
+                              max={12}
+                              step={0.5}
+                              unit="dB"
+                              color="#e5c07b"
+                              height={42}
+                              onChange={(v) => {
+                                setEqMidGain(v);
+                                modularSynth.setEqMid(v);
+                              }}
+                            />
+                            <div className="flex items-center mt-1">
+                              <input
+                                type="number"
+                                value={eqMidFreq}
+                                min={100}
+                                max={8000}
+                                step={50}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (!isNaN(val)) {
+                                    setEqMidFreq(val);
+                                    modularSynth.setEqMidFreq(val);
+                                  }
+                                }}
+                                className="w-11 text-[9px] font-mono text-center bg-black/80 border border-white/20 rounded-xs text-[#e5c07b] py-0.2 focus:border-[#e5c07b] focus:outline-none"
+                                title="Mid Peaking Center Frequency (Hz)"
+                              />
+                            </div>
+                          </div>
+
+                          {/* HIGH Band */}
+                          <div className="flex flex-col items-center justify-between h-full">
+                            <HardwareFader
+                              label="HIGH"
+                              value={eqHighGain}
+                              min={-12}
+                              max={12}
+                              step={0.5}
+                              unit="dB"
+                              color="#98c379"
+                              height={42}
+                              onChange={(v) => {
+                                setEqHighGain(v);
+                                modularSynth.setEqHigh(v);
+                              }}
+                            />
+                            <div className="flex items-center mt-1">
+                              <input
+                                type="number"
+                                value={eqHighFreq}
+                                min={1000}
+                                max={20000}
+                                step={100}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (!isNaN(val)) {
+                                    setEqHighFreq(val);
+                                    modularSynth.setEqHighFreq(val);
+                                  }
+                                }}
+                                className="w-11 text-[9px] font-mono text-center bg-black/80 border border-white/20 rounded-xs text-[#98c379] py-0.2 focus:border-[#98c379] focus:outline-none"
+                                title="High Shelf Center Frequency (Hz)"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

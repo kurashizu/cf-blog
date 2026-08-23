@@ -1865,6 +1865,9 @@ class ModularSynth {
   private eqLowGain: number = 0;   // -12dB to +12dB (Low Shelf @ 100Hz)
   private eqMidGain: number = 0;   // -12dB to +12dB (Peaking Mid @ 1000Hz)
   private eqHighGain: number = 0;  // -12dB to +12dB (High Shelf @ 8000Hz)
+  private eqLowFreq: number = 100; // 30Hz to 800Hz
+  private eqMidFreq: number = 1000;// 200Hz to 6000Hz
+  private eqHighFreq: number = 8000;// 2000Hz to 18000Hz
   private eqLowFilter: BiquadFilterNode | null = null;
   private eqMidFilter: BiquadFilterNode | null = null;
   private eqHighFilter: BiquadFilterNode | null = null;
@@ -1933,18 +1936,18 @@ class ModularSynth {
     // Master 3-Band Parametric Equalizer (EQ) Chain: LowShelf (100Hz) -> Peaking (1000Hz) -> HighShelf (8000Hz) -> MasterGain
     this.eqLowFilter = ctx.createBiquadFilter();
     this.eqLowFilter.type = 'lowshelf';
-    this.eqLowFilter.frequency.setValueAtTime(100, ctx.currentTime);
+    this.eqLowFilter.frequency.setValueAtTime(this.eqLowFreq, ctx.currentTime);
     this.eqLowFilter.gain.setValueAtTime(this.eqEnabled ? this.eqLowGain : 0, ctx.currentTime);
 
     this.eqMidFilter = ctx.createBiquadFilter();
     this.eqMidFilter.type = 'peaking';
-    this.eqMidFilter.frequency.setValueAtTime(1000, ctx.currentTime);
+    this.eqMidFilter.frequency.setValueAtTime(this.eqMidFreq, ctx.currentTime);
     this.eqMidFilter.Q.setValueAtTime(1.0, ctx.currentTime);
     this.eqMidFilter.gain.setValueAtTime(this.eqEnabled ? this.eqMidGain : 0, ctx.currentTime);
 
     this.eqHighFilter = ctx.createBiquadFilter();
     this.eqHighFilter.type = 'highshelf';
-    this.eqHighFilter.frequency.setValueAtTime(8000, ctx.currentTime);
+    this.eqHighFilter.frequency.setValueAtTime(this.eqHighFreq, ctx.currentTime);
     this.eqHighFilter.gain.setValueAtTime(this.eqEnabled ? this.eqHighGain : 0, ctx.currentTime);
 
     this.eqLowFilter.connect(this.eqMidFilter);
@@ -2245,6 +2248,39 @@ class ModularSynth {
 
   public getEqHigh(): number {
     return this.eqHighGain;
+  }
+
+  public setEqLowFreq(freq: number) {
+    this.eqLowFreq = Math.max(20, Math.min(1000, freq));
+    if (this.eqLowFilter) {
+      this.eqLowFilter.frequency.setValueAtTime(this.eqLowFreq, 0);
+    }
+  }
+
+  public getEqLowFreq(): number {
+    return this.eqLowFreq;
+  }
+
+  public setEqMidFreq(freq: number) {
+    this.eqMidFreq = Math.max(100, Math.min(8000, freq));
+    if (this.eqMidFilter) {
+      this.eqMidFilter.frequency.setValueAtTime(this.eqMidFreq, 0);
+    }
+  }
+
+  public getEqMidFreq(): number {
+    return this.eqMidFreq;
+  }
+
+  public setEqHighFreq(freq: number) {
+    this.eqHighFreq = Math.max(1000, Math.min(20000, freq));
+    if (this.eqHighFilter) {
+      this.eqHighFilter.frequency.setValueAtTime(this.eqHighFreq, 0);
+    }
+  }
+
+  public getEqHighFreq(): number {
+    return this.eqHighFreq;
   }
 
   /* -------------------------------------------------------------------------- */
