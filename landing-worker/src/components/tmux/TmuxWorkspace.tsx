@@ -706,6 +706,8 @@ export const TmuxWorkspace: React.FC = () => {
   const [builtinSongIdx, setBuiltinSongIdx] = useState<number>(0);
 
   const handleNewProject = () => {
+    modularSynth.stopSequencer();
+    setIsSeqPlaying(false);
     modularSynth.resetToBlank(64);
     setTotalPatternSteps(64);
     setSynthBpm(120);
@@ -714,7 +716,6 @@ export const TmuxWorkspace: React.FC = () => {
     setSeqCurrentStep(0);
     setActiveStepPage(0);
     setTracksState([...modularSynth.getTracks()]);
-    setIsSeqPlaying(modularSynth.isPlayingSeq());
     showSaveStatus('✓ NEW');
     playSound('click');
   };
@@ -723,6 +724,8 @@ export const TmuxWorkspace: React.FC = () => {
     const song = BUILTIN_SONGS[idx];
     if (!song) return;
     setBuiltinSongIdx(idx);
+    modularSynth.stopSequencer();
+    setIsSeqPlaying(false);
     modularSynth.loadBuiltInSong(song.id);
     setTotalPatternSteps(song.steps);
     setSynthBpm(song.bpm);
@@ -733,7 +736,6 @@ export const TmuxWorkspace: React.FC = () => {
     setIsOverlayMode(true);
     setOverlayTrackIds([0, 1, 2, 3]);
     setTracksState([...modularSynth.getTracks()]);
-    setIsSeqPlaying(modularSynth.isPlayingSeq());
     showSaveStatus(`✓ ${song.name}`);
     playSound('toggle');
   };
@@ -766,6 +768,13 @@ export const TmuxWorkspace: React.FC = () => {
   });
 
   const applyPatchData = (data: SynthPatchData) => {
+    modularSynth.stopSequencer();
+    setIsSeqPlaying(false);
+    modularSynth.setPlaybackStep(0);
+    setCursorStep(0);
+    setSeqCurrentStep(0);
+    setActiveStepPage(0);
+
     if (data.bpm) {
       setSynthBpm(data.bpm);
       modularSynth.setBpm(data.bpm);
