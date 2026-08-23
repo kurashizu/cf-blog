@@ -655,8 +655,8 @@ export const TmuxWorkspace: React.FC = () => {
   const [scopeMode, setScopeMode] = useState<'dual' | 'fft' | 'wave'>('dual');
   const [octaveFrom, setOctaveFrom] = useState<number>(3);
   const [octaveTo, setOctaveTo] = useState<number>(5);
-  const [kbOctaveFrom, setKbOctaveFrom] = useState<number>(3);
-  const [kbOctaveTo, setKbOctaveTo] = useState<number>(4);
+  const [kbOctaveFrom, setKbOctaveFrom] = useState<number>(1);
+  const [kbOctaveTo, setKbOctaveTo] = useState<number>(7);
   const [activeTrackId, setActiveTrackId] = useState<number>(0);
   const [isOverlayMode, setIsOverlayMode] = useState<boolean>(true);
   const [overlayTrackIds, setOverlayTrackIds] = useState<number[]>([0, 1, 2, 3]);
