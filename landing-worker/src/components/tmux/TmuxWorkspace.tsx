@@ -2776,8 +2776,8 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           ))}
                         </div>
 
-                        {/* Right: 2 Knobs Arranged HORIZONTALLY Side-by-Side (32px) */}
-                        <div className="col-span-6 flex items-center justify-around border-l border-white/10 pl-2 h-full py-0.5">
+                        {/* Right: 3 Knobs Arranged HORIZONTALLY Side-by-Side (MORPH, RATIO, GLIDE 32px) */}
+                        <div className="col-span-6 grid grid-cols-3 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
                           <RotaryKnob
                             label="MORPH"
                             value={Math.round(currentTrack.morphAmount * 100)}
@@ -2798,6 +2798,17 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             color="#56b6c2"
                             size={32}
                             onChange={(v) => handleTrackParamChange({ osc2Ratio: v })}
+                          />
+                          <RotaryKnob
+                            label="GLIDE"
+                            value={currentTrack.glideTime ?? 0}
+                            min={0}
+                            max={300}
+                            step={10}
+                            unit="ms"
+                            color="#e5c07b"
+                            size={32}
+                            onChange={(v) => handleTrackParamChange({ glideTime: v })}
                           />
                         </div>
                       </div>

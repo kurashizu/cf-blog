@@ -102,6 +102,7 @@ export interface TrackData {
   // Node 2: Timbre Fusion Node
   blendMode: BlendMode; // 'layer' | 'fm' | 'ring' | 'sync'
   morphAmount: number;  // 0.0 to 1.0 (Blend / FM modulation depth)
+  glideTime?: number;   // 0 to 300ms (Portamento / Glide slide time)
 
   // Node 3: Multi-Mode VCF Resonant Filter Node
   filterType: FilterType; // 'lowpass' | 'bandpass' | 'highpass' | 'notch'
@@ -1813,6 +1814,8 @@ class ModularSynth {
   private tracks: TrackData[] = JSON.parse(JSON.stringify(INITIAL_TRACKS));
   private activeVoices: Map<string, ActiveVoice> = new Map();
   private noiseBuffer: AudioBuffer | null = null;
+  private lastTrackFreqs: Map<number, number> = new Map();
+  private lastTrackNoteTimes: Map<number, number> = new Map();
 
   // Master Global Params (100 BPM for Authentic Original NES Super Mario Bros Groove)
   private bpm: number = 105;
@@ -2211,23 +2214,46 @@ class ModularSynth {
         g1.connect(voiceMix);
         noiseSource.start(startT1);
       } else {
+        const glideSec = (track.glideTime ?? 0) / 1000;
+        const lastFreq = this.lastTrackFreqs.get(track.id);
+        const lastTime = this.lastTrackNoteTimes.get(track.id) ?? 0;
+        const isLegato = (t - lastTime) < 1.5; // Within 1.5s interval
+        const startFreq = (glideSec > 0 && lastFreq && isLegato) ? lastFreq : baseFreq;
+
         osc1 = ctx.createOscillator();
         osc1.type = track.osc1Waveform;
-        osc1.frequency.setValueAtTime(baseFreq, t);
+        osc1.frequency.setValueAtTime(startFreq, t);
+        if (glideSec > 0 && startFreq !== baseFreq) {
+          osc1.frequency.exponentialRampToValueAtTime(baseFreq, t + glideSec);
+        }
         if (pEnvAmt !== 0) {
-          osc1.frequency.exponentialRampToValueAtTime(baseFreq * pRatio, t + pAtt);
-          osc1.frequency.exponentialRampToValueAtTime(baseFreq, t + pAtt + pDec);
+          osc1.frequency.exponentialRampToValueAtTime(baseFreq * pRatio, t + glideSec + pAtt);
+          osc1.frequency.exponentialRampToValueAtTime(baseFreq, t + glideSec + pAtt + pDec);
         }
       }
 
       const osc2Freq = baseFreq * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200);
+      const glideSec2 = (track.glideTime ?? 0) / 1000;
+      const lastFreq2 = this.lastTrackFreqs.get(track.id);
+      const lastTime2 = this.lastTrackNoteTimes.get(track.id) ?? 0;
+      const isLegato2 = (t - lastTime2) < 1.5;
+      const prevOsc2Freq = lastFreq2 ? lastFreq2 * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200) : osc2Freq;
+      const startFreq2 = (glideSec2 > 0 && lastFreq2 && isLegato2) ? prevOsc2Freq : osc2Freq;
+
       osc2 = ctx.createOscillator();
       osc2.type = track.osc2Waveform === 'noise' ? 'sawtooth' : track.osc2Waveform;
-      osc2.frequency.setValueAtTime(osc2Freq, t);
-      if (pEnvAmt !== 0) {
-        osc2.frequency.exponentialRampToValueAtTime(osc2Freq * pRatio, t + pAtt);
-        osc2.frequency.exponentialRampToValueAtTime(osc2Freq, t + pAtt + pDec);
+      osc2.frequency.setValueAtTime(startFreq2, t);
+      if (glideSec2 > 0 && startFreq2 !== osc2Freq) {
+        osc2.frequency.exponentialRampToValueAtTime(osc2Freq, t + glideSec2);
       }
+      if (pEnvAmt !== 0) {
+        osc2.frequency.exponentialRampToValueAtTime(osc2Freq * pRatio, t + glideSec2 + pAtt);
+        osc2.frequency.exponentialRampToValueAtTime(osc2Freq, t + glideSec2 + pAtt + pDec);
+      }
+
+      // Record this note for subsequent glide calculations
+      this.lastTrackFreqs.set(track.id, baseFreq);
+      this.lastTrackNoteTimes.set(track.id, t);
 
       if (track.blendMode === 'fm' && osc1) {
         const fmGain = ctx.createGain();
