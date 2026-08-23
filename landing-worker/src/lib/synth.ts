@@ -1810,6 +1810,10 @@ interface ActiveVoice {
   lfoGain?: GainNode;
   panNode?: StereoPannerNode;
   startTime: number;
+  ampRel: number;
+  vcfRel: number;
+  baseCutoff: number;
+  isContinuousHold?: boolean;
 }
 
 class ModularSynth {
@@ -1818,6 +1822,9 @@ class ModularSynth {
   private noiseBuffer: AudioBuffer | null = null;
   private lastTrackFreqs: Map<number, number> = new Map();
   private lastTrackNoteTimes: Map<number, number> = new Map();
+  private trackHeldVoices: Map<string, string> = new Map(); // key: `${trackId}-${noteIndex}` -> voiceKey
+  private isSustainPedalDown: boolean = false;
+  private sustainedVoiceKeys: Set<string> = new Set();
 
   // Master Global Params (100 BPM for Authentic Original NES Super Mario Bros Groove)
   private bpm: number = 105;
@@ -2389,16 +2396,6 @@ class ModularSynth {
     gainNode.gain.linearRampToValueAtTime(peakGain, t + ampAtt);
     gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + ampAtt + ampDec);
 
-    const holdSec = durationSec !== undefined ? Math.max(0.02, durationSec) : (60 / this.bpm / 8);
-    const releaseStartTime = Math.max(t + ampAtt + ampDec, t + holdSec);
-    gainNode.gain.setValueAtTime(sustainGain, releaseStartTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseStartTime + ampRel);
-
-    filter.frequency.setValueAtTime(sustainCutoff, releaseStartTime);
-    filter.frequency.exponentialRampToValueAtTime(baseCutoff, releaseStartTime + vcfRel);
-
-    const totalDuration = Math.max(0.2, (releaseStartTime - t) + Math.max(ampRel, vcfRel) + 0.1);
-
     // ──────────────────────────────────────────────────────────────────────────
     // NODE 5: STEREO PAN & MASTER FX ROUTING
     // ──────────────────────────────────────────────────────────────────────────
@@ -2422,7 +2419,7 @@ class ModularSynth {
       // 1. Vibrato (Pitch modulation)
       if (pitchModAmt > 0) {
         const pitchGain = ctx.createGain();
-        pitchGain.gain.setValueAtTime(pitchModAmt * (baseFreq * 0.08), t);
+        pitchGain.gain.setValueAtTime(pitchModAmt * baseFreq * 0.12, t);
         lfo.connect(pitchGain);
         if (osc1) pitchGain.connect(osc1.frequency);
         if (osc2) pitchGain.connect(osc2.frequency);
@@ -2430,10 +2427,10 @@ class ModularSynth {
 
       // 2. Wah-Wah / Filter sweep modulation
       if (cutoffModAmt > 0) {
-        const cutoffGain = ctx.createGain();
-        cutoffGain.gain.setValueAtTime(cutoffModAmt * 2800, t);
-        lfo.connect(cutoffGain);
-        cutoffGain.connect(filter.frequency);
+        const filterGain = ctx.createGain();
+        filterGain.gain.setValueAtTime(cutoffModAmt * 2800, t);
+        lfo.connect(filterGain);
+        filterGain.connect(filter.frequency);
       }
 
       // 3. Auto-Pan modulation
@@ -2445,7 +2442,29 @@ class ModularSynth {
       }
 
       lfo.start(t);
-      lfo.stop(t + totalDuration);
+    }
+
+    const isContinuousHold = durationSec === 0;
+
+    if (!isContinuousHold) {
+      const holdSec = durationSec !== undefined ? Math.max(0.02, durationSec) : (60 / this.bpm / 8);
+      const releaseStartTime = Math.max(t + ampAtt + ampDec, t + holdSec);
+      gainNode.gain.setValueAtTime(sustainGain, releaseStartTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseStartTime + ampRel);
+
+      filter.frequency.setValueAtTime(sustainCutoff, releaseStartTime);
+      filter.frequency.exponentialRampToValueAtTime(baseCutoff, releaseStartTime + vcfRel);
+
+      const stopTime = releaseStartTime + ampRel + 0.1;
+      if (osc1) osc1.stop(stopTime);
+      if (osc2) osc2.stop(stopTime);
+      if (noiseSource) noiseSource.stop(stopTime);
+      if (lfo) lfo.stop(stopTime);
+
+      const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
+      void window.setTimeout(() => {
+        this.activeVoices.delete(voiceKey);
+      }, cleanupMs);
     }
 
     voiceMix.connect(filter);
@@ -2462,12 +2481,6 @@ class ModularSynth {
       if (this.reverbConvolver && this.reverbMix > 0) gainNode.connect(this.reverbConvolver);
     }
 
-    const stopTime = releaseStartTime + ampRel + 0.1;
-    if (osc1) osc1.stop(stopTime);
-    if (osc2) osc2.stop(stopTime);
-    if (noiseSource) noiseSource.stop(stopTime);
-    if (lfo) lfo.stop(stopTime);
-
     this.activeVoices.set(voiceKey, {
       osc1,
       osc2,
@@ -2477,13 +2490,93 @@ class ModularSynth {
       lfo,
       panNode: panner,
       startTime: t,
+      ampRel,
+      vcfRel,
+      baseCutoff,
+      isContinuousHold,
     });
 
-    // Schedule voice cleanup timed to the audio stopTime (accurate, low GC pressure)
-    const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
-    void window.setTimeout(() => {
-      this.activeVoices.delete(voiceKey);
-    }, cleanupMs);
+    return voiceKey;
+  }
+
+  // Continuous Note On (from Keyboard / MIDI Controller)
+  public noteOn(trackId: number, noteIndex: number, velocity: number = 64) {
+    const key = `${trackId}-${noteIndex}`;
+    // If existing held voice, release it first
+    if (this.trackHeldVoices.has(key)) {
+      this.noteOff(trackId, noteIndex);
+    }
+
+    const accent = velocity > 100 ? 2 : velocity > 70 ? 1 : 0;
+    // Pass durationSec = 0 to indicate continuous hold until noteOff
+    const voiceKey = this.triggerTrackVoice(trackId, noteIndex, accent, undefined, 0);
+    if (voiceKey) {
+      this.trackHeldVoices.set(key, voiceKey);
+    }
+  }
+
+  // Continuous Note Off (Release key)
+  public noteOff(trackId: number, noteIndex: number) {
+    const key = `${trackId}-${noteIndex}`;
+    const voiceKey = this.trackHeldVoices.get(key);
+    if (!voiceKey) return;
+    this.trackHeldVoices.delete(key);
+
+    if (this.isSustainPedalDown) {
+      // Hold in sustained voice set until pedal releases
+      this.sustainedVoiceKeys.add(voiceKey);
+      return;
+    }
+
+    this.releaseVoice(voiceKey);
+  }
+
+  // Set Sustain Pedal (CC 64) State
+  public setSustainPedal(down: boolean) {
+    this.isSustainPedalDown = down;
+    if (!down) {
+      // Release all accumulated sustained voices whose keys are not still physically held
+      this.sustainedVoiceKeys.forEach((vk) => {
+        this.releaseVoice(vk);
+      });
+      this.sustainedVoiceKeys.clear();
+    }
+  }
+
+  public isSustainActive(): boolean {
+    return this.isSustainPedalDown;
+  }
+
+  private releaseVoice(voiceKey: string) {
+    const voice = this.activeVoices.get(voiceKey);
+    if (!voice) return;
+
+    const ctx = soundEngine.init();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const { gain, filter, ampRel, vcfRel, baseCutoff, osc1, osc2, noise, lfo } = voice;
+
+    try {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(0.02, ampRel));
+
+      filter.frequency.cancelScheduledValues(now);
+      filter.frequency.setValueAtTime(filter.frequency.value, now);
+      filter.frequency.exponentialRampToValueAtTime(baseCutoff, now + Math.max(0.02, vcfRel));
+
+      const stopTime = now + Math.max(ampRel, vcfRel) + 0.05;
+      if (osc1) osc1.stop(stopTime);
+      if (osc2) osc2.stop(stopTime);
+      if (noise) noise.stop(stopTime);
+      if (lfo) lfo.stop(stopTime);
+
+      const cleanupMs = Math.ceil((stopTime - now) * 1000) + 50;
+      window.setTimeout(() => {
+        this.activeVoices.delete(voiceKey);
+      }, cleanupMs);
+    } catch {}
   }
 
   public stopVoice(voiceKey: string) {
@@ -2501,6 +2594,8 @@ class ModularSynth {
   }
 
   public stopAll() {
+    this.trackHeldVoices.clear();
+    this.sustainedVoiceKeys.clear();
     Array.from(this.activeVoices.keys()).forEach((k) => this.stopVoice(k));
   }
 

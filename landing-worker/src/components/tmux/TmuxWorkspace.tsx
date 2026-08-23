@@ -778,15 +778,25 @@ export const TmuxWorkspace: React.FC = () => {
       const noteNumber = data[1];
       const velocity = data.length > 2 ? data[2] : 0;
 
-      // Note On: 0x9 (with velocity > 0)
+      // Note On: cmd === 9 (with velocity > 0)
       if (cmd === 9 && velocity > 0) {
         // Convert MIDI note number (0-127, Middle C = C4 = 60) to PIANO_ROLL_NOTES index
-        // In PIANO_ROLL_NOTES, C8 (108) is idx 0, C4 (60) is idx 48, A0 (21) is idx 87
         const noteIdx = 108 - noteNumber;
         if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
-          const accent = velocity > 100 ? 2 : velocity > 75 ? 1 : 0;
-          modularSynth.triggerTrackVoice(activeTrackId, noteIdx, accent);
+          modularSynth.noteOn(activeTrackId, noteIdx, velocity);
         }
+      }
+      // Note Off: cmd === 8 or (cmd === 9 with velocity === 0)
+      else if (cmd === 8 || (cmd === 9 && velocity === 0)) {
+        const noteIdx = 108 - noteNumber;
+        if (noteIdx >= 0 && noteIdx < PIANO_ROLL_NOTES.length) {
+          modularSynth.noteOff(activeTrackId, noteIdx);
+        }
+      }
+      // Control Change: cmd === 11 (CC 64 = Sustain Damper Pedal)
+      else if (cmd === 11 && noteNumber === 64) {
+        const isDown = velocity >= 64;
+        modularSynth.setSustainPedal(isDown);
       }
     };
 
@@ -3361,6 +3371,25 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                                 <span className="opacity-30">|</span>
 
+                                {/* On-Screen Sustain Pedal Toggle Button */}
+                                <button
+                                  onClick={() => {
+                                    const next = !modularSynth.isSustainActive();
+                                    modularSynth.setSustainPedal(next);
+                                    playSound('toggle');
+                                  }}
+                                  className={`px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all ${
+                                    modularSynth.isSustainActive()
+                                      ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-[0_0_6px_#e5c07b]'
+                                      : 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'
+                                  }`}
+                                  title="Sustain Pedal (PEDAL / CC64) — Keeps sounding notes sustained until released"
+                                >
+                                  SUS: {modularSynth.isSustainActive() ? 'ON' : 'OFF'}
+                                </button>
+
+                                <span className="opacity-30">|</span>
+
                                 {/* MIDI Hardware Status Badge */}
                                 <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold ${
                                   midiConnectedDevice 
@@ -3428,9 +3457,16 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                           <button
                                             key={wk.note}
                                             onMouseDown={() => {
-                                              modularSynth.triggerTrackVoice(activeTrackId, wk.idx, 1);
+                                              modularSynth.noteOn(activeTrackId, wk.idx, 80);
                                               playSound('click');
                                             }}
+                                            onMouseUp={() => modularSynth.noteOff(activeTrackId, wk.idx)}
+                                            onMouseLeave={() => modularSynth.noteOff(activeTrackId, wk.idx)}
+                                            onTouchStart={(e) => {
+                                              e.preventDefault();
+                                              modularSynth.noteOn(activeTrackId, wk.idx, 80);
+                                            }}
+                                            onTouchEnd={() => modularSynth.noteOff(activeTrackId, wk.idx)}
                                             className={`flex-1 h-full rounded-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer transition-all border ${
                                               isPlaying
                                                 ? 'shadow-[0_0_10px_currentColor]'
@@ -3462,8 +3498,22 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                           key={bk.note}
                                           onMouseDown={(e) => {
                                             e.stopPropagation();
-                                            modularSynth.triggerTrackVoice(activeTrackId, bk.idx, 1);
+                                            modularSynth.noteOn(activeTrackId, bk.idx, 80);
                                             playSound('click');
+                                          }}
+                                          onMouseUp={(e) => {
+                                            e.stopPropagation();
+                                            modularSynth.noteOff(activeTrackId, bk.idx);
+                                          }}
+                                          onMouseLeave={() => modularSynth.noteOff(activeTrackId, bk.idx)}
+                                          onTouchStart={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            modularSynth.noteOn(activeTrackId, bk.idx, 80);
+                                          }}
+                                          onTouchEnd={(e) => {
+                                            e.stopPropagation();
+                                            modularSynth.noteOff(activeTrackId, bk.idx);
                                           }}
                                           className={`absolute top-0 h-[62%] rounded-b-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer z-10 transition-all border ${
                                             isPlaying
