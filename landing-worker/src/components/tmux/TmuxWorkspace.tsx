@@ -2476,25 +2476,56 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                   <div className="w-px h-3.5 bg-white/15 mx-0.5 shrink-0" />
 
-                  {/* 8 Track Chips */}
+                  {/* 6 Track Chips */}
                   {tracksState.map((trk) => {
                     const isSelected = isOverlayMode
                       ? overlayTrackIds.includes(trk.id)
                       : activeTrackId === trk.id;
-                    const isPrimary = activeTrackId === trk.id;
+                    const isActiveEditingTrack = activeTrackId === trk.id;
 
                     return (
                       <div
                         key={trk.id}
                         className={`flex items-center border rounded-xs transition-all ${
                           isSelected
-                            ? isPrimary
-                              ? 'border-white bg-white/25 text-white shadow-sm ring-1 ring-white/60'
-                              : 'border-white/50 bg-white/10 text-white'
+                            ? isActiveEditingTrack
+                              ? 'border-white bg-white/20 text-white shadow-sm ring-1 ring-white/60'
+                              : 'border-white/40 bg-white/10 text-white'
                             : 'border-white/15 text-[#eceff4] opacity-50 hover:opacity-90'
                         }`}
                       >
+                        {/* Square Indicator: Exclusive Active Track Toggle (Solid = Active, Hollow = Inactive) */}
                         <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveTrackId(trk.id);
+                            // If not in overlay list, also add it so user can see what they are editing
+                            if (isOverlayMode && !overlayTrackIds.includes(trk.id)) {
+                              setOverlayTrackIds([...overlayTrackIds, trk.id]);
+                            }
+                            playSound('toggle');
+                          }}
+                          className="pl-1.5 pr-0.5 py-1 flex items-center justify-center cursor-pointer group"
+                          title={`Set ${trk.name} as Exclusive Active Track (Controls Modules 1-7, Piano Roll Editing & Piano Keyboard Audition) — Currently ${isActiveEditingTrack ? 'ACTIVE [SOLID]' : 'INACTIVE [HOLLOW]'}`}
+                        >
+                          <span
+                            className={`w-2.5 h-2.5 inline-block shrink-0 rounded-[1px] transition-all ${
+                              isActiveEditingTrack
+                                ? 'shadow-[0_0_6px_currentColor]'
+                                : 'border border-current bg-transparent opacity-60 group-hover:opacity-100 group-hover:bg-white/20'
+                            }`}
+                            style={{
+                              color: trk.color,
+                              backgroundColor: isActiveEditingTrack ? trk.color : 'transparent',
+                              borderColor: trk.color,
+                            }}
+                          />
+                        </button>
+
+                        {/* Track Name Button: Toggles Overlay Visibility in Overlay Mode */}
+                        <button
+                          type="button"
                           onClick={() => {
                             if (isOverlayMode) {
                               if (overlayTrackIds.includes(trk.id)) {
@@ -2507,7 +2538,6 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                 }
                               } else {
                                 setOverlayTrackIds([...overlayTrackIds, trk.id]);
-                                setActiveTrackId(trk.id);
                               }
                             } else {
                               setActiveTrackId(trk.id);
@@ -2515,15 +2545,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                             }
                             playSound('click');
                           }}
-                          className="px-2 py-0.5 font-bold text-xs cursor-pointer flex items-center gap-1.5"
+                          className="pl-1 pr-2 py-0.5 font-bold text-xs cursor-pointer flex items-center"
                           style={{ color: isSelected ? trk.color : undefined }}
                           title={
                             isOverlayMode
-                              ? `${trk.name} — Click to toggle overlay visibility. Active Editing Track: ${activeTrackId === trk.id ? 'YES' : 'NO'}`
+                              ? `${trk.name} — Click name to toggle overlay visibility. Active Editing: ${isActiveEditingTrack ? 'YES' : 'NO'}`
                               : `Select ${trk.name}`
                           }
                         >
-                          <span className="w-2 h-2 inline-block shrink-0 rounded-[1px]" style={{ backgroundColor: trk.color }} />
                           <span>{trk.name.split(':')[0]}</span>
                         </button>
 
