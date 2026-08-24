@@ -2118,7 +2118,7 @@ class ModularSynth {
       this.meter = '6/8';
     } else if (songName === 'RICK') {
       this.tracks = JSON.parse(JSON.stringify(RICK_TRACKS));
-      this.totalSteps = 1184;
+      this.totalSteps = 3296;
       this.bpm = 114;
       this.meter = '4/4';
     }
@@ -2235,7 +2235,7 @@ class ModularSynth {
   }
 
   public setTotalSteps(steps: number) {
-    this.totalSteps = Math.max(8, Math.min(2048, steps));
+    this.totalSteps = Math.max(8, Math.min(4096, steps));
     if (this.currentStep >= this.totalSteps) {
       this.currentStep = 0;
     }
