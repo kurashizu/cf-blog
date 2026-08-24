@@ -906,6 +906,7 @@ export const TmuxWorkspace: React.FC = () => {
   const BUILTIN_SONGS = [
     { id: 'OVERWORLD', name: 'OVERWORLD', steps: 1184, bpm: 105, meter: '4/4' as TimeSignature },
     { id: 'UNDERWATER', name: 'UNDERWATER', steps: 768, bpm: 100, meter: '6/8' as TimeSignature },
+    { id: 'IWISH', name: 'I WISH (STEVIE)', steps: 1184, bpm: 106, meter: '4/4' as TimeSignature },
   ];
   const SOUND_PRESETS = [
     { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
