@@ -2194,7 +2194,13 @@ class ModularSynth {
   public cycleTrackAccent(trackId: number, stepIndex: number): number {
     if (this.tracks[trackId] && this.tracks[trackId].accents) {
       const current = Number(this.tracks[trackId].accents[stepIndex] || 0);
-      const next = (current + 1) % 3; // 0 (Off) -> 1 (+3dB) -> 2 (+6dB) -> 0
+      let next = 0;
+      if (current === 0) next = 1;      // +1dB
+      else if (current === 1) next = 2; // +2dB
+      else if (current === 2) next = 4; // +4dB
+      else if (current === 4) next = 8; // +8dB
+      else next = 0;                    // OFF (0dB)
+
       this.tracks[trackId].accents[stepIndex] = next;
       return next;
     }
@@ -2624,20 +2630,30 @@ class ModularSynth {
       dynamicCutoffBase = dynamicCutoffBase * Math.pow(pitchRatio, keyTrk);
     }
 
+    // Map accent levels (0, 1, 2, 4, 8 dB) to linear gain multiplier and VCF brightness scale
+    // +1dB = ~1.12x, +2dB = ~1.26x, +4dB = ~1.58x, +8dB = ~2.51x
+    let accGainMult = 1.0;
+    let accCutoffMult = 1.0;
+    let accResMult = 1.0;
+
+    if (acc > 0) {
+      accGainMult = Math.pow(10, acc / 20); // Exact decibels to amplitude ratio
+      accCutoffMult = 1.0 + (acc * 0.045);  // Subtle harmonic opening (+1 -> 1.045x, +8 -> 1.36x)
+      accResMult = 1.0 + (acc * 0.03);      // Subtle punch increase
+    }
+
     for (const route of (track.modRoutes || [])) {
       if (!route.enabled) continue;
       if (route.source === 'velocity' && acc > 0) {
-        const velMod = acc === 2 ? 1.5 : 1.0;
-        if (route.dest === 'cutoff') dynamicCutoffBase += route.amount * 3500 * velMod;
-        if (route.dest === 'resonance') dynamicResonance = Math.max(0.2, dynamicResonance + route.amount * 4 * velMod);
+        const velMod = acc / 4.0;
+        if (route.dest === 'cutoff') dynamicCutoffBase += route.amount * 2000 * velMod;
+        if (route.dest === 'resonance') dynamicResonance = Math.max(0.2, dynamicResonance + route.amount * 2 * velMod);
       }
     }
 
     if (acc > 0) {
-      const cutoffMult = acc === 2 ? 1.45 : 1.25;
-      const resMult = acc === 2 ? 1.35 : 1.2;
-      dynamicCutoffBase = Math.min(16000, dynamicCutoffBase * cutoffMult);
-      dynamicResonance = Math.min(16.0, dynamicResonance * resMult);
+      dynamicCutoffBase = Math.min(16000, dynamicCutoffBase * accCutoffMult);
+      dynamicResonance = Math.min(16.0, dynamicResonance * accResMult);
     }
 
     const baseCutoff = Math.max(40, Math.min(16000, dynamicCutoffBase));
@@ -2656,8 +2672,8 @@ class ModularSynth {
     filter.frequency.exponentialRampToValueAtTime(sustainCutoff, t + vcfAtt + vcfDec);
     filter.Q.setValueAtTime(dynamicResonance, t);
 
-    // AMP Dynamic Envelope (+3dB = ~1.41x, +6dB = 2.0x)
-    let gainBase = acc === 2 ? 0.48 : acc === 1 ? 0.34 : 0.24;
+    // AMP Dynamic Envelope: 0.24 base scaled by exact accent dB multiplier
+    let gainBase = 0.24 * accGainMult;
 
     // Apply MIDI Velocity Sensitivity based on the active velocity curve (EXP / LINEAR / LOG / HARD / OFF)
     if (this.velocityCurve !== 'OFF' && rawVelocity !== undefined && rawVelocity > 0) {

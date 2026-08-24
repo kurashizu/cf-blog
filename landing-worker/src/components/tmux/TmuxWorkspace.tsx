@@ -3464,10 +3464,14 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                             className={`flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all ${
                                               isSubCurrent
                                                 ? 'border-white bg-white text-black font-black shadow-[0_0_8px_#fff]'
-                                                : accVal === 2
+                                                : accVal === 8
                                                 ? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-[0_0_6px_#e06c75]'
-                                                : accVal === 1
+                                                : accVal === 4
+                                                ? 'border-[#d19a66] bg-[#d19a66] text-black font-black shadow-xs'
+                                                : accVal === 2
                                                 ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-xs'
+                                                : accVal === 1
+                                                ? 'border-[#98c379] bg-[#98c379] text-black font-black shadow-xs'
                                                 : isBarStart && subCol === 0
                                                 ? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-black/50 text-white/70 hover:border-white/40'
                                                 : isBeatStart && subCol === 0
@@ -3475,10 +3479,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                                 : 'border border-white/10 bg-black/40 text-white/40 hover:border-white/30'
                                             }`}
                                             title={`Step ${step + 1} (${subCol === 0 ? 'L' : 'R'}) Accent: ${
-                                              accVal === 2 ? '+6dB Red' : accVal === 1 ? '+3dB Amber' : 'OFF (0dB)'
+                                              accVal > 0 ? `+${accVal}dB` : 'OFF (0dB)'
                                             } — Click to cycle`}
                                           >
-                                            {accVal === 2 ? '+6' : accVal === 1 ? '+3' : subCol === 0 ? `${colIdx + 1}` : '·'}
+                                            {accVal > 0 ? `+${accVal}` : subCol === 0 ? `${colIdx + 1}` : '·'}
                                           </button>
                                         );
                                       })}
