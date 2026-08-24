@@ -677,6 +677,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [cursorStep, setCursorStep] = useState<number>(0);
   const [totalPatternSteps, setTotalPatternSteps] = useState<number>(modularSynth.getTotalSteps());
   const [activeStepPage, setActiveStepPage] = useState<number>(0);
+  const [pageInputStr, setPageInputStr] = useState<string>('1');
   const [pageFollow, setPageFollow] = useState<boolean>(true);
 
   // System Hardware, Audio Output & MIDI Settings Modal State
@@ -783,6 +784,7 @@ export const TmuxWorkspace: React.FC = () => {
               const meterSteps = (METER_SPECS[timeMeterRef.current] || METER_SPECS['4/4']).stepsPerBar;
               const p = Math.floor(pendingStep / meterSteps);
               setActiveStepPage(p);
+              setPageInputStr(String(p + 1));
             }
             pendingStep = null;
           }
@@ -2808,7 +2810,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       <span className="opacity-60 font-bold" title="Step Page Navigation">PAGE:</span>
                       <button
                         onClick={() => {
-                          setActiveStepPage((prev) => Math.max(0, prev - 1));
+                          const nextP = Math.max(0, activeStepPage - 1);
+                          setActiveStepPage(nextP);
+                          setPageInputStr(String(nextP + 1));
                           playSound('click');
                         }}
                         disabled={activeStepPage === 0}
@@ -2819,14 +2823,37 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       </button>
                       <div className="flex items-center bg-white/10 border border-white/20 hover:border-white/40 rounded-xs px-1 py-0.5 text-xs font-mono font-bold" title={`Active Measure Page: Page ${activeStepPage + 1} of ${totalPages} (Steps ${activeStepPage * stepsPerPage + 1} to ${Math.min(totalPatternSteps, (activeStepPage + 1) * stepsPerPage)}) — Click/type number to jump`}>
                         <input
-                          type="number"
-                          min={1}
-                          max={totalPages}
-                          value={activeStepPage + 1}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={pageInputStr}
+                          onFocus={(e) => {
+                            e.target.select();
+                          }}
                           onChange={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            if (!isNaN(val)) {
-                              const clamped = Math.max(1, Math.min(totalPages, val));
+                            const raw = e.target.value;
+                            // Allow empty string so user can clear and type freely
+                            if (raw === '') {
+                              setPageInputStr('');
+                              return;
+                            }
+                            const digits = raw.replace(/\D/g, '');
+                            if (digits === '') {
+                              setPageInputStr('');
+                              return;
+                            }
+                            const num = parseInt(digits, 10);
+                            const clamped = Math.max(1, Math.min(totalPages, num));
+                            setPageInputStr(digits);
+                            setActiveStepPage(clamped - 1);
+                          }}
+                          onBlur={() => {
+                            if (pageInputStr === '' || isNaN(parseInt(pageInputStr, 10))) {
+                              setPageInputStr(String(activeStepPage + 1));
+                            } else {
+                              const num = parseInt(pageInputStr, 10);
+                              const clamped = Math.max(1, Math.min(totalPages, num));
+                              setPageInputStr(String(clamped));
                               setActiveStepPage(clamped - 1);
                             }
                           }}
@@ -2836,13 +2863,15 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                               playSound('click');
                             }
                           }}
-                          className="w-7 text-center bg-transparent text-white font-mono font-black focus:outline-none focus:bg-white/20 rounded-xs p-0 m-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-8 text-center bg-transparent text-white font-mono font-black focus:outline-none focus:bg-white/20 rounded-xs p-0 m-0"
                         />
                         <span className="opacity-40 select-none">/{totalPages}</span>
                       </div>
                       <button
                         onClick={() => {
-                          setActiveStepPage((prev) => Math.min(totalPages - 1, prev + 1));
+                          const nextP = Math.min(totalPages - 1, activeStepPage + 1);
+                          setActiveStepPage(nextP);
+                          setPageInputStr(String(nextP + 1));
                           playSound('click');
                         }}
                         disabled={activeStepPage >= totalPages - 1}
