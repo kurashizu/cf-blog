@@ -672,7 +672,7 @@ export const TmuxWorkspace: React.FC = () => {
   // Real-time Visual Keyboard & Web MIDI Engine
   const [midiConnectedDevice, setMidiConnectedDevice] = useState<string | null>(null);
   const [tracksState, setTracksState] = useState(modularSynth.getTracks());
-  const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(true);
+  const [isSeqPlaying, setIsSeqPlaying] = useState<boolean>(false);
   const [seqCurrentStep, setSeqCurrentStep] = useState<number>(0);
   const [cursorStep, setCursorStep] = useState<number>(0);
   const [totalPatternSteps, setTotalPatternSteps] = useState<number>(modularSynth.getTotalSteps());
@@ -755,12 +755,9 @@ export const TmuxWorkspace: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  // Auto-Start Sequencer on initial mount
+  // Keep Sequencer stopped on initial mount (play on user click)
   useEffect(() => {
-    if (activeTab === 4) {
-      modularSynth.startSequencer();
-      setIsSeqPlaying(true);
-    }
+    // Sequencer remains paused until user clicks PLAY
   }, []);
 
   // Use refs for the hot-path values to avoid step subscription re-mounting on every meter/pageFollow change
