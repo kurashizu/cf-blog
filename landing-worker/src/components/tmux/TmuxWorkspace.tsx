@@ -1798,19 +1798,32 @@ export const TmuxWorkspace: React.FC = () => {
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
           <span className="text-[#c678dd] hidden xl:inline font-mono">{renderBrailleSpark(0)}</span>
-                    <button
+          <button
             onClick={() => {
-              const m = sound.toggleMute();
-              setIsMuted(m);
-              if (!m) playSound('click');
+              // Linked Audio & Sequencer Playhead Control
+              const nextPlaying = !isSeqPlaying;
+              if (nextPlaying) {
+                // Ensure audio is unmuted and start sequencer
+                sound.setMuted(false);
+                setIsMuted(false);
+                modularSynth.startSequencer(cursorStep);
+                setIsSeqPlaying(true);
+                playSound('click');
+              } else {
+                // Stop sequencer and stop all voices
+                modularSynth.stopSequencer();
+                setIsSeqPlaying(false);
+                playSound('click');
+              }
             }}
-            title="Master Audio Output Toggle — Mute or Unmute all WebAudio sound generation" className={`px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border ${
-              isMuted
-                ? 'border-[#e06c75] text-[#e06c75] hover:bg-[#e06c75] hover:text-black'
-                : 'border-[#98c379] text-[#98c379] hover:bg-[#98c379] hover:text-black'
+            title="Master Audio & Sequencer Playback Toggle — Start / Stop Music & Sound Engine [Spacebar]"
+            className={`px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border ${
+              isSeqPlaying
+                ? 'border-[#e06c75] bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75] hover:text-black shadow-[0_0_8px_#e06c75]'
+                : 'border-[#98c379] bg-[#98c379]/10 text-[#98c379] hover:bg-[#98c379] hover:text-black'
             }`}
           >
-            {isMuted ? '[UNMUTE]' : '[MUTE]'}
+            {isSeqPlaying ? '[■ STOP]' : '[► PLAY]'}
           </button>
           <button onClick={cycleTheme} title="Color Theme Switcher — Cycle palette (Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]" className="hover:underline cursor-pointer hidden sm:inline text-[#e5c07b]">[THEME: {theme.toUpperCase()}]</button>
           <span title="Real-Time System Clock — Australian Eastern Standard Time (Sydney Edge Node UTC+10)" className="tabular-nums text-[#98c379] shrink-0 text-[11px] sm:text-xs">SYDNEY {sydneyTime || '12:14:00'}</span>
@@ -2465,6 +2478,10 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                   {/* PLAY / STOP */}
                   <button
                     onClick={() => {
+                      if (!isSeqPlaying) {
+                        sound.setMuted(false);
+                        setIsMuted(false);
+                      }
                       const playing = modularSynth.toggleSequencer(cursorStep);
                       setIsSeqPlaying(playing);
                       playSound('click');
