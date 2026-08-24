@@ -1531,17 +1531,18 @@ export const INITIAL_TRACKS: TrackData[] = [
     filterRelease: 0.1,
     filterEnvAmount: 0.6,
 
+    pitchAttack: 0.001,
+    pitchDecay: 0.03,
+    pitchEnvAmount: 0.0,
+
     lfoWaveform: 'sine',
     lfoRate: 4.5,
-    lfoDepth: 0.05,
-    lfoTarget: 'pitch',
-
-    modRoutes: [
-      { id: 'r1', source: 'lfo', dest: 'cutoff', amount: 0.25, enabled: true },
-      { id: 'r2', source: 'vcf_env', dest: 'cutoff', amount: 0.60, enabled: true },
-      { id: 'r3', source: 'velocity', dest: 'cutoff', amount: 0.40, enabled: true },
-      { id: 'r4', source: 'lfo', dest: 'pitch', amount: 0.15, enabled: true },
-    ],
+    lfoPitchAmt: 0.0,
+    lfoCutoffAmt: 0.0,
+    lfoPanAmt: 0.0,
+    lfoAmpAmt: 0.0,
+    lfoFadeTime: 0,
+    airGain: 0.0,
 
     grid: MARIO_TRK1_GRID,
     accents: MARIO_TRK1_ACCENTS,
@@ -1590,17 +1591,18 @@ export const INITIAL_TRACKS: TrackData[] = [
     filterRelease: 0.1,
     filterEnvAmount: 0.45,
 
+    pitchAttack: 0.001,
+    pitchDecay: 0.03,
+    pitchEnvAmount: 0.0,
+
     lfoWaveform: 'triangle',
     lfoRate: 4.0,
-    lfoDepth: 0.04,
-    lfoTarget: 'pitch',
-
-    modRoutes: [
-      { id: 'r1', source: 'lfo', dest: 'cutoff', amount: 0.20, enabled: true },
-      { id: 'r2', source: 'vcf_env', dest: 'cutoff', amount: 0.50, enabled: true },
-      { id: 'r3', source: 'velocity', dest: 'cutoff', amount: 0.30, enabled: true },
-      { id: 'r4', source: 'lfo', dest: 'pan', amount: 0.20, enabled: false },
-    ],
+    lfoPitchAmt: 0.0,
+    lfoCutoffAmt: 0.0,
+    lfoPanAmt: 0.0,
+    lfoAmpAmt: 0.0,
+    lfoFadeTime: 0,
+    airGain: 0.0,
 
     grid: MARIO_TRK2_GRID,
     accents: MARIO_TRK2_ACCENTS,
@@ -1649,16 +1651,18 @@ export const INITIAL_TRACKS: TrackData[] = [
     filterRelease: 0.08,
     filterEnvAmount: 0.35,
 
+    pitchAttack: 0.001,
+    pitchDecay: 0.03,
+    pitchEnvAmount: 0.0,
+
     lfoWaveform: 'sine',
     lfoRate: 3.0,
-    lfoDepth: 0.0,
-    lfoTarget: 'filter',
-
-    modRoutes: [
-      { id: 'r1', source: 'vcf_env', dest: 'cutoff', amount: 0.40, enabled: true },
-      { id: 'r2', source: 'velocity', dest: 'cutoff', amount: 0.40, enabled: true },
-      { id: 'r3', source: 'lfo', dest: 'cutoff', amount: 0.0, enabled: false },
-    ],
+    lfoPitchAmt: 0.0,
+    lfoCutoffAmt: 0.0,
+    lfoPanAmt: 0.0,
+    lfoAmpAmt: 0.0,
+    lfoFadeTime: 0,
+    airGain: 0.0,
 
     grid: MARIO_TRK3_GRID,
     accents: MARIO_TRK3_ACCENTS,
@@ -1713,13 +1717,12 @@ export const INITIAL_TRACKS: TrackData[] = [
 
     lfoWaveform: 'square',
     lfoRate: 10.0,
-    lfoDepth: 0.0,
-    lfoTarget: 'amp',
-
-    modRoutes: [
-      { id: 'r1', source: 'vcf_env', dest: 'cutoff', amount: 0.60, enabled: true },
-      { id: 'r2', source: 'velocity', dest: 'cutoff', amount: 0.50, enabled: true },
-    ],
+    lfoPitchAmt: 0.0,
+    lfoCutoffAmt: 0.0,
+    lfoPanAmt: 0.0,
+    lfoAmpAmt: 0.0,
+    lfoFadeTime: 0,
+    airGain: 0.0,
 
     grid: MARIO_TRK4_GRID,
     accents: MARIO_TRK4_ACCENTS,
@@ -1768,12 +1771,19 @@ export const INITIAL_TRACKS: TrackData[] = [
     filterRelease: 0.6,
     filterEnvAmount: 0.4,
 
+    pitchAttack: 0.01,
+    pitchDecay: 0.1,
+    pitchEnvAmount: 0.0,
+
     lfoWaveform: 'sine',
     lfoRate: 0.5,
-    lfoDepth: 0.2,
-    lfoTarget: 'filter',
+    lfoPitchAmt: 0.0,
+    lfoCutoffAmt: 0.0,
+    lfoPanAmt: 0.0,
+    lfoAmpAmt: 0.0,
+    lfoFadeTime: 0,
+    airGain: 0.0,
 
-    modRoutes: [],
     grid: EMPTY_GRID,
     accents: EMPTY_ACCENTS,
   },
@@ -1821,12 +1831,19 @@ export const INITIAL_TRACKS: TrackData[] = [
     filterRelease: 0.2,
     filterEnvAmount: 0.5,
 
+    pitchAttack: 0.01,
+    pitchDecay: 0.1,
+    pitchEnvAmount: 0.0,
+
     lfoWaveform: 'sine',
     lfoRate: 4.0,
-    lfoDepth: 0.0,
-    lfoTarget: 'pitch',
+    lfoPitchAmt: 0.0,
+    lfoCutoffAmt: 0.0,
+    lfoPanAmt: 0.0,
+    lfoAmpAmt: 0.0,
+    lfoFadeTime: 0,
+    airGain: 0.0,
 
-    modRoutes: [],
     grid: EMPTY_GRID,
     accents: EMPTY_ACCENTS,
   }
@@ -2679,10 +2696,10 @@ class ModularSynth {
     }
 
     // Node 5 LFO Modulation Routing (Direct, self-consistent DSP flow)
-    const pitchModAmt = track.lfoPitchAmt !== undefined ? track.lfoPitchAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'pitch')?.amount ?? (track.lfoTarget === 'pitch' ? (track.lfoDepth || 0) : 0));
-    const cutoffModAmt = track.lfoCutoffAmt !== undefined ? track.lfoCutoffAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'cutoff')?.amount ?? (track.lfoTarget === 'filter' ? (track.lfoDepth || 0) : 0));
-    const panModAmt = track.lfoPanAmt !== undefined ? track.lfoPanAmt : ((track.modRoutes || []).find((r) => r.enabled && r.source === 'lfo' && r.dest === 'pan')?.amount ?? (track.lfoTarget === 'pan' ? (track.lfoDepth || 0) : 0));
-    const ampModAmt = track.lfoAmpAmt !== undefined ? track.lfoAmpAmt : (track.lfoTarget === 'amp' ? (track.lfoDepth || 0) : 0);
+    const pitchModAmt = track.lfoPitchAmt ?? 0;
+    const cutoffModAmt = track.lfoCutoffAmt ?? 0;
+    const panModAmt = track.lfoPanAmt ?? 0;
+    const ampModAmt = track.lfoAmpAmt ?? 0;
     const lfoFadeSec = (track.lfoFadeTime ?? 0) / 1000;
 
     let lfo: OscillatorNode | undefined;
