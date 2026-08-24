@@ -1,6 +1,6 @@
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
-import { IWISH_TRACKS } from './songs/iwish';
+import { RICK_TRACKS } from './songs/nevergonna';
 
 export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
 
@@ -2116,10 +2116,10 @@ class ModularSynth {
       this.totalSteps = 768;
       this.bpm = 100;
       this.meter = '6/8';
-    } else if (songName === 'IWISH') {
-      this.tracks = JSON.parse(JSON.stringify(IWISH_TRACKS));
+    } else if (songName === 'RICK') {
+      this.tracks = JSON.parse(JSON.stringify(RICK_TRACKS));
       this.totalSteps = 1184;
-      this.bpm = 106;
+      this.bpm = 114;
       this.meter = '4/4';
     }
     this.currentStep = 0;
