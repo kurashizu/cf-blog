@@ -2817,9 +2817,29 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                       >
                         ◄
                       </button>
-                      <span className="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs" title={`Active Measure Page: Page ${activeStepPage + 1} of ${totalPages} (Steps ${activeStepPage * stepsPerPage + 1} to ${Math.min(totalPatternSteps, (activeStepPage + 1) * stepsPerPage)})`}>
-                        {activeStepPage + 1}/{totalPages}
-                      </span>
+                      <div className="flex items-center bg-white/10 border border-white/20 hover:border-white/40 rounded-xs px-1 py-0.5 text-xs font-mono font-bold" title={`Active Measure Page: Page ${activeStepPage + 1} of ${totalPages} (Steps ${activeStepPage * stepsPerPage + 1} to ${Math.min(totalPatternSteps, (activeStepPage + 1) * stepsPerPage)}) — Click/type number to jump`}>
+                        <input
+                          type="number"
+                          min={1}
+                          max={totalPages}
+                          value={activeStepPage + 1}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val)) {
+                              const clamped = Math.max(1, Math.min(totalPages, val));
+                              setActiveStepPage(clamped - 1);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              (e.target as HTMLInputElement).blur();
+                              playSound('click');
+                            }
+                          }}
+                          className="w-7 text-center bg-transparent text-white font-mono font-black focus:outline-none focus:bg-white/20 rounded-xs p-0 m-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="opacity-40 select-none">/{totalPages}</span>
+                      </div>
                       <button
                         onClick={() => {
                           setActiveStepPage((prev) => Math.min(totalPages - 1, prev + 1));
