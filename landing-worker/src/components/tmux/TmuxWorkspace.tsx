@@ -2516,19 +2516,31 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     </svg>
                   </button>
 
-                  {/* Jump to Cursor with Cursor Step Number */}
-                  <button
-                    onClick={() => {
-                      modularSynth.setPlaybackStep(cursorStep);
-                      setSeqCurrentStep(cursorStep);
-                      playSound('click');
-                    }}
-                    className="h-6 px-2 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0"
-                    title={`Jump Playhead to Cursor (Step ${cursorStep + 1}) — Click to jump`}
-                  >
-                    <span>⤹ CUR:</span>
-                    <span className="font-mono font-black">{cursorStep + 1}</span>
-                  </button>
+                  {/* Jump to Cursor with Cursor Bar.Beat & Step Number */}
+                  {(() => {
+                    const meterSpec = METER_SPECS[timeMeter] || METER_SPECS['4/4'];
+                    const stepsPerBar = meterSpec.stepsPerBar || 32;
+                    const stepsPerBeat = stepsPerBar / (meterSpec.beatsPerBar || 4);
+                    const curBar = Math.floor(cursorStep / stepsPerBar) + 1;
+                    const curBeat = Math.floor((cursorStep % stepsPerBar) / stepsPerBeat) + 1;
+                    const curSub = Math.floor(((cursorStep % stepsPerBar) % stepsPerBeat) / 2) + 1;
+
+                    return (
+                      <button
+                        onClick={() => {
+                          modularSynth.setPlaybackStep(cursorStep);
+                          setSeqCurrentStep(cursorStep);
+                          playSound('click');
+                        }}
+                        className="h-6 px-2 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0"
+                        title={`Jump Playhead to Cursor Position (Bar ${curBar}.${curBeat}, Step ${cursorStep + 1}/${totalPatternSteps}) — Click to jump`}
+                      >
+                        <span>⤹ CUR:</span>
+                        <span className="font-mono font-black">{curBar}.{curBeat}</span>
+                        <span className="text-[10px] opacity-60 font-mono">({cursorStep + 1})</span>
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Right: Overlay Toggle + 8-Track Channel Selectors with Inline Mute/Solo (Right-aligned) */}
