@@ -2485,11 +2485,11 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                         sound.setMuted(false);
                         setIsMuted(false);
                       }
-                      const playing = modularSynth.toggleSequencer(cursorStep);
+                      const playing = modularSynth.toggleSequencer();
                       setIsSeqPlaying(playing);
                       playSound('click');
                     }}
-                    title="Play / Stop Sequencer (Starts from timeline cursor position) [Spacebar]"
+                    title="Play / Stop Sequencer (Resumes from current paused position) [Spacebar]"
                     className={`h-6 px-3 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center justify-center ${
                       isSeqPlaying
                         ? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'

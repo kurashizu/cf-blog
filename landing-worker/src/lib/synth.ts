@@ -3005,6 +3005,7 @@ class ModularSynth {
   private nextStepTime = 0;
   private scheduleAheadSec = 0.2; // 200ms lookahead — wider buffer against main thread jank
   private scheduledStepQueue: { step: number; time: number }[] = [];
+  private lastAudibleStep: number = 0;
   private _voiceSeq = 0; // monotonic voice counter — avoids Math.random() hot-path allocation
 
   public startSequencer(fromStep?: number) {
@@ -3012,8 +3013,12 @@ class ModularSynth {
     this.isSequencerPlaying = true;
     if (fromStep !== undefined && fromStep >= 0 && fromStep < this.totalSteps) {
       this.currentStep = fromStep;
+      this.lastAudibleStep = fromStep;
+    } else if (this.lastAudibleStep >= 0 && this.lastAudibleStep < this.totalSteps) {
+      this.currentStep = this.lastAudibleStep;
     } else if (this.currentStep >= this.totalSteps) {
       this.currentStep = 0;
+      this.lastAudibleStep = 0;
     }
     this.scheduledStepQueue = [];
 
@@ -3029,7 +3034,9 @@ class ModularSynth {
   }
 
   public setPlaybackStep(step: number) {
-    this.currentStep = Math.max(0, Math.min(this.totalSteps - 1, step));
+    const clamped = Math.max(0, Math.min(this.totalSteps - 1, step));
+    this.currentStep = clamped;
+    this.lastAudibleStep = clamped;
     this.scheduledStepQueue = [];
     const ctx = soundEngine.init();
     if (ctx) {
@@ -3048,6 +3055,8 @@ class ModularSynth {
       clearInterval(this.uiTimer);
       this.uiTimer = null;
     }
+    // Set sequencer internal currentStep to the exact last heard audible step so next start resumes right where it stopped
+    this.currentStep = this.lastAudibleStep;
     this.scheduledStepQueue = [];
     this.stopAll();
   }
@@ -3142,6 +3151,7 @@ class ModularSynth {
     }
 
     if (latestStep !== null) {
+      this.lastAudibleStep = latestStep;
       this.onStepListeners.forEach((fn) => fn(latestStep!));
     }
   }
