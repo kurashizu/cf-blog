@@ -1,6 +1,7 @@
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
+import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
 
 export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
 
@@ -537,6 +538,11 @@ class ModularSynth {
       this.tracks = JSON.parse(JSON.stringify(OVERWORLD_TRACKS));
       this.totalSteps = 672;
       this.bpm = 148;
+      this.meter = '4/4';
+    } else if (songName === 'OVERWORLD_FULL') {
+      this.tracks = JSON.parse(JSON.stringify(OVERWORLD_FULL_TRACKS));
+      this.totalSteps = 3360;
+      this.bpm = 150;
       this.meter = '4/4';
     } else if (songName === 'UNDERWATER') {
       this.tracks = JSON.parse(JSON.stringify(UNDERWATER_TRACKS));
