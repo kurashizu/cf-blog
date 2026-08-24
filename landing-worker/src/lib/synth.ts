@@ -305,8 +305,8 @@ class ModularSynth {
   private sustainedVoiceKeys: Set<string> = new Set();
   private velocityCurve: VelocityCurve = 'EXP';
 
-  // Master Global Params (100 BPM for Authentic Original NES Super Mario Bros Groove)
-  private bpm: number = 148;
+  // Master Global Params
+  private bpm: number = 90;
   private meter: TimeSignature = '4/4';
   private editNoteDiv: NoteDurationDiv = '1/8';
   private delayMix: number = 0.0;
@@ -532,17 +532,17 @@ class ModularSynth {
     return this.tracks;
   }
 
-  public loadBuiltInSong(songName: string = 'OVERWORLD') {
+  public loadBuiltInSong(songName: string = 'OVERWORLD_1') {
     this.stopAll();
-    if (songName === 'OVERWORLD') {
-      this.tracks = JSON.parse(JSON.stringify(OVERWORLD_TRACKS));
-      this.totalSteps = 672;
-      this.bpm = 148;
-      this.meter = '4/4';
-    } else if (songName === 'OVERWORLD_FULL') {
+    if (songName === 'OVERWORLD_1' || songName === 'OVERWORLD_FULL') {
       this.tracks = JSON.parse(JSON.stringify(OVERWORLD_FULL_TRACKS));
       this.totalSteps = 3360;
       this.bpm = 150;
+      this.meter = '4/4';
+    } else if (songName === 'OVERWORLD_2' || songName === 'OVERWORLD') {
+      this.tracks = JSON.parse(JSON.stringify(OVERWORLD_TRACKS));
+      this.totalSteps = 672;
+      this.bpm = 90;
       this.meter = '4/4';
     } else if (songName === 'UNDERWATER') {
       this.tracks = JSON.parse(JSON.stringify(UNDERWATER_TRACKS));
