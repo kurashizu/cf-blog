@@ -276,7 +276,7 @@ export const PIANO_ROLL_NOTES = [
   { note: 'A0', freq: 27.5, isBlack: false, oct: 0 },  // 87
 ];
 
-export const INITIAL_TRACKS: TrackData[] = OVERWORLD_TRACKS;
+export const INITIAL_TRACKS: TrackData[] = OVERWORLD_FULL_TRACKS;
 
 interface ActiveVoice {
   osc1?: OscillatorNode;
@@ -305,8 +305,8 @@ class ModularSynth {
   private sustainedVoiceKeys: Set<string> = new Set();
   private velocityCurve: VelocityCurve = 'EXP';
 
-  // Master Global Params
-  private bpm: number = 90;
+  // Master Global Params (Default: SUPER MARIO 3 - OVERWORLD 1, 150 BPM, 3360 steps)
+  private bpm: number = 150;
   private meter: TimeSignature = '4/4';
   private editNoteDiv: NoteDurationDiv = '1/8';
   private delayMix: number = 0.0;
@@ -341,10 +341,10 @@ class ModularSynth {
   private masterLimiterEnabled: boolean = true; // Brickwall Soft Peak Limiter
   private voiceStealingMode: 'oldest' | 'quietest' | 'lowest' = 'oldest';
 
-  // Sequencer Engine (512 Steps, 32 Bars)
+  // Sequencer Engine (Default 3360 steps for OVERWORLD 1)
   private isSequencerPlaying: boolean = false;
   private currentStep: number = 0;
-  private totalSteps: number = 672; // Default 512 steps (32 Bars), configurable: 16, 32, 64, 128, 256, 512
+  private totalSteps: number = 3360; // Default 3360 steps (105 Bars) for OVERWORLD 1
   private sequencerTimer: any = null;
   private onStepListeners: Set<(step: number) => void> = new Set();
   private onNoteListeners: Set<(trackId: number, noteIndex: number, noteName: string, durationMs: number) => void> = new Set();
