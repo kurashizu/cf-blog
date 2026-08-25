@@ -5,6 +5,19 @@ import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
 
 export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
 
+// ISO 226 / Fletcher-Munson Perceptual Equal Loudness Normalization Scale
+// Compares harmonic rich waveforms (Square/Saw) against pure fundamental tones (Sine/Triangle)
+export function getWaveformPerceptualScale(w: SynthWaveform): number {
+  switch (w) {
+    case 'sine': return 1.18;      // Pure sine fundamental boost (+1.4dB)
+    case 'triangle': return 1.05;  // Triangle mostly fundamental (+0.4dB)
+    case 'sawtooth': return 0.82;  // Sawtooth all harmonics (-1.7dB)
+    case 'square': return 0.74;    // Square odd harmonics concentrated in 2-4kHz (-2.6dB)
+    case 'noise': return 0.70;     // Full bandwidth noise (-3.1dB)
+    default: return 1.0;
+  }
+}
+
 export function getWaveformAbbr(w: SynthWaveform): string {
   switch (w) {
     case 'sawtooth': return 'SAW';
@@ -340,6 +353,7 @@ class ModularSynth {
   private latencyHintMode: 'interactive' | 'balanced' | 'playback' = 'balanced';
   private masterLimiterEnabled: boolean = true; // Brickwall Soft Peak Limiter
   private voiceStealingMode: 'oldest' | 'quietest' | 'lowest' = 'oldest';
+  private eqlCompensation: boolean = true; // Equal Loudness (ISO 226) Perceptual Waveform Normalization
 
   // Sequencer Engine (Default 3360 steps for OVERWORLD 1)
   private isSequencerPlaying: boolean = false;
@@ -518,6 +532,14 @@ class ModularSynth {
 
   public getEditNoteDiv(): NoteDurationDiv {
     return this.editNoteDiv;
+  }
+
+  public getEqlCompensation(): boolean {
+    return this.eqlCompensation;
+  }
+
+  public setEqlCompensation(enabled: boolean) {
+    this.eqlCompensation = enabled;
   }
 
   public setGranularity(g: NoteDurationDiv) {
@@ -983,8 +1005,10 @@ class ModularSynth {
 
       // Crossfade balance weighting (xfade: 0 = 100% OSC1, 0.5 = 50/50, 1.0 = 100% OSC2)
       const xf = track.xfade ?? 0.5;
-      const osc1Bal = Math.cos(xf * 0.5 * Math.PI) * Math.SQRT2;
-      const osc2Bal = Math.sin(xf * 0.5 * Math.PI) * Math.SQRT2;
+      const osc1Eql = this.eqlCompensation ? getWaveformPerceptualScale(track.osc1Waveform) : 1.0;
+      const osc2Eql = this.eqlCompensation ? getWaveformPerceptualScale(track.osc2Waveform) : 1.0;
+      const osc1Bal = Math.cos(xf * 0.5 * Math.PI) * Math.SQRT2 * osc1Eql;
+      const osc2Bal = Math.sin(xf * 0.5 * Math.PI) * Math.SQRT2 * osc2Eql;
 
       if (track.blendMode === 'fm' && osc1) {
         const fmGain = ctx.createGain();

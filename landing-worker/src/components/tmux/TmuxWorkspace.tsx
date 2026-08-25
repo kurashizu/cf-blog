@@ -687,6 +687,7 @@ export const TmuxWorkspace: React.FC = () => {
   const [noiseColorSetting, setNoiseColorSetting] = useState<'white' | 'pink' | 'brown'>(modularSynth.getNoiseColor());
   const [reverbDurationSetting, setReverbDurationSetting] = useState<number>(modularSynth.getReverbDuration());
   const [reverbDecaySetting, setReverbDecaySetting] = useState<number>(modularSynth.getReverbDecayRate());
+  const [eqlCompSetting, setEqlCompSetting] = useState<boolean>(modularSynth.getEqlCompensation());
   
   // Audio Hardware & Output Specs
   const [audioSampleRate] = useState<number>(soundEngine.getAudioSampleRate());
@@ -2907,8 +2908,28 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     {/* MODULE 1: DUAL OSCILLATORS (LEFT: OSC1 5-VERTICAL, CENTER: OSC2 5-VERTICAL, RIGHT: 4×2 KNOBS GRID 32px) */}
                     <div className="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[175px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
-                        <span>1. DUAL OSC</span>
-                        <span className="text-white/40 font-mono text-xs">──▼</span>
+                        <div className="flex items-center gap-1.5">
+                          <span>1. DUAL OSC</span>
+                          <button
+                            onClick={() => {
+                              const next = !eqlCompSetting;
+                              setEqlCompSetting(next);
+                              modularSynth.setEqlCompensation(next);
+                              playSound('click');
+                            }}
+                            title="Equal Loudness (ISO 226): Automatically balances perceptual loudness across Square, Saw, Triangle, and Sine waveforms"
+                            className={`px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border ${
+                              eqlCompSetting
+                                ? 'bg-[#98c379]/20 border-[#98c379]/60 text-[#98c379]'
+                                : 'bg-white/5 border-white/20 text-white/40 hover:text-white/70'
+                            }`}
+                          >
+                            EQL:{eqlCompSetting ? 'AUTO' : 'RAW'}
+                          </button>
+                        </div>
+                        <span className="text-white/40 flex items-center" title="Signal Flow: To Timbre Fusion">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto py-0.5">
@@ -3046,7 +3067,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>2. FUSION</span>
-                        <span className="text-white/40 font-mono text-xs">──▼</span>
+                        <span className="text-white/40 flex items-center" title="Signal Flow: To VCF Filter">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto py-0.5">
@@ -3120,7 +3143,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     <div className="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] lg:min-h-0 lg:h-full lg:overflow-hidden">
                       <div className="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
                         <span>3. VCF FILTER</span>
-                        <span className="text-white/40 font-mono text-xs">──▼</span>
+                        <span className="text-white/40 flex items-center" title="Signal Flow: To Envelopes & VCA">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto py-0.5">
@@ -3880,7 +3905,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                         </div>
                       </div>
-                      <span className="text-white/40 font-mono text-xs">──►</span>
+                      <span className="text-white/40 flex items-center" title="Signal Flow: To LFO & Dynamic Modulation">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </span>
                     </div>
 
                     {/* Left/Right Horizontal Split in 2 : 1 Ratio (Envelope Graph 2 parts : ADSR Faders 1 part) */}
@@ -3964,7 +3991,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                     {/* Header */}
                     <div className="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <span>5. LFO MOD</span>
-                      <span className="text-white/40 font-mono text-xs">──►</span>
+                      <span className="text-white/40 flex items-center" title="Signal Flow: To Master FX & EQ">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </span>
                     </div>
 
                     {/* Left/Right Horizontal Split in 1 : 2 Ratio (Left: col-span-4, Right: col-span-8) */}
@@ -4080,7 +4109,7 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
 
                   {/* MODULE 6: MASTER FX & PARAMETRIC EQ (HEADER: 6. FX [MAIN][EQ] ──►, EQ PANEL: [ON/OFF] + 3 FADERS WITH FREQ INPUTS) */}
                   <div className="lg:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between h-full min-h-0 overflow-hidden">
-                    {/* Header: Consistent 6. FX Title + Subtab Pill Buttons + Consistent ──► Arrow */}
+                    {/* Header: Consistent 6. FX Title + Subtab Pill Buttons */}
                     <div className="flex justify-between items-center font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[#e06c75] font-black">6. FX</span>
@@ -4109,7 +4138,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                           </button>
                         </div>
                       </div>
-                      <span className="text-white/40 font-mono text-xs">──►</span>
+                      <span className="text-white/40 flex items-center" title="Signal Flow: To Master Output & Visualizers">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </span>
                     </div>
 
                     {activeFxTab === 'fx' ? (
