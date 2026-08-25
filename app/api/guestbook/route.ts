@@ -112,7 +112,12 @@ export async function POST(request: NextRequest) {
             email: email?.trim(),
         });
 
-        return NextResponse.json({ message }, { status: 201, headers: CORS_HEADERS });
+        // Never echo the email back — the public GET omits it too.
+        const { email: _omitted, ...publicMessage } = message;
+        return NextResponse.json(
+            { message: publicMessage },
+            { status: 201, headers: CORS_HEADERS },
+        );
     } catch (error) {
         console.error("Guestbook POST error:", error);
         return NextResponse.json(

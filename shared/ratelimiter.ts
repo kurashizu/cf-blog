@@ -23,7 +23,11 @@ export interface RateLimitError {
     resetAt?: string;
 }
 
-/** Hash IP to a compact string for KV key privacy. */
+/**
+ * Hash IP to a compact string for KV keys. Non-cryptographic (32-bit,
+ * collision-prone, trivially brute-forceable over IPv4) — this keeps raw
+ * IPs out of KV keys but is NOT a privacy or anonymisation guarantee.
+ */
 export function hashIP(ip: string): string {
     let h = 0;
     for (let i = 0; i < ip.length; i++) {
@@ -64,6 +68,10 @@ export async function checkBurst(
  * KV-based daily rate limit check.
  * Key format: `ratelimit:daily:{endpoint}:{ipHash}:{YYYY-MM-DD}`
  * TTL: 86400s (24h) — auto-expires after midnight.
+ *
+ * The read-increment-write is not atomic (KV has no CAS), so concurrent
+ * requests can undercount. Acceptable here: the CF Rate Limiter burst check
+ * runs first and caps how many requests can race at once.
  */
 export async function checkDailyKV(
     kv: KVNamespace | undefined,

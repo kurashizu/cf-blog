@@ -11,7 +11,7 @@ A personal blog + AI agent deployed to Cloudflare Workers. The homepage has a re
 - **Visitor Terminal** — Typewriter effect showing your IP/location/ISP at the top of the hero
 - **KurAgent** — AI assistant with tool calling (web search, time, JS eval) at `agent.krsz.in`
 - **LLM Leaderboard** — Full-screen modal showing top 50 models from Artificial Analysis (V2 Free endpoint, refreshed at most every 2 h to respect the 100 req/day quota)
-- **Guestbook** — Per-visitor message at `/guestbook`
+- **Guestbook** — Visitor messages on the homepage (flow layout + modal)
 - **News Archive** — Paginated HN news index at `/news` with full-text AI rewrites
 - **Particle Background** — Canvas character rain (ku/ra/shi/zu)
 - **Three Themes** — dark / deep-blue / deep-green, toggle in the header

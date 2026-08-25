@@ -28,13 +28,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(result);
     } catch (e) {
         console.error("Search error:", e);
-        const status = e instanceof RateLimitError ? 429 : 500;
+        // Rate-limit errors carry a user-facing message; anything else stays
+        // server-side to avoid leaking internals.
+        if (e instanceof RateLimitError) {
+            return NextResponse.json(
+                { error: e.message, results: [] },
+                { status: 429 },
+            );
+        }
         return NextResponse.json(
-            {
-                error: e instanceof Error ? e.message : String(e),
-                results: [],
-            },
-            { status },
+            { error: "Search failed", results: [] },
+            { status: 500 },
         );
     }
 }

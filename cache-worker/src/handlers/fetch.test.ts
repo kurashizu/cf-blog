@@ -87,19 +87,16 @@ describe("handleFetch — /__refresh", () => {
         expect(refreshMock).not.toHaveBeenCalled();
     });
 
-    it("treats an empty CRON_SECRET as a fully public endpoint", async () => {
-        // With no secret configured the handler must accept any caller but
-        // refuse the force flag, since the force flag would otherwise let
-        // anonymous callers burn the AA quota. This documents today's
-        // behaviour: refreshCache is callable, but forceLLM is always false.
+    it("fails closed when CRON_SECRET is not configured", async () => {
+        // A missing/empty secret must never mean "public endpoint" — that
+        // would let anyone trigger refreshes and burn upstream quotas the
+        // moment the secret is dropped during a migration.
         const res = await handleFetch(
             buildRequest("https://x.test/__refresh?force=1", "POST", null),
             buildEnv({ CRON_SECRET: "" }) as never,
         );
-        expect(res.status).toBe(200);
-        expect(refreshMock).toHaveBeenCalledWith(expect.anything(), {
-            forceLLM: false,
-        });
+        expect(res.status).toBe(401);
+        expect(refreshMock).not.toHaveBeenCalled();
     });
 
     it("returns a 200 with a summary even when refresh throws", async () => {

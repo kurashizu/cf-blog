@@ -37,7 +37,7 @@ export async function GET(
 
         const row = await cfEnv.DB.prepare(
             `SELECT slug, title, excerpt, content, tags, published_at
-             FROM posts WHERE id = ?`,
+             FROM posts WHERE id = ? AND status = 'published'`,
         )
             .bind(slug)
             .first<{
@@ -83,7 +83,7 @@ export async function GET(
     } catch (e) {
         console.error("Article API error:", e);
         return NextResponse.json(
-            { error: e instanceof Error ? e.message : String(e) },
+            { error: "Internal error" },
             { status: 500 },
         );
     }

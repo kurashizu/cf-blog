@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVisitorInfo } from "@/lib/visitor";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { getVisitorInfo, type VisitorGeo } from "@/lib/visitor";
 
 /**
  * Returns geolocation and device info for the calling visitor.
  *
- * Called from the client (VisitorTerminal's useEffect) AFTER the home page has
- * finished loading. This is intentionally NOT called during SSR — it would
- * block the first byte behind a third-party API call (ip-api.com, 3 s
- * timeout) and would force the page into dynamic rendering.
+ * Called from the client (VisitorTerminal's useEffect) AFTER the home page
+ * has finished loading. This is intentionally NOT called during SSR — it
+ * would force the page into dynamic rendering.
  *
- * Browser cache: 1 hour. Each visitor triggers at most one ip-api.com call
- * per hour, regardless of how many times they reload the page. Different
- * visitors each get their own cache entry, so cache hits don't leak data.
+ * Geo data comes from Cloudflare's `request.cf` properties, resolved at the
+ * edge — no third-party lookup, no visitor IP leaves our infrastructure.
+ * In local dev `cf` is undefined and geo fields come back empty.
  *
- * Response body is `{ visitorInfo }` with geo fields, device fields, and
- * logoFile (the filename to fetch from /fastfetch-logos/).
+ * Browser cache: 1 hour, private — each visitor caches only their own info.
  */
 const BROWSER_CACHE_SECONDS = 3600;
 
@@ -26,7 +25,8 @@ export async function GET(request: NextRequest) {
         "";
 
     const ua = request.headers.get("user-agent") ?? "";
-    const visitorInfo = await getVisitorInfo(ip, ua);
+    const { cf } = getCloudflareContext();
+    const visitorInfo = getVisitorInfo(ip, ua, cf as VisitorGeo | undefined);
 
     return NextResponse.json(
         { visitorInfo },

@@ -15,8 +15,21 @@ export interface VisitorInfo {
     logoFile: string;
 }
 
-const FIELDS = "status,country,countryCode,regionName,city,timezone,isp,query";
-const API_BASE = "http://ip-api.com/json";
+/**
+ * Geo fields sourced from Cloudflare's `request.cf` properties. Cloudflare
+ * resolves these at the edge for every request, so no visitor data ever
+ * leaves our infrastructure (previously this module sent visitor IPs to
+ * ip-api.com over plain HTTP).
+ */
+export interface VisitorGeo {
+    /** ISO 3166-1 alpha-2, e.g. "DE" */
+    country?: string;
+    city?: string;
+    region?: string;
+    timezone?: string;
+    /** Autonomous-system organisation, e.g. "Deutsche Telekom AG" */
+    asOrganization?: string;
+}
 
 /**
  * Determine the fastfetch small logo filename based on the detected OS.
@@ -77,69 +90,43 @@ function parseUA(ua: string): {
     return { browser, os, deviceType, deviceName };
 }
 
+/** "DE" → "Germany"; falls back to the code itself. */
+function countryName(code: string): string {
+    if (!code) return "";
+    try {
+        return (
+            new Intl.DisplayNames(["en"], { type: "region" }).of(code) ?? code
+        );
+    } catch {
+        return code;
+    }
+}
+
 /**
- * Look up geolocation for the given IP via ip-api.com's free JSON endpoint,
- * and parse the User-Agent string for device info.
- *
- * - HTTP only (HTTPS is a paid tier); Cloudflare Workers can call it directly.
- * - 45 req/min per source IP — for a personal blog this is plenty.
- * - Private/reserved/invalid IPs return empty geo fields rather than null.
+ * Build visitor info from Cloudflare's edge-resolved geo data (`request.cf`)
+ * and the User-Agent string. `geo` is undefined in local dev (`next dev`
+ * without the CF proxy) — all geo fields then stay empty, same as the old
+ * lookup-failure path.
  */
-export async function getVisitorInfo(
+export function getVisitorInfo(
     ip: string,
     ua?: string,
-): Promise<VisitorInfo> {
-    let country = "";
-    let countryCode = "";
-    let region = "";
-    let city = "";
-    let timezone = "";
-    let isp = "";
-
-    if (ip) {
-        try {
-            const url = `${API_BASE}/${encodeURIComponent(ip)}?fields=${FIELDS}`;
-            const res = await fetch(url, {
-                signal: AbortSignal.timeout(3000),
-            });
-            if (res.ok) {
-                const data = (await res.json()) as {
-                    status?: string;
-                    country?: string;
-                    countryCode?: string;
-                    regionName?: string;
-                    city?: string;
-                    timezone?: string;
-                    isp?: string;
-                    query?: string;
-                };
-                if (data.status === "success") {
-                    ip = data.query ?? ip;
-                    country = data.country ?? "";
-                    countryCode = data.countryCode ?? "";
-                    region = data.regionName ?? "";
-                    city = data.city ?? "";
-                    timezone = data.timezone ?? "";
-                    isp = data.isp ?? "";
-                }
-            }
-        } catch {
-            // geo lookup failed — continue with empty fields
-        }
-    }
-
+    geo?: VisitorGeo,
+): VisitorInfo {
     const device = ua
         ? parseUA(ua)
         : { browser: "", os: "", deviceType: "", deviceName: "" };
 
+    const countryCode = geo?.country ?? "";
+
     return {
         ip,
-        country,
+        country: countryName(countryCode),
         countryCode,
-        region,
-        city,
-        timezone,
-        isp,
+        region: geo?.region ?? "",
+        city: geo?.city ?? "",
+        timezone: geo?.timezone ?? "",
+        isp: geo?.asOrganization ?? "",
         ...device,
         logoFile: getLogoFilename(device.os),
     };

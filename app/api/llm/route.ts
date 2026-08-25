@@ -10,7 +10,6 @@ import {
     callWithFallback,
     streamWithFallback,
     getModelPool,
-    getDefaultModel,
 } from "@/lib/model-pool";
 import type { BlogEnv } from "@/lib/types/env";
 
@@ -56,12 +55,16 @@ function sanitizeMessage(msg: GeminiMessage): GeminiMessage {
     };
 }
 
+/**
+ * Clamp user-supplied generation options. The model is deliberately NOT
+ * taken from the request — which models run (and on whose quota) is decided
+ * solely by the server-side pool (GEMINI_MODELS).
+ */
 function sanitizeOptions(
     options?: GeminiGenerateOptions,
 ): GeminiGenerateOptions | undefined {
     if (!options) return undefined;
     return {
-        model: options.model || "gemini-2.5-flash-lite",
         temperature:
             typeof options.temperature === "number"
                 ? Math.min(Math.max(options.temperature, 0), MAX_TEMPERATURE)
@@ -142,7 +145,6 @@ export async function POST(request: NextRequest) {
 
         const sanitizedOptions = sanitizeOptions(options);
         const modelPool = getModelPool(env);
-        const defaultModel = getDefaultModel(env);
 
         // Gemma 4 26B/31B is unstable in single-turn conversations — without
         // any prior turns the model often emits only a thought part and no
@@ -173,10 +175,7 @@ export async function POST(request: NextRequest) {
                 env.GEMINI_API_KEY,
                 modelPool,
                 contents,
-                {
-                    ...sanitizedOptions,
-                    model: sanitizedOptions?.model || defaultModel,
-                },
+                sanitizedOptions,
                 env.SESSION_KV,
                 SYSTEM_PROMPT,
             );
@@ -186,11 +185,13 @@ export async function POST(request: NextRequest) {
                     .clone()
                     .json()
                     .catch(() => ({}));
+                console.error(
+                    `Gemini stream error ${streamResp.status}:`,
+                    JSON.stringify(errBody),
+                );
                 return NextResponse.json(
-                    {
-                        error: `Gemini API error ${streamResp.status}: ${JSON.stringify(errBody)}`,
-                    },
-                    { status: 500 },
+                    { error: "Upstream LLM error" },
+                    { status: 502 },
                 );
             }
 
@@ -275,10 +276,7 @@ export async function POST(request: NextRequest) {
             env.GEMINI_API_KEY,
             modelPool,
             contents,
-            {
-                ...sanitizedOptions,
-                model: sanitizedOptions?.model || defaultModel,
-            },
+            sanitizedOptions,
             env.SESSION_KV,
             SYSTEM_PROMPT,
         );
@@ -288,11 +286,13 @@ export async function POST(request: NextRequest) {
                 .clone()
                 .json()
                 .catch(() => ({}));
+            console.error(
+                `Gemini API error ${resp.status}:`,
+                JSON.stringify(errBody),
+            );
             return NextResponse.json(
-                {
-                    error: `Gemini API error ${resp.status}: ${JSON.stringify(errBody)}`,
-                },
-                { status: 500 },
+                { error: "Upstream LLM error" },
+                { status: 502 },
             );
         }
 
@@ -321,7 +321,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("LLM route error:", error);
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Unknown error" },
+            { error: "Internal error" },
             { status: 500 },
         );
     }

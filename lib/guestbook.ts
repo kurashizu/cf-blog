@@ -37,11 +37,16 @@ function rowToMessage(row: {
 
 export function createGuestbookRepo() {
     return {
+        /**
+         * Public listing — deliberately does NOT select `email`. Emails are
+         * PII collected for the admin's eyes only; the public GET endpoint
+         * returns this result verbatim.
+         */
         async getAll(): Promise<GuestbookMessage[]> {
             const db = getDB();
             const result = await db
                 .prepare(
-                    `SELECT id, name, content, email, timestamp, avatar,
+                    `SELECT id, name, content, timestamp, avatar,
                             avatar_index AS avatarIndex, approved
                      FROM guestbook_messages
                      WHERE approved = 1
@@ -52,13 +57,12 @@ export function createGuestbookRepo() {
                 id: string;
                 name: string;
                 content: string;
-                email: string | null;
                 timestamp: string;
                 avatar: string | null;
                 avatarIndex: number | null;
                 approved: number;
             }[];
-            return rows.map(rowToMessage);
+            return rows.map((row) => rowToMessage({ ...row, email: null }));
         },
 
         async getAllForAdmin(): Promise<GuestbookMessage[]> {
