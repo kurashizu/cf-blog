@@ -35,10 +35,14 @@ function formatDate(dateStr: string): string {
     if (!dateStr) return "";
     try {
         const d = new Date(dateStr);
+        // timeZone pinned: YYYY-MM-DD parses as UTC midnight, so a local
+        // zone west of UTC would show the previous day on the client and
+        // mismatch the server-rendered HTML.
         return d.toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
             day: "numeric",
+            timeZone: "UTC",
         });
     } catch {
         return dateStr;

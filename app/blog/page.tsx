@@ -107,11 +107,18 @@ export default async function BlogPage({
             .first(),
     ]);
 
-    const posts = ((rows.results ?? []) as unknown as Post[]).map((p) => ({
-        ...p,
-        tags:
-            typeof p.tags === "string" ? JSON.parse(p.tags as string) : p.tags,
-    }));
+    const posts = ((rows.results ?? []) as unknown as Post[]).map((p) => {
+        // One malformed tags row must not 500 the whole index.
+        let tags = p.tags;
+        if (typeof tags === "string") {
+            try {
+                tags = JSON.parse(tags);
+            } catch {
+                tags = [];
+            }
+        }
+        return { ...p, tags: Array.isArray(tags) ? tags : [] };
+    });
     const total = (countRow?.total as number) ?? 0;
     const totalPages = Math.ceil(total / LIMIT);
 

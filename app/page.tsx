@@ -146,7 +146,10 @@ function langAbbr(name: string): string {
 function LanguageBadge({ languagesJson }: { languagesJson: string }) {
     let langs: RepoLanguage[] = [];
     try {
-        langs = JSON.parse(languagesJson);
+        const parsed: unknown = JSON.parse(languagesJson);
+        // Guard the shape, not just the parse — "null" or "{}" parse fine
+        // but would crash .length/.map below.
+        if (Array.isArray(parsed)) langs = parsed as RepoLanguage[];
     } catch {
         /* ignore */
     }
@@ -259,9 +262,8 @@ export default async function HomePage() {
         ]);
 
     // Visitor geolocation is fetched client-side from /api/visitor-info
-    // after the page loads (see HeroHeader). Doing it here in SSR used to
-    // block the first byte on a third-party API (ip-api.com, 3 s timeout)
-    // and force the whole page into dynamic rendering.
+    // after the page loads (see HeroHeader). Doing it here in SSR would
+    // force the whole page into dynamic rendering.
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 md:py-12">

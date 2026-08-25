@@ -23,10 +23,15 @@ export default async function NewsDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
+    // A non-numeric slug would bind NaN, which D1 rejects with a throw —
+    // 404 it before it ever reaches the query.
+    const numericId = parseInt(id, 10);
+    if (!Number.isFinite(numericId)) notFound();
+
     const db = getDB();
     const row = await db
         .prepare("SELECT * FROM news_items WHERE id = ?")
-        .bind(parseInt(id, 10))
+        .bind(numericId)
         .first();
 
     if (!row) notFound();

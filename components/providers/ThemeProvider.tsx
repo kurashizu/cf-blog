@@ -26,37 +26,53 @@ function getThemeByHour(): Theme {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("deep-green");
   const [mounted, setMounted] = useState(false);
+  // null = auto mode (follow the clock); a Theme = the user's explicit pick.
+  // Only toggleTheme writes to localStorage, so auto-rotation never turns
+  // into a phantom "stored preference".
+  const [userTheme, setUserTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    if (stored === "dark" || stored === "deep-blue" || stored === "deep-green") {
-      setTheme(stored);
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      /* storage unavailable — stay in auto mode */
     }
-    setTheme(getThemeByHour());
+    if (stored === "dark" || stored === "deep-blue" || stored === "deep-green") {
+      setUserTheme(stored);
+      setTheme(stored);
+    } else {
+      setTheme(getThemeByHour());
+    }
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(STORAGE_KEY, theme);
     window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
   }, [theme, mounted]);
 
+  // Auto-rotate by hour only while the user hasn't picked a theme —
+  // otherwise the interval would silently revert their choice.
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || userTheme) return;
     const id = setInterval(() => {
       setTheme(getThemeByHour());
     }, 60_000);
     return () => clearInterval(id);
-  }, [mounted]);
+  }, [mounted, userTheme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => {
-      if (prev === "dark") return "deep-blue";
-      if (prev === "deep-blue") return "deep-green";
-      return "dark";
-    });
+    const next: Theme =
+      theme === "dark" ? "deep-blue" : theme === "deep-blue" ? "deep-green" : "dark";
+    setUserTheme(next);
+    setTheme(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* storage unavailable — the pick still applies for this session */
+    }
   };
 
   return (

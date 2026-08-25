@@ -17,6 +17,13 @@ html {
     scroll-behavior: smooth;
 }
 
+/* KaTeX display math has no overflow container of its own — without this a
+   long equation is clipped by the root overflow-x:hidden and unreachable. */
+.katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
 body {
     background-color: var(--bg-primary);
     color: var(--text-primary);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import type { Rom } from "./types";
 import { LOCAL_ROMS, REMOTE_ROMS } from "./roms";
 
@@ -20,7 +20,10 @@ function formatSize(bytes?: number): string {
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
-export function NESRomPicker({
+// memo: NESPanel re-renders on every key press/release edge — the ROM list
+// (the panel's biggest subtree) only depends on these props, which are
+// stable during gameplay.
+export const NESRomPicker = memo(function NESRomPicker({
     currentRomId,
     onSelectBuiltIn,
     onSelectFile,
@@ -93,7 +96,7 @@ export function NESRomPicker({
             </label>
         </div>
     );
-}
+});
 
 function RomSection({
     label,

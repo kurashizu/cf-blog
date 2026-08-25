@@ -160,7 +160,32 @@ export function VisitorTerminal() {
         return () => clearInterval(interval);
     }, [entries]);
 
-    const visible = entries.slice(0, revealed);
+    // Group consecutive same-color chars into runs. Rendering one <span> per
+    // character meant ~350 spans reconciled on every 10ms typewriter tick;
+    // runs cut that to a few dozen nodes. Inside <pre>, newlines and spaces
+    // render natively — no <br>/&nbsp; needed.
+    const runs = useMemo(() => {
+        const out: { css: string; text: string }[] = [];
+        for (const e of entries) {
+            const last = out[out.length - 1];
+            if (last && last.css === e.css) last.text += e.ch;
+            else out.push({ css: e.css, text: e.ch });
+        }
+        return out;
+    }, [entries]);
+
+    const visibleRuns: React.ReactNode[] = [];
+    let remaining = revealed;
+    for (let i = 0; i < runs.length && remaining > 0; i++) {
+        const run = runs[i];
+        const take = Math.min(run.text.length, remaining);
+        visibleRuns.push(
+            <span key={i} className={run.css || undefined}>
+                {take === run.text.length ? run.text : run.text.slice(0, take)}
+            </span>,
+        );
+        remaining -= take;
+    }
 
     return (
         <div
@@ -178,20 +203,7 @@ export function VisitorTerminal() {
             >
                 <pre>
                     <code>
-                        {visible.map((e, i) => {
-                            if (e.ch === "\n") return <br key={i} />;
-                            if (e.ch === " ")
-                                return (
-                                    <span key={i} className={e.css}>
-                                        &nbsp;
-                                    </span>
-                                );
-                            return (
-                                <span key={i} className={e.css}>
-                                    {e.ch}
-                                </span>
-                            );
-                        })}
+                        {visibleRuns}
                         {entries.length > 0 && !done && (
                             <span className="terminal-cursor" />
                         )}

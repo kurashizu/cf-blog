@@ -23,7 +23,12 @@ export function loadSessions(): SessionMeta[] {
 }
 
 export function saveSessions(sessions: SessionMeta[]): void {
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+    try {
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+    } catch {
+        // QuotaExceededError / private-mode write block — losing persistence
+        // must not crash the agent panel mid-conversation.
+    }
 }
 
 export function loadMessages(sessionId: string): Message[] {
@@ -38,22 +43,38 @@ export function loadMessages(sessionId: string): Message[] {
 }
 
 export function saveMessages(sessionId: string, messages: Message[]): void {
-    localStorage.setItem(
-        `agent_messages:${sessionId}`,
-        JSON.stringify(messages),
-    );
+    try {
+        localStorage.setItem(
+            `agent_messages:${sessionId}`,
+            JSON.stringify(messages),
+        );
+    } catch {
+        // See saveSessions — never throw from the persistence layer.
+    }
 }
 
 export function deleteStoredMessages(sessionId: string): void {
-    localStorage.removeItem(`agent_messages:${sessionId}`);
+    try {
+        localStorage.removeItem(`agent_messages:${sessionId}`);
+    } catch {
+        /* ignore */
+    }
 }
 
 export function getActiveSessionId(): string {
-    return localStorage.getItem(ACTIVE_KEY) ?? "";
+    try {
+        return localStorage.getItem(ACTIVE_KEY) ?? "";
+    } catch {
+        return "";
+    }
 }
 
 export function setActiveSessionId(id: string): void {
-    localStorage.setItem(ACTIVE_KEY, id);
+    try {
+        localStorage.setItem(ACTIVE_KEY, id);
+    } catch {
+        /* ignore */
+    }
 }
 
 export { MAX_SESSIONS };

@@ -79,7 +79,11 @@ export function buildHeatmap(
     cellSize: number = HEATMAP_CELL_SIZE,
     cellGap: number = HEATMAP_CELL_GAP,
 ): HeatmapView {
-    const sorted = [...cache.days].sort((a, b) => a.date.localeCompare(b.date));
+    // The cache entry is raw JSON from D1 — a partial cache-worker write can
+    // miss `days`, and this runs during client render where a throw blanks
+    // the whole page.
+    const allDays = Array.isArray(cache?.days) ? cache.days : [];
+    const sorted = [...allDays].sort((a, b) => a.date.localeCompare(b.date));
 
     if (sorted.length === 0) {
         return emptyView();
@@ -112,7 +116,7 @@ export function buildHeatmap(
     const dayLabels: { row: number; label: string }[] = [];
 
     const totalLast90 = slice.reduce((sum, d) => sum + d.count, 0);
-    const totalLast365 = cache.days.reduce((sum, d) => sum + d.count, 0);
+    const totalLast365 = allDays.reduce((sum, d) => sum + d.count, 0);
 
     let streak = 0;
     for (let i = slice.length - 1; i >= 0; i--) {

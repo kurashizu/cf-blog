@@ -8,9 +8,11 @@ function formatVersion(): string {
     return `${day}.${month}.${year}`;
 }
 
-const VERSION = process.env.NEXT_PUBLIC_VERSION || formatVersion();
-
 export function Footer() {
+    // Computed per render, not at module scope — a module-level value
+    // freezes at isolate start and drifts between concurrently-live
+    // isolates.
+    const version = process.env.NEXT_PUBLIC_VERSION || formatVersion();
     return (
         <footer className="site-footer mt-auto">
             <div className="max-w-4xl mx-auto px-6 py-8">
@@ -55,7 +57,7 @@ export function Footer() {
                         </span>
                         <span className="text-xs text-text-muted/50">·</span>
                         <span className="text-xs text-text-muted">
-                            {VERSION}
+                            {version}
                         </span>
                     </div>
                 </div>

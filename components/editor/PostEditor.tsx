@@ -1,16 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { marked } from "marked";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { adminApi } from "@/lib/api";
-
-function markdownToHtml(md: string): string {
-    if (!md) return "";
-    const result = marked.parse(md, { gfm: true, breaks: true });
-    return typeof result === "string" ? result : "";
-}
+import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
 
 interface PostData {
     title: string;
@@ -46,23 +40,12 @@ export function PostEditor({
     const [externalUrl, setExternalUrl] = useState(initialData?.externalUrl || "");
     const [description, setDescription] = useState(initialData?.description || "");
     const [content, setContent] = useState(initialData?.content || "");
-    const [preview, setPreview] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [message, setMessage] = useState<{
         type: "success" | "error";
         text: string;
     } | null>(null);
-
-    // Update preview when content changes
-    useEffect(() => {
-        if (content) {
-            const html = markdownToHtml(content);
-            setPreview(html);
-        } else {
-            setPreview("");
-        }
-    }, [content]);
 
     // Auto-generate slug from title
     useEffect(() => {
@@ -94,6 +77,7 @@ export function PostEditor({
 
         if (onSubmit) {
             onSubmit(postData);
+            setIsSubmitting(false);
             return;
         }
 
@@ -366,13 +350,13 @@ export function PostEditor({
                             Preview
                         </div>
                         <div className="flex-1 overflow-auto p-4 bg-bg-primary">
-                            {preview ? (
-                                <div
-                                    className="text-[0.9375rem] leading-relaxed text-text-secondary"
-                                    dangerouslySetInnerHTML={{
-                                        __html: preview,
-                                    }}
-                                />
+                            {content ? (
+                                // Same renderer as the public blog page —
+                                // WYSIWYG preview, and no unsanitized HTML
+                                // injection (marked does not sanitize).
+                                <MarkdownRenderer className="text-[0.9375rem] leading-relaxed text-text-secondary">
+                                    {content}
+                                </MarkdownRenderer>
                             ) : (
                                 <p className="text-text-muted">
                                     Start typing to see preview...

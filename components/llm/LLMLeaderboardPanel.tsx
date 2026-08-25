@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { useModalLock } from "@/components/hooks/useModalLock";
 
 export interface LLMModel {
     name: string;
@@ -200,8 +201,8 @@ export function LLMLeaderboardPanel({
         const counts = new Map<string, number>();
         models.forEach((m) =>
             counts.set(
-                m.model_creator.name,
-                (counts.get(m.model_creator.name) ?? 0) + 1,
+                (m.model_creator?.name ?? "Unknown"),
+                (counts.get((m.model_creator?.name ?? "Unknown")) ?? 0) + 1,
             ),
         );
         const sorted = Array.from(counts.entries())
@@ -217,14 +218,14 @@ export function LLMLeaderboardPanel({
     const filtered = useMemo(() => {
         let arr: LLMModel[] = models;
         if (creator !== "All") {
-            arr = arr.filter((m) => m.model_creator.name === creator);
+            arr = arr.filter((m) => (m.model_creator?.name ?? "Unknown") === creator);
         }
         if (query.trim()) {
             const q = query.trim().toLowerCase();
             arr = arr.filter(
                 (m) =>
                     m.name.toLowerCase().includes(q) ||
-                    m.model_creator.name.toLowerCase().includes(q) ||
+                    (m.model_creator?.name ?? "Unknown").toLowerCase().includes(q) ||
                     m.slug.toLowerCase().includes(q),
             );
         }
@@ -243,7 +244,29 @@ export function LLMLeaderboardPanel({
     const top = filtered.slice(0, 50);
     const hasFilters = creator !== "All" || query.trim() !== "";
 
-    // ESC: close detail first, then main modal.
+    const handleClose = useCallback(() => {
+        if (closingExpanded) return;
+        setClosingExpanded(true);
+        setTimeout(() => {
+            setClosingExpanded(false);
+            onCollapse?.();
+        }, 200);
+    }, [closingExpanded, onCollapse]);
+    const handleCloseDetail = useCallback(() => {
+        if (closingDetail) return;
+        setClosingDetail(true);
+        setTimeout(() => {
+            setClosingDetail(false);
+            setSelectedModel(null);
+        }, 200);
+    }, [closingDetail]);
+
+    // Body scroll lock + pause the background effects while open.
+    useModalLock(expanded);
+
+    // ESC: close detail first, then main modal. The close handlers are in
+    // the deps so the listener always sees the current re-entrancy guards
+    // (a stale `closing*` let a double-ESC queue two close chains).
     useEffect(() => {
         if (!expanded) return;
         const handler = (e: KeyboardEvent) => {
@@ -254,7 +277,7 @@ export function LLMLeaderboardPanel({
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [expanded, onCollapse, selectedModel]);
+    }, [expanded, selectedModel, handleClose, handleCloseDetail]);
 
     // Clear selected model when the main panel is closed so it doesn't reappear on reopen.
     useEffect(() => {
@@ -270,22 +293,6 @@ export function LLMLeaderboardPanel({
         }
     };
 
-    const handleClose = () => {
-        if (closingExpanded) return;
-        setClosingExpanded(true);
-        setTimeout(() => {
-            setClosingExpanded(false);
-            onCollapse?.();
-        }, 200);
-    };
-    const handleCloseDetail = () => {
-        if (closingDetail) return;
-        setClosingDetail(true);
-        setTimeout(() => {
-            setClosingDetail(false);
-            setSelectedModel(null);
-        }, 200);
-    };
     const clearFilters = () => {
         setQuery("");
         setCreator("All");
@@ -517,7 +524,7 @@ export function LLMLeaderboardPanel({
                             )}
 
                             {/* Table */}
-                            <div className="flex-1 overflow-y-auto">
+                            <div className="flex-1 overflow-y-auto overflow-x-auto">
                                 {models.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-48 text-text-muted text-sm gap-2">
                                         <span>No data yet.</span>
@@ -643,7 +650,7 @@ export function LLMLeaderboardPanel({
                                                         {m.name}
                                                     </td>
                                                     <td className="py-2.5 px-4 text-text-muted text-xs truncate max-w-[140px] hidden md:table-cell">
-                                                        {m.model_creator.name}
+                                                        {(m.model_creator?.name ?? "Unknown")}
                                                     </td>
                                                     <td className="py-2.5 px-4 text-right text-accent font-mono">
                                                         {fmtScore(
@@ -728,7 +735,7 @@ export function LLMLeaderboardPanel({
                                     </h3>
                                     <p className="text-xs text-text-muted mt-1 flex flex-wrap items-center gap-x-2">
                                         <span>
-                                            {selectedModel.model_creator.name}
+                                            {selectedModel.model_creator?.name ?? "Unknown"}
                                         </span>
                                         <span>·</span>
                                         <span className="font-mono">

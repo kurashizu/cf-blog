@@ -12,6 +12,9 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Format a date string for display.
  * Returns "" instead of "Invalid Date" when the input is empty or unparseable.
+ * Pinned to UTC: dates are stored as YYYY-MM-DD (parsed as UTC midnight), so
+ * formatting in the viewer's zone would render a different day on server vs
+ * client → hydration mismatch.
  */
 export function formatDate(date: string | Date): string {
     if (!date) return "";
@@ -21,6 +24,7 @@ export function formatDate(date: string | Date): string {
         year: "numeric",
         month: "short",
         day: "numeric",
+        timeZone: "UTC",
     });
 }
 

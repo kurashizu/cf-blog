@@ -11,6 +11,15 @@ interface MarkdownRendererProps {
 }
 
 const components: Components = {
+    // GFM tables get no overflow container from the typography plugin — on
+    // mobile a wide table would be clipped by the page's overflow-x:hidden.
+    table({ children, ...props }) {
+        return (
+            <div className="overflow-x-auto">
+                <table {...props}>{children}</table>
+            </div>
+        );
+    },
     code({ className, children, ...props }) {
         const match = /language-mermaid/.exec(className || "");
         if (match) {

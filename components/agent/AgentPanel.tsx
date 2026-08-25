@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useModalLock } from "@/components/hooks/useModalLock";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ALL_THEME_PREFIXES, THEME_PREFIX } from "./config";
 import { useAgentSession } from "./hooks/useAgentSession";
@@ -33,7 +34,7 @@ export function AgentPanel({
 
     const [closing, setClosing] = useState(false);
 
-    const handleCollapse = () => {
+    const handleCollapse = useCallback(() => {
         if (closing) return;
         setClosing(true);
         setTimeout(() => {
@@ -41,7 +42,7 @@ export function AgentPanel({
             if (onCollapse) onCollapse();
             else setInternalExpanded(false);
         }, CLOSE_ANIM_MS);
-    };
+    }, [closing, onCollapse]);
 
     const handleExpand = () => {
         if (onExpand) onExpand();
@@ -57,8 +58,10 @@ export function AgentPanel({
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [expanded]);
+    }, [expanded, handleCollapse]);
+
+    // Body scroll lock + pause the background effects while open.
+    useModalLock(expanded);
 
     // Session + message state.
     const session = useAgentSession();

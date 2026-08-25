@@ -9,6 +9,7 @@ import { NESRomPicker } from "./NESRomPicker";
 import type { Rom, LoadStatus } from "./types";
 import "@/components/nes/nes.css";
 import { findRom } from "./roms";
+import { useModalLock } from "@/components/hooks/useModalLock";
 
 interface NESPanelProps {
     /** Whether the modal is open. Fully controlled — see GadgetsPanel. */
@@ -54,6 +55,70 @@ const DEFAULT_ROM_ID: string | null = "nova";
 
 type SlotEntry = { ts: number } | null;
 
+// Static help table, hoisted to module scope: the panel re-renders on every
+// key press/release edge (pressedButtons), and rebuilding this subtree each
+// time was wasted work on the emulator's critical path.
+const CONTROLS_HELP = (
+    <div className="nes-picker" style={{ marginTop: 16 }}>
+        <h3 className="nes-picker-title">Controls</h3>
+        <div className="nes-controls-help">
+            <div className="nes-controls-help-row">
+                <span className="nes-controls-help-action">D-Pad</span>
+                <span className="nes-controls-help-keys">
+                    <kbd className="nes-kbd">W</kbd>
+                    <kbd className="nes-kbd">A</kbd>
+                    <kbd className="nes-kbd">S</kbd>
+                    <kbd className="nes-kbd">D</kbd>
+                </span>
+            </div>
+            <div className="nes-controls-help-row">
+                <span className="nes-controls-help-action">A</span>
+                <span className="nes-controls-help-keys">
+                    <kbd className="nes-kbd">K</kbd>
+                </span>
+            </div>
+            <div className="nes-controls-help-row">
+                <span className="nes-controls-help-action">B</span>
+                <span className="nes-controls-help-keys">
+                    <kbd className="nes-kbd">J</kbd>
+                </span>
+            </div>
+            <div className="nes-controls-help-row">
+                <span className="nes-controls-help-action">Start</span>
+                <span className="nes-controls-help-keys">
+                    <kbd className="nes-kbd nes-kbd-wide">Enter</kbd>
+                </span>
+            </div>
+            <div className="nes-controls-help-row">
+                <span className="nes-controls-help-action">Select</span>
+                <span className="nes-controls-help-keys">
+                    <kbd className="nes-kbd">\</kbd>
+                </span>
+            </div>
+            <div className="nes-controls-help-row">
+                <span className="nes-controls-help-action">Save slot</span>
+                <span className="nes-controls-help-keys">
+                    <kbd className="nes-kbd">1</kbd>
+                    <kbd className="nes-kbd">2</kbd>
+                    <kbd className="nes-kbd">3</kbd>
+                    <kbd className="nes-kbd">4</kbd>
+                    <kbd className="nes-kbd">5</kbd>
+                </span>
+            </div>
+            <div className="nes-controls-help-row">
+                <span className="nes-controls-help-action">Load slot</span>
+                <span className="nes-controls-help-keys">
+                    <kbd className="nes-kbd">F1</kbd>
+                    <kbd className="nes-kbd">F2</kbd>
+                    <kbd className="nes-kbd">F3</kbd>
+                    <kbd className="nes-kbd">F4</kbd>
+                    <kbd className="nes-kbd">F5</kbd>
+                </span>
+            </div>
+        </div>
+    </div>
+);
+
 function getSaveKey(romId: string, slotNum: number): string {
     return `nes-save:${romId}:slot${slotNum}`;
 }
@@ -74,6 +139,11 @@ function formatRelativeTime(ts: number): string {
 export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const browserRef = useRef<Browser | null>(null);
+    // State mirror of browserRef, so components that receive the Browser as
+    // a prop (NESControls) actually re-render when it comes alive — reading
+    // browserRef.current during render left the touch controls dead until
+    // an unrelated state update happened to fire.
+    const [browser, setBrowser] = useState<Browser | null>(null);
     const [currentRom, setCurrentRom] = useState<Rom | null>(null);
     const [status, setStatus] = useState<LoadStatus>({ kind: "idle" });
     const [paused, setPaused] = useState(false);
@@ -95,6 +165,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
     // time.
     const handleSaveSlotRef = useRef<((n: number) => void) | null>(null);
     const handleLoadSlotRef = useRef<((n: number) => void) | null>(null);
+    const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Spin up the Browser when the modal opens, tear it down on close.
     // JSNES attaches a document-level keyboard listener in its constructor
@@ -116,11 +187,18 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
         document.removeEventListener("keyup", kb.handleKeyUp);
         document.removeEventListener("keypress", kb.handleKeyPress);
         browserRef.current = browser;
+        setBrowser(browser);
         return () => {
             browser.destroy();
             browserRef.current = null;
+            setBrowser(null);
         };
     }, [expanded]);
+
+    // Lock body scroll + pause the ambient background effects while open —
+    // the particle rain repainting under this modal's backdrop-blur costs
+    // real frame time that the emulator needs.
+    useModalLock(expanded);
 
     // Custom keyboard handler. Uses `e.code` (layout-independent physical
     // key identifier) and the JSNES Controller constants directly, so it
@@ -213,7 +291,18 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
         }
     }, [expanded]);
 
-    // ESC to close.
+    const handleClose = useCallback(() => {
+        if (closing) return;
+        setClosing(true);
+        setTimeout(() => {
+            setClosing(false);
+            onCollapse();
+        }, 200);
+    }, [closing, onCollapse]);
+
+    // ESC to close. `handleClose` is in the deps so the handler always sees
+    // the current `closing` re-entrancy guard — a stale closure here let a
+    // double-ESC during the close animation queue two onCollapse chains.
     useEffect(() => {
         if (!expanded) return;
         const handler = (e: KeyboardEvent) => {
@@ -221,8 +310,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [expanded]);
+    }, [expanded, handleClose]);
 
     // Auto-resize the canvas whenever the window resizes — JSNES measures
     // via its container's client size, so any layout shift needs a nudge.
@@ -263,7 +351,16 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
 
     const showToast = useCallback((msg: string) => {
         setToast(msg);
-        setTimeout(() => setToast(null), 1500);
+        // Track the timer so rapid toasts don't let an old timer clear a
+        // newer message, and unmount doesn't fire a stray setState.
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setToast(null), 1500);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        };
     }, []);
 
     // Keep save/load handler refs in sync with the latest closures.
@@ -400,15 +497,6 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
         [currentRom, paused, status, showToast],
     );
 
-    const handleClose = useCallback(() => {
-        if (closing) return;
-        setClosing(true);
-        setTimeout(() => {
-            setClosing(false);
-            onCollapse();
-        }, 200);
-    }, [closing, onCollapse]);
-
     const isReady = status.kind === "ready";
     const currentTitle = currentRom?.title;
 
@@ -500,7 +588,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                             {toast && <div className="nes-toast">{toast}</div>}
 
                             <NESControls
-                                browser={browserRef.current}
+                                browser={browser}
                                 disabled={!isReady}
                                 pressedKeys={pressedButtons}
                             />
@@ -538,83 +626,7 @@ export function NESPanel({ expanded, onExpand, onCollapse }: NESPanelProps) {
                                 </div>
                             </div>
 
-                            <div
-                                className="nes-picker"
-                                style={{ marginTop: 16 }}
-                            >
-                                <h3 className="nes-picker-title">Controls</h3>
-                                <div className="nes-controls-help">
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            D-Pad
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">W</kbd>
-                                            <kbd className="nes-kbd">A</kbd>
-                                            <kbd className="nes-kbd">S</kbd>
-                                            <kbd className="nes-kbd">D</kbd>
-                                        </span>
-                                    </div>
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            A
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">K</kbd>
-                                        </span>
-                                    </div>
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            B
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">J</kbd>
-                                        </span>
-                                    </div>
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            Start
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd nes-kbd-wide">
-                                                Enter
-                                            </kbd>
-                                        </span>
-                                    </div>
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            Select
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">\</kbd>
-                                        </span>
-                                    </div>
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            Save slot
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">1</kbd>
-                                            <kbd className="nes-kbd">2</kbd>
-                                            <kbd className="nes-kbd">3</kbd>
-                                            <kbd className="nes-kbd">4</kbd>
-                                            <kbd className="nes-kbd">5</kbd>
-                                        </span>
-                                    </div>
-                                    <div className="nes-controls-help-row">
-                                        <span className="nes-controls-help-action">
-                                            Load slot
-                                        </span>
-                                        <span className="nes-controls-help-keys">
-                                            <kbd className="nes-kbd">F1</kbd>
-                                            <kbd className="nes-kbd">F2</kbd>
-                                            <kbd className="nes-kbd">F3</kbd>
-                                            <kbd className="nes-kbd">F4</kbd>
-                                            <kbd className="nes-kbd">F5</kbd>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                            {CONTROLS_HELP}
 
                             <div
                                 className="nes-picker"

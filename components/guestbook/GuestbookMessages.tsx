@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
+import { useModalLock } from "@/components/hooks/useModalLock";
 
 interface GuestbookMessage {
     id: string;
@@ -17,10 +18,14 @@ interface GuestbookMessage {
 
 const AVATAR_COUNT = 9;
 const PAGE_SIZE = 20;
+// Flow layout on the homepage shows at most this many chips — rendering
+// every message unpaginated would grow the DOM without bound. The modal
+// (paginated) has the full list.
+const FLOW_LIMIT = 30;
 
 function getAvatarSrc(message: GuestbookMessage): string {
     if (message.avatar) return message.avatar;
-    const index = message.avatarIndex ?? 0;
+    const index = Math.abs(message.avatarIndex ?? 0);
     return `/images/avatar/avatar_${index % AVATAR_COUNT}.avif`;
 }
 
@@ -46,16 +51,9 @@ export function GuestbookMessages({
         }, 200);
     };
 
-    useEffect(() => {
-        if (showAll) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
-        }
-        return () => {
-            document.body.style.overflow = "";
-        };
-    }, [showAll]);
+    // Shared ref-counted lock — restoring `""` directly would unlock scroll
+    // for another modal still open on top of this one.
+    useModalLock(showAll);
 
     useEffect(() => {
         const handlePosted = () => setRefreshKey((k) => k + 1);
@@ -106,7 +104,7 @@ export function GuestbookMessages({
             {/* Flow layout - tags style */}
             <div className="max-w-4xl mx-auto">
                 <div className="flex flex-wrap gap-2 justify-center">
-                    {messages.map((msg) => (
+                    {messages.slice(0, FLOW_LIMIT).map((msg) => (
                         <div
                             key={msg.id}
                             className="flex items-center gap-2 px-3 py-1 bg-bg-card/90 border border-border rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.3)] overflow-hidden hover:border-accent/70 hover:bg-bg-card hover:shadow-[0_0_20px_var(--accent-glow)] hover:-translate-y-0.5 transition-[transform,border-color,background-color] duration-200 cursor-pointer"
@@ -149,7 +147,10 @@ export function GuestbookMessages({
             {showAll &&
                 typeof document !== "undefined" &&
                 createPortal(
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    // z-[100] matches the other full-screen modals (NES, LLM
+                    // leaderboard) so this can't be buried under them or the
+                    // mouse-trail canvas.
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <div
                             className="absolute inset-0 bg-black/50 backdrop-blur-md"
                             onClick={handleClose}

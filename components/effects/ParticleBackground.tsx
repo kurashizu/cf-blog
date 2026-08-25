@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MODAL_LOCK_EVENT, isModalLocked } from "@/components/hooks/useModalLock";
 
 const GROUPS = ["ku", "ra", "shi", "zu"] as const;
 const FONTS = ["monospace", "serif", "sans-serif", "cursive", "fantasy"] as const;
@@ -174,7 +175,13 @@ export function ParticleBackground() {
         };
 
         const start = () => {
-            if (timer === null && !document.hidden && !reducedMotion.matches) timer = setInterval(draw, FRAME_MS);
+            if (
+                timer === null &&
+                !document.hidden &&
+                !reducedMotion.matches &&
+                !isModalLocked()
+            )
+                timer = setInterval(draw, FRAME_MS);
         };
         const stop = () => {
             if (timer !== null) {
@@ -183,6 +190,13 @@ export function ParticleBackground() {
             }
         };
         const handleVisibility = () => (document.hidden ? stop() : start());
+        // Pause while any full-screen modal is open: repainting under the
+        // modal's backdrop-blur re-blurs every frame and steals frame time
+        // from foreground work (worst case: the NES emulator).
+        const handleModalLock = () => (isModalLocked() ? stop() : start());
+        // React to the OS setting changing mid-session, not just at mount.
+        const handleReducedMotion = () =>
+            reducedMotion.matches ? stop() : start();
         const handleResize = () => {
             resize();
             draw();
@@ -191,16 +205,20 @@ export function ParticleBackground() {
         updateColors();
         resize();
         draw();
-        if (!reducedMotion.matches) start();
+        start();
         window.addEventListener("resize", handleResize);
         window.addEventListener("themechange", updateColors);
+        window.addEventListener(MODAL_LOCK_EVENT, handleModalLock);
         document.addEventListener("visibilitychange", handleVisibility);
+        reducedMotion.addEventListener("change", handleReducedMotion);
 
         return () => {
             stop();
             window.removeEventListener("resize", handleResize);
             window.removeEventListener("themechange", updateColors);
+            window.removeEventListener(MODAL_LOCK_EVENT, handleModalLock);
             document.removeEventListener("visibilitychange", handleVisibility);
+            reducedMotion.removeEventListener("change", handleReducedMotion);
         };
     }, []);
 

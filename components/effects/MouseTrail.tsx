@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MODAL_LOCK_EVENT, isModalLocked } from "@/components/hooks/useModalLock";
 
 interface TrailDot {
     x: number;
@@ -45,13 +46,13 @@ export function MouseTrail() {
             }
         };
         const schedule = () => {
-            if (animationId === null && !document.hidden) {
+            if (animationId === null && !document.hidden && !isModalLocked()) {
                 animationId = requestAnimationFrame(animate);
             }
         };
         const animate = () => {
             animationId = null;
-            if (document.hidden) return;
+            if (document.hidden || isModalLocked()) return;
 
             const dots = dotsRef.current;
             context.clearRect(0, 0, canvas.width, canvas.height);
@@ -77,6 +78,9 @@ export function MouseTrail() {
             if (dots.length > 0) schedule();
         };
         const handleMove = (event: MouseEvent) => {
+            // No dots while a modal is open — the canvas sits under the
+            // modal's backdrop-blur, so every paint forces a re-blur.
+            if (isModalLocked()) return;
             dotsRef.current.push({
                 x: event.clientX + (Math.random() - 0.5) * 4,
                 y: event.clientY + (Math.random() - 0.5) * 4,
@@ -89,12 +93,22 @@ export function MouseTrail() {
             schedule();
         };
         const handleVisibility = () => (document.hidden ? cancelLoop() : schedule());
+        const handleModalLock = () => {
+            if (isModalLocked()) {
+                cancelLoop();
+                // Drop the fading dots and clear the canvas so no stale
+                // frame lingers under the modal.
+                dotsRef.current.length = 0;
+                context.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        };
 
         parseAccent();
         resize();
         window.addEventListener("resize", resize);
         window.addEventListener("mousemove", handleMove, { passive: true });
         window.addEventListener("themechange", parseAccent);
+        window.addEventListener(MODAL_LOCK_EVENT, handleModalLock);
         document.addEventListener("visibilitychange", handleVisibility);
 
         return () => {
@@ -102,9 +116,12 @@ export function MouseTrail() {
             window.removeEventListener("resize", resize);
             window.removeEventListener("mousemove", handleMove);
             window.removeEventListener("themechange", parseAccent);
+            window.removeEventListener(MODAL_LOCK_EVENT, handleModalLock);
             document.removeEventListener("visibilitychange", handleVisibility);
         };
     }, []);
 
-    return <canvas ref={canvasRef} aria-hidden="true" className="fixed inset-0 pointer-events-none z-[100]" />;
+    // z-[90]: above page content, below every modal (all at z-[100]) so the
+    // trail never paints over modal content.
+    return <canvas ref={canvasRef} aria-hidden="true" className="fixed inset-0 pointer-events-none z-[90]" />;
 }

@@ -18,14 +18,26 @@ export function ChatWidget() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const abortRef = useRef<AbortController | null>(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        // block:"nearest" keeps the scroll inside the panel — "smooth" alone
+        // can drag the document scroll on some browsers.
+        messagesEndRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+        });
     };
 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Stop an in-flight stream when the widget unmounts (e.g. route change)
+    // so the reader loop doesn't keep calling setMessages on a dead tree.
+    useEffect(() => {
+        return () => abortRef.current?.abort();
+    }, []);
 
     const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
@@ -35,6 +47,9 @@ export function ChatWidget() {
         setInput("");
         setIsLoading(true);
 
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         try {
             const response = await fetch("/api/llm", {
                 method: "POST",
@@ -43,6 +58,7 @@ export function ChatWidget() {
                     messages: [...messages, userMessage],
                     stream: true,
                 }),
+                signal: controller.signal,
             });
 
             if (!response.ok) throw new Error("Failed to get response");
@@ -90,13 +106,16 @@ export function ChatWidget() {
                 });
             }
         } catch (error) {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: "model",
-                    parts: [{ text: "Sorry, something went wrong." }],
-                },
-            ]);
+            // A deliberate abort (unmount) is not an error worth showing.
+            if (!(error instanceof DOMException && error.name === "AbortError")) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "model",
+                        parts: [{ text: "Sorry, something went wrong." }],
+                    },
+                ]);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -256,7 +275,7 @@ export function ChatWidget() {
                                             : "bg-bg-secondary text-text-secondary rounded-bl-md"
                                     }`}
                                 >
-                                    {message.parts[0].text ||
+                                    {message.parts[0]?.text ||
                                         (isLoading &&
                                         index === messages.length - 1
                                             ? "..."
