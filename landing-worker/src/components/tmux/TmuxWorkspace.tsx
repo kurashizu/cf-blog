@@ -908,9 +908,9 @@ export const TmuxWorkspace: React.FC = () => {
   const STORAGE_KEY = 'krsz-synth-patch-v1';
   const BUILTIN_SONGS = [
     { id: 'MARIO_1', name: 'SUPER MARIO 1 - OVERWORLD', steps: 1184, bpm: 100, meter: '4/4' as TimeSignature },
+    { id: 'UNDERWATER', name: 'SUPER MARIO 1 - UNDERWATER', steps: 768, bpm: 100, meter: '6/8' as TimeSignature },
     { id: 'OVERWORLD_1', name: 'SUPER MARIO 3 - OVERWORLD 1', steps: 3360, bpm: 150, meter: '4/4' as TimeSignature },
     { id: 'OVERWORLD_2', name: 'SUPER MARIO 3 - OVERWORLD 2', steps: 672, bpm: 90, meter: '4/4' as TimeSignature },
-    { id: 'UNDERWATER', name: 'UNDERWATER', steps: 768, bpm: 100, meter: '6/8' as TimeSignature },
   ];
   const SOUND_PRESETS = [
     { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
