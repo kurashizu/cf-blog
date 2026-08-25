@@ -3464,9 +3464,9 @@ ORACLE VPS (STATIC EGRESS) ─────────────────�
                                             className={`flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all ${
                                               isSubCurrent
                                                 ? 'border-white bg-white text-black font-black shadow-[0_0_8px_#fff]'
-                                                : accVal === 8
-                                                ? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-[0_0_6px_#e06c75]'
                                                 : accVal === 4
+                                                ? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-xs'
+                                                : accVal === 3
                                                 ? 'border-[#d19a66] bg-[#d19a66] text-black font-black shadow-xs'
                                                 : accVal === 2
                                                 ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-xs'
