@@ -14,7 +14,12 @@ const ThemeContext = createContext<ThemeContextValue>({
   toggleTheme: () => {},
 });
 
-const STORAGE_KEY = "theme";
+// Explicit user picks only. Deliberately NOT the legacy "theme" key: old
+// builds wrote the hour-based auto theme there on every change, so treating
+// that key as a user preference froze returning visitors on whatever theme
+// happened to be active during their last visit (e.g. deep-blue at 3pm).
+const STORAGE_KEY = "theme-user";
+const LEGACY_STORAGE_KEY = "theme";
 
 function getThemeByHour(): Theme {
   const hour = new Date().getHours();
@@ -35,6 +40,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let stored: string | null = null;
     try {
       stored = localStorage.getItem(STORAGE_KEY);
+      // Purge the legacy auto-written key so it can never be mistaken for
+      // a user preference again.
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {
       /* storage unavailable — stay in auto mode */
     }
