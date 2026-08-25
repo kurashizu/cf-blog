@@ -1,4 +1,5 @@
 import { soundEngine } from './sound';
+import { MARIO1_TRACKS } from './songs/mario1';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
@@ -554,9 +555,14 @@ class ModularSynth {
     return this.tracks;
   }
 
-  public loadBuiltInSong(songName: string = 'OVERWORLD_1') {
+  public loadBuiltInSong(songName: string = 'MARIO_1') {
     this.stopAll();
-    if (songName === 'OVERWORLD_1' || songName === 'OVERWORLD_FULL') {
+    if (songName === 'MARIO_1') {
+      this.tracks = JSON.parse(JSON.stringify(MARIO1_TRACKS));
+      this.totalSteps = 1184;
+      this.bpm = 100;
+      this.meter = '4/4';
+    } else if (songName === 'OVERWORLD_1' || songName === 'OVERWORLD_FULL') {
       this.tracks = JSON.parse(JSON.stringify(OVERWORLD_FULL_TRACKS));
       this.totalSteps = 3360;
       this.bpm = 150;

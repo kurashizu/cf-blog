@@ -907,6 +907,7 @@ export const TmuxWorkspace: React.FC = () => {
   // --- Patch & Built-in Song Management ---
   const STORAGE_KEY = 'krsz-synth-patch-v1';
   const BUILTIN_SONGS = [
+    { id: 'MARIO_1', name: 'SUPER MARIO 1 - OVERWORLD', steps: 1184, bpm: 100, meter: '4/4' as TimeSignature },
     { id: 'OVERWORLD_1', name: 'SUPER MARIO 3 - OVERWORLD 1', steps: 3360, bpm: 150, meter: '4/4' as TimeSignature },
     { id: 'OVERWORLD_2', name: 'SUPER MARIO 3 - OVERWORLD 2', steps: 672, bpm: 90, meter: '4/4' as TimeSignature },
     { id: 'UNDERWATER', name: 'UNDERWATER', steps: 768, bpm: 100, meter: '6/8' as TimeSignature },
