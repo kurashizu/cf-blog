@@ -1,4 +1,5 @@
 import { getDB } from "./d1";
+import { GUESTBOOK_AVATAR_COUNT } from "./guestbook-avatar";
 
 export interface GuestbookMessage {
     id: string;
@@ -10,8 +11,6 @@ export interface GuestbookMessage {
     avatarIndex?: number;
     approved: boolean;
 }
-
-const GUESTBOOK_AVATAR_COUNT = 9;
 
 function rowToMessage(row: {
     id: string;

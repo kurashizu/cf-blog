@@ -3,6 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { TOOLS, FUNCTION_DECLARATIONS, executeTool } from "@/lib/tools";
 import { checkBurst, checkDailyKV, getIP } from "@/lib/ratelimiter";
 import type { AgentEnv } from "../../../../lib/types/env";
+import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,15 @@ export async function GET() {
  * POST /api/tool — execute a tool directly
  */
 export async function POST(request: NextRequest) {
+    return withApiAudit(request, "/api/tool", (audit) =>
+        handleTool(request, audit),
+    );
+}
+
+async function handleTool(
+    request: NextRequest,
+    audit: ApiAuditContext,
+): Promise<Response> {
     try {
         const ctx = getCloudflareContext();
         const env = ctx.env as unknown as AgentEnv;
@@ -44,7 +54,10 @@ export async function POST(request: NextRequest) {
             BURST_LIMIT,
             BURST_PERIOD,
         );
-        if (burstResp) return burstResp;
+        if (burstResp) {
+            audit.set({ metadata: { limit: "burst" } });
+            return burstResp;
+        }
 
         // 2. KV daily check (200/IP)
         const dailyResp = await checkDailyKV(
@@ -53,7 +66,10 @@ export async function POST(request: NextRequest) {
             ip,
             DAILY_LIMIT,
         );
-        if (dailyResp) return dailyResp;
+        if (dailyResp) {
+            audit.set({ metadata: { limit: "daily" } });
+            return dailyResp;
+        }
 
         const body = (await request.json()) as {
             name?: string;
@@ -68,7 +84,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // `web_search` hits Brave, `blog_search`/`blog_read` hit cf-blog —
+        // recording the tool name is what makes third-party quota spend
+        // attributable to a caller.
+        audit.set({ metadata: { tool: name } });
         const result = await executeTool(name, args);
+        audit.countUpstreamCall();
 
         return NextResponse.json({
             success: true,
@@ -76,6 +97,10 @@ export async function POST(request: NextRequest) {
             result,
         });
     } catch (error) {
+        audit.set({
+            errorMessage:
+                error instanceof Error ? error.message : String(error),
+        });
         return NextResponse.json(
             {
                 success: false,

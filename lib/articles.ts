@@ -44,43 +44,63 @@ function parseTags(tagsValue: unknown): string[] {
           : [];
 }
 
-function rowToPost(row: Record<string, unknown>): Post {
-    const tags: string[] =
-        typeof row.tags === "string"
-            ? JSON.parse(row.tags as string)
-            : (row.tags as string[]) || [];
+/**
+ * Read the `tags` column defensively. It's free-form TEXT, so it can hold
+ * invalid JSON or valid-but-non-array JSON ("null", "{}"); either used to
+ * throw and, because the callers swallow errors, silently empty the whole
+ * post list.
+ */
+function parseTagsColumn(value: unknown): string[] {
+    if (Array.isArray(value)) return value as string[];
+    if (typeof value !== "string") return [];
+    try {
+        const parsed: unknown = JSON.parse(value);
+        return Array.isArray(parsed) ? (parsed as string[]) : [];
+    } catch {
+        return [];
+    }
+}
+
+/** Queries alias `published_at AS date`; raw `SELECT *` doesn't. Accept both. */
+function rowDate(row: Record<string, unknown>): string {
+    return (row.date as string) || (row.published_at as string) || "";
+}
+
+function rowToPostListItem(row: Record<string, unknown>): PostListItem {
     return {
         slug: row.slug as string,
         title: (row.title as string) || "",
-        date: (row.published_at as string) || "",
-        description: (row.excerpt as string) || "",
-        tags,
+        date: rowDate(row),
+        description: (row.excerpt as string) ?? (row.description as string) ?? "",
+        tags: parseTagsColumn(row.tags),
         published: (row.status as string) === "published",
         coverImage: (row.cover_image as string) || undefined,
         externalUrl: (row.external_url as string) || undefined,
         author: (row.author as string) || "Kurashizu",
         draft: (row.status as string) === "draft",
+    };
+}
+
+function rowToPost(row: Record<string, unknown>): Post {
+    return {
+        ...rowToPostListItem(row),
         content: (row.content as string) || "",
     };
 }
 
-function rowToPostListItem(row: Record<string, unknown>): PostListItem {
-    const tags: string[] =
-        typeof row.tags === "string"
-            ? JSON.parse(row.tags as string)
-            : (row.tags as string[]) || [];
-    return {
-        slug: row.slug as string,
-        title: (row.title as string) || "",
-        date: (row.published_at as string) || "",
-        description: (row.excerpt as string) || "",
-        tags,
-        published: (row.status as string) === "published",
-        coverImage: (row.cover_image as string) || undefined,
-        externalUrl: (row.external_url as string) || undefined,
-        author: (row.author as string) || "Kurashizu",
-        draft: (row.status as string) === "draft",
-    };
+/**
+ * Resolve the stored `status` column from frontmatter.
+ *
+ * The same fact arrives under two names: `draft` (used by the publishing
+ * script) and `published` (used by the admin editor's checkbox). Only
+ * `draft` used to be read, so toggling Publish in the editor did nothing.
+ * `published` wins when present, since it's the explicit UI control.
+ */
+function resolveStatus(data: Record<string, unknown>): "draft" | "published" {
+    if (data.published !== undefined) {
+        return normaliseBool(data.published, true) ? "published" : "draft";
+    }
+    return normaliseBool(data.draft, false) ? "draft" : "published";
 }
 
 /** SHA-256 hex digest using the Web Crypto API. */
@@ -184,7 +204,7 @@ export function createArticlesRepo() {
                     (data.category as string) || "",
                     JSON.stringify(tags),
                     (data.author as string) || "Kurashizu",
-                    normaliseBool(data.draft, false) ? "draft" : "published",
+                    resolveStatus(data),
                     normaliseDate(data.date) || null,
                     contentHash,
                     null,

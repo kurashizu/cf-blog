@@ -12,6 +12,7 @@ import { ParticleBackground } from "@/components/effects/ParticleBackground";
 import { MouseTrail } from "@/components/effects/MouseTrail";
 import { ConsoleEasterEgg } from "@/components/effects/ConsoleEasterEgg";
 import { StayEasterEgg } from "@/components/effects/StayEasterEgg";
+import { PublicChrome } from "@/components/layout/PublicChrome";
 import { BLOG_URL } from "@/shared/site-config";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -38,17 +39,24 @@ export default function RootLayout({
                 className={`${inter.className} flex min-h-screen flex-col bg-bg-primary text-text-primary`}
             >
                 <ThemeProvider>
-                    <ParticleBackground />
-                    <MouseTrail />
-                    <ConsoleEasterEgg />
-                    <StayEasterEgg />
-                    <Header />
+                    {/* Public-site-only chrome. The admin panel brings its
+                        own header and must not inherit the widgets or the
+                        animated canvases. */}
+                    <PublicChrome>
+                        <ParticleBackground />
+                        <MouseTrail />
+                        <ConsoleEasterEgg />
+                        <StayEasterEgg />
+                        <Header />
+                    </PublicChrome>
                     <main className="flex-1">
                         <PageTransition>{children}</PageTransition>
                     </main>
-                    <Footer />
-                    <ChatWidget />
-                    <GuestbookWidget />
+                    <PublicChrome>
+                        <Footer />
+                        <ChatWidget />
+                        <GuestbookWidget />
+                    </PublicChrome>
                 </ThemeProvider>
             </body>
         </html>

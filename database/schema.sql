@@ -140,6 +140,53 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_category_ts ON audit_log(category, ts D
 CREATE INDEX IF NOT EXISTS idx_audit_log_status_ts ON audit_log(status, ts DESC);
 
 -- ============================================
+-- api_access_log — INBOUND request audit (who called us)
+-- ============================================
+-- Counterpart to audit_log: that table records OUTBOUND calls we make to
+-- upstream APIs (quota/reliability); this one records INBOUND API requests
+-- and the caller's identity, so an expensive Gemini/Brave call can be
+-- traced back to the IP that triggered it.
+--
+-- Written by cf-blog and cf-agent route handlers via `shared/api-audit.ts`.
+-- Writes are fire-and-forget (ctx.waitUntil) and must never break a
+-- response. Auto-pruned to 30 days by the 30-min refresh cron — `ip` is
+-- personal data, so the retention window is the privacy control.
+--
+-- One row per inbound API request. For model-calling routes the row also
+-- carries the model and token usage, so "which IP burned the quota" is a
+-- single-table query with no join.
+CREATE TABLE IF NOT EXISTS api_access_log (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts            TEXT NOT NULL DEFAULT (datetime('now')),
+    worker        TEXT NOT NULL,        -- 'cf-blog' | 'cf-agent'
+    route         TEXT NOT NULL,        -- '/api/llm' | '/api/chat' | '/api/tool' | etc.
+    method        TEXT NOT NULL,        -- 'GET' | 'POST' | ...
+    outcome       TEXT NOT NULL,        -- 'ok' | 'rate_limited' | 'unauthorized' | 'bad_request' | 'error'
+    http_status   INTEGER,              -- status code returned to the caller
+    latency_ms    INTEGER,              -- wall-clock handler duration
+    ip            TEXT,                 -- CF-Connecting-IP (personal data — pruned at 30 days)
+    country       TEXT,                 -- request.cf.country (ISO alpha-2)
+    city          TEXT,                 -- request.cf.city
+    asn           INTEGER,              -- request.cf.asn
+    as_org        TEXT,                 -- request.cf.asOrganization (ISP / hosting provider)
+    user_agent    TEXT,                 -- truncated User-Agent
+    referer       TEXT,                 -- truncated Referer
+    ray_id        TEXT,                 -- CF-Ray, to correlate with Cloudflare logs
+    model         TEXT,                 -- model used, for model-calling routes
+    input_tokens  INTEGER,              -- prompt tokens attributed to this caller
+    output_tokens INTEGER,              -- completion tokens attributed to this caller
+    request_count INTEGER,              -- upstream calls made while serving this request
+    error_code    TEXT,
+    error_message TEXT,                 -- short error message (truncated)
+    metadata      TEXT DEFAULT '{}'     -- JSON extras (tool name, query length, stream, etc.)
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_access_log_ts ON api_access_log(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_api_access_log_ip_ts ON api_access_log(ip, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_api_access_log_route_ts ON api_access_log(route, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_api_access_log_outcome_ts ON api_access_log(outcome, ts DESC);
+
+-- ============================================
 -- One-time migrations (already applied to existing DBs)
 -- ============================================
 -- These are kept here for documentation. Running them again on an

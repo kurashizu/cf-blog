@@ -3,6 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createGuestbookRepo } from "@/lib/guestbook";
 import { checkBurst, checkDailyKV, getIP } from "@/shared/ratelimiter";
 import type { BlogEnv } from "@/lib/types/env";
+import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
 
 const BURST_LIMIT = 2;
 const BURST_PERIOD = 10;
@@ -26,21 +27,37 @@ export async function OPTIONS() {
     return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
-export async function GET() {
-    try {
-        const repo = createGuestbookRepo();
-        const messages = await repo.getAll();
-        return NextResponse.json({ messages }, { headers: CORS_HEADERS });
-    } catch (error) {
-        console.error("Guestbook GET error:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch messages" },
-            { status: 500, headers: CORS_HEADERS },
-        );
-    }
+export async function GET(request: NextRequest) {
+    return withApiAudit(request, "/api/guestbook", async (audit) => {
+        try {
+            const repo = createGuestbookRepo();
+            const messages = await repo.getAll();
+            audit.set({ metadata: { returned: messages.length } });
+            return NextResponse.json({ messages }, { headers: CORS_HEADERS });
+        } catch (error) {
+            console.error("Guestbook GET error:", error);
+            audit.set({
+                errorMessage:
+                    error instanceof Error ? error.message : String(error),
+            });
+            return NextResponse.json(
+                { error: "Failed to fetch messages" },
+                { status: 500, headers: CORS_HEADERS },
+            );
+        }
+    });
 }
 
 export async function POST(request: NextRequest) {
+    return withApiAudit(request, "/api/guestbook", (audit) =>
+        handleGuestbookPost(request, audit),
+    );
+}
+
+async function handleGuestbookPost(
+    request: NextRequest,
+    audit: ApiAuditContext,
+): Promise<Response> {
     try {
         const ctx = getCloudflareContext();
         const env = ctx.env as unknown as BlogEnv;
@@ -54,7 +71,10 @@ export async function POST(request: NextRequest) {
             BURST_LIMIT,
             BURST_PERIOD,
         );
-        if (burstResp) return burstResp;
+        if (burstResp) {
+            audit.set({ metadata: { limit: "burst" } });
+            return burstResp;
+        }
 
         // 2. KV daily check (5/IP)
         const dailyResp = await checkDailyKV(
@@ -63,7 +83,10 @@ export async function POST(request: NextRequest) {
             ip,
             DAILY_LIMIT,
         );
-        if (dailyResp) return dailyResp;
+        if (dailyResp) {
+            audit.set({ metadata: { limit: "daily" } });
+            return dailyResp;
+        }
 
         const body = (await request.json()) as {
             name?: string;
@@ -75,6 +98,9 @@ export async function POST(request: NextRequest) {
 
         // Honeypot check
         if (website) {
+            // Worth flagging explicitly: a filled honeypot is a bot, and
+            // the access row is how you spot a campaign from one ASN.
+            audit.set({ metadata: { rejected: "honeypot" } });
             return NextResponse.json(
                 { error: "Invalid submission" },
                 { status: 400, headers: CORS_HEADERS },
@@ -111,6 +137,8 @@ export async function POST(request: NextRequest) {
             content: sanitize(content),
             email: email?.trim(),
         });
+
+        audit.set({ metadata: { posted: true, name_len: name.trim().length } });
 
         // Never echo the email back — the public GET omits it too.
         const { email: _omitted, ...publicMessage } = message;

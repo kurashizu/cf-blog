@@ -193,6 +193,17 @@ export async function refreshCache(
     return `${deleted} old rows pruned`;
   });
 
+  // ── Inbound access log cleanup (keep last 30 days) ──
+  // This retention window is the privacy control for `ip`: caller IPs are
+  // personal data and must not accumulate indefinitely.
+  await runStep(results, "access-log-cleanup", async () => {
+    const result = await env.DB.prepare(
+      `DELETE FROM api_access_log WHERE ts < datetime('now', '-30 days')`,
+    ).run();
+    const deleted = result.meta?.changes ?? 0;
+    return `${deleted} old rows pruned`;
+  });
+
   return results;
 }
 

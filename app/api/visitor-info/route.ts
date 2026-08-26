@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getVisitorInfo, type VisitorGeo } from "@/lib/visitor";
+import { withApiAudit } from "@/lib/api-audit";
 
 /**
  * Returns geolocation and device info for the calling visitor.
@@ -18,22 +19,27 @@ import { getVisitorInfo, type VisitorGeo } from "@/lib/visitor";
 const BROWSER_CACHE_SECONDS = 3600;
 
 export async function GET(request: NextRequest) {
-    const ip =
-        request.headers.get("cf-connecting-ip") ??
-        request.headers.get("x-real-ip") ??
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        "";
+    // Audited like every other route. Note this one fires once per visitor
+    // per hour (browser-cached), so its rows double as the site's visit log
+    // — the highest-volume writer into api_access_log.
+    return withApiAudit(request, "/api/visitor-info", async () => {
+        const ip =
+            request.headers.get("cf-connecting-ip") ??
+            request.headers.get("x-real-ip") ??
+            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+            "";
 
-    const ua = request.headers.get("user-agent") ?? "";
-    const { cf } = getCloudflareContext();
-    const visitorInfo = getVisitorInfo(ip, ua, cf as VisitorGeo | undefined);
+        const ua = request.headers.get("user-agent") ?? "";
+        const { cf } = getCloudflareContext();
+        const visitorInfo = getVisitorInfo(ip, ua, cf as VisitorGeo | undefined);
 
-    return NextResponse.json(
-        { visitorInfo },
-        {
-            headers: {
-                "Cache-Control": `private, max-age=${BROWSER_CACHE_SECONDS}`,
+        return NextResponse.json(
+            { visitorInfo },
+            {
+                headers: {
+                    "Cache-Control": `private, max-age=${BROWSER_CACHE_SECONDS}`,
+                },
             },
-        },
-    );
+        );
+    });
 }

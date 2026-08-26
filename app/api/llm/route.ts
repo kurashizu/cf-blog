@@ -6,6 +6,7 @@ import {
     SYSTEM_PROMPT,
 } from "@/lib/llm-prompt";
 import { checkBurst, checkDailyKV, getIP } from "@/shared/ratelimiter";
+import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
 import {
     callWithFallback,
     streamWithFallback,
@@ -85,6 +86,15 @@ function sanitizeOptions(
 }
 
 export async function POST(request: NextRequest) {
+    return withApiAudit(request, "/api/llm", (audit) =>
+        handleLLM(request, audit),
+    );
+}
+
+async function handleLLM(
+    request: NextRequest,
+    audit: ApiAuditContext,
+): Promise<Response> {
     try {
         const ctx = getCloudflareContext();
         const env = ctx.env as unknown as BlogEnv;
@@ -98,7 +108,10 @@ export async function POST(request: NextRequest) {
             BURST_LIMIT,
             BURST_PERIOD,
         );
-        if (burstResp) return burstResp;
+        if (burstResp) {
+            audit.set({ metadata: { limit: "burst" } });
+            return burstResp;
+        }
 
         // 2. KV daily check (200/IP)
         const dailyResp = await checkDailyKV(
@@ -107,7 +120,10 @@ export async function POST(request: NextRequest) {
             ip,
             DAILY_LIMIT,
         );
-        if (dailyResp) return dailyResp;
+        if (dailyResp) {
+            audit.set({ metadata: { limit: "daily" } });
+            return dailyResp;
+        }
 
         const body = await request.json();
         const { messages, stream, options } = body as {
@@ -171,14 +187,23 @@ export async function POST(request: NextRequest) {
             // stream with a state machine that only forwards non-thought
             // text to the client. This keeps the streaming UX while
             // suppressing the model's internal monologue.
-            const { response: streamResp } = await streamWithFallback(
-                env.GEMINI_API_KEY,
-                modelPool,
-                contents,
-                sanitizedOptions,
-                env.SESSION_KV,
-                SYSTEM_PROMPT,
-            );
+            const { response: streamResp, model: streamModel } =
+                await streamWithFallback(
+                    env.GEMINI_API_KEY,
+                    modelPool,
+                    contents,
+                    sanitizedOptions,
+                    env.SESSION_KV,
+                    SYSTEM_PROMPT,
+                );
+
+            // Attributed to the caller now, while the Response is being
+            // returned — a streaming reply has no usageMetadata to report.
+            audit.set({
+                model: streamModel,
+                requestCount: 1,
+                metadata: { stream: true, messages: sanitizedMessages.length },
+            });
 
             if (!streamResp.ok) {
                 const errBody = await streamResp
@@ -189,6 +214,7 @@ export async function POST(request: NextRequest) {
                     `Gemini stream error ${streamResp.status}:`,
                     JSON.stringify(errBody),
                 );
+                audit.set({ errorCode: String(streamResp.status) });
                 return NextResponse.json(
                     { error: "Upstream LLM error" },
                     { status: 502 },
@@ -290,6 +316,7 @@ export async function POST(request: NextRequest) {
                 `Gemini API error ${resp.status}:`,
                 JSON.stringify(errBody),
             );
+            audit.set({ model, errorCode: String(resp.status) });
             return NextResponse.json(
                 { error: "Upstream LLM error" },
                 { status: 502 },
@@ -306,6 +333,14 @@ export async function POST(request: NextRequest) {
         };
 
         const text = extractResponseText(data.candidates?.[0]?.content?.parts);
+
+        audit.set({
+            model,
+            requestCount: 1,
+            inputTokens: data.usageMetadata?.promptTokenCount,
+            outputTokens: data.usageMetadata?.candidatesTokenCount,
+            metadata: { stream: false, messages: sanitizedMessages.length },
+        });
 
         return NextResponse.json({
             text,

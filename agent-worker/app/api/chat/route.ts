@@ -8,6 +8,7 @@ import {
 } from "@/lib/model-pool";
 import { executeTool, FUNCTION_DECLARATIONS } from "@/lib/tools";
 import type { AgentEnv } from "../../../../lib/types/env";
+import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
 
 const SYSTEM_PROMPT = `You are KurAgent, an AI assistant powered by kurashizu, running on Cloudflare.
 
@@ -200,6 +201,15 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+    return withApiAudit(request, "/api/chat", (audit) =>
+        handleChat(request, audit),
+    );
+}
+
+async function handleChat(
+    request: NextRequest,
+    audit: ApiAuditContext,
+): Promise<Response> {
     try {
         const ctx = getCloudflareContext();
         const env = ctx.env as unknown as AgentEnv;
@@ -218,7 +228,10 @@ export async function POST(request: NextRequest) {
             BURST_LIMIT,
             BURST_PERIOD,
         );
-        if (burstResp) return burstResp;
+        if (burstResp) {
+            audit.set({ metadata: { limit: "burst" } });
+            return burstResp;
+        }
 
         const dailyResp = await checkDailyKV(
             env.SESSION_KV,
@@ -226,7 +239,10 @@ export async function POST(request: NextRequest) {
             ip,
             DAILY_LIMIT,
         );
-        if (dailyResp) return dailyResp;
+        if (dailyResp) {
+            audit.set({ metadata: { limit: "daily" } });
+            return dailyResp;
+        }
 
         const body = (await request.json()) as {
             session_id?: string;
@@ -247,6 +263,7 @@ export async function POST(request: NextRequest) {
                 body.session_id,
                 body.message,
                 body.options,
+                audit,
             );
         }
 
@@ -272,15 +289,23 @@ async function handleSessionChat(
     },
     session_id: string,
     message: string,
-    options?: {
-        model?: string;
-        temperature?: number;
-        maxTokens?: number;
-        topP?: number;
-        topK?: number;
-        stream?: boolean;
-    },
+    options:
+        | {
+              model?: string;
+              temperature?: number;
+              maxTokens?: number;
+              topP?: number;
+              topK?: number;
+              stream?: boolean;
+          }
+        | undefined,
+    audit: ApiAuditContext,
 ) {
+    // SSE: the Response ships before any model or tool call happens, so the
+    // access row is written when the stream terminates instead — see
+    // ApiAuditContext.defer(). Every exit path below must call complete().
+    audit.defer();
+
     let stored: KVSession | null = null;
     try {
         const raw = await env.SESSION_KV.get(session_id, "json");
@@ -327,6 +352,8 @@ async function handleSessionChat(
                         SYSTEM_PROMPT,
                         [{ functionDeclarations: FUNCTION_DECLARATIONS }],
                     );
+                    // Each loop iteration is one upstream Gemini call.
+                    audit.countUpstreamCall();
 
                     if (!streamResp.ok)
                         throw new Error(
@@ -431,6 +458,14 @@ async function handleSessionChat(
                         );
                     }
 
+                    audit.complete({
+                        model: defaultModel,
+                        metadata: {
+                            tools: toolCalls.map((t) => t.name),
+                            iterations: iteration + 1,
+                            hit_iteration_limit: hitIterationLimit,
+                        },
+                    });
                     controller.close();
                     return;
                 }
@@ -441,6 +476,14 @@ async function handleSessionChat(
                     "end_process",
                     `done, hitIterationLimit: true, toolCalls: ${toolCalls.length}`,
                 );
+                audit.complete({
+                    model: defaultModel,
+                    metadata: {
+                        tools: toolCalls.map((t) => t.name),
+                        iterations: MAX_TOOL_CALLS,
+                        hit_iteration_limit: true,
+                    },
+                });
                 controller.close();
             } catch (err) {
                 emitEvent(
@@ -448,6 +491,17 @@ async function handleSessionChat(
                     "error",
                     err instanceof Error ? err.message : "Unknown error",
                 );
+                audit.complete({
+                    outcome: "error",
+                    httpStatus: 200, // headers already sent; the error is in-stream
+                    model: defaultModel,
+                    errorMessage:
+                        err instanceof Error ? err.message : String(err),
+                    metadata: {
+                        tools: toolCalls.map((t) => t.name),
+                        failed_in_stream: true,
+                    },
+                });
                 controller.close();
             }
         },

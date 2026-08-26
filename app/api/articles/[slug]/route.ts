@@ -9,12 +9,24 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
 
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ slug: string }> },
 ) {
+    return withApiAudit(request, "/api/articles/[slug]", (audit) =>
+        handleArticle(request, params, audit),
+    );
+}
+
+async function handleArticle(
+    request: NextRequest,
+    params: Promise<{ slug: string }>,
+    audit: ApiAuditContext,
+): Promise<Response> {
     const { slug } = await params;
+    audit.set({ metadata: { slug } });
     if (!slug || slug.length === 0) {
         return NextResponse.json(
             { error: "Slug is required" },
@@ -82,6 +94,9 @@ export async function GET(
         });
     } catch (e) {
         console.error("Article API error:", e);
+        audit.set({
+            errorMessage: e instanceof Error ? e.message : String(e),
+        });
         return NextResponse.json(
             { error: "Internal error" },
             { status: 500 },

@@ -7,6 +7,15 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+# Shared with cf-blog / cf-blog-cache. cf-agent uses it only to write the
+# inbound request audit trail (`api_access_log`), so /api/chat and /api/tool
+# calls — the biggest consumers of Gemini and Brave quota — are traceable
+# back to a caller in the same admin view as the blog's own routes.
+[[d1_databases]]
+binding = "DB"
+database_name = "cf-blog-db"
+database_id = "f763e00a-1c8b-42d4-ad4f-65d0136cabd2"
+
 [[kv_namespaces]]
 binding = "SESSION_KV"
 id = "757683a8bedf4c53bd20854f6e0f27bb"

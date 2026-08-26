@@ -18,6 +18,16 @@ interface PostData {
     content: string;
 }
 
+/** Coerce a stored date into the `YYYY-MM-DD` that <input type="date"> needs. */
+function toDateInputValue(raw?: string): string {
+    if (!raw) return "";
+    const match = /^\d{4}-\d{2}-\d{2}/.exec(raw.trim());
+    if (match) return match[0];
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toISOString().split("T")[0];
+}
+
 interface PostEditorProps {
     initialData?: Partial<PostData>;
     onSubmit?: (data: PostData) => void;
@@ -31,9 +41,15 @@ export function PostEditor({
 }: PostEditorProps) {
     const [title, setTitle] = useState(initialData?.title || "");
     const [slug, setSlug] = useState(initialData?.slug || "");
-    const [date, setDate] = useState(
-        initialData?.date || new Date().toISOString().split("T")[0],
-    );
+    // Normalised to YYYY-MM-DD: `published_at` is free-form TEXT, and
+    // <input type="date"> silently renders blank for anything else — on a
+    // required field that means the form refuses to submit with no reason
+    // shown. Empty default (filled in on mount) avoids a server/client
+    // mismatch across a UTC midnight.
+    const [date, setDate] = useState(toDateInputValue(initialData?.date));
+    useEffect(() => {
+        if (!date) setDate(new Date().toISOString().split("T")[0]);
+    }, [date]);
     const [tags, setTags] = useState(initialData?.tags || "");
     const [published, setPublished] = useState(initialData?.published ?? true);
     const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
@@ -98,25 +114,30 @@ export function PostEditor({
                     type: "success",
                     text: "Post saved successfully!",
                 });
-                // Reset form for new post
-                setTitle("");
-                setSlug("");
-                setContent("");
-                setTags("");
-                setCoverImage("");
-                setExternalUrl("");
-                setDescription("");
-                // Redirect to admin list for new posts
+                // Only a NEW post clears the form, and only on its way to
+                // the list. Clearing after editing left the user staring at
+                // an empty form whose slug was now "" — which killed the
+                // Delete button and made the next save PUT to /posts/.
                 if (!isEditing) {
+                    setTitle("");
+                    setSlug("");
+                    setContent("");
+                    setTags("");
+                    setCoverImage("");
+                    setExternalUrl("");
+                    setDescription("");
                     setTimeout(() => {
                         window.location.href = "/admin";
-                    }, 1500);
+                    }, 1200);
                 }
             } else {
-                const error = (await response.json()) as { message?: string };
+                const error = (await response.json()) as {
+                    error?: string;
+                    message?: string;
+                };
                 setMessage({
                     type: "error",
-                    text: error.message || "Failed to save post",
+                    text: error.error || error.message || "Failed to save post",
                 });
             }
         } catch {
@@ -142,10 +163,14 @@ export function PostEditor({
             if (response.ok) {
                 window.location.href = "/admin";
             } else {
-                const error = (await response.json()) as { message?: string };
+                const error = (await response.json()) as {
+                    error?: string;
+                    message?: string;
+                };
                 setMessage({
                     type: "error",
-                    text: error.message || "Failed to delete post",
+                    text:
+                        error.error || error.message || "Failed to delete post",
                 });
             }
         } catch {

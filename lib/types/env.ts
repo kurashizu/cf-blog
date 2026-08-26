@@ -28,6 +28,8 @@ export interface BlogEnv extends BaseEnv {
 
 /** agent-worker (cf-agent) bindings. */
 export interface AgentEnv extends BaseEnv {
+    /** Shared cf-blog D1 — used only for the `api_access_log` audit trail. */
+    DB?: D1Database;
     CHAT_RATE_LIMIT?: RateLimit;
     TOOL_RATE_LIMIT?: RateLimit;
     SESSION_KV: KVNamespace;

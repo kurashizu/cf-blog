@@ -8,6 +8,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { BUCKET_URL } from "@/shared/site-config";
+import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
 
 const BUCKET_NAME = "public-files";
 const UPLOAD_URL_EXPIRES_IN = 300; // 5 分钟
@@ -39,10 +40,22 @@ function createS3Client(env: {
 }
 
 export async function GET(request: Request) {
+    return withApiAudit(request, "/api/upload", (audit) =>
+        handleList(request, audit),
+    );
+}
+
+async function handleList(
+    request: Request,
+    audit: ApiAuditContext,
+): Promise<Response> {
     const { env } = getCloudflareContext();
 
     const authError = checkAuth(request, env);
-    if (authError) return authError;
+    if (authError) {
+        audit.set({ metadata: { op: "list" } });
+        return authError;
+    }
 
     const { searchParams } = new URL(request.url);
     const prefix = searchParams.get("prefix") ?? "";
@@ -63,14 +76,30 @@ export async function GET(request: Request) {
         publicUrl: obj.Key ? `${BUCKET_URL}/${obj.Key}` : null,
     }));
 
+    audit.set({
+        requestCount: 1,
+        metadata: { op: "list", prefix, returned: files.length },
+    });
     return NextResponse.json({ files });
 }
 
 export async function DELETE(request: Request) {
+    return withApiAudit(request, "/api/upload", (audit) =>
+        handleDelete(request, audit),
+    );
+}
+
+async function handleDelete(
+    request: Request,
+    audit: ApiAuditContext,
+): Promise<Response> {
     const { env } = getCloudflareContext();
 
     const authError = checkAuth(request, env);
-    if (authError) return authError;
+    if (authError) {
+        audit.set({ metadata: { op: "delete" } });
+        return authError;
+    }
 
     const { searchParams } = new URL(request.url);
     const filename = searchParams.get("filename");
@@ -90,14 +119,30 @@ export async function DELETE(request: Request) {
         }),
     );
 
+    audit.set({
+        requestCount: 1,
+        metadata: { op: "delete", key: filename },
+    });
     return NextResponse.json({ deleted: filename });
 }
 
 export async function POST(request: Request) {
+    return withApiAudit(request, "/api/upload", (audit) =>
+        handlePresign(request, audit),
+    );
+}
+
+async function handlePresign(
+    request: Request,
+    audit: ApiAuditContext,
+): Promise<Response> {
     const { env } = getCloudflareContext();
 
     const authError = checkAuth(request, env);
-    if (authError) return authError;
+    if (authError) {
+        audit.set({ metadata: { op: "presign" } });
+        return authError;
+    }
 
     // ── Parse body ──
     let filename = "";
@@ -133,6 +178,11 @@ export async function POST(request: Request) {
 
     const url = await getSignedUrl(s3, command, {
         expiresIn: UPLOAD_URL_EXPIRES_IN,
+    });
+
+    audit.set({
+        requestCount: 1,
+        metadata: { op: "presign", key: filename, content_type: contentType },
     });
 
     return NextResponse.json({

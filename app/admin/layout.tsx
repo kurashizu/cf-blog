@@ -1,38 +1,26 @@
-export default async function AdminLayout({
+import { AdminNav } from "@/components/admin/AdminNav";
+
+/**
+ * Admin shell. The public chrome is suppressed for `/admin/*` in the root
+ * layout (see `components/layout/PublicChrome.tsx`), so this is the only
+ * header on the page.
+ */
+export default function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
     return (
         <div className="min-h-screen bg-bg-primary">
-            <header className="px-6 py-5 bg-bg-secondary border-b border-border">
-                <div className="mx-auto max-w-6xl px-4 flex items-center justify-between">
-                    <h1 className="text-lg font-bold text-accent">
+            <header className="border-b border-border bg-bg-secondary">
+                <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+                    <span className="text-lg font-bold text-accent">
                         Admin Panel
-                    </h1>
-                    <nav className="flex gap-4">
-                        <a
-                            href="/admin"
-                            className="text-sm text-text-muted hover:text-accent transition-colors"
-                        >
-                            Posts
-                        </a>
-                        <a
-                            href="/admin/guestbook"
-                            className="text-sm text-text-muted hover:text-accent transition-colors"
-                        >
-                            Messages
-                        </a>
-                        <a
-                            href="/admin/audit"
-                            className="text-sm text-text-muted hover:text-accent transition-colors"
-                        >
-                            Audit
-                        </a>
-                    </nav>
+                    </span>
+                    <AdminNav />
                 </div>
             </header>
-            <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+            <div className="mx-auto max-w-6xl px-4 py-6">{children}</div>
         </div>
     );
 }

@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createArticlesRepo } from '@/lib/articles';
 import { buildFrontmatter } from '@/lib/frontmatter';
+import {
+  coalesce,
+  isValidSlug,
+  validatePostInput,
+  type PostInput,
+} from '@/lib/post-input';
 
-const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function isValidSlug(slug: string): boolean {
-  return SLUG_REGEX.test(slug) && slug.length >= 1 && slug.length <= 200;
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   _request: Request,
@@ -42,28 +44,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid slug format' }, { status: 400 });
     }
 
-    const body = await request.json() as {
-      title?: string;
-      content?: string;
-      date?: string;
-      description?: string;
-      tags?: string[];
-      coverImage?: string;
-      externalUrl?: string;
-      author?: string;
-      draft?: boolean;
-      published?: boolean;
-    };
+    const body = await request.json() as PostInput;
     const { title, content, date, description, tags, coverImage, externalUrl, author, draft, published } = body;
 
-    // Validate content length
-    if (content && content.length > 500000) {
-      return NextResponse.json({ error: 'Content too large (max 500KB)' }, { status: 400 });
-    }
-
-    // Validate title length
-    if (title && title.length > 300) {
-      return NextResponse.json({ error: 'Title too long (max 300 characters)' }, { status: 400 });
+    const invalid = validatePostInput(body);
+    if (invalid) {
+      return NextResponse.json({ error: invalid }, { status: 400 });
     }
 
     if (!title && !content) {
@@ -79,21 +65,32 @@ export async function PUT(
     const newSlug = slug;
     const oldSlug = existingPost.slug;
 
+    // Collapse the two spellings into one authoritative flag before
+    // writing. Emitting both `published` and `draft` lets them contradict
+    // each other in the frontmatter; `published` is what repo.save reads.
+    const nextPublished =
+      published !== undefined
+        ? published
+        : draft !== undefined
+          ? !draft
+          : existingPost.published;
+
+    // `coalesce`, not `||`: an empty string is a deliberate "clear this
+    // field", which the old fallback silently reverted.
     const postData = {
       title: title || existingPost.title,
-      date: date || existingPost.date,
+      date: coalesce(date, existingPost.date),
       slug: newSlug,
-      description: description || existingPost.description,
-      tags: tags || existingPost.tags,
-      published: published !== undefined ? published : existingPost.published,
-      coverImage: coverImage || existingPost.coverImage || '',
-      externalUrl: externalUrl || existingPost.externalUrl || '',
+      description: coalesce(description, existingPost.description),
+      tags: coalesce(tags, existingPost.tags),
+      published: nextPublished,
+      coverImage: coalesce(coverImage, existingPost.coverImage ?? ''),
+      externalUrl: coalesce(externalUrl, existingPost.externalUrl ?? ''),
       author: author || existingPost.author,
-      draft: draft !== undefined ? draft : existingPost.draft,
     };
 
     const frontmatter = buildFrontmatter(postData);
-    const fullContent = `${frontmatter}\n\n${content || existingPost.content}`;
+    const fullContent = `${frontmatter}\n\n${content ?? existingPost.content}`;
 
     await repo.save(newSlug, fullContent);
 

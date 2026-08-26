@@ -19,24 +19,22 @@ export default async function EditPostPage({ params }: PageProps) {
         notFound();
     }
 
-    const safePost = JSON.parse(JSON.stringify(post));
-    const tagsString = safePost.tags.join(", ");
-
+    // `post` is already a plain object built field-by-field by the repo, so
+    // the old JSON round-trip bought nothing except erasing its type.
+    // `tags` is guaranteed to be an array by parseTagsColumn.
     return (
-        <div className="container mx-auto max-w-6xl px-4 py-8">
-            <PostEditor
-                initialData={{
-                    title: safePost.title,
-                    slug: safePost.slug,
-                    date: safePost.date,
-                    description: safePost.description || "",
-                    tags: tagsString,
-                    published: safePost.published,
-                    coverImage: safePost.coverImage || "",
-                    externalUrl: safePost.externalUrl || "",
-                    content: safePost.content,
-                }}
-            />
-        </div>
+        <PostEditor
+            initialData={{
+                title: post.title,
+                slug: post.slug,
+                date: post.date,
+                description: post.description || "",
+                tags: post.tags.join(", "),
+                published: post.published,
+                coverImage: post.coverImage || "",
+                externalUrl: post.externalUrl || "",
+                content: post.content,
+            }}
+        />
     );
 }

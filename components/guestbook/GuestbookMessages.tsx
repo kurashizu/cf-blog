@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
+import { guestbookAvatarSrc } from "@/lib/guestbook-avatar";
 import { useModalLock } from "@/components/hooks/useModalLock";
 
 interface GuestbookMessage {
@@ -16,18 +17,13 @@ interface GuestbookMessage {
     avatarIndex?: number;
 }
 
-const AVATAR_COUNT = 9;
 const PAGE_SIZE = 20;
 // Flow layout on the homepage shows at most this many chips — rendering
 // every message unpaginated would grow the DOM without bound. The modal
 // (paginated) has the full list.
 const FLOW_LIMIT = 30;
 
-function getAvatarSrc(message: GuestbookMessage): string {
-    if (message.avatar) return message.avatar;
-    const index = Math.abs(message.avatarIndex ?? 0);
-    return `/images/avatar/avatar_${index % AVATAR_COUNT}.avif`;
-}
+const getAvatarSrc = guestbookAvatarSrc;
 
 interface GuestbookMessagesProps {
     initialRefreshKey?: number;
