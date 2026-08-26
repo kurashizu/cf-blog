@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
-    S3Client,
-    PutObjectCommand,
-    ListObjectsV2Command,
-    DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { BUCKET_URL } from "@/shared/site-config";
+    UPLOAD_URL_EXPIRES_IN,
+    deleteMedia,
+    listMedia,
+    presignMediaUpload,
+    sanitizeUploadFilename,
+    publicUrlFor,
+} from "@/lib/media";
 import { withApiAudit, type ApiAuditContext } from "@/lib/api-audit";
-
-const BUCKET_NAME = "public-files";
-const UPLOAD_URL_EXPIRES_IN = 300; // 5 分钟
 
 function checkAuth(
     request: Request,
@@ -22,21 +19,6 @@ function checkAuth(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return null;
-}
-
-function createS3Client(env: {
-    R2_ACCESS_KEY_ID: string;
-    R2_SECRET_ACCESS_KEY: string;
-    R2_ACCOUNT_ID: string;
-}) {
-    return new S3Client({
-        region: "auto",
-        endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-        credentials: {
-            accessKeyId: env.R2_ACCESS_KEY_ID,
-            secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-        },
-    });
 }
 
 export async function GET(request: Request) {
@@ -60,21 +42,7 @@ async function handleList(
     const { searchParams } = new URL(request.url);
     const prefix = searchParams.get("prefix") ?? "";
 
-    const s3 = createS3Client(env);
-
-    const command = new ListObjectsV2Command({
-        Bucket: BUCKET_NAME,
-        Prefix: prefix,
-    });
-
-    const result = await s3.send(command);
-
-    const files = (result.Contents ?? []).map((obj) => ({
-        key: obj.Key,
-        size: obj.Size,
-        lastModified: obj.LastModified?.toISOString(),
-        publicUrl: obj.Key ? `${BUCKET_URL}/${obj.Key}` : null,
-    }));
+    const files = await listMedia(env, prefix);
 
     audit.set({
         requestCount: 1,
@@ -110,14 +78,7 @@ async function handleDelete(
         );
     }
 
-    const s3 = createS3Client(env);
-
-    await s3.send(
-        new DeleteObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: filename,
-        }),
-    );
+    await deleteMedia(env, filename);
 
     audit.set({
         requestCount: 1,
@@ -151,7 +112,7 @@ async function handlePresign(
         const body = (await request.json()) as Record<string, unknown>;
         if (body.filename) {
             // Sanitize: remove path separators, keep only the basename
-            filename = String(body.filename).replace(/[/\\]/g, "").trim();
+            filename = sanitizeUploadFilename(body.filename);
         }
         if (body.contentType) {
             contentType = String(body.contentType).trim();
@@ -167,18 +128,8 @@ async function handlePresign(
         );
     }
 
-    const s3 = createS3Client(env);
-
     // ── Generate presigned PUT URL ──
-    const command = new PutObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: filename,
-        ContentType: contentType,
-    });
-
-    const url = await getSignedUrl(s3, command, {
-        expiresIn: UPLOAD_URL_EXPIRES_IN,
-    });
+    const { url } = await presignMediaUpload(env, filename, contentType);
 
     audit.set({
         requestCount: 1,
@@ -188,7 +139,7 @@ async function handlePresign(
     return NextResponse.json({
         url,
         key: filename,
-        publicUrl: `${BUCKET_URL}/${filename}`,
+        publicUrl: publicUrlFor(filename),
         expiresIn: UPLOAD_URL_EXPIRES_IN,
     });
 }

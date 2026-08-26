@@ -7,6 +7,7 @@ export interface Post {
     date: string;
     description: string;
     tags: string[];
+    category: string;
     published: boolean;
     coverImage?: string;
     externalUrl?: string;
@@ -73,6 +74,7 @@ function rowToPostListItem(row: Record<string, unknown>): PostListItem {
         date: rowDate(row),
         description: (row.excerpt as string) ?? (row.description as string) ?? "",
         tags: parseTagsColumn(row.tags),
+        category: (row.category as string) || "",
         published: (row.status as string) === "published",
         coverImage: (row.cover_image as string) || undefined,
         externalUrl: (row.external_url as string) || undefined,

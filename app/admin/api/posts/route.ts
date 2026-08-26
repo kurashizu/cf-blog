@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json() as PostInput;
-    const { title, slug, content, date, description, tags, coverImage, externalUrl, author, draft, published } = body;
+    const { title, slug, content, date, description, tags, category, coverImage, externalUrl, author, draft, published } = body;
 
     if (!slug || !content || !title) {
       return NextResponse.json({ error: 'Missing required fields: title, slug, content' }, { status: 400 });
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       slug,
       description: description || '',
       tags: tags || [],
+      category: category || '',
       published: published !== undefined ? published : draft === undefined ? true : !draft,
       coverImage: coverImage || '',
       externalUrl: externalUrl || '',

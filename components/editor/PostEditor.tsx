@@ -1,22 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Tag";
 import { cn } from "@/lib/utils";
 import { adminApi } from "@/lib/api";
 import { MarkdownRenderer } from "@/components/markdown/MarkdownRenderer";
-
-interface PostData {
-    title: string;
-    slug: string;
-    date: string;
-    description: string;
-    tags: string;
-    published: boolean;
-    coverImage: string;
-    externalUrl: string;
-    content: string;
-}
+import { Field, MicroLabel, Notice, Select, TextArea, TextInput } from "@/components/admin/ui";
+import { MarkdownToolbar, type ToolbarAction } from "./MarkdownToolbar";
+import { TagInput } from "./TagInput";
+import {
+    type EditorState,
+    indent,
+    insertImage,
+    insertLink,
+    slugify,
+    textStats,
+    toggleCode,
+    toggleLinePrefix,
+    toggleOrderedList,
+    toggleWrap,
+} from "./markdown-commands";
 
 /** Coerce a stored date into the `YYYY-MM-DD` that <input type="date"> needs. */
 function toDateInputValue(raw?: string): string {
@@ -28,382 +32,739 @@ function toDateInputValue(raw?: string): string {
     return parsed.toISOString().split("T")[0];
 }
 
+export interface PostFormData {
+    title: string;
+    slug: string;
+    date: string;
+    description: string;
+    tags: string[];
+    category: string;
+    published: boolean;
+    coverImage: string;
+    externalUrl: string;
+    content: string;
+}
+
 interface PostEditorProps {
-    initialData?: Partial<PostData>;
-    onSubmit?: (data: PostData) => void;
+    initialData?: Partial<PostFormData> & { tags?: string[] | string };
     isNewPost?: boolean;
+    /** Tags already used across the blog, offered as quick-add chips. */
+    knownTags?: string[];
+    knownCategories?: string[];
+}
+
+type ViewMode = "split" | "write" | "preview";
+
+const AUTOSAVE_KEY = "admin-post-draft-v1";
+const AUTOSAVE_DELAY = 1500;
+
+function normaliseTags(tags?: string[] | string): string[] {
+    if (Array.isArray(tags)) return tags;
+    if (typeof tags === "string") {
+        return tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+    }
+    return [];
 }
 
 export function PostEditor({
     initialData,
-    onSubmit,
     isNewPost = false,
+    knownTags = [],
+    knownCategories = [],
 }: PostEditorProps) {
-    const [title, setTitle] = useState(initialData?.title || "");
-    const [slug, setSlug] = useState(initialData?.slug || "");
-    // Normalised to YYYY-MM-DD: `published_at` is free-form TEXT, and
-    // <input type="date"> silently renders blank for anything else — on a
-    // required field that means the form refuses to submit with no reason
-    // shown. Empty default (filled in on mount) avoids a server/client
-    // mismatch across a UTC midnight.
-    const [date, setDate] = useState(toDateInputValue(initialData?.date));
-    useEffect(() => {
-        if (!date) setDate(new Date().toISOString().split("T")[0]);
-    }, [date]);
-    const [tags, setTags] = useState(initialData?.tags || "");
-    const [published, setPublished] = useState(initialData?.published ?? true);
-    const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
-    const [externalUrl, setExternalUrl] = useState(initialData?.externalUrl || "");
-    const [description, setDescription] = useState(initialData?.description || "");
-    const [content, setContent] = useState(initialData?.content || "");
+    const isEditing = Boolean(initialData?.slug);
+
+    const [form, setForm] = useState<PostFormData>(() => ({
+        title: initialData?.title ?? "",
+        slug: initialData?.slug ?? "",
+        date: toDateInputValue(initialData?.date),
+        description: initialData?.description ?? "",
+        tags: normaliseTags(initialData?.tags),
+        category: initialData?.category ?? "",
+        published: initialData?.published ?? true,
+        coverImage: initialData?.coverImage ?? "",
+        externalUrl: initialData?.externalUrl ?? "",
+        content: initialData?.content ?? "",
+    }));
+
+    const [view, setView] = useState<ViewMode>("split");
+    const [dirty, setDirty] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState<{
         type: "success" | "error";
         text: string;
     } | null>(null);
+    const [draftFound, setDraftFound] = useState<PostFormData | null>(null);
+    const [slugTaken, setSlugTaken] = useState(false);
 
-    // Auto-generate slug from title
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    // Mirrors `form` for handlers that must not be re-created on every
+    // keystroke (the save shortcut, the unload guard).
+    const formRef = useRef(form);
+    formRef.current = form;
+
+    const set = useCallback(<K extends keyof PostFormData>(
+        key: K,
+        value: PostFormData[K],
+    ) => {
+        setForm((prev) => ({ ...prev, [key]: value }));
+        setDirty(true);
+    }, []);
+
+    const stats = useMemo(() => textStats(form.content), [form.content]);
+
+    /* ── Date default (client-only, avoids a UTC-midnight SSR mismatch) ── */
     useEffect(() => {
-        if (!initialData?.slug && title) {
-            const autoSlug = title
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-|-$/g, "");
-            setSlug(autoSlug);
+        if (!form.date) {
+            setForm((p) => ({
+                ...p,
+                date: new Date().toISOString().split("T")[0],
+            }));
         }
-    }, [title, initialData?.slug]);
+    }, [form.date]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        setMessage(null);
+    /* ── Slug auto-generation for new posts ── */
+    useEffect(() => {
+        if (isEditing || !form.title) return;
+        setForm((p) => ({ ...p, slug: slugify(p.title) }));
+    }, [form.title, isEditing]);
 
-        const postData: PostData = {
-            title,
-            slug,
-            date,
-            description,
-            tags,
-            published,
-            coverImage,
-            externalUrl,
-            content,
-        };
-
-        if (onSubmit) {
-            onSubmit(postData);
-            setIsSubmitting(false);
+    /* ── Slug availability check ── */
+    useEffect(() => {
+        if (isEditing || !form.slug) {
+            setSlugTaken(false);
             return;
         }
-
-        // Default behavior: submit to API
-        const isEditing = !!initialData?.slug;
-        const endpoint = isEditing ? adminApi.post(slug) : adminApi.posts;
-        const method = isEditing ? "PUT" : "POST";
-
-        try {
-            const response = await fetch(endpoint, {
-                method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(postData),
-            });
-
-            if (response.ok) {
-                setMessage({
-                    type: "success",
-                    text: "Post saved successfully!",
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => {
+            fetch(adminApi.post(form.slug), { signal: ctrl.signal })
+                .then((res) => setSlugTaken(res.ok))
+                .catch(() => {
+                    /* offline or aborted — don't block saving */
                 });
-                // Only a NEW post clears the form, and only on its way to
-                // the list. Clearing after editing left the user staring at
-                // an empty form whose slug was now "" — which killed the
-                // Delete button and made the next save PUT to /posts/.
-                if (!isEditing) {
-                    setTitle("");
-                    setSlug("");
-                    setContent("");
-                    setTags("");
-                    setCoverImage("");
-                    setExternalUrl("");
-                    setDescription("");
-                    setTimeout(() => {
-                        window.location.href = "/admin";
-                    }, 1200);
-                }
-            } else {
-                const error = (await response.json()) as {
+        }, 400);
+        return () => {
+            clearTimeout(timer);
+            ctrl.abort();
+        };
+    }, [form.slug, isEditing]);
+
+    /* ── Autosave to localStorage, and offer recovery on mount ── */
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(AUTOSAVE_KEY);
+            if (!raw) return;
+            const saved = JSON.parse(raw) as {
+                slug: string;
+                at: number;
+                form: PostFormData;
+            };
+            // Only offer a draft belonging to this post (or to a new post).
+            const sameTarget = isEditing
+                ? saved.slug === initialData?.slug
+                : saved.slug === "";
+            if (sameTarget && saved.form) setDraftFound(saved.form);
+        } catch {
+            /* unreadable draft — ignore */
+        }
+        // Intentionally mount-only: recovery is offered once.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (!dirty) return;
+        const timer = setTimeout(() => {
+            try {
+                localStorage.setItem(
+                    AUTOSAVE_KEY,
+                    JSON.stringify({
+                        slug: initialData?.slug ?? "",
+                        at: Date.now(),
+                        form: formRef.current,
+                    }),
+                );
+            } catch {
+                /* quota or private mode — autosave is best-effort */
+            }
+        }, AUTOSAVE_DELAY);
+        return () => clearTimeout(timer);
+    }, [form, dirty, initialData?.slug]);
+
+    const clearDraft = useCallback(() => {
+        try {
+            localStorage.removeItem(AUTOSAVE_KEY);
+        } catch {
+            /* ignore */
+        }
+    }, []);
+
+    /* ── Warn before losing unsaved work ── */
+    useEffect(() => {
+        if (!dirty) return;
+        const handler = (e: BeforeUnloadEvent) => e.preventDefault();
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [dirty]);
+
+    /* ── Editing commands ── */
+    const applyCommand = useCallback(
+        (fn: (s: EditorState) => EditorState) => {
+            const el = textareaRef.current;
+            if (!el) return;
+            const next = fn({
+                text: el.value,
+                start: el.selectionStart,
+                end: el.selectionEnd,
+            });
+            setForm((p) => ({ ...p, content: next.text }));
+            setDirty(true);
+            // Restore the selection after React commits the new value.
+            requestAnimationFrame(() => {
+                el.focus();
+                el.setSelectionRange(next.start, next.end);
+            });
+        },
+        [],
+    );
+
+    const uploadImage = useCallback(
+        async (file: File) => {
+            setUploading(true);
+            setMessage(null);
+            try {
+                const presign = await fetch("/admin/api/media", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        filename: file.name,
+                        contentType: file.type || "application/octet-stream",
+                    }),
+                });
+                const info = (await presign.json().catch(() => null)) as {
+                    url?: string;
+                    publicUrl?: string;
                     error?: string;
-                    message?: string;
-                };
+                } | null;
+                if (!presign.ok || !info?.url || !info.publicUrl) {
+                    throw new Error(info?.error ?? `HTTP ${presign.status}`);
+                }
+                const put = await fetch(info.url, {
+                    method: "PUT",
+                    headers: { "Content-Type": file.type },
+                    body: file,
+                });
+                if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+
+                applyCommand((s) =>
+                    insertImage(s, info.publicUrl!, file.name.replace(/\.\w+$/, "")),
+                );
+                setMessage({ type: "success", text: `Uploaded ${file.name}` });
+            } catch (e) {
                 setMessage({
                     type: "error",
-                    text: error.error || error.message || "Failed to save post",
+                    text: `Image upload failed: ${e instanceof Error ? e.message : String(e)}`,
                 });
+            } finally {
+                setUploading(false);
             }
-        } catch {
-            setMessage({ type: "error", text: "Failed to save post" });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+        },
+        [applyCommand],
+    );
+
+    const actions: ToolbarAction[] = useMemo(
+        () => [
+            { id: "h2", label: "Heading", glyph: "H2", hint: "Heading (## )", run: () => applyCommand((s) => toggleLinePrefix(s, "## ")) },
+            { id: "h3", label: "Subheading", glyph: "H3", hint: "Subheading (### )", run: () => applyCommand((s) => toggleLinePrefix(s, "### ")) },
+            { id: "bold", label: "Bold", glyph: "B", hint: "Bold (⌘B)", run: () => applyCommand((s) => toggleWrap(s, "**")) },
+            { id: "italic", label: "Italic", glyph: "I", hint: "Italic (⌘I)", run: () => applyCommand((s) => toggleWrap(s, "*")) },
+            { id: "strike", label: "Strikethrough", glyph: "S̶", hint: "Strikethrough", run: () => applyCommand((s) => toggleWrap(s, "~~")) },
+            { id: "code", label: "Code", glyph: "‹›", hint: "Code / code block", run: () => applyCommand(toggleCode) },
+            { id: "link", label: "Link", glyph: "🔗", hint: "Link (⌘K)", run: () => applyCommand((s) => insertLink(s)) },
+            { id: "ul", label: "Bulleted list", glyph: "•", hint: "Bulleted list", run: () => applyCommand((s) => toggleLinePrefix(s, "- ")) },
+            { id: "ol", label: "Numbered list", glyph: "1.", hint: "Numbered list", run: () => applyCommand(toggleOrderedList) },
+            { id: "quote", label: "Quote", glyph: "❝", hint: "Blockquote", run: () => applyCommand((s) => toggleLinePrefix(s, "> ")) },
+            { id: "image", label: "Insert image", glyph: uploading ? "…" : "🖼", hint: "Upload an image to R2 and insert it", run: () => fileInputRef.current?.click() },
+        ],
+        [applyCommand, uploading],
+    );
+
+    /* ── Save ── */
+    const handleSubmit = useCallback(
+        async (e?: React.FormEvent) => {
+            e?.preventDefault();
+            const data = formRef.current;
+            if (!data.title || !data.slug || !data.content) {
+                setMessage({
+                    type: "error",
+                    text: "Title, slug and content are required.",
+                });
+                return;
+            }
+            setIsSubmitting(true);
+            setMessage(null);
+
+            const endpoint = isEditing
+                ? adminApi.post(initialData!.slug!)
+                : adminApi.posts;
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: isEditing ? "PUT" : "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                });
+                if (!response.ok) {
+                    const err = (await response.json().catch(() => null)) as {
+                        error?: string;
+                    } | null;
+                    throw new Error(err?.error ?? `HTTP ${response.status}`);
+                }
+                setDirty(false);
+                clearDraft();
+                setMessage({ type: "success", text: "Saved." });
+                if (!isEditing) {
+                    setTimeout(() => {
+                        window.location.href = "/admin/posts";
+                    }, 800);
+                }
+            } catch (err) {
+                setMessage({
+                    type: "error",
+                    text: `Failed to save: ${err instanceof Error ? err.message : String(err)}`,
+                });
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        [isEditing, initialData, clearDraft],
+    );
+
+    /* ── ⌘S / ⌘B / ⌘I / ⌘K ── */
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (!(e.metaKey || e.ctrlKey)) return;
+            const key = e.key.toLowerCase();
+            if (key === "s") {
+                e.preventDefault();
+                void handleSubmit();
+                return;
+            }
+            if (document.activeElement !== textareaRef.current) return;
+            if (key === "b") {
+                e.preventDefault();
+                applyCommand((s) => toggleWrap(s, "**"));
+            } else if (key === "i") {
+                e.preventDefault();
+                applyCommand((s) => toggleWrap(s, "*"));
+            } else if (key === "k") {
+                e.preventDefault();
+                applyCommand((s) => insertLink(s));
+            }
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [handleSubmit, applyCommand]);
 
     const handleDelete = async () => {
-        if (!slug || !confirm("Are you sure you want to delete this post?")) {
+        const slug = initialData?.slug;
+        if (!slug) return;
+        if (!window.confirm(`Delete "${form.title || slug}"? This cannot be undone.`)) {
             return;
         }
-
         setIsDeleting(true);
         setMessage(null);
-
         try {
-            const response = await fetch(adminApi.post(slug), {
-                method: "DELETE",
-            });
-
-            if (response.ok) {
-                window.location.href = "/admin";
-            } else {
-                const error = (await response.json()) as {
+            const res = await fetch(adminApi.post(slug), { method: "DELETE" });
+            if (!res.ok) {
+                const err = (await res.json().catch(() => null)) as {
                     error?: string;
-                    message?: string;
-                };
-                setMessage({
-                    type: "error",
-                    text:
-                        error.error || error.message || "Failed to delete post",
-                });
+                } | null;
+                throw new Error(err?.error ?? `HTTP ${res.status}`);
             }
-        } catch {
-            setMessage({ type: "error", text: "Failed to delete post" });
-        } finally {
+            clearDraft();
+            setDirty(false);
+            window.location.href = "/admin/posts";
+        } catch (e) {
+            setMessage({
+                type: "error",
+                text: `Failed to delete: ${e instanceof Error ? e.message : String(e)}`,
+            });
             setIsDeleting(false);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="p-0">
-            {/* Header with title and actions */}
-            <div className="mb-5 flex items-center justify-between">
-                <h1 className="text-xl font-bold text-text-primary">
-                    {isNewPost ? "New Post" : "Edit Post"}
-                </h1>
-                <div className="flex gap-2.5">
-                    {!isNewPost && (
-                        <Button
+        <form onSubmit={handleSubmit}>
+            {/* Sticky action bar */}
+            <div className="sticky top-0 z-20 -mx-4 mb-5 flex flex-wrap items-center gap-3 border-b border-border bg-bg-primary/95 px-4 py-3 backdrop-blur">
+                <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-lg font-bold text-text-primary">
+                        {isNewPost ? "New post" : form.title || "Edit post"}
+                    </h1>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
+                        <span>
+                            {stats.words} words · {stats.minutes} min read
+                        </span>
+                        {dirty ? (
+                            <Badge variant="warning">unsaved</Badge>
+                        ) : (
+                            <Badge variant="success">saved</Badge>
+                        )}
+                        {form.published ? (
+                            <Badge variant="success">published</Badge>
+                        ) : (
+                            <Badge variant="info">draft</Badge>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+                    {(["write", "split", "preview"] as ViewMode[]).map((m) => (
+                        <button
+                            key={m}
                             type="button"
-                            variant="secondary"
-                            className="btn-danger"
-                            onClick={handleDelete}
-                            disabled={isDeleting}
+                            onClick={() => setView(m)}
+                            className={cn(
+                                "rounded px-2.5 py-1 text-xs capitalize transition-colors",
+                                view === m
+                                    ? "bg-accent/10 font-medium text-accent"
+                                    : "text-text-muted hover:text-text-primary",
+                            )}
                         >
-                            {isDeleting ? "Deleting..." : "Delete"}
-                        </Button>
+                            {m}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex gap-2">
+                    {isEditing && (
+                        <>
+                            <a
+                                href={`/blog/${initialData?.slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Button type="button" variant="ghost" size="sm">
+                                    View
+                                </Button>
+                            </a>
+                            <Button
+                                type="button"
+                                variant="danger"
+                                size="sm"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? "Deleting…" : "Delete"}
+                            </Button>
+                        </>
                     )}
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? "Saving..." : "Save Changes"}
+                    <Button type="submit" size="sm" disabled={isSubmitting}>
+                        {isSubmitting ? "Saving…" : "Save"}
                     </Button>
                 </div>
             </div>
 
-            {/* Form fields */}
-            <div className="space-y-4">
-                <div>
-                    <label
-                        htmlFor="title"
-                        className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
-                    >
-                        Title
-                    </label>
-                    <input
-                        id="title"
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Post title"
-                        className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
-                        required
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label
-                            htmlFor="slug"
-                            className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
-                        >
-                            Slug
-                        </label>
-                        <input
-                            id="slug"
-                            type="text"
-                            value={slug}
-                            onChange={(e) => setSlug(e.target.value)}
-                            placeholder="post-slug"
-                            className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor="date"
-                            className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
-                        >
-                            Date
-                        </label>
-                        <input
-                            id="date"
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
-                            required
-                        />
-                    </div>
-                </div>
-
-                <div>
-                    <label
-                        htmlFor="description"
-                        className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
-                    >
-                        Description <span className="text-text-muted/70 normal-case font-normal">(short summary shown on /blog list cards)</span>
-                    </label>
-                    <textarea
-                        id="description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="A one-line summary of this post"
-                        rows={2}
-                        className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all resize-y"
-                    />
-                </div>
-
-                <div>
-                    <label
-                        htmlFor="tags"
-                        className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
-                    >
-                        Tags (comma-separated)
-                    </label>
-                    <input
-                        id="tags"
-                        type="text"
-                        value={tags}
-                        onChange={(e) => setTags(e.target.value)}
-                        placeholder="tech, tutorial, guide"
-                        className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
-                    />
-                </div>
-
-                <div>
-                    <label
-                        htmlFor="coverImage"
-                        className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
-                    >
-                        Cover Image URL
-                    </label>
-                    <input
-                        id="coverImage"
-                        type="url"
-                        value={coverImage}
-                        onChange={(e) => setCoverImage(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
-                    />
-                </div>
-
-                <div>
-                    <label
-                        htmlFor="externalUrl"
-                        className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-2"
-                    >
-                        External URL <span className="text-text-muted/70 normal-case font-normal">(optional — opens in new tab from cards)</span>
-                    </label>
-                    <input
-                        id="externalUrl"
-                        type="url"
-                        value={externalUrl}
-                        onChange={(e) => setExternalUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full px-4 py-3 bg-bg-secondary border border-border rounded-md text-[0.9375rem] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-3 focus:ring-accent/10 transition-all"
-                    />
-                </div>
-
-                <div>
-                    <div className="mb-2 flex items-center gap-2">
-                        <label
-                            htmlFor="published"
-                            className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-0"
-                        >
-                            Publish
-                        </label>
-                        <input
-                            type="checkbox"
-                            id="published"
-                            checked={published}
-                            onChange={(e) => setPublished(e.target.checked)}
-                            className="h-4 w-4 rounded border-border bg-bg-secondary text-accent focus:ring-accent"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Split Editor/Preview */}
-            <div className="mt-6">
-                <label className="block text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted mb-4">
-                    Content
-                </label>
-                <div className="grid grid-cols-2 gap-4 h-[28rem] mt-4">
-                    <div className="flex flex-col bg-bg-card border border-border rounded-xl overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-bg-secondary border-b border-border text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted">
-                            Markdown
-                        </div>
-                        <div className="flex-1 overflow-auto p-4 bg-bg-primary">
-                            <textarea
-                                id="content"
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                placeholder="Write your post content here..."
-                                className="w-full h-full bg-transparent border-none resize-none outline-none font-mono text-sm leading-relaxed text-text-primary placeholder:text-text-muted"
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div className="flex flex-col bg-bg-card border border-border rounded-xl overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-bg-secondary border-b border-border text-[0.6875rem] font-semibold uppercase tracking-[0.05em] text-text-muted">
-                            Preview
-                        </div>
-                        <div className="flex-1 overflow-auto p-4 bg-bg-primary">
-                            {content ? (
-                                // Same renderer as the public blog page —
-                                // WYSIWYG preview, and no unsanitized HTML
-                                // injection (marked does not sanitize).
-                                <MarkdownRenderer className="text-[0.9375rem] leading-relaxed text-text-secondary">
-                                    {content}
-                                </MarkdownRenderer>
-                            ) : (
-                                <p className="text-text-muted">
-                                    Start typing to see preview...
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {message && (
-                <div
-                    className={cn(
-                        "mt-4 rounded-lg p-4",
-                        message.type === "success"
-                            ? "bg-green-500/10 text-green-400"
-                            : "bg-red-500/10 text-red-400",
-                    )}
+                <Notice
+                    tone={message.type}
+                    onDismiss={() => setMessage(null)}
                 >
                     {message.text}
-                </div>
+                </Notice>
             )}
+
+            {draftFound && (
+                <Notice tone="error" onDismiss={() => setDraftFound(null)}>
+                    An unsaved draft from a previous session was found.{" "}
+                    <button
+                        type="button"
+                        className="underline underline-offset-2"
+                        onClick={() => {
+                            setForm(draftFound);
+                            setDraftFound(null);
+                            setDirty(true);
+                        }}
+                    >
+                        Restore it
+                    </button>{" "}
+                    or{" "}
+                    <button
+                        type="button"
+                        className="underline underline-offset-2"
+                        onClick={() => {
+                            clearDraft();
+                            setDraftFound(null);
+                        }}
+                    >
+                        discard
+                    </button>
+                    .
+                </Notice>
+            )}
+
+            <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
+                {/* Main column */}
+                <div className="min-w-0 space-y-4">
+                    <Field label="Title" htmlFor="title">
+                        <TextInput
+                            id="title"
+                            value={form.title}
+                            onChange={(e) => set("title", e.target.value)}
+                            placeholder="Post title"
+                            className="text-base"
+                            required
+                        />
+                    </Field>
+
+                    <div>
+                        <MicroLabel className="mb-1.5 block">Content</MicroLabel>
+                        <div className="overflow-hidden rounded-xl border border-border bg-bg-card">
+                            <MarkdownToolbar
+                                actions={actions}
+                                trailing={
+                                    <span className="text-[0.6875rem] text-text-muted">
+                                        {stats.chars.toLocaleString("en-US")} chars
+                                    </span>
+                                }
+                            />
+                            <div
+                                className={cn(
+                                    "grid",
+                                    view === "split"
+                                        ? "md:grid-cols-2"
+                                        : "grid-cols-1",
+                                )}
+                            >
+                                {view !== "preview" && (
+                                    <textarea
+                                        ref={textareaRef}
+                                        id="content"
+                                        value={form.content}
+                                        onChange={(e) =>
+                                            set("content", e.target.value)
+                                        }
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Tab") {
+                                                e.preventDefault();
+                                                applyCommand((s) =>
+                                                    indent(s, e.shiftKey),
+                                                );
+                                            }
+                                        }}
+                                        onPaste={(e) => {
+                                            const file =
+                                                e.clipboardData.files?.[0];
+                                            if (file?.type.startsWith("image/")) {
+                                                e.preventDefault();
+                                                void uploadImage(file);
+                                            }
+                                        }}
+                                        onDrop={(e) => {
+                                            const file = e.dataTransfer.files?.[0];
+                                            if (file?.type.startsWith("image/")) {
+                                                e.preventDefault();
+                                                void uploadImage(file);
+                                            }
+                                        }}
+                                        placeholder="Write in Markdown. Drag or paste an image to upload it."
+                                        className={cn(
+                                            "min-h-[26rem] w-full resize-y bg-bg-primary p-4 font-mono text-sm leading-relaxed text-text-primary",
+                                            "placeholder:text-text-muted focus:outline-none",
+                                            view === "split" &&
+                                                "md:border-r md:border-border",
+                                        )}
+                                        required
+                                    />
+                                )}
+                                {view !== "write" && (
+                                    <div className="min-h-[26rem] overflow-auto bg-bg-primary p-4">
+                                        {form.content ? (
+                                            <MarkdownRenderer className="prose prose-invert max-w-none text-sm">
+                                                {form.content}
+                                            </MarkdownRenderer>
+                                        ) : (
+                                            <p className="text-sm text-text-muted">
+                                                Nothing to preview yet.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void uploadImage(file);
+                                e.target.value = "";
+                            }}
+                        />
+                    </div>
+                </div>
+
+                {/* Metadata sidebar */}
+                <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+                    <div className="space-y-4 rounded-xl border border-border bg-bg-card p-4">
+                        <label className="flex cursor-pointer items-center justify-between gap-3">
+                            <span>
+                                <MicroLabel>Published</MicroLabel>
+                                <span className="mt-0.5 block text-xs text-text-muted">
+                                    Drafts stay hidden from /blog
+                                </span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={form.published}
+                                onChange={(e) =>
+                                    set("published", e.target.checked)
+                                }
+                                className="h-4 w-4 accent-[var(--accent)]"
+                            />
+                        </label>
+
+                        <Field label="Slug" htmlFor="slug">
+                            <TextInput
+                                id="slug"
+                                value={form.slug}
+                                onChange={(e) => set("slug", e.target.value)}
+                                placeholder="post-slug"
+                                className="font-mono text-xs"
+                                required
+                                readOnly={isEditing}
+                            />
+                            {isEditing ? (
+                                <p className="mt-1 text-xs text-text-muted">
+                                    Renaming is not supported here — create a
+                                    new post instead.
+                                </p>
+                            ) : slugTaken ? (
+                                <p className="mt-1 text-xs text-red-400">
+                                    A post with this slug already exists.
+                                </p>
+                            ) : null}
+                        </Field>
+
+                        <Field label="Date" htmlFor="date">
+                            <TextInput
+                                id="date"
+                                type="date"
+                                value={form.date}
+                                onChange={(e) => set("date", e.target.value)}
+                                required
+                            />
+                        </Field>
+
+                        <Field label="Category" htmlFor="category">
+                            {knownCategories.length > 0 ? (
+                                <Select
+                                    id="category"
+                                    value={form.category}
+                                    onChange={(e) =>
+                                        set("category", e.target.value)
+                                    }
+                                >
+                                    <option value="">(none)</option>
+                                    {knownCategories.map((c) => (
+                                        <option key={c} value={c}>
+                                            {c}
+                                        </option>
+                                    ))}
+                                    {form.category &&
+                                        !knownCategories.includes(
+                                            form.category,
+                                        ) && (
+                                            <option value={form.category}>
+                                                {form.category}
+                                            </option>
+                                        )}
+                                </Select>
+                            ) : (
+                                <TextInput
+                                    id="category"
+                                    value={form.category}
+                                    onChange={(e) =>
+                                        set("category", e.target.value)
+                                    }
+                                    placeholder="e.g. engineering"
+                                />
+                            )}
+                        </Field>
+
+                        <Field label="Tags" htmlFor="tags">
+                            <TagInput
+                                id="tags"
+                                value={form.tags}
+                                onChange={(tags) => set("tags", tags)}
+                                suggestions={knownTags}
+                            />
+                        </Field>
+                    </div>
+
+                    <div className="space-y-4 rounded-xl border border-border bg-bg-card p-4">
+                        <Field
+                            label="Description"
+                            htmlFor="description"
+                            hint="Shown on the /blog list cards and in search results."
+                        >
+                            <TextArea
+                                id="description"
+                                value={form.description}
+                                onChange={(e) =>
+                                    set("description", e.target.value)
+                                }
+                                rows={3}
+                                placeholder="A one-line summary"
+                            />
+                        </Field>
+
+                        <Field label="Cover image" htmlFor="coverImage">
+                            <TextInput
+                                id="coverImage"
+                                value={form.coverImage}
+                                onChange={(e) =>
+                                    set("coverImage", e.target.value)
+                                }
+                                placeholder="https://…"
+                                className="font-mono text-xs"
+                            />
+                            {form.coverImage && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={form.coverImage}
+                                    alt=""
+                                    className="mt-2 h-24 w-full rounded border border-border object-cover"
+                                />
+                            )}
+                        </Field>
+
+                        <Field
+                            label="External URL"
+                            htmlFor="externalUrl"
+                            hint="Set this to link the card straight to another site."
+                        >
+                            <TextInput
+                                id="externalUrl"
+                                value={form.externalUrl}
+                                onChange={(e) =>
+                                    set("externalUrl", e.target.value)
+                                }
+                                placeholder="https://…"
+                                className="font-mono text-xs"
+                            />
+                        </Field>
+                    </div>
+                </aside>
+            </div>
         </form>
     );
 }

@@ -39,7 +39,7 @@ export default function AdminError({
                 </Button>
                 <Link href="/admin">
                     <Button variant="secondary" size="sm">
-                        Back to posts
+                        Back to overview
                     </Button>
                 </Link>
             </div>

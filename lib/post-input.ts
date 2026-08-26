@@ -27,6 +27,7 @@ export interface PostInput {
     date?: string;
     description?: string;
     tags?: string[];
+    category?: string;
     coverImage?: string;
     externalUrl?: string;
     author?: string;

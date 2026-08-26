@@ -45,7 +45,7 @@ export async function PUT(
     }
 
     const body = await request.json() as PostInput;
-    const { title, content, date, description, tags, coverImage, externalUrl, author, draft, published } = body;
+    const { title, content, date, description, tags, category, coverImage, externalUrl, author, draft, published } = body;
 
     const invalid = validatePostInput(body);
     if (invalid) {
@@ -83,6 +83,7 @@ export async function PUT(
       slug: newSlug,
       description: coalesce(description, existingPost.description),
       tags: coalesce(tags, existingPost.tags),
+      category: coalesce(category, existingPost.category),
       published: nextPublished,
       coverImage: coalesce(coverImage, existingPost.coverImage ?? ''),
       externalUrl: coalesce(externalUrl, existingPost.externalUrl ?? ''),

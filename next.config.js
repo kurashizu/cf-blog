@@ -24,6 +24,12 @@ const nextConfig = {
                 protocol: "https",
                 hostname: "**.r2.cloudflarestorage.com",
             },
+            // Public R2 bucket (BUCKET_URL in shared/site-config.ts) — cover
+            // images and anything uploaded via the admin media manager.
+            {
+                protocol: "https",
+                hostname: "bucket.krsz.in",
+            },
         ],
     },
 };

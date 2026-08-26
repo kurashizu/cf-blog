@@ -15,6 +15,9 @@ export default defineConfig({
             "lib/**/*.test.ts",
             "shared/**/*.test.ts",
             "agent-worker/lib/**/*.test.ts",
+            // Pure logic extracted from components (e.g. the editor's
+            // markdown transforms) is testable too.
+            "components/**/*.test.ts",
         ],
         coverage: {
             provider: "v8",
