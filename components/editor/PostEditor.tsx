@@ -53,7 +53,12 @@ interface PostEditorProps {
     knownCategories?: string[];
 }
 
-type ViewMode = "split" | "write" | "preview";
+/**
+ * Write and Preview are separate full-width panes, not columns. Side by
+ * side, each half only got about a third of the viewport once the metadata
+ * sidebar took its share — too narrow to read or write comfortably.
+ */
+type ViewMode = "write" | "preview";
 
 const AUTOSAVE_KEY = "admin-post-draft-v1";
 const AUTOSAVE_DELAY = 1500;
@@ -90,7 +95,7 @@ export function PostEditor({
         content: initialData?.content ?? "",
     }));
 
-    const [view, setView] = useState<ViewMode>("split");
+    const [view, setView] = useState<ViewMode>("write");
     const [dirty, setDirty] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -424,24 +429,6 @@ export function PostEditor({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-                    {(["write", "split", "preview"] as ViewMode[]).map((m) => (
-                        <button
-                            key={m}
-                            type="button"
-                            onClick={() => setView(m)}
-                            className={cn(
-                                "rounded px-2.5 py-1 text-xs capitalize transition-colors",
-                                view === m
-                                    ? "bg-accent/10 font-medium text-accent"
-                                    : "text-text-muted hover:text-text-primary",
-                            )}
-                        >
-                            {m}
-                        </button>
-                    ))}
-                </div>
-
                 <div className="flex gap-2">
                     {isEditing && (
                         <>
@@ -512,37 +499,50 @@ export function PostEditor({
             <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
                 {/* Main column */}
                 <div className="min-w-0 space-y-4">
-                    <Field label="Title" htmlFor="title">
-                        <TextInput
-                            id="title"
-                            value={form.title}
-                            onChange={(e) => set("title", e.target.value)}
-                            placeholder="Post title"
-                            className="text-base"
-                            required
-                        />
-                    </Field>
+                    {/* The title reads as a title, not as one more form
+                        field in a stack of identical boxes. */}
+                    <input
+                        id="title"
+                        aria-label="Title"
+                        value={form.title}
+                        onChange={(e) => set("title", e.target.value)}
+                        placeholder="Post title"
+                        className="w-full border-0 bg-transparent px-1 py-1 text-2xl font-bold text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:ring-0"
+                        required
+                    />
 
                     <div>
-                        <MicroLabel className="mb-1.5 block">Content</MicroLabel>
                         <div className="overflow-hidden rounded-xl border border-border bg-bg-card">
-                            <MarkdownToolbar
-                                actions={actions}
-                                trailing={
-                                    <span className="text-[0.6875rem] text-text-muted">
-                                        {stats.chars.toLocaleString("en-US")} chars
-                                    </span>
-                                }
-                            />
-                            <div
-                                className={cn(
-                                    "grid",
-                                    view === "split"
-                                        ? "md:grid-cols-2"
-                                        : "grid-cols-1",
+                            {/* Pane switcher lives on the pane, so it reads
+                                as "what this box is showing" rather than a
+                                global setting. */}
+                            <div className="flex items-center gap-1 border-b border-border bg-bg-secondary px-2 pt-2">
+                                {(["write", "preview"] as ViewMode[]).map(
+                                    (m) => (
+                                        <button
+                                            key={m}
+                                            type="button"
+                                            onClick={() => setView(m)}
+                                            aria-pressed={view === m}
+                                            className={cn(
+                                                "-mb-px rounded-t-lg border border-b-0 px-4 py-1.5 text-xs capitalize transition-colors",
+                                                view === m
+                                                    ? "border-border bg-bg-card font-medium text-accent"
+                                                    : "border-transparent text-text-muted hover:text-text-primary",
+                                            )}
+                                        >
+                                            {m}
+                                        </button>
+                                    ),
                                 )}
-                            >
-                                {view !== "preview" && (
+                                <span className="ml-auto pb-1.5 pr-1 text-[0.6875rem] text-text-muted">
+                                    {stats.chars.toLocaleString("en-US")} chars
+                                </span>
+                            </div>
+
+                            {view === "write" ? (
+                                <>
+                                    <MarkdownToolbar actions={actions} />
                                     <textarea
                                         ref={textareaRef}
                                         id="content"
@@ -561,42 +561,44 @@ export function PostEditor({
                                         onPaste={(e) => {
                                             const file =
                                                 e.clipboardData.files?.[0];
-                                            if (file?.type.startsWith("image/")) {
+                                            if (
+                                                file?.type.startsWith("image/")
+                                            ) {
                                                 e.preventDefault();
                                                 void uploadImage(file);
                                             }
                                         }}
                                         onDrop={(e) => {
-                                            const file = e.dataTransfer.files?.[0];
-                                            if (file?.type.startsWith("image/")) {
+                                            const file =
+                                                e.dataTransfer.files?.[0];
+                                            if (
+                                                file?.type.startsWith("image/")
+                                            ) {
                                                 e.preventDefault();
                                                 void uploadImage(file);
                                             }
                                         }}
                                         placeholder="Write in Markdown. Drag or paste an image to upload it."
-                                        className={cn(
-                                            "min-h-[26rem] w-full resize-y bg-bg-primary p-4 font-mono text-sm leading-relaxed text-text-primary",
-                                            "placeholder:text-text-muted focus:outline-none",
-                                            view === "split" &&
-                                                "md:border-r md:border-border",
-                                        )}
+                                        className="min-h-[34rem] w-full resize-y bg-bg-primary p-6 font-mono text-sm leading-7 text-text-primary placeholder:text-text-muted focus:outline-none"
                                         required
                                     />
-                                )}
-                                {view !== "write" && (
-                                    <div className="min-h-[26rem] overflow-auto bg-bg-primary p-4">
-                                        {form.content ? (
-                                            <MarkdownRenderer className="prose prose-invert max-w-none text-sm">
-                                                {form.content}
-                                            </MarkdownRenderer>
-                                        ) : (
-                                            <p className="text-sm text-text-muted">
-                                                Nothing to preview yet.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                                </>
+                            ) : (
+                                <div className="min-h-[34rem] overflow-auto bg-bg-primary p-6">
+                                    {form.content ? (
+                                        // Same measure as the real article
+                                        // page, so the preview shows the
+                                        // line length readers will get.
+                                        <MarkdownRenderer className="prose prose-invert mx-auto max-w-3xl">
+                                            {form.content}
+                                        </MarkdownRenderer>
+                                    ) : (
+                                        <p className="text-sm text-text-muted">
+                                            Nothing to preview yet.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <input
                             ref={fileInputRef}
