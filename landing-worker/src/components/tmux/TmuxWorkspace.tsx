@@ -907,11 +907,17 @@ export const TmuxWorkspace: React.FC = () => {
   // --- Patch & Built-in Song Management ---
   const STORAGE_KEY = 'krsz-synth-patch-v1';
   const BUILTIN_SONGS = [
-    { id: 'MARIO_1', name: 'SUPER MARIO 1 - OVERWORLD', steps: 1184, bpm: 100, meter: '4/4' as TimeSignature },
     { id: 'UNDERWATER', name: 'SUPER MARIO 1 - UNDERWATER', steps: 768, bpm: 100, meter: '6/8' as TimeSignature },
     { id: 'OVERWORLD_1', name: 'SUPER MARIO 3 - OVERWORLD 1', steps: 3360, bpm: 150, meter: '4/4' as TimeSignature },
     { id: 'OVERWORLD_2', name: 'SUPER MARIO 3 - OVERWORLD 2', steps: 672, bpm: 90, meter: '4/4' as TimeSignature },
   ];
+  // Must match the synth's boot state (INITIAL_TRACKS / bpm / totalSteps),
+  // otherwise the selector names one song while the sequencer holds another.
+  // Looked up by id so reordering the list can't desync it.
+  const DEFAULT_SONG_IDX = Math.max(
+    0,
+    BUILTIN_SONGS.findIndex((s) => s.id === 'OVERWORLD_1'),
+  );
   const SOUND_PRESETS = [
     { name: '8-BIT BASS', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'triangle' as SynthWaveform, cutoff: 1200, resonance: 4.2, ampAttack: 0.003, ampDecay: 0.12, ampSustain: 0.45, ampRelease: 0.08, filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.08, filterEnvAmount: 0.6 } },
     { name: 'PLUCK', preset: { osc1Waveform: 'square' as SynthWaveform, osc2Waveform: 'sawtooth' as SynthWaveform, cutoff: 1800, resonance: 3.5, ampAttack: 0.003, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.2, filterAttack: 0.003, filterDecay: 0.08, filterSustain: 0.0, filterRelease: 0.06, filterEnvAmount: 0.85 } },
@@ -921,7 +927,7 @@ export const TmuxWorkspace: React.FC = () => {
   ];
   const LEN_PRESETS = [16, 32, 64, 128, 256, 512] as const;
 
-  const [builtinSongIdx, setBuiltinSongIdx] = useState<number>(0);
+  const [builtinSongIdx, setBuiltinSongIdx] = useState<number>(DEFAULT_SONG_IDX);
   const [soundPresetIdx, setSoundPresetIdx] = useState<number>(0);
 
   const handleNewProject = () => {
