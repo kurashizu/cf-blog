@@ -39,8 +39,16 @@ CREATE TABLE IF NOT EXISTS news_items (
     summary           TEXT NOT NULL DEFAULT '',
     fetched_at        TEXT NOT NULL DEFAULT (datetime('now')),
     search_updated_at TEXT,
+    -- Search-INDEX retry budget (written by handlers/search-index.ts only).
     retry_count       INTEGER NOT NULL DEFAULT 0,
-    last_failed_at    TEXT
+    last_failed_at    TEXT,
+    -- AI-REWRITE retry budget (written by lib/heartbeat.ts only). Kept
+    -- separate from retry_count on purpose: the two pipelines run at
+    -- different times, and sharing one counter would let a rewrite failure
+    -- permanently disqualify the item from ever being indexed afterwards.
+    rewrite_retry_count INTEGER NOT NULL DEFAULT 0,
+    rewrite_failed_at   TEXT,
+    rewrite_error       TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_news_time ON news_items(time DESC);
@@ -195,6 +203,10 @@ CREATE INDEX IF NOT EXISTS idx_api_access_log_outcome_ts ON api_access_log(outco
 --
 -- ALTER TABLE news_items ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0;
 -- ALTER TABLE news_items ADD COLUMN last_failed_at TEXT;
+--
+-- ALTER TABLE news_items ADD COLUMN rewrite_retry_count INTEGER NOT NULL DEFAULT 0;
+-- ALTER TABLE news_items ADD COLUMN rewrite_failed_at TEXT;
+-- ALTER TABLE news_items ADD COLUMN rewrite_error TEXT;
 --
 -- ALTER TABLE posts ADD COLUMN external_url TEXT DEFAULT '';
 

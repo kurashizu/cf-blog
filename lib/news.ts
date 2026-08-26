@@ -17,9 +17,10 @@
  * `retry_count` / `last_failed_at` are written ONLY by step 3 (see
  * `cache-worker/src/handlers/search-index.ts`) — they are the search-index
  * retry budget, not a rewrite-failure counter. Step 2 records nothing on
- * failure, so a rewrite that keeps failing simply stays at the head of the
- * queue; "Awaiting rewrite" plus the queue head on /admin/ops is how that
- * becomes visible.
+ * failure. It now spends a `rewrite_retry_count` budget and parks the item
+ * after MAX_REWRITE_RETRIES, so one permanently-failing story can no longer
+ * starve every newer item behind it. Parked items show under the
+ * "Rewrite parked" filter and are cleared by a rewrite requeue.
  */
 
 import { getDB } from "./d1";
@@ -31,6 +32,14 @@ import { getDB } from "./d1";
  * manual reset (requeue) brings it back.
  */
 export const MAX_NEWS_RETRIES = 5;
+
+/**
+ * Mirrors `MAX_REWRITE_RETRIES` in `cache-worker/src/lib/heartbeat.ts`.
+ * Once `rewrite_retry_count` reaches it the item is parked: the heartbeat
+ * skips it so it can no longer block newer items, and only a manual
+ * requeue clears it.
+ */
+export const MAX_REWRITE_RETRIES = 5;
 
 /** Row shape for the list — `summary` is replaced by length + preview. */
 export interface NewsListRow {
@@ -46,6 +55,9 @@ export interface NewsListRow {
     search_updated_at: string | null;
     retry_count: number;
     last_failed_at: string | null;
+    rewrite_retry_count: number;
+    rewrite_failed_at: string | null;
+    rewrite_error: string | null;
     summary_length: number;
     summary_preview: string;
 }
@@ -59,6 +71,7 @@ export interface NewsStats {
     total: number;
     with_summary: number;
     awaiting_rewrite: number;
+    rewrite_stalled: number;
     awaiting_index: number;
     with_retries: number;
     stalled: number;
@@ -71,6 +84,7 @@ export type NewsFilter =
     | "awaiting-rewrite"
     | "failed"
     | "stalled"
+    | "rewrite-stalled"
     | "never-indexed";
 
 export const NEWS_FILTER_OPTIONS: { value: NewsFilter; label: string }[] = [
@@ -78,7 +92,11 @@ export const NEWS_FILTER_OPTIONS: { value: NewsFilter; label: string }[] = [
     { value: "has-summary", label: "Has summary" },
     { value: "awaiting-rewrite", label: "Awaiting rewrite" },
     { value: "failed", label: "Failed at least once" },
-    { value: "stalled", label: `Stalled (${MAX_NEWS_RETRIES} retries)` },
+    { value: "stalled", label: `Stalled (either pipeline)` },
+    {
+        value: "rewrite-stalled",
+        label: `Rewrite parked (${MAX_REWRITE_RETRIES} fails)`,
+    },
     { value: "never-indexed", label: "Never indexed" },
 ];
 
@@ -143,11 +161,21 @@ function buildWhere(f: NewsFilters): {
             where.push("summary = ''");
             break;
         case "failed":
-            where.push("(retry_count > 0 OR last_failed_at IS NOT NULL)");
+            where.push(
+                `(retry_count > 0 OR last_failed_at IS NOT NULL
+                  OR rewrite_retry_count > 0 OR rewrite_failed_at IS NOT NULL)`,
+            );
             break;
         case "stalled":
-            where.push("retry_count >= ?");
-            binds.push(MAX_NEWS_RETRIES);
+            // Parked by either pipeline: the index budget or the rewrite
+            // budget. A rewrite-parked item is the one that used to block
+            // the whole queue invisibly.
+            where.push("(retry_count >= ? OR rewrite_retry_count >= ?)");
+            binds.push(MAX_NEWS_RETRIES, MAX_REWRITE_RETRIES);
+            break;
+        case "rewrite-stalled":
+            where.push("summary = '' AND rewrite_retry_count >= ?");
+            binds.push(MAX_REWRITE_RETRIES);
             break;
         case "never-indexed":
             where.push("search_updated_at IS NULL");
@@ -169,6 +197,7 @@ function buildWhere(f: NewsFilters): {
 
 const LIST_COLUMNS = `id, title, url, score, by, time, descendants, domain,
                       fetched_at, search_updated_at, retry_count, last_failed_at,
+                      rewrite_retry_count, rewrite_failed_at, rewrite_error,
                       LENGTH(summary) AS summary_length,
                       SUBSTR(summary, 1, ${PREVIEW_CHARS}) AS summary_preview`;
 
@@ -197,7 +226,10 @@ export async function queryNewsPage(f: NewsFilters): Promise<NewsPage> {
                 `SELECT
                     COUNT(*) AS total,
                     COALESCE(SUM(summary != ''), 0) AS with_summary,
-                    COALESCE(SUM(summary = ''), 0) AS awaiting_rewrite,
+                    COALESCE(SUM(summary = ''
+                                 AND rewrite_retry_count < ?), 0) AS awaiting_rewrite,
+                    COALESCE(SUM(summary = ''
+                                 AND rewrite_retry_count >= ?), 0) AS rewrite_stalled,
                     COALESCE(SUM(summary != ''
                                  AND search_updated_at IS NULL
                                  AND retry_count < ?), 0) AS awaiting_index,
@@ -206,7 +238,7 @@ export async function queryNewsPage(f: NewsFilters): Promise<NewsPage> {
                     COALESCE(SUM(search_updated_at IS NOT NULL), 0) AS indexed
                  FROM news_items`,
             )
-            .bind(MAX_NEWS_RETRIES, MAX_NEWS_RETRIES)
+            .bind(MAX_REWRITE_RETRIES, MAX_REWRITE_RETRIES, MAX_NEWS_RETRIES, MAX_NEWS_RETRIES)
             .first<NewsStats>(),
     ]);
 
@@ -217,6 +249,7 @@ export async function queryNewsPage(f: NewsFilters): Promise<NewsPage> {
             total: 0,
             with_summary: 0,
             awaiting_rewrite: 0,
+            rewrite_stalled: 0,
             awaiting_index: 0,
             with_retries: 0,
             stalled: 0,
@@ -292,6 +325,9 @@ export async function requeueNewsItem(
                SET summary = '',
                    search_updated_at = NULL,
                    retry_count = 0,
+                   rewrite_retry_count = 0,
+                   rewrite_failed_at = NULL,
+                   rewrite_error = NULL,
                    last_failed_at = NULL
                WHERE id = ?`
             : `UPDATE news_items

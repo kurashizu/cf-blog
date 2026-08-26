@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { NewsListRow, NewsPage } from "@/lib/news";
 import {
     MAX_NEWS_RETRIES,
+    MAX_REWRITE_RETRIES,
     NEWS_FILTER_OPTIONS,
     unixToUtc,
 } from "@/lib/news";
@@ -203,16 +204,29 @@ export function NewsManager() {
             key: "summary",
             header: "Summary",
             nowrap: true,
+            // A missing summary is not one state but three: still queued,
+            // failing but retrying, or parked. Parked is the one that used
+            // to be invisible while it blocked the whole queue.
             render: (r) =>
                 r.summary_length > 0 ? (
                     <StatusBadge
                         status="ok"
                         suffix={`${fmtNum(r.summary_length)} ch`}
                     />
+                ) : r.rewrite_retry_count >= MAX_REWRITE_RETRIES ? (
+                    <StatusBadge status="failed" suffix="parked" />
+                ) : r.rewrite_retry_count > 0 ? (
+                    <StatusBadge
+                        status="rate_limited"
+                        suffix={`retry ${r.rewrite_retry_count}/${MAX_REWRITE_RETRIES}`}
+                    />
                 ) : (
                     <StatusBadge status="awaiting rewrite" />
                 ),
-            title: (r) => r.summary_preview || undefined,
+            title: (r) =>
+                r.rewrite_error
+                    ? `Last rewrite failure${r.rewrite_failed_at ? ` (${fmtTs(r.rewrite_failed_at)})` : ""}: ${r.rewrite_error}`
+                    : r.summary_preview || undefined,
         },
         {
             key: "index",
@@ -359,10 +373,12 @@ export function NewsManager() {
                     hint={`${fmtNum(stats?.indexed)} indexed`}
                 />
                 <StatTile
-                    label="Stalled"
-                    value={fmtNum(stats?.stalled)}
-                    hint={`${fmtNum(stats?.with_retries)} have failed at least once`}
-                    tone={(stats?.stalled ?? 0) > 0 ? "danger" : "default"}
+                    label="Rewrite parked"
+                    value={fmtNum(stats?.rewrite_stalled)}
+                    hint={`${fmtNum(stats?.stalled)} index-stalled · requeue to retry`}
+                    tone={
+                        (stats?.rewrite_stalled ?? 0) > 0 ? "danger" : "default"
+                    }
                 />
             </StatGrid>
 
