@@ -74,17 +74,22 @@
 	<div class="grid grid-cols-12 gap-1.5 sm:gap-2 flex-1 min-h-0 w-full max-w-full">
 		<Sidebar />
 
-		<div
-			class="col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} {activeTab === 2
-				? 'p-2 sm:p-3 space-y-1.5'
-				: 'p-2.5 sm:p-3.5 space-y-2'} flex flex-col justify-between {themeStyles.cardBg} rounded-sm min-h-0 overflow-y-auto custom-scrollbar"
-		>
-			{@render children()}
+		<div class="col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} flex flex-col {themeStyles.cardBg} rounded-sm min-h-0 lg:overflow-hidden">
+			<!-- Only the page content scrolls — the console stays pinned below it -->
+			<div
+				class="flex-1 min-h-0 lg:overflow-y-auto custom-scrollbar {activeTab === 2
+					? 'p-2 sm:p-3 space-y-1.5'
+					: 'p-2.5 sm:p-3.5 space-y-2'} flex flex-col"
+			>
+				{@render children()}
+			</div>
 
 			<!-- Console only on modules/guestbook — synth needs the space, and the
 			     utilities testers need raw keyboard/mouse input without an autofocused field -->
 			{#if activeTab <= 1}
-				<CommandConsole />
+				<div class="shrink-0 px-2.5 sm:px-3.5 pb-2.5 sm:pb-3.5">
+					<CommandConsole />
+				</div>
 			{/if}
 		</div>
 	</div>

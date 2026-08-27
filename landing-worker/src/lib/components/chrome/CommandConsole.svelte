@@ -140,7 +140,7 @@
 	<!-- Scrollback -->
 	<div
 		bind:this={scrollEl}
-		class="{variant === 'overlay' ? 'h-[55vh]' : 'max-h-72'} overflow-y-auto custom-scrollbar font-mono text-[13px] leading-relaxed pr-1"
+		class="{variant === 'overlay' ? 'h-[55vh]' : 'max-h-[32vh]'} overflow-y-auto custom-scrollbar font-mono text-[13px] leading-relaxed pr-1"
 	>
 		{#each $consoleBuffer as line, i (i)}
 			<div class="whitespace-pre-wrap break-words {LINE_CLASS[line.kind]}">
