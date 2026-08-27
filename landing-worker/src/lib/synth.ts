@@ -901,6 +901,13 @@ class ModularSynth {
 
     this.initMasterFX(ctx);
 
+    // Overload guard: steal the oldest voice rather than let the live graph
+    // grow without bound (Map iteration order is insertion order).
+    if (this.activeVoices.size >= 64) {
+      const oldest = this.activeVoices.keys().next().value;
+      if (oldest) this.stopVoice(oldest);
+    }
+
     const voiceKey = `v${++this._voiceSeq}`;
     const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
     const tuningScale = this.masterTuningFreq / 440.0;
@@ -1263,10 +1270,12 @@ class ModularSynth {
       if (noiseSource) noiseSource.stop(stopTime);
       if (lfo) lfo.stop(stopTime);
 
+      // onended fires off the audio clock even when background-tab timer
+      // throttling delays the setTimeout fallback by seconds or minutes.
+      const endSrc = osc1 ?? osc2 ?? noiseSource;
+      if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
       const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
-      void window.setTimeout(() => {
-        this.activeVoices.delete(voiceKey);
-      }, cleanupMs);
+      void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
     }
 
     voiceMix.connect(filter);
@@ -1403,10 +1412,10 @@ class ModularSynth {
       if (noise) noise.stop(stopTime);
       if (lfo) lfo.stop(stopTime);
 
+      const endSrc = voice.osc1 ?? voice.osc2 ?? voice.noise;
+      if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
       const cleanupMs = Math.ceil((stopTime - now) * 1000) + 50;
-      window.setTimeout(() => {
-        this.activeVoices.delete(voiceKey);
-      }, cleanupMs);
+      window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
     } catch {}
   }
 
@@ -1421,7 +1430,25 @@ class ModularSynth {
       if (voice.noise) voice.noise.stop();
       if (voice.lfo) voice.lfo.stop();
     } catch {}
+    this.reapVoice(voiceKey);
+  }
+
+  /**
+   * Fully detach a finished voice. Timers are throttled in background tabs
+   * (>=1s, down to once a minute), so relying on setTimeout alone left
+   * silent-but-still-connected gain/filter/pan nodes piling up on the bus
+   * during long unattended playback — the audio thread load grew until
+   * playback audibly glitched.
+   */
+  private reapVoice(voiceKey: string) {
+    const voice = this.activeVoices.get(voiceKey);
+    if (!voice) return;
     this.activeVoices.delete(voiceKey);
+    try {
+      voice.gain.disconnect();
+      voice.filter.disconnect();
+      voice.panNode?.disconnect();
+    } catch { /* already detached */ }
   }
 
   public stopAll() {
@@ -1547,7 +1574,11 @@ class ModularSynth {
 
     const stepDuration = 60 / this.bpm / 8; // 1/8 beat
 
-    while (this.nextStepTime < ctx.currentTime + this.scheduleAheadSec) {
+    // Background tabs clamp setInterval to >=1s — 200ms of lookahead cannot
+    // bridge that, so widen the window while hidden to keep playback gapless.
+    const aheadSec = typeof document !== 'undefined' && document.hidden ? 1.6 : this.scheduleAheadSec;
+
+    while (this.nextStepTime < ctx.currentTime + aheadSec) {
       this.scheduleStepAudio(this.currentStep, this.nextStepTime);
       this.scheduledStepQueue.push({ step: this.currentStep, time: this.nextStepTime });
       this.nextStepTime += stepDuration;
