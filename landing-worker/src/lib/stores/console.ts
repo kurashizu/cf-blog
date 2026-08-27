@@ -20,7 +20,7 @@ export interface ConsoleLine {
 }
 
 const WELCOME: ConsoleLine[] = [
-	{ kind: 'ok', text: 'KRSZ-EDGE WORKBENCH READY // TYPE "help" OR USE [0-3] HOTKEYS' }
+	{ kind: 'ok', text: 'KRSZ-EDGE WORKBENCH READY // TYPE "help" OR USE [CTRL+0-3] HOTKEYS' }
 ];
 
 const MAX_LINES = 300;

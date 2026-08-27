@@ -206,7 +206,7 @@
 	</div>
 
 	<div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono text-white/40">
-		<span>Press any key — green = tested, highlighted = held. Nav hotkeys (0-3, T) are paused on this tool.</span>
+		<span>Press any key — green = tested, highlighted = held. Nav hotkeys (Ctrl+0-3, T) are paused on this tool.</span>
 		<span class="ml-auto">Keys pressed: {eventCount}</span>
 	</div>
 </div>

@@ -36,17 +36,22 @@
 			return;
 		}
 
-		const target = e.target as HTMLElement | null;
-		const isInput = ['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '');
-		if (isInput) return;
-
-		const key = e.key.toLowerCase();
-		if (key >= '0' && key <= '3') {
-			goto(TAB_ROUTES[Number(key)]);
+		// Tab navigation on Ctrl+0..3 — bare digits collided with the QWERTY piano,
+		// typing test and console input. Ctrl+digit types nothing, so it works even
+		// while the console input has focus.
+		if (e.ctrlKey && !e.metaKey && !e.altKey && e.code >= 'Digit0' && e.code <= 'Digit3') {
+			e.preventDefault();
+			goto(TAB_ROUTES[Number(e.code.slice(-1))]);
 			playSound('click');
 			return;
 		}
-		if (key === 't') {
+
+		const target = e.target as HTMLElement | null;
+		const isInput = ['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '');
+		if (isInput) return;
+		if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+		if (e.key.toLowerCase() === 't') {
 			cycleTheme();
 		}
 	}

@@ -112,7 +112,7 @@
 	let step = $derived(steps[stepIdx]);
 	let dpr = $derived(active && typeof window !== 'undefined' ? window.devicePixelRatio : 1);
 
-	// The overlay owns the whole keyboard while it is up — 0-3/T must not navigate away.
+	// The overlay owns the whole keyboard while it is up — Ctrl+0-3/T must not navigate away.
 	$effect(() => {
 		suspendNavHotkeys.set(active);
 		return () => suspendNavHotkeys.set(false);
