@@ -28,7 +28,7 @@ export interface BuiltinSong {
 }
 
 export const BUILTIN_SONGS: BuiltinSong[] = [
-	{ id: 'MARIO_1', name: 'SMB1 - OVERWORLD', steps: 1088, bpm: 100, meter: '4/4' },
+	{ id: 'MARIO_1', name: 'SMB1 - OVERWORLD', steps: 1280, bpm: 105, meter: '4/4' },
 	{ id: 'UNDERWATER', name: 'SMB1 - UNDERWATER', steps: 768, bpm: 100, meter: '6/8' },
 	{ id: 'OVERWORLD_1', name: 'SMB3 - OVERWORLD 1', steps: 3360, bpm: 150, meter: '4/4' },
 	{ id: 'OVERWORLD_2', name: 'SMB3 - OVERWORLD 2', steps: 672, bpm: 90, meter: '4/4' }
@@ -226,7 +226,10 @@ function applyPatchData(data: SynthPatchData): void {
 	if (data.totalSteps) totalPatternSteps.set(data.totalSteps);
 	if (data.tracks && Array.isArray(data.tracks)) {
 		data.tracks.forEach((tData) => {
-			if (tData.id !== undefined) modularSynth.updateTrack(tData.id, tData);
+			// Patches predating per-track EQ carry no eq fields — reset to flat instead
+			// of leaving whatever the previous song had on the live filter chains.
+			if (tData.id !== undefined)
+				modularSynth.updateTrack(tData.id, { eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], ...tData });
 		});
 		refreshTracks();
 	}
@@ -275,7 +278,7 @@ export function handleExportPatch(): void {
 /** Set when programmatic copy is blocked — PatchManager renders it for manual copy. */
 export const shareUrlFallback = writable<string | null>(null);
 
-async function copyText(text: string): Promise<boolean> {
+export async function copyText(text: string): Promise<boolean> {
 	// The async Clipboard API can reject after an await consumed the user gesture
 	// (Safari) or under a restrictive permissions policy — fall back to execCommand.
 	try {
@@ -321,7 +324,6 @@ export async function handleSharePatch(): Promise<void> {
 	} else {
 		// Clipboard fully blocked — hand the link over for manual copy instead of erroring out.
 		shareUrlFallback.set(url);
-		showSaveStatus('CLIPBOARD BLOCKED — COPY BELOW');
 		playSound('click');
 	}
 }

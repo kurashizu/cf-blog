@@ -11,11 +11,28 @@
 		handleExportPatch,
 		handleSharePatch,
 		handleImportPatchFile,
-		shareUrlFallback
+		shareUrlFallback,
+		copyText
 	} from '../../stores/synth-patch';
 
 	let fileInput: HTMLInputElement | undefined = $state();
 	let isLoadMenuOpen = $state(false);
+	let shareCopied = $state(false);
+
+	// Any popover open/close transition resets the ✓ state.
+	$effect(() => {
+		$shareUrlFallback;
+		shareCopied = false;
+	});
+
+	async function copyFromPopover() {
+		const url = $shareUrlFallback;
+		if (!url) return;
+		// Fresh user gesture with no awaits before the write — this usually succeeds
+		// even when the post-encode write in handleSharePatch was rejected.
+		shareCopied = await copyText(url);
+		if (shareCopied) setTimeout(() => shareUrlFallback.set(null), 900);
+	}
 
 	function onImportChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -109,31 +126,48 @@
 		EXP
 	</button>
 
-	<button onclick={handleSharePatch} class="px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Share Patch — Compress the whole patch into a URL and copy it; anyone opening the link gets your exact tracks and patterns">
-		SHARE
-	</button>
+	<!-- SHARE + its blocked-clipboard popover: absolutely positioned so it never reflows the rack -->
+	<div class="relative">
+		<button onclick={handleSharePatch} class="px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Share Patch — Compress the whole patch into a URL and copy it; anyone opening the link gets your exact tracks and patterns">
+			SHARE
+		</button>
+
+		{#if $shareUrlFallback}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="fixed inset-0 z-40" onclick={() => (shareUrlFallback.set(null), (shareCopied = false))}></div>
+
+			<div class="absolute left-0 top-full mt-1 z-50 w-[min(440px,80vw)] bg-[#121417] border border-[#c678dd]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] p-2 space-y-1.5">
+				<div class="text-[10px] font-mono text-white/50">Clipboard was blocked by the browser — copy the link here:</div>
+				<div class="flex items-center gap-1.5">
+					<input
+						type="text"
+						readonly
+						value={$shareUrlFallback}
+						onfocus={(e) => (e.target as HTMLInputElement).select()}
+						onclick={(e) => (e.target as HTMLInputElement).select()}
+						class="flex-1 min-w-0 bg-black/60 border border-[#c678dd]/40 text-[#c678dd] text-[10px] font-mono px-2 py-1 rounded-xs outline-none"
+					/>
+					<button
+						onclick={copyFromPopover}
+						class="px-2 py-1 border rounded-xs font-bold text-[10px] cursor-pointer transition-colors {shareCopied
+							? 'border-[#98c379] text-[#98c379]'
+							: 'border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20'}"
+					>
+						{shareCopied ? '✓' : 'COPY'}
+					</button>
+					<button
+						onclick={() => (shareUrlFallback.set(null), (shareCopied = false))}
+						class="px-2 py-1 border border-white/20 text-white/60 hover:border-white/60 hover:text-white rounded-xs font-bold text-[10px] cursor-pointer transition-colors"
+					>
+						✕
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
 
 	{#if $saveStatus}
 		<span class="text-[#98c379] font-bold text-xs ml-1">{$saveStatus}</span>
-	{/if}
-
-	{#if $shareUrlFallback}
-		<!-- Programmatic copy was blocked by the browser — offer the link for manual copy -->
-		<div class="basis-full flex items-center gap-1.5 mt-1">
-			<input
-				type="text"
-				readonly
-				value={$shareUrlFallback}
-				onfocus={(e) => (e.target as HTMLInputElement).select()}
-				onclick={(e) => (e.target as HTMLInputElement).select()}
-				class="flex-1 min-w-0 bg-black/60 border border-[#c678dd]/50 text-[#c678dd] text-[10px] font-mono px-2 py-1 rounded-xs outline-none"
-			/>
-			<button
-				onclick={() => shareUrlFallback.set(null)}
-				class="px-2 py-1 border border-white/20 text-white/60 hover:border-white/60 hover:text-white rounded-xs font-bold text-[10px] cursor-pointer transition-colors"
-			>
-				✕
-			</button>
-		</div>
 	{/if}
 </div>

@@ -188,6 +188,10 @@ export interface TrackData {
   lfoDepth?: number;       // legacy alias
   lfoTarget?: LfoTarget;   // legacy alias
 
+  // Node 6: Per-Track 6-Band Graphic EQ (gains in dB for EQ_6_BANDS, default flat & off)
+  eqOn?: boolean;
+  eqGains?: number[];
+
   // Node 7: Master Output Channel Strip
   airGain?: number;        // -1.0 to +1.0 (Air Shelf EQ / Tone Shaping, ±8dB at 10kHz)
 
@@ -337,10 +341,11 @@ class ModularSynth {
   private reverbWetGain: GainNode | null = null;
   private waveShaper: WaveShaperNode | null = null;
 
-  // Master 6-Band Graphic Equalizer (EQ) Nodes & State (Default: OFF)
-  private eqEnabled: boolean = false;
-  private eqGains: number[] = [0, 0, 0, 0, 0, 0]; // -12dB to +12dB for 6 bands (80Hz, 250Hz, 800Hz, 2.5kHz, 6kHz, 12kHz)
-  private eqFilters: BiquadFilterNode[] = [];
+  // Per-Track 6-Band Graphic EQ chains (track voices -> input -> 6 biquads -> master bus)
+  private trackBuses: { input: GainNode; filters: BiquadFilterNode[] }[] = [];
+  // Master bus input: track EQ chains + FX wet returns sum here, then pass the
+  // drive shaper on the way to the sound engine's master gain.
+  private masterBusIn: GainNode | null = null;
 
   // Master Audio Hardware & DSP Engine Settings
   private noiseBufferDuration: number = 2.0; // 0.5s to 5.0s
@@ -467,39 +472,58 @@ class ModularSynth {
 
     const masterGain = (soundEngine as any).masterGain || ctx.destination;
 
-    // Master 6-Band Parametric/Graphic Equalizer (EQ) Chain: 80Hz -> 250Hz -> 800Hz -> 2.5kHz -> 6kHz -> 12kHz -> MasterGain
-    this.eqFilters = EQ_6_BANDS.map((band, idx) => {
-      const filter = ctx.createBiquadFilter();
-      filter.type = band.type;
-      filter.frequency.setValueAtTime(band.freq, ctx.currentTime);
-      if (band.type === 'peaking') {
-        filter.Q.setValueAtTime(1.2, ctx.currentTime);
-      }
-      filter.gain.setValueAtTime(this.eqEnabled ? (this.eqGains[idx] ?? 0) : 0, ctx.currentTime);
-      return filter;
-    });
-
-    // Cascade connect 6 filters: [0] -> [1] -> [2] -> [3] -> [4] -> [5] -> masterGain
-    for (let i = 0; i < this.eqFilters.length - 1; i++) {
-      this.eqFilters[i].connect(this.eqFilters[i + 1]);
-    }
-    if (this.eqFilters.length > 0) {
-      this.eqFilters[this.eqFilters.length - 1].connect(masterGain);
-    }
-
-    const eqInputNode = this.eqFilters.length > 0 ? this.eqFilters[0] : masterGain;
-
-    this.delayNode.connect(this.delayWetGain);
-    this.delayWetGain.connect(eqInputNode);
-
-    this.reverbConvolver.connect(this.reverbWetGain);
-    this.reverbWetGain.connect(eqInputNode);
-
-    // Master Warm Tape Overdrive / WaveShaper Saturation
+    // Master bus: track chains + wet FX returns -> drive shaper -> masterGain.
+    // (The shaper is an identity curve at drive 0, so it is bit-transparent by default.)
+    this.masterBusIn = ctx.createGain();
     this.waveShaper = ctx.createWaveShaper();
     (this.waveShaper as any).curve = this.makeDistortionCurve(this.driveAmount);
     this.waveShaper.oversample = '2x';
-    this.waveShaper.connect(eqInputNode);
+    this.masterBusIn.connect(this.waveShaper);
+    this.waveShaper.connect(masterGain);
+
+    // Per-Track 6-Band Graphic EQ chains: voices -> input -> 80Hz -> ... -> 12kHz -> master bus.
+    // Persistent per track (not per voice), so 8 tracks cost at most 48 biquads total.
+    const busCount = Math.max(8, this.tracks.length);
+    this.trackBuses = Array.from({ length: busCount }, () => {
+      const input = ctx.createGain();
+      const filters = EQ_6_BANDS.map((band) => {
+        const filter = ctx.createBiquadFilter();
+        filter.type = band.type;
+        filter.frequency.setValueAtTime(band.freq, ctx.currentTime);
+        if (band.type === 'peaking') {
+          filter.Q.setValueAtTime(1.2, ctx.currentTime);
+        }
+        filter.gain.setValueAtTime(0, ctx.currentTime);
+        return filter;
+      });
+      input.connect(filters[0]);
+      for (let i = 0; i < filters.length - 1; i++) {
+        filters[i].connect(filters[i + 1]);
+      }
+      filters[filters.length - 1].connect(this.masterBusIn!);
+      return { input, filters };
+    });
+    this.applyAllTrackEq();
+
+    this.delayNode.connect(this.delayWetGain);
+    this.delayWetGain.connect(this.masterBusIn);
+
+    this.reverbConvolver.connect(this.reverbWetGain);
+    this.reverbWetGain.connect(this.masterBusIn);
+  }
+
+  // Push a track's stored EQ state onto its live filter chain.
+  private applyTrackEq(trackId: number) {
+    const bus = this.trackBuses[trackId];
+    const trk = this.tracks[trackId];
+    if (!bus || !trk) return;
+    bus.filters.forEach((filter, i) => {
+      filter.gain.setValueAtTime(trk.eqOn ? (trk.eqGains?.[i] ?? 0) : 0, 0);
+    });
+  }
+
+  private applyAllTrackEq() {
+    this.trackBuses.forEach((_, i) => this.applyTrackEq(i));
   }
 
   private makeDistortionCurve(amount: number): Float32Array {
@@ -574,12 +598,13 @@ class ModularSynth {
       this.meter = '6/8';
     } else if (songName === 'MARIO_1') {
       this.tracks = JSON.parse(JSON.stringify(MARIO1_TRACKS));
-      this.totalSteps = 1088;
-      this.bpm = 100;
+      this.totalSteps = 1280;
+      this.bpm = 105;
       this.meter = '4/4';
     }
     this.currentStep = 0;
     this.scheduledStepQueue = [];
+    this.applyAllTrackEq();
     const ctx = soundEngine.init();
     if (ctx) {
       this.nextStepTime = ctx.currentTime + 0.05;
@@ -599,6 +624,7 @@ class ModularSynth {
     this.meter = '4/4';
     this.currentStep = 0;
     this.scheduledStepQueue = [];
+    this.applyAllTrackEq();
     const ctx = soundEngine.init();
     if (ctx) {
       this.nextStepTime = ctx.currentTime + 0.05;
@@ -613,6 +639,7 @@ class ModularSynth {
   public updateTrack(trackId: number, partial: Partial<TrackData>) {
     if (this.tracks[trackId]) {
       this.tracks[trackId] = { ...this.tracks[trackId], ...partial };
+      if ('eqOn' in partial || 'eqGains' in partial) this.applyTrackEq(trackId);
     }
   }
 
@@ -760,35 +787,6 @@ class ModularSynth {
 
   public getDrive(): number {
     return this.driveAmount;
-  }
-
-  // Master 6-Band Graphic Equalizer Controls
-  public setEqEnabled(enabled: boolean) {
-    this.eqEnabled = enabled;
-    this.eqFilters.forEach((filter, idx) => {
-      filter.gain.setValueAtTime(enabled ? (this.eqGains[idx] ?? 0) : 0, 0);
-    });
-  }
-
-  public isEqEnabled(): boolean {
-    return this.eqEnabled;
-  }
-
-  public setEqBandGain(bandIdx: number, gainDb: number) {
-    if (bandIdx < 0 || bandIdx >= 6) return;
-    const clamped = Math.max(-12, Math.min(12, gainDb));
-    this.eqGains[bandIdx] = clamped;
-    if (this.eqFilters[bandIdx] && this.eqEnabled) {
-      this.eqFilters[bandIdx].gain.setValueAtTime(clamped, 0);
-    }
-  }
-
-  public getEqBandGain(bandIdx: number): number {
-    return this.eqGains[bandIdx] ?? 0;
-  }
-
-  public getEqGains(): number[] {
-    return [...this.eqGains];
   }
 
   // DSP Engine & Buffer Advanced Configuration Settings
@@ -1285,15 +1283,16 @@ class ModularSynth {
       finalVoiceNode = airFilter;
     }
 
-    const eqInputNode: AudioNode = (this.eqFilters && this.eqFilters.length > 0) ? this.eqFilters[0] : masterGain;
+    // Route through this track's own EQ chain (delay/reverb sends tap pre-EQ).
+    const busInput: AudioNode = this.trackBuses[track.id]?.input ?? this.masterBusIn ?? masterGain;
 
     if (panner) {
       finalVoiceNode.connect(panner);
-      panner.connect(eqInputNode);
+      panner.connect(busInput);
       if (this.delayNode && this.delayMix > 0) panner.connect(this.delayNode);
       if (this.reverbConvolver && this.reverbMix > 0) finalVoiceNode.connect(this.reverbConvolver);
     } else {
-      finalVoiceNode.connect(eqInputNode);
+      finalVoiceNode.connect(busInput);
       if (this.delayNode && this.delayMix > 0) finalVoiceNode.connect(this.delayNode);
       if (this.reverbConvolver && this.reverbMix > 0) finalVoiceNode.connect(this.reverbConvolver);
     }

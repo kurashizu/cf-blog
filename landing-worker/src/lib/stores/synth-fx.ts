@@ -7,8 +7,6 @@ export const delayFeedback = writable<number>(modularSynth.getDelayFeedback());
 export const reverbMix = writable<number>(modularSynth.getReverbMix());
 export const drive = writable<number>(modularSynth.getDrive());
 export const activeFxTab = writable<'fx' | 'eq'>('fx');
-export const isEqEnabled = writable<boolean>(modularSynth.isEqEnabled());
-export const eqGains = writable<number[]>(modularSynth.getEqGains());
 
 export function setDelayMix(v: number): void {
 	modularSynth.setDelayMix(v);
@@ -35,12 +33,3 @@ export function setDrive(v: number): void {
 	drive.set(v);
 }
 
-export function setEqEnabled(enabled: boolean): void {
-	modularSynth.setEqEnabled(enabled);
-	isEqEnabled.set(enabled);
-}
-
-export function setEqBandGain(bandIdx: number, gainDb: number): void {
-	modularSynth.setEqBandGain(bandIdx, gainDb);
-	eqGains.set(modularSynth.getEqGains());
-}

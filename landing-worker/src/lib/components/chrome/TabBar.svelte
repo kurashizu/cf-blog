@@ -65,7 +65,16 @@
 				? 'border-[#e06c75] bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75] hover:text-black shadow-[0_0_8px_#e06c75]'
 				: 'border-[#98c379] bg-[#98c379]/10 text-[#98c379] hover:bg-[#98c379] hover:text-black'}"
 		>
-			{$isSeqPlaying ? '[■ STOP]' : '[► PLAY]'}
+			<!-- SVG glyph instead of ►/■ text — the font glyphs sit off the text baseline -->
+			<span class="inline-flex items-center gap-1">
+				<span>[</span>
+				{#if $isSeqPlaying}
+					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0"><rect x="1" y="1" width="6" height="6" fill="currentColor" /></svg>
+				{:else}
+					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0"><path d="M1.5 0.6 L7.2 4 L1.5 7.4 Z" fill="currentColor" /></svg>
+				{/if}
+				<span>{$isSeqPlaying ? 'STOP]' : 'PLAY]'}</span>
+			</span>
 		</button>
 		<button
 			onclick={cycleTheme}

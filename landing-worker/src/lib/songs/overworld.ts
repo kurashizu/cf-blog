@@ -8173,7 +8173,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     osc2Waveform: 'sawtooth',
     osc2Gain: 0.65,
     osc2Ratio: 1.0,
-    detuneCents: -12,
+    detuneCents: -7,
     phaseOffset: 45,
     osc2Semitone: 0,
     pulseWidth: 50,
@@ -8185,7 +8185,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
 
     filterType: 'lowpass',
     cutoff: 5200,
-    resonance: 2.2,
+    resonance: 1.8,
     envFilterMod: 0.45,
 
     attack: 0.010,
@@ -8209,7 +8209,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
 
     lfoWaveform: 'triangle',
     lfoRate: 4.0,
-    lfoPitchAmt: 0.04,
+    lfoPitchAmt: 0.03,
     lfoCutoffAmt: 0.10,
     lfoPanAmt: 0.10,
     lfoAmpAmt: 0.0,
@@ -8231,7 +8231,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     osc1Waveform: 'sine',
     osc1Gain: 0.95,
     osc2Waveform: 'triangle',
-    osc2Gain: 0.80,
+    osc2Gain: 0.55,
     osc2Ratio: 2.0,
     detuneCents: 0,
     phaseOffset: 90,
@@ -8240,12 +8240,12 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     subOscGain: 0.0,
     noiseGain: 0.05,
 
-    blendMode: 'fm',
-    morphAmount: 0.28,
+    blendMode: 'layer',
+    morphAmount: 0.0,
 
-    filterType: 'bandpass',
-    cutoff: 2800,
-    resonance: 3.2,
+    filterType: 'lowpass',
+    cutoff: 5000,
+    resonance: 1.4,
     envFilterMod: 0.60,
 
     attack: 0.001,
@@ -8265,16 +8265,16 @@ export const OVERWORLD_TRACKS: TrackData[] = [
 
     pitchAttack: 0.001,
     pitchDecay: 0.02,
-    pitchEnvAmount: 0.15,
+    pitchEnvAmount: 0.06,
 
     lfoWaveform: 'sine',
     lfoRate: 5.5,
     lfoPitchAmt: 0.0,
     lfoCutoffAmt: 0.0,
-    lfoPanAmt: 0.20,
+    lfoPanAmt: 0.0,
     lfoAmpAmt: 0.0,
     lfoFadeTime: 0,
-    airGain: 0.25,
+    airGain: 0.15,
 
     grid: OVERWORLD_TRK3_GRID,
     accents: OVERWORLD_TRK3_ACCENTS,
@@ -8291,13 +8291,13 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     osc1Waveform: 'noise',
     osc1Gain: 1.0,
     osc2Waveform: 'triangle',
-    osc2Gain: 0.50,
+    osc2Gain: 0.30,
     osc2Ratio: 0.5,
     detuneCents: 0,
     phaseOffset: 0,
     osc2Semitone: -12,
     pulseWidth: 50,
-    subOscGain: 0.40,
+    subOscGain: 0.25,
     noiseGain: 0.90,
 
     blendMode: 'layer',
@@ -8325,7 +8325,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
 
     pitchAttack: 0.001,
     pitchDecay: 0.04,
-    pitchEnvAmount: 0.60,
+    pitchEnvAmount: 0.45,
 
     lfoWaveform: 'sine',
     lfoRate: 1.0,
@@ -8411,12 +8411,12 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     osc1Waveform: 'square',
     osc1Gain: 0.85,
     osc2Waveform: 'sawtooth',
-    osc2Gain: 0.50,
+    osc2Gain: 0.35,
     osc2Ratio: 1.0,
     detuneCents: 10,
     phaseOffset: 45,
     osc2Semitone: 12,
-    pulseWidth: 15,
+    pulseWidth: 25,
     subOscGain: 0.0,
     noiseGain: 0.0,
 
@@ -8425,8 +8425,8 @@ export const OVERWORLD_TRACKS: TrackData[] = [
 
     filterType: 'bandpass',
     cutoff: 3600,
-    resonance: 3.5,
-    envFilterMod: 0.70,
+    resonance: 2.0,
+    envFilterMod: 0.55,
 
     attack: 0.001,
     decay: 0.12,
@@ -8441,7 +8441,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     filterDecay: 0.09,
     filterSustain: 0.0,
     filterRelease: 0.05,
-    filterEnvAmount: 0.70,
+    filterEnvAmount: 0.55,
 
     pitchAttack: 0.001,
     pitchDecay: 0.03,
@@ -8451,7 +8451,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     lfoRate: 5.0,
     lfoPitchAmt: 0.0,
     lfoCutoffAmt: 0.0,
-    lfoPanAmt: 0.15,
+    lfoPanAmt: 0.0,
     lfoAmpAmt: 0.0,
     lfoFadeTime: 0,
     airGain: 0.30,

@@ -8,19 +8,28 @@
 		reverbMix,
 		drive,
 		activeFxTab,
-		isEqEnabled,
-		eqGains,
 		setDelayTime,
 		setDelayFeedback,
 		setDelayMix,
 		setReverbMix,
-		setDrive,
-		setEqEnabled,
-		setEqBandGain
+		setDrive
 	} from '../../../stores/synth-fx';
 	import { soundState, setVolume } from '../../../stores/sound';
+	import { tracksState, updateActiveTrack } from '../../../stores/synth-tracks';
+	import { activeTrackId } from '../../../stores/synth-transport';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 	import HardwareFader from '../../hardware/HardwareFader.svelte';
+
+	// The EQ tab edits the ACTIVE track's own 6-band chain — switch TRK to shape another voice.
+	let activeTrack = $derived($tracksState[$activeTrackId]);
+	let trackEqOn = $derived(activeTrack?.eqOn ?? false);
+	let trackEqGains = $derived(activeTrack?.eqGains ?? [0, 0, 0, 0, 0, 0]);
+
+	function setBand(idx: number, gainDb: number) {
+		const gains = [...trackEqGains];
+		gains[idx] = gainDb;
+		updateActiveTrack({ eqGains: gains, eqOn: true });
+	}
 
 	function setTab(tab: 'fx' | 'eq') {
 		activeFxTab.set(tab);
@@ -47,7 +56,7 @@
 					class="px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'eq'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
-					title="Master Parametric EQ: 3-Band Equalizer with Custom Frequency Sliders"
+					title="Per-Track 6-Band Graphic EQ — shapes the active track only"
 				>
 					EQ
 				</button>
@@ -98,25 +107,25 @@
 	{:else}
 		<div class="flex-1 min-h-0 flex flex-col justify-between py-0.5">
 			<div class="flex items-center justify-between px-1 pb-0.5 border-b border-white/10 shrink-0">
-				<span class="text-[10px] font-bold text-white/50">6-BAND GRAPHIC EQ</span>
+				<span class="text-[10px] font-bold text-white/50">TRK {$activeTrackId + 1} · 6-BAND EQ</span>
 				<button
 					onclick={() => {
-						setEqEnabled(!$isEqEnabled);
+						updateActiveTrack({ eqOn: !trackEqOn });
 						playSound('toggle');
 					}}
-					class="px-2 py-0.2 text-[9px] rounded-xs border font-black cursor-pointer transition-all {$isEqEnabled
+					class="px-2 py-0.2 text-[9px] rounded-xs border font-black cursor-pointer transition-all {trackEqOn
 						? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_6px_#98c379]'
 						: 'border-white/20 bg-white/5 text-white/40 hover:text-white'}"
-					title="Toggle Master 6-Band Graphic EQ (Default: OFF)"
+					title="Toggle this track's 6-band graphic EQ (per-track; saved and shared with the patch)"
 				>
-					EQ: {$isEqEnabled ? 'ON' : 'OFF'}
+					EQ: {trackEqOn ? 'ON' : 'OFF'}
 				</button>
 			</div>
 
 			<div class="grid grid-cols-6 gap-0.5 items-end flex-1 min-h-0 pt-0.5 px-0.5">
 				{#each EQ_6_BANDS as band, idx (band.id)}
 					<div class="flex flex-col items-center justify-between h-full">
-						<HardwareFader label={band.label} value={$eqGains[idx] ?? 0} min={-12} max={12} step={0.5} unit="dB" color={band.color} height={48} onChange={(v) => setEqBandGain(idx, v)} />
+						<HardwareFader label={band.label} value={trackEqGains[idx] ?? 0} min={-12} max={12} step={0.5} unit="dB" color={band.color} height={48} onChange={(v) => setBand(idx, v)} />
 					</div>
 				{/each}
 			</div>
