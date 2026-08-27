@@ -8,6 +8,7 @@
 	import { initClock } from '$lib/stores/clock';
 	import { initTransport } from '$lib/stores/synth-transport';
 	import { tabIndexFromPath, TAB_ROUTES } from '$lib/routes-map';
+	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
 	import TelemetryFooter from '$lib/components/chrome/TelemetryFooter.svelte';
@@ -19,12 +20,13 @@
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 
 	function handleKeydown(e: KeyboardEvent) {
+		if ($suspendNavHotkeys) return;
 		const target = e.target as HTMLElement | null;
 		const isInput = ['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '');
 		if (isInput) return;
 
 		const key = e.key.toLowerCase();
-		if (key >= '0' && key <= '2') {
+		if (key >= '0' && key <= '3') {
 			goto(TAB_ROUTES[Number(key)]);
 			playSound('click');
 			return;
@@ -64,7 +66,9 @@
 		>
 			{@render children()}
 
-			{#if activeTab !== 2}
+			<!-- Console only on modules/guestbook — synth needs the space, and the
+			     utilities testers need raw keyboard/mouse input without an autofocused field -->
+			{#if activeTab <= 1}
 				<CommandConsole />
 			{/if}
 		</div>

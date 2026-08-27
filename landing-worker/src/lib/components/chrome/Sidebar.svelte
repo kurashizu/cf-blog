@@ -12,7 +12,8 @@
 	const HOTKEY_TILES = [
 		{ id: 0, key: '0', title: 'MODULES', desc: 'Projects', color: '#56b6c2', icon: '◈', tooltip: '0: Modules — Live Project Portal & Architecture Deep Dives [Hotkey: 0]' },
 		{ id: 1, key: '1', title: 'GUESTBOOK', desc: 'Packets', color: '#e06c75', icon: '✉', tooltip: '1: Guestbook — Send message packets across edge workers [Hotkey: 1]' },
-		{ id: 2, key: '2', title: 'SYNTH', desc: 'WebAudio', color: '#c678dd', icon: '♫', tooltip: '2: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: 2]' }
+		{ id: 2, key: '2', title: 'SYNTH', desc: 'WebAudio', color: '#c678dd', icon: '♫', tooltip: '2: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: 2]' },
+		{ id: 3, key: '3', title: 'UTILITIES', desc: 'HW Test', color: '#e5c07b', icon: '⌨', tooltip: '3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: 3]' }
 	];
 
 	function nav(id: number) {
@@ -71,7 +72,7 @@
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
 		<div class="text-xs font-bold text-[#e5c07b] flex items-center justify-between border-b border-white/10 pb-0.5 shrink-0">
 			<span>┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
-			<span class="text-white/50 text-xs">[0-2, T]</span>
+			<span class="text-white/50 text-xs">[0-3, T]</span>
 		</div>
 
 		<div class="grid grid-cols-3 gap-1.5 py-1">
@@ -117,8 +118,8 @@
 		</div>
 
 		<div class="border-t border-white/10 pt-1 text-xs text-white/50 flex justify-between shrink-0 font-mono">
-			<span>PADS: 4 ACTIVE NODES</span>
-			<span>HOTKEY [0-2, T]</span>
+			<span>PADS: 5 ACTIVE NODES</span>
+			<span>HOTKEY [0-3, T]</span>
 		</div>
 	</div>
 </div>
