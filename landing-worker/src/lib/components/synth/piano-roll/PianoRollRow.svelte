@@ -37,8 +37,7 @@
 	let isRootC = $derived(nInfo.note.startsWith('C') && !nInfo.note.includes('#'));
 	let meterSpec = $derived(METER_SPECS[timeMeter] || METER_SPECS['4/4']);
 	// Columns follow the snap family: 1/4-beat columns (6 steps) for binary snaps,
-	// 1/6-beat columns (4 steps) for ternary snaps. Cells render at half-column
-	// resolution, so occupancy is scanned over step ranges.
+	// 1/6-beat columns (4 steps) for ternary snaps.
 	let spc = $derived(stepsPerColumn(snapDiv));
 	let half = $derived(spc / 2);
 	let colFactor = $derived(ternaryColFactor(snapDiv));
@@ -47,73 +46,42 @@
 	let colsCount = $derived(effColsPerBar);
 	let spanInt = $derived(Math.max(1, Math.floor(divToColumnSpan(snapDiv, snapDiv))));
 
-	function rangeHas(t: VisibleTrackItem, from: number, len: number): boolean {
-		for (let st = from; st < from + len; st++) {
-			if (t.grid[st]?.includes(actualIdx)) return true;
-		}
-		return false;
+	interface NoteSeg {
+		leftPct: number;
+		widthPct: number;
+		startsHere: boolean;
+		endsHere: boolean;
 	}
 
-	function noteBarGeometry(t: VisibleTrackItem, colStart: number) {
-		const is0 = rangeHas(t, colStart, half);
-		const is1 = rangeHas(t, colStart + half, half);
-		if (!is0 && !is1) return null;
-
-		const isPrevConnected = is0 && (t.grid[colStart - 1]?.includes(actualIdx) || false);
-		const isNextConnected = is1 && (t.grid[colStart + spc]?.includes(actualIdx) || false);
-
-		let leftClass = 'left-0 rounded-l-xs';
-		let rightClass = 'right-0 rounded-r-xs';
-		let widthStyle = '100%';
-		let leftStyle: string | undefined;
-
-		if (is0 && is1) {
-			if (isPrevConnected && isNextConnected) {
-				leftClass = '-left-[2px] rounded-none';
-				rightClass = '-right-[2px]';
-				widthStyle = 'calc(100% + 4px)';
-				leftStyle = '-2px';
-			} else if (isPrevConnected) {
-				leftClass = '-left-[2px] rounded-l-none';
-				rightClass = 'right-0 rounded-r-xs';
-				widthStyle = 'calc(100% + 2px)';
-				leftStyle = '-2px';
-			} else if (isNextConnected) {
-				leftClass = 'left-0 rounded-l-xs border-l-2 border-white/80';
-				rightClass = '-right-[2px] rounded-r-none';
-				widthStyle = 'calc(100% + 2px)';
-				leftStyle = '0px';
+	/**
+	 * Pixel-proportional note bars — a note's drawn width IS its step duration,
+	 * so 1/12, 1/8, 1/6 and 1/4 placements all look different, like any DAW roll.
+	 * Returns the segments of this pitch's note runs that overlap the column.
+	 */
+	function noteSegments(t: VisibleTrackItem, colStart: number): NoteSeg[] {
+		const colEnd = colStart + spc;
+		const segs: NoteSeg[] = [];
+		let s = colStart;
+		while (s < colEnd) {
+			if (t.grid[s]?.includes(actualIdx)) {
+				let runStart = s;
+				while (t.grid[runStart - 1]?.includes(actualIdx)) runStart--;
+				let runEnd = s + 1;
+				while (t.grid[runEnd]?.includes(actualIdx)) runEnd++;
+				const from = Math.max(runStart, colStart);
+				const to = Math.min(runEnd, colEnd);
+				segs.push({
+					leftPct: ((from - colStart) / spc) * 100,
+					widthPct: ((to - from) / spc) * 100,
+					startsHere: runStart >= colStart,
+					endsHere: runEnd <= colEnd
+				});
+				s = runEnd;
 			} else {
-				leftClass = 'left-0 rounded-xs border-l-2 border-white/80';
-				rightClass = 'right-0';
-				widthStyle = '100%';
-				leftStyle = '0px';
-			}
-		} else if (is0 && !is1) {
-			if (isPrevConnected) {
-				leftClass = '-left-[2px] rounded-l-none';
-				rightClass = 'rounded-r-xs';
-				widthStyle = 'calc(50% + 2px)';
-				leftStyle = '-2px';
-			} else {
-				leftClass = 'left-0 rounded-xs border-l-2 border-white/80';
-				widthStyle = '50%';
-				leftStyle = '0px';
-			}
-		} else {
-			if (isNextConnected) {
-				leftClass = 'rounded-l-xs border-l-2 border-white/80';
-				rightClass = '-right-[2px] rounded-r-none';
-				widthStyle = 'calc(50% + 2px)';
-				leftStyle = '50%';
-			} else {
-				leftClass = 'rounded-xs border-l-2 border-white/80';
-				widthStyle = '50%';
-				leftStyle = '50%';
+				s++;
 			}
 		}
-
-		return { leftClass, rightClass, widthStyle, leftStyle };
+		return segs;
 	}
 </script>
 
@@ -140,65 +108,47 @@
 			{@const isBarStart = colInBar === 0}
 			{@const isBeatStart = colInBar % effColsPerBeat === 0}
 			{@const isDivBlockStart = colIdx % spanInt === 0}
-			<div class="h-full relative flex">
+			<div class="h-full relative">
+				<!-- Click layer: whole-column cell, or two half-column sub-cells for 1/8 & 1/12 snaps -->
 				{#if hasSubColumns(snapDiv)}
 					<div class="flex h-full w-full gap-0.5">
 						{#each [0, 1] as subCol (subCol)}
 							{@const step = colStart + subCol * half}
 							{@const isSubCurrent = isColActive && activeSubCol === subCol}
-							{@const tracksWithNote = visibleTracks.filter((t) => rangeHas(t, step, half))}
-							{@const hasNote = tracksWithNote.length > 0}
-							{@const primaryTrackWithNote = tracksWithNote.find((t) => t.isPrimary)}
-							{@const displayColor = primaryTrackWithNote ? primaryTrackWithNote.color : tracksWithNote[0]?.color || '#fff'}
-							{@const isPrimaryNote = Boolean(primaryTrackWithNote)}
-							{@const isPrevConnected = hasNote && visibleTracks.some((t) => rangeHas(t, step, half) && (t.grid[step - 1]?.includes(actualIdx) || false))}
-							{@const isNextConnected = hasNote && visibleTracks.some((t) => rangeHas(t, step, half) && (t.grid[step + half]?.includes(actualIdx) || false))}
-							{@const roundedClass = hasNote
-								? isPrevConnected && isNextConnected
-									? 'rounded-none border-x-0'
-									: isPrevConnected
-										? 'rounded-l-none rounded-r-xs border-l-0'
-										: isNextConnected
-											? 'rounded-r-none rounded-l-xs border-r-0 border-l-2 border-white/70'
-											: 'rounded-xs border-l-2 border-white/70'
-								: 'rounded-xs'}
-							{@const spanMargin = hasNote ? (isPrevConnected && isNextConnected ? '-mx-[1.5px] z-[2]' : isPrevConnected ? '-ml-[1.5px] z-[2]' : isNextConnected ? '-mr-[1.5px] z-[2]' : '') : ''}
 							<button
 								onclick={() => onSubCellClick(actualIdx, colIdx, subCol)}
-								class="flex-1 h-full cursor-pointer border {roundedClass} {spanMargin} transition-colors relative {hasNote
-									? `shadow-xs ${isSubCurrent ? 'brightness-125 ring-1 ring-white' : ''}`
-									: isSubCurrent
-										? 'border-white/70 bg-white/30'
-										: isBarStart && subCol === 0
+								title={`Step ${step + 1}`}
+								class="flex-1 h-full cursor-pointer border rounded-xs transition-colors {isSubCurrent
+									? 'border-white/70 bg-white/30'
+									: isBarStart && subCol === 0
+										? isRootC
+											? 'border-l-2 border-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+											: nInfo.isBlack
+												? 'border-l-2 border-[#56b6c2]/70 bg-black/60 hover:bg-white/10'
+												: 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+										: isBeatStart && subCol === 0
 											? isRootC
-												? 'border-l-2 border-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+												? 'border-l border-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
 												: nInfo.isBlack
-													? 'border-l-2 border-[#56b6c2]/70 bg-black/60 hover:bg-white/10'
-													: 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-											: isBeatStart && subCol === 0
-												? isRootC
-													? 'border-l border-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
-													: nInfo.isBlack
-														? 'border-l border-white/25 bg-black/60 hover:bg-white/10'
-														: 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-												: isRootC
-													? 'border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
-													: nInfo.isBlack
-														? subCol === 1
-															? 'border-l border-black/20 bg-black/60 hover:bg-white/10'
-															: 'border-black/20 bg-black/60 hover:bg-white/10'
-														: subCol === 1
-															? 'border-l border-white/10 bg-white/[0.03] hover:bg-white/10'
-															: 'border-white/5 bg-white/[0.03] hover:bg-white/10'}"
-								style="background-color: {hasNote ? displayColor : ''}; border-color: {hasNote ? displayColor : ''}; opacity: {hasNote && !isPrimaryNote ? 0.75 : 1};"
-								title={`Step ${step + 1} (${subCol === 0 ? 'Left' : 'Right'} half)${hasNote ? ` — ${tracksWithNote.length} note(s)` : ''}`}
+													? 'border-l border-white/25 bg-black/60 hover:bg-white/10'
+													: 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+											: isRootC
+												? 'border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
+												: nInfo.isBlack
+													? subCol === 1
+														? 'border-l border-black/20 bg-black/60 hover:bg-white/10'
+														: 'border-black/20 bg-black/60 hover:bg-white/10'
+													: subCol === 1
+														? 'border-l border-white/10 bg-white/[0.03] hover:bg-white/10'
+														: 'border-white/5 bg-white/[0.03] hover:bg-white/10'}"
 							></button>
 						{/each}
 					</div>
 				{:else}
 					<button
 						onclick={() => onCellClick(actualIdx, colIdx)}
-						class="relative w-full h-full cursor-pointer rounded-xs border transition-colors {isColActive
+						title={`${nInfo.note} — Step ${colStart + 1}`}
+						class="w-full h-full cursor-pointer rounded-xs border transition-colors {isColActive
 							? 'border-white/70 bg-white/25 shadow-xs'
 							: isBarStart
 								? isRootC
@@ -219,18 +169,22 @@
 											: isDivBlockStart
 												? 'border border-white/20 bg-white/[0.03] hover:bg-white/10'
 												: 'border border-white/10 bg-white/[0.03] hover:bg-white/10'}"
-					>
-						{#each visibleTracks as t (t.id)}
-							{@const geom = noteBarGeometry(t, colStart)}
-							{#if geom}
-								<div
-									class="absolute top-0 h-full {geom.leftClass} {geom.rightClass} shadow-xs {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-75'} {isColActive && t.isPrimary ? 'brightness-125 ring-1 ring-white' : ''}"
-									style="background-color: {t.color}; left: {geom.leftStyle}; width: {geom.widthStyle};"
-								></div>
-							{/if}
-						{/each}
-					</button>
+					></button>
 				{/if}
+
+				<!-- Note overlay: bar width is exactly the note's step span; clicks pass through -->
+				{#each visibleTracks as t (t.id)}
+					{#each noteSegments(t, colStart) as seg, si (si)}
+						<div
+							class="absolute top-[1px] bottom-[1px] pointer-events-none shadow-xs {seg.startsHere
+								? 'rounded-l-xs border-l-2 border-white/80'
+								: ''} {seg.endsHere ? 'rounded-r-xs' : ''} {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-70'} {isColActive && t.isPrimary
+								? 'brightness-125 ring-1 ring-white'
+								: ''}"
+							style="background-color: {t.color}; left: {seg.startsHere ? `${seg.leftPct}%` : `calc(${seg.leftPct}% - 2px)`}; width: calc({seg.widthPct}% + {(seg.startsHere ? 0 : 2) + (seg.endsHere ? 0 : 2)}px);"
+						></div>
+					{/each}
+				{/each}
 			</div>
 		{/each}
 	</div>

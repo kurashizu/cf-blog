@@ -261,8 +261,9 @@
 	<TrackChips />
 </div>
 
-<!-- Row 3: sound presets, snap/dur, page nav -->
-<div class="grid grid-cols-1 xl:grid-cols-3 items-center gap-2 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
+<!-- Row 3: sound presets, snap/dur, page nav — flex-wrap so the 9-division
+     SNAP/DUR groups wrap instead of overlapping the page controls -->
+<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
 	<div class="flex items-center gap-0.5 justify-start text-xs">
 		<span class="text-white/60 font-bold text-[11px] pl-0.5">PRESET:</span>
 		<button onclick={prevPreset} class="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none" title="Previous Sound Preset">◄</button>
@@ -276,7 +277,7 @@
 		<button onclick={nextPreset} class="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none" title="Next Sound Preset">►</button>
 	</div>
 
-	<div class="flex items-center justify-center gap-2">
+	<div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
 		<div class="flex items-center gap-1">
 			<span class="opacity-60 font-bold" title="Grid Quantization / Snap Alignment">SNAP:</span>
 			{#each DIVS as d (d)}
