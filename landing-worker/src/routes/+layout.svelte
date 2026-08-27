@@ -21,6 +21,17 @@
 	let consoleOverlayOpen = $state(false);
 
 	function handleKeydown(e: KeyboardEvent) {
+		// Tab navigation on Ctrl+0..3 — the universal escape hatch. It types
+		// nothing, so it works with the console input focused, and it ignores
+		// suspendNavHotkeys so the keyboard tester / QWERTY piano / screen test
+		// can never trap you on their tab.
+		if (e.ctrlKey && !e.metaKey && !e.altKey && e.code >= 'Digit0' && e.code <= 'Digit3') {
+			e.preventDefault();
+			goto(TAB_ROUTES[Number(e.code.slice(-1))]);
+			playSound('click');
+			return;
+		}
+
 		if ($suspendNavHotkeys) return;
 
 		// Quake-style console: backquote toggles from anywhere, Esc closes —
@@ -33,16 +44,6 @@
 		}
 		if (e.key === 'Escape' && consoleOverlayOpen) {
 			consoleOverlayOpen = false;
-			return;
-		}
-
-		// Tab navigation on Ctrl+0..3 — bare digits collided with the QWERTY piano,
-		// typing test and console input. Ctrl+digit types nothing, so it works even
-		// while the console input has focus.
-		if (e.ctrlKey && !e.metaKey && !e.altKey && e.code >= 'Digit0' && e.code <= 'Digit3') {
-			e.preventDefault();
-			goto(TAB_ROUTES[Number(e.code.slice(-1))]);
-			playSound('click');
 			return;
 		}
 

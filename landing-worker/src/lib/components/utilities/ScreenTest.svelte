@@ -160,6 +160,7 @@
 
 	function onOverlayKeydown(e: KeyboardEvent) {
 		if (!active) return;
+		if (e.ctrlKey || e.metaKey || e.altKey) return; // Ctrl+0-3 nav passes through
 		if (e.key === 'Escape') {
 			close();
 			return;
@@ -177,7 +178,7 @@
 	<div class="border border-white/15 bg-black/40 rounded-xs p-3 sm:p-4 space-y-3">
 		<p class="text-xs font-mono text-white/60 leading-relaxed">
 			Fullscreen display test suite — {ALL_STEPS.length} patterns across {MODES.length} groups. Inside a test:
-			click / any key = next pattern, ← = previous, Esc = exit. Nav hotkeys are paused while a test runs.
+			click / any key = next pattern, ← = previous, Esc = exit (Ctrl+0-3 navigation keeps working).
 		</p>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5">

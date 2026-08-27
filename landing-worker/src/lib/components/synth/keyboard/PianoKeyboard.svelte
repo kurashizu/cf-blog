@@ -246,7 +246,7 @@
 				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {qwertyOn
 					? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_#56b6c2]'
 					: 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'}"
-				title="Play with your computer keyboard — Z-row = base octave, Q-row = octave above. Ctrl = octave down, Shift = octave up (the [ and ] keys also work), hold Space = sustain pedal. Nav hotkeys pause while active."
+				title="Play with your computer keyboard — Z-row = base octave, Q-row = octave above. Ctrl = octave down, Shift = octave up (the [ and ] keys also work), hold Space = sustain pedal. Ctrl+0-3 tab navigation keeps working."
 			>
 				KBD: {qwertyOn ? 'ON' : 'OFF'}
 			</button>
