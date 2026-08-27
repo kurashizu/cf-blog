@@ -5,8 +5,8 @@
     "type": "module",
     "scripts": {
         "dev": "vite dev",
-        "build": "svelte-check --tsconfig ./tsconfig.json && vite build",
-        "build:cf": "svelte-check --tsconfig ./tsconfig.json && vite build",
+        "build": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && vite build",
+        "build:cf": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && vite build",
         "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "prepare": "svelte-kit sync || echo ''",
