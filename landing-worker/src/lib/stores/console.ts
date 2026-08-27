@@ -106,7 +106,7 @@ const HELP: ConsoleLine[] = [
 	out('  eval <expr>     safe math (e.g. eval 2**16)'),
 	out('  echo <text>     print text'),
 	out('  theme [name]    cycle or set: tokyo gruvbox nord amber'),
-	out('  clear / Ctrl+L  clear screen · Tab completes · ↑↓ history'),
+	out('  clear / Ctrl+L  clear screen · Tab completes/cycles · ↑↓ history'),
 	out('  ` (backquote)   drop-down console overlay on any tab')
 ];
 
@@ -423,25 +423,26 @@ const ARG_COMPLETIONS: Record<string, string[]> = {
 	meter: VALID_METERS
 };
 
-/** Returns the completed input line, or null if there is no match. */
-export function completeCommand(input: string): string | null {
+/**
+ * Live matches for the current input — command names on the first token,
+ * per-command argument candidates after it. A trailing space means "empty
+ * arg query", which returns the full candidate list for that command.
+ */
+export function getSuggestions(input: string): string[] {
 	const parts = input.split(/\s+/);
 	if (parts.length <= 1) {
 		const q = (parts[0] ?? '').toLowerCase();
-		if (!q) return null;
-		const matches = COMMAND_NAMES.filter((c) => c.startsWith(q));
-		if (matches.length === 0) return null;
-		if (matches.length === 1) return matches[0] + ' ';
-		push([out(matches.join('  '))]);
-		return null;
+		if (!q) return [];
+		return COMMAND_NAMES.filter((c) => c.startsWith(q));
 	}
-	const base = parts[0].toLowerCase();
-	const candidates = ARG_COMPLETIONS[base];
-	if (!candidates) return null;
+	const candidates = ARG_COMPLETIONS[parts[0].toLowerCase()];
+	if (!candidates) return [];
 	const q = parts[parts.length - 1].toLowerCase();
-	const matches = candidates.filter((c) => c.startsWith(q));
-	if (matches.length === 0) return null;
-	if (matches.length === 1) return [...parts.slice(0, -1), matches[0]].join(' ') + ' ';
-	push([out(matches.join('  '))]);
-	return null;
+	return candidates.filter((c) => c.startsWith(q));
+}
+
+/** Replace the last token of `input` with `completion`, keeping the rest. */
+export function applyCompletion(input: string, completion: string, trailingSpace = true): string {
+	const head = input.split(/\s+/).slice(0, -1);
+	return [...head, completion].join(' ') + (trailingSpace ? ' ' : '');
 }

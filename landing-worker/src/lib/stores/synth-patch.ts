@@ -272,20 +272,57 @@ export function handleExportPatch(): void {
 }
 
 
+/** Set when programmatic copy is blocked — PatchManager renders it for manual copy. */
+export const shareUrlFallback = writable<string | null>(null);
+
+async function copyText(text: string): Promise<boolean> {
+	// The async Clipboard API can reject after an await consumed the user gesture
+	// (Safari) or under a restrictive permissions policy — fall back to execCommand.
+	try {
+		await navigator.clipboard.writeText(text);
+		return true;
+	} catch {
+		/* fall through */
+	}
+	try {
+		const ta = document.createElement('textarea');
+		ta.value = text;
+		ta.setAttribute('readonly', '');
+		ta.style.position = 'fixed';
+		ta.style.opacity = '0';
+		document.body.appendChild(ta);
+		ta.select();
+		const copied = document.execCommand('copy');
+		document.body.removeChild(ta);
+		return copied;
+	} catch {
+		return false;
+	}
+}
+
 /** SHARE: serialize the whole patch into a compressed #patch= URL and copy it. */
 export async function handleSharePatch(): Promise<void> {
 	if (!codecSupported()) {
 		showSaveStatus('X NO CODEC');
 		return;
 	}
+	let url: string;
 	try {
 		const fragment = await encodeToFragment(gatherPatchData());
-		const url = `${location.origin}/synth#patch=${fragment}`;
-		await navigator.clipboard.writeText(url);
-		showSaveStatus(`✓ LINK COPIED (${Math.round(url.length / 1024)}KB)`);
-		playSound('toggle');
+		url = `${location.origin}/synth#patch=${fragment}`;
 	} catch {
-		showSaveStatus('X SHARE ERR');
+		showSaveStatus('X ENCODE ERR');
+		return;
+	}
+	if (await copyText(url)) {
+		shareUrlFallback.set(null);
+		showSaveStatus(`✓ LINK COPIED (${(url.length / 1024).toFixed(1)}KB)`);
+		playSound('toggle');
+	} else {
+		// Clipboard fully blocked — hand the link over for manual copy instead of erroring out.
+		shareUrlFallback.set(url);
+		showSaveStatus('CLIPBOARD BLOCKED — COPY BELOW');
+		playSound('click');
 	}
 }
 

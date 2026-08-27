@@ -10,7 +10,8 @@
 		handleLoadPatch,
 		handleExportPatch,
 		handleSharePatch,
-		handleImportPatchFile
+		handleImportPatchFile,
+		shareUrlFallback
 	} from '../../stores/synth-patch';
 
 	let fileInput: HTMLInputElement | undefined = $state();
@@ -114,5 +115,25 @@
 
 	{#if $saveStatus}
 		<span class="text-[#98c379] font-bold text-xs ml-1">{$saveStatus}</span>
+	{/if}
+
+	{#if $shareUrlFallback}
+		<!-- Programmatic copy was blocked by the browser — offer the link for manual copy -->
+		<div class="basis-full flex items-center gap-1.5 mt-1">
+			<input
+				type="text"
+				readonly
+				value={$shareUrlFallback}
+				onfocus={(e) => (e.target as HTMLInputElement).select()}
+				onclick={(e) => (e.target as HTMLInputElement).select()}
+				class="flex-1 min-w-0 bg-black/60 border border-[#c678dd]/50 text-[#c678dd] text-[10px] font-mono px-2 py-1 rounded-xs outline-none"
+			/>
+			<button
+				onclick={() => shareUrlFallback.set(null)}
+				class="px-2 py-1 border border-white/20 text-white/60 hover:border-white/60 hover:text-white rounded-xs font-bold text-[10px] cursor-pointer transition-colors"
+			>
+				✕
+			</button>
+		</div>
 	{/if}
 </div>

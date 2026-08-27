@@ -101,6 +101,6 @@
 			<span style="color: {themeStyles.cursorColor}">~ KRSZ CONSOLE // DROP-DOWN</span>
 			<span class="text-white/40">` or Esc to close</span>
 		</div>
-		<CommandConsole />
+		<CommandConsole variant="overlay" />
 	</div>
 {/if}

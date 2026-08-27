@@ -169,7 +169,9 @@
 		<div class="border border-white/15 bg-black/50 rounded-xs p-3 font-mono text-sm sm:text-base leading-loose select-none min-h-[120px]">
 			{#each words.slice(Math.max(0, wordIdx - 5), wordIdx + 25) as w, rel (Math.max(0, wordIdx - 5) + rel)}
 				{@const wi = Math.max(0, wordIdx - 5) + rel}
-				<span class="mr-[0.6em] {wi === wordIdx ? 'bg-white/10 rounded-xs px-0.5' : ''}">
+				<!-- inline-block: Svelte trims inter-iteration whitespace, so without an
+				     atomic inline there'd be no soft-wrap opportunity between words -->
+				<span class="inline-block mr-[0.6em] {wi === wordIdx ? 'bg-white/10 rounded-xs px-0.5' : ''}">
 					{#each w.split('') as ch, ci (ci)}<span class={charClass(wi, ci, ch)}>{ch}</span>{/each}{#if wi === wordIdx && typed.length > w.length}<span class="text-[#e06c75] underline">{typed.slice(w.length)}</span>{/if}{#if wi === wordIdx}<span class="inline-block w-[2px] h-[1em] align-middle animate-pulse" style="background-color: {themeStyles.cursorColor}"></span>{/if}
 				</span>
 			{/each}

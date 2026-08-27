@@ -6,7 +6,7 @@
 	import TypingTest from './TypingTest.svelte';
 	import GamepadTester from './GamepadTester.svelte';
 	import ReactionTest from './ReactionTest.svelte';
-	import DeadPixelTest from './DeadPixelTest.svelte';
+	import ScreenTest from './ScreenTest.svelte';
 
 	type ToolId = 'keyboard' | 'mouse' | 'typing' | 'gamepad' | 'reaction' | 'pixels' | 'display';
 
@@ -16,7 +16,7 @@
 		{ id: 'typing', label: 'TYPING', color: '#e5c07b', desc: '30-second WPM and accuracy test' },
 		{ id: 'gamepad', label: 'GAMEPAD', color: '#e06c75', desc: 'Buttons, axes/drift, rumble (Gamepad API)' },
 		{ id: 'reaction', label: 'REACTION', color: '#61afef', desc: 'Visual reaction time, best/avg of 10' },
-		{ id: 'pixels', label: 'PIXELS', color: '#d19a66', desc: 'Fullscreen solid-color dead pixel check' },
+		{ id: 'pixels', label: 'SCREEN', color: '#d19a66', desc: 'Dead pixels, grayscale, banding, sharpness, text, ghosting' },
 		{ id: 'display', label: 'DISPLAY / SYS', color: '#98c379', desc: 'Resolution, refresh rate, browser environment' }
 	];
 
@@ -71,7 +71,7 @@
 		{:else if activeTool === 'reaction'}
 			<ReactionTest />
 		{:else if activeTool === 'pixels'}
-			<DeadPixelTest />
+			<ScreenTest />
 		{:else}
 			<DisplayInfo />
 		{/if}

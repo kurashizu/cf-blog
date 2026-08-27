@@ -53,10 +53,22 @@
 		playSound('click');
 	}
 
+	function onWindowKeydown(e: KeyboardEvent) {
+		if (e.code !== 'Space' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+		const target = e.target as HTMLElement | null;
+		if (['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '')) return;
+		// preventDefault also stops a focused <button> from firing click on keyup —
+		// otherwise Space would double-trigger through the same gesture.
+		e.preventDefault();
+		handleClick();
+	}
+
 	onMount(() => () => {
 		if (timer) clearTimeout(timer);
 	});
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="space-y-2">
 	<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
@@ -81,18 +93,18 @@
 			{phase === 'waiting' ? 'bg-[#e06c75]/25 border-[#e06c75]' : phase === 'go' ? 'bg-[#98c379]/30 border-[#98c379]' : 'bg-black/50 border-white/15 hover:border-white/40'}"
 	>
 		{#if phase === 'idle'}
-			<span class="text-sm font-black text-white/80">CLICK TO START</span>
-			<span class="text-xs text-white/40">Wait for green, then click as fast as you can</span>
+			<span class="text-sm font-black text-white/80">CLICK OR PRESS SPACE TO START</span>
+			<span class="text-xs text-white/40">Wait for green, then react as fast as you can — Space works throughout</span>
 		{:else if phase === 'waiting'}
 			<span class="text-sm font-black text-[#e06c75]">WAIT FOR GREEN…</span>
 		{:else if phase === 'go'}
-			<span class="text-2xl font-black text-[#98c379]">CLICK NOW!</span>
+			<span class="text-2xl font-black text-[#98c379]">NOW! (click / Space)</span>
 		{:else if phase === 'early'}
 			<span class="text-sm font-black text-[#e06c75]">FALSE START</span>
-			<span class="text-xs text-white/40">Clicked before green — click to retry</span>
+			<span class="text-xs text-white/40">Triggered before green — click or Space to retry</span>
 		{:else}
 			<span class="text-3xl font-black text-[#e5c07b]">{lastMs}ms</span>
-			<span class="text-xs text-white/40">Click to go again · timing includes your display & input latency</span>
+			<span class="text-xs text-white/40">Click or Space to go again · timing includes your display & input latency</span>
 		{/if}
 	</button>
 </div>
