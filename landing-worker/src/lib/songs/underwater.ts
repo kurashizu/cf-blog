@@ -1,4 +1,4 @@
-import { TrackData } from '../synth';
+import type { TrackData } from '../synth';
 
 const UNDERWATER_TRK1_GRID: number[][] = [
   // BAR 1 (Steps 0..23)

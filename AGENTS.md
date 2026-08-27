@@ -9,7 +9,7 @@ Multi-worker Cloudflare monorepo. This file is a quick orientation for AI agents
 | `cf-blog` | `./` | https://blog.krsz.in | Main blog (Next.js) |
 | `cf-agent` | `agent-worker/` | https://agent.krsz.in | AI agent with tool calling (Next.js) |
 | `cf-blog-cache` | `cache-worker/` | (cron-only) | Refreshes caches every 30 min + heartbeat every 3 min + daily HN top-30 fetch |
-| `cf-landing` | `landing-worker/` | https://krsz.in / https://www.krsz.in | Full-screen scroll-driven portal page linking to blog/agent (Next.js, no D1/R2/KV/Vectorize) |
+| `cf-landing` | `landing-worker/` | https://krsz.in / https://www.krsz.in | tmux-styled portal: project showcase, guestbook relay, WebAudio synth (SvelteKit, prerendered, no D1/R2/KV/Vectorize) |
 
 > The apex domain (currently `krsz.in`) is centralized in `shared/site-config.ts`
 > via the `APEX_DOMAIN` constant. All worker URLs above fan out from it.
@@ -303,7 +303,7 @@ Direct deploy (skips CI):
 ## Conventions
 
 - All Next.js workers use `@opennextjs/cloudflare` (not `next start`).
-- `landing-worker/` uses the same `@opennextjs/cloudflare` stack but has no D1/R2/KV/Vectorize bindings — pure static SSR with CSS scroll-driven animations. Custom domains are configured in the Cloudflare Dashboard (not in `wrangler.toml`); the apex domain is tracked in `shared/site-config.ts` (`LANDING_URL`, `LANDING_WWW_URL`).
+- `landing-worker/` is SvelteKit 2 / Svelte 5 with `@sveltejs/adapter-cloudflare`, fully prerendered (every route ships as static HTML; no bindings). Custom domains are configured in the Cloudflare Dashboard (not in `wrangler.toml`); the apex domain is tracked in `shared/site-config.ts` (`LANDING_URL`, `LANDING_WWW_URL`).
 - **Apex domain** is centralized in `shared/site-config.ts` (`APEX_DOMAIN`, defaults to `krsz.in`). All worker URLs (blog, agent, bucket, landing apex + www, share row in `database/schema.sql`) fan out from this single constant. Override per environment via the `APEX_DOMAIN` env var.
 - Static assets go in `public/`. Blog article markdown lives in D1, not the repo (R2 markdown backups were removed in the D1 migration).
 - Theme colors via CSS variables in `components/theme/tokens.css`. Tailwind utilities map to these (`bg-bg-card`, `text-text-muted`, etc.).

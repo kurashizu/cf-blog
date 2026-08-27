@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--bg: #16171d;
+	--bg-card: #1b1d24;
+	--border: #2e3440;
+	--text-primary: #d8dee9;
+	--text-secondary: #90949d;
+	--text-tertiary: #545863;
+	--selection: #56b6c2;
+	--selection-text: #0f1115;
+}
+
+html,
+body {
+	background-color: var(--bg);
+	color: var(--text-primary);
+	min-height: 100vh;
+	margin: 0;
+	padding: 0;
+	font-family:
+		'JetBrains Mono',
+		'Fira Code',
+		'Cascadia Code',
+		ui-monospace,
+		SFMono-Regular,
+		Menlo,
+		Monaco,
+		Consolas,
+		monospace;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+::selection {
+	background: var(--selection);
+	color: var(--selection-text);
+}
+
+/* Authentic terminal block caret */
+input,
+textarea {
+	caret-color: #56b6c2;
+	caret-shape: block;
+}
+
+/* Custom CSS terminal block cursor */
+.cursor-block {
+	display: inline-block;
+	width: 0.6em;
+	height: 1.15em;
+	background-color: currentColor;
+	vertical-align: -0.15em;
+	margin-left: 2px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+/* Matte obsidian custom terminal scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+	width: 5px;
+	height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+	background: rgba(0, 0, 0, 0.25);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.18);
+	border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.35);
+}
+.custom-scrollbar {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.18) rgba(0, 0, 0, 0.25);
+}

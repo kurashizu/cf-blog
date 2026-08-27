@@ -1,4 +1,4 @@
-import { TrackData } from '../synth';
+import type { TrackData } from '../synth';
 
 // Super Mario Bros 3 - Overworld 2 (90 BPM, 4/4 Swing Theme)
 // Total Length: 21 Bars, 672 Steps

@@ -2,6 +2,7 @@ import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
+import { MARIO1_TRACKS } from './songs/mario1';
 
 export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
 
@@ -571,6 +572,11 @@ class ModularSynth {
       this.totalSteps = 768;
       this.bpm = 100;
       this.meter = '6/8';
+    } else if (songName === 'MARIO_1') {
+      this.tracks = JSON.parse(JSON.stringify(MARIO1_TRACKS));
+      this.totalSteps = 1088;
+      this.bpm = 100;
+      this.meter = '4/4';
     }
     this.currentStep = 0;
     this.scheduledStepQueue = [];
