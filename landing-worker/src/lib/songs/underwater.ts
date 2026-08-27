@@ -707,7 +707,7 @@ export const UNDERWATER_TRACKS: TrackData[] = [
   {
     id: 3,
     name: 'TRK 4',
-    color: '#e06c75',
+    color: '#d8dee9',
     volume: 1.5,
     pan: 0.05,
     muted: false,

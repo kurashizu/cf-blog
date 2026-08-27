@@ -8282,7 +8282,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
   {
     id: 3,
     name: 'TRK 4: NES DRUMS',
-    color: '#e06c75',
+    color: '#d8dee9',
     volume: 0.88,
     pan: 0.0,
     muted: false,
