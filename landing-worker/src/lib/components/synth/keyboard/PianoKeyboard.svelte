@@ -97,6 +97,22 @@
 	function qwertyKeydown(e: KeyboardEvent) {
 		const target = e.target as HTMLElement | null;
 		if (['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '')) return;
+
+		// Octave shift: Ctrl = down, Shift = up ([ / ] still work as fallback)
+		if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+			if (!e.repeat) qwertyOctave = Math.max(1, qwertyOctave - 1);
+			return;
+		}
+		if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+			if (!e.repeat) qwertyOctave = Math.min(6, qwertyOctave + 1);
+			return;
+		}
+		// Space = sustain pedal, momentary like the real thing: held down = pedal down
+		if (e.code === 'Space') {
+			e.preventDefault();
+			if (!e.repeat) setSustainPedal(true);
+			return;
+		}
 		if (e.metaKey || e.ctrlKey || e.altKey) return;
 		if (e.code === 'BracketLeft') {
 			e.preventDefault();
@@ -119,6 +135,10 @@
 	}
 
 	function qwertyKeyup(e: KeyboardEvent) {
+		if (e.code === 'Space') {
+			setSustainPedal(false);
+			return;
+		}
 		const idx = heldByCode.get(e.code);
 		if (idx === undefined) return;
 		heldByCode.delete(e.code);
@@ -226,12 +246,12 @@
 				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {qwertyOn
 					? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_#56b6c2]'
 					: 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'}"
-				title="Play with your computer keyboard — Z-row = base octave, Q-row = octave above ([ / ] shifts octave). Nav hotkeys pause while active."
+				title="Play with your computer keyboard — Z-row = base octave, Q-row = octave above. Ctrl = octave down, Shift = octave up (the [ and ] keys also work), hold Space = sustain pedal. Nav hotkeys pause while active."
 			>
 				KBD: {qwertyOn ? 'ON' : 'OFF'}
 			</button>
 			{#if qwertyOn}
-				<span class="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2]" title="QWERTY base octave — shift with [ and ]">C{qwertyOctave}</span>
+				<span class="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2]" title="QWERTY base octave — Ctrl = down, Shift = up (the [ and ] keys also work)">C{qwertyOctave}</span>
 			{/if}
 
 			<span class="opacity-30">|</span>

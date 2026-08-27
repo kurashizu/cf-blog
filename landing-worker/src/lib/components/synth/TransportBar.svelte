@@ -32,29 +32,33 @@
 
 	const METERS: TimeSignature[] = ['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'];
 	const DIVS: NoteDurationDiv[] = ['4', '2', '1', '1/2', '1/3', '1/4', '1/6', '1/8', '1/12'];
-	const LEN_PRESETS = [16, 32, 64, 128, 256, 512];
+	// Pattern length is edited in PAGES (one page = one bar) — the step count
+	// follows the current METER, so the number stays human-sized (40, not 3840).
+	const LEN_PAGE_PRESETS = [1, 2, 4, 8, 16, 32];
 
-	let lenIsCustom = $derived(!LEN_PRESETS.includes($totalPatternSteps));
+	let stepsPerBarNow = $derived((METER_SPECS[$timeMeter] || METER_SPECS['4/4']).stepsPerBar);
+	let lenPages = $derived(Math.max(1, Math.ceil($totalPatternSteps / stepsPerBarNow)));
+	let maxLenPages = $derived(Math.floor(12288 / stepsPerBarNow));
+	let lenIsCustom = $derived(!LEN_PAGE_PRESETS.includes(lenPages));
 
 	function cycleLen() {
-		const currentIdx = LEN_PRESETS.indexOf($totalPatternSteps);
-		const nextLen = currentIdx >= 0 && currentIdx < LEN_PRESETS.length - 1 ? LEN_PRESETS[currentIdx + 1] : LEN_PRESETS[0];
-		setTotalPatternSteps(nextLen);
+		const currentIdx = LEN_PAGE_PRESETS.indexOf(lenPages);
+		const next = currentIdx >= 0 && currentIdx < LEN_PAGE_PRESETS.length - 1 ? LEN_PAGE_PRESETS[currentIdx + 1] : LEN_PAGE_PRESETS[0];
+		setTotalPatternSteps(next * stepsPerBarNow);
 		playSound('click');
 	}
 
 	function onLenInput(e: Event) {
 		const raw = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
 		const val = parseInt(raw, 10);
-		if (!isNaN(val)) {
-			setTotalPatternSteps(Math.max(1, Math.min(4096, val)));
-		} else if (raw === '') {
-			totalPatternSteps.set(0);
+		if (!isNaN(val) && val >= 1) {
+			setTotalPatternSteps(Math.min(maxLenPages, val) * stepsPerBarNow);
 		}
 	}
 
-	function onLenBlur() {
-		if (!$totalPatternSteps || $totalPatternSteps < 8) setTotalPatternSteps(8);
+	function onLenBlur(e: Event) {
+		if (!$totalPatternSteps || $totalPatternSteps < stepsPerBarNow) setTotalPatternSteps(stepsPerBarNow);
+		(e.target as HTMLInputElement).value = String(lenPages);
 	}
 
 	function prevPreset() {
@@ -148,23 +152,24 @@
 		<div class="w-px h-4 bg-white/15 mx-1"></div>
 
 		<div class="flex items-center gap-1">
-			<span class="opacity-60 font-bold" title="Pattern Total Steps (LEN) — Total active sequence steps before looping">LEN:</span>
-			<button onclick={cycleLen} class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1" title="Cycle through step lengths: 16 → 32 → 64 → 128 → 256 → 512 → 16">
-				<span>{LEN_PRESETS.includes($totalPatternSteps) ? $totalPatternSteps : 64}</span>
+			<span class="opacity-60 font-bold" title="Pattern Length in PAGES (1 page = 1 bar of the current METER) — the loop point">LEN:</span>
+			<button onclick={cycleLen} class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1" title="Cycle page-length presets: 1 → 2 → 4 → 8 → 16 → 32 pages">
+				<span>{LEN_PAGE_PRESETS.includes(lenPages) ? lenPages : LEN_PAGE_PRESETS[0]}</span>
 				<span class="text-[10px] opacity-70">⟳</span>
 			</button>
 			<span class="text-white/40 text-[10px] font-bold px-0.5 select-none">OR</span>
 			<input
 				type="text"
 				inputmode="numeric"
-				value={$totalPatternSteps || ''}
+				value={lenPages}
 				oninput={onLenInput}
 				onblur={onLenBlur}
-				class="w-12 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none {lenIsCustom
+				class="w-10 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none {lenIsCustom
 					? 'border-[#98c379] text-[#98c379]'
 					: 'border-white/20 text-white/70 focus:border-white/60'}"
-				title="Custom Step Length — Set arbitrary loop duration (e.g. 1184 steps for the complete Mario theme)"
+				title={`Pattern length in pages — ${lenPages} × ${stepsPerBarNow} steps (${$timeMeter}) = ${$totalPatternSteps} steps`}
 			/>
+			<span class="text-white/40 text-[10px] font-bold select-none" title={`${lenPages} pages × ${stepsPerBarNow} steps/page (${$timeMeter}) = ${$totalPatternSteps} steps`}>PGS</span>
 		</div>
 
 		<div class="w-px h-4 bg-white/15 mx-1"></div>

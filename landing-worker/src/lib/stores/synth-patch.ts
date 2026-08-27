@@ -9,7 +9,6 @@ import {
 	timeMeter,
 	setTimeMeter,
 	totalPatternSteps,
-	setTotalPatternSteps,
 	cursorStep,
 	seqCurrentStep,
 	activeStepPage,
@@ -145,8 +144,6 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	}
 ];
 
-export const LEN_PRESETS = [48, 96, 192, 384, 768, 1536] as const;
-
 export const builtinSongIdx = writable<number>(DEFAULT_SONG_IDX);
 export const soundPresetIdx = writable<number>(0);
 export const saveStatus = writable<string | null>(null);
@@ -193,14 +190,6 @@ export function handleLoadBuiltinSong(idx: number): void {
 	refreshTracks();
 	showSaveStatus(`✓ ${song.name}`);
 	playSound('toggle');
-}
-
-export function handleCycleLen(): void {
-	const current = get(totalPatternSteps);
-	const currentIdx = LEN_PRESETS.indexOf(current as (typeof LEN_PRESETS)[number]);
-	const nextLen = currentIdx >= 0 && currentIdx < LEN_PRESETS.length - 1 ? LEN_PRESETS[currentIdx + 1] : LEN_PRESETS[0];
-	setTotalPatternSteps(nextLen);
-	playSound('click');
 }
 
 interface SynthPatchData {
