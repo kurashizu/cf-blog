@@ -619,6 +619,21 @@ class SoundEngine {
     }, (duration + 0.1) * 1000);
   }
   private analyser: AnalyserNode | null = null;
+  private recDest: MediaStreamAudioDestinationNode | null = null;
+
+  /**
+   * Master-bus capture stream for MediaRecorder. The analyser already carries the
+   * summed master signal, so tapping it here records exactly what the speakers get.
+   */
+  public getRecordingStream(): MediaStream | null {
+    const ctx = this.init();
+    if (!ctx || !this.analyser) return null;
+    if (!this.recDest) {
+      this.recDest = ctx.createMediaStreamDestination();
+      this.analyser.connect(this.recDest);
+    }
+    return this.recDest.stream;
+  }
   private visualizerDataArray: Uint8Array | null = null;
   private visualizerFreqArray: Uint8Array | null = null;
   private visualizerTimeArray: Uint8Array | null = null;

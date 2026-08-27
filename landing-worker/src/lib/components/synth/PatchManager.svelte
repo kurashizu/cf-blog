@@ -9,6 +9,7 @@
 		handleSavePatch,
 		handleLoadPatch,
 		handleExportPatch,
+		handleSharePatch,
 		handleImportPatchFile
 	} from '../../stores/synth-patch';
 
@@ -105,6 +106,10 @@
 
 	<button onclick={handleExportPatch} class="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file">
 		EXP
+	</button>
+
+	<button onclick={handleSharePatch} class="px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Share Patch — Compress the whole patch into a URL and copy it; anyone opening the link gets your exact tracks and patterns">
+		SHARE
 	</button>
 
 	{#if $saveStatus}

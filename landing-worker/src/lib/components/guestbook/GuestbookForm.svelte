@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
 	import { pulseStep } from '../../stores/clock';
@@ -10,6 +11,38 @@
 	let gbContent = $state('');
 	let gbStatus = $state<string | null>(null);
 	let gbFocusedField = $state<'name' | 'email' | 'content' | null>(null);
+
+	interface GuestbookMessage {
+		id: string;
+		name: string;
+		content: string;
+		timestamp: string;
+		approved: boolean;
+	}
+
+	let messages = $state<GuestbookMessage[]>([]);
+	let messagesState = $state<'loading' | 'ready' | 'error'>('loading');
+
+	async function loadMessages() {
+		messagesState = 'loading';
+		try {
+			const resp = await fetch('https://blog.krsz.in/api/guestbook');
+			const data = (await resp.json()) as { messages?: GuestbookMessage[] };
+			messages = (data.messages ?? []).filter((m) => m.approved);
+			messagesState = 'ready';
+		} catch {
+			messagesState = 'error';
+		}
+	}
+
+	onMount(() => {
+		loadMessages();
+	});
+
+	function fmtTime(ts: string): string {
+		const d = new Date(ts);
+		return isNaN(d.getTime()) ? ts : d.toISOString().slice(0, 16).replace('T', ' ') + 'Z';
+	}
 
 	function handleCopy(text: string) {
 		navigator.clipboard?.writeText(text);
@@ -39,6 +72,7 @@
 				gbEmail = '';
 				gbContent = '';
 				playSound('power');
+				loadMessages();
 			} else {
 				gbStatus = `ERROR: ${data.error || `HTTP ${resp.status}`}`;
 				playSound('click');
@@ -139,4 +173,42 @@
 		{/if}
 		<button type="submit" class="w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">DISPATCH PACKET TO BLOG.KRSZ.IN -&gt;</button>
 	</form>
+
+	<!-- Live feed from blog.krsz.in's guestbook API -->
+	<div class="border border-white/10 bg-black/30 rounded-xs p-3 space-y-2">
+		<div class="flex items-center justify-between border-b border-white/10 pb-1.5">
+			<span class="text-xs font-black text-[#e06c75]">┌─[ RECEIVED PACKETS ]─┐</span>
+			<button
+				onclick={() => {
+					loadMessages();
+					playSound('click');
+				}}
+				class="text-xs font-bold text-white/50 hover:text-[#56b6c2] cursor-pointer"
+				title="Reload messages from blog.krsz.in"
+			>
+				⟳ REFRESH
+			</button>
+		</div>
+
+		{#if messagesState === 'loading'}
+			<div class="text-xs font-mono text-white/40 py-2">FETCHING FROM BLOG.KRSZ.IN…</div>
+		{:else if messagesState === 'error'}
+			<div class="text-xs font-mono text-[#e06c75] py-2">FAILED TO REACH THE GUESTBOOK API — TRY REFRESH</div>
+		{:else if messages.length === 0}
+			<div class="text-xs font-mono text-white/40 py-2">NO MESSAGES YET — SEND THE FIRST PACKET</div>
+		{:else}
+			<div class="max-h-64 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+				{#each messages as msg (msg.id)}
+					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5">
+						<div class="flex items-baseline justify-between gap-2">
+							<span class="text-xs font-bold text-[#56b6c2] truncate">{msg.name}</span>
+							<span class="text-[10px] font-mono text-white/35 shrink-0">{fmtTime(msg.timestamp)}</span>
+						</div>
+						<div class="text-xs text-[#eceff4]/90 leading-relaxed whitespace-pre-wrap break-words mt-0.5">{msg.content}</div>
+					</div>
+				{/each}
+			</div>
+			<div class="text-[10px] font-mono text-white/30 pt-0.5">{messages.length} messages · new entries may await moderation</div>
+		{/if}
+	</div>
 </div>

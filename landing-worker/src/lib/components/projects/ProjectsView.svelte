@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
 	import { spinnerFrame } from '../../stores/clock';
 	import { selectedModuleId } from '../../stores/selected-module';
+	import { probeResults, probeAllProjects } from '../../stores/probes';
 	import { MODULES } from '../../data/modules';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import MermaidDiagram from './MermaidDiagram.svelte';
@@ -9,8 +11,17 @@
 	let hoveredCard = $state<string | null>(null);
 	let selectedModule = $derived(MODULES.find((m) => m.id === $selectedModuleId) ?? MODULES[0]);
 
+	onMount(() => {
+		probeAllProjects();
+	});
+
 	function inspect(id: string) {
 		selectedModuleId.set(id);
+		playSound('click');
+	}
+
+	function reprobe() {
+		probeAllProjects(true);
 		playSound('click');
 	}
 </script>
@@ -23,16 +34,21 @@
 ██║╚██╔╝██║██║   ██║██║  ██║██║   ██║██║     ██╔══╝  ╚════██║
 ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████╗███████╗███████║
 ╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝`}</pre>
-		<span class="text-xs sm:text-sm text-[#98c379] flex items-center gap-1.5 shrink-0">
+		<button
+			onclick={reprobe}
+			title="Reachability + round trip measured from YOUR browser just now (2 samples per host, best shown; first hit pays TLS setup) — click to re-probe"
+			class="text-xs sm:text-sm text-[#98c379] flex items-center gap-1.5 shrink-0 cursor-pointer hover:underline"
+		>
 			<span>{$spinnerFrame}</span>
-			<span>6 LIVE PROJECTS</span>
-		</span>
+			<span>6 PROJECTS · LIVE PROBE ⟳</span>
+		</button>
 	</div>
 
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 		{#each MODULES as m (m.id)}
 			{@const isHovered = hoveredCard === m.id}
 			{@const isSelected = selectedModule.id === m.id}
+			{@const probe = $probeResults[m.id]}
 			<button
 				onmouseenter={() => {
 					hoveredCard = m.id;
@@ -56,8 +72,22 @@
 					<p class="text-xs opacity-80 line-clamp-2 mt-1.5 leading-snug">{m.desc}</p>
 				</div>
 				<div class="flex items-center justify-between border-t border-white/10 pt-2 text-xs">
-					<span class="text-xs opacity-90">{isSelected ? 'VIEWING ▼' : 'INSPECT'}</span>
-					<span class="font-bold text-xs flex items-center gap-1" style="color: {m.color}"><span>-&gt;</span></span>
+					<span class="flex items-center gap-1.5 font-mono" title="Measured from your browser — best of 2 requests">
+						{#if probe.status === 'probing'}
+							<span class="w-1.5 h-1.5 rounded-full bg-[#e5c07b] animate-pulse"></span>
+							<span class="text-[#e5c07b]">PROBING…</span>
+						{:else if probe.status === 'up'}
+							<span class="w-1.5 h-1.5 rounded-full bg-[#98c379]"></span>
+							<span class="text-[#98c379] font-bold">UP · {probe.ms}ms</span>
+						{:else if probe.status === 'unreachable'}
+							<span class="w-1.5 h-1.5 rounded-full bg-[#e06c75]"></span>
+							<span class="text-[#e06c75] font-bold">NO RESPONSE</span>
+						{:else}
+							<span class="w-1.5 h-1.5 rounded-full bg-white/25"></span>
+							<span class="text-white/40">—</span>
+						{/if}
+					</span>
+					<span class="font-bold text-xs flex items-center gap-1" style="color: {m.color}"><span>{isSelected ? 'VIEWING ▼' : 'INSPECT ->'}</span></span>
 				</div>
 			</button>
 		{/each}

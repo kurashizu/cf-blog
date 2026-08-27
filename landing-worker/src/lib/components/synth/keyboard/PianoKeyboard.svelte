@@ -4,6 +4,7 @@
 	import { activeTrackId } from '../../../stores/synth-transport';
 	import { currentTrack, tracksState, isOverlayMode, overlayTrackIds, activePlayingNotes, holdManualNote, releaseManualNote } from '../../../stores/synth-tracks';
 	import { midiConnectedDevice, isSustainActive, setSustainPedal, velocityCurve, cycleVelocityCurve } from '../../../stores/synth-midi';
+	import { suspendNavHotkeys } from '../../../stores/hotkeys';
 
 	let kbOctaveFrom = $state(1);
 	let kbOctaveTo = $state(7);
@@ -72,6 +73,84 @@
 	function releaseKey(idx: number) {
 		releaseManualNote($activeTrackId, idx);
 	}
+
+	// ── QWERTY-as-piano: two rows (Z = base octave, Q = base+1), Ableton-style ──
+	let qwertyOn = $state(false);
+	let qwertyOctave = $state(4);
+	const heldByCode = new Map<string, number>();
+
+	// semitone offsets from the base octave's C
+	const QWERTY_MAP: Record<string, number> = {
+		KeyZ: 0, KeyS: 1, KeyX: 2, KeyD: 3, KeyC: 4, KeyV: 5, KeyG: 6, KeyB: 7,
+		KeyH: 8, KeyN: 9, KeyJ: 10, KeyM: 11, Comma: 12, KeyL: 13, Period: 14,
+		KeyQ: 12, Digit2: 13, KeyW: 14, Digit3: 15, KeyE: 16, KeyR: 17, Digit5: 18,
+		KeyT: 19, Digit6: 20, KeyY: 21, Digit7: 22, KeyU: 23, KeyI: 24, Digit9: 25,
+		KeyO: 26, Digit0: 27, KeyP: 28
+	};
+
+	function semitoneToNoteIdx(semi: number): number | null {
+		const midi = 12 * (qwertyOctave + 1) + semi;
+		const idx = 108 - midi;
+		return idx >= 0 && idx < PIANO_ROLL_NOTES.length ? idx : null;
+	}
+
+	function qwertyKeydown(e: KeyboardEvent) {
+		const target = e.target as HTMLElement | null;
+		if (['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '')) return;
+		if (e.metaKey || e.ctrlKey || e.altKey) return;
+		if (e.code === 'BracketLeft') {
+			e.preventDefault();
+			qwertyOctave = Math.max(1, qwertyOctave - 1);
+			return;
+		}
+		if (e.code === 'BracketRight') {
+			e.preventDefault();
+			qwertyOctave = Math.min(6, qwertyOctave + 1);
+			return;
+		}
+		const semi = QWERTY_MAP[e.code];
+		if (semi === undefined) return;
+		e.preventDefault();
+		if (e.repeat || heldByCode.has(e.code)) return;
+		const idx = semitoneToNoteIdx(semi);
+		if (idx === null) return;
+		heldByCode.set(e.code, idx);
+		holdManualNote($activeTrackId, idx, 90);
+	}
+
+	function qwertyKeyup(e: KeyboardEvent) {
+		const idx = heldByCode.get(e.code);
+		if (idx === undefined) return;
+		heldByCode.delete(e.code);
+		releaseManualNote($activeTrackId, idx);
+	}
+
+	function releaseAllQwerty() {
+		for (const [code, idx] of heldByCode) {
+			releaseManualNote($activeTrackId, idx);
+			heldByCode.delete(code);
+		}
+	}
+
+	function toggleQwerty() {
+		qwertyOn = !qwertyOn;
+		playSound('toggle');
+	}
+
+	$effect(() => {
+		if (!qwertyOn) return;
+		suspendNavHotkeys.set(true);
+		window.addEventListener('keydown', qwertyKeydown);
+		window.addEventListener('keyup', qwertyKeyup);
+		window.addEventListener('blur', releaseAllQwerty);
+		return () => {
+			releaseAllQwerty();
+			suspendNavHotkeys.set(false);
+			window.removeEventListener('keydown', qwertyKeydown);
+			window.removeEventListener('keyup', qwertyKeyup);
+			window.removeEventListener('blur', releaseAllQwerty);
+		};
+	});
 </script>
 
 <div class="border border-white/20 bg-black/60 rounded-xs p-1.5 pt-1 flex flex-col gap-1 shrink-0 select-none">
@@ -139,6 +218,21 @@
 					</button>
 				</div>
 			</div>
+
+			<span class="opacity-30">|</span>
+
+			<button
+				onclick={toggleQwerty}
+				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {qwertyOn
+					? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_#56b6c2]'
+					: 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'}"
+				title="Play with your computer keyboard — Z-row = base octave, Q-row = octave above ([ / ] shifts octave). Nav hotkeys pause while active."
+			>
+				KBD: {qwertyOn ? 'ON' : 'OFF'}
+			</button>
+			{#if qwertyOn}
+				<span class="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2]" title="QWERTY base octave — shift with [ and ]">C{qwertyOctave}</span>
+			{/if}
 
 			<span class="opacity-30">|</span>
 

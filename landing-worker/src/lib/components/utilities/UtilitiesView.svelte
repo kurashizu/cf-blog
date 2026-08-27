@@ -3,12 +3,20 @@
 	import KeyboardTester from './KeyboardTester.svelte';
 	import MouseTester from './MouseTester.svelte';
 	import DisplayInfo from './DisplayInfo.svelte';
+	import TypingTest from './TypingTest.svelte';
+	import GamepadTester from './GamepadTester.svelte';
+	import ReactionTest from './ReactionTest.svelte';
+	import DeadPixelTest from './DeadPixelTest.svelte';
 
-	type ToolId = 'keyboard' | 'mouse' | 'display';
+	type ToolId = 'keyboard' | 'mouse' | 'typing' | 'gamepad' | 'reaction' | 'pixels' | 'display';
 
 	const TOOLS: { id: ToolId; label: string; color: string; desc: string }[] = [
 		{ id: 'keyboard', label: 'KEYBOARD', color: '#56b6c2', desc: 'Key events, rollover, per-key coverage' },
 		{ id: 'mouse', label: 'MOUSE', color: '#c678dd', desc: 'Buttons, wheel, double-click timing, move rate' },
+		{ id: 'typing', label: 'TYPING', color: '#e5c07b', desc: '30-second WPM and accuracy test' },
+		{ id: 'gamepad', label: 'GAMEPAD', color: '#e06c75', desc: 'Buttons, axes/drift, rumble (Gamepad API)' },
+		{ id: 'reaction', label: 'REACTION', color: '#61afef', desc: 'Visual reaction time, best/avg of 10' },
+		{ id: 'pixels', label: 'PIXELS', color: '#d19a66', desc: 'Fullscreen solid-color dead pixel check' },
 		{ id: 'display', label: 'DISPLAY / SYS', color: '#98c379', desc: 'Resolution, refresh rate, browser environment' }
 	];
 
@@ -56,6 +64,14 @@
 			<KeyboardTester />
 		{:else if activeTool === 'mouse'}
 			<MouseTester />
+		{:else if activeTool === 'typing'}
+			<TypingTest />
+		{:else if activeTool === 'gamepad'}
+			<GamepadTester />
+		{:else if activeTool === 'reaction'}
+			<ReactionTest />
+		{:else if activeTool === 'pixels'}
+			<DeadPixelTest />
 		{:else}
 			<DisplayInfo />
 		{/if}

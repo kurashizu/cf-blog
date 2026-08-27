@@ -11,6 +11,7 @@ import { activeTrackId } from './synth-transport';
 import { BUILTIN_SONGS, builtinSongIdx, handleLoadBuiltinSong } from './synth-patch';
 import { midiConnectedDevice, midiDevices } from './synth-midi';
 import { soundState, setMuted, setVolume } from './sound';
+import { probeTimes } from './probes';
 
 export type LineKind = 'cmd' | 'out' | 'ok' | 'err' | 'accent' | 'gold';
 export interface ConsoleLine {
@@ -82,6 +83,7 @@ const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
 	out('  0|modules  1|guestbook  2|synth  3|utilities'),
 	out('  open <project>     launch a project in a new tab'),
+	out('  ping <project>     measure real round trip from your browser'),
 	out('  ' + Object.keys(EXTERNAL_LINKS).join(' · ')),
 	accent('── INFO ────────────────────────────────────'),
 	out('  ls          list the live projects'),
@@ -104,7 +106,8 @@ const HELP: ConsoleLine[] = [
 	out('  eval <expr>     safe math (e.g. eval 2**16)'),
 	out('  echo <text>     print text'),
 	out('  theme [name]    cycle or set: tokyo gruvbox nord amber'),
-	out('  clear / Ctrl+L  clear screen · Tab completes · ↑↓ history')
+	out('  clear / Ctrl+L  clear screen · Tab completes · ↑↓ history'),
+	out('  ` (backquote)   drop-down console overlay on any tab')
 ];
 
 export function executeCommand(raw: string): void {
@@ -123,6 +126,25 @@ export function executeCommand(raw: string): void {
 		const tab = NAV_WORDS[cmd];
 		goto(TAB_ROUTES[tab]);
 		push([ok(`Navigated to ${TAB_ROUTES[tab]}`)]);
+		return;
+	}
+
+	if (cmd === 'ping') {
+		const key = args.trim().toLowerCase();
+		const url = EXTERNAL_LINKS[key] ?? MODULES.find((m) => m.id === key)?.url;
+		if (!url) {
+			push([err(`Usage: ping <project> — one of: ${Object.keys(EXTERNAL_LINKS).join(', ')}`)]);
+			return;
+		}
+		push([accent(`PING ${url} (3 samples, browser-measured)`)]);
+		probeTimes(url, 3)
+			.then(({ samples, best }) => {
+				push([
+					...samples.map((ms, i) => out(`  seq=${i + 1}  time=${ms.toFixed(1)}ms${i === 0 ? '  (incl. TLS setup)' : ''}`)),
+					ok(`  best ${best.toFixed(1)}ms · avg ${(samples.reduce((a, b) => a + b, 0) / samples.length).toFixed(1)}ms`)
+				]);
+			})
+			.catch(() => push([err(`  ${url} did not respond`)]));
 		return;
 	}
 
@@ -386,12 +408,13 @@ export function executeCommand(raw: string): void {
 const COMMAND_NAMES = [
 	'help', 'clear', 'ls', 'open', 'whoami', 'date', 'history', 'banner', 'tracks', 'songs', 'load',
 	'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval', 'echo',
-	'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities',
+	'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'ping',
 	...Object.keys(EXTERNAL_LINKS)
 ];
 
 const ARG_COMPLETIONS: Record<string, string[]> = {
 	open: [...Object.keys(EXTERNAL_LINKS)],
+	ping: [...Object.keys(EXTERNAL_LINKS)],
 	load: BUILTIN_SONGS.map((s) => s.id.toLowerCase()),
 	theme: Object.keys(THEME_ALIASES),
 	blend: ['layer', 'fm', 'ring', 'sync'],

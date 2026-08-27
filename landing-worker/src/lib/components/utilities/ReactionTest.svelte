@@ -1,0 +1,98 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { playSound } from '../../sound';
+
+	type Phase = 'idle' | 'waiting' | 'go' | 'result' | 'early';
+
+	let phase = $state<Phase>('idle');
+	let results = $state<number[]>([]);
+	let lastMs = $state<number | null>(null);
+	let goAt = 0;
+	let timer: ReturnType<typeof setTimeout> | null = null;
+
+	let best = $derived(results.length ? Math.min(...results) : null);
+	let avg = $derived(results.length ? Math.round(results.reduce((a, b) => a + b, 0) / results.length) : null);
+
+	function arm() {
+		phase = 'waiting';
+		lastMs = null;
+		timer = setTimeout(() => {
+			phase = 'go';
+			goAt = performance.now();
+		}, 1200 + Math.random() * 2800);
+	}
+
+	function handleClick() {
+		if (phase === 'idle' || phase === 'result' || phase === 'early') {
+			playSound('click');
+			arm();
+			return;
+		}
+		if (phase === 'waiting') {
+			// clicked before green — false start
+			if (timer) clearTimeout(timer);
+			timer = null;
+			phase = 'early';
+			playSound('click');
+			return;
+		}
+		if (phase === 'go') {
+			lastMs = Math.round(performance.now() - goAt);
+			results = [...results, lastMs].slice(-10);
+			phase = 'result';
+			playSound('toggle');
+		}
+	}
+
+	function reset() {
+		if (timer) clearTimeout(timer);
+		timer = null;
+		phase = 'idle';
+		results = [];
+		lastMs = null;
+		playSound('click');
+	}
+
+	onMount(() => () => {
+		if (timer) clearTimeout(timer);
+	});
+</script>
+
+<div class="space-y-2">
+	<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
+			LAST: <span class="font-black text-[#e5c07b]">{lastMs === null ? '—' : `${lastMs}ms`}</span>
+		</span>
+		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
+			BEST: <span class="font-black text-[#98c379]">{best === null ? '—' : `${best}ms`}</span>
+		</span>
+		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
+			AVG: <span class="font-black text-[#56b6c2]">{avg === null ? '—' : `${avg}ms`}</span>
+			<span class="text-white/35">({results.length}/10)</span>
+		</span>
+		<button onclick={reset} class="ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
+			✕ RESET
+		</button>
+	</div>
+
+	<button
+		onclick={handleClick}
+		class="w-full min-h-[260px] rounded-xs border font-mono cursor-pointer transition-colors duration-100 flex flex-col items-center justify-center gap-2 select-none
+			{phase === 'waiting' ? 'bg-[#e06c75]/25 border-[#e06c75]' : phase === 'go' ? 'bg-[#98c379]/30 border-[#98c379]' : 'bg-black/50 border-white/15 hover:border-white/40'}"
+	>
+		{#if phase === 'idle'}
+			<span class="text-sm font-black text-white/80">CLICK TO START</span>
+			<span class="text-xs text-white/40">Wait for green, then click as fast as you can</span>
+		{:else if phase === 'waiting'}
+			<span class="text-sm font-black text-[#e06c75]">WAIT FOR GREEN…</span>
+		{:else if phase === 'go'}
+			<span class="text-2xl font-black text-[#98c379]">CLICK NOW!</span>
+		{:else if phase === 'early'}
+			<span class="text-sm font-black text-[#e06c75]">FALSE START</span>
+			<span class="text-xs text-white/40">Clicked before green — click to retry</span>
+		{:else}
+			<span class="text-3xl font-black text-[#e5c07b]">{lastMs}ms</span>
+			<span class="text-xs text-white/40">Click to go again · timing includes your display & input latency</span>
+		{/if}
+	</button>
+</div>

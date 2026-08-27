@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { initMidi } from '../../stores/synth-midi';
+	import { tryLoadSharedPatch } from '../../stores/synth-patch';
 	import TransportBar from './TransportBar.svelte';
 	import Module1Oscillators from './modules/Module1Oscillators.svelte';
 	import Module2TimbreFusion from './modules/Module2TimbreFusion.svelte';
@@ -14,6 +15,7 @@
 	import SettingsModal from './settings/SettingsModal.svelte';
 
 	onMount(() => {
+		tryLoadSharedPatch();
 		return initMidi();
 	});
 </script>

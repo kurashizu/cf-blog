@@ -18,9 +18,24 @@
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let consoleOverlayOpen = $state(false);
 
 	function handleKeydown(e: KeyboardEvent) {
 		if ($suspendNavHotkeys) return;
+
+		// Quake-style console: backquote toggles from anywhere, Esc closes —
+		// both work even while the console's own input has focus.
+		if (e.code === 'Backquote' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+			e.preventDefault();
+			consoleOverlayOpen = !consoleOverlayOpen;
+			playSound('toggle');
+			return;
+		}
+		if (e.key === 'Escape' && consoleOverlayOpen) {
+			consoleOverlayOpen = false;
+			return;
+		}
+
 		const target = e.target as HTMLElement | null;
 		const isInput = ['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '');
 		if (isInput) return;
@@ -76,3 +91,16 @@
 
 	<TelemetryFooter />
 </div>
+
+{#if consoleOverlayOpen}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-[140] bg-black/50" onclick={() => (consoleOverlayOpen = false)}></div>
+	<div class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBg} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3">
+		<div class="flex items-center justify-between text-xs font-mono font-bold pb-1">
+			<span style="color: {themeStyles.cursorColor}">~ KRSZ CONSOLE // DROP-DOWN</span>
+			<span class="text-white/40">` or Esc to close</span>
+		</div>
+		<CommandConsole />
+	</div>
+{/if}

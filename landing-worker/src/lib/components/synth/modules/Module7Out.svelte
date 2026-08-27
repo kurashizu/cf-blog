@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
+	import { isRecording, recSeconds, recError, toggleRecording } from '../../../stores/recorder';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 	import Visualizers, { type VisualizerMode } from './Visualizers.svelte';
 
@@ -46,7 +47,21 @@
 				</button>
 			</div>
 		</div>
-		<span class="text-[10px] font-mono text-white/50">60 FPS</span>
+		<div class="flex items-center gap-1.5">
+			{#if $recError}
+				<span class="text-[9px] font-mono text-[#e06c75]">{$recError}</span>
+			{/if}
+			<button
+				onclick={toggleRecording}
+				title="Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)"
+				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-black cursor-pointer transition-all flex items-center gap-1 {$isRecording
+					? 'border-[#e06c75] bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
+					: 'border-[#e06c75]/50 bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75]/25'}"
+			>
+				<span class="w-1.5 h-1.5 rounded-full {$isRecording ? 'bg-black animate-pulse' : 'bg-[#e06c75]'}"></span>
+				<span>{$isRecording ? `REC ${$recSeconds}s — STOP & SAVE` : 'REC'}</span>
+			</button>
+		</div>
 	</div>
 
 	<div class="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">

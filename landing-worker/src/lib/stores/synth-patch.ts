@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-codec';
 import { playSound } from '../sound';
 import { modularSynth, type TrackData, type TimeSignature, type SynthWaveform, type FilterType } from '../synth';
 import {
@@ -268,6 +269,44 @@ export function handleExportPatch(): void {
 	document.body.removeChild(a);
 	URL.revokeObjectURL(url);
 	playSound('click');
+}
+
+
+/** SHARE: serialize the whole patch into a compressed #patch= URL and copy it. */
+export async function handleSharePatch(): Promise<void> {
+	if (!codecSupported()) {
+		showSaveStatus('X NO CODEC');
+		return;
+	}
+	try {
+		const fragment = await encodeToFragment(gatherPatchData());
+		const url = `${location.origin}/synth#patch=${fragment}`;
+		await navigator.clipboard.writeText(url);
+		showSaveStatus(`✓ LINK COPIED (${Math.round(url.length / 1024)}KB)`);
+		playSound('toggle');
+	} catch {
+		showSaveStatus('X SHARE ERR');
+	}
+}
+
+/** On /synth mount: if the URL carries a shared patch, load it and clean the hash. */
+export async function tryLoadSharedPatch(): Promise<void> {
+	if (!browser) return;
+	const m = location.hash.match(/^#patch=([A-Za-z0-9_-]+)$/);
+	if (!m) return;
+	if (!codecSupported()) {
+		showSaveStatus('X NO CODEC');
+		return;
+	}
+	try {
+		const data = await decodeFromFragment<SynthPatchData>(m[1]);
+		applyPatchData(data);
+		history.replaceState(null, '', location.pathname);
+		showSaveStatus('✓ SHARED PATCH LOADED');
+		playSound('toggle');
+	} catch {
+		showSaveStatus('X BAD SHARE LINK');
+	}
 }
 
 export function handleImportPatchFile(file: File): void {
