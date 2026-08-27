@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { METER_SPECS, divToColumnSpan, type TimeSignature, type NoteDurationDiv } from '../../../synth';
+	import { METER_SPECS, divToColumnSpan, stepsPerColumn, hasSubColumns, ternaryColFactor, type TimeSignature, type NoteDurationDiv } from '../../../synth';
 
 	interface VisibleTrackItem {
 		id: number;
@@ -36,16 +36,31 @@
 
 	let isRootC = $derived(nInfo.note.startsWith('C') && !nInfo.note.includes('#'));
 	let meterSpec = $derived(METER_SPECS[timeMeter] || METER_SPECS['4/4']);
-	let colsCount = $derived(meterSpec.colsPerBar);
-	let spanInt = $derived(Math.max(1, Math.floor(divToColumnSpan(snapDiv))));
+	// Columns follow the snap family: 1/4-beat columns (6 steps) for binary snaps,
+	// 1/6-beat columns (4 steps) for ternary snaps. Cells render at half-column
+	// resolution, so occupancy is scanned over step ranges.
+	let spc = $derived(stepsPerColumn(snapDiv));
+	let half = $derived(spc / 2);
+	let colFactor = $derived(ternaryColFactor(snapDiv));
+	let effColsPerBar = $derived(meterSpec.colsPerBar * colFactor);
+	let effColsPerBeat = $derived(meterSpec.colsPerBeat * colFactor);
+	let colsCount = $derived(effColsPerBar);
+	let spanInt = $derived(Math.max(1, Math.floor(divToColumnSpan(snapDiv, snapDiv))));
 
-	function noteBarGeometry(t: VisibleTrackItem, step0: number, step1: number) {
-		const is0 = t.grid[step0]?.includes(actualIdx) || false;
-		const is1 = t.grid[step1]?.includes(actualIdx) || false;
+	function rangeHas(t: VisibleTrackItem, from: number, len: number): boolean {
+		for (let st = from; st < from + len; st++) {
+			if (t.grid[st]?.includes(actualIdx)) return true;
+		}
+		return false;
+	}
+
+	function noteBarGeometry(t: VisibleTrackItem, colStart: number) {
+		const is0 = rangeHas(t, colStart, half);
+		const is1 = rangeHas(t, colStart + half, half);
 		if (!is0 && !is1) return null;
 
-		const isPrevConnected = is0 && (t.grid[step0 - 1]?.includes(actualIdx) || false);
-		const isNextConnected = is1 && (t.grid[step1 + 1]?.includes(actualIdx) || false);
+		const isPrevConnected = is0 && (t.grid[colStart - 1]?.includes(actualIdx) || false);
+		const isNextConnected = is1 && (t.grid[colStart + spc]?.includes(actualIdx) || false);
 
 		let leftClass = 'left-0 rounded-l-xs';
 		let rightClass = 'right-0 rounded-r-xs';
@@ -119,26 +134,25 @@
 	<div class="flex-1 h-full gap-0.5" style="display: grid; grid-template-columns: repeat({colsCount}, minmax(0, 1fr));">
 		{#each Array.from({ length: colsCount }) as _, colIdx (colIdx)}
 			{@const globalCol = viewportStartCol + colIdx}
-			{@const step0 = globalCol * 2}
-			{@const step1 = globalCol * 2 + 1}
+			{@const colStart = globalCol * spc}
 			{@const isColActive = activeCol === colIdx}
-			{@const colInBar = globalCol % meterSpec.colsPerBar}
+			{@const colInBar = globalCol % effColsPerBar}
 			{@const isBarStart = colInBar === 0}
-			{@const isBeatStart = colInBar % meterSpec.colsPerBeat === 0}
+			{@const isBeatStart = colInBar % effColsPerBeat === 0}
 			{@const isDivBlockStart = colIdx % spanInt === 0}
 			<div class="h-full relative flex">
-				{#if snapDiv === '1/8'}
+				{#if hasSubColumns(snapDiv)}
 					<div class="flex h-full w-full gap-0.5">
 						{#each [0, 1] as subCol (subCol)}
-							{@const step = globalCol * 2 + subCol}
+							{@const step = colStart + subCol * half}
 							{@const isSubCurrent = isColActive && activeSubCol === subCol}
-							{@const tracksWithNote = visibleTracks.filter((t) => t.grid[step]?.includes(actualIdx))}
+							{@const tracksWithNote = visibleTracks.filter((t) => rangeHas(t, step, half))}
 							{@const hasNote = tracksWithNote.length > 0}
 							{@const primaryTrackWithNote = tracksWithNote.find((t) => t.isPrimary)}
 							{@const displayColor = primaryTrackWithNote ? primaryTrackWithNote.color : tracksWithNote[0]?.color || '#fff'}
 							{@const isPrimaryNote = Boolean(primaryTrackWithNote)}
-							{@const isPrevConnected = hasNote && visibleTracks.some((t) => t.grid[step]?.includes(actualIdx) && (t.grid[step - 1]?.includes(actualIdx) || false))}
-							{@const isNextConnected = hasNote && visibleTracks.some((t) => t.grid[step]?.includes(actualIdx) && (t.grid[step + 1]?.includes(actualIdx) || false))}
+							{@const isPrevConnected = hasNote && visibleTracks.some((t) => rangeHas(t, step, half) && (t.grid[step - 1]?.includes(actualIdx) || false))}
+							{@const isNextConnected = hasNote && visibleTracks.some((t) => rangeHas(t, step, half) && (t.grid[step + half]?.includes(actualIdx) || false))}
 							{@const roundedClass = hasNote
 								? isPrevConnected && isNextConnected
 									? 'rounded-none border-x-0'
@@ -207,7 +221,7 @@
 												: 'border border-white/10 bg-white/[0.03] hover:bg-white/10'}"
 					>
 						{#each visibleTracks as t (t.id)}
-							{@const geom = noteBarGeometry(t, step0, step1)}
+							{@const geom = noteBarGeometry(t, colStart)}
 							{#if geom}
 								<div
 									class="absolute top-0 h-full {geom.leftClass} {geom.rightClass} shadow-xs {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-75'} {isColActive && t.isPrimary ? 'brightness-125 ring-1 ring-white' : ''}"

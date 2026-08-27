@@ -66,7 +66,7 @@ const THEME_ALIASES: Record<string, WorkspaceTheme> = {
 	amber: 'cyber-amber', 'cyber-amber': 'cyber-amber'
 };
 
-const VALID_DIVS = ['4', '2', '1', '1/2', '1/4', '1/8'];
+const VALID_DIVS = ['4', '2', '1', '1/2', '1/3', '1/4', '1/6', '1/8', '1/12'];
 const VALID_METERS = Object.keys(METER_SPECS);
 
 const BANNER = [
@@ -99,7 +99,7 @@ const HELP: ConsoleLine[] = [
 	out('  load <song>              load built-in song'),
 	out('  bpm [40-300]             show / set tempo'),
 	out('  vol [0-100] · mute · unmute   master volume'),
-	out('  snap <div> · dur <div>   grid: 4 2 1 1/2 1/4 1/8'),
+	out('  snap <div> · dur <div>   grid: 4 2 1 1/2 1/3 1/4 1/6 1/8 1/12'),
 	out('  meter <sig>              4/4 3/4 2/4 5/4 6/8 7/8'),
 	out('  blend <layer|fm|ring|sync>   active track blend'),
 	accent('── MISC ────────────────────────────────────'),

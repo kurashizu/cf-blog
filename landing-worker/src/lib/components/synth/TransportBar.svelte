@@ -31,7 +31,7 @@
 	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 
 	const METERS: TimeSignature[] = ['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'];
-	const DIVS: NoteDurationDiv[] = ['4', '2', '1', '1/2', '1/4', '1/8'];
+	const DIVS: NoteDurationDiv[] = ['4', '2', '1', '1/2', '1/3', '1/4', '1/6', '1/8', '1/12'];
 	const LEN_PRESETS = [16, 32, 64, 128, 256, 512];
 
 	let lenIsCustom = $derived(!LEN_PRESETS.includes($totalPatternSteps));
@@ -128,7 +128,7 @@
 
 	let cursorPosition = $derived.by(() => {
 		const meterSpec = METER_SPECS[$timeMeter] || METER_SPECS['4/4'];
-		const stepsPerBar = meterSpec.stepsPerBar || 32;
+		const stepsPerBar = meterSpec.stepsPerBar || 96;
 		const stepsPerBeat = stepsPerBar / (meterSpec.beatsPerBar || 4);
 		const bar = Math.floor($cursorStep / stepsPerBar) + 1;
 		const beat = Math.floor(($cursorStep % stepsPerBar) / stepsPerBeat) + 1;

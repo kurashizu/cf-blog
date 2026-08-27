@@ -28,10 +28,10 @@ export interface BuiltinSong {
 }
 
 export const BUILTIN_SONGS: BuiltinSong[] = [
-	{ id: 'MARIO_1', name: 'SMB1 - OVERWORLD', steps: 1280, bpm: 105, meter: '4/4' },
-	{ id: 'UNDERWATER', name: 'SMB1 - UNDERWATER', steps: 768, bpm: 100, meter: '6/8' },
-	{ id: 'OVERWORLD_1', name: 'SMB3 - OVERWORLD 1', steps: 3360, bpm: 150, meter: '4/4' },
-	{ id: 'OVERWORLD_2', name: 'SMB3 - OVERWORLD 2', steps: 672, bpm: 90, meter: '4/4' }
+	{ id: 'MARIO_1', name: 'SMB1 - OVERWORLD', steps: 3840, bpm: 105, meter: '4/4' },
+	{ id: 'UNDERWATER', name: 'SMB1 - UNDERWATER', steps: 2304, bpm: 100, meter: '6/8' },
+	{ id: 'OVERWORLD_1', name: 'SMB3 - OVERWORLD 1', steps: 10080, bpm: 150, meter: '4/4' },
+	{ id: 'OVERWORLD_2', name: 'SMB3 - OVERWORLD 2', steps: 2016, bpm: 90, meter: '4/4' }
 ];
 
 // Must match the synth's boot state (INITIAL_TRACKS / bpm / totalSteps), otherwise the
@@ -145,7 +145,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	}
 ];
 
-export const LEN_PRESETS = [16, 32, 64, 128, 256, 512] as const;
+export const LEN_PRESETS = [48, 96, 192, 384, 768, 1536] as const;
 
 export const builtinSongIdx = writable<number>(DEFAULT_SONG_IDX);
 export const soundPresetIdx = writable<number>(0);
@@ -170,8 +170,8 @@ function resetPlayheadState(): void {
 
 export function handleNewProject(): void {
 	resetPlayheadState();
-	modularSynth.resetToBlank(64);
-	totalPatternSteps.set(64);
+	modularSynth.resetToBlank(192);
+	totalPatternSteps.set(192);
 	setBpm(120);
 	timeMeter.set('4/4');
 	refreshTracks();
@@ -208,6 +208,8 @@ interface SynthPatchData {
 	bpm: number;
 	meter: TimeSignature;
 	totalSteps: number;
+	/** Grid resolution the patch was saved at. Absent = legacy 8-steps-per-beat patch. */
+	stepsPerBeat?: number;
 }
 
 function gatherPatchData(): SynthPatchData {
@@ -215,11 +217,28 @@ function gatherPatchData(): SynthPatchData {
 		tracks: modularSynth.getTracks(),
 		bpm: get(bpm),
 		meter: get(timeMeter),
-		totalSteps: get(totalPatternSteps)
+		totalSteps: get(totalPatternSteps),
+		stepsPerBeat: 24
 	};
 }
 
-function applyPatchData(data: SynthPatchData): void {
+/** Legacy patches were saved on the 1/8-beat grid — expand to the 1/24-beat grid. */
+function migratePatchData(data: SynthPatchData): SynthPatchData {
+	if (data.stepsPerBeat === 24) return data;
+	return {
+		...data,
+		totalSteps: data.totalSteps ? data.totalSteps * 3 : data.totalSteps,
+		tracks: (data.tracks ?? []).map((t) => ({
+			...t,
+			grid: t.grid ? t.grid.flatMap((cell) => [[...cell], [...cell], [...cell]]) : t.grid,
+			accents: t.accents ? (t.accents as number[]).flatMap((a) => [Number(a) || 0, 0, 0]) : t.accents
+		})),
+		stepsPerBeat: 24
+	};
+}
+
+function applyPatchData(raw: SynthPatchData): void {
+	const data = migratePatchData(raw);
 	resetPlayheadState();
 	if (data.bpm) setBpm(data.bpm);
 	if (data.meter) timeMeter.set(data.meter);

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
-	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS } from '../../../synth';
+	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId } from '../../../stores/synth-transport';
 	import { currentTrack, visibleTracks, tracksState, handlePianoRollCellClick, handlePianoRollSubCellClick, cycleAccent } from '../../../stores/synth-tracks';
 	import PianoRollRow from './PianoRollRow.svelte';
@@ -9,11 +9,17 @@
 	let octaveTo = $state(5);
 
 	let meterSpec = $derived(METER_SPECS[$timeMeter] || METER_SPECS['4/4']);
-	let colsPerPage = $derived(meterSpec.colsPerBar);
+	// Column layout follows the snap family: binary snaps use 1/4-beat columns,
+	// ternary snaps (1/3, 1/6, 1/12) use 1/6-beat columns.
+	let spc = $derived(stepsPerColumn($snapDiv));
+	let colFactor = $derived(ternaryColFactor($snapDiv));
+	let effColsPerBar = $derived(meterSpec.colsPerBar * colFactor);
+	let effColsPerBeat = $derived(meterSpec.colsPerBeat * colFactor);
+	let colsPerPage = $derived(effColsPerBar);
 	let stepsPerPage = $derived(meterSpec.stepsPerBar);
 	let viewportStartCol = $derived($activeStepPage * colsPerPage);
-	let activeCol = $derived($isSeqPlaying && Math.floor($seqCurrentStep / stepsPerPage) === $activeStepPage ? Math.floor(($seqCurrentStep % stepsPerPage) / 2) : -1);
-	let activeSubCol = $derived($isSeqPlaying ? $seqCurrentStep % 2 : -1);
+	let activeCol = $derived($isSeqPlaying && Math.floor($seqCurrentStep / stepsPerPage) === $activeStepPage ? Math.floor(($seqCurrentStep % stepsPerPage) / spc) : -1);
+	let activeSubCol = $derived($isSeqPlaying ? Math.floor(($seqCurrentStep % spc) / (spc / 2)) : -1);
 
 	function clearPage() {
 		for (let i = 0; i < stepsPerPage; i++) {
@@ -127,20 +133,20 @@
 				<div class="flex-1 gap-0.5" style="display: grid; grid-template-columns: repeat({colsPerPage}, minmax(0, 1fr));">
 					{#each Array.from({ length: colsPerPage }) as _, colIdx (colIdx)}
 						{@const globalCol = viewportStartCol + colIdx}
-						{@const barNum = Math.floor(globalCol / meterSpec.colsPerBar) + 1}
-						{@const colInBar = globalCol % meterSpec.colsPerBar}
-						{@const beatNum = Math.floor(colInBar / meterSpec.colsPerBeat) + 1}
+						{@const barNum = Math.floor(globalCol / effColsPerBar) + 1}
+						{@const colInBar = globalCol % effColsPerBar}
+						{@const beatNum = Math.floor(colInBar / effColsPerBeat) + 1}
 						{@const isBarStart = colInBar === 0}
-						{@const isBeatStart = colInBar % meterSpec.colsPerBeat === 0}
-						{@const isCurrent = $isSeqPlaying && Math.floor($seqCurrentStep / 2) === globalCol}
-						{@const isCursorCol = Math.floor($cursorStep / 2) === globalCol}
+						{@const isBeatStart = colInBar % effColsPerBeat === 0}
+						{@const isCurrent = $isSeqPlaying && Math.floor($seqCurrentStep / spc) === globalCol}
+						{@const isCursorCol = Math.floor($cursorStep / spc) === globalCol}
 						<div class="h-full">
-							{#if $snapDiv === '1/8'}
+							{#if hasSubColumns($snapDiv)}
 								<div class="flex h-full gap-0.5 text-xs">
 									{#each [0, 1] as subCol (subCol)}
-										{@const step = globalCol * 2 + subCol}
-										{@const isSubCurrent = $isSeqPlaying && $seqCurrentStep === step}
-										{@const isSubCursor = $cursorStep === step}
+										{@const step = globalCol * spc + subCol * (spc / 2)}
+										{@const isSubCurrent = $isSeqPlaying && $seqCurrentStep >= step && $seqCurrentStep < step + spc / 2}
+										{@const isSubCursor = $cursorStep >= step && $cursorStep < step + spc / 2}
 										<button
 											onclick={() => jumpRulerCursor(step)}
 											class="flex-1 text-center py-0.5 rounded-xs transition-colors cursor-pointer select-none font-bold relative {isSubCurrent
@@ -163,7 +169,7 @@
 								</div>
 							{:else}
 								<button
-									onclick={() => jumpRulerCursor(globalCol * 2)}
+									onclick={() => jumpRulerCursor(globalCol * spc)}
 									class="w-full text-center py-0.5 rounded-xs transition-colors font-bold text-xs cursor-pointer select-none relative {isCurrent
 										? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
 										: isCursorCol
@@ -173,7 +179,7 @@
 												: isBeatStart
 													? 'bg-white/15 text-white'
 													: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
-									title={`Click to set Playback Cursor to Column ${colIdx + 1} (Step ${globalCol * 2 + 1}, Bar ${barNum}.${beatNum})`}
+									title={`Click to set Playback Cursor to Column ${colIdx + 1} (Step ${globalCol * spc + 1}, Bar ${barNum}.${beatNum})`}
 								>
 									{#if isCursorCol && !isCurrent}
 										<span class="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[8px] text-[#56b6c2] leading-none">▼</span>
@@ -215,15 +221,15 @@
 				<div class="flex-1 gap-0.5" style="display: grid; grid-template-columns: repeat({colsPerPage}, minmax(0, 1fr));">
 					{#each Array.from({ length: colsPerPage }) as _, colIdx (colIdx)}
 						{@const globalCol = viewportStartCol + colIdx}
-						{@const colInBar = globalCol % meterSpec.colsPerBar}
+						{@const colInBar = globalCol % effColsPerBar}
 						{@const isBarStart = colInBar === 0}
-						{@const isBeatStart = colInBar % meterSpec.colsPerBeat === 0}
+						{@const isBeatStart = colInBar % effColsPerBeat === 0}
 						<div class="h-full">
 							<div class="flex h-full gap-0.5">
 								{#each [0, 1] as subCol (subCol)}
-									{@const step = globalCol * 2 + subCol}
+									{@const step = globalCol * spc + subCol * (spc / 2)}
 									{@const accVal = Number($currentTrack.accents[step] || 0)}
-									{@const isSubCurrent = $isSeqPlaying && $seqCurrentStep === step}
+									{@const isSubCurrent = $isSeqPlaying && $seqCurrentStep >= step && $seqCurrentStep < step + spc / 2}
 									<button
 										onclick={() => handleCycleAccent(step)}
 										class="flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all {isSubCurrent

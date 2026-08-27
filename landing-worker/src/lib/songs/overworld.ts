@@ -8307,6 +8307,10 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     cutoff: 80,
     resonance: 1.0,
     envFilterMod: 0.0,
+    // NES-style noise pitch: the noise playback rate follows the note, so the
+    // high hat voice (idx 40) ticks bright, the snare voice (idx 55) rasps
+    // fuller, and the low kick voice (idx 75) rumbles.
+    keyTracking: 0.8,
 
     attack: 0.001,
     decay: 0.12,

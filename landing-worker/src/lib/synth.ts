@@ -45,30 +45,56 @@ export interface ModRoute {
   enabled: boolean;
 }
 
-export type NoteDurationDiv = '4' | '2' | '1' | '1/2' | '1/4' | '1/8';
+export type NoteDurationDiv = '4' | '2' | '1' | '1/2' | '1/3' | '1/4' | '1/6' | '1/8' | '1/12';
+
+/**
+ * Finest grid resolution: 1/24 beat. 24 divides both the binary family
+ * (1/2, 1/4, 1/8 beat -> 12/6/3 steps) and the ternary family
+ * (1/3, 1/6, 1/12 beat -> 8/4/2 steps), so straight and swung/triplet
+ * rhythms land on exact steps.
+ */
+export const STEPS_PER_BEAT = 24;
+
+export function isTernaryDiv(div: NoteDurationDiv): boolean {
+  return div === '1/3' || div === '1/6' || div === '1/12';
+}
 
 export function divToStepSpan(div: NoteDurationDiv): number {
   switch (div) {
-    case '4': return 32; // Whole note: 4 beats = 32 steps (at 1/8 beat per step)
-    case '2': return 16; // Half note: 2 beats = 16 steps
-    case '1': return 8;  // Quarter note: 1 beat = 8 steps
-    case '1/2': return 4;// Eighth note: 1/2 beat = 4 steps
-    case '1/4': return 2;// Sixteenth note: 1/4 beat = 2 steps
-    case '1/8': return 1;// 32nd note: 1/8 beat = 1 step
-    default: return 1;
+    case '4': return 96;  // Whole note: 4 beats
+    case '2': return 48;  // Half note: 2 beats
+    case '1': return 24;  // Quarter note: 1 beat
+    case '1/2': return 12;// Eighth note
+    case '1/3': return 8; // Quarter-note triplet third
+    case '1/4': return 6; // Sixteenth note
+    case '1/6': return 4; // Eighth-note triplet third (swung 16th)
+    case '1/8': return 3; // 32nd note
+    case '1/12': return 2;// Sixteenth-note triplet third
+    default: return 3;
   }
 }
 
-export function divToColumnSpan(div: NoteDurationDiv): number {
-  switch (div) {
-    case '4': return 16; // Whole note: 16 visual columns (4 beats)
-    case '2': return 8;  // Half note: 8 visual columns (2 beats)
-    case '1': return 4;  // Quarter note: 4 visual columns (1 beat)
-    case '1/2': return 2;// Eighth note: 2 visual columns (1/2 beat)
-    case '1/4': return 1;// Sixteenth note: 1 visual column (1/4 beat)
-    case '1/8': return 0.5; // 32nd note: 1/2 visual column (1/8 beat)
-    default: return 1;
-  }
+/**
+ * Steps rendered per piano-roll column. Binary snaps draw 1/4-beat columns,
+ * ternary snaps draw 1/6-beat columns — each family tiles its own grid exactly.
+ */
+export function stepsPerColumn(snap: NoteDurationDiv): number {
+  return isTernaryDiv(snap) ? 4 : 6;
+}
+
+/** Snaps finer than one column render as two half-column sub-cells. */
+export function hasSubColumns(snap: NoteDurationDiv): boolean {
+  return snap === '1/8' || snap === '1/12';
+}
+
+/** Visual column count multiplier when a ternary snap is active (16 -> 24 cols/bar in 4/4). */
+export function ternaryColFactor(snap: NoteDurationDiv): number {
+  return isTernaryDiv(snap) ? 1.5 : 1;
+}
+
+/** Span of `div` measured in the CURRENT column unit implied by `snap`. */
+export function divToColumnSpan(div: NoteDurationDiv, snap: NoteDurationDiv = div): number {
+  return divToStepSpan(div) / stepsPerColumn(snap);
 }
 
 export type VelocityCurve = 'OFF' | 'LINEAR' | 'EXP' | 'LOG' | 'HARD';
@@ -107,17 +133,17 @@ export interface MeterSpec {
   beatsPerBar: number;
   colsPerBar: number;
   colsPerBeat: number;
-  stepsPerBar: number;      // total 1/8-beat steps per measure
+  stepsPerBar: number;      // total 1/24-beat steps per measure
   downbeatInterval: number; // steps per primary beat
 }
 
 export const METER_SPECS: Record<TimeSignature, MeterSpec> = {
-  '4/4': { sig: '4/4', label: '4/4', name: '4/4 Common Time', beatsPerBar: 4, colsPerBar: 16, colsPerBeat: 4, stepsPerBar: 32, downbeatInterval: 8 },
-  '3/4': { sig: '3/4', label: '3/4', name: '3/4 Waltz Time', beatsPerBar: 3, colsPerBar: 12, colsPerBeat: 4, stepsPerBar: 24, downbeatInterval: 8 },
-  '2/4': { sig: '2/4', label: '2/4', name: '2/4 March Time', beatsPerBar: 2, colsPerBar: 8, colsPerBeat: 4, stepsPerBar: 16, downbeatInterval: 8 },
-  '5/4': { sig: '5/4', label: '5/4', name: '5/4 Odd Meter', beatsPerBar: 5, colsPerBar: 20, colsPerBeat: 4, stepsPerBar: 40, downbeatInterval: 8 },
-  '6/8': { sig: '6/8', label: '6/8', name: '6/8 Compound Time', beatsPerBar: 6, colsPerBar: 12, colsPerBeat: 2, stepsPerBar: 24, downbeatInterval: 4 },
-  '7/8': { sig: '7/8', label: '7/8', name: '7/8 Complex Time', beatsPerBar: 7, colsPerBar: 14, colsPerBeat: 2, stepsPerBar: 28, downbeatInterval: 4 },
+  '4/4': { sig: '4/4', label: '4/4', name: '4/4 Common Time', beatsPerBar: 4, colsPerBar: 16, colsPerBeat: 4, stepsPerBar: 96, downbeatInterval: 24 },
+  '3/4': { sig: '3/4', label: '3/4', name: '3/4 Waltz Time', beatsPerBar: 3, colsPerBar: 12, colsPerBeat: 4, stepsPerBar: 72, downbeatInterval: 24 },
+  '2/4': { sig: '2/4', label: '2/4', name: '2/4 March Time', beatsPerBar: 2, colsPerBar: 8, colsPerBeat: 4, stepsPerBar: 48, downbeatInterval: 24 },
+  '5/4': { sig: '5/4', label: '5/4', name: '5/4 Odd Meter', beatsPerBar: 5, colsPerBar: 20, colsPerBeat: 4, stepsPerBar: 120, downbeatInterval: 24 },
+  '6/8': { sig: '6/8', label: '6/8', name: '6/8 Compound Time', beatsPerBar: 6, colsPerBar: 12, colsPerBeat: 2, stepsPerBar: 72, downbeatInterval: 12 },
+  '7/8': { sig: '7/8', label: '7/8', name: '7/8 Complex Time', beatsPerBar: 7, colsPerBar: 14, colsPerBeat: 2, stepsPerBar: 84, downbeatInterval: 12 },
 };
 
 export interface TrackData {
@@ -296,6 +322,19 @@ export const PIANO_ROLL_NOTES = [
 
 export const INITIAL_TRACKS: TrackData[] = OVERWORLD_FULL_TRACKS;
 
+/**
+ * The song files predate the 1/24-beat grid (their cells are 1/8-beat steps).
+ * Expand each cell to 3 grid steps — the merge rule keeps note durations
+ * identical. Cells are cloned so in-place grid edits never alias.
+ */
+export function scaleTracksToFineGrid(tracks: TrackData[]): TrackData[] {
+  return tracks.map((t) => ({
+    ...t,
+    grid: t.grid.flatMap((cell) => [[...cell], [...cell], [...cell]]),
+    accents: (t.accents as number[]).flatMap((a) => [a, 0, 0]),
+  }));
+}
+
 interface ActiveVoice {
   osc1?: OscillatorNode;
   osc2?: OscillatorNode;
@@ -313,7 +352,7 @@ interface ActiveVoice {
 }
 
 class ModularSynth {
-  private tracks: TrackData[] = JSON.parse(JSON.stringify(INITIAL_TRACKS));
+  private tracks: TrackData[] = scaleTracksToFineGrid(JSON.parse(JSON.stringify(INITIAL_TRACKS)));
   private activeVoices: Map<string, ActiveVoice> = new Map();
   private noiseBuffer: AudioBuffer | null = null;
   private lastTrackFreqs: Map<number, number> = new Map();
@@ -364,7 +403,7 @@ class ModularSynth {
   // Sequencer Engine (Default 3360 steps for OVERWORLD 1)
   private isSequencerPlaying: boolean = false;
   private currentStep: number = 0;
-  private totalSteps: number = 3360; // Default 3360 steps (105 Bars) for OVERWORLD 1
+  private totalSteps: number = 10080; // Default 10080 steps (105 bars) for OVERWORLD 1
   private sequencerTimer: any = null;
   private onStepListeners: Set<(step: number) => void> = new Set();
   private onNoteListeners: Set<(trackId: number, noteIndex: number, noteName: string, durationMs: number) => void> = new Set();
@@ -582,23 +621,24 @@ class ModularSynth {
   public loadBuiltInSong(songName: string = 'OVERWORLD_1') {
     this.stopAll();
     if (songName === 'OVERWORLD_1' || songName === 'OVERWORLD_FULL') {
-      this.tracks = JSON.parse(JSON.stringify(OVERWORLD_FULL_TRACKS));
-      this.totalSteps = 3360;
+      this.tracks = scaleTracksToFineGrid(JSON.parse(JSON.stringify(OVERWORLD_FULL_TRACKS)));
+      this.totalSteps = 10080;
       this.bpm = 150;
       this.meter = '4/4';
     } else if (songName === 'OVERWORLD_2' || songName === 'OVERWORLD') {
-      this.tracks = JSON.parse(JSON.stringify(OVERWORLD_TRACKS));
-      this.totalSteps = 672;
+      this.tracks = scaleTracksToFineGrid(JSON.parse(JSON.stringify(OVERWORLD_TRACKS)));
+      this.totalSteps = 2016;
       this.bpm = 90;
       this.meter = '4/4';
     } else if (songName === 'UNDERWATER') {
-      this.tracks = JSON.parse(JSON.stringify(UNDERWATER_TRACKS));
-      this.totalSteps = 768;
+      this.tracks = scaleTracksToFineGrid(JSON.parse(JSON.stringify(UNDERWATER_TRACKS)));
+      this.totalSteps = 2304;
       this.bpm = 100;
       this.meter = '6/8';
     } else if (songName === 'MARIO_1') {
+      // mario1.ts is authored natively on the 1/24-beat grid (swing preserved).
       this.tracks = JSON.parse(JSON.stringify(MARIO1_TRACKS));
-      this.totalSteps = 1280;
+      this.totalSteps = 3840;
       this.bpm = 105;
       this.meter = '4/4';
     }
@@ -612,12 +652,12 @@ class ModularSynth {
     this.onStepListeners.forEach((fn) => fn(0));
   }
 
-  public resetToBlank(steps: number = 64) {
+  public resetToBlank(steps: number = 192) {
     this.stopAll();
     this.tracks = INITIAL_TRACKS.map((t) => ({
       ...JSON.parse(JSON.stringify(t)),
-      grid: Array.from({ length: 4096 }, () => []),
-      accents: Array.from({ length: 4096 }, () => 0),
+      grid: Array.from({ length: 12288 }, () => []),
+      accents: Array.from({ length: 12288 }, () => 0),
     }));
     this.totalSteps = steps;
     this.bpm = 120;
@@ -724,7 +764,7 @@ class ModularSynth {
   }
 
   public setTotalSteps(steps: number) {
-    this.totalSteps = Math.max(8, Math.min(4096, steps));
+    this.totalSteps = Math.max(8, Math.min(12288, steps));
     if (this.currentStep >= this.totalSteps) {
       this.currentStep = 0;
     }
@@ -944,15 +984,25 @@ class ModularSynth {
     const pDec = Math.max(0.005, track.pitchDecay ?? 0.05);
     const pRatio = Math.pow(2, pEnvAmt);
 
+    // NES-style noise pitch: with keyTracking > 0 the noise playback rate follows
+    // the note (like the NES noise channel's 16 rates) — high notes tick bright
+    // (hi-hat), mid notes rasp fuller (snare), low notes rumble (kick).
+    const noiseKeyTrk = track.keyTracking ?? 0.0;
+    const noiseRate = noiseKeyTrk > 0
+      ? Math.max(0.25, Math.min(4, Math.pow(baseFreq / 261.63, noiseKeyTrk)))
+      : 1.0;
+
     if (track.osc1Waveform === 'noise' && track.osc2Waveform === 'noise') {
       if (!this.noiseBuffer) this.initNoiseBuffer();
       noiseSource = ctx.createBufferSource();
       noiseSource.buffer = this.noiseBuffer;
       noiseSource.loop = true;
       if (pEnvAmt !== 0) {
-        noiseSource.playbackRate.setValueAtTime(1.0, t);
-        noiseSource.playbackRate.exponentialRampToValueAtTime(pRatio, t + pAtt);
-        noiseSource.playbackRate.exponentialRampToValueAtTime(1.0, t + pAtt + pDec);
+        noiseSource.playbackRate.setValueAtTime(noiseRate, t);
+        noiseSource.playbackRate.exponentialRampToValueAtTime(noiseRate * pRatio, t + pAtt);
+        noiseSource.playbackRate.exponentialRampToValueAtTime(noiseRate, t + pAtt + pDec);
+      } else if (noiseRate !== 1.0) {
+        noiseSource.playbackRate.setValueAtTime(noiseRate, t);
       }
       noiseSource.connect(voiceMix);
       noiseSource.start(startT1);
@@ -963,9 +1013,11 @@ class ModularSynth {
         noiseSource.buffer = this.noiseBuffer;
         noiseSource.loop = true;
         if (pEnvAmt !== 0) {
-          noiseSource.playbackRate.setValueAtTime(1.0, t);
-          noiseSource.playbackRate.exponentialRampToValueAtTime(pRatio, t + pAtt);
-          noiseSource.playbackRate.exponentialRampToValueAtTime(1.0, t + pAtt + pDec);
+          noiseSource.playbackRate.setValueAtTime(noiseRate, t);
+          noiseSource.playbackRate.exponentialRampToValueAtTime(noiseRate * pRatio, t + pAtt);
+          noiseSource.playbackRate.exponentialRampToValueAtTime(noiseRate, t + pAtt + pDec);
+        } else if (noiseRate !== 1.0) {
+          noiseSource.playbackRate.setValueAtTime(noiseRate, t);
         }
         const g1 = ctx.createGain();
         g1.gain.setValueAtTime(track.osc1Gain, t);
@@ -1572,7 +1624,7 @@ class ModularSynth {
     if (!ctx) return;
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
-    const stepDuration = 60 / this.bpm / 8; // 1/8 beat
+    const stepDuration = 60 / this.bpm / STEPS_PER_BEAT; // one grid step (1/24 beat)
 
     // Background tabs clamp setInterval to >=1s — 200ms of lookahead cannot
     // bridge that, so widen the window while hidden to keep playback gapless.
@@ -1588,7 +1640,7 @@ class ModularSynth {
 
   private scheduleStepAudio(step: number, time: number) {
     const hasSolo = this.tracks.some((t) => t.solo);
-    const stepDuration = 60 / this.bpm / 8; // 1/8 beat in seconds
+    const stepDuration = 60 / this.bpm / STEPS_PER_BEAT; // one grid step (1/24 beat) in seconds
 
     this.tracks.forEach((track) => {
       if (track.muted) return;

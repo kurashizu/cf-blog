@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
-import { modularSynth, METER_SPECS, divToColumnSpan, type TrackData } from '../synth';
+import { modularSynth, METER_SPECS, divToColumnSpan, divToStepSpan, stepsPerColumn, ternaryColFactor, type TrackData } from '../synth';
 import {
 	activeTrackId,
 	snapDiv,
@@ -60,23 +60,27 @@ export function toggleTrackSolo(trackId: number): void {
 }
 
 function currentGlobalCol(colIndex: number): number {
-	const meterCols = (METER_SPECS[get(timeMeter)] || METER_SPECS['4/4']).colsPerBar;
+	const snap = get(snapDiv);
+	const meterCols = (METER_SPECS[get(timeMeter)] || METER_SPECS['4/4']).colsPerBar * ternaryColFactor(snap);
 	return get(activeStepPage) * meterCols + colIndex;
 }
 
 /** Toggle a note in the polyphonic piano roll — up to 8 notes per step, snapped to the current grid division. */
 export function handlePianoRollCellClick(noteIndex: number, colIndex: number): void {
-	const snapSpanCols = divToColumnSpan(get(snapDiv));
+	const snap = get(snapDiv);
+	const snapSpanCols = divToColumnSpan(snap, snap);
 	const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
 	const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
 	const trackId = get(activeTrackId);
-	const startStep = currentGlobalCol(snappedCol) * 2;
+	const startStep = currentGlobalCol(snappedCol) * stepsPerColumn(snap);
 	placeOrClearNote(trackId, noteIndex, startStep);
 }
 
 export function handlePianoRollSubCellClick(noteIndex: number, colIndex: number, subCol: number): void {
+	const snap = get(snapDiv);
+	const spc = stepsPerColumn(snap);
 	const trackId = get(activeTrackId);
-	const startStep = currentGlobalCol(colIndex) * 2 + subCol;
+	const startStep = currentGlobalCol(colIndex) * spc + subCol * (spc / 2);
 	placeOrClearNote(trackId, noteIndex, startStep);
 }
 
@@ -96,8 +100,7 @@ function placeOrClearNote(trackId: number, noteIndex: number, startStep: number)
 		}
 		refreshTracks();
 	} else {
-		const durSpanCols = divToColumnSpan(get(noteDur));
-		const durSteps = Math.max(1, Math.round(durSpanCols * 2));
+		const durSteps = Math.max(1, divToStepSpan(get(noteDur)));
 		const endStep = Math.min(total, startStep + durSteps);
 
 		for (let s = startStep; s < endStep; s++) {
