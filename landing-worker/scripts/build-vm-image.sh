@@ -333,6 +333,26 @@ Section "Device"
     Identifier "v86"
     Driver     "modesetting"
 EndSection
+
+# There is no monitor to ask, so X falls back to 1024x768 and the page has to
+# stretch that across a desktop-sized panel. These modes are wider and still fit
+# in 8 MB of video memory at 32bpp; the first one the card accepts wins.
+Section "Monitor"
+    Identifier "v86-monitor"
+    HorizSync   30-90
+    VertRefresh 50-75
+EndSection
+
+Section "Screen"
+    Identifier "v86-screen"
+    Device     "v86"
+    Monitor    "v86-monitor"
+    DefaultDepth 24
+    SubSection "Display"
+        Depth   24
+        Modes   "1440x900" "1280x800" "1280x720" "1024x768"
+    EndSubSection
+EndSection
 EOF
 
 cat > "$ROOTFS/root/.config/openbox/menu.xml" <<'EOF'

@@ -90,6 +90,13 @@
 	/** True once the guest has switched the VGA adapter out of text mode. */
 	let graphical = $state(false);
 	/**
+	 * Whether the click-to-type hint has served its purpose. It used to follow
+	 * focus, which meant it came back every time the screen lost it — including
+	 * to the emulator's own pointer lock — and then sat over the machine
+	 * swallowing the clicks it was asking for.
+	 */
+	let screenHinted = $state(false);
+	/**
 	 * Which adapter is on screen. The guest drives this: v86 reports a graphical
 	 * mode the moment X takes the display, and a text mode when it hands it back,
 	 * so a shell is watched through the serial terminal — which resizes with the
@@ -209,6 +216,7 @@
 		phase = 'loading';
 		errorText = null;
 		chunksFetched = 0;
+		screenHinted = false;
 		playSound('toggle');
 
 		try {
@@ -503,6 +511,7 @@
 		// up to the wrapper here left that textarea blurred, so the terminal took
 		// no typing at all — the VGA screen is the only mode that wants the focus.
 		if (view === 'terminal') return;
+		screenHinted = true;
 		screenWrap?.focus();
 		// The emulated PS/2 mouse reports movement, not position, so it can only
 		// follow a pointer the page has locked. Without this X sees the buttons and
@@ -875,13 +884,16 @@
 			<!-- Line height has to exceed the font size or descenders are clipped:
 			     v86 lays each text row out in exactly this box. -->
 			<div style="white-space: pre; font: 15px/18px monospace; color: #d8dee9; padding: 6px;"></div>
-			<canvas style="display: none"></canvas>
+			<!-- The canvas holds exactly as many pixels as the guest is drawing, and
+			     the panel is bigger than that, so something has to invent the rest.
+			     Nearest-neighbour keeps a pixel a pixel instead of smearing it. -->
+			<canvas style="display: none; image-rendering: pixelated"></canvas>
 		</div>
 
 		<!-- Only the VGA screen needs a capture affordance. xterm takes focus and
 		     mouse events itself, and an overlay would swallow the very clicks that
 		     terminal mode exists to deliver. -->
-		{#if phase === 'running' && !keyboardCaptured && view === 'screen'}
+		{#if phase === 'running' && !screenHinted && view === 'screen'}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
