@@ -449,7 +449,9 @@
 			}
 			overlaySaver = setInterval(() => void persistOverlay(), 20000);
 		} else if (!diskBuffer) {
-			overlayNote = 'this disk cannot be persisted';
+			// Worth saying out loud rather than silently not persisting: it means
+			// this build of v86 keeps its disk somewhere the search did not reach.
+			overlayNote = 'no writable disk found — changes stay in memory';
 		}
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(emulator as any)?.run?.();

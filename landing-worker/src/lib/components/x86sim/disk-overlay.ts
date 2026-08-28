@@ -52,18 +52,37 @@ function isDiskBuffer(value: unknown): value is DiskBuffer {
  * distributed v86 is minified and exposes no accessor for it, so the property
  * path is not something to hard-code and expect to survive an upgrade.
  */
-export function findDiskBuffer(root: unknown, maxDepth = 6): DiskBuffer | null {
+export function findDiskBuffer(root: unknown, maxDepth = 8): DiskBuffer | null {
 	const seen = new Set<unknown>();
+	// The graph runs through the emulator's memory, and enumerating a view over
+	// 256 MB of it would build a quarter-billion-element array. Nothing that can
+	// hold a disk buffer is one of these.
+	const traversable = (value: unknown): boolean =>
+		!!value &&
+		typeof value === 'object' &&
+		!ArrayBuffer.isView(value) &&
+		!(value instanceof ArrayBuffer) &&
+		!(value instanceof Node) &&
+		!(value instanceof Map) &&
+		!(value instanceof Set) &&
+		!seen.has(value);
+
 	let frontier: unknown[] = [root];
+	let visited = 0;
 	for (let depth = 0; depth <= maxDepth && frontier.length; depth++) {
 		const next: unknown[] = [];
 		for (const node of frontier) {
-			if (!node || typeof node !== 'object' || seen.has(node)) continue;
+			if (!traversable(node) || visited++ > 50000) continue;
 			seen.add(node);
 			if (isDiskBuffer(node)) return node;
-			for (const value of Object.values(node as Record<string, unknown>)) {
-				if (value && typeof value === 'object' && !seen.has(value)) next.push(value);
+			let values: unknown[];
+			try {
+				values = Object.values(node as Record<string, unknown>);
+			} catch {
+				// Getters that throw when read out of context — skip the whole node.
+				continue;
 			}
+			for (const value of values) if (traversable(value)) next.push(value);
 		}
 		frontier = next;
 	}
