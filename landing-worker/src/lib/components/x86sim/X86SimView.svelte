@@ -494,6 +494,15 @@
 		keyboardCaptured = false;
 	}
 
+	/**
+	 * Right-click belongs to the machine while it is running: tmux, ncurses menus
+	 * and anything under openbox all use it, and the browser's own menu would take
+	 * it first. Only while running, so the panel behaves normally when idle.
+	 */
+	function onScreenContextMenu(e: MouseEvent) {
+		if (phase === 'running') e.preventDefault();
+	}
+
 	function onScreenKeydown(e: KeyboardEvent) {
 		// Only the VGA screen holds the keyboard hostage, so only it needs a way
 		// out. In terminal mode Escape is the guest's — vim and tmux need it.
@@ -825,6 +834,7 @@
 		onblur={releaseKeyboard}
 		onmousedown={captureKeyboard}
 		onkeydown={onScreenKeydown}
+		oncontextmenu={onScreenContextMenu}
 		class="relative flex-1 min-h-0 border bg-black rounded-xs overflow-hidden outline-none transition-colors {phase ===
 		'idle' || phase === 'error'
 			? 'hidden'
