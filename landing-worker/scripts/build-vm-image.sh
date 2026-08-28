@@ -41,6 +41,8 @@ apk add --root "$ROOTFS" --initdb --no-cache \
 	openrc util-linux e2fsprogs \
 	nano vim htop curl bash file tree tmux ncurses-terminfo eudev \
 	openbox xterm xorg-server xf86-input-libinput xinit xsetroot feh tint2 \
+	pcmanfm xfce4-terminal mousepad xarchiver galculator yad xclip git \
+	netsurf adwaita-icon-theme \
 	font-misc-misc ttf-dejavu
 
 mkdir -p "$ROOTFS/etc/apk"
@@ -161,38 +163,69 @@ set -g default-terminal "screen-256color"
 set -g status-style "bg=colour236,fg=colour252"
 EOF
 
-# The same session as kurashizu/openbox-vnc, cut down to what an emulated 486
-# can carry: openbox with one desktop named KRSZ, the project's wallpaper, and a
-# tint2 panel. pcmanfm draws the desktop there; here it would pull in GTK and
-# take minutes to start, so feh paints the background and the panel and the
-# root menu are the whole interface.
+# The same session as kurashizu/openbox-vnc: openbox with one desktop named
+# KRSZ, that project's wallpaper drawn by pcmanfm, a tint2 panel, and the same
+# three launchers. The browser is the one substitution -- firefox-esr exists for
+# 32-bit x86 but is 243 MB and needs to JIT megabytes of JavaScript to start,
+# which this machine cannot do at half a MIPS. netsurf renders a page instead.
 mkdir -p "$ROOTFS/root/.config/openbox"
 cat > "$ROOTFS/root/.xinitrc" <<'EOF'
-if [ -f /usr/share/backgrounds/krsz.png ]; then
-	feh --bg-scale /usr/share/backgrounds/krsz.png
-else
-	xsetroot -solid "#12151a"
-fi
+pcmanfm --desktop &
 tint2 &
-xterm -geometry 96x26+28+28 -fa "DejaVu Sans Mono" -fs 11 \
-	-bg "#0d1117" -fg "#d8dee9" -title "krsz-vm" &
 exec openbox
-EOF
-
-# The DRM device is what X needs; the framebuffer console it would otherwise
-# bring with it is not. Leaving fbdev emulation on means the text console turns
-# graphical the moment the driver loads at boot, which the page reads -- fairly
-# -- as "something has taken the display", and it switches away from the serial
-# terminal before there is anything to see.
-mkdir -p "$ROOTFS/etc/modprobe.d"
-cat > "$ROOTFS/etc/modprobe.d/krsz.conf" <<'EOF'
-options drm_kms_helper fbdev_emulation=0
 EOF
 
 mkdir -p "$ROOTFS/usr/share/backgrounds"
 if [ -f /assets/wallpaper.png ]; then
 	cp /assets/wallpaper.png "$ROOTFS/usr/share/backgrounds/krsz.png"
 fi
+
+mkdir -p "$ROOTFS/root/.config/pcmanfm/default"
+cat > "$ROOTFS/root/.config/pcmanfm/default/desktop-items-0.conf" <<'EOF'
+[*]
+wallpaper_mode=stretch
+wallpaper=/usr/share/backgrounds/krsz.png
+desktop_bg=#12151a
+desktop_font=Sans 10
+desktop_fg=#ffffff
+desktop_shadow=#000000
+show_documents=0
+show_trash=0
+show_mounts=0
+EOF
+
+mkdir -p "$ROOTFS/root/.config/libfm"
+cat > "$ROOTFS/root/.config/libfm/libfm.conf" <<'EOF'
+[config]
+quick_exec=1
+EOF
+
+mkdir -p "$ROOTFS/root/Desktop"
+cat > "$ROOTFS/root/Desktop/browser.desktop" <<'EOF'
+[Desktop Entry]
+Name=Web Browser
+Exec=netsurf-gtk3
+Icon=web-browser
+Type=Application
+Terminal=false
+EOF
+cat > "$ROOTFS/root/Desktop/files.desktop" <<'EOF'
+[Desktop Entry]
+Name=Files
+Exec=pcmanfm /root
+Icon=folder
+Type=Application
+Terminal=false
+EOF
+cat > "$ROOTFS/root/Desktop/terminal.desktop" <<'EOF'
+[Desktop Entry]
+Name=Terminal
+Exec=xfce4-terminal
+Icon=utilities-terminal
+Type=Application
+Terminal=false
+EOF
+chmod +x "$ROOTFS"/root/Desktop/*.desktop
 
 cat > "$ROOTFS/root/.config/openbox/rc.xml" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -213,10 +246,10 @@ cat > "$ROOTFS/root/.config/openbox/rc.xml" <<'EOF'
 </openbox_config>
 EOF
 
-mkdir -p "$ROOTFS/root/.config/tint2"
 # Backgrounds are numbered in the order they appear and have to be defined
 # before anything refers to them -- writing the panel first leaves it with an
 # id that does not exist yet, and tint2 comes up drawing nothing at all.
+mkdir -p "$ROOTFS/root/.config/tint2"
 cat > "$ROOTFS/root/.config/tint2/tint2rc" <<'EOF'
 rounded = 0
 border_width = 1
@@ -228,16 +261,23 @@ border_width = 1
 background_color = #2b323b 100
 border_color = #98c379 100
 
-panel_items = TC
+panel_items = LTC
 panel_monitor = all
 panel_position = bottom center horizontal
-panel_size = 100% 24
+panel_size = 100% 28
 panel_margin = 0 0
 panel_padding = 4 2 4
 panel_background_id = 1
 panel_layer = top
 strut_policy = follow_size
 wm_menu = 1
+
+launcher_icon_size = 20
+launcher_padding = 4 2 6
+launcher_icon_theme = Adwaita
+launcher_item_app = /root/Desktop/terminal.desktop
+launcher_item_app = /root/Desktop/files.desktop
+launcher_item_app = /root/Desktop/browser.desktop
 
 taskbar_mode = single_desktop
 taskbar_padding = 2 0 4
@@ -281,10 +321,14 @@ cat > "$ROOTFS/root/.config/openbox/menu.xml" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_menu xmlns="http://openbox.org/3.4/menu">
 <menu id="root-menu" label="krsz-vm">
-  <item label="Terminal"><action name="Execute"><command>xterm -fa "DejaVu Sans Mono" -fs 11 -bg "#0d1117" -fg "#d8dee9"</command></action></item>
-  <item label="Top"><action name="Execute"><command>xterm -e htop</command></action></item>
-  <item label="Editor"><action name="Execute"><command>xterm -e vim</command></action></item>
+  <item label="Terminal"><action name="Execute"><command>xfce4-terminal</command></action></item>
+  <item label="Files"><action name="Execute"><command>pcmanfm /root</command></action></item>
+  <item label="Web Browser"><action name="Execute"><command>netsurf-gtk3</command></action></item>
+  <item label="Text Editor"><action name="Execute"><command>mousepad</command></action></item>
+  <item label="Archives"><action name="Execute"><command>xarchiver</command></action></item>
+  <item label="Calculator"><action name="Execute"><command>galculator</command></action></item>
   <separator />
+  <item label="Top"><action name="Execute"><command>xfce4-terminal -e htop</command></action></item>
   <item label="Reconfigure"><action name="Reconfigure" /></item>
   <item label="Exit X"><action name="Exit" /></item>
 </menu>
