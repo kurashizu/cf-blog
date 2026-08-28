@@ -80,11 +80,11 @@
 		<button
 			onclick={cycleTheme}
 			title="Color Theme Switcher — Cycle palette (Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
-			class="hover:underline cursor-pointer hidden sm:inline text-[#e5c07b]">[THEME: {$theme.toUpperCase()}]</button
+			class="hover:underline cursor-pointer hidden xl:inline text-[#e5c07b]">[THEME: {$theme.toUpperCase()}]</button
 		>
 		<span
 			title="Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers"
-			class="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden lg:inline">100%_SERVERLESS</span
+			class="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden 2xl:inline">100%_SERVERLESS</span
 		>
 	</div>
 </header>

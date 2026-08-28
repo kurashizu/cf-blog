@@ -15,9 +15,17 @@ Apex-domain portal (`krsz.in` / `www.krsz.in`), styled as a fake `tmux` terminal
 
 - `/` and `/modules` — project portal: a card grid of the real subdomains (`blog`, `agent`, `share`, `sharetube`, `mail`, `skill`), each with verified real facts and a Mermaid flowchart/sequence diagram of how it actually works. No fabricated metrics.
 - `/guestbook` — posts to `blog.krsz.in`'s guestbook API.
-- `/synth` — an 8-track WebAudio modular synthesizer workstation (sequencer, piano roll, MIDI input, FX/EQ, oscilloscope/FFT/loudness visualizers, patch save/load). The audio engine (`src/lib/synth.ts`, `src/lib/sound.ts`) is framework-agnostic; everything else is Svelte stores wrapping it.
+- `/synth` — an 8-track WebAudio modular synthesizer workstation (sequencer, piano roll, MIDI input, FX/EQ, oscilloscope/FFT/loudness visualizers, patch save/load). Imports `.mid` files (`src/lib/midi-file.ts`, drag one anywhere onto the page) and bounces the pattern to WAV through an `OfflineAudioContext`. The audio engine (`src/lib/synth.ts`, `src/lib/sound.ts`) is framework-agnostic; everything else is Svelte stores wrapping it.
+- `/utilities` — twelve browser-side hardware testers: keyboard, mouse, touch/pen, typing, gamepad, reaction, screen, audio out, mic in, camera, net/power, display/system. Every value is probed live; anything the browser withholds prints `n/a` rather than a number.
+- `/leaderboard` — the Artificial Analysis language-model table, cached by `cache-worker` into D1 and read from `blog.krsz.in/api/llm-leaderboard`. Sortable by intelligence, coding, agentic, blended price, output speed, TTFT or release date.
 
-Shared chrome (tab bar, sidebar, command console, telemetry footer, theme, hotkeys `0`-`2` + `T`) lives in `src/routes/+layout.svelte` and `src/lib/components/chrome/`.
+Shared chrome (tab bar, sidebar, command console, telemetry footer, theme) lives in `src/routes/+layout.svelte` and `src/lib/components/chrome/`.
+
+Hotkeys: `Ctrl+0`-`Ctrl+4` switch view (always, even inside the key-capturing testers), `T` cycles theme, `` ` `` drops the console down over any tab, `?` or `F1` opens the full keymap.
+
+The footer reads `/cdn-cgi/trace` and shows the real serving Cloudflare PoP, negotiated protocol and TLS version; `trace` in the console prints the whole record with a browser-measured round trip. The first load of a tab session runs a POST screen of real capability probes (GPU renderer string, storage quota, service-worker state, edge PoP) — skipped entirely under `prefers-reduced-motion`.
+
+The console is a small shell: a read-only virtual filesystem projected from `MODULES` and the live stores (`cd`, `ls`, `cat`, `tree`), pipes into `grep`/`head`/`tail`/`sort`/`uniq`/`wc`, persistent history, `alias`, and `man <cmd>`.
 
 ## Local Development
 
@@ -56,14 +64,21 @@ landing-worker/
 │   ├── app.css                         # Tailwind entry + design tokens
 │   ├── lib/
 │   │   ├── synth.ts, sound.ts          # Framework-agnostic WebAudio engines (singletons)
+│   │   ├── midi-file.ts                # Standard MIDI File reader (import)
+│   │   ├── wav.ts                      # 16-bit PCM WAV encoder (offline render)
+│   │   ├── vfs.ts                      # Console virtual filesystem, projected from MODULES
+│   │   ├── links.ts                    # Every open/ping destination
 │   │   ├── evaluator.ts                # Sandboxed math expression evaluator (console `eval`)
 │   │   ├── songs/                      # Built-in sequencer patterns (data only)
 │   │   ├── data/modules.ts             # Project portal content (real facts + Mermaid diagrams)
 │   │   ├── routes-map.ts               # Tab index <-> path mapping
 │   │   ├── stores/                     # Svelte stores wrapping the synth/sound singletons
 │   │   └── components/
-│   │       ├── chrome/                 # TabBar, Sidebar, CommandConsole, TelemetryFooter
+│   │       ├── chrome/                 # TabBar, Sidebar, CommandConsole, TelemetryFooter,
+│   │       │                           # HotkeyOverlay, BootSequence
 │   │       ├── projects/               # ProjectsView + MermaidDiagram
+│   │       ├── leaderboard/            # LeaderboardView
+│   │       ├── utilities/              # The twelve hardware testers
 │   │       ├── guestbook/
 │   │       ├── hardware/               # RotaryKnob/HardwareFader + shared drag action
 │   │       ├── pixel/                  # Inline pixel-art icon set
@@ -73,6 +88,7 @@ landing-worker/
 │       ├── +layout.svelte              # Shared chrome, theme, hotkeys, global styles import
 │       ├── +layout.ts                  # prerender = true
 │       ├── +page.svelte, modules/      # Project portal (same content, two paths)
+│       ├── utilities/, leaderboard/
 │       ├── guestbook/
 │       └── synth/
 ├── static/favicon.svg
