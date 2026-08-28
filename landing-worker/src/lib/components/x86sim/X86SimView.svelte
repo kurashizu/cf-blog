@@ -419,14 +419,24 @@
 	const TARGET_COLS = 92;
 
 	function fitTerminal() {
-		if (!fitAddon || !term || !termEl) return;
-		const width = termEl.clientWidth - 12;
-		if (width > 0) {
-			// xterm's cell advance is about 0.6em for the fonts it falls back to.
-			const size = Math.round(width / TARGET_COLS / 0.6);
-			const clamped = Math.max(13, Math.min(22, size));
-			if (term.options.fontSize !== clamped) term.options.fontSize = clamped;
-		}
+		if (!fitAddon || !termEl) return;
+		// Looked up on every call rather than once: the adapter is built during
+		// boot, and a single missed lookup used to leave the terminal unfitted for
+		// the rest of the session.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		term ??= (emulator as any)?.serial_adapter?.term ?? null;
+		if (!term) return;
+
+		fitAddon.fit();
+		// Derive the next size from the columns this one produced instead of
+		// guessing the font's advance — whichever monospace the browser picks,
+		// two passes land on the target.
+		const cols = term.cols ?? 0;
+		const current = term.options.fontSize ?? 15;
+		if (!cols || Math.abs(cols - TARGET_COLS) <= 4) return;
+		const next = Math.max(13, Math.min(22, Math.round((current * cols) / TARGET_COLS)));
+		if (next === current) return;
+		term.options.fontSize = next;
 		fitAddon.fit();
 	}
 

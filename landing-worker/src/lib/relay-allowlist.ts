@@ -2,8 +2,10 @@
  * The destination allowlist shared by the three relay endpoints.
  *
  * `OMNIPROXY_ALLOW` is a comma-separated list of `host` or `host:port` entries.
- * "*" disables the check; unset blocks everything, so a deployment that forgets
- * to configure it fails closed.
+ * A bare "*" disables the check; unset blocks everything, so a deployment that
+ * forgets to configure it fails closed. "*:443" is the useful middle ground --
+ * any destination, but only on the ports a browser-shaped machine has business
+ * reaching, which keeps the relay from becoming a general-purpose one.
  *
  * Where the check lands differs by caller, because who resolves the name does:
  *
@@ -35,8 +37,9 @@ export function parseAllowlist(raw: string | undefined): AllowEntry[] | null {
 	});
 }
 
-/** Matches an entry's host, exactly or as a parent domain. */
+/** Matches an entry's host: "*" for any, otherwise exactly or as a parent domain. */
 function hostMatches(host: string, entry: AllowEntry): boolean {
+	if (entry.host === '*') return true;
 	const h = host.toLowerCase().replace(/\.$/, '');
 	return h === entry.host || h.endsWith(`.${entry.host}`);
 }
