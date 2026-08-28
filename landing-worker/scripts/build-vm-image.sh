@@ -108,8 +108,12 @@ echo "==> kernel modules version: $KVER"
 # Only the features needed to mount an ext4 root off the emulated IDE disk.
 # Every extra feature is another driver probed at boot on hardware v86 may only
 # partly implement.
+#
+# `ata` supplies the controller driver, but the block device itself comes from
+# sd_mod in `scsi` — without it libata enumerates the disk and no /dev/sda ever
+# appears, which is exactly how the first build failed to mount its root.
 cat > "$ROOTFS/etc/mkinitfs/mkinitfs.conf" <<'EOF'
-features="base ext4 ata"
+features="base ext4 ata scsi"
 EOF
 
 cp "$ROOTFS/boot/vmlinuz-${KERNEL_FLAVOR}" "$OUT/vmlinuz"
