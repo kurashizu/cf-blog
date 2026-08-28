@@ -131,8 +131,8 @@ cat > /tmp/motd.raw <<'MOTD'
     Nothing is persisted. Power off and every change is gone.
     The disk is streamed in 1 MiB pieces as you touch it, so the first
     use of a command is slower than the second.
-    Outbound traffic goes through an allowlisted relay, not the open
-    internet -- most hosts will simply refuse to connect.
+    Outbound traffic goes through a relay on the page's own origin,
+    which carries ports 80 and 443 and nothing else.
 
 MOTD
 

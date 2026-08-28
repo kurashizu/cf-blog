@@ -557,8 +557,8 @@
 		{ label: 'DISK', value: 'ext4 image, streamed in 1 MiB chunks' },
 		{
 			label: 'NETWORK',
-			value: settings.network ? 'via the relay, allowlisted' : 'off',
-			title: "v86's own gateway answers ARP, DHCP and ping and resolves names over DoH; the TCP streams it produces are translated to OmniProxy at /net/wisp, where the destination allowlist is enforced"
+			value: settings.network ? 'via the relay, ports 80/443' : 'off',
+			title: "v86's own gateway answers ARP, DHCP and ping and resolves names over DoH; the TCP streams it produces are translated to OmniProxy at /net/wisp. Names are policed at the resolver and ports at the socket, because the guest resolves for itself and connects to an address"
 		},
 		{ label: 'STATUS', value: 'boots to an Alpine login' }
 	]);
