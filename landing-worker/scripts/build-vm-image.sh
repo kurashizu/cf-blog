@@ -143,7 +143,8 @@ cat > /tmp/motd.raw <<'MOTD'
     The disk is streamed in 1 MiB pieces as you touch it, so the first
     use of a command is slower than the second.
     Outbound traffic goes through a relay on the page's own origin,
-    which carries ports 80 and 443 and nothing else.
+    rate limited per client. There is no NAT to punch: nothing on
+    the internet can reach in.
 
 MOTD
 

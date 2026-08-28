@@ -41,7 +41,12 @@ bucket_name = "public-files"
 # "dl-cdn.alpinelinux.org" but not "evil-alpinelinux.org". A port-pinned entry
 # matches only that port, and a portless frame (ICMP) matches only entries that
 # pin no port. "*" disables the check entirely; an empty value blocks everything.
-OMNIPROXY_ALLOW = "*:80,*:443"
+#
+# Currently "*": every host, every port. That makes this a general-purpose proxy
+# for anyone who loads the page, held back only by NET_RATE_LIMIT below and by
+# the fact that the guest has to be driven by hand. Narrow it to "*:80,*:443",
+# or to named hosts, if that stops being an acceptable trade.
+OMNIPROXY_ALLOW = "*"
 
 # VM disk images served to v86 by `src/routes/vm/img/[name]/+server.ts`, as
 # `name|url|size` triples. Upstream sends no CORS headers, so it has to be
