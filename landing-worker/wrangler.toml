@@ -29,6 +29,12 @@ namespace_id = "2001"
   limit = 10
   period = 60
 
+# VM images live under vm/ in the shared public bucket, written by the
+# build-vm-image workflow.
+[[r2_buckets]]
+binding = "VM_BUCKET"
+bucket_name = "public-files"
+
 [vars]
 # Destinations the relay may reach: `host` or `host:port`, comma separated.
 # Matching is suffix-at-label-boundary, so "alpinelinux.org" covers

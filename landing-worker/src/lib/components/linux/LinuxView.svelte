@@ -19,6 +19,12 @@
 	 * enough that the guest never finishes booting.
 	 */
 	const BOOT_LINE = 'virt modloop_verify=no acpi=off nomodeset';
+	/**
+	 * Kernel command line for the purpose-built image. tty0 is listed last so it
+	 * becomes /dev/console and the VGA screen carries the session; ttyS0 still
+	 * gets a getty from the image's inittab.
+	 */
+	const KERNEL_CMDLINE = 'root=/dev/sda rw console=ttyS0,115200 console=tty0';
 
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 
@@ -41,6 +47,16 @@
 	let lastInstructions = 0;
 	let lastSample = 0;
 	let bootLineSent = $state(false);
+	let mode = $state<'kernel' | 'cdrom'>('cdrom');
+
+	async function imageInfo(name: string): Promise<{ size: number } | null> {
+		try {
+			const res = await fetch(`/vm/img/${name}?info`);
+			return res.ok ? ((await res.json()) as { size: number }) : null;
+		} catch {
+			return null;
+		}
+	}
 
 	/**
 	 * Every disk read goes through /vm/img, so counting fetches there is a real
@@ -50,7 +66,7 @@
 	function installFetchCounter() {
 		const original = window.XMLHttpRequest.prototype.open;
 		window.XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
-			if (String(url).includes(`/vm/img/${IMAGE}`)) {
+			if (/\/vm\/img\/(alpine|rootfs)\b/.test(String(url))) {
 				this.addEventListener('load', () => chunksFetched++, { once: true });
 			}
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,10 +88,14 @@
 
 		try {
 			status = 'reading image metadata…';
-			const metaRes = await fetch(`/vm/img/${IMAGE}?info`);
-			if (!metaRes.ok) throw new Error(`image metadata: ${metaRes.status} ${metaRes.statusText}`);
-			const meta = (await metaRes.json()) as { size: number };
+			// A purpose-built kernel + rootfs is preferred when the build workflow
+			// has published one; otherwise fall back to booting the stock ISO.
+			const rootfs = await imageInfo('rootfs');
+			const kernel = rootfs ? await imageInfo('vmlinuz') : null;
+			const meta = kernel ? rootfs : await imageInfo(IMAGE);
+			if (!meta) throw new Error('no VM image is configured on this deployment');
 			imageSize = meta.size;
+			mode = kernel ? 'kernel' : 'cdrom';
 
 			status = 'loading emulator (2 MB wasm)…';
 			// v86 exports both a default and a named V86; only the named one is typed.
@@ -87,6 +107,10 @@
 			restoreFetch = installFetchCounter();
 			status = 'starting SeaBIOS…';
 
+			// v86 rounds async reads out to fixed_chunk_size, so the proxy's cache
+			// is hit squarely instead of straddling two entries.
+			const streamed = { async: true as const, size: meta.size, fixed_chunk_size: CHUNK };
+
 			emulator = new V86({
 				wasm_path: wasmPath,
 				memory_size: MEMORY_MB * 1024 * 1024,
@@ -94,14 +118,19 @@
 				screen_container: screenEl,
 				bios: { url: '/vm/seabios.bin' },
 				vga_bios: { url: '/vm/vgabios.bin' },
-				cdrom: {
-					url: `/vm/img/${IMAGE}`,
-					async: true,
-					size: meta.size,
-					// v86 rounds reads out to this, so the proxy's cache is hit squarely.
-					fixed_chunk_size: CHUNK
-				},
-				boot_order: 0x123, // CD, then hard disk, then floppy
+				...(mode === 'kernel'
+					? {
+							// Loading the kernel and initrd directly skips the bootloader
+							// entirely, which is what makes the cmdline ours to set.
+							bzimage: { url: '/vm/img/vmlinuz' },
+							initrd: { url: '/vm/img/initramfs' },
+							cmdline: KERNEL_CMDLINE,
+							hda: { url: '/vm/img/rootfs', ...streamed }
+						}
+					: {
+							cdrom: { url: `/vm/img/${IMAGE}`, ...streamed },
+							boot_order: 0x123 // CD, then hard disk, then floppy
+						}),
 				autostart: true,
 				disable_speaker: true
 			});
@@ -112,7 +141,8 @@
 				bootedAt = performance.now();
 				lastSample = bootedAt;
 				lastInstructions = 0;
-				waitForBootPrompt();
+				// Only the stock ISO needs its bootloader prompt driven.
+				if (mode === 'cdrom') waitForBootPrompt();
 			});
 			emulator.add_listener('screen-set-size', (dims: [number, number, number]) => {
 				graphical = dims[2] !== 0;
@@ -354,6 +384,7 @@
 				<span class="text-white/25">({chunksFetched} × 1 MiB chunks)</span>
 			</span>
 			<span>MODE <span class="text-[#c678dd]">{graphical ? 'graphical' : 'text'}</span></span>
+			<span>BOOT <span class="text-[#61afef]">{mode === 'kernel' ? 'direct kernel' : 'ISO bootloader'}</span></span>
 			{#if bootLineSent}
 				<span title="Typed at the ISOLINUX prompt to control the kernel cmdline">
 					CMDLINE <span class="text-[#e5c07b]">{BOOT_LINE}</span>

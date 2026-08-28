@@ -1,0 +1,124 @@
+#!/bin/sh
+# Builds the three files v86 needs to boot Alpine: a kernel, an initramfs, and
+# an ext4 root filesystem. Runs inside a 32-bit Alpine container so apk, mkinitfs
+# and the target binaries are all native x86 — see .github/workflows/build-vm-image.yml.
+#
+# Why not a bootable disk image: v86 can load a bzimage and initrd directly and
+# take the kernel command line as an option, which removes the bootloader, the
+# partition table and the loop-device mounting that a disk image would need. It
+# also means the cmdline is controlled by the page instead of typed into a
+# bootloader prompt.
+set -eu
+
+ALPINE_VERSION="${ALPINE_VERSION:-3.24}"
+KERNEL_FLAVOR="${KERNEL_FLAVOR:-lts}"
+IMAGE_MB="${IMAGE_MB:-512}"
+OUT="${OUT:-/out}"
+ROOTFS=/rootfs
+MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}"
+
+echo "==> host: $(uname -m), target Alpine v${ALPINE_VERSION} ${KERNEL_FLAVOR}"
+
+apk add --no-cache e2fsprogs-extra mkinitfs
+
+# ── root filesystem ────────────────────────────────────────────────────────
+mkdir -p "$ROOTFS"
+apk add --root "$ROOTFS" --initdb --no-cache \
+	--repository "$MIRROR/main" \
+	--repository "$MIRROR/community" \
+	--allow-untrusted \
+	alpine-base "linux-${KERNEL_FLAVOR}" busybox-extras \
+	openrc util-linux e2fsprogs \
+	nano vim htop curl bash file tree git
+
+mkdir -p "$ROOTFS/etc/apk"
+cat > "$ROOTFS/etc/apk/repositories" <<EOF
+$MIRROR/main
+$MIRROR/community
+EOF
+
+# ── configuration ──────────────────────────────────────────────────────────
+echo krsz-vm > "$ROOTFS/etc/hostname"
+
+cat > "$ROOTFS/etc/fstab" <<'EOF'
+/dev/sda	/	ext4	rw,relatime	0 1
+EOF
+
+# A serial getty is what the page attaches to. Keeping tty1 as well means the
+# VGA screen still shows something if the serial view is ever swapped out.
+cat > "$ROOTFS/etc/inittab" <<'EOF'
+::sysinit:/sbin/openrc sysinit
+::sysinit:/sbin/openrc boot
+::wait:/sbin/openrc default
+
+ttyS0::respawn:/sbin/getty -L 0 ttyS0 vt100
+tty1::respawn:/sbin/getty 38400 tty1
+
+::ctrlaltdel:/sbin/reboot
+::shutdown:/sbin/openrc shutdown
+EOF
+
+# This is a throwaway demo machine with no network services listening, and
+# prompting for a password nobody was given would just make it unusable.
+sed -i 's|^root:[^:]*:|root::|' "$ROOTFS/etc/shadow"
+
+cat > "$ROOTFS/etc/motd" <<'EOF'
+
+   Alpine Linux on v86 — a 32-bit x86 PC emulated in your browser.
+   Nothing here is persisted: everything is gone when you power off.
+
+EOF
+
+mkdir -p "$ROOTFS/etc/profile.d"
+cat > "$ROOTFS/etc/profile.d/krsz.sh" <<'EOF'
+export PS1='\[\033[1;32m\]\u@krsz-vm\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
+alias ll='ls -la'
+EOF
+
+# ── services ───────────────────────────────────────────────────────────────
+# hwdrivers is the coldplug service that modprobes a driver for every device it
+# finds on the PCI bus. On v86 that is what triple-faults the machine and sends
+# it back to the BIOS, so a fixed virtual machine with known hardware simply
+# does not run hardware autodetection.
+for svc in devfs dmesg sysfs; do
+	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/sysinit/$svc" 2>/dev/null || true
+done
+mkdir -p "$ROOTFS/etc/runlevels/boot" "$ROOTFS/etc/runlevels/default" "$ROOTFS/etc/runlevels/sysinit"
+for svc in bootmisc hostname syslog; do
+	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/boot/$svc" 2>/dev/null || true
+done
+# Deliberately absent from every runlevel: hwdrivers, mdev-conf coldplug, modules.
+rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \
+	"$ROOTFS/etc/runlevels/boot/modules" \
+	"$ROOTFS/etc/runlevels/sysinit/mdev" || true
+
+# ── kernel + initramfs ─────────────────────────────────────────────────────
+KVER=$(ls "$ROOTFS/lib/modules" | head -n1)
+echo "==> kernel modules version: $KVER"
+
+# Only the features needed to mount an ext4 root off the emulated IDE disk.
+# Every extra feature is another driver probed at boot on hardware v86 may only
+# partly implement.
+cat > "$ROOTFS/etc/mkinitfs/mkinitfs.conf" <<'EOF'
+features="base ext4 ata"
+EOF
+
+cp "$ROOTFS/boot/vmlinuz-${KERNEL_FLAVOR}" "$OUT/vmlinuz"
+chroot "$ROOTFS" /sbin/mkinitfs -c /etc/mkinitfs/mkinitfs.conf -o /boot/initramfs-v86 "$KVER"
+cp "$ROOTFS/boot/initramfs-v86" "$OUT/initramfs"
+
+# The kernel and initramfs are loaded whole by v86, so they should not also sit
+# inside the root filesystem taking up space in the streamed image.
+rm -rf "$ROOTFS/boot"/vmlinuz-* "$ROOTFS/boot"/initramfs-* "$ROOTFS/boot"/System.map-* "$ROOTFS/boot"/config-*
+
+# ── ext4 image ─────────────────────────────────────────────────────────────
+# mke2fs -d populates the filesystem from a directory, so no loop mount and no
+# privileged container are needed. No partition table either: the kernel is told
+# root=/dev/sda, the whole disk.
+mke2fs -q -t ext4 -b 4096 -d "$ROOTFS" -F -L krsz-root "$OUT/rootfs.img" "$((IMAGE_MB * 256))"
+
+echo "==> built:"
+ls -l "$OUT"
+for f in vmlinuz initramfs rootfs.img; do
+	echo "$f size=$(stat -c %s "$OUT/$f")"
+done
