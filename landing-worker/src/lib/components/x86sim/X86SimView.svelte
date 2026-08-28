@@ -834,6 +834,10 @@
 	     for graphics. The wrapper is focusable so releasing the keyboard works. -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- max-lg:min-h is for phones: there this panel is a scrolling column with no
+	     height of its own, so flex-1 resolved to the content's height, and the
+	     content is an absolutely positioned terminal — two pixels of machine. On a
+	     desktop the row still shrinks freely. -->
 	<div
 		bind:this={screenWrap}
 		tabindex={phase === 'running' && view !== 'terminal' ? 0 : -1}
@@ -844,7 +848,7 @@
 		onmousedown={captureKeyboard}
 		onkeydown={onScreenKeydown}
 		oncontextmenu={onScreenContextMenu}
-		class="relative flex-1 min-h-0 border bg-black rounded-xs overflow-hidden outline-none transition-colors {phase ===
+		class="relative flex-1 min-h-0 max-lg:min-h-[60vh] border bg-black rounded-xs overflow-hidden outline-none transition-colors {phase ===
 		'idle' || phase === 'error'
 			? 'hidden'
 			: keyboardCaptured

@@ -309,6 +309,20 @@ exec /usr/bin/Xorg -nolisten tcp -verbose 1 "$@" 2>>/var/log/Xorg.stderr.log
 EOF
 chmod +x "$ROOTFS/etc/X11/xinit/xserverrc"
 
+# The DRM driver is loaded here rather than at boot, because it brings a
+# framebuffer console with it: load it early and the guest sits in a graphical
+# mode from the first second, which the page reads -- fairly -- as "something
+# has taken the display", switching away from the serial console before there is
+# anything to see. Turning fbdev emulation off through the module parameter has
+# no effect on this kernel, so the driver simply waits until X is asked for.
+mkdir -p "$ROOTFS/usr/local/bin"
+cat > "$ROOTFS/usr/local/bin/startx" <<'EOF'
+#!/bin/sh
+modprobe bochs 2>/dev/null || true
+exec /usr/bin/startx "$@"
+EOF
+chmod +x "$ROOTFS/usr/local/bin/startx"
+
 mkdir -p "$ROOTFS/etc/X11/xorg.conf.d"
 cat > "$ROOTFS/etc/X11/xorg.conf.d/10-modesetting.conf" <<'EOF'
 Section "Device"
@@ -395,7 +409,7 @@ start() {
 	# /dev/input/event* node libinput looks for; without them X comes up with a
 	# keyboard and no pointer.
 	for mod in virtio virtio_ring virtio_pci failover net_failover virtio_net \
-		bochs atkbd psmouse evdev serio_raw; do
+		atkbd psmouse evdev serio_raw; do
 		modprobe "$mod" 2>/dev/null || true
 	done
 	# X finds its keyboard and mouse through udev, which has to have seen them.
