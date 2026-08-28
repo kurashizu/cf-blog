@@ -13,13 +13,29 @@ directory = ".svelte-kit/cloudflare"
 # Apex domain is centralized in `shared/site-config.ts` (APEX_DOMAIN).
 
 # Network relay for the (upcoming) Linux VM view — `src/routes/net/+server.ts`.
-# All three are set out-of-band so the public repo never carries the endpoint or
-# its token:
+# The endpoint and its token are secrets, so this public repo never carries them:
 #   npx wrangler secret put OMNIPROXY_URL     # e.g. https://host.example/
 #   npx wrangler secret put OMNIPROXY_TOKEN   # sent upstream as x-proxy-token
-#   npx wrangler secret put OMNIPROXY_ALLOW   # host suffixes, comma separated
 # With OMNIPROXY_URL unset the route answers 503 and the rest of the site is
-# unaffected; an unset OMNIPROXY_ALLOW blocks every destination.
+# unaffected. The allowlist below is not sensitive and lives here instead, so
+# what the relay may reach is reviewable in git rather than write-only.
+
+# Per-IP budget on relay connections. One VM opens one socket, so this is far
+# above normal use and only bites a reconnect loop or a scripted abuser.
+[[ratelimits]]
+name = "NET_RATE_LIMIT"
+namespace_id = "2001"
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
+[vars]
+# Destinations the relay may reach: `host` or `host:port`, comma separated.
+# Matching is suffix-at-label-boundary, so "alpinelinux.org" covers
+# "dl-cdn.alpinelinux.org" but not "evil-alpinelinux.org". A port-pinned entry
+# matches only that port, and a portless frame (ICMP) matches only entries that
+# pin no port. "*" disables the check entirely; an empty value blocks everything.
+OMNIPROXY_ALLOW = "alpinelinux.org:443,krsz.in:443"
 
 [observability]
 enabled = false

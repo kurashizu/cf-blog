@@ -50,11 +50,20 @@ refusal rather than a hang.
 ```bash
 npx wrangler secret put OMNIPROXY_URL     # https://host.example/
 npx wrangler secret put OMNIPROXY_TOKEN   # sent upstream as x-proxy-token
-npx wrangler secret put OMNIPROXY_ALLOW   # deb.example.org,krsz.in  ("*" disables)
 ```
 
-Unset `OMNIPROXY_URL` makes the route answer 503 and changes nothing else; unset
-`OMNIPROXY_ALLOW` blocks every destination. Cross-origin upgrades are rejected.
+`OMNIPROXY_ALLOW` is not sensitive, so it lives in `wrangler.toml` under
+`[vars]` instead — what the relay may reach stays reviewable in git rather than
+write-only. Entries are `host` or `host:port`, comma separated; matching is
+suffix-at-label-boundary, so `alpinelinux.org` covers `dl-cdn.alpinelinux.org`
+but not `evil-alpinelinux.org`. A port-pinned entry matches only that port, and
+a frame carrying no port at all (ICMP) matches only entries that pin no port,
+so allowing `example.org:443` never silently grants ping.
+
+Unset `OMNIPROXY_URL` makes the route answer 503 and changes nothing else; an
+empty allowlist blocks every destination and `"*"` disables the check. Upgrades
+without a same-origin `Origin` header are rejected, and `NET_RATE_LIMIT` caps
+relay connections per client IP.
 
 ## Local Development
 
