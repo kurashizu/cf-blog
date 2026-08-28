@@ -4,6 +4,17 @@ import { withApiAudit } from "@/lib/api-audit";
 
 const CACHE_MAX_AGE = 1800;
 
+// Read-only public data, also consumed by the krsz.in portal's leaderboard view.
+const CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+    return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 interface CachedPayload {
     fetchedAt: string;
     intelligenceIndexVersion?: number;
@@ -22,7 +33,7 @@ export async function GET(request: NextRequest) {
                         fetchedAt: null,
                         intelligenceIndexVersion: null,
                     },
-                    { headers: { "Cache-Control": "no-store" } },
+                    { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } },
                 );
             }
 
@@ -43,6 +54,7 @@ export async function GET(request: NextRequest) {
                 },
                 {
                     headers: {
+                        ...CORS_HEADERS,
                         "Cache-Control": `public, max-age=${CACHE_MAX_AGE}, s-maxage=${CACHE_MAX_AGE}`,
                     },
                 },
@@ -54,7 +66,7 @@ export async function GET(request: NextRequest) {
             });
             return NextResponse.json(
                 { models: [], fetchedAt: null, intelligenceIndexVersion: null },
-                { headers: { "Cache-Control": "no-store" } },
+                { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } },
             );
         }
     });

@@ -15,7 +15,8 @@
 		{ id: 0, label: '0:modules', color: '#56b6c2', title: 'View 0: Modules — Live Project Portal & Technical Deep Dives [Hotkey: Ctrl+0]' },
 		{ id: 1, label: '1:guestbook', color: '#e06c75', title: 'View 1: Guestbook — Distributed Edge Packet Messenger [Hotkey: Ctrl+1]' },
 		{ id: 2, label: '2:synth', color: '#c678dd', title: 'View 2: Synth — 8-Track WebAudio Modular Synthesizer & Sequencer [Hotkey: Ctrl+2]' },
-		{ id: 3, label: '3:utilities', color: '#e5c07b', title: 'View 3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' }
+		{ id: 3, label: '3:utilities', color: '#e5c07b', title: 'View 3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
+		{ id: 4, label: '4:leaderboard', color: '#98c379', title: 'View 4: Leaderboard — Artificial Analysis LLM model table, cached through blog.krsz.in [Hotkey: Ctrl+4]' }
 	];
 
 	function nav(id: number) {

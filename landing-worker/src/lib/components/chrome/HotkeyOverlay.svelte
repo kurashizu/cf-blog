@@ -17,12 +17,13 @@
 		{
 			title: 'GLOBAL',
 			color: '#56b6c2',
-			note: 'Ctrl+0-3 works everywhere, including inside the key-capturing testers',
+			note: 'Ctrl+0-4 works everywhere, including inside the key-capturing testers',
 			keys: [
 				{ key: 'Ctrl+0', desc: 'View 0 — modules' },
 				{ key: 'Ctrl+1', desc: 'View 1 — guestbook' },
 				{ key: 'Ctrl+2', desc: 'View 2 — synth' },
 				{ key: 'Ctrl+3', desc: 'View 3 — utilities' },
+				{ key: 'Ctrl+4', desc: 'View 4 — leaderboard' },
 				{ key: 'T', desc: 'Cycle theme (tokyo / gruvbox / nord / amber)' },
 				{ key: '`', desc: 'Drop-down console, from any tab' },
 				{ key: '? or F1', desc: 'This reference' },
