@@ -7,16 +7,38 @@
 	import GamepadTester from './GamepadTester.svelte';
 	import ReactionTest from './ReactionTest.svelte';
 	import ScreenTest from './ScreenTest.svelte';
+	import AudioOutTest from './AudioOutTest.svelte';
+	import MicTest from './MicTest.svelte';
+	import CameraTest from './CameraTest.svelte';
+	import TouchTest from './TouchTest.svelte';
+	import NetPowerInfo from './NetPowerInfo.svelte';
 
-	type ToolId = 'keyboard' | 'mouse' | 'typing' | 'gamepad' | 'reaction' | 'pixels' | 'display';
+	type ToolId =
+		| 'keyboard'
+		| 'mouse'
+		| 'touch'
+		| 'typing'
+		| 'gamepad'
+		| 'reaction'
+		| 'pixels'
+		| 'audioout'
+		| 'mic'
+		| 'camera'
+		| 'net'
+		| 'display';
 
 	const TOOLS: { id: ToolId; label: string; color: string; desc: string }[] = [
 		{ id: 'keyboard', label: 'KEYBOARD', color: '#56b6c2', desc: 'Key events, rollover, per-key coverage' },
 		{ id: 'mouse', label: 'MOUSE', color: '#c678dd', desc: 'Buttons, wheel, double-click timing, move rate' },
+		{ id: 'touch', label: 'TOUCH / PEN', color: '#56b6c2', desc: 'Multi-touch points, stylus pressure, tilt and contact size' },
 		{ id: 'typing', label: 'TYPING', color: '#e5c07b', desc: '30-second WPM and accuracy test' },
 		{ id: 'gamepad', label: 'GAMEPAD', color: '#e06c75', desc: 'Buttons, axes/drift, rumble (Gamepad API)' },
 		{ id: 'reaction', label: 'REACTION', color: '#61afef', desc: 'Visual reaction time, best/avg of 10' },
 		{ id: 'pixels', label: 'SCREEN', color: '#d19a66', desc: 'Dead pixels, grayscale, banding, sharpness, text, ghosting' },
+		{ id: 'audioout', label: 'AUDIO OUT', color: '#98c379', desc: 'Channel routing, phase, 20Hz-20kHz sweep, device latency' },
+		{ id: 'mic', label: 'MIC IN', color: '#e5c07b', desc: 'Level in dBFS, clipping, live spectrum, dominant pitch' },
+		{ id: 'camera', label: 'CAMERA', color: '#c678dd', desc: 'Resolution, declared vs delivered frame rate, capabilities' },
+		{ id: 'net', label: 'NET / PWR', color: '#e06c75', desc: 'Cloudflare PoP, link estimate, battery, storage, permissions' },
 		{ id: 'display', label: 'DISPLAY / SYS', color: '#98c379', desc: 'Resolution, refresh rate, browser environment' }
 	];
 
@@ -38,7 +60,8 @@
 ██║   ██║   ██║   ██║██║     ╚════██║
 ╚██████╔╝   ██║   ██║███████╗███████║
  ╚═════╝    ╚═╝   ╚═╝╚══════╝╚══════╝`}</pre>
-		<div class="flex items-center gap-1.5 text-xs sm:text-sm overflow-x-auto no-scrollbar">
+		<!-- Wraps rather than scrolls: with a dozen tools a hidden overflow row is undiscoverable -->
+		<div class="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 text-xs sm:text-sm">
 			{#each TOOLS as tool (tool.id)}
 				<button
 					onclick={() => select(tool.id)}
@@ -64,6 +87,16 @@
 			<KeyboardTester />
 		{:else if activeTool === 'mouse'}
 			<MouseTester />
+		{:else if activeTool === 'touch'}
+			<TouchTest />
+		{:else if activeTool === 'audioout'}
+			<AudioOutTest />
+		{:else if activeTool === 'mic'}
+			<MicTest />
+		{:else if activeTool === 'camera'}
+			<CameraTest />
+		{:else if activeTool === 'net'}
+			<NetPowerInfo />
 		{:else if activeTool === 'typing'}
 			<TypingTest />
 		{:else if activeTool === 'gamepad'}

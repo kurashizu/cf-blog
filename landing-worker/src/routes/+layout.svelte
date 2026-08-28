@@ -103,10 +103,10 @@
 		if (!alreadyBooted && !reducedMotion) {
 			bootVisible = true;
 			sessionStorage.setItem(BOOT_KEY, '1');
-		} else {
-			// BootSequence would have resolved the trace; without it, fill the footer here.
-			loadEdgeTrace();
 		}
+		// Idempotent and shared with the POST screen's own call — the footer must
+		// still fill in when the boot screen is skipped or dismissed early.
+		loadEdgeTrace();
 
 		return () => {
 			stopClock();
