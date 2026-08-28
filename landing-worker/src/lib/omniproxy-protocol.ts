@@ -78,11 +78,15 @@ export function decodeUdpPayload(payload: Uint8Array): { host: string; port: num
 }
 
 /**
- * ICMP does not use a length-prefixed payload on the wire, despite the helpers
- * in protocol/src/lib.rs: `session.rs` treats the FIRST frame of an unseen
- * stream id as a `SocketAddr` string (e.g. "1.1.1.1:0") and every later frame
- * on that id as raw echo data. Extraction therefore needs stream context,
- * which lives in the relay rather than here.
+ * ICMP framing is asymmetric, so the two directions need different parsers.
+ *
+ * client -> server (`session.rs`): the FIRST frame of an unseen stream id is a
+ * `SocketAddr` string such as "1.1.1.1:0"; every later frame on that id is raw
+ * echo data. Telling them apart needs stream context, which is why the relay
+ * tracks open ids rather than this module.
+ *
+ * server -> client (`icmp/unix.rs` via `encode_icmp_payload`): replies are
+ * `[u16 ipLen][sourceIp][icmpData]`.
  */
 export function parseIcmpTarget(payload: Uint8Array): string | null {
 	const text = decoder.decode(payload).trim();
@@ -91,6 +95,15 @@ export function parseIcmpTarget(payload: Uint8Array): string | null {
 	if (colon <= 0) return null;
 	const host = text.slice(0, colon);
 	return /^[0-9a-zA-Z.:_-]+$/.test(host) && Number.isFinite(Number(text.slice(colon + 1))) ? host : null;
+}
+
+/** Decode a server -> client ICMP reply: `[u16 ipLen][sourceIp][icmpData]`. */
+export function decodeIcmpReply(payload: Uint8Array): { ip: string; data: Uint8Array } | null {
+	if (payload.length < 2) return null;
+	const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+	const ipLen = view.getUint16(0, false);
+	if (payload.length < 2 + ipLen) return null;
+	return { ip: decoder.decode(payload.subarray(2, 2 + ipLen)), data: payload.subarray(2 + ipLen) };
 }
 
 /** Split a "host:port" target, tolerating bracketed IPv6. */
