@@ -115,6 +115,8 @@
 	let fitAddon: any = null;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let term: any = null;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let FitAddonCtor: any = null;
 
 	function sendScancodes(codes: number[]) {
 		emulator?.keyboard_send_scancodes?.(codes);
@@ -306,16 +308,13 @@
 			});
 
 			if (terminalMode && xterm) {
-				// The addon has to attach after v86 has constructed the Terminal.
-				const FitAddon = xterm[1].FitAddon;
-				requestAnimationFrame(() => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					term = (emulator as any)?.serial_adapter?.term;
-					if (!term) return;
-					fitAddon = new FitAddon();
-					term.loadAddon(fitAddon);
-					fitTerminal();
-				});
+				// The addon can only attach once v86 has constructed the Terminal, and
+				// when that happens is not ours to know — fitTerminal attaches it on
+				// whichever call first finds one, and the sampling tick keeps calling.
+				// Hanging it off a single animation frame meant a lost race left the
+				// terminal at its default 80x24 for the rest of the session.
+				FitAddonCtor = xterm[1].FitAddon;
+				requestAnimationFrame(fitTerminal);
 			}
 
 			ticker = setInterval(() => {
@@ -384,6 +383,7 @@
 		emulator = null;
 		fitAddon = null;
 		term = null;
+		FitAddonCtor = null;
 		restoreFetch?.();
 		restoreFetch = null;
 		phase = 'idle';
@@ -419,13 +419,14 @@
 	const TARGET_COLS = 92;
 
 	function fitTerminal() {
-		if (!fitAddon || !termEl) return;
-		// Looked up on every call rather than once: the adapter is built during
-		// boot, and a single missed lookup used to leave the terminal unfitted for
-		// the rest of the session.
+		if (!termEl || !FitAddonCtor) return;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		term ??= (emulator as any)?.serial_adapter?.term ?? null;
 		if (!term) return;
+		if (!fitAddon) {
+			fitAddon = new FitAddonCtor();
+			term.loadAddon(fitAddon);
+		}
 
 		fitAddon.fit();
 		// Derive the next size from the columns this one produced instead of
