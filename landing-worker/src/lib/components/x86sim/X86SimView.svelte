@@ -2,6 +2,16 @@
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
+	import {
+		clearOverlay,
+		findDiskBuffer,
+		loadOverlay,
+		overlayStats,
+		saveOverlay,
+		storedOverlaySize,
+		type DiskBuffer,
+		type OverlayStats
+	} from './disk-overlay';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
 	import VirtualKeyboard from './VirtualKeyboard.svelte';
 	import MermaidDiagram from '../projects/MermaidDiagram.svelte';
@@ -22,6 +32,12 @@
 		jit: boolean;
 		/** Attach a NIC and point it at the relay. */
 		network: boolean;
+		/**
+		 * Keep the guest's writes in the browser's origin-private filesystem, so a
+		 * machine picks up where it was left rather than starting from the image
+		 * every time. See disk-overlay.ts for what is and is not stored.
+		 */
+		persistDisk: boolean;
 	}
 
 	const MEMORY_CHOICES = [64, 128, 256, 512, 1024];
@@ -47,7 +63,7 @@
 	const DEFAULT_CMDLINE =
 		'root=/dev/sda rw modules=sd_mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 6;
+	const SETTINGS_VERSION = 7;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
@@ -59,7 +75,8 @@
 		cmdline: DEFAULT_CMDLINE,
 		acpi: false,
 		jit: true,
-		network: true
+		network: true,
+		persistDisk: true
 	};
 
 	let settings = $state<Settings>({ ...DEFAULTS });
@@ -89,6 +106,14 @@
 	let mips = $state<number | null>(null);
 	/** True once the guest has switched the VGA adapter out of text mode. */
 	let graphical = $state(false);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let diskBuffer: DiskBuffer | null = null;
+	let overlay = $state<OverlayStats>({ blocks: 0, bytes: 0 });
+	let overlayStored = $state(0);
+	let overlayNote = $state('');
+	let overlaySaver: ReturnType<typeof setInterval> | null = null;
+	/** Which image the overlay in memory belongs to, for saving and for wiping. */
+	let overlayKey: { name: string; version: string } | null = null;
 	/**
 	 * Whether the click-to-type hint has served its purpose. It used to follow
 	 * focus, which meant it came back every time the screen lost it — including
@@ -285,7 +310,9 @@
 							cdrom: { url: imageUrl(IMAGE, meta.version ?? meta.size), ...streamed },
 							boot_order: 0x123 // CD, then hard disk, then floppy
 						}),
-				autostart: true,
+				// Held back so a saved overlay can be replayed into the disk before the
+				// guest reads a single block of it; run() below starts the machine.
+				autostart: false,
 				disable_speaker: true,
 				...(settings.network
 					? {
@@ -305,6 +332,10 @@
 							}
 						}
 					: {})
+			});
+
+			emulator.add_listener('emulator-loaded', () => {
+				void startMachine(mode === 'kernel' ? 'rootfs' : IMAGE, String(meta.version ?? meta.size));
 			});
 
 			emulator.add_listener('emulator-started', () => {
@@ -390,9 +421,74 @@
 		}
 	}
 
+	/**
+	 * Replays the saved overlay, then starts the machine. Both halves are here
+	 * rather than in boot() because the disk buffer only exists once v86 has
+	 * finished loading, and the guest must not execute before the replay: a block
+	 * read early would be the image's version of a filesystem the rest of the
+	 * overlay assumes has already moved on.
+	 */
+	async function startMachine(name: string, version: string) {
+		diskBuffer = findDiskBuffer(emulator);
+		overlayKey = { name, version };
+		overlayNote = '';
+		if (diskBuffer && settings.persistDisk) {
+			status = 'restoring saved disk…';
+			try {
+				const restored = await loadOverlay(name, version, diskBuffer);
+				if (restored) {
+					overlay = restored;
+					overlayNote = `restored ${formatBytes(restored.bytes)}`;
+				} else {
+					// Either nothing was saved, or what was saved belongs to a different
+					// build of the image and replaying it would corrupt this one.
+					await clearOverlay(name);
+				}
+			} catch {
+				overlayNote = 'saved disk could not be read';
+			}
+			overlaySaver = setInterval(() => void persistOverlay(), 20000);
+		} else if (!diskBuffer) {
+			overlayNote = 'this disk cannot be persisted';
+		}
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(emulator as any)?.run?.();
+	}
+
+	async function persistOverlay() {
+		if (!diskBuffer || !overlayKey || !settings.persistDisk) return;
+		const { name, version } = overlayKey;
+		const pending = overlayStats(diskBuffer);
+		if (pending.blocks === 0) return;
+		const written = await saveOverlay(name, version, diskBuffer);
+		if (written) {
+			overlay = written;
+			overlayStored = written.bytes;
+			overlayNote = '';
+		} else {
+			overlayNote = 'too large to save — wipe it or turn persistence off';
+		}
+	}
+
+	async function wipeOverlay() {
+		playSound('click');
+		await clearOverlay(overlayKey?.name ?? 'rootfs');
+		overlayStored = 0;
+		overlayNote = phase === 'running' ? 'wiped — this session is still running on its changes' : 'wiped';
+	}
+
+	function formatBytes(bytes: number): string {
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+	}
+
 	function shutdown() {
 		if (ticker) clearInterval(ticker);
 		ticker = null;
+		if (overlaySaver) clearInterval(overlaySaver);
+		overlaySaver = null;
+		diskBuffer = null;
 		try {
 			emulator?.destroy?.();
 		} catch {
@@ -415,9 +511,11 @@
 		graphical = false;
 	}
 
-	function stop() {
-		shutdown();
+	async function stop() {
 		playSound('click');
+		status = 'saving disk…';
+		await persistOverlay();
+		shutdown();
 	}
 
 	/**
@@ -490,6 +588,7 @@
 	 */
 	async function restart() {
 		playSound('click');
+		await persistOverlay();
 		shutdown();
 		await boot();
 	}
@@ -574,10 +673,16 @@
 
 	onMount(() => {
 		loadSettings();
+		void storedOverlaySize('rootfs').then((size) => (overlayStored = size));
 		const onResize = () => fitScreen();
 		window.addEventListener('resize', onResize);
+		// A closed tab gives no chance to save afterwards, and this is the last
+		// event that reliably fires on mobile.
+		const onHide = () => void persistOverlay();
+		window.addEventListener('pagehide', onHide);
 		return () => {
 			window.removeEventListener('resize', onResize);
+			window.removeEventListener('pagehide', onHide);
 			shutdown();
 			suspendNavHotkeys.set(false);
 		};
@@ -621,7 +726,15 @@
 			value: view === 'terminal' ? 'serial console, via xterm.js' : 'emulated VGA, graphical',
 			title: 'Both run at once and the view follows the guest: the serial terminal while it is a shell, because that one resizes with the panel and reports the mouse, and the VGA screen as soon as something takes the display graphically'
 		},
-		{ label: 'DISK', value: 'ext4 image, streamed in 1 MiB chunks' },
+		{
+			label: 'DISK',
+			value: settings.persistDisk
+				? `ext4, streamed in 1 MiB chunks · ${overlay.blocks ? formatBytes(overlay.bytes) + ' changed' : 'unchanged'}`
+				: 'ext4 image, streamed in 1 MiB chunks',
+			title: settings.persistDisk
+				? "The image is read-only and shared; everything the guest writes is kept separately, in this browser's origin-private filesystem, and replayed over the image on the next boot"
+				: 'The image is read-only and shared, and the guest\'s writes live in memory until the tab closes'
+		},
 		{
 			label: 'NETWORK',
 			value: settings.network ? 'via the relay, any host' : 'off',
@@ -766,6 +879,31 @@
 								{mb} MB
 							</button>
 						{/each}
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISK</span>
+						<button
+							onclick={() => (settings.persistDisk = !settings.persistDisk)}
+							title="Keep what the guest writes in this browser's origin-private filesystem and replay it on the next boot. The image itself stays read-only and shared; only the difference is stored, and only in this browser."
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.persistDisk
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							PERSIST: {settings.persistDisk ? 'ON' : 'OFF'}
+						</button>
+						<button
+							onclick={wipeOverlay}
+							title="Delete the saved changes. The next boot starts from the image exactly as built."
+							class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:bg-[#e06c75]/20"
+						>
+							WIPE
+						</button>
+						<span class="text-[10px] font-mono text-white/40">
+							{overlayStored ? `${formatBytes(overlayStored)} saved` : 'nothing saved'}{overlayNote
+								? ` · ${overlayNote}`
+								: ''}
+						</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
