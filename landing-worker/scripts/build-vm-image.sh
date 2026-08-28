@@ -52,6 +52,15 @@ EOF
 # ── configuration ──────────────────────────────────────────────────────────
 echo krsz-vm > "$ROOTFS/etc/hostname"
 
+# xauth resolves the hostname to name the display's auth entry, and with nothing
+# to resolve it to it rejects its own argument -- five lines of "bad display
+# name krsz-vm:0" every time startx runs.
+cat > "$ROOTFS/etc/hosts" <<'EOF'
+127.0.0.1	localhost localhost.localdomain
+127.0.1.1	krsz-vm
+::1	localhost ip6-localhost ip6-loopback
+EOF
+
 cat > "$ROOTFS/etc/fstab" <<'EOF'
 /dev/sda	/	ext4	rw,relatime	0 1
 EOF
@@ -205,30 +214,43 @@ cat > "$ROOTFS/root/.config/openbox/rc.xml" <<'EOF'
 EOF
 
 mkdir -p "$ROOTFS/root/.config/tint2"
+# Backgrounds are numbered in the order they appear and have to be defined
+# before anything refers to them -- writing the panel first leaves it with an
+# id that does not exist yet, and tint2 comes up drawing nothing at all.
 cat > "$ROOTFS/root/.config/tint2/tint2rc" <<'EOF'
-panel_items = TC
-panel_size = 100% 26
-panel_position = bottom center horizontal
-panel_background_id = 1
-taskbar_mode = single_desktop
-task_text = 1
-task_font = sans 9
-task_font_color = #d8dee9 100
-task_active_background_id = 2
-time1_format = %H:%M
-time1_font = sans 9
-clock_font_color = #d8dee9 100
-clock_padding = 8 0
-
 rounded = 0
-border_width = 0
-background_color = #12151a 88
-border_color = #000000 0
+border_width = 1
+background_color = #12151a 92
+border_color = #98c379 70
 
 rounded = 0
 border_width = 1
 background_color = #2b323b 100
 border_color = #98c379 100
+
+panel_items = TC
+panel_monitor = all
+panel_position = bottom center horizontal
+panel_size = 100% 24
+panel_margin = 0 0
+panel_padding = 4 2 4
+panel_background_id = 1
+panel_layer = top
+strut_policy = follow_size
+wm_menu = 1
+
+taskbar_mode = single_desktop
+taskbar_padding = 2 0 4
+task_maximum_size = 220 24
+task_padding = 6 2
+task_font = sans 9
+task_font_color = #d8dee9 100
+task_active_background_id = 2
+
+time1_format = %H:%M
+time1_font = sans 9
+clock_font_color = #d8dee9 100
+clock_padding = 8 0
 EOF
 chmod +x "$ROOTFS/root/.xinitrc"
 
@@ -237,6 +259,16 @@ chmod +x "$ROOTFS/root/.xinitrc"
 # emulator means the BIOS never POSTed, so there is nothing to ask. The card
 # itself is a QEMU-style stdvga (PCI 1234:1111), which the kernel's bochs driver
 # drives directly through its registers -- no firmware involved.
+# The server chatters about every PCI id it probes, straight to the terminal it
+# was started from, which buries the shell it just left behind. The log keeps
+# all of it; the console gets the errors only.
+mkdir -p "$ROOTFS/etc/X11/xinit"
+cat > "$ROOTFS/etc/X11/xinit/xserverrc" <<'EOF'
+#!/bin/sh
+exec /usr/bin/Xorg -nolisten tcp -verbose 1 "$@" 2>>/var/log/Xorg.stderr.log
+EOF
+chmod +x "$ROOTFS/etc/X11/xinit/xserverrc"
+
 mkdir -p "$ROOTFS/etc/X11/xorg.conf.d"
 cat > "$ROOTFS/etc/X11/xorg.conf.d/10-modesetting.conf" <<'EOF'
 Section "Device"

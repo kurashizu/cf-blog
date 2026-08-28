@@ -855,7 +855,7 @@
 		     transform does not change the box the parent lays out. -->
 		<div
 			bind:this={termEl}
-			class="absolute inset-0 p-1.5 {view === 'terminal' ? '' : 'hidden'}"
+			class="absolute inset-0 p-3 {view === 'terminal' ? '' : 'hidden'}"
 		></div>
 
 		<div
