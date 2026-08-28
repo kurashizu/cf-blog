@@ -12,7 +12,12 @@ set -eu
 
 ALPINE_VERSION="${ALPINE_VERSION:-3.24}"
 KERNEL_FLAVOR="${KERNEL_FLAVOR:-lts}"
-IMAGE_MB="${IMAGE_MB:-512}"
+IMAGE_MB="${IMAGE_MB:-256}"
+# Free space to leave on top of the installed system, for apk and scratch files.
+SLACK_MB="${SLACK_MB:-96}"
+# `wrangler r2 object put` refuses anything larger, and a smaller image is less
+# to stream anyway.
+MAX_MB=290
 OUT="${OUT:-/out}"
 ROOTFS=/rootfs
 MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}"
@@ -121,11 +126,20 @@ rm -rf "$ROOTFS/boot"/vmlinuz-* "$ROOTFS/boot"/initramfs-* "$ROOTFS/boot"/System
 # root=/dev/sda, the whole disk.
 #
 # Size follows the content rather than a fixed number: too small fails the build
-# outright, and too large is a bigger object to stream. IMAGE_MB is the floor.
-USED_KB=$(du -sk "$ROOTFS" | cut -f1)
-NEEDED_MB=$(( USED_KB / 1024 * 3 / 2 + 128 ))
+# outright, and too large is a bigger object to stream and to upload. IMAGE_MB is
+# the floor, MAX_MB the ceiling the uploader can accept.
+USED_MB=$(( $(du -sk "$ROOTFS" | cut -f1) / 1024 ))
+NEEDED_MB=$(( USED_MB + SLACK_MB ))
 [ "$NEEDED_MB" -lt "$IMAGE_MB" ] && NEEDED_MB="$IMAGE_MB"
-echo "==> rootfs uses $((USED_KB / 1024)) MB, building a ${NEEDED_MB} MB image"
+if [ "$NEEDED_MB" -gt "$MAX_MB" ]; then
+	if [ "$USED_MB" -ge "$MAX_MB" ]; then
+		echo "!! rootfs is ${USED_MB} MB, which leaves no room under the ${MAX_MB} MB ceiling" >&2
+		exit 1
+	fi
+	echo "==> clamping ${NEEDED_MB} MB to the ${MAX_MB} MB ceiling"
+	NEEDED_MB="$MAX_MB"
+fi
+echo "==> rootfs uses ${USED_MB} MB, building a ${NEEDED_MB} MB image"
 
 mke2fs -q -t ext4 -b 4096 -d "$ROOTFS" -F -L krsz-root "$OUT/rootfs.img" "$((NEEDED_MB * 256))"
 

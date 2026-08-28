@@ -12,8 +12,8 @@ on:
                 description: "Kernel flavour (lts or virt)"
                 default: "lts"
             image_mb:
-                description: "Root filesystem size, MB"
-                default: "512"
+                description: "Root filesystem size floor, MB (capped at 290 by the uploader)"
+                default: "256"
             publish:
                 description: "Upload to R2 (uncheck to build and inspect only)"
                 type: boolean

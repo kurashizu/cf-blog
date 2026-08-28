@@ -16,7 +16,7 @@ Apex-domain portal (`krsz.in` / `www.krsz.in`), styled as a fake `tmux` terminal
 - `/` and `/modules` — project portal: a card grid of the real subdomains (`blog`, `agent`, `share`, `sharetube`, `mail`, `skill`), each with verified real facts and a Mermaid flowchart/sequence diagram of how it actually works. No fabricated metrics.
 - `/guestbook` — posts to `blog.krsz.in`'s guestbook API.
 - `/synth` — an 8-track WebAudio modular synthesizer workstation (sequencer, piano roll, MIDI input, FX/EQ, oscilloscope/FFT/loudness visualizers, patch save/load). Imports `.mid` files (`src/lib/midi-file.ts`, drag one anywhere onto the page) and bounces the pattern to WAV through an `OfflineAudioContext`. The audio engine (`src/lib/synth.ts`, `src/lib/sound.ts`) is framework-agnostic; everything else is Svelte stores wrapping it.
-- `/utilities` — twelve browser-side hardware testers: keyboard, mouse, touch/pen, typing, gamepad, reaction, screen, audio out, mic in, camera, net/power, display/system. Audio out and mic in both pick their device (`AudioContext.setSinkId` / a `deviceId` constraint), and mic in records a take, draws it and plays it back. Every value is probed live; anything the browser withholds prints `n/a` rather than a number.
+- `/utils` — twelve browser-side hardware testers: keyboard, mouse, touch/pen, typing, gamepad, reaction, screen, audio out, mic in, camera, net/power, display/system. Audio out and mic in both pick their device (`AudioContext.setSinkId` / a `deviceId` constraint), and mic in records a take, draws it and plays it back. Every value is probed live; anything the browser withholds prints `n/a` rather than a number.
 - `/leaderboard` — the Artificial Analysis language-model table, cached by `cache-worker` into D1 and read from `blog.krsz.in/api/llm-leaderboard`. Sortable by intelligence, coding, agentic, blended price, output speed, TTFT or release date.
 
 Shared chrome (tab bar, sidebar, command console, telemetry footer, theme) lives in `src/routes/+layout.svelte` and `src/lib/components/chrome/`.
@@ -31,9 +31,9 @@ The footer reads `/cdn-cgi/trace` and shows the real serving Cloudflare PoP, neg
 
 The console is a small shell, reached only as a drop-down (`` ` `` or the `~` button in the tab bar) so no view carries an autofocused input: a read-only virtual filesystem projected from `MODULES` and the live stores (`cd`, `ls`, `cat`, `tree`), pipes into `grep`/`head`/`tail`/`sort`/`uniq`/`wc`, persistent history, `alias`, and `man <cmd>`.
 
-## Linux VM (`/linux`, work in progress)
+## x86 emulator (`/x86sim`, work in progress)
 
-`5:linux` runs [v86](https://github.com/copy/v86) (BSD-2), a 32-bit x86 emulator
+`5:x86sim` runs [v86](https://github.com/copy/v86) (BSD-2), a 32-bit x86 emulator
 that JIT-compiles guest code to WebAssembly, and boots an Alpine x86 ISO on it.
 Alpine is the guest because it still ships 32-bit x86 as a release architecture,
 which Debian and Arch no longer do.
@@ -55,6 +55,8 @@ likely fix is a purpose-built disk image instead of a stock ISO, which is how
 working v86 Linux setups are generally built.
 
 The BIOS blobs in `static/vm/` come from the v86 repository; SeaBIOS is LGPLv3.
+
+`/utilities` and `/linux` still resolve, as prerendered 308s to the new paths.
 
 ## Network relay (`/net`)
 
@@ -142,6 +144,7 @@ landing-worker/
 │   │       ├── projects/               # ProjectsView + MermaidDiagram
 │   │       ├── leaderboard/            # LeaderboardView
 │   │       ├── utilities/              # The twelve hardware testers
+│   │       ├── x86sim/                 # v86 emulator view
 │   │       ├── guestbook/
 │   │       ├── hardware/               # RotaryKnob/HardwareFader + shared drag action
 │   │       ├── pixel/                  # Inline pixel-art icon set
@@ -151,7 +154,7 @@ landing-worker/
 │       ├── +layout.svelte              # Shared chrome, theme, hotkeys, global styles import
 │       ├── +layout.ts                  # prerender = true
 │       ├── +page.svelte, modules/      # Project portal (same content, two paths)
-│       ├── utilities/, leaderboard/
+│       ├── utils/, leaderboard/, x86sim/, net/, vm/
 │       ├── guestbook/
 │       └── synth/
 ├── static/favicon.svg

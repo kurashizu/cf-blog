@@ -15,7 +15,7 @@
 		{ id: 2, key: '2', title: 'SYNTH', desc: 'WebAudio', color: '#c678dd', icon: '♫', tooltip: '2: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: Ctrl+2]' },
 		{ id: 3, key: '3', title: 'UTILITIES', desc: 'HW Test', color: '#e5c07b', icon: '⌨', tooltip: '3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
 		{ id: 4, key: '4', title: 'LLM TABLE', desc: 'Rankings', color: '#98c379', icon: '▤', tooltip: '4: Leaderboard — Artificial Analysis LLM model table [Hotkey: Ctrl+4]' },
-		{ id: 5, key: '5', title: 'LINUX', desc: 'x86 VM', color: '#d19a66', icon: '⬢', tooltip: '5: Linux — Alpine on an emulated 32-bit x86 PC [Hotkey: Ctrl+5]' }
+		{ id: 5, key: '5', title: 'X86SIM', desc: 'PC Emu', color: '#d19a66', icon: '⬢', tooltip: '5: x86sim — Alpine Linux on an emulated 32-bit x86 PC [Hotkey: Ctrl+5]' }
 	];
 
 	function nav(id: number) {
