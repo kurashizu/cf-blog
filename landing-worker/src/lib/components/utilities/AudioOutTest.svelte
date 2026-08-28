@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Dropdown from '../chrome/Dropdown.svelte';
 
 	/**
 	 * This tool owns its own AudioContext rather than borrowing the site's sound
@@ -289,20 +290,21 @@
 
 	<div class="flex flex-wrap items-center gap-2">
 		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">OUTPUT</span>
-		<select
+		<Dropdown
 			bind:value={selectedOutput}
-			onchange={() => applySink(selectedOutput)}
+			onchange={applySink}
 			disabled={!sinkSupported}
+			color="#98c379"
+			width="280px"
+			placeholder="system default"
 			title={sinkSupported
 				? 'Route the test tones to a specific output device'
 				: 'This browser cannot redirect WebAudio to a chosen output — it always uses the system default'}
-			class="px-2 py-1.5 bg-black/60 border border-white/25 rounded-xs text-xs font-mono text-[#d8dee9] cursor-pointer max-w-[280px] disabled:opacity-40 disabled:cursor-not-allowed"
-		>
-			<option value="">system default{outputs.length ? ` (${outputs.length} available)` : ''}</option>
-			{#each outputs as d (d.deviceId)}
-				<option value={d.deviceId}>{d.label || `output ${d.deviceId.slice(0, 6)}`}</option>
-			{/each}
-		</select>
+			options={[
+				{ value: '', label: `system default`, note: outputs.length ? `${outputs.length} available` : undefined },
+				...outputs.map((d) => ({ value: d.deviceId, label: d.label || `output ${d.deviceId.slice(0, 6)}` }))
+			]}
+		/>
 		{#if !sinkSupported}
 			<span class="text-[11px] font-mono text-[#e5c07b]">setSinkId unsupported — playing on the system default</span>
 		{:else if labelsHidden}

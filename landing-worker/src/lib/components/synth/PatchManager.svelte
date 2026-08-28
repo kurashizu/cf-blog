@@ -73,7 +73,7 @@
 
 <div class="flex items-center gap-1.5 flex-wrap">
 	<div class="flex items-center gap-1.5 bg-[#c678dd]/20 border border-[#c678dd]/60 px-2 py-0.5 rounded-xs mr-0.5 select-none shadow-[0_0_8px_rgba(198,120,221,0.25)]">
-		<PixelIcon name="audio" size={14} class="text-[#c678dd]" />
+		<PixelIcon name="audio" size={16} class="text-[#c678dd]" />
 		<span class="font-black text-xs text-white tracking-wider">KRSZ SYNTH</span>
 	</div>
 

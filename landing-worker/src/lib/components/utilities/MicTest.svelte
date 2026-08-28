@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Dropdown from '../chrome/Dropdown.svelte';
 
 	const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 	/** Long enough to test a phrase, short enough that a forgotten recording can't grow without bound. */
@@ -435,19 +436,20 @@
 			</button>
 		{/if}
 
-		<select
+		<Dropdown
 			bind:value={selectedDevice}
-			onchange={() => listening && start(selectedDevice || undefined)}
+			onchange={(v) => listening && start(v || undefined)}
+			color="#e5c07b"
+			width="260px"
+			placeholder="default input"
 			title={devices.some((d) => d.label)
 				? 'Input device'
 				: 'Device names appear once microphone access has been granted'}
-			class="px-2 py-1.5 bg-black/60 border border-white/25 rounded-xs text-xs font-mono text-[#d8dee9] cursor-pointer max-w-[260px]"
-		>
-			<option value="">default input{devices.length ? ` (${devices.length} available)` : ''}</option>
-			{#each devices as d (d.deviceId)}
-				<option value={d.deviceId}>{d.label || `input ${d.deviceId.slice(0, 6)}`}</option>
-			{/each}
-		</select>
+			options={[
+				{ value: '', label: 'default input', note: devices.length ? `${devices.length} available` : undefined },
+				...devices.map((d) => ({ value: d.deviceId, label: d.label || `input ${d.deviceId.slice(0, 6)}` }))
+			]}
+		/>
 
 		{#if listening}
 			<button

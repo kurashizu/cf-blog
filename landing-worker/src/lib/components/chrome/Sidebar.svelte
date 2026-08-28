@@ -95,7 +95,7 @@
 						>
 							[{tab.key}]
 						</span>
-						<span class="text-xs opacity-75 group-hover:opacity-100" style="color: {tab.color}">{tab.icon}</span>
+						<span class="text-base leading-none opacity-85 group-hover:opacity-100" style="color: {tab.color}">{tab.icon}</span>
 					</div>
 					<div class="mt-1">
 						<div class="font-bold text-xs leading-tight tracking-tight" style="color: {isActive ? '#fff' : tab.color}">{tab.title}</div>

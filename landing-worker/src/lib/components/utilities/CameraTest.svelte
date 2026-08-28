@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Dropdown from '../chrome/Dropdown.svelte';
 
 	let stream: MediaStream | null = null;
 	let video: HTMLVideoElement | undefined = $state();
@@ -117,15 +118,15 @@
 		{/if}
 
 		{#if devices.length > 1}
-			<select
+			<Dropdown
 				bind:value={selected}
-				onchange={() => start(selected)}
-				class="px-2 py-1.5 bg-black/60 border border-white/25 rounded-xs text-xs font-mono text-[#d8dee9] cursor-pointer max-w-[260px]"
-			>
-				{#each devices as d (d.deviceId)}
-					<option value={d.deviceId}>{d.label || `camera ${d.deviceId.slice(0, 6)}`}</option>
-				{/each}
-			</select>
+				onchange={(v) => start(v)}
+				color="#c678dd"
+				width="260px"
+				placeholder="camera"
+				title="Capture device"
+				options={devices.map((d) => ({ value: d.deviceId, label: d.label || `camera ${d.deviceId.slice(0, 6)}` }))}
+			/>
 		{/if}
 
 		<span class="text-[11px] font-mono text-white/40">

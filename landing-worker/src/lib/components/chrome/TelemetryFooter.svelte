@@ -45,7 +45,7 @@
 				title={link.title}
 				class="hover:underline flex items-center gap-1 transition-colors {link.color}"
 			>
-				<PixelIcon name={link.icon} size={13} />
+				<PixelIcon name={link.icon} size={16} />
 				<span>{link.label}</span>
 			</a>
 		{/each}

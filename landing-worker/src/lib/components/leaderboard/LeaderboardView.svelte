@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Dropdown from '../chrome/Dropdown.svelte';
 	import { playSound } from '../../sound';
 	import {
 		loadLeaderboard,
@@ -165,6 +166,55 @@
 		playSound('click');
 	}
 
+	/** Slug of the row whose detail panel is open, if any. */
+	let expanded = $state<string | null>(null);
+
+	function rowKey(m: LeaderboardModel): string {
+		return `${m.slug}|${m.name}`;
+	}
+
+	function toggleRow(m: LeaderboardModel) {
+		expanded = expanded === rowKey(m) ? null : rowKey(m);
+		playSound('click');
+	}
+
+	/** Every field the payload carries for one model, with nothing filled in. */
+	function detailRows(m: LeaderboardModel): { label: string; value: string }[] {
+		const price = m.pricing ?? {};
+		const num = (v: number | null | undefined, unit = '') => (v === null || v === undefined ? '—' : `${v}${unit}`);
+		return [
+			{ label: 'slug', value: m.slug || '—' },
+			{ label: 'creator', value: m.model_creator?.name ?? '—' },
+			{ label: 'released', value: m.release_date ?? '—' },
+			{ label: 'intelligence', value: num(m.evaluations?.artificial_analysis_intelligence_index) },
+			{ label: 'coding', value: num(m.evaluations?.artificial_analysis_coding_index) },
+			{ label: 'agentic', value: num(m.evaluations?.artificial_analysis_agentic_index) },
+			{ label: 'blended 3:1', value: price.price_1m_blended_3_to_1 === null || price.price_1m_blended_3_to_1 === undefined ? '—' : `$${price.price_1m_blended_3_to_1} / 1M` },
+			{ label: 'input', value: price.price_1m_input_tokens === null || price.price_1m_input_tokens === undefined ? '—' : `$${price.price_1m_input_tokens} / 1M` },
+			{ label: 'output', value: price.price_1m_output_tokens === null || price.price_1m_output_tokens === undefined ? '—' : `$${price.price_1m_output_tokens} / 1M` },
+			{ label: 'output speed', value: num(m.median_output_tokens_per_second, ' tok/s') },
+			{ label: 'time to first token', value: num(m.median_time_to_first_token_seconds, ' s') }
+		];
+	}
+
+	/** Where this model sits in the full filtered set for a metric, ignoring the current sort. */
+	function rankFor(m: LeaderboardModel, spec: Metric): string {
+		const mine = spec.value(m);
+		if (mine === null) return '—';
+		const ranked = filtered
+			.map((x) => spec.value(x))
+			.filter((v): v is number => v !== null)
+			.sort((a, b) => (spec.bestIsLow ? a - b : b - a));
+		return `#${ranked.indexOf(mine) + 1} of ${ranked.length}`;
+	}
+
+	function onWindowKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape' && expanded) {
+			e.stopPropagation();
+			expanded = null;
+		}
+	}
+
 	let fetchedLabel = $derived(
 		$leaderboard?.fetchedAt
 			? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Australia/Sydney' }).format(
@@ -177,6 +227,8 @@
 		void loadLeaderboard();
 	});
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
 	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
@@ -231,15 +283,17 @@
 			placeholder="filter by model or creator…"
 			class="px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-xs font-mono text-[#d8dee9] outline-none focus:border-[#56b6c2] min-w-[180px] flex-1 max-w-[320px]"
 		/>
-		<select
+		<Dropdown
 			bind:value={creator}
-			class="px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-xs font-mono text-[#d8dee9] cursor-pointer max-w-[200px]"
-		>
-			<option value="">all creators ({creators.length})</option>
-			{#each creators as c (c)}
-				<option value={c}>{c}</option>
-			{/each}
-		</select>
+			color="#61afef"
+			width="220px"
+			placeholder="all creators"
+			title="Filter by model creator"
+			options={[
+				{ value: '', label: 'all creators', note: String(creators.length) },
+				...creators.map((c) => ({ value: c, label: c }))
+			]}
+		/>
 		<div class="flex items-center gap-1">
 			{#each LIMITS as n (n)}
 				<button
@@ -272,17 +326,38 @@
 						<th class="text-right px-2 py-1.5 w-10">#</th>
 						<th class="text-left px-2 py-1.5">model</th>
 						<th class="text-left px-2 py-1.5 hidden md:table-cell">creator</th>
-						<th class="text-left px-2 py-1.5 w-[110px] sm:w-[160px]">{metric.short}</th>
+						<th class="text-left px-2 py-1.5 w-[110px] sm:w-[160px]" style="color: {metric.color}">
+							{metric.short} {metric.bestIsLow ? '↑' : '↓'}
+						</th>
 						{#each METRICS.filter((m) => m.key !== sortKey) as m (m.key)}
-							<th class="text-right px-2 py-1.5 hidden lg:table-cell" title={m.hint}>{m.short}</th>
+							<th class="text-right px-2 py-1.5 hidden lg:table-cell">
+								<button
+									onclick={() => pick(m.key)}
+									title={`Sort by ${m.hint} — ${m.bestIsLow ? 'lower is better' : 'higher is better'}`}
+									class="cursor-pointer hover:text-white transition-colors uppercase"
+								>
+									{m.short}
+								</button>
+							</th>
 						{/each}
 					</tr>
 				</thead>
 				<tbody>
 					{#each shown as m, i (m.slug + m.name)}
-						<tr class="border-b border-white/5 last:border-0 hover:bg-white/5">
+						{@const open = expanded === rowKey(m)}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+						<tr
+							onclick={() => toggleRow(m)}
+							title="Open every field the source has for this model"
+							class="border-b border-white/5 last:border-0 cursor-pointer transition-colors {open
+								? 'bg-white/10'
+								: 'hover:bg-white/5'}"
+						>
 							<td class="px-2 py-1 text-right text-white/35">{i + 1}</td>
-							<td class="px-2 py-1 text-[#eceff4] max-w-[240px] truncate" title={m.name}>{m.name}</td>
+							<td class="px-2 py-1 text-[#eceff4] max-w-[240px] truncate" title={m.name}>
+								<span class="inline-block w-3 text-white/30">{open ? '▾' : '▸'}</span>{m.name}
+							</td>
 							<td class="px-2 py-1 text-white/50 hidden md:table-cell max-w-[130px] truncate">
 								{m.model_creator?.name ?? '—'}
 							</td>
@@ -296,13 +371,52 @@
 								<td class="px-2 py-1 text-right text-white/60 hidden lg:table-cell">{cell(m, x.key)}</td>
 							{/each}
 						</tr>
+						{#if open}
+							<tr class="border-b border-white/10 bg-black/40">
+								<td colspan={2 + METRICS.length}>
+									<div class="px-3 py-2.5 space-y-2">
+										<div class="flex flex-wrap items-baseline justify-between gap-2">
+											<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
+											<button
+												onclick={(e) => {
+													e.stopPropagation();
+													query = m.model_creator?.name ?? '';
+												}}
+												class="text-[10px] text-white/40 hover:text-white cursor-pointer underline"
+											>
+												filter to {m.model_creator?.name ?? 'creator'}
+											</button>
+										</div>
+
+										<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
+											{#each detailRows(m) as row (row.label)}
+												<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1 flex items-baseline justify-between gap-2">
+													<span class="text-[10px] text-white/40 shrink-0">{row.label}</span>
+													<span class="text-[11px] text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
+												</div>
+											{/each}
+										</div>
+
+										<div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-white/45">
+											<span class="text-white/30">rank among the {filtered.length} filtered models:</span>
+											{#each METRICS.filter((x) => x.key !== 'date') as x (x.key)}
+												<span>
+													{x.short} <span style="color: {x.color}">{rankFor(m, x)}</span>
+												</span>
+											{/each}
+										</div>
+									</div>
+								</td>
+							</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>
 		</div>
 
 		<div class="text-[10px] font-mono text-white/30 shrink-0">
-			Blank cells mean Artificial Analysis has no measurement for that model — nothing is inferred.
+			Click a row for every field the source carries, or a column heading to rank by it. Blank
+			cells mean Artificial Analysis has no measurement for that model — nothing is inferred.
 			{#if limit !== 0 && sorted.length > limit}
 				Showing {shown.length} of {sorted.length}; press ALL for the rest.
 			{/if}

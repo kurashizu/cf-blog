@@ -33,6 +33,26 @@
 		const maxLog = Math.log10(20000);
 		const logRange = maxLog - minLog;
 
+		/**
+		 * The canvases carry a fixed 360x46 backing store but are laid out with
+		 * `w-full h-full`, so the browser was stretching a low-resolution bitmap to
+		 * whatever width the panel happened to be — which squashed the axis labels
+		 * horizontally and blurred everything. Matching the backing store to the
+		 * displayed size (times DPR) draws at the real resolution instead.
+		 */
+		const fitCanvas = (canvas: HTMLCanvasElement | undefined, ctx: CanvasRenderingContext2D | null | undefined) => {
+			if (!canvas || !ctx) return;
+			const dpr = window.devicePixelRatio || 1;
+			const w = Math.round(canvas.clientWidth * dpr);
+			const h = Math.round(canvas.clientHeight * dpr);
+			if (!w || !h || (canvas.width === w && canvas.height === h)) return;
+			canvas.width = w;
+			canvas.height = h;
+		};
+
+		/** Font size in backing-store pixels, so labels stay ~9 CSS px at any DPR. */
+		const labelFont = () => `${Math.round(9 * (window.devicePixelRatio || 1))}px monospace`;
+
 		const render = () => {
 			animId = requestAnimationFrame(render);
 			const isMuted = $soundState.muted;
@@ -41,6 +61,7 @@
 
 			// FFT log-frequency spectrum
 			if (fftCanvas && fftCtx) {
+				fitCanvas(fftCanvas, fftCtx);
 				const w = fftCanvas.width;
 				const h = fftCanvas.height;
 				fftCtx.clearRect(0, 0, w, h);
@@ -67,11 +88,13 @@
 				fftCtx.stroke();
 				fftCtx.restore();
 
-				fftCtx.font = '7px monospace';
-				fftCtx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-				fftCtx.fillText('100', tick100 - 6, 8);
-				fftCtx.fillText('1k', tick1k - 4, 8);
-				fftCtx.fillText('10k', tick10k - 6, 8);
+				fftCtx.font = labelFont();
+				fftCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+				fftCtx.textBaseline = 'top';
+				// Centre each label on its gridline rather than nudging by a guess.
+				for (const [text, tx] of [['100', tick100], ['1k', tick1k], ['10k', tick10k]] as const) {
+					fftCtx.fillText(text, tx - fftCtx.measureText(text).width / 2, 3);
+				}
 
 				if (freqData && !isMuted) {
 					const binCount = freqData.length;
@@ -104,6 +127,7 @@
 
 			// Oscilloscope
 			if (waveCanvas && waveCtx) {
+				fitCanvas(waveCanvas, waveCtx);
 				const w = waveCanvas.width;
 				const h = waveCanvas.height;
 				waveCtx.clearRect(0, 0, w, h);
@@ -172,6 +196,7 @@
 
 			// RMS loudness meter/history
 			const loudCtx = loudnessCanvas?.getContext('2d');
+			fitCanvas(loudnessCanvas, loudCtx);
 			if (loudnessCanvas && loudCtx) {
 				const w = loudnessCanvas.width;
 				const h = loudnessCanvas.height;
@@ -212,7 +237,7 @@
 				}
 				loudCtx.restore();
 
-				loudCtx.font = '7px monospace';
+				loudCtx.font = labelFont();
 				loudCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
 				loudCtx.fillText('0dB', 2, y0 - 2);
 				loudCtx.fillText('-6', 2, y6 - 2);

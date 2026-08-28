@@ -5,9 +5,9 @@
 	import { setMuted } from '../../stores/sound';
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
 	import { theme, cycleTheme, THEME_STYLES } from '../../stores/theme';
-	import { SPINNER_FRAMES, spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 	import { consoleOverlayOpen, guideOpen, toggleConsoleOverlay } from '../../stores/chrome';
+	import KrszLogo from './KrszLogo.svelte';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$theme]);
@@ -20,6 +20,27 @@
 		{ id: 4, label: '4:leaderboard', color: '#98c379', title: 'View 4: Leaderboard — Artificial Analysis LLM model table, cached through blog.krsz.in [Hotkey: Ctrl+4]' },
 		{ id: 5, label: '5:x86sim', color: '#d19a66', title: 'View 5: x86sim — a real 32-bit x86 PC emulated in the browser, running Alpine Linux [Hotkey: Ctrl+5]' }
 	];
+
+	let tabStrip: HTMLDivElement | undefined = $state();
+
+	/**
+	 * The strip scrolls sideways when the tabs outgrow it, but a mouse wheel only
+	 * produces vertical deltas — so nothing moved. Translate the larger of the two
+	 * axes into horizontal scroll, and only swallow the event when there is
+	 * actually somewhere to go, so the page still scrolls otherwise.
+	 */
+	function onStripWheel(e: WheelEvent) {
+		const el = tabStrip;
+		if (!el) return;
+		const overflow = el.scrollWidth - el.clientWidth;
+		if (overflow <= 1) return;
+		const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+		if (!delta) return;
+		const next = Math.max(0, Math.min(overflow, el.scrollLeft + delta));
+		if (next === el.scrollLeft) return;
+		e.preventDefault();
+		el.scrollLeft = next;
+	}
 
 	function nav(id: number) {
 		goto(TAB_ROUTES[id]);
@@ -40,11 +61,20 @@
 <header
 	class="w-full max-w-full {themeStyles.headerBg} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border {themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5"
 >
-	<div class="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
-		<span class="bg-black/40 px-2 sm:px-2.5 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-1.5 shrink-0">
-			<span class="text-[#e5c07b] font-mono">{SPINNER_FRAMES[$spinnerFrame]}</span>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		bind:this={tabStrip}
+		onwheel={onStripWheel}
+		class="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1"
+	>
+		<a
+			href="/"
+			title="krsz.in — Kurashizu's Random-Stuff Zone"
+			class="bg-black/40 px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-1.5 shrink-0 hover:bg-black/60 transition-colors"
+		>
+			<KrszLogo size={17} />
 			<span class="hidden 2xl:inline">[tmux:edge]</span>
-		</span>
+		</a>
 
 		<!-- The console is drop-down only, so it needs a visible handle as well as its key -->
 		<button
@@ -54,11 +84,11 @@
 			}}
 			data-tour="console-btn"
 			title="Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]"
-			class="px-2 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 font-mono border {$consoleOverlayOpen
-				? 'border-[#98c379] bg-[#98c379] text-black font-black'
+			class="px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border {$consoleOverlayOpen
+				? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 				: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
 		>
-			<span class="hidden 2xl:inline">~ CONSOLE</span><span class="2xl:hidden">~</span><span class="opacity-60 hidden 2xl:inline">&nbsp;`</span>
+			<span class="hidden 2xl:inline">[~]&nbsp;CONSOLE</span><span class="2xl:hidden">[~]</span>
 		</button>
 
 		<div class="flex items-center gap-1 sm:gap-2" data-tour="tabs">

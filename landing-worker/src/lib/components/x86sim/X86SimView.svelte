@@ -10,6 +10,8 @@
 	const SETTINGS_KEY = 'krsz.vm.settings';
 
 	interface Settings {
+		/** Bumped when a default changes in a way a stored value must not survive. */
+		version: number;
 		memoryMb: number;
 		vgaMemoryMb: number;
 		/** 'auto' prefers a purpose-built image and falls back to the ISO. */
@@ -23,13 +25,23 @@
 	const VGA_CHOICES = [2, 4, 8, 16];
 
 	/**
-	 * Kernel command line for the purpose-built image. tty0 is listed last so it
-	 * becomes /dev/console and the VGA screen carries the session; ttyS0 still
-	 * gets a getty from the image's inittab.
+	 * Kernel command line for the purpose-built image.
+	 *
+	 * `modules=` force-loads sd-mod: Alpine's initramfs loads drivers by modalias,
+	 * and sd_mod has none — it binds when the SCSI layer offers it a disk. Without
+	 * this the guest enumerates 0:0:0:0, never creates /dev/sda, and drops to the
+	 * initramfs rescue shell.
+	 *
+	 * tty0 is listed last so it becomes /dev/console and the VGA screen carries
+	 * the session; ttyS0 still gets a getty from the image's inittab.
 	 */
-	const DEFAULT_CMDLINE = 'root=/dev/sda rw console=ttyS0,115200 console=tty0';
+	const DEFAULT_CMDLINE =
+		'root=LABEL=krsz-root rw modules=sd-mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
+
+	const SETTINGS_VERSION = 2;
 
 	const DEFAULTS: Settings = {
+		version: SETTINGS_VERSION,
 		// Alpine's ISO unpacks modloop into RAM, so it needs real headroom; a
 		// disk-installed image is happy with much less.
 		memoryMb: 512,
@@ -79,6 +91,8 @@
 	let showKeyboard = $state(false);
 	/** Scale the emulated screen down so an 80-column console fits a phone. */
 	let screenScale = $state(1);
+	let keyboardCaptured = $state(false);
+	let screenWrap: HTMLDivElement | undefined = $state();
 
 	function sendScancodes(codes: number[]) {
 		emulator?.keyboard_send_scancodes?.(codes);
@@ -90,8 +104,11 @@
 			if (!raw) return;
 			const saved = JSON.parse(raw) as Partial<Settings>;
 			// Merge rather than replace, so a stored blob from an older build cannot
-			// leave a field undefined and break the emulator config.
-			settings = { ...DEFAULTS, ...saved };
+			// leave a field undefined and break the emulator config. A stale version
+			// drops the fields whose defaults have since been corrected.
+			const stale = (saved.version ?? 0) < SETTINGS_VERSION;
+			if (stale) delete saved.cmdline;
+			settings = { ...DEFAULTS, ...saved, version: SETTINGS_VERSION };
 		} catch {
 			/* unreadable or corrupt — the defaults are fine */
 		}
@@ -285,6 +302,8 @@
 		phase = 'idle';
 		status = '';
 		bootLineSent = false;
+		releaseKeyboard();
+		screenScale = 1;
 		uptime = 0;
 		mips = null;
 		graphical = false;
@@ -314,19 +333,38 @@
 		playSound('click');
 	}
 
-	function focusScreen() {
-		// v86 reads keys off the document, so the tab's own hotkeys have to yield
-		// while the guest has focus — otherwise "t" would flip the theme mid-shell.
+	/**
+	 * v86 reads keys off the document, so the site's own hotkeys have to yield
+	 * while the guest is being typed into — otherwise "t" flips the theme
+	 * mid-shell. The wrapper carries tabindex so blur actually fires: without it
+	 * the div could never take focus, and the suspend was never lifted once set.
+	 */
+	function captureKeyboard() {
+		if (phase !== 'running') return;
+		keyboardCaptured = true;
 		suspendNavHotkeys.set(true);
+		screenWrap?.focus();
 	}
 
-	function blurScreen() {
+	function releaseKeyboard() {
+		keyboardCaptured = false;
 		suspendNavHotkeys.set(false);
+	}
+
+	function onScreenKeydown(e: KeyboardEvent) {
+		// Escape is the way back out; everything else belongs to the guest.
+		if (e.key === 'Escape') {
+			e.preventDefault();
+			screenWrap?.blur();
+		}
 	}
 
 	onMount(() => {
 		loadSettings();
+		const onResize = () => fitScreen();
+		window.addEventListener('resize', onResize);
 		return () => {
+			window.removeEventListener('resize', onResize);
 			shutdown();
 			suspendNavHotkeys.set(false);
 		};
@@ -348,18 +386,18 @@
 		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
 		{ label: 'DISK', value: 'read-only ISO, streamed in 1 MiB chunks' },
 		{ label: 'NETWORK', value: 'relay ready, guest not wired', title: 'The OmniProxy relay at /net is live and tested, but the in-browser gateway that turns guest ethernet frames into relay streams is not written yet' },
-		{ label: 'STATUS', value: 'boots, then resets at driver load' }
+		{ label: 'STATUS', value: 'boots to the initramfs rescue shell' }
 	]);
 </script>
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
 	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
-		<pre class="text-[7px] sm:text-[10px] md:text-xs font-black tracking-tight text-[#98c379] leading-tight overflow-x-auto select-none">{`██╗     ██╗███╗   ██╗██╗   ██╗██╗  ██╗
-██║     ██║████╗  ██║██║   ██║╚██╗██╔╝
-██║     ██║██╔██╗ ██║██║   ██║ ╚███╔╝
-██║     ██║██║╚██╗██║██║   ██║ ██╔██╗
-███████╗██║██║ ╚████║╚██████╔╝██╔╝ ██╗
-╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝`}</pre>
+		<pre class="text-[6px] sm:text-[9px] md:text-[11px] font-black tracking-tight text-[#d19a66] leading-tight overflow-x-auto select-none">{`██╗  ██╗ █████╗  ██████╗ ███████╗██╗███╗   ███╗
+╚██╗██╔╝██╔══██╗██╔════╝ ██╔════╝██║████╗ ████║
+ ╚███╔╝ ╚█████╔╝███████╗ ███████╗██║██╔████╔██║
+ ██╔██╗ ██╔══██╗██╔═══██╗╚════██║██║██║╚██╔╝██║
+██╔╝ ██╗╚█████╔╝╚██████╔╝███████║██║██║ ╚═╝ ██║
+╚═╝  ╚═╝ ╚════╝  ╚═════╝ ╚══════╝╚═╝╚═╝     ╚═╝`}</pre>
 
 		<div class="flex flex-wrap items-center gap-2">
 			{#if phase === 'running'}
@@ -524,21 +562,23 @@
 			</div>
 
 			<div class="border border-[#e06c75]/40 bg-[#e06c75]/5 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-xs font-black font-mono text-[#e06c75]">UNFINISHED — IT DOES NOT REACH A SHELL YET</div>
+				<div class="text-xs font-black font-mono text-[#e06c75]">UNFINISHED — IT STOPS ONE STEP SHORT</div>
 				<p class="text-[11px] text-white/65 leading-relaxed">
-					Press BOOT and you will watch SeaBIOS post, ISOLINUX load, Linux 6.18 come up and
-					OpenRC start mounting filesystems — all real. Then, at
-					<span class="text-[#e5c07b] font-mono">Loading hardware drivers</span>, the machine
-					resets and starts over. That step is where the guest probes emulated PCI hardware
-					and modprobes drivers for it, and something there triple-faults v86.
+					Press BOOT and the machine comes up cleanly: SeaBIOS posts, the kernel starts, the
+					initramfs runs, and you land at a working shell prompt. It is the
+					<em>initramfs rescue</em> shell, though, not Alpine — mounting the root filesystem
+					fails, so you get busybox rather than the installed system.
 				</p>
 				<p class="text-[11px] text-white/50 leading-relaxed">
-					Ruled out so far: it is not the disk stream (every chunk request returns 206 in a
-					few ms), not guest RAM (identical at 256 and 512 MB), not kernel age (Alpine 3.16
-					on 5.15 fails earlier than 3.24 on 6.18), and not ACPI or KMS
-					(<span class="font-mono">acpi=off nomodeset</span> changes nothing). The likely fix
-					is a purpose-built disk image rather than a stock ISO, which is how essentially
-					every working v86 Linux is put together.
+					The cause is narrowed down: <span class="font-mono">ata_piix</span> loads and the
+					disk enumerates as SCSI <span class="font-mono">0:0:0:0</span>, but nothing binds
+					<span class="font-mono">sd_mod</span>, so <span class="font-mono">/dev/sda</span>
+					never appears. The module is in the initramfs — the build prints it — and forcing it
+					with <span class="font-mono">modules=</span>, switching to
+					<span class="font-mono">root=LABEL=</span> and adding
+					<span class="font-mono">rootwait</span> have all left it unloaded. Everything before
+					that point works, including the streamed disk, which is why the counter shows a
+					single chunk read.
 				</p>
 			</div>
 
@@ -546,7 +586,7 @@
 				<div class="text-xs font-black font-mono text-white/60">WHAT ALREADY WORKS</div>
 				<ul class="text-[11px] text-white/55 leading-relaxed list-disc pl-4 space-y-0.5">
 					<li>The ISO is never downloaded whole: v86 reads 1 MiB chunks over HTTP Range as the guest touches them, through a proxy that caches each chunk at the edge.</li>
-					<li>The kernel command line above is typed into the ISOLINUX prompt by the page, which is the only way to influence it when booting a stock ISO.</li>
+					<li>The kernel and initramfs are built in CI and loaded directly, with no bootloader, so the command line is set by the page rather than typed into a prompt.</li>
 					<li>Nothing starts on its own — opening this tab costs you nothing until you press BOOT.</li>
 					<li>Keyboard input goes to the guest while the screen has focus, so the site's own shortcuts pause there. Click outside to get them back.</li>
 				</ul>
@@ -561,21 +601,43 @@
 		</div>
 	{/if}
 
-	<!-- v86 wants exactly this shape: a <div> it fills in text mode and a <canvas> for graphics -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- v86 wants exactly this shape: a <div> it fills in text mode and a <canvas>
+	     for graphics. The wrapper is focusable so releasing the keyboard works. -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div
-		class="flex-1 min-h-0 border {themeStyles.border} bg-black rounded-xs overflow-auto {phase === 'idle' || phase === 'error'
+		bind:this={screenWrap}
+		tabindex={phase === 'running' ? 0 : -1}
+		role="application"
+		aria-label="Emulated PC screen"
+		onfocus={captureKeyboard}
+		onblur={releaseKeyboard}
+		onmousedown={captureKeyboard}
+		onkeydown={onScreenKeydown}
+		class="relative flex-1 min-h-0 border bg-black rounded-xs overflow-auto outline-none transition-colors {phase ===
+		'idle' || phase === 'error'
 			? 'hidden'
-			: ''}"
-		onfocusin={focusScreen}
-		onfocusout={blurScreen}
-		onmousedown={focusScreen}
+			: keyboardCaptured
+				? 'border-[#98c379]'
+				: themeStyles.border}"
 	>
 		<div bind:this={screenEl} class="inline-block origin-top-left" style="transform: scale({screenScale})">
 			<div style="white-space: pre; font: 15px/15px monospace; color: #d8dee9; padding: 6px;"></div>
 			<canvas style="display: none"></canvas>
 		</div>
+
+		{#if phase === 'running' && !keyboardCaptured}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				onclick={captureKeyboard}
+				class="absolute inset-0 flex items-end justify-center pb-3 bg-black/25 cursor-pointer"
+			>
+				<span class="px-2.5 py-1 rounded-xs bg-black/85 border border-white/25 text-[11px] font-mono text-white/75">
+					click to type into the machine — Esc gives the keyboard back
+				</span>
+			</div>
+		{/if}
 	</div>
 
 	{#if showKeyboard && phase === 'running'}

@@ -216,7 +216,7 @@
 
 <div
 	bind:this={bubbleEl}
-	class="fixed z-[170] max-w-[min(420px,92vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono"
+	class="fixed z-[170] max-w-[min(480px,94vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono"
 	style="{bubbleStyle} border-color: {step.color}88;"
 >
 	{#if box && arrowLeft !== null}
@@ -229,24 +229,24 @@
 	{/if}
 
 	<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
-		<span class="text-xs font-black tracking-wide" style="color: {step.color}">{step.title}</span>
-		<span class="text-[10px] text-white/35">{index + 1}/{STEPS.length}</span>
+		<span class="text-sm font-black tracking-wide" style="color: {step.color}">{step.title}</span>
+		<span class="text-xs text-white/45">{index + 1}/{STEPS.length}</span>
 	</div>
 
 	<div class="px-2.5 py-2 space-y-2">
-		<p class="text-[11px] sm:text-xs text-white/70 leading-relaxed">{step.body}</p>
+		<p class="text-xs sm:text-sm text-white/75 leading-relaxed">{step.body}</p>
 
 		{#if step.keys}
 			<div class="space-y-1">
 				{#each step.keys as k (k.key)}
 					<div class="flex items-baseline gap-2">
 						<kbd
-							class="shrink-0 px-1.5 py-0.5 rounded-xs border bg-black/50 text-[10px] font-bold whitespace-nowrap min-w-[84px] text-center"
+							class="shrink-0 px-2 py-1 rounded-xs border bg-black/50 text-[11px] sm:text-xs font-bold whitespace-nowrap min-w-[100px] text-center"
 							style="border-color: {step.color}55; color: {step.color}"
 						>
 							{k.key}
 						</kbd>
-						<span class="text-[11px] text-white/60 leading-snug">{k.desc}</span>
+						<span class="text-[11px] sm:text-xs text-white/70 leading-snug">{k.desc}</span>
 					</div>
 				{/each}
 			</div>
@@ -263,14 +263,14 @@
 					style={i === index ? `background-color: ${s.color}` : undefined}
 				></button>
 			{/each}
-			<button onclick={onClose} class="ml-1.5 text-[10px] text-white/35 hover:text-white/70 cursor-pointer">SKIP</button>
+			<button onclick={onClose} class="ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer">SKIP</button>
 		</div>
 
 		<div class="flex items-center gap-1.5">
 			{#if step.action}
 				<button
 					onclick={runAction}
-					class="px-2 py-0.5 border rounded-xs text-[10px] font-bold cursor-pointer hover:bg-white/10"
+					class="px-2.5 py-1 border rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10"
 					style="border-color: {step.color}88; color: {step.color}"
 				>
 					{step.action.label}
@@ -279,13 +279,13 @@
 			<button
 				onclick={back}
 				disabled={index === 0}
-				class="px-2 py-0.5 border border-white/25 text-white/65 rounded-xs text-[10px] font-bold cursor-pointer hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+				class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
 			>
 				BACK
 			</button>
 			<button
 				onclick={next}
-				class="px-2.5 py-0.5 border rounded-xs text-[10px] font-black cursor-pointer"
+				class="px-3 py-1 border rounded-xs text-[11px] font-black cursor-pointer"
 				style="border-color: {step.color}; color: {step.color}"
 			>
 				{isLast ? 'DONE' : 'NEXT →'}
