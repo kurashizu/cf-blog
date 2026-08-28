@@ -513,15 +513,31 @@
 		if (view === 'terminal') return;
 		screenHinted = true;
 		screenWrap?.focus();
-		// The emulated PS/2 mouse reports movement, not position, so it can only
-		// follow a pointer the page has locked. Without this X sees the buttons and
-		// no motion at all.
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(emulator as any)?.lock_mouse?.();
+		lockPointer();
 	}
 
 	function releaseKeyboard() {
 		keyboardCaptured = false;
+	}
+
+	/**
+	 * The emulated PS/2 mouse reports movement, not position, so it can only
+	 * follow a pointer the page has locked — without a lock X sees the buttons and
+	 * no motion at all. `unadjustedMovement` asks for the raw deltas: the system's
+	 * pointer acceleration is meant for a cursor the guest cannot see, and applied
+	 * to a drag it reads as the pointer suddenly bolting.
+	 */
+	function lockPointer() {
+		const target = screenEl as (HTMLElement & { requestPointerLock?: (o?: object) => unknown }) | null;
+		try {
+			const pending = target?.requestPointerLock?.({ unadjustedMovement: true });
+			// Chrome rejects the promise when it cannot honour the option; every
+			// other engine returns undefined and has already locked.
+			(pending as Promise<void> | undefined)?.catch?.(() => target?.requestPointerLock?.());
+		} catch {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(emulator as any)?.lock_mouse?.();
+		}
 	}
 
 	/**
@@ -533,15 +549,27 @@
 		if (phase === 'running') e.preventDefault();
 	}
 
+	/** Escapes closer together than this are a deliberate "let me out". */
+	const DOUBLE_ESC_MS = 700;
+	let lastEscape = 0;
+
 	function onScreenKeydown(e: KeyboardEvent) {
 		// Only the VGA screen holds the keyboard hostage, so only it needs a way
 		// out. In terminal mode Escape is the guest's — vim and tmux need it.
 		if (view === 'terminal') return;
-		// Escape is the way back out; everything else belongs to the guest.
-		if (e.key === 'Escape') {
+		if (e.key !== 'Escape') return;
+		// So does the guest on this side, though: a single Escape belongs to
+		// whatever is running under X. Two in quick succession mean the viewer,
+		// not the guest, and that is what hands the keyboard back.
+		const now = e.timeStamp;
+		if (now - lastEscape < DOUBLE_ESC_MS) {
+			lastEscape = 0;
 			e.preventDefault();
+			document.exitPointerLock?.();
 			screenWrap?.blur();
+			return;
 		}
+		lastEscape = now;
 	}
 
 	onMount(() => {
@@ -901,7 +929,7 @@
 				class="absolute inset-0 flex items-end justify-center pb-3 bg-black/25 cursor-pointer"
 			>
 				<span class="px-2.5 py-1 rounded-xs bg-black/85 border border-white/25 text-[11px] font-mono text-white/75">
-					click to type into the machine — Esc gives the keyboard back
+					click to type into the machine — Esc twice gives the keyboard back
 				</span>
 			</div>
 		{/if}

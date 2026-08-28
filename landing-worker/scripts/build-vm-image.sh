@@ -204,12 +204,17 @@ cat > "$ROOTFS/root/.config/libfm/libfm.conf" <<'EOF'
 quick_exec=1
 EOF
 
+mkdir -p "$ROOTFS/usr/share/icons/krsz"
+if [ -d /assets/icons ]; then
+	cp /assets/icons/*.png "$ROOTFS/usr/share/icons/krsz/"
+fi
+
 mkdir -p "$ROOTFS/root/Desktop"
 cat > "$ROOTFS/root/Desktop/browser.desktop" <<'EOF'
 [Desktop Entry]
 Name=Web Browser
 Exec=netsurf-gtk3
-Icon=web-browser
+Icon=/usr/share/icons/krsz/browser.png
 Type=Application
 Terminal=false
 EOF
@@ -217,7 +222,7 @@ cat > "$ROOTFS/root/Desktop/files.desktop" <<'EOF'
 [Desktop Entry]
 Name=Files
 Exec=pcmanfm /root
-Icon=folder
+Icon=/usr/share/icons/krsz/files.png
 Type=Application
 Terminal=false
 EOF
@@ -225,7 +230,7 @@ cat > "$ROOTFS/root/Desktop/terminal.desktop" <<'EOF'
 [Desktop Entry]
 Name=Terminal
 Exec=xfce4-terminal
-Icon=utilities-terminal
+Icon=/usr/share/icons/krsz/terminal.png
 Type=Application
 Terminal=false
 EOF
