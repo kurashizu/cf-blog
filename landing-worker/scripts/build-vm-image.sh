@@ -112,13 +112,34 @@ echo "==> kernel modules version: $KVER"
 # `ata` supplies the controller driver, but the block device itself comes from
 # sd_mod in `scsi` — without it libata enumerates the disk and no /dev/sda ever
 # appears, which is exactly how the first build failed to mount its root.
+#
+# The stock `ata`/`scsi` features bring up the SCSI core and the controller, but
+# the guest still came up with host0/target0:0:0:0 present and no /dev/sda —
+# nothing had bound sd_mod, the upper-level disk driver. Listing the modules
+# explicitly is deterministic in a way that feature names are not.
+mkdir -p "$ROOTFS/etc/mkinitfs/features.d"
+cat > "$ROOTFS/etc/mkinitfs/features.d/v86.modules" <<'EOF'
+kernel/drivers/ata
+kernel/drivers/scsi/scsi_mod.ko*
+kernel/drivers/scsi/sd_mod.ko*
+kernel/drivers/scsi/sr_mod.ko*
+kernel/drivers/cdrom
+EOF
+
 cat > "$ROOTFS/etc/mkinitfs/mkinitfs.conf" <<'EOF'
-features="base ext4 ata scsi"
+features="base ext4 v86"
 EOF
 
 cp "$ROOTFS/boot/vmlinuz-${KERNEL_FLAVOR}" "$OUT/vmlinuz"
 chroot "$ROOTFS" /sbin/mkinitfs -c /etc/mkinitfs/mkinitfs.conf -o /boot/initramfs-v86 "$KVER"
 cp "$ROOTFS/boot/initramfs-v86" "$OUT/initramfs"
+
+# Prove the disk drivers are actually in there rather than finding out by
+# watching a guest fail to mount its root.
+echo "==> initramfs storage modules:"
+gzip -dc "$OUT/initramfs" 2>/dev/null | cpio -t 2>/dev/null | grep -E 'sd_mod|sr_mod|ata|ext4' || \
+	echo "!! could not list initramfs contents"
+
 
 # The kernel and initramfs are loaded whole by v86, so they should not also sit
 # inside the root filesystem taking up space in the streamed image.

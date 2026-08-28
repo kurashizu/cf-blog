@@ -3,6 +3,7 @@
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
+	import VirtualKeyboard from './VirtualKeyboard.svelte';
 
 	type Phase = 'idle' | 'loading' | 'running' | 'error';
 
@@ -74,6 +75,14 @@
 	let lastSample = 0;
 	let bootLineSent = $state(false);
 	let mode = $state<'kernel' | 'cdrom'>('cdrom');
+	/** Shown by default on coarse pointers, where there is no real keyboard. */
+	let showKeyboard = $state(false);
+	/** Scale the emulated screen down so an 80-column console fits a phone. */
+	let screenScale = $state(1);
+
+	function sendScancodes(codes: number[]) {
+		emulator?.keyboard_send_scancodes?.(codes);
+	}
 
 	function loadSettings() {
 		try {
@@ -207,7 +216,13 @@
 				graphical = dims[2] !== 0;
 			});
 
-			ticker = setInterval(sample, 1000);
+			ticker = setInterval(() => {
+				sample();
+				fitScreen();
+			}, 1000);
+			// No physical keyboard on a touch device, and a phone IME cannot
+			// usefully drive a terminal, so offer the on-screen one straight away.
+			if (matchMedia('(pointer: coarse)').matches) showKeyboard = true;
 		} catch (e) {
 			phase = 'error';
 			errorText = e instanceof Error ? e.message : String(e);
@@ -280,6 +295,19 @@
 		playSound('click');
 	}
 
+	/**
+	 * v86 renders text mode at a fixed character size, so on a narrow screen the
+	 * 80-column console overflows. Scaling the whole container keeps it readable
+	 * without touching the emulator's own font metrics.
+	 */
+	function fitScreen() {
+		if (!screenEl?.parentElement) return;
+		const available = screenEl.parentElement.clientWidth - 12;
+		const natural = screenEl.scrollWidth;
+		if (!available || !natural) return;
+		screenScale = Math.min(1, available / natural);
+	}
+
 	function sendCtrlAltDel() {
 		// 0x1D ctrl, 0x38 alt, 0x53 delete — make, then break.
 		emulator?.keyboard_send_scancodes?.([0x1d, 0x38, 0x53, 0xd3, 0xb8, 0x9d]);
@@ -343,6 +371,15 @@
 						</span>
 					{/if}
 				</span>
+				<button
+					onclick={() => (showKeyboard = !showKeyboard)}
+					title="On-screen keyboard — sends scancodes directly, which also avoids the layout mismatch a non-US physical keyboard hits"
+					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {showKeyboard
+						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+						: 'border-white/25 text-white/70 hover:bg-white/10'}"
+				>
+					⌨ KEYS
+				</button>
 				<button
 					onclick={sendCtrlAltDel}
 					title="Send Ctrl+Alt+Del to the guest"
@@ -535,11 +572,17 @@
 		onfocusout={blurScreen}
 		onmousedown={focusScreen}
 	>
-		<div bind:this={screenEl} class="inline-block origin-top-left">
+		<div bind:this={screenEl} class="inline-block origin-top-left" style="transform: scale({screenScale})">
 			<div style="white-space: pre; font: 15px/15px monospace; color: #d8dee9; padding: 6px;"></div>
 			<canvas style="display: none"></canvas>
 		</div>
 	</div>
+
+	{#if showKeyboard && phase === 'running'}
+		<div class="shrink-0">
+			<VirtualKeyboard send={sendScancodes} onClose={() => (showKeyboard = false)} />
+		</div>
+	{/if}
 
 	{#if phase === 'running' || phase === 'loading'}
 		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-white/40 shrink-0">
