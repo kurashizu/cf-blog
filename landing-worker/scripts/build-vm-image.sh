@@ -39,8 +39,8 @@ apk add --root "$ROOTFS" --initdb --no-cache \
 	--allow-untrusted \
 	alpine-base "linux-${KERNEL_FLAVOR}" linux-firmware-none busybox-extras \
 	openrc util-linux e2fsprogs \
-	nano vim htop curl bash file tree tmux ncurses-terminfo \
-	openbox xterm xorg-server xf86-video-vesa xf86-input-libinput xinit \
+	nano vim htop curl bash file tree tmux ncurses-terminfo eudev \
+	openbox xterm xorg-server xf86-input-libinput xinit \
 	font-misc-misc ttf-dejavu
 
 mkdir -p "$ROOTFS/etc/apk"
@@ -122,7 +122,7 @@ cat > /tmp/motd.raw <<'MOTD'
   \033[38;5;114mTRY THIS\033[0m
     \033[38;5;222muname -a\033[0m          see what you are actually running on
     \033[38;5;222mtmux\033[0m              terminal multiplexer, mouse reporting is on
-    \033[38;5;222mstartx\033[0m            openbox on the VESA framebuffer
+    \033[38;5;222mstartx\033[0m            openbox -- switch the panel to VGA to watch
     \033[38;5;222mapk add <pkg>\033[0m     the mirror is reachable through the relay
     \033[38;5;222mping krsz.in\033[0m      answered by the emulator's own stack
     \033[38;5;222mrs\033[0m                re-fit the shell after resizing the window
@@ -160,11 +160,16 @@ exec openbox
 EOF
 chmod +x "$ROOTFS/root/.xinitrc"
 
+# Not the vesa driver, which is the obvious choice and does not work here: it
+# asks the video BIOS for its mode list, and a kernel handed straight to the
+# emulator means the BIOS never POSTed, so there is nothing to ask. The card
+# itself is a QEMU-style stdvga (PCI 1234:1111), which the kernel's bochs driver
+# drives directly through its registers -- no firmware involved.
 mkdir -p "$ROOTFS/etc/X11/xorg.conf.d"
-cat > "$ROOTFS/etc/X11/xorg.conf.d/10-vesa.conf" <<'EOF'
+cat > "$ROOTFS/etc/X11/xorg.conf.d/10-modesetting.conf" <<'EOF'
 Section "Device"
     Identifier "v86"
-    Driver     "vesa"
+    Driver     "modesetting"
 EndSection
 EOF
 
@@ -224,9 +229,16 @@ depend() {
 
 start() {
 	ebegin "Loading virtio drivers"
-	for mod in virtio virtio_ring virtio_pci failover net_failover virtio_net; do
+	for mod in virtio virtio_ring virtio_pci failover net_failover virtio_net bochs; do
 		modprobe "$mod" 2>/dev/null || true
 	done
+	# X finds its keyboard and mouse through udev, which has to have seen them.
+	# Only the input subsystem is triggered: walking the whole bus is what
+	# hwdrivers does, and what takes the machine down.
+	if command -v udevd >/dev/null && [ ! -S /run/udev/control ]; then
+		udevd --daemon 2>/dev/null || true
+		udevadm trigger --subsystem-match=input --action=add 2>/dev/null || true
+	fi
 	# The NIC is the only one that matters; report on whether it appeared.
 	[ -d /sys/class/net/eth0 ]
 	eend $? "no virtio NIC — check that networking is enabled on the page"
