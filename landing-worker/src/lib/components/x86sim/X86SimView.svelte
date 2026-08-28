@@ -113,6 +113,8 @@
 	let termEl: HTMLDivElement | undefined = $state();
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let fitAddon: any = null;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let term: any = null;
 
 	function sendScancodes(codes: number[]) {
 		emulator?.keyboard_send_scancodes?.(codes);
@@ -308,11 +310,11 @@
 				const FitAddon = xterm[1].FitAddon;
 				requestAnimationFrame(() => {
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const term = (emulator as any)?.serial_adapter?.term;
+					term = (emulator as any)?.serial_adapter?.term;
 					if (!term) return;
 					fitAddon = new FitAddon();
 					term.loadAddon(fitAddon);
-					fitAddon.fit();
+					fitTerminal();
 				});
 			}
 
@@ -381,6 +383,7 @@
 		}
 		emulator = null;
 		fitAddon = null;
+		term = null;
 		restoreFetch?.();
 		restoreFetch = null;
 		phase = 'idle';
@@ -406,8 +409,29 @@
 	 * the space: down on a phone, and up on a desktop, where it previously sat in
 	 * the top-left corner surrounded by black.
 	 */
+	/**
+	 * Columns are free — the panel is 1300 px wide on a desktop — but a shell only
+	 * writes 70-odd characters, so leaving the font at its default fills a third
+	 * of the box with tiny text and two thirds with nothing. The size is chosen to
+	 * land near TARGET_COLS instead, which is wide enough for tmux and vim and
+	 * large enough to read. The guest picks the new width up from `resize`.
+	 */
+	const TARGET_COLS = 92;
+
+	function fitTerminal() {
+		if (!fitAddon || !term || !termEl) return;
+		const width = termEl.clientWidth - 12;
+		if (width > 0) {
+			// xterm's cell advance is about 0.6em for the fonts it falls back to.
+			const size = Math.round(width / TARGET_COLS / 0.6);
+			const clamped = Math.max(13, Math.min(22, size));
+			if (term.options.fontSize !== clamped) term.options.fontSize = clamped;
+		}
+		fitAddon.fit();
+	}
+
 	function fitScreen() {
-		fitAddon?.fit?.();
+		fitTerminal();
 		if (settings.display === 'terminal') return;
 		if (!screenEl || !screenWrap) return;
 		const availableW = screenWrap.clientWidth - 8;
