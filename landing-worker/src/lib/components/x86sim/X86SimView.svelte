@@ -22,12 +22,6 @@
 		jit: boolean;
 		/** Attach a NIC and point it at the relay. */
 		network: boolean;
-		/**
-		 * 'terminal' attaches xterm.js to the guest's serial port; 'screen' shows
-		 * the emulated VGA adapter. The VGA text console cannot report the mouse,
-		 * so anything that wants a pointer — tmux, ncurses apps — needs the former.
-		 */
-		display: 'terminal' | 'screen';
 	}
 
 	const MEMORY_CHOICES = [64, 128, 256, 512, 1024];
@@ -53,7 +47,7 @@
 	const DEFAULT_CMDLINE =
 		'root=/dev/sda rw modules=sd_mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 5;
+	const SETTINGS_VERSION = 6;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
@@ -65,8 +59,7 @@
 		cmdline: DEFAULT_CMDLINE,
 		acpi: false,
 		jit: true,
-		network: true,
-		display: 'terminal'
+		network: true
 	};
 
 	let settings = $state<Settings>({ ...DEFAULTS });
@@ -96,6 +89,13 @@
 	let mips = $state<number | null>(null);
 	/** True once the guest has switched the VGA adapter out of text mode. */
 	let graphical = $state(false);
+	/**
+	 * Which adapter is on screen. The guest drives this: v86 reports a graphical
+	 * mode the moment X takes the display, and a text mode when it hands it back,
+	 * so a shell is watched through the serial terminal — which resizes with the
+	 * panel and reports the mouse — and X through the VGA screen.
+	 */
+	let view = $derived<'terminal' | 'screen'>(graphical ? 'screen' : 'terminal');
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let emulator: any = null;
@@ -217,11 +217,11 @@
 			mode = kernel ? 'kernel' : 'cdrom';
 
 			status = 'loading emulator (2 MB wasm)…';
-			// xterm only comes down when the terminal display is actually chosen.
-			const terminalMode = settings.display === 'terminal';
-			const xterm = terminalMode
-				? await Promise.all([import('@xterm/xterm'), import('@xterm/addon-fit'), import('@xterm/xterm/css/xterm.css')])
-				: null;
+			const xterm = await Promise.all([
+				import('@xterm/xterm'),
+				import('@xterm/addon-fit'),
+				import('@xterm/xterm/css/xterm.css')
+			]);
 			// v86 exports both a default and a named V86; only the named one is typed.
 			const [{ V86 }, { default: wasmPath }] = await Promise.all([
 				import('v86'),
@@ -241,17 +241,16 @@
 				vga_memory_size: settings.vgaMemoryMb * 1024 * 1024,
 				acpi: settings.acpi,
 				disable_jit: !settings.jit,
-				...(terminalMode
-					? {
-							// v86 drives the terminal directly; the VGA adapter still exists,
-							// it is just not what is on screen.
-							serial_console: {
-								type: 'xtermjs' as const,
-								xterm_lib: xterm![0].Terminal,
-								container: termEl
-							}
-						}
-					: { screen_container: screenEl }),
+				// Both, always. The guest talks to a serial line and to a VGA adapter at
+				// the same time, and which of the two is worth looking at is a property
+				// of what the guest is doing, not a setting: a shell belongs in the
+				// terminal, and X has nowhere to draw but the screen.
+				serial_console: {
+					type: 'xtermjs' as const,
+					xterm_lib: xterm[0].Terminal,
+					container: termEl
+				},
+				screen_container: screenEl,
 				bios: { url: '/vm/seabios.bin' },
 				vga_bios: { url: '/vm/vgabios.bin' },
 				...(mode === 'kernel'
@@ -307,7 +306,7 @@
 				requestAnimationFrame(fitScreen);
 			});
 
-			if (terminalMode && xterm) {
+			{
 				// The addon can only attach once v86 has constructed the Terminal, and
 				// when that happens is not ours to know — fitTerminal attaches it on
 				// whichever call first finds one, and the sampling tick keeps calling.
@@ -443,7 +442,7 @@
 
 	function fitScreen() {
 		fitTerminal();
-		if (settings.display === 'terminal') return;
+		if (view === 'terminal') return;
 		if (!screenEl || !screenWrap) return;
 		const availableW = screenWrap.clientWidth - 8;
 		const availableH = screenWrap.clientHeight - 8;
@@ -487,7 +486,13 @@
 		// xterm reads from a hidden textarea it focuses on mousedown. Pulling focus
 		// up to the wrapper here left that textarea blurred, so the terminal took
 		// no typing at all — the VGA screen is the only mode that wants the focus.
-		if (settings.display !== 'terminal') screenWrap?.focus();
+		if (view === 'terminal') return;
+		screenWrap?.focus();
+		// The emulated PS/2 mouse reports movement, not position, so it can only
+		// follow a pointer the page has locked. Without this X sees the buttons and
+		// no motion at all.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(emulator as any)?.lock_mouse?.();
 	}
 
 	function releaseKeyboard() {
@@ -506,7 +511,7 @@
 	function onScreenKeydown(e: KeyboardEvent) {
 		// Only the VGA screen holds the keyboard hostage, so only it needs a way
 		// out. In terminal mode Escape is the guest's — vim and tmux need it.
-		if (settings.display === 'terminal') return;
+		if (view === 'terminal') return;
 		// Escape is the way back out; everything else belongs to the guest.
 		if (e.key === 'Escape') {
 			e.preventDefault();
@@ -560,8 +565,8 @@
 		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
 		{
 			label: 'DISPLAY',
-			value: settings.display === 'terminal' ? 'serial via xterm.js' : 'emulated VGA',
-			title: 'The serial terminal reports the mouse and resizes with the panel; the VGA text console can do neither'
+			value: view === 'terminal' ? 'serial console, via xterm.js' : 'emulated VGA, graphical',
+			title: 'Both run at once and the view follows the guest: the serial terminal while it is a shell, because that one resizes with the panel and reports the mouse, and the VGA screen as soon as something takes the display graphically'
 		},
 		{ label: 'DISK', value: 'ext4 image, streamed in 1 MiB chunks' },
 		{
@@ -701,23 +706,6 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISPLAY</span>
-						{#each [['terminal', 'TERMINAL'], ['screen', 'VGA SCREEN']] as const as [value, label] (value)}
-							<button
-								onclick={() => (settings.display = value)}
-								title={value === 'terminal'
-									? "xterm.js on the guest's serial port — it reports the mouse, so tmux and ncurses apps can use one, and it resizes with the panel"
-									: 'The emulated VGA adapter. Shows the graphical console, but a text console cannot report the mouse.'}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.display === value
-									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-									: 'border-white/20 text-white/55 hover:border-white/50'}"
-							>
-								{label}
-							</button>
-						{/each}
-					</div>
-
-					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">BOOT</span>
 						{#each [['auto', 'AUTO'], ['kernel', 'DIRECT KERNEL'], ['cdrom', 'ISO BOOTLOADER']] as const as [value, label] (value)}
 							<button
@@ -827,7 +815,7 @@
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div
 		bind:this={screenWrap}
-		tabindex={phase === 'running' && settings.display !== 'terminal' ? 0 : -1}
+		tabindex={phase === 'running' && view !== 'terminal' ? 0 : -1}
 		role="application"
 		aria-label="Emulated PC screen"
 		onfocus={captureKeyboard}
@@ -846,12 +834,12 @@
 		     transform does not change the box the parent lays out. -->
 		<div
 			bind:this={termEl}
-			class="absolute inset-0 p-1.5 {settings.display === 'terminal' ? '' : 'hidden'}"
+			class="absolute inset-0 p-1.5 {view === 'terminal' ? '' : 'hidden'}"
 		></div>
 
 		<div
 			bind:this={screenEl}
-			class="absolute left-1/2 top-1/2 {settings.display === 'terminal' ? 'hidden' : ''}"
+			class="absolute left-1/2 top-1/2 {view === 'terminal' ? 'hidden' : ''}"
 			style="width: max-content; transform: translate(-50%, -50%) scale({screenScale}); transform-origin: center center"
 		>
 			<!-- Line height has to exceed the font size or descenders are clipped:
@@ -863,7 +851,7 @@
 		<!-- Only the VGA screen needs a capture affordance. xterm takes focus and
 		     mouse events itself, and an overlay would swallow the very clicks that
 		     terminal mode exists to deliver. -->
-		{#if phase === 'running' && !keyboardCaptured && settings.display === 'screen'}
+		{#if phase === 'running' && !keyboardCaptured && view === 'screen'}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div

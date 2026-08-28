@@ -40,7 +40,7 @@ apk add --root "$ROOTFS" --initdb --no-cache \
 	alpine-base "linux-${KERNEL_FLAVOR}" linux-firmware-none busybox-extras \
 	openrc util-linux e2fsprogs \
 	nano vim htop curl bash file tree tmux ncurses-terminfo eudev \
-	openbox xterm xorg-server xf86-input-libinput xinit \
+	openbox xterm xorg-server xf86-input-libinput xinit xsetroot \
 	font-misc-misc ttf-dejavu
 
 mkdir -p "$ROOTFS/etc/apk"
@@ -122,7 +122,7 @@ cat > /tmp/motd.raw <<'MOTD'
   \033[38;5;114mTRY THIS\033[0m
     \033[38;5;222muname -a\033[0m          see what you are actually running on
     \033[38;5;222mtmux\033[0m              terminal multiplexer, mouse reporting is on
-    \033[38;5;222mstartx\033[0m            openbox -- switch the panel to VGA to watch
+    \033[38;5;222mstartx\033[0m            an openbox desktop; right-click it for the menu
     \033[38;5;222mapk add <pkg>\033[0m     the mirror is reachable through the relay
     \033[38;5;222mping krsz.in\033[0m      answered by the emulator's own stack
     \033[38;5;222mrs\033[0m                re-fit the shell after resizing the window
@@ -155,7 +155,9 @@ EOF
 # startx brings up openbox with a terminal, on the VESA driver — v86 presents a
 # standard VGA/VESA adapter rather than anything a KMS driver would know.
 cat > "$ROOTFS/root/.xinitrc" <<'EOF'
-xterm -geometry 100x30+10+10 &
+xsetroot -solid "#12151a" 2>/dev/null
+xterm -geometry 100x30+24+24 -fa "DejaVu Sans Mono" -fs 11 \
+	-bg "#0d1117" -fg "#d8dee9" -title "krsz-vm" &
 exec openbox
 EOF
 chmod +x "$ROOTFS/root/.xinitrc"
@@ -171,6 +173,21 @@ Section "Device"
     Identifier "v86"
     Driver     "modesetting"
 EndSection
+EOF
+
+mkdir -p "$ROOTFS/root/.config/openbox"
+cat > "$ROOTFS/root/.config/openbox/menu.xml" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+<menu id="root-menu" label="krsz-vm">
+  <item label="Terminal"><action name="Execute"><command>xterm -fa "DejaVu Sans Mono" -fs 11 -bg "#0d1117" -fg "#d8dee9"</command></action></item>
+  <item label="Top"><action name="Execute"><command>xterm -e htop</command></action></item>
+  <item label="Editor"><action name="Execute"><command>xterm -e vim</command></action></item>
+  <separator />
+  <item label="Reconfigure"><action name="Reconfigure" /></item>
+  <item label="Exit X"><action name="Exit" /></item>
+</menu>
+</openbox_menu>
 EOF
 
 mkdir -p "$ROOTFS/etc/profile.d"
@@ -229,7 +246,11 @@ depend() {
 
 start() {
 	ebegin "Loading virtio drivers"
-	for mod in virtio virtio_ring virtio_pci failover net_failover virtio_net bochs; do
+	# psmouse and evdev are what turn the emulated PS/2 mouse into the
+	# /dev/input/event* node libinput looks for; without them X comes up with a
+	# keyboard and no pointer.
+	for mod in virtio virtio_ring virtio_pci failover net_failover virtio_net \
+		bochs atkbd psmouse evdev serio_raw; do
 		modprobe "$mod" 2>/dev/null || true
 	done
 	# X finds its keyboard and mouse through udev, which has to have seen them.
