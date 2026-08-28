@@ -81,9 +81,10 @@
 		<button
 			onclick={() => (guideOpen = true)}
 			title="Walk through the synth — what each rack does, and how to get a sound out of it"
-			class="ml-0.5 w-4 h-4 rounded-full border border-[#c678dd]/60 text-[#c678dd] text-[10px] leading-none font-black cursor-pointer hover:bg-[#c678dd] hover:text-black transition-colors flex items-center justify-center"
+			class="ml-0.5 text-[#c678dd]/70 hover:text-[#c678dd] cursor-pointer transition-colors flex items-center"
+			aria-label="Synth walkthrough"
 		>
-			?
+			<PixelIcon name="help" size={14} />
 		</button>
 	</div>
 

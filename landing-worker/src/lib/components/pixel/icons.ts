@@ -12,6 +12,7 @@ export const PIXEL_ICON_PATHS = {
 	github: 'M5 1h6v1H5V1zm-2 2h2v1H3V3zm8 0h2v1h-2V3zM2 4h1v3H2V4zm11 0h1v3h-1V4zM1 7h1v4H1V7zm13 0h1v4h-1V7zM2 11h1v2H2v-2zm11 0h1v2h-1v-2zm-9 2h1v1H4v-1zm7 0h1v1h-1v-1zm-6 1h6v1H5v-1zm0-7h2v2H5V7zm4 0h2v2H9V7zm-2 4h2v1H7v-1z',
 	huggingface:
 		'M4 2h8v1H4V2zM2 3h2v1H2V3zm10 0h2v1h-2V3zM1 4h1v8H1V4zm13 0h1v8h-1V4zM2 12h2v1H2v-1zm10 0h2v1h-2v-1zM4 13h8v1H4v-1zM4 6h2v2H4V6zm6 0h2v2h-2V6zm-3 3h2v1H7V9zm-2 1h1v1H5v-1zm5 0h1v1h-1v-1zm-3 1h2v1H7v-1z',
+	help: 'M5 2h6v1H5V2zM4 3h1v2H4V3zm7 0h1v3h-1V3zM9 6h2v1H9V6zM8 7h2v1H8V7zm-1 1h2v3H7V8zm0 4h2v2H7v-2z',
 	hardware:
 		'M2 1h1v2h2V1h1v2h4V1h1v2h2V1h1v2h1v10h-1v2h-1v-2h-2v2h-1v-2H6v2H5v-2H3v2H2v-2H1V3h1V1zm1 3v8h10V4H3zm2 2h3v3H5V6zm4 0h2v1H9V6zm0 2h2v1H9V8zm-4 2h6v1H5v-1z'
 } as const;

@@ -137,8 +137,15 @@ cp "$ROOTFS/boot/initramfs-v86" "$OUT/initramfs"
 # Prove the disk drivers are actually in there rather than finding out by
 # watching a guest fail to mount its root.
 echo "==> initramfs storage modules:"
-gzip -dc "$OUT/initramfs" 2>/dev/null | cpio -t 2>/dev/null | grep -E 'sd_mod|sr_mod|ata|ext4' || \
-	echo "!! could not list initramfs contents"
+mkdir -p /tmp/initcheck && (cd /tmp/initcheck && gzip -dc "$OUT/initramfs" | cpio -idm 2>/dev/null) || true
+find /tmp/initcheck -name 'sd_mod*' -o -name 'ata_piix*' -o -name 'ext4*' | sed 's|/tmp/initcheck||' || true
+
+# The .ko being present is not enough: modprobe resolves through modules.dep, and
+# a module packed without a dep entry silently fails to load — which is exactly
+# how the guest ended up with an enumerated disk and no /dev/sda.
+echo "==> modules.dep entries:"
+find /tmp/initcheck -name modules.dep -exec grep -cE 'sd_mod|ata_piix' {} + 2>/dev/null || echo "!! no modules.dep"
+find /tmp/initcheck -name modules.dep -exec grep -E 'sd_mod|ata_piix' {} + 2>/dev/null | head -5 || true
 
 
 # The kernel and initramfs are loaded whole by v86, so they should not also sit
