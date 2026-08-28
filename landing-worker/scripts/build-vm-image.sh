@@ -118,17 +118,16 @@ echo "==> kernel modules version: $KVER"
 # nothing had bound sd_mod, the upper-level disk driver. Listing the modules
 # explicitly is deterministic in a way that feature names are not.
 #
-# scsi_common has to be here too. modules.dep records sd_mod as depending on
-# both scsi_mod and scsi_common, and modprobe fails quietly when a dependency is
-# missing from the initramfs — which is precisely how the disk kept enumerating
-# with no block device behind it.
+# Whole directories, not `.ko*` globs. With the globs the guest's own modprobe
+# reported "Module sd_mod not found in directory /lib/modules/<ver>" while
+# ata_piix — listed as a bare directory — had loaded fine, so the glob entries
+# were not landing where modprobe looks. Taking the whole scsi directory costs a
+# few MB of initramfs and removes a class of failure that is invisible until a
+# guest cannot find its root.
 mkdir -p "$ROOTFS/etc/mkinitfs/features.d"
 cat > "$ROOTFS/etc/mkinitfs/features.d/v86.modules" <<'EOF'
 kernel/drivers/ata
-kernel/drivers/scsi/scsi_mod.ko*
-kernel/drivers/scsi/scsi_common.ko*
-kernel/drivers/scsi/sd_mod.ko*
-kernel/drivers/scsi/sr_mod.ko*
+kernel/drivers/scsi
 kernel/drivers/cdrom
 EOF
 
@@ -149,6 +148,10 @@ find /tmp/initcheck -name 'sd_mod*' -o -name 'ata_piix*' -o -name 'ext4*' | sed 
 # The .ko being present is not enough: modprobe resolves through modules.dep, and
 # a module packed without a dep entry silently fails to load — which is exactly
 # how the guest ended up with an enumerated disk and no /dev/sda.
+echo "==> where modprobe will look:"
+ls /tmp/initcheck/lib/modules/*/kernel/drivers/scsi/ 2>/dev/null | head -8 || \
+	echo "!! nothing under /lib/modules/*/kernel/drivers/scsi"
+
 echo "==> modules.dep entries:"
 find /tmp/initcheck -name modules.dep -exec grep -cE 'sd_mod|ata_piix' {} + 2>/dev/null || echo "!! no modules.dep"
 find /tmp/initcheck -name modules.dep -exec grep -E 'sd_mod|ata_piix' {} + 2>/dev/null | head -5 || true

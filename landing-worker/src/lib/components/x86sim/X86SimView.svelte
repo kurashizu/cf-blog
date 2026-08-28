@@ -28,9 +28,12 @@
 	/**
 	 * Kernel command line for the purpose-built image.
 	 *
-	 * `modules=` force-loads sd-mod: Alpine's initramfs loads drivers by modalias,
+	 * `modules=` force-loads sd_mod: Alpine's initramfs loads drivers by modalias,
 	 * and sd_mod has none — it binds when the SCSI layer offers it a disk. Without
-	 * it the guest enumerates 0:0:0:0 and never creates /dev/sda.
+	 * it the guest enumerates 0:0:0:0 and never creates /dev/sda. The name is
+	 * spelled with an underscore because the initramfs's busybox modprobe does not
+	 * translate "sd-mod" the way kmod's does — it answers "Module sd-mod not
+	 * found" and carries on.
 	 *
 	 * The root is named by device rather than by LABEL: with sd-mod loading, the
 	 * disk shows up as /dev/sda, while `root=LABEL=` left the initramfs reporting
@@ -40,9 +43,9 @@
 	 * the session; ttyS0 still gets a getty from the image's inittab.
 	 */
 	const DEFAULT_CMDLINE =
-		'root=/dev/sda rw modules=sd-mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
+		'root=/dev/sda rw modules=sd_mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 3;
+	const SETTINGS_VERSION = 4;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
