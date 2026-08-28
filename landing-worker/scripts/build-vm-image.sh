@@ -100,12 +100,12 @@ chmod +x "$ROOTFS/sbin/autologin"
 
 cat > /tmp/motd.raw <<'MOTD'
 
-  \033[38;5;180m ██╗  ██╗ █████╗  ██████╗ ███████╗██╗███╗   ███╗\033[0m
-  \033[38;5;180m ╚██╗██╔╝██╔══██╗██╔════╝ ██╔════╝██║████╗ ████║\033[0m
-  \033[38;5;180m  ╚███╔╝ ╚█████╔╝███████╗ ███████╗██║██╔████╔██║\033[0m
-  \033[38;5;180m  ██╔██╗ ██╔══██╗██╔═══██╗╚════██║██║██║╚██╔╝██║\033[0m
-  \033[38;5;180m ██╔╝ ██╗╚█████╔╝╚██████╔╝███████║██║██║ ╚═╝ ██║\033[0m
-  \033[38;5;180m ╚═╝  ╚═╝ ╚════╝  ╚═════╝ ╚══════╝╚═╝╚═╝     ╚═╝\033[0m
+  \033[38;5;180m██╗  ██╗██████╗ ███████╗███████╗       ██╗   ██╗███╗   ███╗\033[0m
+  \033[38;5;180m██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝       ██║   ██║████╗ ████║\033[0m
+  \033[38;5;180m█████╔╝ ██████╔╝███████╗  ███╔╝ ██████╗██║   ██║██╔████╔██║\033[0m
+  \033[38;5;180m██╔═██╗ ██╔══██╗╚════██║ ███╔╝  ╚═════╝╚██╗ ██╔╝██║╚██╔╝██║\033[0m
+  \033[38;5;180m██║  ██╗██║  ██║███████║███████╗        ╚████╔╝ ██║ ╚═╝ ██║\033[0m
+  \033[38;5;180m╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝         ╚═══╝  ╚═╝     ╚═╝\033[0m
 
   \033[1mAlpine Linux on an emulated 32-bit x86 PC, inside a browser tab.\033[0m
   No hypervisor underneath — SeaBIOS, a real kernel, and v86 translating
@@ -163,6 +163,16 @@ mkdir -p "$ROOTFS/etc/profile.d"
 cat > "$ROOTFS/etc/profile.d/krsz.sh" <<'EOF'
 export PS1='\[\033[1;32m\]\u@krsz-vm\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
 alias ll='ls -la'
+
+# A serial line carries no window size, so the kernel assumes 80x24 and the shell
+# wraps a quarter of the way across a desktop-sized terminal. `resize` asks the
+# terminal where its cursor lands in the far corner and sets the size from the
+# answer — only on ttyS0, since the VGA console never replies and the read would
+# sit there waiting. `rs` re-runs it after the browser window changes.
+alias rs='resize >/dev/null'
+case "$(tty)" in
+	/dev/ttyS*) command -v resize >/dev/null && resize >/dev/null 2>&1 ;;
+esac
 EOF
 
 # ── services ───────────────────────────────────────────────────────────────
@@ -181,6 +191,31 @@ done
 # is why the guest had no address, no route, and a resolver pointing at
 # 127.0.0.1 while the relay sat there unused.
 ln -sf /etc/init.d/networking "$ROOTFS/etc/runlevels/boot/networking" 2>/dev/null || true
+
+# Without hwdrivers nothing walks the PCI bus, so the NIC's driver is never
+# loaded and networking finds no interface to configure — the guest ends up with
+# no route and every lookup fails as "Network unreachable". The hardware here is
+# fixed and known, so the drivers it needs are named outright instead.
+cat > "$ROOTFS/etc/init.d/vmdrivers" <<'EOF'
+#!/sbin/openrc-run
+description="Load drivers for the emulator's fixed set of devices"
+
+depend() {
+	before net networking
+}
+
+start() {
+	ebegin "Loading virtio drivers"
+	for mod in virtio virtio_ring virtio_pci failover net_failover virtio_net; do
+		modprobe "$mod" 2>/dev/null || true
+	done
+	# The NIC is the only one that matters; report on whether it appeared.
+	[ -d /sys/class/net/eth0 ]
+	eend $? "no virtio NIC — check that networking is enabled on the page"
+}
+EOF
+chmod +x "$ROOTFS/etc/init.d/vmdrivers"
+ln -sf /etc/init.d/vmdrivers "$ROOTFS/etc/runlevels/boot/vmdrivers" 2>/dev/null || true
 
 # Deliberately absent from every runlevel: hwdrivers, mdev-conf coldplug, modules.
 rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \

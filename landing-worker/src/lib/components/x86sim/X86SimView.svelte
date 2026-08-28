@@ -449,7 +449,10 @@
 	function captureKeyboard() {
 		if (phase !== 'running') return;
 		keyboardCaptured = true;
-		screenWrap?.focus();
+		// xterm reads from a hidden textarea it focuses on mousedown. Pulling focus
+		// up to the wrapper here left that textarea blurred, so the terminal took
+		// no typing at all — the VGA screen is the only mode that wants the focus.
+		if (settings.display !== 'terminal') screenWrap?.focus();
 	}
 
 	function releaseKeyboard() {
@@ -457,6 +460,9 @@
 	}
 
 	function onScreenKeydown(e: KeyboardEvent) {
+		// Only the VGA screen holds the keyboard hostage, so only it needs a way
+		// out. In terminal mode Escape is the guest's — vim and tmux need it.
+		if (settings.display === 'terminal') return;
 		// Escape is the way back out; everything else belongs to the guest.
 		if (e.key === 'Escape') {
 			e.preventDefault();
@@ -777,7 +783,7 @@
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div
 		bind:this={screenWrap}
-		tabindex={phase === 'running' ? 0 : -1}
+		tabindex={phase === 'running' && settings.display !== 'terminal' ? 0 : -1}
 		role="application"
 		aria-label="Emulated PC screen"
 		onfocus={captureKeyboard}
@@ -801,7 +807,7 @@
 		<div
 			bind:this={screenEl}
 			class="absolute left-1/2 top-1/2 {settings.display === 'terminal' ? 'hidden' : ''}"
-			style="transform: translate(-50%, -50%) scale({screenScale}); transform-origin: center center"
+			style="width: max-content; transform: translate(-50%, -50%) scale({screenScale}); transform-origin: center center"
 		>
 			<!-- Line height has to exceed the font size or descenders are clipped:
 			     v86 lays each text row out in exactly this box. -->
