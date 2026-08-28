@@ -272,8 +272,12 @@
 								type: 'virtio' as const,
 								relay_url: `${location.protocol === 'https:' ? 'wisps' : 'wisp'}://${location.host}/net/wisp`,
 								// v86's WISP backend answers ARP, DHCP and ping itself and
-								// resolves names over DoH, so only the streams reach us.
-								dns_method: 'doh' as const
+								// resolves names over DoH. The resolver has to be same-origin:
+								// the lookup is a fetch from this page, and a public resolver
+								// is a cross-origin request the browser will not make — which
+								// showed up as every name failing with "DNS: transient error".
+								dns_method: 'doh' as const,
+								doh_server: location.host
 							}
 						}
 					: {})
