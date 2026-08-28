@@ -55,6 +55,7 @@
 		<span class="text-[#e06c75] hidden sm:inline">"krsz-edge-node"</span>
 		{#if edgeLabel}
 			<span
+				data-tour="edge"
 				title={edgeTitle}
 				class="text-[11px] sm:text-xs {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
 			>

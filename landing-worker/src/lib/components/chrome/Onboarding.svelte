@@ -1,81 +1,150 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { onMount, tick } from 'svelte';
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
-	import { TAB_ROUTES } from '../../routes-map';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
 
 	let { onClose }: { onClose: () => void } = $props();
 
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 
-	interface Row {
-		key?: string;
-		label: string;
-		desc: string;
-		color?: string;
-		/** Optional action that demonstrates the step instead of describing it. */
+	interface Step {
+		/** `data-tour` value of the element this step points at. */
+		target: string;
+		title: string;
+		body: string;
+		/** Keys worth showing next to the copy — the real bindings, nothing invented. */
+		keys?: { key: string; desc: string }[];
+		color: string;
+		/** Optional button that demonstrates the step instead of describing it. */
 		action?: { label: string; run: () => void };
 	}
 
-	interface Step {
-		title: string;
-		lead: string;
-		rows: Row[];
-		footer?: string;
-	}
-
-	/** Every claim here mirrors what the code actually does — see +layout.svelte and console.ts. */
 	const STEPS: Step[] = [
 		{
-			title: 'WHAT THIS IS',
-			lead: 'A workbench for the things running on krsz.in, laid out like a tmux session. Five views, one shared console, and nothing decorative: every number you see is either measured in your browser or read from the service it describes.',
-			rows: [
-				{ label: 'RUNTIME', desc: 'Fully prerendered SvelteKit, served as static assets from a Cloudflare Worker', color: '#56b6c2' },
-				{ label: 'OPERATOR', desc: 'kurashizu — IT Masters @ UNSW, Sydney', color: '#61afef' },
-				{ label: 'RULE', desc: 'No invented metrics. Anything the browser will not tell us prints "n/a".', color: '#98c379' }
-			]
-		},
-		{
-			title: 'THE FIVE VIEWS',
-			lead: 'Switch with the tabs along the top, the launchpad in the sidebar, or Ctrl and a digit — the keys work even inside the keyboard tester and the piano.',
-			rows: [
-				{ key: 'Ctrl+0', label: 'MODULES', desc: 'Every live subdomain, with verified facts and a real architecture diagram', color: '#56b6c2' },
-				{ key: 'Ctrl+1', label: 'GUESTBOOK', desc: "Posts a message to blog.krsz.in's guestbook API", color: '#e06c75' },
-				{ key: 'Ctrl+2', label: 'SYNTH', desc: '8-track WebAudio synth: sequencer, piano roll, MIDI in, .mid import, WAV bounce', color: '#c678dd' },
-				{ key: 'Ctrl+3', label: 'UTILITIES', desc: 'Twelve hardware testers — keyboard, mouse, pen, audio in/out, camera, screen, network', color: '#e5c07b' },
-				{ key: 'Ctrl+4', label: 'LEADERBOARD', desc: 'The Artificial Analysis language-model table, sortable seven ways', color: '#98c379' }
-			]
-		},
-		{
-			title: 'THE CONSOLE',
-			lead: 'A small shell, opened as a drop-down over whatever view you are on. It is not a prop: the filesystem is a live projection of this site’s own data.',
-			rows: [
-				{ key: '`', label: 'OPEN', desc: 'Backquote from anywhere, or the ~ CONSOLE button top-left', color: '#98c379' },
-				{ key: 'help', label: 'COMMANDS', desc: 'The full list; "man <cmd>" explains one of them', color: '#56b6c2' },
-				{ key: 'ls / cd / cat', label: 'FILESYSTEM', desc: 'Browse /projects, /operator, /synth, /edge — try "cat /projects/share/facts.txt"', color: '#e5c07b' },
-				{ key: '|', label: 'PIPES', desc: 'grep, head, tail, sort, uniq, wc — "cat /projects/index | grep tube"', color: '#c678dd' },
-				{ key: 'trace', label: 'EDGE', desc: 'The Cloudflare PoP actually serving you, with a measured round trip', color: '#61afef' },
-				{ key: 'ping <name>', label: 'LATENCY', desc: 'Real round trips from your browser to each project origin', color: '#e06c75' }
+			target: 'tabs',
+			title: 'FIVE VIEWS',
+			body: 'Everything on this site lives in one of five views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
+			keys: [
+				{ key: 'Ctrl+0', desc: 'modules — the live projects, with real architecture diagrams' },
+				{ key: 'Ctrl+1', desc: 'guestbook — posts to blog.krsz.in' },
+				{ key: 'Ctrl+2', desc: 'synth — 8-track WebAudio workstation, .mid in, WAV out' },
+				{ key: 'Ctrl+3', desc: 'utilities — twelve hardware testers' },
+				{ key: 'Ctrl+4', desc: 'leaderboard — the Artificial Analysis model table' }
 			],
-			footer: 'Tab completes and cycles, → accepts the ghost suggestion, ↑↓ walk a history that survives reloads.'
+			color: '#56b6c2'
 		},
 		{
-			title: 'EVERY SHORTCUT',
-			lead: 'These work globally. The synth adds a QWERTY piano on top — press ? any time for the complete map.',
-			rows: [
-				{ key: 'Ctrl+0…4', label: 'VIEWS', desc: 'Switch view, always, from anywhere' },
-				{ key: '`', label: 'CONSOLE', desc: 'Toggle the drop-down console', color: '#98c379' },
-				{ key: '? / F1', label: 'KEYMAP', desc: 'The full reference, including the piano keys', color: '#61afef' },
-				{ key: 'T', label: 'THEME', desc: 'Cycle tokyo / gruvbox / nord / amber', color: '#e5c07b' },
-				{ key: 'Esc', label: 'CLOSE', desc: 'Dismiss whichever overlay is open' }
-			]
+			target: 'panel',
+			title: 'THE WORKBENCH',
+			body: 'The active view fills this panel. Nothing in it is decorative: every latency, level and capability you see was measured in your browser or read from the service it describes. Where a browser refuses to answer, it prints "n/a" instead of a plausible number.',
+			color: '#e5c07b'
+		},
+		{
+			target: 'console-btn',
+			title: 'THE CONSOLE',
+			body: 'A small shell, dropped down over whatever view you are on. Its filesystem is a live projection of this site’s own data, so it cannot drift out of date.',
+			keys: [
+				{ key: '` backquote', desc: 'open or close it from anywhere' },
+				{ key: 'help', desc: 'the command list; man <cmd> explains one' },
+				{ key: 'ls / cd / cat', desc: 'browse /projects, /operator, /synth, /edge' },
+				{ key: 'cmd | cmd', desc: 'pipe into grep, head, tail, sort, uniq, wc' },
+				{ key: 'trace', desc: 'the Cloudflare PoP actually serving you' }
+			],
+			color: '#98c379',
+			action: { label: 'OPEN IT', run: () => consoleOverlayOpen.set(true) }
+		},
+		{
+			target: 'launchpad',
+			title: 'LAUNCHPAD',
+			body: 'The same five views as pads, plus the theme switch. The sidebar above it is the operator profile; the banner at the top is just the name.',
+			keys: [{ key: 'T', desc: 'cycle theme — tokyo, gruvbox, nord, amber' }],
+			color: '#c678dd'
+		},
+		{
+			target: 'edge',
+			title: 'REAL EDGE, NOT A BADGE',
+			body: 'This reads /cdn-cgi/trace on every load: the Cloudflare point of presence that actually served you, the negotiated protocol and the TLS version. Run "trace" in the console for the full record with a measured round trip.',
+			color: '#61afef'
+		},
+		{
+			target: 'guide-btn',
+			title: 'THAT IS THE TOUR',
+			body: 'This button reopens the walkthrough any time — so does the "guide" command. For the complete keymap, including the synth’s QWERTY piano, press ? or F1.',
+			keys: [
+				{ key: '? / F1', desc: 'full keyboard reference' },
+				{ key: 'Esc', desc: 'close whichever overlay is open' }
+			],
+			color: '#e06c75',
+			action: { label: 'SHOW KEYMAP', run: () => hotkeyOverlayOpen.set(true) }
 		}
 	];
 
+	interface Box {
+		x: number;
+		y: number;
+		w: number;
+		h: number;
+	}
+
 	let index = $state(0);
+	let box = $state<Box | null>(null);
+	/** Which side of the target the bubble sits on. */
+	let placement = $state<'top' | 'bottom'>('bottom');
+	let bubbleStyle = $state('');
+	let bubbleEl: HTMLDivElement | undefined = $state();
+
 	let step = $derived(STEPS[index]);
 	let isLast = $derived(index === STEPS.length - 1);
+
+	const PAD = 6;
+	const GAP = 14;
+
+	function targetEl(name: string): HTMLElement | null {
+		const el = document.querySelector<HTMLElement>(`[data-tour="${name}"]`);
+		if (!el) return null;
+		const r = el.getBoundingClientRect();
+		// A zero-sized or fully hidden anchor cannot be pointed at.
+		return r.width > 0 && r.height > 0 ? el : null;
+	}
+
+	/** Measure the current target and park the bubble beside it, inside the viewport. */
+	async function place() {
+		const el = targetEl(step.target);
+		if (!el) {
+			box = null;
+			bubbleStyle = 'left: 50%; top: 50%; transform: translate(-50%, -50%);';
+			return;
+		}
+		el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		const r = el.getBoundingClientRect();
+		box = { x: r.left, y: r.top, w: r.width, h: r.height };
+
+		await tick();
+		const vw = window.innerWidth;
+		const vh = window.innerHeight;
+		const bw = Math.min(bubbleEl?.offsetWidth || 360, vw - 16);
+		const bh = bubbleEl?.offsetHeight || 220;
+
+		// Prefer below; flip above when the target sits low on the screen.
+		const below = r.bottom + GAP;
+		placement = below + bh <= vh - 8 ? 'bottom' : 'top';
+		const top = placement === 'bottom' ? below : Math.max(8, r.top - GAP - bh);
+
+		// Centre on the target, then pull back inside the viewport.
+		let left = r.left + r.width / 2 - bw / 2;
+		left = Math.max(8, Math.min(left, vw - bw - 8));
+		bubbleStyle = `left: ${Math.round(left)}px; top: ${Math.round(top)}px; width: ${Math.round(bw)}px;`;
+	}
+
+	/** Arrow x, relative to the bubble, so it still points at the target after clamping. */
+	let arrowLeft = $derived.by(() => {
+		if (!box || !bubbleStyle) return null;
+		const bubbleX = parseFloat(bubbleStyle.match(/left: (-?[\d.]+)px/)?.[1] ?? '0');
+		const bubbleW = parseFloat(bubbleStyle.match(/width: ([\d.]+)px/)?.[1] ?? '0');
+		const centre = box.x + box.w / 2 - bubbleX;
+		return Math.max(14, Math.min(centre, bubbleW - 14));
+	});
 
 	function next() {
 		if (isLast) {
@@ -92,105 +161,134 @@
 		playSound('click');
 	}
 
-	function finishAnd(run: () => void) {
+	function runAction() {
+		const action = step.action;
 		onClose();
-		run();
+		action?.run();
 	}
+
+	function onKeydown(e: KeyboardEvent) {
+		if (e.key === 'ArrowRight' || e.key === 'Enter') {
+			e.preventDefault();
+			next();
+		} else if (e.key === 'ArrowLeft') {
+			e.preventDefault();
+			back();
+		}
+	}
+
+	// Re-measure whenever the step changes, and keep up with layout changes.
+	$effect(() => {
+		index;
+		$theme;
+		void place();
+	});
+
+	onMount(() => {
+		const onResize = () => void place();
+		window.addEventListener('resize', onResize);
+		window.addEventListener('scroll', onResize, true);
+		window.addEventListener('keydown', onKeydown);
+		return () => {
+			window.removeEventListener('resize', onResize);
+			window.removeEventListener('scroll', onResize, true);
+			window.removeEventListener('keydown', onKeydown);
+		};
+	});
 </script>
 
+<!-- Click catcher: the tour drives itself, so nothing underneath is clickable -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[170] bg-black/75 backdrop-blur-[2px] flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto" onclick={onClose}>
+<div class="fixed inset-0 z-[166]" onclick={(e) => e.stopPropagation()}></div>
+
+{#if box}
+	<!-- Spotlight: a hole punched out of a huge shadow, so the anchor stays lit -->
 	<div
-		class="w-full max-w-2xl {themeStyles.cardBg} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono my-auto"
-		onclick={(e) => e.stopPropagation()}
-	>
-		<div class="flex items-center justify-between px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBg} rounded-t-sm">
-			<span class="text-xs sm:text-sm font-black" style="color: {themeStyles.cursorColor}">
-				┌─[ GETTING STARTED · {index + 1}/{STEPS.length} ]─┐
-			</span>
-			<button onclick={onClose} class="text-xs text-white/50 hover:text-white cursor-pointer">[ SKIP ]</button>
-		</div>
+		class="fixed z-[168] pointer-events-none rounded-sm transition-all duration-200 ease-out"
+		style="left: {box.x - PAD}px; top: {box.y - PAD}px; width: {box.w + PAD * 2}px; height: {box.h + PAD * 2}px;
+		       box-shadow: 0 0 0 9999px rgba(0,0,0,0.72); border: 2px solid {step.color};"
+	></div>
+{:else}
+	<div class="fixed inset-0 z-[168] bg-black/72 pointer-events-none"></div>
+{/if}
 
-		<div class="p-3 sm:p-4 space-y-3">
-			<div>
-				<div class="text-sm sm:text-base font-black tracking-wide" style="color: {themeStyles.cursorColor}">{step.title}</div>
-				<p class="text-[11px] sm:text-xs text-white/60 leading-relaxed mt-1">{step.lead}</p>
-			</div>
+<div
+	bind:this={bubbleEl}
+	class="fixed z-[170] max-w-[min(420px,92vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono"
+	style="{bubbleStyle} border-color: {step.color}88;"
+>
+	{#if box && arrowLeft !== null}
+		<div
+			class="absolute w-3 h-3 rotate-45 {themeStyles.cardBg}"
+			style="left: {arrowLeft - 6}px; {placement === 'bottom'
+				? `top: -7px; border-left: 2px solid ${step.color}88; border-top: 2px solid ${step.color}88;`
+				: `bottom: -7px; border-right: 2px solid ${step.color}88; border-bottom: 2px solid ${step.color}88;`}"
+		></div>
+	{/if}
 
-			<div class="space-y-1 max-h-[46vh] overflow-y-auto custom-scrollbar pr-1">
-				{#each step.rows as row (row.label)}
-					<div class="flex items-baseline gap-2 sm:gap-3 border border-white/10 bg-black/30 rounded-xs px-2 py-1.5">
-						{#if row.key}
-							<kbd
-								class="shrink-0 px-1.5 py-0.5 rounded-xs border bg-black/50 text-[10px] sm:text-xs font-bold whitespace-nowrap min-w-[74px] text-center"
-								style="border-color: {row.color ?? '#8892a0'}66; color: {row.color ?? '#d8dee9'}"
-							>
-								{row.key}
-							</kbd>
-						{/if}
-						<span class="shrink-0 text-[10px] sm:text-xs font-bold w-[84px] sm:w-[104px]" style="color: {row.color ?? '#d8dee9'}">
-							{row.label}
-						</span>
-						<span class="text-[11px] sm:text-xs text-white/65 leading-snug">{row.desc}</span>
+	<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
+		<span class="text-xs font-black tracking-wide" style="color: {step.color}">{step.title}</span>
+		<span class="text-[10px] text-white/35">{index + 1}/{STEPS.length}</span>
+	</div>
+
+	<div class="px-2.5 py-2 space-y-2">
+		<p class="text-[11px] sm:text-xs text-white/70 leading-relaxed">{step.body}</p>
+
+		{#if step.keys}
+			<div class="space-y-1">
+				{#each step.keys as k (k.key)}
+					<div class="flex items-baseline gap-2">
+						<kbd
+							class="shrink-0 px-1.5 py-0.5 rounded-xs border bg-black/50 text-[10px] font-bold whitespace-nowrap min-w-[84px] text-center"
+							style="border-color: {step.color}55; color: {step.color}"
+						>
+							{k.key}
+						</kbd>
+						<span class="text-[11px] text-white/60 leading-snug">{k.desc}</span>
 					</div>
 				{/each}
 			</div>
+		{/if}
+	</div>
 
-			{#if step.footer}
-				<p class="text-[10px] sm:text-[11px] text-white/40 leading-relaxed">{step.footer}</p>
-			{/if}
+	<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-t border-white/10">
+		<div class="flex items-center gap-1.5">
+			{#each STEPS as s, i (s.target)}
+				<button
+					onclick={() => (index = i)}
+					aria-label={`Step ${i + 1}: ${s.title}`}
+					class="w-1.5 h-1.5 rounded-full cursor-pointer transition-colors {i === index ? '' : 'bg-white/20 hover:bg-white/45'}"
+					style={i === index ? `background-color: ${s.color}` : undefined}
+				></button>
+			{/each}
+			<button onclick={onClose} class="ml-1.5 text-[10px] text-white/35 hover:text-white/70 cursor-pointer">SKIP</button>
 		</div>
 
-		<div class="flex items-center justify-between gap-2 px-3 py-2 border-t {themeStyles.border} {themeStyles.headerBg} rounded-b-sm">
-			<div class="flex items-center gap-1.5">
-				{#each STEPS as s, i (s.title)}
-					<button
-						onclick={() => (index = i)}
-						aria-label={`Step ${i + 1}: ${s.title}`}
-						class="w-2 h-2 rounded-full cursor-pointer transition-colors {i === index ? '' : 'bg-white/20 hover:bg-white/40'}"
-						style={i === index ? `background-color: ${themeStyles.cursorColor}` : undefined}
-					></button>
-				{/each}
-			</div>
-
-			<div class="flex items-center gap-1.5">
-				{#if isLast}
-					<button
-						onclick={() => finishAnd(() => consoleOverlayOpen.set(true))}
-						class="px-2.5 py-1 border border-[#98c379]/50 text-[#98c379] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#98c379]/20"
-					>
-						OPEN CONSOLE
-					</button>
-					<button
-						onclick={() => finishAnd(() => hotkeyOverlayOpen.set(true))}
-						class="px-2.5 py-1 border border-[#61afef]/50 text-[#61afef] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#61afef]/20 hidden sm:inline"
-					>
-						FULL KEYMAP
-					</button>
-				{:else if index === 1}
-					<button
-						onclick={() => finishAnd(() => goto(TAB_ROUTES[2]))}
-						class="px-2.5 py-1 border border-[#c678dd]/50 text-[#c678dd] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#c678dd]/20 hidden sm:inline"
-					>
-						JUMP TO SYNTH
-					</button>
-				{/if}
+		<div class="flex items-center gap-1.5">
+			{#if step.action}
 				<button
-					onclick={back}
-					disabled={index === 0}
-					class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+					onclick={runAction}
+					class="px-2 py-0.5 border rounded-xs text-[10px] font-bold cursor-pointer hover:bg-white/10"
+					style="border-color: {step.color}88; color: {step.color}"
 				>
-					BACK
+					{step.action.label}
 				</button>
-				<button
-					onclick={next}
-					class="px-3 py-1 border rounded-xs text-xs font-black cursor-pointer transition-colors"
-					style="border-color: {themeStyles.cursorColor}; color: {themeStyles.cursorColor}"
-				>
-					{isLast ? 'START' : 'NEXT'}
-				</button>
-			</div>
+			{/if}
+			<button
+				onclick={back}
+				disabled={index === 0}
+				class="px-2 py-0.5 border border-white/25 text-white/65 rounded-xs text-[10px] font-bold cursor-pointer hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+			>
+				BACK
+			</button>
+			<button
+				onclick={next}
+				class="px-2.5 py-0.5 border rounded-xs text-[10px] font-black cursor-pointer"
+				style="border-color: {step.color}; color: {step.color}"
+			>
+				{isLast ? 'DONE' : 'NEXT →'}
+			</button>
 		</div>
 	</div>
 </div>

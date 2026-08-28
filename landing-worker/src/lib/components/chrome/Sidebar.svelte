@@ -70,7 +70,7 @@
 	</div>
 
 	<!-- Hotkey launchpad -->
-	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
+	<div data-tour="launchpad" class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
 		<div class="text-xs font-bold text-[#e5c07b] flex items-center justify-between border-b border-white/10 pb-0.5 shrink-0">
 			<span>┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
 			<span class="text-white/50 text-xs">[CTRL+0-4 · T · ?]</span>

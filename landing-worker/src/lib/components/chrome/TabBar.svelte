@@ -51,6 +51,7 @@
 				toggleConsoleOverlay();
 				playSound('toggle');
 			}}
+			data-tour="console-btn"
 			title="Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]"
 			class="px-2 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 font-mono border {$consoleOverlayOpen
 				? 'border-[#98c379] bg-[#98c379] text-black font-black'
@@ -59,18 +60,20 @@
 			<span class="hidden 2xl:inline">~ CONSOLE</span><span class="2xl:hidden">~</span><span class="opacity-60 hidden 2xl:inline">&nbsp;`</span>
 		</button>
 
-		{#each TABS as tab (tab.id)}
-			<button
-				onclick={() => nav(tab.id)}
-				title={tab.title}
-				class="px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
-					? 'text-black font-black'
-					: 'hover:bg-white/10 text-[#d8dee9]'}"
-				style={activeTab === tab.id ? `background-color: ${tab.color}` : undefined}
-			>
-				{tab.label}
-			</button>
-		{/each}
+		<div class="flex items-center gap-1 sm:gap-2" data-tour="tabs">
+			{#each TABS as tab (tab.id)}
+				<button
+					onclick={() => nav(tab.id)}
+					title={tab.title}
+					class="px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
+						? 'text-black font-black'
+						: 'hover:bg-white/10 text-[#d8dee9]'}"
+					style={activeTab === tab.id ? `background-color: ${tab.color}` : undefined}
+				>
+					{tab.label}
+				</button>
+			{/each}
+		</div>
 	</div>
 
 	<div class="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
@@ -97,6 +100,7 @@
 				guideOpen.set(true);
 				playSound('click');
 			}}
+			data-tour="guide-btn"
 			title="Open the walkthrough — what each view does and every keyboard shortcut"
 			class="px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
 		>

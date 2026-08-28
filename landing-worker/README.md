@@ -23,7 +23,7 @@ Shared chrome (tab bar, sidebar, command console, telemetry footer, theme) lives
 
 Hotkeys: `Ctrl+0`-`Ctrl+4` switch view (always, even inside the key-capturing testers), `T` cycles theme, `` ` `` drops the console down over any tab, `?` or `F1` opens the full keymap.
 
-First-time visitors get a four-step walkthrough of the views, the console and the shortcuts (`Onboarding.svelte`); it is offered once, then only via the `[?] GUIDE` button or the `guide` console command.
+First-time visitors get a six-step guided tour (`Onboarding.svelte`): a spotlight ring around a real element with a bubble anchored beside it, walking through the tabs, the workbench panel, the console button, the sidebar launchpad and the footer's edge readout. Anchors are `data-tour` attributes on the chrome; a step whose anchor is missing at that viewport falls back to a centred bubble. It is offered once per browser, then only via the `[?] GUIDE` button, the `guide` console command, or `keys` for the keymap.
 
 Every page load starts with a short POST screen of real capability probes (GPU renderer string, storage quota, service-worker state, edge PoP) — any key skips it, and it never runs under `prefers-reduced-motion`. Tab switches are client-side navigation, so it does not reappear between views.
 
