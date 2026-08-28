@@ -39,7 +39,7 @@ apk add --root "$ROOTFS" --initdb --no-cache \
 	--allow-untrusted \
 	alpine-base "linux-${KERNEL_FLAVOR}" linux-firmware-none busybox-extras \
 	openrc util-linux e2fsprogs \
-	nano vim htop curl bash file tree tmux \
+	nano vim htop curl bash file tree tmux ncurses-terminfo \
 	openbox xterm xorg-server xf86-video-vesa xf86-input-libinput xinit \
 	font-misc-misc ttf-dejavu
 
@@ -72,14 +72,17 @@ cat > "$ROOTFS/etc/resolv.conf" <<'EOF'
 nameserver 192.168.86.1
 EOF
 
-# A serial getty is what the page attaches to. Keeping tty1 as well means the
+# A serial getty is what the page attaches to. The terminal type matters: tmux
+# only turns mouse reporting on for a terminal whose terminfo says it has a
+# mouse, and vt100 -- the usual default for a serial line -- does not.
+# Keeping tty1 as well means the
 # VGA screen still shows something if the serial view is ever swapped out.
 cat > "$ROOTFS/etc/inittab" <<'EOF'
 ::sysinit:/sbin/openrc sysinit
 ::sysinit:/sbin/openrc boot
 ::wait:/sbin/openrc default
 
-ttyS0::respawn:/sbin/getty -n -l /sbin/autologin -L 0 ttyS0 vt100
+ttyS0::respawn:/sbin/getty -n -l /sbin/autologin -L 0 ttyS0 xterm-256color
 tty1::respawn:/sbin/getty -n -l /sbin/autologin 38400 tty1
 
 ::ctrlaltdel:/sbin/reboot
@@ -89,6 +92,11 @@ EOF
 # This is a throwaway demo machine with no network services listening, and
 # prompting for a password nobody was given would just make it unusable.
 sed -i 's|^root:[^:]*:|root::|' "$ROOTFS/etc/shadow"
+
+# bash rather than ash for the login shell: it understands the \[ \] wrapping in
+# the prompt below, and it has PROMPT_COMMAND, which is how the terminal size
+# stays right for a whole session rather than only at login.
+sed -i 's|^\(root:.*\):/bin/[a-z]*$|\1:/bin/bash|' "$ROOTFS/etc/passwd"
 
 # getty -l runs this instead of /bin/login. Going through `login -f` rather than
 # exec'ing a shell directly keeps the profile, the motd and the login record.
@@ -170,9 +178,18 @@ alias ll='ls -la'
 # terminal where its cursor lands in the far corner and sets the size from the
 # answer — only on ttyS0, since the VGA console never replies and the read would
 # sit there waiting. `rs` re-runs it after the browser window changes.
-alias rs='resize >/dev/null'
+#
+# Doing it once at login is not enough either: the page is still settling its
+# layout then, and the window can be resized at any point afterwards. Re-asking
+# before each prompt costs one fork and keeps the size right for good.
+alias rs='resize >/dev/null 2>&1'
 case "$(tty)" in
-	/dev/ttyS*) command -v resize >/dev/null && resize >/dev/null 2>&1 ;;
+	/dev/ttyS*)
+		if command -v resize >/dev/null; then
+			resize >/dev/null 2>&1
+			[ -n "${BASH:-}" ] && PROMPT_COMMAND='resize >/dev/null 2>&1'
+		fi
+		;;
 esac
 EOF
 
