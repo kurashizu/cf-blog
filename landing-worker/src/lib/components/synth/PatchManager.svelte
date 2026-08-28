@@ -1,5 +1,7 @@
 <script lang="ts">
 	import PixelIcon from '../pixel/PixelIcon.svelte';
+	import Onboarding from '../chrome/Onboarding.svelte';
+	import { SYNTH_TOUR } from './synth-tour';
 	import {
 		BUILTIN_SONGS,
 		builtinSongIdx,
@@ -17,6 +19,7 @@
 	import { handleImportMidiFile, isMidiFile, importReport, clearImportReport } from '../../stores/synth-import';
 	import { handleRenderWav, renderPhase, renderProgress, renderReport, clearRenderReport } from '../../stores/synth-render';
 
+	let guideOpen = $state(false);
 	let fileInput: HTMLInputElement | undefined = $state();
 	let isLoadMenuOpen = $state(false);
 	let shareCopied = $state(false);
@@ -71,11 +74,22 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<div class="flex items-center gap-1.5 flex-wrap">
+<div data-tour="synth-transport" class="flex items-center gap-1.5 flex-wrap">
 	<div class="flex items-center gap-1.5 bg-[#c678dd]/20 border border-[#c678dd]/60 px-2 py-0.5 rounded-xs mr-0.5 select-none shadow-[0_0_8px_rgba(198,120,221,0.25)]">
 		<PixelIcon name="audio" size={16} class="text-[#c678dd]" />
 		<span class="font-black text-xs text-white tracking-wider">KRSZ SYNTH</span>
+		<button
+			onclick={() => (guideOpen = true)}
+			title="Walk through the synth — what each rack does, and how to get a sound out of it"
+			class="ml-0.5 w-4 h-4 rounded-full border border-[#c678dd]/60 text-[#c678dd] text-[10px] leading-none font-black cursor-pointer hover:bg-[#c678dd] hover:text-black transition-colors flex items-center justify-center"
+		>
+			?
+		</button>
 	</div>
+
+	{#if guideOpen}
+		<Onboarding steps={SYNTH_TOUR} heading="SYNTH TOUR" onClose={() => (guideOpen = false)} />
+	{/if}
 
 	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,.mid,.midi,audio/midi" class="hidden" />
 

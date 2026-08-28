@@ -42,7 +42,7 @@
 	}
 </script>
 
-<div class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar ml-auto">
+<div data-tour="synth-tracks" class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar ml-auto">
 	<button
 		onclick={toggleOverlayMode}
 		class="px-2 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0 {$isOverlayMode

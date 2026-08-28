@@ -4,11 +4,15 @@
 	import { theme, THEME_STYLES } from '../../stores/theme';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
 
-	let { onClose }: { onClose: () => void } = $props();
+	let {
+		onClose,
+		steps,
+		heading = 'GETTING STARTED'
+	}: { onClose: () => void; steps?: Step[]; heading?: string } = $props();
 
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 
-	interface Step {
+	export interface Step {
 		/** `data-tour` value of the element this step points at. */
 		target: string;
 		title: string;
@@ -20,7 +24,7 @@
 		action?: { label: string; run: () => void };
 	}
 
-	const STEPS: Step[] = [
+	const SITE_STEPS: Step[] = [
 		{
 			target: 'tabs',
 			title: 'SIX VIEWS',
@@ -95,6 +99,7 @@
 	let bubbleStyle = $state('');
 	let bubbleEl: HTMLDivElement | undefined = $state();
 
+	let STEPS = $derived(steps ?? SITE_STEPS);
 	let step = $derived(STEPS[index]);
 	let isLast = $derived(index === STEPS.length - 1);
 
