@@ -56,6 +56,22 @@ cat > "$ROOTFS/etc/fstab" <<'EOF'
 /dev/sda	/	ext4	rw,relatime	0 1
 EOF
 
+# v86's network backend runs a DHCP server, so the guest only has to ask.
+mkdir -p "$ROOTFS/etc/network"
+cat > "$ROOTFS/etc/network/interfaces" <<'EOF'
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+EOF
+
+# A resolver to fall back on if the lease ever arrives without one; udhcpc
+# rewrites this when it does.
+cat > "$ROOTFS/etc/resolv.conf" <<'EOF'
+nameserver 192.168.86.1
+EOF
+
 # A serial getty is what the page attaches to. Keeping tty1 as well means the
 # VGA screen still shows something if the serial view is ever swapped out.
 cat > "$ROOTFS/etc/inittab" <<'EOF'
@@ -161,6 +177,11 @@ mkdir -p "$ROOTFS/etc/runlevels/boot" "$ROOTFS/etc/runlevels/default" "$ROOTFS/e
 for svc in bootmisc hostname syslog; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/boot/$svc" 2>/dev/null || true
 done
+# The NIC needs configuring, which needs the networking service — leaving it out
+# is why the guest had no address, no route, and a resolver pointing at
+# 127.0.0.1 while the relay sat there unused.
+ln -sf /etc/init.d/networking "$ROOTFS/etc/runlevels/boot/networking" 2>/dev/null || true
+
 # Deliberately absent from every runlevel: hwdrivers, mdev-conf coldplug, modules.
 rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \
 	"$ROOTFS/etc/runlevels/boot/modules" \
