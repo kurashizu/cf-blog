@@ -408,13 +408,45 @@ class ModularSynth {
   private onStepListeners: Set<(step: number) => void> = new Set();
   private onNoteListeners: Set<(trackId: number, noteIndex: number, noteName: string, durationMs: number) => void> = new Set();
 
+  /**
+   * Non-null only for the duration of renderOffline(). While it is set, every
+   * node the engine builds goes into the offline graph instead of the live one,
+   * and the real-time bookkeeping (voice stealing, cleanup timers, mute) is
+   * bypassed — an offline render has no "now" for any of it to be relative to.
+   */
+  private renderCtx: OfflineAudioContext | null = null;
+
+  /** The context the engine should build into right now. */
+  private audioCtx(): AudioContext | null {
+    return (this.renderCtx as unknown as AudioContext | null) ?? soundEngine.init();
+  }
+
+  private renderMaster: GainNode | null = null;
+
+  /**
+   * Where the master bus terminates: the sound engine's fader, or — while
+   * rendering — a stand-in fader at the same volume, so a bounce is as loud as
+   * what you actually hear rather than however loud the raw chain happens to be.
+   */
+  private masterOut(ctx: AudioContext): AudioNode {
+    if (this.renderCtx) {
+      if (!this.renderMaster) {
+        this.renderMaster = ctx.createGain();
+        this.renderMaster.gain.value = soundEngine.getVolume();
+        this.renderMaster.connect(ctx.destination);
+      }
+      return this.renderMaster;
+    }
+    return (soundEngine as any).masterGain || ctx.destination;
+  }
+
   constructor() {
     this.initNoiseBuffer();
   }
 
   public regenerateNoiseBuffer() {
     if (typeof window === 'undefined') return;
-    const ctx = soundEngine.init();
+    const ctx = this.audioCtx();
     if (!ctx) return;
 
     const bufferSize = Math.floor(ctx.sampleRate * Math.max(0.5, Math.min(5.0, this.noiseBufferDuration)));
@@ -458,7 +490,7 @@ class ModularSynth {
 
   public regenerateReverbBuffer() {
     if (typeof window === 'undefined') return;
-    const ctx = soundEngine.init();
+    const ctx = this.audioCtx();
     if (!ctx || !this.reverbConvolver) return;
 
     const rate = ctx.sampleRate;
@@ -509,7 +541,7 @@ class ModularSynth {
     }
     this.reverbConvolver.buffer = impulse;
 
-    const masterGain = (soundEngine as any).masterGain || ctx.destination;
+    const masterGain = this.masterOut(ctx);
 
     // Master bus: track chains + wet FX returns -> drive shaper -> masterGain.
     // (The shaper is an identity curve at drive 0, so it is bit-transparent by default.)
@@ -928,22 +960,26 @@ class ModularSynth {
 
   public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number, rawVelocity?: number) {
     const track = this.tracks[trackId];
-    if (!track || soundEngine.isMuted()) return;
+    // Muting silences live playback, but must not silence an offline render.
+    if (!track || (!this.renderCtx && soundEngine.isMuted())) return;
 
     const noteInfo = PIANO_ROLL_NOTES[noteIndex];
     if (!noteInfo) return;
 
     const acc = typeof accentLevel === 'boolean' ? (accentLevel ? 1 : 0) : (accentLevel || 0);
 
-    const ctx = soundEngine.init();
+    const ctx = this.audioCtx();
     if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    // An OfflineAudioContext also reports "suspended" before startRendering();
+    // resuming it here would begin the render mid-schedule.
+    if (!this.renderCtx && ctx.state === 'suspended') ctx.resume().catch(() => {});
 
     this.initMasterFX(ctx);
 
     // Overload guard: steal the oldest voice rather than let the live graph
-    // grow without bound (Map iteration order is insertion order).
-    if (this.activeVoices.size >= 64) {
+    // grow without bound (Map iteration order is insertion order). Offline
+    // voices all carry explicit start/stop times, so none of them is "active".
+    if (!this.renderCtx && this.activeVoices.size >= 64) {
       const oldest = this.activeVoices.keys().next().value;
       if (oldest) this.stopVoice(oldest);
     }
@@ -952,7 +988,7 @@ class ModularSynth {
     const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
     const tuningScale = this.masterTuningFreq / 440.0;
     const baseFreq = noteInfo.freq * tuningScale;
-    const masterGain = (soundEngine as any).masterGain || ctx.destination;
+    const masterGain = this.masterOut(ctx);
 
     // ──────────────────────────────────────────────────────────────────────────
     // NODE 1 & NODE 2: DUAL INPUT WAVEFORM GENERATORS & TIMBRE FUSION
@@ -1324,10 +1360,14 @@ class ModularSynth {
 
       // onended fires off the audio clock even when background-tab timer
       // throttling delays the setTimeout fallback by seconds or minutes.
-      const endSrc = osc1 ?? osc2 ?? noiseSource;
-      if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
-      const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
-      void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
+      // Neither applies offline: wall-clock reaping there would disconnect
+      // nodes the renderer has not reached yet.
+      if (!this.renderCtx) {
+        const endSrc = osc1 ?? osc2 ?? noiseSource;
+        if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
+        const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
+        void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
+      }
     }
 
     voiceMix.connect(filter);
@@ -1358,20 +1398,24 @@ class ModularSynth {
       if (this.reverbConvolver && this.reverbMix > 0) finalVoiceNode.connect(this.reverbConvolver);
     }
 
-    this.activeVoices.set(voiceKey, {
-      osc1,
-      osc2,
-      noise: noiseSource,
-      filter,
-      gain: gainNode,
-      lfo,
-      panNode: panner,
-      startTime: t,
-      ampRel,
-      vcfRel,
-      baseCutoff,
-      isContinuousHold,
-    });
+    // The live voice map exists so held notes can be released and stolen; an
+    // offline render would only accumulate entries nothing ever reads.
+    if (!this.renderCtx) {
+      this.activeVoices.set(voiceKey, {
+        osc1,
+        osc2,
+        noise: noiseSource,
+        filter,
+        gain: gainNode,
+        lfo,
+        panNode: panner,
+        startTime: t,
+        ampRel,
+        vcfRel,
+        baseCutoff,
+        isContinuousHold,
+      });
+    }
 
     return voiceKey;
   }
@@ -1616,6 +1660,129 @@ class ModularSynth {
     this.uiTimer = window.setInterval(() => {
       this.checkUIQueue();
     }, 16);
+  }
+
+  /** Seconds the current pattern occupies at the current tempo. */
+  public getPatternSeconds(): number {
+    return (this.totalSteps * 60) / this.bpm / STEPS_PER_BEAT;
+  }
+
+  /** The node cache that belongs to one AudioContext and cannot outlive it. */
+  private graphCache() {
+    return {
+      noiseBuffer: this.noiseBuffer,
+      delayNode: this.delayNode,
+      delayFeedbackGain: this.delayFeedbackGain,
+      delayWetGain: this.delayWetGain,
+      reverbConvolver: this.reverbConvolver,
+      reverbWetGain: this.reverbWetGain,
+      waveShaper: this.waveShaper,
+      masterBusIn: this.masterBusIn,
+      trackBuses: this.trackBuses,
+    };
+  }
+
+  private restoreGraphCache(cache: ReturnType<ModularSynth['graphCache']>) {
+    this.noiseBuffer = cache.noiseBuffer;
+    this.delayNode = cache.delayNode;
+    this.delayFeedbackGain = cache.delayFeedbackGain;
+    this.delayWetGain = cache.delayWetGain;
+    this.reverbConvolver = cache.reverbConvolver;
+    this.reverbWetGain = cache.reverbWetGain;
+    this.waveShaper = cache.waveShaper;
+    this.masterBusIn = cache.masterBusIn;
+    this.trackBuses = cache.trackBuses;
+  }
+
+  private clearGraphCache() {
+    this.restoreGraphCache({
+      noiseBuffer: null,
+      delayNode: null,
+      delayFeedbackGain: null,
+      delayWetGain: null,
+      reverbConvolver: null,
+      reverbWetGain: null,
+      waveShaper: null,
+      masterBusIn: null,
+      trackBuses: [],
+    });
+  }
+
+  /**
+   * Render the whole pattern through this exact signal chain into an
+   * AudioBuffer. The live node graph is set aside and put back afterwards, so
+   * playback and the visualizers are unaffected. Unlike a MediaRecorder
+   * capture this carries no scheduling jitter, ends exactly on the pattern,
+   * and does not require listening to the song in real time — but it is not
+   * necessarily quicker: a dense multi-minute pattern can render slower than
+   * it plays, which is why progress is reported.
+   */
+  public async renderOffline(
+    options: {
+      sampleRate?: number;
+      tailSeconds?: number;
+      /** Called with 'schedule' | 'render' and a 0..1 fraction. */
+      onProgress?: (phase: 'schedule' | 'render', fraction: number) => void;
+    } = {}
+  ): Promise<AudioBuffer> {
+    if (typeof OfflineAudioContext === 'undefined') throw new Error('OfflineAudioContext is unavailable in this browser.');
+    if (this.renderCtx) throw new Error('A render is already running.');
+
+    const sampleRate = options.sampleRate ?? 48000;
+    // Long releases and the delay/reverb tails need room past the last step.
+    const tailSeconds = options.tailSeconds ?? 2.5;
+    const stepDuration = 60 / this.bpm / STEPS_PER_BEAT;
+    const seconds = this.getPatternSeconds() + tailSeconds;
+    const frames = Math.ceil(seconds * sampleRate);
+    const offline = new OfflineAudioContext(2, frames, sampleRate);
+
+    const live = this.graphCache();
+    this.renderCtx = offline;
+    this.clearGraphCache();
+    try {
+      const ctx = offline as unknown as AudioContext;
+      this.regenerateNoiseBuffer();
+      this.initMasterFX(ctx);
+      this.regenerateReverbBuffer();
+
+      // Building thousands of voices is a long synchronous stretch — yield
+      // periodically so the progress readout can actually paint.
+      const YIELD_EVERY = 480;
+      for (let step = 0; step < this.totalSteps; step++) {
+        this.scheduleStepAudio(step, step * stepDuration);
+        if (step % YIELD_EVERY === 0) {
+          options.onProgress?.('schedule', step / this.totalSteps);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+      options.onProgress?.('schedule', 1);
+
+      // Suspend/resume checkpoints turn the render itself into real progress
+      // rather than an unbounded wait.
+      if (options.onProgress) {
+        const marks = 40;
+        for (let i = 1; i < marks; i++) {
+          const at = (seconds * i) / marks;
+          void offline
+            .suspend(at)
+            .then(() => {
+              options.onProgress?.('render', i / marks);
+              void offline.resume();
+            })
+            .catch(() => {
+              /* a checkpoint past the buffer, or an aborted render — ignore */
+            });
+        }
+      }
+
+      const buffer = await offline.startRendering();
+      options.onProgress?.('render', 1);
+      return buffer;
+    } finally {
+      this.renderCtx = null;
+      this.renderMaster = null;
+      this.restoreGraphCache(live);
+    }
   }
 
   private schedulerLoop() {

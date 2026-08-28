@@ -145,6 +145,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 ];
 
 export const builtinSongIdx = writable<number>(DEFAULT_SONG_IDX);
+/** What is loaded right now — used to name exports. Set by every loader. */
+export const currentSongName = writable<string>(BUILTIN_SONGS[DEFAULT_SONG_IDX]?.name ?? 'patch');
 export const soundPresetIdx = writable<number>(0);
 export const saveStatus = writable<string | null>(null);
 
@@ -172,6 +174,7 @@ export function handleNewProject(): void {
 	setBpm(120);
 	timeMeter.set('4/4');
 	refreshTracks();
+	currentSongName.set('blank');
 	showSaveStatus('✓ NEW');
 	playSound('click');
 }
@@ -188,6 +191,7 @@ export function handleLoadBuiltinSong(idx: number): void {
 	isOverlayMode.set(true);
 	overlayTrackIds.set([0, 1, 2, 3]);
 	refreshTracks();
+	currentSongName.set(song.name);
 	showSaveStatus(`✓ ${song.name}`);
 	playSound('toggle');
 }

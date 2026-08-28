@@ -14,10 +14,21 @@
 		shareUrlFallback,
 		copyText
 	} from '../../stores/synth-patch';
+	import { handleImportMidiFile, isMidiFile, importReport, clearImportReport } from '../../stores/synth-import';
+	import { handleRenderWav, renderPhase, renderProgress, renderReport, clearRenderReport } from '../../stores/synth-render';
 
 	let fileInput: HTMLInputElement | undefined = $state();
 	let isLoadMenuOpen = $state(false);
 	let shareCopied = $state(false);
+
+	/** Import and render both report into the same popover; only one is ever set. */
+	let report = $derived($importReport ?? $renderReport);
+	let reportIsError = $derived((report?.[0] ?? '').startsWith('✕'));
+
+	function dismissReport() {
+		clearImportReport();
+		clearRenderReport();
+	}
 
 	// Any popover open/close transition resets the ✓ state.
 	$effect(() => {
@@ -36,7 +47,10 @@
 
 	function onImportChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
-		if (file) handleImportPatchFile(file);
+		if (file) {
+			if (isMidiFile(file)) void handleImportMidiFile(file);
+			else handleImportPatchFile(file);
+		}
 		if (fileInput) fileInput.value = '';
 	}
 
@@ -63,7 +77,7 @@
 		<span class="font-black text-xs text-white tracking-wider">KRSZ SYNTH</span>
 	</div>
 
-	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json" class="hidden" />
+	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,.mid,.midi,audio/midi" class="hidden" />
 
 	<button onclick={handleNewProject} title="New Project — Clear all tracks and reset to blank 64-step sequencer" class="px-2 py-0.5 border border-white/20 text-white/80 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs">
 		NEW
@@ -118,12 +132,29 @@
 		{/if}
 	</div>
 
-	<button onclick={() => fileInput?.click()} class="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Import Patch — Load a previously exported JSON synthesizer patch file">
+	<button onclick={() => fileInput?.click()} class="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Import — A previously exported JSON patch, or a .mid file: every MIDI track becomes a sequencer track, with the file's own tempo and time signature. You can also drop the file anywhere on this page.">
 		IMP
 	</button>
 
 	<button onclick={handleExportPatch} class="px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file">
 		EXP
+	</button>
+
+	<button
+		onclick={handleRenderWav}
+		disabled={$renderPhase === 'rendering'}
+		class="px-2 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs disabled:cursor-wait {$renderPhase === 'rendering'
+			? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
+			: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
+		title="Render WAV — Bounce the whole pattern through the real signal chain offline and download it as 16-bit stereo WAV. A dense multi-minute song can take a minute or two; the button shows live progress."
+	>
+		{#if $renderPhase === 'rendering'}
+			{$renderProgress
+				? `${$renderProgress.stage === 'schedule' ? 'SCHED' : 'RENDER'} ${Math.round($renderProgress.fraction * 100)}%`
+				: 'RENDERING…'}
+		{:else}
+			WAV
+		{/if}
 	</button>
 
 	<!-- SHARE + its blocked-clipboard popover: absolutely positioned so it never reflows the rack -->
@@ -171,3 +202,23 @@
 		<span class="text-[#98c379] font-bold text-xs ml-1">{$saveStatus}</span>
 	{/if}
 </div>
+
+{#if report}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-[120] bg-black/40" onclick={dismissReport}></div>
+	<div
+		class="fixed z-[130] left-1/2 top-16 -translate-x-1/2 w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 space-y-1 font-mono"
+		style="border-color: {reportIsError ? '#e06c75' : '#98c379'}88"
+	>
+		<div class="flex items-start justify-between gap-2 border-b border-white/10 pb-1.5">
+			<span class="text-xs font-black break-all" style="color: {reportIsError ? '#e06c75' : '#98c379'}">{report[0]}</span>
+			<button onclick={dismissReport} class="text-xs text-white/50 hover:text-white cursor-pointer shrink-0">[ ✕ ]</button>
+		</div>
+		<div class="text-[11px] text-white/70 leading-relaxed whitespace-pre-wrap max-h-[46vh] overflow-y-auto custom-scrollbar">
+			{#each report.slice(1) as line, i (i)}
+				<div>{line}</div>
+			{/each}
+		</div>
+	</div>
+{/if}
