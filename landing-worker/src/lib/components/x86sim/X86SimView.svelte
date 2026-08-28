@@ -400,17 +400,16 @@
 	}
 
 	/** The real path a guest disk read takes — every hop here exists in the repo. */
-	const TOPOLOGY = `flowchart LR
-    subgraph browser["Your browser tab"]
-        V["v86 — x86-to-wasm JIT"]
-        G["Alpine Linux (32-bit)"]
-        G --- V
+	const TOPOLOGY = `flowchart TB
+    subgraph tab["Your browser tab"]
+        direction LR
+        G["Alpine Linux<br/>32-bit x86"] --- V["v86<br/>x86-to-wasm JIT"]
     end
-    V -->|"bzimage + initrd, loaded whole"| W
-    V -->|"HTTP Range, 1 MiB chunks"| W["Worker /vm/img"]
+    V -->|"kernel + initrd<br/>loaded whole"| W["Worker<br/>/vm/img"]
+    V -->|"disk: HTTP Range<br/>1 MiB chunks"| W
     W --> C{{"Edge cache"}}
-    C -->|miss| R[("R2: vm/*")]
-    B["CI: build-vm-image"] -->|"apk + mke2fs -d"| R`;
+    C -->|"miss"| R[("R2<br/>vm/*")]
+    B["CI<br/>build-vm-image"] -->|"apk + mke2fs -d"| R`;
 
 	let fetchedBytes = $derived(chunksFetched * CHUNK);
 	let imageMiB = $derived(imageSize === null ? null : imageSize / 1024 / 1024);

@@ -117,10 +117,16 @@ echo "==> kernel modules version: $KVER"
 # the guest still came up with host0/target0:0:0:0 present and no /dev/sda —
 # nothing had bound sd_mod, the upper-level disk driver. Listing the modules
 # explicitly is deterministic in a way that feature names are not.
+#
+# scsi_common has to be here too. modules.dep records sd_mod as depending on
+# both scsi_mod and scsi_common, and modprobe fails quietly when a dependency is
+# missing from the initramfs — which is precisely how the disk kept enumerating
+# with no block device behind it.
 mkdir -p "$ROOTFS/etc/mkinitfs/features.d"
 cat > "$ROOTFS/etc/mkinitfs/features.d/v86.modules" <<'EOF'
 kernel/drivers/ata
 kernel/drivers/scsi/scsi_mod.ko*
+kernel/drivers/scsi/scsi_common.ko*
 kernel/drivers/scsi/sd_mod.ko*
 kernel/drivers/scsi/sr_mod.ko*
 kernel/drivers/cdrom
