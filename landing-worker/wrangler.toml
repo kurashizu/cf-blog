@@ -48,7 +48,7 @@ OMNIPROXY_ALLOW = "alpinelinux.org:443,krsz.in:443"
 # proxied; the proxy caches 1 MiB chunks at the edge, which is what makes a
 # 49 MiB ISO practical to boot more than once. Point these at R2 later without
 # touching any code.
-VM_IMAGES = "vmlinuz|r2:vm/vmlinuz|8651264,initramfs|r2:vm/initramfs|9744998,rootfs|r2:vm/rootfs.img@209715200|595591168,alpine|https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/alpine-virt-3.24.1-x86.iso|51380224"
+VM_IMAGES = "vmlinuz|r2:vm/vmlinuz|8651264,initramfs|r2:vm/initramfs|9744101,rootfs|r2:vm/rootfs.img@209715200|595591168,alpine|https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/alpine-virt-3.24.1-x86.iso|51380224"
 
 [observability]
 enabled = false
