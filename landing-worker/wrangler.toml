@@ -12,6 +12,15 @@ directory = ".svelte-kit/cloudflare"
 # configured in the Cloudflare Dashboard — not declared here on purpose.
 # Apex domain is centralized in `shared/site-config.ts` (APEX_DOMAIN).
 
+# Network relay for the (upcoming) Linux VM view — `src/routes/net/+server.ts`.
+# All three are set out-of-band so the public repo never carries the endpoint or
+# its token:
+#   npx wrangler secret put OMNIPROXY_URL     # e.g. https://host.example/
+#   npx wrangler secret put OMNIPROXY_TOKEN   # sent upstream as x-proxy-token
+#   npx wrangler secret put OMNIPROXY_ALLOW   # host suffixes, comma separated
+# With OMNIPROXY_URL unset the route answers 503 and the rest of the site is
+# unaffected; an unset OMNIPROXY_ALLOW blocks every destination.
+
 [observability]
 enabled = false
 

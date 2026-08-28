@@ -31,6 +31,31 @@ The footer reads `/cdn-cgi/trace` and shows the real serving Cloudflare PoP, neg
 
 The console is a small shell, reached only as a drop-down (`` ` `` or the `~` button in the tab bar) so no view carries an autofocused input: a read-only virtual filesystem projected from `MODULES` and the live stores (`cd`, `ls`, `cat`, `tree`), pipes into `grep`/`head`/`tail`/`sort`/`uniq`/`wc`, persistent history, `alias`, and `man <cmd>`.
 
+## Network relay (`/net`)
+
+`src/routes/net/+server.ts` is the one non-prerendered route: a same-origin
+WebSocket front door for an [OmniProxy](https://github.com/kurashizu/OmniProxy)
+relay, for the Linux VM view. The browser cannot set `x-proxy-token` on a
+WebSocket and a token in the page bundle would be readable by anyone, so the
+upstream endpoint and its token live only as Worker secrets and never reach the
+client — the page just opens `wss://<origin>/net`.
+
+Because the wire format is `[u32 stream_id][u8 type][payload]`, the relay reads
+the CONNECT target straight out of each frame and enforces a destination
+allowlist at the edge, without the upstream server knowing about it. A blocked
+target is answered with a `TCP_CONNECTED` frame carrying an error string, which
+is how the upstream itself reports a failed connect, so the guest sees a clean
+refusal rather than a hang.
+
+```bash
+npx wrangler secret put OMNIPROXY_URL     # https://host.example/
+npx wrangler secret put OMNIPROXY_TOKEN   # sent upstream as x-proxy-token
+npx wrangler secret put OMNIPROXY_ALLOW   # deb.example.org,krsz.in  ("*" disables)
+```
+
+Unset `OMNIPROXY_URL` makes the route answer 503 and changes nothing else; unset
+`OMNIPROXY_ALLOW` blocks every destination. Cross-origin upgrades are rejected.
+
 ## Local Development
 
 ```bash
