@@ -243,9 +243,17 @@ mke2fs -q -t ext4 -b 4096 -d "$ROOTFS" -F -L krsz-root "$OUT/rootfs.img" "$((NEE
 
 # Split for upload. The parts are plain byte ranges of the same image, so the
 # proxy can serve any offset by reading from the part it lands in.
-split -b "${PART_MB}m" -d -a 3 "$OUT/rootfs.img" "$OUT/rootfs.img."
+# busybox split has no -d/-a, so its suffixes are alphabetic; dd gives the
+# numbered parts the proxy expects and needs nothing installed.
+PART_COUNT=$(( (NEEDED_MB + PART_MB - 1) / PART_MB ))
+i=0
+while [ "$i" -lt "$PART_COUNT" ]; do
+	dd if="$OUT/rootfs.img" of="$OUT/rootfs.img.$(printf '%03d' "$i")" \
+		bs=1048576 skip=$(( i * PART_MB )) count="$PART_MB" 2>/dev/null
+	i=$(( i + 1 ))
+done
 rm -f "$OUT/rootfs.img"
-echo "==> rootfs split into $(ls "$OUT"/rootfs.img.* | wc -l) part(s) of up to ${PART_MB} MB"
+echo "==> rootfs split into ${PART_COUNT} part(s) of up to ${PART_MB} MB"
 
 echo "==> built:"
 ls -l "$OUT"

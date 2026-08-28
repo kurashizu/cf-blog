@@ -260,6 +260,8 @@
 				bootedAt = performance.now();
 				lastSample = bootedAt;
 				lastInstructions = 0;
+				// The guest owns the keyboard for as long as it is running.
+				suspendNavHotkeys.set(true);
 				// Only the stock ISO needs its bootloader prompt driven.
 				if (mode === 'cdrom') waitForBootPrompt();
 			});
@@ -339,6 +341,7 @@
 		phase = 'idle';
 		status = '';
 		bootLineSent = false;
+		suspendNavHotkeys.set(false);
 		releaseKeyboard();
 		screenScale = 1;
 		uptime = 0;
@@ -380,21 +383,23 @@
 	}
 
 	/**
-	 * v86 reads keys off the document, so the site's own hotkeys have to yield
-	 * while the guest is being typed into — otherwise "t" flips the theme
-	 * mid-shell. The wrapper carries tabindex so blur actually fires: without it
-	 * the div could never take focus, and the suspend was never lifted once set.
+	 * v86 listens for keys on the document, not on its container, so a keystroke
+	 * reaches the guest whether or not the screen has focus — tying the site's
+	 * hotkey suspension to focus meant "t" still flipped the theme mid-shell.
+	 * Suspension follows the machine being powered on instead. Ctrl+0-5 ignores
+	 * the flag, so there is always a way out.
+	 *
+	 * Focus still matters for the ring and the click-to-type hint, which is why
+	 * the wrapper carries a tabindex.
 	 */
 	function captureKeyboard() {
 		if (phase !== 'running') return;
 		keyboardCaptured = true;
-		suspendNavHotkeys.set(true);
 		screenWrap?.focus();
 	}
 
 	function releaseKeyboard() {
 		keyboardCaptured = false;
-		suspendNavHotkeys.set(false);
 	}
 
 	function onScreenKeydown(e: KeyboardEvent) {
