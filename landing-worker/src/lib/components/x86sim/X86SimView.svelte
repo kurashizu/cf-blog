@@ -93,9 +93,20 @@
 	 * Which adapter is on screen. The guest drives this: v86 reports a graphical
 	 * mode the moment X takes the display, and a text mode when it hands it back,
 	 * so a shell is watched through the serial terminal — which resizes with the
-	 * panel and reports the mouse — and X through the VGA screen.
+	 * panel and reports the mouse — and X through the VGA screen. The override is
+	 * there because a guest that fails to bring X up would otherwise leave the
+	 * viewer looking at a blank screen with no way back to the console.
 	 */
-	let view = $derived<'terminal' | 'screen'>(graphical ? 'screen' : 'terminal');
+	let viewMode = $state<'auto' | 'terminal' | 'screen'>('auto');
+	let view = $derived<'terminal' | 'screen'>(
+		viewMode === 'auto' ? (graphical ? 'screen' : 'terminal') : viewMode
+	);
+	const VIEW_LABEL = { auto: 'VIEW AUTO', terminal: 'VIEW TERM', screen: 'VIEW VGA' } as const;
+	function cycleView() {
+		viewMode = viewMode === 'auto' ? 'terminal' : viewMode === 'terminal' ? 'screen' : 'auto';
+		playSound('click');
+		requestAnimationFrame(fitScreen);
+	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let emulator: any = null;
@@ -606,6 +617,16 @@
 						</span>
 					{/if}
 				</div>
+				<button
+					onclick={cycleView}
+					title="Which of the machine's two outputs is shown. On AUTO it follows the guest: the serial terminal while it is a shell, the VGA screen once something takes the display graphically."
+					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {viewMode ===
+					'auto'
+						? 'border-white/25 text-white/70 hover:bg-white/10'
+						: 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'}"
+				>
+					{VIEW_LABEL[viewMode]}
+				</button>
 				<button
 					onclick={() => (showKeyboard = !showKeyboard)}
 					title="On-screen keyboard — sends scancodes directly, which also avoids the layout mismatch a non-US physical keyboard hits"

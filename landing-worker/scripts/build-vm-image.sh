@@ -170,6 +170,16 @@ xterm -geometry 96x26+28+28 -fa "DejaVu Sans Mono" -fs 11 \
 exec openbox
 EOF
 
+# The DRM device is what X needs; the framebuffer console it would otherwise
+# bring with it is not. Leaving fbdev emulation on means the text console turns
+# graphical the moment the driver loads at boot, which the page reads -- fairly
+# -- as "something has taken the display", and it switches away from the serial
+# terminal before there is anything to see.
+mkdir -p "$ROOTFS/etc/modprobe.d"
+cat > "$ROOTFS/etc/modprobe.d/krsz.conf" <<'EOF'
+options drm_kms_helper fbdev_emulation=0
+EOF
+
 mkdir -p "$ROOTFS/usr/share/backgrounds"
 if [ -f /assets/wallpaper.png ]; then
 	cp /assets/wallpaper.png "$ROOTFS/usr/share/backgrounds/krsz.png"
