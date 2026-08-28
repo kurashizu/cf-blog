@@ -52,11 +52,11 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		// Tab navigation on Ctrl+0..4 — the universal escape hatch. It types
+		// Tab navigation on Ctrl+0..5 — the universal escape hatch. It types
 		// nothing, so it works with the console input focused, and it ignores
 		// suspendNavHotkeys so the keyboard tester / QWERTY piano / screen test
 		// can never trap you on their tab.
-		if (e.ctrlKey && !e.metaKey && !e.altKey && e.code >= 'Digit0' && e.code <= 'Digit4') {
+		if (e.ctrlKey && !e.metaKey && !e.altKey && e.code >= 'Digit0' && e.code <= 'Digit5') {
 			e.preventDefault();
 			goto(TAB_ROUTES[Number(e.code.slice(-1))]);
 			playSound('click');

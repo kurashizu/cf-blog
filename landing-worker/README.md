@@ -31,6 +31,31 @@ The footer reads `/cdn-cgi/trace` and shows the real serving Cloudflare PoP, neg
 
 The console is a small shell, reached only as a drop-down (`` ` `` or the `~` button in the tab bar) so no view carries an autofocused input: a read-only virtual filesystem projected from `MODULES` and the live stores (`cd`, `ls`, `cat`, `tree`), pipes into `grep`/`head`/`tail`/`sort`/`uniq`/`wc`, persistent history, `alias`, and `man <cmd>`.
 
+## Linux VM (`/linux`, work in progress)
+
+`5:linux` runs [v86](https://github.com/copy/v86) (BSD-2), a 32-bit x86 emulator
+that JIT-compiles guest code to WebAssembly, and boots an Alpine x86 ISO on it.
+Alpine is the guest because it still ships 32-bit x86 as a release architecture,
+which Debian and Arch no longer do.
+
+`src/routes/vm/img/[name]/+server.ts` serves the ISO: upstream sends no CORS
+headers, and the proxy also puts the bytes behind Cloudflare's cache. v86 rounds
+its Range reads out to `fixed_chunk_size`, so the client and the route agree on
+1 MiB chunks and every read lands squarely on one cache entry. Images are
+configured as `name|url|size` triples in `VM_IMAGES`, so they can be repointed at
+R2 without touching code. `?info` returns metadata; the bare URL requires a Range.
+
+**It does not reach a shell yet.** SeaBIOS posts, ISOLINUX loads (the page types
+the kernel cmdline into its prompt, the only way to influence it on a stock ISO),
+Linux boots and OpenRC starts — then the machine resets at `Loading hardware
+drivers`, where the guest modprobes drivers for emulated PCI hardware. Ruled out:
+the disk stream (every chunk returns 206 in a few ms), guest RAM (same at 256 and
+512 MB), kernel age (3.16/5.15 fails earlier than 3.24/6.18), and ACPI/KMS. The
+likely fix is a purpose-built disk image instead of a stock ISO, which is how
+working v86 Linux setups are generally built.
+
+The BIOS blobs in `static/vm/` come from the v86 repository; SeaBIOS is LGPLv3.
+
 ## Network relay (`/net`)
 
 `src/routes/net/+server.ts` is the one non-prerendered route: a same-origin

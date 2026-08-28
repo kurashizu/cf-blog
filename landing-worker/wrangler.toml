@@ -37,6 +37,13 @@ namespace_id = "2001"
 # pin no port. "*" disables the check entirely; an empty value blocks everything.
 OMNIPROXY_ALLOW = "alpinelinux.org:443,krsz.in:443"
 
+# VM disk images served to v86 by `src/routes/vm/img/[name]/+server.ts`, as
+# `name|url|size` triples. Upstream sends no CORS headers, so it has to be
+# proxied; the proxy caches 1 MiB chunks at the edge, which is what makes a
+# 49 MiB ISO practical to boot more than once. Point these at R2 later without
+# touching any code.
+VM_IMAGES = "alpine|https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/alpine-virt-3.24.1-x86.iso|51380224"
+
 [observability]
 enabled = false
 

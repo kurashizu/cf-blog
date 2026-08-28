@@ -13,7 +13,8 @@
         "deploy:cf": "wrangler deploy"
     },
     "dependencies": {
-        "mermaid": "^11.17.2"
+        "mermaid": "^11.17.2",
+        "v86": "^0.5.445"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20250520.0",

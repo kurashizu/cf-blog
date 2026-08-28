@@ -25,7 +25,7 @@ export interface ConsoleLine {
 }
 
 const WELCOME: ConsoleLine[] = [
-	{ kind: 'ok', text: 'KRSZ-EDGE WORKBENCH READY // TYPE "help" OR USE [CTRL+0-4] HOTKEYS' }
+	{ kind: 'ok', text: 'KRSZ-EDGE WORKBENCH READY // TYPE "help" OR USE [CTRL+0-5] HOTKEYS' }
 ];
 
 const MAX_LINES = 300;
@@ -84,7 +84,8 @@ const NAV_WORDS: Record<string, number> = {
 	'1': 1, guestbook: 1, packets: 1,
 	'2': 2, synth: 2, audio: 2,
 	'3': 3, utilities: 3, utils: 3, tools: 3, hw: 3,
-	'4': 4, leaderboard: 4, llm: 4, models: 4, ranks: 4
+	'4': 4, leaderboard: 4, llm: 4, models: 4, ranks: 4,
+	'5': 5, linux: 5, vm: 5, alpine: 5, x86: 5
 };
 
 const THEME_ALIASES: Record<string, WorkspaceTheme> = {
@@ -109,7 +110,7 @@ const BANNER = [
 
 const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
-	out('  0|modules  1|guestbook  2|synth  3|utilities  4|leaderboard'),
+	out('  0|modules  1|guestbook  2|synth  3|utilities  4|leaderboard  5|linux'),
 	out('  open <project>     launch a project in a new tab'),
 	out('  ping <project>     measure real round trip from your browser'),
 	out('  ' + Object.keys(EXTERNAL_LINKS).join(' · ')),
@@ -620,7 +621,7 @@ const COMMAND_NAMES = [
 	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'date', 'history', 'banner', 'tracks',
 	'songs', 'load', 'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval',
 	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'leaderboard', 'llm', 'ping',
-	'trace', 'guide', 'tour', 'keys',
+	'trace', 'guide', 'tour', 'keys', 'linux', 'vm', 'alpine',
 	...Object.keys(EXTERNAL_LINKS)
 ];
 

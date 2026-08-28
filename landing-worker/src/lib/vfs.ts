@@ -174,7 +174,7 @@ export const ROOT: VDir = {
 				file(
 					'hotkeys',
 					lines(
-						`${pad('Ctrl+0..4', 12)}switch tab`,
+						`${pad('Ctrl+0..5', 12)}switch tab`,
 						`${pad('T', 12)}cycle theme`,
 						`${pad('`', 12)}drop-down console`,
 						`${pad('?', 12)}hotkey reference`,

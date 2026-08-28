@@ -23,14 +23,15 @@
 	const STEPS: Step[] = [
 		{
 			target: 'tabs',
-			title: 'FIVE VIEWS',
-			body: 'Everything on this site lives in one of five views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
+			title: 'SIX VIEWS',
+			body: 'Everything on this site lives in one of six views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
 			keys: [
 				{ key: 'Ctrl+0', desc: 'modules — the live projects, with real architecture diagrams' },
 				{ key: 'Ctrl+1', desc: 'guestbook — posts to blog.krsz.in' },
 				{ key: 'Ctrl+2', desc: 'synth — 8-track WebAudio workstation, .mid in, WAV out' },
 				{ key: 'Ctrl+3', desc: 'utilities — twelve hardware testers' },
-				{ key: 'Ctrl+4', desc: 'leaderboard — the Artificial Analysis model table' }
+				{ key: 'Ctrl+4', desc: 'leaderboard — the Artificial Analysis model table' },
+				{ key: 'Ctrl+5', desc: 'linux — a real 32-bit x86 PC, emulated in the tab' }
 			],
 			color: '#56b6c2'
 		},
