@@ -4,13 +4,13 @@ import {
 	decodeFrame,
 	encodeFrame,
 	encodeUdpPayload,
-	splitHostPort,
 	TYPE_TCP_CONNECT,
 	TYPE_TCP_CONNECTED,
 	TYPE_TCP_DATA,
 	TYPE_TCP_FIN,
 	TYPE_UDP_DATA
 } from '$lib/omniproxy-protocol';
+import { isAllowed, parseAllowlist } from '$lib/relay-allowlist';
 
 export const prerender = false;
 
@@ -256,31 +256,4 @@ function toBytes(data: unknown): Uint8Array | null {
 	if (data instanceof ArrayBuffer) return new Uint8Array(data);
 	if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 	return null;
-}
-
-interface AllowEntry {
-	host: string;
-	port: number | null;
-}
-
-function parseAllowlist(raw: string | undefined): AllowEntry[] | null {
-	if (!raw) return [];
-	const parts = raw
-		.split(',')
-		.map((s) => s.trim().toLowerCase())
-		.filter(Boolean);
-	if (parts.includes('*')) return null;
-	return parts.map((part) => {
-		const { host, port } = splitHostPort(part);
-		return { host: host.replace(/\.$/, ''), port };
-	});
-}
-
-function isAllowed(host: string, port: number, allow: AllowEntry[] | null): boolean {
-	if (allow === null) return true;
-	const h = host.toLowerCase().replace(/\.$/, '');
-	return allow.some((entry) => {
-		if (h !== entry.host && !h.endsWith(`.${entry.host}`)) return false;
-		return entry.port === null || port === entry.port;
-	});
 }

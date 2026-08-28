@@ -11,6 +11,7 @@ import {
 	TYPE_TCP_CONNECTED,
 	TYPE_UDP_DATA
 } from '$lib/omniproxy-protocol';
+import { isAllowed, parseAllowlist } from '$lib/relay-allowlist';
 
 /** A live WebSocket relay — nothing here can be prerendered. */
 export const prerender = false;
@@ -200,38 +201,3 @@ interface RelayEnv {
 }
 
 /** An allowlist entry: a host suffix, optionally pinned to one port. */
-interface AllowEntry {
-	host: string;
-	port: number | null;
-}
-
-function parseAllowlist(raw: string | undefined): AllowEntry[] | null {
-	if (!raw) return [];
-	const parts = raw
-		.split(',')
-		.map((s) => s.trim().toLowerCase())
-		.filter(Boolean);
-	// "*" is an explicit, deliberate opt-out — an unset variable blocks everything.
-	if (parts.includes('*')) return null;
-	return parts.map((part) => {
-		const { host, port } = splitHostPort(part);
-		// A bare hostname has no colon, so splitHostPort hands it back whole.
-		return { host: host.replace(/\.$/, ''), port };
-	});
-}
-
-/**
- * Suffix match on the label boundary, so "evil-krsz.in" cannot pass as
- * "krsz.in". A port-pinned entry matches only that port; a frame carrying no
- * port at all (ICMP) matches only entries that pin no port, so allowing
- * "example.org:443" never silently grants ping.
- */
-function isAllowed(host: string, port: number | null, allow: AllowEntry[] | null): boolean {
-	if (allow === null) return true;
-	const h = host.toLowerCase().replace(/\.$/, '');
-	return allow.some((entry) => {
-		if (h !== entry.host && !h.endsWith(`.${entry.host}`)) return false;
-		if (entry.port === null) return true;
-		return port === entry.port;
-	});
-}
