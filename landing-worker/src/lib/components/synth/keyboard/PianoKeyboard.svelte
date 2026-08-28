@@ -290,9 +290,9 @@
 				VEL: {$velocityCurve === 'LINEAR' ? 'LIN' : $velocityCurve}
 			</button>
 
-			<span class="opacity-30">|</span>
-
-			<div class="flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold {$midiConnectedDevice ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' : 'border-white/20 bg-white/5 text-white/40'}">
+			<!-- Pinned right: a device name is as long as its maker made it, and
+			     letting it sit inline shifted every control before it. -->
+			<div class="ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap {$midiConnectedDevice ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' : 'border-white/20 bg-white/5 text-white/40'}">
 				<span class="w-1.5 h-1.5 rounded-full {$midiConnectedDevice ? 'bg-[#98c379] animate-pulse' : 'bg-white/30'}"></span>
 				<span>MIDI: {$midiConnectedDevice ? $midiConnectedDevice.toUpperCase() : 'STANDBY'}</span>
 			</div>
