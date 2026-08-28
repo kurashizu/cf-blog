@@ -25,7 +25,7 @@
 </script>
 
 <div
-	class="col-span-12 lg:col-span-3 xl:col-span-3 border {themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 {themeStyles.cardBg} rounded-sm min-h-0 max-w-full overflow-y-auto custom-scrollbar"
+	class="order-2 lg:order-none col-span-12 lg:col-span-3 xl:col-span-3 border {themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 {themeStyles.cardBg} rounded-sm min-h-0 max-w-full overflow-y-auto custom-scrollbar"
 >
 	<!-- ASCII brand & acronym breakdown -->
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden">

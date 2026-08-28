@@ -4,6 +4,7 @@
 	import { theme, THEME_STYLES } from '../../stores/theme';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
 	import VirtualKeyboard from './VirtualKeyboard.svelte';
+	import MermaidDiagram from '../projects/MermaidDiagram.svelte';
 
 	type Phase = 'idle' | 'loading' | 'running' | 'error';
 
@@ -29,16 +30,19 @@
 	 *
 	 * `modules=` force-loads sd-mod: Alpine's initramfs loads drivers by modalias,
 	 * and sd_mod has none — it binds when the SCSI layer offers it a disk. Without
-	 * this the guest enumerates 0:0:0:0, never creates /dev/sda, and drops to the
-	 * initramfs rescue shell.
+	 * it the guest enumerates 0:0:0:0 and never creates /dev/sda.
+	 *
+	 * The root is named by device rather than by LABEL: with sd-mod loading, the
+	 * disk shows up as /dev/sda, while `root=LABEL=` left the initramfs reporting
+	 * "Can't lookup blockdev" — it has no blkid to resolve a label with.
 	 *
 	 * tty0 is listed last so it becomes /dev/console and the VGA screen carries
 	 * the session; ttyS0 still gets a getty from the image's inittab.
 	 */
 	const DEFAULT_CMDLINE =
-		'root=LABEL=krsz-root rw modules=sd-mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
+		'root=/dev/sda rw modules=sd-mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 2;
+	const SETTINGS_VERSION = 3;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
@@ -231,6 +235,9 @@
 			});
 			emulator.add_listener('screen-set-size', (dims: [number, number, number]) => {
 				graphical = dims[2] !== 0;
+				// A mode change resizes the screen, so refit immediately rather than
+				// leaving it wrong until the next sampling tick.
+				requestAnimationFrame(fitScreen);
 			});
 
 			ticker = setInterval(() => {
@@ -315,16 +322,25 @@
 	}
 
 	/**
-	 * v86 renders text mode at a fixed character size, so on a narrow screen the
-	 * 80-column console overflows. Scaling the whole container keeps it readable
-	 * without touching the emulator's own font metrics.
+	 * v86 draws text mode at a fixed character size — an 80x25 console is about
+	 * 730x390 px no matter how big the panel is. Scaling the whole thing to the
+	 * available box keeps the emulator's own font metrics untouched while filling
+	 * the space: down on a phone, and up on a desktop, where it previously sat in
+	 * the top-left corner surrounded by black.
 	 */
 	function fitScreen() {
-		if (!screenEl?.parentElement) return;
-		const available = screenEl.parentElement.clientWidth - 12;
-		const natural = screenEl.scrollWidth;
-		if (!available || !natural) return;
-		screenScale = Math.min(1, available / natural);
+		if (!screenEl || !screenWrap) return;
+		const availableW = screenWrap.clientWidth - 8;
+		const availableH = screenWrap.clientHeight - 8;
+		// Measure unscaled, or the transform feeds back into its own input.
+		const previous = screenEl.style.transform;
+		screenEl.style.transform = 'none';
+		const naturalW = screenEl.scrollWidth;
+		const naturalH = screenEl.scrollHeight;
+		screenEl.style.transform = previous;
+		if (!availableW || !availableH || !naturalW || !naturalH) return;
+		// Capped so a tiny early-boot screen does not blow up into a blurry wall.
+		screenScale = Math.max(0.25, Math.min(3, availableW / naturalW, availableH / naturalH));
 	}
 
 	function sendCtrlAltDel() {
@@ -376,6 +392,26 @@
 		saveSettings();
 	});
 
+	/** m:ss past a minute, so a long session does not read as a four-digit blob. */
+	function formatUptime(seconds: number): string {
+		if (seconds < 60) return `${seconds.toFixed(0)}s`;
+		const m = Math.floor(seconds / 60);
+		return `${m}m ${String(Math.floor(seconds % 60)).padStart(2, '0')}s`;
+	}
+
+	/** The real path a guest disk read takes — every hop here exists in the repo. */
+	const TOPOLOGY = `flowchart LR
+    subgraph browser["Your browser tab"]
+        V["v86 — x86-to-wasm JIT"]
+        G["Alpine Linux (32-bit)"]
+        G --- V
+    end
+    V -->|"bzimage + initrd, loaded whole"| W
+    V -->|"HTTP Range, 1 MiB chunks"| W["Worker /vm/img"]
+    W --> C{{"Edge cache"}}
+    C -->|miss| R[("R2: vm/*")]
+    B["CI: build-vm-image"] -->|"apk + mke2fs -d"| R`;
+
 	let fetchedBytes = $derived(chunksFetched * CHUNK);
 	let imageMiB = $derived(imageSize === null ? null : imageSize / 1024 / 1024);
 
@@ -401,14 +437,23 @@
 
 		<div class="flex flex-wrap items-center gap-2">
 			{#if phase === 'running'}
-				<span class="text-xs font-mono font-bold text-[#98c379]">
-					● RUNNING · {uptime.toFixed(0)}s
+				<div class="flex items-center gap-2 mr-1">
+					<span class="flex items-center gap-1.5 text-xs font-mono font-bold text-[#98c379]">
+						<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] animate-pulse"></span>
+						RUNNING
+					</span>
+					<span class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60" title="Time since the emulator started">
+						{formatUptime(uptime)}
+					</span>
 					{#if mips !== null}
-						<span title="Instructions per second of wall clock. The emulated CPU is halted while a disk chunk is being fetched, so this counts network waits as if they were slow execution — during boot it says more about I/O than about the JIT.">
-							· {mips.toFixed(2)} MIPS<span class="text-white/35"> incl. I/O waits</span>
+						<span
+							class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60"
+							title="Instructions per second of wall clock. The emulated CPU is halted while a disk chunk is in flight, so this counts network waits as if they were slow execution — during boot it says more about I/O than about the JIT."
+						>
+							{mips.toFixed(2)} <span class="text-white/35">MIPS</span>
 						</span>
 					{/if}
-				</span>
+				</div>
 				<button
 					onclick={() => (showKeyboard = !showKeyboard)}
 					title="On-screen keyboard — sends scancodes directly, which also avoids the layout mismatch a non-US physical keyboard hits"
@@ -582,6 +627,14 @@
 				</p>
 			</div>
 
+			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1.5">
+				<div class="flex items-baseline justify-between gap-2">
+					<span class="text-xs font-black font-mono text-[#d19a66]">HOW A DISK READ TRAVELS</span>
+					<span class="text-[10px] font-mono text-white/35">every hop exists in the repo</span>
+				</div>
+				<MermaidDiagram chart={TOPOLOGY} accent="#d19a66" />
+			</div>
+
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1">
 				<div class="text-xs font-black font-mono text-white/60">WHAT ALREADY WORKS</div>
 				<ul class="text-[11px] text-white/55 leading-relaxed list-disc pl-4 space-y-0.5">
@@ -614,14 +667,20 @@
 		onblur={releaseKeyboard}
 		onmousedown={captureKeyboard}
 		onkeydown={onScreenKeydown}
-		class="relative flex-1 min-h-0 border bg-black rounded-xs overflow-auto outline-none transition-colors {phase ===
+		class="relative flex-1 min-h-0 border bg-black rounded-xs overflow-hidden outline-none transition-colors {phase ===
 		'idle' || phase === 'error'
 			? 'hidden'
 			: keyboardCaptured
 				? 'border-[#98c379]'
 				: themeStyles.border}"
 	>
-		<div bind:this={screenEl} class="inline-block origin-top-left" style="transform: scale({screenScale})">
+		<!-- Absolutely centred so the scale factor cannot skew the layout: a
+		     transform does not change the box the parent lays out. -->
+		<div
+			bind:this={screenEl}
+			class="absolute left-1/2 top-1/2"
+			style="transform: translate(-50%, -50%) scale({screenScale}); transform-origin: center center"
+		>
 			<div style="white-space: pre; font: 15px/15px monospace; color: #d8dee9; padding: 6px;"></div>
 			<canvas style="display: none"></canvas>
 		</div>

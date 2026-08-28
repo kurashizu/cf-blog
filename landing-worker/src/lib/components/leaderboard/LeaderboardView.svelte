@@ -166,17 +166,43 @@
 		playSound('click');
 	}
 
-	/** Slug of the row whose detail panel is open, if any. */
-	let expanded = $state<string | null>(null);
+	/** The model whose card is open, anchored where it was clicked. */
+	let popover = $state<{ model: LeaderboardModel; x: number; y: number } | null>(null);
+	let cardEl: HTMLDivElement | undefined = $state();
+	let cardPos = $state({ left: 0, top: 0 });
 
 	function rowKey(m: LeaderboardModel): string {
 		return `${m.slug}|${m.name}`;
 	}
 
-	function toggleRow(m: LeaderboardModel) {
-		expanded = expanded === rowKey(m) ? null : rowKey(m);
+	function openCard(m: LeaderboardModel, e: MouseEvent) {
+		if (popover && rowKey(popover.model) === rowKey(m)) {
+			popover = null;
+			return;
+		}
+		popover = { model: m, x: e.clientX, y: e.clientY };
 		playSound('click');
 	}
+
+	/**
+	 * Park the card beside the pointer, then pull it back inside the viewport —
+	 * a row near the bottom or the right edge would otherwise open off-screen.
+	 */
+	function placeCard() {
+		if (!popover || !cardEl) return;
+		const gap = 14;
+		const w = cardEl.offsetWidth;
+		const h = cardEl.offsetHeight;
+		const left = Math.max(8, Math.min(popover.x + gap, window.innerWidth - w - 8));
+		const top = Math.max(8, Math.min(popover.y + gap, window.innerHeight - h - 8));
+		cardPos = { left, top };
+	}
+
+	$effect(() => {
+		if (!popover) return;
+		// Measure after the card exists, then again once fonts settle.
+		requestAnimationFrame(placeCard);
+	});
 
 	/** Every field the payload carries for one model, with nothing filled in. */
 	function detailRows(m: LeaderboardModel): { label: string; value: string }[] {
@@ -209,9 +235,9 @@
 	}
 
 	function onWindowKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape' && expanded) {
+		if (e.key === 'Escape' && popover) {
 			e.stopPropagation();
-			expanded = null;
+			popover = null;
 		}
 	}
 
@@ -344,20 +370,18 @@
 				</thead>
 				<tbody>
 					{#each shown as m, i (m.slug + m.name)}
-						{@const open = expanded === rowKey(m)}
+						{@const open = popover !== null && rowKey(popover.model) === rowKey(m)}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 						<tr
-							onclick={() => toggleRow(m)}
-							title="Open every field the source has for this model"
+							onclick={(e) => openCard(m, e)}
+							title="Every field the source has for this model"
 							class="border-b border-white/5 last:border-0 cursor-pointer transition-colors {open
 								? 'bg-white/10'
 								: 'hover:bg-white/5'}"
 						>
 							<td class="px-2 py-1 text-right text-white/35">{i + 1}</td>
-							<td class="px-2 py-1 text-[#eceff4] max-w-[240px] truncate" title={m.name}>
-								<span class="inline-block w-3 text-white/30">{open ? '▾' : '▸'}</span>{m.name}
-							</td>
+							<td class="px-2 py-1 text-[#eceff4] max-w-[240px] truncate" title={m.name}>{m.name}</td>
 							<td class="px-2 py-1 text-white/50 hidden md:table-cell max-w-[130px] truncate">
 								{m.model_creator?.name ?? '—'}
 							</td>
@@ -371,44 +395,6 @@
 								<td class="px-2 py-1 text-right text-white/60 hidden lg:table-cell">{cell(m, x.key)}</td>
 							{/each}
 						</tr>
-						{#if open}
-							<tr class="border-b border-white/10 bg-black/40">
-								<td colspan={2 + METRICS.length}>
-									<div class="px-3 py-2.5 space-y-2">
-										<div class="flex flex-wrap items-baseline justify-between gap-2">
-											<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
-											<button
-												onclick={(e) => {
-													e.stopPropagation();
-													query = m.model_creator?.name ?? '';
-												}}
-												class="text-[10px] text-white/40 hover:text-white cursor-pointer underline"
-											>
-												filter to {m.model_creator?.name ?? 'creator'}
-											</button>
-										</div>
-
-										<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
-											{#each detailRows(m) as row (row.label)}
-												<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1 flex items-baseline justify-between gap-2">
-													<span class="text-[10px] text-white/40 shrink-0">{row.label}</span>
-													<span class="text-[11px] text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
-												</div>
-											{/each}
-										</div>
-
-										<div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-white/45">
-											<span class="text-white/30">rank among the {filtered.length} filtered models:</span>
-											{#each METRICS.filter((x) => x.key !== 'date') as x (x.key)}
-												<span>
-													{x.short} <span style="color: {x.color}">{rankFor(m, x)}</span>
-												</span>
-											{/each}
-										</div>
-									</div>
-								</td>
-							</tr>
-						{/if}
 					{/each}
 				</tbody>
 			</table>
@@ -423,3 +409,65 @@
 		</div>
 	{/if}
 </div>
+
+{#if popover}
+	{@const m = popover.model}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-[120]" onclick={() => (popover = null)}></div>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		bind:this={cardEl}
+		class="fixed z-[130] w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] font-mono"
+		style="left: {cardPos.left}px; top: {cardPos.top}px; border-color: {metric.color}80"
+		onclick={(e) => e.stopPropagation()}
+	>
+		<div class="flex items-start justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
+			<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
+			<button onclick={() => (popover = null)} class="text-[10px] text-white/40 hover:text-white cursor-pointer shrink-0">
+				[ ✕ ]
+			</button>
+		</div>
+
+		<div class="p-2.5 space-y-2">
+			<div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
+				{#each detailRows(m) as row (row.label)}
+					<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1 flex items-baseline justify-between gap-2">
+						<span class="text-[10px] text-white/40 shrink-0">{row.label}</span>
+						<span class="text-[11px] text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
+					</div>
+				{/each}
+			</div>
+
+			<div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/45 border-t border-white/10 pt-1.5">
+				<span class="text-white/30">rank among the {filtered.length} filtered:</span>
+				{#each METRICS.filter((x) => x.key !== 'date') as x (x.key)}
+					<span>{x.short} <span style="color: {x.color}">{rankFor(m, x)}</span></span>
+				{/each}
+			</div>
+
+			<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+				<button
+					onclick={() => {
+						query = m.model_creator?.name ?? '';
+						popover = null;
+					}}
+					class="text-[10px] text-white/45 hover:text-white cursor-pointer underline"
+				>
+					filter the table to {m.model_creator?.name ?? 'this creator'}
+				</button>
+				{#if m.slug}
+					<a
+						href={`https://artificialanalysis.ai/models/${encodeURIComponent(m.slug)}`}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-[10px] text-[#61afef] hover:underline"
+					>
+						open on Artificial Analysis ↗
+					</a>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}

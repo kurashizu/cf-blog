@@ -70,10 +70,11 @@
 		<a
 			href="/"
 			title="krsz.in — Kurashizu's Random-Stuff Zone"
-			class="bg-black/40 px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-1.5 shrink-0 hover:bg-black/60 transition-colors"
+			class="bg-black/40 px-1 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
 		>
-			<KrszLogo size={17} />
-			<span class="hidden 2xl:inline">[tmux:edge]</span>
+			<!-- Sized against the tab buttons' own line box, so a bigger mark does not
+			     make the header taller. -->
+			<KrszLogo size={24} />
 		</a>
 
 		<!-- The console is drop-down only, so it needs a visible handle as well as its key -->

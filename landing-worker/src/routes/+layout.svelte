@@ -146,9 +146,11 @@
 	<TabBar />
 
 	<div class="grid grid-cols-12 gap-1.5 sm:gap-2 flex-1 min-h-0 w-full max-w-full">
+		<!-- Sidebar renders first for the desktop grid, but on a phone it would push
+		     the actual view a whole screen down, so order puts content first there. -->
 		<Sidebar />
 
-		<div data-tour="panel" class="col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} flex flex-col {themeStyles.cardBg} rounded-sm min-h-0 lg:overflow-hidden">
+		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} flex flex-col {themeStyles.cardBg} rounded-sm min-h-0 lg:overflow-hidden">
 			<!-- The console lives only in the drop-down overlay now, so every view
 			     gets the full panel and no view has an autofocused input competing
 			     with the keyboard testers or the QWERTY piano. -->

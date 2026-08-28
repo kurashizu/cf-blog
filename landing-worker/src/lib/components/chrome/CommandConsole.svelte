@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
 	import { pulseStep } from '../../stores/clock';
@@ -16,6 +17,7 @@
 
 	let commandInput = $state('');
 	let inputEl: HTMLInputElement | undefined = $state();
+	let focused = $state(false);
 	let scrollEl: HTMLDivElement | undefined = $state();
 	/** null = editing a fresh line; otherwise index into commandHistory being recalled. */
 	let historyIdx = $state<number | null>(null);
@@ -39,6 +41,14 @@
 		accent: 'text-[#56b6c2] font-bold',
 		gold: 'text-[#e5c07b] font-bold'
 	};
+
+	// The console is a drop-down now, so it is opened deliberately — put the caret
+	// in it rather than making the user click. autofocus alone is unreliable for
+	// an element that mounts into an already-loaded page.
+	onMount(() => {
+		const id = requestAnimationFrame(() => inputEl?.focus());
+		return () => cancelAnimationFrame(id);
+	});
 
 	// Keep the scrollback pinned to the newest line.
 	$effect(() => {
@@ -172,7 +182,9 @@
 	<form
 		onsubmit={handleSubmit}
 		onclick={() => inputEl?.focus()}
-		class="flex items-center gap-2 sm:gap-2.5 border border-white/25 bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px] max-w-full"
+		class="flex items-center gap-2 sm:gap-2.5 border bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px] max-w-full transition-colors {focused
+			? 'border-white/60 bg-black/80'
+			: 'border-white/20'}"
 	>
 		{#if $cwd !== '/'}
 			<span class="font-mono text-xs sm:text-sm text-white/40 select-none shrink-0 hidden sm:inline">{$cwd}</span>
@@ -183,7 +195,11 @@
 			<span class="whitespace-pre">{commandInput}</span>
 			<span
 				class="inline-block w-[9px] h-[18px] ml-0.5 align-middle shrink-0 transition-opacity duration-75"
-				style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.95 : 0.15};"
+				style="background-color: {themeStyles.cursorColor}; opacity: {!focused
+					? 0.2
+					: $pulseStep % 6 < 4
+						? 0.95
+						: 0.15};"
 			></span>
 			{#if ghost}
 				<span class="whitespace-pre text-white/25 select-none pointer-events-none">{ghost}</span>
@@ -200,6 +216,8 @@
 				type="text"
 				bind:value={commandInput}
 				onkeydown={handleKeydown}
+				onfocus={() => (focused = true)}
+				onblur={() => (focused = false)}
 				class="absolute inset-0 w-full h-full opacity-0 cursor-text outline-none font-mono z-10"
 				autofocus
 			/>
