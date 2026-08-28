@@ -110,7 +110,9 @@
 			}
 			if (aborted) return;
 			finished = true;
-			await sleep(400);
+			// Long enough to actually read the result — the probes themselves finish
+			// in under a second, which made the whole screen a flicker.
+			await sleep(1200);
 			if (!aborted) onDone();
 		})();
 
