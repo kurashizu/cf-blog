@@ -139,7 +139,12 @@ async function loadChunk(
 ): Promise<Uint8Array | null> {
 	// A synthetic key so entries are addressed by chunk, not by whatever range
 	// the client happened to ask for.
-	const key = new Request(`https://vm-image-cache.invalid/${encodeURIComponent(image.url)}/${CHUNK}/${index}`);
+	// The size is part of the key on purpose: the R2 object name stays the same
+	// when CI republishes, so an immutable entry keyed only by name would serve
+	// the previous build forever.
+	const key = new Request(
+		`https://vm-image-cache.invalid/${encodeURIComponent(image.url)}/${image.size}/${CHUNK}/${index}`
+	);
 
 	const hit = await cache?.match(key);
 	if (hit) return new Uint8Array(await hit.arrayBuffer());

@@ -135,6 +135,15 @@
 		playSound('click');
 	}
 
+	/**
+	 * Images are served immutable, but their R2 keys are reused on every rebuild,
+	 * so the URL carries the size as a version — otherwise the edge keeps handing
+	 * back the previous build until the cache expires a year from now.
+	 */
+	function imageUrl(name: string, size: number): string {
+		return `/vm/img/${name}?v=${size}`;
+	}
+
 	async function imageInfo(name: string): Promise<{ size: number } | null> {
 		try {
 			const res = await fetch(`/vm/img/${name}?info`);
@@ -179,6 +188,7 @@
 			const wantKernel = settings.boot !== 'cdrom';
 			const rootfs = wantKernel ? await imageInfo('rootfs') : null;
 			const kernel = rootfs ? await imageInfo('vmlinuz') : null;
+			const initramfs = kernel ? await imageInfo('initramfs') : null;
 			if (settings.boot === 'kernel' && !kernel) {
 				throw new Error('no purpose-built image is published on this deployment yet');
 			}
@@ -214,13 +224,13 @@
 					? {
 							// Loading the kernel and initrd directly skips the bootloader
 							// entirely, which is what makes the cmdline ours to set.
-							bzimage: { url: '/vm/img/vmlinuz' },
-							initrd: { url: '/vm/img/initramfs' },
+							bzimage: { url: imageUrl('vmlinuz', kernel?.size ?? 0) },
+							initrd: { url: imageUrl('initramfs', initramfs?.size ?? 0) },
 							cmdline: settings.cmdline,
-							hda: { url: '/vm/img/rootfs', ...streamed }
+							hda: { url: imageUrl('rootfs', meta.size), ...streamed }
 						}
 					: {
-							cdrom: { url: `/vm/img/${IMAGE}`, ...streamed },
+							cdrom: { url: imageUrl(IMAGE, meta.size), ...streamed },
 							boot_order: 0x123 // CD, then hard disk, then floppy
 						}),
 				autostart: true,
@@ -422,9 +432,9 @@
 		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, x86 (32-bit)', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
 		{ label: 'CPU', value: 'single core, ~Pentium 4 class, no x86-64' },
 		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
-		{ label: 'DISK', value: 'read-only ISO, streamed in 1 MiB chunks' },
+		{ label: 'DISK', value: 'ext4 image, streamed in 1 MiB chunks' },
 		{ label: 'NETWORK', value: 'relay ready, guest not wired', title: 'The OmniProxy relay at /net is live and tested, but the in-browser gateway that turns guest ethernet frames into relay streams is not written yet' },
-		{ label: 'STATUS', value: 'boots to the initramfs rescue shell' }
+		{ label: 'STATUS', value: 'boots to an Alpine login' }
 	]);
 </script>
 
@@ -608,24 +618,23 @@
 				{/each}
 			</div>
 
-			<div class="border border-[#e06c75]/40 bg-[#e06c75]/5 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-xs font-black font-mono text-[#e06c75]">UNFINISHED — IT STOPS ONE STEP SHORT</div>
+			<div class="border border-[#98c379]/40 bg-[#98c379]/5 rounded-xs p-2.5 space-y-1.5">
+				<div class="text-xs font-black font-mono text-[#98c379]">IT BOOTS — LOG IN AS root, NO PASSWORD</div>
 				<p class="text-[11px] text-white/65 leading-relaxed">
-					Press BOOT and the machine comes up cleanly: SeaBIOS posts, the kernel starts, the
-					initramfs runs, and you land at a working shell prompt. It is the
-					<em>initramfs rescue</em> shell, though, not Alpine — mounting the root filesystem
-					fails, so you get busybox rather than the installed system.
+					SeaBIOS posts, the kernel starts, the initramfs mounts the root filesystem off the
+					emulated disk, OpenRC brings the system up and you get a login prompt on
+					<span class="font-mono">krsz-vm</span>. There is no password — it is a throwaway
+					machine with nothing listening. <span class="font-mono">apk</span> is installed but
+					has no network yet, so it can only work offline for now.
 				</p>
-				<p class="text-[11px] text-white/50 leading-relaxed">
-					The cause is narrowed down: <span class="font-mono">ata_piix</span> loads and the
-					disk enumerates as SCSI <span class="font-mono">0:0:0:0</span>, but nothing binds
-					<span class="font-mono">sd_mod</span>, so <span class="font-mono">/dev/sda</span>
-					never appears. The module is in the initramfs — the build prints it — and forcing it
-					with <span class="font-mono">modules=</span>, switching to
-					<span class="font-mono">root=LABEL=</span> and adding
-					<span class="font-mono">rootwait</span> have all left it unloaded. Everything before
-					that point works, including the streamed disk, which is why the counter shows a
-					single chunk read.
+				<p class="text-[11px] text-white/45 leading-relaxed">
+					Getting here took four separate fixes worth writing down: hardware autodetection had
+					to go (it triple-faults the emulator), the SCSI disk driver and its dependencies had
+					to be packed as whole directories rather than globs, the module had to be spelled
+					<span class="font-mono">sd_mod</span> because busybox's modprobe does not translate
+					<span class="font-mono">sd-mod</span>, and the image URLs needed a version — they are
+					served immutable but CI reuses the same R2 keys, so the edge was still handing back
+					the previous build.
 				</p>
 			</div>
 

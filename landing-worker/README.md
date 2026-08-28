@@ -45,14 +45,16 @@ its Range reads out to `fixed_chunk_size`, so the client and the route agree on
 configured as `name|url|size` triples in `VM_IMAGES`, so they can be repointed at
 R2 without touching code. `?info` returns metadata; the bare URL requires a Range.
 
-**It does not reach a shell yet.** SeaBIOS posts, ISOLINUX loads (the page types
-the kernel cmdline into its prompt, the only way to influence it on a stock ISO),
-Linux boots and OpenRC starts — then the machine resets at `Loading hardware
-drivers`, where the guest modprobes drivers for emulated PCI hardware. Ruled out:
-the disk stream (every chunk returns 206 in a few ms), guest RAM (same at 256 and
-512 MB), kernel age (3.16/5.15 fails earlier than 3.24/6.18), and ACPI/KMS. The
-likely fix is a purpose-built disk image instead of a stock ISO, which is how
-working v86 Linux setups are generally built.
+It boots to an Alpine login (`root`, no password). Getting there took four
+fixes worth recording: hardware autodetection has to be left out of every
+runlevel because it triple-faults the emulator; the SCSI disk driver and its
+dependencies must be packed as whole module directories rather than `.ko*`
+globs, which land somewhere modprobe does not search; the module has to be
+spelled `sd_mod`, since the initramfs's busybox modprobe does not translate
+`sd-mod` the way kmod's does; and image URLs carry their size as a version,
+because they are served immutable while CI reuses the same R2 keys — without it
+the edge keeps serving the previous build and every other fix looks like it
+failed.
 
 The BIOS blobs in `static/vm/` come from the v86 repository; SeaBIOS is LGPLv3.
 
