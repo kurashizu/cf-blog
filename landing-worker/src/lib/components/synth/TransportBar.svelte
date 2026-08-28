@@ -2,6 +2,7 @@
 	import { playSound } from '../../sound';
 	import { setMuted } from '../../stores/sound';
 	import { METER_SPECS, type TimeSignature, type NoteDurationDiv } from '../../synth';
+	import { isSynthSettingsOpen } from '../../stores/synth-settings';
 	import {
 		bpm,
 		setBpm,
@@ -191,6 +192,18 @@
 				</button>
 			{/each}
 		</div>
+		<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
+		<button
+			onclick={() => {
+				isSynthSettingsOpen.set(true);
+				playSound('click');
+			}}
+			class="px-2 py-0.5 border border-[#e5c07b]/50 hover:border-[#e5c07b] bg-[#e5c07b]/10 hover:bg-[#e5c07b]/20 text-[#e5c07b] hover:text-white rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0"
+			title="Open Synthesizer & Audio DSP Global Configuration [SETTINGS]"
+		>
+			<span>⚙</span>
+			<span>SETTINGS</span>
+		</button>
 	</div>
 </div>
 
@@ -349,5 +362,6 @@
 		>
 			FLW
 		</button>
+
 	</div>
 </div>
