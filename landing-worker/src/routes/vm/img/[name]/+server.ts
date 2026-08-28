@@ -158,7 +158,14 @@ async function loadChunk(
 		// R2 ranges are served by the binding itself — no upstream request, no
 		// egress charge, and the object is ours so it cannot disappear or rate-limit.
 		if (!bucket) return null;
-		const object = await bucket.get(image.url.slice(3), { range: { offset: start, length } });
+		const { key, partBytes } = parseR2Source(image.url);
+		// Large images are stored as parts because the uploader refuses objects
+		// over 300 MiB. CHUNK divides the part size, so a read never straddles two.
+		const objectKey = partBytes
+			? `${key}.${String(Math.floor(start / partBytes)).padStart(3, '0')}`
+			: key;
+		const offset = partBytes ? start % partBytes : start;
+		const object = await bucket.get(objectKey, { range: { offset, length } });
 		if (!object) return null;
 		bytes = new Uint8Array(await object.arrayBuffer());
 	} else {
@@ -184,11 +191,23 @@ async function loadChunk(
 	return bytes;
 }
 
+/** `r2:<key>` or `r2:<key>@<partBytes>` for an image stored in numbered parts. */
+function parseR2Source(url: string): { key: string; partBytes: number | null } {
+	const rest = url.slice(3);
+	const at = rest.lastIndexOf('@');
+	if (at <= 0) return { key: rest, partBytes: null };
+	const size = Number(rest.slice(at + 1));
+	return Number.isFinite(size) && size > 0
+		? { key: rest.slice(0, at), partBytes: size }
+		: { key: rest, partBytes: null };
+}
+
 /** Whole small image, for the kernel and initrd that v86 loads in one piece. */
 async function readAll(image: ImageSpec, bucket: R2Bucket | undefined): Promise<Uint8Array<ArrayBuffer> | null> {
 	if (image.url.startsWith('r2:')) {
 		if (!bucket) return null;
-		const object = await bucket.get(image.url.slice(3));
+		// Only unsplit objects are served whole; anything large must be ranged.
+		const object = await bucket.get(parseR2Source(image.url).key);
 		return object ? new Uint8Array(await object.arrayBuffer()) : null;
 	}
 	const res = await fetch(image.url);

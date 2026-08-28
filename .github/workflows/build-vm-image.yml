@@ -49,7 +49,7 @@ jobs:
                   {
                     echo "vmlinuz=$(stat -c %s out/vmlinuz)"
                     echo "initramfs=$(stat -c %s out/initramfs)"
-                    echo "rootfs=$(stat -c %s out/rootfs.img)"
+                    echo "rootfs=$(cat out/rootfs.img.* | wc -c)"
                   } >> "$GITHUB_OUTPUT"
                   ls -l out
                   sha256sum out/* > out/SHA256SUMS
@@ -62,9 +62,9 @@ jobs:
                   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
                   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
               run: |
-                  for f in vmlinuz initramfs rootfs.img; do
-                    npx wrangler r2 object put "public-files/vm/$f" \
-                      --file "../out/$f" \
+                  for path in ../out/vmlinuz ../out/initramfs ../out/rootfs.img.*; do
+                    npx wrangler r2 object put "public-files/vm/$(basename "$path")" \
+                      --file "$path" \
                       --content-type application/octet-stream \
                       --remote
                   done
@@ -88,6 +88,6 @@ jobs:
                     echo 'Set `VM_IMAGES` in `landing-worker/wrangler.toml` to:'
                     echo
                     echo '```toml'
-                    echo "VM_IMAGES = \"vmlinuz|r2:vm/vmlinuz|${{ steps.sizes.outputs.vmlinuz }},initramfs|r2:vm/initramfs|${{ steps.sizes.outputs.initramfs }},rootfs|r2:vm/rootfs.img|${{ steps.sizes.outputs.rootfs }}\""
+                    echo "VM_IMAGES = \"vmlinuz|r2:vm/vmlinuz|${{ steps.sizes.outputs.vmlinuz }},initramfs|r2:vm/initramfs|${{ steps.sizes.outputs.initramfs }},rootfs|r2:vm/rootfs.img|${{ steps.sizes.outputs.rootfs }}\"  # rootfs is served from .000/.001/... parts"
                     echo '```'
                   } >> "$GITHUB_STEP_SUMMARY"

@@ -15,9 +15,10 @@ KERNEL_FLAVOR="${KERNEL_FLAVOR:-lts}"
 IMAGE_MB="${IMAGE_MB:-256}"
 # Free space to leave on top of the installed system, for apk and scratch files.
 SLACK_MB="${SLACK_MB:-96}"
-# `wrangler r2 object put` refuses anything larger, and a smaller image is less
-# to stream anyway.
-MAX_MB=290
+# The root filesystem is stored as parts because `wrangler r2 object put` refuses
+# anything over 300 MiB; the disk proxy maps a byte offset back to the part that
+# holds it, so the guest sees one contiguous disk.
+PART_MB="${PART_MB:-200}"
 OUT="${OUT:-/out}"
 ROOTFS=/rootfs
 MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}"
@@ -62,8 +63,8 @@ cat > "$ROOTFS/etc/inittab" <<'EOF'
 ::sysinit:/sbin/openrc boot
 ::wait:/sbin/openrc default
 
-ttyS0::respawn:/sbin/getty -L 0 ttyS0 vt100
-tty1::respawn:/sbin/getty 38400 tty1
+ttyS0::respawn:/sbin/getty -n -l /sbin/autologin -L 0 ttyS0 vt100
+tty1::respawn:/sbin/getty -n -l /sbin/autologin 38400 tty1
 
 ::ctrlaltdel:/sbin/reboot
 ::shutdown:/sbin/openrc shutdown
@@ -73,16 +74,49 @@ EOF
 # prompting for a password nobody was given would just make it unusable.
 sed -i 's|^root:[^:]*:|root::|' "$ROOTFS/etc/shadow"
 
-cat > "$ROOTFS/etc/motd" <<'EOF'
-
-   Alpine Linux on v86 — a 32-bit x86 PC emulated in your browser.
-   Nothing here is persisted: everything is gone when you power off.
-
-   tmux      mouse reporting is on
-   startx    openbox on the VESA framebuffer
-   apk       reaches the mirror through an allowlisted relay
-
+# getty -l runs this instead of /bin/login. Going through `login -f` rather than
+# exec'ing a shell directly keeps the profile, the motd and the login record.
+cat > "$ROOTFS/sbin/autologin" <<'EOF'
+#!/bin/sh
+exec /bin/login -f root
 EOF
+chmod +x "$ROOTFS/sbin/autologin"
+
+cat > /tmp/motd.raw <<'MOTD'
+
+  \033[38;5;180m ██╗  ██╗ █████╗  ██████╗ ███████╗██╗███╗   ███╗\033[0m
+  \033[38;5;180m ╚██╗██╔╝██╔══██╗██╔════╝ ██╔════╝██║████╗ ████║\033[0m
+  \033[38;5;180m  ╚███╔╝ ╚█████╔╝███████╗ ███████╗██║██╔████╔██║\033[0m
+  \033[38;5;180m  ██╔██╗ ██╔══██╗██╔═══██╗╚════██║██║██║╚██╔╝██║\033[0m
+  \033[38;5;180m ██╔╝ ██╗╚█████╔╝╚██████╔╝███████║██║██║ ╚═╝ ██║\033[0m
+  \033[38;5;180m ╚═╝  ╚═╝ ╚════╝  ╚═════╝ ╚══════╝╚═╝╚═╝     ╚═╝\033[0m
+
+  \033[1mAlpine Linux on an emulated 32-bit x86 PC, inside a browser tab.\033[0m
+  No hypervisor underneath — SeaBIOS, a real kernel, and v86 translating
+  x86 to WebAssembly as it runs.
+
+  \033[38;5;114mTRY THIS\033[0m
+    \033[38;5;222muname -a\033[0m          see what you are actually running on
+    \033[38;5;222mtmux\033[0m              terminal multiplexer, mouse reporting is on
+    \033[38;5;222mstartx\033[0m            openbox on the VESA framebuffer
+    \033[38;5;222mapk add <pkg>\033[0m     the mirror is reachable through the relay
+    \033[38;5;222mping krsz.in\033[0m      answered by the emulator's own stack
+
+  \033[38;5;110mGOOD TO KNOW\033[0m
+    Nothing is persisted. Power off and every change is gone.
+    The disk is streamed in 1 MiB pieces as you touch it, so the first
+    use of a command is slower than the second.
+    Outbound traffic goes through an allowlisted relay, not the open
+    internet — most hosts will simply refuse to connect.
+
+MOTD
+
+# login cats /etc/motd verbatim, so the escapes have to be real bytes by then —
+# printf %b expands them; echo -e is not portable to busybox's shell.
+: > "$ROOTFS/etc/motd"
+while IFS= read -r line; do
+	printf '%b\n' "$line" >> "$ROOTFS/etc/motd"
+done < /tmp/motd.raw
 
 # Mouse reporting on, because the whole point of a terminal in a browser tab is
 # that a pointer is already there.
@@ -203,20 +237,19 @@ rm -rf "$ROOTFS/boot"/vmlinuz-* "$ROOTFS/boot"/initramfs-* "$ROOTFS/boot"/System
 USED_MB=$(( $(du -sk "$ROOTFS" | cut -f1) / 1024 ))
 NEEDED_MB=$(( USED_MB + SLACK_MB ))
 [ "$NEEDED_MB" -lt "$IMAGE_MB" ] && NEEDED_MB="$IMAGE_MB"
-if [ "$NEEDED_MB" -gt "$MAX_MB" ]; then
-	if [ "$USED_MB" -ge "$MAX_MB" ]; then
-		echo "!! rootfs is ${USED_MB} MB, which leaves no room under the ${MAX_MB} MB ceiling" >&2
-		exit 1
-	fi
-	echo "==> clamping ${NEEDED_MB} MB to the ${MAX_MB} MB ceiling"
-	NEEDED_MB="$MAX_MB"
-fi
 echo "==> rootfs uses ${USED_MB} MB, building a ${NEEDED_MB} MB image"
 
 mke2fs -q -t ext4 -b 4096 -d "$ROOTFS" -F -L krsz-root "$OUT/rootfs.img" "$((NEEDED_MB * 256))"
 
+# Split for upload. The parts are plain byte ranges of the same image, so the
+# proxy can serve any offset by reading from the part it lands in.
+split -b "${PART_MB}m" -d -a 3 "$OUT/rootfs.img" "$OUT/rootfs.img."
+rm -f "$OUT/rootfs.img"
+echo "==> rootfs split into $(ls "$OUT"/rootfs.img.* | wc -l) part(s) of up to ${PART_MB} MB"
+
 echo "==> built:"
 ls -l "$OUT"
-for f in vmlinuz initramfs rootfs.img; do
+for f in vmlinuz initramfs; do
 	echo "$f size=$(stat -c %s "$OUT/$f")"
 done
+echo "rootfs total=$(( NEEDED_MB * 1024 * 1024 )) part_bytes=$(( PART_MB * 1024 * 1024 ))"
