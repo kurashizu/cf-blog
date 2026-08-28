@@ -22,6 +22,12 @@
 		jit: boolean;
 		/** Attach a NIC and point it at the relay. */
 		network: boolean;
+		/**
+		 * 'terminal' attaches xterm.js to the guest's serial port; 'screen' shows
+		 * the emulated VGA adapter. The VGA text console cannot report the mouse,
+		 * so anything that wants a pointer — tmux, ncurses apps — needs the former.
+		 */
+		display: 'terminal' | 'screen';
 	}
 
 	const MEMORY_CHOICES = [64, 128, 256, 512, 1024];
@@ -47,7 +53,7 @@
 	const DEFAULT_CMDLINE =
 		'root=/dev/sda rw modules=sd_mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 4;
+	const SETTINGS_VERSION = 5;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
@@ -59,7 +65,8 @@
 		cmdline: DEFAULT_CMDLINE,
 		acpi: false,
 		jit: true,
-		network: true
+		network: true,
+		display: 'terminal'
 	};
 
 	let settings = $state<Settings>({ ...DEFAULTS });
@@ -103,6 +110,9 @@
 	let screenScale = $state(1);
 	let keyboardCaptured = $state(false);
 	let screenWrap: HTMLDivElement | undefined = $state();
+	let termEl: HTMLDivElement | undefined = $state();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let fitAddon: any = null;
 
 	function sendScancodes(codes: number[]) {
 		emulator?.keyboard_send_scancodes?.(codes);
@@ -201,6 +211,11 @@
 			mode = kernel ? 'kernel' : 'cdrom';
 
 			status = 'loading emulator (2 MB wasm)…';
+			// xterm only comes down when the terminal display is actually chosen.
+			const terminalMode = settings.display === 'terminal';
+			const xterm = terminalMode
+				? await Promise.all([import('@xterm/xterm'), import('@xterm/addon-fit'), import('@xterm/xterm/css/xterm.css')])
+				: null;
 			// v86 exports both a default and a named V86; only the named one is typed.
 			const [{ V86 }, { default: wasmPath }] = await Promise.all([
 				import('v86'),
@@ -220,7 +235,17 @@
 				vga_memory_size: settings.vgaMemoryMb * 1024 * 1024,
 				acpi: settings.acpi,
 				disable_jit: !settings.jit,
-				screen_container: screenEl,
+				...(terminalMode
+					? {
+							// v86 drives the terminal directly; the VGA adapter still exists,
+							// it is just not what is on screen.
+							serial_console: {
+								type: 'xtermjs' as const,
+								xterm_lib: xterm![0].Terminal,
+								container: termEl
+							}
+						}
+					: { screen_container: screenEl }),
 				bios: { url: '/vm/seabios.bin' },
 				vga_bios: { url: '/vm/vgabios.bin' },
 				...(mode === 'kernel'
@@ -271,6 +296,19 @@
 				// leaving it wrong until the next sampling tick.
 				requestAnimationFrame(fitScreen);
 			});
+
+			if (terminalMode && xterm) {
+				// The addon has to attach after v86 has constructed the Terminal.
+				const FitAddon = xterm[1].FitAddon;
+				requestAnimationFrame(() => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const term = (emulator as any)?.serial_adapter?.term;
+					if (!term) return;
+					fitAddon = new FitAddon();
+					term.loadAddon(fitAddon);
+					fitAddon.fit();
+				});
+			}
 
 			ticker = setInterval(() => {
 				sample();
@@ -336,6 +374,7 @@
 			/* already torn down */
 		}
 		emulator = null;
+		fitAddon = null;
 		restoreFetch?.();
 		restoreFetch = null;
 		phase = 'idle';
@@ -362,6 +401,8 @@
 	 * the top-left corner surrounded by black.
 	 */
 	function fitScreen() {
+		fitAddon?.fit?.();
+		if (settings.display === 'terminal') return;
 		if (!screenEl || !screenWrap) return;
 		const availableW = screenWrap.clientWidth - 8;
 		const availableH = screenWrap.clientHeight - 8;
@@ -376,10 +417,17 @@
 		screenScale = Math.max(0.25, Math.min(3, availableW / naturalW, availableH / naturalH));
 	}
 
-	function sendCtrlAltDel() {
-		// 0x1D ctrl, 0x38 alt, 0x53 delete — make, then break.
-		emulator?.keyboard_send_scancodes?.([0x1d, 0x38, 0x53, 0xd3, 0xb8, 0x9d]);
+	/**
+	 * A full restart, not Ctrl+Alt+Del. The kernel and initramfs are handed to the
+	 * emulator at construction rather than loaded by a bootloader, so a
+	 * guest-initiated reboot leaves SeaBIOS looking for a boot sector that was
+	 * never written — it hangs there. Tearing the machine down and building it
+	 * again is the only reset that works with direct kernel boot.
+	 */
+	async function restart() {
 		playSound('click');
+		shutdown();
+		await boot();
 	}
 
 	/**
@@ -454,6 +502,11 @@
 		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, x86 (32-bit)', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
 		{ label: 'CPU', value: 'single core, ~Pentium 4 class, no x86-64' },
 		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
+		{
+			label: 'DISPLAY',
+			value: settings.display === 'terminal' ? 'serial via xterm.js' : 'emulated VGA',
+			title: 'The serial terminal reports the mouse and resizes with the panel; the VGA text console can do neither'
+		},
 		{ label: 'DISK', value: 'ext4 image, streamed in 1 MiB chunks' },
 		{
 			label: 'NETWORK',
@@ -502,11 +555,11 @@
 					⌨ KEYS
 				</button>
 				<button
-					onclick={sendCtrlAltDel}
-					title="Send Ctrl+Alt+Del to the guest"
+					onclick={restart}
+					title="Rebuild the machine from scratch. Not Ctrl+Alt+Del: the kernel is handed to the emulator directly rather than loaded from the disk, so a guest reboot would leave SeaBIOS with nothing to boot."
 					class="px-2.5 py-1 border border-[#e5c07b]/50 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#e5c07b]/20"
 				>
-					CTRL+ALT+DEL
+					↻ RESTART
 				</button>
 				<button
 					onclick={stop}
@@ -587,6 +640,23 @@
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{mb} MB
+							</button>
+						{/each}
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISPLAY</span>
+						{#each [['terminal', 'TERMINAL'], ['screen', 'VGA SCREEN']] as const as [value, label] (value)}
+							<button
+								onclick={() => (settings.display = value)}
+								title={value === 'terminal'
+									? "xterm.js on the guest's serial port — it reports the mouse, so tmux and ncurses apps can use one, and it resizes with the panel"
+									: 'The emulated VGA adapter. Shows the graphical console, but a text console cannot report the mouse.'}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.display === value
+									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{label}
 							</button>
 						{/each}
 					</div>
@@ -718,15 +788,25 @@
 		<!-- Absolutely centred so the scale factor cannot skew the layout: a
 		     transform does not change the box the parent lays out. -->
 		<div
+			bind:this={termEl}
+			class="absolute inset-0 p-1.5 {settings.display === 'terminal' ? '' : 'hidden'}"
+		></div>
+
+		<div
 			bind:this={screenEl}
-			class="absolute left-1/2 top-1/2"
+			class="absolute left-1/2 top-1/2 {settings.display === 'terminal' ? 'hidden' : ''}"
 			style="transform: translate(-50%, -50%) scale({screenScale}); transform-origin: center center"
 		>
-			<div style="white-space: pre; font: 15px/15px monospace; color: #d8dee9; padding: 6px;"></div>
+			<!-- Line height has to exceed the font size or descenders are clipped:
+			     v86 lays each text row out in exactly this box. -->
+			<div style="white-space: pre; font: 15px/18px monospace; color: #d8dee9; padding: 6px;"></div>
 			<canvas style="display: none"></canvas>
 		</div>
 
-		{#if phase === 'running' && !keyboardCaptured}
+		<!-- Only the VGA screen needs a capture affordance. xterm takes focus and
+		     mouse events itself, and an overlay would swallow the very clicks that
+		     terminal mode exists to deliver. -->
+		{#if phase === 'running' && !keyboardCaptured && settings.display === 'screen'}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div

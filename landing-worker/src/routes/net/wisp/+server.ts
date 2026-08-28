@@ -79,7 +79,15 @@ export const GET: RequestHandler = async ({ request, platform, url }) => {
 	} catch {
 		error(403, 'Malformed Origin.');
 	}
-	if (originHost !== url.host) error(403, 'Cross-origin relay use is not allowed.');
+	// Hostnames, not full authorities: a dev proxy rewrites the port, and the port
+	// carries none of the property being checked here — that the caller is a page
+	// on this site rather than somebody else's.
+	const hostHeader = request.headers.get('host') ?? '';
+	const hostHostname = hostHeader.replace(/:\d+$/, '').toLowerCase();
+	const originHostname = originHost.replace(/:\d+$/, '').toLowerCase();
+	if (originHostname !== url.hostname.toLowerCase() && originHostname !== hostHostname) {
+		error(403, 'Cross-origin relay use is not allowed.');
+	}
 
 	if (env.NET_RATE_LIMIT) {
 		const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
