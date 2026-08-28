@@ -38,7 +38,9 @@ apk add --root "$ROOTFS" --initdb --no-cache \
 	--allow-untrusted \
 	alpine-base "linux-${KERNEL_FLAVOR}" linux-firmware-none busybox-extras \
 	openrc util-linux e2fsprogs \
-	nano vim htop curl bash file tree
+	nano vim htop curl bash file tree tmux \
+	openbox xterm xorg-server xf86-video-vesa xf86-input-libinput xinit \
+	font-misc-misc ttf-dejavu
 
 mkdir -p "$ROOTFS/etc/apk"
 cat > "$ROOTFS/etc/apk/repositories" <<EOF
@@ -76,6 +78,35 @@ cat > "$ROOTFS/etc/motd" <<'EOF'
    Alpine Linux on v86 — a 32-bit x86 PC emulated in your browser.
    Nothing here is persisted: everything is gone when you power off.
 
+   tmux      mouse reporting is on
+   startx    openbox on the VESA framebuffer
+   apk       reaches the mirror through an allowlisted relay
+
+EOF
+
+# Mouse reporting on, because the whole point of a terminal in a browser tab is
+# that a pointer is already there.
+cat > "$ROOTFS/etc/tmux.conf" <<'EOF'
+set -g mouse on
+set -g history-limit 10000
+set -g default-terminal "screen-256color"
+set -g status-style "bg=colour236,fg=colour252"
+EOF
+
+# startx brings up openbox with a terminal, on the VESA driver — v86 presents a
+# standard VGA/VESA adapter rather than anything a KMS driver would know.
+cat > "$ROOTFS/root/.xinitrc" <<'EOF'
+xterm -geometry 100x30+10+10 &
+exec openbox
+EOF
+chmod +x "$ROOTFS/root/.xinitrc"
+
+mkdir -p "$ROOTFS/etc/X11/xorg.conf.d"
+cat > "$ROOTFS/etc/X11/xorg.conf.d/10-vesa.conf" <<'EOF'
+Section "Device"
+    Identifier "v86"
+    Driver     "vesa"
+EndSection
 EOF
 
 mkdir -p "$ROOTFS/etc/profile.d"

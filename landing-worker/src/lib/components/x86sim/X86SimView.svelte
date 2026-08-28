@@ -20,6 +20,8 @@
 		cmdline: string;
 		acpi: boolean;
 		jit: boolean;
+		/** Attach a NIC and point it at the relay. */
+		network: boolean;
 	}
 
 	const MEMORY_CHOICES = [64, 128, 256, 512, 1024];
@@ -56,7 +58,8 @@
 		boot: 'auto',
 		cmdline: DEFAULT_CMDLINE,
 		acpi: false,
-		jit: true
+		jit: true,
+		network: true
 	};
 
 	let settings = $state<Settings>({ ...DEFAULTS });
@@ -234,7 +237,21 @@
 							boot_order: 0x123 // CD, then hard disk, then floppy
 						}),
 				autostart: true,
-				disable_speaker: true
+				disable_speaker: true,
+				...(settings.network
+					? {
+							net_device: {
+								// virtio is the modern-Linux path and carries a larger MTU;
+								// the relay is same-origin so the page never learns the
+								// upstream endpoint.
+								type: 'virtio' as const,
+								relay_url: `${location.protocol === 'https:' ? 'wisps' : 'wisp'}://${location.host}/net/wisp`,
+								// v86's WISP backend answers ARP, DHCP and ping itself and
+								// resolves names over DoH, so only the streams reach us.
+								dns_method: 'doh' as const
+							}
+						}
+					: {})
 			});
 
 			emulator.add_listener('emulator-started', () => {
@@ -433,7 +450,11 @@
 		{ label: 'CPU', value: 'single core, ~Pentium 4 class, no x86-64' },
 		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
 		{ label: 'DISK', value: 'ext4 image, streamed in 1 MiB chunks' },
-		{ label: 'NETWORK', value: 'relay ready, guest not wired', title: 'The OmniProxy relay at /net is live and tested, but the in-browser gateway that turns guest ethernet frames into relay streams is not written yet' },
+		{
+			label: 'NETWORK',
+			value: settings.network ? 'via the relay, allowlisted' : 'off',
+			title: "v86's own gateway answers ARP, DHCP and ping and resolves names over DoH; the TCP streams it produces are translated to OmniProxy at /net/wisp, where the destination allowlist is enforced"
+		},
 		{ label: 'STATUS', value: 'boots to an Alpine login' }
 	]);
 </script>
@@ -600,6 +621,10 @@
 						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
 							<input type="checkbox" bind:checked={settings.jit} class="accent-[#98c379]" />
 							<span title="v86 interprets code until a block is hot, then compiles it to WebAssembly. Turning this off is much slower and only useful for comparison.">JIT</span>
+						</label>
+						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
+							<input type="checkbox" bind:checked={settings.network} class="accent-[#98c379]" />
+							<span title="Attach a virtio NIC pointed at the same-origin relay. Reachable destinations are limited by an allowlist enforced at the edge.">NET</span>
 						</label>
 						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
 							<input type="checkbox" bind:checked={settings.acpi} class="accent-[#98c379]" />
