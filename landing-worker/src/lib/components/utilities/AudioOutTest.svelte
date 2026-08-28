@@ -16,6 +16,40 @@
 	let info = $state<{ label: string; value: string }[]>([]);
 	let error = $state<string | null>(null);
 
+	let outputs = $state<MediaDeviceInfo[]>([]);
+	let selectedOutput = $state('');
+	/** AudioContext.setSinkId is Chromium-only today; elsewhere the picker is inert. */
+	let sinkSupported = $state(true);
+	/** Output labels stay blank until some device permission has been granted. */
+	let labelsHidden = $derived(outputs.length > 0 && outputs.every((d) => !d.label));
+
+	async function listOutputs() {
+		if (!navigator.mediaDevices?.enumerateDevices) return;
+		try {
+			const all = await navigator.mediaDevices.enumerateDevices();
+			outputs = all.filter((d) => d.kind === 'audiooutput');
+		} catch {
+			outputs = [];
+		}
+	}
+
+	/** Move the live context to another output, if this browser allows it. */
+	async function applySink(deviceId: string) {
+		selectedOutput = deviceId;
+		const c = ctx as (AudioContext & { setSinkId?: (id: string) => Promise<void> }) | null;
+		if (!c) return;
+		if (typeof c.setSinkId !== 'function') {
+			sinkSupported = false;
+			return;
+		}
+		try {
+			await c.setSinkId(deviceId);
+			readInfo();
+		} catch (e) {
+			error = e instanceof Error ? `Could not switch output: ${e.message}` : 'Could not switch output';
+		}
+	}
+
 	function ensureContext(): AudioContext | null {
 		if (ctx) return ctx;
 		try {
@@ -25,9 +59,11 @@
 				return null;
 			}
 			ctx = new Klass();
+			sinkSupported = typeof (ctx as unknown as { setSinkId?: unknown }).setSinkId === 'function';
 			master = ctx.createGain();
 			master.gain.value = gain;
 			master.connect(ctx.destination);
+			if (selectedOutput) void applySink(selectedOutput);
 			readInfo();
 			return ctx;
 		} catch {
@@ -51,6 +87,15 @@
 		rows.push({
 			label: 'OUTPUT LATENCY',
 			value: !outLatency ? 'not reported by this browser' : `${(outLatency * 1000).toFixed(1)} ms`
+		});
+		const sink = (ctx as unknown as { sinkId?: string }).sinkId;
+		rows.push({
+			label: 'SINK',
+			value: !sinkSupported
+				? 'system default (setSinkId unsupported)'
+				: !sink
+					? 'system default'
+					: (outputs.find((d) => d.deviceId === sink)?.label ?? sink.slice(0, 12))
 		});
 		info = rows;
 	}
@@ -177,10 +222,16 @@
 		if (master) master.gain.value = gain;
 	});
 
-	onMount(() => () => {
-		stopAll();
-		void ctx?.close();
-		ctx = null;
+	onMount(() => {
+		void listOutputs();
+		const onDeviceChange = () => void listOutputs();
+		navigator.mediaDevices?.addEventListener?.('devicechange', onDeviceChange);
+		return () => {
+			navigator.mediaDevices?.removeEventListener?.('devicechange', onDeviceChange);
+			stopAll();
+			void ctx?.close();
+			ctx = null;
+		};
 	});
 
 	const CHANNEL_TESTS = [
@@ -234,6 +285,31 @@
 		>
 			STOP
 		</button>
+	</div>
+
+	<div class="flex flex-wrap items-center gap-2">
+		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">OUTPUT</span>
+		<select
+			bind:value={selectedOutput}
+			onchange={() => applySink(selectedOutput)}
+			disabled={!sinkSupported}
+			title={sinkSupported
+				? 'Route the test tones to a specific output device'
+				: 'This browser cannot redirect WebAudio to a chosen output — it always uses the system default'}
+			class="px-2 py-1.5 bg-black/60 border border-white/25 rounded-xs text-xs font-mono text-[#d8dee9] cursor-pointer max-w-[280px] disabled:opacity-40 disabled:cursor-not-allowed"
+		>
+			<option value="">system default{outputs.length ? ` (${outputs.length} available)` : ''}</option>
+			{#each outputs as d (d.deviceId)}
+				<option value={d.deviceId}>{d.label || `output ${d.deviceId.slice(0, 6)}`}</option>
+			{/each}
+		</select>
+		{#if !sinkSupported}
+			<span class="text-[11px] font-mono text-[#e5c07b]">setSinkId unsupported — playing on the system default</span>
+		{:else if labelsHidden}
+			<span class="text-[11px] font-mono text-white/40">
+				Device names stay hidden until a microphone grant exists — the MIC IN tool unlocks them.
+			</span>
+		{/if}
 	</div>
 
 	<div class="flex flex-wrap items-center gap-3 border border-white/15 bg-black/40 rounded-xs px-2.5 py-2">
