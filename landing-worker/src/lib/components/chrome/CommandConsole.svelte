@@ -12,8 +12,6 @@
 		type LineKind
 	} from '../../stores/console';
 
-	let { variant = 'inline' }: { variant?: 'inline' | 'overlay' } = $props();
-
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 
 	let commandInput = $state('');
@@ -141,7 +139,7 @@
 	<!-- Scrollback -->
 	<div
 		bind:this={scrollEl}
-		class="{variant === 'overlay' ? 'h-[55vh]' : 'max-h-[32vh]'} overflow-y-auto custom-scrollbar font-mono text-[13px] leading-relaxed pr-1"
+		class="min-h-[3rem] max-h-[55vh] overflow-y-auto custom-scrollbar font-mono text-[13px] leading-relaxed pr-1"
 	>
 		{#each $consoleBuffer as line, i (i)}
 			<div class="whitespace-pre-wrap break-words {LINE_CLASS[line.kind]}">

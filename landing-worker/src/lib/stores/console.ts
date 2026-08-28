@@ -16,6 +16,7 @@ import { midiConnectedDevice, midiDevices } from './synth-midi';
 import { soundState, setMuted, setVolume } from './sound';
 import { probeTimes } from './probes';
 import { edgeTraceMs, loadEdgeTrace } from './edge';
+import { guideOpen, hotkeyOverlayOpen } from './chrome';
 
 export type LineKind = 'cmd' | 'out' | 'ok' | 'err' | 'accent' | 'gold';
 export interface ConsoleLine {
@@ -143,7 +144,8 @@ const HELP: ConsoleLine[] = [
 	out('  echo <text>     print text'),
 	out('  theme [name]    cycle or set: tokyo gruvbox nord amber'),
 	out('  clear / Ctrl+L  clear screen · Tab completes/cycles · ↑↓ history'),
-	out('  ` (backquote)   drop-down console overlay on any tab'),
+	out('  guide           replay the getting-started walkthrough'),
+	out('  ` (backquote)   open/close this console over any view'),
 	out('  ? (shift+/)     full hotkey reference')
 ];
 
@@ -170,7 +172,9 @@ const USAGE: Record<string, string[]> = {
 	load: ['load <song>', 'Load a built-in song by name fragment. See "songs".'],
 	theme: ['theme [name]', 'Cycle, or set one of: ' + Object.keys(THEME_STYLES).join(', ')],
 	echo: ['echo <text>', 'Print text. Useful as a pipe source.'],
-	history: ['history', 'The last 15 commands. Persisted across visits.']
+	history: ['history', 'The last 15 commands. Persisted across visits.'],
+	guide: ['guide', 'Reopen the getting-started walkthrough.'],
+	keys: ['keys', 'Open the full keyboard reference (same as ? or F1).']
 };
 
 // ── pipe filters ────────────────────────────────────────────────────────────
@@ -400,6 +404,16 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	// ── info ──
 	if (cmd === 'help' || cmd === '?') return HELP;
 
+	if (cmd === 'guide' || cmd === 'tour' || cmd === 'intro') {
+		guideOpen.set(true);
+		return [ok('Opened the getting-started walkthrough.')];
+	}
+
+	if (cmd === 'keys' || cmd === 'keymap') {
+		hotkeyOverlayOpen.set(true);
+		return [ok('Opened the keymap.')];
+	}
+
 	if (cmd === 'man') {
 		const name = args.trim().toLowerCase();
 		if (!name) return HELP;
@@ -606,7 +620,7 @@ const COMMAND_NAMES = [
 	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'date', 'history', 'banner', 'tracks',
 	'songs', 'load', 'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval',
 	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'leaderboard', 'llm', 'ping',
-	'trace',
+	'trace', 'guide', 'tour', 'keys',
 	...Object.keys(EXTERNAL_LINKS)
 ];
 

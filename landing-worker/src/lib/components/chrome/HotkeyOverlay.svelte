@@ -25,8 +25,9 @@
 				{ key: 'Ctrl+3', desc: 'View 3 — utilities' },
 				{ key: 'Ctrl+4', desc: 'View 4 — leaderboard' },
 				{ key: 'T', desc: 'Cycle theme (tokyo / gruvbox / nord / amber)' },
-				{ key: '`', desc: 'Drop-down console, from any tab' },
+				{ key: '`', desc: 'Drop-down console — same as the ~ button, top-left' },
 				{ key: '? or F1', desc: 'This reference' },
+				{ key: 'guide', desc: 'Console command (or the [?] button) for the walkthrough' },
 				{ key: 'Esc', desc: 'Close the console overlay or this panel' }
 			]
 		},

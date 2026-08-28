@@ -106,11 +106,11 @@
 				}
 				if (aborted) return;
 				rows = [...rows, { label: check.label, value, state: value.startsWith('n/a') ? 'na' : 'ok' }];
-				await sleep(70);
+				await sleep(45);
 			}
 			if (aborted) return;
 			finished = true;
-			await sleep(650);
+			await sleep(400);
 			if (!aborted) onDone();
 		})();
 

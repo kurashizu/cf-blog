@@ -7,6 +7,7 @@
 	import { theme, cycleTheme, THEME_STYLES } from '../../stores/theme';
 	import { SPINNER_FRAMES, spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
+	import { consoleOverlayOpen, guideOpen, toggleConsoleOverlay } from '../../stores/chrome';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$theme]);
@@ -41,8 +42,22 @@
 	<div class="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
 		<span class="bg-black/40 px-2 sm:px-2.5 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-1.5 shrink-0">
 			<span class="text-[#e5c07b] font-mono">{SPINNER_FRAMES[$spinnerFrame]}</span>
-			<span>[tmux:edge]</span>
+			<span class="hidden 2xl:inline">[tmux:edge]</span>
 		</span>
+
+		<!-- The console is drop-down only, so it needs a visible handle as well as its key -->
+		<button
+			onclick={() => {
+				toggleConsoleOverlay();
+				playSound('toggle');
+			}}
+			title="Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]"
+			class="px-2 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 font-mono border {$consoleOverlayOpen
+				? 'border-[#98c379] bg-[#98c379] text-black font-black'
+				: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
+		>
+			<span class="hidden 2xl:inline">~ CONSOLE</span><span class="2xl:hidden">~</span><span class="opacity-60 hidden 2xl:inline">&nbsp;`</span>
+		</button>
 
 		{#each TABS as tab (tab.id)}
 			<button
@@ -78,9 +93,19 @@
 			</span>
 		</button>
 		<button
+			onclick={() => {
+				guideOpen.set(true);
+				playSound('click');
+			}}
+			title="Open the walkthrough — what each view does and every keyboard shortcut"
+			class="px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
+		>
+			<span class="hidden 2xl:inline">[?]&nbsp;GUIDE</span><span class="2xl:hidden">[?]</span>
+		</button>
+		<button
 			onclick={cycleTheme}
 			title="Color Theme Switcher — Cycle palette (Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
-			class="hover:underline cursor-pointer hidden xl:inline text-[#e5c07b]">[THEME: {$theme.toUpperCase()}]</button
+			class="hover:underline cursor-pointer hidden 2xl:inline text-[#e5c07b]">[THEME: {$theme.toUpperCase()}]</button
 		>
 		<span
 			title="Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers"

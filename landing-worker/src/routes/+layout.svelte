@@ -11,25 +11,44 @@
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
+	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen } from '$lib/stores/chrome';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
 	import TelemetryFooter from '$lib/components/chrome/TelemetryFooter.svelte';
 	import CommandConsole from '$lib/components/chrome/CommandConsole.svelte';
 	import HotkeyOverlay from '$lib/components/chrome/HotkeyOverlay.svelte';
 	import BootSequence from '$lib/components/chrome/BootSequence.svelte';
+	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
 
 	let { children } = $props();
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$theme]);
-	let consoleOverlayOpen = $state(false);
-	let hotkeyOverlayOpen = $state(false);
 	let bootVisible = $state(false);
 
-	const BOOT_KEY = 'krsz.post.done';
+	const GUIDE_KEY = 'krsz.guide.seen';
+
+	/** The walkthrough is offered once, then only on request. */
+	function showGuideIfNew() {
+		try {
+			if (localStorage.getItem(GUIDE_KEY) !== '1') guideOpen.set(true);
+		} catch {
+			/* private mode — skip the guide rather than block the page */
+		}
+	}
+
+	function closeGuide() {
+		guideOpen.set(false);
+		try {
+			localStorage.setItem(GUIDE_KEY, '1');
+		} catch {
+			/* nothing to remember it with; it will offer again next visit */
+		}
+	}
 
 	function dismissBoot() {
 		bootVisible = false;
+		showGuideIfNew();
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -47,7 +66,7 @@
 		// F1 reaches the keymap even from a focused console input, where "?" types.
 		if (e.key === 'F1') {
 			e.preventDefault();
-			hotkeyOverlayOpen = !hotkeyOverlayOpen;
+			hotkeyOverlayOpen.update((v) => !v);
 			playSound('toggle');
 			return;
 		}
@@ -58,17 +77,21 @@
 		// both work even while the console's own input has focus.
 		if (e.code === 'Backquote' && !e.metaKey && !e.ctrlKey && !e.altKey) {
 			e.preventDefault();
-			consoleOverlayOpen = !consoleOverlayOpen;
+			consoleOverlayOpen.update((v) => !v);
 			playSound('toggle');
 			return;
 		}
 		if (e.key === 'Escape') {
-			if (hotkeyOverlayOpen) {
-				hotkeyOverlayOpen = false;
+			if ($guideOpen) {
+				closeGuide();
 				return;
 			}
-			if (consoleOverlayOpen) {
-				consoleOverlayOpen = false;
+			if ($hotkeyOverlayOpen) {
+				hotkeyOverlayOpen.set(false);
+				return;
+			}
+			if ($consoleOverlayOpen) {
+				consoleOverlayOpen.set(false);
 				return;
 			}
 		}
@@ -80,7 +103,7 @@
 
 		if (e.key === '?') {
 			e.preventDefault();
-			hotkeyOverlayOpen = !hotkeyOverlayOpen;
+			hotkeyOverlayOpen.update((v) => !v);
 			playSound('toggle');
 			return;
 		}
@@ -96,14 +119,13 @@
 		initConsoleState();
 		window.addEventListener('keydown', handleKeydown);
 
-		// POST runs once per tab session, and never for reduced-motion users —
-		// the boot screen is a probe readout, not information you can only get there.
-		const alreadyBooted = sessionStorage.getItem(BOOT_KEY) === '1';
+		// POST runs on every page load — it is short, skippable with any key, and
+		// never shown to reduced-motion users. Tab switches are client-side
+		// navigation, so it does not reappear when moving between views.
 		const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (!alreadyBooted && !reducedMotion) {
-			bootVisible = true;
-			sessionStorage.setItem(BOOT_KEY, '1');
-		}
+		if (!reducedMotion) bootVisible = true;
+		else showGuideIfNew();
+
 		// Idempotent and shared with the POST screen's own call — the footer must
 		// still fill in when the boot screen is skipped or dismissed early.
 		loadEdgeTrace();
@@ -127,7 +149,9 @@
 		<Sidebar />
 
 		<div class="col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} flex flex-col {themeStyles.cardBg} rounded-sm min-h-0 lg:overflow-hidden">
-			<!-- Only the page content scrolls — the console stays pinned below it -->
+			<!-- The console lives only in the drop-down overlay now, so every view
+			     gets the full panel and no view has an autofocused input competing
+			     with the keyboard testers or the QWERTY piano. -->
 			<div
 				class="flex-1 min-h-0 lg:overflow-y-auto custom-scrollbar {activeTab === 2
 					? 'p-2 sm:p-3 space-y-1.5'
@@ -135,35 +159,31 @@
 			>
 				{@render children()}
 			</div>
-
-			<!-- Console only on modules/guestbook — synth needs the space, and the
-			     utilities testers need raw keyboard/mouse input without an autofocused field -->
-			{#if activeTab <= 1}
-				<div class="shrink-0 px-2.5 sm:px-3.5 pb-2.5 sm:pb-3.5">
-					<CommandConsole />
-				</div>
-			{/if}
 		</div>
 	</div>
 
 	<TelemetryFooter />
 </div>
 
-{#if consoleOverlayOpen}
+{#if $consoleOverlayOpen}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[140] bg-black/50" onclick={() => (consoleOverlayOpen = false)}></div>
+	<div class="fixed inset-0 z-[140] bg-black/50" onclick={() => consoleOverlayOpen.set(false)}></div>
 	<div class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBg} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3">
 		<div class="flex items-center justify-between text-xs font-mono font-bold pb-1">
 			<span style="color: {themeStyles.cursorColor}">~ KRSZ CONSOLE // DROP-DOWN</span>
 			<span class="text-white/40">` or Esc to close</span>
 		</div>
-		<CommandConsole variant="overlay" />
+		<CommandConsole />
 	</div>
 {/if}
 
-{#if hotkeyOverlayOpen}
-	<HotkeyOverlay onClose={() => (hotkeyOverlayOpen = false)} />
+{#if $hotkeyOverlayOpen}
+	<HotkeyOverlay onClose={() => hotkeyOverlayOpen.set(false)} />
+{/if}
+
+{#if $guideOpen}
+	<Onboarding onClose={closeGuide} />
 {/if}
 
 {#if bootVisible}

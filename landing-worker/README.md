@@ -23,9 +23,13 @@ Shared chrome (tab bar, sidebar, command console, telemetry footer, theme) lives
 
 Hotkeys: `Ctrl+0`-`Ctrl+4` switch view (always, even inside the key-capturing testers), `T` cycles theme, `` ` `` drops the console down over any tab, `?` or `F1` opens the full keymap.
 
-The footer reads `/cdn-cgi/trace` and shows the real serving Cloudflare PoP, negotiated protocol and TLS version; `trace` in the console prints the whole record with a browser-measured round trip. The first load of a tab session runs a POST screen of real capability probes (GPU renderer string, storage quota, service-worker state, edge PoP) — skipped entirely under `prefers-reduced-motion`.
+First-time visitors get a four-step walkthrough of the views, the console and the shortcuts (`Onboarding.svelte`); it is offered once, then only via the `[?] GUIDE` button or the `guide` console command.
 
-The console is a small shell: a read-only virtual filesystem projected from `MODULES` and the live stores (`cd`, `ls`, `cat`, `tree`), pipes into `grep`/`head`/`tail`/`sort`/`uniq`/`wc`, persistent history, `alias`, and `man <cmd>`.
+Every page load starts with a short POST screen of real capability probes (GPU renderer string, storage quota, service-worker state, edge PoP) — any key skips it, and it never runs under `prefers-reduced-motion`. Tab switches are client-side navigation, so it does not reappear between views.
+
+The footer reads `/cdn-cgi/trace` and shows the real serving Cloudflare PoP, negotiated protocol and TLS version; `trace` in the console prints the whole record with a browser-measured round trip.
+
+The console is a small shell, reached only as a drop-down (`` ` `` or the `~` button in the tab bar) so no view carries an autofocused input: a read-only virtual filesystem projected from `MODULES` and the live stores (`cd`, `ls`, `cat`, `tree`), pipes into `grep`/`head`/`tail`/`sort`/`uniq`/`wc`, persistent history, `alias`, and `man <cmd>`.
 
 ## Local Development
 
@@ -75,7 +79,7 @@ landing-worker/
 │   │   ├── stores/                     # Svelte stores wrapping the synth/sound singletons
 │   │   └── components/
 │   │       ├── chrome/                 # TabBar, Sidebar, CommandConsole, TelemetryFooter,
-│   │       │                           # HotkeyOverlay, BootSequence
+│   │       │                           # HotkeyOverlay, BootSequence, Onboarding
 │   │       ├── projects/               # ProjectsView + MermaidDiagram
 │   │       ├── leaderboard/            # LeaderboardView
 │   │       ├── utilities/              # The twelve hardware testers
