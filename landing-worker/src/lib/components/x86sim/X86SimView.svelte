@@ -426,7 +426,9 @@
 	 * land near TARGET_COLS instead, which is wide enough for tmux and vim and
 	 * large enough to read. The guest picks the new width up from `resize`.
 	 */
-	const TARGET_COLS = 92;
+	const TARGET_COLS = 100;
+	/** Past this the console reads as a slide, not a terminal. */
+	const MAX_FONT_PX = 17;
 
 	function fitTerminal() {
 		if (!termEl || !FitAddonCtor) return;
@@ -445,10 +447,13 @@
 		const cols = term.cols ?? 0;
 		const current = term.options.fontSize ?? 15;
 		if (!cols || Math.abs(cols - TARGET_COLS) <= 4) return;
-		const next = Math.max(13, Math.min(22, Math.round((current * cols) / TARGET_COLS)));
+		const next = Math.max(12, Math.min(MAX_FONT_PX, Math.round((current * cols) / TARGET_COLS)));
 		if (next === current) return;
 		term.options.fontSize = next;
-		fitAddon.fit();
+		// xterm measures its cell after the font has landed, so fitting in this
+		// frame sizes the grid to the old metrics — one row too many, the last of
+		// them cut off by the bottom edge.
+		requestAnimationFrame(() => fitAddon?.fit?.());
 	}
 
 	function fitScreen() {

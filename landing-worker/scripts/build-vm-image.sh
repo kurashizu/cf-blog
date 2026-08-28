@@ -14,7 +14,10 @@ ALPINE_VERSION="${ALPINE_VERSION:-3.24}"
 KERNEL_FLAVOR="${KERNEL_FLAVOR:-lts}"
 IMAGE_MB="${IMAGE_MB:-256}"
 # Free space to leave on top of the installed system, for apk and scratch files.
-SLACK_MB="${SLACK_MB:-96}"
+# The desktop packages ate the old 96 MB down to single digits, which is not
+# enough to install anything -- and every written block lives in the browser's
+# memory anyway, so the only cost of a roomier filesystem is R2 storage.
+SLACK_MB="${SLACK_MB:-224}"
 # The root filesystem is stored as parts because `wrangler r2 object put` refuses
 # anything over 300 MiB; the disk proxy maps a byte offset back to the part that
 # holds it, so the guest sees one contiguous disk.
