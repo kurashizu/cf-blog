@@ -38,6 +38,7 @@ jobs:
                     -e IMAGE_MB='${{ inputs.image_mb }}' \
                     -v "$PWD/out:/out" \
                     -v "$PWD/landing-worker/scripts/build-vm-image.sh:/build.sh:ro" \
+                    -v "$PWD/landing-worker/vm-assets:/assets:ro" \
                     i386/alpine:${{ inputs.alpine_version }} sh /build.sh
 
             - name: Take ownership and record sizes

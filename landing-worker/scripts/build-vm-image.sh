@@ -40,7 +40,7 @@ apk add --root "$ROOTFS" --initdb --no-cache \
 	alpine-base "linux-${KERNEL_FLAVOR}" linux-firmware-none busybox-extras \
 	openrc util-linux e2fsprogs \
 	nano vim htop curl bash file tree tmux ncurses-terminfo eudev \
-	openbox xterm xorg-server xf86-input-libinput xinit xsetroot \
+	openbox xterm xorg-server xf86-input-libinput xinit xsetroot feh tint2 \
 	font-misc-misc ttf-dejavu
 
 mkdir -p "$ROOTFS/etc/apk"
@@ -152,13 +152,73 @@ set -g default-terminal "screen-256color"
 set -g status-style "bg=colour236,fg=colour252"
 EOF
 
-# startx brings up openbox with a terminal, on the VESA driver — v86 presents a
-# standard VGA/VESA adapter rather than anything a KMS driver would know.
+# The same session as kurashizu/openbox-vnc, cut down to what an emulated 486
+# can carry: openbox with one desktop named KRSZ, the project's wallpaper, and a
+# tint2 panel. pcmanfm draws the desktop there; here it would pull in GTK and
+# take minutes to start, so feh paints the background and the panel and the
+# root menu are the whole interface.
+mkdir -p "$ROOTFS/root/.config/openbox"
 cat > "$ROOTFS/root/.xinitrc" <<'EOF'
-xsetroot -solid "#12151a" 2>/dev/null
-xterm -geometry 100x30+24+24 -fa "DejaVu Sans Mono" -fs 11 \
+if [ -f /usr/share/backgrounds/krsz.png ]; then
+	feh --bg-scale /usr/share/backgrounds/krsz.png
+else
+	xsetroot -solid "#12151a"
+fi
+tint2 &
+xterm -geometry 96x26+28+28 -fa "DejaVu Sans Mono" -fs 11 \
 	-bg "#0d1117" -fg "#d8dee9" -title "krsz-vm" &
 exec openbox
+EOF
+
+mkdir -p "$ROOTFS/usr/share/backgrounds"
+if [ -f /assets/wallpaper.png ]; then
+	cp /assets/wallpaper.png "$ROOTFS/usr/share/backgrounds/krsz.png"
+fi
+
+cat > "$ROOTFS/root/.config/openbox/rc.xml" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <desktops>
+    <number>1</number>
+    <firstdesk>1</firstdesk>
+    <names>
+      <name>KRSZ</name>
+    </names>
+  </desktops>
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>NLIMC</titleLayout>
+    <font place="ActiveWindow"><name>sans</name><size>9</size></font>
+    <font place="InactiveWindow"><name>sans</name><size>9</size></font>
+  </theme>
+</openbox_config>
+EOF
+
+mkdir -p "$ROOTFS/root/.config/tint2"
+cat > "$ROOTFS/root/.config/tint2/tint2rc" <<'EOF'
+panel_items = TC
+panel_size = 100% 26
+panel_position = bottom center horizontal
+panel_background_id = 1
+taskbar_mode = single_desktop
+task_text = 1
+task_font = sans 9
+task_font_color = #d8dee9 100
+task_active_background_id = 2
+time1_format = %H:%M
+time1_font = sans 9
+clock_font_color = #d8dee9 100
+clock_padding = 8 0
+
+rounded = 0
+border_width = 0
+background_color = #12151a 88
+border_color = #000000 0
+
+rounded = 0
+border_width = 1
+background_color = #2b323b 100
+border_color = #98c379 100
 EOF
 chmod +x "$ROOTFS/root/.xinitrc"
 
@@ -175,7 +235,6 @@ Section "Device"
 EndSection
 EOF
 
-mkdir -p "$ROOTFS/root/.config/openbox"
 cat > "$ROOTFS/root/.config/openbox/menu.xml" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_menu xmlns="http://openbox.org/3.4/menu">
