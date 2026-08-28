@@ -9,16 +9,28 @@
 	import { initTransport } from '$lib/stores/synth-transport';
 	import { tabIndexFromPath, TAB_ROUTES } from '$lib/routes-map';
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
+	import { initConsoleState } from '$lib/stores/console';
+	import { loadEdgeTrace } from '$lib/stores/edge';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
 	import TelemetryFooter from '$lib/components/chrome/TelemetryFooter.svelte';
 	import CommandConsole from '$lib/components/chrome/CommandConsole.svelte';
+	import HotkeyOverlay from '$lib/components/chrome/HotkeyOverlay.svelte';
+	import BootSequence from '$lib/components/chrome/BootSequence.svelte';
 
 	let { children } = $props();
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 	let consoleOverlayOpen = $state(false);
+	let hotkeyOverlayOpen = $state(false);
+	let bootVisible = $state(false);
+
+	const BOOT_KEY = 'krsz.post.done';
+
+	function dismissBoot() {
+		bootVisible = false;
+	}
 
 	function handleKeydown(e: KeyboardEvent) {
 		// Tab navigation on Ctrl+0..3 — the universal escape hatch. It types
@@ -32,6 +44,14 @@
 			return;
 		}
 
+		// F1 reaches the keymap even from a focused console input, where "?" types.
+		if (e.key === 'F1') {
+			e.preventDefault();
+			hotkeyOverlayOpen = !hotkeyOverlayOpen;
+			playSound('toggle');
+			return;
+		}
+
 		if ($suspendNavHotkeys) return;
 
 		// Quake-style console: backquote toggles from anywhere, Esc closes —
@@ -42,15 +62,28 @@
 			playSound('toggle');
 			return;
 		}
-		if (e.key === 'Escape' && consoleOverlayOpen) {
-			consoleOverlayOpen = false;
-			return;
+		if (e.key === 'Escape') {
+			if (hotkeyOverlayOpen) {
+				hotkeyOverlayOpen = false;
+				return;
+			}
+			if (consoleOverlayOpen) {
+				consoleOverlayOpen = false;
+				return;
+			}
 		}
 
 		const target = e.target as HTMLElement | null;
 		const isInput = ['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '');
 		if (isInput) return;
 		if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+		if (e.key === '?') {
+			e.preventDefault();
+			hotkeyOverlayOpen = !hotkeyOverlayOpen;
+			playSound('toggle');
+			return;
+		}
 
 		if (e.key.toLowerCase() === 't') {
 			cycleTheme();
@@ -60,7 +93,20 @@
 	onMount(() => {
 		const stopClock = initClock();
 		const stopTransport = initTransport();
+		initConsoleState();
 		window.addEventListener('keydown', handleKeydown);
+
+		// POST runs once per tab session, and never for reduced-motion users —
+		// the boot screen is a probe readout, not information you can only get there.
+		const alreadyBooted = sessionStorage.getItem(BOOT_KEY) === '1';
+		const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (!alreadyBooted && !reducedMotion) {
+			bootVisible = true;
+			sessionStorage.setItem(BOOT_KEY, '1');
+		} else {
+			// BootSequence would have resolved the trace; without it, fill the footer here.
+			loadEdgeTrace();
+		}
 
 		return () => {
 			stopClock();
@@ -114,4 +160,12 @@
 		</div>
 		<CommandConsole variant="overlay" />
 	</div>
+{/if}
+
+{#if hotkeyOverlayOpen}
+	<HotkeyOverlay onClose={() => (hotkeyOverlayOpen = false)} />
+{/if}
+
+{#if bootVisible}
+	<BootSequence onDone={dismissBoot} />
 {/if}

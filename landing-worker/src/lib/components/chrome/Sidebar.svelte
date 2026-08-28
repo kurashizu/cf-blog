@@ -72,7 +72,7 @@
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
 		<div class="text-xs font-bold text-[#e5c07b] flex items-center justify-between border-b border-white/10 pb-0.5 shrink-0">
 			<span>┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
-			<span class="text-white/50 text-xs">[CTRL+0-3, T]</span>
+			<span class="text-white/50 text-xs">[CTRL+0-3 · T · ?]</span>
 		</div>
 
 		<div class="grid grid-cols-3 gap-1.5 py-1">
@@ -119,7 +119,7 @@
 
 		<div class="border-t border-white/10 pt-1 text-xs text-white/50 flex justify-between shrink-0 font-mono">
 			<span>PADS: 5 ACTIVE NODES</span>
-			<span>HOTKEY [CTRL+0-3, T]</span>
+			<span>HOTKEY [CTRL+0-3 · T · ?]</span>
 		</div>
 	</div>
 </div>

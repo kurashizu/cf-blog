@@ -5,6 +5,7 @@
 	import {
 		consoleBuffer,
 		commandHistory,
+		cwd,
 		executeCommand,
 		getSuggestions,
 		applyCompletion,
@@ -175,6 +176,9 @@
 		onclick={() => inputEl?.focus()}
 		class="flex items-center gap-2 sm:gap-2.5 border border-white/25 bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px] max-w-full"
 	>
+		{#if $cwd !== '/'}
+			<span class="font-mono text-xs sm:text-sm text-white/40 select-none shrink-0 hidden sm:inline">{$cwd}</span>
+		{/if}
 		<span class="font-black text-sm select-none" style="color: {themeStyles.cursorColor}">:</span>
 
 		<div class="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden">

@@ -1,9 +1,26 @@
 <script lang="ts">
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { edgeTrace, edgeTraceMs, edgeTraceStatus, traceSummary } from '../../stores/edge';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 
 	let themeStyles = $derived(THEME_STYLES[$theme]);
+
+	/** Real `/cdn-cgi/trace` values — never a placeholder number. */
+	let edgeLabel = $derived(
+		$edgeTraceStatus === 'ok'
+			? traceSummary($edgeTrace)
+			: $edgeTraceStatus === 'probing'
+				? 'TRACING EDGE…'
+				: $edgeTraceStatus === 'unavailable'
+					? 'EDGE TRACE N/A'
+					: ''
+	);
+	let edgeTitle = $derived(
+		$edgeTrace
+			? `Served by Cloudflare PoP ${$edgeTrace.colo}${$edgeTrace.loc ? ` (${$edgeTrace.loc})` : ''} over ${$edgeTrace.http}, ${$edgeTrace.tls}${$edgeTrace.kex ? ` / ${$edgeTrace.kex}` : ''}${$edgeTraceMs === null ? '' : ` — trace round trip ${$edgeTraceMs}ms`}. Read live from /cdn-cgi/trace; type "trace" in the console for the full record.`
+			: 'Cloudflare /cdn-cgi/trace — type "trace" in the console to probe the edge.'
+	);
 
 	const LINKS = [
 		{ href: 'https://github.com/kurashizu', icon: 'github', label: '1:gh/kurashizu', title: 'GitHub Profile — Open https://github.com/kurashizu in a new tab', color: 'text-[#61afef] hover:text-[#98c379]' },
@@ -36,6 +53,13 @@
 
 	<div class="flex items-center gap-2 sm:gap-3">
 		<span class="text-[#e06c75] hidden sm:inline">"krsz-edge-node"</span>
-		<span class="text-[#98c379] text-[11px] sm:text-xs">STATUS: 0ms COLD START</span>
+		{#if edgeLabel}
+			<span
+				title={edgeTitle}
+				class="text-[11px] sm:text-xs {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
+			>
+				{edgeLabel}
+			</span>
+		{/if}
 	</div>
 </footer>

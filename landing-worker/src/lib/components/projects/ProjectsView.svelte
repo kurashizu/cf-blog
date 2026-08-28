@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
-	import { spinnerFrame } from '../../stores/clock';
+	import { SPINNER_FRAMES, spinnerFrame } from '../../stores/clock';
 	import { selectedModuleId } from '../../stores/selected-module';
 	import { probeResults, probeAllProjects } from '../../stores/probes';
 	import { MODULES } from '../../data/modules';
@@ -39,7 +39,7 @@
 			title="Reachability + round trip measured from YOUR browser just now (2 samples per host, best shown; first hit pays TLS setup) — click to re-probe"
 			class="text-xs sm:text-sm text-[#98c379] flex items-center gap-1.5 shrink-0 cursor-pointer hover:underline"
 		>
-			<span>{$spinnerFrame}</span>
+			<span>{SPINNER_FRAMES[$spinnerFrame]}</span>
 			<span>6 PROJECTS · LIVE PROBE ⟳</span>
 		</button>
 	</div>
@@ -63,7 +63,7 @@
 				<div>
 					<div class="flex items-center justify-between text-xs mb-1.5">
 						<span class="font-bold text-xs sm:text-sm" style="color: {m.color}">[{m.badge}]</span>
-						<span class="px-1.5 py-0.5 rounded text-xs font-bold bg-black/40 text-[#eceff4] font-mono">{isHovered ? $spinnerFrame + ' ' + m.tag : m.tag}</span>
+						<span class="px-1.5 py-0.5 rounded text-xs font-bold bg-black/40 text-[#eceff4] font-mono">{isHovered ? SPINNER_FRAMES[$spinnerFrame] + ' ' + m.tag : m.tag}</span>
 					</div>
 					<div class="font-bold text-sm sm:text-base group-hover:underline flex items-center gap-2 text-[#eceff4]">
 						<PixelIcon name={m.icon} size={18} />

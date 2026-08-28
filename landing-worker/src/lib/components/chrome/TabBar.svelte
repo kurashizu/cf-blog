@@ -5,7 +5,7 @@
 	import { setMuted } from '../../stores/sound';
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
 	import { theme, cycleTheme, THEME_STYLES } from '../../stores/theme';
-	import { spinnerFrame } from '../../stores/clock';
+	import { SPINNER_FRAMES, spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
@@ -39,7 +39,7 @@
 >
 	<div class="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
 		<span class="bg-black/40 px-2 sm:px-2.5 py-1 rounded text-xs sm:text-sm text-[#56b6c2] flex items-center gap-1.5 shrink-0">
-			<span class="text-[#e5c07b] font-mono">{$spinnerFrame}</span>
+			<span class="text-[#e5c07b] font-mono">{SPINNER_FRAMES[$spinnerFrame]}</span>
 			<span>[tmux:edge]</span>
 		</span>
 
