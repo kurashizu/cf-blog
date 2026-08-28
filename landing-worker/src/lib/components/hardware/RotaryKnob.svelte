@@ -61,9 +61,17 @@
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
 		const dir = e.deltaY < 0 ? 1 : -1;
-		const delta = (max - min) * 0.05 * dir;
-		const stepped = Math.round((value + delta) / step) * step;
-		onChange(Math.max(min, Math.min(max, stepped)));
+		// At least one step, or the rounding below lands back on the current value
+		// and the knob cannot be turned at all — which is what happened to RATIO,
+		// whose 0.5 step is larger than 5% of its 0.5-4 range.
+		const magnitude = Math.max(step, (max - min) * 0.05);
+		const stepped = Math.round((value + magnitude * dir) / step) * step;
+		// Re-round to the step's own precision so repeated turns cannot drift.
+		const decimals = (String(step).split('.')[1] ?? '').length;
+		const snapped = Number(stepped.toFixed(decimals));
+		const next = Math.max(min, Math.min(max, snapped));
+		if (next === value) return;
+		onChange(next);
 		playSound('click');
 	}
 </script>

@@ -173,7 +173,7 @@
 	});
 </script>
 
-<div class="border border-white/20 bg-black/60 rounded-xs p-1.5 pt-1 flex flex-col gap-1 shrink-0 select-none">
+<div data-tour="synth-keys" class="border border-white/20 bg-black/60 rounded-xs p-1.5 pt-1 flex flex-col gap-1 shrink-0 select-none">
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-mono">
 		<div class="flex items-center gap-1.5">
 			<span class="font-black text-[#56b6c2]">PIANO KEYBOARD</span>
