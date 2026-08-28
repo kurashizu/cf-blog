@@ -53,7 +53,10 @@ export const GET: RequestHandler = async ({ params, request, platform, url }) =>
 	// both a small JSON body and ranged image bytes gets sliced by any cache that
 	// stores the JSON first, which is exactly what happened the first time.
 	if (url.searchParams.has('info')) {
-		return new Response(JSON.stringify({ name: params.name, size: image.size, chunk: CHUNK }), {
+		// The version is derived from the whole source string, so adding a build
+		// marker to VM_IMAGES is enough to retire every cached chunk. Size alone
+		// was not: a rebuilt image is usually the same size as the one before it.
+		return new Response(JSON.stringify({ name: params.name, size: image.size, chunk: CHUNK, version: sourceVersion(image) }), {
 			status: 200,
 			headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }
 		});
@@ -191,9 +194,20 @@ async function loadChunk(
 	return bytes;
 }
 
+/** A short stable digest of the source string, used to version cached bytes. */
+function sourceVersion(image: ImageSpec): string {
+	let h = 2166136261;
+	for (const ch of `${image.url}|${image.size}`) {
+		h ^= ch.charCodeAt(0);
+		h = Math.imul(h, 16777619);
+	}
+	return (h >>> 0).toString(36);
+}
+
 /** `r2:<key>` or `r2:<key>@<partBytes>` for an image stored in numbered parts. */
 function parseR2Source(url: string): { key: string; partBytes: number | null } {
-	const rest = url.slice(3);
+	// Anything after # is a build marker for cache-busting, not part of the key.
+	const rest = url.slice(3).split('#')[0];
 	const at = rest.lastIndexOf('@');
 	if (at <= 0) return { key: rest, partBytes: null };
 	const size = Number(rest.slice(at + 1));

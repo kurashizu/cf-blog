@@ -150,17 +150,19 @@
 
 	/**
 	 * Images are served immutable, but their R2 keys are reused on every rebuild,
-	 * so the URL carries the size as a version — otherwise the edge keeps handing
-	 * back the previous build until the cache expires a year from now.
+	 * so the URL carries a version — otherwise the edge keeps handing back the
+	 * previous build until the cache expires a year from now. The version comes
+	 * from the server rather than the size, because a rebuilt image is usually
+	 * exactly the same size as the one it replaces.
 	 */
-	function imageUrl(name: string, size: number): string {
-		return `/vm/img/${name}?v=${size}`;
+	function imageUrl(name: string, version: string | number): string {
+		return `/vm/img/${name}?v=${version}`;
 	}
 
-	async function imageInfo(name: string): Promise<{ size: number } | null> {
+	async function imageInfo(name: string): Promise<{ size: number; version?: string } | null> {
 		try {
 			const res = await fetch(`/vm/img/${name}?info`);
-			return res.ok ? ((await res.json()) as { size: number }) : null;
+			return res.ok ? ((await res.json()) as { size: number; version?: string }) : null;
 		} catch {
 			return null;
 		}
@@ -252,13 +254,13 @@
 					? {
 							// Loading the kernel and initrd directly skips the bootloader
 							// entirely, which is what makes the cmdline ours to set.
-							bzimage: { url: imageUrl('vmlinuz', kernel?.size ?? 0) },
-							initrd: { url: imageUrl('initramfs', initramfs?.size ?? 0) },
+							bzimage: { url: imageUrl('vmlinuz', kernel?.version ?? kernel?.size ?? 0) },
+							initrd: { url: imageUrl('initramfs', initramfs?.version ?? initramfs?.size ?? 0) },
 							cmdline: settings.cmdline,
-							hda: { url: imageUrl('rootfs', meta.size), ...streamed }
+							hda: { url: imageUrl('rootfs', meta.version ?? meta.size), ...streamed }
 						}
 					: {
-							cdrom: { url: imageUrl(IMAGE, meta.size), ...streamed },
+							cdrom: { url: imageUrl(IMAGE, meta.version ?? meta.size), ...streamed },
 							boot_order: 0x123 // CD, then hard disk, then floppy
 						}),
 				autostart: true,
