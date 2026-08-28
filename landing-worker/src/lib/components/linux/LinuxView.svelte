@@ -6,9 +6,41 @@
 
 	type Phase = 'idle' | 'loading' | 'running' | 'error';
 
-	/** Guest RAM. Alpine's ISO unpacks modloop into RAM, so it needs real headroom. */
-	const MEMORY_MB = 512;
-	const VGA_MEMORY_MB = 8;
+	const SETTINGS_KEY = 'krsz.vm.settings';
+
+	interface Settings {
+		memoryMb: number;
+		vgaMemoryMb: number;
+		/** 'auto' prefers a purpose-built image and falls back to the ISO. */
+		boot: 'auto' | 'kernel' | 'cdrom';
+		cmdline: string;
+		acpi: boolean;
+		jit: boolean;
+	}
+
+	const MEMORY_CHOICES = [64, 128, 256, 512, 1024];
+	const VGA_CHOICES = [2, 4, 8, 16];
+
+	/**
+	 * Kernel command line for the purpose-built image. tty0 is listed last so it
+	 * becomes /dev/console and the VGA screen carries the session; ttyS0 still
+	 * gets a getty from the image's inittab.
+	 */
+	const DEFAULT_CMDLINE = 'root=/dev/sda rw console=ttyS0,115200 console=tty0';
+
+	const DEFAULTS: Settings = {
+		// Alpine's ISO unpacks modloop into RAM, so it needs real headroom; a
+		// disk-installed image is happy with much less.
+		memoryMb: 512,
+		vgaMemoryMb: 8,
+		boot: 'auto',
+		cmdline: DEFAULT_CMDLINE,
+		acpi: false,
+		jit: true
+	};
+
+	let settings = $state<Settings>({ ...DEFAULTS });
+	let showSettings = $state(false);
 	/** Must match CHUNK in the disk proxy so each read maps to one cache entry. */
 	const CHUNK = 1024 * 1024;
 	const IMAGE = 'alpine';
@@ -19,12 +51,6 @@
 	 * enough that the guest never finishes booting.
 	 */
 	const BOOT_LINE = 'virt modloop_verify=no acpi=off nomodeset';
-	/**
-	 * Kernel command line for the purpose-built image. tty0 is listed last so it
-	 * becomes /dev/console and the VGA screen carries the session; ttyS0 still
-	 * gets a getty from the image's inittab.
-	 */
-	const KERNEL_CMDLINE = 'root=/dev/sda rw console=ttyS0,115200 console=tty0';
 
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 
@@ -48,6 +74,33 @@
 	let lastSample = 0;
 	let bootLineSent = $state(false);
 	let mode = $state<'kernel' | 'cdrom'>('cdrom');
+
+	function loadSettings() {
+		try {
+			const raw = localStorage.getItem(SETTINGS_KEY);
+			if (!raw) return;
+			const saved = JSON.parse(raw) as Partial<Settings>;
+			// Merge rather than replace, so a stored blob from an older build cannot
+			// leave a field undefined and break the emulator config.
+			settings = { ...DEFAULTS, ...saved };
+		} catch {
+			/* unreadable or corrupt — the defaults are fine */
+		}
+	}
+
+	function saveSettings() {
+		try {
+			localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+		} catch {
+			/* private mode — the choice just won't survive a reload */
+		}
+	}
+
+	function resetSettings() {
+		settings = { ...DEFAULTS };
+		saveSettings();
+		playSound('click');
+	}
 
 	async function imageInfo(name: string): Promise<{ size: number } | null> {
 		try {
@@ -90,8 +143,12 @@
 			status = 'reading image metadata…';
 			// A purpose-built kernel + rootfs is preferred when the build workflow
 			// has published one; otherwise fall back to booting the stock ISO.
-			const rootfs = await imageInfo('rootfs');
+			const wantKernel = settings.boot !== 'cdrom';
+			const rootfs = wantKernel ? await imageInfo('rootfs') : null;
 			const kernel = rootfs ? await imageInfo('vmlinuz') : null;
+			if (settings.boot === 'kernel' && !kernel) {
+				throw new Error('no purpose-built image is published on this deployment yet');
+			}
 			const meta = kernel ? rootfs : await imageInfo(IMAGE);
 			if (!meta) throw new Error('no VM image is configured on this deployment');
 			imageSize = meta.size;
@@ -113,8 +170,10 @@
 
 			emulator = new V86({
 				wasm_path: wasmPath,
-				memory_size: MEMORY_MB * 1024 * 1024,
-				vga_memory_size: VGA_MEMORY_MB * 1024 * 1024,
+				memory_size: settings.memoryMb * 1024 * 1024,
+				vga_memory_size: settings.vgaMemoryMb * 1024 * 1024,
+				acpi: settings.acpi,
+				disable_jit: !settings.jit,
 				screen_container: screenEl,
 				bios: { url: '/vm/seabios.bin' },
 				vga_bios: { url: '/vm/vgabios.bin' },
@@ -124,7 +183,7 @@
 							// entirely, which is what makes the cmdline ours to set.
 							bzimage: { url: '/vm/img/vmlinuz' },
 							initrd: { url: '/vm/img/initramfs' },
-							cmdline: KERNEL_CMDLINE,
+							cmdline: settings.cmdline,
 							hda: { url: '/vm/img/rootfs', ...streamed }
 						}
 					: {
@@ -237,23 +296,32 @@
 		suspendNavHotkeys.set(false);
 	}
 
-	onMount(() => () => {
-		shutdown();
-		suspendNavHotkeys.set(false);
+	onMount(() => {
+		loadSettings();
+		return () => {
+			shutdown();
+			suspendNavHotkeys.set(false);
+		};
+	});
+
+	$effect(() => {
+		// Touch every field so any change is persisted.
+		JSON.stringify(settings);
+		saveSettings();
 	});
 
 	let fetchedBytes = $derived(chunksFetched * CHUNK);
 	let imageMiB = $derived(imageSize === null ? null : imageSize / 1024 / 1024);
 
-	const FACTS: { label: string; value: string; title?: string }[] = [
+	let FACTS = $derived<{ label: string; value: string; title?: string }[]>([
 		{ label: 'EMULATOR', value: 'v86 — x86-to-wasm JIT, BSD-2', title: 'copy/v86: a 32-bit x86 PC emulator that JIT-compiles guest code to WebAssembly' },
 		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, x86 (32-bit)', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
 		{ label: 'CPU', value: 'single core, ~Pentium 4 class, no x86-64' },
-		{ label: 'RAM', value: `${MEMORY_MB} MB guest / ${VGA_MEMORY_MB} MB VGA` },
+		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
 		{ label: 'DISK', value: 'read-only ISO, streamed in 1 MiB chunks' },
 		{ label: 'NETWORK', value: 'relay ready, guest not wired', title: 'The OmniProxy relay at /net is live and tested, but the in-browser gateway that turns guest ethernet frames into relay streams is not written yet' },
 		{ label: 'STATUS', value: 'boots, then resets at driver load' }
-	];
+	]);
 </script>
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
@@ -298,6 +366,15 @@
 				</button>
 			{:else}
 				<button
+					onclick={() => (showSettings = !showSettings)}
+					title="Machine configuration — applied when the VM is built, so it can only change while it is powered off"
+					class="px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors {showSettings
+						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+						: 'border-white/25 text-white/70 hover:bg-white/10'}"
+				>
+					⚙ CONFIG
+				</button>
+				<button
 					onclick={boot}
 					class="px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black"
 				>
@@ -314,6 +391,91 @@
 				kernel, not a shell simulation. It is a work in progress: the boot gets a long way and
 				then resets, and the panel below says exactly where and what has been ruled out.
 			</p>
+
+			{#if showSettings}
+				<div class="border border-[#56b6c2]/40 bg-black/30 rounded-xs p-2.5 space-y-2.5">
+					<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+						<span class="text-xs font-black font-mono text-[#56b6c2]">MACHINE CONFIG</span>
+						<div class="flex items-center gap-2">
+							<span class="text-[10px] font-mono text-white/35">saved in this browser · applies at next boot</span>
+							<button onclick={resetSettings} class="text-[10px] font-mono text-white/45 hover:text-white cursor-pointer underline">
+								reset
+							</button>
+						</div>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">GUEST RAM</span>
+						{#each MEMORY_CHOICES as mb (mb)}
+							<button
+								onclick={() => (settings.memoryMb = mb)}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.memoryMb === mb
+									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{mb} MB
+							</button>
+						{/each}
+						<span class="text-[10px] font-mono text-white/30">this is browser memory, not your machine's</span>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">VGA RAM</span>
+						{#each VGA_CHOICES as mb (mb)}
+							<button
+								onclick={() => (settings.vgaMemoryMb = mb)}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.vgaMemoryMb === mb
+									? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{mb} MB
+							</button>
+						{/each}
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">BOOT</span>
+						{#each [['auto', 'AUTO'], ['kernel', 'DIRECT KERNEL'], ['cdrom', 'ISO BOOTLOADER']] as const as [value, label] (value)}
+							<button
+								onclick={() => (settings.boot = value)}
+								title={value === 'auto'
+									? 'Use the purpose-built image when one is published, otherwise the stock ISO'
+									: value === 'kernel'
+										? 'Load the kernel and initramfs directly, with the command line below'
+										: 'Boot the stock Alpine ISO through its bootloader'}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.boot === value
+									? 'border-[#61afef] bg-[#61afef]/20 text-[#61afef]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{label}
+							</button>
+						{/each}
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">CMDLINE</span>
+						<input
+							type="text"
+							bind:value={settings.cmdline}
+							spellcheck="false"
+							title="Kernel command line, used only by direct kernel boot"
+							class="flex-1 min-w-[240px] px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-[11px] font-mono text-[#d8dee9] outline-none focus:border-[#56b6c2]"
+						/>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-3">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">CPU</span>
+						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
+							<input type="checkbox" bind:checked={settings.jit} class="accent-[#98c379]" />
+							<span title="v86 interprets code until a block is hot, then compiles it to WebAssembly. Turning this off is much slower and only useful for comparison.">JIT</span>
+						</label>
+						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
+							<input type="checkbox" bind:checked={settings.acpi} class="accent-[#98c379]" />
+							<span title="Expose an ACPI table to the guest. Off by default: it gives the kernel more hardware to probe, and probing is where this emulator is weakest.">ACPI</span>
+						</label>
+					</div>
+				</div>
+			{/if}
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 				{#each FACTS as fact (fact.label)}

@@ -40,21 +40,20 @@ jobs:
                     -v "$PWD/landing-worker/scripts/build-vm-image.sh:/build.sh:ro" \
                     i386/alpine:${{ inputs.alpine_version }} sh /build.sh
 
-            - name: Record sizes
+            - name: Take ownership and record sizes
               id: sizes
+              # The container writes as root, so nothing else on the runner can
+              # read the output until it is chowned.
               run: |
+                  sudo chown -R "$USER:$USER" out
                   {
                     echo "vmlinuz=$(stat -c %s out/vmlinuz)"
                     echo "initramfs=$(stat -c %s out/initramfs)"
                     echo "rootfs=$(stat -c %s out/rootfs.img)"
                   } >> "$GITHUB_OUTPUT"
                   ls -l out
-
-            - uses: actions/upload-artifact@v5
-              with:
-                  name: krsz-vm-image
-                  path: out/
-                  retention-days: 7
+                  sha256sum out/* > out/SHA256SUMS
+                  cat out/SHA256SUMS
 
             - name: Publish to R2
               if: ${{ inputs.publish }}
@@ -69,6 +68,17 @@ jobs:
                       --content-type application/octet-stream \
                       --remote
                   done
+
+            # Only the small pieces: the root filesystem belongs in R2, and zipping
+            # half a gigabyte on every run to throw it away in a week is waste.
+            - uses: actions/upload-artifact@v5
+              with:
+                  name: krsz-vm-kernel
+                  path: |
+                      out/vmlinuz
+                      out/initramfs
+                      out/SHA256SUMS
+                  retention-days: 7
 
             - name: Configuration to apply
               run: |
