@@ -334,6 +334,13 @@
 					: {})
 			});
 
+			// With ?debug the machine is reachable from the console. The disk buffer
+			// has no accessor and the build is minified, so when persistence stops
+			// working this is how the object graph gets looked at.
+			if (new URLSearchParams(location.search).has('debug')) {
+				(window as unknown as { __x86sim?: unknown }).__x86sim = emulator;
+			}
+
 			emulator.add_listener('emulator-loaded', () => {
 				void startMachine(mode === 'kernel' ? 'rootfs' : IMAGE, String(meta.version ?? meta.size));
 			});
