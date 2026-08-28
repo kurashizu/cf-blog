@@ -187,8 +187,9 @@
 		if (typeof counter === 'number') {
 			const now = performance.now();
 			const elapsed = (now - lastSample) / 1000;
-			// The counter is a 32-bit wrap-around, so a negative delta is a wrap,
-			// not a slowdown — skip that sample rather than print a bogus figure.
+			// v86 returns cpu.instruction_counter[0] >>> 0 — a 32-bit counter that
+			// wraps roughly every seven minutes at 10 MIPS. A negative delta is a
+			// wrap, not a slowdown, so drop the sample rather than print a bogus one.
 			const delta = counter - lastInstructions;
 			if (elapsed > 0 && delta >= 0) mips = delta / elapsed / 1e6;
 			lastInstructions = counter;
@@ -268,7 +269,11 @@
 			{#if phase === 'running'}
 				<span class="text-xs font-mono font-bold text-[#98c379]">
 					● RUNNING · {uptime.toFixed(0)}s
-					{#if mips !== null}· {mips.toFixed(1)} MIPS{/if}
+					{#if mips !== null}
+						<span title="Instructions per second of wall clock. The emulated CPU is halted while a disk chunk is being fetched, so this counts network waits as if they were slow execution — during boot it says more about I/O than about the JIT.">
+							· {mips.toFixed(2)} MIPS<span class="text-white/35"> incl. I/O waits</span>
+						</span>
+					{/if}
 				</span>
 				<button
 					onclick={sendCtrlAltDel}

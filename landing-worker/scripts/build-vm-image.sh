@@ -21,15 +21,19 @@ echo "==> host: $(uname -m), target Alpine v${ALPINE_VERSION} ${KERNEL_FLAVOR}"
 
 apk add --no-cache e2fsprogs-extra mkinitfs
 
+# linux-firmware-none satisfies linux-lts's linux-firmware-any dependency with an
+# empty package. The real one is hundreds of MB of vendor blobs — GPU firmware,
+# WiFi, and so on — none of which exists on an emulated PC.
+
 # ── root filesystem ────────────────────────────────────────────────────────
 mkdir -p "$ROOTFS"
 apk add --root "$ROOTFS" --initdb --no-cache \
 	--repository "$MIRROR/main" \
 	--repository "$MIRROR/community" \
 	--allow-untrusted \
-	alpine-base "linux-${KERNEL_FLAVOR}" busybox-extras \
+	alpine-base "linux-${KERNEL_FLAVOR}" linux-firmware-none busybox-extras \
 	openrc util-linux e2fsprogs \
-	nano vim htop curl bash file tree git
+	nano vim htop curl bash file tree
 
 mkdir -p "$ROOTFS/etc/apk"
 cat > "$ROOTFS/etc/apk/repositories" <<EOF
@@ -115,7 +119,15 @@ rm -rf "$ROOTFS/boot"/vmlinuz-* "$ROOTFS/boot"/initramfs-* "$ROOTFS/boot"/System
 # mke2fs -d populates the filesystem from a directory, so no loop mount and no
 # privileged container are needed. No partition table either: the kernel is told
 # root=/dev/sda, the whole disk.
-mke2fs -q -t ext4 -b 4096 -d "$ROOTFS" -F -L krsz-root "$OUT/rootfs.img" "$((IMAGE_MB * 256))"
+#
+# Size follows the content rather than a fixed number: too small fails the build
+# outright, and too large is a bigger object to stream. IMAGE_MB is the floor.
+USED_KB=$(du -sk "$ROOTFS" | cut -f1)
+NEEDED_MB=$(( USED_KB / 1024 * 3 / 2 + 128 ))
+[ "$NEEDED_MB" -lt "$IMAGE_MB" ] && NEEDED_MB="$IMAGE_MB"
+echo "==> rootfs uses $((USED_KB / 1024)) MB, building a ${NEEDED_MB} MB image"
+
+mke2fs -q -t ext4 -b 4096 -d "$ROOTFS" -F -L krsz-root "$OUT/rootfs.img" "$((NEEDED_MB * 256))"
 
 echo "==> built:"
 ls -l "$OUT"
