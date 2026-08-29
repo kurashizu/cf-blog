@@ -175,6 +175,10 @@ for lib in "$ROOTFS"/lib/ld-musl-*.so.* "$ROOTFS"/lib/libc.musl-*.so.*; do
 	[ -e "$lib" ] && cp -a "$lib" "$INITRD/lib/"
 done
 
+# Whole directories rather than named files: ext4 pulls in crc and mbcache and
+# jbd2, and a missing dependency shows up only as "Unknown symbol" long after
+# the module that needed it. lib and crypto are small enough that guessing is
+# not worth the risk.
 MODDIR="$INITRD/lib/modules/$KVER"
 mkdir -p "$MODDIR"
 for path in \
@@ -184,17 +188,20 @@ for path in \
 	kernel/fs/ext4 \
 	kernel/fs/jbd2 \
 	kernel/fs/mbcache.ko.gz \
-	kernel/lib/crc16.ko.gz \
-	kernel/lib/crc32c_generic.ko.gz \
-	kernel/crypto/crc32c_generic.ko.gz
+	kernel/lib \
+	kernel/crypto
 do
 	src="$ROOTFS/lib/modules/$KVER/$path"
 	[ -e "$src" ] || continue
 	mkdir -p "$MODDIR/$(dirname "$path")"
 	cp -a "$src" "$MODDIR/$(dirname "$path")/"
 done
-cp -a "$ROOTFS/lib/modules/$KVER"/modules.* "$MODDIR/" 2>/dev/null || true
-depmod -b "$INITRD" "$KVER" 2>/dev/null || true
+
+# Alpine ships modules gzipped, and this kernel wants them whole: the loader
+# rejected them as "Invalid ELF header magic", which is what a compressed module
+# looks like to something expecting an ELF header.
+find "$MODDIR" -name '*.ko.gz' -exec gunzip -f {} +
+depmod -b "$INITRD" "$KVER"
 
 cat > "$INITRD/init" <<'INIT'
 #!/bin/busybox sh
@@ -216,13 +223,13 @@ echo "krsz-rv: initramfs up, drivers loaded"
 
 if [ ! -b /dev/vda ]; then
 	echo "krsz-rv: no /dev/vda -- dropping to a shell"
-	exec /bin/sh
+	exec setsid -c /bin/sh || exec /bin/sh
 fi
 
 echo "krsz-rv: mounting /dev/vda"
 if ! mount -t ext4 -o ro /dev/vda /sysroot; then
 	echo "krsz-rv: mount failed -- dropping to a shell"
-	exec /bin/sh
+	exec setsid -c /bin/sh || exec /bin/sh
 fi
 
 echo "krsz-rv: switching to the root filesystem"
