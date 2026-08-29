@@ -191,11 +191,14 @@ function config(images: Record<string, ImageSpec>, env: Env | undefined, url: UR
 			// machine that is merely slow is indistinguishable from one that is
 			// dead. TinyEMU carries an HTIF console, which is what SBI prints on.
 			// ?shell stops at a shell in the initramfs, before the root filesystem
-			// is looked for: it separates a machine that cannot boot from a root
-			// filesystem that cannot be mounted, and there is no other way to ask.
-			cmdline: url.searchParams.has('shell')
-				? 'earlycon=sbi console=hvc0 rdinit=/bin/sh'
-				: 'earlycon=sbi console=hvc0 root=/dev/vda rw rootwait',
+			// is looked for, and ?cmdline replaces the line outright. Both exist
+			// because this machine's only channel is a console, and the console is
+			// the thing most often in question.
+			cmdline:
+				url.searchParams.get('cmdline') ??
+				(url.searchParams.has('shell')
+					? 'earlycon=sbi keep_bootcon console=hvc0 rdinit=/bin/sh'
+					: 'earlycon=sbi keep_bootcon console=hvc0 root=/dev/vda rw rootwait'),
 			drive0: { file: `${here}${version('rootfs')}/blk.txt` }
 		},
 		null,

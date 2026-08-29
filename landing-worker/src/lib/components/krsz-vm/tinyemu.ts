@@ -84,7 +84,10 @@ function clearGlobals() {
 function machineConfigUrl(): string {
 	const params = new URLSearchParams(location.search);
 	if (params.has('probe')) return new URL(PROBE_CONFIG_PATH, location.href).href;
-	const query = params.has('shell') ? '?shell=1' : '';
+	const forwarded = new URLSearchParams();
+	if (params.has('shell')) forwarded.set('shell', '1');
+	if (params.has('cmdline')) forwarded.set('cmdline', params.get('cmdline') ?? '');
+	const query = forwarded.size ? `?${forwarded}` : '';
 	return new URL(CONFIG_PATH + query, location.href).href;
 }
 
