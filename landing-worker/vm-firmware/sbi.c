@@ -241,18 +241,24 @@ void sbi_trap(struct frame *f)
 	__asm__ volatile("csrr %0, mcause" : "=r"(cause));
 	__asm__ volatile("csrr %0, mepc" : "=r"(epc));
 
-	if (traps_logged < 8) {
-		u64 tval;
-		__asm__ volatile("csrr %0, mtval" : "=r"(tval));
+	/* Emulated time reads are the overwhelming majority and say nothing, so
+	   they are counted rather than printed; everything else is worth a line
+	   until the boot is well past the point where it stops. */
+	if ((cause & 0xff) != CAUSE_ILLEGAL && traps_logged < 200) {
 		traps_logged++;
-		sbi_puts("krsz-sbi: trap cause=");
-		put_hex(cause);
-		sbi_puts(" epc=");
-		put_hex(epc);
-		sbi_puts(" tval=");
-		put_hex(tval);
-		sbi_puts(" a7=");
-		put_hex(A7(f));
+		sbi_puts("sbi: cause=");
+		put_hex(cause & 0xff);
+		if ((cause & 0xff) == CAUSE_ECALL_S) {
+			sbi_puts(" eid=");
+			put_hex(A7(f));
+			sbi_puts(" fid=");
+			put_hex(A6(f));
+			sbi_puts(" arg0=");
+			put_hex(A0(f));
+		} else {
+			sbi_puts(" epc=");
+			put_hex(epc);
+		}
 		htif_putc('\n');
 	}
 
