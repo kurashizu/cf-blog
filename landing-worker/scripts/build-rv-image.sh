@@ -140,12 +140,18 @@ mkdir -p "$ROOTFS/etc/runlevels/boot" "$ROOTFS/etc/runlevels/default" "$ROOTFS/e
 for svc in devfs dmesg sysfs; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/sysinit/$svc" 2>/dev/null || true
 done
-for svc in bootmisc hostname syslog; do
+# syslog is deliberately absent, and it is what stopped this machine booting:
+# started by hand inside the guest it never returns, and a kill signal does not
+# reach it either. openrc runs the boot runlevel in order, so nothing after it
+# ever ran and the last line on the console stayed the one sysinit printed.
+# Nothing here reads a log file; dmesg is where this machine says things.
+for svc in bootmisc hostname; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/boot/$svc" 2>/dev/null || true
 done
 rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \
 	"$ROOTFS/etc/runlevels/boot/modules" \
 	"$ROOTFS/etc/runlevels/sysinit/mdev" || true
+
 
 # ── firmware, kernel, initramfs ────────────────────────────────────────────
 KVER=$(ls "$ROOTFS/lib/modules" | head -n1)
@@ -238,8 +244,23 @@ if ! mount -t ext4 -o ro /dev/vda /sysroot; then
 	exec setsid -c /bin/sh || exec /bin/sh
 fi
 
+# A way in without switching root, for when the question is about the machine
+# rather than about the system on it.
+if grep -q krsz_shell /proc/cmdline; then
+	echo "krsz-rv: stopping in the initramfs, as asked"
+	exec setsid -c /bin/sh || exec /bin/sh
+fi
+
 echo "krsz-rv: switching to the root filesystem"
 mount -o remount,rw /sysroot 2>/dev/null
+
+# openrc keeps its dependency cache in /run, and writes it before anything else
+# runs. Without a tmpfs there it writes into the root filesystem, fails with
+# "Bad file descriptor", and gives up on the dependency tree — which stops the
+# boot dead after sysinit with no error anyone can see. Alpine's own initramfs
+# mounts this; ours has to as well.
+mkdir -p /sysroot/run
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /sysroot/run
 umount /proc /sys 2>/dev/null
 exec switch_root /sysroot /sbin/init
 INIT

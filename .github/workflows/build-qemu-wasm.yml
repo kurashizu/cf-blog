@@ -12,6 +12,10 @@ on:
             qemu_ref:
                 description: "Branch or tag of ktock/qemu-wasm"
                 default: "master"
+            publish:
+                description: "Upload to R2 (uncheck to build and inspect only)"
+                type: boolean
+                default: true
 
 jobs:
     build:
@@ -36,6 +40,27 @@ jobs:
 
             - name: Record sizes
               run: ls -l out && sha256sum out/* | tee out/SHA256SUMS
+
+            - name: Publish to R2
+              # Not shipped as a static asset: the wasm is tens of megabytes and
+              # Workers refuse a single asset over 25 MiB. It goes where the disk
+              # images already go, and is served through the same proxy.
+              if: ${{ inputs.publish }}
+              working-directory: landing-worker
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+              run: |
+                  target='${{ inputs.target }}'
+                  put() {
+                    npx wrangler r2 object put "public-files/qemu/$2" \
+                      --file "../out/$1" --content-type "$3" --remote
+                  }
+                  # The content types matter: a wasm served as anything else is
+                  # refused by streaming compilation, and the glue is a module.
+                  put "qemu-system-$target" "qemu-system-$target.js" "text/javascript"
+                  put "qemu-system-$target.wasm" "qemu-system-$target.wasm" "application/wasm"
+                  put "qemu-system-$target.worker.js" "qemu-system-$target.worker.js" "text/javascript"
 
             - uses: actions/upload-artifact@v5
               with:
