@@ -4,7 +4,10 @@
 	import { theme, THEME_STYLES } from '../../stores/theme';
 	import {
 		MODELS,
+		cachedModelIds,
+		cachedSizeMb,
 		createEngine,
+		evictModel,
 		modelById,
 		pickModel,
 		probeGpu,
@@ -43,6 +46,11 @@
 	/** Tokens/sec of the last completed reply, straight from the engine's stats. */
 	let lastStats = $state('');
 
+	/** Which models are already on disk, and whether the storage panel is open. */
+	let cached = $state<Set<string>>(new Set());
+	let storageOpen = $state(false);
+	let evicting = $state('');
+
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 	let activeModel = $derived(modelById(selectedModel));
 	let busy = $derived(phase === 'loading' || phase === 'generating');
@@ -57,8 +65,39 @@
 				errorText = g.reason ?? 'WebGPU is unavailable.';
 			}
 		});
+		void refreshCached();
 		return () => teardown();
 	});
+
+	async function refreshCached() {
+		cached = await cachedModelIds();
+	}
+
+	/**
+	 * Frees a model's weights. The running engine is torn down first when it is
+	 * the one being evicted — deleting underneath a live engine leaves the next
+	 * load reading a partially removed entry.
+	 */
+	async function evict(id: string) {
+		if (evicting) return;
+		evicting = id;
+		try {
+			if (id === selectedModel && (phase === 'ready' || phase === 'generating')) {
+				teardown();
+				turns = [];
+				lastStats = '';
+				phase = 'idle';
+			}
+			await evictModel(id);
+			await refreshCached();
+			playSound('click');
+		} catch (err) {
+			errorText = `could not free ${id}: ${(err as Error).message}`;
+			phase = 'error';
+		} finally {
+			evicting = '';
+		}
+	}
 
 	function teardown() {
 		engine?.unload?.();
@@ -83,6 +122,7 @@
 			worker = created.worker;
 			phase = 'ready';
 			progressText = '';
+			void refreshCached();
 			await tick();
 			inputEl?.focus();
 		} catch (err) {
@@ -208,7 +248,9 @@
 			class="bg-black/50 border border-white/25 rounded-xs px-1.5 py-0.5 font-mono text-xs text-[#d8dee9] cursor-pointer disabled:opacity-50"
 		>
 			{#each MODELS as m (m.id)}
-				<option value={m.id}>{m.label} — {(m.vramMb / 1024).toFixed(2)} GB</option>
+				<option value={m.id}>
+					{m.label} — {m.downloadMb} MB{cached.has(m.id) ? ' ✓' : ''}
+				</option>
 			{/each}
 		</select>
 
@@ -217,6 +259,20 @@
 		{/if}
 
 		<div class="flex-1"></div>
+
+		<button
+			onclick={() => {
+				storageOpen = !storageOpen;
+				if (storageOpen) void refreshCached();
+				playSound('toggle');
+			}}
+			title="What these models have stored in this browser, and how to free it"
+			class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {storageOpen
+				? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
+				: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
+		>
+			STORAGE{cached.size ? ` (${cachedSizeMb(cached)} MB)` : ''}
+		</button>
 
 		{#if lastStats}
 			<span class="text-[#98c379]" title="Decode speed of the last reply">{lastStats}</span>
@@ -233,6 +289,40 @@
 			</button>
 		{/if}
 	</div>
+
+	{#if storageOpen}
+		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5">
+			<div class="text-white/50 leading-relaxed">
+				Weights are cached by the browser so a second visit skips the download. Freeing one
+				reclaims the space; the model downloads again next time you load it.
+			</div>
+			{#each MODELS as m (m.id)}
+				{@const isCached = cached.has(m.id)}
+				<div class="flex items-center gap-2 font-mono">
+					<span class="{isCached ? 'text-[#98c379]' : 'text-white/25'} w-3">{isCached ? '●' : '○'}</span>
+					<span class="{isCached ? 'text-[#d8dee9]' : 'text-white/35'} flex-1 truncate">{m.label}</span>
+					<span class="text-white/35 tabular-nums">{m.downloadMb} MB</span>
+					<span class="text-white/25 tabular-nums hidden sm:inline" title="GPU memory once loaded">
+						{(m.vramMb / 1024).toFixed(1)} GB vram
+					</span>
+					{#if isCached}
+						<button
+							onclick={() => evict(m.id)}
+							disabled={!!evicting}
+							class="px-1.5 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-40"
+						>
+							{evicting === m.id ? '…' : 'FREE'}
+						</button>
+					{:else}
+						<span class="text-white/20 px-1.5">—</span>
+					{/if}
+				</div>
+			{/each}
+			{#if !cached.size}
+				<div class="text-white/30 font-mono">nothing cached yet.</div>
+			{/if}
+		</div>
+	{/if}
 
 	<!-- Transcript -->
 	<div
@@ -259,8 +349,15 @@
 					other end of this box.
 				</div>
 				<div class="text-white/40 text-xs">
-					First run downloads ~{activeModel ? (activeModel.vramMb / 1024).toFixed(2) : '1.6'} GB of weights
-					and caches them, so later visits start immediately.
+					{#if activeModel && cached.has(activeModel.id)}
+						Already cached — this loads straight from disk.
+					{:else if activeModel}
+						First run downloads {activeModel.downloadMb} MB of weights and caches them, so later
+						visits start immediately.
+					{/if}
+					{#if activeModel}
+						<br />Needs about {(activeModel.vramMb / 1024).toFixed(1)} GB of GPU memory while running.
+					{/if}
 					{#if gpu && !gpu.f16}
 						<br />Your GPU lacks <code>shader-f16</code>, so the f32 build was selected.
 					{/if}

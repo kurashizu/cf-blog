@@ -3,25 +3,32 @@ import type { ChatCompletionMessageParam, InitProgressReport, MLCEngineInterface
 export interface ModelChoice {
 	id: string;
 	label: string;
-	/** vram_required_MB straight out of web-llm's prebuiltAppConfig. */
+	/**
+	 * Bytes actually fetched over the network, summed from the model repo's file
+	 * listing. This is NOT web-llm's `vram_required_MB` — that field is runtime
+	 * GPU memory (weights + KV cache + activations) and runs 1.5-4x larger.
+	 */
+	downloadMb: number;
+	/** web-llm's `vram_required_MB`: what the model occupies on the GPU once live. */
 	vramMb: number;
 	note: string;
 }
 
 /**
- * The f16 build is the default: same int4 weights as the f32 one, 265 MB
- * smaller and faster, but its kernels need the `shader-f16` WebGPU feature.
- * `pickModel()` falls back to the f32 build where the adapter lacks it.
+ * Both builds carry the same int4 weights and download identically (426 MB);
+ * they differ only in activation precision, which shows up as runtime VRAM.
+ * f16 is the default because it is faster, but its kernels need the
+ * `shader-f16` WebGPU feature — `pickModel()` falls back where it is missing.
  */
 export const MODEL_F16 = 'Qwen3.5-0.8B-q4f16_1-MLC';
 export const MODEL_F32 = 'Qwen3.5-0.8B-q4f32_1-MLC';
 
 export const MODELS: ModelChoice[] = [
-	{ id: MODEL_F16, label: 'Qwen3.5 0.8B · q4f16', vramMb: 1629, note: 'default — needs shader-f16' },
-	{ id: MODEL_F32, label: 'Qwen3.5 0.8B · q4f32', vramMb: 1894, note: 'fallback — no f16 required' },
-	{ id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', label: 'Llama 3.2 1B', vramMb: 879, note: 'smallest good English model' },
-	{ id: 'gemma3-1b-it-q4f16_1-MLC', label: 'Gemma 3 1B', vramMb: 711, note: 'fastest to download' },
-	{ id: 'SmolLM2-360M-Instruct-q4f16_1-MLC', label: 'SmolLM2 360M', vramMb: 376, note: 'tiny — weak at chat' }
+	{ id: MODEL_F16, label: 'Qwen3.5 0.8B · q4f16', downloadMb: 426, vramMb: 1629, note: 'default — best Chinese, needs shader-f16' },
+	{ id: MODEL_F32, label: 'Qwen3.5 0.8B · q4f32', downloadMb: 426, vramMb: 1894, note: 'same weights, no f16 required' },
+	{ id: 'gemma3-1b-it-q4f16_1-MLC', label: 'Gemma 3 1B', downloadMb: 574, vramMb: 711, note: 'lightest on GPU memory' },
+	{ id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', label: 'Llama 3.2 1B', downloadMb: 672, vramMb: 879, note: 'solid English' },
+	{ id: 'SmolLM2-360M-Instruct-q4f16_1-MLC', label: 'SmolLM2 360M', downloadMb: 198, vramMb: 376, note: 'tiny — weak at chat' }
 ];
 
 /**
@@ -95,6 +102,38 @@ export async function createEngine(
 		worker.terminate();
 		throw err;
 	}
+}
+
+/** Which of the listed models already have their weights cached locally. */
+export async function cachedModelIds(): Promise<Set<string>> {
+	const { hasModelInCache } = await import('@mlc-ai/web-llm');
+	const found = new Set<string>();
+	await Promise.all(
+		MODELS.map(async (m) => {
+			// A miss throws on some browsers rather than returning false.
+			try {
+				if (await hasModelInCache(m.id)) found.add(m.id);
+			} catch {
+				/* treat as not cached */
+			}
+		})
+	);
+	return found;
+}
+
+/**
+ * Drops one model's weights, wasm and config from the browser's cache. The
+ * engine holding that model must be unloaded first, or the next load can read
+ * a half-deleted entry.
+ */
+export async function evictModel(modelId: string): Promise<void> {
+	const { deleteModelAllInfoInCache } = await import('@mlc-ai/web-llm');
+	await deleteModelAllInfoInCache(modelId);
+}
+
+/** Rough on-disk footprint of the cached models, in MB. */
+export function cachedSizeMb(ids: Set<string>): number {
+	return MODELS.filter((m) => ids.has(m.id)).reduce((a, m) => a + m.downloadMb, 0);
 }
 
 export type { ChatCompletionMessageParam, InitProgressReport, MLCEngineInterface };

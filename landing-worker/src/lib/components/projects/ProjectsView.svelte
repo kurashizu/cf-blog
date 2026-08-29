@@ -28,7 +28,7 @@
 
 <div class="space-y-3 sm:space-y-4 flex-1">
 	<div class="flex items-center justify-between border-b border-white/10 pb-2">
-		<pre class="text-[7px] sm:text-[10px] md:text-xs font-black tracking-tight text-[#56b6c2] leading-tight overflow-x-auto select-none">{`███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
+		<pre class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight text-[#56b6c2] leading-tight overflow-x-auto select-none">{`███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
 ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
 ██╔████╔██║██║   ██║██║  ██║██║   ██║██║     █████╗  ███████╗
 ██║╚██╔╝██║██║   ██║██║  ██║██║   ██║██║     ██╔══╝  ╚════██║

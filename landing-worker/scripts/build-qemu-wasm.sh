@@ -31,6 +31,19 @@ fi
 # does not move.
 sed -i 's|https://zlib.net/zlib-\$ZLIB_VERSION.tar.xz|https://github.com/madler/zlib/releases/download/v$ZLIB_VERSION/zlib-$ZLIB_VERSION.tar.xz|' "$WORK/Dockerfile"
 
+# arm64 and riscv64 need libfdt, which QEMU builds from the dtc subproject. Left
+# to itself, meson runs git inside the source tree to fetch it and reports only
+# "Git command failed" when anything about that goes wrong — a bind-mounted tree,
+# a shallow clone, a submodule directory left half-populated. Cloning it here
+# takes the whole question out of the build.
+DTC_URL=$(sed -n 's/^url = //p' "$WORK/subprojects/dtc.wrap")
+DTC_REV=$(sed -n 's/^revision = //p' "$WORK/subprojects/dtc.wrap")
+if [ ! -d "$WORK/subprojects/dtc/.git" ]; then
+	rm -rf "$WORK/subprojects/dtc"
+	git clone "$DTC_URL" "$WORK/subprojects/dtc"
+	git -C "$WORK/subprojects/dtc" checkout --detach "$DTC_REV"
+fi
+
 echo "==> building the toolchain image"
 docker build -t buildqemu - < "$WORK/Dockerfile"
 
