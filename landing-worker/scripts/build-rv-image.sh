@@ -15,13 +15,15 @@ KERNEL_FLAVOR="${KERNEL_FLAVOR:-lts}"
 # is a megabyte QEMU has to write while emulating a riscv64 CPU.
 SLACK_MB="${SLACK_MB:-256}"
 PART_MB="${PART_MB:-200}"
+# Deliberately old: see the note where the firmware is built.
+OPENSBI_VERSION="${OPENSBI_VERSION:-v0.9}"
 OUT="${OUT:-/out}"
 ROOTFS=/rootfs
 MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}"
 
 echo "==> host: $(uname -m), target Alpine v${ALPINE_VERSION} ${KERNEL_FLAVOR}"
 
-apk add --no-cache e2fsprogs-extra mkinitfs opensbi
+apk add --no-cache e2fsprogs-extra mkinitfs build-base git
 
 # ── root filesystem ────────────────────────────────────────────────────────
 mkdir -p "$ROOTFS"
@@ -165,15 +167,25 @@ features="base ext4 tinyemu"
 EOF
 mkinitfs -b "$ROOTFS" -o "$OUT/initramfs" "$KVER"
 
+# The firmware is built from source rather than taken from the distribution,
+# and deliberately from an old release. TinyEMU implements the 2019 privileged
+# spec; a current OpenSBI programs PMP registers and reads counters that do not
+# exist here, finds itself on a machine it cannot describe, and hangs in
+# sbi_hart_hang() -- silently, because this machine's only console is HTIF and
+# nothing has bound it yet. v0.9 is from the same era as the emulator.
+git clone --depth 1 --branch "$OPENSBI_VERSION" https://github.com/riscv-software-src/opensbi /tmp/opensbi
+make -C /tmp/opensbi PLATFORM=generic -j"$(nproc)"
+FW=/tmp/opensbi/build/platform/generic/firmware/fw_jump.bin
+[ -f "$FW" ] || { echo "!! OpenSBI did not produce fw_jump.bin"; exit 1; }
+
 # TinyEMU copies the bios to the base of RAM and the kernel to the next 2 MB
 # boundary after it, so a firmware smaller than 2 MB puts the kernel at
-# 0x80200000 -- which is exactly where OpenSBI's fw_jump hands control on. The
-# padding is what makes that arithmetic true rather than lucky.
-FW=$(find / -name 'fw_jump.bin' -path '*opensbi*' 2>/dev/null | head -n1)
-[ -n "$FW" ] || { echo "!! no OpenSBI fw_jump.bin in the opensbi package"; exit 1; }
-cp "$FW" "$OUT/fw_jump.bin"
-dd if=/dev/zero bs=1M count=2 2>/dev/null | cat "$OUT/fw_jump.bin" - | head -c 2097152 > "$OUT/bios.bin"
-rm -f "$OUT/fw_jump.bin"
+# 0x80200000 -- which is exactly where fw_jump hands control on. The padding is
+# what makes that arithmetic true rather than lucky.
+FW_SIZE=$(stat -c %s "$FW")
+[ "$FW_SIZE" -lt 2097152 ] || { echo "!! firmware is $FW_SIZE bytes, which would move the kernel"; exit 1; }
+cp "$FW" /tmp/fw.bin
+dd if=/dev/zero bs=1M count=2 2>/dev/null | cat /tmp/fw.bin - | head -c 2097152 > "$OUT/bios.bin"
 
 # The kernel has to be a raw Image: OpenSBI jumps to it, and there is nothing
 # in between to decompress anything.
