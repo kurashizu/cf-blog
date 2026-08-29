@@ -38,11 +38,14 @@ sed -i 's|https://zlib.net/zlib-\$ZLIB_VERSION.tar.xz|https://github.com/madler/
 # takes the whole question out of the build.
 DTC_URL=$(sed -n 's/^url = //p' "$WORK/subprojects/dtc.wrap")
 DTC_REV=$(sed -n 's/^revision = //p' "$WORK/subprojects/dtc.wrap")
-if [ ! -d "$WORK/subprojects/dtc/.git" ]; then
-	rm -rf "$WORK/subprojects/dtc"
-	git clone "$DTC_URL" "$WORK/subprojects/dtc"
-	git -C "$WORK/subprojects/dtc" checkout --detach "$DTC_REV"
-fi
+# Unconditionally, and as a plain checkout: a submodule left by the recursive
+# clone has its .git elsewhere, which is not a repository once the tree is
+# copied into the container — and meson responds to that by trying to create
+# one, in a directory that already has files in it.
+rm -rf "$WORK/subprojects/dtc"
+git clone "$DTC_URL" "$WORK/subprojects/dtc"
+git -C "$WORK/subprojects/dtc" checkout --detach "$DTC_REV"
+echo "==> dtc at $(git -C "$WORK/subprojects/dtc" rev-parse --short HEAD)"
 
 echo "==> building the toolchain image"
 docker build -t buildqemu - < "$WORK/Dockerfile"
@@ -73,6 +76,7 @@ docker exec build-qemu-wasm git config --global --add safe.directory '*'
 EXTRA_CFLAGS="-O3 -g -Wno-error=unused-command-line-argument -matomics -mbulk-memory -DNDEBUG -DG_DISABLE_ASSERT -D_GNU_SOURCE -sASYNCIFY=1 -pthread -sPROXY_TO_PTHREAD=1 -sFORCE_FILESYSTEM -sALLOW_TABLE_GROWTH -sTOTAL_MEMORY=2300MB -sWASM_BIGINT -sMALLOC=mimalloc --js-library=/build/node_modules/xterm-pty/emscripten-pty.js -sEXPORT_ES6=1 -sASYNCIFY_IMPORTS=ffi_call_js"
 
 echo "==> what the build sees of the subproject"
+docker exec build-qemu-wasm sh -c 'ls -la /qemu/subprojects/dtc | head -6'
 docker exec build-qemu-wasm sh -c 'id; ls -la /qemu/subprojects | head -20; git -C /qemu/subprojects/dtc log --oneline -1 || echo "(dtc is not a repo in here)"'
 
 configure_failed() {
