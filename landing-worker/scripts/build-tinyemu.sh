@@ -43,7 +43,7 @@ s = s.replace('-s BINARYEN_TRAP_MODE=clamp ', '')
 s = s.replace('EXTRA_EXPORTED_RUNTIME_METHODS', 'EXPORTED_RUNTIME_METHODS')
 # The JS library calls _malloc and _free directly and reaches the C callbacks
 # through dynCall; both have to be asked for now or they are optimised away.
-s = s.replace("'_net_set_carrier']", "'_net_set_carrier','_malloc','_free']")
+s = s.replace("'_net_set_carrier']", "'_net_set_carrier','_vm_stop','_malloc','_free']")
 s = s.replace('-s NO_FILESYSTEM=1', '-s NO_FILESYSTEM=1 -s DYNCALLS=1')
 s = s.replace('-s TOTAL_MEMORY=67108864', '-s INITIAL_MEMORY=67108864')
 
@@ -61,6 +61,36 @@ s = s.replace('PROGS=js/riscvemu32.js js/riscvemu32-wasm.js js/riscvemu64.js js/
 p.write_text(s)
 print('Makefile.js rewritten')
 PY
+
+# TinyEMU drives itself with a chain of timers inside the module and has no way
+# to be told to stop, so a powered-off machine would keep running unseen. One
+# flag, checked where the chain is picked up again.
+python3 - <<'PATCHRUN'
+import pathlib
+p = pathlib.Path('jsemu.c')
+s = p.read_text()
+a = '''void virt_machine_run(void *opaque)
+{
+    VirtMachine *m = opaque;'''
+b = '''BOOL vm_stopped;
+
+/* Called from the page when the machine is powered off: the run loop
+   reschedules itself, so stopping means not scheduling the next one. */
+void vm_stop(void)
+{
+    vm_stopped = TRUE;
+}
+
+void virt_machine_run(void *opaque)
+{
+    VirtMachine *m = opaque;
+
+    if (vm_stopped)
+        return;'''
+assert a in s, 'run loop not found'
+p.write_text(s.replace(a, b, 1))
+print('jsemu.c: vm_stop added')
+PATCHRUN
 
 # The JS library that ships with it is the same vintage as the makefile and
 # leans on three things the Emscripten runtime has since removed. It would have

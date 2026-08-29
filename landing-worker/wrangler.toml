@@ -54,6 +54,16 @@ OMNIPROXY_ALLOW = "*"
 # 49 MiB ISO practical to boot more than once. Point these at R2 later without
 # touching any code.
 VM_IMAGES = "vmlinuz|r2:vm/vmlinuz#b18|8651264,initramfs|r2:vm/initramfs#b18|9747256,rootfs|r2:vm/rootfs.img@209715200#b18|1390411776,alpine|https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/alpine-virt-3.24.1-x86.iso|51380224"
+# The riscv64 machine, in the shapes TinyEMU asks for (see src/routes/vm/rv).
+# Same rule as VM_IMAGES: bump the #marker whenever CI republishes, or the edge
+# keeps serving the previous build from an immutable entry.
+RV_IMAGES = "bios.bin|r2:rv/bios.bin#r1|2097152,kernel|r2:rv/kernel#r1|22380544,initramfs|r2:rv/initramfs#r1|6637812,rootfs|r2:rv/rootfs.img@209715200#r1|1192230912"
+
+# What the riscv64 guest is given. TinyEMU interprets rather than compiles, so
+# this machine is slower than its x86 neighbour and there is little point
+# handing it more memory than a shell needs.
+RV_MEMORY_MB = "256"
+
 
 [observability]
 enabled = false
