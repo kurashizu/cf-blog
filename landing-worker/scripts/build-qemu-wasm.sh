@@ -44,6 +44,19 @@ docker run --rm -d --name build-qemu-wasm -v "$WORK":/qemu/:rw \
 BUILD_DIR=$(docker exec build-qemu-wasm pwd)
 echo "==> building in $BUILD_DIR"
 
+# The source is bind-mounted from the host and owned by another uid, which git
+# refuses to touch. Meson runs git to set the dtc subproject up and reports only
+# that the command failed, so this looks like a missing device-tree library
+# rather than a permissions check.
+docker exec build-qemu-wasm git config --global --add safe.directory '*'
+
+# And if configure still fails, the reason is in meson's log rather than in
+# anything printed to the terminal.
+dump_meson_log() {
+	docker exec build-qemu-wasm sh -c 'tail -60 /build/meson-logs/meson-log.txt' 2>/dev/null || true
+}
+trap dump_meson_log ERR
+
 # Verbatim from the project's own instructions, which is the point: this is a
 # long build and guessing at flags is how an afternoon disappears.
 EXTRA_CFLAGS="-O3 -g -Wno-error=unused-command-line-argument -matomics -mbulk-memory -DNDEBUG -DG_DISABLE_ASSERT -D_GNU_SOURCE -sASYNCIFY=1 -pthread -sPROXY_TO_PTHREAD=1 -sFORCE_FILESYSTEM -sALLOW_TABLE_GROWTH -sTOTAL_MEMORY=2300MB -sWASM_BIGINT -sMALLOC=mimalloc --js-library=/build/node_modules/xterm-pty/emscripten-pty.js -sEXPORT_ES6=1 -sASYNCIFY_IMPORTS=ffi_call_js"
