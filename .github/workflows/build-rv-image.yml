@@ -39,6 +39,7 @@ jobs:
                     -e KERNEL_FLAVOR='${{ inputs.kernel_flavor }}' \
                     -v "$PWD/out:/out" \
                     -v "$PWD/landing-worker/scripts/build-rv-image.sh:/build.sh:ro" \
+                    -v "$PWD/landing-worker/vm-firmware:/firmware:ro" \
                     alpine:${{ inputs.alpine_version }} sh /build.sh
 
             - name: Take ownership and record sizes
