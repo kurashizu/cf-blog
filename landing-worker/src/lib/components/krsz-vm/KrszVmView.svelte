@@ -253,7 +253,7 @@
 	function installFetchCounter() {
 		const original = window.XMLHttpRequest.prototype.open;
 		window.XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
-			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/blk\d+\.bin/.test(String(url))) {
+			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin/.test(String(url))) {
 				this.addEventListener('load', () => chunksFetched++, { once: true });
 			}
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
