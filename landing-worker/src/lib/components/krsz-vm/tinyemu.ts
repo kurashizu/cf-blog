@@ -15,6 +15,12 @@
 /** Where the emulator and its machine description are served from. */
 const EMULATOR_URL = '/vm/riscvemu64-wasm.js';
 /**
+ * The same emulator with TinyEMU's own diagnostics compiled in — exceptions,
+ * MMU faults, invalid accesses. Loaded only with ?debug, because a machine that
+ * runs while printing nothing cannot be diagnosed from outside.
+ */
+const DEBUG_EMULATOR_URL = '/vm/riscvemu64-debug.js';
+/**
  * Absolute on purpose. TinyEMU decides between fetching and opening a local
  * file by whether the name looks like a URL, and a path does not: it took
  * "/vm/rv/krsz-rv.cfg" for a filename, tried to open it in a build that has no
@@ -76,7 +82,10 @@ export async function startRiscv(options: {
 
 	// The emulator is a static asset rather than a bundled dependency: it is
 	// built by CI from Bellard's source, not published anywhere to install from.
-	const factory = (await import(/* @vite-ignore */ EMULATOR_URL)) as {
+	const wanted = new URLSearchParams(location.search).has('debug')
+		? DEBUG_EMULATOR_URL
+		: EMULATOR_URL;
+	const factory = (await import(/* @vite-ignore */ wanted)) as {
 		default: (config?: Record<string, unknown>) => Promise<TinyEmuModule>;
 	};
 
