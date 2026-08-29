@@ -1,3 +1,5 @@
+import { BUCKET_URL } from '$shared/site-config';
+
 /**
  * The chatbot's model, and everything configurable about how it generates.
  *
@@ -9,8 +11,16 @@
  * audio encoders become available at all.
  */
 
-/** Repository holding the ONNX export, including its vision and audio towers. */
-export const MODEL_ID = 'onnx-community/gemma-4-E2B-it-ONNX';
+/**
+ * The weights and the ONNX runtime are both served from this site's own bucket
+ * rather than HuggingFace and jsdelivr. Nothing this page needs comes from a
+ * third party at runtime.
+ */
+export const MODEL_ID = 'gemma-4-E2B-it-ONNX';
+
+/** Where the mirrored model and runtime live. */
+export const MODEL_HOST = `${BUCKET_URL}/llm/`;
+export const ORT_WASM_PATH = `${BUCKET_URL}/ort/`;
 
 /**
  * Which precision to load each part of the model at. Sizes are the actual

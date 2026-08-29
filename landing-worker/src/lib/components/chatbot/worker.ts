@@ -10,10 +10,26 @@ import {
 	AutoModelForImageTextToText,
 	InterruptableStoppingCriteria,
 	TextStreamer,
+	env,
 	type PreTrainedModel,
 	type Processor
 } from '@huggingface/transformers';
-import { DTYPE, MODEL_ID } from './engine';
+import { DTYPE, MODEL_HOST, MODEL_ID, ORT_WASM_PATH } from './engine';
+
+/**
+ * Serve both the weights and the runtime from this site's bucket. By default
+ * transformers.js fetches models from huggingface.co and onnxruntime-web pulls
+ * its wasm from jsdelivr; neither is wanted here.
+ *
+ * `remotePathTemplate` is flattened to just the model name because the mirror
+ * stores files under llm/<model>/… rather than the Hub's <org>/<model>/resolve/
+ * <revision>/… layout.
+ */
+env.remoteHost = MODEL_HOST;
+env.remotePathTemplate = '{model}';
+// Typed optional because the wasm backend is absent in some builds; in a
+// browser it is always present, and without it nothing here could run.
+if (env.backends.onnx.wasm) env.backends.onnx.wasm.wasmPaths = ORT_WASM_PATH;
 
 let processor: Processor | null = null;
 let model: PreTrainedModel | null = null;

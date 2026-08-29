@@ -579,7 +579,8 @@
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5">
 			<div class="text-white/50 leading-relaxed">
 				The model downloads once and is cached by the browser, so a second visit skips it. Clearing
-				this site's data in your browser frees the space.
+				this site's data in your browser frees the space. Both the weights and the inference runtime
+				come from this site's own storage — nothing is fetched from a third party.
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
 				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.decoder)}</span>
