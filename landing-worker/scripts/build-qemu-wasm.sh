@@ -18,12 +18,11 @@ WORK="${WORK:-/tmp/qemu-wasm}"
 
 mkdir -p "$OUT"
 
-# Submodules included: aarch64 and riscv64 need libfdt, and QEMU builds it from
-# its bundled dtc. Without it meson tries to fetch the subproject at configure
-# time, which is both slower and a network dependency inside the container.
+# Without submodules: QEMU's are firmware ROM sources — u-boot, seabios,
+# opensbi and the rest — hundreds of megabytes that a browser build never
+# links. The one subproject this does need, dtc, is checked out below.
 if [ ! -d "$WORK" ]; then
-	git clone --depth 1 --recurse-submodules --shallow-submodules \
-		--branch "$QEMU_REF" https://github.com/ktock/qemu-wasm "$WORK"
+	git clone --depth 1 --branch "$QEMU_REF" https://github.com/ktock/qemu-wasm "$WORK"
 fi
 
 # zlib.net serves only the current release, so a pinned version disappears from
