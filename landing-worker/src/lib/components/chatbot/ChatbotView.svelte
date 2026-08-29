@@ -34,20 +34,17 @@
 		'Always reply in the same language the user wrote in.';
 
 	/**
-	 * Qwen3.5's chat template does not switch thinking with a phrase in the
-	 * prompt — `/no_think` appears nowhere in it, and writing it into the system
-	 * message just gives the model something to muse about. What the template
-	 * actually does on `enable_thinking: false` is prefill the assistant turn
-	 * with an already-closed block:
+	 * Thinking is switched off through web-llm's own `extra_body.enable_thinking`
+	 * flag, not by anything in the prompt. It encodes a closed `<think></think>`
+	 * block straight into the generation, so the model resumes after reasoning it
+	 * never got to open.
 	 *
-	 *     <|im_start|>assistant\n<think>\n\n</think>\n\n
-	 *
-	 * so the model resumes after a reasoning block it never got to open. web-llm
-	 * drives the `qwen2` template, which has no such branch, so the prefill is
-	 * done here: an assistant message carrying exactly that text, appended after
-	 * the user's turn. The model continues it rather than starting fresh.
+	 * Two earlier attempts were wrong: `/no_think` in the system message appears
+	 * nowhere in Qwen3.5's template, so the model read it as prose and reasoned
+	 * about what it meant; and appending the prefill as an assistant message is
+	 * rejected outright, since web-llm requires the last message to be from
+	 * `user` or `tool`.
 	 */
-	const NO_THINK_PREFILL = '<think>\n\n</think>\n\n';
 
 	let phase = $state<Phase>('idle');
 	let gpu = $state<GpuSupport | null>(null);
@@ -231,6 +228,9 @@
 							transcript
 					}
 				],
+				// Never reason about a summary — it is a mechanical step, and the
+				// tokens would come out of the same budget.
+				extra_body: { enable_thinking: false },
 				temperature: 0.3,
 				max_tokens: 300
 			});
@@ -285,17 +285,13 @@
 				.map((t) => ({ role: t.role, content: t.content }) as ChatCompletionMessageParam)
 		];
 
-		// With thinking off, hand the model a closed reasoning block to continue
-		// from. See NO_THINK_PREFILL.
-		if (!thinkMode) {
-			messages.push({ role: 'assistant', content: NO_THINK_PREFILL });
-		}
 
 		try {
 			const stream = await engine.chat.completions.create({
 				messages,
 				stream: true,
 				stream_options: { include_usage: true },
+				extra_body: { enable_thinking: thinkMode },
 				...SAMPLING,
 				// A backstop, not a budget: if the model does loop, this bounds how
 				// long you wait before STOP becomes the obvious move. Thinking needs
@@ -340,20 +336,20 @@
 			}
 			phase = 'ready';
 		} catch (err) {
+			// The engine is still loaded and the transcript is still worth reading,
+			// so a failed turn is reported in place rather than replacing the view
+			// with an error screen. Only a broken engine gets 'error'.
 			const msg = (err as Error).message || String(err);
-			if (/context window/i.test(msg)) {
-				const next = [...turns];
-				next[next.length - 1] = {
-					role: 'assistant',
-					content: 'the conversation outgrew the context window — run /compact, or /clear to start over',
-					notice: true
-				};
-				turns = next;
-				phase = 'ready';
-			} else {
-				phase = 'error';
-				errorText = msg;
-			}
+			const next = [...turns];
+			next[next.length - 1] = {
+				role: 'assistant',
+				notice: true,
+				content: /context window/i.test(msg)
+					? 'the conversation outgrew the context window — run /compact, or /clear to start over'
+					: `that turn failed: ${msg}`
+			};
+			turns = next;
+			phase = 'ready';
 		}
 		await tick();
 		inputEl?.focus();
