@@ -174,7 +174,10 @@ mkinitfs -b "$ROOTFS" -o "$OUT/initramfs" "$KVER"
 # sbi_hart_hang() -- silently, because this machine's only console is HTIF and
 # nothing has bound it yet. v0.9 is from the same era as the emulator.
 git clone --depth 1 --branch "$OPENSBI_VERSION" https://github.com/riscv-software-src/opensbi /tmp/opensbi
-make -C /tmp/opensbi PLATFORM=generic -j"$(nproc)"
+# gnu11 because this OpenSBI is old enough to typedef bool, which is a keyword
+# under the C23 the compiler now defaults to -- and the firmware builds with
+# -Werror, so that alone stops it.
+make -C /tmp/opensbi PLATFORM=generic CC="gcc -std=gnu11" -j"$(nproc)"
 FW=/tmp/opensbi/build/platform/generic/firmware/fw_jump.bin
 [ -f "$FW" ] || { echo "!! OpenSBI did not produce fw_jump.bin"; exit 1; }
 
