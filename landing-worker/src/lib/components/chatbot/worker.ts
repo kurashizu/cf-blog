@@ -37,7 +37,14 @@ let stopper: InterruptableStoppingCriteria | null = null;
 
 type InMsg =
 	| { type: 'load' }
-	| { type: 'generate'; messages: unknown[]; images: string[]; audio: string[]; opts: Record<string, unknown> }
+	| {
+			type: 'generate';
+			messages: unknown[];
+			images: string[];
+			audio: string[];
+			enableThinking?: boolean;
+			opts: Record<string, unknown>;
+	  }
 	| { type: 'interrupt' };
 
 const post = (m: unknown) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
@@ -110,6 +117,8 @@ async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
 		add_generation_prompt: true,
 		tokenize: true,
 		return_dict: true,
+		// The template opens a reasoning channel when this is set.
+		enable_thinking: msg.enableThinking ?? false,
 		...(images ? { images } : {}),
 		...(audio ? { audio } : {})
 	});

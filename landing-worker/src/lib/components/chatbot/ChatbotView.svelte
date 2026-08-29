@@ -47,6 +47,7 @@
 	let fileEl: HTMLInputElement | undefined = $state();
 
 	let lastStats = $state('');
+	let thinkMode = $state(false);
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
 	let completionIdx = $state(-1);
@@ -408,6 +409,8 @@
 			messages,
 			images,
 			audio,
+			// Read by the chat template, not by generate().
+			enableThinking: thinkMode,
 			opts: {
 				max_new_tokens: config.maxTokens,
 				do_sample: config.doSample,
@@ -825,21 +828,32 @@
 				onclick={() => fileEl?.click()}
 				disabled={phase === 'generating'}
 				title="Attach an image or a sound — you can also paste or drag one in"
-				aria-label="attach a file"
-				class="px-1.5 py-1 text-[#c678dd]/70 hover:text-[#c678dd] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 text-sm"
+				class="px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#c678dd]/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
 			>
-				+
+				FILE
 			</button>
 			<button
 				onclick={recording ? stopRecording : startRecording}
 				disabled={phase === 'generating'}
 				title={recording ? 'Stop recording and attach it' : 'Record from your microphone'}
-				aria-label={recording ? 'stop recording' : 'record audio'}
-				class="px-1.5 py-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 text-sm {recording
-					? 'text-[#e06c75] animate-pulse'
-					: 'text-[#c678dd]/70 hover:text-[#c678dd]'}"
+				class="px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {recording
+					? 'border-[#e06c75] bg-[#e06c75]/20 text-[#e06c75]'
+					: 'border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20'}"
 			>
-				{recording ? '■' : '●'}
+				{recording ? 'STOP REC' : 'REC'}
+			</button>
+			<button
+				onclick={() => {
+					thinkMode = !thinkMode;
+					playSound('toggle');
+				}}
+				disabled={phase === 'generating'}
+				title="Let the model reason before answering, folded away above the reply. Slower."
+				class="px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {thinkMode
+					? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
+					: 'border-[#c678dd]/40 text-[#c678dd]/60 hover:bg-[#c678dd]/20'}"
+			>
+				THINK
 			</button>
 			<textarea
 				bind:this={inputEl}

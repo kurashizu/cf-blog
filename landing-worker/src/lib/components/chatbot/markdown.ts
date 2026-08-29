@@ -162,29 +162,39 @@ export function isLooping(text: string): boolean {
 }
 
 export interface SplitReply {
-	/** Reasoning the model emitted inside <think> … </think>. */
+	/** Reasoning the model emitted in its thinking channel. */
 	think: string;
-	/** Everything outside the think block — the actual answer. */
+	/** Everything outside that channel — the actual answer. */
 	answer: string;
-	/** True while a think block is open and not yet closed. */
+	/** True while a reasoning block is open and not yet closed. */
 	thinking: boolean;
 }
 
 /**
- * Separates the reasoning block from the answer. `<think>` and `</think>` are
- * real tokens in this model's vocabulary, so they arrive as literal text in the
- * stream and would otherwise render as part of the reply.
+ * The delimiters a reply may wrap its reasoning in. This model uses the
+ * channel markers its chat template strips (`<|channel>` … `<channel|>`);
+ * `<think>` is kept because other models emit that instead, and a stray pair
+ * would otherwise render as part of the answer.
  */
-export function splitThink(raw: string): SplitReply {
-	const open = raw.indexOf('<think>');
-	if (open === -1) return { think: '', answer: raw, thinking: false };
+const THINK_DELIMS: [string, string][] = [
+	['<|channel>', '<channel|>'],
+	['<think>', '</think>']
+];
 
-	const close = raw.indexOf('</think>', open);
-	if (close === -1) {
-		// Still streaming the reasoning.
-		return { think: raw.slice(open + 7), answer: '', thinking: true };
+/** Separates the reasoning block from the answer. */
+export function splitThink(raw: string): SplitReply {
+	for (const [openTag, closeTag] of THINK_DELIMS) {
+		const open = raw.indexOf(openTag);
+		if (open === -1) continue;
+
+		const close = raw.indexOf(closeTag, open + openTag.length);
+		if (close === -1) {
+			// Still streaming the reasoning.
+			return { think: raw.slice(open + openTag.length), answer: '', thinking: true };
+		}
+		const think = raw.slice(open + openTag.length, close);
+		const answer = (raw.slice(0, open) + raw.slice(close + closeTag.length)).trim();
+		return { think: think.trim(), answer, thinking: false };
 	}
-	const think = raw.slice(open + 7, close);
-	const answer = (raw.slice(0, open) + raw.slice(close + 8)).trim();
-	return { think: think.trim(), answer, thinking: false };
+	return { think: '', answer: raw, thinking: false };
 }
