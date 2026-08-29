@@ -143,8 +143,8 @@ done
 # syslog is absent because nothing here reads a log file -- dmesg is where this
 # machine says things -- not because it hangs. It was blamed for that once, on
 # the strength of a `timeout` that expired while the console it was writing to
-# did not exist; the real cause was /dev/hvc0 missing after switch_root, which
-# the initramfs now fixes by carrying devtmpfs across.
+# did not exist. Removing it did not change where the boot stops, so whatever
+# wedges this machine is still unfound; see the switch_root note below.
 for svc in bootmisc hostname; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/boot/$svc" 2>/dev/null || true
 done
@@ -262,14 +262,20 @@ mount -o remount,rw /sysroot 2>/dev/null
 mkdir -p /sysroot/run
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /sysroot/run
 
-# And devtmpfs has to come across the switch. The root filesystem ships a static
-# /dev holding console, null, pts, random, shm, urandom and zero -- no hvc0. The
-# console is virtio, so inittab respawns its getty on hvc0, and openrc's devfs
-# service is what would mount devtmpfs and create it. That service runs in
-# sysinit, which is exactly where the boot stopped: the last line to reach the
-# screen was sysfs's "Mounting bpf filesystem", and everything after it went to
-# a console the guest could no longer open. Moving the mount we already have
-# means /dev is populated from the first instruction init runs.
+# Carry devtmpfs across the switch. The root filesystem ships a static /dev
+# holding console, null, pts, random, shm, urandom and zero -- no hvc0 -- while
+# the console is virtio and inittab respawns its getty there. openrc's devfs
+# service would mount devtmpfs and create it, but only once sysinit runs, so
+# without this there is a window where /dev/hvc0 does not exist. Moving the
+# mount we already have closes that window.
+#
+# It does not, however, fix the hang: this machine still stops at sysfs's
+# "Mounting bpf filesystem" and answers no input afterwards. What has been ruled
+# out, each by testing rather than by reading: syslog, the bpf mount itself
+# (instant from a shell), /run's mount options, openrc's terminal-width query,
+# and console backpressure. The same sysinit and boot runlevels complete cleanly
+# under chroot -- the freeze needs PID 1 after a real switch_root -- so the
+# remaining suspects are the runlevel transition and busybox init's handoff.
 mkdir -p /sysroot/dev
 mount --move /dev /sysroot/dev
 umount /proc /sys 2>/dev/null
