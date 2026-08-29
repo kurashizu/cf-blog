@@ -59,9 +59,9 @@ function blockIndex(rootfs: ImageSpec | undefined): Response {
 	return new Response(body, {
 		headers: {
 			'content-type': 'text/plain; charset=utf-8',
-			// Short-lived: this one changes when the image is rebuilt, and it is a
-			// single small request per boot.
-			'cache-control': 'public, max-age=300'
+			// Deliberately uncached: it is one small request per boot, and holding
+			// it means a rebuilt machine boots the previous description of itself.
+			'cache-control': 'no-store'
 		}
 	});
 }
@@ -160,7 +160,7 @@ function config(env: Env | undefined, url: URL): Response {
 	return new Response(body, {
 		headers: {
 			'content-type': 'text/plain; charset=utf-8',
-			'cache-control': 'public, max-age=300'
+			'cache-control': 'no-store'
 		}
 	});
 }
