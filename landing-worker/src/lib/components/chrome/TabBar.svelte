@@ -19,7 +19,7 @@
 		{ id: 3, label: '3:utils', color: '#e5c07b', title: 'View 3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
 		{ id: 4, label: '4:leaderboard', color: '#98c379', title: 'View 4: Leaderboard — Artificial Analysis LLM model table, cached through blog.krsz.in [Hotkey: Ctrl+4]' },
 		{ id: 5, label: '5:krsz-vm', color: '#d19a66', title: 'View 5: krsz-vm — a real 32-bit x86 PC emulated in the browser, running Alpine Linux [Hotkey: Ctrl+5]' },
-		{ id: 6, label: '6:chatbot', color: '#61afef', title: 'View 6: chatbot — Qwen3.5-0.8B running entirely in your GPU via WebGPU, no server [Hotkey: Ctrl+6]' }
+		{ id: 6, label: '6:chatbot', color: '#61afef', title: 'View 6: chatbot — a language model running entirely on your GPU via WebGPU, no server [Hotkey: Ctrl+6]' }
 	];
 
 	let tabStrip: HTMLDivElement | undefined = $state();

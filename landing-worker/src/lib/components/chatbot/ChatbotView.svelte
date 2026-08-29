@@ -33,8 +33,13 @@
 		'You run entirely inside the visitor’s browser on their own GPU — no server sees this conversation. ' +
 		'Always reply in the same language the user wrote in.';
 
-	/** Appended when thinking is off, to discourage the model from opening a think block. */
-	const NO_THINK = ' Answer directly. Do not produce a <think> block.';
+	/**
+	 * This model has no native reasoning mode, so "think" is a prompt, not a
+	 * switch: it asks for the working before the answer, wrapped in a tag the
+	 * transcript can fold away. Without it the model answers directly.
+	 */
+	const THINK_PROMPT =
+		' Before answering, reason through the problem inside <think> </think> tags, then give your answer after the closing tag.';
 
 	let phase = $state<Phase>('idle');
 	let gpu = $state<GpuSupport | null>(null);
@@ -259,7 +264,7 @@
 		lastStats = '';
 		await scrollToEnd();
 
-		let system = BASE_PROMPT + (thinkMode ? '' : NO_THINK);
+		let system = BASE_PROMPT + (thinkMode ? THINK_PROMPT : '');
 		if (compactedSummary) {
 			system += `\n\nEarlier conversation, summarised: ${compactedSummary}`;
 		}
@@ -396,7 +401,7 @@
 				thinkMode = !thinkMode;
 				playSound('toggle');
 			}}
-			title="Show the model's reasoning before its answer. Slower, and this model's reasoning is often thin."
+			title="Ask the model to reason step by step before answering, and fold that working away above the reply. Slower, and a model this size reasons only so well."
 			class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {thinkMode
 				? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
 				: 'border-[#c678dd]/40 text-[#c678dd]/70 hover:bg-[#c678dd]/20'}"

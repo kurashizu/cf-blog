@@ -1,6 +1,5 @@
 import type {
 	ChatCompletionMessageParam,
-	ChatOptions,
 	InitProgressReport,
 	MLCEngineInterface
 } from '@mlc-ai/web-llm';
@@ -21,23 +20,33 @@ export interface ModelBuild {
 }
 
 /**
- * Swapping the model means changing the two ids below AND the stop token ids in
- * CHAT_OPTS — they are the model's tokenizer ids, not portable constants, and a
- * mismatched pair is what makes generation run on past its stop token. Check
- * `added_tokens_decoder` in the model's tokenizer_config.json before changing
- * either.
+ * Llama-3.2-1B-Instruct, chosen over the smaller Qwen3.5-0.8B after that model
+ * looped badly in multi-turn chat. The cause is architectural rather than
+ * configuration: Qwen3.5 is a hybrid Gated DeltaNet (18 linear-attention layers
+ * to 6 full-attention, `full_attention_interval: 4`), and it is the only family
+ * in web-llm's list that carries a `max_history_size` override — the tell for
+ * the recurrent-state path. Upstream reports the same loops on other runtimes,
+ * so it is not something this page can configure away.
  *
- * Both builds carry the same int4 weights and download identically (426 MB);
- * they differ only in activation precision, which shows up as runtime VRAM.
- * f16 is preferred because it is faster, but its kernels need the
- * `shader-f16` WebGPU feature — `pickModel()` falls back where it is missing.
+ * Llama-3.2-1B is a plain transformer, instruction-tuned for dialogue, and
+ * needs 879 MB of VRAM against Qwen3.5-0.8B's 1629 MB — better behaved and
+ * roughly half the GPU memory.
+ *
+ * Swapping the model again means changing both ids below and re-checking the
+ * packaged `mlc-chat-config.json`: stop token ids belong to a model's own
+ * tokenizer and a mismatched pair is what lets generation run past its stop
+ * token. Llama-3.2's config is correct as published, so no override is applied.
+ *
+ * Both builds carry the same int4 weights; they differ in activation precision,
+ * which shows up as runtime VRAM. f16 is preferred because it is faster, but
+ * its kernels need `shader-f16` — `pickModel()` falls back where it is missing.
  */
-export const MODEL_F16 = 'Qwen3.5-0.8B-q4f16_1-MLC';
-export const MODEL_F32 = 'Qwen3.5-0.8B-q4f32_1-MLC';
+export const MODEL_F16 = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
+export const MODEL_F32 = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
 
 export const BUILDS: Record<string, ModelBuild> = {
-	[MODEL_F16]: { id: MODEL_F16, downloadMb: 426, vramMb: 1629 },
-	[MODEL_F32]: { id: MODEL_F32, downloadMb: 426, vramMb: 1894 }
+	[MODEL_F16]: { id: MODEL_F16, downloadMb: 672, vramMb: 879 },
+	[MODEL_F32]: { id: MODEL_F32, downloadMb: 672, vramMb: 1129 }
 };
 
 /** Every build the page may cache — used by the storage panel. */
@@ -52,49 +61,14 @@ export const ALL_BUILDS: ModelBuild[] = Object.values(BUILDS);
  */
 
 /**
- * The published `mlc-chat-config.json` describes this model with Qwen2's
- * conversation template, and Qwen2's stop token ids (151643 / 151645) with it.
- * This model's vocabulary is 248320 tokens, where `<|endoftext|>` is 248044 and
- * `<|im_end|>` is 248046 — the declared ids point at unrelated tokens, so
- * generation never stops cleanly. That is what makes it repeat a greeting and
- * ignore the language it was addressed in.
+ * No `conv_template` override. Llama-3.2's packaged config declares the
+ * `llama-3_1` template with stop tokens 128001 / 128008 / 128009, which are
+ * `<|end_of_text|>`, `<|eom_id|>` and `<|eot_id|>` in its own 128256-token
+ * vocabulary — correct as published, so overriding it could only break it.
  *
- * The role markup itself (`<|im_start|>` … `<|im_end|>`) is right, so only the
- * ids and stop strings need correcting. chatOpts is merged over the record's
- * overrides last, so this wins.
+ * (The previous model needed one: its config carried Qwen2's stop token ids
+ * against a 248320-token vocabulary, so generation never stopped cleanly.)
  */
-const STOP_ENDOFTEXT = 248044;
-const STOP_IM_END = 248046;
-
-type ConvTemplate = NonNullable<ChatOptions['conv_template']>;
-
-const ROLES = {
-	user: '<|im_start|>user',
-	assistant: '<|im_start|>assistant',
-	tool: '<|im_start|>tool'
-} as unknown as ConvTemplate['roles'];
-
-export const CHAT_OPTS: ChatOptions = {
-	conv_template: {
-		system_template: '<|im_start|>system\n{system_message}<|im_end|>\n',
-		system_message: 'You are a helpful assistant.',
-		add_role_after_system_message: true,
-		// web-llm keys these by its Role enum, whose values are exactly these
-		// strings. The enum is not re-exported from the package root, and a static
-		// import would pull the whole engine into the page's first chunk.
-		roles: ROLES,
-		role_templates: {
-			user: '{user_message}',
-			assistant: '{assistant_message}',
-			tool: '{tool_message}'
-		},
-		seps: ['<|im_end|>\n'],
-		role_content_sep: '\n',
-		role_empty_sep: '\n',
-		stop_str: ['<|endoftext|>', '<|im_end|>'],
-		stop_token_ids: [STOP_ENDOFTEXT, STOP_IM_END]
-	}
-};
 
 export interface GpuSupport {
 	ok: boolean;
@@ -153,11 +127,12 @@ export const CONTEXT_WINDOW = 4096;
  * incoherent rather than merely repetitive.
  */
 export const SAMPLING = {
-	temperature: 0.7,
+	// Meta's own recommendation for Llama 3.2 Instruct.
+	temperature: 0.6,
 	top_p: 0.9,
-	repetition_penalty: 1.1,
+	// Set as a pair: web-llm zeroes one and warns if only the other is given.
 	frequency_penalty: 0.3,
-	presence_penalty: 0.1
+	presence_penalty: 0.3
 } as const;
 
 /**
@@ -172,13 +147,9 @@ export async function createEngine(
 	const { CreateWebWorkerMLCEngine } = await import('@mlc-ai/web-llm');
 	const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 	try {
-		const engine = await CreateWebWorkerMLCEngine(
-			worker,
-			modelId,
-			{ initProgressCallback: onProgress },
-			// Corrects the packaged config's Qwen2 stop tokens — see CHAT_OPTS.
-			structuredClone(CHAT_OPTS)
-		);
+		const engine = await CreateWebWorkerMLCEngine(worker, modelId, {
+			initProgressCallback: onProgress
+		});
 		return { engine, worker };
 	} catch (err) {
 		worker.terminate();
