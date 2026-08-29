@@ -163,6 +163,36 @@ p.write_text(s)
 print('riscv_cpu.c: PMP and performance counter CSRs stubbed')
 PATCHCSR
 
+# The HTIF console is the only one this machine has, and OpenSBI will not bind a
+# serial driver to a node with no address. Without a console the firmware and
+# the kernel both boot in complete silence, which is indistinguishable from not
+# booting at all.
+python3 - <<'PATCHFDT'
+import pathlib
+p = pathlib.Path('riscv_machine.c')
+s = p.read_text()
+a = '''    fdt_begin_node(s, "htif");
+    fdt_prop_str(s, "compatible", "ucb,htif0");
+    fdt_end_node(s); /* htif */'''
+b = '''    fdt_begin_node_num(s, "htif", HTIF_BASE_ADDR);
+    fdt_prop_str(s, "compatible", "ucb,htif0");
+    fdt_prop_tab_u64_2(s, "reg", HTIF_BASE_ADDR, 16);
+    fdt_end_node(s); /* htif */'''
+assert a in s, 'htif node not found'
+s = s.replace(a, b, 1)
+
+# And name it as the console, so the firmware does not have to guess which of
+# the devices it found is the one to print on.
+a2 = '''    fdt_begin_node(s, "chosen");'''
+b2 = '''    fdt_begin_node(s, "chosen");
+    fdt_prop_str(s, "stdout-path", "/htif@40008000");'''
+assert a2 in s, 'chosen node not found'
+s = s.replace(a2, b2, 1)
+
+p.write_text(s)
+print('riscv_machine.c: htif given an address and named as stdout')
+PATCHFDT
+
 # The JS library that ships with it is the same vintage as the makefile and
 # leans on three things the Emscripten runtime has since removed. It would have
 # compiled and then failed on its first fetch.
