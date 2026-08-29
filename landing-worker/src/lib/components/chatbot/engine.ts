@@ -69,12 +69,97 @@ export const BUILDS: Record<string, ModelBuild> = {
 export const ALL_BUILDS: ModelBuild[] = Object.values(BUILDS);
 
 /**
- * `max_history_size` is deliberately NOT overridden. Despite the name it does
- * not trim conversation history — web-llm only uses it to size the RNN state
- * tensor for recurrent/hybrid models. Multi-turn memory is bounded by
- * `context_window_size` (4096) instead, and the engine slides that window
- * itself. Setting it here would over-allocate state for no benefit.
+ * Everything the CONFIG panel can change. Held in one place so the panel, the
+ * request, and the engine reload all read the same shape.
  */
+export interface ChatConfig {
+	contextWindow: number;
+	maxTokens: number;
+	thinkMaxTokens: number;
+	temperature: number;
+	topP: number;
+	repetitionPenalty: number;
+	frequencyPenalty: number;
+	presencePenalty: number;
+	/** Stop generation when the tail collapses into repetition. */
+	loopGuard: boolean;
+}
+
+/**
+ * The model is trained for 262144 tokens of context and web-llm's record
+ * overrides that down to 4096. 32768 is a middle ground that holds a real
+ * conversation, at roughly 384 MB of KV cache against 48 MB at 4096 — the
+ * weights are only ~426 MB, so the window is the larger cost.
+ *
+ * Changing `contextWindow` needs the engine reloaded; everything else applies
+ * to the next message.
+ */
+export const DEFAULT_CONFIG: ChatConfig = {
+	contextWindow: 32768,
+	maxTokens: 2048,
+	// Reasoning spends from the same budget as the answer, and this model
+	// reasons at length, so thinking turns get materially more room.
+	thinkMaxTokens: 4096,
+	temperature: 0.6,
+	topP: 0.8,
+	repetitionPenalty: 1.15,
+	frequencyPenalty: 0.5,
+	presencePenalty: 0.2,
+	loopGuard: true
+};
+
+/** Bounds for the CONFIG panel's inputs, and a guard on restored values. */
+export const CONFIG_LIMITS = {
+	contextWindow: { min: 1024, max: 131072, step: 1024 },
+	maxTokens: { min: 64, max: 16384, step: 64 },
+	thinkMaxTokens: { min: 256, max: 32768, step: 256 },
+	temperature: { min: 0, max: 2, step: 0.05 },
+	topP: { min: 0.05, max: 1, step: 0.05 },
+	repetitionPenalty: { min: 1, max: 2, step: 0.05 },
+	frequencyPenalty: { min: -2, max: 2, step: 0.1 },
+	presencePenalty: { min: -2, max: 2, step: 0.1 }
+} as const;
+
+const CONFIG_KEY = 'krsz.chatbot.config';
+
+export function loadConfig(): ChatConfig {
+	try {
+		const raw = localStorage.getItem(CONFIG_KEY);
+		if (!raw) return { ...DEFAULT_CONFIG };
+		const saved = JSON.parse(raw) as Partial<ChatConfig>;
+		const merged = { ...DEFAULT_CONFIG, ...saved };
+		// A stored value from an older build could sit outside the current
+		// bounds, which the engine would reject on load.
+		for (const [k, lim] of Object.entries(CONFIG_LIMITS)) {
+			const key = k as keyof typeof CONFIG_LIMITS;
+			const v = merged[key];
+			if (typeof v !== 'number' || !Number.isFinite(v)) merged[key] = DEFAULT_CONFIG[key];
+			else merged[key] = Math.min(lim.max, Math.max(lim.min, v));
+		}
+		return merged;
+	} catch {
+		return { ...DEFAULT_CONFIG };
+	}
+}
+
+export function saveConfig(c: ChatConfig): void {
+	try {
+		localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
+	} catch {
+		/* private window, or storage disabled — the session still works */
+	}
+}
+
+/** The sampling fields, in the shape a chat completion request wants. */
+export function samplingOf(c: ChatConfig) {
+	return {
+		temperature: c.temperature,
+		top_p: c.topP,
+		repetition_penalty: c.repetitionPenalty,
+		frequency_penalty: c.frequencyPenalty,
+		presence_penalty: c.presencePenalty
+	};
+}
 
 /**
  * Corrects the packaged config's stop tokens. See bug 1 above: it declares
@@ -169,22 +254,10 @@ export function buildById(id: string): ModelBuild | undefined {
 	return BUILDS[id];
 }
 
-/** Context window the model is configured with — the budget the UI reports against. */
-export const CONTEXT_WINDOW = 4096;
-
 /**
- * Sampling for chat replies.
- *
- * The packaged config ships every penalty disabled (`repetition_penalty: 1.0`,
- * both OpenAI penalties at 0), which leaves a sub-1B model free to fall into a
- * loop and restate the same sentence until it hits max_tokens. A mild
- * repetition penalty plus nucleus sampling is the standard remedy; the values
- * are deliberately gentle, since penalising too hard makes a small model
- * incoherent rather than merely repetitive.
- */
-/**
- * Tuned for stability rather than flair, because this model's documented
- * failure is looping rather than dullness.
+ * Sampling defaults are tuned for stability rather than flair, because this
+ * model's documented failure is looping rather than dullness. See
+ * DEFAULT_CONFIG; the CONFIG panel can change any of them.
  *
  * web-llm passes presence, frequency and repetition penalties into one kernel
  * together (they compose; they are not alternatives), and applies them over
@@ -192,9 +265,8 @@ export const CONTEXT_WINDOW = 4096;
  *
  * - temperature below Qwen's suggested 0.7, and top_p tightened to 0.8: a
  *   narrower, flatter distribution is far less likely to wander into a loop.
- * - repetition_penalty 1.15 is the blunt instrument that acts on any repeated
- *   token regardless of count. Past ~1.2 small models start dodging necessary
- *   words and turn stilted.
+ * - repetition_penalty 1.15 acts on any repeated token regardless of count.
+ *   Past ~1.2 small models start dodging necessary words and turn stilted.
  * - frequency_penalty scales with how often a token has appeared, which is what
  *   actually breaks a loop already in progress.
  * - presence_penalty stays low on purpose. Qwen suggests 1.5-2.0 against
@@ -202,34 +274,31 @@ export const CONTEXT_WINDOW = 4096;
  *   mixing — on a page answering in Chinese that is the worse failure, and it
  *   is a flat penalty on every seen token, which in Chinese hits common
  *   characters hardest.
- */
-export const SAMPLING = {
-	temperature: 0.6,
-	top_p: 0.8,
-	repetition_penalty: 1.15,
-	frequency_penalty: 0.5,
-	presence_penalty: 0.2
-} as const;
-
-/**
+ *
  * Loads the engine in a Web Worker so token generation never blocks the main
  * thread. The worker module is created here rather than at module scope so a
  * cancelled load leaves nothing behind.
  */
 export async function createEngine(
 	modelId: string,
+	config: ChatConfig,
 	onProgress: (r: InitProgressReport) => void
 ): Promise<{ engine: MLCEngineInterface; worker: Worker }> {
 	const { CreateWebWorkerMLCEngine } = await import('@mlc-ai/web-llm');
 	const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 	try {
+		// Corrects the packaged config's stop tokens (see CHAT_OPTS) and widens
+		// the window past web-llm's 4096 override. web-llm keeps a reference to
+		// this object, so hand it a copy rather than the module's own.
+		const chatOpts: ChatOptions = {
+			...structuredClone(CHAT_OPTS),
+			context_window_size: config.contextWindow
+		};
 		const engine = await CreateWebWorkerMLCEngine(
 			worker,
 			modelId,
 			{ initProgressCallback: onProgress },
-			// Corrects the packaged config's stop tokens — see CHAT_OPTS. web-llm
-			// keeps a reference to this, so hand it a copy rather than the module's.
-			structuredClone(CHAT_OPTS)
+			chatOpts
 		);
 		return { engine, worker };
 	} catch (err) {

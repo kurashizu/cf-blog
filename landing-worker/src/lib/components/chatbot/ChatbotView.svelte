@@ -5,15 +5,19 @@
 	import { isLooping, renderMarkdown, splitThink } from './markdown';
 	import {
 		ALL_BUILDS,
-		CONTEXT_WINDOW,
-		SAMPLING,
+		CONFIG_LIMITS,
+		DEFAULT_CONFIG,
 		buildById,
 		cachedModelIds,
 		cachedSizeMb,
 		createEngine,
 		evictModel,
+		loadConfig,
 		pickModel,
 		probeGpu,
+		samplingOf,
+		saveConfig,
+		type ChatConfig,
 		type ChatCompletionMessageParam,
 		type GpuSupport,
 		type MLCEngineInterface
@@ -79,10 +83,19 @@
 	/** Index of the highlighted completion, or -1 when the menu is closed. */
 	let completionIdx = $state(-1);
 
+	let config = $state<ChatConfig>({ ...DEFAULT_CONFIG });
+	let configOpen = $state(false);
+	/** The window the running engine was built with, so a change can prompt a reload. */
+	let loadedContextWindow = $state(0);
+
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 	let build = $derived(buildById(modelId));
 	let busy = $derived(phase === 'loading' || phase === 'generating');
-	let ctxPct = $derived(Math.min(100, Math.round((usedTokens / CONTEXT_WINDOW) * 100)));
+	let ctxPct = $derived(Math.min(100, Math.round((usedTokens / config.contextWindow) * 100)));
+	/** True when contextWindow was changed after the engine was built. */
+	let needsReload = $derived(
+		loadedContextWindow > 0 && loadedContextWindow !== config.contextWindow
+	);
 
 	/**
 	 * Completions for a lone `/word` being typed. Only while the draft is exactly
@@ -99,6 +112,7 @@
 	});
 
 	onMount(() => {
+		config = loadConfig();
 		probeGpu().then((g) => {
 			gpu = g;
 			if (!modelId) modelId = pickModel(g);
@@ -130,12 +144,13 @@
 		progressText = 'requesting the weights…';
 		playSound('click');
 		try {
-			const created = await createEngine(modelId, (r) => {
+			const created = await createEngine(modelId, config, (r) => {
 				progressText = r.text;
 				progressPct = Math.round((r.progress ?? 0) * 100);
 			});
 			engine = created.engine;
 			worker = created.worker;
+			loadedContextWindow = config.contextWindow;
 			phase = 'ready';
 			progressText = '';
 			void refreshCached();
@@ -210,7 +225,7 @@
 				return true;
 			case 'stats':
 				notice(
-					`context ${usedTokens}/${CONTEXT_WINDOW} tokens (${ctxPct}%)\n` +
+					`context ${usedTokens}/${config.contextWindow} tokens (${ctxPct}%)\n` +
 						`last decode ${lastStats || '—'}\n` +
 						`turns ${turns.filter((t) => !t.notice).length}`
 				);
@@ -243,7 +258,12 @@
 		compacting = `summarising ${real.length} messages…`;
 		try {
 			const transcript = real
-				.map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`)
+				.map(
+					(t) =>
+						`${t.role === 'user' ? 'User' : 'Assistant'}: ${
+							t.role === 'assistant' ? splitThink(t.content).answer : t.content
+						}`
+				)
 				.join('\n');
 			// Streamed rather than awaited whole: summarising is slow enough on a
 			// small model that a silent wait reads as a hang.
@@ -313,12 +333,24 @@
 			system += `\n\nEarlier conversation, summarised: ${compactedSummary}`;
 		}
 
+		// Past assistant turns go back as their answer only, with any reasoning
+		// stripped. Qwen's own chat template does the same, and it matters here:
+		// a reply generated with thinking off still carries the empty
+		// "<think></think>" prefill web-llm wrote into it, and feeding that back
+		// teaches the model to keep producing empty think blocks — so turning
+		// thinking on mid-conversation did nothing, while turning it off worked.
 		const messages: ChatCompletionMessageParam[] = [
 			{ role: 'system', content: system },
 			...turns
 				.slice(0, -1)
 				.filter((t) => !t.notice)
-				.map((t) => ({ role: t.role, content: t.content }) as ChatCompletionMessageParam)
+				.map(
+					(t) =>
+						({
+							role: t.role,
+							content: t.role === 'assistant' ? splitThink(t.content).answer : t.content
+						}) as ChatCompletionMessageParam
+				)
 		];
 
 
@@ -328,15 +360,12 @@
 				stream: true,
 				stream_options: { include_usage: true },
 				extra_body: { enable_thinking: thinkMode },
-				...SAMPLING,
-				// A backstop, not a budget: if the model does loop, this bounds how
-				// long you wait before STOP becomes the obvious move. Thinking needs
-				// the extra room, since the reasoning block spends from the same pot.
-				// Thinking spends from this same budget, and this model reasons at
-				// length — 2000+ characters to answer "hi" — so a cap that is fine
-				// for a direct answer gets consumed entirely by the reasoning,
-				// leaving the block unclosed and no answer at all. Give it room.
-				max_tokens: thinkMode ? 2500 : 500
+				...samplingOf(config),
+				// Reasoning spends from this same budget, and this model reasons at
+				// length — thousands of characters to answer "hi" — so a cap that
+				// suits a direct answer gets consumed entirely inside the think
+				// block, leaving it unclosed and no answer at all.
+				max_tokens: thinkMode ? config.thinkMaxTokens : config.maxTokens
 			});
 			let looped = false;
 			for await (const chunk of stream) {
@@ -349,7 +378,7 @@
 					await scrollToEnd();
 
 					// Cut a loop short rather than let it run to max_tokens.
-					if (isLooping(grown)) {
+					if (config.loopGuard && isLooping(grown)) {
 						looped = true;
 						await engine.interruptGenerate();
 						break;
@@ -495,7 +524,7 @@
 			<!-- Context meter -->
 			<span
 				class="flex items-center gap-1.5 font-mono"
-				title="How much of the {CONTEXT_WINDOW}-token context window the conversation occupies"
+				title="How much of the {config.contextWindow}-token context window the conversation occupies"
 			>
 				<span class="text-white/40 hidden sm:inline">ctx</span>
 				<span class="w-14 h-1 bg-white/10 rounded-full overflow-hidden hidden sm:block">
@@ -533,7 +562,22 @@
 
 		<button
 			onclick={() => {
+				configOpen = !configOpen;
+				if (configOpen) storageOpen = false;
+				playSound('toggle');
+			}}
+			title="Generation limits and sampling"
+			class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {configOpen
+				? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+				: 'border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20'}"
+		>
+			CONFIG{needsReload ? ' *' : ''}
+		</button>
+
+		<button
+			onclick={() => {
 				storageOpen = !storageOpen;
+				if (storageOpen) configOpen = false;
 				if (storageOpen) void refreshCached();
 				playSound('toggle');
 			}}
@@ -560,6 +604,81 @@
 			</button>
 		{/if}
 	</div>
+
+	{#if configOpen}
+		{@const F = [
+			{ k: 'maxTokens' as const, label: 'max output', hint: 'tokens per reply' },
+			{ k: 'thinkMaxTokens' as const, label: 'max output (thinking)', hint: 'reasoning spends from this too' },
+			{ k: 'contextWindow' as const, label: 'context window', hint: 'needs a reload' },
+			{ k: 'temperature' as const, label: 'temperature', hint: 'lower is steadier' },
+			{ k: 'topP' as const, label: 'top_p', hint: 'nucleus sampling' },
+			{ k: 'repetitionPenalty' as const, label: 'repetition penalty', hint: 'any repeated token' },
+			{ k: 'frequencyPenalty' as const, label: 'frequency penalty', hint: 'scales with repeats' },
+			{ k: 'presencePenalty' as const, label: 'presence penalty', hint: 'high values mix languages' }
+		]}
+		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-2">
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+				{#each F as f (f.k)}
+					<label class="flex items-center gap-2 font-mono">
+						<span class="text-white/60 w-40 shrink-0" title={f.hint}>{f.label}</span>
+						<input
+							type="number"
+							bind:value={config[f.k]}
+							min={CONFIG_LIMITS[f.k].min}
+							max={CONFIG_LIMITS[f.k].max}
+							step={CONFIG_LIMITS[f.k].step}
+							onchange={() => saveConfig(config)}
+							class="w-24 bg-black/50 border border-white/20 rounded-xs px-1.5 py-0.5 text-[#d8dee9] outline-none focus:border-[#56b6c2] tabular-nums"
+						/>
+					</label>
+				{/each}
+				<label class="flex items-center gap-2 font-mono">
+					<span class="text-white/60 w-40 shrink-0" title="Stop a reply that collapses into repetition">
+						loop guard
+					</span>
+					<input
+						type="checkbox"
+						bind:checked={config.loopGuard}
+						onchange={() => saveConfig(config)}
+						class="accent-[#56b6c2] cursor-pointer"
+					/>
+				</label>
+			</div>
+
+			<div class="flex items-center gap-2 border-t border-white/10 pt-1.5">
+				<span class="text-white/35 flex-1">
+					{#if needsReload}
+						<span class="text-[#e5c07b]">context window changed — reload the model to apply it.</span>
+					{:else}
+						Saved in this browser. Sampling applies to the next message.
+					{/if}
+				</span>
+				{#if needsReload}
+					<button
+						onclick={() => {
+							teardown();
+							resetConversation();
+							phase = 'idle';
+							void load();
+						}}
+						class="px-2 py-0.5 border border-[#e5c07b] text-[#e5c07b] rounded-xs font-bold cursor-pointer hover:bg-[#e5c07b] hover:text-black"
+					>
+						RELOAD
+					</button>
+				{/if}
+				<button
+					onclick={() => {
+						config = { ...DEFAULT_CONFIG };
+						saveConfig(config);
+						playSound('click');
+					}}
+					class="px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10"
+				>
+					DEFAULTS
+				</button>
+			</div>
+		</div>
+	{/if}
 
 	{#if storageOpen}
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5">
