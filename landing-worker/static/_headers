@@ -1,0 +1,16 @@
+# QEMU runs its CPU on a worker thread and shares memory with it, which a
+# browser only permits on a cross-origin isolated page. Scoped to this one
+# route: isolation also means every cross-origin subresource must consent to
+# being embedded, and there is no reason to impose that on pages that gain
+# nothing from it.
+#
+# The fonts this site loads do consent — Google serves them with
+# cross-origin-resource-policy: cross-origin — which is the only reason this is
+# a header change rather than a font migration.
+/krsz-vm
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+
+/krsz-vm/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
