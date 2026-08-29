@@ -174,6 +174,7 @@ mkinitfs -b "$ROOTFS" -o "$OUT/initramfs" "$KVER"
 mkdir -p /tmp/fw
 gcc -march=rv64gc -mabi=lp64d -mcmodel=medany \
 	-nostdlib -nostartfiles -ffreestanding -fno-stack-protector \
+	-fno-pie -no-pie \
 	-O2 -Wall -Wextra -Werror \
 	-T /firmware/link.ld \
 	/firmware/start.S /firmware/sbi.c \

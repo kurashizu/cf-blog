@@ -13,7 +13,11 @@ _start:
 	csrw	mip, zero
 	mv	s1, a1			/* the device tree, for after the banner */
 
-	la	t0, trap_entry
+	/* lla, not la: la goes through the global offset table, and in a flat
+	   binary with no linker to fill it that loads zero -- which is how both
+	   the trap vector and the stack pointer came to be zero, and why the
+	   kernel's first ecall landed at address zero and stayed there. */
+	lla	t0, trap_entry
 	csrw	mtvec, t0
 
 	/* Everything the kernel should handle itself goes to S-mode. Bit 9 stays
@@ -28,7 +32,7 @@ _start:
 	csrw	mcounteren, t0
 	csrw	scounteren, t0
 
-	la	sp, stack_top
+	lla	sp, stack_top
 	/* The trap handler swaps this in: the kernel's stack is not ours. */
 	csrw	mscratch, sp
 
