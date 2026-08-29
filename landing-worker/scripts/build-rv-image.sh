@@ -147,11 +147,6 @@ rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \
 	"$ROOTFS/etc/runlevels/boot/modules" \
 	"$ROOTFS/etc/runlevels/sysinit/mdev" || true
 
-# The boot stops dead at "Mounting bpf filesystem", which is the last thing
-# openrc's sysfs service does and the first one this machine cannot finish.
-# Nothing here uses bpf, so the call goes rather than the service: /sys,
-# securityfs and debugfs are all mounted by the time it is reached.
-sed -i '/^[[:space:]]*mount_bpf$/d' "$ROOTFS/etc/init.d/sysfs" || true
 
 # ── firmware, kernel, initramfs ────────────────────────────────────────────
 KVER=$(ls "$ROOTFS/lib/modules" | head -n1)
@@ -253,6 +248,14 @@ fi
 
 echo "krsz-rv: switching to the root filesystem"
 mount -o remount,rw /sysroot 2>/dev/null
+
+# openrc keeps its dependency cache in /run, and writes it before anything else
+# runs. Without a tmpfs there it writes into the root filesystem, fails with
+# "Bad file descriptor", and gives up on the dependency tree — which stops the
+# boot dead after sysinit with no error anyone can see. Alpine's own initramfs
+# mounts this; ours has to as well.
+mkdir -p /sysroot/run
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /sysroot/run
 umount /proc /sys 2>/dev/null
 exec switch_root /sysroot /sbin/init
 INIT
