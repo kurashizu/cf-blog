@@ -91,6 +91,9 @@
 	function teardown() {
 		worker?.terminate();
 		worker = null;
+		// Leaving mid-take would otherwise leave the mic indicator lit.
+		recorder?.stop();
+		recStream?.getTracks().forEach((t) => t.stop());
 		for (const t of turns) t.attachments?.forEach((a) => URL.revokeObjectURL(a.url));
 		pending.forEach((a) => URL.revokeObjectURL(a.url));
 	}
@@ -309,6 +312,48 @@
 		pending = pending.filter((_, n) => n !== i);
 	}
 
+	let recording = $state(false);
+	let recorder: MediaRecorder | null = null;
+	let recStream: MediaStream | null = null;
+
+	/**
+	 * Records from the microphone straight into an attachment. The blob's own
+	 * container does not matter — decodeAudio() in the worker resamples whatever
+	 * comes out through an OfflineAudioContext.
+	 */
+	async function startRecording() {
+		if (recording) return;
+		try {
+			recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		} catch (err) {
+			notice(`could not reach the microphone: ${(err as Error).message}`);
+			return;
+		}
+		const chunks: Blob[] = [];
+		recorder = new MediaRecorder(recStream);
+		recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+		recorder.onstop = () => {
+			// Release the mic as soon as the take ends, so no tab indicator lingers.
+			recStream?.getTracks().forEach((t) => t.stop());
+			recStream = null;
+			recording = false;
+			if (!chunks.length) return;
+			const blob = new Blob(chunks, { type: recorder?.mimeType || 'audio/webm' });
+			const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+			pending = [...pending, { kind: 'audio', url: URL.createObjectURL(blob), name: `recording ${stamp}` }];
+			void tick().then(() => inputEl?.focus());
+		};
+		recorder.start();
+		recording = true;
+		playSound('click');
+	}
+
+	function stopRecording() {
+		recorder?.stop();
+		recorder = null;
+		playSound('click');
+	}
+
 	function send() {
 		const text = draft.trim();
 		if (busy || phase !== 'ready' || !worker) return;
@@ -339,7 +384,11 @@
 		const images: string[] = [];
 		const audio: string[] = [];
 		const messages = [
-			{ role: 'system', content: [{ type: 'text', text: SYSTEM_PROMPT }] },
+			// The system message must be a plain string: the chat template applies
+			// `| trim` to it unconditionally, where user and assistant turns branch
+			// on string-vs-sequence first. An array here fails with
+			// "Unknown ArrayValue filter: trim".
+			{ role: 'system', content: SYSTEM_PROMPT },
 			...history.map((t) => {
 				const parts: Record<string, string>[] = [];
 				for (const a of t.attachments ?? []) {
@@ -774,12 +823,23 @@
 			/>
 			<button
 				onclick={() => fileEl?.click()}
-				disabled={phase !== 'ready'}
+				disabled={phase === 'generating'}
 				title="Attach an image or a sound — you can also paste or drag one in"
 				aria-label="attach a file"
 				class="px-1.5 py-1 text-[#c678dd]/70 hover:text-[#c678dd] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 text-sm"
 			>
 				+
+			</button>
+			<button
+				onclick={recording ? stopRecording : startRecording}
+				disabled={phase === 'generating'}
+				title={recording ? 'Stop recording and attach it' : 'Record from your microphone'}
+				aria-label={recording ? 'stop recording' : 'record audio'}
+				class="px-1.5 py-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 text-sm {recording
+					? 'text-[#e06c75] animate-pulse'
+					: 'text-[#c678dd]/70 hover:text-[#c678dd]'}"
+			>
+				{recording ? '■' : '●'}
 			</button>
 			<textarea
 				bind:this={inputEl}
