@@ -41,6 +41,10 @@ s = s.replace('-O2 --llvm-opts 2 -Wall', '-O2 -Wall -Wno-implicit-function-decla
 s = s.replace('--memory-init-file 0 ', '')
 s = s.replace('-s BINARYEN_TRAP_MODE=clamp ', '')
 s = s.replace('EXTRA_EXPORTED_RUNTIME_METHODS', 'EXPORTED_RUNTIME_METHODS')
+# The JS library calls _malloc and _free directly and reaches the C callbacks
+# through dynCall; both have to be asked for now or they are optimised away.
+s = s.replace("'_net_set_carrier']", "'_net_set_carrier','_malloc','_free']")
+s = s.replace('-s NO_FILESYSTEM=1', '-s NO_FILESYSTEM=1 -s DYNCALLS=1')
 s = s.replace('-s TOTAL_MEMORY=67108864', '-s INITIAL_MEMORY=67108864')
 
 # The page loads this itself rather than letting it run on load, so it is built
@@ -57,6 +61,37 @@ s = s.replace('PROGS=js/riscvemu32.js js/riscvemu32-wasm.js js/riscvemu64.js js/
 p.write_text(s)
 print('Makefile.js rewritten')
 PY
+
+# The JS library that ships with it is the same vintage as the makefile and
+# leans on three things the Emscripten runtime has since removed. It would have
+# compiled and then failed on its first fetch.
+python3 - <<'PATCHLIB'
+import pathlib
+p = pathlib.Path('js/lib.js')
+s = p.read_text()
+
+# Renamed years ago.
+s = s.replace('Pointer_stringify(', 'UTF8ToString(')
+# Runtime.* is gone; dynCall is a plain global when DYNCALLS is on.
+s = s.replace('Runtime.dynCall(', 'dynCall(')
+
+# Browser.wgetRequests belonged to a library this build does not link. The
+# requests only need somewhere to live that outlives the call, and Module is
+# already that.
+s = s.replace('var handle = Browser.getNextWgetRequestHandle();',
+              'var handle = (Module.__wgetId = (Module.__wgetId || 0) + 1);')
+s = s.replace('delete Browser.wgetRequests[handle];',
+              'delete (Module.__wgetReqs || {})[handle];')
+s = s.replace('Browser.wgetRequests[handle] = http;',
+              '(Module.__wgetReqs = Module.__wgetReqs || {})[handle] = http;')
+
+# The page is not obliged to care about download progress.
+s = s.replace('update_downloading(Boolean(flag));',
+              "if (typeof update_downloading === 'function') update_downloading(Boolean(flag));")
+
+p.write_text(s)
+print('js/lib.js patched')
+PATCHLIB
 
 mkdir -p js
 emmake make -f Makefile.js -j"$(nproc)"
