@@ -473,7 +473,7 @@ start() {
 	# /dev/input/event* node libinput looks for; without them X comes up with a
 	# keyboard and no pointer.
 	for mod in virtio virtio_ring virtio_pci failover net_failover virtio_net \
-		atkbd psmouse evdev serio_raw; do
+		atkbd psmouse evdev serio_raw krszcpu; do
 		modprobe "$mod" 2>/dev/null || true
 	done
 	# X finds its keyboard and mouse through udev, which has to have seen them.
@@ -495,6 +495,60 @@ ln -sf /etc/init.d/vmdrivers "$ROOTFS/etc/runlevels/boot/vmdrivers" 2>/dev/null 
 rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \
 	"$ROOTFS/etc/runlevels/boot/modules" \
 	"$ROOTFS/etc/runlevels/sysinit/mdev" || true
+
+# ── the CPU's name ─────────────────────────────────────────────────────────
+# /proc/cpuinfo prints whatever the kernel put in x86_model_id, and with no
+# brand string coming back from CPUID -- v86 does not implement those leaves --
+# the kernel falls back to its family/model table and calls this a Pentium III.
+# It is not one. A module that writes the field says what the machine actually
+# is, and nothing else in the system reads it.
+GUEST_KVER=$(ls "$ROOTFS/lib/modules" | head -n1)
+apk add --no-cache build-base linux-lts-dev
+HEADER_KVER=$(ls /lib/modules | head -n1)
+# A module built against different headers than the kernel it loads into is a
+# silent way to break the boot, so the two versions have to agree exactly.
+if [ "$GUEST_KVER" != "$HEADER_KVER" ]; then
+	echo "!! headers are $HEADER_KVER but the guest kernel is $GUEST_KVER"
+	exit 1
+fi
+
+mkdir -p /tmp/krszcpu
+cat > /tmp/krszcpu/krszcpu.c <<'EOF'
+// Names the emulated processor after the machine it is inside. CPUID carries no
+// brand string here, so without this the kernel guesses from family and model
+// and settles on a Pentium III, which this is not.
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/cpu.h>
+#include <asm/processor.h>
+
+#define KRSZ_BRAND "KRSZ i686 VCPU"
+
+static int __init krszcpu_init(void)
+{
+	unsigned int cpu;
+
+	strscpy(boot_cpu_data.x86_model_id, KRSZ_BRAND, sizeof(boot_cpu_data.x86_model_id));
+	for_each_online_cpu(cpu)
+		strscpy(per_cpu(cpu_info, cpu).x86_model_id, KRSZ_BRAND,
+			sizeof(boot_cpu_data.x86_model_id));
+	return 0;
+}
+
+static void __exit krszcpu_exit(void) { }
+
+module_init(krszcpu_init);
+module_exit(krszcpu_exit);
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Report the emulated CPU under its own name");
+EOF
+cat > /tmp/krszcpu/Makefile <<'EOF'
+obj-m := krszcpu.o
+EOF
+make -C "/lib/modules/$HEADER_KVER/build" M=/tmp/krszcpu modules
+mkdir -p "$ROOTFS/lib/modules/$GUEST_KVER/extra"
+cp /tmp/krszcpu/krszcpu.ko "$ROOTFS/lib/modules/$GUEST_KVER/extra/"
+depmod -b "$ROOTFS" "$GUEST_KVER"
 
 # ── kernel + initramfs ─────────────────────────────────────────────────────
 KVER=$(ls "$ROOTFS/lib/modules" | head -n1)
