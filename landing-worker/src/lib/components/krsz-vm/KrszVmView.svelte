@@ -503,6 +503,11 @@
 				}
 			});
 			riscv = machine;
+			// Reachable from the console alongside the x86 machine's own hook, for
+			// the same reason: this one cannot be inspected any other way.
+			if (new URLSearchParams(location.search).has('debug')) {
+				(window as unknown as { __krszrv?: unknown }).__krszrv = machine;
+			}
 			term.onData((data: string) => machine.sendText(data));
 
 			phase = 'running';

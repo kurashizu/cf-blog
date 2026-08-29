@@ -39,6 +39,8 @@ export interface RvTerminal {
 }
 
 export interface RvMachine {
+	/** Prints the CPU's program counter and privilege level to the console. */
+	dumpState(): void;
 	/** Send one byte of input to the guest's console. */
 	sendChar(code: number): void;
 	sendText(text: string): void;
@@ -113,6 +115,13 @@ export async function startRiscv(options: {
 	const queue = (code: number) => module.ccall('console_queue_char', null, ['number'], [code]);
 
 	return {
+		dumpState() {
+			try {
+				module.ccall('vm_dump_state', null, [], []);
+			} catch {
+				/* a build without it */
+			}
+		},
 		sendChar: queue,
 		sendText(text: string) {
 			// One byte at a time, as bytes: the console is a byte stream and the
