@@ -18,8 +18,12 @@ WORK="${WORK:-/tmp/qemu-wasm}"
 
 mkdir -p "$OUT"
 
+# Submodules included: aarch64 and riscv64 need libfdt, and QEMU builds it from
+# its bundled dtc. Without it meson tries to fetch the subproject at configure
+# time, which is both slower and a network dependency inside the container.
 if [ ! -d "$WORK" ]; then
-	git clone --depth 1 --branch "$QEMU_REF" https://github.com/ktock/qemu-wasm "$WORK"
+	git clone --depth 1 --recurse-submodules --shallow-submodules \
+		--branch "$QEMU_REF" https://github.com/ktock/qemu-wasm "$WORK"
 fi
 
 # zlib.net serves only the current release, so a pinned version disappears from
@@ -27,25 +31,65 @@ fi
 # does not move.
 sed -i 's|https://zlib.net/zlib-\$ZLIB_VERSION.tar.xz|https://github.com/madler/zlib/releases/download/v$ZLIB_VERSION/zlib-$ZLIB_VERSION.tar.xz|' "$WORK/Dockerfile"
 
+# arm64 and riscv64 need libfdt, which QEMU builds from the dtc subproject. Left
+# to itself, meson runs git inside the source tree to fetch it and reports only
+# "Git command failed" when anything about that goes wrong — a bind-mounted tree,
+# a shallow clone, a submodule directory left half-populated. Cloning it here
+# takes the whole question out of the build.
+DTC_URL=$(sed -n 's/^url = //p' "$WORK/subprojects/dtc.wrap")
+DTC_REV=$(sed -n 's/^revision = //p' "$WORK/subprojects/dtc.wrap")
+# Unconditionally, and as a plain checkout: a submodule left by the recursive
+# clone has its .git elsewhere, which is not a repository once the tree is
+# copied into the container — and meson responds to that by trying to create
+# one, in a directory that already has files in it.
+rm -rf "$WORK/subprojects/dtc"
+git clone "$DTC_URL" "$WORK/subprojects/dtc"
+git -C "$WORK/subprojects/dtc" checkout --detach "$DTC_REV"
+echo "==> dtc at $(git -C "$WORK/subprojects/dtc" rev-parse --short HEAD)"
+
 echo "==> building the toolchain image"
 docker build -t buildqemu - < "$WORK/Dockerfile"
 
 docker rm -f build-qemu-wasm >/dev/null 2>&1 || true
-docker run --rm -d --name build-qemu-wasm -v "$WORK":/qemu/:ro \
-	--entrypoint /bin/sh buildqemu -c 'sleep infinity'
+# Copied in rather than bind-mounted, which is where four attempts went. Meson
+# writes into the source tree to set subprojects up, and a mount owned by the
+# host's user is a directory the container cannot touch — reported, unhelpfully,
+# as "Git command failed". Inside its own filesystem the build owns everything
+# it needs to.
+docker run --rm -d --name build-qemu-wasm --entrypoint /bin/sh buildqemu -c 'sleep infinity'
+echo "==> copying the source into the container"
+docker cp "$WORK/." build-qemu-wasm:/qemu
 
 BUILD_DIR=$(docker exec build-qemu-wasm pwd)
 echo "==> building in $BUILD_DIR"
 
+# The source is bind-mounted from the host and owned by another uid, which git
+# refuses to touch. Meson runs git to set the dtc subproject up and reports only
+# that the command failed, so this looks like a missing device-tree library
+# rather than a permissions check.
+docker exec build-qemu-wasm git config --global --add safe.directory '*'
+
+# And if configure still fails, the reason is in meson's log rather than in
+# anything printed to the terminal.
 # Verbatim from the project's own instructions, which is the point: this is a
 # long build and guessing at flags is how an afternoon disappears.
 EXTRA_CFLAGS="-O3 -g -Wno-error=unused-command-line-argument -matomics -mbulk-memory -DNDEBUG -DG_DISABLE_ASSERT -D_GNU_SOURCE -sASYNCIFY=1 -pthread -sPROXY_TO_PTHREAD=1 -sFORCE_FILESYSTEM -sALLOW_TABLE_GROWTH -sTOTAL_MEMORY=2300MB -sWASM_BIGINT -sMALLOC=mimalloc --js-library=/build/node_modules/xterm-pty/emscripten-pty.js -sEXPORT_ES6=1 -sASYNCIFY_IMPORTS=ffi_call_js"
+
+echo "==> what the build sees of the subproject"
+docker exec build-qemu-wasm sh -c 'ls -la /qemu/subprojects/dtc | head -6'
+docker exec build-qemu-wasm sh -c 'id; ls -la /qemu/subprojects | head -20; git -C /qemu/subprojects/dtc log --oneline -1 || echo "(dtc is not a repo in here)"'
+
+configure_failed() {
+	echo "==> meson's own log"
+	docker exec build-qemu-wasm sh -c 'tail -80 /build/meson-logs/meson-log.txt' || true
+	exit 1
+}
 
 docker exec build-qemu-wasm emconfigure /qemu/configure \
 	--static --target-list="${TARGET}-softmmu" --cpu=wasm32 --cross-prefix= \
 	--without-default-features --enable-system --with-coroutine=fiber --enable-virtfs \
 	--extra-cflags="$EXTRA_CFLAGS" --extra-cxxflags="$EXTRA_CFLAGS" \
-	--extra-ldflags="-sEXPORTED_RUNTIME_METHODS=getTempRet0,setTempRet0,addFunction,removeFunction,TTY,FS"
+	--extra-ldflags="-sEXPORTED_RUNTIME_METHODS=getTempRet0,setTempRet0,addFunction,removeFunction,TTY,FS" || configure_failed
 
 docker exec build-qemu-wasm emmake make -j"$(nproc)" "qemu-system-${TARGET}"
 

@@ -922,7 +922,7 @@
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
 	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
-		<pre class="text-[6px] sm:text-[9px] md:text-[11px] font-black tracking-tight text-[#d19a66] leading-tight overflow-x-auto select-none">{`██╗  ██╗██████╗ ███████╗███████╗       ██╗   ██╗███╗   ███╗
+		<pre class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight text-[#d19a66] leading-tight overflow-x-auto select-none">{`██╗  ██╗██████╗ ███████╗███████╗       ██╗   ██╗███╗   ███╗
 ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝       ██║   ██║████╗ ████║
 █████╔╝ ██████╔╝███████╗  ███╔╝ ██████╗██║   ██║██╔████╔██║
 ██╔═██╗ ██╔══██╗╚════██║ ███╔╝  ╚═════╝╚██╗ ██╔╝██║╚██╔╝██║
