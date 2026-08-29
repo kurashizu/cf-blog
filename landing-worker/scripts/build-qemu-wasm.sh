@@ -48,11 +48,14 @@ echo "==> building the toolchain image"
 docker build -t buildqemu - < "$WORK/Dockerfile"
 
 docker rm -f build-qemu-wasm >/dev/null 2>&1 || true
-# Writable, unlike the project's own instructions: meson populates subprojects
-# inside the source tree, and a read-only mount stops the build at "git init
-# dtc" the moment a target needs a device tree.
-docker run --rm -d --name build-qemu-wasm -v "$WORK":/qemu/:rw \
-	--entrypoint /bin/sh buildqemu -c 'sleep infinity'
+# Copied in rather than bind-mounted, which is where four attempts went. Meson
+# writes into the source tree to set subprojects up, and a mount owned by the
+# host's user is a directory the container cannot touch — reported, unhelpfully,
+# as "Git command failed". Inside its own filesystem the build owns everything
+# it needs to.
+docker run --rm -d --name build-qemu-wasm --entrypoint /bin/sh buildqemu -c 'sleep infinity'
+echo "==> copying the source into the container"
+docker cp "$WORK/." build-qemu-wasm:/qemu
 
 BUILD_DIR=$(docker exec build-qemu-wasm pwd)
 echo "==> building in $BUILD_DIR"
