@@ -20,33 +20,42 @@ export interface ModelBuild {
 }
 
 /**
- * Llama-3.2-1B-Instruct, chosen over the smaller Qwen3.5-0.8B after that model
- * looped badly in multi-turn chat. The cause is architectural rather than
- * configuration: Qwen3.5 is a hybrid Gated DeltaNet (18 linear-attention layers
- * to 6 full-attention, `full_attention_interval: 4`), and it is the only family
- * in web-llm's list that carries a `max_history_size` override — the tell for
- * the recurrent-state path. Upstream reports the same loops on other runtimes,
- * so it is not something this page can configure away.
+ * Qwen3-0.6B, chosen after Qwen3.5-0.8B looped badly in multi-turn chat.
  *
- * Llama-3.2-1B is a plain transformer, instruction-tuned for dialogue, and
- * needs 879 MB of VRAM against Qwen3.5-0.8B's 1629 MB — better behaved and
- * roughly half the GPU memory.
+ * Qwen3.5 failed for two compounding reasons, neither fixable from here: it is
+ * a hybrid Gated DeltaNet (18 linear-attention layers to 6 full-attention) and
+ * the only family in web-llm's list carrying a `max_history_size` override —
+ * the tell for the recurrent-state path — and its MLC config declares Qwen3's
+ * stop token ids against a 248320-token vocabulary where they are undefined.
+ * Qwen's own model card warns the 0.8B is "more prone to entering thinking
+ * loops … which may prevent it from terminating generation properly".
+ *
+ * Qwen3-0.6B is the older generation and scores lower on knowledge benchmarks,
+ * but it is a plain transformer with a correct `qwen3` template and stop ids
+ * (151643 / 151645) that genuinely exist in its 151936-token vocabulary. For a
+ * chat toy, terminating correctly beats scoring well.
+ *
+ * It is also the right pick for Chinese: 24873 whole-word Chinese tokens
+ * against Llama-3.2-1B's 3629, which encodes a 23-character Chinese sentence in
+ * ~12 tokens where Llama needs ~17. And it is the smallest of the candidates —
+ * 335 MB, half of Llama-3.2-1B's 672 MB.
  *
  * Swapping the model again means changing both ids below and re-checking the
- * packaged `mlc-chat-config.json`: stop token ids belong to a model's own
- * tokenizer and a mismatched pair is what lets generation run past its stop
- * token. Llama-3.2's config is correct as published, so no override is applied.
+ * packaged `mlc-chat-config.json` against the model's own
+ * `tokenizer_config.json`: stop token ids belong to a model's tokenizer and are
+ * not portable between generations. That mismatch is exactly what broke Qwen3.5.
  *
- * Both builds carry the same int4 weights; they differ in activation precision,
- * which shows up as runtime VRAM. f16 is preferred because it is faster, but
- * its kernels need `shader-f16` — `pickModel()` falls back where it is missing.
+ * Both builds carry the same int4 weights and download identically; they differ
+ * in activation precision, which shows up as runtime VRAM. f16 is preferred
+ * because it is faster, but its kernels need `shader-f16` — `pickModel()` falls
+ * back where the adapter lacks it.
  */
-export const MODEL_F16 = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
-export const MODEL_F32 = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+export const MODEL_F16 = 'Qwen3-0.6B-q4f16_1-MLC';
+export const MODEL_F32 = 'Qwen3-0.6B-q4f32_1-MLC';
 
 export const BUILDS: Record<string, ModelBuild> = {
-	[MODEL_F16]: { id: MODEL_F16, downloadMb: 672, vramMb: 879 },
-	[MODEL_F32]: { id: MODEL_F32, downloadMb: 672, vramMb: 1129 }
+	[MODEL_F16]: { id: MODEL_F16, downloadMb: 335, vramMb: 1403 },
+	[MODEL_F32]: { id: MODEL_F32, downloadMb: 335, vramMb: 1925 }
 };
 
 /** Every build the page may cache — used by the storage panel. */
@@ -61,13 +70,13 @@ export const ALL_BUILDS: ModelBuild[] = Object.values(BUILDS);
  */
 
 /**
- * No `conv_template` override. Llama-3.2's packaged config declares the
- * `llama-3_1` template with stop tokens 128001 / 128008 / 128009, which are
- * `<|end_of_text|>`, `<|eom_id|>` and `<|eot_id|>` in its own 128256-token
- * vocabulary — correct as published, so overriding it could only break it.
+ * No `conv_template` override. Qwen3-0.6B's packaged config declares the
+ * `qwen3` template with stop tokens 151643 / 151645, which are `<|endoftext|>`
+ * and `<|im_end|>` in its own 151936-token vocabulary — verified against the
+ * model's `tokenizer_config.json`, so overriding it could only break it.
  *
- * (The previous model needed one: its config carried Qwen2's stop token ids
- * against a 248320-token vocabulary, so generation never stopped cleanly.)
+ * (Qwen3.5 needed one: it declares these same two ids against a 248320-token
+ * vocabulary where they are undefined, so generation never stopped cleanly.)
  */
 
 export interface GpuSupport {
@@ -127,12 +136,15 @@ export const CONTEXT_WINDOW = 4096;
  * incoherent rather than merely repetitive.
  */
 export const SAMPLING = {
-	// Meta's own recommendation for Llama 3.2 Instruct.
-	temperature: 0.6,
-	top_p: 0.9,
+	// Qwen3's own recommended non-thinking settings.
+	temperature: 0.7,
+	top_p: 0.8,
+	// Qwen suggests presence_penalty up to 1.5-2.0 against repetition, but warns
+	// that high values cause language mixing — which for a page answering in
+	// Chinese is a worse failure than the occasional repeat. Kept moderate.
 	// Set as a pair: web-llm zeroes one and warns if only the other is given.
-	frequency_penalty: 0.3,
-	presence_penalty: 0.3
+	presence_penalty: 0.6,
+	frequency_penalty: 0.3
 } as const;
 
 /**
