@@ -224,6 +224,29 @@ p.write_text(s)
 print('riscv_cpu.c: PMP and performance counter CSRs stubbed, state dump added')
 PATCHCSR
 
+# The guest finds its disk, reports its size, and then never reads a byte of
+# it. These two lines say whether the request reaches the block device at all
+# and whether it turns into a fetch.
+python3 - <<'PATCHBLK'
+import pathlib
+p = pathlib.Path('block_net.c')
+s = p.read_text()
+a = '''    //    printf("bf_read_async: sector_num=%" PRId64 " n=%d\\n", sector_num, n);'''
+b = '''    fprintf(stderr, "blk: read sector=%" PRId64 " n=%d\\n", sector_num, n);'''
+assert a in s, 'read_async trace not found'
+s = s.replace(a, b, 1)
+
+a2 = 'static void bf_start_load_block(BlockDevice *bs, int block_num)\n{'
+b2 = '''static void bf_start_load_block(BlockDevice *bs, int block_num)
+{
+    fprintf(stderr, "blk: fetching block %d\\n", block_num);'''
+assert a2 in s, 'start_load_block not found'
+s = s.replace(a2, b2, 1)
+
+p.write_text(s)
+print('block_net.c: read and fetch traced')
+PATCHBLK
+
 # The ISA string in the device tree is built by walking the misa bits in
 # alphabetical order, which spells rv64acdfimsu. A kernel reads that string in
 # canonical order -- base first, then m, a, f, d -- sees an 'a' where the base
