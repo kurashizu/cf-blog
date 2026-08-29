@@ -190,7 +190,12 @@ function config(images: Record<string, ImageSpec>, env: Env | undefined, url: UR
 			// probed, so without it every message before that goes nowhere and a
 			// machine that is merely slow is indistinguishable from one that is
 			// dead. TinyEMU carries an HTIF console, which is what SBI prints on.
-			cmdline: 'earlycon=sbi console=hvc0 root=/dev/vda rw rootwait',
+			// ?shell stops at a shell in the initramfs, before the root filesystem
+			// is looked for: it separates a machine that cannot boot from a root
+			// filesystem that cannot be mounted, and there is no other way to ask.
+			cmdline: url.searchParams.has('shell')
+				? 'earlycon=sbi console=hvc0 rdinit=/bin/sh'
+				: 'earlycon=sbi console=hvc0 root=/dev/vda rw rootwait',
 			drive0: { file: `${here}${version('rootfs')}/blk.txt` }
 		},
 		null,

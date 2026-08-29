@@ -77,6 +77,17 @@ function clearGlobals() {
 	delete scope.update_downloading;
 }
 
+/**
+ * The page's own query is passed through to the config, which is how a
+ * diagnostic switch reaches a machine whose only other input is a console.
+ */
+function machineConfigUrl(): string {
+	const params = new URLSearchParams(location.search);
+	if (params.has('probe')) return new URL(PROBE_CONFIG_PATH, location.href).href;
+	const query = params.has('shell') ? '?shell=1' : '';
+	return new URL(CONFIG_PATH + query, location.href).href;
+}
+
 export async function startRiscv(options: {
 	term: RvTerminal;
 	memoryMb?: number;
@@ -119,10 +130,7 @@ export async function startRiscv(options: {
 		'vm_start',
 		null,
 		['string', 'number', 'string', 'string', 'number', 'number', 'number'],
-		[new URL(
-			new URLSearchParams(location.search).has('probe') ? PROBE_CONFIG_PATH : CONFIG_PATH,
-			location.href
-		).href, options.memoryMb ?? DEFAULT_MEMORY_MB, null, null, 0, 0, 0]
+		[machineConfigUrl(), options.memoryMb ?? DEFAULT_MEMORY_MB, null, null, 0, 0, 0]
 	);
 
 	const queue = (code: number) => module.ccall('console_queue_char', null, ['number'], [code]);
