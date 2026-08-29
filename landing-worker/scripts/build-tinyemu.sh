@@ -109,6 +109,60 @@ p.write_text(s)
 print('jsemu.c: vm_stop and two prints added')
 PATCHRUN
 
+# This TinyEMU predates the privileged spec that OpenSBI expects, so the
+# firmware reads registers the emulator has never heard of and traps to a dead
+# stop before printing anything. Two families are enough: the PMP registers,
+# which OpenSBI programs to fence its domains, and the machine performance
+# counters it enumerates on the way past.
+#
+# Reads answer zero and writes are dropped. Nothing here enforces PMP anyway —
+# the point is to let the firmware finish configuring a protection scheme the
+# emulator does not implement, not to pretend it works.
+python3 - <<'PATCHCSR'
+import pathlib
+p = pathlib.Path('riscv_cpu.c')
+s = p.read_text()
+
+read_at = '''    case 0xf14:
+        val = s->mhartid;
+        break;'''
+read_new = '''    case 0xf14:
+        val = s->mhartid;
+        break;
+    case 0x3a0 ... 0x3af: /* pmpcfg0-15 */
+    case 0x3b0 ... 0x3ef: /* pmpaddr0-63 */
+    case 0x320:           /* mcountinhibit */
+    case 0x323 ... 0x33f: /* mhpmevent3-31 */
+    case 0xb03 ... 0xb1f: /* mhpmcounter3-31 */
+    case 0xb83 ... 0xb9f: /* mhpmcounter3-31h */
+        val = 0;
+        break;'''
+assert read_at in s, 'csr_read tail not found'
+s = s.replace(read_at, read_new, 1)
+
+write_at = '''static int csr_write(RISCVCPUState *s, uint32_t csr, target_ulong val)
+{
+    target_ulong mask;
+'''
+write_new = '''static int csr_write(RISCVCPUState *s, uint32_t csr, target_ulong val)
+{
+    target_ulong mask;
+
+    /* Accepted and discarded: see the note in scripts/build-tinyemu.sh. */
+    if ((csr >= 0x3a0 && csr <= 0x3ef) ||
+        csr == 0x320 ||
+        (csr >= 0x323 && csr <= 0x33f) ||
+        (csr >= 0xb03 && csr <= 0xb1f) ||
+        (csr >= 0xb83 && csr <= 0xb9f))
+        return 0;
+'''
+assert write_at in s, 'csr_write head not found'
+s = s.replace(write_at, write_new, 1)
+
+p.write_text(s)
+print('riscv_cpu.c: PMP and performance counter CSRs stubbed')
+PATCHCSR
+
 # The JS library that ships with it is the same vintage as the makefile and
 # leans on three things the Emscripten runtime has since removed. It would have
 # compiled and then failed on its first fetch.
