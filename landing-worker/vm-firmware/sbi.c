@@ -67,10 +67,32 @@ static void sbi_puts(const char *s)
 		htif_putc(*s++);
 }
 
+static void put_hex(u64 v)
+{
+	int i;
+	sbi_puts("0x");
+	for (i = 60; i >= 0; i -= 4) {
+		unsigned d = (v >> i) & 0xf;
+		htif_putc(d < 10 ? '0' + d : 'a' + d - 10);
+	}
+}
+
 void sbi_banner(void)
 {
-	sbi_puts("krsz-sbi: handing over to the kernel\n");
+	u64 mtvec;
+
+	__asm__ volatile("csrr %0, mtvec" : "=r"(mtvec));
+	sbi_puts("krsz-sbi: trap vector at ");
+	put_hex(mtvec);
+	sbi_puts(", handing over to the kernel\n");
 }
+
+/*
+ * The first few traps, in full. A firmware this small is either right or
+ * catastrophically wrong, and the difference is visible in the first handful of
+ * calls the kernel makes; after that the noise would drown the boot.
+ */
+static int traps_logged;
 
 static void set_timer(u64 when)
 {
@@ -182,6 +204,22 @@ void sbi_trap(struct frame *f)
 	u64 cause, epc;
 
 	__asm__ volatile("csrr %0, mcause" : "=r"(cause));
+	__asm__ volatile("csrr %0, mepc" : "=r"(epc));
+
+	if (traps_logged < 8) {
+		u64 tval;
+		__asm__ volatile("csrr %0, mtval" : "=r"(tval));
+		traps_logged++;
+		sbi_puts("krsz-sbi: trap cause=");
+		put_hex(cause);
+		sbi_puts(" epc=");
+		put_hex(epc);
+		sbi_puts(" tval=");
+		put_hex(tval);
+		sbi_puts(" a7=");
+		put_hex(f->a7);
+		htif_putc('\n');
+	}
 
 	if (cause & CAUSE_INTERRUPT) {
 		if ((cause & 0xff) == CAUSE_M_TIMER) {
@@ -196,14 +234,17 @@ void sbi_trap(struct frame *f)
 
 	if ((cause & 0xff) == CAUSE_ECALL_S) {
 		handle_ecall(f);
-		__asm__ volatile("csrr %0, mepc" : "=r"(epc));
 		__asm__ volatile("csrw mepc, %0" :: "r"(epc + 4));
 		return;
 	}
 
 	/* Nothing else should reach machine mode: everything the kernel can
 	   handle was delegated to it before it started. */
-	sbi_puts("krsz-sbi: unexpected trap in machine mode, stopping\n");
+	sbi_puts("krsz-sbi: unexpected trap in machine mode, cause=");
+	put_hex(cause);
+	sbi_puts(" epc=");
+	put_hex(epc);
+	sbi_puts("\n");
 	for (;;)
 		;
 }
