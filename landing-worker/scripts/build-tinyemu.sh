@@ -256,6 +256,24 @@ b3 = '''    fprintf(stderr, "blk: block %u arrived err=%d size=%d\\n",
 assert a3 in s, 'read_onload body not found'
 s = s.replace(a3, b3, 1)
 
+a4 = '''    /* continue I/O read/write if necessary */
+    if (b->block_num == bf->cur_block_num) {'''
+b4 = '''    fprintf(stderr, "blk: block %u stored, waiting on %d\\n",
+            b->block_num, bf->cur_block_num);
+    /* continue I/O read/write if necessary */
+    if (b->block_num == bf->cur_block_num) {'''
+assert a4 in s, 'update_block body not found'
+s = s.replace(a4, b4, 1)
+
+a5 = '''        //        printf("end of request\\n");
+        /* end of request */
+        bf->cb(bf->opaque, 0);'''
+b5 = '''        fprintf(stderr, "blk: request complete\\n");
+        /* end of request */
+        bf->cb(bf->opaque, 0);'''
+assert a5 in s, 'completion not found'
+s = s.replace(a5, b5, 1)
+
 p.write_text(s)
 print('block_net.c: read, fetch and arrival traced')
 PATCHBLK
