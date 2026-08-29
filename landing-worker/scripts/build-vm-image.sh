@@ -18,7 +18,7 @@ IMAGE_MB="${IMAGE_MB:-256}"
 # enough to install anything -- and npm pulling a toolchain wants a great deal
 # more than that. Free space costs only R2 storage: blocks are fetched as the
 # guest touches them, so an image with room in it is not a slower one.
-SLACK_MB="${SLACK_MB:-512}"
+SLACK_MB="${SLACK_MB:-768}"
 # The root filesystem is stored as parts because `wrangler r2 object put` refuses
 # anything over 300 MiB; the disk proxy maps a byte offset back to the part that
 # holds it, so the guest sees one contiguous disk.
@@ -45,7 +45,7 @@ apk add --root "$ROOTFS" --initdb --no-cache \
 	openrc util-linux e2fsprogs \
 	nano vim htop curl bash file tree tmux ncurses-terminfo eudev \
 	openbox xterm xorg-server xf86-input-libinput xinit xsetroot feh tint2 \
-	pcmanfm xfce4-terminal mousepad xarchiver galculator yad xclip git \
+	pcmanfm xfce4-terminal mousepad xarchiver galculator xclip git \
 	netsurf adwaita-icon-theme \
 	font-misc-misc ttf-dejavu
 
@@ -54,6 +54,14 @@ cat > "$ROOTFS/etc/apk/repositories" <<EOF
 $MIRROR/main
 $MIRROR/community
 EOF
+
+# Software OpenGL for a machine that draws a window manager, a terminal and a
+# file browser: 195 MB of LLVM that would never be executed. Xorg falls back to
+# shadowfb, which is what the AccelMethod option below asks for anyway. If
+# taking it out would take Xorg too, the build stops rather than shipping a
+# desktop that cannot start.
+apk del --root "$ROOTFS" --no-scripts llvm22-libs 2>/dev/null || true
+[ -x "$ROOTFS/usr/bin/Xorg" ] || { echo "!! removing llvm22-libs took Xorg with it"; exit 1; }
 
 # ── configuration ──────────────────────────────────────────────────────────
 echo krsz-vm > "$ROOTFS/etc/hostname"
@@ -360,6 +368,10 @@ cat > "$ROOTFS/etc/X11/xorg.conf.d/10-modesetting.conf" <<'EOF'
 Section "Device"
     Identifier "v86"
     Driver     "modesetting"
+    # No acceleration, which is the honest setting here: the only OpenGL on this
+    # machine would be llvmpipe compiling shaders on a CPU that manages half a
+    # MIPS. Saying so lets the 195 MB of LLVM behind it go.
+    Option     "AccelMethod" "none"
 EndSection
 
 # There is no monitor to ask, so X falls back to 1024x768 and the page has to
