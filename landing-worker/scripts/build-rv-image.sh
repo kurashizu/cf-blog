@@ -261,6 +261,17 @@ mount -o remount,rw /sysroot 2>/dev/null
 # mounts this; ours has to as well.
 mkdir -p /sysroot/run
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /sysroot/run
+
+# And devtmpfs has to come across the switch. The root filesystem ships a static
+# /dev holding console, null, pts, random, shm, urandom and zero -- no hvc0. The
+# console is virtio, so inittab respawns its getty on hvc0, and openrc's devfs
+# service is what would mount devtmpfs and create it. That service runs in
+# sysinit, which is exactly where the boot stopped: the last line to reach the
+# screen was sysfs's "Mounting bpf filesystem", and everything after it went to
+# a console the guest could no longer open. Moving the mount we already have
+# means /dev is populated from the first instruction init runs.
+mkdir -p /sysroot/dev
+mount --move /dev /sysroot/dev
 umount /proc /sys 2>/dev/null
 exec switch_root /sysroot /sbin/init
 INIT
