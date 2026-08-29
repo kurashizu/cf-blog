@@ -140,11 +140,11 @@ mkdir -p "$ROOTFS/etc/runlevels/boot" "$ROOTFS/etc/runlevels/default" "$ROOTFS/e
 for svc in devfs dmesg sysfs; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/sysinit/$svc" 2>/dev/null || true
 done
-# syslog is deliberately absent, and it is what stopped this machine booting:
-# started by hand inside the guest it never returns, and a kill signal does not
-# reach it either. openrc runs the boot runlevel in order, so nothing after it
-# ever ran and the last line on the console stayed the one sysinit printed.
-# Nothing here reads a log file; dmesg is where this machine says things.
+# syslog is absent because nothing here reads a log file -- dmesg is where this
+# machine says things -- not because it hangs. It was blamed for that once, on
+# the strength of a `timeout` that expired while the console it was writing to
+# did not exist; the real cause was /dev/hvc0 missing after switch_root, which
+# the initramfs now fixes by carrying devtmpfs across.
 for svc in bootmisc hostname; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/boot/$svc" 2>/dev/null || true
 done
