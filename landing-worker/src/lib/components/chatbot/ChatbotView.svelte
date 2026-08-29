@@ -4,24 +4,16 @@
 	import { theme, THEME_STYLES } from '../../stores/theme';
 	import { isLooping, renderMarkdown, splitThink } from './markdown';
 	import {
-		ALL_BUILDS,
 		CONFIG_LIMITS,
 		DEFAULT_CONFIG,
-		buildById,
-		cachedModelIds,
-		cachedSizeMb,
-		createEngine,
-		evictModel,
+		PART_SIZES_MB,
+		TOTAL_DOWNLOAD_MB,
 		loadConfig,
-		pickModel,
 		probeGpu,
-		samplingOf,
 		saveConfig,
-		vramAtContext,
+		type Attachment,
 		type ChatConfig,
-		type ChatCompletionMessageParam,
-		type GpuSupport,
-		type MLCEngineInterface
+		type GpuSupport
 	} from './engine';
 
 	type Phase = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
@@ -29,32 +21,18 @@
 	interface Turn {
 		role: 'user' | 'assistant';
 		content: string;
-		/** Set on system notices (slash-command output), which are not sent to the model. */
+		attachments?: Attachment[];
+		/** Set on system notices, which are never sent to the model. */
 		notice?: boolean;
 	}
 
-	const BASE_PROMPT =
+	const SYSTEM_PROMPT =
 		'You are a concise assistant embedded in krsz.in, a terminal-styled personal site. ' +
 		'You run entirely inside the visitor’s browser on their own GPU — no server sees this conversation. ' +
 		'Always reply in the same language the user wrote in.';
 
-	/**
-	 * Thinking is switched off through web-llm's own `extra_body.enable_thinking`
-	 * flag, not by anything in the prompt. It encodes a closed `<think></think>`
-	 * block straight into the generation, so the model resumes after reasoning it
-	 * never got to open.
-	 *
-	 * Two earlier attempts were wrong: `/no_think` in the system message appears
-	 * nowhere in Qwen3.5's template, so the model read it as prose and reasoned
-	 * about what it meant; and appending the prefill as an assistant message is
-	 * rejected outright, since web-llm requires the last message to be from
-	 * `user` or `tool`.
-	 */
-
 	let phase = $state<Phase>('idle');
 	let gpu = $state<GpuSupport | null>(null);
-	let modelId = $state<string>('');
-	let engine: MLCEngineInterface | null = null;
 	let worker: Worker | null = null;
 
 	let progressText = $state('');
@@ -63,52 +41,38 @@
 
 	let turns = $state<Turn[]>([]);
 	let draft = $state('');
+	let pending = $state<Attachment[]>([]);
 	let scroller: HTMLDivElement | undefined = $state();
 	let inputEl: HTMLTextAreaElement | undefined = $state();
+	let fileEl: HTMLInputElement | undefined = $state();
 
 	let lastStats = $state('');
-	let thinkMode = $state(false);
-	/** Which assistant turns have their reasoning expanded. */
 	let openThink = $state<Set<number>>(new Set());
-
-	let cached = $state<Set<string>>(new Set());
-	let storageOpen = $state(false);
-	let evicting = $state('');
-
-	/** Prompt tokens reported for the last exchange — drives the context meter. */
-	let usedTokens = $state(0);
-
-	/** How far /compact has got, so a slow summary is not a frozen screen. */
 	let compacting = $state('');
-
-	/** Index of the highlighted completion, or -1 when the menu is closed. */
 	let completionIdx = $state(-1);
 
 	let config = $state<ChatConfig>({ ...DEFAULT_CONFIG });
 	let configOpen = $state(false);
-	/** The window the running engine was built with, so a change can prompt a reload. */
-	let loadedContextWindow = $state(0);
+	let storageOpen = $state(false);
+
+	/** Bytes seen per file during load, so one bar can cover four downloads. */
+	let fileProgress = $state<Record<string, { loaded: number; total: number }>>({});
 
 	let themeStyles = $derived(THEME_STYLES[$theme]);
-	let build = $derived(buildById(modelId));
 	let busy = $derived(phase === 'loading' || phase === 'generating');
-	let ctxPct = $derived(Math.min(100, Math.round((usedTokens / config.contextWindow) * 100)));
-	/** True when contextWindow was changed after the engine was built. */
-	let needsReload = $derived(
-		loadedContextWindow > 0 && loadedContextWindow !== config.contextWindow
-	);
 
-	/**
-	 * Completions for a lone `/word` being typed. Only while the draft is exactly
-	 * one slash-prefixed word, so a message that merely mentions a slash later on
-	 * does not pop the menu open.
-	 */
+	const COMMANDS = [
+		{ name: 'help', hint: 'list these commands' },
+		{ name: 'clear', hint: 'wipe the conversation' },
+		{ name: 'compact', hint: 'summarise the history, freeing context' },
+		{ name: 'stats', hint: 'last decode speed and turn count' }
+	] as const;
+
 	let completions = $derived.by(() => {
 		const m = draft.match(/^\/(\w*)$/);
 		if (!m) return [];
 		const q = m[1].toLowerCase();
 		const hits = COMMANDS.filter((c) => c.name.startsWith(q));
-		// An exact single match is already typed out — nothing left to complete.
 		return hits.length === 1 && hits[0].name === q ? [] : hits;
 	});
 
@@ -116,78 +80,141 @@
 		config = loadConfig();
 		probeGpu().then((g) => {
 			gpu = g;
-			if (!modelId) modelId = pickModel(g);
 			if (!g.ok) {
 				phase = 'error';
 				errorText = g.reason ?? 'WebGPU is unavailable.';
 			}
 		});
-		void refreshCached();
 		return () => teardown();
 	});
 
 	function teardown() {
-		engine?.unload?.();
 		worker?.terminate();
-		engine = null;
 		worker = null;
+		for (const t of turns) t.attachments?.forEach((a) => URL.revokeObjectURL(a.url));
+		pending.forEach((a) => URL.revokeObjectURL(a.url));
 	}
 
-	async function refreshCached() {
-		cached = await cachedModelIds();
+	function fmtMb(mb: number): string {
+		return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${Math.round(mb)} MB`;
 	}
 
-	async function load() {
-		if (busy || !gpu?.ok) return;
-		phase = 'loading';
-		errorText = '';
-		progressPct = 0;
-		progressText = 'requesting the weights…';
-		playSound('click');
-		try {
-			const created = await createEngine(modelId, config, (r) => {
-				progressText = r.text;
-				progressPct = Math.round((r.progress ?? 0) * 100);
-			});
-			engine = created.engine;
-			worker = created.worker;
-			loadedContextWindow = config.contextWindow;
+	/** Starts the worker and wires its protocol to this component's state. */
+	function spawnWorker(): Worker {
+		const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+		w.onmessage = (e: MessageEvent) => {
+			const m = e.data;
+			switch (m.type) {
+				case 'progress':
+					onProgress(m.payload);
+					break;
+				case 'ready':
+					phase = 'ready';
+					progressText = '';
+					void tick().then(() => inputEl?.focus());
+					break;
+				case 'token':
+					appendToken(m.text);
+					break;
+				case 'done':
+					finishTurn(m.tokensPerSecond);
+					break;
+				case 'error':
+					onWorkerError(m.message);
+					break;
+			}
+		};
+		w.onerror = (e) => onWorkerError(e.message || 'the worker failed');
+		return w;
+	}
+
+	/**
+	 * transformers.js reports each file separately, so the bar shows total bytes
+	 * across all of them rather than jumping back to zero four times.
+	 */
+	function onProgress(p: Record<string, unknown>) {
+		const status = p.status as string;
+		const file = (p.file as string) ?? '';
+		if (status === 'progress' && typeof p.loaded === 'number' && typeof p.total === 'number') {
+			fileProgress = { ...fileProgress, [file]: { loaded: p.loaded, total: p.total } };
+		} else if (status === 'done' && fileProgress[file]) {
+			const f = fileProgress[file];
+			fileProgress = { ...fileProgress, [file]: { loaded: f.total, total: f.total } };
+		}
+
+		const vals = Object.values(fileProgress);
+		const loaded = vals.reduce((a, v) => a + v.loaded, 0);
+		// Until every file has been announced, the known total understates the
+		// download — fall back to the published figure so the bar does not race
+		// to 100% and then restart.
+		const known = vals.reduce((a, v) => a + v.total, 0);
+		const total = Math.max(known, TOTAL_DOWNLOAD_MB * 1048576);
+		progressPct = total ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
+		progressText =
+			status === 'ready' || !vals.length
+				? 'preparing the model…'
+				: `${fmtMb(loaded / 1048576)} of ${fmtMb(total / 1048576)}`;
+	}
+
+	function onWorkerError(message: string) {
+		if (phase === 'generating') {
+			// A failed turn keeps the session: the model is still resident.
+			const next = [...turns];
+			next[next.length - 1] = { role: 'assistant', content: `that turn failed: ${message}`, notice: true };
+			turns = next;
 			phase = 'ready';
-			progressText = '';
-			void refreshCached();
-			await tick();
-			inputEl?.focus();
-		} catch (err) {
+		} else {
 			phase = 'error';
-			errorText = (err as Error).message || String(err);
+			errorText = message;
 			teardown();
 		}
 	}
 
-	async function evict(id: string) {
-		if (evicting) return;
-		evicting = id;
-		try {
-			if (id === modelId && (phase === 'ready' || phase === 'generating')) {
-				teardown();
-				resetConversation();
-				phase = 'idle';
-			}
-			await evictModel(id);
-			await refreshCached();
-			playSound('click');
-		} catch (err) {
-			errorText = `could not free the cached weights: ${(err as Error).message}`;
-			phase = 'error';
-		} finally {
-			evicting = '';
+	function appendToken(text: string) {
+		const next = [...turns];
+		const grown = next[next.length - 1].content + text;
+		next[next.length - 1] = { role: 'assistant', content: grown };
+		turns = next;
+		void scrollToEnd();
+
+		if (config.loopGuard && isLooping(grown)) {
+			worker?.postMessage({ type: 'interrupt' });
 		}
 	}
 
-	function resetConversation() {
+	function finishTurn(tps: number) {
+		if (tps > 0) lastStats = `${tps.toFixed(1)} tok/s`;
+		if (compacting) {
+			// The summary was streamed into the last turn; fold it into history.
+			const summary = splitThink(turns[turns.length - 1]?.content ?? '').answer.trim();
+			compacting = '';
+			if (summary) {
+				dropAttachments();
+				turns = [{ role: 'assistant', content: `[compacted]\n${summary}`, notice: true }];
+			} else {
+				notice('compact failed — the model returned nothing.');
+			}
+		}
+		phase = 'ready';
+		void tick().then(() => inputEl?.focus());
+	}
+
+	function load() {
+		if (busy || !gpu?.ok) return;
+		phase = 'loading';
+		errorText = '';
+		progressPct = 0;
+		fileProgress = {};
+		progressText = 'requesting the weights…';
+		playSound('click');
+		worker = spawnWorker();
+		worker.postMessage({ type: 'load' });
+	}
+
+	function dropAttachments() {
+		for (const t of turns) t.attachments?.forEach((a) => URL.revokeObjectURL(a.url));
 		turns = [];
 		lastStats = '';
-		usedTokens = 0;
 		openThink = new Set();
 	}
 
@@ -195,261 +222,157 @@
 		turns = [...turns, { role: 'assistant', content: text, notice: true }];
 	}
 
-	/** Sizes past a gigabyte read better in GB than as four digits of MB. */
-	function fmtMb(mb: number): string {
-		return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb} MB`;
-	}
-
-	/**
-	 * The commands, as data: the completion menu and /help both read this, so a
-	 * new command cannot appear in one and go missing from the other.
-	 */
-	const COMMANDS = [
-		{ name: 'help', hint: 'list these commands' },
-		{ name: 'clear', hint: 'wipe the conversation' },
-		{ name: 'compact', hint: 'summarise the history, freeing context' },
-		{ name: 'think', hint: 'toggle the reasoning block' },
-		{ name: 'stats', hint: 'context use and last decode speed' }
-	] as const;
-
-	/**
-	 * Slash commands are handled here and never reach the model. They mirror the
-	 * site's console conventions: a bare word, no arguments unless stated.
-	 */
-	function runCommand(raw: string): boolean {
+	function runCommand(raw: string): void {
 		const [cmd] = raw.slice(1).trim().split(/\s+/);
 		switch (cmd.toLowerCase()) {
 			case 'help':
 				notice(COMMANDS.map((c) => `/${c.name} — ${c.hint}`).join('\n'));
-				return true;
+				return;
 			case 'clear':
-				resetConversation();
-				return true;
-			case 'think':
-				thinkMode = !thinkMode;
-				notice(`thinking ${thinkMode ? 'on' : 'off'}.`);
-				return true;
+				dropAttachments();
+				return;
 			case 'stats':
 				notice(
-					`context ${usedTokens}/${config.contextWindow} tokens (${ctxPct}%)\n` +
-						`last decode ${lastStats || '—'}\n` +
-						`turns ${turns.filter((t) => !t.notice).length}`
+					`last decode ${lastStats || '—'}\n` +
+						`turns ${turns.filter((t) => !t.notice).length}\n` +
+						`attachments ${turns.reduce((a, t) => a + (t.attachments?.length ?? 0), 0)}`
 				);
-				return true;
+				return;
 			case 'compact':
-				void compact();
-				return true;
+				compact();
+				return;
 			default:
 				notice(`unknown command: /${cmd} — try /help`);
-				return true;
 		}
 	}
 
 	/**
-	 * Asks the model to summarise the conversation so far, then replaces the
-	 * history with that summary. The point is to free context, so the summary
-	 * has to replace the transcript rather than be appended to it.
+	 * Replaces the transcript with a summary of it. Runs through the same worker
+	 * path as a normal turn, so it streams and can be interrupted.
 	 */
-	async function compact() {
-		if (!engine || phase !== 'ready') {
+	function compact() {
+		const real = turns.filter((t) => !t.notice);
+		if (phase !== 'ready' || !worker) {
 			notice('nothing to compact — the model is not loaded.');
 			return;
 		}
-		const real = turns.filter((t) => !t.notice);
 		if (real.length < 2) {
 			notice('nothing to compact yet.');
 			return;
 		}
-		phase = 'generating';
+		const transcript = real
+			.map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${splitThink(t.content).answer || t.content}`)
+			.join('\n');
+
 		compacting = `summarising ${real.length} messages…`;
-		try {
-			const transcript = real
-				.map(
-					(t) =>
-						`${t.role === 'user' ? 'User' : 'Assistant'}: ${
-							t.role === 'assistant' ? splitThink(t.content).answer : t.content
-						}`
-				)
-				.join('\n');
-			// Streamed rather than awaited whole: summarising is slow enough on a
-			// small model that a silent wait reads as a hang.
-			const stream = await engine.chat.completions.create({
-				messages: [
-					{
-						role: 'user',
-						content:
-							'Summarise the following conversation in under 120 words, keeping any facts, ' +
-							'names, and decisions that later turns might rely on. Reply with the summary only.\n\n' +
-							transcript
-					}
-				],
-				stream: true,
-				// Never reason about a summary — it is a mechanical step, and the
-				// tokens would come out of the same budget.
-				extra_body: { enable_thinking: false },
-				temperature: 0.3,
-				max_tokens: 300
-			});
-			let summary = '';
-			for await (const chunk of stream) {
-				summary += chunk.choices[0]?.delta?.content ?? '';
-				compacting = `summarising… ${summary.length} chars`;
-			}
-			summary = splitThink(summary).answer.trim();
-			if (!summary) {
-				notice('compact failed — the model returned nothing.');
-			} else {
-				const before = usedTokens;
-				resetConversation();
-				turns = [{ role: 'assistant', content: `[compacted]\n${summary}`, notice: true }];
-				compactedSummary = summary;
-				if (before) notice(`context freed — was ${before} tokens.`);
-			}
-			phase = 'ready';
-		} catch (err) {
-			phase = 'ready';
-			notice(`compact failed: ${(err as Error).message}`);
-		}
-		compacting = '';
-		await scrollToEnd();
+		turns = [...turns, { role: 'assistant', content: '' }];
+		phase = 'generating';
+		worker.postMessage({
+			type: 'generate',
+			messages: [
+				{
+					role: 'user',
+					content: [
+						{
+							type: 'text',
+							text:
+								'Summarise the following conversation in under 120 words, keeping any facts, ' +
+								'names, and decisions that later turns might rely on. Reply with the summary only.\n\n' +
+								transcript
+						}
+					]
+				}
+			],
+			images: [],
+			audio: [],
+			opts: { max_new_tokens: 300, do_sample: false }
+		});
 	}
 
-	/** Carried into the next request's system prompt after /compact. */
-	let compactedSummary = $state('');
-
-	async function send() {
-		const text = draft.trim();
-		if (!text || busy || phase !== 'ready' || !engine) return;
-
-		if (text.startsWith('/')) {
-			draft = '';
-			runCommand(text);
-			await scrollToEnd();
-			return;
-		}
-
-		turns = [...turns, { role: 'user', content: text }, { role: 'assistant', content: '' }];
-		draft = '';
-		phase = 'generating';
-		lastStats = '';
-		await scrollToEnd();
-
-		let system = BASE_PROMPT;
-		if (compactedSummary) {
-			system += `\n\nEarlier conversation, summarised: ${compactedSummary}`;
-		}
-
-		// Past assistant turns go back as their answer only, with any reasoning
-		// stripped. Qwen's own chat template does the same, and it matters here:
-		// a reply generated with thinking off still carries the empty
-		// "<think></think>" prefill web-llm wrote into it, and feeding that back
-		// teaches the model to keep producing empty think blocks — so turning
-		// thinking on mid-conversation did nothing, while turning it off worked.
-		const messages: ChatCompletionMessageParam[] = [
-			{ role: 'system', content: system },
-			...turns
-				.slice(0, -1)
-				.filter((t) => !t.notice)
-				.map(
-					(t) =>
-						({
-							role: t.role,
-							content: t.role === 'assistant' ? splitThink(t.content).answer : t.content
-						}) as ChatCompletionMessageParam
-				)
-		];
-
-
-		try {
-			const stream = await engine.chat.completions.create({
-				messages,
-				stream: true,
-				stream_options: { include_usage: true },
-				extra_body: { enable_thinking: thinkMode },
-				...samplingOf(config),
-				// Reasoning spends from this same budget, and this model reasons at
-				// length — thousands of characters to answer "hi" — so a cap that
-				// suits a direct answer gets consumed entirely inside the think
-				// block, leaving it unclosed and no answer at all.
-				max_tokens: thinkMode ? config.thinkMaxTokens : config.maxTokens
-			});
-			let looped = false;
-			for await (const chunk of stream) {
-				const delta = chunk.choices[0]?.delta?.content;
-				if (delta) {
-					const next = [...turns];
-					const grown = next[next.length - 1].content + delta;
-					next[next.length - 1] = { role: 'assistant', content: grown };
-					turns = next;
-					await scrollToEnd();
-
-					// Cut a loop short rather than let it run to max_tokens.
-					if (config.loopGuard && isLooping(grown)) {
-						looped = true;
-						await engine.interruptGenerate();
-						break;
-					}
-				}
-				if (chunk.usage) {
-					if (chunk.usage.extra?.decode_tokens_per_s) {
-						lastStats = `${chunk.usage.extra.decode_tokens_per_s.toFixed(1)} tok/s`;
-					}
-					if (chunk.usage.total_tokens) usedTokens = chunk.usage.total_tokens;
-				}
+	/** Attachments the composer is holding, added by the file picker or a paste. */
+	async function addFiles(files: FileList | File[] | null) {
+		if (!files) return;
+		for (const f of Array.from(files)) {
+			const kind = f.type.startsWith('image/') ? 'image' : f.type.startsWith('audio/') ? 'audio' : null;
+			if (!kind) {
+				notice(`${f.name} is neither an image nor audio — skipped.`);
+				continue;
 			}
-			if (looped) {
-				// Say so rather than leaving a reply that just stops mid-repetition.
-				turns = [
-					...turns,
-					{
-						role: 'assistant',
-						content: 'cut short — the model started repeating itself. ask again, or /clear.',
-						notice: true
-					}
-				];
-			} else {
-				// A reasoning block that never closed means generation ran out of
-				// room inside it, so there is no answer to show — only a cursor. Say
-				// what happened instead of leaving an empty bubble.
-				const final = splitThink(turns[turns.length - 1]?.content ?? '');
-				if (final.thinking && !final.answer) {
-					turns = [
-						...turns,
-						{
-							role: 'assistant',
-							content:
-								'the model was still reasoning when it ran out of room, so it never got to an answer. ask again, or turn THINK off.',
-							notice: true
-						}
-					];
-				}
-			}
-			await scrollToEnd();
-			phase = 'ready';
-		} catch (err) {
-			// The engine is still loaded and the transcript is still worth reading,
-			// so a failed turn is reported in place rather than replacing the view
-			// with an error screen. Only a broken engine gets 'error'.
-			const msg = (err as Error).message || String(err);
-			const next = [...turns];
-			next[next.length - 1] = {
-				role: 'assistant',
-				notice: true,
-				content: /context window/i.test(msg)
-					? 'the conversation outgrew the context window — run /compact, or /clear to start over'
-					: `that turn failed: ${msg}`
-			};
-			turns = next;
-			phase = 'ready';
+			pending = [...pending, { kind, url: URL.createObjectURL(f), name: f.name }];
 		}
 		await tick();
 		inputEl?.focus();
 	}
 
-	async function stopGenerating() {
-		if (phase !== 'generating' || !engine) return;
-		await engine.interruptGenerate();
-		phase = 'ready';
+	function removePending(i: number) {
+		URL.revokeObjectURL(pending[i].url);
+		pending = pending.filter((_, n) => n !== i);
+	}
+
+	function send() {
+		const text = draft.trim();
+		if (busy || phase !== 'ready' || !worker) return;
+		if (!text && !pending.length) return;
+
+		if (text.startsWith('/')) {
+			draft = '';
+			runCommand(text);
+			void scrollToEnd();
+			return;
+		}
+
+		const attachments = pending;
+		turns = [
+			...turns,
+			{ role: 'user', content: text, attachments: attachments.length ? attachments : undefined },
+			{ role: 'assistant', content: '' }
+		];
+		draft = '';
+		pending = [];
+		phase = 'generating';
+		lastStats = '';
+		void scrollToEnd();
+
+		// The processor's template wants content as typed parts, with one
+		// {type:'image'} / {type:'audio'} placeholder per attachment in order.
+		const history = turns.slice(0, -1).filter((t) => !t.notice);
+		const images: string[] = [];
+		const audio: string[] = [];
+		const messages = [
+			{ role: 'system', content: [{ type: 'text', text: SYSTEM_PROMPT }] },
+			...history.map((t) => {
+				const parts: Record<string, string>[] = [];
+				for (const a of t.attachments ?? []) {
+					parts.push({ type: a.kind });
+					(a.kind === 'image' ? images : audio).push(a.url);
+				}
+				// Assistant turns go back as their answer only — reasoning stripped,
+				// which is what the chat template itself does.
+				const body = t.role === 'assistant' ? splitThink(t.content).answer : t.content;
+				if (body) parts.push({ type: 'text', text: body });
+				return { role: t.role, content: parts };
+			})
+		];
+
+		worker.postMessage({
+			type: 'generate',
+			messages,
+			images,
+			audio,
+			opts: {
+				max_new_tokens: config.maxTokens,
+				do_sample: config.doSample,
+				temperature: config.temperature,
+				top_p: config.topP,
+				top_k: config.topK,
+				repetition_penalty: config.repetitionPenalty
+			}
+		});
+	}
+
+	function stopGenerating() {
+		if (phase !== 'generating') return;
+		worker?.postMessage({ type: 'interrupt' });
 	}
 
 	async function scrollToEnd() {
@@ -471,7 +394,6 @@
 	}
 
 	function onKeydown(e: KeyboardEvent) {
-		// The completion menu owns these keys while it is open.
 		if (completions.length) {
 			if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
 				e.preventDefault();
@@ -486,7 +408,6 @@
 			}
 			if (e.key === 'Escape') {
 				e.preventDefault();
-				// Closes the menu without clearing what was typed.
 				draft = draft + ' ';
 				completionIdx = -1;
 				return;
@@ -497,14 +418,21 @@
 				return;
 			}
 		}
-
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			send();
 		}
 	}
 
-	/** Grows the composer with its content, up to a few lines. */
+	/** Pasting an image straight into the composer is the fastest way to attach. */
+	function onPaste(e: ClipboardEvent) {
+		const files = Array.from(e.clipboardData?.files ?? []);
+		if (files.length) {
+			e.preventDefault();
+			void addFiles(files);
+		}
+	}
+
 	function autosize(el: HTMLTextAreaElement) {
 		const fit = () => {
 			el.style.height = 'auto';
@@ -516,55 +444,30 @@
 	}
 </script>
 
-<div class="flex flex-col gap-2 min-h-0 flex-1">
+<div
+	class="flex flex-col gap-2 min-h-0 flex-1"
+	ondragover={(e) => e.preventDefault()}
+	ondrop={(e) => {
+		e.preventDefault();
+		void addFiles(e.dataTransfer?.files ?? null);
+	}}
+	role="region"
+	aria-label="chatbot"
+>
 	<!-- Control strip -->
 	<div
 		class="flex flex-wrap items-center gap-2 px-2 py-1.5 border {themeStyles.border} rounded-xs bg-black/30 text-xs"
 	>
 		<span class="font-black text-[#61afef]">6:chatbot</span>
-		<span class="text-white/40 hidden sm:inline">runs on your GPU · nothing is sent anywhere</span>
+		<span class="text-white/40 hidden sm:inline">text · images · audio, all on your GPU</span>
 
 		<div class="flex-1"></div>
-
-		{#if phase === 'ready' || phase === 'generating'}
-			<!-- Context meter -->
-			<span
-				class="flex items-center gap-1.5 font-mono"
-				title="How much of the {config.contextWindow}-token context window the conversation occupies"
-			>
-				<span class="text-white/40 hidden sm:inline">ctx</span>
-				<span class="w-14 h-1 bg-white/10 rounded-full overflow-hidden hidden sm:block">
-					<span
-						class="block h-full transition-[width] duration-300 {ctxPct > 85
-							? 'bg-[#e06c75]'
-							: ctxPct > 60
-								? 'bg-[#e5c07b]'
-								: 'bg-[#98c379]'}"
-						style="width: {ctxPct}%"
-					></span>
-				</span>
-				<span class="tabular-nums {ctxPct > 85 ? 'text-[#e06c75]' : 'text-white/50'}">{ctxPct}%</span>
-			</span>
-		{/if}
 
 		{#if compacting}
 			<span class="text-[#e5c07b] font-mono">◐ {compacting}</span>
 		{:else if lastStats}
 			<span class="text-[#98c379] tabular-nums" title="Decode speed of the last reply">{lastStats}</span>
 		{/if}
-
-		<button
-			onclick={() => {
-				thinkMode = !thinkMode;
-				playSound('toggle');
-			}}
-			title="Let the model reason before answering, folded away above the reply. Slower, and a model this size reasons only so well."
-			class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {thinkMode
-				? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
-				: 'border-[#c678dd]/40 text-[#c678dd]/70 hover:bg-[#c678dd]/20'}"
-		>
-			THINK {thinkMode ? 'ON' : 'OFF'}
-		</button>
 
 		<button
 			onclick={() => {
@@ -577,29 +480,27 @@
 				? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 				: 'border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20'}"
 		>
-			CONFIG{needsReload ? ' *' : ''}
+			CONFIG
 		</button>
 
 		<button
 			onclick={() => {
 				storageOpen = !storageOpen;
 				if (storageOpen) configOpen = false;
-				if (storageOpen) void refreshCached();
 				playSound('toggle');
 			}}
-			title="What this page has stored in your browser, and how to free it"
+			title="What this page downloads and stores in your browser"
 			class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {storageOpen
 				? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 				: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
 		>
-			STORAGE{cached.size ? ` (${fmtMb(cachedSizeMb(cached))})` : ''}
+			STORAGE
 		</button>
 
 		{#if phase === 'ready' || phase === 'generating'}
 			<button
 				onclick={() => {
-					resetConversation();
-					compactedSummary = '';
+					dropAttachments();
 					playSound('click');
 					inputEl?.focus();
 				}}
@@ -614,19 +515,16 @@
 	{#if configOpen}
 		{@const F = [
 			{ k: 'maxTokens' as const, label: 'max output', hint: 'tokens per reply' },
-			{ k: 'thinkMaxTokens' as const, label: 'max output (thinking)', hint: 'reasoning spends from this too' },
-			{ k: 'contextWindow' as const, label: 'context window', hint: 'needs a reload' },
 			{ k: 'temperature' as const, label: 'temperature', hint: 'lower is steadier' },
 			{ k: 'topP' as const, label: 'top_p', hint: 'nucleus sampling' },
-			{ k: 'repetitionPenalty' as const, label: 'repetition penalty', hint: 'any repeated token' },
-			{ k: 'frequencyPenalty' as const, label: 'frequency penalty', hint: 'scales with repeats' },
-			{ k: 'presencePenalty' as const, label: 'presence penalty', hint: 'high values mix languages' }
+			{ k: 'topK' as const, label: 'top_k', hint: 'candidates considered' },
+			{ k: 'repetitionPenalty' as const, label: 'repetition penalty', hint: 'discourages repeats' }
 		]}
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-2">
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
 				{#each F as f (f.k)}
 					<label class="flex items-center gap-2 font-mono">
-						<span class="text-white/60 w-40 shrink-0" title={f.hint}>{f.label}</span>
+						<span class="text-white/60 w-36 shrink-0" title={f.hint}>{f.label}</span>
 						<input
 							type="number"
 							bind:value={config[f.k]}
@@ -639,7 +537,18 @@
 					</label>
 				{/each}
 				<label class="flex items-center gap-2 font-mono">
-					<span class="text-white/60 w-40 shrink-0" title="Stop a reply that collapses into repetition">
+					<span class="text-white/60 w-36 shrink-0" title="Sample, rather than always take the likeliest token">
+						sampling
+					</span>
+					<input
+						type="checkbox"
+						bind:checked={config.doSample}
+						onchange={() => saveConfig(config)}
+						class="accent-[#56b6c2] cursor-pointer"
+					/>
+				</label>
+				<label class="flex items-center gap-2 font-mono">
+					<span class="text-white/60 w-36 shrink-0" title="Stop a reply that collapses into repetition">
 						loop guard
 					</span>
 					<input
@@ -650,28 +559,8 @@
 					/>
 				</label>
 			</div>
-
 			<div class="flex items-center gap-2 border-t border-white/10 pt-1.5">
-				<span class="text-white/35 flex-1">
-					{#if needsReload}
-						<span class="text-[#e5c07b]">context window changed — reload the model to apply it.</span>
-					{:else}
-						Saved in this browser. Sampling applies to the next message.
-					{/if}
-				</span>
-				{#if needsReload}
-					<button
-						onclick={() => {
-							teardown();
-							resetConversation();
-							phase = 'idle';
-							void load();
-						}}
-						class="px-2 py-0.5 border border-[#e5c07b] text-[#e5c07b] rounded-xs font-bold cursor-pointer hover:bg-[#e5c07b] hover:text-black"
-					>
-						RELOAD
-					</button>
-				{/if}
+				<span class="text-white/35 flex-1">Saved in this browser. Applies to the next message.</span>
 				<button
 					onclick={() => {
 						config = { ...DEFAULT_CONFIG };
@@ -689,32 +578,18 @@
 	{#if storageOpen}
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5">
 			<div class="text-white/50 leading-relaxed">
-				The weights are cached by your browser so a second visit skips the download. Freeing them
-				reclaims the space; they download again next time you load the model.
+				The model downloads once and is cached by the browser, so a second visit skips it. Clearing
+				this site's data in your browser frees the space.
 			</div>
-			{#each ALL_BUILDS as b (b.id)}
-				{@const isCached = cached.has(b.id)}
-				{#if isCached || b.id === modelId}
-					<div class="flex items-center gap-2 font-mono">
-						<span class="{isCached ? 'text-[#98c379]' : 'text-white/25'} w-3">{isCached ? '●' : '○'}</span>
-						<span class="{isCached ? 'text-[#d8dee9]' : 'text-white/35'} flex-1">
-							model weights{b.id === modelId ? '' : ' (other GPU build)'}
-						</span>
-						<span class="text-white/35 tabular-nums">{fmtMb(b.downloadMb)}</span>
-						{#if isCached}
-							<button
-								onclick={() => evict(b.id)}
-								disabled={!!evicting}
-								class="px-1.5 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-40"
-							>
-								{evicting === b.id ? '…' : 'FREE'}
-							</button>
-						{:else}
-							<span class="text-white/20 px-1.5">not cached</span>
-						{/if}
-					</div>
-				{/if}
-			{/each}
+			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
+				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.decoder)}</span>
+				<span>embeddings</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.embed)}</span>
+				<span>vision encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
+				<span>audio encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.audio)}</span>
+			</div>
+			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1">
+				total {fmtMb(TOTAL_DOWNLOAD_MB)}
+			</div>
 		</div>
 	{/if}
 
@@ -738,21 +613,13 @@
 		{:else if phase === 'idle'}
 			<div class="m-auto max-w-lg text-center flex flex-col gap-4">
 				<div class="text-white/70 text-sm leading-relaxed">
-					A language model runs <span class="text-[#61afef] font-bold">entirely in this tab</span>, on
-					your own GPU through WebGPU. Nothing you type leaves the machine — there is no server on the
-					other end of this box.
+					A model that reads <span class="text-[#61afef] font-bold">text, images and sound</span> runs
+					entirely in this tab, on your own GPU. Nothing you send leaves the machine — there is no
+					server on the other end of this box.
 				</div>
 				<div class="text-white/40 text-xs">
-					{#if build && cached.has(build.id)}
-						Already cached — this loads straight from disk.
-					{:else if build}
-						First run downloads {fmtMb(build.downloadMb)} and caches it, so later visits start immediately.
-					{/if}
-					{#if build}
-						<br />Needs about {(vramAtContext(build, config.contextWindow) / 1024).toFixed(1)} GB of
-						GPU memory while running, at the current {(config.contextWindow / 1024).toFixed(0)}k context
-						window. Integrated graphics will struggle.
-					{/if}
+					First run downloads {fmtMb(TOTAL_DOWNLOAD_MB)} and caches it, so later visits start
+					immediately. Needs roughly 4 GB of GPU memory — integrated graphics will struggle.
 				</div>
 				<button
 					onclick={load}
@@ -774,19 +641,37 @@
 			</div>
 		{:else if turns.length === 0}
 			<div class="m-auto text-white/30 text-xs font-mono text-center leading-relaxed">
-				ready — say something.<br />
+				ready — say something, or drop in an image or a sound.<br />
 				<span class="text-white/20">/help lists the commands</span>
 			</div>
 		{/if}
 
 		{#each turns as turn, i (i)}
 			{#if turn.role === 'user'}
-				<div class="flex justify-end">
-					<div
-						class="max-w-[80%] px-3 py-2 rounded-md text-sm bg-[#61afef]/12 border border-[#61afef]/25 text-[#d8dee9] whitespace-pre-wrap break-words"
-					>
-						{turn.content}
-					</div>
+				<div class="flex flex-col items-end gap-1">
+					{#if turn.attachments?.length}
+						<div class="flex flex-wrap gap-1.5 justify-end max-w-[80%]">
+							{#each turn.attachments as a (a.url)}
+								{#if a.kind === 'image'}
+									<img
+										src={a.url}
+										alt={a.name}
+										class="max-h-40 rounded-md border border-[#61afef]/25"
+									/>
+								{:else}
+									<!-- svelte-ignore a11y_media_has_caption -->
+									<audio src={a.url} controls class="h-8"></audio>
+								{/if}
+							{/each}
+						</div>
+					{/if}
+					{#if turn.content}
+						<div
+							class="max-w-[80%] px-3 py-2 rounded-md text-sm bg-[#61afef]/12 border border-[#61afef]/25 text-[#d8dee9] whitespace-pre-wrap break-words"
+						>
+							{turn.content}
+						</div>
+					{/if}
 				</div>
 			{:else if turn.notice}
 				<div class="text-[11px] font-mono text-white/35 whitespace-pre-wrap border-l-2 border-white/15 pl-2">
@@ -798,14 +683,12 @@
 					{#if parts.think || parts.thinking}
 						<button
 							onclick={() => toggleThink(i)}
-							title="A model this size reasons at length and not always to the point. Kept folded away."
+							title="The model's reasoning, kept folded away."
 							class="self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer"
 						>
 							{openThink.has(i) ? '▾' : '▸'}
 							{parts.thinking ? 'thinking…' : 'reasoning'} ({parts.think.length} chars)
 						</button>
-						<!-- Stays folded while streaming: this model can reason for
-						     thousands of characters, and unfolding it buries the answer. -->
 						{#if openThink.has(i)}
 							<div
 								class="text-xs font-mono text-white/45 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5 max-h-64 overflow-y-auto"
@@ -819,8 +702,6 @@
 							{@html renderMarkdown(parts.answer)}
 						</div>
 					{:else if !parts.thinking}
-						<!-- While reasoning streams, the toggle above already says so; a
-						     second cursor here reads as a stalled answer. -->
 						<span class="text-white/40 text-sm">▋</span>
 					{/if}
 				</div>
@@ -852,38 +733,83 @@
 			</div>
 		{/if}
 
+		{#if pending.length}
+			<div class="flex flex-wrap gap-1.5 mb-1.5">
+				{#each pending as a, pi (a.url)}
+					<div
+						class="flex items-center gap-1.5 border {themeStyles.border} rounded-xs bg-black/40 pl-1.5 pr-1 py-1 text-[11px] font-mono"
+					>
+						{#if a.kind === 'image'}
+							<img src={a.url} alt={a.name} class="h-8 w-8 object-cover rounded-xs" />
+						{:else}
+							<span class="text-[#c678dd]">♪</span>
+						{/if}
+						<span class="text-white/60 max-w-32 truncate">{a.name}</span>
+						<button
+							onclick={() => removePending(pi)}
+							aria-label="remove {a.name}"
+							class="text-white/40 hover:text-[#e06c75] cursor-pointer px-1"
+						>
+							×
+						</button>
+					</div>
+				{/each}
+			</div>
+		{/if}
+
 		<div
 			class="flex items-end gap-2 border {themeStyles.border} rounded-xs bg-black/40 px-2 py-1.5 focus-within:border-[#61afef] transition-colors"
 		>
-		<textarea
-			bind:this={inputEl}
-			bind:value={draft}
-			use:autosize
-			onkeydown={onKeydown}
-			disabled={phase !== 'ready' && phase !== 'generating'}
-			rows="1"
-			placeholder={phase === 'ready' || phase === 'generating'
-				? 'message, or /help'
-				: 'Load the model first.'}
-			style="caret-color: {themeStyles.cursorColor}"
-			class="flex-1 resize-none bg-transparent border-0 outline-none font-mono text-sm text-[#d8dee9] leading-relaxed disabled:opacity-40 placeholder:text-white/25 max-h-40"
-		></textarea>
-		{#if phase === 'generating'}
+			<input
+				bind:this={fileEl}
+				type="file"
+				accept="image/*,audio/*"
+				multiple
+				class="hidden"
+				onchange={(e) => {
+					void addFiles(e.currentTarget.files);
+					e.currentTarget.value = '';
+				}}
+			/>
 			<button
-				onclick={stopGenerating}
-				class="px-3 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black shrink-0"
+				onclick={() => fileEl?.click()}
+				disabled={phase !== 'ready'}
+				title="Attach an image or a sound — you can also paste or drag one in"
+				aria-label="attach a file"
+				class="px-1.5 py-1 text-[#c678dd]/70 hover:text-[#c678dd] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 text-sm"
 			>
-				STOP
+				+
 			</button>
-		{:else}
-			<button
-				onclick={send}
-				disabled={phase !== 'ready' || !draft.trim()}
-				class="px-3 py-1 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-			>
-				SEND
-			</button>
-		{/if}
+			<textarea
+				bind:this={inputEl}
+				bind:value={draft}
+				use:autosize
+				onkeydown={onKeydown}
+				onpaste={onPaste}
+				disabled={phase !== 'ready' && phase !== 'generating'}
+				rows="1"
+				placeholder={phase === 'ready' || phase === 'generating'
+					? 'message, or /help'
+					: 'Load the model first.'}
+				style="caret-color: {themeStyles.cursorColor}"
+				class="flex-1 resize-none bg-transparent border-0 outline-none font-mono text-sm text-[#d8dee9] leading-relaxed disabled:opacity-40 placeholder:text-white/25 max-h-40"
+			></textarea>
+			{#if phase === 'generating'}
+				<button
+					onclick={stopGenerating}
+					class="px-3 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black shrink-0"
+				>
+					STOP
+				</button>
+			{:else}
+				<button
+					onclick={send}
+					disabled={phase !== 'ready' || (!draft.trim() && !pending.length)}
+					class="px-3 py-1 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+				>
+					SEND
+				</button>
+			{/if}
 		</div>
 	</div>
 </div>
