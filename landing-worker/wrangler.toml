@@ -57,7 +57,7 @@ VM_IMAGES = "vmlinuz|r2:vm/vmlinuz#b18|8651264,initramfs|r2:vm/initramfs#b18|974
 # The riscv64 machine, in the shapes TinyEMU asks for (see src/routes/vm/rv).
 # Same rule as VM_IMAGES: bump the #marker whenever CI republishes, or the edge
 # keeps serving the previous build from an immutable entry.
-RV_IMAGES = "bios.bin|r2:rv/bios.bin#r3|2097152,kernel|r2:rv/kernel#r3|22380544,initramfs|r2:rv/initramfs#r3|6637609,rootfs|r2:rv/rootfs.img@209715200#r3|1192230912"
+RV_IMAGES = "bios.bin|r2:rv/bios.bin#r4|2097152,kernel|r2:rv/kernel#r4|22380544,initramfs|r2:rv/initramfs#r4|6637622,rootfs|r2:rv/rootfs.img@209715200#r4|1192230912"
 
 # What the riscv64 guest is given. TinyEMU interprets rather than compiles, so
 # this machine is slower than its x86 neighbour and there is little point
