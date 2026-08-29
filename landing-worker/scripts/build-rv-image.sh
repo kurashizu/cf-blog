@@ -21,7 +21,7 @@ MIRROR="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}"
 
 echo "==> host: $(uname -m), target Alpine v${ALPINE_VERSION} ${KERNEL_FLAVOR}"
 
-apk add --no-cache e2fsprogs-extra mkinitfs build-base
+apk add --no-cache e2fsprogs-extra cpio build-base
 
 # ── root filesystem ────────────────────────────────────────────────────────
 mkdir -p "$ROOTFS"
@@ -151,19 +151,84 @@ rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \
 KVER=$(ls "$ROOTFS/lib/modules" | head -n1)
 echo "==> kernel modules version: $KVER"
 
-# Everything the machine needs to reach its root is on virtio-mmio, which is
-# how TinyEMU presents every device it has.
-mkdir -p "$ROOTFS/etc/mkinitfs/features.d"
-cat > "$ROOTFS/etc/mkinitfs/features.d/tinyemu.modules" <<'EOF'
-kernel/drivers/virtio
-kernel/drivers/block/virtio_blk.ko*
-kernel/drivers/char/virtio_console.ko*
-kernel/fs/ext4
-EOF
-cat > "$ROOTFS/etc/mkinitfs/mkinitfs.conf" <<'EOF'
-features="base ext4 tinyemu"
-EOF
-mkinitfs -b "$ROOTFS" -o "$OUT/initramfs" "$KVER"
+# The initramfs is hand-built rather than produced by mkinitfs, and that is a
+# deliberate step backwards in convenience. Alpine's takes the console the
+# kernel hands it, and on this machine there is none yet: virtio-console is a
+# module, so it registers after init has already started and every word
+# userspace says goes nowhere. Its status lines reach /dev/kmsg and are the only
+# thing visible, which is why a boot that stopped inside "Mounting root..." gave
+# nothing to work with.
+#
+# This one loads the drivers first, reopens its own console on the device that
+# now exists, and says what it is doing at each step.
+INITRD=/tmp/initramfs-root
+rm -rf "$INITRD"
+mkdir -p "$INITRD"/{bin,dev,proc,sys,sysroot,lib,lib/modules}
+
+cp -a "$ROOTFS/bin/busybox" "$INITRD/bin/"
+# busybox here is dynamically linked, so it needs the loader and libc beside it.
+cp -a "$ROOTFS"/lib/ld-musl-*.so.* "$INITRD/lib/" 2>/dev/null || true
+cp -a "$ROOTFS"/lib/libc.musl-*.so.* "$INITRD/lib/" 2>/dev/null || true
+
+MODDIR="$INITRD/lib/modules/$KVER"
+mkdir -p "$MODDIR"
+for path in \
+	kernel/drivers/virtio \
+	kernel/drivers/block/virtio_blk.ko.gz \
+	kernel/drivers/char/virtio_console.ko.gz \
+	kernel/fs/ext4 \
+	kernel/fs/jbd2 \
+	kernel/fs/mbcache.ko.gz \
+	kernel/lib/crc16.ko.gz \
+	kernel/lib/crc32c_generic.ko.gz \
+	kernel/crypto/crc32c_generic.ko.gz
+do
+	src="$ROOTFS/lib/modules/$KVER/$path"
+	[ -e "$src" ] || continue
+	mkdir -p "$MODDIR/$(dirname "$path")"
+	cp -a "$src" "$MODDIR/$(dirname "$path")/"
+done
+cp -a "$ROOTFS/lib/modules/$KVER"/modules.* "$MODDIR/" 2>/dev/null || true
+depmod -b "$INITRD" "$KVER" 2>/dev/null || true
+
+cat > "$INITRD/init" <<'INIT'
+#!/bin/busybox sh
+/bin/busybox --install -s /bin
+
+mount -t devtmpfs dev /dev 2>/dev/null
+mount -t proc proc /proc 2>/dev/null
+mount -t sysfs sys /sys 2>/dev/null
+
+# The drivers first, then the console they provide: the kernel started this
+# script before either existed.
+for mod in virtio virtio_ring virtio_mmio virtio_console virtio_blk \
+	mbcache jbd2 crc16 crc32c_generic ext4; do
+	modprobe "$mod" 2>/dev/null
+done
+
+exec </dev/hvc0 >/dev/hvc0 2>&1
+echo "krsz-rv: initramfs up, drivers loaded"
+
+if [ ! -b /dev/vda ]; then
+	echo "krsz-rv: no /dev/vda -- dropping to a shell"
+	exec /bin/sh
+fi
+
+echo "krsz-rv: mounting /dev/vda"
+if ! mount -t ext4 -o ro /dev/vda /sysroot; then
+	echo "krsz-rv: mount failed -- dropping to a shell"
+	exec /bin/sh
+fi
+
+echo "krsz-rv: switching to the root filesystem"
+mount -o remount,rw /sysroot 2>/dev/null
+umount /proc /sys 2>/dev/null
+exec switch_root /sysroot /sbin/init
+INIT
+chmod +x "$INITRD/init"
+
+( cd "$INITRD" && find . | cpio -o -H newc --quiet | gzip -9 ) > "$OUT/initramfs"
+echo "==> initramfs: $(stat -c %s "$OUT/initramfs") bytes"
 
 # The firmware is ours: see landing-worker/vm-firmware. OpenSBI is the obvious
 # choice and does not fit this machine — a current one programs registers this
