@@ -38,9 +38,28 @@
 		 * every time. See disk-overlay.ts for what is and is not stored.
 		 */
 		persistDisk: boolean;
+		/**
+		 * The mode X asks for, passed to the guest on the kernel command line
+		 * because there is no monitor for it to ask. "auto" leaves the guest to
+		 * pick, which lands on 1024x768.
+		 */
+		resolution: string;
+		/**
+		 * How the guest's screen is fitted to the panel. The canvas holds exactly
+		 * the pixels the guest draws, so anything but 1:1 is invented — "integer"
+		 * invents only whole pixels, which stays sharp.
+		 */
+		scaling: 'fit' | 'integer' | 'none';
 	}
 
 	const MEMORY_CHOICES = [64, 128, 256, 512, 1024];
+	/** Every one of these fits in 8 MB of video memory at 24bpp. */
+	const RESOLUTIONS = ['auto', '1024x768', '1280x800', '1440x900', '1600x900'];
+	const SCALING_CHOICES = [
+		['fit', 'FIT', 'Fill the panel. Smooth, and rarely a whole number of pixels.'],
+		['integer', 'SHARP', 'Scale by whole pixels only, so nothing is invented between them.'],
+		['none', '1:1', "One guest pixel per screen pixel, whatever size that comes out."]
+	] as const;
 	const VGA_CHOICES = [2, 4, 8, 16];
 
 	/**
@@ -63,7 +82,7 @@
 	const DEFAULT_CMDLINE =
 		'root=/dev/sda rw modules=sd_mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 7;
+	const SETTINGS_VERSION = 8;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
@@ -76,7 +95,9 @@
 		acpi: false,
 		jit: true,
 		network: true,
-		persistDisk: true
+		persistDisk: true,
+		resolution: '1280x800',
+		scaling: 'fit'
 	};
 
 	let settings = $state<Settings>({ ...DEFAULTS });
@@ -520,6 +541,17 @@
 		graphical = false;
 	}
 
+	/**
+	 * The command line as the guest sees it. The chosen mode is appended rather
+	 * than kept in the editable field, so picking a resolution does not quietly
+	 * rewrite something the viewer typed — and `startx` reads it back out of
+	 * /proc/cmdline, there being no monitor for X to ask.
+	 */
+	function guestCmdline(): string {
+		const base = settings.cmdline.replace(/\s*krsz_res=\S+/g, '').trim();
+		return settings.resolution === 'auto' ? base : `${base} krsz_res=${settings.resolution}`;
+	}
+
 	async function stop() {
 		playSound('click');
 		status = 'saving disk…';
@@ -585,7 +617,12 @@
 		screenEl.style.transform = previous;
 		if (!availableW || !availableH || !naturalW || !naturalH) return;
 		// Capped so a tiny early-boot screen does not blow up into a blurry wall.
-		screenScale = Math.max(0.25, Math.min(3, availableW / naturalW, availableH / naturalH));
+		const fitted = Math.max(0.25, Math.min(3, availableW / naturalW, availableH / naturalH));
+		if (settings.scaling === 'none') screenScale = 1;
+		// Whole multiples only, and never below one guest pixel per screen pixel:
+		// a half-pixel scale is where the smearing comes from.
+		else if (settings.scaling === 'integer') screenScale = fitted >= 1 ? Math.floor(fitted) : 1 / Math.ceil(1 / fitted);
+		else screenScale = fitted;
 	}
 
 	/**
@@ -760,7 +797,7 @@
 			value: settings.network ? 'via the relay, any host' : 'off',
 			title: "v86's own gateway answers ARP, DHCP and ping and resolves names over DoH; the TCP streams it produces are translated to OmniProxy at /net/wisp. Names are policed at the resolver and ports at the socket, because the guest resolves for itself and connects to an address"
 		},
-		{ label: 'STATUS', value: 'boots to an Alpine login' }
+		{ label: 'STATUS', value: 'boots to a root shell in ~30s' }
 	]);
 </script>
 
@@ -855,9 +892,10 @@
 	{#if phase === 'idle' || phase === 'error'}
 		<div class="space-y-3">
 			<p class="text-[11px] sm:text-xs text-white/60 leading-relaxed max-w-3xl">
-				A real 32-bit x86 PC, emulated in this tab — SeaBIOS, a bootloader and an actual Linux
-				kernel, not a shell simulation. It is a work in progress: the boot gets a long way and
-				then resets, and the panel below says exactly where and what has been ruled out.
+				A real 32-bit x86 PC, emulated in this tab — an actual Linux kernel on an emulated
+				disk, network card and VGA adapter, not a shell simulation. It boots to a root shell
+				in about half a minute, reaches the network through a relay on this origin, and keeps
+				what you change in this browser.
 			</p>
 
 			{#if showSettings}
@@ -897,6 +935,43 @@
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{mb} MB
+							</button>
+						{/each}
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">SCREEN</span>
+						{#each RESOLUTIONS as res (res)}
+							<button
+								onclick={() => (settings.resolution = res)}
+								title={res === 'auto'
+									? 'Leave the mode to the guest, which with no monitor to ask lands on 1024x768'
+									: `Ask X for ${res}. Takes effect the next time startx runs.`}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.resolution ===
+								res
+									? 'border-[#d19a66] bg-[#d19a66]/20 text-[#d19a66]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{res}
+							</button>
+						{/each}
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">SCALING</span>
+						{#each SCALING_CHOICES as [value, label, hint] (value)}
+							<button
+								onclick={() => {
+									settings.scaling = value;
+									fitScreen();
+								}}
+								title={hint}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.scaling ===
+								value
+									? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{label}
 							</button>
 						{/each}
 					</div>
@@ -970,7 +1045,19 @@
 							<input type="checkbox" bind:checked={settings.acpi} class="accent-[#98c379]" />
 							<span title="Expose an ACPI table to the guest. Off by default: it gives the kernel more hardware to probe, and probing is where this emulator is weakest.">ACPI</span>
 						</label>
+						<button
+							onclick={resetSettings}
+							title="Put every setting on this panel back to its default, including the command line. The saved disk is left alone."
+							class="ml-auto px-2 py-0.5 border border-white/20 text-white/55 rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:border-white/50"
+						>
+							RESET
+						</button>
 					</div>
+
+					<p class="text-[10px] font-mono text-white/35 leading-relaxed">
+						RAM, VGA RAM, boot mode and the command line take effect on the next boot;
+						screen size applies the next time <span class="text-white/50">startx</span> runs.
+					</p>
 				</div>
 			{/if}
 
@@ -984,22 +1071,22 @@
 			</div>
 
 			<div class="border border-[#98c379]/40 bg-[#98c379]/5 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-xs font-black font-mono text-[#98c379]">IT BOOTS — LOG IN AS root, NO PASSWORD</div>
+				<div class="text-xs font-black font-mono text-[#98c379]">BOOTS STRAIGHT INTO A ROOT SHELL</div>
 				<p class="text-[11px] text-white/65 leading-relaxed">
-					SeaBIOS posts, the kernel starts, the initramfs mounts the root filesystem off the
-					emulated disk, OpenRC brings the system up and you get a login prompt on
-					<span class="font-mono">krsz-vm</span>. There is no password — it is a throwaway
-					machine with nothing listening. <span class="font-mono">apk</span> is installed but
-					has no network yet, so it can only work offline for now.
+					The kernel starts, the initramfs mounts the root filesystem off the emulated disk,
+					OpenRC brings the system up and a serial getty logs you in on
+					<span class="font-mono">krsz-vm</span> — no prompt, no password, nothing listening.
+					<span class="font-mono">apk</span> installs packages over the relay,
+					<span class="font-mono">tmux</span> has the mouse, and
+					<span class="font-mono">startx</span> opens an openbox desktop on the VGA side.
 				</p>
 				<p class="text-[11px] text-white/45 leading-relaxed">
-					Getting here took four separate fixes worth writing down: hardware autodetection had
-					to go (it triple-faults the emulator), the SCSI disk driver and its dependencies had
-					to be packed as whole directories rather than globs, the module had to be spelled
-					<span class="font-mono">sd_mod</span> because busybox's modprobe does not translate
-					<span class="font-mono">sd-mod</span>, and the image URLs needed a version — they are
-					served immutable but CI reuses the same R2 keys, so the edge was still handing back
-					the previous build.
+					Two decisions shape the rest of it. Hardware autodetection is off — walking the PCI
+					bus triple-faults the emulator — so the drivers this machine needs are named
+					outright, which is also why the display driver only loads when
+					<span class="font-mono">startx</span> asks for it. And the image is served
+					immutable but rebuilt in place, so every URL carries a version: without one the edge
+					kept handing back the previous build, and every fix looked like it had failed.
 				</p>
 			</div>
 
@@ -1014,10 +1101,12 @@
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1">
 				<div class="text-xs font-black font-mono text-white/60">WHAT ALREADY WORKS</div>
 				<ul class="text-[11px] text-white/55 leading-relaxed list-disc pl-4 space-y-0.5">
-					<li>The ISO is never downloaded whole: v86 reads 1 MiB chunks over HTTP Range as the guest touches them, through a proxy that caches each chunk at the edge.</li>
+					<li>The image is never downloaded whole: v86 reads 1 MiB chunks over HTTP Range as the guest touches them, through a proxy that caches each chunk at the edge. A boot to a shell moves about 60 MiB of a gigabyte.</li>
 					<li>The kernel and initramfs are built in CI and loaded directly, with no bootloader, so the command line is set by the page rather than typed into a prompt.</li>
+					<li>Everything the guest writes is kept in this browser and replayed over the image on the next boot — install a package once and it is still there tomorrow. CONFIG · DISK turns that off or wipes it.</li>
+					<li>The guest's own TCP and UDP go out through a relay on this origin, and its name lookups through a DNS-over-HTTPS endpoint here; nothing on the internet can reach in.</li>
 					<li>Nothing starts on its own — opening this tab costs you nothing until you press BOOT.</li>
-					<li>Keyboard input goes to the guest while the screen has focus, so the site's own shortcuts pause there. Click outside to get them back.</li>
+					<li>While the machine runs it has the keyboard, so the site's own shortcuts step aside; Ctrl+0-5 still switches tabs, and on the VGA screen two Escapes hand the keyboard back.</li>
 				</ul>
 			</div>
 
@@ -1115,7 +1204,11 @@
 					CMDLINE <span class="text-[#e5c07b]">{BOOT_LINE}</span>
 				</span>
 			{/if}
-			<span class="text-white/25">read-only · nothing is persisted</span>
+			<span class="text-white/25"
+				>{settings.persistDisk
+					? 'image read-only · changes kept in this browser'
+					: 'read-only · nothing is persisted'}</span
+			>
 		</div>
 	{/if}
 </div>

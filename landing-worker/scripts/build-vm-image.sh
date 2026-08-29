@@ -15,9 +15,10 @@ KERNEL_FLAVOR="${KERNEL_FLAVOR:-lts}"
 IMAGE_MB="${IMAGE_MB:-256}"
 # Free space to leave on top of the installed system, for apk and scratch files.
 # The desktop packages ate the old 96 MB down to single digits, which is not
-# enough to install anything -- and every written block lives in the browser's
-# memory anyway, so the only cost of a roomier filesystem is R2 storage.
-SLACK_MB="${SLACK_MB:-224}"
+# enough to install anything -- and npm pulling a toolchain wants a great deal
+# more than that. Free space costs only R2 storage: blocks are fetched as the
+# guest touches them, so an image with room in it is not a slower one.
+SLACK_MB="${SLACK_MB:-512}"
 # The root filesystem is stored as parts because `wrangler r2 object put` refuses
 # anything over 300 MiB; the disk proxy maps a byte offset back to the part that
 # holds it, so the guest sees one contiguous disk.
@@ -142,7 +143,8 @@ cat > /tmp/motd.raw <<'MOTD'
     \033[38;5;222mrs\033[0m                re-fit the shell after resizing the window
 
   \033[38;5;110mGOOD TO KNOW\033[0m
-    Nothing is persisted. Power off and every change is gone.
+    What you change is kept in this browser and replayed at the next
+    boot -- CONFIG has the switch, and the button that wipes it.
     The disk is streamed in 1 MiB pieces as you touch it, so the first
     use of a command is slower than the second.
     Outbound traffic goes through a relay on the page's own origin,
@@ -328,6 +330,27 @@ mkdir -p "$ROOTFS/usr/local/bin"
 cat > "$ROOTFS/usr/local/bin/startx" <<'EOF'
 #!/bin/sh
 modprobe bochs 2>/dev/null || true
+
+# There is no monitor to ask for a mode list, so the page passes the one it
+# wants on the kernel command line and it is turned into a Screen section here.
+res=$(sed -n 's/.*krsz_res=\([0-9]\{3,4\}x[0-9]\{3,4\}\).*/\1/p' /proc/cmdline)
+if [ -n "$res" ]; then
+	cat > /etc/X11/xorg.conf.d/20-mode.conf <<CONF
+Section "Screen"
+    Identifier "v86-screen"
+    Device     "v86"
+    Monitor    "v86-monitor"
+    DefaultDepth 24
+    SubSection "Display"
+        Depth   24
+        Modes   "$res" "1280x800" "1024x768"
+    EndSubSection
+EndSection
+CONF
+else
+	rm -f /etc/X11/xorg.conf.d/20-mode.conf
+fi
+
 exec /usr/bin/startx "$@"
 EOF
 chmod +x "$ROOTFS/usr/local/bin/startx"
