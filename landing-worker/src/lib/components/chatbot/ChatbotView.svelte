@@ -8,8 +8,6 @@
 		DEFAULT_CONFIG,
 		PART_SIZES_MB,
 		TOTAL_DOWNLOAD_MB,
-		TOTAL_DOWNLOAD_CPU_MB,
-		EMBED_FP16_MB,
 		loadConfig,
 		probeGpu,
 		saveConfig,
@@ -92,7 +90,6 @@
 	function teardown() {
 		worker?.terminate();
 		worker = null;
-		activeBackend = '';
 		// Leaving mid-take would otherwise leave the mic indicator lit.
 		recorder?.stop();
 		recStream?.getTracks().forEach((t) => t.stop());
@@ -114,8 +111,7 @@
 					onProgress(m.payload);
 					break;
 				case 'ready':
-					activeBackend = m.device ?? '';
-					phase = 'ready';
+							phase = 'ready';
 					progressText = '';
 					void tick().then(() => inputEl?.focus());
 					break;
@@ -154,7 +150,7 @@
 		// download — fall back to the published figure so the bar does not race
 		// to 100% and then restart.
 		const known = vals.reduce((a, v) => a + v.total, 0);
-		const total = Math.max(known, expectedDownloadMb * 1048576);
+		const total = Math.max(known, TOTAL_DOWNLOAD_MB * 1048576);
 		progressPct = total ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
 		progressText =
 			status === 'ready' || !vals.length
@@ -205,26 +201,12 @@
 		void tick().then(() => inputEl?.focus());
 	}
 
-	/** What 'auto' resolves to, and what an explicit choice would actually get. */
-	let resolvedBackend = $derived<'webgpu' | 'wasm'>(
-		config.backend === 'auto' ? (gpu?.ok ? 'webgpu' : 'wasm') : config.backend
-	);
-	/** The backend the loaded engine is actually running on. */
-	let activeBackend = $state<'webgpu' | 'wasm' | ''>('');
-
-	/**
-	 * The CPU path pulls a much larger embedding table, so the figure quoted and
-	 * the progress denominator both have to follow the backend.
-	 */
-	let expectedDownloadMb = $derived(
-		resolvedBackend === 'wasm' ? TOTAL_DOWNLOAD_CPU_MB : TOTAL_DOWNLOAD_MB
-	);
 
 	function load() {
 		if (busy) return;
 		// An explicit webgpu choice on a machine without it would fail deep in the
 		// runtime with an opaque error; say so here instead.
-		if (resolvedBackend === 'webgpu' && !gpu?.ok) {
+		if (!gpu?.ok) {
 			phase = 'error';
 			errorText = gpu?.reason ?? 'WebGPU is unavailable.';
 			return;
@@ -236,7 +218,7 @@
 		progressText = 'requesting the weights…';
 		playSound('click');
 		worker = spawnWorker();
-		worker.postMessage({ type: 'load', device: resolvedBackend });
+		worker.postMessage({ type: 'load' });
 	}
 
 	function dropAttachments() {
@@ -538,14 +520,6 @@
 		<span class="text-white/40 hidden sm:inline">
 			text · images · audio, all on your machine
 		</span>
-		{#if activeBackend}
-			<span
-				class="font-mono {activeBackend === 'webgpu' ? 'text-[#98c379]' : 'text-[#e5c07b]'}"
-				title={activeBackend === 'webgpu' ? 'Running on the GPU' : 'Running on the CPU — far slower'}
-			>
-				{activeBackend === 'webgpu' ? 'GPU' : 'CPU'}
-			</span>
-		{/if}
 
 		<div class="flex-1"></div>
 
@@ -644,29 +618,6 @@
 						class="accent-[#56b6c2] cursor-pointer"
 					/>
 				</label>
-				<label class="flex items-center gap-2 font-mono sm:col-span-2">
-					<span class="text-white/60 w-36 shrink-0" title="Where inference runs. Changing this needs a reload.">
-						runs on
-					</span>
-					<select
-						bind:value={config.backend}
-						onchange={() => saveConfig(config)}
-						class="bg-black/50 border border-white/20 rounded-xs px-1.5 py-0.5 text-[#d8dee9] outline-none focus:border-[#56b6c2] cursor-pointer"
-					>
-						<option value="auto">auto — GPU when available</option>
-						<option value="webgpu">GPU (WebGPU)</option>
-						<option value="wasm">CPU (WebAssembly)</option>
-					</select>
-					<span class="text-white/35">
-						{#if config.backend === 'auto'}
-							→ {resolvedBackend === 'webgpu' ? 'GPU' : 'CPU'}
-						{:else if config.backend === 'wasm'}
-							far slower, but works anywhere
-						{:else if !gpu?.ok}
-							<span class="text-[#e06c75]">unavailable here</span>
-						{/if}
-					</span>
-				</label>
 			</div>
 			<div class="flex items-center gap-2 border-t border-white/10 pt-1.5">
 				<span class="text-white/35 flex-1">
@@ -695,20 +646,12 @@
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
 				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.decoder)}</span>
-				<span>embeddings</span>
-				<span class="tabular-nums">
-					{fmtMb(resolvedBackend === 'wasm' ? EMBED_FP16_MB : PART_SIZES_MB.embed)}
-				</span>
+				<span>embeddings</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.embed)}</span>
 				<span>vision encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
 				<span>audio encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.audio)}</span>
 			</div>
 			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1">
-				total {fmtMb(expectedDownloadMb)}
-				{#if resolvedBackend === 'wasm'}
-					<span class="text-white/35">
-						— the CPU needs an unquantised embedding table, which is most of this
-					</span>
-				{/if}
+				total {fmtMb(TOTAL_DOWNLOAD_MB)}
 			</div>
 		</div>
 	{/if}
@@ -719,8 +662,18 @@
 		class="flex-1 min-h-[45vh] overflow-y-auto border {themeStyles.border} rounded-xs bg-black/40 px-3 py-3 flex flex-col gap-4"
 	>
 		{#if phase === 'error'}
-			<div class="m-auto max-w-md text-center flex flex-col gap-3">
+			<div class="m-auto max-w-lg text-center flex flex-col gap-3">
 				<div class="text-[#e06c75] font-bold">✗ {errorText}</div>
+				{#if !gpu?.ok && gpu?.fixes?.length}
+					<!-- A WebGPU failure is fixable by the visitor, so say how. -->
+					<ul
+						class="text-left text-white/50 text-xs list-disc pl-5 space-y-1 leading-relaxed border border-white/10 rounded-xs px-3 py-2"
+					>
+						{#each gpu.fixes as fix (fix)}
+							<li>{fix}</li>
+						{/each}
+					</ul>
+				{/if}
 				{#if gpu?.ok}
 					<button
 						onclick={load}
@@ -738,39 +691,33 @@
 					no server on the other end of this box.
 				</div>
 				<div class="text-white/40 text-xs">
-					First run downloads {fmtMb(expectedDownloadMb)} and caches it, so later visits start
-					immediately.
-					{#if resolvedBackend === 'webgpu'}
-						<br />Runs on the GPU and wants roughly 4 GB of video memory — integrated graphics will
-						struggle.
-					{:else}
-						<br /><span class="text-[#e5c07b]">Will run on the CPU</span>, which works anywhere but
-						is far slower — expect a few tokens a second. It also needs a larger embedding table
-						the CPU can actually read, which is most of that download.
-						{#if gpu && !gpu.ok}
-							<br /><span class="text-white/30">{gpu.reason}</span>
-						{/if}
-					{/if}
+					First run downloads {fmtMb(TOTAL_DOWNLOAD_MB)} and caches it, so later visits start
+					immediately. Runs on the GPU through WebGPU and wants roughly 4 GB of video memory —
+					integrated graphics will struggle.
 				</div>
-				<div class="flex flex-wrap items-center justify-center gap-2">
+				{#if gpu && !gpu.ok}
+					<!-- Loading cannot work here, so lead with why and what to do about it. -->
+					<div
+						class="text-left border border-[#e06c75]/40 bg-[#e06c75]/5 rounded-xs px-3 py-2 text-xs flex flex-col gap-1.5"
+					>
+						<div class="text-[#e06c75] font-bold">✗ {gpu.reason}</div>
+						{#if gpu.fixes?.length}
+							<ul class="text-white/50 list-disc pl-4 space-y-1 leading-relaxed">
+								{#each gpu.fixes as fix (fix)}
+									<li>{fix}</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				{:else}
 					<button
 						onclick={load}
-						class="px-4 py-2 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black"
+						disabled={!gpu}
+						class="mx-auto px-4 py-2 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
 					>
-						▶ LOAD ON {resolvedBackend === 'webgpu' ? 'GPU' : 'CPU'}
+						{gpu ? '▶ LOAD MODEL' : 'checking WebGPU…'}
 					</button>
-					<button
-						onclick={() => {
-							config = { ...config, backend: resolvedBackend === 'webgpu' ? 'wasm' : 'webgpu' };
-							saveConfig(config);
-							playSound('toggle');
-						}}
-						title="Pick where inference runs. The CONFIG panel keeps this setting."
-						class="px-3 py-2 border border-white/25 text-white/60 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10"
-					>
-						USE {resolvedBackend === 'webgpu' ? 'CPU' : 'GPU'} INSTEAD
-					</button>
-				</div>
+				{/if}
 				{#if gpu?.adapterLabel}
 					<div class="text-white/30 text-[10px] font-mono">gpu: {gpu.adapterLabel}</div>
 				{/if}

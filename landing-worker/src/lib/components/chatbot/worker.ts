@@ -14,7 +14,7 @@ import {
 	type PreTrainedModel,
 	type Processor
 } from '@huggingface/transformers';
-import { MODEL_HOST, MODEL_ID, ORT_WASM_PATH, dtypeFor } from './engine';
+import { DTYPE, MODEL_HOST, MODEL_ID, ORT_WASM_PATH } from './engine';
 
 /**
  * Serve both the weights and the runtime from this site's bucket. By default
@@ -36,7 +36,7 @@ let model: PreTrainedModel | null = null;
 let stopper: InterruptableStoppingCriteria | null = null;
 
 type InMsg =
-	| { type: 'load'; device: 'webgpu' | 'wasm' }
+	| { type: 'load' }
 	| {
 			type: 'generate';
 			messages: unknown[];
@@ -49,7 +49,7 @@ type InMsg =
 
 const post = (m: unknown) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
 
-async function load(device: 'webgpu' | 'wasm') {
+async function load() {
 	if (model) {
 		post({ type: 'ready' });
 		return;
@@ -60,13 +60,13 @@ async function load(device: 'webgpu' | 'wasm') {
 
 	processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback });
 	model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
-		dtype: dtypeFor(device),
+		dtype: DTYPE,
 		// A string applies to every session; an object would silently leave any
 		// part it omits on the default backend, which in a browser is wasm.
-		device,
+		device: 'webgpu',
 		progress_callback
 	});
-	post({ type: 'ready', device });
+	post({ type: 'ready' });
 }
 
 /**
@@ -164,7 +164,7 @@ async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
 self.onmessage = async (e: MessageEvent<InMsg>) => {
 	const msg = e.data;
 	try {
-		if (msg.type === 'load') await load(msg.device);
+		if (msg.type === 'load') await load();
 		else if (msg.type === 'generate') await generate(msg);
 		else if (msg.type === 'interrupt') stopper?.interrupt();
 	} catch (err) {

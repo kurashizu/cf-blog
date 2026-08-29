@@ -43,30 +43,6 @@ export const DTYPE = {
 	audio_encoder: 'q4f16'
 } as const;
 
-/**
- * The CPU backend needs a different embedding table.
- *
- * Every quantised `embed_tokens` export — q4f16, q4 and quantized alike —
- * builds its lookup out of `com.microsoft.GatherBlockQuantized`, and the wasm
- * CPU provider has no kernel for the type combination they use, so the session
- * cannot even be created:
- *
- *   Failed to find kernel for com.microsoft.GatherBlockQuantized(1)
- *   (node:'node_embedding_Quant' ep:'CPUExecutionProvider')
- *
- * Only the fp16 export avoids that op, and it is 5248 MB against 1517 — so the
- * CPU path costs 3.7 GB more to download as well as running far slower. The
- * other three parts are unaffected and stay at q4f16.
- */
-export const DTYPE_CPU = {
-	...DTYPE,
-	embed_tokens: 'fp16'
-} as const;
-
-export function dtypeFor(backend: Backend) {
-	return backend === 'wasm' ? DTYPE_CPU : DTYPE;
-}
-
 /** Download size in MB, by part, for what the storage panel reports. */
 export const PART_SIZES_MB = {
 	decoder: 1449,
@@ -75,29 +51,10 @@ export const PART_SIZES_MB = {
 	audio: 163
 } as const;
 
-/** The fp16 embedding table the CPU backend has to use instead. */
-export const EMBED_FP16_MB = 5248;
-
 export const TOTAL_DOWNLOAD_MB =
 	PART_SIZES_MB.decoder + PART_SIZES_MB.embed + PART_SIZES_MB.vision + PART_SIZES_MB.audio;
 
-/** What the CPU backend downloads, with the larger embedding table. */
-export const TOTAL_DOWNLOAD_CPU_MB = TOTAL_DOWNLOAD_MB - PART_SIZES_MB.embed + EMBED_FP16_MB;
-
-/**
- * Where inference runs. WebGPU is dramatically faster; wasm is the fallback for
- * browsers that do not expose WebGPU at all — Firefox on Linux still hides it
- * behind `dom.webgpu.enabled`, and any plain-http origin that is not localhost
- * fails the secure-context requirement regardless of browser.
- *
- * On wasm a 4B model runs at conversational speed only in the loosest sense;
- * expect single-digit tokens per second on a good desktop CPU, and slower on
- * anything portable. It is there so the page works, not so it works well.
- */
-export type Backend = 'webgpu' | 'wasm';
-
 export interface ChatConfig {
-	backend: Backend | 'auto';
 	maxTokens: number;
 	temperature: number;
 	topP: number;
@@ -110,7 +67,6 @@ export interface ChatConfig {
 }
 
 export const DEFAULT_CONFIG: ChatConfig = {
-	backend: 'auto',
 	maxTokens: 2048,
 	temperature: 0.7,
 	topP: 0.9,
@@ -161,7 +117,10 @@ export function saveConfig(c: ChatConfig): void {
 export interface GpuSupport {
 	ok: boolean;
 	f16: boolean;
+	/** One-line summary of why WebGPU is unavailable. */
 	reason?: string;
+	/** Concrete things the visitor can do about it, in order. */
+	fixes?: string[];
 	adapterLabel?: string;
 }
 
@@ -169,30 +128,62 @@ export interface GpuSupport {
  * WebGPU is a two-step check: the entry point can exist while no adapter is
  * actually available (blocklisted driver, software fallback disabled), and that
  * second case is the one that shows up on real machines.
+ *
+ * The three failures need completely different fixes, so each carries its own
+ * instructions rather than one generic "unsupported" line.
  */
 export async function probeGpu(): Promise<GpuSupport> {
 	const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
 	if (!gpu) {
-		// `isSecureContext` separates "this browser cannot" from "this URL is not
-		// allowed to" — the second is the common one on a LAN address, and the fix
-		// is completely different.
+		// A page served over plain http from anything but localhost fails the
+		// secure-context requirement, and no browser setting works around that —
+		// so it has to be told apart from a browser that simply lacks WebGPU.
 		const insecure = typeof isSecureContext !== 'undefined' && !isSecureContext;
+		if (insecure) {
+			return {
+				ok: false,
+				f16: false,
+				reason: 'WebGPU needs a secure context, and this page is plain http on something other than localhost.',
+				fixes: [
+					'Open the page over https, or from http://localhost — both count as secure.',
+					'Chrome can be told to trust this one origin: launch it with --unsafely-treat-insecure-origin-as-secure=<this page’s origin>',
+					'Firefox has no equivalent switch, so https is the only route there.'
+				]
+			};
+		}
 		return {
 			ok: false,
 			f16: false,
-			reason: insecure
-				? 'WebGPU needs a secure context, and this page is plain http on a non-localhost address. Use https, or run on the CPU instead.'
-				: 'This browser does not expose WebGPU. Chrome/Edge 113+, Safari 18+, or Firefox with dom.webgpu.enabled. You can run on the CPU instead.'
+			reason: 'This browser does not expose WebGPU.',
+			fixes: [
+				'Chrome or Edge 113+, or Safari 18+, support it without any setting.',
+				'Firefox: open about:config and set dom.webgpu.enabled to true, then restart the browser.',
+				'Firefox on Linux also needs dom.webgpu.workers.enabled — the model runs in a worker — and a working Vulkan driver (mesa-vulkan-drivers).'
+			]
 		};
 	}
 	let adapter: GPUAdapter | null = null;
 	try {
 		adapter = await gpu.requestAdapter();
 	} catch (err) {
-		return { ok: false, f16: false, reason: `WebGPU adapter request failed: ${(err as Error).message}` };
+		return {
+			ok: false,
+			f16: false,
+			reason: `WebGPU adapter request failed: ${(err as Error).message}`,
+			fixes: ['Update your graphics driver, then restart the browser.']
+		};
 	}
 	if (!adapter) {
-		return { ok: false, f16: false, reason: 'WebGPU is present but no GPU adapter was granted — often a blocklisted driver.' };
+		return {
+			ok: false,
+			f16: false,
+			reason: 'WebGPU is present but no GPU adapter was granted — usually a blocklisted or missing driver.',
+			fixes: [
+				'Update your graphics driver and restart the browser.',
+				'On Linux, check that Vulkan works: run `vulkaninfo --summary`, and install mesa-vulkan-drivers if it fails.',
+				'Chrome: chrome://gpu lists what was blocklisted and why.'
+			]
+		};
 	}
 	return {
 		ok: true,
