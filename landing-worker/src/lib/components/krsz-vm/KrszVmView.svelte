@@ -13,6 +13,7 @@
 		type OverlayStats
 	} from './disk-overlay';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
+	import type { RvMachine } from './tinyemu';
 	import VirtualKeyboard from './VirtualKeyboard.svelte';
 	import MermaidDiagram from '../projects/MermaidDiagram.svelte';
 
@@ -37,6 +38,12 @@
 		 * machine picks up where it was left rather than starting from the image
 		 * every time. See disk-overlay.ts for what is and is not stored.
 		 */
+		/**
+		 * Which machine to build. They are different emulators, not different
+		 * settings of one: v86 is IA-32 and cannot be anything else, and TinyEMU
+		 * interprets rv64gc where v86 compiles to WebAssembly.
+		 */
+		machine: 'x86' | 'riscv64';
 		persistDisk: boolean;
 		/**
 		 * The mode X asks for, passed to the guest on the kernel command line
@@ -82,7 +89,7 @@
 	const DEFAULT_CMDLINE =
 		'root=/dev/sda rw modules=sd_mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 8;
+	const SETTINGS_VERSION = 9;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
@@ -95,6 +102,7 @@
 		acpi: false,
 		jit: true,
 		network: true,
+		machine: 'x86',
 		persistDisk: true,
 		resolution: '1280x800',
 		scaling: 'fit'
@@ -181,6 +189,7 @@
 	let term: any = null;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let FitAddonCtor: any = null;
+	let riscv: RvMachine | null = null;
 
 	function sendScancodes(codes: number[]) {
 		emulator?.keyboard_send_scancodes?.(codes);
@@ -237,14 +246,14 @@
 	}
 
 	/**
-	 * Every disk read goes through /vm/img, so counting fetches there is a real
-	 * measure of how much of the image this boot actually touched — the whole
-	 * point of streaming it rather than downloading 49 MiB up front.
+	 * Every disk read goes through /vm/img or /vm/rv, so counting fetches there
+	 * is a real measure of how much of the image this boot actually touched — the
+	 * whole point of streaming it rather than downloading it up front.
 	 */
 	function installFetchCounter() {
 		const original = window.XMLHttpRequest.prototype.open;
 		window.XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
-			if (/\/vm\/img\/(alpine|rootfs)\b/.test(String(url))) {
+			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/blk\d+\.bin/.test(String(url))) {
 				this.addEventListener('load', () => chunksFetched++, { once: true });
 			}
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -264,6 +273,11 @@
 		chunksFetched = 0;
 		screenHinted = false;
 		playSound('toggle');
+
+		if (settings.machine === 'riscv64') {
+			await bootRiscv();
+			return;
+		}
 
 		try {
 			status = 'reading image metadata…';
@@ -450,6 +464,66 @@
 	}
 
 	/**
+	 * The riscv64 machine. A different emulator with a different shape: TinyEMU
+	 * has no VGA to show, no instruction counter to sample and no network, so
+	 * this path builds a terminal itself and leaves the rest of the panel to
+	 * report nothing rather than report zero.
+	 */
+	async function bootRiscv() {
+		try {
+			status = 'loading emulator…';
+			const [xtermMod, fitMod] = await Promise.all([
+				import('@xterm/xterm'),
+				import('@xterm/addon-fit'),
+				import('@xterm/xterm/css/xterm.css')
+			]);
+			if (!termEl) throw new Error('the terminal has nowhere to draw');
+
+			term = new xtermMod.Terminal({
+				fontSize: 15,
+				theme: { background: '#000000', foreground: '#d8dee9' },
+				convertEol: false,
+				cursorBlink: true
+			});
+			FitAddonCtor = fitMod.FitAddon;
+			fitAddon = new FitAddonCtor();
+			term.loadAddon(fitAddon);
+			term.open(termEl);
+			fitTerminal();
+
+			status = 'fetching firmware and kernel…';
+			const { startRiscv } = await import('./tinyemu');
+			const machine = await startRiscv({
+				term: {
+					write: (text: string) => term?.write(text),
+					getSize: () => [term?.cols ?? 80, term?.rows ?? 25]
+				},
+				onDownloading: (active: boolean) => {
+					if (active && phase === 'loading') status = 'streaming the disk…';
+				}
+			});
+			riscv = machine;
+			term.onData((data: string) => machine.sendText(data));
+
+			phase = 'running';
+			status = 'running';
+			bootedAt = performance.now();
+			suspendNavHotkeys.set(true);
+			restoreFetch = installFetchCounter();
+			ticker = setInterval(() => {
+				uptime = (performance.now() - bootedAt) / 1000;
+				fitTerminal();
+			}, 1000);
+			if (matchMedia('(pointer: coarse)').matches) showKeyboard = true;
+		} catch (e) {
+			phase = 'error';
+			errorText = e instanceof Error ? e.message : String(e);
+			status = '';
+			playSound('ping', false);
+		}
+	}
+
+	/**
 	 * Replays the saved overlay, then starts the machine. Both halves are here
 	 * rather than in boot() because the disk buffer only exists once v86 has
 	 * finished loading, and the guest must not execute before the replay: a block
@@ -519,6 +593,17 @@
 		if (overlaySaver) clearInterval(overlaySaver);
 		overlaySaver = null;
 		diskBuffer = null;
+		try {
+			riscv?.destroy();
+		} catch {
+			/* already gone */
+		}
+		riscv = null;
+		try {
+			term?.dispose?.();
+		} catch {
+			/* v86 owns the terminal on the x86 path and disposes it itself */
+		}
 		try {
 			emulator?.destroy?.();
 		} catch {
@@ -773,7 +858,32 @@
 	let fetchedBytes = $derived(chunksFetched * CHUNK);
 	let imageMiB = $derived(imageSize === null ? null : imageSize / 1024 / 1024);
 
-	let FACTS = $derived<{ label: string; value: string; title?: string }[]>([
+	/** What the panel says about whichever machine is selected. */
+	let FACTS = $derived<{ label: string; value: string; title?: string }[]>(
+		settings.machine === 'riscv64'
+			? [
+					{
+						label: 'EMULATOR',
+						value: 'TinyEMU — rv64gc interpreter, MIT',
+						title: "Fabrice Bellard's TinyEMU, built to WebAssembly from source by CI. It interprets where v86 compiles, which is why this machine is the slower of the two."
+					},
+					{ label: 'GUEST', value: 'Alpine Linux 3.24, riscv64' },
+					{ label: 'CPU', value: 'single hart, rv64gc, no vector' },
+					{ label: 'RAM', value: '256 MB' },
+					{ label: 'DISPLAY', value: 'virtio console, via xterm.js' },
+					{
+						label: 'DISK',
+						value: 'ext4, streamed in 1 MiB blocks',
+						title: 'The same R2 objects and the same edge cache as the x86 machine, served as numbered block files because that is the shape TinyEMU asks for'
+					},
+					{
+						label: 'NETWORK',
+						value: 'none yet',
+						title: "TinyEMU's ethernet is raw frames and the relay carries streams; bridging them needs a TCP/IP stack in the page, which v86 brings with it and this one has nowhere to borrow"
+					},
+					{ label: 'STATUS', value: 'boots to a root shell' }
+				]
+			: [
 		{ label: 'EMULATOR', value: 'v86 — x86-to-wasm JIT, BSD-2', title: 'copy/v86: a 32-bit x86 PC emulator that JIT-compiles guest code to WebAssembly' },
 		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, x86 (32-bit)', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
 		{ label: 'CPU', value: 'single core, ~Pentium 4 class, no x86-64' },
@@ -790,7 +900,7 @@
 				: 'ext4 image, streamed in 1 MiB chunks',
 			title: settings.persistDisk
 				? "The image is read-only and shared; everything the guest writes is kept separately, in this browser's origin-private filesystem, and replayed over the image on the next boot"
-				: 'The image is read-only and shared, and the guest\'s writes live in memory until the tab closes'
+				: "The image is read-only and shared, and the guest's writes live in memory until the tab closes"
 		},
 		{
 			label: 'NETWORK',
@@ -798,7 +908,8 @@
 			title: "v86's own gateway answers ARP, DHCP and ping and resolves names over DoH; the TCP streams it produces are translated to OmniProxy at /net/wisp. Names are policed at the resolver and ports at the socket, because the guest resolves for itself and connects to an address"
 		},
 		{ label: 'STATUS', value: 'boots to a root shell in ~30s' }
-	]);
+			]
+	);
 </script>
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
@@ -940,6 +1051,24 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
+						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['riscv64', 'riscv64', 'TinyEMU: a 64-bit RISC-V machine, interpreted rather than compiled — slower, console only, and with no network yet.']] as const as [value, label, hint] (value)}
+							<button
+								onclick={() => (settings.machine = value)}
+								title={hint}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.machine ===
+								value
+									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{label}
+							</button>
+						{/each}
+						<span class="text-[10px] font-mono text-white/40">two emulators, not two settings</span>
+					</div>
+
+					{#if settings.machine === 'x86'}
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">SCREEN</span>
 						{#each RESOLUTIONS as res (res)}
 							<button
@@ -1053,10 +1182,16 @@
 							RESET
 						</button>
 					</div>
+					{/if}
 
 					<p class="text-[10px] font-mono text-white/35 leading-relaxed">
-						RAM, VGA RAM, boot mode and the command line take effect on the next boot;
-						screen size applies the next time <span class="text-white/50">startx</span> runs.
+						{#if settings.machine === 'x86'}
+							RAM, VGA RAM, boot mode and the command line take effect on the next boot;
+							screen size applies the next time <span class="text-white/50">startx</span> runs.
+						{:else}
+							The riscv64 machine takes no settings yet: it is a console, a streamed disk
+							and 256 MB, and it has no network to configure.
+						{/if}
 					</p>
 				</div>
 			{/if}
