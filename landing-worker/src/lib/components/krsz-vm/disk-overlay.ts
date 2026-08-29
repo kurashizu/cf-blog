@@ -133,11 +133,18 @@ export function overlayStats(buffer: DiskBuffer | null): OverlayStats {
 	return { blocks, bytes: blocks * BLOCK_BYTES };
 }
 
+/**
+ * The file keeps the view's old name. Renaming it would orphan every disk saved
+ * before the view was called krsz-vm, and a name is not worth someone's
+ * installed packages.
+ */
+const OVERLAY_PREFIX = 'x86sim';
+
 async function overlayFile(name: string, create: boolean): Promise<FileSystemFileHandle | null> {
 	if (!navigator.storage?.getDirectory) return null;
 	try {
 		const dir = await navigator.storage.getDirectory();
-		return await dir.getFileHandle(`x86sim-${name}.overlay`, { create });
+		return await dir.getFileHandle(`${OVERLAY_PREFIX}-${name}.overlay`, { create });
 	} catch {
 		// A missing file when create is false, or a browser that has OPFS behind a
 		// setting. Either way there is nothing to restore and nowhere to save.
@@ -234,7 +241,7 @@ export async function clearOverlay(name: string): Promise<void> {
 	if (!navigator.storage?.getDirectory) return;
 	try {
 		const dir = await navigator.storage.getDirectory();
-		await dir.removeEntry(`x86sim-${name}.overlay`);
+		await dir.removeEntry(`${OVERLAY_PREFIX}-${name}.overlay`);
 	} catch {
 		/* nothing saved */
 	}

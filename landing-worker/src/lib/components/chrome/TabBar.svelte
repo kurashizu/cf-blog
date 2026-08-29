@@ -18,7 +18,7 @@
 		{ id: 2, label: '2:synth', color: '#c678dd', title: 'View 2: Synth — 8-Track WebAudio Modular Synthesizer & Sequencer [Hotkey: Ctrl+2]' },
 		{ id: 3, label: '3:utils', color: '#e5c07b', title: 'View 3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
 		{ id: 4, label: '4:leaderboard', color: '#98c379', title: 'View 4: Leaderboard — Artificial Analysis LLM model table, cached through blog.krsz.in [Hotkey: Ctrl+4]' },
-		{ id: 5, label: '5:x86sim', color: '#d19a66', title: 'View 5: x86sim — a real 32-bit x86 PC emulated in the browser, running Alpine Linux [Hotkey: Ctrl+5]' }
+		{ id: 5, label: '5:krsz-vm', color: '#d19a66', title: 'View 5: krsz-vm — a real 32-bit x86 PC emulated in the browser, running Alpine Linux [Hotkey: Ctrl+5]' }
 	];
 
 	let tabStrip: HTMLDivElement | undefined = $state();

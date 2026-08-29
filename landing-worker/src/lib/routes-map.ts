@@ -1,4 +1,4 @@
-export const TAB_ROUTES = ['/modules', '/guestbook', '/synth', '/utils', '/leaderboard', '/x86sim'] as const;
+export const TAB_ROUTES = ['/modules', '/guestbook', '/synth', '/utils', '/leaderboard', '/krsz-vm'] as const;
 
 export const TAB_TITLES = [
 	'KRSZ™ // 0:modules — Live Project Portal',
@@ -6,7 +6,7 @@ export const TAB_TITLES = [
 	'KRSZ™ // 2:synth — WebAudio Modular Synthesizer',
 	'KRSZ™ // 3:utils — Hardware Test Bench',
 	'KRSZ™ // 4:leaderboard — LLM Model Table',
-	'KRSZ™ // 5:x86sim — x86 PC Emulator'
+	'KRSZ™ // 5:krsz-vm — 32-bit x86 PC Emulator'
 ];
 
 /** Which of the tabs a pathname belongs to — mirrors the root path ('' / '/') to tab 0. */

@@ -85,7 +85,7 @@ const NAV_WORDS: Record<string, number> = {
 	'2': 2, synth: 2, audio: 2,
 	'3': 3, utilities: 3, utils: 3, tools: 3, hw: 3,
 	'4': 4, leaderboard: 4, llm: 4, models: 4, ranks: 4,
-	'5': 5, x86sim: 5, linux: 5, vm: 5, alpine: 5, x86: 5, sim: 5
+	'5': 5, 'krsz-vm': 5, krszvm: 5, x86sim: 5, linux: 5, vm: 5, alpine: 5, x86: 5, sim: 5
 };
 
 const THEME_ALIASES: Record<string, WorkspaceTheme> = {
@@ -110,7 +110,7 @@ const BANNER = [
 
 const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
-	out('  0|modules  1|guestbook  2|synth  3|utils  4|leaderboard  5|x86sim'),
+	out('  0|modules  1|guestbook  2|synth  3|utils  4|leaderboard  5|krsz-vm'),
 	out('  open <project>     launch a project in a new tab'),
 	out('  ping <project>     measure real round trip from your browser'),
 	out('  ' + Object.keys(EXTERNAL_LINKS).join(' · ')),
@@ -621,7 +621,7 @@ const COMMAND_NAMES = [
 	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'date', 'history', 'banner', 'tracks',
 	'songs', 'load', 'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval',
 	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'utils', 'leaderboard', 'llm', 'ping',
-	'trace', 'guide', 'tour', 'keys', 'x86sim', 'linux', 'vm', 'alpine',
+	'trace', 'guide', 'tour', 'keys', 'krsz-vm', 'x86sim', 'linux', 'vm', 'alpine',
 	...Object.keys(EXTERNAL_LINKS)
 ];
 
