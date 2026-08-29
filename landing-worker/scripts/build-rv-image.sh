@@ -177,7 +177,11 @@ git clone --depth 1 --branch "$OPENSBI_VERSION" https://github.com/riscv-softwar
 # gnu11 because this OpenSBI is old enough to typedef bool, which is a keyword
 # under the C23 the compiler now defaults to -- and the firmware builds with
 # -Werror, so that alone stops it.
-make -C /tmp/opensbi PLATFORM=generic CC="gcc -std=gnu11" -j"$(nproc)"
+# The ISA string is spelled out because binutils has since split fence.i and the
+# CSR instructions into their own extensions, and firmware from before that
+# split names neither.
+make -C /tmp/opensbi PLATFORM=generic CC="gcc -std=gnu11" \
+	PLATFORM_RISCV_ISA=rv64gc_zicsr_zifencei -j"$(nproc)"
 FW=/tmp/opensbi/build/platform/generic/firmware/fw_jump.bin
 [ -f "$FW" ] || { echo "!! OpenSBI did not produce fw_jump.bin"; exit 1; }
 
