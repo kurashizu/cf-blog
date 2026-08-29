@@ -14,7 +14,14 @@
 
 /** Where the emulator and its machine description are served from. */
 const EMULATOR_URL = '/vm/riscvemu64-wasm.js';
-const CONFIG_URL = '/vm/rv/krsz-rv.cfg';
+/**
+ * Absolute on purpose. TinyEMU decides between fetching and opening a local
+ * file by whether the name looks like a URL, and a path does not: it took
+ * "/vm/rv/krsz-rv.cfg" for a filename, tried to open it in a build that has no
+ * filesystem, and aborted without a word. Everything the config names is
+ * resolved against this, so they all become absolute with it.
+ */
+const CONFIG_PATH = '/vm/rv/krsz-rv.cfg';
 
 export interface RvTerminal {
 	write(text: string): void;
@@ -86,7 +93,7 @@ export async function startRiscv(options: {
 		'vm_start',
 		null,
 		['string', 'number', 'string', 'string', 'number', 'number', 'number'],
-		[CONFIG_URL, options.memoryMb ?? 0, null, null, cols, rows, 0]
+		[new URL(CONFIG_PATH, location.href).href, options.memoryMb ?? 0, null, null, cols, rows, 0]
 	);
 
 	const queue = (code: number) => module.ccall('console_queue_char', null, ['number'], [code]);
