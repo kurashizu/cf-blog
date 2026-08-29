@@ -314,6 +314,28 @@ p.write_text(s.replace(a, b, 1))
 print('riscv_machine.c: ISA string put in canonical order')
 PATCHISA
 
+# The guest's disk read completes and the guest never notices, which puts the
+# question on the interrupt line between them.
+python3 - <<'PATCHIRQ'
+import pathlib
+p = pathlib.Path('riscv_machine.c')
+s = p.read_text()
+a = '''static void plic_set_irq(void *opaque, int irq_num, int state)
+{
+    RISCVMachine *s = opaque;
+    uint32_t mask;'''
+b = '''static void plic_set_irq(void *opaque, int irq_num, int state)
+{
+    RISCVMachine *s = opaque;
+    uint32_t mask;
+
+    fprintf(stderr, "irq: %d -> %d\\n", irq_num, state);'''
+assert a in s, 'plic_set_irq not found'
+s = s.replace(a, b, 1)
+p.write_text(s)
+print('riscv_machine.c: interrupt line traced')
+PATCHIRQ
+
 # The HTIF console is the only one this machine has, and OpenSBI will not bind a
 # serial driver to a node with no address. Without a console the firmware and
 # the kernel both boot in complete silence, which is indistinguishable from not
