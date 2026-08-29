@@ -121,10 +121,12 @@ export async function startRiscv(options: {
 
 	return {
 		dumpState() {
-			try {
-				module.ccall('vm_dump_state', null, [], []);
-			} catch {
-				/* a build without it */
+			for (const fn of ['vm_dump_state', 'vm_dump_loop']) {
+				try {
+					module.ccall(fn, null, [], []);
+				} catch {
+					/* a build without it */
+				}
 			}
 		},
 		sendChar: queue,

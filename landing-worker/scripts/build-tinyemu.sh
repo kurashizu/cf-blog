@@ -43,7 +43,7 @@ s = s.replace('-s BINARYEN_TRAP_MODE=clamp ', '')
 s = s.replace('EXTRA_EXPORTED_RUNTIME_METHODS', 'EXPORTED_RUNTIME_METHODS')
 # The JS library calls _malloc and _free directly and reaches the C callbacks
 # through dynCall; both have to be asked for now or they are optimised away.
-s = s.replace("'_net_set_carrier']", "'_net_set_carrier','_vm_stop','_vm_dump_state','_malloc','_free']")
+s = s.replace("'_net_set_carrier']", "'_net_set_carrier','_vm_stop','_vm_dump_state','_vm_dump_loop','_malloc','_free']")
 s = s.replace('-s NO_FILESYSTEM=1', '-s NO_FILESYSTEM=1 -s DYNCALLS=1')
 s = s.replace('-s TOTAL_MEMORY=67108864', '-s INITIAL_MEMORY=67108864')
 
@@ -74,6 +74,17 @@ a = '''void virt_machine_run(void *opaque)
     VirtMachine *m = opaque;'''
 b = '''BOOL vm_stopped;
 static BOOL vm_ran_once;
+static uint64_t vm_run_calls, vm_interp_calls;
+static int vm_last_delay;
+
+/* How the run loop is actually behaving: a machine can look stopped because
+   nothing schedules it, because it schedules itself and sleeps, or because it
+   runs and executes nothing. These three numbers say which. */
+void vm_dump_loop(void)
+{
+    fprintf(stderr, "run=%\" PRIu64 \" interp=%\" PRIu64 \" last_delay=%d\\n",
+            vm_run_calls, vm_interp_calls, vm_last_delay);
+}
 
 /* Called from the page when the machine is powered off: the run loop
    reschedules itself, so stopping means not scheduling the next one. */
@@ -94,7 +105,8 @@ void virt_machine_run(void *opaque)
     if (!vm_ran_once) {
         vm_ran_once = TRUE;
         fprintf(stderr, "machine running\\n");
-    }'''
+    }
+    vm_run_calls++;'''
 assert a in s, 'run loop not found'
 s = s.replace(a, b, 1)
 
@@ -106,7 +118,23 @@ assert a2 in s, 'vm_start body not found'
 s = s.replace(a2, b2, 1)
 
 p.write_text(s)
-print('jsemu.c: vm_stop and two prints added')
+loop_at = '''        virt_machine_interp(m, MAX_EXEC_CYCLE);
+        i++;'''
+loop_new = '''        vm_interp_calls++;
+        virt_machine_interp(m, MAX_EXEC_CYCLE);
+        i++;'''
+assert loop_at in s, 'interp call not found'
+s = s.replace(loop_at, loop_new, 1)
+
+delay_at = '''    if (delay == 0) {
+        emscripten_async_call(virt_machine_run, m, 0);'''
+delay_new = '''    vm_last_delay = delay;
+    if (delay == 0) {
+        emscripten_async_call(virt_machine_run, m, 0);'''
+assert delay_at in s, 'delay branch not found'
+s = s.replace(delay_at, delay_new, 1)
+
+print('jsemu.c: vm_stop, prints and loop counters added')
 PATCHRUN
 
 # This TinyEMU predates the privileged spec that OpenSBI expects, so the
