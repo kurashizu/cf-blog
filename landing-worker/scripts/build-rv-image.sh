@@ -163,12 +163,17 @@ echo "==> kernel modules version: $KVER"
 # now exists, and says what it is doing at each step.
 INITRD=/tmp/initramfs-root
 rm -rf "$INITRD"
-mkdir -p "$INITRD"/{bin,dev,proc,sys,sysroot,lib,lib/modules}
+# Written out one at a time: this runs under ash, which has no brace expansion
+# and would otherwise make a single directory with a very odd name.
+for dir in bin dev proc sys sysroot lib lib/modules; do
+	mkdir -p "$INITRD/$dir"
+done
 
-cp -a "$ROOTFS/bin/busybox" "$INITRD/bin/"
+cp -a "$ROOTFS/bin/busybox" "$INITRD/bin/busybox"
 # busybox here is dynamically linked, so it needs the loader and libc beside it.
-cp -a "$ROOTFS"/lib/ld-musl-*.so.* "$INITRD/lib/" 2>/dev/null || true
-cp -a "$ROOTFS"/lib/libc.musl-*.so.* "$INITRD/lib/" 2>/dev/null || true
+for lib in "$ROOTFS"/lib/ld-musl-*.so.* "$ROOTFS"/lib/libc.musl-*.so.*; do
+	[ -e "$lib" ] && cp -a "$lib" "$INITRD/lib/"
+done
 
 MODDIR="$INITRD/lib/modules/$KVER"
 mkdir -p "$MODDIR"
