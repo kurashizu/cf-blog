@@ -109,7 +109,6 @@
 	};
 
 	let settings = $state<Settings>({ ...DEFAULTS });
-	let showSettings = $state(false);
 	/** Must match CHUNK in the disk proxy so each read maps to one cache entry. */
 	const CHUNK = 1024 * 1024;
 	const IMAGE = 'alpine';
@@ -991,19 +990,10 @@
 				</button>
 			{:else}
 				<button
-					onclick={() => (showSettings = !showSettings)}
-					title="Machine configuration — applied when the VM is built, so it can only change while it is powered off"
-					class="px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors {showSettings
-						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
-						: 'border-white/25 text-white/70 hover:bg-white/10'}"
-				>
-					⚙ CONFIG
-				</button>
-				<button
 					onclick={boot}
 					class="px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black"
 				>
-					▶ BOOT ANYWAY
+					▶ BOOT
 				</button>
 			{/if}
 		</div>
@@ -1018,9 +1008,8 @@
 				what you change in this browser.
 			</p>
 
-			{#if showSettings}
-				<div class="border border-[#56b6c2]/40 bg-black/30 rounded-xs p-2.5 space-y-2.5">
-					<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+			<div class="border border-[#56b6c2]/40 bg-black/30 rounded-xs p-2.5 space-y-2.5">
+				<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
 						<span class="text-xs font-black font-mono text-[#56b6c2]">MACHINE CONFIG</span>
 						<div class="flex items-center gap-2">
 							<span class="text-[10px] font-mono text-white/35">saved in this browser · applies at next boot</span>
@@ -1204,7 +1193,6 @@
 						{/if}
 					</p>
 				</div>
-			{/if}
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 				{#each FACTS as fact (fact.label)}
