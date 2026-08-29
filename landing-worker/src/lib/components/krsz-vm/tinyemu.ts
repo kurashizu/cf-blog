@@ -101,12 +101,20 @@ export async function startRiscv(options: {
 		printErr: (line: string) => console.warn('[riscv64]', line)
 	});
 
-	const [cols, rows] = options.term.getSize();
 	// vm_start(config_url, ram_size_mb, cmdline, pwd, width, height, has_network).
+	//
 	// The size is in megabytes and it overrides the config rather than defaulting
-	// to it — passing zero asserts inside the memory map, which is what a missing
-	// argument looked like from the outside. A null cmdline does leave the
-	// config's alone, and the machine has no network to be told about.
+	// to it — passing zero asserts inside the memory map.
+	//
+	// Width and height are zero on purpose, and this is the one argument worth
+	// dwelling on: they describe a *graphical* framebuffer, and any non-zero pair
+	// makes TinyEMU build a display instead of a console. Passing the terminal's
+	// own size — the obvious thing to do — is why this machine printed nothing at
+	// all, whichever firmware it booted: there was no console device for it to
+	// print on, and the first character written to HTIF dereferenced it. The
+	// terminal's size reaches the guest through console_get_size instead.
+	//
+	// A null cmdline leaves the config's alone, and there is no network.
 	module.ccall(
 		'vm_start',
 		null,
@@ -114,7 +122,7 @@ export async function startRiscv(options: {
 		[new URL(
 			new URLSearchParams(location.search).has('probe') ? PROBE_CONFIG_PATH : CONFIG_PATH,
 			location.href
-		).href, options.memoryMb ?? DEFAULT_MEMORY_MB, null, null, cols, rows, 0]
+		).href, options.memoryMb ?? DEFAULT_MEMORY_MB, null, null, 0, 0, 0]
 	);
 
 	const queue = (code: number) => module.ccall('console_queue_char', null, ['number'], [code]);
