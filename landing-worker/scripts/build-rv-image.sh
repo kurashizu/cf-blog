@@ -201,6 +201,12 @@ done
 # rejected them as "Invalid ELF header magic", which is what a compressed module
 # looks like to something expecting an ELF header.
 find "$MODDIR" -name '*.ko.gz' -exec gunzip -f {} +
+
+# depmod wants the kernel's own index files beside the modules, and builds the
+# dependency graph from what it finds there.
+for index in modules.builtin modules.builtin.modinfo modules.order; do
+	[ -e "$ROOTFS/lib/modules/$KVER/$index" ] && cp -a "$ROOTFS/lib/modules/$KVER/$index" "$MODDIR/"
+done
 depmod -b "$INITRD" "$KVER"
 
 cat > "$INITRD/init" <<'INIT'
