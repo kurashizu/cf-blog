@@ -53,14 +53,37 @@ static void mmio_write32(u64 addr, u32 value)
 	*(volatile u32 *)(unsigned long)addr = value;
 }
 
-static u64 mmio_read64(u64 addr)
+static u32 mmio_read32(u64 addr)
 {
-	return *(volatile u64 *)(unsigned long)addr;
+	return *(volatile u32 *)(unsigned long)addr;
 }
 
-static void mmio_write64(u64 addr, u64 value)
+/*
+ * The timer is a pair of 32-bit registers, not a 64-bit one: TinyEMU registers
+ * the CLINT as a 32-bit device and asserts on anything wider. A single 64-bit
+ * store to the compare register is silently nothing, which is why the kernel
+ * set a deadline, went to sleep, and never woke up.
+ */
+static u64 clint_time(void)
 {
-	*(volatile u64 *)(unsigned long)addr = value;
+	u32 hi, lo, hi_again;
+
+	do {
+		hi = mmio_read32(CLINT_MTIME + 4);
+		lo = mmio_read32(CLINT_MTIME);
+		hi_again = mmio_read32(CLINT_MTIME + 4);
+	} while (hi != hi_again);
+
+	return ((u64)hi << 32) | lo;
+}
+
+static void clint_set_timecmp(u64 when)
+{
+	/* High half first and out of reach, so the deadline is never briefly in
+	   the past while the two halves disagree. */
+	mmio_write32(CLINT_MTIMECMP + 4, 0xffffffffu);
+	mmio_write32(CLINT_MTIMECMP, (u32)when);
+	mmio_write32(CLINT_MTIMECMP + 4, (u32)(when >> 32));
 }
 
 /*
@@ -108,7 +131,7 @@ static int traps_logged;
 
 static void set_timer(u64 when)
 {
-	mmio_write64(CLINT_MTIMECMP, when);
+	clint_set_timecmp(when);
 	/* The pending supervisor timer belongs to the old deadline. */
 	__asm__ volatile("csrc mip, %0" :: "r"(MIP_STIP));
 	__asm__ volatile("csrs mie, %0" :: "r"(MIE_MTIE));
@@ -253,7 +276,7 @@ void sbi_trap(struct frame *f)
 		if ((insn & 0x7f) == 0x73 && ((insn >> 20) & 0xfff) == CSR_TIME) {
 			unsigned rd = (unsigned)((insn >> 7) & 0x1f);
 			if (rd != 0)
-				REG(f, rd) = mmio_read64(CLINT_MTIME);
+				REG(f, rd) = clint_time();
 			__asm__ volatile("csrw mepc, %0" :: "r"(epc + 4));
 			return;
 		}
@@ -281,11 +304,4 @@ void sbi_trap(struct frame *f)
 	sbi_puts("\n");
 	for (;;)
 		;
-}
-
-/* The timer is read through this rather than the time CSR so that the counter
-   and the deadline agree; nothing else uses it yet. */
-u64 sbi_time(void)
-{
-	return mmio_read64(CLINT_MTIME);
 }
