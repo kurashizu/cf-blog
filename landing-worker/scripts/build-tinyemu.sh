@@ -314,6 +314,25 @@ p.write_text(s.replace(a, b, 1))
 print('riscv_machine.c: ISA string put in canonical order')
 PATCHISA
 
+# The completion is written and the interrupt is delivered and acknowledged, and
+# the guest still waits: so the question is what the two sides think the used
+# ring is, and what was written into it.
+python3 - <<'PATCHVQ'
+import pathlib
+p = pathlib.Path('virtio.c')
+s = p.read_text()
+a = '''    s->int_status |= 1;
+    set_irq(s->irq, 1);'''
+b = '''    fprintf(stderr, "vq: consume q=%d desc=%d len=%d used=0x%08x idx=%d\\n",
+            queue_idx, desc_idx, desc_len, (uint32_t)qs->used_addr, index + 1);
+    s->int_status |= 1;
+    set_irq(s->irq, 1);'''
+assert a in s, 'consume_desc not found'
+s = s.replace(a, b, 1)
+p.write_text(s)
+print('virtio.c: completion traced')
+PATCHVQ
+
 # The guest's disk read completes and the guest never notices, which puts the
 # question on the interrupt line between them.
 python3 - <<'PATCHIRQ'
