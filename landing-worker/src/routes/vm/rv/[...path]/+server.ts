@@ -1,6 +1,13 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { CHUNK, loadChunk, parseImages, parseR2Source, type ImageSpec } from '$lib/vm-storage';
+import {
+	CHUNK,
+	loadChunk,
+	parseImages,
+	parseR2Source,
+	sourceVersion,
+	type ImageSpec
+} from '$lib/vm-storage';
 
 export const prerender = false;
 
@@ -32,9 +39,13 @@ export const GET: RequestHandler = async ({ params, platform, url }) => {
 	const images = parseImages(env?.RV_IMAGES);
 	if (!Object.keys(images).length) error(503, 'No riscv64 machine is configured on this deployment.');
 
-	const file = params.file;
+	// The last segment is the file; anything before it is the version, which is
+	// there to be part of the URL and nothing else. TinyEMU builds a block's
+	// address by replacing the last segment of the index's, so the version has
+	// to live in the path — a query string would not survive that.
+	const file = params.path.split('/').pop() ?? '';
 
-	if (file === 'krsz-rv.cfg') return config(env, url);
+	if (file === 'krsz-rv.cfg') return config(images, env, url);
 	if (file === 'blk.txt') return blockIndex(images.rootfs);
 
 	const block = matchBlock(file);
@@ -132,27 +143,33 @@ async function whole(image: ImageSpec, bucket: R2Bucket | undefined): Promise<Re
  * in the page, which the x86 machine gets from v86 and this one has nowhere to
  * borrow.
  */
-function config(env: Env | undefined, url: URL): Response {
+function config(images: Record<string, ImageSpec>, env: Env | undefined, url: URL): Response {
 	const memory = Number(env?.RV_MEMORY_MB ?? 256);
 	// Absolute, all of them. TinyEMU resolves the firmware and kernel against
 	// this file's own location but hands the drive's name straight to its HTTP
 	// block device, which asked the origin root for /blk.txt and got the site's
 	// 404 page — then tried to parse it as an index.
 	const here = new URL('.', url).href;
+	// Every file is served immutable, and the R2 keys are reused on every
+	// rebuild, so each URL carries the version of what it points at. Without it a
+	// browser that has booted this machine once keeps the firmware it cached for
+	// a year — which looked, for one long afternoon, like a firmware that could
+	// not be fixed.
+	const version = (name: string) => (images[name] ? sourceVersion(images[name]) : 'x');
 	const body = JSON.stringify(
 		{
 			version: 1,
 			machine: 'riscv64',
 			memory_size: Number.isFinite(memory) && memory >= 64 ? memory : 256,
-			bios: `${here}bios.bin`,
-			kernel: `${here}kernel`,
-			initrd: `${here}initramfs`,
+			bios: `${here}bios.bin?v=${version('bios.bin')}`,
+			kernel: `${here}kernel?v=${version('kernel')}`,
+			initrd: `${here}initramfs?v=${version('initramfs')}`,
 			// earlycon first: the virtio console only exists once its driver has
 			// probed, so without it every message before that goes nowhere and a
 			// machine that is merely slow is indistinguishable from one that is
 			// dead. TinyEMU carries an HTIF console, which is what SBI prints on.
 			cmdline: 'earlycon=sbi console=hvc0 root=/dev/vda rw rootwait',
-			drive0: { file: `${here}blk.txt` }
+			drive0: { file: `${here}${version('rootfs')}/blk.txt` }
 		},
 		null,
 		2
