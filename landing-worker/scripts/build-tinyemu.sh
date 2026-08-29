@@ -374,10 +374,25 @@ assert a in s, 'htif node not found'
 s = s.replace(a, b, 1)
 
 # And name it as the console, so the firmware does not have to guess which of
-# the devices it found is the one to print on.
+# the devices it found is the one to print on. The seed beside it is what stops
+# the guest waiting forever on an entropy pool it has no way to fill: this
+# machine has no random source, no cycle counter worth the name and almost no
+# interrupts, so the first thing to call getrandom() simply blocks. It is
+# derived from the clock, which is weak -- and the honest note is that this is a
+# public demo machine whose entire disk is downloadable, not somewhere to keep
+# a secret.
 a2 = '''    fdt_begin_node(s, "chosen");'''
 b2 = '''    fdt_begin_node(s, "chosen");
-    fdt_prop_str(s, "stdout-path", "/htif@40008000");'''
+    fdt_prop_str(s, "stdout-path", "/htif@40008000");
+    {
+        uint8_t seed[32];
+        uint64_t t = rtc_get_time(m);
+        int i;
+
+        for (i = 0; i < (int)sizeof(seed); i++)
+            seed[i] = (uint8_t)((t >> ((i % 8) * 8)) + i * 61);
+        fdt_prop(s, "rng-seed", seed, sizeof(seed));
+    }'''
 assert a2 in s, 'chosen node not found'
 s = s.replace(a2, b2, 1)
 
