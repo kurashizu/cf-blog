@@ -69,7 +69,14 @@ export async function startRiscv(options: {
 	const factory = (await import(/* @vite-ignore */ EMULATOR_URL)) as {
 		default: (config?: Record<string, unknown>) => Promise<TinyEmuModule>;
 	};
-	const module = await factory.default({});
+
+	// TinyEMU reports every failure through stdio and then exits, which without
+	// somewhere to print lands in the page as a bare "Aborted()". These hand its
+	// own words back.
+	const module = await factory.default({
+		print: (line: string) => console.log('[riscv64]', line),
+		printErr: (line: string) => console.warn('[riscv64]', line)
+	});
 
 	const [cols, rows] = options.term.getSize();
 	// vm_start(config_url, ram_size, cmdline, pwd, width, height, has_network).
