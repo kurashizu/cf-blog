@@ -28,6 +28,8 @@ const DEBUG_EMULATOR_URL = '/vm/riscvemu64-debug.js';
  * resolved against this, so they all become absolute with it.
  */
 const CONFIG_PATH = '/vm/rv/krsz-rv.cfg';
+/** ?probe boots the console test instead of the machine — see the rv route. */
+const PROBE_CONFIG_PATH = '/vm/rv/probe.cfg';
 
 /** Matches RV_MEMORY_MB in wrangler.toml; TinyEMU wants it in megabytes. */
 const DEFAULT_MEMORY_MB = 256;
@@ -109,7 +111,10 @@ export async function startRiscv(options: {
 		'vm_start',
 		null,
 		['string', 'number', 'string', 'string', 'number', 'number', 'number'],
-		[new URL(CONFIG_PATH, location.href).href, options.memoryMb ?? DEFAULT_MEMORY_MB, null, null, cols, rows, 0]
+		[new URL(
+			new URLSearchParams(location.search).has('probe') ? PROBE_CONFIG_PATH : CONFIG_PATH,
+			location.href
+		).href, options.memoryMb ?? DEFAULT_MEMORY_MB, null, null, cols, rows, 0]
 	);
 
 	const queue = (code: number) => module.ccall('console_queue_char', null, ['number'], [code]);

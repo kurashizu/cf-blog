@@ -46,6 +46,12 @@ export const GET: RequestHandler = async ({ params, platform, url }) => {
 	const file = params.path.split('/').pop() ?? '';
 
 	if (file === 'krsz-rv.cfg') return config(images, env, url);
+	// ?probe boots a few hand-written instructions that say hello over HTIF and
+	// stop. If those characters arrive, the console, the loader and the serving
+	// path are all sound and the fault is in the firmware; if they do not, it is
+	// the other way round. Nothing else can tell the two apart on a machine with
+	// no output.
+	if (file === 'probe.cfg') return probeConfig(url);
 	if (file === 'blk.txt') return blockIndex(images.rootfs);
 
 	const block = matchBlock(file);
@@ -131,6 +137,22 @@ async function whole(image: ImageSpec, bucket: R2Bucket | undefined): Promise<Re
 			'content-type': 'application/octet-stream',
 			'cache-control': 'public, max-age=31536000, immutable'
 		}
+	});
+}
+
+function probeConfig(url: URL): Response {
+	const body = JSON.stringify(
+		{
+			version: 1,
+			machine: 'riscv64',
+			memory_size: 256,
+			bios: new URL('/vm/rv-probe.bin', url).href
+		},
+		null,
+		2
+	);
+	return new Response(body, {
+		headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }
 	});
 }
 
