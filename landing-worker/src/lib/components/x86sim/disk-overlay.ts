@@ -48,11 +48,45 @@ function isDiskBuffer(value: unknown): value is DiskBuffer {
 }
 
 /**
- * Finds the disk buffer inside the emulator by shape rather than by name: the
- * distributed v86 is minified and exposes no accessor for it, so the property
- * path is not something to hard-code and expect to survive an upgrade.
+ * Where the buffer sits in a v86 built as we build it. Tried first, because a
+ * blind walk over the emulator is both slower and easier to get wrong.
+ */
+const KNOWN_PATHS = [
+	['v86', 'cpu', 'devices', 'ide', 'primary', 'master', 'buffer'],
+	['v86', 'cpu', 'devices', 'ide', 'secondary', 'master', 'buffer'],
+	['v86', 'cpu', 'devices', 'cdrom', 'buffer']
+];
+
+function read(node: unknown, key: string): unknown {
+	try {
+		return (node as Record<string, unknown>)[key];
+	} catch {
+		// Properties bound to the emulator's memory throw when read at the wrong
+		// moment; one of them must not cost us the rest of the object.
+		return undefined;
+	}
+}
+
+function follow(root: unknown, path: string[]): unknown {
+	let node = root;
+	for (const key of path) {
+		if (!node || typeof node !== 'object') return undefined;
+		node = read(node, key);
+	}
+	return node;
+}
+
+/**
+ * Finds the disk buffer inside the emulator. The distributed v86 is minified and
+ * exposes no accessor for it, so the known path is a starting guess rather than
+ * a contract — when it stops being true, the search by shape still finds it.
  */
 export function findDiskBuffer(root: unknown, maxDepth = 8): DiskBuffer | null {
+	for (const path of KNOWN_PATHS) {
+		const candidate = follow(root, path);
+		if (isDiskBuffer(candidate)) return candidate;
+	}
+
 	const seen = new Set<unknown>();
 	// The graph runs through the emulator's memory, and enumerating a view over
 	// 256 MB of it would build a quarter-billion-element array. Nothing that can
@@ -75,14 +109,19 @@ export function findDiskBuffer(root: unknown, maxDepth = 8): DiskBuffer | null {
 			if (!traversable(node) || visited++ > 50000) continue;
 			seen.add(node);
 			if (isDiskBuffer(node)) return node;
-			let values: unknown[];
+			let keys: string[];
 			try {
-				values = Object.values(node as Record<string, unknown>);
+				// Own names rather than enumerable keys: some of what leads to the
+				// devices is not enumerable, and each read is guarded on its own so a
+				// single throwing property cannot cost the whole subtree.
+				keys = Object.getOwnPropertyNames(node);
 			} catch {
-				// Getters that throw when read out of context — skip the whole node.
 				continue;
 			}
-			for (const value of values) if (traversable(value)) next.push(value);
+			for (const key of keys) {
+				const value = read(node, key);
+				if (traversable(value)) next.push(value);
+			}
 		}
 		frontier = next;
 	}
