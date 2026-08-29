@@ -171,28 +171,33 @@ export interface SplitReply {
 }
 
 /**
- * The delimiters a reply may wrap its reasoning in. This model uses the
- * channel markers its chat template strips (`<|channel>` … `<channel|>`);
- * `<think>` is kept because other models emit that instead, and a stray pair
- * would otherwise render as part of the answer.
+ * The delimiters a reply may wrap its reasoning in. This model's template emits
+ * `<|channel>thought\n` … `\n<channel|>`, where `thought` names the channel and
+ * is part of the marker rather than the reasoning — so the open tag is matched
+ * with a pattern that consumes the channel name, otherwise it shows up as a
+ * stray first line in the reasoning box. `<think>` is kept because other models
+ * emit that instead, and a stray pair would otherwise render as part of the
+ * answer.
  */
-const THINK_DELIMS: [string, string][] = [
-	['<|channel>', '<channel|>'],
-	['<think>', '</think>']
+const THINK_DELIMS: [RegExp, string][] = [
+	[/<\|channel>[a-z_]*\n?/, '<channel|>'],
+	[/<think>/, '</think>']
 ];
 
 /** Separates the reasoning block from the answer. */
 export function splitThink(raw: string): SplitReply {
-	for (const [openTag, closeTag] of THINK_DELIMS) {
-		const open = raw.indexOf(openTag);
-		if (open === -1) continue;
+	for (const [openRe, closeTag] of THINK_DELIMS) {
+		const m = raw.match(openRe);
+		if (!m || m.index === undefined) continue;
 
-		const close = raw.indexOf(closeTag, open + openTag.length);
+		const open = m.index;
+		const bodyStart = open + m[0].length;
+		const close = raw.indexOf(closeTag, bodyStart);
 		if (close === -1) {
 			// Still streaming the reasoning.
-			return { think: raw.slice(open + openTag.length), answer: '', thinking: true };
+			return { think: raw.slice(bodyStart), answer: '', thinking: true };
 		}
-		const think = raw.slice(open + openTag.length, close);
+		const think = raw.slice(bodyStart, close);
 		const answer = (raw.slice(0, open) + raw.slice(close + closeTag.length)).trim();
 		return { think: think.trim(), answer, thinking: false };
 	}

@@ -41,7 +41,8 @@ type InMsg =
 			type: 'generate';
 			messages: unknown[];
 			images: string[];
-			audio: string[];
+			/** Mono PCM at the encoder's sample rate, decoded on the main thread. */
+			audio: Float32Array[];
 			enableThinking?: boolean;
 			opts: Record<string, unknown>;
 	  }
@@ -71,8 +72,13 @@ async function load() {
 
 /**
  * Decodes a data URL into the shape the processor wants. Images go through
- * RawImage; audio has to become a mono Float32Array at the model's sample rate,
- * which is what the audio tower was trained on.
+ * RawImage.
+ *
+ * Audio is decoded on the main thread instead, because the Web Audio API is not
+ * exposed to workers in WebKit — `OfflineAudioContext` is simply undefined here,
+ * which is what "Can't find variable: OfflineAudioContext" was. The page hands
+ * this side finished mono Float32Array samples, so nothing audio-related has to
+ * construct an audio context in worker scope.
  */
 async function decodeImages(urls: string[]) {
 	if (!urls.length) return null;
@@ -80,36 +86,11 @@ async function decodeImages(urls: string[]) {
 	return Promise.all(urls.map((u) => RawImage.fromURL(u)));
 }
 
-const AUDIO_SAMPLE_RATE = 16000;
-
-async function decodeAudio(urls: string[]) {
-	if (!urls.length) return null;
-	const out: Float32Array[] = [];
-	for (const u of urls) {
-		const buf = await (await fetch(u)).arrayBuffer();
-		// OfflineAudioContext resamples to the rate the encoder expects.
-		const ctx = new OfflineAudioContext(1, 1, AUDIO_SAMPLE_RATE);
-		const decoded = await ctx.decodeAudioData(buf);
-		if (decoded.numberOfChannels === 1) {
-			out.push(decoded.getChannelData(0));
-		} else {
-			// Downmix: the encoder takes mono.
-			const n = decoded.length;
-			const mixed = new Float32Array(n);
-			for (let c = 0; c < decoded.numberOfChannels; c++) {
-				const ch = decoded.getChannelData(c);
-				for (let i = 0; i < n; i++) mixed[i] += ch[i] / decoded.numberOfChannels;
-			}
-			out.push(mixed);
-		}
-	}
-	return out;
-}
-
 async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
 	if (!model || !processor) throw new Error('the model is not loaded');
 
-	const [images, audio] = await Promise.all([decodeImages(msg.images), decodeAudio(msg.audio)]);
+	const images = await decodeImages(msg.images);
+	const audio = msg.audio.length ? msg.audio : null;
 
 	// The processor turns the chat template plus any media into model inputs.
 	const proc = processor as unknown as {

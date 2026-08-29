@@ -26,10 +26,18 @@
 		notice?: boolean;
 	}
 
+	/**
+	 * Kept deliberately plain. An earlier version described the site as
+	 * "terminal-styled", and a model this size read that as a role to play: it
+	 * answered "hi" with invented console chrome ([SYSTEM ONLINE], [ERROR] Invalid
+	 * input) rather than a greeting. The visual theme is the page's business, not
+	 * the assistant's, so it is not mentioned here at all.
+	 */
 	const SYSTEM_PROMPT =
-		'You are a concise assistant embedded in krsz.in, a terminal-styled personal site. ' +
+		'You are a helpful assistant on krsz.in, a personal website. ' +
 		'You run entirely inside the visitor’s browser on their own hardware — no server sees this conversation. ' +
-		'Always reply in the same language the user wrote in.';
+		'Reply naturally and conversationally, in the same language the user wrote in. ' +
+		'Never imitate a command line, and never invent system messages, status banners, or error codes.';
 
 	let phase = $state<Phase>('idle');
 	let gpu = $state<GpuSupport | null>(null);
@@ -323,10 +331,43 @@
 	let recorder: MediaRecorder | null = null;
 	let recStream: MediaStream | null = null;
 
+	/** What the audio tower was trained on. */
+	const AUDIO_SAMPLE_RATE = 16000;
+
+	/**
+	 * Decodes an attachment into mono PCM at the model's sample rate.
+	 *
+	 * This lives on the main thread rather than in the worker because WebKit does
+	 * not expose the Web Audio API to workers at all, so constructing an
+	 * OfflineAudioContext there throws before any decoding can happen. Safari also
+	 * still needs the webkit-prefixed constructor.
+	 */
+	async function decodeAudio(url: string): Promise<Float32Array> {
+		const Ctor =
+			(globalThis as unknown as { OfflineAudioContext?: typeof OfflineAudioContext })
+				.OfflineAudioContext ??
+			(globalThis as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext })
+				.webkitOfflineAudioContext;
+		if (!Ctor) throw new Error('this browser has no Web Audio support, so audio cannot be decoded');
+
+		const buf = await (await fetch(url)).arrayBuffer();
+		const ctx = new Ctor(1, 1, AUDIO_SAMPLE_RATE);
+		const decoded = await ctx.decodeAudioData(buf);
+		if (decoded.numberOfChannels === 1) return decoded.getChannelData(0);
+
+		// Downmix: the encoder takes mono.
+		const n = decoded.length;
+		const mixed = new Float32Array(n);
+		for (let c = 0; c < decoded.numberOfChannels; c++) {
+			const ch = decoded.getChannelData(c);
+			for (let i = 0; i < n; i++) mixed[i] += ch[i] / decoded.numberOfChannels;
+		}
+		return mixed;
+	}
+
 	/**
 	 * Records from the microphone straight into an attachment. The blob's own
-	 * container does not matter — decodeAudio() in the worker resamples whatever
-	 * comes out through an OfflineAudioContext.
+	 * container does not matter — decodeAudio() resamples whatever comes out.
 	 */
 	async function startRecording() {
 		if (recording) return;
@@ -361,7 +402,7 @@
 		playSound('click');
 	}
 
-	function send() {
+	async function send() {
 		const text = draft.trim();
 		if (busy || phase !== 'ready' || !worker) return;
 		if (!text && !pending.length) return;
@@ -389,7 +430,7 @@
 		// {type:'image'} / {type:'audio'} placeholder per attachment in order.
 		const history = turns.slice(0, -1).filter((t) => !t.notice);
 		const images: string[] = [];
-		const audio: string[] = [];
+		const audioUrls: string[] = [];
 		const messages = [
 			// The system message must be a plain string: the chat template applies
 			// `| trim` to it unconditionally, where user and assistant turns branch
@@ -400,7 +441,7 @@
 				const parts: Record<string, string>[] = [];
 				for (const a of t.attachments ?? []) {
 					parts.push({ type: a.kind });
-					(a.kind === 'image' ? images : audio).push(a.url);
+					(a.kind === 'image' ? images : audioUrls).push(a.url);
 				}
 				// Assistant turns go back as their answer only — reasoning stripped,
 				// which is what the chat template itself does.
@@ -409,6 +450,18 @@
 				return { role: t.role, content: parts };
 			})
 		];
+
+		// Decoded here rather than in the worker: WebKit gives workers no Web Audio
+		// API, so the worker receives finished samples.
+		let audio: Float32Array[];
+		try {
+			audio = await Promise.all(audioUrls.map(decodeAudio));
+		} catch (err) {
+			phase = 'ready';
+			turns = turns.slice(0, -1);
+			notice(`that recording could not be decoded: ${(err as Error).message}`);
+			return;
+		}
 
 		worker.postMessage({
 			type: 'generate',
@@ -478,7 +531,7 @@
 		}
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
-			send();
+			void send();
 		}
 	}
 
