@@ -81,68 +81,100 @@ static void set_timer(u64 when)
 }
 
 /*
- * The v0.1 calls Linux still falls back on, plus the two v0.2 extensions it
- * looks for. Anything else is refused rather than silently ignored: a kernel
- * that asked for something it needed should find out.
+ * The calls Linux makes. Two eras of them: the v0.1 numbers a kernel falls back
+ * on when nothing better is advertised, and the extensions a current one looks
+ * for first -- TIME for the timer and DBCN for the console. A kernel built
+ * without the legacy extension prints through DBCN or not at all, which is why
+ * both are here.
+ *
+ * Anything else is refused rather than quietly succeeding: a kernel that asked
+ * for something it needed should find out.
  */
 #define SBI_SUCCESS          0
 #define SBI_ERR_NOT_SUPPORTED (-2)
 
 #define EXT_BASE   0x10
 #define EXT_TIME   0x54494D45
+#define EXT_DBCN   0x4442434E
 
 static void handle_ecall(struct frame *f)
 {
-	u64 eid = f->a7, fid = f->a6;
-
-	f->a0 = SBI_SUCCESS;
+	/* Read every argument before writing any of them: a0 is both the first
+	   argument and the first return value. */
+	const u64 eid = f->a7, fid = f->a6;
+	const u64 arg0 = f->a0, arg1 = f->a1;
+	u64 error = SBI_SUCCESS, value = 0;
 
 	switch (eid) {
 	case 0x00:			/* legacy set_timer */
-		set_timer(f->a0);
-		return;
+		set_timer(arg0);
+		break;
 	case 0x01:			/* legacy console_putchar */
-		htif_putc((char)f->a0);
-		return;
+		htif_putc((char)arg0);
+		break;
 	case 0x02:			/* legacy console_getchar */
-		f->a0 = (u64)-1;
-		return;
+		error = (u64)-1;
+		break;
 	case 0x03: case 0x04:		/* clear_ipi, send_ipi: one hart */
-	case 0x05: case 0x06: case 0x07: /* fences: one hart, and TinyEMU is coherent */
-		return;
+	case 0x05: case 0x06: case 0x07: /* fences: one hart, and coherent */
+		break;
 	case 0x08:			/* legacy shutdown */
 		mmio_write32(HTIF_BASE + 0, 1);
 		mmio_write32(HTIF_BASE + 4, 0);
 		for (;;)
 			;
 	case EXT_TIME:
-		if (fid == 0) {
-			set_timer(f->a0);
-			f->a1 = 0;
-		} else {
-			f->a0 = SBI_ERR_NOT_SUPPORTED;
+		if (fid == 0)
+			set_timer(arg0);
+		else
+			error = SBI_ERR_NOT_SUPPORTED;
+		break;
+	case EXT_DBCN:
+		switch (fid) {
+		case 0: {		/* write: arg0 bytes at arg1 */
+			const char *p = (const char *)(unsigned long)arg1;
+			u64 i;
+			for (i = 0; i < arg0; i++)
+				htif_putc(p[i]);
+			value = arg0;
+			break;
 		}
-		return;
+		case 1:			/* read: nothing is typed at it yet */
+			value = 0;
+			break;
+		case 2:			/* write_byte */
+			htif_putc((char)arg0);
+			break;
+		default:
+			error = SBI_ERR_NOT_SUPPORTED;
+			break;
+		}
+		break;
 	case EXT_BASE:
 		switch (fid) {
-		case 0: f->a1 = 0x00000002; break;	/* spec version 0.2 */
-		case 1: f->a1 = 0; break;		/* implementation id */
-		case 2: f->a1 = 1; break;		/* implementation version */
-		case 3:					/* probe_extension */
-			f->a1 = (f->a0 <= 0x08 || f->a0 == EXT_TIME) ? 1 : 0;
+		/* 2.0, because that is the version a kernel wants to see before it
+		   will consider the debug console extension at all. */
+		case 0: value = 0x02000000; break;
+		case 1: value = 0; break;	/* implementation id */
+		case 2: value = 1; break;	/* implementation version */
+		case 3:				/* probe_extension */
+			value = (arg0 <= 0x08 || arg0 == EXT_TIME || arg0 == EXT_DBCN) ? 1 : 0;
 			break;
-		case 4: f->a1 = 0; break;		/* mvendorid */
-		case 5: f->a1 = 0; break;		/* marchid */
-		case 6: f->a1 = 0; break;		/* mimpid */
-		default: f->a0 = SBI_ERR_NOT_SUPPORTED; return;
+		case 4: case 5: case 6:		/* mvendorid, marchid, mimpid */
+			value = 0;
+			break;
+		default:
+			error = SBI_ERR_NOT_SUPPORTED;
+			break;
 		}
-		f->a0 = SBI_SUCCESS;
-		return;
+		break;
 	default:
-		f->a0 = SBI_ERR_NOT_SUPPORTED;
-		f->a1 = 0;
-		return;
+		error = SBI_ERR_NOT_SUPPORTED;
+		break;
 	}
+
+	f->a0 = error;
+	f->a1 = value;
 }
 
 void sbi_trap(struct frame *f)
