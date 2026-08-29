@@ -27,14 +27,26 @@ typedef unsigned int u32;
 
 #define CAUSE_INTERRUPT     (1ULL << 63)
 #define CAUSE_M_TIMER       7
+#define CAUSE_ILLEGAL       2
 #define CAUSE_ECALL_S       9
 
-/* The frame start.S pushes, in the order it pushes it. */
+/* The counter Linux reads for every timestamp, and the one register this
+   emulator does not have. */
+#define CSR_TIME            0xc01
+
+/*
+ * The frame start.S pushes: x1 through x31, indexed by register number so an
+ * emulated instruction can write whichever destination it names.
+ */
 struct frame {
-	u64 ra, gp, tp, t0, t1, t2;
-	u64 a0, a1, a2, a3, a4, a5, a6, a7;
-	u64 t3, t4, t5, t6;
+	u64 x[31];
 };
+
+#define REG(f, n) ((f)->x[(n) - 1])
+#define A0(f) REG(f, 10)
+#define A1(f) REG(f, 11)
+#define A6(f) REG(f, 16)
+#define A7(f) REG(f, 17)
 
 static void mmio_write32(u64 addr, u32 value)
 {
@@ -123,8 +135,8 @@ static void handle_ecall(struct frame *f)
 {
 	/* Read every argument before writing any of them: a0 is both the first
 	   argument and the first return value. */
-	const u64 eid = f->a7, fid = f->a6;
-	const u64 arg0 = f->a0, arg1 = f->a1;
+	const u64 eid = A7(f), fid = A6(f);
+	const u64 arg0 = A0(f), arg1 = A1(f);
 	u64 error = SBI_SUCCESS, value = 0;
 
 	switch (eid) {
@@ -195,8 +207,8 @@ static void handle_ecall(struct frame *f)
 		break;
 	}
 
-	f->a0 = error;
-	f->a1 = value;
+	A0(f) = error;
+	A1(f) = value;
 }
 
 void sbi_trap(struct frame *f)
@@ -217,7 +229,7 @@ void sbi_trap(struct frame *f)
 		sbi_puts(" tval=");
 		put_hex(tval);
 		sbi_puts(" a7=");
-		put_hex(f->a7);
+		put_hex(A7(f));
 		htif_putc('\n');
 	}
 
@@ -230,6 +242,28 @@ void sbi_trap(struct frame *f)
 			return;
 		}
 		return;
+	}
+
+	if ((cause & 0xff) == CAUSE_ILLEGAL) {
+		/* The only instruction worth emulating here is a read of the time
+		   CSR: TinyEMU has no such register, and on real hardware machine
+		   mode is exactly where that gap is filled. */
+		u64 insn;
+		__asm__ volatile("csrr %0, mtval" : "=r"(insn));
+		if ((insn & 0x7f) == 0x73 && ((insn >> 20) & 0xfff) == CSR_TIME) {
+			unsigned rd = (unsigned)((insn >> 7) & 0x1f);
+			if (rd != 0)
+				REG(f, rd) = mmio_read64(CLINT_MTIME);
+			__asm__ volatile("csrw mepc, %0" :: "r"(epc + 4));
+			return;
+		}
+		sbi_puts("krsz-sbi: illegal instruction ");
+		put_hex(insn);
+		sbi_puts(" at ");
+		put_hex(epc);
+		htif_putc('\n');
+		for (;;)
+			;
 	}
 
 	if ((cause & 0xff) == CAUSE_ECALL_S) {
