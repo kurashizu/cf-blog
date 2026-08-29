@@ -73,6 +73,7 @@ a = '''void virt_machine_run(void *opaque)
 {
     VirtMachine *m = opaque;'''
 b = '''BOOL vm_stopped;
+static BOOL vm_ran_once;
 
 /* Called from the page when the machine is powered off: the run loop
    reschedules itself, so stopping means not scheduling the next one. */
@@ -86,10 +87,26 @@ void virt_machine_run(void *opaque)
     VirtMachine *m = opaque;
 
     if (vm_stopped)
-        return;'''
+        return;
+
+    /* One line, once: the difference between a machine that is slow and one
+       that never started is otherwise invisible from the page. */
+    if (!vm_ran_once) {
+        vm_ran_once = TRUE;
+        fprintf(stderr, "machine running\\n");
+    }'''
 assert a in s, 'run loop not found'
 p.write_text(s.replace(a, b, 1))
-print('jsemu.c: vm_stop added')
+# And one at the top of vm_start, so a machine that never gets as far as
+# loading its config can be told apart from one that never starts.
+a2 = 'void vm_start(const char *url, int ram_size, const char *cmdline,'
+b2 = '''void vm_start(const char *url, int ram_size, const char *cmdline,'''
+s2 = s.replace('    s->p = mallocz(sizeof(VirtMachineParams));',
+               '    fprintf(stderr, "vm_start: %s, %d MB\\n", url, ram_size);\n    s->p = mallocz(sizeof(VirtMachineParams));', 1)
+assert s2 != s, 'vm_start body not found'
+s = s2
+p.write_text(s)
+print('jsemu.c: vm_stop and two prints added')
 PATCHRUN
 
 # The JS library that ships with it is the same vintage as the makefile and
