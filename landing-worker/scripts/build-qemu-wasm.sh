@@ -22,6 +22,11 @@ if [ ! -d "$WORK" ]; then
 	git clone --depth 1 --branch "$QEMU_REF" https://github.com/ktock/qemu-wasm "$WORK"
 fi
 
+# zlib.net serves only the current release, so a pinned version disappears from
+# it the moment there is a newer one. The GitHub release of the same version
+# does not move.
+sed -i 's|https://zlib.net/zlib-\$ZLIB_VERSION.tar.xz|https://github.com/madler/zlib/releases/download/v$ZLIB_VERSION/zlib-$ZLIB_VERSION.tar.xz|' "$WORK/Dockerfile"
+
 echo "==> building the toolchain image"
 docker build -t buildqemu - < "$WORK/Dockerfile"
 
