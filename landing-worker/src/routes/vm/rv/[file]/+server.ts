@@ -147,7 +147,11 @@ function config(env: Env | undefined, url: URL): Response {
 			bios: `${here}bios.bin`,
 			kernel: `${here}kernel`,
 			initrd: `${here}initramfs`,
-			cmdline: 'console=hvc0 root=/dev/vda rw rootwait',
+			// earlycon first: the virtio console only exists once its driver has
+			// probed, so without it every message before that goes nowhere and a
+			// machine that is merely slow is indistinguishable from one that is
+			// dead. TinyEMU carries an HTIF console, which is what SBI prints on.
+			cmdline: 'earlycon=sbi console=hvc0 root=/dev/vda rw rootwait',
 			drive0: { file: `${here}blk.txt` }
 		},
 		null,
