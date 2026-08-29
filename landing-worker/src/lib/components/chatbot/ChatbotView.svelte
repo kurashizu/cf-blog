@@ -17,6 +17,7 @@
 		probeGpu,
 		samplingOf,
 		saveConfig,
+		vramAtContext,
 		type ChatConfig,
 		type ChatCompletionMessageParam,
 		type GpuSupport,
@@ -192,6 +193,11 @@
 
 	function notice(text: string) {
 		turns = [...turns, { role: 'assistant', content: text, notice: true }];
+	}
+
+	/** Sizes past a gigabyte read better in GB than as four digits of MB. */
+	function fmtMb(mb: number): string {
+		return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb} MB`;
 	}
 
 	/**
@@ -586,7 +592,7 @@
 				? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 				: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
 		>
-			STORAGE{cached.size ? ` (${cachedSizeMb(cached)} MB)` : ''}
+			STORAGE{cached.size ? ` (${fmtMb(cachedSizeMb(cached))})` : ''}
 		</button>
 
 		{#if phase === 'ready' || phase === 'generating'}
@@ -694,7 +700,7 @@
 						<span class="{isCached ? 'text-[#d8dee9]' : 'text-white/35'} flex-1">
 							model weights{b.id === modelId ? '' : ' (other GPU build)'}
 						</span>
-						<span class="text-white/35 tabular-nums">{b.downloadMb} MB</span>
+						<span class="text-white/35 tabular-nums">{fmtMb(b.downloadMb)}</span>
 						{#if isCached}
 							<button
 								onclick={() => evict(b.id)}
@@ -740,10 +746,12 @@
 					{#if build && cached.has(build.id)}
 						Already cached — this loads straight from disk.
 					{:else if build}
-						First run downloads {build.downloadMb} MB and caches it, so later visits start immediately.
+						First run downloads {fmtMb(build.downloadMb)} and caches it, so later visits start immediately.
 					{/if}
 					{#if build}
-						<br />Needs about {(build.vramMb / 1024).toFixed(1)} GB of GPU memory while running.
+						<br />Needs about {(vramAtContext(build, config.contextWindow) / 1024).toFixed(1)} GB of
+						GPU memory while running, at the current {(config.contextWindow / 1024).toFixed(0)}k context
+						window. Integrated graphics will struggle.
 					{/if}
 				</div>
 				<button

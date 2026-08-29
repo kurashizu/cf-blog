@@ -16,53 +16,71 @@ export interface ModelBuild {
 	/** Bytes fetched over the network — NOT web-llm's `vram_required_MB`, which
 	 * is runtime GPU memory (weights + KV cache + activations) and runs larger. */
 	downloadMb: number;
-	/** web-llm's `vram_required_MB`: GPU memory once live. */
+	/** web-llm's `vram_required_MB`, which assumes its own 4096-token window. */
 	vramMb: number;
 }
 
+/** The window web-llm's `vram_required_MB` figures are quoted at. */
+const VRAM_BASE_CTX = 4096;
+
 /**
- * Qwen3.5-0.8B — the newest model available as an MLC build, and the strongest
- * on knowledge benchmarks of anything that fits here.
+ * KV cache bytes per token of context, for Qwen3.5-4B at f16.
  *
- * It needs help to behave. Three things are wrong or hostile out of the box,
- * all handled below and in CHAT_OPTS:
+ * 8 full-attention layers (32 layers, `full_attention_interval: 4`), 4 KV
+ * heads, head_dim 256, K and V, 2 bytes each:
+ *   2 * 8 * 4 * 256 * 2 = 32768 bytes per token.
+ */
+const KV_BYTES_PER_TOKEN = 2 * 8 * 4 * 256 * 2;
+
+/**
+ * VRAM at a given context window. `vram_required_MB` is quoted at 4096, but the
+ * page runs a much wider window by default and the cache scales linearly with
+ * it — reporting the unadjusted figure would understate memory by gigabytes.
+ */
+export function vramAtContext(build: ModelBuild, contextWindow: number): number {
+	const delta = ((contextWindow - VRAM_BASE_CTX) * KV_BYTES_PER_TOKEN) / 1048576;
+	return Math.max(build.vramMb, Math.round(build.vramMb + delta));
+}
+
+/**
+ * Qwen3.5-4B. The 0.8B of the same family degenerated badly — reasoning that
+ * dissolved into free-associated nouns for 13000 characters — which is what
+ * Qwen's card warns about for that size specifically. Four billion parameters
+ * buys enough headroom that the failure mode should not appear at all.
+ *
+ * The cost is real and worth knowing before changing this: 2280 MB to
+ * download, and 3868 MB of VRAM at web-llm's 4096-token window, rising to
+ * roughly 4.8 GB at the 32768 this page asks for, since the KV cache scales
+ * with the window. That rules out most integrated graphics.
+ *
+ * Two things are still wrong or hostile out of the box, both handled below:
  *
  *  1. Its MLC config declares stop token ids 151643 / 151645, copied from
- *     Qwen3's 151936-token vocabulary. This model's vocabulary is 248320, where
- *     those ids are undefined and the real markers are 248044 (`<|endoftext|>`)
- *     and 248046 (`<|im_end|>`). Uncorrected, generation never stops cleanly —
- *     which is what makes it repeat a greeting and answer in the wrong
- *     language. CHAT_OPTS fixes this.
+ *     Qwen3's 151936-token vocabulary. This model's vocabulary is 248320,
+ *     where those ids are undefined and the real markers are 248044
+ *     (`<|endoftext|>`) and 248046 (`<|im_end|>`) — verified against its own
+ *     tokenizer_config.json. Uncorrected, generation never stops cleanly.
+ *     CHAT_OPTS fixes this. The 0.8B had the identical defect.
  *  2. web-llm sets `max_history_size: 1` on every Qwen3.5 entry and no other
- *     family. It is a hybrid Gated DeltaNet (18 linear-attention layers to 6
- *     full-attention), so this sizes the recurrent state.
- *  3. Qwen's own model card warns this size is "more prone to entering thinking
- *     loops … which may prevent it from terminating generation properly", and
- *     reports its own IFEval *dropping* in thinking mode (52.1 → 44.0). The
- *     think toggle therefore defaults off, and SAMPLING carries a real
- *     repetition penalty.
- *
- * If it still loops in normal use, the fault is architectural rather than
- * configuration and Qwen3-0.6B is the fallback: older and lower-scoring, but a
- * plain transformer with a correct config and equally good Chinese
- * (24873 whole-word Chinese tokens against this model's comparable coverage).
+ *     family. It is a hybrid Gated DeltaNet (32 layers, full attention every
+ *     4th), so this sizes the recurrent state and is left alone.
  *
  * Swapping the model means changing both ids below AND re-checking the packaged
  * `mlc-chat-config.json` against the model's own `tokenizer_config.json`. Stop
  * token ids belong to a model's tokenizer and are not portable between
  * generations — that mismatch is bug 1 above.
  *
- * Both builds carry the same int4 weights and download identically (426 MB);
+ * Both builds carry the same int4 weights and download identically (2280 MB);
  * they differ in activation precision, which shows up as runtime VRAM. f16 is
  * preferred because it is faster, but its kernels need `shader-f16` —
  * `pickModel()` falls back where the adapter lacks it.
  */
-export const MODEL_F16 = 'Qwen3.5-0.8B-q4f16_1-MLC';
-export const MODEL_F32 = 'Qwen3.5-0.8B-q4f32_1-MLC';
+export const MODEL_F16 = 'Qwen3.5-4B-q4f16_1-MLC';
+export const MODEL_F32 = 'Qwen3.5-4B-q4f32_1-MLC';
 
 export const BUILDS: Record<string, ModelBuild> = {
-	[MODEL_F16]: { id: MODEL_F16, downloadMb: 426, vramMb: 1629 },
-	[MODEL_F32]: { id: MODEL_F32, downloadMb: 426, vramMb: 1894 }
+	[MODEL_F16]: { id: MODEL_F16, downloadMb: 2280, vramMb: 3868 },
+	[MODEL_F32]: { id: MODEL_F32, downloadMb: 2280, vramMb: 4680 }
 };
 
 /** Every build the page may cache — used by the storage panel. */
