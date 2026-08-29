@@ -1,0 +1,66 @@
+name: Build ARM64 image
+
+# Manual only, like its x86 and riscv64 siblings — this writes to R2. Unlike
+# the riscv64 one it is quick: GitHub has arm64 runners, so nothing here runs
+# under emulation.
+on:
+    workflow_dispatch:
+        inputs:
+            alpine_version:
+                description: "Alpine release series"
+                default: "3.24"
+            kernel_flavor:
+                description: "Kernel flavour"
+                default: "virt"
+            publish:
+                description: "Upload to R2 (uncheck to build and inspect only)"
+                type: boolean
+                default: true
+
+jobs:
+    build:
+        runs-on: ubuntu-24.04-arm
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Build kernel and root filesystem
+              run: |
+                  mkdir -p out
+                  docker run --rm \
+                    -e ALPINE_VERSION='${{ inputs.alpine_version }}' \
+                    -e KERNEL_FLAVOR='${{ inputs.kernel_flavor }}' \
+                    -v "$PWD/out:/out" \
+                    -v "$PWD/landing-worker/scripts/build-arm-image.sh:/build.sh:ro" \
+                    alpine:${{ inputs.alpine_version }} sh /build.sh
+
+            - name: Take ownership and record sizes
+              run: |
+                  sudo chown -R "$USER:$USER" out
+                  ls -l out
+                  sha256sum out/* > out/SHA256SUMS
+                  cat out/SHA256SUMS
+
+            - name: Publish to R2
+              if: ${{ inputs.publish }}
+              working-directory: landing-worker
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+              # Split into parts, like the riscv64 image: wrangler's uploader
+              # refuses anything over 300 MiB, and the route reassembles them.
+              run: |
+                  for path in ../out/kernel ../out/rootfs.img.*; do
+                    npx wrangler r2 object put "public-files/arm/$(basename "$path")" \
+                      --file "$path" \
+                      --content-type application/octet-stream \
+                      --remote
+                  done
+
+            - uses: actions/upload-artifact@v5
+              with:
+                  name: krsz-arm-kernel
+                  path: |
+                      out/kernel
+                      out/SHA256SUMS
+                  retention-days: 14
