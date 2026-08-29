@@ -886,7 +886,11 @@
 						value: 'none yet',
 						title: "TinyEMU's ethernet is raw frames and the relay carries streams; bridging them needs a TCP/IP stack in the page, which v86 brings with it and this one has nowhere to borrow"
 					},
-					{ label: 'STATUS', value: 'boots to a root shell' }
+					{
+						label: 'STATUS',
+						value: 'work in progress — stops before userspace',
+						title: 'The kernel boots, brings up its console, timer and interrupt controller, and reads the first block of a disk streamed over HTTP. It then stops before mounting a root filesystem. The x86 machine is unaffected.'
+					}
 				]
 			: [
 		{ label: 'EMULATOR', value: 'v86 — x86-to-wasm JIT, BSD-2', title: 'copy/v86: a 32-bit x86 PC emulator that JIT-compiles guest code to WebAssembly' },
@@ -1057,7 +1061,7 @@
 
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
-						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['riscv64', 'riscv64', 'TinyEMU: a 64-bit RISC-V machine, interpreted rather than compiled — slower, console only, and with no network yet.']] as const as [value, label, hint] (value)}
+						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['riscv64', 'riscv64 · WIP', 'TinyEMU with firmware written for it here. The kernel boots, finds its console, timer, interrupt controller and streamed disk, and then stops before userspace — this one is not finished.']] as const as [value, label, hint] (value)}
 							<button
 								onclick={() => (settings.machine = value)}
 								title={hint}
@@ -1194,8 +1198,9 @@
 							RAM, VGA RAM, boot mode and the command line take effect on the next boot;
 							screen size applies the next time <span class="text-white/50">startx</span> runs.
 						{:else}
-							The riscv64 machine takes no settings yet: it is a console, a streamed disk
-							and 256 MB, and it has no network to configure.
+							The riscv64 machine takes no settings yet, and does not finish booting: it
+							reaches the point of mounting a root filesystem and stops. Everything under
+							it — firmware, console, timer, interrupts, the streamed disk — works.
 						{/if}
 					</p>
 				</div>
