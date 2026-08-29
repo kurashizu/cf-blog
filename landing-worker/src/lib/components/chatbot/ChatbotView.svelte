@@ -73,10 +73,30 @@
 	/** Prompt tokens reported for the last exchange — drives the context meter. */
 	let usedTokens = $state(0);
 
+	/** How far /compact has got, so a slow summary is not a frozen screen. */
+	let compacting = $state('');
+
+	/** Index of the highlighted completion, or -1 when the menu is closed. */
+	let completionIdx = $state(-1);
+
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 	let build = $derived(buildById(modelId));
 	let busy = $derived(phase === 'loading' || phase === 'generating');
 	let ctxPct = $derived(Math.min(100, Math.round((usedTokens / CONTEXT_WINDOW) * 100)));
+
+	/**
+	 * Completions for a lone `/word` being typed. Only while the draft is exactly
+	 * one slash-prefixed word, so a message that merely mentions a slash later on
+	 * does not pop the menu open.
+	 */
+	let completions = $derived.by(() => {
+		const m = draft.match(/^\/(\w*)$/);
+		if (!m) return [];
+		const q = m[1].toLowerCase();
+		const hits = COMMANDS.filter((c) => c.name.startsWith(q));
+		// An exact single match is already typed out — nothing left to complete.
+		return hits.length === 1 && hits[0].name === q ? [] : hits;
+	});
 
 	onMount(() => {
 		probeGpu().then((g) => {
@@ -160,6 +180,18 @@
 	}
 
 	/**
+	 * The commands, as data: the completion menu and /help both read this, so a
+	 * new command cannot appear in one and go missing from the other.
+	 */
+	const COMMANDS = [
+		{ name: 'help', hint: 'list these commands' },
+		{ name: 'clear', hint: 'wipe the conversation' },
+		{ name: 'compact', hint: 'summarise the history, freeing context' },
+		{ name: 'think', hint: 'toggle the reasoning block' },
+		{ name: 'stats', hint: 'context use and last decode speed' }
+	] as const;
+
+	/**
 	 * Slash commands are handled here and never reach the model. They mirror the
 	 * site's console conventions: a bare word, no arguments unless stated.
 	 */
@@ -167,13 +199,7 @@
 		const [cmd] = raw.slice(1).trim().split(/\s+/);
 		switch (cmd.toLowerCase()) {
 			case 'help':
-				notice(
-					'/help — this list\n' +
-						'/clear — wipe the conversation\n' +
-						'/compact — replace the history with a short summary, freeing context\n' +
-						'/think — toggle the reasoning block\n' +
-						'/stats — context use and last decode speed'
-				);
+				notice(COMMANDS.map((c) => `/${c.name} — ${c.hint}`).join('\n'));
 				return true;
 			case 'clear':
 				resetConversation();
@@ -214,11 +240,14 @@
 			return;
 		}
 		phase = 'generating';
+		compacting = `summarising ${real.length} messages…`;
 		try {
 			const transcript = real
 				.map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`)
 				.join('\n');
-			const res = await engine.chat.completions.create({
+			// Streamed rather than awaited whole: summarising is slow enough on a
+			// small model that a silent wait reads as a hang.
+			const stream = await engine.chat.completions.create({
 				messages: [
 					{
 						role: 'user',
@@ -228,27 +257,34 @@
 							transcript
 					}
 				],
+				stream: true,
 				// Never reason about a summary — it is a mechanical step, and the
 				// tokens would come out of the same budget.
 				extra_body: { enable_thinking: false },
 				temperature: 0.3,
 				max_tokens: 300
 			});
-			const summary = res.choices[0]?.message?.content?.trim();
+			let summary = '';
+			for await (const chunk of stream) {
+				summary += chunk.choices[0]?.delta?.content ?? '';
+				compacting = `summarising… ${summary.length} chars`;
+			}
+			summary = splitThink(summary).answer.trim();
 			if (!summary) {
 				notice('compact failed — the model returned nothing.');
 			} else {
+				const before = usedTokens;
 				resetConversation();
-				turns = [
-					{ role: 'assistant', content: `[compacted]\n${splitThink(summary).answer}`, notice: true }
-				];
-				compactedSummary = splitThink(summary).answer;
+				turns = [{ role: 'assistant', content: `[compacted]\n${summary}`, notice: true }];
+				compactedSummary = summary;
+				if (before) notice(`context freed — was ${before} tokens.`);
 			}
 			phase = 'ready';
 		} catch (err) {
 			phase = 'ready';
 			notice(`compact failed: ${(err as Error).message}`);
 		}
+		compacting = '';
 		await scrollToEnd();
 	}
 
@@ -296,7 +332,11 @@
 				// A backstop, not a budget: if the model does loop, this bounds how
 				// long you wait before STOP becomes the obvious move. Thinking needs
 				// the extra room, since the reasoning block spends from the same pot.
-				max_tokens: thinkMode ? 900 : 500
+				// Thinking spends from this same budget, and this model reasons at
+				// length — 2000+ characters to answer "hi" — so a cap that is fine
+				// for a direct answer gets consumed entirely by the reasoning,
+				// leaving the block unclosed and no answer at all. Give it room.
+				max_tokens: thinkMode ? 2500 : 500
 			});
 			let looped = false;
 			for await (const chunk of stream) {
@@ -332,8 +372,24 @@
 						notice: true
 					}
 				];
-				await scrollToEnd();
+			} else {
+				// A reasoning block that never closed means generation ran out of
+				// room inside it, so there is no answer to show — only a cursor. Say
+				// what happened instead of leaving an empty bubble.
+				const final = splitThink(turns[turns.length - 1]?.content ?? '');
+				if (final.thinking && !final.answer) {
+					turns = [
+						...turns,
+						{
+							role: 'assistant',
+							content:
+								'the model was still reasoning when it ran out of room, so it never got to an answer. ask again, or turn THINK off.',
+							notice: true
+						}
+					];
+				}
 			}
+			await scrollToEnd();
 			phase = 'ready';
 		} catch (err) {
 			// The engine is still loaded and the transcript is still worth reading,
@@ -373,7 +429,40 @@
 		openThink = next;
 	}
 
+	function acceptCompletion(name: string) {
+		draft = `/${name}`;
+		completionIdx = -1;
+		inputEl?.focus();
+	}
+
 	function onKeydown(e: KeyboardEvent) {
+		// The completion menu owns these keys while it is open.
+		if (completions.length) {
+			if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+				e.preventDefault();
+				completionIdx = (Math.max(0, completionIdx) + 1) % completions.length;
+				if (e.key === 'Tab') acceptCompletion(completions[completionIdx].name);
+				return;
+			}
+			if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				completionIdx = (Math.max(0, completionIdx) - 1 + completions.length) % completions.length;
+				return;
+			}
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				// Closes the menu without clearing what was typed.
+				draft = draft + ' ';
+				completionIdx = -1;
+				return;
+			}
+			if (e.key === 'Enter' && !e.shiftKey && completionIdx >= 0) {
+				e.preventDefault();
+				acceptCompletion(completions[completionIdx].name);
+				return;
+			}
+		}
+
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			send();
@@ -423,7 +512,9 @@
 			</span>
 		{/if}
 
-		{#if lastStats}
+		{#if compacting}
+			<span class="text-[#e5c07b] font-mono">◐ {compacting}</span>
+		{:else if lastStats}
 			<span class="text-[#98c379] tabular-nums" title="Decode speed of the last reply">{lastStats}</span>
 		{/if}
 
@@ -583,11 +674,8 @@
 							title="A model this size reasons at length and not always to the point. Kept folded away."
 							class="self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer"
 						>
-							{#if parts.thinking}
-								◐ thinking… ({parts.think.length} chars)
-							{:else}
-								{openThink.has(i) ? '▾' : '▸'} reasoning ({parts.think.length} chars)
-							{/if}
+							{openThink.has(i) ? '▾' : '▸'}
+							{parts.thinking ? 'thinking…' : 'reasoning'} ({parts.think.length} chars)
 						</button>
 						<!-- Stays folded while streaming: this model can reason for
 						     thousands of characters, and unfolding it buries the answer. -->
@@ -603,7 +691,9 @@
 						<div class="chat-md text-sm text-[#d8dee9] break-words">
 							{@html renderMarkdown(parts.answer)}
 						</div>
-					{:else}
+					{:else if !parts.thinking}
+						<!-- While reasoning streams, the toggle above already says so; a
+						     second cursor here reads as a stalled answer. -->
 						<span class="text-white/40 text-sm">▋</span>
 					{/if}
 				</div>
@@ -612,9 +702,32 @@
 	</div>
 
 	<!-- Composer -->
-	<div
-		class="flex items-end gap-2 border {themeStyles.border} rounded-xs bg-black/40 px-2 py-1.5 focus-within:border-[#61afef] transition-colors"
-	>
+	<div class="relative">
+		{#if completions.length}
+			<div
+				class="absolute bottom-full left-0 mb-1 min-w-56 border {themeStyles.border} rounded-xs bg-black/95 py-1 text-xs font-mono shadow-lg z-20"
+			>
+				{#each completions as c, ci (c.name)}
+					<button
+						onclick={() => acceptCompletion(c.name)}
+						onmouseenter={() => (completionIdx = ci)}
+						class="w-full text-left px-2 py-1 cursor-pointer flex gap-2 {ci === completionIdx
+							? 'bg-[#61afef]/20 text-[#61afef]'
+							: 'text-[#d8dee9] hover:bg-white/10'}"
+					>
+						<span class="font-bold">/{c.name}</span>
+						<span class="text-white/40 truncate">{c.hint}</span>
+					</button>
+				{/each}
+				<div class="px-2 pt-1 text-[10px] text-white/25 border-t border-white/10 mt-1">
+					tab completes · ↑↓ to choose · esc dismisses
+				</div>
+			</div>
+		{/if}
+
+		<div
+			class="flex items-end gap-2 border {themeStyles.border} rounded-xs bg-black/40 px-2 py-1.5 focus-within:border-[#61afef] transition-colors"
+		>
 		<textarea
 			bind:this={inputEl}
 			bind:value={draft}
@@ -644,6 +757,7 @@
 				SEND
 			</button>
 		{/if}
+		</div>
 	</div>
 </div>
 
