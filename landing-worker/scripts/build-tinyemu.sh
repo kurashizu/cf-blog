@@ -336,9 +336,19 @@ s = s.replace('delete Browser.wgetRequests[handle];',
 s = s.replace('Browser.wgetRequests[handle] = http;',
               '(Module.__wgetReqs = Module.__wgetReqs || {})[handle] = http;')
 
+# The file buffers keep their table on Browser too, and this is the one that
+# mattered: block loading goes through them, so the disk read that should have
+# started the boot threw "Browser is not defined" and the guest waited forever
+# for a block that was never fetched.
+s = s.replace('Browser.fbuf_table', 'Module.__fbufTable')
+s = s.replace('Browser.fbuf_next_handle', 'Module.__fbufNextHandle')
+
 # The page is not obliged to care about download progress.
 s = s.replace('update_downloading(Boolean(flag));',
               "if (typeof update_downloading === 'function') update_downloading(Boolean(flag));")
+
+assert 'Browser.' not in s, 'a Browser reference is still there: ' + \
+    str([l.strip() for l in s.split('\n') if 'Browser.' in l])
 
 p.write_text(s)
 print('js/lib.js patched')
