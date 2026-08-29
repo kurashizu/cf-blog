@@ -23,6 +23,9 @@ const EMULATOR_URL = '/vm/riscvemu64-wasm.js';
  */
 const CONFIG_PATH = '/vm/rv/krsz-rv.cfg';
 
+/** Matches RV_MEMORY_MB in wrangler.toml; TinyEMU wants it in megabytes. */
+const DEFAULT_MEMORY_MB = 256;
+
 export interface RvTerminal {
 	write(text: string): void;
 	/** Columns and rows, in that order — TinyEMU asks as a pair. */
@@ -86,14 +89,16 @@ export async function startRiscv(options: {
 	});
 
 	const [cols, rows] = options.term.getSize();
-	// vm_start(config_url, ram_size, cmdline, pwd, width, height, has_network).
-	// A null cmdline leaves the one in the config alone, and the machine has no
-	// network to be told about.
+	// vm_start(config_url, ram_size_mb, cmdline, pwd, width, height, has_network).
+	// The size is in megabytes and it overrides the config rather than defaulting
+	// to it — passing zero asserts inside the memory map, which is what a missing
+	// argument looked like from the outside. A null cmdline does leave the
+	// config's alone, and the machine has no network to be told about.
 	module.ccall(
 		'vm_start',
 		null,
 		['string', 'number', 'string', 'string', 'number', 'number', 'number'],
-		[new URL(CONFIG_PATH, location.href).href, options.memoryMb ?? 0, null, null, cols, rows, 0]
+		[new URL(CONFIG_PATH, location.href).href, options.memoryMb ?? DEFAULT_MEMORY_MB, null, null, cols, rows, 0]
 	);
 
 	const queue = (code: number) => module.ccall('console_queue_char', null, ['number'], [code]);
