@@ -710,17 +710,28 @@
 		return `${m}m ${String(Math.floor(seconds % 60)).padStart(2, '0')}s`;
 	}
 
-	/** The real path a guest disk read takes — every hop here exists in the repo. */
+	/** Every hop the machine makes outside its own tab, and each one is in the repo. */
 	const TOPOLOGY = `flowchart TB
     subgraph tab["Your browser tab"]
-        direction LR
-        G["Alpine Linux<br/>32-bit x86"] --- V["v86<br/>x86-to-wasm JIT"]
+        direction TB
+        G["Alpine Linux 3.24<br/>32-bit x86"] --- V["v86<br/>x86-to-wasm JIT"]
+        V <-->|"changed blocks,<br/>replayed at boot"| O[("OPFS<br/>overlay")]
     end
-    V -->|"kernel + initrd<br/>loaded whole"| W["Worker<br/>/vm/img"]
-    V -->|"disk: HTTP Range<br/>1 MiB chunks"| W
-    W --> C{{"Edge cache"}}
+    subgraph edge["Worker on this origin"]
+        direction TB
+        IMG["/vm/img<br/>1 MiB ranges"]
+        NET["/net/wisp<br/>WISP to OmniProxy"]
+        DNS["/dns-query<br/>DNS over HTTPS"]
+    end
+    V -->|"kernel + initrd whole,<br/>disk as it is touched"| IMG
+    V -->|"the guest's TCP<br/>and UDP streams"| NET
+    V -->|"every name<br/>the guest resolves"| DNS
+    IMG --> C{{"Edge cache<br/>immutable, versioned"}}
     C -->|"miss"| R[("R2<br/>vm/*")]
-    B["CI<br/>build-vm-image"] -->|"apk + mke2fs -d"| R`;
+    B["CI<br/>build-vm-image"] -->|"apk + mke2fs -d"| R
+    NET --> P["OmniProxy<br/>relay endpoint"]
+    DNS --> F["cloudflare-dns.com"]
+    P --> I(["The internet"])`;
 
 	let fetchedBytes = $derived(chunksFetched * CHUNK);
 	let imageMiB = $derived(imageSize === null ? null : imageSize / 1024 / 1024);
@@ -994,7 +1005,7 @@
 
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1.5">
 				<div class="flex items-baseline justify-between gap-2">
-					<span class="text-xs font-black font-mono text-[#d19a66]">HOW A DISK READ TRAVELS</span>
+					<span class="text-xs font-black font-mono text-[#d19a66]">WHAT LEAVES THE TAB</span>
 					<span class="text-[10px] font-mono text-white/35">every hop exists in the repo</span>
 				</div>
 				<MermaidDiagram chart={TOPOLOGY} accent="#d19a66" />
