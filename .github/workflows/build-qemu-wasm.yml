@@ -1,0 +1,44 @@
+name: Build QEMU (wasm)
+
+# One architecture per run. Each is a full QEMU build under Emscripten and takes
+# the better part of an hour, so batching them only delays finding out that
+# something is wrong.
+on:
+    workflow_dispatch:
+        inputs:
+            target:
+                description: "Guest architecture (aarch64, riscv64, x86_64)"
+                default: "aarch64"
+            qemu_ref:
+                description: "Branch or tag of ktock/qemu-wasm"
+                default: "master"
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 300
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Free up disk space
+              # A QEMU build tree plus the toolchain image does not fit next to
+              # everything a stock runner ships with.
+              run: |
+                  sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+                  df -h /
+
+            - name: Build QEMU for the browser
+              env:
+                  TARGET: ${{ inputs.target }}
+                  QEMU_REF: ${{ inputs.qemu_ref }}
+                  OUT: ${{ github.workspace }}/out
+              run: bash landing-worker/scripts/build-qemu-wasm.sh
+
+            - name: Record sizes
+              run: ls -l out && sha256sum out/* | tee out/SHA256SUMS
+
+            - uses: actions/upload-artifact@v5
+              with:
+                  name: qemu-wasm-${{ inputs.target }}
+                  path: out/*
+                  retention-days: 14
