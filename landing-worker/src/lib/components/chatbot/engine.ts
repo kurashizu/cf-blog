@@ -25,12 +25,12 @@ export const MODELS: ModelChoice[] = [
 ];
 
 /**
- * web-llm's own config sets `max_history_size: 1` on the Qwen3.5 records, which
- * drops everything but the newest turn — the model forgets your first message by
- * the third. The context window is 4096, so let history fill it instead and rely
- * on web-llm sliding the window when it actually runs out.
+ * `max_history_size` is deliberately NOT overridden. Despite the name it does
+ * not trim conversation history — web-llm only uses it to size the RNN state
+ * tensor for recurrent/hybrid models. Multi-turn memory is bounded by
+ * `context_window_size` (4096) instead, and the engine slides that window
+ * itself. Setting it here would over-allocate state for no benefit.
  */
-export const CHAT_OPTS = { max_history_size: 8 } as const;
 
 export interface GpuSupport {
 	ok: boolean;
@@ -89,7 +89,7 @@ export async function createEngine(
 	try {
 		const engine = await CreateWebWorkerMLCEngine(worker, modelId, {
 			initProgressCallback: onProgress
-		}, CHAT_OPTS);
+		});
 		return { engine, worker };
 	} catch (err) {
 		worker.terminate();

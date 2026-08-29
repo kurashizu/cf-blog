@@ -1,4 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
+/// <reference types="@webgpu/types" />
 
 declare global {
 	namespace App {
