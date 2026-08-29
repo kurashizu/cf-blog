@@ -243,8 +243,21 @@ b2 = '''static void bf_start_load_block(BlockDevice *bs, int block_num)
 assert a2 in s, 'start_load_block not found'
 s = s.replace(a2, b2, 1)
 
+a3 = '''    if (err < 0) {
+        fprintf(stderr, "Could not load block %u\\n", b->block_num);
+        exit(1);
+    }'''
+b3 = '''    fprintf(stderr, "blk: block %u arrived err=%d size=%d\\n",
+            b->block_num, err, (int)size);
+    if (err < 0) {
+        fprintf(stderr, "Could not load block %u\\n", b->block_num);
+        exit(1);
+    }'''
+assert a3 in s, 'read_onload body not found'
+s = s.replace(a3, b3, 1)
+
 p.write_text(s)
-print('block_net.c: read and fetch traced')
+print('block_net.c: read, fetch and arrival traced')
 PATCHBLK
 
 # The ISA string in the device tree is built by walking the misa bits in
