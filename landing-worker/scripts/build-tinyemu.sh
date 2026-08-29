@@ -224,6 +224,42 @@ p.write_text(s)
 print('riscv_cpu.c: PMP and performance counter CSRs stubbed, state dump added')
 PATCHCSR
 
+# The ISA string in the device tree is built by walking the misa bits in
+# alphabetical order, which spells rv64acdfimsu. A kernel reads that string in
+# canonical order -- base first, then m, a, f, d -- sees an 'a' where the base
+# letter belongs, and concludes the CPU does not support rv64ima. It then stops
+# with a BUG in smpboot.c, which is a long way from the actual complaint.
+python3 - <<'PATCHISA'
+import pathlib
+p = pathlib.Path('riscv_machine.c')
+s = p.read_text()
+a = '''    q = isa_string;
+    q += snprintf(isa_string, sizeof(isa_string), "rv%d", max_xlen);
+    for(i = 0; i < 26; i++) {
+        if (misa & (1 << i))
+            *q++ = 'a' + i;
+    }
+    *q = '\\0';'''
+b = '''    {
+        /* Canonical order, which is the only order a kernel will read. The
+           supervisor and user bits of misa are deliberately not letters here:
+           they are not ISA extensions and a strict parser rejects them. */
+        static const char canonical[] = "imafdqclbjtpvn";
+        const char *c;
+
+        q = isa_string;
+        q += snprintf(isa_string, sizeof(isa_string), "rv%d", max_xlen);
+        for (c = canonical; *c != '\\0'; c++) {
+            if (misa & (1 << (*c - 'a')))
+                *q++ = *c;
+        }
+        *q = '\\0';
+    }'''
+assert a in s, 'isa string not found'
+p.write_text(s.replace(a, b, 1))
+print('riscv_machine.c: ISA string put in canonical order')
+PATCHISA
+
 # The HTIF console is the only one this machine has, and OpenSBI will not bind a
 # serial driver to a node with no address. Without a console the firmware and
 # the kernel both boot in complete silence, which is indistinguishable from not
