@@ -144,4 +144,19 @@ mkdir -p js
 emmake make -f Makefile.js -j"$(nproc)"
 
 cp js/riscvemu64-wasm.js js/riscvemu64-wasm.wasm "$OUT/"
+
+# A second build that says what the guest CPU is doing wrong. TinyEMU keeps its
+# diagnostics behind compile-time switches, and a machine that runs but prints
+# nothing — no console, no disk reads — cannot be told apart from outside
+# without them. The page loads this one only with ?debug.
+if [ "${DEBUG_BUILD:-1}" = "1" ]; then
+	make -f Makefile.js clean >/dev/null 2>&1 || rm -f ./*.js.o js/riscvemu64-wasm.*
+	EMCFLAGS_EXTRA="-DDUMP_EXCEPTIONS -DDUMP_INVALID_MEM_ACCESS -DDUMP_MMU_EXCEPTIONS -DDUMP_INVALID_CSR"
+	sed -i.bak "s|^EMCFLAGS=|EMCFLAGS=$EMCFLAGS_EXTRA |" Makefile.js
+	emmake make -f Makefile.js -j"$(nproc)"
+	cp js/riscvemu64-wasm.js "$OUT/riscvemu64-debug.js"
+	cp js/riscvemu64-wasm.wasm "$OUT/riscvemu64-debug.wasm"
+	# The glue looks for its own name; the copy has a different one.
+	sed -i "s/riscvemu64-wasm\.wasm/riscvemu64-debug.wasm/g" "$OUT/riscvemu64-debug.js"
+fi
 ls -l "$OUT"
