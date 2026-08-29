@@ -18,8 +18,12 @@ WORK="${WORK:-/tmp/qemu-wasm}"
 
 mkdir -p "$OUT"
 
+# Submodules included: aarch64 and riscv64 need libfdt, and QEMU builds it from
+# its bundled dtc. Without it meson tries to fetch the subproject at configure
+# time, which is both slower and a network dependency inside the container.
 if [ ! -d "$WORK" ]; then
-	git clone --depth 1 --branch "$QEMU_REF" https://github.com/ktock/qemu-wasm "$WORK"
+	git clone --depth 1 --recurse-submodules --shallow-submodules \
+		--branch "$QEMU_REF" https://github.com/ktock/qemu-wasm "$WORK"
 fi
 
 # zlib.net serves only the current release, so a pinned version disappears from
@@ -31,7 +35,10 @@ echo "==> building the toolchain image"
 docker build -t buildqemu - < "$WORK/Dockerfile"
 
 docker rm -f build-qemu-wasm >/dev/null 2>&1 || true
-docker run --rm -d --name build-qemu-wasm -v "$WORK":/qemu/:ro \
+# Writable, unlike the project's own instructions: meson populates subprojects
+# inside the source tree, and a read-only mount stops the build at "git init
+# dtc" the moment a target needs a device tree.
+docker run --rm -d --name build-qemu-wasm -v "$WORK":/qemu/:rw \
 	--entrypoint /bin/sh buildqemu -c 'sleep infinity'
 
 BUILD_DIR=$(docker exec build-qemu-wasm pwd)
