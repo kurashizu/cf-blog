@@ -34,14 +34,20 @@
 		'Always reply in the same language the user wrote in.';
 
 	/**
-	 * Qwen3 has a native reasoning mode driven by a soft switch in the prompt:
-	 * `/think` opens a real <think> block, `/no_think` suppresses it. Those tags
-	 * are tokens the model was trained on, not an instruction it has to obey, so
-	 * this is a switch rather than a suggestion. The transcript folds the block
-	 * away either way.
+	 * Qwen3.5's chat template does not switch thinking with a phrase in the
+	 * prompt — `/no_think` appears nowhere in it, and writing it into the system
+	 * message just gives the model something to muse about. What the template
+	 * actually does on `enable_thinking: false` is prefill the assistant turn
+	 * with an already-closed block:
+	 *
+	 *     <|im_start|>assistant\n<think>\n\n</think>\n\n
+	 *
+	 * so the model resumes after a reasoning block it never got to open. web-llm
+	 * drives the `qwen2` template, which has no such branch, so the prefill is
+	 * done here: an assistant message carrying exactly that text, appended after
+	 * the user's turn. The model continues it rather than starting fresh.
 	 */
-	const THINK_ON = ' /think';
-	const THINK_OFF = ' /no_think';
+	const NO_THINK_PREFILL = '<think>\n\n</think>\n\n';
 
 	let phase = $state<Phase>('idle');
 	let gpu = $state<GpuSupport | null>(null);
@@ -266,7 +272,7 @@
 		lastStats = '';
 		await scrollToEnd();
 
-		let system = BASE_PROMPT + (thinkMode ? THINK_ON : THINK_OFF);
+		let system = BASE_PROMPT;
 		if (compactedSummary) {
 			system += `\n\nEarlier conversation, summarised: ${compactedSummary}`;
 		}
@@ -278,6 +284,12 @@
 				.filter((t) => !t.notice)
 				.map((t) => ({ role: t.role, content: t.content }) as ChatCompletionMessageParam)
 		];
+
+		// With thinking off, hand the model a closed reasoning block to continue
+		// from. See NO_THINK_PREFILL.
+		if (!thinkMode) {
+			messages.push({ role: 'assistant', content: NO_THINK_PREFILL });
+		}
 
 		try {
 			const stream = await engine.chat.completions.create({
@@ -572,13 +584,20 @@
 					{#if parts.think || parts.thinking}
 						<button
 							onclick={() => toggleThink(i)}
+							title="A model this size reasons at length and not always to the point. Kept folded away."
 							class="self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer"
 						>
-							{parts.thinking ? '◐ thinking…' : openThink.has(i) ? '▾ reasoning' : '▸ reasoning'}
+							{#if parts.thinking}
+								◐ thinking… ({parts.think.length} chars)
+							{:else}
+								{openThink.has(i) ? '▾' : '▸'} reasoning ({parts.think.length} chars)
+							{/if}
 						</button>
-						{#if openThink.has(i) || parts.thinking}
+						<!-- Stays folded while streaming: this model can reason for
+						     thousands of characters, and unfolding it buries the answer. -->
+						{#if openThink.has(i)}
 							<div
-								class="text-xs font-mono text-white/45 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5"
+								class="text-xs font-mono text-white/45 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5 max-h-64 overflow-y-auto"
 							>
 								{parts.think}
 							</div>
@@ -588,7 +607,7 @@
 						<div class="chat-md text-sm text-[#d8dee9] break-words">
 							{@html renderMarkdown(parts.answer)}
 						</div>
-					{:else if !parts.thinking}
+					{:else}
 						<span class="text-white/40 text-sm">▋</span>
 					{/if}
 				</div>
