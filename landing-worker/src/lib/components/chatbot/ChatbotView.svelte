@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
-	import { renderMarkdown, splitThink } from './markdown';
+	import { isLooping, renderMarkdown, splitThink } from './markdown';
 	import {
 		ALL_BUILDS,
 		CONTEXT_WINDOW,
@@ -285,18 +285,27 @@
 				stream: true,
 				stream_options: { include_usage: true },
 				...SAMPLING,
-				max_tokens: 800
+				// A backstop, not a budget: if the model does loop, this bounds how
+				// long you wait before STOP becomes the obvious move. Thinking needs
+				// the extra room, since the reasoning block spends from the same pot.
+				max_tokens: thinkMode ? 900 : 500
 			});
+			let looped = false;
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta?.content;
 				if (delta) {
 					const next = [...turns];
-					next[next.length - 1] = {
-						role: 'assistant',
-						content: next[next.length - 1].content + delta
-					};
+					const grown = next[next.length - 1].content + delta;
+					next[next.length - 1] = { role: 'assistant', content: grown };
 					turns = next;
 					await scrollToEnd();
+
+					// Cut a loop short rather than let it run to max_tokens.
+					if (isLooping(grown)) {
+						looped = true;
+						await engine.interruptGenerate();
+						break;
+					}
 				}
 				if (chunk.usage) {
 					if (chunk.usage.extra?.decode_tokens_per_s) {
@@ -304,6 +313,18 @@
 					}
 					if (chunk.usage.total_tokens) usedTokens = chunk.usage.total_tokens;
 				}
+			}
+			if (looped) {
+				// Say so rather than leaving a reply that just stops mid-repetition.
+				turns = [
+					...turns,
+					{
+						role: 'assistant',
+						content: 'cut short — the model started repeating itself. ask again, or /clear.',
+						notice: true
+					}
+				];
+				await scrollToEnd();
 			}
 			phase = 'ready';
 		} catch (err) {

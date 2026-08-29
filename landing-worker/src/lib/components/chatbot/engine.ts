@@ -1,5 +1,6 @@
 import type {
 	ChatCompletionMessageParam,
+	ChatOptions,
 	InitProgressReport,
 	MLCEngineInterface
 } from '@mlc-ai/web-llm';
@@ -20,42 +21,48 @@ export interface ModelBuild {
 }
 
 /**
- * Qwen3-0.6B, chosen after Qwen3.5-0.8B looped badly in multi-turn chat.
+ * Qwen3.5-0.8B — the newest model available as an MLC build, and the strongest
+ * on knowledge benchmarks of anything that fits here.
  *
- * Qwen3.5 failed for two compounding reasons, neither fixable from here: it is
- * a hybrid Gated DeltaNet (18 linear-attention layers to 6 full-attention) and
- * the only family in web-llm's list carrying a `max_history_size` override —
- * the tell for the recurrent-state path — and its MLC config declares Qwen3's
- * stop token ids against a 248320-token vocabulary where they are undefined.
- * Qwen's own model card warns the 0.8B is "more prone to entering thinking
- * loops … which may prevent it from terminating generation properly".
+ * It needs help to behave. Three things are wrong or hostile out of the box,
+ * all handled below and in CHAT_OPTS:
  *
- * Qwen3-0.6B is the older generation and scores lower on knowledge benchmarks,
- * but it is a plain transformer with a correct `qwen3` template and stop ids
- * (151643 / 151645) that genuinely exist in its 151936-token vocabulary. For a
- * chat toy, terminating correctly beats scoring well.
+ *  1. Its MLC config declares stop token ids 151643 / 151645, copied from
+ *     Qwen3's 151936-token vocabulary. This model's vocabulary is 248320, where
+ *     those ids are undefined and the real markers are 248044 (`<|endoftext|>`)
+ *     and 248046 (`<|im_end|>`). Uncorrected, generation never stops cleanly —
+ *     which is what makes it repeat a greeting and answer in the wrong
+ *     language. CHAT_OPTS fixes this.
+ *  2. web-llm sets `max_history_size: 1` on every Qwen3.5 entry and no other
+ *     family. It is a hybrid Gated DeltaNet (18 linear-attention layers to 6
+ *     full-attention), so this sizes the recurrent state.
+ *  3. Qwen's own model card warns this size is "more prone to entering thinking
+ *     loops … which may prevent it from terminating generation properly", and
+ *     reports its own IFEval *dropping* in thinking mode (52.1 → 44.0). The
+ *     think toggle therefore defaults off, and SAMPLING carries a real
+ *     repetition penalty.
  *
- * It is also the right pick for Chinese: 24873 whole-word Chinese tokens
- * against Llama-3.2-1B's 3629, which encodes a 23-character Chinese sentence in
- * ~12 tokens where Llama needs ~17. And it is the smallest of the candidates —
- * 335 MB, half of Llama-3.2-1B's 672 MB.
+ * If it still loops in normal use, the fault is architectural rather than
+ * configuration and Qwen3-0.6B is the fallback: older and lower-scoring, but a
+ * plain transformer with a correct config and equally good Chinese
+ * (24873 whole-word Chinese tokens against this model's comparable coverage).
  *
- * Swapping the model again means changing both ids below and re-checking the
- * packaged `mlc-chat-config.json` against the model's own
- * `tokenizer_config.json`: stop token ids belong to a model's tokenizer and are
- * not portable between generations. That mismatch is exactly what broke Qwen3.5.
+ * Swapping the model means changing both ids below AND re-checking the packaged
+ * `mlc-chat-config.json` against the model's own `tokenizer_config.json`. Stop
+ * token ids belong to a model's tokenizer and are not portable between
+ * generations — that mismatch is bug 1 above.
  *
- * Both builds carry the same int4 weights and download identically; they differ
- * in activation precision, which shows up as runtime VRAM. f16 is preferred
- * because it is faster, but its kernels need `shader-f16` — `pickModel()` falls
- * back where the adapter lacks it.
+ * Both builds carry the same int4 weights and download identically (426 MB);
+ * they differ in activation precision, which shows up as runtime VRAM. f16 is
+ * preferred because it is faster, but its kernels need `shader-f16` —
+ * `pickModel()` falls back where the adapter lacks it.
  */
-export const MODEL_F16 = 'Qwen3-0.6B-q4f16_1-MLC';
-export const MODEL_F32 = 'Qwen3-0.6B-q4f32_1-MLC';
+export const MODEL_F16 = 'Qwen3.5-0.8B-q4f16_1-MLC';
+export const MODEL_F32 = 'Qwen3.5-0.8B-q4f32_1-MLC';
 
 export const BUILDS: Record<string, ModelBuild> = {
-	[MODEL_F16]: { id: MODEL_F16, downloadMb: 335, vramMb: 1403 },
-	[MODEL_F32]: { id: MODEL_F32, downloadMb: 335, vramMb: 1925 }
+	[MODEL_F16]: { id: MODEL_F16, downloadMb: 426, vramMb: 1629 },
+	[MODEL_F32]: { id: MODEL_F32, downloadMb: 426, vramMb: 1894 }
 };
 
 /** Every build the page may cache — used by the storage panel. */
@@ -70,14 +77,54 @@ export const ALL_BUILDS: ModelBuild[] = Object.values(BUILDS);
  */
 
 /**
- * No `conv_template` override. Qwen3-0.6B's packaged config declares the
- * `qwen3` template with stop tokens 151643 / 151645, which are `<|endoftext|>`
- * and `<|im_end|>` in its own 151936-token vocabulary — verified against the
- * model's `tokenizer_config.json`, so overriding it could only break it.
+ * Corrects the packaged config's stop tokens. See bug 1 above: it declares
+ * Qwen3's 151643 / 151645 against this model's 248320-token vocabulary, where
+ * they are undefined. The real ids come from its own `tokenizer_config.json`:
  *
- * (Qwen3.5 needed one: it declares these same two ids against a 248320-token
- * vocabulary where they are undefined, so generation never stopped cleanly.)
+ *   248044 '<|endoftext|>'   248046 '<|im_end|>'   (248045 is '<|im_start|>')
+ *
+ * The role markup itself is right, so only the ids and stop strings change.
+ * web-llm merges chatOpts over the model record's overrides last, so this wins.
+ *
+ * `max_history_size` is deliberately left alone. Despite the name it does not
+ * trim conversation history — web-llm only uses it to size the RNN state tensor
+ * that this hybrid architecture needs. Raising it would over-allocate; the real
+ * bound on a conversation is `context_window_size`.
  */
+const STOP_ENDOFTEXT = 248044;
+const STOP_IM_END = 248046;
+
+type ConvTemplate = NonNullable<ChatOptions['conv_template']>;
+
+/**
+ * web-llm keys these by its `Role` enum, whose values are exactly these
+ * strings. The enum is not re-exported from the package root, and importing it
+ * statically would pull the whole engine into the page's first chunk.
+ */
+const ROLES = {
+	user: '<|im_start|>user',
+	assistant: '<|im_start|>assistant',
+	tool: '<|im_start|>tool'
+} as unknown as ConvTemplate['roles'];
+
+export const CHAT_OPTS: ChatOptions = {
+	conv_template: {
+		system_template: '<|im_start|>system\n{system_message}<|im_end|>\n',
+		system_message: 'You are a helpful assistant.',
+		add_role_after_system_message: true,
+		roles: ROLES,
+		role_templates: {
+			user: '{user_message}',
+			assistant: '{assistant_message}',
+			tool: '{tool_message}'
+		},
+		seps: ['<|im_end|>\n'],
+		role_content_sep: '\n',
+		role_empty_sep: '\n',
+		stop_str: ['<|endoftext|>', '<|im_end|>'],
+		stop_token_ids: [STOP_ENDOFTEXT, STOP_IM_END]
+	}
+};
 
 export interface GpuSupport {
 	ok: boolean;
@@ -135,16 +182,33 @@ export const CONTEXT_WINDOW = 4096;
  * are deliberately gentle, since penalising too hard makes a small model
  * incoherent rather than merely repetitive.
  */
+/**
+ * Tuned for stability rather than flair, because this model's documented
+ * failure is looping rather than dullness.
+ *
+ * web-llm passes presence, frequency and repetition penalties into one kernel
+ * together (they compose; they are not alternatives), and applies them over
+ * every token seen so far — so all three can pull in the same direction.
+ *
+ * - temperature below Qwen's suggested 0.7, and top_p tightened to 0.8: a
+ *   narrower, flatter distribution is far less likely to wander into a loop.
+ * - repetition_penalty 1.15 is the blunt instrument that acts on any repeated
+ *   token regardless of count. Past ~1.2 small models start dodging necessary
+ *   words and turn stilted.
+ * - frequency_penalty scales with how often a token has appeared, which is what
+ *   actually breaks a loop already in progress.
+ * - presence_penalty stays low on purpose. Qwen suggests 1.5-2.0 against
+ *   repetition but warns in the same note that high values cause language
+ *   mixing — on a page answering in Chinese that is the worse failure, and it
+ *   is a flat penalty on every seen token, which in Chinese hits common
+ *   characters hardest.
+ */
 export const SAMPLING = {
-	// Qwen3's own recommended non-thinking settings.
-	temperature: 0.7,
+	temperature: 0.6,
 	top_p: 0.8,
-	// Qwen suggests presence_penalty up to 1.5-2.0 against repetition, but warns
-	// that high values cause language mixing — which for a page answering in
-	// Chinese is a worse failure than the occasional repeat. Kept moderate.
-	// Set as a pair: web-llm zeroes one and warns if only the other is given.
-	presence_penalty: 0.6,
-	frequency_penalty: 0.3
+	repetition_penalty: 1.15,
+	frequency_penalty: 0.5,
+	presence_penalty: 0.2
 } as const;
 
 /**
@@ -159,9 +223,14 @@ export async function createEngine(
 	const { CreateWebWorkerMLCEngine } = await import('@mlc-ai/web-llm');
 	const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 	try {
-		const engine = await CreateWebWorkerMLCEngine(worker, modelId, {
-			initProgressCallback: onProgress
-		});
+		const engine = await CreateWebWorkerMLCEngine(
+			worker,
+			modelId,
+			{ initProgressCallback: onProgress },
+			// Corrects the packaged config's stop tokens — see CHAT_OPTS. web-llm
+			// keeps a reference to this, so hand it a copy rather than the module's.
+			structuredClone(CHAT_OPTS)
+		);
 		return { engine, worker };
 	} catch (err) {
 		worker.terminate();

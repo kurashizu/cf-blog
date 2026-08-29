@@ -131,6 +131,36 @@ export function renderMarkdown(src: string): string {
 	return out.join('');
 }
 
+/**
+ * True when the tail of a reply has collapsed into repetition.
+ *
+ * Sampling penalties make looping less likely but cannot rule it out, and a
+ * model stuck in a loop will happily fill every token it is allowed. This
+ * watches the end of the stream for a short phrase repeating back-to-back, so
+ * generation can be cut off rather than run to max_tokens.
+ *
+ * Deliberately conservative: it needs three consecutive copies of a chunk of
+ * real length, which prose does not produce by accident.
+ */
+export function isLooping(text: string): boolean {
+	// Long enough to hold three copies of a paragraph-sized repeat.
+	const tail = text.slice(-1800);
+	if (tail.length < 60) return false;
+
+	// Every phrase length, longest first — a stride would step over the exact
+	// period of a repeat and miss it. Capped at a third of the tail, since three
+	// copies have to fit.
+	const max = Math.floor(tail.length / 3);
+	for (let len = Math.min(400, max); len >= 8; len--) {
+		const a = tail.slice(-len);
+		const b = tail.slice(-len * 2, -len);
+		if (a !== b) continue;
+		const c = tail.slice(-len * 3, -len * 2);
+		if (b === c && a.trim().length >= 8) return true;
+	}
+	return false;
+}
+
 export interface SplitReply {
 	/** Reasoning the model emitted inside <think> … </think>. */
 	think: string;
