@@ -178,10 +178,14 @@ static void dump_regs(RISCVCPUState *s);
 /* Called from the page: prints where the CPU is. See build-tinyemu.sh. */
 void vm_dump_state(void)
 {
-    if (dbg_cpu)
-        dump_regs(dbg_cpu);
-    else
+    if (!dbg_cpu) {
         fprintf(stderr, "no cpu yet\\n");
+        return;
+    }
+    dump_regs(dbg_cpu);
+    fprintf(stderr, "power_down=%d mip=%08x mie=%08x insn=%\" PRIu64 \"\\n",
+            dbg_cpu->power_down_flag, (uint32_t)dbg_cpu->mip,
+            (uint32_t)dbg_cpu->mie, (uint64_t)dbg_cpu->insn_counter);
 }
 
 static void dump_regs(RISCVCPUState *s)'''
