@@ -36,7 +36,7 @@ let model: PreTrainedModel | null = null;
 let stopper: InterruptableStoppingCriteria | null = null;
 
 type InMsg =
-	| { type: 'load' }
+	| { type: 'load'; device: 'webgpu' | 'wasm' }
 	| {
 			type: 'generate';
 			messages: unknown[];
@@ -49,7 +49,7 @@ type InMsg =
 
 const post = (m: unknown) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
 
-async function load() {
+async function load(device: 'webgpu' | 'wasm') {
 	if (model) {
 		post({ type: 'ready' });
 		return;
@@ -61,10 +61,12 @@ async function load() {
 	processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback });
 	model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
 		dtype: DTYPE,
-		device: 'webgpu',
+		// A string applies to every session; an object would silently leave any
+		// part it omits on the default backend, which in a browser is wasm.
+		device,
 		progress_callback
 	});
-	post({ type: 'ready' });
+	post({ type: 'ready', device });
 }
 
 /**
@@ -162,7 +164,7 @@ async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
 self.onmessage = async (e: MessageEvent<InMsg>) => {
 	const msg = e.data;
 	try {
-		if (msg.type === 'load') await load();
+		if (msg.type === 'load') await load(msg.device);
 		else if (msg.type === 'generate') await generate(msg);
 		else if (msg.type === 'interrupt') stopper?.interrupt();
 	} catch (err) {

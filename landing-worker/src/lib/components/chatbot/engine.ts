@@ -54,7 +54,20 @@ export const PART_SIZES_MB = {
 export const TOTAL_DOWNLOAD_MB =
 	PART_SIZES_MB.decoder + PART_SIZES_MB.embed + PART_SIZES_MB.vision + PART_SIZES_MB.audio;
 
+/**
+ * Where inference runs. WebGPU is dramatically faster; wasm is the fallback for
+ * browsers that do not expose WebGPU at all — Firefox on Linux still hides it
+ * behind `dom.webgpu.enabled`, and any plain-http origin that is not localhost
+ * fails the secure-context requirement regardless of browser.
+ *
+ * On wasm a 4B model runs at conversational speed only in the loosest sense;
+ * expect single-digit tokens per second on a good desktop CPU, and slower on
+ * anything portable. It is there so the page works, not so it works well.
+ */
+export type Backend = 'webgpu' | 'wasm';
+
 export interface ChatConfig {
+	backend: Backend | 'auto';
 	maxTokens: number;
 	temperature: number;
 	topP: number;
@@ -67,6 +80,7 @@ export interface ChatConfig {
 }
 
 export const DEFAULT_CONFIG: ChatConfig = {
+	backend: 'auto',
 	maxTokens: 2048,
 	temperature: 0.7,
 	topP: 0.9,
@@ -129,7 +143,17 @@ export interface GpuSupport {
 export async function probeGpu(): Promise<GpuSupport> {
 	const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
 	if (!gpu) {
-		return { ok: false, f16: false, reason: 'This browser has no WebGPU. Chrome/Edge 113+, or Safari 18+.' };
+		// `isSecureContext` separates "this browser cannot" from "this URL is not
+		// allowed to" — the second is the common one on a LAN address, and the fix
+		// is completely different.
+		const insecure = typeof isSecureContext !== 'undefined' && !isSecureContext;
+		return {
+			ok: false,
+			f16: false,
+			reason: insecure
+				? 'WebGPU needs a secure context, and this page is plain http on a non-localhost address. Use https, or run on the CPU instead.'
+				: 'This browser does not expose WebGPU. Chrome/Edge 113+, Safari 18+, or Firefox with dom.webgpu.enabled. You can run on the CPU instead.'
+		};
 	}
 	let adapter: GPUAdapter | null = null;
 	try {
