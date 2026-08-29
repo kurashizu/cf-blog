@@ -27,14 +27,14 @@ interface Env {
 	VM_BUCKET?: R2Bucket;
 }
 
-export const GET: RequestHandler = async ({ params, platform }) => {
+export const GET: RequestHandler = async ({ params, platform, url }) => {
 	const env = platform?.env as Env | undefined;
 	const images = parseImages(env?.RV_IMAGES);
 	if (!Object.keys(images).length) error(503, 'No riscv64 machine is configured on this deployment.');
 
 	const file = params.file;
 
-	if (file === 'krsz-rv.cfg') return config(images, env);
+	if (file === 'krsz-rv.cfg') return config(env, url);
 	if (file === 'blk.txt') return blockIndex(images.rootfs);
 
 	const block = matchBlock(file);
@@ -132,18 +132,23 @@ async function whole(image: ImageSpec, bucket: R2Bucket | undefined): Promise<Re
  * in the page, which the x86 machine gets from v86 and this one has nowhere to
  * borrow.
  */
-function config(images: Record<string, ImageSpec>, env: Env | undefined): Response {
+function config(env: Env | undefined, url: URL): Response {
 	const memory = Number(env?.RV_MEMORY_MB ?? 256);
+	// Absolute, all of them. TinyEMU resolves the firmware and kernel against
+	// this file's own location but hands the drive's name straight to its HTTP
+	// block device, which asked the origin root for /blk.txt and got the site's
+	// 404 page — then tried to parse it as an index.
+	const here = new URL('.', url).href;
 	const body = JSON.stringify(
 		{
 			version: 1,
 			machine: 'riscv64',
 			memory_size: Number.isFinite(memory) && memory >= 64 ? memory : 256,
-			bios: 'bios.bin',
-			kernel: 'kernel',
-			initrd: 'initramfs',
+			bios: `${here}bios.bin`,
+			kernel: `${here}kernel`,
+			initrd: `${here}initramfs`,
 			cmdline: 'console=hvc0 root=/dev/vda rw rootwait',
-			drive0: { file: 'blk.txt' }
+			drive0: { file: `${here}blk.txt` }
 		},
 		null,
 		2
