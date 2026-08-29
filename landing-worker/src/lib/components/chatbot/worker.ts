@@ -14,7 +14,7 @@ import {
 	type PreTrainedModel,
 	type Processor
 } from '@huggingface/transformers';
-import { DTYPE, MODEL_HOST, MODEL_ID, ORT_WASM_PATH } from './engine';
+import { MODEL_HOST, MODEL_ID, ORT_WASM_PATH, dtypeFor } from './engine';
 
 /**
  * Serve both the weights and the runtime from this site's bucket. By default
@@ -60,7 +60,7 @@ async function load(device: 'webgpu' | 'wasm') {
 
 	processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback });
 	model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
-		dtype: DTYPE,
+		dtype: dtypeFor(device),
 		// A string applies to every session; an object would silently leave any
 		// part it omits on the default backend, which in a browser is wasm.
 		device,

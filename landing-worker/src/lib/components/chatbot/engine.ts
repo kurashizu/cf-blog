@@ -43,6 +43,30 @@ export const DTYPE = {
 	audio_encoder: 'q4f16'
 } as const;
 
+/**
+ * The CPU backend needs a different embedding table.
+ *
+ * Every quantised `embed_tokens` export — q4f16, q4 and quantized alike —
+ * builds its lookup out of `com.microsoft.GatherBlockQuantized`, and the wasm
+ * CPU provider has no kernel for the type combination they use, so the session
+ * cannot even be created:
+ *
+ *   Failed to find kernel for com.microsoft.GatherBlockQuantized(1)
+ *   (node:'node_embedding_Quant' ep:'CPUExecutionProvider')
+ *
+ * Only the fp16 export avoids that op, and it is 5248 MB against 1517 — so the
+ * CPU path costs 3.7 GB more to download as well as running far slower. The
+ * other three parts are unaffected and stay at q4f16.
+ */
+export const DTYPE_CPU = {
+	...DTYPE,
+	embed_tokens: 'fp16'
+} as const;
+
+export function dtypeFor(backend: Backend) {
+	return backend === 'wasm' ? DTYPE_CPU : DTYPE;
+}
+
 /** Download size in MB, by part, for what the storage panel reports. */
 export const PART_SIZES_MB = {
 	decoder: 1449,
@@ -51,8 +75,14 @@ export const PART_SIZES_MB = {
 	audio: 163
 } as const;
 
+/** The fp16 embedding table the CPU backend has to use instead. */
+export const EMBED_FP16_MB = 5248;
+
 export const TOTAL_DOWNLOAD_MB =
 	PART_SIZES_MB.decoder + PART_SIZES_MB.embed + PART_SIZES_MB.vision + PART_SIZES_MB.audio;
+
+/** What the CPU backend downloads, with the larger embedding table. */
+export const TOTAL_DOWNLOAD_CPU_MB = TOTAL_DOWNLOAD_MB - PART_SIZES_MB.embed + EMBED_FP16_MB;
 
 /**
  * Where inference runs. WebGPU is dramatically faster; wasm is the fallback for

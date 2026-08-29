@@ -8,6 +8,8 @@
 		DEFAULT_CONFIG,
 		PART_SIZES_MB,
 		TOTAL_DOWNLOAD_MB,
+		TOTAL_DOWNLOAD_CPU_MB,
+		EMBED_FP16_MB,
 		loadConfig,
 		probeGpu,
 		saveConfig,
@@ -152,7 +154,7 @@
 		// download — fall back to the published figure so the bar does not race
 		// to 100% and then restart.
 		const known = vals.reduce((a, v) => a + v.total, 0);
-		const total = Math.max(known, TOTAL_DOWNLOAD_MB * 1048576);
+		const total = Math.max(known, expectedDownloadMb * 1048576);
 		progressPct = total ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
 		progressText =
 			status === 'ready' || !vals.length
@@ -209,6 +211,14 @@
 	);
 	/** The backend the loaded engine is actually running on. */
 	let activeBackend = $state<'webgpu' | 'wasm' | ''>('');
+
+	/**
+	 * The CPU path pulls a much larger embedding table, so the figure quoted and
+	 * the progress denominator both have to follow the backend.
+	 */
+	let expectedDownloadMb = $derived(
+		resolvedBackend === 'wasm' ? TOTAL_DOWNLOAD_CPU_MB : TOTAL_DOWNLOAD_MB
+	);
 
 	function load() {
 		if (busy) return;
@@ -685,12 +695,20 @@
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
 				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.decoder)}</span>
-				<span>embeddings</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.embed)}</span>
+				<span>embeddings</span>
+				<span class="tabular-nums">
+					{fmtMb(resolvedBackend === 'wasm' ? EMBED_FP16_MB : PART_SIZES_MB.embed)}
+				</span>
 				<span>vision encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
 				<span>audio encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.audio)}</span>
 			</div>
 			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1">
-				total {fmtMb(TOTAL_DOWNLOAD_MB)}
+				total {fmtMb(expectedDownloadMb)}
+				{#if resolvedBackend === 'wasm'}
+					<span class="text-white/35">
+						— the CPU needs an unquantised embedding table, which is most of this
+					</span>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -720,14 +738,15 @@
 					no server on the other end of this box.
 				</div>
 				<div class="text-white/40 text-xs">
-					First run downloads {fmtMb(TOTAL_DOWNLOAD_MB)} and caches it, so later visits start
+					First run downloads {fmtMb(expectedDownloadMb)} and caches it, so later visits start
 					immediately.
 					{#if resolvedBackend === 'webgpu'}
 						<br />Runs on the GPU and wants roughly 4 GB of video memory — integrated graphics will
 						struggle.
 					{:else}
 						<br /><span class="text-[#e5c07b]">Will run on the CPU</span>, which works anywhere but
-						is far slower — expect a few tokens a second.
+						is far slower — expect a few tokens a second. It also needs a larger embedding table
+						the CPU can actually read, which is most of that download.
 						{#if gpu && !gpu.ok}
 							<br /><span class="text-white/30">{gpu.reason}</span>
 						{/if}
