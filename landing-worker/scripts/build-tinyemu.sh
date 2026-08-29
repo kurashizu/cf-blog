@@ -96,15 +96,15 @@ void virt_machine_run(void *opaque)
         fprintf(stderr, "machine running\\n");
     }'''
 assert a in s, 'run loop not found'
-p.write_text(s.replace(a, b, 1))
-# And one at the top of vm_start, so a machine that never gets as far as
-# loading its config can be told apart from one that never starts.
-a2 = 'void vm_start(const char *url, int ram_size, const char *cmdline,'
-b2 = '''void vm_start(const char *url, int ram_size, const char *cmdline,'''
-s2 = s.replace('    s->p = mallocz(sizeof(VirtMachineParams));',
-               '    fprintf(stderr, "vm_start: %s, %d MB\\n", url, ram_size);\n    s->p = mallocz(sizeof(VirtMachineParams));', 1)
-assert s2 != s, 'vm_start body not found'
-s = s2
+s = s.replace(a, b, 1)
+
+# And one where vm_start begins, so a machine that never gets as far as loading
+# its config can be told apart from one that loads everything and never runs.
+a2 = '    s->p = mallocz(sizeof(VirtMachineParams));'
+b2 = '    fprintf(stderr, "vm_start: %s, %d MB\\n", url, ram_size);\n' + a2
+assert a2 in s, 'vm_start body not found'
+s = s.replace(a2, b2, 1)
+
 p.write_text(s)
 print('jsemu.c: vm_stop and two prints added')
 PATCHRUN
