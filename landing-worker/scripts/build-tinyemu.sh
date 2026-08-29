@@ -43,7 +43,7 @@ s = s.replace('-s BINARYEN_TRAP_MODE=clamp ', '')
 s = s.replace('EXTRA_EXPORTED_RUNTIME_METHODS', 'EXPORTED_RUNTIME_METHODS')
 # The JS library calls _malloc and _free directly and reaches the C callbacks
 # through dynCall; both have to be asked for now or they are optimised away.
-s = s.replace("'_net_set_carrier']", "'_net_set_carrier','_vm_stop','_malloc','_free']")
+s = s.replace("'_net_set_carrier']", "'_net_set_carrier','_vm_stop','_vm_dump_state','_malloc','_free']")
 s = s.replace('-s NO_FILESYSTEM=1', '-s NO_FILESYSTEM=1 -s DYNCALLS=1')
 s = s.replace('-s TOTAL_MEMORY=67108864', '-s INITIAL_MEMORY=67108864')
 
@@ -159,8 +159,37 @@ write_new = '''static int csr_write(RISCVCPUState *s, uint32_t csr, target_ulong
 assert write_at in s, 'csr_write head not found'
 s = s.replace(write_at, write_new, 1)
 
+# A way to ask the CPU where it is. Without a console, a machine that runs
+# forever and one that is quietly making progress look identical; the program
+# counter and the privilege level tell them apart in one call.
+init_at = '''    s->common.class_ptr = &glue(riscv_cpu_class, MAX_XLEN);
+    s->mem_map = mem_map;'''
+init_new = '''    s->common.class_ptr = &glue(riscv_cpu_class, MAX_XLEN);
+    dbg_cpu = s;
+    s->mem_map = mem_map;'''
+assert init_at in s, 'cpu init body not found'
+s = s.replace(init_at, init_new, 1)
+
+# The dump itself, declared after dump_regs so it can call it.
+dump_at = 'static void dump_regs(RISCVCPUState *s)'
+dump_new = '''static RISCVCPUState *dbg_cpu;
+static void dump_regs(RISCVCPUState *s);
+
+/* Called from the page: prints where the CPU is. See build-tinyemu.sh. */
+void vm_dump_state(void)
+{
+    if (dbg_cpu)
+        dump_regs(dbg_cpu);
+    else
+        fprintf(stderr, "no cpu yet\\n");
+}
+
+static void dump_regs(RISCVCPUState *s)'''
+assert dump_at in s, 'dump_regs not found'
+s = s.replace(dump_at, dump_new, 1)
+
 p.write_text(s)
-print('riscv_cpu.c: PMP and performance counter CSRs stubbed')
+print('riscv_cpu.c: PMP and performance counter CSRs stubbed, state dump added')
 PATCHCSR
 
 # The HTIF console is the only one this machine has, and OpenSBI will not bind a
