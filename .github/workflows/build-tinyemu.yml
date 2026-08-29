@@ -1,0 +1,37 @@
+name: Build TinyEMU
+
+# Manual only: the emulator changes about as often as Bellard releases one, and
+# the build takes an Emscripten toolchain the site build has no use for.
+# The artifact is committed to landing-worker/static/vm/ by hand, next to the
+# BIOS images it sits beside at runtime.
+on:
+    workflow_dispatch:
+        inputs:
+            tinyemu_version:
+                description: "TinyEMU release date"
+                default: "2019-12-21"
+            emsdk_version:
+                description: "Emscripten SDK version"
+                default: "3.1.74"
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Build riscv64 emulator to wasm
+              env:
+                  TINYEMU_VERSION: ${{ inputs.tinyemu_version }}
+                  EMSDK_VERSION: ${{ inputs.emsdk_version }}
+                  OUT: ${{ github.workspace }}/out
+              run: bash landing-worker/scripts/build-tinyemu.sh
+
+            - name: Record sizes
+              run: ls -l out && sha256sum out/*
+
+            - uses: actions/upload-artifact@v5
+              with:
+                  name: tinyemu-riscv64
+                  path: out/*
+                  retention-days: 14
