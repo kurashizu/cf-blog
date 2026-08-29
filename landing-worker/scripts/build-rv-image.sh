@@ -147,6 +147,12 @@ rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \
 	"$ROOTFS/etc/runlevels/boot/modules" \
 	"$ROOTFS/etc/runlevels/sysinit/mdev" || true
 
+# The boot stops dead at "Mounting bpf filesystem", which is the last thing
+# openrc's sysfs service does and the first one this machine cannot finish.
+# Nothing here uses bpf, so the call goes rather than the service: /sys,
+# securityfs and debugfs are all mounted by the time it is reached.
+sed -i '/^[[:space:]]*mount_bpf$/d' "$ROOTFS/etc/init.d/sysfs" || true
+
 # ── firmware, kernel, initramfs ────────────────────────────────────────────
 KVER=$(ls "$ROOTFS/lib/modules" | head -n1)
 echo "==> kernel modules version: $KVER"
@@ -235,6 +241,13 @@ fi
 echo "krsz-rv: mounting /dev/vda"
 if ! mount -t ext4 -o ro /dev/vda /sysroot; then
 	echo "krsz-rv: mount failed -- dropping to a shell"
+	exec setsid -c /bin/sh || exec /bin/sh
+fi
+
+# A way in without switching root, for when the question is about the machine
+# rather than about the system on it.
+if grep -q krsz_shell /proc/cmdline; then
+	echo "krsz-rv: stopping in the initramfs, as asked"
 	exec setsid -c /bin/sh || exec /bin/sh
 fi
 
