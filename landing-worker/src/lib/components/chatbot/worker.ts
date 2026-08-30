@@ -33,6 +33,25 @@ type InMsg =
 
 const post = (m: unknown) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
 
+/**
+ * wllama's primary build needs both JSPI and Memory64. Firefox releases that
+ * expose WebGPU but lack either feature otherwise pass the page's adapter probe
+ * and then fall back to a load path whose 4 GiB heap cannot hold this model,
+ * projector and a 32K context at the same time.
+ */
+function needsCompatRuntime(): boolean {
+	const wasm = WebAssembly as typeof WebAssembly & { Suspending?: unknown };
+	if (typeof wasm.Suspending !== 'function') return true;
+	try {
+		new WebAssembly.Memory(
+			{ address: 'i64', initial: 1n } as unknown as WebAssembly.MemoryDescriptor
+		);
+		return false;
+	} catch {
+		return true;
+	}
+}
+
 async function load(contextWindow: number) {
 	if (wllama) {
 		post({ type: 'ready' });
@@ -52,6 +71,19 @@ async function load(contextWindow: number) {
 			}
 		}
 	);
+	// This is a no-op on browsers that support the primary runtime. On older
+	// Firefox/Safari it selects wllama's matching 3.6.1 Asyncify build, which is
+	// able to drive WebGPU without JSPI.
+	w.setCompat('default', 'firefox_safari');
+	const compat = needsCompatRuntime();
+	const effectiveContext = compat ? Math.min(contextWindow, 8192) : contextWindow;
+	if (effectiveContext !== contextWindow) {
+		post({
+			type: 'log',
+			level: 'warn',
+			text: `compatibility runtime: context limited to ${effectiveContext} tokens to stay below its 4 GiB heap`
+		});
+	}
 
 	await w.loadModelFromUrl(
 		// The projector rides along in the source object rather than in the
@@ -59,7 +91,10 @@ async function load(contextWindow: number) {
 		// up text-only, with nothing to say so.
 		{ url: MODEL_HOST + MODEL_FILE, mmprojUrl: MODEL_HOST + MMPROJ_FILE },
 		{
-			n_ctx: contextWindow,
+			n_ctx: effectiveContext,
+			// The UI serialises generations, so the library's four default server
+			// slots only reserve memory that this chatbot can never use.
+			n_parallel: 1,
 			// Everything on the GPU: WebGPU is a hard requirement for this page, so
 			// there is no CPU split worth negotiating.
 			n_gpu_layers: 999,
