@@ -3,11 +3,11 @@
 #
 # Shorter than its riscv64 sibling, and the reasons are worth naming. There is
 # no firmware to write: QEMU's `virt` board starts the kernel itself, where
-# TinyEMU needed an SBI implementation of our own. There is no hand-built
-# initramfs either: `virt` gives the kernel a PL011 UART that exists before
-# init runs, so Alpine's own mkinitfs has somewhere to print and its console
-# does not arrive late as a module. And arm64 runners are real, so nothing here
-# runs under emulation.
+# TinyEMU needed an SBI implementation of our own. The initramfs is Alpine's
+# own mkinitfs rather than one built by hand: `virt` gives the kernel a PL011
+# UART that exists before init runs, so mkinitfs has somewhere to print and its
+# console does not arrive late as a module. And arm64 runners are real, so
+# nothing here runs under emulation.
 #
 # What is shared with the other two machines is the shape: same distribution,
 # same read-only image streamed in 1 MiB pieces, same autologin to a shell.
@@ -28,14 +28,14 @@ apk add --no-cache e2fsprogs-extra cpio
 # ── root filesystem ────────────────────────────────────────────────────────
 mkdir -p "$ROOTFS"
 # linux-virt rather than linux-lts: it is Alpine's kernel for virtual machines,
-# which is exactly what this is, and it carries virtio built in rather than as
-# modules an initramfs has to find first.
+# which is exactly what this is, and it leaves out the drivers for hardware that
+# will never be here.
 apk add --root "$ROOTFS" --initdb --no-cache \
 	--repository "$MIRROR/main" \
 	--repository "$MIRROR/community" \
 	--allow-untrusted \
 	alpine-base "linux-${KERNEL_FLAVOR}" busybox-extras \
-	openrc util-linux e2fsprogs \
+	openrc util-linux e2fsprogs mkinitfs \
 	nano vim htop curl bash file tree tmux ncurses-terminfo
 
 mkdir -p "$ROOTFS/etc/apk"
@@ -148,9 +148,20 @@ echo "==> kernel modules version: $KVER"
 cp "$ROOTFS/boot/vmlinuz-$KERNEL_FLAVOR" "$OUT/kernel"
 echo "==> kernel: $(stat -c %s "$OUT/kernel") bytes"
 
-# No initramfs. linux-virt has virtio-blk and ext4 built in, so the kernel
-# mounts /dev/vda itself -- which is the whole reason for choosing that flavour
-# over lts, and what let the riscv64 machine's hand-built initramfs stay there.
+# An initramfs is required, which cost a boot to learn: linux-virt builds
+# VIRTIO_PCI in but leaves VIRTIO_BLK and EXT4_FS as modules, so the kernel
+# enumerates the PCI device, prints "enabling device", and then waits forever
+# for a /dev/vda that nothing is there to create.
+#
+# mkinitfs is given the features by hand rather than read from
+# /etc/mkinitfs/mkinitfs.conf, because the default set drags in cryptsetup, lvm
+# and raid probing that this machine has no use for and pays for on every boot.
+cat > "$ROOTFS/etc/mkinitfs/mkinitfs.conf" <<'EOF'
+features="base virtio ext4"
+EOF
+chroot "$ROOTFS" /sbin/mkinitfs -o /boot/initramfs-krsz "$KVER"
+cp "$ROOTFS/boot/initramfs-krsz" "$OUT/initramfs"
+echo "==> initramfs: $(stat -c %s "$OUT/initramfs") bytes"
 
 # ── image ──────────────────────────────────────────────────────────────────
 rm -rf "$ROOTFS/var/cache/apk"/* "$ROOTFS/tmp"/* 2>/dev/null || true

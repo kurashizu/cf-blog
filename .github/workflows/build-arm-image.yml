@@ -50,7 +50,7 @@ jobs:
               # Split into parts, like the riscv64 image: wrangler's uploader
               # refuses anything over 300 MiB, and the route reassembles them.
               run: |
-                  for path in ../out/kernel ../out/rootfs.img.*; do
+                  for path in ../out/kernel ../out/initramfs ../out/rootfs.img.*; do
                     npx wrangler r2 object put "public-files/arm/$(basename "$path")" \
                       --file "$path" \
                       --content-type application/octet-stream \
@@ -62,5 +62,6 @@ jobs:
                   name: krsz-arm-kernel
                   path: |
                       out/kernel
+                      out/initramfs
                       out/SHA256SUMS
                   retention-days: 14
