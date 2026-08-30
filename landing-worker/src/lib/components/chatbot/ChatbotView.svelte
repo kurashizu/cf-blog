@@ -327,6 +327,8 @@
 		};
 		await putSession(entry);
 		sessions = [entry, ...sessions.filter((x) => x.id !== sessionId)];
+		// Keep the storage panel's figure honest while it is open.
+		if (storageOpen) void refreshSize();
 	}
 
 	function restoreSession(sess: Session) {
@@ -360,6 +362,11 @@
 		void tick().then(() => inputEl?.focus());
 	}
 
+	/** The panel reports what is actually stored, so it is recomputed on change. */
+	async function refreshSize() {
+		savedSize = await sessionsSize();
+	}
+
 	async function wipeSessions() {
 		await clearSessions();
 		sessions = [];
@@ -372,6 +379,7 @@
 	async function removeSession(id: string) {
 		await dbDeleteSession(id);
 		sessions = sessions.filter((x) => x.id !== id);
+		void refreshSize();
 		// Deleting the open conversation leaves the page on a fresh one.
 		if (id === sessionId) {
 			dropAttachments();
@@ -798,7 +806,7 @@
 				storageOpen = !storageOpen;
 				if (storageOpen) {
 					configOpen = false;
-					void sessionsSize().then((v) => (savedSize = v));
+					void refreshSize();
 				}
 				playSound('toggle');
 			}}
