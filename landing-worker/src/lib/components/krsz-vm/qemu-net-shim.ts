@@ -1,171 +1,143 @@
 /**
- * The half of the network that has to run inside QEMU's own thread.
+ * The socket QEMU's netdev thinks it has.
  *
- * QEMU's main is proxied to a pthread, and Emscripten's socket layer lives
- * wherever the socket is opened -- so the WebSocket that `-netdev socket`
- * produces is constructed in that worker, against that worker's globals. The
- * page cannot reach in and replace it after the fact.
+ * `-netdev socket` speaks raw Ethernet over an ordinary TCP connection, and
+ * under Emscripten a TCP connection is a WebSocket: SOCKFS tunnels one over the
+ * other. So QEMU connects, this stands in for the connection, and the frames go
+ * to the gateway in qemu-net rather than to a server.
  *
- * What the page does control is `mainScriptUrlOrBlob`: the pthread bootstrap
- * imports exactly that and calls its default export with the module it is
- * building. So the page hands it a small module that runs this first and then
- * re-exports the real glue untouched.
+ * Where this runs matters, and the first attempt got it wrong. QEMU's main is
+ * proxied to a pthread, so the socket looked like it would be built there --
+ * but `__syscall_connect` opens with `if (ENVIRONMENT_IS_PTHREAD) return
+ * proxyToMainThread(...)`, and every other socket call does the same. The
+ * socket is built on the page's thread whatever thread asked for it, which is
+ * also where the gateway wants to be: it needs `fetch` against this origin and
+ * one place to keep connection state. So this is an ordinary module in the
+ * page, and the elaborate machinery for reaching into a worker was answering a
+ * question that was never asked.
  *
- * Once installed, the socket is not a socket. Frames go to the page and come
- * back from it, because the gateway that answers them -- ARP, DHCP, DNS, TCP --
- * wants `fetch` against this origin and one place to keep connection state, and
- * a pthread that QEMU may stop is not that place.
- *
- * The channel is `Module.printErr`. It looks like an odd choice and it is the
- * only supported one: the pthread bootstrap forwards a fixed list of four
- * handlers to the page -- onExit, onAbort, print, printErr -- and nothing else
- * crosses without patching Emscripten's own dispatch. Frames are small, and
- * base64 is cheap next to the emulation they are feeding.
+ * QEMU is given a hostname it can never resolve, and that is deliberate: the
+ * name is how the replacement recognises its own socket, and nothing else the
+ * runtime opens is touched. Before this was in place the real WebSocket tried
+ * to dial it and QEMU refused to start -- "can't connect socket: Host is
+ * unreachable".
  */
 
-/** Prefixes a printErr line that is a network frame rather than a diagnostic. */
-export const NET_PREFIX = ' krsz-net ';
+import type { QemuNet } from './qemu-net';
 
-/** The host QEMU is told to connect to; only this one is intercepted. */
+/**
+ * The host QEMU is told to connect to. Never resolved and never reached: it is
+ * a label, and `.invalid` is reserved by RFC 2606 precisely so that a name
+ * meant never to resolve cannot collide with one that does.
+ */
 export const NET_HOST = 'krsz-net.invalid';
 
-/**
- * What Module.websocket.url is set to. Never dialled -- the bridged socket
- * stands in for the connection -- but Emscripten parses an address out of it,
- * so it has to look like a real ws:// URL with a port.
- */
-export const NET_URL = `ws://${NET_HOST}:443/`;
-
-export function toBase64(bytes: Uint8Array): string {
-	let s = '';
-	for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-	return btoa(s);
-}
-
-export function fromBase64(text: string): Uint8Array {
-	const s = atob(text);
-	const out = new Uint8Array(s.length);
-	for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
-	return out;
-}
-
+/** Emscripten's poll reads these off the socket instance, not off the class. */
+const CONNECTING = 0;
+const OPEN = 1;
+const CLOSED = 3;
 
 /**
- * The shim itself, as source text for the blob module the pthread imports.
+ * Replaces WebSocket for this one host, for as long as the machine runs.
  *
- * Text rather than an imported module because neither way of asking Vite for a
- * URL works: `?url` copies the .ts byte for byte and the browser will not run
- * TypeScript, and `?worker&url` compiles it as a worker entry, which for a
- * module of pure function exports tree-shakes to an empty file. The constants
- * are interpolated from the ones above, so they still have one definition.
- *
- * What it does: replaces WebSocket for the one host QEMU's netdev is pointed
- * at, writes the guest's frames out through printErr -- the only handler the
- * pthread bootstrap forwards to the page that can carry bytes -- and takes
- * frames back on a message listener. Emscripten's own worker handler ignores a
- * message with no `cmd` field, so listening alongside it is safe.
+ * `getNet` rather than the gateway itself because the two are circular: the
+ * gateway sends through the socket, the socket delivers to the gateway, and one
+ * of them has to be built first.
  */
-export const NET_SHIM_SOURCE = `
-const NET_PREFIX = ${JSON.stringify(NET_PREFIX)};
-const NET_HOST = ${JSON.stringify(NET_HOST)};
-const NET_URL = ${JSON.stringify(NET_URL)};
-
-function toBase64(bytes) {
-	let s = '';
-	for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-	return btoa(s);
-}
-
-function fromBase64(text) {
-	const s = atob(text);
-	const out = new Uint8Array(s.length);
-	for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
-	return out;
-}
-
-function installNetShim(scope, module) {
+export function installNetShim(
+	scope: typeof globalThis,
+	getNet: () => QemuNet | null
+): () => void {
 	const Real = scope.WebSocket;
-	if (!Real) return;
-	let live = null;
-
-	// Where every socket this module opens is told to go. It has to be set:
-	// QEMU names a host, but Emscripten's DNS has already replaced it with a
-	// synthetic 172.29.x.x by the time the socket is built, so there is no name
-	// left to recognise. The URL is never dialled -- the class below stands in
-	// for the connection -- but it must parse as ws(s)://host:port, because
-	// createPeer insists on reading an address out of it.
-	module.websocket = module.websocket || {};
-	module.websocket.url = NET_URL;
+	if (!Real) return () => {};
 
 	class BridgedSocket {
-		constructor(url) {
-			this.url = url;
-			this.binaryType = 'arraybuffer';
-			this.readyState = 0;
-			// Emscripten's poll compares readyState against these as properties of
-			// the socket object, not of the class -- \`dest.socket.OPEN\`. Without
-			// them every comparison is against undefined, the socket never reports
-			// writable, and the poll blocks in Atomics.wait on the page's main
-			// thread: the machine wedges mid-boot with the tab pinned.
-			this.CONNECTING = 0;
-			this.OPEN = 1;
-			this.CLOSING = 2;
-			this.CLOSED = 3;
-			this.onopen = null;
-			this.onmessage = null;
-			this.onclose = null;
-			this.onerror = null;
+		binaryType: 'blob' | 'arraybuffer' = 'arraybuffer';
+		readyState: number = CONNECTING;
+		onopen: ((ev: unknown) => void) | null = null;
+		onmessage: ((ev: { data: unknown }) => void) | null = null;
+		onclose: ((ev: unknown) => void) | null = null;
+		onerror: ((ev: unknown) => void) | null = null;
+
+		// Emscripten's poll compares `dest.socket.readyState` against
+		// `dest.socket.OPEN` -- properties of the instance. Without them every
+		// comparison is against undefined, the socket never reports writable, and
+		// the poll blocks in Atomics.wait on the page's main thread: the machine
+		// wedges mid-boot with the tab pinned.
+		readonly CONNECTING = CONNECTING;
+		readonly OPEN = OPEN;
+		readonly CLOSING = 2;
+		readonly CLOSED = CLOSED;
+
+		constructor(readonly url: string) {
 			live = this;
-			// Opened on the next turn: the caller is still inside \`new\`, and
+			// Open on the next turn, not now: the caller is still inside `new` and
 			// Emscripten stores the socket only once the constructor returns.
 			setTimeout(() => {
-				this.readyState = 1;
-				if (this.onopen) this.onopen({});
+				if (this.readyState !== CONNECTING) return;
+				this.readyState = OPEN;
+				this.onopen?.({});
 			}, 0);
 		}
 
-		send(data) {
+		/** QEMU writing a frame. Straight to the gateway. */
+		send(data: ArrayBuffer | ArrayBufferView | string) {
 			if (typeof data === 'string') return;
 			const bytes =
 				data instanceof ArrayBuffer
 					? new Uint8Array(data)
 					: new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-			if (module.printErr) module.printErr(NET_PREFIX + toBase64(bytes));
+			getNet()?.receive(bytes);
+		}
+
+		/** The gateway handing a frame back. */
+		deliver(bytes: Uint8Array) {
+			// A copy: Emscripten keeps what it is given on its receive queue, and
+			// the gateway reuses its buffers.
+			this.onmessage?.({ data: bytes.slice().buffer });
 		}
 
 		close() {
-			this.readyState = 3;
+			this.readyState = CLOSED;
 			if (live === this) live = null;
-			if (this.onclose) this.onclose({});
+			this.onclose?.({});
 		}
 
-		addEventListener(type, fn) {
-			if (type === 'open') this.onopen = fn;
-			else if (type === 'message') this.onmessage = fn;
-			else if (type === 'close') this.onclose = fn;
-			else if (type === 'error') this.onerror = fn;
+		addEventListener(type: string, fn: (ev: never) => void) {
+			if (type === 'open') this.onopen = fn as (ev: unknown) => void;
+			else if (type === 'message') this.onmessage = fn as (ev: { data: unknown }) => void;
+			else if (type === 'close') this.onclose = fn as (ev: unknown) => void;
+			else if (type === 'error') this.onerror = fn as (ev: unknown) => void;
 		}
 		removeEventListener() {}
 	}
 
-	// The way back in. Emscripten's own worker handler ignores a message with no
-	// \`cmd\` field outright -- it only complains about commands it does not know --
-	// so a listener of ours alongside it is safe, and the page can post to every
-	// running worker and let the one holding the socket answer.
-	scope.addEventListener('message', (ev) => {
-		const msg = ev.data;
-		if (!msg || typeof msg.krszNet !== 'string' || !live) return;
-		const bytes = fromBase64(msg.krszNet);
-		if (live.onmessage) live.onmessage({ data: bytes.buffer });
-	});
+	let live: BridgedSocket | null = null;
 
 	scope.WebSocket = new Proxy(Real, {
-		construct(target, argv) {
-			// Only the netdev's own socket, recognised by the URL we just pinned.
-			// Anything else the runtime opens is left alone.
-			if (String(argv[0] || '').includes(NET_HOST)) return new BridgedSocket(String(argv[0]));
-			return Reflect.construct(target, argv);
+		construct(target, argv: unknown[]) {
+			if (String(argv[0] ?? '').includes(NET_HOST)) {
+				return new BridgedSocket(String(argv[0])) as unknown as WebSocket;
+			}
+			return Reflect.construct(target, argv as never[]);
 		}
-	});
+	}) as typeof WebSocket;
+
+	// How the gateway reaches the guest. Read through a function so it always
+	// finds the socket QEMU is currently holding.
+	deliverTo = (bytes: Uint8Array) => live?.deliver(bytes);
+
+	return () => {
+		scope.WebSocket = Real;
+		deliverTo = null;
+		live = null;
+	};
 }
-`;
+
+/** Set while a shim is installed; the gateway's way back to the guest. */
+let deliverTo: ((bytes: Uint8Array) => void) | null = null;
+
+/** Hands one Ethernet frame, length-prefixed, to whatever QEMU is listening. */
+export function sendToGuest(bytes: Uint8Array): void {
+	deliverTo?.(bytes);
+}
