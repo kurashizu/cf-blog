@@ -103,7 +103,9 @@ function machineArgs(arch: QemuArch): string[] {
 		case 'riscv64':
 			return ['-machine', 'virt'];
 		case 'x86_64':
-			return ['-machine', 'q35'];
+			// `pc` rather than q35, which is the board upstream's own x86 examples
+			// use and the one its BIOS blob is built for.
+			return ['-machine', 'pc'];
 	}
 }
 
@@ -178,6 +180,21 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	}
 	const initrdBytes = new Uint8Array(await initrdResponse.arrayBuffer());
 
+	// x86 opens these by name once it is running, so they have to be in the
+	// filesystem before main -- same reason as the kernel. The other boards read
+	// none of them and pay nothing for this.
+	const roms: [string, Uint8Array][] = [];
+	if (options.arch === 'x86_64') {
+		const wanted = ['bios-256k.bin', 'vgabios-stdvga.bin', 'kvmvapic.bin', 'linuxboot_dma.bin'];
+		await Promise.all(
+			wanted.map(async (name) => {
+				const response = await fetch(`${BINARY_BASE}/pc-bios-${name}`);
+				if (!response.ok) throw new Error(`The ROM ${name} is missing (${response.status}).`);
+				roms.push([name, new Uint8Array(await response.arrayBuffer())]);
+			})
+		);
+	}
+
 	const args = [
 		'-nographic',
 		'-m', `${options.memoryMb}M`,
@@ -191,6 +208,10 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		'-accel', 'tcg,tb-size=500',
 		...(options.smp > 1 ? ['-smp', `${options.smp}`] : []),
 		...machineArgs(options.arch),
+		// Where QEMU looks for the ROMs it opens at runtime. x86 cannot start
+		// without its BIOS, and the display adapter runs a VGA BIOS of its own;
+		// the other two boards need nothing here.
+		...(options.arch === 'x86_64' ? ['-L', '/krsz/pc-bios/'] : []),
 		// No network yet: QEMU's user-mode stack needs a host socket API that the
 		// browser does not have, and the relay this site runs carries streams
 		// rather than frames.
@@ -199,12 +220,17 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// shorthand, which is what upstream's own Alpine example does. The
 		// shorthand asks QEMU to pick the transport, and on this board it picks
 		// one the guest then waits on forever.
-		// MMIO rather than PCI. Neither finishes a mount in this build, but the
-		// PCI device wedges the guest while its drivers are still loading, where
-		// MMIO at least lets that step complete and the disk enumerate. See the
-		// note above startQemu for what is actually broken here.
-		'-drive', 'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
-		'-device', 'virtio-blk-device,drive=rootfs',
+		// x86 takes the `if=virtio` shorthand, which is what upstream's own
+		// examples use and what works there. The arm64 board needs the device
+		// spelled out, and hangs either way -- see the note above startQemu.
+		...(options.arch === 'x86_64'
+			? ['-drive', 'if=virtio,format=raw,file=/krsz/rootfs.img']
+			: [
+					'-drive',
+					'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
+					'-device',
+					'virtio-blk-device,drive=rootfs'
+				]),
 		'-kernel', '/krsz/kernel',
 		'-initrd', '/krsz/initramfs',
 		// `modules=` is not optional with Alpine's initramfs. Its init modprobes
@@ -243,6 +269,10 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 				built.FS.mkdir('/krsz');
 				built.FS.writeFile('/krsz/kernel', kernelBytes);
 				built.FS.writeFile('/krsz/initramfs', initrdBytes);
+				if (roms.length) {
+					built.FS.mkdir('/krsz/pc-bios');
+					for (const [name, bytes] of roms) built.FS.writeFile(`/krsz/pc-bios/${name}`, bytes);
+				}
 				createLazyImage(built as unknown as Parameters<typeof createLazyImage>[0], {
 					path: '/krsz/rootfs.img',
 					url: options.rootfsUrl,

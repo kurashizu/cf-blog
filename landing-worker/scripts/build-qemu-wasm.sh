@@ -107,5 +107,20 @@ for name in "qemu-system-${TARGET}" "qemu-system-${TARGET}.wasm" \
 	docker cp "build-qemu-wasm:${BUILD_DIR}/${name}" "$OUT/" 2>/dev/null || true
 done
 
+# The ROMs x86 cannot start without: its BIOS, and the VGA BIOS the display
+# adapter runs. QEMU looks for these at runtime under whatever -L names, so they
+# have to travel with the binary rather than being linked into it. They are
+# committed blobs rather than the firmware *sources* the submodules hold, which
+# is why a shallow clone without submodules still has them.
+#
+# Only the handful x86 actually reads: pc-bios is 45 files and most of them
+# belong to boards this build does not have.
+mkdir -p "$OUT/pc-bios"
+for rom in bios-256k.bin vgabios-stdvga.bin vgabios.bin kvmvapic.bin linuxboot_dma.bin \
+	efi-virtio.rom efi-e1000.rom; do
+	docker cp "build-qemu-wasm:/qemu/pc-bios/${rom}" "$OUT/pc-bios/" 2>/dev/null || true
+done
+echo "==> ROMs collected: $(ls "$OUT/pc-bios" 2>/dev/null | wc -l)"
+
 docker rm -f build-qemu-wasm >/dev/null 2>&1 || true
 ls -l "$OUT"
