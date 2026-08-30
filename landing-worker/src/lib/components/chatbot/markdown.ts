@@ -37,6 +37,64 @@ function inline(s: string): string {
 }
 
 /**
+ * A small syntax highlighter for fenced code.
+ *
+ * Not a parser — a single pass of ordered patterns, which is all a chat reply
+ * needs and cannot get stuck on malformed input. The order matters: comments
+ * and strings are claimed first so a keyword inside them is not recoloured.
+ *
+ * Everything is escaped on the way in, and the patterns only ever wrap already
+ * escaped text in spans, so highlighting cannot introduce markup.
+ */
+const TOKENS: [RegExp, string][] = [
+	// Comments and strings first — they win over everything inside them.
+	[/(\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/)/g, 'c'],
+	[/(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;|`[^`]*?`)/g, 's'],
+	// Numbers, including hex and decimals.
+	[/\b(0x[0-9a-fA-F]+|\d+\.?\d*)\b/g, 'n'],
+	[
+		/\b(const|let|var|function|return|if|else|for|while|class|new|await|async|import|export|from|def|elif|try|catch|except|finally|throw|raise|with|as|in|of|not|and|or|is|None|True|False|null|undefined|true|false|this|self|typeof|instanceof|break|continue|yield|lambda|pass)\b/g,
+		'k'
+	],
+	// A name immediately before a paren reads as a call.
+	[/\b([a-zA-Z_$][\w$]*)(?=\()/g, 'f']
+];
+
+function highlight(code: string, lang: string): string {
+	const escaped = escapeHtml(code);
+	// Plain text and prose fences are left alone; colour would only mislead.
+	if (lang && /^(text|txt|plain|md|markdown|output)$/i.test(lang)) return escaped;
+
+	// Placeholders keep an earlier match from being re-scanned by a later
+	// pattern, which is what would let a keyword inside a string get recoloured.
+	const held: string[] = [];
+	let out = escaped;
+	for (const [re, cls] of TOKENS) {
+		out = out.replace(re, (m) => {
+			held.push(`<span class="tok-${cls}">${m}</span>`);
+			// The index is written in letters, not digits: a numeric placeholder
+			// is itself matched by the number pattern on the next pass, which ate
+			// the comment and string it was standing in for.
+			const tag = String(held.length - 1)
+				.split('')
+				.map((d) => String.fromCharCode(97 + Number(d)))
+				.join('');
+			return `\u0000${tag}\u0000`;
+		});
+	}
+	return out.replace(/\u0000([a-j]+)\u0000/g, (_, tag: string) =>
+		held[
+			Number(
+				tag
+					.split('')
+					.map((ch) => ch.charCodeAt(0) - 97)
+					.join('')
+			)
+		]
+	);
+}
+
+/**
  * Renders Markdown to an HTML string. The input is escaped before any tag is
  * added, so a reply containing markup renders as visible text.
  */
@@ -68,7 +126,7 @@ export function renderMarkdown(src: string): string {
 				i++;
 			}
 			i++; // closing fence (or end of input)
-			out.push(`<pre${lang}><code>${escapeHtml(body.join('\n'))}</code></pre>`);
+			out.push(`<pre${lang}><code>${highlight(body.join('\n'), fence[1] ?? '')}</code></pre>`);
 			continue;
 		}
 

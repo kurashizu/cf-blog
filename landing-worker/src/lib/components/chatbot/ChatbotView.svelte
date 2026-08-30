@@ -1264,6 +1264,12 @@
 	.chat-md :global(p:last-child) {
 		margin-bottom: 0;
 	}
+	/*
+	 * Headings, emphasis and links each take their own hue from the palette the
+	 * rest of the page uses, so a structured reply reads at a glance the way
+	 * highlighted code does — muted rather than loud, since a reply is mostly
+	 * prose.
+	 */
 	.chat-md :global(h1),
 	.chat-md :global(h2),
 	.chat-md :global(h3),
@@ -1271,6 +1277,35 @@
 		font-weight: 800;
 		margin: 0.7em 0 0.35em;
 		line-height: 1.25;
+	}
+	.chat-md :global(h1) {
+		color: #61afef;
+	}
+	.chat-md :global(h2) {
+		color: #c678dd;
+	}
+	.chat-md :global(h3) {
+		color: #56b6c2;
+	}
+	.chat-md :global(h4) {
+		color: #98c379;
+	}
+	.chat-md :global(strong) {
+		color: #e5c07b;
+		font-weight: 700;
+	}
+	.chat-md :global(em) {
+		color: #56b6c2;
+	}
+	/* The marker, not the text: a coloured bullet reads as structure. */
+	.chat-md :global(li)::marker {
+		color: #c678dd;
+	}
+	.chat-md :global(ol li)::marker {
+		color: #61afef;
+	}
+	.chat-md :global(:not(pre) > code) {
+		color: #e06c75;
 	}
 	.chat-md :global(h1) {
 		font-size: 1.15em;
@@ -1316,6 +1351,30 @@
 		padding: 0;
 		font-size: 0.88em;
 		line-height: 1.5;
+	}
+
+	/*
+	 * Syntax colours, drawn from the palette the rest of the page already uses
+	 * rather than a stock highlighter theme — the same purple that marks THINK,
+	 * the green of SEND, the amber of a tool call. Muted on purpose: a reply is
+	 * mostly prose, and code inside it should read as part of the conversation
+	 * rather than compete with it.
+	 */
+	.chat-md :global(.tok-k) {
+		color: #c678dd;
+	}
+	.chat-md :global(.tok-s) {
+		color: #98c379;
+	}
+	.chat-md :global(.tok-n) {
+		color: #e5c07b;
+	}
+	.chat-md :global(.tok-f) {
+		color: #61afef;
+	}
+	.chat-md :global(.tok-c) {
+		color: rgb(255 255 255 / 0.35);
+		font-style: italic;
 	}
 	.chat-md :global(blockquote) {
 		border-left: 2px solid rgb(255 255 255 / 0.2);
