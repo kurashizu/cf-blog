@@ -138,6 +138,8 @@ export class QemuNet {
 	private closed = false;
 	/** Bytes of a frame that has not all arrived yet. */
 	private inbox = new Uint8Array(0);
+	/** How long to wait before the next reconnection, doubling to a ceiling. */
+	private retry = 0;
 	/** Counters, for ?debug: which direction, if either, is actually moving. */
 	stats = { framesIn: 0, framesOut: 0, arp: 0, dhcp: 0, dns: 0, icmp: 0, tcp: 0 };
 
@@ -173,6 +175,7 @@ export class QemuNet {
 		this.wisp = ws;
 		ws.onopen = () => {
 			this.wispReady = true;
+			this.retry = 0;
 			for (const q of this.wispQueue) ws.send(q);
 			this.wispQueue = [];
 			this.opts.onStatus?.('relay connected');
@@ -187,7 +190,20 @@ export class QemuNet {
 			}
 			this.conns.clear();
 			this.byStream.clear();
-			if (!this.closed) this.opts.onStatus?.('relay disconnected');
+			// Anything queued belonged to a stream that no longer exists.
+			this.wispQueue = [];
+			if (this.closed) return;
+			// And open a new one. The relay is a WebSocket to the edge and it does
+			// not stay up for the life of a machine: it is rate limited per client,
+			// closed when idle, and subject to every ordinary reason a connection
+			// ends. Without this the first close was permanent -- the guest kept a
+			// connection the gateway could no longer carry, and a fetch that had
+			// worked a minute earlier timed out with nothing in the log to say why.
+			this.opts.onStatus?.('relay disconnected, reconnecting');
+			this.retry = Math.min(this.retry ? this.retry * 2 : 500, 8000);
+			setTimeout(() => {
+				if (!this.closed) this.openWisp();
+			}, this.retry);
 		};
 		ws.onerror = () => this.opts.onStatus?.('relay error');
 	}
