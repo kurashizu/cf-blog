@@ -72,7 +72,16 @@ docker exec build-qemu-wasm git config --global --add safe.directory '*'
 # anything printed to the terminal.
 # Verbatim from the project's own instructions, which is the point: this is a
 # long build and guessing at flags is how an afternoon disappears.
-EXTRA_CFLAGS="-O3 -g -Wno-error=unused-command-line-argument -matomics -mbulk-memory -DNDEBUG -DG_DISABLE_ASSERT -D_GNU_SOURCE -sASYNCIFY=1 -pthread -sPROXY_TO_PTHREAD=1 -sFORCE_FILESYSTEM -sALLOW_TABLE_GROWTH -sTOTAL_MEMORY=2300MB -sWASM_BIGINT -sMALLOC=mimalloc --js-library=/build/node_modules/xterm-pty/emscripten-pty.js -sEXPORT_ES6=1 -sASYNCIFY_IMPORTS=ffi_call_js"
+#
+# The one addition is PTHREAD_POOL_SIZE. Emscripten's default pool is 4, and
+# QEMU wants more than that: main is proxied onto one, and the CPU, the RCU
+# thread and the block layer's own take the rest. Past the fourth, spawnThread
+# gets a worker back from getNewWorker whose wasm module is still loading --
+# loadWasmModuleToWorker is asynchronous and nothing waits for it -- so the
+# thread never starts and whoever was waiting on it waits forever. What that
+# looked like from the outside: the guest printed "[vda] 905216 512-byte
+# logical blocks", having read exactly one sector, and then stopped for good.
+EXTRA_CFLAGS="-O3 -g -Wno-error=unused-command-line-argument -matomics -mbulk-memory -DNDEBUG -DG_DISABLE_ASSERT -D_GNU_SOURCE -sASYNCIFY=1 -pthread -sPROXY_TO_PTHREAD=1 -sFORCE_FILESYSTEM -sALLOW_TABLE_GROWTH -sTOTAL_MEMORY=2300MB -sWASM_BIGINT -sMALLOC=mimalloc -sPTHREAD_POOL_SIZE=8 --js-library=/build/node_modules/xterm-pty/emscripten-pty.js -sEXPORT_ES6=1 -sASYNCIFY_IMPORTS=ffi_call_js"
 
 echo "==> what the build sees of the subproject"
 docker exec build-qemu-wasm sh -c 'ls -la /qemu/subprojects/dtc | head -6'
