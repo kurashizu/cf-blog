@@ -210,6 +210,49 @@ export function renderMarkdown(src: string, math: MathSpan[] = []): string {
 			continue;
 		}
 
+		// A table: a header row of pipes, then a row of dashes marking alignment.
+		// Both are required — a lone line of pipes is prose, not a table.
+		if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i + 1])) {
+			closeList();
+			const cells = (row: string) =>
+				row
+					.trim()
+					.replace(/^\||\|$/g, '')
+					.split('|')
+					.map((c) => c.trim());
+
+			const head = cells(line);
+			// The alignment row is consumed but not honoured: cells are centred by
+			// the stylesheet, and a model that writes `:---` out of habit should
+			// not end up with columns that disagree with each other.
+			i += 2;
+
+			const body: string[][] = [];
+			while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
+				body.push(cells(lines[i]));
+				i++;
+			}
+
+			// `<br>` is how a model writes a line break inside a cell, and the
+			// escaper would otherwise show it as text.
+			const cell = (text: string) =>
+				inline(escapeHtml(text)).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
+			const rows = body
+				.map((r) => `<tr>${r.map((c) => `<td>${cell(c)}</td>`).join('')}</tr>`)
+				.join('');
+
+			// Wrapped so the scroll lives on a container: `display:block` on the
+			// table itself is what makes it scroll, but it also drops the table
+			// layout, and with it the cell borders.
+			out.push(
+				`<div class="tbl"><table><thead><tr>${head
+					.map((h) => `<th>${cell(h)}</th>`)
+					.join('')}</tr></thead><tbody>${rows}</tbody></table></div>`
+			);
+			continue;
+		}
+
 		const ul = line.match(/^\s*[-*+]\s+(.*)$/);
 		const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
 		if (ul || ol) {
@@ -234,7 +277,13 @@ export function renderMarkdown(src: string, math: MathSpan[] = []): string {
 			!/^#{1,4}\s/.test(lines[i]) &&
 			!/^>/.test(lines[i]) &&
 			!/^\s*[-*+]\s/.test(lines[i]) &&
-			!/^\s*\d+[.)]\s/.test(lines[i])
+			!/^\s*\d+[.)]\s/.test(lines[i]) &&
+			// A table's header line, which the block above will claim.
+			!(
+				lines[i].includes('|') &&
+				i + 1 < lines.length &&
+				/^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i + 1])
+			)
 		) {
 			para.push(lines[i]);
 			i++;
