@@ -55,6 +55,8 @@ export const TOTAL_DOWNLOAD_MB =
 	PART_SIZES_MB.decoder + PART_SIZES_MB.embed + PART_SIZES_MB.vision + PART_SIZES_MB.audio;
 
 export interface ChatConfig {
+	/** How many tokens of history to keep before /compact is suggested. */
+	contextWindow: number;
 	maxTokens: number;
 	temperature: number;
 	topP: number;
@@ -67,6 +69,10 @@ export interface ChatConfig {
 }
 
 export const DEFAULT_CONFIG: ChatConfig = {
+	// The architecture allows 131072, but every token costs KV-cache memory on
+	// the visitor's GPU, so the default is the working budget rather than the
+	// ceiling. Raising it in CONFIG takes effect on the next turn.
+	contextWindow: 32768,
 	maxTokens: 2048,
 	temperature: 0.7,
 	topP: 0.9,
@@ -77,6 +83,7 @@ export const DEFAULT_CONFIG: ChatConfig = {
 };
 
 export const CONFIG_LIMITS = {
+	contextWindow: { min: 2048, max: 131072, step: 1024 },
 	maxTokens: { min: 64, max: 8192, step: 64 },
 	temperature: { min: 0, max: 2, step: 0.05 },
 	topP: { min: 0.05, max: 1, step: 0.05 },

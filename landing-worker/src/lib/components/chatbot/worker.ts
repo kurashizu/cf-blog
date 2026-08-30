@@ -114,6 +114,12 @@ async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
 	});
 	const inputs = await proc(prompt, images, audio);
 
+	// The prompt's real token count, straight from what the processor produced —
+	// this is what the context readout reports, rather than an estimate.
+	const ids = (inputs as { input_ids?: { dims?: number[] } }).input_ids;
+	const promptTokens = ids?.dims?.[ids.dims.length - 1] ?? 0;
+	post({ type: 'context', promptTokens });
+
 	stopper = new InterruptableStoppingCriteria();
 
 	// Typed optional because a Processor need not carry one; this model's does.
@@ -123,9 +129,26 @@ async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
 	const t0 = performance.now();
 	let chunks = 0;
 
+	// The reasoning delimiters are special tokens (`<|channel>` and `<channel|>`,
+	// ids 100/101), so skip_special_tokens strips them from the decoded text
+	// before anything downstream can see them — which left the channel's name,
+	// the bare word "thought", as the first line of the answer. Watching the raw
+	// ids instead marks the boundary explicitly, while the text stays clean of
+	// every other special token (`<|turn>` and friends).
+	const tok = tokenizer as unknown as { convert_tokens_to_ids(t: string): number };
+	const CHANNEL_OPEN = tok.convert_tokens_to_ids('<|channel>');
+	const CHANNEL_CLOSE = tok.convert_tokens_to_ids('<channel|>');
+
 	const streamer = new TextStreamer(tokenizer, {
 		skip_prompt: true,
 		skip_special_tokens: true,
+		token_callback_function: (ids: bigint[]) => {
+			for (const raw of ids) {
+				const id = Number(raw);
+				if (id === CHANNEL_OPEN) post({ type: 'channel', open: true });
+				else if (id === CHANNEL_CLOSE) post({ type: 'channel', open: false });
+			}
+		},
 		callback_function: (text: string) => {
 			chunks++;
 			post({ type: 'token', text });

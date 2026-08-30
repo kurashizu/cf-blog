@@ -55,12 +55,17 @@
 	let fileEl: HTMLInputElement | undefined = $state();
 
 	let lastStats = $state('');
+	/** Real prompt length of the last turn, reported by the worker. */
+	let usedTokens = $state(0);
 	let thinkMode = $state(false);
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
 	let completionIdx = $state(-1);
 
 	let config = $state<ChatConfig>({ ...DEFAULT_CONFIG });
+	let ctxPct = $derived(
+		config.contextWindow ? Math.min(100, Math.round((usedTokens / config.contextWindow) * 100)) : 0
+	);
 	let configOpen = $state(false);
 	let storageOpen = $state(false);
 
@@ -122,6 +127,15 @@
 							phase = 'ready';
 					progressText = '';
 					void tick().then(() => inputEl?.focus());
+					break;
+				case 'context':
+					usedTokens = m.promptTokens;
+					break;
+				case 'channel':
+					// The delimiters never survive decoding (they are special tokens
+					// the streamer strips), so they are put back into the accumulated
+					// text here and splitThink() folds the block away as before.
+					appendToken(m.open ? '<|channel>' : '<channel|>');
 					break;
 				case 'token':
 					appendToken(m.text);
@@ -233,6 +247,7 @@
 		for (const t of turns) t.attachments?.forEach((a) => URL.revokeObjectURL(a.url));
 		turns = [];
 		lastStats = '';
+		usedTokens = 0;
 		openThink = new Set();
 	}
 
@@ -576,6 +591,26 @@
 
 		<div class="flex-1"></div>
 
+		{#if usedTokens > 0}
+			<span
+				class="hidden sm:flex items-center gap-1.5 font-mono"
+				title="How much of the {config.contextWindow}-token context window the conversation occupies. /compact summarises it."
+			>
+				<span class="text-white/35">ctx</span>
+				<span class="block h-1 w-14 bg-white/10 rounded-full overflow-hidden">
+					<span
+						class="block h-full transition-[width] duration-300 {ctxPct > 85
+							? 'bg-[#e06c75]'
+							: ctxPct > 60
+								? 'bg-[#e5c07b]'
+								: 'bg-[#98c379]'}"
+						style="width: {ctxPct}%"
+					></span>
+				</span>
+				<span class="tabular-nums {ctxPct > 85 ? 'text-[#e06c75]' : 'text-white/50'}">{ctxPct}%</span>
+			</span>
+		{/if}
+
 		{#if compacting}
 			<span class="text-[#e5c07b] font-mono">◐ {compacting}</span>
 		{:else if lastStats}
@@ -627,6 +662,7 @@
 
 	{#if configOpen}
 		{@const F = [
+			{ k: 'contextWindow' as const, label: 'context window', hint: 'budget before /compact' },
 			{ k: 'maxTokens' as const, label: 'max output', hint: 'tokens per reply' },
 			{ k: 'temperature' as const, label: 'temperature', hint: 'lower is steadier' },
 			{ k: 'topP' as const, label: 'top_p', hint: 'nucleus sampling' },

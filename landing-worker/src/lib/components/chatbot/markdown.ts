@@ -180,7 +180,10 @@ export interface SplitReply {
  * answer.
  */
 const THINK_DELIMS: [RegExp, string][] = [
-	[/<\|channel>[a-z_]*\n?/, '<channel|>'],
+	// The channel's name ("thought") is decoded as ordinary text right after the
+	// marker, so it is consumed here rather than showing up as the block's first
+	// line.
+	[/<\|channel>[ \t]*[a-z_]*\n?/, '<channel|>'],
 	[/<think>/, '</think>']
 ];
 
