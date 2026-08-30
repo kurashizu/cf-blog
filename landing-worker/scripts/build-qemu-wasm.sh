@@ -116,8 +116,10 @@ done
 # Only the handful x86 actually reads: pc-bios is 45 files and most of them
 # belong to boards this build does not have.
 mkdir -p "$OUT/pc-bios"
+# riscv64's is opensbi: the `virt` board will not start without an SBI
+# implementation, and QEMU looks for this exact filename.
 for rom in bios-256k.bin vgabios-stdvga.bin vgabios.bin kvmvapic.bin linuxboot_dma.bin \
-	efi-virtio.rom efi-e1000.rom; do
+	efi-virtio.rom efi-e1000.rom opensbi-riscv64-generic-fw_dynamic.bin; do
 	docker cp "build-qemu-wasm:/qemu/pc-bios/${rom}" "$OUT/pc-bios/" 2>/dev/null || true
 done
 echo "==> ROMs collected: $(ls "$OUT/pc-bios" 2>/dev/null | wc -l)"

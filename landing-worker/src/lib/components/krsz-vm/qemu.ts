@@ -60,6 +60,12 @@ interface EmscriptenModule {
 	};
 	/** The pty's slave half. The glue reads this as `Module["pty"]`. */
 	pty?: unknown;
+	/** Emscripten's TTY, exported by the build so its poll can be replaced. */
+	TTY?: {
+		stream_ops: {
+			poll: (stream: unknown, timeout: number) => number;
+		};
+	};
 	_exit?: (code: number) => void;
 }
 
@@ -104,8 +110,10 @@ function machineArgs(arch: QemuArch): string[] {
 			return ['-machine', 'virt'];
 		case 'x86_64':
 			// `pc` rather than q35, which is the board upstream's own x86 examples
-			// use and the one its BIOS blob is built for.
-			return ['-machine', 'pc'];
+			// use and the one its BIOS blob is built for. The TSC is given a fixed
+			// frequency because there is no working PIT here to calibrate against,
+			// and a guest that cannot calibrate does not finish booting.
+			return ['-machine', 'pc', '-cpu', 'qemu64,tsc-frequency=1000000000'];
 	}
 }
 
@@ -159,7 +167,9 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	const { master, slave } = openpty();
 	options.term.loadAddon(master);
 
-	const glueUrl = `${BINARY_BASE}/qemu-system-${options.arch}.js`;
+	const forcedArch = (globalThis as unknown as { __qemuArch?: QemuArch }).__qemuArch;
+	const arch = forcedArch ?? options.arch;
+	const glueUrl = `${BINARY_BASE}/qemu-system-${arch}.js`;
 
 	const factory = (await import(/* @vite-ignore */ glueUrl)) as {
 		default: (module: Partial<EmscriptenModule>) => Promise<EmscriptenModule>;
@@ -185,7 +195,17 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	// none of them and pay nothing for this.
 	const roms: [string, Uint8Array][] = [];
 	if (options.arch === 'x86_64') {
-		const wanted = ['bios-256k.bin', 'vgabios-stdvga.bin', 'kvmvapic.bin', 'linuxboot_dma.bin'];
+		// Everything SeaBIOS may open, not just the BIOS itself: it initialises the
+		// display next and looks for a VGA BIOS by more than one name, and the
+		// option ROMs are what let it boot from a virtio disk.
+		const wanted = [
+			'bios-256k.bin',
+			'vgabios.bin',
+			'vgabios-stdvga.bin',
+			'kvmvapic.bin',
+			'linuxboot_dma.bin',
+			'efi-virtio.rom'
+		];
 		await Promise.all(
 			wanted.map(async (name) => {
 				const response = await fetch(`${BINARY_BASE}/pc-bios-${name}`);
@@ -241,11 +261,40 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// one sector, with the disk sitting right there in the kernel log.
 		'-append',
 		options.cmdline ||
-			`console=${consoleName(options.arch)} root=/dev/vda rw rootwait modules=virtio_blk,ext4`
+			[
+				`console=${consoleName(options.arch)}`,
+				'root=/dev/vda rw rootwait',
+				'modules=virtio_blk,ext4',
+				// The PC's interrupt controllers are where this board is weakest.
+				// Without acpi=off -- which upstream's own x86 example also passes --
+				// the kernel panics in setup_IO_APIC with "IO-APIC + timer doesn't
+				// work"; there is no firmware here to describe the hardware, so the
+				// less it infers the better. The clocksource is named outright for
+				// the same reason: left to calibrate, it finds neither PIT nor HPET
+				// and marks the TSC unstable, and the clock stops advancing.
+				// The PC board's timers are where this machine currently stops. Left
+				// alone the kernel panics in setup_IO_APIC ("IO-APIC + timer doesn't
+				// work"); acpi=off clears that, and then it cannot calibrate the TSC
+				// because neither the PIT nor an HPET ticks, and time stops
+				// advancing. no_timer_check stops it re-testing a route it has
+				// already been told to trust.
+				...(options.arch === 'x86_64'
+					? ['acpi=off', 'no_timer_check', 'tsc=reliable', 'tsc_khz=1000000']
+					: [])
+			].join(' ')
 	];
 
 	// Reads are served from the network as QEMU asks for them; writes stay here.
 	const overlay: OverlayBlocks = new Map();
+
+
+	// TEMPORARY diagnostic hook: let the page replace the argument list, so
+	// board and transport variants can be compared without a rebuild apiece.
+	const override = (globalThis as unknown as { __qemuArgs?: string[] }).__qemuArgs;
+	if (override) {
+		args.length = 0;
+		args.push(...override);
+	}
 
 
 	const module = await factory.default({
@@ -291,6 +340,27 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		print: (line: string) => console.log(`[qemu/${options.arch}]`, line),
 		printErr: (line: string) => console.warn(`[qemu/${options.arch}]`, line)
 	});
+
+	// Emscripten's own poll blocks when the terminal has nothing to say, and it
+	// blocks with Atomics.wait -- on whichever thread asked. Run on the page's
+	// main thread that is a deadlock: the notify it is waiting for can only be
+	// delivered by the timers and event handlers of the very thread it has
+	// stopped. What it looked like from outside was a machine frozen with the
+	// main thread pinned at 98%, in repeating one-second slices.
+	//
+	// Answering "not readable" without waiting is what upstream's own examples
+	// do, and it is the difference between a QEMU that boots and one that does
+	// not.
+	const tty = module.TTY;
+	if (tty) {
+		const oldPoll = tty.stream_ops.poll;
+		tty.stream_ops.poll = function (this: unknown, stream: unknown, timeout: number) {
+			if (!slave.readable) {
+				return (slave.readable ? 1 : 0) | (slave.writable ? 4 : 0);
+			}
+			return oldPoll.call(this, stream, timeout);
+		};
+	}
 
 	// By the time this resolves QEMU is already running: the glue called main
 	// itself, with the arguments above, once preRun had put the disk in place.

@@ -59,6 +59,12 @@ VM_IMAGES = "vmlinuz|r2:vm/vmlinuz#b18|8651264,initramfs|r2:vm/initramfs#b18|974
 # keeps serving the previous build from an immutable entry.
 RV_IMAGES = "bios.bin|r2:rv/bios.bin#r15|2097152,kernel|r2:rv/kernel#r15|22380544,initramfs|r2:rv/initramfs#r15|1906643,rootfs|r2:rv/rootfs.img@209715200#r15|1192230912"
 
+# The x86-64 machine: QEMU on the `pc` board, which is the one upstream
+# qemu-wasm actually exercises with a disk. Same route and same 1 MiB chunking
+# as the others. Bump the #marker whenever CI republishes, or the edge keeps
+# serving the previous build from an immutable entry.
+PC_IMAGES = "kernel|r2:pc/kernel#p1|12588032,initramfs|r2:pc/initramfs#p1|7478939,rootfs|r2:pc/rootfs.img@209715200#p1|429916160"
+
 # The arm64 machine, which is QEMU rather than an emulator written for the
 # browser. Same route and same 1 MiB chunking as the other two -- QEMU opens the
 # image as a file and the page serves those reads by range (see qemu-disk.ts) --
