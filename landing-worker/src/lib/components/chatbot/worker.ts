@@ -92,19 +92,27 @@ async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
 	const images = await decodeImages(msg.images);
 	const audio = msg.audio.length ? msg.audio : null;
 
-	// The processor turns the chat template plus any media into model inputs.
+	// Two steps, and the split matters. apply_chat_template() only renders and
+	// tokenizes text: any extra option it does not recognise (`images`, `audio`)
+	// falls through to the Jinja template as a variable and is then dropped, so
+	// asking it to tokenize directly produced a prompt holding one bare
+	// `<|image|>` token with no pixels behind it — which the model read as a typo
+	// rather than a picture.
+	//
+	// Calling the processor with the rendered text is what actually expands each
+	// placeholder into its soft-token run and attaches pixel_values /
+	// audio features.
 	const proc = processor as unknown as {
-		apply_chat_template(m: unknown[], o: Record<string, unknown>): unknown;
+		apply_chat_template(m: unknown[], o: Record<string, unknown>): string;
+		(text: string, images: unknown, audio: unknown): Promise<unknown>;
 	};
-	const inputs = await proc.apply_chat_template(msg.messages, {
+	const prompt = proc.apply_chat_template(msg.messages, {
 		add_generation_prompt: true,
-		tokenize: true,
-		return_dict: true,
+		tokenize: false,
 		// The template opens a reasoning channel when this is set.
-		enable_thinking: msg.enableThinking ?? false,
-		...(images ? { images } : {}),
-		...(audio ? { audio } : {})
+		enable_thinking: msg.enableThinking ?? false
 	});
+	const inputs = await proc(prompt, images, audio);
 
 	stopper = new InterruptableStoppingCriteria();
 

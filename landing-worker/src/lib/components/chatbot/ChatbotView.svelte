@@ -842,11 +842,16 @@
 						{/if}
 					{/if}
 					{#if parts.answer}
-						<div class="chat-md text-sm text-[#d8dee9] break-words">
+						<div
+							class="chat-md self-start px-3 py-2 rounded-md text-sm bg-white/[0.06] border border-white/15 text-[#d8dee9] break-words"
+						>
 							{@html renderMarkdown(parts.answer)}
 						</div>
 					{:else if !parts.thinking}
-						<span class="text-white/40 text-sm">▋</span>
+						<span
+							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/40 text-sm"
+							>▋</span
+						>
 					{/if}
 				</div>
 			{/if}
@@ -946,6 +951,8 @@
 			>
 				THINK
 			</button>
+			<!-- Divides the action buttons from the message field. -->
+			<div class="self-stretch w-px bg-white/15 shrink-0 my-0.5" aria-hidden="true"></div>
 			<textarea
 				bind:this={inputEl}
 				bind:value={draft}
