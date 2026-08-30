@@ -46,7 +46,7 @@
 		 * to WebAssembly -- which is why that one needs a cross-origin isolated
 		 * page and the other two do not.
 		 */
-		machine: 'x86' | 'riscv64' | 'arm64';
+		machine: 'x86' | 'riscv64' | 'arm64' | 'x86_64';
 		persistDisk: boolean;
 		/**
 		 * The mode X asks for, passed to the guest on the kernel command line
@@ -92,7 +92,7 @@
 	const DEFAULT_CMDLINE =
 		'root=/dev/sda rw modules=sd_mod,ata_piix,ext4 rootwait console=ttyS0,115200 console=tty0';
 
-	const SETTINGS_VERSION = 10;
+	const SETTINGS_VERSION = 11;
 
 	const DEFAULTS: Settings = {
 		version: SETTINGS_VERSION,
@@ -248,10 +248,13 @@
 		}
 	}
 
-	/** The same, for the arm64 machine's own images. */
-	async function armInfo(name: string): Promise<{ size: number; version?: string } | null> {
+	/** The same, for a QEMU machine's own images -- /vm/arm or /vm/pc. */
+	async function qemuInfo(
+		base: string,
+		name: string
+	): Promise<{ size: number; version?: string } | null> {
 		try {
-			const res = await fetch(`/vm/arm/${name}?info`);
+			const res = await fetch(`/vm/${base}/${name}?info`);
 			return res.ok ? ((await res.json()) as { size: number; version?: string }) : null;
 		} catch {
 			return null;
@@ -266,7 +269,7 @@
 	function installFetchCounter() {
 		const original = window.XMLHttpRequest.prototype.open;
 		window.XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
-			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin|\/vm\/arm\/rootfs\b/.test(String(url))) {
+			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin|\/vm\/(arm|pc)\/rootfs\b/.test(String(url))) {
 				this.addEventListener('load', () => chunksFetched++, { once: true });
 			}
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -292,8 +295,8 @@
 			return;
 		}
 
-		if (settings.machine === 'arm64') {
-			await bootQemu();
+		if (settings.machine === 'arm64' || settings.machine === 'x86_64') {
+			await bootQemu(settings.machine === 'x86_64' ? 'x86_64' : 'aarch64');
 			return;
 		}
 
@@ -494,7 +497,7 @@
 	 * are answered a chunk at a time from /vm/arm -- see qemu-disk.ts, which is
 	 * where the awkward part lives.
 	 */
-	async function bootQemu() {
+	async function bootQemu(arch: 'aarch64' | 'x86_64') {
 		try {
 			status = 'loading emulator…';
 			const [xtermMod, fitMod] = await Promise.all([
@@ -517,20 +520,22 @@
 			fitTerminal();
 
 			status = 'reading image metadata…';
+			// Each QEMU machine has its own images under its own prefix.
+			const base = arch === 'x86_64' ? 'pc' : 'arm';
 			const [kernel, initrd, rootfs] = await Promise.all([
-				armInfo('kernel'),
-				armInfo('initramfs'),
-				armInfo('rootfs')
+				qemuInfo(base, 'kernel'),
+				qemuInfo(base, 'initramfs'),
+				qemuInfo(base, 'rootfs')
 			]);
 			if (!kernel || !initrd || !rootfs) {
-				throw new Error('no arm64 image is published on this deployment yet');
+				throw new Error(`no ${arch} image is published on this deployment yet`);
 			}
 			imageSize = rootfs.size;
 
 			status = 'loading QEMU (66 MB wasm)…';
 			const { startQemu } = await import('./qemu');
 			const machine = await startQemu({
-				arch: 'aarch64',
+				arch,
 				// The whole Terminal, not a pair of callbacks: QEMU speaks through a
 				// line discipline that attaches to it as an addon. See qemu.ts.
 				term,
@@ -538,9 +543,9 @@
 				// Four vCPUs under single-threaded TCG, which is what upstream's own
 				// examples use.
 				smp: 4,
-				kernelUrl: `/vm/arm/kernel?v=${kernel.version ?? 0}`,
-				initrdUrl: `/vm/arm/initramfs?v=${initrd.version ?? 0}`,
-				rootfsUrl: `/vm/arm/rootfs?v=${rootfs.version ?? 0}`,
+				kernelUrl: `/vm/${base}/kernel?v=${kernel.version ?? 0}`,
+				initrdUrl: `/vm/${base}/initramfs?v=${initrd.version ?? 0}`,
+				rootfsUrl: `/vm/${base}/rootfs?v=${rootfs.version ?? 0}`,
 				kernelSize: kernel.size,
 				rootfsSize: rootfs.size,
 				cmdline: '',
@@ -983,7 +988,29 @@
 
 	/** What the panel says about whichever machine is selected. */
 	let FACTS = $derived<{ label: string; value: string; title?: string }[]>(
-		settings.machine === 'arm64'
+		settings.machine === 'x86_64'
+			? [
+					{
+						label: 'EMULATOR',
+						value: 'QEMU 10 — wasm build, GPL-2',
+						title: 'Upstream QEMU compiled to WebAssembly, which is why this machine has real device models rather than the minimum a browser emulator can get away with. It runs its CPU on a worker thread sharing memory with the page, so the page has to be cross-origin isolated for it to start at all.'
+					},
+					{ label: 'GUEST', value: 'Alpine Linux 3.24, x86-64' },
+					{ label: 'CPU', value: `${4} cores, TCG` },
+					{ label: 'RAM', value: `${settings.memoryMb} MB` },
+					{ label: 'DISPLAY', value: '16550 serial, via xterm.js' },
+					{
+						label: 'DISK',
+						value: 'ext4, streamed in 1 MiB chunks',
+						title: 'QEMU opens its drive as an ordinary file, and the upstream demos download the whole image before starting. This one does not: reads are answered a chunk at a time from the same edge cache the other machines use, and writes are kept in the tab.'
+					},
+					{
+						label: 'NETWORK',
+						value: 'none yet',
+						title: "QEMU's user-mode network stack wants a host socket API the browser does not have; bridging it needs a TCP/IP stack running in the page"
+					}
+				]
+			: settings.machine === 'arm64'
 			? [
 					{
 						label: 'EMULATOR',
@@ -1191,7 +1218,7 @@
 
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
-						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['arm64', 'arm64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating aarch64 as it goes, on a worker thread that shares memory with the page.'], ['riscv64', 'riscv64 · WIP', 'TinyEMU with firmware written for it here. The kernel boots, finds its console, timer, interrupt controller and streamed disk, and then stops before userspace — this one is not finished.']] as const as [value, label, hint] (value)}
+						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.'], ['arm64', 'arm64 · WIP', "QEMU on an emulated 64-bit ARM board. The kernel boots and finds its disk, then stops: virtio-blk wedges in this build, which is a path upstream never exercises."], ['riscv64', 'riscv64 · WIP', 'TinyEMU with firmware written for it here. The kernel boots, finds its console, timer, interrupt controller and streamed disk, and then stops before userspace — this one is not finished.']] as const as [value, label, hint] (value)}
 							<button
 								onclick={() => (settings.machine = value)}
 								title={hint}
@@ -1203,7 +1230,7 @@
 								{label}
 							</button>
 						{/each}
-						<span class="text-[10px] font-mono text-white/40">three emulators, not three settings</span>
+						<span class="text-[10px] font-mono text-white/40">different emulators, not settings</span>
 					</div>
 
 					{#if settings.machine === 'x86'}
