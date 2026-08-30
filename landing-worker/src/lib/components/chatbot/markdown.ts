@@ -164,13 +164,23 @@ export function renderMarkdown(src: string, math: MathSpan[] = []): string {
 				body.push(lines[i]);
 				i++;
 			}
+			// Whether the fence was actually closed, or the text simply ran out —
+			// which is the normal state of a block still being streamed.
+			const closed = i < lines.length;
 			i++; // closing fence (or end of input)
 			const kind = (fence[1] ?? '').toLowerCase();
 			if (kind === 'mermaid') {
 				// Left for the page to render: a diagram needs a live element and a
 				// library, neither of which belongs in a string of HTML. The source
 				// rides along escaped so it survives being read back out.
-				out.push(`<div data-mermaid="${escapeHtml(body.join('\n'))}"></div>`);
+				//
+				// Only a closed block is offered for drawing. Half a diagram is not
+				// a diagram, and mermaid's parser is loud about it.
+				out.push(
+					closed
+						? `<div data-mermaid="${escapeHtml(body.join('\n'))}"></div>`
+						: `<pre data-lang="mermaid"><code>${escapeHtml(body.join('\n'))}</code></pre>`
+				);
 			} else {
 				out.push(`<pre${lang}><code>${highlight(body.join('\n'), kind)}</code></pre>`);
 			}

@@ -102,18 +102,47 @@
 			securityLevel: 'strict',
 			theme: 'base',
 			fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+			// Every surface is a near-transparent white so nodes read as faint
+			// panels on the dark ground, the way the rest of the page does. Left
+			// to itself mermaid picks saturated pastels that glare against it.
 			themeVariables: {
 				fontSize: '13px',
+				darkMode: true,
 				background: 'transparent',
 				primaryColor: 'rgba(255,255,255,0.06)',
-				primaryTextColor: '#eceff4',
-				primaryBorderColor: '#56b6c2',
-				lineColor: 'rgba(255,255,255,0.45)',
+				primaryTextColor: '#d8dee9',
+				primaryBorderColor: 'rgba(255,255,255,0.22)',
 				secondaryColor: 'rgba(255,255,255,0.04)',
-				tertiaryColor: 'rgba(255,255,255,0.04)',
-				edgeLabelBackground: '#16171d'
+				secondaryTextColor: '#d8dee9',
+				secondaryBorderColor: 'rgba(255,255,255,0.18)',
+				tertiaryColor: 'rgba(255,255,255,0.03)',
+				tertiaryTextColor: '#d8dee9',
+				tertiaryBorderColor: 'rgba(255,255,255,0.14)',
+				// Subgraphs: the pale block behind the nodes in a cluster.
+				clusterBkg: 'rgba(255,255,255,0.03)',
+				clusterBorder: 'rgba(255,255,255,0.12)',
+				lineColor: 'rgba(255,255,255,0.35)',
+				textColor: '#d8dee9',
+				edgeLabelBackground: '#16171d',
+				nodeTextColor: '#d8dee9',
+				mainBkg: 'rgba(255,255,255,0.06)',
+				nodeBorder: 'rgba(255,255,255,0.22)',
+				titleColor: '#d8dee9',
+				// Notes and actors, for sequence diagrams.
+				noteBkgColor: 'rgba(255,255,255,0.05)',
+				noteTextColor: '#d8dee9',
+				noteBorderColor: 'rgba(255,255,255,0.16)',
+				actorBkg: 'rgba(255,255,255,0.06)',
+				actorBorder: 'rgba(255,255,255,0.22)',
+				actorTextColor: '#d8dee9',
+				labelBoxBkgColor: 'rgba(255,255,255,0.05)',
+				labelBoxBorderColor: 'rgba(255,255,255,0.16)',
+				labelTextColor: '#d8dee9'
 			},
-			flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+			flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+			// Without this, a diagram that fails to parse is drawn as mermaid's own
+			// bomb graphic, appended to the document body outside this component.
+			suppressErrorRendering: true
 		});
 
 		for (const block of blocks) {
@@ -125,17 +154,29 @@
 				const { svg } = await mermaid.render(id, src);
 				block.innerHTML = svg;
 				block.className = 'overflow-x-auto py-1';
-			} catch (err) {
-				// A diagram the model got wrong should read as the code it wrote,
-				// not vanish.
-				block.className = 'text-xs font-mono text-[#e06c75]/80';
-				block.textContent = `diagram error: ${(err as Error).message}`;
+			} catch {
+				// A diagram this model got wrong is unremarkable — it is a 2B model
+				// writing a syntax it barely knows — so the source is shown as a
+				// code block and nothing is said about it. Mermaid also injects an
+				// error graphic of its own on failure, which has to be cleared.
+				block.replaceChildren();
+				block.removeAttribute('class');
+				const pre = document.createElement('pre');
+				const code = document.createElement('code');
+				code.textContent = src;
+				pre.appendChild(code);
+				block.appendChild(pre);
+				document.querySelectorAll('[id^="dmermaid-"], [id^="mermaid-"]').forEach((n) => {
+					if (!el.contains(n)) n.remove();
+				});
 			}
 		}
 	}
 
 	$effect(() => {
-		// Depend on the html so this re-runs as a reply streams in.
+		// Depend on the html so this re-runs as a reply streams in. Maths is
+		// cheap and idempotent; diagrams only ever see closed blocks, because
+		// renderMarkdown leaves an unclosed fence as plain code.
 		void html;
 		if (!host) return;
 		void renderMath(host, math);

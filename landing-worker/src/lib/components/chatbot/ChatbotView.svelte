@@ -101,17 +101,23 @@
 
 	/** Real prompt length of the last turn, reported by the worker. */
 	let usedTokens = $state(0);
-	/** After a few seconds on a non-empty history, name the slow part. */
+	/**
+	 * What the wait actually is.
+	 *
+	 * Not "thinking": before the first token the model is reading the prompt,
+	 * which it does whether or not reasoning is switched on, and calling that
+	 * thinking is wrong in the common case. Once reasoning is on and tokens have
+	 * started arriving, it genuinely is thinking, and the reasoning block says so
+	 * on its own.
+	 */
 	let waitLabel = $derived(
-		usedTokens > 0 && waitedSecs >= 4 ? 'reading the conversation…' : 'thinking…'
+		usedTokens > 0 && waitedSecs >= 4 ? 'reading the conversation…' : 'processing…'
 	);
 	let thinkMode = $state(false);
 	let sessions = $state<Session[]>([]);
 	let sessionId = $state('');
 	/** Refreshed whenever the storage panel opens, so the figure is current. */
 	let savedSize = $state<{ count: number; bytes: number } | null>(null);
-	/** Shown once per session when THINK is flipped with turns already present. */
-	let thinkWarned = $state(false);
 	/** Microphones offered in CONFIG; labels need permission, so this is lazy. */
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
@@ -381,7 +387,6 @@
 		dropAttachments();
 		sessionId = sess.id;
 		thinkMode = sess.think;
-		thinkWarned = false;
 		usedTokens = 0;
 		lastStats = '';
 		turns = sess.turns.map((t) => ({
@@ -402,7 +407,6 @@
 		await persist();
 		dropAttachments();
 		sessionId = newSessionId();
-		thinkWarned = false;
 		usedTokens = 0;
 		lastStats = '';
 		void tick().then(() => inputEl?.focus());
@@ -443,23 +447,18 @@
 	}
 
 	/**
-	 * Reasoning is a property of the conversation, not of one message: the chat
-	 * template injects `<|think|>` into the first system turn, so it governs the
-	 * whole exchange. Turning it on midway rewrites the prefix every earlier turn
-	 * was generated under, and the model keeps answering in the style it already
-	 * sees — which is why this says so rather than silently doing nothing.
+	 * Reasoning takes effect on the next reply, mid-conversation and all.
+	 *
+	 * The previous model needed a fresh conversation to change this — its
+	 * template injected the switch into the first system turn, so flipping it
+	 * later rewrote the prefix every earlier turn had been written under. This
+	 * runtime passes it per request instead, verified by toggling it after a
+	 * plain turn and watching the reasoning appear on the very next one.
 	 */
 	function setThinkMode(on: boolean) {
 		thinkMode = on;
 		playSound('toggle');
 		void persist();
-		if (turns.some((t) => !t.notice) && !thinkWarned) {
-			thinkWarned = true;
-			notice(
-				`reasoning is ${on ? 'on' : 'off'} from here, but it applies to the whole ` +
-					'conversation — start a new one (NEW) for a clean run.'
-			);
-		}
 	}
 
 	function notice(text: string) {
@@ -888,7 +887,7 @@
 						onchange={(e) => setThinkMode(e.currentTarget.checked)}
 						class="accent-[#c678dd] cursor-pointer"
 					/>
-					<span class="text-white/30 text-[11px]">whole conversation — use NEW to switch cleanly</span>
+					<span class="text-white/30 text-[11px]">also on the THINK button, beside the message box</span>
 				</label>
 				<label class="flex items-center gap-2 font-mono">
 					<span class="text-white/60 w-36 shrink-0" title="Sample, rather than always take the likeliest token">
@@ -1166,6 +1165,7 @@
 							{phase === 'generating' && i === turns.length - 1 && !turn.content
 								? 'thinking…'
 								: 'reasoning'} ({turn.reasoning.length} chars)
+
 						</button>
 						{#if openThink.has(i)}
 							<div
@@ -1191,12 +1191,12 @@
 						>
 							<RichReply content={turn.content} />
 						</div>
-					{:else if phase === 'generating' && i === turns.length - 1}
+					{:else if phase === 'generating' && i === turns.length - 1 && !turn.reasoning}
 						<!--
-							Before the first token there is nothing to stream, and on a cold
-							cache that wait is measured in seconds while the model reads the
-							whole prompt. A bare cursor made that look like a hang, so this
-							says which phase it is in and counts the seconds.
+							Only while nothing at all has arrived. Once reasoning starts
+							streaming the model is plainly working and the reasoning block
+							says so; before that there is a silent gap, seconds long on a
+							cold cache, that a bare cursor made look like a hang.
 						-->
 						<div
 							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/45 text-sm flex items-center gap-2 font-mono"
@@ -1293,6 +1293,22 @@
 				class="px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#c678dd]/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
 			>
 				IMAGE
+			</button>
+			<!--
+				Beside IMAGE rather than buried in CONFIG: this model reads
+				enable_thinking per request, so switching mid-conversation takes
+				effect on the very next reply — verified by toggling it after a
+				plain turn and watching the reasoning appear.
+			-->
+			<button
+				onclick={() => setThinkMode(!thinkMode)}
+				disabled={phase === 'generating'}
+				title="Let the model reason before answering. Slower, and better on anything with steps."
+				class="px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {thinkMode
+					? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
+					: 'border-[#c678dd]/50 text-[#c678dd]/60 hover:bg-[#c678dd]/20'}"
+			>
+				THINK
 			</button>
 			<!-- Divides the action buttons from the message field. -->
 			<div class="self-stretch w-px bg-white/15 shrink-0 my-0.5" aria-hidden="true"></div>
