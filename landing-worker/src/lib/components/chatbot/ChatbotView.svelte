@@ -26,6 +26,7 @@
 		type Session,
 		type StoredAttachment
 	} from './sessions';
+	import AudioClip from './AudioClip.svelte';
 
 	type Phase = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
 
@@ -84,8 +85,8 @@
 	let savedSize = $state<{ count: number; bytes: number } | null>(null);
 	/** Shown once per session when THINK is flipped with turns already present. */
 	let thinkWarned = $state(false);
-	/** Shown once per session when audio is first attached. */
-	let audioWarned = $state(false);
+	/** Microphones offered in CONFIG; labels need permission, so this is lazy. */
+	let mics = $state<MediaDeviceInfo[]>([]);
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
 	let completionIdx = $state(-1);
@@ -399,25 +400,39 @@
 	}
 
 	/**
-	 * Said once per session when audio is attached.
+	 * Enumerates microphones for the CONFIG list.
 	 *
-	 * The pipeline is correct — the waveform is decoded, the processor expands
-	 * the placeholder into its full run of soft tokens and returns the mel
-	 * features to go with them — but this model does very little with the result.
-	 * Asked to describe a 440 Hz tone and two seconds of pure silence, it answers
-	 * "a low, resonant hum" to both, and small changes of wording ("what is this
-	 * sound?") make it deny receiving audio at all. Only noise reliably shifts
-	 * the answer. Saying so is better than letting a confident invention read as
-	 * comprehension.
+	 * Device labels are empty until the page has been granted microphone access
+	 * once, so this is called after a successful recording as well as when the
+	 * panel opens — before that the entries would all read "microphone 2".
 	 */
-	function warnAboutAudio() {
-		if (audioWarned) return;
-		audioWarned = true;
-		notice(
-			'note: audio is passed to the model, but this 2B model barely uses it — ' +
-				'it often answers with a plausible-sounding guess, or claims it received nothing. ' +
-				'Images are reliable; sound is not.'
-		);
+	async function listMics() {
+		try {
+			const all = await navigator.mediaDevices.enumerateDevices();
+			mics = all.filter((d) => d.kind === 'audioinput');
+		} catch {
+			mics = [];
+		}
+	}
+
+	/**
+	 * Reasoning is a property of the conversation, not of one message: the chat
+	 * template injects `<|think|>` into the first system turn, so it governs the
+	 * whole exchange. Turning it on midway rewrites the prefix every earlier turn
+	 * was generated under, and the model keeps answering in the style it already
+	 * sees — which is why this says so rather than silently doing nothing.
+	 */
+	function setThinkMode(on: boolean) {
+		thinkMode = on;
+		playSound('toggle');
+		void persist();
+		if (turns.some((t) => !t.notice) && !thinkWarned) {
+			thinkWarned = true;
+			notice(
+				`reasoning is ${on ? 'on' : 'off'} from here, but it applies to the whole ` +
+					'conversation — start a new one (NEW) for a clean run.'
+			);
+		}
 	}
 
 	function notice(text: string) {
@@ -500,7 +515,6 @@
 		if (!files) return;
 		for (const f of Array.from(files)) {
 			const kind = f.type.startsWith('image/') ? 'image' : f.type.startsWith('audio/') ? 'audio' : null;
-			if (kind === 'audio') warnAboutAudio();
 			if (!kind) {
 				notice(`${f.name} is neither an image nor audio — skipped.`);
 				continue;
@@ -561,7 +575,12 @@
 	async function startRecording() {
 		if (recording) return;
 		try {
-			recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			// An exact deviceId would throw if that microphone has been unplugged;
+			// asking for it as a preference falls back to the default instead.
+			recStream = await navigator.mediaDevices.getUserMedia({
+				audio: config.micId ? { deviceId: config.micId } : true
+			});
+			void listMics();
 		} catch (err) {
 			notice(`could not reach the microphone: ${(err as Error).message}`);
 			return;
@@ -587,7 +606,6 @@
 			const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
 			const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 			pending = [...pending, { kind: 'audio', url: URL.createObjectURL(blob), name: `recording ${stamp}` }];
-			warnAboutAudio();
 			void tick().then(() => inputEl?.focus());
 		};
 		rec.start();
@@ -782,7 +800,7 @@
 	>
 		<span class="font-black text-[#61afef]">6:chatbot</span>
 		<span class="text-white/40 hidden sm:inline">
-			text · images · audio (limited), all on your machine
+			text · images · audio, all on your machine
 		</span>
 
 		<div class="flex-1"></div>
@@ -816,7 +834,10 @@
 		<button
 			onclick={() => {
 				configOpen = !configOpen;
-				if (configOpen) storageOpen = false;
+				if (configOpen) {
+					storageOpen = false;
+					void listMics();
+				}
 				playSound('toggle');
 			}}
 			title="Generation limits and sampling"
@@ -885,6 +906,21 @@
 					</label>
 				{/each}
 				<label class="flex items-center gap-2 font-mono">
+					<span
+						class="text-white/60 w-36 shrink-0"
+						title="Let the model reason before answering. Applies to the whole conversation, so it belongs here rather than beside the message box."
+					>
+						reasoning
+					</span>
+					<input
+						type="checkbox"
+						checked={thinkMode}
+						onchange={(e) => setThinkMode(e.currentTarget.checked)}
+						class="accent-[#c678dd] cursor-pointer"
+					/>
+					<span class="text-white/30 text-[11px]">whole conversation — use NEW to switch cleanly</span>
+				</label>
+				<label class="flex items-center gap-2 font-mono">
 					<span class="text-white/60 w-36 shrink-0" title="Sample, rather than always take the likeliest token">
 						sampling
 					</span>
@@ -894,6 +930,22 @@
 						onchange={() => saveConfig(config)}
 						class="accent-[#56b6c2] cursor-pointer"
 					/>
+				</label>
+				<label class="flex items-center gap-2 font-mono sm:col-span-2">
+					<span class="text-white/60 w-36 shrink-0" title="Which microphone REC records from">
+						microphone
+					</span>
+					<select
+						bind:value={config.micId}
+						onchange={() => saveConfig(config)}
+						class="flex-1 min-w-0 bg-black/50 border border-white/20 rounded-xs px-1.5 py-0.5 text-[#d8dee9] outline-none focus:border-[#56b6c2] cursor-pointer"
+					>
+						<option value="">system default</option>
+						{#each mics as d (d.deviceId)}
+							<!-- Labels are blank until the mic has been used once. -->
+							<option value={d.deviceId}>{d.label || `microphone ${d.deviceId.slice(0, 6)}`}</option>
+						{/each}
+					</select>
 				</label>
 				<label class="flex items-center gap-2 font-mono">
 					<span class="text-white/60 w-36 shrink-0" title="Stop a reply that collapses into repetition">
@@ -1108,8 +1160,7 @@
 										class="max-h-40 rounded-md border border-[#61afef]/25"
 									/>
 								{:else}
-									<!-- svelte-ignore a11y_media_has_caption -->
-									<audio src={a.url} controls class="h-8"></audio>
+									<AudioClip src={a.url} name={a.name} />
 								{/if}
 							{/each}
 						</div>
@@ -1233,40 +1284,6 @@
 			>
 				FILE
 			</button>
-			<button
-				onclick={recording ? stopRecording : startRecording}
-				disabled={phase === 'generating'}
-				title={recording ? 'Stop recording and attach it' : 'Record from your microphone'}
-				class="px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {recording
-					? 'border-[#e06c75] bg-[#e06c75]/20 text-[#e06c75]'
-					: 'border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20'}"
-			>
-				{recording ? 'STOP REC' : 'REC'}
-			</button>
-			<button
-				onclick={() => {
-					thinkMode = !thinkMode;
-					playSound('toggle');
-					// The template injects <|think|> into the first system turn, so it
-					// governs the whole conversation rather than this one message.
-					// Flipping it here rewrites the prefix every earlier turn was
-					// generated under, which the model notices.
-					if (turns.some((t) => !t.notice) && !thinkWarned) {
-						thinkWarned = true;
-						notice(
-							`reasoning is ${thinkMode ? 'on' : 'off'} from here, but it applies to the whole ` +
-								'conversation — start a new one (NEW) for a clean run.'
-						);
-					}
-				}}
-				disabled={phase === 'generating'}
-				title="Let the model reason before answering, folded away above the reply. Slower."
-				class="px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {thinkMode
-					? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
-					: 'border-[#c678dd]/40 text-[#c678dd]/60 hover:bg-[#c678dd]/20'}"
-			>
-				THINK
-			</button>
 			<!-- Divides the action buttons from the message field. -->
 			<div class="self-stretch w-px bg-white/15 shrink-0 my-0.5" aria-hidden="true"></div>
 			<textarea
@@ -1291,6 +1308,17 @@
 					STOP
 				</button>
 			{:else}
+				<!-- Beside SEND: recording is the first half of sending a voice message. -->
+				<button
+					onclick={recording ? stopRecording : startRecording}
+					disabled={phase !== 'ready'}
+					title={recording ? 'Stop recording and attach it' : 'Record from your microphone'}
+					class="px-3 py-1 border rounded-xs text-xs font-black cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 transition-colors {recording
+						? 'border-[#e06c75] bg-[#e06c75]/20 text-[#e06c75]'
+						: 'border-[#c678dd] text-[#c678dd] hover:bg-[#c678dd] hover:text-black'}"
+				>
+					{recording ? '■ STOP' : '● REC'}
+				</button>
 				<button
 					onclick={send}
 					disabled={phase !== 'ready' || (!draft.trim() && !pending.length)}

@@ -64,6 +64,12 @@ export interface ChatConfig {
 	repetitionPenalty: number;
 	/** Sample rather than take the most likely token every time. */
 	doSample: boolean;
+	/**
+	 * deviceId of the microphone to record from. Empty means the system default;
+	 * the id is stable per browser profile, and a missing device falls back to
+	 * the default rather than failing to record.
+	 */
+	micId: string;
 	/** Stop generation when the tail collapses into repetition. */
 	loopGuard: boolean;
 }
@@ -79,7 +85,8 @@ export const DEFAULT_CONFIG: ChatConfig = {
 	topK: 50,
 	repetitionPenalty: 1.1,
 	doSample: true,
-	loopGuard: true
+	loopGuard: true,
+	micId: ''
 };
 
 export const CONFIG_LIMITS = {
