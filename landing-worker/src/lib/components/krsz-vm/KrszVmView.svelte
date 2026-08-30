@@ -535,10 +535,9 @@
 				// line discipline that attaches to it as an addon. See qemu.ts.
 				term,
 				memoryMb: settings.memoryMb,
-				// One core. Multi-threaded TCG wants a thread per vCPU on top of the
-				// one QEMU already runs on, and the gain is not worth finding out
-				// which browsers will not give them out.
-				smp: 1,
+				// Four vCPUs under single-threaded TCG, which is what upstream's own
+				// examples use.
+				smp: 4,
 				kernelUrl: `/vm/arm/kernel?v=${kernel.version ?? 0}`,
 				initrdUrl: `/vm/arm/initramfs?v=${initrd.version ?? 0}`,
 				rootfsUrl: `/vm/arm/rootfs?v=${rootfs.version ?? 0}`,

@@ -132,6 +132,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	options.term.loadAddon(master);
 
 	const glueUrl = `${BINARY_BASE}/qemu-system-${options.arch}.js`;
+
 	const factory = (await import(/* @vite-ignore */ glueUrl)) as {
 		default: (module: Partial<EmscriptenModule>) => Promise<EmscriptenModule>;
 	};
@@ -157,17 +158,34 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// tb-size is the translation cache in MB. The default is small enough that
 		// a booting kernel evicts its own hot code; 500 is what upstream's own
 		// examples use.
-		'-accel', options.smp > 1 ? 'tcg,tb-size=500,thread=multi' : 'tcg,tb-size=500',
+		// Single-threaded TCG even with several vCPUs, which is what upstream's own
+		// examples do -- they carry the MTTCG line commented out. The vCPUs still
+		// matter: with one, QEMU's CPU loop and the block layer's completions have
+		// nowhere to run but each other's way.
+		'-accel', 'tcg,tb-size=500',
 		...(options.smp > 1 ? ['-smp', `${options.smp}`] : []),
 		...machineArgs(options.arch),
 		// No network yet: QEMU's user-mode stack needs a host socket API that the
 		// browser does not have, and the relay this site runs carries streams
 		// rather than frames.
 		'-nic', 'none',
-		'-drive', 'if=virtio,format=raw,file=/krsz/rootfs.img',
+		// Spelled out as a drive plus a device rather than the `if=virtio`
+		// shorthand, which is what upstream's own Alpine example does. The
+		// shorthand asks QEMU to pick the transport, and on this board it picks
+		// one the guest then waits on forever.
+		'-drive', 'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
+		'-device', 'virtio-blk-pci,drive=rootfs',
 		'-kernel', '/krsz/kernel',
 		'-initrd', '/krsz/initramfs',
-		'-append', options.cmdline || `console=${consoleName(options.arch)} root=/dev/vda rw rootwait`
+		// `modules=` is not optional with Alpine's initramfs. Its init modprobes
+		// exactly what this names (plus loop and squashfs) and nothing else, then
+		// hands the root to nlplug-findfs -- which cannot identify a filesystem
+		// whose driver was never loaded, and waits for a device that by then
+		// already exists. Without it the boot stops on "Mounting root" having read
+		// one sector, with the disk sitting right there in the kernel log.
+		'-append',
+		options.cmdline ||
+			`console=${consoleName(options.arch)} root=/dev/vda rw rootwait modules=virtio_blk,ext4`
 	];
 
 	// Reads are served from the network as QEMU asks for them; writes stay here.
