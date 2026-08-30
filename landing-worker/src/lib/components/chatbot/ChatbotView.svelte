@@ -1203,11 +1203,26 @@
 						>
 							{@html renderMarkdown(parts.answer)}
 						</div>
-					{:else if !parts.thinking}
+					{:else if phase === 'generating' && i === turns.length - 1}
 						<span
 							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/40 text-sm"
 							>▋</span
 						>
+					{:else if !parts.thinking}
+						<!--
+							Generation finished without producing anything. The model does
+							this when it decides there is nothing to answer — a recording of
+							a silent room asked to be transcribed stops on its first token —
+							and the cursor alone left the turn looking permanently stuck.
+						-->
+						<div
+							class="self-start px-3 py-2 rounded-md text-xs bg-white/[0.03] border border-white/10 text-white/40 italic"
+						>
+							no reply — the model stopped without generating anything.{turns[i - 1]
+								?.attachments?.length
+								? ' If that was a recording, check it is not silent.'
+								: ''}
+						</div>
 					{/if}
 				</div>
 			{/if}
