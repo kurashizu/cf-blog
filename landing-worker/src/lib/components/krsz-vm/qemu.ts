@@ -60,6 +60,12 @@ interface EmscriptenModule {
 	};
 	/** The pty's slave half. The glue reads this as `Module["pty"]`. */
 	pty?: unknown;
+	/** Emscripten's TTY, exported by the build so its poll can be replaced. */
+	TTY?: {
+		stream_ops: {
+			poll: (stream: unknown, timeout: number) => number;
+		};
+	};
 	_exit?: (code: number) => void;
 }
 
@@ -189,7 +195,17 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	// none of them and pay nothing for this.
 	const roms: [string, Uint8Array][] = [];
 	if (options.arch === 'x86_64') {
-		const wanted = ['bios-256k.bin', 'vgabios-stdvga.bin', 'kvmvapic.bin', 'linuxboot_dma.bin'];
+		// Everything SeaBIOS may open, not just the BIOS itself: it initialises the
+		// display next and looks for a VGA BIOS by more than one name, and the
+		// option ROMs are what let it boot from a virtio disk.
+		const wanted = [
+			'bios-256k.bin',
+			'vgabios.bin',
+			'vgabios-stdvga.bin',
+			'kvmvapic.bin',
+			'linuxboot_dma.bin',
+			'efi-virtio.rom'
+		];
 		await Promise.all(
 			wanted.map(async (name) => {
 				const response = await fetch(`${BINARY_BASE}/pc-bios-${name}`);
@@ -324,6 +340,27 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		print: (line: string) => console.log(`[qemu/${options.arch}]`, line),
 		printErr: (line: string) => console.warn(`[qemu/${options.arch}]`, line)
 	});
+
+	// Emscripten's own poll blocks when the terminal has nothing to say, and it
+	// blocks with Atomics.wait -- on whichever thread asked. Run on the page's
+	// main thread that is a deadlock: the notify it is waiting for can only be
+	// delivered by the timers and event handlers of the very thread it has
+	// stopped. What it looked like from outside was a machine frozen with the
+	// main thread pinned at 98%, in repeating one-second slices.
+	//
+	// Answering "not readable" without waiting is what upstream's own examples
+	// do, and it is the difference between a QEMU that boots and one that does
+	// not.
+	const tty = module.TTY;
+	if (tty) {
+		const oldPoll = tty.stream_ops.poll;
+		tty.stream_ops.poll = function (this: unknown, stream: unknown, timeout: number) {
+			if (!slave.readable) {
+				return (slave.readable ? 1 : 0) | (slave.writable ? 4 : 0);
+			}
+			return oldPoll.call(this, stream, timeout);
+		};
+	}
 
 	// By the time this resolves QEMU is already running: the glue called main
 	// itself, with the arguments above, once preRun had put the disk in place.
