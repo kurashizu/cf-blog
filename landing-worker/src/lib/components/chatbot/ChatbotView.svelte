@@ -1203,7 +1203,7 @@
 			<input
 				bind:this={fileEl}
 				type="file"
-				accept="image/*,audio/*"
+				accept="image/*"
 				multiple
 				class="hidden"
 				onchange={(e) => {
@@ -1214,10 +1214,10 @@
 			<button
 				onclick={() => fileEl?.click()}
 				disabled={phase === 'generating'}
-				title="Attach an image or a sound — you can also paste or drag one in"
+				title="Attach an image — you can also paste or drag one in"
 				class="px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#c678dd]/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
 			>
-				FILE
+				IMAGE
 			</button>
 			<!-- Divides the action buttons from the message field. -->
 			<div class="self-stretch w-px bg-white/15 shrink-0 my-0.5" aria-hidden="true"></div>
