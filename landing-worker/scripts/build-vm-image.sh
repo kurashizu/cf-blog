@@ -130,7 +130,6 @@ EOF
 chmod +x "$ROOTFS/sbin/autologin"
 
 cat > /tmp/motd.raw <<'MOTD'
-
   \033[38;5;180m██╗  ██╗██████╗ ███████╗███████╗       ██╗   ██╗███╗   ███╗\033[0m
   \033[38;5;180m██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝       ██║   ██║████╗ ████║\033[0m
   \033[38;5;180m█████╔╝ ██████╔╝███████╗  ███╔╝ ██████╗██║   ██║██╔████╔██║\033[0m
@@ -138,26 +137,20 @@ cat > /tmp/motd.raw <<'MOTD'
   \033[38;5;180m██║  ██╗██║  ██║███████║███████╗        ╚████╔╝ ██║ ╚═╝ ██║\033[0m
   \033[38;5;180m╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝         ╚═══╝  ╚═╝     ╚═╝\033[0m
 
-  \033[1mAlpine Linux on an emulated 32-bit x86 PC, inside a browser tab.\033[0m
-  No hypervisor underneath -- SeaBIOS, a real kernel, and v86 translating
-  x86 to WebAssembly as it runs.
+  \033[1mAlpine Linux on an emulated i686 PC, in a browser tab.\033[0m
+  v86 translating x86 to WebAssembly, with SeaBIOS and a real kernel.
 
   \033[38;5;114mTRY THIS\033[0m
-    \033[38;5;222muname -a\033[0m          see what you are actually running on
-    \033[38;5;222mtmux\033[0m              terminal multiplexer, mouse reporting is on
-    \033[38;5;222mstartx\033[0m            an openbox desktop; right-click it for the menu
+    \033[38;5;222muname -a\033[0m          what you are actually running on
+    \033[38;5;222mstartx\033[0m            an openbox desktop; right-click for the menu
     \033[38;5;222mapk add <pkg>\033[0m     the mirror is reachable through the relay
-    \033[38;5;222mping krsz.in\033[0m      answered by the emulator's own stack
-    \033[38;5;222mrs\033[0m                re-fit the shell after resizing the window
+    \033[38;5;222mtmux\033[0m              the mouse works
+    \033[38;5;222mrs\033[0m                re-fit the shell after resizing
 
   \033[38;5;110mGOOD TO KNOW\033[0m
-    What you change is kept in this browser and replayed at the next
-    boot -- CONFIG has the switch, and the button that wipes it.
-    The disk is streamed in 1 MiB pieces as you touch it, so the first
-    use of a command is slower than the second.
-    Outbound traffic goes through a relay on the page's own origin,
-    rate limited per client. There is no NAT to punch: nothing on
-    the internet can reach in.
+    The disk streams in 1 MiB pieces, so a command is slower the first time.
+    What you change is kept in this browser and replayed at the next boot.
+    Outbound traffic goes through a relay on this origin. Nothing can reach in.
 
 MOTD
 

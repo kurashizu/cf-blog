@@ -540,6 +540,7 @@
 				kernelSize: kernel.size,
 				rootfsSize: rootfs.size,
 				cmdline: '',
+				network: settings.network,
 				onStatus: (text: string) => {
 					if (phase === 'loading') status = text;
 				}
@@ -916,7 +917,7 @@
 						title: 'Upstream QEMU compiled to WebAssembly, which is why this machine has real device models rather than the minimum a browser emulator can get away with. It runs its CPU on a worker thread sharing memory with the page, so the page has to be cross-origin isolated for it to start at all.'
 					},
 					{ label: 'GUEST', value: 'Alpine Linux 3.24, x86-64' },
-					{ label: 'CPU', value: `${4} cores, TCG` },
+					{ label: 'CPU', value: 'single core, TCG' },
 					{ label: 'RAM', value: `${settings.memoryMb} MB` },
 					{ label: 'DISPLAY', value: '16550 serial, via xterm.js' },
 					{
@@ -926,8 +927,8 @@
 					},
 					{
 						label: 'NETWORK',
-						value: 'none yet',
-						title: "QEMU's user-mode network stack wants a host socket API the browser does not have; bridging it needs a TCP/IP stack running in the page"
+						value: settings.network ? 'via the relay, any host' : 'off',
+						title: "QEMU's own user-mode stack is not in this build, and every backend that is wants a host socket API a tab does not have. What works instead: -netdev socket, whose connection Emscripten makes a WebSocket, intercepted in QEMU's thread and answered by a gateway in the page — ARP, DHCP, ping and DNS locally, TCP out through the same relay the other machine uses"
 					}
 				]
 			: [
@@ -1041,10 +1042,12 @@
 	{#if phase === 'idle' || phase === 'error'}
 		<div class="space-y-3">
 			<p class="text-[11px] sm:text-xs text-white/60 leading-relaxed max-w-3xl">
-				A real 32-bit x86 PC, emulated in this tab — an actual Linux kernel on an emulated
-				disk, network card and VGA adapter, not a shell simulation. It boots to a root shell
-				in about half a minute, reaches the network through a relay on this origin, and keeps
-				what you change in this browser.
+				A real x86 PC, emulated in this tab — an actual Linux kernel on an emulated
+				disk and network card, not a shell simulation. Two machines to pick from:
+				<span class="font-mono text-white/75">i686</span> under v86, which adds a VGA
+				adapter and a graphical desktop, and <span class="font-mono text-white/75">x86-64</span>
+				under QEMU. Either boots to a root shell, reaches the network through a relay on
+				this origin, and keeps what you change in this browser.
 			</p>
 
 			<div class="border border-[#56b6c2]/40 bg-black/30 rounded-xs p-2.5 space-y-2.5">
@@ -1073,6 +1076,7 @@
 						<span class="text-[10px] font-mono text-white/30">this is browser memory, not your machine's</span>
 					</div>
 
+					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">VGA RAM</span>
 						{#each VGA_CHOICES as mb (mb)}
@@ -1086,10 +1090,11 @@
 							</button>
 						{/each}
 					</div>
+					{/if}
 
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
-						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.']] as const as [value, label, hint] (value)}
+						{#each [['x86', 'i686', 'v86: a 32-bit x86 PC, JIT-compiled to WebAssembly. The one with a graphical desktop and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.']] as const as [value, label, hint] (value)}
 							<button
 								onclick={() => (settings.machine = value)}
 								title={hint}
@@ -1141,6 +1146,21 @@
 							</button>
 						{/each}
 					</div>
+					{/if}
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">NETWORK</span>
+						<button
+							onclick={() => (settings.network = !settings.network)}
+							title="Attach a virtio NIC and put a gateway behind it — DHCP, DNS and TCP — whose connections leave through the relay on this origin. Reachable destinations are limited by an allowlist enforced at the edge."
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.network
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							NET: {settings.network ? 'ON' : 'OFF'}
+						</button>
+						<span class="text-[10px] font-mono text-white/40">nothing on the internet can reach in</span>
+					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISK</span>
@@ -1167,6 +1187,7 @@
 						</span>
 					</div>
 
+					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">BOOT</span>
 						{#each [['auto', 'AUTO'], ['kernel', 'DIRECT KERNEL'], ['cdrom', 'ISO BOOTLOADER']] as const as [value, label] (value)}
@@ -1204,10 +1225,6 @@
 							<span title="v86 interprets code until a block is hot, then compiles it to WebAssembly. Turning this off is much slower and only useful for comparison.">JIT</span>
 						</label>
 						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
-							<input type="checkbox" bind:checked={settings.network} class="accent-[#98c379]" />
-							<span title="Attach a virtio NIC pointed at the same-origin relay. Reachable destinations are limited by an allowlist enforced at the edge.">NET</span>
-						</label>
-						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
 							<input type="checkbox" bind:checked={settings.acpi} class="accent-[#98c379]" />
 							<span title="Expose an ACPI table to the guest. Off by default: it gives the kernel more hardware to probe, and probing is where this emulator is weakest.">ACPI</span>
 						</label>
@@ -1226,10 +1243,11 @@
 							RAM, VGA RAM, boot mode and the command line take effect on the next boot;
 							screen size applies the next time <span class="text-white/50">startx</span> runs.
 						{:else}
-							RAM takes effect on the next boot; the rest of these belong to the 32-bit
-							machine. This one needs a cross-origin isolated page for its CPU thread,
-							and downloads a 66 MB emulator before it starts — the disk itself is
-							still streamed a megabyte at a time.
+							RAM, network and disk take effect on the next boot. This machine has no
+							VGA side, so it is the serial terminal throughout; it needs a
+							cross-origin isolated page for its CPU thread, and downloads a 66 MB
+							emulator before it starts — the disk itself is still streamed a
+							megabyte at a time.
 						{/if}
 					</p>
 				</div>

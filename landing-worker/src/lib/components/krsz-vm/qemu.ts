@@ -20,6 +20,8 @@ import { openpty } from 'xterm-pty';
 import type { Terminal } from '@xterm/xterm';
 import { CHUNK, type OverlayBlocks } from './qemu-disk';
 import { createLazyImage } from './qemu-disk';
+import { QemuNet } from './qemu-net';
+import { NET_HOST, NET_PREFIX, NET_SHIM_SOURCE, fromBase64, toBase64 } from './qemu-net-shim';
 
 /** Where the built binaries are served from — see routes/vm/qemu. */
 const BINARY_BASE = '/vm/qemu';
@@ -67,6 +69,8 @@ interface EmscriptenModule {
 		};
 	};
 	_exit?: (code: number) => void;
+	/** Exported by the build; how the page reaches the thread holding the socket. */
+	PThread?: { runningWorkers: Worker[] };
 }
 
 export interface QemuOptions {
@@ -88,6 +92,8 @@ export interface QemuOptions {
 	kernelSize: number;
 	rootfsSize: number;
 	cmdline: string;
+	/** Attach a NIC and the page-side gateway behind it. */
+	network: boolean;
 	onStatus?: (text: string) => void;
 }
 
@@ -143,6 +149,33 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	options.term.loadAddon(master);
 
 	const glueUrl = `${BINARY_BASE}/qemu-system-${options.arch}.js`;
+
+	// What each pthread imports in place of the glue. The bootstrap does
+	// `import(urlOrBlob).then(m => m.default(Module))`, so a module that installs
+	// the socket shim first and then re-exports the real factory puts our code
+	// inside the thread that opens the socket -- which the page cannot otherwise
+	// reach into.
+	//
+	// The shim travels as source text rather than as a URL to import, because
+	// neither way of asking Vite for one works here: `?url` copies the .ts file
+	// byte for byte and the browser will not run TypeScript, and `?worker&url`
+	// compiles it as a worker entry -- which, for a module that only exports
+	// functions, tree-shakes to an empty file. Inlining the source sidesteps
+	// both, and it is still ordinary typechecked code in its own module.
+	const shimUrl = options.network
+		? URL.createObjectURL(
+				new Blob(
+					[
+						[
+							`import factory from ${JSON.stringify(new URL(glueUrl, location.href).href)};`,
+							NET_SHIM_SOURCE,
+							`export default (Module) => { installNetShim(globalThis, Module); return factory(Module); };`
+						].join('\n')
+					],
+					{ type: 'text/javascript' }
+				)
+			)
+		: null;
 
 	const factory = (await import(/* @vite-ignore */ glueUrl)) as {
 		default: (module: Partial<EmscriptenModule>) => Promise<EmscriptenModule>;
@@ -207,10 +240,18 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// Where QEMU looks for the ROMs it opens at runtime: it cannot start
 		// without its BIOS, and the display adapter runs a VGA BIOS of its own.
 		'-L', '/krsz/pc-bios/',
-		// No network yet: QEMU's user-mode stack needs a host socket API that the
-		// browser does not have, and the relay this site runs carries streams
-		// rather than frames.
-		'-nic', 'none',
+		// The network, when it is on. `socket` is the only backend this build has
+		// that can work here: libslirp is not compiled in, and every other one
+		// wants a host API a tab does not have. What makes it usable is that
+		// under Emscripten a TCP connection is a WebSocket -- so QEMU connects,
+		// the shim intercepts, and the frames arrive in the page where the
+		// gateway in qemu-net answers them. The host below is never resolved.
+		...(options.network
+			? [
+					'-netdev', `socket,id=vmnic,connect=${NET_HOST}:443`,
+					'-device', 'virtio-net-pci,netdev=vmnic'
+				]
+			: ['-nic', 'none']),
 		// Spelled out as a drive plus a device rather than the `if=virtio`
 		// shorthand, which is what upstream's own Alpine example does. The
 		// shorthand asks QEMU to pick the transport, and on this board it picks
@@ -245,6 +286,23 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	// Reads are served from the network as QEMU asks for them; writes stay here.
 	const overlay: OverlayBlocks = new Map();
+
+	// The gateway the guest thinks it is talking to. It is built before the
+	// module because printErr, which is how frames arrive, closes over it.
+	let started: EmscriptenModule | null = null;
+	const net = options.network
+		? new QemuNet({
+				send(bytes) {
+					// Posted to every running worker: only the one holding the socket
+					// has a listener that answers, and the page is not told which
+					// thread QEMU put its netdev on.
+					const workers = started?.PThread?.runningWorkers ?? [];
+					const payload = { krszNet: toBase64(bytes) };
+					for (const worker of workers) worker.postMessage(payload);
+				},
+				onStatus: (text) => options.onStatus?.(`network: ${text}`)
+			})
+		: null;
 
 
 	const module = await factory.default({
@@ -283,13 +341,24 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// The glue resolves its wasm and worker against its own location, which is
 		// this route — but only if it is told where that is.
 		locateFile: (path: string) => `${BINARY_BASE}/${path}`,
-		mainScriptUrlOrBlob: new URL(glueUrl, location.href).href,
+		mainScriptUrlOrBlob: shimUrl ?? new URL(glueUrl, location.href).href,
 		// Everything the guest prints goes through the pty, not through here:
 		// these two are QEMU's own diagnostics, which belong in the console.
 		pty: slave,
 		print: (line: string) => console.log('[qemu]', line),
-		printErr: (line: string) => console.warn('[qemu]', line)
+		// Both QEMU's diagnostics and, when the network is on, the guest's frames:
+		// the pthread bootstrap forwards exactly four handlers to the page and
+		// this is the only one carrying bytes, so the shim writes frames here
+		// behind a prefix that QEMU's own output cannot produce.
+		printErr: (line: string) => {
+			if (net && line.startsWith(NET_PREFIX)) {
+				net.receive(fromBase64(line.slice(NET_PREFIX.length)));
+				return;
+			}
+			console.warn('[qemu]', line);
+		}
 	});
+	started = module;
 
 	// Emscripten's own poll blocks when the terminal has nothing to say, and it
 	// blocks with Atomics.wait -- on whichever thread asked. Run on the page's
@@ -321,6 +390,8 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 			slave.write(text);
 		},
 		destroy() {
+			net?.destroy();
+			if (shimUrl) URL.revokeObjectURL(shimUrl);
 			// QEMU has no way back out of main under Asyncify, so the machine ends
 			// with the page. The caller reloads.
 			try {

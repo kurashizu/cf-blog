@@ -14,7 +14,7 @@ export const TAB_TITLES = [
 	'KRSZ™ // 2:synth — WebAudio Modular Synthesizer',
 	'KRSZ™ // 3:utils — Hardware Test Bench',
 	'KRSZ™ // 4:leaderboard — LLM Model Table',
-	'KRSZ™ // 5:krsz-vm — 32-bit x86 PC Emulator',
+	'KRSZ™ // 5:krsz-vm — x86 PC Emulator',
 	'KRSZ™ // 6:chatbot — In-Browser LLM on WebGPU'
 ];
 

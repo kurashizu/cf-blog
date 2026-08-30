@@ -80,7 +80,6 @@ EOF
 chmod +x "$ROOTFS/sbin/autologin"
 
 cat > /tmp/motd.raw <<'MOTD'
-
   \033[38;5;114m██╗  ██╗██████╗ ███████╗███████╗      ██████╗  ██████╗\033[0m
   \033[38;5;114m██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝      ██╔══██╗██╔════╝\033[0m
   \033[38;5;114m█████╔╝ ██████╔╝███████╗  ███╔╝ █████╗██████╔╝██║\033[0m
@@ -88,20 +87,19 @@ cat > /tmp/motd.raw <<'MOTD'
   \033[38;5;114m██║  ██╗██║  ██║███████║███████╗      ██║     ╚██████╗\033[0m
   \033[38;5;114m╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝      ╚═╝      ╚═════╝\033[0m
 
-  \033[1mAlpine Linux on an emulated 64-bit PC, in a browser tab.\033[0m
-  This is QEMU itself, compiled to WebAssembly: the same emulator you would
-  run on a desktop, translating x86-64 to wasm as it goes, on a worker
-  thread sharing memory with the page.
+  \033[1mAlpine Linux on an emulated x86-64 PC, in a browser tab.\033[0m
+  QEMU itself, compiled to WebAssembly, on a thread beside the page.
 
   \033[38;5;114mTRY THIS\033[0m
-    \033[38;5;222muname -a\033[0m          see what you are actually running on
+    \033[38;5;222muname -a\033[0m          what you are actually running on
+    \033[38;5;222mapk add <pkg>\033[0m     the mirror is reachable through the relay
+    \033[38;5;222mtmux\033[0m              the mouse works
     \033[38;5;222mcat /proc/cpuinfo\033[0m the core this CPU reports
-    \033[38;5;222mtmux\033[0m              terminal multiplexer
 
   \033[38;5;110mGOOD TO KNOW\033[0m
-    The disk is streamed in 1 MiB pieces as you touch it, so the first
-    use of a command is slower than the second.
+    The disk streams in 1 MiB pieces, so a command is slower the first time.
     Writes stay in the tab. Power off and they are gone.
+    Outbound traffic goes through a relay on this origin. Nothing can reach in.
 
 MOTD
 

@@ -870,47 +870,62 @@
 							max={CONFIG_LIMITS[f.k].max}
 							step={CONFIG_LIMITS[f.k].step}
 							onchange={() => saveConfig(config)}
-							class="w-24 bg-black/50 border border-white/20 rounded-xs px-1.5 py-0.5 text-[#d8dee9] outline-none focus:border-[#56b6c2] tabular-nums"
+							class="no-spinner w-24 bg-black/50 border border-white/20 rounded-xs px-1.5 py-0.5 text-[#d8dee9] outline-none focus:border-[#56b6c2] tabular-nums"
 						/>
 					</label>
 				{/each}
-				<label class="flex items-center gap-2 font-mono">
+				<div class="flex items-center gap-2 font-mono">
 					<span
 						class="text-white/60 w-36 shrink-0"
 						title="Let the model reason before answering. Applies to the whole conversation, so it belongs here rather than beside the message box."
 					>
 						reasoning
 					</span>
-					<input
-						type="checkbox"
-						checked={thinkMode}
-						onchange={(e) => setThinkMode(e.currentTarget.checked)}
-						class="accent-[#c678dd] cursor-pointer"
-					/>
+					<button
+						onclick={() => setThinkMode(!thinkMode)}
+						aria-pressed={thinkMode}
+						class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {thinkMode
+							? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
+							: 'border-white/20 text-white/55 hover:border-white/50'}"
+					>
+						{thinkMode ? 'ON' : 'OFF'}
+					</button>
 					<span class="text-white/30 text-[11px]">also on the THINK button, beside the message box</span>
-				</label>
-				<label class="flex items-center gap-2 font-mono">
+				</div>
+				<div class="flex items-center gap-2 font-mono">
 					<span class="text-white/60 w-36 shrink-0" title="Sample, rather than always take the likeliest token">
 						sampling
 					</span>
-					<input
-						type="checkbox"
-						bind:checked={config.doSample}
-						onchange={() => saveConfig(config)}
-						class="accent-[#56b6c2] cursor-pointer"
-					/>
-				</label>
-				<label class="flex items-center gap-2 font-mono">
+					<button
+						onclick={() => {
+							config.doSample = !config.doSample;
+							saveConfig(config);
+						}}
+						aria-pressed={config.doSample}
+						class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {config.doSample
+							? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+							: 'border-white/20 text-white/55 hover:border-white/50'}"
+					>
+						{config.doSample ? 'ON' : 'OFF'}
+					</button>
+				</div>
+				<div class="flex items-center gap-2 font-mono">
 					<span class="text-white/60 w-36 shrink-0" title="Stop a reply that collapses into repetition">
 						loop guard
 					</span>
-					<input
-						type="checkbox"
-						bind:checked={config.loopGuard}
-						onchange={() => saveConfig(config)}
-						class="accent-[#56b6c2] cursor-pointer"
-					/>
-				</label>
+					<button
+						onclick={() => {
+							config.loopGuard = !config.loopGuard;
+							saveConfig(config);
+						}}
+						aria-pressed={config.loopGuard}
+						class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {config.loopGuard
+							? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+							: 'border-white/20 text-white/55 hover:border-white/50'}"
+					>
+						{config.loopGuard ? 'ON' : 'OFF'}
+					</button>
+				</div>
 			</div>
 			<div class="flex items-center gap-2 border-t border-white/10 pt-1.5">
 				<span class="text-white/35 flex-1">
@@ -1359,4 +1374,18 @@
 <style>
 	/* Markdown produced by renderMarkdown(). Scoped to the transcript so it
 	   cannot leak into the rest of the terminal chrome. */
+
+	/* The number fields keep their typing and their validation but lose the
+	   platform spinner, which was the one control on this panel the browser
+	   drew in its own style -- a grey stepper beside flat bordered boxes. */
+	.no-spinner {
+		appearance: textfield;
+		-moz-appearance: textfield;
+	}
+	.no-spinner::-webkit-outer-spin-button,
+	.no-spinner::-webkit-inner-spin-button {
+		appearance: none;
+		-webkit-appearance: none;
+		margin: 0;
+	}
 </style>
