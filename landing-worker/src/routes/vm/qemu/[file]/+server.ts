@@ -23,20 +23,28 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 	const file = params.file;
 	// Names only, from the set the build produces: this reads a bucket, and a
 	// path is not something a caller gets to compose.
-	if (!/^qemu-system-(aarch64|riscv64|x86_64)(\.wasm|\.worker\.js|\.js)$/.test(file)) {
+	const isBinary = /^qemu-system-(aarch64|riscv64|x86_64)(\.wasm|\.worker\.js|\.js)$/.test(file);
+	// The ROMs x86 reads at runtime, which QEMU opens by name out of whatever -L
+	// points at. Spelled with a prefix rather than a slash because this route
+	// takes one path segment.
+	const isRom = /^pc-bios-[A-Za-z0-9_.-]+$/.test(file) && !file.includes('..');
+	if (!isBinary && !isRom) {
 		error(404, 'No such file.');
 	}
 
 	const bucket = (platform?.env as { VM_BUCKET?: R2Bucket } | undefined)?.VM_BUCKET;
 	if (!bucket) error(503, 'No bucket is bound.');
 
-	const object = await bucket.get(`qemu/${file}`);
+	const key = isRom ? `qemu/pc-bios/${file.slice('pc-bios-'.length)}` : `qemu/${file}`;
+	const object = await bucket.get(key);
 	if (!object) error(404, 'That file has not been built yet.');
 
-	const extension = file.endsWith('.wasm') ? '.wasm' : '.js';
+	const contentType = isRom
+		? 'application/octet-stream'
+		: TYPES[file.endsWith('.wasm') ? '.wasm' : '.js'];
 	return new Response(object.body, {
 		headers: {
-			'content-type': TYPES[extension],
+			'content-type': contentType,
 			'content-length': String(object.size),
 			// Built artifacts, rebuilt in place — the version lives in the URL the
 			// page asks for, the same as every other image here.

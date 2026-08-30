@@ -61,6 +61,13 @@ jobs:
                   put "qemu-system-$target" "qemu-system-$target.js" "text/javascript"
                   put "qemu-system-$target.wasm" "qemu-system-$target.wasm" "application/wasm"
                   put "qemu-system-$target.worker.js" "qemu-system-$target.worker.js" "text/javascript"
+                  # The ROMs x86 reads at runtime. Shared across targets, so
+                  # they go under their own prefix rather than the target's.
+                  for rom in ../out/pc-bios/*; do
+                    [ -e "$rom" ] || continue
+                    npx wrangler r2 object put "public-files/qemu/pc-bios/$(basename "$rom")" \
+                      --file "$rom" --content-type application/octet-stream --remote
+                  done
 
             - uses: actions/upload-artifact@v5
               with:

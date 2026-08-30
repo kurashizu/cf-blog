@@ -140,11 +140,11 @@ mkdir -p "$ROOTFS/etc/runlevels/boot" "$ROOTFS/etc/runlevels/default" "$ROOTFS/e
 for svc in devfs dmesg sysfs; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/sysinit/$svc" 2>/dev/null || true
 done
-# syslog is deliberately absent, and it is what stopped this machine booting:
-# started by hand inside the guest it never returns, and a kill signal does not
-# reach it either. openrc runs the boot runlevel in order, so nothing after it
-# ever ran and the last line on the console stayed the one sysinit printed.
-# Nothing here reads a log file; dmesg is where this machine says things.
+# syslog is absent because nothing here reads a log file -- dmesg is where this
+# machine says things -- not because it hangs. It was blamed for that once, on
+# the strength of a `timeout` that expired while the console it was writing to
+# did not exist. Removing it did not change where the boot stops, so whatever
+# wedges this machine is still unfound; see the switch_root note below.
 for svc in bootmisc hostname; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/boot/$svc" 2>/dev/null || true
 done
@@ -261,6 +261,23 @@ mount -o remount,rw /sysroot 2>/dev/null
 # mounts this; ours has to as well.
 mkdir -p /sysroot/run
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /sysroot/run
+
+# Carry devtmpfs across the switch. The root filesystem ships a static /dev
+# holding console, null, pts, random, shm, urandom and zero -- no hvc0 -- while
+# the console is virtio and inittab respawns its getty there. openrc's devfs
+# service would mount devtmpfs and create it, but only once sysinit runs, so
+# without this there is a window where /dev/hvc0 does not exist. Moving the
+# mount we already have closes that window.
+#
+# It does not, however, fix the hang: this machine still stops at sysfs's
+# "Mounting bpf filesystem" and answers no input afterwards. What has been ruled
+# out, each by testing rather than by reading: syslog, the bpf mount itself
+# (instant from a shell), /run's mount options, openrc's terminal-width query,
+# and console backpressure. The same sysinit and boot runlevels complete cleanly
+# under chroot -- the freeze needs PID 1 after a real switch_root -- so the
+# remaining suspects are the runlevel transition and busybox init's handoff.
+mkdir -p /sysroot/dev
+mount --move /dev /sysroot/dev
 umount /proc /sys 2>/dev/null
 exec switch_root /sysroot /sbin/init
 INIT
