@@ -29,6 +29,13 @@ export const NET_PREFIX = ' krsz-net ';
 /** The host QEMU is told to connect to; only this one is intercepted. */
 export const NET_HOST = 'krsz-net.invalid';
 
+/**
+ * What Module.websocket.url is set to. Never dialled -- the bridged socket
+ * stands in for the connection -- but Emscripten parses an address out of it,
+ * so it has to look like a real ws:// URL with a port.
+ */
+export const NET_URL = `ws://${NET_HOST}:443/`;
+
 export function toBase64(bytes: Uint8Array): string {
 	let s = '';
 	for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
@@ -61,6 +68,7 @@ export function fromBase64(text: string): Uint8Array {
 export const NET_SHIM_SOURCE = `
 const NET_PREFIX = ${JSON.stringify(NET_PREFIX)};
 const NET_HOST = ${JSON.stringify(NET_HOST)};
+const NET_URL = ${JSON.stringify(NET_URL)};
 
 function toBase64(bytes) {
 	let s = '';
@@ -80,11 +88,29 @@ function installNetShim(scope, module) {
 	if (!Real) return;
 	let live = null;
 
+	// Where every socket this module opens is told to go. It has to be set:
+	// QEMU names a host, but Emscripten's DNS has already replaced it with a
+	// synthetic 172.29.x.x by the time the socket is built, so there is no name
+	// left to recognise. The URL is never dialled -- the class below stands in
+	// for the connection -- but it must parse as ws(s)://host:port, because
+	// createPeer insists on reading an address out of it.
+	module.websocket = module.websocket || {};
+	module.websocket.url = NET_URL;
+
 	class BridgedSocket {
 		constructor(url) {
 			this.url = url;
 			this.binaryType = 'arraybuffer';
 			this.readyState = 0;
+			// Emscripten's poll compares readyState against these as properties of
+			// the socket object, not of the class -- \`dest.socket.OPEN\`. Without
+			// them every comparison is against undefined, the socket never reports
+			// writable, and the poll blocks in Atomics.wait on the page's main
+			// thread: the machine wedges mid-boot with the tab pinned.
+			this.CONNECTING = 0;
+			this.OPEN = 1;
+			this.CLOSING = 2;
+			this.CLOSED = 3;
 			this.onopen = null;
 			this.onmessage = null;
 			this.onclose = null;
@@ -135,8 +161,8 @@ function installNetShim(scope, module) {
 
 	scope.WebSocket = new Proxy(Real, {
 		construct(target, argv) {
-			// Only the netdev's own socket. Anything else the runtime opens is left
-			// alone, so this cannot break an unrelated connection.
+			// Only the netdev's own socket, recognised by the URL we just pinned.
+			// Anything else the runtime opens is left alone.
 			if (String(argv[0] || '').includes(NET_HOST)) return new BridgedSocket(String(argv[0]));
 			return Reflect.construct(target, argv);
 		}

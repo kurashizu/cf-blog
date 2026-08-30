@@ -128,6 +128,8 @@ export class QemuNet {
 	private closed = false;
 	/** Bytes of a frame that has not all arrived yet. */
 	private inbox = new Uint8Array(0);
+	/** Counters, for ?debug: which direction, if either, is actually moving. */
+	stats = { framesIn: 0, framesOut: 0, arp: 0, dhcp: 0, dns: 0, icmp: 0, tcp: 0 };
 
 	private opts: QemuNetOptions;
 
@@ -256,12 +258,17 @@ export class QemuNet {
 
 	/** One complete Ethernet frame. */
 	private onFrame(frame: Uint8Array) {
+		this.stats.framesIn++;
 		if (frame.length < ETH_HDR) return;
 		// Remember who is asking, so replies go back to the right card.
 		this.guestMac = Array.from(frame.subarray(6, 12));
 		const type = (frame[12] << 8) | frame[13];
-		if (type === ETH_ARP) this.onArp(frame);
-		else if (type === ETH_IP) this.onIp(frame);
+		if (type === ETH_ARP) {
+			this.stats.arp++;
+			this.onArp(frame);
+		} else if (type === ETH_IP) {
+			this.onIp(frame);
+		}
 	}
 
 	private ethernet(dstMac: number[], type: number, payload: Uint8Array): void {
@@ -271,6 +278,7 @@ export class QemuNet {
 		frame[12] = type >> 8;
 		frame[13] = type & 0xff;
 		frame.set(payload, ETH_HDR);
+		this.stats.framesOut++;
 		// QEMU's socket netdev reads a length first, then that many bytes.
 		const out = new Uint8Array(LEN + frame.length);
 		new DataView(out.buffer).setUint32(0, frame.length, false);
@@ -311,9 +319,15 @@ export class QemuNet {
 		const total = (ip[2] << 8) | ip[3];
 		const body = ip.subarray(ihl, Math.min(total, ip.length));
 
-		if (proto === IP_ICMP) this.onIcmp(src, dst, body);
+		if (proto === IP_ICMP) {
+			this.stats.icmp++;
+			this.onIcmp(src, dst, body);
+		}
 		else if (proto === IP_UDP) this.onUdp(src, dst, body);
-		else if (proto === IP_TCP) this.onTcp(src, dst, body);
+		else if (proto === IP_TCP) {
+			this.stats.tcp++;
+			this.onTcp(src, dst, body);
+		}
 	}
 
 	private sendIp(dst: number[], proto: number, payload: Uint8Array, src = GATEWAY_IP, mac = this.guestMac) {
@@ -361,8 +375,13 @@ export class QemuNet {
 		const sport = (body[0] << 8) | body[1];
 		const dport = (body[2] << 8) | body[3];
 		const payload = body.subarray(8);
-		if (dport === 67) this.onDhcp(payload);
-		else if (dport === 53) void this.onDns(src, sport, payload);
+		if (dport === 67) {
+			this.stats.dhcp++;
+			this.onDhcp(payload);
+		} else if (dport === 53) {
+			this.stats.dns++;
+			void this.onDns(src, sport, payload);
+		}
 	}
 
 	private sendUdp(dst: number[], sport: number, dport: number, payload: Uint8Array, src = GATEWAY_IP, mac = this.guestMac) {
@@ -557,7 +576,14 @@ export class QemuNet {
 		}
 	}
 
-	private sendTcp(conn: Connection, flags: number, data: Uint8Array) {
+	/**
+	 * Sends one segment. `seq` names it: left out, this is new data and goes on
+	 * the unacknowledged list; given, it is a retransmission of something already
+	 * there and the list is left alone.
+	 */
+	private emit(conn: Connection, flags: number, data: Uint8Array, seq?: number) {
+		const retransmit = seq !== undefined;
+		const sequence = seq ?? conn.sndNext;
 		const dst = conn.src;
 		const src = conn.dst;
 		const withMss = (flags & SYN) !== 0;
@@ -566,7 +592,7 @@ export class QemuNet {
 		const v = new DataView(seg.buffer);
 		v.setUint16(0, conn.port, false);
 		v.setUint16(2, conn.guestPort, false);
-		v.setUint32(4, conn.sndNext, false);
+		v.setUint32(4, sequence, false);
 		v.setUint32(8, conn.rcvNext, false);
 		seg[12] = ((20 + optLen) / 4) << 4;
 		seg[13] = flags;
@@ -584,26 +610,28 @@ export class QemuNet {
 		v.setUint16(16, sum || 0xffff, false);
 		this.sendIp(dst, IP_TCP, seg, src);
 
-		if (data.length) {
-			conn.pending.push({ seq: conn.sndNext, data: new Uint8Array(data), sentAt: Date.now() });
+		if (data.length && !retransmit) {
+			conn.pending.push({ seq: sequence, data: new Uint8Array(data), sentAt: Date.now() });
 			conn.sndNext = (conn.sndNext + data.length) >>> 0;
 		}
+	}
+
+	/** New data or a bare flag segment, at the current sequence number. */
+	private sendTcp(conn: Connection, flags: number, data: Uint8Array) {
+		this.emit(conn, flags, data);
 	}
 
 	private retransmit() {
 		const now = Date.now();
 		for (const conn of this.conns.values()) {
-			for (const p of conn.pending) {
+			if (conn.state === 'dead') continue;
+			// A copy, because emit() does not touch conn.pending for a segment that
+			// names its own sequence -- but iterating the live array while sending
+			// is the kind of thing that only breaks once something else changes.
+			for (const p of [...conn.pending]) {
 				if (now - p.sentAt < 600) continue;
 				p.sentAt = now;
-				const save = conn.sndNext;
-				conn.sndNext = p.seq;
-				const data = p.data;
-				// Sent directly rather than through sendTcp, which would queue it
-				// a second time.
-				conn.pending = conn.pending.filter((q) => q !== p);
-				this.sendTcp(conn, ACK | PSH, data);
-				conn.sndNext = save;
+				this.emit(conn, ACK | PSH, p.data, p.seq);
 			}
 		}
 	}

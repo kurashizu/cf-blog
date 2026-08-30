@@ -42,6 +42,8 @@ export type QemuArch = 'x86_64';
 export interface QemuMachine {
 	sendText(text: string): void;
 	destroy(): void;
+	/** The network gateway, when one is attached. Exposed for ?debug. */
+	net?: unknown;
 }
 
 /**
@@ -386,6 +388,9 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	options.onStatus?.('booting');
 
 	return {
+		// The gateway, for ?debug: whether a frame ever reached the page, and what
+		// the guest's connections are doing, is not visible from anywhere else.
+		net,
 		sendText(text: string) {
 			slave.write(text);
 		},
