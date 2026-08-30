@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
-	import { isLooping, renderMarkdown, splitThink } from './markdown';
+	import { isLooping, renderMarkdown } from './markdown';
 	import {
 		CONFIG_LIMITS,
 		DEFAULT_CONFIG,
@@ -26,37 +26,46 @@
 		type Session,
 		type StoredAttachment
 	} from './sessions';
-	import AudioClip from './AudioClip.svelte';
+	import { TOOLS, callTool } from './tools';
 
 	type Phase = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
+
+	interface ToolCall {
+		id: string;
+		name: string;
+		args: string;
+	}
 
 	interface Turn {
 		role: 'user' | 'assistant';
 		content: string;
+		/**
+		 * The model's reasoning, kept apart from the answer. The runtime reports
+		 * the two separately, so unlike the previous engine there is nothing to
+		 * parse back out of the text.
+		 */
+		reasoning?: string;
 		attachments?: Attachment[];
 		/** Set on system notices, which are never sent to the model. */
 		notice?: boolean;
+		/** Tools this reply asked for, shown in the transcript and sent back. */
+		toolCalls?: ToolCall[];
+		/** True on a turn holding what a tool returned. */
+		toolResult?: boolean;
+		toolCallId?: string;
+		toolName?: string;
 	}
 
 	/**
-	 * Every clause here is load-bearing, and two were found by testing rather than
-	 * by writing what read well.
-	 *
-	 * The site is not described as "terminal-styled": a model this size read that
-	 * as a role to play and answered "hi" with invented console chrome ([SYSTEM
-	 * ONLINE], [ERROR] Invalid input) instead of a greeting.
-	 *
-	 * The language line says "the language the conversation uses" rather than
-	 * "the language the user wrote in". Phrasing it around what the user *writes*
-	 * made the model treat the exchange as text-only and deny hearing anything —
-	 * an attached recording came back as "please provide the sound". Naming the
-	 * media it can perceive fixes that; the two sentences were verified against
-	 * the running model, holding a 440 Hz tone constant.
+	 * The site is deliberately not described as "terminal-styled": a model this
+	 * size read that as a role to play and answered "hi" with invented console
+	 * chrome ([SYSTEM ONLINE], [ERROR] Invalid input) instead of a greeting.
 	 */
 	const SYSTEM_PROMPT =
 		'You are a helpful assistant on krsz.in, a personal website. ' +
 		'You run entirely inside the visitor’s browser on their own hardware — no server sees this conversation. ' +
-		'You can see images and hear audio the visitor sends. ' +
+		'You can see images the visitor sends, and you can run JavaScript with the run_js tool ' +
+		'whenever a calculation should be exact rather than guessed. ' +
 		'Reply in the language the conversation uses. ' +
 		'Never imitate a command line, and never invent system messages, status banners, or error codes.';
 
@@ -86,7 +95,6 @@
 	/** Shown once per session when THINK is flipped with turns already present. */
 	let thinkWarned = $state(false);
 	/** Microphones offered in CONFIG; labels need permission, so this is lazy. */
-	let mics = $state<MediaDeviceInfo[]>([]);
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
 	let completionIdx = $state(-1);
@@ -140,9 +148,6 @@
 	function teardown() {
 		worker?.terminate();
 		worker = null;
-		// Leaving mid-take would otherwise leave the mic indicator lit.
-		recorder?.stop();
-		recStream?.getTracks().forEach((t) => t.stop());
 		for (const t of turns) t.attachments?.forEach((a) => URL.revokeObjectURL(a.url));
 		pending.forEach((a) => URL.revokeObjectURL(a.url));
 	}
@@ -165,27 +170,23 @@
 			const m = e.data;
 			switch (m.type) {
 				case 'progress':
-					onProgress(m.payload);
+					onProgress(m.loaded, m.total);
 					break;
 				case 'ready':
-							phase = 'ready';
+					phase = 'ready';
 					progressText = '';
 					void tick().then(() => inputEl?.focus());
 					break;
-				case 'context':
-					usedTokens = m.promptTokens;
-					break;
-				case 'channel':
-					// The delimiters never survive decoding (they are special tokens
-					// the streamer strips), so they are put back into the accumulated
-					// text here and splitThink() folds the block away as before.
-					appendToken(m.open ? '<|channel>' : '<channel|>');
+				case 'reasoning':
+					// The runtime separates reasoning from the answer, so it arrives
+					// already delimited rather than having to be parsed back out.
+					appendReasoning(m.text);
 					break;
 				case 'token':
 					appendToken(m.text);
 					break;
 				case 'done':
-					finishTurn(m.tokensPerSecond);
+					void finishTurn(m.tokensPerSecond, m.toolCalls ?? []);
 					break;
 				case 'error':
 					onWorkerError(m.message);
@@ -196,32 +197,15 @@
 		return w;
 	}
 
-	/**
-	 * transformers.js reports each file separately, so the bar shows total bytes
-	 * across all of them rather than jumping back to zero four times.
-	 */
-	function onProgress(p: Record<string, unknown>) {
-		const status = p.status as string;
-		const file = (p.file as string) ?? '';
-		if (status === 'progress' && typeof p.loaded === 'number' && typeof p.total === 'number') {
-			fileProgress = { ...fileProgress, [file]: { loaded: p.loaded, total: p.total } };
-		} else if (status === 'done' && fileProgress[file]) {
-			const f = fileProgress[file];
-			fileProgress = { ...fileProgress, [file]: { loaded: f.total, total: f.total } };
-		}
-
-		const vals = Object.values(fileProgress);
-		const loaded = vals.reduce((a, v) => a + v.loaded, 0);
-		// Until every file has been announced, the known total understates the
-		// download — fall back to the published figure so the bar does not race
-		// to 100% and then restart.
-		const known = vals.reduce((a, v) => a + v.total, 0);
-		const total = Math.max(known, TOTAL_DOWNLOAD_MB * 1048576);
-		progressPct = total ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
-		progressText =
-			status === 'ready' || !vals.length
-				? 'preparing the model…'
-				: `${fmtMb(loaded / 1048576)} of ${fmtMb(total / 1048576)}`;
+	/** The runtime reports bytes across every shard as one running total. */
+	function onProgress(loaded: number, total: number) {
+		// Before the first byte arrives the reported total is 0; the published
+		// figure keeps the bar from racing to 100% and then restarting.
+		const denom = total || TOTAL_DOWNLOAD_MB * 1048576;
+		progressPct = Math.min(99, Math.round((loaded / denom) * 100));
+		progressText = loaded
+			? `${fmtMb(loaded / 1048576)} of ${fmtMb(denom / 1048576)}`
+			: 'preparing the model…';
 	}
 
 	function onWorkerError(message: string) {
@@ -240,8 +224,9 @@
 
 	function appendToken(text: string) {
 		const next = [...turns];
-		const grown = next[next.length - 1].content + text;
-		next[next.length - 1] = { role: 'assistant', content: grown };
+		const last = next[next.length - 1];
+		const grown = last.content + text;
+		next[next.length - 1] = { ...last, role: 'assistant', content: grown };
 		turns = next;
 		void scrollToEnd();
 
@@ -250,11 +235,27 @@
 		}
 	}
 
-	function finishTurn(tps: number) {
+	function appendReasoning(text: string) {
+		const next = [...turns];
+		const last = next[next.length - 1];
+		next[next.length - 1] = { ...last, role: 'assistant', reasoning: (last.reasoning ?? '') + text };
+		turns = next;
+		void scrollToEnd();
+	}
+
+	async function finishTurn(tps: number, toolCalls: ToolCall[] = []) {
 		if (tps > 0) lastStats = `${tps.toFixed(1)} tok/s`;
+
+		// A reply that ends in tool calls is only half a turn: run them, hand the
+		// results back, and let the model finish with what it learned.
+		if (toolCalls.length && !compacting) {
+			await runToolCalls(toolCalls);
+			return;
+		}
+
 		if (compacting) {
 			// The summary was streamed into the last turn; fold it into history.
-			const summary = splitThink(turns[turns.length - 1]?.content ?? '').answer.trim();
+			const summary = (turns[turns.length - 1]?.content ?? '').trim();
 			compacting = '';
 			if (summary) {
 				dropAttachments();
@@ -285,7 +286,7 @@
 		progressText = 'requesting the weights…';
 		playSound('click');
 		worker = spawnWorker();
-		worker.postMessage({ type: 'load' });
+		worker.postMessage({ type: 'load', contextWindow: config.contextWindow });
 	}
 
 	/**
@@ -400,22 +401,6 @@
 	}
 
 	/**
-	 * Enumerates microphones for the CONFIG list.
-	 *
-	 * Device labels are empty until the page has been granted microphone access
-	 * once, so this is called after a successful recording as well as when the
-	 * panel opens — before that the entries would all read "microphone 2".
-	 */
-	async function listMics() {
-		try {
-			const all = await navigator.mediaDevices.enumerateDevices();
-			mics = all.filter((d) => d.kind === 'audioinput');
-		} catch {
-			mics = [];
-		}
-	}
-
-	/**
 	 * Reasoning is a property of the conversation, not of one message: the chat
 	 * template injects `<|think|>` into the first system turn, so it governs the
 	 * whole exchange. Turning it on midway rewrites the prefix every earlier turn
@@ -482,7 +467,7 @@
 			return;
 		}
 		const transcript = real
-			.map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${splitThink(t.content).answer || t.content}`)
+			.map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`)
 			.join('\n');
 
 		compacting = `summarising ${real.length} messages…`;
@@ -504,9 +489,7 @@
 					]
 				}
 			],
-			images: [],
-			audio: [],
-			opts: { max_new_tokens: 300, do_sample: false }
+			opts: { max_tokens: 300, temperature: 0 }
 		});
 	}
 
@@ -514,12 +497,11 @@
 	async function addFiles(files: FileList | File[] | null) {
 		if (!files) return;
 		for (const f of Array.from(files)) {
-			const kind = f.type.startsWith('image/') ? 'image' : f.type.startsWith('audio/') ? 'audio' : null;
-			if (!kind) {
-				notice(`${f.name} is neither an image nor audio — skipped.`);
+			if (!f.type.startsWith('image/')) {
+				notice(`${f.name} is not an image — skipped.`);
 				continue;
 			}
-			pending = [...pending, { kind, url: URL.createObjectURL(f), name: f.name }];
+			pending = [...pending, { kind: 'image', url: URL.createObjectURL(f), name: f.name }];
 		}
 		await tick();
 		inputEl?.focus();
@@ -530,94 +512,7 @@
 		pending = pending.filter((_, n) => n !== i);
 	}
 
-	let recording = $state(false);
-	let recorder: MediaRecorder | null = null;
-	let recStream: MediaStream | null = null;
 
-	/** What the audio tower was trained on. */
-	const AUDIO_SAMPLE_RATE = 16000;
-
-	/**
-	 * Decodes an attachment into mono PCM at the model's sample rate.
-	 *
-	 * This lives on the main thread rather than in the worker because WebKit does
-	 * not expose the Web Audio API to workers at all, so constructing an
-	 * OfflineAudioContext there throws before any decoding can happen. Safari also
-	 * still needs the webkit-prefixed constructor.
-	 */
-	async function decodeAudio(url: string): Promise<Float32Array> {
-		const Ctor =
-			(globalThis as unknown as { OfflineAudioContext?: typeof OfflineAudioContext })
-				.OfflineAudioContext ??
-			(globalThis as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext })
-				.webkitOfflineAudioContext;
-		if (!Ctor) throw new Error('this browser has no Web Audio support, so audio cannot be decoded');
-
-		const buf = await (await fetch(url)).arrayBuffer();
-		const ctx = new Ctor(1, 1, AUDIO_SAMPLE_RATE);
-		const decoded = await ctx.decodeAudioData(buf);
-		if (decoded.numberOfChannels === 1) return decoded.getChannelData(0);
-
-		// Downmix: the encoder takes mono.
-		const n = decoded.length;
-		const mixed = new Float32Array(n);
-		for (let c = 0; c < decoded.numberOfChannels; c++) {
-			const ch = decoded.getChannelData(c);
-			for (let i = 0; i < n; i++) mixed[i] += ch[i] / decoded.numberOfChannels;
-		}
-		return mixed;
-	}
-
-	/**
-	 * Records from the microphone straight into an attachment. The blob's own
-	 * container does not matter — decodeAudio() resamples whatever comes out.
-	 */
-	async function startRecording() {
-		if (recording) return;
-		try {
-			// An exact deviceId would throw if that microphone has been unplugged;
-			// asking for it as a preference falls back to the default instead.
-			recStream = await navigator.mediaDevices.getUserMedia({
-				audio: config.micId ? { deviceId: config.micId } : true
-			});
-			void listMics();
-		} catch (err) {
-			notice(`could not reach the microphone: ${(err as Error).message}`);
-			return;
-		}
-		const chunks: Blob[] = [];
-		const rec = new MediaRecorder(recStream);
-		recorder = rec;
-		rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-		rec.onstop = () => {
-			// Release the mic as soon as the take ends, so no tab indicator lingers.
-			recStream?.getTracks().forEach((t) => t.stop());
-			recStream = null;
-			recording = false;
-			recorder = null;
-			if (!chunks.length) return;
-			// Read the type from `rec` rather than the `recorder` field, and only
-			// now: stopRecording() clears that field synchronously while this fires
-			// afterwards, so the field is already null, and the recorder only
-			// settles on a concrete container once started. The old code took
-			// `recorder?.mimeType` here and always fell back to audio/webm — which
-			// happens to name what Chrome produces, but Safari records mp4, and an
-			// mp4 labelled webm will not play back.
-			const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
-			const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-			pending = [...pending, { kind: 'audio', url: URL.createObjectURL(blob), name: `recording ${stamp}` }];
-			void tick().then(() => inputEl?.focus());
-		};
-		rec.start();
-		recording = true;
-		playSound('click');
-	}
-
-	function stopRecording() {
-		// The field is cleared in onstop, once the recorder has finished with it.
-		recorder?.stop();
-		playSound('click');
-	}
 
 	async function send() {
 		const text = draft.trim();
@@ -643,71 +538,107 @@
 		lastStats = '';
 		void scrollToEnd();
 
-		// The processor's template wants content as typed parts, with one
-		// {type:'image'} / {type:'audio'} placeholder per attachment in order.
+		await dispatch();
+	}
+
+	/**
+	 * Builds the conversation in the runtime's message shape and starts a reply.
+	 *
+	 * Split out from send() because a tool call finishes the same way: the tool's
+	 * result is appended and this runs again, so the model can answer with what
+	 * it learned.
+	 */
+	async function dispatch() {
+		if (!worker) return;
 		const history = turns.slice(0, -1).filter((t) => !t.notice);
-		const images: string[] = [];
-		const audioUrls: string[] = [];
-		// Only the newest turn's media is sent. Re-sending earlier attachments
-		// emits a placeholder for each one, but the processor derives audio
-		// features from the first waveform alone, so a second recording asked
-		// about later was answered from the first — and every past image would be
-		// re-encoded on every turn for nothing. What those attachments showed is
-		// already carried by the replies about them, which do stay in history.
+		// Only the newest turn's images are attached. Re-sending earlier ones
+		// re-encodes every past picture on every turn for nothing; what they
+		// showed is already carried by the replies about them.
 		const lastIdx = history.length - 1;
-		const messages = [
-			// The system message must be a plain string: the chat template applies
-			// `| trim` to it unconditionally, where user and assistant turns branch
-			// on string-vs-sequence first. An array here fails with
-			// "Unknown ArrayValue filter: trim".
-			{ role: 'system', content: SYSTEM_PROMPT },
-			...history.map((t, i) => {
-				const parts: Record<string, string>[] = [];
-				if (i === lastIdx) {
-					for (const a of t.attachments ?? []) {
-						parts.push({ type: a.kind });
-						(a.kind === 'image' ? images : audioUrls).push(a.url);
+
+		const messages: Record<string, unknown>[] = [{ role: 'system', content: SYSTEM_PROMPT }];
+		for (const [i, t] of history.entries()) {
+			if (t.toolResult) {
+				messages.push({ role: 'tool', tool_call_id: t.toolCallId, content: t.content });
+				continue;
+			}
+			if (t.toolCalls?.length) {
+				messages.push({
+					role: 'assistant',
+					content: t.content || null,
+					tool_calls: t.toolCalls.map((c) => ({
+						id: c.id,
+						type: 'function',
+						function: { name: c.name, arguments: c.args }
+					}))
+				});
+				continue;
+			}
+			const imgs = i === lastIdx ? (t.attachments ?? []).filter((a) => a.kind === 'image') : [];
+			if (imgs.length) {
+				const parts: Record<string, unknown>[] = [];
+				if (t.content) parts.push({ type: 'text', text: t.content });
+				for (const a of imgs) {
+					try {
+						parts.push({ type: 'image', data: await (await fetch(a.url)).arrayBuffer() });
+					} catch {
+						// A revoked object URL cannot be recovered; the text still stands.
 					}
 				}
-				// Assistant turns go back as their answer only — reasoning stripped,
-				// which is what the chat template itself does.
-				const body = t.role === 'assistant' ? splitThink(t.content).answer : t.content;
-				if (body) parts.push({ type: 'text', text: body });
-				return { role: t.role, content: parts };
-			})
-			// A past turn that carried only an attachment has nothing left once its
-			// media is dropped, so it is not sent as an empty turn.
-			.filter((m) => m.content.length > 0)
-		];
-
-		// Decoded here rather than in the worker: WebKit gives workers no Web Audio
-		// API, so the worker receives finished samples.
-		let audio: Float32Array[];
-		try {
-			audio = await Promise.all(audioUrls.map(decodeAudio));
-		} catch (err) {
-			phase = 'ready';
-			turns = turns.slice(0, -1);
-			notice(`that recording could not be decoded: ${(err as Error).message}`);
-			return;
+				messages.push({ role: t.role, content: parts });
+			} else if (t.content) {
+				messages.push({ role: t.role, content: t.content });
+			}
 		}
+
+		// Tools are withheld from a turn that carries an image. Told it can run
+		// code, a model this size reaches for it to "analyse" the picture — it
+		// wrote a canvas snippet to read the pixels, which the sandbox has no DOM
+		// to satisfy — when it could simply look. Wording the description against
+		// it did not hold; not offering the tool does.
+		const hasImage = history.some(
+			(t, i) => i === lastIdx && (t.attachments ?? []).some((a) => a.kind === 'image')
+		);
 
 		worker.postMessage({
 			type: 'generate',
 			messages,
-			images,
-			audio,
-			// Read by the chat template, not by generate().
+			tools: hasImage ? [] : TOOLS,
 			enableThinking: thinkMode,
 			opts: {
-				max_new_tokens: config.maxTokens,
-				do_sample: config.doSample,
-				temperature: config.temperature,
+				max_tokens: config.maxTokens,
+				temperature: config.doSample ? config.temperature : 0,
 				top_p: config.topP,
 				top_k: config.topK,
-				repetition_penalty: config.repetitionPenalty
+				repeat_penalty: config.repetitionPenalty
 			}
 		});
+	}
+
+	/**
+	 * Runs the tools the model asked for and continues the turn.
+	 *
+	 * Each result becomes a turn of its own so the transcript shows what was run
+	 * and what came back — a reply that silently depended on a calculation would
+	 * be impossible to check.
+	 */
+	async function runToolCalls(calls: ToolCall[]) {
+		const next = [...turns];
+		const last = next[next.length - 1];
+		next[next.length - 1] = { ...last, role: 'assistant', toolCalls: calls };
+		turns = next;
+
+		for (const c of calls) {
+			const result = await callTool(c.name, c.args);
+			turns = [
+				...turns,
+				{ role: 'user', content: result, toolResult: true, toolCallId: c.id, toolName: c.name }
+			];
+		}
+		// Placeholder for the reply that reads the results.
+		turns = [...turns, { role: 'assistant', content: '' }];
+		void scrollToEnd();
+		await dispatch();
 	}
 
 	function stopGenerating() {
@@ -800,7 +731,7 @@
 	>
 		<span class="font-black text-[#61afef]">6:chatbot</span>
 		<span class="text-white/40 hidden sm:inline">
-			text · images · audio, all on your machine
+			text · images · tools, all on your machine
 		</span>
 
 		<div class="flex-1"></div>
@@ -834,10 +765,7 @@
 		<button
 			onclick={() => {
 				configOpen = !configOpen;
-				if (configOpen) {
-					storageOpen = false;
-					void listMics();
-				}
+				if (configOpen) storageOpen = false;
 				playSound('toggle');
 			}}
 			title="Generation limits and sampling"
@@ -931,22 +859,6 @@
 						class="accent-[#56b6c2] cursor-pointer"
 					/>
 				</label>
-				<label class="flex items-center gap-2 font-mono sm:col-span-2">
-					<span class="text-white/60 w-36 shrink-0" title="Which microphone REC records from">
-						microphone
-					</span>
-					<select
-						bind:value={config.micId}
-						onchange={() => saveConfig(config)}
-						class="flex-1 min-w-0 bg-black/50 border border-white/20 rounded-xs px-1.5 py-0.5 text-[#d8dee9] outline-none focus:border-[#56b6c2] cursor-pointer"
-					>
-						<option value="">system default</option>
-						{#each mics as d (d.deviceId)}
-							<!-- Labels are blank until the mic has been used once. -->
-							<option value={d.deviceId}>{d.label || `microphone ${d.deviceId.slice(0, 6)}`}</option>
-						{/each}
-					</select>
-				</label>
 				<label class="flex items-center gap-2 font-mono">
 					<span class="text-white/60 w-36 shrink-0" title="Stop a reply that collapses into repetition">
 						loop guard
@@ -985,10 +897,8 @@
 				come from this site's own storage — nothing is fetched from a third party.
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
-				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.decoder)}</span>
-				<span>embeddings</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.embed)}</span>
-				<span>vision encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
-				<span>audio encoder</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.audio)}</span>
+				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.model)}</span>
+				<span>vision projector</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
 			</div>
 			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1">
 				total {fmtMb(TOTAL_DOWNLOAD_MB)}
@@ -1148,7 +1058,13 @@
 		{/if}
 
 		{#each turns as turn, i (i)}
-			{#if turn.role === 'user'}
+			{#if turn.toolResult}
+				<div
+					class="self-start font-mono text-[11px] text-white/45 border-l-2 border-[#e5c07b]/40 pl-2 py-0.5 whitespace-pre-wrap max-w-[85%] overflow-x-auto"
+				>
+					{turn.toolName} → {turn.content}
+				</div>
+			{:else if turn.role === 'user'}
 				<div class="flex flex-col items-end gap-1">
 					{#if turn.attachments?.length}
 						<div class="flex flex-wrap gap-1.5 justify-end max-w-[80%]">
@@ -1159,8 +1075,6 @@
 										alt={a.name}
 										class="max-h-40 rounded-md border border-[#61afef]/25"
 									/>
-								{:else}
-									<AudioClip src={a.url} name={a.name} />
 								{/if}
 							{/each}
 						</div>
@@ -1178,50 +1092,56 @@
 					{turn.content}
 				</div>
 			{:else}
-				{@const parts = splitThink(turn.content)}
 				<div class="flex flex-col gap-1.5 max-w-[85%]">
-					{#if parts.think || parts.thinking}
+					{#if turn.reasoning}
 						<button
 							onclick={() => toggleThink(i)}
 							title="The model's reasoning, kept folded away."
 							class="self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer"
 						>
 							{openThink.has(i) ? '▾' : '▸'}
-							{parts.thinking ? 'thinking…' : 'reasoning'} ({parts.think.length} chars)
+							{phase === 'generating' && i === turns.length - 1 && !turn.content
+								? 'thinking…'
+								: 'reasoning'} ({turn.reasoning.length} chars)
 						</button>
 						{#if openThink.has(i)}
 							<div
 								class="text-xs font-mono text-white/45 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5 max-h-64 overflow-y-auto"
 							>
-								{parts.think}
+								{turn.reasoning}
 							</div>
 						{/if}
 					{/if}
-					{#if parts.answer}
+					{#if turn.toolCalls?.length}
+						<!-- What the model ran, so a reply that leans on a result can be checked. -->
+						{#each turn.toolCalls as c (c.id)}
+							<div
+								class="self-start font-mono text-[11px] text-[#e5c07b]/80 border border-[#e5c07b]/25 bg-[#e5c07b]/5 rounded-xs px-2 py-1"
+							>
+								⚙ {c.name}({c.args})
+							</div>
+						{/each}
+					{/if}
+					{#if turn.content}
 						<div
 							class="chat-md self-start px-3 py-2 rounded-md text-sm bg-white/[0.06] border border-white/15 text-[#d8dee9] break-words"
 						>
-							{@html renderMarkdown(parts.answer)}
+							{@html renderMarkdown(turn.content)}
 						</div>
 					{:else if phase === 'generating' && i === turns.length - 1}
 						<span
 							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/40 text-sm"
 							>▋</span
 						>
-					{:else if !parts.thinking}
+					{:else if !turn.reasoning && !turn.toolCalls?.length}
 						<!--
-							Generation finished without producing anything. The model does
-							this when it decides there is nothing to answer — a recording of
-							a silent room asked to be transcribed stops on its first token —
-							and the cursor alone left the turn looking permanently stuck.
+							Generation finished without producing anything. The cursor alone
+							left such a turn looking permanently stuck.
 						-->
 						<div
 							class="self-start px-3 py-2 rounded-md text-xs bg-white/[0.03] border border-white/10 text-white/40 italic"
 						>
-							no reply — the model stopped without generating anything.{turns[i - 1]
-								?.attachments?.length
-								? ' If that was a recording, check it is not silent.'
-								: ''}
+							no reply — the model stopped without generating anything.
 						</div>
 					{/if}
 				</div>
@@ -1323,17 +1243,6 @@
 					STOP
 				</button>
 			{:else}
-				<!-- Beside SEND: recording is the first half of sending a voice message. -->
-				<button
-					onclick={recording ? stopRecording : startRecording}
-					disabled={phase !== 'ready'}
-					title={recording ? 'Stop recording and attach it' : 'Record from your microphone'}
-					class="px-3 py-1 border rounded-xs text-xs font-black cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 transition-colors {recording
-						? 'border-[#e06c75] bg-[#e06c75]/20 text-[#e06c75]'
-						: 'border-[#c678dd] text-[#c678dd] hover:bg-[#c678dd] hover:text-black'}"
-				>
-					{recording ? '■ STOP' : '● REC'}
-				</button>
 				<button
 					onclick={send}
 					disabled={phase !== 'ready' || (!draft.trim() && !pending.length)}

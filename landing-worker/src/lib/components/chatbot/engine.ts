@@ -3,56 +3,41 @@ import { BUCKET_URL } from '$shared/site-config';
 /**
  * The chatbot's model, and everything configurable about how it generates.
  *
- * This runs on transformers.js rather than MLC web-llm. web-llm is the faster
- * runtime — it compiles a model to purpose-built WebGPU kernels — but it can
- * only load models MLC has compiled, and MLC has no gemma4 and no audio-capable
- * family at all (its registry carries gemma/gemma2/gemma3 and nothing that
- * takes sound). transformers.js runs ONNX graphs, which is how the vision and
- * audio encoders become available at all.
+ * This runs llama.cpp compiled to WebAssembly, through wllama, rather than
+ * transformers.js on ONNX. The ONNX path worked but left two things on the
+ * table that matter here: it disposed the attention cache after every reply,
+ * so each turn re-read the whole conversation before writing a word (measured
+ * at ~2.8 ms per token, 1.5 s of silence on a 400-token history), and it had no
+ * tool calling. llama.cpp keeps the cache between turns and parses tool calls
+ * out of the model's own grammar, and it loads in a quarter of the time.
  */
+
+/** Where the mirrored model and the wasm runtime live. */
+// TODO(before merge): point at the bucket once the weights are uploaded.
+export const MODEL_HOST = 'http://127.0.0.1:8899/';
+export const WASM_PATH = '/wllama/wllama.wasm';
 
 /**
- * The weights and the ONNX runtime are both served from this site's own bucket
- * rather than HuggingFace and jsdelivr. Nothing this page needs comes from a
- * third party at runtime.
- */
-export const MODEL_ID = 'gemma-4-E2B-it-ONNX';
-
-/** Where the mirrored model and runtime live. */
-export const MODEL_HOST = `${BUCKET_URL}/llm/`;
-export const ORT_WASM_PATH = `${BUCKET_URL}/ort/`;
-
-/**
- * Which precision to load each part of the model at. Sizes are the actual
- * bytes fetched, summed from the repo's file listing:
+ * Qwen3.5-2B at Q4_K_M, with the vision projector alongside it.
  *
- *   decoder_model_merged_q4f16   1449 MB    the language model
- *   embed_tokens_q4f16           1517 MB    the token embedding table
- *   vision_encoder_q4f16           95 MB    images
- *   audio_encoder_q4f16           163 MB    sound
- *                                ────────
- *                                 3225 MB
+ * Q4_K_M is the balance the quantization ladder is built around — smaller than
+ * Q5 with no visible quality cost on a model this size — and at 1222 MB it also
+ * stays under the 2 GB ceiling a single ArrayBuffer can hold, so the weights
+ * need no splitting. The projector is a separate file the runtime loads beside
+ * the model; without it the model is text-only.
  *
- * q4f16 throughout: int4 weights with f16 activations, the smallest
- * combination the export offers. q4 alone more than doubles this.
+ * This model has no audio tower. The chat takes text and images.
  */
-export const DTYPE = {
-	embed_tokens: 'q4f16',
-	decoder_model_merged: 'q4f16',
-	vision_encoder: 'q4f16',
-	audio_encoder: 'q4f16'
-} as const;
+export const MODEL_FILE = 'Qwen3.5-2B-Q4_K_M.gguf';
+export const MMPROJ_FILE = 'mmproj-F16.gguf';
 
 /** Download size in MB, by part, for what the storage panel reports. */
 export const PART_SIZES_MB = {
-	decoder: 1449,
-	embed: 1517,
-	vision: 95,
-	audio: 163
+	model: 1222,
+	vision: 637
 } as const;
 
-export const TOTAL_DOWNLOAD_MB =
-	PART_SIZES_MB.decoder + PART_SIZES_MB.embed + PART_SIZES_MB.vision + PART_SIZES_MB.audio;
+export const TOTAL_DOWNLOAD_MB = PART_SIZES_MB.model + PART_SIZES_MB.vision;
 
 export interface ChatConfig {
 	/** How many tokens of history to keep before /compact is suggested. */

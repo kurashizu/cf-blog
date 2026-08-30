@@ -1,48 +1,31 @@
 /// <reference lib="webworker" />
 /**
  * The model runs here so decoding never competes with the UI for the main
- * thread. transformers.js has no worker protocol of its own (web-llm did), so
- * this defines a small one: `load`, `generate`, `interrupt`, and progress and
- * token events back.
- */
-import {
-	AutoProcessor,
-	AutoModelForImageTextToText,
-	InterruptableStoppingCriteria,
-	TextStreamer,
-	env,
-	type PreTrainedModel,
-	type Processor
-} from '@huggingface/transformers';
-import { DTYPE, MODEL_HOST, MODEL_ID, ORT_WASM_PATH } from './engine';
-
-/**
- * Serve both the weights and the runtime from this site's bucket. By default
- * transformers.js fetches models from huggingface.co and onnxruntime-web pulls
- * its wasm from jsdelivr; neither is wanted here.
+ * thread.
  *
- * `remotePathTemplate` is flattened to just the model name because the mirror
- * stores files under llm/<model>/… rather than the Hub's <org>/<model>/resolve/
- * <revision>/… layout.
+ * wllama exposes an OpenAI-shaped API over llama.cpp compiled to wasm, which
+ * brings three things the previous ONNX runtime did not: the attention cache
+ * survives between turns (so a reply no longer re-reads the whole conversation
+ * before writing a word), tool calls are parsed out of the model's own output,
+ * and reasoning arrives in its own field rather than having to be recovered
+ * from delimiters inside the text.
  */
-env.remoteHost = MODEL_HOST;
-env.remotePathTemplate = '{model}';
-// Typed optional because the wasm backend is absent in some builds; in a
-// browser it is always present, and without it nothing here could run.
-if (env.backends.onnx.wasm) env.backends.onnx.wasm.wasmPaths = ORT_WASM_PATH;
+// The built ESM rather than the bare specifier: the package has no exports map
+// and its `main` points at the TypeScript sources, which svelte-check then type
+// checks as if they were ours.
+import { Wllama } from '@wllama/wllama/esm/index.js';
+import { MMPROJ_FILE, MODEL_FILE, MODEL_HOST, WASM_PATH } from './engine';
 
-let processor: Processor | null = null;
-let model: PreTrainedModel | null = null;
-let stopper: InterruptableStoppingCriteria | null = null;
+let wllama: Wllama | null = null;
+/** Set while a reply is streaming, so `interrupt` has something to abort. */
+let abort: AbortController | null = null;
 
 type InMsg =
-	| { type: 'load' }
+	| { type: 'load'; contextWindow: number }
 	| {
 			type: 'generate';
 			messages: unknown[];
-			images: string[];
-			/** Mono PCM at the encoder's sample rate, decoded on the main thread. */
-			audio: Float32Array[];
+			tools?: unknown[];
 			enableThinking?: boolean;
 			opts: Record<string, unknown>;
 	  }
@@ -50,135 +33,117 @@ type InMsg =
 
 const post = (m: unknown) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
 
-async function load() {
-	if (model) {
+async function load(contextWindow: number) {
+	if (wllama) {
 		post({ type: 'ready' });
 		return;
 	}
-	// Every file reports separately, so the UI aggregates rather than showing
-	// one bar jumping between four downloads.
-	const progress_callback = (p: Record<string, unknown>) => post({ type: 'progress', payload: p });
+	const w = new Wllama({ default: WASM_PATH });
 
-	processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback });
-	model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
-		dtype: DTYPE,
-		// A string applies to every session; an object would silently leave any
-		// part it omits on the default backend, which in a browser is wasm.
-		device: 'webgpu',
-		progress_callback
-	});
+	await w.loadModelFromUrl(
+		// The projector rides along in the source object rather than in the
+		// options; passed as an option it is silently ignored and the model comes
+		// up text-only, with nothing to say so.
+		{ url: MODEL_HOST + MODEL_FILE, mmprojUrl: MODEL_HOST + MMPROJ_FILE },
+		{
+			n_ctx: contextWindow,
+			// Everything on the GPU: WebGPU is a hard requirement for this page, so
+			// there is no CPU split worth negotiating.
+			n_gpu_layers: 999,
+			// Render the model's own chat template rather than guessing a format.
+			// This is also what makes tool calls and reasoning legible.
+			jinja: true,
+			progressCallback: ({ loaded, total }: { loaded: number; total: number }) =>
+				post({ type: 'progress', loaded, total })
+		}
+	);
+	wllama = w;
 	post({ type: 'ready' });
 }
 
-/**
- * Decodes a data URL into the shape the processor wants. Images go through
- * RawImage.
- *
- * Audio is decoded on the main thread instead, because the Web Audio API is not
- * exposed to workers in WebKit — `OfflineAudioContext` is simply undefined here,
- * which is what "Can't find variable: OfflineAudioContext" was. The page hands
- * this side finished mono Float32Array samples, so nothing audio-related has to
- * construct an audio context in worker scope.
- */
-async function decodeImages(urls: string[]) {
-	if (!urls.length) return null;
-	const { RawImage } = await import('@huggingface/transformers');
-	return Promise.all(urls.map((u) => RawImage.fromURL(u)));
+interface Delta {
+	content?: string;
+	reasoning_content?: string;
+	/**
+	 * Only the opening fragment of a call carries `id` and `name`; every
+	 * fragment after it identifies the call by `index` alone, and its
+	 * `arguments` are a slice of the JSON to be concatenated.
+	 */
+	tool_calls?: {
+		index: number;
+		id?: string;
+		function?: { name?: string; arguments?: string };
+	}[];
 }
 
 async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
-	if (!model || !processor) throw new Error('the model is not loaded');
+	if (!wllama) throw new Error('the model is not loaded');
 
-	const images = await decodeImages(msg.images);
-	const audio = msg.audio.length ? msg.audio : null;
-
-	// Two steps, and the split matters. apply_chat_template() only renders and
-	// tokenizes text: any extra option it does not recognise (`images`, `audio`)
-	// falls through to the Jinja template as a variable and is then dropped, so
-	// asking it to tokenize directly produced a prompt holding one bare
-	// `<|image|>` token with no pixels behind it — which the model read as a typo
-	// rather than a picture.
-	//
-	// Calling the processor with the rendered text is what actually expands each
-	// placeholder into its soft-token run and attaches pixel_values /
-	// audio features.
-	const proc = processor as unknown as {
-		apply_chat_template(m: unknown[], o: Record<string, unknown>): string;
-		(text: string, images: unknown, audio: unknown): Promise<unknown>;
-	};
-	const prompt = proc.apply_chat_template(msg.messages, {
-		add_generation_prompt: true,
-		tokenize: false,
-		// The template opens a reasoning channel when this is set.
-		enable_thinking: msg.enableThinking ?? false
-	});
-	const inputs = await proc(prompt, images, audio);
-
-	// The prompt's real token count, straight from what the processor produced —
-	// this is what the context readout reports, rather than an estimate.
-	const ids = (inputs as { input_ids?: { dims?: number[] } }).input_ids;
-	const promptTokens = ids?.dims?.[ids.dims.length - 1] ?? 0;
-	post({ type: 'context', promptTokens });
-
-	stopper = new InterruptableStoppingCriteria();
-
-	// Typed optional because a Processor need not carry one; this model's does.
-	const tokenizer = processor.tokenizer;
-	if (!tokenizer) throw new Error('the processor has no tokenizer');
-
+	abort = new AbortController();
 	const t0 = performance.now();
-	let chunks = 0;
-
-	// The reasoning delimiters are special tokens (`<|channel>` and `<channel|>`,
-	// ids 100/101), so skip_special_tokens strips them from the decoded text
-	// before anything downstream can see them — which left the channel's name,
-	// the bare word "thought", as the first line of the answer. Watching the raw
-	// ids instead marks the boundary explicitly, while the text stays clean of
-	// every other special token (`<|turn>` and friends).
-	const tok = tokenizer as unknown as { convert_tokens_to_ids(t: string): number };
-	const CHANNEL_OPEN = tok.convert_tokens_to_ids('<|channel>');
-	const CHANNEL_CLOSE = tok.convert_tokens_to_ids('<channel|>');
-
-	const streamer = new TextStreamer(tokenizer, {
-		skip_prompt: true,
-		skip_special_tokens: true,
-		token_callback_function: (ids: bigint[]) => {
-			for (const raw of ids) {
-				const id = Number(raw);
-				if (id === CHANNEL_OPEN) post({ type: 'channel', open: true });
-				else if (id === CHANNEL_CLOSE) post({ type: 'channel', open: false });
-			}
-		},
-		callback_function: (text: string) => {
-			chunks++;
-			post({ type: 'token', text });
-		}
-	});
+	let tokens = 0;
+	// Accumulated across chunks, keyed by the index the runtime repeats on every
+	// fragment — the id appears only once, on the first.
+	const calls = new Map<number, { id: string; name: string; args: string }>();
 
 	try {
-		await model.generate({
-			...(inputs as object),
+		await wllama.createChatCompletion({
+			messages: msg.messages,
+			...(msg.tools?.length ? { tools: msg.tools } : {}),
+			// Reasoning governs the whole exchange, and the template reads it from
+			// here rather than from anything in the messages themselves.
+			chat_template_kwargs: { enable_thinking: msg.enableThinking ?? false },
 			...msg.opts,
-			streamer,
-			stopping_criteria: stopper
-		} as Parameters<PreTrainedModel['generate']>[0]);
+			stream: true,
+			abortSignal: abort.signal,
+			onData: (chunk: { choices?: { delta?: Delta }[] }) => {
+				const d = chunk.choices?.[0]?.delta;
+				if (!d) return;
+				if (d.reasoning_content) {
+					tokens++;
+					post({ type: 'reasoning', text: d.reasoning_content });
+				}
+				if (d.content) {
+					tokens++;
+					post({ type: 'token', text: d.content });
+				}
+				for (const c of d.tool_calls ?? []) {
+					let slot = calls.get(c.index);
+					if (!slot) {
+						slot = { id: '', name: '', args: '' };
+						calls.set(c.index, slot);
+					}
+					if (c.id) slot.id = c.id;
+					if (c.function?.name) slot.name = c.function.name;
+					if (c.function?.arguments) slot.args += c.function.arguments;
+				}
+			}
+			// The call is typed against wllama's own message union, which this
+			// worker deliberately keeps opaque: the page owns the conversation.
+		} as Parameters<Wllama['createChatCompletion']>[0]);
+
 		const secs = (performance.now() - t0) / 1000;
-		// Streamer callbacks fire per decoded chunk, which for this tokenizer is
-		// one token — close enough for a rate readout, and it costs nothing.
-		post({ type: 'done', tokensPerSecond: secs > 0 ? chunks / secs : 0 });
+		post({
+			type: 'done',
+			tokensPerSecond: secs > 0 ? tokens / secs : 0,
+			toolCalls: [...calls.values()]
+		});
 	} catch (err) {
-		post({ type: 'error', message: (err as Error).message || String(err) });
+		// An interrupt arrives here as an abort; that is a normal end, not a
+		// failure, and the partial reply on the page stays as it is.
+		if (abort?.signal.aborted) post({ type: 'done', tokensPerSecond: 0, toolCalls: [] });
+		else post({ type: 'error', message: (err as Error).message || String(err) });
 	} finally {
-		stopper = null;
+		abort = null;
 	}
 }
 
 self.onmessage = async (e: MessageEvent<InMsg>) => {
 	const msg = e.data;
 	try {
-		if (msg.type === 'load') await load();
+		if (msg.type === 'load') await load(msg.contextWindow);
 		else if (msg.type === 'generate') await generate(msg);
-		else if (msg.type === 'interrupt') stopper?.interrupt();
+		else if (msg.type === 'interrupt') abort?.abort();
 	} catch (err) {
 		post({ type: 'error', message: (err as Error).message || String(err) });
 	}
