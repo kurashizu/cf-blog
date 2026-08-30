@@ -117,6 +117,32 @@ function consoleName(arch: QemuArch): string {
 	return arch === 'aarch64' ? 'ttyAMA0' : 'ttyS0';
 }
 
+/**
+ * Known broken: this machine does not finish booting.
+ *
+ * The kernel comes up completely -- PCI, virtio, the PL011 console, the RTC,
+ * Alpine's initramfs, and the disk enumerated at exactly the right size -- and
+ * then stops the moment virtio-blk does any I/O. What that cost to find out is
+ * worth writing down, because every obvious suspect is innocent:
+ *
+ *   - Not the streamed disk. The whole 442 MiB image preloaded into Emscripten's
+ *     filesystem as a plain file, no stream_ops and no network, hangs the same.
+ *   - Not the synchronous fetch. Same freeze with every chunk already in memory.
+ *   - Not the thread pool. Patching Emscripten's default 4 up to 12 changes
+ *     nothing (and the flag has to go in --extra-ldflags, not the cflags).
+ *   - Not virtio, and not the board. virtio-rng-pci on the same `virt` machine
+ *     works; it is virtio-blk specifically.
+ *   - Not our file at all: a null-co drive, which never touches a file, wedges
+ *     in the same place.
+ *
+ * What is left is QEMU's own block layer under Asyncify. While it is stuck the
+ * page's main thread is ~99% blocked, which is the shape of a proxied call
+ * deadlocking against the thread that proxied it. Upstream never exercises this
+ * path: every qemu-wasm example with a disk is x86_64 or riscv64, and their one
+ * aarch64 example uses an SD card on raspi3ap, which `virt` does not support.
+ *
+ * So the next move is riscv64 rather than more argument permutations here.
+ */
 export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	if (!crossOriginIsolated) {
 		throw new Error(
@@ -173,8 +199,12 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// shorthand, which is what upstream's own Alpine example does. The
 		// shorthand asks QEMU to pick the transport, and on this board it picks
 		// one the guest then waits on forever.
+		// MMIO rather than PCI. Neither finishes a mount in this build, but the
+		// PCI device wedges the guest while its drivers are still loading, where
+		// MMIO at least lets that step complete and the disk enumerate. See the
+		// note above startQemu for what is actually broken here.
 		'-drive', 'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
-		'-device', 'virtio-blk-pci,drive=rootfs',
+		'-device', 'virtio-blk-device,drive=rootfs',
 		'-kernel', '/krsz/kernel',
 		'-initrd', '/krsz/initramfs',
 		// `modules=` is not optional with Alpine's initramfs. Its init modprobes
@@ -190,6 +220,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	// Reads are served from the network as QEMU asks for them; writes stay here.
 	const overlay: OverlayBlocks = new Map();
+
 
 	const module = await factory.default({
 		arguments: args,
