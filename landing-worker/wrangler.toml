@@ -59,6 +59,14 @@ VM_IMAGES = "vmlinuz|r2:vm/vmlinuz#b18|8651264,initramfs|r2:vm/initramfs#b18|974
 # keeps serving the previous build from an immutable entry.
 RV_IMAGES = "bios.bin|r2:rv/bios.bin#r15|2097152,kernel|r2:rv/kernel#r15|22380544,initramfs|r2:rv/initramfs#r15|1906643,rootfs|r2:rv/rootfs.img@209715200#r15|1192230912"
 
+# The arm64 machine, which is QEMU rather than an emulator written for the
+# browser. Same route and same 1 MiB chunking as the other two -- QEMU opens the
+# image as a file and the page serves those reads by range (see qemu-disk.ts) --
+# so the only thing that differs is the key prefix. Bump the #marker whenever CI
+# republishes, or the edge keeps serving the previous build from an immutable
+# entry.
+ARM_IMAGES = "kernel|r2:arm/kernel#a1|10371584,rootfs|r2:arm/rootfs.img@209715200#a1|457179136"
+
 # What the riscv64 guest is given. TinyEMU interprets rather than compiles, so
 # this machine is slower than its x86 neighbour and there is little point
 # handing it more memory than a shell needs.

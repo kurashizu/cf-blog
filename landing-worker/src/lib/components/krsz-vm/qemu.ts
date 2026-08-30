@@ -16,6 +16,8 @@
  * from, and whose writes are kept in memory rather than sent anywhere.
  */
 
+import { openpty } from 'xterm-pty';
+import type { Terminal } from '@xterm/xterm';
 import { CHUNK, type OverlayBlocks } from './qemu-disk';
 import { createLazyImage } from './qemu-disk';
 
@@ -24,12 +26,16 @@ const BINARY_BASE = '/vm/qemu';
 
 export type QemuArch = 'aarch64' | 'riscv64' | 'x86_64';
 
-export interface QemuTerminal {
-	write(text: string): void;
-	getSize(): [number, number];
-	/** Called with each byte the guest should receive; the view owns input. */
-	onInput(handler: (data: string) => void): void;
-}
+/**
+ * QEMU does not speak to a terminal the way the other two machines do.
+ *
+ * v86 and TinyEMU hand the page bytes and take bytes back, so a write and an
+ * onData were enough. QEMU was built against xterm-pty, which puts a real line
+ * discipline between the two: it is what answers the guest's TCGETS, reports a
+ * window size to TIOCGWINSZ, turns a typed ^C into SIGINT rather than a byte,
+ * and echoes in canonical mode. So the view gives us its Terminal and the pty's
+ * master half attaches to it as an addon.
+ */
 
 export interface QemuMachine {
 	sendText(text: string): void;
@@ -37,11 +43,13 @@ export interface QemuMachine {
 }
 
 /**
- * Emscripten's module object. QEMU's glue reads `arguments` before main, and
- * exposes FS and TTY because the build asks for them in EXPORTED_RUNTIME_METHODS.
+ * Emscripten's module object. QEMU's glue reads `arguments` before main, takes
+ * the pty's slave half from `pty`, and exposes FS because the build asks for it
+ * in EXPORTED_RUNTIME_METHODS.
  */
 interface EmscriptenModule {
 	arguments?: string[];
+	preRun?: ((built: EmscriptenModule) => void)[];
 	print?: (line: string) => void;
 	printErr?: (line: string) => void;
 	locateFile?: (path: string) => string;
@@ -50,20 +58,27 @@ interface EmscriptenModule {
 		mkdir(path: string): void;
 		writeFile(path: string, data: Uint8Array): void;
 	};
-	TTY: unknown;
+	/** The pty's slave half. The glue reads this as `Module["pty"]`. */
 	pty?: unknown;
-	callMain?: (args: string[]) => void;
 	_exit?: (code: number) => void;
 }
 
 export interface QemuOptions {
 	arch: QemuArch;
-	term: QemuTerminal;
+	/** The view's xterm instance; the pty's master attaches to it. */
+	term: Terminal;
 	memoryMb: number;
 	/** Cores. QEMU's multi-threaded TCG needs `thread=multi` to use them. */
 	smp: number;
 	/** The kernel image, as a URL this page can range-request. */
 	kernelUrl: string;
+	/**
+	 * The initramfs. Not optional on arm64: Alpine's linux-virt builds the
+	 * virtio PCI transport in but leaves virtio-blk and ext4 as modules, so
+	 * without this the kernel finds the disk's PCI device and then waits forever
+	 * for a /dev/vda nothing creates.
+	 */
+	initrdUrl: string;
 	/** The root filesystem image, likewise. */
 	rootfsUrl: string;
 	kernelSize: number;
@@ -111,10 +126,30 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	options.onStatus?.('loading QEMU');
 
+	// The line discipline QEMU was built to talk to. The master half is an xterm
+	// addon, the slave half is what the glue picks up as Module["pty"].
+	const { master, slave } = openpty();
+	options.term.loadAddon(master);
+
 	const glueUrl = `${BINARY_BASE}/qemu-system-${options.arch}.js`;
 	const factory = (await import(/* @vite-ignore */ glueUrl)) as {
 		default: (module: Partial<EmscriptenModule>) => Promise<EmscriptenModule>;
 	};
+
+	// Fetched before the module is built, because preRun runs synchronously and
+	// the kernel has to be a file by the time QEMU looks for one.
+	options.onStatus?.('fetching the kernel');
+	const kernelResponse = await fetch(options.kernelUrl);
+	if (!kernelResponse.ok) {
+		throw new Error(`The kernel could not be fetched (${kernelResponse.status}).`);
+	}
+	const kernelBytes = new Uint8Array(await kernelResponse.arrayBuffer());
+
+	const initrdResponse = await fetch(options.initrdUrl);
+	if (!initrdResponse.ok) {
+		throw new Error(`The initramfs could not be fetched (${initrdResponse.status}).`);
+	}
+	const initrdBytes = new Uint8Array(await initrdResponse.arrayBuffer());
 
 	const args = [
 		'-nographic',
@@ -131,6 +166,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		'-nic', 'none',
 		'-drive', 'if=virtio,format=raw,file=/krsz/rootfs.img',
 		'-kernel', '/krsz/kernel',
+		'-initrd', '/krsz/initramfs',
 		'-append', options.cmdline || `console=${consoleName(options.arch)} root=/dev/vda rw rootwait`
 	];
 
@@ -139,46 +175,51 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	const module = await factory.default({
 		arguments: args,
+		// The filesystem is built in preRun rather than after this promise
+		// resolves, and that ordering is not a preference. QEMU's main is proxied
+		// to a pthread and the glue starts it as soon as the runtime is up --
+		// before the promise resolves -- so a disk set up out here would not exist
+		// yet when QEMU opened its drive. preRun runs inside that initialisation,
+		// ahead of main, which is where these belong.
+		//
+		// Holding main back with noInitialRun and starting it by hand is not an
+		// option: this build does not export callMain, so calling it is a silent
+		// no-op and the machine simply never runs.
+		//
+		// Emscripten hands each of these the module it is still building, which is
+		// the only way to reach FS this early -- the promise that would return it
+		// has not resolved yet.
+		preRun: [
+			(built: EmscriptenModule) => {
+				built.FS.mkdir('/krsz');
+				built.FS.writeFile('/krsz/kernel', kernelBytes);
+				built.FS.writeFile('/krsz/initramfs', initrdBytes);
+				createLazyImage(built as unknown as Parameters<typeof createLazyImage>[0], {
+					path: '/krsz/rootfs.img',
+					url: options.rootfsUrl,
+					size: options.rootfsSize,
+					overlay
+				});
+			}
+		],
 		// The glue resolves its wasm and worker against its own location, which is
 		// this route — but only if it is told where that is.
 		locateFile: (path: string) => `${BINARY_BASE}/${path}`,
 		mainScriptUrlOrBlob: new URL(glueUrl, location.href).href,
-		print: (line: string) => options.term.write(line + '\r\n'),
+		// Everything the guest prints goes through the pty, not through here:
+		// these two are QEMU's own diagnostics, which belong in the console.
+		pty: slave,
+		print: (line: string) => console.log(`[qemu/${options.arch}]`, line),
 		printErr: (line: string) => console.warn(`[qemu/${options.arch}]`, line)
 	});
 
-	options.onStatus?.('preparing the disk');
-
-	// QEMU opens both of these as plain files. The kernel is small enough to
-	// fetch whole; the root filesystem is not, so it is registered as a node
-	// whose reads are fetched a chunk at a time and whose writes stay in memory.
-	module.FS.mkdir('/krsz');
-	const kernel = await fetch(options.kernelUrl);
-	if (!kernel.ok) throw new Error(`The kernel could not be fetched (${kernel.status}).`);
-	module.FS.writeFile('/krsz/kernel', new Uint8Array(await kernel.arrayBuffer()));
-
-	createLazyImage(module as unknown as Parameters<typeof createLazyImage>[0], {
-		path: '/krsz/rootfs.img',
-		url: options.rootfsUrl,
-		size: options.rootfsSize,
-		overlay
-	});
-
+	// By the time this resolves QEMU is already running: the glue called main
+	// itself, with the arguments above, once preRun had put the disk in place.
 	options.onStatus?.('booting');
-
-	// Everything the machine says arrives through print/printErr above; what the
-	// user types goes back through QEMU's stdin.
-	options.term.onInput((data) => {
-		for (const byte of new TextEncoder().encode(data)) queueInput(module, byte);
-	});
-
-	// callMain is what actually starts QEMU. The glue would have run it itself,
-	// but only after the filesystem was set up — which is what we just did.
-	module.callMain?.(args);
 
 	return {
 		sendText(text: string) {
-			for (const byte of new TextEncoder().encode(text)) queueInput(module, byte);
+			slave.write(text);
 		},
 		destroy() {
 			// QEMU has no way back out of main under Asyncify, so the machine ends
@@ -192,10 +233,5 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	};
 }
 
-/** Emscripten's TTY takes input through the device's own queue. */
-function queueInput(module: EmscriptenModule, byte: number) {
-	const tty = module.TTY as { stream_ops?: unknown; ttys?: { input: number[] }[] } | undefined;
-	tty?.ttys?.[0]?.input.push(byte);
-}
 
 export { CHUNK };

@@ -14,9 +14,9 @@
  * what makes the read-only image writable without a megabyte of upload.
  *
  * The one thing this cannot do is block. Emscripten's `read` is synchronous and
- * fetch is not, so a chunk has to be present before QEMU asks for it. QEMU runs
- * under Asyncify on a worker with its memory shared, which means the fetch can
- * be made from the main thread and waited for with Atomics — see fetchChunk.
+ * fetch is not, so the bytes have to be in hand by the time QEMU asks — which
+ * leaves synchronous XMLHttpRequest, the same thing Emscripten's own LazyFile
+ * falls back to. See fetchChunk for why it is written the awkward way it is.
  */
 
 /** One request, one cache entry — the same size the routes chunk at. */
@@ -27,6 +27,7 @@ export type OverlayBlocks = Map<number, Uint8Array>;
 
 interface EmscriptenFS {
 	FS: {
+		/** Creates the file but returns nothing -- look the node up afterwards. */
 		createDataFile(
 			parent: string,
 			name: string,
@@ -34,7 +35,7 @@ interface EmscriptenFS {
 			canRead: boolean,
 			canWrite: boolean,
 			canOwn: boolean
-		): FSNode;
+		): void;
 		lookupPath(path: string): { node: FSNode };
 	};
 }
@@ -70,16 +71,29 @@ function fetchChunk(url: string, index: number, size: number): Uint8Array {
 	const request = new XMLHttpRequest();
 	request.open('GET', url, false);
 	request.setRequestHeader('Range', `bytes=${start}-${end}`);
-	request.responseType = 'arraybuffer';
+	// No responseType, which a document forbids on a synchronous request — and
+	// this one does run on the document: Emscripten proxies the read there from
+	// QEMU's thread. Asking for a binary arraybuffer throws InvalidAccessError.
+	//
+	// So the bytes come back as text through a character set that maps every
+	// byte 0x00–0xFF to the code point of the same value, and are unpacked one
+	// character at a time. This is what Emscripten's own LazyFile does, for
+	// exactly this reason.
+	request.overrideMimeType('text/plain; charset=x-user-defined');
 	request.send(null);
 	// 206 is the answer to a range request; a 200 means the whole file came back,
 	// which is wrong but usable if it is the only chunk.
 	if (request.status !== 206 && request.status !== 200) {
 		throw new Error(`Chunk ${index} could not be read (${request.status}).`);
 	}
-	const body = request.response as ArrayBuffer | null;
-	if (!body) throw new Error(`Chunk ${index} came back empty.`);
-	const bytes = new Uint8Array(body);
+	const text = request.responseText;
+	if (text === null) throw new Error(`Chunk ${index} came back empty.`);
+	const bytes = new Uint8Array(text.length);
+	for (let i = 0; i < text.length; i++) {
+		// x-user-defined puts the byte in the low eight bits; the rest is the
+		// 0xF700 page the encoding assigns, and masking it off gives the byte.
+		bytes[i] = text.charCodeAt(i) & 0xff;
+	}
 	// A short chunk at the end of the image is expected; a short one anywhere
 	// else means the range was not honoured, and silently zero-filling it would
 	// corrupt the filesystem in a way the guest could not explain.
@@ -100,8 +114,11 @@ export function createLazyImage(module: EmscriptenFS, options: LazyImageOptions)
 	const parent = path.slice(0, slash) || '/';
 	const name = path.slice(slash + 1);
 
-	// An empty file to hang the node off; nothing reads these contents.
-	const node = module.FS.createDataFile(parent, name, new Uint8Array(0), true, true, true);
+	// An empty file to hang the node off; nothing reads these contents. The node
+	// has to be looked up rather than taken from the call -- createDataFile makes
+	// the file and returns undefined.
+	module.FS.createDataFile(parent, name, new Uint8Array(0), true, true, true);
+	const node = module.FS.lookupPath(path).node;
 	node.contents = undefined;
 	node.usedBytes = size;
 

@@ -13,16 +13,19 @@
         "deploy:cf": "wrangler deploy"
     },
     "dependencies": {
+        "@huggingface/transformers": "^4.2.0",
         "@xterm/addon-fit": "^0.11.0",
         "@xterm/xterm": "^6.0.0",
         "mermaid": "^11.17.2",
-        "v86": "^0.5.445"
+        "v86": "^0.5.445",
+        "xterm-pty": "^0.12.0"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20250520.0",
         "@sveltejs/adapter-cloudflare": "^7.2.8",
         "@sveltejs/kit": "^2.63.0",
         "@sveltejs/vite-plugin-svelte": "^7.1.2",
+        "@webgpu/types": "^0.1.72",
         "autoprefixer": "^10.4.20",
         "postcss": "^8.4.49",
         "svelte": "^5.56.1",
