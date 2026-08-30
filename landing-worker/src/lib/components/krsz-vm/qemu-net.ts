@@ -114,6 +114,10 @@ interface Connection {
 	state: 'syn' | 'open' | 'guestClosed' | 'peerClosed' | 'dead';
 	/** Sent but unacknowledged, kept for retransmission. */
 	pending: { seq: number; data: Uint8Array; sentAt: number }[];
+	/** Upstream bytes not yet handed to the guest. */
+	outbox: Uint8Array[];
+	/** The peer closed, but there were still queued bytes to deliver first. */
+	finAfterOutbox: boolean;
 	/** The guest's address, and the one it thinks it is talking to. */
 	src: number[];
 	dst: number[];
@@ -234,10 +238,16 @@ export class QemuNet {
 		} else if (type === W_CLOSE) {
 			const conn = this.byStream.get(streamId);
 			if (!conn || conn.state === 'dead') return;
-			// The far end is finished: pass the FIN along to the guest.
-			this.sendTcp(conn, FIN | ACK, new Uint8Array(0));
-			conn.sndNext++;
+			// The far end is finished. The FIN goes out behind whatever is still
+			// queued, not in front of it -- sent now it would claim a sequence
+			// number the undelivered bytes are going to need.
 			conn.state = conn.state === 'guestClosed' ? 'dead' : 'peerClosed';
+			if (conn.outbox.length || conn.pending.length) {
+				conn.finAfterOutbox = true;
+			} else {
+				this.sendTcp(conn, FIN | ACK, new Uint8Array(0));
+				conn.sndNext = (conn.sndNext + 1) >>> 0;
+			}
 		} else if (type === W_CONTINUE) {
 			// Flow control we do not need to track: the relay grants a window per
 			// stream and we never have enough in flight to exhaust it.
@@ -538,6 +548,8 @@ export class QemuNet {
 				rcvNext: (seq + 1) >>> 0,
 				state: 'syn',
 				pending: [],
+				outbox: [],
+				finAfterOutbox: false,
 				src,
 				dst
 			};
@@ -559,8 +571,14 @@ export class QemuNet {
 		}
 
 		if (!conn) {
-			// Nothing here by that name. A reset is the honest answer and stops the
-			// guest retrying a connection this gateway has forgotten.
+			// Nothing here by that name, so say so rather than stay silent: a reset
+			// ends the guest's connection now instead of leaving it to time out.
+			// v86's gateway does the same. Never in reply to a reset, which would
+			// bounce forever.
+			if (!(flags & RST)) {
+				const ackn = (ack + (flags & (SYN | FIN) ? 1 : 0)) >>> 0;
+				this.reset(src, dst, sport, dport, ackn, (seq + (flags & (SYN | FIN) ? 1 : 0)) >>> 0);
+			}
 			return;
 		}
 
@@ -581,6 +599,8 @@ export class QemuNet {
 			conn.pending = conn.pending.filter(
 				(p) => (((ack - ((p.seq + p.data.length) >>> 0)) | 0) < 0)
 			);
+			// What the acknowledgement releases: the next queued segment.
+			this.pump(conn);
 		}
 
 		if (data.length) {
@@ -602,12 +622,66 @@ export class QemuNet {
 		}
 	}
 
-	/** Bytes from upstream, handed to the guest as one or more segments. */
+	/** A bare RST, for a segment naming a connection this gateway does not have. */
+	private reset(
+		src: number[],
+		dst: number[],
+		sport: number,
+		dport: number,
+		seq: number,
+		ackn: number
+	) {
+		const seg = new Uint8Array(20);
+		const v = new DataView(seg.buffer);
+		v.setUint16(0, dport, false);
+		v.setUint16(2, sport, false);
+		v.setUint32(4, seq, false);
+		v.setUint32(8, ackn, false);
+		seg[12] = 5 << 4;
+		seg[13] = RST | ACK;
+		const sum = checksum(seg, 0, seg.length, pseudoSum(dst, src, IP_TCP, seg.length));
+		v.setUint16(16, sum || 0xffff, false);
+		this.sendIp(src, IP_TCP, seg, dst);
+	}
+
+	/**
+	 * Bytes from upstream. Queued, then handed to the guest a segment at a time.
+	 *
+	 * One segment in flight and no more, which is what v86's own gateway does
+	 * (src/browser/fake_network.js, BSD-2-Clause): its pump() sends a single
+	 * chunk, sets `pending`, and waits for the acknowledgement before sending
+	 * the next. The first version of this sent the whole reply as a burst of
+	 * back-to-back segments, which is where a TLS handshake -- 3889 bytes, three
+	 * segments -- fell over while a 559-byte HTTP reply that fitted in one
+	 * segment did not.
+	 */
 	private deliver(conn: Connection, data: Uint8Array) {
+		if (data.length) conn.outbox.push(new Uint8Array(data));
+		this.pump(conn);
+	}
+
+	/** Sends the next queued segment, if nothing of ours is unacknowledged. */
+	private pump(conn: Connection) {
+		if (conn.pending.length || conn.state === 'dead') return;
+		if (!conn.outbox.length) {
+			// The far end finished while we still had bytes to hand over; the FIN
+			// waited for them, and this is where it goes out.
+			if (conn.finAfterOutbox) {
+				conn.finAfterOutbox = false;
+				this.sendTcp(conn, FIN | ACK, new Uint8Array(0));
+				conn.sndNext = (conn.sndNext + 1) >>> 0;
+			}
+			return;
+		}
 		// 1400 of MTU less 40 of headers, so nothing this sends is fragmented.
 		const MSS = 1360;
-		for (let i = 0; i < data.length; i += MSS) {
-			this.sendTcp(conn, ACK | PSH, data.subarray(i, Math.min(i + MSS, data.length)));
+		const head = conn.outbox[0];
+		if (head.length <= MSS) {
+			conn.outbox.shift();
+			this.sendTcp(conn, ACK | PSH, head);
+		} else {
+			conn.outbox[0] = head.subarray(MSS);
+			this.sendTcp(conn, ACK | PSH, head.subarray(0, MSS));
 		}
 	}
 
