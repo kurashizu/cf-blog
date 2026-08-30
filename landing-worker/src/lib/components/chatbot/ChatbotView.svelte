@@ -84,6 +84,8 @@
 	let savedSize = $state<{ count: number; bytes: number } | null>(null);
 	/** Shown once per session when THINK is flipped with turns already present. */
 	let thinkWarned = $state(false);
+	/** Shown once per session when audio is first attached. */
+	let audioWarned = $state(false);
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
 	let completionIdx = $state(-1);
@@ -396,6 +398,28 @@
 		openThink = new Set();
 	}
 
+	/**
+	 * Said once per session when audio is attached.
+	 *
+	 * The pipeline is correct — the waveform is decoded, the processor expands
+	 * the placeholder into its full run of soft tokens and returns the mel
+	 * features to go with them — but this model does very little with the result.
+	 * Asked to describe a 440 Hz tone and two seconds of pure silence, it answers
+	 * "a low, resonant hum" to both, and small changes of wording ("what is this
+	 * sound?") make it deny receiving audio at all. Only noise reliably shifts
+	 * the answer. Saying so is better than letting a confident invention read as
+	 * comprehension.
+	 */
+	function warnAboutAudio() {
+		if (audioWarned) return;
+		audioWarned = true;
+		notice(
+			'note: audio is passed to the model, but this 2B model barely uses it — ' +
+				'it often answers with a plausible-sounding guess, or claims it received nothing. ' +
+				'Images are reliable; sound is not.'
+		);
+	}
+
 	function notice(text: string) {
 		turns = [...turns, { role: 'assistant', content: text, notice: true }];
 	}
@@ -476,6 +500,7 @@
 		if (!files) return;
 		for (const f of Array.from(files)) {
 			const kind = f.type.startsWith('image/') ? 'image' : f.type.startsWith('audio/') ? 'audio' : null;
+			if (kind === 'audio') warnAboutAudio();
 			if (!kind) {
 				notice(`${f.name} is neither an image nor audio — skipped.`);
 				continue;
@@ -562,6 +587,7 @@
 			const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
 			const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 			pending = [...pending, { kind: 'audio', url: URL.createObjectURL(blob), name: `recording ${stamp}` }];
+			warnAboutAudio();
 			void tick().then(() => inputEl?.focus());
 		};
 		rec.start();
@@ -756,7 +782,7 @@
 	>
 		<span class="font-black text-[#61afef]">6:chatbot</span>
 		<span class="text-white/40 hidden sm:inline">
-			text · images · audio, all on your machine
+			text · images · audio (limited), all on your machine
 		</span>
 
 		<div class="flex-1"></div>
