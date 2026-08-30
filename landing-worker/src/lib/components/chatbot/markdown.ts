@@ -37,6 +37,45 @@ function inline(s: string): string {
 }
 
 /**
+ * Maths the model wrote, lifted out before anything else touches the text.
+ *
+ * The model wraps arithmetic in LaTeX far more often than it writes real
+ * mathematics — `$42 + 1 = 43$` is typical — but both have to survive, and
+ * both break if the delimiters go through the escaper and the emphasis rules
+ * first: `$...$` around a `*` would be read as italics, and `\times` would lose
+ * its backslash. So spans are pulled out here, replaced by a marker the rest of
+ * the pipeline leaves alone, and rendered at the end.
+ *
+ * Rendering is deferred to the page: KaTeX is ~280 KB and most replies contain
+ * no maths at all, so it is imported only when a span is actually found.
+ */
+const MATH_MARK = '\u0001';
+
+export interface MathSpan {
+	tex: string;
+	/** Display maths gets its own block; inline sits in the sentence. */
+	display: boolean;
+}
+
+/** Pulls `$$…$$` and `$…$` out, leaving markers behind. */
+function liftMath(src: string, out: MathSpan[]): string {
+	return (
+		src
+			// Display first: `$$…$$` would otherwise match the inline rule twice.
+			.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+				out.push({ tex: tex.trim(), display: true });
+				return `${MATH_MARK}${out.length - 1}${MATH_MARK}`;
+			})
+			// Inline, but not a bare `$` used as currency: the content may not
+			// start or end with a space, which is the usual way to tell them apart.
+			.replace(/\$(?!\s)([^$\n]+?)(?<!\s)\$/g, (_, tex) => {
+				out.push({ tex: tex.trim(), display: false });
+				return `${MATH_MARK}${out.length - 1}${MATH_MARK}`;
+			})
+	);
+}
+
+/**
  * A small syntax highlighter for fenced code.
  *
  * Not a parser — a single pass of ordered patterns, which is all a chat reply
@@ -98,9 +137,9 @@ function highlight(code: string, lang: string): string {
  * Renders Markdown to an HTML string. The input is escaped before any tag is
  * added, so a reply containing markup renders as visible text.
  */
-export function renderMarkdown(src: string): string {
+export function renderMarkdown(src: string, math: MathSpan[] = []): string {
 	const out: string[] = [];
-	const lines = src.split('\n');
+	const lines = liftMath(src, math).split('\n');
 	let i = 0;
 	let listKind: 'ul' | 'ol' | null = null;
 
@@ -126,7 +165,15 @@ export function renderMarkdown(src: string): string {
 				i++;
 			}
 			i++; // closing fence (or end of input)
-			out.push(`<pre${lang}><code>${highlight(body.join('\n'), fence[1] ?? '')}</code></pre>`);
+			const kind = (fence[1] ?? '').toLowerCase();
+			if (kind === 'mermaid') {
+				// Left for the page to render: a diagram needs a live element and a
+				// library, neither of which belongs in a string of HTML. The source
+				// rides along escaped so it survives being read back out.
+				out.push(`<div data-mermaid="${escapeHtml(body.join('\n'))}"></div>`);
+			} else {
+				out.push(`<pre${lang}><code>${highlight(body.join('\n'), kind)}</code></pre>`);
+			}
 			continue;
 		}
 

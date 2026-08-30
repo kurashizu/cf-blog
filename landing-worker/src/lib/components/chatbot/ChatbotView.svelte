@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { playSound } from '../../sound';
 	import { theme, THEME_STYLES } from '../../stores/theme';
-	import { isLooping, renderMarkdown } from './markdown';
+	import { isLooping } from './markdown';
 	import {
 		CONFIG_LIMITS,
 		DEFAULT_CONFIG,
@@ -27,6 +27,7 @@
 		type StoredAttachment
 	} from './sessions';
 	import { TOOLS, callTool } from './tools';
+	import RichReply from './RichReply.svelte';
 
 	type Phase = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
 
@@ -85,8 +86,26 @@
 	let fileEl: HTMLInputElement | undefined = $state();
 
 	let lastStats = $state('');
+
+	/**
+	 * What the model is doing before the first token arrives.
+	 *
+	 * Reading a prompt is not instant — on a cold cache the whole conversation
+	 * has to be read before a word comes back, which is seconds of silence — and
+	 * a reply that has begun streaming is a different wait from one that has not.
+	 * The two are named separately so neither looks like a stall.
+	 */
+	const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+	let spinnerTick = $state(0);
+	let waitedSecs = $state(0);
+	let waitStart = 0;
+
 	/** Real prompt length of the last turn, reported by the worker. */
 	let usedTokens = $state(0);
+	/** After a few seconds on a non-empty history, name the slow part. */
+	let waitLabel = $derived(
+		usedTokens > 0 && waitedSecs >= 4 ? 'reading the conversation…' : 'thinking…'
+	);
 	let thinkMode = $state(false);
 	let sessions = $state<Session[]>([]);
 	let sessionId = $state('');
@@ -126,6 +145,19 @@
 		const q = m[1].toLowerCase();
 		const hits = COMMANDS.filter((c) => c.name.startsWith(q));
 		return hits.length === 1 && hits[0].name === q ? [] : hits;
+	});
+
+	$effect(() => {
+		if (phase !== 'generating') {
+			waitedSecs = 0;
+			return;
+		}
+		waitStart = Date.now();
+		const id = setInterval(() => {
+			spinnerTick++;
+			waitedSecs = Math.floor((Date.now() - waitStart) / 1000);
+		}, 120);
+		return () => clearInterval(id);
 	});
 
 	onMount(() => {
@@ -1053,12 +1085,19 @@
 			</div>
 		{:else if turns.length === 0}
 			<div class="m-auto text-white/30 text-xs font-mono text-center leading-relaxed">
-				ready — say something, or drop in an image or a sound.<br />
+				ready — say something, or drop in an image.<br />
 				<span class="text-white/20">/help lists the commands</span>
 			</div>
 		{/if}
 
-		{#each turns as turn, i (i)}
+
+		<!--
+			The transcript only appears once the model is loaded. A restored
+			conversation shown beside a LOAD MODEL button reads as though the chat
+			were live, and a message typed into it would go nowhere.
+		-->
+		{#if phase === 'ready' || phase === 'generating'}
+			{#each turns as turn, i (i)}
 			{#if turn.toolResult}
 				<div
 					class="self-start font-mono text-[11px] text-white/45 border-l-2 border-[#e5c07b]/40 pl-2 py-0.5 whitespace-pre-wrap max-w-[85%] overflow-x-auto"
@@ -1125,15 +1164,26 @@
 					{/if}
 					{#if turn.content}
 						<div
-							class="chat-md self-start px-3 py-2 rounded-md text-sm bg-white/[0.06] border border-white/15 text-[#d8dee9] break-words"
+							class="self-start px-3 py-2 rounded-md text-sm bg-white/[0.06] border border-white/15 text-[#d8dee9] break-words"
 						>
-							{@html renderMarkdown(turn.content)}
+							<RichReply content={turn.content} />
 						</div>
 					{:else if phase === 'generating' && i === turns.length - 1}
-						<span
-							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/40 text-sm"
-							>▋</span
+						<!--
+							Before the first token there is nothing to stream, and on a cold
+							cache that wait is measured in seconds while the model reads the
+							whole prompt. A bare cursor made that look like a hang, so this
+							says which phase it is in and counts the seconds.
+						-->
+						<div
+							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/45 text-sm flex items-center gap-2 font-mono"
 						>
+							<span class="text-[#61afef]">{SPINNER[spinnerTick % SPINNER.length]}</span>
+							<span>{waitLabel}</span>
+							{#if waitedSecs >= 2}
+								<span class="text-white/25 tabular-nums">{waitedSecs}s</span>
+							{/if}
+						</div>
 					{:else if !turn.reasoning && !turn.toolCalls?.length}
 						<!--
 							Generation finished without producing anything. The cursor alone
@@ -1144,10 +1194,11 @@
 						>
 							no reply — the model stopped without generating anything.
 						</div>
-					{/if}
-				</div>
-			{/if}
-		{/each}
+						{/if}
+					</div>
+				{/if}
+			{/each}
+		{/if}
 	</div>
 
 	<!-- Composer -->
@@ -1372,6 +1423,22 @@
 	}
 	.chat-md :global(.tok-f) {
 		color: #61afef;
+	}
+	/*
+	 * KaTeX ships its own stylesheet, but only the parts a chat reply reaches
+	 * are needed, and its defaults sit oddly against a monospace terminal — the
+	 * font is a serif at a size tuned for prose. This keeps the maths at the
+	 * surrounding size and gives display equations room.
+	 */
+	.chat-md :global(.katex) {
+		font-size: 1.05em;
+	}
+	.chat-md :global(.katex-block) {
+		display: block;
+		margin: 0.5em 0;
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding: 0.15em 0;
 	}
 	.chat-md :global(.tok-c) {
 		color: rgb(255 255 255 / 0.35);
