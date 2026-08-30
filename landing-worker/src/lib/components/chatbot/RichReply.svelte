@@ -17,13 +17,22 @@
 	/** The marker renderMarkdown leaves where a maths span was. */
 	const MATH_MARK = '\u0001';
 
-	let math = $state<MathSpan[]>([]);
-	let html = $derived.by(() => {
-		const spans: MathSpan[] = [];
-		const out = renderMarkdown(content, spans);
-		math = spans;
-		return out;
+	/**
+	 * The HTML and the maths it refers to are derived together.
+	 *
+	 * Assigning the spans to separate `$state` from inside the derivation is
+	 * what Svelte calls an unsafe mutation, and it does not merely warn: it
+	 * throws mid-update, which aborts whatever render was in flight. Here that
+	 * meant the chatbot's own `phase = 'ready'` never reached the DOM, so the
+	 * page sat on the loading screen after the model had finished loading.
+	 */
+	let rendered = $derived.by(() => {
+		const math: MathSpan[] = [];
+		const html = renderMarkdown(content, math);
+		return { html, math };
 	});
+	let html = $derived(rendered.html);
+	let math = $derived(rendered.math);
 
 	/**
 	 * Replaces the markers with rendered maths.
