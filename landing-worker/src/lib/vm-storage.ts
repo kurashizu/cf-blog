@@ -2,7 +2,7 @@
  * Reading the VM images out of R2, in aligned chunks the edge can cache.
  *
  * Shared by the two disk routes: /vm/img speaks HTTP Range, because that is
- * what v86 asks for, and /vm/rv serves numbered block files, because that is
+ * what v86 asks for, and /vm/pc serves the QEMU machine's images, because that
  * what TinyEMU asks for. Underneath they are the same bytes fetched the same
  * way, so the chunking, the cache keys and the R2 part arithmetic live here.
  */

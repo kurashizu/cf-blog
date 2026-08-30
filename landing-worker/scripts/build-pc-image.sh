@@ -4,7 +4,7 @@
 # This is the machine upstream qemu-wasm actually exercises with a disk, which
 # is why it is the one the site ships. The `pc` board starts the kernel through
 # a BIOS the build ships beside the binary, virtio-blk works there where it
-# hangs on arm64, and the serial console is a plain 16550 at ttyS0.
+# the serial console is a plain 16550 at ttyS0.
 #
 # The initramfs is Alpine's own mkinitfs rather than one built by hand -- the
 # board has a UART before init runs, so it has somewhere to print.
@@ -58,8 +58,7 @@ cat > "$ROOTFS/etc/fstab" <<'EOF'
 EOF
 
 # ttyS0 is the 16550 every PC has and where -nographic points QEMU's stdio. A
-# real serial port rather than the riscv64 machine's virtio console, so the
-# getty goes there and window size works the usual way.
+# real serial port, so the getty goes there and window size works the usual way.
 cat > "$ROOTFS/etc/inittab" <<'EOF'
 ::sysinit:/sbin/openrc sysinit
 ::sysinit:/sbin/openrc boot
@@ -150,7 +149,6 @@ echo "==> kernel: $(stat -c %s "$OUT/kernel") bytes"
 # An initramfs is required: linux-virt builds VIRTIO_PCI in but leaves
 # VIRTIO_BLK and EXT4_FS as modules, so without one the kernel enumerates the
 # PCI device and then waits forever for a /dev/vda nothing is there to create.
-# The arm64 machine learned this the expensive way.
 #
 # mkinitfs is given the features by hand rather than read from
 # /etc/mkinitfs/mkinitfs.conf, because the default set drags in cryptsetup, lvm
@@ -175,7 +173,7 @@ mke2fs -q -t ext4 -d "$ROOTFS" -L krsz-pc -O ^has_journal,^metadata_csum,^64bit 
 echo "==> image: $(stat -c %s "$OUT/rootfs.img") bytes"
 
 # Split for the uploader, which refuses anything over 300 MiB. The route
-# reassembles them by name, the same as the riscv64 image.
+# reassembles them by name.
 SIZE=$(stat -c %s "$OUT/rootfs.img")
 PART_BYTES=$((PART_MB * 1024 * 1024))
 PARTS=$(( (SIZE + PART_BYTES - 1) / PART_BYTES ))

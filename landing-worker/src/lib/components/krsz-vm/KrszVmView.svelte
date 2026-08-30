@@ -13,7 +13,6 @@
 		type OverlayStats
 	} from './disk-overlay';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
-	import type { RvMachine } from './tinyemu';
 	import type { QemuMachine } from './qemu';
 	import VirtualKeyboard from './VirtualKeyboard.svelte';
 	import MermaidDiagram from '../projects/MermaidDiagram.svelte';
@@ -40,13 +39,12 @@
 		 * every time. See disk-overlay.ts for what is and is not stored.
 		 */
 		/**
-		 * Which machine to build. These are different emulators, not different
-		 * settings of one: v86 is IA-32 and cannot be anything else, TinyEMU
-		 * interprets rv64gc where v86 compiles, and arm64 is QEMU itself compiled
-		 * to WebAssembly -- which is why that one needs a cross-origin isolated
-		 * page and the other two do not.
+		 * Which machine to build. These are two different emulators, not two
+		 * settings of one: v86 is IA-32 and cannot be anything else, while x86-64
+		 * is QEMU itself compiled to WebAssembly -- which is why that one needs a
+		 * cross-origin isolated page and v86 does not.
 		 */
-		machine: 'x86' | 'riscv64' | 'arm64' | 'x86_64';
+		machine: 'x86' | 'x86_64';
 		persistDisk: boolean;
 		/**
 		 * The mode X asks for, passed to the guest on the kernel command line
@@ -191,7 +189,6 @@
 	let term: any = null;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let FitAddonCtor: any = null;
-	let riscv: RvMachine | null = null;
 	let qemu: QemuMachine | null = null;
 
 	function sendScancodes(codes: number[]) {
@@ -207,7 +204,14 @@
 			// leave a field undefined and break the emulator config. A stale version
 			// drops the fields whose defaults have since been corrected.
 			const stale = (saved.version ?? 0) < SETTINGS_VERSION;
-			if (stale) delete saved.cmdline;
+			if (stale) {
+				delete saved.cmdline;
+				// And the machine, because the set of them has changed across these
+				// versions: a stored name that no longer exists, or one that has
+				// moved, leaves the panel describing a machine the buttons do not
+				// select and the boot going somewhere the viewer did not ask for.
+				delete saved.machine;
+			}
 			settings = { ...DEFAULTS, ...saved, version: SETTINGS_VERSION };
 		} catch {
 			/* unreadable or corrupt — the defaults are fine */
@@ -248,13 +252,10 @@
 		}
 	}
 
-	/** The same, for a QEMU machine's own images -- /vm/arm or /vm/pc. */
-	async function qemuInfo(
-		base: string,
-		name: string
-	): Promise<{ size: number; version?: string } | null> {
+	/** The same, for the QEMU machine's own images under /vm/pc. */
+	async function qemuInfo(name: string): Promise<{ size: number; version?: string } | null> {
 		try {
-			const res = await fetch(`/vm/${base}/${name}?info`);
+			const res = await fetch(`/vm/pc/${name}?info`);
 			return res.ok ? ((await res.json()) as { size: number; version?: string }) : null;
 		} catch {
 			return null;
@@ -262,14 +263,14 @@
 	}
 
 	/**
-	 * Every disk read goes through /vm/img, /vm/rv or /vm/arm, so counting fetches there
+	 * Every disk read goes through /vm/img or /vm/pc, so counting fetches there
 	 * is a real measure of how much of the image this boot actually touched — the
 	 * whole point of streaming it rather than downloading it up front.
 	 */
 	function installFetchCounter() {
 		const original = window.XMLHttpRequest.prototype.open;
 		window.XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
-			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin|\/vm\/(arm|pc)\/rootfs\b/.test(String(url))) {
+			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin|\/vm\/pc\/rootfs\b/.test(String(url))) {
 				this.addEventListener('load', () => chunksFetched++, { once: true });
 			}
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -290,13 +291,8 @@
 		screenHinted = false;
 		playSound('toggle');
 
-		if (settings.machine === 'riscv64') {
-			await bootRiscv();
-			return;
-		}
-
-		if (settings.machine === 'arm64' || settings.machine === 'x86_64') {
-			await bootQemu(settings.machine === 'x86_64' ? 'x86_64' : 'aarch64');
+		if (settings.machine === 'x86_64') {
+			await bootQemu();
 			return;
 		}
 
@@ -485,19 +481,19 @@
 	}
 
 	/**
-	 * The arm64 machine: QEMU itself, compiled to WebAssembly.
+	 * The x86-64 machine: QEMU itself, compiled to WebAssembly.
 	 *
-	 * The shape is the riscv64 one -- build a terminal, hand it to the emulator,
+	 * The shape is v86's -- build a terminal, hand it to the emulator,
 	 * let the panel report what little there is -- but the emulator underneath is
 	 * upstream QEMU rather than something written for a browser. That buys real
 	 * device models and costs a cross-origin isolated page, because QEMU runs its
 	 * CPU on a worker that shares memory with this one.
 	 *
 	 * The disk is not downloaded. QEMU opens it as a file, and that file's reads
-	 * are answered a chunk at a time from /vm/arm -- see qemu-disk.ts, which is
+	 * are answered a chunk at a time from /vm/pc -- see qemu-disk.ts, which is
 	 * where the awkward part lives.
 	 */
-	async function bootQemu(arch: 'aarch64' | 'x86_64') {
+	async function bootQemu() {
 		try {
 			status = 'loading emulator…';
 			const [xtermMod, fitMod] = await Promise.all([
@@ -520,32 +516,27 @@
 			fitTerminal();
 
 			status = 'reading image metadata…';
-			// Each QEMU machine has its own images under its own prefix.
-			const base = arch === 'x86_64' ? 'pc' : 'arm';
 			const [kernel, initrd, rootfs] = await Promise.all([
-				qemuInfo(base, 'kernel'),
-				qemuInfo(base, 'initramfs'),
-				qemuInfo(base, 'rootfs')
+				qemuInfo('kernel'),
+				qemuInfo('initramfs'),
+				qemuInfo('rootfs')
 			]);
 			if (!kernel || !initrd || !rootfs) {
-				throw new Error(`no ${arch} image is published on this deployment yet`);
+				throw new Error('no x86-64 image is published on this deployment yet');
 			}
 			imageSize = rootfs.size;
 
 			status = 'loading QEMU (66 MB wasm)…';
 			const { startQemu } = await import('./qemu');
 			const machine = await startQemu({
-				arch,
+				arch: 'x86_64',
 				// The whole Terminal, not a pair of callbacks: QEMU speaks through a
 				// line discipline that attaches to it as an addon. See qemu.ts.
 				term,
 				memoryMb: settings.memoryMb,
-				// Four vCPUs under single-threaded TCG, which is what upstream's own
-				// examples use.
-				smp: 4,
-				kernelUrl: `/vm/${base}/kernel?v=${kernel.version ?? 0}`,
-				initrdUrl: `/vm/${base}/initramfs?v=${initrd.version ?? 0}`,
-				rootfsUrl: `/vm/${base}/rootfs?v=${rootfs.version ?? 0}`,
+				kernelUrl: `/vm/pc/kernel?v=${kernel.version ?? 0}`,
+				initrdUrl: `/vm/pc/initramfs?v=${initrd.version ?? 0}`,
+				rootfsUrl: `/vm/pc/rootfs?v=${rootfs.version ?? 0}`,
 				kernelSize: kernel.size,
 				rootfsSize: rootfs.size,
 				cmdline: '',
@@ -561,71 +552,6 @@
 				// and the DOM holds only the rows currently on screen.
 				w.__term = term;
 			}
-
-			phase = 'running';
-			status = 'running';
-			bootedAt = performance.now();
-			suspendNavHotkeys.set(true);
-			restoreFetch = installFetchCounter();
-			ticker = setInterval(() => {
-				uptime = (performance.now() - bootedAt) / 1000;
-				fitTerminal();
-			}, 1000);
-			if (matchMedia('(pointer: coarse)').matches) showKeyboard = true;
-		} catch (e) {
-			phase = 'error';
-			errorText = e instanceof Error ? e.message : String(e);
-			status = '';
-			playSound('ping', false);
-		}
-	}
-
-	/**
-	 * The riscv64 machine. A different emulator with a different shape: TinyEMU
-	 * has no VGA to show, no instruction counter to sample and no network, so
-	 * this path builds a terminal itself and leaves the rest of the panel to
-	 * report nothing rather than report zero.
-	 */
-	async function bootRiscv() {
-		try {
-			status = 'loading emulator…';
-			const [xtermMod, fitMod] = await Promise.all([
-				import('@xterm/xterm'),
-				import('@xterm/addon-fit'),
-				import('@xterm/xterm/css/xterm.css')
-			]);
-			if (!termEl) throw new Error('the terminal has nowhere to draw');
-
-			term = new xtermMod.Terminal({
-				fontSize: 15,
-				theme: { background: '#000000', foreground: '#d8dee9' },
-				convertEol: false,
-				cursorBlink: true
-			});
-			FitAddonCtor = fitMod.FitAddon;
-			fitAddon = new FitAddonCtor();
-			term.loadAddon(fitAddon);
-			term.open(termEl);
-			fitTerminal();
-
-			status = 'fetching firmware and kernel…';
-			const { startRiscv } = await import('./tinyemu');
-			const machine = await startRiscv({
-				term: {
-					write: (text: string) => term?.write(text),
-					getSize: () => [term?.cols ?? 80, term?.rows ?? 25]
-				},
-				onDownloading: (active: boolean) => {
-					if (active && phase === 'loading') status = 'streaming the disk…';
-				}
-			});
-			riscv = machine;
-			// Reachable from the console alongside the x86 machine's own hook, for
-			// the same reason: this one cannot be inspected any other way.
-			if (new URLSearchParams(location.search).has('debug')) {
-				(window as unknown as { __krszrv?: unknown }).__krszrv = machine;
-			}
-			term.onData((data: string) => machine.sendText(data));
 
 			phase = 'running';
 			status = 'running';
@@ -715,12 +641,6 @@
 		if (overlaySaver) clearInterval(overlaySaver);
 		overlaySaver = null;
 		diskBuffer = null;
-		try {
-			riscv?.destroy();
-		} catch {
-			/* already gone */
-		}
-		riscv = null;
 		try {
 			qemu?.destroy();
 		} catch {
@@ -1010,55 +930,6 @@
 						title: "QEMU's user-mode network stack wants a host socket API the browser does not have; bridging it needs a TCP/IP stack running in the page"
 					}
 				]
-			: settings.machine === 'arm64'
-			? [
-					{
-						label: 'EMULATOR',
-						value: 'QEMU 10 — wasm build, GPL-2',
-						title: 'Upstream QEMU compiled to WebAssembly, which is why this machine has real device models rather than the minimum a browser emulator can get away with. It runs its CPU on a worker thread sharing memory with the page, so the page has to be cross-origin isolated for it to start at all.'
-					},
-					{ label: 'GUEST', value: 'Alpine Linux 3.24, aarch64' },
-					{ label: 'CPU', value: 'one core, Cortex-A72, TCG' },
-					{ label: 'RAM', value: `${settings.memoryMb} MB` },
-					{ label: 'DISPLAY', value: 'PL011 serial, via xterm.js' },
-					{
-						label: 'DISK',
-						value: 'ext4, streamed in 1 MiB chunks',
-						title: 'QEMU opens its drive as an ordinary file, and the upstream demos download the whole image before starting. This one does not: reads are answered a chunk at a time from the same edge cache the other machines use, and writes are kept in the tab.'
-					},
-					{
-						label: 'NETWORK',
-						value: 'none yet',
-						title: "QEMU's user-mode network stack wants a host socket API the browser does not have"
-					}
-				]
-			: settings.machine === 'riscv64'
-				? [
-					{
-						label: 'EMULATOR',
-						value: 'TinyEMU — rv64gc interpreter, MIT',
-						title: "Fabrice Bellard's TinyEMU, built to WebAssembly from source by CI. It interprets where v86 compiles, which is why this machine is the slower of the two."
-					},
-					{ label: 'GUEST', value: 'Alpine Linux 3.24, riscv64' },
-					{ label: 'CPU', value: 'single hart, rv64gc, no vector' },
-					{ label: 'RAM', value: '256 MB' },
-					{ label: 'DISPLAY', value: 'virtio console, via xterm.js' },
-					{
-						label: 'DISK',
-						value: 'ext4, streamed in 1 MiB blocks',
-						title: 'The same R2 objects and the same edge cache as the x86 machine, served as numbered block files because that is the shape TinyEMU asks for'
-					},
-					{
-						label: 'NETWORK',
-						value: 'none yet',
-						title: "TinyEMU's ethernet is raw frames and the relay carries streams; bridging them needs a TCP/IP stack in the page, which v86 brings with it and this one has nowhere to borrow"
-					},
-					{
-						label: 'STATUS',
-						value: 'work in progress — stops before userspace',
-						title: 'The kernel boots, brings up its console, timer and interrupt controller, and reads the first block of a disk streamed over HTTP. It then stops before mounting a root filesystem. The x86 machine is unaffected.'
-					}
-				]
 			: [
 		{ label: 'EMULATOR', value: 'v86 — x86-to-wasm JIT, BSD-2', title: 'copy/v86: a 32-bit x86 PC emulator that JIT-compiles guest code to WebAssembly' },
 		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, x86 (32-bit)', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
@@ -1218,7 +1089,7 @@
 
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
-						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.'], ['arm64', 'arm64 · WIP', "QEMU on an emulated 64-bit ARM board. The kernel boots and finds its disk, then stops: virtio-blk wedges in this build, which is a path upstream never exercises."], ['riscv64', 'riscv64 · WIP', 'TinyEMU with firmware written for it here. The kernel boots, finds its console, timer, interrupt controller and streamed disk, and then stops before userspace — this one is not finished.']] as const as [value, label, hint] (value)}
+						{#each [['x86', 'x86 · 32-bit', 'v86: an IA-32 PC, JIT-compiled to WebAssembly. The one with a desktop, a network and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.']] as const as [value, label, hint] (value)}
 							<button
 								onclick={() => (settings.machine = value)}
 								title={hint}
@@ -1354,15 +1225,11 @@
 						{#if settings.machine === 'x86'}
 							RAM, VGA RAM, boot mode and the command line take effect on the next boot;
 							screen size applies the next time <span class="text-white/50">startx</span> runs.
-						{:else if settings.machine === 'arm64'}
-							RAM takes effect on the next boot; the rest of these belong to the x86
+						{:else}
+							RAM takes effect on the next boot; the rest of these belong to the 32-bit
 							machine. This one needs a cross-origin isolated page for its CPU thread,
 							and downloads a 66 MB emulator before it starts — the disk itself is
 							still streamed a megabyte at a time.
-						{:else}
-							The riscv64 machine takes no settings yet, and does not finish booting: it
-							reaches the point of mounting a root filesystem and stops. Everything under
-							it — firmware, console, timer, interrupts, the streamed disk — works.
 						{/if}
 					</p>
 				</div>

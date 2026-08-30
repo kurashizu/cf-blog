@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 	const file = params.file;
 	// Names only, from the set the build produces: this reads a bucket, and a
 	// path is not something a caller gets to compose.
-	const isBinary = /^qemu-system-(aarch64|riscv64|x86_64)(\.wasm|\.worker\.js|\.js)$/.test(file);
+	const isBinary = /^qemu-system-x86_64(\.wasm|\.worker\.js|\.js)$/.test(file);
 	// The ROMs x86 reads at runtime, which QEMU opens by name out of whatever -L
 	// points at. Spelled with a prefix rather than a slash because this route
 	// takes one path segment.

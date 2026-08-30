@@ -1,9 +1,9 @@
 /**
  * The QEMU machines: upstream QEMU compiled to WebAssembly, wired to a terminal.
  *
- * v86 is IA-32 and TinyEMU is rv64, each with its own emulator and its own way
- * of being talked to. QEMU replaces both with one codebase that speaks x86-64,
- * arm64 and riscv64, and brings QEMU's device models with it. What it asks for
+ * v86 is IA-32 and cannot be anything else. QEMU is the real emulator, brought
+ * to the browser whole: the same x86-64 machine you would run on a desktop,
+ * with QEMU's own device models behind it. What it asks for
  * in return is threads — the CPU runs on a worker sharing memory with the page,
  * which the browser allows only when the document is cross-origin isolated.
  *
@@ -24,7 +24,7 @@ import { createLazyImage } from './qemu-disk';
 /** Where the built binaries are served from — see routes/vm/qemu. */
 const BINARY_BASE = '/vm/qemu';
 
-export type QemuArch = 'aarch64' | 'riscv64' | 'x86_64';
+export type QemuArch = 'x86_64';
 
 /**
  * QEMU does not speak to a terminal the way the other two machines do.
@@ -74,15 +74,13 @@ export interface QemuOptions {
 	/** The view's xterm instance; the pty's master attaches to it. */
 	term: Terminal;
 	memoryMb: number;
-	/** Cores. QEMU's multi-threaded TCG needs `thread=multi` to use them. */
-	smp: number;
 	/** The kernel image, as a URL this page can range-request. */
 	kernelUrl: string;
 	/**
-	 * The initramfs. Not optional on arm64: Alpine's linux-virt builds the
-	 * virtio PCI transport in but leaves virtio-blk and ext4 as modules, so
-	 * without this the kernel finds the disk's PCI device and then waits forever
-	 * for a /dev/vda nothing creates.
+	 * The initramfs, which is not optional: Alpine's linux-virt builds the virtio
+	 * PCI transport in but leaves virtio-blk and ext4 as modules, so without this
+	 * the kernel finds the disk's PCI device and then waits forever for a
+	 * /dev/vda nothing creates.
 	 */
 	initrdUrl: string;
 	/** The root filesystem image, likewise. */
@@ -94,64 +92,41 @@ export interface QemuOptions {
 }
 
 /**
- * The machine QEMU should build, per architecture.
+ * The machine QEMU should build.
  *
- * `virt` on arm64 and riscv64 is the paravirtual board: no firmware to supply,
- * a virtio console, and a device tree QEMU generates. x86-64 needs its BIOS
- * blobs, which are not in this build, so it boots the kernel directly too.
+ * `pc` rather than q35: it is the board upstream's own x86 examples use and the
+ * one its BIOS blob is built for.
  */
-function machineArgs(arch: QemuArch): string[] {
-	switch (arch) {
-		case 'aarch64':
-			// cortex-a72 is the newest core this build models completely; `virt`
-			// defaults to cortex-a15, which is 32-bit and refuses an arm64 kernel.
-			return ['-machine', 'virt', '-cpu', 'cortex-a72'];
-		case 'riscv64':
-			return ['-machine', 'virt'];
-		case 'x86_64':
-			// `pc` rather than q35, which is the board upstream's own x86 examples
-			// use and the one its BIOS blob is built for. The TSC is given a fixed
-			// frequency because there is no working PIT here to calibrate against,
-			// and a guest that cannot calibrate does not finish booting.
-			return ['-machine', 'pc', '-cpu', 'qemu64,tsc-frequency=1000000000'];
-	}
+function machineArgs(): string[] {
+	return ['-machine', 'pc'];
+}
+
+
+/**
+ * The console device: the 16550 every PC has, which `-nographic` points QEMU's
+ * own stdio at, and which is what reaches the terminal.
+ */
+function consoleName(): string {
+	return 'ttyS0';
 }
 
 /**
- * The console device, which differs by board: arm64 and riscv64 `virt` put a
- * PL011/16550 at a fixed address that the kernel finds through the device tree,
- * and both call it ttyAMA0 or ttyS0 accordingly. `-nographic` points QEMU's own
- * stdio at it, which is what reaches the terminal.
- */
-function consoleName(arch: QemuArch): string {
-	return arch === 'aarch64' ? 'ttyAMA0' : 'ttyS0';
-}
-
-/**
- * Known broken: this machine does not finish booting.
+ * What it took to make these boot, so the next machine costs less.
  *
- * The kernel comes up completely -- PCI, virtio, the PL011 console, the RTC,
- * Alpine's initramfs, and the disk enumerated at exactly the right size -- and
- * then stops the moment virtio-blk does any I/O. What that cost to find out is
- * worth writing down, because every obvious suspect is innocent:
+ * The terminal's poll was the expensive one. Emscripten's TTY poll blocks when
+ * the terminal has nothing to say, with Atomics.wait, on whichever thread asked
+ * -- and on the page's main thread that is a deadlock, because the notify it
+ * waits for can only come from the timers of the thread it has just stopped.
+ * From outside it looked like a machine frozen with the main thread pinned at
+ * 98% in repeating one-second slices, from the moment the BIOS started and with
+ * no disk attached at all. Upstream replaces that poll after init; so do we.
  *
- *   - Not the streamed disk. The whole 442 MiB image preloaded into Emscripten's
- *     filesystem as a plain file, no stream_ops and no network, hangs the same.
- *   - Not the synchronous fetch. Same freeze with every chunk already in memory.
- *   - Not the thread pool. Patching Emscripten's default 4 up to 12 changes
- *     nothing (and the flag has to go in --extra-ldflags, not the cflags).
- *   - Not virtio, and not the board. virtio-rng-pci on the same `virt` machine
- *     works; it is virtio-blk specifically.
- *   - Not our file at all: a null-co drive, which never touches a file, wedges
- *     in the same place.
- *
- * What is left is QEMU's own block layer under Asyncify. While it is stuck the
- * page's main thread is ~99% blocked, which is the shape of a proxied call
- * deadlocking against the thread that proxied it. Upstream never exercises this
- * path: every qemu-wasm example with a disk is x86_64 or riscv64, and their one
- * aarch64 example uses an SD card on raspi3ap, which `virt` does not support.
- *
- * So the next move is riscv64 rather than more argument permutations here.
+ * x86 then needed three more things, none of them guessable: SeaBIOS wants
+ * every ROM it opens present in the filesystem, not just the BIOS itself; no
+ * -smp, because with it the board skips SeaBIOS and panics in setup_IO_APIC;
+ * and noapic, because that IO-APIC cannot route the timer while the legacy PIC
+ * can. acpi=off looks like the fix for the same panic and is not: it clears the
+ * panic and takes SeaBIOS's HPET with it, and then the clock stops advancing.
  */
 export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	if (!crossOriginIsolated) {
@@ -167,9 +142,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	const { master, slave } = openpty();
 	options.term.loadAddon(master);
 
-	const forcedArch = (globalThis as unknown as { __qemuArch?: QemuArch }).__qemuArch;
-	const arch = forcedArch ?? options.arch;
-	const glueUrl = `${BINARY_BASE}/qemu-system-${arch}.js`;
+	const glueUrl = `${BINARY_BASE}/qemu-system-${options.arch}.js`;
 
 	const factory = (await import(/* @vite-ignore */ glueUrl)) as {
 		default: (module: Partial<EmscriptenModule>) => Promise<EmscriptenModule>;
@@ -194,7 +167,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	// filesystem before main -- same reason as the kernel. The other boards read
 	// none of them and pay nothing for this.
 	const roms: [string, Uint8Array][] = [];
-	if (options.arch === 'x86_64') {
+	{
 		// Everything SeaBIOS may open, not just the BIOS itself: it initialises the
 		// display next and looks for a VGA BIOS by more than one name, and the
 		// option ROMs are what let it boot from a virtio disk.
@@ -226,12 +199,14 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// matter: with one, QEMU's CPU loop and the block layer's completions have
 		// nowhere to run but each other's way.
 		'-accel', 'tcg,tb-size=500',
-		...(options.smp > 1 ? ['-smp', `${options.smp}`] : []),
-		...machineArgs(options.arch),
-		// Where QEMU looks for the ROMs it opens at runtime. x86 cannot start
-		// without its BIOS, and the display adapter runs a VGA BIOS of its own;
-		// the other two boards need nothing here.
-		...(options.arch === 'x86_64' ? ['-L', '/krsz/pc-bios/'] : []),
+		// No -smp: with it the machine skips SeaBIOS entirely and the kernel
+		// panics in setup_IO_APIC, where one processor boots through the BIOS and
+		// comes up. Upstream's x86 examples pass none either.
+
+		...machineArgs(),
+		// Where QEMU looks for the ROMs it opens at runtime: it cannot start
+		// without its BIOS, and the display adapter runs a VGA BIOS of its own.
+		'-L', '/krsz/pc-bios/',
 		// No network yet: QEMU's user-mode stack needs a host socket API that the
 		// browser does not have, and the relay this site runs carries streams
 		// rather than frames.
@@ -240,17 +215,9 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// shorthand, which is what upstream's own Alpine example does. The
 		// shorthand asks QEMU to pick the transport, and on this board it picks
 		// one the guest then waits on forever.
-		// x86 takes the `if=virtio` shorthand, which is what upstream's own
-		// examples use and what works there. The arm64 board needs the device
-		// spelled out, and hangs either way -- see the note above startQemu.
-		...(options.arch === 'x86_64'
-			? ['-drive', 'if=virtio,format=raw,file=/krsz/rootfs.img']
-			: [
-					'-drive',
-					'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
-					'-device',
-					'virtio-blk-device,drive=rootfs'
-				]),
+		// A drive plus a device, the way upstream's own Alpine example writes it.
+		'-drive', 'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
+		'-device', 'virtio-blk-pci,drive=rootfs',
 		'-kernel', '/krsz/kernel',
 		'-initrd', '/krsz/initramfs',
 		// `modules=` is not optional with Alpine's initramfs. Its init modprobes
@@ -262,39 +229,22 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		'-append',
 		options.cmdline ||
 			[
-				`console=${consoleName(options.arch)}`,
+				`console=${consoleName()}`,
 				'root=/dev/vda rw rootwait',
 				'modules=virtio_blk,ext4',
-				// The PC's interrupt controllers are where this board is weakest.
-				// Without acpi=off -- which upstream's own x86 example also passes --
-				// the kernel panics in setup_IO_APIC with "IO-APIC + timer doesn't
-				// work"; there is no firmware here to describe the hardware, so the
-				// less it infers the better. The clocksource is named outright for
-				// the same reason: left to calibrate, it finds neither PIT nor HPET
-				// and marks the TSC unstable, and the clock stops advancing.
-				// The PC board's timers are where this machine currently stops. Left
-				// alone the kernel panics in setup_IO_APIC ("IO-APIC + timer doesn't
-				// work"); acpi=off clears that, and then it cannot calibrate the TSC
-				// because neither the PIT nor an HPET ticks, and time stops
-				// advancing. no_timer_check stops it re-testing a route it has
-				// already been told to trust.
-				...(options.arch === 'x86_64'
-					? ['acpi=off', 'no_timer_check', 'tsc=reliable', 'tsc_khz=1000000']
-					: [])
+				// noapic is what makes this board boot. Its IO-APIC cannot route the
+				// timer -- left to try it, the kernel panics in setup_IO_APIC with
+				// "IO-APIC + timer doesn't work" -- while the legacy PIC it falls
+				// back to works, and SeaBIOS's ACPI tables hand it an HPET to keep
+				// time with. acpi=off is the tempting fix and the wrong one: it
+				// clears the panic and takes the HPET away with it, and the clock
+				// stops advancing instead.
+				'noapic'
 			].join(' ')
 	];
 
 	// Reads are served from the network as QEMU asks for them; writes stay here.
 	const overlay: OverlayBlocks = new Map();
-
-
-	// TEMPORARY diagnostic hook: let the page replace the argument list, so
-	// board and transport variants can be compared without a rebuild apiece.
-	const override = (globalThis as unknown as { __qemuArgs?: string[] }).__qemuArgs;
-	if (override) {
-		args.length = 0;
-		args.push(...override);
-	}
 
 
 	const module = await factory.default({
@@ -337,8 +287,8 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// Everything the guest prints goes through the pty, not through here:
 		// these two are QEMU's own diagnostics, which belong in the console.
 		pty: slave,
-		print: (line: string) => console.log(`[qemu/${options.arch}]`, line),
-		printErr: (line: string) => console.warn(`[qemu/${options.arch}]`, line)
+		print: (line: string) => console.log('[qemu]', line),
+		printErr: (line: string) => console.warn('[qemu]', line)
 	});
 
 	// Emscripten's own poll blocks when the terminal has nothing to say, and it
