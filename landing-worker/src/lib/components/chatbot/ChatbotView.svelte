@@ -98,7 +98,6 @@
 	const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 	let spinnerTick = $state(0);
 	let waitedSecs = $state(0);
-	let waitStart = 0;
 
 	/** Real prompt length of the last turn, reported by the worker. */
 	let usedTokens = $state(0);
@@ -148,14 +147,20 @@
 	});
 
 	$effect(() => {
-		if (phase !== 'generating') {
-			waitedSecs = 0;
-			return;
-		}
-		waitStart = Date.now();
+		// Reads `phase` and nothing else. The earlier version also wrote
+		// `waitedSecs` on the non-generating path, and `waitedSecs` feeds
+		// `waitLabel`, which the template renders — so the effect depended on its
+		// own writes. Svelte then stopped propagating the update that triggered
+		// it, and `phase = 'ready'` never reached the DOM: the worker reported
+		// itself loaded while the page sat on the loading screen.
+		if (phase !== 'generating') return;
+
+		const started = Date.now();
+		spinnerTick = 0;
+		waitedSecs = 0;
 		const id = setInterval(() => {
 			spinnerTick++;
-			waitedSecs = Math.floor((Date.now() - waitStart) / 1000);
+			waitedSecs = Math.floor((Date.now() - started) / 1000);
 		}, 120);
 		return () => clearInterval(id);
 	});
