@@ -84,19 +84,19 @@ configure_failed() {
 	exit 1
 }
 
+# PTHREAD_POOL_SIZE below is a link setting -- in the compile flags emcc ignores
+# it with a warning, which is how it got missed the first time. Emscripten's
+# default pool is 4 and QEMU wants more: main is proxied onto one, and the CPU,
+# RCU and block threads take the rest. Past the fourth, spawnThread gets a
+# worker from getNewWorker whose wasm module is still loading --
+# loadWasmModuleToWorker is asynchronous and nothing waits for it -- so the
+# thread never starts and whoever waited on it waits forever. From outside that
+# looked like: the guest printed "[vda] 905216 512-byte logical blocks", having
+# read one sector, and stopped for good.
 docker exec build-qemu-wasm emconfigure /qemu/configure \
 	--static --target-list="${TARGET}-softmmu" --cpu=wasm32 --cross-prefix= \
 	--without-default-features --enable-system --with-coroutine=fiber --enable-virtfs \
 	--extra-cflags="$EXTRA_CFLAGS" --extra-cxxflags="$EXTRA_CFLAGS" \
-	# PTHREAD_POOL_SIZE is a link setting -- in the compile flags emcc ignores it
-	# with a warning, which is how it got missed the first time. Emscripten's
-	# default pool is 4 and QEMU wants more: main is proxied onto one, and the
-	# CPU, RCU and block threads take the rest. Past the fourth, spawnThread gets
-	# a worker from getNewWorker whose wasm module is still loading --
-	# loadWasmModuleToWorker is asynchronous and nothing waits for it -- so the
-	# thread never starts and whoever waited on it waits forever. From outside
-	# that looked like: the guest printed "[vda] 905216 512-byte logical blocks",
-	# having read one sector, and stopped for good.
 	--extra-ldflags="-sEXPORTED_RUNTIME_METHODS=getTempRet0,setTempRet0,addFunction,removeFunction,TTY,FS -sPTHREAD_POOL_SIZE=8" || configure_failed
 
 docker exec build-qemu-wasm emmake make -j"$(nproc)" "qemu-system-${TARGET}"
