@@ -1082,18 +1082,31 @@
 			</div>
 		{:else if phase === 'loading'}
 			<div class="m-auto w-full max-w-md flex flex-col gap-2">
-				<div class="text-[#e5c07b] text-xs font-mono">◐ {progressText}</div>
+				<!--
+					Never blank: once the bytes are in, the runtime spends a while
+					building the model before it says it is ready, and an empty panel
+					in that gap reads as a crash.
+				-->
+				<div class="text-[#e5c07b] text-xs font-mono">
+					◐ {progressText || 'preparing the model…'}
+				</div>
 				<div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
 					<div class="h-full bg-[#98c379] transition-[width] duration-200" style="width: {progressPct}%"></div>
 				</div>
 				<div class="text-white/40 text-[10px] font-mono text-right">{progressPct}%</div>
 			</div>
-		{:else if turns.length === 0}
+		{:else if turns.filter((t) => !t.notice).length === 0}
 			<div class="m-auto text-white/30 text-xs font-mono text-center leading-relaxed">
 				ready — say something, or drop in an image.<br />
 				<span class="text-white/20">/help lists the commands</span>
 			</div>
 		{/if}
+		<!--
+			A conversation restored from a previous visit reaches none of the
+			branches above — the phase is ready and turns is not empty — so the
+			panel came up blank until this block, which is guarded on the phase
+			rather than chained onto it.
+		-->
 
 
 		<!--
