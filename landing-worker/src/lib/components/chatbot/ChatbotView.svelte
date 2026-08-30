@@ -1189,7 +1189,17 @@
 						<div
 							class="self-start px-3 py-2 rounded-md text-sm bg-white/[0.06] border border-white/15 text-[#d8dee9] break-words"
 						>
-							<RichReply content={turn.content} />
+							{#if phase === 'generating' && i === turns.length - 1}
+								<!--
+									Do not rebuild the whole Markdown/KaTeX tree for every token.
+									In particular, a completed formula otherwise disappears back
+									to its marker while the async KaTeX pass starts again, which
+									makes the reply flash. Format it once when streaming ends.
+								-->
+								<div class="whitespace-pre-wrap">{turn.content}</div>
+							{:else}
+								<RichReply content={turn.content} />
+							{/if}
 						</div>
 					{:else if phase === 'generating' && i === turns.length - 1 && !turn.reasoning}
 						<!--

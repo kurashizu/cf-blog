@@ -19,6 +19,8 @@ import { MMPROJ_FILE, MODEL_FILE, MODEL_HOST, WASM_PATH } from './engine';
 let wllama: Wllama | null = null;
 /** Set while a reply is streaming, so `interrupt` has something to abort. */
 let abort: AbortController | null = null;
+/** Native llama.cpp context retained so a fatal malloc is not the only visible line. */
+let nativeLogs: string[] = [];
 
 type InMsg =
 	| { type: 'load'; contextWindow: number }
@@ -32,6 +34,19 @@ type InMsg =
 	| { type: 'interrupt' };
 
 const post = (m: unknown) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
+
+function rememberNative(level: string, args: unknown[]): void {
+	const text = args.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ').trim();
+	if (!text) return;
+	nativeLogs.push(`[${level}] ${text}`);
+	if (nativeLogs.length > 40) nativeLogs.shift();
+}
+
+function errorWithNative(err: unknown): string {
+	const message = (err as Error)?.message || String(err);
+	const context = nativeLogs.filter((line) => !line.includes(message)).slice(-24);
+	return context.length ? `${message}\n\nllama.cpp log:\n${context.join('\n')}` : message;
+}
 
 /**
  * wllama's primary build needs both JSPI and Memory64. Firefox releases that
@@ -57,6 +72,7 @@ async function load(contextWindow: number) {
 		post({ type: 'ready' });
 		return;
 	}
+	nativeLogs = [];
 	// The runtime reports load failures through its logger, not by rejecting:
 	// without one, a model that fails to come up leaves the page back on the
 	// idle screen with nothing said about why.
@@ -64,10 +80,10 @@ async function load(contextWindow: number) {
 		{ default: WASM_PATH },
 		{
 			logger: {
-				debug: () => {},
-				log: () => {},
-				warn: (...a: unknown[]) => post({ type: 'log', level: 'warn', text: a.join(' ') }),
-				error: (...a: unknown[]) => post({ type: 'log', level: 'error', text: a.join(' ') })
+				debug: (...a: unknown[]) => rememberNative('debug', a),
+				log: (...a: unknown[]) => rememberNative('info', a),
+				warn: (...a: unknown[]) => rememberNative('warn', a),
+				error: (...a: unknown[]) => rememberNative('error', a)
 			}
 		}
 	);
@@ -193,6 +209,6 @@ self.onmessage = async (e: MessageEvent<InMsg>) => {
 		else if (msg.type === 'generate') await generate(msg);
 		else if (msg.type === 'interrupt') abort?.abort();
 	} catch (err) {
-		post({ type: 'error', message: (err as Error).message || String(err) });
+		post({ type: 'error', message: errorWithNative(err) });
 	}
 };
