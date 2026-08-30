@@ -74,7 +74,17 @@ const ip4 = (a: number[]) => a.join('.');
 
 function checksum(data: Uint8Array, start = 0, end = data.length, seed = 0): number {
 	let sum = seed;
-	for (let i = start; i + 1 < end; i += 2) sum += (data[i] << 8) | data[i + 1];
+	let i = start;
+	// Folded as it goes rather than once at the end. A full-size segment is some
+	// 700 words, and left to accumulate the running total passes 2^31 -- where
+	// JavaScript's bitwise operators, which are signed 32-bit, turn it negative
+	// and the checksum comes out wrong. Wrong for large segments only, which is
+	// why small things worked and TLS did not: the guest's stack dropped the
+	// record and OpenSSL reported a record-layer failure.
+	for (; i + 1 < end; i += 2) {
+		sum += (data[i] << 8) | data[i + 1];
+		if (sum > 0xffff) sum = (sum & 0xffff) + (sum >>> 16);
+	}
 	if ((end - start) % 2) sum += data[end - 1] << 8;
 	while (sum >>> 16) sum = (sum & 0xffff) + (sum >>> 16);
 	return ~sum & 0xffff;
@@ -545,7 +555,16 @@ export class QemuNet {
 
 		if (flags & ACK) {
 			conn.sndUnacked = ack;
-			conn.pending = conn.pending.filter((p) => ((ack - (p.seq + p.data.length)) | 0) < 0);
+			// Kept if its last byte is still unacknowledged. Both ends of the
+			// comparison have to be reduced mod 2^32 before the subtraction:
+			// seq + length is an ordinary sum that runs past 2^32 without
+			// wrapping, and once it does the sign test says the wrong thing and
+			// acknowledged data is retransmitted into the middle of a live
+			// stream. Small transfers never got far enough to see it; a TLS
+			// handshake did, and OpenSSL reported a record-layer failure.
+			conn.pending = conn.pending.filter(
+				(p) => (((ack - ((p.seq + p.data.length) >>> 0)) | 0) < 0)
+			);
 		}
 
 		if (data.length) {
@@ -625,14 +644,14 @@ export class QemuNet {
 		const now = Date.now();
 		for (const conn of this.conns.values()) {
 			if (conn.state === 'dead') continue;
-			// A copy, because emit() does not touch conn.pending for a segment that
-			// names its own sequence -- but iterating the live array while sending
-			// is the kind of thing that only breaks once something else changes.
-			for (const p of [...conn.pending]) {
-				if (now - p.sentAt < 600) continue;
-				p.sentAt = now;
-				this.emit(conn, ACK | PSH, p.data, p.seq);
-			}
+			// Only the oldest, and only once its timer is up. Resending the whole
+			// window on every tick is how a slow ack turns into a burst of
+			// duplicates, and the guest reassembles those into a stream that no
+			// longer says what the server sent.
+			const oldest = conn.pending[0];
+			if (!oldest || now - oldest.sentAt < 1000) continue;
+			oldest.sentAt = now;
+			this.emit(conn, ACK | PSH, oldest.data, oldest.seq);
 		}
 	}
 
