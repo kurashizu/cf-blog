@@ -38,7 +38,20 @@ async function load(contextWindow: number) {
 		post({ type: 'ready' });
 		return;
 	}
-	const w = new Wllama({ default: WASM_PATH });
+	// The runtime reports load failures through its logger, not by rejecting:
+	// without one, a model that fails to come up leaves the page back on the
+	// idle screen with nothing said about why.
+	const w = new Wllama(
+		{ default: WASM_PATH },
+		{
+			logger: {
+				debug: () => {},
+				log: () => {},
+				warn: (...a: unknown[]) => post({ type: 'log', level: 'warn', text: a.join(' ') }),
+				error: (...a: unknown[]) => post({ type: 'log', level: 'error', text: a.join(' ') })
+			}
+		}
+	);
 
 	await w.loadModelFromUrl(
 		// The projector rides along in the source object rather than in the

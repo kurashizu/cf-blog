@@ -201,6 +201,11 @@
 		w.onmessage = (e: MessageEvent) => {
 			const m = e.data;
 			switch (m.type) {
+				case 'log':
+					// Surfaced so a failed load says why instead of silently
+					// returning to the idle screen.
+					if (m.level === 'error') onWorkerError(m.text);
+					break;
 				case 'progress':
 					onProgress(m.loaded, m.total);
 					break;
