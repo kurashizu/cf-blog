@@ -13,9 +13,8 @@ import { BUCKET_URL } from '$shared/site-config';
  */
 
 /** Where the mirrored model and the wasm runtime live. */
-// TODO(before merge): point at the bucket once the weights are uploaded.
-export const MODEL_HOST = 'http://127.0.0.1:8899/';
-export const WASM_PATH = '/wllama/wllama.wasm';
+export const MODEL_HOST = `${BUCKET_URL}/gguf/`;
+export const WASM_PATH = `${BUCKET_URL}/wllama/wllama.wasm`;
 
 /**
  * Qwen3.5-2B at Q4_K_M, with the vision projector alongside it.
