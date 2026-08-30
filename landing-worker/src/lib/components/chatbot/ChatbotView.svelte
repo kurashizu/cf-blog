@@ -27,16 +27,25 @@
 	}
 
 	/**
-	 * Kept deliberately plain. An earlier version described the site as
-	 * "terminal-styled", and a model this size read that as a role to play: it
-	 * answered "hi" with invented console chrome ([SYSTEM ONLINE], [ERROR] Invalid
-	 * input) rather than a greeting. The visual theme is the page's business, not
-	 * the assistant's, so it is not mentioned here at all.
+	 * Every clause here is load-bearing, and two were found by testing rather than
+	 * by writing what read well.
+	 *
+	 * The site is not described as "terminal-styled": a model this size read that
+	 * as a role to play and answered "hi" with invented console chrome ([SYSTEM
+	 * ONLINE], [ERROR] Invalid input) instead of a greeting.
+	 *
+	 * The language line says "the language the conversation uses" rather than
+	 * "the language the user wrote in". Phrasing it around what the user *writes*
+	 * made the model treat the exchange as text-only and deny hearing anything —
+	 * an attached recording came back as "please provide the sound". Naming the
+	 * media it can perceive fixes that; the two sentences were verified against
+	 * the running model, holding a 440 Hz tone constant.
 	 */
 	const SYSTEM_PROMPT =
 		'You are a helpful assistant on krsz.in, a personal website. ' +
 		'You run entirely inside the visitor’s browser on their own hardware — no server sees this conversation. ' +
-		'Reply naturally and conversationally, in the same language the user wrote in. ' +
+		'You can see images and hear audio the visitor sends. ' +
+		'Reply in the language the conversation uses. ' +
 		'Never imitate a command line, and never invent system messages, status banners, or error codes.';
 
 	let phase = $state<Phase>('idle');
@@ -446,17 +455,26 @@
 		const history = turns.slice(0, -1).filter((t) => !t.notice);
 		const images: string[] = [];
 		const audioUrls: string[] = [];
+		// Only the newest turn's media is sent. Re-sending earlier attachments
+		// emits a placeholder for each one, but the processor derives audio
+		// features from the first waveform alone, so a second recording asked
+		// about later was answered from the first — and every past image would be
+		// re-encoded on every turn for nothing. What those attachments showed is
+		// already carried by the replies about them, which do stay in history.
+		const lastIdx = history.length - 1;
 		const messages = [
 			// The system message must be a plain string: the chat template applies
 			// `| trim` to it unconditionally, where user and assistant turns branch
 			// on string-vs-sequence first. An array here fails with
 			// "Unknown ArrayValue filter: trim".
 			{ role: 'system', content: SYSTEM_PROMPT },
-			...history.map((t) => {
+			...history.map((t, i) => {
 				const parts: Record<string, string>[] = [];
-				for (const a of t.attachments ?? []) {
-					parts.push({ type: a.kind });
-					(a.kind === 'image' ? images : audioUrls).push(a.url);
+				if (i === lastIdx) {
+					for (const a of t.attachments ?? []) {
+						parts.push({ type: a.kind });
+						(a.kind === 'image' ? images : audioUrls).push(a.url);
+					}
 				}
 				// Assistant turns go back as their answer only — reasoning stripped,
 				// which is what the chat template itself does.
@@ -464,6 +482,9 @@
 				if (body) parts.push({ type: 'text', text: body });
 				return { role: t.role, content: parts };
 			})
+			// A past turn that carried only an attachment has nothing left once its
+			// media is dropped, so it is not sent as an empty turn.
+			.filter((m) => m.content.length > 0)
 		];
 
 		// Decoded here rather than in the worker: WebKit gives workers no Web Audio
