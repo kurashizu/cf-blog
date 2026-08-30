@@ -15,6 +15,17 @@
 		type ChatConfig,
 		type GpuSupport
 	} from './engine';
+	import {
+		loadSessions,
+		putSession,
+		deleteSession as dbDeleteSession,
+		clearSessions,
+		sessionsSize,
+		titleFor,
+		newSessionId,
+		type Session,
+		type StoredAttachment
+	} from './sessions';
 
 	type Phase = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
 
@@ -67,6 +78,12 @@
 	/** Real prompt length of the last turn, reported by the worker. */
 	let usedTokens = $state(0);
 	let thinkMode = $state(false);
+	let sessions = $state<Session[]>([]);
+	let sessionId = $state('');
+	/** Refreshed whenever the storage panel opens, so the figure is current. */
+	let savedSize = $state<{ count: number; bytes: number } | null>(null);
+	/** Shown once per session when THINK is flipped with turns already present. */
+	let thinkWarned = $state(false);
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
 	let completionIdx = $state(-1);
@@ -87,6 +104,7 @@
 	const COMMANDS = [
 		{ name: 'help', hint: 'list these commands' },
 		{ name: 'clear', hint: 'wipe the conversation' },
+		{ name: 'new', hint: 'start a fresh conversation, keeping this one' },
 		{ name: 'compact', hint: 'summarise the history, freeing context' },
 		{ name: 'stats', hint: 'last decode speed and turn count' }
 	] as const;
@@ -101,6 +119,13 @@
 
 	onMount(() => {
 		config = loadConfig();
+		sessionId = newSessionId();
+		// Reopen the most recent conversation, so a reload continues where the
+		// visitor left off rather than dropping them into a blank page.
+		void loadSessions().then((list) => {
+			sessions = list;
+			if (list.length) restoreSession(list[0]);
+		});
 		probeGpu().then((g) => {
 			gpu = g;
 			// No WebGPU is not fatal any more — wasm still runs, just slowly. The
@@ -121,6 +146,13 @@
 
 	function fmtMb(mb: number): string {
 		return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${Math.round(mb)} MB`;
+	}
+
+	/** Conversations are usually kilobytes, where fmtMb would just read "0 MB". */
+	function fmtBytes(b: number): string {
+		if (b < 1024) return `${Math.round(b)} B`;
+		if (b < 1048576) return `${(b / 1024).toFixed(b < 10240 ? 1 : 0)} KB`;
+		return `${(b / 1048576).toFixed(1)} MB`;
 	}
 
 	/** Starts the worker and wires its protocol to this component's state. */
@@ -229,6 +261,7 @@
 			}
 		}
 		phase = 'ready';
+		void persist();
 		void tick().then(() => inputEl?.focus());
 	}
 
@@ -252,6 +285,101 @@
 		worker.postMessage({ type: 'load' });
 	}
 
+	/**
+	 * Writes the current exchange to IndexedDB, attachments included.
+	 *
+	 * The object URLs held in memory are not storable, so each one is fetched
+	 * back into the Blob it points at — the bytes are still in the page, this
+	 * just takes a reference to them the database can keep.
+	 */
+	async function persist() {
+		if (!sessionId) return;
+		const real = turns.filter((t) => t.content.trim() || t.attachments?.length);
+		if (!real.length) {
+			await dbDeleteSession(sessionId);
+			sessions = sessions.filter((x) => x.id !== sessionId);
+			return;
+		}
+		const stored = await Promise.all(
+			real.map(async (t) => {
+				const atts: StoredAttachment[] = [];
+				for (const a of t.attachments ?? []) {
+					try {
+						atts.push({ kind: a.kind, name: a.name, blob: await (await fetch(a.url)).blob() });
+					} catch {
+						// A revoked URL cannot be recovered; the turn keeps its text.
+					}
+				}
+				return {
+					role: t.role,
+					content: t.content,
+					...(t.notice ? { notice: true } : {}),
+					...(atts.length ? { attachments: atts } : {})
+				};
+			})
+		);
+		const entry: Session = {
+			id: sessionId,
+			title: titleFor(real),
+			updated: Date.now(),
+			think: thinkMode,
+			turns: stored
+		};
+		await putSession(entry);
+		sessions = [entry, ...sessions.filter((x) => x.id !== sessionId)];
+	}
+
+	function restoreSession(sess: Session) {
+		dropAttachments();
+		sessionId = sess.id;
+		thinkMode = sess.think;
+		thinkWarned = false;
+		usedTokens = 0;
+		lastStats = '';
+		turns = sess.turns.map((t) => ({
+			role: t.role,
+			content: t.content,
+			notice: t.notice,
+			// Fresh object URLs: the stored blobs outlive the ones this page made.
+			attachments: t.attachments?.map((a) => ({
+				kind: a.kind,
+				name: a.name,
+				url: URL.createObjectURL(a.blob)
+			}))
+		}));
+		void scrollToEnd();
+	}
+
+	async function startSession() {
+		await persist();
+		dropAttachments();
+		sessionId = newSessionId();
+		thinkWarned = false;
+		usedTokens = 0;
+		lastStats = '';
+		void tick().then(() => inputEl?.focus());
+	}
+
+	async function wipeSessions() {
+		await clearSessions();
+		sessions = [];
+		dropAttachments();
+		sessionId = newSessionId();
+		usedTokens = 0;
+		savedSize = { count: 0, bytes: 0 };
+	}
+
+	async function removeSession(id: string) {
+		await dbDeleteSession(id);
+		sessions = sessions.filter((x) => x.id !== id);
+		// Deleting the open conversation leaves the page on a fresh one.
+		if (id === sessionId) {
+			dropAttachments();
+			sessionId = newSessionId();
+			usedTokens = 0;
+		}
+	}
+
 	function dropAttachments() {
 		for (const t of turns) t.attachments?.forEach((a) => URL.revokeObjectURL(a.url));
 		turns = [];
@@ -272,6 +400,10 @@
 				return;
 			case 'clear':
 				dropAttachments();
+				void persist();
+				return;
+			case 'new':
+				void startSession();
 				return;
 			case 'stats':
 				notice(
@@ -402,27 +534,36 @@
 			return;
 		}
 		const chunks: Blob[] = [];
-		recorder = new MediaRecorder(recStream);
-		recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-		recorder.onstop = () => {
+		const rec = new MediaRecorder(recStream);
+		recorder = rec;
+		rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+		rec.onstop = () => {
 			// Release the mic as soon as the take ends, so no tab indicator lingers.
 			recStream?.getTracks().forEach((t) => t.stop());
 			recStream = null;
 			recording = false;
+			recorder = null;
 			if (!chunks.length) return;
-			const blob = new Blob(chunks, { type: recorder?.mimeType || 'audio/webm' });
+			// Read the type from `rec` rather than the `recorder` field, and only
+			// now: stopRecording() clears that field synchronously while this fires
+			// afterwards, so the field is already null, and the recorder only
+			// settles on a concrete container once started. The old code took
+			// `recorder?.mimeType` here and always fell back to audio/webm — which
+			// happens to name what Chrome produces, but Safari records mp4, and an
+			// mp4 labelled webm will not play back.
+			const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
 			const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 			pending = [...pending, { kind: 'audio', url: URL.createObjectURL(blob), name: `recording ${stamp}` }];
 			void tick().then(() => inputEl?.focus());
 		};
-		recorder.start();
+		rec.start();
 		recording = true;
 		playSound('click');
 	}
 
 	function stopRecording() {
+		// The field is cleared in onstop, once the recorder has finished with it.
 		recorder?.stop();
-		recorder = null;
 		playSound('click');
 	}
 
@@ -655,7 +796,10 @@
 		<button
 			onclick={() => {
 				storageOpen = !storageOpen;
-				if (storageOpen) configOpen = false;
+				if (storageOpen) {
+					configOpen = false;
+					void sessionsSize().then((v) => (savedSize = v));
+				}
 				playSound('toggle');
 			}}
 			title="What this page downloads and stores in your browser"
@@ -762,6 +906,76 @@
 			</div>
 			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1">
 				total {fmtMb(TOTAL_DOWNLOAD_MB)}
+			</div>
+
+			<!-- Saved conversations -->
+			<div class="border-t border-white/10 pt-1.5 flex flex-col gap-1.5">
+				<div class="flex items-center justify-between gap-2">
+					<span class="text-white/50">
+						conversations
+						{#if savedSize}
+							<span class="font-mono text-white/35">
+								· {savedSize.count} saved · {fmtBytes(savedSize.bytes)}
+							</span>
+						{/if}
+					</span>
+					<div class="flex gap-1">
+						<button
+							onclick={startSession}
+							class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] rounded-xs font-bold cursor-pointer hover:bg-[#98c379]/20"
+						>
+							NEW
+						</button>
+						<button
+							onclick={wipeSessions}
+							disabled={!sessions.length}
+							class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
+						>
+							DELETE ALL
+						</button>
+					</div>
+				</div>
+				<div class="text-white/35 leading-relaxed">
+					Conversations, including the images and audio in them, are kept in this browser only —
+					they are never uploaded.
+				</div>
+				{#if sessions.length}
+					<div class="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
+						{#each sessions as sess (sess.id)}
+							<div
+								class="flex items-center gap-2 px-1.5 py-1 rounded-xs {sess.id === sessionId
+									? 'bg-[#61afef]/10 border border-[#61afef]/30'
+									: 'border border-transparent hover:bg-white/5'}"
+							>
+								<button
+									onclick={() => restoreSession(sess)}
+									class="flex-1 text-left truncate cursor-pointer {sess.id === sessionId
+										? 'text-[#61afef]'
+										: 'text-white/70 hover:text-white'}"
+									title={sess.title}
+								>
+									{sess.title}
+								</button>
+								{#if sess.think}
+									<span class="text-[#c678dd]/70 font-mono text-[10px] shrink-0">THINK</span>
+								{/if}
+								<span class="font-mono text-white/30 text-[10px] tabular-nums shrink-0">
+									{sess.turns.length} turns
+								</span>
+								<button
+									onclick={() => removeSession(sess.id)}
+									title="Delete this conversation"
+									aria-label="Delete conversation"
+									class="text-white/30 hover:text-[#e06c75] cursor-pointer shrink-0 px-1"
+								>
+									×
+								</button>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="text-white/25 font-mono">no saved conversations yet</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -999,6 +1213,17 @@
 				onclick={() => {
 					thinkMode = !thinkMode;
 					playSound('toggle');
+					// The template injects <|think|> into the first system turn, so it
+					// governs the whole conversation rather than this one message.
+					// Flipping it here rewrites the prefix every earlier turn was
+					// generated under, which the model notices.
+					if (turns.some((t) => !t.notice) && !thinkWarned) {
+						thinkWarned = true;
+						notice(
+							`reasoning is ${thinkMode ? 'on' : 'off'} from here, but it applies to the whole ` +
+								'conversation — start a new one (NEW) for a clean run.'
+						);
+					}
 				}}
 				disabled={phase === 'generating'}
 				title="Let the model reason before answering, folded away above the reply. Slower."
