@@ -1006,7 +1006,8 @@
 		{:else if phase === 'idle'}
 			<div class="m-auto max-w-lg text-center flex flex-col gap-4">
 				<div class="text-white/70 text-sm leading-relaxed">
-					A model that reads <span class="text-[#61afef] font-bold">text, images and sound</span> runs
+					A model that reads <span class="text-[#61afef] font-bold">text and images</span>, and
+					<span class="text-[#e5c07b] font-bold">runs code</span> when a number has to be exact, works
 					entirely in this tab, on your own hardware. Nothing you send leaves the machine — there is
 					no server on the other end of this box.
 				</div>
