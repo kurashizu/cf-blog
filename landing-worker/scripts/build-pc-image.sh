@@ -213,7 +213,14 @@ echo "==> root filesystem: ${USED_KB} KiB used, building a ${SIZE_MB} MiB image"
 
 # mke2fs -d fills the filesystem from a directory, so nothing here needs a loop
 # device or privileges.
-mke2fs -q -t ext4 -d "$ROOTFS" -L krsz-pc -O ^has_journal,^metadata_csum,^64bit \
+#
+# With a journal, which it did without while the guest's writes died with the
+# tab: there was nothing to recover, and leaving it out saved the space and the
+# writes. Now that writes are kept in OPFS and replayed, every power-off is an
+# unclean one -- the tab does not get to unmount -- and without a journal the
+# only way back is a full scan of 410 MiB, which on this CPU takes minutes and
+# ends in a reboot. The journal turns that into a few seconds.
+mke2fs -q -t ext4 -d "$ROOTFS" -L krsz-pc -O ^metadata_csum,^64bit \
 	"$OUT/rootfs.img" "${SIZE_MB}M"
 echo "==> image: $(stat -c %s "$OUT/rootfs.img") bytes"
 
