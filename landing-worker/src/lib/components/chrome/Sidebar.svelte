@@ -16,7 +16,8 @@
 		{ id: 3, key: '3', title: 'UTILITIES', desc: 'HW Test', color: '#e5c07b', icon: '⌨', tooltip: '3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
 		{ id: 4, key: '4', title: 'LLM TABLE', desc: 'Rankings', color: '#98c379', icon: '▤', tooltip: '4: Leaderboard — Artificial Analysis LLM model table [Hotkey: Ctrl+4]' },
 		{ id: 5, key: '5', title: 'KRSZ-VM', desc: 'PC Emu', color: '#d19a66', icon: '⬢', tooltip: '5: krsz-vm — Alpine Linux on an emulated x86 PC, i686 or x86-64 [Hotkey: Ctrl+5]' },
-		{ id: 6, key: '6', title: 'CHATBOT', desc: 'On-GPU', color: '#61afef', icon: '◑', tooltip: '6: chatbot — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]' }
+		{ id: 6, key: '6', title: 'CHATBOT', desc: 'On-GPU', color: '#61afef', icon: '◑', tooltip: '6: chatbot — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]' },
+		{ id: 7, key: '7', title: 'LIFE.LAB', desc: 'Conway', color: '#98c379', icon: '⬗', tooltip: "7: lifelab — Conway's Game of Life, as a campaign: the two rules, still lifes, gliders, collisions, and the glider gun [Hotkey: Ctrl+7]" }
 	];
 
 	function nav(id: number) {
@@ -75,7 +76,7 @@
 	<div data-tour="launchpad" class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
 		<div class="text-xs font-bold text-[#e5c07b] flex items-center justify-between border-b border-white/10 pb-0.5 shrink-0">
 			<span>┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
-			<span class="text-white/50 text-xs">[CTRL+0-5 · T · ?]</span>
+			<span class="text-white/50 text-xs">[CTRL+0-7 · T · ?]</span>
 		</div>
 
 		<div class="grid grid-cols-3 gap-1.5 py-1">
@@ -122,7 +123,7 @@
 
 		<div class="border-t border-white/10 pt-1 text-xs text-white/50 flex justify-between shrink-0 font-mono">
 			<span>PADS: 7 ACTIVE NODES</span>
-			<span>HOTKEY [CTRL+0-5 · T · ?]</span>
+			<span>HOTKEY [CTRL+0-7 · T · ?]</span>
 		</div>
 	</div>
 </div>

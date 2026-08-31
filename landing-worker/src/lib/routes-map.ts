@@ -5,7 +5,8 @@ export const TAB_ROUTES = [
 	'/utils',
 	'/leaderboard',
 	'/krsz-vm',
-	'/chatbot'
+	'/chatbot',
+	'/lifelab'
 ] as const;
 
 export const TAB_TITLES = [
@@ -15,7 +16,8 @@ export const TAB_TITLES = [
 	'KRSZ™ // 3:utils — Hardware Test Bench',
 	'KRSZ™ // 4:leaderboard — LLM Model Table',
 	'KRSZ™ // 5:krsz-vm — x86 PC Emulator',
-	'KRSZ™ // 6:chatbot — In-Browser LLM on WebGPU'
+	'KRSZ™ // 6:chatbot — In-Browser LLM on WebGPU',
+	'KRSZ™ // 7:lifelab — Conway Automaton Laboratory'
 ];
 
 /** Which of the tabs a pathname belongs to — mirrors the root path ('' / '/') to tab 0. */
