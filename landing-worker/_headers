@@ -1,16 +1,25 @@
-# QEMU runs its CPU on a worker thread and shares memory with it, which a
-# browser only permits on a cross-origin isolated page. Scoped to this one
-# route: isolation also means every cross-origin subresource must consent to
-# being embedded, and there is no reason to impose that on pages that gain
-# nothing from it.
+# Cross-origin isolation, for the whole site.
 #
-# The fonts this site loads do consent — Google serves them with
-# cross-origin-resource-policy: cross-origin — which is the only reason this is
-# a header change rather than a font migration.
-/krsz-vm
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: require-corp
-
-/krsz-vm/*
+# QEMU runs its CPU on a worker thread and shares memory with it, which a
+# browser permits only on a cross-origin isolated page. Isolation is a property
+# of a *document*, applied when the server delivers it -- so it cannot be
+# granted to a page reached by a client-side navigation, which creates no
+# document at all. Scoping these headers to /krsz-vm therefore meant the VM
+# worked when its URL was opened directly and failed when it was reached by
+# pressing its tab, which is how anyone actually gets there.
+#
+# The alternative was to make that one tab reload the page. That worked and was
+# wrong: it replayed the boot screen, threw away the client-side router's
+# advantage, and made one tab behave unlike the other seven for reasons no
+# reader could see. Isolating everything costs nothing here and removes the
+# special case.
+#
+# The price of isolation is that every cross-origin subresource must consent by
+# sending cross-origin-resource-policy. Two things are loaded from elsewhere and
+# both already do: Google's fonts (fonts.googleapis.com and fonts.gstatic.com
+# both send it). The chatbot's weights used to come from bucket.krsz.in, which
+# does not send it and has nowhere to add it, so they are served from this
+# origin instead -- see src/routes/model/[file]/+server.ts.
+/*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp

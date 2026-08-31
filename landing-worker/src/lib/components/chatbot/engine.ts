@@ -1,4 +1,3 @@
-import { BUCKET_URL } from '$shared/site-config';
 
 /**
  * The chatbot's model, and everything configurable about how it generates.
@@ -12,9 +11,18 @@ import { BUCKET_URL } from '$shared/site-config';
  * out of the model's own grammar, and it loads in a quarter of the time.
  */
 
-/** Where the mirrored model and the wasm runtime live. */
-export const MODEL_HOST = `${BUCKET_URL}/gguf/`;
-export const WASM_PATH = `${BUCKET_URL}/wllama/wllama.wasm`;
+/**
+ * Where the mirrored model and the wasm runtime live.
+ *
+ * This origin, not the bucket's. The whole site is cross-origin isolated so the
+ * VM tab can share memory with its CPU thread, and an isolated document refuses
+ * any cross-origin subresource that has not said it consents to being embedded.
+ * An R2 custom domain sends no cross-origin-resource-policy and offers nowhere
+ * to add one, so the files come through a route on this origin instead, where
+ * the question does not arise. See src/routes/model/[file]/+server.ts.
+ */
+export const MODEL_HOST = '/model/';
+export const WASM_PATH = '/model/wllama.wasm';
 
 /**
  * Qwen3.5-2B at Q4_K_M, with the vision projector alongside it.

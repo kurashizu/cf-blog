@@ -7,7 +7,7 @@
 	import { theme, cycleTheme, THEME_STYLES } from '$lib/stores/theme';
 	import { initClock } from '$lib/stores/clock';
 	import { initTransport } from '$lib/stores/synth-transport';
-	import { tabIndexFromPath, TAB_ROUTES, navigateTo, consumeInternalNav } from '$lib/routes-map';
+	import { tabIndexFromPath, TAB_ROUTES } from '$lib/routes-map';
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
@@ -58,7 +58,7 @@
 		// can never trap you on their tab.
 		if (e.ctrlKey && !e.metaKey && !e.altKey && e.code >= 'Digit0' && e.code <= 'Digit7') {
 			e.preventDefault();
-			navigateTo(TAB_ROUTES[Number(e.code.slice(-1))], goto);
+			goto(TAB_ROUTES[Number(e.code.slice(-1))]);
 			playSound('click');
 			return;
 		}
@@ -119,14 +119,11 @@
 		initConsoleState();
 		window.addEventListener('keydown', handleKeydown);
 
-		// POST runs on a visit — short, skippable with any key, never shown to
-		// reduced-motion users. Most tab switches are client-side navigation and
-		// never reach here, but the VM tab has to reload the document to get its
-		// cross-origin isolation headers, and replaying the boot sequence because
-		// someone pressed Ctrl+5 is the wrong answer: it is the same session and
-		// they have already watched it.
+		// POST runs on every page load — it is short, skippable with any key, and
+		// never shown to reduced-motion users. Tab switches are client-side
+		// navigation, so it does not reappear when moving between views.
 		const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (!reducedMotion && !consumeInternalNav()) bootVisible = true;
+		if (!reducedMotion) bootVisible = true;
 		else showGuideIfNew();
 
 		// Idempotent and shared with the POST screen's own call — the footer must

@@ -4,7 +4,7 @@
 	import { playSound } from '../../sound';
 	import { theme, cycleTheme, THEME_STYLES } from '../../stores/theme';
 	import { spinnerFrame } from '../../stores/clock';
-	import { tabIndexFromPath, TAB_ROUTES, navigateTo } from '../../routes-map';
+	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$theme]);
@@ -21,7 +21,7 @@
 	];
 
 	function nav(id: number) {
-		navigateTo(TAB_ROUTES[id], goto);
+		goto(TAB_ROUTES[id]);
 		playSound('click');
 	}
 </script>
