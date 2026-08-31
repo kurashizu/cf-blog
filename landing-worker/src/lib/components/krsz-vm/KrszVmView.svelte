@@ -885,21 +885,22 @@
 	const TOPOLOGY = `flowchart TB
     subgraph tab["Your browser tab"]
         direction TB
-        G["Alpine Linux 3.24<br/>32-bit x86"] --- V["v86<br/>x86-to-wasm JIT"]
+        G["Alpine Linux 3.24<br/>i686 or x86-64"] --- V["v86 · JIT<br/>or QEMU · wasm"]
+        V --- GW["Gateway in the page<br/>ARP · DHCP · DNS · TCP"]
         V <-->|"changed blocks,<br/>replayed at boot"| O[("OPFS<br/>overlay")]
     end
     subgraph edge["Worker on this origin"]
         direction TB
-        IMG["/vm/img<br/>1 MiB ranges"]
+        IMG["/vm/img · /vm/pc<br/>1 MiB ranges"]
         NET["/net/wisp<br/>WISP to OmniProxy"]
         DNS["/dns-query<br/>DNS over HTTPS"]
     end
     V -->|"kernel + initrd whole,<br/>disk as it is touched"| IMG
-    V -->|"the guest's TCP<br/>and UDP streams"| NET
-    V -->|"every name<br/>the guest resolves"| DNS
+    GW -->|"the guest's<br/>TCP streams"| NET
+    GW -->|"every name<br/>the guest resolves"| DNS
     IMG --> C{{"Edge cache<br/>immutable, versioned"}}
-    C -->|"miss"| R[("R2<br/>vm/*")]
-    B["CI<br/>build-vm-image"] -->|"apk + mke2fs -d"| R
+    C -->|"miss"| R[("R2<br/>vm/* · pc/*")]
+    B["CI<br/>build-vm-image<br/>build-pc-image"] -->|"apk + mke2fs -d"| R
     NET --> P["OmniProxy<br/>relay endpoint"]
     DNS --> F["cloudflare-dns.com"]
     P --> I(["The internet"])`;
@@ -923,17 +924,18 @@
 					{
 						label: 'DISK',
 						value: 'ext4, streamed in 1 MiB chunks',
-						title: 'QEMU opens its drive as an ordinary file, and the upstream demos download the whole image before starting. This one does not: reads are answered a chunk at a time from the same edge cache the other machines use, and writes are kept in the tab.'
+						title: 'QEMU opens its drive as an ordinary file, and the upstream demos download the whole image before starting. This one does not: reads are answered a chunk at a time from the same edge cache the other machine uses, and writes are kept in the tab.'
 					},
 					{
 						label: 'NETWORK',
 						value: settings.network ? 'via the relay, any host' : 'off',
 						title: "QEMU's own user-mode stack is not in this build, and every backend that is wants a host socket API a tab does not have. What works instead: -netdev socket, whose connection Emscripten turns into a WebSocket, intercepted on the page's own thread and answered by v86's gateway — the same one the other machine here uses, and out through the same relay"
-					}
+					},
+					{ label: 'STATUS', value: 'boots to a root shell in ~2 min' }
 				]
 			: [
 		{ label: 'EMULATOR', value: 'v86 — x86-to-wasm JIT, BSD-2', title: 'copy/v86: a 32-bit x86 PC emulator that JIT-compiles guest code to WebAssembly' },
-		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, x86 (32-bit)', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
+		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, i686', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
 		{ label: 'CPU', value: 'single core, ~Pentium 4 class, no x86-64' },
 		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
 		{
@@ -1264,18 +1266,19 @@
 			<div class="border border-[#98c379]/40 bg-[#98c379]/5 rounded-xs p-2.5 space-y-1.5">
 				<div class="text-xs font-black font-mono text-[#98c379]">BOOTS STRAIGHT INTO A ROOT SHELL</div>
 				<p class="text-[11px] text-white/65 leading-relaxed">
-					The kernel starts, the initramfs mounts the root filesystem off the emulated disk,
-					OpenRC brings the system up and a serial getty logs you in on
-					<span class="font-mono">krsz-vm</span> — no prompt, no password, nothing listening.
-					<span class="font-mono">apk</span> installs packages over the relay,
-					<span class="font-mono">tmux</span> has the mouse, and
-					<span class="font-mono">startx</span> opens an openbox desktop on the VGA side.
+					Either machine: the kernel starts, the initramfs mounts the root filesystem off the
+					emulated disk, OpenRC brings the system up and a serial getty logs you in — no
+					prompt, no password, nothing listening.
+					<span class="font-mono">apk</span> installs packages over the relay and
+					<span class="font-mono">tmux</span> has the mouse. On
+					<span class="font-mono">i686</span> there is a VGA side too, and
+					<span class="font-mono">startx</span> opens an openbox desktop on it.
 				</p>
 				<p class="text-[11px] text-white/45 leading-relaxed">
-					Two decisions shape the rest of it. Hardware autodetection is off — walking the PCI
-					bus triple-faults the emulator — so the drivers this machine needs are named
+					Two decisions shape the rest of it. On the i686 machine hardware autodetection is
+					off — walking the PCI bus triple-faults v86 — so the drivers it needs are named
 					outright, which is also why the display driver only loads when
-					<span class="font-mono">startx</span> asks for it. And the image is served
+					<span class="font-mono">startx</span> asks for it. And both images are served
 					immutable but rebuilt in place, so every URL carries a version: without one the edge
 					kept handing back the previous build, and every fix looked like it had failed.
 				</p>
@@ -1292,12 +1295,12 @@
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1">
 				<div class="text-xs font-black font-mono text-white/60">WHAT ALREADY WORKS</div>
 				<ul class="text-[11px] text-white/55 leading-relaxed list-disc pl-4 space-y-0.5">
-					<li>The image is never downloaded whole: v86 reads 1 MiB chunks over HTTP Range as the guest touches them, through a proxy that caches each chunk at the edge. A boot to a shell moves about 60 MiB of a gigabyte.</li>
+					<li>Neither image is downloaded whole: 1 MiB chunks go over HTTP Range as the guest touches them, through a proxy that caches each chunk at the edge. A boot to a shell moves about 60 MiB of the i686 machine's gigabyte, and under 40 MiB of the x86-64 machine's 410.</li>
 					<li>The kernel and initramfs are built in CI and loaded directly, with no bootloader, so the command line is set by the page rather than typed into a prompt.</li>
 					<li>Everything the guest writes is kept in this browser and replayed over the image on the next boot — install a package once and it is still there tomorrow. CONFIG · DISK turns that off or wipes it.</li>
-					<li>The guest's own TCP and UDP go out through a relay on this origin, and its name lookups through a DNS-over-HTTPS endpoint here; nothing on the internet can reach in.</li>
+					<li>The guest's own TCP goes out through a relay on this origin, and its name lookups through a DNS-over-HTTPS endpoint here; nothing on the internet can reach in. Both machines use the same gateway — v86 brings one, and the x86-64 machine borrows it, because QEMU's own is not in this build.</li>
 					<li>Nothing starts on its own — opening this tab costs you nothing until you press BOOT.</li>
-					<li>While the machine runs it has the keyboard, so the site's own shortcuts step aside; Ctrl+0-5 still switches tabs, and on the VGA screen two Escapes hand the keyboard back.</li>
+					<li>While the machine runs it has the keyboard, so the site's own shortcuts step aside; Ctrl+0-5 still switches tabs, and on the i686 machine's VGA screen two Escapes hand the keyboard back.</li>
 				</ul>
 			</div>
 
