@@ -23,7 +23,10 @@
  * unreachable".
  */
 
-import type { QemuNet } from './qemu-net';
+/** What the shim needs of the gateway: somewhere to put the guest's frames. */
+interface FrameSink {
+	receive(bytes: Uint8Array): void;
+}
 
 /**
  * The host QEMU is told to connect to. Never resolved and never reached: it is
@@ -46,7 +49,7 @@ const CLOSED = 3;
  */
 export function installNetShim(
 	scope: typeof globalThis,
-	getNet: () => QemuNet | null
+	getNet: () => FrameSink | null
 ): () => void {
 	const Real = scope.WebSocket;
 	if (!Real) return () => {};

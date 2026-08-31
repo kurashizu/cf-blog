@@ -20,7 +20,7 @@ import { openpty } from 'xterm-pty';
 import type { Terminal } from '@xterm/xterm';
 import { CHUNK, type OverlayBlocks } from './qemu-disk';
 import { createLazyImage } from './qemu-disk';
-import { QemuNet } from './qemu-net';
+import { WispAdapter } from './v86net/adapter.js';
 import { NET_HOST, installNetShim, sendToGuest } from './qemu-net-shim';
 
 /** Where the built binaries are served from — see routes/vm/qemu. */
@@ -155,7 +155,11 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	// main thread -- so however QEMU's main is scheduled, the WebSocket for
 	// `-netdev socket` is constructed in this scope, where the gateway already
 	// is. Nothing has to be smuggled into a worker.
-	const releaseShim = options.network ? installNetShim(globalThis, () => net) : null;
+	const releaseShim = options.network
+		? installNetShim(globalThis, () =>
+				net ? { receive: (bytes: Uint8Array) => net.receive_from_guest(bytes) } : null
+			)
+		: null;
 
 	const factory = (await import(/* @vite-ignore */ glueUrl)) as {
 		default: (module: Partial<EmscriptenModule>) => Promise<EmscriptenModule>;
@@ -269,11 +273,23 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	// The gateway the guest thinks it is talking to. It is built before the
 	// module because printErr, which is how frames arrive, closes over it.
+	// v86's own gateway, vendored: ARP, DHCP, ICMP, DNS over the same-origin DoH
+	// endpoint, and a TCP implementation with a real state machine. It has been
+	// carrying the other machine on this page for months, and writing a second
+	// one beside it was the wrong trade -- this one has a TLS handshake's worth
+	// of correctness that the second one did not.
 	const net = options.network
-		? new QemuNet({
-				send: sendToGuest,
-				onStatus: (text) => options.onStatus?.(`network: ${text}`)
-			})
+		? new WispAdapter(
+				`${location.protocol === 'https:' ? 'wisps' : 'wisp'}://${location.host}/net/wisp`,
+				{
+					send: sendToGuest,
+					// The resolver has to be same-origin: the lookup is a fetch from
+					// this page, and a public one is a cross-origin request the
+					// browser will not make.
+					doh_server: location.host,
+					onStatus: (text: string) => options.onStatus?.(`network: ${text}`)
+				}
+			)
 		: null;
 
 
