@@ -176,9 +176,11 @@ krsz_resize() {
 	return 0
 }
 krsz_resize
-# A serial line gets no SIGWINCH either, so the size is re-read whenever a
-# prompt is drawn -- which costs one escape sequence and keeps a resized
-# browser window honest.
+# A serial line gets no SIGWINCH either, so the size is re-read before each
+# prompt -- one escape sequence, and a resized browser window stays honest.
+# The measurement happens before the prompt is drawn, so a resize is picked up
+# at the next prompt rather than the moment the window moves; a full-screen
+# program started after that sees the right size, which is what matters.
 PROMPT_COMMAND=krsz_resize
 EOF
 
