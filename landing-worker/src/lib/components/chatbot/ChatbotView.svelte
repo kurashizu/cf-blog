@@ -118,6 +118,9 @@
 	let sessionId = $state('');
 	/** Refreshed whenever the storage panel opens, so the figure is current. */
 	let savedSize = $state<{ count: number; bytes: number } | null>(null);
+	/** What the model weights actually occupy on this device, once measured. */
+	let modelCacheSize = $state<{ count: number; bytes: number } | null>(null);
+	let wipingModel = $state(false);
 	/** Microphones offered in CONFIG; labels need permission, so this is lazy. */
 	let openThink = $state<Set<number>>(new Set());
 	let compacting = $state('');
@@ -415,6 +418,50 @@
 	/** The panel reports what is actually stored, so it is recomputed on change. */
 	async function refreshSize() {
 		savedSize = await sessionsSize();
+		void refreshModelCache();
+	}
+
+	/**
+	 * How much the weights occupy, read from wllama's own cache rather than
+	 * assumed from the download size: a part-finished download leaves a file
+	 * that is smaller than the figure the panel advertises, and after a wipe
+	 * there is nothing there at all.
+	 */
+	async function refreshModelCache() {
+		try {
+			const { CacheManager } = await import('@wllama/wllama/esm/index.js');
+			const entries = await new CacheManager().list();
+			modelCacheSize = {
+				count: entries.length,
+				bytes: entries.reduce((n, e) => n + (e.size || 0), 0)
+			};
+		} catch {
+			// No OPFS, or the library could not be loaded: the panel just omits it.
+			modelCacheSize = null;
+		}
+	}
+
+	/**
+	 * Deletes the downloaded weights. The engine holds them open while it is
+	 * loaded, so the worker is torn down first -- otherwise the files are
+	 * removed from the directory listing but the space is not returned until
+	 * the tab is closed.
+	 */
+	async function wipeModelCache() {
+		if (wipingModel) return;
+		wipingModel = true;
+		try {
+			teardown();
+			const { CacheManager } = await import('@wllama/wllama/esm/index.js');
+			await new CacheManager().clear();
+			phase = 'idle';
+			await refreshModelCache();
+			playSound('click');
+		} catch (e) {
+			notice(`could not clear the model cache: ${e instanceof Error ? e.message : String(e)}`);
+		} finally {
+			wipingModel = false;
+		}
 	}
 
 	async function wipeSessions() {
@@ -948,16 +995,33 @@
 	{#if storageOpen}
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5">
 			<div class="text-white/50 leading-relaxed">
-				The model downloads once and is cached by the browser, so a second visit skips it. Clearing
-				this site's data in your browser frees the space. Both the weights and the inference runtime
-				come from this site's own storage — nothing is fetched from a third party.
+				The model downloads once and is cached by the browser, so a second visit skips it. Both the
+				weights and the inference runtime come from this site's own storage — nothing is fetched
+				from a third party.
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
 				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.model)}</span>
 				<span>vision projector</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
 			</div>
-			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1">
-				total {fmtMb(TOTAL_DOWNLOAD_MB)}
+			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1 flex items-center justify-between gap-2">
+				<span>
+					total {fmtMb(TOTAL_DOWNLOAD_MB)}
+					{#if modelCacheSize}
+						<span class="text-white/35">
+							· {modelCacheSize.count
+								? `${fmtBytes(modelCacheSize.bytes)} cached here`
+								: 'not downloaded yet'}
+						</span>
+					{/if}
+				</span>
+				<button
+					onclick={wipeModelCache}
+					disabled={wipingModel || !modelCacheSize?.count}
+					title="Delete the downloaded weights from this device. The next load downloads them again."
+					class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
+				>
+					{wipingModel ? 'CLEARING…' : 'WIPE MODEL'}
+				</button>
 			</div>
 
 			<!-- Saved conversations -->

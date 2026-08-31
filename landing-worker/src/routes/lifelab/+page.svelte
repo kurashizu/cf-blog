@@ -43,8 +43,11 @@
 	/>
 </svelte:head>
 
-<!-- The ids below are the game's own contract; main.js looks each of them up. -->
-<div id="lifelab">
+<!-- The ids below are the game's own contract; main.js looks each of them up.
+     The negative margins undo the slot's padding: every other view is a
+     document that wants a margin, this one is an application that draws to its
+     own edges. -->
+<div id="lifelab" class="-m-2.5 sm:-m-3.5">
 	<aside id="side">
 		<div id="brand">LIFE<span>.LAB</span><small>CONWAY AUTOMATON · B3/S23</small></div>
 		<button id="shopbtn" title="Spend credits on aids">
