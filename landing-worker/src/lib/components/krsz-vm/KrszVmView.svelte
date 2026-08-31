@@ -1056,6 +1056,12 @@
 						</span>
 					{/if}
 				</div>
+				<!-- Both of these belong to the i686 machine. The x86-64 one runs
+				     -nographic, so there is no VGA to switch to, and the on-screen
+				     keyboard sends scancodes to v86's keyboard controller, which QEMU
+				     has no equivalent of -- offering either would be a button that
+				     does nothing, or worse, shows a black rectangle. -->
+				{#if settings.machine === 'x86'}
 				<button
 					onclick={cycleView}
 					title="Which of the machine's two outputs is shown. On AUTO it follows the guest: the serial terminal while it is a shell, the VGA screen once something takes the display graphically."
@@ -1075,6 +1081,7 @@
 				>
 					⌨ KEYS
 				</button>
+				{/if}
 				<button
 					onclick={restart}
 					title="Rebuild the machine from scratch. Not Ctrl+Alt+Del: the kernel is handed to the emulator directly rather than loaded from the disk, so a guest reboot would leave SeaBIOS with nothing to boot."
@@ -1418,10 +1425,14 @@
 	>
 		<!-- Absolutely centred so the scale factor cannot skew the layout: a
 		     transform does not change the box the parent lays out. -->
-		<div
-			bind:this={termEl}
-			class="absolute inset-0 p-3 {view === 'terminal' ? '' : 'hidden'}"
-		></div>
+		<!-- The padding is on the wrapper, not on the element xterm fills: fit()
+		     sizes the grid from that element's own box, so padding on it is
+		     counted as usable height and the last row lands past the bottom edge,
+		     cut in half. Measured: a 530px box with 12px of padding leaves 506,
+		     which is 25 rows of 20px, and xterm asked for 26. -->
+		<div class="absolute inset-0 p-3 {view === 'terminal' ? '' : 'hidden'}">
+			<div bind:this={termEl} class="w-full h-full"></div>
+		</div>
 
 		<div
 			bind:this={screenEl}
