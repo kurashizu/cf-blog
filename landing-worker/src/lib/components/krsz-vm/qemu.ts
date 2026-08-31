@@ -155,8 +155,15 @@ function consoleName(arch: QemuArch): string {
  */
 export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	if (!crossOriginIsolated) {
+		// Recoverable, and the user cannot be expected to know how: COOP and COEP
+		// are applied when the document is created, so a page that arrived by a
+		// client-side navigation never had them. Reloading this URL asks the
+		// server for them properly. navigateTo() in routes-map should make this
+		// unreachable; the message is here for the paths it cannot cover, such as
+		// a restored bfcache entry or a link from another site.
 		throw new Error(
-			'This page is not cross-origin isolated, so QEMU cannot start its CPU thread.'
+			'This page is not cross-origin isolated, so QEMU cannot start its CPU thread. ' +
+				'Reload this page (Cmd/Ctrl+R) to fix it.'
 		);
 	}
 

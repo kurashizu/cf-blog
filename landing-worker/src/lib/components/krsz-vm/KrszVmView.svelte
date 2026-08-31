@@ -518,6 +518,10 @@
 			term.loadAddon(fitAddon);
 			term.open(termEl);
 			fitTerminal();
+			// fitTerminal can queue a second pass in a rAF when it changes the font
+			// size, so the columns are not final until that has run, and QEMU reads
+			// the terminal once as it starts.
+			await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 			status = 'reading image metadata…';
 			// Each QEMU machine has its own images under its own prefix.
@@ -607,6 +611,10 @@
 			term.loadAddon(fitAddon);
 			term.open(termEl);
 			fitTerminal();
+			// fitTerminal can queue a second pass in a rAF when it changes the font
+			// size, so the columns are not final until that has run, and QEMU reads
+			// the terminal once as it starts.
+			await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 			status = 'fetching firmware and kernel…';
 			const { startRiscv } = await import('./tinyemu');
