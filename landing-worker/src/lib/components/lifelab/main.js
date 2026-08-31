@@ -154,13 +154,39 @@ function teachSetup() {
   syncRun(); updateStats();
 }
 
+/**
+ * Opens the next level and pays for a first clear.
+ *
+ * Shared, because there are two ways to finish one: a goal met, and the lesson
+ * reaching its last step. The lesson used to call finishWin directly and skip
+ * this, so clearing level 00 never opened level 01 -- and since every level
+ * after that is reached through the NEXT LEVEL button rather than the list,
+ * nothing else opened either. The list sat at "00 / 01 ???" no matter how far
+ * the player had actually got.
+ *
+ * @returns the credits earned, which is 0 on a replay.
+ */
+function recordClear() {
+  if (S.idx !== S.unlocked || S.unlocked >= CAMPAIGN - 1) return 0;
+  S.unlocked++;
+  localStorage.setItem('lifelab-unlocked', S.unlocked);
+  // Paid once, on the first clear -- replaying a level should not farm it.
+  S.shop.coins += 2;
+  saveShop(S.shop);
+  tlog('> +2 CREDITS', 't-ok');
+  return 2;
+}
+
 function teachNext() {
   const L = S.L;
   if (!L.lesson) return;
   if (S.teachStep >= L.steps.length - 1) {
     // The lesson is over; the campaign starts at the level after it.
     S.won = true;
-    finishWin(0);
+    const earned = recordClear();
+    buildLevelList();
+    syncShopBadge();
+    finishWin(earned);
     return;
   }
   S.teachStep++;
@@ -777,16 +803,7 @@ function onWin() {
   S.goal = null; S.won = true;
   tlog('> STATUS: COMPLETE', 't-ok');
   banner('COMPLETE');
-  let earned = 0;
-  if (S.idx === S.unlocked && S.unlocked < CAMPAIGN - 1) {
-    S.unlocked++;
-    localStorage.setItem('lifelab-unlocked', S.unlocked);
-    // Paid once, on the first clear -- replaying a level should not farm it.
-    earned = 2;
-    S.shop.coins += earned;
-    saveShop(S.shop);
-    tlog('> +' + earned + ' CREDITS', 't-ok');
-  }
+  const earned = recordClear();
   buildLevelList();
   syncShopBadge();
   // Long enough to watch what just happened, short enough not to feel stuck.

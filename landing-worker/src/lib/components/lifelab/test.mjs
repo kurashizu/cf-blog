@@ -430,5 +430,22 @@ for (const n of ['toad', 'beacon']) {
   const missing = Object.keys(RLES).filter(n => !used.has(n));
   check('every pattern is used by a level', missing.length === 0, missing.join(' ') || 'all covered');
 }
+// The lesson is finished by walking its steps, not by meeting a goal, so it
+// leaves by a different door -- and that door used to skip the unlock, which
+// left the level list stuck at "00 / 01 ???" for the whole campaign. This
+// checks the shape that made that possible: every campaign level must be
+// reachable by clearing the one before it, with no gap at the lesson.
+{
+  const campaign = LEVELS.filter((l) => !l.sandbox);
+  check('the lesson is first', !!campaign[0].lesson, campaign[0].name);
+  check('only one lesson', campaign.filter((l) => l.lesson).length === 1, 'the rest must have goals');
+  const goalless = campaign.filter((l) => !l.lesson && !l.goal).map((l) => l.tab);
+  check('every other level has a goal to clear', goalless.length === 0,
+    goalless.length ? `no goal on ${goalless.join(' ')}` : 'all clearable');
+  check('the sandbox is last and outside the campaign',
+    LEVELS[LEVELS.length - 1].sandbox === true && campaign.length === LEVELS.length - 1,
+    `${campaign.length} campaign levels + sandbox`);
+}
+
 console.log(fails ? `\n${fails} FAILURES` : '\nALL PASS');
 process.exit(fails ? 1 : 0);
