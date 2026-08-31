@@ -22,14 +22,21 @@
 		// so the site's own single-key shortcuts stand aside. Ctrl+0-7 still
 		// works: the layout handles those before anything else sees them.
 		suspendNavHotkeys.set(true);
+		let game: { stop: () => void } | null = null;
 		void (async () => {
 			await import('$lib/components/lifelab/style.css');
 			if (disposed) return;
-			await import('$lib/components/lifelab/main.js');
-			if (!disposed) mounted = true;
+			// start() rather than an import side effect: the module is cached across
+			// navigations but this markup is not, so every mount has to rebind.
+			const mod = await import('$lib/components/lifelab/main.js');
+			if (disposed) return;
+			game = mod;
+			mod.start();
+			mounted = true;
 		})();
 		return () => {
 			disposed = true;
+			game?.stop();
 			suspendNavHotkeys.set(false);
 		};
 	});

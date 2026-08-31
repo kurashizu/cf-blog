@@ -11,10 +11,12 @@ import { LEVELS } from './levels.js';
 import { ITEMS, loadShop, saveShop } from './shop.js';
 
 const $ = s => document.querySelector(s);
-const termEl = $('#term'), cv = $('#cv'), ctx = cv.getContext('2d');
-const topbar = $('#topbar'), tray = $('#tray'), levelsEl = $('#levels'), msgEl = $('#msg');
-const modeBtn = $('#modebtn'), lvHead = $('#lvhead'), wipeBtn = $('#wipebtn');
-const shopBtn = $('#shopbtn'), coinsEl = $('#coins');
+// Bound in start(), not at import. A module is evaluated once and cached, but
+// the page it draws into is created and destroyed on every SPA navigation --
+// so binding here left the second visit holding elements that were no longer
+// in the document, drawing into a detached canvas: a blank panel.
+let termEl, cv, ctx, topbar, tray, levelsEl, msgEl;
+let modeBtn, lvHead, wipeBtn, shopBtn, coinsEl;
 const guideEl = $('#guide'), gstep = $('#gstep'), gtext = $('#gtext');
 const PCOLORS = ['#98c379', '#e5c07b', '#c678dd', '#56b6c2', '#e06c75', '#61afef', '#d19a66'];
 
@@ -828,9 +830,11 @@ function fitCamera() {
   const r = cv.getBoundingClientRect();
   if (!r.width) return;
   const s = Math.min((r.width - 60) / S.L.w, (r.height - 60) / S.L.h);
-  // The lesson draws a number inside every cell, so it needs cells big enough
-  // to read one. Elsewhere 22px is plenty and a bigger cap only wastes space.
-  S.cam.s = Math.max(1.5, Math.min(S.L.lesson ? 54 : 22, s));
+  // Caps, not targets. The lesson draws a number inside every cell so it needs
+  // room to read one, but letting a 13x9 board fill an 842px panel gives 54px
+  // cells that read as a bug rather than a board; 30 is legible and still looks
+  // like a grid. Elsewhere 22 is plenty.
+  S.cam.s = Math.max(1.5, Math.min(S.L.lesson ? 30 : 22, s));
   S.cam.x = (r.width - S.L.w * S.cam.s) / 2;
   S.cam.y = (r.height - S.L.h * S.cam.s) / 2;
 }
@@ -840,8 +844,18 @@ function toCell(e) {
   return { x: Math.floor((mx - S.cam.x) / S.cam.s), y: Math.floor((my - S.cam.y) / S.cam.s), mx, my };
 }
 
-cv.addEventListener('contextmenu', e => e.preventDefault());
-cv.addEventListener('pointerdown', e => {
+/**
+ * Input, bound per mount.
+ *
+ * The canvas handlers go on the element this mount created; the window ones are
+ * kept as references so unbindInput can take them off again, or a second visit
+ * would leave the first visit's keyboard handler still running.
+ */
+let onPointerMove = null, onPointerUp = null, onKeyDown = null;
+
+function bindInput() {
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  cv.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (e.button === 1) return;
   const c = toCell(e);
@@ -865,7 +879,7 @@ cv.addEventListener('pointerdown', e => {
     placeStamp(c.x, c.y);
   }
 });
-window.addEventListener('pointermove', e => {
+  onPointerMove = e => {
   S.hover = toCell(e);
   if (!S.drag) return;
   if (S.drag.mode === 'pan') {
@@ -877,9 +891,11 @@ window.addEventListener('pointermove', e => {
   } else if (S.drag.mode === 'erase') {
     const c = toCell(e); if (inGrid(c)) paint(c.x, c.y, 0);
   }
-});
-window.addEventListener('pointerup', () => { S.drag = null; });
-cv.addEventListener('wheel', e => {
+  };
+  onPointerUp = () => { S.drag = null; };
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  cv.addEventListener('wheel', e => {
   e.preventDefault();
   const r = cv.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
@@ -890,12 +906,21 @@ cv.addEventListener('wheel', e => {
   S.cam.s = ns;
 }, { passive: false });
 
-window.addEventListener('keydown', e => {
+  onKeyDown = e => {
   if (e.code === 'Space') { e.preventDefault(); startPause(); }
   else if (e.code === 'KeyN' || e.code === 'Period') stepOnce();
   else if (e.code === 'KeyR') { if (S.stamp) S.rot = (S.rot + 1) % 4; }
-  else if (e.code === 'Escape') { S.stamp = null; S.tool = 'pan'; syncTools(); }
-});
+    else if (e.code === 'Escape') { S.stamp = null; S.tool = 'pan'; syncTools(); }
+  };
+  window.addEventListener('keydown', onKeyDown);
+}
+
+function unbindInput() {
+  if (onPointerMove) window.removeEventListener('pointermove', onPointerMove);
+  if (onPointerUp) window.removeEventListener('pointerup', onPointerUp);
+  if (onKeyDown) window.removeEventListener('keydown', onKeyDown);
+  onPointerMove = onPointerUp = onKeyDown = null;
+}
 
 /* ---------------- rendering ---------------- */
 function resize() {
@@ -1364,24 +1389,61 @@ function frame(t) {
     if (acc > 4) acc = 0;
   } else acc = 0;
   draw(); updateStats(); updateGuide();
-  requestAnimationFrame(frame);
+  raf = requestAnimationFrame(frame);
 }
 
-modeBtn.onclick = chooseMode;
-wipeBtn.onclick = wipeSave;
-shopBtn.onclick = openShop;
-shopBtn.querySelector('.sicon').innerHTML = ICONS.shop;
-syncShopBadge();
+let raf = 0, ro = null;
 
-new ResizeObserver(() => resize()).observe($('#cvwrap'));
+/**
+ * Binds to the markup the page has just rendered and starts the machine.
+ *
+ * Called on every mount rather than at import, because the module is cached
+ * across navigations while the DOM it drives is not.
+ */
+export function start() {
+  stop();
+  termEl = $('#term'); cv = $('#cv'); ctx = cv.getContext('2d');
+  topbar = $('#topbar'); tray = $('#tray'); levelsEl = $('#levels'); msgEl = $('#msg');
+  modeBtn = $('#modebtn'); lvHead = $('#lvhead'); wipeBtn = $('#wipebtn');
+  shopBtn = $('#shopbtn'); coinsEl = $('#coins');
 
-// headless driver for automated checks
-window.lifelab = { S, loadLevel, doStep, startPause, step: n => { for (let i = 0; i < n; i++) doStep(); draw(); updateStats(); } };
+  // Progress is read fresh: a wipe in another tab, or simply a later visit,
+  // should not be masked by whatever the first import happened to see.
+  S.unlocked = Math.min(LEVELS.length - 1, +(localStorage.getItem('lifelab-unlocked') || 0));
+  S.shop = loadShop();
+  S.teachStep = 0;
+  S.saw4x4 = false;
+  last = performance.now(); acc = 0;
 
-tlog('LIFE.LAB v0.1 — cellular automaton laboratory', 't-hd');
-tlog('rule: B3/S23 | grid: bounded | host: krsz.in');
-// A level is loaded so the canvas has something to size itself against; the
-// chooser sits over it until the player picks a mode.
-loadLevel(Math.min(S.unlocked, LEVELS.length - 2), { quiet: true });
-chooseMode();
-requestAnimationFrame(frame);
+  modeBtn.onclick = chooseMode;
+  wipeBtn.onclick = wipeSave;
+  shopBtn.onclick = openShop;
+  shopBtn.querySelector('.sicon').innerHTML = ICONS.shop;
+  syncShopBadge();
+
+  bindInput();
+  ro = new ResizeObserver(() => resize());
+  ro.observe($('#cvwrap'));
+
+  // headless driver for automated checks
+  window.lifelab = { S, loadLevel, doStep, startPause, step: n => { for (let i = 0; i < n; i++) doStep(); draw(); updateStats(); } };
+
+  tlog('LIFE.LAB v0.1 — cellular automaton laboratory', 't-hd');
+  tlog('rule: B3/S23 | grid: bounded | host: krsz.in');
+  // A level is loaded so the canvas has something to size itself against; the
+  // chooser sits over it until the player picks a mode.
+  loadLevel(Math.min(S.unlocked, LEVELS.length - 2), { quiet: true });
+  chooseMode();
+  raf = requestAnimationFrame(frame);
+}
+
+/** Stops the loop and releases the observer, so a hidden view costs nothing. */
+export function stop() {
+  if (raf) cancelAnimationFrame(raf);
+  raf = 0;
+  ro?.disconnect();
+  ro = null;
+  unbindInput();
+  S.running = false;
+  clearTimeout(winTimer);
+}
