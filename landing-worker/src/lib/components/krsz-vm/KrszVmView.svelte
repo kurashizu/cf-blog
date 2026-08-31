@@ -7,6 +7,10 @@
 		findDiskBuffer,
 		loadOverlay,
 		overlayStats,
+		bufferStore,
+		chunkStore,
+		readOverlay,
+		replayOverlay,
 		saveOverlay,
 		storedOverlaySize,
 		type DiskBuffer,
@@ -526,6 +530,19 @@
 			}
 			imageSize = rootfs.size;
 
+			// Read before the machine is built: the replay happens inside preRun,
+			// which is synchronous, so the bytes have to be in hand by then.
+			const diskVersion = String(rootfs.version ?? rootfs.size);
+			let savedOverlay: Uint8Array | null = null;
+			if (settings.persistDisk) {
+				status = 'reading saved disk…';
+				try {
+					savedOverlay = await readOverlay(overlayName('x86_64'));
+				} catch {
+					overlayNote = 'saved disk could not be read';
+				}
+			}
+
 			status = 'loading QEMU (66 MB wasm)…';
 			const { startQemu } = await import('./qemu');
 			const machine = await startQemu({
@@ -541,11 +558,34 @@
 				rootfsSize: rootfs.size,
 				cmdline: '',
 				network: settings.network,
+				restore: (disk) => {
+					// Synchronous, inside preRun, before the guest reads a block. The
+					// bytes were fetched above because this is not a place that can
+					// await.
+					if (!savedOverlay) return;
+					const restored = replayOverlay(
+						savedOverlay,
+						diskVersion,
+						chunkStore(disk.chunks, disk.dirty, disk.chunkBytes, disk.ensureChunk)
+					);
+					if (restored) {
+						overlay = restored;
+						overlayNote = `restored ${formatBytes(restored.bytes)}`;
+					} else {
+						// What was saved belongs to a different build of the image;
+						// replaying it onto this one would corrupt it.
+						void clearOverlay(overlayName('x86_64'));
+					}
+				},
 				onStatus: (text: string) => {
 					if (phase === 'loading') status = text;
 				}
 			});
 			qemu = machine;
+			overlayKey = { name: overlayName('x86_64'), version: diskVersion };
+			if (settings.persistDisk) {
+				overlaySaver = setInterval(() => void persistOverlay(), 20000);
+			}
 			if (new URLSearchParams(location.search).has('debug')) {
 				const w = window as unknown as { __krszqemu?: unknown; __term?: unknown };
 				w.__krszqemu = machine;
@@ -586,7 +626,7 @@
 		if (diskBuffer && settings.persistDisk) {
 			status = 'restoring saved disk…';
 			try {
-				const restored = await loadOverlay(name, version, diskBuffer);
+				const restored = await loadOverlay(name, version, bufferStore(diskBuffer));
 				if (restored) {
 					overlay = restored;
 					overlayNote = `restored ${formatBytes(restored.bytes)}`;
@@ -608,12 +648,21 @@
 		(emulator as any)?.run?.();
 	}
 
+	/** The running machine's disk, whichever machine that is. */
+	function currentStore() {
+		if (qemu?.disk) {
+			const d = qemu.disk;
+			return chunkStore(d.chunks, d.dirty, d.chunkBytes, d.ensureChunk);
+		}
+		return diskBuffer ? bufferStore(diskBuffer) : null;
+	}
+
 	async function persistOverlay() {
-		if (!diskBuffer || !overlayKey || !settings.persistDisk) return;
+		const store = currentStore();
+		if (!store || !overlayKey || !settings.persistDisk) return;
 		const { name, version } = overlayKey;
-		const pending = overlayStats(diskBuffer);
-		if (pending.blocks === 0) return;
-		const written = await saveOverlay(name, version, diskBuffer);
+		if (store.dirtyBlocks().length === 0) return;
+		const written = await saveOverlay(name, version, store);
 		if (written) {
 			overlay = written;
 			overlayStored = written.bytes;
@@ -625,10 +674,20 @@
 
 	async function wipeOverlay() {
 		playSound('click');
-		await clearOverlay(overlayKey?.name ?? 'rootfs');
+		await clearOverlay(overlayKey?.name ?? overlayName(settings.machine));
 		overlayStored = 0;
 		overlayNote = phase === 'running' ? 'wiped — this session is still running on its changes' : 'wiped';
 	}
+
+	// The panel shows the selected machine's saved size, not whichever was asked
+	// for first: they keep separate overlays and showing one under the other's
+	// name is how the x86-64 panel came to report the i686 machine's bytes.
+	$effect(() => {
+		const name = overlayName(settings.machine);
+		void storedOverlaySize(name).then((size) => {
+			if (overlayName(settings.machine) === name) overlayStored = size;
+		});
+	});
 
 	function formatBytes(bytes: number): string {
 		if (bytes < 1024) return `${bytes} B`;
@@ -851,9 +910,14 @@
 		lastEscape = now;
 	}
 
+	/** The overlay file each machine owns. They must not share one: the blocks
+	 *  are offsets into one particular filesystem, and replaying one machine's
+	 *  onto the other would corrupt it. */
+	const overlayName = (machine: Settings['machine']) =>
+		machine === 'x86_64' ? 'rootfs-pc' : 'rootfs';
+
 	onMount(() => {
 		loadSettings();
-		void storedOverlaySize('rootfs').then((size) => (overlayStored = size));
 		const onResize = () => fitScreen();
 		window.addEventListener('resize', onResize);
 		// A closed tab gives no chance to save afterwards, and this is the last
@@ -923,8 +987,10 @@
 					{ label: 'DISPLAY', value: '16550 serial, via xterm.js' },
 					{
 						label: 'DISK',
-						value: 'ext4, streamed in 1 MiB chunks',
-						title: 'QEMU opens its drive as an ordinary file, and the upstream demos download the whole image before starting. This one does not: reads are answered a chunk at a time from the same edge cache the other machine uses, and writes are kept in the tab.'
+						value: settings.persistDisk
+							? `ext4, streamed in 1 MiB chunks · ${overlay.blocks ? formatBytes(overlay.bytes) + ' changed' : 'unchanged'}`
+							: 'ext4 image, streamed in 1 MiB chunks',
+						title: 'QEMU opens its drive as an ordinary file, and the upstream demos download the whole image before starting. This one does not: reads are answered a chunk at a time from the same edge cache the other machine uses, and what the guest writes is kept in this browser and replayed at the next boot.'
 					},
 					{
 						label: 'NETWORK',
@@ -1109,13 +1175,8 @@
 						<span class="text-[10px] font-mono text-white/40">nothing on the internet can reach in</span>
 					</div>
 
-					<!-- min-h is the height of a button row (measured: 30px). This row holds
-					     buttons for the i686 machine and one line of text for the other, and
-					     without it the row shrinks on the switch and its label re-centres --
-					     two pixels of movement under the pointer that just clicked. -->
 					<div class="flex flex-wrap items-center gap-2 min-h-[30px]">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISK</span>
-						{#if settings.machine === 'x86'}
 						<button
 							onclick={() => (settings.persistDisk = !settings.persistDisk)}
 							title="Keep what the guest writes in this browser's origin-private filesystem and replay it on the next boot. The image itself stays read-only and shared; only the difference is stored, and only in this browser."
@@ -1137,15 +1198,6 @@
 								? ` · ${overlayNote}`
 								: ''}
 						</span>
-						{:else}
-						<!-- The x86-64 machine keeps its writes in a Map that dies with the
-						     tab. Showing the toggle here would offer a switch that does
-						     nothing, and the byte count beside it belongs to the other
-						     machine's overlay. -->
-						<span class="text-[10px] font-mono text-white/40">
-							writes stay in memory · gone at power off
-						</span>
-						{/if}
 					</div>
 
 					{#if settings.machine === 'x86'}
@@ -1271,12 +1323,11 @@
 							RAM, VGA RAM, boot mode and the command line take effect on the next boot;
 							screen size applies the next time <span class="text-white/50">startx</span> runs.
 						{:else}
-							RAM and network take effect on the next boot. This machine has no VGA
-							side, so it is the serial terminal throughout, and nothing it writes
-							is kept — that one is the i686 machine's. It needs a cross-origin
-							isolated page for its CPU thread, and downloads a 66 MB emulator
-							before it starts; the disk itself is still streamed a megabyte at a
-							time.
+							RAM, network and disk take effect on the next boot. This machine has
+							no VGA side, so it is the serial terminal throughout; it needs a
+							cross-origin isolated page for its CPU thread, and downloads a 66 MB
+							emulator before it starts — the disk itself is still streamed a
+							megabyte at a time.
 						{/if}
 					</p>
 				</div>

@@ -24,7 +24,7 @@
  */
 
 const MAGIC = 'KRSZVM01';
-const BLOCK_BYTES = 256;
+export const BLOCK_BYTES = 256;
 const HEADER_BYTES = 8 + 4 + 4 + 4;
 
 /** Past this the overlay is doing the image's job, and the browser will start refusing writes. */
@@ -39,6 +39,63 @@ export interface DiskBuffer {
 export interface OverlayStats {
 	blocks: number;
 	bytes: number;
+}
+
+/**
+ * What the two machines have in common, which is less than it looks: a set of
+ * block numbers the guest has written, and a way to read and write one block by
+ * number. v86 holds 256-byte blocks directly; QEMU holds megabyte chunks and
+ * addresses blocks inside them. Everything below works through this, so both
+ * write the same file and either can read the other's.
+ */
+export interface BlockStore {
+	dirtyBlocks(): number[];
+	readBlock(block: number): Uint8Array | undefined;
+	writeBlock(block: number, data: Uint8Array): void;
+}
+
+/** A v86 async buffer, seen as a block store. */
+export function bufferStore(buffer: DiskBuffer): BlockStore {
+	return {
+		dirtyBlocks: () => [...buffer.block_cache_is_write].filter((n) => buffer.block_cache.has(n)),
+		readBlock: (block) => buffer.block_cache.get(block),
+		writeBlock: (block, data) => {
+			buffer.block_cache.set(block, data);
+			buffer.block_cache_is_write.add(block);
+		}
+	};
+}
+
+/**
+ * QEMU's lazy image, seen as a block store. `chunks` holds whole megabytes and
+ * `dirty` names the blocks within them the guest has written; a block is read
+ * and written as a slice of the chunk that contains it.
+ *
+ * `ensureChunk` is how a block gets written into a chunk that is not resident
+ * yet — on load the image has been touched by nothing, so the chunk it belongs
+ * to has to be brought in before the saved bytes can be laid over it.
+ */
+export function chunkStore(
+	chunks: Map<number, Uint8Array>,
+	dirty: Set<number>,
+	chunkBytes: number,
+	ensureChunk: (index: number) => Uint8Array
+): BlockStore {
+	const per = chunkBytes / BLOCK_BYTES;
+	return {
+		dirtyBlocks: () => [...dirty],
+		readBlock: (block) => {
+			const chunk = chunks.get(Math.floor(block / per));
+			if (!chunk) return undefined;
+			const at = (block % per) * BLOCK_BYTES;
+			return chunk.subarray(at, at + BLOCK_BYTES);
+		},
+		writeBlock: (block, data) => {
+			const chunk = ensureChunk(Math.floor(block / per));
+			chunk.set(data, (block % per) * BLOCK_BYTES);
+			dirty.add(block);
+		}
+	};
 }
 
 function isDiskBuffer(value: unknown): value is DiskBuffer {
@@ -156,9 +213,9 @@ async function overlayFile(name: string, create: boolean): Promise<FileSystemFil
 export async function saveOverlay(
 	name: string,
 	version: string,
-	buffer: DiskBuffer
+	store: BlockStore
 ): Promise<OverlayStats | null> {
-	const dirty = [...buffer.block_cache_is_write].filter((n) => buffer.block_cache.has(n));
+	const dirty = store.dirtyBlocks();
 	const versionBytes = new TextEncoder().encode(version);
 	const total = HEADER_BYTES + versionBytes.length + dirty.length * (4 + BLOCK_BYTES);
 	if (total > OVERLAY_LIMIT) return null;
@@ -174,7 +231,7 @@ export async function saveOverlay(
 	let offset = HEADER_BYTES + versionBytes.length;
 	for (const block of dirty) {
 		view.setUint32(offset, block, true);
-		const data = buffer.block_cache.get(block);
+		const data = store.readBlock(block);
 		// A short block would silently shift everything after it, so pad rather
 		// than trusting every entry to be exactly one block long.
 		out.set(data && data.length === BLOCK_BYTES ? data : new Uint8Array(BLOCK_BYTES), offset + 4);
@@ -201,17 +258,40 @@ export async function saveOverlay(
 export async function loadOverlay(
 	name: string,
 	version: string,
-	buffer: DiskBuffer
+	store: BlockStore
 ): Promise<OverlayStats | null> {
+	const bytes = await readOverlay(name);
+	return bytes ? replayOverlay(bytes, version, store) : null;
+}
+
+/**
+ * Reads the saved file, without replaying it.
+ *
+ * Split from the replay because QEMU needs the two halves at different moments:
+ * its disk is built inside Emscripten's preRun, which is synchronous and runs
+ * before the guest executes, so the bytes have to be in hand by then. Reading
+ * them is the part that has to await.
+ */
+export async function readOverlay(name: string): Promise<Uint8Array | null> {
 	const handle = await overlayFile(name, false);
 	if (!handle) return null;
-
-	let bytes: Uint8Array;
 	try {
-		bytes = new Uint8Array(await (await handle.getFile()).arrayBuffer());
+		return new Uint8Array(await (await handle.getFile()).arrayBuffer());
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Replays an overlay that has already been read. Must run before the guest
+ * executes anything: a block read before it is replaced would be the image's
+ * version of a filesystem the rest of the overlay assumes has moved on.
+ */
+export function replayOverlay(
+	bytes: Uint8Array,
+	version: string,
+	store: BlockStore
+): OverlayStats | null {
 	if (bytes.length < HEADER_BYTES) return null;
 
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -230,8 +310,7 @@ export async function loadOverlay(
 		const block = view.getUint32(offset, true);
 		// Copied, not viewed: the guest writes into these arrays in place, and a
 		// view would have the whole file behind it.
-		buffer.block_cache.set(block, bytes.slice(offset + 4, offset + 4 + BLOCK_BYTES));
-		buffer.block_cache_is_write.add(block);
+		store.writeBlock(block, bytes.slice(offset + 4, offset + 4 + BLOCK_BYTES));
 		offset += 4 + BLOCK_BYTES;
 	}
 	return { blocks: count, bytes: count * BLOCK_BYTES };

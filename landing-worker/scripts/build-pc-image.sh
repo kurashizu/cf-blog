@@ -115,6 +115,24 @@ set -g default-terminal "screen-256color"
 set -g status-style "bg=colour236,fg=colour252"
 EOF
 
+# The gateway on the page runs a DHCP server, so the guest only has to ask --
+# but something has to ask. Without this the NIC is present and down, and the
+# network looks broken from inside while the relay sits there unused.
+mkdir -p "$ROOTFS/etc/network"
+cat > "$ROOTFS/etc/network/interfaces" <<'EOF'
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+EOF
+
+# A resolver to fall back on if a lease ever arrives without one; udhcpc
+# rewrites this when it does. The gateway answers DNS at its own address.
+cat > "$ROOTFS/etc/resolv.conf" <<'EOF'
+nameserver 192.168.86.1
+EOF
+
 mkdir -p "$ROOTFS/etc/profile.d"
 cat > "$ROOTFS/etc/profile.d/krsz.sh" <<'EOF'
 export PS1='\[\033[1;32m\]\u@krsz-pc\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
@@ -129,6 +147,35 @@ done
 for svc in bootmisc hostname; do
 	ln -sf "/etc/init.d/$svc" "$ROOTFS/etc/runlevels/boot/$svc" 2>/dev/null || true
 done
+# The NIC needs configuring, and that is the networking service's job.
+ln -sf /etc/init.d/networking "$ROOTFS/etc/runlevels/boot/networking" 2>/dev/null || true
+
+# virtio_net is a module in Alpine's linux-virt, and the initramfs loads only
+# what `modules=` on the cmdline names -- which is the disk's driver, because
+# that is what root depends on. Nothing loads this one, so it is named here and
+# modprobed before networking runs; otherwise there is no eth0 to configure.
+cat > "$ROOTFS/etc/init.d/vmnet" <<'EOF'
+#!/sbin/openrc-run
+description="Loads the virtio NIC's driver, which nothing else does"
+depend() {
+	before net networking
+}
+start() {
+	ebegin "Loading virtio_net"
+	modprobe virtio_net 2>/dev/null
+	# Give the PCI probe a moment to create the interface before networking
+	# looks for it.
+	for _ in 1 2 3 4 5 6 7 8 9 10; do
+		[ -d /sys/class/net/eth0 ] && break
+		sleep 0.2
+	done
+	[ -d /sys/class/net/eth0 ]
+	eend $? "no virtio NIC -- check that networking is enabled on the page"
+}
+EOF
+chmod +x "$ROOTFS/etc/init.d/vmnet"
+ln -sf /etc/init.d/vmnet "$ROOTFS/etc/runlevels/boot/vmnet" 2>/dev/null || true
+
 # hwdrivers scans a bus this machine does not have, and modules loads a list
 # built for real hardware. Both cost seconds and neither finds anything.
 rm -f "$ROOTFS/etc/runlevels/sysinit/hwdrivers" \

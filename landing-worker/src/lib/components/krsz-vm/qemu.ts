@@ -44,6 +44,18 @@ export interface QemuMachine {
 	destroy(): void;
 	/** The network gateway, when one is attached. Exposed for ?debug. */
 	net?: unknown;
+	/**
+	 * The written chunks and the blocks within them the guest has touched, so
+	 * the view can save them to OPFS and replay them on the next boot. Reading
+	 * a block needs its chunk resident, and on a restore nothing has been read
+	 * yet, so `ensureChunk` brings one in.
+	 */
+	disk: {
+		chunks: OverlayBlocks;
+		dirty: Set<number>;
+		chunkBytes: number;
+		ensureChunk(index: number): Uint8Array;
+	};
 }
 
 /**
@@ -94,6 +106,21 @@ export interface QemuOptions {
 	cmdline: string;
 	/** Attach a NIC and the page-side gateway behind it. */
 	network: boolean;
+	/**
+	 * Replays a saved overlay into the disk, before the guest runs.
+	 *
+	 * It has to be a callback rather than something the caller does with the
+	 * returned handle: QEMU's main is started by the glue during initialisation,
+	 * so by the time startQemu resolves the guest is already reading the disk,
+	 * and a block restored after that would land under a filesystem the kernel
+	 * has already made up its mind about.
+	 */
+	restore?: (disk: {
+		chunks: OverlayBlocks;
+		dirty: Set<number>;
+		chunkBytes: number;
+		ensureChunk(index: number): Uint8Array;
+	}) => void;
 	onStatus?: (text: string) => void;
 }
 
@@ -268,8 +295,13 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 			].join(' ')
 	];
 
-	// Reads are served from the network as QEMU asks for them; writes stay here.
+	// Reads are served from the network as QEMU asks for them; writes stay here,
+	// and `dirty` names the 256-byte blocks inside them the guest has touched --
+	// which is what gets saved, because saving whole megabytes because one sector
+	// changed would fill the overlay's budget in a couple of hundred writes.
 	const overlay: OverlayBlocks = new Map();
+	const dirty = new Set<number>();
+	let image: ReturnType<typeof createLazyImage> | null = null;
 
 	// The gateway the guest thinks it is talking to. It is built before the
 	// module because printErr, which is how frames arrive, closes over it.
@@ -318,11 +350,20 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 					built.FS.mkdir('/krsz/pc-bios');
 					for (const [name, bytes] of roms) built.FS.writeFile(`/krsz/pc-bios/${name}`, bytes);
 				}
-				createLazyImage(built as unknown as Parameters<typeof createLazyImage>[0], {
+				image = createLazyImage(built as unknown as Parameters<typeof createLazyImage>[0], {
 					path: '/krsz/rootfs.img',
 					url: options.rootfsUrl,
 					size: options.rootfsSize,
-					overlay
+					overlay,
+					dirty
+				});
+				// Here, and not after the factory resolves: main has already started
+				// by then. Synchronous for the same reason -- preRun does not wait.
+				options.restore?.({
+					chunks: overlay,
+					dirty,
+					chunkBytes: CHUNK,
+					ensureChunk: (index: number) => image!.writableChunk(index)
 				});
 			}
 		],
@@ -366,6 +407,15 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// The gateway, for ?debug: whether a frame ever reached the page, and what
 		// the guest's connections are doing, is not visible from anywhere else.
 		net,
+		disk: {
+			chunks: overlay,
+			dirty,
+			chunkBytes: CHUNK,
+			ensureChunk: (index: number) => {
+				if (!image) throw new Error('The disk is not set up yet.');
+				return image.writableChunk(index);
+			}
+		},
 		sendText(text: string) {
 			slave.write(text);
 		},

@@ -25,6 +25,17 @@ export const CHUNK = 1024 * 1024;
 /** Chunk index → the bytes the guest has written into it. */
 export type OverlayBlocks = Map<number, Uint8Array>;
 
+/**
+ * The granularity writes are *recorded* at, which is not the granularity they
+ * are held at. Chunks are a megabyte because that is what one range request
+ * costs; saving a megabyte because the guest touched one sector of it would
+ * fill the overlay's budget after a couple of hundred writes. So the chunks
+ * stay as they are and the numbers of the 256-byte blocks inside them are kept
+ * alongside -- 256 because that is what v86 uses, and both machines then write
+ * the same file format.
+ */
+export const BLOCK_BYTES = 256;
+
 interface EmscriptenFS {
 	FS: {
 		/** Creates the file but returns nothing -- look the node up afterwards. */
@@ -54,6 +65,8 @@ export interface LazyImageOptions {
 	url: string;
 	size: number;
 	overlay: OverlayBlocks;
+	/** Block numbers the guest has written, at BLOCK_BYTES granularity. */
+	dirty?: Set<number>;
 }
 
 /**
@@ -136,6 +149,8 @@ export function createLazyImage(module: EmscriptenFS, options: LazyImageOptions)
 		return held;
 	};
 
+	const dirty = options.dirty;
+
 	/** The copy the guest is allowed to modify — made on first write. */
 	const writableChunkFor = (index: number): Uint8Array => {
 		let written = overlay.get(index);
@@ -152,6 +167,7 @@ export function createLazyImage(module: EmscriptenFS, options: LazyImageOptions)
 
 	// Emscripten calls these with (stream, buffer, offset, length, position),
 	// where offset is into `buffer` and position into the file.
+	// (writableChunkFor is returned below, for replaying a saved overlay.)
 	node.stream_ops = {
 		...node.stream_ops,
 		read(
@@ -191,6 +207,14 @@ export function createLazyImage(module: EmscriptenFS, options: LazyImageOptions)
 				const within = at % CHUNK;
 				const take = Math.min(length - done, CHUNK - within);
 				writableChunkFor(index).set(buffer.subarray(offset + done, offset + done + take), within);
+				if (dirty) {
+					// Every block this write touched, whole or in part. A partial one
+					// still has to be saved entire: the file records blocks, and half a
+					// block replayed over the image is worse than none.
+					const first = Math.floor(at / BLOCK_BYTES);
+					const last = Math.floor((at + take - 1) / BLOCK_BYTES);
+					for (let b = first; b <= last; b++) dirty.add(b);
+				}
 				done += take;
 			}
 			return length;
@@ -208,6 +232,12 @@ export function createLazyImage(module: EmscriptenFS, options: LazyImageOptions)
 		/** What the guest has written, in bytes — for the disk panel. */
 		overlayBytes: () => overlay.size * CHUNK,
 		/** What has been pulled from the network, in bytes. */
-		fetchedBytes: () => cache.size * CHUNK
+		fetchedBytes: () => cache.size * CHUNK,
+		/**
+		 * The chunk at `index`, in its writable copy, fetching it first if the
+		 * guest has not touched it. Replaying a saved overlay needs this: the
+		 * blocks it holds belong to chunks nothing has read yet.
+		 */
+		writableChunk: (index: number) => writableChunkFor(index)
 	};
 }
