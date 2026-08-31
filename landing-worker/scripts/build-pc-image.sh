@@ -141,6 +141,45 @@ mkdir -p "$ROOTFS/etc/profile.d"
 cat > "$ROOTFS/etc/profile.d/krsz.sh" <<'EOF'
 export PS1='\[\033[1;32m\]\u@krsz-pc\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
 alias ll='ls -la'
+
+# Tell the kernel how big this terminal is.
+#
+# The console is ttyS0 -- a 16550 UART, because that is what -nographic gives
+# us. A serial line has no window size: TIOCGWINSZ answers zeros however large
+# the browser's terminal actually is, so `stty size` fails outright and
+# anything that needs the dimensions refuses to start. btop says "Failed to get
+# size of terminal!"; tmux, top and vi are all equally lost.
+#
+# There is no message the emulator can send to fix that, because the size never
+# reaches the guest in the first place. So the terminal is asked directly: park
+# the cursor far beyond any real screen, and the reply to a cursor-position
+# report says where it actually stopped -- which is the last row and column.
+# Then hand those to stty, and TIOCGWINSZ has an answer for everyone else.
+krsz_resize() {
+	local pos rows cols
+	[ -t 0 ] || return 0
+	# Raw and unechoed, or the reply is printed and the read never completes.
+	local saved
+	saved=$(stty -g 2>/dev/null) || return 0
+	stty raw -echo min 0 time 8 2>/dev/null || return 0
+	printf '\033[s\033[999;999H\033[6n'
+	IFS='' read -r pos
+	printf '\033[u'
+	stty "$saved" 2>/dev/null
+	# The reply is ESC [ rows ; cols R -- take the last pair it contains.
+	pos=${pos##*\[}
+	rows=${pos%%;*}
+	cols=${pos#*;}
+	cols=${cols%%R*}
+	case "$rows$cols" in *[!0-9]* | '') return 0 ;; esac
+	[ "$rows" -gt 1 ] && [ "$cols" -gt 1 ] && stty rows "$rows" cols "$cols" 2>/dev/null
+	return 0
+}
+krsz_resize
+# A serial line gets no SIGWINCH either, so the size is re-read whenever a
+# prompt is drawn -- which costs one escape sequence and keeps a resized
+# browser window honest.
+PROMPT_COMMAND=krsz_resize
 EOF
 
 # ── services ───────────────────────────────────────────────────────────────
