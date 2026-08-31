@@ -51,6 +51,12 @@ export function WispAdapter(wisp_url, config) {
 	this.dns_method = 'doh';
 	this.doh_server = config.doh_server;
 	this.tcp_conn = {};
+	// The vendored gateway announces new connections on v86's bus before it
+	// calls on_tcp_connection. There is no bus here, and without this the
+	// dereference throws -- which is exactly where the guest's SYN was
+	// disappearing: DHCP and DNS worked, and every TCP connection timed out
+	// having never been created.
+	this.bus = { pair: { send: () => {} } };
 	this.mtu = config.mtu;
 	this.eth_encoder_buf = create_eth_encoder_buf(this.mtu);
 
