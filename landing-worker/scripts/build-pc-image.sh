@@ -53,8 +53,12 @@ cat > "$ROOTFS/etc/hosts" <<'EOF'
 ::1	localhost ip6-localhost ip6-loopback
 EOF
 
+# The last field is the fsck pass, and it is 0 on purpose. The image is built
+# clean by mke2fs on every publish and the guest's writes live in the page, not
+# in it -- so there is nothing for a boot-time check to find, and under TCG that
+# check was a quarter of the whole startup.
 cat > "$ROOTFS/etc/fstab" <<'EOF'
-/dev/vda	/	ext4	rw,relatime	0 1
+/dev/vda	/	ext4	rw,relatime	0 0
 EOF
 
 # ttyS0 is the 16550 every PC has and where -nographic points QEMU's stdio. A
@@ -198,8 +202,14 @@ echo "==> kernel: $(stat -c %s "$OUT/kernel") bytes"
 # mkinitfs is given the features by hand rather than read from
 # /etc/mkinitfs/mkinitfs.conf, because the default set drags in cryptsetup, lvm
 # and raid probing that this machine has no use for and pays for on every boot.
+#
+# scsi is gone for the same reason, and it was the expensive one: it pulls in
+# the whole of drivers/scsi plus the fusion tree, and nlplug-findfs coldplugs
+# every one of them while it is looking for the root device. Measured on the
+# real machine, "Mounting root" took 45 seconds of a 90-second boot. The only
+# disk here is virtio-blk.
 cat > "$ROOTFS/etc/mkinitfs/mkinitfs.conf" <<'EOF'
-features="base virtio ext4 scsi"
+features="base virtio ext4"
 EOF
 chroot "$ROOTFS" /sbin/mkinitfs -o /boot/initramfs-krsz "$KVER"
 cp "$ROOTFS/boot/initramfs-krsz" "$OUT/initramfs"
