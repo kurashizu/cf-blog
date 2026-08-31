@@ -37,7 +37,17 @@
 .shead #wipebtn:hover{border-color:var(--red);color:var(--red)}
 /* One level per row now that each carries its name: a wrapped grid of long
    labels is unreadable, and the list is what the player picks from. */
-#levels{padding:8px 12px 12px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:5px}
+/* The pattern library. It scrolls on its own rather than pushing the log off
+   the bottom of the sidebar: thirty entries in six groups is taller than any
+   panel, and the log is the other half of what this column is for. */
+#levels{padding:8px 12px 12px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin}
+/* A group heading, not a row: the name and its explanation are separate words
+   and ran together without this. */
+.libhead{display:flex;align-items:baseline;gap:6px;margin:9px 0 1px;font-size:10px;letter-spacing:2px;color:var(--faint)}
+.libhead:first-child{margin-top:0}
+.libhead small{font-size:10px;letter-spacing:0;text-transform:none;opacity:.7}
+.libitem.cur{border-color:currentColor;background:rgba(255,255,255,.05)}
+.libitem svg{flex:none}
 .lv{border:1px solid var(--line);background:none;color:var(--dim);font:inherit;font-size:13px;padding:5px 10px;cursor:pointer;border-radius:2px}
 .lv:hover{border-color:var(--faint)}
 .lv.lock{opacity:.32;cursor:not-allowed}

@@ -20,6 +20,56 @@ export const RLES = {
   diehard:   { label: 'DIEHARD',      rle: '6bo$2o$bo3b3o!' },
   eater:     { label: 'EATER',        rle: '2o2b$obob$2bob$2b2o!' },
   gosperGun: { label: 'GOSPER GUN',   rle: '24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o$2o8bo3bob2o4bobo$10bo5bo7bo$11bo3bo$12b2o!' },
+
+  // ── beyond the beginner's shelf ───────────────────────────────────────
+  // Everything above you could find by drawing. These were searched for --
+  // some for decades -- and every one below has been simulated and labelled
+  // by what it actually does, not by what it is usually called.
+
+  // Methuselahs: a handful of cells whose consequences run for hundreds of
+  // generations. The point is that you cannot tell by looking at them.
+  bunnies:   { label: 'BUNNIES',      rle: 'o5bo$2bo3bo$2bo2bobo$bobo!' },
+  rabbits:   { label: 'RABBITS',      rle: 'o3b3o$3o2bo$bo!' },
+  // Grows without bound from 28 cells, laying debris as it goes.
+  switchEngine:{label: 'SWITCH ENGINE', rle: '4b2o$4b2o2$2b5o$bo5bo$o3bobo$o3bobo$bo5bo$2b5o2$4b2o$4b2o!' },
+
+  // Ships past the three everyone knows. Speed is a fraction of c, one cell
+  // per generation, which nothing in Life beats. Both of these took a search
+  // program to find -- the copperhead as recently as 2016.
+  copperhead:{ label: 'COPPERHEAD c/10', rle: 'b2o2b2o$3b2o$3b2o$obo2bobo$o6bo2$o6bo$b2o2b2o$2b4o2$3b2o$3b2o!' },
+  loafer:    { label: 'LOAFER c/7',   rle: 'b2o2bob2o$o2bo2b2o$bobo$2bo$8bo$6b3o$5bo$6bo$7b2o!' },
+  // Three lightweights flying in formation, which is how ships are ferried.
+  flotilla:  { label: 'FLOTILLA',     rle: '3bo$4bo$o3bo$b4o10$3bo$4bo$o3bo$b4o10$3bo$4bo$o3bo$b4o!' },
+
+  // A period-8 oscillator, twice the period of anything else small here.
+  figure8:   { label: 'FIGURE EIGHT', rle: '3o$3o$3o$3b3o$3b3o$3b3o!' },
+
+  // ── units, not patterns ───────────────────────────────────────────────
+  // Assemblies rather than single objects: two or more of the pieces above,
+  // arranged so the interaction between them is the point. These are the
+  // parts a computer in Life is built from, and each was placed by hand and
+  // then simulated to confirm it does what it is named for.
+  //
+  // A full Turing machine will not fit here. Rendell's is roughly 1700x1700
+  // cells against this dish's 320x200, and the universal one is far larger
+  // again -- so what is offered is the components, which do fit and which are
+  // the interesting half anyway.
+
+  // Two gliders head-on. Both are destroyed completely: verified 0 cells left
+  // after 150 generations. One signal cancelling another is a NOT gate, and
+  // deletion is the operation every other gate is assembled from.
+  annihilate:{ label: 'ANNIHILATE',   rle: 'bo$2bo$3o10$12b3o$12bo$13bo!' },
+
+  // A glider flying into an eater. The glider is consumed and the eater
+  // repairs itself: verified 7 cells left, which is the eater alone. This is
+  // how a signal is discarded without leaving debris behind.
+  sink:      { label: 'GLIDER SINK',  rle: 'bo$2bo$3o10$12b2o$12bobo$14bo$14b2o!' },
+
+  // A gun firing forever into an eater that keeps up. Population stays between
+  // 86 and 121 over 400 generations rather than growing without bound: a
+  // fixed-size machine consuming an endless stream, which is the whole idea a
+  // computer rests on.
+  gunSink:   { label: 'GUN + SINK',   rle: '24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o$2o8bo3bob2o4bobo$10bo5bo7bo$11bo3bo$12b2o22$38b2o$38bobo$40bo$40b2o!' },
 };
 
 /**

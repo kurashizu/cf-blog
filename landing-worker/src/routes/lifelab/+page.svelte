@@ -46,7 +46,7 @@
 	<title>KRSZ™ // 7:lifelab — Conway Automaton Laboratory</title>
 	<meta
 		name="description"
-		content="Conway's Game of Life as a 25-level campaign: the two rules, still lifes and oscillators, gliders and spaceships, collisions, and the glider gun that makes computation possible."
+		content="Conway's Game of Life as an open dish: a 320x200 grid, a library of verified patterns from still lifes to the Gosper gun, free drawing and random soup."
 	/>
 </svelte:head>
 
@@ -57,13 +57,9 @@
 <div id="lifelab" class="-m-2.5 sm:-m-3.5">
 	<aside id="side">
 		<div id="brand">LIFE<span>.LAB</span><small>CONWAY AUTOMATON · B3/S23</small></div>
-		<button id="shopbtn" title="Spend credits on aids">
-			<span class="sicon"></span><span class="slabel">SHOP</span><b id="coins">0</b>
-		</button>
 		<div id="lvhead" class="shead">
-			<span>LEVELS</span>
-			<button id="modebtn" title="Back to the mode chooser">MODE</button>
-			<button id="wipebtn" title="Erase all saved progress and start over">WIPE</button>
+			<span>PATTERNS</span>
+			<button id="wipebtn" title="Remove every cell from the board">CLEAR ALL</button>
 		</div>
 		<div id="levels"></div>
 		<div class="shead"><span>LOG</span><small>what the dish just did</small></div>

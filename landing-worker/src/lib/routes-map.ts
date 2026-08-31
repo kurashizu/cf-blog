@@ -53,9 +53,38 @@ export const ISOLATED_ROUTES: readonly string[] = ['/krsz-vm'];
 export function navigateTo(route: string, spa: (r: string) => void): void {
 	if (ISOLATED_ROUTES.includes(route)) {
 		if (typeof location !== 'undefined' && location.pathname !== route) {
+			// Remembered across the reload so the layout can tell this apart from
+			// someone arriving at the site. A full load replays the POST screen,
+			// which is right for a visit and wrong for a tab switch -- the user
+			// pressed a tab and got a boot sequence they had already sat through.
+			try {
+				sessionStorage.setItem(INTERNAL_NAV_KEY, '1');
+			} catch {
+				/* private mode: the POST screen plays again, which is only cosmetic */
+			}
 			location.assign(route);
 			return;
 		}
 	}
 	spa(route);
+}
+
+/**
+ * Set for exactly one page load when a tab switch had to reload the document.
+ *
+ * sessionStorage rather than localStorage: it belongs to this tab and this
+ * browsing session, so a genuinely new visit -- a new tab, a fresh window --
+ * still gets the boot screen.
+ */
+export const INTERNAL_NAV_KEY = 'krsz.nav.internal';
+
+/** True once, if this load came from a tab switch rather than a fresh visit. */
+export function consumeInternalNav(): boolean {
+	try {
+		if (sessionStorage.getItem(INTERNAL_NAV_KEY) !== '1') return false;
+		sessionStorage.removeItem(INTERNAL_NAV_KEY);
+		return true;
+	} catch {
+		return false;
+	}
 }

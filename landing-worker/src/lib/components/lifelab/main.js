@@ -4,11 +4,10 @@
 // anys and possibly-nulls that are all guaranteed by construction, and typing
 // it properly would mean rewriting it in TypeScript. The parts worth checking
 // -- the automaton, the pattern library, the level data and the save format --
-// are checked: engine.js, patterns.js, levels.js and shop.js all pass.
+// are checked: engine.js, patterns.js and levels.js all pass.
 import { Life } from './engine.js';
 import { pattern, rotateCells, RLES, kindOf } from './patterns.js';
 import { LEVELS } from './levels.js';
-import { ITEMS, loadShop, saveShop } from './shop.js';
 
 const $ = s => document.querySelector(s);
 // Bound in start(), not at import. A module is evaluated once and cached, but
@@ -16,7 +15,7 @@ const $ = s => document.querySelector(s);
 // so binding here left the second visit holding elements that were no longer
 // in the document, drawing into a detached canvas: a blank panel.
 let termEl, cv, ctx, topbar, tray, levelsEl, msgEl;
-let modeBtn, lvHead, wipeBtn, shopBtn, coinsEl;
+let wipeBtn;
 let guideEl, gstep, gtext;
 
 /**
@@ -40,20 +39,15 @@ function bind() {
   ctx = cv.getContext('2d');
   guideEl = $('#guide'); gstep = $('#gstep'); gtext = $('#gtext');
   topbar = $('#topbar'); tray = $('#tray'); levelsEl = $('#levels'); msgEl = $('#msg');
-  modeBtn = $('#modebtn'); lvHead = $('#lvhead'); wipeBtn = $('#wipebtn');
-  shopBtn = $('#shopbtn'); coinsEl = $('#coins');
+  wipeBtn = $('#wipebtn');
 
   // Handlers and the size observer belong to the nodes, so they are re-attached
   // with them rather than once in start().
-  modeBtn.onclick = chooseMode;
   wipeBtn.onclick = wipeSave;
-  shopBtn.onclick = openShop;
-  shopBtn.querySelector('.sicon').innerHTML = ICONS.shop;
   // The two sidebar-header buttons were the only text-only controls left, and
   // one of them erases the save -- the control that most needs to be
   // recognisable at a glance was the least marked.
-  modeBtn.innerHTML = ICONS.mode + '<span>MODE</span>';
-  wipeBtn.innerHTML = ICONS.wipe + '<span>WIPE</span>';
+  wipeBtn.innerHTML = ICONS.wipe + '<span>CLEAR ALL</span>';
   ro?.disconnect();
   ro = new ResizeObserver(() => resize());
   ro.observe($('#cvwrap'));
@@ -109,22 +103,16 @@ const S = {
   unlocked: 0,
   // 'campaign' or 'sandbox'; null until the opening screen is answered.
   mode: null,
-  shop: loadShop(),
   rewind: [],
   /** Set once the overcrowding demonstration has been watched through. */
   saw4x4: false,
   // Which situation the rules lesson is showing.
   teachStep: 0,
 };
-const has = id => S.shop.owned.includes(id);
-/**
- * How many entries are campaign levels. The sandbox is the last entry and is
- * not one of them -- counting it made the list draw a locked "???" row for it,
- * put the sandbox behind a padlock the campaign never opens, and reported one
- * level more than exists.
- */
-const CAMPAIGN = LEVELS.filter(l => !l.sandbox).length;
-const SANDBOX_IDX = LEVELS.findIndex(l => l.sandbox);
+// The shop is gone with the campaign -- its credits were earned by clearing
+// levels. The aids it sold are analysis tools, which is exactly what a dish
+// wants, so they are simply on.
+const has = () => true;
 const el = { toolBtns: {}, stampBtns: {} };
 /** Held so a level change cannot fire a stale win dialog over the next level. */
 let winTimer = null;
@@ -140,298 +128,7 @@ function tlog(text, cls = 't-sys') {
 let lastDeny = '';
 function deny(msg) { if (lastDeny !== msg) { tlog('> ' + msg, 't-warn'); lastDeny = msg; } }
 
-/**
- * Erases the save: unlocked levels, credits, and everything bought.
- *
- * Behind a confirmation because it cannot be undone and the button sits next to
- * one that only changes mode -- a misclick would otherwise cost the whole run.
- */
-function wipeSave() {
-  showMsg(
-    'ERASE SAVE',
-    'This clears everything kept in this browser: the levels you have opened, your credits, and anything bought from the shop. It cannot be undone.',
-    [
-      {
-        label: 'ERASE EVERYTHING',
-        fn: () => {
-          try {
-            localStorage.removeItem('lifelab-unlocked');
-            localStorage.removeItem('lifelab-shop');
-          } catch {
-            /* a browser with storage blocked has nothing to erase */
-          }
-          S.unlocked = 0;
-          S.shop = loadShop();
-          S.saw4x4 = false;
-          syncShopBadge();
-          hideMsg();
-          tlog('> SAVE ERASED', 't-warn');
-          loadLevel(0);
-          chooseMode();
-        },
-      },
-      { label: 'KEEP IT', fn: hideMsg },
-    ],
-    true
-  );
-}
-
-/* ---------------- the rules lesson ---------------- */
-/**
- * Level 00 is a lesson rather than a puzzle: one situation at a time, set up
- * for the player, with the neighbour counts drawn on the board.
- *
- * Showing all of them together was the mistake in the first version -- three
- * things changed at once and the text had to say which one it meant, which is
- * exactly the reading a new player cannot do yet.
- */
-function teachSetup() {
-  const L = S.L;
-  if (!L.lesson) return;
-  const step = L.steps[S.teachStep];
-  if (!step || !step.teach || step.teach.keep) return;
-  S.eng.clear();
-  for (const [x, y] of step.teach.cells) S.eng.set(x, y, 1);
-  S.running = false;
-  syncRun(); updateStats();
-}
-
-/**
- * Opens the next level and pays for a first clear.
- *
- * Shared, because there are two ways to finish one: a goal met, and the lesson
- * reaching its last step. The lesson used to call finishWin directly and skip
- * this, so clearing level 00 never opened level 01 -- and since every level
- * after that is reached through the NEXT LEVEL button rather than the list,
- * nothing else opened either. The list sat at "00 / 01 ???" no matter how far
- * the player had actually got.
- *
- * @returns the credits earned, which is 0 on a replay.
- */
-function recordClear() {
-  if (S.idx !== S.unlocked || S.unlocked >= CAMPAIGN - 1) return 0;
-  S.unlocked++;
-  localStorage.setItem('lifelab-unlocked', S.unlocked);
-  // Paid once, on the first clear -- replaying a level should not farm it.
-  S.shop.coins += 2;
-  saveShop(S.shop);
-  tlog('> +2 CREDITS', 't-ok');
-  return 2;
-}
-
-function teachNext() {
-  const L = S.L;
-  if (!L.lesson) return;
-  if (S.teachStep >= L.steps.length - 1) {
-    // The lesson is over; the campaign starts at the level after it.
-    S.won = true;
-    const earned = recordClear();
-    buildLevelList();
-    syncShopBadge();
-    finishWin(earned);
-    return;
-  }
-  S.teachStep++;
-  S.stepIdx = S.teachStep;
-  teachSetup();
-  buildTopbar();
-  draw(); updateGuide();
-}
-
 /* ---------------- shop ---------------- */
-function syncShopBadge() { coinsEl.textContent = S.shop.coins; }
-
-/**
- * Built by hand rather than through showMsg, because every row has its own
- * button and a price that has to grey out when it cannot be paid.
- */
-function openShop() {
-  // The post-win banner arms a timer to show MISSION COMPLETE; if the player
-  // opens the shop inside that window it would replace their screen a second
-  // later, so opening a dialog of your own cancels it.
-  clearTimeout(winTimer);
-  msgEl.innerHTML = '';
-  const box = document.createElement('div');
-  box.className = 'box shop';
-
-  const h = document.createElement('h2');
-  h.textContent = 'SHOP';
-  const p = document.createElement('p');
-  p.innerHTML = 'A level pays <span class="n">2 credits</span> the first time you clear it, and only then \u2014 ' +
-    'there are <span class="n">48</span> in the whole campaign. Nothing here changes the rules; they only let you ' +
-    '<span class="k">see further ahead</span> than a still frame does.';
-  box.append(h, p);
-  // The rows scroll; the heading and the close button do not, so a long list
-  // cannot push the way out of the panel off the bottom of the screen.
-  const scroll = document.createElement('div');
-  scroll.className = 'shopscroll';
-  box.appendChild(scroll);
-
-  ITEMS.forEach(it => {
-    const row = document.createElement('div'); row.className = 'shoprow';
-    const ic = document.createElement('div'); ic.className = 'shopicon';
-    ic.innerHTML = ICONS[it.icon] || '';
-    const main = document.createElement('div'); main.className = 'shopmain';
-    const nm = document.createElement('div'); nm.className = 'shopname'; nm.textContent = it.name;
-    const bl = document.createElement('div'); bl.className = 'shopblurb'; bl.textContent = it.blurb;
-    const dt = document.createElement('div'); dt.className = 'shopdetail'; dt.textContent = it.detail;
-    main.append(nm, bl, dt);
-    const b = document.createElement('button'); b.className = 'buy';
-    const owned = has(it.id);
-    // A tool the campaign has not reached a use for yet is shown, but not for
-    // sale: seeing TRAJECTORY seven levels before the first ship only invites
-    // spending on something that does nothing.
-    const tooEarly = !owned && (it.from ?? 0) > S.unlocked;
-    if (owned) { b.classList.add('owned'); b.innerHTML = ICONS.check + '<span>OWNED</span>'; b.disabled = true; }
-    else if (tooEarly) {
-      row.classList.add('locked');
-      b.classList.add('soon');
-      b.innerHTML = ICONS.lock + '<span>L' + String(it.from).padStart(2, '0') + '</span>';
-      b.disabled = true;
-      b.title = 'Unlocks at level ' + String(it.from).padStart(2, '0') + ', where it first has a use';
-    }
-    else {
-      b.innerHTML = ICONS.coin + '<span>' + it.cost + '</span>';
-      b.disabled = S.shop.coins < it.cost;
-      b.onclick = () => {
-        if (S.shop.coins < it.cost) return;
-        S.shop.coins -= it.cost;
-        S.shop.owned.push(it.id);
-        saveShop(S.shop);
-        syncShopBadge();
-        tlog('> BOUGHT ' + it.name, 't-ok');
-        buildTopbar();
-        openShop();
-      };
-    }
-    row.append(ic, main, b);
-    scroll.appendChild(row);
-  });
-
-  const row = document.createElement('div'); row.className = 'row';
-  const close = document.createElement('button'); close.className = 'tb';
-  close.innerHTML = ICONS.close + '<span>CLOSE</span>'; close.onclick = hideMsg;
-  row.appendChild(close);
-  box.appendChild(row);
-  msgEl.appendChild(box);
-  msgEl.classList.remove('hidden');
-}
-
-/* ---------------- mode select ---------------- */
-/**
- * Asked once, before anything is on the board. Without it the player arrives at
- * a dish, a row of tabs and a log with no indication which of them is the way
- * in -- and the campaign's first level looks like just another tab rather than
- * the place to start.
- */
-function chooseMode() {
-  clearTimeout(winTimer);
-  const resume = S.unlocked > 0;
-  showMsg(
-    'LIFE.LAB',
-    "Conway's Game of Life: a grid where every cell lives or dies by two rules, " +
-    'and complexity builds itself out of them.\n\n' +
-    'TUTORIAL walks the ideas one level at a time, each with a goal and a hint. ' +
-    'SANDBOX is the open dish -- the full pattern library, free drawing, random soup.',
-    [
-      { label: resume ? 'RESUME TUTORIAL' : 'START TUTORIAL', fn: () => enterMode('campaign') },
-      { label: 'SANDBOX', fn: () => enterMode('sandbox') },
-    ]
-  );
-}
-
-function enterMode(mode) {
-  S.mode = mode;
-  hideMsg();
-  // The level row has nothing to list in the sandbox, so its heading goes too.
-  lvHead.style.display = mode === 'sandbox' ? 'none' : '';
-  if (mode === 'sandbox') {
-    tlog('> SANDBOX — free dish, no goals', 't-ok');
-    loadLevel(LEVELS.findIndex(L => L.sandbox));
-  } else {
-    tlog('> TUTORIAL — ' + (S.unlocked + 1) + ' of ' + CAMPAIGN + ' levels open', 't-ok');
-    loadLevel(Math.min(S.unlocked, CAMPAIGN - 1));
-  }
-}
-
-/* ---------------- level loading ---------------- */
-function loadLevel(i, opts = {}) {
-  clearTimeout(winTimer);
-  clearBanner();
-  if (S.idx !== i) S.saw4x4 = false;
-  S.idx = i; const L = LEVELS[i]; S.L = L;
-  S.eng = new Life(L.w, L.h);
-  S.ghost = new Float32Array(L.w * L.h);
-  S.buf = document.createElement('canvas'); S.buf.width = L.w; S.buf.height = L.h;
-  S.bctx = S.buf.getContext('2d');
-  S.img = S.bctx.createImageData(L.w, L.h);
-  (L.presets || []).forEach(p => {
-    const pat = pattern(p.name);
-    pat.cells.forEach(([x, y]) => S.eng.set(p.x + x, p.y + y, 1));
-  });
-  S.presetPop = S.eng.pop;
-  S.phase = 'edit'; S.running = false; S.stampsUsed = 0; S.snap = null; S.goal = null;
-  S.stamp = null; S.rot = 0; S.drag = null; lastDeny = ''; S.stepIdx = 0; S.won = false;
-  S.tool = (L.tools || []).includes('draw') ? 'draw' : 'pan';
-  S.teachStep = 0;
-  teachSetup();
-  buildTopbar(); buildTray(); buildLevelList();
-  fitCamera();
-  hideMsg();
-  if (!opts.quiet) briefing(L);
-  syncRun(); syncTools();
-}
-
-function briefing(L) {
-  tlog('');
-  tlog('== ' + L.name, 't-hd');
-  (L.intro || []).forEach(l => tlog(l));
-}
-
-function buildLevelList() {
-  levelsEl.innerHTML = '';
-  if (S.mode === 'sandbox') return;
-
-  // Only as far as the player has got, plus one locked tab so it is visible
-  // that the campaign continues. The whole row at once is a table of contents
-  // for a book they have not started, and the locked entries are the majority
-  // of it -- six things to read and nothing to do with any of them.
-  const last = Math.min(CAMPAIGN - 1, S.unlocked + 1);
-  for (let i = 0; i <= last; i++) {
-    const L = LEVELS[i];
-    const locked = i > S.unlocked;
-    const b = document.createElement('button');
-    b.className = 'lv' + (i === S.idx ? ' cur' : '') + (locked ? ' lock' : '') +
-      (i < S.unlocked && i !== S.idx ? ' done' : '');
-    // The name, not just the number. A column of two-digit tabs says nothing
-    // about what is in any of them, and the names already existed -- they were
-    // only ever shown once the level was open.
-    const short = (L.name.split('·')[1] || L.name).trim();
-    b.innerHTML = (locked ? ICONS.lock : i < S.unlocked ? ICONS.check : '') +
-      '<span class="lvn">' + L.tab + '</span>' +
-      '<span class="lvt">' + (locked ? '???' : short) + '</span>';
-    b.title = locked
-      ? 'Locked — clear ' + LEVELS[S.unlocked].tab + ' to open this'
-      : L.name + (i < S.unlocked ? ' (cleared)' : '');
-    if (!locked) { b.style.color = L.accent || ''; if (i === S.idx) b.style.borderColor = L.accent || ''; }
-    b.onclick = () => { if (!locked) loadLevel(i); else deny('LOCKED — clear the current level first'); };
-    levelsEl.appendChild(b);
-  }
-
-  // The sandbox is the reward for finishing, not a level to be unlocked past:
-  // it appears once the campaign is cleared and is always openable after that.
-  if (S.unlocked >= CAMPAIGN - 1 && SANDBOX_IDX >= 0) {
-    const L = LEVELS[SANDBOX_IDX];
-    const b = document.createElement('button');
-    b.className = 'lv' + (SANDBOX_IDX === S.idx ? ' cur' : '');
-    b.innerHTML = ICONS.soup + '<span class="lvn">' + L.tab + '</span><span class="lvt">FREE DISH</span>';
-    b.title = 'Sandbox — the full pattern library, free drawing, random soup';
-    b.style.color = L.accent || '';
-    if (SANDBOX_IDX === S.idx) b.style.borderColor = L.accent || '';
-    b.onclick = () => loadLevel(SANDBOX_IDX);
-    levelsEl.appendChild(b);
-  }
-}
 
 /* ---------------- toolbar / tray ---------------- */
 function mkBtn(icon, label, fn) {
@@ -449,10 +146,9 @@ function buildTopbar() {
   const L = S.L;
   el.run = mkBtn(ICONS.play, 'RUN', startPause);
   el.step = mkBtn(ICONS.step, 'STEP', stepOnce);
-  if (L.lesson) el.next = mkBtn(ICONS.play, 'NEXT', teachNext);
   if (has('undo')) mkBtn(ICONS.back, 'BACK', stepBack);
-  el.reset = mkBtn(L.sandbox ? ICONS.clear : ICONS.reset, L.sandbox ? 'CLEAR' : 'RESET', reset);
-  if (L.sandbox) mkBtn(ICONS.soup, 'SOUP', soup);
+  el.reset = mkBtn(ICONS.clear, 'CLEAR', reset);
+  mkBtn(ICONS.soup, 'SOUP', soup);
   mkSep();
   el.toolBtns = {};
   const addTool = (name, icon, label) => {
@@ -461,67 +157,23 @@ function buildTopbar() {
   addTool('pan', ICONS.pan, 'PAN');
   if ((L.tools || []).includes('draw')) addTool('draw', ICONS.draw, 'DRAW');
   if ((L.tools || []).includes('erase')) addTool('erase', ICONS.erase, 'ERASE');
-  mkSep();
+  // No separator before the speed control: it is part of the same "how you
+  // work" half as the tools, and the extra 9px was enough to push it onto a
+  // second row of its own at ordinary window widths.
   el.spd = mkBtn('', 'SPD ' + SPEEDS[S.speed] + '/s', () => {
     S.speed = (S.speed + 1) % SPEEDS.length;
     el.spd.querySelector('span').textContent = 'SPD ' + SPEEDS[S.speed] + '/s';
   });
   const stats = document.createElement('div');
   stats.id = 'stats';
-  const hasBudget = L.budget || L.stampBudget;
-  // GOAL is the readout that was missing. A level can ask for exactly 6 cells
-  // at gen 10, or arrival by gen 105, and until now the only place either
-  // number appeared was one sentence in the corner -- so a player watching the
-  // board had no way to tell how close they were or how long was left.
   const field = (label, inner) => '<span class="stat">' + label + ' ' + inner + '</span>';
   stats.innerHTML =
     field('GEN', '<b id="stGen">0</b>') +
     field('POP', '<b id="stPop">0</b>') +
-    (hasBudget ? field(L.stampBudget ? 'AMMO' : 'CELLS', '<b id="stBud"></b>') : '') +
-    (goalLabel(L) ? field('GOAL', '<b id="stGoal"></b>') : field('RULE', '<b>B3/S23</b>'));
+    field('RULE', '<b>B3/S23</b>');
   topbar.appendChild(stats);
   el.gen = stats.querySelector('#stGen');
   el.pop = stats.querySelector('#stPop');
-  el.bud = stats.querySelector('#stBud');
-  el.goal = stats.querySelector('#stGoal');
-}
-
-/** A one-line statement of what this level wants, or '' when there is nothing useful to say. */
-function goalLabel(L) {
-  const g = L.goal;
-  if (!g) return '';
-  switch (g.type) {
-    case 'survive': return 'alive at gen ' + g.gens;
-    case 'still': return 'unchanged to gen ' + g.gens;
-    case 'settle': return 'all still by gen ' + g.maxGen;
-    case 'osc': return 'any repeat';
-    case 'period': return 'period ' + g.period;
-    case 'exact': return g.pop + ' cells at gen ' + g.gen;
-    case 'grow': return 'reach ' + g.pop + ' cells';
-    case 'reach': return g.byGen ? 'target by gen ' + g.byGen : 'reach the target';
-    case 'clear': return 'clear the target';
-    case 'guard': return 'hold to gen ' + g.gens;
-    case 'visit': return 'all ' + L.zones.length + ' zones';
-    default: return '';
-  }
-}
-
-/** How far along the goal is, as live text beside it. */
-function goalProgress(L) {
-  const g = L.goal, e = S.eng;
-  if (!g) return '';
-  switch (g.type) {
-    case 'survive': case 'guard': {
-      const target = g.gens;
-      return e.gen + '/' + target;
-    }
-    case 'still': return e.gen + '/' + g.gens;
-    case 'settle': return e.gen + '/' + g.maxGen;
-    case 'exact': return e.pop + ' @ ' + e.gen + '/' + g.gen;
-    case 'grow': return e.pop + '/' + g.pop;
-    case 'reach': return g.byGen ? e.gen + '/' + g.byGen : String(e.gen);
-    default: return '';
-  }
 }
 
 function miniSVG(p, color) {
@@ -530,6 +182,108 @@ function miniSVG(p, color) {
   let r = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + p.w + ' ' + p.h + '">';
   p.cells.forEach(([x, y]) => { r += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="currentColor"/>'; });
   return r + '</svg>';
+}
+
+/**
+ * The sidebar list: every pattern, grouped by what it actually does.
+ *
+ * This is where the level list used to be. A campaign needs a table of
+ * contents; a dish needs to tell you what is on the shelf, because the tray's
+ * icons are eleven pixels wide and "LOAFER c/7" means nothing until someone
+ * says it is a spaceship that moves one cell every seven generations.
+ *
+ * Every classification here was produced by simulating the pattern, not by
+ * recalling what it is usually called -- three of the labels were wrong the
+ * first time and the simulation is what caught them.
+ */
+const LIBRARY = [
+  {
+    group: 'STILL LIFES', hint: 'never change',
+    of: ['block', 'beehive', 'loaf', 'tub', 'boat', 'pond', 'eater'],
+  },
+  {
+    group: 'OSCILLATORS', hint: 'repeat forever',
+    of: ['blinker', 'toad', 'beacon', 'clock', 'pulsar', 'figure8', 'pentadec'],
+  },
+  {
+    group: 'SPACESHIPS', hint: 'move across the grid',
+    of: ['glider', 'lwss', 'mwss', 'flotilla', 'loafer', 'copperhead'],
+  },
+  {
+    group: 'CHAOS', hint: 'small starts, long lives',
+    of: ['rpent', 'acorn', 'diehard', 'bunnies', 'rabbits', 'switchEngine'],
+  },
+  {
+    group: 'INFINITE', hint: 'grow without stopping',
+    of: ['gosperGun'],
+  },
+  {
+    group: 'UNITS', hint: 'the parts a computer is made of',
+    of: ['annihilate', 'sink', 'gunSink'],
+  },
+];
+
+/** What each pattern is, in one phrase. Simulated, not remembered. */
+const NOTES = {
+  block: '4 cells, the simplest stable shape',
+  beehive: 'stable, 6 cells',
+  loaf: 'stable, 7 cells',
+  tub: 'stable, 4 cells',
+  boat: 'stable, 5 cells',
+  pond: 'stable, 8 cells',
+  eater: 'stable — and it swallows a glider that hits it',
+  blinker: 'period 2, the smallest oscillator',
+  toad: 'period 2',
+  beacon: 'period 2',
+  clock: 'period 2',
+  pulsar: 'period 3, 48 cells',
+  figure8: 'period 8',
+  pentadec: 'period 15, the longest here',
+  glider: 'period 4, travels diagonally',
+  lwss: 'period 4, travels sideways',
+  mwss: 'period 4, one cell wider than the LWSS',
+  flotilla: 'three lightweights flying in formation',
+  loafer: 'one cell every 7 generations — found by a search program',
+  copperhead: 'one cell every 10 — not discovered until 2016',
+  rpent: '5 cells, still going 1000 generations later',
+  acorn: '7 cells that take 5000 generations to settle',
+  diehard: '7 cells that vanish completely at generation 130',
+  bunnies: '9 cells, runs for thousands',
+  rabbits: '9 cells, likewise',
+  switchEngine: 'grows forever, leaving debris behind it',
+  gosperGun: 'fires a glider every 30 generations, for ever',
+  annihilate: 'two gliders head-on — both destroyed, nothing left. A NOT gate',
+  sink: 'a glider flies into an eater and is gone; the eater repairs itself',
+  gunSink: 'an endless stream, absorbed. Population stays bounded for ever',
+};
+
+function buildLibrary() {
+  levelsEl.innerHTML = '';
+  let ci = 0;
+  for (const sec of LIBRARY) {
+    const h = document.createElement('div');
+    h.className = 'libhead';
+    h.innerHTML = '<span>' + sec.group + '</span><small>' + sec.hint + '</small>';
+    levelsEl.appendChild(h);
+
+    for (const n of sec.of) {
+      if (!RLES[n]) continue;
+      const p = pattern(n);
+      const b = document.createElement('button');
+      b.className = 'lv libitem' + (S.stamp === n ? ' cur' : '');
+      b.style.color = PCOLORS[ci++ % PCOLORS.length];
+      b.innerHTML = miniSVG(p) + '<span class="lvt">' + p.label + '</span>';
+      b.title = p.label + ' — ' + (NOTES[n] || '');
+      // Selecting here is the same act as selecting in the tray, so that the
+      // two lists cannot disagree about what is held.
+      b.onclick = () => {
+        if (S.stamp === n) { S.stamp = null; S.tool = 'pan'; }
+        else { S.stamp = n; S.tool = 'stamp'; }
+        syncTools();
+      };
+      levelsEl.appendChild(b);
+    }
+  }
 }
 
 function buildTray() {
@@ -563,6 +317,107 @@ function buildTray() {
     b.onclick = () => { S.rot = (S.rot + 1) % 4; };
     tray.appendChild(b);
   }
+}
+
+/* ---------------- level loading ---------------- */
+function loadLevel(i) {
+  S.idx = i; const L = LEVELS[i]; S.L = L;
+  S.eng = new Life(L.w, L.h);
+  S.ghost = new Float32Array(L.w * L.h);
+  S.buf = document.createElement('canvas'); S.buf.width = L.w; S.buf.height = L.h;
+  S.bctx = S.buf.getContext('2d');
+  S.img = S.bctx.createImageData(L.w, L.h);
+  S.presetPop = 0;
+  S.phase = 'edit'; S.running = false; S.stampsUsed = 0; S.snap = null; S.goal = null;
+  S.stamp = null; S.rot = 0; S.drag = null; lastDeny = ''; S.stepIdx = 0; S.won = false;
+  S.tool = 'draw';
+  buildTopbar(); buildTray(); buildLibrary();
+  fitCamera();
+  hideMsg();
+  syncRun(); syncTools();
+}
+
+/**
+ * Empties the dish, after asking.
+ *
+ * This button used to erase the campaign save. Nothing is persisted any more,
+ * so the destructive act left is throwing away what has been drawn -- and a
+ * board can hold a lot of work, which is why it asks first.
+ */
+function wipeSave() {
+  if (S.eng.pop === 0) { deny('the dish is already empty'); return; }
+  showMsg(
+    'CLEAR THE DISH?',
+    'This removes every cell on the board. Nothing can undo it.',
+    [
+      {
+        label: 'CLEAR IT',
+        fn: () => {
+          S.eng.clear();
+          S.ghost.fill(0);
+          S.rewind.length = 0;
+          S.running = false; S.phase = 'edit'; S.snap = null;
+          hideMsg(); syncRun();
+          tlog('> DISH CLEARED', 't-warn');
+        },
+      },
+      { label: 'KEEP IT', fn: hideMsg },
+    ],
+    true
+  );
+}
+
+function placeStamp(cx, cy) {
+  if (!canEditCell(cx, cy)) return;
+  const { cells, ok, ox, oy } = stampCellsAt(cx, cy);
+  if (!ok) { deny('does not fit: partly outside the dish'); return; }
+  cells.forEach(([x, y]) => S.eng.set(x, y, 1));
+  S.stampsUsed++;
+  tlog('> placed ' + RLES[S.stamp].label + ' @ (' + ox + ',' + oy + ')', 't-sys');
+}
+
+/* ---------------- run control ---------------- */
+function startPause() {
+  if (S.running) { S.running = false; syncRun(); return; }
+  if (S.eng.pop === 0) { deny('the dish is empty'); return; }
+  S.running = true; syncRun();
+}
+function stepOnce() {
+  if (S.eng.pop === 0) { deny('the dish is empty'); return; }
+  S.running = false; doStep(); syncRun();
+}
+function reset() {
+  S.eng.clear();
+  S.ghost.fill(0);
+  S.rewind.length = 0;
+  S.running = false;
+  syncRun();
+  tlog('> CLEAR', 't-sys');
+}
+function soup() {
+  const e = S.eng;
+  for (let y = 0; y < S.L.h; y++)
+    for (let x = 0; x < S.L.w; x++)
+      e.set(x, y, Math.random() < 0.12 ? 1 : 0);
+  tlog('> SOUP — 12% random fill', 't-sys');
+}
+
+function doStep() {
+  // Life is not reversible -- a generation has many possible predecessors --
+  // so going back means having kept the frames. Forty is enough to replay a
+  // collision and cheap next to the board itself.
+  S.rewind.push(S.eng.snapshot());
+  if (S.rewind.length > 40) S.rewind.shift();
+  S.eng.step();
+}
+
+function stepBack() {
+  const prev = S.rewind.pop();
+  if (!prev) { deny('nothing further back is kept'); return; }
+  S.running = false;
+  S.eng.restore(prev);
+  syncRun(); updateStats(); draw();
+  tlog('> REWIND to gen ' + S.eng.gen, 't-sys');
 }
 
 function syncRun() {
@@ -607,279 +462,6 @@ function stampCellsAt(cx, cy) {
   return { cells, ok, ox, oy };
 }
 
-function placeStamp(cx, cy) {
-  if (!canEditCell(cx, cy)) return;
-  if (!S.L.sandbox && S.L.stampBudget && S.stampsUsed >= S.L.stampBudget) {
-    deny('Out of stamps — RESET to retry'); return;
-  }
-  const { cells, ok, ox, oy } = stampCellsAt(cx, cy);
-  if (!ok) { deny('Does not fit: out of bounds or outside the launch zone'); return; }
-  cells.forEach(([x, y]) => S.eng.set(x, y, 1));
-  S.stampsUsed++;
-  tlog('> placed ' + RLES[S.stamp].label + ' @ (' + ox + ',' + oy + ')', 't-sys');
-}
-
-/* ---------------- run control ---------------- */
-function beginRun() {
-  if (S.eng.pop === 0) { deny('The dish is empty'); return false; }
-  S.snap = S.eng.snapshot();
-  S.goal = makeGoal(S.L);
-  if (S.goal) S.goal.start(S.eng);
-  S.phase = 'run';
-  tlog('> RUN — pop ' + S.eng.pop, 't-ok');
-  return true;
-}
-function startPause() {
-  if (S.running) { S.running = false; syncRun(); return; }
-  if (!S.L.sandbox && S.phase === 'edit' && !beginRun()) return;
-  S.running = true; syncRun();
-}
-function stepOnce() {
-  if (!S.L.sandbox && S.phase === 'edit' && !beginRun()) return;
-  S.running = false; doStep(); syncRun();
-}
-function reset() {
-  if (S.L.sandbox) { S.eng.clear(); S.running = false; syncRun(); tlog('> CLEAR', 't-sys'); return; }
-  // The whole level back to how it opened: gen 0, budget returned, and the
-  // board carrying only what the level itself places. Restoring the snapshot
-  // instead left the player's own cells sitting there, which is a different
-  // thing from a reset and was the other button.
-  loadLevel(S.idx, { quiet: true });
-  tlog('> RESET — level back to gen 0', 't-sys');
-}
-function clearAll() { reset(); }
-function soup() {
-  const e = S.eng;
-  for (let y = 0; y < S.L.h; y++)
-    for (let x = 0; x < S.L.w; x++)
-      e.set(x, y, Math.random() < 0.12 ? 1 : 0);
-  tlog('> SOUP — 12% random fill', 't-sys');
-}
-
-function doStep() {
-  if (has('undo')) {
-    // Life is not reversible -- a generation has many possible predecessors --
-    // so going back means having kept the frames. Forty is enough to replay a
-    // collision and cheap next to the board itself.
-    S.rewind.push(S.eng.snapshot());
-    if (S.rewind.length > 40) S.rewind.shift();
-  }
-  const r = S.eng.step();
-  if (!S.goal) return;
-  const res = S.goal.onStep(S.eng, r);
-  if (!res) return;
-  if (res.log) tlog(res.log, 't-ok');
-  if (res.win) onWin();
-  else if (res.soft) {
-    // Expected, and part of the lesson: stop the clock and say so, without the
-    // failure dialog and without ending the attempt.
-    S.running = false; syncRun();
-    tlog('> ' + res.soft, 't-warn');
-  } else if (res.fail) onFail(res.fail);
-}
-
-function stepBack() {
-  const prev = S.rewind.pop();
-  if (!prev) { deny('Nothing further back is kept'); return; }
-  S.running = false;
-  S.eng.restore(prev);
-  S.won = false;
-  syncRun(); updateStats(); draw();
-  tlog('> REWIND to gen ' + S.eng.gen, 't-sys');
-}
-
-/* ---------------- goals ---------------- */
-function makeGoal(L) {
-  const g = L.goal; if (!g) return null;
-  const seen = new Map();
-  const goalState = {};
-  return {
-    start(e) { if (g.type === 'osc' || g.type === 'period') seen.set(e.hash(), 0); },
-    onStep(e, r) {
-      // Checked before the goal itself: a level can be lost by breaking the
-      // constraint even on the generation it would otherwise be won.
-      if (L.hazard && e.rectCount(L.hazard) > 0) {
-        return { fail: 'Something entered the marked zone at gen ' + e.gen + '.' };
-      }
-      switch (g.type) {
-        case 'survive':
-          // A level that teaches by showing a shape fail gives the player a
-          // grace window: dying inside it is the lesson, not a loss.
-          if (e.pop === 0 && L.graceGens && e.gen <= L.graceGens) {
-            S.saw4x4 = true;
-            return { soft: 'All 16 died at gen ' + e.gen + '. Press RESET and try a smaller square.' };
-          }
-          if (e.pop === 0) return { fail: 'All cells died at gen ' + e.gen + '.' };
-          if (e.gen >= g.gens) return { win: true };
-          return null;
-        case 'still':
-          if (e.pop === 0) return { fail: 'The structure died out.' };
-          if (r.changed > 0) return { fail: 'Changed at gen ' + e.gen + ' — not a still life.' };
-          if (e.gen >= g.gens) return { win: true };
-          return null;
-        case 'osc': {
-          if (e.pop === 0) return { fail: 'The structure died out.' };
-          const h = e.hash();
-          if (seen.has(h)) {
-            const p = e.gen - seen.get(h);
-            if (p >= 2) return { win: true, log: '> period-' + p + ' recurrence @ gen ' + e.gen };
-            return { fail: 'Perfectly static — a still life, not an oscillator.' };
-          }
-          seen.set(h, e.gen);
-          if (e.gen >= g.maxGen) return { fail: 'No recurrence detected within ' + g.maxGen + ' gens.' };
-          return null;
-        }
-        case 'reach':
-          if (e.rectCount(L.target) > 0) {
-            if (g.byGen && e.gen > g.byGen) {
-              return { fail: 'Arrived at gen ' + e.gen + ', but the deadline was ' + g.byGen + '.' };
-            }
-            return { win: true, log: '> signal entered target zone @ gen ' + e.gen };
-          }
-          if (g.byGen && e.gen > g.byGen) return { fail: 'Nothing arrived by gen ' + g.byGen + '.' };
-          if (e.pop === 0) return { fail: 'All cells died — signal lost.' };
-          if (e.gen >= g.maxGen) return { fail: 'Timeout: nothing reached the target within ' + g.maxGen + ' gens.' };
-          return null;
-        case 'clear':
-          if (e.rectCount(L.target) === 0) return { win: true, log: '> target zone cleared @ gen ' + e.gen };
-          if (e.gen >= g.maxGen) return { fail: 'Timeout: debris remains in the target zone. RESET and adjust your aim.' };
-          return null;
-        case 'grow':
-          // Reach a population from a small budget. Placement matters because
-          // most arrangements of the same cells die or settle small.
-          if (e.pop > (goalState.peak || 0)) goalState.peak = e.pop;
-          if (e.pop >= g.pop) return { win: true, log: '> population ' + e.pop + ' @ gen ' + e.gen };
-          if (e.pop === 0) {
-            return { fail: 'Everything died at gen ' + e.gen + ' — it peaked at ' + goalState.peak + ' of ' + g.pop + '.' };
-          }
-          if (e.gen >= g.maxGen) {
-            return { fail: 'Peaked at ' + goalState.peak + ', needed ' + g.pop + '.' };
-          }
-          return null;
-        case 'settle': {
-          // Come to rest -- no change at all -- before the deadline. Anything
-          // still twitching, and anything that dies, is a loss.
-          if (e.pop === 0) return { fail: 'Everything died at gen ' + e.gen + '.' };
-          if (r.changed === 0 && e.gen > 1) return { win: true, log: '> settled @ gen ' + e.gen };
-          if (e.gen >= g.maxGen) {
-            return { fail: 'Still moving at gen ' + g.maxGen + ' — ' + r.changed + ' cells changed on the last step.' };
-          }
-          return null;
-        }
-        case 'guard':
-          // Something got through: the run is lost the moment the zone is
-          // entered, and won if the window closes with it still clear.
-          if (e.rectCount(L.target) > 0) return { fail: 'The signal reached the zone at gen ' + e.gen + '.' };
-          if (e.gen >= g.gens) return { win: true, log: '> zone held for ' + g.gens + ' gens' };
-          return null;
-        case 'exact':
-          // An exact population at an exact generation. Overshooting is as
-          // wrong as undershooting, so the shape has to be chosen rather than
-          // just made big.
-          if (e.gen === g.gen) {
-            return e.pop === g.pop
-              ? { win: true, log: '> population ' + e.pop + ' @ gen ' + g.gen }
-              : { fail: 'Gen ' + g.gen + ' had ' + e.pop + ' cells, not ' + g.pop + '.' };
-          }
-          if (e.pop === 0) return { fail: 'Everything died at gen ' + e.gen + '.' };
-          return null;
-        case 'visit': {
-          // Every zone has to be reached, not just one -- so a single ship in
-          // the right direction is never enough.
-          if (!goalState.hit) goalState.hit = new Set();
-          L.zones.forEach((z, i) => { if (e.rectCount(z) > 0) goalState.hit.add(i); });
-          if (goalState.hit.size >= L.zones.length) {
-            return { win: true, log: '> all ' + L.zones.length + ' zones reached @ gen ' + e.gen };
-          }
-          if (e.pop === 0) return { fail: 'Everything died with ' + goalState.hit.size + ' of ' + L.zones.length + ' zones reached.' };
-          if (e.gen >= g.maxGen) {
-            const missed = L.zones.map((z, i) => i + 1).filter(n => !goalState.hit.has(n - 1));
-            return { fail: 'Zone ' + missed.join(' and ') + ' never reached.' };
-          }
-          return null;
-        }
-        case 'period': {
-          // A specific period, not just any recurrence. Finding a p3 when the
-          // easy answers are all p2 is the whole puzzle.
-          if (e.pop === 0) return { fail: 'The structure died out.' };
-          const h = e.hash();
-          if (seen.has(h)) {
-            const per = e.gen - seen.get(h);
-            return per === g.period
-              ? { win: true, log: '> period ' + per + ' @ gen ' + e.gen }
-              : { fail: 'That repeats every ' + per + ' gens, not ' + g.period + '.' };
-          }
-          seen.set(h, e.gen);
-          if (e.gen >= g.maxGen) return { fail: 'No recurrence within ' + g.maxGen + ' gens.' };
-          return null;
-        }
-        case 'watch':
-          if (e.gen >= g.gens) return { win: true };
-          return null;
-      }
-      return null;
-    },
-  };
-}
-
-function onWin() {
-  // The goal is met, but the interesting part is usually still happening -- a
-  // still life settling, an oscillator on its second turn, a glider crossing
-  // the rest of the board. Stopping dead and covering it with a dialog takes
-  // away the thing the level was teaching, so the machine keeps running and the
-  // dialog waits.
-  S.goal = null; S.won = true;
-  tlog('> STATUS: COMPLETE', 't-ok');
-  banner('COMPLETE');
-  const earned = recordClear();
-  buildLevelList();
-  syncShopBadge();
-  // Long enough to watch what just happened, short enough not to feel stuck.
-  clearTimeout(winTimer);
-  winTimer = setTimeout(() => finishWin(earned), 2600);
-}
-
-/**
- * A quiet line over the board while the win plays out, so it is obvious the
- * goal was met even though nothing has stopped.
- */
-function banner(text) {
-  let el = document.getElementById('winbanner');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'winbanner';
-    document.getElementById('cvwrap').appendChild(el);
-  }
-  el.textContent = text;
-  el.classList.add('show');
-}
-function clearBanner() {
-  document.getElementById('winbanner')?.classList.remove('show');
-}
-
-function finishWin(earned) {
-  S.running = false; syncRun();
-  clearBanner();
-  const next = S.idx + 1 < LEVELS.length ? S.idx + 1 : null;
-  const btns = [];
-  if (next != null) btns.push({ label: LEVELS[next].sandbox ? 'ENTER SANDBOX' : 'NEXT LEVEL', fn: () => loadLevel(next) });
-  if (earned) btns.push({ label: 'SHOP (+' + earned + ')', fn: openShop });
-  btns.push({ label: 'STAY HERE', fn: hideMsg });
-  showMsg('MISSION COMPLETE', S.L.winText || '', btns, false);
-}
-function onFail(msg) {
-  S.running = false; syncRun();
-  // Disarmed like onWin does. Left armed, pressing SPACE through the FAILED box
-  // resumed stepping and a `guard` goal could later fire onWin -- overwriting
-  // the failure with MISSION COMPLETE and banking the credit for it.
-  S.goal = null;
-  tlog('> STATUS: FAILED — ' + msg, 't-err');
-  showMsg('MISSION FAILED', msg, [
-    { label: 'RESET & RETRY', fn: () => { hideMsg(); reset(); } },
-    { label: 'KEEP WATCHING', fn: hideMsg },
-  ], true);
-}
-
 function showMsg(title, text, btns, bad) {
   msgEl.innerHTML = '';
   const box = document.createElement('div'); box.className = 'box';
@@ -905,7 +487,7 @@ function fitCamera() {
   // room to read one, but letting a 13x9 board fill an 842px panel gives 54px
   // cells that read as a bug rather than a board; 30 is legible and still looks
   // like a grid. Elsewhere 22 is plenty.
-  S.cam.s = Math.max(1.5, Math.min(S.L.lesson ? 30 : 22, s));
+  S.cam.s = Math.max(1.5, Math.min(22, s));
   S.cam.x = (r.width - S.L.w * S.cam.s) / 2;
   S.cam.y = (r.height - S.L.h * S.cam.s) / 2;
 }
@@ -1031,57 +613,6 @@ function updateImage() {
       }
       d[di] = r; d[di + 1] = gg; d[di + 2] = b; d[di + 3] = 255;
     }
-  }
-}
-
-function cellRect(x, y, w, h) {
-  return [S.cam.x + x * S.cam.s, S.cam.y + y * S.cam.s, w * S.cam.s, h * S.cam.s];
-}
-
-function drawZones() {
-  const L = S.L;
-  ctx.font = '10px monospace';
-  if (L.editable) {
-    const [x, y, w, h] = cellRect(L.editable.x, L.editable.y, L.editable.w, L.editable.h);
-    ctx.setLineDash([5, 4]);
-    ctx.strokeStyle = 'rgba(86,182,194,.6)'; ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(86,182,194,.75)';
-    ctx.fillText('LAUNCH', x, y - 5);
-    ctx.setLineDash([]);
-  }
-  if (L.hazard) {
-    const [x, y, w, h] = cellRect(L.hazard.x, L.hazard.y, L.hazard.w, L.hazard.h);
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = 'rgba(224,108,117,.75)'; ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(224,108,117,.09)';
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(224,108,117,.85)';
-    ctx.fillText('KEEP OUT', x, y - 5);
-    ctx.setLineDash([]);
-  }
-  (L.zones || []).forEach((z, i) => {
-    const [x, y, w, h] = cellRect(z.x, z.y, z.w, z.h);
-    ctx.setLineDash([4, 3]);
-    const lit = S.goal && S.phase !== 'edit' && S.eng.rectCount(z) > 0;
-    ctx.strokeStyle = lit ? 'rgba(152,195,121,.9)' : 'rgba(229,192,123,.7)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = lit ? 'rgba(152,195,121,.9)' : 'rgba(229,192,123,.8)';
-    ctx.fillText('ZONE ' + (i + 1), x, y - 5);
-    ctx.setLineDash([]);
-  });
-  if (L.target) {
-    const [x, y, w, h] = cellRect(L.target.x, L.target.y, L.target.w, L.target.h);
-    ctx.setLineDash([5, 4]);
-    ctx.strokeStyle = 'rgba(209,154,102,.7)'; ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(209,154,102,.05)';
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(209,154,102,.8)';
-    ctx.fillText('TARGET', x, y - 5);
-    ctx.setLineDash([]);
   }
 }
 
@@ -1228,86 +759,6 @@ function drawHeat() {
   ctx.restore();
 }
 
-/**
- * The step's own example, drawn on the board where it should go.
- *
- * The point is that a level can be played without reading anything: the outline
- * says put cells here, and it stops as soon as the step is satisfied. Pulsed so
- * it cannot be mistaken for live cells, and skipped once the player has drawn
- * enough that they clearly did not need it.
- */
-function drawDemo() {
-  if (!S.L || !S.L.steps || S.won || S.running) return;
-  const step = S.L.steps[S.stepIdx];
-  if (!step || !step.show) return;
-  if (step.done && step.done(S)) return;
-
-  // Magenta, and deliberately not the amber it used to be: a live cell starts
-  // amber and ages towards green, so an amber outline sitting next to the cells
-  // the player has just drawn was the same colour as them. This is the one hue
-  // on screen that no cell ever takes.
-  const t = (Math.sin(performance.now() / 380) + 1) / 2;
-  ctx.save();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(198,120,221,' + (0.55 + t * 0.4) + ')';
-  ctx.fillStyle = 'rgba(198,120,221,' + (0.08 + t * 0.14) + ')';
-  for (const [x, y] of step.show) {
-    if (S.eng.get(x, y)) continue; // already placed, no need to point at it
-    const [sx, sy, sw, sh] = cellRect(x, y, 1, 1);
-    ctx.fillRect(sx + 1, sy + 1, sw - 2, sh - 2);
-    ctx.strokeRect(sx + 1, sy + 1, sw - 2, sh - 2);
-  }
-  ctx.restore();
-}
-
-/**
- * The lesson's own overlay: the neighbour count on every cell that has one, and
- * a ring around the one the step is talking about.
- *
- * This is the part that makes the rule visible instead of asserted. A sentence
- * saying "under 2 neighbours dies" means nothing to someone who has not yet
- * been shown what a neighbour is; a 1 sitting on the cell, and that cell
- * circled, does the whole job without being read.
- */
-function drawLesson() {
-  const L = S.L;
-  if (!L || !L.lesson) return;
-  const step = L.steps[S.teachStep];
-  if (!step || !step.teach) return;
-
-  ctx.save();
-  ctx.font = 'bold ' + Math.floor(S.cam.s * 0.46) + 'px ui-monospace, monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  for (let y = 0; y < L.h; y++)
-    for (let x = 0; x < L.w; x++) {
-      let n = 0;
-      for (let dy = -1; dy <= 1; dy++)
-        for (let dx = -1; dx <= 1; dx++)
-          if ((dx || dy) && S.eng.get(x + dx, y + dy)) n++;
-      if (!n) continue;
-      const live = S.eng.get(x, y);
-      // Only what the rules turn on: a live cell's own count, and an empty
-      // cell's count when it is 3 and something is about to appear there.
-      if (!live && n !== 3) continue;
-      const [sx, sy, sw, sh] = cellRect(x, y, 1, 1);
-      ctx.fillStyle = live
-        ? (n === 2 || n === 3 ? 'rgba(22,23,29,.85)' : 'rgba(224,108,117,.95)')
-        : 'rgba(152,195,121,.95)';
-      ctx.fillText(String(n), sx + sw / 2, sy + sh / 2);
-    }
-
-  if (step.teach.ring) {
-    const [rx, ry] = step.teach.ring;
-    const [sx, sy, sw, sh] = cellRect(rx, ry, 1, 1);
-    const t = (Math.sin(performance.now() / 420) + 1) / 2;
-    ctx.strokeStyle = 'rgba(229,192,123,' + (0.5 + t * 0.4) + ')';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(sx - 2.5, sy - 2.5, sw + 5, sh + 5);
-  }
-  ctx.restore();
-}
-
 function drawHover() {
   if (S.running || S.tool !== 'draw' || S.cam.s < 9) return;
   const c = S.hover;
@@ -1336,43 +787,19 @@ function draw() {
   ctx.setTransform(dpr * S.cam.s, 0, 0, dpr * S.cam.s, dpr * S.cam.x, dpr * S.cam.y);
   ctx.drawImage(S.buf, 0, 0);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawGrid(); drawZones(); drawGhostFrame(); drawHeat(); drawLesson(); drawPreview(); drawTrace(); drawHover();
-  // Last, so the outline the player is being asked to trace is never buried
-  // under a hover box or a preview.
-  drawDemo();
+  drawGrid(); drawGhostFrame(); drawHeat(); drawPreview(); drawTrace(); drawHover();
 }
 
 function updateGuide() {
+  // One line, always the same: what the controls do. There is no sequence to
+  // walk through any more, so the card neither advances nor points at anything.
   const L = S.L;
-  if (!L || !L.steps) { guideEl.style.display = 'none'; return; }
+  if (!L || !L.steps || !L.steps[0]) { guideEl.style.display = 'none'; return; }
   guideEl.style.display = 'flex';
-  // The level's accent now lives on the step label alone -- the card is
-  // bordered like the other panels rather than flagged down one side.
   gstep.style.color = L.accent || '#56b6c2';
-  // The win banner already says this. Two "mission complete" indicators at once
-  // was the thing to remove, so the guide simply steps aside.
-  if (S.won) { guideEl.style.display = 'none'; syncPointer(null); return; }
-  if (S.won) { gstep.textContent = 'DONE'; gtext.textContent = 'Mission complete'; return; }
-  let i = S.stepIdx;
-  if (L.lesson) {
-    // Driven by teachNext and by STEP, not by scanning ahead: the lesson's
-    // steps deliberately repeat their conditions.
-    i = S.teachStep;
-    if (L.steps[i] && L.steps[i].done && L.steps[i].done(S) && !L.steps[i].teach?.keep) {
-      // The generation advanced -- move to the "here is what happened" half.
-      S.teachStep = Math.min(S.teachStep + 1, L.steps.length - 1);
-      S.stepIdx = S.teachStep;
-      i = S.teachStep;
-      buildTopbar();
-    }
-  } else {
-    while (i < L.steps.length - 1 && L.steps[i].done && L.steps[i].done(S)) i++;
-    if (i > S.stepIdx) S.stepIdx = i;
-    i = S.stepIdx;
-  }
-  gstep.textContent = L.sandbox ? 'FREE' : 'STEP ' + (i + 1) + '/' + L.steps.length;
-  gtext.textContent = L.steps[i].text;
-  syncPointer(L.steps[i].anchor);
+  gstep.textContent = 'B3/S23';
+  gtext.textContent = L.steps[0].text;
+  syncPointer(null);
 }
 
 /**
@@ -1442,18 +869,6 @@ function updateStats() {
   if (!el.gen) return;
   el.gen.textContent = S.eng.gen;
   el.pop.textContent = S.eng.pop;
-  if (el.goal) {
-    const L = S.L;
-    const prog = S.phase === 'edit' ? '' : goalProgress(L);
-    el.goal.textContent = prog || goalLabel(L);
-    el.goal.title = goalLabel(L);
-  }
-  if (el.bud) {
-    const L = S.L;
-    el.bud.textContent = S.phase !== 'edit' ? '--' :
-      L.stampBudget ? S.stampsUsed + '/' + L.stampBudget :
-      Math.max(0, S.eng.pop - S.presetPop) + '/' + L.budget;
-  }
 }
 
 /* ---------------- main loop ---------------- */
@@ -1468,7 +883,7 @@ function frame(t) {
   } else acc = 0;
   // The page can be replaced between frames; if it was, take the new nodes and
   // re-fit the camera to them before drawing into a canvas of a different size.
-  if (bind()) { buildTopbar(); buildTray(); buildLevelList(); resize(); }
+  if (bind()) { buildTopbar(); buildTray(); buildLibrary(); resize(); }
   draw(); updateStats(); updateGuide();
   raf = requestAnimationFrame(frame);
 }
@@ -1488,33 +903,19 @@ export function start() {
   cv = null;
   if (!bind()) return;
 
-  // Progress is read fresh: a wipe in another tab, or simply a later visit,
-  // should not be masked by whatever the first import happened to see.
-  // Clamped from both ends and checked for a number: Math.min(24, NaN) is NaN,
-  // and loadLevel(NaN) reads LEVELS[NaN] -- undefined -- so `new Life(L.w, L.h)`
-  // threw inside start() and the whole tab came up blank. A save that has been
-  // corrupted, hand-edited, or written by an older schema now just starts over.
-  const savedLevel = Number(localStorage.getItem('lifelab-unlocked'));
-  S.unlocked = Number.isFinite(savedLevel)
-    ? Math.max(0, Math.min(CAMPAIGN - 1, Math.floor(savedLevel)))
-    : 0;
-  S.shop = loadShop();
-  S.teachStep = 0;
-  S.saw4x4 = false;
   last = performance.now(); acc = 0;
 
-  syncShopBadge();
   bindInput();
 
   // headless driver for automated checks
   window.lifelab = { S, loadLevel, doStep, startPause, step: n => { for (let i = 0; i < n; i++) doStep(); draw(); updateStats(); } };
 
-  tlog('LIFE.LAB v0.1 — cellular automaton laboratory', 't-hd');
-  tlog('rule: B3/S23 | grid: bounded | host: krsz.in');
-  // A level is loaded so the canvas has something to size itself against; the
-  // chooser sits over it until the player picks a mode.
-  loadLevel(Math.min(S.unlocked, CAMPAIGN - 1), { quiet: true });
-  chooseMode();
+  tlog('LIFE.LAB v0.2 — cellular automaton laboratory', 't-hd');
+  tlog('rule: B3/S23 | grid: 320x200 bounded | host: krsz.in');
+  // Straight into the dish. There is only one, and a chooser over a single
+  // choice is a door with nothing behind it.
+  S.mode = 'sandbox';
+  loadLevel(0);
   raf = requestAnimationFrame(frame);
 }
 
