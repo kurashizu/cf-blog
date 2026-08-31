@@ -295,7 +295,11 @@ function buildTray() {
   const names = (L.stamps === 'all' || (has('lab') && L.stamps))
     ? Object.keys(RLES)
     : (L.stamps || []);
-  tray.style.display = names.length ? 'flex' : 'none';
+  // No inline display: it would beat the stylesheet, and an inline `flex` left
+  // over from when this was a single column is exactly what collapsed the grid
+  // into six-pixel slivers off the right edge -- the patterns were there, and
+  // unclickable. `#tray:empty` in the stylesheet handles the empty case.
+  tray.style.removeProperty('display');
   names.forEach((n, ni) => {
     const p = pattern(n);
     const b = document.createElement('button');
@@ -313,6 +317,7 @@ function buildTray() {
   if (names.length) {
     const b = document.createElement('button');
     b.className = 'stamp';
+    b.style.gridColumn = '1 / -1';
     b.innerHTML = ICONS.rot + '<span>ROTATE [R]</span>';
     b.onclick = () => { S.rot = (S.rot + 1) % 4; };
     tray.appendChild(b);
@@ -614,6 +619,11 @@ function updateImage() {
       d[di] = r; d[di + 1] = gg; d[di + 2] = b; d[di + 3] = 255;
     }
   }
+}
+
+/** A cell rectangle in screen space, from the camera. */
+function cellRect(x, y, w, h) {
+  return [S.cam.x + x * S.cam.s, S.cam.y + y * S.cam.s, w * S.cam.s, h * S.cam.s];
 }
 
 function drawGrid() {
