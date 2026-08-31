@@ -749,6 +749,13 @@
 		playSound('click');
 		status = 'saving disk…';
 		await persistOverlay();
+		// Same reason as restart(): the x86-64 machine does not stop, it ends with
+		// the page. Without this the panel returns to idle while QEMU keeps
+		// running behind it, and the next BOOT starts a second one.
+		if (settings.machine === 'x86_64' && phase === 'running') {
+			location.reload();
+			return;
+		}
 		shutdown();
 	}
 
@@ -828,6 +835,16 @@
 	async function restart() {
 		playSound('click');
 		await persistOverlay();
+		// QEMU cannot be restarted in place. Its main is proxied to a pthread and
+		// run under Asyncify, so there is no way back out of it: _exit does not
+		// stop the CPU loop, and building a second machine beside the first
+		// leaves the page driving neither -- the old one goes on reading the disk
+		// while the terminal sits empty. Reloading is the honest way to do this,
+		// and the saved overlay above is what makes it cost nothing.
+		if (settings.machine === 'x86_64') {
+			location.reload();
+			return;
+		}
 		shutdown();
 		await boot();
 	}
@@ -1084,7 +1101,9 @@
 				{/if}
 				<button
 					onclick={restart}
-					title="Rebuild the machine from scratch. Not Ctrl+Alt+Del: the kernel is handed to the emulator directly rather than loaded from the disk, so a guest reboot would leave SeaBIOS with nothing to boot."
+					title={settings.machine === 'x86_64'
+						? 'Reload the page and boot again. QEMU runs its main under Asyncify and cannot be torn down in place, so this is a real reload — the saved disk is written first, so nothing is lost.'
+						: 'Rebuild the machine from scratch. Not Ctrl+Alt+Del: the kernel is handed to the emulator directly rather than loaded from the disk, so a guest reboot would leave SeaBIOS with nothing to boot.'}
 					class="px-2.5 py-1 border border-[#e5c07b]/50 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#e5c07b]/20"
 				>
 					↻ RESTART

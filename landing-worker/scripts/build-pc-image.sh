@@ -98,7 +98,7 @@ cat > /tmp/motd.raw <<'MOTD'
 
   \033[38;5;110mGOOD TO KNOW\033[0m
     The disk streams in 1 MiB pieces, so a command is slower the first time.
-    Writes stay in the tab. Power off and they are gone.
+    What you change is kept in this browser and replayed at the next boot.
     Outbound traffic goes through a relay on this origin. Nothing can reach in.
 
 MOTD
