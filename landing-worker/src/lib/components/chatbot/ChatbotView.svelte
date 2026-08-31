@@ -377,7 +377,14 @@
 			think: thinkMode,
 			turns: stored
 		};
-		await putSession(entry);
+		const saved = await putSession(entry);
+		if (!saved) {
+			// Said plainly rather than left to be discovered on the next visit,
+			// when the conversation is simply not in the list.
+			errorText =
+				'This conversation could not be saved — the browser is out of storage. ' +
+				'Deleting older conversations frees space.';
+		}
 		sessions = [entry, ...sessions.filter((x) => x.id !== sessionId)];
 		// Keep the storage panel's figure honest while it is open.
 		if (storageOpen) void refreshSize();
@@ -416,6 +423,47 @@
 	async function refreshSize() {
 		savedSize = await sessionsSize();
 	}
+
+	/** Bytes wllama has cached, or null while it has not been asked yet. */
+	let modelCacheBytes: number | null = $state(null);
+
+	async function refreshModelCache() {
+		try {
+			const { CacheManager } = await import('@wllama/wllama/esm/index.js');
+			// list() rather than getSize(name): the cache holds the weights and the
+			// vision projector under names derived from their URLs, and the panel
+			// wants the total of whatever is actually there.
+			const files = await new CacheManager().list();
+			modelCacheBytes = files.reduce((n, f) => n + (f.size > 0 ? f.size : 0), 0);
+		} catch {
+			// Storage the browser will not open (a private window, blocked site
+			// data) reports nothing rather than an error the panel cannot act on.
+			modelCacheBytes = null;
+		}
+	}
+
+	/**
+	 * Drops the downloaded weights.
+	 *
+	 * The worker holds the model open, so it is terminated first: clearing the
+	 * cache underneath a running engine leaves it reading files that are no
+	 * longer there. The next send loads from scratch, downloading again.
+	 */
+	async function wipeModelCache() {
+		if (modelWiping) return;
+		modelWiping = true;
+		try {
+			teardown();
+			phase = 'idle';
+			const { CacheManager } = await import('@wllama/wllama/esm/index.js');
+			await new CacheManager().clear();
+			await refreshModelCache();
+		} finally {
+			modelWiping = false;
+		}
+	}
+
+	let modelWiping = $state(false);
 
 	async function wipeSessions() {
 		await clearSessions();
@@ -823,6 +871,7 @@
 				if (storageOpen) {
 					configOpen = false;
 					void refreshSize();
+					void refreshModelCache();
 				}
 				playSound('toggle');
 			}}
@@ -933,9 +982,9 @@
 	{#if storageOpen}
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5">
 			<div class="text-white/50 leading-relaxed">
-				The model downloads once and is cached by the browser, so a second visit skips it. Clearing
-				this site's data in your browser frees the space. Both the weights and the inference runtime
-				come from this site's own storage — nothing is fetched from a third party.
+				The model downloads once and is cached by the browser, so a second visit skips it. Both the
+				weights and the inference runtime come from this site's own storage — nothing is fetched
+				from a third party.
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
 				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.model)}</span>
@@ -943,6 +992,27 @@
 			</div>
 			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1">
 				total {fmtMb(TOTAL_DOWNLOAD_MB)}
+			</div>
+
+			<!-- The cached weights. Telling the reader to clear the whole site's data
+			     took the saved conversations with it; this drops the download alone. -->
+			<div class="border-t border-white/10 pt-1.5 flex items-center justify-between gap-2">
+				<span class="text-white/50">
+					cached model
+					{#if modelCacheBytes !== null}
+						<span class="font-mono text-white/35">· {fmtBytes(modelCacheBytes)}</span>
+					{/if}
+				</span>
+				<button
+					onclick={wipeModelCache}
+					disabled={modelWiping || !modelCacheBytes}
+					class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
+				>
+					{modelWiping ? 'WIPING…' : 'WIPE MODEL'}
+				</button>
+			</div>
+			<div class="text-white/35 leading-relaxed">
+				Frees the space the weights take. The next message downloads them again.
 			</div>
 
 			<!-- Saved conversations -->
