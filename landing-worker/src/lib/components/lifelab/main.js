@@ -239,7 +239,18 @@ function openShop() {
     main.append(nm, bl, dt);
     const b = document.createElement('button'); b.className = 'buy';
     const owned = it.kind === 'tool' && has(it.id);
+    // A tool the campaign has not reached a use for yet is shown, but not for
+    // sale: seeing TRAJECTORY seven levels before the first ship only invites
+    // spending on something that does nothing.
+    const tooEarly = !owned && (it.from ?? 0) > S.unlocked;
     if (owned) { b.classList.add('owned'); b.innerHTML = ICONS.check + '<span>OWNED</span>'; b.disabled = true; }
+    else if (tooEarly) {
+      row.classList.add('locked');
+      b.classList.add('soon');
+      b.innerHTML = ICONS.lock + '<span>L' + String(it.from).padStart(2, '0') + '</span>';
+      b.disabled = true;
+      b.title = 'Unlocks at level ' + String(it.from).padStart(2, '0') + ', where it first has a use';
+    }
     else {
       b.innerHTML = ICONS.coin + '<span>' + it.cost + '</span>';
       b.disabled = S.shop.coins < it.cost;

@@ -196,3 +196,9 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
   background:rgba(27,29,36,.94);border:1px solid var(--yellow);transform:rotate(45deg);margin-left:-5px}
 #guide.anchored[data-side="below"]::after{top:-6px;border-right:none;border-bottom:none}
 #guide.anchored[data-side="above"]::after{bottom:-6px;border-left:none;border-top:none}
+
+/* A tool the campaign has not reached yet: readable, so the player knows what
+   is coming and can save for it, but plainly not on sale. */
+.shoprow.locked .shopname,.shoprow.locked .shopblurb{color:var(--faint)}
+.shoprow.locked .shopicon{color:var(--faint);opacity:.6}
+.buy.soon{border-color:var(--line);color:var(--faint)}

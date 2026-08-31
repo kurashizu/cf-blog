@@ -1,6 +1,7 @@
 import { Life } from './engine.js';
 import { pattern, rotateCells, RLES } from './patterns.js';
 import { LEVELS } from './levels.js';
+import { ITEMS } from './shop.js';
 
 function place(e, p, x, y) { p.cells.forEach(([cx, cy]) => e.set(x + cx, y + cy, 1)); }
 function cellsOf(e) {
@@ -445,6 +446,51 @@ for (const n of ['toad', 'beacon']) {
   check('the sandbox is last and outside the campaign',
     LEVELS[LEVELS.length - 1].sandbox === true && campaign.length === LEVELS.length - 1,
     `${campaign.length} campaign levels + sandbox`);
+}
+
+// The shop economy. Credits only come from first clears, so the whole budget
+// is fixed and the prices have to be checked against it: the first version had
+// every tool owned by level 11 of 25, which left the back half of the campaign
+// with a shop that had nothing in it.
+{
+  const campaign = LEVELS.filter((l) => !l.sandbox).length;
+  const budget = (campaign - 1) * 2;
+  const tools = ITEMS.filter((i) => i.kind === 'tool');
+  const toolCost = tools.reduce((n, i) => n + i.cost, 0);
+
+  check('the tools are affordable in one run', toolCost <= budget,
+    `${toolCost} credits of tools against ${budget} earnable`);
+  check('the tools are not trivially affordable', toolCost > budget * 0.6,
+    `${Math.round((100 * toolCost) / budget)}% of the budget`);
+
+  // Every gate must land on a level that exists, and no tool may be on sale
+  // before it has anything to work on.
+  const badGate = tools.filter((t) => (t.from ?? 0) >= campaign);
+  check('every tool unlocks within the campaign', badGate.length === 0,
+    badGate.map((t) => t.id).join(' ') || 'all reachable');
+
+  // Walk the campaign buying the cheapest unlocked tool whenever affordable,
+  // and check the purchases are spread rather than bunched at the start.
+  let coins = 0;
+  const owned = new Set();
+  const boughtAt = [];
+  for (let lvl = 0; lvl < campaign; lvl++) {
+    coins += 2;
+    for (;;) {
+      const next = tools
+        .filter((t) => !owned.has(t.id) && coins >= t.cost && lvl >= (t.from ?? 0))
+        .sort((a, b) => a.cost - b.cost)[0];
+      if (!next) break;
+      coins -= next.cost;
+      owned.add(next.id);
+      boughtAt.push(lvl);
+    }
+  }
+  check('every tool can be bought by the end', owned.size === tools.length,
+    `${owned.size} of ${tools.length}`);
+  check('purchases are spread across the campaign',
+    boughtAt.length > 0 && boughtAt[boughtAt.length - 1] >= campaign * 0.5,
+    `last tool at level ${boughtAt[boughtAt.length - 1]} of ${campaign - 1}`);
 }
 
 console.log(fails ? `\n${fails} FAILURES` : '\nALL PASS');

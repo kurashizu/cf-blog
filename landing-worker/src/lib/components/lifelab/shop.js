@@ -14,6 +14,12 @@
  * `use` is spent. Each buy adds a charge, and a charge is consumed when it is
  * used -- these are the ones that solve a level outright, so paying per use is
  * what keeps them from replacing the puzzle.
+ *
+ * `from` is the level a tool first has anything to do. Without it the cheapest
+ * tool was affordable after one clear and the whole set was owned by level 11
+ * of 25 -- so the back half of the campaign had a shop with nothing in it, and
+ * TRAJECTORY was on sale seven levels before the first ship appeared. A tool
+ * shows as locked until the campaign reaches the level that gives it a use.
  */
 export const ITEMS = [
   {
@@ -21,7 +27,8 @@ export const ITEMS = [
     kind: 'tool',
     icon: 'trace',
     name: 'TRAJECTORY',
-    cost: 3,
+    cost: 6,
+    from: 8,
     blurb: 'Dotted path showing where a stamped ship travels.',
     detail: 'Runs the pattern forward 120 gens on its own and marks where it goes. Aiming stops being guesswork.',
   },
@@ -30,7 +37,8 @@ export const ITEMS = [
     kind: 'tool',
     icon: 'ghost',
     name: 'GHOST FRAME',
-    cost: 4,
+    cost: 5,
+    from: 3,
     blurb: 'Faint overlay of the next generation, before you run.',
     detail: 'Shows what one step would produce while you are still editing.',
   },
@@ -39,7 +47,8 @@ export const ITEMS = [
     kind: 'tool',
     icon: 'heat',
     name: 'NEIGHBOUR COUNT',
-    cost: 3,
+    cost: 4,
+    from: 1,
     blurb: 'Each empty cell shows how many neighbours it has.',
     detail: 'A cell with exactly 3 is about to be born. Makes the rule visible instead of remembered.',
   },
@@ -48,7 +57,8 @@ export const ITEMS = [
     kind: 'tool',
     icon: 'undo',
     name: 'REWIND',
-    cost: 5,
+    cost: 8,
+    from: 14,
     blurb: 'Step the simulation backwards.',
     detail: 'Keeps the last 40 generations so a collision can be replayed frame by frame.',
   },
@@ -56,7 +66,7 @@ export const ITEMS = [
     id: 'peek',
     icon: 'trace',
     kind: 'use',
-    cost: 2,
+    cost: 3,
     name: 'FAST FORWARD',
     blurb: 'Jump 50 generations instantly.',
     detail: 'Spends one charge. Useful when a pattern needs a long run before anything happens.',
@@ -65,7 +75,7 @@ export const ITEMS = [
     id: 'wipe',
     icon: 'undo',
     kind: 'use',
-    cost: 2,
+    cost: 3,
     name: 'SECOND CHANCE',
     blurb: 'Restore the budget after a failed run.',
     detail: 'Spends one charge and puts the level back to gen 0 with your stamps returned.',
@@ -75,7 +85,8 @@ export const ITEMS = [
     kind: 'tool',
     icon: 'lab',
     name: 'LAB ACCESS',
-    cost: 8,
+    cost: 12,
+    from: 6,
     blurb: 'The full pattern library in every level.',
     detail: 'Every stamp in the sandbox becomes available while a level is running. Budgets still apply.',
   },
