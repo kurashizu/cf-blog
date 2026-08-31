@@ -58,7 +58,7 @@ VM_IMAGES = "vmlinuz|r2:vm/vmlinuz#b19|8651264,initramfs|r2:vm/initramfs#b19|974
 # qemu-wasm actually exercises with a disk. Same route and same 1 MiB chunking
 # as the others. Bump the #marker whenever CI republishes, or the edge keeps
 # serving the previous build from an immutable entry.
-PC_IMAGES = "kernel|r2:pc/kernel#p3|12588032,initramfs|r2:pc/initramfs#p3|7478954,rootfs|r2:pc/rootfs.img@209715200#p3|429916160"
+PC_IMAGES = "kernel|r2:pc/kernel#p4|12588032,initramfs|r2:pc/initramfs#p4|7478992,rootfs|r2:pc/rootfs.img@209715200#p4|429916160"
 
 
 [observability]
