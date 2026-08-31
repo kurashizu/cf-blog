@@ -1064,6 +1064,23 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
+						{#each [['x86', 'i686', 'v86: a 32-bit x86 PC, JIT-compiled to WebAssembly. The one with a graphical desktop and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.']] as const as [value, label, hint] (value)}
+							<button
+								onclick={() => (settings.machine = value)}
+								title={hint}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.machine ===
+								value
+									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
+							>
+								{label}
+							</button>
+						{/each}
+						<span class="text-[10px] font-mono text-white/40">different emulators, not settings</span>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">GUEST RAM</span>
 						{#each MEMORY_CHOICES as mb (mb)}
 							<button
@@ -1076,6 +1093,59 @@
 							</button>
 						{/each}
 						<span class="text-[10px] font-mono text-white/30">this is browser memory, not your machine's</span>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">NETWORK</span>
+						<button
+							onclick={() => (settings.network = !settings.network)}
+							title="Attach a virtio NIC and put a gateway behind it — DHCP, DNS and TCP — whose connections leave through the relay on this origin. Reachable destinations are limited by an allowlist enforced at the edge."
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.network
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							NET: {settings.network ? 'ON' : 'OFF'}
+						</button>
+						<span class="text-[10px] font-mono text-white/40">nothing on the internet can reach in</span>
+					</div>
+
+					<!-- min-h is the height of a button row (measured: 30px). This row holds
+					     buttons for the i686 machine and one line of text for the other, and
+					     without it the row shrinks on the switch and its label re-centres --
+					     two pixels of movement under the pointer that just clicked. -->
+					<div class="flex flex-wrap items-center gap-2 min-h-[30px]">
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISK</span>
+						{#if settings.machine === 'x86'}
+						<button
+							onclick={() => (settings.persistDisk = !settings.persistDisk)}
+							title="Keep what the guest writes in this browser's origin-private filesystem and replay it on the next boot. The image itself stays read-only and shared; only the difference is stored, and only in this browser."
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.persistDisk
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							PERSIST: {settings.persistDisk ? 'ON' : 'OFF'}
+						</button>
+						<button
+							onclick={wipeOverlay}
+							title="Delete the saved changes. The next boot starts from the image exactly as built."
+							class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:bg-[#e06c75]/20"
+						>
+							WIPE
+						</button>
+						<span class="text-[10px] font-mono text-white/40">
+							{overlayStored ? `${formatBytes(overlayStored)} saved` : 'nothing saved'}{overlayNote
+								? ` · ${overlayNote}`
+								: ''}
+						</span>
+						{:else}
+						<!-- The x86-64 machine keeps its writes in a Map that dies with the
+						     tab. Showing the toggle here would offer a switch that does
+						     nothing, and the byte count beside it belongs to the other
+						     machine's overlay. -->
+						<span class="text-[10px] font-mono text-white/40">
+							writes stay in memory · gone at power off
+						</span>
+						{/if}
 					</div>
 
 					{#if settings.machine === 'x86'}
@@ -1093,23 +1163,6 @@
 						{/each}
 					</div>
 					{/if}
-
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
-						{#each [['x86', 'i686', 'v86: a 32-bit x86 PC, JIT-compiled to WebAssembly. The one with a graphical desktop and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.']] as const as [value, label, hint] (value)}
-							<button
-								onclick={() => (settings.machine = value)}
-								title={hint}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.machine ===
-								value
-									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-									: 'border-white/20 text-white/55 hover:border-white/50'}"
-							>
-								{label}
-							</button>
-						{/each}
-						<span class="text-[10px] font-mono text-white/40">different emulators, not settings</span>
-					</div>
 
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
@@ -1150,55 +1203,6 @@
 					</div>
 					{/if}
 
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">NETWORK</span>
-						<button
-							onclick={() => (settings.network = !settings.network)}
-							title="Attach a virtio NIC and put a gateway behind it — DHCP, DNS and TCP — whose connections leave through the relay on this origin. Reachable destinations are limited by an allowlist enforced at the edge."
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.network
-								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-								: 'border-white/20 text-white/55 hover:border-white/50'}"
-						>
-							NET: {settings.network ? 'ON' : 'OFF'}
-						</button>
-						<span class="text-[10px] font-mono text-white/40">nothing on the internet can reach in</span>
-					</div>
-
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISK</span>
-						{#if settings.machine === 'x86'}
-						<button
-							onclick={() => (settings.persistDisk = !settings.persistDisk)}
-							title="Keep what the guest writes in this browser's origin-private filesystem and replay it on the next boot. The image itself stays read-only and shared; only the difference is stored, and only in this browser."
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.persistDisk
-								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-								: 'border-white/20 text-white/55 hover:border-white/50'}"
-						>
-							PERSIST: {settings.persistDisk ? 'ON' : 'OFF'}
-						</button>
-						<button
-							onclick={wipeOverlay}
-							title="Delete the saved changes. The next boot starts from the image exactly as built."
-							class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:bg-[#e06c75]/20"
-						>
-							WIPE
-						</button>
-						<span class="text-[10px] font-mono text-white/40">
-							{overlayStored ? `${formatBytes(overlayStored)} saved` : 'nothing saved'}{overlayNote
-								? ` · ${overlayNote}`
-								: ''}
-						</span>
-						{:else}
-						<!-- The x86-64 machine keeps its writes in a Map that dies with the
-						     tab. Showing the toggle here would offer a switch that does
-						     nothing, and the byte count beside it belongs to the other
-						     machine's overlay. -->
-						<span class="text-[10px] font-mono text-white/40">
-							writes stay in memory · gone at power off
-						</span>
-						{/if}
-					</div>
-
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">BOOT</span>
@@ -1232,14 +1236,26 @@
 
 					<div class="flex flex-wrap items-center gap-3">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">CPU</span>
-						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
-							<input type="checkbox" bind:checked={settings.jit} class="accent-[#98c379]" />
-							<span title="v86 interprets code until a block is hot, then compiles it to WebAssembly. Turning this off is much slower and only useful for comparison.">JIT</span>
-						</label>
-						<label class="flex items-center gap-1.5 text-[11px] font-mono text-white/65 cursor-pointer">
-							<input type="checkbox" bind:checked={settings.acpi} class="accent-[#98c379]" />
-							<span title="Expose an ACPI table to the guest. Off by default: it gives the kernel more hardware to probe, and probing is where this emulator is weakest.">ACPI</span>
-						</label>
+						<button
+							onclick={() => (settings.jit = !settings.jit)}
+							aria-pressed={settings.jit}
+							title="v86 interprets code until a block is hot, then compiles it to WebAssembly. Turning this off is much slower and only useful for comparison."
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.jit
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							JIT: {settings.jit ? 'ON' : 'OFF'}
+						</button>
+						<button
+							onclick={() => (settings.acpi = !settings.acpi)}
+							aria-pressed={settings.acpi}
+							title="Expose an ACPI table to the guest. Off by default: it gives the kernel more hardware to probe, and probing is where this emulator is weakest."
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.acpi
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							ACPI: {settings.acpi ? 'ON' : 'OFF'}
+						</button>
 						<button
 							onclick={resetSettings}
 							title="Put every setting on this panel back to its default, including the command line. The saved disk is left alone."
