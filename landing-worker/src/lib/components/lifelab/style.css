@@ -28,7 +28,8 @@
 .shead{display:flex;align-items:center;gap:6px;padding:11px 12px 0 12px;font-size:10px;letter-spacing:2px;color:var(--faint);min-width:0}
 .shead > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shead small{font-size:10px;letter-spacing:0;color:var(--faint);opacity:.75;text-transform:none}
-.shead button{flex:none;border:1px solid var(--line);background:none;color:var(--dim);font:inherit;font-size:10px;letter-spacing:1px;padding:2px 6px;cursor:pointer;border-radius:2px}
+.shead button{flex:none;display:flex;align-items:center;gap:5px;border:1px solid var(--line);background:none;color:var(--dim);font:inherit;font-size:10px;letter-spacing:1px;padding:2px 6px;cursor:pointer;border-radius:2px}
+.shead button svg{display:block;flex:none;width:9px;height:9px}
 .shead button:hover{border-color:var(--faint);color:var(--fg)}
 .shead #modebtn{margin-left:auto}
 /* Destructive, so it is coloured like the other things that cannot be undone
@@ -53,14 +54,19 @@
 #term::-webkit-scrollbar-track{background:rgba(0,0,0,.25)}
 #term::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
 #stage{flex:1;position:relative;display:flex;flex-direction:column;min-width:0}
-#topbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);z-index:3;overflow-x:auto;scrollbar-width:none}
+/* Wraps rather than scrolls. The row was overflow-x:auto, which quietly put the
+   stats -- GEN, POP and the GOAL that says what the level actually wants --
+   past the right edge on a narrow stage, reachable only by scrolling a bar with
+   no visible scrollbar. Wrapping keeps every control and every readout on
+   screen; the stage loses a few pixels of height instead, which it can spare. */
+#topbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);z-index:3}
 #topbar::-webkit-scrollbar{display:none}
 button.tb{flex:none;white-space:nowrap;display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--line);color:var(--fg);font:inherit;font-size:12px;letter-spacing:1px;padding:6px 11px;cursor:pointer;border-radius:2px}
 button.tb:hover{border-color:var(--faint)}
 button.tb.on{border-color:var(--accent);color:var(--accent);background:rgba(86,182,194,.08)}
 button.tb svg{display:block;flex:none}
 .sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
-#stats{margin-left:auto;display:flex;gap:18px;color:var(--faint);font-size:12px;letter-spacing:1px}
+#stats{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--faint);font-size:12px;letter-spacing:1px}
 #stats b{color:var(--dim);font-weight:normal}
 #cvwrap{position:relative;flex:1;min-width:0;min-height:0;overflow:hidden}
 #cv{display:block;width:100%;height:100%}
@@ -161,7 +167,14 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
 .stat{white-space:nowrap}
 /* The goal is the one field whose text varies in length, so it gets room and
    is not allowed to push the fixed readouts around as it changes. */
-#stGoal{min-width:14ch;color:var(--yellow)}
+/* Wide enough for the longest label the campaign can produce ("all still by
+   gen 260") so the field never resizes between levels and never pushes
+   the toolbar into a horizontal scroll. Fixed rather than min-width: a label
+   that outgrew the reservation used to widen the whole row and hide GOAL off
+   the right edge, which is exactly the shifting-layout problem the tray and
+   level list were already fixed for. 24ch rather than the label's 20 characters
+   because ch does not account for the 1px letter-spacing this row applies. */
+#stGoal{width:24ch;text-align:left;color:var(--yellow);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lv{width:100%;justify-content:flex-start;gap:7px;padding:4px 9px;text-align:left}
 .lvn{color:var(--faint);font-size:11px;min-width:2ch}
 .lvt{font-size:11px;letter-spacing:.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

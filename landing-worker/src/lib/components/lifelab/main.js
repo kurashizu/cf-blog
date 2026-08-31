@@ -17,7 +17,48 @@ const $ = s => document.querySelector(s);
 // in the document, drawing into a detached canvas: a blank panel.
 let termEl, cv, ctx, topbar, tray, levelsEl, msgEl;
 let modeBtn, lvHead, wipeBtn, shopBtn, coinsEl;
-const guideEl = $('#guide'), gstep = $('#gstep'), gtext = $('#gtext');
+let guideEl, gstep, gtext;
+
+/**
+ * Points the module at the markup that is on screen right now.
+ *
+ * Binding once in start() was not enough and the reason is subtle: start() runs
+ * from onMount, and Svelte fires that while the *outgoing* page is still in the
+ * document, so every lookup landed on the old markup. The loop then ran at full
+ * speed writing into detached nodes -- the canvas kept whatever it had painted
+ * before the navigation and the tutorial card sat empty, which read as "the
+ * guide disappeared when I switched tabs".
+ *
+ * So the render loop calls this too. It is one querySelector against a cheap id
+ * selector, and only when the node it holds has actually left the document, so
+ * the steady-state cost is a single `document.contains` per frame.
+ */
+function bind() {
+  if (cv && document.contains(cv)) return false;
+  termEl = $('#term'); cv = $('#cv');
+  if (!cv) return false;
+  ctx = cv.getContext('2d');
+  guideEl = $('#guide'); gstep = $('#gstep'); gtext = $('#gtext');
+  topbar = $('#topbar'); tray = $('#tray'); levelsEl = $('#levels'); msgEl = $('#msg');
+  modeBtn = $('#modebtn'); lvHead = $('#lvhead'); wipeBtn = $('#wipebtn');
+  shopBtn = $('#shopbtn'); coinsEl = $('#coins');
+
+  // Handlers and the size observer belong to the nodes, so they are re-attached
+  // with them rather than once in start().
+  modeBtn.onclick = chooseMode;
+  wipeBtn.onclick = wipeSave;
+  shopBtn.onclick = openShop;
+  shopBtn.querySelector('.sicon').innerHTML = ICONS.shop;
+  // The two sidebar-header buttons were the only text-only controls left, and
+  // one of them erases the save -- the control that most needs to be
+  // recognisable at a glance was the least marked.
+  modeBtn.innerHTML = ICONS.mode + '<span>MODE</span>';
+  wipeBtn.innerHTML = ICONS.wipe + '<span>WIPE</span>';
+  ro?.disconnect();
+  ro = new ResizeObserver(() => resize());
+  ro.observe($('#cvwrap'));
+  return true;
+}
 const PCOLORS = ['#98c379', '#e5c07b', '#c678dd', '#56b6c2', '#e06c75', '#61afef', '#d19a66'];
 
 const SPEEDS = [2, 8, 30, 120, 480];
@@ -44,6 +85,16 @@ const ICONS = {
   undo:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M5 1v3h4v2H5v3L0 5.5z" fill="currentColor"/><path d="M10 3h2v6h-2z" fill="currentColor" opacity=".5"/></svg>',
   lab:   '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M4 1h4v1H7v3l3 6H2l3-6V2H4z" fill="currentColor"/></svg>',
   mode:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M1 1h4v4H1zM7 1h4v4H7zM1 7h4v4H1zM7 7h4v4H7z" fill="currentColor"/></svg>',
+  // A bin, not the erase X. WIPE destroys the save, and it is the one control
+  // that must not look like the two harmless X-marked ones (CLEAR the board,
+  // CLOSE the shop) sitting a few pixels away.
+  wipe:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M4 1h4v1h3v1H1V2h3zM2 4h8l-1 7H3zm2 1v5h1V5zm3 0v5h1V5z" fill="currentColor"/></svg>',
+  // Dismiss, distinct from the erase X: a chevron that reads as "put this away"
+  // rather than "delete something".
+  close: '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M6 8.5L1.5 4l1-1L6 6.5 9.5 3l1 1z" fill="currentColor"/></svg>',
+  // Rewind is not the same action as restarting the level, so BACK stops
+  // borrowing RESET's arrow.
+  back:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M5 2v8L1 6zm5 0v8L6 6z" fill="currentColor"/></svg>',
   lock:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M3 5V3h1V2h4v1h1v2h1v6H2V5zm2 0h2V3H5z" fill="currentColor"/></svg>',
   check: '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M0 6h2v2H0zM2 8h2v2H2zM4 6h2v2H4zM6 4h2v2H6zM8 2h2v2H8zM10 0h2v2h-2z" fill="currentColor"/></svg>',
 };
@@ -195,6 +246,10 @@ function syncShopBadge() { coinsEl.textContent = S.shop.coins; }
  * button and a price that has to grey out when it cannot be paid.
  */
 function openShop() {
+  // The post-win banner arms a timer to show MISSION COMPLETE; if the player
+  // opens the shop inside that window it would replace their screen a second
+  // later, so opening a dialog of your own cancels it.
+  clearTimeout(winTimer);
   msgEl.innerHTML = '';
   const box = document.createElement('div');
   box.className = 'box shop';
@@ -255,7 +310,7 @@ function openShop() {
 
   const row = document.createElement('div'); row.className = 'row';
   const close = document.createElement('button'); close.className = 'tb';
-  close.innerHTML = ICONS.clear + '<span>CLOSE</span>'; close.onclick = hideMsg;
+  close.innerHTML = ICONS.close + '<span>CLOSE</span>'; close.onclick = hideMsg;
   row.appendChild(close);
   box.appendChild(row);
   msgEl.appendChild(box);
@@ -270,6 +325,7 @@ function openShop() {
  * the place to start.
  */
 function chooseMode() {
+  clearTimeout(winTimer);
   const resume = S.unlocked > 0;
   showMsg(
     'LIFE.LAB',
@@ -394,7 +450,7 @@ function buildTopbar() {
   el.run = mkBtn(ICONS.play, 'RUN', startPause);
   el.step = mkBtn(ICONS.step, 'STEP', stepOnce);
   if (L.lesson) el.next = mkBtn(ICONS.play, 'NEXT', teachNext);
-  if (has('undo')) mkBtn(ICONS.reset, 'BACK', stepBack);
+  if (has('undo')) mkBtn(ICONS.back, 'BACK', stepBack);
   el.reset = mkBtn(L.sandbox ? ICONS.clear : ICONS.reset, L.sandbox ? 'CLEAR' : 'RESET', reset);
   if (L.sandbox) mkBtn(ICONS.soup, 'SOUP', soup);
   mkSep();
@@ -813,6 +869,10 @@ function finishWin(earned) {
 }
 function onFail(msg) {
   S.running = false; syncRun();
+  // Disarmed like onWin does. Left armed, pressing SPACE through the FAILED box
+  // resumed stepping and a `guard` goal could later fire onWin -- overwriting
+  // the failure with MISSION COMPLETE and banking the credit for it.
+  S.goal = null;
   tlog('> STATUS: FAILED — ' + msg, 't-err');
   showMsg('MISSION FAILED', msg, [
     { label: 'RESET & RETRY', fn: () => { hideMsg(); reset(); } },
@@ -918,6 +978,10 @@ function bindInput() {
 }, { passive: false });
 
   onKeyDown = e => {
+  // A dialog is modal: the mode chooser, the shop, and the win/fail boxes all
+  // sit over the board, and SPACE running the simulation behind one of them was
+  // how a shown failure could quietly become a win.
+  if (msgEl && !msgEl.classList.contains('hidden')) return;
   if (e.code === 'Space') { e.preventDefault(); startPause(); }
   else if (e.code === 'KeyN' || e.code === 'Period') stepOnce();
   else if (e.code === 'KeyR') { if (S.stamp) S.rot = (S.rot + 1) % 4; }
@@ -1285,6 +1349,9 @@ function updateGuide() {
   // The level's accent now lives on the step label alone -- the card is
   // bordered like the other panels rather than flagged down one side.
   gstep.style.color = L.accent || '#56b6c2';
+  // The win banner already says this. Two "mission complete" indicators at once
+  // was the thing to remove, so the guide simply steps aside.
+  if (S.won) { guideEl.style.display = 'none'; syncPointer(null); return; }
   if (S.won) { gstep.textContent = 'DONE'; gtext.textContent = 'Mission complete'; return; }
   let i = S.stepIdx;
   if (L.lesson) {
@@ -1399,6 +1466,9 @@ function frame(t) {
     while (acc >= 1 && n < 120 && S.running) { acc -= 1; n++; doStep(); }
     if (acc > 4) acc = 0;
   } else acc = 0;
+  // The page can be replaced between frames; if it was, take the new nodes and
+  // re-fit the camera to them before drawing into a canvas of a different size.
+  if (bind()) { buildTopbar(); buildTray(); buildLevelList(); resize(); }
   draw(); updateStats(); updateGuide();
   raf = requestAnimationFrame(frame);
 }
@@ -1413,28 +1483,28 @@ let raf = 0, ro = null;
  */
 export function start() {
   stop();
-  termEl = $('#term'); cv = $('#cv'); ctx = cv.getContext('2d');
-  topbar = $('#topbar'); tray = $('#tray'); levelsEl = $('#levels'); msgEl = $('#msg');
-  modeBtn = $('#modebtn'); lvHead = $('#lvhead'); wipeBtn = $('#wipebtn');
-  shopBtn = $('#shopbtn'); coinsEl = $('#coins');
+  // Forced: the elements from the previous visit may still be in the document
+  // at this point, so bind() must not take its own "still attached" shortcut.
+  cv = null;
+  if (!bind()) return;
 
   // Progress is read fresh: a wipe in another tab, or simply a later visit,
   // should not be masked by whatever the first import happened to see.
-  S.unlocked = Math.min(CAMPAIGN - 1, +(localStorage.getItem('lifelab-unlocked') || 0));
+  // Clamped from both ends and checked for a number: Math.min(24, NaN) is NaN,
+  // and loadLevel(NaN) reads LEVELS[NaN] -- undefined -- so `new Life(L.w, L.h)`
+  // threw inside start() and the whole tab came up blank. A save that has been
+  // corrupted, hand-edited, or written by an older schema now just starts over.
+  const savedLevel = Number(localStorage.getItem('lifelab-unlocked'));
+  S.unlocked = Number.isFinite(savedLevel)
+    ? Math.max(0, Math.min(CAMPAIGN - 1, Math.floor(savedLevel)))
+    : 0;
   S.shop = loadShop();
   S.teachStep = 0;
   S.saw4x4 = false;
   last = performance.now(); acc = 0;
 
-  modeBtn.onclick = chooseMode;
-  wipeBtn.onclick = wipeSave;
-  shopBtn.onclick = openShop;
-  shopBtn.querySelector('.sicon').innerHTML = ICONS.shop;
   syncShopBadge();
-
   bindInput();
-  ro = new ResizeObserver(() => resize());
-  ro.observe($('#cvwrap'));
 
   // headless driver for automated checks
   window.lifelab = { S, loadLevel, doStep, startPause, step: n => { for (let i = 0; i < n; i++) doStep(); draw(); updateStats(); } };
