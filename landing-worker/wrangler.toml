@@ -53,12 +53,12 @@ OMNIPROXY_ALLOW = "*"
 # proxied; the proxy caches 1 MiB chunks at the edge, which is what makes a
 # 49 MiB ISO practical to boot more than once. Point these at R2 later without
 # touching any code.
-VM_IMAGES = "vmlinuz|r2:vm/vmlinuz#b18|8651264,initramfs|r2:vm/initramfs#b18|9747256,rootfs|r2:vm/rootfs.img@209715200#b18|1390411776,alpine|https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/alpine-virt-3.24.1-x86.iso|51380224"
+VM_IMAGES = "vmlinuz|r2:vm/vmlinuz#b19|8651264,initramfs|r2:vm/initramfs#b19|9747247,rootfs|r2:vm/rootfs.img@209715200#b19|1390411776,alpine|https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/alpine-virt-3.24.1-x86.iso|51380224"
 # The x86-64 machine: QEMU on the `pc` board, which is the one upstream
 # qemu-wasm actually exercises with a disk. Same route and same 1 MiB chunking
 # as the others. Bump the #marker whenever CI republishes, or the edge keeps
 # serving the previous build from an immutable entry.
-PC_IMAGES = "kernel|r2:pc/kernel#p1|12588032,initramfs|r2:pc/initramfs#p1|7478939,rootfs|r2:pc/rootfs.img@209715200#p1|429916160"
+PC_IMAGES = "kernel|r2:pc/kernel#p2|12588032,initramfs|r2:pc/initramfs#p2|7478965,rootfs|r2:pc/rootfs.img@209715200#p2|429916160"
 
 
 [observability]
