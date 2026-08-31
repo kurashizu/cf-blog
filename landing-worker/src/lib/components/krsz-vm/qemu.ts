@@ -175,6 +175,23 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 	const { master, slave } = openpty();
 	options.term.loadAddon(master);
 
+	// Tell the pty how big the terminal already is.
+	//
+	// The slave starts at xterm-pty's default of 80x24 and only learns better
+	// from the master's onResize handler -- which the addon installs here, in
+	// activate(). The view has already fitted the terminal by now, so that
+	// resize fired against nothing and the guest was left believing in a
+	// terminal it does not have: 80x24 out of TIOCGWINSZ, which is what makes
+	// btop refuse to start and anything full-screen draw into the wrong box.
+	// Nudging the size re-emits onResize, now that there is something listening.
+	{
+		const { cols, rows } = options.term;
+		if (cols > 1 && rows > 1) {
+			options.term.resize(cols - 1, rows);
+			options.term.resize(cols, rows);
+		}
+	}
+
 	const glueUrl = `${BINARY_BASE}/qemu-system-${options.arch}.js`;
 
 	// The socket is intercepted here, on the page's own thread, and not in a
