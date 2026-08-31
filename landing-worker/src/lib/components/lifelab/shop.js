@@ -6,14 +6,14 @@
 // makes a level easier to satisfy -- they only let the player see further ahead
 // than a still frame does, which is the part that is genuinely hard to eyeball.
 /**
- * Two kinds of thing.
+ * Everything here is bought once and owned: a way of seeing the dish that
+ * stays on.
  *
- * `tool` is bought once and owned: a way of seeing the dish that stays on. They
- * are the ones worth saving for.
- *
- * `use` is spent. Each buy adds a charge, and a charge is consumed when it is
- * used -- these are the ones that solve a level outright, so paying per use is
- * what keeps them from replacing the puzzle.
+ * There were consumables too, and they were a bad idea. Credits come only from
+ * first clears, so the budget is fixed and nothing replenishes it -- a charge
+ * that costs 3 of a lifetime 48 to skip fifty generations is a permanent price
+ * for a temporary thing, and both of them duplicated a button the toolbar
+ * already had: the speed control and RESET.
  *
  * `from` is the level a tool first has anything to do. Without it the cheapest
  * tool was affordable after one clear and the whole set was owned by level 11
@@ -63,24 +63,6 @@ export const ITEMS = [
     detail: 'Keeps the last 40 generations so a collision can be replayed frame by frame.',
   },
   {
-    id: 'peek',
-    icon: 'trace',
-    kind: 'use',
-    cost: 3,
-    name: 'FAST FORWARD',
-    blurb: 'Jump 50 generations instantly.',
-    detail: 'Spends one charge. Useful when a pattern needs a long run before anything happens.',
-  },
-  {
-    id: 'wipe',
-    icon: 'undo',
-    kind: 'use',
-    cost: 3,
-    name: 'SECOND CHANCE',
-    blurb: 'Restore the budget after a failed run.',
-    detail: 'Spends one charge and puts the level back to gen 0 with your stamps returned.',
-  },
-  {
     id: 'lab',
     kind: 'tool',
     icon: 'lab',
@@ -100,15 +82,13 @@ export function loadShop() {
     return {
       coins: +raw.coins || 0,
       owned: Array.isArray(raw.owned) ? raw.owned : [],
-      // id -> charges remaining, for the consumables.
-      charges: raw.charges && typeof raw.charges === 'object' ? raw.charges : {},
     };
   } catch {
-    return { coins: 0, owned: [], charges: {} };
+    return { coins: 0, owned: [] };
   }
 }
 
-/** @param {{ coins: number, owned: string[], charges: Record<string, number> }} s */
+/** @param {{ coins: number, owned: string[] }} s */
 export function saveShop(s) {
-  localStorage.setItem(KEY, JSON.stringify({ coins: s.coins, owned: s.owned, charges: s.charges }));
+  localStorage.setItem(KEY, JSON.stringify({ coins: s.coins, owned: s.owned }));
 }

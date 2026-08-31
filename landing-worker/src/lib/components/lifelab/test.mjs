@@ -455,7 +455,9 @@ for (const n of ['toad', 'beacon']) {
 {
   const campaign = LEVELS.filter((l) => !l.sandbox).length;
   const budget = (campaign - 1) * 2;
-  const tools = ITEMS.filter((i) => i.kind === 'tool');
+  const tools = ITEMS;
+  check('everything in the shop is a permanent tool', ITEMS.every((i) => i.kind === 'tool'),
+    'credits do not replenish, so a consumable is a permanent price for a temporary thing');
   const toolCost = tools.reduce((n, i) => n + i.cost, 0);
 
   check('the tools are affordable in one run', toolCost <= budget,

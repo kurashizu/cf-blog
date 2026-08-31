@@ -74,15 +74,6 @@ const has = id => S.shop.owned.includes(id);
  */
 const CAMPAIGN = LEVELS.filter(l => !l.sandbox).length;
 const SANDBOX_IDX = LEVELS.findIndex(l => l.sandbox);
-const charges = id => S.shop.charges[id] || 0;
-function spend(id) {
-  if (!charges(id)) return false;
-  S.shop.charges[id]--;
-  saveShop(S.shop);
-  syncShopBadge();
-  buildTopbar();
-  return true;
-}
 const el = { toolBtns: {}, stampBtns: {} };
 /** Held so a level change cannot fire a stale win dialog over the next level. */
 let winTimer = null;
@@ -211,8 +202,9 @@ function openShop() {
   const h = document.createElement('h2');
   h.textContent = 'SHOP';
   const p = document.createElement('p');
-  p.innerHTML = 'Each level cleared pays <span class="n">2 credits</span>. ' +
-    'Nothing here changes the rules \u2014 they only let you <span class="k">see further ahead</span> than a still frame does.';
+  p.innerHTML = 'A level pays <span class="n">2 credits</span> the first time you clear it, and only then \u2014 ' +
+    'there are <span class="n">48</span> in the whole campaign. Nothing here changes the rules; they only let you ' +
+    '<span class="k">see further ahead</span> than a still frame does.';
   box.append(h, p);
   // The rows scroll; the heading and the close button do not, so a long list
   // cannot push the way out of the panel off the bottom of the screen.
@@ -220,15 +212,7 @@ function openShop() {
   scroll.className = 'shopscroll';
   box.appendChild(scroll);
 
-  let lastKind = null;
-  ITEMS.slice().sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'tool' ? -1 : 1)).forEach(it => {
-    if (it.kind !== lastKind) {
-      lastKind = it.kind;
-      const hd = document.createElement('div');
-      hd.className = 'shopgroup';
-      hd.textContent = it.kind === 'tool' ? 'TOOLS — bought once' : 'SUPPLIES — spent on use';
-      scroll.appendChild(hd);
-    }
+  ITEMS.forEach(it => {
     const row = document.createElement('div'); row.className = 'shoprow';
     const ic = document.createElement('div'); ic.className = 'shopicon';
     ic.innerHTML = ICONS[it.icon] || '';
@@ -238,7 +222,7 @@ function openShop() {
     const dt = document.createElement('div'); dt.className = 'shopdetail'; dt.textContent = it.detail;
     main.append(nm, bl, dt);
     const b = document.createElement('button'); b.className = 'buy';
-    const owned = it.kind === 'tool' && has(it.id);
+    const owned = has(it.id);
     // A tool the campaign has not reached a use for yet is shown, but not for
     // sale: seeing TRAJECTORY seven levels before the first ship only invites
     // spending on something that does nothing.
@@ -257,20 +241,13 @@ function openShop() {
       b.onclick = () => {
         if (S.shop.coins < it.cost) return;
         S.shop.coins -= it.cost;
-        if (it.kind === 'tool') S.shop.owned.push(it.id);
-        else S.shop.charges[it.id] = charges(it.id) + 1;
+        S.shop.owned.push(it.id);
         saveShop(S.shop);
         syncShopBadge();
         tlog('> BOUGHT ' + it.name, 't-ok');
         buildTopbar();
         openShop();
       };
-    }
-    if (it.kind === 'use' && charges(it.id)) {
-      const n = document.createElement('span');
-      n.className = 'shopheld';
-      n.textContent = 'x' + charges(it.id);
-      main.appendChild(n);
     }
     row.append(ic, main, b);
     scroll.appendChild(row);
@@ -418,8 +395,6 @@ function buildTopbar() {
   el.step = mkBtn(ICONS.step, 'STEP', stepOnce);
   if (L.lesson) el.next = mkBtn(ICONS.play, 'NEXT', teachNext);
   if (has('undo')) mkBtn(ICONS.reset, 'BACK', stepBack);
-  if (charges('peek')) mkBtn(ICONS.trace, 'FF50 x' + charges('peek'), fastForward);
-  if (charges('wipe') && !L.sandbox) mkBtn(ICONS.undo, 'RETRY x' + charges('wipe'), secondChance);
   el.reset = mkBtn(L.sandbox ? ICONS.clear : ICONS.reset, L.sandbox ? 'CLEAR' : 'RESET', reset);
   if (L.sandbox) mkBtn(ICONS.soup, 'SOUP', soup);
   mkSep();
@@ -655,20 +630,6 @@ function stepBack() {
   S.won = false;
   syncRun(); updateStats(); draw();
   tlog('> REWIND to gen ' + S.eng.gen, 't-sys');
-}
-
-function fastForward() {
-  if (!spend('peek')) return;
-  S.running = false; syncRun();
-  for (let i = 0; i < 50 && !S.won; i++) doStep();
-  updateStats(); draw();
-  tlog('> FAST FORWARD to gen ' + S.eng.gen, 't-sys');
-}
-
-function secondChance() {
-  if (!spend('wipe')) return;
-  loadLevel(S.idx, { quiet: true });
-  tlog('> SECOND CHANCE — budget restored', 't-ok');
 }
 
 /* ---------------- goals ---------------- */
