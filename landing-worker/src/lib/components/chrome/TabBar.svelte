@@ -5,7 +5,7 @@
 	import { setMuted } from '../../stores/sound';
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
 	import { theme, cycleTheme, THEME_STYLES } from '../../stores/theme';
-	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
+	import { tabIndexFromPath, TAB_ROUTES, navigateTo } from '../../routes-map';
 	import { consoleOverlayOpen, guideOpen, toggleConsoleOverlay } from '../../stores/chrome';
 	import KrszLogo from './KrszLogo.svelte';
 
@@ -45,7 +45,7 @@
 	}
 
 	function nav(id: number) {
-		goto(TAB_ROUTES[id]);
+		navigateTo(TAB_ROUTES[id], goto);
 		playSound('click');
 	}
 
