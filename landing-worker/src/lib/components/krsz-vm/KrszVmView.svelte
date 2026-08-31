@@ -1166,6 +1166,7 @@
 
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISK</span>
+						{#if settings.machine === 'x86'}
 						<button
 							onclick={() => (settings.persistDisk = !settings.persistDisk)}
 							title="Keep what the guest writes in this browser's origin-private filesystem and replay it on the next boot. The image itself stays read-only and shared; only the difference is stored, and only in this browser."
@@ -1187,6 +1188,15 @@
 								? ` · ${overlayNote}`
 								: ''}
 						</span>
+						{:else}
+						<!-- The x86-64 machine keeps its writes in a Map that dies with the
+						     tab. Showing the toggle here would offer a switch that does
+						     nothing, and the byte count beside it belongs to the other
+						     machine's overlay. -->
+						<span class="text-[10px] font-mono text-white/40">
+							writes stay in memory · gone at power off
+						</span>
+						{/if}
 					</div>
 
 					{#if settings.machine === 'x86'}
@@ -1245,11 +1255,12 @@
 							RAM, VGA RAM, boot mode and the command line take effect on the next boot;
 							screen size applies the next time <span class="text-white/50">startx</span> runs.
 						{:else}
-							RAM, network and disk take effect on the next boot. This machine has no
-							VGA side, so it is the serial terminal throughout; it needs a
-							cross-origin isolated page for its CPU thread, and downloads a 66 MB
-							emulator before it starts — the disk itself is still streamed a
-							megabyte at a time.
+							RAM and network take effect on the next boot. This machine has no VGA
+							side, so it is the serial terminal throughout, and nothing it writes
+							is kept — that one is the i686 machine's. It needs a cross-origin
+							isolated page for its CPU thread, and downloads a 66 MB emulator
+							before it starts; the disk itself is still streamed a megabyte at a
+							time.
 						{/if}
 					</p>
 				</div>
