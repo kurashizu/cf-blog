@@ -27,8 +27,8 @@
 	const SITE_STEPS: Step[] = [
 		{
 			target: 'tabs',
-			title: 'SIX VIEWS',
-			body: 'Everything on this site lives in one of six views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
+			title: 'EIGHT VIEWS',
+			body: 'Everything on this site lives in one of eight views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
 			keys: [
 				{ key: 'Ctrl+0', desc: 'modules — the live projects, with real architecture diagrams' },
 				{ key: 'Ctrl+1', desc: 'guestbook — posts to blog.krsz.in' },

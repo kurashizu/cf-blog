@@ -55,7 +55,7 @@ const S = {
   tool: 'pan', stamp: null, rot: 0,
   stampsUsed: 0, presetPop: 0, snap: null, goal: null,
   hover: null, drag: null, paintVal: 1,
-  unlocked: Math.min(LEVELS.length - 1, +(localStorage.getItem('lifelab-unlocked') || 0)),
+  unlocked: 0,
   // 'campaign' or 'sandbox'; null until the opening screen is answered.
   mode: null,
   shop: loadShop(),
@@ -66,6 +66,14 @@ const S = {
   teachStep: 0,
 };
 const has = id => S.shop.owned.includes(id);
+/**
+ * How many entries are campaign levels. The sandbox is the last entry and is
+ * not one of them -- counting it made the list draw a locked "???" row for it,
+ * put the sandbox behind a padlock the campaign never opens, and reported one
+ * level more than exists.
+ */
+const CAMPAIGN = LEVELS.filter(l => !l.sandbox).length;
+const SANDBOX_IDX = LEVELS.findIndex(l => l.sandbox);
 const charges = id => S.shop.charges[id] || 0;
 function spend(id) {
   if (!charges(id)) return false;
@@ -271,8 +279,8 @@ function enterMode(mode) {
     tlog('> SANDBOX — free dish, no goals', 't-ok');
     loadLevel(LEVELS.findIndex(L => L.sandbox));
   } else {
-    tlog('> TUTORIAL — ' + (S.unlocked + 1) + ' of ' + (LEVELS.length - 1) + ' levels open', 't-ok');
-    loadLevel(Math.min(S.unlocked, LEVELS.length - 2));
+    tlog('> TUTORIAL — ' + (S.unlocked + 1) + ' of ' + CAMPAIGN + ' levels open', 't-ok');
+    loadLevel(Math.min(S.unlocked, CAMPAIGN - 1));
   }
 }
 
@@ -318,7 +326,7 @@ function buildLevelList() {
   // that the campaign continues. The whole row at once is a table of contents
   // for a book they have not started, and the locked entries are the majority
   // of it -- six things to read and nothing to do with any of them.
-  const last = Math.min(LEVELS.length - 1, S.unlocked + 1);
+  const last = Math.min(CAMPAIGN - 1, S.unlocked + 1);
   for (let i = 0; i <= last; i++) {
     const L = LEVELS[i];
     const locked = i > S.unlocked;
@@ -337,6 +345,20 @@ function buildLevelList() {
       : L.name + (i < S.unlocked ? ' (cleared)' : '');
     if (!locked) { b.style.color = L.accent || ''; if (i === S.idx) b.style.borderColor = L.accent || ''; }
     b.onclick = () => { if (!locked) loadLevel(i); else deny('LOCKED — clear the current level first'); };
+    levelsEl.appendChild(b);
+  }
+
+  // The sandbox is the reward for finishing, not a level to be unlocked past:
+  // it appears once the campaign is cleared and is always openable after that.
+  if (S.unlocked >= CAMPAIGN - 1 && SANDBOX_IDX >= 0) {
+    const L = LEVELS[SANDBOX_IDX];
+    const b = document.createElement('button');
+    b.className = 'lv' + (SANDBOX_IDX === S.idx ? ' cur' : '');
+    b.innerHTML = ICONS.soup + '<span class="lvn">' + L.tab + '</span><span class="lvt">FREE DISH</span>';
+    b.title = 'Sandbox — the full pattern library, free drawing, random soup';
+    b.style.color = L.accent || '';
+    if (SANDBOX_IDX === S.idx) b.style.borderColor = L.accent || '';
+    b.onclick = () => loadLevel(SANDBOX_IDX);
     levelsEl.appendChild(b);
   }
 }
@@ -756,7 +778,7 @@ function onWin() {
   tlog('> STATUS: COMPLETE', 't-ok');
   banner('COMPLETE');
   let earned = 0;
-  if (S.idx === S.unlocked && S.unlocked < LEVELS.length - 1) {
+  if (S.idx === S.unlocked && S.unlocked < CAMPAIGN - 1) {
     S.unlocked++;
     localStorage.setItem('lifelab-unlocked', S.unlocked);
     // Paid once, on the first clear -- replaying a level should not farm it.
@@ -1409,7 +1431,7 @@ export function start() {
 
   // Progress is read fresh: a wipe in another tab, or simply a later visit,
   // should not be masked by whatever the first import happened to see.
-  S.unlocked = Math.min(LEVELS.length - 1, +(localStorage.getItem('lifelab-unlocked') || 0));
+  S.unlocked = Math.min(CAMPAIGN - 1, +(localStorage.getItem('lifelab-unlocked') || 0));
   S.shop = loadShop();
   S.teachStep = 0;
   S.saw4x4 = false;
@@ -1432,7 +1454,7 @@ export function start() {
   tlog('rule: B3/S23 | grid: bounded | host: krsz.in');
   // A level is loaded so the canvas has something to size itself against; the
   // chooser sits over it until the player picks a mode.
-  loadLevel(Math.min(S.unlocked, LEVELS.length - 2), { quiet: true });
+  loadLevel(Math.min(S.unlocked, CAMPAIGN - 1), { quiet: true });
   chooseMode();
   raf = requestAnimationFrame(frame);
 }
