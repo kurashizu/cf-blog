@@ -928,7 +928,7 @@
 					{
 						label: 'NETWORK',
 						value: settings.network ? 'via the relay, any host' : 'off',
-						title: "QEMU's own user-mode stack is not in this build, and every backend that is wants a host socket API a tab does not have. What works instead: -netdev socket, whose connection Emscripten makes a WebSocket, intercepted in QEMU's thread and answered by a gateway in the page — ARP, DHCP, ping and DNS locally, TCP out through the same relay the other machine uses"
+						title: "QEMU's own user-mode stack is not in this build, and every backend that is wants a host socket API a tab does not have. What works instead: -netdev socket, whose connection Emscripten turns into a WebSocket, intercepted on the page's own thread and answered by v86's gateway — the same one the other machine here uses, and out through the same relay"
 					}
 				]
 			: [
