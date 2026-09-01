@@ -329,14 +329,32 @@ function driftPos(idx, time) {
   return driftTmp.set(px, py, pz).clone();
 }
 
-/** One lane per creator, ordered by how many models they have. */
+/** One lane per creator, ordered by how many models they have. Still used by
+ *  RACE's own side-lane layout (raceLaneZ, below), independently of posTime. */
 const laneOf = new Map(CREATORS.map(([c], i) => [c, i]));
 
-const posTime = (m) => new THREE.Vector3(
-  (norm(dNum(m), dLo, dHi) - 0.5) * 2 * S,
-  (norm(m.i, iLo, iHi) - 0.5) * 2 * S,
-  (laneOf.get(m.c) / Math.max(CREATORS.length - 1, 1) - 0.5) * 2 * S
-);
+/* TIMELINE's X/Z used to be release date and creator lane, on a flat grid.
+ * They are now one axis, not two: release date alone, run out as a spiral --
+ * the earliest model sits at the centre, and each later one lands further
+ * round and further out, the way a time axis reads on a clock face rather
+ * than a ruler. Y keeps its own meaning, intelligence, unchanged -- the
+ * spiral is what got rebuilt, not the whole layout. */
+const SPIRAL_TURNS = 4.5;
+const posTime = (m, idx) => {
+  const t01 = norm(dNum(m), dLo, dHi);
+  const angle = t01 * SPIRAL_TURNS * Math.PI * 2;
+  const radius = t01 * S;
+  // A pure curve puts every model from the same moment on the same point;
+  // the same per-model jitter posSpace uses for drift keeps a release date
+  // with several launches that day readable as several bodies, not one.
+  const jx = (idx * 12.9898 % 1 - 0.5) * 5;
+  const jz = (idx * 78.233 % 1 - 0.5) * 5;
+  return new THREE.Vector3(
+    Math.cos(angle) * radius + jx,
+    (norm(m.i, iLo, iHi) - 0.5) * 2 * S,
+    Math.sin(angle) * radius + jz
+  );
+};
 
 /* ---------- scene ---------- */
 const scene = new THREE.Scene();
@@ -352,6 +370,13 @@ const persp = new THREE.PerspectiveCamera(62, stageW / stageH, 0.5, 3000);
 const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, -2000, 4000);
 let camera = persp;
 let projMode = 'persp';
+/** Set once the projection ◄ value ► cycle is wired, below; setProjection can
+ *  run before then (setView is called at boot before the HUD is wired up). */
+let paintProjCycle;
+/** Set once the view ◄ value ► cycle is wired; startRace/stopRace can be
+ *  triggered before then is never true in practice, but keeping the same
+ *  optional-call shape as paintProjCycle costs nothing and rules it out. */
+let paintViewCycle;
 /** World height the orthographic view spans; kept in step with the dolly. */
 let orthoZoom = 300;
 
@@ -373,8 +398,7 @@ function setProjection(mode) {
   camera.position.copy(from.position);
   camera.quaternion.copy(from.quaternion);
   if (mode === 'ortho') sizeOrtho();
-  $('p-persp').classList.toggle('on', mode === 'persp');
-  $('p-ortho').classList.toggle('on', mode === 'ortho');
+  paintProjCycle?.();
   syncProjUI();
 }
 
@@ -879,13 +903,17 @@ function buildAxisLabels(mode) {
          new THREE.Vector3(-S - 4, -S - 7, (norm(lg(v), sLo, sHi) - 0.5) * 2 * S), 'rgba(97,175,239,.55)');
     }
   } else {
-    mk('RELEASE DATE →', new THREE.Vector3(S + 6, -S, -S), AX.x);
     mk('↑ INTELLIGENCE INDEX', new THREE.Vector3(-S, S + 8, -S), AX.y);
-    mk('CREATOR LANES →', new THREE.Vector3(-S, -S, S + 6), AX.z);
+    // Year rings sit on the spiral itself rather than an edge, at the same
+    // radius and angle release dates from that year land at -- an edge label
+    // has no fixed meaning left to point at once time is wound into a curve.
     for (const y of [2024, 2025, 2026]) {
       const t = Date.parse(y + '-01-01');
       if (t < dLo || t > dHi) continue;
-      mk(y + '', new THREE.Vector3((norm(t, dLo, dHi) - 0.5) * 2 * S, -S - 7, -S), 'rgba(229,192,123,.5)');
+      const t01 = norm(t, dLo, dHi);
+      const angle = t01 * SPIRAL_TURNS * Math.PI * 2;
+      const radius = t01 * S;
+      mk(y + '', new THREE.Vector3(Math.cos(angle) * radius, -S - 4, Math.sin(angle) * radius), 'rgba(229,192,123,.55)');
     }
   }
   // No intelligence numbers here: that scale lives on the central spine, which
@@ -914,17 +942,13 @@ const CW = 1 / ATLAS.cols, CH = 1 / ATLAS.rows;
 
 const agE = ext((m) => (m.ag == null ? NaN : m.ag));
 
-/* Radius is switchable rather than fixed to one field: agentic is the default
- * because it is the one axis position never already shows, but a viewer
- * comparing coding ability or price wants that pressed into size instead.
- * Each field keeps its own extent so switching never has to renormalise --
- * they're all computed once, up front, from the whole field. */
+/* Radius is switchable, but only among fields no axis already shows: X, Y and
+ * Z already draw price, intelligence and speed as position, so pressing one
+ * of those into size too would just repeat an axis instead of adding one --
+ * agentic and coding are the two the box has no other way to see. */
 const RADIUS_FIELDS = {
   agentic: { get: (m) => m.ag, label: 'agentic', ext: agE },
-  coding: { get: (m) => m.cd, label: 'coding', ext: ext((m) => (m.cd == null ? NaN : m.cd)) },
-  intel: { get: (m) => m.i, label: 'intelligence', ext: ext((m) => (m.i == null ? NaN : m.i)) },
-  price: { get: (m) => m.p, label: 'price', ext: ext((m) => (m.p == null ? NaN : m.p)) },
-  speed: { get: (m) => m.sp, label: 'speed', ext: ext((m) => (m.sp == null ? NaN : m.sp)) }
+  coding: { get: (m) => m.cd, label: 'coding', ext: ext((m) => (m.cd == null ? NaN : m.cd)) }
 };
 let radiusField = 'agentic';
 const radiusOf = (m) => {
@@ -1011,8 +1035,10 @@ const spinAxis = [];
       : 1 - THREE.MathUtils.clamp(
           (Math.log(Math.max(t, 0.05)) - Math.log(tLo)) /
           Math.max(Math.log(tHi) - Math.log(tLo), 0.001), 0, 1);
-    // Linear in that fraction, so the spread is even across the field.
-    spinRate[i] = 0.05 + f * 2.9;
+    // Linear in that fraction, so the spread is even across the field. The
+    // fastest end was still barely perceptible even at max, so its ceiling
+    // was doubled -- the slowest models keep the same near-stationary 0.05.
+    spinRate[i] = 0.05 + f * 5.8;
     const a = i * 2.399963, b = i * 1.61803;
     spinAxis.push(new THREE.Vector3(
       Math.cos(a) * Math.sin(b), Math.cos(b), Math.sin(a) * Math.sin(b)
@@ -2158,6 +2184,7 @@ function onFilterChanged() {
   memberReady = false;
   if (gravityOn) { gravSettled = false; gravCalm = 0; gravAnneal = Math.min(gravAnneal, 0.55); lastClusterSig = ''; }
   updateFilterCount();
+  buildParetoViz();
 }
 function updateFilterCount() {
   const shown = MODELS.reduce((n, m) => n + (isOff(m) ? 0 : 1), 0);
@@ -2316,6 +2343,105 @@ $('freset').onclick = () => {
 
 updateFilterCount();
 
+/* ---------- Pareto frontier ---------------------------------------------- *
+ * A model is on the frontier if no other visible model beats it on every
+ * objective at once -- cheaper, smarter and faster all simultaneously, for
+ * the fully-measured field, or cheaper and smarter for the price-only annex.
+ * Shown as geometry rather than a highlight because the shape itself is the
+ * point: the frontier is a surface (quadrant A, all three axes) or a curve
+ * (quadrant B, missing speed) in the same space the bodies already occupy,
+ * not a separate chart.
+ *
+ * O(n^2) against the visible field, which is a few hundred points -- run only
+ * when the toggle is on and only once every few frames (paretoTick, below),
+ * not per rendered frame.
+ */
+let paretoOn = false;
+let paretoStaleAt = 0;
+const paretoGroup = new THREE.Group();
+scene.add(paretoGroup);
+
+/** objs: [[key, betterIsHigher], ...]. Returns the subset of `items` no other
+ *  item in the list beats on every objective at once. */
+function paretoFront(items, objs) {
+  const dominates = (a, b) => {
+    let strictly = false;
+    for (const [key, hi] of objs) {
+      const av = a[key], bv = b[key];
+      if (hi ? av < bv : av > bv) return false;
+      if (av !== bv) strictly = true;
+    }
+    return strictly;
+  };
+  return items.filter(([m]) => !items.some(([n]) => n !== m && dominates(n, m)));
+}
+
+function disposeParetoViz() {
+  paretoGroup.clear();
+}
+
+function buildParetoViz() {
+  disposeParetoViz();
+  if (!paretoOn) return;
+
+  if (view === 'space') {
+    // Quadrant A: three real axes, so the frontier is a surface. A convex
+    // hull of just the frontier points reads as that surface without pretending
+    // to a rigorous non-convex boundary -- the effect the shape is for, not a
+    // published Pareto plot.
+    const A = vis();
+    const frontA = paretoFront(A, [['p', false], ['i', true], ['sp', true]]);
+    if (frontA.length >= 4) {
+      try {
+        const geo = new ConvexGeometry(frontA.map(([, i]) => cur[i].clone()));
+        paretoGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+          color: 0x98c379, transparent: true, opacity: 0.1,
+          side: THREE.DoubleSide, depthWrite: false
+        })));
+        paretoGroup.add(new THREE.LineSegments(
+          new THREE.WireframeGeometry(geo),
+          new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: 0.4 })
+        ));
+      } catch { /* degenerate hull (near-coplanar points): skip the mesh, no line either */ }
+    }
+
+    // Quadrant B: price and intelligence are real, speed never was, so the
+    // frontier there is a curve, not a surface. Drawn through each point's
+    // live position, wander included, rather than a flattened idealised line,
+    // so it reads as a thread through the actual bodies in the annex band.
+    const B = MODELS.map((m, i) => [m, i]).filter(([m]) => !isOff(m) && m.q === 'B');
+    const frontB = paretoFront(B, [['p', false], ['i', true]])
+      .sort((a, b) => a[0].p - b[0].p);
+    if (frontB.length >= 2) {
+      paretoGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(frontB.map(([, i]) => cur[i])),
+        new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: 0.75 })
+      ));
+    }
+  } else {
+    // TIMELINE: the two axes left are release date and intelligence, so the
+    // frontier is "the best intelligence available as of each date" -- a
+    // running maximum, drawn along the spiral itself rather than flattened.
+    const T = vis().slice().sort((a, b) => dNum(a[0]) - dNum(b[0]));
+    const frontT = [];
+    let best = -Infinity;
+    for (const pair of T) { if (pair[0].i > best) { best = pair[0].i; frontT.push(pair); } }
+    if (frontT.length >= 2) {
+      paretoGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(frontT.map(([, i]) => cur[i])),
+        new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: 0.75 })
+      ));
+    }
+  }
+}
+
+$('pareto-toggle').onclick = () => {
+  paretoOn = !paretoOn;
+  $('pareto-toggle').classList.toggle('on', paretoOn);
+  paretoGroup.visible = paretoOn;
+  buildParetoViz();
+};
+
 /* ---------- views ---------- */
 /* r's row is a placeholder, not the field name: which index sizes the sphere
  * is a choice, not a fixed fact about the plot the way X/Y/Z are, so it gets
@@ -2329,31 +2455,42 @@ const AXTEXT = {
          '<span class="hint-tip" title="Models missing a field upstream sit outside the ' +
          'measured box and drift along the axis they were never measured on." ' +
          'style="color:#d19a66">unmeasured &#9432;</span>',
-  time:  '<span title="Model release date."><b style="color:#e5c07b">X</b> released</span><br>' +
+  time:  '<span title="Release date, run out as a spiral instead of a straight line: the earliest model sits at the centre, and each later one lands further round and further out."><b style="color:#e5c07b">X&#8226;Z</b> released, spiralled</span><br>' +
          '<span title="Artificial Analysis Intelligence Index."><b style="color:#56b6c2">Y</b> intelligence</span><br>' +
-         '<span title="One lane per model creator."><b style="color:#61afef">Z</b> creator</span><br>' +
          '<span id="rfield"></span>'
 };
 
+/** Wires an existing ◄ value ► triple (prev/val/next ids already in the
+ *  markup) to step through a small list -- the one shape used for every short
+ *  cycle on this HUD (radius, projection, view), the same as the synth's own
+ *  METER stepper: arrows step, the centre names where you are. */
+function wireCycle(prevId, valId, nextId, order, get, set, label) {
+  const step = (dir) => {
+    const at = order.indexOf(get());
+    set(order[(at + dir + order.length) % order.length]);
+    paint();
+  };
+  function paint() {
+    const el = $(valId);
+    if (el) el.textContent = label(get());
+  }
+  $(prevId).onclick = () => step(-1);
+  $(nextId).onclick = () => step(1);
+  $(valId).onclick = () => step(1);
+  paint();
+  return paint;
+}
+
 const RADIUS_ORDER = Object.keys(RADIUS_FIELDS);
-/* A row of the same .btn/.btn.on the PROJECTION and TIMELAPSE groups already
- * use in #ctl, rather than a bare clickable word -- five discrete choices
- * read as buttons everywhere else on this HUD, so radius should not be the
- * one control that looks like plain text with a dotted underline. */
 function renderRadiusField() {
   const el = $('rfield');
   if (!el) return;
-  el.innerHTML = '<div class="rrow" style="--g:#c678dd">r' +
-    RADIUS_ORDER.map((k) =>
-      `<button type="button" class="btn rbtn${k === radiusField ? ' on' : ''}" data-k="${k}">${esc(RADIUS_FIELDS[k].label)}</button>`
-    ).join('') +
-    '</div>';
-  el.querySelectorAll('.rbtn').forEach((btn) => {
-    btn.onclick = () => {
-      radiusField = btn.dataset.k;
-      renderRadiusField();
-    };
-  });
+  el.innerHTML = '<span class="cyc" style="--g:#c678dd">r&nbsp;' +
+    '<button type="button" class="carrow" id="r-prev">&#9664;</button>' +
+    '<button type="button" class="cval" id="r-val"></button>' +
+    '<button type="button" class="carrow" id="r-next">&#9654;</button></span>';
+  wireCycle('r-prev', 'r-val', 'r-next', RADIUS_ORDER,
+    () => radiusField, (v) => { radiusField = v; }, (k) => RADIUS_FIELDS[k].label);
 }
 
 function setView(v) {
@@ -2361,16 +2498,15 @@ function setView(v) {
   view = v;
   for (let i = 0; i < N; i++) {
     from[i].copy(cur[i]);
-    to[i].copy(v === 'space' ? posSpace(MODELS[i], i) : posTime(MODELS[i]));
+    to[i].copy(v === 'space' ? posSpace(MODELS[i], i) : posTime(MODELS[i], i));
   }
   morph = 0;
-  $('v-space').classList.toggle('on', v === 'space');
-  $('v-time').classList.toggle('on', v === 'time');
   $('axinfo').innerHTML = AXTEXT[v];
   renderRadiusField();
   annexGroup.visible = v === 'space';
   spineGroup.visible = v === 'space';
   buildAxisLabels(v);
+  paretoGroup.visible = false; // hidden through the morph; runFrame rebuilds it once bodies settle
 }
 /* One control, not four: clicking advances through the axis pairs and the
    label says which one you are on. Four buttons for what is really a single
@@ -2396,11 +2532,31 @@ function syncProjUI() {
   if (!on) { cyc.classList.remove('on'); vpAt = -1; }
 }
 
-$('p-persp').onclick = () => setProjection('persp');
-$('p-ortho').onclick = () => setProjection('ortho');
+const PROJ_ORDER = ['persp', 'ortho'];
+paintProjCycle = wireCycle('proj-prev', 'proj-val', 'proj-next', PROJ_ORDER,
+  () => projMode, (v) => setProjection(v), (k) => (k === 'persp' ? 'PERSP' : 'ORTHO'));
 syncProjUI();
-$('v-space').onclick = () => setView('space');
-$('v-time').onclick = () => setView('time');
+
+/* RACE only ever replays the timeline with the release-date axis animated, so
+ * it is a third position on the same VIEW cycle instead of a separate
+ * TIMELAPSE group: selecting it is what starts it, and stepping away from it
+ * is what stops it, rather than a start/stop button living somewhere else.
+ * raceOn itself is declared down with the rest of the race state below, but
+ * the cycle's first paint runs synchronously right here, before that
+ * declaration's own line executes -- so the flag needed hoisting up to this
+ * point instead, ahead of every other read of it (all of them inside
+ * functions that only run later, so this is the one spot order matters). */
+let raceOn = false;
+const VIEW_ORDER = ['space', 'time', 'race'];
+function viewModeNow() { return raceOn ? 'race' : view; }
+function setViewMode(v) {
+  if (v === 'race') { if (!raceOn) startRace(); return; }
+  if (raceOn) stopRace();
+  setView(v);
+}
+paintViewCycle = wireCycle('view-prev', 'view-val', 'view-next', VIEW_ORDER,
+  viewModeNow, setViewMode, (k) => (k === 'space' ? 'SPACE' : k === 'time' ? 'TIMELINE' : 'RACE'));
+
 $('axinfo').innerHTML = AXTEXT.space;
 renderRadiusField();
 buildAxisLabels('space');
@@ -2506,7 +2662,7 @@ const _missionStart = () => {
  * Every quantity animated here is a payload field, not a simulation.
  * ------------------------------------------------------------------ */
 const RACE_SECONDS = 42;
-let raceOn = false, raceT = 0, racePick = -1, raceDone = false;
+let raceT = 0, racePick = -1, raceDone = false; // raceOn itself is declared above, before the view cycle
 const raceBob = new Float32Array(N);
 // Per-model scale during the race: 0 until it ships, 1 once it has arrived.
 const raceScale = new Float32Array(N).fill(1);
@@ -2559,13 +2715,13 @@ function startRace() {
   // The race runs along the release-date axis, so it needs the timeline layout.
   setView('time');
   morph = 1;
-  for (let i = 0; i < N; i++) { to[i].copy(posTime(MODELS[i])); from[i].copy(to[i]); }
+  for (let i = 0; i < N; i++) { to[i].copy(posTime(MODELS[i], i)); from[i].copy(to[i]); }
   raceOn = true; raceT = 0; raceDone = false; racePick = -1;
   $('modes').style.display = 'none';
   streamPts.visible = true;
-  $('r-start').classList.add('on');
   raceEl.style.display = 'block';
   syncLeftColumn();
+  paintViewCycle?.();
   // Fly the camera to a side-on view of the whole track.
   camera.position.set(-30, 40, 300);
   yawPitch.yaw = 0; yawPitch.pitch = -0.08; vel.set(0, 0, 0);
@@ -2577,11 +2733,10 @@ function stopRace() {
   streamPts.visible = false;
   raceBob.fill(0);
   raceScale.fill(1);
-  $('r-start').classList.remove('on');
   raceEl.style.display = 'none';
   syncLeftColumn();
+  paintViewCycle?.();
 }
-$('r-start').onclick = () => (raceOn ? stopRace() : startRace());
 
 // Standings: who has actually launched by now, ranked by intelligence.
 function standings() {
@@ -2909,7 +3064,7 @@ function stopGravity() {
   gravEl.style.display = 'none';
   syncLeftColumn();
   // Fall back to the axes layout.
-  for (let i = 0; i < N; i++) { from[i].copy(cur[i]); to[i].copy(view === 'space' ? posSpace(MODELS[i], i) : posTime(MODELS[i])); }
+  for (let i = 0; i < N; i++) { from[i].copy(cur[i]); to[i].copy(view === 'space' ? posSpace(MODELS[i], i) : posTime(MODELS[i], i)); }
   morph = 0;
 }
 $('g-start').onclick = () => (gravityOn ? stopGravity() : startGravity());
@@ -3442,6 +3597,13 @@ function runFrame(dt) {
   if (gravityOn) {
     if (!gravSettled) stepGravity(dt);
     if (performance.now() - gravPanelAt > 600) { gravPanelAt = performance.now(); renderGravityPanel(); }
+  }
+  // Rebuilt on the same cadence as the gravity panel rather than every frame:
+  // the frontier is a few hundred points compared pairwise, cheap enough for
+  // that rate but wasted at 60 of them a second while nothing has moved.
+  if (paretoOn) {
+    if (morph >= 1 && !paretoGroup.visible) { paretoGroup.visible = true; buildParetoViz(); paretoStaleAt = performance.now(); }
+    else if (gravityOn && performance.now() - paretoStaleAt > 600) { paretoStaleAt = performance.now(); buildParetoViz(); }
   }
   dtNow = dt;
   writeInstances();

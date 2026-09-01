@@ -132,22 +132,28 @@
 			    <div class="grp" style="--g:#56b6c2">
 			      <span class="ghd">VIEW</span>
 			      <div class="gbtns">
-			      <button class="btn on" id="v-space">SPACE</button>
-			      <button class="btn" id="v-time">TIMELINE</button>
+			        <!-- RACE only ever replays the timeline with the release-date axis
+			             animated, so it is a third position on this same axis rather than
+			             a whole separate TIMELAPSE group next to it. -->
+			        <span class="cyc" id="view-cyc">
+			          <button class="carrow" id="view-prev" title="Previous view">&#9664;</button>
+			          <button class="cval" id="view-val" title="SPACE — every model at a position. TIMELINE — released along X. RACE — TIMELINE, replayed."></button>
+			          <button class="carrow" id="view-next" title="Next view">&#9654;</button>
+			        </span>
 			      </div>
 			    </div>
 			    <div class="grp" style="--g:#61afef">
 			      <span class="ghd">PROJECTION</span>
 			      <div class="gbtns">
-			        <button class="btn on" id="p-persp" title="Perspective — natural depth, free flight">PERSP</button>
-			        <button class="btn" id="p-ortho" title="Orthographic — no foreshortening, reads as a flat plot">ORTHO</button>
+			        <!-- Two states, cycled rather than picked: the same ◄ value ► shape
+			             as the synth's METER stepper, so a binary choice looks like every
+			             other stepped choice on this HUD instead of a pair of toggle buttons. -->
+			        <span class="cyc" id="proj-cyc">
+			          <button class="carrow" id="proj-prev" title="Previous projection">&#9664;</button>
+			          <button class="cval" id="proj-val" title="Perspective — natural depth, free flight / Orthographic — no foreshortening, reads as a flat plot"></button>
+			          <button class="carrow" id="proj-next" title="Next projection">&#9654;</button>
+			        </span>
 			        <button class="btn" id="vp-cycle" title="Look straight down one axis — click to cycle the pair">$ &times; I</button>
-			      </div>
-			    </div>
-			    <div class="grp" style="--g:#e5c07b">
-			      <span class="ghd">TIMELAPSE</span>
-			      <div class="gbtns">
-			        <button class="btn" id="r-start" title="Replay three years of releases">RACE</button>
 			      </div>
 			    </div>
 			    <div class="grp" style="--g:#d19a66">
@@ -155,6 +161,12 @@
 			      <div class="gbtns">
 			      <button class="btn" id="g-start" title="N-body clustering in capability space">SIMULATE</button>
 			      <button class="btn on" id="g-hull" title="How each cluster is drawn">LINK</button>
+			      </div>
+			    </div>
+			    <div class="grp" style="--g:#98c379">
+			      <span class="ghd">PARETO</span>
+			      <div class="gbtns">
+			      <button class="btn" id="pareto-toggle" title="No model beats every one on this surface at once — cheaper, smarter and faster all at the same time">FRONTIER</button>
 			      </div>
 			    </div>
 			  </div>
@@ -253,6 +265,18 @@
 :global(.lmspace .btn.on) { color:#0a0b0d; background:var(--g,#fff); border-color:var(--g,#fff); }
 :global(.lmspace .btn.inert) { opacity:.28; cursor:default; pointer-events:none; }
 :global(.lmspace #vp-cycle) { min-width:8ch; text-align:center; }
+/* The synth's own METER stepper shape: a plain arrow either side of a
+   bordered, filled value -- a binary or short cycle reads as one stepped
+   control here instead of a row of toggle buttons for each option. */
+:global(.lmspace .cyc) { display:flex; align-items:center; gap:1px; }
+:global(.lmspace .carrow) { padding:0 2px; background:none; border:none; font:inherit;
+    font-size:9px; color:var(--g); cursor:pointer; font-weight:700; }
+:global(.lmspace .carrow:hover) { color:#fff; }
+:global(.lmspace .cval) { padding:4px 9px; border:1px solid color-mix(in srgb, var(--g) 50%, transparent);
+    background:color-mix(in srgb, var(--g) 12%, transparent); border-radius:2px;
+    color:var(--g); font:inherit; font-size:10px; font-weight:900; letter-spacing:.03em;
+    cursor:pointer; min-width:7ch; text-align:center; transition:.12s; }
+:global(.lmspace .cval:hover) { background:color-mix(in srgb, var(--g) 20%, transparent); color:#fff; }
 :global(.lmspace .row) { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
 :global(.lmspace .lbl) { font-size:12px; font-weight:700; letter-spacing:.1em;
     color:rgba(255,255,255,.32); text-transform:uppercase; }
@@ -261,26 +285,26 @@
     border-radius:2px; padding:9px 11px; backdrop-filter:blur(8px); width:220px; }
 :global(.lmspace #legend) { position:absolute; left:12px; bottom:26px; z-index:20;
     max-height:min(58%,420px); overflow-y:auto; width:220px; }
-/* The heading is a button everywhere -- collapsing only does anything below
-   the mobile breakpoint, but resizing a desktop window down through it should
-   not require JS to have pre-decided which elements can be clicked. */
+/* The heading is a button everywhere, and collapsing works at every width --
+   the same _/expand shape LIFE.LAB's floating log uses, so either panel can
+   be tucked out of the way on a desktop-sized stage too, not only forced
+   closed on a phone-sized one. */
 :global(.lmspace .phd) { display:flex; align-items:center; justify-content:space-between;
 	width:100%; background:none; border:none; padding:0 0 5px; margin:0;
 	font:inherit; color:inherit; cursor:pointer; }
-:global(.lmspace .pcaret) { display:none; transition:transform .15s; }
+:global(.lmspace .pcaret) { display:inline; transition:transform .15s; }
 :global(.lmspace .collapsed .pcaret) { transform:rotate(-90deg); }
+:global(.lmspace #modes.collapsed #axinfo),
+:global(.lmspace #legend.collapsed #filtercount),
+:global(.lmspace #legend.collapsed #franges),
+:global(.lmspace #legend.collapsed #freset),
+:global(.lmspace #legend.collapsed #fcreators) { display:none; }
 @media (max-width: 520px) {
 	/* Below phone width the two side panels cannot coexist without one
-	   covering the other, so the caret appears and a tap opens one at a time
-	   (enforced in scene.js) instead of both always staying open. */
-	:global(.lmspace .pcaret) { display:inline; }
+	   covering the other, so opening one auto-collapses the other (enforced
+	   in scene.js) instead of both being free to stay open together. */
 	:global(.lmspace #modes), :global(.lmspace #legend) { width:min(78vw,260px); }
 	:global(.lmspace #legend) { bottom:12px; max-height:min(70%,460px); }
-	:global(.lmspace #modes.collapsed #axinfo),
-	:global(.lmspace #legend.collapsed #filtercount),
-	:global(.lmspace #legend.collapsed #franges),
-	:global(.lmspace #legend.collapsed #freset),
-	:global(.lmspace #legend.collapsed #fcreators) { display:none; }
 	:global(.lmspace #ctl) { grid-template-columns:1fr; justify-content:start; max-width:52vw; }
 	:global(.lmspace .gbtns) { justify-content:flex-start; }
 	:global(.lmspace .ghd) { text-align:left; }
@@ -437,13 +461,10 @@
 :global(.lmspace #tip[data-side="below"]::after) { top:-5px; border-right:none; border-bottom:none; }
 :global(.lmspace #tip[data-side="above"]::after) { bottom:-5px; border-left:none; border-top:none; }
 :global(.lmspace .has-tip), :global(.lmspace .hint-tip) { cursor:help; }
-/* Radius field picker: the same .btn row PROJECTION and TIMELAPSE already use
-   in #ctl, so choosing what sizes the spheres looks like every other choice
-   on this HUD instead of inventing a new control just for this one field. */
-:global(.lmspace .rrow) { display:flex; align-items:center; gap:5px; flex-wrap:wrap;
-    margin-top:2px; color:rgba(255,255,255,.4); text-transform:none; letter-spacing:normal;
-    font-size:14px; font-weight:400; }
-:global(.lmspace .rbtn) { padding:2px 6px; font-size:10px; }
+/* Radius's ◄ value ► sits inside the AXES text panel rather than #ctl, so it
+   needs the same .cyc font metrics restated at this smaller size. */
+:global(.lmspace #rfield .cyc) { font-size:14px; }
+:global(.lmspace #rfield .cval) { font-size:11px; }
 :global(.lmspace #boot) { position:absolute; inset:0; z-index:99; background:var(--bg); display:flex;
     align-items:center; justify-content:center; font-size:11px; color:var(--cyan); }
 :global(.lmspace .err) { color:var(--red); }
