@@ -279,7 +279,6 @@
 	:global(.lmspace #modes.collapsed #axinfo),
 	:global(.lmspace #legend.collapsed #filtercount),
 	:global(.lmspace #legend.collapsed #franges),
-	:global(.lmspace #legend.collapsed .fmeasured),
 	:global(.lmspace #legend.collapsed #freset),
 	:global(.lmspace #legend.collapsed #fcreators) { display:none; }
 	:global(.lmspace #ctl) { grid-template-columns:1fr; justify-content:start; max-width:52vw; }
@@ -287,33 +286,40 @@
 	:global(.lmspace .ghd) { text-align:left; }
 	:global(.lmspace #hint) { display:none; }
 }
+/* Creator rows: card membership plus mute/solo, in the same shape as the
+   synth's own TRK chips -- a name, then a divider, then two small letter
+   buttons that light up filled rather than just changing text colour. */
 :global(.lmspace .lg) { display:flex; align-items:center; gap:6px; font-size:11px;
-    color:rgba(255,255,255,.55); cursor:pointer; padding:1px 0; }
-:global(.lmspace .lg:hover) { color:#fff; }
-:global(.lmspace .lg.mute) { opacity:.3; }
+    color:rgba(255,255,255,.55); padding:2px 0; }
+:global(.lmspace .lg.mute) { opacity:.4; }
 :global(.lmspace .dot) { display:none; }
+:global(.lmspace .lgname) { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+:global(.lmspace .lgn) { opacity:.45; }
+:global(.lmspace .lgm), :global(.lmspace .lgs) { font: inherit; font-size:10px; font-weight:700;
+    width:15px; height:15px; line-height:15px; text-align:center; padding:0; margin-left:2px;
+    border:1px solid rgba(255,255,255,.18); border-radius:2px; background:rgba(0,0,0,.4);
+    color:rgba(255,255,255,.4); cursor:pointer; flex:none; }
+:global(.lmspace .lgm:hover), :global(.lmspace .lgs:hover) { color:#fff; border-color:rgba(255,255,255,.5); }
+:global(.lmspace .lgm.on) { background:#e06c75; border-color:#e06c75; color:#0a0b0d; font-weight:900; }
+:global(.lmspace .lgs.on) { background:#e5c07b; border-color:#e5c07b; color:#0a0b0d; font-weight:900; }
 :global(.lmspace .fcount) { font-size:11px; color:rgba(255,255,255,.4); margin-bottom:7px; }
-:global(.lmspace #franges) { display:flex; flex-direction:column; gap:9px; margin-bottom:8px; }
+:global(.lmspace #franges) { display:flex; flex-direction:column; gap:11px; margin-bottom:8px; }
 :global(.lmspace .flbl) { display:flex; justify-content:space-between; font-size:11px;
-    color:rgba(255,255,255,.55); margin-bottom:3px; }
+    color:rgba(255,255,255,.55); margin-bottom:4px; }
 :global(.lmspace .flbl .fval) { color:rgba(255,255,255,.4); font-variant-numeric:tabular-nums; }
-:global(.lmspace .fslider) { position:relative; height:14px; }
-:global(.lmspace .fslider input[type="range"]) { position:absolute; left:0; top:4px; width:100%;
-    margin:0; appearance:none; background:transparent; pointer-events:none; }
-:global(.lmspace .fslider input[type="range"]::-webkit-slider-runnable-track) {
-    height:3px; background:rgba(255,255,255,.15); border-radius:2px; }
-:global(.lmspace .fslider input[type="range"]::-webkit-slider-thumb) { appearance:none;
-    pointer-events:auto; width:11px; height:11px; margin-top:-4px; border-radius:50%;
-    background:var(--cyan,#56b6c2); border:1px solid rgba(0,0,0,.4); cursor:pointer; }
-:global(.lmspace .fslider input[type="range"]::-moz-range-track) {
-    height:3px; background:rgba(255,255,255,.15); border-radius:2px; }
-:global(.lmspace .fslider input[type="range"]::-moz-range-thumb) { pointer-events:auto;
-    width:11px; height:11px; border-radius:50%; background:var(--cyan,#56b6c2);
-    border:1px solid rgba(0,0,0,.4); cursor:pointer; }
-:global(.lmspace .fmeasured) { display:flex; align-items:center; gap:6px; font-size:11px;
-    color:rgba(255,255,255,.55); cursor:pointer; padding:2px 0; }
-:global(.lmspace .fmeasured input) { cursor:pointer; }
-:global(.lmspace #fcreators) { margin-top:2px; }
+/* The same visual language as the synth's HorizontalHardwareFader: a thin
+   dark track, a coloured fill between the handles, and small bordered square
+   handles with a centre grip mark -- built from plain divs rather than a
+   native input so two handles can share one track. */
+:global(.lmspace .fslider) { position:relative; height:14px; cursor:ew-resize; touch-action:none; }
+:global(.lmspace .ftrack) { position:absolute; left:0; right:0; top:6px; height:2px;
+    background:rgba(255,255,255,.15); border-radius:1px; }
+:global(.lmspace .ffill) { position:absolute; top:5px; height:4px; border-radius:1px; opacity:.55; }
+:global(.lmspace .fhandle) { position:absolute; top:2px; width:10px; height:10px; margin-left:-5px;
+    border-radius:2px; border:1px solid rgba(0,0,0,.4); box-shadow:0 0 4px rgba(0,0,0,.6);
+    display:flex; align-items:center; justify-content:center; cursor:ew-resize; }
+:global(.lmspace .fhandle:hover), :global(.lmspace .fhandle:active) { filter:brightness(1.2); }
+:global(.lmspace .fgrip) { width:1px; height:6px; background:rgba(0,0,0,.7); border-radius:1px; }
 :global(.lmspace #hint) { position:absolute; right:12px; bottom:26px; z-index:19; text-align:right;
     font-size:11px; color:rgba(255,255,255,.3); line-height:1.7; }
 :global(.lmspace kbd) { border:1px solid rgba(255,255,255,.22); border-radius:2px; padding:0 4px;
@@ -431,8 +437,13 @@
 :global(.lmspace #tip[data-side="below"]::after) { top:-5px; border-right:none; border-bottom:none; }
 :global(.lmspace #tip[data-side="above"]::after) { bottom:-5px; border-left:none; border-top:none; }
 :global(.lmspace .has-tip), :global(.lmspace .hint-tip) { cursor:help; }
-:global(.lmspace .rpick) { cursor:pointer; opacity:.75; border-bottom:1px dotted rgba(255,255,255,.4); }
-:global(.lmspace .rpick:hover), :global(.lmspace .rpick:focus-visible) { opacity:1; color:#fff; }
+/* Radius field picker: the same .btn row PROJECTION and TIMELAPSE already use
+   in #ctl, so choosing what sizes the spheres looks like every other choice
+   on this HUD instead of inventing a new control just for this one field. */
+:global(.lmspace .rrow) { display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+    margin-top:2px; color:rgba(255,255,255,.4); text-transform:none; letter-spacing:normal;
+    font-size:14px; font-weight:400; }
+:global(.lmspace .rbtn) { padding:2px 6px; font-size:10px; }
 :global(.lmspace #boot) { position:absolute; inset:0; z-index:99; background:var(--bg); display:flex;
     align-items:center; justify-content:center; font-size:11px; color:var(--cyan); }
 :global(.lmspace .err) { color:var(--red); }

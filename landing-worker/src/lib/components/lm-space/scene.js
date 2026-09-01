@@ -949,7 +949,6 @@ const RANGE_FIELDS = {
 /** Current [lo, hi] per field, in the field's own (non-log) units; null means unset. */
 const range = {};
 for (const k of Object.keys(RANGE_FIELDS)) range[k] = null;
-let measuredOnly = false;
 
 function passesRange(m) {
   for (const [k, cfg] of Object.entries(RANGE_FIELDS)) {
@@ -959,15 +958,22 @@ function passesRange(m) {
     if (v == null) continue; // never measured -- a range cannot rule it out
     if (v < r[0] || v > r[1]) return false;
   }
-  if (measuredOnly && m.q !== 'A') return false;
   return true;
+}
+
+/** Mute-and-solo, the same rule the synth's own tracks use: muted is always
+ *  off, and the moment anything is soloed only the soloed set stays on. */
+const soloed = new Set();
+function creatorOn(c) {
+  if (hidden.has(c)) return false;
+  return soloed.size === 0 || soloed.has(c);
 }
 
 /** The single visibility predicate: every place that used to check only
  *  hidden.has(m.c) now goes through this, so a range filter reaches every
  *  system creator muting already did -- LOD, gravity, race, ranks. */
 function isOff(m) {
-  return hidden.has(m.c) || !passesRange(m);
+  return !creatorOn(m.c) || !passesRange(m);
 }
 
 const from = MODELS.map((m, i) => posSpace(m, i));
@@ -2172,25 +2178,28 @@ const RANGE_UI = [
 const toSlider = (key, v) => (RANGE_FIELDS[key].log ? Math.log10(Math.max(v, 0.01)) : v);
 const fromSlider = (key, v) => (RANGE_FIELDS[key].log ? Math.pow(10, v) : v);
 
+/** Field colour for each range row -- reused from the axis legend so a
+ *  filter's fill reads as "the same price axis", not an unrelated control. */
+const RANGE_COLOR = { price: '#e5c07b', intel: '#56b6c2', speed: '#61afef', agentic: '#c678dd' };
+
 legend.innerHTML =
   '<div id="filtercount" class="fcount"></div>' +
   '<div id="franges">' +
   RANGE_UI.map(({ key, label }) => {
-    const cfg = RANGE_FIELDS[key];
-    const lo = toSlider(key, cfg.lo), hi = toSlider(key, cfg.hi);
     return `<div class="frow" data-k="${key}">
       <div class="flbl"><span>${label}</span><span class="fval"></span></div>
-      <div class="fslider">
-        <input type="range" class="flo" min="${lo}" max="${hi}" step="any" value="${lo}">
-        <input type="range" class="fhi" min="${lo}" max="${hi}" step="any" value="${hi}">
+      <div class="fslider" data-k="${key}">
+        <div class="ftrack"></div>
+        <div class="ffill" style="background:${RANGE_COLOR[key]}"></div>
+        <div class="fhandle flo" style="background:${RANGE_COLOR[key]}"><div class="fgrip"></div></div>
+        <div class="fhandle fhi" style="background:${RANGE_COLOR[key]}"><div class="fgrip"></div></div>
       </div>
     </div>`;
   }).join('') +
   '</div>' +
-  '<label class="fmeasured"><input type="checkbox" id="fmeas"> measured only (all 3 axes)</label>' +
-  '<button id="freset" class="x" style="margin-top:4px">reset filters</button>' +
+  '<button id="freset" class="x" style="margin-top:2px">reset filters</button>' +
   '<div id="fcreators">' +
-  '<div class="lbl" style="margin:8px 0 5px">creators &mdash; click to toggle</div>' +
+  '<div class="lbl" style="margin:8px 0 5px">creators</div>' +
   CREATORS.map(([c, n]) => {
     const cell = ATLAS.index[c] ?? 0;
     const bx = (cell % ATLAS.cols) * 100 / (ATLAS.cols - 1);
@@ -2202,65 +2211,106 @@ legend.innerHTML =
         mask-size:${ATLAS.cols * 100}% ${ATLAS.rows * 100}%;
         -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></span>
       <span class="dot" style="background:${colorOf.get(c)}"></span>
-      <span style="flex:1">${esc(c)}</span><span style="opacity:.45">${n}</span></div>`;
+      <span class="lgname">${esc(c)}</span><span class="lgn">${n}</span>
+      <button type="button" class="lgm" data-c="${esc(c)}" title="Mute ${esc(c)}">M</button>
+      <button type="button" class="lgs" data-c="${esc(c)}" title="Solo ${esc(c)}">S</button>
+      </div>`;
   }).join('') +
   '</div>';
 
-legend.querySelectorAll('.lg').forEach((el) => {
-  el.onclick = () => {
+function refreshCreatorRows() {
+  legend.querySelectorAll('.lg').forEach((el) => {
     const c = el.dataset.c;
-    hidden.has(c) ? hidden.delete(c) : hidden.add(c);
     el.classList.toggle('mute', hidden.has(c));
+    el.querySelector('.lgm').classList.toggle('on', hidden.has(c));
+    el.querySelector('.lgs').classList.toggle('on', soloed.has(c));
+  });
+}
+legend.querySelectorAll('.lgm').forEach((btn) => {
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const c = btn.dataset.c;
+    hidden.has(c) ? hidden.delete(c) : hidden.add(c);
+    refreshCreatorRows();
+    onFilterChanged();
+  };
+});
+legend.querySelectorAll('.lgs').forEach((btn) => {
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const c = btn.dataset.c;
+    soloed.has(c) ? soloed.delete(c) : soloed.add(c);
+    refreshCreatorRows();
     onFilterChanged();
   };
 });
 
-legend.querySelectorAll('.frow').forEach((row) => {
+/** Two-handle drag, in the same absolute-x style the hardware faders use:
+ *  a pointer down on a handle tracks pointermove against the track's own
+ *  rect until pointerup, unified across mouse/touch/pen. */
+function wireRangeRow(row) {
   const key = row.dataset.k;
+  const track = row.querySelector('.fslider');
+  const loEl = track.querySelector('.flo'), hiEl = track.querySelector('.fhi');
+  const fill = track.querySelector('.ffill');
   const cfg = RANGE_FIELDS[key];
-  const loEl = row.querySelector('.flo'), hiEl = row.querySelector('.fhi');
-  const valEl = row.querySelector('.fval');
+  const slLo = toSlider(key, cfg.lo), slHi = toSlider(key, cfg.hi);
+  let vLo = slLo, vHi = slHi;
+
+  const pctOf = (v) => (v - slLo) / (slHi - slLo);
   const paint = () => {
-    const lo = fromSlider(key, +loEl.value), hi = fromSlider(key, +hiEl.value);
+    const loP = pctOf(vLo) * 100, hiP = pctOf(vHi) * 100;
+    loEl.style.left = loP + '%';
+    hiEl.style.left = hiP + '%';
+    fill.style.left = loP + '%';
+    fill.style.width = (hiP - loP) + '%';
     const ui = RANGE_UI.find((r) => r.key === key);
-    valEl.textContent = `${ui.fmt(lo)} – ${ui.fmt(hi)}`;
+    row.querySelector('.fval').textContent =
+      `${ui.fmt(fromSlider(key, vLo))} – ${ui.fmt(fromSlider(key, vHi))}`;
   };
-  const apply = () => {
-    // Dragging one handle past the other would invert the band; clamping
-    // keeps lo <= hi without the two inputs fighting over the same pixel.
-    if (+loEl.value > +hiEl.value) {
-      if (document.activeElement === loEl) hiEl.value = loEl.value;
-      else loEl.value = hiEl.value;
-    }
-    const lo = fromSlider(key, +loEl.value), hi = fromSlider(key, +hiEl.value);
-    const atFloor = +loEl.value <= +loEl.min + 1e-9;
-    const atCeil = +hiEl.value >= +hiEl.max - 1e-9;
+  const commit = () => {
+    const atFloor = vLo <= slLo + 1e-9, atCeil = vHi >= slHi - 1e-9;
     // A band pinned to both ends is the same as no filter, and is kept that
     // way rather than as [lo, hi] so a model with no value still passes it.
-    range[key] = atFloor && atCeil ? null : [lo, hi];
+    range[key] = atFloor && atCeil ? null : [fromSlider(key, vLo), fromSlider(key, vHi)];
     paint();
     onFilterChanged();
   };
-  loEl.addEventListener('input', apply);
-  hiEl.addEventListener('input', apply);
-  paint();
-});
 
-const measEl = $('fmeas');
-measEl.onchange = () => { measuredOnly = measEl.checked; onFilterChanged(); };
+  function dragHandle(which) {
+    return (e) => {
+      e.preventDefault();
+      const move = (ev) => {
+        const rect = track.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+        const v = slLo + pct * (slHi - slLo);
+        // Clamping to the other handle rather than letting them cross keeps
+        // lo <= hi without the two handles fighting over the same pixel.
+        if (which === 'lo') vLo = Math.min(v, vHi);
+        else vHi = Math.max(v, vLo);
+        commit();
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      };
+      move(e);
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    };
+  }
+  loEl.addEventListener('pointerdown', dragHandle('lo'));
+  hiEl.addEventListener('pointerdown', dragHandle('hi'));
+  row._resetRange = () => { vLo = slLo; vHi = slHi; commit(); };
+  paint();
+}
+legend.querySelectorAll('.frow').forEach(wireRangeRow);
 
 $('freset').onclick = () => {
   hidden.clear();
-  legend.querySelectorAll('.lg.mute').forEach((el) => el.classList.remove('mute'));
-  for (const key of Object.keys(RANGE_FIELDS)) {
-    range[key] = null;
-    const row = legend.querySelector(`.frow[data-k="${key}"]`);
-    row.querySelector('.flo').value = row.querySelector('.flo').min;
-    row.querySelector('.fhi').value = row.querySelector('.fhi').max;
-    row.querySelector('.flo').dispatchEvent(new Event('input'));
-  }
-  measuredOnly = false;
-  measEl.checked = false;
+  soloed.clear();
+  refreshCreatorRows();
+  legend.querySelectorAll('.frow').forEach((row) => row._resetRange());
   onFilterChanged();
 };
 
@@ -2286,16 +2336,24 @@ const AXTEXT = {
 };
 
 const RADIUS_ORDER = Object.keys(RADIUS_FIELDS);
+/* A row of the same .btn/.btn.on the PROJECTION and TIMELAPSE groups already
+ * use in #ctl, rather than a bare clickable word -- five discrete choices
+ * read as buttons everywhere else on this HUD, so radius should not be the
+ * one control that looks like plain text with a dotted underline. */
 function renderRadiusField() {
   const el = $('rfield');
   if (!el) return;
-  el.innerHTML = 'r &mdash; <span class="rpick" tabindex="0" title="Click to size spheres by a different field">' +
-    esc(RADIUS_FIELDS[radiusField].label) + '</span>';
-  el.querySelector('.rpick').onclick = () => {
-    const at = RADIUS_ORDER.indexOf(radiusField);
-    radiusField = RADIUS_ORDER[(at + 1) % RADIUS_ORDER.length];
-    renderRadiusField();
-  };
+  el.innerHTML = '<div class="rrow" style="--g:#c678dd">r' +
+    RADIUS_ORDER.map((k) =>
+      `<button type="button" class="btn rbtn${k === radiusField ? ' on' : ''}" data-k="${k}">${esc(RADIUS_FIELDS[k].label)}</button>`
+    ).join('') +
+    '</div>';
+  el.querySelectorAll('.rbtn').forEach((btn) => {
+    btn.onclick = () => {
+      radiusField = btn.dataset.k;
+      renderRadiusField();
+    };
+  });
 }
 
 function setView(v) {
