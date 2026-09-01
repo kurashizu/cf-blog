@@ -1252,9 +1252,42 @@ const mat = new THREE.ShaderMaterial({
  * in its distance band, so the near ones keep their silhouette and the far
  * ones cost almost nothing. All three share the material and the per-instance
  * attributes -- only the index buffer differs. */
-const mesh = new THREE.InstancedMesh(geo, mat, N);
-mesh.frustumCulled = false;
-scene.add(mesh);
+/* Three levels of geometry.
+ *
+ * A 22x16 sphere is 704 triangles, and 624 of them is 440k a frame -- most of
+ * it spent on bodies a handful of pixels across, where the difference between
+ * 704 triangles and 96 is invisible. Each level draws only the bodies in its
+ * distance band, so a body near the camera keeps a clean silhouette and a
+ * distant one costs almost nothing.
+ *
+ * All three share the material and every per-instance attribute; only the
+ * geometry differs, and each keeps its own instance count. */
+const LOD_GEOS = [
+  geo,                                       // near: the full sphere
+  new THREE.SphereGeometry(1, 12, 8),        // mid
+  new THREE.SphereGeometry(1, 7, 5)          // far
+];
+/** Radius in pixels below which a body drops to the next level down. */
+const LOD_PX = [30, 11];
+
+const meshes = LOD_GEOS.map((g) => {
+  // Each level gets its own attribute buffers. They cannot be shared: an
+  // instance attribute is read by gl_InstanceID, and a body's slot differs
+  // between levels, so the values have to be repacked alongside the matrices.
+  if (g !== geo) {
+    for (const [name, size] of [['aCell', 2], ['aColor', 3], ['aColor2', 3],
+                                ['aColor3', 3], ['aColor4', 3], ['aState', 4], ['aAge', 1]]) {
+      g.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(N * size), size));
+    }
+  }
+  const m = new THREE.InstancedMesh(g, mat, N);
+  m.frustumCulled = false;
+  m.count = 0;
+  scene.add(m);
+  return m;
+});
+/** The near mesh, kept under its old name for the code that raycasts it. */
+const mesh = meshes[0];
 
 // Per-instance colour, fed to the impostor shader.
 const colorAttr = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
@@ -1291,8 +1324,29 @@ const logoUniforms = mat.uniforms;
 const emph = new Float32Array(N);
 let dtNow = 0.016, nowMs = 0;
 
+const lodN = [0, 0, 0];
+/** Which level each body is currently drawn at, for the hysteresis test. */
+const lodOf = new Uint8Array(N);
+const ATTRS = ['aCell', 'aColor', 'aColor2', 'aColor3', 'aColor4', 'aState', 'aAge'];
+
+/** Move one body's per-instance values into its slot on a lower level. */
+function copyInstanceAttrs(i, lod, slot) {
+  const dst = LOD_GEOS[lod];
+  for (const name of ATTRS) {
+    const src = geo.getAttribute(name);
+    const out = dst.getAttribute(name);
+    const n = src.itemSize;
+    for (let k = 0; k < n; k++) out.array[slot * n + k] = src.array[i * n + k];
+    out.needsUpdate = true;
+  }
+}
+/** Pixels per world unit at unit depth, for the level-of-detail test. */
+let projScale = 500;
+
 function writeInstances() {
   nowMs = performance.now();
+  lodN[0] = lodN[1] = lodN[2] = 0;
+  projScale = (innerHeight * 0.5) * Math.abs(camera.projectionMatrix.elements[5]);
   for (let i = 0; i < N; i++) {
     const m = MODELS[i];
     const off = hidden.has(m.c);
@@ -1348,7 +1402,26 @@ function writeInstances() {
     dummy.scale.setScalar(r);
     dummy.quaternion.setFromAxisAngle(spinAxis[i], driftClock * spinRate[i]);
     dummy.updateMatrix();
-    mesh.setMatrixAt(i, dummy.matrix);
+    // Pick a level from the body's size on screen, then append it to that
+    // mesh's instance list. Counting up per level each frame is what lets the
+    // three meshes share one attribute set.
+    const dz = Math.max(camera.position.distanceTo(cur[i]), 0.001);
+    const px = (r / dz) * projScale;
+    // Hysteresis: a body sitting on a threshold would otherwise flip level
+    // every frame, and each flip repacks its attributes. It has to cross by a
+    // clear margin before it moves.
+    const was = lodOf[i];
+    let lod = px > LOD_PX[0] ? 0 : px > LOD_PX[1] ? 1 : 2;
+    if (lod !== was) {
+      const up = LOD_PX[Math.min(was, 1)] * 1.25;
+      const dn = LOD_PX[Math.min(lod, 1)] * 0.8;
+      if (lod < was ? px < up : px > dn) lod = was;
+      lodOf[i] = lod;
+    }
+    const slot = lodN[lod]++;
+    meshes[lod].setMatrixAt(slot, dummy.matrix);
+    // Copy this body's attributes into the slot it occupies at this level.
+    if (lod > 0) copyInstanceAttrs(i, lod, slot);
 
     // State rides as (dim, whiten) so the highlight applies to every stop of a
     // multi-colour mark, not just the first one.
@@ -1357,7 +1430,10 @@ function writeInstances() {
     const white = e * 0.42 + (tgt ? 0.3 + 0.3 * Math.sin(nowMs / 160) : 0);
     stateAttr.setXYZW(i, dim, white, e, alpha);
   }
-  mesh.instanceMatrix.needsUpdate = true;
+  for (let k = 0; k < meshes.length; k++) {
+    meshes[k].count = lodN[k];
+    meshes[k].instanceMatrix.needsUpdate = true;
+  }
   stateAttr.needsUpdate = true;
 }
 
@@ -2922,6 +2998,8 @@ onWin('resize', () => {
 });
 
 let driftClock = 0;
+let fpsEl = $('fps');
+let fpsFrames = 0, fpsAccum = 0;
 const clock = new THREE.Clock();
 let rafId = 0;
 let running = true;
@@ -2983,6 +3061,23 @@ function frameLoop() {
   updateShadows();
   updateConstellations();
   if (locked) crosshairHover();
+  // Frame rate, averaged over half a second so the reading is steady enough to
+  // read while flying. The triangle count comes with it, because the number
+  // that explains a slow frame here is nearly always how much geometry the
+  // level-of-detail split is letting through.
+  fpsFrames++;
+  fpsAccum += dt;
+  if (fpsAccum >= 0.5) {
+    if (!fpsEl) fpsEl = $('fps');
+    const fps = fpsFrames / fpsAccum;
+    const tris = lodN[0] * 704 + lodN[1] * 192 + lodN[2] * 70;
+    if (fpsEl) fpsEl.innerHTML =
+      `<span class="fps-n" style="color:${fps >= 50 ? '#98c379' : fps >= 28 ? '#e5c07b' : '#e06c75'}">` +
+      `${fps.toFixed(0)}</span><span class="fps-l"> fps &middot; ${(tris / 1000).toFixed(0)}k tri &middot; ` +
+      `${lodN[0]}/${lodN[1]}/${lodN[2]}</span>`;
+    fpsFrames = 0; fpsAccum = 0;
+  }
+
   if (raceOn) updateRace(dt);
   if (gravityOn) {
     if (!gravSettled) stepGravity(dt);

@@ -149,6 +149,7 @@
 			  </span>
 			</div>
 
+			<div id="fps" title="Frames per second, triangles drawn, and how many bodies are at each level of detail"></div>
 			<div id="crosshair"></div>
 			<div id="range"></div>
 			<div id="outwarn">OUTSIDE &middot; <kbd>R</kbd> to return</div>
@@ -230,7 +231,7 @@
 :global(.lmspace .lg:hover) { color:#fff; }
 :global(.lmspace .lg.mute) { opacity:.3; }
 :global(.lmspace .dot) { display:none; }
-:global(.lmspace #hint) { position:absolute; right:12px; bottom:12px; z-index:19; text-align:right;
+:global(.lmspace #hint) { position:absolute; right:12px; bottom:26px; z-index:19; text-align:right;
     font-size:11px; color:rgba(255,255,255,.3); line-height:1.7; }
 :global(.lmspace kbd) { border:1px solid rgba(255,255,255,.22); border-radius:2px; padding:0 4px;
     font:inherit; font-size:12px; color:rgba(255,255,255,.55); }
@@ -274,6 +275,11 @@
 :global(.lmspace #mission .q) { font-size:11px; font-weight:700; color:var(--yellow); }
 :global(.lmspace #mission .m) { font-size:11px; color:rgba(255,255,255,.5); margin-top:3px; }
 :global(.lmspace #mission .res) { font-size:12px; margin-top:5px; font-weight:700; }
+:global(.lmspace #fps) { position:absolute; right:10px; bottom:9px; z-index:26;
+    font-size:10px; letter-spacing:.04em; white-space:nowrap; pointer-events:none;
+    text-shadow:0 0 5px #000; font-variant-numeric:tabular-nums; }
+:global(.lmspace .fps-n) { font-weight:700; }
+:global(.lmspace .fps-l) { color:rgba(255,255,255,.35); }
 :global(.lmspace #crosshair) { position:absolute; left:50%; top:50%; z-index:25; width:16px; height:16px;
     margin:-8px 0 0 -8px; pointer-events:none; display:none; }
 :global(.lmspace #crosshair:before), :global(.lmspace #crosshair:after) { content:''; position:absolute;
