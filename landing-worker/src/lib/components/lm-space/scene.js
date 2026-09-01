@@ -338,12 +338,51 @@ const laneOf = new Map(CREATORS.map(([c], i) => [c, i]));
  * the earliest model sits at the centre, and each later one lands further
  * round and further out, the way a time axis reads on a clock face rather
  * than a ruler. Y keeps its own meaning, intelligence, unchanged -- the
- * spiral is what got rebuilt, not the whole layout. */
+ * spiral is what got rebuilt, not the whole layout.
+ *
+ * Wound at the true release-date pace, months with several launches placed
+ * their bodies close enough to overlap outright -- a real release calendar
+ * is bursty, not evenly spaced. So the spiral parameter is not quite the raw
+ * date: each model is pushed at least MIN_ARC further along the curve than
+ * whichever of its neighbours came just before it, in release order. A
+ * launch week with ten models spreads those ten out along a short stretch of
+ * curve instead of stacking them at one point; everything not that
+ * crowded still lands within a hair of its true chronological position. */
 const SPIRAL_TURNS = 4.5;
+const SPIRAL_R = S * 2.2;      // outer radius -- wider than the box was, so a
+                                // full turn's worth of bodies has room to sit apart
+const MIN_ARC = 6.5;            // minimum spacing along the curve, in scene units
+const spiralParam = new Float32Array(N);
+{
+  const order = MODELS.map((m, i) => i).sort((a, b) => dNum(MODELS[a]) - dNum(MODELS[b]));
+  let prevS = -1;
+  for (const i of order) {
+    const raw = norm(dNum(MODELS[i]), dLo, dHi);
+    // The parameter can only move forward from the previous body's -- release
+    // order stays intact even where the minimum spacing pushes a date's true
+    // position later than its neighbour's true position would have been.
+    let s = Math.max(raw, prevS);
+    if (prevS >= 0) {
+      // Arc length is approximated as radius times the angle swept, evaluated
+      // at the outer of the two points -- exact enough for a spacing floor,
+      // not meant as a true rectification of the curve.
+      const radius = Math.max(s, 0.02) * SPIRAL_R;
+      const minDs = MIN_ARC / (radius * SPIRAL_TURNS * Math.PI * 2);
+      if (s < prevS + minDs) s = prevS + minDs;
+    }
+    spiralParam[i] = s;
+    prevS = s;
+  }
+  // Renormalise back to 0..1: the spacing floor can push the last few points
+  // past a parameter of 1, which would draw them outside every ring and
+  // label built for the 0..1 range.
+  const maxS = prevS || 1;
+  for (let i = 0; i < N; i++) spiralParam[i] /= maxS;
+}
 const posTime = (m, idx) => {
-  const t01 = norm(dNum(m), dLo, dHi);
+  const t01 = spiralParam[idx];
   const angle = t01 * SPIRAL_TURNS * Math.PI * 2;
-  const radius = t01 * S;
+  const radius = t01 * SPIRAL_R;
   // A pure curve puts every model from the same moment on the same point;
   // the same per-model jitter posSpace uses for drift keeps a release date
   // with several launches that day readable as several bodies, not one.
@@ -911,7 +950,7 @@ scene.add(timeSpineGroup);
   for (let k = 0; k <= WALL_SEGS; k++) {
     const t = k / WALL_SEGS;
     const angle = t * SPIRAL_TURNS * Math.PI * 2;
-    const r = t * S;
+    const r = t * SPIRAL_R;
     const x = Math.cos(angle) * r, z = Math.sin(angle) * r;
     wallPos.push(x, -S, z, x, S, z);
   }
@@ -937,7 +976,7 @@ scene.add(timeSpineGroup);
     for (const [dk, arr, y] of [[0, floorPts, -S], [1, ceilPts, S]]) {
       const t0 = k / WALL_SEGS, t1 = (k + 1) / WALL_SEGS;
       const a0 = t0 * SPIRAL_TURNS * Math.PI * 2, a1 = t1 * SPIRAL_TURNS * Math.PI * 2;
-      const r0 = t0 * S, r1 = t1 * S;
+      const r0 = t0 * SPIRAL_R, r1 = t1 * SPIRAL_R;
       arr.push(new THREE.Vector3(Math.cos(a0) * r0, y, Math.sin(a0) * r0));
       arr.push(new THREE.Vector3(Math.cos(a1) * r1, y, Math.sin(a1) * r1));
     }
@@ -948,7 +987,7 @@ scene.add(timeSpineGroup);
   // A ring at each level, wide enough to reach past the fully wound-out edge
   // of the spiral, so a height can still be read off out where the latest
   // models sit and not only near the centre.
-  const ringR = S + 14;
+  const ringR = SPIRAL_R + 14;
   for (const v of [10, 20, 30, 40, 50, 60]) {
     if (v < iLo || v > iHi) continue;
     const y = (norm(v, iLo, iHi) - 0.5) * 2 * S;
@@ -1004,7 +1043,7 @@ function buildAxisLabels(mode) {
   const host = mode === 'space' ? frame : timeSpineGroup;
   axisLabels.forEach((l) => l.parent?.remove(l));
   axisLabels.length = 0;
-  const mk = (t, p, c) => { const l = tag(t, p, c); axisLabels.push(l); host.add(l); };
+  const mk = (t, p, c, cls) => { const l = tag(t, p, c, cls); axisLabels.push(l); host.add(l); };
   if (mode === 'space') {
     mk('PRICE  $/1M →', new THREE.Vector3(S + 6, -S, -S), AX.x);
     mk('SPEED  tok/s →', new THREE.Vector3(-S, -S, S + 6), AX.z);
@@ -1020,16 +1059,24 @@ function buildAxisLabels(mode) {
          new THREE.Vector3(-S - 4, -S - 7, (norm(lg(v), sLo, sHi) - 0.5) * 2 * S), 'rgba(97,175,239,.55)');
     }
   } else {
-    // Year rings sit on the spiral itself rather than an edge, at the same
-    // radius and angle release dates from that year land at -- an edge label
+    // Month ticks sit on the spiral itself rather than an edge, at the same
+    // radius and angle release dates from that month land at -- an edge label
     // has no fixed meaning left to point at once time is wound into a curve.
-    for (const y of [2024, 2025, 2026]) {
-      const t = Date.parse(y + '-01-01');
-      if (t < dLo || t > dHi) continue;
+    // January of each year is marked and named in full; the other eleven get
+    // a short mark and a bare number, or the curve's month-by-month pace
+    // would be unreadable at only three points a year apart.
+    const MONTH1 = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    let cursor = new Date(dLo); cursor.setUTCDate(1); cursor.setUTCHours(0, 0, 0, 0);
+    if (cursor.getTime() < dLo) cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    for (; cursor.getTime() <= dHi; cursor.setUTCMonth(cursor.getUTCMonth() + 1)) {
+      const t = cursor.getTime();
       const t01 = norm(t, dLo, dHi);
       const angle = t01 * SPIRAL_TURNS * Math.PI * 2;
-      const radius = t01 * S;
-      mk(y + '', new THREE.Vector3(Math.cos(angle) * radius, -S - 4, Math.sin(angle) * radius), 'rgba(229,192,123,.55)');
+      const radius = t01 * SPIRAL_R;
+      const pos = new THREE.Vector3(Math.cos(angle) * radius, -S - 4, Math.sin(angle) * radius);
+      const isJan = cursor.getUTCMonth() === 0;
+      mk(isJan ? String(cursor.getUTCFullYear()) : MONTH1[cursor.getUTCMonth()],
+         pos, isJan ? 'rgba(229,192,123,.85)' : 'rgba(229,192,123,.4)', isJan ? 'tag' : 'tag spinenum');
     }
   }
   // No intelligence numbers here: that scale lives on the central spine, which
@@ -1957,7 +2004,7 @@ onDoc('pointerlockchange', () => {
   locked = document.pointerLockElement === cv;
   $('crosshair').style.display = locked ? 'block' : 'none';
 });
-onDoc('mousemove', (e) => { if (locked) applyLook(e.movementX, e.movementY); });
+onDoc('mousemove', (e) => { if (locked && !raceOn) applyLook(e.movementX, e.movementY); });
 
 let dragging = 0, dragged = false, lx = 0, ly = 0;
 cv.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -1968,6 +2015,9 @@ cv.addEventListener('pointerdown', (e) => {
 cv.addEventListener('pointerup', (e) => { dragging = 0; try { cv.releasePointerCapture(e.pointerId); } catch {} });
 cv.addEventListener('pointermove', (e) => {
   if (!dragging) { hoverTest(e); return; }
+  // RACE holds a fixed, straight-on view -- a scrubbable replay reads like a
+  // chart, and a chart does not tilt while you drag on it.
+  if (raceOn) { dragged = true; return; }
   const dx = e.clientX - lx, dy = e.clientY - ly;
   lx = e.clientX; ly = e.clientY;
   if (Math.abs(dx) + Math.abs(dy) > 3) dragged = true;
@@ -2851,9 +2901,15 @@ function startRace() {
   paintRaceCtl();
   syncLeftColumn();
   paintViewCycle?.();
-  // Fly the camera to a side-on view of the whole track.
-  camera.position.set(-30, 40, 300);
-  yawPitch.yaw = 0; yawPitch.pitch = -0.08; vel.set(0, 0, 0);
+  // A replay reads like a chart, not a scene to fly through: orthographic and
+  // dead front-on, so date runs perfectly horizontal and intelligence
+  // perfectly vertical with no perspective to bend either. Free look and
+  // WASD are also switched off for as long as raceOn holds, above.
+  setProjection('ortho');
+  orthoZoom = S * 2.3;
+  sizeOrtho();
+  camera.position.set(0, 0, 300);
+  yawPitch.yaw = 0; yawPitch.pitch = 0; vel.set(0, 0, 0);
   renderRacePanel();
 }
 function stopRace() {
@@ -2871,6 +2927,9 @@ function stopRace() {
   timeSpineGroup.visible = true;
   for (let i = 0; i < N; i++) { to[i].copy(posTime(MODELS[i], i)); from[i].copy(to[i]); }
   morph = 1;
+  // The locked ortho view was RACE's own; free flight comes back with it.
+  setProjection('persp');
+  lookAtHome();
   paintViewCycle?.();
 }
 
@@ -3688,12 +3747,17 @@ function runFrame(dt) {
   if (right.lengthSq() < 1e-6) right.set(1, 0, 0).applyQuaternion(q);
   else right.normalize();
   const accel = new THREE.Vector3();
-  if (kb.has('w')) accel.add(fwd);
-  if (kb.has('s')) accel.sub(fwd);
-  if (kb.has('d')) accel.add(right);
-  if (kb.has('a')) accel.sub(right);
-  if (kb.has('e')) accel.y += 1;
-  if (kb.has('q')) accel.y -= 1;
+  // RACE holds its fixed, straight-on view -- flying off it would leave the
+  // replay's own scrub controls pointed at a track the camera can no longer
+  // see square-on.
+  if (!raceOn) {
+    if (kb.has('w')) accel.add(fwd);
+    if (kb.has('s')) accel.sub(fwd);
+    if (kb.has('d')) accel.add(right);
+    if (kb.has('a')) accel.sub(right);
+    if (kb.has('e')) accel.y += 1;
+    if (kb.has('q')) accel.y -= 1;
+  }
   /* Normalising the whole vector let Q/E steal from the forward component, so
      W+E flew forward more slowly than W alone. Clamping instead keeps each
      axis at full authority while still capping the diagonal. */
