@@ -34,7 +34,7 @@
 				{ key: 'Ctrl+1', desc: 'guestbook — posts to blog.krsz.in' },
 				{ key: 'Ctrl+2', desc: 'synth — 8-track WebAudio workstation, .mid in, WAV out' },
 				{ key: 'Ctrl+3', desc: 'utils — twelve hardware testers' },
-				{ key: 'Ctrl+4', desc: 'leaderboard — the Artificial Analysis model table' },
+				{ key: 'Ctrl+4', desc: 'lm-space — the model table as a navigable volume' },
 				{ key: 'Ctrl+5', desc: 'krsz-vm — a real x86 PC, emulated in the tab' },
 				{ key: 'Ctrl+6', desc: 'chatbot — a language model on your own GPU, no server' },
 				{ key: 'Ctrl+7', desc: "lifelab — Conway's Game of Life, as a campaign" }

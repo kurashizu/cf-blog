@@ -7,7 +7,7 @@
 	import { theme, cycleTheme, THEME_STYLES } from '$lib/stores/theme';
 	import { initClock } from '$lib/stores/clock';
 	import { initTransport } from '$lib/stores/synth-transport';
-	import { tabIndexFromPath, TAB_ROUTES } from '$lib/routes-map';
+	import { tabIndexFromPath, TAB_ROUTES, navigateTo } from '$lib/routes-map';
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
@@ -58,7 +58,7 @@
 		// can never trap you on their tab.
 		if (e.ctrlKey && !e.metaKey && !e.altKey && e.code >= 'Digit0' && e.code <= 'Digit7') {
 			e.preventDefault();
-			goto(TAB_ROUTES[Number(e.code.slice(-1))]);
+			navigateTo(TAB_ROUTES[Number(e.code.slice(-1))], goto);
 			playSound('click');
 			return;
 		}

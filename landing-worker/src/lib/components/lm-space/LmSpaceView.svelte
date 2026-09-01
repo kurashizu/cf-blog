@@ -1,0 +1,353 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import LeaderboardView from '$lib/components/leaderboard/LeaderboardView.svelte';
+	import {
+		loadLeaderboard,
+		leaderboardStatus,
+		leaderboardError,
+		LEADERBOARD_URL
+	} from '$lib/stores/leaderboard';
+	import { playSound } from '$lib/sound';
+	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
+	import { LM_SPACE_TOUR } from './lm-space-tour';
+
+	let guideOpen = $state(false);
+
+	/**
+	 * Two readings of the same data. The volume is the default because it is
+	 * what this view is for -- seeing where a model sits among the rest -- but a
+	 * table still does things three dimensions cannot: sort, scan a column, and
+	 * read an exact figure. Neither replaces the other.
+	 */
+	let mode = $state<'space' | 'table'>('space');
+
+	/**
+	 * three.js and roughly 640KB of marks and sky are fetched only when the
+	 * volume is first opened, so none of it reaches the main bundle. The scene
+	 * is torn down when the tab unmounts: a live WebGL context and a running
+	 * animation frame outlive their DOM otherwise.
+	 */
+	let host = $state<HTMLDivElement>();
+	let dispose: (() => void) | null = null;
+	let engineError = $state<string | null>(null);
+	let booting = $state(true);
+	let started = false;
+
+	async function start() {
+		if (started || !host) return;
+		started = true;
+		try {
+			const payload = await loadLeaderboard();
+			if (!payload) return;
+			const { mountLmSpace } = await import('./scene');
+			if (!host) return;
+			dispose = await mountLmSpace(host, payload);
+		} catch (e) {
+			engineError = e instanceof Error ? e.message : 'failed to start';
+		} finally {
+			booting = false;
+		}
+	}
+
+	$effect(() => {
+		if (mode === 'space' && host && !started) void start();
+	});
+
+	onMount(() => () => {
+		dispose?.();
+		dispose = null;
+	});
+</script>
+
+<div class="flex-1 min-h-0 flex flex-col">
+	<div class="flex items-center gap-1.5 pb-1.5 shrink-0" data-tour="lms-modes">
+		<span class="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest mr-0.5">VIEW AS</span>
+		{#each [['space', 'SPACE'], ['table', 'TABLE']] as [k, label] (k)}
+			<button
+				onclick={() => { mode = k as 'space' | 'table'; playSound('click'); }}
+				class="px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {mode === k
+					? 'border-[#56b6c2] text-[#56b6c2] bg-[#56b6c2]/10'
+					: 'border-white/20 text-white/55 hover:border-white/50'}"
+			>
+				{label}
+			</button>
+		{/each}
+		<button
+			onclick={() => { guideOpen = true; playSound('click'); }}
+			title="What this view is showing"
+			class="ml-auto px-2 py-1 border border-white/20 text-white/55 rounded-xs text-xs font-bold
+				cursor-pointer transition-colors hover:border-[#56b6c2] hover:text-[#56b6c2]"
+		>
+			? GUIDE
+		</button>
+	</div>
+
+	{#if guideOpen}
+		<Onboarding steps={LM_SPACE_TOUR} heading="LM.SPACE TOUR" onClose={() => (guideOpen = false)} />
+	{/if}
+
+	{#if mode === 'table'}
+		<LeaderboardView />
+	{:else}
+		<div class="lmspace relative flex-1 min-h-0 overflow-hidden border border-white/10 rounded-xs"
+			data-tour="lms-stage" bind:this={host}>
+			<div id="app" class="absolute inset-0"></div>
+			<div id="labels" class="absolute inset-0 z-10 pointer-events-none overflow-hidden"></div>
+
+			<div class="hud" id="topbar">
+			  <div>
+			    <div class="title">LM.SPACE</div>
+			    <div class="sub">
+			      <span id="meta">loading&hellip;</span><br>
+			      <span class="hint-tip" title="Artificial Analysis language-models API. Every coordinate is a field of the payload; nothing is inferred.">source &#9432;</span>
+			    </div>
+			  </div>
+			  <div id="ctl" data-tour="lms-ctl">
+			    <div class="grp" style="--g:#56b6c2">
+			      <span class="ghd">VIEW</span>
+			      <div class="gbtns">
+			      <button class="btn on" id="v-space">SPACE</button>
+			      <button class="btn" id="v-time">TIMELINE</button>
+			      </div>
+			    </div>
+			    <div class="grp" style="--g:#61afef">
+			      <span class="ghd">PROJECTION</span>
+			      <div class="gbtns">
+			        <button class="btn on" id="p-persp" title="Perspective — natural depth, free flight">PERSP</button>
+			        <button class="btn" id="p-ortho" title="Orthographic — no foreshortening, reads as a flat plot">ORTHO</button>
+			        <button class="btn" id="vp-cycle" title="Look straight down one axis — click to cycle the pair">$ &times; I</button>
+			      </div>
+			    </div>
+			    <div class="grp" style="--g:#e5c07b">
+			      <span class="ghd">TIMELAPSE</span>
+			      <div class="gbtns">
+			        <button class="btn" id="r-start" title="Replay three years of releases">RACE</button>
+			      </div>
+			    </div>
+			    <div class="grp" style="--g:#d19a66">
+			      <span class="ghd">GRAVITY</span>
+			      <div class="gbtns">
+			      <button class="btn" id="g-start" title="N-body clustering in capability space">SIMULATE</button>
+			      <button class="btn on" id="g-hull" title="How each cluster is drawn">LINK</button>
+			      </div>
+			    </div>
+			  </div>
+			</div>
+
+			<div id="modes" data-tour="lms-axes">
+			  <div class="panel">
+			    <div class="lbl" style="margin-bottom:5px">axes</div>
+			    <div id="axinfo" style="font-size:14px;line-height:1.75;color:rgba(255,255,255,.55)"></div>
+			  </div>
+			</div>
+
+			<div class="panel" id="legend"></div>
+
+			<div id="hint">
+			  <span title="W A S D fly · Q E up/down · Shift boost · drag left to pan · right-drag or click the canvas to look · click a node to inspect · in look mode aim with the crosshair · Esc releases the cursor · R resets the view · L logos · C variant links · F freeze gravity">
+			    <kbd>WASD</kbd> fly &middot; <kbd>R</kbd> reset &middot; controls &#9432;
+			  </span>
+			</div>
+
+			<div id="fps" title="Frames per second, triangles drawn, and how many bodies are at each level of detail"></div>
+			<div id="crosshair"></div>
+			<div id="range"></div>
+			<div id="outwarn">OUTSIDE &middot; <kbd>R</kbd> to return</div>
+			<div id="mission"></div>
+			<div id="race"></div>
+			<div id="gravity"></div>
+			<div id="card"></div>
+
+			{#if booting}
+				<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-[#56b6c2] pointer-events-none">
+					building the volume&hellip;
+				</div>
+			{/if}
+
+			{#if $leaderboardStatus === 'error' || engineError}
+				<div class="absolute inset-0 flex items-center justify-center p-4">
+					<div class="border border-[#e06c75]/50 bg-black/80 rounded-xs px-4 py-3 text-xs font-mono text-[#e06c75] max-w-[420px]">
+						{engineError ?? $leaderboardError}
+						<button onclick={() => { started = false; engineError = null; booting = true; void start(); }}
+							class="ml-2 underline cursor-pointer">retry</button>
+						<div class="text-white/35 mt-1">
+							source: <a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer"
+								class="text-[#61afef] hover:underline">blog.krsz.in</a>
+						</div>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+</div>
+
+<style>
+/* The scene builds its labels, tip bubbles and panel contents at runtime, so
+   Svelte cannot scope these statically. Every selector is marked global and
+   prefixed with .lmspace, which keeps it off the rest of the app. */
+:global(.lmspace) {
+    --cyan:#56b6c2; --green:#98c379; --purple:#c678dd; --yellow:#e5c07b;
+    --blue:#61afef; --red:#e06c75; --orange:#d19a66; --fg:#d8dee9; --bg:#0a0b0d;
+  }
+:global(.lmspace) *, :global(.lmspace) *::before, :global(.lmspace) *::after { box-sizing:border-box; }
+:global(.lmspace), :global(.lmspace) { background:var(--bg); color:var(--fg);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; overflow:hidden; }
+:global(.lmspace #app) { position:absolute; inset:0; }
+:global(.lmspace canvas) { display:block; }
+:global(.lmspace .hud) { position:fixed; pointer-events:none; z-index:20; }
+:global(.lmspace .hud > *) { pointer-events:auto; }
+:global(.lmspace #topbar) { top:0; left:0; right:0; padding:10px 12px; gap:26px;
+    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;
+    justify-content:space-between;
+    background:linear-gradient(180deg,rgba(10,11,13,.92),rgba(10,11,13,0)); }
+:global(.lmspace .title) { font-weight:900; font-size:11px; letter-spacing:.12em; color:var(--cyan); }
+:global(.lmspace .sub) { font-size:11px; color:rgba(255,255,255,.38); line-height:1.6; margin-top:3px; }
+:global(.lmspace .sub a) { color:var(--blue); }
+:global(.lmspace #ctl) { display:grid; grid-template-columns:auto auto; gap:6px 12px;
+    justify-content:end; align-items:center; }
+:global(.lmspace .grp) { display:contents; }
+:global(.lmspace .ghd) { font-size:9px; font-weight:900; letter-spacing:.12em; color:var(--g);
+    white-space:nowrap; text-align:right; }
+:global(.lmspace .gbtns) { display:flex; align-items:center; gap:5px; justify-content:flex-end; }
+:global(.lmspace .gnum) { font-size:9px; color:var(--g); min-width:3ch; text-align:center; }
+:global(.lmspace .btn) { padding:4px 9px; border:1px solid rgba(255,255,255,.18); border-radius:2px;
+    background:rgba(0,0,0,.45); color:rgba(255,255,255,.65); font:inherit; font-size:10px;
+    font-weight:700; cursor:pointer; letter-spacing:.03em; transition:.12s;
+    white-space:nowrap; }
+:global(.lmspace .btn:hover) { border-color:var(--g,rgba(255,255,255,.5)); color:#fff; }
+:global(.lmspace .btn.on) { color:#0a0b0d; background:var(--g,#fff); border-color:var(--g,#fff); }
+:global(.lmspace .btn.inert) { opacity:.28; cursor:default; pointer-events:none; }
+:global(.lmspace #vp-cycle) { min-width:8ch; text-align:center; }
+:global(.lmspace .row) { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+:global(.lmspace .lbl) { font-size:12px; font-weight:700; letter-spacing:.1em;
+    color:rgba(255,255,255,.32); text-transform:uppercase; }
+:global(.lmspace #modes) { position:absolute; top:84px; left:12px; z-index:20; display:flex; flex-direction:column; gap:8px; }
+:global(.lmspace .panel) { background:rgba(9,10,12,.85); border:1px solid rgba(255,255,255,.12);
+    border-radius:2px; padding:9px 11px; backdrop-filter:blur(8px); width:220px; }
+:global(.lmspace #legend) { position:absolute; left:12px; bottom:12px; z-index:20;
+    max-height:min(38vh,260px); overflow-y:auto; width:196px; }
+:global(.lmspace .lg) { display:flex; align-items:center; gap:6px; font-size:11px;
+    color:rgba(255,255,255,.55); cursor:pointer; padding:1px 0; }
+:global(.lmspace .lg:hover) { color:#fff; }
+:global(.lmspace .lg.mute) { opacity:.3; }
+:global(.lmspace .dot) { display:none; }
+:global(.lmspace #hint) { position:absolute; right:12px; bottom:26px; z-index:19; text-align:right;
+    font-size:11px; color:rgba(255,255,255,.3); line-height:1.7; }
+:global(.lmspace kbd) { border:1px solid rgba(255,255,255,.22); border-radius:2px; padding:0 4px;
+    font:inherit; font-size:12px; color:rgba(255,255,255,.55); }
+:global(.lmspace .ntag) { position:absolute; white-space:nowrap; pointer-events:none; }
+:global(.lmspace .ntag .nt-row) { display:flex; align-items:center;
+    position:absolute; left:0; top:50%; transform:translate(9px, -50%); }
+:global(.lmspace .ntag .nt-line) { display:block; width:15px; height:1px;
+    background:linear-gradient(90deg,rgba(255,255,255,.15),rgba(255,255,255,.5)); flex:0 0 auto; }
+:global(.lmspace .ntag .nt-txt) { font-size:inherit; letter-spacing:.02em; padding-left:4px;
+    text-shadow:0 0 5px #000, 0 0 2px #000, 0 1px 2px #000; }
+:global(.lmspace .spinenum) { font-size:12px; font-weight:700; letter-spacing:.04em;
+    background:rgba(10,12,15,.72); padding:0 4px; border-radius:2px;
+    border:1px solid rgba(86,182,194,.35); }
+:global(.lmspace .tag) { font-size:11px; color:rgba(255,255,255,.75); white-space:nowrap;
+    text-shadow:0 0 6px #000,0 0 3px #000; pointer-events:none;
+    padding-left:9px; letter-spacing:.02em; }
+:global(.lmspace #card) { position:absolute; z-index:60; width:min(430px,92vw);
+    background:rgba(15,17,20,.97); border:1px solid var(--cyan);
+    border-radius:2px; box-shadow:0 14px 40px rgba(0,0,0,.85); display:none; }
+:global(.lmspace #card .hd) { display:flex; justify-content:space-between; gap:8px; align-items:flex-start;
+    padding:7px 9px; border-bottom:1px solid rgba(255,255,255,.1); }
+:global(.lmspace #card .nm) { font-size:11px; font-weight:900; color:var(--cyan); line-height:1.35; }
+:global(.lmspace #card .cr) { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
+:global(.lmspace #card .qwarn) { font-size:12px; color:var(--orange); margin-top:3px; line-height:1.4;
+    border-left:2px solid var(--orange); padding-left:5px; }
+:global(.lmspace #card .bd) { padding:9px; }
+:global(.lmspace .grid) { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+:global(.lmspace .kv) { border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.4);
+    border-radius:2px; padding:4px 6px; }
+:global(.lmspace .kv .k) { font-size:12px; color:rgba(255,255,255,.36); text-transform:uppercase; letter-spacing:.06em; }
+:global(.lmspace .kv .v) { font-size:11px; font-weight:700; margin-top:2px; }
+:global(.lmspace .ranks) { margin-top:8px; padding-top:7px; border-top:1px solid rgba(255,255,255,.1);
+    font-size:11px; color:rgba(255,255,255,.45); display:flex; flex-wrap:wrap; gap:4px 12px; }
+:global(.lmspace .x) { cursor:pointer; color:rgba(255,255,255,.4); font-size:11px; background:none;
+    border:none; font:inherit; padding:0; }
+:global(.lmspace .x:hover) { color:#fff; }
+:global(.lmspace #mission) { position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:30;
+    display:none; text-align:center; background:rgba(9,10,12,.9);
+    border:1px solid var(--yellow); border-radius:2px; padding:7px 14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.7); max-width:min(560px,92vw); }
+:global(.lmspace #mission .q) { font-size:11px; font-weight:700; color:var(--yellow); }
+:global(.lmspace #mission .m) { font-size:11px; color:rgba(255,255,255,.5); margin-top:3px; }
+:global(.lmspace #mission .res) { font-size:12px; margin-top:5px; font-weight:700; }
+:global(.lmspace #fps) { position:absolute; right:10px; bottom:9px; z-index:26;
+    font-size:10px; letter-spacing:.04em; white-space:nowrap; pointer-events:none;
+    text-shadow:0 0 5px #000; font-variant-numeric:tabular-nums; }
+:global(.lmspace .fps-n) { font-weight:700; }
+:global(.lmspace .fps-l) { color:rgba(255,255,255,.35); }
+:global(.lmspace #crosshair) { position:absolute; left:50%; top:50%; z-index:25; width:16px; height:16px;
+    margin:-8px 0 0 -8px; pointer-events:none; display:none; }
+:global(.lmspace #crosshair:before), :global(.lmspace #crosshair:after) { content:''; position:absolute;
+    background:rgba(255,255,255,.5); transition:background .1s; }
+:global(.lmspace #crosshair.hot:before), :global(.lmspace #crosshair.hot:after) { background:var(--green); }
+:global(.lmspace #crosshair.hot) { transform:scale(1.35); }
+:global(.lmspace #crosshair:before) { left:7px; top:0; width:2px; height:16px; }
+:global(.lmspace #crosshair:after) { top:7px; left:0; height:2px; width:16px; }
+:global(.lmspace .lgico) { width:13px; height:13px; flex:0 0 auto;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; background-color:currentColor; }
+:global(.lmspace #card .logo) { width:30px; height:30px; flex:0 0 auto;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; background-color:currentColor; }
+:global(.lmspace #race) { position:absolute; top:84px; left:12px; z-index:30; display:none;
+    width:224px; max-height:calc(100vh - 260px); overflow-y:auto; background:rgba(9,10,12,.9); border:1px solid var(--purple);
+    border-radius:2px; padding:7px 8px; backdrop-filter:blur(8px); }
+:global(.lmspace #race .rhd) { display:flex; justify-content:space-between; align-items:baseline;
+    gap:6px; padding-bottom:5px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.12); }
+:global(.lmspace #race .q) { font-size:12px; font-weight:900; color:var(--purple); letter-spacing:.04em; }
+:global(.lmspace #race .m) { font-size:12px; color:rgba(255,255,255,.4); }
+:global(.lmspace .rrow) { display:flex; align-items:center; gap:6px; font-size:11px; padding:1.5px 0;
+    color:rgba(255,255,255,.62); }
+:global(.lmspace .rrow.me) { background:rgba(198,120,221,.16); outline:1px solid rgba(198,120,221,.4);
+    border-radius:2px; color:#fff; }
+:global(.lmspace .rrow .rk) { min-width:3.2ch; text-align:right; color:rgba(255,255,255,.3);
+    flex:0 0 auto; font-variant-numeric:tabular-nums; padding-right:2px; }
+:global(.lmspace .rrow .rn) { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; }
+:global(.lmspace .rrow .rv) { font-weight:700; flex:0 0 auto; font-variant-numeric:tabular-nums; }
+:global(.lmspace .rhint) { font-size:12px; color:rgba(255,255,255,.35); margin-top:5px;
+    padding-top:4px; border-top:1px solid rgba(255,255,255,.1); }
+:global(.lmspace #gravity) { position:absolute; top:84px; left:12px; z-index:30; display:none;
+    width:224px; max-height:calc(100vh - 260px); overflow-y:auto; background:rgba(9,10,12,.9); border:1px solid var(--green);
+    border-radius:2px; padding:7px 8px; backdrop-filter:blur(8px); }
+:global(.lmspace #gravity .q) { color:var(--green); }
+:global(.lmspace .gcl) { border-top:1px solid rgba(255,255,255,.08); padding:4px 0 3px; }
+:global(.lmspace .gcl:first-of-type) { border-top:0; }
+:global(.lmspace .gcl-h) { font-size:11px; color:rgba(255,255,255,.72); }
+:global(.lmspace .gcl-m) { font-size:12px; color:rgba(255,255,255,.42); margin-top:1px; }
+:global(.lmspace #range) { position:absolute; left:50%; top:calc(50% + 22px); transform:translateX(-50%);
+    z-index:24; font-size:11px; letter-spacing:.06em; white-space:nowrap;
+    color:rgba(255,255,255,.4); pointer-events:none; text-shadow:0 0 5px #000;
+    opacity:0; transition:opacity .25s; }
+:global(.lmspace #range .rg-lab) { color:rgba(255,255,255,.3); }
+:global(.lmspace #range .rg-num) { color:var(--cyan); font-weight:700; }
+:global(.lmspace #range.mid .rg-num) { color:var(--yellow); }
+:global(.lmspace #range.far .rg-num) { color:var(--red); }
+:global(.lmspace #range .rg-warn) { color:var(--red); }
+:global(.lmspace #outwarn) { position:absolute; left:50%; top:calc(50% - 30px); transform:translate(-50%,4px);
+    z-index:24; font-size:9px; letter-spacing:.06em; white-space:nowrap;
+    color:var(--red); text-shadow:0 0 5px #000; pointer-events:none;
+    opacity:0; transition:opacity .25s ease, transform .25s ease; }
+:global(.lmspace #outwarn.show) { opacity:1; transform:translate(-50%,0); }
+:global(.lmspace #outwarn kbd) { border:none; padding:0; font-size:9px; color:var(--red); font-weight:700; }
+:global(.lmspace #tip) { position:absolute; z-index:80; max-width:290px; padding:8px 11px;
+    background:rgba(15,17,20,.97); border:1px solid rgba(255,255,255,.2);
+    border-radius:2px; font-size:9px; line-height:1.55; color:var(--fg);
+    box-shadow:0 10px 30px rgba(0,0,0,.7); pointer-events:none;
+    opacity:0; transform:translateY(-3px); transition:opacity .14s, transform .14s; }
+:global(.lmspace #tip.show) { opacity:1; transform:none; }
+:global(.lmspace #tip::after) { content:''; position:absolute; left:var(--arrow,20px); width:8px; height:8px;
+    background:rgba(15,17,20,.97); border:1px solid rgba(255,255,255,.2);
+    transform:rotate(45deg); margin-left:-4px; }
+:global(.lmspace #tip[data-side="below"]::after) { top:-5px; border-right:none; border-bottom:none; }
+:global(.lmspace #tip[data-side="above"]::after) { bottom:-5px; border-left:none; border-top:none; }
+:global(.lmspace .has-tip), :global(.lmspace .hint-tip) { cursor:help; }
+:global(.lmspace #boot) { position:fixed; inset:0; z-index:99; background:var(--bg); display:flex;
+    align-items:center; justify-content:center; font-size:11px; color:var(--cyan); }
+:global(.lmspace .err) { color:var(--red); }
+:global(.lmspace ::-webkit-scrollbar) { width:7px; height:7px; }
+:global(.lmspace ::-webkit-scrollbar-thumb) { background:rgba(255,255,255,.16); border-radius:4px; }
+</style>

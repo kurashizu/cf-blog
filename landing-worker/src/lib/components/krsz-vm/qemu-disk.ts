@@ -79,6 +79,34 @@ export interface LazyImageOptions {
  * reason.
  */
 function fetchChunk(url: string, index: number, size: number): Uint8Array {
+	// Retried, because this runs for as long as the machine does. The guest
+	// faults in a block whenever it touches one it has not read yet -- an `apk
+	// add` well into a session, a log rotation, anything -- and a request that
+	// fails then throws inside QEMU's read path, where there is no handler and
+	// no way back: the panel still says RUNNING and the machine is wedged. A
+	// blip is far more likely than a genuinely missing chunk, so it is worth
+	// asking again before giving up. Synchronous by necessity, so the wait
+	// between tries is a spin rather than a timer.
+	let lastError: unknown = null;
+	for (let attempt = 0; attempt < 3; attempt++) {
+		if (attempt > 0) {
+			const until = Date.now() + attempt * 250;
+			while (Date.now() < until) {
+				/* nothing else can run here anyway */
+			}
+		}
+		try {
+			return fetchChunkOnce(url, index, size);
+		} catch (error) {
+			lastError = error;
+		}
+	}
+	throw lastError instanceof Error
+		? lastError
+		: new Error(`Chunk ${index} could not be read.`);
+}
+
+function fetchChunkOnce(url: string, index: number, size: number): Uint8Array {
 	const start = index * CHUNK;
 	const end = Math.min(start + CHUNK, size) - 1;
 	const request = new XMLHttpRequest();

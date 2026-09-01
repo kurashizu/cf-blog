@@ -84,7 +84,7 @@ const NAV_WORDS: Record<string, number> = {
 	'1': 1, guestbook: 1, packets: 1,
 	'2': 2, synth: 2, audio: 2,
 	'3': 3, utilities: 3, utils: 3, tools: 3, hw: 3,
-	'4': 4, leaderboard: 4, llm: 4, models: 4, ranks: 4,
+	'4': 4, 'lm-space': 4, lmspace: 4, leaderboard: 4, llm: 4, models: 4, ranks: 4,
 	'5': 5, 'krsz-vm': 5, krszvm: 5, x86sim: 5, linux: 5, vm: 5, alpine: 5, x86: 5, sim: 5,
 	'6': 6, chatbot: 6, llm2: 6, gpu: 6, webgpu: 6,
 	'7': 7, lifelab: 7, life: 7, conway: 7, gol: 7, automaton: 7
@@ -112,7 +112,7 @@ const BANNER = [
 
 const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
-	out('  0|modules  1|guestbook  2|synth  3|utils  4|leaderboard  5|krsz-vm'),
+	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm'),
 	out('  open <project>     launch a project in a new tab'),
 	out('  ping <project>     measure real round trip from your browser'),
 	out('  ' + Object.keys(EXTERNAL_LINKS).join(' · ')),
@@ -622,7 +622,7 @@ const COMMAND_NAMES = [
 	'help', 'man', 'clear', 'ls', 'll', 'cd', 'pwd', 'cat', 'tree', 'grep', 'head', 'tail', 'wc',
 	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'date', 'history', 'banner', 'tracks',
 	'songs', 'load', 'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval',
-	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'utils', 'leaderboard', 'llm', 'ping',
+	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'utils', 'lm-space', 'leaderboard', 'llm', 'ping',
 	'trace', 'guide', 'tour', 'keys', 'krsz-vm', 'x86sim', 'linux', 'vm', 'alpine',
 	...Object.keys(EXTERNAL_LINKS)
 ];

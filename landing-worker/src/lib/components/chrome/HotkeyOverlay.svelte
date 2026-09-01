@@ -23,7 +23,7 @@
 				{ key: 'Ctrl+1', desc: 'View 1 — guestbook' },
 				{ key: 'Ctrl+2', desc: 'View 2 — synth' },
 				{ key: 'Ctrl+3', desc: 'View 3 — utils' },
-				{ key: 'Ctrl+4', desc: 'View 4 — leaderboard' },
+				{ key: 'Ctrl+4', desc: 'View 4 — lm-space' },
 				{ key: 'Ctrl+5', desc: 'View 5 — krsz-vm (PC emulator)' },
 				{ key: 'T', desc: 'Cycle theme (tokyo / gruvbox / nord / amber)' },
 				{ key: '`', desc: 'Drop-down console — same as the ~ button, top-left' },

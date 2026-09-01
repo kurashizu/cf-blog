@@ -110,8 +110,16 @@ export async function loadSessions(): Promise<Session[]> {
 	return all.sort((a, b) => b.updated - a.updated);
 }
 
-export async function putSession(sess: Session): Promise<void> {
-	await tx('readwrite', (s) => s.put(sess) as IDBRequest<IDBValidKey>);
+/**
+ * Saves one conversation. False when the browser refused to store it.
+ *
+ * The refusal is usually a quota: a long conversation carrying images and audio
+ * can outgrow what a browser allows, and private windows allow far less. It was
+ * swallowed before, so the turn looked saved and was gone on the next visit.
+ */
+export async function putSession(sess: Session): Promise<boolean> {
+	const key = await tx('readwrite', (s) => s.put(sess) as IDBRequest<IDBValidKey>);
+	return key !== null;
 }
 
 export async function deleteSession(id: string): Promise<void> {

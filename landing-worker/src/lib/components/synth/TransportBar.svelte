@@ -42,6 +42,17 @@
 	let maxLenPages = $derived(Math.floor(12288 / stepsPerBarNow));
 	let lenIsCustom = $derived(!LEN_PAGE_PRESETS.includes(lenPages));
 
+	/* METER was six buttons wide for a control that is set once and rarely
+	   touched, which is a lot of the row spent on it. Cycled instead, like
+	   PRESET: the arrows step through the list and the label names where you
+	   are. Every signature is still reachable, in fewer pixels. */
+	function stepMeter(dir: number) {
+		const i = METERS.indexOf($timeMeter);
+		const next = METERS[(i + dir + METERS.length) % METERS.length];
+		setTimeMeter(next);
+		playSound('click');
+	}
+
 	function cycleLen() {
 		const currentIdx = LEN_PAGE_PRESETS.indexOf(lenPages);
 		const next = currentIdx >= 0 && currentIdx < LEN_PAGE_PRESETS.length - 1 ? LEN_PAGE_PRESETS[currentIdx + 1] : LEN_PAGE_PRESETS[0];
@@ -177,20 +188,15 @@
 
 		<div class="flex items-center gap-1">
 			<span class="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
-			{#each METERS as sig (sig)}
-				<button
-					onclick={() => {
-						setTimeMeter(sig);
-						playSound('click');
-					}}
-					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {$timeMeter === sig
-						? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
-						: 'border-white/20 text-white/70 hover:border-white/50'}"
-					title={METER_SPECS[sig].name}
-				>
-					{sig}
-				</button>
-			{/each}
+			<button onclick={() => stepMeter(-1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title="Previous Time Signature">◄</button>
+			<button
+				onclick={() => stepMeter(1)}
+				class="px-1.5 py-0.5 border border-[#c678dd]/50 hover:border-[#c678dd] bg-[#c678dd]/10 hover:bg-[#c678dd]/20 rounded-xs font-black text-[#c678dd] hover:text-white cursor-pointer transition-colors min-w-[3.2rem] text-center"
+				title={METER_SPECS[$timeMeter].name}
+			>
+				{$timeMeter}
+			</button>
+			<button onclick={() => stepMeter(1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title="Next Time Signature">►</button>
 		</div>
 		<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
 		<button
