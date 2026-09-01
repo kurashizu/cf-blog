@@ -162,7 +162,13 @@
 
 			<div id="modes" data-tour="lms-axes">
 			  <div class="panel">
-			    <div class="lbl" style="margin-bottom:5px">axes</div>
+			    <!-- Only a toggle below the mobile breakpoint: on desktop the two
+			         side panels have room to coexist, but a phone-width stage is
+			         barely taller than one of them, so both start collapsed there
+			         and a tap on the heading is what opens either one. -->
+			    <button type="button" id="modeshd" class="phd">
+			      <span class="lbl">axes</span><span class="pcaret">&#9662;</span>
+			    </button>
 			    <div id="axinfo" style="font-size:14px;line-height:1.75;color:rgba(255,255,255,.55)"></div>
 			  </div>
 			</div>
@@ -254,12 +260,60 @@
 :global(.lmspace .panel) { background:rgba(9,10,12,.85); border:1px solid rgba(255,255,255,.12);
     border-radius:2px; padding:9px 11px; backdrop-filter:blur(8px); width:220px; }
 :global(.lmspace #legend) { position:absolute; left:12px; bottom:26px; z-index:20;
-    max-height:min(34%,220px); overflow-y:auto; width:196px; }
+    max-height:min(58%,420px); overflow-y:auto; width:220px; }
+/* The heading is a button everywhere -- collapsing only does anything below
+   the mobile breakpoint, but resizing a desktop window down through it should
+   not require JS to have pre-decided which elements can be clicked. */
+:global(.lmspace .phd) { display:flex; align-items:center; justify-content:space-between;
+	width:100%; background:none; border:none; padding:0 0 5px; margin:0;
+	font:inherit; color:inherit; cursor:pointer; }
+:global(.lmspace .pcaret) { display:none; transition:transform .15s; }
+:global(.lmspace .collapsed .pcaret) { transform:rotate(-90deg); }
+@media (max-width: 520px) {
+	/* Below phone width the two side panels cannot coexist without one
+	   covering the other, so the caret appears and a tap opens one at a time
+	   (enforced in scene.js) instead of both always staying open. */
+	:global(.lmspace .pcaret) { display:inline; }
+	:global(.lmspace #modes), :global(.lmspace #legend) { width:min(78vw,260px); }
+	:global(.lmspace #legend) { bottom:12px; max-height:min(70%,460px); }
+	:global(.lmspace #modes.collapsed #axinfo),
+	:global(.lmspace #legend.collapsed #filtercount),
+	:global(.lmspace #legend.collapsed #franges),
+	:global(.lmspace #legend.collapsed .fmeasured),
+	:global(.lmspace #legend.collapsed #freset),
+	:global(.lmspace #legend.collapsed #fcreators) { display:none; }
+	:global(.lmspace #ctl) { grid-template-columns:1fr; justify-content:start; max-width:52vw; }
+	:global(.lmspace .gbtns) { justify-content:flex-start; }
+	:global(.lmspace .ghd) { text-align:left; }
+	:global(.lmspace #hint) { display:none; }
+}
 :global(.lmspace .lg) { display:flex; align-items:center; gap:6px; font-size:11px;
     color:rgba(255,255,255,.55); cursor:pointer; padding:1px 0; }
 :global(.lmspace .lg:hover) { color:#fff; }
 :global(.lmspace .lg.mute) { opacity:.3; }
 :global(.lmspace .dot) { display:none; }
+:global(.lmspace .fcount) { font-size:11px; color:rgba(255,255,255,.4); margin-bottom:7px; }
+:global(.lmspace #franges) { display:flex; flex-direction:column; gap:9px; margin-bottom:8px; }
+:global(.lmspace .flbl) { display:flex; justify-content:space-between; font-size:11px;
+    color:rgba(255,255,255,.55); margin-bottom:3px; }
+:global(.lmspace .flbl .fval) { color:rgba(255,255,255,.4); font-variant-numeric:tabular-nums; }
+:global(.lmspace .fslider) { position:relative; height:14px; }
+:global(.lmspace .fslider input[type="range"]) { position:absolute; left:0; top:4px; width:100%;
+    margin:0; appearance:none; background:transparent; pointer-events:none; }
+:global(.lmspace .fslider input[type="range"]::-webkit-slider-runnable-track) {
+    height:3px; background:rgba(255,255,255,.15); border-radius:2px; }
+:global(.lmspace .fslider input[type="range"]::-webkit-slider-thumb) { appearance:none;
+    pointer-events:auto; width:11px; height:11px; margin-top:-4px; border-radius:50%;
+    background:var(--cyan,#56b6c2); border:1px solid rgba(0,0,0,.4); cursor:pointer; }
+:global(.lmspace .fslider input[type="range"]::-moz-range-track) {
+    height:3px; background:rgba(255,255,255,.15); border-radius:2px; }
+:global(.lmspace .fslider input[type="range"]::-moz-range-thumb) { pointer-events:auto;
+    width:11px; height:11px; border-radius:50%; background:var(--cyan,#56b6c2);
+    border:1px solid rgba(0,0,0,.4); cursor:pointer; }
+:global(.lmspace .fmeasured) { display:flex; align-items:center; gap:6px; font-size:11px;
+    color:rgba(255,255,255,.55); cursor:pointer; padding:2px 0; }
+:global(.lmspace .fmeasured input) { cursor:pointer; }
+:global(.lmspace #fcreators) { margin-top:2px; }
 :global(.lmspace #hint) { position:absolute; right:12px; bottom:26px; z-index:19; text-align:right;
     font-size:11px; color:rgba(255,255,255,.3); line-height:1.7; }
 :global(.lmspace kbd) { border:1px solid rgba(255,255,255,.22); border-radius:2px; padding:0 4px;
@@ -377,6 +431,8 @@
 :global(.lmspace #tip[data-side="below"]::after) { top:-5px; border-right:none; border-bottom:none; }
 :global(.lmspace #tip[data-side="above"]::after) { bottom:-5px; border-left:none; border-top:none; }
 :global(.lmspace .has-tip), :global(.lmspace .hint-tip) { cursor:help; }
+:global(.lmspace .rpick) { cursor:pointer; opacity:.75; border-bottom:1px dotted rgba(255,255,255,.4); }
+:global(.lmspace .rpick:hover), :global(.lmspace .rpick:focus-visible) { opacity:1; color:#fff; }
 :global(.lmspace #boot) { position:absolute; inset:0; z-index:99; background:var(--bg); display:flex;
     align-items:center; justify-content:center; font-size:11px; color:var(--cyan); }
 :global(.lmspace .err) { color:var(--red); }

@@ -154,7 +154,11 @@
 		     the actual view a whole screen down, so order puts content first there. -->
 		<Sidebar />
 
-		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} flex flex-col {themeStyles.cardBg} rounded-sm min-h-0 lg:overflow-hidden">
+		<!-- Below lg the grid gives each item its own auto-sized row rather than a
+		     shared height, so a canvas view with no text content to size against
+		     collapsed to a sliver a few pixels tall. min-h-[70svh] gives the panel
+		     a floor on a phone; lg:min-h-0 leaves the desktop flex layout alone. -->
+		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} flex flex-col {themeStyles.cardBg} rounded-sm min-h-[70svh] lg:min-h-0 lg:overflow-hidden">
 			<!-- The console lives only in the drop-down overlay now, so every view
 			     gets the full panel and no view has an autofocused input competing
 			     with the keyboard testers or the QWERTY piano. -->

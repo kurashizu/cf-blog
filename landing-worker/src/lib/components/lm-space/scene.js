@@ -699,7 +699,7 @@ frame.add(shadows);
 function updateShadows() {
   if (!frame.visible) return;
   for (let i = 0; i < N; i++) {
-    const off = hidden.has(MODELS[i].c) || (raceOn && raceScale[i] < 0.999);
+    const off = isOff(MODELS[i]) || (raceOn && raceScale[i] < 0.999);
     shadowPos[i * 3] = off ? 0 : cur[i].x;
     shadowPos[i * 3 + 1] = off ? -9999 : -S + 0.5;
     shadowPos[i * 3 + 2] = off ? 0 : cur[i].z;
@@ -913,7 +913,62 @@ atlasTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 const CW = 1 / ATLAS.cols, CH = 1 / ATLAS.rows;
 
 const agE = ext((m) => (m.ag == null ? NaN : m.ag));
-const radiusOf = (m) => (m.ag == null ? 1.7 : 1.5 + norm(m.ag, agE[0], agE[1]) * 2.6);
+
+/* Radius is switchable rather than fixed to one field: agentic is the default
+ * because it is the one axis position never already shows, but a viewer
+ * comparing coding ability or price wants that pressed into size instead.
+ * Each field keeps its own extent so switching never has to renormalise --
+ * they're all computed once, up front, from the whole field. */
+const RADIUS_FIELDS = {
+  agentic: { get: (m) => m.ag, label: 'agentic', ext: agE },
+  coding: { get: (m) => m.cd, label: 'coding', ext: ext((m) => (m.cd == null ? NaN : m.cd)) },
+  intel: { get: (m) => m.i, label: 'intelligence', ext: ext((m) => (m.i == null ? NaN : m.i)) },
+  price: { get: (m) => m.p, label: 'price', ext: ext((m) => (m.p == null ? NaN : m.p)) },
+  speed: { get: (m) => m.sp, label: 'speed', ext: ext((m) => (m.sp == null ? NaN : m.sp)) }
+};
+let radiusField = 'agentic';
+const radiusOf = (m) => {
+  const cfg = RADIUS_FIELDS[radiusField];
+  const v = cfg.get(m);
+  return v == null ? 1.7 : 1.5 + norm(v, cfg.ext[0], cfg.ext[1]) * 2.6;
+};
+
+/* ---------- filters ---------------------------------------------------------
+ * Creator mutes are the original filter; each of these adds a numeric band on
+ * one field. A model missing the field a filter is drawn on passes that
+ * filter rather than being dropped by it -- a range you never opened should
+ * not silently hide the two-thirds of the field with no measured speed, say.
+ * Bounds are the same robust extents the axes themselves use, so the slider's
+ * ends line up with where the box actually starts and stops. */
+const RANGE_FIELDS = {
+  price: { get: (m) => m.p, lo: Math.pow(10, pLo) - 0.05, hi: Math.pow(10, pHi) - 0.05, log: true },
+  intel: { get: (m) => m.i, lo: iLo, hi: iHi, log: false },
+  speed: { get: (m) => m.sp, lo: Math.pow(10, sLo) - 0.05, hi: Math.pow(10, sHi) - 0.05, log: true },
+  agentic: { get: (m) => m.ag, lo: agE[0], hi: agE[1], log: false }
+};
+/** Current [lo, hi] per field, in the field's own (non-log) units; null means unset. */
+const range = {};
+for (const k of Object.keys(RANGE_FIELDS)) range[k] = null;
+let measuredOnly = false;
+
+function passesRange(m) {
+  for (const [k, cfg] of Object.entries(RANGE_FIELDS)) {
+    const r = range[k];
+    if (!r) continue;
+    const v = cfg.get(m);
+    if (v == null) continue; // never measured -- a range cannot rule it out
+    if (v < r[0] || v > r[1]) return false;
+  }
+  if (measuredOnly && m.q !== 'A') return false;
+  return true;
+}
+
+/** The single visibility predicate: every place that used to check only
+ *  hidden.has(m.c) now goes through this, so a range filter reaches every
+ *  system creator muting already did -- LOD, gravity, race, ranks. */
+function isOff(m) {
+  return hidden.has(m.c) || !passesRange(m);
+}
 
 const from = MODELS.map((m, i) => posSpace(m, i));
 const to = MODELS.map((m, i) => posSpace(m, i));
@@ -1376,7 +1431,7 @@ function writeInstances() {
   projScale = (stageH * 0.5) * Math.abs(camera.projectionMatrix.elements[5]);
   for (let i = 0; i < N; i++) {
     const m = MODELS[i];
-    const off = hidden.has(m.c);
+    const off = isOff(m);
     const q = MODELS[i].q;
     if (!gravityOn && view === 'space' && q !== 'A') {
       // An unmeasured axis has no resting value, so it is re-evaluated every
@@ -1518,7 +1573,7 @@ function declutterLabels() {
 
   const cand = [];
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c)) continue;
+    if (isOff(MODELS[i])) continue;
     if (raceOn && raceScale[i] < 0.999) continue;
     // Only the strongest setting is named; five labels for one model was the
     // densest part of the scene.
@@ -1673,7 +1728,7 @@ function updateConstellations() {
   camera.getWorldDirection(tView);
   let s = 0;
   for (const fam of FAMILIES) {
-    const vis = fam.filter((i) => !hidden.has(MODELS[i].c) && !(raceOn && raceScale[i] < 0.999));
+    const vis = fam.filter((i) => !isOff(MODELS[i]) && !(raceOn && raceScale[i] < 0.999));
     if (vis.length < 2) continue;
     const headR = radiusOf(MODELS[vis[vis.length - 1]]);
     for (let k = 0; k + 1 < vis.length; k++, s++) {
@@ -1965,7 +2020,7 @@ function pick(e) {
   const o = ray.ray.origin, d = ray.ray.direction;
   let best = -1, bestT = Infinity;
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c)) continue;
+    if (isOff(MODELS[i])) continue;
     // Match the radius the orb is actually drawn at, including the enlargement
     // applied while it is hovered or selected, so the hit target never
     // disagrees with what is on screen.
@@ -2006,7 +2061,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const kv = (k, v, c) => `<div class="kv"><div class="k">${k}</div><div class="v" style="color:${c}">${v}</div></div>`;
 function rank(m, keyName, lowBest) {
   if (m[keyName] == null) return '—';
-  const vs = MODELS.filter((x) => !hidden.has(x.c)).map((x) => x[keyName]).filter((v) => v != null);
+  const vs = MODELS.filter((x) => !isOff(x)).map((x) => x[keyName]).filter((v) => v != null);
   vs.sort((a, b) => (lowBest ? a - b : b - a));
   return '#' + (vs.indexOf(m[keyName]) + 1) + '/' + vs.length;
 }
@@ -2052,7 +2107,7 @@ function select(i) {
         ${kv('slug', esc(m.s || '—'), 'rgba(255,255,255,.5)')}
       </div>
       <div class="ranks">
-        <span style="color:rgba(255,255,255,.3)">rank among ${MODELS.filter((x) => !hidden.has(x.c)).length} visible:</span>
+        <span style="color:rgba(255,255,255,.3)">rank among ${MODELS.filter((x) => !isOff(x)).length} visible:</span>
         <span>INTEL <b style="color:#56b6c2">${rank(m, 'i', false)}</b></span>
         <span>PRICE <b style="color:#e5c07b">${rank(m, 'p', true)}</b></span>
         <span>SPEED <b style="color:#61afef">${rank(m, 'sp', false)}</b></span>
@@ -2083,9 +2138,59 @@ function closeCard() {
   selIdx = -1;
 }
 
-/* ---------- legend ---------- */
+/* ---------- filter panel ----------------------------------------------------
+ * One panel, two kinds of control: creators are membership (in the field or
+ * out), the sliders are range. Both end up muting the same models through
+ * isOff, so anything downstream that already respected creator toggles --
+ * LOD, gravity, race, ranks -- picks up range filtering for free.
+ */
 const legend = $('legend');
-legend.innerHTML = '<div class="lbl" style="margin-bottom:5px">creators &mdash; click to toggle</div>' +
+
+/** Whatever changed the visible set needs to unsettle the same things a
+ *  creator toggle always did, plus repaint the live count every control shares. */
+function onFilterChanged() {
+  memberReady = false;
+  if (gravityOn) { gravSettled = false; gravCalm = 0; gravAnneal = Math.min(gravAnneal, 0.55); lastClusterSig = ''; }
+  updateFilterCount();
+}
+function updateFilterCount() {
+  const shown = MODELS.reduce((n, m) => n + (isOff(m) ? 0 : 1), 0);
+  const el = $('filtercount');
+  if (el) el.textContent = `${shown} / ${MODELS.length} shown`;
+}
+
+const RANGE_UI = [
+  { key: 'price', label: 'price $/1M', fmt: (v) => money(v), step: 0.01 },
+  { key: 'intel', label: 'intelligence', fmt: (v) => fmt(v, 0), step: 1 },
+  { key: 'speed', label: 'speed tok/s', fmt: (v) => fmt(v, 0), step: 1 },
+  { key: 'agentic', label: 'agentic', fmt: (v) => fmt(v, 0), step: 1 }
+];
+
+/** Log fields are dragged in log space so the handle sits where the field's
+ *  own axis puts it -- a linear slider over $0.01-$200 would spend most of its
+ *  travel above $20, where three-quarters of the field never prices. */
+const toSlider = (key, v) => (RANGE_FIELDS[key].log ? Math.log10(Math.max(v, 0.01)) : v);
+const fromSlider = (key, v) => (RANGE_FIELDS[key].log ? Math.pow(10, v) : v);
+
+legend.innerHTML =
+  '<div id="filtercount" class="fcount"></div>' +
+  '<div id="franges">' +
+  RANGE_UI.map(({ key, label }) => {
+    const cfg = RANGE_FIELDS[key];
+    const lo = toSlider(key, cfg.lo), hi = toSlider(key, cfg.hi);
+    return `<div class="frow" data-k="${key}">
+      <div class="flbl"><span>${label}</span><span class="fval"></span></div>
+      <div class="fslider">
+        <input type="range" class="flo" min="${lo}" max="${hi}" step="any" value="${lo}">
+        <input type="range" class="fhi" min="${lo}" max="${hi}" step="any" value="${hi}">
+      </div>
+    </div>`;
+  }).join('') +
+  '</div>' +
+  '<label class="fmeasured"><input type="checkbox" id="fmeas"> measured only (all 3 axes)</label>' +
+  '<button id="freset" class="x" style="margin-top:4px">reset filters</button>' +
+  '<div id="fcreators">' +
+  '<div class="lbl" style="margin:8px 0 5px">creators &mdash; click to toggle</div>' +
   CREATORS.map(([c, n]) => {
     const cell = ATLAS.index[c] ?? 0;
     const bx = (cell % ATLAS.cols) * 100 / (ATLAS.cols - 1);
@@ -2098,33 +2203,101 @@ legend.innerHTML = '<div class="lbl" style="margin-bottom:5px">creators &mdash; 
         -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></span>
       <span class="dot" style="background:${colorOf.get(c)}"></span>
       <span style="flex:1">${esc(c)}</span><span style="opacity:.45">${n}</span></div>`;
-  }).join('');
+  }).join('') +
+  '</div>';
+
 legend.querySelectorAll('.lg').forEach((el) => {
   el.onclick = () => {
     const c = el.dataset.c;
     hidden.has(c) ? hidden.delete(c) : hidden.add(c);
     el.classList.toggle('mute', hidden.has(c));
-    // The field changed, so let the simulation re-settle around it.
-    // The field changed, so the grouping and the layout both need redoing.
-    memberReady = false;
-    if (gravityOn) { gravSettled = false; gravCalm = 0; gravAnneal = Math.min(gravAnneal, 0.55); lastClusterSig = ''; }
+    onFilterChanged();
   };
 });
 
+legend.querySelectorAll('.frow').forEach((row) => {
+  const key = row.dataset.k;
+  const cfg = RANGE_FIELDS[key];
+  const loEl = row.querySelector('.flo'), hiEl = row.querySelector('.fhi');
+  const valEl = row.querySelector('.fval');
+  const paint = () => {
+    const lo = fromSlider(key, +loEl.value), hi = fromSlider(key, +hiEl.value);
+    const ui = RANGE_UI.find((r) => r.key === key);
+    valEl.textContent = `${ui.fmt(lo)} – ${ui.fmt(hi)}`;
+  };
+  const apply = () => {
+    // Dragging one handle past the other would invert the band; clamping
+    // keeps lo <= hi without the two inputs fighting over the same pixel.
+    if (+loEl.value > +hiEl.value) {
+      if (document.activeElement === loEl) hiEl.value = loEl.value;
+      else loEl.value = hiEl.value;
+    }
+    const lo = fromSlider(key, +loEl.value), hi = fromSlider(key, +hiEl.value);
+    const atFloor = +loEl.value <= +loEl.min + 1e-9;
+    const atCeil = +hiEl.value >= +hiEl.max - 1e-9;
+    // A band pinned to both ends is the same as no filter, and is kept that
+    // way rather than as [lo, hi] so a model with no value still passes it.
+    range[key] = atFloor && atCeil ? null : [lo, hi];
+    paint();
+    onFilterChanged();
+  };
+  loEl.addEventListener('input', apply);
+  hiEl.addEventListener('input', apply);
+  paint();
+});
+
+const measEl = $('fmeas');
+measEl.onchange = () => { measuredOnly = measEl.checked; onFilterChanged(); };
+
+$('freset').onclick = () => {
+  hidden.clear();
+  legend.querySelectorAll('.lg.mute').forEach((el) => el.classList.remove('mute'));
+  for (const key of Object.keys(RANGE_FIELDS)) {
+    range[key] = null;
+    const row = legend.querySelector(`.frow[data-k="${key}"]`);
+    row.querySelector('.flo').value = row.querySelector('.flo').min;
+    row.querySelector('.fhi').value = row.querySelector('.fhi').max;
+    row.querySelector('.flo').dispatchEvent(new Event('input'));
+  }
+  measuredOnly = false;
+  measEl.checked = false;
+  onFilterChanged();
+};
+
+updateFilterCount();
+
 /* ---------- views ---------- */
+/* r's row is a placeholder, not the field name: which index sizes the sphere
+ * is a choice, not a fixed fact about the plot the way X/Y/Z are, so it gets
+ * its own render pass wired up after the innerHTML swap rather than baked
+ * into the string like the fixed axes. */
 const AXTEXT = {
   space: '<span title="US dollars per million tokens, blended 3:1 input to output. Log scale."><b style="color:#e5c07b">X</b> price</span><br>' +
          '<span title="Artificial Analysis Intelligence Index. The one axis every model has."><b style="color:#56b6c2">Y</b> intelligence</span><br>' +
          '<span title="Median output tokens per second. Log scale."><b style="color:#61afef">Z</b> speed</span><br>' +
-         '<span style="opacity:.6" title="Sphere radius encodes the agentic index.">r &mdash; agentic</span><br>' +
+         '<span id="rfield"></span><br>' +
          '<span class="hint-tip" title="Models missing a field upstream sit outside the ' +
          'measured box and drift along the axis they were never measured on." ' +
          'style="color:#d19a66">unmeasured &#9432;</span>',
   time:  '<span title="Model release date."><b style="color:#e5c07b">X</b> released</span><br>' +
          '<span title="Artificial Analysis Intelligence Index."><b style="color:#56b6c2">Y</b> intelligence</span><br>' +
          '<span title="One lane per model creator."><b style="color:#61afef">Z</b> creator</span><br>' +
-         '<span style="opacity:.6" title="Sphere radius encodes the agentic index.">r &mdash; agentic</span>'
+         '<span id="rfield"></span>'
 };
+
+const RADIUS_ORDER = Object.keys(RADIUS_FIELDS);
+function renderRadiusField() {
+  const el = $('rfield');
+  if (!el) return;
+  el.innerHTML = 'r &mdash; <span class="rpick" tabindex="0" title="Click to size spheres by a different field">' +
+    esc(RADIUS_FIELDS[radiusField].label) + '</span>';
+  el.querySelector('.rpick').onclick = () => {
+    const at = RADIUS_ORDER.indexOf(radiusField);
+    radiusField = RADIUS_ORDER[(at + 1) % RADIUS_ORDER.length];
+    renderRadiusField();
+  };
+}
+
 function setView(v) {
   if (v === view) return;
   view = v;
@@ -2136,6 +2309,7 @@ function setView(v) {
   $('v-space').classList.toggle('on', v === 'space');
   $('v-time').classList.toggle('on', v === 'time');
   $('axinfo').innerHTML = AXTEXT[v];
+  renderRadiusField();
   annexGroup.visible = v === 'space';
   spineGroup.visible = v === 'space';
   buildAxisLabels(v);
@@ -2170,7 +2344,35 @@ syncProjUI();
 $('v-space').onclick = () => setView('space');
 $('v-time').onclick = () => setView('time');
 $('axinfo').innerHTML = AXTEXT.space;
+renderRadiusField();
 buildAxisLabels('space');
+
+/* ---------- narrow-stage panel collapse ------------------------------------
+ * A phone-width stage is barely taller than either side panel on its own, so
+ * AXES and FILTER cannot both stay open the way they do on desktop -- one
+ * would always cover the other, or both would eat the whole box and leave
+ * nothing to fly through. Below the breakpoint they start collapsed to a
+ * heading, and a tap opens one at a time; above it, both stay open exactly as
+ * they always have, so nothing here touches desktop's layout. */
+const NARROW = () => root.clientWidth < 520;
+function setCollapsed(panel, on) {
+  panel.classList.toggle('collapsed', on);
+}
+const modesHd = $('modeshd');
+modesHd.onclick = () => {
+  const modes = $('modes');
+  const wasCollapsed = modes.classList.contains('collapsed');
+  setCollapsed(modes, !wasCollapsed);
+  if (wasCollapsed && NARROW()) setCollapsed(legend, true);
+};
+legend.insertAdjacentHTML('afterbegin',
+  '<button type="button" id="legendhd" class="phd"><span class="lbl">filter</span><span class="pcaret">&#9662;</span></button>');
+$('legendhd').onclick = () => {
+  const wasCollapsed = legend.classList.contains('collapsed');
+  setCollapsed(legend, !wasCollapsed);
+  if (wasCollapsed && NARROW()) setCollapsed($('modes'), true);
+};
+if (NARROW()) { setCollapsed($('modes'), true); setCollapsed(legend, true); }
 
 function toggleLogos() {
   logosOn = !logosOn;
@@ -2184,7 +2386,7 @@ let missionOn = false, missionTarget = -1, missionT0 = 0, missionN = 0, missionH
 /* Missions ask you to navigate to an answer, so they may only involve models
  * whose position is a real measurement -- a model parked in an annexe cannot be
  * "the cheapest at 300 tok/s" because its speed was never measured. */
-const vis = () => MODELS.map((m, i) => [m, i]).filter(([m]) => !hidden.has(m.c) && m.q === 'A');
+const vis = () => MODELS.map((m, i) => [m, i]).filter(([m]) => !isOff(m) && m.q === 'A');
 const MISSIONS = [
   () => { const p = vis().filter(([m]) => m.p <= 2 && m.p > 0); if (!p.length) return null;
     return { q: 'Find the highest INTELLIGENCE under $2/1M', i: p.reduce((a, b) => (b[0].i > a[0].i ? b : a))[1] }; },
@@ -2327,7 +2529,7 @@ $('r-start').onclick = () => (raceOn ? stopRace() : startRace());
 function standings() {
   const live = [];
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c)) continue;
+    if (isOff(MODELS[i])) continue;
     if (raceStart(i) <= raceT) live.push(i);
   }
   live.sort((a, b) => MODELS[b].i - MODELS[a].i);
@@ -2381,7 +2583,7 @@ function updateRace(dt) {
   for (let i = 0; i < N; i++) {
     const m = MODELS[i];
     const born = raceStart(i);
-    const live = born <= raceT && !hidden.has(m.c);
+    const live = born <= raceT && !isOff(m);
 
     // An unreleased model is scaled away rather than parked under the floor:
     // sinking it merely moved the orb somewhere the camera can still fly to,
@@ -2683,7 +2885,7 @@ function stepGravity(dt) {
   const cenX = new Float64Array(64), cenY = new Float64Array(64);
   const cenZ = new Float64Array(64), cenN = new Float64Array(64);
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c) || MEMBER[i] < 0) continue;
+    if (isOff(MODELS[i]) || MEMBER[i] < 0) continue;
     const c = MEMBER[i];
     cenX[c] += gPos[i].x; cenY[c] += gPos[i].y; cenZ[c] += gPos[i].z; cenN[c]++;
   }
@@ -2695,11 +2897,11 @@ function stepGravity(dt) {
   // and applied afterwards. Updating in place made each body react to a partly
   // advanced world, which pumps energy in and prevents convergence.
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c) || MEMBER[i] < 0) continue;
+    if (isOff(MODELS[i]) || MEMBER[i] < 0) continue;
     const pi = gPos[i];
     let fx = 0, fy = 0, fz = 0;
     for (let j = 0; j < N; j++) {
-      if (i === j || hidden.has(MODELS[j].c) || MEMBER[j] < 0) continue;
+      if (i === j || isOff(MODELS[j]) || MEMBER[j] < 0) continue;
       const pj = gPos[j];
       const dx = pj.x - pi.x, dy = pj.y - pi.y, dz = pj.z - pi.z;
       const r2 = dx * dx + dy * dy + dz * dz + 12;   // softening: no singularity
@@ -2764,7 +2966,7 @@ function stepGravity(dt) {
 
   let moved = 0, live = 0;
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c) || MEMBER[i] < 0) continue;
+    if (isOff(MODELS[i]) || MEMBER[i] < 0) continue;
     const vi = gVel[i];
     vi.x = (vi.x + gForce[i * 3] * h) * damping;
     vi.y = (vi.y + gForce[i * 3 + 1] * h) * damping;
@@ -2785,9 +2987,9 @@ function stepGravity(dt) {
   // form as a group gathers, and it is what keeps every mark readable.
   for (let pass = 0; pass < 2; pass++) {
     for (let i = 0; i < N; i++) {
-      if (hidden.has(MODELS[i].c) || MEMBER[i] < 0) continue;
+      if (isOff(MODELS[i]) || MEMBER[i] < 0) continue;
       for (let j = i + 1; j < N; j++) {
-        if (hidden.has(MODELS[j].c) || MEMBER[j] < 0) continue;
+        if (isOff(MODELS[j]) || MEMBER[j] < 0) continue;
         const pi = gPos[i], pj = gPos[j];
         let dx = pj.x - pi.x, dy = pj.y - pi.y, dz = pj.z - pi.z;
         let d = Math.sqrt(dx * dx + dy * dy + dz * dz);
@@ -2812,7 +3014,7 @@ function stepGravity(dt) {
   if (gravCalm > 0.6) gravSettled = true;
 
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c) || MEMBER[i] < 0) continue;
+    if (isOff(MODELS[i]) || MEMBER[i] < 0) continue;
     cur[i].copy(gPos[i]);
   }
 }
@@ -2844,7 +3046,7 @@ function computeMembership() {
   const idx = [];
   // Only fully measured models can be clustered: the others would be grouped by
   // the zeros that stand in for their missing fields, which is not a finding.
-  for (let i = 0; i < N; i++) if (!hidden.has(MODELS[i].c) && MODELS[i].q === 'A') idx.push(i);
+  for (let i = 0; i < N; i++) if (!isOff(MODELS[i]) && MODELS[i].q === 'A') idx.push(i);
   const k = Math.min(K_CLUSTERS, idx.length);
   MEMBER = new Int16Array(N).fill(-1);
   if (k < 2) { idx.forEach((i) => (MEMBER[i] = 0)); memberReady = true; return; }
@@ -2917,7 +3119,7 @@ function clusters() {
   if (!memberReady) computeMembership();
   const groups = new Map();
   for (let i = 0; i < N; i++) {
-    if (hidden.has(MODELS[i].c)) continue;
+    if (isOff(MODELS[i])) continue;
     const c = MEMBER[i];
     if (c < 0) continue;
     if (!groups.has(c)) groups.set(c, []);
@@ -3065,10 +3267,33 @@ let fpsFrames = 0, fpsAccum = 0;
 const clock = new THREE.Clock();
 let rafId = 0;
 let running = true;
-function frameLoop() {
+/* Recording rig, gated behind a URL flag so it never ships to a real visitor.
+   A real clock ties frame content to wall-clock render speed, which is
+   unusable for a scripted flythrough: a dropped frame under a screenshot
+   capture would skip motion rather than just take longer. Freezing the clock
+   and stepping it by a fixed amount per capture makes the output identical
+   however slow the machine taking the screenshot actually is. */
+const director = /[?&]director=1\b/.test(location.search)
+  ? {
+      frozen: false,
+      fixedDt: 1 / 60,
+      freeze() { this.frozen = true; },
+      step(dt) {
+        if (dt != null) this.fixedDt = dt;
+        frameLoop(this.fixedDt);
+      },
+      camera,
+      yawPitch,
+      vel,
+      setMode(id) { const el = $(id); if (el) el.click(); }
+    }
+  : null;
+if (director) window.__lmDirector = director;
+
+function frameLoop(forcedDt) {
   if (!running) return;
-  rafId = requestAnimationFrame(frameLoop);
-  const dt = Math.min(clock.getDelta(), 0.05);
+  if (!director?.frozen) rafId = requestAnimationFrame(frameLoop);
+  const dt = forcedDt ?? Math.min(clock.getDelta(), 0.05);
   driftClock += dt;
   if (morph < 1) morph = Math.min(1, morph + dt * 0.85);
 

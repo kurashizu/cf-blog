@@ -18,7 +18,7 @@ export const LM_SPACE_TOUR: Step[] = [
 	{
 		target: 'lms-axes',
 		title: 'WHAT THE AXES ARE',
-		body: 'Price runs left to right and output speed front to back, both on log scales because each spans two orders of magnitude. Height is the intelligence index. A sphere is bigger when its agentic score is higher.',
+		body: 'Price runs left to right and output speed front to back, both on log scales because each spans two orders of magnitude. Height is the intelligence index. A sphere is bigger when its agentic score is higher by default — click "agentic" in the AXES panel to size by coding, intelligence, price or speed instead.',
 		keys: [
 			{ key: 'X', desc: 'blended price, $/1M tokens at 3:1 in:out' },
 			{ key: 'Y', desc: 'Artificial Analysis intelligence index' },
