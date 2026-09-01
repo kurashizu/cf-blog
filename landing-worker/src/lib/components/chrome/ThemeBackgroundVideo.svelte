@@ -37,6 +37,39 @@
 			showB = true;
 		}
 	});
+
+	/*
+	 * The native `loop` attribute hands the restart to the browser: on end it
+	 * fires `ended`, resets `currentTime` to 0, and calls `play()` again --
+	 * a full stop/reset/restart of the decode pipeline. For a 1280x720 AV1
+	 * stream (one of the more expensive formats to decode, especially without
+	 * hardware support) that round trip is slow enough to show up as a stall
+	 * right at the loop point, on top of whatever the footage itself is doing.
+	 *
+	 * Driving the loop by hand sidesteps that: `timeupdate` fires many times a
+	 * second, and jumping `currentTime` back near zero a little before the
+	 * real end keeps the same decode session running instead of tearing it
+	 * down and rebuilding it. The video never actually reaches its `ended`
+	 * state, so the expensive reset never happens.
+	 */
+	const LOOP_EPSILON = 0.12;
+
+	function manualLoop(node: HTMLVideoElement) {
+		node.loop = false;
+		const onTimeUpdate = () => {
+			const d = node.duration;
+			if (!isFinite(d) || d <= 0) return;
+			if (node.currentTime >= d - LOOP_EPSILON) {
+				node.currentTime = 0.001;
+			}
+		};
+		node.addEventListener('timeupdate', onTimeUpdate);
+		return {
+			destroy() {
+				node.removeEventListener('timeupdate', onTimeUpdate);
+			}
+		};
+	}
 </script>
 
 {#if !reducedMotion}
@@ -45,9 +78,9 @@
 			class="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out"
 			style="opacity: {showB ? 0 : 1}"
 			src={THEME_VIDEO[slotA]}
+			use:manualLoop
 			autoplay
 			muted
-			loop
 			playsinline
 			disablepictureinpicture
 		></video>
@@ -56,9 +89,9 @@
 				class="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out"
 				style="opacity: {showB ? 1 : 0}"
 				src={THEME_VIDEO[slotB]}
+				use:manualLoop
 				autoplay
 				muted
-				loop
 				playsinline
 				disablepictureinpicture
 			></video>
