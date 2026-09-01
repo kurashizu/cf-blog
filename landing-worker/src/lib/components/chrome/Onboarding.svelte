@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { playSound } from '../../sound';
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
 
 	let {
@@ -10,7 +10,7 @@
 		heading = 'GETTING STARTED'
 	}: { onClose: () => void; steps?: Step[]; heading?: string } = $props();
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	export interface Step {
 		/** `data-tour` value of the element this step points at. */
@@ -188,7 +188,7 @@
 	// Re-measure whenever the step changes, and keep up with layout changes.
 	$effect(() => {
 		index;
-		$theme;
+		$resolvedTheme;
 		void place();
 	});
 

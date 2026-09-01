@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { pulseStep } from '../../stores/clock';
 	import {
 		consoleBuffer,
@@ -13,7 +13,7 @@
 		type LineKind
 	} from '../../stores/console';
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	let commandInput = $state('');
 	let inputEl: HTMLInputElement | undefined = $state();

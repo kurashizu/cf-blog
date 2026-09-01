@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { playSound } from '../../sound';
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { isLooping } from './markdown';
 	import {
 		CONFIG_LIMITS,
@@ -136,7 +136,7 @@
 	/** Bytes seen per file during load, so one bar can cover four downloads. */
 	let fileProgress = $state<Record<string, { loaded: number; total: number }>>({});
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 	let busy = $derived(phase === 'loading' || phase === 'generating');
 
 	const COMMANDS = [

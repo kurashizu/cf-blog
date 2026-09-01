@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { pulseStep } from '../../stores/clock';
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	let gbName = $state('');
 	let gbEmail = $state('');

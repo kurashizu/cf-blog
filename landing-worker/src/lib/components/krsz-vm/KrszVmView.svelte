@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import {
 		clearOverlay,
 		findDiskBuffer,
@@ -125,7 +125,7 @@
 	 */
 	const BOOT_LINE = 'virt modloop_verify=no acpi=off nomodeset';
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	let phase = $state<Phase>('idle');
 	let status = $state('');

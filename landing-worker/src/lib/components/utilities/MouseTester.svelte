@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	// e.button -> index: 0 L, 1 M, 2 R, 3 X1(back), 4 X2(forward)
 	const BUTTON_NAMES = ['LEFT', 'MIDDLE', 'RIGHT', 'BACK (X1)', 'FWD (X2)'];

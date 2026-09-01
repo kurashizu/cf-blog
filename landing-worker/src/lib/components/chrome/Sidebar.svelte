@@ -2,12 +2,15 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { playSound } from '../../sound';
-	import { theme, cycleTheme, THEME_STYLES } from '../../stores/theme';
+	import { theme, cycleTheme, THEME_STYLES, resolvedTheme } from '../../stores/theme';
 	import { spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
+	/* AUTO shows the hour-driven pick, not the literal word — the point of the
+	   tile is to say what's on screen right now, and "auto" alone doesn't. */
+	let themeLabel = $derived($theme === 'auto' ? `auto·${$resolvedTheme.split('-')[0]}` : $theme.split('-')[0]);
 
 	const HOTKEY_TILES = [
 		{ id: 0, key: '0', title: 'MODULES', desc: 'Projects', color: '#56b6c2', icon: '◈', tooltip: '0: Modules — Live Project Portal & Architecture Deep Dives [Hotkey: Ctrl+0]' },
@@ -27,7 +30,7 @@
 </script>
 
 <div
-	class="order-2 lg:order-none col-span-12 lg:col-span-3 xl:col-span-3 border {themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 {themeStyles.cardBg} rounded-sm min-h-0 max-w-full overflow-y-auto custom-scrollbar"
+	class="order-2 lg:order-none col-span-12 lg:col-[span_5_/_span_5] border {themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 {themeStyles.cardBgVideo} rounded-sm min-h-0 max-w-full overflow-y-auto custom-scrollbar"
 >
 	<!-- ASCII brand & acronym breakdown -->
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden">
@@ -116,7 +119,7 @@
 				</div>
 				<div class="mt-1">
 					<div class="font-bold text-xs text-[#d8dee9] leading-tight">THEME</div>
-					<div class="text-xs opacity-60 font-mono uppercase">{$theme.split('-')[0]}</div>
+					<div class="text-xs opacity-60 font-mono uppercase">{themeLabel}</div>
 				</div>
 			</button>
 		</div>

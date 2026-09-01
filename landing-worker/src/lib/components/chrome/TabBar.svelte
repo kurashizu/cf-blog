@@ -4,13 +4,15 @@
 	import { playSound } from '../../sound';
 	import { setMuted } from '../../stores/sound';
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
-	import { theme, cycleTheme, THEME_STYLES } from '../../stores/theme';
+	import { theme, cycleTheme, THEME_STYLES, resolvedTheme } from '../../stores/theme';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 	import { consoleOverlayOpen, guideOpen, toggleConsoleOverlay } from '../../stores/chrome';
 	import KrszLogo from './KrszLogo.svelte';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
+	/* AUTO alone doesn't say what's actually on screen — pair it with the hour's pick. */
+	let themeLabel = $derived($theme === 'auto' ? `AUTO·${$resolvedTheme.toUpperCase()}` : $theme.toUpperCase());
 
 	const TABS = [
 		{ id: 0, label: '0:modules', color: '#56b6c2', title: 'View 0: Modules — Live Project Portal & Technical Deep Dives [Hotkey: Ctrl+0]' },
@@ -61,7 +63,7 @@
 </script>
 
 <header
-	class="w-full max-w-full {themeStyles.headerBg} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border {themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5"
+	class="w-full max-w-full {themeStyles.headerBgVideo} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border {themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5"
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
@@ -142,8 +144,8 @@
 		</button>
 		<button
 			onclick={cycleTheme}
-			title="Color Theme Switcher — Cycle palette (Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
-			class="hover:underline cursor-pointer hidden 2xl:inline text-[#e5c07b]">[THEME: {$theme.toUpperCase()}]</button
+			title="Color Theme Switcher — Cycle palette (Auto by time of day, Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
+			class="hover:underline cursor-pointer hidden 2xl:inline text-[#e5c07b]">[THEME: {themeLabel}]</button
 		>
 		<span
 			title="Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers"

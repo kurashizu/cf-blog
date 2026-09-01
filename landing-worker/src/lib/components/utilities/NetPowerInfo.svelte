@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { MODULES } from '../../data/modules';
-	import { probeResults, probeAllProjects } from '../../stores/probes';
 	import { edgeTrace, edgeTraceMs, edgeTraceStatus, loadEdgeTrace } from '../../stores/edge';
 
 	interface Row {
@@ -15,7 +13,6 @@
 	let network = $state<Row[]>([]);
 	let storage = $state<Row[]>([]);
 	let permissions = $state<Row[]>([]);
-	let probing = $state(false);
 
 	interface BatteryLike extends EventTarget {
 		level: number;
@@ -123,12 +120,6 @@
 		permissions = rows;
 	}
 
-	async function probeAll() {
-		probing = true;
-		await probeAllProjects(true);
-		probing = false;
-	}
-
 	onMount(() => {
 		const cleanups: (() => void)[] = [readNetwork()];
 		void readBattery().then((c) => cleanups.push(c));
@@ -178,16 +169,6 @@
 		>
 			RE-TRACE EDGE
 		</button>
-		<button
-			onclick={probeAll}
-			disabled={probing}
-			class="px-2.5 py-1.5 border border-[#56b6c2]/50 text-[#56b6c2] rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 disabled:opacity-40 disabled:cursor-wait"
-		>
-			{probing ? 'PROBING…' : 'PROBE ALL ORIGINS'}
-		</button>
-		<span class="text-[11px] font-mono text-white/40">
-			Round trips are measured from this browser — they depend on your own link, not just the origin.
-		</span>
 	</div>
 
 	{#each SECTIONS as section (section.key)}
@@ -206,28 +187,4 @@
 			</div>
 		</div>
 	{/each}
-
-	<div class="border rounded-xs bg-black/25 p-2.5" style="border-color: #e06c7533">
-		<div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 mb-1.5">
-			<span class="text-xs font-black font-mono text-[#e06c75]">ORIGIN REACHABILITY</span>
-			<span class="text-[10px] font-mono text-white/35">best of 2 no-cors fetches</span>
-		</div>
-		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-			{#each MODULES as m (m.id)}
-				{@const r = $probeResults[m.id]}
-				<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2">
-					<span class="text-xs font-mono font-bold truncate" style="color: {m.color}">{m.name}</span>
-					<span
-						class="text-xs font-mono font-bold shrink-0 {r?.status === 'up'
-							? 'text-[#98c379]'
-							: r?.status === 'unreachable'
-								? 'text-[#e06c75]'
-								: 'text-white/35'}"
-					>
-						{r?.status === 'up' ? `${r.ms} ms` : r?.status === 'probing' ? '…' : r?.status === 'unreachable' ? 'no answer' : 'idle'}
-					</span>
-				</div>
-			{/each}
-		</div>
-	</div>
 </div>

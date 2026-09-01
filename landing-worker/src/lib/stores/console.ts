@@ -7,7 +7,7 @@ import { MODULES } from '../data/modules';
 import { EXTERNAL_LINKS } from '../links';
 import { TAB_ROUTES } from '../routes-map';
 import { allPaths, lookup, renderTree, resolvePath, type VNode } from '../vfs';
-import { theme, cycleTheme, THEME_STYLES, type WorkspaceTheme } from './theme';
+import { theme, cycleTheme, THEME_STYLES, resolvedTheme, type WorkspaceTheme } from './theme';
 import { bpm, setBpm, setSnapDiv, setNoteDur, setTimeMeter, toggle as toggleSeq, play, stop, isSeqPlaying } from './synth-transport';
 import { updateActiveTrack, tracksState } from './synth-tracks';
 import { activeTrackId } from './synth-transport';
@@ -91,6 +91,7 @@ const NAV_WORDS: Record<string, number> = {
 };
 
 const THEME_ALIASES: Record<string, WorkspaceTheme> = {
+	auto: 'auto',
 	tokyo: 'tokyo-matte', 'tokyo-matte': 'tokyo-matte',
 	gruvbox: 'gruvbox-dark', 'gruvbox-dark': 'gruvbox-dark',
 	nord: 'nord-terminal', 'nord-terminal': 'nord-terminal',
@@ -145,7 +146,7 @@ const HELP: ConsoleLine[] = [
 	accent('── MISC ────────────────────────────────────'),
 	out('  eval <expr>     safe math (e.g. eval 2**16)'),
 	out('  echo <text>     print text'),
-	out('  theme [name]    cycle or set: tokyo gruvbox nord amber'),
+	out('  theme [name]    cycle or set: auto tokyo gruvbox nord amber'),
 	out('  clear / Ctrl+L  clear screen · Tab completes/cycles · ↑↓ history'),
 	out('  guide           replay the getting-started walkthrough'),
 	out('  ` (backquote)   open/close this console over any view'),
@@ -173,7 +174,7 @@ const USAGE: Record<string, string[]> = {
 	bpm: ['bpm [40-300]', 'Show or set the sequencer tempo.'],
 	vol: ['vol [0-100]', 'Show or set master volume.'],
 	load: ['load <song>', 'Load a built-in song by name fragment. See "songs".'],
-	theme: ['theme [name]', 'Cycle, or set one of: ' + Object.keys(THEME_STYLES).join(', ')],
+	theme: ['theme [name]', 'Cycle, or set one of: ' + Object.keys(THEME_ALIASES).join(', ')],
 	echo: ['echo <text>', 'Print text. Useful as a pipe source.'],
 	history: ['history', 'The last 15 commands. Persisted across visits.'],
 	guide: ['guide', 'Reopen the getting-started walkthrough.'],
@@ -558,10 +559,11 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		const q = args.trim().toLowerCase();
 		if (!q) {
 			cycleTheme();
-			return [ok(`Theme: ${get(theme)}`)];
+			const t = get(theme);
+			return [ok(`Theme: ${t === 'auto' ? `auto (${get(resolvedTheme)})` : t}`)];
 		}
 		const t = THEME_ALIASES[q];
-		if (!t) return [err(`Unknown theme "${q}". Valid: ${Object.keys(THEME_STYLES).join(', ')}`)];
+		if (!t) return [err(`Unknown theme "${q}". Valid: ${Object.keys(THEME_ALIASES).join(', ')}`)];
 		theme.set(t);
 		return [ok(`Theme set to ${t}.`)];
 	}

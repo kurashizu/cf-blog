@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 
 	let { onClose }: { onClose: () => void } = $props();
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	interface Group {
 		title: string;

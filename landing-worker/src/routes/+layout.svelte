@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { playSound } from '$lib/sound';
 	import '../app.css';
-	import { theme, cycleTheme, THEME_STYLES } from '$lib/stores/theme';
+	import { cycleTheme, THEME_STYLES, THEME_CSS_VARS, resolvedTheme, refreshAutoTheme } from '$lib/stores/theme';
 	import { initClock } from '$lib/stores/clock';
 	import { initTransport } from '$lib/stores/synth-transport';
 	import { tabIndexFromPath, TAB_ROUTES, navigateTo } from '$lib/routes-map';
@@ -13,6 +13,7 @@
 	import { loadEdgeTrace } from '$lib/stores/edge';
 	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen } from '$lib/stores/chrome';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
+	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
 	import TelemetryFooter from '$lib/components/chrome/TelemetryFooter.svelte';
 	import CommandConsole from '$lib/components/chrome/CommandConsole.svelte';
@@ -23,7 +24,19 @@
 	let { children } = $props();
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
+	/* app.css declares these on :root as the tokyo-matte values (the default),
+	   for styling that reads the CSS variables directly rather than through
+	   THEME_STYLES' Tailwind classes -- lifelab's own stylesheet, chiefly.
+	   Pushed onto the real :root (not a wrapper div) so html/body's own
+	   background-color: var(--bg) picks it up too, not just content inside
+	   this component. */
+	$effect(() => {
+		const vars = THEME_CSS_VARS[$resolvedTheme];
+		for (const [k, v] of Object.entries(vars)) {
+			document.documentElement.style.setProperty(k, v);
+		}
+	});
 	let bootVisible = $state(false);
 	/* Mirrored into a store so a view's own walkthrough can wait for the screen
 	   to be clear -- the POST screen is shown before the site tour is offered,
@@ -123,6 +136,12 @@
 		initConsoleState();
 		window.addEventListener('keydown', handleKeydown);
 
+		// The auto theme only ever changes on the hour, but a minute-granularity
+		// poll is cheap and means it never waits for a re-render triggered by
+		// something else to notice the hour turned over.
+		refreshAutoTheme();
+		const themeInterval = setInterval(refreshAutoTheme, 60_000);
+
 		// POST runs on every page load — it is short, skippable with any key, and
 		// never shown to reduced-motion users. Tab switches are client-side
 		// navigation, so it does not reappear when moving between views.
@@ -137,6 +156,7 @@
 		return () => {
 			stopClock();
 			stopTransport();
+			clearInterval(themeInterval);
 			window.removeEventListener('keydown', handleKeydown);
 		};
 	});
@@ -146,10 +166,12 @@
 	<title>KRSZ™ — Kurashizu's Random-Stuff Zone | Serverless Edge Portal</title>
 </svelte:head>
 
-<div class="w-full min-h-screen lg:h-screen lg:max-h-screen overflow-x-hidden lg:overflow-hidden font-mono text-sm sm:text-base {themeStyles.bg} {themeStyles.text} flex flex-col justify-between select-none p-1.5 sm:p-3 md:p-4 transition-colors duration-200">
+<ThemeBackgroundVideo />
+
+<div class="relative z-10 w-full min-h-screen lg:h-screen lg:max-h-screen overflow-x-hidden lg:overflow-hidden font-mono text-sm sm:text-base {themeStyles.text} flex flex-col justify-between select-none p-1.5 sm:p-3 md:p-4 transition-colors duration-200">
 	<TabBar />
 
-	<div class="grid grid-cols-12 gap-1.5 sm:gap-2 flex-1 min-h-0 w-full max-w-full">
+	<div class="grid grid-cols-12 lg:grid-cols-[repeat(24,minmax(0,1fr))] gap-1.5 sm:gap-2 flex-1 min-h-0 w-full max-w-full">
 		<!-- Sidebar renders first for the desktop grid, but on a phone it would push
 		     the actual view a whole screen down, so order puts content first there. -->
 		<Sidebar />
@@ -158,7 +180,7 @@
 		     shared height, so a canvas view with no text content to size against
 		     collapsed to a sliver a few pixels tall. min-h-[70svh] gives the panel
 		     a floor on a phone; lg:min-h-0 leaves the desktop flex layout alone. -->
-		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-span-9 xl:col-span-9 border {themeStyles.border} flex flex-col {themeStyles.cardBg} rounded-sm min-h-[70svh] lg:min-h-0 lg:overflow-hidden">
+		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-[span_19_/_span_19] border {themeStyles.border} flex flex-col {themeStyles.cardBgVideo} rounded-sm min-h-[70svh] lg:min-h-0 lg:overflow-hidden">
 			<!-- The console lives only in the drop-down overlay now, so every view
 			     gets the full panel and no view has an autofocused input competing
 			     with the keyboard testers or the QWERTY piano. -->

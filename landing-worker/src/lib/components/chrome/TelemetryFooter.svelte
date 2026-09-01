@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { playSound } from '../../sound';
-	import { theme, THEME_STYLES } from '../../stores/theme';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { edgeTrace, edgeTraceMs, edgeTraceStatus, traceSummary } from '../../stores/edge';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 
-	let themeStyles = $derived(THEME_STYLES[$theme]);
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	/** Real `/cdn-cgi/trace` values — never a placeholder number. */
 	let edgeLabel = $derived(
@@ -31,7 +31,7 @@
 </script>
 
 <footer
-	class="w-full max-w-full {themeStyles.headerBg} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-wrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border {themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 gap-1.5"
+	class="w-full max-w-full {themeStyles.headerBgVideo} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-wrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border {themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 gap-1.5"
 >
 	<div class="flex flex-wrap items-center gap-2 sm:gap-3">
 		<span>[0] 0:krsz.in*</span>
