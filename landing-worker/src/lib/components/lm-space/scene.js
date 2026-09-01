@@ -1655,8 +1655,10 @@ function writeInstances() {
     dummy.position.copy(cur[i]);
     // Emphasis is animated rather than switched: a body eases up to its
     // highlighted size and pulses gently while selected. Snapping the scale
-    // read as a glitch instead of as feedback.
-    const wantEmph = i === selIdx ? 1 : i === hoverIdx ? 0.5 : 0;
+    // read as a glitch instead of as feedback. A frontier body reuses the
+    // same halo -- strong enough to read as "on the front" at a glance, but
+    // a notch under selection so picking one still stands out on top of it.
+    const wantEmph = i === selIdx ? 1 : i === hoverIdx ? 0.5 : onFrontier[i] ? 0.8 : 0;
     emph[i] += (wantEmph - emph[i]) * Math.min(1, dtNow * 9);
     const e = emph[i];
     const tgt = missionOn && missionTarget === i;
@@ -2537,6 +2539,9 @@ updateFilterCount();
  */
 let paretoOn = false;
 let paretoStaleAt = 0;
+/** Which bodies are currently on the frontier, read by writeInstances to give
+ *  them the same selection-halo glow a hovered or selected body gets. */
+const onFrontier = new Uint8Array(N);
 const paretoGroup = new THREE.Group();
 scene.add(paretoGroup);
 
@@ -2556,11 +2561,33 @@ function paretoFront(items, objs) {
 }
 
 function disposeParetoViz() {
+  // Object3D.clear() only drops the children from the graph, not their GPU
+  // resources -- and this rebuilds on every filter change, gravity tick and
+  // view settle while the toggle is on, so leaving geometries behind would
+  // leak one set per rebuild for as long as the frontier stayed visible.
+  paretoGroup.traverse((o) => {
+    o.geometry?.dispose?.();
+    o.material?.dispose?.();
+  });
   paretoGroup.clear();
+}
+
+/** A single edge as a real cylinder rather than a line -- LineBasicMaterial's
+ *  linewidth is a no-op on most GPUs, so a tube is the only reliable way to
+ *  draw a visibly thick connector between two points. */
+function mkTube(p0, p1, radius, color, opacity) {
+  const geo = new THREE.CylinderGeometry(radius, radius, p0.distanceTo(p1), 6, 1);
+  geo.rotateX(Math.PI / 2);
+  geo.translate(0, 0, p0.distanceTo(p1) / 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity }));
+  mesh.position.copy(p0);
+  mesh.lookAt(p1);
+  return mesh;
 }
 
 function buildParetoViz() {
   disposeParetoViz();
+  onFrontier.fill(0);
   if (!paretoOn) return;
 
   if (view === 'space') {
@@ -2597,13 +2624,19 @@ function buildParetoViz() {
           // Wireframe only, no fill: a translucent mesh still read as a solid
           // from some angles even with only the outward faces kept, and the
           // wireframe alone traces the same shape without ever being
-          // mistaken for a volume.
+          // mistaken for a volume. LineBasicMaterial's own linewidth is a
+          // no-op on most GPUs, so each edge is a real tube instead -- the
+          // only reliable way to draw a visibly thick line in three.js.
           const shellGeo = new THREE.BufferGeometry().setFromPoints(keep);
-          paretoGroup.add(new THREE.LineSegments(
-            new THREE.WireframeGeometry(shellGeo),
-            new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: 0.5 })
-          ));
+          const wire = new THREE.WireframeGeometry(shellGeo);
+          const wPos = wire.attributes.position;
+          const p0 = new THREE.Vector3(), p1 = new THREE.Vector3();
+          for (let k = 0; k < wPos.count; k += 2) {
+            p0.fromBufferAttribute(wPos, k); p1.fromBufferAttribute(wPos, k + 1);
+            paretoGroup.add(mkTube(p0, p1, 0.35, 0x98c379, 0.85));
+          }
         }
+        for (const [, i] of frontA) onFrontier[i] = 1;
       } catch { /* degenerate hull (near-coplanar points): skip the mesh, no line either */ }
     }
 
@@ -2615,11 +2648,11 @@ function buildParetoViz() {
     const frontB = paretoFront(B, [['p', false], ['i', true]])
       .sort((a, b) => a[0].p - b[0].p);
     if (frontB.length >= 2) {
-      paretoGroup.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(frontB.map(([, i]) => cur[i])),
-        new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: 0.75 })
-      ));
+      for (let k = 0; k + 1 < frontB.length; k++) {
+        paretoGroup.add(mkTube(cur[frontB[k][1]], cur[frontB[k + 1][1]], 0.4, 0x98c379, 0.9));
+      }
     }
+    for (const [, i] of frontB) onFrontier[i] = 1;
   } else {
     // TIMELINE: the two axes left are release date and intelligence, so the
     // frontier is "the best intelligence available as of each date" -- a
