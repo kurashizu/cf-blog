@@ -14,7 +14,7 @@ const $ = s => document.querySelector(s);
 // the page it draws into is created and destroyed on every SPA navigation --
 // so binding here left the second visit holding elements that were no longer
 // in the document, drawing into a detached canvas: a blank panel.
-let termEl, cv, ctx, topbar, tray, levelsEl, msgEl;
+let termEl, cv, ctx, topbar, tray, msgEl;
 let wipeBtn;
 let guideEl, gstep, gtext;
 
@@ -38,7 +38,7 @@ function bind() {
   if (!cv) return false;
   ctx = cv.getContext('2d');
   guideEl = $('#guide'); gstep = $('#gstep'); gtext = $('#gtext');
-  topbar = $('#topbar'); tray = $('#tray'); levelsEl = $('#levels'); msgEl = $('#msg');
+  topbar = $('#topbar'); tray = $('#tray'); msgEl = $('#msg');
   wipeBtn = $('#wipebtn');
 
   // Handlers and the size observer belong to the nodes, so they are re-attached
@@ -257,35 +257,6 @@ const NOTES = {
   gunSink: 'an endless stream, absorbed. Population stays bounded for ever',
 };
 
-function buildLibrary() {
-  levelsEl.innerHTML = '';
-  let ci = 0;
-  for (const sec of LIBRARY) {
-    const h = document.createElement('div');
-    h.className = 'libhead';
-    h.innerHTML = '<span>' + sec.group + '</span><small>' + sec.hint + '</small>';
-    levelsEl.appendChild(h);
-
-    for (const n of sec.of) {
-      if (!RLES[n]) continue;
-      const p = pattern(n);
-      const b = document.createElement('button');
-      b.className = 'lv libitem' + (S.stamp === n ? ' cur' : '');
-      b.style.color = PCOLORS[ci++ % PCOLORS.length];
-      b.innerHTML = miniSVG(p) + '<span class="lvt">' + p.label + '</span>';
-      b.title = p.label + ' — ' + (NOTES[n] || '');
-      // Selecting here is the same act as selecting in the tray, so that the
-      // two lists cannot disagree about what is held.
-      b.onclick = () => {
-        if (S.stamp === n) { S.stamp = null; S.tool = 'pan'; }
-        else { S.stamp = n; S.tool = 'stamp'; }
-        syncTools();
-      };
-      levelsEl.appendChild(b);
-    }
-  }
-}
-
 function buildTray() {
   tray.innerHTML = '';
   el.stampBtns = {};
@@ -336,7 +307,7 @@ function loadLevel(i) {
   S.phase = 'edit'; S.running = false; S.stampsUsed = 0; S.snap = null; S.goal = null;
   S.stamp = null; S.rot = 0; S.drag = null; lastDeny = ''; S.stepIdx = 0; S.won = false;
   S.tool = 'draw';
-  buildTopbar(); buildTray(); buildLibrary();
+  buildTopbar(); buildTray();
   fitCamera();
   hideMsg();
   syncRun(); syncTools();
@@ -923,7 +894,7 @@ function frame(t) {
   } else acc = 0;
   // The page can be replaced between frames; if it was, take the new nodes and
   // re-fit the camera to them before drawing into a canvas of a different size.
-  if (bind()) { buildTopbar(); buildTray(); buildLibrary(); resize(); }
+  if (bind()) { buildTopbar(); buildTray(); resize(); }
   draw(); updateStats(); updateGuide();
   raf = requestAnimationFrame(frame);
 }

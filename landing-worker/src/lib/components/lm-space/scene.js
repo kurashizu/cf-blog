@@ -1271,14 +1271,12 @@ const LOD_GEOS = [
 const LOD_PX = [30, 11];
 
 const meshes = LOD_GEOS.map((g) => {
-  // Each level gets its own attribute buffers. They cannot be shared: an
-  // instance attribute is read by gl_InstanceID, and a body's slot differs
-  // between levels, so the values have to be repacked alongside the matrices.
-  if (g !== geo) {
-    for (const [name, size] of [['aCell', 2], ['aColor', 3], ['aColor2', 3],
-                                ['aColor3', 3], ['aColor4', 3], ['aState', 4], ['aAge', 1]]) {
-      g.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(N * size), size));
-    }
+  // Every level gets its own attribute buffers, the near one included. They
+  // cannot be shared: an instance attribute is read by gl_InstanceID, and a
+  // body's slot is its position in that level's draw list, not its model index.
+  for (const [name, size] of [['aCell', 2], ['aColor', 3], ['aColor2', 3],
+                              ['aColor3', 3], ['aColor4', 3], ['aState', 4], ['aAge', 1]]) {
+    g.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(N * size), size));
   }
   const m = new THREE.InstancedMesh(g, mat, N);
   m.frustumCulled = false;
@@ -1309,15 +1307,25 @@ for (let i = 0; i < N; i++) {
   ageAttr.setX(i, Number.isFinite(t) ? norm(t, dLo, dHi) : 0.5);
 }
 geo.setAttribute('aAge', ageAttr);
-// The remaining three stops never change, so they are written once.
-for (const [k, name] of [[1, 'aColor2'], [2, 'aColor3'], [3, 'aColor4']]) {
+/* The master values, indexed by model rather than by draw slot. Each level
+ * copies out of these into the position the body occupies in its own list. */
+const srcStops = [1, 2, 3].map((k) => {
   const arr = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
     const c = STOPS[i][k];
     arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b;
   }
-  geo.setAttribute(name, new THREE.InstancedBufferAttribute(arr, 3));
-}
+  return arr;
+});
+const SRC = [
+  ['aCell', cellUv],
+  ['aColor', colorAttr.array],
+  ['aColor2', srcStops[0]],
+  ['aColor3', srcStops[1]],
+  ['aColor4', srcStops[2]],
+  ['aState', stateAttr.array],
+  ['aAge', ageAttr.array]
+];
 
 const logoUniforms = mat.uniforms;
 
@@ -1327,16 +1335,14 @@ let dtNow = 0.016, nowMs = 0;
 const lodN = [0, 0, 0];
 /** Which level each body is currently drawn at, for the hysteresis test. */
 const lodOf = new Uint8Array(N);
-const ATTRS = ['aCell', 'aColor', 'aColor2', 'aColor3', 'aColor4', 'aState', 'aAge'];
 
-/** Move one body's per-instance values into its slot on a lower level. */
+/** Move one body's per-instance values into the slot it occupies at `lod`. */
 function copyInstanceAttrs(i, lod, slot) {
   const dst = LOD_GEOS[lod];
-  for (const name of ATTRS) {
-    const src = geo.getAttribute(name);
+  for (const [name, src] of SRC) {
     const out = dst.getAttribute(name);
-    const n = src.itemSize;
-    for (let k = 0; k < n; k++) out.array[slot * n + k] = src.array[i * n + k];
+    const n = out.itemSize;
+    for (let k = 0; k < n; k++) out.array[slot * n + k] = src[i * n + k];
     out.needsUpdate = true;
   }
 }
@@ -1420,8 +1426,11 @@ function writeInstances() {
     }
     const slot = lodN[lod]++;
     meshes[lod].setMatrixAt(slot, dummy.matrix);
-    // Copy this body's attributes into the slot it occupies at this level.
-    if (lod > 0) copyInstanceAttrs(i, lod, slot);
+    // Every level packs its bodies by draw order, so a body's slot is not its
+    // model index on any of them -- including the first. Its attributes have to
+    // follow it into that slot, or each body wears the mark of whichever model
+    // happened to land at the same position, changing as the camera moves.
+    copyInstanceAttrs(i, lod, slot);
 
     // State rides as (dim, whiten) so the highlight applies to every stop of a
     // multi-colour mark, not just the first one.
@@ -1983,7 +1992,7 @@ function select(i) {
     <div class="hd">
       <div style="display:flex;gap:8px;align-items:flex-start;min-width:0">
         <div class="logo" style="color:${col};
-          -webkit-mask-image:url(./atlas.png); mask-image:url(./atlas.png);
+          -webkit-mask-image:url(${ASSETS}/atlas.png); mask-image:url(${ASSETS}/atlas.png);
           -webkit-mask-size:${ATLAS.cols * 100}% ${ATLAS.rows * 100}%;
           mask-size:${ATLAS.cols * 100}% ${ATLAS.rows * 100}%;
           -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></div>
@@ -2054,7 +2063,7 @@ legend.innerHTML = '<div class="lbl" style="margin-bottom:5px">creators &mdash; 
     const by = Math.floor(cell / ATLAS.cols) * 100 / (ATLAS.rows - 1);
     return `<div class="lg" data-c="${esc(c)}">
       <span class="lgico" style="color:${colorOf.get(c)};
-        -webkit-mask-image:url(./atlas.png); mask-image:url(./atlas.png);
+        -webkit-mask-image:url(${ASSETS}/atlas.png); mask-image:url(${ASSETS}/atlas.png);
         -webkit-mask-size:${ATLAS.cols * 100}% ${ATLAS.rows * 100}%;
         mask-size:${ATLAS.cols * 100}% ${ATLAS.rows * 100}%;
         -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></span>
@@ -2313,7 +2322,7 @@ function renderRacePanel() {
       return `<div class="rrow ${i === racePick ? 'me' : ''}">
         <span class="rk">${k + 1}</span>
         <span class="lgico" style="color:${colorOf.get(m.c)};
-          -webkit-mask-image:url(./atlas.png); mask-image:url(./atlas.png);
+          -webkit-mask-image:url(${ASSETS}/atlas.png); mask-image:url(${ASSETS}/atlas.png);
           -webkit-mask-size:${ATLAS.cols * 100}% ${ATLAS.rows * 100}%;
           mask-size:${ATLAS.cols * 100}% ${ATLAS.rows * 100}%;
           -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></span>

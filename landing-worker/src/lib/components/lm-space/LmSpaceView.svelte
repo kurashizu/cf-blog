@@ -196,14 +196,18 @@
 :global(.lmspace canvas) { display:block; }
 :global(.lmspace .hud) { position:absolute; pointer-events:none; z-index:20; }
 :global(.lmspace .hud > *) { pointer-events:auto; }
-:global(.lmspace #topbar) { top:0; left:0; right:0; padding:10px 12px; gap:26px;
-    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;
-    justify-content:space-between;
+:global(.lmspace #topbar) { top:0; left:0; right:0; padding:9px 10px;
+    display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
     background:linear-gradient(180deg,rgba(10,11,13,.92),rgba(10,11,13,0)); }
+/* The controls keep their full width and the heading gives way: a truncated
+   title is readable, a clipped button is not. */
+:global(.lmspace #topbar > div:first-child) { min-width:0; overflow:hidden; }
+:global(.lmspace #ctl) { flex:none; }
 :global(.lmspace .title) { font-weight:900; font-size:11px; letter-spacing:.12em; color:var(--cyan); }
 :global(.lmspace .sub) { font-size:11px; color:rgba(255,255,255,.38); line-height:1.6; margin-top:3px; }
 :global(.lmspace .sub a) { color:var(--blue); }
-:global(.lmspace #ctl) { display:grid; grid-template-columns:auto auto; gap:6px 12px;
+:global(.lmspace #ctl) { display:grid; grid-template-columns:auto auto; gap:4px 9px;
+    max-height:calc(100% - 16px); overflow-y:auto; overflow-x:hidden;
     justify-content:end; align-items:center; }
 :global(.lmspace .grp) { display:contents; }
 :global(.lmspace .ghd) { font-size:9px; font-weight:900; letter-spacing:.12em; color:var(--g);
@@ -224,8 +228,8 @@
 :global(.lmspace #modes) { position:absolute; top:84px; left:12px; z-index:20; display:flex; flex-direction:column; gap:8px; }
 :global(.lmspace .panel) { background:rgba(9,10,12,.85); border:1px solid rgba(255,255,255,.12);
     border-radius:2px; padding:9px 11px; backdrop-filter:blur(8px); width:220px; }
-:global(.lmspace #legend) { position:absolute; left:12px; bottom:12px; z-index:20;
-    max-height:min(38vh,260px); overflow-y:auto; width:196px; }
+:global(.lmspace #legend) { position:absolute; left:12px; bottom:26px; z-index:20;
+    max-height:min(34%,220px); overflow-y:auto; width:196px; }
 :global(.lmspace .lg) { display:flex; align-items:center; gap:6px; font-size:11px;
     color:rgba(255,255,255,.55); cursor:pointer; padding:1px 0; }
 :global(.lmspace .lg:hover) { color:#fff; }
@@ -293,7 +297,7 @@
 :global(.lmspace #card .logo) { width:30px; height:30px; flex:0 0 auto;
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; background-color:currentColor; }
 :global(.lmspace #race) { position:absolute; top:84px; left:12px; z-index:30; display:none;
-    width:224px; max-height:calc(100vh - 260px); overflow-y:auto; background:rgba(9,10,12,.9); border:1px solid var(--purple);
+    width:200px; max-height:calc(100% - 108px); overflow-y:auto; background:rgba(9,10,12,.92); border:1px solid var(--purple);
     border-radius:2px; padding:7px 8px; backdrop-filter:blur(8px); }
 :global(.lmspace #race .rhd) { display:flex; justify-content:space-between; align-items:baseline;
     gap:6px; padding-bottom:5px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.12); }
@@ -311,7 +315,7 @@
 :global(.lmspace .rhint) { font-size:12px; color:rgba(255,255,255,.35); margin-top:5px;
     padding-top:4px; border-top:1px solid rgba(255,255,255,.1); }
 :global(.lmspace #gravity) { position:absolute; top:84px; left:12px; z-index:30; display:none;
-    width:224px; max-height:calc(100vh - 260px); overflow-y:auto; background:rgba(9,10,12,.9); border:1px solid var(--green);
+    width:200px; max-height:calc(100% - 108px); overflow-y:auto; background:rgba(9,10,12,.92); border:1px solid var(--green);
     border-radius:2px; padding:7px 8px; backdrop-filter:blur(8px); }
 :global(.lmspace #gravity .q) { color:var(--green); }
 :global(.lmspace .gcl) { border-top:1px solid rgba(255,255,255,.08); padding:4px 0 3px; }

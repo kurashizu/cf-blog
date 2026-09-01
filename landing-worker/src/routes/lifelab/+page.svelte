@@ -60,10 +60,9 @@
 │  │├┤ ├┤   │  ├─┤├┴┐
 ┴─┘┴└  └─┘  ┴─┘┴ ┴└─┘</pre><small>CONWAY AUTOMATON · B3/S23</small></div>
 		<div id="lvhead" class="shead">
-			<span>PATTERNS</span>
+			<span>BOARD</span>
 			<button id="wipebtn" title="Remove every cell from the board">CLEAR ALL</button>
 		</div>
-		<div id="levels"></div>
 		<div class="shead"><span>LOG</span><small>what the dish just did</small></div>
 		<div id="term"></div>
 	</aside>

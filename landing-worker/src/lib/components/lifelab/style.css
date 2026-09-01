@@ -18,7 +18,7 @@
   font-size:14px;-webkit-font-smoothing:antialiased;
   user-select:none;overflow:hidden;
 }
-#side{width:clamp(200px,24%,290px);flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel);min-width:0}
+#side{width:clamp(168px,17%,220px);flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel);min-width:0}
 #brand{padding:12px 12px 11px;border-bottom:1px solid var(--line)}
 /* Drawn in characters, like the rest of this site's chrome. Line height is
    pinned because at the default the rows separate and the letterforms come
@@ -43,14 +43,8 @@
 /* The pattern library. It scrolls on its own rather than pushing the log off
    the bottom of the sidebar: thirty entries in six groups is taller than any
    panel, and the log is the other half of what this column is for. */
-#levels{padding:8px 12px 12px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin}
 /* A group heading, not a row: the name and its explanation are separate words
    and ran together without this. */
-.libhead{display:flex;align-items:baseline;gap:6px;margin:9px 0 1px;font-size:10px;letter-spacing:2px;color:var(--faint)}
-.libhead:first-child{margin-top:0}
-.libhead small{font-size:10px;letter-spacing:0;text-transform:none;opacity:.7}
-.libitem.cur{border-color:currentColor;background:rgba(255,255,255,.05)}
-.libitem svg{flex:none}
 .lv{border:1px solid var(--line);background:none;color:var(--dim);font:inherit;font-size:13px;padding:5px 10px;cursor:pointer;border-radius:2px}
 .lv:hover{border-color:var(--faint)}
 .lv.lock{opacity:.32;cursor:not-allowed}
@@ -108,7 +102,7 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
    strip. One column fitted twelve of thirty entries in a 671px panel and hid
    the rest behind a five-pixel scrollbar -- which read as "the patterns will
    not come out", because most of them could not be got at. */
-#tray{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:8px 7px;border-left:1px solid var(--line);background:var(--panel);width:150px;flex:none;align-content:start;overflow-y:auto;scrollbar-width:thin}
+#tray{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:8px 7px;border-left:1px solid var(--line);background:var(--panel);width:166px;flex:none;align-content:start;overflow-y:auto;scrollbar-width:thin}
 #tray:empty{display:none}
 #tray::-webkit-scrollbar{width:5px}
 #tray::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
