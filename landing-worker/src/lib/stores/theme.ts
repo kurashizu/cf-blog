@@ -27,8 +27,8 @@ export const THEME_STYLES: Record<FixedTheme, ThemeStyle> = {
 		border: 'border-[#2e3440]',
 		headerBg: 'bg-[#1e222b]',
 		cardBg: 'bg-[#1b1d24]',
-		headerBgVideo: 'bg-[#1e222b]/85 backdrop-blur-sm',
-		cardBgVideo: 'bg-[#1b1d24]/82 backdrop-blur-sm',
+		headerBgVideo: 'bg-[#1e222b]/92 backdrop-blur-sm',
+		cardBgVideo: 'bg-[#1b1d24]/90 backdrop-blur-sm',
 		cursorColor: '#56b6c2',
 		accentColor: '#56b6c2'
 	},
@@ -38,8 +38,8 @@ export const THEME_STYLES: Record<FixedTheme, ThemeStyle> = {
 		border: 'border-[#3c3836]',
 		headerBg: 'bg-[#282828]',
 		cardBg: 'bg-[#242728]',
-		headerBgVideo: 'bg-[#282828]/85 backdrop-blur-sm',
-		cardBgVideo: 'bg-[#242728]/82 backdrop-blur-sm',
+		headerBgVideo: 'bg-[#282828]/92 backdrop-blur-sm',
+		cardBgVideo: 'bg-[#242728]/90 backdrop-blur-sm',
 		cursorColor: '#fabd2f',
 		accentColor: '#fabd2f'
 	},
@@ -49,8 +49,8 @@ export const THEME_STYLES: Record<FixedTheme, ThemeStyle> = {
 		border: 'border-[#3b4252]',
 		headerBg: 'bg-[#2e3440]',
 		cardBg: 'bg-[#242933]',
-		headerBgVideo: 'bg-[#2e3440]/85 backdrop-blur-sm',
-		cardBgVideo: 'bg-[#242933]/82 backdrop-blur-sm',
+		headerBgVideo: 'bg-[#2e3440]/92 backdrop-blur-sm',
+		cardBgVideo: 'bg-[#242933]/90 backdrop-blur-sm',
 		cursorColor: '#88c0d0',
 		accentColor: '#88c0d0'
 	},
@@ -60,8 +60,8 @@ export const THEME_STYLES: Record<FixedTheme, ThemeStyle> = {
 		border: 'border-[#3d311c]',
 		headerBg: 'bg-[#261f12]',
 		cardBg: 'bg-[#1c1710]',
-		headerBgVideo: 'bg-[#261f12]/85 backdrop-blur-sm',
-		cardBgVideo: 'bg-[#1c1710]/82 backdrop-blur-sm',
+		headerBgVideo: 'bg-[#261f12]/92 backdrop-blur-sm',
+		cardBgVideo: 'bg-[#1c1710]/90 backdrop-blur-sm',
 		cursorColor: '#e5be7a',
 		accentColor: '#ffd166'
 	}

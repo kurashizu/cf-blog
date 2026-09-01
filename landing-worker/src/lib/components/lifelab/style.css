@@ -20,7 +20,16 @@
      positioned overlays inside cannot escape into the page. */
   position:relative;isolation:isolate;
   border-radius:2px;overflow:hidden;
-  background:var(--ll-bg);color:var(--ll-fg);
+  /* Same 90%-opaque + blur treatment as the rest of the chrome's cardBgVideo
+     surfaces, so the site's background video shows through here too instead
+     of the dish sitting on a flat, unrelated color. Kept mostly opaque (not
+     as translucent as a static panel) because the canvas underneath is
+     itself constantly moving -- cells flipping every generation -- and a
+     lighter backdrop would fight it for attention while the player is
+     trying to read the board. */
+  background:color-mix(in srgb, var(--ll-bg) 90%, transparent);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  color:var(--ll-fg);
   font-family:"JetBrains Mono","Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-size:14px;-webkit-font-smoothing:antialiased;
   user-select:none;overflow:hidden;

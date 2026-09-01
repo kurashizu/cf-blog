@@ -64,7 +64,8 @@
 			></video>
 		{/if}
 		<!-- Darkens and evens out the footage so panel text sitting on cardBgVideo
-		     keeps its contrast regardless of which moment of the loop is showing. -->
-		<div class="absolute inset-0 bg-black/45"></div>
+		     keeps its contrast regardless of which moment of the loop is showing.
+		     Kept heavy on purpose -- this is a backdrop, not a focal point. -->
+		<div class="absolute inset-0 bg-black/65"></div>
 	</div>
 {/if}
