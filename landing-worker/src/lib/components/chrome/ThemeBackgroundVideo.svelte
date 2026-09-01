@@ -69,6 +69,6 @@
 		     opacity (theme.ts) is a separate knob and stays where it was;
 		     dimming the video itself is what actually mutes it without also
 		     flattening panel surfaces that have nothing to do with the video. -->
-		<div class="absolute inset-0 bg-black/78"></div>
+		<div class="absolute inset-0 bg-black/88"></div>
 	</div>
 {/if}
