@@ -2544,6 +2544,21 @@ let paretoStaleAt = 0;
 const onFrontier = new Uint8Array(N);
 const paretoGroup = new THREE.Group();
 scene.add(paretoGroup);
+/** Model indices along quadrant B's frontier curve, in price order -- who is
+ *  on it changes rarely (only on a filter/gravity rebuild), but the tube
+ *  meshes tracing it have to move every frame with the wander those bodies
+ *  never stop doing. A sibling of paretoGroup rather than a child of it, so
+ *  disposeParetoViz's rebuild of the static frontA content never touches it. */
+let paretoBChain = [];
+const paretoBGroup = new THREE.Group();
+scene.add(paretoBGroup);
+function updateParetoTubes() {
+  paretoBGroup.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
+  paretoBGroup.clear();
+  for (let k = 0; k + 1 < paretoBChain.length; k++) {
+    paretoBGroup.add(mkTube(cur[paretoBChain[k]], cur[paretoBChain[k + 1]], 0.4, 0x98c379, 0.9));
+  }
+}
 
 /** objs: [[key, betterIsHigher], ...]. Returns the subset of `items` no other
  *  item in the list beats on every objective at once. */
@@ -2588,7 +2603,12 @@ function mkTube(p0, p1, radius, color, opacity) {
 function buildParetoViz() {
   disposeParetoViz();
   onFrontier.fill(0);
-  if (!paretoOn) return;
+  if (!paretoOn) {
+    paretoBChain = [];
+    paretoBGroup.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
+    paretoBGroup.clear();
+    return;
+  }
 
   if (view === 'space') {
     // Quadrant A: three real axes, so the frontier is a surface. The convex
@@ -2641,18 +2661,18 @@ function buildParetoViz() {
     }
 
     // Quadrant B: price and intelligence are real, speed never was, so the
-    // frontier there is a curve, not a surface. Drawn through each point's
-    // live position, wander included, rather than a flattened idealised line,
-    // so it reads as a thread through the actual bodies in the annex band.
+    // frontier there is a curve through the annex band, not a surface -- and
+    // every body out there wanders (the jitter that marks an unmeasured axis
+    // as a parking position rather than a value), so its tubes cannot be
+    // built once here and left standing. This only records which models are
+    // on that curve and in what order; updateParetoTubes, called every
+    // frame below, is what actually places the tube meshes each time,
+    // against wherever the wander put the bodies on that particular frame.
     const B = MODELS.map((m, i) => [m, i]).filter(([m]) => !isOff(m) && m.q === 'B');
     const frontB = paretoFront(B, [['p', false], ['i', true]])
       .sort((a, b) => a[0].p - b[0].p);
-    if (frontB.length >= 2) {
-      for (let k = 0; k + 1 < frontB.length; k++) {
-        paretoGroup.add(mkTube(cur[frontB[k][1]], cur[frontB[k + 1][1]], 0.4, 0x98c379, 0.9));
-      }
-    }
-    for (const [, i] of frontB) onFrontier[i] = 1;
+    paretoBChain = frontB.map(([, i]) => i);
+    for (const i of paretoBChain) onFrontier[i] = 1;
   } else {
     // TIMELINE: the two axes left are release date and intelligence, so the
     // frontier is "the best intelligence available as of each date" -- a
@@ -2674,7 +2694,9 @@ $('pareto-toggle').onclick = () => {
   paretoOn = !paretoOn;
   $('pareto-toggle').classList.toggle('on', paretoOn);
   paretoGroup.visible = paretoOn;
+  paretoBGroup.visible = paretoOn;
   buildParetoViz();
+  updateParetoTubes();
 };
 
 /* ---------- views ---------- */
@@ -2747,7 +2769,9 @@ function setView(v) {
   // one. The spiral's own spine is what orients it now.
   frame.visible = v === 'space';
   buildAxisLabels(v);
-  paretoGroup.visible = false; // hidden through the morph; runFrame rebuilds it once bodies settle
+  // Hidden through the morph; runFrame rebuilds both once bodies settle.
+  paretoGroup.visible = false;
+  paretoBGroup.visible = false;
 }
 /* One control, not four: clicking advances through the axis pairs and the
    label says which one you are on. Four buttons for what is really a single
@@ -3900,8 +3924,18 @@ function runFrame(dt) {
   // the frontier is a few hundred points compared pairwise, cheap enough for
   // that rate but wasted at 60 of them a second while nothing has moved.
   if (paretoOn) {
-    if (morph >= 1 && !paretoGroup.visible) { paretoGroup.visible = true; buildParetoViz(); paretoStaleAt = performance.now(); }
-    else if (gravityOn && performance.now() - paretoStaleAt > 600) { paretoStaleAt = performance.now(); buildParetoViz(); }
+    if (morph >= 1 && !paretoGroup.visible) {
+      paretoGroup.visible = true; paretoBGroup.visible = true;
+      buildParetoViz(); paretoStaleAt = performance.now();
+    } else if (gravityOn && performance.now() - paretoStaleAt > 600) {
+      paretoStaleAt = performance.now(); buildParetoViz();
+    }
+    // Membership on the frontier changes rarely and is worth the O(n^2) scan
+    // only occasionally, but quadrant B's bodies wander every frame -- their
+    // tubes have to be replaced that often too, or they drift off the
+    // spheres they are meant to be connecting the moment the curve's own
+    // membership stops changing.
+    if (view === 'space') updateParetoTubes();
   }
   dtNow = dt;
   writeInstances();
