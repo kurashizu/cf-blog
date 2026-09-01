@@ -356,6 +356,18 @@ const posTime = (m, idx) => {
   );
 };
 
+/* RACE keeps the flat grid TIMELINE used to have -- release date on X,
+ * creator lane on Z -- rather than the spiral: a replay you can scrub with
+ * transport controls needs a straight track to read progress along, and the
+ * standings panel already reports rank as a list, so the spiral's "further
+ * round the curve" reading would just fight the panel that already says the
+ * same thing in text. */
+const posRace = (m, idx) => new THREE.Vector3(
+  (norm(dNum(m), dLo, dHi) - 0.5) * 2 * S,
+  (norm(m.i, iLo, iHi) - 0.5) * 2 * S,
+  (laneOf.get(m.c) / Math.max(CREATORS.length - 1, 1) - 0.5) * 2 * S
+);
+
 /* ---------- scene ---------- */
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0b0d);
@@ -862,6 +874,106 @@ scene.add(spineGroup);
                      'across all regions: the same height always means the same score.'));
 }
 
+/* ---------- the spiral's own spine and wall ---------- *
+ * TIMELINE has no box any more -- price and speed are gone, so a rectangular
+ * frame around a spiral read as leftover scaffolding from the layout it used
+ * to be. What replaces it: a thick central shaft carrying the intelligence
+ * scale, and the time curve itself drawn once at the floor and swept upward
+ * into a translucent wall, so the spiral reads as a shape in space -- a
+ * tornado's surface -- rather than a bare line with nothing around it.
+ */
+const timeSpineGroup = new THREE.Group();
+timeSpineGroup.visible = false;
+scene.add(timeSpineGroup);
+{
+  const cx = 0, cz = 0;
+  // Thicker than the box's own corner spine: this one has to read as the
+  // single anchor for a whole open layout, not as one of three rules meeting
+  // at a corner.
+  const shaft = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.1, 1.1, S * 2, 16),
+    new THREE.MeshBasicMaterial({ color: 0x56b6c2, transparent: true, opacity: 0.85 })
+  );
+  timeSpineGroup.add(shaft);
+  const glow = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.2, 3.2, S * 2, 16, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0x56b6c2, transparent: true, opacity: 0.1,
+      side: THREE.DoubleSide, depthWrite: false })
+  );
+  timeSpineGroup.add(glow);
+
+  // The spiral wall: the same curve the bodies sit along the floor projection
+  // of, swept from floor to ceiling. A ribbon strip rather than a full tube --
+  // it only has to read as one continuous surface from outside, the way a
+  // tornado's funnel is drawn as a wall rather than a solid.
+  const WALL_SEGS = 240;
+  const wallPos = [];
+  for (let k = 0; k <= WALL_SEGS; k++) {
+    const t = k / WALL_SEGS;
+    const angle = t * SPIRAL_TURNS * Math.PI * 2;
+    const r = t * S;
+    const x = Math.cos(angle) * r, z = Math.sin(angle) * r;
+    wallPos.push(x, -S, z, x, S, z);
+  }
+  const wallGeo = new THREE.BufferGeometry();
+  wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(wallPos, 3));
+  const wallIdx = [];
+  for (let k = 0; k < WALL_SEGS; k++) {
+    const a = k * 2, b = a + 1, c = a + 2, d = a + 3;
+    wallIdx.push(a, b, c, b, d, c);
+  }
+  wallGeo.setIndex(wallIdx);
+  wallGeo.computeVertexNormals();
+  const wall = new THREE.Mesh(wallGeo, new THREE.MeshBasicMaterial({
+    color: 0x56b6c2, transparent: true, opacity: 0.07,
+    side: THREE.DoubleSide, depthWrite: false
+  }));
+  timeSpineGroup.add(wall);
+  // A brighter thread along the floor and one along the ceiling mark the
+  // wall's two edges, the way the box's own edges were drawn brighter than
+  // its faces.
+  const floorPts = [], ceilPts = [];
+  for (let k = 0; k < WALL_SEGS; k++) {
+    for (const [dk, arr, y] of [[0, floorPts, -S], [1, ceilPts, S]]) {
+      const t0 = k / WALL_SEGS, t1 = (k + 1) / WALL_SEGS;
+      const a0 = t0 * SPIRAL_TURNS * Math.PI * 2, a1 = t1 * SPIRAL_TURNS * Math.PI * 2;
+      const r0 = t0 * S, r1 = t1 * S;
+      arr.push(new THREE.Vector3(Math.cos(a0) * r0, y, Math.sin(a0) * r0));
+      arr.push(new THREE.Vector3(Math.cos(a1) * r1, y, Math.sin(a1) * r1));
+    }
+  }
+  timeSpineGroup.add(lineSet(floorPts, 0xe5c07b, 0.5));
+  timeSpineGroup.add(lineSet(ceilPts, AX.y, 0.35));
+
+  // A ring at each level, wide enough to reach past the fully wound-out edge
+  // of the spiral, so a height can still be read off out where the latest
+  // models sit and not only near the centre.
+  const ringR = S + 14;
+  for (const v of [10, 20, 30, 40, 50, 60]) {
+    if (v < iLo || v > iHi) continue;
+    const y = (norm(v, iLo, iHi) - 0.5) * 2 * S;
+    const major = v % 20 === 0;
+    const pts = [];
+    const SEGS = 96;
+    for (let k = 0; k < SEGS; k += 2) {
+      const a0 = (k / SEGS) * Math.PI * 2, a1 = ((k + 1) / SEGS) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a0) * ringR, y, Math.sin(a0) * ringR));
+      pts.push(new THREE.Vector3(Math.cos(a1) * ringR, y, Math.sin(a1) * ringR));
+    }
+    if (!major) continue;
+    timeSpineGroup.add(lineSet(pts, AX.y, 0.10));
+    timeSpineGroup.add(tag(String(v), new THREE.Vector3(cx, y, cz),
+                       major ? 'rgba(86,182,194,1)' : 'rgba(86,182,194,.7)', 'tag spinenum'));
+  }
+
+  timeSpineGroup.add(tag('INTELLIGENCE', new THREE.Vector3(cx, S + 12, cz), 'rgba(86,182,194,.95)',
+                     'tag axmain', 'The one axis every model is measured on, read the same way ' +
+                     'here as through the centre of the box: height alone is the score.'));
+  timeSpineGroup.add(tag('← EARLIEST', new THREE.Vector3(cx, -S - 10, cz), 'rgba(229,192,123,.85)',
+                     'tag axmain', 'The spiral winds outward from here -- the centre is the ' +
+                     'earliest release date in the field, and each later model lands further round.'));
+}
+
 
 /** Round decade-and-half steps inside a log range, for readable axis ticks. */
 function niceTicks(logLo, logHi, want) {
@@ -885,9 +997,14 @@ const fmtTick = (v) => (v >= 1000 ? (v / 1000) + 'k' : v >= 1 ? String(v) : Stri
 
 const axisLabels = [];
 function buildAxisLabels(mode) {
-  axisLabels.forEach((l) => frame.remove(l));
+  // TIMELINE has no box for these to sit at the edge of, so its own labels
+  // are children of the spiral's spine instead -- which is hidden and shown
+  // as a whole with the rest of that view, rather than needing its own
+  // visibility bookkeeping here.
+  const host = mode === 'space' ? frame : timeSpineGroup;
+  axisLabels.forEach((l) => l.parent?.remove(l));
   axisLabels.length = 0;
-  const mk = (t, p, c) => { const l = tag(t, p, c); axisLabels.push(l); frame.add(l); };
+  const mk = (t, p, c) => { const l = tag(t, p, c); axisLabels.push(l); host.add(l); };
   if (mode === 'space') {
     mk('PRICE  $/1M →', new THREE.Vector3(S + 6, -S, -S), AX.x);
     mk('SPEED  tok/s →', new THREE.Vector3(-S, -S, S + 6), AX.z);
@@ -903,7 +1020,6 @@ function buildAxisLabels(mode) {
          new THREE.Vector3(-S - 4, -S - 7, (norm(lg(v), sLo, sHi) - 0.5) * 2 * S), 'rgba(97,175,239,.55)');
     }
   } else {
-    mk('↑ INTELLIGENCE INDEX', new THREE.Vector3(-S, S + 8, -S), AX.y);
     // Year rings sit on the spiral itself rather than an edge, at the same
     // radius and angle release dates from that year land at -- an edge label
     // has no fixed meaning left to point at once time is wound into a curve.
@@ -2505,6 +2621,12 @@ function setView(v) {
   renderRadiusField();
   annexGroup.visible = v === 'space';
   spineGroup.visible = v === 'space';
+  timeSpineGroup.visible = v === 'time';
+  // TIMELINE has no rectangular anything left to measure -- price and speed
+  // are gone, and a straight-edged box around a spiral read as leftover
+  // scaffolding from the layout it used to be rather than a frame for this
+  // one. The spiral's own spine is what orients it now.
+  frame.visible = v === 'space';
   buildAxisLabels(v);
   paretoGroup.visible = false; // hidden through the morph; runFrame rebuilds it once bodies settle
 }
@@ -2662,7 +2784,7 @@ const _missionStart = () => {
  * Every quantity animated here is a payload field, not a simulation.
  * ------------------------------------------------------------------ */
 const RACE_SECONDS = 42;
-let raceT = 0, racePick = -1, raceDone = false; // raceOn itself is declared above, before the view cycle
+let raceT = 0, racePick = -1, raceDone = false, racePaused = false; // raceOn itself is declared above, before the view cycle
 const raceBob = new Float32Array(N);
 // Per-model scale during the race: 0 until it ships, 1 once it has arrived.
 const raceScale = new Float32Array(N).fill(1);
@@ -2712,14 +2834,21 @@ const raceStart = (i) => norm(dNum(MODELS[i]), dLo, dHi);   // 0..1 across the w
 
 function startRace() {
   if (missionOn) stopMission();
-  // The race runs along the release-date axis, so it needs the timeline layout.
+  // The race runs along the release-date axis, so it needs a timeline layout
+  // -- but its own flat one, not the spiral TIMELINE otherwise shows: a
+  // scrubbable replay needs a straight track to read progress along, and
+  // setView('time') would leave the spiral's spine up and the box down.
   setView('time');
+  frame.visible = true;
+  timeSpineGroup.visible = false;
   morph = 1;
-  for (let i = 0; i < N; i++) { to[i].copy(posTime(MODELS[i], i)); from[i].copy(to[i]); }
-  raceOn = true; raceT = 0; raceDone = false; racePick = -1;
+  for (let i = 0; i < N; i++) { to[i].copy(posRace(MODELS[i], i)); from[i].copy(to[i]); }
+  raceOn = true; raceT = 0; raceDone = false; racePick = -1; racePaused = false;
   $('modes').style.display = 'none';
   streamPts.visible = true;
   raceEl.style.display = 'block';
+  raceCtl.classList.add('show');
+  paintRaceCtl();
   syncLeftColumn();
   paintViewCycle?.();
   // Fly the camera to a side-on view of the whole track.
@@ -2734,9 +2863,45 @@ function stopRace() {
   raceBob.fill(0);
   raceScale.fill(1);
   raceEl.style.display = 'none';
+  raceCtl.classList.remove('show');
   syncLeftColumn();
+  // Coming off RACE still leaves view === 'time'; restore the spiral's own
+  // frame/spine state now that the flat track it borrowed is done with.
+  frame.visible = false;
+  timeSpineGroup.visible = true;
+  for (let i = 0; i < N; i++) { to[i].copy(posTime(MODELS[i], i)); from[i].copy(to[i]); }
+  morph = 1;
   paintViewCycle?.();
 }
+
+/* ---------- transport: play/pause, step, restart -------------------------- *
+ * A replay is more useful paused than always running: stopping on a date to
+ * read the standings, or nudging forward one launch at a time, both need the
+ * clock to hold still until told otherwise. Built once, outside renderRacePanel
+ * so pausing does not have to fight a rebuild that runs four times a second.
+ */
+const raceCtl = $('racectl');
+const RACE_STEP = 0.01;   // one nudge, in the same 0..1 units raceT itself uses
+function paintRaceCtl() {
+  const playBtn = $('race-play');
+  playBtn.innerHTML = racePaused || raceDone ? '&#9654;' : '&#10074;&#10074;';
+  playBtn.title = racePaused || raceDone ? 'Play' : 'Pause';
+  playBtn.classList.toggle('on', !racePaused && !raceDone);
+}
+function raceSeek(t) {
+  raceT = THREE.MathUtils.clamp(t, 0, 1);
+  raceDone = raceT >= 1;
+  renderRacePanel();
+  paintRaceCtl();
+}
+$('race-restart').onclick = () => { racePaused = true; raceSeek(0); };
+$('race-back').onclick = () => { racePaused = true; raceSeek(raceT - RACE_STEP); };
+$('race-fwd').onclick = () => { racePaused = true; raceSeek(raceT + RACE_STEP); };
+$('race-play').onclick = () => {
+  if (raceDone) { raceSeek(0); racePaused = false; }
+  else racePaused = !racePaused;
+  paintRaceCtl();
+};
 
 // Standings: who has actually launched by now, ranked by intelligence.
 function standings() {
@@ -2787,7 +2952,7 @@ function renderRacePanel() {
 }
 
 function updateRace(dt) {
-  if (!raceDone) {
+  if (!raceDone && !racePaused) {
     raceT += dt / RACE_SECONDS;
     if (raceT >= 1) { raceT = 1; raceDone = true; }
   }
@@ -2837,7 +3002,7 @@ function updateRace(dt) {
   streamGeo.attributes.position.needsUpdate = true;
   streamGeo.attributes.color.needsUpdate = true;
   streamGeo.attributes.aAlpha.needsUpdate = true;
-  if (Math.floor(now * 4) !== lastPanel) { lastPanel = Math.floor(now * 4); renderRacePanel(); }
+  if (Math.floor(now * 4) !== lastPanel) { lastPanel = Math.floor(now * 4); renderRacePanel(); paintRaceCtl(); }
 }
 let lastPanel = -1;
 

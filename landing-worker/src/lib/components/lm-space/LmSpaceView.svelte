@@ -198,6 +198,15 @@
 			<div id="range"></div>
 			<div id="outwarn">OUTSIDE &middot; <kbd>R</kbd> to return</div>
 			<div id="mission"></div>
+			<!-- Built once, outside #race's own innerHTML: that panel is rebuilt
+			     wholesale four times a second while playing, and re-wiring click
+			     handlers on every rebuild is wasted work a static sibling avoids. -->
+			<div id="racectl">
+				<button type="button" id="race-restart" title="Back to the start">&#9198;</button>
+				<button type="button" id="race-back" title="Step back one increment">&#9664;&#9664;</button>
+				<button type="button" id="race-play" title="Play / pause">&#9654;</button>
+				<button type="button" id="race-fwd" title="Step forward one increment">&#9654;&#9654;</button>
+			</div>
 			<div id="race"></div>
 			<div id="gravity"></div>
 			<div id="card"></div>
@@ -405,8 +414,17 @@
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; background-color:currentColor; }
 :global(.lmspace #card .logo) { width:30px; height:30px; flex:0 0 auto;
     -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; background-color:currentColor; }
-:global(.lmspace #race) { position:absolute; top:84px; left:12px; z-index:30; display:none;
-    width:200px; max-height:calc(100% - 108px); overflow-y:auto; background:rgba(9,10,12,.92); border:1px solid var(--purple);
+:global(.lmspace #racectl) { position:absolute; top:56px; left:12px; z-index:30; display:none;
+    width:200px; gap:4px; background:rgba(9,10,12,.92); border:1px solid var(--purple);
+    border-radius:2px; padding:5px 6px; backdrop-filter:blur(8px); }
+:global(.lmspace #racectl.show) { display:flex; }
+:global(.lmspace #racectl button) { flex:1; padding:4px 0; border:1px solid rgba(255,255,255,.18);
+    border-radius:2px; background:rgba(0,0,0,.45); color:rgba(255,255,255,.7); font:inherit;
+    font-size:12px; cursor:pointer; transition:.12s; }
+:global(.lmspace #racectl button:hover) { border-color:var(--purple); color:#fff; }
+:global(.lmspace #racectl button.on) { color:#0a0b0d; background:var(--purple); border-color:var(--purple); }
+:global(.lmspace #race) { position:absolute; top:98px; left:12px; z-index:30; display:none;
+    width:200px; max-height:calc(100% - 122px); overflow-y:auto; background:rgba(9,10,12,.92); border:1px solid var(--purple);
     border-radius:2px; padding:7px 8px; backdrop-filter:blur(8px); }
 :global(.lmspace #race .rhd) { display:flex; justify-content:space-between; align-items:baseline;
     gap:6px; padding-bottom:5px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.12); }
