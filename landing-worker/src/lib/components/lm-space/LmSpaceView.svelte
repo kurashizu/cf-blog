@@ -368,12 +368,13 @@
     background:rgba(10,12,15,.72); padding:0 4px; border-radius:2px;
     border:1px solid rgba(86,182,194,.35); }
 /* The spiral's month ticks: dense enough, against a cloud of hundreds of
-   spheres, that a faint single letter was unreadable. A bold filled chip in
-   the axis's own gold reads at a glance the way the price/speed tick labels
-   already do on the box, just carried onto a curve instead of an edge. */
-:global(.lmspace .tmonth) { font-size:15px; font-weight:900; letter-spacing:.03em;
-    color:#0a0b0d; background:#e5c07b; padding:2px 7px; border-radius:3px;
-    box-shadow:0 0 10px rgba(229,192,123,.65), 0 2px 5px rgba(0,0,0,.6);
+   spheres, that a faint single letter was unreadable -- but a solid filled
+   chip at every one of them, a dozen or more on screen at once, read as its
+   own wall of boxes instead. Bold gold text with just a shadow to hold it off
+   the background is the middle point: legible without becoming the loudest
+   thing in the scene. */
+:global(.lmspace .tmonth) { font-size:14px; font-weight:800; letter-spacing:.03em;
+    color:#e5c07b; text-shadow:0 0 6px #000, 0 0 3px #000, 0 1px 3px #000;
     white-space:nowrap; }
 :global(.lmspace .tag) { font-size:11px; color:rgba(255,255,255,.75); white-space:nowrap;
     text-shadow:0 0 6px #000,0 0 3px #000; pointer-events:none;

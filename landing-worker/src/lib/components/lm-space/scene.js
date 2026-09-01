@@ -1075,7 +1075,7 @@ function buildAxisLabels(mode) {
       const angle = t01 * SPIRAL_TURNS * Math.PI * 2;
       const radius = t01 * SPIRAL_R;
       const pos = new THREE.Vector3(Math.cos(angle) * radius, -S - 4, Math.sin(angle) * radius);
-      mk(`${MONTH3[cursor.getUTCMonth()]}/${cursor.getUTCFullYear()}`, pos, '#0a0b0d', 'tmonth');
+      mk(`${MONTH3[cursor.getUTCMonth()]}/${cursor.getUTCFullYear()}`, pos, '#e5c07b', 'tmonth');
     }
   }
   // No intelligence numbers here: that scale lives on the central spine, which
@@ -1775,10 +1775,24 @@ function declutterLabels() {
     projV.copy(cur[i]).project(camera);
     if (projV.z > 1 || Math.abs(projV.x) > 0.98 || Math.abs(projV.y) > 0.95) continue;
     const d = camera.position.distanceTo(cur[i]);
-    if (d > 300) continue;
+    // Distance is what perspective uses to prioritise the near bodies over
+    // the far ones; an orthographic replay has no near or far to speak of,
+    // so the same cutoff would just be an arbitrary hole in the track.
+    if (!raceOn && d > 300) continue;
     cand.push([d, i, (projV.x * 0.5 + 0.5) * stageW, (-projV.y * 0.5 + 0.5) * stageH]);
   }
-  cand.sort((a, b) => a[0] - b[0]);
+  if (raceOn) {
+    // The leaders are the point of a replay -- the standings panel already
+    // says who they are in text, but seeing the name on the body they belong
+    // to is what makes the standings legible as a shape in the track rather
+    // than a list to cross-reference against it. Sorted first by rank, so a
+    // fixed-size label pool always keeps the frontier over any mid-pack tie.
+    const rank = new Map();
+    standings().forEach((i, k) => rank.set(i, k));
+    cand.sort((a, b) => (rank.get(a[1]) ?? 1e9) - (rank.get(b[1]) ?? 1e9));
+  } else {
+    cand.sort((a, b) => a[0] - b[0]);
+  }
 
   const placed = [];
   let used = 0;
@@ -2550,23 +2564,46 @@ function buildParetoViz() {
   if (!paretoOn) return;
 
   if (view === 'space') {
-    // Quadrant A: three real axes, so the frontier is a surface. A convex
-    // hull of just the frontier points reads as that surface without pretending
-    // to a rigorous non-convex boundary -- the effect the shape is for, not a
-    // published Pareto plot.
+    // Quadrant A: three real axes, so the frontier is a surface. The convex
+    // hull of the frontier points is closed on every side, though, and a
+    // Pareto front only has one meaningful face -- the one looking toward the
+    // dominated region. Keeping every face of the hull drew the far side too
+    // and the whole thing read as a solid wedge rather than a sheet, so only
+    // triangles whose normal points away from the "better" corner (cheaper,
+    // smarter, faster) survive: those are the ones actually bounding the
+    // frontier, and dropping the rest leaves an open shell instead of a solid.
     const A = vis();
     const frontA = paretoFront(A, [['p', false], ['i', true], ['sp', true]]);
     if (frontA.length >= 4) {
       try {
         const geo = new ConvexGeometry(frontA.map(([, i]) => cur[i].clone()));
-        paretoGroup.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-          color: 0x98c379, transparent: true, opacity: 0.1,
-          side: THREE.DoubleSide, depthWrite: false
-        })));
-        paretoGroup.add(new THREE.LineSegments(
-          new THREE.WireframeGeometry(geo),
-          new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: 0.4 })
-        ));
+        const pos = geo.attributes.position;
+        const centroid = new THREE.Vector3();
+        for (let k = 0; k < pos.count; k++) centroid.add(new THREE.Vector3().fromBufferAttribute(pos, k));
+        centroid.divideScalar(pos.count);
+        const keep = [];
+        const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+        const ab = new THREE.Vector3(), ac = new THREE.Vector3(), normal = new THREE.Vector3(), toCenter = new THREE.Vector3();
+        for (let k = 0; k < pos.count; k += 3) {
+          a.fromBufferAttribute(pos, k); b.fromBufferAttribute(pos, k + 1); c.fromBufferAttribute(pos, k + 2);
+          ab.subVectors(b, a); ac.subVectors(c, a); normal.crossVectors(ab, ac);
+          toCenter.subVectors(centroid, a);
+          // A face pointing toward the hull's own centroid is an inner/back
+          // face from the frontier's point of view; only the outward ones --
+          // facing away from the bulk of the data -- are the frontier itself.
+          if (normal.dot(toCenter) < 0) keep.push(a.clone(), b.clone(), c.clone());
+        }
+        if (keep.length) {
+          // Wireframe only, no fill: a translucent mesh still read as a solid
+          // from some angles even with only the outward faces kept, and the
+          // wireframe alone traces the same shape without ever being
+          // mistaken for a volume.
+          const shellGeo = new THREE.BufferGeometry().setFromPoints(keep);
+          paretoGroup.add(new THREE.LineSegments(
+            new THREE.WireframeGeometry(shellGeo),
+            new THREE.LineBasicMaterial({ color: 0x98c379, transparent: true, opacity: 0.5 })
+          ));
+        }
       } catch { /* degenerate hull (near-coplanar points): skip the mesh, no line either */ }
     }
 
