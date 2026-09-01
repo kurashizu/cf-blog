@@ -1,0 +1,339 @@
+{
+"Alibaba": [
+"#7370cb",
+"#7f74ce",
+"#706cc3"
+],
+"OpenAI": [
+"#5bc4aa",
+"#62c5ad",
+"#56c2a7"
+],
+"Google": [
+"#6b90cb",
+"#c9716a",
+"#cab063",
+"#66c07e"
+],
+"Anthropic": [
+"#c6856f",
+"#ca8e75",
+"#c2806b"
+],
+"DeepSeek": [
+"#697ac5",
+"#6f83cb",
+"#5f70c1"
+],
+"Mistral": [
+"#cd6882",
+"#cd846a",
+"#ccb266"
+],
+"SpaceXAI": [
+"#7a9abd",
+"#85a3c4",
+"#6f93b7"
+],
+"Z AI": [
+"#68bec7",
+"#72c6cc",
+"#5fb7c4"
+],
+"Meta": [
+"#62accb",
+"#5e8ec9",
+"#6dafcc",
+"#639bc8"
+],
+"NVIDIA": [
+"#9fc859",
+"#a5c668",
+"#9cc653"
+],
+"Amazon": [
+"#cba162",
+"#cea76d",
+"#c89164"
+],
+"IBM": [
+"#7589d1",
+"#7b8ed3",
+"#7085ca"
+],
+"Kimi": [
+"#816fcf",
+"#8a75d1",
+"#7b6ac5"
+],
+"Liquid AI": [
+"#5e9ec7",
+"#659bc8",
+"#5c9ec7",
+"#56a2c4"
+],
+"InclusionAI": [
+"#ca609f",
+"#cb689c",
+"#ca5f9e",
+"#c758a2"
+],
+"Allen Institute for AI": [
+"#72c2af",
+"#79c4b8",
+"#70c2af",
+"#6bbfa6"
+],
+"Xiaomi": [
+"#cd9c68",
+"#cea770",
+"#cc9b67",
+"#ca9061"
+],
+"LG AI Research": [
+"#c272c2",
+"#c479be",
+"#c270c2",
+"#b96bbf"
+],
+"Upstage": [
+"#8471d0",
+"#9178d1",
+"#836fcf",
+"#7669cd"
+],
+"MiniMax": [
+"#ca6a83",
+"#cb7283",
+"#ca6882",
+"#c76284"
+],
+"Nous Research": [
+"#c3a27c",
+"#c4aa83",
+"#c3a17a",
+"#c09874"
+],
+"AI21 Labs": [
+"#72c29b",
+"#79c4a5",
+"#70c29a",
+"#6bbf90"
+],
+"Cohere": [
+"#6bb898",
+"#72baa0",
+"#69b996",
+"#64b58e"
+],
+"Perplexity": [
+"#72c286",
+"#79c491",
+"#70c285",
+"#6bbf79"
+],
+"Microsoft": [
+"#ca7d67",
+"#a4c859",
+"#60a9ca",
+"#cbae62"
+],
+"MBZUAI Institute of Foundation Models": [
+"#7bc272",
+"#7dc479",
+"#7ac270",
+"#7abf6b"
+],
+"StepFun": [
+"#60aeca",
+"#68aacc",
+"#5fadca",
+"#59b2c8"
+],
+"Sarvam": [
+"#c27277",
+"#c47b79",
+"#c27075",
+"#bf6b76"
+],
+"China Mobile": [
+"#72b7c2",
+"#79b4c4",
+"#70b7c2",
+"#6bbabf"
+],
+"OpenBMB": [
+"#c2a472",
+"#c4ad79",
+"#c2a470",
+"#bf996b"
+],
+"Motif Technologies": [
+"#c272bd",
+"#c479b9",
+"#c270bd",
+"#bf6bbf"
+],
+"Tencent": [
+"#5d86c9",
+"#6584ca",
+"#5c85c9",
+"#5588c6"
+],
+"ServiceNow": [
+"#af72c2",
+"#b879c4",
+"#af70c2",
+"#a66bbf"
+],
+"LongCat": [
+"#69c77f",
+"#70c98b",
+"#67c77d",
+"#61c471"
+],
+"Sapiens AI": [
+"#6781c3",
+"#6e81c5",
+"#6580c4",
+"#5f82c1"
+],
+"ByteDance Seed": [
+"#6783c1",
+"#6f82c3",
+"#6581c2",
+"#5f84bf"
+],
+"Korea Telecom": [
+"#c2b172",
+"#c4b979",
+"#c2b170",
+"#bfa76b"
+],
+"Baidu": [
+"#7279c2",
+"#797bc4",
+"#7077c2",
+"#6b78bf"
+],
+"Thinking Machines": [
+"#88a2c3",
+"#8faac5",
+"#86a5c3",
+"#81a3c0"
+],
+"AI9Stars": [
+"#7272c2",
+"#8079c4",
+"#7070c2",
+"#6b71bf"
+],
+"Trillion Labs": [
+"#b472c2",
+"#bb79c4",
+"#b370c2",
+"#aa6bbf"
+],
+"KwaiKAT": [
+"#cb7f63",
+"#cc8c6b",
+"#cb7e62",
+"#c8715b"
+],
+"Reka AI": [
+"#c97f6b",
+"#ca8b72",
+"#c97e69",
+"#c67163"
+],
+"Swiss AI Initiative": [
+"#c28172",
+"#c48d79",
+"#c28070",
+"#bf746b"
+],
+"OpenChat": [
+"#99c272",
+"#98c479",
+"#98c270",
+"#9abf6b"
+],
+"Deep Cogito": [
+"#9172c2",
+"#9c79c4",
+"#9070c2",
+"#866bbf"
+],
+"Prime Intellect": [
+"#c2a272",
+"#c4ac79",
+"#c2a170",
+"#bf976b"
+],
+"Nanbeige": [
+"#9d72c2",
+"#a779c4",
+"#9c70c2",
+"#926bbf"
+],
+"Arcee AI": [
+"#62c6c5",
+"#69c2c8",
+"#60c6c5",
+"#5ac4bb"
+],
+"Celeris": [
+"#5ac8b9",
+"#62c9c3",
+"#59c8b8",
+"#52c5ad"
+],
+"Snowflake": [
+"#7295c2",
+"#7994c4",
+"#7094c2",
+"#6b96bf"
+],
+"Databricks": [
+"#72c284",
+"#79c48f",
+"#70c282",
+"#6bbf78"
+],
+"Inception": [
+"#806fcf",
+"#8d76d0",
+"#7f6dce",
+"#7267cc"
+],
+"Naver": [
+"#b672c2",
+"#be79c4",
+"#b570c2",
+"#ac6bbf"
+],
+"Multiverse Computing": [
+"#cb6f68",
+"#cd7d70",
+"#cc6d66",
+"#c96161"
+],
+"Nex AGI": [
+"#65c6c6",
+"#6cc1c8",
+"#62c7c7",
+"#5dc4bd"
+],
+"TII UAE": [
+"#72c291",
+"#79c49c",
+"#70c290",
+"#6bbf86"
+],
+"SK Telecom": [
+"#72bec2",
+"#79bac4",
+"#70bec2",
+"#6bbfbe"
+]
+}

@@ -14,7 +14,7 @@
 		{ id: 1, key: '1', title: 'GUESTBOOK', desc: 'Packets', color: '#e06c75', icon: '✉', tooltip: '1: Guestbook — Send message packets across edge workers [Hotkey: Ctrl+1]' },
 		{ id: 2, key: '2', title: 'SYNTH', desc: 'WebAudio', color: '#c678dd', icon: '♫', tooltip: '2: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: Ctrl+2]' },
 		{ id: 3, key: '3', title: 'UTILITIES', desc: 'HW Test', color: '#e5c07b', icon: '⌨', tooltip: '3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
-		{ id: 4, key: '4', title: 'LLM TABLE', desc: 'Rankings', color: '#98c379', icon: '▤', tooltip: '4: Leaderboard — Artificial Analysis LLM model table [Hotkey: Ctrl+4]' },
+		{ id: 4, key: '4', title: 'LM.SPACE', desc: 'Model volume', color: '#98c379', icon: '▤', tooltip: '4: LM.SPACE — the Artificial Analysis model table as a navigable volume [Hotkey: Ctrl+4]' },
 		{ id: 5, key: '5', title: 'KRSZ-VM', desc: 'PC Emu', color: '#d19a66', icon: '⬢', tooltip: '5: krsz-vm — Alpine Linux on an emulated 32-bit x86 PC [Hotkey: Ctrl+5]' },
 		{ id: 6, key: '6', title: 'CHATBOT', desc: 'On-GPU', color: '#61afef', icon: '◑', tooltip: '6: chatbot — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]' }
 	];

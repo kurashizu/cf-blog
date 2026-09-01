@@ -3,7 +3,7 @@ export const TAB_ROUTES = [
 	'/guestbook',
 	'/synth',
 	'/utils',
-	'/leaderboard',
+	'/lm-space',
 	'/krsz-vm',
 	'/chatbot'
 ] as const;
@@ -13,7 +13,7 @@ export const TAB_TITLES = [
 	'KRSZ™ // 1:guestbook — Edge Packet Messenger',
 	'KRSZ™ // 2:synth — WebAudio Modular Synthesizer',
 	'KRSZ™ // 3:utils — Hardware Test Bench',
-	'KRSZ™ // 4:leaderboard — LLM Model Table',
+	'KRSZ™ // 4:lm-space — The Leaderboard as a Volume',
 	'KRSZ™ // 5:krsz-vm — 32-bit x86 PC Emulator',
 	'KRSZ™ // 6:chatbot — In-Browser LLM on WebGPU'
 ];
