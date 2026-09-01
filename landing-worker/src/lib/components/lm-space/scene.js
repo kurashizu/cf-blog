@@ -2674,10 +2674,17 @@ function buildParetoViz() {
     paretoBChain = frontB.map(([, i]) => i);
     for (const i of paretoBChain) onFrontier[i] = 1;
   } else {
-    // TIMELINE: the two axes left are release date and intelligence, so the
-    // frontier is "the best intelligence available as of each date" -- a
-    // running maximum, drawn along the spiral itself rather than flattened.
-    const T = vis().slice().sort((a, b) => dNum(a[0]) - dNum(b[0]));
+    // TIMELINE and RACE both leave view === 'time' -- RACE is a scrubbable
+    // replay of the same layout, not a separate mode of it -- so a model not
+    // yet launched at the current raceT has to be left out here exactly as
+    // every other race-aware system already excludes it (isOff itself does
+    // not: the race's launch clock is a separate, later cut than filtering).
+    // Without this the line reached toward release dates with no body drawn
+    // for them yet, which is what read as stuck on an old shape after
+    // scrubbing or switching into RACE.
+    const T = vis()
+      .filter(([, i]) => !raceOn || raceScale[i] >= 0.999)
+      .sort((a, b) => dNum(a[0]) - dNum(b[0]));
     const frontT = [];
     let best = -Infinity;
     for (const pair of T) { if (pair[0].i > best) { best = pair[0].i; frontT.push(pair); } }
@@ -3045,6 +3052,10 @@ function raceSeek(t) {
   raceDone = raceT >= 1;
   renderRacePanel();
   paintRaceCtl();
+  // A manual scrub is a deliberate, discrete jump rather than the steady
+  // drift autoplay makes -- worth an immediate rebuild rather than waiting
+  // on the same interval that smooths over continuous playback.
+  if (paretoOn) buildParetoViz();
 }
 $('race-restart').onclick = () => { racePaused = true; raceSeek(0); };
 $('race-back').onclick = () => { racePaused = true; raceSeek(raceT - RACE_STEP); };
@@ -3927,7 +3938,11 @@ function runFrame(dt) {
     if (morph >= 1 && !paretoGroup.visible) {
       paretoGroup.visible = true; paretoBGroup.visible = true;
       buildParetoViz(); paretoStaleAt = performance.now();
-    } else if (gravityOn && performance.now() - paretoStaleAt > 600) {
+    } else if ((gravityOn || (raceOn && !raceDone)) && performance.now() - paretoStaleAt > 600) {
+      // Gravity keeps moving bodies after they settle into their groups; a
+      // playing race keeps launching new ones. Both change who belongs on
+      // the frontier on their own, without the panel's own controls ever
+      // being touched, so both need the same periodic recheck.
       paretoStaleAt = performance.now(); buildParetoViz();
     }
     // Membership on the frontier changes rarely and is worth the O(n^2) scan
