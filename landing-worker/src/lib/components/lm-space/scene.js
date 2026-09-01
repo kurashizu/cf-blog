@@ -3272,16 +3272,16 @@ let running = true;
    unusable for a scripted flythrough: a dropped frame under a screenshot
    capture would skip motion rather than just take longer. Freezing the clock
    and stepping it by a fixed amount per capture makes the output identical
-   however slow the machine taking the screenshot actually is. */
+   however slow the machine taking the screenshot actually is.
+   frameLoop stays requestAnimationFrame's own callback, taking the rAF
+   timestamp it's always taken and ignoring it exactly as before; the forced
+   step is a second, separate entry point, never the same function called two
+   ways, so a real frame can never be mistaken for a scripted one. */
+let frozen = false;
 const director = /[?&]director=1\b/.test(location.search)
   ? {
-      frozen: false,
-      fixedDt: 1 / 60,
-      freeze() { this.frozen = true; },
-      step(dt) {
-        if (dt != null) this.fixedDt = dt;
-        frameLoop(this.fixedDt);
-      },
+      freeze() { frozen = true; },
+      step(dt) { runFrame(dt ?? 1 / 60); },
       camera,
       yawPitch,
       vel,
@@ -3290,10 +3290,13 @@ const director = /[?&]director=1\b/.test(location.search)
   : null;
 if (director) window.__lmDirector = director;
 
-function frameLoop(forcedDt) {
+function frameLoop() {
   if (!running) return;
-  if (!director?.frozen) rafId = requestAnimationFrame(frameLoop);
-  const dt = forcedDt ?? Math.min(clock.getDelta(), 0.05);
+  if (!frozen) rafId = requestAnimationFrame(frameLoop);
+  if (!frozen) runFrame(Math.min(clock.getDelta(), 0.05));
+}
+
+function runFrame(dt) {
   driftClock += dt;
   if (morph < 1) morph = Math.min(1, morph + dt * 0.85);
 
