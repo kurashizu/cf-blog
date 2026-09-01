@@ -262,7 +262,9 @@
 
 	<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-t border-white/10">
 		<div class="flex items-center gap-1.5">
-			{#each STEPS as s, i (s.target)}
+			<!-- Keyed by position: several steps may point at the same anchor, so a
+			     target is not a unique key. -->
+			{#each STEPS as s, i (i)}
 				<button
 					onclick={() => (index = i)}
 					aria-label={`Step ${i + 1}: ${s.title}`}

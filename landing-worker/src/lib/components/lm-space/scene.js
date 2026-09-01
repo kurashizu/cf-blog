@@ -90,6 +90,19 @@ function onDoc(type, fn, opts) {
   winOff.push(() => document.removeEventListener(type, fn, opts));
 }
 
+/* The stage is a panel in the workbench, not the window. Sizing to
+   innerWidth/innerHeight renders a canvas larger than its container and shows
+   only its top-left corner. A hidden panel measures 0, which would make the
+   projection matrix degenerate, so hold the last good size until it is laid
+   out again. */
+let stageW = 1, stageH = 1;
+function measureStage() {
+  const w = root.clientWidth, h = root.clientHeight;
+  if (w > 0 && h > 0) { stageW = w; stageH = h; return true; }
+  return false;
+}
+measureStage();
+
 function dispose() {
   running = false;
   cancelAnimationFrame(rafId);
@@ -335,7 +348,7 @@ scene.background = new THREE.Color(0x0a0b0d);
  * cloud; orthographic removes foreshortening, so bodies the same size read the
  * same size wherever they sit -- which is what you want when comparing
  * positions along an axis rather than exploring. */
-const persp = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.5, 3000);
+const persp = new THREE.PerspectiveCamera(62, stageW / stageH, 0.5, 3000);
 const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, -2000, 4000);
 let camera = persp;
 let projMode = 'persp';
@@ -343,7 +356,7 @@ let projMode = 'persp';
 let orthoZoom = 300;
 
 function sizeOrtho() {
-  const a = innerWidth / innerHeight;
+  const a = stageW / stageH;
   ortho.left = -orthoZoom * a * 0.5;
   ortho.right = orthoZoom * a * 0.5;
   ortho.top = orthoZoom * 0.5;
@@ -372,11 +385,11 @@ const HOME = new THREE.Vector3(-25, 48, 190);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(stageW, stageH);
 $('app').appendChild(renderer.domElement);
 
 const labelRenderer = new CSS2DRenderer({ element: $('labels') });
-labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.setSize(stageW, stageH);
 
 scene.add(new THREE.AmbientLight(0xffffff, 1.25));
 const key = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -966,7 +979,8 @@ for (let i = 0; i < N; i++) {
   cellUv[i * 2] = (cell % ATLAS.cols) * CW;
   cellUv[i * 2 + 1] = 1 - CH - Math.floor(cell / ATLAS.cols) * CH;
 }
-geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(cellUv, 2));
+/* `cellUv` and the buffers below are sources indexed by model. They are not
+   attached to a geometry: each level draws a repacking of them. */
 
 const mat = new THREE.ShaderMaterial({
   uniforms: {
@@ -978,7 +992,7 @@ const mat = new THREE.ShaderMaterial({
     // one three.js injects automatically; it tracks the active camera.
     uProj: { value: new THREE.Matrix4() },
     // Viewport height, so the shader can size a body in pixels.
-    uViewH: { value: innerHeight }
+    uViewH: { value: stageH }
   },
   transparent: true,
   glslVersion: THREE.GLSL3,
@@ -1270,12 +1284,19 @@ const LOD_GEOS = [
 /** Radius in pixels below which a body drops to the next level down. */
 const LOD_PX = [30, 11];
 
+/* The attributes hung on `geo` stay the canonical copy, indexed by model.
+   What each mesh draws is a repacking of them, indexed by the slot the body
+   took on that level this frame -- so every level needs its own buffers,
+   including the near one. Sharing them draws each body with whichever model
+   happens to land in the same slot, and since slots are reassigned as the
+   camera moves, the marks change while flying. */
+const LOD_ATTRS = [['aCell', 2], ['aColor', 3], ['aColor2', 3],
+                   ['aColor3', 3], ['aColor4', 3], ['aState', 4], ['aAge', 1]];
 const meshes = LOD_GEOS.map((g) => {
   // Every level gets its own attribute buffers, the near one included. They
   // cannot be shared: an instance attribute is read by gl_InstanceID, and a
   // body's slot is its position in that level's draw list, not its model index.
-  for (const [name, size] of [['aCell', 2], ['aColor', 3], ['aColor2', 3],
-                              ['aColor3', 3], ['aColor4', 3], ['aState', 4], ['aAge', 1]]) {
+  for (const [name, size] of LOD_ATTRS) {
     g.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(N * size), size));
   }
   const m = new THREE.InstancedMesh(g, mat, N);
@@ -1293,9 +1314,7 @@ for (let i = 0; i < N; i++) {
   const c = STOPS[i][0];
   colorAttr.setXYZ(i, c.r, c.g, c.b);
 }
-geo.setAttribute('aColor', colorAttr);
 const stateAttr = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4);
-geo.setAttribute('aState', stateAttr);
 
 /* Release date is otherwise unused in this view, and it is the one field that
  * says whether a model is current. Newer bodies are rendered clean and lit;
@@ -1306,9 +1325,11 @@ for (let i = 0; i < N; i++) {
   const t = dNum(MODELS[i]);
   ageAttr.setX(i, Number.isFinite(t) ? norm(t, dLo, dHi) : 0.5);
 }
-geo.setAttribute('aAge', ageAttr);
 /* The master values, indexed by model rather than by draw slot. Each level
- * copies out of these into the position the body occupies in its own list. */
+ * copies out of these into the position the body occupies in its own list.
+ * They are deliberately not attached to `geo`: it is level 0's destination,
+ * and re-attaching a source there would make the near bodies read by model
+ * index again. */
 const srcStops = [1, 2, 3].map((k) => {
   const arr = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
@@ -1317,15 +1338,6 @@ const srcStops = [1, 2, 3].map((k) => {
   }
   return arr;
 });
-const SRC = [
-  ['aCell', cellUv],
-  ['aColor', colorAttr.array],
-  ['aColor2', srcStops[0]],
-  ['aColor3', srcStops[1]],
-  ['aColor4', srcStops[2]],
-  ['aState', stateAttr.array],
-  ['aAge', ageAttr.array]
-];
 
 const logoUniforms = mat.uniforms;
 
@@ -1335,13 +1347,22 @@ let dtNow = 0.016, nowMs = 0;
 const lodN = [0, 0, 0];
 /** Which level each body is currently drawn at, for the hysteresis test. */
 const lodOf = new Uint8Array(N);
+/** Per-instance sources, indexed by model: [attribute, array, itemSize]. */
+const SRC = [
+  ['aCell', cellUv, 2],
+  ['aColor', colorAttr.array, 3],
+  ['aColor2', srcStops[0], 3],
+  ['aColor3', srcStops[1], 3],
+  ['aColor4', srcStops[2], 3],
+  ['aState', stateAttr.array, 4],
+  ['aAge', ageAttr.array, 1]
+];
 
-/** Move one body's per-instance values into the slot it occupies at `lod`. */
+/** Move model `i`'s values into the slot it occupies on level `lod`. */
 function copyInstanceAttrs(i, lod, slot) {
   const dst = LOD_GEOS[lod];
-  for (const [name, src] of SRC) {
+  for (const [name, src, n] of SRC) {
     const out = dst.getAttribute(name);
-    const n = out.itemSize;
     for (let k = 0; k < n; k++) out.array[slot * n + k] = src[i * n + k];
     out.needsUpdate = true;
   }
@@ -1352,7 +1373,7 @@ let projScale = 500;
 function writeInstances() {
   nowMs = performance.now();
   lodN[0] = lodN[1] = lodN[2] = 0;
-  projScale = (innerHeight * 0.5) * Math.abs(camera.projectionMatrix.elements[5]);
+  projScale = (stageH * 0.5) * Math.abs(camera.projectionMatrix.elements[5]);
   for (let i = 0; i < N; i++) {
     const m = MODELS[i];
     const off = hidden.has(m.c);
@@ -1419,25 +1440,28 @@ function writeInstances() {
     const was = lodOf[i];
     let lod = px > LOD_PX[0] ? 0 : px > LOD_PX[1] ? 1 : 2;
     if (lod !== was) {
-      const up = LOD_PX[Math.min(was, 1)] * 1.25;
-      const dn = LOD_PX[Math.min(lod, 1)] * 0.8;
-      if (lod < was ? px < up : px > dn) lod = was;
+      // The boundary being crossed is the one between the two levels, which
+      // for a move of more than one level is the one nearest the old level.
+      const edge = LOD_PX[Math.min(lod, was)];
+      // Moving up a level needs a clear overshoot, moving down a clear
+      // undershoot; inside the band the body keeps the level it had.
+      if (lod < was ? px < edge * 1.25 : px > edge * 0.8) lod = was;
       lodOf[i] = lod;
     }
-    const slot = lodN[lod]++;
-    meshes[lod].setMatrixAt(slot, dummy.matrix);
-    // Every level packs its bodies by draw order, so a body's slot is not its
-    // model index on any of them -- including the first. Its attributes have to
-    // follow it into that slot, or each body wears the mark of whichever model
-    // happened to land at the same position, changing as the camera moves.
-    copyInstanceAttrs(i, lod, slot);
-
     // State rides as (dim, whiten) so the highlight applies to every stop of a
-    // multi-colour mark, not just the first one.
+    // multi-colour mark, not just the first one. It is written to the source
+    // before the repack below, so the slot copy carries this frame's value.
     const dim = off ? 0.18 : 1;
     // The glow rides the same eased value, so brightness and size move together.
     const white = e * 0.42 + (tgt ? 0.3 + 0.3 * Math.sin(nowMs / 160) : 0);
     stateAttr.setXYZW(i, dim, white, e, alpha);
+
+    const slot = lodN[lod]++;
+    meshes[lod].setMatrixAt(slot, dummy.matrix);
+    // Copy this body's attributes into the slot it occupies at this level.
+    // Every level packs by draw order, so a body's slot is never its model
+    // index -- the near level included.
+    copyInstanceAttrs(i, lod, slot);
   }
   for (let k = 0; k < meshes.length; k++) {
     meshes[k].count = lodN[k];
@@ -1489,7 +1513,7 @@ function declutterLabels() {
     projV.copy(el.position).project(camera);
     const vis = projV.z < 1 && Math.abs(projV.x) < 1.05 && Math.abs(projV.y) < 1.05;
     el.element.style.opacity = vis ? '1' : '0';
-    if (vis) reserved.push([(projV.x * 0.5 + 0.5) * innerWidth, (-projV.y * 0.5 + 0.5) * innerHeight]);
+    if (vis) reserved.push([(projV.x * 0.5 + 0.5) * stageW, (-projV.y * 0.5 + 0.5) * stageH]);
   }
 
   const cand = [];
@@ -1503,7 +1527,7 @@ function declutterLabels() {
     if (projV.z > 1 || Math.abs(projV.x) > 0.98 || Math.abs(projV.y) > 0.95) continue;
     const d = camera.position.distanceTo(cur[i]);
     if (d > 300) continue;
-    cand.push([d, i, (projV.x * 0.5 + 0.5) * innerWidth, (-projV.y * 0.5 + 0.5) * innerHeight]);
+    cand.push([d, i, (projV.x * 0.5 + 0.5) * stageW, (-projV.y * 0.5 + 0.5) * stageH]);
   }
   cand.sort((a, b) => a[0] - b[0]);
 
@@ -1700,6 +1724,8 @@ function toggleConstellations() {
 /* ---------- controls ---------- */
 const kb = new Set();
 const yawPitch = { yaw: 0, pitch: 0 };
+/** World up, for a strafe that stays level regardless of pitch. */
+const UP = new THREE.Vector3(0, 1, 0);
 let locked = false;
 const vel = new THREE.Vector3();
 function lookAtHome() {
@@ -1929,8 +1955,11 @@ function pick(e) {
   if (locked || !e) {
     ndc.x = 0; ndc.y = 0;
   } else {
-    ndc.x = (e.clientX / innerWidth) * 2 - 1;
-    ndc.y = -(e.clientY / innerHeight) * 2 + 1;
+    // Relative to the canvas: the stage is a panel with its own origin, so
+    // viewport coordinates alone aim at the wrong body.
+    const b = renderer.domElement.getBoundingClientRect();
+    ndc.x = ((e.clientX - b.left) / b.width) * 2 - 1;
+    ndc.y = -((e.clientY - b.top) / b.height) * 2 + 1;
   }
   ray.setFromCamera(ndc, camera);
   const o = ray.ray.origin, d = ray.ray.direction;
@@ -2955,12 +2984,18 @@ function showTip(target) {
   tipEl.classList.add('show');
   tipFor = target;
 
-  const r = target.getBoundingClientRect();
+  /* The bubble is positioned against the stage, so the anchor's viewport rect
+     has to be rebased onto it -- the stage is a panel inset from the window,
+     and using viewport coordinates directly offsets every tip by that inset. */
+  const vr = target.getBoundingClientRect();
+  const sr = root.getBoundingClientRect();
+  const r = { left: vr.left - sr.left, top: vr.top - sr.top,
+              bottom: vr.bottom - sr.top, width: vr.width };
   const tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
-  // Prefer below; flip above when there is no room, and keep it on screen.
-  const below = r.bottom + 8 + th < innerHeight;
+  // Prefer below; flip above when there is no room, and keep it inside the stage.
+  const below = r.bottom + 8 + th < sr.height;
   const top = below ? r.bottom + 8 : r.top - th - 8;
-  const left = Math.max(8, Math.min(r.left + r.width / 2 - tw / 2, innerWidth - tw - 8));
+  const left = Math.max(8, Math.min(r.left + r.width / 2 - tw / 2, sr.width - tw - 8));
   tipEl.style.left = left + 'px';
   tipEl.style.top = top + 'px';
   tipEl.dataset.side = below ? 'below' : 'above';
@@ -2970,10 +3005,17 @@ function showTip(target) {
 
 function hideTip() { tipEl.classList.remove('show'); tipFor = null; }
 
-// Any element with a title becomes a tip anchor, including ones created later.
+/* Any element with a title inside the stage becomes a tip anchor, including
+   ones created later.
+
+   Scoped to the stage on purpose. Svelte delegates its own click handlers to
+   the document root, so a listener here that calls stopPropagation() runs
+   before them and swallows clicks on the surrounding chrome -- which is what
+   stopped the view's own GUIDE button, itself a titled button, from opening. */
 onDoc('click', (e) => {
   const t = e.target.closest('[title], [data-tip]');
-  if (!t || t.tagName === 'BUTTON' && !t.classList.contains('hint-tip') && !t.classList.contains('has-tip')) {
+  const inStage = t && root.contains(t);
+  if (!inStage || (t.tagName === 'BUTTON' && !t.classList.contains('hint-tip') && !t.classList.contains('has-tip'))) {
     if (!e.target.closest('#tip')) hideTip();
     return;
   }
@@ -2998,13 +3040,24 @@ $('meta').innerHTML =
     : 'upstream time unknown');
 
 /* ---------- loop ---------- */
-onWin('resize', () => {
-  persp.aspect = innerWidth / innerHeight;
+function applySize() {
+  if (!measureStage()) return;
+  persp.aspect = stageW / stageH;
   persp.updateProjectionMatrix();
   sizeOrtho();
-  renderer.setSize(innerWidth, innerHeight);
-  labelRenderer.setSize(innerWidth, innerHeight);
-});
+  renderer.setSize(stageW, stageH);
+  labelRenderer.setSize(stageW, stageH);
+  // Drives the shader's pixel-size LOD, so it has to track the stage too.
+  mat.uniforms.uViewH.value = stageH;
+}
+applySize();
+
+/* The panel resizes without the window doing so -- the sidebar collapses, the
+   tab is switched away and back -- so watch the element itself. */
+const stageRO = new ResizeObserver(applySize);
+stageRO.observe(root);
+winOff.push(() => stageRO.disconnect());
+onWin('resize', applySize);
 
 let driftClock = 0;
 let fpsEl = $('fps');
@@ -3022,7 +3075,12 @@ function frameLoop() {
   const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(yawPitch.pitch, yawPitch.yaw, 0, 'YXZ'));
   camera.quaternion.copy(q);
   const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
-  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+  /* Strafe along the horizon rather than the camera's own right vector: with
+     pitch applied, A/D would bank the path while looking up or down, which is
+     what made flying feel like it was sliding off course. */
+  const right = new THREE.Vector3().crossVectors(fwd, UP);
+  if (right.lengthSq() < 1e-6) right.set(1, 0, 0).applyQuaternion(q);
+  else right.normalize();
   const accel = new THREE.Vector3();
   if (kb.has('w')) accel.add(fwd);
   if (kb.has('s')) accel.sub(fwd);
@@ -3030,7 +3088,14 @@ function frameLoop() {
   if (kb.has('a')) accel.sub(right);
   if (kb.has('e')) accel.y += 1;
   if (kb.has('q')) accel.y -= 1;
-  if (accel.lengthSq() > 0) vel.addScaledVector(accel.normalize(), 320 * (kb.has('shift') ? 3.1 : 1) * dt);
+  /* Normalising the whole vector let Q/E steal from the forward component, so
+     W+E flew forward more slowly than W alone. Clamping instead keeps each
+     axis at full authority while still capping the diagonal. */
+  if (accel.lengthSq() > 1) accel.normalize();
+  const push = 320 * (kb.has('shift') ? 3.1 : 1);
+  vel.addScaledVector(accel, push * dt);
+  /* Damping is applied over the step rather than per frame, so the same key
+     press covers the same distance whatever the frame rate. */
   vel.multiplyScalar(Math.pow(0.0016, dt));
   camera.position.addScaledVector(vel, dt);
   updateRange();

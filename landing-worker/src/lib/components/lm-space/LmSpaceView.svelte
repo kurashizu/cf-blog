@@ -19,6 +19,15 @@
 	 * table still does things three dimensions cannot: sort, scan a column, and
 	 * read an exact figure. Neither replaces the other.
 	 */
+	/* Hoisted out of the markup: an array literal in the `each` is rebuilt on
+	   every render, and Svelte compares the keys of the new list against the
+	   old one -- which threw each_key_duplicate and aborted the update, so the
+	   GUIDE panel never mounted. */
+	const MODES = [
+		{ k: 'space' as const, label: 'SPACE' },
+		{ k: 'table' as const, label: 'TABLE' }
+	];
+
 	let mode = $state<'space' | 'table'>('space');
 
 	/**
@@ -62,9 +71,9 @@
 <div class="flex-1 min-h-0 flex flex-col">
 	<div class="flex items-center gap-1.5 pb-1.5 shrink-0" data-tour="lms-modes">
 		<span class="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest mr-0.5">VIEW AS</span>
-		{#each [['space', 'SPACE'], ['table', 'TABLE']] as [k, label] (k)}
+		{#each MODES as { k, label } (k)}
 			<button
-				onclick={() => { mode = k as 'space' | 'table'; playSound('click'); }}
+				onclick={() => { mode = k; playSound('click'); }}
 				class="px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {mode === k
 					? 'border-[#56b6c2] text-[#56b6c2] bg-[#56b6c2]/10'
 					: 'border-white/20 text-white/55 hover:border-white/50'}"
@@ -88,9 +97,13 @@
 
 	{#if mode === 'table'}
 		<LeaderboardView />
-	{:else}
-		<div class="lmspace relative flex-1 min-h-0 overflow-hidden border border-white/10 rounded-xs"
-			data-tour="lms-stage" bind:this={host}>
+	{/if}
+	<!-- The stage is hidden rather than destroyed when the table is showing.
+	     Tearing it down drops the WebGL context and the loaded marks, so coming
+	     back would re-boot the scene from nothing and lose the camera. -->
+	<div class="lmspace relative flex-1 min-h-0 overflow-hidden border border-white/10 rounded-xs"
+		class:lms-off={mode !== 'space'}
+		data-tour="lms-stage" bind:this={host}>
 			<div id="app" class="absolute inset-0"></div>
 			<div id="labels" class="absolute inset-0 z-10 pointer-events-none overflow-hidden"></div>
 
@@ -177,8 +190,7 @@
 					</div>
 				</div>
 			{/if}
-		</div>
-	{/if}
+	</div>
 </div>
 
 <style>
@@ -337,6 +349,9 @@
     opacity:0; transition:opacity .25s ease, transform .25s ease; }
 :global(.lmspace #outwarn.show) { opacity:1; transform:translate(-50%,0); }
 :global(.lmspace #outwarn kbd) { border:none; padding:0; font-size:9px; color:var(--red); font-weight:700; }
+/* Hiding keeps the WebGL context and the loaded marks alive; the scene
+   re-fits itself when the stage is laid out again. */
+:global(.lmspace.lms-off) { display:none; }
 :global(.lmspace #tip) { position:absolute; z-index:80; max-width:290px; padding:8px 11px;
     background:rgba(15,17,20,.97); border:1px solid rgba(255,255,255,.2);
     border-radius:2px; font-size:9px; line-height:1.55; color:var(--fg);
