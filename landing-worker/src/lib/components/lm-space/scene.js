@@ -1062,10 +1062,11 @@ function buildAxisLabels(mode) {
     // Month ticks sit on the spiral itself rather than an edge, at the same
     // radius and angle release dates from that month land at -- an edge label
     // has no fixed meaning left to point at once time is wound into a curve.
-    // January of each year is marked and named in full; the other eleven get
-    // a short mark and a bare number, or the curve's month-by-month pace
-    // would be unreadable at only three points a year apart.
-    const MONTH1 = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    // Every one is spelled out as "Aug/2024" and drawn as a filled chip
+    // rather than a bare number: against a cloud of hundreds of spheres a
+    // faint letter was unreadable, and half a date is ambiguous the moment
+    // the spiral has wound past one full year.
+    const MONTH3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     let cursor = new Date(dLo); cursor.setUTCDate(1); cursor.setUTCHours(0, 0, 0, 0);
     if (cursor.getTime() < dLo) cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     for (; cursor.getTime() <= dHi; cursor.setUTCMonth(cursor.getUTCMonth() + 1)) {
@@ -1074,9 +1075,7 @@ function buildAxisLabels(mode) {
       const angle = t01 * SPIRAL_TURNS * Math.PI * 2;
       const radius = t01 * SPIRAL_R;
       const pos = new THREE.Vector3(Math.cos(angle) * radius, -S - 4, Math.sin(angle) * radius);
-      const isJan = cursor.getUTCMonth() === 0;
-      mk(isJan ? String(cursor.getUTCFullYear()) : MONTH1[cursor.getUTCMonth()],
-         pos, isJan ? 'rgba(229,192,123,.85)' : 'rgba(229,192,123,.4)', isJan ? 'tag' : 'tag spinenum');
+      mk(`${MONTH3[cursor.getUTCMonth()]}/${cursor.getUTCFullYear()}`, pos, '#0a0b0d', 'tmonth');
     }
   }
   // No intelligence numbers here: that scale lives on the central spine, which

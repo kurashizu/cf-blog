@@ -367,6 +367,14 @@
 :global(.lmspace .spinenum) { font-size:12px; font-weight:700; letter-spacing:.04em;
     background:rgba(10,12,15,.72); padding:0 4px; border-radius:2px;
     border:1px solid rgba(86,182,194,.35); }
+/* The spiral's month ticks: dense enough, against a cloud of hundreds of
+   spheres, that a faint single letter was unreadable. A bold filled chip in
+   the axis's own gold reads at a glance the way the price/speed tick labels
+   already do on the box, just carried onto a curve instead of an edge. */
+:global(.lmspace .tmonth) { font-size:15px; font-weight:900; letter-spacing:.03em;
+    color:#0a0b0d; background:#e5c07b; padding:2px 7px; border-radius:3px;
+    box-shadow:0 0 10px rgba(229,192,123,.65), 0 2px 5px rgba(0,0,0,.6);
+    white-space:nowrap; }
 :global(.lmspace .tag) { font-size:11px; color:rgba(255,255,255,.75); white-space:nowrap;
     text-shadow:0 0 6px #000,0 0 3px #000; pointer-events:none;
     padding-left:9px; letter-spacing:.02em; }
