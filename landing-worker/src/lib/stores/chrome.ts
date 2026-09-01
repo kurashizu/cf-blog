@@ -8,6 +8,8 @@ import { writable } from 'svelte/store';
 export const consoleOverlayOpen = writable<boolean>(false);
 export const hotkeyOverlayOpen = writable<boolean>(false);
 export const guideOpen = writable<boolean>(false);
+/** True while the POST screen covers the page, so nothing else opens under it. */
+export const bootOpen = writable<boolean>(false);
 
 export function toggleConsoleOverlay(): void {
 	consoleOverlayOpen.update((v) => !v);
@@ -15,4 +17,74 @@ export function toggleConsoleOverlay(): void {
 
 export function toggleHotkeyOverlay(): void {
 	hotkeyOverlayOpen.update((v) => !v);
+}
+
+/**
+ * Per-view walkthroughs are offered once and then only on request, the same
+ * way the site tour is. Each view keeps its own flag, so seeing the site tour
+ * does not consume the synth's, and a new view added later starts unseen for
+ * everybody rather than being silently skipped by returning visitors.
+ *
+ * Every access is guarded: in private mode localStorage throws on read as well
+ * as write, and a walkthrough is never worth breaking a page over. Failing to
+ * read counts as seen, so the tour cannot reappear on every load.
+ */
+const SEEN_PREFIX = 'krsz.guide.';
+
+export function guideSeen(view: string): boolean {
+	try {
+		return localStorage.getItem(SEEN_PREFIX + view) === '1';
+	} catch {
+		return true;
+	}
+}
+
+/**
+ * Resolves once the page is clear of the chrome that owns the screen on a first
+ * visit: the POST screen, then the site tour. A view's own walkthrough waits on
+ * this so it cannot open underneath the boot sequence, or stack on top of the
+ * site tour when a first visit lands straight on that view.
+ *
+ * The boot screen matters as much as the tour here: it is shown before the site
+ * tour is offered, so a bare `guideOpen` check passes during boot and the view
+ * tour would open behind it.
+ */
+export function afterSiteGuide(): Promise<void> {
+	return new Promise((resolve) => {
+		let boot = false;
+		let guide = false;
+		let stopBoot: (() => void) | undefined;
+		let stopGuide: (() => void) | undefined;
+		let done = false;
+
+		const settle = () => {
+			if (done || boot || guide) return;
+			done = true;
+			resolve();
+			// subscribe() runs its callback synchronously, so on the nothing-showing
+			// path the unsubscribers are not assigned yet; releasing them is
+			// deferred to let those assignments land.
+			queueMicrotask(() => {
+				stopBoot?.();
+				stopGuide?.();
+			});
+		};
+
+		stopBoot = bootOpen.subscribe((v) => {
+			boot = v;
+			settle();
+		});
+		stopGuide = guideOpen.subscribe((v) => {
+			guide = v;
+			settle();
+		});
+	});
+}
+
+export function markGuideSeen(view: string): void {
+	try {
+		localStorage.setItem(SEEN_PREFIX + view, '1');
+	} catch {
+		/* nothing to remember it with; it will offer again next visit */
+	}
 }

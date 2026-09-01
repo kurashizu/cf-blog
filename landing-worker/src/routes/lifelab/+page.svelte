@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
+	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
+	import { LIFELAB_TOUR } from '$lib/components/lifelab/lifelab-tour';
+	import { guideSeen, markGuideSeen, afterSiteGuide } from '$lib/stores/chrome';
 
 	/**
 	 * LIFE.LAB, mounted into the site.
@@ -15,6 +18,12 @@
 	 * server render has neither of.
 	 */
 	let mounted = $state(false);
+	let guideOpen = $state(false);
+
+	function closeGuide() {
+		guideOpen = false;
+		markGuideSeen('lifelab');
+	}
 
 	onMount(() => {
 		let disposed = false;
@@ -33,6 +42,14 @@
 			game = mod;
 			mod.start();
 			mounted = true;
+			// Offered once the dish is drawn, and never on top of the site tour:
+			// every step points at something the game builds, so an earlier offer
+			// would spotlight elements that do not exist yet.
+			if (!guideSeen('lifelab')) {
+				void afterSiteGuide().then(() => {
+					if (!disposed) guideOpen = true;
+				});
+			}
 		})();
 		return () => {
 			disposed = true;
@@ -55,31 +72,50 @@
      document that wants a margin, this one is an application that draws to its
      own edges. -->
 <div id="lifelab" class="-m-2.5 sm:-m-3.5">
-	<aside id="side">
-		<div id="brand"><pre id="wordmark">┬  ┬┌─┐┌─┐  ┬  ┌─┐┌┐ 
-│  │├┤ ├┤   │  ├─┤├┴┐
-┴─┘┴└  └─┘  ┴─┘┴ ┴└─┘</pre><small>CONWAY AUTOMATON · B3/S23</small></div>
-		<div id="lvhead" class="shead">
-			<span>BOARD</span>
-			<button id="wipebtn" title="Remove every cell from the board">CLEAR ALL</button>
-		</div>
-		<div class="shead"><span>LOG</span><small>what the dish just did</small></div>
-		<div id="term"></div>
-	</aside>
 	<main id="stage">
+		<!-- The sidebar is gone: once the pattern library moved to the tray and
+		     the log began floating, a whole column held a wordmark and two
+		     buttons. Both now sit in the header beside the controls, and the
+		     dish gets the width back. -->
+		<div id="brand">
+			<pre id="wordmark">┬  ┬┌─┐┌─┐  ┬  ┌─┐┌┐ 
+│  │├┤ ├┤   │  ├─┤├┴┐
+┴─┘┴└  └─┘  ┴─┘┴ ┴└─┘</pre>
+			<small>CONWAY AUTOMATON · B3/S23</small>
+			<span id="brandbtns">
+				<button
+					id="llguide"
+					title="Walk through the lab — the rule, the controls and what to watch"
+					onclick={() => (guideOpen = true)}>?</button>
+				<button id="wipebtn" title="Remove every cell from the board">CLEAR ALL</button>
+			</span>
+		</div>
 		<div id="topbar"></div>
 		<div id="stagerow">
 			<div id="cvwrap">
-				<canvas id="cv"></canvas>
+				<canvas id="cv" data-tour="ll-dish"></canvas>
 				<div id="crt"></div>
 				<div id="spotlight"></div>
 				<div id="guide"><span id="gstep"></span><span id="gtext"></span></div>
 				<div id="msg" class="hidden"></div>
+				<!-- The log floats over the dish rather than owning a column: it is a
+				     record of what just happened, glanced at, not worked in. -->
+				<div id="logwrap" data-tour="ll-log">
+					<div class="shead" id="loghead">
+						<span>LOG</span><small>what the dish just did</small>
+						<button id="logtoggle" title="Hide the log">_</button>
+					</div>
+					<div id="term"></div>
+				</div>
 			</div>
-			<div id="tray"></div>
+			<div id="tray" data-tour="ll-tray"></div>
 		</div>
 	</main>
 </div>
+
+{#if guideOpen}
+	<Onboarding steps={LIFELAB_TOUR} heading="LIFE.LAB TOUR" onClose={closeGuide} />
+{/if}
 
 {#if !mounted}
 	<div class="absolute inset-0 flex items-center justify-center pointer-events-none">

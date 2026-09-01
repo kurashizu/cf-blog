@@ -11,7 +11,7 @@
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
-	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen } from '$lib/stores/chrome';
+	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen } from '$lib/stores/chrome';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
 	import TelemetryFooter from '$lib/components/chrome/TelemetryFooter.svelte';
@@ -25,6 +25,10 @@
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$theme]);
 	let bootVisible = $state(false);
+	/* Mirrored into a store so a view's own walkthrough can wait for the screen
+	   to be clear -- the POST screen is shown before the site tour is offered,
+	   so a view tour that only checked the tour would open behind it. */
+	$effect(() => bootOpen.set(bootVisible));
 
 	const GUIDE_KEY = 'krsz.guide.seen';
 

@@ -18,13 +18,26 @@
   font-size:14px;-webkit-font-smoothing:antialiased;
   user-select:none;overflow:hidden;
 }
-#side{width:clamp(168px,17%,220px);flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel);min-width:0}
-#brand{padding:12px 12px 11px;border-bottom:1px solid var(--line)}
+/* A header strip rather than a column: the wordmark, what the dish is, and the
+   two board-level buttons, all on one line above the controls. */
+#brand{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;
+  padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel);min-width:0}
+#brandbtns{margin-left:auto;flex:none;display:flex;align-items:center;gap:6px}
+#brandbtns button{flex:none;display:flex;align-items:center;gap:5px;border:1px solid var(--line);
+  background:none;color:var(--dim);font:inherit;font-size:10px;letter-spacing:1px;
+  padding:3px 8px;cursor:pointer;border-radius:2px}
+#brandbtns button svg{display:block;flex:none;width:9px;height:9px}
+#brandbtns button:hover{border-color:var(--faint);color:var(--fg)}
+#brandbtns #llguide:hover{border-color:var(--accent);color:var(--accent)}
+#brandbtns #wipebtn:hover{border-color:var(--red);color:var(--red)}
 /* Drawn in characters, like the rest of this site's chrome. Line height is
    pinned because at the default the rows separate and the letterforms come
    apart. */
-#wordmark{font-size:11px;line-height:1.05;color:var(--fg);white-space:pre;letter-spacing:0;margin:0}
-#brand small{display:block;font-size:10px;color:var(--faint);letter-spacing:2px;margin-top:7px}
+#wordmark{flex:none;font-size:11px;line-height:1.05;color:var(--fg);white-space:pre;letter-spacing:0;margin:0}
+/* Allowed to shrink, so it truncates before it pushes the buttons off the
+   edge -- it is the one thing here that can lose characters and still read. */
+#brand small{flex:0 1 auto;min-width:0;font-size:10px;color:var(--faint);letter-spacing:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Section headings. The sidebar was three unlabelled stacks -- a row of short
    codes and a scrolling stream -- and nothing said which was which, so the log
    read as output the player was supposed to act on rather than a record. */
@@ -35,6 +48,10 @@
 .shead button svg{display:block;flex:none;width:9px;height:9px}
 .shead button:hover{border-color:var(--faint);color:var(--fg)}
 .shead #modebtn{margin-left:auto}
+/* The walkthrough button sits between the label and CLEAR ALL, pushed right so
+   the two buttons group together away from the heading. */
+.shead #llguide{margin-left:auto;padding:2px 7px}
+.shead #llguide:hover{border-color:var(--accent);color:var(--accent)}
 /* Destructive, so it is coloured like the other things that cannot be undone
    rather than sitting anonymously beside MODE. */
 .shead #wipebtn:hover{border-color:var(--red);color:var(--red)}
@@ -48,7 +65,23 @@
 .lv{border:1px solid var(--line);background:none;color:var(--dim);font:inherit;font-size:13px;padding:5px 10px;cursor:pointer;border-radius:2px}
 .lv:hover{border-color:var(--faint)}
 .lv.lock{opacity:.32;cursor:not-allowed}
-#term{flex:1;overflow-y:auto;padding:8px 12px 22px;line-height:1.65;font-size:13px}
+/* Floating log. It sits over the bottom-left of the dish, sized to its content
+   up to a ceiling, so a quiet run takes almost no room and a busy one scrolls
+   instead of growing. Pointer events are on only for the panel itself, so the
+   board stays drawable everywhere it does not cover. */
+#logwrap{position:absolute;left:10px;bottom:10px;z-index:4;width:clamp(200px,26%,280px);
+  max-height:min(42%,240px);display:flex;flex-direction:column;
+  border:1px solid var(--line);border-radius:2px;background:rgba(10,12,14,.82);
+  backdrop-filter:blur(3px);box-shadow:0 6px 22px rgba(0,0,0,.5);overflow:hidden}
+#loghead{flex:none;padding:7px 9px 6px;border-bottom:1px solid var(--line)}
+#loghead button{margin-left:auto;flex:none;border:1px solid var(--line);background:none;
+  color:var(--dim);font:inherit;font-size:10px;line-height:1;padding:2px 7px 4px;
+  cursor:pointer;border-radius:2px}
+#loghead button:hover{border-color:var(--faint);color:var(--fg)}
+/* Collapsed: the heading stays as the handle to bring it back. */
+#logwrap.min{max-height:none}
+#logwrap.min #term{display:none}
+#term{flex:1;min-height:0;overflow-y:auto;padding:8px 10px 14px;line-height:1.6;font-size:12px}
 #term::after{content:"\2588";animation:blink 1.1s steps(1) infinite;color:var(--accent)}
 @keyframes blink{50%{opacity:0}}
 .tline{white-space:pre-wrap;word-break:break-all}
@@ -61,19 +94,25 @@
 #term::-webkit-scrollbar-track{background:rgba(0,0,0,.25)}
 #term::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
 #stage{flex:1;position:relative;display:flex;flex-direction:column;min-width:0}
-/* Wraps rather than scrolls. The row was overflow-x:auto, which quietly put the
-   stats -- GEN, POP and the GOAL that says what the level actually wants --
-   past the right edge on a narrow stage, reachable only by scrolling a bar with
-   no visible scrollbar. Wrapping keeps every control and every readout on
-   screen; the stage loses a few pixels of height instead, which it can spare. */
-#topbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);z-index:3}
+/* One row. Wrapping put the stats on a line of their own, which cost the stage
+   a full row of height to show three short readouts. The controls are a fixed,
+   known set and the stats are narrow, so they fit together at every width this
+   view is usable at; below that the row scrolls rather than growing taller,
+   since height is what the dish needs. */
+/* One row, and the stats stay pinned to the right where they are always
+   readable. Only the controls scroll when the row runs out of width: they are
+   a known set the player learns, while GEN and POP are the readouts that have
+   to be visible at all times. */
+#topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);z-index:3;min-width:0}
+#tbscroll{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto;scrollbar-width:none}
+#tbscroll::-webkit-scrollbar{display:none}
 #topbar::-webkit-scrollbar{display:none}
 button.tb{flex:none;white-space:nowrap;display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--line);color:var(--fg);font:inherit;font-size:12px;letter-spacing:1px;padding:6px 11px;cursor:pointer;border-radius:2px}
 button.tb:hover{border-color:var(--faint)}
 button.tb.on{border-color:var(--accent);color:var(--accent);background:rgba(86,182,194,.08)}
 button.tb svg{display:block;flex:none}
 .sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
-#stats{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--faint);font-size:12px;letter-spacing:1px}
+#stats{margin-left:auto;flex:none;display:flex;flex-wrap:nowrap;gap:18px;color:var(--faint);font-size:12px;letter-spacing:1px}
 #stats b{color:var(--dim);font-weight:normal}
 #cvwrap{position:relative;flex:1;min-width:0;min-height:0;overflow:hidden}
 #cv{display:block;width:100%;height:100%}
@@ -223,3 +262,19 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
 .shoprow.locked .shopname,.shoprow.locked .shopblurb{color:var(--faint)}
 .shoprow.locked .shopicon{color:var(--faint);opacity:.6}
 .buy.soon{border-color:var(--line);color:var(--faint)}
+
+/* Narrow stages: the dish is the point, and a floating panel that covers a
+   quarter of it is worse than one the player opens when wanted. The log starts
+   collapsed to its heading and the sidebar gives up its fixed width. */
+@media (max-width: 720px) {
+  #logwrap{width:min(62vw,220px);max-height:min(30%,132px);left:8px;bottom:8px}
+  /* "what the dish just did" is a gloss on a heading that already says LOG;
+     at this width it wraps to a second line and costs more than it explains. */
+  #loghead small{display:none}
+  #topbar{padding:8px 10px;gap:6px}
+  #stats{gap:12px;font-size:11px}
+  /* The wordmark is three lines of box-drawing; the strapline repeats what the
+     RULE readout already shows. */
+  #brand{gap:10px;padding:7px 10px}
+  #brand small{display:none}
+}

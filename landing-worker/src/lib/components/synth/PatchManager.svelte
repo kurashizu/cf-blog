@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { onMount, tick } from 'svelte';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import Onboarding from '../chrome/Onboarding.svelte';
 	import { SYNTH_TOUR } from './synth-tour';
+	import { guideSeen, markGuideSeen, afterSiteGuide } from '../../stores/chrome';
 	import {
 		BUILTIN_SONGS,
 		builtinSongIdx,
@@ -20,6 +22,23 @@
 	import { handleRenderWav, renderPhase, renderProgress, renderReport, clearRenderReport } from '../../stores/synth-render';
 
 	let guideOpen = $state(false);
+
+	function closeGuide() {
+		guideOpen = false;
+		markGuideSeen('synth');
+	}
+
+	/* Offered once, then only from the [?]. The tour's first step points at the
+	   track list, which is a sibling component, so it waits a tick for the rest
+	   of the workstation to render rather than spotlighting nothing -- and for
+	   the site tour to close, so a first visit straight to /synth does not show
+	   both at once. */
+	onMount(async () => {
+		if (guideSeen('synth')) return;
+		await tick();
+		await afterSiteGuide();
+		guideOpen = true;
+	});
 	let fileInput: HTMLInputElement | undefined = $state();
 	let isLoadMenuOpen = $state(false);
 	let shareCopied = $state(false);
@@ -89,7 +108,7 @@
 	</div>
 
 	{#if guideOpen}
-		<Onboarding steps={SYNTH_TOUR} heading="SYNTH TOUR" onClose={() => (guideOpen = false)} />
+		<Onboarding steps={SYNTH_TOUR} heading="SYNTH TOUR" onClose={closeGuide} />
 	{/if}
 
 	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,.mid,.midi,audio/midi" class="hidden" />

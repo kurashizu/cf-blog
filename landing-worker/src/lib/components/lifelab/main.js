@@ -15,7 +15,7 @@ const $ = s => document.querySelector(s);
 // so binding here left the second visit holding elements that were no longer
 // in the document, drawing into a detached canvas: a blank panel.
 let termEl, cv, ctx, topbar, tray, msgEl;
-let wipeBtn;
+let wipeBtn, logWrap, logToggle, tbScroll;
 let guideEl, gstep, gtext;
 
 /**
@@ -40,6 +40,7 @@ function bind() {
   guideEl = $('#guide'); gstep = $('#gstep'); gtext = $('#gtext');
   topbar = $('#topbar'); tray = $('#tray'); msgEl = $('#msg');
   wipeBtn = $('#wipebtn');
+  logWrap = $('#logwrap'); logToggle = $('#logtoggle');
 
   // Handlers and the size observer belong to the nodes, so they are re-attached
   // with them rather than once in start().
@@ -48,6 +49,15 @@ function bind() {
   // one of them erases the save -- the control that most needs to be
   // recognisable at a glance was the least marked.
   wipeBtn.innerHTML = ICONS.wipe + '<span>CLEAR ALL</span>';
+  /* The log floats over the dish, so it has to be dismissable: on a short
+     stage it covers a corner the player may want to draw in. */
+  if (logToggle) {
+    logToggle.onclick = () => {
+      const min = logWrap.classList.toggle('min');
+      logToggle.textContent = min ? '\u25A1' : '_';
+      logToggle.title = min ? 'Show the log' : 'Hide the log';
+    };
+  }
   ro?.disconnect();
   ro = new ResizeObserver(() => { resize(); clampCam(); });
   ro.observe($('#cvwrap'));
@@ -136,15 +146,23 @@ function mkBtn(icon, label, fn) {
   b.className = 'tb';
   b.innerHTML = icon + (label ? '<span>' + label + '</span>' : '');
   b.onclick = fn;
-  topbar.appendChild(b);
+  tbScroll.appendChild(b);
   return b;
 }
-function mkSep() { const d = document.createElement('div'); d.className = 'sep'; topbar.appendChild(d); }
+function mkSep() { const d = document.createElement('div'); d.className = 'sep'; tbScroll.appendChild(d); }
 
 function buildTopbar() {
   topbar.innerHTML = '';
+  /* The controls live in a scroller so a narrow stage slides them rather than
+     dropping their labels or pushing the readouts off the edge. */
+  tbScroll = document.createElement('div');
+  tbScroll.id = 'tbscroll';
+  topbar.appendChild(tbScroll);
   const L = S.L;
   el.run = mkBtn(ICONS.play, 'RUN', startPause);
+  // Anchors for the walkthrough. The toolbar is rebuilt per level, so they are
+  // set here rather than in the markup.
+  el.run.dataset.tour = 'll-run';
   el.step = mkBtn(ICONS.step, 'STEP', stepOnce);
   if (has('undo')) mkBtn(ICONS.back, 'BACK', stepBack);
   el.reset = mkBtn(ICONS.clear, 'CLEAR', reset);
@@ -155,6 +173,7 @@ function buildTopbar() {
     el.toolBtns[name] = mkBtn(icon, label, () => { S.tool = name; S.stamp = null; syncTools(); });
   };
   addTool('pan', ICONS.pan, 'PAN');
+  el.toolBtns.pan.dataset.tour = 'll-tools';
   if ((L.tools || []).includes('draw')) addTool('draw', ICONS.draw, 'DRAW');
   if ((L.tools || []).includes('erase')) addTool('erase', ICONS.erase, 'ERASE');
   // No separator before the speed control: it is part of the same "how you
@@ -166,6 +185,7 @@ function buildTopbar() {
   });
   const stats = document.createElement('div');
   stats.id = 'stats';
+  stats.dataset.tour = 'll-stats';
   const field = (label, inner) => '<span class="stat">' + label + ' ' + inner + '</span>';
   stats.innerHTML =
     field('GEN', '<b id="stGen">0</b>') +

@@ -9,9 +9,15 @@
 	} from '$lib/stores/leaderboard';
 	import { playSound } from '$lib/sound';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
+	import { guideSeen, markGuideSeen, afterSiteGuide } from '$lib/stores/chrome';
 	import { LM_SPACE_TOUR } from './lm-space-tour';
 
 	let guideOpen = $state(false);
+
+	function closeGuide() {
+		guideOpen = false;
+		markGuideSeen('lm-space');
+	}
 
 	/**
 	 * Two readings of the same data. The volume is the default because it is
@@ -55,6 +61,13 @@
 			engineError = e instanceof Error ? e.message : 'failed to start';
 		} finally {
 			booting = false;
+			// Offered only after the volume is drawn: three of the steps point at
+			// the stage, and pointing at one that has not rendered yet spotlights
+			// an empty box. Not offered at all if the engine failed, since the
+			// error is the thing to read then, and never on top of the site tour.
+			if (!engineError && !guideSeen('lm-space')) {
+				void afterSiteGuide().then(() => { guideOpen = true; });
+			}
 		}
 	}
 
@@ -92,7 +105,7 @@
 	</div>
 
 	{#if guideOpen}
-		<Onboarding steps={LM_SPACE_TOUR} heading="LM.SPACE TOUR" onClose={() => (guideOpen = false)} />
+		<Onboarding steps={LM_SPACE_TOUR} heading="LM.SPACE TOUR" onClose={closeGuide} />
 	{/if}
 
 	{#if mode === 'table'}
