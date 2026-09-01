@@ -56,7 +56,9 @@
      own edges. -->
 <div id="lifelab" class="-m-2.5 sm:-m-3.5">
 	<aside id="side">
-		<div id="brand">LIFE<span>.LAB</span><small>CONWAY AUTOMATON · B3/S23</small></div>
+		<div id="brand"><pre id="wordmark">┬  ┬┌─┐┌─┐  ┬  ┌─┐┌┐ 
+│  │├┤ ├┤   │  ├─┤├┴┐
+┴─┘┴└  └─┘  ┴─┘┴ ┴└─┘</pre><small>CONWAY AUTOMATON · B3/S23</small></div>
 		<div id="lvhead" class="shead">
 			<span>PATTERNS</span>
 			<button id="wipebtn" title="Remove every cell from the board">CLEAR ALL</button>

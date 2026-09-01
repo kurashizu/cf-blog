@@ -49,7 +49,7 @@ function bind() {
   // recognisable at a glance was the least marked.
   wipeBtn.innerHTML = ICONS.wipe + '<span>CLEAR ALL</span>';
   ro?.disconnect();
-  ro = new ResizeObserver(() => resize());
+  ro = new ResizeObserver(() => { resize(); clampCam(); });
   ro.observe($('#cvwrap'));
   return true;
 }
@@ -496,6 +496,34 @@ function fitCamera() {
   S.cam.x = (r.width - S.L.w * S.cam.s) / 2;
   S.cam.y = (r.height - S.L.h * S.cam.s) / 2;
 }
+
+/* ---------------- camera bounds ---------------- *
+ * The board is finite, so the view is too. Without this the grid can be panned
+ * off the canvas entirely, or zoomed until one cell fills the screen or the
+ * whole dish is a speck -- states the player then has to undo by hand before
+ * they can carry on.
+ *
+ * At least a third of the board stays on screen in each axis, and a board that
+ * already fits is simply centred. Zoom is held between "a cell is still worth
+ * drawing" and "a cell is a fifth of the viewport".
+ */
+function clampCam() {
+  const r = cv.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+
+  const minS = Math.max(1.2, Math.min(r.width / S.L.w, r.height / S.L.h) * 0.55);
+  const maxS = Math.max(minS + 0.1, Math.min(r.width, r.height) / 5);
+  S.cam.s = Math.max(minS, Math.min(maxS, S.cam.s));
+
+  const bw = S.L.w * S.cam.s, bh = S.L.h * S.cam.s;
+  const keepX = Math.min(bw, r.width) / 3;
+  const keepY = Math.min(bh, r.height) / 3;
+  if (bw <= r.width) S.cam.x = (r.width - bw) / 2;
+  else S.cam.x = Math.max(r.width - bw - keepX, Math.min(keepX, S.cam.x));
+  if (bh <= r.height) S.cam.y = (r.height - bh) / 2;
+  else S.cam.y = Math.max(r.height - bh - keepY, Math.min(keepY, S.cam.y));
+}
+
 function toCell(e) {
   const r = cv.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
@@ -544,6 +572,7 @@ function bindInput() {
     S.cam.x += e.clientX - S.drag.mx;
     S.cam.y += e.clientY - S.drag.my;
     S.drag.mx = e.clientX; S.drag.my = e.clientY;
+    clampCam();
   } else if (S.drag.mode === 'paint') {
     const c = toCell(e); if (inGrid(c)) paint(c.x, c.y, S.paintVal);
   } else if (S.drag.mode === 'erase') {
@@ -562,6 +591,7 @@ function bindInput() {
   S.cam.x = mx - (mx - S.cam.x) * k;
   S.cam.y = my - (my - S.cam.y) * k;
   S.cam.s = ns;
+  clampCam();
 }, { passive: false });
 
   onKeyDown = e => {

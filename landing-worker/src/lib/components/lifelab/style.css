@@ -19,9 +19,12 @@
   user-select:none;overflow:hidden;
 }
 #side{width:clamp(200px,24%,290px);flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel);min-width:0}
-#brand{padding:14px 12px;font-size:20px;letter-spacing:3px;border-bottom:1px solid var(--line)}
-#brand span{color:var(--faint)}
-#brand small{display:block;font-size:11px;color:var(--faint);letter-spacing:2px;margin-top:4px}
+#brand{padding:12px 12px 11px;border-bottom:1px solid var(--line)}
+/* Drawn in characters, like the rest of this site's chrome. Line height is
+   pinned because at the default the rows separate and the letterforms come
+   apart. */
+#wordmark{font-size:11px;line-height:1.05;color:var(--fg);white-space:pre;letter-spacing:0;margin:0}
+#brand small{display:block;font-size:10px;color:var(--faint);letter-spacing:2px;margin-top:7px}
 /* Section headings. The sidebar was three unlabelled stacks -- a row of short
    codes and a scrolling stream -- and nothing said which was which, so the log
    read as output the player was supposed to act on rather than a record. */

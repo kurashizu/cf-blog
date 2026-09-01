@@ -194,7 +194,7 @@
     font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; overflow:hidden; }
 :global(.lmspace #app) { position:absolute; inset:0; }
 :global(.lmspace canvas) { display:block; }
-:global(.lmspace .hud) { position:fixed; pointer-events:none; z-index:20; }
+:global(.lmspace .hud) { position:absolute; pointer-events:none; z-index:20; }
 :global(.lmspace .hud > *) { pointer-events:auto; }
 :global(.lmspace #topbar) { top:0; left:0; right:0; padding:10px 12px; gap:26px;
     display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;
@@ -345,7 +345,7 @@
 :global(.lmspace #tip[data-side="below"]::after) { top:-5px; border-right:none; border-bottom:none; }
 :global(.lmspace #tip[data-side="above"]::after) { bottom:-5px; border-left:none; border-top:none; }
 :global(.lmspace .has-tip), :global(.lmspace .hint-tip) { cursor:help; }
-:global(.lmspace #boot) { position:fixed; inset:0; z-index:99; background:var(--bg); display:flex;
+:global(.lmspace #boot) { position:absolute; inset:0; z-index:99; background:var(--bg); display:flex;
     align-items:center; justify-content:center; font-size:11px; color:var(--cyan); }
 :global(.lmspace .err) { color:var(--red); }
 :global(.lmspace ::-webkit-scrollbar) { width:7px; height:7px; }
