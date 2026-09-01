@@ -101,7 +101,12 @@
 		     Kept heavy on purpose -- this is a backdrop, not a focal point. Panel
 		     opacity (theme.ts) is a separate knob and stays where it was;
 		     dimming the video itself is what actually mutes it without also
-		     flattening panel surfaces that have nothing to do with the video. -->
-		<div class="absolute inset-0 bg-black/91"></div>
+		     flattening panel surfaces that have nothing to do with the video.
+		     Inline style, not an arbitrary-value class: Tailwind only ever
+		     generated the handful of bg-black/NN opacities already used
+		     elsewhere in the codebase (20/25/30/40/50/55/60/70/80/85/90/95) --
+		     any other number silently compiles to nothing, so the overlay was
+		     briefly fully transparent at /91 with no visible error anywhere. -->
+		<div class="absolute inset-0" style="background-color: rgba(0, 0, 0, 0.91)"></div>
 	</div>
 {/if}
