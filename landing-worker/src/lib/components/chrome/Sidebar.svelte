@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoxHeader from './BoxHeader.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { playSound } from '../../sound';
@@ -34,12 +35,9 @@
 >
 	<!-- ASCII brand & acronym breakdown -->
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden">
-		<div class="text-xs sm:text-sm font-bold text-[#56b6c2] flex items-center justify-between border-b border-white/10 pb-0.5">
-			<span>┌─[ SYS_BANNER // KRSZ.IN ]─┐</span>
-			<span class="text-[#98c379] font-mono text-xs flex items-center gap-1">
-				<span>{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
-			</span>
-		</div>
+		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
+			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
+		</BoxHeader>
 
 		<pre class="text-[8px] sm:text-xs leading-none font-black tracking-tight text-[#e5c07b] overflow-x-auto select-none py-0.5">{` ██╗  ██╗██████╗ ███████╗███████╗
  ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝
@@ -48,7 +46,8 @@
  ██║  ██╗██║  ██║███████║███████╗
  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝`}</pre>
 
-		<div class="grid grid-cols-2 gap-1 text-xs border-t border-white/10 pt-1.5 font-mono">
+		<!-- Columns come and go with the width; a cell never splits its own two words. -->
+		<div class="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap">
 			<div class="flex items-center gap-1.5"><span class="bg-[#e06c75] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[K]</span><span class="text-[#e06c75] font-bold">urashizu's</span></div>
 			<div class="flex items-center gap-1.5"><span class="bg-[#61afef] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[R]</span><span class="text-[#61afef] font-bold">andom-</span></div>
 			<div class="flex items-center gap-1.5"><span class="bg-[#e5c07b] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[S]</span><span class="text-[#e5c07b] font-bold">tuff</span></div>
@@ -58,10 +57,9 @@
 
 	<!-- Operator profile -->
 	<div class="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">
-		<div class="text-xs sm:text-sm font-bold text-[#61afef] flex items-center justify-between border-b border-white/10 pb-1 shrink-0">
-			<span>┌─[ OPERATOR_PROFILE ]─┐</span>
+		<BoxHeader title="OPERATOR_PROFILE" short={['OPERATOR', 'OP']} class="text-xs sm:text-sm font-bold text-[#61afef] border-b border-white/10 pb-1 shrink-0">
 			<span class="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs">VERIFIED</span>
-		</div>
+		</BoxHeader>
 		<div class="space-y-1.5 py-1 text-xs sm:text-sm leading-relaxed">
 			<div class="flex items-baseline gap-2"><span class="text-[#e5c07b] font-bold shrink-0">[OPERATOR]</span><span class="text-[#eceff4] font-medium">kurashizu (IT Masters @ UNSW)</span></div>
 			<div class="flex items-baseline gap-2"><span class="text-[#61afef] font-bold shrink-0">[LOCATION]</span><span class="text-[#eceff4]">Sydney, Australia [UTC+10/11]</span></div>
@@ -76,24 +74,10 @@
 	</div>
 
 	<!-- Hotkey launchpad -->
-	<div data-tour="launchpad" class="launchpad border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
-		<!-- Sized by the panel's own width (container query), not the viewport:
-		     the sidebar is a fifth of the page on desktop and the whole of it on
-		     a phone, so viewport breakpoints get this exactly backwards. Each
-		     tier is a shorter reading of the same line rather than a truncated
-		     one; if even the shortest does not fit, the hint wraps whole onto a
-		     second line, right-aligned, instead of the text breaking mid-word. -->
-		<div class="text-xs font-bold text-[#e5c07b] flex flex-wrap items-center justify-between gap-x-2 border-b border-white/10 pb-0.5 shrink-0 whitespace-nowrap">
-			<span>
-				<span class="lp-t-full">┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
-				<span class="lp-t-mid">┌─[ HOTKEYS // LAUNCHPAD ]─┐</span>
-				<span class="lp-t-short">┌─[ HOTKEYS ]─┐</span>
-			</span>
-			<span class="text-white/50 text-xs ml-auto" title="CTRL+0-7 jumps to a tab · T cycles the theme · ? lists every hotkey">
-				<span class="lp-h-full">[CTRL+0-7 · T · ?]</span>
-				<span class="lp-h-short">[^0-7 · T · ?]</span>
-			</span>
-		</div>
+	<div data-tour="launchpad" class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
+		<BoxHeader title="QUICK_HOTKEYS // LAUNCHPAD" short={['HOTKEYS // LAUNCHPAD', 'LAUNCHPAD', 'PADS']} class="text-xs font-bold text-[#e5c07b] border-b border-white/10 pb-0.5 shrink-0">
+			<span class="text-white/50 text-xs" title="CTRL+0-7 jumps to a tab · T cycles the theme · ? lists every hotkey">[CTRL+0-7 · T · ?]</span>
+		</BoxHeader>
 
 		<div class="grid grid-cols-3 gap-1.5 py-1">
 			{#each HOTKEY_TILES as tab (tab.id)}
@@ -137,22 +121,10 @@
 			</button>
 		</div>
 
-		<div class="border-t border-white/10 pt-1 text-xs text-white/50 flex justify-between shrink-0 font-mono">
+		<div class="border-t border-white/10 pt-1 text-xs text-white/50 flex flex-wrap justify-between gap-x-2 shrink-0 font-mono whitespace-nowrap">
 			<span>PADS: 7 ACTIVE NODES</span>
-			<span>HOTKEY [CTRL+0-7 · T · ?]</span>
+			<span class="ml-auto">HOTKEY [CTRL+0-7 · T · ?]</span>
 		</div>
 	</div>
 </div>
 
-<style>
-	.launchpad { container-type: inline-size; }
-	.lp-t-mid, .lp-t-short, .lp-h-short { display: none; }
-	@container (max-width: 420px) {
-		.lp-t-full, .lp-h-full { display: none; }
-		.lp-t-mid, .lp-h-short { display: inline; }
-	}
-	@container (max-width: 320px) {
-		.lp-t-mid { display: none; }
-		.lp-t-short { display: inline; }
-	}
-</style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoxHeader from '../chrome/BoxHeader.svelte';
 	import { playSound } from '../../sound';
 	import { SPINNER_FRAMES, spinnerFrame } from '../../stores/clock';
 	import { selectedModuleId } from '../../stores/selected-module';
@@ -102,7 +103,7 @@
 		</ul>
 
 		<div class="border border-white/10 bg-black/40 rounded-xs p-2.5 sm:p-3">
-			<div class="text-xs font-bold mb-1.5 border-b border-white/10 pb-1" style="color: {selectedModule.color}">┌─[ REQUEST FLOW ]─┐</div>
+			<BoxHeader title="REQUEST FLOW" short="FLOW" class="text-xs font-bold mb-1.5 border-b border-white/10 pb-1" style="color: {selectedModule.color}" />
 			{#key selectedModule.id}
 				<MermaidDiagram chart={selectedModule.topology} accent={selectedModule.color} />
 			{/key}

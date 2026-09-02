@@ -530,10 +530,39 @@ function toCell(e) {
  */
 let onPointerMove = null, onPointerUp = null, onKeyDown = null;
 
+/** Zoom about a canvas-space point by factor k (wheel and pinch share it). */
+function zoomAt(mx, my, k) {
+  const ns = Math.max(1.2, Math.min(48, S.cam.s * k));
+  const kk = ns / S.cam.s;
+  S.cam.x = mx - (mx - S.cam.x) * kk;
+  S.cam.y = my - (my - S.cam.y) * kk;
+  S.cam.s = ns;
+  clampCam();
+}
+
+/* Touch: pointer events already unify mouse and finger for drawing and
+   panning, but a phone has no wheel, so zoom needs two fingers. While two
+   are down, the gesture owns the camera -- pinch scales about the midpoint
+   and moving both pans -- and whatever single-finger drag was in progress is
+   dropped so a second finger never paints a stray line. */
+const touches = new Map();
+let pinch = null;
+
 function bindInput() {
   cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('pointerdown', e => {
   e.preventDefault();
+  if (e.pointerType === 'touch') {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { cv.setPointerCapture(e.pointerId); } catch {}
+    if (touches.size === 2) {
+      const [a, b] = [...touches.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      S.drag = null;
+      return;
+    }
+    if (touches.size > 2) return;
+  }
   if (e.button === 1) return;
   const c = toCell(e);
   if (e.button === 2 || (S.tool === 'pan' && e.button === 0)) {
@@ -557,6 +586,19 @@ function bindInput() {
   }
 });
   onPointerMove = e => {
+  if (e.pointerType === 'touch' && touches.has(e.pointerId)) {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && touches.size === 2) {
+      const [a, b] = [...touches.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const r = cv.getBoundingClientRect();
+      S.cam.x += mx - pinch.mx; S.cam.y += my - pinch.my;
+      if (pinch.d > 0) zoomAt(mx - r.left, my - r.top, d / pinch.d);
+      pinch = { d, mx, my };
+      return;
+    }
+    if (pinch) return;
+  }
   S.hover = toCell(e);
   if (!S.drag) return;
   if (S.drag.mode === 'pan') {
@@ -570,19 +612,17 @@ function bindInput() {
     const c = toCell(e); if (inGrid(c)) paint(c.x, c.y, 0);
   }
   };
-  onPointerUp = () => { S.drag = null; };
+  onPointerUp = e => {
+    S.drag = null;
+    if (e && touches.delete(e.pointerId) && touches.size < 2) pinch = null;
+  };
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
   cv.addEventListener('wheel', e => {
   e.preventDefault();
   const r = cv.getBoundingClientRect();
-  const mx = e.clientX - r.left, my = e.clientY - r.top;
-  const ns = Math.max(1.2, Math.min(48, S.cam.s * Math.exp(-e.deltaY * 0.0012)));
-  const k = ns / S.cam.s;
-  S.cam.x = mx - (mx - S.cam.x) * k;
-  S.cam.y = my - (my - S.cam.y) * k;
-  S.cam.s = ns;
-  clampCam();
+  zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0012));
 }, { passive: false });
 
   onKeyDown = e => {
@@ -600,7 +640,8 @@ function bindInput() {
 
 function unbindInput() {
   if (onPointerMove) window.removeEventListener('pointermove', onPointerMove);
-  if (onPointerUp) window.removeEventListener('pointerup', onPointerUp);
+  if (onPointerUp) { window.removeEventListener('pointerup', onPointerUp); window.removeEventListener('pointercancel', onPointerUp); }
+  touches.clear(); pinch = null;
   if (onKeyDown) window.removeEventListener('keydown', onKeyDown);
   onPointerMove = onPointerUp = onKeyDown = null;
 }

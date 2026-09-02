@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoxHeader from '../chrome/BoxHeader.svelte';
 	import { playSound } from '../../sound';
 	import KeyboardTester from './KeyboardTester.svelte';
 	import MouseTester from './MouseTester.svelte';
@@ -78,10 +79,9 @@
 	</div>
 
 	<div style="border-color: {current.color}66;" class="border p-3 sm:p-4 rounded-sm space-y-2 bg-black/20">
-		<div class="flex items-center justify-between border-b border-white/10 pb-1.5">
-			<span class="font-black text-xs sm:text-sm" style="color: {current.color}">┌─[ {current.label} ]─┐</span>
-			<span class="text-[10px] sm:text-xs text-white/40 font-mono">{current.desc}</span>
-		</div>
+		<BoxHeader title={current.label} class="font-black text-xs sm:text-sm border-b border-white/10 pb-1.5" style="color: {current.color}">
+			<span class="text-[10px] sm:text-xs text-white/40 font-mono font-normal">{current.desc}</span>
+		</BoxHeader>
 
 		{#if activeTool === 'keyboard'}
 			<KeyboardTester />

@@ -278,6 +278,17 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
    quarter of it is worse than one the player opens when wanted. The log starts
    collapsed to its heading and the sidebar gives up its fixed width. */
 @media (max-width: 720px) {
+  /* The pattern tray stops being a side column -- on a phone it took a third
+     of the width from a dish that is the whole point -- and becomes a strip
+     of stamps under the dish that scrolls sideways. */
+  #stagerow{flex-direction:column}
+  #tray{width:auto;max-height:86px;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:72px;
+    grid-template-rows:1fr;overflow-x:auto;overflow-y:hidden;border-left:none;border-top:1px solid var(--ll-line);
+    padding:6px 8px;scrollbar-width:none}
+  #tray::-webkit-scrollbar{display:none}
+  #wordmark{font-size:9px}
+  /* The floating instruction card shrinks so it stops covering the dish. */
+  #guide{right:8px;bottom:8px;max-width:52%;font-size:11px;padding:6px 8px}
   #logwrap{width:min(62vw,220px);max-height:min(30%,132px);left:8px;bottom:8px}
   /* "what the dish just did" is a gloss on a heading that already says LOG;
      at this width it wraps to a second line and costs more than it explains. */

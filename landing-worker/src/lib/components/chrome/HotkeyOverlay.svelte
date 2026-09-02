@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoxHeader from './BoxHeader.svelte';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 
 	let { onClose }: { onClose: () => void } = $props();
@@ -80,10 +81,9 @@
 		class="w-full max-w-3xl {themeStyles.cardBg} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto"
 		onclick={(e) => e.stopPropagation()}
 	>
-		<div class="flex items-center justify-between px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBg} rounded-t-sm">
-			<span class="text-xs sm:text-sm font-black" style="color: {themeStyles.cursorColor}">┌─[ KEYMAP // KRSZ.IN ]─┐</span>
-			<button onclick={onClose} class="text-xs text-white/50 hover:text-white cursor-pointer">[ Esc ]</button>
-		</div>
+		<BoxHeader title="KEYMAP // KRSZ.IN" short="KEYMAP" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBg} rounded-t-sm" style="color: {themeStyles.cursorColor}">
+			<button onclick={onClose} class="text-xs text-white/50 hover:text-white cursor-pointer font-normal">[ Esc ]</button>
+		</BoxHeader>
 
 		<div class="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto custom-scrollbar">
 			{#each GROUPS as group (group.title)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoxHeader from '../chrome/BoxHeader.svelte';
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
@@ -176,8 +177,7 @@
 
 	<!-- Live feed from blog.krsz.in's guestbook API -->
 	<div class="border border-white/10 bg-black/30 rounded-xs p-3 space-y-2">
-		<div class="flex items-center justify-between border-b border-white/10 pb-1.5">
-			<span class="text-xs font-black text-[#e06c75]">┌─[ RECEIVED PACKETS ]─┐</span>
+		<BoxHeader title="RECEIVED PACKETS" short="PACKETS" class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5">
 			<button
 				onclick={() => {
 					loadMessages();
@@ -188,7 +188,7 @@
 			>
 				⟳ REFRESH
 			</button>
-		</div>
+		</BoxHeader>
 
 		{#if messagesState === 'loading'}
 			<div class="text-xs font-mono text-white/40 py-2">FETCHING FROM BLOG.KRSZ.IN…</div>

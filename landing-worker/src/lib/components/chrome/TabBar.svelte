@@ -13,6 +13,13 @@
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 	/* AUTO alone doesn't say what's actually on screen — pair it with the hour's pick. */
 	let themeLabel = $derived($theme === 'auto' ? `AUTO·${$resolvedTheme.toUpperCase()}` : $theme.toUpperCase());
+	/* The button reserves the width of the longest label it can ever show, so
+	   cycling themes never shoves GUIDE and the rest sideways. Found, not
+	   hardcoded, so a renamed theme cannot quietly make it wrong. */
+	const THEME_LABEL_WIDEST = (() => {
+		const names = Object.keys(THEME_STYLES).map((t) => t.toUpperCase());
+		return [...names, ...names.map((n) => `AUTO·${n}`)].reduce((a, b) => (b.length > a.length ? b : a));
+	})();
 
 	const TABS = [
 		{ id: 0, label: '0:modules', color: '#56b6c2', title: 'View 0: Modules — Live Project Portal & Technical Deep Dives [Hotkey: Ctrl+0]' },
@@ -66,10 +73,14 @@
 	class="w-full max-w-full {themeStyles.headerBgVideo} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border {themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5"
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- The strip is a container query root: below the width where all eight
+	     full labels fit, tabs collapse to their number and only the active one
+	     keeps its name -- the row stays one line, no clipping, no hidden
+	     sideways scroll to discover. -->
 	<div
 		bind:this={tabStrip}
 		onwheel={onStripWheel}
-		class="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1"
+		class="tabstrip flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1"
 	>
 		<a
 			href="/"
@@ -106,7 +117,7 @@
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
 					style={activeTab === tab.id ? `background-color: ${tab.color}` : undefined}
 				>
-					{tab.label}
+					{tab.id}<span class="tabname" class:on={activeTab === tab.id}>:{tab.label.slice(2)}</span>
 				</button>
 			{/each}
 		</div>
@@ -145,11 +156,21 @@
 		<button
 			onclick={cycleTheme}
 			title="Color Theme Switcher — Cycle palette (Auto by time of day, Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
-			class="hover:underline cursor-pointer hidden 2xl:inline text-[#e5c07b]">[THEME: {themeLabel}]</button
+			class="hover:underline cursor-pointer hidden 2xl:grid text-[#e5c07b] text-center"
 		>
+			<span class="col-start-1 row-start-1 invisible" aria-hidden="true">[THEME: {THEME_LABEL_WIDEST}]</span>
+			<span class="col-start-1 row-start-1">[THEME: {themeLabel}]</span>
+		</button>
 		<span
 			title="Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers"
 			class="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden 2xl:inline">100%_SERVERLESS</span
 		>
 	</div>
 </header>
+
+<style>
+	.tabstrip { container-type: inline-size; }
+	@container (max-width: 940px) {
+		.tabname:not(.on) { display: none; }
+	}
+</style>
