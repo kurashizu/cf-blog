@@ -46,6 +46,19 @@
 			]
 		},
 		{
+			title: 'SYNTH — TRANSPORT',
+			color: '#98c379',
+			note: 'Active on view 2 whenever no text field, menu or settings panel has focus',
+			keys: [
+				{ key: 'Enter', desc: 'Play / stop the sequencer' },
+				{ key: 'Home', desc: 'Rewind to bar 1' },
+				{ key: 'Backspace', desc: 'Stop and rewind to bar 1' },
+				{ key: '← / →', desc: 'Previous / next page' },
+				{ key: '↑ / ↓', desc: 'Next / previous sound preset (applied to the active track)' },
+				{ key: '- / =', desc: 'Tempo −1 / +1 BPM (hold to ramp)' }
+			]
+		},
+		{
 			title: 'SYNTH — QWERTY PIANO',
 			color: '#c678dd',
 			note: 'Active on view 2 whenever no text field has focus',

@@ -25,6 +25,7 @@
 		jumpPlayheadToCursor
 	} from '../../stores/synth-transport';
 	import { SOUND_PRESETS, soundPresetIdx } from '../../stores/synth-patch';
+	import { hotkeyOverlayOpen, consoleOverlayOpen } from '../../stores/chrome';
 	import { updateActiveTrack } from '../../stores/synth-tracks';
 	import { PRESET_TOOLTIPS } from './tooltips';
 	import PatchManager from './PatchManager.svelte';
@@ -136,6 +137,41 @@
 		}
 	}
 
+	/*
+	 * Transport hotkeys. Everything the QWERTY piano uses is off limits -- the
+	 * letter rows, the digit row, Space (sustain), [ ] Ctrl Shift (octave) --
+	 * which leaves the keys a DAW would reach for anyway: Enter for play/stop,
+	 * Home / Backspace to return to zero, arrows for pages and presets, - =
+	 * for tempo (held, they ramp). No modifiers, so nothing collides with the
+	 * octave shifts or the site's Ctrl+digit navigation.
+	 */
+	function onTransportHotkey(e: KeyboardEvent) {
+		if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+		if ($hotkeyOverlayOpen || $consoleOverlayOpen || $isSynthSettingsOpen) return;
+		const target = e.target as HTMLElement | null;
+		const tag = target?.tagName?.toLowerCase() ?? '';
+		if (['input', 'textarea', 'select'].includes(tag) || target?.isContentEditable) return;
+		// A focused button already fires on Enter; don't also toggle the transport.
+		if (e.key === 'Enter' && (tag === 'button' || tag === 'a')) return;
+		switch (e.key) {
+			case 'Enter': togglePlayback(); break;
+			case 'Home': rewindToStart(); playSound('click'); break;
+			case 'Backspace':
+				if ($isSeqPlaying) toggle();
+				rewindToStart();
+				playSound('click');
+				break;
+			case 'ArrowLeft': prevPage(); break;
+			case 'ArrowRight': nextPage(); break;
+			case 'ArrowUp': nextPreset(); applyPreset(); break;
+			case 'ArrowDown': prevPreset(); applyPreset(); break;
+			case '-': setBpm(Math.max(40, $bpm - 1)); break;
+			case '=': setBpm(Math.min(240, $bpm + 1)); break;
+			default: return;
+		}
+		e.preventDefault();
+	}
+
 	function togglePlayback() {
 		if (!$isSeqPlaying) setMuted(false);
 		toggle();
@@ -151,6 +187,8 @@
 		return { bar, beat };
 	});
 </script>
+
+<svelte:window onkeydown={onTransportHotkey} />
 
 <!-- Row 1: logo/project management + BPM/LEN/METER -->
 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0">
@@ -222,7 +260,7 @@
 				playSound('click');
 			}}
 			class="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
-			title="Rewind to Beginning (Step 1 / Bar 1.1)"
+			title="Rewind to Beginning (Step 1 / Bar 1.1) — Home; Backspace also stops"
 		>
 			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
 				<rect x="2" y="2.5" width="2" height="11" rx="0.5" />
@@ -246,7 +284,7 @@
 
 		<button
 			onclick={togglePlayback}
-			title="Play / Stop Sequencer (Resumes from current paused position)"
+			title="Play / Stop Sequencer (Resumes from current paused position) — Enter"
 			class="h-6 px-3 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center justify-center {$isSeqPlaying
 				? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
 				: 'bg-[#98c379] text-black hover:opacity-90'}"
