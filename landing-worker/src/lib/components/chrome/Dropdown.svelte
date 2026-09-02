@@ -60,13 +60,13 @@
 		{title}
 		{disabled}
 		onclick={() => (open = !open)}
-		class="w-full px-2 py-1 border rounded-xs font-mono text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed {open
+		class="press w-full px-2 py-1 border rounded-xs font-mono text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed {open
 			? 'bg-white/10'
 			: 'hover:bg-white/5'}"
 		style="border-color: {open ? color : `${color}66`}; color: {color}; width: {width}"
 	>
 		<span class="truncate">{selected?.label ?? placeholder}</span>
-		<span class="text-[9px] leading-none opacity-70">{open ? '▲' : '▼'}</span>
+		<span class="text-[9px] leading-none opacity-70 inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
 	</button>
 
 	{#if open && !disabled}
@@ -75,7 +75,7 @@
 		<div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
 
 		<div
-			class="absolute left-0 top-full mt-1 z-50 max-h-[42vh] overflow-y-auto custom-scrollbar bg-[#121417] border rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
+			class="dropdown-pop absolute left-0 top-full mt-1 z-50 max-h-[42vh] overflow-y-auto custom-scrollbar bg-[#121417] border rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono origin-top"
 			style="border-color: {color}80; min-width: {width}"
 		>
 			<!-- Keyed by position: device lists hand back empty deviceIds before a
@@ -84,7 +84,7 @@
 				<button
 					type="button"
 					onclick={() => pick(option)}
-					class="w-full text-left px-2.5 py-1.5 flex items-center justify-between gap-2 cursor-pointer {option.value ===
+					class="w-full text-left px-2.5 py-1.5 flex items-center justify-between gap-2 cursor-pointer transition-colors {option.value ===
 					value
 						? 'text-white bg-white/10 font-bold'
 						: 'text-white/80 hover:bg-white/10'}"

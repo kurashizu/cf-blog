@@ -57,7 +57,7 @@
 				rel="noopener noreferrer"
 				onclick={() => playSound('click')}
 				title={link.title}
-				class="hover:underline flex items-center gap-1 transition-colors shrink-0 {link.color}"
+				class="press hover:underline flex items-center gap-1 transition-colors shrink-0 {link.color}"
 			>
 				<PixelIcon name={link.icon} size={16} />
 				<span class="footer-linklabel">{link.label}</span>
@@ -71,8 +71,11 @@
 			<span
 				data-tour="edge"
 				title={edgeTitle}
-				class="footer-edgelabel shrink-0 {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
+				class="footer-edgelabel shrink-0 inline-flex items-center gap-1 transition-colors {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
 			>
+				{#if $edgeTraceStatus === 'ok'}
+					<span class="w-1 h-1 rounded-full bg-[#98c379] blink-live"></span>
+				{/if}
 				{edgeLabel}
 			</span>
 		{/if}
@@ -84,7 +87,7 @@
 					target="_blank"
 					rel="noopener noreferrer"
 					onclick={() => playSound('click')}
-					class="hover:underline hover:text-white/70 transition-colors"
+					class="press hover:underline hover:text-white/70 transition-colors"
 				>
 					{__BUILD_COMMIT__}
 				</a>

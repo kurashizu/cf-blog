@@ -69,7 +69,10 @@
 		</div>
 		<div class="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1">
 			<span>STATUS: OPEN FOR RESEARCH</span>
-			<span>AVAILABLE NOW</span>
+			<span class="inline-flex items-center gap-1">
+				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live"></span>
+				AVAILABLE NOW
+			</span>
 		</div>
 	</div>
 
@@ -85,19 +88,19 @@
 				<button
 					onclick={() => nav(tab.id)}
 					title={tab.tooltip}
-					class="border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group relative overflow-hidden min-w-0 {isActive
+					class="lift press border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all group relative overflow-hidden min-w-0 {isActive
 						? 'border-white bg-white/20 text-white shadow-md'
-						: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5'}"
+						: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
 					style={isActive ? `border-color: ${tab.color}` : undefined}
 				>
 					<div class="w-full flex items-center justify-between">
 						<span
-							class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border"
+							class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border transition-colors"
 							style="background-color: {isActive ? tab.color : 'rgba(0,0,0,0.5)'}; color: {isActive ? '#000' : tab.color}; border-color: {tab.color};"
 						>
 							[{tab.key}]
 						</span>
-						<span class="text-base leading-none opacity-85 group-hover:opacity-100" style="color: {tab.color}">{tab.icon}</span>
+						<span class="text-base leading-none opacity-85 group-hover:opacity-100 group-hover:scale-110 transition-transform" style="color: {tab.color}">{tab.icon}</span>
 					</div>
 					<div class="mt-1 w-full min-w-0">
 						<div class="font-bold text-xs leading-tight tracking-tight truncate" style="color: {isActive ? '#fff' : tab.color}">{tab.title}</div>
@@ -108,7 +111,7 @@
 
 			<button
 				onclick={cycleTheme}
-				class="border border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group overflow-hidden min-w-0"
+				class="lift press border border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)] rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all group overflow-hidden min-w-0"
 			>
 				<div class="w-full flex items-center justify-between">
 					<span class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border border-[#d8dee9]/40 bg-black/50 text-[#d8dee9]">[T]</span>

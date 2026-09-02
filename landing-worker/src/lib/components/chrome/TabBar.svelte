@@ -85,7 +85,7 @@
 		<a
 			href="/"
 			title="krsz.in — Kurashizu's Random-Stuff Zone"
-			class="bg-black/40 px-1 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
+			class="press bg-black/40 px-1 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
 		>
 			<!-- Sized against the tab buttons' own line box, so a bigger mark does not
 			     make the header taller. -->
@@ -100,7 +100,7 @@
 			}}
 			data-tour="console-btn"
 			title="Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]"
-			class="px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border {$consoleOverlayOpen
+			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border {$consoleOverlayOpen
 				? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 				: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
 		>
@@ -112,7 +112,7 @@
 				<button
 					onclick={() => nav(tab.id)}
 					title={tab.title}
-					class="px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
+					class="press px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-all whitespace-nowrap shrink-0 {activeTab === tab.id
 						? 'text-black font-black'
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
 					style={activeTab === tab.id ? `background-color: ${tab.color}` : undefined}
@@ -127,7 +127,7 @@
 		<button
 			onclick={togglePlayback}
 			title="Master Audio & Sequencer Playback Toggle — Start / Stop Music & Sound Engine"
-			class="px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border {$isSeqPlaying
+			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-all whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border {$isSeqPlaying
 				? 'border-[#e06c75] bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75] hover:text-black shadow-[0_0_8px_#e06c75]'
 				: 'border-[#98c379] bg-[#98c379]/10 text-[#98c379] hover:bg-[#98c379] hover:text-black'}"
 		>
@@ -135,7 +135,7 @@
 			<span class="inline-flex items-center gap-1">
 				<span>[</span>
 				{#if $isSeqPlaying}
-					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0"><rect x="1" y="1" width="6" height="6" fill="currentColor" /></svg>
+					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0 blink-live"><rect x="1" y="1" width="6" height="6" fill="currentColor" /></svg>
 				{:else}
 					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0"><path d="M1.5 0.6 L7.2 4 L1.5 7.4 Z" fill="currentColor" /></svg>
 				{/if}
@@ -149,14 +149,14 @@
 			}}
 			data-tour="guide-btn"
 			title="Open the walkthrough — what each view does and every keyboard shortcut"
-			class="px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
+			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
 		>
 			<span class="hidden 2xl:inline">[?]&nbsp;GUIDE</span><span class="2xl:hidden">[?]</span>
 		</button>
 		<button
 			onclick={cycleTheme}
 			title="Color Theme Switcher — Cycle palette (Auto by time of day, Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
-			class="hover:underline cursor-pointer hidden 2xl:grid text-[#e5c07b] text-center"
+			class="press hover:underline cursor-pointer hidden 2xl:grid text-[#e5c07b] text-center"
 		>
 			<span class="col-start-1 row-start-1 invisible" aria-hidden="true">[THEME: {THEME_LABEL_WIDEST}]</span>
 			<span class="col-start-1 row-start-1">[THEME: {themeLabel}]</span>
