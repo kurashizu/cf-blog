@@ -7,7 +7,8 @@
 // did not have. Every one was caught here rather than by a reader, which is the
 // entire reason this file exists.
 import { Life } from './engine.js';
-import { pattern, RLES } from './patterns.js';
+import { pattern, RLES, CATEGORIES, patternMeta, encodeRLE, decodeRLE, parseRLE, transformCells } from './patterns.js';
+import { EXT } from './library-ext.js';
 import { LEVELS } from './levels.js';
 
 let fails = 0;
@@ -97,7 +98,7 @@ const EXPECT = {
   pentadec: { kind: 'oscillator', period: 15 },
 
   glider: { kind: 'ship', period: 4, diagonal: true },
-  lwss: { kind: 'ship', period: 4 }, mwss: { kind: 'ship', period: 4 },
+  lwss: { kind: 'ship', period: 4 }, mwss: { kind: 'ship', period: 4 }, hwss: { kind: 'ship', period: 4 },
   flotilla: { kind: 'ship', period: 4 },
   loafer: { kind: 'ship', period: 7 },      // c/7, as the label claims
   copperhead: { kind: 'ship', period: 10 }, // c/10
@@ -106,6 +107,9 @@ const EXPECT = {
   bunnies: { kind: 'unbounded' }, rabbits: { kind: 'unbounded' },
   switchEngine: { kind: 'unbounded' }, gosperGun: { kind: 'unbounded' },
   diehard: { kind: 'dies' },
+  // From the Golly set: the small ones are cheap enough to run here.
+  blom: { kind: 'unbounded' }, lidka: { kind: 'unbounded' }, iwona: { kind: 'unbounded' }, justyna: { kind: 'unbounded' },
+  pufferTrain: { kind: 'unbounded' }, quad20: { kind: 'unbounded' }, spacefiller: { kind: 'unbounded' },
 };
 
 for (const [name, want] of Object.entries(EXPECT)) {
@@ -118,7 +122,7 @@ for (const [name, want] of Object.entries(EXPECT)) {
       : got.kind === 'oscillator' ? `oscillator p${got.period}`
         : got.kind === 'dies' ? `dies at gen ${got.gen}`
           : got.kind;
-  check(`${RLES[name].label} is ${want.kind}${want.period ? ' period ' + want.period : ''}`, ok, '-> ' + desc);
+  check(`${patternMeta(name).label} is ${want.kind}${want.period ? ' period ' + want.period : ''}`, ok, '-> ' + desc);
 }
 
 // A methuselah has to run a long time from very little, or it is just noise.
@@ -156,10 +160,49 @@ function popAfter(name, gens, size = 260) {
     hi < 200 && lo > 0, `population settles between ${lo} and ${hi}`);
 }
 
+// ── the shelf ────────────────────────────────────────────────────────────
+// Every key a category names must resolve, with a label and a note, and every
+// Golly entry must decode to the size it declares -- a typo in a 90KB RLE is
+// invisible until something is placed and looks wrong.
+{
+  const keys = CATEGORIES.flatMap((c) => c.of);
+  const bad = keys.filter((k) => { try { return !patternMeta(k) || !pattern(k).cells.length; } catch { return true; } });
+  check('every shelf entry resolves', bad.length === 0, bad.join(', ') || keys.length + ' entries');
+  const dup = keys.filter((k, i) => keys.indexOf(k) !== i);
+  check('no pattern is shelved twice', dup.length === 0, dup.join(', '));
+  const unshelved = [...Object.keys(RLES), ...Object.keys(EXT)].filter((k) => !keys.includes(k));
+  check('every pattern is on a shelf', unshelved.length === 0, unshelved.join(', '));
+  const sized = Object.entries(EXT).filter(([k, e]) => { const p = pattern(k); return p.w !== e.w || p.h !== e.h; });
+  check('every Golly entry decodes to its declared size', sized.length === 0, sized.map(([k]) => k).join(', '));
+  check('the Turing machine is there and is the size Rendell built', EXT.turing && pattern('turing').w === 1714 && pattern('turing').h === 1647, EXT.turing ? pattern('turing').w + 'x' + pattern('turing').h + ', ' + pattern('turing').cells.length + ' cells' : 'missing');
+}
+
+// ── RLE in and out ───────────────────────────────────────────────────────
+// What SELECT saves and PASTE reads is the same format Golly writes; a cell
+// lost in either direction would make a custom pattern silently wrong.
+{
+  let bad = 0;
+  for (const k of [...Object.keys(RLES), 'stargate', 'p52gun']) {
+    const p = pattern(k);
+    const { body } = encodeRLE(p.cells, p.w, p.h);
+    const d = decodeRLE(body);
+    const a = p.cells.map((c) => c.join(',')).sort().join(';');
+    const b = d.cells.map((c) => c.join(',')).sort().join(';');
+    if (a !== b) { bad++; console.log('       ' + k + ' changed on the way through RLE'); }
+  }
+  check('encode→decode returns every cell', bad === 0);
+  const parsed = parseRLE('#N Glider\n#C the smallest ship\nx = 3, y = 3, rule = B3/S23\nbob$2bo$\n3o!\n');
+  check('parseRLE reads a whole file', parsed.name === 'Glider' && parsed.w === 3 && parsed.rle === 'bob$2bo$3o!', JSON.stringify(parsed));
+  const g = pattern('glider');
+  const r1 = transformCells(g, 1, false), f1 = transformCells(g, 0, true);
+  check('rotate keeps the cell count and swaps the box', r1.cells.length === 5 && r1.w === g.h && r1.h === g.w);
+  check('flip mirrors x', f1.cells.every(([x]) => x >= 0 && x < g.w) && f1.cells.some(([x, y]) => !g.cells.some(([gx, gy]) => gx === x && gy === y)));
+}
+
 // Every pattern the library lists must exist, or the sidebar renders a gap.
 {
   const missing = [];
-  for (const n of Object.keys(EXPECT)) if (!RLES[n]) missing.push(n);
+  for (const n of Object.keys(EXPECT)) if (!patternMeta(n)) missing.push(n);
   check('every tested pattern exists in the library', missing.length === 0, missing.join(', '));
 }
 

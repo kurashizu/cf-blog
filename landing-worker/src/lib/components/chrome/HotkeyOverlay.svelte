@@ -60,6 +60,18 @@
 			]
 		},
 		{
+			title: 'LIFELAB — THE DISH',
+			color: '#61afef',
+			note: 'Active on view 7 whenever no text field has focus',
+			keys: [
+				{ key: 'Space', desc: 'Run / pause' },
+				{ key: 'N or .', desc: 'Step one generation' },
+				{ key: 'R / F', desc: 'Rotate / mirror the pattern in hand' },
+				{ key: 'Esc', desc: 'Put the pattern down, or drop the selection' },
+				{ key: 'wheel / pinch', desc: 'Zoom; right-drag or two fingers pan' }
+			]
+		},
+		{
 			title: 'SYNTH — QWERTY PIANO',
 			color: '#c678dd',
 			note: 'Active on view 2 whenever no text field has focus',

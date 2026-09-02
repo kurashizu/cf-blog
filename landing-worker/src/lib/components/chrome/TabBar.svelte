@@ -107,12 +107,12 @@
 			<span class="hidden 2xl:inline">[~]&nbsp;CONSOLE</span><span class="2xl:hidden">[~]</span>
 		</button>
 
-		<div class="flex items-center gap-1 sm:gap-2" data-tour="tabs">
+		<div class="flex items-center gap-0.5 sm:gap-2" data-tour="tabs">
 			{#each TABS as tab (tab.id)}
 				<button
 					onclick={() => nav(tab.id)}
 					title={tab.title}
-					class="px-2 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
+					class="px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
 						? 'text-black font-black'
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
 					style={activeTab === tab.id ? `background-color: ${tab.color}` : undefined}

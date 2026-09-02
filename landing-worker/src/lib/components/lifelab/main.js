@@ -6,7 +6,7 @@
 // -- the automaton, the pattern library, the level data and the save format --
 // are checked: engine.js, patterns.js and levels.js all pass.
 import { Life } from './engine.js';
-import { pattern, rotateCells, RLES, kindOf } from './patterns.js';
+import { pattern, transformCells, kindOf, CATEGORIES, patternMeta, custom, parseRLE, decodeRLE, encodeRLE, normalizeCells } from './patterns.js';
 import { LEVELS } from './levels.js';
 
 const $ = s => document.querySelector(s);
@@ -15,7 +15,7 @@ const $ = s => document.querySelector(s);
 // so binding here left the second visit holding elements that were no longer
 // in the document, drawing into a detached canvas: a blank panel.
 let termEl, cv, ctx, topbar, tray, msgEl;
-let wipeBtn, logWrap, logToggle, tbScroll;
+let wipeBtn, logWrap, logToggle, tbScroll, stampBar, selBar, traySecs;
 let guideEl, gstep, gtext;
 
 /**
@@ -41,6 +41,12 @@ function bind() {
   topbar = $('#topbar'); tray = $('#tray'); msgEl = $('#msg');
   wipeBtn = $('#wipebtn');
   logWrap = $('#logwrap'); logToggle = $('#logtoggle');
+  // Floating bars over the dish, built here rather than in the markup: they
+  // are the game's own furniture, and rebuilt with it on every mount.
+  const wrap = $('#cvwrap');
+  stampBar = document.createElement('div'); stampBar.id = 'stampbar'; stampBar.className = 'fbar'; stampBar.hidden = true;
+  selBar = document.createElement('div'); selBar.id = 'selbar'; selBar.className = 'fbar'; selBar.hidden = true;
+  wrap.append(stampBar, selBar);
 
   // Handlers and the size observer belong to the nodes, so they are re-attached
   // with them rather than once in start().
@@ -101,13 +107,28 @@ const ICONS = {
   back:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M5 2v8L1 6zm5 0v8L6 6z" fill="currentColor"/></svg>',
   lock:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M3 5V3h1V2h4v1h1v2h1v6H2V5zm2 0h2V3H5z" fill="currentColor"/></svg>',
   check: '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M0 6h2v2H0zM2 8h2v2H2zM4 6h2v2H4zM6 4h2v2H6zM8 2h2v2H8zM10 0h2v2h-2z" fill="currentColor"/></svg>',
+  sel:   '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M0 0h3v1H1v2H0zM9 0h3v3h-1V1H9zM0 9h1v2h2v1H0zM11 9h1v3H9v-1h2zM5 0h2v1H5zM5 11h2v1H5zM0 5h1v2H0zM11 5h1v2h-1z" fill="currentColor"/></svg>',
+  flip:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M5 0h2v12H5zM0 3h3v6H0zM9 3h3v6H9z" fill="currentColor" fill-opacity=".5"/><path d="M5 0h2v12H5z" fill="currentColor"/></svg>',
+  dish:  '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M0 0h12v12H0zm1 1v10h10V1z" fill="currentColor"/><path d="M3 3h6v6H3z" fill="currentColor" fill-opacity=".45"/></svg>',
 };
+
+/* Dish sizes. The default is big enough for a gun to fire into; the largest
+   fits Rendell's Turing machine (1714x1647) with room around it. Anything past
+   that is a wall of cells the browser cannot step quickly, so the shelf stops
+   there. */
+const DISH_SIZES = [[320, 200], [640, 400], [1280, 800], [2000, 1800]];
+/** Steps per frame stop once this much of the frame has gone on them. */
+const STEP_BUDGET_MS = 12;
 
 const S = {
   idx: 0, L: null, eng: null, ghost: null, buf: null, bctx: null, img: null,
   phase: 'edit', running: false, speed: 1,
   cam: { x: 0, y: 0, s: 12 },
-  tool: 'pan', stamp: null, rot: 0,
+  tool: 'pan', stamp: null, rot: 0, flip: false,
+  /** Rectangle being selected, in cells, or null. */
+  sel: null,
+  /** On touch, a stamp is previewed at the tapped cell and placed from the bar. */
+  pendingTap: null,
   stampsUsed: 0, presetPop: 0, snap: null, goal: null,
   hover: null, drag: null, paintVal: 1,
   unlocked: 0,
@@ -176,6 +197,10 @@ function buildTopbar() {
   el.toolBtns.pan.dataset.tour = 'll-tools';
   if ((L.tools || []).includes('draw')) addTool('draw', ICONS.draw, 'DRAW');
   if ((L.tools || []).includes('erase')) addTool('erase', ICONS.erase, 'ERASE');
+  // SELECT: drag a box; the bar that follows saves it as a pattern of your
+  // own, copies it as RLE, or clears it.
+  addTool('sel', ICONS.sel, 'SELECT');
+  el.toolBtns.sel.title = 'Drag a rectangle to save it as a pattern, copy it as RLE, or clear it';
   // No separator before the speed control: it is part of the same "how you
   // work" half as the tools, and the extra 9px was enough to push it onto a
   // second row of its own at ordinary window widths.
@@ -183,141 +208,266 @@ function buildTopbar() {
     S.speed = (S.speed + 1) % SPEEDS.length;
     el.spd.querySelector('span').textContent = 'SPD ' + SPEEDS[S.speed] + '/s';
   });
+  el.dish = mkBtn(ICONS.dish, '', cycleDish);
+  el.dish.title = 'Dish size — cycles 320×200, 640×400, 1280×800, 2000×1800. Cells are kept; shrinking asks first if any would be lost.';
+  syncDishBtn();
   const stats = document.createElement('div');
   stats.id = 'stats';
   stats.dataset.tour = 'll-stats';
   const field = (label, inner) => '<span class="stat">' + label + ' ' + inner + '</span>';
+  // No RULE readout: the brand line already says B3/S23, and the row's width
+  // is better spent on the controls.
   stats.innerHTML =
     field('GEN', '<b id="stGen">0</b>') +
-    field('POP', '<b id="stPop">0</b>') +
-    field('RULE', '<b>B3/S23</b>');
+    field('POP', '<b id="stPop">0</b>');
   topbar.appendChild(stats);
   el.gen = stats.querySelector('#stGen');
   el.pop = stats.querySelector('#stPop');
 }
 
-function miniSVG(p, color) {
+/**
+ * A thumbnail. A canvas rather than an SVG of one <rect> per cell: the Turing
+ * machine has 36,000 cells and an SVG that size is a page of its own. Cached
+ * as a data URL so rebuilding the tray does not redraw every shelf.
+ */
+const thumbCache = new Map();
+function thumb(key, color) {
+  const ck = key + '|' + color;
+  if (thumbCache.has(ck)) return thumbCache.get(ck);
+  const p = pattern(key);
   const sc = Math.min(26 / p.w, 26 / p.h, 5);
   const W = Math.max(8, Math.round(p.w * sc)), H = Math.max(8, Math.round(p.h * sc));
-  let r = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + p.w + ' ' + p.h + '">';
-  p.cells.forEach(([x, y]) => { r += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="currentColor"/>'; });
-  return r + '</svg>';
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.fillStyle = color;
+  const ox = (W - p.w * sc) / 2, oy = (H - p.h * sc) / 2;
+  const cw = Math.max(sc, 0.35);
+  for (const [x, y] of p.cells) g.fillRect(ox + x * sc, oy + y * sc, cw, cw);
+  const html = '<img width="' + W + '" height="' + H + '" src="' + c.toDataURL() + '" alt="">';
+  thumbCache.set(ck, html);
+  return html;
 }
 
-/**
- * The sidebar list: every pattern, grouped by what it actually does.
- *
- * This is where the level list used to be. A campaign needs a table of
- * contents; a dish needs to tell you what is on the shelf, because the tray's
- * icons are eleven pixels wide and "LOAFER c/7" means nothing until someone
- * says it is a spaceship that moves one cell every seven generations.
- *
- * Every classification here was produced by simulating the pattern, not by
- * recalling what it is usually called -- three of the labels were wrong the
- * first time and the simulation is what caught them.
- */
-const LIBRARY = [
-  {
-    group: 'STILL LIFES', hint: 'never change',
-    of: ['block', 'beehive', 'loaf', 'tub', 'boat', 'pond', 'eater'],
-  },
-  {
-    group: 'OSCILLATORS', hint: 'repeat forever',
-    of: ['blinker', 'toad', 'beacon', 'clock', 'pulsar', 'figure8', 'pentadec'],
-  },
-  {
-    group: 'SPACESHIPS', hint: 'move across the grid',
-    of: ['glider', 'lwss', 'mwss', 'flotilla', 'loafer', 'copperhead'],
-  },
-  {
-    group: 'CHAOS', hint: 'small starts, long lives',
-    of: ['rpent', 'acorn', 'diehard', 'bunnies', 'rabbits', 'switchEngine'],
-  },
-  {
-    group: 'INFINITE', hint: 'grow without stopping',
-    of: ['gosperGun'],
-  },
-  {
-    group: 'UNITS', hint: 'the parts a computer is made of',
-    of: ['annihilate', 'sink', 'gunSink'],
-  },
-];
-
-/** What each pattern is, in one phrase. Simulated, not remembered. */
-const NOTES = {
-  block: '4 cells, the simplest stable shape',
-  beehive: 'stable, 6 cells',
-  loaf: 'stable, 7 cells',
-  tub: 'stable, 4 cells',
-  boat: 'stable, 5 cells',
-  pond: 'stable, 8 cells',
-  eater: 'stable — and it swallows a glider that hits it',
-  blinker: 'period 2, the smallest oscillator',
-  toad: 'period 2',
-  beacon: 'period 2',
-  clock: 'period 2',
-  pulsar: 'period 3, 48 cells',
-  figure8: 'period 8',
-  pentadec: 'period 15, the longest here',
-  glider: 'period 4, travels diagonally',
-  lwss: 'period 4, travels sideways',
-  mwss: 'period 4, one cell wider than the LWSS',
-  flotilla: 'three lightweights flying in formation',
-  loafer: 'one cell every 7 generations — found by a search program',
-  copperhead: 'one cell every 10 — not discovered until 2016',
-  rpent: '5 cells, still going 1000 generations later',
-  acorn: '7 cells that take 5000 generations to settle',
-  diehard: '7 cells that vanish completely at generation 130',
-  bunnies: '9 cells, runs for thousands',
-  rabbits: '9 cells, likewise',
-  switchEngine: 'grows forever, leaving debris behind it',
-  gosperGun: 'fires a glider every 30 generations, for ever',
-  annihilate: 'two gliders head-on — both destroyed, nothing left. A NOT gate',
-  sink: 'a glider flies into an eater and is gone; the eater repairs itself',
-  gunSink: 'an endless stream, absorbed. Population stays bounded for ever',
-};
+let trayQuery = '';
+/** Which sections are folded. Persisted: a shelf you closed stays closed. */
+let trayFolded = null;
+function loadFolded() {
+  if (trayFolded) return trayFolded;
+  try { trayFolded = JSON.parse(localStorage.getItem('lifelab.tray.folded') || '{}') || {}; } catch { trayFolded = {}; }
+  return trayFolded;
+}
+function saveFolded() { try { localStorage.setItem('lifelab.tray.folded', JSON.stringify(trayFolded || {})); } catch {} }
 
 function buildTray() {
   tray.innerHTML = '';
   el.stampBtns = {};
-  const L = S.L;
-  // LAB ACCESS opens the whole library inside a level. The budget is untouched,
-  // so it buys choice rather than an easier goal.
-  const names = (L.stamps === 'all' || (has('lab') && L.stamps))
-    ? Object.keys(RLES)
-    : (L.stamps || []);
-  // No inline display: it would beat the stylesheet, and an inline `flex` left
-  // over from when this was a single column is exactly what collapsed the grid
-  // into six-pixel slivers off the right edge -- the patterns were there, and
-  // unclickable. `#tray:empty` in the stylesheet handles the empty case.
   tray.style.removeProperty('display');
-  names.forEach((n, ni) => {
-    const p = pattern(n);
-    const b = document.createElement('button');
-    b.className = 'stamp';
-    b.style.color = PCOLORS[ni % PCOLORS.length];
-    b.innerHTML = miniSVG(p) + '<span>' + p.label + '</span>';
-    b.onclick = () => {
-      if (S.stamp === n) { S.stamp = null; S.tool = 'pan'; }
-      else { S.stamp = n; S.tool = 'stamp'; }
-      syncTools();
-    };
-    el.stampBtns[n] = b;
-    tray.appendChild(b);
-  });
-  if (names.length) {
-    const b = document.createElement('button');
-    b.className = 'stamp';
-    b.style.gridColumn = '1 / -1';
-    b.innerHTML = ICONS.rot + '<span>ROTATE [R]</span>';
-    b.onclick = () => { S.rot = (S.rot + 1) % 4; };
-    tray.appendChild(b);
+  const search = document.createElement('input');
+  search.id = 'trsearch'; search.type = 'search'; search.placeholder = 'search patterns'; search.value = trayQuery;
+  search.autocomplete = 'off'; search.spellcheck = false;
+  search.oninput = () => { trayQuery = search.value.trim().toLowerCase(); renderTray(); };
+  tray.appendChild(search);
+  traySecs = document.createElement('div'); traySecs.id = 'trsecs';
+  tray.appendChild(traySecs);
+  renderTray();
+}
+
+function renderTray() {
+  if (!traySecs) return;
+  traySecs.innerHTML = '';
+  el.stampBtns = {};
+  const folded = loadFolded();
+  const q = trayQuery;
+  const sections = CATEGORIES.map(c => ({ ...c, items: c.of }));
+  sections.push({ id: 'custom', label: 'CUSTOM', hint: 'yours, kept in this browser', items: custom.list().map(c => c.key), mine: true });
+  let colour = 0;
+  for (const sec of sections) {
+    const items = sec.items.filter(k => {
+      if (!q) return true;
+      const m = patternMeta(k);
+      return (m.label + ' ' + (m.note || '') + ' ' + (m.credit || '') + ' ' + sec.label).toLowerCase().includes(q);
+    });
+    if (!items.length && !sec.mine) continue;
+    const box = document.createElement('div'); box.className = 'trsec';
+    const open = q ? true : !folded[sec.id];
+    box.classList.toggle('fold', !open);
+    const hd = document.createElement('button'); hd.type = 'button'; hd.className = 'trhd';
+    hd.innerHTML = '<span class="tcar">' + (open ? '&#9662;' : '&#9656;') + '</span><span class="tlbl">' + sec.label + '</span><small>' + items.length + '</small>';
+    hd.title = sec.hint;
+    hd.onclick = () => { folded[sec.id] = open; saveFolded(); renderTray(); };
+    box.appendChild(hd);
+    const grid = document.createElement('div'); grid.className = 'trgrid';
+    for (const k of items) grid.appendChild(stampButton(k, PCOLORS[colour++ % PCOLORS.length], sec.mine));
+    if (sec.mine) {
+      const add = document.createElement('button'); add.className = 'stamp tradd';
+      add.innerHTML = ICONS.sel + '<span>FROM SELECTION</span>';
+      add.title = 'Switch to SELECT, drag a box on the dish, then SAVE from the bar that appears';
+      add.onclick = () => { S.stamp = null; S.tool = 'sel'; syncTools(); syncStampBar(); tlog('> SELECT: drag a box on the dish, then SAVE', 't-sys'); };
+      const paste = document.createElement('button'); paste.className = 'stamp tradd';
+      paste.innerHTML = ICONS.draw + '<span>PASTE RLE</span>';
+      paste.title = 'Paste a pattern in RLE, the format LifeWiki and Golly use';
+      paste.onclick = importRLE;
+      grid.append(add, paste);
+    }
+    box.appendChild(grid);
+    traySecs.appendChild(box);
   }
+  syncTools();
+}
+
+function stampButton(k, color, mine) {
+  const m = patternMeta(k);
+  const p = pattern(k);
+  const b = document.createElement('button');
+  b.className = 'stamp';
+  b.style.color = color;
+  const big = p.w > S.L.w || p.h > S.L.h;
+  b.innerHTML = thumb(k, color) + '<span>' + m.label + '</span>' +
+    (p.w * p.h >= 2500 ? '<i' + (big ? ' class="big"' : '') + '>' + p.w + '&times;' + p.h + '</i>' : '');
+  b.title = m.label + ' — ' + p.w + '×' + p.h + ', ' + p.cells.length + ' cells' +
+    (m.note ? '\n' + m.note : '') + (m.credit ? '\n' + m.credit : '') +
+    (big ? '\nBigger than the dish — selecting it offers to enlarge the dish' : '');
+  b.onclick = () => selectStamp(k);
+  if (mine) {
+    const x = document.createElement('span'); x.className = 'del'; x.innerHTML = '&#10005;'; x.title = 'Delete this pattern';
+    x.onclick = (e) => { e.stopPropagation(); custom.remove(k); if (S.stamp === k) { S.stamp = null; S.tool = 'pan'; } renderTray(); syncStampBar(); tlog('> deleted ' + m.label, 't-warn'); };
+    b.appendChild(x);
+  }
+  el.stampBtns[k] = b;
+  return b;
+}
+
+/** Picks a stamp, offering to grow the dish first when it would not fit. */
+function selectStamp(k) {
+  if (S.stamp === k) { S.stamp = null; S.tool = 'pan'; S.pendingTap = null; syncTools(); syncStampBar(); return; }
+  const p = pattern(k), m = patternMeta(k);
+  if (p.w > S.L.w || p.h > S.L.h) {
+    const [nw, nh] = fitDish(p.w, p.h);
+    showMsg(
+      'BIGGER THAN THE DISH',
+      m.label + ' is ' + p.w + '×' + p.h + ' cells; the dish is ' + S.L.w + '×' + S.L.h + '.\n' +
+      'Enlarge the dish to ' + nw + '×' + nh + '? Everything on it is kept.' +
+      (nw * nh > 2e6 ? '\n\nA dish this size steps slowly — expect a few generations a second, not hundreds.' : ''),
+      [
+        { label: 'ENLARGE & PLACE', fn: () => {
+          hideMsg();
+          resizeDish(nw, nh);
+          S.stamp = k; S.rot = 0; S.flip = false; S.tool = 'stamp';
+          // One sensible place for something this size: the middle.
+          placeStamp(nw >> 1, nh >> 1);
+          S.stamp = null; S.tool = 'pan';
+          fitCamera(); syncTools(); syncStampBar();
+        } },
+        { label: 'CANCEL', fn: hideMsg },
+      ]
+    );
+    return;
+  }
+  S.stamp = k; S.tool = 'stamp'; S.pendingTap = null;
+  syncTools(); syncStampBar();
+}
+
+/** The smallest shelf size with margin around w×h, or a custom one past the shelf. */
+function fitDish(w, h) {
+  for (const [dw, dh] of DISH_SIZES) if (dw >= w + 40 && dh >= h + 40) return [dw, dh];
+  return [w + 80, h + 80];
+}
+
+function syncStampBar() {
+  if (!stampBar) return;
+  if (!S.stamp) { stampBar.hidden = true; return; }
+  const m = patternMeta(S.stamp), p = transformCells(pattern(S.stamp), S.rot, S.flip);
+  const touch = matchMedia('(hover: none)').matches;
+  stampBar.hidden = false;
+  stampBar.innerHTML =
+    '<b>' + m.label + '</b><small>' + p.w + '&times;' + p.h + (S.rot ? ' &middot; ' + S.rot * 90 + '&deg;' : '') + (S.flip ? ' &middot; mirrored' : '') + '</small>' +
+    (S.pendingTap ? '<button class="tb go" id="sb-place">' + ICONS.check + '<span>PLACE HERE</span></button>' : '') +
+    '<button class="tb" id="sb-rot" title="Rotate a quarter turn [R]">' + ICONS.rot + '<span>ROTATE</span></button>' +
+    '<button class="tb" id="sb-flip" title="Mirror left-to-right [F]">' + ICONS.flip + '<span>FLIP</span></button>' +
+    '<button class="tb" id="sb-done" title="Put the stamp down [Esc]">' + ICONS.close + '<span>DONE</span></button>' +
+    '<em>' + (touch ? 'tap the dish to aim, then PLACE HERE · drag to pan' : 'click to place · right-drag to pan · R rotate · F flip · Esc done') + '</em>';
+  stampBar.querySelector('#sb-rot').onclick = () => { S.rot = (S.rot + 1) % 4; syncStampBar(); };
+  stampBar.querySelector('#sb-flip').onclick = () => { S.flip = !S.flip; syncStampBar(); };
+  stampBar.querySelector('#sb-done').onclick = () => { S.stamp = null; S.tool = 'pan'; S.pendingTap = null; syncTools(); syncStampBar(); };
+  const go = stampBar.querySelector('#sb-place');
+  if (go) go.onclick = () => { const c = S.pendingTap; if (c) { placeStamp(c.x, c.y); } S.pendingTap = null; syncStampBar(); };
+}
+
+function syncSelBar() {
+  if (!selBar) return;
+  const r = selRect();
+  if (!r || S.tool !== 'sel' || S.drag) { selBar.hidden = true; return; }
+  const n = S.eng.rectCount(r);
+  selBar.hidden = false;
+  selBar.innerHTML =
+    '<b>SELECTION</b><small>' + r.w + '&times;' + r.h + ' &middot; ' + n + ' cells</small>' +
+    '<button class="tb go" id="sl-save"' + (n ? '' : ' disabled') + '>' + ICONS.check + '<span>SAVE AS PATTERN</span></button>' +
+    '<button class="tb" id="sl-copy"' + (n ? '' : ' disabled') + ' title="Copy as RLE, pasteable into Golly or back in here">' + ICONS.draw + '<span>COPY RLE</span></button>' +
+    '<button class="tb" id="sl-clear"' + (n ? '' : ' disabled') + '>' + ICONS.clear + '<span>CLEAR</span></button>' +
+    '<button class="tb" id="sl-x" title="Drop the selection [Esc]">' + ICONS.close + '</button>';
+  selBar.querySelector('#sl-save').onclick = saveSelection;
+  selBar.querySelector('#sl-copy').onclick = copySelection;
+  selBar.querySelector('#sl-clear').onclick = () => {
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) S.eng.set(x, y, 0);
+    tlog('> cleared ' + n + ' cells', 't-sys'); syncSelBar();
+  };
+  selBar.querySelector('#sl-x').onclick = () => { S.sel = null; syncSelBar(); };
+}
+
+/** The selection as a clamped rectangle, or null. */
+function selRect() {
+  const q = S.sel; if (!q) return null;
+  const x = Math.max(0, Math.min(q.x0, q.x1)), y = Math.max(0, Math.min(q.y0, q.y1));
+  const x2 = Math.min(S.L.w - 1, Math.max(q.x0, q.x1)), y2 = Math.min(S.L.h - 1, Math.max(q.y0, q.y1));
+  if (x2 < x || y2 < y) return null;
+  return { x, y, w: x2 - x + 1, h: y2 - y + 1 };
+}
+function selectionCells() {
+  const r = selRect(); if (!r) return { cells: [], w: 0, h: 0 };
+  const cells = [];
+  for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (S.eng.get(x, y)) cells.push([x, y]);
+  return normalizeCells(cells);
+}
+function saveSelection() {
+  const { cells, w, h } = selectionCells();
+  if (!cells.length) { deny('nothing selected'); return; }
+  showPrompt('SAVE AS PATTERN', w + '×' + h + ', ' + cells.length + ' cells. Name it:', 'MY PATTERN', (name) => {
+    const key = custom.add(name, cells, w, h);
+    hideMsg();
+    S.sel = null; syncSelBar();
+    renderTray();
+    tlog('> saved ' + patternMeta(key).label + ' to CUSTOM', 't-sys');
+    selectStamp(key);
+  });
+}
+function copySelection() {
+  const { cells, w, h } = selectionCells();
+  if (!cells.length) { deny('nothing selected'); return; }
+  const { header, body } = encodeRLE(cells, w, h);
+  const text = header + '\n' + body;
+  const done = () => tlog('> copied ' + cells.length + ' cells as RLE', 't-sys');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => showRLE(text));
+  else showRLE(text);
+}
+function showRLE(text) {
+  showPrompt('RLE', 'Clipboard access was refused; copy it from here:', '', null, text);
+}
+function importRLE() {
+  showPrompt('PASTE RLE', 'A whole .rle file or just the body (b = dead, o = alive, $ = next row, ! = end).', 'NAME', (name, text) => {
+    const parsed = parseRLE(text || '');
+    let d;
+    try { d = parsed.rle ? normalizeCells(decodeRLE(parsed.rle).cells) : null; } catch { d = null; }
+    if (!d || !d.cells.length) { deny('that is not RLE I can read'); return; }
+    const key = custom.add(name || parsed.name || 'PASTED', d.cells, d.w, d.h, parsed.comments[0]);
+    hideMsg(); renderTray();
+    tlog('> imported ' + patternMeta(key).label + ' (' + d.w + '×' + d.h + ', ' + d.cells.length + ' cells)', 't-sys');
+    selectStamp(key);
+  }, '', true);
 }
 
 /* ---------------- level loading ---------------- */
 function loadLevel(i) {
-  S.idx = i; const L = LEVELS[i]; S.L = L;
+  S.idx = i; const L = { ...LEVELS[i] }; S.L = L;
   S.eng = new Life(L.w, L.h);
   S.ghost = new Float32Array(L.w * L.h);
   S.buf = document.createElement('canvas'); S.buf.width = L.w; S.buf.height = L.h;
@@ -325,13 +475,55 @@ function loadLevel(i) {
   S.img = S.bctx.createImageData(L.w, L.h);
   S.presetPop = 0;
   S.phase = 'edit'; S.running = false; S.stampsUsed = 0; S.snap = null; S.goal = null;
-  S.stamp = null; S.rot = 0; S.drag = null; lastDeny = ''; S.stepIdx = 0; S.won = false;
+  S.stamp = null; S.rot = 0; S.flip = false; S.sel = null; S.pendingTap = null; S.drag = null; lastDeny = ''; S.stepIdx = 0; S.won = false;
   S.tool = 'draw';
   buildTopbar(); buildTray();
   fitCamera();
   hideMsg();
-  syncRun(); syncTools();
+  syncRun(); syncTools(); syncStampBar(); syncSelBar();
 }
+
+/* ---------------- dish size ---------------- */
+/** Re-makes the board at w×h, keeping every cell that still fits. */
+function resizeDish(w, h) {
+  const old = S.eng, L = S.L;
+  const eng = new Life(w, h);
+  const cw = Math.min(L.w, w), ch = Math.min(L.h, h);
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const v = old.get(x, y); if (v) eng.set(x, y, v); }
+  eng.gen = old.gen;
+  L.w = w; L.h = h;
+  S.eng = eng;
+  S.ghost = new Float32Array(w * h);
+  S.buf = document.createElement('canvas'); S.buf.width = w; S.buf.height = h;
+  S.bctx = S.buf.getContext('2d');
+  S.img = S.bctx.createImageData(w, h);
+  S.rewind.length = 0;
+  S.sel = null;
+  clampCam();
+  syncDishBtn(); syncSelBar(); renderTray();
+  tlog('> DISH ' + w + '×' + h, 't-sys');
+}
+
+function syncDishBtn() {
+  if (!el.dish) return;
+  el.dish.innerHTML = ICONS.dish + '<span>' + S.L.w + '&times;' + S.L.h + '</span>';
+}
+
+/** Next size on the shelf; shrinking asks first when cells would fall off. */
+function cycleDish() {
+  const i = DISH_SIZES.findIndex(([w, h]) => w === S.L.w && h === S.L.h);
+  const [w, h] = DISH_SIZES[(i + 1) % DISH_SIZES.length];
+  const lost = (w < S.L.w || h < S.L.h) ? S.eng.pop - S.eng.rectCount({ x: 0, y: 0, w: Math.min(w, S.L.w), h: Math.min(h, S.L.h) }) : 0;
+  if (lost > 0) {
+    showMsg('SHRINK THE DISH?', lost + ' cells lie outside ' + w + '×' + h + ' and would be lost.',
+      [{ label: 'SHRINK IT', fn: () => { hideMsg(); resizeDish(w, h); } }, { label: 'KEEP IT', fn: hideMsg }], true);
+    return;
+  }
+  resizeDish(w, h);
+}
+
+/** How many snapshots the rewind keeps: forty on a small dish, a few on a huge one. */
+function rewindCap() { return Math.max(3, Math.min(40, Math.floor(1.6e7 / (S.L.w * S.L.h)))); }
 
 /**
  * Empties the dish, after asking.
@@ -369,7 +561,7 @@ function placeStamp(cx, cy) {
   if (!ok) { deny('does not fit: partly outside the dish'); return; }
   cells.forEach(([x, y]) => S.eng.set(x, y, 1));
   S.stampsUsed++;
-  tlog('> placed ' + RLES[S.stamp].label + ' @ (' + ox + ',' + oy + ')', 't-sys');
+  tlog('> placed ' + patternMeta(S.stamp).label + ' @ (' + ox + ',' + oy + ')', 't-sys');
 }
 
 /* ---------------- run control ---------------- */
@@ -403,7 +595,7 @@ function doStep() {
   // so going back means having kept the frames. Forty is enough to replay a
   // collision and cheap next to the board itself.
   S.rewind.push(S.eng.snapshot());
-  if (S.rewind.length > 40) S.rewind.shift();
+  while (S.rewind.length > rewindCap()) S.rewind.shift();
   S.eng.step();
 }
 
@@ -423,6 +615,7 @@ function syncRun() {
 }
 function syncTools() {
   for (const [n, b] of Object.entries(el.toolBtns)) b.classList.toggle('on', S.tool === n && !S.stamp);
+  if (S.tool !== 'sel') { S.sel = null; syncSelBar(); }
   for (const [n, b] of Object.entries(el.stampBtns)) { const on = S.stamp === n; b.classList.toggle('on', on); b.style.borderColor = on ? b.style.color : ''; }
 }
 
@@ -450,12 +643,12 @@ function paint(x, y, v) {
 }
 
 function stampCellsAt(cx, cy) {
-  const p = rotateCells(pattern(S.stamp), S.rot);
+  const p = transformCells(pattern(S.stamp), S.rot, S.flip);
   const ox = cx - (p.w >> 1), oy = cy - (p.h >> 1);
   const cells = p.cells.map(([x, y]) => [ox + x, oy + y]);
   const ok = cells.every(([x, y]) =>
     x >= 0 && y >= 0 && x < S.L.w && y < S.L.h && canEditCell(x, y, true));
-  return { cells, ok, ox, oy };
+  return { cells, ok, ox, oy, w: p.w, h: p.h };
 }
 
 function showMsg(title, text, btns, bad) {
@@ -474,6 +667,46 @@ function showMsg(title, text, btns, bad) {
 }
 function hideMsg() { msgEl.classList.add('hidden'); }
 
+/**
+ * A dialog with a name field and, optionally, a text area. Built in the dish
+ * rather than with window.prompt: a native prompt is modal for the whole
+ * browser, cannot be styled, and on some setups never returns focus.
+ * @param {string} title @param {string} text @param {string} placeholder
+ * @param {((name: string, body: string) => void) | null} onOk
+ * @param {string=} body @param {boolean=} withBody
+ */
+function showPrompt(title, text, placeholder, onOk, body = '', withBody = false) {
+  msgEl.innerHTML = '';
+  const box = document.createElement('div'); box.className = 'box';
+  const h = document.createElement('h2'); h.textContent = title;
+  const p = document.createElement('p'); p.textContent = text;
+  box.append(h, p);
+  let input = null, area = null;
+  if (onOk) {
+    input = document.createElement('input'); input.type = 'text'; input.placeholder = placeholder; input.maxLength = 28; input.className = 'pin';
+    box.appendChild(input);
+  }
+  if (withBody || body) {
+    area = document.createElement('textarea'); area.className = 'pta'; area.spellcheck = false;
+    area.placeholder = 'x = 3, y = 3\nbob$2bo$3o!';
+    if (body) { area.value = body; area.readOnly = true; }
+    box.appendChild(area);
+  }
+  const row = document.createElement('div'); row.className = 'row';
+  if (onOk) {
+    const ok = document.createElement('button'); ok.className = 'tb'; ok.innerHTML = '<span>OK</span>';
+    ok.onclick = () => onOk(input.value.trim(), area ? area.value : '');
+    row.appendChild(ok);
+  }
+  const cancel = document.createElement('button'); cancel.className = 'tb'; cancel.innerHTML = '<span>' + (onOk ? 'CANCEL' : 'CLOSE') + '</span>';
+  cancel.onclick = hideMsg;
+  row.appendChild(cancel);
+  box.appendChild(row); msgEl.appendChild(box);
+  msgEl.classList.remove('hidden');
+  (area && !body ? area : input || cancel).focus();
+  if (input) input.onkeydown = (e) => { if (e.key === 'Enter') onOk(input.value.trim(), area ? area.value : ''); };
+}
+
 /* ---------------- camera / input ---------------- */
 function fitCamera() {
   const r = cv.getBoundingClientRect();
@@ -483,7 +716,9 @@ function fitCamera() {
   // room to read one, but letting a 13x9 board fill an 842px panel gives 54px
   // cells that read as a bug rather than a board; 30 is legible and still looks
   // like a grid. Elsewhere 22 is plenty.
-  S.cam.s = Math.max(1.5, Math.min(22, s));
+  // The floor lets a 2000-cell dish fit on screen as a map; on the default
+  // dish the fit is well above it anyway.
+  S.cam.s = Math.max(0.3, Math.min(22, s));
   S.cam.x = (r.width - S.L.w * S.cam.s) / 2;
   S.cam.y = (r.height - S.L.h * S.cam.s) / 2;
 }
@@ -502,7 +737,7 @@ function clampCam() {
   const r = cv.getBoundingClientRect();
   if (!r.width || !r.height) return;
 
-  const minS = Math.max(1.2, Math.min(r.width / S.L.w, r.height / S.L.h) * 0.55);
+  const minS = Math.max(0.25, Math.min(r.width / S.L.w, r.height / S.L.h) * 0.55);
   const maxS = Math.max(minS + 0.1, Math.min(r.width, r.height) / 5);
   S.cam.s = Math.max(minS, Math.min(maxS, S.cam.s));
 
@@ -532,7 +767,7 @@ let onPointerMove = null, onPointerUp = null, onKeyDown = null;
 
 /** Zoom about a canvas-space point by factor k (wheel and pinch share it). */
 function zoomAt(mx, my, k) {
-  const ns = Math.max(1.2, Math.min(48, S.cam.s * k));
+  const ns = Math.max(0.25, Math.min(48, S.cam.s * k));
   const kk = ns / S.cam.s;
   S.cam.x = mx - (mx - S.cam.x) * kk;
   S.cam.y = my - (my - S.cam.y) * kk;
@@ -571,6 +806,19 @@ function bindInput() {
     return;
   }
   if (e.button !== 0) return;
+  if (S.tool === 'sel') {
+    S.sel = { x0: c.x, y0: c.y, x1: c.x, y1: c.y };
+    S.drag = { mode: 'select' };
+    try { cv.setPointerCapture(e.pointerId); } catch {}
+    syncSelBar();
+    return;
+  }
+  // A finger cannot hover, so on touch a stamp is aimed by tapping and placed
+  // from the bar; a finger that moves instead pans.
+  if (S.tool === 'stamp' && S.stamp && e.pointerType === 'touch') {
+    S.drag = { mode: 'tap', mx: e.clientX, my: e.clientY, cell: c };
+    return;
+  }
   if (S.tool === 'draw') {
     if (!inGrid(c)) return;
     S.paintVal = S.eng.get(c.x, c.y) ? 0 : 1;
@@ -601,6 +849,15 @@ function bindInput() {
   }
   S.hover = toCell(e);
   if (!S.drag) return;
+  if (S.drag.mode === 'tap') {
+    if (Math.hypot(e.clientX - S.drag.mx, e.clientY - S.drag.my) > 8) S.drag = { mode: 'pan', mx: e.clientX, my: e.clientY };
+    return;
+  }
+  if (S.drag.mode === 'select') {
+    const c = toCell(e);
+    S.sel.x1 = Math.max(0, Math.min(S.L.w - 1, c.x)); S.sel.y1 = Math.max(0, Math.min(S.L.h - 1, c.y));
+    return;
+  }
   if (S.drag.mode === 'pan') {
     S.cam.x += e.clientX - S.drag.mx;
     S.cam.y += e.clientY - S.drag.my;
@@ -613,7 +870,10 @@ function bindInput() {
   }
   };
   onPointerUp = e => {
+    if (S.drag && S.drag.mode === 'tap') { S.hover = S.drag.cell; S.pendingTap = S.drag.cell; syncStampBar(); }
+    const wasSelect = S.drag && S.drag.mode === 'select';
     S.drag = null;
+    if (wasSelect) syncSelBar();
     if (e && touches.delete(e.pointerId) && touches.size < 2) pinch = null;
   };
   window.addEventListener('pointermove', onPointerMove);
@@ -629,11 +889,18 @@ function bindInput() {
   // A dialog is modal: the mode chooser, the shop, and the win/fail boxes all
   // sit over the board, and SPACE running the simulation behind one of them was
   // how a shown failure could quietly become a win.
-  if (msgEl && !msgEl.classList.contains('hidden')) return;
+  if (msgEl && !msgEl.classList.contains('hidden')) { if (e.key === 'Escape') hideMsg(); return; }
+  // Typing in the tray's search box is not a command.
+  const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+  if (tag === 'input' || tag === 'textarea') return;
   if (e.code === 'Space') { e.preventDefault(); startPause(); }
   else if (e.code === 'KeyN' || e.code === 'Period') stepOnce();
-  else if (e.code === 'KeyR') { if (S.stamp) S.rot = (S.rot + 1) % 4; }
-    else if (e.code === 'Escape') { S.stamp = null; S.tool = 'pan'; syncTools(); }
+  else if (e.code === 'KeyR') { if (S.stamp) { S.rot = (S.rot + 1) % 4; syncStampBar(); } }
+  else if (e.code === 'KeyF') { if (S.stamp) { S.flip = !S.flip; syncStampBar(); } }
+  else if (e.code === 'Escape') {
+    if (S.sel) { S.sel = null; syncSelBar(); return; }
+    S.stamp = null; S.pendingTap = null; S.tool = 'pan'; syncTools(); syncStampBar();
+  }
   };
   window.addEventListener('keydown', onKeyDown);
 }
@@ -683,18 +950,31 @@ function resize() {
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
 }
 
-function updateImage() {
+/** The cells the camera can see, plus one, clamped to the board. */
+function visibleRange() {
+  const r = cv.getBoundingClientRect();
+  return {
+    x0: Math.max(0, Math.floor(-S.cam.x / S.cam.s) - 1),
+    y0: Math.max(0, Math.floor(-S.cam.y / S.cam.s) - 1),
+    x1: Math.min(S.L.w, Math.ceil((r.width - S.cam.x) / S.cam.s) + 1),
+    y1: Math.min(S.L.h, Math.ceil((r.height - S.cam.y) / S.cam.s) + 1),
+  };
+}
+
+/** Repaints the visible part of the board image. Off-screen cells are left
+ *  as they were; they are repainted the moment they scroll into view. On a
+ *  2000×1800 dish this is the difference between 60 frames a second and 8. */
+function updateImage(v) {
   const L = S.L, e = S.eng, d = S.img.data, g = S.ghost, st = e.stride, a = e.a;
   const [pr, pg, pb] = THEME.panel, [ar, ag, ab] = THEME.accent;
-  let di = 0, gi = 0;
-  for (let y = 0; y < L.h; y++) {
-    let si = (y + 1) * st + 1;
-    for (let x = 0; x < L.w; x++, si++, gi++, di += 4) {
-      const v = a[si];
+  for (let y = v.y0; y < v.y1; y++) {
+    let si = (y + 1) * st + v.x0 + 1, gi = y * L.w + v.x0, di = gi * 4;
+    for (let x = v.x0; x < v.x1; x++, si++, gi++, di += 4) {
+      const v0 = a[si];
       let r, gg, b, al = 255;
-      if (v) {
+      if (v0) {
         g[gi] = 1;
-        const t = Math.min(v, 40) / 40;
+        const t = Math.min(v0, 40) / 40;
         if (t < 0.35) {
           const u = t / 0.35;
           r = (229 - 77 * u) | 0; gg = (192 + 3 * u) | 0; b = (123 - 2 * u) | 0;
@@ -748,11 +1028,20 @@ function drawPreview() {
   if (S.tool !== 'stamp' || !S.stamp || !S.hover) return;
   if (!S.L.sandbox && S.phase !== 'edit') return;
   if (!inGrid(S.hover)) return;
-  const { cells, ok } = stampCellsAt(S.hover.x, S.hover.y);
+  const { cells, ok, ox, oy, w, h } = stampCellsAt(S.hover.x, S.hover.y);
+  // The box first, so a big pattern's footprint reads even where its cells
+  // are a few pixels each; then the cells, green when it fits, red when not.
+  const [bx, by, bw, bh] = cellRect(ox, oy, w, h);
+  ctx.save();
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = ok ? 'rgba(86,182,194,.55)' : 'rgba(224,108,117,.7)'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+  ctx.restore();
   ctx.fillStyle = ok ? 'rgba(86,182,194,.5)' : 'rgba(224,108,117,.5)';
+  const inset = S.cam.s >= 4 ? 1 : 0;
   cells.forEach(([x, y]) => {
     const [sx, sy, sw, sh] = cellRect(x, y, 1, 1);
-    ctx.fillRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
+    ctx.fillRect(sx + inset * 0.5, sy + inset * 0.5, Math.max(1, sw - inset), Math.max(1, sh - inset));
   });
 }
 
@@ -789,6 +1078,7 @@ function drawTrace() {
     // the board. The rotation the player has applied turns the vector too.
     let [dx, dy] = [kind.dx, kind.dy];
     for (let r = 0; r < (S.rot & 3); r++) [dx, dy] = [-dy, dx];
+    if (S.flip) dx = -dx;
     const steps = Math.max(S.L.w, S.L.h);
     let ex = cx, ey = cy;
     for (let i = 1; i <= steps; i++) {
@@ -828,18 +1118,25 @@ function drawTrace() {
 }
 
 /** The next generation, faintly, while still editing. */
+/** The next generation, faintly, while still editing. Simulated for the
+ *  visible cells only: on a big dish the whole board is too much to copy and
+ *  step every frame, and nothing off screen can be seen anyway. */
 function drawGhostFrame() {
   if (!has('ghost') || S.running || S.phase !== 'edit') return;
   if (S.cam.s < 4) return;
-  const sim = new Life(S.L.w, S.L.h);
-  for (let y = 0; y < S.L.h; y++)
-    for (let x = 0; x < S.L.w; x++) if (S.eng.get(x, y)) sim.set(x, y, 1);
+  const v = visibleRange();
+  const W = v.x1 - v.x0 + 2, H = v.y1 - v.y0 + 2;
+  if (W <= 2 || H <= 2 || W * H > 300000) return;
+  const sim = new Life(W, H);
+  for (let y = v.y0 - 1; y < v.y1 + 1; y++)
+    for (let x = v.x0 - 1; x < v.x1 + 1; x++)
+      if (x >= 0 && y >= 0 && x < S.L.w && y < S.L.h && S.eng.get(x, y)) sim.set(x - v.x0 + 1, y - v.y0 + 1, 1);
   if (sim.pop === 0 || sim.pop > 1200) return;
   sim.step();
   ctx.fillStyle = 'rgba(152,195,121,.22)';
-  for (let y = 0; y < S.L.h; y++)
-    for (let x = 0; x < S.L.w; x++) {
-      if (!sim.get(x, y) || S.eng.get(x, y)) continue;
+  for (let y = v.y0; y < v.y1; y++)
+    for (let x = v.x0; x < v.x1; x++) {
+      if (!sim.get(x - v.x0 + 1, y - v.y0 + 1) || S.eng.get(x, y)) continue;
       const [sx, sy, sw, sh] = cellRect(x, y, 1, 1);
       ctx.fillRect(sx + 1, sy + 1, sw - 2, sh - 2);
     }
@@ -851,8 +1148,9 @@ function drawHeat() {
   ctx.save();
   ctx.font = Math.floor(S.cam.s * 0.5) + 'px ui-monospace, monospace';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (let y = 0; y < S.L.h; y++)
-    for (let x = 0; x < S.L.w; x++) {
+  const v = visibleRange();
+  for (let y = v.y0; y < v.y1; y++)
+    for (let x = v.x0; x < v.x1; x++) {
       if (S.eng.get(x, y)) continue;
       let n = 0;
       for (let dy = -1; dy <= 1; dy++)
@@ -890,13 +1188,38 @@ function draw() {
   // Cleared, not painted: outside the board the container's own translucent
   // theme background (style.css) shows, video and all, same as the chrome.
   ctx.clearRect(0, 0, cv.width, cv.height);
-  updateImage();
-  S.bctx.putImageData(S.img, 0, 0);
+  const v = visibleRange();
+  if (v.x1 > v.x0 && v.y1 > v.y0) {
+    updateImage(v);
+    S.bctx.putImageData(S.img, 0, 0, v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0);
+  }
   ctx.imageSmoothingEnabled = false;
   ctx.setTransform(dpr * S.cam.s, 0, 0, dpr * S.cam.s, dpr * S.cam.x, dpr * S.cam.y);
   ctx.drawImage(S.buf, 0, 0);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawGrid(); drawGhostFrame(); drawHeat(); drawPreview(); drawTrace(); drawHover();
+  drawDishFrame(); drawGrid(); drawGhostFrame(); drawHeat(); drawPreview(); drawTrace(); drawHover(); drawSelection();
+}
+
+/** The edge of the dish: one faint line, so a translucent board still has a
+ *  visible boundary and "does not fit" has something to be measured against. */
+function drawDishFrame() {
+  const [sx, sy, sw, sh] = cellRect(0, 0, S.L.w, S.L.h);
+  ctx.strokeStyle = rgba(THEME.fg, .18); ctx.lineWidth = 1;
+  ctx.strokeRect(Math.round(sx) + 0.5, Math.round(sy) + 0.5, Math.round(sw) - 1, Math.round(sh) - 1);
+}
+
+/** The SELECT box: a dashed rectangle over the cells it covers. */
+function drawSelection() {
+  const r = selRect();
+  if (!r || S.tool !== 'sel') return;
+  const [sx, sy, sw, sh] = cellRect(r.x, r.y, r.w, r.h);
+  ctx.save();
+  ctx.fillStyle = 'rgba(229,192,123,.08)';
+  ctx.fillRect(sx, sy, sw, sh);
+  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = 'rgba(229,192,123,.9)'; ctx.lineWidth = 1;
+  ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
+  ctx.restore();
 }
 
 function updateGuide() {
@@ -987,13 +1310,20 @@ function frame(t) {
   if (S.running) {
     acc += dt * SPEEDS[S.speed];
     let n = 0;
-    while (acc >= 1 && n < 120 && S.running) { acc -= 1; n++; doStep(); }
+    const t0 = performance.now();
+    // A big dish steps slowly; past the budget the rest of this frame's
+    // generations are dropped rather than the frame, so the view stays live.
+    while (acc >= 1 && n < 120 && S.running) {
+      acc -= 1; n++; doStep();
+      if (performance.now() - t0 > STEP_BUDGET_MS) { acc = 0; break; }
+    }
     if (acc > 4) acc = 0;
   } else acc = 0;
   // The page can be replaced between frames; if it was, take the new nodes and
   // re-fit the camera to them before drawing into a canvas of a different size.
   if (bind()) { buildTopbar(); buildTray(); resize(); }
   draw(); updateStats(); updateGuide();
+  if (selBar && !selBar.hidden && S.running) syncSelBar();
   raf = requestAnimationFrame(frame);
 }
 

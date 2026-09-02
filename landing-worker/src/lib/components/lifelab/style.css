@@ -154,6 +154,51 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
    not come out", because most of them could not be got at. */
 #tray{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:8px 7px;border-left:1px solid var(--ll-line);background:color-mix(in srgb, var(--ll-panel) 45%, transparent);width:166px;flex:none;align-content:start;overflow-y:auto;scrollbar-width:thin}
 #tray:empty{display:none}
+/* The tray is a column of shelves now: a search box, then one foldable
+   section per kind of pattern, each a two-column grid of stamps. */
+#tray{grid-template-columns:none;display:flex;flex-direction:column;gap:6px;width:186px}
+#trsearch{flex:none;width:100%;border:1px solid var(--ll-line);background:rgba(0,0,0,.25);color:var(--ll-fg);
+  font:inherit;font-size:10px;letter-spacing:1px;padding:5px 7px;border-radius:2px;outline:none}
+#trsearch:focus{border-color:var(--ll-accent)}
+#trsearch::placeholder{color:var(--ll-faint)}
+#trsecs{display:flex;flex-direction:column;gap:6px;min-height:0}
+.trsec{display:flex;flex-direction:column;gap:5px}
+.trhd{display:flex;align-items:center;gap:6px;background:none;border:none;border-bottom:1px solid var(--ll-line);
+  color:var(--ll-dim);font:inherit;font-size:9px;letter-spacing:2px;padding:4px 2px;cursor:pointer;text-align:left}
+.trhd:hover{color:var(--ll-fg)}
+.trhd .tcar{color:var(--ll-faint);width:8px}
+.trhd .tlbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trhd small{color:var(--ll-faint);font-size:9px;letter-spacing:0}
+.trsec.fold .trgrid{display:none}
+.trgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+.stamp{position:relative}
+.stamp i{font-style:normal;font-size:8px;letter-spacing:0;color:var(--ll-faint)}
+.stamp i.big{color:var(--ll-amber)}
+.stamp img{display:block;image-rendering:pixelated}
+.stamp .del{position:absolute;top:2px;right:3px;font-size:9px;color:var(--ll-faint);line-height:1;padding:2px}
+.stamp .del:hover{color:var(--ll-red)}
+.stamp.tradd{border-style:dashed;color:var(--ll-dim)}
+.stamp.tradd svg{width:14px;height:14px}
+/* Floating bars over the dish: what is in hand (a stamp, a selection) and
+   what can be done with it. Centred at the top, out of the way of the log in
+   the bottom-left and the guide in the bottom-right. */
+.fbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:4;max-width:calc(100% - 16px);
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;
+  padding:5px 8px;border:1px solid var(--ll-line);border-radius:2px;background:rgba(0,0,0,.55);
+  backdrop-filter:blur(3px);font-size:10px;letter-spacing:1px}
+.fbar[hidden]{display:none}
+.fbar b{color:var(--ll-accent);font-weight:normal;letter-spacing:2px}
+.fbar small{color:var(--ll-faint);font-size:9px}
+.fbar em{flex-basis:100%;text-align:center;font-style:normal;color:var(--ll-faint);font-size:9px;letter-spacing:.5px}
+.fbar button.tb{padding:3px 7px;font-size:10px;gap:5px}
+.fbar button.tb.go{border-color:var(--ll-green);color:var(--ll-green)}
+.fbar button.tb:disabled{opacity:.35;cursor:default}
+#selbar b{color:var(--ll-yellow)}
+/* The name / RLE prompt inside the dialog box. */
+#msg .box input.pin,#msg .box textarea.pta{display:block;width:100%;border:1px solid var(--ll-line);background:rgba(0,0,0,.3);
+  color:var(--ll-fg);font:inherit;font-size:12px;padding:7px 9px;border-radius:2px;outline:none;margin-bottom:12px}
+#msg .box input.pin:focus,#msg .box textarea.pta:focus{border-color:var(--ll-accent)}
+#msg .box textarea.pta{height:120px;resize:vertical;font-size:11px;line-height:1.5;white-space:pre}
 #tray::-webkit-scrollbar{width:5px}
 #tray::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
 .stamp{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:1px solid var(--ll-line);color:var(--ll-dim);font:inherit;font-size:9px;letter-spacing:0;padding:5px 2px;cursor:pointer;border-radius:2px;min-width:0}
@@ -282,13 +327,17 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
      of the width from a dish that is the whole point -- and becomes a strip
      of stamps under the dish that scrolls sideways. */
   #stagerow{flex-direction:column}
-  #tray{width:auto;max-height:86px;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:72px;
-    grid-template-rows:1fr;overflow-x:auto;overflow-y:hidden;border-left:none;border-top:1px solid var(--ll-line);
-    padding:6px 8px;scrollbar-width:none}
-  #tray::-webkit-scrollbar{display:none}
+  #tray{width:auto;max-height:150px;overflow-y:auto;border-left:none;border-top:1px solid var(--ll-line);padding:6px 8px}
+  /* Each shelf is a row that scrolls sideways; the shelves stack. */
+  .trgrid{display:flex;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  .trgrid::-webkit-scrollbar{display:none}
+  .stamp{flex:none;width:72px}
+  .fbar em{display:none}
   #wordmark{font-size:9px}
-  /* The floating instruction card shrinks so it stops covering the dish. */
-  #guide{right:8px;bottom:8px;max-width:52%;font-size:11px;padding:6px 8px}
+  /* The instruction card is one static line, and on a phone it covered a
+     third of the dish. Faded out rather than display:none, which main.js
+     sets inline on every frame. */
+  #guide{opacity:0;pointer-events:none}
   #logwrap{width:min(62vw,220px);max-height:min(30%,132px);left:8px;bottom:8px}
   /* "what the dish just did" is a gloss on a heading that already says LOG;
      at this width it wraps to a second line and costs more than it explains. */

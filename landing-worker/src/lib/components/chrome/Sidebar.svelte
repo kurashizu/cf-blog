@@ -47,7 +47,7 @@
  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝`}</pre>
 
 		<!-- Columns come and go with the width; a cell never splits its own two words. -->
-		<div class="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap">
+		<div class="grid grid-cols-[repeat(auto-fit,minmax(105px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap">
 			<div class="flex items-center gap-1.5"><span class="bg-[#e06c75] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[K]</span><span class="text-[#e06c75] font-bold">urashizu's</span></div>
 			<div class="flex items-center gap-1.5"><span class="bg-[#61afef] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[R]</span><span class="text-[#61afef] font-bold">andom-</span></div>
 			<div class="flex items-center gap-1.5"><span class="bg-[#e5c07b] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[S]</span><span class="text-[#e5c07b] font-bold">tuff</span></div>
