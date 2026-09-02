@@ -14,6 +14,7 @@
 	 * -- nothing to scatter, and it would only add inert nodes.
 	 */
 	import { onMount } from 'svelte';
+	import { performanceMode } from '../../stores/performance';
 
 	let {
 		art,
@@ -143,6 +144,7 @@
 	}
 
 	function onPointerMove(e: PointerEvent) {
+		if ($performanceMode) return;
 		pendingX = e.clientX;
 		pendingY = e.clientY;
 		if (rafHandle) return;
@@ -165,7 +167,7 @@
 	/** A brief full-scatter burst on click, then everything springs home -- the
 	 *  "poked" moment, distinct from the pointer-follow hover scatter. */
 	function burst() {
-		if (bursting) return;
+		if (bursting || $performanceMode) return;
 		bursting = true;
 		for (const g of glyphs) {
 			const angle = g.seed * Math.PI * 2;
@@ -201,7 +203,7 @@
      px of real overflow on whichever ancestor happened to be overflow-auto,
      which is exactly the bug: a scrollbar appearing under a banner that
      never scrolled before, on every page that uses this component. -->
-<div class="overflow-x-auto">
+<div class="overflow-x-auto {className}">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -- role/tabindex are only ever both set together, when onclick is provided; the linter can't see that from the dynamic role expression. -->
 	<div
 		bind:this={containerEl}
@@ -215,7 +217,7 @@
 		tabindex={onclick ? 0 : undefined}
 		onkeydown={onclick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleClick()) : undefined}
 		{title}
-		class="relative select-none overflow-hidden w-fit {onclick ? 'cursor-pointer' : 'cursor-default'} {className}"
+		class="relative select-none overflow-hidden w-fit {onclick ? 'cursor-pointer' : 'cursor-default'}"
 		style={colorRanges ? undefined : `color: ${color}`}
 	>
 		<!-- Sizes the box exactly like the <pre> it replaces: same text, same font,

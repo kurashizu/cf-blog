@@ -1,5 +1,6 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { performanceMode } from './performance';
 
 export const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 export const BRAILLE_WAVES = ['⣀', '⣄', '⣤', '⣦', '⣶', '⣷', '⣿', '⣶', '⣦', '⣤', '⣄'];
@@ -30,7 +31,13 @@ export function initClock(): () => void {
 	updateTime();
 	const clockInterval = setInterval(updateTime, 1000);
 
+	// The wall clock above is informational (TabBar shows the real time) and
+	// stays live regardless. This one is purely decorative -- a braille
+	// spinner/pulse that exists to look alive, nothing reads it for meaning
+	// -- so under performance mode it just stops advancing rather than
+	// ticking 12.5x/second forever on every page for no functional reason.
 	const animInterval = setInterval(() => {
+		if (get(performanceMode)) return;
 		spinnerFrame.update((f) => (f + 1) % SPINNER_FRAMES.length);
 		pulseStep.update((p) => (p + 1) % 12);
 	}, 80);
