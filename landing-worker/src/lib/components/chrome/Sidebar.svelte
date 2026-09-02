@@ -45,9 +45,9 @@
 						playSound('click');
 					}}
 					title="Global settings — sound, and clearing anything the site has stored in this browser"
-					class="press text-white/45 hover:text-[#56b6c2] hover:rotate-45 transition-all cursor-pointer leading-none"
+					class="press px-1.5 py-0.2 border border-white/25 rounded-xs text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] transition-colors cursor-pointer font-mono font-bold text-xs leading-none group"
 				>
-					⚙
+					<span class="inline-block group-hover:rotate-90 transition-transform duration-300">⚙</span>
 				</button>
 			</span>
 		</BoxHeader>

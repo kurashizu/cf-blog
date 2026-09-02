@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import BoxHeader from './BoxHeader.svelte';
+	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { playSound, soundEngine, setSoundMuted, setSoundVolume } from '../../sound';
 	import { clearOverlay, storedOverlaySize } from '../krsz-vm/disk-overlay';
@@ -224,10 +225,10 @@
 <div class="scrim-in fixed inset-0 z-[160] bg-black/70 backdrop-blur-[2px] flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto" onclick={onClose}>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="modal-pop w-full max-w-2xl {themeStyles.cardBg} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto"
+		class="modal-pop w-full max-w-2xl {themeStyles.cardBgVideo} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto transform-gpu"
 		onclick={(e) => e.stopPropagation()}
 	>
-		<BoxHeader title="GLOBAL_SETTINGS // KRSZ.IN" short="SETTINGS" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBg} rounded-t-sm" style="color: {themeStyles.cursorColor}">
+		<BoxHeader title="GLOBAL_SETTINGS // KRSZ.IN" short="SETTINGS" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm" style="color: {themeStyles.cursorColor}">
 			<button onclick={onClose} class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors">[ Esc ]</button>
 		</BoxHeader>
 
@@ -249,20 +250,19 @@
 						{soundMuted ? 'MUTED' : 'ON'}
 					</button>
 				</div>
-				<div class="flex items-center gap-3">
-					<span class="text-xs text-white/70 shrink-0 w-16">VOLUME</span>
-					<input
-						type="range"
-						min="0"
-						max="1"
-						step="0.01"
-						value={soundVolume}
-						disabled={soundMuted}
-						oninput={(e) => setSoundVolume(Number((e.target as HTMLInputElement).value))}
-						class="focus-glow flex-1 accent-[#98c379] disabled:opacity-30"
-						style="--krsz-focus-color: #98c379"
+				<div class="flex items-center {soundMuted ? 'opacity-30 pointer-events-none' : ''}">
+					<HorizontalHardwareFader
+						label="VOLUME"
+						value={Math.round(soundVolume * 100)}
+						min={0}
+						max={100}
+						step={1}
+						unit="%"
+						width={140}
+						showValue
+						color="#98c379"
+						onChange={(v) => setSoundVolume(v / 100)}
 					/>
-					<span class="text-xs text-white/45 w-9 text-right tabular-nums">{Math.round(soundVolume * 100)}%</span>
 				</div>
 			</div>
 

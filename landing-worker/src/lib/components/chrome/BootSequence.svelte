@@ -37,7 +37,17 @@
 		},
 		{ label: 'DISPLAY', run: () => `${screen.width}x${screen.height} @ ${window.devicePixelRatio}x` },
 		{ label: 'COLOR DEPTH', run: () => `${screen.colorDepth}-bit` },
+		{ label: 'ORIENTATION', run: () => screen.orientation?.type ?? (screen.width >= screen.height ? 'landscape' : 'portrait') },
+		{ label: 'TOUCH', run: () => (navigator.maxTouchPoints > 0 ? `${navigator.maxTouchPoints} point${navigator.maxTouchPoints === 1 ? '' : 's'}` : 'n/a (no touch surface)') },
 		{ label: 'GPU', run: readGpu },
+		{ label: 'WEBGPU', run: readWebgpu },
+		{
+			label: 'WASM',
+			run: () =>
+				typeof WebAssembly === 'undefined'
+					? 'n/a'
+					: `baseline${typeof SharedArrayBuffer !== 'undefined' && crossOriginIsolated ? ' + threads (SharedArrayBuffer, cross-origin isolated)' : ''}`
+		},
 		{
 			label: 'WEBAUDIO',
 			run: () =>
@@ -47,9 +57,12 @@
 		},
 		{ label: 'MIDI', run: () => ('requestMIDIAccess' in navigator ? 'Web MIDI available' : 'n/a (no Web MIDI)') },
 		{ label: 'GAMEPAD', run: () => ('getGamepads' in navigator ? 'Gamepad API available' : 'n/a') },
+		{ label: 'NETWORK', run: readNetwork },
 		{ label: 'STORAGE QUOTA', run: readStorage },
+		{ label: 'PERSISTED', run: readPersisted },
 		{ label: 'SERVICE WORKER', run: readServiceWorker },
 		{ label: 'LOCALE / TZ', run: () => `${navigator.language} · ${Intl.DateTimeFormat().resolvedOptions().timeZone}` },
+		{ label: 'PAGE LOAD', run: readPageLoad },
 		{ label: 'EDGE POP', run: readEdge }
 	];
 
@@ -68,6 +81,24 @@
 		}
 	}
 
+	async function readWebgpu(): Promise<string> {
+		const gpu = (navigator as unknown as { gpu?: { requestAdapter: () => Promise<unknown> } }).gpu;
+		if (!gpu) return 'n/a (no navigator.gpu)';
+		try {
+			const adapter = await gpu.requestAdapter();
+			return adapter ? 'adapter granted — the chatbot can run on-GPU' : 'n/a (no adapter — driver blocklisted or missing)';
+		} catch {
+			return 'n/a';
+		}
+	}
+
+	function readNetwork(): string {
+		const conn = (navigator as unknown as { connection?: { effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean } }).connection;
+		if (!conn) return navigator.onLine ? 'online (detail withheld by browser)' : 'offline';
+		const parts = [conn.effectiveType?.toUpperCase(), conn.downlink !== undefined ? `~${conn.downlink}Mbps` : null, conn.rtt !== undefined ? `${conn.rtt}ms rtt` : null];
+		return `${navigator.onLine ? 'online' : 'offline'} · ${parts.filter(Boolean).join(' · ') || 'n/a'}${conn.saveData ? ' · data saver on' : ''}`;
+	}
+
 	async function readStorage(): Promise<string> {
 		if (!navigator.storage?.estimate) return 'n/a';
 		try {
@@ -81,11 +112,28 @@
 		}
 	}
 
+	async function readPersisted(): Promise<string> {
+		if (!navigator.storage?.persisted) return 'n/a';
+		try {
+			const already = await navigator.storage.persisted();
+			return already ? 'granted — storage survives disk pressure' : 'not persisted (browser may evict under pressure)';
+		} catch {
+			return 'n/a';
+		}
+	}
+
 	async function readServiceWorker(): Promise<string> {
 		if (!navigator.serviceWorker) return 'n/a (unsupported)';
 		if (navigator.serviceWorker.controller) return 'active — offline shell cached';
 		const reg = await navigator.serviceWorker.getRegistration();
 		return reg ? 'registered, activates on next load' : 'not registered';
+	}
+
+	function readPageLoad(): string {
+		const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+		if (!nav) return 'n/a';
+		const type = nav.type === 'navigate' ? 'fresh load' : nav.type === 'reload' ? 'reload' : nav.type === 'back_forward' ? 'back/forward cache' : nav.type;
+		return `${nav.responseEnd.toFixed(0)}ms to first byte-complete response · ${type}`;
 	}
 
 	async function readEdge(): Promise<string> {
