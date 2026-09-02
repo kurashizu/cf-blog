@@ -605,6 +605,35 @@ function unbindInput() {
   onPointerMove = onPointerUp = onKeyDown = null;
 }
 
+/* ---------------- theme ---------------- */
+/* The dish takes its colors from the site's theme tokens, read off the canvas'
+   own computed style (style.css aliases them as --ll-*). Read once at start
+   and again whenever the root layout repaints :root for a theme change --
+   never per frame; getComputedStyle inside the draw loop is a layout flush
+   per frame for a value that changes a few times a day. Only the game-state
+   ramp for live cells (yellow -> green -> blue by age) stays the game's own. */
+const THEME = { bg: [22, 23, 29], panel: [27, 29, 36], fg: [216, 222, 233], accent: [86, 182, 194] };
+function parseColor(str) {
+  const v = (str || '').trim();
+  let m = /^#([0-9a-f]{3})$/i.exec(v);
+  if (m) return [...m[1]].map(c => parseInt(c + c, 16));
+  m = /^#([0-9a-f]{6})/i.exec(v);
+  if (m) return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16));
+  m = /^rgba?\(([^)]+)\)/.exec(v);
+  if (m) return m[1].split(/[\s,/]+/).slice(0, 3).map(Number);
+  return null;
+}
+function readTheme() {
+  if (!cv) return;
+  const cs = getComputedStyle(cv);
+  for (const [k, prop] of [['bg', '--ll-bg'], ['panel', '--ll-panel'], ['fg', '--ll-fg'], ['accent', '--ll-accent']]) {
+    const c = parseColor(cs.getPropertyValue(prop));
+    if (c) THEME[k] = c;
+  }
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+let themeObs = null;
+
 /* ---------------- rendering ---------------- */
 function resize() {
   const r = cv.getBoundingClientRect();
@@ -615,12 +644,13 @@ function resize() {
 
 function updateImage() {
   const L = S.L, e = S.eng, d = S.img.data, g = S.ghost, st = e.stride, a = e.a;
+  const [pr, pg, pb] = THEME.panel, [ar, ag, ab] = THEME.accent;
   let di = 0, gi = 0;
   for (let y = 0; y < L.h; y++) {
     let si = (y + 1) * st + 1;
     for (let x = 0; x < L.w; x++, si++, gi++, di += 4) {
       const v = a[si];
-      let r, gg, b;
+      let r, gg, b, al = 255;
       if (v) {
         g[gi] = 1;
         const t = Math.min(v, 40) / 40;
@@ -632,12 +662,18 @@ function updateImage() {
           r = (152 - 55 * u) | 0; gg = (195 - 20 * u) | 0; b = (121 + 118 * u) | 0;
         }
       } else {
+        // Dead cells are the theme's panel color, left translucent so the
+        // board is a slab over the same video-lit backdrop as every other
+        // panel rather than an opaque hole in it. A fading ghost of a cell
+        // that just died tints toward the theme accent.
         let f = g[gi] * 0.90;
         if (f < 0.02) f = 0;
         g[gi] = f;
-        r = (26 + 62 * f) | 0; gg = (28 + 30 * f) | 0; b = (35 + 58 * f) | 0;
+        const k = f * 0.5;
+        r = (pr + (ar - pr) * k) | 0; gg = (pg + (ag - pg) * k) | 0; b = (pb + (ab - pb) * k) | 0;
+        al = (160 + 95 * f) | 0;
       }
-      d[di] = r; d[di + 1] = gg; d[di + 2] = b; d[di + 3] = 255;
+      d[di] = r; d[di + 1] = gg; d[di + 2] = b; d[di + 3] = al;
     }
   }
 }
@@ -654,7 +690,7 @@ function drawGrid() {
   const x1 = Math.min(S.L.w, Math.ceil((r.width - S.cam.x) / S.cam.s));
   const y0 = Math.max(0, Math.floor(-S.cam.y / S.cam.s));
   const y1 = Math.min(S.L.h, Math.ceil((r.height - S.cam.y) / S.cam.s));
-  ctx.strokeStyle = 'rgba(216,222,233,.06)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = rgba(THEME.fg, .06); ctx.lineWidth = 1;
   ctx.beginPath();
   for (let x = x0; x <= x1; x++) {
     const sx = S.cam.x + x * S.cam.s;
@@ -784,7 +820,7 @@ function drawHeat() {
       if (!n) continue;
       const [sx, sy, sw, sh] = cellRect(x, y, 1, 1);
       // Three is the one that matters: that cell is about to be born.
-      ctx.fillStyle = n === 3 ? 'rgba(152,195,121,.9)' : 'rgba(144,148,157,.4)';
+      ctx.fillStyle = n === 3 ? 'rgba(152,195,121,.9)' : rgba(THEME.fg, .35);
       ctx.fillText(String(n), sx + sw / 2, sy + sh / 2);
     }
   ctx.restore();
@@ -810,8 +846,9 @@ function draw() {
   resize();
   const dpr = devicePixelRatio || 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = "#16171d";
-  ctx.fillRect(0, 0, cv.width, cv.height);
+  // Cleared, not painted: outside the board the container's own translucent
+  // theme background (style.css) shows, video and all, same as the chrome.
+  ctx.clearRect(0, 0, cv.width, cv.height);
   updateImage();
   S.bctx.putImageData(S.img, 0, 0);
   ctx.imageSmoothingEnabled = false;
@@ -936,6 +973,11 @@ export function start() {
 
   last = performance.now(); acc = 0;
 
+  readTheme();
+  // The root layout pushes theme tokens onto <html style> on every switch.
+  themeObs = new MutationObserver(readTheme);
+  themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
   bindInput();
 
   // headless driver for automated checks
@@ -956,6 +998,8 @@ export function stop() {
   raf = 0;
   ro?.disconnect();
   ro = null;
+  themeObs?.disconnect();
+  themeObs = null;
   unbindInput();
   S.running = false;
   clearTimeout(winTimer);
