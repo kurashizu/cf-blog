@@ -76,10 +76,23 @@
 	</div>
 
 	<!-- Hotkey launchpad -->
-	<div data-tour="launchpad" class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
-		<div class="text-xs font-bold text-[#e5c07b] flex items-center justify-between border-b border-white/10 pb-0.5 shrink-0">
-			<span>┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
-			<span class="text-white/50 text-xs">[CTRL+0-7 · T · ?]</span>
+	<div data-tour="launchpad" class="launchpad border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
+		<!-- Sized by the panel's own width (container query), not the viewport:
+		     the sidebar is a fifth of the page on desktop and the whole of it on
+		     a phone, so viewport breakpoints get this exactly backwards. Each
+		     tier is a shorter reading of the same line rather than a truncated
+		     one; if even the shortest does not fit, the hint wraps whole onto a
+		     second line, right-aligned, instead of the text breaking mid-word. -->
+		<div class="text-xs font-bold text-[#e5c07b] flex flex-wrap items-center justify-between gap-x-2 border-b border-white/10 pb-0.5 shrink-0 whitespace-nowrap">
+			<span>
+				<span class="lp-t-full">┌─[ QUICK_HOTKEYS // LAUNCHPAD ]─┐</span>
+				<span class="lp-t-mid">┌─[ HOTKEYS // LAUNCHPAD ]─┐</span>
+				<span class="lp-t-short">┌─[ HOTKEYS ]─┐</span>
+			</span>
+			<span class="text-white/50 text-xs ml-auto" title="CTRL+0-7 jumps to a tab · T cycles the theme · ? lists every hotkey">
+				<span class="lp-h-full">[CTRL+0-7 · T · ?]</span>
+				<span class="lp-h-short">[^0-7 · T · ?]</span>
+			</span>
 		</div>
 
 		<div class="grid grid-cols-3 gap-1.5 py-1">
@@ -130,3 +143,16 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.launchpad { container-type: inline-size; }
+	.lp-t-mid, .lp-t-short, .lp-h-short { display: none; }
+	@container (max-width: 420px) {
+		.lp-t-full, .lp-h-full { display: none; }
+		.lp-t-mid, .lp-h-short { display: inline; }
+	}
+	@container (max-width: 320px) {
+		.lp-t-mid { display: none; }
+		.lp-t-short { display: inline; }
+	}
+</style>
