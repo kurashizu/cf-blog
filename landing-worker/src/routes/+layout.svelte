@@ -253,7 +253,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-[140] bg-black/50" onclick={() => consoleOverlayOpen.set(false)} transition:fade={{ duration: 150 }}></div>
 	<div
-		class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBg} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3"
+		class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBgVideo} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3"
 		transition:fly={{ y: -16, duration: 180, opacity: 0 }}
 	>
 		<div class="flex items-center justify-between text-xs font-mono font-bold pb-1">

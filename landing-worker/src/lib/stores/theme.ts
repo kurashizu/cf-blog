@@ -4,6 +4,19 @@ import { browser } from '$app/environment';
 export type FixedTheme = 'tokyo-matte' | 'gruvbox-dark' | 'nord-terminal' | 'cyber-amber';
 export type WorkspaceTheme = FixedTheme | 'auto';
 
+/**
+ * The KRSZ mark's own brand colors -- one per letter, fixed regardless of
+ * which of the four theme palettes above is active. Every other color on
+ * the site follows the current theme; this one deliberately doesn't, so the
+ * mark reads as a constant identity rather than another themed element.
+ */
+export const KRSZ_LETTER_COLORS = {
+	K: '#56b6c2',
+	R: '#e5c07b',
+	S: '#c678dd',
+	Z: '#98c379'
+} as const;
+
 export interface ThemeStyle {
 	bg: string;
 	text: string;

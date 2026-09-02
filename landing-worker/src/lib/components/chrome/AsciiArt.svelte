@@ -18,18 +18,30 @@
 	let {
 		art,
 		color,
+		colorRanges,
 		class: className = '',
 		onclick,
 		title
 	}: {
 		/** Raw multi-line block-letter text, exactly as it would sit inside a <pre>. */
 		art: string;
+		/** Fallback for any column not covered by colorRanges, and the only color used when colorRanges is omitted. */
 		color: string;
+		/** Per-letter coloring (the KRSZ brand mark): column ranges, inclusive, checked in order -- first match wins. Columns outside every range fall back to `color`. */
+		colorRanges?: { from: number; to: number; color: string }[];
 		class?: string;
 		/** Omit for a purely decorative banner -- the burst still plays on click, it just does nothing else. */
 		onclick?: () => void;
 		title?: string;
 	} = $props();
+
+	function colorForCol(col: number): string {
+		if (!colorRanges) return color;
+		for (const r of colorRanges) {
+			if (col >= r.from && col <= r.to) return r.color;
+		}
+		return color;
+	}
 
 	interface Glyph {
 		ch: string;
@@ -43,7 +55,13 @@
 	}
 
 	let rows = $derived(art.replace(/\n$/, '').split('\n'));
-	let glyphs = $derived.by(() => {
+	/** $state, not $derived -- applyPointer()/burst() mutate dx/dy on these
+	 *  objects in place every frame, and a $derived value can't be assigned
+	 *  to (the `glyphs = glyphs` re-trigger silently did nothing once this
+	 *  was flipped to $derived.by, which is what actually killed the hover
+	 *  effect: the physics ran, but nothing ever told Svelte to re-render). */
+	let glyphs = $state<Glyph[]>([]);
+	$effect(() => {
 		const out: Glyph[] = [];
 		rows.forEach((line, row) => {
 			[...line].forEach((ch, col) => {
@@ -51,7 +69,7 @@
 				out.push({ ch, row, col, dx: 0, dy: 0, seed: Math.random() });
 			});
 		});
-		return out;
+		glyphs = out;
 	});
 
 	let containerEl: HTMLDivElement | undefined = $state();
@@ -198,7 +216,7 @@
 		onkeydown={onclick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleClick()) : undefined}
 		{title}
 		class="relative select-none overflow-hidden w-fit {onclick ? 'cursor-pointer' : 'cursor-default'} {className}"
-		style="color: {color}"
+		style={colorRanges ? undefined : `color: ${color}`}
 	>
 		<!-- Sizes the box exactly like the <pre> it replaces: same text, same font,
 		     invisible, so its rendered box gives the real glyph cell size in px
@@ -209,7 +227,7 @@
 		{#each glyphs as g (g.row + ':' + g.col)}
 			<span
 				class="absolute top-0 left-0 transition-transform {hovering || bursting ? 'will-change-transform' : ''}"
-				style="transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
+				style="{colorRanges ? `color: ${colorForCol(g.col)};` : ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
 					? '60ms'
 					: hovering
 						? '90ms'

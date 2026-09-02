@@ -4,9 +4,18 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { playSound } from '../../sound';
-	import { theme, cycleTheme, THEME_STYLES, resolvedTheme } from '../../stores/theme';
+	import { theme, cycleTheme, THEME_STYLES, resolvedTheme, KRSZ_LETTER_COLORS } from '../../stores/theme';
 	import { spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
+
+	/* Each ANSI Shadow letter block is exactly 8 columns wide -- K/R/S/Z back
+	   to back with no gap, so the ranges are just four fixed 8-wide slices. */
+	const KRSZ_COLOR_RANGES = [
+		{ from: 0, to: 7, color: KRSZ_LETTER_COLORS.K },
+		{ from: 8, to: 15, color: KRSZ_LETTER_COLORS.R },
+		{ from: 16, to: 23, color: KRSZ_LETTER_COLORS.S },
+		{ from: 24, to: 31, color: KRSZ_LETTER_COLORS.Z }
+	];
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
@@ -42,22 +51,23 @@
 
 		<AsciiArt
 			color="#e5c07b"
+			colorRanges={KRSZ_COLOR_RANGES}
 			class="text-[8px] sm:text-xs leading-none font-black tracking-tight overflow-x-auto py-0.5"
 			title="krsz.in"
-			art={` ██╗  ██╗██████╗ ███████╗███████╗
- ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝
- █████╔╝ ██████╔╝███████╗  ███╔╝
- ██╔═██╗ ██╔══██╗╚════██║ ███╔╝
- ██║  ██╗██║  ██║███████║███████╗
- ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝`}
+			art={`██╗  ██╗██████╗ ███████╗███████╗
+██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝
+█████╔╝ ██████╔╝███████╗  ███╔╝
+██╔═██╗ ██╔══██╗╚════██║ ███╔╝
+██║  ██╗██║  ██║███████║███████╗
+╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝`}
 		/>
 
 		<!-- Columns come and go with the width; a cell never splits its own two words. -->
 		<div class="grid grid-cols-[repeat(auto-fit,minmax(105px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap">
-			<div class="flex items-center gap-1.5"><span class="bg-[#e06c75] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[K]</span><span class="text-[#e06c75] font-bold">urashizu's</span></div>
-			<div class="flex items-center gap-1.5"><span class="bg-[#61afef] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[R]</span><span class="text-[#61afef] font-bold">andom-</span></div>
-			<div class="flex items-center gap-1.5"><span class="bg-[#e5c07b] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[S]</span><span class="text-[#e5c07b] font-bold">tuff</span></div>
-			<div class="flex items-center gap-1.5"><span class="bg-[#98c379] text-black px-1 py-0.2 rounded-xs font-bold text-xs">[Z]</span><span class="text-[#98c379] font-bold">one.</span></div>
+			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.K}">[K]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.K}">urashizu's</span></div>
+			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.R}">[R]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.R}">andom-</span></div>
+			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.S}">[S]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.S}">tuff</span></div>
+			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.Z}">[Z]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.Z}">one.</span></div>
 		</div>
 	</div>
 
