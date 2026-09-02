@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import {
@@ -1082,7 +1083,7 @@
 				<button
 					onclick={cycleView}
 					title="Which of the machine's two outputs is shown. On AUTO it follows the guest: the serial terminal while it is a shell, the VGA screen once something takes the display graphically."
-					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {viewMode ===
+					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {viewMode ===
 					'auto'
 						? 'border-white/25 text-white/70 hover:bg-white/10'
 						: 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'}"
@@ -1092,7 +1093,7 @@
 				<button
 					onclick={() => (showKeyboard = !showKeyboard)}
 					title="On-screen keyboard — sends scancodes directly, which also avoids the layout mismatch a non-US physical keyboard hits"
-					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {showKeyboard
+					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {showKeyboard
 						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 						: 'border-white/25 text-white/70 hover:bg-white/10'}"
 				>
@@ -1104,28 +1105,28 @@
 					title={settings.machine === 'x86_64'
 						? 'Reload the page and boot again. QEMU runs its main under Asyncify and cannot be torn down in place, so this is a real reload — the saved disk is written first, so nothing is lost.'
 						: 'Rebuild the machine from scratch. Not Ctrl+Alt+Del: the kernel is handed to the emulator directly rather than loaded from the disk, so a guest reboot would leave SeaBIOS with nothing to boot.'}
-					class="px-2.5 py-1 border border-[#e5c07b]/50 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#e5c07b]/20"
+					class="px-2.5 py-1 border border-[#e5c07b]/50 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 hover:bg-[#e5c07b]/20"
 				>
 					↻ RESTART
 				</button>
 				<button
 					onclick={stop}
-					class="px-2.5 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black"
+					class="px-2.5 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer transition-colors active:scale-95 hover:bg-[#e06c75] hover:text-black"
 				>
 					POWER OFF
 				</button>
 			{:else if phase === 'loading'}
-				<span class="text-xs font-mono text-[#e5c07b]">◐ {status}</span>
+				<span class="text-xs font-mono text-[#e5c07b] blink-live">◐ {status}</span>
 				<button
 					onclick={stop}
-					class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10"
+					class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 hover:bg-white/10"
 				>
 					CANCEL
 				</button>
 			{:else}
 				<button
 					onclick={boot}
-					class="px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black"
+					class="px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer transition-colors active:scale-95 hover:bg-[#98c379] hover:text-black"
 				>
 					▶ BOOT
 				</button>
@@ -1149,7 +1150,7 @@
 						<span class="text-xs font-black font-mono text-[#56b6c2]">MACHINE CONFIG</span>
 						<div class="flex items-center gap-2">
 							<span class="text-[10px] font-mono text-white/35">saved in this browser · applies at next boot</span>
-							<button onclick={resetSettings} class="text-[10px] font-mono text-white/45 hover:text-white cursor-pointer underline">
+							<button onclick={resetSettings} class="press text-[10px] font-mono text-white/45 hover:text-white cursor-pointer underline transition-colors">
 								reset
 							</button>
 						</div>
@@ -1161,7 +1162,7 @@
 							<button
 								onclick={() => (settings.machine = value)}
 								title={hint}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.machine ===
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.machine ===
 								value
 									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
@@ -1177,7 +1178,7 @@
 						{#each MEMORY_CHOICES as mb (mb)}
 							<button
 								onclick={() => (settings.memoryMb = mb)}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.memoryMb === mb
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.memoryMb === mb
 									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
@@ -1192,7 +1193,7 @@
 						<button
 							onclick={() => (settings.network = !settings.network)}
 							title="Attach a virtio NIC and put a gateway behind it — DHCP, DNS and TCP — whose connections leave through the relay on this origin. Reachable destinations are limited by an allowlist enforced at the edge."
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.network
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.network
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
@@ -1206,7 +1207,7 @@
 						<button
 							onclick={() => (settings.persistDisk = !settings.persistDisk)}
 							title="Keep what the guest writes in this browser's origin-private filesystem and replay it on the next boot. The image itself stays read-only and shared; only the difference is stored, and only in this browser."
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.persistDisk
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.persistDisk
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
@@ -1215,7 +1216,7 @@
 						<button
 							onclick={wipeOverlay}
 							title="Delete the saved changes. The next boot starts from the image exactly as built."
-							class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:bg-[#e06c75]/20"
+							class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:bg-[#e06c75]/20"
 						>
 							WIPE
 						</button>
@@ -1232,7 +1233,7 @@
 						{#each VGA_CHOICES as mb (mb)}
 							<button
 								onclick={() => (settings.vgaMemoryMb = mb)}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.vgaMemoryMb === mb
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.vgaMemoryMb === mb
 									? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
@@ -1251,7 +1252,7 @@
 								title={res === 'auto'
 									? 'Leave the mode to the guest, which with no monitor to ask lands on 1024x768'
 									: `Ask X for ${res}. Takes effect the next time startx runs.`}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.resolution ===
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.resolution ===
 								res
 									? 'border-[#d19a66] bg-[#d19a66]/20 text-[#d19a66]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
@@ -1270,7 +1271,7 @@
 									fitScreen();
 								}}
 								title={hint}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.scaling ===
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.scaling ===
 								value
 									? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
@@ -1292,7 +1293,7 @@
 									: value === 'kernel'
 										? 'Load the kernel and initramfs directly, with the command line below'
 										: 'Boot the stock Alpine ISO through its bootloader'}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.boot === value
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.boot === value
 									? 'border-[#61afef] bg-[#61afef]/20 text-[#61afef]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
@@ -1308,7 +1309,7 @@
 							bind:value={settings.cmdline}
 							spellcheck="false"
 							title="Kernel command line, used only by direct kernel boot"
-							class="flex-1 min-w-[240px] px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-[11px] font-mono text-[#d8dee9] outline-none focus:border-[#56b6c2]"
+							class="flex-1 min-w-[240px] px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-[11px] font-mono text-[#d8dee9] outline-none transition-colors focus:border-[#56b6c2]"
 						/>
 					</div>
 
@@ -1318,7 +1319,7 @@
 							onclick={() => (settings.jit = !settings.jit)}
 							aria-pressed={settings.jit}
 							title="v86 interprets code until a block is hot, then compiles it to WebAssembly. Turning this off is much slower and only useful for comparison."
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.jit
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.jit
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
@@ -1328,7 +1329,7 @@
 							onclick={() => (settings.acpi = !settings.acpi)}
 							aria-pressed={settings.acpi}
 							title="Expose an ACPI table to the guest. Off by default: it gives the kernel more hardware to probe, and probing is where this emulator is weakest."
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors {settings.acpi
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.acpi
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
@@ -1337,7 +1338,7 @@
 						<button
 							onclick={resetSettings}
 							title="Put every setting on this panel back to its default, including the command line. The saved disk is left alone."
-							class="ml-auto px-2 py-0.5 border border-white/20 text-white/55 rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:border-white/50"
+							class="press ml-auto px-2 py-0.5 border border-white/20 text-white/55 rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:border-white/50"
 						>
 							RESET
 						</button>
@@ -1476,6 +1477,7 @@
 			<div
 				onclick={captureKeyboard}
 				class="absolute inset-0 flex items-end justify-center pb-3 bg-black/25 cursor-pointer"
+				transition:fade={{ duration: 180 }}
 			>
 				<span class="px-2.5 py-1 rounded-xs bg-black/85 border border-white/25 text-[11px] font-mono text-white/75">
 					click to type into the machine — Esc twice gives the keyboard back

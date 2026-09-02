@@ -13,6 +13,7 @@
 	import CameraTest from './CameraTest.svelte';
 	import TouchTest from './TouchTest.svelte';
 	import NetPowerInfo from './NetPowerInfo.svelte';
+	import { fade } from 'svelte/transition';
 
 	type ToolId =
 		| 'keyboard'
@@ -67,7 +68,7 @@
 				<button
 					onclick={() => select(tool.id)}
 					title={`${tool.label} — ${tool.desc}`}
-					class="px-2.5 py-1 border rounded-xs cursor-pointer transition-colors whitespace-nowrap {activeTool === tool.id
+					class="press px-2.5 py-1 border rounded-xs cursor-pointer transition-colors whitespace-nowrap {activeTool === tool.id
 						? 'border-white bg-white/20 text-white font-bold'
 						: 'border-white/20 hover:border-white/60 opacity-70'}"
 					style={activeTool === tool.id ? `color: ${tool.color}` : undefined}
@@ -83,30 +84,34 @@
 			<span class="text-[10px] sm:text-xs text-white/40 font-mono font-normal">{current.desc}</span>
 		</BoxHeader>
 
-		{#if activeTool === 'keyboard'}
-			<KeyboardTester />
-		{:else if activeTool === 'mouse'}
-			<MouseTester />
-		{:else if activeTool === 'touch'}
-			<TouchTest />
-		{:else if activeTool === 'audioout'}
-			<AudioOutTest />
-		{:else if activeTool === 'mic'}
-			<MicTest />
-		{:else if activeTool === 'camera'}
-			<CameraTest />
-		{:else if activeTool === 'net'}
-			<NetPowerInfo />
-		{:else if activeTool === 'typing'}
-			<TypingTest />
-		{:else if activeTool === 'gamepad'}
-			<GamepadTester />
-		{:else if activeTool === 'reaction'}
-			<ReactionTest />
-		{:else if activeTool === 'pixels'}
-			<ScreenTest />
-		{:else}
-			<DisplayInfo />
-		{/if}
+		{#key activeTool}
+			<div in:fade={{ duration: 140 }}>
+				{#if activeTool === 'keyboard'}
+					<KeyboardTester />
+				{:else if activeTool === 'mouse'}
+					<MouseTester />
+				{:else if activeTool === 'touch'}
+					<TouchTest />
+				{:else if activeTool === 'audioout'}
+					<AudioOutTest />
+				{:else if activeTool === 'mic'}
+					<MicTest />
+				{:else if activeTool === 'camera'}
+					<CameraTest />
+				{:else if activeTool === 'net'}
+					<NetPowerInfo />
+				{:else if activeTool === 'typing'}
+					<TypingTest />
+				{:else if activeTool === 'gamepad'}
+					<GamepadTester />
+				{:else if activeTool === 'reaction'}
+					<ReactionTest />
+				{:else if activeTool === 'pixels'}
+					<ScreenTest />
+				{:else}
+					<DisplayInfo />
+				{/if}
+			</div>
+		{/key}
 	</div>
 </div>

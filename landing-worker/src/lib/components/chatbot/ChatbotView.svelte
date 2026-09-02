@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { isLooping } from './markdown';
@@ -857,7 +858,7 @@
 				playSound('toggle');
 			}}
 			title="Generation limits and sampling"
-			class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {configOpen
+			class="press px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {configOpen
 				? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 				: 'border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20'}"
 		>
@@ -874,7 +875,7 @@
 				playSound('toggle');
 			}}
 			title="What this page downloads and stores in your browser"
-			class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {storageOpen
+			class="press px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {storageOpen
 				? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 				: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
 		>
@@ -889,7 +890,7 @@
 					inputEl?.focus();
 				}}
 				disabled={phase === 'generating'}
-				class="px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10 disabled:opacity-40"
+				class="press px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10 disabled:opacity-40"
 			>
 				CLEAR
 			</button>
@@ -905,7 +906,7 @@
 			{ k: 'topK' as const, label: 'top_k', hint: 'candidates considered' },
 			{ k: 'repetitionPenalty' as const, label: 'repetition penalty', hint: 'discourages repeats' }
 		]}
-		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-2">
+		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-2" transition:fly={{ y: -6, duration: 150, opacity: 0 }}>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
 				{#each F as f (f.k)}
 					<label class="flex items-center gap-2 font-mono">
@@ -931,7 +932,7 @@
 					<button
 						onclick={() => setThinkMode(!thinkMode)}
 						aria-pressed={thinkMode}
-						class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {thinkMode
+						class="press px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {thinkMode
 							? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
 							: 'border-white/20 text-white/55 hover:border-white/50'}"
 					>
@@ -949,7 +950,7 @@
 							saveConfig(config);
 						}}
 						aria-pressed={config.doSample}
-						class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {config.doSample
+						class="press px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {config.doSample
 							? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 							: 'border-white/20 text-white/55 hover:border-white/50'}"
 					>
@@ -966,7 +967,7 @@
 							saveConfig(config);
 						}}
 						aria-pressed={config.loopGuard}
-						class="px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {config.loopGuard
+						class="press px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {config.loopGuard
 							? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 							: 'border-white/20 text-white/55 hover:border-white/50'}"
 					>
@@ -984,7 +985,7 @@
 						saveConfig(config);
 						playSound('click');
 					}}
-					class="px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10"
+					class="press px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10"
 				>
 					DEFAULTS
 				</button>
@@ -993,7 +994,7 @@
 	{/if}
 
 	{#if storageOpen}
-		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5">
+		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5" transition:fly={{ y: -6, duration: 150, opacity: 0 }}>
 			<div class="text-white/50 leading-relaxed">
 				The model downloads once and is cached by the browser, so a second visit skips it. Both the
 				weights and the inference runtime come from this site's own storage — nothing is fetched
@@ -1018,7 +1019,7 @@
 					onclick={wipeModelCache}
 					disabled={wipingModel || !modelCacheSize?.count}
 					title="Delete the downloaded weights from this device. The next load downloads them again."
-					class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
+					class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
 				>
 					{wipingModel ? 'CLEARING…' : 'WIPE MODEL'}
 				</button>
@@ -1038,14 +1039,14 @@
 					<div class="flex gap-1">
 						<button
 							onclick={startSession}
-							class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] rounded-xs font-bold cursor-pointer hover:bg-[#98c379]/20"
+							class="press px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] rounded-xs font-bold cursor-pointer hover:bg-[#98c379]/20"
 						>
 							NEW
 						</button>
 						<button
 							onclick={wipeSessions}
 							disabled={!sessions.length}
-							class="px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
+							class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
 						>
 							DELETE ALL
 						</button>
@@ -1065,7 +1066,7 @@
 							>
 								<button
 									onclick={() => restoreSession(sess)}
-									class="flex-1 text-left truncate cursor-pointer {sess.id === sessionId
+									class="press flex-1 text-left truncate cursor-pointer transition-colors {sess.id === sessionId
 										? 'text-[#61afef]'
 										: 'text-white/70 hover:text-white'}"
 									title={sess.title}
@@ -1082,7 +1083,7 @@
 									onclick={() => removeSession(sess.id)}
 									title="Delete this conversation"
 									aria-label="Delete conversation"
-									class="text-white/30 hover:text-[#e06c75] cursor-pointer shrink-0 px-1"
+									class="press text-white/30 hover:text-[#e06c75] cursor-pointer shrink-0 px-1 transition-colors"
 								>
 									×
 								</button>
@@ -1117,7 +1118,7 @@
 				{#if gpu?.ok}
 					<button
 						onclick={load}
-						class="mx-auto px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black"
+						class="press mx-auto px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors"
 					>
 						RETRY
 					</button>
@@ -1154,7 +1155,7 @@
 					<button
 						onclick={load}
 						disabled={!gpu}
-						class="mx-auto px-4 py-2 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed"
+						class="press mx-auto px-4 py-2 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
 					>
 						{gpu ? '▶ LOAD MODEL' : 'checking WebGPU…'}
 					</button>
@@ -1199,6 +1200,11 @@
 		-->
 		{#if phase === 'ready' || phase === 'generating'}
 			{#each turns as turn, i (i)}
+			<!-- Only the newly-appended turn ever plays this: existing turns keep
+			     their old i and never remount, and a streaming turn's own content
+			     changes in place without touching this wrapper, so the entrance
+			     cannot re-fire mid-stream. -->
+			<div in:fly={{ y: 6, duration: 160, opacity: 0 }}>
 			{#if turn.toolResult}
 				<div
 					class="self-start font-mono text-[11px] text-white/45 border-l-2 border-[#e5c07b]/40 pl-2 py-0.5 whitespace-pre-wrap max-w-[85%] overflow-x-auto"
@@ -1238,7 +1244,7 @@
 						<button
 							onclick={() => toggleThink(i)}
 							title="The model's reasoning, kept folded away."
-							class="self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer"
+							class="press self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer transition-colors"
 						>
 							{openThink.has(i) ? '▾' : '▸'}
 							{phase === 'generating' && i === turns.length - 1 && !turn.content
@@ -1309,6 +1315,7 @@
 						{/if}
 					</div>
 				{/if}
+			</div>
 			{/each}
 		{/if}
 	</div>
@@ -1317,13 +1324,13 @@
 	<div class="relative">
 		{#if completions.length}
 			<div
-				class="absolute bottom-full left-0 mb-1 min-w-56 border {themeStyles.border} rounded-xs bg-black/95 py-1 text-xs font-mono shadow-lg z-20"
+				class="dropdown-pop absolute bottom-full left-0 mb-1 min-w-56 border {themeStyles.border} rounded-xs bg-black/95 py-1 text-xs font-mono shadow-lg z-20 origin-bottom"
 			>
 				{#each completions as c, ci (c.name)}
 					<button
 						onclick={() => acceptCompletion(c.name)}
 						onmouseenter={() => (completionIdx = ci)}
-						class="w-full text-left px-2 py-1 cursor-pointer flex gap-2 {ci === completionIdx
+						class="w-full text-left px-2 py-1 cursor-pointer flex gap-2 transition-colors {ci === completionIdx
 							? 'bg-[#61afef]/20 text-[#61afef]'
 							: 'text-[#d8dee9] hover:bg-white/10'}"
 					>
@@ -1352,7 +1359,7 @@
 						<button
 							onclick={() => removePending(pi)}
 							aria-label="remove {a.name}"
-							class="text-white/40 hover:text-[#e06c75] cursor-pointer px-1"
+							class="press text-white/40 hover:text-[#e06c75] cursor-pointer px-1 transition-colors"
 						>
 							×
 						</button>
@@ -1379,7 +1386,7 @@
 				onclick={() => fileEl?.click()}
 				disabled={phase === 'generating'}
 				title="Attach an image — you can also paste or drag one in"
-				class="px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#c678dd]/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
+				class="press px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#c678dd]/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
 			>
 				IMAGE
 			</button>
@@ -1393,7 +1400,7 @@
 				onclick={() => setThinkMode(!thinkMode)}
 				disabled={phase === 'generating'}
 				title="Let the model reason before answering. Slower, and better on anything with steps."
-				class="px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {thinkMode
+				class="press px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {thinkMode
 					? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
 					: 'border-[#c678dd]/50 text-[#c678dd]/60 hover:bg-[#c678dd]/20'}"
 			>
@@ -1418,7 +1425,7 @@
 			{#if phase === 'generating'}
 				<button
 					onclick={stopGenerating}
-					class="px-3 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black shrink-0"
+					class="press px-3 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black shrink-0 transition-colors"
 				>
 					STOP
 				</button>
@@ -1426,7 +1433,7 @@
 				<button
 					onclick={send}
 					disabled={phase !== 'ready' || (!draft.trim() && !pending.length)}
-					class="px-3 py-1 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+					class="press px-3 py-1 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed shrink-0 transition-colors"
 				>
 					SEND
 				</button>

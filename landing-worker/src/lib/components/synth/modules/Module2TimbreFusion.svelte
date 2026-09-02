@@ -25,7 +25,7 @@
 						playSound('click');
 					}}
 					title={BLEND_TOOLTIPS[mode] || mode}
-					class="h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.blendMode === mode
+					class="press h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.blendMode === mode
 						? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
 						: 'border-white/20 text-white/70 hover:bg-white/10'}"
 				>

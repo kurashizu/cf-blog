@@ -21,7 +21,7 @@
 				<button
 					onclick={() => setMode('fft')}
 					title="Visualizer Mode: FFT Log Spectrum Analyzer — Shows frequency distribution across 20Hz to 20kHz"
-					class="px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'fft'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'fft'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -30,7 +30,7 @@
 				<button
 					onclick={() => setMode('scope')}
 					title="Visualizer Mode: Oscilloscope Waveform — Real-time time-domain audio wave display"
-					class="px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'scope'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'scope'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -39,7 +39,7 @@
 				<button
 					onclick={() => setMode('loudness')}
 					title="Visualizer Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)"
-					class="px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'loudness'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'loudness'
 						? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -54,7 +54,7 @@
 			<button
 				onclick={toggleRecording}
 				title="Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)"
-				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-black cursor-pointer transition-all flex items-center gap-1 {$isRecording
+				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-black cursor-pointer transition-all flex items-center gap-1 {$isRecording
 					? 'border-[#e06c75] bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
 					: 'border-[#e06c75]/50 bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75]/25'}"
 			>

@@ -93,7 +93,7 @@
 			onDragEnd: () => (isDragging = false)
 		}}
 		style="width: {size}px; height: {size}px"
-		class="relative rounded-full transition-transform active:scale-95 {isDragging ? 'shadow-[0_0_8px_rgba(255,255,255,0.4)]' : ''}"
+		class="relative rounded-full transition-transform duration-150 active:scale-95 hover:scale-[1.04] {isDragging ? 'shadow-[0_0_8px_rgba(255,255,255,0.4)]' : ''}"
 	>
 		<svg viewBox="0 0 100 100" class="w-full h-full overflow-visible select-none pointer-events-none">
 			<circle cx="50" cy="50" r="46" fill="#12151a" stroke="rgba(255,255,255,0.25)" stroke-width="3" class="group-hover:stroke-white/60 transition-colors" />

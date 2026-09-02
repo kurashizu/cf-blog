@@ -44,7 +44,7 @@
 <div data-tour="synth-tracks" class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar ml-auto">
 	<button
 		onclick={toggleOverlayMode}
-		class="px-2 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0 {$isOverlayMode
+		class="press px-2 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0 {$isOverlayMode
 			? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_rgba(86,182,194,0.5)]'
 			: 'border-white/20 text-white/60 hover:text-white hover:border-white/50'}"
 		title={$isOverlayMode
@@ -73,7 +73,7 @@
 					e.stopPropagation();
 					selectActiveTrack(trk.id);
 				}}
-				class="pl-1.5 pr-0.5 py-1 flex items-center justify-center cursor-pointer group"
+				class="press pl-1.5 pr-0.5 py-1 flex items-center justify-center cursor-pointer group"
 				title={`Set ${trk.name} as Exclusive Active Track (Controls Modules 1-7, Piano Roll Editing & Piano Keyboard Audition) — Currently ${isActiveEditingTrack ? 'ACTIVE [SOLID]' : 'INACTIVE [HOLLOW]'}`}
 			>
 				<span
@@ -87,7 +87,7 @@
 			<button
 				type="button"
 				onclick={() => toggleOverlayVisibility(trk.id)}
-				class="pl-1 pr-2 py-0.5 font-bold text-xs cursor-pointer flex items-center"
+				class="press pl-1 pr-2 py-0.5 font-bold text-xs cursor-pointer flex items-center transition-colors"
 				style={isSelected ? `color: ${trk.color}` : ''}
 				title={$isOverlayMode ? `${trk.name} — Click name to toggle overlay visibility. Active Editing: ${isActiveEditingTrack ? 'YES' : 'NO'}` : `Select ${trk.name}`}
 			>
@@ -101,7 +101,7 @@
 						toggleTrackMute(trk.id);
 						playSound('click');
 					}}
-					class="px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'}"
+					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'}"
 					title={`Mute ${trk.name}`}
 				>
 					M
@@ -112,7 +112,7 @@
 						toggleTrackSolo(trk.id);
 						playSound('click');
 					}}
-					class="px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'}"
+					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'}"
 					title={`Solo ${trk.name}`}
 				>
 					S

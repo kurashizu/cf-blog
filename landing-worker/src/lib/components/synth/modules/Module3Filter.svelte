@@ -26,7 +26,7 @@
 						playSound('click');
 					}}
 					title={FILTER_TOOLTIPS[f] || f}
-					class="h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.filterType === f
+					class="press h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.filterType === f
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/70 hover:bg-white/10'}"
 				>

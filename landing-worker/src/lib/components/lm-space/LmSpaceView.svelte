@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import LeaderboardView from '$lib/components/leaderboard/LeaderboardView.svelte';
 	import {
 		loadLeaderboard,
@@ -101,7 +102,7 @@
 		{#each MODES as { k, label } (k)}
 			<button
 				onclick={() => { mode = k; playSound('click'); }}
-				class="px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {mode === k
+				class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {mode === k
 					? 'border-[#56b6c2] text-[#56b6c2] bg-[#56b6c2]/10'
 					: 'border-white/20 text-white/55 hover:border-white/50'}"
 			>
@@ -111,7 +112,7 @@
 		<button
 			onclick={() => { guideOpen = true; playSound('click'); }}
 			title="What this view is showing"
-			class="ml-auto px-2 py-1 border border-white/20 text-white/55 rounded-xs text-xs font-bold
+			class="press ml-auto px-2 py-1 border border-white/20 text-white/55 rounded-xs text-xs font-bold
 				cursor-pointer transition-colors hover:border-[#56b6c2] hover:text-[#56b6c2]"
 		>
 			? GUIDE
@@ -123,7 +124,7 @@
 	{/if}
 
 	{#if mobile && mobileNoteOpen}
-		<div class="shrink-0 mb-1.5 px-2.5 py-2 border border-[#e5c07b]/50 bg-[#e5c07b]/10 rounded-xs text-xs font-mono text-[#e5c07b] flex items-start gap-2">
+		<div class="shrink-0 mb-1.5 px-2.5 py-2 border border-[#e5c07b]/50 bg-[#e5c07b]/10 rounded-xs text-xs font-mono text-[#e5c07b] flex items-start gap-2" transition:fade={{ duration: 160 }}>
 			<span class="flex-1">
 				<b>DESKTOP RECOMMENDED.</b> The 3D volume is flown with a keyboard and mouse and does not
 				work well on a touch screen. You have been put on the TABLE view; SPACE is still there
@@ -133,7 +134,7 @@
 				onclick={() => { mobileNoteOpen = false; playSound('click'); }}
 				title="Dismiss"
 				aria-label="Dismiss"
-				class="shrink-0 px-1 text-[#e5c07b]/70 hover:text-[#e5c07b] cursor-pointer"
+				class="press shrink-0 px-1 text-[#e5c07b]/70 hover:text-[#e5c07b] cursor-pointer transition-colors"
 			>&#10005;</button>
 		</div>
 	{/if}
@@ -242,17 +243,17 @@
 			<div id="card"></div>
 
 			{#if booting}
-				<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-[#56b6c2] pointer-events-none">
-					building the volume&hellip;
+				<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-[#56b6c2] pointer-events-none" out:fade={{ duration: 150 }}>
+					<span class="blink-live">building the volume&hellip;</span>
 				</div>
 			{/if}
 
 			{#if $leaderboardStatus === 'error' || engineError}
-				<div class="absolute inset-0 flex items-center justify-center p-4">
-					<div class="border border-[#e06c75]/50 bg-black/80 rounded-xs px-4 py-3 text-xs font-mono text-[#e06c75] max-w-[420px]">
+				<div class="absolute inset-0 flex items-center justify-center p-4" transition:fade={{ duration: 160 }}>
+					<div class="border border-[#e06c75]/50 bg-black/80 rounded-xs px-4 py-3 text-xs font-mono text-[#e06c75] max-w-[420px] modal-pop">
 						{engineError ?? $leaderboardError}
 						<button onclick={() => { started = false; engineError = null; booting = true; void start(); }}
-							class="ml-2 underline cursor-pointer">retry</button>
+							class="press ml-2 underline cursor-pointer hover:text-white transition-colors">retry</button>
 						<div class="text-white/35 mt-1">
 							source: <a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer"
 								class="text-[#61afef] hover:underline">blog.krsz.in</a>

@@ -20,7 +20,7 @@
 					playSound('click');
 				}}
 				title="Equal Loudness (ISO 226): Automatically balances perceptual loudness across Square, Saw, Triangle, and Sine waveforms"
-				class="px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border {$eqlCompSetting
+				class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border {$eqlCompSetting
 					? 'bg-[#98c379]/20 border-[#98c379]/60 text-[#98c379]'
 					: 'bg-white/5 border-white/20 text-white/40 hover:text-white/70'}"
 			>
@@ -43,7 +43,7 @@
 							playSound('click');
 						}}
 						title={`Oscillator 1 Waveform: ${WAVE_TOOLTIPS[w] || w}`}
-						class="flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.osc1Waveform === w
+						class="press flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.osc1Waveform === w
 							? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
 							: 'border-white/20 text-white/70 hover:bg-white/10'}"
 					>
@@ -63,7 +63,7 @@
 							playSound('click');
 						}}
 						title={`Oscillator 2 Waveform: ${WAVE_TOOLTIPS[w] || w}`}
-						class="flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.osc2Waveform === w
+						class="press flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.osc2Waveform === w
 							? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 							: 'border-white/20 text-white/70 hover:bg-white/10'}"
 					>

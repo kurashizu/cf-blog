@@ -70,12 +70,13 @@
 		</div>
 	{:else}
 		<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
-			<span class="px-2 py-1 border border-[#98c379]/50 bg-[#98c379]/10 rounded-xs text-[#98c379] font-bold truncate max-w-[60%]" title={pad.id}>
-				● {pad.id}
+			<span class="px-2 py-1 border border-[#98c379]/50 bg-[#98c379]/10 rounded-xs text-[#98c379] font-bold truncate max-w-[60%] flex items-center gap-1.5" title={pad.id}>
+				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live shrink-0"></span>
+				{pad.id}
 			</span>
 			<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">MAPPING: <span class="font-bold text-white/80">{pad.mapping || 'custom'}</span></span>
 			{#if pad.canRumble}
-				<button onclick={rumble} class="px-2 py-1 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold cursor-pointer transition-colors">
+				<button onclick={rumble} class="press px-2 py-1 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold cursor-pointer transition-colors">
 					◉ RUMBLE TEST
 				</button>
 			{/if}
@@ -87,7 +88,7 @@
 				<div class="grid grid-cols-2 gap-x-3 gap-y-1">
 					{#each pad.buttons as b, i (i)}
 						<div class="flex items-center gap-1.5 text-[10px] font-mono">
-							<span class="w-14 shrink-0 truncate {b.pressed ? 'font-black' : testedButtons.has(i) ? 'text-[#98c379]' : 'text-white/40'}" style={b.pressed ? `color: ${themeStyles.cursorColor}` : ''}>
+							<span class="w-14 shrink-0 truncate transition-colors duration-75 {b.pressed ? 'font-black' : testedButtons.has(i) ? 'text-[#98c379]' : 'text-white/40'}" style={b.pressed ? `color: ${themeStyles.cursorColor}` : ''}>
 								{buttonName(i)}
 							</span>
 							<div class="flex-1 h-2 bg-black/60 border border-white/10 rounded-xs overflow-hidden">
@@ -106,11 +107,11 @@
 						<div class="flex-1 h-2.5 bg-black/60 border border-white/10 rounded-xs relative overflow-hidden">
 							<div class="absolute top-0 bottom-0 left-1/2 w-px bg-white/25"></div>
 							<div
-								class="absolute top-0 bottom-0 w-1.5 rounded-xs"
+								class="absolute top-0 bottom-0 w-1.5 rounded-xs transition-[background-color] duration-75"
 								style="left: calc({((a + 1) / 2) * 100}% - 3px); background-color: {Math.abs(a) > 0.05 ? themeStyles.cursorColor : 'rgba(255,255,255,0.35)'};"
 							></div>
 						</div>
-						<span class="w-12 text-right shrink-0 {Math.abs(a) > 0.05 ? 'text-[#e5c07b] font-bold' : 'text-white/35'}">{a.toFixed(2)}</span>
+						<span class="w-12 text-right shrink-0 transition-colors duration-75 {Math.abs(a) > 0.05 ? 'text-[#e5c07b] font-bold' : 'text-white/35'}">{a.toFixed(2)}</span>
 					</div>
 				{/each}
 				<div class="text-[10px] font-mono text-white/30 pt-1">Sticks centered read ~0.00 — persistent offset at rest = drift.</div>

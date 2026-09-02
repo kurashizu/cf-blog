@@ -111,7 +111,7 @@
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
 			DBL-CLICKS: <span class="font-bold text-[#98c379]">{dblClicks}</span>
 		</span>
-		<button onclick={reset} class="ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
+		<button onclick={reset} class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
 			✕ RESET
 		</button>
 	</div>
@@ -121,17 +121,17 @@
 		<div class="border border-white/15 bg-black/40 rounded-xs p-3 flex flex-col items-center gap-2">
 			<div class="flex gap-1 w-full">
 				<div class="flex flex-col gap-1 justify-center">
-					<div class="border rounded-xs w-7 h-8 flex items-center justify-center text-[9px] font-mono font-bold {btnClass(4)}" style={isDown(4) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''} title="Forward (X2)">X2</div>
-					<div class="border rounded-xs w-7 h-8 flex items-center justify-center text-[9px] font-mono font-bold {btnClass(3)}" style={isDown(3) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''} title="Back (X1)">X1</div>
+					<div class="border rounded-xs w-7 h-8 flex items-center justify-center text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(4)}" style={isDown(4) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''} title="Forward (X2)">X2</div>
+					<div class="border rounded-xs w-7 h-8 flex items-center justify-center text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(3)}" style={isDown(3) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''} title="Back (X1)">X1</div>
 				</div>
 				<div class="flex-1 grid grid-cols-[1fr_22px_1fr] gap-1">
-					<div class="border rounded-tl-2xl rounded-bl-xs h-[76px] flex items-end justify-center pb-1 text-[9px] font-mono font-bold {btnClass(0)}" style={isDown(0) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}>L</div>
+					<div class="border rounded-tl-2xl rounded-bl-xs h-[76px] flex items-end justify-center pb-1 text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(0)}" style={isDown(0) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}>L</div>
 					<div class="flex flex-col items-center justify-start pt-1 gap-1">
-						<div class="border rounded-full w-4 h-9 flex items-center justify-center text-[9px] font-mono font-bold {btnClass(1)}" style={isDown(1) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''} title="Middle / wheel click">M</div>
-						<div class="text-[9px] font-mono {lastWheelDelta < 0 ? 'text-[#56b6c2] font-bold' : 'text-white/30'}">▲{wheelUp}</div>
-						<div class="text-[9px] font-mono {lastWheelDelta > 0 ? 'text-[#e5c07b] font-bold' : 'text-white/30'}">▼{wheelDown}</div>
+						<div class="border rounded-full w-4 h-9 flex items-center justify-center text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(1)}" style={isDown(1) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''} title="Middle / wheel click">M</div>
+						<div class="text-[9px] font-mono transition-colors {lastWheelDelta < 0 ? 'text-[#56b6c2] font-bold' : 'text-white/30'}">▲{wheelUp}</div>
+						<div class="text-[9px] font-mono transition-colors {lastWheelDelta > 0 ? 'text-[#e5c07b] font-bold' : 'text-white/30'}">▼{wheelDown}</div>
 					</div>
-					<div class="border rounded-tr-2xl rounded-br-xs h-[76px] flex items-end justify-center pb-1 text-[9px] font-mono font-bold {btnClass(2)}" style={isDown(2) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}>R</div>
+					<div class="border rounded-tr-2xl rounded-br-xs h-[76px] flex items-end justify-center pb-1 text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(2)}" style={isDown(2) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}>R</div>
 				</div>
 			</div>
 			<div class="w-full border border-white/10 rounded-b-2xl rounded-t-xs h-16 bg-black/30"></div>

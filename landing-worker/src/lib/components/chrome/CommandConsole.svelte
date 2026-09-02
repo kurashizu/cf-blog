@@ -166,7 +166,7 @@
 				<button
 					type="button"
 					onclick={() => pickSuggestion(s)}
-					class="px-1.5 py-0.5 border border-white/15 bg-black/40 hover:border-[#56b6c2] hover:text-[#56b6c2] text-white/60 rounded-xs cursor-pointer transition-colors"
+					class="press px-1.5 py-0.5 border border-white/15 bg-black/40 hover:border-[#56b6c2] hover:text-[#56b6c2] text-white/60 rounded-xs cursor-pointer transition-colors"
 				>
 					{s}
 				</button>
@@ -223,7 +223,7 @@
 			/>
 		</div>
 
-		<button type="submit" class="text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80" style="color: {themeStyles.cursorColor}">
+		<button type="submit" class="press text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80 transition-opacity" style="color: {themeStyles.cursorColor}">
 			[EXEC]
 		</button>
 	</form>

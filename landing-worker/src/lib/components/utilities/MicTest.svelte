@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import Dropdown from '../chrome/Dropdown.svelte';
 
 	const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -423,14 +424,14 @@
 		{#if listening}
 			<button
 				onclick={stop}
-				class="px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black"
+				class="press px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black transition-colors"
 			>
 				STOP &amp; RELEASE MIC
 			</button>
 		{:else}
 			<button
 				onclick={() => start(selectedDevice || undefined)}
-				class="px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black"
+				class="press px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors {error ? 'shake-once' : ''}"
 			>
 				GRANT MIC &amp; START
 			</button>
@@ -455,7 +456,7 @@
 			<button
 				onclick={toggleMonitor}
 				title="Route the microphone straight to the output so you can hear yourself. Use headphones — on speakers this will feed back."
-				class="px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors {monitor
+				class="press px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors {monitor
 					? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 					: 'border-white/25 text-white/70 hover:bg-white/10'}"
 			>
@@ -463,7 +464,7 @@
 			</button>
 			<button
 				onclick={() => (clipped = false)}
-				class="px-2.5 py-1.5 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10"
+				class="press px-2.5 py-1.5 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 			>
 				RESET CLIP
 			</button>
@@ -481,7 +482,7 @@
 	{/if}
 
 	{#if error}
-		<div class="text-xs font-mono text-[#e06c75]">{error}</div>
+		<div class="text-xs font-mono text-[#e06c75]" transition:fade={{ duration: 150 }}>{error}</div>
 	{/if}
 
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-2">
@@ -503,7 +504,7 @@
 				DOMINANT <span class="text-[#56b6c2]">{dominantHz ? `${dominantHz} Hz` : '—'}</span>
 				{#if dominantHz}<span class="text-[#c678dd]"> · {noteFor(dominantHz)}</span>{/if}
 			</span>
-			{#if clipped}<span class="text-[#e06c75] font-bold">CLIP DETECTED</span>{/if}
+			{#if clipped}<span class="text-[#e06c75] font-bold" transition:fade={{ duration: 150 }}>CLIP DETECTED</span>{/if}
 		</div>
 	</div>
 
@@ -518,18 +519,18 @@
 			<button
 				onclick={toggleRecording}
 				disabled={!listening}
-				class="px-2.5 py-1 border rounded-xs text-xs font-black cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed {recording
+				class="press px-2.5 py-1 border rounded-xs text-xs font-black cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed {recording
 					? 'border-[#e06c75] bg-[#e06c75]/25 text-[#e06c75]'
 					: 'border-[#e06c75]/50 text-[#e06c75] hover:bg-[#e06c75]/20'}"
 				title={listening ? `Record up to ${MAX_REC_MS / 1000}s from this input` : 'Start the microphone first'}
 			>
-				{recording ? `■ STOP ${recSeconds}s` : '● RECORD'}
+				{#if recording}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>■ STOP {recSeconds}s</span>{:else}● RECORD{/if}
 			</button>
 
 			<button
 				onclick={playing ? stopPlayback : playTake}
 				disabled={!take}
-				class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed {playing
+				class="press px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed {playing
 					? 'border-[#98c379] bg-[#98c379]/25 text-[#98c379]'
 					: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
 			>
@@ -539,7 +540,7 @@
 			<button
 				onclick={saveTake}
 				disabled={!take}
-				class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed"
+				class="press px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
 				title="Download the recording in the format this browser captured it as"
 			>
 				SAVE

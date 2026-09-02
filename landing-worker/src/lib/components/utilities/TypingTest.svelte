@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
@@ -151,15 +152,15 @@
 				resetTest();
 				playSound('click');
 			}}
-			class="ml-auto px-2 py-1 border border-white/20 hover:border-[#56b6c2] text-white/60 hover:text-[#56b6c2] rounded-xs font-bold cursor-pointer transition-colors"
+			class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#56b6c2] text-white/60 hover:text-[#56b6c2] rounded-xs font-bold cursor-pointer transition-colors"
 		>
 			⟳ RESTART
 		</button>
 	</div>
 
 	{#if finished}
-		<div class="border p-4 rounded-xs text-center space-y-1.5" style="border-color: {themeStyles.cursorColor}66;">
-			<div class="text-2xl font-black font-mono" style="color: {themeStyles.cursorColor}">{wpm} WPM</div>
+		<div class="border p-4 rounded-xs text-center space-y-1.5" style="border-color: {themeStyles.cursorColor}66;" in:fade={{ duration: 200 }}>
+			<div class="text-2xl font-black font-mono value-in" style="color: {themeStyles.cursorColor}">{wpm} WPM</div>
 			<div class="text-xs font-mono text-white/60">
 				{accuracy}% accuracy · {correctWords}/{submitted.length} words correct in {DURATION}s
 			</div>

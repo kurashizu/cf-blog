@@ -44,7 +44,7 @@
 			<div class="flex items-center gap-1">
 				<button
 					onclick={() => setTab('fx')}
-					class="px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'fx'
+					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'fx'
 						? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 					title="Main FX: Tape Delay, Space Reverb & Tape Overdrive Saturation"
@@ -53,7 +53,7 @@
 				</button>
 				<button
 					onclick={() => setTab('eq')}
-					class="px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'eq'
+					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'eq'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 					title="Per-Track 6-Band Graphic EQ — shapes the active track only"
@@ -113,7 +113,7 @@
 						updateActiveTrack({ eqOn: !trackEqOn });
 						playSound('toggle');
 					}}
-					class="px-2 py-0.2 text-[9px] rounded-xs border font-black cursor-pointer transition-all {trackEqOn
+					class="press px-2 py-0.2 text-[9px] rounded-xs border font-black cursor-pointer transition-all {trackEqOn
 						? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_6px_#98c379]'
 						: 'border-white/20 bg-white/5 text-white/40 hover:text-white'}"
 					title="Toggle this track's 6-band graphic EQ (per-track; saved and shared with the patch)"

@@ -38,9 +38,9 @@
 							setMasterTuning(f);
 							playSound('click');
 						}}
-						class="px-2 py-1 rounded-xs border text-xs font-bold transition-all {Math.abs($masterTuningSetting - f) < 0.1
+						class="press px-2 py-1 rounded-xs border text-xs font-bold transition-all {Math.abs($masterTuningSetting - f) < 0.1
 							? 'border-[#98c379] bg-[#98c379] text-black font-black'
-							: 'border-white/15 bg-white/5 text-white/60 hover:text-white'}"
+							: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
 					>
 						{f}Hz
 					</button>
@@ -68,9 +68,9 @@
 							setMaxPolyphony(p);
 							playSound('click');
 						}}
-						class="px-2 py-1 rounded-xs border text-xs font-bold transition-all {$maxPolyphonySetting === p
+						class="press px-2 py-1 rounded-xs border text-xs font-bold transition-all {$maxPolyphonySetting === p
 							? 'border-[#98c379] bg-[#98c379] text-black font-black'
-							: 'border-white/15 bg-white/5 text-white/60 hover:text-white'}"
+							: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
 					>
 						{p}
 					</button>
@@ -93,7 +93,7 @@
 						setVoiceStealing(item.id);
 						playSound('click');
 					}}
-					class="p-2 rounded-xs border text-left cursor-pointer transition-all {$voiceStealingSetting === item.id
+					class="press p-2 rounded-xs border text-left cursor-pointer transition-all {$voiceStealingSetting === item.id
 						? 'border-[#98c379] bg-[#98c379] text-black font-black'
 						: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 				>

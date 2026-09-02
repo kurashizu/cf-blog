@@ -55,7 +55,7 @@
 			{#each LATENCY_HINTS as item (item.id)}
 				<button
 					onclick={() => setLatencyHint(item.id)}
-					class="p-2 rounded-xs border text-left cursor-pointer transition-all {$latencyHintSetting === item.id
+					class="press p-2 rounded-xs border text-left cursor-pointer transition-all {$latencyHintSetting === item.id
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 				>
@@ -83,9 +83,9 @@
 					{#each FFT_SIZES as size (size)}
 						<button
 							onclick={() => setFftSize(size)}
-							class="py-1 rounded-xs border text-center font-bold text-[11px] transition-all {$fftSizeSetting === size
+							class="press py-1 rounded-xs border text-center font-bold text-[11px] transition-all {$fftSizeSetting === size
 								? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
-								: 'border-white/15 bg-white/5 text-white/60 hover:text-white'}"
+								: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
 						>
 							{size}
 						</button>
@@ -130,7 +130,7 @@
 			</div>
 			<button
 				onclick={() => setMasterLimiter(!$masterLimiterSetting)}
-				class="px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all {$masterLimiterSetting
+				class="press px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all {$masterLimiterSetting
 					? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_8px_#98c379]'
 					: 'border-white/20 bg-white/5 text-white/60 hover:text-white'}"
 			>

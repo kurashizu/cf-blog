@@ -2,6 +2,9 @@
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
 
+	/** Bump to re-trigger .value-in on the result number even if it repeats the same ms. */
+	let resultGen = $state(0);
+
 	type Phase = 'idle' | 'waiting' | 'go' | 'result' | 'early';
 
 	let phase = $state<Phase>('idle');
@@ -40,6 +43,7 @@
 			lastMs = Math.round(performance.now() - goAt);
 			results = [...results, lastMs].slice(-10);
 			phase = 'result';
+			resultGen++;
 			playSound('toggle');
 		}
 	}
@@ -73,24 +77,25 @@
 <div class="space-y-2">
 	<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			LAST: <span class="font-black text-[#e5c07b]">{lastMs === null ? '—' : `${lastMs}ms`}</span>
+			LAST: <span class="font-black text-[#e5c07b] inline-block">{#key `${lastMs}-${resultGen}`}<span class="value-in inline-block">{lastMs === null ? '—' : `${lastMs}ms`}</span>{/key}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			BEST: <span class="font-black text-[#98c379]">{best === null ? '—' : `${best}ms`}</span>
+			BEST: <span class="font-black text-[#98c379] inline-block">{#key best}<span class="value-in inline-block">{best === null ? '—' : `${best}ms`}</span>{/key}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			AVG: <span class="font-black text-[#56b6c2]">{avg === null ? '—' : `${avg}ms`}</span>
+			AVG: <span class="font-black text-[#56b6c2] inline-block">{#key avg}<span class="value-in inline-block">{avg === null ? '—' : `${avg}ms`}</span>{/key}</span>
 			<span class="text-white/35">({results.length}/10)</span>
 		</span>
-		<button onclick={reset} class="ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
+		<button onclick={reset} class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
 			✕ RESET
 		</button>
 	</div>
 
 	<button
 		onclick={handleClick}
-		class="w-full min-h-[260px] rounded-xs border font-mono cursor-pointer transition-colors duration-100 flex flex-col items-center justify-center gap-2 select-none
-			{phase === 'waiting' ? 'bg-[#e06c75]/25 border-[#e06c75]' : phase === 'go' ? 'bg-[#98c379]/30 border-[#98c379]' : 'bg-black/50 border-white/15 hover:border-white/40'}"
+		class="press w-full min-h-[260px] rounded-xs border font-mono cursor-pointer transition-colors duration-100 flex flex-col items-center justify-center gap-2 select-none
+			{phase === 'waiting' ? 'bg-[#e06c75]/25 border-[#e06c75]' : phase === 'go' ? 'bg-[#98c379]/30 border-[#98c379]' : 'bg-black/50 border-white/15 hover:border-white/40'}
+			{phase === 'early' ? 'shake-once' : ''}"
 	>
 		{#if phase === 'idle'}
 			<span class="text-sm font-black text-white/80">CLICK OR PRESS SPACE TO START</span>
@@ -103,7 +108,7 @@
 			<span class="text-sm font-black text-[#e06c75]">FALSE START</span>
 			<span class="text-xs text-white/40">Triggered before green — click or Space to retry</span>
 		{:else}
-			<span class="text-3xl font-black text-[#e5c07b]">{lastMs}ms</span>
+			<span class="text-3xl font-black text-[#e5c07b] value-in">{lastMs}ms</span>
 			<span class="text-xs text-white/40">Click or Space to go again · timing includes your display & input latency</span>
 		{/if}
 	</button>

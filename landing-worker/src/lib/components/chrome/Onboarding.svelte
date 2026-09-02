@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
@@ -154,17 +155,22 @@
 		return Math.max(14, Math.min(centre, bubbleW - 14));
 	});
 
+	/** +1/-1 -- which way the bubble content should slide on the next step change. */
+	let direction = $state(1);
+
 	function next() {
 		if (isLast) {
 			onClose();
 			return;
 		}
+		direction = 1;
 		index++;
 		playSound('click');
 	}
 
 	function back() {
 		if (index === 0) return;
+		direction = -1;
 		index--;
 		playSound('click');
 	}
@@ -239,42 +245,50 @@
 
 	<div
 		bind:this={bubbleEl}
-		class="fixed z-[170] max-w-[min(480px,94vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono"
+		class="fixed z-[170] max-w-[min(480px,94vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono transition-[border-color] duration-200"
 		style="{bubbleStyle} border-color: {step.color}88;"
+		in:fade={{ duration: 200 }}
 	>
 		{#if box && arrowLeft !== null}
 			<div
-				class="absolute w-3 h-3 rotate-45 {themeStyles.cardBg}"
+				class="absolute w-3 h-3 rotate-45 {themeStyles.cardBg} transition-[border-color] duration-200"
 				style="left: {arrowLeft - 6}px; {placement === 'bottom'
 					? `top: -7px; border-left: 2px solid ${step.color}88; border-top: 2px solid ${step.color}88;`
 					: `bottom: -7px; border-right: 2px solid ${step.color}88; border-bottom: 2px solid ${step.color}88;`}"
 			></div>
 		{/if}
 
-		<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
-			<span class="text-sm font-black tracking-wide" style="color: {step.color}">{step.title}</span>
-			<span class="text-xs text-white/45">{index + 1}/{STEPS.length}</span>
-		</div>
-
-		<div class="px-2.5 py-2 space-y-2">
-			<p class="text-xs sm:text-sm text-white/75 leading-relaxed">{step.body}</p>
-
-			{#if step.keys}
-				<div class="space-y-1">
-					{#each step.keys as k (k.key)}
-						<div class="flex items-baseline gap-2">
-							<kbd
-								class="shrink-0 px-2 py-1 rounded-xs border bg-black/50 text-[11px] sm:text-xs font-bold whitespace-nowrap min-w-[100px] text-center"
-								style="border-color: {step.color}55; color: {step.color}"
-							>
-								{k.key}
-							</kbd>
-							<span class="text-[11px] sm:text-xs text-white/70 leading-snug">{k.desc}</span>
-						</div>
-					{/each}
+		<!-- Keyed on the step index so the slide direction reflects Next/Back/dot-jump;
+		     only the content re-mounts, never the bubble shell itself -- bubbleEl's
+		     measurement in place() depends on that element staying alive across steps. -->
+		{#key index}
+			<div in:fly={{ x: direction * 24, duration: 180, opacity: 0 }}>
+				<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
+					<span class="text-sm font-black tracking-wide" style="color: {step.color}">{step.title}</span>
+					<span class="text-xs text-white/45">{index + 1}/{STEPS.length}</span>
 				</div>
-			{/if}
+
+			<div class="px-2.5 py-2 space-y-2">
+				<p class="text-xs sm:text-sm text-white/75 leading-relaxed">{step.body}</p>
+
+				{#if step.keys}
+					<div class="space-y-1">
+						{#each step.keys as k (k.key)}
+							<div class="flex items-baseline gap-2">
+								<kbd
+									class="shrink-0 px-2 py-1 rounded-xs border bg-black/50 text-[11px] sm:text-xs font-bold whitespace-nowrap min-w-[100px] text-center"
+									style="border-color: {step.color}55; color: {step.color}"
+								>
+									{k.key}
+								</kbd>
+								<span class="text-[11px] sm:text-xs text-white/70 leading-snug">{k.desc}</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
 		</div>
+		{/key}
 
 		<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-t border-white/10">
 			<div class="flex items-center gap-1.5">
@@ -282,20 +296,23 @@
 				     target is not a unique key. -->
 				{#each STEPS as s, i (i)}
 					<button
-						onclick={() => (index = i)}
+						onclick={() => {
+							direction = i > index ? 1 : -1;
+							index = i;
+						}}
 						aria-label={`Step ${i + 1}: ${s.title}`}
-						class="w-1.5 h-1.5 rounded-full cursor-pointer transition-colors {i === index ? '' : 'bg-white/20 hover:bg-white/45'}"
+						class="press w-1.5 h-1.5 rounded-full cursor-pointer transition-all {i === index ? 'scale-125' : 'bg-white/20 hover:bg-white/45'}"
 						style={i === index ? `background-color: ${s.color}` : undefined}
 					></button>
 				{/each}
-				<button onclick={onClose} class="ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer">SKIP</button>
+				<button onclick={onClose} class="press ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer transition-colors">SKIP</button>
 			</div>
 
 			<div class="flex items-center gap-1.5">
 				{#if step.action}
 					<button
 						onclick={runAction}
-						class="px-2.5 py-1 border rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10"
+						class="press px-2.5 py-1 border rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 transition-colors"
 						style="border-color: {step.color}88; color: {step.color}"
 					>
 						{step.action.label}
@@ -304,13 +321,13 @@
 				<button
 					onclick={back}
 					disabled={index === 0}
-					class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+					class="press px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 				>
 					BACK
 				</button>
 				<button
 					onclick={next}
-					class="px-3 py-1 border rounded-xs text-[11px] font-black cursor-pointer"
+					class="press px-3 py-1 border rounded-xs text-[11px] font-black cursor-pointer hover:bg-white/10 transition-colors"
 					style="border-color: {step.color}; color: {step.color}"
 				>
 					{isLast ? 'DONE' : 'NEXT →'}

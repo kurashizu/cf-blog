@@ -165,7 +165,7 @@
 	<div class="flex flex-wrap items-center gap-2">
 		<button
 			onclick={() => loadEdgeTrace(true)}
-			class="px-2.5 py-1.5 border border-[#98c379]/50 text-[#98c379] rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10"
+			class="press px-2.5 py-1.5 border border-[#98c379]/50 text-[#98c379] rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 		>
 			RE-TRACE EDGE
 		</button>

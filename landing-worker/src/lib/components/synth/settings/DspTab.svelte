@@ -57,9 +57,9 @@
 								setNoiseColor(col);
 								playSound('toggle');
 							}}
-							class="py-1 rounded-xs border text-center font-bold uppercase transition-all {$noiseColorSetting === col
+							class="press py-1 rounded-xs border text-center font-bold uppercase transition-all {$noiseColorSetting === col
 								? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
-								: 'border-white/15 bg-white/5 text-white/60 hover:text-white'}"
+								: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
 						>
 							{col}
 						</button>

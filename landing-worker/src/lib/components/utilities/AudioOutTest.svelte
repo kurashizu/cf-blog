@@ -258,7 +258,7 @@
 			<button
 				onclick={() => tone(t.mode, `440 Hz ${t.label}`)}
 				title={t.hint}
-				class="px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors hover:bg-white/10"
+				class="press px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors hover:bg-white/10"
 				style="border-color: {t.color}66; color: {t.color}"
 			>
 				440Hz {t.label}
@@ -266,7 +266,7 @@
 		{/each}
 		<button
 			onclick={sweep}
-			class="px-2.5 py-1.5 border border-[#e5c07b]/40 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10"
+			class="press px-2.5 py-1.5 border border-[#e5c07b]/40 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 			title="Logarithmic sine sweep, 20 Hz to 20 kHz over 8 seconds — reveals resonances and rolloff"
 		>
 			SWEEP 20Hz→20kHz
@@ -274,7 +274,7 @@
 		{#each ['left', 'right', 'both'] as const as m (m)}
 			<button
 				onclick={() => noise(m)}
-				class="px-2.5 py-1.5 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10"
+				class="press px-2.5 py-1.5 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 				title="White noise on the {m} channel"
 			>
 				NOISE {m.toUpperCase()}
@@ -282,7 +282,7 @@
 		{/each}
 		<button
 			onclick={stopAll}
-			class="px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black"
+			class="press px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black transition-colors"
 		>
 			STOP
 		</button>
@@ -318,7 +318,8 @@
 		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">LEVEL</span>
 		<input type="range" min="0" max="0.6" step="0.01" bind:value={gain} class="flex-1 min-w-[120px] accent-[#98c379]" />
 		<span class="text-xs font-mono text-[#98c379] w-12 text-right">{Math.round(gain * 100)}%</span>
-		<span class="text-xs font-mono {running ? 'text-[#e5c07b]' : 'text-white/35'} min-w-[160px]">
+		<span class="text-xs font-mono transition-colors min-w-[160px] flex items-center gap-1.5 {running ? 'text-[#e5c07b]' : 'text-white/35'}">
+			{#if running}<span class="w-1.5 h-1.5 rounded-full bg-[#e5c07b] blink-live shrink-0"></span>{/if}
 			{running ?? 'idle'}{sweepHz ? ` · ${sweepHz} Hz` : ''}
 		</span>
 	</div>

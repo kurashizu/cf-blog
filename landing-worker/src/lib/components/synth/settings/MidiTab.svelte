@@ -31,7 +31,7 @@
 							setSelectedMidiDevice('all');
 							playSound('click');
 						}}
-						class="p-2 border rounded-xs text-left cursor-pointer transition-all {$selectedMidiDevice === 'all'
+						class="press p-2 border rounded-xs text-left cursor-pointer transition-all {$selectedMidiDevice === 'all'
 							? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
 							: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 					>
@@ -44,7 +44,7 @@
 								setSelectedMidiDevice(dev.id);
 								playSound('click');
 							}}
-							class="p-2 border rounded-xs text-left cursor-pointer transition-all {$selectedMidiDevice === dev.id
+							class="press p-2 border rounded-xs text-left cursor-pointer transition-all {$selectedMidiDevice === dev.id
 								? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
 								: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 						>
@@ -82,7 +82,7 @@
 					setMidiOmni(!$midiOmniSetting);
 					playSound('toggle');
 				}}
-				class="px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all {$midiOmniSetting
+				class="press px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all {$midiOmniSetting
 					? 'border-[#e5c07b] bg-[#e5c07b] text-black shadow-[0_0_8px_#e5c07b]'
 					: 'border-white/20 bg-white/5 text-white/60 hover:text-white'}"
 			>

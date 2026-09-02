@@ -36,9 +36,11 @@
 #brandbtns{margin-left:auto;flex:none;display:flex;align-items:center;gap:6px}
 #brandbtns button{flex:none;display:flex;align-items:center;gap:5px;border:1px solid var(--ll-line);
   background:none;color:var(--ll-dim);font:inherit;font-size:10px;letter-spacing:1px;
-  padding:3px 8px;cursor:pointer;border-radius:2px}
+  padding:3px 8px;cursor:pointer;border-radius:2px;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1),color 130ms cubic-bezier(.2,0,0,1),transform 110ms cubic-bezier(.2,0,0,1)}
 #brandbtns button svg{display:block;flex:none;width:9px;height:9px}
 #brandbtns button:hover{border-color:var(--ll-faint);color:var(--ll-fg)}
+#brandbtns button:active{transform:scale(.94)}
 #brandbtns #llguide:hover{border-color:var(--ll-accent);color:var(--ll-accent)}
 #brandbtns #wipebtn:hover{border-color:var(--ll-red);color:var(--ll-red)}
 /* Drawn in characters, like the rest of this site's chrome. Line height is
@@ -55,9 +57,11 @@
 .shead{display:flex;align-items:center;gap:6px;padding:11px 12px 0 12px;font-size:10px;letter-spacing:2px;color:var(--ll-faint);min-width:0}
 .shead > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shead small{font-size:10px;letter-spacing:0;color:var(--ll-faint);opacity:.75;text-transform:none}
-.shead button{flex:none;display:flex;align-items:center;gap:5px;border:1px solid var(--ll-line);background:none;color:var(--ll-dim);font:inherit;font-size:10px;letter-spacing:1px;padding:2px 6px;cursor:pointer;border-radius:2px}
+.shead button{flex:none;display:flex;align-items:center;gap:5px;border:1px solid var(--ll-line);background:none;color:var(--ll-dim);font:inherit;font-size:10px;letter-spacing:1px;padding:2px 6px;cursor:pointer;border-radius:2px;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1),color 130ms cubic-bezier(.2,0,0,1),transform 110ms cubic-bezier(.2,0,0,1)}
 .shead button svg{display:block;flex:none;width:9px;height:9px}
 .shead button:hover{border-color:var(--ll-faint);color:var(--ll-fg)}
+.shead button:active{transform:scale(.94)}
 .shead #modebtn{margin-left:auto}
 /* The walkthrough button sits between the label and CLEAR ALL, pushed right so
    the two buttons group together away from the heading. */
@@ -73,8 +77,10 @@
    panel, and the log is the other half of what this column is for. */
 /* A group heading, not a row: the name and its explanation are separate words
    and ran together without this. */
-.lv{border:1px solid var(--ll-line);background:none;color:var(--ll-dim);font:inherit;font-size:13px;padding:5px 10px;cursor:pointer;border-radius:2px}
+.lv{border:1px solid var(--ll-line);background:none;color:var(--ll-dim);font:inherit;font-size:13px;padding:5px 10px;cursor:pointer;border-radius:2px;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1),color 130ms cubic-bezier(.2,0,0,1),opacity 150ms cubic-bezier(.2,0,0,1),transform 110ms cubic-bezier(.2,0,0,1)}
 .lv:hover{border-color:var(--ll-faint)}
+.lv:not(.lock):active{transform:scale(.98)}
 .lv.lock{opacity:.32;cursor:not-allowed}
 /* Floating log. It sits over the bottom-left of the dish, sized to its content
    up to a ceiling, so a quiet run takes almost no room and a busy one scrolls
@@ -118,8 +124,10 @@
 #tbscroll{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto;scrollbar-width:none}
 #tbscroll::-webkit-scrollbar{display:none}
 #topbar::-webkit-scrollbar{display:none}
-button.tb{flex:none;white-space:nowrap;display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--ll-line);color:var(--ll-fg);font:inherit;font-size:12px;letter-spacing:1px;padding:6px 9px;cursor:pointer;border-radius:2px}
+button.tb{flex:none;white-space:nowrap;display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--ll-line);color:var(--ll-fg);font:inherit;font-size:12px;letter-spacing:1px;padding:6px 9px;cursor:pointer;border-radius:2px;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1),color 130ms cubic-bezier(.2,0,0,1),background-color 130ms cubic-bezier(.2,0,0,1),transform 110ms cubic-bezier(.2,0,0,1)}
 button.tb:hover{border-color:var(--ll-faint)}
+button.tb:not(:disabled):active{transform:scale(.94)}
 button.tb.on{border-color:var(--ll-accent);color:var(--ll-accent);background:rgba(86,182,194,.08)}
 button.tb svg{display:block;flex:none}
 .sep{width:1px;align-self:stretch;background:var(--ll-line);margin:0 4px}
@@ -139,7 +147,12 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
 #gtext{color:var(--ll-fg);line-height:1.55}
 #msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(13,14,18,.72);z-index:5}
 #msg.hidden{display:none}
-#msg .box{border:1px solid var(--ll-line);background:var(--ll-panel);padding:24px 30px;max-width:480px;border-radius:2px}
+/* display:none can't be transitioned, so the dialog can't cross-fade in from
+   nothing -- but the card itself can still settle in with a small one-off
+   rise+fade each time the wrapper drops .hidden, same beat as #winbanner. */
+@keyframes llmsgin{from{opacity:0;transform:scale(.97) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
+#msg .box{border:1px solid var(--ll-line);background:var(--ll-panel);padding:24px 30px;max-width:480px;border-radius:2px;
+  animation:llmsgin 180ms cubic-bezier(.2,0,0,1)}
 #msg h2{font-size:15px;letter-spacing:3px;margin-bottom:13px;color:var(--ll-green)}
 #msg h2.bad{color:var(--ll-red)}
 #msg p{color:var(--ll-dim);line-height:1.7;margin-bottom:18px;white-space:pre-wrap;font-size:13px}
@@ -158,13 +171,15 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
    section per kind of pattern, each a two-column grid of stamps. */
 #tray{grid-template-columns:none;display:flex;flex-direction:column;gap:6px;width:186px}
 #trsearch{flex:none;width:100%;border:1px solid var(--ll-line);background:rgba(0,0,0,.25);color:var(--ll-fg);
-  font:inherit;font-size:10px;letter-spacing:1px;padding:5px 7px;border-radius:2px;outline:none}
+  font:inherit;font-size:10px;letter-spacing:1px;padding:5px 7px;border-radius:2px;outline:none;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1)}
 #trsearch:focus{border-color:var(--ll-accent)}
 #trsearch::placeholder{color:var(--ll-faint)}
 #trsecs{display:flex;flex-direction:column;gap:6px;min-height:0}
 .trsec{display:flex;flex-direction:column;gap:5px}
 .trhd{display:flex;align-items:center;gap:6px;background:none;border:none;border-bottom:1px solid var(--ll-line);
-  color:var(--ll-dim);font:inherit;font-size:9px;letter-spacing:2px;padding:4px 2px;cursor:pointer;text-align:left}
+  color:var(--ll-dim);font:inherit;font-size:9px;letter-spacing:2px;padding:4px 2px;cursor:pointer;text-align:left;
+  transition:color 130ms cubic-bezier(.2,0,0,1)}
 .trhd:hover{color:var(--ll-fg)}
 .trhd .tcar{color:var(--ll-faint);width:8px}
 .trhd .tlbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -203,12 +218,14 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
 #piecebar{transition:left .06s linear,top .06s linear}
 /* The name / RLE prompt inside the dialog box. */
 #msg .box input.pin,#msg .box textarea.pta{display:block;width:100%;border:1px solid var(--ll-line);background:rgba(0,0,0,.3);
-  color:var(--ll-fg);font:inherit;font-size:12px;padding:7px 9px;border-radius:2px;outline:none;margin-bottom:12px}
+  color:var(--ll-fg);font:inherit;font-size:12px;padding:7px 9px;border-radius:2px;outline:none;margin-bottom:12px;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1)}
 #msg .box input.pin:focus,#msg .box textarea.pta:focus{border-color:var(--ll-accent)}
 #msg .box textarea.pta{height:120px;resize:vertical;font-size:11px;line-height:1.5;white-space:pre}
 #tray::-webkit-scrollbar{width:5px}
 #tray::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}
-.stamp{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:1px solid var(--ll-line);color:var(--ll-dim);font:inherit;font-size:9px;letter-spacing:0;padding:5px 2px;cursor:pointer;border-radius:2px;min-width:0}
+.stamp{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:1px solid var(--ll-line);color:var(--ll-dim);font:inherit;font-size:9px;letter-spacing:0;padding:5px 2px;cursor:pointer;border-radius:2px;min-width:0;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1),color 130ms cubic-bezier(.2,0,0,1),transform 110ms cubic-bezier(.2,0,0,1)}
 /* The label wraps and, failing that, shrinks: the tray is a fixed column now,
    so a long name has to fit the button rather than the button fit the name. */
 .stamp span{max-width:100%;line-height:1.2;text-align:center;
@@ -216,6 +233,7 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
      has to be broken mid-word once PENTADECATHLON is spelled shorter. */
   overflow-wrap:break-word}
 .stamp:hover{border-color:var(--ll-faint)}
+.stamp:active{transform:scale(.95)}
 .stamp.on{border-color:var(--ll-accent);color:var(--ll-accent)}
 .stamp svg{display:block}
 
@@ -238,8 +256,10 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
 .shopname{color:var(--ll-fg);font-size:12px;letter-spacing:1px}
 .shopblurb{color:var(--ll-dim);font-size:12px;line-height:1.5;margin-top:2px}
 .shopdetail{color:var(--ll-faint);font-size:11px;line-height:1.5;margin-top:3px}
-.buy{border:1px solid var(--ll-line);background:none;color:var(--ll-dim);font:inherit;font-size:11px;letter-spacing:1px;padding:4px 9px;cursor:pointer;border-radius:2px;white-space:nowrap;align-self:center}
+.buy{border:1px solid var(--ll-line);background:none;color:var(--ll-dim);font:inherit;font-size:11px;letter-spacing:1px;padding:4px 9px;cursor:pointer;border-radius:2px;white-space:nowrap;align-self:center;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1),color 130ms cubic-bezier(.2,0,0,1),opacity 150ms cubic-bezier(.2,0,0,1),transform 110ms cubic-bezier(.2,0,0,1)}
 .buy:hover:not(:disabled){border-color:var(--ll-accent);color:var(--ll-accent)}
+.buy:not(:disabled):active{transform:scale(.94)}
 .buy:disabled{opacity:.4;cursor:default}
 .buy.owned{border-color:var(--ll-green);color:var(--ll-green)}
 #shopbtn b{color:var(--ll-yellow);font-weight:400;margin-left:4px}
@@ -268,8 +288,10 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
    primary control and not a footnote. */
 #shopbtn{display:flex;align-items:center;gap:9px;width:calc(100% - 24px);margin:12px 12px 0;padding:8px 11px;
   border:1px solid var(--ll-line);border-radius:2px;background:none;color:var(--ll-dim);font:inherit;font-size:12px;
-  letter-spacing:2px;cursor:pointer}
+  letter-spacing:2px;cursor:pointer;
+  transition:border-color 130ms cubic-bezier(.2,0,0,1),color 130ms cubic-bezier(.2,0,0,1),transform 110ms cubic-bezier(.2,0,0,1)}
 #shopbtn:hover{border-color:var(--ll-yellow);color:var(--ll-fg)}
+#shopbtn:active{transform:scale(.98)}
 #shopbtn .sicon{display:flex;color:var(--ll-yellow)}
 #shopbtn .slabel{flex:1;text-align:left}
 /* Fixed width so a two-digit balance cannot widen the button and shove the rest
@@ -355,4 +377,18 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
      RULE readout already shows. */
   #brand{gap:10px;padding:7px 10px}
   #brand small{display:none}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #brandbtns button, .shead button, .lv, button.tb, .stamp, .buy, #shopbtn, .trhd, #trsearch,
+  #msg .box input.pin, #msg .box textarea.pta {
+    transition:none
+  }
+  #brandbtns button:active, .shead button:active, .lv:active, button.tb:active, .stamp:active,
+  .buy:active, #shopbtn:active {
+    transform:none
+  }
+  #msg .box{animation:none}
+  .point.act{animation:none}
+  #term::after{animation:none}
 }

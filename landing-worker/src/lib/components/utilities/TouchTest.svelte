@@ -95,14 +95,14 @@
 		</span>
 		<span class="text-white/45">CONCURRENT SEEN <span class="text-[#98c379]">{maxSeen}</span></span>
 		<span class="text-white/45">
-			PRESSURE <span class={anyPressure ? 'text-[#98c379]' : 'text-white/35'}>{anyPressure ? 'variable — real sensor' : 'not observed'}</span>
+			PRESSURE <span class="transition-colors {anyPressure ? 'text-[#98c379]' : 'text-white/35'}">{anyPressure ? 'variable — real sensor' : 'not observed'}</span>
 		</span>
 		<span class="text-white/45">
-			TILT <span class={anyTilt ? 'text-[#98c379]' : 'text-white/35'}>{anyTilt ? 'reported' : 'not observed'}</span>
+			TILT <span class="transition-colors {anyTilt ? 'text-[#98c379]' : 'text-white/35'}">{anyTilt ? 'reported' : 'not observed'}</span>
 		</span>
 		<button
 			onclick={reset}
-			class="px-2 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10"
+			class="press px-2 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 		>
 			RESET
 		</button>

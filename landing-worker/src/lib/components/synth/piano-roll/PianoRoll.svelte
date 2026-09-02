@@ -60,7 +60,7 @@
 		</div>
 
 		<div class="flex items-center gap-1.5 text-xs">
-			<button onclick={clearPage} class="border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold" title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track">
+			<button onclick={clearPage} class="press border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold transition-colors" title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track">
 				✕ CLR
 			</button>
 
@@ -77,7 +77,7 @@
 							playSound('click');
 						}}
 						disabled={octaveFrom <= 1}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Lower starting octave (Octave down)"
 					>
 						◄
@@ -89,7 +89,7 @@
 							playSound('click');
 						}}
 						disabled={octaveFrom >= octaveTo}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Raise starting octave (Octave up)"
 					>
 						►
@@ -104,7 +104,7 @@
 							playSound('click');
 						}}
 						disabled={octaveTo <= octaveFrom}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Lower ending octave"
 					>
 						◄
@@ -116,7 +116,7 @@
 							playSound('click');
 						}}
 						disabled={octaveTo >= 7}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Raise ending octave"
 					>
 						►
@@ -149,7 +149,7 @@
 										{@const isSubCursor = $cursorStep >= step && $cursorStep < step + spc / 2}
 										<button
 											onclick={() => jumpRulerCursor(step)}
-											class="flex-1 text-center py-0.5 rounded-xs transition-colors cursor-pointer select-none font-bold relative {isSubCurrent
+											class="press flex-1 text-center py-0.5 rounded-xs transition-colors cursor-pointer select-none font-bold relative {isSubCurrent
 												? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
 												: isSubCursor
 													? 'bg-[#56b6c2]/40 text-[#56b6c2] border border-[#56b6c2] font-black'
@@ -170,7 +170,7 @@
 							{:else}
 								<button
 									onclick={() => jumpRulerCursor(globalCol * spc)}
-									class="w-full text-center py-0.5 rounded-xs transition-colors font-bold text-xs cursor-pointer select-none relative {isCurrent
+									class="press w-full text-center py-0.5 rounded-xs transition-colors font-bold text-xs cursor-pointer select-none relative {isCurrent
 										? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
 										: isCursorCol
 											? 'bg-[#56b6c2]/40 text-[#56b6c2] border border-[#56b6c2] font-black'
@@ -232,7 +232,7 @@
 									{@const isSubCurrent = $isSeqPlaying && $seqCurrentStep >= step && $seqCurrentStep < step + spc / 2}
 									<button
 										onclick={() => handleCycleAccent(step)}
-										class="flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all {isSubCurrent
+										class="press flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all {isSubCurrent
 											? 'border-white bg-white text-black font-black shadow-[0_0_8px_#fff]'
 											: accVal === 4
 												? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-xs'

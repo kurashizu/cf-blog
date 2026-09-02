@@ -62,7 +62,7 @@
 				<button
 					onclick={() => setTab('amp')}
 					title="Amplitude Envelope (AMP) — Shapes volume and loudness contour over time via ADSR"
-					class="px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'amp'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'amp'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -71,7 +71,7 @@
 				<button
 					onclick={() => setTab('vcf')}
 					title="Filter Envelope (VCF) — Sweeps filter cutoff frequency over time via ADSR"
-					class="px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'vcf'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'vcf'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -80,7 +80,7 @@
 				<button
 					onclick={() => setTab('pit')}
 					title="Pitch Envelope (PIT) — Modulates transient oscillator pitch over time (ideal for punchy kick drums and laser FX)"
-					class="px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'pit'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'pit'
 						? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>

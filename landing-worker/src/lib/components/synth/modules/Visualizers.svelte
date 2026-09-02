@@ -287,7 +287,7 @@
 				{#each TIME_BASES as tb (tb)}
 					<button
 						onclick={() => setTimeBase(tb)}
-						class="px-1 py-0.2 rounded-xs border text-[8px] cursor-pointer font-black leading-none {timeBase === tb
+						class="press px-1 py-0.2 rounded-xs border text-[8px] cursor-pointer font-black leading-none transition-colors {timeBase === tb
 							? 'border-[#98c379] bg-[#98c379] text-black font-black'
 							: 'border-white/20 text-white/60 hover:text-white'}"
 					>

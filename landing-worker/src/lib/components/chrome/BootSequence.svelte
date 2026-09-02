@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { loadEdgeTrace } from '../../stores/edge';
+	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 
 	let { onDone }: { onDone: () => void } = $props();
+
+	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	interface Row {
 		label: string;
@@ -85,11 +89,20 @@
 
 	let rows = $state<Row[]>([]);
 	let finished = $state(false);
+	let closing = $state(false);
 	let aborted = false;
+
+	/** Fades the screen out over the background video instead of cutting straight to it. */
+	const EXIT_MS = 260;
+	function finish() {
+		if (closing) return;
+		closing = true;
+		setTimeout(onDone, EXIT_MS);
+	}
 
 	function skip() {
 		aborted = true;
-		onDone();
+		finish();
 	}
 
 	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -113,7 +126,7 @@
 			// Long enough to actually read the result — the probes themselves finish
 			// in under a second, which made the whole screen a flicker.
 			await sleep(1200);
-			if (!aborted) onDone();
+			if (!aborted) finish();
 		})();
 
 		window.addEventListener('keydown', skip);
@@ -126,7 +139,20 @@
 	});
 </script>
 
-<div class="fixed inset-0 z-[200] bg-[#0b0c0f] text-[#d8dee9] font-mono overflow-hidden flex flex-col p-3 sm:p-6 md:p-10">
+<!-- Translucent like every other panel (cardBgVideo), so the theme's background
+     video reads through the self-test instead of hiding it behind a flat
+     black screen -- the POST is the very first thing a visitor sees, so it
+     should already look like the same surface the rest of the site is built
+     from. transform-gpu sidesteps the Safari backdrop-filter repaint bug
+     (see +layout.svelte's data-tour="panel" for the full writeup). A soft
+     fade+rise on the way in, and a quicker fade on the way out so dismissing
+     it (any key, or the auto-continue) never cuts straight to the shell. -->
+<div
+	class="fixed inset-0 z-[200] {themeStyles.cardBgVideo} text-[#d8dee9] font-mono overflow-hidden flex flex-col p-3 sm:p-6 md:p-10 transform-gpu transition-opacity duration-200 {closing
+		? 'opacity-0'
+		: 'opacity-100'}"
+	in:fade={{ duration: 260 }}
+>
 	<div class="text-[10px] sm:text-xs text-white/40 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5">
 		<span>KRSZ EDGE WORKBENCH — POWER-ON SELF TEST</span>
 		<span>press any key to skip</span>
@@ -134,7 +160,7 @@
 
 	<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pt-2 sm:pt-3 text-[11px] sm:text-sm leading-relaxed">
 		{#each rows as row (row.label)}
-			<div class="flex items-baseline gap-2 sm:gap-3">
+			<div class="flex items-baseline gap-2 sm:gap-3" in:fly={{ y: -4, duration: 180 }}>
 				<span class="shrink-0 font-bold {row.state === 'ok' ? 'text-[#98c379]' : 'text-[#e5c07b]'}">
 					[{row.state === 'ok' ? ' OK ' : ' -- '}]
 				</span>
@@ -144,10 +170,10 @@
 		{/each}
 
 		{#if finished}
-			<div class="mt-2 sm:mt-3 pt-2 border-t border-white/10 text-[#56b6c2] font-bold">
+			<div class="mt-2 sm:mt-3 pt-2 border-t border-white/10 text-[#56b6c2] font-bold" in:fade={{ duration: 200 }}>
 				POST COMPLETE — {rows.filter((r) => r.state === 'ok').length}/{rows.length} checks answered
 			</div>
-			<div class="text-white/40">booting workbench…</div>
+			<div class="text-white/40" in:fade={{ duration: 200, delay: 60 }}>booting workbench…</div>
 		{:else}
 			<div class="text-white/30">
 				<span class="inline-block w-[8px] h-[14px] align-middle bg-[#56b6c2] animate-pulse"></span>

@@ -192,7 +192,7 @@
 							playSound('click');
 						}}
 						disabled={kbOctaveFrom <= 1}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Lower starting octave"
 					>
 						◄
@@ -204,7 +204,7 @@
 							playSound('click');
 						}}
 						disabled={kbOctaveFrom >= kbOctaveTo}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Raise starting octave"
 					>
 						►
@@ -219,7 +219,7 @@
 							playSound('click');
 						}}
 						disabled={kbOctaveTo <= kbOctaveFrom}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Lower ending octave"
 					>
 						◄
@@ -231,7 +231,7 @@
 							playSound('click');
 						}}
 						disabled={kbOctaveTo >= 7}
-						class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
 						title="Raise ending octave"
 					>
 						►
@@ -243,7 +243,7 @@
 
 			<button
 				onclick={toggleQwerty}
-				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {qwertyOn
+				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {qwertyOn
 					? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_#56b6c2]'
 					: 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'}"
 				title="Play with your computer keyboard — Z-row = base octave, Q-row = octave above. Ctrl = octave down, Shift = octave up (the [ and ] keys also work), hold Space = sustain pedal. Ctrl+0-3 tab navigation keeps working."
@@ -261,7 +261,7 @@
 					setSustainPedal(!$isSustainActive);
 					playSound('toggle');
 				}}
-				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {$isSustainActive
+				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {$isSustainActive
 					? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-[0_0_6px_#e5c07b]'
 					: 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'}"
 				title="Sustain Pedal (PEDAL / CC64) — Keeps sounding notes sustained until released"
@@ -276,7 +276,7 @@
 					cycleVelocityCurve();
 					playSound('toggle');
 				}}
-				class="px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {$velocityCurve === 'EXP'
+				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {$velocityCurve === 'EXP'
 					? 'border-[#61afef] bg-[#61afef] text-black font-black shadow-[0_0_6px_#61afef]'
 					: $velocityCurve === 'LINEAR'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black shadow-[0_0_6px_#98c379]'

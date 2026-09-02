@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import { playSound } from '../../sound';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
 
@@ -186,7 +187,7 @@
 				<button
 					onclick={() => start(mode.steps)}
 					style="border-color: {mode.color}55;"
-					class="text-left border bg-black/40 hover:bg-white/5 rounded-xs px-2.5 py-2 cursor-pointer transition-colors group"
+					class="press text-left border bg-black/40 hover:bg-white/5 rounded-xs px-2.5 py-2 cursor-pointer transition-colors group"
 				>
 					<div class="flex items-center justify-between">
 						<span class="font-black text-xs" style="color: {mode.color}">▶ {mode.label}</span>
@@ -199,7 +200,7 @@
 
 		<button
 			onclick={() => start(ALL_STEPS)}
-			class="w-full px-3 py-1.5 border border-[#e5c07b]/60 bg-[#e5c07b]/10 text-[#e5c07b] hover:bg-[#e5c07b]/25 rounded-xs font-black text-xs cursor-pointer transition-colors"
+			class="press w-full px-3 py-1.5 border border-[#e5c07b]/60 bg-[#e5c07b]/10 text-[#e5c07b] hover:bg-[#e5c07b]/25 rounded-xs font-black text-xs cursor-pointer transition-colors"
 		>
 			▶▶ RUN FULL SEQUENCE ({ALL_STEPS.length} patterns)
 		</button>
@@ -273,7 +274,10 @@
 		{/if}
 
 		{#if hintVisible}
-			<div class="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/85 border border-white/20 rounded-xs text-xs font-mono text-white/85 pointer-events-none whitespace-nowrap">
+			<div
+				class="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/85 border border-white/20 rounded-xs text-xs font-mono text-white/85 pointer-events-none whitespace-nowrap"
+				transition:fade={{ duration: 150 }}
+			>
 				{step.group} · {step.name} ({stepIdx + 1}/{steps.length})
 				{#if step.kind === 'pattern'}&nbsp;· 1 css px = {dpr}× device px{/if}
 				&nbsp;— click/key next · ← prev · Esc exit

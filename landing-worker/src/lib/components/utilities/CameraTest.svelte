@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import Dropdown from '../chrome/Dropdown.svelte';
 
 	let stream: MediaStream | null = null;
@@ -104,14 +105,14 @@
 		{#if running}
 			<button
 				onclick={stop}
-				class="px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black"
+				class="press px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black transition-colors"
 			>
 				STOP &amp; RELEASE CAMERA
 			</button>
 		{:else}
 			<button
 				onclick={() => start()}
-				class="px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black"
+				class="press px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors {error ? 'shake-once' : ''}"
 			>
 				GRANT CAMERA &amp; START
 			</button>
@@ -135,13 +136,17 @@
 	</div>
 
 	{#if error}
-		<div class="text-xs font-mono text-[#e06c75]">{error}</div>
+		<div class="text-xs font-mono text-[#e06c75]" transition:fade={{ duration: 150 }}>{error}</div>
 	{/if}
 
-	<div class="border border-white/15 bg-black/50 rounded-xs overflow-hidden flex items-center justify-center min-h-[180px]">
+	<div class="border border-white/15 bg-black/50 rounded-xs overflow-hidden flex items-center justify-center min-h-[180px] relative">
 		<!-- svelte-ignore a11y_media_has_caption -->
-		<video bind:this={video} muted playsinline class="max-h-[42vh] w-auto {running ? '' : 'hidden'}"></video>
-		{#if !running}
+		<video bind:this={video} muted playsinline class="max-h-[42vh] w-auto transition-opacity duration-200 {running ? 'opacity-100' : 'opacity-0 absolute'}"></video>
+		{#if running}
+			<span class="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 bg-black/70 border border-[#e06c75]/50 rounded-xs text-[10px] font-mono font-bold text-[#e06c75]">
+				<span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>LIVE
+			</span>
+		{:else}
 			<span class="text-xs font-mono text-white/30 py-12">no stream</span>
 		{/if}
 	</div>

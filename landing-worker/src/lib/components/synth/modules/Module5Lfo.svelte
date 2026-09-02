@@ -27,7 +27,7 @@
 							playSound('click');
 						}}
 						title={LFO_TOOLTIPS[w] || w}
-						class="py-1 text-[10px] sm:text-xs border rounded-xs font-black cursor-pointer leading-none text-center {$currentTrack.lfoWaveform === w
+						class="press py-1 text-[10px] sm:text-xs border rounded-xs font-black cursor-pointer leading-none text-center transition-colors {$currentTrack.lfoWaveform === w
 							? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
 							: 'border-white/20 text-white/60 hover:text-white'}"
 					>

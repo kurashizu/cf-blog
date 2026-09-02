@@ -166,7 +166,7 @@
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
 			TESTED: <span class="text-[#98c379] font-bold">{tested.size}</span> · DOWN NOW: <span class="font-bold" style="color: {themeStyles.cursorColor}">{pressed.size}</span>
 		</span>
-		<button onclick={reset} class="ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
+		<button onclick={reset} class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
 			✕ RESET
 		</button>
 	</div>

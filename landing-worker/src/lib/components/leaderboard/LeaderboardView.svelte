@@ -292,7 +292,7 @@
 			<button
 				onclick={() => pick(m.key)}
 				title={`${m.hint} — ${m.bestIsLow ? 'lower is better' : 'higher is better'}`}
-				class="px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {sortKey === m.key
+				class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {sortKey === m.key
 					? 'bg-white/15 text-white'
 					: 'border-white/20 text-white/55 hover:border-white/50'}"
 				style={sortKey === m.key ? `border-color: ${m.color}; color: ${m.color}` : undefined}
@@ -307,7 +307,8 @@
 			type="text"
 			bind:value={query}
 			placeholder="filter by model or creator…"
-			class="px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-xs font-mono text-[#d8dee9] outline-none focus:border-[#56b6c2] min-w-[180px] flex-1 max-w-[320px]"
+			class="focus-glow px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-xs font-mono text-[#d8dee9] outline-none min-w-[180px] flex-1 max-w-[320px] transition-colors"
+			style="--krsz-focus-color: #56b6c2"
 		/>
 		<Dropdown
 			bind:value={creator}
@@ -324,7 +325,7 @@
 			{#each LIMITS as n (n)}
 				<button
 					onclick={() => (limit = n)}
-					class="px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {limit === n
+					class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {limit === n
 						? 'border-white bg-white/15 text-white'
 						: 'border-white/20 text-white/55 hover:border-white/50'}"
 				>
@@ -340,7 +341,7 @@
 	{:else if $leaderboardStatus === 'error'}
 		<div class="text-xs font-mono text-[#e06c75]">
 			Could not load the leaderboard: {$leaderboardError}
-			<button onclick={() => loadLeaderboard(true)} class="ml-2 underline cursor-pointer">retry</button>
+			<button onclick={() => loadLeaderboard(true)} class="press ml-2 underline cursor-pointer hover:text-white transition-colors">retry</button>
 		</div>
 	{/if}
 
@@ -360,7 +361,7 @@
 								<button
 									onclick={() => pick(m.key)}
 									title={`Sort by ${m.hint} — ${m.bestIsLow ? 'lower is better' : 'higher is better'}`}
-									class="cursor-pointer hover:text-white transition-colors uppercase"
+									class="press cursor-pointer hover:text-white transition-colors uppercase"
 								>
 									{m.short}
 								</button>
@@ -387,7 +388,7 @@
 							</td>
 							<td class="px-2 py-1">
 								<div class="flex items-center gap-1.5">
-									<div class="h-2 rounded-xs shrink-0" style="width: {barWidth(m) * 0.6}px; background: {metric.color}; opacity: 0.75"></div>
+									<div class="h-2 rounded-xs shrink-0 transition-[width] duration-200 ease-out" style="width: {barWidth(m) * 0.6}px; background: {metric.color}; opacity: 0.75"></div>
 									<span class="font-bold shrink-0" style="color: {metric.color}">{cell(m, sortKey)}</span>
 								</div>
 							</td>
@@ -414,18 +415,18 @@
 	{@const m = popover.model}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[120]" onclick={() => (popover = null)}></div>
+	<div class="scrim-in fixed inset-0 z-[120]" onclick={() => (popover = null)}></div>
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={cardEl}
-		class="fixed z-[130] w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] font-mono"
+		class="modal-pop fixed z-[130] w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] font-mono"
 		style="left: {cardPos.left}px; top: {cardPos.top}px; border-color: {metric.color}80"
 		onclick={(e) => e.stopPropagation()}
 	>
 		<div class="flex items-start justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
 			<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
-			<button onclick={() => (popover = null)} class="text-[10px] text-white/40 hover:text-white cursor-pointer shrink-0">
+			<button onclick={() => (popover = null)} class="press text-[10px] text-white/40 hover:text-white cursor-pointer shrink-0 transition-colors">
 				[ ✕ ]
 			</button>
 		</div>
@@ -453,7 +454,7 @@
 						query = m.model_creator?.name ?? '';
 						popover = null;
 					}}
-					class="text-[10px] text-white/45 hover:text-white cursor-pointer underline"
+					class="press text-[10px] text-white/45 hover:text-white cursor-pointer underline transition-colors"
 				>
 					filter the table to {m.model_creator?.name ?? 'this creator'}
 				</button>
@@ -462,7 +463,7 @@
 						href={`https://artificialanalysis.ai/models/${encodeURIComponent(m.slug)}`}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="text-[10px] text-[#61afef] hover:underline"
+						class="press text-[10px] text-[#61afef] hover:underline"
 					>
 						open on Artificial Analysis ↗
 					</a>

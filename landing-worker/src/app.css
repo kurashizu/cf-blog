@@ -150,19 +150,125 @@ textarea {
 	animation: krsz-pop 120ms cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* Full modal entrance -- a touch more rise than the dropdown gets, since it's
+   arriving from the center of the screen rather than off a trigger button.
+   Paired with .scrim-in on the backdrop behind it. */
+@keyframes krsz-modal-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.96) translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
+}
+.modal-pop {
+	animation: krsz-modal-pop 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes krsz-scrim-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+.scrim-in {
+	animation: krsz-scrim-in 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Card-style hover for clickable panels (project nodes, module tiles) --
+   a shade lighter and a hairline lift, distinct from .lift's 1px nudge
+   because these are bigger surfaces where a full pixel of shadow travel
+   reads better than the tile-scale version. */
+.card-hover {
+	transition:
+		transform 150ms cubic-bezier(0.2, 0, 0, 1),
+		border-color 150ms cubic-bezier(0.2, 0, 0, 1),
+		box-shadow 150ms cubic-bezier(0.2, 0, 0, 1),
+		background-color 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+.card-hover:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.55);
+}
+.card-hover:active {
+	transform: translateY(0) scale(0.99);
+}
+
+/* A once-off horizontal shake for a rejected action -- invalid input, a
+   disabled control that was clicked anyway. Short and small: this is a
+   terminal error beep, not a cartoon wobble. */
+@keyframes krsz-shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	20%,
+	60% {
+		transform: translateX(-3px);
+	}
+	40%,
+	80% {
+		transform: translateX(3px);
+	}
+}
+.shake-once {
+	animation: krsz-shake 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Input focus -- a soft glow instead of the browser default outline, kept
+   consistent across every text field/select in the workbench. */
+.focus-glow {
+	transition:
+		border-color 130ms cubic-bezier(0.2, 0, 0, 1),
+		box-shadow 130ms cubic-bezier(0.2, 0, 0, 1);
+}
+.focus-glow:focus-visible {
+	outline: none;
+	border-color: var(--krsz-focus-color, #56b6c2);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--krsz-focus-color, #56b6c2) 25%, transparent);
+}
+
+/* Numbers/values that change often (counters, live readings) cross-fade
+   their old value out rather than popping straight to the new one. Apply to
+   a leaf element keyed so Svelte tears it down and back up on change. */
+@keyframes krsz-value-in {
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+.value-in {
+	animation: krsz-value-in 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.press,
-	.lift {
+	.lift,
+	.card-hover,
+	.focus-glow {
 		transition: none;
 	}
 	.press:active,
 	.lift:hover,
-	.lift:active {
+	.lift:active,
+	.card-hover:hover,
+	.card-hover:active {
 		transform: none;
 	}
 	.flash-once,
 	.blink-live,
-	.dropdown-pop {
+	.dropdown-pop,
+	.modal-pop,
+	.scrim-in,
+	.shake-once,
+	.value-in {
 		animation: none;
 	}
 }

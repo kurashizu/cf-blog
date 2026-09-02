@@ -220,7 +220,7 @@
 				<button
 					onclick={() => send(macro.codes)}
 					title={macro.title}
-					class="px-1.5 py-0.5 border border-[#e5c07b]/40 text-[#e5c07b] rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:bg-[#e5c07b]/20 active:scale-95"
+					class="px-1.5 py-0.5 border border-[#e5c07b]/40 text-[#e5c07b] rounded-xs text-[11px] font-mono font-bold cursor-pointer hover:bg-[#e5c07b]/20 active:scale-95 transition-transform"
 				>
 					{macro.label}
 				</button>
@@ -231,7 +231,7 @@
 				modifiers latch for one key · tap again to lock
 			</span>
 			{#if onClose}
-				<button onclick={onClose} class="text-[10px] font-mono text-white/40 hover:text-white cursor-pointer">
+				<button onclick={onClose} class="press text-[10px] font-mono text-white/40 hover:text-white cursor-pointer transition-colors">
 					[ hide ]
 				</button>
 			{/if}
@@ -246,7 +246,7 @@
 				<button
 					onclick={() => press(key)}
 					title={key.mod ? 'Tap to arm for one key, tap again to lock' : undefined}
-					class="border rounded-xs font-mono cursor-pointer active:scale-95 transition-colors py-1.5 min-w-0 truncate {r === 0
+					class="border rounded-xs font-mono cursor-pointer active:scale-95 transition-[color,background-color,border-color,transform] py-1.5 min-w-0 truncate {r === 0
 						? 'text-[10px]'
 						: 'text-[11px] sm:text-xs'} {isLocked
 						? 'border-[#e06c75] bg-[#e06c75]/30 text-[#e06c75] font-bold'

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { playSound } from '$lib/sound';
@@ -207,8 +208,11 @@
 {#if $consoleOverlayOpen}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[140] bg-black/50" onclick={() => consoleOverlayOpen.set(false)}></div>
-	<div class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBg} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3">
+	<div class="fixed inset-0 z-[140] bg-black/50" onclick={() => consoleOverlayOpen.set(false)} transition:fade={{ duration: 150 }}></div>
+	<div
+		class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBg} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3"
+		transition:fly={{ y: -16, duration: 180, opacity: 0 }}
+	>
 		<div class="flex items-center justify-between text-xs font-mono font-bold pb-1">
 			<span style="color: {themeStyles.cursorColor}">~ KRSZ CONSOLE // DROP-DOWN</span>
 			<span class="text-white/40">` or Esc to close</span>
