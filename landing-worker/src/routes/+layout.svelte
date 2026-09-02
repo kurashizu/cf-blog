@@ -12,7 +12,7 @@
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
-	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen } from '$lib/stores/chrome';
+	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen } from '$lib/stores/chrome';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
@@ -21,6 +21,8 @@
 	import HotkeyOverlay from '$lib/components/chrome/HotkeyOverlay.svelte';
 	import BootSequence from '$lib/components/chrome/BootSequence.svelte';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
+	import Welcome from '$lib/components/chrome/Welcome.svelte';
+	import GlobalSettings from '$lib/components/chrome/GlobalSettings.svelte';
 
 	let { children } = $props();
 
@@ -45,6 +47,7 @@
 	$effect(() => bootOpen.set(bootVisible));
 
 	const GUIDE_KEY = 'krsz.guide.seen';
+	const WELCOME_KEY = 'krsz.welcome.seen';
 
 	/** The walkthrough is offered once, then only on request. */
 	function showGuideIfNew() {
@@ -64,9 +67,30 @@
 		}
 	}
 
+	/** A full-screen "let's get started" ahead of the anchored tour, shown once
+	 *  on a first visit -- the tour alone points at chrome that means nothing
+	 *  until you know what the site even is. Returning visitors (or anyone who
+	 *  already saw it) skip straight to the existing guide gate below. */
+	function closeWelcome() {
+		welcomeOpen.set(false);
+		try {
+			localStorage.setItem(WELCOME_KEY, '1');
+		} catch {
+			/* nothing to remember it with; it will offer again next visit */
+		}
+		showGuideIfNew();
+	}
+
 	function dismissBoot() {
 		bootVisible = false;
-		showGuideIfNew();
+		let seenWelcome = true;
+		try {
+			seenWelcome = localStorage.getItem(WELCOME_KEY) === '1';
+		} catch {
+			/* private mode — treat as seen so at least the tour still offers itself */
+		}
+		if (seenWelcome) showGuideIfNew();
+		else welcomeOpen.set(true);
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -225,8 +249,16 @@
 	<HotkeyOverlay onClose={() => hotkeyOverlayOpen.set(false)} />
 {/if}
 
+{#if $globalSettingsOpen}
+	<GlobalSettings onClose={() => globalSettingsOpen.set(false)} />
+{/if}
+
 {#if $guideOpen}
 	<Onboarding onClose={closeGuide} />
+{/if}
+
+{#if $welcomeOpen}
+	<Welcome onDone={closeWelcome} />
 {/if}
 
 {#if bootVisible}

@@ -7,6 +7,12 @@
 	let { onDone }: { onDone: () => void } = $props();
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
+	/** cardBgVideo's own bg-[...]/NN literal, its blur suffix stripped off since
+	 *  this screen wants a stronger one (backdrop-blur-xl, a static literal
+	 *  below). The colour itself is extracted, never synthesized, so Tailwind's
+	 *  scanner -- which already generates it correctly from theme.ts -- still
+	 *  sees the exact same string. */
+	let bgColorClass = $derived(themeStyles.cardBgVideo.replace(/\s*backdrop-blur-\S+/, ''));
 
 	interface Row {
 		label: string;
@@ -139,16 +145,24 @@
 	});
 </script>
 
-<!-- Translucent like every other panel (cardBgVideo), so the theme's background
-     video reads through the self-test instead of hiding it behind a flat
-     black screen -- the POST is the very first thing a visitor sees, so it
-     should already look like the same surface the rest of the site is built
-     from. transform-gpu sidesteps the Safari backdrop-filter repaint bug
-     (see +layout.svelte's data-tour="panel" for the full writeup). A soft
+<!-- Translucent like every other panel (cardBgVideo's own colour/opacity via
+     bgColorClass below), so the theme's background video reads through the
+     self-test instead of hiding it behind a flat black screen -- the POST is
+     the very first thing a visitor sees, so it should already look like the
+     same surface the rest of the site is built from. The blur itself is a
+     static literal (backdrop-blur-xl, stronger than cardBgVideo's own -sm) so
+     Tailwind's scanner actually generates it -- building the class name at
+     runtime (e.g. via .replace()) would compile to nothing, since the JIT
+     scanner only sees string literals in source, not their runtime output.
+     This overlay covers the whole busy homepage rather than sitting beside it
+     like a normal panel, so the checklist text needs more separation from
+     whatever the video is doing behind it than a small panel does.
+     transform-gpu sidesteps the Safari backdrop-filter repaint bug (see
+     +layout.svelte's data-tour="panel" for the full writeup). A soft
      fade+rise on the way in, and a quicker fade on the way out so dismissing
      it (any key, or the auto-continue) never cuts straight to the shell. -->
 <div
-	class="fixed inset-0 z-[200] {themeStyles.cardBgVideo} text-[#d8dee9] font-mono overflow-hidden flex flex-col p-3 sm:p-6 md:p-10 transform-gpu transition-opacity duration-200 {closing
+	class="fixed inset-0 z-[200] {bgColorClass} backdrop-blur-xl text-[#d8dee9] font-mono overflow-hidden flex flex-col p-3 sm:p-6 md:p-10 transform-gpu transition-opacity duration-200 {closing
 		? 'opacity-0'
 		: 'opacity-100'}"
 	in:fade={{ duration: 260 }}
