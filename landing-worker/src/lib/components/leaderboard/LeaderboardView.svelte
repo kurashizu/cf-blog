@@ -188,6 +188,20 @@
 	}
 
 	/**
+	 * This view is mounted inside +layout.svelte's routed panel, which carries
+	 * `transform-gpu` (a Safari backdrop-filter repaint fix). Any transform,
+	 * even the identity matrix, creates a new containing block for descendant
+	 * `position: fixed` elements -- so without this, the popover's own
+	 * left/top math would be correct on paper but render offset by wherever
+	 * that panel sits, landing nowhere near the click. Same fix and same
+	 * reasoning as Onboarding.svelte's own portal().
+	 */
+	function portal(node: HTMLElement) {
+		document.body.appendChild(node);
+		return { destroy: () => node.remove() };
+	}
+
+	/**
 	 * Park the card beside the pointer, then pull it back inside the viewport —
 	 * a row near the bottom or the right edge would otherwise open off-screen.
 	 */
@@ -420,6 +434,7 @@
 
 {#if popover}
 	{@const m = popover.model}
+	<div use:portal>
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-[120]" onclick={() => (popover = null)} transition:fade={{ duration: 180 }}></div>
@@ -478,5 +493,6 @@
 				{/if}
 			</div>
 		</div>
+	</div>
 	</div>
 {/if}
