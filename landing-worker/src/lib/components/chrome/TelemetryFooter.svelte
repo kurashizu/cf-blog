@@ -36,18 +36,20 @@
 	const BUILD_TITLE = `Build ${__BUILD_COMMIT__} — ${__BUILD_TIME__} (${__BUILD_TIME_SYDNEY__} Sydney)${BUILD_URL ? '. Open the commit on GitHub in a new tab.' : ''}`;
 </script>
 
-<!-- A single row, always: the two groups no longer wrap onto their own lines when
-     the panel narrows. footer-fit is a container query context (the available
-     width is the panel's, not the viewport's -- the sidebar changes it too), so
-     link labels drop to icon-only before anything gets crowded, and the whole
-     row falls back to a horizontal scroll only past the point where even that
-     is too tight -- it never stacks. -->
+<!-- A single row, always -- like TabBar, never a scrollbar: footer-fit is a
+     container query root (the available width is the panel's, not the
+     viewport's, since the sidebar changes it too) and content sheds itself in
+     rank order as it narrows, same escalation TabBar uses for its own tabs and
+     right-hand badges. Least essential first: the build time, the edge-node
+     label and its dividers, the edge trace reading, then link text down to
+     icon-only. [0] 0:krsz.in* and the commit hash are the two things that
+     never go, so there is always a floor of real content, never an empty bar. -->
 <footer
-	class="footer-fit w-full max-w-full {themeStyles.headerBgVideo} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-nowrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border {themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 gap-1.5 overflow-x-auto custom-scrollbar"
+	class="footer-fit w-full max-w-full {themeStyles.headerBgVideo} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-nowrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border {themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 footer-gap overflow-hidden"
 >
-	<div class="flex items-center gap-2 sm:gap-3 shrink-0">
+	<div class="flex items-center footer-gap shrink-0 min-w-0">
 		<span class="shrink-0">[0] 0:krsz.in*</span>
-		<span class="opacity-40 text-white/30 hidden sm:inline shrink-0">|</span>
+		<span class="footer-div opacity-40 text-white/30 shrink-0">|</span>
 		{#each LINKS as link (link.href)}
 			<a
 				href={link.href}
@@ -63,18 +65,18 @@
 		{/each}
 	</div>
 
-	<div class="flex items-center gap-2 sm:gap-3 shrink-0">
-		<span class="text-[#e06c75] hidden sm:inline shrink-0">"krsz-edge-node"</span>
+	<div class="flex items-center footer-gap shrink-0 min-w-0">
+		<span class="footer-edgenode text-[#e06c75] shrink-0">"krsz-edge-node"</span>
 		{#if edgeLabel}
 			<span
 				data-tour="edge"
 				title={edgeTitle}
-				class="text-[11px] sm:text-xs shrink-0 {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
+				class="footer-edgelabel shrink-0 {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
 			>
 				{edgeLabel}
 			</span>
 		{/if}
-		<span class="opacity-40 text-white/30 hidden sm:inline shrink-0">|</span>
+		<span class="footer-div opacity-40 text-white/30 shrink-0">|</span>
 		<span class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap shrink-0" title={BUILD_TITLE}>
 			{#if BUILD_URL}
 				<a
@@ -89,7 +91,7 @@
 			{:else}
 				{__BUILD_COMMIT__}
 			{/if}
-			<span class="hidden sm:inline"> · {__BUILD_TIME_SYDNEY__}</span>
+			<span class="footer-buildtime"> · {__BUILD_TIME_SYDNEY__}</span>
 		</span>
 	</div>
 </footer>
@@ -98,12 +100,48 @@
 	.footer-fit {
 		container-type: inline-size;
 	}
-	/* Link text is the first thing to give: the icon alone still identifies each
-	   one (title carries the full name), and dropping it buys back real room
-	   before anything more useful would have to go. */
-	@container (max-width: 640px) {
-		.footer-linklabel {
-			display: none;
+	.footer-gap {
+		gap: 0.375rem;
+	}
+	@media (min-width: 640px) {
+		.footer-gap {
+			gap: 0.75rem;
 		}
+	}
+	/* Last resort once every optional item is already gone (icon-only links,
+	   [0] 0:krsz.in* and the commit hash) -- tightens the remaining gaps so the
+	   irreducible floor still fits at the very narrowest real phone widths. */
+	@container (max-width: 340px) {
+		.footer-gap {
+			gap: 0.25rem;
+		}
+	}
+	.footer-edgelabel {
+		font-size: 0.6875rem;
+	}
+	@media (min-width: 640px) {
+		.footer-edgelabel {
+			font-size: 0.75rem;
+		}
+	}
+	/* Sheds in rank order as the panel narrows, same escalation TabBar uses for
+	   its own tabs and right-hand badges -- each step hides one more thing,
+	   never wraps, never scrolls. Thresholds are measured, not guessed: the
+	   content at each stage (padding and gaps included) actually needs that
+	   much room, checked against a full-width, nothing-hidden render. */
+	@container (max-width: 1320px) {
+		.footer-buildtime { display: none; }
+	}
+	@container (max-width: 1180px) {
+		.footer-edgenode { display: none; }
+	}
+	@container (max-width: 1030px) {
+		.footer-div { display: none; }
+	}
+	@container (max-width: 990px) {
+		.footer-edgelabel { display: none; }
+	}
+	@container (max-width: 790px) {
+		.footer-linklabel { display: none; }
 	}
 </style>
