@@ -17,13 +17,16 @@ Apex-domain portal (`krsz.in` / `www.krsz.in`), styled as a fake `tmux` terminal
 - `/guestbook` — posts to `blog.krsz.in`'s guestbook API.
 - `/synth` — an 8-track WebAudio modular synthesizer workstation (sequencer, piano roll, MIDI input, FX/EQ, oscilloscope/FFT/loudness visualizers, patch save/load). Imports `.mid` files (`src/lib/midi-file.ts`, drag one anywhere onto the page) and bounces the pattern to WAV through an `OfflineAudioContext`. The audio engine (`src/lib/synth.ts`, `src/lib/sound.ts`) is framework-agnostic; everything else is Svelte stores wrapping it.
 - `/utils` — twelve browser-side hardware testers: keyboard, mouse, touch/pen, typing, gamepad, reaction, screen, audio out, mic in, camera, net/power, display/system. Audio out and mic in both pick their device (`AudioContext.setSinkId` / a `deviceId` constraint), and mic in records a take, draws it and plays it back. Every value is probed live; anything the browser withholds prints `n/a` rather than a number.
-- `/leaderboard` — the Artificial Analysis language-model table, cached by `cache-worker` into D1 and read from `blog.krsz.in/api/llm-leaderboard`. Sortable by intelligence, coding, agentic, blended price, output speed, TTFT or release date.
+- `/lm-space` — the Artificial Analysis language-model table as a navigable 3D volume (three.js, WASD + mouse), with a sortable-table fallback mode for touch devices or by choice. Data is cached by `cache-worker` into D1 and read from `blog.krsz.in/api/llm-leaderboard`.
+- `/krsz-vm` — a real x86 PC, emulated in the tab via v86; see "x86 emulator" below.
+- `/chatbot` — a language model running entirely on-device via WebGPU, no server involved.
+- `/lifelab` — Conway's Game of Life as a campaign: the two rules, still lifes, gliders, collisions, and the glider gun.
 
 Shared chrome (tab bar, sidebar, command console, telemetry footer, theme) lives in `src/routes/+layout.svelte` and `src/lib/components/chrome/`.
 
-Hotkeys: `Ctrl+0`-`Ctrl+4` switch view (always, even inside the key-capturing testers), `T` cycles theme, `` ` `` drops the console down over any tab, `?` or `F1` opens the full keymap.
+Hotkeys: `Ctrl+0`-`Ctrl+7` switch view (always, even inside the key-capturing testers), `T` cycles theme, `` ` `` drops the console down over any tab, `?` or `F1` opens the full keymap.
 
-First-time visitors get a six-step guided tour (`Onboarding.svelte`): a spotlight ring around a real element with a bubble anchored beside it, walking through the tabs, the workbench panel, the console button, the sidebar launchpad and the footer's edge readout. Anchors are `data-tour` attributes on the chrome; a step whose anchor is missing at that viewport falls back to a centred bubble. It is offered once per browser, then only via the `[?] GUIDE` button, the `guide` console command, or `keys` for the keymap.
+On a true first visit, a full-screen `Welcome.svelte` intro runs before anything else — its CTA doubles as agreeing to the linked privacy notice — and only then is the seven-step guided tour (`Onboarding.svelte`) offered: a spotlight ring around a real element with a bubble anchored beside it, walking through the tabs, the workbench panel, the console button, the sidebar launchpad, the footer's edge readout, the guide button itself, and finally opening the full keymap. Anchors are `data-tour` attributes on the chrome; a step whose anchor is missing at that viewport falls back to a centred bubble. It is offered once per browser, then only via the `[?] GUIDE` button, the `guide` console command, or `keys` for the keymap. `/synth`, `/lm-space`, and `/lifelab` each layer their own view-specific guided tour on top, tracked independently in `localStorage` and all resettable from Global Settings.
 
 Every page load starts with a short POST screen of real capability probes (GPU renderer string, storage quota, service-worker state, edge PoP) — any key skips it, and it never runs under `prefers-reduced-motion`. Tab switches are client-side navigation, so it does not reappear between views.
 
@@ -31,9 +34,9 @@ The footer reads `/cdn-cgi/trace` and shows the real serving Cloudflare PoP, neg
 
 The console is a small shell, reached only as a drop-down (`` ` `` or the `~` button in the tab bar) so no view carries an autofocused input: a read-only virtual filesystem projected from `MODULES` and the live stores (`cd`, `ls`, `cat`, `tree`), pipes into `grep`/`head`/`tail`/`sort`/`uniq`/`wc`, persistent history, `alias`, and `man <cmd>`.
 
-## x86 emulator (`/x86sim`, work in progress)
+## x86 emulator (`/krsz-vm`, work in progress)
 
-`5:x86sim` runs [v86](https://github.com/copy/v86) (BSD-2), a 32-bit x86 emulator
+`5:krsz-vm` runs [v86](https://github.com/copy/v86) (BSD-2), a 32-bit x86 emulator
 that JIT-compiles guest code to WebAssembly, and boots an Alpine x86 ISO on it.
 Alpine is the guest because it still ships 32-bit x86 as a release architecture,
 which Debian and Arch no longer do.
@@ -58,16 +61,19 @@ failed.
 
 The BIOS blobs in `static/vm/` come from the v86 repository; SeaBIOS is LGPLv3.
 
-`/utilities` and `/linux` still resolve, as prerendered 308s to the new paths.
+`/utilities`, `/linux` and `/x86sim` still resolve, as prerendered 308s to the new paths.
 
 ## Network relay (`/net`)
 
-`src/routes/net/+server.ts` is the one non-prerendered route: a same-origin
-WebSocket front door for an [OmniProxy](https://github.com/kurashizu/OmniProxy)
-relay, for the Linux VM view. The browser cannot set `x-proxy-token` on a
-WebSocket and a token in the page bundle would be readable by anyone, so the
-upstream endpoint and its token live only as Worker secrets and never reach the
-client — the page just opens `wss://<origin>/net`.
+`src/routes/net/+server.ts` is one of a handful of non-prerendered routes (the
+others serve the VM's disk/ISO images, a WISP protocol bridge for the
+emulator's networking, the chatbot's proxied model weights, and a
+DNS-over-HTTPS endpoint) — this one is a same-origin WebSocket front door for
+an [OmniProxy](https://github.com/kurashizu/OmniProxy) relay, for the Linux VM
+view. The browser cannot set `x-proxy-token` on a WebSocket and a token in the
+page bundle would be readable by anyone, so the upstream endpoint and its
+token live only as Worker secrets and never reach the client — the page just
+opens `wss://<origin>/net`.
 
 Because the wire format is `[u32 stream_id][u8 type][payload]`, the relay reads
 the CONNECT target straight out of each frame and enforces a destination
@@ -130,7 +136,7 @@ The **KRSZ mark itself** (`lib/krsz-marks.ts`) is the one piece of the UI that d
 
 ### Performance Mode (`stores/performance.ts`)
 
-A manual, explicit toggle in Global Settings — separate from `prefers-reduced-motion`, which is about motion sensitivity. Performance Mode is about a slow device or battery, and when it's on, it goes to true zero, not just eased curves: every CSS `transition`/`animation`/`backdrop-filter` is force-killed via one universal `:root[data-perf='on'] * { ... !important }` rule in `app.css` (a hand-kept list of specific classes was tried first and kept missing real cases — the universal rule is the fix), every translucent surface (`bg-black/NN` cards, the `headerBgVideo`/`cardBgVideo` pair) collapses to solid black via an attribute-selector rule so it doesn't have to touch the ~17 components that read `THEME_STYLES` directly, and the background theme video is suppressed in JS (`ThemeBackgroundVideo.svelte`) since CSS alone can't stop a `<video>` element from decoding frames.
+A manual, explicit toggle in Global Settings — separate from `prefers-reduced-motion`, which is about motion sensitivity. Performance Mode is about a slow device or battery, and when it's on, it goes to true zero, not just eased curves: every CSS `transition`/`animation`/`backdrop-filter` is force-killed via one universal `:root[data-perf='on'] * { ... !important }` rule in `app.css` (a hand-kept list of specific classes was tried first and kept missing real cases — the universal rule is the fix), every translucent surface (`bg-black/NN` cards, the `headerBgVideo`/`cardBgVideo` pair) collapses to solid black via an attribute-selector rule so it doesn't have to touch the ~18 components that read `THEME_STYLES` directly, and the background theme video is suppressed in JS (`ThemeBackgroundVideo.svelte`) since CSS alone can't stop a `<video>` element from decoding frames.
 
 Svelte's `transition:`/`in:`/`out:` directives animate inline styles directly and are **invisible to CSS entirely**, `!important` or not — `$lib/perf-transitions.ts` is a drop-in `fade`/`fly`/`scale` replacement (same signature as `svelte/transition`) that collapses to `duration: 0` when performance mode is on. Every file that imports `fade`/`fly`/`scale` imports from `$lib/perf-transitions`, not `svelte/transition` directly — keep it that way for any new overlay.
 
@@ -182,29 +188,37 @@ landing-worker/
 │   │   ├── vfs.ts                      # Console virtual filesystem, projected from MODULES
 │   │   ├── links.ts                    # Every open/ping destination
 │   │   ├── evaluator.ts                # Sandboxed math expression evaluator (console `eval`)
+│   │   ├── krsz-marks.ts               # KRSZ brand mark: figlet-font renderings + fixed letter colors
+│   │   ├── omniproxy-protocol.ts, relay-allowlist.ts  # OmniProxy wire format + destination allowlist for /net
+│   │   ├── share-codec.ts              # Patch <-> URL-fragment codec (synth)
+│   │   ├── vm-storage.ts               # VM image chunking/range-parsing helpers shared by the vm/img and vm/pc routes
 │   │   ├── songs/                      # Built-in sequencer patterns (data only)
 │   │   ├── data/modules.ts             # Project portal content (real facts + Mermaid diagrams)
 │   │   ├── routes-map.ts               # Tab index <-> path mapping
 │   │   ├── stores/                     # Svelte stores wrapping the synth/sound singletons
 │   │   └── components/
+│   │       ├── chatbot/                # In-browser WebGPU LLM chat
 │   │       ├── chrome/                 # TabBar, Sidebar, CommandConsole, TelemetryFooter,
 │   │       │                           # HotkeyOverlay, BootSequence, Onboarding
 │   │       ├── projects/               # ProjectsView + MermaidDiagram
-│   │       ├── leaderboard/            # LeaderboardView
-│   │       ├── utilities/              # The twelve hardware testers
-│   │       ├── x86sim/                 # v86 emulator view
 │   │       ├── guestbook/
 │   │       ├── hardware/               # RotaryKnob/HardwareFader + shared drag action
+│   │       ├── krsz-vm/                # x86/QEMU PC emulator view (formerly x86sim/)
+│   │       ├── leaderboard/            # Sortable table, now the fallback mode inside lm-space/
+│   │       ├── lifelab/                # Conway's Game of Life campaign
+│   │       ├── lm-space/               # 3D WebGL leaderboard volume + table fallback
 │   │       ├── pixel/                  # Inline pixel-art icon set
-│   │       └── synth/                  # Transport, track chips, patch manager,
-│   │                                   # Modules 1-7, piano roll, keyboard, settings modal
+│   │       ├── synth/                  # Transport, track chips, patch manager,
+│   │       │                           # Modules 1-7, piano roll, keyboard, settings modal
+│   │       └── utilities/              # The twelve hardware testers
 │   └── routes/
 │       ├── +layout.svelte              # Shared chrome, theme, hotkeys, global styles import
 │       ├── +layout.ts                  # prerender = true
 │       ├── +page.svelte, modules/      # Project portal (same content, two paths)
-│       ├── utils/, leaderboard/, x86sim/, net/, vm/
+│       ├── utils/, lm-space/, krsz-vm/, chatbot/, lifelab/, net/ (+wisp/), vm/ (img/[name]/, pc/[name]/, qemu/[file]/), model/[file]/, dns-query/
 │       ├── guestbook/
-│       └── synth/
+│       ├── synth/
+│       └── x86sim/, linux/, utilities/  # legacy redirect stubs (308 to krsz-vm / utils)
 ├── static/favicon.svg
 ├── svelte.config.js                    # adapter-cloudflare, $shared alias
 ├── vite.config.ts

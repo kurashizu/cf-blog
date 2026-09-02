@@ -206,18 +206,4 @@ export interface Attachment {
 	name: string;
 }
 
-/** One entry in the chat, in the shape the processor's template expects. */
-export interface ChatTurn {
-	role: 'user' | 'assistant';
-	content: string;
-	attachments?: Attachment[];
-}
-
-/** Progress while the weights download, aggregated across every file. */
-export interface LoadProgress {
-	file: string;
-	loadedMb: number;
-	totalMb: number;
-	pct: number;
-}
 

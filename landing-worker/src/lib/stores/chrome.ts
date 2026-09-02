@@ -24,10 +24,6 @@ export function toggleConsoleOverlay(): void {
 	consoleOverlayOpen.update((v) => !v);
 }
 
-export function toggleHotkeyOverlay(): void {
-	hotkeyOverlayOpen.update((v) => !v);
-}
-
 /**
  * Per-view walkthroughs are offered once and then only on request, the same
  * way the site tour is. Each view keeps its own flag, so seeing the site tour

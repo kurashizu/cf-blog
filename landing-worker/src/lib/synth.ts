@@ -99,12 +99,6 @@ export function divToColumnSpan(div: NoteDurationDiv, snap: NoteDurationDiv = di
 
 export type VelocityCurve = 'OFF' | 'LINEAR' | 'EXP' | 'LOG' | 'HARD';
 
-export interface VelocityCurveSpec {
-  id: VelocityCurve;
-  name: string;
-  calcGainScale: (rawVel: number) => number;
-}
-
 export interface EqBandSpec {
   id: number;
   label: string;

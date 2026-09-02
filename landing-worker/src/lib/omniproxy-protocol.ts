@@ -49,10 +49,6 @@ export function encodeText(text: string): Uint8Array {
 	return encoder.encode(text);
 }
 
-export function decodeText(bytes: Uint8Array): string {
-	return decoder.decode(bytes);
-}
-
 /** UDP payload: `[u16 hostLen][host][u16 port][data]`. */
 export function encodeUdpPayload(host: string, port: number, data: Uint8Array): Uint8Array {
 	const hb = encoder.encode(host);
@@ -63,18 +59,6 @@ export function encodeUdpPayload(host: string, port: number, data: Uint8Array): 
 	view.setUint16(2 + hb.length, port, false);
 	out.set(data, 4 + hb.length);
 	return out;
-}
-
-export function decodeUdpPayload(payload: Uint8Array): { host: string; port: number; data: Uint8Array } | null {
-	if (payload.length < 4) return null;
-	const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-	const hostLen = view.getUint16(0, false);
-	if (payload.length < 2 + hostLen + 2) return null;
-	return {
-		host: decoder.decode(payload.subarray(2, 2 + hostLen)),
-		port: view.getUint16(2 + hostLen, false),
-		data: payload.subarray(4 + hostLen)
-	};
 }
 
 /**
@@ -95,15 +79,6 @@ export function parseIcmpTarget(payload: Uint8Array): string | null {
 	if (colon <= 0) return null;
 	const host = text.slice(0, colon);
 	return /^[0-9a-zA-Z.:_-]+$/.test(host) && Number.isFinite(Number(text.slice(colon + 1))) ? host : null;
-}
-
-/** Decode a server -> client ICMP reply: `[u16 ipLen][sourceIp][icmpData]`. */
-export function decodeIcmpReply(payload: Uint8Array): { ip: string; data: Uint8Array } | null {
-	if (payload.length < 2) return null;
-	const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-	const ipLen = view.getUint16(0, false);
-	if (payload.length < 2 + ipLen) return null;
-	return { ip: decoder.decode(payload.subarray(2, 2 + ipLen)), data: payload.subarray(2 + ipLen) };
 }
 
 /** Split a "host:port" target, tolerating bracketed IPv6. */

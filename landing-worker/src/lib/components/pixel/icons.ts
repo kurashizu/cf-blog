@@ -18,11 +18,11 @@ export const PIXEL_ICON_PATHS = {
 	// (the previous version, despite its comment's intent, still rendered
 	// as a featureless blob with straight peg legs).
 	github: 'M2 2h2v1h-2zM12 2h2v1h-2zM2 3h3v1h-3zM11 3h3v1h-3zM2 4h4v1h-4zM10 4h4v1h-4zM3 5h10v1h-10zM2 6h12v1h-12zM1 7h14v1h-14zM1 8h2v1h-2zM4 8h8v1h-8zM13 8h2v1h-2zM0 9h16v1h-16zM0 10h2v1h-2zM3 10h10v1h-10zM14 10h2v1h-2zM0 11h16v1h-16zM0 12h16v1h-16zM1 13h14v1h-14zM2 14h3v1h-3zM6 14h4v1h-4zM11 14h3v1h-3zM3 15h2v1h-2zM11 15h2v1h-2z',
-	// The hugging-face emoji: a round face with a smile band, and two
-	// separate hand shapes reaching up from the sides toward it -- the
-	// hands are the one feature that makes this read as "hugging" rather
-	// than a generic smiley (the previous version's "hands" were two
-	// disconnected rectangles below the face, closer to a robot's legs).
+	// The hugging-face emoji: a round face with a horizontal band across
+	// it, and two separate curled shapes at the bottom corners standing
+	// in for the hugging-face emoji's hands -- disconnected from the face
+	// by design so the eye reads them as a separate hand element rather
+	// than part of the face outline.
 	huggingface: 'M6 1h4v1h-4zM5 2h6v1h-6zM4 3h8v1h-8zM3 4h10v1h-10zM2 5h12v1h-12zM1 6h2v1h-2zM5 6h6v1h-6zM13 6h2v1h-2zM1 7h14v1h-14zM1 8h2v1h-2zM5 8h6v1h-6zM13 8h2v1h-2zM2 9h12v1h-12zM3 10h2v1h-2zM11 10h2v1h-2zM0 12h2v1h-2zM14 12h2v1h-2zM0 13h3v1h-3zM13 13h3v1h-3zM1 14h3v1h-3zM12 14h3v1h-3zM2 15h2v1h-2zM12 15h2v1h-2z',
 	help: 'M5 2h6v1H5V2zM4 3h1v2H4V3zm7 0h1v3h-1V3zM9 6h2v1H9V6zM8 7h2v1H8V7zm-1 1h2v3H7V8zm0 4h2v2H7v-2z',
 	hardware:
