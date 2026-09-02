@@ -80,18 +80,32 @@
 		measure();
 		const ro = new ResizeObserver(measure);
 		if (preEl) ro.observe(preEl);
-		return () => ro.disconnect();
+		return () => {
+			ro.disconnect();
+			if (rafHandle) cancelAnimationFrame(rafHandle);
+		};
 	});
 
 	/** Reach of the scatter, in glyph cells -- close glyphs move a lot, this far out nothing does. */
 	const RADIUS = 3.2;
 	const STRENGTH = 1.6;
 
-	function onPointerMove(e: PointerEvent) {
+	/** Latest raw pointer position, applied at most once per animation frame --
+	 *  pointermove can fire far faster than the display refreshes (trackpads
+	 *  routinely hit 120-1000Hz), and without this the O(glyphs) distance pass
+	 *  plus a full Svelte re-render of every span ran on every single event,
+	 *  which is what actually froze the page on the wider banners (LEADERBOARD
+	 *  is 500+ glyphs) rather than the effect itself being wrong. */
+	let pendingX = 0;
+	let pendingY = 0;
+	let rafHandle = 0;
+
+	function applyPointer() {
+		rafHandle = 0;
 		if (!containerEl || bursting) return;
 		const rect = containerEl.getBoundingClientRect();
-		const px = (e.clientX - rect.left) / cellW;
-		const py = (e.clientY - rect.top) / cellH;
+		const px = (pendingX - rect.left) / cellW;
+		const py = (pendingY - rect.top) / cellH;
 
 		for (const g of glyphs) {
 			const ddx = g.col + 0.5 - px;
@@ -110,8 +124,19 @@
 		glyphs = glyphs;
 	}
 
+	function onPointerMove(e: PointerEvent) {
+		pendingX = e.clientX;
+		pendingY = e.clientY;
+		if (rafHandle) return;
+		rafHandle = requestAnimationFrame(applyPointer);
+	}
+
 	function onPointerLeave() {
 		hovering = false;
+		if (rafHandle) {
+			cancelAnimationFrame(rafHandle);
+			rafHandle = 0;
+		}
 		for (const g of glyphs) {
 			g.dx = 0;
 			g.dy = 0;
@@ -147,36 +172,49 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_tabindex -- role/tabindex are only ever both set together, when onclick is provided; the linter can't see that from the dynamic role expression. -->
-<div
-	bind:this={containerEl}
-	onpointermove={(e) => {
-		hovering = true;
-		onPointerMove(e);
-	}}
-	onpointerleave={onPointerLeave}
-	onclick={handleClick}
-	role={onclick ? 'button' : undefined}
-	tabindex={onclick ? 0 : undefined}
-	onkeydown={onclick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleClick()) : undefined}
-	{title}
-	class="relative select-none {onclick ? 'cursor-pointer' : 'cursor-default'} {className}"
-	style="color: {color}"
->
-	<!-- Sizes the box exactly like the <pre> it replaces: same text, same font,
-	     invisible, so its rendered box gives the real glyph cell size in px
-	     (measure() above) rather than assuming 1ch/1em -- leading-tight and
-	     leading-none aren't the same, and callers pass either one. -->
-	<pre bind:this={preEl} class="invisible pointer-events-none">{art}</pre>
+<!-- Two layers, not one: className (every caller passes overflow-x-auto, for
+     the rare viewport too narrow for even the smallest responsive text size)
+     has to sit on an ancestor that never itself gets clipped, while the
+     glyph-positioning div needs overflow-hidden so a scattered or bursting
+     glyph -- deliberately pushed past its own cell, that's the whole effect --
+     can never register as scrollable content and silently grow a scrollbar
+     that was never supposed to exist. Putting both roles on one element (the
+     original shape of this component) meant every hover/click added a few
+     px of real overflow on whichever ancestor happened to be overflow-auto,
+     which is exactly the bug: a scrollbar appearing under a banner that
+     never scrolled before, on every page that uses this component. -->
+<div class="overflow-x-auto">
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -- role/tabindex are only ever both set together, when onclick is provided; the linter can't see that from the dynamic role expression. -->
+	<div
+		bind:this={containerEl}
+		onpointermove={(e) => {
+			hovering = true;
+			onPointerMove(e);
+		}}
+		onpointerleave={onPointerLeave}
+		onclick={handleClick}
+		role={onclick ? 'button' : undefined}
+		tabindex={onclick ? 0 : undefined}
+		onkeydown={onclick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleClick()) : undefined}
+		{title}
+		class="relative select-none overflow-hidden w-fit {onclick ? 'cursor-pointer' : 'cursor-default'} {className}"
+		style="color: {color}"
+	>
+		<!-- Sizes the box exactly like the <pre> it replaces: same text, same font,
+		     invisible, so its rendered box gives the real glyph cell size in px
+		     (measure() above) rather than assuming 1ch/1em -- leading-tight and
+		     leading-none aren't the same, and callers pass either one. -->
+		<pre bind:this={preEl} class="invisible pointer-events-none">{art}</pre>
 
-	{#each glyphs as g (g.row + ':' + g.col)}
-		<span
-			class="absolute top-0 left-0 transition-transform will-change-transform"
-			style="transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
-				? '60ms'
-				: hovering
-					? '90ms'
-					: '260ms'}; transition-timing-function: {bursting ? 'linear' : hovering ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)'};"
-		>{g.ch}</span>
-	{/each}
+		{#each glyphs as g (g.row + ':' + g.col)}
+			<span
+				class="absolute top-0 left-0 transition-transform {hovering || bursting ? 'will-change-transform' : ''}"
+				style="transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
+					? '60ms'
+					: hovering
+						? '90ms'
+						: '260ms'}; transition-timing-function: {bursting ? 'linear' : hovering ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)'};"
+			>{g.ch}</span>
+		{/each}
+	</div>
 </div>

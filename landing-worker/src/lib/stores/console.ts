@@ -14,7 +14,6 @@ import { activeTrackId } from './synth-transport';
 import { BUILTIN_SONGS, builtinSongIdx, handleLoadBuiltinSong } from './synth-patch';
 import { midiConnectedDevice, midiDevices } from './synth-midi';
 import { soundState, setMuted, setVolume } from './sound';
-import { probeTimes } from './probes';
 import { edgeTraceMs, loadEdgeTrace } from './edge';
 import { guideOpen, hotkeyOverlayOpen } from './chrome';
 
@@ -115,7 +114,6 @@ const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
 	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm  6|chatbot  7|lifelab'),
 	out('  open <project>     launch a project in a new tab'),
-	out('  ping <project>     measure real round trip from your browser'),
 	out('  ' + Object.keys(EXTERNAL_LINKS).join(' · ')),
 	accent('── FILESYSTEM ──────────────────────────────'),
 	out('  pwd · cd <path> · ls [-l] [path] · tree [path]'),
@@ -168,7 +166,6 @@ const USAGE: Record<string, string[]> = {
 	alias: ['alias [name="command"]', 'Define or list shell aliases. Persisted in localStorage.'],
 	unalias: ['unalias <name>', 'Remove one alias.'],
 	trace: ['trace', 'Fetch /cdn-cgi/trace and print the serving Cloudflare PoP,', 'negotiated protocol, TLS version and key-exchange group.'],
-	ping: ['ping <project>', 'Three no-cors fetches to a project origin, timed in your browser.'],
 	open: ['open <project>', 'Open a project in a new tab.'],
 	eval: ['eval <expression>', 'Evaluate arithmetic with a hand-written parser — never raw eval().'],
 	bpm: ['bpm [40-300]', 'Show or set the sequencer tempo.'],
@@ -230,23 +227,6 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		const tab = NAV_WORDS[cmd];
 		goto(TAB_ROUTES[tab]);
 		return [ok(`Navigated to ${TAB_ROUTES[tab]}`)];
-	}
-
-	if (cmd === 'ping') {
-		const key = args.trim().toLowerCase();
-		const url = EXTERNAL_LINKS[key] ?? MODULES.find((m) => m.id === key)?.url;
-		if (!url) return [err(`Usage: ping <project> — one of: ${Object.keys(EXTERNAL_LINKS).join(', ')}`)];
-		if (!ctx.piped) push([accent(`PING ${url} (3 samples, browser-measured)`)]);
-		try {
-			const { samples, best } = await probeTimes(url, 3);
-			return [
-				...(ctx.piped ? [accent(`PING ${url}`)] : []),
-				...samples.map((ms, i) => out(`  seq=${i + 1}  time=${ms.toFixed(1)}ms${i === 0 ? '  (incl. TLS setup)' : ''}`)),
-				ok(`  best ${best.toFixed(1)}ms · avg ${(samples.reduce((a, b) => a + b, 0) / samples.length).toFixed(1)}ms`)
-			];
-		} catch {
-			return [err(`  ${url} did not respond`)];
-		}
 	}
 
 	if (cmd === 'open') {
@@ -624,7 +604,7 @@ const COMMAND_NAMES = [
 	'help', 'man', 'clear', 'ls', 'll', 'cd', 'pwd', 'cat', 'tree', 'grep', 'head', 'tail', 'wc',
 	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'date', 'history', 'banner', 'tracks',
 	'songs', 'load', 'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval',
-	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'utils', 'lm-space', 'leaderboard', 'llm', 'ping',
+	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'utils', 'lm-space', 'leaderboard', 'llm',
 	'trace', 'guide', 'tour', 'keys', 'krsz-vm', 'x86sim', 'linux', 'vm', 'alpine', 'chatbot', 'webgpu', 'lifelab', 'life', 'conway',
 	...Object.keys(EXTERNAL_LINKS)
 ];
@@ -637,7 +617,6 @@ const PATH_COMMANDS = new Set(['cd', 'ls', 'll', 'cat', 'tree', 'grep', 'head', 
 
 const ARG_COMPLETIONS: Record<string, string[]> = {
 	open: [...Object.keys(EXTERNAL_LINKS)],
-	ping: [...Object.keys(EXTERNAL_LINKS)],
 	load: BUILTIN_SONGS.map((s) => s.id.toLowerCase()),
 	theme: Object.keys(THEME_ALIASES),
 	blend: ['layer', 'fm', 'ring', 'sync'],

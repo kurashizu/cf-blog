@@ -13,6 +13,7 @@
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
 	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen } from '$lib/stores/chrome';
+	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
@@ -39,6 +40,12 @@
 		for (const [k, v] of Object.entries(vars)) {
 			document.documentElement.style.setProperty(k, v);
 		}
+	});
+	/* Same :root[data-perf] pattern as the theme -- app.css's performance-mode
+	   block reads this attribute, not the store directly, so no component
+	   outside this layout needs to know performance mode exists. */
+	$effect(() => {
+		document.documentElement.dataset.perf = $performanceMode ? 'on' : 'off';
 	});
 	let bootVisible = $state(false);
 	/* Mirrored into a store so a view's own walkthrough can wait for the screen
@@ -159,6 +166,7 @@
 		const stopClock = initClock();
 		const stopTransport = initTransport();
 		initConsoleState();
+		initPerformanceMode();
 		window.addEventListener('keydown', handleKeydown);
 
 		// The auto theme only ever changes on the hour, but a minute-granularity

@@ -115,8 +115,21 @@
 	}
 </script>
 
+<!-- header-fit is the one container-query root for the whole bar -- tab labels
+     and the right-hand cluster (CONSOLE/GUIDE/SETTINGS text, the theme badge,
+     the serverless badge) used to shed on two unrelated systems: the tab
+     labels reacted to the tabstrip's own container width, the right cluster
+     reacted to the viewport's width via 2xl:. Those two didn't move
+     together -- the sidebar alone can shrink the tabstrip's real width
+     without the viewport changing at all, so at plenty of real widths the
+     tabs had already collapsed to bare numbers while GUIDE/SETTINGS/PLAY
+     still carried full text, and the two sides fought over space that
+     wasn't there, clipping the right cluster. One root, one ladder, sheds
+     least-essential first: the serverless badge, then the theme label, then
+     every button's text (icon/bracket only survives), then finally the tab
+     names collapse to bare numbers -- by then there's real room again. -->
 <header
-	class="w-full max-w-full {themeStyles.headerBgVideo} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border {themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5"
+	class="header-fit w-full max-w-full {themeStyles.headerBgVideo} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border {themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5"
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- The strip is a container query root: below the width where all eight
@@ -150,7 +163,7 @@
 				? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 				: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
 		>
-			<span class="hidden 2xl:inline">[~]&nbsp;CONSOLE</span><span class="2xl:hidden">[~]</span>
+			<span class="btnlabel">[~]&nbsp;CONSOLE</span><span class="btnlabel-off">[~]</span>
 		</button>
 
 		<div bind:this={tabsRow} class="relative flex items-center gap-0.5 sm:gap-2" data-tour="tabs">
@@ -210,7 +223,7 @@
 			title="Open the walkthrough — what each view does and every keyboard shortcut"
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
 		>
-			<span class="hidden 2xl:inline">[?]&nbsp;GUIDE</span><span class="2xl:hidden">[?]</span>
+			<span class="btnlabel">[?]&nbsp;GUIDE</span><span class="btnlabel-off">[?]</span>
 		</button>
 		<button
 			onclick={() => {
@@ -218,28 +231,58 @@
 				playSound('click');
 			}}
 			title="Global settings — sound, and clearing anything the site has stored in this browser"
-			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-white/25 text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] hover:bg-[#56b6c2]/20 group"
+			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-white/25 text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] hover:bg-[#56b6c2]/20"
 		>
-			<span class="hidden 2xl:inline">[<span class="inline-block group-hover:rotate-90 transition-transform duration-300">⚙</span>]&nbsp;SETTINGS</span><span class="2xl:hidden">[<span class="inline-block group-hover:rotate-90 transition-transform duration-300">⚙</span>]</span>
+			<span class="btnlabel">[CFG]&nbsp;SETTINGS</span><span class="btnlabel-off">[CFG]</span>
 		</button>
 		<button
 			onclick={cycleTheme}
 			title="Color Theme Switcher — Cycle palette (Auto by time of day, Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
-			class="press hover:underline cursor-pointer hidden 2xl:grid text-[#e5c07b] text-center"
+			class="themebadge press hover:underline cursor-pointer grid text-[#e5c07b] text-center"
 		>
 			<span class="col-start-1 row-start-1 invisible" aria-hidden="true">[THEME: {THEME_LABEL_WIDEST}]</span>
 			<span class="col-start-1 row-start-1">[THEME: {themeLabel}]</span>
 		</button>
 		<span
 			title="Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers"
-			class="bg-black/40 px-2 py-0.5 text-[#56b6c2] hidden 2xl:inline">100%_SERVERLESS</span
+			class="servbadge bg-black/40 px-2 py-0.5 text-[#56b6c2]">100%_SERVERLESS</span
 		>
 	</div>
 </header>
 
 <style>
-	.tabstrip { container-type: inline-size; }
-	@container (max-width: 940px) {
+	/* One container-query root for the whole bar (see the comment on <header>
+	   above for why) -- named so both the tab-strip's own rule and the right
+	   cluster's rules resolve against the same real available width instead
+	   of two different reference frames that don't move together. Thresholds
+	   below are measured against the bar's actual content, not guessed: at
+	   each stage, everything still visible needs that much room, checked
+	   with every optional item above it already hidden. */
+	.header-fit {
+		container-type: inline-size;
+		container-name: header-fit;
+	}
+
+	/* Sheds least-essential first. The serverless badge and the theme label
+	   are pure status/trivia -- gone first. Then every button's text label,
+	   down to icon/bracket-only (CONSOLE/GUIDE/SETTINGS/PLAY all keep their
+	   bracket so the row doesn't visually shrink to nothing, only the word
+	   inside goes). Tab names are the last thing to collapse to bare numbers,
+	   since which view is active matters more than any of the chrome around
+	   it -- by the time it's this tight, the button labels are already gone
+	   and there is real room again. */
+	.btnlabel-off { display: none; }
+	@container header-fit (max-width: 1780px) {
+		.servbadge { display: none; }
+	}
+	@container header-fit (max-width: 1620px) {
+		.themebadge { display: none; }
+	}
+	@container header-fit (max-width: 1180px) {
+		.btnlabel { display: none; }
+		.btnlabel-off { display: inline; }
+	}
+	@container header-fit (max-width: 940px) {
 		.tabname:not(.on) { display: none; }
 	}
 </style>

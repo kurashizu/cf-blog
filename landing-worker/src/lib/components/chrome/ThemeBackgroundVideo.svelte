@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { resolvedTheme, THEME_VIDEO, type FixedTheme } from '../../stores/theme';
+	import { performanceMode } from '../../stores/performance';
 
 	/*
 	 * Two stacked <video> elements rather than one whose src is swapped: a src
@@ -162,7 +163,7 @@
 	}
 </script>
 
-{#if mounted && !reducedMotion}
+{#if mounted && !reducedMotion && !$performanceMode}
 	<div class="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
 		<video
 			bind:this={videoA}

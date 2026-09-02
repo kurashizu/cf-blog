@@ -8,6 +8,7 @@
 	import { playSound, soundEngine, setSoundMuted, setSoundVolume } from '../../sound';
 	import { clearOverlay, storedOverlaySize } from '../krsz-vm/disk-overlay';
 	import { clearSessions, sessionsSize } from '../chatbot/sessions';
+	import { performanceMode, setPerformanceMode } from '../../stores/performance';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -270,6 +271,28 @@
 						color="#98c379"
 						onChange={(v) => setSoundVolume(v / 100)}
 					/>
+				</div>
+			</div>
+
+			<!-- Performance -->
+			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
+				<div class="text-xs sm:text-sm font-black text-[#61afef] border-b border-white/10 pb-1">PERFORMANCE</div>
+				<div class="flex items-center justify-between gap-3">
+					<span class="text-xs text-white/70 max-w-[70%]">
+						Drop the background video, every panel's blur, and every hover/press animation. For a slow
+						device or battery saving, not a visual preference.
+					</span>
+					<button
+						onclick={() => {
+							setPerformanceMode(!$performanceMode);
+							playSound('toggle');
+						}}
+						class="press px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors shrink-0 {$performanceMode
+							? 'border-[#61afef] bg-[#61afef]/15 text-[#61afef]'
+							: 'border-white/20 text-white/40 hover:border-white/40'}"
+					>
+						{$performanceMode ? 'ON' : 'OFF'}
+					</button>
 				</div>
 			</div>
 

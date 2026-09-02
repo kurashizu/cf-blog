@@ -279,3 +279,44 @@ textarea {
 		animation: none;
 	}
 }
+
+/* Performance mode -- a manual switch in Global Settings (stores/performance.ts),
+   separate from prefers-reduced-motion above: that one is about motion
+   sensitivity, this one is about a slow device or battery, so it strips
+   everything with a real compositing/GPU cost rather than just easing
+   curves. Same micro-interaction blackout as reduced-motion (duplicated
+   rather than combined into one selector list, since the two conditions
+   can each be true without the other), plus the two actually expensive
+   surfaces: backdrop-filter (every cardBgVideo/headerBgVideo panel, the
+   boot/welcome screens' blur-xl) and the theme background video, the
+   latter suppressed in ThemeBackgroundVideo.svelte itself since CSS alone
+   can't stop a video element from decoding frames. */
+:root[data-perf='on'] {
+	--krsz-perf: 1;
+}
+:root[data-perf='on'] .press,
+:root[data-perf='on'] .lift,
+:root[data-perf='on'] .card-hover,
+:root[data-perf='on'] .focus-glow {
+	transition: none;
+}
+:root[data-perf='on'] .press:active,
+:root[data-perf='on'] .lift:hover,
+:root[data-perf='on'] .lift:active,
+:root[data-perf='on'] .card-hover:hover,
+:root[data-perf='on'] .card-hover:active {
+	transform: none;
+}
+:root[data-perf='on'] .flash-once,
+:root[data-perf='on'] .blink-live,
+:root[data-perf='on'] .dropdown-pop,
+:root[data-perf='on'] .modal-pop,
+:root[data-perf='on'] .scrim-in,
+:root[data-perf='on'] .shake-once,
+:root[data-perf='on'] .value-in {
+	animation: none;
+}
+:root[data-perf='on'] * {
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
