@@ -282,44 +282,23 @@ textarea {
 
 /* Performance mode -- a manual switch in Global Settings (stores/performance.ts),
    separate from prefers-reduced-motion above: that one is about motion
-   sensitivity, this one is about a slow device or battery, so it strips
-   everything with a real compositing/GPU cost rather than just easing
-   curves. Same micro-interaction blackout as reduced-motion (duplicated
-   rather than combined into one selector list, since the two conditions
-   can each be true without the other), plus the two actually expensive
-   surfaces: backdrop-filter (every cardBgVideo/headerBgVideo panel, the
-   boot/welcome screens' blur-xl) and the theme background video, the
-   latter suppressed in ThemeBackgroundVideo.svelte itself since CSS alone
-   can't stop a video element from decoding frames. */
-:root[data-perf='on'] {
-	--krsz-perf: 1;
-}
-:root[data-perf='on'] .press,
-:root[data-perf='on'] .lift,
-:root[data-perf='on'] .card-hover,
-:root[data-perf='on'] .focus-glow {
-	transition: none;
-}
-:root[data-perf='on'] .press:active,
-:root[data-perf='on'] .lift:hover,
-:root[data-perf='on'] .lift:active,
-:root[data-perf='on'] .card-hover:hover,
-:root[data-perf='on'] .card-hover:active {
-	transform: none;
-}
-:root[data-perf='on'] .flash-once,
-:root[data-perf='on'] .blink-live,
-:root[data-perf='on'] .dropdown-pop,
-:root[data-perf='on'] .modal-pop,
-:root[data-perf='on'] .scrim-in,
-:root[data-perf='on'] .shake-once,
-:root[data-perf='on'] .value-in {
-	animation: none;
-}
+   sensitivity, this one is about a slow device or battery, so it goes all
+   the way to zero rather than just easing curves. A universal kill on *
+   instead of a hand-kept class list -- the earlier version named specific
+   classes (.press, .lift, .dropdown-pop, ...) and it kept missing real
+   cases (AsciiArt's hover/burst glyph transitions had no listed class and
+   slipped through entirely) every time a new animated bit got added
+   anywhere on the site. transition/animation: none !important on every
+   element closes that class of gap for CSS-driven motion for good; the two
+   things CSS categorically can't reach -- Svelte's transition:/in:/out:
+   directives (they animate inline styles directly, so !important on a
+   stylesheet rule can't touch them) and the theme background video (a
+   video element decodes regardless of CSS) -- are gated in JS instead, at
+   the store itself ($performanceMode) and in ThemeBackgroundVideo.svelte. */
 :root[data-perf='on'] * {
+	transition: none !important;
+	animation: none !important;
+	scroll-behavior: auto !important;
 	backdrop-filter: none !important;
 	-webkit-backdrop-filter: none !important;
-}
-:root[data-perf='on'] .custom-scrollbar {
-	scroll-behavior: auto;
 }

@@ -14,7 +14,7 @@
 	import CameraTest from './CameraTest.svelte';
 	import TouchTest from './TouchTest.svelte';
 	import NetPowerInfo from './NetPowerInfo.svelte';
-	import { fade } from 'svelte/transition';
+	import { fade } from '$lib/perf-transitions';
 
 	type ToolId =
 		| 'keyboard'

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fade, scale } from 'svelte/transition';
+	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	import LeaderboardView from '$lib/components/leaderboard/LeaderboardView.svelte';
 	import {

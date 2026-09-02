@@ -2,7 +2,7 @@
 	import BoxHeader from '../chrome/BoxHeader.svelte';
 	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { onMount } from 'svelte';
-	import { fade } from 'svelte/transition';
+	import { fade } from '$lib/perf-transitions';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { pulseStep } from '../../stores/clock';

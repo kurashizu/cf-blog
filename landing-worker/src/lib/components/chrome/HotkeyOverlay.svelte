@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fade, scale } from 'svelte/transition';
+	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	import BoxHeader from './BoxHeader.svelte';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';

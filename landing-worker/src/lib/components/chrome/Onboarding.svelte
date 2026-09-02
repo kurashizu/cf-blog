@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { fade, fly } from '$lib/perf-transitions';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
@@ -131,7 +131,14 @@
 			bubbleStyle = 'left: 50%; top: 50%; transform: translate(-50%, -50%);';
 			return;
 		}
-		el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+		// scrollIntoView's smooth animation runs asynchronously -- reading
+		// getBoundingClientRect() right after calling it (the previous shape
+		// of this function) measured wherever the element was BEFORE the
+		// scroll finished, not where it ended up, and produced a spotlight
+		// box and bubble position pointing at the wrong part of the page
+		// whenever the target actually needed scrolling to reach. Instant
+		// scroll instead, so the very next measurement is already correct.
+		el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
 		const r = el.getBoundingClientRect();
 		box = { x: r.left, y: r.top, w: r.width, h: r.height };
 

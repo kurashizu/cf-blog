@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
+	import { fade } from '$lib/perf-transitions';
 	import BoxHeader from '../chrome/BoxHeader.svelte';
 	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';

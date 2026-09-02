@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { fade, fly } from '$lib/perf-transitions';
 	import { loadEdgeTrace } from '../../stores/edge';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 

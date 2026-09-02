@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
+	import { fade } from '$lib/perf-transitions';
 	import { playSound } from '../../sound';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
 

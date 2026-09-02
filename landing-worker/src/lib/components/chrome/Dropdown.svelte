@@ -6,7 +6,7 @@
 	 * fonts, system blue and rounded corners that belong to nothing else on the
 	 * page. Everywhere a list needs picking from, this is used instead.
 	 */
-	import { scale } from 'svelte/transition';
+	import { scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	export interface Option {
 		value: string;

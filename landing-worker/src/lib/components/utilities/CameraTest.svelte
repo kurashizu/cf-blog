@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fade } from 'svelte/transition';
+	import { fade } from '$lib/perf-transitions';
 	import Dropdown from '../chrome/Dropdown.svelte';
 
 	let stream: MediaStream | null = null;
