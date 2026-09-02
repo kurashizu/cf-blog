@@ -2006,13 +2006,19 @@ const cv = renderer.domElement;
 cv.addEventListener('click', (e) => {
   if (dragged) return;
   if (locked) {
-    // Aiming with the crosshair: shoot down the centre of the screen.
+    // Aiming with the crosshair: shoot down the centre of the screen. Firing
+    // at nothing while a body is selected lets go of it.
     const hit = pick(null);
     if (hit !== -1) select(hit);
+    else if (selIdx !== -1) closeCard();
     return;
   }
   const idx = pick(e);
   if (idx !== -1) { select(idx); return; }
+  // Empty space. With a body selected the click means "done with that one",
+  // not "start looking around" -- only a click with nothing selected engages
+  // free-look, so deselecting never drops you into pointer lock by surprise.
+  if (selIdx !== -1) { closeCard(); return; }
   cv.requestPointerLock();
 });
 onDoc('pointerlockchange', () => {
@@ -2067,6 +2073,11 @@ cv.addEventListener('wheel', (e) => {
 onWin('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'escape') { if (locked) document.exitPointerLock(); closeCard(); return; }
+  // X also closes the card. Esc is the obvious key but while the pointer is
+  // locked the browser consumes it to release the lock and the page never
+  // sees the keydown, so in free-look the card would otherwise only close
+  // via its own button, which there is no cursor to reach.
+  if (k === 'x') { closeCard(); return; }
   if (k === 'r') { lookAtHome(); return; }
   if (k === 'l') { toggleLogos(); return; }
   if (k === 'c') { toggleConstellations(); return; }
@@ -2305,7 +2316,7 @@ function select(i) {
             }</div>`}
         </div>
       </div>
-      <button class="x" id="cardx" title="Close">✕</button>
+      <button class="x" id="cardx" title="Close (X, or click empty space)">✕</button>
     </div>
     <div class="bd">
       <div class="grid">

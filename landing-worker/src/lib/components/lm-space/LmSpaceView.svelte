@@ -218,7 +218,7 @@
 			<div class="panel" id="legend"></div>
 
 			<div id="hint">
-			  <span title="W A S D fly · Q E up/down · Shift boost · drag left to pan · right-drag or click the canvas to look · click a node to inspect · in look mode aim with the crosshair · Esc releases the cursor · R resets the view · L logos · C variant links · F freeze gravity">
+			  <span title="W A S D fly · Q E up/down · Shift boost · drag left to pan · right-drag or click the canvas to look · click a node to inspect · click empty space or press X to deselect · in look mode aim with the crosshair · Esc releases the cursor · R resets the view · L logos · C variant links · F freeze gravity">
 			    <kbd>WASD</kbd> fly &middot; <kbd>R</kbd> reset &middot; controls &#9432;
 			  </span>
 			</div>
