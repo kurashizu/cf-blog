@@ -143,7 +143,13 @@
 		// scroll instead, so the very next measurement is already correct.
 		el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
 		const r = el.getBoundingClientRect();
-		box = { x: r.left, y: r.top, w: r.width, h: r.height };
+		// Skip the reassignment when nothing actually moved -- during the
+		// settle-frame window below this runs up to ~90 times, and a new
+		// object here re-triggers every reactive consumer (arrowLeft, the
+		// spotlight/bubble markup) even when the numbers are identical.
+		if (!box || box.x !== r.left || box.y !== r.top || box.w !== r.width || box.h !== r.height) {
+			box = { x: r.left, y: r.top, w: r.width, h: r.height };
+		}
 
 		await tick();
 		const vw = window.innerWidth;
@@ -241,10 +247,35 @@
 		window.addEventListener('resize', onResize);
 		window.addEventListener('scroll', onResize, true);
 		window.addEventListener('keydown', onKeydown);
+
+		/* window 'resize' only fires when the VIEWPORT changes size -- it does
+		 * nothing for a target moving because the page's own content reflowed
+		 * under it, which is exactly what a per-view tour opened via
+		 * afterSiteGuide() on a genuine first visit hits: heavy panels (the
+		 * synth's piano roll, lifelab's board) are still settling their own
+		 * layout -- a late webfont swap, a canvas/grid sizing itself off its
+		 * container, anything mounting async -- in the same window this tour
+		 * also mounts in, so the one-shot initial measurement was correct
+		 * for a DOM shape that changed a moment later, landing the spotlight
+		 * and bubble on whatever now occupies that old position instead of
+		 * the actual target. There's no single event for "some element's
+		 * position changed for any reason", so this re-measures every frame
+		 * for a short settle window after mount instead of trying to
+		 * subscribe to the specific cause -- cheap (a rect read and, only on
+		 * an actual change, a class of state writes) and self-terminating,
+		 * not a permanent per-frame cost. */
+		let settleFrames = 90; // ~1.5s at 60fps
+		let settleHandle = requestAnimationFrame(function tick() {
+			if (settleFrames-- <= 0) return;
+			void place();
+			settleHandle = requestAnimationFrame(tick);
+		});
+
 		return () => {
 			window.removeEventListener('resize', onResize);
 			window.removeEventListener('scroll', onResize, true);
 			window.removeEventListener('keydown', onKeydown);
+			cancelAnimationFrame(settleHandle);
 		};
 	});
 </script>

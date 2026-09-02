@@ -15,9 +15,9 @@ export const globalSettingsOpen = writable<boolean>(false);
 /** The full-screen "let's get started" welcome, shown once before the anchored
  *  site tour on a first visit -- see WELCOME_KEY in +layout.svelte. */
 export const welcomeOpen = writable<boolean>(false);
-/** The privacy consent gate, shown once ahead of even the welcome screen on a
- *  first visit -- see PRIVACY_KEY in +layout.svelte. Not dismissible except
- *  by its own Agree button, unlike every other overlay here. */
+/** The privacy notice -- opened on request from the link on the welcome
+ *  screen (or anywhere else), not part of the first-visit gate itself:
+ *  the welcome screen's own CTA is what counts as agreeing. */
 export const privacyOpen = writable<boolean>(false);
 
 export function toggleConsoleOverlay(): void {
@@ -50,29 +50,27 @@ export function guideSeen(view: string): boolean {
 
 /**
  * Resolves once the page is clear of the chrome that owns the screen on a first
- * visit: the POST screen, the privacy notice, the welcome screen, then the site
- * tour. A view's own walkthrough waits on this so it cannot open underneath any
- * of those, or stack on top of the site tour when a first visit lands straight
- * on that view.
+ * visit: the POST screen, the welcome screen, then the site tour. A view's own
+ * walkthrough waits on this so it cannot open underneath the boot sequence or
+ * the welcome screen, or stack on top of the site tour when a first visit
+ * lands straight on that view.
  *
- * All four matter here, not just the tour: each is shown before the site tour
- * is offered, so a bare `guideOpen` check passes during any of them and the
- * view tour would open behind it.
+ * The boot and welcome screens matter as much as the tour here: both are
+ * shown before the site tour is offered, so a bare `guideOpen` check passes
+ * during either and the view tour would open behind it.
  */
 export function afterSiteGuide(): Promise<void> {
 	return new Promise((resolve) => {
 		let boot = false;
-		let privacy = false;
 		let welcome = false;
 		let guide = false;
 		let stopBoot: (() => void) | undefined;
-		let stopPrivacy: (() => void) | undefined;
 		let stopWelcome: (() => void) | undefined;
 		let stopGuide: (() => void) | undefined;
 		let done = false;
 
 		const settle = () => {
-			if (done || boot || privacy || welcome || guide) return;
+			if (done || boot || welcome || guide) return;
 			done = true;
 			resolve();
 			// subscribe() runs its callback synchronously, so on the nothing-showing
@@ -80,7 +78,6 @@ export function afterSiteGuide(): Promise<void> {
 			// deferred to let those assignments land.
 			queueMicrotask(() => {
 				stopBoot?.();
-				stopPrivacy?.();
 				stopWelcome?.();
 				stopGuide?.();
 			});
@@ -88,10 +85,6 @@ export function afterSiteGuide(): Promise<void> {
 
 		stopBoot = bootOpen.subscribe((v) => {
 			boot = v;
-			settle();
-		});
-		stopPrivacy = privacyOpen.subscribe((v) => {
-			privacy = v;
 			settle();
 		});
 		stopWelcome = welcomeOpen.subscribe((v) => {

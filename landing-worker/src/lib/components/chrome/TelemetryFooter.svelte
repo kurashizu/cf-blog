@@ -23,8 +23,8 @@
 	);
 
 	const LINKS = [
-		{ href: 'https://github.com/kurashizu', icon: 'github', label: '1:gh/kurashizu', title: 'GitHub Profile — Open https://github.com/kurashizu in a new tab', color: 'text-[#61afef] hover:text-[#98c379]' },
-		{ href: 'https://huggingface.co/kurashizu', icon: 'huggingface', label: '2:hf/kurashizu', title: 'Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab', color: 'text-[#e5c07b] hover:text-[#e06c75]' },
+		{ href: 'https://github.com/kurashizu', icon: 'github', label: '1:github/kurashizu', title: 'GitHub Profile — Open https://github.com/kurashizu in a new tab', color: 'text-[#61afef] hover:text-[#98c379]' },
+		{ href: 'https://huggingface.co/kurashizu', icon: 'huggingface', label: '2:huggingface/kurashizu', title: 'Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab', color: 'text-[#e5c07b] hover:text-[#e06c75]' },
 		{ href: 'https://oshwhub.com/Kurashizu', icon: 'hardware', label: '3:oshwhub', title: 'OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab', color: 'text-[#e06c75] hover:text-[#56b6c2]' },
 		{ href: 'https://skill.krsz.in/rules', icon: 'rules', label: '4:rules', title: 'Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab', color: 'text-[#98c379] hover:text-[#56b6c2]' }
 	] as const;
@@ -66,7 +66,6 @@
 	</div>
 
 	<div class="flex items-center footer-gap shrink-0 min-w-0">
-		<span class="footer-edgenode text-[#e06c75] shrink-0">"krsz-edge-node"</span>
 		{#if edgeLabel}
 			<span
 				data-tour="edge"
@@ -80,6 +79,7 @@
 			</span>
 		{/if}
 		<span class="footer-div opacity-40 text-white/30 shrink-0">|</span>
+		<span class="footer-copyright text-[10px] sm:text-xs text-white/35 shrink-0" title="© {new Date().getFullYear()} kurashizu">© kurashizu</span>
 		<span class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap shrink-0" title={BUILD_TITLE}>
 			{#if BUILD_URL}
 				<a
@@ -136,7 +136,7 @@
 		.footer-buildtime { display: none; }
 	}
 	@container (max-width: 1180px) {
-		.footer-edgenode { display: none; }
+		.footer-copyright { display: none; }
 	}
 	@container (max-width: 1030px) {
 		.footer-div { display: none; }

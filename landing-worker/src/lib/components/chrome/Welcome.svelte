@@ -3,6 +3,7 @@
 	import KrszLogo from './KrszLogo.svelte';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
+	import { privacyOpen } from '../../stores/chrome';
 
 	let { onDone }: { onDone: () => void } = $props();
 
@@ -71,9 +72,8 @@
 				<div class="space-y-1.5">
 					<h1 class="text-2xl sm:text-4xl font-black tracking-tight text-[#eceff4]">Welcome to krsz.in</h1>
 					<p class="text-xs sm:text-sm text-white/55 max-w-md mx-auto leading-relaxed">
-						Kurashizu's random-stuff zone — eight real, working tools built into one edge-native
-						workbench. Everything you see is live: measured in your browser, or read from the service
-						it describes. Nothing here is a mockup.
+						Kurashizu's random-stuff zone — eight real, working tools in one edge-native workbench.
+						Everything you see is live, not a mockup.
 					</p>
 				</div>
 			</div>
@@ -91,13 +91,17 @@
 				{/each}
 			</div>
 
-			<div class="flex flex-col items-center gap-2.5 pt-1" in:fade={{ duration: 300, delay: 120 }}>
+			<div class="flex flex-col items-center gap-2 pt-1" in:fade={{ duration: 300, delay: 120 }}>
 				<button
 					onclick={start}
 					class="press modal-pop px-6 py-2.5 border-2 border-[#98c379] bg-[#98c379]/15 text-[#98c379] rounded-xs text-sm font-black tracking-wide cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors"
 				>
 					LET'S GET STARTED →
 				</button>
+				<p class="text-[10px] text-white/35">
+					By clicking "let's get started", you agree to our
+					<button onclick={() => privacyOpen.set(true)} class="underline hover:text-white/60 cursor-pointer transition-colors">privacy policy</button>.
+				</p>
 				<button onclick={finish} class="press text-xs text-white/40 hover:text-white cursor-pointer transition-colors">
 					skip — I've got it
 				</button>

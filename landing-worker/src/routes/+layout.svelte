@@ -56,7 +56,6 @@
 
 	const GUIDE_KEY = 'krsz.guide.seen';
 	const WELCOME_KEY = 'krsz.welcome.seen';
-	const PRIVACY_KEY = 'krsz.privacy.agreed';
 
 	/** The walkthrough is offered once, then only on request. */
 	function showGuideIfNew() {
@@ -78,8 +77,11 @@
 
 	/** A full-screen "let's get started" ahead of the anchored tour, shown once
 	 *  on a first visit -- the tour alone points at chrome that means nothing
-	 *  until you know what the site even is. Returning visitors (or anyone who
-	 *  already saw it) skip straight to the existing guide gate below. */
+	 *  until you know what the site even is. Its own CTA doubles as agreeing
+	 *  to the privacy notice linked beside it -- there's no separate consent
+	 *  gate, clicking "let's get started" is the one action that means both.
+	 *  Returning visitors (or anyone who already saw it) skip straight to the
+	 *  existing guide gate below. */
 	function closeWelcome() {
 		welcomeOpen.set(false);
 		try {
@@ -90,37 +92,8 @@
 		showGuideIfNew();
 	}
 
-	/** Ahead of even the welcome screen on a first visit -- consent comes
-	 *  before any feature tour, not after. */
-	function agreePrivacy() {
-		privacyOpen.set(false);
-		try {
-			localStorage.setItem(PRIVACY_KEY, '1');
-		} catch {
-			/* nothing to remember it with; it will ask again next visit */
-		}
-		let seenWelcome = true;
-		try {
-			seenWelcome = localStorage.getItem(WELCOME_KEY) === '1';
-		} catch {
-			/* private mode — treat as seen so at least the tour still offers itself */
-		}
-		if (seenWelcome) showGuideIfNew();
-		else welcomeOpen.set(true);
-	}
-
 	function dismissBoot() {
 		bootVisible = false;
-		let seenPrivacy = true;
-		try {
-			seenPrivacy = localStorage.getItem(PRIVACY_KEY) === '1';
-		} catch {
-			/* private mode — treat as seen so the rest of the first-visit flow still runs */
-		}
-		if (!seenPrivacy) {
-			privacyOpen.set(true);
-			return;
-		}
 		let seenWelcome = true;
 		try {
 			seenWelcome = localStorage.getItem(WELCOME_KEY) === '1';
@@ -312,7 +285,7 @@
 {/if}
 
 {#if $privacyOpen}
-	<PrivacyNotice onAgree={agreePrivacy} />
+	<PrivacyNotice onClose={() => privacyOpen.set(false)} />
 {/if}
 
 {#if bootVisible}

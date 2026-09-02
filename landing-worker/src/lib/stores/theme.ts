@@ -1,4 +1,4 @@
-import { derived, writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
 export type FixedTheme = 'tokyo-matte' | 'gruvbox-dark' | 'nord-terminal' | 'cyber-amber';
@@ -181,8 +181,17 @@ export const resolvedTheme = derived([theme, autoResolvedTheme], ([$theme, $auto
 	$theme === 'auto' ? $autoResolvedTheme : $theme
 );
 
-const ORDER: WorkspaceTheme[] = ['auto', 'tokyo-matte', 'gruvbox-dark', 'nord-terminal', 'cyber-amber'];
+const ORDER: FixedTheme[] = ['tokyo-matte', 'gruvbox-dark', 'nord-terminal', 'cyber-amber'];
 
+/** Cycles only the four fixed themes -- 'auto' isn't a stop on this cycle,
+ *  it's a separate mode (set explicitly via the console's `theme auto`).
+ *  Pressing cycle while on auto doesn't jump to some arbitrary fixed theme
+ *  by array position; it moves on from whichever one auto currently
+ *  resolves to, via the same store refreshAutoTheme() keeps live, so the
+ *  step feels continuous with what was already on screen. */
 export function cycleTheme(): void {
-	theme.update((t) => ORDER[(ORDER.indexOf(t) + 1) % ORDER.length]);
+	theme.update((t) => {
+		const current = t === 'auto' ? get(autoResolvedTheme) : t;
+		return ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
+	});
 }
