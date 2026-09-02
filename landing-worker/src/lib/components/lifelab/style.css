@@ -20,11 +20,10 @@
      positioned overlays inside cannot escape into the page. */
   position:relative;isolation:isolate;
   border-radius:2px;overflow:hidden;
-  /* Same 82%-opaque + blur treatment as the rest of the chrome's cardBgVideo
-     surfaces, so the site's background video shows through here too instead
-     of the dish sitting on a flat, unrelated color. */
-  background:color-mix(in srgb, var(--ll-bg) 82%, transparent);
-  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  /* No background of its own: the game fills the main panel, which already
+     paints the chrome's 82%-opaque + blur cardBgVideo surface. A second such
+     layer here stacked to ~97% and hid the video the other views show. */
+  background:transparent;
   color:var(--ll-fg);
   font-family:"JetBrains Mono","Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-size:14px;-webkit-font-smoothing:antialiased;
@@ -33,7 +32,7 @@
 /* A header strip rather than a column: the wordmark, what the dish is, and the
    two board-level buttons, all on one line above the controls. */
 #brand{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;
-  padding:8px 14px;border-bottom:1px solid var(--ll-line);background:var(--ll-panel);min-width:0}
+  padding:8px 14px;border-bottom:1px solid var(--ll-line);background:color-mix(in srgb, var(--ll-panel) 45%, transparent);min-width:0}
 #brandbtns{margin-left:auto;flex:none;display:flex;align-items:center;gap:6px}
 #brandbtns button{flex:none;display:flex;align-items:center;gap:5px;border:1px solid var(--ll-line);
   background:none;color:var(--ll-dim);font:inherit;font-size:10px;letter-spacing:1px;
@@ -83,7 +82,7 @@
    board stays drawable everywhere it does not cover. */
 #logwrap{position:absolute;left:10px;bottom:10px;z-index:4;width:clamp(200px,26%,280px);
   max-height:min(42%,240px);display:flex;flex-direction:column;
-  border:1px solid var(--ll-line);border-radius:2px;background:rgba(10,12,14,.82);
+  border:1px solid var(--ll-line);border-radius:2px;background:rgba(0,0,0,.35);
   backdrop-filter:blur(3px);box-shadow:0 6px 22px rgba(0,0,0,.5);overflow:hidden}
 #loghead{flex:none;padding:7px 9px 6px;border-bottom:1px solid var(--ll-line)}
 #loghead button{margin-left:auto;flex:none;border:1px solid var(--ll-line);background:none;
@@ -115,7 +114,7 @@
    readable. Only the controls scroll when the row runs out of width: they are
    a known set the player learns, while GEN and POP are the readouts that have
    to be visible at all times. */
-#topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--ll-line);background:var(--ll-panel);z-index:3;min-width:0}
+#topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--ll-line);background:color-mix(in srgb, var(--ll-panel) 45%, transparent);z-index:3;min-width:0}
 #tbscroll{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto;scrollbar-width:none}
 #tbscroll::-webkit-scrollbar{display:none}
 #topbar::-webkit-scrollbar{display:none}
@@ -153,7 +152,7 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
    strip. One column fitted twelve of thirty entries in a 671px panel and hid
    the rest behind a five-pixel scrollbar -- which read as "the patterns will
    not come out", because most of them could not be got at. */
-#tray{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:8px 7px;border-left:1px solid var(--ll-line);background:var(--ll-panel);width:166px;flex:none;align-content:start;overflow-y:auto;scrollbar-width:thin}
+#tray{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;padding:8px 7px;border-left:1px solid var(--ll-line);background:color-mix(in srgb, var(--ll-panel) 45%, transparent);width:166px;flex:none;align-content:start;overflow-y:auto;scrollbar-width:thin}
 #tray:empty{display:none}
 #tray::-webkit-scrollbar{width:5px}
 #tray::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:2px}

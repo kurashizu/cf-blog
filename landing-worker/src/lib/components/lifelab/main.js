@@ -663,15 +663,15 @@ function updateImage() {
         }
       } else {
         // Dead cells are the theme's panel color, left translucent so the
-        // board is a slab over the same video-lit backdrop as every other
-        // panel rather than an opaque hole in it. A fading ghost of a cell
+        // board is a faint slab over the same video-lit backdrop as every
+        // other panel rather than an opaque hole in it. A fading ghost of a cell
         // that just died tints toward the theme accent.
         let f = g[gi] * 0.90;
         if (f < 0.02) f = 0;
         g[gi] = f;
         const k = f * 0.5;
         r = (pr + (ar - pr) * k) | 0; gg = (pg + (ag - pg) * k) | 0; b = (pb + (ab - pb) * k) | 0;
-        al = (160 + 95 * f) | 0;
+        al = (90 + 120 * f) | 0;
       }
       d[di] = r; d[di + 1] = gg; d[di + 2] = b; d[di + 3] = al;
     }
