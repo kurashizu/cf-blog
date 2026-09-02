@@ -28,6 +28,12 @@
 		{ href: 'https://oshwhub.com/Kurashizu', icon: 'hardware', label: '3:oshwhub', title: 'OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab', color: 'text-[#e06c75] hover:text-[#56b6c2]' },
 		{ href: 'https://skill.krsz.in/rules', icon: 'rules', label: '4:rules', title: 'Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab', color: 'text-[#98c379] hover:text-[#56b6c2]' }
 	] as const;
+
+	/** Which build this is — commit and time baked in by vite.config.ts, never computed at runtime. */
+	const BUILD_URL = __BUILD_COMMIT_FULL__
+		? `https://github.com/kurashizu/cf-blog/commit/${__BUILD_COMMIT_FULL__}`
+		: undefined;
+	const BUILD_TITLE = `Build ${__BUILD_COMMIT__} — ${__BUILD_TIME__} (${__BUILD_TIME_SYDNEY__} Sydney)${BUILD_URL ? '. Open the commit on GitHub in a new tab.' : ''}`;
 </script>
 
 <footer
@@ -62,5 +68,22 @@
 				{edgeLabel}
 			</span>
 		{/if}
+		<span class="opacity-40 text-white/30 hidden sm:inline">|</span>
+		<span class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap" title={BUILD_TITLE}>
+			{#if BUILD_URL}
+				<a
+					href={BUILD_URL}
+					target="_blank"
+					rel="noopener noreferrer"
+					onclick={() => playSound('click')}
+					class="hover:underline hover:text-white/70 transition-colors"
+				>
+					{__BUILD_COMMIT__}
+				</a>
+			{:else}
+				{__BUILD_COMMIT__}
+			{/if}
+			<span class="hidden sm:inline"> · {__BUILD_TIME_SYDNEY__}</span>
+		</span>
 	</div>
 </footer>
