@@ -37,6 +37,20 @@
 	let mode = $state<'space' | 'table'>('space');
 
 	/**
+	 * The volume is flown with WASD and a mouse; on a touch screen it is a
+	 * slab you can only prod at. Phones and tablets therefore land on the
+	 * table, with a note saying why, and can still opt into SPACE. Decided
+	 * in a pre-effect so it lands before the effect below would boot the
+	 * scene for a mode we are about to leave.
+	 */
+	let mobile = $state(false);
+	let mobileNoteOpen = $state(true);
+	$effect.pre(() => {
+		mobile = matchMedia('(hover: none) and (pointer: coarse)').matches;
+		if (mobile) mode = 'table';
+	});
+
+	/**
 	 * three.js and roughly 640KB of marks and sky are fetched only when the
 	 * volume is first opened, so none of it reaches the main bundle. The scene
 	 * is torn down when the tab unmounts: a live WebGL context and a running
@@ -106,6 +120,22 @@
 
 	{#if guideOpen}
 		<Onboarding steps={LM_SPACE_TOUR} heading="LM.SPACE TOUR" onClose={closeGuide} />
+	{/if}
+
+	{#if mobile && mobileNoteOpen}
+		<div class="shrink-0 mb-1.5 px-2.5 py-2 border border-[#e5c07b]/50 bg-[#e5c07b]/10 rounded-xs text-xs font-mono text-[#e5c07b] flex items-start gap-2">
+			<span class="flex-1">
+				<b>DESKTOP RECOMMENDED.</b> The 3D volume is flown with a keyboard and mouse and does not
+				work well on a touch screen. You have been put on the TABLE view; SPACE is still there
+				above if you want to try it anyway.
+			</span>
+			<button
+				onclick={() => { mobileNoteOpen = false; playSound('click'); }}
+				title="Dismiss"
+				aria-label="Dismiss"
+				class="shrink-0 px-1 text-[#e5c07b]/70 hover:text-[#e5c07b] cursor-pointer"
+			>&#10005;</button>
+		</div>
 	{/if}
 
 	{#if mode === 'table'}
