@@ -67,21 +67,27 @@
 ╚██████╔╝   ██║   ██║███████╗███████║
  ╚═════╝    ╚═╝   ╚═╝╚══════╝╚══════╝`}
 		/>
-		<!-- Wraps rather than scrolls: with a dozen tools a hidden overflow row is undiscoverable -->
-		<div class="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 text-xs sm:text-sm">
-			{#each TOOLS as tool (tool.id)}
-				<button
-					onclick={() => select(tool.id)}
-					title={`${tool.label} — ${tool.desc}`}
-					class="press px-2.5 py-1 border rounded-xs cursor-pointer transition-colors whitespace-nowrap {activeTool === tool.id
-						? 'border-white bg-white/20 text-white font-bold'
-						: 'border-white/20 hover:border-white/60 opacity-70'}"
-					style={activeTool === tool.id ? `color: ${tool.color}` : undefined}
-				>
-					{tool.label}
-				</button>
-			{/each}
-		</div>
+	</div>
+
+	<!-- Same launchpad-tile look as the sidebar's own hotkey grid: a small
+	     card per tool instead of a flat row of pills, so this reads as one
+	     consistent pattern across the site rather than two different ways
+	     of picking from a list. -->
+	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
+		{#each TOOLS as tool (tool.id)}
+			{@const isActive = activeTool === tool.id}
+			<button
+				onclick={() => select(tool.id)}
+				title={`${tool.label} — ${tool.desc}`}
+				class="lift press border rounded-xs p-1.5 flex flex-col items-start text-left cursor-pointer transition-all min-w-0 {isActive
+					? 'border-white bg-white/20 text-white shadow-md'
+					: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
+				style={isActive ? `border-color: ${tool.color}` : undefined}
+			>
+				<div class="font-bold text-xs leading-tight tracking-tight truncate w-full" style="color: {isActive ? '#fff' : tool.color}">{tool.label}</div>
+				<div class="text-[10px] sm:text-xs opacity-60 font-mono truncate w-full">{tool.desc}</div>
+			</button>
+		{/each}
 	</div>
 
 	<div style="border-color: {current.color}66;" class="border p-3 sm:p-4 rounded-sm space-y-2 bg-black/20">

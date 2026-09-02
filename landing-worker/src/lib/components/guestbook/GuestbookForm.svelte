@@ -198,6 +198,10 @@
 		{#if gbStatus}
 			<div class="border border-[#98c379] p-2.5 text-xs sm:text-sm font-bold text-[#98c379] bg-black/40 rounded-xs" in:fade={{ duration: 160 }}>{gbStatus}</div>
 		{/if}
+		<p class="text-[10px] sm:text-xs text-white/40 leading-relaxed">
+			Unlike the rest of this site, this is sent to blog.krsz.in and shown publicly below. Sending confirms
+			you're fine with that.
+		</p>
 		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">DISPATCH PACKET TO BLOG.KRSZ.IN -&gt;</button>
 	</form>
 
