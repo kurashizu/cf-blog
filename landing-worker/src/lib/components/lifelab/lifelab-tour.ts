@@ -30,7 +30,7 @@ export const LIFELAB_TOUR: Step[] = [
 	{
 		target: 'll-tools',
 		title: 'DRAWING',
-		body: 'PAN drags the view. DRAW paints live cells and ERASE removes them, so you can seed a shape by hand and watch what it becomes. Pick a pattern from the tray instead and the cursor carries it as a stamp until you place it.',
+		body: 'PAN drags the view. DRAW paints live cells, and clears one you click on, so you can seed a shape by hand and watch what it becomes. SELECT drags a box around cells and picks them up: drag to move, R and F to turn, Delete to remove, Enter to drop. Pick a pattern from the tray instead and it follows the cursor until you click. Ctrl+Z undoes any of it.',
 		color: '#e5c07b'
 	},
 	{

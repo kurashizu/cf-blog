@@ -21,7 +21,7 @@ export const LEVELS = [
     h: 200,
     sandbox: true,
     accent: '#61afef',
-    tools: ['pan', 'draw', 'erase'],
+    tools: ['pan', 'draw'],
     stamps: 'all',
     intro: ['> B3/S23 — a cell lives on 2 or 3 neighbours, and is born on exactly 3.'],
     steps: [

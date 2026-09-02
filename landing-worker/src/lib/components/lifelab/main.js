@@ -205,8 +205,13 @@ function buildTopbar() {
   };
   addTool('pan', ICONS.pan, 'PAN');
   el.toolBtns.pan.dataset.tour = 'll-tools';
-  if ((L.tools || []).includes('draw')) addTool('draw', ICONS.draw, 'DRAW');
-  if ((L.tools || []).includes('erase')) addTool('erase', ICONS.erase, 'ERASE');
+  // No ERASE tool: DRAW clears a live cell it is clicked on, and SELECT +
+  // Delete clears any area. A third way to do the same thing was one more
+  // button to understand.
+  if ((L.tools || []).includes('draw')) {
+    addTool('draw', ICONS.draw, 'DRAW');
+    el.toolBtns.draw.title = 'Paint cells — click a live cell to clear it. To clear an area, SELECT it and press Delete';
+  }
   // SELECT: drag a box; the bar that follows saves it as a pattern of your
   // own, copies it as RLE, or clears it.
   addTool('sel', ICONS.sel, 'SELECT');
@@ -544,7 +549,7 @@ function syncPieceBar(rebuild) {
       '<button class="tb" id="pb-save" title="Save to the CUSTOM shelf [Ctrl+S]">' + ICONS.lab + '<span>SAVE</span></button>' +
       '<button class="tb go" id="pb-drop" title="Put it down here [Enter, or click outside it]">' + ICONS.check + '<span>DROP</span></button>' +
       '<button class="tb" id="pb-again" title="Put a copy down and keep this one in hand [Ctrl+D]">' + ICONS.soup + '<span>STAMP</span></button>' +
-      '<button class="tb bad" id="pb-del" title="' + (pc.origin ? 'Delete these cells [Delete]' : 'Drop it, unplaced [Delete]') + '">' + ICONS.close + '</button>' +
+      '<button class="tb bad" id="pb-del" title="' + (pc.origin ? 'Delete these cells [Delete]' : 'Throw it away without placing it [Delete]') + '">' + ICONS.wipe + '<span>DELETE</span></button>' +
       '<em>' + (pc.follow ? 'click to put it down · shift-click to stamp copies' : touch ? 'drag to move · tap outside to drop' : 'drag to move · arrows nudge · click outside or Enter drops · Esc ' + (pc.origin ? 'puts it back' : 'cancels') + ' · Ctrl+Z undoes') + '</em>';
     pieceBar.querySelector('#pb-rot').onclick = rotatePiece;
     pieceBar.querySelector('#pb-flip').onclick = flipPiece;

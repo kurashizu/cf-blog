@@ -197,7 +197,8 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
 .fbar button.tb{padding:3px 7px;font-size:10px;gap:5px}
 .fbar button.tb.go{border-color:var(--ll-green);color:var(--ll-green)}
 .fbar button.tb:disabled{opacity:.35;cursor:default}
-.fbar button.tb.bad:hover{border-color:var(--ll-red);color:var(--ll-red)}
+.fbar button.tb.bad{color:var(--ll-red);border-color:color-mix(in srgb, var(--ll-red) 45%, transparent)}
+.fbar button.tb.bad:hover{border-color:var(--ll-red);background:rgba(224,108,117,.12)}
 /* Rides on the piece, so it must not take the pointer away from it. */
 #piecebar{transition:left .06s linear,top .06s linear}
 /* The name / RLE prompt inside the dialog box. */

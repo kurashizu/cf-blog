@@ -70,7 +70,7 @@ function classify(name, gens = 900) {
 check('there is exactly one level', LEVELS.length === 1, LEVELS.length + ' found');
 check('it is the sandbox', LEVELS[0].sandbox === true);
 check('it offers every pattern', LEVELS[0].stamps === 'all');
-check('it can draw and erase', ['pan', 'draw', 'erase'].every((t) => LEVELS[0].tools.includes(t)));
+check('it can pan and draw', ['pan', 'draw'].every((t) => LEVELS[0].tools.includes(t)));
 
 // ── every pattern is distinct ────────────────────────────────────────────
 {
