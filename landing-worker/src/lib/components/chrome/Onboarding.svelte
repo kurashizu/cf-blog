@@ -78,7 +78,13 @@
 		{
 			target: 'guide-btn',
 			title: 'THAT IS THE TOUR',
-			body: 'This button reopens the walkthrough any time — so does the "guide" command. For the complete keymap, including the synth’s QWERTY piano, press ? or F1.',
+			body: 'This button reopens the walkthrough any time — so does the "guide" command.',
+			color: '#e06c75'
+		},
+		{
+			target: 'guide-btn',
+			title: 'ONE MORE THING — THE KEYMAP',
+			body: 'Every shortcut on this site, in one place: navigation, the synth’s QWERTY piano, the console, all of it. Press ? or F1 whenever you need it back.',
 			keys: [
 				{ key: '? / F1', desc: 'full keyboard reference' },
 				{ key: 'Esc', desc: 'close whichever overlay is open' }

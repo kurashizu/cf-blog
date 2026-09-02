@@ -7,7 +7,7 @@ import { MODULES } from '../data/modules';
 import { EXTERNAL_LINKS } from '../links';
 import { TAB_ROUTES } from '../routes-map';
 import { allPaths, lookup, renderTree, resolvePath, type VNode } from '../vfs';
-import { theme, cycleTheme, THEME_STYLES, resolvedTheme, type WorkspaceTheme } from './theme';
+import { theme, cycleTheme, resolvedTheme, type WorkspaceTheme } from './theme';
 import { bpm, setBpm, setSnapDiv, setNoteDur, setTimeMeter, toggle as toggleSeq, play, stop, isSeqPlaying } from './synth-transport';
 import { updateActiveTrack, tracksState } from './synth-tracks';
 import { activeTrackId } from './synth-transport';
@@ -115,7 +115,7 @@ const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
 	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm  6|chatbot  7|lifelab'),
 	out('  open <project>     launch a project in a new tab'),
-	out('  ' + Object.keys(EXTERNAL_LINKS).join(' · ')),
+	out('  ' + Object.keys(EXTERNAL_LINKS).filter((k) => k !== 'rules').join(' · ')),
 	accent('── FILESYSTEM ──────────────────────────────'),
 	out('  pwd · cd <path> · ls [-l] [path] · tree [path]'),
 	out('  cat <file>      print a file'),
@@ -124,7 +124,7 @@ const HELP: ConsoleLine[] = [
 	out('  cmd | cmd       pipe output into a filter'),
 	out('  alias ll="ls -l" · unalias ll'),
 	accent('── EDGE ────────────────────────────────────'),
-	out('  trace       real Cloudflare PoP, protocol, TLS (/cdn-cgi/trace)'),
+	out('  trace (edge)   real Cloudflare PoP, protocol, TLS (/cdn-cgi/trace)'),
 	accent('── INFO ────────────────────────────────────'),
 	out('  whoami      operator profile'),
 	out('  tracks      sequencer track states'),
@@ -149,7 +149,7 @@ const HELP: ConsoleLine[] = [
 	out('  clear / Ctrl+L  clear screen · Tab completes/cycles · ↑↓ history'),
 	out('  guide           replay the getting-started walkthrough'),
 	out('  ` (backquote)   open/close this console over any view'),
-	out('  ? (shift+/)     full hotkey reference')
+	out('  keys            full hotkey reference (or press ? / F1 outside this console)')
 ];
 
 /** One-line usage strings for `man <cmd>`. */
@@ -176,7 +176,26 @@ const USAGE: Record<string, string[]> = {
 	echo: ['echo <text>', 'Print text. Useful as a pipe source.'],
 	history: ['history', 'The last 15 commands. Persisted across visits.'],
 	guide: ['guide', 'Reopen the getting-started walkthrough.'],
-	keys: ['keys', 'Open the full keyboard reference (same as ? or F1).']
+	keys: ['keys', 'Open the full keyboard reference. Not the same as typing "?" here — that prints help; press the actual ? or F1 key (outside a text field) for this instead.'],
+	man: ['man <cmd>', 'Usage for one command.'],
+	help: ['help', 'The full command list, grouped by section.'],
+	whoami: ['whoami', 'Operator profile — name, location, motto, stack.'],
+	date: ['date', 'Current time in Sydney and UTC.'],
+	tracks: ['tracks', 'Sequencer track states — which are muted, soloed, and their blend mode.'],
+	songs: ['songs', 'Built-in songs (● marks the one currently loaded).'],
+	midi: ['midi', 'Connected MIDI device status, if any.'],
+	banner: ['banner', 'Print the KRSZ banner — a fresh block-letter rendering each time.'],
+	play: ['play', 'Start sequencer playback.'],
+	stop: ['stop', 'Stop sequencer playback.'],
+	seq: ['seq', 'Toggle sequencer playback.'],
+	mute: ['mute', 'Mute master output.'],
+	unmute: ['unmute', 'Unmute master output.'],
+	snap: ['snap <div>', 'Set the sequencer grid snap. One of: ' + VALID_DIVS.join(', ')],
+	dur: ['dur <div>', 'Set the default note duration. One of: ' + VALID_DIVS.join(', ')],
+	meter: ['meter <sig>', 'Set the time signature. One of: ' + VALID_METERS.join(', ')],
+	blend: ['blend <mode>', 'Set the active track\'s blend mode: layer, fm, ring, or sync.'],
+	clear: ['clear', 'Clear the console scrollback.'],
+	pwd: ['pwd', 'Print the current virtual working directory.']
 };
 
 // ── pipe filters ────────────────────────────────────────────────────────────
@@ -601,12 +620,20 @@ export async function executeCommand(raw: string): Promise<void> {
 }
 
 // ── Tab completion ──────────────────────────────────────────────────────────
+/** Every non-navigation, non-link dispatched command and alias -- there's no
+ *  way to introspect the `cmd === '...'` checks below programmatically, so
+ *  this list has to be hand-kept in sync with runOne(). NAV_WORDS and
+ *  EXTERNAL_LINKS are spread in below rather than duplicated here, since
+ *  those two ARE enumerable objects and hand-copying them is exactly the
+ *  kind of drift that let `alias help=...`/`alias 0=...` silently shadow
+ *  real commands before this list caught up with them. */
 const COMMAND_NAMES = [
-	'help', 'man', 'clear', 'ls', 'll', 'cd', 'pwd', 'cat', 'tree', 'grep', 'head', 'tail', 'wc',
-	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'date', 'history', 'banner', 'tracks',
-	'songs', 'load', 'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval',
-	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'utils', 'lm-space', 'leaderboard', 'llm',
-	'trace', 'guide', 'tour', 'keys', 'krsz-vm', 'x86sim', 'linux', 'vm', 'alpine', 'chatbot', 'webgpu', 'lifelab', 'life', 'conway',
+	'help', '?', 'man', 'clear', 'cls', 'ls', 'll', 'cd', 'pwd', 'cat', 'tree', 'grep', 'head', 'tail', 'wc', 'dir',
+	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'about', 'date', 'time', 'history', 'banner', 'tracks', 'trk',
+	'songs', 'load', 'play', 'stop', 'seq', 'sequence', 'bpm', 'vol', 'volume', 'mute', 'unmute', 'midi', 'theme', 'eval', 'js', 'calc',
+	'echo', 'snap', 'dur', 'meter', 'blend',
+	'trace', 'edge', 'guide', 'tour', 'keys', 'keymap', 'intro',
+	...Object.keys(NAV_WORDS),
 	...Object.keys(EXTERNAL_LINKS)
 ];
 
