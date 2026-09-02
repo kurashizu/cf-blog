@@ -288,6 +288,32 @@ export function transformCells(p, rot, flip) {
   return { cells: r.cells.map(([x, y]) => [r.w - 1 - x, y]), w: r.w, h: r.h };
 }
 
+/**
+ * The next orientation after pressing ROTATE or FLIP, defined on what is on
+ * screen: ROTATE always turns the shape you are looking at a quarter turn
+ * clockwise, FLIP always mirrors it left-to-right.
+ *
+ * The stored form is "rotate, then mirror", and a mirror reverses the sense
+ * of any rotation applied after it: turning a mirrored shape clockwise is the
+ * same as turning the unmirrored one anticlockwise and mirroring after. So
+ * once flipped, ROTATE has to step the stored rotation backwards -- stepping
+ * it forwards made the button turn the wrong way, which is what "the rotate
+ * logic makes no sense" was.
+ * @param {number} rot @param {boolean} flip @param {'rotate' | 'flip'} op
+ * @returns {{ rot: number, flip: boolean }}
+ */
+export function nextOrientation(rot, flip, op) {
+  if (op === 'flip') return { rot, flip: !flip };
+  return { rot: (rot + (flip ? 3 : 1)) & 3, flip };
+}
+
+/** True when two patterns are the same set of cells. @param {Pattern} a @param {Pattern} b */
+export function sameCells(a, b) {
+  if (a.cells.length !== b.cells.length || a.w !== b.w || a.h !== b.h) return false;
+  const key = (/** @type {number[][]} */ c) => c.map(([x, y]) => x + ',' + y).sort().join(';');
+  return key(a.cells) === key(b.cells);
+}
+
 /** @param {Pattern} p @param {number} rot @returns {Pattern} */
 export function rotateCells(p, rot) {
   let { cells, w, h } = p;

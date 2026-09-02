@@ -6,7 +6,7 @@
 // -- the automaton, the pattern library, the level data and the save format --
 // are checked: engine.js, patterns.js and levels.js all pass.
 import { Life } from './engine.js';
-import { pattern, transformCells, kindOf, CATEGORIES, patternMeta, custom, parseRLE, decodeRLE, encodeRLE, normalizeCells } from './patterns.js';
+import { pattern, transformCells, nextOrientation, sameCells, kindOf, CATEGORIES, patternMeta, custom, parseRLE, decodeRLE, encodeRLE, normalizeCells } from './patterns.js';
 import { LEVELS } from './levels.js';
 
 const $ = s => document.querySelector(s);
@@ -15,7 +15,7 @@ const $ = s => document.querySelector(s);
 // so binding here left the second visit holding elements that were no longer
 // in the document, drawing into a detached canvas: a blank panel.
 let termEl, cv, ctx, topbar, tray, msgEl;
-let wipeBtn, logWrap, logToggle, tbScroll, stampBar, selBar, traySecs;
+let wipeBtn, logWrap, logToggle, tbScroll, pieceBar, traySecs;
 let guideEl, gstep, gtext;
 
 /**
@@ -43,10 +43,8 @@ function bind() {
   logWrap = $('#logwrap'); logToggle = $('#logtoggle');
   // Floating bars over the dish, built here rather than in the markup: they
   // are the game's own furniture, and rebuilt with it on every mount.
-  const wrap = $('#cvwrap');
-  stampBar = document.createElement('div'); stampBar.id = 'stampbar'; stampBar.className = 'fbar'; stampBar.hidden = true;
-  selBar = document.createElement('div'); selBar.id = 'selbar'; selBar.className = 'fbar'; selBar.hidden = true;
-  wrap.append(stampBar, selBar);
+  pieceBar = document.createElement('div'); pieceBar.id = 'piecebar'; pieceBar.className = 'fbar'; pieceBar.hidden = true;
+  $('#cvwrap').appendChild(pieceBar);
 
   // Handlers and the size observer belong to the nodes, so they are re-attached
   // with them rather than once in start().
@@ -55,6 +53,14 @@ function bind() {
   // one of them erases the save -- the control that most needs to be
   // recognisable at a glance was the least marked.
   wipeBtn.innerHTML = ICONS.wipe + '<span>CLEAR ALL</span>';
+  // Dish size sits with CLEAR ALL: both are about the board itself, not
+  // about editing it, and the control row below is full.
+  el.dish = document.createElement('button');
+  el.dish.id = 'dishbtn';
+  el.dish.title = 'Dish size — cycles 320×200, 640×400, 1280×800, 2000×1800. Cells are kept; shrinking asks first if any would be lost.';
+  el.dish.onclick = cycleDish;
+  wipeBtn.parentNode.insertBefore(el.dish, wipeBtn);
+  if (S.L) syncDishBtn();
   /* The log floats over the dish, so it has to be dismissable: on a short
      stage it covers a corner the player may want to draw in. */
   if (logToggle) {
@@ -124,11 +130,15 @@ const S = {
   idx: 0, L: null, eng: null, ghost: null, buf: null, bctx: null, img: null,
   phase: 'edit', running: false, speed: 1,
   cam: { x: 0, y: 0, s: 12 },
-  tool: 'pan', stamp: null, rot: 0, flip: false,
-  /** Rectangle being selected, in cells, or null. */
+  tool: 'pan',
+  /**
+   * The one thing that can be in hand: a set of cells at a position on the
+   * board, not yet part of it. Comes from the tray or from lifting a
+   * selection; moves, turns, drops, or goes away. See the "piece" section.
+   */
+  piece: null,
+  /** The marquee while SELECT is being dragged, in cells, or null. */
   sel: null,
-  /** On touch, a stamp is previewed at the tapped cell and placed from the bar. */
-  pendingTap: null,
   stampsUsed: 0, presetPop: 0, snap: null, goal: null,
   hover: null, drag: null, paintVal: 1,
   unlocked: 0,
@@ -191,7 +201,7 @@ function buildTopbar() {
   mkSep();
   el.toolBtns = {};
   const addTool = (name, icon, label) => {
-    el.toolBtns[name] = mkBtn(icon, label, () => { S.tool = name; S.stamp = null; syncTools(); });
+    el.toolBtns[name] = mkBtn(icon, label, () => { S.tool = name; syncTools(); });
   };
   addTool('pan', ICONS.pan, 'PAN');
   el.toolBtns.pan.dataset.tour = 'll-tools';
@@ -200,7 +210,7 @@ function buildTopbar() {
   // SELECT: drag a box; the bar that follows saves it as a pattern of your
   // own, copies it as RLE, or clears it.
   addTool('sel', ICONS.sel, 'SELECT');
-  el.toolBtns.sel.title = 'Drag a rectangle to save it as a pattern, copy it as RLE, or clear it';
+  el.toolBtns.sel.title = 'Drag a box around cells to pick them up: then drag to move, R / F to turn, Enter to drop, Delete to remove, Ctrl+S to save';
   // No separator before the speed control: it is part of the same "how you
   // work" half as the tools, and the extra 9px was enough to push it onto a
   // second row of its own at ordinary window widths.
@@ -208,9 +218,7 @@ function buildTopbar() {
     S.speed = (S.speed + 1) % SPEEDS.length;
     el.spd.querySelector('span').textContent = 'SPD ' + SPEEDS[S.speed] + '/s';
   });
-  el.dish = mkBtn(ICONS.dish, '', cycleDish);
-  el.dish.title = 'Dish size — cycles 320×200, 640×400, 1280×800, 2000×1800. Cells are kept; shrinking asks first if any would be lost.';
-  syncDishBtn();
+
   const stats = document.createElement('div');
   stats.id = 'stats';
   stats.dataset.tour = 'll-stats';
@@ -234,8 +242,12 @@ const thumbCache = new Map();
 function thumb(key, color) {
   const ck = key + '|' + color;
   if (thumbCache.has(ck)) return thumbCache.get(ck);
-  const p = pattern(key);
-  const sc = Math.min(26 / p.w, 26 / p.h, 5);
+  const html = thumbOf(pattern(key), color);
+  thumbCache.set(ck, html);
+  return html;
+}
+function thumbOf(p, color, size = 26) {
+  const sc = Math.min(size / p.w, size / p.h, 5);
   const W = Math.max(8, Math.round(p.w * sc)), H = Math.max(8, Math.round(p.h * sc));
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
@@ -243,10 +255,10 @@ function thumb(key, color) {
   const ox = (W - p.w * sc) / 2, oy = (H - p.h * sc) / 2;
   const cw = Math.max(sc, 0.35);
   for (const [x, y] of p.cells) g.fillRect(ox + x * sc, oy + y * sc, cw, cw);
-  const html = '<img width="' + W + '" height="' + H + '" src="' + c.toDataURL() + '" alt="">';
-  thumbCache.set(ck, html);
-  return html;
+  return '<img width="' + W + '" height="' + H + '" src="' + c.toDataURL() + '" alt="">';
 }
+
+
 
 let trayQuery = '';
 /** Which sections are folded. Persisted: a shelf you closed stays closed. */
@@ -302,7 +314,7 @@ function renderTray() {
       const add = document.createElement('button'); add.className = 'stamp tradd';
       add.innerHTML = ICONS.sel + '<span>FROM SELECTION</span>';
       add.title = 'Switch to SELECT, drag a box on the dish, then SAVE from the bar that appears';
-      add.onclick = () => { S.stamp = null; S.tool = 'sel'; syncTools(); syncStampBar(); tlog('> SELECT: drag a box on the dish, then SAVE', 't-sys'); };
+      add.onclick = () => { S.tool = 'sel'; syncTools(); tlog('> SELECT: drag a box around cells to pick them up, then SAVE from the bar', 't-sys'); };
       const paste = document.createElement('button'); paste.className = 'stamp tradd';
       paste.innerHTML = ICONS.draw + '<span>PASTE RLE</span>';
       paste.title = 'Paste a pattern in RLE, the format LifeWiki and Golly use';
@@ -327,10 +339,10 @@ function stampButton(k, color, mine) {
   b.title = m.label + ' — ' + p.w + '×' + p.h + ', ' + p.cells.length + ' cells' +
     (m.note ? '\n' + m.note : '') + (m.credit ? '\n' + m.credit : '') +
     (big ? '\nBigger than the dish — selecting it offers to enlarge the dish' : '');
-  b.onclick = () => selectStamp(k);
+  b.onclick = () => pickPiece(k);
   if (mine) {
     const x = document.createElement('span'); x.className = 'del'; x.innerHTML = '&#10005;'; x.title = 'Delete this pattern';
-    x.onclick = (e) => { e.stopPropagation(); custom.remove(k); if (S.stamp === k) { S.stamp = null; S.tool = 'pan'; } renderTray(); syncStampBar(); tlog('> deleted ' + m.label, 't-warn'); };
+    x.onclick = (e) => { e.stopPropagation(); custom.remove(k); renderTray(); tlog('> deleted ' + m.label, 't-warn'); };
     b.appendChild(x);
   }
   el.stampBtns[k] = b;
@@ -338,8 +350,30 @@ function stampButton(k, color, mine) {
 }
 
 /** Picks a stamp, offering to grow the dish first when it would not fit. */
-function selectStamp(k) {
-  if (S.stamp === k) { S.stamp = null; S.tool = 'pan'; S.pendingTap = null; syncTools(); syncStampBar(); return; }
+/* ---------------- the piece in hand ---------------- *
+ * One model for everything that is not yet on the board. A piece is a set of
+ * cells (already turned the way you see them -- there is no hidden rotation
+ * state to compose wrongly) at a top-left position, plus how it got here:
+ *
+ *   from the tray   -> it follows the pointer until a click parks it
+ *                      (on touch it parks in the middle of the view at once);
+ *   lifted by SELECT-> it is parked where it was, and Esc puts it back.
+ *
+ * Parked, it is dragged to move, nudged by arrows, turned by R and F about
+ * its own centre, dropped by Enter or a click outside it, removed by Delete,
+ * copied, saved, or stamped again. Anything that plainly means "I am done
+ * with it" -- RUN, STEP, picking another pattern, starting a new selection --
+ * drops it first, so it never has to be thought about.
+ */
+function makePiece(cells, w, h, extra) {
+  return { cells, w, h, x: 0, y: 0, follow: false, origin: null, key: null, label: 'PIECE', rot: 0, flip: false, ...extra };
+}
+function isTouch() { return matchMedia('(hover: none)').matches; }
+function pieceCenterAt(pc, cx, cy) { pc.x = cx - (pc.w >> 1); pc.y = cy - (pc.h >> 1); }
+function pieceHit(c) { const pc = S.piece; return !!(pc && c && c.x >= pc.x && c.y >= pc.y && c.x < pc.x + pc.w && c.y < pc.y + pc.h); }
+
+/** Takes a pattern off the shelf into the hand, offering a bigger dish first if it needs one. */
+function pickPiece(k) {
   const p = pattern(k), m = patternMeta(k);
   if (p.w > S.L.w || p.h > S.L.h) {
     const [nw, nh] = fitDish(p.w, p.h);
@@ -351,20 +385,215 @@ function selectStamp(k) {
       [
         { label: 'ENLARGE & PLACE', fn: () => {
           hideMsg();
+          commitPiece();
           resizeDish(nw, nh);
-          S.stamp = k; S.rot = 0; S.flip = false; S.tool = 'stamp';
-          // One sensible place for something this size: the middle.
-          placeStamp(nw >> 1, nh >> 1);
-          S.stamp = null; S.tool = 'pan';
-          fitCamera(); syncTools(); syncStampBar();
+          const pc = makePiece(p.cells.map(c => [c[0], c[1]]), p.w, p.h, { key: k, label: m.label });
+          pieceCenterAt(pc, nw >> 1, nh >> 1);
+          S.piece = pc;
+          // One sensible place for something this size: the middle, down.
+          commitPiece();
+          fitCamera();
         } },
         { label: 'CANCEL', fn: hideMsg },
       ]
     );
     return;
   }
-  S.stamp = k; S.tool = 'stamp'; S.pendingTap = null;
-  syncTools(); syncStampBar();
+  commitPiece();
+  const pc = makePiece(p.cells.map(c => [c[0], c[1]]), p.w, p.h, { key: k, label: m.label, follow: !isTouch() });
+  const r = cv.getBoundingClientRect();
+  const c = S.hover && inGrid(S.hover) ? S.hover : screenToCell(r.width / 2, r.height / 2);
+  pieceCenterAt(pc, c.x, c.y);
+  S.piece = pc;
+  if (S.tool === 'sel') S.tool = 'pan';
+  syncTools(); syncPieceBar(true);
+}
+
+/** Cell under a point on the canvas, in CSS pixels from its top-left. */
+function screenToCell(mx, my) {
+  return { x: Math.floor((mx - S.cam.x) / S.cam.s), y: Math.floor((my - S.cam.y) / S.cam.s) };
+}
+
+/** The marquee, clamped to the board, as a rectangle, or null. */
+
+
+/** Lifts the cells inside the marquee into the hand. They leave the board
+ *  as they do, which is what makes "drag it somewhere else" mean what it says. */
+function liftSelection() {
+  const r = selRect();
+  S.sel = null;
+  if (!r) return;
+  const raw = [];
+  for (let y = r.y; y < r.y + r.h; y++)
+    for (let x = r.x; x < r.x + r.w; x++) if (S.eng.get(x, y)) raw.push([x, y]);
+  if (!raw.length) { deny('nothing in that box'); return; }
+  pushUndo();
+  let bx = Infinity, by = Infinity;
+  for (const [x, y] of raw) { if (x < bx) bx = x; if (y < by) by = y; }
+  for (const [x, y] of raw) S.eng.set(x, y, 0);
+  const n = normalizeCells(raw);
+  S.piece = makePiece(n.cells, n.w, n.h, { x: bx, y: by, label: 'SELECTION', origin: { x: bx, y: by, cells: n.cells.slice() } });
+  syncPieceBar(true);
+  tlog('> picked up ' + raw.length + ' cells — drag to move, R/F to turn, Enter to drop, Esc to put back', 't-sys');
+}
+
+/** Puts the piece down on the board. With keep, a copy lands and the piece stays in hand. */
+function commitPiece(keep) {
+  const pc = S.piece; if (!pc) return;
+  pushUndo();
+  let lost = 0;
+  for (const [x, y] of pc.cells) {
+    const gx = pc.x + x, gy = pc.y + y;
+    if (gx < 0 || gy < 0 || gx >= S.L.w || gy >= S.L.h) { lost++; continue; }
+    S.eng.set(gx, gy, 1);
+  }
+  S.stampsUsed++;
+  tlog('> ' + pc.label + ' @ (' + pc.x + ',' + pc.y + ')' + (lost ? ' — ' + lost + ' cells fell off the edge' : ''), lost ? 't-warn' : 't-sys');
+  if (!keep) S.piece = null;
+  syncPieceBar(true);
+}
+/** Esc: a lifted selection goes back where it was; a tray piece just vanishes. */
+function cancelPiece() {
+  const pc = S.piece; if (!pc) return;
+  if (pc.origin) for (const [x, y] of pc.origin.cells) S.eng.set(pc.origin.x + x, pc.origin.y + y, 1);
+  S.piece = null; syncPieceBar(true);
+}
+function deletePiece() {
+  const pc = S.piece; if (!pc) return;
+  tlog('> ' + (pc.origin ? 'deleted ' + pc.cells.length + ' cells' : 'dropped ' + pc.label), 't-sys');
+  S.piece = null; syncPieceBar(true);
+}
+function rotatePiece() {
+  const pc = S.piece; if (!pc) return;
+  const cx = pc.x + pc.w / 2, cy = pc.y + pc.h / 2;
+  const t = transformCells(pc, 1, false);
+  pc.cells = t.cells; pc.w = t.w; pc.h = t.h;
+  pc.x = Math.round(cx - pc.w / 2); pc.y = Math.round(cy - pc.h / 2);
+  ({ rot: pc.rot, flip: pc.flip } = nextOrientation(pc.rot, pc.flip, 'rotate'));
+  syncPieceBar(true);
+}
+function flipPiece() {
+  const pc = S.piece; if (!pc) return;
+  const t = transformCells(pc, 0, true);
+  pc.cells = t.cells;
+  ({ rot: pc.rot, flip: pc.flip } = nextOrientation(pc.rot, pc.flip, 'flip'));
+  syncPieceBar(true);
+}
+function nudgePiece(dx, dy) { const pc = S.piece; if (!pc) return; pc.x += dx; pc.y += dy; pc.follow = false; syncPieceBar(); }
+
+function savePiece() {
+  const pc = S.piece; if (!pc) return;
+  showPrompt('SAVE AS PATTERN', pc.w + '×' + pc.h + ', ' + pc.cells.length + ' cells. Name it:', pc.key ? pc.label : 'MY PATTERN', (name) => {
+    const key = custom.add(name, pc.cells, pc.w, pc.h);
+    hideMsg(); renderTray();
+    tlog('> saved ' + patternMeta(key).label + ' to CUSTOM', 't-sys');
+  });
+}
+/** The piece as RLE, to the clipboard and to an in-page clip for Ctrl+V. */
+let clip = null;
+function copyPiece() {
+  const pc = S.piece; if (!pc) return;
+  clip = { cells: pc.cells.map(c => [c[0], c[1]]), w: pc.w, h: pc.h, label: pc.label };
+  const { header, body } = encodeRLE(pc.cells, pc.w, pc.h);
+  const text = header + '\n' + body;
+  const done = () => tlog('> copied ' + pc.cells.length + ' cells as RLE', 't-sys');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => showPrompt('RLE', 'Clipboard access was refused; copy it from here:', '', null, text));
+  else showPrompt('RLE', 'Copy it from here:', '', null, text);
+}
+/** Ctrl+V: the in-page clip, else whatever RLE the system clipboard holds. */
+function pasteClip() {
+  const put = (cells, w, h, label) => {
+    commitPiece();
+    const pc = makePiece(cells, w, h, { label, follow: !isTouch() });
+    const r = cv.getBoundingClientRect();
+    const c = S.hover && inGrid(S.hover) ? S.hover : screenToCell(r.width / 2, r.height / 2);
+    pieceCenterAt(pc, c.x, c.y);
+    S.piece = pc; syncPieceBar(true);
+  };
+  if (clip) { put(clip.cells.map(c => [c[0], c[1]]), clip.w, clip.h, clip.label); return; }
+  if (!navigator.clipboard?.readText) { deny('nothing to paste — copy a piece first'); return; }
+  navigator.clipboard.readText().then((t) => {
+    const parsed = parseRLE(t || '');
+    if (!parsed.rle) { deny('the clipboard holds no RLE'); return; }
+    const d = normalizeCells(decodeRLE(parsed.rle).cells);
+    if (!d.cells.length) { deny('the clipboard holds no RLE'); return; }
+    put(d.cells, d.w, d.h, parsed.name || 'PASTED');
+  }, () => deny('clipboard access was refused'));
+}
+
+/**
+ * The bar that rides on the piece: what it is, drawn as it will land, and
+ * every thing that can be done to it, each with its key. Sits just above the
+ * piece's box while parked (below if there is no room), pinned to the top of
+ * the dish while following the pointer so it does not chase the cursor.
+ */
+function syncPieceBar(rebuild) {
+  if (!pieceBar) return;
+  const pc = S.piece;
+  if (!pc) { pieceBar.hidden = true; return; }
+  if (rebuild || pieceBar.hidden) {
+    const color = (pc.key && el.stampBtns[pc.key] && el.stampBtns[pc.key].style.color) || (pc.origin ? '#e5c07b' : '#56b6c2');
+    const touch = isTouch();
+    pieceBar.hidden = false;
+    pieceBar.innerHTML =
+      '<span class="sbthumb" style="color:' + color + '" title="As it will land">' + thumbOf(pc, color, 30) + '</span>' +
+      '<b style="color:' + color + '">' + pc.label + '</b><small>' + pc.w + '&times;' + pc.h + ' &middot; ' + pc.cells.length + '</small>' +
+      '<button class="tb" id="pb-rot" title="Turn a quarter turn clockwise [R]">' + ICONS.rot + '<span>ROTATE</span></button>' +
+      '<button class="tb" id="pb-flip" title="Mirror left-to-right [F]">' + ICONS.flip + '<span>FLIP</span></button>' +
+      '<button class="tb" id="pb-copy" title="Copy as RLE [Ctrl+C]">' + ICONS.draw + '<span>COPY</span></button>' +
+      '<button class="tb" id="pb-save" title="Save to the CUSTOM shelf [Ctrl+S]">' + ICONS.lab + '<span>SAVE</span></button>' +
+      '<button class="tb go" id="pb-drop" title="Put it down here [Enter, or click outside it]">' + ICONS.check + '<span>DROP</span></button>' +
+      '<button class="tb" id="pb-again" title="Put a copy down and keep this one in hand [Ctrl+D]">' + ICONS.soup + '<span>STAMP</span></button>' +
+      '<button class="tb bad" id="pb-del" title="' + (pc.origin ? 'Delete these cells [Delete]' : 'Drop it, unplaced [Delete]') + '">' + ICONS.close + '</button>' +
+      '<em>' + (pc.follow ? 'click to put it down · shift-click to stamp copies' : touch ? 'drag to move · tap outside to drop' : 'drag to move · arrows nudge · click outside or Enter drops · Esc ' + (pc.origin ? 'puts it back' : 'cancels') + ' · Ctrl+Z undoes') + '</em>';
+    pieceBar.querySelector('#pb-rot').onclick = rotatePiece;
+    pieceBar.querySelector('#pb-flip').onclick = flipPiece;
+    pieceBar.querySelector('#pb-copy').onclick = copyPiece;
+    pieceBar.querySelector('#pb-save').onclick = savePiece;
+    pieceBar.querySelector('#pb-drop').onclick = () => commitPiece();
+    pieceBar.querySelector('#pb-again').onclick = () => commitPiece(true);
+    pieceBar.querySelector('#pb-del').onclick = deletePiece;
+  }
+  placePieceBar();
+}
+function placePieceBar() {
+  const pc = S.piece; if (!pc || !pieceBar || pieceBar.hidden) return;
+  const wrap = cv.getBoundingClientRect();
+  const bw = pieceBar.offsetWidth, bh = pieceBar.offsetHeight;
+  let left, top;
+  if (pc.follow) { left = (wrap.width - bw) / 2; top = 8; }
+  else {
+    const [sx, sy, sw, sh] = cellRect(pc.x, pc.y, pc.w, pc.h);
+    left = sx + sw / 2 - bw / 2;
+    top = sy - bh - 8;
+    if (top < 4) top = sy + sh + 8;
+    if (top + bh > wrap.height - 4) top = Math.max(4, wrap.height - bh - 4);
+  }
+  left = Math.max(4, Math.min(wrap.width - bw - 4, left));
+  pieceBar.style.left = Math.round(left) + 'px';
+  pieceBar.style.top = Math.round(top) + 'px';
+}
+
+/* ---------------- undo ---------------- *
+ * Every edit -- a drop, a delete, a stroke of DRAW, SOUP, CLEAR -- snapshots
+ * the board first. Ctrl+Z walks back. Kept apart from BACK, which rewinds
+ * generations: one is "I did not mean that", the other "what just happened".
+ */
+const undoStack = [];
+let undoBytes = 0;
+function pushUndo() {
+  const snap = S.eng.snapshot();
+  undoStack.push(snap); undoBytes += snap.a.byteLength;
+  while (undoStack.length > 60 || undoBytes > 4.8e7) undoBytes -= undoStack.shift().a.byteLength;
+}
+function undoEdit() {
+  const snap = undoStack.pop();
+  if (!snap) { deny('nothing to undo'); return; }
+  undoBytes -= snap.a.byteLength;
+  if (S.piece) { S.piece = null; syncPieceBar(true); }
+  S.eng.restore(snap);
+  S.running = false; syncRun();
+  tlog('> undo', 't-sys');
 }
 
 /** The smallest shelf size with margin around w×h, or a custom one past the shelf. */
@@ -373,46 +602,9 @@ function fitDish(w, h) {
   return [w + 80, h + 80];
 }
 
-function syncStampBar() {
-  if (!stampBar) return;
-  if (!S.stamp) { stampBar.hidden = true; return; }
-  const m = patternMeta(S.stamp), p = transformCells(pattern(S.stamp), S.rot, S.flip);
-  const touch = matchMedia('(hover: none)').matches;
-  stampBar.hidden = false;
-  stampBar.innerHTML =
-    '<b>' + m.label + '</b><small>' + p.w + '&times;' + p.h + (S.rot ? ' &middot; ' + S.rot * 90 + '&deg;' : '') + (S.flip ? ' &middot; mirrored' : '') + '</small>' +
-    (S.pendingTap ? '<button class="tb go" id="sb-place">' + ICONS.check + '<span>PLACE HERE</span></button>' : '') +
-    '<button class="tb" id="sb-rot" title="Rotate a quarter turn [R]">' + ICONS.rot + '<span>ROTATE</span></button>' +
-    '<button class="tb" id="sb-flip" title="Mirror left-to-right [F]">' + ICONS.flip + '<span>FLIP</span></button>' +
-    '<button class="tb" id="sb-done" title="Put the stamp down [Esc]">' + ICONS.close + '<span>DONE</span></button>' +
-    '<em>' + (touch ? 'tap the dish to aim, then PLACE HERE · drag to pan' : 'click to place · right-drag to pan · R rotate · F flip · Esc done') + '</em>';
-  stampBar.querySelector('#sb-rot').onclick = () => { S.rot = (S.rot + 1) % 4; syncStampBar(); };
-  stampBar.querySelector('#sb-flip').onclick = () => { S.flip = !S.flip; syncStampBar(); };
-  stampBar.querySelector('#sb-done').onclick = () => { S.stamp = null; S.tool = 'pan'; S.pendingTap = null; syncTools(); syncStampBar(); };
-  const go = stampBar.querySelector('#sb-place');
-  if (go) go.onclick = () => { const c = S.pendingTap; if (c) { placeStamp(c.x, c.y); } S.pendingTap = null; syncStampBar(); };
-}
 
-function syncSelBar() {
-  if (!selBar) return;
-  const r = selRect();
-  if (!r || S.tool !== 'sel' || S.drag) { selBar.hidden = true; return; }
-  const n = S.eng.rectCount(r);
-  selBar.hidden = false;
-  selBar.innerHTML =
-    '<b>SELECTION</b><small>' + r.w + '&times;' + r.h + ' &middot; ' + n + ' cells</small>' +
-    '<button class="tb go" id="sl-save"' + (n ? '' : ' disabled') + '>' + ICONS.check + '<span>SAVE AS PATTERN</span></button>' +
-    '<button class="tb" id="sl-copy"' + (n ? '' : ' disabled') + ' title="Copy as RLE, pasteable into Golly or back in here">' + ICONS.draw + '<span>COPY RLE</span></button>' +
-    '<button class="tb" id="sl-clear"' + (n ? '' : ' disabled') + '>' + ICONS.clear + '<span>CLEAR</span></button>' +
-    '<button class="tb" id="sl-x" title="Drop the selection [Esc]">' + ICONS.close + '</button>';
-  selBar.querySelector('#sl-save').onclick = saveSelection;
-  selBar.querySelector('#sl-copy').onclick = copySelection;
-  selBar.querySelector('#sl-clear').onclick = () => {
-    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) S.eng.set(x, y, 0);
-    tlog('> cleared ' + n + ' cells', 't-sys'); syncSelBar();
-  };
-  selBar.querySelector('#sl-x').onclick = () => { S.sel = null; syncSelBar(); };
-}
+
+
 
 /** The selection as a clamped rectangle, or null. */
 function selRect() {
@@ -422,36 +614,10 @@ function selRect() {
   if (x2 < x || y2 < y) return null;
   return { x, y, w: x2 - x + 1, h: y2 - y + 1 };
 }
-function selectionCells() {
-  const r = selRect(); if (!r) return { cells: [], w: 0, h: 0 };
-  const cells = [];
-  for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (S.eng.get(x, y)) cells.push([x, y]);
-  return normalizeCells(cells);
-}
-function saveSelection() {
-  const { cells, w, h } = selectionCells();
-  if (!cells.length) { deny('nothing selected'); return; }
-  showPrompt('SAVE AS PATTERN', w + '×' + h + ', ' + cells.length + ' cells. Name it:', 'MY PATTERN', (name) => {
-    const key = custom.add(name, cells, w, h);
-    hideMsg();
-    S.sel = null; syncSelBar();
-    renderTray();
-    tlog('> saved ' + patternMeta(key).label + ' to CUSTOM', 't-sys');
-    selectStamp(key);
-  });
-}
-function copySelection() {
-  const { cells, w, h } = selectionCells();
-  if (!cells.length) { deny('nothing selected'); return; }
-  const { header, body } = encodeRLE(cells, w, h);
-  const text = header + '\n' + body;
-  const done = () => tlog('> copied ' + cells.length + ' cells as RLE', 't-sys');
-  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => showRLE(text));
-  else showRLE(text);
-}
-function showRLE(text) {
-  showPrompt('RLE', 'Clipboard access was refused; copy it from here:', '', null, text);
-}
+
+
+
+
 function importRLE() {
   showPrompt('PASTE RLE', 'A whole .rle file or just the body (b = dead, o = alive, $ = next row, ! = end).', 'NAME', (name, text) => {
     const parsed = parseRLE(text || '');
@@ -461,7 +627,7 @@ function importRLE() {
     const key = custom.add(name || parsed.name || 'PASTED', d.cells, d.w, d.h, parsed.comments[0]);
     hideMsg(); renderTray();
     tlog('> imported ' + patternMeta(key).label + ' (' + d.w + '×' + d.h + ', ' + d.cells.length + ' cells)', 't-sys');
-    selectStamp(key);
+    pickPiece(key);
   }, '', true);
 }
 
@@ -475,12 +641,13 @@ function loadLevel(i) {
   S.img = S.bctx.createImageData(L.w, L.h);
   S.presetPop = 0;
   S.phase = 'edit'; S.running = false; S.stampsUsed = 0; S.snap = null; S.goal = null;
-  S.stamp = null; S.rot = 0; S.flip = false; S.sel = null; S.pendingTap = null; S.drag = null; lastDeny = ''; S.stepIdx = 0; S.won = false;
+  S.piece = null; S.sel = null; S.drag = null; lastDeny = ''; S.stepIdx = 0; S.won = false;
+  undoStack.length = 0; undoBytes = 0;
   S.tool = 'draw';
-  buildTopbar(); buildTray();
+  buildTopbar(); buildTray(); syncDishBtn();
   fitCamera();
   hideMsg();
-  syncRun(); syncTools(); syncStampBar(); syncSelBar();
+  syncRun(); syncTools(); syncPieceBar(true);
 }
 
 /* ---------------- dish size ---------------- */
@@ -498,9 +665,10 @@ function resizeDish(w, h) {
   S.bctx = S.buf.getContext('2d');
   S.img = S.bctx.createImageData(w, h);
   S.rewind.length = 0;
+  undoStack.length = 0; undoBytes = 0;
   S.sel = null;
   clampCam();
-  syncDishBtn(); syncSelBar(); renderTray();
+  syncDishBtn(); renderTray();
   tlog('> DISH ' + w + '×' + h, 't-sys');
 }
 
@@ -541,6 +709,8 @@ function wipeSave() {
       {
         label: 'CLEAR IT',
         fn: () => {
+          pushUndo();
+          S.piece = null; syncPieceBar(true);
           S.eng.clear();
           S.ghost.fill(0);
           S.rewind.length = 0;
@@ -555,26 +725,23 @@ function wipeSave() {
   );
 }
 
-function placeStamp(cx, cy) {
-  if (!canEditCell(cx, cy)) return;
-  const { cells, ok, ox, oy } = stampCellsAt(cx, cy);
-  if (!ok) { deny('does not fit: partly outside the dish'); return; }
-  cells.forEach(([x, y]) => S.eng.set(x, y, 1));
-  S.stampsUsed++;
-  tlog('> placed ' + patternMeta(S.stamp).label + ' @ (' + ox + ',' + oy + ')', 't-sys');
-}
+
 
 /* ---------------- run control ---------------- */
 function startPause() {
   if (S.running) { S.running = false; syncRun(); return; }
+  commitPiece();
   if (S.eng.pop === 0) { deny('the dish is empty'); return; }
   S.running = true; syncRun();
 }
 function stepOnce() {
+  commitPiece();
   if (S.eng.pop === 0) { deny('the dish is empty'); return; }
   S.running = false; doStep(); syncRun();
 }
 function reset() {
+  if (S.eng.pop || S.piece) pushUndo();
+  S.piece = null; syncPieceBar(true);
   S.eng.clear();
   S.ghost.fill(0);
   S.rewind.length = 0;
@@ -583,6 +750,8 @@ function reset() {
   tlog('> CLEAR', 't-sys');
 }
 function soup() {
+  commitPiece();
+  pushUndo();
   const e = S.eng;
   for (let y = 0; y < S.L.h; y++)
     for (let x = 0; x < S.L.w; x++)
@@ -614,9 +783,10 @@ function syncRun() {
     '<span>' + (S.running ? 'PAUSE' : 'RUN') + '</span>';
 }
 function syncTools() {
-  for (const [n, b] of Object.entries(el.toolBtns)) b.classList.toggle('on', S.tool === n && !S.stamp);
-  if (S.tool !== 'sel') { S.sel = null; syncSelBar(); }
-  for (const [n, b] of Object.entries(el.stampBtns)) { const on = S.stamp === n; b.classList.toggle('on', on); b.style.borderColor = on ? b.style.color : ''; }
+  for (const [n, b] of Object.entries(el.toolBtns)) b.classList.toggle('on', S.tool === n);
+  if (S.tool !== 'sel') S.sel = null;
+  const held = S.piece && S.piece.key;
+  for (const [n, b] of Object.entries(el.stampBtns)) { const on = held === n; b.classList.toggle('on', on); b.style.borderColor = on ? b.style.color : ''; }
 }
 
 /* ---------------- editing ---------------- */
@@ -642,14 +812,7 @@ function paint(x, y, v) {
   S.eng.set(x, y, v);
 }
 
-function stampCellsAt(cx, cy) {
-  const p = transformCells(pattern(S.stamp), S.rot, S.flip);
-  const ox = cx - (p.w >> 1), oy = cy - (p.h >> 1);
-  const cells = p.cells.map(([x, y]) => [ox + x, oy + y]);
-  const ok = cells.every(([x, y]) =>
-    x >= 0 && y >= 0 && x < S.L.w && y < S.L.h && canEditCell(x, y, true));
-  return { cells, ok, ox, oy, w: p.w, h: p.h };
-}
+
 
 function showMsg(title, text, btns, bad) {
   msgEl.innerHTML = '';
@@ -800,6 +963,24 @@ function bindInput() {
   }
   if (e.button === 1) return;
   const c = toCell(e);
+  const pc = S.piece;
+  if (pc && e.button === 0) {
+    if (pc.follow) {
+      // Following the pointer: this click parks it. Shift stamps a copy and
+      // keeps following, for laying down a row of the same thing.
+      pieceCenterAt(pc, c.x, c.y);
+      if (e.shiftKey) { commitPiece(true); return; }
+      pc.follow = false; syncPieceBar(true); return;
+    }
+    if (pieceHit(c)) {
+      S.drag = { mode: 'piece', cx: c.x, cy: c.y, px: pc.x, py: pc.y };
+      try { cv.setPointerCapture(e.pointerId); } catch {}
+      return;
+    }
+    // Outside it: that is "done with it". The click is spent on that.
+    commitPiece();
+    return;
+  }
   if (e.button === 2 || (S.tool === 'pan' && e.button === 0)) {
     S.drag = { mode: 'pan', mx: e.clientX, my: e.clientY };
     try { cv.setPointerCapture(e.pointerId); } catch {}
@@ -810,27 +991,21 @@ function bindInput() {
     S.sel = { x0: c.x, y0: c.y, x1: c.x, y1: c.y };
     S.drag = { mode: 'select' };
     try { cv.setPointerCapture(e.pointerId); } catch {}
-    syncSelBar();
-    return;
-  }
-  // A finger cannot hover, so on touch a stamp is aimed by tapping and placed
-  // from the bar; a finger that moves instead pans.
-  if (S.tool === 'stamp' && S.stamp && e.pointerType === 'touch') {
-    S.drag = { mode: 'tap', mx: e.clientX, my: e.clientY, cell: c };
     return;
   }
   if (S.tool === 'draw') {
     if (!inGrid(c)) return;
+    pushUndo();
     S.paintVal = S.eng.get(c.x, c.y) ? 0 : 1;
     paint(c.x, c.y, S.paintVal);
     S.drag = { mode: 'paint' };
     try { cv.setPointerCapture(e.pointerId); } catch {}
   } else if (S.tool === 'erase') {
+    if (!inGrid(c)) return;
+    pushUndo();
     paint(c.x, c.y, 0);
     S.drag = { mode: 'erase' };
     try { cv.setPointerCapture(e.pointerId); } catch {}
-  } else if (S.tool === 'stamp' && S.stamp) {
-    placeStamp(c.x, c.y);
   }
 });
   onPointerMove = e => {
@@ -848,9 +1023,12 @@ function bindInput() {
     if (pinch) return;
   }
   S.hover = toCell(e);
+  const pc = S.piece;
+  if (pc && pc.follow) pieceCenterAt(pc, S.hover.x, S.hover.y);
   if (!S.drag) return;
-  if (S.drag.mode === 'tap') {
-    if (Math.hypot(e.clientX - S.drag.mx, e.clientY - S.drag.my) > 8) S.drag = { mode: 'pan', mx: e.clientX, my: e.clientY };
+  if (S.drag.mode === 'piece') {
+    const c = toCell(e);
+    pc.x = S.drag.px + (c.x - S.drag.cx); pc.y = S.drag.py + (c.y - S.drag.cy);
     return;
   }
   if (S.drag.mode === 'select') {
@@ -870,11 +1048,10 @@ function bindInput() {
   }
   };
   onPointerUp = e => {
-    if (S.drag && S.drag.mode === 'tap') { S.hover = S.drag.cell; S.pendingTap = S.drag.cell; syncStampBar(); }
-    const wasSelect = S.drag && S.drag.mode === 'select';
+    const was = S.drag && S.drag.mode;
     S.drag = null;
-    if (wasSelect) syncSelBar();
     if (e && touches.delete(e.pointerId) && touches.size < 2) pinch = null;
+    if (was === 'select') liftSelection();
   };
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
@@ -893,13 +1070,30 @@ function bindInput() {
   // Typing in the tray's search box is not a command.
   const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
   if (tag === 'input' || tag === 'textarea') return;
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && !e.altKey) {
+    if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); undoEdit(); }
+    else if (e.code === 'KeyC' && S.piece) { e.preventDefault(); copyPiece(); }
+    else if (e.code === 'KeyV') { e.preventDefault(); pasteClip(); }
+    else if (e.code === 'KeyD' && S.piece) { e.preventDefault(); commitPiece(true); }
+    else if (e.code === 'KeyS' && S.piece) { e.preventDefault(); savePiece(); }
+    return;
+  }
   if (e.code === 'Space') { e.preventDefault(); startPause(); }
   else if (e.code === 'KeyN' || e.code === 'Period') stepOnce();
-  else if (e.code === 'KeyR') { if (S.stamp) { S.rot = (S.rot + 1) % 4; syncStampBar(); } }
-  else if (e.code === 'KeyF') { if (S.stamp) { S.flip = !S.flip; syncStampBar(); } }
+  else if (e.code === 'KeyR') rotatePiece();
+  else if (e.code === 'KeyF') flipPiece();
+  else if (e.code === 'Enter') { if (S.piece) { e.preventDefault(); commitPiece(); } }
+  else if (e.code === 'Delete' || e.code === 'Backspace') { if (S.piece) { e.preventDefault(); deletePiece(); } }
+  else if (e.code.startsWith('Arrow') && S.piece) {
+    e.preventDefault();
+    const n = e.shiftKey ? 10 : 1;
+    nudgePiece(e.code === 'ArrowLeft' ? -n : e.code === 'ArrowRight' ? n : 0, e.code === 'ArrowUp' ? -n : e.code === 'ArrowDown' ? n : 0);
+  }
   else if (e.code === 'Escape') {
-    if (S.sel) { S.sel = null; syncSelBar(); return; }
-    S.stamp = null; S.pendingTap = null; S.tool = 'pan'; syncTools(); syncStampBar();
+    if (S.piece) { cancelPiece(); return; }
+    if (S.sel) { S.sel = null; S.drag = null; return; }
+    S.tool = 'pan'; syncTools();
   }
   };
   window.addEventListener('keydown', onKeyDown);
@@ -1024,25 +1218,26 @@ function drawGrid() {
   ctx.stroke();
 }
 
-function drawPreview() {
-  if (S.tool !== 'stamp' || !S.stamp || !S.hover) return;
-  if (!S.L.sandbox && S.phase !== 'edit') return;
-  if (!inGrid(S.hover)) return;
-  const { cells, ok, ox, oy, w, h } = stampCellsAt(S.hover.x, S.hover.y);
-  // The box first, so a big pattern's footprint reads even where its cells
-  // are a few pixels each; then the cells, green when it fits, red when not.
-  const [bx, by, bw, bh] = cellRect(ox, oy, w, h);
+/** The piece in hand: its footprint, then its cells -- green where they will
+ *  land on the board, red where they hang off the edge. */
+function drawPiece() {
+  const pc = S.piece; if (!pc) return;
+  const [bx, by, bw, bh] = cellRect(pc.x, pc.y, pc.w, pc.h);
   ctx.save();
-  ctx.setLineDash([3, 3]);
-  ctx.strokeStyle = ok ? 'rgba(86,182,194,.55)' : 'rgba(224,108,117,.7)'; ctx.lineWidth = 1;
-  ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+  ctx.fillStyle = 'rgba(86,182,194,.06)';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = pc.origin ? 'rgba(229,192,123,.9)' : 'rgba(86,182,194,.8)'; ctx.lineWidth = 1;
+  ctx.strokeRect(Math.round(bx) + 0.5, Math.round(by) + 0.5, Math.round(bw) - 1, Math.round(bh) - 1);
   ctx.restore();
-  ctx.fillStyle = ok ? 'rgba(86,182,194,.5)' : 'rgba(224,108,117,.5)';
   const inset = S.cam.s >= 4 ? 1 : 0;
-  cells.forEach(([x, y]) => {
-    const [sx, sy, sw, sh] = cellRect(x, y, 1, 1);
+  const ok = 'rgba(86,182,194,.6)', bad = 'rgba(224,108,117,.6)';
+  for (const [x, y] of pc.cells) {
+    const gx = pc.x + x, gy = pc.y + y;
+    ctx.fillStyle = (gx < 0 || gy < 0 || gx >= S.L.w || gy >= S.L.h) ? bad : ok;
+    const [sx, sy, sw, sh] = cellRect(gx, gy, 1, 1);
     ctx.fillRect(sx + inset * 0.5, sy + inset * 0.5, Math.max(1, sw - inset), Math.max(1, sh - inset));
-  });
+  }
 }
 
 /**
@@ -1056,19 +1251,20 @@ function drawPreview() {
  */
 function drawTrace() {
   if (!has('trace')) return;
-  if (S.tool !== 'stamp' || !S.stamp || !S.hover || !inGrid(S.hover)) return;
+  const pc = S.piece;
+  if (!pc || !pc.key) return;
   if (!S.L.sandbox && S.phase !== 'edit') return;
 
-  const kind = kindOf(S.stamp);
+  const kind = kindOf(pc.key);
   // Only something that travels rigidly has a path worth drawing. Tracing the
   // centre of an oscillator gives a wobble around a fixed point, and tracing
   // the R-pentomino gives a wandering line through an explosion -- both look
   // like a prediction and neither is one. Those get a mark that says what the
   // pattern does instead, which is the honest version of the same help.
-  const { cells } = stampCellsAt(S.hover.x, S.hover.y);
+  const cells = pc.cells;
   if (!cells.length) return;
   let cx = 0, cy = 0;
-  for (const [x, y] of cells) { cx += x; cy += y; }
+  for (const [x, y] of cells) { cx += pc.x + x; cy += pc.y + y; }
   cx = cx / cells.length + 0.5; cy = cy / cells.length + 0.5;
 
   ctx.save();
@@ -1077,8 +1273,8 @@ function drawTrace() {
     // simulated: one cell per `period / |d|` gens, straight until it leaves
     // the board. The rotation the player has applied turns the vector too.
     let [dx, dy] = [kind.dx, kind.dy];
-    for (let r = 0; r < (S.rot & 3); r++) [dx, dy] = [-dy, dx];
-    if (S.flip) dx = -dx;
+    for (let r = 0; r < (pc.rot & 3); r++) [dx, dy] = [-dy, dx];
+    if (pc.flip) dx = -dx;
     const steps = Math.max(S.L.w, S.L.h);
     let ex = cx, ey = cy;
     for (let i = 1; i <= steps; i++) {
@@ -1197,7 +1393,7 @@ function draw() {
   ctx.setTransform(dpr * S.cam.s, 0, 0, dpr * S.cam.s, dpr * S.cam.x, dpr * S.cam.y);
   ctx.drawImage(S.buf, 0, 0);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawDishFrame(); drawGrid(); drawGhostFrame(); drawHeat(); drawPreview(); drawTrace(); drawHover(); drawSelection();
+  drawDishFrame(); drawGrid(); drawGhostFrame(); drawHeat(); drawPiece(); drawTrace(); drawHover(); drawSelection();
 }
 
 /** The edge of the dish: one faint line, so a translucent board still has a
@@ -1323,7 +1519,8 @@ function frame(t) {
   // re-fit the camera to them before drawing into a canvas of a different size.
   if (bind()) { buildTopbar(); buildTray(); resize(); }
   draw(); updateStats(); updateGuide();
-  if (selBar && !selBar.hidden && S.running) syncSelBar();
+  if (S.piece) { placePieceBar(); cv.style.cursor = S.piece.follow ? 'copy' : pieceHit(S.hover) ? 'move' : 'default'; }
+  else if (cv.style.cursor) cv.style.cursor = '';
   raf = requestAnimationFrame(frame);
 }
 

@@ -25,7 +25,7 @@ export const LEVELS = [
     stamps: 'all',
     intro: ['> B3/S23 — a cell lives on 2 or 3 neighbours, and is born on exactly 3.'],
     steps: [
-      { text: 'DRAW paints cells · pick a pattern from the tray · SOUP fills with noise · RUN' },
+      { text: 'pick a pattern and click to put it down · SELECT picks cells up to move, R / F to turn · Ctrl+Z undoes · RUN' },
     ],
   },
 ];

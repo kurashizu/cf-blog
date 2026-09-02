@@ -7,7 +7,7 @@
 // did not have. Every one was caught here rather than by a reader, which is the
 // entire reason this file exists.
 import { Life } from './engine.js';
-import { pattern, RLES, CATEGORIES, patternMeta, encodeRLE, decodeRLE, parseRLE, transformCells } from './patterns.js';
+import { pattern, RLES, CATEGORIES, patternMeta, encodeRLE, decodeRLE, parseRLE, transformCells, nextOrientation, sameCells } from './patterns.js';
 import { EXT } from './library-ext.js';
 import { LEVELS } from './levels.js';
 
@@ -197,6 +197,22 @@ function popAfter(name, gens, size = 260) {
   const r1 = transformCells(g, 1, false), f1 = transformCells(g, 0, true);
   check('rotate keeps the cell count and swaps the box', r1.cells.length === 5 && r1.w === g.h && r1.h === g.w);
   check('flip mirrors x', f1.cells.every(([x]) => x >= 0 && x < g.w) && f1.cells.some(([x, y]) => !g.cells.some(([gx, gy]) => gx === x && gy === y)));
+  // ROTATE must turn whatever is on screen clockwise -- including after a
+  // FLIP. Compare the composed orientation against rotating the flipped
+  // shape directly.
+  const cw = (p) => ({ cells: p.cells.map(([x, y]) => [p.h - 1 - y, x]), w: p.h, h: p.w });
+  const mirror = (p) => ({ cells: p.cells.map(([x, y]) => [p.w - 1 - x, y]), w: p.w, h: p.h });
+  let ok = true;
+  for (const key of ['glider', 'lwss', 'rpent', 'acorn']) {
+    const p = pattern(key);
+    let st = { rot: 0, flip: false }, shown = p;
+    for (const op of ['rotate', 'flip', 'rotate', 'rotate', 'flip', 'rotate', 'flip', 'flip', 'rotate']) {
+      st = nextOrientation(st.rot, st.flip, op);
+      shown = op === 'rotate' ? cw(shown) : mirror(shown);
+      if (!sameCells(transformCells(p, st.rot, st.flip), shown)) { ok = false; console.log('       ' + key + ' diverges after ' + op); break; }
+    }
+  }
+  check('ROTATE turns the shape on screen clockwise, before and after FLIP', ok);
 }
 
 // Every pattern the library lists must exist, or the sidebar renders a gap.

@@ -66,8 +66,12 @@
 			keys: [
 				{ key: 'Space', desc: 'Run / pause' },
 				{ key: 'N or .', desc: 'Step one generation' },
-				{ key: 'R / F', desc: 'Rotate / mirror the pattern in hand' },
-				{ key: 'Esc', desc: 'Put the pattern down, or drop the selection' },
+				{ key: 'click / drag', desc: 'Put down the piece in hand / move it' },
+				{ key: 'R / F', desc: 'Rotate / mirror the piece' },
+				{ key: '← ↑ → ↓', desc: 'Nudge the piece one cell (Shift: ten)' },
+				{ key: 'Enter / Esc / Del', desc: 'Drop it / put it back / delete it' },
+				{ key: 'Ctrl+Z', desc: 'Undo the last edit' },
+				{ key: 'Ctrl+C / V / D / S', desc: 'Copy as RLE / paste / stamp a copy / save to CUSTOM' },
 				{ key: 'wheel / pinch', desc: 'Zoom; right-drag or two fingers pan' }
 			]
 		},

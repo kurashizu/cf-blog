@@ -118,7 +118,7 @@
 #tbscroll{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto;scrollbar-width:none}
 #tbscroll::-webkit-scrollbar{display:none}
 #topbar::-webkit-scrollbar{display:none}
-button.tb{flex:none;white-space:nowrap;display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--ll-line);color:var(--ll-fg);font:inherit;font-size:12px;letter-spacing:1px;padding:6px 11px;cursor:pointer;border-radius:2px}
+button.tb{flex:none;white-space:nowrap;display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--ll-line);color:var(--ll-fg);font:inherit;font-size:12px;letter-spacing:1px;padding:6px 9px;cursor:pointer;border-radius:2px}
 button.tb:hover{border-color:var(--ll-faint)}
 button.tb.on{border-color:var(--ll-accent);color:var(--ll-accent);background:rgba(86,182,194,.08)}
 button.tb svg{display:block;flex:none}
@@ -182,18 +182,24 @@ canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:
 /* Floating bars over the dish: what is in hand (a stamp, a selection) and
    what can be done with it. Centred at the top, out of the way of the log in
    the bottom-left and the guide in the bottom-right. */
-.fbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:4;max-width:calc(100% - 16px);
+.fbar{position:absolute;top:8px;left:8px;z-index:4;width:max-content;max-width:calc(100% - 16px);
   display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;
   padding:5px 8px;border:1px solid var(--ll-line);border-radius:2px;background:rgba(0,0,0,.55);
   backdrop-filter:blur(3px);font-size:10px;letter-spacing:1px}
 .fbar[hidden]{display:none}
 .fbar b{color:var(--ll-accent);font-weight:normal;letter-spacing:2px}
+.fbar .sbthumb{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--ll-line);border-radius:2px;background:rgba(0,0,0,.35)}
+.fbar .sbthumb img{display:block;image-rendering:pixelated}
 .fbar small{color:var(--ll-faint);font-size:9px}
-.fbar em{flex-basis:100%;text-align:center;font-style:normal;color:var(--ll-faint);font-size:9px;letter-spacing:.5px}
+/* width:0 + min-width:100%: the hint takes the row's width without ever
+   setting it, so a long hint cannot stretch the bar across the dish. */
+.fbar em{width:0;min-width:100%;text-align:center;font-style:normal;color:var(--ll-faint);font-size:9px;letter-spacing:.5px;white-space:normal}
 .fbar button.tb{padding:3px 7px;font-size:10px;gap:5px}
 .fbar button.tb.go{border-color:var(--ll-green);color:var(--ll-green)}
 .fbar button.tb:disabled{opacity:.35;cursor:default}
-#selbar b{color:var(--ll-yellow)}
+.fbar button.tb.bad:hover{border-color:var(--ll-red);color:var(--ll-red)}
+/* Rides on the piece, so it must not take the pointer away from it. */
+#piecebar{transition:left .06s linear,top .06s linear}
 /* The name / RLE prompt inside the dialog box. */
 #msg .box input.pin,#msg .box textarea.pta{display:block;width:100%;border:1px solid var(--ll-line);background:rgba(0,0,0,.3);
   color:var(--ll-fg);font:inherit;font-size:12px;padding:7px 9px;border-radius:2px;outline:none;margin-bottom:12px}
