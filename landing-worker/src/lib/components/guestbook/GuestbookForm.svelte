@@ -25,7 +25,58 @@
 		approved: boolean;
 	}
 
+	/** One message plus the randomized drift it was assigned at load time --
+	 *  rolled once per message, not on every render, so a card doesn't jump
+	 *  to a new path on some unrelated reactive update. */
+	interface FloatingPacket extends GuestbookMessage {
+		left: number;
+		top: number;
+		dx: number;
+		dy: number;
+		duration: number;
+		delay: number;
+		color: string;
+	}
+
+	const PACKET_COLORS = ['#e06c75', '#56b6c2', '#e5c07b', '#98c379', '#c678dd', '#61afef'];
+
+	/** Scatters messages across the floating field and gives each its own slow
+	 *  bob -- a fixed seed per id (not Math.random on every reactive pass)
+	 *  so the layout doesn't reshuffle every time `messages` is reassigned
+	 *  for an unrelated reason. */
+	function seededRandom(seed: string): () => number {
+		let h = 0;
+		for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+		return () => {
+			h = (h * 1103515245 + 12345) >>> 0;
+			return h / 4294967296;
+		};
+	}
+
+	function toFloatingPackets(msgs: GuestbookMessage[]): FloatingPacket[] {
+		return msgs.map((m, i) => {
+			const rand = seededRandom(m.id);
+			return {
+				...m,
+				// Card position is its CENTER (translate(-50%, -50%) below), not its
+				// left/top edge -- at a fixed pixel card width inside a variable-
+				// width percentage-based field, anchoring by the edge means the
+				// widest cards can run off the right/bottom on a narrow container;
+				// anchoring by the center bounds the overflow to half the card's
+				// own size on either side instead of its full size on one side.
+				left: 12 + rand() * 76,
+				top: 14 + rand() * 72,
+				dx: (rand() - 0.5) * 12,
+				dy: (rand() - 0.5) * 12,
+				duration: 14 + rand() * 10,
+				delay: -rand() * 20,
+				color: PACKET_COLORS[i % PACKET_COLORS.length]
+			};
+		});
+	}
+
 	let messages = $state<GuestbookMessage[]>([]);
+	let packets = $derived(toFloatingPackets(messages));
 	let messagesState = $state<'loading' | 'ready' | 'error'>('loading');
 
 	async function loadMessages() {
@@ -107,7 +158,7 @@
 	}
 </script>
 
-<div class="space-y-3 sm:space-y-3.5 flex-1">
+<div class="space-y-3 sm:space-y-3.5 flex-1 flex flex-col min-h-0">
 	<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
 		<AsciiArt
 			color="#e06c75"
@@ -205,9 +256,13 @@
 		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">DISPATCH PACKET TO BLOG.KRSZ.IN -&gt;</button>
 	</form>
 
-	<!-- Live feed from blog.krsz.in's guestbook API -->
-	<div class="border border-white/10 bg-black/30 rounded-xs p-3 space-y-2">
-		<BoxHeader title="RECEIVED PACKETS" short="PACKETS" class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5">
+	<!-- Live feed from blog.krsz.in's guestbook API -- each message drifts
+	     slowly around a bounded field instead of sitting in a static list,
+	     like packets actually adrift on a network rather than log lines.
+	     flex-1/min-h-0 so this claims whatever vertical room the form above
+	     didn't use, down to a sane floor. -->
+	<div class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2 flex-1 min-h-[260px]">
+		<BoxHeader title="RECEIVED PACKETS" short="PACKETS" class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5 shrink-0">
 			<button
 				onclick={() => {
 					loadMessages();
@@ -227,18 +282,62 @@
 		{:else if messages.length === 0}
 			<div class="text-xs font-mono text-white/40 py-2">NO MESSAGES YET — SEND THE FIRST PACKET</div>
 		{:else}
-			<div class="max-h-64 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
-				{#each messages as msg (msg.id)}
-					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5" in:fade={{ duration: 180 }}>
-						<div class="flex items-baseline justify-between gap-2">
-							<span class="text-xs font-bold text-[#56b6c2] truncate">{msg.name}</span>
-							<span class="text-[10px] font-mono text-white/35 shrink-0">{fmtTime(msg.timestamp)}</span>
+			<div class="relative flex-1 min-h-0 overflow-hidden rounded-xs" style="background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 22px 22px;">
+				{#each packets as p (p.id)}
+					<div
+						class="packet-float group absolute w-[150px] sm:w-[170px]"
+						style="left: {p.left}%; top: {p.top}%; --dx: calc(-50% + {p.dx}px); --dy: calc(-50% + {p.dy}px); animation-duration: {p.duration}s; animation-delay: {p.delay}s;"
+						in:fade={{ duration: 220 }}
+					>
+						<div
+							class="border rounded-xs px-2 py-1.5 bg-black/70 backdrop-blur-[1px] cursor-default transition-[transform,box-shadow] hover:scale-[1.08] hover:z-20 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.7)]"
+							style="border-color: {p.color}55;"
+							title={p.content}
+						>
+							<div class="flex items-baseline justify-between gap-1.5">
+								<span class="text-[11px] font-bold truncate" style="color: {p.color}">{p.name}</span>
+								<span class="text-[9px] font-mono text-white/30 shrink-0">{fmtTime(p.timestamp)}</span>
+							</div>
+							<div class="text-[10px] text-[#eceff4]/80 leading-snug mt-0.5 line-clamp-2 group-hover:line-clamp-none">
+								{p.content}
+							</div>
 						</div>
-						<div class="text-xs text-[#eceff4]/90 leading-relaxed whitespace-pre-wrap break-words mt-0.5">{msg.content}</div>
 					</div>
 				{/each}
 			</div>
-			<div class="text-[10px] font-mono text-white/30 pt-0.5">{messages.length} messages · new entries may await moderation</div>
+			<div class="text-[10px] font-mono text-white/30 shrink-0">{messages.length} messages · hover a packet to read it in full · new entries may await moderation</div>
 		{/if}
 	</div>
 </div>
+
+<style>
+	/* Each packet bobs along its own small, randomized (--dx, --dy) offset --
+	   duration/delay are set inline per card (see toFloatingPackets) so the
+	   whole field doesn't move in lockstep. Both keyframe endpoints carry the
+	   -50% recentering (the card's left/top is its own center, not its edge,
+	   so it can't be pushed out of bounds by its own width/height at the
+	   field's edges) baked into --dx/--dy themselves, since a keyframe
+	   can't compose an animated transform with a separate static one on the
+	   same property. Held on hover via the paused state below so the
+	   content can actually be read. Performance mode's universal
+	   `animation: none !important` (app.css) already stops this outright,
+	   so no separate gate is needed here. */
+	.packet-float {
+		animation-name: krsz-packet-drift;
+		animation-timing-function: ease-in-out;
+		animation-iteration-count: infinite;
+		animation-direction: alternate;
+		transform: translate(-50%, -50%);
+	}
+	.packet-float:hover {
+		animation-play-state: paused;
+	}
+	@keyframes krsz-packet-drift {
+		from {
+			transform: translate(-50%, -50%);
+		}
+		to {
+			transform: translate(var(--dx), var(--dy));
+		}
+	}
+</style>
