@@ -192,6 +192,21 @@
 		void place();
 	});
 
+	/**
+	 * Every per-view tour is mounted deep inside the routed panel, which paints
+	 * `backdrop-blur-sm` for the video background to show through. A filter (like
+	 * a transform) creates a new containing block for its descendants' `position:
+	 * fixed`, so without this the whole overlay -- click-catcher, spotlight and
+	 * bubble alike -- would measure the viewport correctly but render offset by
+	 * however far that block sits from the real origin. Moving the node to
+	 * `<body>` keeps `fixed` meaning what it says regardless of what the panel
+	 * around any given view does.
+	 */
+	function portal(node: HTMLElement) {
+		document.body.appendChild(node);
+		return { destroy: () => node.remove() };
+	}
+
 	onMount(() => {
 		const onResize = () => void place();
 		window.addEventListener('resize', onResize);
@@ -205,100 +220,102 @@
 	});
 </script>
 
-<!-- Click catcher: the tour drives itself, so nothing underneath is clickable -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[166]" onclick={(e) => e.stopPropagation()}></div>
+<div use:portal>
+	<!-- Click catcher: the tour drives itself, so nothing underneath is clickable -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-[166]" onclick={(e) => e.stopPropagation()}></div>
 
-{#if box}
-	<!-- Spotlight: a hole punched out of a huge shadow, so the anchor stays lit -->
-	<div
-		class="fixed z-[168] pointer-events-none rounded-sm transition-all duration-200 ease-out"
-		style="left: {box.x - PAD}px; top: {box.y - PAD}px; width: {box.w + PAD * 2}px; height: {box.h + PAD * 2}px;
-		       box-shadow: 0 0 0 9999px rgba(0,0,0,0.72); border: 2px solid {step.color};"
-	></div>
-{:else}
-	<div class="fixed inset-0 z-[168] bg-black/72 pointer-events-none"></div>
-{/if}
-
-<div
-	bind:this={bubbleEl}
-	class="fixed z-[170] max-w-[min(480px,94vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono"
-	style="{bubbleStyle} border-color: {step.color}88;"
->
-	{#if box && arrowLeft !== null}
+	{#if box}
+		<!-- Spotlight: a hole punched out of a huge shadow, so the anchor stays lit -->
 		<div
-			class="absolute w-3 h-3 rotate-45 {themeStyles.cardBg}"
-			style="left: {arrowLeft - 6}px; {placement === 'bottom'
-				? `top: -7px; border-left: 2px solid ${step.color}88; border-top: 2px solid ${step.color}88;`
-				: `bottom: -7px; border-right: 2px solid ${step.color}88; border-bottom: 2px solid ${step.color}88;`}"
+			class="fixed z-[168] pointer-events-none rounded-sm transition-all duration-200 ease-out"
+			style="left: {box.x - PAD}px; top: {box.y - PAD}px; width: {box.w + PAD * 2}px; height: {box.h + PAD * 2}px;
+			       box-shadow: 0 0 0 9999px rgba(0,0,0,0.72); border: 2px solid {step.color};"
 		></div>
+	{:else}
+		<div class="fixed inset-0 z-[168] bg-black/72 pointer-events-none"></div>
 	{/if}
 
-	<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
-		<span class="text-sm font-black tracking-wide" style="color: {step.color}">{step.title}</span>
-		<span class="text-xs text-white/45">{index + 1}/{STEPS.length}</span>
-	</div>
-
-	<div class="px-2.5 py-2 space-y-2">
-		<p class="text-xs sm:text-sm text-white/75 leading-relaxed">{step.body}</p>
-
-		{#if step.keys}
-			<div class="space-y-1">
-				{#each step.keys as k (k.key)}
-					<div class="flex items-baseline gap-2">
-						<kbd
-							class="shrink-0 px-2 py-1 rounded-xs border bg-black/50 text-[11px] sm:text-xs font-bold whitespace-nowrap min-w-[100px] text-center"
-							style="border-color: {step.color}55; color: {step.color}"
-						>
-							{k.key}
-						</kbd>
-						<span class="text-[11px] sm:text-xs text-white/70 leading-snug">{k.desc}</span>
-					</div>
-				{/each}
-			</div>
+	<div
+		bind:this={bubbleEl}
+		class="fixed z-[170] max-w-[min(480px,94vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono"
+		style="{bubbleStyle} border-color: {step.color}88;"
+	>
+		{#if box && arrowLeft !== null}
+			<div
+				class="absolute w-3 h-3 rotate-45 {themeStyles.cardBg}"
+				style="left: {arrowLeft - 6}px; {placement === 'bottom'
+					? `top: -7px; border-left: 2px solid ${step.color}88; border-top: 2px solid ${step.color}88;`
+					: `bottom: -7px; border-right: 2px solid ${step.color}88; border-bottom: 2px solid ${step.color}88;`}"
+			></div>
 		{/if}
-	</div>
 
-	<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-t border-white/10">
-		<div class="flex items-center gap-1.5">
-			<!-- Keyed by position: several steps may point at the same anchor, so a
-			     target is not a unique key. -->
-			{#each STEPS as s, i (i)}
-				<button
-					onclick={() => (index = i)}
-					aria-label={`Step ${i + 1}: ${s.title}`}
-					class="w-1.5 h-1.5 rounded-full cursor-pointer transition-colors {i === index ? '' : 'bg-white/20 hover:bg-white/45'}"
-					style={i === index ? `background-color: ${s.color}` : undefined}
-				></button>
-			{/each}
-			<button onclick={onClose} class="ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer">SKIP</button>
+		<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
+			<span class="text-sm font-black tracking-wide" style="color: {step.color}">{step.title}</span>
+			<span class="text-xs text-white/45">{index + 1}/{STEPS.length}</span>
 		</div>
 
-		<div class="flex items-center gap-1.5">
-			{#if step.action}
-				<button
-					onclick={runAction}
-					class="px-2.5 py-1 border rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10"
-					style="border-color: {step.color}88; color: {step.color}"
-				>
-					{step.action.label}
-				</button>
+		<div class="px-2.5 py-2 space-y-2">
+			<p class="text-xs sm:text-sm text-white/75 leading-relaxed">{step.body}</p>
+
+			{#if step.keys}
+				<div class="space-y-1">
+					{#each step.keys as k (k.key)}
+						<div class="flex items-baseline gap-2">
+							<kbd
+								class="shrink-0 px-2 py-1 rounded-xs border bg-black/50 text-[11px] sm:text-xs font-bold whitespace-nowrap min-w-[100px] text-center"
+								style="border-color: {step.color}55; color: {step.color}"
+							>
+								{k.key}
+							</kbd>
+							<span class="text-[11px] sm:text-xs text-white/70 leading-snug">{k.desc}</span>
+						</div>
+					{/each}
+				</div>
 			{/if}
-			<button
-				onclick={back}
-				disabled={index === 0}
-				class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
-			>
-				BACK
-			</button>
-			<button
-				onclick={next}
-				class="px-3 py-1 border rounded-xs text-[11px] font-black cursor-pointer"
-				style="border-color: {step.color}; color: {step.color}"
-			>
-				{isLast ? 'DONE' : 'NEXT →'}
-			</button>
+		</div>
+
+		<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-t border-white/10">
+			<div class="flex items-center gap-1.5">
+				<!-- Keyed by position: several steps may point at the same anchor, so a
+				     target is not a unique key. -->
+				{#each STEPS as s, i (i)}
+					<button
+						onclick={() => (index = i)}
+						aria-label={`Step ${i + 1}: ${s.title}`}
+						class="w-1.5 h-1.5 rounded-full cursor-pointer transition-colors {i === index ? '' : 'bg-white/20 hover:bg-white/45'}"
+						style={i === index ? `background-color: ${s.color}` : undefined}
+					></button>
+				{/each}
+				<button onclick={onClose} class="ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer">SKIP</button>
+			</div>
+
+			<div class="flex items-center gap-1.5">
+				{#if step.action}
+					<button
+						onclick={runAction}
+						class="px-2.5 py-1 border rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10"
+						style="border-color: {step.color}88; color: {step.color}"
+					>
+						{step.action.label}
+					</button>
+				{/if}
+				<button
+					onclick={back}
+					disabled={index === 0}
+					class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+				>
+					BACK
+				</button>
+				<button
+					onclick={next}
+					class="px-3 py-1 border rounded-xs text-[11px] font-black cursor-pointer"
+					style="border-color: {step.color}; color: {step.color}"
+				>
+					{isLast ? 'DONE' : 'NEXT →'}
+				</button>
+			</div>
 		</div>
 	</div>
 </div>
