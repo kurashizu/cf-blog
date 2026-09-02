@@ -1,12 +1,12 @@
 <script lang="ts">
 	import BoxHeader from './BoxHeader.svelte';
+	import AsciiArt from './AsciiArt.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { playSound } from '../../sound';
 	import { theme, cycleTheme, THEME_STYLES, resolvedTheme } from '../../stores/theme';
 	import { spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
-	import { globalSettingsOpen } from '../../stores/chrome';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
@@ -37,27 +37,20 @@
 	<!-- ASCII brand & acronym breakdown -->
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden">
 		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
-			<span class="flex items-center gap-2">
-				<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
-				<button
-					onclick={() => {
-						globalSettingsOpen.set(true);
-						playSound('click');
-					}}
-					title="Global settings — sound, and clearing anything the site has stored in this browser"
-					class="press px-1.5 py-0.2 border border-white/25 rounded-xs text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] transition-colors cursor-pointer font-mono font-bold text-xs leading-none group"
-				>
-					<span class="inline-block group-hover:rotate-90 transition-transform duration-300">⚙</span>
-				</button>
-			</span>
+			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
 		</BoxHeader>
 
-		<pre class="text-[8px] sm:text-xs leading-none font-black tracking-tight text-[#e5c07b] overflow-x-auto select-none py-0.5">{` ██╗  ██╗██████╗ ███████╗███████╗
+		<AsciiArt
+			color="#e5c07b"
+			class="text-[8px] sm:text-xs leading-none font-black tracking-tight overflow-x-auto py-0.5"
+			title="krsz.in"
+			art={` ██╗  ██╗██████╗ ███████╗███████╗
  ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝
  █████╔╝ ██████╔╝███████╗  ███╔╝
  ██╔═██╗ ██╔══██╗╚════██║ ███╔╝
  ██║  ██╗██║  ██║███████║███████╗
- ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝`}</pre>
+ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝`}
+		/>
 
 		<!-- Columns come and go with the width; a cell never splits its own two words. -->
 		<div class="grid grid-cols-[repeat(auto-fit,minmax(105px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap">

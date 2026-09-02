@@ -221,7 +221,18 @@
 					? 'p-2 sm:p-3 space-y-1.5'
 					: 'p-2.5 sm:p-3.5 space-y-2'} flex flex-col"
 			>
-				{@render children()}
+				<!-- Switching tabs already unmounts the old view and mounts the new one
+				     (they are different route components, not one kept alive) -- the
+				     only thing missing was any transition on top of that swap, which
+				     made it a hard cut. Keying on the pathname plays a short cross-fade
+				     across it without changing what was already happening underneath;
+				     nothing here keeps a stateful view (synth's audio graph, the VM,
+				     chatbot's model) alive any differently than before. -->
+				{#key page.url.pathname}
+					<div class="flex-1 min-h-0 flex flex-col" in:fade={{ duration: 160, delay: 60 }} out:fade={{ duration: 90 }}>
+						{@render children()}
+					</div>
+				{/key}
 			</div>
 		</div>
 	</div>

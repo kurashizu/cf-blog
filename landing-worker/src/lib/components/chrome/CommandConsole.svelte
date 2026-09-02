@@ -149,7 +149,7 @@
 	<!-- Scrollback -->
 	<div
 		bind:this={scrollEl}
-		class="min-h-[3rem] max-h-[55vh] overflow-y-auto custom-scrollbar font-mono text-[13px] leading-relaxed pr-1"
+		class="min-h-[3rem] max-h-[55vh] overflow-y-auto custom-scrollbar scroll-instant font-mono text-[13px] leading-relaxed pr-1"
 	>
 		{#each $consoleBuffer as line, i (i)}
 			<div class="whitespace-pre-wrap break-words {LINE_CLASS[line.kind]}">

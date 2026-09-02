@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '../../../sound';
 	import { isSynthSettingsOpen, synthSettingsTab } from '../../../stores/synth-settings';
 	import AudioHwTab from './AudioHwTab.svelte';
@@ -24,14 +25,16 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="scrim-in fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80 backdrop-blur-xs select-none"
+		class="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80 backdrop-blur-xs select-none"
 		onclick={close}
+		transition:fade={{ duration: 180 }}
 	>
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="modal-pop w-full max-w-2xl bg-[#121417] border border-[#e5c07b]/40 rounded-xs shadow-[0_0_24px_rgba(0,0,0,0.8),0_0_12px_rgba(229,192,123,0.15)] flex flex-col max-h-[85vh] overflow-hidden"
+			class="w-full max-w-2xl bg-[#121417] border border-[#e5c07b]/40 rounded-xs shadow-[0_0_24px_rgba(0,0,0,0.8),0_0_12px_rgba(229,192,123,0.15)] flex flex-col max-h-[85vh] overflow-hidden"
 			onclick={(e) => e.stopPropagation()}
+			transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 		>
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between px-3 py-2 bg-black/60 border-b border-white/10 shrink-0">

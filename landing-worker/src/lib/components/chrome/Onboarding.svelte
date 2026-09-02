@@ -125,7 +125,7 @@
 			bubbleStyle = 'left: 50%; top: 50%; transform: translate(-50%, -50%);';
 			return;
 		}
-		el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
 		const r = el.getBoundingClientRect();
 		box = { x: r.left, y: r.top, w: r.width, h: r.height };
 
@@ -226,7 +226,7 @@
 	});
 </script>
 
-<div use:portal>
+<div use:portal out:fade={{ duration: 180 }}>
 	<!-- Click catcher: the tour drives itself, so nothing underneath is clickable -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->

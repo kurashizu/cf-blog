@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fade } from 'svelte/transition';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import LeaderboardView from '$lib/components/leaderboard/LeaderboardView.svelte';
 	import {
 		loadLeaderboard,
@@ -250,7 +251,10 @@
 
 			{#if $leaderboardStatus === 'error' || engineError}
 				<div class="absolute inset-0 flex items-center justify-center p-4" transition:fade={{ duration: 160 }}>
-					<div class="border border-[#e06c75]/50 bg-black/80 rounded-xs px-4 py-3 text-xs font-mono text-[#e06c75] max-w-[420px] modal-pop">
+					<div
+						class="border border-[#e06c75]/50 bg-black/80 rounded-xs px-4 py-3 text-xs font-mono text-[#e06c75] max-w-[420px]"
+						transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
+					>
 						{engineError ?? $leaderboardError}
 						<button onclick={() => { started = false; engineError = null; booting = true; void start(); }}
 							class="press ml-2 underline cursor-pointer hover:text-white transition-colors">retry</button>

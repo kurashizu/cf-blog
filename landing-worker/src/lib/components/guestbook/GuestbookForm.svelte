@@ -1,5 +1,6 @@
 <script lang="ts">
 	import BoxHeader from '../chrome/BoxHeader.svelte';
+	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { playSound } from '../../sound';
@@ -108,12 +109,16 @@
 
 <div class="space-y-3 sm:space-y-3.5 flex-1">
 	<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
-		<pre class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight text-[#e06c75] leading-tight overflow-x-auto select-none">{` ██████╗ ██╗   ██╗███████╗███████╗████████╗██████╗  ██████╗  ██████╗ ██╗  ██╗
+		<AsciiArt
+			color="#e06c75"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			art={` ██████╗ ██╗   ██╗███████╗███████╗████████╗██████╗  ██████╗  ██████╗ ██╗  ██╗
 ██╔════╝ ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔═══██╗██║ ██╔╝
 ██║  ███╗██║   ██║█████╗  ███████╗   ██║   ██████╔╝██║   ██║██║   ██║█████╔╝
 ██║   ██║██║   ██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║██║   ██║██╔═██╗
 ╚██████╔╝╚██████╔╝███████╗███████║   ██║   ██████╔╝╚██████╔╝╚██████╔╝██║  ██╗
- ╚═════╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝`}</pre>
+ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝`}
+		/>
 		<div class="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm shrink-0">
 			<button onclick={() => handleCopy('krsz.dev@gmail.com')} class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[krsz.dev@gmail.com]</button>
 			<button onclick={() => handleCopy('admin@krsz.in')} class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[admin@krsz.in]</button>

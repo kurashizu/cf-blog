@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
+	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import {
@@ -1048,12 +1049,16 @@
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
 	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
-		<pre class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight text-[#d19a66] leading-tight overflow-x-auto select-none">{`██╗  ██╗██████╗ ███████╗███████╗       ██╗   ██╗███╗   ███╗
+		<AsciiArt
+			color="#d19a66"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			art={`██╗  ██╗██████╗ ███████╗███████╗       ██╗   ██╗███╗   ███╗
 ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝       ██║   ██║████╗ ████║
 █████╔╝ ██████╔╝███████╗  ███╔╝ ██████╗██║   ██║██╔████╔██║
 ██╔═██╗ ██╔══██╗╚════██║ ███╔╝  ╚═════╝╚██╗ ██╔╝██║╚██╔╝██║
 ██║  ██╗██║  ██║███████║███████╗        ╚████╔╝ ██║ ╚═╝ ██║
-╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝         ╚═══╝  ╚═╝     ╚═╝`}</pre>
+╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝         ╚═══╝  ╚═╝     ╚═╝`}
+		/>
 
 		<div class="flex flex-wrap items-center gap-2">
 			{#if phase === 'running'}

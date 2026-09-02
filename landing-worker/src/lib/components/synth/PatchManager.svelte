@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import Onboarding from '../chrome/Onboarding.svelte';
 	import { SYNTH_TOUR } from './synth-tour';
@@ -139,7 +141,10 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="fixed inset-0 z-40" onclick={() => (isLoadMenuOpen = false)}></div>
 
-			<div class="dropdown-pop origin-top absolute left-0 top-full mt-1 z-50 min-w-[290px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono">
+			<div
+				class="origin-top absolute left-0 top-full mt-1 z-50 min-w-[290px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
+				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
+			>
 				<button onclick={loadLocal} class="press w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[#56b6c2] hover:bg-[#56b6c2]/20 cursor-pointer font-bold transition-colors" title="Restore saved synth parameters and sequencer patterns from browser LocalStorage">
 					<span class="shrink-0">▣</span>
 					<span>LOCAL PATCH (BROWSER)</span>
@@ -202,7 +207,10 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="fixed inset-0 z-40" onclick={() => (shareUrlFallback.set(null), (shareCopied = false))}></div>
 
-			<div class="dropdown-pop origin-top absolute left-0 top-full mt-1 z-50 w-[min(440px,80vw)] bg-[#121417] border border-[#c678dd]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] p-2 space-y-1.5">
+			<div
+				class="origin-top absolute left-0 top-full mt-1 z-50 w-[min(440px,80vw)] bg-[#121417] border border-[#c678dd]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] p-2 space-y-1.5"
+				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
+			>
 				<div class="text-[10px] font-mono text-white/50">Clipboard was blocked by the browser — copy the link here:</div>
 				<div class="flex items-center gap-1.5">
 					<input
@@ -240,10 +248,11 @@
 {#if report}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="scrim-in fixed inset-0 z-[120] bg-black/40" onclick={dismissReport}></div>
+	<div class="fixed inset-0 z-[120] bg-black/40" onclick={dismissReport} transition:fade={{ duration: 180 }}></div>
 	<div
-		class="modal-pop fixed z-[130] left-1/2 top-16 -translate-x-1/2 w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 space-y-1 font-mono {reportIsError ? 'shake-once' : ''}"
+		class="fixed z-[130] left-1/2 top-16 -translate-x-1/2 w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 space-y-1 font-mono {reportIsError ? 'shake-once' : ''}"
 		style="border-color: {reportIsError ? '#e06c75' : '#98c379'}88"
+		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
 		<div class="flex items-start justify-between gap-2 border-b border-white/10 pb-1.5">
 			<span class="text-xs font-black break-all" style="color: {reportIsError ? '#e06c75' : '#98c379'}">{report[0]}</span>

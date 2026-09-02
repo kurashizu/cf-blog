@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import BoxHeader from './BoxHeader.svelte';
 	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
@@ -222,11 +224,16 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="scrim-in fixed inset-0 z-[160] bg-black/70 backdrop-blur-[2px] flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto" onclick={onClose}>
+<div
+	class="fixed inset-0 z-[160] bg-black/70 backdrop-blur-[2px] flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto"
+	onclick={onClose}
+	transition:fade={{ duration: 180 }}
+>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="modal-pop w-full max-w-2xl {themeStyles.cardBgVideo} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto transform-gpu"
+		class="w-full max-w-2xl {themeStyles.cardBgVideo} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto transform-gpu"
 		onclick={(e) => e.stopPropagation()}
+		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
 		<BoxHeader title="GLOBAL_SETTINGS // KRSZ.IN" short="SETTINGS" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm" style="color: {themeStyles.cursorColor}">
 			<button onclick={onClose} class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors">[ Esc ]</button>

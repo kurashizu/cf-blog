@@ -6,7 +6,7 @@
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
 	import { theme, cycleTheme, THEME_STYLES, resolvedTheme } from '../../stores/theme';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
-	import { consoleOverlayOpen, guideOpen, toggleConsoleOverlay } from '../../stores/chrome';
+	import { consoleOverlayOpen, guideOpen, globalSettingsOpen, toggleConsoleOverlay } from '../../stores/chrome';
 	import KrszLogo from './KrszLogo.svelte';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
@@ -33,6 +33,52 @@
 	];
 
 	let tabStrip: HTMLDivElement | undefined = $state();
+	let tabsRow: HTMLDivElement | undefined = $state();
+	let tabBtns: (HTMLButtonElement | undefined)[] = [];
+
+	/**
+	 * A single pill that slides between tabs, instead of each button silently
+	 * swapping its own background the instant activeTab changes -- with eight
+	 * sibling buttons there is no element in that scheme that actually moves,
+	 * so the highlight just teleports. Measured against tabsRow rather than the
+	 * viewport so it tracks correctly regardless of the strip's own scroll
+	 * position or the sidebar's width changing the row's offset.
+	 */
+	let indicator = $state<{ left: number; width: number; color: string } | null>(null);
+
+	function placeIndicator() {
+		const row = tabsRow;
+		const btn = tabBtns[activeTab];
+		if (!row || !btn) {
+			indicator = null;
+			return;
+		}
+		const rowRect = row.getBoundingClientRect();
+		const btnRect = btn.getBoundingClientRect();
+		indicator = { left: btnRect.left - rowRect.left, width: btnRect.width, color: TABS[activeTab].color };
+	}
+
+	$effect(() => {
+		activeTab;
+		// Layout (container-query label collapse, window resize) can move a tab
+		// without changing which one is active, so re-measure on both triggers
+		// rather than only when the index itself changes.
+		placeIndicator();
+	});
+
+	$effect(() => {
+		const row = tabsRow;
+		const strip = tabStrip;
+		if (!row || !strip) return;
+		// Watch both: the row's own box (a tab actually resized) and the strip
+		// (the container-query root whose width crossing the label-collapse
+		// breakpoint is what caused it) -- the row alone can lag a frame behind
+		// the strip crossing the breakpoint.
+		const ro = new ResizeObserver(placeIndicator);
+		ro.observe(row);
+		ro.observe(strip);
+		return () => ro.disconnect();
+	});
 
 	/**
 	 * The strip scrolls sideways when the tabs outgrow it, but a mouse wheel only
@@ -107,15 +153,28 @@
 			<span class="hidden 2xl:inline">[~]&nbsp;CONSOLE</span><span class="2xl:hidden">[~]</span>
 		</button>
 
-		<div class="flex items-center gap-0.5 sm:gap-2" data-tour="tabs">
+		<div bind:this={tabsRow} class="relative flex items-center gap-0.5 sm:gap-2" data-tour="tabs">
+			<!-- The one element that actually moves -- everything else here is a
+			     colour transition on a fixed element, this is the only spot on the
+			     page where a highlight has to travel between siblings. Absolutely
+			     positioned against tabsRow (not the strip, which scrolls) so its
+			     left/width are plain pixel offsets, eased with the same curve as
+			     .press elsewhere rather than a spring. Hidden until the first
+			     measurement lands so it never flashes at (0,0) before layout. -->
+			{#if indicator}
+				<div
+					class="absolute inset-y-0 rounded pointer-events-none transition-[transform,width,background-color] duration-200 z-0"
+					style="transform: translateX({indicator.left}px); width: {indicator.width}px; background-color: {indicator.color}; transition-timing-function: cubic-bezier(0.2, 0, 0, 1);"
+				></div>
+			{/if}
 			{#each TABS as tab (tab.id)}
 				<button
+					bind:this={tabBtns[tab.id]}
 					onclick={() => nav(tab.id)}
 					title={tab.title}
-					class="press px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-all whitespace-nowrap shrink-0 {activeTab === tab.id
+					class="press relative z-10 px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
 						? 'text-black font-black'
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
-					style={activeTab === tab.id ? `background-color: ${tab.color}` : undefined}
 				>
 					{tab.id}<span class="tabname" class:on={activeTab === tab.id}>:{tab.label.slice(2)}</span>
 				</button>
@@ -152,6 +211,16 @@
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
 		>
 			<span class="hidden 2xl:inline">[?]&nbsp;GUIDE</span><span class="2xl:hidden">[?]</span>
+		</button>
+		<button
+			onclick={() => {
+				globalSettingsOpen.set(true);
+				playSound('click');
+			}}
+			title="Global settings — sound, and clearing anything the site has stored in this browser"
+			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-white/25 text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] hover:bg-[#56b6c2]/20 group"
+		>
+			<span class="hidden 2xl:inline">[<span class="inline-block group-hover:rotate-90 transition-transform duration-300">⚙</span>]&nbsp;SETTINGS</span><span class="2xl:hidden">[<span class="inline-block group-hover:rotate-90 transition-transform duration-300">⚙</span>]</span>
 		</button>
 		<button
 			onclick={cycleTheme}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import BoxHeader from '../chrome/BoxHeader.svelte';
+	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';
 	import KeyboardTester from './KeyboardTester.svelte';
 	import MouseTester from './MouseTester.svelte';
@@ -56,12 +57,16 @@
 
 <div class="space-y-3 sm:space-y-4 flex-1">
 	<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
-		<pre class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight text-[#e5c07b] leading-tight overflow-x-auto select-none">{`██╗   ██╗████████╗██╗██╗     ███████╗
+		<AsciiArt
+			color="#e5c07b"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			art={`██╗   ██╗████████╗██╗██╗     ███████╗
 ██║   ██║╚══██╔══╝██║██║     ██╔════╝
 ██║   ██║   ██║   ██║██║     ███████╗
 ██║   ██║   ██║   ██║██║     ╚════██║
 ╚██████╔╝   ██║   ██║███████╗███████║
- ╚═════╝    ╚═╝   ╚═╝╚══════╝╚══════╝`}</pre>
+ ╚═════╝    ╚═╝   ╚═╝╚══════╝╚══════╝`}
+		/>
 		<!-- Wraps rather than scrolls: with a dozen tools a hidden overflow row is undiscoverable -->
 		<div class="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 text-xs sm:text-sm">
 			{#each TOOLS as tool (tool.id)}

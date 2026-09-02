@@ -82,6 +82,13 @@ textarea {
 .custom-scrollbar {
 	scrollbar-width: thin;
 	scrollbar-color: rgba(255, 255, 255, 0.18) rgba(0, 0, 0, 0.25);
+	scroll-behavior: smooth;
+}
+/* Opt out on containers that call scrollTop = scrollHeight on every new line
+   (the chat log during streaming, the console scrollback) -- smooth would
+   fight itself on every token/line and read as stutter, not ease. */
+.scroll-instant {
+	scroll-behavior: auto;
 }
 
 /* Micro-interaction primitives -- restrained and fast (120-160ms), matching

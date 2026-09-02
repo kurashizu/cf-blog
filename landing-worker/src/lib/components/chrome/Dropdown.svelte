@@ -6,6 +6,8 @@
 	 * fonts, system blue and rounded corners that belong to nothing else on the
 	 * page. Everywhere a list needs picking from, this is used instead.
 	 */
+	import { scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	export interface Option {
 		value: string;
 		label: string;
@@ -75,8 +77,9 @@
 		<div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
 
 		<div
-			class="dropdown-pop absolute left-0 top-full mt-1 z-50 max-h-[42vh] overflow-y-auto custom-scrollbar bg-[#121417] border rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono origin-top"
+			class="absolute left-0 top-full mt-1 z-50 max-h-[42vh] overflow-y-auto custom-scrollbar bg-[#121417] border rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono origin-top"
 			style="border-color: {color}80; min-width: {width}"
+			transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 		>
 			<!-- Keyed by position: device lists hand back empty deviceIds before a
 			     permission grant, so values are not unique until then. -->

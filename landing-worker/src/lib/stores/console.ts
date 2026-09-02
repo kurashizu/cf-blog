@@ -113,7 +113,7 @@ const BANNER = [
 
 const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
-	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm'),
+	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm  6|chatbot  7|lifelab'),
 	out('  open <project>     launch a project in a new tab'),
 	out('  ping <project>     measure real round trip from your browser'),
 	out('  ' + Object.keys(EXTERNAL_LINKS).join(' · ')),
@@ -625,7 +625,7 @@ const COMMAND_NAMES = [
 	'sort', 'uniq', 'alias', 'unalias', 'open', 'whoami', 'date', 'history', 'banner', 'tracks',
 	'songs', 'load', 'play', 'stop', 'seq', 'bpm', 'vol', 'mute', 'unmute', 'midi', 'theme', 'eval',
 	'echo', 'snap', 'dur', 'meter', 'blend', 'modules', 'guestbook', 'synth', 'utilities', 'utils', 'lm-space', 'leaderboard', 'llm', 'ping',
-	'trace', 'guide', 'tour', 'keys', 'krsz-vm', 'x86sim', 'linux', 'vm', 'alpine',
+	'trace', 'guide', 'tour', 'keys', 'krsz-vm', 'x86sim', 'linux', 'vm', 'alpine', 'chatbot', 'webgpu', 'lifelab', 'life', 'conway',
 	...Object.keys(EXTERNAL_LINKS)
 ];
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import BoxHeader from '../chrome/BoxHeader.svelte';
+	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';
 	import { SPINNER_FRAMES, spinnerFrame } from '../../stores/clock';
 	import { selectedModuleId } from '../../stores/selected-module';
@@ -19,12 +20,16 @@
 
 <div class="space-y-3 sm:space-y-4 flex-1">
 	<div class="flex items-center justify-between border-b border-white/10 pb-2">
-		<pre class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight text-[#56b6c2] leading-tight overflow-x-auto select-none">{`███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
+		<AsciiArt
+			color="#56b6c2"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			art={`███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
 ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
 ██╔████╔██║██║   ██║██║  ██║██║   ██║██║     █████╗  ███████╗
 ██║╚██╔╝██║██║   ██║██║  ██║██║   ██║██║     ██╔══╝  ╚════██║
 ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████╗███████╗███████║
-╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝`}</pre>
+╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝`}
+		/>
 		<span class="text-xs sm:text-sm text-[#98c379] flex items-center gap-1.5 shrink-0">
 			<span>{SPINNER_FRAMES[$spinnerFrame]}</span>
 			<span>6 PROJECTS</span>

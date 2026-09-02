@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { fade, fly, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { isLooping } from './markdown';
@@ -1324,7 +1325,8 @@
 	<div class="relative">
 		{#if completions.length}
 			<div
-				class="dropdown-pop absolute bottom-full left-0 mb-1 min-w-56 border {themeStyles.border} rounded-xs bg-black/95 py-1 text-xs font-mono shadow-lg z-20 origin-bottom"
+				class="absolute bottom-full left-0 mb-1 min-w-56 border {themeStyles.border} rounded-xs bg-black/95 py-1 text-xs font-mono shadow-lg z-20 origin-bottom"
+				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
 				{#each completions as c, ci (c.name)}
 					<button

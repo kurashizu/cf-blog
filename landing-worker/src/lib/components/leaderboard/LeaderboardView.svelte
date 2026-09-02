@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import Dropdown from '../chrome/Dropdown.svelte';
+	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';
 	import {
 		loadLeaderboard,
@@ -258,12 +261,16 @@
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
 	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
-		<pre class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight text-[#56b6c2] leading-tight overflow-x-auto select-none">{`██╗     ███████╗ █████╗ ██████╗ ███████╗██████╗ ██████╗  ██████╗  █████╗ ██████╗ ██████╗ 
+		<AsciiArt
+			color="#56b6c2"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			art={`██╗     ███████╗ █████╗ ██████╗ ███████╗██████╗ ██████╗  ██████╗  █████╗ ██████╗ ██████╗
 ██║     ██╔════╝██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔═══██╗██╔══██╗██╔══██╗██╔══██╗
 ██║     █████╗  ███████║██║  ██║█████╗  ██████╔╝██████╔╝██║   ██║███████║██████╔╝██║  ██║
 ██║     ██╔══╝  ██╔══██║██║  ██║██╔══╝  ██╔══██╗██╔══██╗██║   ██║██╔══██║██╔══██╗██║  ██║
 ███████╗███████╗██║  ██║██████╔╝███████╗██║  ██║██████╔╝╚██████╔╝██║  ██║██║  ██║██████╔╝
-╚══════╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ `}</pre>
+╚══════╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ `}
+		/>
 
 		<div class="text-[10px] sm:text-xs font-mono text-white/45 text-right leading-relaxed max-w-[440px]">
 			<div>
@@ -415,14 +422,15 @@
 	{@const m = popover.model}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="scrim-in fixed inset-0 z-[120]" onclick={() => (popover = null)}></div>
+	<div class="fixed inset-0 z-[120]" onclick={() => (popover = null)} transition:fade={{ duration: 180 }}></div>
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={cardEl}
-		class="modal-pop fixed z-[130] w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] font-mono"
+		class="fixed z-[130] w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] font-mono"
 		style="left: {cardPos.left}px; top: {cardPos.top}px; border-color: {metric.color}80"
 		onclick={(e) => e.stopPropagation()}
+		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
 		<div class="flex items-start justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
 			<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
