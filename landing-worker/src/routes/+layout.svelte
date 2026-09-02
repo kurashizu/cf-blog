@@ -179,8 +179,15 @@
 		<!-- Below lg the grid gives each item its own auto-sized row rather than a
 		     shared height, so a canvas view with no text content to size against
 		     collapsed to a sliver a few pixels tall. min-h-[70svh] gives the panel
-		     a floor on a phone; lg:min-h-0 leaves the desktop flex layout alone. -->
-		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-[span_19_/_span_19] border {themeStyles.border} flex flex-col {themeStyles.cardBgVideo} rounded-sm min-h-[70svh] lg:min-h-0 lg:overflow-hidden">
+		     a floor on a phone; lg:min-h-0 leaves the desktop flex layout alone.
+		     transform-gpu forces its own compositing layer -- Safari has a long-
+		     standing bug where content near a backdrop-filter (cardBgVideo's blur)
+		     stops repainting after certain layout changes, leaving stale/blank
+		     pixels until something forces a repaint. Promoting the layer sidesteps
+		     it; without it, resizing the window enough times left whole synth rack
+		     modules rendering empty in Safari despite their content being intact
+		     in the DOM. -->
+		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-[span_19_/_span_19] border {themeStyles.border} flex flex-col {themeStyles.cardBgVideo} rounded-sm min-h-[70svh] lg:min-h-0 lg:overflow-hidden transform-gpu">
 			<!-- The console lives only in the drop-down overlay now, so every view
 			     gets the full panel and no view has an autofocused input competing
 			     with the keyboard testers or the QWERTY piano. -->
