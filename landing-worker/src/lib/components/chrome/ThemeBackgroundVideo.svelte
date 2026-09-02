@@ -44,13 +44,19 @@
 	 * A theme change only *loads* the new clip into whichever layer is hidden.
 	 * The fade to it waits for `onReady` -- i.e. until that layer has decoded a
 	 * frame -- otherwise the crossfade starts against a still-black element.
+	 * Unless the hidden layer already holds that clip (cycling back to a theme
+	 * we just left, or auto returning to one from earlier in the day): then
+	 * the src doesn't change, no `loadeddata` will ever come, and the fade
+	 * has to be started right here.
 	 */
 	$effect(() => {
 		const next = $resolvedTheme;
 		untrack(() => {
-			const current = showB ? slotB : slotA;
-			if (next === current) return;
-			if (showB) slotA = next;
+			const visible = showB ? slotB : slotA;
+			if (next === visible) return;
+			const hiddenTheme = showB ? slotA : slotB;
+			if (hiddenTheme === next) reveal(showB ? 'A' : 'B');
+			else if (showB) slotA = next;
 			else slotB = next;
 		});
 	});
@@ -61,18 +67,9 @@
 
 	let fadeGen = 0;
 
-	function onReady(slot: 'A' | 'B') {
-		const hidden = slot === 'A' ? showB : !showB;
-		if (!hidden) return;
-		const loaded = slot === 'A' ? slotA : slotB;
-		const video = slot === 'A' ? videoA : videoB;
-		if (loaded !== $resolvedTheme) {
-			// Theme moved on while this was loading; don't leave it decoding for nothing.
-			video?.pause();
-			return;
-		}
+	function reveal(slot: 'A' | 'B') {
 		showB = slot === 'B';
-		play(video);
+		play(slot === 'A' ? videoA : videoB);
 		// Once the outgoing layer has faded out, stop its decoder. A second AV1
 		// stream running invisibly forever is real CPU for nothing. Generation
 		// check so a quick flip back doesn't pause the layer that is now visible.
@@ -81,6 +78,18 @@
 			if (gen !== fadeGen) return;
 			(showB ? videoA : videoB)?.pause();
 		}, FADE_MS + 50);
+	}
+
+	function onReady(slot: 'A' | 'B') {
+		const hidden = slot === 'A' ? showB : !showB;
+		if (!hidden) return;
+		const loaded = slot === 'A' ? slotA : slotB;
+		if (loaded !== $resolvedTheme) {
+			// Theme moved on while this was loading; don't leave it decoding for nothing.
+			(slot === 'A' ? videoA : videoB)?.pause();
+			return;
+		}
+		reveal(slot);
 	}
 
 	/*
