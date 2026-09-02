@@ -36,12 +36,18 @@
 	const BUILD_TITLE = `Build ${__BUILD_COMMIT__} — ${__BUILD_TIME__} (${__BUILD_TIME_SYDNEY__} Sydney)${BUILD_URL ? '. Open the commit on GitHub in a new tab.' : ''}`;
 </script>
 
+<!-- A single row, always: the two groups no longer wrap onto their own lines when
+     the panel narrows. footer-fit is a container query context (the available
+     width is the panel's, not the viewport's -- the sidebar changes it too), so
+     link labels drop to icon-only before anything gets crowded, and the whole
+     row falls back to a horizontal scroll only past the point where even that
+     is too tight -- it never stacks. -->
 <footer
-	class="w-full max-w-full {themeStyles.headerBgVideo} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-wrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border {themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 gap-1.5"
+	class="footer-fit w-full max-w-full {themeStyles.headerBgVideo} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-nowrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border {themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 gap-1.5 overflow-x-auto custom-scrollbar"
 >
-	<div class="flex flex-wrap items-center gap-2 sm:gap-3">
-		<span>[0] 0:krsz.in*</span>
-		<span class="opacity-40 text-white/30 hidden sm:inline">|</span>
+	<div class="flex items-center gap-2 sm:gap-3 shrink-0">
+		<span class="shrink-0">[0] 0:krsz.in*</span>
+		<span class="opacity-40 text-white/30 hidden sm:inline shrink-0">|</span>
 		{#each LINKS as link (link.href)}
 			<a
 				href={link.href}
@@ -49,27 +55,27 @@
 				rel="noopener noreferrer"
 				onclick={() => playSound('click')}
 				title={link.title}
-				class="hover:underline flex items-center gap-1 transition-colors {link.color}"
+				class="hover:underline flex items-center gap-1 transition-colors shrink-0 {link.color}"
 			>
 				<PixelIcon name={link.icon} size={16} />
-				<span>{link.label}</span>
+				<span class="footer-linklabel">{link.label}</span>
 			</a>
 		{/each}
 	</div>
 
-	<div class="flex items-center gap-2 sm:gap-3">
-		<span class="text-[#e06c75] hidden sm:inline">"krsz-edge-node"</span>
+	<div class="flex items-center gap-2 sm:gap-3 shrink-0">
+		<span class="text-[#e06c75] hidden sm:inline shrink-0">"krsz-edge-node"</span>
 		{#if edgeLabel}
 			<span
 				data-tour="edge"
 				title={edgeTitle}
-				class="text-[11px] sm:text-xs {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
+				class="text-[11px] sm:text-xs shrink-0 {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
 			>
 				{edgeLabel}
 			</span>
 		{/if}
-		<span class="opacity-40 text-white/30 hidden sm:inline">|</span>
-		<span class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap" title={BUILD_TITLE}>
+		<span class="opacity-40 text-white/30 hidden sm:inline shrink-0">|</span>
+		<span class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap shrink-0" title={BUILD_TITLE}>
 			{#if BUILD_URL}
 				<a
 					href={BUILD_URL}
@@ -87,3 +93,17 @@
 		</span>
 	</div>
 </footer>
+
+<style>
+	.footer-fit {
+		container-type: inline-size;
+	}
+	/* Link text is the first thing to give: the icon alone still identifies each
+	   one (title carries the full name), and dropping it buys back real room
+	   before anything more useful would have to go. */
+	@container (max-width: 640px) {
+		.footer-linklabel {
+			display: none;
+		}
+	}
+</style>

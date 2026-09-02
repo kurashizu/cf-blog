@@ -85,7 +85,7 @@
 				<button
 					onclick={() => nav(tab.id)}
 					title={tab.tooltip}
-					class="border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group relative overflow-hidden {isActive
+					class="border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group relative overflow-hidden min-w-0 {isActive
 						? 'border-white bg-white/20 text-white shadow-md'
 						: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5'}"
 					style={isActive ? `border-color: ${tab.color}` : undefined}
@@ -99,24 +99,24 @@
 						</span>
 						<span class="text-base leading-none opacity-85 group-hover:opacity-100" style="color: {tab.color}">{tab.icon}</span>
 					</div>
-					<div class="mt-1">
-						<div class="font-bold text-xs leading-tight tracking-tight" style="color: {isActive ? '#fff' : tab.color}">{tab.title}</div>
-						<div class="text-xs opacity-60 font-mono">{tab.desc}</div>
+					<div class="mt-1 w-full min-w-0">
+						<div class="font-bold text-xs leading-tight tracking-tight truncate" style="color: {isActive ? '#fff' : tab.color}">{tab.title}</div>
+						<div class="text-xs opacity-60 font-mono truncate">{tab.desc}</div>
 					</div>
 				</button>
 			{/each}
 
 			<button
 				onclick={cycleTheme}
-				class="border border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group"
+				class="border border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all active:scale-95 group overflow-hidden min-w-0"
 			>
 				<div class="w-full flex items-center justify-between">
 					<span class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border border-[#d8dee9]/40 bg-black/50 text-[#d8dee9]">[T]</span>
 					<span class="text-xs text-[#e5c07b] group-hover:rotate-45 transition-transform">◐</span>
 				</div>
-				<div class="mt-1">
-					<div class="font-bold text-xs text-[#d8dee9] leading-tight">THEME</div>
-					<div class="text-xs opacity-60 font-mono uppercase">{themeLabel}</div>
+				<div class="mt-1 w-full min-w-0">
+					<div class="font-bold text-xs text-[#d8dee9] leading-tight truncate">THEME</div>
+					<div class="text-xs opacity-60 font-mono uppercase truncate" title={themeLabel}>{themeLabel}</div>
 				</div>
 			</button>
 		</div>
