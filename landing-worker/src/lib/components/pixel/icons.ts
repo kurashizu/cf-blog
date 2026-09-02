@@ -8,8 +8,12 @@ export const PIXEL_ICON_PATHS = {
 	vault: 'M7 1h2v1h-2zM6 2h4v1h-4zM5 3h6v1h-6zM4 4h2v1h-2zM7 4h2v1h-2zM10 4h2v1h-2zM7 5h2v1h-2zM7 6h2v1h-2zM2 8h11v1h-11zM2 9h1v1h-1zM12 9h1v1h-1zM2 10h1v1h-1zM4 10h3v1h-3zM8 10h3v1h-3zM12 10h1v1h-1zM2 11h1v1h-1zM12 11h1v1h-1zM2 12h1v1h-1zM4 12h3v1h-3zM8 12h3v1h-3zM12 12h1v1h-1zM2 13h1v1h-1zM12 13h1v1h-1zM2 14h11v1h-11z',
 	video: 'M1 3h14v10H1V3zm2 2v6h10V5H3zm3 1l4 2-4 2V6z',
 	mail: 'M1 3h14v10H1V3zm2 2v1l5 4 5-4V5H3zm0 3v3h10V8L8 12 3 8z',
-	// A ruled document. Two empty panels read as a window, not a rulebook.
-	rules: 'M2 1h10v1h-10zM2 2h1v1h-1zM11 2h1v1h-1zM2 3h1v1h-1zM4 3h2v1h-2zM7 3h3v1h-3zM11 3h1v1h-1zM2 4h1v1h-1zM11 4h1v1h-1zM2 5h1v1h-1zM4 5h2v1h-2zM7 5h3v1h-3zM11 5h1v1h-1zM2 6h1v1h-1zM11 6h1v1h-1zM2 7h1v1h-1zM4 7h2v1h-2zM7 7h3v1h-3zM11 7h1v1h-1zM2 8h1v1h-1zM11 8h1v1h-1zM2 9h1v1h-1zM4 9h2v1h-2zM7 9h3v1h-3zM11 9h1v1h-1zM2 10h1v1h-1zM11 10h1v1h-1zM2 11h10v1h-10z',
+	// A solid ruled document, the rule lines cut through the fill as gaps
+	// rather than drawn as a hollow outline with thin separate strokes --
+	// the earlier version only used about two-thirds of the 16x16 canvas
+	// and read noticeably thinner/smaller than the other footer icons at
+	// the same render size.
+	rules: 'M1 1h13v1h-13zM1 2h13v1h-13zM1 3h13v1h-13zM1 4h3v1h-3zM11 4h3v1h-3zM1 5h13v1h-13zM1 6h13v1h-13zM1 7h3v1h-3zM11 7h3v1h-3zM1 8h13v1h-13zM1 9h13v1h-13zM1 10h3v1h-3zM11 10h3v1h-3zM1 11h13v1h-13zM1 12h13v1h-13zM1 13h13v1h-13z',
 	audio: 'M1 6h2v4H1V6zm3-2h2v8H4V4zm3-3h2v14H7V1zm3 3h2v10h-2V4zm3 2h2v4h-2V6z',
 	arrowUpRight: 'M6 3h7v7h-2V6.4L4.4 13 3 11.6 9.6 5H6V3z',
 	// The Octocat's head: rounded skull, two pointed ears, two eyes, two
@@ -25,8 +29,11 @@ export const PIXEL_ICON_PATHS = {
 	// than part of the face outline.
 	huggingface: 'M6 1h4v1h-4zM5 2h6v1h-6zM4 3h8v1h-8zM3 4h10v1h-10zM2 5h12v1h-12zM1 6h2v1h-2zM5 6h6v1h-6zM13 6h2v1h-2zM1 7h14v1h-14zM1 8h2v1h-2zM5 8h6v1h-6zM13 8h2v1h-2zM2 9h12v1h-12zM3 10h2v1h-2zM11 10h2v1h-2zM0 12h2v1h-2zM14 12h2v1h-2zM0 13h3v1h-3zM13 13h3v1h-3zM1 14h3v1h-3zM12 14h3v1h-3zM2 15h2v1h-2zM12 15h2v1h-2z',
 	help: 'M5 2h6v1H5V2zM4 3h1v2H4V3zm7 0h1v3h-1V3zM9 6h2v1H9V6zM8 7h2v1H8V7zm-1 1h2v3H7V8zm0 4h2v2H7v-2z',
+	// A solid IC chip with block pins on all four sides -- the earlier
+	// version was a thin single-pixel outline with hairline pins that read
+	// noticeably lighter than the other footer icons at the same size.
 	hardware:
-		'M2 1h1v2h2V1h1v2h4V1h1v2h2V1h1v2h1v10h-1v2h-1v-2h-2v2h-1v-2H6v2H5v-2H3v2H2v-2H1V3h1V1zm1 3v8h10V4H3zm2 2h3v3H5V6zm4 0h2v1H9V6zm0 2h2v1H9V8zm-4 2h6v1H5v-1z'
+		'M2 0h2v1h-2zM6 0h2v1h-2zM10 0h2v1h-2zM2 1h2v1h-2zM6 1h2v1h-2zM10 1h2v1h-2zM1 3h14v1h-14zM1 4h14v1h-14zM1 5h14v1h-14zM1 6h14v1h-14zM1 7h14v1h-14zM1 8h14v1h-14zM1 9h14v1h-14zM1 10h14v1h-14zM1 11h14v1h-14zM2 13h2v1h-2zM6 13h2v1h-2zM10 13h2v1h-2zM2 14h2v1h-2zM6 14h2v1h-2zM10 14h2v1h-2z'
 } as const;
 
 export type PixelIconName = keyof typeof PIXEL_ICON_PATHS;
