@@ -12,7 +12,7 @@
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
-	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen } from '$lib/stores/chrome';
+	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen, privacyOpen } from '$lib/stores/chrome';
 	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
@@ -23,6 +23,7 @@
 	import BootSequence from '$lib/components/chrome/BootSequence.svelte';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
 	import Welcome from '$lib/components/chrome/Welcome.svelte';
+	import PrivacyNotice from '$lib/components/chrome/PrivacyNotice.svelte';
 	import GlobalSettings from '$lib/components/chrome/GlobalSettings.svelte';
 
 	let { children } = $props();
@@ -55,6 +56,7 @@
 
 	const GUIDE_KEY = 'krsz.guide.seen';
 	const WELCOME_KEY = 'krsz.welcome.seen';
+	const PRIVACY_KEY = 'krsz.privacy.agreed';
 
 	/** The walkthrough is offered once, then only on request. */
 	function showGuideIfNew() {
@@ -88,8 +90,37 @@
 		showGuideIfNew();
 	}
 
+	/** Ahead of even the welcome screen on a first visit -- consent comes
+	 *  before any feature tour, not after. */
+	function agreePrivacy() {
+		privacyOpen.set(false);
+		try {
+			localStorage.setItem(PRIVACY_KEY, '1');
+		} catch {
+			/* nothing to remember it with; it will ask again next visit */
+		}
+		let seenWelcome = true;
+		try {
+			seenWelcome = localStorage.getItem(WELCOME_KEY) === '1';
+		} catch {
+			/* private mode — treat as seen so at least the tour still offers itself */
+		}
+		if (seenWelcome) showGuideIfNew();
+		else welcomeOpen.set(true);
+	}
+
 	function dismissBoot() {
 		bootVisible = false;
+		let seenPrivacy = true;
+		try {
+			seenPrivacy = localStorage.getItem(PRIVACY_KEY) === '1';
+		} catch {
+			/* private mode — treat as seen so the rest of the first-visit flow still runs */
+		}
+		if (!seenPrivacy) {
+			privacyOpen.set(true);
+			return;
+		}
 		let seenWelcome = true;
 		try {
 			seenWelcome = localStorage.getItem(WELCOME_KEY) === '1';
@@ -278,6 +309,10 @@
 
 {#if $welcomeOpen}
 	<Welcome onDone={closeWelcome} />
+{/if}
+
+{#if $privacyOpen}
+	<PrivacyNotice onAgree={agreePrivacy} />
 {/if}
 
 {#if bootVisible}

@@ -30,7 +30,15 @@
 					tertiaryColor: 'rgba(255,255,255,0.04)',
 					edgeLabelBackground: '#16171d',
 					clusterBkg: 'rgba(255,255,255,0.03)',
-					clusterBorder: 'rgba(255,255,255,0.15)'
+					clusterBorder: 'rgba(255,255,255,0.15)',
+					/* Sequence-diagram "Note over/left/right" boxes default to a
+					   solid pale yellow under theme: 'base' if left unset -- the
+					   one part of the palette above didn't reach, and it's the
+					   only opaque, off-style block in an otherwise transparent,
+					   dark diagram. */
+					noteBkgColor: 'rgba(255,255,255,0.06)',
+					noteBorderColor: color,
+					noteTextColor: '#eceff4'
 				},
 				flowchart: {
 					useMaxWidth: false,

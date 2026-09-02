@@ -144,11 +144,12 @@
 		<a
 			href="/"
 			title="krsz.in — Kurashizu's Random-Stuff Zone"
-			class="press bg-black/40 px-1 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
+			class="press bg-black/40 px-0.5 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
 		>
-			<!-- Sized against the tab buttons' own line box, so a bigger mark does not
-			     make the header taller. -->
-			<KrszLogo size={24} />
+			<!-- Sized against the tab buttons' own line box (30px including their
+			     padding, measured against the CONSOLE button) rather than guessed --
+			     this is as large as the mark can go without growing the header. -->
+			<KrszLogo size={30} />
 		</a>
 
 		<!-- The console is drop-down only, so it needs a visible handle as well as its key -->

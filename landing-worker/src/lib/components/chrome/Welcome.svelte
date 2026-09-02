@@ -91,17 +91,7 @@
 				{/each}
 			</div>
 
-			<div class="border border-white/15 bg-black/30 rounded-xs p-2.5 sm:p-3 text-left" in:fade={{ duration: 300, delay: 120 }}>
-				<div class="text-[10px] sm:text-xs font-black text-[#61afef] mb-1">[PRIVACY]</div>
-				<p class="text-[10px] sm:text-xs text-white/55 leading-relaxed">
-					No account, no tracking, no analytics. Settings, sound, and theme live only in this browser's
-					own storage and are never sent anywhere. The one exception is the
-					<span class="text-[#e06c75] font-bold">Guestbook</span> — a message you post there is sent to
-					the server and shown publicly, with its own confirmation next to the send button.
-				</p>
-			</div>
-
-			<div class="flex flex-col items-center gap-2.5 pt-1" in:fade={{ duration: 300, delay: 200 }}>
+			<div class="flex flex-col items-center gap-2.5 pt-1" in:fade={{ duration: 300, delay: 120 }}>
 				<button
 					onclick={start}
 					class="press modal-pop px-6 py-2.5 border-2 border-[#98c379] bg-[#98c379]/15 text-[#98c379] rounded-xs text-sm font-black tracking-wide cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors"

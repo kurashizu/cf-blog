@@ -23,6 +23,12 @@
 		color: string;
 		/** Optional button that demonstrates the step instead of describing it. */
 		action?: { label: string; run: () => void };
+		/** Skip this step's own bubble entirely -- close the tour and run its
+		 *  action straight away instead. For a step whose whole point IS the
+		 *  thing the action opens (the closing keymap step): showing a bubble
+		 *  that merely offers a button to see it is a worse experience than
+		 *  just putting it on screen. */
+		closeAndRun?: boolean;
 	}
 
 	const SITE_STEPS: Step[] = [
@@ -84,13 +90,10 @@
 		{
 			target: 'guide-btn',
 			title: 'ONE MORE THING — THE KEYMAP',
-			body: 'Every shortcut on this site, in one place: navigation, the synth’s QWERTY piano, the console, all of it. Press ? or F1 whenever you need it back.',
-			keys: [
-				{ key: '? / F1', desc: 'full keyboard reference' },
-				{ key: 'Esc', desc: 'close whichever overlay is open' }
-			],
+			body: 'Every shortcut on this site, in one place.',
 			color: '#e06c75',
-			action: { label: 'SHOW KEYMAP', run: () => hotkeyOverlayOpen.set(true) }
+			action: { label: 'SHOW KEYMAP', run: () => hotkeyOverlayOpen.set(true) },
+			closeAndRun: true
 		}
 	];
 
@@ -174,6 +177,13 @@
 	function next() {
 		if (isLast) {
 			onClose();
+			return;
+		}
+		const upcoming = STEPS[index + 1];
+		if (upcoming.closeAndRun) {
+			playSound('click');
+			onClose();
+			upcoming.action?.run();
 			return;
 		}
 		direction = 1;

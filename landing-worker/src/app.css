@@ -302,3 +302,20 @@ textarea {
 	backdrop-filter: none !important;
 	-webkit-backdrop-filter: none !important;
 }
+/* Every translucent surface on the site is built on Tailwind's bg-black/NN
+   (plain cards/scrims/badges) or bg-[#hex]/NN + backdrop-blur-sm (the
+   headerBgVideo/cardBgVideo pair in stores/theme.ts, used on ~17
+   components that read THEME_STYLES directly). Both compile to a fixed
+   rgb(.../NN%) background-color per class, so there's no single CSS
+   variable to override -- but the class name itself is a stable,
+   predictable string in both cases (Tailwind's arbitrary-value syntax
+   keeps the literal "bg-black/" or "backdrop-blur" substring in the
+   compiled class attribute), so an attribute selector reaches every one
+   of them without touching the ~17 call sites that build these class
+   strings from theme data. Solid black rather than each theme's own hue:
+   the point here is opaque and cheap, not a perfect color match, and it
+   reads correctly against every theme without needing per-theme rules. */
+:root[data-perf='on'] [class*='bg-black/'],
+:root[data-perf='on'] [class*='backdrop-blur'] {
+	background-color: #000 !important;
+}

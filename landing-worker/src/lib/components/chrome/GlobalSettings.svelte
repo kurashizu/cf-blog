@@ -18,7 +18,14 @@
 	 *  owner's own constant so this list cannot silently drift out of sync --
 	 *  see sound.ts, stores/chrome.ts, stores/synth-patch.ts, stores/console.ts,
 	 *  krsz-vm/KrszVmView.svelte and chatbot/engine.ts for where each is read. */
-	const GUIDE_KEYS = ['krsz.guide.seen', 'krsz.guide.synth', 'krsz.guide.lm-space', 'krsz.guide.lifelab', 'krsz.welcome.seen'];
+	const GUIDE_KEYS = [
+		'krsz.guide.seen',
+		'krsz.guide.synth',
+		'krsz.guide.lm-space',
+		'krsz.guide.lifelab',
+		'krsz.welcome.seen',
+		'krsz.privacy.agreed'
+	];
 	const SYNTH_PATCH_KEY = 'krsz-synth-patch-v1';
 	const CONSOLE_KEYS = ['krsz.console.history', 'krsz.console.aliases'];
 	const VM_SETTINGS_KEY = 'krsz.vm.settings';
@@ -157,7 +164,7 @@
 				label: 'WELCOME & GUIDED TOURS SEEN',
 				color: '#e06c75',
 				size: localStorageBytes(GUIDE_KEYS),
-				detail: 'the welcome screen, the site tour and every per-view walkthrough offer themselves again on next visit',
+				detail: 'the privacy notice, welcome screen, site tour and every per-view walkthrough offer themselves again on next visit',
 				clear: async () => removeKeys(GUIDE_KEYS)
 			}
 		];
