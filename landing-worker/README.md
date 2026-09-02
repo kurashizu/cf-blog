@@ -219,7 +219,8 @@ landing-worker/
 │       ├── guestbook/
 │       ├── synth/
 │       └── x86sim/, linux/, utilities/  # legacy redirect stubs (308 to krsz-vm / utils)
-├── static/favicon.svg
+├── static/favicon.svg                  # Site mark (also inlined as chrome/KrszLogo.svelte)
+├── static/icon-*.png, apple-touch-icon.png, manifest.webmanifest  # PWA / home-screen icons
 ├── svelte.config.js                    # adapter-cloudflare, $shared alias
 ├── vite.config.ts
 ├── tailwind.config.js
