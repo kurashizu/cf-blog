@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import BoxHeader from './BoxHeader.svelte';
 	import AsciiArt from './AsciiArt.svelte';
 	import { goto } from '$app/navigation';
@@ -7,15 +8,22 @@
 	import { theme, cycleTheme, THEME_STYLES, resolvedTheme, KRSZ_LETTER_COLORS } from '../../stores/theme';
 	import { spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
+	import { KRSZ_MARKS } from '../../krsz-marks';
 
-	/* Each ANSI Shadow letter block is exactly 8 columns wide -- K/R/S/Z back
-	   to back with no gap, so the ranges are just four fixed 8-wide slices. */
-	const KRSZ_COLOR_RANGES = [
-		{ from: 0, to: 7, color: KRSZ_LETTER_COLORS.K },
-		{ from: 8, to: 15, color: KRSZ_LETTER_COLORS.R },
-		{ from: 16, to: 23, color: KRSZ_LETTER_COLORS.S },
-		{ from: 24, to: 31, color: KRSZ_LETTER_COLORS.Z }
-	];
+	/* Picked once on mount, not at module/SSR time -- doing it during render
+	   would either bake the same mark into every SSR'd page (a module-level
+	   pick) or mismatch between server and client HTML (a random $state
+	   initializer, which SSR and the client would each evaluate separately
+	   and disagree on). Defaults to the original ANSI Shadow mark (index 0)
+	   until mount runs, so there's no flash of a second mark replacing the
+	   first on every load. */
+	let krszMark = $state(KRSZ_MARKS[0]);
+	onMount(() => {
+		krszMark = KRSZ_MARKS[Math.floor(Math.random() * KRSZ_MARKS.length)];
+	});
+	let krszColorRanges = $derived(
+		krszMark.colorRanges.map((r) => ({ from: r.from, to: r.to, color: KRSZ_LETTER_COLORS[r.letter] }))
+	);
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
@@ -41,26 +49,25 @@
 </script>
 
 <div
-	class="order-2 lg:order-none col-span-12 lg:col-[span_5_/_span_5] border {themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 {themeStyles.cardBgVideo} rounded-sm min-h-0 max-w-full overflow-y-auto custom-scrollbar"
+	class="order-2 lg:order-none col-span-12 lg:col-[span_5_/_span_5] border {themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 {themeStyles.cardBgVideo} rounded-sm min-h-0 max-w-full"
 >
-	<!-- ASCII brand & acronym breakdown -->
+	<!-- ASCII brand & acronym breakdown -- pinned, not part of the scroll
+	     region below: the mark is the site's own identity, not a piece of
+	     content that should disappear the moment someone scrolls the panel. -->
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden">
 		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
 			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
 		</BoxHeader>
 
-		<AsciiArt
-			color="#e5c07b"
-			colorRanges={KRSZ_COLOR_RANGES}
-			class="text-[8px] sm:text-xs leading-none font-black tracking-tight overflow-x-auto py-0.5"
-			title="krsz.in"
-			art={`██╗  ██╗██████╗ ███████╗███████╗
-██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝
-█████╔╝ ██████╔╝███████╗  ███╔╝
-██╔═██╗ ██╔══██╗╚════██║ ███╔╝
-██║  ██╗██║  ██║███████║███████╗
-╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝`}
-		/>
+		{#key krszMark.font}
+			<AsciiArt
+				color="#e5c07b"
+				colorRanges={krszColorRanges}
+				class="text-[8px] sm:text-xs leading-none font-black tracking-tight overflow-x-auto py-0.5"
+				title="krsz.in — {krszMark.font}"
+				art={krszMark.art}
+			/>
+		{/key}
 
 		<!-- Columns come and go with the width; a cell never splits its own two words. -->
 		<div class="grid grid-cols-[repeat(auto-fit,minmax(105px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap">
@@ -70,6 +77,10 @@
 			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.Z}">[Z]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.Z}">one.</span></div>
 		</div>
 	</div>
+
+	<!-- Everything below the mark scrolls in its own region now that the
+	     mark itself is pinned above it. -->
+	<div class="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto custom-scrollbar">
 
 	<!-- Operator profile -->
 	<div class="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">
@@ -144,6 +155,7 @@
 			<span>PADS: 7 ACTIVE NODES</span>
 			<span class="ml-auto">HOTKEY [CTRL+0-7 · T · ?]</span>
 		</div>
+	</div>
 	</div>
 </div>
 

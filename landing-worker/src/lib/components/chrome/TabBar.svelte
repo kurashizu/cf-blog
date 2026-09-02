@@ -233,7 +233,7 @@
 			title="Global settings — sound, and clearing anything the site has stored in this browser"
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-white/25 text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] hover:bg-[#56b6c2]/20"
 		>
-			<span class="btnlabel">[CFG]&nbsp;SETTINGS</span><span class="btnlabel-off">[CFG]</span>
+			[CFG]
 		</button>
 		<button
 			onclick={cycleTheme}

@@ -16,6 +16,7 @@ import { midiConnectedDevice, midiDevices } from './synth-midi';
 import { soundState, setMuted, setVolume } from './sound';
 import { edgeTraceMs, loadEdgeTrace } from './edge';
 import { guideOpen, hotkeyOverlayOpen } from './chrome';
+import { KRSZ_MARKS } from '../krsz-marks';
 
 export type LineKind = 'cmd' | 'out' | 'ok' | 'err' | 'accent' | 'gold';
 export interface ConsoleLine {
@@ -100,15 +101,15 @@ const THEME_ALIASES: Record<string, WorkspaceTheme> = {
 const VALID_DIVS = ['4', '2', '1', '1/2', '1/3', '1/4', '1/6', '1/8', '1/12'];
 const VALID_METERS = Object.keys(METER_SPECS);
 
-const BANNER = [
-	' ██╗  ██╗██████╗ ███████╗███████╗',
-	' ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝',
-	' █████╔╝ ██████╔╝███████╗  ███╔╝ ',
-	' ██╔═██╗ ██╔══██╗╚════██║ ███╔╝  ',
-	' ██║  ██╗██║  ██║███████║███████╗',
-	' ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝',
-	" Kurashizu's Random-Stuff Zone — 100% serverless edge"
-];
+const BANNER_TAGLINE = " Kurashizu's Random-Stuff Zone — 100% serverless edge";
+
+/** Picks one of the same ten figlet renderings the Sidebar mark uses (see
+ *  lib/krsz-marks.ts) so `banner` isn't always the identical block of text --
+ *  a fresh pick per invocation, same idea as a real terminal's `fortune`. */
+function rollBanner(): string[] {
+	const mark = KRSZ_MARKS[Math.floor(Math.random() * KRSZ_MARKS.length)];
+	return [...mark.art.split('\n'), '', BANNER_TAGLINE];
+}
 
 const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
@@ -464,7 +465,7 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		return h.length ? h.map((c, i) => out(`  ${String(i + 1).padStart(2)}  ${c}`)) : [out('history is empty')];
 	}
 
-	if (cmd === 'banner') return BANNER.map((l) => ({ kind: 'gold' as LineKind, text: l }));
+	if (cmd === 'banner') return rollBanner().map((l) => ({ kind: 'gold' as LineKind, text: l }));
 
 	// ── synth ──
 	if (cmd === 'play') {
