@@ -40,8 +40,8 @@ export const THEME_STYLES: Record<FixedTheme, ThemeStyle> = {
 		cardBg: 'bg-[#242728]',
 		headerBgVideo: 'bg-[#282828]/85 backdrop-blur-sm',
 		cardBgVideo: 'bg-[#242728]/82 backdrop-blur-sm',
-		cursorColor: '#fabd2f',
-		accentColor: '#fabd2f'
+		cursorColor: '#b8bb26',
+		accentColor: '#b8bb26'
 	},
 	'nord-terminal': {
 		bg: 'bg-[#1e222a]',
@@ -92,7 +92,7 @@ export const THEME_CSS_VARS: Record<FixedTheme, Record<string, string>> = {
 		'--text-primary': '#ebdbb2',
 		'--text-secondary': '#a89984',
 		'--text-tertiary': '#665c54',
-		'--selection': '#fabd2f'
+		'--selection': '#b8bb26'
 	},
 	'nord-terminal': {
 		'--bg': '#1e222a',
