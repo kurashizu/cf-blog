@@ -160,13 +160,13 @@ export const MODULES: ModuleSpec[] = [
 		id: 'mail',
 		name: 'mail.krsz.in',
 		url: 'https://mail.krsz.in',
-		tag: 'INVITE_ONLY_WEBMAIL',
+		tag: 'SELFHOSTED_WEBMAIL',
 		badge: 'NODE_05',
-		desc: 'A real private mailbox with its own webmail UI — not a routing gateway. Invite-only, no tracking.',
+		desc: 'A real private mailbox with its own webmail UI — not a routing gateway. Open signup, no tracking.',
 		tech: ['SvelteKit SSR on Cloudflare Workers', 'D1 (accounts/folders/messages) + R2 (bodies/attachments)', 'Email Routing triggers inbound parsing only', 'Resend (external) + in-Worker delivery (internal)'],
 		facts: [
 			'Full webmail UI — inbox/sent/drafts/trash/junk/starred, drag-drop attachments, search',
-			'Invite-only signup, PBKDF2-SHA256 password hashing, JWT sessions in KV',
+			'Open signup, PBKDF2-SHA256 password hashing, JWT sessions in KV',
 			'Per-account quotas (200 MiB / 1,000 messages) with a nightly cleanup cron'
 		],
 		topology: `flowchart LR
