@@ -314,6 +314,17 @@ textarea {
 	scrollbar-gutter: auto;
 }
 
+/* Same opt-out, but only from the xl breakpoint up. For a scroller that really
+   does scroll on narrow screens and is overflow-hidden on wide ones: reserving
+   below xl is right, and above it the gutter is being held for a bar that
+   cannot appear. Written here rather than as a Tailwind variant because
+   scrollbar-gutter has no utility to modify. */
+@media (min-width: 1280px) {
+	.custom-scrollbar.xl-no-gutter {
+		scrollbar-gutter: auto;
+	}
+}
+
 /* Each roll row is ~40 elements and there are 36 of them, but only the dozen
    or so inside the scrollport can be seen. content-visibility lets the engine
    skip style, layout and paint for the rest until they scroll in; the

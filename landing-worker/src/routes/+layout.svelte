@@ -254,8 +254,16 @@
 			<!-- The console lives only in the drop-down overlay now, so every view
 			     gets the full panel and no view has an autofocused input competing
 			     with the keyboard testers or the QWERTY piano. -->
+			<!-- no-gutter: this pane reserved 10px for its scrollbar on every view,
+			     whether or not one was there, so every view's right edge stopped 10px
+			     inside the header's -- the panel's box and the header's both end on
+			     the same line, and this was the whole difference. The bar now takes
+			     its space only when it is actually drawn. The trade is that content
+			     shifts by 10px on the views that do scroll, at the moment the bar
+			     appears; the alignment is worth more than that, and most views either
+			     always scroll or never do. -->
 			<div
-				class="flex-1 min-h-0 lg:overflow-y-auto custom-scrollbar {activeTab === 2
+				class="flex-1 min-h-0 lg:overflow-y-auto custom-scrollbar no-gutter {activeTab === 2
 					? 'p-2 sm:p-3 space-y-1.5'
 					: 'p-2.5 sm:p-3.5 space-y-2'} flex flex-col"
 			>

@@ -23,7 +23,11 @@
 <div class="space-y-1.5 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
 	<TransportBar />
 
-	<div class="flex-1 min-h-0 flex flex-col gap-1.5 overflow-y-auto xl:overflow-hidden custom-scrollbar">
+	<!-- xl-no-gutter: this really scrolls below xl, where the gutter should be
+	     reserved, and is overflow-hidden at xl, where it was holding 10px open for
+	     a bar that cannot appear. That is what kept the workstation's right edge
+	     inside the header's; the racks' own reserved gutter took the other 10. -->
+	<div class="flex-1 min-h-0 flex flex-col gap-1.5 overflow-y-auto xl:overflow-hidden custom-scrollbar xl-no-gutter">
 		<!-- Top: modules 1-3 + piano roll/keyboard, side by side once there's enough width to not squeeze either -->
 		<div class="flex flex-col xl:flex-1 xl:min-h-0 xl:grid xl:grid-cols-[250px_minmax(0,1fr)] gap-1.5 xl:overflow-hidden">
 			<!-- Modules 1-3: own scrollable group — natural content height is the floor (never overlaps),
@@ -40,11 +44,21 @@
 			</div>
 		</div>
 
-		<!-- Bottom: modules 4-7, own scrollable group (both axes — the 12-col layout has a width floor so it scrolls sideways instead of squeezing).
-		     xl:max-w caps how wide the row itself grows: each module's knobs are fixed-size, so past a comfortable
-		     width the 12-col track only stretches empty gutters between them. Capped and centred instead of full-bleed. -->
-		<div data-tour="synth-rack" class="shrink-0 xl:max-h-[260px] overflow-auto custom-scrollbar no-gutter">
-			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 xl:min-w-[1000px] xl:max-w-[1400px] xl:mx-auto gap-1.5 text-xs">
+		<!-- Bottom: modules 4-7. Scrolls on both axes below xl, where the 12-col
+		     layout has a width floor and would rather scroll sideways than squeeze.
+		     No max-width: it used to cap at 1400px and centre, on the theory that
+		     the knobs are fixed-size so extra width only stretches empty gutters
+		     between them. On a wide screen that reads as the row having given up --
+		     600px of dead margin either side of it while the piano roll above runs
+		     the full width. The modules span the panel now; each one's contents are
+		     centred inside its own cell, so the knobs stay grouped rather than
+		     drifting apart. -->
+		<!-- max-h rather than a fixed height: the row is 175px of content, and a
+		     260px box left 85px of nothing under it while the module column beside
+		     the roll was 94px short and scrolling. shrink-0 keeps it from being
+		     squeezed; the flex parent gives what it does not take to the row above. -->
+		<div data-tour="synth-rack" class="shrink-0 xl:max-h-[260px] h-fit overflow-auto custom-scrollbar no-gutter">
+			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 xl:min-w-[1000px] gap-1.5 text-xs">
 				<Module4Envelopes />
 				<Module5Lfo />
 				<Module6FxEq />
