@@ -1054,56 +1054,34 @@ function bindInput() {
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
-  /* Mouse wheel zooms; trackpad two-finger scroll pans; ctrl/cmd + wheel (and
-     a trackpad pinch, which reports as exactly that) zooms.
-
-     Telling the two devices apart is the whole difficulty. A mouse wheel sends
-     one axis only, in coarse notches -- a detent is ~100px in Chrome, and
-     never a fraction. A trackpad sends fine-grained deltas, usually with some
-     deltaX even on a swipe the finger meant as vertical. So: no deltaX at all
-     AND a large, whole-numbered deltaY is a wheel; anything else is a pad.
-     Getting this wrong in either direction is bad -- all-zoom made a two-finger
-     swipe shoot the board in and out, all-pan left a mouse with no zoom at
-     all -- so the wheel test is deliberately narrow and the pad is the
-     fallback. */
-  /* Set while wheel events look like they came from a trackpad; see below. */
-  let padUntil = 0;
+  /* The wheel zooms. Always.
+     Two attempts at being clever about this both failed on real hardware: all
+     events panning took zoom away from the mouse, and sniffing the device from
+     delta shape misread mice whose notches are small (Chrome sends 40 or less
+     on plenty of them, and a free-spinning wheel sends less still) as a
+     trackpad. Zoom is what a wheel does here, so it is unconditional -- no
+     heuristic to get wrong.
+     A trackpad still pans: two-finger scroll arrives with a horizontal
+     component, and that -- deltaX alone, which a wheel never produces -- is
+     the one signal that is actually reliable. Vertical-only pad swipes zoom,
+     which is the same thing they would do on a mouse and is at least
+     consistent; right-drag and the PAN tool cover panning on any device. */
   cv.addEventListener('wheel', e => {
     e.preventDefault();
     const r = cv.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
 
-    // Pinch on a trackpad arrives as ctrlKey + wheel; cmd is the same gesture
-    // by keyboard. Both mean zoom whatever the device.
-    if (e.ctrlKey || e.metaKey) {
-      zoomAt(mx, my, Math.exp(-e.deltaY * 0.0025));
+    // A pure horizontal component only ever comes from a trackpad: pan on both
+    // axes, scaled by zoom so it does not crawl when the board is small.
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      const k = 2.2 / Math.max(S.cam.s, 0.35);
+      S.cam.x -= e.deltaX * k;
+      S.cam.y -= e.deltaY * k;
+      clampCam();
       return;
     }
 
-    /* A single event cannot be classified reliably -- a fast trackpad swipe can
-       land on a whole number as easily as a wheel notch does. A short history
-       can: a trackpad emits a burst of events a few milliseconds apart, and
-       within any burst some carry deltaX or a fractional deltaY. A wheel emits
-       isolated notches. So one fractional-or-horizontal event marks the device
-       as a pad for as long as the gesture keeps arriving. */
-    const now = e.timeStamp;
-    const padLike = e.deltaX !== 0 || !Number.isInteger(e.deltaY) || Math.abs(e.deltaY) < 50;
-    if (padLike) padUntil = now + 600;
-    // `>=` and not `>`: with padUntil at its initial 0 the very first mouse
-    // notch of the session compares 0 > 0 and would pan once before zooming.
-    const wheel = !padLike && now >= padUntil;
-    if (wheel) {
-      zoomAt(mx, my, Math.exp(-e.deltaY * 0.0025));
-      return;
-    }
-
-    // Trackpad pan. Scaled up from 1:1 -- at the default the board crawled,
-    // because a swipe's deltas are small and the camera is in world pixels
-    // that shrink further as you zoom out.
-    const k = 2.2 / Math.max(S.cam.s, 0.35);
-    S.cam.x -= e.deltaX * k;
-    S.cam.y -= e.deltaY * k;
-    clampCam();
+    zoomAt(mx, my, Math.exp(-e.deltaY * 0.0025));
   }, { passive: false });
 
   onKeyDown = e => {

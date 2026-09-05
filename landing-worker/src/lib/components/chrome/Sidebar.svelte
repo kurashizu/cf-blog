@@ -59,7 +59,7 @@
 </script>
 
 <div
-	class="order-2 lg:order-none col-span-12 lg:col-[span_5_/_span_5] border {themeStyles.border} p-2 sm:p-2.5 flex flex-col gap-2 {themeStyles.cardBgVideo} rounded-sm min-h-0 max-w-full"
+	class="order-2 lg:order-none col-span-12 lg:col-[span_5_/_span_5] border {themeStyles.border} p-2 sm:p-2.5 pr-0 sm:pr-0 flex flex-col gap-2 {themeStyles.cardBgVideo} rounded-sm min-h-0 max-w-full"
 >
 	<!-- ASCII brand & acronym breakdown -- pinned, not part of the scroll
 	     region below: the mark is the site's own identity, not a piece of
@@ -71,7 +71,7 @@
 	     this one was drawn 10px wider and the three stopped lining up. A margin
 	     rather than a gutter of its own: there is nothing to scroll here, and
 	     scrollbar-gutter only applies to a scroll container. -->
-	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-[10px]">
+	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-2 sm:mr-2.5">
 		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
 			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
 		</BoxHeader>
@@ -97,7 +97,11 @@
 
 	<!-- Everything below the mark scrolls in its own region now that the
 	     mark itself is pinned above it. -->
-	<div class="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+	<!-- The column drops its right padding and this region carries it instead, so
+	     the scrollbar sits in that reclaimed strip rather than eating 10px out of
+	     every panel's width. Before, the bar's gutter was inside the padding and
+	     all three panels stopped 10px short of the column's edge. -->
+	<div class="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto custom-scrollbar pr-2 sm:pr-2.5">
 
 	<!-- Operator profile -->
 	<div class="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">
