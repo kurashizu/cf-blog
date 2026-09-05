@@ -1749,6 +1749,40 @@ const projV = new THREE.Vector3();
 const camDir = new THREE.Vector3();
 const camUp = new THREE.Vector3();
 
+/**
+ * What a body's label says.
+ *
+ * Every label used to be the name with its parenthetical stripped, which for a
+ * family of effort variants meant five orbs in a row all reading "GPT-6 Astra"
+ * -- the one thing they have in common, and the one thing that does not tell
+ * them apart. The suffix that was being thrown away ("high", "low",
+ * "non-reasoning") is exactly what distinguishes them.
+ *
+ * So the strongest member of a family carries the full name, and the rest carry
+ * only their branch. The family reads as one model at several settings, which
+ * is what it is, and the name is stated once rather than five times.
+ * A model with no family keeps its plain name.
+ */
+function labelText(i) {
+  const raw = MODELS[i].n;
+  const base = raw.replace(/\s*\(.*$/, '');
+  if (!isTail[i]) return base;
+  const m = raw.match(/\(([^)]*)\)/);
+  // A variant whose name carries no parenthetical has nothing shorter to say
+  // than the name itself; better a repeat than an empty label.
+  if (!m) return base;
+  const inner = m[1].trim();
+  /* Upstream writes the setting two ways: bare ("max", "Non-reasoning") and
+     spelled out as a clause list ("Adaptive Reasoning, Max Effort, Default
+     Fallback"). The effort word is the only part that varies within a family --
+     every member repeats the rest -- so the long form is reduced to it. */
+  const effort = inner.match(/\b(max|xhigh|high|medium|low|minimal|none)\b\s*effort/i);
+  if (effort) return effort[1].toLowerCase();
+  if (/non-?reasoning/i.test(inner)) return 'non-reasoning';
+  // Short enough to read as a branch already.
+  return inner.length <= 18 ? inner : inner.split(',')[0].trim();
+}
+
 function declutterLabels() {
   // Rank candidates by distance so the labels follow the camera.
   camera.getWorldDirection(camDir);
@@ -1819,7 +1853,7 @@ function declutterLabels() {
       .addScaledVector(camDir, -radiusOf(MODELS[i]) * 1.6)
       .addScaledVector(camUp, radiusOf(MODELS[i]) * 0.55);
     const txt = el.querySelector('.nt-txt');
-    const name = MODELS[i].n.replace(/\s*\(.*$/, '');
+    const name = labelText(i);
     if (txt.textContent !== name) txt.textContent = name;
     const col = colorOf.get(MODELS[i].c);
     if (el.dataset.col !== col) { el.dataset.col = col; txt.style.color = col; }
@@ -3015,7 +3049,6 @@ function startRace() {
   morph = 1;
   for (let i = 0; i < N; i++) { to[i].copy(posRace(MODELS[i], i)); from[i].copy(to[i]); }
   raceOn = true; raceT = 0; raceDone = false; racePick = -1; racePaused = false;
-  $('modes').style.display = 'none';
   streamPts.visible = true;
   raceEl.style.display = 'block';
   raceCtl.classList.add('show');
@@ -3035,7 +3068,6 @@ function startRace() {
 }
 function stopRace() {
   raceOn = false;
-  if (!gravityOn) $('modes').style.display = '';
   streamPts.visible = false;
   raceBob.fill(0);
   raceScale.fill(1);
@@ -3352,9 +3384,27 @@ function buildClusterViz(cl) {
 
 /** The axes only describe the plotted layouts, so gravity hides them. */
 /** The legend yields whenever a panel occupies the left column. */
+/* One owner for the left column.
+ *
+ * #modes (AXES/FILTER), #legend, #gravity and #race are all absolutely
+ * positioned at the same top-left corner of the stage, so they do not stack --
+ * whichever is on top simply covers the others, and the one underneath still
+ * takes clicks around its edges. GRAVITY and RACE each own that corner while
+ * they run, and the axis controls do the rest of the time.
+ *
+ * This used to be spread across the callers: RACE hid #modes itself in
+ * startRace and restored it in stopRace, gravity never hid it at all (so the
+ * GRAVITY panel drew straight over a still-visible AXES), and stopRace's
+ * restore was guarded on gravityOn to avoid undoing a state it did not own.
+ * Deciding it in one place from the two flags is what keeps them from
+ * overlapping -- every caller now just calls this after changing a flag. */
 function syncLeftColumn() {
   const busy = gravityOn || raceOn;
   $('legend').style.display = busy ? 'none' : '';
+  // The axis controls stay for TIMELINE -- it is still a plotted layout and
+  // AXES still describes it -- and only yield to the two modes that take the
+  // corner for a panel of their own.
+  $('modes').style.display = busy ? 'none' : '';
 }
 
 /**

@@ -194,7 +194,7 @@
 		<div class="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden">
 			<span class="whitespace-pre">{commandInput}</span>
 			<span
-				class="inline-block w-[9px] h-[18px] ml-0.5 align-middle shrink-0 transition-opacity duration-75"
+				class="inline-block w-[9px] h-[18px] shrink-0 transition-opacity duration-75"
 				style="background-color: {themeStyles.cursorColor}; opacity: {!focused
 					? 0.2
 					: $pulseStep % 6 < 4

@@ -131,6 +131,38 @@
 <header
 	class="header-fit w-full max-w-full {themeStyles.headerBgVideo} px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between font-bold text-xs sm:text-sm tracking-wider border {themeStyles.border} rounded-t-sm mb-1.5 sm:mb-2 gap-1.5"
 >
+	<!-- The mark sits outside the scrolling strip, as its own flex item: it is
+	     the way back to the index, not one of the things being scrolled past,
+	     and inside the strip it slid off the left edge the moment the tabs
+	     overflowed -- exactly when a way home is most useful. -->
+	<a
+		href="/"
+		title="krsz.in — Kurashizu's Random-Stuff Zone"
+		class="press bg-black/40 px-0.5 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
+	>
+		<!-- Sized against the tab buttons' own line box (30px including their
+		     padding, measured against the CONSOLE button) rather than guessed --
+		     this is as large as the mark can go without growing the header. -->
+		<KrszLogo size={30} />
+	</a>
+
+	<!-- Pinned beside the mark for the same reason: the console opens over any
+	     view, so its handle belongs with the fixed chrome rather than among the
+	     tabs it scrolls away with. -->
+	<button
+		onclick={() => {
+			toggleConsoleOverlay();
+			playSound('toggle');
+		}}
+		data-tour="console-btn"
+		title="Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]"
+		class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border {$consoleOverlayOpen
+			? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+			: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
+	>
+		<span class="btnlabel">[~]&nbsp;CONSOLE</span><span class="btnlabel-off">[~]</span>
+	</button>
+
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- The strip is a container query root: below the width where all eight
 	     full labels fit, tabs collapse to their number and only the active one
@@ -141,32 +173,6 @@
 		onwheel={onStripWheel}
 		class="tabstrip flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1"
 	>
-		<a
-			href="/"
-			title="krsz.in — Kurashizu's Random-Stuff Zone"
-			class="press bg-black/40 px-0.5 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
-		>
-			<!-- Sized against the tab buttons' own line box (30px including their
-			     padding, measured against the CONSOLE button) rather than guessed --
-			     this is as large as the mark can go without growing the header. -->
-			<KrszLogo size={30} />
-		</a>
-
-		<!-- The console is drop-down only, so it needs a visible handle as well as its key -->
-		<button
-			onclick={() => {
-				toggleConsoleOverlay();
-				playSound('toggle');
-			}}
-			data-tour="console-btn"
-			title="Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]"
-			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border {$consoleOverlayOpen
-				? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-				: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
-		>
-			<span class="btnlabel">[~]&nbsp;CONSOLE</span><span class="btnlabel-off">[~]</span>
-		</button>
-
 		<div bind:this={tabsRow} class="relative flex items-center gap-0.5 sm:gap-2" data-tour="tabs">
 			<!-- The one element that actually moves -- everything else here is a
 			     colour transition on a fixed element, this is the only spot on the
@@ -212,7 +218,9 @@
 				{:else}
 					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0"><path d="M1.5 0.6 L7.2 4 L1.5 7.4 Z" fill="currentColor" /></svg>
 				{/if}
-				<span>{$isSeqPlaying ? 'STOP]' : 'PLAY]'}</span>
+				<!-- The word sheds with every other button label; the bracket and the
+				     glyph stay, so the control keeps its shape and its state. -->
+				<span class="btnlabel">{$isSeqPlaying ? 'STOP' : 'PLAY'}</span><span>]</span>
 			</span>
 		</button>
 		<button
@@ -279,11 +287,23 @@
 	@container header-fit (max-width: 1620px) {
 		.themebadge { display: none; }
 	}
-	@container header-fit (max-width: 1180px) {
+	/* 1380, not 1180: measured, the tab strip starts overflowing at 1360px --
+	   the eight names need 894px and only 884px is left for them. The old
+	   threshold let the bar spend that 180px band scrolling sideways instead,
+	   which is the one outcome this ladder exists to avoid, and a scrolled
+	   strip hides whichever tabs ran off the edge. Shedding the button words
+	   ten pixels before the strip would have to scroll keeps every tab
+	   reachable without one. */
+	@container header-fit (max-width: 1380px) {
 		.btnlabel { display: none; }
 		.btnlabel-off { display: inline; }
 	}
-	@container header-fit (max-width: 940px) {
+	/* 1260, not 940: with the button words already gone, the eight full names
+	   still need 894px and run out of room at 1240px. The old value left that
+	   300px band to sideways scrolling, so the tabs the strip pushed off the
+	   edge were simply unreachable without discovering the scroll. The active
+	   tab keeps its name either way, which is the part worth the space. */
+	@container header-fit (max-width: 1260px) {
 		.tabname:not(.on) { display: none; }
 	}
 </style>
