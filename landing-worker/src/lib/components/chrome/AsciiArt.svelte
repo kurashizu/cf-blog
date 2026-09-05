@@ -22,9 +22,7 @@
 		colorRanges,
 		class: className = '',
 		onclick,
-		title,
-		fit,
-		maxFontSize = 22
+		title
 	}: {
 		/** Raw multi-line block-letter text, exactly as it would sit inside a <pre>. */
 		art: string;
@@ -36,25 +34,6 @@
 		/** Omit for a purely decorative banner -- the burst still plays on click, it just does nothing else. */
 		onclick?: () => void;
 		title?: string;
-		/**
-		 * Size the art to fill its container's width instead of taking a font
-		 * size from the caller's classes.
-		 *
-		 * The banners are between 37 and 89 columns wide depending on how long
-		 * the word is, and every caller passed the same fixed text-[4px]/[6px]/
-		 * [8px] ladder -- so UTILS (37 cols) drew at a third the width of
-		 * LEADERBOARD (89) in the same slot, and none of them related to the
-		 * panel they sat in. Fitting makes the *banner* the constant instead of
-		 * the glyph, which is what makes the set look like one family.
-		 */
-		fit?: boolean;
-		/**
-		 * Ceiling for `fit`, so a short word does not balloon on a wide screen.
-		 * 22 rather than 13: at 13 the short banners (UTILS, 37 cols) hit the cap
-		 * and stopped growing while the long ones (LEADERBOARD, 89) were still
-		 * width-bound, which is the size mismatch this is meant to remove.
-		 */
-		maxFontSize?: number;
 	} = $props();
 
 	function colorForCell(col: number, row: number): string {
@@ -99,8 +78,6 @@
 
 	let containerEl: HTMLDivElement | undefined = $state();
 	let preEl: HTMLPreElement | undefined = $state();
-	/** The outer box, so fitToWidth can read the width its parent offers. */
-	let boxEl: HTMLDivElement | undefined = $state();
 	let hovering = $state(false);
 	let bursting = $state(false);
 	/** Real glyph cell size in px, measured off the invisible <pre> rather than
@@ -112,65 +89,6 @@
 	let cellW = $state(8);
 	let cellH = $state(14);
 
-	/** Set by fitToWidth; applied to the box so the <pre> measures at this size. */
-	let fittedSize = $state<number | null>(null);
-
-	/**
-	 * Choose the font size that makes the art exactly fill the available width.
-	 *
-	 * The glyph cell is a fixed fraction of the font size in a monospace face,
-	 * so one measurement at a known size gives the ratio and the rest is
-	 * arithmetic -- no binary search, and no second layout pass.
-	 */
-	function fitToWidth() {
-		if (!fit || !boxEl || !preEl || rows.length === 0) return;
-		/* A share of the row, not all of it: every banner sits in a flex row
-		   beside something else (the contact buttons, a tool count, a refresh
-		   control), so spending the parent's full width would push those out.
-		   Half leaves the banner clearly the largest thing in the row while
-		   still bounded by it. */
-		/* What the row has left once its other items are placed.
-		   The box's own width cannot be used -- it grows to whatever the art
-		   needs, so measuring it and then sizing the art to it is circular and
-		   simply keeps whatever size it already had. The parent's width minus
-		   the siblings is the real budget, and it tracks the layout as the
-		   window narrows.
-		   `gap` is subtracted once per sibling, plus a small margin so a
-		   rounding error cannot tip the row into wrapping. */
-		const parent = boxEl.parentElement;
-		if (!parent) return;
-		const parentW = parent.getBoundingClientRect().width;
-		const gap = parseFloat(getComputedStyle(parent).columnGap) || 0;
-		let taken = 0;
-		for (const sib of parent.children) {
-			if (sib === boxEl) continue;
-			taken += sib.getBoundingClientRect().width + gap;
-		}
-		const avail = parentW - taken - 4;
-		if (avail <= 0) return;
-		const longest = Math.max(1, ...rows.map((r) => r.length));
-		/* Derive the cell-per-font-size ratio, not the current width.
-		   Reading the <pre>'s own width would be circular once a fitted size is
-		   applied -- it reports what the last fit produced, the arithmetic
-		   cancels out, and the size then never changes again however narrow the
-		   container gets. This measures the ratio at a known size instead, so
-		   every call is independent of the last one. */
-		const current = parseFloat(getComputedStyle(preEl).fontSize) || 10;
-		const perColPerPx = preEl.getBoundingClientRect().width / longest / current;
-		if (!perColPerPx) return;
-		const next = Math.min(maxFontSize, avail / longest / perColPerPx);
-		// Whole pixels: a fractional size lands glyph cells on half pixels, and
-		// the block characters stop meeting.
-		/* Floor of 8: below that the block characters stop reading as letters at
-		   all, and it is better for the row to wrap (it is flex-wrap) than for
-		   the banner to shrink into an unreadable smudge. The measurement can
-		   under-report the space available -- siblings that have themselves
-		   wrapped are measured at their widest -- so this is the guard against
-		   one bad reading collapsing the mark. */
-		const rounded = Math.max(8, Math.min(maxFontSize, Math.floor(next)));
-		if (rounded !== fittedSize) fittedSize = rounded;
-	}
-
 	function measure() {
 		if (!preEl) return;
 		const rect = preEl.getBoundingClientRect();
@@ -180,22 +98,10 @@
 		cellH = rect.height / rows.length || cellH;
 	}
 
-	function remeasure() {
-		fitToWidth();
-		measure();
-	}
-
 	onMount(() => {
-		remeasure();
-		// A second pass once fittedSize has been applied: the first run measured
-		// at the caller's size to derive the ratio, so the cell it recorded is
-		// the pre-fit one.
-		requestAnimationFrame(remeasure);
-		const ro = new ResizeObserver(remeasure);
+		measure();
+		const ro = new ResizeObserver(measure);
 		if (preEl) ro.observe(preEl);
-		// The width the art fits into is the parent's, which can change without
-		// the <pre> changing until after this runs.
-		if (boxEl?.parentElement) ro.observe(boxEl.parentElement);
 		return () => {
 			ro.disconnect();
 			if (rafHandle) cancelAnimationFrame(rafHandle);
@@ -304,11 +210,7 @@
      They are drawn by tiling █ ═ ║ ╗ into solid letterforms, which needs every
      glyph to be one cell wide with ink running edge to edge; Jelly's block is
      two cells against its own six-pixel letter, so the shapes came apart. -->
-<div
-	bind:this={boxEl}
-	class="ascii-art overflow-x-auto {className}"
-	style={fittedSize === null ? undefined : `font-size: ${fittedSize}px`}
->
+<div class="ascii-art overflow-x-auto {className}">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -- role/tabindex are only ever both set together, when onclick is provided; the linter can't see that from the dynamic role expression. -->
 	<div
 		bind:this={containerEl}

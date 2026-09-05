@@ -58,9 +58,8 @@
 <div class="space-y-3 sm:space-y-4 flex-1">
 	<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
 		<AsciiArt
-			fit
 			color="#e5c07b"
-			class="font-black tracking-tight leading-none"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
 			art={`██╗   ██╗████████╗██╗██╗     ███████╗
 ██║   ██║╚══██╔══╝██║██║     ██╔════╝
 ██║   ██║   ██║   ██║██║     ███████╗
