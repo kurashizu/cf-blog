@@ -396,16 +396,22 @@ const EMPTY_ACCENTS_3840: number[] = Array.from({ length: 3840 }, () => 0);
    with the hat's -- 12ms of decay -- and the snare came out as another tick.
    Splitting them by note index gives each its own voice while leaving the
    written rhythm exactly as transcribed. */
-const SNARE_NOTES = new Set([55, 56]);
+/* The transcription writes the noise channel as two note indices, which are the
+   two lengths the engine plays: idx 55/56 is the accented on-beat hit (293 of
+   them, every one carrying an accent, landing on 0/12/18/24/36/48/60/66/72/84
+   of each 96-step bar) and idx 40/41 the unaccented one between them (169,
+   offbeat). They map onto the long beat and the short beat respectively. */
+const LONG_BEAT_NOTES = new Set([55, 56]);
 
 const MARIO1_HAT_GRID: number[][] = MARIO1_TRK4_GRID.map((c) =>
-  c.filter((n) => !SNARE_NOTES.has(n))
+  c.filter((n) => !LONG_BEAT_NOTES.has(n))
 );
 const MARIO1_SNARE_GRID: number[][] = MARIO1_TRK4_GRID.map((c) =>
-  c.filter((n) => SNARE_NOTES.has(n))
+  c.filter((n) => LONG_BEAT_NOTES.has(n))
 );
-/* Accents were authored for the on-beat hits, which are the snare's, so they
-   travel with it rather than staying on the hat. */
+/* The accents were authored on the long-beat hits, so they go with that track.
+   Every one of its 293 onsets is accented, which is the transcription saying
+   these are the emphasised beats -- the short ones in between carry none. */
 const MARIO1_HAT_ACCENTS: number[] = EMPTY_ACCENTS_3840;
 
 const GRIDS: Record<number, number[][]> = {
@@ -416,46 +422,84 @@ const GRIDS: Record<number, number[][]> = {
   5: MARIO1_SNARE_GRID,
 };
 
-/* Track 6 is unused by the transcription, so the snare takes it. Full band
-   where the hat is high-passed to a tick -- a snare's body is the low end of
-   the noise, and filtering that out is what made the two read as one
-   instrument. It rings rather than clicks: the decay runs about six times the
-   hat's and releases instead of cutting, and the pitch envelope is dropped so
-   it does not chirp. */
-const SNARE_VOICE: Partial<TrackData> = {
-  name: 'TRK 6: NES SNARE',
-  color: '#abb2bf',
-  volume: 0.8,
+/* Both voices are taken from what the game actually writes to the APU.
+ *
+ * SMB1's music engine has exactly three drums, and NoiseBeatHandler in the
+ * disassembly plays them by loading three fixed register triples:
+ *
+ *   short beat   $400C=$1C  $400E=$03  $400F=$18
+ *   strong beat  $400C=$1C  $400E=$0C  $400F=$18
+ *   long beat    $400C=$1C  $400E=$03  $400F=$58
+ *
+ * Decoding those: $1C is constant volume 12 with the envelope DISABLED, so
+ * every drum is a flat-topped burst that stops dead when its length counter
+ * expires -- there is no decay curve on the chip at all. $400E bit 7 is clear
+ * in all three, so all of them are the 32K long sequence: plain white noise,
+ * full band, no tonal component. Period $03 is 32, which is noise near 28kHz --
+ * i.e. bright, unfiltered hiss. The only difference between the short beat and
+ * the long beat is $400F: length index 3 against index 11, which is 2 against
+ * 10 on the length table, or 33ms against 167ms at the 60Hz the counter runs
+ * at. Same timbre, five times the ring.
+ *
+ * So the hat and the snare here are one sound at two lengths, which is the
+ * opposite of what was implemented before: the hat had been high-passed to
+ * 80Hz with key tracking on and the snare given a 340ms release and a
+ * different cutoff, making two instruments out of what the hardware plays as
+ * one. Both are now flat white noise at full band, separated only by how long
+ * they last. Sustain is 0 and release is near zero because the chip does not
+ * fade -- the length counter simply reaches zero and the channel goes quiet. */
+const NOISE_COMMON: Partial<TrackData> = {
   osc1Waveform: 'noise',
   osc1Gain: 1.0,
   osc2Gain: 0.0,
   subOscGain: 0.0,
   noiseGain: 1.0,
-  filterType: 'highpass',
-  cutoff: 130,
-  resonance: 0.6,
+  // Full band. $400E bit 7 clear is the 32K sequence, which is white noise with
+  // no tone to it, and nothing in the chain filters it.
+  filterType: 'lowpass',
+  cutoff: 20000,
+  resonance: 0.0,
   envFilterMod: 0.0,
-  keyTracking: 0.0,
-  attack: 0.001,
-  decay: 0.34,
-  sustain: 0.0,
-  release: 0.14,
-  ampAttack: 0.001,
-  ampDecay: 0.34,
-  ampSustain: 0.0,
-  ampRelease: 0.14,
   filterEnvAmount: 0.0,
+  // One sound whatever note triggers it: the period is fixed at $03 for both.
+  keyTracking: 0.0,
   pitchEnvAmount: 0.0,
+  attack: 0.001,
+  ampAttack: 0.001,
+  sustain: 0.0,
+  ampSustain: 0.0,
   muted: false,
+};
+
+/** Short beat: length index 3 -> 2 ticks at 60Hz -> 33ms. */
+const HAT_VOICE: Partial<TrackData> = {
+  ...NOISE_COMMON,
+  name: 'TRK 4: NES NOISE (SHORT)',
+  color: '#d8dee9',
+  volume: 0.7,
+  decay: 0.033,
+  release: 0.006,
+  ampDecay: 0.033,
+  ampRelease: 0.006,
+};
+
+/** Long beat: length index 11 -> 10 ticks at 60Hz -> 167ms. */
+const SNARE_VOICE: Partial<TrackData> = {
+  ...NOISE_COMMON,
+  name: 'TRK 6: NES NOISE (LONG)',
+  color: '#abb2bf',
+  volume: 0.78,
+  decay: 0.167,
+  release: 0.012,
+  ampDecay: 0.167,
+  ampRelease: 0.012,
 };
 
 // Same kit as the SMB3 songs — loadBuiltInSong deep-copies, so sharing the
 // track parameter objects here is safe.
 export const MARIO1_TRACKS: TrackData[] = OVERWORLD_TRACKS.map((t) => ({
   ...t,
-  // Now that the snare has left, this track is the hat alone; the inherited
-  // "NES DRUMS" would name it for a kit it no longer plays.
-  ...(t.id === 3 ? { name: 'TRK 4: NES HIHAT' } : {}),
+  ...(t.id === 3 ? HAT_VOICE : {}),
   ...(t.id === 5 ? SNARE_VOICE : {}),
   grid: GRIDS[t.id] ?? EMPTY_GRID_3840,
   accents: t.id === 5 ? MARIO1_TRK4_ACCENTS : t.id === 3 ? MARIO1_HAT_ACCENTS : EMPTY_ACCENTS_3840,
