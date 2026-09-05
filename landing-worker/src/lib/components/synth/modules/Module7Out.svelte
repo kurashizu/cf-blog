@@ -51,15 +51,28 @@
 			{#if $recError}
 				<span class="text-[9px] font-mono text-[#e06c75]">{$recError}</span>
 			{/if}
+			<!-- The label was "REC" idle and "REC 4s — STOP & SAVE" while recording:
+			     seven times the text, in a rack header with no room for it, so the
+			     button wrapped to two lines and shoved the row apart the moment
+			     recording started. It now says REC and then the running count, which
+			     is the only part that has to change, and the elapsed time is
+			     tabular-nums and fixed-width so ticking from 9s to 10s does not
+			     resize it either. What the click does is in the tooltip, where the
+			     rest of the controls keep that kind of thing. -->
 			<button
 				onclick={toggleRecording}
-				title="Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)"
-				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-black cursor-pointer transition-all flex items-center gap-1 {$isRecording
+				title={$isRecording
+					? `Recording — ${$recSeconds}s. Click to stop and download.`
+					: 'Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)'}
+				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-black cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap shrink-0 {$isRecording
 					? 'border-[#e06c75] bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
 					: 'border-[#e06c75]/50 bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75]/25'}"
 			>
-				<span class="w-1.5 h-1.5 rounded-full {$isRecording ? 'bg-black animate-pulse' : 'bg-[#e06c75]'}"></span>
-				<span>{$isRecording ? `REC ${$recSeconds}s — STOP & SAVE` : 'REC'}</span>
+				<span class="w-1.5 h-1.5 rounded-full shrink-0 {$isRecording ? 'bg-black animate-pulse' : 'bg-[#e06c75]'}"></span>
+				<span>REC</span>
+				{#if $isRecording}
+					<span class="tabular-nums text-right" style="min-width: 3ch;">{$recSeconds}s</span>
+				{/if}
 			</button>
 		</div>
 	</div>

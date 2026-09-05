@@ -43,7 +43,7 @@
 		<!-- Bottom: modules 4-7, own scrollable group (both axes — the 12-col layout has a width floor so it scrolls sideways instead of squeezing).
 		     xl:max-w caps how wide the row itself grows: each module's knobs are fixed-size, so past a comfortable
 		     width the 12-col track only stretches empty gutters between them. Capped and centred instead of full-bleed. -->
-		<div data-tour="synth-rack" class="shrink-0 xl:max-h-[260px] overflow-auto custom-scrollbar">
+		<div data-tour="synth-rack" class="shrink-0 xl:max-h-[260px] overflow-auto custom-scrollbar no-gutter">
 			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 xl:min-w-[1000px] xl:max-w-[1400px] xl:mx-auto gap-1.5 text-xs">
 				<Module4Envelopes />
 				<Module5Lfo />

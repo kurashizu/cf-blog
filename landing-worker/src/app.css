@@ -301,6 +301,19 @@ textarea {
 	contain: layout style;
 }
 
+/* Opt out of the reserved gutter, keeping the styled bar for when one appears.
+   `stable` holds 10px open whether or not a bar is drawn, which is right for a
+   pane whose content comes and goes: the layout should not jump when it does.
+   It is wrong for a scroller nested inside another one that only overflows in a
+   corner case -- both gutters are reserved, they stack, and the inner one takes
+   10px off its children permanently to guard against a bar that is almost never
+   there. That is what left the synth's rack row ending 10px short of the piano
+   roll directly above it, with the racks' own scroller measured at scrollHeight
+   366 against clientHeight 366: nothing to scroll, gutter reserved anyway. */
+.custom-scrollbar.no-gutter {
+	scrollbar-gutter: auto;
+}
+
 /* Each roll row is ~40 elements and there are 36 of them, but only the dozen
    or so inside the scrollport can be seen. content-visibility lets the engine
    skip style, layout and paint for the rest until they scroll in; the
