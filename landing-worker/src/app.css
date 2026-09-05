@@ -588,28 +588,35 @@ textarea {
 	background-color: #000 !important;
 }
 
-/* No backdrop-filter on WebKit, whatever the performance setting.
+/* On WebKit, drop the blur on the two surfaces that are always on screen.
  *
- * The site's two largest surfaces -- the sidebar and the main panel -- carry
- * backdrop-blur-sm, and behind them a background video is decoding
+ * The sidebar and the main panel carry backdrop-blur-sm, cover most of the
+ * viewport between them, and sit over a background video that decodes
  * continuously. Chromium blurs that backdrop on the GPU and the cost does not
  * show up. WebKit re-blurs the whole backdrop on the main thread for every
- * video frame, over two surfaces that together cover most of the viewport.
+ * frame of video, forever, because those two surfaces never go away.
  *
  * Measured from a Safari timeline recording of an ordinary 31-second session:
  * 16.2 SECONDS of the 31 went to layout/composite across 129 events -- a mean
- * of 125ms per composite, with the worst at 1562ms -- and it is spread evenly
- * over every two-second bucket of the recording, with no network activity near
- * the peaks. Median rendering frame was 80ms, which is 12fps. Chrome on the
- * same build holds 165.
+ * of 125ms per composite, with the worst at 1562ms -- spread evenly over every
+ * two-second bucket, with no network activity near the peaks. Median rendering
+ * frame was 80ms, which is 12fps. Chrome on the same build holds 165.
+ *
+ * Only -sm, which is the size those two use. The overlays -- boot, welcome,
+ * credits, hotkeys, the privacy notice, the synth settings -- blur at -xl, -xs
+ * or an arbitrary [2px], and they keep it: each is on screen briefly rather
+ * than for the whole session, and the blur is doing visible work there, which
+ * is the whole reason a scrim reads as a scrim instead of as flat colour laid
+ * over the page. Matching every backdrop-blur took those with it and left the
+ * boot screen stacked flat on the page behind it.
  *
  * @supports on -webkit-named-image is a WebKit-only query: Chromium and Firefox
  * do not implement it, so neither one sees this block and both keep the blur.
  * The translucent background-color underneath stays exactly as it was, so the
- * surfaces still read as panels over the video -- they just no longer ask for
- * a per-frame blur of everything behind them. */
+ * two surfaces still read as panels over the video -- they just no longer ask
+ * for a per-frame blur of everything behind them. */
 @supports (background: -webkit-named-image(i)) {
-	[class*='backdrop-blur'] {
+	[class~='backdrop-blur-sm'] {
 		backdrop-filter: none !important;
 		-webkit-backdrop-filter: none !important;
 	}
