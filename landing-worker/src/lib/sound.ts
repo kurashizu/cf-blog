@@ -30,6 +30,7 @@ class SoundEngine {
   private masterGain: GainNode | null = null;
   private muted: boolean = false;
   private volume: number = 0.28; // Default comfortable level
+  private lastBumpTime = 0;
   private lastHoverTime: number = 0;
   private lastSseTickTime: number = 0;
   private listeners: Set<StateListener> = new Set();
@@ -381,6 +382,50 @@ class SoundEngine {
   /**
    * PING: Clean chime tone for completion/acknowledgement events.
    */
+  /**
+   * A short, soft knock -- two packets in the guestbook field touching.
+   *
+   * Deliberately quieter and duller than `click`: a busy field can produce
+   * several of these a second, and the UI's own click is a deliberate action
+   * that should stay distinguishable from ambient contact. `strength` is the
+   * impact speed normalised 0..1, so a hard throw thuds and a drift barely
+   * registers.
+   *
+   * Debounced hard for the same reason -- a pile-up resolves over several
+   * frames and would otherwise fire a burst of overlapping voices.
+   */
+  public bump(strength: number = 0.5) {
+    const now = Date.now();
+    if (now - this.lastBumpTime < 55) return;
+    this.lastBumpTime = now;
+
+    const ctx = this.getReadyContext();
+    if (!ctx || !this.masterGain) return;
+
+    const s = Math.max(0, Math.min(1, strength));
+    const t = ctx.currentTime;
+    const duration = 0.05 + s * 0.03;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    // Low and falling: a knock, not a beep. Harder hits start higher.
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140 + s * 190, t);
+    osc.frequency.exponentialRampToValueAtTime(70, t + duration);
+
+    const peak = 0.012 + s * 0.05;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(peak, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + duration);
+
+    setTimeout(() => gain.disconnect(), 120);
+  }
+
   public ping(success: boolean = true) {
     const ctx = this.getReadyContext();
     if (!ctx || !this.masterGain) return;
@@ -814,7 +859,7 @@ class SoundEngine {
 // Global Singleton Instance
 export const soundEngine = new SoundEngine();
 
-export type SoundEffectType = 'click' | 'toggle' | 'hover' | 'keystroke' | 'power' | 'synthPad' | 'sseTick' | 'ping';
+export type SoundEffectType = 'click' | 'toggle' | 'hover' | 'keystroke' | 'power' | 'synthPad' | 'sseTick' | 'ping' | 'bump';
 
 /**
  * Universal sound player function supporting string type parameter
@@ -841,6 +886,9 @@ export function playSound(type: SoundEffectType, ...args: any[]): void {
       break;
     case 'sseTick':
       soundEngine.sseTick();
+      break;
+    case 'bump':
+      soundEngine.bump(args[0]);
       break;
     case 'ping':
       soundEngine.ping(args[0]);

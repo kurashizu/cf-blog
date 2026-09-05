@@ -190,6 +190,7 @@
 			b.h = h;
 		}
 
+		let wallHit = 0;
 		for (const b of bodies) {
 			if (b.id === dragId) continue;         // carried, not simulated
 			b.x += b.vx * dt;
@@ -201,16 +202,19 @@
 			// Walls. Position is the card's centre, so the bound is half its size.
 			const hw = b.w / 2;
 			const hh = b.h / 2;
-			if (b.x < hw) { b.x = hw; b.vx = Math.abs(b.vx) * 0.6; }
-			if (b.x > W - hw) { b.x = W - hw; b.vx = -Math.abs(b.vx) * 0.6; }
-			if (b.y < hh) { b.y = hh; b.vy = Math.abs(b.vy) * 0.6; }
-			if (b.y > H - hh) { b.y = H - hh; b.vy = -Math.abs(b.vy) * 0.6; }
+			// A wall is contact too, so it is worth the same knock -- tracked here
+			// and played once per frame alongside the body-to-body hits below.
+			if (b.x < hw) { b.x = hw; wallHit = Math.max(wallHit, Math.abs(b.vx)); b.vx = Math.abs(b.vx) * 0.6; }
+			if (b.x > W - hw) { b.x = W - hw; wallHit = Math.max(wallHit, Math.abs(b.vx)); b.vx = -Math.abs(b.vx) * 0.6; }
+			if (b.y < hh) { b.y = hh; wallHit = Math.max(wallHit, Math.abs(b.vy)); b.vy = Math.abs(b.vy) * 0.6; }
+			if (b.y > H - hh) { b.y = H - hh; wallHit = Math.max(wallHit, Math.abs(b.vy)); b.vy = -Math.abs(b.vy) * 0.6; }
 		}
 
 		/* Separation, as axis-aligned boxes rather than circles: the cards are
 		   wide rectangles, and a circle around one either leaves visible gaps or
 		   overlaps at the corners. Resolved along the shallower axis, which is
 		   the direction the pair actually needs to move to stop touching. */
+		let loudest = 0;
 		for (let i = 0; i < bodies.length; i++) {
 			for (let j = i + 1; j < bodies.length; j++) {
 				const a = bodies[i];
@@ -225,17 +229,54 @@
 				if (aFixed && bFixed) continue;
 				// A dragged card pushes others without being pushed itself.
 				const share = aFixed || bFixed ? 1 : 0.5;
-				if (ox < oy) {
-					const s = Math.sign(dx) || 1;
-					if (!aFixed) { a.x -= s * ox * share; a.vx -= s * 22; }
-					if (!bFixed) { b.x += s * ox * share; b.vx += s * 22; }
+
+				/* Resolve along the shallower axis, then exchange velocity along
+				   that same axis rather than adding a fixed kick.
+				   The old response added ±22 to both bodies whatever happened, so
+				   a card drifting into another rebounded exactly as hard as one
+				   thrown across the field, and a resting pair jittered forever
+				   because the kick never depended on their actually approaching.
+				   Swapping the closing velocity is what makes contact read as
+				   weight: a fast body loses what a slow one gains, and two at
+				   rest exchange nothing at all. */
+				const axisX = ox < oy;
+				const s = (axisX ? Math.sign(dx) : Math.sign(dy)) || 1;
+				const overlap = axisX ? ox : oy;
+				const av = axisX ? a.vx : a.vy;
+				const bv = axisX ? b.vx : b.vy;
+				// Positive when they are closing on each other along this axis.
+				const closing = (av - bv) * s;
+
+				if (axisX) {
+					if (!aFixed) a.x -= s * overlap * share;
+					if (!bFixed) b.x += s * overlap * share;
 				} else {
-					const s = Math.sign(dy) || 1;
-					if (!aFixed) { a.y -= s * oy * share; a.vy -= s * 22; }
-					if (!bFixed) { b.y += s * oy * share; b.vy += s * 22; }
+					if (!aFixed) a.y -= s * overlap * share;
+					if (!bFixed) b.y += s * overlap * share;
+				}
+
+				if (closing > 0) {
+					// 0.7: a little energy is lost on contact, so a field left alone
+					// settles instead of pinballing.
+					const transfer = closing * 0.7;
+					if (axisX) {
+						if (!aFixed) a.vx -= s * transfer;
+						if (!bFixed) b.vx += s * transfer;
+					} else {
+						if (!aFixed) a.vy -= s * transfer;
+						if (!bFixed) b.vy += s * transfer;
+					}
+					if (closing > loudest) loudest = closing;
 				}
 			}
 		}
+
+		/* One sound per frame, for the hardest contact in it. A pile-up resolves
+		   over several pairs and several frames; playing each would be a rattle
+		   rather than a knock. Below the threshold the contact is a resting
+		   nudge, which should be silent. */
+		const impact = Math.max(loudest, wallHit);
+		if (impact > 40) playSound('bump', Math.min(1, (impact - 40) / 460));
 
 		// One write per body, straight to the node -- no reactive round-trip.
 		paint();
@@ -393,8 +434,9 @@
 <div class="space-y-3 sm:space-y-3.5 flex-1 flex flex-col min-h-0">
 	<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
 		<AsciiArt
+			fit
 			color="#e06c75"
-			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			class="font-black tracking-tight leading-none"
 			art={` ██████╗ ██╗   ██╗███████╗███████╗████████╗██████╗  ██████╗  ██████╗ ██╗  ██╗
 ██╔════╝ ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔═══██╗██║ ██╔╝
 ██║  ███╗██║   ██║█████╗  ███████╗   ██║   ██████╔╝██║   ██║██║   ██║█████╔╝

@@ -3452,12 +3452,23 @@ function startGravity() {
   $('g-start').classList.add('on');
   gravEl.style.display = 'block';
   syncLeftColumn();
-  // Seed from the current layout with a small random kick, so you can see the
-  // cloud fall out of the axes you already know into whatever it prefers.
+  /* Seed from the SPACE layout with a small random kick, so you can see the
+     cloud fall out of the axes you already know into whatever it prefers.
+     posSpace, not cur: setView above only sets a morph *target* and lets the
+     bodies travel there over the next second, so starting from cur meant a
+     SIMULATE pressed in TIMELINE began from wherever the spiral happened to
+     have each body -- the physics ran on the previous view's positions and the
+     cloud never fell out of the axes at all. The morph is also finished here
+     rather than raced, since gravity owns cur from this point on. */
   for (let i = 0; i < N; i++) {
-    gPos[i].copy(cur[i]);
+    const seed = posSpace(MODELS[i], i);
+    cur[i].copy(seed);
+    from[i].copy(seed);
+    to[i].copy(seed);
+    gPos[i].copy(seed);
     gVel[i].set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
   }
+  morph = 1;
   renderGravityPanel();
 }
 function stopGravity() {

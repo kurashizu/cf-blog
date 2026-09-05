@@ -21,8 +21,9 @@
 <div class="space-y-3 sm:space-y-4 flex-1">
 	<div class="flex items-center justify-between border-b border-white/10 pb-2">
 		<AsciiArt
+			fit
 			color="#56b6c2"
-			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			class="font-black tracking-tight leading-none"
 			art={`███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
 ████╗ ████║██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
 ██╔████╔██║██║   ██║██║  ██║██║   ██║██║     █████╗  ███████╗
