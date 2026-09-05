@@ -201,7 +201,6 @@ textarea {
  * the panel it sits in and the thumb is a solid light bar, so the pair says
  * "there is more here" at a glance rather than on inspection. */
 .custom-scrollbar::-webkit-scrollbar {
-	-webkit-appearance: none;
 	width: 10px;
 	height: 10px;
 }
@@ -210,7 +209,7 @@ textarea {
 	border-radius: 2px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.32);
+	background-color: rgba(255, 255, 255, 0.32);
 	border-radius: 2px;
 	/* Inset from the track so the thumb reads as sitting in a gutter rather
 	   than filling it edge to edge. */
@@ -218,12 +217,10 @@ textarea {
 	background-clip: padding-box;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.55);
-	background-clip: padding-box;
+	background-color: rgba(255, 255, 255, 0.55);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:active {
-	background: var(--selection);
-	background-clip: padding-box;
+	background-color: var(--selection);
 }
 /* Both corners meet on a pane that scrolls in two directions; left unpainted
    it shows the browser's own light default against a dark panel. */
@@ -231,11 +228,27 @@ textarea {
 	background: rgba(0, 0, 0, 0.4);
 }
 .custom-scrollbar {
-	/* Firefox: `auto` rather than `thin`, since thin there is the same
-	   near-invisible hairline this is replacing. */
-	scrollbar-width: auto;
-	scrollbar-color: rgba(255, 255, 255, 0.32) rgba(0, 0, 0, 0.4);
+	/* Deliberately no `scrollbar-color` (and no `scrollbar-width: thin`).
+	   Either one switches Chrome to the standard scrollbar implementation,
+	   which ignores every ::-webkit-scrollbar rule above -- so the styled,
+	   space-reserving bar silently reverted to a zero-width overlay that is
+	   invisible until you scroll. That was the original complaint, and setting
+	   the standard properties to "improve" it is what caused it.
+	   Firefox has no ::-webkit-scrollbar, so it is styled through the standard
+	   properties in its own @supports block below, where they cannot reach
+	   Chrome. */
+	scrollbar-gutter: stable;
 	scroll-behavior: smooth;
+}
+
+/* Firefox only: it ignores ::-webkit-scrollbar entirely, and unlike Chrome its
+   scrollbars already hold their space, so the standard properties are safe to
+   set here and only here. */
+@supports (-moz-appearance: none) {
+	.custom-scrollbar {
+		scrollbar-width: auto;
+		scrollbar-color: rgba(255, 255, 255, 0.32) rgba(0, 0, 0, 0.4);
+	}
 }
 /* Opt out on containers that call scrollTop = scrollHeight on every new line
    (the chat log during streaming, the console scrollback) -- smooth would

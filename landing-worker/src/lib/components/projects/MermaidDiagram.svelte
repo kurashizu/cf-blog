@@ -18,7 +18,10 @@
 				startOnLoad: false,
 				securityLevel: 'strict',
 				theme: 'base',
-				fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+				// Same face as the rest of the site. Mermaid takes its font as a
+				// config string rather than inheriting from CSS, so this is its own
+				// copy of the stack and had to be updated with it.
+				fontFamily: "'Jelly Pixel', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
 				themeVariables: {
 					fontSize: '13px',
 					background: 'transparent',
