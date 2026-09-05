@@ -8,7 +8,8 @@ import { OVERWORLD_TRACKS } from './overworld';
 // while its straight-pattern sections (bars 1, 14-17, 30-33) and all
 // pitched tracks keep the source's straight rhythm. Notes stay staccato;
 // the noise channel splits into an accented on-beat snare voice (idx 55/56)
-// and a short hat voice (idx 40/41).
+// and a short hat voice (idx 40/41), which are then dealt onto two tracks so
+// each gets its own envelope -- see the split below.
 // Generator: scratchpad gen-mario1-v4.mjs (40 bars x 96 = 3840 steps).
 
 const MARIO1_TRK1_GRID: number[][] = [
@@ -389,17 +390,73 @@ const MARIO1_TRK4_ACCENTS: number[] = [
 const EMPTY_GRID_3840: number[][] = Array.from({ length: 3840 }, () => []);
 const EMPTY_ACCENTS_3840: number[] = Array.from({ length: 3840 }, () => 0);
 
+/* The 2A03 has one noise channel, so the transcription puts both percussion
+   voices on one track: idx 55/56 for the accented on-beat hits and 40/41 for
+   the off-beat ticks. A track carries one set of envelopes, so both were played
+   with the hat's -- 12ms of decay -- and the snare came out as another tick.
+   Splitting them by note index gives each its own voice while leaving the
+   written rhythm exactly as transcribed. */
+const SNARE_NOTES = new Set([55, 56]);
+
+const MARIO1_HAT_GRID: number[][] = MARIO1_TRK4_GRID.map((c) =>
+  c.filter((n) => !SNARE_NOTES.has(n))
+);
+const MARIO1_SNARE_GRID: number[][] = MARIO1_TRK4_GRID.map((c) =>
+  c.filter((n) => SNARE_NOTES.has(n))
+);
+/* Accents were authored for the on-beat hits, which are the snare's, so they
+   travel with it rather than staying on the hat. */
+const MARIO1_HAT_ACCENTS: number[] = EMPTY_ACCENTS_3840;
+
 const GRIDS: Record<number, number[][]> = {
   0: MARIO1_TRK1_GRID,
   1: MARIO1_TRK2_GRID,
-  3: MARIO1_TRK4_GRID,
+  3: MARIO1_HAT_GRID,
   4: MARIO1_TRK5_GRID,
+  5: MARIO1_SNARE_GRID,
 };
 
-// Same 6-track kit as the SMB3 songs — loadBuiltInSong deep-copies, so sharing
-// the track parameter objects here is safe.
+/* Track 6 is unused by the transcription, so the snare takes it. Full band
+   where the hat is high-passed to a tick -- a snare's body is the low end of
+   the noise, and filtering that out is what made the two read as one
+   instrument. It rings rather than clicks: the decay runs about six times the
+   hat's and releases instead of cutting, and the pitch envelope is dropped so
+   it does not chirp. */
+const SNARE_VOICE: Partial<TrackData> = {
+  name: 'TRK 6: NES SNARE',
+  color: '#abb2bf',
+  volume: 0.8,
+  osc1Waveform: 'noise',
+  osc1Gain: 1.0,
+  osc2Gain: 0.0,
+  subOscGain: 0.0,
+  noiseGain: 1.0,
+  filterType: 'highpass',
+  cutoff: 130,
+  resonance: 0.6,
+  envFilterMod: 0.0,
+  keyTracking: 0.0,
+  attack: 0.001,
+  decay: 0.34,
+  sustain: 0.0,
+  release: 0.14,
+  ampAttack: 0.001,
+  ampDecay: 0.34,
+  ampSustain: 0.0,
+  ampRelease: 0.14,
+  filterEnvAmount: 0.0,
+  pitchEnvAmount: 0.0,
+  muted: false,
+};
+
+// Same kit as the SMB3 songs — loadBuiltInSong deep-copies, so sharing the
+// track parameter objects here is safe.
 export const MARIO1_TRACKS: TrackData[] = OVERWORLD_TRACKS.map((t) => ({
   ...t,
+  // Now that the snare has left, this track is the hat alone; the inherited
+  // "NES DRUMS" would name it for a kit it no longer plays.
+  ...(t.id === 3 ? { name: 'TRK 4: NES HIHAT' } : {}),
+  ...(t.id === 5 ? SNARE_VOICE : {}),
   grid: GRIDS[t.id] ?? EMPTY_GRID_3840,
-  accents: t.id === 3 ? MARIO1_TRK4_ACCENTS : EMPTY_ACCENTS_3840,
+  accents: t.id === 5 ? MARIO1_TRK4_ACCENTS : t.id === 3 ? MARIO1_HAT_ACCENTS : EMPTY_ACCENTS_3840,
 }));

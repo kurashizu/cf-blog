@@ -189,7 +189,17 @@ export function handleLoadBuiltinSong(idx: number): void {
 	setBpm(song.bpm);
 	timeMeter.set(song.meter);
 	isOverlayMode.set(true);
-	overlayTrackIds.set([0, 1, 2, 3]);
+	/* Whichever tracks the song actually wrote notes to, rather than a fixed
+	   [0,1,2,3] -- that hid any part the arrangement put on a later track, and
+	   SMB1's snare (track 6) played while the roll drew an empty lane where it
+	   should have been. The overlay shows four at once and SMB1 uses five, so
+	   the first four written tracks win; the rest are still audible and one
+	   click away in the track list. */
+	const used = modularSynth
+		.getTracks()
+		.filter((t) => t.grid.some((step) => step && step.length))
+		.map((t) => t.id);
+	overlayTrackIds.set((used.length ? used : [0, 1, 2, 3]).slice(0, 4));
 	refreshTracks();
 	currentSongName.set(song.name);
 	showSaveStatus(`✓ ${song.name}`);
