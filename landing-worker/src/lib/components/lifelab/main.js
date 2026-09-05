@@ -196,7 +196,10 @@ function buildTopbar() {
   el.run.dataset.tour = 'll-run';
   el.step = mkBtn(ICONS.step, 'STEP', stepOnce);
   if (has('undo')) mkBtn(ICONS.back, 'BACK', stepBack);
-  el.reset = mkBtn(ICONS.clear, 'CLEAR', reset);
+  /* No CLEAR here. The header's CLEAR ALL already empties the board and does
+     it behind a confirmation, which a destructive, un-undoable action wants;
+     this one did the same thing one row away with no prompt at all, so the
+     panel offered two buttons with the same name and the same effect. */
   mkBtn(ICONS.soup, 'SOUP', soup);
   mkSep();
   el.toolBtns = {};
@@ -744,16 +747,6 @@ function stepOnce() {
   if (S.eng.pop === 0) { deny('the dish is empty'); return; }
   S.running = false; doStep(); syncRun();
 }
-function reset() {
-  if (S.eng.pop || S.piece) pushUndo();
-  S.piece = null; syncPieceBar(true);
-  S.eng.clear();
-  S.ghost.fill(0);
-  S.rewind.length = 0;
-  S.running = false;
-  syncRun();
-  tlog('> CLEAR', 't-sys');
-}
 function soup() {
   commitPiece();
   pushUndo();
@@ -1061,35 +1054,55 @@ function bindInput() {
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
-  /* Trackpad two-finger scroll pans; ctrl/cmd + wheel (which is also what a
-     trackpad pinch reports) zooms.
-     Every wheel event used to zoom, so a two-finger swipe -- the ordinary way
-     to move around anything on a laptop -- shot the board in and out instead
-     of moving it, and there was no way to pan on the X axis at all without
-     picking up the PAN tool and dragging.
-     A mouse wheel still zooms: it reports large deltaY in whole notches with
-     no deltaX, which is the shape checked for below. */
+  /* Mouse wheel zooms; trackpad two-finger scroll pans; ctrl/cmd + wheel (and
+     a trackpad pinch, which reports as exactly that) zooms.
+
+     Telling the two devices apart is the whole difficulty. A mouse wheel sends
+     one axis only, in coarse notches -- a detent is ~100px in Chrome, and
+     never a fraction. A trackpad sends fine-grained deltas, usually with some
+     deltaX even on a swipe the finger meant as vertical. So: no deltaX at all
+     AND a large, whole-numbered deltaY is a wheel; anything else is a pad.
+     Getting this wrong in either direction is bad -- all-zoom made a two-finger
+     swipe shoot the board in and out, all-pan left a mouse with no zoom at
+     all -- so the wheel test is deliberately narrow and the pad is the
+     fallback. */
+  /* Set while wheel events look like they came from a trackpad; see below. */
+  let padUntil = 0;
   cv.addEventListener('wheel', e => {
     e.preventDefault();
     const r = cv.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
 
     // Pinch on a trackpad arrives as ctrlKey + wheel; cmd is the same gesture
     // by keyboard. Both mean zoom whatever the device.
     if (e.ctrlKey || e.metaKey) {
-      zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0012));
+      zoomAt(mx, my, Math.exp(-e.deltaY * 0.0025));
       return;
     }
 
-    /* Anything else pans -- including a plain mouse wheel, which pans
-       vertically the way a wheel does over any other scrollable thing.
-       Distinguishing wheel from trackpad by delta size was tried and is not
-       reliable: Chrome reports deltaMode 0 for both, and a slow wheel notch
-       looks exactly like a trackpad swipe. Zoom stays on the gesture that
-       unambiguously means zoom: ctrl/cmd + wheel, which is also exactly what
-       a trackpad pinch reports, plus the two-finger pinch handled above. */
+    /* A single event cannot be classified reliably -- a fast trackpad swipe can
+       land on a whole number as easily as a wheel notch does. A short history
+       can: a trackpad emits a burst of events a few milliseconds apart, and
+       within any burst some carry deltaX or a fractional deltaY. A wheel emits
+       isolated notches. So one fractional-or-horizontal event marks the device
+       as a pad for as long as the gesture keeps arriving. */
+    const now = e.timeStamp;
+    const padLike = e.deltaX !== 0 || !Number.isInteger(e.deltaY) || Math.abs(e.deltaY) < 50;
+    if (padLike) padUntil = now + 600;
+    // `>=` and not `>`: with padUntil at its initial 0 the very first mouse
+    // notch of the session compares 0 > 0 and would pan once before zooming.
+    const wheel = !padLike && now >= padUntil;
+    if (wheel) {
+      zoomAt(mx, my, Math.exp(-e.deltaY * 0.0025));
+      return;
+    }
 
-    S.cam.x -= e.deltaX;
-    S.cam.y -= e.deltaY;
+    // Trackpad pan. Scaled up from 1:1 -- at the default the board crawled,
+    // because a swipe's deltas are small and the camera is in world pixels
+    // that shrink further as you zoom out.
+    const k = 2.2 / Math.max(S.cam.s, 0.35);
+    S.cam.x -= e.deltaX * k;
+    S.cam.y -= e.deltaY * k;
     clampCam();
   }, { passive: false });
 
@@ -1477,7 +1490,6 @@ function syncPointer(anchor) {
   const target = !anchor || S.won ? null :
     anchor === 'run' ? el.run :
     anchor === 'step' ? el.step :
-    anchor === 'reset' ? el.reset :
     anchor === 'next' ? el.next :
     anchor === 'draw' ? el.toolBtns.draw :
     anchor === 'spd' ? el.spd :

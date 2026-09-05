@@ -363,7 +363,12 @@ class ModularSynth {
   private delayMix: number = 0.0;
   private delayTime: number = 0.22;
   private delayFeedback: number = 0.32;
-  private reverbMix: number = 0.15;
+  /* 0.06, not 0.15: none of the built-in songs set this, so every one of them
+     played through whatever the default was, and at 0.15 the chip voices --
+     dry, square and short by nature -- came out washed and distant. Low enough
+     now to give the room a little depth without smearing the attacks; the
+     R-MIX knob still reaches the old value and beyond. */
+  private reverbMix: number = 0.06;
   private driveAmount: number = 0.0;
 
   // Master Audio FX Nodes

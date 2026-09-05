@@ -18,6 +18,17 @@
 	let colsPerPage = $derived(effColsPerBar);
 	let stepsPerPage = $derived(meterSpec.stepsPerBar);
 	let viewportStartCol = $derived($activeStepPage * colsPerPage);
+	/* The rows that are actually on screen, filtered before the loop.
+	   The template used to iterate all 88 notes and hide the out-of-range ones
+	   with an {#if} inside, which still creates an each-block per note -- ~50
+	   of them holding nothing, on a view that already mounts the most DOM on
+	   the site. Filtering here means only the ~36 visible octaves are built,
+	   which is most of the difference in how long this tab takes to appear. */
+	let visibleNotes = $derived(
+		PIANO_ROLL_NOTES.map((nInfo, actualIdx) => ({ nInfo, actualIdx })).filter(
+			({ nInfo }) => nInfo.oct >= octaveFrom && nInfo.oct <= octaveTo
+		)
+	);
 	let activeCol = $derived($isSeqPlaying && Math.floor($seqCurrentStep / stepsPerPage) === $activeStepPage ? Math.floor(($seqCurrentStep % stepsPerPage) / spc) : -1);
 	let activeSubCol = $derived($isSeqPlaying ? Math.floor(($seqCurrentStep % spc) / (spc / 2)) : -1);
 	/* The playhead and the cursor as plain column/sub-column numbers.
@@ -198,22 +209,20 @@
 
 			<!-- Scrollable note rows -->
 			<div class="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col overflow-y-auto custom-scrollbar">
-				{#each PIANO_ROLL_NOTES as nInfo, actualIdx (nInfo.note)}
-					{#if nInfo.oct >= octaveFrom && nInfo.oct <= octaveTo}
-						<PianoRollRow
-							{nInfo}
-							{actualIdx}
-							visibleTracks={$visibleTracks}
-							{viewportStartCol}
-							{activeCol}
-							{activeSubCol}
-							timeMeter={$timeMeter}
-							snapDiv={$snapDiv}
-							onAudition={auditionNote}
-							onCellClick={handlePianoRollCellClick}
-							onSubCellClick={handlePianoRollSubCellClick}
-						/>
-					{/if}
+				{#each visibleNotes as { nInfo, actualIdx } (nInfo.note)}
+					<PianoRollRow
+						{nInfo}
+						{actualIdx}
+						visibleTracks={$visibleTracks}
+						{viewportStartCol}
+						{activeCol}
+						{activeSubCol}
+						timeMeter={$timeMeter}
+						snapDiv={$snapDiv}
+						onAudition={auditionNote}
+						onCellClick={handlePianoRollCellClick}
+						onSubCellClick={handlePianoRollSubCellClick}
+					/>
 				{/each}
 			</div>
 

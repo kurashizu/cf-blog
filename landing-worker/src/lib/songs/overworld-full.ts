@@ -40419,7 +40419,7 @@ export const OVERWORLD_FULL_TRACKS: TrackData[] = [
     id: 1,
     name: 'TRK 2: BRASS HARMONY',
     color: '#56b6c2',
-    volume: 0.78,
+    volume: 0.58,
     pan: -0.28,
     muted: false,
     solo: false,
