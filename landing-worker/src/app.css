@@ -90,7 +90,8 @@
    has to land on the grid. These are the ones the codebase actually uses --
    all of them below 12px, all of them floored to it, since a 12px bitmap has
    no smaller glyph to draw. Kept as a plain override rather than hunting ~250
-   class occurrences, so a stray text-[10px] added later is corrected too. */
+   class occurrences, so a stray text-[10px] added later is corrected too.
+
    The :not(.ascii-art) guard matters: a banner is a picture made of glyphs,
    sized to fit its panel rather than to be read as text, and forcing its 4-8px
    art up to 12px would blow it out of the box it is drawn in. */
