@@ -20,6 +20,16 @@
 	let viewportStartCol = $derived($activeStepPage * colsPerPage);
 	let activeCol = $derived($isSeqPlaying && Math.floor($seqCurrentStep / stepsPerPage) === $activeStepPage ? Math.floor(($seqCurrentStep % stepsPerPage) / spc) : -1);
 	let activeSubCol = $derived($isSeqPlaying ? Math.floor(($seqCurrentStep % spc) / (spc / 2)) : -1);
+	/* The playhead and the cursor as plain column/sub-column numbers.
+	   Every cell in the ruler and the accent row used to test $seqCurrentStep
+	   itself, so a step change invalidated all ~880 of them rather than the two
+	   the playhead actually moved between -- which is what made the whole page
+	   stutter while the sequencer ran. Reading the store once here and handing
+	   the cells a number leaves each comparing two integers. */
+	let playCol = $derived($isSeqPlaying ? Math.floor($seqCurrentStep / spc) : -1);
+	let playSubCol = $derived($isSeqPlaying ? Math.floor(($seqCurrentStep % spc) / (spc / 2)) : -1);
+	let cursorCol = $derived(Math.floor($cursorStep / spc));
+	let cursorSubCol = $derived(Math.floor(($cursorStep % spc) / (spc / 2)));
 
 	function clearPage() {
 		for (let i = 0; i < stepsPerPage; i++) {
@@ -138,15 +148,15 @@
 						{@const beatNum = Math.floor(colInBar / effColsPerBeat) + 1}
 						{@const isBarStart = colInBar === 0}
 						{@const isBeatStart = colInBar % effColsPerBeat === 0}
-						{@const isCurrent = $isSeqPlaying && Math.floor($seqCurrentStep / spc) === globalCol}
-						{@const isCursorCol = Math.floor($cursorStep / spc) === globalCol}
+						{@const isCurrent = playCol === globalCol}
+						{@const isCursorCol = cursorCol === globalCol}
 						<div class="h-full">
 							{#if hasSubColumns($snapDiv)}
 								<div class="flex h-full gap-0.5 text-xs">
 									{#each [0, 1] as subCol (subCol)}
 										{@const step = globalCol * spc + subCol * (spc / 2)}
-										{@const isSubCurrent = $isSeqPlaying && $seqCurrentStep >= step && $seqCurrentStep < step + spc / 2}
-										{@const isSubCursor = $cursorStep >= step && $cursorStep < step + spc / 2}
+										{@const isSubCurrent = playCol === globalCol && playSubCol === subCol}
+										{@const isSubCursor = cursorCol === globalCol && cursorSubCol === subCol}
 										<button
 											onclick={() => jumpRulerCursor(step)}
 											class="press flex-1 text-center py-0.5 rounded-xs transition-colors cursor-pointer select-none font-bold relative {isSubCurrent
@@ -223,7 +233,7 @@
 								{#each [0, 1] as subCol (subCol)}
 									{@const step = globalCol * spc + subCol * (spc / 2)}
 									{@const accVal = Number($currentTrack.accents[step] || 0)}
-									{@const isSubCurrent = $isSeqPlaying && $seqCurrentStep >= step && $seqCurrentStep < step + spc / 2}
+									{@const isSubCurrent = playCol === globalCol && playSubCol === subCol}
 									<button
 										onclick={() => handleCycleAccent(step)}
 										class="press flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all {isSubCurrent

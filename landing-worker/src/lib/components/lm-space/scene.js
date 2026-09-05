@@ -1197,10 +1197,15 @@ const spinAxis = [];
       : 1 - THREE.MathUtils.clamp(
           (Math.log(Math.max(t, 0.05)) - Math.log(tLo)) /
           Math.max(Math.log(tHi) - Math.log(tLo), 0.001), 0, 1);
-    // Linear in that fraction, so the spread is even across the field. The
-    // fastest end was still barely perceptible even at max, so its ceiling
-    // was doubled -- the slowest models keep the same near-stationary 0.05.
-    spinRate[i] = 0.05 + f * 5.8;
+    /* Linear in that fraction, so the spread is even across the field.
+       Radians per second, capped at 3 RPM (0.3142 rad/s) for the quickest
+       model -- one turn every 20 seconds. The floor is scaled by the same
+       factor rather than left where it was: holding 0.05 while the ceiling
+       came down would have squeezed the fast-to-slow ratio from 117x to about
+       6x, and the whole point of the channel is that the difference is
+       readable. At 0.0027 the slowest takes ~38 minutes a turn, which reads as
+       stationary without being it. */
+    spinRate[i] = 0.002685 + f * 0.311474;
     const a = i * 2.399963, b = i * 1.61803;
     spinAxis.push(new THREE.Vector3(
       Math.cos(a) * Math.sin(b), Math.cos(b), Math.sin(a) * Math.sin(b)
