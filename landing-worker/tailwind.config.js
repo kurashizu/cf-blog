@@ -54,8 +54,13 @@ export default {
         // Jelly does not carry (and the CJK ranges it is not loaded for)
         // still has somewhere to fall back to.
         mono: ['Jelly Pixel', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
-        sans: ['Jelly Pixel', 'Inter Tight', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
-        display: ['Jelly Pixel', 'Space Grotesk', 'Inter Tight', 'sans-serif'],
+        // Inter Tight and Space Grotesk are gone from these stacks. They were
+        // never reached -- Jelly Pixel wins every latin glyph ahead of them --
+        // but naming them was what kept a render-blocking request for three
+        // families in the document head. The system stack behind Jelly covers
+        // the same job without a network round trip.
+        sans: ['Jelly Pixel', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        display: ['Jelly Pixel', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
       },
     },
   },

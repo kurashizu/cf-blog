@@ -9,12 +9,49 @@
 		<meta name="description" content="KRSZ: Kurashizu's Random-Stuff Zone. 100% Serverless Edge Architecture & Experimental Suite." />
 		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
 		<meta name="theme-color" content="#16171d" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<!-- The face the site is actually set in. Discovered from app.css otherwise,
+		     which means the CSS has to arrive and parse before the 59KB subset is
+		     even requested; preloading starts it alongside the document. Only the
+		     latin subset -- the CJK ones are behind unicode-range and are not
+		     fetched unless a page needs them. -->
+		<link
+			rel="preload"
+			href="%sveltekit.assets%/fonts/jelly-latin.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+
+		<!-- JetBrains Mono only, and not on the critical path.
+		     This used to request Inter Tight and Space Grotesk as well, in full
+		     300..900 variable ranges with italics -- 29 font files across three
+		     families -- as a render-blocking stylesheet. Nothing paints until a
+		     blocking stylesheet returns, and this one is a third party: measured
+		     at 397ms to first byte, against a 147ms first paint for everything
+		     served from our own origin. Safari felt it worst, because it will not
+		     start the module graph behind a pending stylesheet the way Chrome's
+		     preload scanner does, so the whole app waited on fonts.googleapis.com
+		     rather than just the text.
+
+		     Both of those families were also dead: the site is set in Jelly Pixel,
+		     and they survived only as fallbacks after it in the Tailwind stacks,
+		     which Jelly Pixel always wins. JetBrains Mono stays because the ASCII
+		     banners are drawn in it -- Jelly's block glyph is two cells wide and
+		     shears the art -- but a banner is decoration, so it loads async via
+		     media=print/onload and swaps in when it arrives. -->
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
-			href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Space+Grotesk:wght@400..700&display=swap"
+			href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&display=swap"
 			rel="stylesheet"
+			media="print"
+			onload="this.media='all'"
 		/>
+		<noscript>
+			<link
+				href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..800&display=swap"
+				rel="stylesheet"
+			/>
+		</noscript>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover" class="antialiased overflow-x-hidden">
