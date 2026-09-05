@@ -19,9 +19,15 @@
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
-	/* Latin, punctuation, arrows and the box-drawing/block glyphs the ASCII
-	   panels and banners are built from. */
-	unicode-range: U+0000-024F, U+2000-206F, U+2190-21FF, U+2500-257F, U+2580-259F, U+25A0-25FF, U+2700-27BF, U+FE70-FEFF, U+FF00-FFEF;
+	/* Latin, punctuation and arrows only.
+	   Deliberately NOT the box-drawing (U+2500-257F) or block (U+2580-259F)
+	   ranges: the site's banners and panel frames are drawn by tiling █ ═ ║ ╗
+	   into solid shapes, which only works if every one of those glyphs is
+	   exactly one cell wide and its ink runs edge to edge. Jelly's are neither
+	   -- they came out at 8.5px against the letters' 10.7px, so the banners
+	   sheared into disconnected blocks. Left to the mono fallback behind it,
+	   which is what drew them correctly before. */
+	unicode-range: U+0000-024F, U+2000-206F, U+2190-21FF, U+2700-27BF, U+FE70-FEFF, U+FF00-FFEF;
 }
 @font-face {
 	font-family: 'Jelly Pixel';
@@ -64,14 +70,35 @@
 	font-synthesis: none;
 }
 
+/* The block-letter banners (AsciiArt.svelte) and anything else built by tiling
+   box-drawing glyphs keep the outline mono face.
+   Those shapes only hold together if █ ═ ║ ╗ are each exactly one cell wide
+   with their ink running edge to edge. Jelly's letters are 6px wide and its
+   block is 12px -- two cells -- so the rows sheared into disconnected pieces
+   whichever font won. Excluding the face here is what keeps one consistent
+   cell across the whole banner. */
+.ascii-art,
+.ascii-art * {
+	font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	/* The rows have to touch for the letterforms to close up. The global 24px
+	   line height (set for the 12px grid) opened a gap between every row of a
+	   banner drawn at 4-8px, slicing the letters into bands. */
+	line-height: 1;
+}
+
 /* Any size written as an arbitrary value rather than through the scale still
    has to land on the grid. These are the ones the codebase actually uses --
    all of them below 12px, all of them floored to it, since a 12px bitmap has
    no smaller glyph to draw. Kept as a plain override rather than hunting ~250
    class occurrences, so a stray text-[10px] added later is corrected too. */
-.text-\[4px\], .text-\[6px\], .text-\[8px\], .text-\[9px\],
-.text-\[10px\], .text-\[11px\], .text-\[13px\],
-.sm\:text-\[6px\], .md\:text-\[8px\] {
+   The :not(.ascii-art) guard matters: a banner is a picture made of glyphs,
+   sized to fit its panel rather than to be read as text, and forcing its 4-8px
+   art up to 12px would blow it out of the box it is drawn in. */
+.text-\[4px\]:not(.ascii-art), .text-\[6px\]:not(.ascii-art),
+.text-\[8px\]:not(.ascii-art), .text-\[9px\]:not(.ascii-art),
+.text-\[10px\]:not(.ascii-art), .text-\[11px\]:not(.ascii-art),
+.text-\[13px\]:not(.ascii-art),
+.sm\:text-\[6px\]:not(.ascii-art), .md\:text-\[8px\]:not(.ascii-art) {
 	font-size: 12px;
 	line-height: 24px;
 }

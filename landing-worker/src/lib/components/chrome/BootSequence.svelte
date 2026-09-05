@@ -161,13 +161,29 @@
 
 	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+	/* No probe is worth holding the screen over.
+	 *
+	 * The checks run in series, and several are real async calls into the
+	 * platform -- requestAdapter, storage.estimate, getRegistration, and a
+	 * network fetch for the edge trace. Any one of them hanging (a wedged GPU
+	 * driver, a service worker stuck activating, a captive portal swallowing
+	 * the request) held the whole POST screen up with no way past it but a
+	 * keypress, on the one screen shown before a visitor has any reason to
+	 * think pressing a key is what is wanted.
+	 *
+	 * A probe that has not answered inside a second is reported as such and the
+	 * sequence moves on; the real answer arriving later is simply ignored. */
+	function withTimeout(p: Promise<string>, ms = 1000): Promise<string> {
+		return Promise.race([p, sleep(ms).then(() => 'n/a (timed out)')]);
+	}
+
 	onMount(() => {
 		(async () => {
 			for (const check of CHECKS) {
 				if (aborted) return;
 				let value: string;
 				try {
-					value = await check.run();
+					value = await withTimeout(Promise.resolve(check.run()));
 				} catch {
 					value = 'n/a';
 				}

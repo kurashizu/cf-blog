@@ -90,7 +90,7 @@
 		const rect = fieldEl?.getBoundingClientRect();
 		const W = rect?.width || 600;
 		const H = rect?.height || 300;
-		bodies = msgs.map((m, i) => {
+		const next = msgs.map((m, i) => {
 			const rand = seededRandom(m.id);
 			return {
 				...m,
@@ -105,7 +105,14 @@
 				color: PACKET_COLORS[i % PACKET_COLORS.length]
 			};
 		});
-		nodes = new Array(bodies.length).fill(null);
+		/* Sized from the local array, not from `bodies`. Reading `bodies` here
+		   read state this function had just written, and inside the $effect below
+		   that registers the effect as its own dependency -- it reran itself
+		   until Svelte gave up with effect_update_depth_exceeded, which took the
+		   whole page down with it (the boot screen simply never got to finish).
+		   The assignment is last, so nothing in here observes it. */
+		nodes = new Array(next.length).fill(null);
+		bodies = next;
 	}
 
 	/* Registers a card's element in `nodes`, and places it immediately.

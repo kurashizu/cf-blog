@@ -203,7 +203,11 @@
      px of real overflow on whichever ancestor happened to be overflow-auto,
      which is exactly the bug: a scrollbar appearing under a banner that
      never scrolled before, on every page that uses this component. -->
-<div class="overflow-x-auto {className}">
+<!-- ascii-art opts these banners out of the site's pixel face -- see app.css.
+     They are drawn by tiling █ ═ ║ ╗ into solid letterforms, which needs every
+     glyph to be one cell wide with ink running edge to edge; Jelly's block is
+     two cells against its own six-pixel letter, so the shapes came apart. -->
+<div class="ascii-art overflow-x-auto {className}">
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -- role/tabindex are only ever both set together, when onclick is provided; the linter can't see that from the dynamic role expression. -->
 	<div
 		bind:this={containerEl}
