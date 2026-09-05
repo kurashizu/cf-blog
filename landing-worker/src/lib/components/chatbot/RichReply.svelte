@@ -9,10 +9,17 @@
 	 * they are completed here after the HTML is in the DOM.
 	 */
 	import { renderMarkdown, type MathSpan } from './markdown';
+	import { textSize } from '../../stores/text-scale';
 
 	let { content }: { content: string } = $props();
 
 	let host: HTMLDivElement | undefined = $state();
+
+	/** The site's current root size in px, which rem everywhere else resolves against. */
+	function rootFontSize(): number {
+		if (typeof window === 'undefined') return 14;
+		return parseFloat(getComputedStyle(document.documentElement).fontSize) || 14;
+	}
 
 	/** The marker renderMarkdown leaves where a maths span was. */
 	const MATH_MARK = '\u0001';
@@ -110,7 +117,12 @@
 			// panels on the dark ground, the way the rest of the page does. Left
 			// to itself mermaid picks saturated pastels that glare against it.
 			themeVariables: {
-				fontSize: '13px',
+				/* Mermaid renders to SVG with the size baked into the markup, so it
+				   cannot inherit the site's rem scale the way everything else does --
+				   it stayed at a fixed 13px while the rest of the page grew. Reading
+				   the root size at draw time makes a diagram match the text around
+				   it. Redrawn on change by the effect below. */
+				fontSize: `${rootFontSize()}px`,
 				darkMode: true,
 				background: 'transparent',
 				primaryColor: 'rgba(255,255,255,0.06)',
@@ -184,6 +196,19 @@
 		void html;
 		if (!host) return;
 		void renderMath(host, math);
+		void renderDiagrams(host);
+	});
+
+	/* A drawn diagram has its font size baked into the SVG, so changing the site's
+	   text size leaves every existing one at the old size. Clearing the done marks
+	   and redrawing is the only way to pick the new one up; mermaid has no way to
+	   restyle in place. */
+	$effect(() => {
+		void $textSize;
+		if (!host) return;
+		const drawn = [...host.querySelectorAll<HTMLElement>('[data-mermaid][data-done]')];
+		if (!drawn.length) return;
+		for (const n of drawn) delete n.dataset.done;
 		void renderDiagrams(host);
 	});
 </script>

@@ -173,8 +173,6 @@
 			{/each}
 
 			<p class="text-xs text-white/35 leading-relaxed border-t border-white/10 pt-2.5">
-				Licence texts travel with the files they cover — the typeface's is at
-				<a href="/fonts/jelly-OFL.txt" target="_blank" rel="noopener noreferrer" class="press underline decoration-white/25 underline-offset-2 hover:text-white/60 transition-colors">/fonts/jelly-OFL.txt</a>.
 				If something here is miscredited or missing, that is a mistake worth telling me about.
 			</p>
 		</div>

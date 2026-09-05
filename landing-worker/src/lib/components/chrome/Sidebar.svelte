@@ -65,13 +65,12 @@
 	     region below: the mark is the site's own identity, not a piece of
 	     content that should disappear the moment someone scrolls the panel.
 
-	     The right margin matches the scrollbar gutter of the scroll region
-	     below. Being pinned means this panel sits directly in the column while
-	     the two below sit inside a scroller that reserves 10px for its bar -- so
-	     this one was drawn 10px wider and the three stopped lining up. A margin
-	     rather than a gutter of its own: there is nothing to scroll here, and
-	     scrollbar-gutter only applies to a scroll container. -->
-	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-2 sm:mr-2.5">
+	     This panel is pinned in the column; the two below sit inside a scroller
+	     whose scrollbar-gutter takes 10px out of their available width. The
+	     margin gives back exactly that, so all three border boxes end on the
+	     same line. It has to be a margin and not padding: padding would sit
+	     inside this panel's own border, which is what is being aligned. -->
+	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-[10px]">
 		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
 			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
 		</BoxHeader>
@@ -97,11 +96,12 @@
 
 	<!-- Everything below the mark scrolls in its own region now that the
 	     mark itself is pinned above it. -->
-	<!-- The column drops its right padding and this region carries it instead, so
-	     the scrollbar sits in that reclaimed strip rather than eating 10px out of
-	     every panel's width. Before, the bar's gutter was inside the padding and
-	     all three panels stopped 10px short of the column's edge. -->
-	<div class="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto custom-scrollbar pr-2 sm:pr-2.5">
+	<!-- No right padding: .custom-scrollbar sets scrollbar-gutter: stable, which
+	     already reserves the bar's 10px out of this element's content box. Adding
+	     padding on top reserved it twice, so the panels in here were drawn ~19px
+	     narrower than the pinned banner above, which is the mismatch that kept
+	     coming back. The gutter alone leaves both at the same width. -->
+	<div class="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto custom-scrollbar">
 
 	<!-- Operator profile -->
 	<div class="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">

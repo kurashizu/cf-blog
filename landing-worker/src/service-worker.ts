@@ -19,11 +19,25 @@ const IMMUTABLE = new Set(build);
 // than a scan of the array.
 const CACHEABLE = new Set(ASSETS);
 
+/* Precache the shell, not the whole site.
+ *
+ * addAll over every asset made a first visit download all 14MB before the
+ * worker would activate -- including the 2.1MB v86 wasm, which belongs to the
+ * VM tab and is lazily imported, so a visitor who never opens that tab paid for
+ * it anyway. Worse, addAll is atomic: one failed or slow request rejects the
+ * whole thing, install never completes, and the worker retries the set from
+ * scratch on the next load, which is a first visit that stays slow and a
+ * refresh that appears to hang. The shell is what has to be there for an
+ * offline start; everything else is written on demand by the fetch handler
+ * below, which already caches what it fetches. */
+const PRECACHE = [...files, ...prerendered];
+
 sw.addEventListener('install', (event) => {
 	event.waitUntil(
 		caches
 			.open(CACHE)
-			.then((cache) => cache.addAll(ASSETS))
+			// Individually, so one bad asset cannot reject the install.
+			.then((cache) => Promise.all(PRECACHE.map((a) => cache.add(a).catch(() => {}))))
 			.then(() => sw.skipWaiting())
 	);
 });

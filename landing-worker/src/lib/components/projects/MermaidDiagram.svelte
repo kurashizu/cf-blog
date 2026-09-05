@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { textSize } from '../../stores/text-scale';
 
 	let { chart, accent = '#56b6c2' }: { chart: string; accent?: string } = $props();
 
@@ -23,7 +24,10 @@
 				// copy of the stack and had to be updated with it.
 				fontFamily: "'Jelly Pixel', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
 				themeVariables: {
-					fontSize: '13px',
+					// Baked into the SVG at draw time -- mermaid cannot inherit the
+					// site's rem scale, so the root size is read here and the diagram
+					// is redrawn when it changes.
+					fontSize: `${parseFloat(getComputedStyle(document.documentElement).fontSize) || 14}px`,
 					background: 'transparent',
 					primaryColor: 'rgba(255,255,255,0.06)',
 					primaryTextColor: '#eceff4',
@@ -81,6 +85,9 @@
 	}
 
 	$effect(() => {
+		// The text size is a dependency, not an argument: the size is baked into
+		// the SVG, so a change means this has to be drawn again from source.
+		void $textSize;
 		renderChart(chart, accent);
 	});
 </script>

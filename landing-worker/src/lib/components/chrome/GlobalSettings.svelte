@@ -9,7 +9,16 @@
 	import { clearOverlay, storedOverlaySize } from '../krsz-vm/disk-overlay';
 	import { clearSessions, sessionsSize } from '../chatbot/sessions';
 	import { performanceMode, setPerformanceMode } from '../../stores/performance';
-	import { textSize, setTextSize, TEXT_SIZES, DEFAULT_TEXT_SIZE } from '../../stores/text-scale';
+	import {
+		textSize,
+		textSizeAuto,
+		setTextSize,
+		setTextSizeAuto,
+		autoTextSize,
+		physicalScreenWidth,
+		TEXT_SIZES,
+		DEFAULT_TEXT_SIZE
+	} from '../../stores/text-scale';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -220,9 +229,17 @@
 			onClose();
 		}
 	}
+
+	/* Only so AUTO's tooltip can name the size it would pick. Tracks the window
+	   so the number stays honest if the panel is open while the window is moved
+	   to a display of a different resolution. */
+	let screenWidth = $state(physicalScreenWidth());
+	function syncScreenWidth() {
+		screenWidth = physicalScreenWidth();
+	}
 </script>
 
-<svelte:window onkeydown={onWindowKeydown} />
+<svelte:window onkeydown={onWindowKeydown} onresize={syncScreenWidth} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -281,10 +298,23 @@
 				<div class="text-xs sm:text-sm font-black text-[#e5c07b] border-b border-white/10 pb-1">TEXT SIZE</div>
 				<div class="flex items-center justify-between gap-3 flex-wrap">
 					<span class="text-xs text-white/70 max-w-[70%]">
-						Scales the whole site. The typeface is drawn on a 12px grid, so 12 and 24 are exactly
+						Scales the whole site. AUTO follows the screen — 12 at 720p, 14 at 1080p, 16 at 2K,
+						20 at 4K, 24 at 8K. The typeface is drawn on a 12px grid, so 12 and 24 are exactly
 						sharp and the sizes between them are interpolated a little.
 					</span>
 					<div class="flex items-center gap-1 shrink-0">
+						<button
+							onclick={() => {
+								setTextSizeAuto();
+								playSound('click');
+							}}
+							title="Follow the screen's resolution (currently {autoTextSize(screenWidth)}px)"
+							class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {$textSizeAuto
+								? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
+								: 'border-white/20 text-white/40 hover:border-white/40'}"
+						>
+							AUTO
+						</button>
 						{#each TEXT_SIZES as px (px)}
 							<button
 								onclick={() => {
@@ -292,7 +322,8 @@
 									playSound('click');
 								}}
 								title="{px}px{px % 12 === 0 ? ' — exact on the 12px grid' : ''}{px === DEFAULT_TEXT_SIZE ? ' (default)' : ''}"
-								class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {$textSize === px
+								class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {!$textSizeAuto &&
+								$textSize === px
 									? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
 									: 'border-white/20 text-white/40 hover:border-white/40'}"
 							>

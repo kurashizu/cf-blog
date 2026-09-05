@@ -7,6 +7,7 @@
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { pulseStep } from '../../stores/clock';
 	import { performanceMode } from '../../stores/performance';
+	import { textSize } from '../../stores/text-scale';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -79,12 +80,19 @@
 	/** Which body the pointer is currently carrying, if any. */
 	let dragId: string | null = null;
 
-	const CARD_W = 150;
-	const CARD_H = 54;
+	/* The card holds text that is sized in rem, so the box has to be too: at a
+	   fixed 150x54 the timestamp and body ran outside the border as soon as the
+	   text setting went past the default. These are the original sizes expressed
+	   against the 14px default, scaled by whatever the root is now, so the card
+	   is the same shape at every setting and the text always fits it. Both the
+	   physics and the rendered element read them, so a card's drawn size and the
+	   obstacle its neighbours collide with stay the same thing. */
+	const CARD_W = $derived(10.714 * $textSize);
+	const CARD_H = $derived(3.857 * $textSize);
 	/** An expanded card is a bigger obstacle; the physics reads these so its
 	 *  neighbours are pushed clear of the text rather than overlapping it. */
-	const OPEN_W = 240;
-	const OPEN_H = 150;
+	const OPEN_W = $derived(17.143 * $textSize);
+	const OPEN_H = $derived(10.714 * $textSize);
 
 	function buildBodies(msgs: GuestbookMessage[]) {
 		const rect = fieldEl?.getBoundingClientRect();
@@ -161,6 +169,10 @@
 	   `nodes` after this effect's own DOM update has been applied. */
 	$effect(() => {
 		messages;
+		// Card sizes are derived from the text setting, and the initial scatter is
+		// laid out against them, so a change has to re-seed the field or the cards
+		// keep the spacing of the size they were built at.
+		$textSize;
 		if (!fieldEl) return;
 		buildBodies(messages);
 	});

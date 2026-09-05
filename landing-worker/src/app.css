@@ -118,6 +118,21 @@ img[data-pixelated],
 	line-height: 1.5;
 }
 
+/* Banners follow the text setting too, but proportionally rather than by being
+   floored to it. Each one is drawn at whichever size fits its panel -- 4px to
+   8px -- and those sizes are relative to each other, so they are re-expressed
+   as fractions of the root: at the 14px default a text-[6px] banner lands back
+   on 6px, and at 24px it scales with everything around it. Floored to 12px
+   instead, like body text, the art would burst its panel; left in px, as it
+   was, it stayed the one thing on the page that ignored the setting. */
+.ascii-art.text-\[4px\] { font-size: 0.286rem; }
+.ascii-art.text-\[6px\], .ascii-art.sm\:text-\[6px\] { font-size: 0.429rem; }
+.ascii-art.text-\[8px\], .ascii-art.md\:text-\[8px\] { font-size: 0.571rem; }
+.ascii-art.text-\[9px\] { font-size: 0.643rem; }
+.ascii-art.text-\[10px\] { font-size: 0.714rem; }
+.ascii-art.text-\[11px\] { font-size: 0.786rem; }
+.ascii-art.text-\[13px\] { font-size: 0.929rem; }
+
 :root {
 	--bg: #16171d;
 	--bg-card: #1b1d24;
