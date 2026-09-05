@@ -79,7 +79,7 @@
 			<AsciiArt
 				color="#e5c07b"
 				colorRanges={krszColorRanges}
-				class="text-[8px] sm:text-xs leading-none font-black tracking-tight overflow-x-auto py-0.5"
+				class="krsz-logo leading-none font-black tracking-tight overflow-x-auto py-0.5"
 				title="krsz.in — {krszMark.font}"
 				art={krszMark.art}
 			/>

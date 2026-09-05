@@ -80,19 +80,27 @@
 	/** Which body the pointer is currently carrying, if any. */
 	let dragId: string | null = null;
 
-	/* The card holds text that is sized in rem, so the box has to be too: at a
-	   fixed 150x54 the timestamp and body ran outside the border as soon as the
-	   text setting went past the default. These are the original sizes expressed
-	   against the 14px default, scaled by whatever the root is now, so the card
-	   is the same shape at every setting and the text always fits it. Both the
-	   physics and the rendered element read them, so a card's drawn size and the
-	   obstacle its neighbours collide with stay the same thing. */
-	const CARD_W = $derived(10.714 * $textSize);
-	const CARD_H = $derived(3.857 * $textSize);
+	/* The card holds text sized in rem, so the box has to be too: at a fixed
+	   150x54 the timestamp and body ran outside the border as soon as the text
+	   setting went past the default. These are the original sizes expressed
+	   against the 14px default and scaled by whatever the root is now.
+
+	   Plain functions rather than $derived. The physics loop runs from onMount,
+	   which is not a reactive context, so a $derived read inside it is never
+	   re-evaluated: the simulation went on colliding against the sizes from the
+	   frame the loop started while the DOM drew the new ones, which is why the
+	   cards passed through each other at larger settings. Reading the root at
+	   each use keeps the obstacle and the drawn card the same box. */
+	const rootPx = () =>
+		typeof document === 'undefined'
+			? 14
+			: parseFloat(getComputedStyle(document.documentElement).fontSize) || 14;
+	const cardW = () => 10.714 * rootPx();
+	const cardH = () => 3.857 * rootPx();
 	/** An expanded card is a bigger obstacle; the physics reads these so its
 	 *  neighbours are pushed clear of the text rather than overlapping it. */
-	const OPEN_W = $derived(17.143 * $textSize);
-	const OPEN_H = $derived(10.714 * $textSize);
+	const openW = () => 17.143 * rootPx();
+	const openH = () => 10.714 * rootPx();
 
 	function buildBodies(msgs: GuestbookMessage[]) {
 		const rect = fieldEl?.getBoundingClientRect();
@@ -103,13 +111,13 @@
 			return {
 				...m,
 				// Inset by half a card so nothing starts already clipped by a wall.
-				x: CARD_W / 2 + rand() * Math.max(1, W - CARD_W),
-				y: CARD_H / 2 + rand() * Math.max(1, H - CARD_H),
+				x: cardW() / 2 + rand() * Math.max(1, W - cardW()),
+				y: cardH() / 2 + rand() * Math.max(1, H - cardH()),
 				// Slow enough to read while it moves; the drift is ambient, not busy.
 				vx: (rand() - 0.5) * 26,
 				vy: (rand() - 0.5) * 26,
-				w: CARD_W,
-				h: CARD_H,
+				w: cardW(),
+				h: cardH(),
 				color: PACKET_COLORS[i % PACKET_COLORS.length]
 			};
 		});
@@ -179,7 +187,7 @@
 
 	/** Sizes follow selection: the open card is the one being read. */
 	function sizeOf(p: Packet, open: boolean) {
-		return open ? { w: OPEN_W, h: OPEN_H } : { w: CARD_W, h: CARD_H };
+		return open ? { w: openW(), h: openH() } : { w: cardW(), h: cardH() };
 	}
 
 	let raf = 0;
@@ -594,7 +602,7 @@
 							use:register={i}
 							role="listitem"
 							class="absolute left-0 top-0 will-change-transform"
-							style="width: {open ? OPEN_W : CARD_W}px; z-index: {open ? 30 : 10};"
+							style="width: {open ? 17.143 * $textSize : 10.714 * $textSize}px; z-index: {open ? 30 : 10};"
 							in:fade={{ duration: 220 }}
 						>
 							<div
@@ -610,7 +618,7 @@
 								class="border rounded-xs px-2 py-1.5 bg-black/80 backdrop-blur-[1px] select-none transition-[box-shadow,border-color] hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.7)] focus:outline-none focus-visible:ring-1"
 								class:cursor-grab={!open}
 								class:cursor-default={open}
-								style="border-color: {p.color}{open ? 'cc' : '55'}; {open ? `height: ${OPEN_H}px;` : ''} --tw-ring-color: {p.color};"
+								style="border-color: {p.color}{open ? 'cc' : '55'}; {open ? `height: ${10.714 * $textSize}px;` : ''} --tw-ring-color: {p.color};"
 							>
 								<div class="flex items-baseline justify-between gap-1.5">
 									<span class="text-[11px] font-bold truncate" style="color: {p.color}">{p.name}</span>
@@ -620,7 +628,7 @@
 									class="text-[10px] text-[#eceff4]/80 leading-snug mt-0.5 break-words"
 									class:line-clamp-2={!open}
 									class:overflow-y-auto={open}
-									style={open ? `max-height: ${OPEN_H - 34}px;` : ''}
+									style={open ? `max-height: ${10.714 * $textSize - 34}px;` : ''}
 								>
 									{p.content}
 								</div>

@@ -133,6 +133,14 @@ img[data-pixelated],
 .ascii-art.text-\[11px\] { font-size: 0.786rem; }
 .ascii-art.text-\[13px\] { font-size: 0.929rem; }
 
+/* The KRSZ mark in the sidebar is the site's logo, not one of the banners above
+   -- it wants to read as a mark rather than as small print, so it gets its own
+   size instead of an inline banner's. 1.286rem is 18px at the 14px default,
+   which is the largest the panel takes: the widest of the marks is 22 columns,
+   and at JetBrains Mono's 0.6em advance that is 238px inside a content box
+   about 248px wide. Anything larger clips the Block mark. */
+.ascii-art.krsz-logo { font-size: 1.286rem; }
+
 :root {
 	--bg: #16171d;
 	--bg-card: #1b1d24;
