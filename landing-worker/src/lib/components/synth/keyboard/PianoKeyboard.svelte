@@ -320,7 +320,15 @@
 						style={isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}
 						title={`Play ${wk.note} (${PIANO_ROLL_NOTES[wk.idx]?.freq.toFixed(1)} Hz)`}
 					>
-						<span class="text-[9px] font-mono font-black opacity-70 leading-none">{wk.note}</span>
+						<!-- Only the Cs are named, and only by their octave number.
+					     Seven octaves of white keys is 49 labels across the strip;
+					     at that density every one of them collided with its
+					     neighbours and none could be read. One number per octave is
+					     what the eye actually navigates by -- find C4, count from
+					     there -- and it leaves each label room to be legible. -->
+					{#if wk.note.startsWith('C') && !wk.note.includes('#')}
+						<span class="text-[9px] font-mono font-black opacity-70 leading-none">{wk.note.slice(1)}</span>
+					{/if}
 					</button>
 				{/each}
 			</div>
@@ -355,7 +363,10 @@
 					style="left: {leftPos}%; width: {bWidth}%; {isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}"
 					title={`Play ${bk.note} (${PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1)} Hz)`}
 				>
-					<span class="text-[8px] font-mono font-bold leading-none">{bk.note.replace('#', '')}#</span>
+					<!-- Unlabelled: a black key is barely wider than the text that
+					     was on it, so those labels were the densest part of the
+					     collision. Their names are on the title, and a keyboard is
+					     read from the Cs and the black-key groups anyway. -->
 				</button>
 			{/each}
 		{/if}

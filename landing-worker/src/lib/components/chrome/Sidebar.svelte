@@ -21,8 +21,18 @@
 	onMount(() => {
 		krszMark = KRSZ_MARKS[Math.floor(Math.random() * KRSZ_MARKS.length)];
 	});
+	/* The mark is stacked K R over S Z, so a column range alone is ambiguous --
+	   the columns carrying K on the top half carry S on the bottom. Each range
+	   is bounded to its own half by row as well. */
 	let krszColorRanges = $derived(
-		krszMark.colorRanges.map((r) => ({ from: r.from, to: r.to, color: KRSZ_LETTER_COLORS[r.letter] }))
+		krszMark.colorRanges.map((r) => ({
+			from: r.from,
+			to: r.to,
+			color: KRSZ_LETTER_COLORS[r.letter],
+			...(r.letter === 'K' || r.letter === 'R'
+				? { fromRow: 0, toRow: krszMark.rowsPerHalf - 1 }
+				: { fromRow: krszMark.rowsPerHalf })
+		}))
 	);
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
@@ -87,12 +97,18 @@
 		<BoxHeader title="OPERATOR_PROFILE" short={['OPERATOR', 'OP']} class="text-xs sm:text-sm font-bold text-[#61afef] border-b border-white/10 pb-1 shrink-0">
 			<span class="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs">VERIFIED</span>
 		</BoxHeader>
-		<div class="space-y-1.5 py-1 text-xs sm:text-sm leading-relaxed">
-			<div class="flex items-baseline gap-2"><span class="text-[#e5c07b] font-bold shrink-0">[OPERATOR]</span><span class="text-[#eceff4] font-medium">kurashizu (IT Masters @ UNSW)</span></div>
-			<div class="flex items-baseline gap-2"><span class="text-[#61afef] font-bold shrink-0">[LOCATION]</span><span class="text-[#eceff4]">Sydney, Australia [UTC+10/11]</span></div>
-			<div class="flex items-baseline gap-2"><span class="text-[#e06c75] font-bold shrink-0">[MOTTO]</span><span class="text-[#eceff4] italic">"Follow best practices &amp; KISS"</span></div>
-			<div class="flex items-baseline gap-2"><span class="text-[#98c379] font-bold shrink-0">[RUNTIME]</span><span class="text-[#eceff4]">100% Serverless Edge Isolates</span></div>
-			<div class="flex items-baseline gap-2"><span class="text-[#56b6c2] font-bold shrink-0">[STACK]</span><span class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</span></div>
+		<!-- Label over value, not beside it.
+		     Side by side, the label ate a third of a sidebar this narrow and left
+		     the value in a column too thin to hold its own line, so every entry
+		     wrapped and hung under itself -- five ragged two-line blocks that read
+		     as broken rather than as a record. Stacked, each value gets the full
+		     width and most fit on one line. -->
+		<div class="space-y-2 py-1 text-xs sm:text-sm">
+			<div><div class="text-[#e5c07b] font-bold">[OPERATOR]</div><div class="text-[#eceff4] font-medium">kurashizu (IT Masters @ UNSW)</div></div>
+			<div><div class="text-[#61afef] font-bold">[LOCATION]</div><div class="text-[#eceff4]">Sydney, Australia [UTC+10/11]</div></div>
+			<div><div class="text-[#e06c75] font-bold">[MOTTO]</div><div class="text-[#eceff4] italic">"Follow best practices &amp; KISS"</div></div>
+			<div><div class="text-[#98c379] font-bold">[RUNTIME]</div><div class="text-[#eceff4]">100% Serverless Edge Isolates</div></div>
+			<div><div class="text-[#56b6c2] font-bold">[STACK]</div><div class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</div></div>
 		</div>
 		<div class="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1">
 			<span>STATUS: OPEN FOR RESEARCH</span>

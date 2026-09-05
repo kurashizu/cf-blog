@@ -64,10 +64,21 @@
    Set on :root and inherited, so it reaches shadow content and canvas-adjacent
    text as well; the vendor-prefixed pair covers Firefox and WebKit. */
 :root {
-	image-rendering: pixelated;
 	-webkit-font-smoothing: none;
 	-moz-osx-font-smoothing: grayscale;
 	font-synthesis: none;
+}
+
+/* image-rendering is deliberately NOT set globally.
+   It was, and it inherits -- which reached every bordered grid on the site and
+   made hairline borders double up against each other, most visibly in the
+   synth's piano roll where a lattice of 1px cells turned into overlapping
+   lines. It only ever mattered for bitmap images, and the pixel face is
+   handled by font-smoothing above, so it belongs on the images that want it
+   rather than on the root. */
+img[data-pixelated],
+.pixelated {
+	image-rendering: pixelated;
 }
 
 /* The block-letter banners (AsciiArt.svelte) and anything else built by tiling
@@ -100,8 +111,11 @@
 .text-\[10px\]:not(.ascii-art), .text-\[11px\]:not(.ascii-art),
 .text-\[13px\]:not(.ascii-art),
 .sm\:text-\[6px\]:not(.ascii-art), .md\:text-\[8px\]:not(.ascii-art) {
-	font-size: 12px;
-	line-height: 24px;
+	font-size: 1rem;
+	/* 1.5, not 2. The face's ink is short -- an 8px cap on a 12px em -- so a
+	   double-height line box left roughly two blank rows between every wrapped
+	   line, which read as the text having come apart. */
+	line-height: 1.5;
 }
 
 :root {
@@ -136,8 +150,11 @@ body {
 	/* Neither antialiased nor optimizeLegibility here any more: both soften a
 	   bitmap face, and optimizeLegibility additionally turns on ligatures and
 	   kerning that a fixed 12px grid has no room for. */
-	font-size: 12px;
-	line-height: 24px;
+	font-size: 1rem;
+	/* 1.5, not 2. The face's ink is short -- an 8px cap on a 12px em -- so a
+	   double-height line box left roughly two blank rows between every wrapped
+	   line, which read as the text having come apart. */
+	line-height: 1.5;
 }
 
 ::selection {

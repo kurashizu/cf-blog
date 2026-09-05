@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import HorizontalHardwareFader from '../../hardware/HorizontalHardwareFader.svelte';
 	import {
 		audioSampleRate,
 		noiseDurationSetting,
@@ -29,14 +30,14 @@
 					<span>PCM Buffer Length:</span>
 					<span class="text-[#c678dd] font-bold">{$noiseDurationSetting.toFixed(1)}s ({($noiseDurationSetting * $audioSampleRate).toLocaleString()} samples)</span>
 				</div>
-				<input
-					type="range"
+				<HorizontalHardwareFader
+					value={$noiseDurationSetting}
 					min={0.5}
 					max={5.0}
 					step={0.5}
-					value={$noiseDurationSetting}
-					oninput={(e) => setNoiseDuration(parseFloat((e.currentTarget as HTMLInputElement).value))}
-					class="w-full accent-[#c678dd] cursor-pointer"
+					color="#c678dd"
+					width="100%"
+					onChange={setNoiseDuration}
 				/>
 				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
 					<span>0.5s (22k samples)</span>
@@ -82,14 +83,14 @@
 					<span>Impulse Duration (RT60):</span>
 					<span class="text-[#c678dd] font-bold">{$reverbDurationSetting.toFixed(1)}s ({($reverbDurationSetting * $audioSampleRate * 2).toLocaleString()} stereo samples)</span>
 				</div>
-				<input
-					type="range"
+				<HorizontalHardwareFader
+					value={$reverbDurationSetting}
 					min={0.2}
 					max={6.0}
 					step={0.2}
-					value={$reverbDurationSetting}
-					oninput={(e) => setReverbDuration(parseFloat((e.currentTarget as HTMLInputElement).value))}
-					class="w-full accent-[#c678dd] cursor-pointer"
+					color="#c678dd"
+					width="100%"
+					onChange={setReverbDuration}
 				/>
 				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
 					<span>0.2s (Room)</span>
@@ -103,14 +104,14 @@
 					<span>Decay Factor (Air Absorption):</span>
 					<span class="text-[#c678dd] font-bold">{$reverbDecaySetting.toFixed(2)}</span>
 				</div>
-				<input
-					type="range"
+				<HorizontalHardwareFader
+					value={$reverbDecaySetting}
 					min={0.1}
 					max={2.0}
 					step={0.05}
-					value={$reverbDecaySetting}
-					oninput={(e) => setReverbDecay(parseFloat((e.currentTarget as HTMLInputElement).value))}
-					class="w-full accent-[#c678dd] cursor-pointer"
+					color="#c678dd"
+					width="100%"
+					onChange={setReverbDecay}
 				/>
 				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
 					<span>0.1 (Dark)</span>

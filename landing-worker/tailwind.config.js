@@ -11,7 +11,14 @@
    anything smaller has no representable glyph at all.
    Line heights are whole multiples too: a fractional line box lands the grid
    on a half pixel and undoes the alignment even when the size is right. */
-const px = (size, line) => [`${size}px`, { lineHeight: `${line}px` }];
+/* Sizes are rem, not px, so the whole scale follows the root font-size the
+   CFG text-size setting writes (stores/text-scale.ts) -- one value moves the
+   site proportionally instead of every view knowing about the setting.
+   Written against a 12px root: 1rem is one step of the face's design grid. */
+const px = (size, line) => [`${size / 12}rem`, { lineHeight: `${line / 12}rem` }];
+/* Line heights are 1.5x the size rather than 2x: the face's cap is 8px on a
+   12px em, so a double-height box left two blank rows between wrapped lines
+   and made every paragraph look like it had come apart. */
 
 export default {
   content: [
@@ -22,17 +29,24 @@ export default {
     // Replaces the scale rather than extending it: every text-* class in the
     // codebase has to resolve to a multiple of 12, including the ones written
     // before this change.
+    /* Body text is 12px -- the face's own design size, and the only one it is
+       exactly sharp at.
+       It is genuinely smaller than what it replaced: Jelly's cap-height here is
+       8px against the 10.2px the site had in 14px JetBrains Mono. Going up to
+       24px was tried and does not fit -- this layout is built for small type,
+       and at 24px the card tags, the sidebar and the panel labels all clipped.
+       So the size stays and headings carry the contrast instead. */
     fontSize: {
-      xs: px(12, 24),
-      sm: px(12, 24),
-      base: px(12, 24),
+      xs: px(12, 18),
+      sm: px(12, 18),
+      base: px(12, 18),
       lg: px(24, 36),
       xl: px(24, 36),
       '2xl': px(24, 36),
-      '3xl': px(36, 48),
-      '4xl': px(36, 48),
-      '5xl': px(48, 60),
-      '6xl': px(48, 60),
+      '3xl': px(36, 54),
+      '4xl': px(36, 54),
+      '5xl': px(48, 72),
+      '6xl': px(48, 72),
     },
     extend: {
       fontFamily: {

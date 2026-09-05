@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { soundEngine } from '../../../sound';
+	import HorizontalHardwareFader from '../../hardware/HorizontalHardwareFader.svelte';
 	import {
 		audioSampleRate,
 		latencyHintSetting,
@@ -98,14 +99,14 @@
 					<span>Time Smoothing Constant:</span>
 					<span class="text-[#56b6c2] font-bold">{$fftSmoothingSetting.toFixed(2)}</span>
 				</div>
-				<input
-					type="range"
+				<HorizontalHardwareFader
+					value={$fftSmoothingSetting}
 					min={0.1}
 					max={0.95}
 					step={0.05}
-					value={$fftSmoothingSetting}
-					oninput={(e) => setFftSmoothing(parseFloat((e.currentTarget as HTMLInputElement).value))}
-					class="w-full accent-[#56b6c2] cursor-pointer"
+					color="#56b6c2"
+					width="100%"
+					onChange={setFftSmoothing}
 				/>
 				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
 					<span>0.10 (Instant/Fast)</span>

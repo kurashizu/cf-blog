@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 	import Dropdown from '../chrome/Dropdown.svelte';
 
 	/**
@@ -316,7 +317,17 @@
 
 	<div class="flex flex-wrap items-center gap-3 border border-white/15 bg-black/40 rounded-xs px-2.5 py-2">
 		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">LEVEL</span>
-		<input type="range" min="0" max="0.6" step="0.01" bind:value={gain} class="flex-1 min-w-[120px] accent-[#98c379]" />
+		<div class="flex-1 min-w-[120px]">
+			<HorizontalHardwareFader
+				value={gain}
+				min={0}
+				max={0.6}
+				step={0.01}
+				color="#98c379"
+				width="100%"
+				onChange={(v) => (gain = v)}
+			/>
+		</div>
 		<span class="text-xs font-mono text-[#98c379] w-12 text-right">{Math.round(gain * 100)}%</span>
 		<span class="text-xs font-mono transition-colors min-w-[160px] flex items-center gap-1.5 {running ? 'text-[#e5c07b]' : 'text-white/35'}">
 			{#if running}<span class="w-1.5 h-1.5 rounded-full bg-[#e5c07b] blink-live shrink-0"></span>{/if}

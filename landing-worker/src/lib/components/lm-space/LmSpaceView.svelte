@@ -278,7 +278,11 @@
   }
 :global(.lmspace) *, :global(.lmspace) *::before, :global(.lmspace) *::after { box-sizing:border-box; }
 :global(.lmspace), :global(.lmspace) { background:var(--bg); color:var(--fg);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; overflow:hidden; }
+    /* Same face as the rest of the site; this view had its own stack and so
+       stayed in the outline mono after the switch. 12px because every panel
+       here is dense readout over a 3D scene. */
+    font-family:'Jelly Pixel',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12px; line-height:24px; overflow:hidden; }
 :global(.lmspace #app) { position:absolute; inset:0; }
 :global(.lmspace canvas) { display:block; }
 :global(.lmspace .hud) { position:absolute; pointer-events:none; z-index:20; }

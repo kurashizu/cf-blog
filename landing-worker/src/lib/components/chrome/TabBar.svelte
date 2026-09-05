@@ -280,30 +280,30 @@
 	   since which view is active matters more than any of the chrome around
 	   it -- by the time it's this tight, the button labels are already gone
 	   and there is real room again. */
+	/* Each threshold sits just above the width at which the row it protects
+	   would actually start scrolling, measured against the pixel face the site
+	   is set in -- Jelly's cell is 6px where the old outline mono was 7.2px, so
+	   everything fits roughly 300px narrower than it used to and the previous
+	   values collapsed the bar while a third of the row was still empty.
+
+	   Measured overflow points, with everything above each stage already
+	   hidden: all visible 1600 · badges gone 1040 · button words gone 910 ·
+	   tab names gone 550. Each rule fires a little before its own number so a
+	   stage never has to share a pixel with the scroll it exists to prevent. */
 	.btnlabel-off { display: none; }
-	@container header-fit (max-width: 1780px) {
+	@container header-fit (max-width: 1660px) {
 		.servbadge { display: none; }
 	}
-	@container header-fit (max-width: 1620px) {
+	@container header-fit (max-width: 1610px) {
 		.themebadge { display: none; }
 	}
-	/* 1380, not 1180: measured, the tab strip starts overflowing at 1360px --
-	   the eight names need 894px and only 884px is left for them. The old
-	   threshold let the bar spend that 180px band scrolling sideways instead,
-	   which is the one outcome this ladder exists to avoid, and a scrolled
-	   strip hides whichever tabs ran off the edge. Shedding the button words
-	   ten pixels before the strip would have to scroll keeps every tab
-	   reachable without one. */
-	@container header-fit (max-width: 1380px) {
+	@container header-fit (max-width: 1050px) {
 		.btnlabel { display: none; }
 		.btnlabel-off { display: inline; }
 	}
-	/* 1260, not 940: with the button words already gone, the eight full names
-	   still need 894px and run out of room at 1240px. The old value left that
-	   300px band to sideways scrolling, so the tabs the strip pushed off the
-	   edge were simply unreachable without discovering the scroll. The active
-	   tab keeps its name either way, which is the part worth the space. */
-	@container header-fit (max-width: 1260px) {
+	/* The active tab keeps its name at every width -- which view you are on is
+	   worth more than the four characters it costs. */
+	@container header-fit (max-width: 920px) {
 		.tabname:not(.on) { display: none; }
 	}
 </style>

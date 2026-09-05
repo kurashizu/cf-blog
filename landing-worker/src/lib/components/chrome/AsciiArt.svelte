@@ -28,18 +28,21 @@
 		art: string;
 		/** Fallback for any column not covered by colorRanges, and the only color used when colorRanges is omitted. */
 		color: string;
-		/** Per-letter coloring (the KRSZ brand mark): column ranges, inclusive, checked in order -- first match wins. Columns outside every range fall back to `color`. */
-		colorRanges?: { from: number; to: number; color: string }[];
+		/** Per-letter coloring (the KRSZ brand mark): column ranges, inclusive, checked in order -- first match wins. Columns outside every range fall back to `color`. `fromRow`/`toRow` bound a range vertically as well, which the two-by-two mark needs: there the same columns carry K on the top half and S on the bottom. */
+		colorRanges?: { from: number; to: number; color: string; fromRow?: number; toRow?: number }[];
 		class?: string;
 		/** Omit for a purely decorative banner -- the burst still plays on click, it just does nothing else. */
 		onclick?: () => void;
 		title?: string;
 	} = $props();
 
-	function colorForCol(col: number): string {
+	function colorForCell(col: number, row: number): string {
 		if (!colorRanges) return color;
 		for (const r of colorRanges) {
-			if (col >= r.from && col <= r.to) return r.color;
+			if (col < r.from || col > r.to) continue;
+			if (r.fromRow !== undefined && row < r.fromRow) continue;
+			if (r.toRow !== undefined && row > r.toRow) continue;
+			return r.color;
 		}
 		return color;
 	}
@@ -233,7 +236,7 @@
 		{#each glyphs as g (g.row + ':' + g.col)}
 			<span
 				class="absolute top-0 left-0 transition-transform {hovering || bursting ? 'will-change-transform' : ''}"
-				style="{colorRanges ? `color: ${colorForCol(g.col)};` : ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
+				style="{colorRanges ? `color: ${colorForCell(g.col, g.row)};` : ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
 					? '60ms'
 					: hovering
 						? '90ms'

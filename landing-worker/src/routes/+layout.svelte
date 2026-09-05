@@ -14,6 +14,7 @@
 	import { loadEdgeTrace } from '$lib/stores/edge';
 	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen, privacyOpen, creditsOpen } from '$lib/stores/chrome';
 	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
+	import { textSize, initTextSize } from '$lib/stores/text-scale';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
@@ -48,6 +49,12 @@
 	   outside this layout needs to know performance mode exists. */
 	$effect(() => {
 		document.documentElement.dataset.perf = $performanceMode ? 'on' : 'off';
+	});
+	/* One root font-size drives the whole type scale, which is written in rem
+	   (tailwind.config.js) -- so the CFG text-size setting moves the site
+	   proportionally without any view knowing the setting exists. */
+	$effect(() => {
+		document.documentElement.style.fontSize = `${$textSize}px`;
 	});
 	let bootVisible = $state(false);
 	/* Mirrored into a store so a view's own walkthrough can wait for the screen
@@ -172,6 +179,7 @@
 		const stopTransport = initTransport();
 		initConsoleState();
 		initPerformanceMode();
+		initTextSize();
 		window.addEventListener('keydown', handleKeydown);
 
 		// The auto theme only ever changes on the hour, but a minute-granularity

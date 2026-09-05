@@ -9,6 +9,7 @@
 	import { clearOverlay, storedOverlaySize } from '../krsz-vm/disk-overlay';
 	import { clearSessions, sessionsSize } from '../chatbot/sessions';
 	import { performanceMode, setPerformanceMode } from '../../stores/performance';
+	import { textSize, setTextSize, TEXT_SIZES, DEFAULT_TEXT_SIZE } from '../../stores/text-scale';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -232,7 +233,8 @@
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="w-full max-w-2xl {themeStyles.cardBgVideo} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto transform-gpu"
+		class="w-full max-w-2xl backdrop-blur-sm border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto transform-gpu"
+		style="background-color: color-mix(in srgb, var(--bg-card) 94%, transparent);"
 		onclick={(e) => e.stopPropagation()}
 		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
@@ -271,6 +273,33 @@
 						color="#98c379"
 						onChange={(v) => setSoundVolume(v / 100)}
 					/>
+				</div>
+			</div>
+
+			<!-- Text size -->
+			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
+				<div class="text-xs sm:text-sm font-black text-[#e5c07b] border-b border-white/10 pb-1">TEXT SIZE</div>
+				<div class="flex items-center justify-between gap-3 flex-wrap">
+					<span class="text-xs text-white/70 max-w-[70%]">
+						Scales the whole site. The typeface is drawn on a 12px grid, so 12 and 24 are exactly
+						sharp and the sizes between them are interpolated a little.
+					</span>
+					<div class="flex items-center gap-1 shrink-0">
+						{#each TEXT_SIZES as px (px)}
+							<button
+								onclick={() => {
+									setTextSize(px);
+									playSound('click');
+								}}
+								title="{px}px{px % 12 === 0 ? ' — exact on the 12px grid' : ''}{px === DEFAULT_TEXT_SIZE ? ' (default)' : ''}"
+								class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {$textSize === px
+									? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
+									: 'border-white/20 text-white/40 hover:border-white/40'}"
+							>
+								{px}
+							</button>
+						{/each}
+					</div>
 				</div>
 			</div>
 
