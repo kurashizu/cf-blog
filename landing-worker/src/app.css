@@ -2,6 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Jelly Pixel -- a 12px bitmap face, SIL OFL 1.1.
+   https://github.com/TakWolf/jelly-pixel-font  (licence: static/fonts/jelly-OFL.txt)
+
+   Split per script and declared with unicode-range so a browser only fetches
+   the file a page's text actually needs: a Latin-only page never pays for the
+   ~170KB of CJK, and a guestbook message in Chinese pulls one 59KB file rather
+   than a merged one several times that size.
+
+   font-display: swap -- the fallback stack is metrically different, so a
+   blocking load would hold the whole terminal blank; swapping keeps the site
+   readable while the face arrives. */
+@font-face {
+	font-family: 'Jelly Pixel';
+	src: url('/fonts/jelly-latin.woff2') format('woff2');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+	/* Latin, punctuation, arrows and the box-drawing/block glyphs the ASCII
+	   panels and banners are built from. */
+	unicode-range: U+0000-024F, U+2000-206F, U+2190-21FF, U+2500-257F, U+2580-259F, U+25A0-25FF, U+2700-27BF, U+FE70-FEFF, U+FF00-FFEF;
+}
+@font-face {
+	font-family: 'Jelly Pixel';
+	src: url('/fonts/jelly-zh_cn.woff2') format('woff2');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+3000-303F, U+FF01-FF60;
+}
+@font-face {
+	font-family: 'Jelly Pixel';
+	src: url('/fonts/jelly-ja.woff2') format('woff2');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+	/* Kana only: the Han range is already served by the file above, and
+	   claiming it twice would make the winner depend on declaration order. */
+	unicode-range: U+3040-309F, U+30A0-30FF, U+31F0-31FF;
+}
+@font-face {
+	font-family: 'Jelly Pixel';
+	src: url('/fonts/jelly-ko.woff2') format('woff2');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+AC00-D7AF, U+1100-11FF, U+3130-318F;
+}
+
+/* A bitmap face must not be smoothed: the antialiasing that makes an outline
+   font look better is exactly what turns a pixel grid into a blur. This is
+   also why the scale in tailwind.config.js is whole multiples of 12 -- the two
+   have to hold together to keep the glyphs sharp.
+
+   Set on :root and inherited, so it reaches shadow content and canvas-adjacent
+   text as well; the vendor-prefixed pair covers Firefox and WebKit. */
+:root {
+	image-rendering: pixelated;
+	-webkit-font-smoothing: none;
+	-moz-osx-font-smoothing: grayscale;
+	font-synthesis: none;
+}
+
+/* Any size written as an arbitrary value rather than through the scale still
+   has to land on the grid. These are the ones the codebase actually uses --
+   all of them below 12px, all of them floored to it, since a 12px bitmap has
+   no smaller glyph to draw. Kept as a plain override rather than hunting ~250
+   class occurrences, so a stray text-[10px] added later is corrected too. */
+.text-\[4px\], .text-\[6px\], .text-\[8px\], .text-\[9px\],
+.text-\[10px\], .text-\[11px\], .text-\[13px\],
+.sm\:text-\[6px\], .md\:text-\[8px\] {
+	font-size: 12px;
+	line-height: 24px;
+}
+
 :root {
 	--bg: #16171d;
 	--bg-card: #1b1d24;
@@ -21,6 +95,7 @@ body {
 	margin: 0;
 	padding: 0;
 	font-family:
+		'Jelly Pixel',
 		'JetBrains Mono',
 		'Fira Code',
 		'Cascadia Code',
@@ -30,8 +105,11 @@ body {
 		Monaco,
 		Consolas,
 		monospace;
-	-webkit-font-smoothing: antialiased;
-	text-rendering: optimizeLegibility;
+	/* Neither antialiased nor optimizeLegibility here any more: both soften a
+	   bitmap face, and optimizeLegibility additionally turns on ligatures and
+	   kerning that a fixed 12px grid has no room for. */
+	font-size: 12px;
+	line-height: 24px;
 }
 
 ::selection {

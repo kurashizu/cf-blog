@@ -12,6 +12,11 @@ export const guideOpen = writable<boolean>(false);
 export const bootOpen = writable<boolean>(false);
 /** The gear-icon global settings panel: sound, and clearing any of the site's storage. */
 export const globalSettingsOpen = writable<boolean>(false);
+/** The open-source credits, opened from the footer. In a store because, like
+ *  the panels above, it has to render at the layout root: the page body sits in
+ *  a `relative z-10` wrapper, and a fixed overlay inside that stacking context
+ *  cannot rise above its siblings however high its own z-index goes. */
+export const creditsOpen = writable<boolean>(false);
 /** The full-screen "let's get started" welcome, shown once before the anchored
  *  site tour on a first visit -- see WELCOME_KEY in +layout.svelte. */
 export const welcomeOpen = writable<boolean>(false);

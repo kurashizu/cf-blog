@@ -3,6 +3,7 @@
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { edgeTrace, edgeTraceMs, edgeTraceStatus, traceSummary } from '../../stores/edge';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
+	import { creditsOpen } from '../../stores/chrome';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -96,6 +97,18 @@
 			{/if}
 			<span class="footer-buildtime"> · {__BUILD_TIME_SYDNEY__}</span>
 		</span>
+		<!-- Beside the commit because it answers the neighbouring question: that
+		     one says which build this is, this one says what it is made of. -->
+		<button
+			onclick={() => {
+				creditsOpen.set(true);
+				playSound('click');
+			}}
+			title="The open-source projects this site is built on"
+			class="press text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors shrink-0"
+		>
+			[credits]
+		</button>
 	</div>
 </footer>
 

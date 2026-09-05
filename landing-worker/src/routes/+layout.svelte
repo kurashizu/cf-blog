@@ -12,7 +12,7 @@
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
-	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen, privacyOpen } from '$lib/stores/chrome';
+	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen, privacyOpen, creditsOpen } from '$lib/stores/chrome';
 	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
@@ -25,6 +25,7 @@
 	import Welcome from '$lib/components/chrome/Welcome.svelte';
 	import PrivacyNotice from '$lib/components/chrome/PrivacyNotice.svelte';
 	import GlobalSettings from '$lib/components/chrome/GlobalSettings.svelte';
+	import CreditsDialog from '$lib/components/chrome/CreditsDialog.svelte';
 
 	let { children } = $props();
 
@@ -274,6 +275,10 @@
 
 {#if $globalSettingsOpen}
 	<GlobalSettings onClose={() => globalSettingsOpen.set(false)} />
+{/if}
+
+{#if $creditsOpen}
+	<CreditsDialog onClose={() => creditsOpen.set(false)} />
 {/if}
 
 {#if $guideOpen}
