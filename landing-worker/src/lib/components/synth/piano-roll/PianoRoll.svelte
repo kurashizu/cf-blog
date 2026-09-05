@@ -152,7 +152,7 @@
 											class="press flex-1 text-center py-0.5 rounded-xs transition-colors cursor-pointer select-none font-bold relative {isSubCurrent
 												? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
 												: isSubCursor
-													? 'bg-[#56b6c2]/40 text-[#56b6c2] border border-[#56b6c2] font-black'
+													? 'bg-[#56b6c2]/70 text-black border border-[#56b6c2] font-black'
 													: isBarStart && subCol === 0
 														? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
 														: isBeatStart && subCol === 0
@@ -160,9 +160,6 @@
 															: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
 											title={`Click to set Playback Cursor to Step ${step + 1} (Bar ${barNum}.${beatNum})`}
 										>
-											{#if isSubCursor && !isSubCurrent}
-												<span class="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[8px] text-[#56b6c2] leading-none">▼</span>
-											{/if}
 											{subCol === 0 ? (isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`) : '+'}
 										</button>
 									{/each}
@@ -173,7 +170,7 @@
 									class="press w-full text-center py-0.5 rounded-xs transition-colors font-bold text-xs cursor-pointer select-none relative {isCurrent
 										? 'bg-white text-black font-black shadow-[0_0_6px_#fff]'
 										: isCursorCol
-											? 'bg-[#56b6c2]/40 text-[#56b6c2] border border-[#56b6c2] font-black'
+											? 'bg-[#56b6c2]/70 text-black border border-[#56b6c2] font-black'
 											: isBarStart
 												? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
 												: isBeatStart
@@ -181,9 +178,6 @@
 													: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
 									title={`Click to set Playback Cursor to Column ${colIdx + 1} (Step ${globalCol * spc + 1}, Bar ${barNum}.${beatNum})`}
 								>
-									{#if isCursorCol && !isCurrent}
-										<span class="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[8px] text-[#56b6c2] leading-none">▼</span>
-									{/if}
 									{isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
 								</button>
 							{/if}

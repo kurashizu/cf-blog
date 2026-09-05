@@ -10,19 +10,20 @@ import { writable } from 'svelte/store';
  * picking one for everybody is the wrong call: 12px fits the most on screen,
  * 24px is comfortable but starts clipping the tighter panels.
  *
- * So it is a setting. Every step is a multiple of the face's own 12px design
- * grid except the 16px default, which is the size the site actually reads
- * best at -- sharpness is worth less than legibility at the size most people
- * will sit at, and the difference is only visible on close inspection.
+ * So it is a setting. 12 and 24 are exact multiples of the face's own design
+ * grid; the default sits between them at 14, which is the size this layout
+ * actually reads best at -- sharpness is worth less than legibility at the
+ * size most people will sit at, and the interpolation is only visible on
+ * close inspection.
  *
  * Applied as a root font-size and consumed through rem, so one value scales
  * the whole site proportionally rather than each view needing to know.
  */
 const KEY = 'krsz.text.scale';
 
-/** Every step, smallest first. 16 is the default; 12 and 24 are grid-exact. */
+/** Every step, smallest first. 14 is the default; 12 and 24 are grid-exact. */
 export const TEXT_SIZES = [12, 14, 16, 20, 24] as const;
-export const DEFAULT_TEXT_SIZE = 16;
+export const DEFAULT_TEXT_SIZE = 14;
 
 function readInitial(): number {
 	try {

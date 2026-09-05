@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fade, fly } from '$lib/perf-transitions';
+	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { playSound } from '$lib/sound';
@@ -27,6 +28,12 @@
 	import PrivacyNotice from '$lib/components/chrome/PrivacyNotice.svelte';
 	import GlobalSettings from '$lib/components/chrome/GlobalSettings.svelte';
 	import CreditsDialog from '$lib/components/chrome/CreditsDialog.svelte';
+
+	/* Read at init rather than in an effect: bootVisible's own initialiser
+	   consults it, and an effect would run after the first paint -- which is
+	   the flicker this is here to prevent. */
+	const PREFERS_REDUCED_MOTION =
+		typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	let { children } = $props();
 
@@ -56,7 +63,17 @@
 	$effect(() => {
 		document.documentElement.style.fontSize = `${$textSize}px`;
 	});
-	let bootVisible = $state(false);
+	/* Starts true, not false.
+	   The POST screen used to be switched on in onMount, which is after
+	   hydration -- so every load painted the full page for a frame and then
+	   dropped the boot screen over it, which read as the site flickering rather
+	   than starting up. It covers the page from the first paint now, and the
+	   two cases that should not see it (reduced motion, and SSR where there is
+	   no client to dismiss it) turn it off instead.
+	   `browser` guards SSR: rendered on the server this would ship a boot
+	   screen into the prerendered HTML that nothing would ever take down for a
+	   visitor with JS disabled. */
+	let bootVisible = $state(browser && !PREFERS_REDUCED_MOTION);
 	/* Mirrored into a store so a view's own walkthrough can wait for the screen
 	   to be clear -- the POST screen is shown before the site tour is offered,
 	   so a view tour that only checked the tour would open behind it. */
@@ -191,9 +208,9 @@
 		// POST runs on every page load — it is short, skippable with any key, and
 		// never shown to reduced-motion users. Tab switches are client-side
 		// navigation, so it does not reappear when moving between views.
-		const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (!reducedMotion) bootVisible = true;
-		else showGuideIfNew();
+		// bootVisible is already true by now (see its declaration) unless reduced
+		// motion turned it off; that case still needs the guide offered.
+		if (!bootVisible) showGuideIfNew();
 
 		// Idempotent and shared with the POST screen's own call — the footer must
 		// still fill in when the boot screen is skipped or dismissed early.

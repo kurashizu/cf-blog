@@ -51,7 +51,12 @@
 /* Drawn in characters, like the rest of this site's chrome. Line height is
    pinned because at the default the rows separate and the letterforms come
    apart. */
-#wordmark{flex:none;font-size:11px;line-height:1.05;color:var(--ll-fg);white-space:pre;letter-spacing:0;margin:0}
+/* Box-drawing glyphs, so it needs the outline mono the rest of the site's
+   banners use (.ascii-art in app.css) -- Jelly draws those at a different cell
+   width from its letters, which left the wordmark's strokes not meeting.
+   line-height:1 so the three rows touch and the letterforms close. */
+#wordmark{flex:none;font-family:'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11px;line-height:1;color:var(--ll-fg);white-space:pre;letter-spacing:0;margin:0}
 /* Allowed to shrink, so it truncates before it pushes the buttons off the
    edge -- it is the one thing here that can lose characters and still read. */
 #brand small{flex:0 1 auto;min-width:0;font-size:10px;color:var(--ll-faint);letter-spacing:2px;
