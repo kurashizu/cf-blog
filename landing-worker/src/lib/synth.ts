@@ -507,6 +507,34 @@ class ModularSynth {
     this.reverbConvolver.buffer = impulse;
   }
 
+  /* Both buffers are filled a sample at a time -- 6s of stereo reverb is 529k
+     iterations of Math.exp plus two Math.random, and the noise buffer is
+     another 220k -- which measures at 10ms and 6ms of blocked main thread.
+     The knobs that set their parameters are sliders, so a single drag asked
+     for dozens of those rebuilds, one per input event, when only the value the
+     drag ends on is ever heard. Collapsing them into one rebuild per frame
+     keeps the result identical and pays the cost once. */
+  private reverbRebuildHandle: number | null = null;
+  private noiseRebuildHandle: number | null = null;
+
+  private scheduleReverbRebuild() {
+    if (typeof window === 'undefined') return this.regenerateReverbBuffer();
+    if (this.reverbRebuildHandle !== null) return;
+    this.reverbRebuildHandle = window.requestAnimationFrame(() => {
+      this.reverbRebuildHandle = null;
+      this.regenerateReverbBuffer();
+    });
+  }
+
+  private scheduleNoiseRebuild() {
+    if (typeof window === 'undefined') return this.regenerateNoiseBuffer();
+    if (this.noiseRebuildHandle !== null) return;
+    this.noiseRebuildHandle = window.requestAnimationFrame(() => {
+      this.noiseRebuildHandle = null;
+      this.regenerateNoiseBuffer();
+    });
+  }
+
   private initMasterFX(ctx: AudioContext) {
     if (this.delayNode) return;
 
@@ -867,7 +895,7 @@ class ModularSynth {
 
   public setNoiseBufferDuration(sec: number) {
     this.noiseBufferDuration = Math.max(0.5, Math.min(5.0, sec));
-    this.regenerateNoiseBuffer();
+    this.scheduleNoiseRebuild();
   }
 
   public getNoiseColor(): 'white' | 'pink' | 'brown' {
@@ -876,7 +904,7 @@ class ModularSynth {
 
   public setNoiseColor(color: 'white' | 'pink' | 'brown') {
     this.noiseColor = color;
-    this.regenerateNoiseBuffer();
+    this.scheduleNoiseRebuild();
   }
 
   public getReverbDuration(): number {
@@ -885,7 +913,7 @@ class ModularSynth {
 
   public setReverbDuration(sec: number) {
     this.reverbDuration = Math.max(0.2, Math.min(6.0, sec));
-    this.regenerateReverbBuffer();
+    this.scheduleReverbRebuild();
   }
 
   public getReverbDecayRate(): number {
@@ -894,7 +922,7 @@ class ModularSynth {
 
   public setReverbDecayRate(decay: number) {
     this.reverbDecayRate = Math.max(0.1, Math.min(2.0, decay));
-    this.regenerateReverbBuffer();
+    this.scheduleReverbRebuild();
   }
 
   public getMasterTuningFreq(): number {
@@ -1742,7 +1770,12 @@ class ModularSynth {
       const ctx = offline as unknown as AudioContext;
       this.regenerateNoiseBuffer();
       this.initMasterFX(ctx);
-      this.regenerateReverbBuffer();
+      // initMasterFX already filled a 1.8s/0.6 impulse. Regenerating is only
+      // worth 264k iterations when the settings ask for something other than
+      // that default.
+      if (this.reverbDuration !== 1.8 || this.reverbDecayRate !== 0.6) {
+        this.regenerateReverbBuffer();
+      }
 
       // Building thousands of voices is a long synchronous stretch — yield
       // periodically so the progress readout can actually paint.

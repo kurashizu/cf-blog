@@ -268,6 +268,25 @@ textarea {
 	   Chrome. */
 	scrollbar-gutter: stable;
 	scroll-behavior: smooth;
+	/* A scroller's contents cannot affect the size or position of anything
+	   outside it, so the engine does not need to walk back out of one when
+	   something inside changes. On the synth -- 2.7k elements, 1.5k of them the
+	   piano roll -- a full style recalc cost 11ms with the whole page as one
+	   flat scope. Every click paid it after the handler had already finished in
+	   0.2ms, which is why buttons felt like they lagged behind the press even
+	   though nothing in the JS was slow. */
+	contain: layout style;
+}
+
+/* Each roll row is ~40 elements and there are 36 of them, but only the dozen
+   or so inside the scrollport can be seen. content-visibility lets the engine
+   skip style, layout and paint for the rest until they scroll in; the
+   intrinsic size keeps the scrollbar honest in the meantime so skipped rows
+   still occupy their 18px. Together with the containment above this takes the
+   recalc from 11ms to 6ms. */
+.piano-roll-row {
+	content-visibility: auto;
+	contain-intrinsic-size: auto 18px;
 }
 
 /* The same bar for every other scroller on the page.

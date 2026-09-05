@@ -85,7 +85,7 @@
 	}
 </script>
 
-<div class="flex items-center gap-1 shrink-0 min-h-[18px] h-[18px]">
+<div class="piano-roll-row flex items-center gap-1 shrink-0 min-h-[18px] h-[18px]">
 	<button
 		type="button"
 		onclick={() => onAudition(actualIdx)}

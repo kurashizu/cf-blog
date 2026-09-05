@@ -259,15 +259,20 @@
 					? 'p-2 sm:p-3 space-y-1.5'
 					: 'p-2.5 sm:p-3.5 space-y-2'} flex flex-col"
 			>
-				<!-- Switching tabs already unmounts the old view and mounts the new one
-				     (they are different route components, not one kept alive) -- the
-				     only thing missing was any transition on top of that swap, which
-				     made it a hard cut. Keying on the pathname plays a short cross-fade
-				     across it without changing what was already happening underneath;
-				     nothing here keeps a stateful view (synth's audio graph, the VM,
-				     chatbot's model) alive any differently than before. -->
+				<!-- Keying on the pathname fades the incoming view in over the swap.
+				     There is deliberately no out: transition. An outgoing one keeps the
+				     view it is fading in the DOM until it finishes, and if it never
+				     finishes -- a background tab throttles the frames that drive it, and
+				     a fast second navigation orphans it outright -- the node is never
+				     removed. That left the synth, the heaviest view on the site, mounted
+				     and laid out on every route visited after it: 576 grid cells still
+				     in the layout while lifelab was on screen, permanently. Style recalc
+				     is charged on the whole document, so every one of those strays was
+				     billed to every click anywhere, which is what made the site feel
+				     worse the longer it was used. Dropping out: makes the unmount
+				     immediate and unconditional. -->
 				{#key page.url.pathname}
-					<div class="flex-1 min-h-0 flex flex-col" in:fade={{ duration: 160, delay: 60 }} out:fade={{ duration: 90 }}>
+					<div class="flex-1 min-h-0 flex flex-col" in:fade={{ duration: 160, delay: 60 }}>
 						{@render children()}
 					</div>
 				{/key}
