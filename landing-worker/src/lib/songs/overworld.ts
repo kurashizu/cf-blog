@@ -8168,9 +8168,9 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     muted: false,
     solo: false,
 
-    osc1Waveform: 'sawtooth',
+    osc1Waveform: 'square',
     osc1Gain: 0.85,
-    osc2Waveform: 'sawtooth',
+    osc2Waveform: 'square',
     osc2Gain: 0.65,
     osc2Ratio: 1.0,
     detuneCents: -7,
@@ -8414,7 +8414,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
 
     osc1Waveform: 'square',
     osc1Gain: 0.85,
-    osc2Waveform: 'sawtooth',
+    osc2Waveform: 'square',
     osc2Gain: 0.35,
     osc2Ratio: 1.0,
     detuneCents: 10,

@@ -217,12 +217,12 @@ textarea {
 .custom-scrollbar::-webkit-scrollbar-thumb {
 	background-image: linear-gradient(
 		180deg,
-		#e06c75 0%,
-		#d19a66 20%,
-		#e5c07b 40%,
-		#98c379 60%,
-		#56b6c2 80%,
-		#c678dd 100%
+		#e06c75 0 16.66%,
+		#d19a66 16.66% 33.33%,
+		#e5c07b 33.33% 50%,
+		#98c379 50% 66.66%,
+		#56b6c2 66.66% 83.33%,
+		#c678dd 83.33% 100%
 	);
 	border-radius: 2px;
 	/* Inset from the track so the thumb reads as sitting in a gutter rather
@@ -243,12 +243,12 @@ textarea {
 .custom-scrollbar::-webkit-scrollbar-thumb:horizontal {
 	background-image: linear-gradient(
 		90deg,
-		#e06c75 0%,
-		#d19a66 20%,
-		#e5c07b 40%,
-		#98c379 60%,
-		#56b6c2 80%,
-		#c678dd 100%
+		#e06c75 0 16.66%,
+		#d19a66 16.66% 33.33%,
+		#e5c07b 33.33% 50%,
+		#98c379 50% 66.66%,
+		#56b6c2 66.66% 83.33%,
+		#c678dd 83.33% 100%
 	);
 }
 /* Both corners meet on a pane that scrolls in two directions; left unpainted
@@ -268,6 +268,64 @@ textarea {
 	   Chrome. */
 	scrollbar-gutter: stable;
 	scroll-behavior: smooth;
+}
+
+/* The same bar for every other scroller on the page.
+   .custom-scrollbar is applied by hand and a good few containers that scroll
+   -- the horizontal strips under the banners, the tab rail, the table panes --
+   never got it, so they kept the browser's default grey overlay while the ones
+   beside them were the accent ramp. Styling the element selectors covers those
+   without having to find and tag each one; .custom-scrollbar still exists for
+   the gutter reservation, which only makes sense where it was asked for. */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+::-webkit-scrollbar-track {
+	background: rgba(0, 0, 0, 0.4);
+	border-radius: 2px;
+}
+::-webkit-scrollbar-thumb {
+	background-image: linear-gradient(
+		180deg,
+		#e06c75 0 16.66%,
+		#d19a66 16.66% 33.33%,
+		#e5c07b 33.33% 50%,
+		#98c379 50% 66.66%,
+		#56b6c2 66.66% 83.33%,
+		#c678dd 83.33% 100%
+	);
+	border-radius: 2px;
+	border: 2px solid transparent;
+	background-clip: padding-box;
+	opacity: 0.55;
+}
+::-webkit-scrollbar-thumb:horizontal {
+	background-image: linear-gradient(
+		90deg,
+		#e06c75 0 16.66%,
+		#d19a66 16.66% 33.33%,
+		#e5c07b 33.33% 50%,
+		#98c379 50% 66.66%,
+		#56b6c2 66.66% 83.33%,
+		#c678dd 83.33% 100%
+	);
+}
+::-webkit-scrollbar-thumb:hover { opacity: 0.85; }
+::-webkit-scrollbar-thumb:active { opacity: 1; }
+::-webkit-scrollbar-corner { background: rgba(0, 0, 0, 0.4); }
+/* Re-stated after the global block above, which would otherwise give the tab
+   strip and the other deliberately-bare scrollers a visible bar: the class
+   exists precisely where a scrollbar is noise, and a class selector only wins
+   on specificity for the properties it actually sets. */
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+	width: 0;
+	height: 0;
+}
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
 
 /* Firefox only: it ignores ::-webkit-scrollbar entirely, and unlike Chrome its

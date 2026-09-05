@@ -32,8 +32,11 @@ export const TOOLS: ToolSpec[] = [
 				'computation the model cannot do reliably in its head — arithmetic on large ' +
 				'numbers, date arithmetic, string transformation. Do not use it to restate ' +
 				'something already known, and never to answer a question about an image. ' +
-				'The code runs in an isolated sandbox with no access to the page, the ' +
-				'network, or storage.',
+				'Never use it to draw, render, or produce a diagram, chart, or image: to ' +
+				'show a diagram, write a ```mermaid code block in your reply and it is ' +
+				'rendered for you. ' +
+				'The code runs in an isolated sandbox with no DOM and no access to the ' +
+				'page, the network, or storage.',
 			parameters: {
 				type: 'object',
 				properties: {

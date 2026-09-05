@@ -63,8 +63,15 @@
 >
 	<!-- ASCII brand & acronym breakdown -- pinned, not part of the scroll
 	     region below: the mark is the site's own identity, not a piece of
-	     content that should disappear the moment someone scrolls the panel. -->
-	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden">
+	     content that should disappear the moment someone scrolls the panel.
+
+	     The right margin matches the scrollbar gutter of the scroll region
+	     below. Being pinned means this panel sits directly in the column while
+	     the two below sit inside a scroller that reserves 10px for its bar -- so
+	     this one was drawn 10px wider and the three stopped lining up. A margin
+	     rather than a gutter of its own: there is nothing to scroll here, and
+	     scrollbar-gutter only applies to a scroll container. -->
+	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-[10px]">
 		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
 			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
 		</BoxHeader>

@@ -65,12 +65,9 @@
 	 * chrome ([SYSTEM ONLINE], [ERROR] Invalid input) instead of a greeting.
 	 */
 	const SYSTEM_PROMPT =
-		'You are a helpful assistant on krsz.in, a personal website. ' +
-		'You run entirely inside the visitor’s browser on their own hardware — no server sees this conversation. ' +
-		'You can see images the visitor sends, and you can run JavaScript with the run_js tool ' +
-		'whenever a calculation should be exact rather than guessed. ' +
-		'Reply in the language the conversation uses. ' +
-		'Never imitate a command line, and never invent system messages, status banners, or error codes.';
+		'A helpful assistant on krsz.in, running in the visitor’s browser. ' +
+		'run_js is for exact calculation only; for diagrams write a ```mermaid block. ' +
+		'Use the conversation’s language. Never act as a terminal.';
 
 	let phase = $state<Phase>('idle');
 	let gpu = $state<GpuSupport | null>(null);
@@ -884,14 +881,17 @@
 		</button>
 
 		{#if phase === 'ready' || phase === 'generating'}
+			<!-- Live during generation too: it only drops the pending
+			     attachments, which has nothing to do with the reply being
+			     streamed. Disabled, it greyed out to 40% at exactly the moment
+			     the two buttons beside it stayed lit, and read as broken. -->
 			<button
 				onclick={() => {
 					dropAttachments();
 					playSound('click');
 					inputEl?.focus();
 				}}
-				disabled={phase === 'generating'}
-				class="press px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10 disabled:opacity-40"
+				class="press px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10"
 			>
 				CLEAR
 			</button>

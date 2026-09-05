@@ -510,7 +510,15 @@
 			if (!termEl) throw new Error('the terminal has nowhere to draw');
 
 			term = new xtermMod.Terminal({
-				fontSize: 15,
+				// Same face as the rest of the site. xterm takes its font as an
+				// option rather than inheriting from CSS, so without this the
+				// emulator's console was the one surface still in xterm's own
+				// default monospace.
+				fontFamily: "'Jelly Pixel', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+				// 12, not 15: the face is drawn on a 12px grid and is only exactly
+				// sharp at whole multiples of it, and a terminal is the one place
+				// where every glyph being crisp matters most.
+				fontSize: 12,
 				theme: { background: '#000000', foreground: '#d8dee9' },
 				convertEol: false,
 				cursorBlink: true
@@ -794,7 +802,7 @@
 		// guessing the font's advance — whichever monospace the browser picks,
 		// two passes land on the target.
 		const cols = term.cols ?? 0;
-		const current = term.options.fontSize ?? 15;
+		const current = term.options.fontSize ?? 12;
 		if (!cols || Math.abs(cols - TARGET_COLS) <= 4) return;
 		const next = Math.max(12, Math.min(MAX_FONT_PX, Math.round((current * cols) / TARGET_COLS)));
 		if (next === current) return;

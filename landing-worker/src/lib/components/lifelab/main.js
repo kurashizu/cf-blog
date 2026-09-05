@@ -1061,11 +1061,37 @@ function bindInput() {
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
+  /* Trackpad two-finger scroll pans; ctrl/cmd + wheel (which is also what a
+     trackpad pinch reports) zooms.
+     Every wheel event used to zoom, so a two-finger swipe -- the ordinary way
+     to move around anything on a laptop -- shot the board in and out instead
+     of moving it, and there was no way to pan on the X axis at all without
+     picking up the PAN tool and dragging.
+     A mouse wheel still zooms: it reports large deltaY in whole notches with
+     no deltaX, which is the shape checked for below. */
   cv.addEventListener('wheel', e => {
-  e.preventDefault();
-  const r = cv.getBoundingClientRect();
-  zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0012));
-}, { passive: false });
+    e.preventDefault();
+    const r = cv.getBoundingClientRect();
+
+    // Pinch on a trackpad arrives as ctrlKey + wheel; cmd is the same gesture
+    // by keyboard. Both mean zoom whatever the device.
+    if (e.ctrlKey || e.metaKey) {
+      zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0012));
+      return;
+    }
+
+    /* Anything else pans -- including a plain mouse wheel, which pans
+       vertically the way a wheel does over any other scrollable thing.
+       Distinguishing wheel from trackpad by delta size was tried and is not
+       reliable: Chrome reports deltaMode 0 for both, and a slow wheel notch
+       looks exactly like a trackpad swipe. Zoom stays on the gesture that
+       unambiguously means zoom: ctrl/cmd + wheel, which is also exactly what
+       a trackpad pinch reports, plus the two-finger pinch handled above. */
+
+    S.cam.x -= e.deltaX;
+    S.cam.y -= e.deltaY;
+    clampCam();
+  }, { passive: false });
 
   onKeyDown = e => {
   // A dialog is modal: the mode chooser, the shop, and the win/fail boxes all

@@ -55,12 +55,19 @@
 
 		const render = () => {
 			animId = requestAnimationFrame(render);
+			/* Only the visualizer on screen is drawn.
+			   All three canvases were repainted every frame although the markup
+			   only ever shows one -- two thirds of the work went into elements
+			   the tab had hidden. Pulling the analyser data is skipped with them
+			   when nothing is visible at all. */
+			const shown = fftCanvas?.isConnected || waveCanvas?.isConnected || loudnessCanvas?.isConnected;
+			if (!shown) return;
 			const isMuted = $soundState.muted;
 			const freqData = sound.getByteFrequencyData();
 			const timeData = sound.getByteTimeDomainData();
 
 			// FFT log-frequency spectrum
-			if (fftCanvas && fftCtx) {
+			if (activeOutVisualizer === 'fft' && fftCanvas && fftCtx) {
 				fitCanvas(fftCanvas, fftCtx);
 				const w = fftCanvas.width;
 				const h = fftCanvas.height;
@@ -126,7 +133,7 @@
 			}
 
 			// Oscilloscope
-			if (waveCanvas && waveCtx) {
+			if (activeOutVisualizer === 'scope' && waveCanvas && waveCtx) {
 				fitCanvas(waveCanvas, waveCtx);
 				const w = waveCanvas.width;
 				const h = waveCanvas.height;
@@ -197,7 +204,7 @@
 			// RMS loudness meter/history
 			const loudCtx = loudnessCanvas?.getContext('2d');
 			fitCanvas(loudnessCanvas, loudCtx);
-			if (loudnessCanvas && loudCtx) {
+			if (activeOutVisualizer === 'loudness' && loudnessCanvas && loudCtx) {
 				const w = loudnessCanvas.width;
 				const h = loudnessCanvas.height;
 				loudCtx.clearRect(0, 0, w, h);
