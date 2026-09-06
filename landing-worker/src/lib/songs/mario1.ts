@@ -396,10 +396,58 @@ const GRIDS: Record<number, number[][]> = {
   4: MARIO1_TRK5_GRID,
 };
 
+/* The noise channel, from the game's NoiseBeatHandler (smbdis.asm): three
+   beats, each a fixed register triplet.
+
+     short   $400C=$1C  $400E=$03  $400F=$18   white noise,  2 frames ( 33 ms)
+     strong  $400C=$1C  $400E=$0C  $400F=$18   low noise,    2 frames ( 33 ms)
+     long    $400C=$1C  $400E=$03  $400F=$58   white noise, 10 frames (167 ms)
+
+   $1C is volume 12 with the envelope off: a flat burst that the length
+   counter cuts dead, no decay curve at all. Period $03 clocks the LFSR at
+   56 kHz -- flat across the audio band -- and $0C at 2.3 kHz, which is the
+   same generator heard through a ~1 kHz low-pass. Decoding the ground-music
+   noise data (lead-in: $31 $90 $31 $90 $31 $71 $31 $90 $90 $90) puts long
+   beats where this transcription has idx 55 and short beats where it has
+   idx 40, step for step, so those two keys carry those two sounds. The
+   strong beat opens part 2C ($21) and has no note here; it is on C2 so the
+   kit is complete and the pattern is untouched.
+
+   Flat-then-cut is sustain 1 with the grid run as the hold: 4 steps at
+   105 BPM is 95 ms, plus a 70 ms release for the long beat's 167; the short
+   beat's 2 steps are 48 ms against the hardware's 33, as close as the grid
+   gets. The long key sits 2 dB under unity to cancel the +2 accent every one
+   of its hits carries -- the chip plays both at the same volume. */
+const NES_NOISE: Partial<TrackData> = {
+  osc1Waveform: 'noise', osc1Gain: 1.0,
+  osc2Waveform: 'triangle', osc2Gain: 0.0, osc2Ratio: 1, detuneCents: 0, phaseOffset: 0, osc2Semitone: 0,
+  pulseWidth: 50, subOscGain: 0.0, noiseGain: 0.0, noiseRetrig: 1, noiseRetrigGap: 12,
+  blendMode: 'layer', morphAmount: 0.0, glideTime: 0, xfade: 0.5,
+  filterType: 'lowpass', cutoff: 12000, resonance: 0.2, envFilterMod: 0.0, keyTracking: 0.0,
+  attack: 0.001, decay: 0.01, sustain: 1.0, release: 0.01,
+  ampAttack: 0.001, ampDecay: 0.01, ampSustain: 1.0, ampRelease: 0.01,
+  filterAttack: 0.001, filterDecay: 0.01, filterSustain: 0.0, filterRelease: 0.01, filterEnvAmount: 0.0,
+  pitchAttack: 0.001, pitchDecay: 0.01, pitchEnvAmount: 0.0,
+  lfoWaveform: 'sine', lfoRate: 1.0, lfoPitchAmt: 0.0, lfoCutoffAmt: 0.0, lfoPanAmt: 0.0, lfoAmpAmt: 0.0, lfoFadeTime: 0,
+  airGain: 0.0,
+};
+
+export const SMB1_NOISE_KEYS: Record<number, Partial<TrackData>> = {
+  40: { ampRelease: 0.01, release: 0.01 },                                   // G#4 short beat
+  55: { osc1Gain: 0.79, ampRelease: 0.07, release: 0.07 },                   // F3  long beat
+  // KEY TRK 1 at C2 slows the noise buffer to a quarter rate, which is the
+  // nearest this engine gets to the slow LFSR (amplitude intact, unlike a
+  // filter alone, which lost 7 dB); the low-pass is scaled by the same key
+  // tracking, so 4800 here is ~1.2 kHz at C2.
+  72: { keyTracking: 1, filterType: 'lowpass', cutoff: 4800, resonance: 1, ampRelease: 0.01, release: 0.01 }, // C2 strong beat
+};
+
 // Same 6-track kit as the SMB3 songs — loadBuiltInSong deep-copies, so sharing
-// the track parameter objects here is safe.
+// the track parameter objects here is safe. TRK 4 is the exception: it is the
+// NES noise channel in percussion mode, one sound per key.
 export const MARIO1_TRACKS: TrackData[] = OVERWORLD_TRACKS.map((t) => ({
   ...t,
+  ...(t.id === 3 ? { ...NES_NOISE, percussion: true, keyTimbres: SMB1_NOISE_KEYS } : {}),
   grid: GRIDS[t.id] ?? EMPTY_GRID_3840,
   accents: t.id === 3 ? MARIO1_TRK4_ACCENTS : EMPTY_ACCENTS_3840,
 }));

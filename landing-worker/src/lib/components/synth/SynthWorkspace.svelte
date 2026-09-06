@@ -32,7 +32,7 @@
 		<div class="flex flex-col xl:flex-1 xl:min-h-0 xl:grid xl:grid-cols-[250px_minmax(0,1fr)] gap-1.5 xl:overflow-hidden">
 			<!-- Modules 1-3: own scrollable group — natural content height is the floor (never overlaps),
 			     extra vertical space distributes 5:3:3 so tall screens fill instead of leaving whitespace -->
-			<div data-tour="synth-side" class="order-2 xl:order-1 flex flex-col gap-1.5 min-w-[260px] xl:min-w-0 xl:h-full xl:overflow-y-auto custom-scrollbar pr-0.5">
+			<div data-tour="synth-side" class="order-2 xl:order-1 flex flex-col gap-1.5 min-w-[260px] xl:min-w-0 xl:h-full xl:overflow-y-auto overflow-x-hidden custom-scrollbar pr-0.5">
 				<Module1Oscillators />
 				<Module2TimbreFusion />
 				<Module3Filter />

@@ -220,6 +220,13 @@ export interface TrackData {
   // Modular Modulation Matrix Routing (Optional legacy support)
   modRoutes?: ModRoute[];
 
+  /* Percussion mode: every key can carry its own sound. keyTimbres is sparse --
+     a key with no entry plays the track's own timbre -- and each entry holds
+     only the fields that differ, so a kit of eight sounds stays small in a
+     patch or a share link. Off, the table is kept but ignored. */
+  percussion?: boolean;
+  keyTimbres?: Record<number, Partial<TrackData>>;
+
   // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes) & Accents (0 = Off, 1 = +3dB, 2 = +6dB)
   grid: number[][];
   accents: (number | boolean)[];
@@ -315,6 +322,36 @@ export const PIANO_ROLL_NOTES = [
   { note: 'A#0', freq: 29.14, isBlack: true, oct: 0 },  // 86
   { note: 'A0', freq: 27.5, isBlack: false, oct: 0 },  // 87
 ];
+
+/* The fields that make up a sound, as opposed to where the track sits in the
+   mix (volume, pan, mute, solo), what it plays (grid, accents) or what it is
+   (id, name, colour). The per-track EQ is a bus effect and stays with the
+   track. This is what a preset carries and what a percussion key can override. */
+export const KEY_TIMBRE_KEYS = [
+  'osc1Waveform', 'osc1Gain', 'osc2Waveform', 'osc2Gain', 'osc2Ratio', 'detuneCents', 'phaseOffset',
+  'osc2Semitone', 'pulseWidth', 'subOscGain', 'noiseGain', 'noiseRetrig', 'noiseRetrigGap',
+  'blendMode', 'morphAmount', 'glideTime', 'xfade',
+  'filterType', 'cutoff', 'resonance', 'envFilterMod', 'keyTracking',
+  'attack', 'decay', 'sustain', 'release',
+  'ampAttack', 'ampDecay', 'ampSustain', 'ampRelease',
+  'filterAttack', 'filterDecay', 'filterSustain', 'filterRelease', 'filterEnvAmount',
+  'pitchAttack', 'pitchDecay', 'pitchEnvAmount',
+  'lfoWaveform', 'lfoRate', 'lfoPitchAmt', 'lfoCutoffAmt', 'lfoPanAmt', 'lfoAmpAmt', 'lfoFadeTime',
+  'lfoDepth', 'lfoTarget', 'airGain'
+] as const satisfies readonly (keyof TrackData)[];
+
+export type KeyTimbreKey = (typeof KEY_TIMBRE_KEYS)[number];
+
+export function isKeyTimbreKey(k: string): k is KeyTimbreKey {
+  return (KEY_TIMBRE_KEYS as readonly string[]).includes(k);
+}
+
+/** The sound a given key plays on a track: the track's own, overlaid with that key's entry in percussion mode. */
+export function effectiveTimbre(track: TrackData, noteIndex: number): TrackData {
+  if (!track.percussion) return track;
+  const kt = track.keyTimbres?.[noteIndex];
+  return kt ? { ...track, ...kt } : track;
+}
 
 export const INITIAL_TRACKS: TrackData[] = OVERWORLD_FULL_TRACKS;
 
@@ -803,12 +840,29 @@ class ModularSynth {
     }
   }
 
+  /* Additive, like a mixer: solo is "only this set", and hearing kick and
+     snare together is the common case. Playback already treated it that way;
+     only this entry point used to clear the others. */
   public toggleTrackSolo(trackId: number) {
-    if (this.tracks[trackId]) {
-      const current = this.tracks[trackId].solo;
-      this.tracks.forEach((t) => (t.solo = false));
-      this.tracks[trackId].solo = !current;
-    }
+    if (this.tracks[trackId]) this.tracks[trackId].solo = !this.tracks[trackId].solo;
+  }
+
+  public updateKeyTimbre(trackId: number, noteIndex: number, partial: Partial<TrackData>) {
+    const trk = this.tracks[trackId];
+    if (!trk) return;
+    const table = { ...(trk.keyTimbres ?? {}) };
+    const picked: Record<string, unknown> = { ...(table[noteIndex] ?? {}) };
+    for (const [k, v] of Object.entries(partial)) if (isKeyTimbreKey(k)) picked[k] = v;
+    table[noteIndex] = picked as Partial<TrackData>;
+    this.tracks[trackId] = { ...trk, keyTimbres: table };
+  }
+
+  public clearKeyTimbre(trackId: number, noteIndex: number) {
+    const trk = this.tracks[trackId];
+    if (!trk?.keyTimbres?.[noteIndex]) return;
+    const table = { ...trk.keyTimbres };
+    delete table[noteIndex];
+    this.tracks[trackId] = { ...trk, keyTimbres: table };
   }
 
   public getBpm(): number {
@@ -1040,12 +1094,15 @@ class ModularSynth {
   }
 
   public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number, rawVelocity?: number) {
-    const track = this.tracks[trackId];
+    const trackRow = this.tracks[trackId];
     // Muting silences live playback, but must not silence an offline render.
-    if (!track || (!this.renderCtx && soundEngine.isMuted())) return;
+    if (!trackRow || (!this.renderCtx && soundEngine.isMuted())) return;
 
     const noteInfo = PIANO_ROLL_NOTES[noteIndex];
     if (!noteInfo) return;
+
+    // In percussion mode the key decides the sound; everything below reads the merged timbre.
+    const track = effectiveTimbre(trackRow, noteIndex);
 
     const acc = typeof accentLevel === 'boolean' ? (accentLevel ? 1 : 0) : (accentLevel || 0);
 

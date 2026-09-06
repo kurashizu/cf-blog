@@ -3,7 +3,7 @@ import { browser } from '$app/environment';
 import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-codec';
 import { playSound } from '../sound';
 import { modularSynth, type TrackData, type TimeSignature } from '../synth';
-import { isPresetFile, applyPresetFile } from './synth-presets';
+import { isPresetFile, applyPresetFile, isKitFile, applyKitFile } from './synth-presets';
 import {
 	bpm,
 	setBpm,
@@ -134,8 +134,10 @@ function applyPatchData(raw: SynthPatchData): void {
 		data.tracks.forEach((tData) => {
 			// Patches predating per-track EQ carry no eq fields — reset to flat instead
 			// of leaving whatever the previous song had on the live filter chains.
+			// Likewise percussion mode: a patch that predates it, or one saved with
+			// it off, must not inherit the live track's key table.
 			if (tData.id !== undefined)
-				modularSynth.updateTrack(tData.id, { eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], ...tData });
+				modularSynth.updateTrack(tData.id, { eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], percussion: false, keyTimbres: {}, ...tData });
 		});
 		refreshTracks();
 	}
@@ -264,6 +266,10 @@ export function handleImportPatchFile(file: File): void {
 			// treating it as a (trackless, so silent) patch.
 			if (isPresetFile(parsed)) {
 				applyPresetFile(parsed);
+				return;
+			}
+			if (isKitFile(parsed)) {
+				applyKitFile(parsed);
 				return;
 			}
 			applyPatchData(parsed);

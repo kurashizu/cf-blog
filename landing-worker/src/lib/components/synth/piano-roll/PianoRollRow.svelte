@@ -17,6 +17,10 @@
 		activeSubCol,
 		timeMeter,
 		snapDiv,
+		percussion = false,
+		isActiveKey = false,
+		isCustomKey = false,
+		onResetKey,
 		onAudition,
 		onCellClick,
 		onSubCellClick
@@ -29,6 +33,11 @@
 		activeSubCol: number;
 		timeMeter: TimeSignature;
 		snapDiv: NoteDurationDiv;
+		/** Percussion mode: the label shows which keys carry their own sound and which one the racks edit. */
+		percussion?: boolean;
+		isActiveKey?: boolean;
+		isCustomKey?: boolean;
+		onResetKey?: (noteIdx: number) => void;
 		onAudition: (noteIdx: number) => void;
 		onCellClick: (noteIdx: number, colIdx: number) => void;
 		onSubCellClick: (noteIdx: number, colIdx: number, subCol: number) => void;
@@ -89,13 +98,25 @@
 	<button
 		type="button"
 		onclick={() => onAudition(actualIdx)}
-		title={`Audition ${nInfo.note} (${Math.round(nInfo.freq)}Hz)`}
-		class="w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 {isRootC
+		oncontextmenu={(e) => {
+			if (!percussion || !onResetKey) return;
+			e.preventDefault();
+			onResetKey(actualIdx);
+		}}
+		title={percussion
+			? `${nInfo.note} — click to audition and edit this key${isCustomKey ? ' (has its own sound; right-click to drop it)' : ' (plays the track sound)'}`
+			: `Audition ${nInfo.note} (${Math.round(nInfo.freq)}Hz)`}
+		class="w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end gap-0.5 select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 {isActiveKey
+			? 'ring-1 ring-[#c678dd] shadow-[0_0_6px_rgba(198,120,221,0.6)]'
+			: ''} {isRootC
 			? 'bg-[#56b6c2]/30 text-[#56b6c2] border border-[#56b6c2]/40 hover:bg-[#56b6c2]/50'
 			: nInfo.isBlack
 				? 'bg-black/90 text-[#e5c07b] border-r border-white/20 hover:bg-neutral-900'
 				: 'bg-white/10 text-[#eceff4] hover:bg-white/20'}"
 	>
+		{#if isCustomKey}
+			<span class="w-1 h-1 rounded-full bg-[#c678dd] shrink-0" aria-hidden="true"></span>
+		{/if}
 		{nInfo.note}
 	</button>
 

@@ -40432,7 +40432,7 @@ export const OVERWORLD_FULL_TRACKS: TrackData[] = [
     detuneCents: 14,
     phaseOffset: 45,
     osc2Semitone: 0,
-    pulseWidth: 25,
+    pulseWidth: 50,
     subOscGain: 0.0,
     noiseGain: 0,
 
@@ -40551,10 +40551,10 @@ export const OVERWORLD_FULL_TRACKS: TrackData[] = [
     osc2Ratio: 0.5,
     detuneCents: 0,
     phaseOffset: 0,
-    osc2Semitone: -12,
+    osc2Semitone: 0,
     pulseWidth: 50,
-    subOscGain: 0.2,
-    noiseGain: 1.0,
+    subOscGain: 0,
+    noiseGain: 0,
 
     blendMode: 'layer',
     morphAmount: 0.0,
@@ -40613,7 +40613,7 @@ export const OVERWORLD_FULL_TRACKS: TrackData[] = [
     phaseOffset: 0,
     osc2Semitone: 0,
     pulseWidth: 50,
-    subOscGain: 0.45,
+    subOscGain: 0,
     noiseGain: 0,
 
     blendMode: 'layer',
@@ -40671,8 +40671,8 @@ export const OVERWORLD_FULL_TRACKS: TrackData[] = [
     osc2Ratio: 1.0,
     detuneCents: 10,
     phaseOffset: 45,
-    osc2Semitone: 12,
-    pulseWidth: 15,
+    osc2Semitone: 0,
+    pulseWidth: 50,
     subOscGain: 0.0,
     noiseGain: 0.0,
 

@@ -1,5 +1,16 @@
 import { writable, derived, get } from 'svelte/store';
-import { modularSynth, METER_SPECS, divToColumnSpan, divToStepSpan, stepsPerColumn, ternaryColFactor, type TrackData } from '../synth';
+import {
+	modularSynth,
+	METER_SPECS,
+	PIANO_ROLL_NOTES,
+	divToColumnSpan,
+	divToStepSpan,
+	stepsPerColumn,
+	ternaryColFactor,
+	effectiveTimbre,
+	isKeyTimbreKey,
+	type TrackData
+} from '../synth';
 import {
 	activeTrackId,
 	snapDiv,
@@ -17,7 +28,22 @@ export const overlayTrackIds = writable<number[]>([0, 1, 2, 3]);
 /** trackId-noteIndex -> held note, from mouse/touch keyboard presses or live MIDI input. */
 export const manualHeldNotes = writable<Map<string, { trackId: number; noteIdx: number }>>(new Map());
 
+/* The key the racks edit in percussion mode: whichever key was last placed on
+   the roll, auditioned from its label, or pressed on the keyboard (mouse,
+   QWERTY or MIDI). Outside percussion mode it is only informational. */
+export const activeKey = writable<number>(48); // C4
+
+/** The racks read this: the active track, seen through the active key when the track is in percussion mode. */
 export const currentTrack = derived(
+	[tracksState, activeTrackId, activeKey],
+	([$tracksState, $activeTrackId, $activeKey]) => {
+		const trk = $tracksState[$activeTrackId] || $tracksState[0];
+		return trk ? effectiveTimbre(trk, $activeKey) : trk;
+	}
+);
+
+/** The active track row itself, without the key overlay. */
+export const activeTrackRow = derived(
 	[tracksState, activeTrackId],
 	([$tracksState, $activeTrackId]) => $tracksState[$activeTrackId] || $tracksState[0]
 );
@@ -39,13 +65,61 @@ function refreshTracks(): void {
 	tracksState.set([...modularSynth.getTracks()]);
 }
 
+export function noteNameOf(noteIndex: number): string {
+	return PIANO_ROLL_NOTES[noteIndex]?.note ?? `#${noteIndex}`;
+}
+
+/**
+ * Edit the active track. In percussion mode the sound fields go to the active
+ * key's entry and everything else (volume, pan, EQ, name...) to the track row,
+ * so the racks, the presets and RST all work per key without knowing about it.
+ */
 export function updateActiveTrack(partial: Partial<TrackData>): void {
-	modularSynth.updateTrack(get(activeTrackId), partial);
+	const id = get(activeTrackId);
+	const trk = modularSynth.getTrack(id);
+	if (trk?.percussion) {
+		const key = get(activeKey);
+		const toKey: Record<string, unknown> = {};
+		const toTrack: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(partial)) (isKeyTimbreKey(k) ? toKey : toTrack)[k] = v;
+		if (Object.keys(toKey).length) modularSynth.updateKeyTimbre(id, key, toKey as Partial<TrackData>);
+		if (Object.keys(toTrack).length) modularSynth.updateTrack(id, toTrack as Partial<TrackData>);
+	} else {
+		modularSynth.updateTrack(id, partial);
+	}
 	refreshTracks();
 }
 
 export function updateTrack(trackId: number, partial: Partial<TrackData>): void {
 	modularSynth.updateTrack(trackId, partial);
+	refreshTracks();
+}
+
+export function toggleTrackPercussion(trackId: number): void {
+	const trk = modularSynth.getTrack(trackId);
+	if (!trk) return;
+	// The key table survives a round trip through off, so a mis-click does not lose a kit.
+	modularSynth.updateTrack(trackId, { percussion: !trk.percussion, keyTimbres: trk.keyTimbres ?? {} });
+	refreshTracks();
+}
+
+export function keyIsCustomised(trk: TrackData | undefined, noteIndex: number): boolean {
+	const kt = trk?.keyTimbres?.[noteIndex];
+	return !!kt && Object.keys(kt).length > 0;
+}
+
+/** Drop a key's own sound so it plays the track timbre again. */
+export function resetKeyTimbre(trackId: number, noteIndex: number): void {
+	modularSynth.clearKeyTimbre(trackId, noteIndex);
+	refreshTracks();
+}
+
+/** Replace the active track's whole key table (a kit) and switch percussion on. */
+export function applyKitToActiveTrack(keys: Record<number, Partial<TrackData>>): void {
+	const id = get(activeTrackId);
+	const copy: Record<number, Partial<TrackData>> = {};
+	for (const [k, v] of Object.entries(keys)) copy[Number(k)] = { ...v };
+	modularSynth.updateTrack(id, { percussion: true, keyTimbres: copy });
 	refreshTracks();
 }
 
@@ -73,6 +147,7 @@ export function handlePianoRollCellClick(noteIndex: number, colIndex: number): v
 	const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
 	const trackId = get(activeTrackId);
 	const startStep = currentGlobalCol(snappedCol) * stepsPerColumn(snap);
+	activeKey.set(noteIndex);
 	placeOrClearNote(trackId, noteIndex, startStep);
 }
 
@@ -81,6 +156,7 @@ export function handlePianoRollSubCellClick(noteIndex: number, colIndex: number,
 	const spc = stepsPerColumn(snap);
 	const trackId = get(activeTrackId);
 	const startStep = currentGlobalCol(colIndex) * spc + subCol * (spc / 2);
+	activeKey.set(noteIndex);
 	placeOrClearNote(trackId, noteIndex, startStep);
 }
 
@@ -121,6 +197,7 @@ export function cycleAccent(step: number): void {
 }
 
 export function holdManualNote(trackId: number, noteIdx: number, velocity = 100): void {
+	if (trackId === get(activeTrackId)) activeKey.set(noteIdx);
 	modularSynth.noteOn(trackId, noteIdx, velocity);
 	manualHeldNotes.update((prev) => {
 		const next = new Map(prev);

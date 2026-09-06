@@ -2,7 +2,7 @@
 	import { playSound } from '../../../sound';
 	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId } from '../../../stores/synth-transport';
-	import { currentTrack, visibleTracks, tracksState, handlePianoRollCellClick, handlePianoRollSubCellClick, cycleAccent } from '../../../stores/synth-tracks';
+	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, handlePianoRollCellClick, handlePianoRollSubCellClick, cycleAccent } from '../../../stores/synth-tracks';
 	import PianoRollRow from './PianoRollRow.svelte';
 
 	let octaveFrom = $state(3);
@@ -52,9 +52,18 @@
 	}
 
 	function auditionNote(idx: number) {
+		activeKey.set(idx);
 		modularSynth.triggerTrackVoice($activeTrackId, idx, 0);
 		playSound('click');
 	}
+
+	function resetKey(idx: number) {
+		resetKeyTimbre($activeTrackId, idx);
+		playSound('click');
+	}
+
+	let percussion = $derived(!!$activeTrackRow?.percussion);
+	let activeKeyCustom = $derived(keyIsCustomised($activeTrackRow, $activeKey));
 
 	function jumpRulerCursor(step: number) {
 		cursorStep.set(step);
@@ -75,6 +84,12 @@
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
 		<div class="flex items-center gap-2">
 			<span class="font-black text-xs" style="color: {$currentTrack.color}">PIANO ROLL // {$currentTrack.name}</span>
+			{#if percussion}
+				<!-- Which key the racks are editing, and whether it has its own sound yet -->
+				<span class="text-xs font-mono font-bold text-[#c678dd]" title={activeKeyCustom ? `Racks are editing ${noteNameOf($activeKey)}'s own sound. Right-click a key label to drop its sound.` : `Racks are editing ${noteNameOf($activeKey)}; it still plays the track's sound until you change something.`}>
+					KEY {noteNameOf($activeKey)} {activeKeyCustom ? '●' : '○'}
+				</span>
+			{/if}
 			<span class="text-xs text-[#98c379] font-mono font-bold">
 				BAR {Math.floor($seqCurrentStep / stepsPerPage) + 1}.{Math.floor(($seqCurrentStep % stepsPerPage) / (stepsPerPage / meterSpec.beatsPerBar)) + 1} (STEP {$seqCurrentStep + 1}/{$totalPatternSteps})
 			</span>
@@ -219,6 +234,10 @@
 						{activeSubCol}
 						timeMeter={$timeMeter}
 						snapDiv={$snapDiv}
+						{percussion}
+						isActiveKey={percussion && $activeKey === actualIdx}
+						isCustomKey={percussion && keyIsCustomised($activeTrackRow, actualIdx)}
+						onResetKey={resetKey}
 						onAudition={auditionNote}
 						onCellClick={handlePianoRollCellClick}
 						onSubCellClick={handlePianoRollSubCellClick}
