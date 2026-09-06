@@ -9,11 +9,12 @@ import chatbot from './chatbot';
 import vm from './vm';
 import lmspace from './lmspace';
 import community from './community';
+import lifelab from './lifelab';
 
 /* One file per area so parallel work never collides; merged flat here. Keys
    are namespaced by area (`synth.transport.play`), so a collision means two
    areas claimed the same name -- the dev-time check below says which. */
-const AREAS: Messages[] = [common, chrome, home, synth, synthPanels, utilities, chatbot, vm, lmspace, community];
+const AREAS: Messages[] = [common, chrome, home, synth, synthPanels, utilities, chatbot, vm, lmspace, community, lifelab];
 
 function merge(locale: keyof Messages): Dict {
 	const out: Dict = {};

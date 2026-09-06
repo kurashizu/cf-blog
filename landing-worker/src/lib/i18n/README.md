@@ -21,7 +21,7 @@ A key missing in a locale falls back to English, then to the key; dev mode logs 
 
 ## Message files
 
-`src/lib/i18n/messages/<area>.ts`, one per area (`chrome`, `home`, `synth`, `synth-panels`, `utilities`, `chatbot`, `vm`, `lmspace`, `community`, `common`). Only edit the file for your area. Never edit `messages/index.ts`.
+`src/lib/i18n/messages/<area>.ts`, one per area (`chrome`, `home`, `synth`, `synth-panels`, `utilities`, `chatbot`, `vm`, `lmspace`, `community`, `lifelab`, `common`). Only edit the file for your area. Never edit `messages/index.ts`.
 
 Rules for the file (the check script depends on them):
 
