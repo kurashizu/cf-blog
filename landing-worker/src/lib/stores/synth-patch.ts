@@ -1,3 +1,4 @@
+import { SPAIN_STEPS } from '../songs/spain';
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-codec';
@@ -31,7 +32,8 @@ export const BUILTIN_SONGS: BuiltinSong[] = [
 	{ id: 'MARIO_1', name: 'SMB1 - OVERWORLD', steps: 3840, bpm: 105, meter: '4/4' },
 	{ id: 'UNDERWATER', name: 'SMB1 - UNDERWATER', steps: 2304, bpm: 100, meter: '6/8' },
 	{ id: 'OVERWORLD_1', name: 'SMB3 - OVERWORLD 1', steps: 10080, bpm: 150, meter: '4/4' },
-	{ id: 'OVERWORLD_2', name: 'SMB3 - OVERWORLD 2', steps: 2016, bpm: 90, meter: '4/4' }
+	{ id: 'OVERWORLD_2', name: 'SMB3 - OVERWORLD 2', steps: 2016, bpm: 90, meter: '4/4' },
+	{ id: 'SPAIN', name: 'CHICK COREA - SPAIN', steps: SPAIN_STEPS, bpm: 115, meter: '4/4' }
 ];
 
 // Must match the synth's boot state (INITIAL_TRACKS / bpm / totalSteps), otherwise the

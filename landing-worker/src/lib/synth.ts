@@ -3,6 +3,7 @@ import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
 import { MARIO1_TRACKS } from './songs/mario1';
+import { SPAIN_TRACKS, SPAIN_STEPS } from './songs/spain';
 
 export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
 
@@ -748,6 +749,12 @@ class ModularSynth {
       this.totalSteps = 2304;
       this.bpm = 100;
       this.meter = '6/8';
+    } else if (songName === 'SPAIN') {
+      // spain.ts is authored natively on the 1/24-beat grid, in half time (see the file).
+      this.tracks = JSON.parse(JSON.stringify(SPAIN_TRACKS));
+      this.totalSteps = SPAIN_STEPS;
+      this.bpm = 115;
+      this.meter = '4/4';
     } else if (songName === 'MARIO_1') {
       // mario1.ts is authored natively on the 1/24-beat grid (swing preserved).
       this.tracks = JSON.parse(JSON.stringify(MARIO1_TRACKS));
