@@ -124,7 +124,7 @@
 		<div class="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="TIME" value={Math.round($delayTime * 1000)} min={50} max={800} step={10} unit="ms" color="#e06c75" size={40} reset={300} onChange={(v) => setDelayTime(v / 1000)} />
+					<RotaryKnob label="TIME" value={Math.round($delayTime * 1000)} min={50} max={800} step={10} unit="ms" color="#e06c75" size={40} description="Delay Time — Milliseconds between the dry signal and its first echo" reset={300} onChange={(v) => setDelayTime(v / 1000)} />
 				</div>
 				<div class="col-span-2 flex justify-center">
 					<RotaryKnob label="FDBK" value={Math.round($delayFeedback * 100)} min={0} max={85} step={5} unit="%" color="#e06c75" size={40} reset={0} onChange={(v) => setDelayFeedback(v / 100)} />
@@ -235,7 +235,19 @@
 			<div class="grid grid-cols-6 gap-0.5 items-end flex-1 min-h-0 pt-0.5 px-0.5">
 				{#each EQ_6_BANDS as band, idx (band.id)}
 					<div class="flex flex-col items-center justify-between h-full">
-						<HardwareFader label={band.label} value={trackEqGains[idx] ?? 0} min={-12} max={12} step={0.5} unit="dB" color={band.color} height={48} reset={0} onChange={(v) => setBand(idx, v)} />
+						<HardwareFader
+							label={band.label}
+							value={trackEqGains[idx] ?? 0}
+							min={-12}
+							max={12}
+							step={0.5}
+							unit="dB"
+							color={band.color}
+							height={48}
+							description={`${band.type === 'lowshelf' ? 'Low Shelf' : band.type === 'highshelf' ? 'High Shelf' : 'Peaking Band'} — Boost/cut around ${band.label}Hz`}
+							reset={0}
+							onChange={(v) => setBand(idx, v)}
+						/>
 					</div>
 				{/each}
 			</div>

@@ -1,4 +1,5 @@
 import { SPAIN_STEPS } from '../songs/spain';
+import { TAKE_FIVE_STEPS } from '../songs/take-five';
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-codec';
@@ -35,7 +36,8 @@ export const BUILTIN_SONGS: BuiltinSong[] = [
 	{ id: 'UNDERWATER', name: 'SMB1 - UNDERWATER', steps: 2304, bpm: 100, meter: '6/8' },
 	{ id: 'OVERWORLD_1', name: 'SMB3 - OVERWORLD 1', steps: 10080, bpm: 150, meter: '4/4' },
 	{ id: 'OVERWORLD_2', name: 'SMB3 - OVERWORLD 2', steps: 2016, bpm: 90, meter: '4/4' },
-	{ id: 'SPAIN', name: 'CHICK COREA - SPAIN', steps: SPAIN_STEPS, bpm: 115, meter: '4/4' }
+	{ id: 'SPAIN', name: 'C.COREA - SPAIN', steps: SPAIN_STEPS, bpm: 115, meter: '4/4' },
+	{ id: 'TAKE_FIVE', name: 'D.BRUBECK - TAKE FIVE', steps: TAKE_FIVE_STEPS, bpm: 180, meter: '5/4' }
 ];
 
 // Must match the synth's boot state (INITIAL_TRACKS / bpm / totalSteps), otherwise the
@@ -188,13 +190,29 @@ export function handleLoadPatch(): void {
 	}
 }
 
-export function handleExportPatch(): void {
+/* The patch's sequencer grids are mostly empty-array cells, repeated thousands
+   of times, so plain JSON is almost all redundant text -- gzip typically
+   shrinks it 20-50x, the same ratio the #patch= share link relies on
+   (share-codec.ts uses deflate-raw for the URL; this uses gzip proper, with
+   its header, so the file opens with any system unzip tool, not just here). */
+export async function handleExportPatch(): Promise<void> {
 	const patch = gatherPatchData();
-	const blob = new Blob([JSON.stringify(patch, null, 2)], { type: 'application/json' });
+	const json = new TextEncoder().encode(JSON.stringify(patch));
+	let blob: Blob;
+	let filename: string;
+	if (codecSupported()) {
+		const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+		const gzipped = await new Response(stream).arrayBuffer();
+		blob = new Blob([gzipped], { type: 'application/gzip' });
+		filename = 'krsz-patch-export.json.gz';
+	} else {
+		blob = new Blob([json], { type: 'application/json' });
+		filename = 'krsz-patch-export.json';
+	}
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
-	a.download = 'krsz-patch-export.json';
+	a.download = filename;
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);
@@ -276,28 +294,41 @@ export async function tryLoadSharedPatch(): Promise<void> {
 	}
 }
 
-export function handleImportPatchFile(file: File): void {
-	const reader = new FileReader();
-	reader.onload = (ev) => {
-		try {
-			const parsed = JSON.parse(ev.target?.result as string);
-			// The IMP button and the page-wide drop zone both land here; a preset
-			// file is JSON too, so route it to the active track instead of
-			// treating it as a (trackless, so silent) patch.
-			if (isPresetFile(parsed)) {
-				applyPresetFile(parsed);
+/** True for a gzip member: magic bytes 1f 8b, regardless of file extension. */
+async function isGzip(file: File): Promise<boolean> {
+	const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+	return head[0] === 0x1f && head[1] === 0x8b;
+}
+
+export async function handleImportPatchFile(file: File): Promise<void> {
+	try {
+		let text: string;
+		if (await isGzip(file)) {
+			if (!codecSupported()) {
+				showSaveStatus('X NO CODEC');
 				return;
 			}
-			if (isKitFile(parsed)) {
-				applyKitFile(parsed);
-				return;
-			}
-			applyPatchData(parsed);
-			showSaveStatus('✓ IMPORTED');
-			playSound('toggle');
-		} catch {
-			showSaveStatus('X INVALID');
+			const stream = file.stream().pipeThrough(new DecompressionStream('gzip'));
+			text = await new Response(stream).text();
+		} else {
+			text = await file.text();
 		}
-	};
-	reader.readAsText(file);
+		const parsed = JSON.parse(text);
+		// The IMP button and the page-wide drop zone both land here; a preset
+		// file is JSON too, so route it to the active track instead of
+		// treating it as a (trackless, so silent) patch.
+		if (isPresetFile(parsed)) {
+			applyPresetFile(parsed);
+			return;
+		}
+		if (isKitFile(parsed)) {
+			applyKitFile(parsed);
+			return;
+		}
+		applyPatchData(parsed);
+		showSaveStatus('✓ IMPORTED');
+		playSound('toggle');
+	} catch {
+		showSaveStatus('X INVALID');
+	}
 }

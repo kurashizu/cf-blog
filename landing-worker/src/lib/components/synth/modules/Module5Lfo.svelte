@@ -39,29 +39,29 @@
 					</button>
 				{/each}
 			</div>
-			<RotaryKnob label="RATE" value={$currentTrack.lfoRate} min={0.1} max={20} step={0.2} unit="Hz" color="#c678dd" size={40} reset={5} onChange={(v) => updateActiveTrack({ lfoRate: v })} />
+			<RotaryKnob label="RATE" value={$currentTrack.lfoRate} min={0.1} max={20} step={0.2} unit="Hz" color="#c678dd" size={40} description="LFO Speed — How fast the low-frequency oscillator cycles, in Hertz" reset={5} onChange={(v) => updateActiveTrack({ lfoRate: v })} />
 		</div>
 
 		<div class="col-span-8 flex flex-col justify-around h-full py-0.5 my-auto">
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="PITCH" value={Math.round(($currentTrack.lfoPitchAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={40} reset={0} onChange={(v) => updateActiveTrack({ lfoPitchAmt: v / 100 })} />
+					<RotaryKnob label="PITCH" value={Math.round(($currentTrack.lfoPitchAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={40} description="LFO → Pitch — How much the LFO wobbles the oscillator pitch (vibrato depth)" reset={0} onChange={(v) => updateActiveTrack({ lfoPitchAmt: v / 100 })} />
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="CUTOFF" value={Math.round(($currentTrack.lfoCutoffAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#56b6c2" size={40} reset={0} onChange={(v) => updateActiveTrack({ lfoCutoffAmt: v / 100 })} />
+					<RotaryKnob label="CUTOFF" value={Math.round(($currentTrack.lfoCutoffAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#56b6c2" size={40} description="LFO → Cutoff — How much the LFO sweeps the filter cutoff frequency (wah/wobble depth)" reset={0} onChange={(v) => updateActiveTrack({ lfoCutoffAmt: v / 100 })} />
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="AMP" value={Math.round(($currentTrack.lfoAmpAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#d19a66" size={40} reset={0} onChange={(v) => updateActiveTrack({ lfoAmpAmt: v / 100 })} />
+					<RotaryKnob label="AMP" value={Math.round(($currentTrack.lfoAmpAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#d19a66" size={40} description="LFO → Amplitude — How much the LFO pumps the volume up and down (tremolo depth)" reset={0} onChange={(v) => updateActiveTrack({ lfoAmpAmt: v / 100 })} />
 				</div>
 			</div>
 
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-1"></div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="PAN" value={Math.round(($currentTrack.lfoPanAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#98c379" size={40} reset={0} onChange={(v) => updateActiveTrack({ lfoPanAmt: v / 100 })} />
+					<RotaryKnob label="PAN" value={Math.round(($currentTrack.lfoPanAmt ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#98c379" size={40} description="LFO → Pan — How much the LFO sweeps the stereo position left and right (auto-pan depth)" reset={0} onChange={(v) => updateActiveTrack({ lfoPanAmt: v / 100 })} />
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="FADE" value={$currentTrack.lfoFadeTime ?? 0} min={0} max={2000} step={50} unit="ms" color="#c678dd" size={40} reset={0} onChange={(v) => updateActiveTrack({ lfoFadeTime: v })} />
+					<RotaryKnob label="FADE" value={$currentTrack.lfoFadeTime ?? 0} min={0} max={2000} step={50} unit="ms" color="#c678dd" size={40} description="LFO Fade-In Time — Milliseconds for the LFO's depth to ramp up from zero after the note starts" reset={0} onChange={(v) => updateActiveTrack({ lfoFadeTime: v })} />
 				</div>
 				<div class="col-span-1"></div>
 			</div>

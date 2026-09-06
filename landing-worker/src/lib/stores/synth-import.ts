@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { playSound } from '../sound';
 import { parseMidiFile, splitByChannel, MidiParseError, type MidiTrack } from '../midi-file';
-import { METER_SPECS, modularSynth, PIANO_ROLL_NOTES, STEPS_PER_BEAT, type TimeSignature } from '../synth';
+import { MAX_GRID_STEPS, METER_SPECS, modularSynth, PIANO_ROLL_NOTES, STEPS_PER_BEAT, type TimeSignature } from '../synth';
 import {
 	setBpm,
 	setTimeMeter,
@@ -18,7 +18,7 @@ import { builtinSongIdx, currentSongName, saveStatus } from './synth-patch';
 export const importReport = writable<string[] | null>(null);
 
 /** The engine allocates its grids at this fixed length. */
-const GRID_CAPACITY = 12288;
+const GRID_CAPACITY = MAX_GRID_STEPS;
 /** TrackData documents the grid as up to 8 simultaneous notes per step. */
 const MAX_POLYPHONY = 8;
 /** PIANO_ROLL_NOTES[0] is C8 = MIDI 108, descending by semitone to A0 = MIDI 21. */

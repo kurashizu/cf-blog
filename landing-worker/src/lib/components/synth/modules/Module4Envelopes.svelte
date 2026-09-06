@@ -37,6 +37,16 @@
 	);
 	let envColor = $derived(activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b');
 
+	const ENV_TARGET = { amp: 'volume', vcf: 'filter cutoff', pit: 'pitch' } as const;
+	let attackDesc = $derived(`Attack — Time to ramp the ${ENV_TARGET[activeEnvTab]} envelope up from zero to peak after the note starts`);
+	let decayDesc = $derived(`Decay — Time for the ${ENV_TARGET[activeEnvTab]} envelope to fall from peak down to its sustain level`);
+	let thirdDesc = $derived(
+		activeEnvTab === 'pit'
+			? 'Pitch Envelope Amount — Depth of the pitch sweep in octaves, positive rises or negative falls from the note'
+			: `Sustain — The steady ${ENV_TARGET[activeEnvTab]} level held for as long as the note is held down`
+	);
+	let releaseDesc = $derived(`Release — Time for the ${ENV_TARGET[activeEnvTab]} envelope to fade back to zero after the note is released`);
+
 	function setTab(tab: 'amp' | 'vcf' | 'pit') {
 		activeEnvTab = tab;
 		playSound('click');
@@ -114,8 +124,8 @@
 
 		<!-- Fixed width so the four faders never get crushed when the rack is at its narrowest -->
 		<div class="w-32 shrink-0 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5">
-			<HardwareFader label="A" value={attackVal} min={0} max={0.8} step={0.001} color={envColor} height={46} reset={0} onChange={onAttackChange} />
-			<HardwareFader label="D" value={decayVal} min={0.01} max={1.0} step={0.01} color={envColor} height={46} reset={0.01} onChange={onDecayChange} />
+			<HardwareFader label="A" value={attackVal} min={0} max={0.8} step={0.001} color={envColor} height={46} description={attackDesc} reset={0} onChange={onAttackChange} />
+			<HardwareFader label="D" value={decayVal} min={0.01} max={1.0} step={0.01} color={envColor} height={46} description={decayDesc} reset={0.01} onChange={onDecayChange} />
 			<HardwareFader
 				label={activeEnvTab === 'pit' ? 'AMT' : 'S'}
 				value={sustainVal}
@@ -124,6 +134,7 @@
 				step={activeEnvTab === 'pit' ? 0.1 : 0.02}
 				color={envColor}
 				height={46}
+				description={thirdDesc}
 				reset={activeEnvTab === 'amp' ? 1 : 0}
 				onChange={onThirdChange}
 			/>
@@ -138,6 +149,7 @@
 					step={0.02}
 					color={envColor}
 					height={46}
+					description={releaseDesc}
 					reset={activeEnvTab === 'amp' ? 0.02 : 0}
 					onChange={onFourthChange}
 				/>

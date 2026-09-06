@@ -73,7 +73,7 @@
 		const file = (e.target as HTMLInputElement).files?.[0];
 		if (file) {
 			if (isMidiFile(file)) void handleImportMidiFile(file);
-			else handleImportPatchFile(file);
+			else void handleImportPatchFile(file);
 		}
 		if (fileInput) fileInput.value = '';
 	}
@@ -113,7 +113,7 @@
 		<Onboarding steps={SYNTH_TOUR} heading="SYNTH TOUR" onClose={closeGuide} />
 	{/if}
 
-	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,.mid,.midi,audio/midi" class="hidden" />
+	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,.json.gz,.gz,.mid,.midi,audio/midi" class="hidden" />
 
 	<button onclick={handleNewProject} title="New Project — Clear all tracks and reset to blank 64-step sequencer" class="press px-2 py-0.5 border border-white/20 text-white/80 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs">
 		NEW
@@ -142,7 +142,7 @@
 			<div class="fixed inset-0 z-40" onclick={() => (isLoadMenuOpen = false)}></div>
 
 			<div
-				class="origin-top absolute left-0 top-full mt-1 z-50 min-w-[290px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
+				class="origin-top absolute left-0 top-full mt-1 z-50 w-max min-w-[290px] max-w-[90vw] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
 				<button onclick={loadLocal} class="press w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[#56b6c2] hover:bg-[#56b6c2]/20 cursor-pointer font-bold transition-colors" title="Restore saved synth parameters and sequencer patterns from browser LocalStorage">
@@ -162,20 +162,20 @@
 					>
 						<span class="flex items-center gap-2 min-w-0">
 							<span class="shrink-0 {$builtinSongIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$builtinSongIdx === idx ? '●' : '○'}</span>
-							<span class="truncate">{song.name}</span>
+							<span class="whitespace-nowrap">{song.name}</span>
 						</span>
-						<span class="shrink-0 text-[10px] text-white/40">{song.bpm}bpm · {song.meter}</span>
+						<span class="shrink-0 whitespace-nowrap text-[10px] text-white/40">{song.bpm}bpm · {song.meter}</span>
 					</button>
 				{/each}
 			</div>
 		{/if}
 	</div>
 
-	<button onclick={() => fileInput?.click()} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Import — A previously exported JSON patch, or a .mid file: every MIDI track becomes a sequencer track, with the file's own tempo and time signature. You can also drop the file anywhere on this page.">
+	<button onclick={() => fileInput?.click()} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Import — A previously exported patch (.json or gzipped .json.gz), or a .mid file: every MIDI track becomes a sequencer track, with the file's own tempo and time signature. You can also drop the file anywhere on this page.">
 		IMP
 	</button>
 
-	<button onclick={handleExportPatch} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Export Patch — Download complete 8-track synthesizer configuration and patterns as a JSON file">
+	<button onclick={handleExportPatch} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Export Patch — Download the complete 8-track synthesizer configuration and patterns, gzip-compressed (.json.gz) since the sequencer grids are mostly repeated empty cells">
 		EXP
 	</button>
 

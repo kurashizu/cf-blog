@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { playSound } from '../../sound';
 	import { setMuted } from '../../stores/sound';
-	import { METER_SPECS, type TimeSignature, type NoteDurationDiv } from '../../synth';
+	import { MAX_GRID_STEPS, METER_SPECS, type TimeSignature, type NoteDurationDiv } from '../../synth';
 	import { isSynthSettingsOpen } from '../../stores/synth-settings';
 	import {
 		bpm,
@@ -44,7 +44,7 @@
 
 	let stepsPerBarNow = $derived((METER_SPECS[$timeMeter] || METER_SPECS['4/4']).stepsPerBar);
 	let lenPages = $derived(Math.max(1, Math.ceil($totalPatternSteps / stepsPerBarNow)));
-	let maxLenPages = $derived(Math.floor(12288 / stepsPerBarNow));
+	let maxLenPages = $derived(Math.floor(MAX_GRID_STEPS / stepsPerBarNow));
 	let lenIsCustom = $derived(!LEN_PAGE_PRESETS.includes(lenPages));
 
 	/* METER was six buttons wide for a control that is set once and rarely

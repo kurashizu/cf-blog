@@ -89,8 +89,8 @@
 				{/each}
 			</div>
 			<div class="shrink-0 flex flex-col justify-around items-center border-l border-white/10 pl-1.5">
-				<RotaryKnob label="OSC1" value={Math.round($currentTrack.osc1Gain * 100)} min={0} max={100} unit="%" color="#e5c07b" size={32} reset={100} onChange={(v) => updateActiveTrack({ osc1Gain: v / 100 })} />
-				<RotaryKnob label="OSC2" value={Math.round($currentTrack.osc2Gain * 100)} min={0} max={100} unit="%" color="#56b6c2" size={32} reset={0} onChange={(v) => updateActiveTrack({ osc2Gain: v / 100 })} />
+				<RotaryKnob label="OSC1" value={Math.round($currentTrack.osc1Gain * 100)} min={0} max={100} unit="%" color="#e5c07b" size={32} description="Oscillator 1 Level — Output volume of the first oscillator" reset={100} onChange={(v) => updateActiveTrack({ osc1Gain: v / 100 })} />
+				<RotaryKnob label="OSC2" value={Math.round($currentTrack.osc2Gain * 100)} min={0} max={100} unit="%" color="#56b6c2" size={32} description="Oscillator 2 Level — Output volume of the second oscillator" reset={0} onChange={(v) => updateActiveTrack({ osc2Gain: v / 100 })} />
 			</div>
 		</div>
 		<button

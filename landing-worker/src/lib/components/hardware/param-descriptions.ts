@@ -13,12 +13,17 @@ export const PARAM_DESCRIPTIONS: Record<string, string> = {
 	PHASE: 'Phase Angle Offset — Waveform starting phase from 0° to 360° for stereo widening',
 	MRP: 'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
 	MORPH: 'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
+	'X-FADE': 'Crossfade Balance — Static mix between Oscillator 1 and 2 (0% = all OSC1, 100% = all OSC2)',
+	GLIDE: 'Glide Time — Milliseconds for pitch to slide from one note to the next instead of jumping',
 
 	// Filter
 	CUT: 'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
 	CUTOFF: 'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
 	RES: 'Resonance / Q-Factor — Emphasizes and boosts frequencies around the cutoff point',
+	RESQ: 'Resonance / Q-Factor — Emphasizes and boosts frequencies around the cutoff point; high values self-oscillate into a whistle',
+	KTRK: 'Keyboard Tracking — How much the cutoff follows note pitch, so higher notes stay proportionally as bright as low ones',
 	MOD: 'Envelope Modulation — Bipolar depth of envelope sweeping the filter cutoff frequency',
+	ENVA: 'Filter Envelope Amount — Bipolar depth of the filter envelope sweeping the cutoff frequency',
 
 	// Envelopes
 	A: 'Attack Time — Time taken for envelope to ramp up from zero to peak level',
@@ -38,6 +43,9 @@ export const PARAM_DESCRIPTIONS: Record<string, string> = {
 	DRIVE: 'Analog Overdrive / Saturation — Soft-clipping distortion adding warmth and punch',
 	'D.TIME': 'Delay Echo Time — Time delay between echo repeats (10ms to 1000ms)',
 	'D.FDBK': 'Delay Feedback — Amount of output fed back to input for sustaining echoes',
+	FDBK: 'Delay Feedback — Amount of output fed back to input for sustaining echoes',
 	'D.MIX': 'Delay Wet/Dry Mix — Balance between dry un-effected sound and wet echo signal',
+	'D-MIX': 'Delay Wet/Dry Mix — Balance between dry un-effected sound and wet echo signal',
+	'R-MIX': 'Reverb Wet/Dry Mix — Balance between dry un-effected sound and wet reverb signal',
 	REV: 'Reverb Space Mix — Wet level of spatial convolution acoustic space reverberation'
 };

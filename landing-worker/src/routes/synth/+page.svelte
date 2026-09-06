@@ -34,7 +34,7 @@
 		const file = e.dataTransfer?.files?.[0];
 		if (!file) return;
 		if (isMidiFile(file)) void handleImportMidiFile(file);
-		else if (/\.json$/i.test(file.name)) handleImportPatchFile(file);
+		else if (/\.(json|json\.gz|gz)$/i.test(file.name)) void handleImportPatchFile(file);
 	}
 </script>
 

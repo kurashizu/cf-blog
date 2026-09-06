@@ -4,6 +4,7 @@ import { OVERWORLD_TRACKS } from './songs/overworld';
 import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
 import { MARIO1_TRACKS } from './songs/mario1';
 import { SPAIN_TRACKS, SPAIN_STEPS } from './songs/spain';
+import { TAKE_FIVE_TRACKS, TAKE_FIVE_STEPS } from './songs/take-five';
 
 /* Basic waves, buffer sources (noise, the 808-style METAL bank), stacked
    waves (PWM = two saws with a slowly drifting phase, SUPERSAW = five detuned
@@ -133,6 +134,11 @@ export type NoteDurationDiv = '4' | '2' | '1' | '1/2' | '1/3' | '1/4' | '1/6' | 
  * rhythms land on exact steps.
  */
 export const STEPS_PER_BEAT = 24;
+/** Longest pattern the sequencer will hold, in 1/24-beat steps (256 bars of 4/4, or ~136 of 5/4). Each
+    track allocates a JS array of this length per grid/accents, so this is a memory/GC tradeoff, not
+    just a step-count choice -- exported patches are gzip-compressed, but that doesn't shrink the
+    in-memory grids these allocate. */
+export const MAX_GRID_STEPS = 32768;
 
 export function isTernaryDiv(div: NoteDurationDiv): boolean {
   return div === '1/3' || div === '1/6' || div === '1/12';
@@ -464,7 +470,7 @@ const BLANK_TRACK_TIMBRE: Omit<TrackData, 'id' | 'name' | 'color' | 'grid' | 'ac
 /** Append blank tracks up to TRACK_COUNT, with grids the length of the song's own. */
 export function padTracks(tracks: TrackData[], count = TRACK_COUNT): TrackData[] {
   const out = tracks.slice();
-  const len = tracks[0]?.grid.length ?? 12288;
+  const len = tracks[0]?.grid.length ?? MAX_GRID_STEPS;
   for (let id = out.length; id < count; id++) {
     out.push({
       ...JSON.parse(JSON.stringify(BLANK_TRACK_TIMBRE)),
@@ -895,6 +901,12 @@ class ModularSynth {
       this.totalSteps = 3840;
       this.bpm = 105;
       this.meter = '4/4';
+    } else if (songName === 'TAKE_FIVE') {
+      // take-five.ts is authored natively on the 1/24-beat grid, at full resolution (see the file).
+      this.tracks = JSON.parse(JSON.stringify(TAKE_FIVE_TRACKS));
+      this.totalSteps = TAKE_FIVE_STEPS;
+      this.bpm = 180;
+      this.meter = '5/4';
     }
     this.tracks = padTracks(this.tracks);
     this.currentStep = 0;
@@ -911,8 +923,8 @@ class ModularSynth {
     this.stopAll();
     this.tracks = INITIAL_TRACKS.map((t) => ({
       ...JSON.parse(JSON.stringify(t)),
-      grid: Array.from({ length: 12288 }, () => []),
-      accents: Array.from({ length: 12288 }, () => 0),
+      grid: Array.from({ length: MAX_GRID_STEPS }, () => []),
+      accents: Array.from({ length: MAX_GRID_STEPS }, () => 0),
     }));
     this.totalSteps = steps;
     this.bpm = 120;
@@ -1042,7 +1054,7 @@ class ModularSynth {
   }
 
   public setTotalSteps(steps: number) {
-    this.totalSteps = Math.max(8, Math.min(12288, steps));
+    this.totalSteps = Math.max(8, Math.min(MAX_GRID_STEPS, steps));
     if (this.currentStep >= this.totalSteps) {
       this.currentStep = 0;
     }
