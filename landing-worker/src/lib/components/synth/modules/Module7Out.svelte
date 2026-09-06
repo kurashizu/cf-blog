@@ -14,7 +14,7 @@
 	}
 </script>
 
-<div class="xl:col-span-4 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
+<div class="xl:col-span-8 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
 	<div class="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0">
 		<div class="flex items-center gap-2">
 			<span class="text-white text-xs font-black">7. OUT</span>

@@ -58,7 +58,7 @@
 		     the roll was 94px short and scrolling. shrink-0 keeps it from being
 		     squeezed; the flex parent gives what it does not take to the row above. -->
 		<div data-tour="synth-rack" class="shrink-0 xl:max-h-[260px] h-fit overflow-auto custom-scrollbar no-gutter">
-			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 xl:min-w-[1000px] gap-1.5 text-xs">
+			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[repeat(24,minmax(0,1fr))] xl:min-w-[1000px] gap-1.5 text-xs">
 				<Module4Envelopes />
 				<Module5Lfo />
 				<Module6FxEq />

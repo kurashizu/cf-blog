@@ -76,7 +76,7 @@
 	}
 </script>
 
-<div class="xl:col-span-2 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
+<div class="xl:col-span-5 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
 	<div class="flex justify-between items-center font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
 		<div class="flex items-center gap-1.5">
 			<span class="text-[#e06c75] font-black">6. FX</span>

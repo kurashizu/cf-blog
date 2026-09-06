@@ -63,7 +63,7 @@
 	}
 </script>
 
-<div class="xl:col-span-3 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
+<div class="xl:col-span-6 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
 	<div class="flex items-center justify-between font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
 		<div class="flex items-center gap-2">
 			<span class="text-[#98c379] text-xs font-black">4. ENVELOPES</span>
