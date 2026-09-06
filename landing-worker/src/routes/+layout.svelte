@@ -216,6 +216,24 @@
 		// still fill in when the boot screen is skipped or dismissed early.
 		loadEdgeTrace();
 
+		/* A deploy's new service worker installs and activates in the background,
+		   but it does not control the page that is already open -- only the next
+		   navigation gets a client claimed by it. Without this, the fix in
+		   service-worker.ts (network-first HTML) still needed two manual reloads:
+		   the first triggers the update and is served by the outgoing worker, the
+		   second is finally controlled by the new one and shows the new commit.
+		   `controller` is null on a first visit (nothing to update from) and a
+		   fresh reload is a bad first impression, so this only fires when there
+		   was already an active worker -- i.e. an update, not an install. */
+		if (browser && navigator.serviceWorker && navigator.serviceWorker.controller) {
+			let reloaded = false;
+			navigator.serviceWorker.addEventListener('controllerchange', () => {
+				if (reloaded) return;
+				reloaded = true;
+				location.reload();
+			});
+		}
+
 		return () => {
 			stopClock();
 			stopTransport();

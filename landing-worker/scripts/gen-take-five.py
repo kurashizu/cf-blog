@@ -228,14 +228,14 @@ def grid_const(name, grid):
     out = [f'const {name}: number[][] = [']
     for b in range(total // 240):
         out.append(f'  // BAR {b+1}')
-        out.append('  ' + ', '.join('[' + ', '.join(map(str, c)) + ']' for c in grid[b*120:(b+1)*120]) + ',')
+        out.append('  ' + ', '.join('[' + ', '.join(map(str, c)) + ']' for c in grid[b*240:(b+1)*240]) + ',')
     out.append('];')
     return '\n'.join(out)
 
 def acc_const(name, acc):
     out = [f'const {name}: number[] = [']
     for b in range(total // 240):
-        out.append('  ' + ', '.join(map(str, acc[b*120:(b+1)*120])) + ',')
+        out.append('  ' + ', '.join(map(str, acc[b*240:(b+1)*240])) + ',')
     out.append('];')
     return '\n'.join(out)
 
