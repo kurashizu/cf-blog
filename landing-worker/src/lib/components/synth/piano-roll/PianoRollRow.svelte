@@ -207,7 +207,7 @@
 							class="absolute top-[1px] bottom-[1px] pointer-events-none shadow-xs {seg.startsHere
 								? 'rounded-l-xs border-l-2 border-white/80'
 								: ''} {seg.endsHere ? 'rounded-r-xs' : ''} {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-70'} {isSel
-								? 'z-[4] brightness-125 outline outline-1 outline-white shadow-[0_0_6px_rgba(255,255,255,0.7)]'
+								? `z-[4] brightness-110 border-2 border-white shadow-[0_0_8px_rgba(255,255,255,0.9)] ${seg.startsHere ? '' : 'border-l-0'} ${seg.endsHere ? '' : 'border-r-0'}`
 								: isColActive && t.isPrimary
 									? 'brightness-125 ring-1 ring-white'
 									: ''}"
