@@ -80,16 +80,26 @@
 
 	/* Loading closed the menu immediately, so the "loaded" confirmation had
 	   nowhere to land but the toolbar's shared status slot next to SHARE --
-	   easy to miss, and not obviously about LOAD. Keep the menu open long
-	   enough to show it in place, then close. */
+	   easy to miss, and not obviously about LOAD. It renders inside the menu
+	   instead now; loadStatusActive keeps it out of the toolbar slot for the
+	   full 2s showSaveStatus keeps the message alive, not just while the
+	   menu happens to still be open (the menu closes sooner, on its own timer,
+	   and the toolbar slot re-showing the stale message once it did was
+	   exactly the bug this is fixing). */
+	let loadStatusActive = $state(false);
+
 	function loadLocal() {
 		handleLoadPatch();
+		loadStatusActive = true;
 		setTimeout(() => (isLoadMenuOpen = false), 900);
+		setTimeout(() => (loadStatusActive = false), 2000);
 	}
 
 	function loadBuiltin(idx: number) {
 		handleLoadBuiltinSong(idx);
+		loadStatusActive = true;
 		setTimeout(() => (isLoadMenuOpen = false), 900);
+		setTimeout(() => (loadStatusActive = false), 2000);
 	}
 
 	function onWindowKeydown(e: KeyboardEvent) {
@@ -248,7 +258,7 @@
 		{/if}
 	</div>
 
-	{#if $saveStatus && !isLoadMenuOpen}
+	{#if $saveStatus && !isLoadMenuOpen && !loadStatusActive}
 		<span class="text-[#98c379] font-bold text-xs ml-1">{$saveStatus}</span>
 	{/if}
 </div>
