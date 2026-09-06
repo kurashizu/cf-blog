@@ -54,30 +54,35 @@
 	<div class="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto py-0.5">
 		<!-- The two wave columns, with the loudness switch under them: it belongs to
 		     the oscillators, and the header had no room for it. -->
-		<div class="col-span-6 flex flex-col h-full py-0.5 gap-1">
-		<div class="grid grid-cols-2 gap-1.5 flex-1 min-h-0">
+		<div class="col-span-6 flex flex-col h-full py-0.5 gap-1.5 justify-center">
+			<!-- The oscillators are stacked, one above the other: a header row with
+			     the name and the wave picker, then a wide, short scope. Side by side,
+			     the scopes were taller than they were wide. -->
 			{#each [1, 2] as osc (osc)}
 				{@const w = osc === 1 ? $currentTrack.osc1Waveform : $currentTrack.osc2Waveform}
 				{@const color = osc === 1 ? '#e5c07b' : '#56b6c2'}
 				<div class="flex flex-col gap-1 min-w-0">
-					<span class="text-[10px] text-white/60 font-black text-center leading-none">OSC{osc}</span>
-					<WaveMenu
-						label={`OSC${osc}`}
-						value={w}
-						{color}
-						onPick={(nw: SynthWaveform) => updateActiveTrack(osc === 1 ? { osc1Waveform: nw } : { osc2Waveform: nw })}
-						onDraw={() => openDraw(osc as 1 | 2, null)}
-						onEdit={(cw) => openDraw(osc as 1 | 2, cw)}
-					/>
+					<div class="flex items-center gap-1.5">
+						<span class="text-[10px] font-black leading-none shrink-0 w-8" style="color: {color}">OSC{osc}</span>
+						<div class="flex-1 min-w-0">
+							<WaveMenu
+								label={`OSC${osc}`}
+								value={w}
+								{color}
+								onPick={(nw: SynthWaveform) => updateActiveTrack(osc === 1 ? { osc1Waveform: nw } : { osc2Waveform: nw })}
+								onDraw={() => openDraw(osc as 1 | 2, null)}
+								onEdit={(cw) => openDraw(osc as 1 | 2, cw)}
+							/>
+						</div>
+					</div>
 					<!-- One cycle of the chosen wave -->
-					<svg viewBox="0 0 100 30" preserveAspectRatio="none" class="w-full flex-1 min-h-[28px] border border-white/10 rounded-xs bg-black/40" aria-hidden="true">
+					<svg viewBox="0 0 100 30" preserveAspectRatio="none" class="w-full h-11 border border-white/10 rounded-xs bg-black/40" aria-hidden="true">
 						<line x1="0" y1="15" x2="100" y2="15" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
 						<path d={osc === 1 ? path1 : path2} fill="none" stroke={color} stroke-width="1.2" vector-effect="non-scaling-stroke" />
 					</svg>
 				</div>
 			{/each}
-		</div>
-		<button
+			<button
 			onclick={() => {
 				setEqlComp(!$eqlCompSetting);
 				playSound('click');

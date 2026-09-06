@@ -7,7 +7,7 @@
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 
 	const FILTER_TYPES: FilterType[] = ['lowpass', 'bandpass', 'highpass', 'notch'];
-	const FILTER_LABELS: Record<FilterType, string> = { lowpass: 'LPF', bandpass: 'BPF', highpass: 'HPF', notch: 'NOTCH' };
+	const FILTER_LABELS: Record<FilterType, string> = { lowpass: 'LPF', bandpass: 'BPF', highpass: 'HPF', notch: 'NTCH' };
 </script>
 
 <div class="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0 xl:grow-[3]">

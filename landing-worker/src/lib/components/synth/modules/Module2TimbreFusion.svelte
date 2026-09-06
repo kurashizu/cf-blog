@@ -7,6 +7,8 @@
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 
 	const BLEND_MODES: BlendMode[] = ['layer', 'fm', 'ring', 'sync'];
+	/* Four letters at most: the buttons are narrow and LAYER spilled over. */
+	const BLEND_LABELS: Record<BlendMode, string> = { layer: 'LAYR', fm: 'FM', ring: 'RING', sync: 'SYNC' };
 </script>
 
 <div class="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0 xl:grow-[3]">
@@ -33,7 +35,7 @@
 						? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
 						: 'border-white/20 text-white/70 hover:bg-white/10'}"
 				>
-					{mode.toUpperCase()}
+					{BLEND_LABELS[mode]}
 				</button>
 			{/each}
 		</div>
