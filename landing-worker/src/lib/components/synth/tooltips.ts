@@ -5,10 +5,10 @@ export const WAVE_TOOLTIPS: Record<string, string> = {
 	sine: 'Sine Waveform — Pure fundamental frequency without overtones, ideal for deep sub bass and clean tones',
 	noise: 'White Noise Generator — Equal energy across all frequencies, ideal for drums, percussive transients, and sound effects (OSC1; on OSC2 it plays as a saw)',
 	metal: 'METAL — six squares at the 808 cymbal ratios, fixed pitch: the clang of rides, crashes and hats; add NOISE for the sizzle and high-pass the body away (OSC1)',
-	pwm: 'PWM — a pulse whose width sweeps continuously (two saws drifting against each other), the classic moving analogue pad and lead',
-	supersaw: 'SUPERSAW — five saws spread ±19 cents, the trance stack; wide and thick without any chorus',
-	organ: 'ORGAN — drawbar harmonics 1, 2, 3, 4, 5 and 8; steady, hollow, sits well under a lead',
-	fold: 'FOLD — a sine driven into a wavefolder; brighter than a triangle, with the West-coast bite'
+	pwm: 'PWM — a pulse whose width sweeps around WIDTH at RATE by DEPTH (knobs in its submenu); the classic moving analogue pad and lead',
+	supersaw: 'SUPERSAW — five saws, the outer pair SPREAD cents away at MIX level (knobs in its submenu); the trance stack, wide without any chorus',
+	organ: 'ORGAN — six drawbars, harmonics 1, 2, 3, 4, 5 and 8 (knobs in its submenu); steady, hollow, sits well under a lead',
+	fold: 'FOLD — a sine driven into a wavefolder by FOLD (knob in its submenu); brighter than a triangle, with the West-coast bite'
 };
 
 export const BLEND_TOOLTIPS: Record<string, string> = {

@@ -20,6 +20,7 @@ export const RACK1_NEUTRAL: Partial<TrackData> = {
 	detuneCents: 0,
 	osc2Semitone: 0,
 	pulseWidth: 50,
+	waveParams: {},
 	phaseOffset: 0,
 	subOscGain: 0,
 	noiseGain: 0,

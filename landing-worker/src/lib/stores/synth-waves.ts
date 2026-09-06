@@ -5,7 +5,7 @@
  * so a shared patch still plays.
  */
 import { writable, get } from 'svelte/store';
-import { modularSynth, type CustomWave, type SynthWaveform, type TrackData } from '../synth';
+import { modularSynth, waveParam, type CustomWave, type SynthWaveform, type TrackData, type WaveParams } from '../synth';
 
 const KEY = 'krsz-synth-waves-v1';
 export const WAVE_SAMPLES = 128;
@@ -126,7 +126,7 @@ export const WAVE_LABELS: Record<string, string> = {
 };
 
 /** One cycle of the wave as N points in -1..1, for the little scope under each OSC. */
-export function previewSamples(w: SynthWaveform | string, n = 96): number[] {
+export function previewSamples(w: SynthWaveform | string, n = 96, params?: WaveParams): number[] {
 	const out: number[] = [];
 	const custom = findCustomWave(w);
 	if (custom) {
@@ -154,14 +154,18 @@ export function previewSamples(w: SynthWaveform | string, n = 96): number[] {
 				v /= 6;
 				break;
 			}
-			case 'pwm': v = x < 0.3 ? 1 : -1; break;
+			case 'pwm': v = x < waveParam(params, 'pwmWidth') / 100 ? 1 : -1; break;
 			case 'supersaw': v = (2 * x - 1) * 0.7 + 0.3 * (2 * ((x * 1.03) % 1) - 1); break;
 			case 'organ': {
-				for (const [h, a] of [[1, 1], [2, 0.7], [3, 0.5], [4, 0.45], [5, 0.25], [8, 0.2]] as [number, number][]) v += a * Math.sin(ph * h);
-				v /= 2.2;
+				const bars = (['org1', 'org2', 'org3', 'org4', 'org5', 'org8'] as const).map((k) => waveParam(params, k) / 8);
+				const harm = [1, 2, 3, 4, 5, 8];
+				const at = (a: number) => harm.reduce((acc, h, k) => acc + bars[k] * Math.sin(a * h), 0);
+				let peak = 0;
+				for (let j = 0; j < n; j++) peak = Math.max(peak, Math.abs(at((2 * Math.PI * j) / n)));
+				v = at(ph) / (peak || 1);
 				break;
 			}
-			case 'fold': v = Math.sin(2.6 * Math.sin(ph)); break;
+			case 'fold': v = Math.sin(waveParam(params, 'foldAmt') * Math.sin(ph)); break;
 			default: v = Math.sin(ph);
 		}
 		out.push(v);

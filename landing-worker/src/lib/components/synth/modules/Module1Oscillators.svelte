@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
 	import { resetRack1 } from '../../../stores/synth-reset';
-	import type { SynthWaveform, CustomWave } from '../../../synth';
+	import type { SynthWaveform, CustomWave, WaveParams } from '../../../synth';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
 	import { eqlCompSetting, setEqlComp } from '../../../stores/synth-settings';
 	import { customWaves, previewSamples, previewPath, saveCustomWave, updateCustomWave } from '../../../stores/synth-waves';
@@ -29,14 +29,18 @@
 		editing = null;
 	}
 
+	function setWaveParams(patch: WaveParams) {
+		updateActiveTrack({ waveParams: { ...($currentTrack.waveParams ?? {}), ...patch } });
+	}
+
 	// $customWaves is read so an edited drawing redraws the scope.
 	let path1 = $derived.by(() => {
 		void $customWaves;
-		return previewPath(previewSamples($currentTrack.osc1Waveform));
+		return previewPath(previewSamples($currentTrack.osc1Waveform, 96, $currentTrack.waveParams));
 	});
 	let path2 = $derived.by(() => {
 		void $customWaves;
-		return previewPath(previewSamples($currentTrack.osc2Waveform));
+		return previewPath(previewSamples($currentTrack.osc2Waveform, 96, $currentTrack.waveParams));
 	});
 </script>
 
@@ -68,7 +72,9 @@
 									label={`OSC${osc}`}
 									value={w}
 									{color}
+									params={$currentTrack.waveParams}
 									onPick={(nw: SynthWaveform) => updateActiveTrack(osc === 1 ? { osc1Waveform: nw } : { osc2Waveform: nw })}
+									onParam={setWaveParams}
 									onDraw={() => openDraw(osc as 1 | 2, null)}
 									onEdit={(cw) => openDraw(osc as 1 | 2, cw)}
 								/>

@@ -2,25 +2,32 @@
 	import { scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '../../sound';
-	import { BASIC_WAVES, NOISE_WAVES, ADVANCED_WAVES, getWaveformAbbr, type SynthWaveform, type CustomWave } from '../../synth';
+	import { BASIC_WAVES, NOISE_WAVES, ADVANCED_WAVES, WAVE_PARAM_SPECS, waveParam, getWaveformAbbr, type SynthWaveform, type CustomWave, type WaveParams } from '../../synth';
 	import { customWaves, deleteCustomWave, findCustomWave, WAVE_LABELS } from '../../stores/synth-waves';
 	import { WAVE_TOOLTIPS } from './tooltips';
+	import RotaryKnob from '../hardware/RotaryKnob.svelte';
 
 	/* The same cascading menu as PRESET: sections on the left, the section's
-	   waves in a flyout. CUSTOM holds the drawn tables with edit / delete, and
-	   the DRAW NEW action opens the editor. */
+	   waves in a flyout. Waves with knobs (the ADVANCED ones) open a third
+	   panel on hover; turning a knob there also selects the wave, so the
+	   change is heard, and leaves the menu open. CUSTOM holds the drawn tables
+	   with edit / delete, and the DRAW NEW action opens the editor. */
 	let {
 		label,
 		value,
 		color,
+		params,
 		onPick,
+		onParam,
 		onDraw,
 		onEdit
 	}: {
 		label: string;
 		value: SynthWaveform;
 		color: string;
+		params?: WaveParams;
 		onPick: (w: SynthWaveform) => void;
+		onParam: (patch: WaveParams) => void;
 		onDraw: () => void;
 		onEdit: (wave: CustomWave) => void;
 	} = $props();
@@ -35,6 +42,7 @@
 
 	let open = $state(false);
 	let section = $state<SectionId | null>(null);
+	let paramWave = $state<SynthWaveform | null>(null);
 	let trigger = $state<HTMLButtonElement | null>(null);
 	let anchor = $state({ left: 0, top: 0 });
 
@@ -66,6 +74,11 @@
 	function close() {
 		open = false;
 		section = null;
+		paramWave = null;
+	}
+	function turn(w: SynthWaveform, key: keyof WaveParams, v: number) {
+		onParam({ [key]: v });
+		if (value !== w) onPick(w);
 	}
 	function pick(w: SynthWaveform) {
 		onPick(w);
@@ -84,9 +97,10 @@
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-{#snippet flyout(children: import('svelte').Snippet)}
+{#snippet flyout(children: import('svelte').Snippet, scroll: boolean)}
+	<!-- Only the CUSTOM list scrolls; the others must not clip their third panel. -->
 	<div
-		class="absolute left-full top-0 -mt-px ml-0.5 z-50 min-w-[210px] max-h-[60vh] overflow-y-auto custom-scrollbar bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
+		class="absolute left-full top-0 -mt-px ml-0.5 z-50 min-w-[210px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono {scroll ? 'max-h-[60vh] overflow-y-auto custom-scrollbar' : 'overflow-visible'}"
 		transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
 	>
 		{@render children()}
@@ -123,7 +137,7 @@
 				{@const isOpen = section === sec.id}
 				{@const count = sec.id === 'CUSTOM' ? $customWaves.length : sec.waves.length}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div class="relative" onmouseenter={() => (section = sec.id)}>
+				<div class="relative" onmouseenter={() => { section = sec.id; paramWave = null; }}>
 					<button onclick={() => (section = isOpen ? null : sec.id)} class="{rowBase} justify-between {isOpen ? rowOn : rowIdle}" title={sec.hint}>
 						<span class="flex items-center gap-2 min-w-0">
 							<span class="truncate">{sec.label}</span>
@@ -134,18 +148,38 @@
 
 					{#if isOpen}
 						{#if sec.id !== 'CUSTOM'}
-							{@render flyout(waveList)}
+							{@render flyout(waveList, false)}
 							{#snippet waveList()}
 								{#each sec.waves as w (w)}
 									{@const on = value === w}
-									<button onclick={() => pick(w)} class="{rowBase} {on ? rowOn : rowIdle}" title={WAVE_TOOLTIPS[w] || w}>
-										<span class="shrink-0 {on ? 'text-[#98c379]' : 'text-white/25'}">{on ? '●' : '○'}</span>
-										<span class="truncate">{WAVE_LABELS[w] ?? w}</span>
-									</button>
+									{@const specs = WAVE_PARAM_SPECS[w]}
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div class="relative" onmouseenter={() => (paramWave = specs ? w : null)}>
+										<button onclick={() => pick(w)} class="{rowBase} {on ? rowOn : rowIdle}" title={WAVE_TOOLTIPS[w] || w}>
+											<span class="shrink-0 {on ? 'text-[#98c379]' : 'text-white/25'}">{on ? '●' : '○'}</span>
+											<span class="truncate">{WAVE_LABELS[w] ?? w}</span>
+											{#if specs}<span class="ml-auto pl-2 text-[9px] text-white/40">►</span>{/if}
+										</button>
+										{#if specs && paramWave === w}
+											<div
+												class="absolute left-full top-0 -mt-px ml-0.5 z-50 bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] px-2 pt-1 pb-1.5 text-xs font-mono"
+												transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
+											>
+												<div class="text-[10px] font-bold text-white/40 select-none border-b border-white/10 pb-0.5 mb-1 whitespace-nowrap">{getWaveformAbbr(w)} PARAMS</div>
+												<div class="grid gap-x-1 gap-y-0.5" style="grid-template-columns: repeat({Math.min(3, specs.length)}, auto)">
+													{#each specs as sp (sp.key)}
+														<div class="flex justify-center">
+															<RotaryKnob label={sp.label} value={waveParam(params, sp.key)} min={sp.min} max={sp.max} step={sp.step} unit={sp.unit} {color} size={30} reset={sp.def} description={sp.hint} onChange={(v) => turn(w, sp.key, v)} />
+														</div>
+													{/each}
+												</div>
+											</div>
+										{/if}
+									</div>
 								{/each}
 							{/snippet}
 						{:else}
-							{@render flyout(customList)}
+							{@render flyout(customList, true)}
 							{#snippet customList()}
 								{#if $customWaves.length === 0}
 									<div class="px-2.5 py-1.5 text-[10px] text-white/30 select-none max-w-[220px]">none yet — draw one below</div>

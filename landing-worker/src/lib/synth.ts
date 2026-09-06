@@ -25,6 +25,54 @@ export interface CustomWave {
   samples: number[];
 }
 
+/* The knobs behind the ADVANCED waves. They live on the track (and on a
+   percussion key), like PW does, and are shared by OSC1 and OSC2. */
+export interface WaveParams {
+  pwmWidth?: number;   // 5..95 %, the duty cycle the sweep centres on
+  pwmRate?: number;    // 0.1..10 Hz
+  pwmDepth?: number;   // 0..100 %, how far the width sweeps
+  ssawSpread?: number; // 0..50 cents, the outer saws' detune
+  ssawMix?: number;    // 0..100 %, companions against the centre saw
+  foldAmt?: number;    // 1..8, drive into the folder
+  org1?: number; org2?: number; org3?: number; org4?: number; org5?: number; org8?: number; // drawbars 0..8
+}
+export interface WaveParamSpec {
+  key: keyof WaveParams;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  def: number;
+  hint: string;
+}
+export const WAVE_PARAM_SPECS: Partial<Record<SynthWaveform, WaveParamSpec[]>> = {
+  pwm: [
+    { key: 'pwmWidth', label: 'WIDTH', min: 5, max: 95, step: 5, unit: '%', def: 50, hint: 'Duty cycle the sweep centres on' },
+    { key: 'pwmRate', label: 'RATE', min: 0.1, max: 10, step: 0.1, unit: 'Hz', def: 0.4, hint: 'How fast the width sweeps' },
+    { key: 'pwmDepth', label: 'DEPTH', min: 0, max: 100, step: 5, unit: '%', def: 40, hint: 'How far the width sweeps either side of WIDTH; 0 = a fixed pulse' }
+  ],
+  supersaw: [
+    { key: 'ssawSpread', label: 'SPREAD', min: 0, max: 50, step: 1, unit: 'c', def: 19, hint: 'Detune of the outer saws, in cents; the inner pair sits at half' },
+    { key: 'ssawMix', label: 'MIX', min: 0, max: 100, step: 5, unit: '%', def: 60, hint: 'Level of the four companion saws against the centre one' }
+  ],
+  organ: [
+    { key: 'org1', label: "8'", min: 0, max: 8, step: 1, unit: '', def: 8, hint: 'Fundamental drawbar' },
+    { key: 'org2', label: "4'", min: 0, max: 8, step: 1, unit: '', def: 6, hint: 'Octave drawbar' },
+    { key: 'org3', label: "2⅔'", min: 0, max: 8, step: 1, unit: '', def: 4, hint: 'Twelfth drawbar (3rd harmonic)' },
+    { key: 'org4', label: "2'", min: 0, max: 8, step: 1, unit: '', def: 4, hint: 'Two-octave drawbar' },
+    { key: 'org5', label: "1⅗'", min: 0, max: 8, step: 1, unit: '', def: 2, hint: 'Seventeenth drawbar (5th harmonic)' },
+    { key: 'org8', label: "1'", min: 0, max: 8, step: 1, unit: '', def: 2, hint: 'Three-octave drawbar' }
+  ],
+  fold: [{ key: 'foldAmt', label: 'FOLD', min: 1, max: 8, step: 0.2, unit: 'x', def: 2.6, hint: 'Drive into the folder; more folds, brighter' }]
+};
+const WAVE_PARAM_DEFAULTS: Record<keyof WaveParams, number> = Object.fromEntries(
+  Object.values(WAVE_PARAM_SPECS).flatMap((a) => a ?? []).map((sp) => [sp.key, sp.def])
+) as Record<keyof WaveParams, number>;
+export function waveParam(p: WaveParams | undefined, key: keyof WaveParams): number {
+  return p?.[key] ?? WAVE_PARAM_DEFAULTS[key];
+}
+
 // ISO 226 / Fletcher-Munson Perceptual Equal Loudness Normalization Scale
 // Compares harmonic rich waveforms (Square/Saw) against pure fundamental tones (Sine/Triangle)
 export function getWaveformPerceptualScale(w: SynthWaveform): number {
@@ -190,6 +238,7 @@ export interface TrackData {
   phaseOffset: number;  // 0 to 360 degrees
   osc2Semitone: number; // -24 to +24 semitones (OSC2 transpose)
   pulseWidth: number;   // 5 to 95 percent (square wave duty cycle)
+  waveParams?: WaveParams; // knobs of the ADVANCED waves; see WAVE_PARAM_SPECS
   subOscGain: number;   // 0.0 to 1.0 (sub-oscillator one octave below)
   noiseGain: number;    // 0.0 to 1.0 (noise generator mix level)
   noiseRetrig?: number;    // 1 to 4 bursts per hit -- the 808 clap's stutter; 1 = plain noise
@@ -368,7 +417,7 @@ export const PIANO_ROLL_NOTES = [
    track. This is what a preset carries and what a percussion key can override. */
 export const KEY_TIMBRE_KEYS = [
   'osc1Waveform', 'osc1Gain', 'osc2Waveform', 'osc2Gain', 'osc2Ratio', 'detuneCents', 'phaseOffset',
-  'osc2Semitone', 'pulseWidth', 'subOscGain', 'noiseGain', 'noiseRetrig', 'noiseRetrigGap',
+  'osc2Semitone', 'pulseWidth', 'waveParams', 'subOscGain', 'noiseGain', 'noiseRetrig', 'noiseRetrigGap',
   'blendMode', 'morphAmount', 'glideTime', 'xfade',
   'filterType', 'cutoff', 'resonance', 'envFilterMod', 'keyTracking',
   'attack', 'decay', 'sustain', 'release',
@@ -1218,20 +1267,42 @@ class ModularSynth {
     return wave;
   }
 
-  private static ORGAN_TABLE = (() => {
-    // Drawbars 8', 4', 2 2/3', 2', 1 3/5', 1': harmonics 1, 2, 3, 4, 5, 8.
-    const amps: [number, number][] = [[1, 1], [2, 0.7], [3, 0.5], [4, 0.45], [5, 0.25], [8, 0.2]];
-    const N = 256;
-    const out = new Float32Array(N);
-    for (let i = 0; i < N; i++) for (const [h, a] of amps) out[i] += a * Math.sin((2 * Math.PI * h * i) / N);
-    return out;
-  })();
-  private static FOLD_TABLE = (() => {
-    // A sine driven into a folder: sin(k * sin x), the West-coast timbre.
-    const N = 256;
-    const out = new Float32Array(N);
-    for (let i = 0; i < N; i++) out[i] = Math.sin(2.6 * Math.sin((2 * Math.PI * i) / N));
-    return out;
+  /* Drawbars 8', 4', 2 2/3', 2', 1 3/5', 1': harmonics 1, 2, 3, 4, 5, 8, each
+     0..8 like the real thing. One table per drawbar setting, cached. */
+  private organTables = new Map<string, Float32Array>();
+  private organTable(p: WaveParams | undefined): { key: string; table: Float32Array } {
+    const bars = (['org1', 'org2', 'org3', 'org4', 'org5', 'org8'] as const).map((k) => Math.max(0, Math.min(8, Math.round(waveParam(p, k)))));
+    const key = 'organ:' + bars.join('');
+    let table = this.organTables.get(key);
+    if (!table) {
+      const harm = [1, 2, 3, 4, 5, 8];
+      const N = 256;
+      table = new Float32Array(N);
+      for (let i = 0; i < N; i++) for (let k = 0; k < 6; k++) table[i] += (bars[k] / 8) * Math.sin((2 * Math.PI * harm[k] * i) / N);
+      this.organTables.set(key, table);
+    }
+    return { key, table };
+  }
+  /* A sine driven into a folder: sin(k * sin x), the West-coast timbre; k is the FOLD knob. */
+  private foldTables = new Map<string, Float32Array>();
+  private foldTable(p: WaveParams | undefined): { key: string; table: Float32Array } {
+    const k = Math.max(1, Math.min(8, waveParam(p, 'foldAmt')));
+    const key = 'fold:' + k.toFixed(1);
+    let table = this.foldTables.get(key);
+    if (!table) {
+      const N = 256;
+      table = new Float32Array(N);
+      for (let i = 0; i < N; i++) table[i] = Math.sin(k * Math.sin((2 * Math.PI * i) / N));
+      this.foldTables.set(key, table);
+    }
+    return { key, table };
+  }
+  /* A comparator: -1 below zero, +1 above. With a saw in and an offset added,
+     the output is a pulse whose width is the offset -- the PWM oscillator. */
+  private static STEP_CURVE = (() => {
+    const c = new Float32Array(1024);
+    for (let i = 0; i < c.length; i++) c[i] = i < c.length / 2 ? -1 : 1;
+    return c;
   })();
 
   private pulseWaves: WeakMap<BaseAudioContext, Map<number, PeriodicWave>> = new WeakMap();
@@ -1255,11 +1326,16 @@ class ModularSynth {
     return wave;
   }
 
-  private applyWaveform(osc: OscillatorNode, w: SynthWaveform, pulseWidth: number | undefined, ctx: BaseAudioContext) {
+  private applyWaveform(osc: OscillatorNode, w: SynthWaveform, pulseWidth: number | undefined, params: WaveParams | undefined, ctx: BaseAudioContext) {
     const pw = pulseWidth ?? 50;
     if (w === 'square' && Math.round(pw) !== 50) osc.setPeriodicWave(this.pulseWave(ctx, pw));
-    else if (w === 'organ') osc.setPeriodicWave(this.periodicFromSamples(ctx, 'organ', ModularSynth.ORGAN_TABLE));
-    else if (w === 'fold') osc.setPeriodicWave(this.periodicFromSamples(ctx, 'fold', ModularSynth.FOLD_TABLE));
+    else if (w === 'organ') {
+      const { key, table } = this.organTable(params);
+      osc.setPeriodicWave(this.periodicFromSamples(ctx, key, table));
+    } else if (w === 'fold') {
+      const { key, table } = this.foldTable(params);
+      osc.setPeriodicWave(this.periodicFromSamples(ctx, key, table));
+    }
     else if (w.startsWith('custom:')) {
       const id = w.slice(7);
       const cw = this.customWaves.get(id);
@@ -1279,48 +1355,74 @@ class ModularSynth {
   }
 
   /**
-   * PWM and SUPERSAW are stacks. PWM: a second saw a fixed 0.4 Hz away, inverted
-   * and summed, gives a pulse whose width sweeps continuously -- the classic
-   * two-saw trick, and it needs no modulator. SUPERSAW: four more saws spread
-   * ±19 cents around the first. Returns the node to use downstream and the
-   * companions, which the caller starts and stops with the primary.
+   * PWM and SUPERSAW are built around the saw the caller made. PWM: the saw
+   * plus an offset goes through a comparator, so the pulse is high for the part
+   * of the cycle the saw sits above the offset -- WIDTH sets that offset and a
+   * triangle LFO (RATE, DEPTH) moves it. The offset is subtracted again after
+   * the comparator, which takes out the DC a lopsided pulse carries. (The old
+   * two-saws-subtracted version started every note with both saws in phase,
+   * i.e. silent, and went silent twice per sweep.) SUPERSAW: four more saws
+   * spread SPREAD cents either side, at MIX of the centre one.
+   * Returns the node to use downstream, the companion oscillators (they follow
+   * the primary's pitch modulation) and helper sources that only need to be
+   * started and stopped with the voice.
    */
-  private buildToneStack(ctx: BaseAudioContext, osc: OscillatorNode, w: SynthWaveform, plan: FreqPlan): { out: AudioNode; companions: OscillatorNode[] } {
+  private buildToneStack(ctx: BaseAudioContext, osc: OscillatorNode, w: SynthWaveform, plan: FreqPlan, p: WaveParams | undefined): { out: AudioNode; companions: OscillatorNode[]; helpers: AudioScheduledSourceNode[] } {
     if (w === 'pwm') {
-      const comp = ctx.createOscillator();
-      comp.type = 'sawtooth';
-      this.applyFreqPlan(comp.frequency, plan, 1, 0.4);
-      const sum = ctx.createGain();
-      const gA = ctx.createGain();
-      const gB = ctx.createGain();
-      gA.gain.value = 0.5;
-      gB.gain.value = -0.5;
-      osc.connect(gA);
-      comp.connect(gB);
-      gA.connect(sum);
-      gB.connect(sum);
-      return { out: sum, companions: [comp] };
+      const width = Math.max(5, Math.min(95, waveParam(p, 'pwmWidth'))) / 100;
+      const base = 2 * width - 1;
+      // The sweep stops short of closing the pulse entirely.
+      const depth = Math.min(waveParam(p, 'pwmDepth') / 100, 0.95 - Math.abs(base));
+      const offset = ctx.createConstantSource();
+      offset.offset.value = base;
+      const lfo = ctx.createOscillator();
+      lfo.type = 'triangle';
+      lfo.frequency.value = Math.max(0.05, waveParam(p, 'pwmRate'));
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = Math.max(0, depth);
+      const offsetSum = ctx.createGain();
+      offset.connect(offsetSum);
+      lfo.connect(lfoGain);
+      lfoGain.connect(offsetSum);
+
+      const cmpIn = ctx.createGain();
+      osc.connect(cmpIn);
+      offsetSum.connect(cmpIn);
+      const cmp = ctx.createWaveShaper();
+      cmp.curve = ModularSynth.STEP_CURVE;
+      cmp.oversample = '2x';
+      cmpIn.connect(cmp);
+
+      const out = ctx.createGain();
+      cmp.connect(out);
+      const dcCancel = ctx.createGain();
+      dcCancel.gain.value = -1;
+      offsetSum.connect(dcCancel);
+      dcCancel.connect(out);
+      return { out, companions: [], helpers: [offset, lfo] };
     }
     if (w === 'supersaw') {
+      const spread = Math.max(0, Math.min(50, waveParam(p, 'ssawSpread')));
+      const mix = Math.max(0, Math.min(1, waveParam(p, 'ssawMix') / 100));
       const sum = ctx.createGain();
       const gP = ctx.createGain();
       gP.gain.value = 0.5;
       osc.connect(gP);
       gP.connect(sum);
       const companions: OscillatorNode[] = [];
-      for (const cents of [-19, -9, 9, 19]) {
+      for (const f of [-1, -0.5, 0.5, 1]) {
         const o = ctx.createOscillator();
         o.type = 'sawtooth';
-        this.applyFreqPlan(o.frequency, plan, Math.pow(2, cents / 1200));
+        this.applyFreqPlan(o.frequency, plan, Math.pow(2, (f * spread) / 1200));
         const g = ctx.createGain();
-        g.gain.value = 0.3;
+        g.gain.value = 0.5 * mix;
         o.connect(g);
         g.connect(sum);
         companions.push(o);
       }
-      return { out: sum, companions };
+      return { out: sum, companions, helpers: [] };
     }
-    return { out: osc, companions: [] };
+    return { out: osc, companions: [], helpers: [] };
   }
 
   /** The 808 cymbal bank: six squares at its inharmonic ratios, fixed pitch, four seconds. */
@@ -1443,6 +1545,7 @@ class ModularSynth {
     let osc1Out: AudioNode | undefined;
     let osc2Out: AudioNode | undefined;
     const companions: OscillatorNode[] = [];
+    const helpers: AudioScheduledSourceNode[] = [];
     let osc2: OscillatorNode | undefined;
     let noiseSource: AudioBufferSourceNode | undefined;
     const extras: AudioScheduledSourceNode[] = [];
@@ -1521,7 +1624,7 @@ class ModularSynth {
         const startFreq = (glideSec > 0 && lastFreq && isLegato) ? lastFreq : baseFreq;
 
         osc1 = ctx.createOscillator();
-        this.applyWaveform(osc1, track.osc1Waveform, track.pulseWidth, ctx);
+        this.applyWaveform(osc1, track.osc1Waveform, track.pulseWidth, track.waveParams, ctx);
         const plan1: FreqPlan = { t, start: startFreq, ramps: [] };
         if (glideSec > 0 && startFreq !== baseFreq) plan1.ramps.push({ to: baseFreq, at: t + glideSec });
         if (pEnvAmt !== 0) {
@@ -1529,9 +1632,10 @@ class ModularSynth {
           plan1.ramps.push({ to: baseFreq, at: t + glideSec + pAtt + pDec });
         }
         this.applyFreqPlan(osc1.frequency, plan1);
-        const stack1 = this.buildToneStack(ctx, osc1, track.osc1Waveform, plan1);
+        const stack1 = this.buildToneStack(ctx, osc1, track.osc1Waveform, plan1, track.waveParams);
         osc1Out = stack1.out;
         companions.push(...stack1.companions);
+        helpers.push(...stack1.helpers);
       }
 
       // SEMI transposes OSC2 in semitones on top of RATIO and DET; it was a knob
@@ -1545,7 +1649,7 @@ class ModularSynth {
       const startFreq2 = (glideSec2 > 0 && lastFreq2 && isLegato2) ? prevOsc2Freq : osc2Freq;
 
       osc2 = ctx.createOscillator();
-      this.applyWaveform(osc2, track.osc2Waveform, track.pulseWidth, ctx);
+      this.applyWaveform(osc2, track.osc2Waveform, track.pulseWidth, track.waveParams, ctx);
       const plan2: FreqPlan = { t, start: startFreq2, ramps: [] };
       if (glideSec2 > 0 && startFreq2 !== osc2Freq) plan2.ramps.push({ to: osc2Freq, at: t + glideSec2 });
       if (pEnvAmt !== 0) {
@@ -1553,9 +1657,10 @@ class ModularSynth {
         plan2.ramps.push({ to: osc2Freq, at: t + glideSec2 + pAtt + pDec });
       }
       this.applyFreqPlan(osc2.frequency, plan2);
-      const stack2 = this.buildToneStack(ctx, osc2, track.osc2Waveform, plan2);
+      const stack2 = this.buildToneStack(ctx, osc2, track.osc2Waveform, plan2, track.waveParams);
       osc2Out = stack2.out;
       companions.push(...stack2.companions);
+      helpers.push(...stack2.helpers);
 
       // Record this note for subsequent glide calculations
       this.lastTrackFreqs.set(track.id, baseFreq);
@@ -1613,6 +1718,10 @@ class ModularSynth {
       for (const c of companions) {
         c.start(startT1);
         extras.push(c);
+      }
+      for (const h of helpers) {
+        h.start(startT1);
+        extras.push(h);
       }
 
       // SUB: a sine an octave under OSC1, following its glide and pitch envelope.
