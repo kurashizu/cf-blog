@@ -41,10 +41,10 @@
 
 		<div class="col-span-7 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
 			<RotaryKnob label="CUTOFF" value={$currentTrack.cutoff} min={40} max={12000} step={50} unit="Hz" color="#56b6c2" size={32} reset={12000} onChange={(v) => updateActiveTrack({ cutoff: v })} />
-			<RotaryKnob label="RES (Q)" value={$currentTrack.resonance} min={0.2} max={14} step={0.2} color="#e5c07b" size={32} reset={0.2} onChange={(v) => updateActiveTrack({ resonance: v })} />
-			<RotaryKnob label="KEY TRK" value={Math.round(($currentTrack.keyTracking ?? 0.0) * 100)} min={0} max={100} step={5} unit="%" color="#61afef" size={32} reset={0} onChange={(v) => updateActiveTrack({ keyTracking: v / 100 })} />
+			<RotaryKnob label="RESQ" value={$currentTrack.resonance} min={0.2} max={14} step={0.2} color="#e5c07b" size={32} reset={0.2} onChange={(v) => updateActiveTrack({ resonance: v })} />
+			<RotaryKnob label="KTRK" value={Math.round(($currentTrack.keyTracking ?? 0.0) * 100)} min={0} max={100} step={5} unit="%" color="#61afef" size={32} reset={0} onChange={(v) => updateActiveTrack({ keyTracking: v / 100 })} />
 			<RotaryKnob
-				label="ENV AMT"
+				label="ENVA"
 				value={Math.round(($currentTrack.filterEnvAmount ?? $currentTrack.envFilterMod ?? 0.5) * 100)}
 				min={-100}
 				max={100}
