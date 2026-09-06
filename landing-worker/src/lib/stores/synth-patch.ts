@@ -137,7 +137,7 @@ function applyPatchData(raw: SynthPatchData): void {
 			// Likewise percussion mode: a patch that predates it, or one saved with
 			// it off, must not inherit the live track's key table.
 			if (tData.id !== undefined)
-				modularSynth.updateTrack(tData.id, { eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], percussion: false, keyTimbres: {}, ...tData });
+				modularSynth.updateTrack(tData.id, { eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], percussion: false, keyTimbres: {}, duckSource: -1, duckKey: -1, duckDepth: 0, ...tData });
 		});
 		refreshTracks();
 	}

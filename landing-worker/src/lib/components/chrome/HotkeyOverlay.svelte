@@ -53,13 +53,32 @@
 			color: '#98c379',
 			note: 'Active on view 2 whenever no text field, menu or settings panel has focus',
 			keys: [
-				{ key: 'Enter', desc: 'Play / stop the sequencer' },
+				{ key: 'Space / Enter', desc: 'Play / pause where it is (Space is the sustain pedal while QWERTY is on)' },
 				{ key: 'Home', desc: 'Rewind to bar 1' },
 				{ key: 'Backspace', desc: 'Stop and rewind to bar 1' },
-				{ key: '← / →', desc: 'Previous / next page' },
+				{ key: '← / →', desc: 'Previous / next page (Shift: move the cursor a bar)' },
 				{ key: '↑ / ↓', desc: 'Next / previous sound preset (applied to the active track)' },
+				{ key: '1 – 8', desc: 'Select track 1–8' },
+				{ key: 'M / S / L / F', desc: 'Mute / solo the active track; LOOP–ONCE; follow the playhead across pages' },
+				{ key: ', / .', desc: 'Cursor back / forward one bar' },
 				{ key: 'Right-click', desc: 'Reset a knob or fader to its neutral value; RST on a rack does the whole rack' },
 				{ key: '- / =', desc: 'Tempo −1 / +1 BPM (hold to ramp)' }
+			]
+		},
+		{
+			title: 'SYNTH — PIANO ROLL',
+			color: '#c678dd',
+			note: 'Letters, digits and , . belong to the QWERTY piano while it is on; a tap of Ctrl / Shift shifts its octave',
+			keys: [
+				{ key: 'click / drag', desc: 'Place a note / box-select (Shift adds)' },
+				{ key: 'click a note', desc: 'Select it (Shift toggles); drag to move, drag its right end to resize, Alt-drag copies' },
+				{ key: 'Right-click', desc: 'Delete the note under the pointer; drag to erase more' },
+				{ key: '← ↑ → ↓', desc: 'Nudge the selection a grid step / semitone (Shift: a bar / an octave)' },
+				{ key: 'Delete / Esc', desc: 'Delete the selection / clear it' },
+				{ key: 'Ctrl+A', desc: 'Select the page; again for the whole track' },
+				{ key: 'Ctrl+C / X / V', desc: 'Copy / cut / paste at the cursor (the cyan ruler cell); clips cross tracks, patches and tabs' },
+				{ key: 'Ctrl+D', desc: 'Repeat the selection right after itself' },
+				{ key: 'Ctrl+Z / Ctrl+Shift+Z', desc: 'Undo / redo (also Ctrl+Y)' }
 			]
 		},
 		{

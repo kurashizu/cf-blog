@@ -17,13 +17,12 @@
 		activeSubCol,
 		timeMeter,
 		snapDiv,
+		selected,
 		percussion = false,
 		isActiveKey = false,
 		isCustomKey = false,
 		onResetKey,
-		onAudition,
-		onCellClick,
-		onSubCellClick
+		onAudition
 	}: {
 		nInfo: { note: string; freq: number; isBlack: boolean; oct: number };
 		actualIdx: number;
@@ -33,14 +32,14 @@
 		activeSubCol: number;
 		timeMeter: TimeSignature;
 		snapDiv: NoteDurationDiv;
+		/** `note:start` keys of the selected runs on the primary track. */
+		selected: Set<string>;
 		/** Percussion mode: the label shows which keys carry their own sound and which one the racks edit. */
 		percussion?: boolean;
 		isActiveKey?: boolean;
 		isCustomKey?: boolean;
 		onResetKey?: (noteIdx: number) => void;
 		onAudition: (noteIdx: number) => void;
-		onCellClick: (noteIdx: number, colIdx: number) => void;
-		onSubCellClick: (noteIdx: number, colIdx: number, subCol: number) => void;
 	} = $props();
 
 	let isRootC = $derived(nInfo.note.startsWith('C') && !nInfo.note.includes('#'));
@@ -60,6 +59,7 @@
 		widthPct: number;
 		startsHere: boolean;
 		endsHere: boolean;
+		runStart: number;
 	}
 
 	/**
@@ -83,7 +83,8 @@
 					leftPct: ((from - colStart) / spc) * 100,
 					widthPct: ((to - from) / spc) * 100,
 					startsHere: runStart >= colStart,
-					endsHere: runEnd <= colEnd
+					endsHere: runEnd <= colEnd,
+					runStart
 				});
 				s = runEnd;
 			} else {
@@ -94,6 +95,7 @@
 	}
 </script>
 
+<!-- Cells carry data-note / data-step / data-span; the roll's pointer handler reads them, so the cells themselves have no listeners. -->
 <div class="piano-roll-row flex items-center gap-1 shrink-0 min-h-[18px] h-[18px]">
 	<button
 		type="button"
@@ -130,16 +132,18 @@
 			{@const isBeatStart = colInBar % effColsPerBeat === 0}
 			{@const isDivBlockStart = colIdx % spanInt === 0}
 			<div class="h-full relative">
-				<!-- Click layer: whole-column cell, or two half-column sub-cells for 1/8 & 1/12 snaps -->
+				<!-- Hit layer: whole-column cell, or two half-column sub-cells for 1/8 & 1/12 snaps -->
 				{#if hasSubColumns(snapDiv)}
 					<div class="flex h-full w-full gap-0.5">
 						{#each [0, 1] as subCol (subCol)}
 							{@const step = colStart + subCol * half}
 							{@const isSubCurrent = isColActive && activeSubCol === subCol}
-							<button
-								onclick={() => onSubCellClick(actualIdx, colIdx, subCol)}
-								title={`Step ${step + 1}`}
-								class="flex-1 h-full cursor-pointer border rounded-xs transition-colors {isSubCurrent
+							<div
+								data-note={actualIdx}
+								data-step={step}
+								data-span={half}
+								title={`${nInfo.note} — Step ${step + 1}`}
+								class="flex-1 h-full border rounded-xs transition-colors {isSubCurrent
 									? 'border-white/70 bg-white/30'
 									: isBarStart && subCol === 0
 										? isRootC
@@ -162,14 +166,16 @@
 													: subCol === 1
 														? 'border-l border-white/10 bg-white/[0.03] hover:bg-white/10'
 														: 'border-white/5 bg-white/[0.03] hover:bg-white/10'}"
-							></button>
+							></div>
 						{/each}
 					</div>
 				{:else}
-					<button
-						onclick={() => onCellClick(actualIdx, colIdx)}
+					<div
+						data-note={actualIdx}
+						data-step={colStart}
+						data-span={spc}
 						title={`${nInfo.note} — Step ${colStart + 1}`}
-						class="w-full h-full cursor-pointer rounded-xs border transition-colors {isColActive
+						class="w-full h-full rounded-xs border transition-colors {isColActive
 							? 'border-white/70 bg-white/25 shadow-xs'
 							: isBarStart
 								? isRootC
@@ -190,18 +196,21 @@
 											: isDivBlockStart
 												? 'border border-white/20 bg-white/[0.03] hover:bg-white/10'
 												: 'border border-white/10 bg-white/[0.03] hover:bg-white/10'}"
-					></button>
+					></div>
 				{/if}
 
-				<!-- Note overlay: bar width is exactly the note's step span; clicks pass through -->
+				<!-- Note overlay: bar width is exactly the note's step span; pointer events pass through to the cell -->
 				{#each visibleTracks as t (t.id)}
 					{#each noteSegments(t, colStart) as seg, si (si)}
+						{@const isSel = t.isPrimary && selected.has(`${actualIdx}:${seg.runStart}`)}
 						<div
 							class="absolute top-[1px] bottom-[1px] pointer-events-none shadow-xs {seg.startsHere
 								? 'rounded-l-xs border-l-2 border-white/80'
-								: ''} {seg.endsHere ? 'rounded-r-xs' : ''} {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-70'} {isColActive && t.isPrimary
-								? 'brightness-125 ring-1 ring-white'
-								: ''}"
+								: ''} {seg.endsHere ? 'rounded-r-xs' : ''} {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-70'} {isSel
+								? 'z-[4] brightness-125 outline outline-1 outline-white shadow-[0_0_6px_rgba(255,255,255,0.7)]'
+								: isColActive && t.isPrimary
+									? 'brightness-125 ring-1 ring-white'
+									: ''}"
 							style="background-color: {t.color}; left: {seg.startsHere ? `${seg.leftPct}%` : `calc(${seg.leftPct}% - 2px)`}; width: calc({seg.widthPct}% + {(seg.startsHere ? 0 : 2) + (seg.endsHere ? 0 : 2)}px);"
 						></div>
 					{/each}

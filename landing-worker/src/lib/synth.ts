@@ -217,6 +217,14 @@ export interface TrackData {
   // Node 7: Master Output Channel Strip
   airGain?: number;        // -1.0 to +1.0 (Air Shelf EQ / Tone Shaping, ±8dB at 10kHz)
 
+  // Sidechain ducking (7.OUT): this track dips whenever the source track fires a note.
+  duckSource?: number;     // source track id, -1 = off
+  duckKey?: number;        // only this note index on the source triggers it, -1 = any key
+  duckDepth?: number;      // 0.0 to 1.0 -- how far the track dips (1 = to silence)
+  duckDip?: number;        // ms to reach the floor
+  duckHold?: number;       // ms held at the floor
+  duckRelease?: number;    // ms back to unity
+
   // Modular Modulation Matrix Routing (Optional legacy support)
   modRoutes?: ModRoute[];
 
@@ -421,7 +429,7 @@ class ModularSynth {
   private waveShaper: WaveShaperNode | null = null;
 
   // Per-Track 6-Band Graphic EQ chains (track voices -> input -> 6 biquads -> master bus)
-  private trackBuses: { input: GainNode; filters: BiquadFilterNode[] }[] = [];
+  private trackBuses: { input: GainNode; filters: BiquadFilterNode[]; duck: GainNode }[] = [];
   // Master bus input: track EQ chains + FX wet returns sum here, then pass the
   // drive shaper on the way to the sound engine's master gain.
   private masterBusIn: GainNode | null = null;
@@ -639,8 +647,13 @@ class ModularSynth {
       for (let i = 0; i < filters.length - 1; i++) {
         filters[i].connect(filters[i + 1]);
       }
-      filters[filters.length - 1].connect(this.masterBusIn!);
-      return { input, filters };
+      // The ducking gain sits after the EQ, so sidechain dips are one
+      // automation curve per track and never touch the summing point.
+      const duck = ctx.createGain();
+      duck.gain.setValueAtTime(1, ctx.currentTime);
+      filters[filters.length - 1].connect(duck);
+      duck.connect(this.masterBusIn!);
+      return { input, filters, duck };
     });
     this.applyAllTrackEq();
 
@@ -811,6 +824,12 @@ class ModularSynth {
   public setTrackStepNotes(trackId: number, stepIndex: number, notes: number[]) {
     if (this.tracks[trackId]) {
       this.tracks[trackId].grid[stepIndex] = [...notes];
+    }
+  }
+
+  public setTrackAccent(trackId: number, stepIndex: number, level: number) {
+    if (this.tracks[trackId]?.accents) {
+      this.tracks[trackId].accents[stepIndex] = level;
     }
   }
 
@@ -1093,6 +1112,44 @@ class ModularSynth {
     }
   }
 
+  /**
+   * Sidechain, trigger-driven: every track keyed to this source (and, if it
+   * asked for one, to this key) gets a gain dip scheduled at the note's start
+   * time. There is no envelope follower -- every sound here is an envelope we
+   * already know -- so the dip is sample-accurate, costs nothing, and comes
+   * out identical in an offline render. The reverb/delay sends tap before the
+   * track bus, so only the dry signal ducks and tails keep ringing.
+   */
+  private scheduleDucking(sourceId: number, noteIndex: number, t: number) {
+    for (let j = 0; j < this.tracks.length; j++) {
+      const trk = this.tracks[j];
+      if (j === sourceId || trk.duckSource !== sourceId) continue;
+      const depth = trk.duckDepth ?? 0;
+      if (depth <= 0) continue;
+      const key = trk.duckKey ?? -1;
+      if (key >= 0 && key !== noteIndex) continue;
+      const bus = this.trackBuses[j];
+      if (!bus) continue;
+      const g = bus.duck.gain;
+      const dip = Math.max(0.001, (trk.duckDip ?? 5) / 1000);
+      const hold = Math.max(0, (trk.duckHold ?? 40) / 1000);
+      const rel = Math.max(0.005, (trk.duckRelease ?? 150) / 1000);
+      const floor = Math.max(0.0005, 1 - depth);
+      const param = g as AudioParam & { cancelAndHoldAtTime?: (t: number) => AudioParam };
+      // A retrigger inside the previous release starts from wherever the
+      // curve is, not from unity; browsers without cancelAndHold restart
+      // from the current value instead, which only matters mid-release.
+      if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(t);
+      else {
+        g.cancelScheduledValues(t);
+        g.setValueAtTime(g.value, t);
+      }
+      g.linearRampToValueAtTime(floor, t + dip);
+      g.setValueAtTime(floor, t + dip + hold);
+      g.linearRampToValueAtTime(1, t + dip + hold + rel);
+    }
+  }
+
   public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number, rawVelocity?: number) {
     const trackRow = this.tracks[trackId];
     // Muting silences live playback, but must not silence an offline render.
@@ -1124,6 +1181,7 @@ class ModularSynth {
 
     const voiceKey = `v${++this._voiceSeq}`;
     const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
+    this.scheduleDucking(trackId, noteIndex, t);
     const tuningScale = this.masterTuningFreq / 440.0;
     const baseFreq = noteInfo.freq * tuningScale;
     const masterGain = this.masterOut(ctx);

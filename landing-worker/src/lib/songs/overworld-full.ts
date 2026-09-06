@@ -40479,7 +40479,7 @@ export const OVERWORLD_FULL_TRACKS: TrackData[] = [
     id: 2,
     name: 'TRK 3: STEEL DRUM / MARIMBA',
     color: '#c678dd',
-    volume: 1.0,
+    volume: 0.7, // the pad sat on top of the lead at 1.0; -3 dB keeps it a counter-line
     pan: 0.32,
     muted: false,
     solo: false,

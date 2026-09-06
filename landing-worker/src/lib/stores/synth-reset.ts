@@ -82,7 +82,13 @@ export const RACK6_EQ_NEUTRAL: Partial<TrackData> = {
 export const RACK7_NEUTRAL: Partial<TrackData> = {
 	pan: 0,
 	airGain: 0,
-	volume: 1
+	volume: 1,
+	duckSource: -1,
+	duckKey: -1,
+	duckDepth: 0,
+	duckDip: 5,
+	duckHold: 40,
+	duckRelease: 150
 };
 
 /** Global FX defaults, in the stores' own units (seconds / 0-1). */

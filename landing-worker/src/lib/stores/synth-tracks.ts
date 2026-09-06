@@ -21,6 +21,7 @@ import {
 	isSeqPlaying,
 	seqCurrentStep
 } from './synth-transport';
+import { withUndo, selectRuns, clearSelection } from './synth-edit';
 
 export const tracksState = writable<TrackData[]>(modularSynth.getTracks());
 export const isOverlayMode = writable<boolean>(true);
@@ -61,7 +62,7 @@ export const visibleTracks = derived(
 	}
 );
 
-function refreshTracks(): void {
+export function refreshTracks(): void {
 	tracksState.set([...modularSynth.getTracks()]);
 }
 
@@ -160,7 +161,8 @@ export function handlePianoRollSubCellClick(noteIndex: number, colIndex: number,
 	placeOrClearNote(trackId, noteIndex, startStep);
 }
 
-function placeOrClearNote(trackId: number, noteIndex: number, startStep: number): void {
+/** Put a note of the current NOTE DUR down, or lift the run under the click. Both are one undo step. */
+export function placeOrClearNote(trackId: number, noteIndex: number, startStep: number): void {
 	const track = modularSynth.getTrack(trackId);
 	const total = get(totalPatternSteps);
 	if (!track || startStep >= total) return;
@@ -168,23 +170,30 @@ function placeOrClearNote(trackId: number, noteIndex: number, startStep: number)
 	const isAlreadyOn = track.grid[startStep]?.includes(noteIndex) || false;
 
 	if (isAlreadyOn) {
-		let s = startStep;
-		while (s < total && track.grid[s]?.includes(noteIndex)) {
-			const notes = track.grid[s] || [];
-			modularSynth.setTrackStepNotes(trackId, s, notes.filter((n) => n !== noteIndex));
-			s++;
-		}
+		withUndo(trackId, () => {
+			let s = startStep;
+			while (s < total && track.grid[s]?.includes(noteIndex)) {
+				const notes = track.grid[s] || [];
+				modularSynth.setTrackStepNotes(trackId, s, notes.filter((n) => n !== noteIndex));
+				s++;
+			}
+		});
+		clearSelection();
 		refreshTracks();
 	} else {
 		const durSteps = Math.max(1, divToStepSpan(get(noteDur)));
 		const endStep = Math.min(total, startStep + durSteps);
 
-		for (let s = startStep; s < endStep; s++) {
-			const notes = track.grid[s] || [];
-			if (!notes.includes(noteIndex) && notes.length < 8) {
-				modularSynth.setTrackStepNotes(trackId, s, [...notes, noteIndex].sort((a, b) => a - b));
+		withUndo(trackId, () => {
+			for (let s = startStep; s < endStep; s++) {
+				const notes = track.grid[s] || [];
+				if (!notes.includes(noteIndex) && notes.length < 8) {
+					modularSynth.setTrackStepNotes(trackId, s, [...notes, noteIndex].sort((a, b) => a - b));
+				}
 			}
-		}
+		});
+		// The new note is the selection, so Delete / arrows / Ctrl+D act on it straight away.
+		selectRuns([{ note: noteIndex, start: startStep, len: endStep - startStep }]);
 		refreshTracks();
 		const isAccent = track.accents[startStep] || false;
 		modularSynth.triggerTrackVoice(trackId, noteIndex, isAccent);
@@ -192,7 +201,8 @@ function placeOrClearNote(trackId: number, noteIndex: number, startStep: number)
 }
 
 export function cycleAccent(step: number): void {
-	modularSynth.cycleTrackAccent(get(activeTrackId), step);
+	const id = get(activeTrackId);
+	withUndo(id, () => modularSynth.cycleTrackAccent(id, step));
 	refreshTracks();
 }
 

@@ -24,8 +24,11 @@
 		stepBar,
 		jumpPlayheadToCursor,
 		loopMode,
-		setLoopMode
+		setLoopMode,
+		activeTrackId
 	} from '../../stores/synth-transport';
+	import { tracksState, toggleTrackMute, toggleTrackSolo } from '../../stores/synth-tracks';
+	import { suspendNavHotkeys } from '../../stores/hotkeys';
 	import { stepPreset } from '../../stores/synth-presets';
 	import { hotkeyOverlayOpen, consoleOverlayOpen } from '../../stores/chrome';
 	import PatchManager from './PatchManager.svelte';
@@ -123,22 +126,39 @@
 	}
 
 	/*
-	 * Transport hotkeys. Everything the QWERTY piano uses is off limits -- the
-	 * letter rows, the digit row, Space (sustain), [ ] Ctrl Shift (octave) --
-	 * which leaves the keys a DAW would reach for anyway: Enter for play/stop,
-	 * Home / Backspace to return to zero, arrows for pages and presets, - =
-	 * for tempo (held, they ramp). No modifiers, so nothing collides with the
-	 * octave shifts or the site's Ctrl+digit navigation.
+	 * Transport hotkeys. The piano roll's editor listens in the capture phase
+	 * and marks what it took with preventDefault, so Backspace and the arrows
+	 * only land here when nothing is selected. Ctrl/Cmd combos are the
+	 * editor's (and the site's Ctrl+digit navigation); Alt is left alone.
+	 * While the QWERTY piano is on it owns the letter rows, the digit row,
+	 * Space (sustain) and , . -- those keys are transport keys only when it is
+	 * off, which `suspendNavHotkeys` reports.
 	 */
 	function onTransportHotkey(e: KeyboardEvent) {
-		if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+		if (e.defaultPrevented) return;
+		if (e.ctrlKey || e.metaKey || e.altKey) return;
 		if ($hotkeyOverlayOpen || $consoleOverlayOpen || $isSynthSettingsOpen) return;
 		const target = e.target as HTMLElement | null;
 		const tag = target?.tagName?.toLowerCase() ?? '';
 		if (['input', 'textarea', 'select'].includes(tag) || target?.isContentEditable) return;
-		// A focused button already fires on Enter; don't also toggle the transport.
-		if (e.key === 'Enter' && (tag === 'button' || tag === 'a')) return;
+		// A focused button already fires on Enter / Space; don't also toggle the transport.
+		if ((e.key === 'Enter' || e.key === ' ') && (tag === 'button' || tag === 'a')) return;
+		const qwerty = $suspendNavHotkeys;
+
+		if (e.shiftKey) {
+			if (e.key === 'ArrowLeft') stepBar(-1);
+			else if (e.key === 'ArrowRight') stepBar(1);
+			else return;
+			playSound('click');
+			e.preventDefault();
+			return;
+		}
+
 		switch (e.key) {
+			case ' ':
+				if (qwerty) return;
+				togglePlayback();
+				break;
 			case 'Enter': togglePlayback(); break;
 			case 'Home': rewindToStart(); playSound('click'); break;
 			case 'Backspace':
@@ -152,7 +172,23 @@
 			case 'ArrowDown': stepPreset(-1); break;
 			case '-': setBpm(Math.max(40, $bpm - 1)); break;
 			case '=': setBpm(Math.min(240, $bpm + 1)); break;
-			default: return;
+			default: {
+				if (qwerty) return;
+				switch (e.key.toLowerCase()) {
+					case 'm': toggleTrackMute($activeTrackId); break;
+					case 's': toggleTrackSolo($activeTrackId); break;
+					case 'l': setLoopMode(!$loopMode); break;
+					case 'f': pageFollow.update((v) => !v); break;
+					case ',': stepBar(-1); break;
+					case '.': stepBar(1); break;
+					default: {
+						const n = Number(e.key);
+						if (!(n >= 1 && n <= 8) || !$tracksState[n - 1]) return;
+						activeTrackId.set(n - 1);
+					}
+				}
+				playSound('click');
+			}
 		}
 		e.preventDefault();
 	}

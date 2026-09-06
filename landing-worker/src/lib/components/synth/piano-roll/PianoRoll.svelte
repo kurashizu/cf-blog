@@ -1,8 +1,17 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { playSound } from '../../../sound';
-	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor } from '../../../synth';
+	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId } from '../../../stores/synth-transport';
-	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, handlePianoRollCellClick, handlePianoRollSubCellClick, cycleAccent } from '../../../stores/synth-tracks';
+	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, cycleAccent } from '../../../stores/synth-tracks';
+	import {
+		selection, canUndo, canRedo, undo, redo, runKey, runAt, runsIn, selectedRuns, selectRuns, toggleRun, clearSelection, selectAll,
+		deleteRuns, deleteSelection, moveSelection, resizeSelection, duplicateSelection, copySelection, cutSelection, pasteClip,
+		transformMove, transformResize, withUndo, beginBatch, endBatch, barSteps, type NoteRun
+	} from '../../../stores/synth-edit';
+	import { hotkeyOverlayOpen, consoleOverlayOpen } from '../../../stores/chrome';
+	import { isSynthSettingsOpen } from '../../../stores/synth-settings';
 	import PianoRollRow from './PianoRollRow.svelte';
 
 	let octaveFrom = $state(3);
@@ -18,6 +27,8 @@
 	let colsPerPage = $derived(effColsPerBar);
 	let stepsPerPage = $derived(meterSpec.stepsPerBar);
 	let viewportStartCol = $derived($activeStepPage * colsPerPage);
+	/** Steps per snap increment: what a click lands on and what a drag or arrow nudge moves by. */
+	let snapSteps = $derived(Math.max(1, divToStepSpan($snapDiv)));
 	/* The rows that are actually on screen, filtered before the loop.
 	   The template used to iterate all 88 notes and hide the out-of-range ones
 	   with an {#if} inside, which still creates an each-block per note -- ~50
@@ -43,10 +54,13 @@
 	let cursorSubCol = $derived(Math.floor(($cursorStep % spc) / (spc / 2)));
 
 	function clearPage() {
-		for (let i = 0; i < stepsPerPage; i++) {
-			const actualStep = $activeStepPage * stepsPerPage + i;
-			modularSynth.clearTrackStep($activeTrackId, actualStep);
-		}
+		const id = $activeTrackId;
+		withUndo(id, () => {
+			for (let i = 0; i < stepsPerPage; i++) {
+				modularSynth.clearTrackStep(id, $activeStepPage * stepsPerPage + i);
+			}
+		});
+		clearSelection();
 		tracksState.set([...modularSynth.getTracks()]);
 		playSound('click');
 	}
@@ -78,6 +92,320 @@
 		cycleAccent(step);
 		playSound('click');
 	}
+
+	/* ------------------------------------------------------------------
+	   Editing. One pointer handler on the rows container does everything;
+	   the cells only carry data-note / data-step / data-span.
+	     click empty        place a note (NOTE DUR long); it becomes the selection
+	     drag empty         marquee; Shift adds to the selection
+	     click a note       select it; Shift toggles it
+	     drag a note        move the selection (snap steps / semitones); Alt drags a copy
+	     drag a note's end  resize the selection
+	     right-click / drag delete the note(s) under the pointer
+	   A move or resize is previewed by rendering a transformed copy of the
+	   grid; nothing is written until the pointer goes up.
+	   ------------------------------------------------------------------ */
+	interface Cell {
+		note: number;
+		step: number;
+		span: number;
+		el: HTMLElement;
+	}
+	type DragMode = 'marquee' | 'move' | 'resize' | 'erase';
+	interface Drag {
+		mode: DragMode;
+		active: boolean;
+		x0: number;
+		y0: number;
+		cell: Cell;
+		lastCell: Cell;
+		fs0: number;
+		shift: boolean;
+		copy: boolean;
+		base: Set<string>;
+		runs: NoteRun[];
+		d: { dSteps: number; dNotes: number } | null;
+	}
+
+	let rows: HTMLDivElement;
+	let drag: Drag | null = null;
+	let marquee = $state<{ left: number; top: number; width: number; height: number } | null>(null);
+	let marqueeKeys = $state<Set<string> | null>(null);
+	let preview = $state<{ grid: number[][]; keys: Set<string> } | null>(null);
+	let hoverCursor = $state('');
+
+	/* While a move or resize is in flight the primary track is drawn from the transformed copy. */
+	let rowTracks = $derived(preview ? $visibleTracks.map((t) => (t.isPrimary ? { ...t, grid: preview!.grid } : t)) : $visibleTracks);
+	let shownSelection = $derived(preview ? preview.keys : (marqueeKeys ?? $selection));
+
+	function cellFromEl(el: Element | null): Cell | null {
+		const c = el?.closest?.('[data-step]') as HTMLElement | null;
+		if (!c || !rows.contains(c)) return null;
+		return { note: Number(c.dataset.note), step: Number(c.dataset.step), span: Number(c.dataset.span), el: c };
+	}
+
+	function cellAt(x: number, y: number): Cell | null {
+		return cellFromEl(document.elementFromPoint(x, y));
+	}
+
+	/** Pointer x inside the cell as a fractional step, so a note narrower than the cell still hits. */
+	function fracStep(cell: Cell, x: number): number {
+		const r = cell.el.getBoundingClientRect();
+		return cell.step + Math.min(0.999, Math.max(0, (x - r.left) / Math.max(1, r.width))) * cell.span;
+	}
+
+	function hitRun(cell: Cell, x: number): { run: NoteRun; edge: boolean } | null {
+		const grid = $activeTrackRow?.grid;
+		if (!grid) return null;
+		const fs = fracStep(cell, x);
+		let run = runAt(grid, cell.note, Math.floor(fs));
+		for (let s = cell.step; !run && s < cell.step + cell.span; s++) run = runAt(grid, cell.note, s);
+		if (!run) return null;
+		const r = cell.el.getBoundingClientRect();
+		const pxPerStep = r.width / cell.span;
+		const runPx = run.len * pxPerStep;
+		const ptrPx = (fs - run.start) * pxPerStep;
+		const zone = Math.min(runPx * 0.5, Math.max(6, runPx * 0.25));
+		return { run, edge: runPx - ptrPx <= zone };
+	}
+
+	function placeAt(cell: Cell) {
+		const start = Math.floor(cell.step / snapSteps) * snapSteps;
+		activeKey.set(cell.note);
+		placeOrClearNote($activeTrackId, cell.note, start);
+	}
+
+	function onPointerDown(e: PointerEvent) {
+		if (drag || (e.button !== 0 && e.button !== 2)) return;
+		const cell = cellFromEl(e.target as Element);
+		if (!cell || !$activeTrackRow) return;
+		const total = $totalPatternSteps;
+		const common = { active: false, x0: e.clientX, y0: e.clientY, cell, lastCell: cell, fs0: fracStep(cell, e.clientX), shift: e.shiftKey, copy: e.altKey, base: new Set<string>(), runs: [] as NoteRun[], d: null };
+
+		if (e.button === 2) {
+			e.preventDefault();
+			beginBatch($activeTrackId);
+			const hit = hitRun(cell, e.clientX);
+			if (hit) deleteRuns([hit.run]);
+			drag = { ...common, mode: 'erase', active: true };
+			rows.setPointerCapture(e.pointerId);
+			return;
+		}
+
+		const hit = hitRun(cell, e.clientX);
+		if (hit) {
+			const k = runKey(hit.run.note, hit.run.start);
+			if (e.shiftKey) {
+				toggleRun(hit.run);
+				if (!get(selection).has(k)) return; // shift-click took it out: nothing to drag
+			} else if (!get(selection).has(k)) {
+				selectRuns([hit.run]);
+			}
+			activeKey.set(cell.note);
+			if (e.pointerType === 'touch') return;
+			drag = { ...common, mode: hit.edge ? 'resize' : 'move', runs: selectedRuns($activeTrackRow.grid, total, get(selection)) };
+		} else {
+			drag = { ...common, mode: 'marquee', base: e.shiftKey ? new Set(get(selection)) : new Set() };
+		}
+		rows.setPointerCapture(e.pointerId);
+	}
+
+	function onPointerMove(e: PointerEvent) {
+		if (!drag) {
+			const cell = cellFromEl(e.target as Element);
+			const hit = cell && hitRun(cell, e.clientX);
+			hoverCursor = hit ? (hit.edge ? 'ew-resize' : 'grab') : '';
+			return;
+		}
+		if (!drag.active) {
+			if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4) return;
+			drag.active = true;
+			if (drag.mode === 'move') hoverCursor = 'grabbing';
+		}
+		const trk = $activeTrackRow;
+		if (!trk) return;
+		const total = $totalPatternSteps;
+		const cell = cellAt(e.clientX, e.clientY) ?? drag.lastCell;
+		drag.lastCell = cell;
+
+		switch (drag.mode) {
+			case 'erase': {
+				const hit = hitRun(cell, e.clientX);
+				if (hit) deleteRuns([hit.run]);
+				break;
+			}
+			case 'marquee': {
+				const a = drag.cell;
+				const noteLo = Math.min(a.note, cell.note);
+				const noteHi = Math.max(a.note, cell.note);
+				const stepLo = Math.min(a.step, cell.step);
+				const stepHi = Math.max(a.step + a.span, cell.step + cell.span);
+				const keys = new Set(drag.base);
+				for (const r of runsIn(trk.grid, total, noteLo, noteHi, stepLo, stepHi)) keys.add(runKey(r.note, r.start));
+				marqueeKeys = keys;
+				const ra = a.el.getBoundingClientRect();
+				const rb = cell.el.getBoundingClientRect();
+				const rc = rows.getBoundingClientRect();
+				const left = Math.min(ra.left, rb.left);
+				const top = Math.min(ra.top, rb.top);
+				marquee = {
+					left: left - rc.left + rows.scrollLeft,
+					top: top - rc.top + rows.scrollTop,
+					width: Math.max(ra.right, rb.right) - left,
+					height: Math.max(ra.bottom, rb.bottom) - top
+				};
+				break;
+			}
+			case 'move': {
+				const dSteps = Math.round((fracStep(cell, e.clientX) - drag.fs0) / snapSteps) * snapSteps;
+				const dNotes = cell.note - drag.cell.note;
+				const out = transformMove(trk.grid, trk.accents as number[], total, drag.runs, dSteps, dNotes, drag.copy);
+				preview = { grid: out.grid, keys: out.keys };
+				drag.d = { dSteps: out.dSteps, dNotes: out.dNotes };
+				break;
+			}
+			case 'resize': {
+				const dLen = Math.round((fracStep(cell, e.clientX) - drag.fs0) / snapSteps) * snapSteps;
+				const out = transformResize(trk.grid, total, drag.runs, dLen);
+				preview = { grid: out.grid, keys: out.keys };
+				drag.d = { dSteps: dLen, dNotes: 0 };
+				break;
+			}
+		}
+	}
+
+	function finishDrag(e: PointerEvent, commit: boolean) {
+		const d = drag;
+		if (!d) return;
+		drag = null;
+		hoverCursor = '';
+		marquee = null;
+		const keys = marqueeKeys;
+		marqueeKeys = null;
+		preview = null;
+		try {
+			rows.releasePointerCapture(e.pointerId);
+		} catch {
+			/* already released */
+		}
+
+		if (d.mode === 'erase') {
+			endBatch();
+			return;
+		}
+		if (!commit) return;
+		if (!d.active) {
+			// A plain click. On a note the selection was settled on the way down.
+			if (d.mode === 'marquee') {
+				if (!d.shift) clearSelection();
+				placeAt(d.cell);
+			}
+			return;
+		}
+		if (d.mode === 'marquee') {
+			selection.set(keys ?? d.base);
+		} else if (d.mode === 'move' && d.d && (d.d.dSteps || d.d.dNotes || d.copy)) {
+			moveSelection(d.d.dSteps, d.d.dNotes, d.copy);
+			playSound('click');
+		} else if (d.mode === 'resize' && d.d?.dSteps) {
+			resizeSelection(d.d.dSteps);
+			playSound('click');
+		}
+	}
+
+	function cancelDrag() {
+		if (!drag) return;
+		if (drag.mode === 'erase') endBatch();
+		drag = null;
+		hoverCursor = '';
+		marquee = null;
+		marqueeKeys = null;
+		preview = null;
+	}
+
+	/* Keyboard: registered in the capture phase so the transport's and the
+	   QWERTY piano's window listeners see these keys only when nothing here
+	   wanted them. Ctrl/Cmd combos are free (both other listeners skip them);
+	   Delete, Backspace, Esc and the arrows only act while a selection exists. */
+	function onKeydown(e: KeyboardEvent) {
+		if ($hotkeyOverlayOpen || $consoleOverlayOpen || $isSynthSettingsOpen) return;
+		const target = e.target as HTMLElement | null;
+		const tag = target?.tagName?.toLowerCase() ?? '';
+		if (['input', 'textarea', 'select'].includes(tag) || target?.isContentEditable) return;
+		const mod = e.ctrlKey || e.metaKey;
+		const hasSel = $selection.size > 0;
+
+		if (mod && !e.altKey) {
+			switch (e.key.toLowerCase()) {
+				case 'a': selectAll($activeStepPage * stepsPerPage, stepsPerPage); break;
+				case 'c': if (!copySelection()) return; break;
+				case 'x': if (!cutSelection()) return; break;
+				case 'v':
+					// Let the native paste event through: it carries the clipboard text
+					// without a permission prompt. If none arrives (empty clipboard,
+					// another browser), the in-page clip is pasted after a beat.
+					pasteKeyAt = performance.now();
+					window.setTimeout(() => {
+						if (pasteKeyAt && performance.now() - pasteKeyAt >= 80) {
+							pasteKeyAt = 0;
+							if (pasteClip(null)) playSound('click');
+						}
+					}, 100);
+					return;
+				case 'd': if (!duplicateSelection()) return; break;
+				case 'z': if (!(e.shiftKey ? redo() : undo())) return; break;
+				case 'y': if (!redo()) return; break;
+				default: return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+			playSound('click');
+			return;
+		}
+		if (e.key === 'Escape') {
+			if (drag) cancelDrag();
+			else if (hasSel) clearSelection();
+			else return;
+			e.preventDefault();
+			return;
+		}
+		if (!hasSel || e.altKey) return;
+		switch (e.key) {
+			case 'Delete':
+			case 'Backspace': deleteSelection(); break;
+			case 'ArrowLeft': moveSelection(-(e.shiftKey ? barSteps() : snapSteps), 0); break;
+			case 'ArrowRight': moveSelection(e.shiftKey ? barSteps() : snapSteps, 0); break;
+			case 'ArrowUp': moveSelection(0, -(e.shiftKey ? 12 : 1)); break; // lower index = higher pitch
+			case 'ArrowDown': moveSelection(0, e.shiftKey ? 12 : 1); break;
+			default: return;
+		}
+		e.preventDefault();
+		e.stopPropagation();
+		playSound('click');
+	}
+
+	let pasteKeyAt = 0;
+	function onPaste(e: ClipboardEvent) {
+		if ($hotkeyOverlayOpen || $consoleOverlayOpen || $isSynthSettingsOpen) return;
+		const target = e.target as HTMLElement | null;
+		const tag = target?.tagName?.toLowerCase() ?? '';
+		if (['input', 'textarea', 'select'].includes(tag) || target?.isContentEditable) return;
+		pasteKeyAt = 0;
+		const text = e.clipboardData?.getData('text/plain') ?? '';
+		if (pasteClip(text)) {
+			e.preventDefault();
+			playSound('click');
+		}
+	}
+
+	onMount(() => {
+		window.addEventListener('keydown', onKeydown, true);
+		window.addEventListener('paste', onPaste, true);
+		return () => {
+			window.removeEventListener('keydown', onKeydown, true);
+			window.removeEventListener('paste', onPaste, true);
+		};
+	});
 </script>
 
 <div class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
@@ -96,7 +424,14 @@
 		</div>
 
 		<div class="flex items-center gap-1.5 text-xs">
-			<button onclick={clearPage} class="press border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold transition-colors" title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track">
+			{#if $selection.size}
+				<span class="text-xs font-mono font-bold text-white/80 px-1.5 py-0.5 border border-white/40 rounded-xs" title="Selected notes — drag to move (Alt: copy), drag the right end to resize, arrows nudge (Shift: bar / octave), Delete removes, Ctrl+C/X/V/D copy / cut / paste at the cursor / repeat, Esc clears">
+					SEL {$selection.size}
+				</span>
+			{/if}
+			<button onclick={() => { if (undo()) playSound('click'); }} disabled={!$canUndo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title="Undo the last roll edit (Ctrl+Z)">↶</button>
+			<button onclick={() => { if (redo()) playSound('click'); }} disabled={!$canRedo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title="Redo (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
+			<button onclick={clearPage} class="press border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold transition-colors" title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track (undoable)">
 				✕ CLR
 			</button>
 
@@ -222,27 +557,39 @@
 				</div>
 			</div>
 
-			<!-- Scrollable note rows -->
-			<div class="flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col overflow-y-auto custom-scrollbar">
+			<!-- Scrollable note rows; one pointer handler edits, see the script -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				bind:this={rows}
+				class="relative flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col overflow-y-auto custom-scrollbar select-none"
+				style="cursor: {hoverCursor || 'auto'}; touch-action: pan-y;"
+				onpointerdown={onPointerDown}
+				onpointermove={onPointerMove}
+				onpointerup={(e) => finishDrag(e, true)}
+				onpointercancel={(e) => finishDrag(e, false)}
+				oncontextmenu={(e) => e.preventDefault()}
+			>
 				{#each visibleNotes as { nInfo, actualIdx } (nInfo.note)}
 					<PianoRollRow
 						{nInfo}
 						{actualIdx}
-						visibleTracks={$visibleTracks}
+						visibleTracks={rowTracks}
 						{viewportStartCol}
 						{activeCol}
 						{activeSubCol}
 						timeMeter={$timeMeter}
 						snapDiv={$snapDiv}
+						selected={shownSelection}
 						{percussion}
 						isActiveKey={percussion && $activeKey === actualIdx}
 						isCustomKey={percussion && keyIsCustomised($activeTrackRow, actualIdx)}
 						onResetKey={resetKey}
 						onAudition={auditionNote}
-						onCellClick={handlePianoRollCellClick}
-						onSubCellClick={handlePianoRollSubCellClick}
 					/>
 				{/each}
+				{#if marquee}
+					<div class="absolute z-[5] pointer-events-none border border-white/70 bg-white/10 rounded-xs" style="left: {marquee.left}px; top: {marquee.top}px; width: {marquee.width}px; height: {marquee.height}px;"></div>
+				{/if}
 			</div>
 
 			<!-- Fixed accent track -->

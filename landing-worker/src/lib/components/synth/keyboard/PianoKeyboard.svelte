@@ -94,19 +94,28 @@
 		return idx >= 0 && idx < PIANO_ROLL_NOTES.length ? idx : null;
 	}
 
+	/* Octave shift on a *tap* of Ctrl (down) or Shift (up): the shift happens on
+	   key-up, and only if nothing else was pressed or clicked while the key was
+	   held, so Ctrl+C, Shift+click and Shift+arrow reach the roll's editor
+	   without changing the octave. [ / ] still work as a fallback. */
+	let modHeld: string | null = null;
+	let modUsed = false;
+	function modPointer() {
+		if (modHeld) modUsed = true;
+	}
+
 	function qwertyKeydown(e: KeyboardEvent) {
 		const target = e.target as HTMLElement | null;
 		if (['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '')) return;
 
-		// Octave shift: Ctrl = down, Shift = up ([ / ] still work as fallback)
-		if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
-			if (!e.repeat) qwertyOctave = Math.max(1, qwertyOctave - 1);
+		if (e.code === 'ControlLeft' || e.code === 'ControlRight' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+			if (!e.repeat) {
+				modHeld = e.code;
+				modUsed = false;
+			}
 			return;
 		}
-		if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
-			if (!e.repeat) qwertyOctave = Math.min(6, qwertyOctave + 1);
-			return;
-		}
+		if (modHeld) modUsed = true;
 		// Space = sustain pedal, momentary like the real thing: held down = pedal down
 		if (e.code === 'Space') {
 			e.preventDefault();
@@ -135,6 +144,11 @@
 	}
 
 	function qwertyKeyup(e: KeyboardEvent) {
+		if (e.code === modHeld) {
+			if (!modUsed) qwertyOctave = e.code.startsWith('Control') ? Math.max(1, qwertyOctave - 1) : Math.min(6, qwertyOctave + 1);
+			modHeld = null;
+			return;
+		}
 		if (e.code === 'Space') {
 			setSustainPedal(false);
 			return;
@@ -162,12 +176,14 @@
 		suspendNavHotkeys.set(true);
 		window.addEventListener('keydown', qwertyKeydown);
 		window.addEventListener('keyup', qwertyKeyup);
+		window.addEventListener('pointerdown', modPointer, true);
 		window.addEventListener('blur', releaseAllQwerty);
 		return () => {
 			releaseAllQwerty();
 			suspendNavHotkeys.set(false);
 			window.removeEventListener('keydown', qwertyKeydown);
 			window.removeEventListener('keyup', qwertyKeyup);
+			window.removeEventListener('pointerdown', modPointer, true);
 			window.removeEventListener('blur', releaseAllQwerty);
 		};
 	});

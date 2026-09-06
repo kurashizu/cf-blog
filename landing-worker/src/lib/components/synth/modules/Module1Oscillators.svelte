@@ -13,21 +13,7 @@
 
 <div class="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[175px] shrink-0 xl:grow-[5]">
 	<div class="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
-		<div class="flex items-center gap-1.5">
-			<span class="whitespace-nowrap">1. DUAL OSC</span>
-			<button
-				onclick={() => {
-					setEqlComp(!$eqlCompSetting);
-					playSound('click');
-				}}
-				title="Equal Loudness (ISO 226): Automatically balances perceptual loudness across Square, Saw, Triangle, and Sine waveforms"
-				class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border {$eqlCompSetting
-					? 'bg-[#98c379]/20 border-[#98c379]/60 text-[#98c379]'
-					: 'bg-white/5 border-white/20 text-white/40 hover:text-white/70'}"
-			>
-				EQL:{$eqlCompSetting ? 'AUTO' : 'RAW'}
-			</button>
-		</div>
+		<span class="whitespace-nowrap">1. DUAL OSC</span>
 		<div class="flex items-center gap-1.5">
 			<span class="text-white/40 flex items-center" title="Signal Flow: To Timbre Fusion">
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
@@ -37,7 +23,11 @@
 	</div>
 
 	<div class="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto py-0.5">
-		<div class="col-span-3 flex flex-col justify-between h-full py-0.5">
+		<!-- The two wave columns, with the loudness switch under them: it belongs to
+		     the oscillators, and the header had no room for it. -->
+		<div class="col-span-6 flex flex-col h-full py-0.5 gap-1">
+		<div class="grid grid-cols-2 gap-1 flex-1 min-h-0">
+		<div class="flex flex-col justify-between h-full">
 			<span class="text-[10px] text-white/60 font-black text-center mb-0.5 leading-none">OSC1</span>
 			<div class="flex flex-col gap-0.5 flex-1 justify-between">
 				{#each OSC1_WAVES as w (w)}
@@ -57,7 +47,7 @@
 			</div>
 		</div>
 
-		<div class="col-span-3 flex flex-col justify-between h-full py-0.5">
+		<div class="flex flex-col justify-between h-full">
 			<span class="text-[10px] text-white/60 font-black text-center mb-0.5 leading-none">OSC2</span>
 			<div class="flex flex-col gap-0.5 flex-1 justify-between">
 				{#each OSC2_WAVES as w (w)}
@@ -76,6 +66,20 @@
 				{/each}
 			</div>
 		</div>
+	</div>
+		<button
+			onclick={() => {
+				setEqlComp(!$eqlCompSetting);
+				playSound('click');
+			}}
+			title="Equal Loudness (ISO 226): Automatically balances perceptual loudness across Square, Saw, Triangle, and Sine waveforms"
+			class="press w-full px-1 py-0.5 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border shrink-0 {$eqlCompSetting
+				? 'bg-[#98c379]/20 border-[#98c379]/60 text-[#98c379]'
+				: 'bg-white/5 border-white/20 text-white/40 hover:text-white/70'}"
+		>
+			EQL:{$eqlCompSetting ? 'AUTO' : 'RAW'}
+		</button>
+	</div>
 
 		<div class="col-span-6 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
 			<RotaryKnob label="OSC1" value={Math.round($currentTrack.osc1Gain * 100)} min={0} max={100} unit="%" color="#e5c07b" size={32} reset={100} onChange={(v) => updateActiveTrack({ osc1Gain: v / 100 })} />
