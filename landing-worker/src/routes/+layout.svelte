@@ -76,7 +76,15 @@
 	let bootVisible = $state(browser && !PREFERS_REDUCED_MOTION);
 	/* Mirrored into a store so a view's own walkthrough can wait for the screen
 	   to be clear -- the POST screen is shown before the site tour is offered,
-	   so a view tour that only checked the tour would open behind it. */
+	   so a view tour that only checked the tour would open behind it. Seeded
+	   here, synchronously, rather than through an $effect: effects run after
+	   the mount pass, but a child's onMount can run before that (a first visit
+	   straight to /synth called afterSiteGuide() from PatchManager's onMount
+	   while bootOpen was still its default false, so it resolved immediately
+	   and opened the synth tour under -- and at the same time as -- the site's
+	   own welcome/tour). Setting the store's value here runs during this
+	   component's own init, before any child mounts. */
+	bootOpen.set(browser && !PREFERS_REDUCED_MOTION);
 	$effect(() => bootOpen.set(bootVisible));
 
 	const GUIDE_KEY = 'krsz.guide.seen';
