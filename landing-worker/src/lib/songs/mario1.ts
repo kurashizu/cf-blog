@@ -384,44 +384,52 @@ const GRIDS: Record<number, number[][]> = {
    shows rather than what the ear gets. */
 /* Voicing. The chip plays all three as bursts of one noise generator, but
    the ear files them as a kit: the long beat sits on 2 and 4 and reads as
-   a snare, the short ones as hats, the strong one as a low kick. Flat
-   bursts cut by length -- the literal hardware envelope -- came across as
-   dragging, so each is a decaying hit that starts on its first sample.
-   The hat is the sound the track had before any of this (high-passed
-   noise with a small pitch snap, decaying over 120 ms). */
+   a snare, the short ones as hats, the strong one as a low kick.
+
+   Tuned against the original recording: reference hits were cut out at the
+   ROM-predicted positions (16 hats, 8 snares, 8 kicks in the first two
+   part-1 sections), reduced to a 40-band log spectrum with the sustaining
+   channels subtracted plus a band-limited RMS envelope, and each candidate
+   here was rendered offline and correlated with that. The hat wants no
+   high-pass at all (full-band noise, spectral r = 0.77 vs 0.12 with the 80
+   Hz HPF it used to have); the kick's low-pass at KEY TRK 1 (r = 0.88); the
+   snare keeps a 40% triangle body for the ear's sake at the cost of
+   spectral r (0.35), and its 60% sustain over the 7-step run gives the
+   reference's flat-then-drop envelope (r = 0.85). Every hit starts on its
+   first sample. */
 const NES_HAT: Partial<TrackData> = {
   osc1Waveform: 'noise', osc1Gain: 1.0,
   osc2Waveform: 'triangle', osc2Gain: 0.0, osc2Ratio: 1, detuneCents: 0, phaseOffset: 0, osc2Semitone: 0,
   pulseWidth: 50, subOscGain: 0.0, noiseGain: 0.0, noiseRetrig: 1, noiseRetrigGap: 12,
   blendMode: 'layer', morphAmount: 0.0, glideTime: 0, xfade: 0.5,
-  filterType: 'highpass', cutoff: 80, resonance: 1.0, envFilterMod: 0.0, keyTracking: 0.8,
-  attack: 0, decay: 0.12, sustain: 0.0, release: 0.04,
-  ampAttack: 0, ampDecay: 0.12, ampSustain: 0.0, ampRelease: 0.04,
+  filterType: 'lowpass', cutoff: 12000, resonance: 0.2, envFilterMod: 0.0, keyTracking: 0.8,
+  attack: 0, decay: 0.1, sustain: 0.0, release: 0.04,
+  ampAttack: 0, ampDecay: 0.1, ampSustain: 0.0, ampRelease: 0.04,
   filterAttack: 0, filterDecay: 0.06, filterSustain: 0.0, filterRelease: 0.03, filterEnvAmount: 0.0,
-  pitchAttack: 0.001, pitchDecay: 0.04, pitchEnvAmount: 0.45,
+  pitchAttack: 0.001, pitchDecay: 0.04, pitchEnvAmount: 0.0,
   lfoWaveform: 'sine', lfoRate: 1.0, lfoPitchAmt: 0.0, lfoCutoffAmt: 0.0, lfoPanAmt: 0.0, lfoAmpAmt: 0.0, lfoFadeTime: 0,
   airGain: 0.0,
 };
 
 export const SMB1_NOISE_KEYS: Record<number, Partial<TrackData>> = {
   // F3: hat -- the track's own sound; the entry exists so the key shows as part of the kit.
-  55: { ampDecay: 0.12, decay: 0.12 },
+  55: { ampDecay: 0.1, decay: 0.1 },
   // D3: snare -- triangle body at the key with a sine a fifth up, the noise
   // mix for the rattle, a short pitch snap, 180 ms.
   58: {
-    osc1Waveform: 'triangle', osc1Gain: 0.8, osc2Waveform: 'sine', osc2Gain: 0.5, osc2Semitone: 7,
+    osc1Waveform: 'triangle', osc1Gain: 0.4, osc2Waveform: 'sine', osc2Gain: 0.5, osc2Semitone: 7,
     noiseGain: 0.9, keyTracking: 0.5,
-    filterType: 'lowpass', cutoff: 8000, resonance: 0.5,
+    filterType: 'lowpass', cutoff: 12000, resonance: 0.5,
     filterEnvAmount: 0.3, filterAttack: 0, filterDecay: 0.08, filterSustain: 0.0,
     pitchEnvAmount: 1.0, pitchAttack: 0.001, pitchDecay: 0.02,
-    ampDecay: 0.18, decay: 0.18, ampRelease: 0.05, release: 0.05, airGain: 0.2,
+    ampDecay: 0.3, decay: 0.3, ampSustain: 0.6, sustain: 0.6, ampRelease: 0.05, release: 0.05, airGain: 0.0,
   },
   // C3: the strong beat -- KEY TRK 1 at C3 halves the noise rate and scales
   // the low-pass to ~2.4 kHz, the nearest this engine gets to the 2.3 kHz
   // LFSR without losing the level (a 1.2 kHz cut sat 8 dB under the hat).
   60: {
     keyTracking: 1, filterType: 'lowpass', cutoff: 4800, resonance: 1.0, pitchEnvAmount: 0.0,
-    ampDecay: 0.07, decay: 0.07, ampRelease: 0.02, release: 0.02,
+    ampDecay: 0.12, decay: 0.12, ampRelease: 0.02, release: 0.02,
   },
 };
 
