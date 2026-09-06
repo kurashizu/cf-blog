@@ -362,7 +362,8 @@ export function effectiveTimbre(track: TrackData, noteIndex: number): TrackData 
   return kt ? { ...track, ...kt } : track;
 }
 
-export const INITIAL_TRACKS: TrackData[] = OVERWORLD_FULL_TRACKS;
+/** What the synth holds at boot. SPAIN is authored natively on the 1/24-beat grid, so it is copied, not scaled. */
+export const INITIAL_TRACKS: TrackData[] = SPAIN_TRACKS;
 
 /**
  * The song files predate the 1/24-beat grid (their cells are 1/8-beat steps).
@@ -396,7 +397,7 @@ interface ActiveVoice {
 }
 
 class ModularSynth {
-  private tracks: TrackData[] = scaleTracksToFineGrid(JSON.parse(JSON.stringify(INITIAL_TRACKS)));
+  private tracks: TrackData[] = JSON.parse(JSON.stringify(INITIAL_TRACKS));
   private activeVoices: Map<string, ActiveVoice> = new Map();
   private noiseBuffer: AudioBuffer | null = null;
   private lastTrackFreqs: Map<number, number> = new Map();
@@ -407,7 +408,7 @@ class ModularSynth {
   private velocityCurve: VelocityCurve = 'EXP';
 
   // Master Global Params (Default: SUPER MARIO 3 - OVERWORLD 1, 150 BPM, 3360 steps)
-  private bpm: number = 150;
+  private bpm: number = 115;
   private meter: TimeSignature = '4/4';
   private editNoteDiv: NoteDurationDiv = '1/8';
   private delayMix: number = 0.0;
@@ -454,7 +455,7 @@ class ModularSynth {
   // Sequencer Engine (Default 3360 steps for OVERWORLD 1)
   private isSequencerPlaying: boolean = false;
   private currentStep: number = 0;
-  private totalSteps: number = 10080; // Default 10080 steps (105 bars) for OVERWORLD 1
+  private totalSteps: number = SPAIN_STEPS; // the boot song
   private sequencerTimer: any = null;
   private onStepListeners: Set<(step: number) => void> = new Set();
   private onNoteListeners: Set<(trackId: number, noteIndex: number, noteName: string, durationMs: number) => void> = new Set();

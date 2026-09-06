@@ -39,7 +39,7 @@ export const BUILTIN_SONGS: BuiltinSong[] = [
 // Must match the synth's boot state (INITIAL_TRACKS / bpm / totalSteps), otherwise the
 // selector names one song while the sequencer holds another. Looked up by id so
 // reordering the list can't desync it.
-const DEFAULT_SONG_IDX = Math.max(0, BUILTIN_SONGS.findIndex((s) => s.id === 'OVERWORLD_1'));
+const DEFAULT_SONG_IDX = Math.max(0, BUILTIN_SONGS.findIndex((s) => s.id === 'SPAIN'));
 
 export const builtinSongIdx = writable<number>(DEFAULT_SONG_IDX);
 /** What is loaded right now — used to name exports. Set by every loader. */
