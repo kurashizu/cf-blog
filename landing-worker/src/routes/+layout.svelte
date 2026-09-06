@@ -11,7 +11,7 @@
 	import { initClock } from '$lib/stores/clock';
 	import { initTransport } from '$lib/stores/synth-transport';
 	import { tabIndexFromPath, TAB_ROUTES, navigateTo } from '$lib/routes-map';
-	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
+	import { suspendNavHotkeys, consoleHotkeyWhileSuspended } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
 	import {
@@ -194,16 +194,17 @@
 			return;
 		}
 
-		if ($suspendNavHotkeys) return;
-
 		// Quake-style console: backquote toggles from anywhere, Esc closes —
-		// both work even while the console's own input has focus.
-		if (e.code === 'Backquote' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+		// both work even while the console's own input has focus. A view that
+		// owns the keyboard blocks it unless it says the key is free (LIFE.LAB).
+		if (e.code === 'Backquote' && !e.metaKey && !e.ctrlKey && !e.altKey && (!$suspendNavHotkeys || $consoleHotkeyWhileSuspended)) {
 			e.preventDefault();
 			consoleOverlayOpen.update((v) => !v);
 			playSound('toggle');
 			return;
 		}
+
+		if ($suspendNavHotkeys) return;
 		if (e.key === 'Escape') {
 			// Checked first: the tour's finale opens this overlay and is still
 			// "active" (queue-wise) until it closes, so if the tour branch ran

@@ -520,7 +520,7 @@
 				// option rather than inheriting from CSS, so without this the
 				// emulator's console was the one surface still in xterm's own
 				// default monospace.
-				fontFamily: "'Jelly Pixel', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+				fontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
 				// 12, not 15: the face is drawn on a 12px grid and is only exactly
 				// sharp at whole multiples of it, and a terminal is the one place
 				// where every glyph being crisp matters most.
@@ -1467,7 +1467,7 @@
 		>
 			<!-- Line height has to exceed the font size or descenders are clipped:
 			     v86 lays each text row out in exactly this box. -->
-			<div style="white-space: pre; font: 15px/18px monospace; color: #d8dee9; padding: 6px;"></div>
+			<div style="white-space: pre; font: 15px/18px 'KRSZ Box', monospace; color: #d8dee9; padding: 6px;"></div>
 			<!-- The canvas holds exactly as many pixels as the guest is drawing, and
 			     the panel is bigger than that, so something has to invent the rest.
 			     Nearest-neighbour keeps a pixel a pixel instead of smearing it. -->

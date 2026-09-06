@@ -23,7 +23,7 @@
 				// Same face as the rest of the site. Mermaid takes its font as a
 				// config string rather than inheriting from CSS, so this is its own
 				// copy of the stack and had to be updated with it.
-				fontFamily: "'Jelly Pixel', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+				fontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
 				themeVariables: {
 					// Baked into the SVG at draw time -- mermaid cannot inherit the
 					// site's rem scale, so the root size is read here and the diagram
@@ -59,11 +59,11 @@
 				sequence: {
 					useMaxWidth: false,
 					actorFontSize: 13,
-					actorFontFamily: "'JetBrains Mono', monospace",
+					actorFontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', monospace",
 					messageFontSize: 13,
-					messageFontFamily: "'JetBrains Mono', monospace",
+					messageFontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', monospace",
 					noteFontSize: 12,
-					noteFontFamily: "'JetBrains Mono', monospace",
+					noteFontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', monospace",
 					wrap: true,
 					width: 140,
 					height: 40,

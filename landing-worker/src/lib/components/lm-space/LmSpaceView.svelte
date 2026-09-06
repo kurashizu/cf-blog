@@ -285,7 +285,7 @@
        scales with font-size instead of staying a fixed 24px when the CFG
        text-size setting changes the root -- it was in px here only because
        the view had never followed that setting at all before. */
-    font-family:'Jelly Pixel',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-family:'Jelly Pixel','KRSZ Box',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     font-size:1rem; line-height:2; overflow:hidden; }
 :global(.lmspace #app) { position:absolute; inset:0; }
 :global(.lmspace canvas) { display:block; }

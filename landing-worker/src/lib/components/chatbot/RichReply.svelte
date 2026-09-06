@@ -112,7 +112,7 @@
 			// string rather than inheriting from CSS, so this is a second copy of
 			// the stack (the other is in projects/MermaidDiagram.svelte) and had to
 			// be updated alongside it.
-			fontFamily: "'Jelly Pixel', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+			fontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
 			// Every surface is a near-transparent white so nodes read as faint
 			// panels on the dark ground, the way the rest of the page does. Left
 			// to itself mermaid picks saturated pastels that glare against it.

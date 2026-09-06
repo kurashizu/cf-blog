@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
+	import { suspendNavHotkeys, consoleHotkeyWhileSuspended } from '$lib/stores/hotkeys';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
 	import { getLifelabTour } from '$lib/components/lifelab/lifelab-tour';
 	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '$lib/stores/chrome';
@@ -36,6 +36,7 @@
 		// so the site's own single-key shortcuts stand aside. Ctrl+0-7 still
 		// works: the layout handles those before anything else sees them.
 		suspendNavHotkeys.set(true);
+		consoleHotkeyWhileSuspended.set(true);
 		let game: { stop: () => void } | null = null;
 		void (async () => {
 			await import('$lib/components/lifelab/style.css');
@@ -57,6 +58,7 @@
 			dequeueOnboarding(TOUR);
 			game?.stop();
 			suspendNavHotkeys.set(false);
+			consoleHotkeyWhileSuspended.set(false);
 		};
 	});
 </script>

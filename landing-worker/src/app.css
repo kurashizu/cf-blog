@@ -29,6 +29,27 @@
 	   which is what drew them correctly before. */
 	unicode-range: U+0000-024F, U+2000-206F, U+2190-21FF, U+2700-27BF, U+FE70-FEFF, U+FF00-FFEF;
 }
+/* JetBrains Mono's box-drawing, block and geometric glyphs (U+2500-25FF),
+   self-hosted. The Google Fonts stylesheet serves JetBrains Mono in Latin /
+   Cyrillic / Greek subsets only, so these code points were never in it: the
+   browser fell through to a per-language fallback face, which is Menlo on an
+   English page but a full-width CJK font once the page is in Chinese,
+   Japanese or Korean -- and the ASCII banners and LIFE.LAB's wordmark, which
+   are drawn from exactly these glyphs, sheared apart in every language but
+   English. Its own family name, not 'JetBrains Mono': Chrome never consulted
+   a same-named @font-face added beside the Google ones (measured -- the face
+   stayed "unloaded" and the glyphs kept coming from the language fallback),
+   so it sits in front of JetBrains Mono in every stack instead. Only this
+   range, so everything else still resolves through the faces behind it.
+   Variable weight, so bold banners keep working. */
+@font-face {
+	font-family: 'KRSZ Box';
+	src: url('/fonts/jbmono-box.woff2') format('woff2');
+	font-weight: 100 800;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+2500-25FF;
+}
 /* Jelly Pixel stops at Latin: upstream ships 389 Han glyphs and no Hangul at
    all, so with it alone a translated sentence came out as pixel Latin with
    system-font CJK stitched in between. The CJK ranges are served instead by
@@ -89,10 +110,10 @@
    otherwise fall back to the simplified flavour. The ASCII banners and
    LIFE.LAB's box-drawn wordmark keep their own single-cell mono stack. */
 :root:lang(zh-TW) *:not(.ascii-art):not(.ascii-art *):not(#wordmark) {
-	font-family: 'Jelly Pixel Hant', 'Jelly Pixel', 'JetBrains Mono', ui-monospace, monospace;
+	font-family: 'Jelly Pixel Hant', 'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', ui-monospace, monospace;
 }
 :root:lang(ja) *:not(.ascii-art):not(.ascii-art *):not(#wordmark) {
-	font-family: 'Jelly Pixel JA', 'Jelly Pixel', 'JetBrains Mono', ui-monospace, monospace;
+	font-family: 'Jelly Pixel JA', 'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* A bitmap face must not be smoothed: the antialiasing that makes an outline
@@ -129,7 +150,7 @@ img[data-pixelated],
    cell across the whole banner. */
 .ascii-art,
 .ascii-art * {
-	font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-family: 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 	/* The rows have to touch for the letterforms to close up. The global 24px
 	   line height (set for the 12px grid) opened a gap between every row of a
 	   banner drawn at 4-8px, slicing the letters into bands. */
@@ -200,6 +221,7 @@ body {
 	padding: 0;
 	font-family:
 		'Jelly Pixel',
+		'KRSZ Box',
 		'JetBrains Mono',
 		'Fira Code',
 		'Cascadia Code',
