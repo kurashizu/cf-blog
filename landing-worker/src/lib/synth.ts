@@ -362,8 +362,45 @@ export function effectiveTimbre(track: TrackData, noteIndex: number): TrackData 
   return kt ? { ...track, ...kt } : track;
 }
 
+/** The rack always has this many tracks; songs that define fewer get blank ones appended. */
+export const TRACK_COUNT = 8;
+const EXTRA_TRACK_COLORS = ['#e06c75', '#d19a66'];
+
+/** A neutral sound for a track a song does not use: square + saw, open filter, plain envelope. */
+const BLANK_TRACK_TIMBRE: Omit<TrackData, 'id' | 'name' | 'color' | 'grid' | 'accents'> = {
+  volume: 0.8, pan: 0, muted: false, solo: false,
+  osc1Waveform: 'square', osc1Gain: 0.9, osc2Waveform: 'sawtooth', osc2Gain: 0.5, osc2Ratio: 1, detuneCents: 0, phaseOffset: 0,
+  osc2Semitone: 0, pulseWidth: 50, subOscGain: 0, noiseGain: 0, noiseRetrig: 1, noiseRetrigGap: 12,
+  blendMode: 'layer', morphAmount: 0, glideTime: 0, xfade: 0.5,
+  filterType: 'lowpass', cutoff: 12000, resonance: 0.2, envFilterMod: 0, keyTracking: 0,
+  attack: 0.005, decay: 0.15, sustain: 0.7, release: 0.1,
+  ampAttack: 0.005, ampDecay: 0.15, ampSustain: 0.7, ampRelease: 0.1,
+  filterAttack: 0.005, filterDecay: 0.15, filterSustain: 0.3, filterRelease: 0.1, filterEnvAmount: 0,
+  pitchAttack: 0.001, pitchDecay: 0.03, pitchEnvAmount: 0,
+  lfoWaveform: 'sine', lfoRate: 5, lfoPitchAmt: 0, lfoCutoffAmt: 0, lfoPanAmt: 0, lfoAmpAmt: 0, lfoFadeTime: 0,
+  eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], airGain: 0,
+  duckSource: -1, duckKeys: [], duckDepth: 0, duckDip: 5, duckHold: 40, duckRelease: 150,
+};
+
+/** Append blank tracks up to TRACK_COUNT, with grids the length of the song's own. */
+export function padTracks(tracks: TrackData[], count = TRACK_COUNT): TrackData[] {
+  const out = tracks.slice();
+  const len = tracks[0]?.grid.length ?? 12288;
+  for (let id = out.length; id < count; id++) {
+    out.push({
+      ...JSON.parse(JSON.stringify(BLANK_TRACK_TIMBRE)),
+      id,
+      name: `TRK ${id + 1}`,
+      color: EXTRA_TRACK_COLORS[(id - 6 + EXTRA_TRACK_COLORS.length) % EXTRA_TRACK_COLORS.length],
+      grid: Array.from({ length: len }, () => []),
+      accents: Array.from({ length: len }, () => 0),
+    });
+  }
+  return out;
+}
+
 /** What the synth holds at boot. SPAIN is authored natively on the 1/24-beat grid, so it is copied, not scaled. */
-export const INITIAL_TRACKS: TrackData[] = SPAIN_TRACKS;
+export const INITIAL_TRACKS: TrackData[] = padTracks(SPAIN_TRACKS);
 
 /**
  * The song files predate the 1/24-beat grid (their cells are 1/8-beat steps).
@@ -774,6 +811,7 @@ class ModularSynth {
       this.bpm = 105;
       this.meter = '4/4';
     }
+    this.tracks = padTracks(this.tracks);
     this.currentStep = 0;
     this.scheduledStepQueue = [];
     this.applyAllTrackEq();

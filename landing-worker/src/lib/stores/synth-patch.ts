@@ -133,6 +133,18 @@ function applyPatchData(raw: SynthPatchData): void {
 	if (data.meter) timeMeter.set(data.meter);
 	if (data.totalSteps) totalPatternSteps.set(data.totalSteps);
 	if (data.tracks && Array.isArray(data.tracks)) {
+		// Tracks the patch does not mention (older patches carry six) are
+		// emptied rather than left holding the previous song's pattern.
+		const present = new Set(data.tracks.map((t) => t.id));
+		for (const trk of modularSynth.getTracks()) {
+			if (present.has(trk.id)) continue;
+			const len = trk.grid.length;
+			modularSynth.updateTrack(trk.id, {
+				name: `TRK ${trk.id + 1}`, muted: false, solo: false, eqOn: false, eqGains: [0, 0, 0, 0, 0, 0],
+				percussion: false, keyTimbres: {}, duckSource: -1, duckKeys: [], duckDepth: 0,
+				grid: Array.from({ length: len }, () => []), accents: Array.from({ length: len }, () => 0)
+			});
+		}
 		data.tracks.forEach((tData) => {
 			// Patches predating per-track EQ carry no eq fields — reset to flat instead
 			// of leaving whatever the previous song had on the live filter chains.

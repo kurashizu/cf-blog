@@ -73,7 +73,7 @@
 				<p class="text-white/80 font-bold">{$midiOmniSetting ? 'Omni Mode (All 6 Tracks Layered)' : 'Focused Active Track Only (Strict)'}</p>
 				<p class="text-white/40 text-[10px]">
 					{$midiOmniSetting
-						? 'Incoming MIDI notes broadcast to all 6 tracks simultaneously'
+						? 'Incoming MIDI notes broadcast to all 8 tracks simultaneously'
 						: 'Incoming MIDI notes trigger strictly the active focused track only'}
 				</p>
 			</div>
