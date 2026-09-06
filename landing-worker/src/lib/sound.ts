@@ -1,3 +1,4 @@
+import { writable } from 'svelte/store';
 /**
  * KRSZ™ Sound Engine — Web Audio API Synthesizer
  * 
@@ -8,6 +9,9 @@
  */
 
 // Musical note frequency mapping (Hz)
+/** True while the shared AudioContext is actually running (not suspended / closed). */
+export const audioContextRunning = writable<boolean>(false);
+
 export const NOTE_FREQUENCIES: Record<string, number> = {
   'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'B3': 246.94,
   'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
@@ -87,6 +91,10 @@ class SoundEngine {
         this.masterGain.connect(this.analyser);
         this.analyser.connect(this.ctx.destination);
         this.generateNoiseBuffer();
+        const ctx = this.ctx;
+        const sync = () => audioContextRunning.set(ctx.state === 'running');
+        ctx.onstatechange = sync;
+        sync();
       } catch (e) {
         console.warn('Web Audio API not supported or blocked:', e);
         return null;

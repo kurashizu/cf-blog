@@ -2,6 +2,23 @@
 	import { untrack } from 'svelte';
 	import { resolvedTheme, THEME_VIDEO, type FixedTheme } from '../../stores/theme';
 	import { performanceMode } from '../../stores/performance';
+	import { audioContextRunning } from '../../sound';
+
+	/*
+	 * Safari + a running AudioContext + this muted video = 2-3 fps site-wide.
+	 * A Web Inspector recording of krsz.in (Sep 2026) showed it plainly: the
+	 * moment the synth's audio engine started, every frame's *composite* step
+	 * went to 300-500 ms while the main thread sat at 5-13 % CPU, and the
+	 * video toggled its "power-efficient playback" state 107 times in 21 s --
+	 * Safari kept bouncing the clip between the hardware overlay path and a
+	 * software path it has to read back and blend under the backdrop-filter
+	 * panels. It stayed that way on every view until the page was reloaded.
+	 * So on Safari the visible layer is frozen on its current frame (paused)
+	 * while the context is running, and resumes when the engine suspends.
+	 */
+	const isSafari =
+		typeof navigator !== 'undefined' && /safari/i.test(navigator.userAgent) && !/chrome|chromium|crios|fxios|android|edg/i.test(navigator.userAgent);
+	let holdVideo = $derived(isSafari && $audioContextRunning);
 
 	/*
 	 * Two stacked <video> elements rather than one whose src is swapped: a src
@@ -63,8 +80,15 @@
 	});
 
 	function play(v: HTMLVideoElement | undefined) {
+		if (holdVideo) return;
 		if (v && v.paused) void v.play().catch(() => {});
 	}
+
+	$effect(() => {
+		const v = showB ? videoB : videoA;
+		if (holdVideo) v?.pause();
+		else play(v);
+	});
 
 	let fadeGen = 0;
 

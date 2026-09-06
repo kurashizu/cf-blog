@@ -56,6 +56,8 @@
 	</button>
 
 	<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
+	<!-- One label for the row; the chips carry only the number, so eight of them still fit. -->
+	<span class="text-white/50 font-bold text-xs shrink-0 select-none" title="Tracks — click a number to edit that track; in OVERLAY mode click it to show or hide it on the roll">TRK:</span>
 
 	{#each $tracksState as trk (trk.id)}
 		{@const isSelected = $isOverlayMode ? $overlayTrackIds.includes(trk.id) : $activeTrackId === trk.id}
@@ -91,7 +93,7 @@
 				style={isSelected ? `color: ${trk.color}` : ''}
 				title={$isOverlayMode ? `${trk.name} — Click name to toggle overlay visibility. Active Editing: ${isActiveEditingTrack ? 'YES' : 'NO'}` : `Select ${trk.name}`}
 			>
-				<span>{trk.name.split(':')[0]}</span>
+				<span class="font-mono">{trk.id + 1}</span>
 			</button>
 
 			<div class="flex items-center border-l border-white/15 px-1 gap-0.5">
