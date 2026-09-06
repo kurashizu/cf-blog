@@ -21,9 +21,17 @@
 				? $currentTrack.filterDecay
 				: ($currentTrack.pitchDecay ?? 0.1)
 	);
+	// PIT's third fader is the pitch-envelope depth in octaves (-4..4). It used
+	// to read a hard-coded 0, so the fader could be dragged and never moved.
 	let sustainVal = $derived(
-		activeEnvTab === 'amp' ? ($currentTrack.ampSustain ?? $currentTrack.sustain) : activeEnvTab === 'vcf' ? $currentTrack.filterSustain : 0
+		activeEnvTab === 'amp'
+			? ($currentTrack.ampSustain ?? $currentTrack.sustain)
+			: activeEnvTab === 'vcf'
+				? $currentTrack.filterSustain
+				: ($currentTrack.pitchEnvAmount ?? 0)
 	);
+	// The graph's sustain axis is 0-1; show the pitch depth as a fraction of its range.
+	let visSustain = $derived(activeEnvTab === 'pit' ? Math.min(1, Math.abs(sustainVal) / 4) : sustainVal);
 	let releaseVal = $derived(
 		activeEnvTab === 'amp' ? ($currentTrack.ampRelease ?? $currentTrack.release) : activeEnvTab === 'vcf' ? $currentTrack.filterRelease : 0.01
 	);
@@ -100,7 +108,7 @@
 	<div class="flex gap-1.5 items-center flex-1 min-h-0 my-auto">
 		<div class="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5">
 			<div class="flex-1 flex items-center justify-center">
-				<AdsrVisualizer attack={attackVal} decay={decayVal} sustain={sustainVal} release={releaseVal} color={envColor} />
+				<AdsrVisualizer attack={attackVal} decay={decayVal} sustain={visSustain} release={releaseVal} color={envColor} />
 			</div>
 		</div>
 
