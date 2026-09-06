@@ -4,7 +4,7 @@
 	import { playSound } from '../../../sound';
 	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId } from '../../../stores/synth-transport';
-	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, cycleAccent } from '../../../stores/synth-tracks';
+	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, cycleAccent, updateTrack } from '../../../stores/synth-tracks';
 	import {
 		selection, canUndo, canRedo, undo, redo, runKey, runAt, runsIn, selectedRuns, selectRuns, toggleRun, clearSelection, selectAll,
 		deleteRuns, deleteSelection, moveSelection, resizeSelection, duplicateSelection, copySelection, cutSelection, pasteClip,
@@ -77,6 +77,45 @@
 	}
 
 	let percussion = $derived(!!$activeTrackRow?.percussion);
+
+	/* The track's name, in the roll header, editable in place. Ten characters
+	   show; the rest is an ellipsis and the tooltip. Short names are what the
+	   DUCK source stepper and the chips read, so renaming is worth a click. */
+	const NAME_SHOW = 10;
+	const NAME_MAX = 24;
+	let trackName = $derived($activeTrackRow?.name ?? '');
+	let shortName = $derived(trackName.length > NAME_SHOW ? trackName.slice(0, NAME_SHOW) + '…' : trackName);
+	let editingName = $state(false);
+	let nameDraft = $state('');
+	let nameInput = $state<HTMLInputElement | null>(null);
+
+	function startRename() {
+		nameDraft = trackName;
+		editingName = true;
+		playSound('click');
+		requestAnimationFrame(() => {
+			nameInput?.focus();
+			nameInput?.select();
+		});
+	}
+
+	function commitRename() {
+		if (!editingName) return;
+		editingName = false;
+		const next = nameDraft.trim().slice(0, NAME_MAX);
+		if (next && next !== trackName) {
+			updateTrack($activeTrackId, { name: next });
+			playSound('click');
+		}
+	}
+
+	function onNameKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') commitRename();
+		else if (e.key === 'Escape') editingName = false;
+		else return;
+		e.preventDefault();
+		e.stopPropagation();
+	}
 	let activeKeyCustom = $derived(keyIsCustomised($activeTrackRow, $activeKey));
 
 	function jumpRulerCursor(step: number) {
@@ -411,7 +450,29 @@
 <div class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
 		<div class="flex items-center gap-2">
-			<span class="font-black text-xs" style="color: {$currentTrack.color}">PIANO ROLL // {$currentTrack.name}</span>
+			<span class="font-black text-xs" style="color: {$currentTrack.color}">PIANO ROLL</span>
+			{#if editingName}
+				<input
+					bind:this={nameInput}
+					bind:value={nameDraft}
+					onkeydown={onNameKeydown}
+					onblur={commitRename}
+					maxlength={NAME_MAX}
+					spellcheck="false"
+					aria-label="Track name"
+					class="w-[120px] px-1.5 py-0.5 text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none text-white"
+					style="border-color: {$currentTrack.color}"
+				/>
+			{:else}
+				<button
+					onclick={startRename}
+					title={`${trackName} — click to rename TRK ${$activeTrackId + 1} (${NAME_MAX} characters; ${NAME_SHOW} show here)`}
+					class="press px-1.5 py-0.5 text-xs font-mono font-bold rounded-xs border cursor-pointer transition-colors hover:brightness-125 max-w-[120px] truncate"
+					style="color: {$currentTrack.color}; border-color: color-mix(in srgb, {$currentTrack.color} 50%, transparent); background: color-mix(in srgb, {$currentTrack.color} 12%, transparent)"
+				>
+					{shortName}
+				</button>
+			{/if}
 			{#if percussion}
 				<!-- Which key the racks are editing, and whether it has its own sound yet -->
 				<span class="text-xs font-mono font-bold text-[#c678dd]" title={activeKeyCustom ? `Racks are editing ${noteNameOf($activeKey)}'s own sound. Right-click a key label to drop its sound.` : `Racks are editing ${noteNameOf($activeKey)}; it still plays the track's sound until you change something.`}>
