@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { initMidi } from '../../stores/synth-midi';
 	import { tryLoadSharedPatch } from '../../stores/synth-patch';
+	import { stop as stopSequencer } from '../../stores/synth-transport';
 	import TransportBar from './TransportBar.svelte';
 	import Module1Oscillators from './modules/Module1Oscillators.svelte';
 	import Module2TimbreFusion from './modules/Module2TimbreFusion.svelte';
@@ -16,7 +17,21 @@
 
 	onMount(() => {
 		tryLoadSharedPatch();
-		return initMidi();
+		const stopMidi = initMidi();
+		// modularSynth's playback scheduler is two setIntervals (a 40ms audio
+		// lookahead and a 16ms UI sync) that only ever stop on an explicit
+		// stopSequencer() call -- it is a singleton, not scoped to this route,
+		// so leaving /synth mid-playback (the layout fully unmounts this view
+		// on every route change, see +layout.svelte's {#key page.url.pathname})
+		// left both timers running in the background indefinitely, competing
+		// with whatever view was now on screen for main-thread time every
+		// frame. This showed up as lm-space's fps fluctuating wildly rather
+		// than just being uniformly lower, which is what pointed at a
+		// periodic background task rather than a genuinely heavier GPU load.
+		return () => {
+			stopMidi();
+			stopSequencer();
+		};
 	});
 </script>
 

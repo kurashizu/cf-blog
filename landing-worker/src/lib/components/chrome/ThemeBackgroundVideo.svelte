@@ -153,17 +153,60 @@
 	 * `ended` is handled too in case a browser gets there anyway.
 	 */
 	const LOOP_EPSILON = 0.15;
+	/* If currentTime hasn't moved forward by this much within this many
+	   frame-callbacks, the video is stuck -- decoder stall, a seek that
+	   never resolved, anything -- and nothing else here will ever notice,
+	   since every check above assumes currentTime keeps advancing normally.
+	   ~1s of frames at 24fps with slack for a throttled tab. */
+	const STALL_CHECK_FRAMES = 40;
+	const STALL_EPSILON = 0.01;
 
 	function seamlessLoop(node: HTMLVideoElement) {
 		node.loop = true;
 		const rvfc = typeof node.requestVideoFrameCallback === 'function';
 		let handle = 0;
+		// Set right after issuing the loop-seek and cleared once currentTime
+		// is actually seen back near zero: without this, a seek that has not
+		// visibly landed yet (currentTime still reads near the end, `seeking`
+		// not yet true -- both observed to lag the call by more than one
+		// frame-callback on a single-keyframe AV1 stream) gets re-issued on
+		// every subsequent tick, and stacking seeks like that is what left
+		// the clip frozen mid-loop rather than at the boundary this was
+		// already guarding.
+		let loopPending = false;
+		let lastTime = -1;
+		let stallCounter = 0;
 
 		const check = () => {
 			const d = node.duration;
-			if (isFinite(d) && d > 0 && !node.seeking && node.currentTime >= d - LOOP_EPSILON) {
+			const t = node.currentTime;
+			if (loopPending) {
+				if (t < LOOP_EPSILON) loopPending = false;
+			} else if (isFinite(d) && d > 0 && !node.seeking && t >= d - LOOP_EPSILON) {
+				loopPending = true;
 				node.currentTime = 0.001;
 			}
+
+			// Stall watchdog: only meaningful once playing and not mid-seek,
+			// otherwise a legitimately paused/seeking frame reads as stuck.
+			if (!node.paused && !node.seeking && !loopPending) {
+				if (Math.abs(t - lastTime) < STALL_EPSILON) {
+					stallCounter++;
+					if (stallCounter >= STALL_CHECK_FRAMES) {
+						stallCounter = 0;
+						// Nudge the decoder: a tiny seek forces it to re-render
+						// from wherever it actually is, and play() covers the
+						// case where playback silently paused itself.
+						node.currentTime = Math.min(t + 0.03, isFinite(d) ? d - 0.05 : t);
+						play(node);
+					}
+				} else {
+					stallCounter = 0;
+				}
+			} else {
+				stallCounter = 0;
+			}
+			lastTime = t;
 			schedule();
 		};
 		const schedule = () => {
