@@ -188,8 +188,13 @@
 		const upcoming = STEPS[index + 1];
 		if (upcoming.closeAndRun) {
 			playSound('click');
-			onClose();
+			// The action first: for the site tour's finale this opens the keymap,
+			// and onClose() (a view's own tour may be queued right behind this
+			// one, see stores/chrome.ts) checks whether that overlay is open to
+			// decide whether the tour is really over yet. Closing first would
+			// let that check run before the overlay exists to see.
 			upcoming.action?.run();
+			onClose();
 			return;
 		}
 		direction = 1;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { fade, fly } from '$lib/perf-transitions';
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
@@ -113,13 +114,29 @@
 		}
 	}
 
+	/* Onboarding.svelte's closing step (SITE_STEPS' closeAndRun) opens the
+	   keymap as its finale, and runs that action before calling this -- so if
+	   the keymap is open right now, this close is that finale, and the tour
+	   is not really "over" until the keymap closes too: dequeuing 'site-tour'
+	   here would let the next queued stage (a view's own tour) become active
+	   while the keymap is still what is actually covering the screen. Wait
+	   for hotkeyOverlayOpen to drop before dequeuing in that case; any other
+	   close (Esc, the [x], a non-final step) dequeues immediately. */
 	function closeGuide() {
-		dequeueOnboarding('site-tour');
 		try {
 			localStorage.setItem(GUIDE_KEY, '1');
 		} catch {
 			/* nothing to remember it with; it will offer again next visit */
 		}
+		if (!get(hotkeyOverlayOpen)) {
+			dequeueOnboarding('site-tour');
+			return;
+		}
+		const stop = hotkeyOverlayOpen.subscribe((open) => {
+			if (open) return;
+			dequeueOnboarding('site-tour');
+			queueMicrotask(() => stop());
+		});
 	}
 
 	/** A full-screen "let's get started" ahead of the anchored tour, shown once
@@ -183,12 +200,16 @@
 			return;
 		}
 		if (e.key === 'Escape') {
-			if ($guideActive) {
-				closeGuide();
-				return;
-			}
+			// Checked first: the tour's finale opens this overlay and is still
+			// "active" (queue-wise) until it closes, so if the tour branch ran
+			// first here, Esc on the finale would re-enter closeGuide() instead
+			// of ever reaching this and closing the overlay it is waiting on.
 			if ($hotkeyOverlayOpen) {
 				hotkeyOverlayOpen.set(false);
+				return;
+			}
+			if ($guideActive) {
+				closeGuide();
 				return;
 			}
 			if ($consoleOverlayOpen) {
