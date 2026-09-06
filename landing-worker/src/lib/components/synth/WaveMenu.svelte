@@ -43,6 +43,7 @@
 	let open = $state(false);
 	let section = $state<SectionId | null>(null);
 	let paramWave = $state<SynthWaveform | null>(null);
+	let paramTop = $state(0);
 	let trigger = $state<HTMLButtonElement | null>(null);
 	let anchor = $state({ left: 0, top: 0 });
 
@@ -154,7 +155,7 @@
 									{@const on = value === w}
 									{@const specs = WAVE_PARAM_SPECS[w]}
 									<!-- svelte-ignore a11y_no_static_element_interactions -->
-									<div class="relative" onmouseenter={() => (paramWave = specs ? w : null)}>
+									<div class="relative" onmouseenter={(e) => { paramWave = specs ? w : null; paramTop = e.currentTarget.offsetTop; }}>
 										<button onclick={() => pick(w)} class="{rowBase} {on ? rowOn : rowIdle}" title={WAVE_TOOLTIPS[w] || w}>
 											<span class="shrink-0 {on ? 'text-[#98c379]' : 'text-white/25'}">{on ? '●' : '○'}</span>
 											<span class="truncate">{WAVE_LABELS[w] ?? w}</span>
@@ -165,10 +166,12 @@
 								{#if paramWave && WAVE_PARAM_SPECS[paramWave]}
 									{@const pw = paramWave}
 									{@const specs = WAVE_PARAM_SPECS[pw] ?? []}
-									<!-- Pinned to the flyout's top-right corner, so it stays put while the
-									     rows are hovered; fixed cells, so a value read-out cannot shift a knob. -->
+									<!-- Level with the hovered row, like any cascading menu, so the pointer
+									     reaches it by moving straight right without crossing other rows.
+									     Fixed cells, so a value read-out cannot shift a knob. -->
 									<div
-										class="absolute left-full top-0 -mt-px ml-0.5 z-50 bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] px-1.5 pt-1 pb-1.5 text-xs font-mono"
+										style="top: {paramTop - 1}px"
+										class="absolute left-full ml-0.5 z-50 bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] px-1.5 pt-1 pb-1.5 text-xs font-mono"
 										transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
 									>
 										<div class="text-[10px] font-bold text-white/40 select-none border-b border-white/10 pb-0.5 mb-1 whitespace-nowrap">{getWaveformAbbr(pw)} PARAMS</div>

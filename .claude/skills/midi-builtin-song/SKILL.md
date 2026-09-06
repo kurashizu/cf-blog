@@ -35,7 +35,7 @@ Write down, per channel: GM program number, note count, pitch range, and whether
 The sequencer has **one tempo**, **24 steps per beat**, bar = beats-per-bar × 24 steps (4/4 → 96), **max 12288 steps** (128 bars of 4/4). Note index = `108 − MIDI note` (C4 = 48; only 0..87 fit, drop the rest). Up to **8 notes per cell**, **8 tracks**.
 
 - Constant tempo, song fits: steps per MIDI beat = 24, bpm = the file's.
-- Too long: write it in half time: 12 steps per MIDI beat and bpm = file bpm ÷ 2. Same speed, half the steps. Spain does this: 230 BPM body → 115 BPM, 12 steps per MIDI beat.
+- Too long (more than 12288 steps at 24 per beat): write it in **half time**: 12 steps per MIDI beat, bpm = file bpm ÷ 2, **meter unchanged**. The song plays at the same speed with half the steps; one sequencer bar now holds two real bars. This works for any meter, because it halves the steps per beat, not the bar: 5/4 at 180 → sequencer 5/4 at 90, a real 5/4 bar is 60 steps, a sequencer bar (120 steps) is two real bars. Spain does this: 230 BPM body → 115 BPM, 12 steps per MIDI beat. 12 steps per beat still resolves 16ths (3 steps) and triplets (4 steps).
 - Tempo changes: pick steps-per-MIDI-beat per section so one bpm carries all of them (Spain: intro 36 steps/beat, body 12). Small errors (a few %) are fine.
 - Round the total up to whole bars.
 
