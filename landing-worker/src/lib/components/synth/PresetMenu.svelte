@@ -221,7 +221,7 @@
 			<div class="fixed inset-0 z-40" onclick={close}></div>
 
 			<div
-				class="origin-top absolute left-0 top-full mt-1 z-50 min-w-[190px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
+				class="origin-top absolute left-0 top-full mt-1 z-50 min-w-[230px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
 				{#each SECTIONS as sec (sec.id)}
