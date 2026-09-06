@@ -49,7 +49,6 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-1.5">
-			<button onclick={resetRack7} title="RESET — put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RESET</button>
 			{#if $recError}
 				<span class="text-[9px] font-mono text-[#e06c75]">{$recError}</span>
 			{/if}
@@ -76,6 +75,7 @@
 					<span class="tabular-nums text-right" style="min-width: 3ch;">{$recSeconds}s</span>
 				{/if}
 			</button>
+			<button onclick={resetRack7} title="RST — reset: put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 
@@ -92,7 +92,8 @@
 				color="#e5c07b"
 				size={40}
 				description="Air Shelf EQ — Boosts/cuts high-end brilliance (±8dB @ 10kHz)"
-				reset={0}	onChange={(v) => updateActiveTrack({ airGain: v / 100 })}
+				reset={0}
+				onChange={(v) => updateActiveTrack({ airGain: v / 100 })}
 			/>
 			<!-- Third knob centered under the pair — all three are per-track; there is no
 			     fourth real per-track output parameter, and decorative knobs got cut on purpose -->

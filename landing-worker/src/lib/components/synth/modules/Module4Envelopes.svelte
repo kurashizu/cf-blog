@@ -98,10 +98,10 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-1.5">
-			<button onclick={resetRack4} title="RESET — put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RESET</button>
 			<span class="text-white/40 flex items-center" title="Signal Flow: To LFO & Dynamic Modulation">
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
 			</span>
+			<button onclick={resetRack4} title="RST — reset: put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 
@@ -124,18 +124,24 @@
 				step={activeEnvTab === 'pit' ? 0.1 : 0.02}
 				color={envColor}
 				height={46}
-				reset={activeEnvTab === 'amp' ? 1 : 0}	onChange={onThirdChange}
+				reset={activeEnvTab === 'amp' ? 1 : 0}
+				onChange={onThirdChange}
 			/>
-			<HardwareFader
-				label={activeEnvTab === 'pit' ? '-' : 'R'}
-				value={releaseVal}
-				min={0}
-				max={1.5}
-				step={0.02}
-				color={activeEnvTab === 'pit' ? '#333' : activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
-				height={46}
-				reset={activeEnvTab === 'pit' ? undefined : activeEnvTab === 'amp' ? 0.02 : 0}	onChange={onFourthChange}
-			/>
+			<!-- The pitch envelope has no release stage; the slot used to hold a
+			     greyed-out dummy fader, which read as a broken control. -->
+			{#if activeEnvTab !== 'pit'}
+				<HardwareFader
+					label="R"
+					value={releaseVal}
+					min={0}
+					max={1.5}
+					step={0.02}
+					color={envColor}
+					height={46}
+					reset={activeEnvTab === 'amp' ? 0.02 : 0}
+					onChange={onFourthChange}
+				/>
+			{/if}
 		</div>
 	</div>
 </div>

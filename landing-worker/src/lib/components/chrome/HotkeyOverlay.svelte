@@ -58,7 +58,7 @@
 				{ key: 'Backspace', desc: 'Stop and rewind to bar 1' },
 				{ key: '← / →', desc: 'Previous / next page' },
 				{ key: '↑ / ↓', desc: 'Next / previous sound preset (applied to the active track)' },
-				{ key: 'Right-click', desc: 'Reset a knob or fader to its neutral value; RESET on a rack does the whole rack' },
+				{ key: 'Right-click', desc: 'Reset a knob or fader to its neutral value; RST on a rack does the whole rack' },
 				{ key: '- / =', desc: 'Tempo −1 / +1 BPM (hold to ramp)' }
 			]
 		},
