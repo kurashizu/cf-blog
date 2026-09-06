@@ -214,7 +214,7 @@
 			    <button type="button" id="modeshd" class="phd">
 			      <span class="lbl">axes</span><span class="pcaret">&#9662;</span>
 			    </button>
-			    <div id="axinfo" style="font-size:14px;line-height:1.75;color:rgba(255,255,255,.55)"></div>
+			    <div id="axinfo" style="font-size:1.1667rem;line-height:1.75;color:rgba(255,255,255,.55)"></div>
 			  </div>
 			</div>
 
@@ -280,10 +280,14 @@
 :global(.lmspace) *, :global(.lmspace) *::before, :global(.lmspace) *::after { box-sizing:border-box; }
 :global(.lmspace), :global(.lmspace) { background:var(--bg); color:var(--fg);
     /* Same face as the rest of the site; this view had its own stack and so
-       stayed in the outline mono after the switch. 12px because every panel
-       here is dense readout over a 3D scene. */
+       stayed in the outline mono after the switch. 1rem (12px at the site's
+       own 12px-root convention, see tailwind.config.js) because every panel
+       here is dense readout over a 3D scene. line-height is unitless so it
+       scales with font-size instead of staying a fixed 24px when the CFG
+       text-size setting changes the root -- it was in px here only because
+       the view had never followed that setting at all before. */
     font-family:'Jelly Pixel',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    font-size:12px; line-height:24px; overflow:hidden; }
+    font-size:1rem; line-height:2; overflow:hidden; }
 :global(.lmspace #app) { position:absolute; inset:0; }
 :global(.lmspace canvas) { display:block; }
 :global(.lmspace .hud) { position:absolute; pointer-events:none; z-index:20; }
@@ -295,19 +299,19 @@
    title is readable, a clipped button is not. */
 :global(.lmspace #topbar > div:first-child) { min-width:0; overflow:hidden; }
 :global(.lmspace #ctl) { flex:none; }
-:global(.lmspace .title) { font-weight:900; font-size:11px; letter-spacing:.12em; color:var(--cyan); }
-:global(.lmspace .sub) { font-size:11px; color:rgba(255,255,255,.38); line-height:1.6; margin-top:3px; }
+:global(.lmspace .title) { font-weight:900; font-size:0.9167rem; letter-spacing:.12em; color:var(--cyan); }
+:global(.lmspace .sub) { font-size:0.9167rem; color:rgba(255,255,255,.38); line-height:1.6; margin-top:3px; }
 :global(.lmspace .sub a) { color:var(--blue); }
 :global(.lmspace #ctl) { display:grid; grid-template-columns:auto auto; gap:4px 9px;
     max-height:calc(100% - 16px); overflow-y:auto; overflow-x:hidden;
     justify-content:end; align-items:center; }
 :global(.lmspace .grp) { display:contents; }
-:global(.lmspace .ghd) { font-size:9px; font-weight:900; letter-spacing:.12em; color:var(--g);
+:global(.lmspace .ghd) { font-size:0.75rem; font-weight:900; letter-spacing:.12em; color:var(--g);
     white-space:nowrap; text-align:right; }
 :global(.lmspace .gbtns) { display:flex; align-items:center; gap:5px; justify-content:flex-end; }
-:global(.lmspace .gnum) { font-size:9px; color:var(--g); min-width:3ch; text-align:center; }
+:global(.lmspace .gnum) { font-size:0.75rem; color:var(--g); min-width:3ch; text-align:center; }
 :global(.lmspace .btn) { padding:4px 9px; border:1px solid rgba(255,255,255,.18); border-radius:2px;
-    background:rgba(0,0,0,.45); color:rgba(255,255,255,.65); font:inherit; font-size:10px;
+    background:rgba(0,0,0,.45); color:rgba(255,255,255,.65); font:inherit; font-size:0.8333rem;
     font-weight:700; cursor:pointer; letter-spacing:.03em; transition:.12s;
     white-space:nowrap; }
 :global(.lmspace .btn:hover) { border-color:var(--g,rgba(255,255,255,.5)); color:#fff; }
@@ -319,15 +323,15 @@
    control here instead of a row of toggle buttons for each option. */
 :global(.lmspace .cyc) { display:flex; align-items:center; gap:1px; }
 :global(.lmspace .carrow) { padding:0 2px; background:none; border:none; font:inherit;
-    font-size:9px; color:var(--g); cursor:pointer; font-weight:700; }
+    font-size:0.75rem; color:var(--g); cursor:pointer; font-weight:700; }
 :global(.lmspace .carrow:hover) { color:#fff; }
 :global(.lmspace .cval) { padding:4px 9px; border:1px solid color-mix(in srgb, var(--g) 50%, transparent);
     background:color-mix(in srgb, var(--g) 12%, transparent); border-radius:2px;
-    color:var(--g); font:inherit; font-size:10px; font-weight:900; letter-spacing:.03em;
+    color:var(--g); font:inherit; font-size:0.8333rem; font-weight:900; letter-spacing:.03em;
     cursor:pointer; min-width:7ch; text-align:center; transition:.12s; }
 :global(.lmspace .cval:hover) { background:color-mix(in srgb, var(--g) 20%, transparent); color:#fff; }
 :global(.lmspace .row) { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
-:global(.lmspace .lbl) { font-size:12px; font-weight:700; letter-spacing:.1em;
+:global(.lmspace .lbl) { font-size:1rem; font-weight:700; letter-spacing:.1em;
     color:rgba(255,255,255,.32); text-transform:uppercase; }
 :global(.lmspace #modes) { position:absolute; top:84px; left:12px; z-index:20; display:flex; flex-direction:column; gap:8px; }
 :global(.lmspace .panel) { background:rgba(9,10,12,.85); border:1px solid rgba(255,255,255,.12);
@@ -362,22 +366,22 @@
 /* Creator rows: card membership plus mute/solo, in the same shape as the
    synth's own TRK chips -- a name, then a divider, then two small letter
    buttons that light up filled rather than just changing text colour. */
-:global(.lmspace .lg) { display:flex; align-items:center; gap:6px; font-size:11px;
+:global(.lmspace .lg) { display:flex; align-items:center; gap:6px; font-size:0.9167rem;
     color:rgba(255,255,255,.55); padding:2px 0; }
 :global(.lmspace .lg.mute) { opacity:.4; }
 :global(.lmspace .dot) { display:none; }
 :global(.lmspace .lgname) { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 :global(.lmspace .lgn) { opacity:.45; }
-:global(.lmspace .lgm), :global(.lmspace .lgs) { font: inherit; font-size:10px; font-weight:700;
+:global(.lmspace .lgm), :global(.lmspace .lgs) { font: inherit; font-size:0.8333rem; font-weight:700;
     width:15px; height:15px; line-height:15px; text-align:center; padding:0; margin-left:2px;
     border:1px solid rgba(255,255,255,.18); border-radius:2px; background:rgba(0,0,0,.4);
     color:rgba(255,255,255,.4); cursor:pointer; flex:none; }
 :global(.lmspace .lgm:hover), :global(.lmspace .lgs:hover) { color:#fff; border-color:rgba(255,255,255,.5); }
 :global(.lmspace .lgm.on) { background:#e06c75; border-color:#e06c75; color:#0a0b0d; font-weight:900; }
 :global(.lmspace .lgs.on) { background:#e5c07b; border-color:#e5c07b; color:#0a0b0d; font-weight:900; }
-:global(.lmspace .fcount) { font-size:11px; color:rgba(255,255,255,.4); margin-bottom:7px; }
+:global(.lmspace .fcount) { font-size:0.9167rem; color:rgba(255,255,255,.4); margin-bottom:7px; }
 :global(.lmspace #franges) { display:flex; flex-direction:column; gap:11px; margin-bottom:8px; }
-:global(.lmspace .flbl) { display:flex; justify-content:space-between; font-size:11px;
+:global(.lmspace .flbl) { display:flex; justify-content:space-between; font-size:0.9167rem;
     color:rgba(255,255,255,.55); margin-bottom:4px; }
 :global(.lmspace .flbl .fval) { color:rgba(255,255,255,.4); font-variant-numeric:tabular-nums; }
 /* The same visual language as the synth's HorizontalHardwareFader: a thin
@@ -394,9 +398,9 @@
 :global(.lmspace .fhandle:hover), :global(.lmspace .fhandle:active) { filter:brightness(1.2); }
 :global(.lmspace .fgrip) { width:1px; height:6px; background:rgba(0,0,0,.7); border-radius:1px; }
 :global(.lmspace #hint) { position:absolute; right:12px; bottom:26px; z-index:19; text-align:right;
-    font-size:11px; color:rgba(255,255,255,.3); line-height:1.7; }
+    font-size:0.9167rem; color:rgba(255,255,255,.3); line-height:1.7; }
 :global(.lmspace kbd) { border:1px solid rgba(255,255,255,.22); border-radius:2px; padding:0 4px;
-    font:inherit; font-size:12px; color:rgba(255,255,255,.55); }
+    font:inherit; font-size:1rem; color:rgba(255,255,255,.55); }
 :global(.lmspace .ntag) { position:absolute; white-space:nowrap; pointer-events:none; }
 :global(.lmspace .ntag .nt-row) { display:flex; align-items:center;
     position:absolute; left:0; top:50%; transform:translate(9px, -50%); }
@@ -404,7 +408,7 @@
     background:linear-gradient(90deg,rgba(255,255,255,.15),rgba(255,255,255,.5)); flex:0 0 auto; }
 :global(.lmspace .ntag .nt-txt) { font-size:inherit; letter-spacing:.02em; padding-left:4px;
     text-shadow:0 0 5px #000, 0 0 2px #000, 0 1px 2px #000; }
-:global(.lmspace .spinenum) { font-size:12px; font-weight:700; letter-spacing:.04em;
+:global(.lmspace .spinenum) { font-size:1rem; font-weight:700; letter-spacing:.04em;
     background:rgba(10,12,15,.72); padding:0 4px; border-radius:2px;
     border:1px solid rgba(86,182,194,.35); }
 /* The spiral's month ticks: dense enough, against a cloud of hundreds of
@@ -413,10 +417,10 @@
    own wall of boxes instead. Bold gold text with just a shadow to hold it off
    the background is the middle point: legible without becoming the loudest
    thing in the scene. */
-:global(.lmspace .tmonth) { font-size:14px; font-weight:800; letter-spacing:.03em;
+:global(.lmspace .tmonth) { font-size:1.1667rem; font-weight:800; letter-spacing:.03em;
     color:#e5c07b; text-shadow:0 0 6px #000, 0 0 3px #000, 0 1px 3px #000;
     white-space:nowrap; }
-:global(.lmspace .tag) { font-size:11px; color:rgba(255,255,255,.75); white-space:nowrap;
+:global(.lmspace .tag) { font-size:0.9167rem; color:rgba(255,255,255,.75); white-space:nowrap;
     text-shadow:0 0 6px #000,0 0 3px #000; pointer-events:none;
     padding-left:9px; letter-spacing:.02em; }
 :global(.lmspace #card) { position:absolute; z-index:60; width:min(430px,92vw);
@@ -424,30 +428,30 @@
     border-radius:2px; box-shadow:0 14px 40px rgba(0,0,0,.85); display:none; }
 :global(.lmspace #card .hd) { display:flex; justify-content:space-between; gap:8px; align-items:flex-start;
     padding:7px 9px; border-bottom:1px solid rgba(255,255,255,.1); }
-:global(.lmspace #card .nm) { font-size:11px; font-weight:900; color:var(--cyan); line-height:1.35; }
-:global(.lmspace #card .cr) { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
-:global(.lmspace #card .qwarn) { font-size:12px; color:var(--orange); margin-top:3px; line-height:1.4;
+:global(.lmspace #card .nm) { font-size:0.9167rem; font-weight:900; color:var(--cyan); line-height:1.35; }
+:global(.lmspace #card .cr) { font-size:0.9167rem; color:rgba(255,255,255,.4); margin-top:2px; }
+:global(.lmspace #card .qwarn) { font-size:1rem; color:var(--orange); margin-top:3px; line-height:1.4;
     border-left:2px solid var(--orange); padding-left:5px; }
 :global(.lmspace #card .bd) { padding:9px; }
 :global(.lmspace .grid) { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
 :global(.lmspace .kv) { border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.4);
     border-radius:2px; padding:4px 6px; }
-:global(.lmspace .kv .k) { font-size:12px; color:rgba(255,255,255,.36); text-transform:uppercase; letter-spacing:.06em; }
-:global(.lmspace .kv .v) { font-size:11px; font-weight:700; margin-top:2px; }
+:global(.lmspace .kv .k) { font-size:1rem; color:rgba(255,255,255,.36); text-transform:uppercase; letter-spacing:.06em; }
+:global(.lmspace .kv .v) { font-size:0.9167rem; font-weight:700; margin-top:2px; }
 :global(.lmspace .ranks) { margin-top:8px; padding-top:7px; border-top:1px solid rgba(255,255,255,.1);
-    font-size:11px; color:rgba(255,255,255,.45); display:flex; flex-wrap:wrap; gap:4px 12px; }
-:global(.lmspace .x) { cursor:pointer; color:rgba(255,255,255,.4); font-size:11px; background:none;
+    font-size:0.9167rem; color:rgba(255,255,255,.45); display:flex; flex-wrap:wrap; gap:4px 12px; }
+:global(.lmspace .x) { cursor:pointer; color:rgba(255,255,255,.4); font-size:0.9167rem; background:none;
     border:none; font:inherit; padding:0; }
 :global(.lmspace .x:hover) { color:#fff; }
 :global(.lmspace #mission) { position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:30;
     display:none; text-align:center; background:rgba(9,10,12,.9);
     border:1px solid var(--yellow); border-radius:2px; padding:7px 14px;
     box-shadow:0 6px 24px rgba(0,0,0,.7); max-width:min(560px,92vw); }
-:global(.lmspace #mission .q) { font-size:11px; font-weight:700; color:var(--yellow); }
-:global(.lmspace #mission .m) { font-size:11px; color:rgba(255,255,255,.5); margin-top:3px; }
-:global(.lmspace #mission .res) { font-size:12px; margin-top:5px; font-weight:700; }
+:global(.lmspace #mission .q) { font-size:0.9167rem; font-weight:700; color:var(--yellow); }
+:global(.lmspace #mission .m) { font-size:0.9167rem; color:rgba(255,255,255,.5); margin-top:3px; }
+:global(.lmspace #mission .res) { font-size:1rem; margin-top:5px; font-weight:700; }
 :global(.lmspace #fps) { position:absolute; right:10px; bottom:9px; z-index:26;
-    font-size:10px; letter-spacing:.04em; white-space:nowrap; pointer-events:none;
+    font-size:0.8333rem; letter-spacing:.04em; white-space:nowrap; pointer-events:none;
     text-shadow:0 0 5px #000; font-variant-numeric:tabular-nums; }
 :global(.lmspace .fps-n) { font-weight:700; }
 :global(.lmspace .fps-l) { color:rgba(255,255,255,.35); }
@@ -469,7 +473,7 @@
 :global(.lmspace #racectl.show) { display:flex; }
 :global(.lmspace #racectl button) { flex:1; padding:4px 0; border:1px solid rgba(255,255,255,.18);
     border-radius:2px; background:rgba(0,0,0,.45); color:rgba(255,255,255,.7); font:inherit;
-    font-size:12px; cursor:pointer; transition:.12s; }
+    font-size:1rem; cursor:pointer; transition:.12s; }
 :global(.lmspace #racectl button:hover) { border-color:var(--purple); color:#fff; }
 :global(.lmspace #racectl button.on) { color:#0a0b0d; background:var(--purple); border-color:var(--purple); }
 :global(.lmspace #race) { position:absolute; top:98px; left:12px; z-index:30; display:none;
@@ -477,9 +481,9 @@
     border-radius:2px; padding:7px 8px; backdrop-filter:blur(8px); }
 :global(.lmspace #race .rhd) { display:flex; justify-content:space-between; align-items:baseline;
     gap:6px; padding-bottom:5px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.12); }
-:global(.lmspace #race .q) { font-size:12px; font-weight:900; color:var(--purple); letter-spacing:.04em; }
-:global(.lmspace #race .m) { font-size:12px; color:rgba(255,255,255,.4); }
-:global(.lmspace .rrow) { display:flex; align-items:center; gap:6px; font-size:11px; padding:1.5px 0;
+:global(.lmspace #race .q) { font-size:1rem; font-weight:900; color:var(--purple); letter-spacing:.04em; }
+:global(.lmspace #race .m) { font-size:1rem; color:rgba(255,255,255,.4); }
+:global(.lmspace .rrow) { display:flex; align-items:center; gap:6px; font-size:0.9167rem; padding:1.5px 0;
     color:rgba(255,255,255,.62); }
 :global(.lmspace .rrow.me) { background:rgba(198,120,221,.16); outline:1px solid rgba(198,120,221,.4);
     border-radius:2px; color:#fff; }
@@ -488,7 +492,7 @@
 :global(.lmspace .rrow .rn) { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
     white-space:nowrap; }
 :global(.lmspace .rrow .rv) { font-weight:700; flex:0 0 auto; font-variant-numeric:tabular-nums; }
-:global(.lmspace .rhint) { font-size:12px; color:rgba(255,255,255,.35); margin-top:5px;
+:global(.lmspace .rhint) { font-size:1rem; color:rgba(255,255,255,.35); margin-top:5px;
     padding-top:4px; border-top:1px solid rgba(255,255,255,.1); }
 :global(.lmspace #gravity) { position:absolute; top:84px; left:12px; z-index:30; display:none;
     width:200px; max-height:calc(100% - 108px); overflow-y:auto; background:rgba(9,10,12,.92); border:1px solid var(--green);
@@ -496,10 +500,10 @@
 :global(.lmspace #gravity .q) { color:var(--green); }
 :global(.lmspace .gcl) { border-top:1px solid rgba(255,255,255,.08); padding:4px 0 3px; }
 :global(.lmspace .gcl:first-of-type) { border-top:0; }
-:global(.lmspace .gcl-h) { font-size:11px; color:rgba(255,255,255,.72); }
-:global(.lmspace .gcl-m) { font-size:12px; color:rgba(255,255,255,.42); margin-top:1px; }
+:global(.lmspace .gcl-h) { font-size:0.9167rem; color:rgba(255,255,255,.72); }
+:global(.lmspace .gcl-m) { font-size:1rem; color:rgba(255,255,255,.42); margin-top:1px; }
 :global(.lmspace #range) { position:absolute; left:50%; top:calc(50% + 22px); transform:translateX(-50%);
-    z-index:24; font-size:11px; letter-spacing:.06em; white-space:nowrap;
+    z-index:24; font-size:0.9167rem; letter-spacing:.06em; white-space:nowrap;
     color:rgba(255,255,255,.4); pointer-events:none; text-shadow:0 0 5px #000;
     opacity:0; transition:opacity .25s; }
 :global(.lmspace #range .rg-lab) { color:rgba(255,255,255,.3); }
@@ -508,17 +512,17 @@
 :global(.lmspace #range.far .rg-num) { color:var(--red); }
 :global(.lmspace #range .rg-warn) { color:var(--red); }
 :global(.lmspace #outwarn) { position:absolute; left:50%; top:calc(50% - 30px); transform:translate(-50%,4px);
-    z-index:24; font-size:9px; letter-spacing:.06em; white-space:nowrap;
+    z-index:24; font-size:0.75rem; letter-spacing:.06em; white-space:nowrap;
     color:var(--red); text-shadow:0 0 5px #000; pointer-events:none;
     opacity:0; transition:opacity .25s ease, transform .25s ease; }
 :global(.lmspace #outwarn.show) { opacity:1; transform:translate(-50%,0); }
-:global(.lmspace #outwarn kbd) { border:none; padding:0; font-size:9px; color:var(--red); font-weight:700; }
+:global(.lmspace #outwarn kbd) { border:none; padding:0; font-size:0.75rem; color:var(--red); font-weight:700; }
 /* Hiding keeps the WebGL context and the loaded marks alive; the scene
    re-fits itself when the stage is laid out again. */
 :global(.lmspace.lms-off) { display:none; }
 :global(.lmspace #tip) { position:absolute; z-index:80; max-width:290px; padding:8px 11px;
     background:rgba(15,17,20,.97); border:1px solid rgba(255,255,255,.2);
-    border-radius:2px; font-size:9px; line-height:1.55; color:var(--fg);
+    border-radius:2px; font-size:0.75rem; line-height:1.55; color:var(--fg);
     box-shadow:0 10px 30px rgba(0,0,0,.7); pointer-events:none;
     opacity:0; transform:translateY(-3px); transition:opacity .14s, transform .14s; }
 :global(.lmspace #tip.show) { opacity:1; transform:none; }
@@ -530,10 +534,10 @@
 :global(.lmspace .has-tip), :global(.lmspace .hint-tip) { cursor:help; }
 /* Radius's ◄ value ► sits inside the AXES text panel rather than #ctl, so it
    needs the same .cyc font metrics restated at this smaller size. */
-:global(.lmspace #rfield .cyc) { font-size:14px; }
-:global(.lmspace #rfield .cval) { font-size:11px; }
+:global(.lmspace #rfield .cyc) { font-size:1.1667rem; }
+:global(.lmspace #rfield .cval) { font-size:0.9167rem; }
 :global(.lmspace #boot) { position:absolute; inset:0; z-index:99; background:var(--bg); display:flex;
-    align-items:center; justify-content:center; font-size:11px; color:var(--cyan); }
+    align-items:center; justify-content:center; font-size:0.9167rem; color:var(--cyan); }
 :global(.lmspace .err) { color:var(--red); }
 :global(.lmspace ::-webkit-scrollbar) { width:7px; height:7px; }
 :global(.lmspace ::-webkit-scrollbar-thumb) { background:rgba(255,255,255,.16); border-radius:4px; }
