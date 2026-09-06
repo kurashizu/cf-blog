@@ -23,6 +23,7 @@
 		renameUserKit,
 		exportActiveKit,
 		handleImportKitFile,
+		CATEGORY_HINTS,
 		type PresetCategory,
 		type DrumKit
 	} from '../../stores/synth-presets';
@@ -37,8 +38,7 @@
 	   to read at a glance. Hover opens a flyout; so does click, for touch. */
 	type Section = PresetCategory | 'KITS' | 'MINE';
 	const SECTIONS: { id: Section; label: string; hint: string }[] = [
-		{ id: 'SYNTH', label: 'SYNTH', hint: 'Basses, leads, plucks — one sound across the keyboard' },
-		{ id: 'DRUMS', label: 'DRUMS', hint: 'Single drum sounds; put one on a key in percussion mode, or on a whole track' },
+		...PRESET_CATEGORIES.map((c) => ({ id: c as Section, label: c, hint: CATEGORY_HINTS[c] })),
 		{ id: 'KITS', label: 'KITS', hint: 'Whole key tables — turns the active track into a drum machine (percussion mode)' },
 		{ id: 'MINE', label: 'MY PRESETS', hint: 'What you saved or imported here; rename and remove in place' }
 	];
@@ -226,7 +226,7 @@
 			>
 				{#each SECTIONS as sec (sec.id)}
 					{@const isOpen = section === sec.id}
-					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'KITS' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => (p.category ?? 'SYNTH') === sec.id).length}
+					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'KITS' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => p.category === sec.id).length}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div class="relative" onmouseenter={() => (section = sec.id)}>
 						<button
@@ -242,11 +242,11 @@
 						</button>
 
 						{#if isOpen}
-							{#if sec.id === 'SYNTH' || sec.id === 'DRUMS'}
+							{#if sec.id !== 'KITS' && sec.id !== 'MINE'}
 								{@render flyout(presetList)}
 								{#snippet presetList()}
 									{#each SOUND_PRESETS as p, idx (p.name)}
-										{#if (p.category ?? 'SYNTH') === sec.id}
+										{#if p.category === sec.id}
 											<button onclick={() => pick(idx)} class="{rowBase} {$soundPresetIdx === idx ? rowOn : rowIdle}" title={PRESET_TOOLTIPS[p.name] || p.name}>
 												<span class="shrink-0 {$soundPresetIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$soundPresetIdx === idx ? '●' : '○'}</span>
 												<span class="truncate">{p.name}</span>

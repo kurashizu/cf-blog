@@ -11,10 +11,11 @@ const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
 const FILE_FORMAT = 'krsz-synth-preset';
 const KIT_FILE_FORMAT = 'krsz-synth-kit';
 
-export type PresetCategory = 'SYNTH' | 'DRUMS';
+export type PresetCategory = 'BASS' | 'LEAD' | 'PLUCK' | 'KEYS' | 'PAD' | 'DRUMS';
 
 export interface SoundPreset {
 	name: string;
+	/** Built-ins carry one; user presets are listed under MY PRESETS regardless. */
 	category?: PresetCategory;
 	preset: Partial<TrackData>;
 }
@@ -105,9 +106,10 @@ function synth(extra: Partial<TrackData>): Partial<TrackData> {
 }
 
 export const SOUND_PRESETS: SoundPreset[] = [
+	/* BASS */
 	{
 		name: '8-BIT BASS',
-		category: 'SYNTH',
+		category: 'BASS',
 		preset: synth({
 			osc1Waveform: 'square',
 			osc2Waveform: 'triangle',
@@ -125,27 +127,162 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
-		name: 'PLUCK',
-		category: 'SYNTH',
+		// One sine and the SUB under it, nothing above 800 Hz: weight, no edge.
+		name: 'SUB BASS',
+		category: 'BASS',
+		preset: synth({
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			subOscGain: 0.7,
+			cutoff: 800,
+			resonance: 0.2,
+			ampAttack: 0.005,
+			ampDecay: 0.2,
+			ampSustain: 0.9,
+			ampRelease: 0.15
+		})
+	},
+	{
+		// A saw into a high-Q low-pass that the envelope sweeps, with glide: the 303 recipe.
+		name: 'ACID BASS',
+		category: 'BASS',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			glideTime: 60,
+			cutoff: 400,
+			resonance: 8,
+			filterEnvAmount: 0.7,
+			filterAttack: 0.003,
+			filterDecay: 0.2,
+			filterSustain: 0,
+			filterRelease: 0.1,
+			ampAttack: 0.003,
+			ampDecay: 0.25,
+			ampSustain: 0.6,
+			ampRelease: 0.12
+		})
+	},
+	{
+		// Sine modulated by a sine an octave up; the envelope on the filter stands in for an FM index envelope.
+		name: 'FM BASS',
+		category: 'BASS',
+		preset: synth({
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			osc2Waveform: 'sine',
+			osc2Gain: 0.8,
+			osc2Ratio: 2,
+			blendMode: 'fm',
+			morphAmount: 0.5,
+			cutoff: 3000,
+			resonance: 0.5,
+			filterEnvAmount: 0.4,
+			filterDecay: 0.25,
+			filterSustain: 0.2,
+			ampAttack: 0.003,
+			ampDecay: 0.3,
+			ampSustain: 0.5,
+			ampRelease: 0.15
+		})
+	},
+
+	/* LEAD */
+	{
+		// Was osc1Waveform 'pulse', which is not a Web Audio oscillator type:
+		// every note threw on osc.type and the preset was silent. A pulse is a
+		// square with PW off 50%, which the engine now actually builds.
+		name: 'LEAD',
+		category: 'LEAD',
 		preset: synth({
 			osc1Waveform: 'square',
+			pulseWidth: 25,
 			osc2Waveform: 'sawtooth',
-			cutoff: 1800,
-			resonance: 3.5,
-			ampAttack: 0.003,
-			ampDecay: 0.35,
-			ampSustain: 0.7,
+			detuneCents: 8,
+			cutoff: 6500,
+			resonance: 2.8,
+			ampAttack: 0.005,
+			ampDecay: 0.2,
+			ampSustain: 0.8,
+			ampRelease: 0.18,
+			filterAttack: 0.005,
+			filterDecay: 0.25,
+			filterSustain: 0.6,
+			filterRelease: 0.12,
+			filterEnvAmount: 0.4
+		})
+	},
+	{
+		// Two saws 14 cents apart with a delayed vibrato.
+		name: 'SAW LEAD',
+		category: 'LEAD',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 0.9,
+			osc2Waveform: 'sawtooth',
+			osc2Gain: 0.8,
+			detuneCents: 14,
+			cutoff: 5000,
+			resonance: 1,
+			ampAttack: 0.01,
+			ampDecay: 0.2,
+			ampSustain: 0.8,
 			ampRelease: 0.2,
-			filterAttack: 0.003,
-			filterDecay: 0.08,
-			filterSustain: 0.0,
-			filterRelease: 0.06,
-			filterEnvAmount: 0.85
+			lfoWaveform: 'sine',
+			lfoRate: 5.5,
+			lfoPitchAmt: 0.1,
+			lfoFadeTime: 300
+		})
+	},
+	{
+		// SYNC mode with the second oscillator at a fifth; the filter envelope gives it the rip.
+		name: 'SYNC LEAD',
+		category: 'LEAD',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Waveform: 'square',
+			osc2Gain: 0.9,
+			osc2Ratio: 1.5,
+			blendMode: 'sync',
+			morphAmount: 0.7,
+			cutoff: 7000,
+			resonance: 2,
+			filterEnvAmount: 0.5,
+			filterDecay: 0.3,
+			filterSustain: 0.3,
+			ampAttack: 0.005,
+			ampDecay: 0.3,
+			ampSustain: 0.7,
+			ampRelease: 0.2
+		})
+	},
+	{
+		// A 15% pulse, no filter, a fast vibrato: the NES lead voice.
+		name: 'CHIP LEAD',
+		category: 'LEAD',
+		preset: synth({
+			osc1Waveform: 'square',
+			osc1Gain: 1,
+			pulseWidth: 15,
+			osc2Gain: 0,
+			cutoff: 12000,
+			resonance: 0.2,
+			ampAttack: 0,
+			ampDecay: 0.1,
+			ampSustain: 0.8,
+			ampRelease: 0.05,
+			lfoWaveform: 'triangle',
+			lfoRate: 6,
+			lfoPitchAmt: 0.08,
+			lfoFadeTime: 150
 		})
 	},
 	{
 		name: 'BRASS',
-		category: 'SYNTH',
+		category: 'LEAD',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc2Waveform: 'sawtooth',
@@ -163,28 +300,269 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			filterEnvAmount: 0.55
 		})
 	},
+
+	/* PLUCK */
 	{
-		// Was osc1Waveform 'pulse', which is not a Web Audio oscillator type:
-		// every note threw on osc.type and the preset was silent. A pulse is a
-		// square with PW off 50%, which the engine now actually builds.
-		name: 'LEAD',
-		category: 'SYNTH',
+		name: 'PLUCK',
+		category: 'PLUCK',
 		preset: synth({
 			osc1Waveform: 'square',
+			osc2Waveform: 'sawtooth',
+			cutoff: 1800,
+			resonance: 3.5,
+			ampAttack: 0.003,
+			ampDecay: 0.35,
+			ampSustain: 0.7,
+			ampRelease: 0.2,
+			filterAttack: 0.003,
+			filterDecay: 0.08,
+			filterSustain: 0.0,
+			filterRelease: 0.06,
+			filterEnvAmount: 0.85
+		})
+	},
+	{
+		// Triangle with a sine an octave up, a filter that snaps shut, no sustain: a plucked string.
+		name: 'KOTO',
+		category: 'PLUCK',
+		preset: synth({
+			osc1Waveform: 'triangle',
+			osc1Gain: 1,
+			osc2Waveform: 'sine',
+			osc2Gain: 0.4,
+			osc2Ratio: 2,
+			cutoff: 4000,
+			resonance: 1,
+			keyTracking: 0.5,
+			filterEnvAmount: 0.6,
+			filterAttack: 0,
+			filterDecay: 0.08,
+			filterSustain: 0,
+			ampAttack: 0.002,
+			ampDecay: 0.4,
+			ampSustain: 0,
+			ampRelease: 0.3
+		})
+	},
+	{
+		// Sine body and a quieter triangle an octave up, decaying together.
+		name: 'MARIMBA',
+		category: 'PLUCK',
+		preset: synth({
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			osc2Waveform: 'triangle',
+			osc2Gain: 0.6,
+			osc2Ratio: 2,
+			cutoff: 8000,
+			resonance: 0.3,
+			ampAttack: 0,
+			ampDecay: 0.35,
+			ampSustain: 0,
+			ampRelease: 0.25
+		})
+	},
+	{
+		// Two sines ring-modulated at a 3.5 ratio: inharmonic partials, long tail, air.
+		name: 'BELL',
+		category: 'PLUCK',
+		preset: synth({
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			osc2Waveform: 'sine',
+			osc2Gain: 1,
+			osc2Ratio: 3.5,
+			blendMode: 'ring',
+			cutoff: 12000,
+			resonance: 0.2,
+			ampAttack: 0.002,
+			ampDecay: 0.8,
+			ampSustain: 0.2,
+			ampRelease: 1.2,
+			airGain: 0.3
+		})
+	},
+
+	/* KEYS */
+	{
+		// Sine carrier, sine modulator four octaves up at a light index: the tine.
+		name: 'E-PIANO',
+		category: 'KEYS',
+		preset: synth({
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			osc2Waveform: 'sine',
+			osc2Gain: 0.5,
+			osc2Ratio: 4,
+			blendMode: 'fm',
+			morphAmount: 0.2,
+			cutoff: 6000,
+			resonance: 0.3,
+			filterEnvAmount: 0.3,
+			filterDecay: 0.4,
+			filterSustain: 0.2,
+			ampAttack: 0.002,
+			ampDecay: 0.6,
+			ampSustain: 0.35,
+			ampRelease: 0.3
+		})
+	},
+	{
+		// Drawbars: fundamental, octave, and the SUB below; no envelope to speak of; a slow tremolo.
+		name: 'ORGAN',
+		category: 'KEYS',
+		preset: synth({
+			osc1Waveform: 'sine',
+			osc1Gain: 0.8,
+			osc2Waveform: 'sine',
+			osc2Gain: 0.5,
+			osc2Ratio: 2,
+			subOscGain: 0.5,
+			cutoff: 12000,
+			resonance: 0.2,
+			ampAttack: 0.005,
+			ampDecay: 0.05,
+			ampSustain: 1,
+			ampRelease: 0.05,
+			lfoWaveform: 'sine',
+			lfoRate: 6,
+			lfoAmpAmt: 0.15
+		})
+	},
+	{
+		// A 25% pulse through a resonant low-pass that closes fast.
+		name: 'CLAV',
+		category: 'KEYS',
+		preset: synth({
+			osc1Waveform: 'square',
+			osc1Gain: 1,
 			pulseWidth: 25,
 			osc2Waveform: 'sawtooth',
-			detuneCents: 8,
-			cutoff: 6500,
-			resonance: 2.8,
-			ampAttack: 0.005,
-			ampDecay: 0.2,
-			ampSustain: 0.8,
-			ampRelease: 0.18,
-			filterAttack: 0.005,
-			filterDecay: 0.25,
-			filterSustain: 0.6,
-			filterRelease: 0.12,
-			filterEnvAmount: 0.4
+			osc2Gain: 0.4,
+			cutoff: 3500,
+			resonance: 4,
+			filterEnvAmount: 0.7,
+			filterAttack: 0,
+			filterDecay: 0.12,
+			filterSustain: 0.1,
+			ampAttack: 0,
+			ampDecay: 0.3,
+			ampSustain: 0.15,
+			ampRelease: 0.08
+		})
+	},
+	{
+		// Saw with a square an octave up, plucked and bright.
+		name: 'HARPSICHORD',
+		category: 'KEYS',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 0.9,
+			osc2Waveform: 'square',
+			osc2Gain: 0.4,
+			osc2Ratio: 2,
+			cutoff: 9000,
+			resonance: 1,
+			filterEnvAmount: 0.3,
+			filterDecay: 0.2,
+			filterSustain: 0,
+			ampAttack: 0,
+			ampDecay: 0.5,
+			ampSustain: 0,
+			ampRelease: 0.2
+		})
+	},
+
+	/* PAD */
+	{
+		// Detuned saws behind a low filter that breathes with a slow LFO.
+		name: 'WARM PAD',
+		category: 'PAD',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 0.9,
+			osc2Waveform: 'sawtooth',
+			osc2Gain: 0.9,
+			detuneCents: 10,
+			cutoff: 1800,
+			resonance: 0.8,
+			filterEnvAmount: 0.1,
+			filterAttack: 0.6,
+			filterDecay: 0.5,
+			filterSustain: 0.8,
+			ampAttack: 0.6,
+			ampDecay: 0.5,
+			ampSustain: 0.9,
+			ampRelease: 1.2,
+			lfoWaveform: 'sine',
+			lfoRate: 0.3,
+			lfoCutoffAmt: 0.15
+		})
+	},
+	{
+		// Wider detune, brighter filter, a vibrato that fades in.
+		name: 'STRINGS',
+		category: 'PAD',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 0.9,
+			osc2Waveform: 'sawtooth',
+			osc2Gain: 0.9,
+			detuneCents: 18,
+			cutoff: 4000,
+			resonance: 0.5,
+			ampAttack: 0.4,
+			ampDecay: 0.3,
+			ampSustain: 1,
+			ampRelease: 0.9,
+			lfoWaveform: 'sine',
+			lfoRate: 5,
+			lfoPitchAmt: 0.06,
+			lfoFadeTime: 600
+		})
+	},
+	{
+		// Triangle and a sine an octave up, open filter, air on top, drifting in the stereo field.
+		name: 'GLASS PAD',
+		category: 'PAD',
+		preset: synth({
+			osc1Waveform: 'triangle',
+			osc1Gain: 0.9,
+			osc2Waveform: 'sine',
+			osc2Gain: 0.7,
+			osc2Ratio: 2,
+			detuneCents: 6,
+			cutoff: 12000,
+			resonance: 0.2,
+			ampAttack: 0.5,
+			ampDecay: 0.3,
+			ampSustain: 1,
+			ampRelease: 1.5,
+			airGain: 0.5,
+			lfoWaveform: 'sine',
+			lfoRate: 0.4,
+			lfoPanAmt: 0.3
+		})
+	},
+	{
+		// Square with a square an octave below, a low filter the LFO opens and closes.
+		name: 'HOLLOW PAD',
+		category: 'PAD',
+		preset: synth({
+			osc1Waveform: 'square',
+			osc1Gain: 0.8,
+			osc2Waveform: 'square',
+			osc2Gain: 0.6,
+			osc2Ratio: 0.5,
+			cutoff: 2500,
+			resonance: 1.5,
+			ampAttack: 0.7,
+			ampDecay: 0.4,
+			ampSustain: 0.9,
+			ampRelease: 1.4,
+			lfoWaveform: 'triangle',
+			lfoRate: 0.2,
+			lfoCutoffAmt: 0.25
 		})
 	},
 
@@ -366,7 +744,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	}
 ];
 
-export const PRESET_CATEGORIES: PresetCategory[] = ['SYNTH', 'DRUMS'];
+export const PRESET_CATEGORIES: PresetCategory[] = ['BASS', 'LEAD', 'PLUCK', 'KEYS', 'PAD', 'DRUMS'];
+
+export const CATEGORY_HINTS: Record<PresetCategory, string> = {
+	BASS: 'Low end — subs, acid, FM; play them under C3',
+	LEAD: 'Melody voices — pulses, detuned saws, sync, brass',
+	PLUCK: 'Struck and plucked — fast attack, no sustain',
+	KEYS: 'Keyboards — tines, drawbars, clav, harpsichord',
+	PAD: 'Slow attack, long release, movement from the LFO',
+	DRUMS: 'Single drum sounds; put one on a key in percussion mode, or on a whole track'
+};
 
 /* What a preset is: the sound of a track, and nothing about where it sits in
    the mix or what it plays -- the engine's KEY_TIMBRE_KEYS, plus the per-track
