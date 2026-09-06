@@ -167,6 +167,7 @@
 	}
 
 	let rows: HTMLDivElement;
+	let rowsWidth = $state(0);
 	let drag: Drag | null = null;
 	let marquee = $state<{ left: number; top: number; width: number; height: number } | null>(null);
 	let marqueeKeys = $state<Set<string> | null>(null);
@@ -622,6 +623,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				bind:this={rows}
+				bind:clientWidth={rowsWidth}
 				class="relative flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col overflow-y-auto custom-scrollbar select-none"
 				style="cursor: {hoverCursor || 'auto'}; touch-action: pan-y;"
 				onpointerdown={onPointerDown}
@@ -636,8 +638,6 @@
 						{actualIdx}
 						visibleTracks={rowTracks}
 						{viewportStartCol}
-						{activeCol}
-						{activeSubCol}
 						timeMeter={$timeMeter}
 						snapDiv={$snapDiv}
 						selected={shownSelection}
@@ -648,6 +648,17 @@
 						onAudition={auditionNote}
 					/>
 				{/each}
+				<!-- The playhead: one element moved per step. It used to be a prop on
+				     every row, which re-evaluated ~600 cell classes 46 times a second at
+				     115 BPM and held the whole page to ~30 fps. -->
+				{#if activeCol >= 0 && rowsWidth > 40}
+					{@const pitch = (rowsWidth - 40) / colsPerPage}
+					{@const sub = hasSubColumns($snapDiv)}
+					<div
+						class="absolute top-0 left-0 !mt-0 z-[1] pointer-events-none rounded-xs bg-white/20 border border-white/60 will-change-transform"
+						style="transform: translateX({40 + (activeCol + (sub ? activeSubCol * 0.5 : 0)) * pitch}px); width: {pitch / (sub ? 2 : 1) - 2}px; height: {visibleNotes.length * 20 - 2}px;"
+					></div>
+				{/if}
 				{#if marquee}
 					<div class="absolute z-[5] pointer-events-none border border-white/70 bg-white/10 rounded-xs" style="left: {marquee.left}px; top: {marquee.top}px; width: {marquee.width}px; height: {marquee.height}px;"></div>
 				{/if}

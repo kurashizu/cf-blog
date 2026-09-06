@@ -225,25 +225,34 @@ export function releaseManualNote(trackId: number, noteIdx: number): void {
 	});
 }
 
-/** Notes currently ringing on the visual piano keyboard: live sequencer steps + manually/MIDI-held notes. */
-export const activePlayingNotes = derived(
+/* Notes currently ringing on the visual piano keyboard: live sequencer steps
+   + manually/MIDI-held notes. Computed as a string first: a derived store
+   notifies on every input change (46 steps a second at 115 BPM), but a
+   string that comes out equal is deduplicated, so the 88-key keyboard only
+   re-renders when a note actually starts or stops. */
+const activePlayingSig = derived(
 	[isSeqPlaying, seqCurrentStep, tracksState, manualHeldNotes],
 	([$isSeqPlaying, $seqCurrentStep, $tracksState, $manualHeldNotes]) => {
-		const activeMap = new Map<number, { trackId: number }>();
-
+		const parts: string[] = [];
 		if ($isSeqPlaying) {
 			const hasSolo = $tracksState.some((t) => t.solo);
-			$tracksState.forEach((trk) => {
-				if (trk.muted) return;
-				if (hasSolo && !trk.solo) return;
-				const stepNotes = trk.grid[$seqCurrentStep] || [];
-				stepNotes.forEach((nIdx) => {
-					if (nIdx !== null && nIdx !== undefined) activeMap.set(nIdx, { trackId: trk.id });
-				});
-			});
+			for (const trk of $tracksState) {
+				if (trk.muted || (hasSolo && !trk.solo)) continue;
+				const stepNotes = trk.grid[$seqCurrentStep];
+				if (!stepNotes) continue;
+				for (const nIdx of stepNotes) parts.push(`${nIdx}:${trk.id}`);
+			}
 		}
-
-		$manualHeldNotes.forEach((entry) => activeMap.set(entry.noteIdx, { trackId: entry.trackId }));
-		return activeMap;
+		$manualHeldNotes.forEach((entry) => parts.push(`${entry.noteIdx}:${entry.trackId}`));
+		return parts.join(',');
 	}
 );
+
+export const activePlayingNotes = derived(activePlayingSig, ($sig) => {
+	const activeMap = new Map<number, { trackId: number }>();
+	if ($sig) for (const p of $sig.split(',')) {
+		const [n, t] = p.split(':');
+		activeMap.set(Number(n), { trackId: Number(t) });
+	}
+	return activeMap;
+});

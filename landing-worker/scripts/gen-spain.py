@@ -174,7 +174,7 @@ TRACKS = [
                       filterAttack=0.03, filterDecay=0.2, filterSustain=0.6, filterEnvAmount=0.15,
                       lfoRate=5.5, lfoPitchAmt=0.02, lfoFadeTime=180, airGain=0.1),
          duck=dict(duckSource=-1, duckKeys=[], duckDepth=0)),
-    dict(id=1, name='TRK 2: PIANO', color='#56b6c2', volume=0.7, pan=-0.2,
+    dict(id=1, name='TRK 2: PIANO', color='#56b6c2', volume=0.6, pan=-0.2,
          timbre=synth(osc1Waveform='sine', osc1Gain=1, osc2Waveform='sine', osc2Gain=0.5, osc2Ratio=4, blendMode='fm', morphAmount=0.2,
                       cutoff=6000, resonance=0.3, filterEnvAmount=0.3, filterDecay=0.4, filterSustain=0.2,
                       ampAttack=0.002, ampDecay=0.6, ampSustain=0.35, ampRelease=0.3),
@@ -185,7 +185,7 @@ TRACKS = [
                       cutoff=4000, resonance=1, keyTracking=0.5, filterEnvAmount=0.6, filterAttack=0, filterDecay=0.08, filterSustain=0,
                       ampAttack=0.002, ampDecay=0.5, ampSustain=0.25, ampRelease=0.3),
          duck=dict(duckSource=-1, duckKeys=[], duckDepth=0)),
-    dict(id=3, name='TRK 4: DRUMS', color='#d8dee9', volume=1.0, pan=0.0,
+    dict(id=3, name='TRK 4: DRUMS', color='#d8dee9', volume=1.4, pan=0.0,
          timbre=CHAT, percussion=True,
          duck=dict(duckSource=-1, duckKeys=[], duckDepth=0)),
     dict(id=4, name='TRK 5: ACOUSTIC BASS', color='#61afef', volume=0.95, pan=0.0,
@@ -196,8 +196,8 @@ TRACKS = [
          duck=dict(duckSource=3, duckKeys=[108 - 35], duckDepth=0.45, duckDip=3, duckHold=30, duckRelease=90)),
     dict(id=5, name='TRK 6: SYNTH BRASS', color='#c678dd', volume=0.8, pan=-0.1,
          timbre=synth(osc1Waveform='sawtooth', osc2Waveform='sawtooth', detuneCents=12, cutoff=2400, resonance=2.0,
-                      ampAttack=0.04, ampDecay=0.25, ampSustain=0.8, ampRelease=0.2,
-                      filterAttack=0.06, filterDecay=0.2, filterSustain=0.5, filterRelease=0.15, filterEnvAmount=0.55),
+                      ampAttack=0.03, ampDecay=0.15, ampSustain=0.8, ampRelease=0.05,
+                      filterAttack=0.05, filterDecay=0.15, filterSustain=0.5, filterRelease=0.05, filterEnvAmount=0.55),
          # the solo sits on top of the kit: every hit gets its instant
          duck=dict(duckSource=3, duckKeys=[], duckDepth=0.25, duckDip=3, duckHold=25, duckRelease=80)),
 ]

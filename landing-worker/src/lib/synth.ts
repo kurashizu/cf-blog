@@ -428,6 +428,8 @@ class ModularSynth {
   private reverbConvolver: ConvolverNode | null = null;
   private reverbWetGain: GainNode | null = null;
   private waveShaper: WaveShaperNode | null = null;
+  private shaperIn: GainNode | null = null;
+  private shaperBypass: GainNode | null = null;
 
   // Per-Track 6-Band Graphic EQ chains (track voices -> input -> 6 biquads -> master bus)
   private trackBuses: { input: GainNode; filters: BiquadFilterNode[]; duck: GainNode }[] = [];
@@ -621,13 +623,22 @@ class ModularSynth {
     const masterGain = this.masterOut(ctx);
 
     // Master bus: track chains + wet FX returns -> drive shaper -> masterGain.
-    // (The shaper is an identity curve at drive 0, so it is bit-transparent by default.)
+    // The shaper's curve is only defined on [-1, 1]: anything hotter is
+    // clamped, i.e. hard-clipped, even at drive 0 where the curve is a
+    // straight line. A busy mix sums well past 1 before the master fader
+    // brings it down, so at drive 0 the shaper is routed around entirely.
     this.masterBusIn = ctx.createGain();
     this.waveShaper = ctx.createWaveShaper();
     (this.waveShaper as any).curve = this.makeDistortionCurve(this.driveAmount);
     this.waveShaper.oversample = '2x';
-    this.masterBusIn.connect(this.waveShaper);
+    this.shaperIn = ctx.createGain();
+    this.shaperBypass = ctx.createGain();
+    this.masterBusIn.connect(this.shaperIn);
+    this.shaperIn.connect(this.waveShaper);
     this.waveShaper.connect(masterGain);
+    this.masterBusIn.connect(this.shaperBypass);
+    this.shaperBypass.connect(masterGain);
+    this.applyDriveRouting();
 
     // Per-Track 6-Band Graphic EQ chains: voices -> input -> 80Hz -> ... -> 12kHz -> master bus.
     // Persistent per track (not per voice), so 8 tracks cost at most 48 biquads total.
@@ -966,6 +977,16 @@ class ModularSynth {
     if (this.waveShaper) {
       (this.waveShaper as any).curve = this.makeDistortionCurve(this.driveAmount);
     }
+    this.applyDriveRouting();
+  }
+
+  /** Drive on: through the shaper. Drive off: around it, so nothing clips before the master fader. */
+  private applyDriveRouting() {
+    if (!this.shaperIn || !this.shaperBypass) return;
+    const on = this.driveAmount > 0.001;
+    const t = this.shaperIn.context.currentTime;
+    this.shaperIn.gain.setTargetAtTime(on ? 1 : 0, t, 0.01);
+    this.shaperBypass.gain.setTargetAtTime(on ? 0 : 1, t, 0.01);
   }
 
   public getDrive(): number {
@@ -1624,12 +1645,15 @@ class ModularSynth {
       if (lfo) lfo.stop(stopTime);
 
       // onended fires off the audio clock even when background-tab timer
-      // throttling delays the setTimeout fallback by seconds or minutes.
-      // Neither applies offline: wall-clock reaping there would disconnect
-      // nodes the renderer has not reached yet.
+      // throttling delays the setTimeout fallback by seconds or minutes. It
+      // is also the only reaper an offline render may use: it fires when the
+      // renderer actually reaches the end of the note, whereas wall-clock
+      // reaping would disconnect nodes it has not got to yet. Without any
+      // reaping offline, every finished voice stayed in the graph and the
+      // render cost grew with the square of the song length.
+      const endSrc = osc1 ?? osc2 ?? noiseSource;
+      if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
       if (!this.renderCtx) {
-        const endSrc = osc1 ?? osc2 ?? noiseSource;
-        if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
         const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
         void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
       }
@@ -1663,9 +1687,9 @@ class ModularSynth {
       if (this.reverbConvolver && this.reverbMix > 0) finalVoiceNode.connect(this.reverbConvolver);
     }
 
-    // The live voice map exists so held notes can be released and stolen; an
-    // offline render would only accumulate entries nothing ever reads.
-    if (!this.renderCtx) {
+    // The voice map lets held notes be released and stolen live, and lets
+    // onended reap a finished voice's nodes in either context.
+    {
       this.activeVoices.set(voiceKey, {
         osc1,
         osc2,
@@ -1968,6 +1992,8 @@ class ModularSynth {
       reverbConvolver: this.reverbConvolver,
       reverbWetGain: this.reverbWetGain,
       waveShaper: this.waveShaper,
+      shaperIn: this.shaperIn,
+      shaperBypass: this.shaperBypass,
       masterBusIn: this.masterBusIn,
       trackBuses: this.trackBuses,
     };
@@ -1981,6 +2007,8 @@ class ModularSynth {
     this.reverbConvolver = cache.reverbConvolver;
     this.reverbWetGain = cache.reverbWetGain;
     this.waveShaper = cache.waveShaper;
+    this.shaperIn = cache.shaperIn;
+    this.shaperBypass = cache.shaperBypass;
     this.masterBusIn = cache.masterBusIn;
     this.trackBuses = cache.trackBuses;
   }
@@ -1994,6 +2022,8 @@ class ModularSynth {
       reverbConvolver: null,
       reverbWetGain: null,
       waveShaper: null,
+      shaperIn: null,
+      shaperBypass: null,
       masterBusIn: null,
       trackBuses: [],
     });
@@ -2028,6 +2058,7 @@ class ModularSynth {
     const offline = new OfflineAudioContext(2, frames, sampleRate);
 
     const live = this.graphCache();
+    const liveVoiceKeys = new Set(this.activeVoices.keys());
     this.renderCtx = offline;
     this.clearGraphCache();
     try {
@@ -2041,40 +2072,44 @@ class ModularSynth {
         this.regenerateReverbBuffer();
       }
 
-      // Building thousands of voices is a long synchronous stretch — yield
-      // periodically so the progress readout can actually paint.
-      const YIELD_EVERY = 480;
-      for (let step = 0; step < this.totalSteps; step++) {
-        this.scheduleStepAudio(step, step * stepDuration);
-        if (step % YIELD_EVERY === 0) {
-          options.onProgress?.('schedule', step / this.totalSteps);
-          await new Promise((resolve) => setTimeout(resolve, 0));
+      // Voices are built a second of audio at a time, at suspend checkpoints
+      // the renderer stops on. Building them all up front put every voice of
+      // the song into the graph at once -- tens of thousands of nodes for a
+      // dense tune -- and the renderer paid for all of them on every quantum,
+      // so a four-minute song took minutes and the tab froze. With chunks,
+      // only the voices of the current second (plus their tails, until
+      // onended reaps them) are live.
+      const chunkSteps = Math.max(1, Math.round(1.0 / stepDuration));
+      const scheduleRange = (from: number, to: number) => {
+        for (let step = from; step < Math.min(to, this.totalSteps); step++) {
+          this.scheduleStepAudio(step, step * stepDuration);
         }
-      }
+      };
+      scheduleRange(0, chunkSteps);
       options.onProgress?.('schedule', 1);
-
-      // Suspend/resume checkpoints turn the render itself into real progress
-      // rather than an unbounded wait.
-      if (options.onProgress) {
-        const marks = 40;
-        for (let i = 1; i < marks; i++) {
-          const at = (seconds * i) / marks;
-          void offline
-            .suspend(at)
-            .then(() => {
-              options.onProgress?.('render', i / marks);
-              void offline.resume();
-            })
-            .catch(() => {
-              /* a checkpoint past the buffer, or an aborted render — ignore */
-            });
-        }
+      for (let from = chunkSteps; from < this.totalSteps; from += chunkSteps) {
+        const at = from * stepDuration;
+        void offline
+          .suspend(at)
+          .then(() => {
+            scheduleRange(from, from + chunkSteps);
+            options.onProgress?.('render', at / seconds);
+            void offline.resume();
+          })
+          .catch(() => {
+            /* a checkpoint past the buffer, or an aborted render — ignore */
+          });
       }
 
       const buffer = await offline.startRendering();
       options.onProgress?.('render', 1);
       return buffer;
     } finally {
+      // Voices whose tails ran past the buffer never fired onended; drop their
+      // entries so the live voice-stealing guard does not count offline nodes.
+      for (const k of Array.from(this.activeVoices.keys())) {
+        if (!liveVoiceKeys.has(k)) this.activeVoices.delete(k);
+      }
       this.renderCtx = null;
       this.renderMaster = null;
       this.restoreGraphCache(live);

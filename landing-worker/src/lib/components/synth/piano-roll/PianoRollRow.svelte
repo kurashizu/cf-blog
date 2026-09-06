@@ -13,8 +13,6 @@
 		actualIdx,
 		visibleTracks,
 		viewportStartCol,
-		activeCol,
-		activeSubCol,
 		timeMeter,
 		snapDiv,
 		selected,
@@ -28,8 +26,6 @@
 		actualIdx: number;
 		visibleTracks: VisibleTrackItem[];
 		viewportStartCol: number;
-		activeCol: number;
-		activeSubCol: number;
 		timeMeter: TimeSignature;
 		snapDiv: NoteDurationDiv;
 		/** `note:start` keys of the selected runs on the primary track. */
@@ -126,7 +122,6 @@
 		{#each Array.from({ length: colsCount }) as _, colIdx (colIdx)}
 			{@const globalCol = viewportStartCol + colIdx}
 			{@const colStart = globalCol * spc}
-			{@const isColActive = activeCol === colIdx}
 			{@const colInBar = globalCol % effColsPerBar}
 			{@const isBarStart = colInBar === 0}
 			{@const isBeatStart = colInBar % effColsPerBeat === 0}
@@ -137,15 +132,12 @@
 					<div class="flex h-full w-full gap-0.5">
 						{#each [0, 1] as subCol (subCol)}
 							{@const step = colStart + subCol * half}
-							{@const isSubCurrent = isColActive && activeSubCol === subCol}
 							<div
 								data-note={actualIdx}
 								data-step={step}
 								data-span={half}
 								title={`${nInfo.note} — Step ${step + 1}`}
-								class="flex-1 h-full border rounded-xs transition-colors {isSubCurrent
-									? 'border-white/70 bg-white/30'
-									: isBarStart && subCol === 0
+								class="flex-1 h-full border rounded-xs transition-colors {isBarStart && subCol === 0
 										? isRootC
 											? 'border-l-2 border-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
 											: nInfo.isBlack
@@ -175,9 +167,7 @@
 						data-step={colStart}
 						data-span={spc}
 						title={`${nInfo.note} — Step ${colStart + 1}`}
-						class="w-full h-full rounded-xs border transition-colors {isColActive
-							? 'border-white/70 bg-white/25 shadow-xs'
-							: isBarStart
+						class="w-full h-full rounded-xs border transition-colors {isBarStart
 								? isRootC
 									? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
 									: nInfo.isBlack
@@ -208,9 +198,7 @@
 								? 'rounded-l-xs border-l-2 border-white/80'
 								: ''} {seg.endsHere ? 'rounded-r-xs' : ''} {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-70'} {isSel
 								? `z-[4] brightness-110 border-2 border-white shadow-[0_0_8px_rgba(255,255,255,0.9)] ${seg.startsHere ? '' : 'border-l-0'} ${seg.endsHere ? '' : 'border-r-0'}`
-								: isColActive && t.isPrimary
-									? 'brightness-125 ring-1 ring-white'
-									: ''}"
+								: ''}"
 							style="background-color: {t.color}; left: {seg.startsHere ? `${seg.leftPct}%` : `calc(${seg.leftPct}% - 2px)`}; width: calc({seg.widthPct}% + {(seg.startsHere ? 0 : 2) + (seg.endsHere ? 0 : 2)}px);"
 						></div>
 					{/each}
