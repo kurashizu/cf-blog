@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { resetRack7 } from '../../../stores/synth-reset';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
 	import { isRecording, recSeconds, recError, toggleRecording } from '../../../stores/recorder';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
@@ -48,6 +49,7 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-1.5">
+			<button onclick={resetRack7} title="RESET — put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RESET</button>
 			{#if $recError}
 				<span class="text-[9px] font-mono text-[#e06c75]">{$recError}</span>
 			{/if}
@@ -79,7 +81,7 @@
 
 	<div class="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
 		<div class="col-span-4 grid grid-cols-2 gap-0.5 border-r border-white/10 pr-1 h-full items-center py-0.5">
-			<RotaryKnob label="PAN" value={Math.round($currentTrack.pan * 100)} min={-100} max={100} step={5} unit="" color="#56b6c2" size={40} onChange={(v) => updateActiveTrack({ pan: v / 100 })} />
+			<RotaryKnob label="PAN" value={Math.round($currentTrack.pan * 100)} min={-100} max={100} step={5} unit="" color="#56b6c2" size={40} reset={0} onChange={(v) => updateActiveTrack({ pan: v / 100 })} />
 			<RotaryKnob
 				label="AIR"
 				value={Math.round(($currentTrack.airGain ?? 0) * 100)}
@@ -90,12 +92,12 @@
 				color="#e5c07b"
 				size={40}
 				description="Air Shelf EQ — Boosts/cuts high-end brilliance (±8dB @ 10kHz)"
-				onChange={(v) => updateActiveTrack({ airGain: v / 100 })}
+				reset={0}	onChange={(v) => updateActiveTrack({ airGain: v / 100 })}
 			/>
 			<!-- Third knob centered under the pair — all three are per-track; there is no
 			     fourth real per-track output parameter, and decorative knobs got cut on purpose -->
 			<div class="col-span-2 flex justify-center">
-				<RotaryKnob label="VOL" value={Math.round($currentTrack.volume * 100)} min={0} max={100} unit="%" color="#98c379" size={40} onChange={(v) => updateActiveTrack({ volume: v / 100 })} />
+				<RotaryKnob label="VOL" value={Math.round($currentTrack.volume * 100)} min={0} max={100} unit="%" color="#98c379" size={40} reset={100} onChange={(v) => updateActiveTrack({ volume: v / 100 })} />
 			</div>
 		</div>
 

@@ -24,11 +24,10 @@
 		stepBar,
 		jumpPlayheadToCursor
 	} from '../../stores/synth-transport';
-	import { SOUND_PRESETS, soundPresetIdx } from '../../stores/synth-patch';
+	import { stepPreset } from '../../stores/synth-presets';
 	import { hotkeyOverlayOpen, consoleOverlayOpen } from '../../stores/chrome';
-	import { updateActiveTrack } from '../../stores/synth-tracks';
-	import { PRESET_TOOLTIPS } from './tooltips';
 	import PatchManager from './PatchManager.svelte';
+	import PresetMenu from './PresetMenu.svelte';
 	import TrackChips from './TrackChips.svelte';
 	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 
@@ -44,9 +43,9 @@
 	let lenIsCustom = $derived(!LEN_PAGE_PRESETS.includes(lenPages));
 
 	/* METER was six buttons wide for a control that is set once and rarely
-	   touched, which is a lot of the row spent on it. Cycled instead, like
-	   PRESET: the arrows step through the list and the label names where you
-	   are. Every signature is still reachable, in fewer pixels. */
+	   touched, which is a lot of the row spent on it. Cycled instead: the
+	   arrows step through the list and the label names where you are. Every
+	   signature is still reachable, in fewer pixels. */
 	function stepMeter(dir: number) {
 		const i = METERS.indexOf($timeMeter);
 		const next = METERS[(i + dir + METERS.length) % METERS.length];
@@ -72,22 +71,6 @@
 	function onLenBlur(e: Event) {
 		if (!$totalPatternSteps || $totalPatternSteps < stepsPerBarNow) setTotalPatternSteps(stepsPerBarNow);
 		(e.target as HTMLInputElement).value = String(lenPages);
-	}
-
-	function prevPreset() {
-		soundPresetIdx.update((i) => (i - 1 + SOUND_PRESETS.length) % SOUND_PRESETS.length);
-		playSound('click');
-	}
-	function nextPreset() {
-		soundPresetIdx.update((i) => (i + 1) % SOUND_PRESETS.length);
-		playSound('click');
-	}
-	function applyPreset() {
-		const sel = SOUND_PRESETS[$soundPresetIdx];
-		if (sel) {
-			updateActiveTrack(sel.preset);
-			playSound('toggle');
-		}
 	}
 
 	let totalPages = $derived(Math.max(1, Math.ceil($totalPatternSteps / ((METER_SPECS[$timeMeter] || METER_SPECS['4/4']).stepsPerBar))));
@@ -163,8 +146,8 @@
 				break;
 			case 'ArrowLeft': prevPage(); break;
 			case 'ArrowRight': nextPage(); break;
-			case 'ArrowUp': nextPreset(); applyPreset(); break;
-			case 'ArrowDown': prevPreset(); applyPreset(); break;
+			case 'ArrowUp': stepPreset(1); break;
+			case 'ArrowDown': stepPreset(-1); break;
 			case '-': setBpm(Math.max(40, $bpm - 1)); break;
 			case '=': setBpm(Math.min(240, $bpm + 1)); break;
 			default: return;
@@ -196,7 +179,7 @@
 
 	<div class="flex flex-wrap items-center gap-1.5 text-xs ml-auto">
 		<div class="flex items-center gap-1">
-			<HorizontalHardwareFader label="BPM:" value={$bpm} min={40} max={240} step={1} width={74} showValue color="#98c379" onChange={setBpm} />
+			<HorizontalHardwareFader label="BPM:" value={$bpm} min={40} max={240} step={1} width={74} showValue color="#98c379" reset={120} onChange={setBpm} />
 		</div>
 
 		<div class="w-px h-4 bg-white/15 mx-1"></div>
@@ -326,18 +309,7 @@
 <!-- Row 3: sound presets, snap/dur, page nav — flex-wrap so the 9-division
      SNAP/DUR groups wrap instead of overlapping the page controls -->
 <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
-	<div class="flex items-center gap-0.5 justify-start text-xs">
-		<span class="text-white/60 font-bold text-[11px] pl-0.5">PRESET:</span>
-		<button onclick={prevPreset} class="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none" title="Previous Sound Preset">◄</button>
-		<button
-			onclick={applyPreset}
-			class="px-1.5 py-0.5 border border-white/20 hover:border-[#56b6c2] bg-white/5 hover:bg-white/15 rounded-xs font-bold text-white hover:text-[#56b6c2] cursor-pointer transition-colors"
-			title={`Click to load preset: ${PRESET_TOOLTIPS[SOUND_PRESETS[$soundPresetIdx]?.name] || SOUND_PRESETS[$soundPresetIdx]?.name}`}
-		>
-			{SOUND_PRESETS[$soundPresetIdx]?.name}
-		</button>
-		<button onclick={nextPreset} class="px-1 text-[#56b6c2] hover:text-white cursor-pointer font-bold select-none" title="Next Sound Preset">►</button>
-	</div>
+	<PresetMenu />
 
 	<div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
 		<div class="flex items-center gap-1">

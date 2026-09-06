@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { resetRack2 } from '../../../stores/synth-reset';
 	import type { BlendMode } from '../../../synth';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
 	import { BLEND_TOOLTIPS } from '../tooltips';
@@ -11,9 +12,12 @@
 <div class="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0 xl:grow-[3]">
 	<div class="flex justify-between items-center font-black text-[#c678dd] text-xs border-b border-white/10 pb-0.5 shrink-0">
 		<span>2. FUSION</span>
-		<span class="text-white/40 flex items-center" title="Signal Flow: To VCF Filter">
-			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
-		</span>
+		<div class="flex items-center gap-1.5">
+			<button onclick={resetRack2} title="RESET — put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RESET</button>
+			<span class="text-white/40 flex items-center" title="Signal Flow: To VCF Filter">
+				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
+			</span>
+		</div>
 	</div>
 
 	<div class="grid grid-cols-12 gap-2 items-center flex-1 min-h-0 my-auto py-0.5">
@@ -35,10 +39,10 @@
 		</div>
 
 		<div class="col-span-7 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
-			<RotaryKnob label="MORPH" value={Math.round($currentTrack.morphAmount * 100)} min={0} max={100} unit="%" color="#c678dd" size={32} onChange={(v) => updateActiveTrack({ morphAmount: v / 100 })} />
-			<RotaryKnob label="RATIO" value={$currentTrack.osc2Ratio} min={0.5} max={4} step={0.5} unit="x" color="#56b6c2" size={32} onChange={(v) => updateActiveTrack({ osc2Ratio: v })} />
-			<RotaryKnob label="X-FADE" value={Math.round(($currentTrack.xfade ?? 0.5) * 100)} min={0} max={100} step={5} unit="%" color="#d19a66" size={32} onChange={(v) => updateActiveTrack({ xfade: v / 100 })} />
-			<RotaryKnob label="GLIDE" value={$currentTrack.glideTime ?? 0} min={0} max={300} step={10} unit="ms" color="#e5c07b" size={32} onChange={(v) => updateActiveTrack({ glideTime: v })} />
+			<RotaryKnob label="MORPH" value={Math.round($currentTrack.morphAmount * 100)} min={0} max={100} unit="%" color="#c678dd" size={32} reset={0} onChange={(v) => updateActiveTrack({ morphAmount: v / 100 })} />
+			<RotaryKnob label="RATIO" value={$currentTrack.osc2Ratio} min={0.5} max={4} step={0.5} unit="x" color="#56b6c2" size={32} reset={1} onChange={(v) => updateActiveTrack({ osc2Ratio: v })} />
+			<RotaryKnob label="X-FADE" value={Math.round(($currentTrack.xfade ?? 0.5) * 100)} min={0} max={100} step={5} unit="%" color="#d19a66" size={32} reset={50} onChange={(v) => updateActiveTrack({ xfade: v / 100 })} />
+			<RotaryKnob label="GLIDE" value={$currentTrack.glideTime ?? 0} min={0} max={300} step={10} unit="ms" color="#e5c07b" size={32} reset={0} onChange={(v) => updateActiveTrack({ glideTime: v })} />
 		</div>
 	</div>
 </div>

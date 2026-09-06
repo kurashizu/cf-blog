@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { resetRack4 } from '../../../stores/synth-reset';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
 	import HardwareFader from '../../hardware/HardwareFader.svelte';
@@ -88,9 +89,12 @@
 				</button>
 			</div>
 		</div>
-		<span class="text-white/40 flex items-center" title="Signal Flow: To LFO & Dynamic Modulation">
-			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-		</span>
+		<div class="flex items-center gap-1.5">
+			<button onclick={resetRack4} title="RESET — put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RESET</button>
+			<span class="text-white/40 flex items-center" title="Signal Flow: To LFO & Dynamic Modulation">
+				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+			</span>
+		</div>
 	</div>
 
 	<div class="flex gap-1.5 items-center flex-1 min-h-0 my-auto">
@@ -102,8 +106,8 @@
 
 		<!-- Fixed width so the four faders never get crushed when the rack is at its narrowest -->
 		<div class="w-32 shrink-0 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5">
-			<HardwareFader label="A" value={attackVal} min={0.001} max={0.8} step={0.01} color={envColor} height={46} onChange={onAttackChange} />
-			<HardwareFader label="D" value={decayVal} min={0.01} max={1.0} step={0.01} color={envColor} height={46} onChange={onDecayChange} />
+			<HardwareFader label="A" value={attackVal} min={0.001} max={0.8} step={0.01} color={envColor} height={46} reset={0.001} onChange={onAttackChange} />
+			<HardwareFader label="D" value={decayVal} min={0.01} max={1.0} step={0.01} color={envColor} height={46} reset={0.01} onChange={onDecayChange} />
 			<HardwareFader
 				label={activeEnvTab === 'pit' ? 'AMT' : 'S'}
 				value={sustainVal}
@@ -112,7 +116,7 @@
 				step={activeEnvTab === 'pit' ? 0.1 : 0.02}
 				color={envColor}
 				height={46}
-				onChange={onThirdChange}
+				reset={activeEnvTab === 'amp' ? 1 : 0}	onChange={onThirdChange}
 			/>
 			<HardwareFader
 				label={activeEnvTab === 'pit' ? '-' : 'R'}
@@ -122,7 +126,7 @@
 				step={0.02}
 				color={activeEnvTab === 'pit' ? '#333' : activeEnvTab === 'amp' ? '#98c379' : '#56b6c2'}
 				height={46}
-				onChange={onFourthChange}
+				reset={activeEnvTab === 'pit' ? undefined : activeEnvTab === 'amp' ? 0.02 : 0}	onChange={onFourthChange}
 			/>
 		</div>
 	</div>

@@ -57,7 +57,7 @@
 			<div class="text-center font-mono px-4">
 				<div class="text-sm sm:text-base font-black text-[#c678dd]">DROP TO LOAD</div>
 				<div class="text-[11px] sm:text-xs text-white/60 mt-1">
-					.mid → one sequencer track per MIDI track · .json → synth patch
+					.mid → one sequencer track per MIDI track · .json → synth patch, or a preset onto the active track
 				</div>
 			</div>
 		</div>

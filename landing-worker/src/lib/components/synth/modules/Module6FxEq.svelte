@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { resetRack6 } from '../../../stores/synth-reset';
 	import { EQ_6_BANDS } from '../../../synth';
 	import {
 		delayTime,
@@ -62,31 +63,34 @@
 				</button>
 			</div>
 		</div>
-		<span class="text-white/40 flex items-center" title="Signal Flow: To Master Output & Visualizers">
-			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-		</span>
+		<div class="flex items-center gap-1.5">
+			<button onclick={resetRack6} title="RESET — put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RESET</button>
+			<span class="text-white/40 flex items-center" title="Signal Flow: To Master Output & Visualizers">
+				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+			</span>
+		</div>
 	</div>
 
 	{#if $activeFxTab === 'fx'}
 		<div class="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="TIME" value={Math.round($delayTime * 1000)} min={50} max={800} step={10} unit="ms" color="#e06c75" size={40} onChange={(v) => setDelayTime(v / 1000)} />
+					<RotaryKnob label="TIME" value={Math.round($delayTime * 1000)} min={50} max={800} step={10} unit="ms" color="#e06c75" size={40} reset={300} onChange={(v) => setDelayTime(v / 1000)} />
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="FDBK" value={Math.round($delayFeedback * 100)} min={0} max={85} step={5} unit="%" color="#e06c75" size={40} onChange={(v) => setDelayFeedback(v / 100)} />
+					<RotaryKnob label="FDBK" value={Math.round($delayFeedback * 100)} min={0} max={85} step={5} unit="%" color="#e06c75" size={40} reset={0} onChange={(v) => setDelayFeedback(v / 100)} />
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="D-MIX" value={Math.round($delayMix * 100)} min={0} max={100} step={5} unit="%" color="#e06c75" size={40} onChange={(v) => setDelayMix(v / 100)} />
+					<RotaryKnob label="D-MIX" value={Math.round($delayMix * 100)} min={0} max={100} step={5} unit="%" color="#e06c75" size={40} reset={0} onChange={(v) => setDelayMix(v / 100)} />
 				</div>
 			</div>
 
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="R-MIX" value={Math.round($reverbMix * 100)} min={0} max={100} step={5} unit="%" color="#c678dd" size={40} onChange={(v) => setReverbMix(v / 100)} />
+					<RotaryKnob label="R-MIX" value={Math.round($reverbMix * 100)} min={0} max={100} step={5} unit="%" color="#c678dd" size={40} reset={0} onChange={(v) => setReverbMix(v / 100)} />
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="DRIVE" value={Math.round($drive * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={40} onChange={(v) => setDrive(v / 100)} />
+					<RotaryKnob label="DRIVE" value={Math.round($drive * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={40} reset={0} onChange={(v) => setDrive(v / 100)} />
 				</div>
 				<div class="col-span-2 flex justify-center">
 					<RotaryKnob
@@ -99,7 +103,7 @@
 						color="#e06c75"
 						size={40}
 						description="Master Output Volume — global gain for the whole sound engine, persisted in the browser"
-						onChange={(v) => setVolume(v / 100)}
+						reset={100}	onChange={(v) => setVolume(v / 100)}
 					/>
 				</div>
 			</div>
@@ -125,7 +129,7 @@
 			<div class="grid grid-cols-6 gap-0.5 items-end flex-1 min-h-0 pt-0.5 px-0.5">
 				{#each EQ_6_BANDS as band, idx (band.id)}
 					<div class="flex flex-col items-center justify-between h-full">
-						<HardwareFader label={band.label} value={trackEqGains[idx] ?? 0} min={-12} max={12} step={0.5} unit="dB" color={band.color} height={48} onChange={(v) => setBand(idx, v)} />
+						<HardwareFader label={band.label} value={trackEqGains[idx] ?? 0} min={-12} max={12} step={0.5} unit="dB" color={band.color} height={48} reset={0} onChange={(v) => setBand(idx, v)} />
 					</div>
 				{/each}
 			</div>

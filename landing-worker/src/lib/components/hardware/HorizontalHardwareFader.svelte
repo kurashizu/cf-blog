@@ -15,6 +15,7 @@
 		showValue = false,
 		bipolar = false,
 		description,
+		reset,
 		onChange
 	}: {
 		label?: string;
@@ -28,6 +29,8 @@
 		showValue?: boolean;
 		bipolar?: boolean;
 		description?: string;
+		/** Neutral value the control snaps back to on right-click; omit to disable. */
+		reset?: number;
 		onChange: (val: number) => void;
 	} = $props();
 
@@ -43,7 +46,7 @@
 
 	let desc = $derived(description || (label ? PARAM_DESCRIPTIONS[label.toUpperCase()] : '') || '');
 	let tooltipText = $derived(
-		`${label ? `${label}${desc ? ` (${desc})` : ''}: ` : ''}${formatDisplay(value)}${unit} — Click, drag left/right, or scroll wheel`
+		`${label ? `${label}${desc ? ` (${desc})` : ''}: ` : ''}${formatDisplay(value)}${unit} — Click, drag left/right, or scroll wheel${reset !== undefined ? ' · right-click resets' : ''}`
 	);
 
 	function handleWheel(e: WheelEvent) {
@@ -56,10 +59,23 @@
 	}
 
 	let widthStyle = $derived(typeof width === 'number' ? `${width}px` : width);
+
+	/* Right-click snaps the control to its neutral value -- the number at which
+	   it does nothing -- supplied by whoever placed it, since only the rack
+	   knows what that is. Without one the browser menu is left alone. */
+	function handleContextMenu(e: MouseEvent) {
+		if (reset === undefined) return;
+		e.preventDefault();
+		if (value === reset) return;
+		onChange(reset);
+		playSound('click');
+	}
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	onwheel={handleWheel}
+	oncontextmenu={handleContextMenu}
 	class="flex items-center gap-1.5 select-none font-mono cursor-ew-resize group shrink-0 min-w-0 leading-none"
 	title={tooltipText}
 >

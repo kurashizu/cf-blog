@@ -56,6 +56,8 @@ export function draggable(node: HTMLElement, opts: DraggableOptions) {
 
 	function handleDown(e: PointerEvent) {
 		if (!e.isPrimary) return;
+		// Right button is the control's reset gesture, not a drag.
+		if (e.button !== 0) return;
 		e.preventDefault();
 		dragStartCoord = e.clientY;
 		startVal = options.getValue();
