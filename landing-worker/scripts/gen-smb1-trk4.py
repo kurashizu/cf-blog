@@ -102,7 +102,7 @@ SEQ = ['LeadIn', 'Part1', 'Part1',
        # the loop returns to Part1 (header offset $11 -> $12); the transcription's bars 38-40 are its first three bars
        'Part1', 'Part1']
 
-KEY = {1: 40, 2: 72, 3: 55}       # short -> G#4, strong -> C2, long -> F3
+KEY = {1: 55, 2: 60, 3: 58}       # short -> F3 (hat), strong -> C3 (kick), long -> D3 (snare)
 DUR = {1: 2, 2: 2, 3: 7}          # steps: 48 ms, 48 ms, 167 ms at 105 BPM
 
 grid = [[] for _ in range(3840)]
