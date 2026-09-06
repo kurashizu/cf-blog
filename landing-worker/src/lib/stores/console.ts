@@ -15,7 +15,7 @@ import { BUILTIN_SONGS, builtinSongIdx, handleLoadBuiltinSong } from './synth-pa
 import { midiConnectedDevice, midiDevices } from './synth-midi';
 import { soundState, setMuted, setVolume } from './sound';
 import { edgeTraceMs, loadEdgeTrace } from './edge';
-import { guideOpen, hotkeyOverlayOpen } from './chrome';
+import { openOnboardingNow, hotkeyOverlayOpen } from './chrome';
 import { KRSZ_MARKS } from '../krsz-marks';
 
 export type LineKind = 'cmd' | 'out' | 'ok' | 'err' | 'accent' | 'gold';
@@ -409,7 +409,7 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	if (cmd === 'help' || cmd === '?') return HELP;
 
 	if (cmd === 'guide' || cmd === 'tour' || cmd === 'intro') {
-		guideOpen.set(true);
+		openOnboardingNow('site-tour');
 		return [ok('Opened the getting-started walkthrough.')];
 	}
 

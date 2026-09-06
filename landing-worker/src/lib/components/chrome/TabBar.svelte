@@ -6,7 +6,7 @@
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
 	import { theme, cycleTheme, THEME_STYLES, resolvedTheme } from '../../stores/theme';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
-	import { consoleOverlayOpen, guideOpen, globalSettingsOpen, toggleConsoleOverlay } from '../../stores/chrome';
+	import { consoleOverlayOpen, globalSettingsOpen, toggleConsoleOverlay, openOnboardingNow } from '../../stores/chrome';
 	import KrszLogo from './KrszLogo.svelte';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
@@ -225,7 +225,7 @@
 		</button>
 		<button
 			onclick={() => {
-				guideOpen.set(true);
+				openOnboardingNow('site-tour');
 				playSound('click');
 			}}
 			data-tour="guide-btn"

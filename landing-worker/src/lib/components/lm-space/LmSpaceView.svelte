@@ -11,13 +11,14 @@
 	} from '$lib/stores/leaderboard';
 	import { playSound } from '$lib/sound';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
-	import { guideSeen, markGuideSeen, afterSiteGuide } from '$lib/stores/chrome';
+	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '$lib/stores/chrome';
 	import { LM_SPACE_TOUR } from './lm-space-tour';
 
-	let guideOpen = $state(false);
+	const TOUR = 'lm-space-tour';
+	let guideActive = isOnboardingActive(TOUR);
 
 	function closeGuide() {
-		guideOpen = false;
+		dequeueOnboarding(TOUR);
 		markGuideSeen('lm-space');
 	}
 
@@ -82,7 +83,7 @@
 			// an empty box. Not offered at all if the engine failed, since the
 			// error is the thing to read then, and never on top of the site tour.
 			if (!engineError && !guideSeen('lm-space')) {
-				void afterSiteGuide().then(() => { guideOpen = true; });
+				enqueueOnboarding(TOUR);
 			}
 		}
 	}
@@ -111,7 +112,7 @@
 			</button>
 		{/each}
 		<button
-			onclick={() => { guideOpen = true; playSound('click'); }}
+			onclick={() => { openOnboardingNow(TOUR); playSound('click'); }}
 			title="What this view is showing"
 			class="press ml-auto px-2 py-1 border border-white/20 text-white/55 rounded-xs text-xs font-bold
 				cursor-pointer transition-colors hover:border-[#56b6c2] hover:text-[#56b6c2]"
@@ -120,7 +121,7 @@
 		</button>
 	</div>
 
-	{#if guideOpen}
+	{#if $guideActive}
 		<Onboarding steps={LM_SPACE_TOUR} heading="LM.SPACE TOUR" onClose={closeGuide} />
 	{/if}
 

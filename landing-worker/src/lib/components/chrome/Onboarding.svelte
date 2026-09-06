@@ -250,8 +250,9 @@
 
 		/* window 'resize' only fires when the VIEWPORT changes size -- it does
 		 * nothing for a target moving because the page's own content reflowed
-		 * under it, which is exactly what a per-view tour opened via
-		 * afterSiteGuide() on a genuine first visit hits: heavy panels (the
+		 * under it, which is exactly what a per-view tour opened via the
+		 * onboarding queue (see stores/chrome.ts) on a genuine first visit
+		 * hits: heavy panels (the
 		 * synth's piano roll, lifelab's board) are still settling their own
 		 * layout -- a late webfont swap, a canvas/grid sizing itself off its
 		 * container, anything mounting async -- in the same window this tour

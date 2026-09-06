@@ -3,7 +3,7 @@
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
 	import { LIFELAB_TOUR } from '$lib/components/lifelab/lifelab-tour';
-	import { guideSeen, markGuideSeen, afterSiteGuide } from '$lib/stores/chrome';
+	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '$lib/stores/chrome';
 
 	/**
 	 * LIFE.LAB, mounted into the site.
@@ -18,10 +18,11 @@
 	 * server render has neither of.
 	 */
 	let mounted = $state(false);
-	let guideOpen = $state(false);
+	const TOUR = 'lifelab-tour';
+	let guideActive = isOnboardingActive(TOUR);
 
 	function closeGuide() {
-		guideOpen = false;
+		dequeueOnboarding(TOUR);
 		markGuideSeen('lifelab');
 	}
 
@@ -45,14 +46,11 @@
 			// Offered once the dish is drawn, and never on top of the site tour:
 			// every step points at something the game builds, so an earlier offer
 			// would spotlight elements that do not exist yet.
-			if (!guideSeen('lifelab')) {
-				void afterSiteGuide().then(() => {
-					if (!disposed) guideOpen = true;
-				});
-			}
+			if (!guideSeen('lifelab')) enqueueOnboarding(TOUR);
 		})();
 		return () => {
 			disposed = true;
+			dequeueOnboarding(TOUR);
 			game?.stop();
 			suspendNavHotkeys.set(false);
 		};
@@ -86,7 +84,7 @@
 				<button
 					id="llguide"
 					title="Walk through the lab — the rule, the controls and what to watch"
-					onclick={() => (guideOpen = true)}>?</button>
+					onclick={() => openOnboardingNow(TOUR)}>?</button>
 				<button id="wipebtn" title="Remove every cell from the board">CLEAR ALL</button>
 			</span>
 		</div>
@@ -113,7 +111,7 @@
 	</main>
 </div>
 
-{#if guideOpen}
+{#if $guideActive}
 	<Onboarding steps={LIFELAB_TOUR} heading="LIFE.LAB TOUR" onClose={closeGuide} />
 {/if}
 

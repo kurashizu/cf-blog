@@ -13,7 +13,17 @@
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import { initConsoleState } from '$lib/stores/console';
 	import { loadEdgeTrace } from '$lib/stores/edge';
-	import { consoleOverlayOpen, hotkeyOverlayOpen, guideOpen, bootOpen, globalSettingsOpen, welcomeOpen, privacyOpen, creditsOpen } from '$lib/stores/chrome';
+	import {
+		consoleOverlayOpen,
+		hotkeyOverlayOpen,
+		globalSettingsOpen,
+		privacyOpen,
+		creditsOpen,
+		enqueueOnboarding,
+		dequeueOnboarding,
+		openOnboardingNow,
+		isOnboardingActive
+	} from '$lib/stores/chrome';
 	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
 	import { textSize, initTextSize } from '$lib/stores/text-scale';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
@@ -74,33 +84,37 @@
 	   screen into the prerendered HTML that nothing would ever take down for a
 	   visitor with JS disabled. */
 	let bootVisible = $state(browser && !PREFERS_REDUCED_MOTION);
-	/* Mirrored into a store so a view's own walkthrough can wait for the screen
-	   to be clear -- the POST screen is shown before the site tour is offered,
-	   so a view tour that only checked the tour would open behind it. Seeded
-	   here, synchronously, rather than through an $effect: effects run after
-	   the mount pass, but a child's onMount can run before that (a first visit
-	   straight to /synth called afterSiteGuide() from PatchManager's onMount
-	   while bootOpen was still its default false, so it resolved immediately
-	   and opened the synth tour under -- and at the same time as -- the site's
-	   own welcome/tour). Setting the store's value here runs during this
-	   component's own init, before any child mounts. */
-	bootOpen.set(browser && !PREFERS_REDUCED_MOTION);
-	$effect(() => bootOpen.set(bootVisible));
+	/* A first visit stacks boot -> welcome -> site tour -> (if landing on a
+	   view with its own tour) that view's tour, and only one may ever be on
+	   screen. These used to be independent booleans, each handoff closing one
+	   and opening the next by hand, and every handoff was a place the outgoing
+	   flag could clear before the incoming one was set -- a window, however
+	   brief, where nothing (or momentarily the wrong two things) read as
+	   showing. A view's own tour gates on "is nothing else showing", so it
+	   could slip through exactly in that window and open under, or alongside,
+	   whatever opened a tick later. See onboardingQueue in stores/chrome.ts.
+	   Boot is enqueued here, synchronously, at this component's own init --
+	   before any child mounts -- rather than in an $effect (which runs after
+	   the mount pass): a child view's onMount enqueues its own tour immediately,
+	   and it needs boot already in the queue ahead of it or it would front-run. */
+	if (browser && !PREFERS_REDUCED_MOTION) enqueueOnboarding('boot');
 
 	const GUIDE_KEY = 'krsz.guide.seen';
 	const WELCOME_KEY = 'krsz.welcome.seen';
+	let guideActive = isOnboardingActive('site-tour');
+	let welcomeActive = isOnboardingActive('welcome');
 
 	/** The walkthrough is offered once, then only on request. */
 	function showGuideIfNew() {
 		try {
-			if (localStorage.getItem(GUIDE_KEY) !== '1') guideOpen.set(true);
+			if (localStorage.getItem(GUIDE_KEY) !== '1') enqueueOnboarding('site-tour');
 		} catch {
 			/* private mode — skip the guide rather than block the page */
 		}
 	}
 
 	function closeGuide() {
-		guideOpen.set(false);
+		dequeueOnboarding('site-tour');
 		try {
 			localStorage.setItem(GUIDE_KEY, '1');
 		} catch {
@@ -116,17 +130,18 @@
 	 *  Returning visitors (or anyone who already saw it) skip straight to the
 	 *  existing guide gate below. */
 	function closeWelcome() {
-		welcomeOpen.set(false);
 		try {
 			localStorage.setItem(WELCOME_KEY, '1');
 		} catch {
 			/* nothing to remember it with; it will offer again next visit */
 		}
 		showGuideIfNew();
+		dequeueOnboarding('welcome');
 	}
 
 	function dismissBoot() {
 		bootVisible = false;
+		dequeueOnboarding('boot');
 		let seenWelcome = true;
 		try {
 			seenWelcome = localStorage.getItem(WELCOME_KEY) === '1';
@@ -134,7 +149,7 @@
 			/* private mode — treat as seen so at least the tour still offers itself */
 		}
 		if (seenWelcome) showGuideIfNew();
-		else welcomeOpen.set(true);
+		else enqueueOnboarding('welcome');
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -168,7 +183,7 @@
 			return;
 		}
 		if (e.key === 'Escape') {
-			if ($guideOpen) {
+			if ($guideActive) {
 				closeGuide();
 				return;
 			}
@@ -345,11 +360,11 @@
 	<CreditsDialog onClose={() => creditsOpen.set(false)} />
 {/if}
 
-{#if $guideOpen}
+{#if $guideActive}
 	<Onboarding onClose={closeGuide} />
 {/if}
 
-{#if $welcomeOpen}
+{#if $welcomeActive}
 	<Welcome onDone={closeWelcome} />
 {/if}
 

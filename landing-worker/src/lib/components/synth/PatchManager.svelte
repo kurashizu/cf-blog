@@ -5,7 +5,7 @@
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import Onboarding from '../chrome/Onboarding.svelte';
 	import { SYNTH_TOUR } from './synth-tour';
-	import { guideSeen, markGuideSeen, afterSiteGuide } from '../../stores/chrome';
+	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '../../stores/chrome';
 	import {
 		BUILTIN_SONGS,
 		builtinSongIdx,
@@ -23,23 +23,27 @@
 	import { handleImportMidiFile, isMidiFile, importReport, clearImportReport } from '../../stores/synth-import';
 	import { handleRenderWav, renderPhase, renderProgress, renderReport, clearRenderReport } from '../../stores/synth-render';
 
-	let guideOpen = $state(false);
+	const TOUR = 'synth-tour';
+	let guideActive = isOnboardingActive(TOUR);
 
 	function closeGuide() {
-		guideOpen = false;
+		dequeueOnboarding(TOUR);
 		markGuideSeen('synth');
 	}
 
 	/* Offered once, then only from the [?]. The tour's first step points at the
 	   track list, which is a sibling component, so it waits a tick for the rest
-	   of the workstation to render rather than spotlighting nothing -- and for
-	   the site tour to close, so a first visit straight to /synth does not show
-	   both at once. */
+	   of the workstation to render rather than spotlighting nothing. Queuing
+	   (rather than the old await-then-open) means this can enqueue immediately
+	   and simply wait its turn -- there is no window where it and the site's
+	   own boot/welcome/tour are both showing, because "showing" is just "am I
+	   the front of the queue" (see onboardingQueue in stores/chrome.ts), and
+	   the queue is never observed empty between one stage closing and the
+	   next opening. */
 	onMount(async () => {
 		if (guideSeen('synth')) return;
 		await tick();
-		await afterSiteGuide();
-		guideOpen = true;
+		enqueueOnboarding(TOUR);
 	});
 	let fileInput: HTMLInputElement | undefined = $state();
 	let isLoadMenuOpen = $state(false);
@@ -114,7 +118,7 @@
 		<PixelIcon name="audio" size={16} class="text-[#c678dd]" />
 		<span class="font-black text-xs text-white tracking-wider">KRSZ SYNTH</span>
 		<button
-			onclick={() => (guideOpen = true)}
+			onclick={() => openOnboardingNow(TOUR)}
 			title="Walk through the synth — what each rack does, and how to get a sound out of it"
 			class="press ml-0.5 text-[#c678dd]/70 hover:text-[#c678dd] cursor-pointer transition-colors flex items-center"
 			aria-label="Synth walkthrough"
@@ -123,7 +127,7 @@
 		</button>
 	</div>
 
-	{#if guideOpen}
+	{#if $guideActive}
 		<Onboarding steps={SYNTH_TOUR} heading="SYNTH TOUR" onClose={closeGuide} />
 	{/if}
 
