@@ -122,6 +122,8 @@ export default {
 		'synthPanels.out.loudnessModeHint': 'Visualizer Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)',
 		'synthPanels.out.recordingHint': 'Recording — {seconds}s. Click to stop and download.',
 		'synthPanels.out.recordIdleHint': 'Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)',
+		'synthPanels.out.recorderUnsupported': 'MediaRecorder unsupported in this browser',
+		'synthPanels.out.audioCaptureUnavailable': 'audio capture unavailable',
 		'synthPanels.out.airDesc': 'Air Shelf EQ — Boosts/cuts high-end brilliance (±8dB @ 10kHz)',
 
 		// Piano keyboard
@@ -371,6 +373,8 @@ export default {
 		'synthPanels.out.loudnessModeHint': '可视化模式：RMS 响度表与历史记录——实时动态分贝范围（-60dB 至 +6dB）',
 		'synthPanels.out.recordingHint': '录制中 —— {seconds}秒。点击停止并下载。',
 		'synthPanels.out.recordIdleHint': '录制主输出，停止后自动下载（WebM/Opus，Safari 上为 M4A）',
+		'synthPanels.out.recorderUnsupported': '此浏览器不支持 MediaRecorder',
+		'synthPanels.out.audioCaptureUnavailable': '音频采集不可用',
 		'synthPanels.out.airDesc': '高频架式均衡——提升／衰减高频明亮感（10kHz 处 ±8dB）',
 
 		'synthPanels.keyboard.octRangeHint': '键盘八度范围（起始 - 结束）——改变可见键盘的音域范围',
@@ -611,6 +615,8 @@ export default {
 		'synthPanels.out.loudnessModeHint': '視覺化模式：RMS 響度表與歷史記錄——即時動態分貝範圍（-60dB 至 +6dB）',
 		'synthPanels.out.recordingHint': '錄製中 —— {seconds} 秒。點擊停止並下載。',
 		'synthPanels.out.recordIdleHint': '錄製主輸出，停止後自動下載（WebM/Opus，Safari 上為 M4A）',
+		'synthPanels.out.recorderUnsupported': '此瀏覽器不支援 MediaRecorder',
+		'synthPanels.out.audioCaptureUnavailable': '音訊擷取不可用',
 		'synthPanels.out.airDesc': '高頻架式等化——提升／衰減高頻明亮感（10kHz 處 ±8dB）',
 
 		'synthPanels.keyboard.octRangeHint': '鍵盤八度範圍（起始 - 結束）——改變可見鍵盤的音域範圍',
@@ -851,6 +857,8 @@ export default {
 		'synthPanels.out.loudnessModeHint': 'ビジュアライザーモード：RMSラウドネスメーター＆履歴 — リアルタイムのダイナミックデシベル範囲（-60dB〜+6dB）',
 		'synthPanels.out.recordingHint': '録音中 — {seconds}秒。クリックで停止してダウンロード。',
 		'synthPanels.out.recordIdleHint': 'マスター出力を録音し、停止時にダウンロードします（WebM/Opus、SafariではM4A）',
+		'synthPanels.out.recorderUnsupported': 'このブラウザでは MediaRecorder に対応していません',
+		'synthPanels.out.audioCaptureUnavailable': 'オーディオキャプチャを利用できません',
 		'synthPanels.out.airDesc': 'エア・シェルフEQ — 高域の輝きをブースト／カット（10kHzで±8dB）',
 
 		'synthPanels.keyboard.octRangeHint': 'キーボードのオクターブ範囲（開始〜終了） — 表示される鍵盤の音域を変更',
@@ -1091,6 +1099,8 @@ export default {
 		'synthPanels.out.loudnessModeHint': '시각화 모드: RMS 러프니스 미터 및 히스토리 — 실시간 다이내믹 데시벨 범위(-60dB~+6dB)',
 		'synthPanels.out.recordingHint': '녹음 중 — {seconds}초. 클릭하면 중지하고 다운로드합니다.',
 		'synthPanels.out.recordIdleHint': '마스터 출력을 녹음하고 중지 시 다운로드합니다(WebM/Opus, Safari에서는 M4A)',
+		'synthPanels.out.recorderUnsupported': '이 브라우저에서는 MediaRecorder를 지원하지 않습니다',
+		'synthPanels.out.audioCaptureUnavailable': '오디오 캡처를 사용할 수 없습니다',
 		'synthPanels.out.airDesc': '에어 쉘프 EQ — 고음역의 화사함을 부스트/컷(10kHz에서 ±8dB)',
 
 		'synthPanels.keyboard.octRangeHint': '키보드 옥타브 범위(시작-끝) — 표시되는 건반 음역을 변경',

@@ -1,10 +1,9 @@
 import { tr } from '$lib/i18n';
 
-/* WAVE and PRESET tooltips are consumed by WaveMenu.svelte and PresetMenu.svelte
-   (this agent's files) and are resolved lazily via a getter, never at import
-   time, so they follow the current locale. BLEND/FILTER/LFO tooltips are
-   consumed by the rack modules (a sibling area) and are left as plain English
-   maps here untouched. */
+/* WAVE, PRESET, BLEND, FILTER and LFO tooltips are all resolved lazily via a
+   getter, never at import time, so they follow the current locale. Consuming
+   components read $locale inside a $derived.by (see WaveMenu.svelte /
+   PresetMenu.svelte / the rack modules) so a language switch re-renders. */
 
 export function waveTooltips(): Record<string, string> {
 	return {
@@ -21,26 +20,32 @@ export function waveTooltips(): Record<string, string> {
 	};
 }
 
-export const BLEND_TOOLTIPS: Record<string, string> = {
-	layer: 'Blend Mode: Layer — Sums Oscillator 1 and Oscillator 2 in parallel for thick dual-oscillator tones',
-	fm: 'Blend Mode: FM (Frequency Modulation) — Oscillator 2 modulates the frequency of Oscillator 1 for rich metallic/bell harmonic timbres',
-	ring: 'Blend Mode: Ring Modulation — Multiplies Oscillator 1 and 2 signals together creating complex inharmonic textures',
-	sync: 'Blend Mode: Hard Sync — Resets Oscillator 2 phase whenever Oscillator 1 completes a cycle for cutting sync lead sweeps'
-};
+export function blendTooltips(): Record<string, string> {
+	return {
+		layer: tr('synth.tooltips.blendLayer'),
+		fm: tr('synth.tooltips.blendFm'),
+		ring: tr('synth.tooltips.blendRing'),
+		sync: tr('synth.tooltips.blendSync')
+	};
+}
 
-export const FILTER_TOOLTIPS: Record<string, string> = {
-	lowpass: 'Filter Mode: Low-Pass Filter (LPF) — Allows low frequencies below cutoff to pass through, attenuating highs',
-	highpass: 'Filter Mode: High-Pass Filter (HPF) — Allows high frequencies above cutoff to pass through, attenuating lows',
-	bandpass: 'Filter Mode: Band-Pass Filter (BPF) — Passes a resonant narrow band around the cutoff frequency, attenuating lows and highs',
-	notch: 'Filter Mode: Notch / Band-Reject Filter (BRF) — Attenuates a narrow band at cutoff while letting both lows and highs pass'
-};
+export function filterTooltips(): Record<string, string> {
+	return {
+		lowpass: tr('synth.tooltips.filterLowpass'),
+		highpass: tr('synth.tooltips.filterHighpass'),
+		bandpass: tr('synth.tooltips.filterBandpass'),
+		notch: tr('synth.tooltips.filterNotch')
+	};
+}
 
-export const LFO_TOOLTIPS: Record<string, string> = {
-	sine: 'Sine Wave LFO — Smooth, continuous cyclical modulation',
-	triangle: 'Triangle Wave LFO — Linear ramp up and down modulation',
-	square: 'Square Wave LFO — Stepped on/off binary modulation pulse',
-	sawtooth: 'Sawtooth Wave LFO — Linear ramp with sharp instantaneous drop'
-};
+export function lfoTooltips(): Record<string, string> {
+	return {
+		sine: tr('synth.tooltips.lfoSine'),
+		triangle: tr('synth.tooltips.lfoTriangle'),
+		square: tr('synth.tooltips.lfoSquare'),
+		sawtooth: tr('synth.tooltips.lfoSawtooth')
+	};
+}
 
 export function presetTooltips(): Record<string, string> {
 	return {

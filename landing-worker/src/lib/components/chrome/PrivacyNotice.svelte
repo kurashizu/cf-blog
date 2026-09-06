@@ -2,6 +2,7 @@
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	import BoxHeader from './BoxHeader.svelte';
+	import { t } from '$lib/i18n';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 
 	let { onClose }: { onClose: () => void } = $props();
@@ -37,32 +38,21 @@
 		</BoxHeader>
 
 		<div class="p-3 sm:p-4 space-y-4 text-xs sm:text-sm max-h-[75vh] overflow-y-auto custom-scrollbar">
-			<p class="text-white/45 text-[11px]">Scope: krsz.in only — the site you are on right now.</p>
+			<p class="text-white/45 text-[11px]">{$t('chrome.privacy.scope')}</p>
 
 			<section class="space-y-1.5">
-				<h2 class="text-[11px] sm:text-xs font-black tracking-wide" style="color: {themeStyles.cursorColor}">1. WHAT THIS SITE COLLECTS</h2>
-				<p class="text-white/70 leading-relaxed">
-					Nothing. krsz.in has no account system, no analytics, and no tracking of any kind. Your
-					theme, sound settings, console history and everything else this workbench remembers is
-					written only to this browser's own local storage — it never leaves your device, and no
-					server ever sees it.
-				</p>
+				<h2 class="text-[11px] sm:text-xs font-black tracking-wide" style="color: {themeStyles.cursorColor}">{$t('chrome.privacy.section1Title')}</h2>
+				<p class="text-white/70 leading-relaxed">{$t('chrome.privacy.section1Body')}</p>
 			</section>
 
 			<section class="border border-[#e06c75]/40 bg-[#e06c75]/10 rounded-xs p-2.5 space-y-1.5">
-				<h2 class="text-[11px] sm:text-xs font-black tracking-wide text-[#e06c75]">2. THE ONE EXCEPTION — GUESTBOOK</h2>
-				<p class="text-[#e06c75]/90 leading-relaxed">
-					A message posted in the Guestbook is sent to this site's server and displayed publicly.
-					That form carries its own confirmation next to the send button, separate from this notice.
-				</p>
+				<h2 class="text-[11px] sm:text-xs font-black tracking-wide text-[#e06c75]">{$t('chrome.privacy.section2Title')}</h2>
+				<p class="text-[#e06c75]/90 leading-relaxed">{$t('chrome.privacy.section2Body')}</p>
 			</section>
 
 			<section class="space-y-1.5">
-				<h2 class="text-[11px] sm:text-xs font-black tracking-wide" style="color: {themeStyles.cursorColor}">3. LINKED PROJECTS — SEPARATE POLICIES</h2>
-				<p class="text-white/70 leading-relaxed">
-					MODULES links out to other, independently run sites under krsz.in — each is its own
-					application with its own server and its own privacy practices, not covered by this notice:
-				</p>
+				<h2 class="text-[11px] sm:text-xs font-black tracking-wide" style="color: {themeStyles.cursorColor}">{$t('chrome.privacy.section3Title')}</h2>
+				<p class="text-white/70 leading-relaxed">{$t('chrome.privacy.section3Body')}</p>
 				<div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] pt-0.5">
 					{#each MODULE_LINKS as m (m.name)}
 						<a href={m.href} target="_blank" rel="noopener noreferrer" class="text-white/50 hover:text-white underline transition-colors">{m.name}</a>
@@ -70,7 +60,7 @@
 				</div>
 			</section>
 
-			<div class="border-t border-white/10 pt-2 text-[10px] text-white/30">krsz.in — privacy notice</div>
+			<div class="border-t border-white/10 pt-2 text-[10px] text-white/30">{$t('chrome.privacy.footer')}</div>
 		</div>
 	</div>
 </div>

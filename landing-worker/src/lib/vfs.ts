@@ -1,4 +1,5 @@
 import { get } from 'svelte/store';
+import { tr } from './i18n';
 import { MODULES } from './data/modules';
 import { EXTERNAL_LINKS } from './links';
 import { THEME_STYLES } from './stores/theme';
@@ -41,17 +42,17 @@ function moduleDir(m: (typeof MODULES)[number]): VDir {
 		children: [
 			file(
 				'README',
-				lines(
-					`${m.name}  [${m.badge}]`,
-					`url:  ${m.url}`,
-					`tag:  ${m.tag}`,
-					'',
-					...wrap(m.desc, 68)
-				),
+				// Resolved at read time, not baked in with lines(), so this follows
+				// the active locale the same as the module's own card in /projects.
+				() => [`${m.name}  [${m.badge}]`, `url:  ${m.url}`, `tag:  ${m.tag}`, '', ...wrap(tr(m.descKey), 68)],
 				m.name
 			),
 			file('tech.txt', lines(...m.tech.map((t) => `- ${t}`)), `${m.tech.length} entries`),
-			file('facts.txt', lines(...m.facts.flatMap((f) => wrap(`* ${f}`, 68))), `${m.facts.length} verified`),
+			file(
+				'facts.txt',
+				() => m.factKeys.flatMap((k) => wrap(`* ${tr(k)}`, 68)),
+				`${m.facts.length} verified`
+			),
 			file('topology.mmd', lines(...m.topology.split('\n')), 'mermaid'),
 			file('url', lines(m.url))
 		]
@@ -103,14 +104,16 @@ export const ROOT: VDir = {
 			children: [
 				file(
 					'profile.txt',
-					lines(
+					// Resolved at read time (see moduleDir()'s README/facts.txt above),
+					// so `cat`/`whoami` follow the active locale.
+					() => [
 						`${pad('operator')}kurashizu (IT Masters @ UNSW)`,
-						`${pad('location')}Sydney, Australia [UTC+10/11]`,
-						`${pad('motto')}"Follow best practices & KISS"`,
-						`${pad('runtime')}100% serverless edge isolates`,
+						`${pad('location')}${tr('chrome.console.run.profileLocation')}`,
+						`${pad('motto')}${tr('chrome.console.run.profileMotto')}`,
+						`${pad('runtime')}${tr('chrome.console.run.profileRuntime')}`,
 						`${pad('stack')}SvelteKit · uv · FFmpeg · D1 · Vectorize`,
-						`${pad('status')}open for research`
-					)
+						`${pad('status')}${tr('chrome.console.run.profileStatus')}`
+					]
 				),
 				file(
 					'links.txt',
@@ -149,7 +152,7 @@ export const ROOT: VDir = {
 			children: [
 				file('trace', () => {
 					const t = get(edgeTrace);
-					if (!t) return [`trace ${get(edgeTraceStatus)} — run "trace" to probe the edge`];
+					if (!t) return [tr('chrome.console.run.traceIdleHint', { status: get(edgeTraceStatus) })];
 					const ms = get(edgeTraceMs);
 					return [
 						...Object.entries(t.raw).map(([k, v]) => `${k.padEnd(13)}${v}`),
@@ -162,25 +165,19 @@ export const ROOT: VDir = {
 			type: 'dir',
 			name: 'etc',
 			children: [
-				file(
-					'motd',
-					lines(
-						"Kurashizu's Random-Stuff Zone — 100% serverless edge.",
-						'Every number on this site is measured in your browser or read',
-						'from the origin it describes. Nothing is decorative.'
-					)
-				),
+				file('motd', () => [
+					tr('chrome.console.run.motd1'),
+					tr('chrome.console.run.motd2'),
+					tr('chrome.console.run.motd3')
+				]),
 				file('themes', lines(...Object.keys(THEME_STYLES)), 'theme <name>'),
-				file(
-					'hotkeys',
-					lines(
-						`${pad('Ctrl+0..5', 12)}switch tab`,
-						`${pad('T', 12)}cycle theme`,
-						`${pad('`', 12)}drop-down console`,
-						`${pad('?', 12)}hotkey reference`,
-						`${pad('Tab', 12)}complete / cycle in the console`
-					)
-				)
+				file('hotkeys', () => [
+					`${pad('Ctrl+0..5', 12)}${tr('chrome.console.run.hotkeySwitchTab')}`,
+					`${pad('T', 12)}${tr('chrome.console.run.hotkeyCycleTheme')}`,
+					`${pad('`', 12)}${tr('chrome.console.run.hotkeyDropdownConsole')}`,
+					`${pad('?', 12)}${tr('chrome.console.run.hotkeyReference')}`,
+					`${pad('Tab', 12)}${tr('chrome.console.run.hotkeyCompleteConsole')}`
+				])
 			]
 		}
 	]

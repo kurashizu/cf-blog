@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
-	import { t } from '../../../i18n';
+	import { t, locale } from '../../../i18n';
 	import { resetRack2 } from '../../../stores/synth-reset';
 	import type { BlendMode } from '../../../synth';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
-	import { BLEND_TOOLTIPS } from '../tooltips';
+	import { blendTooltips } from '../tooltips';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 
 	const BLEND_MODES: BlendMode[] = ['layer', 'fm', 'ring', 'sync'];
 	/* Four letters at most: the buttons are narrow and LAYER spilled over. */
 	const BLEND_LABELS: Record<BlendMode, string> = { layer: 'LAYR', fm: 'FM', ring: 'RING', sync: 'SYNC' };
+	// $locale is read here only to give this $derived a tracked dependency —
+	// blendTooltips() itself resolves strings through tr(), which is not reactive.
+	let BLEND_TOOLTIPS = $derived.by(() => {
+		void $locale;
+		return blendTooltips();
+	});
 </script>
 
 <div class="border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0 xl:grow-[3]">

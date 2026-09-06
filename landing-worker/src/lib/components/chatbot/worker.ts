@@ -140,8 +140,14 @@ interface Delta {
 	}[];
 }
 
+/** A stable code, not prose — this worker has no access to the main thread's
+ *  locale, so the message shown to the user is resolved by ChatbotView's
+ *  onWorkerError() via tr(), the same way a real (untranslatable) engine
+ *  error string is passed straight through. */
+const ERR_MODEL_NOT_LOADED = 'MODEL_NOT_LOADED';
+
 async function generate(msg: Extract<InMsg, { type: 'generate' }>) {
-	if (!wllama) throw new Error('the model is not loaded');
+	if (!wllama) throw new Error(ERR_MODEL_NOT_LOADED);
 
 	abort = new AbortController();
 	const t0 = performance.now();

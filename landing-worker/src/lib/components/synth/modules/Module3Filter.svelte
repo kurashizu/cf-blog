@@ -1,14 +1,20 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
-	import { t } from '../../../i18n';
+	import { t, locale } from '../../../i18n';
 	import { resetRack3 } from '../../../stores/synth-reset';
 	import type { FilterType } from '../../../synth';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
-	import { FILTER_TOOLTIPS } from '../tooltips';
+	import { filterTooltips } from '../tooltips';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 
 	const FILTER_TYPES: FilterType[] = ['lowpass', 'bandpass', 'highpass', 'notch'];
 	const FILTER_LABELS: Record<FilterType, string> = { lowpass: 'LPF', bandpass: 'BPF', highpass: 'HPF', notch: 'NTCH' };
+	// $locale is read here only to give this $derived a tracked dependency —
+	// filterTooltips() itself resolves strings through tr(), which is not reactive.
+	let FILTER_TOOLTIPS = $derived.by(() => {
+		void $locale;
+		return filterTooltips();
+	});
 </script>
 
 <div class="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0 xl:grow-[3]">

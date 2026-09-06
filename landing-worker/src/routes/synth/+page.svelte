@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
 	import SynthWorkspace from '$lib/components/synth/SynthWorkspace.svelte';
-	import { TAB_TITLES } from '$lib/routes-map';
 	import { handleImportMidiFile, isMidiFile } from '$lib/stores/synth-import';
 	import { handleImportPatchFile } from '$lib/stores/synth-patch';
 
@@ -40,7 +39,7 @@
 </script>
 
 <svelte:head>
-	<title>{TAB_TITLES[2]}</title>
+	<title>{$t('common.tabTitle.2')}</title>
 </svelte:head>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->

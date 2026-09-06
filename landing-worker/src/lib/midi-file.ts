@@ -4,6 +4,7 @@
  * signature, and track/instrument names. Controllers, bends and sysex are
  * parsed only far enough to skip them correctly.
  */
+import { tr } from './i18n';
 
 export interface MidiNote {
 	midi: number;
@@ -79,7 +80,7 @@ export class MidiParseError extends Error {}
 export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 	const r = new Reader(new DataView(buffer));
 
-	if (r.str(4) !== 'MThd') throw new MidiParseError('Not a MIDI file — missing MThd header.');
+	if (r.str(4) !== 'MThd') throw new MidiParseError(tr('synth.midiImport.noHeader'));
 	const headerLen = r.u32();
 	const format = r.u16();
 	const ntrks = r.u16();
@@ -87,9 +88,9 @@ export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 	// Headers are 6 bytes today, but the spec allows longer ones.
 	r.skip(headerLen - 6);
 
-	if (division & 0x8000) throw new MidiParseError('SMPTE-timed MIDI files are not supported — export with metrical (PPQ) timing.');
+	if (division & 0x8000) throw new MidiParseError(tr('synth.midiImport.smpteUnsupported'));
 	const ticksPerQuarter = division;
-	if (!ticksPerQuarter) throw new MidiParseError('MIDI file declares zero ticks per quarter note.');
+	if (!ticksPerQuarter) throw new MidiParseError(tr('synth.midiImport.zeroTicks'));
 
 	let bpm = 120;
 	let bpmFromFile = false;
@@ -209,7 +210,7 @@ export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 		tracks.push({ name, notes, channels: [...channels].sort((a, b) => a - b) });
 	}
 
-	if (tracks.length === 0) throw new MidiParseError('No note data found in this MIDI file.');
+	if (tracks.length === 0) throw new MidiParseError(tr('synth.midiImport.noNoteData'));
 
 	return { format, ticksPerQuarter, bpm, bpmFromFile, timeSignature, tracks, totalTicks };
 }

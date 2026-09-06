@@ -25,16 +25,19 @@ export interface ConsoleLine {
 	text: string;
 }
 
-const WELCOME: ConsoleLine[] = [
-	{ kind: 'ok', text: 'KRSZ-EDGE WORKBENCH READY // TYPE "help" OR USE [CTRL+0-5] HOTKEYS' }
-];
+/** Resolved lazily (called at store creation, not at module load) so the
+ *  welcome line follows the locale detected from localStorage/the browser,
+ *  which is not settled yet when this module is first evaluated. */
+function welcomeLines(): ConsoleLine[] {
+	return [{ kind: 'ok', text: tr('chrome.console.welcome') }];
+}
 
 const MAX_LINES = 300;
 const HISTORY_KEY = 'krsz.console.history';
 const ALIAS_KEY = 'krsz.console.aliases';
 
 /** Scrollback buffer — lives in a store so it survives visiting /synth (which unmounts the console). */
-export const consoleBuffer = writable<ConsoleLine[]>([...WELCOME]);
+export const consoleBuffer = writable<ConsoleLine[]>(welcomeLines());
 /** Submitted commands, newest last — for ArrowUp/ArrowDown recall. Persisted across visits. */
 export const commandHistory = writable<string[]>([]);
 /** Virtual working directory, shown in the prompt and used to resolve relative paths. */
@@ -228,10 +231,10 @@ function takeFlag(tokens: string[], flag: string): boolean {
 /** Filter input: piped lines when present, otherwise the named file. */
 function filterInput(stdin: ConsoleLine[] | null, path: string | undefined, base: string): ConsoleLine[] | ConsoleLine {
 	if (stdin) return stdin;
-	if (!path) return err('No input — give a file or pipe something in.');
+	if (!path) return err(tr('chrome.console.run.noInput'));
 	const node = lookup(resolvePath(base, path));
-	if (!node) return err(`No such file: ${path}`);
-	if (node.type === 'dir') return err(`${path} is a directory`);
+	if (!node) return err(tr('chrome.console.run.noSuchFile', { path }));
+	if (node.type === 'dir') return err(tr('chrome.console.run.isADirectory', { path }));
 	return node.read().map(out);
 }
 
@@ -255,30 +258,30 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	if (cmd in NAV_WORDS) {
 		const tab = NAV_WORDS[cmd];
 		goto(TAB_ROUTES[tab]);
-		return [ok(`Navigated to ${TAB_ROUTES[tab]}`)];
+		return [ok(tr('chrome.console.run.navigatedTo', { path: TAB_ROUTES[tab] }))];
 	}
 
 	if (cmd === 'open') {
 		const key = args.trim().toLowerCase();
 		const url = EXTERNAL_LINKS[key] ?? MODULES.find((m) => m.id === key)?.url;
-		if (!url) return [err(`Unknown project: "${key}". Try: ${Object.keys(EXTERNAL_LINKS).join(', ')}`)];
+		if (!url) return [err(tr('chrome.console.run.unknownProject', { key, list: Object.keys(EXTERNAL_LINKS).join(', ') }))];
 		window.open(url, '_blank');
-		return [ok(`Opened ${url}`)];
+		return [ok(tr('chrome.console.run.opened', { url }))];
 	}
 
 	if (cmd in EXTERNAL_LINKS) {
 		window.open(EXTERNAL_LINKS[cmd], '_blank');
-		return [ok(`Opened ${EXTERNAL_LINKS[cmd]}`)];
+		return [ok(tr('chrome.console.run.opened', { url: EXTERNAL_LINKS[cmd] }))];
 	}
 
 	// ── edge ──
 	if (cmd === 'trace' || cmd === 'edge') {
-		if (!ctx.piped) push([accent('GET /cdn-cgi/trace …')]);
+		if (!ctx.piped) push([accent(tr('chrome.console.run.gettingTrace'))]);
 		const t = await loadEdgeTrace(true);
-		if (!t) return [err('Edge trace unavailable — /cdn-cgi/trace did not answer.')];
+		if (!t) return [err(tr('chrome.console.run.edgeTraceUnavailable'))];
 		const ms = get(edgeTraceMs);
 		return [
-			accent('CLOUDFLARE EDGE — measured, not asserted'),
+			accent(tr('chrome.console.run.edgeHeading')),
 			ok(`  colo        ${t.colo}${t.loc ? `  (${t.loc})` : ''}   serving PoP`),
 			out(`  protocol    ${t.http}`),
 			out(`  tls         ${t.tls}${t.kex ? `  kex=${t.kex}` : ''}`),
@@ -296,8 +299,8 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	if (cmd === 'cd') {
 		const target = args.trim() ? resolvePath(base, args.trim()) : '/';
 		const node = lookup(target);
-		if (!node) return [err(`cd: no such directory: ${args.trim()}`)];
-		if (node.type !== 'dir') return [err(`cd: not a directory: ${args.trim()}`)];
+		if (!node) return [err(tr('chrome.console.run.cdNoSuchDir', { path: args.trim() }))];
+		if (node.type !== 'dir') return [err(tr('chrome.console.run.cdNotADir', { path: args.trim() }))];
 		cwd.set(target);
 		return [ok(target)];
 	}
@@ -307,27 +310,27 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		const long = takeFlag(flags, '-l') || cmd === 'll';
 		const target = resolvePath(base, flags[0] ?? '.');
 		const node = lookup(target);
-		if (!node) return [err(`ls: no such path: ${flags[0] ?? target}`)];
+		if (!node) return [err(tr('chrome.console.run.lsNoSuchPath', { path: flags[0] ?? target }))];
 		if (node.type === 'file') return [out(formatEntry(node, long))];
-		if (node.children.length === 0) return [out('(empty)')];
+		if (node.children.length === 0) return [out(tr('chrome.console.run.empty'))];
 		return [
-			accent(`${target === '/' ? '/' : target}  —  ${node.children.length} entries`),
+			accent(tr('chrome.console.run.entriesHeading', { path: target === '/' ? '/' : target, count: node.children.length })),
 			...node.children.map((c) => out(formatEntry(c, long)))
 		];
 	}
 
 	if (cmd === 'cat') {
-		if (!args.trim()) return [err('Usage: cat <file>')];
+		if (!args.trim()) return [err(tr('chrome.console.run.usageCat'))];
 		const node = lookup(resolvePath(base, args.trim()));
-		if (!node) return [err(`cat: no such file: ${args.trim()}`)];
-		if (node.type === 'dir') return [err(`cat: ${args.trim()} is a directory — try "ls"`)];
+		if (!node) return [err(tr('chrome.console.run.catNoSuchFile', { path: args.trim() }))];
+		if (node.type === 'dir') return [err(tr('chrome.console.run.catIsADir', { path: args.trim() }))];
 		return node.read().map(out);
 	}
 
 	if (cmd === 'tree') {
 		const target = resolvePath(base, args.trim() || '.');
 		const node = lookup(target);
-		if (!node) return [err(`tree: no such path: ${args.trim()}`)];
+		if (!node) return [err(tr('chrome.console.run.treeNoSuchPath', { path: args.trim() }))];
 		return [accent(target === '/' ? '/' : target), ...renderTree(node).map(out)];
 	}
 
@@ -336,17 +339,17 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		const flags = [...rest];
 		const insensitive = takeFlag(flags, '-i');
 		const pattern = flags.shift();
-		if (!pattern) return [err('Usage: grep [-i] <pattern> [file]')];
+		if (!pattern) return [err(tr('chrome.console.run.usageGrep'))];
 		const input = filterInput(ctx.stdin, flags[0], base);
 		if (!Array.isArray(input)) return [input];
 		let re: RegExp;
 		try {
 			re = new RegExp(pattern, insensitive ? 'i' : '');
 		} catch {
-			return [err(`grep: invalid pattern: ${pattern}`)];
+			return [err(tr('chrome.console.run.grepInvalidPattern', { pattern }))];
 		}
 		const hits = input.filter((l) => re.test(l.text));
-		return hits.length ? hits : [out(`(no match for /${pattern}/)`)];
+		return hits.length ? hits : [out(tr('chrome.console.run.noMatch', { pattern }))];
 	}
 
 	if (cmd === 'head' || cmd === 'tail') {
@@ -363,7 +366,7 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		if (!Array.isArray(input)) return [input];
 		const words = input.reduce((a, l) => a + l.text.split(/\s+/).filter(Boolean).length, 0);
 		const chars = input.reduce((a, l) => a + l.text.length, 0);
-		return [out(`${input.length} lines  ${words} words  ${chars} chars`)];
+		return [out(tr('chrome.console.run.wcSummary', { lines: input.length, words, chars }))];
 	}
 
 	if (cmd === 'sort') {
@@ -387,31 +390,31 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 			const all = get(aliases);
 			const names = Object.keys(all).sort();
 			return names.length
-				? [accent('ALIASES:'), ...names.map((n) => out(`  ${n.padEnd(10)} ${all[n]}`))]
-				: [out('No aliases. Define one: alias ll="ls -l"')];
+				? [accent(tr('chrome.console.run.aliasesHeading')), ...names.map((n) => out(`  ${n.padEnd(10)} ${all[n]}`))]
+				: [out(tr('chrome.console.run.noAliases'))];
 		}
 		const m = args.match(/^(\w+)\s*=\s*(.+)$/);
-		if (!m) return [err('Usage: alias name="command"')];
+		if (!m) return [err(tr('chrome.console.run.usageAlias'))];
 		const value = m[2].replace(/^['"]|['"]$/g, '');
-		if (RESERVED_ALIAS_NAMES.has(m[1].toLowerCase())) return [err(`alias: "${m[1]}" is a built-in command`)];
+		if (RESERVED_ALIAS_NAMES.has(m[1].toLowerCase())) return [err(tr('chrome.console.run.aliasReserved', { name: m[1] }))];
 		aliases.update((a) => {
 			const next = { ...a, [m[1]]: value };
 			persist(ALIAS_KEY, next);
 			return next;
 		});
-		return [ok(`alias ${m[1]}="${value}"`)];
+		return [ok(tr('chrome.console.run.aliasSet', { name: m[1], value }))];
 	}
 
 	if (cmd === 'unalias') {
 		const name = args.trim();
-		if (!(name in get(aliases))) return [err(`unalias: no such alias: ${name}`)];
+		if (!(name in get(aliases))) return [err(tr('chrome.console.run.unaliasNoSuchAlias', { name }))];
 		aliases.update((a) => {
 			const next = { ...a };
 			delete next[name];
 			persist(ALIAS_KEY, next);
 			return next;
 		});
-		return [ok(`Removed alias ${name}`)];
+		return [ok(tr('chrome.console.run.aliasRemoved', { name }))];
 	}
 
 	// ── info ──
@@ -437,14 +440,14 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 
 	if (cmd === 'whoami' || cmd === 'about') {
 		const node = lookup('/operator/profile.txt');
-		return node && node.type === 'file' ? node.read().map(out) : [err('profile unavailable')];
+		return node && node.type === 'file' ? node.read().map(out) : [err(tr('chrome.console.run.profileUnavailable'))];
 	}
 
 	if (cmd === 'tracks' || cmd === 'trk') {
 		const tracks = get(tracksState);
 		const active = get(activeTrackId);
 		return [
-			accent('SEQ TRACKS:'),
+			accent(tr('chrome.console.run.seqTracksHeading')),
 			...tracks.map((t) =>
 				out(`  ${t.id === active ? '▶' : ' '} ${t.name.padEnd(24)} ${t.muted ? '[MUTED]' : '       '} ${t.solo ? '[SOLO]' : ''}`)
 			)
@@ -454,7 +457,7 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	if (cmd === 'songs') {
 		const current = get(builtinSongIdx);
 		return [
-			accent('BUILT-IN SONGS:'),
+			accent(tr('chrome.console.run.builtinSongsHeading')),
 			...BUILTIN_SONGS.map((s, i) =>
 				out(`  ${i === current ? '●' : '○'} ${s.name.padEnd(20)} ${String(s.bpm).padStart(3)}bpm · ${s.meter} · ${s.steps} steps`)
 			)
@@ -463,19 +466,19 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 
 	if (cmd === 'load') {
 		const q = args.trim().toLowerCase();
-		if (!q) return [err('Usage: load <song> — try "songs" to list them')];
+		if (!q) return [err(tr('chrome.console.run.usageLoad'))];
 		const idx = BUILTIN_SONGS.findIndex((s) => s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
-		if (idx === -1) return [err(`No song matches "${q}". Try "songs".`)];
+		if (idx === -1) return [err(tr('chrome.console.run.noSongMatch', { q }))];
 		handleLoadBuiltinSong(idx);
-		return [ok(`Loaded ${BUILTIN_SONGS[idx].name} (${BUILTIN_SONGS[idx].bpm} BPM, ${BUILTIN_SONGS[idx].meter})`)];
+		return [ok(tr('chrome.console.run.loadedSong', { name: BUILTIN_SONGS[idx].name, bpm: BUILTIN_SONGS[idx].bpm, meter: BUILTIN_SONGS[idx].meter }))];
 	}
 
 	if (cmd === 'midi') {
 		const device = get(midiConnectedDevice);
 		const devices = get(midiDevices);
 		return device
-			? [ok(`MIDI CONNECTED: ${device}`), ...devices.map((d) => out(`  · ${d.name}`))]
-			: [out('MIDI: standby — no input device connected')];
+			? [ok(tr('chrome.console.run.midiConnected', { device })), ...devices.map((d) => out(`  · ${d.name}`))]
+			: [out(tr('chrome.console.run.midiStandby'))];
 	}
 
 	if (cmd === 'date' || cmd === 'time') {
@@ -490,7 +493,7 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 
 	if (cmd === 'history') {
 		const h = get(commandHistory).slice(0, -1).slice(-15);
-		return h.length ? h.map((c, i) => out(`  ${String(i + 1).padStart(2)}  ${c}`)) : [out('history is empty')];
+		return h.length ? h.map((c, i) => out(`  ${String(i + 1).padStart(2)}  ${c}`)) : [out(tr('chrome.console.run.historyEmpty'))];
 	}
 
 	if (cmd === 'banner') return rollBanner().map((l) => ({ kind: 'gold' as LineKind, text: l }));
@@ -499,64 +502,64 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	if (cmd === 'play') {
 		setMuted(false);
 		play();
-		return [ok('Sequencer playing.')];
+		return [ok(tr('chrome.console.run.sequencerPlaying'))];
 	}
 	if (cmd === 'stop') {
 		stop();
-		return [ok('Sequencer stopped.')];
+		return [ok(tr('chrome.console.run.sequencerStopped'))];
 	}
 	if (cmd === 'seq' || cmd === 'sequence') {
 		const playing = toggleSeq();
 		if (playing) setMuted(false);
-		return [ok(`Sequencer ${playing ? 'playing' : 'stopped'}.`)];
+		return [ok(tr('chrome.console.run.sequencerToggled', { state: playing ? tr('chrome.console.run.statePlaying') : tr('chrome.console.run.stateStopped') }))];
 	}
 
 	if (cmd === 'bpm') {
-		if (!args) return [out(`BPM: ${get(bpm)} — ${get(isSeqPlaying) ? 'playing' : 'stopped'}`)];
+		if (!args) return [out(tr('chrome.console.run.bpmStatus', { bpm: get(bpm), state: get(isSeqPlaying) ? tr('chrome.console.run.statePlaying') : tr('chrome.console.run.stateStopped') }))];
 		const val = parseInt(args, 10);
-		if (isNaN(val) || val < 40 || val > 300) return [err(`Invalid BPM "${args}" — expected 40-300.`)];
+		if (isNaN(val) || val < 40 || val > 300) return [err(tr('chrome.console.run.invalidBpm', { value: args }))];
 		setBpm(val);
-		return [ok(`BPM set to ${val}.`)];
+		return [ok(tr('chrome.console.run.bpmSet', { value: val }))];
 	}
 
 	if (cmd === 'vol' || cmd === 'volume') {
-		if (!args) return [out(`Volume: ${Math.round(get(soundState).volume * 100)}%${get(soundState).muted ? ' (muted)' : ''}`)];
+		if (!args) return [out(tr('chrome.console.run.volumeStatus', { percent: Math.round(get(soundState).volume * 100), muted: get(soundState).muted ? tr('chrome.console.run.volumeMutedSuffix') : '' }))];
 		const val = parseInt(args, 10);
-		if (isNaN(val) || val < 0 || val > 100) return [err(`Invalid volume "${args}" — expected 0-100.`)];
+		if (isNaN(val) || val < 0 || val > 100) return [err(tr('chrome.console.run.invalidVolume', { value: args }))];
 		setVolume(val / 100);
 		setMuted(false);
-		return [ok(`Volume set to ${val}%.`)];
+		return [ok(tr('chrome.console.run.volumeSet', { value: val }))];
 	}
 
 	if (cmd === 'mute') {
 		setMuted(true);
-		return [ok('Muted.')];
+		return [ok(tr('chrome.console.run.muted'))];
 	}
 	if (cmd === 'unmute') {
 		setMuted(false);
-		return [ok('Unmuted.')];
+		return [ok(tr('chrome.console.run.unmuted'))];
 	}
 
 	if (cmd === 'snap' || cmd === 'dur') {
 		const div = args.trim();
-		if (!VALID_DIVS.includes(div)) return [err(`Usage: ${cmd} <div> — one of: ${VALID_DIVS.join(' ')}`)];
+		if (!VALID_DIVS.includes(div)) return [err(tr('chrome.console.run.usageSnapDur', { cmd, list: VALID_DIVS.join(' ') }))];
 		if (cmd === 'snap') setSnapDiv(div as NoteDurationDiv);
 		else setNoteDur(div as NoteDurationDiv);
-		return [ok(`${cmd === 'snap' ? 'Grid snap' : 'Note duration'} set to ${div}.`)];
+		return [ok(cmd === 'snap' ? tr('chrome.console.run.gridSnapSet', { value: div }) : tr('chrome.console.run.noteDurationSet', { value: div }))];
 	}
 
 	if (cmd === 'meter') {
 		const sig = args.trim();
-		if (!VALID_METERS.includes(sig)) return [err(`Usage: meter <sig> — one of: ${VALID_METERS.join(' ')}`)];
+		if (!VALID_METERS.includes(sig)) return [err(tr('chrome.console.run.usageMeter', { list: VALID_METERS.join(' ') }))];
 		setTimeMeter(sig as TimeSignature);
-		return [ok(`Time signature set to ${sig}.`)];
+		return [ok(tr('chrome.console.run.meterSet', { value: sig }))];
 	}
 
 	if (cmd === 'blend') {
 		const mode = args.toLowerCase();
-		if (!['layer', 'fm', 'ring', 'sync'].includes(mode)) return [err('Usage: blend <layer|fm|ring|sync>')];
+		if (!['layer', 'fm', 'ring', 'sync'].includes(mode)) return [err(tr('chrome.console.run.usageBlend'))];
 		updateActiveTrack({ blendMode: mode as BlendMode });
-		return [ok(`Track ${get(activeTrackId) + 1} blend mode set to ${mode.toUpperCase()}`)];
+		return [ok(tr('chrome.console.run.blendSet', { track: get(activeTrackId) + 1, mode: mode.toUpperCase() }))];
 	}
 
 	// ── misc ──
@@ -569,12 +572,12 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		if (!q) {
 			cycleTheme();
 			const t = get(theme);
-			return [ok(`Theme: ${t === 'auto' ? `auto (${get(resolvedTheme)})` : t}`)];
+			return [ok(tr('chrome.console.run.themeStatus', { theme: t === 'auto' ? `auto (${get(resolvedTheme)})` : t }))];
 		}
 		const t = THEME_ALIASES[q];
-		if (!t) return [err(`Unknown theme "${q}". Valid: ${Object.keys(THEME_ALIASES).join(', ')}`)];
+		if (!t) return [err(tr('chrome.console.run.unknownTheme', { q, list: Object.keys(THEME_ALIASES).join(', ') }))];
 		theme.set(t);
-		return [ok(`Theme set to ${t}.`)];
+		return [ok(tr('chrome.console.run.themeSet', { theme: t }))];
 	}
 
 	if (cmd === 'clear' || cmd === 'cls') {
@@ -582,7 +585,7 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		return [];
 	}
 
-	return [err(`Command not recognized: "${cmd}". Type "help".`)];
+	return [err(tr('chrome.console.run.commandNotRecognized', { cmd }))];
 }
 
 function formatEntry(node: VNode, long: boolean): string {

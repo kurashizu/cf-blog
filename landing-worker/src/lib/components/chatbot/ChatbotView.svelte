@@ -246,7 +246,7 @@
 					break;
 			}
 		};
-		w.onerror = (e) => onWorkerError(e.message || 'the worker failed');
+		w.onerror = (e) => onWorkerError(e.message || tr('chatbot.error.workerFailed'));
 		return w;
 	}
 
@@ -264,7 +264,12 @@
 			: tr('chatbot.loading.preparing');
 	}
 
+	/** Worker.ts has no access to this thread's locale, so it sends this fixed
+	 *  code instead of English prose for the one error it authors itself; every
+	 *  other message the worker posts is a real (untranslatable) engine error
+	 *  string and is passed through as-is. */
 	function onWorkerError(message: string) {
+		if (message === 'MODEL_NOT_LOADED') message = tr('chatbot.error.modelNotLoaded');
 		if (phase === 'generating') {
 			// A failed turn keeps the session: the model is still resident.
 			const next = [...turns];

@@ -5,6 +5,14 @@ import type { Messages } from '../types';
    order, so the check script can diff them. */
 export default {
 	en: {
+		'common.tabTitle.0': 'KRSZ™ // 0:modules — Live Project Portal',
+		'common.tabTitle.1': 'KRSZ™ // 1:guestbook — Edge Packet Messenger',
+		'common.tabTitle.2': 'KRSZ™ // 2:synth — WebAudio Modular Synthesizer',
+		'common.tabTitle.3': 'KRSZ™ // 3:utils — Hardware Test Bench',
+		'common.tabTitle.4': 'KRSZ™ // 4:lm-space — The Leaderboard as a Volume',
+		'common.tabTitle.5': 'KRSZ™ // 5:krsz-vm — x86 PC Emulator',
+		'common.tabTitle.6': 'KRSZ™ // 6:web-lm — In-Browser LLM on WebGPU',
+		'common.tabTitle.7': 'KRSZ™ // 7:lifelab — Conway Automaton Laboratory',
 		'common.lang.title': 'Language — the site follows your browser unless you pick one here',
 		'common.lang.auto': 'Auto',
 		'common.lang.autoNote': 'browser: {name}',
@@ -30,6 +38,14 @@ export default {
 		'common.openNewTab': 'Open {url} in a new tab'
 	},
 	'zh-CN': {
+		'common.tabTitle.0': 'KRSZ™ // 0:modules — 实时项目门户',
+		'common.tabTitle.1': 'KRSZ™ // 1:guestbook — 边缘数据包留言板',
+		'common.tabTitle.2': 'KRSZ™ // 2:synth — WebAudio 模块化合成器',
+		'common.tabTitle.3': 'KRSZ™ // 3:utils — 硬件测试台',
+		'common.tabTitle.4': 'KRSZ™ // 4:lm-space — 立体化的排行榜',
+		'common.tabTitle.5': 'KRSZ™ // 5:krsz-vm — x86 PC 模拟器',
+		'common.tabTitle.6': 'KRSZ™ // 6:web-lm — 基于 WebGPU 的浏览器内大模型',
+		'common.tabTitle.7': 'KRSZ™ // 7:lifelab — 康威元胞自动机实验室',
 		'common.lang.title': '语言 — 默认跟随浏览器，在这里可以手动选择',
 		'common.lang.auto': '自动',
 		'common.lang.autoNote': '浏览器：{name}',
@@ -55,6 +71,14 @@ export default {
 		'common.openNewTab': '在新标签页打开 {url}'
 	},
 	'zh-TW': {
+		'common.tabTitle.0': 'KRSZ™ // 0:modules — 即時專案入口',
+		'common.tabTitle.1': 'KRSZ™ // 1:guestbook — 邊緣封包留言板',
+		'common.tabTitle.2': 'KRSZ™ // 2:synth — WebAudio 模組化合成器',
+		'common.tabTitle.3': 'KRSZ™ // 3:utils — 硬體測試台',
+		'common.tabTitle.4': 'KRSZ™ // 4:lm-space — 立體化的排行榜',
+		'common.tabTitle.5': 'KRSZ™ // 5:krsz-vm — x86 PC 模擬器',
+		'common.tabTitle.6': 'KRSZ™ // 6:web-lm — 基於 WebGPU 的瀏覽器內大型語言模型',
+		'common.tabTitle.7': 'KRSZ™ // 7:lifelab — 康威細胞自動機實驗室',
 		'common.lang.title': '語言 — 預設跟隨瀏覽器，也可以在這裡手動選擇',
 		'common.lang.auto': '自動',
 		'common.lang.autoNote': '瀏覽器：{name}',
@@ -80,6 +104,14 @@ export default {
 		'common.openNewTab': '在新分頁開啟 {url}'
 	},
 	ja: {
+		'common.tabTitle.0': 'KRSZ™ // 0:modules — ライブプロジェクトポータル',
+		'common.tabTitle.1': 'KRSZ™ // 1:guestbook — エッジパケットメッセンジャー',
+		'common.tabTitle.2': 'KRSZ™ // 2:synth — WebAudio モジュラーシンセサイザー',
+		'common.tabTitle.3': 'KRSZ™ // 3:utils — ハードウェアテストベンチ',
+		'common.tabTitle.4': 'KRSZ™ // 4:lm-space — 立体空間としてのリーダーボード',
+		'common.tabTitle.5': 'KRSZ™ // 5:krsz-vm — x86 PC エミュレータ',
+		'common.tabTitle.6': 'KRSZ™ // 6:web-lm — WebGPU で動くブラウザ内 LLM',
+		'common.tabTitle.7': 'KRSZ™ // 7:lifelab — コンウェイのセルオートマトン実験室',
 		'common.lang.title': '言語 — 通常はブラウザに従います。ここで手動選択もできます',
 		'common.lang.auto': '自動',
 		'common.lang.autoNote': 'ブラウザ：{name}',
@@ -105,6 +137,14 @@ export default {
 		'common.openNewTab': '{url} を新しいタブで開く'
 	},
 	ko: {
+		'common.tabTitle.0': 'KRSZ™ // 0:modules — 라이브 프로젝트 포털',
+		'common.tabTitle.1': 'KRSZ™ // 1:guestbook — 엣지 패킷 메신저',
+		'common.tabTitle.2': 'KRSZ™ // 2:synth — WebAudio 모듈러 신시사이저',
+		'common.tabTitle.3': 'KRSZ™ // 3:utils — 하드웨어 테스트 벤치',
+		'common.tabTitle.4': 'KRSZ™ // 4:lm-space — 입체 공간으로 보는 리더보드',
+		'common.tabTitle.5': 'KRSZ™ // 5:krsz-vm — x86 PC 에뮬레이터',
+		'common.tabTitle.6': 'KRSZ™ // 6:web-lm — WebGPU 기반 브라우저 내 LLM',
+		'common.tabTitle.7': 'KRSZ™ // 7:lifelab — 콘웨이 세포 자동자 실험실',
 		'common.lang.title': '언어 — 기본은 브라우저 설정을 따르며, 여기서 직접 고를 수 있습니다',
 		'common.lang.auto': '자동',
 		'common.lang.autoNote': '브라우저: {name}',

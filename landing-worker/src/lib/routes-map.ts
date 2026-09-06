@@ -9,16 +9,7 @@ export const TAB_ROUTES = [
 	'/lifelab'
 ] as const;
 
-export const TAB_TITLES = [
-	'KRSZ™ // 0:modules — Live Project Portal',
-	'KRSZ™ // 1:guestbook — Edge Packet Messenger',
-	'KRSZ™ // 2:synth — WebAudio Modular Synthesizer',
-	'KRSZ™ // 3:utils — Hardware Test Bench',
-	'KRSZ™ // 4:lm-space — The Leaderboard as a Volume',
-	'KRSZ™ // 5:krsz-vm — x86 PC Emulator',
-	'KRSZ™ // 6:web-lm — In-Browser LLM on WebGPU',
-	'KRSZ™ // 7:lifelab — Conway Automaton Laboratory'
-];
+/* Page titles live in i18n as common.tabTitle.0..7 (routes read them with $t). */
 
 /** Which of the tabs a pathname belongs to — mirrors the root path ('' / '/') to tab 0. */
 export function tabIndexFromPath(pathname: string): number {

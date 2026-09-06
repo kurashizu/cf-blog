@@ -8,7 +8,7 @@
 import { Life } from './engine.js';
 import { pattern, transformCells, nextOrientation, sameCells, kindOf, CATEGORIES, categoryMeta, patternMeta, custom, parseRLE, decodeRLE, encodeRLE, normalizeCells } from './patterns.js';
 import { LEVELS } from './levels.js';
-import { tr } from '$lib/i18n';
+import { tr, locale } from '$lib/i18n';
 
 const $ = s => document.querySelector(s);
 // Bound in start(), not at import. A module is evaluated once and cached, but
@@ -1548,6 +1548,25 @@ function frame(t) {
 }
 
 let raf = 0, ro = null;
+let localeUnsub = null;
+
+/**
+ * Re-applies the current language to the toolbar and tray without touching
+ * game state. buildTopbar()/buildTray() already clear their container's
+ * innerHTML and re-create every button with a fresh listener each time they
+ * run (the same thing frame() does after a rebind), so calling them again
+ * here cannot double-bind -- the old nodes and their listeners are discarded,
+ * not layered under new ones. The piece bar and any open dialog rebuild their
+ * own strings the next time they are shown, and syncRun()/updateGuide() are
+ * already called every frame, so nothing else needs to be touched here.
+ */
+function relabel() {
+  if (!topbar || !tray) return;
+  buildTopbar();
+  buildTray();
+  syncRun();
+  syncDishBtn();
+}
 
 /**
  * Binds to the markup the page has just rendered and starts the machine.
@@ -1571,6 +1590,16 @@ export function start() {
 
   bindInput();
 
+  // Re-labels the topbar/tray when the site language changes while the game
+  // is open -- they are only ever built once per level otherwise. `subscribe`
+  // fires synchronously with the current value first; that first call is the
+  // language already in effect when this mount built them, so it is skipped.
+  let first = true;
+  localeUnsub = locale.subscribe(() => {
+    if (first) { first = false; return; }
+    relabel();
+  });
+
   // headless driver for automated checks
   window.lifelab = { S, loadLevel, doStep, startPause, step: n => { for (let i = 0; i < n; i++) doStep(); draw(); updateStats(); } };
 
@@ -1591,6 +1620,8 @@ export function stop() {
   ro = null;
   themeObs?.disconnect();
   themeObs = null;
+  localeUnsub?.();
+  localeUnsub = null;
   unbindInput();
   S.running = false;
   clearTimeout(winTimer);

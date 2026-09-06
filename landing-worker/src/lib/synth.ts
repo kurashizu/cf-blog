@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
 import { OVERWORLD_TRACKS } from './songs/overworld';
@@ -2408,8 +2409,8 @@ class ModularSynth {
       onProgress?: (phase: 'schedule' | 'render', fraction: number) => void;
     } = {}
   ): Promise<AudioBuffer> {
-    if (typeof OfflineAudioContext === 'undefined') throw new Error('OfflineAudioContext is unavailable in this browser.');
-    if (this.renderCtx) throw new Error('A render is already running.');
+    if (typeof OfflineAudioContext === 'undefined') throw new Error(tr('synth.render.offlineUnavailable'));
+    if (this.renderCtx) throw new Error(tr('synth.render.alreadyRunning'));
 
     const sampleRate = options.sampleRate ?? 48000;
     // Long releases and the delay/reverb tails need room past the last step.

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { TAB_TITLES } from '$lib/routes-map';
+	import { t } from '$lib/i18n';
 	import KrszVmView from '$lib/components/krsz-vm/KrszVmView.svelte';
 </script>
 
 <svelte:head>
-	<title>{TAB_TITLES[5]}</title>
+	<title>{$t('common.tabTitle.5')}</title>
 </svelte:head>
 
 <KrszVmView />

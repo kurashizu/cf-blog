@@ -1,14 +1,20 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
-	import { t } from '../../../i18n';
+	import { t, locale } from '../../../i18n';
 	import { resetRack5 } from '../../../stores/synth-reset';
 	import type { LfoWaveform } from '../../../synth';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
-	import { LFO_TOOLTIPS } from '../tooltips';
+	import { lfoTooltips } from '../tooltips';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 
 	const LFO_WAVES: LfoWaveform[] = ['sine', 'triangle', 'square', 'sawtooth'];
 	const LFO_LABELS: Record<LfoWaveform, string> = { sine: 'SIN', triangle: 'TRI', square: 'SQR', sawtooth: 'SAW' };
+	// $locale is read here only to give this $derived a tracked dependency —
+	// lfoTooltips() itself resolves strings through tr(), which is not reactive.
+	let LFO_TOOLTIPS = $derived.by(() => {
+		void $locale;
+		return lfoTooltips();
+	});
 </script>
 
 <div class="xl:col-span-5 border border-[#c678dd]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">

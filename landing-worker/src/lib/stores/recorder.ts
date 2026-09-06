@@ -1,4 +1,5 @@
 import { writable, get } from 'svelte/store';
+import { tr } from '../i18n';
 import { soundEngine, playSound } from '../sound';
 
 export const isRecording = writable<boolean>(false);
@@ -21,13 +22,13 @@ export function startRecording(): void {
 	recError.set(null);
 
 	if (typeof MediaRecorder === 'undefined') {
-		recError.set('MediaRecorder unsupported in this browser');
+		recError.set(tr('synthPanels.out.recorderUnsupported'));
 		return;
 	}
 	const stream = soundEngine.getRecordingStream();
 	const mimeType = pickMimeType();
 	if (!stream || !mimeType) {
-		recError.set('audio capture unavailable');
+		recError.set(tr('synthPanels.out.audioCaptureUnavailable'));
 		return;
 	}
 

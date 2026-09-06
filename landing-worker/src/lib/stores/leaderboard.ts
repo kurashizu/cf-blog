@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { tr } from '../i18n';
 
 /**
  * The model table behind blog.krsz.in's LLM leaderboard: Artificial Analysis'
@@ -58,14 +59,14 @@ export function loadLeaderboard(force = false): Promise<LeaderboardPayload | nul
 			const res = await fetch(LEADERBOARD_URL, { cache: 'no-store' });
 			if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
 			const data = (await res.json()) as LeaderboardPayload;
-			if (!Array.isArray(data.models)) throw new Error('unexpected payload shape');
+			if (!Array.isArray(data.models)) throw new Error(tr('community.leaderboard.errorUnexpectedShape'));
 			leaderboard.set(data);
 			leaderboardMs.set(Math.round(performance.now() - t0));
 			leaderboardStatus.set(data.models.length ? 'ok' : 'error');
-			if (!data.models.length) leaderboardError.set('The upstream cache is empty right now.');
+			if (!data.models.length) leaderboardError.set(tr('community.leaderboard.errorEmptyCache'));
 			return data;
 		} catch (e) {
-			leaderboardError.set(e instanceof Error ? e.message : 'request failed');
+			leaderboardError.set(e instanceof Error ? e.message : tr('community.leaderboard.errorRequestFailed'));
 			leaderboardStatus.set('error');
 			return null;
 		} finally {

@@ -116,11 +116,11 @@
 		     as broken rather than as a record. Stacked, each value gets the full
 		     width and most fit on one line. -->
 		<div class="space-y-2 py-1 text-xs sm:text-sm">
-			<div><div class="text-[#e5c07b] font-bold">[OPERATOR]</div><div class="text-[#eceff4] font-medium">kurashizu (IT Masters @ UNSW)</div></div>
-			<div><div class="text-[#61afef] font-bold">[LOCATION]</div><div class="text-[#eceff4]">Sydney, Australia [UTC+10/11]</div></div>
-			<div><div class="text-[#e06c75] font-bold">[MOTTO]</div><div class="text-[#eceff4] italic">"Follow best practices &amp; KISS"</div></div>
-			<div><div class="text-[#98c379] font-bold">[RUNTIME]</div><div class="text-[#eceff4]">100% Serverless Edge Isolates</div></div>
-			<div><div class="text-[#56b6c2] font-bold">[STACK]</div><div class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</div></div>
+			<div><div class="text-[#e5c07b] font-bold">{$t('chrome.sidebar.labelOperator')}</div><div class="text-[#eceff4] font-medium">{$t('chrome.sidebar.operatorValue')}</div></div>
+			<div><div class="text-[#61afef] font-bold">{$t('chrome.sidebar.labelLocation')}</div><div class="text-[#eceff4]">{$t('chrome.sidebar.locationValue')}</div></div>
+			<div><div class="text-[#e06c75] font-bold">{$t('chrome.sidebar.labelMotto')}</div><div class="text-[#eceff4] italic">"{$t('chrome.sidebar.mottoValue')}"</div></div>
+			<div><div class="text-[#98c379] font-bold">{$t('chrome.sidebar.labelRuntime')}</div><div class="text-[#eceff4]">{$t('chrome.sidebar.runtimeValue')}</div></div>
+			<div><div class="text-[#56b6c2] font-bold">{$t('chrome.sidebar.labelStack')}</div><div class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</div></div>
 		</div>
 		<div class="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1">
 			<span>{$t('chrome.sidebar.statusOpen')}</span>
