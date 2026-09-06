@@ -190,7 +190,7 @@ export default {
 		'chrome.credits.nord': 'The nord-terminal theme',
 		'chrome.credits.gruvbox': 'The gruvbox-dark theme',
 		'chrome.credits.cloudflareWorkers': 'Runs this site, and D1 / R2 / KV / Vectorize behind it',
-		'chrome.credits.intro': "This site is assembled almost entirely out of other people's work. Everything below is something it actually ships or runs, with the licence it carries.",
+		'chrome.credits.intro': "Built by kurashizu, standing on the open-source projects below. Each one is something the site actually ships or runs, listed with the licence it carries.",
 		'chrome.credits.outro': 'If something here is miscredited or missing, that is a mistake worth telling me about.',
 
 		'chrome.dropdown.placeholder': 'select…',
@@ -611,7 +611,7 @@ export default {
 		'chrome.credits.nord': 'nord-terminal 主题',
 		'chrome.credits.gruvbox': 'gruvbox-dark 主题',
 		'chrome.credits.cloudflareWorkers': '运行本站，以及背后的 D1 / R2 / KV / Vectorize',
-		'chrome.credits.intro': '这个网站几乎完全是用其他人的成果搭建而成的。下面列出的每一项都是本站实际使用或运行的东西，并附带其许可协议。',
+		'chrome.credits.intro': '本站由 kurashizu 构建，站在下面这些开源项目的肩膀上。每一项都是本站实际使用或运行的东西，并附带其许可协议。',
 		'chrome.credits.outro': '如果这里有署名错误或遗漏，欢迎告诉我。',
 
 		'chrome.dropdown.placeholder': '请选择…',
@@ -1032,7 +1032,7 @@ export default {
 		'chrome.credits.nord': 'nord-terminal 主題',
 		'chrome.credits.gruvbox': 'gruvbox-dark 主題',
 		'chrome.credits.cloudflareWorkers': '執行本站，以及背後的 D1 / R2 / KV / Vectorize',
-		'chrome.credits.intro': '這個網站幾乎完全是用其他人的成果組裝而成的。下面列出的每一項都是本站實際使用或執行的東西，並附帶其授權條款。',
+		'chrome.credits.intro': '本站由 kurashizu 打造，站在下面這些開源專案的肩膀上。每一項都是本站實際使用或執行的東西，並附帶其授權條款。',
 		'chrome.credits.outro': '如果這裡有署名錯誤或遺漏，歡迎告訴我。',
 
 		'chrome.dropdown.placeholder': '請選擇…',
@@ -1453,7 +1453,7 @@ export default {
 		'chrome.credits.nord': 'nord-terminal テーマ',
 		'chrome.credits.gruvbox': 'gruvbox-dark テーマ',
 		'chrome.credits.cloudflareWorkers': 'このサイトと、その裏側の D1 / R2 / KV / Vectorize を実行しています',
-		'chrome.credits.intro': 'このサイトは、ほぼすべてが他の人々の成果物で組み立てられています。以下は実際に使用・実行しているものと、そのライセンスです。',
+		'chrome.credits.intro': 'このサイトは kurashizu が、以下のオープンソースプロジェクトの上に構築しました。いずれも実際に使用・実行しているもので、ライセンスとともに掲載しています。',
 		'chrome.credits.outro': 'クレジット表記に誤りや漏れがあれば、教えていただけるとありがたいです。',
 
 		'chrome.dropdown.placeholder': '選択…',
@@ -1874,7 +1874,7 @@ export default {
 		'chrome.credits.nord': 'nord-terminal 테마',
 		'chrome.credits.gruvbox': 'gruvbox-dark 테마',
 		'chrome.credits.cloudflareWorkers': '이 사이트와 그 뒤의 D1 / R2 / KV / Vectorize를 실행합니다',
-		'chrome.credits.intro': '이 사이트는 거의 전적으로 다른 사람들의 결과물로 조립되어 있습니다. 아래는 실제로 이 사이트가 사용하거나 실행하는 것들과 그 라이선스입니다.',
+		'chrome.credits.intro': '이 사이트는 kurashizu가 아래 오픈소스 프로젝트들 위에 구축했습니다. 각 항목은 실제로 이 사이트가 사용하거나 실행하는 것이며, 라이선스와 함께 적었습니다.',
 		'chrome.credits.outro': '여기에 잘못 표기되었거나 빠진 것이 있다면 알려주시면 감사하겠습니다.',
 
 		'chrome.dropdown.placeholder': '선택…',

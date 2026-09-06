@@ -86,12 +86,12 @@
 }
 /* Applied to everything rather than to body: Tailwind's font-mono and a few
    component stylesheets set font-family themselves, and each of those would
-   otherwise fall back to the simplified flavour. The ASCII banners keep
-   their own stack (see .ascii-art below). */
-:root:lang(zh-TW) *:not(.ascii-art):not(.ascii-art *) {
+   otherwise fall back to the simplified flavour. The ASCII banners and
+   LIFE.LAB's box-drawn wordmark keep their own single-cell mono stack. */
+:root:lang(zh-TW) *:not(.ascii-art):not(.ascii-art *):not(#wordmark) {
 	font-family: 'Jelly Pixel Hant', 'Jelly Pixel', 'JetBrains Mono', ui-monospace, monospace;
 }
-:root:lang(ja) *:not(.ascii-art):not(.ascii-art *) {
+:root:lang(ja) *:not(.ascii-art):not(.ascii-art *):not(#wordmark) {
 	font-family: 'Jelly Pixel JA', 'Jelly Pixel', 'JetBrains Mono', ui-monospace, monospace;
 }
 

@@ -13,6 +13,7 @@
 	let trigger = $state<HTMLButtonElement | null>(null);
 	let anchor = $state({ right: 0, bottom: 0 });
 
+	let current = $derived(LOCALES.find((l) => l.id === $locale) ?? LOCALES[0]);
 	let detected = $derived(LOCALES.find((l) => l.id === detectLocale()) ?? LOCALES[0]);
 
 	function portal(node: HTMLElement) {
@@ -60,6 +61,8 @@
 	class="press flex items-center cursor-pointer transition-colors shrink-0 {open ? 'text-white' : 'text-white/40 hover:text-white/70'}"
 >
 	<PixelIcon name="globe" size={16} />
+	<!-- The current language's one-glyph badge beside the globe (简 / 繁 / 日 / 한 / EN). -->
+	<span class="ml-1 text-xs leading-none" lang={$locale}>{current.code}</span>
 </button>
 
 {#if open}

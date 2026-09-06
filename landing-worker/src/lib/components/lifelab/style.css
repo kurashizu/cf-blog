@@ -55,7 +55,7 @@
    banners use (.ascii-art in app.css) -- Jelly draws those at a different cell
    width from its letters, which left the wordmark's strokes not meeting.
    line-height:1 so the three rows touch and the letterforms close. */
-#wordmark{flex:none;font-family:'Jelly Pixel','JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+#wordmark{flex:none;font-family:'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-size:11px;line-height:1;color:var(--ll-fg);white-space:pre;letter-spacing:0;margin:0}
 /* Allowed to shrink, so it truncates before it pushes the buttons off the
    edge -- it is the one thing here that can lose characters and still read. */

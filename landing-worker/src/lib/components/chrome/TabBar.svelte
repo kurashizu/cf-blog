@@ -25,14 +25,14 @@
 	/** Tooltip resolves through $t() in this $derived, not a module-level
 	 *  constant, since the locale isn't known at module load time. */
 	let TABS = $derived([
-		{ id: 0, label: '0:modules', color: '#56b6c2', title: $t('chrome.tabbar.tab0') },
-		{ id: 1, label: '1:guestbook', color: '#e06c75', title: $t('chrome.tabbar.tab1') },
-		{ id: 2, label: '2:synth', color: '#c678dd', title: $t('chrome.tabbar.tab2') },
-		{ id: 3, label: '3:utils', color: '#e5c07b', title: $t('chrome.tabbar.tab3') },
-		{ id: 4, label: '4:lm-space', color: '#98c379', title: $t('chrome.tabbar.tab4') },
-		{ id: 5, label: '5:krsz-vm', color: '#d19a66', title: $t('chrome.tabbar.tab5') },
-		{ id: 6, label: '6:web-lm', color: '#61afef', title: $t('chrome.tabbar.tab6') },
-		{ id: 7, label: '7:lifelab', color: '#98c379', title: $t('chrome.tabbar.tab7') }
+		{ id: 0, label: $t('common.tabName.0'), color: '#56b6c2', title: $t('chrome.tabbar.tab0') },
+		{ id: 1, label: $t('common.tabName.1'), color: '#e06c75', title: $t('chrome.tabbar.tab1') },
+		{ id: 2, label: $t('common.tabName.2'), color: '#c678dd', title: $t('chrome.tabbar.tab2') },
+		{ id: 3, label: $t('common.tabName.3'), color: '#e5c07b', title: $t('chrome.tabbar.tab3') },
+		{ id: 4, label: $t('common.tabName.4'), color: '#98c379', title: $t('chrome.tabbar.tab4') },
+		{ id: 5, label: $t('common.tabName.5'), color: '#d19a66', title: $t('chrome.tabbar.tab5') },
+		{ id: 6, label: $t('common.tabName.6'), color: '#61afef', title: $t('chrome.tabbar.tab6') },
+		{ id: 7, label: $t('common.tabName.7'), color: '#98c379', title: $t('chrome.tabbar.tab7') }
 	]);
 
 	let tabStrip: HTMLDivElement | undefined = $state();
@@ -69,15 +69,38 @@
 		placeIndicator();
 	});
 
+	/* Tab names collapse to bare numbers (the active one keeps its name) when
+	   the row no longer fits the strip. Decided by measuring, not by a fixed
+	   container-query width: the names are translated, and a Japanese
+	   "1:ゲストブック" is twice as wide as "1:guestbook", so one threshold
+	   measured for English put the strip into a sideways scroll in every other
+	   language. Names are shown for the measurement and hidden again if the
+	   full row is wider than the space, which is exactly the question. */
+	let namesCollapsed = $state(false);
+	function fitNames() {
+		const row = tabsRow;
+		const strip = tabStrip;
+		if (!row || !strip) return;
+		strip.classList.remove('names-off');
+		const fits = row.scrollWidth <= strip.clientWidth + 1;
+		strip.classList.toggle('names-off', !fits);
+		namesCollapsed = !fits;
+	}
+
 	$effect(() => {
 		const row = tabsRow;
 		const strip = tabStrip;
 		if (!row || !strip) return;
-		// Watch both: the row's own box (a tab actually resized) and the strip
-		// (the container-query root whose width crossing the label-collapse
-		// breakpoint is what caused it) -- the row alone can lag a frame behind
-		// the strip crossing the breakpoint.
-		const ro = new ResizeObserver(placeIndicator);
+		// Watch both: the row's own box (a tab actually resized, or its label
+		// changed language) and the strip (the available width changed) -- the
+		// row alone can lag a frame behind the strip. Fit first, then place the
+		// indicator on the post-collapse layout. Toggling the class changes the
+		// row's size, which re-fires this once more; the second pass measures
+		// the same answer and changes nothing, so it settles.
+		const ro = new ResizeObserver(() => {
+			fitNames();
+			placeIndicator();
+		});
 		ro.observe(row);
 		ro.observe(strip);
 		return () => ro.disconnect();
@@ -175,6 +198,7 @@
 		bind:this={tabStrip}
 		onwheel={onStripWheel}
 		class="tabstrip flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1"
+		class:names-off={namesCollapsed}
 	>
 		<div bind:this={tabsRow} class="relative flex items-center gap-0.5 sm:gap-2" data-tour="tabs">
 			<!-- The one element that actually moves -- everything else here is a
@@ -199,7 +223,7 @@
 						? 'text-black font-black'
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
 				>
-					{tab.id}<span class="tabname" class:on={activeTab === tab.id}>:{tab.label.slice(2)}</span>
+					{tab.id}<span class="tabname" class:on={activeTab === tab.id}>:{tab.label}</span>
 				</button>
 			{/each}
 		</div>
@@ -290,9 +314,11 @@
 	   values collapsed the bar while a third of the row was still empty.
 
 	   Measured overflow points, with everything above each stage already
-	   hidden: all visible 1600 · badges gone 1040 · button words gone 910 ·
-	   tab names gone 550. Each rule fires a little before its own number so a
-	   stage never has to share a pixel with the scroll it exists to prevent. */
+	   hidden: all visible 1600 · badges gone 1040 · button words gone 910. Each
+	   rule fires a little before its own number so a stage never has to share a
+	   pixel with the scroll it exists to prevent. (Tab names are the exception:
+	   their width depends on the language, so they are measured, not
+	   thresholded.) */
 	.btnlabel-off { display: none; }
 	@container header-fit (max-width: 1660px) {
 		.servbadge { display: none; }
@@ -305,8 +331,7 @@
 		.btnlabel-off { display: inline; }
 	}
 	/* The active tab keeps its name at every width -- which view you are on is
-	   worth more than the four characters it costs. */
-	@container header-fit (max-width: 920px) {
-		.tabname:not(.on) { display: none; }
-	}
+	   worth more than the four characters it costs. Set by fitNames() from a
+	   measurement rather than a container width (see the script). */
+	.tabstrip.names-off .tabname:not(.on) { display: none; }
 </style>
