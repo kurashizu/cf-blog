@@ -105,6 +105,16 @@
 	}
 
 	let index = $state(0);
+	/* Separate from whether the parent still has this component mounted: the
+	   finale's action runs before onClose() now (see next()) so the parent
+	   can tell an onboarding-queue stage really finished vs. just handed off
+	   to the overlay it opened, and the parent may deliberately keep this
+	   component around a while longer waiting for that overlay to close. But
+	   this component's own bubble/spotlight has nothing left to say once the
+	   finale has run -- past the last step, with no further click able to do
+	   anything -- so it hides its own UI immediately rather than waiting on
+	   the parent's timing. */
+	let dismissed = $state(false);
 	let box = $state<Box | null>(null);
 	/** Which side of the target the bubble sits on. */
 	let placement = $state<'top' | 'bottom'>('bottom');
@@ -182,12 +192,14 @@
 
 	function next() {
 		if (isLast) {
+			dismissed = true;
 			onClose();
 			return;
 		}
 		const upcoming = STEPS[index + 1];
 		if (upcoming.closeAndRun) {
 			playSound('click');
+			dismissed = true;
 			// The action first: for the site tour's finale this opens the keymap,
 			// and onClose() (a view's own tour may be queued right behind this
 			// one, see stores/chrome.ts) checks whether that overlay is open to
@@ -211,6 +223,7 @@
 
 	function runAction() {
 		const action = step.action;
+		dismissed = true;
 		onClose();
 		action?.run();
 	}
@@ -286,6 +299,7 @@
 	});
 </script>
 
+{#if !dismissed}
 <div use:portal out:fade={{ duration: 180 }}>
 	<!-- Click catcher: the tour drives itself, so nothing underneath is clickable -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -365,7 +379,7 @@
 						style={i === index ? `background-color: ${s.color}` : undefined}
 					></button>
 				{/each}
-				<button onclick={onClose} class="press ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer transition-colors">SKIP</button>
+				<button onclick={() => { dismissed = true; onClose(); }} class="press ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer transition-colors">SKIP</button>
 			</div>
 
 			<div class="flex items-center gap-1.5">
@@ -396,3 +410,4 @@
 		</div>
 	</div>
 </div>
+{/if}
