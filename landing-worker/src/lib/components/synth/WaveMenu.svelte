@@ -160,23 +160,27 @@
 											<span class="truncate">{WAVE_LABELS[w] ?? w}</span>
 											{#if specs}<span class="ml-auto pl-2 text-[9px] text-white/40">►</span>{/if}
 										</button>
-										{#if specs && paramWave === w}
-											<div
-												class="absolute left-full top-0 -mt-px ml-0.5 z-50 bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] px-2 pt-1 pb-1.5 text-xs font-mono"
-												transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
-											>
-												<div class="text-[10px] font-bold text-white/40 select-none border-b border-white/10 pb-0.5 mb-1 whitespace-nowrap">{getWaveformAbbr(w)} PARAMS</div>
-												<div class="grid gap-x-1 gap-y-0.5" style="grid-template-columns: repeat({Math.min(3, specs.length)}, auto)">
-													{#each specs as sp (sp.key)}
-														<div class="flex justify-center">
-															<RotaryKnob label={sp.label} value={waveParam(params, sp.key)} min={sp.min} max={sp.max} step={sp.step} unit={sp.unit} {color} size={30} reset={sp.def} description={sp.hint} onChange={(v) => turn(w, sp.key, v)} />
-														</div>
-													{/each}
-												</div>
-											</div>
-										{/if}
 									</div>
 								{/each}
+								{#if paramWave && WAVE_PARAM_SPECS[paramWave]}
+									{@const pw = paramWave}
+									{@const specs = WAVE_PARAM_SPECS[pw] ?? []}
+									<!-- Pinned to the flyout's top-right corner, so it stays put while the
+									     rows are hovered; fixed cells, so a value read-out cannot shift a knob. -->
+									<div
+										class="absolute left-full top-0 -mt-px ml-0.5 z-50 bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] px-1.5 pt-1 pb-1.5 text-xs font-mono"
+										transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
+									>
+										<div class="text-[10px] font-bold text-white/40 select-none border-b border-white/10 pb-0.5 mb-1 whitespace-nowrap">{getWaveformAbbr(pw)} PARAMS</div>
+										<div class="grid gap-y-1" style="grid-template-columns: repeat({Math.min(3, specs.length)}, 44px)">
+											{#each specs as sp (sp.key)}
+												<div class="flex justify-center">
+													<RotaryKnob label={sp.label} value={waveParam(params, sp.key)} min={sp.min} max={sp.max} step={sp.step} unit={sp.unit} {color} size={30} reset={sp.def} description={sp.hint} onChange={(v) => turn(pw, sp.key, v)} />
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
 							{/snippet}
 						{:else}
 							{@render flyout(customList, true)}

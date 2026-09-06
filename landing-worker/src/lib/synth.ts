@@ -48,21 +48,21 @@ export interface WaveParamSpec {
 }
 export const WAVE_PARAM_SPECS: Partial<Record<SynthWaveform, WaveParamSpec[]>> = {
   pwm: [
-    { key: 'pwmWidth', label: 'WIDTH', min: 5, max: 95, step: 5, unit: '%', def: 50, hint: 'Duty cycle the sweep centres on' },
+    { key: 'pwmWidth', label: 'PW', min: 5, max: 95, step: 5, unit: '%', def: 50, hint: 'Duty cycle the sweep centres on' },
     { key: 'pwmRate', label: 'RATE', min: 0.1, max: 10, step: 0.1, unit: 'Hz', def: 0.4, hint: 'How fast the width sweeps' },
-    { key: 'pwmDepth', label: 'DEPTH', min: 0, max: 100, step: 5, unit: '%', def: 40, hint: 'How far the width sweeps either side of WIDTH; 0 = a fixed pulse' }
+    { key: 'pwmDepth', label: 'DPTH', min: 0, max: 100, step: 5, unit: '%', def: 40, hint: 'How far the width sweeps either side of WIDTH; 0 = a fixed pulse' }
   ],
   supersaw: [
-    { key: 'ssawSpread', label: 'SPREAD', min: 0, max: 50, step: 1, unit: 'c', def: 19, hint: 'Detune of the outer saws, in cents; the inner pair sits at half' },
+    { key: 'ssawSpread', label: 'SPRD', min: 0, max: 50, step: 1, unit: 'c', def: 19, hint: 'Detune of the outer saws, in cents; the inner pair sits at half' },
     { key: 'ssawMix', label: 'MIX', min: 0, max: 100, step: 5, unit: '%', def: 60, hint: 'Level of the four companion saws against the centre one' }
   ],
   organ: [
-    { key: 'org1', label: "8'", min: 0, max: 8, step: 1, unit: '', def: 8, hint: 'Fundamental drawbar' },
-    { key: 'org2', label: "4'", min: 0, max: 8, step: 1, unit: '', def: 6, hint: 'Octave drawbar' },
-    { key: 'org3', label: "2⅔'", min: 0, max: 8, step: 1, unit: '', def: 4, hint: 'Twelfth drawbar (3rd harmonic)' },
-    { key: 'org4', label: "2'", min: 0, max: 8, step: 1, unit: '', def: 4, hint: 'Two-octave drawbar' },
-    { key: 'org5', label: "1⅗'", min: 0, max: 8, step: 1, unit: '', def: 2, hint: 'Seventeenth drawbar (5th harmonic)' },
-    { key: 'org8', label: "1'", min: 0, max: 8, step: 1, unit: '', def: 2, hint: 'Three-octave drawbar' }
+    { key: 'org1', label: 'H1', min: 0, max: 8, step: 1, unit: '', def: 8, hint: 'Fundamental drawbar' },
+    { key: 'org2', label: 'H2', min: 0, max: 8, step: 1, unit: '', def: 6, hint: 'Octave drawbar' },
+    { key: 'org3', label: 'H3', min: 0, max: 8, step: 1, unit: '', def: 4, hint: 'Twelfth drawbar (3rd harmonic)' },
+    { key: 'org4', label: 'H4', min: 0, max: 8, step: 1, unit: '', def: 4, hint: 'Two-octave drawbar' },
+    { key: 'org5', label: 'H5', min: 0, max: 8, step: 1, unit: '', def: 2, hint: 'Seventeenth drawbar (5th harmonic)' },
+    { key: 'org8', label: 'H8', min: 0, max: 8, step: 1, unit: '', def: 2, hint: 'Three-octave drawbar' }
   ],
   fold: [{ key: 'foldAmt', label: 'FOLD', min: 1, max: 8, step: 0.2, unit: 'x', def: 2.6, hint: 'Drive into the folder; more folds, brighter' }]
 };
