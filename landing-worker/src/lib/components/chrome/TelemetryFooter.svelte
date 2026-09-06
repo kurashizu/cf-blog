@@ -4,6 +4,7 @@
 	import { edgeTrace, edgeTraceMs, edgeTraceStatus, traceSummary } from '../../stores/edge';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import { creditsOpen } from '../../stores/chrome';
+	import LanguageMenu from './LanguageMenu.svelte';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -109,6 +110,7 @@
 		>
 			[credits]
 		</button>
+		<LanguageMenu />
 	</div>
 </footer>
 

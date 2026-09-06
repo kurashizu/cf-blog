@@ -27,6 +27,7 @@
 	} from '$lib/stores/chrome';
 	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
 	import { textSize, initTextSize } from '$lib/stores/text-scale';
+	import { initLocale } from '$lib/i18n';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
@@ -99,6 +100,10 @@
 	   the mount pass): a child view's onMount enqueues its own tour immediately,
 	   and it needs boot already in the queue ahead of it or it would front-run. */
 	if (browser && !PREFERS_REDUCED_MOTION) enqueueOnboarding('boot');
+	/* Language resolves here, synchronously, for the same reason: the boot
+	   screen and every child view read it at their own init. SSR stays English
+	   (prerendered, no Accept-Language to read); hydration patches the text. */
+	if (browser) initLocale();
 
 	const GUIDE_KEY = 'krsz.guide.seen';
 	const WELCOME_KEY = 'krsz.welcome.seen';
