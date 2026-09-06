@@ -51,38 +51,43 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-12 gap-1 items-center flex-1 min-h-0 my-auto py-0.5">
-		<!-- The two wave columns, with the loudness switch under them: it belongs to
-		     the oscillators, and the header had no room for it. -->
-		<div class="col-span-6 flex flex-col h-full py-0.5 gap-1.5 justify-center">
-			<!-- The oscillators are stacked, one above the other: a header row with
-			     the name and the wave picker, then a wide, short scope. Side by side,
-			     the scopes were taller than they were wide. -->
-			{#each [1, 2] as osc (osc)}
-				{@const w = osc === 1 ? $currentTrack.osc1Waveform : $currentTrack.osc2Waveform}
-				{@const color = osc === 1 ? '#e5c07b' : '#56b6c2'}
-				<div class="flex flex-col gap-1 min-w-0">
-					<div class="flex items-center gap-1.5">
-						<span class="text-[10px] font-black leading-none shrink-0 w-8" style="color: {color}">OSC{osc}</span>
-						<div class="flex-1 min-w-0">
-							<WaveMenu
-								label={`OSC${osc}`}
-								value={w}
-								{color}
-								onPick={(nw: SynthWaveform) => updateActiveTrack(osc === 1 ? { osc1Waveform: nw } : { osc2Waveform: nw })}
-								onDraw={() => openDraw(osc as 1 | 2, null)}
-								onEdit={(cw) => openDraw(osc as 1 | 2, cw)}
-							/>
+	<!-- Grouped by meaning. Top, left/right: the two oscillators (wave picker over
+	     a wide scope, one per row) beside their two level knobs. Then the loudness
+	     switch. Bottom, two rows of four: pitch and shape, then the extra sources. -->
+	<div class="flex flex-col flex-1 min-h-0 justify-center gap-1.5 py-1">
+		<div class="flex gap-1.5 shrink-0">
+			<div class="flex-1 min-w-0 flex flex-col gap-1.5">
+				{#each [1, 2] as osc (osc)}
+					{@const w = osc === 1 ? $currentTrack.osc1Waveform : $currentTrack.osc2Waveform}
+					{@const color = osc === 1 ? '#e5c07b' : '#56b6c2'}
+					<div class="flex flex-col gap-1 min-w-0">
+						<div class="flex items-center gap-1.5">
+							<span class="text-[10px] font-black leading-none shrink-0 w-8" style="color: {color}">OSC{osc}</span>
+							<div class="flex-1 min-w-0">
+								<WaveMenu
+									label={`OSC${osc}`}
+									value={w}
+									{color}
+									onPick={(nw: SynthWaveform) => updateActiveTrack(osc === 1 ? { osc1Waveform: nw } : { osc2Waveform: nw })}
+									onDraw={() => openDraw(osc as 1 | 2, null)}
+									onEdit={(cw) => openDraw(osc as 1 | 2, cw)}
+								/>
+							</div>
 						</div>
+						<!-- One cycle of the chosen wave -->
+						<svg viewBox="0 0 100 30" preserveAspectRatio="none" class="w-full h-8 border border-white/10 rounded-xs bg-black/40" aria-hidden="true">
+							<line x1="0" y1="15" x2="100" y2="15" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
+							<path d={osc === 1 ? path1 : path2} fill="none" stroke={color} stroke-width="1.2" vector-effect="non-scaling-stroke" />
+						</svg>
 					</div>
-					<!-- One cycle of the chosen wave -->
-					<svg viewBox="0 0 100 30" preserveAspectRatio="none" class="w-full h-11 border border-white/10 rounded-xs bg-black/40" aria-hidden="true">
-						<line x1="0" y1="15" x2="100" y2="15" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
-						<path d={osc === 1 ? path1 : path2} fill="none" stroke={color} stroke-width="1.2" vector-effect="non-scaling-stroke" />
-					</svg>
-				</div>
-			{/each}
-			<button
+				{/each}
+			</div>
+			<div class="shrink-0 flex flex-col justify-around items-center border-l border-white/10 pl-1.5">
+				<RotaryKnob label="OSC1" value={Math.round($currentTrack.osc1Gain * 100)} min={0} max={100} unit="%" color="#e5c07b" size={32} reset={100} onChange={(v) => updateActiveTrack({ osc1Gain: v / 100 })} />
+				<RotaryKnob label="OSC2" value={Math.round($currentTrack.osc2Gain * 100)} min={0} max={100} unit="%" color="#56b6c2" size={32} reset={0} onChange={(v) => updateActiveTrack({ osc2Gain: v / 100 })} />
+			</div>
+		</div>
+		<button
 			onclick={() => {
 				setEqlComp(!$eqlCompSetting);
 				playSound('click');
@@ -94,11 +99,8 @@
 		>
 			EQL:{$eqlCompSetting ? 'AUTO' : 'RAW'}
 		</button>
-	</div>
 
-		<div class="col-span-6 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
-			<RotaryKnob label="OSC1" value={Math.round($currentTrack.osc1Gain * 100)} min={0} max={100} unit="%" color="#e5c07b" size={32} reset={100} onChange={(v) => updateActiveTrack({ osc1Gain: v / 100 })} />
-			<RotaryKnob label="OSC2" value={Math.round($currentTrack.osc2Gain * 100)} min={0} max={100} unit="%" color="#56b6c2" size={32} reset={0} onChange={(v) => updateActiveTrack({ osc2Gain: v / 100 })} />
+		<div class="grid grid-cols-4 gap-x-0.5 gap-y-1 border-t border-white/10 pt-1.5 shrink-0">
 			<RotaryKnob label="DET" value={$currentTrack.detuneCents} min={-50} max={50} step={2} unit="c" color="#e06c75" size={32} reset={0} onChange={(v) => updateActiveTrack({ detuneCents: v })} />
 			<RotaryKnob label="SEMI" value={$currentTrack.osc2Semitone ?? 0} min={-24} max={24} step={1} unit="st" color="#c678dd" size={32} reset={0} onChange={(v) => updateActiveTrack({ osc2Semitone: v })} />
 			<RotaryKnob label="PW" value={$currentTrack.pulseWidth ?? 50} min={5} max={95} step={5} unit="%" color="#d19a66" size={32} reset={50} onChange={(v) => updateActiveTrack({ pulseWidth: v })} />
