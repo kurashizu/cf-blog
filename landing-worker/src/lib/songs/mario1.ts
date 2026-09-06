@@ -437,8 +437,22 @@ export const SMB1_NOISE_KEYS: Record<number, Partial<TrackData>> = {
 // Same 6-track kit as the SMB3 songs — loadBuiltInSong deep-copies, so sharing
 // the track parameter objects here is safe. TRK 4 is the exception: it is the
 // NES noise channel in percussion mode, one sound per key.
+/* Sidechain, per track, keyed to TRK 4's kit: the bass ducks on the kick (C3),
+   the harmony on the snare (D3), the pad on every hit; the lead stays steady.
+   Set for every track because OVERWORLD_TRACKS carries SMB3's own keys. */
+const OFF = { duckSource: -1, duckKey: -1, duckDepth: 0 };
+const MARIO1_DUCK: Record<number, Partial<TrackData>> = {
+  0: OFF,
+  1: { duckSource: 3, duckKey: 58, duckDepth: 0.3, duckDip: 3, duckHold: 40, duckRelease: 100 },
+  2: { duckSource: 3, duckKey: -1, duckDepth: 0.35, duckDip: 5, duckHold: 20, duckRelease: 80 },
+  3: OFF,
+  4: { duckSource: 3, duckKey: 60, duckDepth: 0.55, duckDip: 3, duckHold: 30, duckRelease: 90 },
+  5: OFF,
+};
+
 export const MARIO1_TRACKS: TrackData[] = OVERWORLD_TRACKS.map((t) => ({
   ...t,
+  ...(MARIO1_DUCK[t.id] ?? OFF),
   ...(t.id === 3 ? { ...NES_HAT, percussion: true, keyTimbres: SMB1_NOISE_KEYS } : {}),
   grid: GRIDS[t.id] ?? EMPTY_GRID_3840,
   accents: t.id === 3 ? MARIO1_TRK4_ACCENTS : EMPTY_ACCENTS_3840,

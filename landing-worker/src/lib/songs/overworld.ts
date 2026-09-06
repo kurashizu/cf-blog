@@ -8165,6 +8165,8 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     color: '#56b6c2',
     volume: 0.62,
     pan: -0.28,
+    // Sidechain: the harmony steps back for the snare/hat lane (TRK 4 F3)
+    duckSource: 3, duckKey: 55, duckDepth: 0.25, duckDip: 3, duckHold: 40, duckRelease: 100,
     muted: false,
     solo: false,
 
@@ -8225,6 +8227,8 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     color: '#98c379',
     volume: 0.82,
     pan: 0.32,
+    // Sidechain: the pad breathes with every noise hit so the drums stay audible over a sustained chord
+    duckSource: 3, duckKey: -1, duckDepth: 0.35, duckDip: 5, duckHold: 20, duckRelease: 80,
     muted: false,
     solo: false,
 
@@ -8349,6 +8353,8 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     color: '#c678dd',
     volume: 0.92,
     pan: 0.0,
+    // Sidechain: the bass makes room for the kick (TRK 4 A1)
+    duckSource: 3, duckKey: 75, duckDepth: 0.55, duckDip: 3, duckHold: 30, duckRelease: 90,
     muted: false,
     solo: false,
 
