@@ -160,10 +160,12 @@ OHAT = hit(0.3, 0.12, osc1Waveform='noise', osc1Gain=1, filterType='highpass', c
 # (sum and difference tones plus their odd harmonics), noise on top gives the
 # sizzle, a high-pass takes the body out. The ride is a shorter ping with more
 # tone, the crash a long wash that is mostly noise.
-RIDE = hit(0.8, 0.35, osc1Waveform='square', osc1Gain=0.45, osc2Waveform='square', osc2Gain=0.45, osc2Ratio=3, osc2Semitone=14,
-           blendMode='ring', noiseGain=0.45, filterType='highpass', cutoff=3000, resonance=1.2, airGain=0.35)
-CRASH = hit(2.6, 1.0, osc1Waveform='square', osc1Gain=0.35, osc2Waveform='square', osc2Gain=0.35, osc2Ratio=4, osc2Semitone=9,
-            blendMode='ring', noiseGain=1.0, filterType='highpass', cutoff=3200, resonance=0.7, airGain=0.5)
+# METAL is the engine's 808 cymbal bank (six squares at fixed inharmonic
+# ratios, not tracking the key); noise on top for the sizzle, high-passed.
+RIDE = hit(0.8, 0.35, osc1Waveform='metal', osc1Gain=1.0, noiseGain=0.4, keyTracking=0,
+           filterType='highpass', cutoff=3800, resonance=0.9, airGain=0.4)
+CRASH = hit(2.6, 1.0, osc1Waveform='metal', osc1Gain=0.55, noiseGain=0.9, keyTracking=0,
+            filterType='highpass', cutoff=3500, resonance=0.5, airGain=0.5)
 TOM = hit(0.35, 0.08, osc1Waveform='sine', osc1Gain=1, osc2Waveform='triangle', osc2Gain=0.3, subOscGain=0.3, noiseGain=0.12,
           pitchEnvAmount=1.2, pitchAttack=0.001, pitchDecay=0.08, cutoff=2500)
 COWBELL = hit(0.3, 0.1, osc1Waveform='square', osc1Gain=1, osc2Waveform='square', osc2Gain=1, osc2Ratio=1.5, filterType='bandpass', cutoff=1500, resonance=1)

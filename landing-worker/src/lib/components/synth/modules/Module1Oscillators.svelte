@@ -1,14 +1,43 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
 	import { resetRack1 } from '../../../stores/synth-reset';
-	import { getWaveformAbbr, type SynthWaveform } from '../../../synth';
+	import type { SynthWaveform, CustomWave } from '../../../synth';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
 	import { eqlCompSetting, setEqlComp } from '../../../stores/synth-settings';
-	import { WAVE_TOOLTIPS } from '../tooltips';
+	import { customWaves, previewSamples, previewPath, saveCustomWave, updateCustomWave } from '../../../stores/synth-waves';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
+	import WaveMenu from '../WaveMenu.svelte';
+	import WaveDrawDialog from '../WaveDrawDialog.svelte';
 
-	const OSC1_WAVES: SynthWaveform[] = ['square', 'sawtooth', 'triangle', 'sine', 'noise'];
-	const OSC2_WAVES: SynthWaveform[] = ['sawtooth', 'square', 'sine', 'triangle', 'noise'];
+	/* Which oscillator the draw dialog is for, and the wave being edited (null = new). */
+	let drawFor = $state<1 | 2 | null>(null);
+	let editing = $state<CustomWave | null>(null);
+
+	function openDraw(osc: 1 | 2, wave: CustomWave | null) {
+		drawFor = osc;
+		editing = wave;
+		playSound('click');
+	}
+
+	function onSaveWave(name: string, samples: number[], id?: string) {
+		let waveId = id;
+		if (id) updateCustomWave(id, { name, samples });
+		else waveId = saveCustomWave(name, samples).id;
+		if (drawFor === 1) updateActiveTrack({ osc1Waveform: `custom:${waveId}` });
+		else if (drawFor === 2) updateActiveTrack({ osc2Waveform: `custom:${waveId}` });
+		drawFor = null;
+		editing = null;
+	}
+
+	// $customWaves is read so an edited drawing redraws the scope.
+	let path1 = $derived.by(() => {
+		void $customWaves;
+		return previewPath(previewSamples($currentTrack.osc1Waveform));
+	});
+	let path2 = $derived.by(() => {
+		void $customWaves;
+		return previewPath(previewSamples($currentTrack.osc2Waveform));
+	});
 </script>
 
 <div class="border border-[#e5c07b]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[175px] shrink-0 xl:grow-[5]">
@@ -26,47 +55,28 @@
 		<!-- The two wave columns, with the loudness switch under them: it belongs to
 		     the oscillators, and the header had no room for it. -->
 		<div class="col-span-6 flex flex-col h-full py-0.5 gap-1">
-		<div class="grid grid-cols-2 gap-1 flex-1 min-h-0">
-		<div class="flex flex-col justify-between h-full">
-			<span class="text-[10px] text-white/60 font-black text-center mb-0.5 leading-none">OSC1</span>
-			<div class="flex flex-col gap-0.5 flex-1 justify-between">
-				{#each OSC1_WAVES as w (w)}
-					<button
-						onclick={() => {
-							updateActiveTrack({ osc1Waveform: w });
-							playSound('click');
-						}}
-						title={`Oscillator 1 Waveform: ${WAVE_TOOLTIPS[w] || w}`}
-						class="press flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.osc1Waveform === w
-							? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
-							: 'border-white/20 text-white/70 hover:bg-white/10'}"
-					>
-						{getWaveformAbbr(w)}
-					</button>
-				{/each}
-			</div>
+		<div class="grid grid-cols-2 gap-1.5 flex-1 min-h-0">
+			{#each [1, 2] as osc (osc)}
+				{@const w = osc === 1 ? $currentTrack.osc1Waveform : $currentTrack.osc2Waveform}
+				{@const color = osc === 1 ? '#e5c07b' : '#56b6c2'}
+				<div class="flex flex-col gap-1 min-w-0">
+					<span class="text-[10px] text-white/60 font-black text-center leading-none">OSC{osc}</span>
+					<WaveMenu
+						label={`OSC${osc}`}
+						value={w}
+						{color}
+						onPick={(nw: SynthWaveform) => updateActiveTrack(osc === 1 ? { osc1Waveform: nw } : { osc2Waveform: nw })}
+						onDraw={() => openDraw(osc as 1 | 2, null)}
+						onEdit={(cw) => openDraw(osc as 1 | 2, cw)}
+					/>
+					<!-- One cycle of the chosen wave -->
+					<svg viewBox="0 0 100 30" preserveAspectRatio="none" class="w-full flex-1 min-h-[28px] border border-white/10 rounded-xs bg-black/40" aria-hidden="true">
+						<line x1="0" y1="15" x2="100" y2="15" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
+						<path d={osc === 1 ? path1 : path2} fill="none" stroke={color} stroke-width="1.2" vector-effect="non-scaling-stroke" />
+					</svg>
+				</div>
+			{/each}
 		</div>
-
-		<div class="flex flex-col justify-between h-full">
-			<span class="text-[10px] text-white/60 font-black text-center mb-0.5 leading-none">OSC2</span>
-			<div class="flex flex-col gap-0.5 flex-1 justify-between">
-				{#each OSC2_WAVES as w (w)}
-					<button
-						onclick={() => {
-							updateActiveTrack({ osc2Waveform: w });
-							playSound('click');
-						}}
-						title={`Oscillator 2 Waveform: ${WAVE_TOOLTIPS[w] || w}`}
-						class="press flex-1 flex items-center justify-center text-[10px] border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.osc2Waveform === w
-							? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
-							: 'border-white/20 text-white/70 hover:bg-white/10'}"
-					>
-						{getWaveformAbbr(w)}
-					</button>
-				{/each}
-			</div>
-		</div>
-	</div>
 		<button
 			onclick={() => {
 				setEqlComp(!$eqlCompSetting);
@@ -97,3 +107,7 @@
 		</div>
 	</div>
 </div>
+
+{#if drawFor}
+	<WaveDrawDialog initial={editing} forLabel={`OSC${drawFor}`} onSave={onSaveWave} onClose={() => { drawFor = null; editing = null; }} />
+{/if}

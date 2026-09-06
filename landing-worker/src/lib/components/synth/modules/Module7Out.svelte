@@ -98,7 +98,7 @@
 			<!-- Third knob centered under the pair — all three are per-track; there is no
 			     fourth real per-track output parameter, and decorative knobs got cut on purpose -->
 			<div class="col-span-2 flex justify-center">
-				<RotaryKnob label="VOL" value={Math.round($currentTrack.volume * 100)} min={0} max={100} unit="%" color="#98c379" size={40} reset={100} onChange={(v) => updateActiveTrack({ volume: v / 100 })} />
+				<RotaryKnob label="VOL" value={Math.round($currentTrack.volume * 100)} min={0} max={150} unit="%" color="#98c379" size={40} reset={100} onChange={(v) => updateActiveTrack({ volume: v / 100 })} />
 			</div>
 		</div>
 

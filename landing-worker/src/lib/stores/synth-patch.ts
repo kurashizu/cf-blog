@@ -5,6 +5,8 @@ import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-c
 import { playSound } from '../sound';
 import { modularSynth, type TrackData, type TimeSignature } from '../synth';
 import { isPresetFile, applyPresetFile, isKitFile, applyKitFile } from './synth-presets';
+import { ensureCustomWaves, wavesUsedBy } from './synth-waves';
+import type { CustomWave } from '../synth';
 import {
 	bpm,
 	setBpm,
@@ -99,6 +101,8 @@ interface SynthPatchData {
 	totalSteps: number;
 	/** Grid resolution the patch was saved at. Absent = legacy 8-steps-per-beat patch. */
 	stepsPerBeat?: number;
+	/** Drawn waves the tracks reference, so the patch plays in another browser. */
+	waves?: CustomWave[];
 }
 
 function gatherPatchData(): SynthPatchData {
@@ -107,7 +111,8 @@ function gatherPatchData(): SynthPatchData {
 		bpm: get(bpm),
 		meter: get(timeMeter),
 		totalSteps: get(totalPatternSteps),
-		stepsPerBeat: 24
+		stepsPerBeat: 24,
+		waves: wavesUsedBy(modularSynth.getTracks())
 	};
 }
 
@@ -128,6 +133,7 @@ function migratePatchData(data: SynthPatchData): SynthPatchData {
 
 function applyPatchData(raw: SynthPatchData): void {
 	const data = migratePatchData(raw);
+	ensureCustomWaves(data.waves);
 	resetPlayheadState();
 	if (data.bpm) setBpm(data.bpm);
 	if (data.meter) timeMeter.set(data.meter);

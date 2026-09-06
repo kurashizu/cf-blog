@@ -5,7 +5,25 @@ import { OVERWORLD_FULL_TRACKS } from './songs/overworld-full';
 import { MARIO1_TRACKS } from './songs/mario1';
 import { SPAIN_TRACKS, SPAIN_STEPS } from './songs/spain';
 
-export type SynthWaveform = 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise';
+/* Basic waves, buffer sources (noise, the 808-style METAL bank), stacked
+   waves (PWM = two saws with a slowly drifting phase, SUPERSAW = five detuned
+   saws), harmonic tables (ORGAN drawbars, FOLD = a folded sine), and user
+   drawn tables registered at runtime as `custom:<id>`. */
+export type SynthWaveform =
+  | 'sawtooth' | 'square' | 'sine' | 'triangle' | 'noise'
+  | 'metal' | 'pwm' | 'supersaw' | 'organ' | 'fold'
+  | `custom:${string}`;
+
+export const BASIC_WAVES: SynthWaveform[] = ['square', 'sawtooth', 'triangle', 'sine'];
+export const NOISE_WAVES: SynthWaveform[] = ['noise', 'metal'];
+export const ADVANCED_WAVES: SynthWaveform[] = ['pwm', 'supersaw', 'organ', 'fold'];
+
+export interface CustomWave {
+  id: string;
+  name: string;
+  /** One cycle, -1..1, any length (128 is what the editor draws). */
+  samples: number[];
+}
 
 // ISO 226 / Fletcher-Munson Perceptual Equal Loudness Normalization Scale
 // Compares harmonic rich waveforms (Square/Saw) against pure fundamental tones (Sine/Triangle)
@@ -15,8 +33,15 @@ export function getWaveformPerceptualScale(w: SynthWaveform): number {
     case 'triangle': return 1.05;  // Triangle mostly fundamental (+0.4dB)
     case 'sawtooth': return 0.82;  // Sawtooth all harmonics (-1.7dB)
     case 'square': return 0.74;    // Square odd harmonics concentrated in 2-4kHz (-2.6dB)
-    case 'noise': return 0.70;     // Full bandwidth noise (-3.1dB)
-    default: return 1.0;
+    // Noise used to be scaled 0.70 like a sustained wave; it is only ever a
+    // hit, and the ear reads a 50 ms burst as quieter still, so it sits at 1.
+    case 'noise': return 1.0;
+    case 'metal': return 0.9;
+    case 'pwm': return 0.74;
+    case 'supersaw': return 0.8;
+    case 'organ': return 1.0;
+    case 'fold': return 0.95;
+    default: return 0.85;           // drawn tables
   }
 }
 
@@ -27,7 +52,12 @@ export function getWaveformAbbr(w: SynthWaveform): string {
     case 'sine': return 'SIN';
     case 'triangle': return 'TRI';
     case 'noise': return 'NOI';
-    default: return 'SIN';
+    case 'metal': return 'MTL';
+    case 'pwm': return 'PWM';
+    case 'supersaw': return 'SSAW';
+    case 'organ': return 'ORG';
+    case 'fold': return 'FOLD';
+    default: return w.startsWith('custom:') ? 'USR' : String(w).toUpperCase().slice(0, 3);
   }
 }
 export type BlendMode = 'layer' | 'fm' | 'ring' | 'sync';
@@ -413,6 +443,12 @@ export function scaleTracksToFineGrid(tracks: TrackData[]): TrackData[] {
     grid: t.grid.flatMap((cell) => [[...cell], [...cell], [...cell]]),
     accents: (t.accents as number[]).flatMap((a) => [a, 0, 0]),
   }));
+}
+
+interface FreqPlan {
+  t: number;
+  start: number;
+  ramps: { to: number; at: number }[];
 }
 
 interface ActiveVoice {
@@ -1134,6 +1170,70 @@ class ModularSynth {
      cached per context and duty so a hat pattern does not rebuild it every
      step. 64 harmonics: at C4 that reaches 16 kHz, above it the wave aliases
      less than the built-in square already does. */
+  /* ---- drawn and tabled waves ---- */
+  private customWaves = new Map<string, CustomWave>();
+  private waveVersion = new Map<string, number>();
+  private tableWaves: WeakMap<BaseAudioContext, Map<string, PeriodicWave>> = new WeakMap();
+
+  public registerCustomWave(w: CustomWave) {
+    this.customWaves.set(w.id, { ...w, samples: [...w.samples] });
+    this.waveVersion.set(w.id, (this.waveVersion.get(w.id) ?? 0) + 1);
+  }
+  public unregisterCustomWave(id: string) {
+    this.customWaves.delete(id);
+  }
+  public getCustomWave(id: string): CustomWave | undefined {
+    return this.customWaves.get(id);
+  }
+  public listCustomWaves(): CustomWave[] {
+    return Array.from(this.customWaves.values());
+  }
+
+  /** A PeriodicWave from one cycle of samples: 64 harmonics by direct DFT, cached per context and table version. */
+  private periodicFromSamples(ctx: BaseAudioContext, key: string, samples: ArrayLike<number>): PeriodicWave {
+    let perCtx = this.tableWaves.get(ctx);
+    if (!perCtx) {
+      perCtx = new Map();
+      this.tableWaves.set(ctx, perCtx);
+    }
+    let wave = perCtx.get(key);
+    if (!wave) {
+      const N = samples.length;
+      const H = 64;
+      const real = new Float32Array(H + 1);
+      const imag = new Float32Array(H + 1);
+      for (let n = 1; n <= H; n++) {
+        let re = 0, im = 0;
+        for (let i = 0; i < N; i++) {
+          const ph = (2 * Math.PI * n * i) / N;
+          re += samples[i] * Math.cos(ph);
+          im += samples[i] * Math.sin(ph);
+        }
+        real[n] = (2 / N) * re;
+        imag[n] = (2 / N) * im;
+      }
+      wave = ctx.createPeriodicWave(real, imag, { disableNormalization: false });
+      perCtx.set(key, wave);
+    }
+    return wave;
+  }
+
+  private static ORGAN_TABLE = (() => {
+    // Drawbars 8', 4', 2 2/3', 2', 1 3/5', 1': harmonics 1, 2, 3, 4, 5, 8.
+    const amps: [number, number][] = [[1, 1], [2, 0.7], [3, 0.5], [4, 0.45], [5, 0.25], [8, 0.2]];
+    const N = 256;
+    const out = new Float32Array(N);
+    for (let i = 0; i < N; i++) for (const [h, a] of amps) out[i] += a * Math.sin((2 * Math.PI * h * i) / N);
+    return out;
+  })();
+  private static FOLD_TABLE = (() => {
+    // A sine driven into a folder: sin(k * sin x), the West-coast timbre.
+    const N = 256;
+    const out = new Float32Array(N);
+    for (let i = 0; i < N; i++) out[i] = Math.sin(2.6 * Math.sin((2 * Math.PI * i) / N));
+    return out;
+  })();
+
   private pulseWaves: WeakMap<BaseAudioContext, Map<number, PeriodicWave>> = new WeakMap();
   private pulseWave(ctx: BaseAudioContext, dutyPct: number): PeriodicWave {
     const duty = Math.round(Math.max(5, Math.min(95, dutyPct)));
@@ -1158,7 +1258,89 @@ class ModularSynth {
   private applyWaveform(osc: OscillatorNode, w: SynthWaveform, pulseWidth: number | undefined, ctx: BaseAudioContext) {
     const pw = pulseWidth ?? 50;
     if (w === 'square' && Math.round(pw) !== 50) osc.setPeriodicWave(this.pulseWave(ctx, pw));
-    else osc.type = w === 'noise' ? 'sawtooth' : w;
+    else if (w === 'organ') osc.setPeriodicWave(this.periodicFromSamples(ctx, 'organ', ModularSynth.ORGAN_TABLE));
+    else if (w === 'fold') osc.setPeriodicWave(this.periodicFromSamples(ctx, 'fold', ModularSynth.FOLD_TABLE));
+    else if (w.startsWith('custom:')) {
+      const id = w.slice(7);
+      const cw = this.customWaves.get(id);
+      if (cw && cw.samples.length >= 8) osc.setPeriodicWave(this.periodicFromSamples(ctx, `custom:${id}:${this.waveVersion.get(id) ?? 0}`, cw.samples));
+      else osc.type = 'sine';
+    }
+    // Buffer sources only exist for OSC1; on OSC2 they fall back to a saw. PWM
+    // and SUPERSAW start from a saw and get their companions in buildToneStack.
+    else if (w === 'noise' || w === 'metal' || w === 'pwm' || w === 'supersaw') osc.type = 'sawtooth';
+    else osc.type = w as OscillatorType;
+  }
+
+  /** How an oscillator's frequency moves over the note, so companions can follow it exactly. */
+  private applyFreqPlan(p: AudioParam, plan: FreqPlan, mul = 1, add = 0) {
+    p.setValueAtTime(plan.start * mul + add, plan.t);
+    for (const r of plan.ramps) p.exponentialRampToValueAtTime(r.to * mul + add, r.at);
+  }
+
+  /**
+   * PWM and SUPERSAW are stacks. PWM: a second saw a fixed 0.4 Hz away, inverted
+   * and summed, gives a pulse whose width sweeps continuously -- the classic
+   * two-saw trick, and it needs no modulator. SUPERSAW: four more saws spread
+   * ±19 cents around the first. Returns the node to use downstream and the
+   * companions, which the caller starts and stops with the primary.
+   */
+  private buildToneStack(ctx: BaseAudioContext, osc: OscillatorNode, w: SynthWaveform, plan: FreqPlan): { out: AudioNode; companions: OscillatorNode[] } {
+    if (w === 'pwm') {
+      const comp = ctx.createOscillator();
+      comp.type = 'sawtooth';
+      this.applyFreqPlan(comp.frequency, plan, 1, 0.4);
+      const sum = ctx.createGain();
+      const gA = ctx.createGain();
+      const gB = ctx.createGain();
+      gA.gain.value = 0.5;
+      gB.gain.value = -0.5;
+      osc.connect(gA);
+      comp.connect(gB);
+      gA.connect(sum);
+      gB.connect(sum);
+      return { out: sum, companions: [comp] };
+    }
+    if (w === 'supersaw') {
+      const sum = ctx.createGain();
+      const gP = ctx.createGain();
+      gP.gain.value = 0.5;
+      osc.connect(gP);
+      gP.connect(sum);
+      const companions: OscillatorNode[] = [];
+      for (const cents of [-19, -9, 9, 19]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        this.applyFreqPlan(o.frequency, plan, Math.pow(2, cents / 1200));
+        const g = ctx.createGain();
+        g.gain.value = 0.3;
+        o.connect(g);
+        g.connect(sum);
+        companions.push(o);
+      }
+      return { out: sum, companions };
+    }
+    return { out: osc, companions: [] };
+  }
+
+  /** The 808 cymbal bank: six squares at its inharmonic ratios, fixed pitch, four seconds. */
+  private metalBuffer: AudioBuffer | null = null;
+  private metalBuf(): AudioBuffer {
+    if (this.metalBuffer) return this.metalBuffer;
+    const ctx = this.audioCtx()!;
+    const sr = ctx.sampleRate;
+    const len = sr * 4;
+    const buffer = ctx.createBuffer(1, len, sr);
+    const data = buffer.getChannelData(0);
+    const freqs = [205.3, 304.4, 369.6, 522.7, 540.0, 800.0];
+    const phases = freqs.map((_, k) => (k * 1.7) % (2 * Math.PI));
+    for (let i = 0; i < len; i++) {
+      let v = 0;
+      for (let k = 0; k < freqs.length; k++) v += Math.sin((2 * Math.PI * freqs[k] * i) / sr + phases[k]) >= 0 ? 1 : -1;
+      data[i] = v / freqs.length;
+    }
+    this.metalBuffer = buffer;
+    return buffer;
   }
 
   /* The 808 clap is one noise burst repeated three or four times a few ms
@@ -1258,6 +1440,9 @@ class ModularSynth {
     // ──────────────────────────────────────────────────────────────────────────
     const voiceMix = ctx.createGain();
     let osc1: OscillatorNode | undefined;
+    let osc1Out: AudioNode | undefined;
+    let osc2Out: AudioNode | undefined;
+    const companions: OscillatorNode[] = [];
     let osc2: OscillatorNode | undefined;
     let noiseSource: AudioBufferSourceNode | undefined;
     const extras: AudioScheduledSourceNode[] = [];
@@ -1292,10 +1477,12 @@ class ModularSynth {
       ? Math.max(0.25, Math.min(4, Math.pow(baseFreq / 261.63, noiseKeyTrk)))
       : 1.0;
 
-    if (track.osc1Waveform === 'noise' && track.osc2Waveform === 'noise') {
-      if (!this.noiseBuffer) this.initNoiseBuffer();
+    const osc1IsBuffer = track.osc1Waveform === 'noise' || track.osc1Waveform === 'metal';
+    if (osc1IsBuffer && !this.noiseBuffer) this.initNoiseBuffer();
+    const buf1 = track.osc1Waveform === 'metal' ? this.metalBuf() : this.noiseBuffer;
+    if (osc1IsBuffer && track.osc2Waveform === 'noise') {
       noiseSource = ctx.createBufferSource();
-      noiseSource.buffer = this.noiseBuffer;
+      noiseSource.buffer = buf1;
       noiseSource.loop = true;
       if (pEnvAmt !== 0) {
         noiseSource.playbackRate.setValueAtTime(noiseRate, t);
@@ -1310,10 +1497,9 @@ class ModularSynth {
       gN.connect(voiceMix);
       noiseSource.start(startT1);
     } else {
-      if (track.osc1Waveform === 'noise') {
-        if (!this.noiseBuffer) this.initNoiseBuffer();
+      if (osc1IsBuffer) {
         noiseSource = ctx.createBufferSource();
-        noiseSource.buffer = this.noiseBuffer;
+        noiseSource.buffer = buf1;
         noiseSource.loop = true;
         if (pEnvAmt !== 0) {
           noiseSource.playbackRate.setValueAtTime(noiseRate, t);
@@ -1336,14 +1522,16 @@ class ModularSynth {
 
         osc1 = ctx.createOscillator();
         this.applyWaveform(osc1, track.osc1Waveform, track.pulseWidth, ctx);
-        osc1.frequency.setValueAtTime(startFreq, t);
-        if (glideSec > 0 && startFreq !== baseFreq) {
-          osc1.frequency.exponentialRampToValueAtTime(baseFreq, t + glideSec);
-        }
+        const plan1: FreqPlan = { t, start: startFreq, ramps: [] };
+        if (glideSec > 0 && startFreq !== baseFreq) plan1.ramps.push({ to: baseFreq, at: t + glideSec });
         if (pEnvAmt !== 0) {
-          osc1.frequency.exponentialRampToValueAtTime(baseFreq * pRatio, t + glideSec + pAtt);
-          osc1.frequency.exponentialRampToValueAtTime(baseFreq, t + glideSec + pAtt + pDec);
+          plan1.ramps.push({ to: baseFreq * pRatio, at: t + glideSec + pAtt });
+          plan1.ramps.push({ to: baseFreq, at: t + glideSec + pAtt + pDec });
         }
+        this.applyFreqPlan(osc1.frequency, plan1);
+        const stack1 = this.buildToneStack(ctx, osc1, track.osc1Waveform, plan1);
+        osc1Out = stack1.out;
+        companions.push(...stack1.companions);
       }
 
       // SEMI transposes OSC2 in semitones on top of RATIO and DET; it was a knob
@@ -1358,14 +1546,16 @@ class ModularSynth {
 
       osc2 = ctx.createOscillator();
       this.applyWaveform(osc2, track.osc2Waveform, track.pulseWidth, ctx);
-      osc2.frequency.setValueAtTime(startFreq2, t);
-      if (glideSec2 > 0 && startFreq2 !== osc2Freq) {
-        osc2.frequency.exponentialRampToValueAtTime(osc2Freq, t + glideSec2);
-      }
+      const plan2: FreqPlan = { t, start: startFreq2, ramps: [] };
+      if (glideSec2 > 0 && startFreq2 !== osc2Freq) plan2.ramps.push({ to: osc2Freq, at: t + glideSec2 });
       if (pEnvAmt !== 0) {
-        osc2.frequency.exponentialRampToValueAtTime(osc2Freq * pRatio, t + glideSec2 + pAtt);
-        osc2.frequency.exponentialRampToValueAtTime(osc2Freq, t + glideSec2 + pAtt + pDec);
+        plan2.ramps.push({ to: osc2Freq * pRatio, at: t + glideSec2 + pAtt });
+        plan2.ramps.push({ to: osc2Freq, at: t + glideSec2 + pAtt + pDec });
       }
+      this.applyFreqPlan(osc2.frequency, plan2);
+      const stack2 = this.buildToneStack(ctx, osc2, track.osc2Waveform, plan2);
+      osc2Out = stack2.out;
+      companions.push(...stack2.companions);
 
       // Record this note for subsequent glide calculations
       this.lastTrackFreqs.set(track.id, baseFreq);
@@ -1382,43 +1572,48 @@ class ModularSynth {
         const fmGain = ctx.createGain();
         const fmIndex = track.morphAmount * baseFreq * 3.5 * track.osc2Gain * osc2Bal;
         fmGain.gain.setValueAtTime(fmIndex, t);
-        osc2.connect(fmGain);
+        osc2Out!.connect(fmGain);
         fmGain.connect(osc1.frequency);
+        for (const c of companions) if (c !== osc2) fmGain.connect(c.frequency);
 
         const osc1GainNode = ctx.createGain();
         osc1GainNode.gain.setValueAtTime(track.osc1Gain * osc1Bal, t);
-        osc1.connect(osc1GainNode);
+        osc1Out!.connect(osc1GainNode);
         osc1GainNode.connect(voiceMix);
       } else if (track.blendMode === 'ring' && osc1) {
         const ringGain = ctx.createGain();
         ringGain.gain.setValueAtTime(0, t);
-        osc1.connect(ringGain);
-        osc2.connect(ringGain.gain);
+        osc1Out!.connect(ringGain);
+        osc2Out!.connect(ringGain.gain);
         ringGain.connect(voiceMix);
       } else if (track.blendMode === 'sync' && osc1) {
         const g1 = ctx.createGain();
         const g2 = ctx.createGain();
         g1.gain.setValueAtTime(track.osc1Gain * osc1Bal * (1.0 - track.morphAmount * 0.4), t);
         g2.gain.setValueAtTime(track.osc2Gain * osc2Bal * track.morphAmount * 0.9, t);
-        osc1.connect(g1);
-        osc2.connect(g2);
+        osc1Out!.connect(g1);
+        osc2Out!.connect(g2);
         g1.connect(voiceMix);
         g2.connect(voiceMix);
       } else {
         if (osc1) {
           const g1 = ctx.createGain();
           g1.gain.setValueAtTime(track.osc1Gain * osc1Bal * (1.0 - track.morphAmount * 0.6), t);
-          osc1.connect(g1);
+          osc1Out!.connect(g1);
           g1.connect(voiceMix);
         }
         const g2 = ctx.createGain();
         g2.gain.setValueAtTime(track.osc2Gain * osc2Bal * (0.2 + track.morphAmount * 0.8), t);
-        osc2.connect(g2);
+        osc2Out!.connect(g2);
         g2.connect(voiceMix);
       }
 
       if (osc1) osc1.start(startT1);
       osc2.start(startT2);
+      for (const c of companions) {
+        c.start(startT1);
+        extras.push(c);
+      }
 
       // SUB: a sine an octave under OSC1, following its glide and pitch envelope.
       // Was a knob with nothing behind it; a kick without it has no weight.
@@ -1572,7 +1767,10 @@ class ModularSynth {
       gainBase = 0.28 * velGainScale;
     }
 
-    const peakGain = gainBase * track.volume;
+    // A one-shot (no sustain) is over in 50-200 ms; at the same peak the ear
+    // hears it 6-10 dB under a held note. Give hits back some of that.
+    const oneShot = ampSus <= 0.001 ? 1.8 : 1;
+    const peakGain = gainBase * track.volume * oneShot;
     const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
     if (ampAtt === 0) {
@@ -1618,6 +1816,7 @@ class ModularSynth {
         lfo.connect(pitchGain);
         if (osc1) pitchGain.connect(osc1.frequency);
         if (osc2) pitchGain.connect(osc2.frequency);
+        for (const c of companions) pitchGain.connect(c.frequency);
       }
 
       // 2. Wah-Wah / Filter sweep modulation
@@ -2025,6 +2224,7 @@ class ModularSynth {
   private graphCache() {
     return {
       noiseBuffer: this.noiseBuffer,
+      metalBuffer: this.metalBuffer,
       delayNode: this.delayNode,
       delayFeedbackGain: this.delayFeedbackGain,
       delayWetGain: this.delayWetGain,
@@ -2040,6 +2240,7 @@ class ModularSynth {
 
   private restoreGraphCache(cache: ReturnType<ModularSynth['graphCache']>) {
     this.noiseBuffer = cache.noiseBuffer;
+    this.metalBuffer = cache.metalBuffer;
     this.delayNode = cache.delayNode;
     this.delayFeedbackGain = cache.delayFeedbackGain;
     this.delayWetGain = cache.delayWetGain;
@@ -2055,6 +2256,7 @@ class ModularSynth {
   private clearGraphCache() {
     this.restoreGraphCache({
       noiseBuffer: null,
+      metalBuffer: null,
       delayNode: null,
       delayFeedbackGain: null,
       delayWetGain: null,
