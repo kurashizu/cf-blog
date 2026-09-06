@@ -52,9 +52,13 @@
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
 		const dir = e.deltaY < 0 ? 1 : -1;
-		const delta = (max - min) * 0.05 * dir;
-		const stepped = Math.round((value + delta) / step) * step;
-		onChange(Math.max(min, Math.min(max, stepped)));
+		// One wheel notch is one step, the finest move the fader has; re-rounded to
+		// the step's precision so repeated turns cannot drift.
+		const stepped = Math.round((value + step * dir) / step) * step;
+		const decimals = (String(step).split('.')[1] ?? '').length;
+		const next = Math.max(min, Math.min(max, Number(stepped.toFixed(decimals))));
+		if (next === value) return;
+		onChange(next);
 		playSound('click');
 	}
 

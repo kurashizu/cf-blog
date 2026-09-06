@@ -64,12 +64,10 @@
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
 		const dir = e.deltaY < 0 ? 1 : -1;
-		// At least one step, or the rounding below lands back on the current value
-		// and the knob cannot be turned at all — which is what happened to RATIO,
-		// whose 0.5 step is larger than 5% of its 0.5-4 range.
-		const magnitude = Math.max(step, (max - min) * 0.05);
-		const stepped = Math.round((value + magnitude * dir) / step) * step;
-		// Re-round to the step's own precision so repeated turns cannot drift.
+		// One wheel notch is one step -- the finest move the control has, so the
+		// wheel is the precision input and dragging is the coarse one. Re-round to
+		// the step's own precision so repeated turns cannot drift.
+		const stepped = Math.round((value + step * dir) / step) * step;
 		const decimals = (String(step).split('.')[1] ?? '').length;
 		const snapped = Number(stepped.toFixed(decimals));
 		const next = Math.max(min, Math.min(max, snapped));
