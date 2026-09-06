@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { t, locale } from '$lib/i18n';
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import Onboarding from '../chrome/Onboarding.svelte';
-	import { SYNTH_TOUR } from './synth-tour';
+	import { synthTour } from './synth-tour';
 	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '../../stores/chrome';
 	import {
 		BUILTIN_SONGS,
@@ -25,6 +26,12 @@
 
 	const TOUR = 'synth-tour';
 	let guideActive = isOnboardingActive(TOUR);
+	// $locale is read here only to give this $derived a tracked dependency —
+	// synthTour() itself resolves strings through tr(), which is not reactive.
+	let tourSteps = $derived.by(() => {
+		void $locale;
+		return synthTour();
+	});
 
 	function closeGuide() {
 		dequeueOnboarding(TOUR);
@@ -119,25 +126,25 @@
 		<span class="font-black text-xs text-white tracking-wider">KRSZ SYNTH</span>
 		<button
 			onclick={() => openOnboardingNow(TOUR)}
-			title="Walk through the synth — what each rack does, and how to get a sound out of it"
+			title={$t('synth.badge.walkthroughHint')}
 			class="press ml-0.5 text-[#c678dd]/70 hover:text-[#c678dd] cursor-pointer transition-colors flex items-center"
-			aria-label="Synth walkthrough"
+			aria-label={$t('synth.badge.walkthroughAria')}
 		>
 			<PixelIcon name="help" size={14} />
 		</button>
 	</div>
 
 	{#if $guideActive}
-		<Onboarding steps={SYNTH_TOUR} heading="SYNTH TOUR" onClose={closeGuide} />
+		<Onboarding steps={tourSteps} heading="SYNTH TOUR" onClose={closeGuide} />
 	{/if}
 
 	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,.json.gz,.gz,.mid,.midi,audio/midi" class="hidden" />
 
-	<button onclick={handleNewProject} title="New Project — Clear all tracks and reset to blank 64-step sequencer" class="press px-2 py-0.5 border border-white/20 text-white/80 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs">
+	<button onclick={handleNewProject} title={$t('synth.patch.newHint')} class="press px-2 py-0.5 border border-white/20 text-white/80 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs">
 		NEW
 	</button>
 
-	<button onclick={handleSavePatch} title="Save Patch — Store all 8-track synth parameters and sequencer notes into browser LocalStorage" class="press px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs">
+	<button onclick={handleSavePatch} title={$t('synth.patch.saveHint')} class="press px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs">
 		SAVE
 	</button>
 
@@ -145,7 +152,7 @@
 	<div class="relative">
 		<button
 			onclick={() => (isLoadMenuOpen = !isLoadMenuOpen)}
-			title="Load — Local browser patch or a built-in song"
+			title={$t('synth.patch.loadHint')}
 			class="press px-2 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 {isLoadMenuOpen
 				? 'border-[#56b6c2] bg-[#56b6c2] text-black'
 				: 'border-[#56b6c2]/50 bg-[#56b6c2]/10 text-[#56b6c2] hover:bg-[#56b6c2]/25'}"
@@ -167,12 +174,12 @@
 					<div class="px-2.5 pb-1.5 mb-1 border-b border-white/10 text-[#98c379] font-bold">{$saveStatus}</div>
 				{/if}
 
-				<button onclick={loadLocal} class="press w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[#56b6c2] hover:bg-[#56b6c2]/20 cursor-pointer font-bold transition-colors" title="Restore saved synth parameters and sequencer patterns from browser LocalStorage">
+				<button onclick={loadLocal} class="press w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[#56b6c2] hover:bg-[#56b6c2]/20 cursor-pointer font-bold transition-colors" title={$t('synth.patch.loadLocalHint')}>
 					<span class="shrink-0">▣</span>
-					<span>LOCAL PATCH (BROWSER)</span>
+					<span>{$t('synth.patch.loadLocalLabel')}</span>
 				</button>
 
-				<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none">BUILT-IN SONGS</div>
+				<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none">{$t('synth.patch.builtinSongsLabel')}</div>
 
 				{#each BUILTIN_SONGS as song, idx (song.id)}
 					<button
@@ -180,7 +187,7 @@
 						class="press w-full text-left px-2.5 py-1.5 flex items-center justify-between gap-2 cursor-pointer transition-colors {$builtinSongIdx === idx
 							? 'text-white bg-white/10 font-bold'
 							: 'text-white/80 hover:bg-white/10'}"
-						title={`Load ${song.name} (${song.bpm} BPM, ${song.meter}, ${song.steps} steps)`}
+						title={$t('synth.patch.loadSongHint', { name: song.name, bpm: song.bpm, meter: song.meter, steps: song.steps })}
 					>
 						<span class="flex items-center gap-2 min-w-0">
 							<span class="shrink-0 {$builtinSongIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$builtinSongIdx === idx ? '●' : '○'}</span>
@@ -193,11 +200,11 @@
 		{/if}
 	</div>
 
-	<button onclick={() => fileInput?.click()} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Import — A previously exported patch (.json or gzipped .json.gz), or a .mid file: every MIDI track becomes a sequencer track, with the file's own tempo and time signature. You can also drop the file anywhere on this page.">
+	<button onclick={() => fileInput?.click()} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title={$t('synth.patch.importHint')}>
 		IMP
 	</button>
 
-	<button onclick={handleExportPatch} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Export Patch — Download the complete 8-track synthesizer configuration and patterns, gzip-compressed (.json.gz) since the sequencer grids are mostly repeated empty cells">
+	<button onclick={handleExportPatch} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title={$t('synth.patch.exportHint')}>
 		EXP
 	</button>
 
@@ -207,12 +214,12 @@
 		class="press px-2 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs disabled:cursor-wait {$renderPhase === 'rendering'
 			? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 			: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
-		title="Render WAV — Bounce the whole pattern through the real signal chain offline and download it as 16-bit stereo WAV. A dense multi-minute song can take a minute or two; the button shows live progress."
+		title={$t('synth.patch.renderHint')}
 	>
 		{#if $renderPhase === 'rendering'}
 			{$renderProgress
-				? `${$renderProgress.stage === 'schedule' ? 'SCHED' : 'RENDER'} ${Math.round($renderProgress.fraction * 100)}%`
-				: 'RENDERING…'}
+				? $t('synth.patch.renderingStage', { stage: $renderProgress.stage === 'schedule' ? $t('synth.patch.renderingStageSchedule') : $t('synth.patch.renderingStageRender'), percent: Math.round($renderProgress.fraction * 100) })
+				: $t('synth.patch.rendering')}
 		{:else}
 			WAV
 		{/if}
@@ -220,7 +227,7 @@
 
 	<!-- SHARE + its blocked-clipboard popover: absolutely positioned so it never reflows the rack -->
 	<div class="relative">
-		<button onclick={handleSharePatch} class="press px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs" title="Share Patch — Compress the whole patch into a URL and copy it; anyone opening the link gets your exact tracks and patterns">
+		<button onclick={handleSharePatch} class="press px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs" title={$t('synth.patch.shareHint')}>
 			SHARE
 		</button>
 
@@ -233,7 +240,7 @@
 				class="origin-top absolute left-0 top-full mt-1 z-50 w-[min(440px,80vw)] bg-[#121417] border border-[#c678dd]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] p-2 space-y-1.5"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
-				<div class="text-[10px] font-mono text-white/50">Clipboard was blocked by the browser — copy the link here:</div>
+				<div class="text-[10px] font-mono text-white/50">{$t('synth.patch.shareBlocked')}</div>
 				<div class="flex items-center gap-1.5">
 					<input
 						type="text"
@@ -249,7 +256,7 @@
 							? 'border-[#98c379] text-[#98c379]'
 							: 'border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20'}"
 					>
-						{shareCopied ? '✓' : 'COPY'}
+						{shareCopied ? '✓' : $t('common.copy').toUpperCase()}
 					</button>
 					<button
 						onclick={() => (shareUrlFallback.set(null), (shareCopied = false))}

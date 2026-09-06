@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
+
 	/**
 	 * A full PC keyboard that sends PS/2 set-1 scancodes straight to the guest.
 	 *
@@ -202,15 +204,15 @@
 		return key.label;
 	}
 
-	/** Sequences worth one tap in a shell. */
-	const MACROS: { label: string; codes: number[]; title: string }[] = [
-		{ label: '^C', codes: [0x1d, 0x2e, 0xae, 0x9d], title: 'Ctrl+C — interrupt' },
-		{ label: '^D', codes: [0x1d, 0x20, 0xa0, 0x9d], title: 'Ctrl+D — end of input' },
-		{ label: '^L', codes: [0x1d, 0x26, 0xa6, 0x9d], title: 'Ctrl+L — clear screen' },
-		{ label: '^Z', codes: [0x1d, 0x2c, 0xac, 0x9d], title: 'Ctrl+Z — suspend' },
-		{ label: 'PgUp', codes: [0xe0, 0x49, 0xe0, 0xc9], title: 'Page up' },
-		{ label: 'PgDn', codes: [0xe0, 0x51, 0xe0, 0xd1], title: 'Page down' }
-	];
+	/** Sequences worth one tap in a shell. Titles are resolved at render, not at import time. */
+	let MACROS = $derived<{ label: string; codes: number[]; title: string }[]>([
+		{ label: '^C', codes: [0x1d, 0x2e, 0xae, 0x9d], title: $t('vm.keyboard.macroInterrupt') },
+		{ label: '^D', codes: [0x1d, 0x20, 0xa0, 0x9d], title: $t('vm.keyboard.macroEof') },
+		{ label: '^L', codes: [0x1d, 0x26, 0xa6, 0x9d], title: $t('vm.keyboard.macroClear') },
+		{ label: '^Z', codes: [0x1d, 0x2c, 0xac, 0x9d], title: $t('vm.keyboard.macroSuspend') },
+		{ label: 'PgUp', codes: [0xe0, 0x49, 0xe0, 0xc9], title: $t('vm.keyboard.macroPageUp') },
+		{ label: 'PgDn', codes: [0xe0, 0x51, 0xe0, 0xd1], title: $t('vm.keyboard.macroPageDown') }
+	]);
 </script>
 
 <div class="border border-white/20 bg-black/60 rounded-xs p-1.5 space-y-1 select-none">
@@ -228,11 +230,11 @@
 		</div>
 		<div class="flex items-center gap-2">
 			<span class="text-[10px] font-mono text-white/30 hidden sm:inline">
-				modifiers latch for one key · tap again to lock
+				{$t('vm.keyboard.modifierNote')}
 			</span>
 			{#if onClose}
 				<button onclick={onClose} class="press text-[10px] font-mono text-white/40 hover:text-white cursor-pointer transition-colors">
-					[ hide ]
+					{$t('vm.keyboard.hide')}
 				</button>
 			{/if}
 		</div>
@@ -245,7 +247,7 @@
 				{@const isLocked = modLocked(key)}
 				<button
 					onclick={() => press(key)}
-					title={key.mod ? 'Tap to arm for one key, tap again to lock' : undefined}
+					title={key.mod ? $t('vm.keyboard.modHint') : undefined}
 					class="border rounded-xs font-mono cursor-pointer active:scale-95 transition-[color,background-color,border-color,transform] py-1.5 min-w-0 truncate {r === 0
 						? 'text-[10px]'
 						: 'text-[11px] sm:text-xs'} {isLocked

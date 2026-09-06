@@ -1,15 +1,25 @@
-export const WAVE_TOOLTIPS: Record<string, string> = {
-	square: 'Square Waveform — Hollow timbre rich in odd harmonics, ideal for retro 8-bit leads and chiptune bass',
-	sawtooth: 'Sawtooth Waveform — Bright, buzzy timbre with all harmonics, ideal for aggressive leads, brass, and thick pads',
-	triangle: 'Triangle Waveform — Soft, warm timbre with gentle odd harmonics, ideal for warm basslines and flute sounds',
-	sine: 'Sine Waveform — Pure fundamental frequency without overtones, ideal for deep sub bass and clean tones',
-	noise: 'White Noise Generator — Equal energy across all frequencies, ideal for drums, percussive transients, and sound effects (OSC1; on OSC2 it plays as a saw)',
-	metal: 'METAL — six squares at the 808 cymbal ratios, fixed pitch: the clang of rides, crashes and hats; add NOISE for the sizzle and high-pass the body away (OSC1)',
-	pwm: 'PWM — a pulse whose width sweeps around WIDTH at RATE by DEPTH (knobs in its submenu); the classic moving analogue pad and lead',
-	supersaw: 'SUPERSAW — five saws, the outer pair SPREAD cents away at MIX level (knobs in its submenu); the trance stack, wide without any chorus',
-	organ: 'ORGAN — six drawbars, harmonics 1, 2, 3, 4, 5 and 8 (knobs in its submenu); steady, hollow, sits well under a lead',
-	fold: 'FOLD — a sine driven into a wavefolder by FOLD (knob in its submenu); brighter than a triangle, with the West-coast bite'
-};
+import { tr } from '$lib/i18n';
+
+/* WAVE and PRESET tooltips are consumed by WaveMenu.svelte and PresetMenu.svelte
+   (this agent's files) and are resolved lazily via a getter, never at import
+   time, so they follow the current locale. BLEND/FILTER/LFO tooltips are
+   consumed by the rack modules (a sibling area) and are left as plain English
+   maps here untouched. */
+
+export function waveTooltips(): Record<string, string> {
+	return {
+		square: tr('synth.tooltip.square'),
+		sawtooth: tr('synth.tooltip.sawtooth'),
+		triangle: tr('synth.tooltip.triangle'),
+		sine: tr('synth.tooltip.sine'),
+		noise: tr('synth.tooltip.noise'),
+		metal: tr('synth.tooltip.metal'),
+		pwm: tr('synth.tooltip.pwm'),
+		supersaw: tr('synth.tooltip.supersaw'),
+		organ: tr('synth.tooltip.organ'),
+		fold: tr('synth.tooltip.fold')
+	};
+}
 
 export const BLEND_TOOLTIPS: Record<string, string> = {
 	layer: 'Blend Mode: Layer — Sums Oscillator 1 and Oscillator 2 in parallel for thick dual-oscillator tones',
@@ -32,36 +42,38 @@ export const LFO_TOOLTIPS: Record<string, string> = {
 	sawtooth: 'Sawtooth Wave LFO — Linear ramp with sharp instantaneous drop'
 };
 
-export const PRESET_TOOLTIPS: Record<string, string> = {
-	'8-BIT BASS': 'Preset: 8-Bit Bass — Retro chiptune square/triangle bass with snappy VCF filter envelope',
-	PLUCK: 'Preset: Pluck — Short transient acoustic/electronic synth pluck with fast filter decay',
-	BRASS: 'Preset: Brass — Dual detuned sawtooth oscillators with dynamic filter sweep',
-	LEAD: 'Preset: Lead — Cutting 25% pulse + sawtooth lead with resonant filter and full sustain',
-	'SUB BASS': 'Preset: Sub Bass — Sine plus the SUB octave under an 800 Hz low-pass; weight without edge',
-	'ACID BASS': 'Preset: Acid Bass — Saw into a Q 8 low-pass swept by the envelope, 60 ms glide',
-	'FM BASS': 'Preset: FM Bass — Sine carrier modulated by a sine an octave up',
-	'SAW LEAD': 'Preset: Saw Lead — Two saws 14 cents apart with a vibrato that fades in',
-	'SYNC LEAD': 'Preset: Sync Lead — SYNC mode with the second oscillator a fifth up, filter envelope for the rip',
-	'CHIP LEAD': 'Preset: Chip Lead — 15% pulse, no filter, fast vibrato: the NES lead voice',
-	KOTO: 'Preset: Koto — Triangle with a sine an octave up and a filter that snaps shut; no sustain',
-	MARIMBA: 'Preset: Marimba — Sine body and a quieter triangle an octave up, decaying together',
-	BELL: 'Preset: Bell — Two sines ring-modulated at a 3.5 ratio; inharmonic partials, long tail',
-	'E-PIANO': 'Preset: E-Piano — Sine carrier with a light FM tine four octaves up',
-	ORGAN: 'Preset: Organ — Fundamental, octave and SUB drawbars, no envelope, slow tremolo',
-	CLAV: 'Preset: Clav — 25% pulse through a resonant low-pass that closes fast',
-	HARPSICHORD: 'Preset: Harpsichord — Saw with a square an octave up, plucked and bright',
-	'WARM PAD': 'Preset: Warm Pad — Detuned saws behind a low filter that breathes with a slow LFO',
-	STRINGS: 'Preset: Strings — Wide detune, brighter filter, vibrato fading in',
-	'GLASS PAD': 'Preset: Glass Pad — Triangle and sine an octave up, open filter, air on top, slow auto-pan',
-	'HOLLOW PAD': 'Preset: Hollow Pad — Square with a square an octave below, low filter the LFO opens and closes',
-	'KICK 808': 'Preset: 808 Kick — Sine with a 2.5-octave pitch drop and a sub underneath; sequence it low (C2-C3)',
-	'KICK PUNCH': 'Preset: Punch Kick — Shorter, harder triangle kick with a noise beater click',
-	SNARE: 'Preset: Snare — Triangle + fifth body with a noise rattle; KEY TRK brightens it up the keyboard',
-	CLAP: 'Preset: Clap — Three noise bursts 11 ms apart, then the tail (RPT / GAP in rack 1)',
-	'CLOSED HAT': 'Preset: Closed Hat — 45 ms of high-passed noise; higher keys are brighter',
-	'OPEN HAT': 'Preset: Open Hat — The closed hat left to ring for 350 ms',
-	TOM: 'Preset: Tom — Shallow pitch drop on a sine + triangle; play across a few keys for a rack',
-	RIMSHOT: 'Preset: Rimshot — Ring-modulated 40 ms ping',
-	COWBELL: 'Preset: Cowbell — Two squares a fifth apart (the 808 pair), band-passed at 1.5 kHz',
-	SHAKER: 'Preset: Shaker — Soft-attack noise with a filter that opens and closes with the hit'
-};
+export function presetTooltips(): Record<string, string> {
+	return {
+		'8-BIT BASS': tr('synth.tooltip.preset8BitBass'),
+		PLUCK: tr('synth.tooltip.presetPluck'),
+		BRASS: tr('synth.tooltip.presetBrass'),
+		LEAD: tr('synth.tooltip.presetLead'),
+		'SUB BASS': tr('synth.tooltip.presetSubBass'),
+		'ACID BASS': tr('synth.tooltip.presetAcidBass'),
+		'FM BASS': tr('synth.tooltip.presetFmBass'),
+		'SAW LEAD': tr('synth.tooltip.presetSawLead'),
+		'SYNC LEAD': tr('synth.tooltip.presetSyncLead'),
+		'CHIP LEAD': tr('synth.tooltip.presetChipLead'),
+		KOTO: tr('synth.tooltip.presetKoto'),
+		MARIMBA: tr('synth.tooltip.presetMarimba'),
+		BELL: tr('synth.tooltip.presetBell'),
+		'E-PIANO': tr('synth.tooltip.presetEPiano'),
+		ORGAN: tr('synth.tooltip.presetOrgan'),
+		CLAV: tr('synth.tooltip.presetClav'),
+		HARPSICHORD: tr('synth.tooltip.presetHarpsichord'),
+		'WARM PAD': tr('synth.tooltip.presetWarmPad'),
+		STRINGS: tr('synth.tooltip.presetStrings'),
+		'GLASS PAD': tr('synth.tooltip.presetGlassPad'),
+		'HOLLOW PAD': tr('synth.tooltip.presetHollowPad'),
+		'KICK 808': tr('synth.tooltip.presetKick808'),
+		'KICK PUNCH': tr('synth.tooltip.presetKickPunch'),
+		SNARE: tr('synth.tooltip.presetSnare'),
+		CLAP: tr('synth.tooltip.presetClap'),
+		'CLOSED HAT': tr('synth.tooltip.presetClosedHat'),
+		'OPEN HAT': tr('synth.tooltip.presetOpenHat'),
+		TOM: tr('synth.tooltip.presetTom'),
+		RIMSHOT: tr('synth.tooltip.presetRimshot'),
+		COWBELL: tr('synth.tooltip.presetCowbell'),
+		SHAKER: tr('synth.tooltip.presetShaker')
+	};
+}

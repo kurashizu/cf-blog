@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { t } from '../../../i18n';
 	import HorizontalHardwareFader from '../../hardware/HorizontalHardwareFader.svelte';
 	import {
 		audioSampleRate,
@@ -20,15 +21,15 @@
 	<!-- Noise Buffer Config -->
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
-			<span class="text-[#c678dd] font-black">NOISE GENERATOR PCM AUDIO BUFFER</span>
-			<span class="text-white/40 text-[10px]">AudioBuffer Allocation</span>
+			<span class="text-[#c678dd] font-black">{$t('synthPanels.dsp.noiseBufferTitle')}</span>
+			<span class="text-white/40 text-[10px]">{$t('synthPanels.dsp.audioBufferAllocation')}</span>
 		</div>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
 			<div>
 				<div class="flex justify-between text-white/70 mb-1">
-					<span>PCM Buffer Length:</span>
-					<span class="text-[#c678dd] font-bold">{$noiseDurationSetting.toFixed(1)}s ({($noiseDurationSetting * $audioSampleRate).toLocaleString()} samples)</span>
+					<span>{$t('synthPanels.dsp.pcmBufferLength')}</span>
+					<span class="text-[#c678dd] font-bold">{$t('synthPanels.dsp.durationSamples', { seconds: $noiseDurationSetting.toFixed(1), samples: ($noiseDurationSetting * $audioSampleRate).toLocaleString() })}</span>
 				</div>
 				<HorizontalHardwareFader
 					value={$noiseDurationSetting}
@@ -40,15 +41,15 @@
 					onChange={setNoiseDuration}
 				/>
 				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
-					<span>0.5s (22k samples)</span>
-					<span>2.0s (Default)</span>
-					<span>5.0s (220k samples)</span>
+					<span>{$t('synthPanels.dsp.noiseDurationMin')}</span>
+					<span>{$t('synthPanels.dsp.noiseDurationDefault')}</span>
+					<span>{$t('synthPanels.dsp.noiseDurationMax')}</span>
 				</div>
 			</div>
 
 			<div>
 				<div class="flex justify-between text-white/70 mb-1">
-					<span>Noise Color Spectrum:</span>
+					<span>{$t('synthPanels.dsp.noiseColorLabel')}</span>
 					<span class="text-[#c678dd] font-bold uppercase">{$noiseColorSetting}</span>
 				</div>
 				<div class="grid grid-cols-3 gap-1 mt-1">
@@ -73,15 +74,15 @@
 	<!-- Convolution Space Reverb Buffer -->
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
-			<span class="text-[#c678dd] font-black">CONVOLUTION REVERB IMPULSE RESPONSE BUFFER</span>
-			<span class="text-white/40 text-[10px]">Stereo IR Buffer</span>
+			<span class="text-[#c678dd] font-black">{$t('synthPanels.dsp.reverbBufferTitle')}</span>
+			<span class="text-white/40 text-[10px]">{$t('synthPanels.dsp.stereoIrBuffer')}</span>
 		</div>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
 			<div>
 				<div class="flex justify-between text-white/70 mb-1">
-					<span>Impulse Duration (RT60):</span>
-					<span class="text-[#c678dd] font-bold">{$reverbDurationSetting.toFixed(1)}s ({($reverbDurationSetting * $audioSampleRate * 2).toLocaleString()} stereo samples)</span>
+					<span>{$t('synthPanels.dsp.impulseDuration')}</span>
+					<span class="text-[#c678dd] font-bold">{$t('synthPanels.dsp.durationStereoSamples', { seconds: $reverbDurationSetting.toFixed(1), samples: ($reverbDurationSetting * $audioSampleRate * 2).toLocaleString() })}</span>
 				</div>
 				<HorizontalHardwareFader
 					value={$reverbDurationSetting}
@@ -93,15 +94,15 @@
 					onChange={setReverbDuration}
 				/>
 				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
-					<span>0.2s (Room)</span>
-					<span>1.8s (Plate)</span>
-					<span>6.0s (Cathedral)</span>
+					<span>{$t('synthPanels.dsp.reverbDurationRoom')}</span>
+					<span>{$t('synthPanels.dsp.reverbDurationPlate')}</span>
+					<span>{$t('synthPanels.dsp.reverbDurationCathedral')}</span>
 				</div>
 			</div>
 
 			<div>
 				<div class="flex justify-between text-white/70 mb-1">
-					<span>Decay Factor (Air Absorption):</span>
+					<span>{$t('synthPanels.dsp.decayFactorLabel')}</span>
 					<span class="text-[#c678dd] font-bold">{$reverbDecaySetting.toFixed(2)}</span>
 				</div>
 				<HorizontalHardwareFader
@@ -114,9 +115,9 @@
 					onChange={setReverbDecay}
 				/>
 				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
-					<span>0.1 (Dark)</span>
-					<span>0.6 (Warm)</span>
-					<span>2.0 (Bright Air)</span>
+					<span>{$t('synthPanels.dsp.decayDark')}</span>
+					<span>{$t('synthPanels.dsp.decayWarm')}</span>
+					<span>{$t('synthPanels.dsp.decayBrightAir')}</span>
 				</div>
 			</div>
 		</div>

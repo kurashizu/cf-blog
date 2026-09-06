@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import { suspendNavHotkeys } from '$lib/stores/hotkeys';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
-	import { LIFELAB_TOUR } from '$lib/components/lifelab/lifelab-tour';
+	import { getLifelabTour } from '$lib/components/lifelab/lifelab-tour';
 	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '$lib/stores/chrome';
+	import { t, locale } from '$lib/i18n';
 
 	/**
 	 * LIFE.LAB, mounted into the site.
@@ -20,6 +21,9 @@
 	let mounted = $state(false);
 	const TOUR = 'lifelab-tour';
 	let guideActive = isOnboardingActive(TOUR);
+	// Recomputed whenever the language changes, so the tour never opens in a
+	// locale that was current only at the time the page first mounted.
+	let tourSteps = $derived.by(() => { $locale; return getLifelabTour(); });
 
 	function closeGuide() {
 		dequeueOnboarding(TOUR);
@@ -58,10 +62,10 @@
 </script>
 
 <svelte:head>
-	<title>KRSZ™ // 7:lifelab — Conway Automaton Laboratory</title>
+	<title>{$t('lifelab.page.title')}</title>
 	<meta
 		name="description"
-		content="Conway's Game of Life as an open dish: a 320x200 grid, a library of verified patterns from still lifes to the Gosper gun, free drawing and random soup."
+		content={$t('lifelab.page.description')}
 	/>
 </svelte:head>
 
@@ -79,13 +83,13 @@
 			<pre id="wordmark">┬  ┬┌─┐┌─┐  ┬  ┌─┐┌┐ 
 │  │├┤ ├┤   │  ├─┤├┴┐
 ┴─┘┴└  └─┘  ┴─┘┴ ┴└─┘</pre>
-			<small>CONWAY AUTOMATON · B3/S23</small>
+			<small>{$t('lifelab.page.subtitle')}</small>
 			<span id="brandbtns">
 				<button
 					id="llguide"
-					title="Walk through the lab — the rule, the controls and what to watch"
+					title={$t('lifelab.page.guideHint')}
 					onclick={() => openOnboardingNow(TOUR)}>?</button>
-				<button id="wipebtn" title="Remove every cell from the board">CLEAR ALL</button>
+				<button id="wipebtn" title={$t('lifelab.page.clearAllHint')}>{$t('lifelab.ui.clearAll')}</button>
 			</span>
 		</div>
 		<div id="topbar"></div>
@@ -100,8 +104,8 @@
 				     record of what just happened, glanced at, not worked in. -->
 				<div id="logwrap" data-tour="ll-log">
 					<div class="shead" id="loghead">
-						<span>LOG</span><small>what the dish just did</small>
-						<button id="logtoggle" title="Hide the log">_</button>
+						<span>{$t('lifelab.page.logLabel')}</span><small>{$t('lifelab.page.logSubtitle')}</small>
+						<button id="logtoggle" title={$t('lifelab.page.hideLogHint')}>_</button>
 					</div>
 					<div id="term"></div>
 				</div>
@@ -112,11 +116,11 @@
 </div>
 
 {#if $guideActive}
-	<Onboarding steps={LIFELAB_TOUR} heading="LIFE.LAB TOUR" onClose={closeGuide} />
+	<Onboarding steps={tourSteps} heading={$t('lifelab.page.tourHeading')} onClose={closeGuide} />
 {/if}
 
 {#if !mounted}
 	<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-		<span class="font-mono text-xs text-white/40">loading LIFE.LAB…</span>
+		<span class="font-mono text-xs text-white/40">{$t('lifelab.page.loading')}</span>
 	</div>
 {/if}

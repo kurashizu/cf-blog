@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade } from '$lib/perf-transitions';
 	import Dropdown from '../chrome/Dropdown.svelte';
+	import { t, tr } from '$lib/i18n';
 
 	const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 	/** Long enough to test a phrase, short enough that a forgotten recording can't grow without bound. */
@@ -77,7 +78,7 @@
 				}
 			});
 		} catch (e) {
-			error = e instanceof Error ? `${e.name}: ${e.message}` : 'Microphone access denied';
+			error = e instanceof Error ? tr('utilities.mic.error.named', { name: e.name, message: e.message }) : tr('utilities.mic.error.deniedFallback');
 			return;
 		}
 
@@ -103,12 +104,12 @@
 		if (!track || !ctx) return;
 		const s = track.getSettings();
 		settings = [
-			{ label: 'DEVICE', value: track.label || '(label withheld)' },
-			{ label: 'SAMPLE RATE', value: `${s.sampleRate ?? ctx.sampleRate} Hz` },
-			{ label: 'CHANNELS', value: String(s.channelCount ?? 1) },
-			{ label: 'ECHO CANCEL', value: String(s.echoCancellation ?? 'n/a') },
-			{ label: 'NOISE SUPPR.', value: String(s.noiseSuppression ?? 'n/a') },
-			{ label: 'AUTO GAIN', value: String(s.autoGainControl ?? 'n/a') }
+			{ label: tr('utilities.mic.settings.device'), value: track.label || tr('utilities.mic.settings.device.labelWithheld') },
+			{ label: tr('utilities.mic.settings.sampleRate'), value: `${s.sampleRate ?? ctx.sampleRate} Hz` },
+			{ label: tr('utilities.mic.settings.channels'), value: String(s.channelCount ?? 1) },
+			{ label: tr('utilities.mic.settings.echoCancel'), value: String(s.echoCancellation ?? 'n/a') },
+			{ label: tr('utilities.mic.settings.noiseSuppr'), value: String(s.noiseSuppression ?? 'n/a') },
+			{ label: tr('utilities.mic.settings.autoGain'), value: String(s.autoGainControl ?? 'n/a') }
 		];
 	}
 
@@ -296,7 +297,7 @@
 		if (!stream || recording) return;
 		const mimeType = pickMimeType();
 		if (!mimeType) {
-			error = 'MediaRecorder cannot capture audio in this browser.';
+			error = tr('utilities.mic.error.mediaRecorderUnsupported');
 			return;
 		}
 		stopPlayback();
@@ -341,7 +342,7 @@
 			const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
 			take = { blob, buffer, ext: extensionFor(mimeType) };
 		} catch {
-			error = 'Recorded, but this browser could not decode the take for playback.';
+			error = tr('utilities.mic.error.decodeFailed');
 		} finally {
 			decoding = false;
 		}
@@ -426,14 +427,14 @@
 				onclick={stop}
 				class="press px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black transition-colors"
 			>
-				STOP &amp; RELEASE MIC
+				{$t('utilities.mic.stop')}
 			</button>
 		{:else}
 			<button
 				onclick={() => start(selectedDevice || undefined)}
 				class="press px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors {error ? 'shake-once' : ''}"
 			>
-				GRANT MIC &amp; START
+				{$t('utilities.mic.start')}
 			</button>
 		{/if}
 
@@ -442,42 +443,42 @@
 			onchange={(v) => listening && start(v || undefined)}
 			color="#e5c07b"
 			width="260px"
-			placeholder="default input"
+			placeholder={$t('utilities.mic.device.placeholder')}
 			title={devices.some((d) => d.label)
-				? 'Input device'
-				: 'Device names appear once microphone access has been granted'}
+				? $t('utilities.mic.device.title.labeled')
+				: $t('utilities.mic.device.title.unlabeled')}
 			options={[
-				{ value: '', label: 'default input', note: devices.length ? `${devices.length} available` : undefined },
-				...devices.map((d) => ({ value: d.deviceId, label: d.label || `input ${d.deviceId.slice(0, 6)}` }))
+				{ value: '', label: $t('utilities.mic.device.default'), note: devices.length ? $t('utilities.mic.device.available', { count: devices.length }) : undefined },
+				...devices.map((d) => ({ value: d.deviceId, label: d.label || $t('utilities.mic.device.fallback', { id: d.deviceId.slice(0, 6) }) }))
 			]}
 		/>
 
 		{#if listening}
 			<button
 				onclick={toggleMonitor}
-				title="Route the microphone straight to the output so you can hear yourself. Use headphones — on speakers this will feed back."
+				title={$t('utilities.mic.monitor.title')}
 				class="press px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors {monitor
 					? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 					: 'border-white/25 text-white/70 hover:bg-white/10'}"
 			>
-				MONITOR: {monitor ? 'ON' : 'OFF'}
+				{$t('utilities.mic.monitor.label', { state: monitor ? $t('utilities.mic.monitor.on') : $t('utilities.mic.monitor.off') })}
 			</button>
 			<button
 				onclick={() => (clipped = false)}
 				class="press px-2.5 py-1.5 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 			>
-				RESET CLIP
+				{$t('utilities.mic.resetClip')}
 			</button>
 		{/if}
 
 		<span class="text-[11px] font-mono text-white/40">
-			Audio never leaves the page — analysed and played back in the browser, nothing is uploaded.
+			{$t('utilities.mic.privacyNote')}
 		</span>
 	</div>
 
 	{#if monitor}
 		<div class="text-[11px] font-mono text-[#e5c07b]">
-			Monitoring is on — wear headphones, or the microphone will pick up its own output.
+			{$t('utilities.mic.monitorWarning')}
 		</div>
 	{/if}
 
@@ -487,7 +488,7 @@
 
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-2">
 		<div class="flex items-center gap-2">
-			<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-10">RMS</span>
+			<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-10">{$t('utilities.mic.rms.label')}</span>
 			<div class="flex-1 h-3 bg-black/60 border border-white/10 rounded-xs overflow-hidden">
 				<div
 					class="h-full transition-[width] duration-75"
@@ -495,16 +496,16 @@
 				></div>
 			</div>
 			<span class="text-xs font-mono text-[#98c379] w-20 text-right">
-				{rms === -Infinity ? '—' : `${rms.toFixed(1)} dBFS`}
+				{rms === -Infinity ? '—' : $t('utilities.mic.rms.value', { db: rms.toFixed(1) })}
 			</span>
 		</div>
 		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono">
-			<span class="text-white/45">PEAK <span class="text-[#e5c07b]">{peak === -Infinity ? '—' : `${peak.toFixed(1)} dBFS`}</span></span>
+			<span class="text-white/45">{$t('utilities.mic.peak.label')} <span class="text-[#e5c07b]">{peak === -Infinity ? '—' : $t('utilities.mic.rms.value', { db: peak.toFixed(1) })}</span></span>
 			<span class="text-white/45">
-				DOMINANT <span class="text-[#56b6c2]">{dominantHz ? `${dominantHz} Hz` : '—'}</span>
+				{$t('utilities.mic.dominant.label')} <span class="text-[#56b6c2]">{dominantHz ? $t('utilities.mic.dominant.value', { hz: dominantHz }) : '—'}</span>
 				{#if dominantHz}<span class="text-[#c678dd]"> · {noteFor(dominantHz)}</span>{/if}
 			</span>
-			{#if clipped}<span class="text-[#e06c75] font-bold" transition:fade={{ duration: 150 }}>CLIP DETECTED</span>{/if}
+			{#if clipped}<span class="text-[#e06c75] font-bold" transition:fade={{ duration: 150 }}>{$t('utilities.mic.clip.detected')}</span>{/if}
 		</div>
 	</div>
 
@@ -514,7 +515,7 @@
 	     whether the input actually sounds right, not just whether it registers -->
 	<div class="border border-[#e5c07b]/30 bg-black/25 rounded-xs p-2.5 space-y-2">
 		<div class="flex flex-wrap items-center gap-2">
-			<span class="text-xs font-black font-mono text-[#e5c07b]">RECORD &amp; PLAY BACK</span>
+			<span class="text-xs font-black font-mono text-[#e5c07b]">{$t('utilities.mic.record.heading')}</span>
 
 			<button
 				onclick={toggleRecording}
@@ -522,9 +523,9 @@
 				class="press px-2.5 py-1 border rounded-xs text-xs font-black cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed {recording
 					? 'border-[#e06c75] bg-[#e06c75]/25 text-[#e06c75]'
 					: 'border-[#e06c75]/50 text-[#e06c75] hover:bg-[#e06c75]/20'}"
-				title={listening ? `Record up to ${MAX_REC_MS / 1000}s from this input` : 'Start the microphone first'}
+				title={listening ? $t('utilities.mic.record.title', { seconds: MAX_REC_MS / 1000 }) : $t('utilities.mic.record.titleDisabled')}
 			>
-				{#if recording}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>■ STOP {recSeconds}s</span>{:else}● RECORD{/if}
+				{#if recording}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>{$t('utilities.mic.record.stop', { seconds: recSeconds })}</span>{:else}{$t('utilities.mic.record.start')}{/if}
 			</button>
 
 			<button
@@ -534,29 +535,33 @@
 					? 'border-[#98c379] bg-[#98c379]/25 text-[#98c379]'
 					: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
 			>
-				{playing ? '■ STOP' : '▶ PLAY TAKE'}
+				{playing ? $t('utilities.mic.play.stop') : $t('utilities.mic.play.play')}
 			</button>
 
 			<button
 				onclick={saveTake}
 				disabled={!take}
 				class="press px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
-				title="Download the recording in the format this browser captured it as"
+				title={$t('utilities.mic.save.title')}
 			>
-				SAVE
+				{$t('utilities.mic.save')}
 			</button>
 
 			<span class="text-[11px] font-mono text-white/40">
 				{#if recording}
-					recording — stops automatically at {MAX_REC_MS / 1000}s
+					{$t('utilities.mic.status.recording', { seconds: MAX_REC_MS / 1000 })}
 				{:else if decoding}
-					decoding take…
+					{$t('utilities.mic.status.decoding')}
 				{:else if take}
-					{take.buffer.duration.toFixed(1)}s · {take.buffer.sampleRate / 1000} kHz · {take.buffer.numberOfChannels === 1
-						? 'mono'
-						: `${take.buffer.numberOfChannels} ch`} · {(take.blob.size / 1024).toFixed(0)} KB {take.ext}
+					{$t('utilities.mic.status.take', {
+						duration: take.buffer.duration.toFixed(1),
+						khz: take.buffer.sampleRate / 1000,
+						channels: take.buffer.numberOfChannels === 1 ? $t('utilities.mic.status.take.mono') : $t('utilities.mic.status.take.channels', { count: take.buffer.numberOfChannels }),
+						kb: (take.blob.size / 1024).toFixed(0),
+						ext: take.ext
+					})}
 				{:else}
-					no take yet
+					{$t('utilities.mic.status.noTake')}
 				{/if}
 			</span>
 		</div>

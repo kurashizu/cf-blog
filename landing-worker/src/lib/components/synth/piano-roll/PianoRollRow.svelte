@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '../../../i18n';
 	import { METER_SPECS, divToColumnSpan, stepsPerColumn, hasSubColumns, ternaryColFactor, type TimeSignature, type NoteDurationDiv } from '../../../synth';
 
 	interface VisibleTrackItem {
@@ -102,8 +103,10 @@
 			onResetKey(actualIdx);
 		}}
 		title={percussion
-			? `${nInfo.note} — click to audition and edit this key${isCustomKey ? ' (has its own sound; right-click to drop it)' : ' (plays the track sound)'}`
-			: `Audition ${nInfo.note} (${Math.round(nInfo.freq)}Hz)`}
+			? (isCustomKey
+					? $t('synthPanels.roll.auditionKeyCustomHint', { note: nInfo.note })
+					: $t('synthPanels.roll.auditionKeyDefaultHint', { note: nInfo.note }))
+			: $t('synthPanels.roll.auditionNoteHint', { note: nInfo.note, freq: Math.round(nInfo.freq) })}
 		class="w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end gap-0.5 select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 {isActiveKey
 			? 'ring-1 ring-[#c678dd] shadow-[0_0_6px_rgba(198,120,221,0.6)]'
 			: ''} {isRootC
@@ -136,7 +139,7 @@
 								data-note={actualIdx}
 								data-step={step}
 								data-span={half}
-								title={`${nInfo.note} — Step ${step + 1}`}
+								title={$t('synthPanels.roll.cellStepHint', { note: nInfo.note, step: step + 1 })}
 								class="flex-1 h-full border rounded-xs transition-colors {isBarStart && subCol === 0
 										? isRootC
 											? 'border-l-2 border-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
@@ -166,7 +169,7 @@
 						data-note={actualIdx}
 						data-step={colStart}
 						data-span={spc}
-						title={`${nInfo.note} — Step ${colStart + 1}`}
+						title={$t('synthPanels.roll.cellStepHint', { note: nInfo.note, step: colStart + 1 })}
 						class="w-full h-full rounded-xs border transition-colors {isBarStart
 								? isRootC
 									? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'

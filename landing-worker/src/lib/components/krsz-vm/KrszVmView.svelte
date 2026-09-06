@@ -4,6 +4,7 @@
 	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
+	import { t, tr } from '$lib/i18n';
 	import {
 		clearOverlay,
 		findDiskBuffer,
@@ -69,11 +70,12 @@
 	const MEMORY_CHOICES = [64, 128, 256, 512, 1024];
 	/** Every one of these fits in 8 MB of video memory at 24bpp. */
 	const RESOLUTIONS = ['auto', '1024x768', '1280x800', '1440x900', '1600x900'];
-	const SCALING_CHOICES = [
-		['fit', 'FIT', 'Fill the panel. Smooth, and rarely a whole number of pixels.'],
-		['integer', 'SHARP', 'Scale by whole pixels only, so nothing is invented between them.'],
-		['none', '1:1', "One guest pixel per screen pixel, whatever size that comes out."]
-	] as const;
+	/** Labels and hints are resolved at render, not at import time, so the locale can change. */
+	let SCALING_CHOICES = $derived([
+		['fit', $t('vm.scaling.fit'), $t('vm.scaling.fitHint')],
+		['integer', $t('vm.scaling.sharp'), $t('vm.scaling.sharpHint')],
+		['none', $t('vm.scaling.oneToOne'), $t('vm.scaling.oneToOneHint')]
+	] as const);
 	const VGA_CHOICES = [2, 4, 8, 16];
 
 	/**
@@ -168,7 +170,11 @@
 	let view = $derived<'terminal' | 'screen'>(
 		viewMode === 'auto' ? (graphical ? 'screen' : 'terminal') : viewMode
 	);
-	const VIEW_LABEL = { auto: 'VIEW AUTO', terminal: 'VIEW TERM', screen: 'VIEW VGA' } as const;
+	let VIEW_LABEL = $derived({
+		auto: $t('vm.view.auto'),
+		terminal: $t('vm.view.term'),
+		screen: $t('vm.view.vga')
+	} as const);
 	function cycleView() {
 		viewMode = viewMode === 'auto' ? 'terminal' : viewMode === 'terminal' ? 'screen' : 'auto';
 		playSound('click');
@@ -303,7 +309,7 @@
 		}
 
 		try {
-			status = 'reading image metadata…';
+			status = tr('vm.status.readingMetadata');
 			// A purpose-built kernel + rootfs is preferred when the build workflow
 			// has published one; otherwise fall back to booting the stock ISO.
 			const wantKernel = settings.boot !== 'cdrom';
@@ -311,14 +317,14 @@
 			const kernel = rootfs ? await imageInfo('vmlinuz') : null;
 			const initramfs = kernel ? await imageInfo('initramfs') : null;
 			if (settings.boot === 'kernel' && !kernel) {
-				throw new Error('no purpose-built image is published on this deployment yet');
+				throw new Error(tr('vm.error.noKernelImage'));
 			}
 			const meta = kernel ? rootfs : await imageInfo(IMAGE);
-			if (!meta) throw new Error('no VM image is configured on this deployment');
+			if (!meta) throw new Error(tr('vm.error.noVmImage'));
 			imageSize = meta.size;
 			mode = kernel ? 'kernel' : 'cdrom';
 
-			status = 'loading emulator (2 MB wasm)…';
+			status = tr('vm.status.loadingEmulatorSized');
 			const xterm = await Promise.all([
 				import('@xterm/xterm'),
 				import('@xterm/addon-fit'),
@@ -331,7 +337,7 @@
 			]);
 
 			restoreFetch = installFetchCounter();
-			status = 'starting SeaBIOS…';
+			status = tr('vm.status.startingSeabios');
 
 			// v86 rounds async reads out to fixed_chunk_size, so the proxy's cache
 			// is hit squarely instead of straddling two entries.
@@ -405,7 +411,7 @@
 
 			emulator.add_listener('emulator-started', () => {
 				phase = 'running';
-				status = 'running';
+				status = tr('vm.status.running');
 				bootedAt = performance.now();
 				lastSample = bootedAt;
 				lastInstructions = 0;
@@ -501,13 +507,13 @@
 	 */
 	async function bootQemu() {
 		try {
-			status = 'loading emulator…';
+			status = tr('vm.status.loadingEmulator');
 			const [xtermMod, fitMod] = await Promise.all([
 				import('@xterm/xterm'),
 				import('@xterm/addon-fit'),
 				import('@xterm/xterm/css/xterm.css')
 			]);
-			if (!termEl) throw new Error('the terminal has nowhere to draw');
+			if (!termEl) throw new Error(tr('vm.error.noTerminalTarget'));
 
 			term = new xtermMod.Terminal({
 				// Same face as the rest of the site. xterm takes its font as an
@@ -529,14 +535,14 @@
 			term.open(termEl);
 			fitTerminal();
 
-			status = 'reading image metadata…';
+			status = tr('vm.status.readingMetadata');
 			const [kernel, initrd, rootfs] = await Promise.all([
 				qemuInfo('kernel'),
 				qemuInfo('initramfs'),
 				qemuInfo('rootfs')
 			]);
 			if (!kernel || !initrd || !rootfs) {
-				throw new Error('no x86-64 image is published on this deployment yet');
+				throw new Error(tr('vm.error.noX64Image'));
 			}
 			imageSize = rootfs.size;
 
@@ -545,15 +551,15 @@
 			const diskVersion = String(rootfs.version ?? rootfs.size);
 			let savedOverlay: Uint8Array | null = null;
 			if (settings.persistDisk) {
-				status = 'reading saved disk…';
+				status = tr('vm.status.readingSavedDisk');
 				try {
 					savedOverlay = await readOverlay(overlayName('x86_64'));
 				} catch {
-					overlayNote = 'saved disk could not be read';
+					overlayNote = tr('vm.overlay.savedDiskUnreadable');
 				}
 			}
 
-			status = 'loading QEMU (66 MB wasm)…';
+			status = tr('vm.status.loadingQemuSized');
 			const { startQemu } = await import('./qemu');
 			const machine = await startQemu({
 				arch: 'x86_64',
@@ -580,7 +586,7 @@
 					);
 					if (restored) {
 						overlay = restored;
-						overlayNote = `restored ${formatBytes(restored.bytes)}`;
+						overlayNote = tr('vm.overlay.restored', { size: formatBytes(restored.bytes) });
 					} else {
 						// What was saved belongs to a different build of the image;
 						// replaying it onto this one would corrupt it.
@@ -605,7 +611,7 @@
 			}
 
 			phase = 'running';
-			status = 'running';
+			status = tr('vm.status.running');
 			bootedAt = performance.now();
 			suspendNavHotkeys.set(true);
 			restoreFetch = installFetchCounter();
@@ -634,25 +640,25 @@
 		overlayKey = { name, version };
 		overlayNote = '';
 		if (diskBuffer && settings.persistDisk) {
-			status = 'restoring saved disk…';
+			status = tr('vm.status.restoringDisk');
 			try {
 				const restored = await loadOverlay(name, version, bufferStore(diskBuffer));
 				if (restored) {
 					overlay = restored;
-					overlayNote = `restored ${formatBytes(restored.bytes)}`;
+					overlayNote = tr('vm.overlay.restored', { size: formatBytes(restored.bytes) });
 				} else {
 					// Either nothing was saved, or what was saved belongs to a different
 					// build of the image and replaying it would corrupt this one.
 					await clearOverlay(name);
 				}
 			} catch {
-				overlayNote = 'saved disk could not be read';
+				overlayNote = tr('vm.overlay.savedDiskUnreadable');
 			}
 			overlaySaver = setInterval(() => void persistOverlay(), 20000);
 		} else if (!diskBuffer) {
 			// Worth saying out loud rather than silently not persisting: it means
 			// this build of v86 keeps its disk somewhere the search did not reach.
-			overlayNote = 'no writable disk found — changes stay in memory';
+			overlayNote = tr('vm.overlay.noWritableDisk');
 		}
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(emulator as any)?.run?.();
@@ -678,7 +684,7 @@
 			overlayStored = written.bytes;
 			overlayNote = '';
 		} else {
-			overlayNote = 'too large to save — wipe it or turn persistence off';
+			overlayNote = tr('vm.overlay.tooLarge');
 		}
 	}
 
@@ -686,7 +692,7 @@
 		playSound('click');
 		await clearOverlay(overlayKey?.name ?? overlayName(settings.machine));
 		overlayStored = 0;
-		overlayNote = phase === 'running' ? 'wiped — this session is still running on its changes' : 'wiped';
+		overlayNote = phase === 'running' ? tr('vm.overlay.wipedRunning') : tr('vm.overlay.wiped');
 	}
 
 	// The panel shows the selected machine's saved size, not whichever was asked
@@ -757,7 +763,7 @@
 
 	async function stop() {
 		playSound('click');
-		status = 'saving disk…';
+		status = tr('vm.status.savingDisk');
 		await persistOverlay();
 		// Same reason as restart(): the x86-64 machine does not stop, it ends with
 		// the page. Without this the panel returns to idle while QEMU keeps
@@ -1004,53 +1010,61 @@
 		settings.machine === 'x86_64'
 			? [
 					{
-						label: 'EMULATOR',
-						value: 'QEMU 10 — wasm build, GPL-2',
-						title: 'Upstream QEMU compiled to WebAssembly, which is why this machine has real device models rather than the minimum a browser emulator can get away with. It runs its CPU on a worker thread sharing memory with the page, so the page has to be cross-origin isolated for it to start at all.'
+						label: $t('vm.facts.emulator'),
+						value: $t('vm.facts.emulatorValueX64'),
+						title: $t('vm.facts.emulatorTitleX64')
 					},
-					{ label: 'GUEST', value: 'Alpine Linux 3.24, x86-64' },
-					{ label: 'CPU', value: 'single core, TCG' },
-					{ label: 'RAM', value: `${settings.memoryMb} MB` },
-					{ label: 'DISPLAY', value: '16550 serial, via xterm.js' },
+					{ label: $t('vm.facts.guest'), value: $t('vm.facts.guestValueX64') },
+					{ label: $t('vm.facts.cpu'), value: $t('vm.facts.cpuValueX64') },
+					{ label: $t('vm.facts.ram'), value: $t('vm.facts.ramValueX64', { memoryMb: settings.memoryMb }) },
+					{ label: $t('vm.facts.display'), value: $t('vm.facts.displayValueX64') },
 					{
-						label: 'DISK',
+						label: $t('vm.facts.disk'),
 						value: settings.persistDisk
-							? `ext4, streamed in 1 MiB chunks · ${overlay.blocks ? formatBytes(overlay.bytes) + ' changed' : 'unchanged'}`
-							: 'ext4 image, streamed in 1 MiB chunks',
-						title: 'QEMU opens its drive as an ordinary file, and the upstream demos download the whole image before starting. This one does not: reads are answered a chunk at a time from the same edge cache the other machine uses, and what the guest writes is kept in this browser and replayed at the next boot.'
+							? $t('vm.facts.diskValuePersist', {
+									change: overlay.blocks
+										? $t('vm.facts.diskChanged', { size: formatBytes(overlay.bytes) })
+										: $t('vm.facts.diskUnchanged')
+								})
+							: $t('vm.facts.diskValuePlain'),
+						title: $t('vm.facts.diskTitleX64')
 					},
 					{
-						label: 'NETWORK',
-						value: settings.network ? 'via the relay, any host' : 'off',
-						title: "QEMU's own user-mode stack is not in this build, and every backend that is wants a host socket API a tab does not have. What works instead: -netdev socket, whose connection Emscripten turns into a WebSocket, intercepted on the page's own thread and answered by v86's gateway — the same one the other machine here uses, and out through the same relay"
+						label: $t('vm.facts.network'),
+						value: settings.network ? $t('vm.facts.networkValueOn') : $t('vm.facts.networkValueOff'),
+						title: $t('vm.facts.networkTitleX64')
 					},
-					{ label: 'STATUS', value: 'boots to a root shell in ~2 min' }
+					{ label: $t('vm.facts.status'), value: $t('vm.facts.statusValueX64') }
 				]
 			: [
-		{ label: 'EMULATOR', value: 'v86 — x86-to-wasm JIT, BSD-2', title: 'copy/v86: a 32-bit x86 PC emulator that JIT-compiles guest code to WebAssembly' },
-		{ label: 'GUEST', value: 'Alpine Linux 3.24.1, i686', title: 'Alpine still ships 32-bit x86 as a release architecture, which is why it works here where Debian and Arch no longer would' },
-		{ label: 'CPU', value: 'single core, ~Pentium 4 class, no x86-64' },
-		{ label: 'RAM', value: `${settings.memoryMb} MB guest / ${settings.vgaMemoryMb} MB VGA` },
+		{ label: $t('vm.facts.emulator'), value: $t('vm.facts.emulatorValueX86'), title: $t('vm.facts.emulatorTitleX86') },
+		{ label: $t('vm.facts.guest'), value: $t('vm.facts.guestValueX86'), title: $t('vm.facts.guestTitleX86') },
+		{ label: $t('vm.facts.cpu'), value: $t('vm.facts.cpuValueX86') },
+		{ label: $t('vm.facts.ram'), value: $t('vm.facts.ramValueX86', { memoryMb: settings.memoryMb, vgaMemoryMb: settings.vgaMemoryMb }) },
 		{
-			label: 'DISPLAY',
-			value: view === 'terminal' ? 'serial console, via xterm.js' : 'emulated VGA, graphical',
-			title: 'Both run at once and the view follows the guest: the serial terminal while it is a shell, because that one resizes with the panel and reports the mouse, and the VGA screen as soon as something takes the display graphically'
+			label: $t('vm.facts.display'),
+			value: view === 'terminal' ? $t('vm.facts.displayValueTerminal') : $t('vm.facts.displayValueScreen'),
+			title: $t('vm.facts.displayTitleX86')
 		},
 		{
-			label: 'DISK',
+			label: $t('vm.facts.disk'),
 			value: settings.persistDisk
-				? `ext4, streamed in 1 MiB chunks · ${overlay.blocks ? formatBytes(overlay.bytes) + ' changed' : 'unchanged'}`
-				: 'ext4 image, streamed in 1 MiB chunks',
+				? $t('vm.facts.diskValuePersist', {
+						change: overlay.blocks
+							? $t('vm.facts.diskChanged', { size: formatBytes(overlay.bytes) })
+							: $t('vm.facts.diskUnchanged')
+					})
+				: $t('vm.facts.diskValuePlain'),
 			title: settings.persistDisk
-				? "The image is read-only and shared; everything the guest writes is kept separately, in this browser's origin-private filesystem, and replayed over the image on the next boot"
-				: "The image is read-only and shared, and the guest's writes live in memory until the tab closes"
+				? $t('vm.facts.diskTitlePersistX86')
+				: $t('vm.facts.diskTitlePlainX86')
 		},
 		{
-			label: 'NETWORK',
-			value: settings.network ? 'via the relay, any host' : 'off',
-			title: "v86's own gateway answers ARP, DHCP and ping and resolves names over DoH; the TCP streams it produces are translated to OmniProxy at /net/wisp. Names are policed at the resolver and ports at the socket, because the guest resolves for itself and connects to an address"
+			label: $t('vm.facts.network'),
+			value: settings.network ? $t('vm.facts.networkValueOn') : $t('vm.facts.networkValueOff'),
+			title: $t('vm.facts.networkTitleX86')
 		},
-		{ label: 'STATUS', value: 'boots to a root shell in ~30s' }
+		{ label: $t('vm.facts.status'), value: $t('vm.facts.statusValueX86') }
 			]
 	);
 </script>
@@ -1073,15 +1087,15 @@
 				<div class="flex items-center gap-2 mr-1">
 					<span class="flex items-center gap-1.5 text-xs font-mono font-bold text-[#98c379]">
 						<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] animate-pulse"></span>
-						RUNNING
+						{$t('vm.running.label')}
 					</span>
-					<span class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60" title="Time since the emulator started">
+					<span class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60" title={$t('vm.running.uptimeHint')}>
 						{formatUptime(uptime)}
 					</span>
 					{#if mips !== null}
 						<span
 							class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60"
-							title="Instructions per second of wall clock. The emulated CPU is halted while a disk chunk is in flight, so this counts network waits as if they were slow execution — during boot it says more about I/O than about the JIT."
+							title={$t('vm.running.mipsHint')}
 						>
 							{mips.toFixed(2)} <span class="text-white/35">MIPS</span>
 						</span>
@@ -1095,7 +1109,7 @@
 				{#if settings.machine === 'x86'}
 				<button
 					onclick={cycleView}
-					title="Which of the machine's two outputs is shown. On AUTO it follows the guest: the serial terminal while it is a shell, the VGA screen once something takes the display graphically."
+					title={$t('vm.view.hint')}
 					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {viewMode ===
 					'auto'
 						? 'border-white/25 text-white/70 hover:bg-white/10'
@@ -1105,28 +1119,28 @@
 				</button>
 				<button
 					onclick={() => (showKeyboard = !showKeyboard)}
-					title="On-screen keyboard — sends scancodes directly, which also avoids the layout mismatch a non-US physical keyboard hits"
+					title={$t('vm.button.keysHint')}
 					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {showKeyboard
 						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 						: 'border-white/25 text-white/70 hover:bg-white/10'}"
 				>
-					⌨ KEYS
+					{$t('vm.button.keys')}
 				</button>
 				{/if}
 				<button
 					onclick={restart}
 					title={settings.machine === 'x86_64'
-						? 'Reload the page and boot again. QEMU runs its main under Asyncify and cannot be torn down in place, so this is a real reload — the saved disk is written first, so nothing is lost.'
-						: 'Rebuild the machine from scratch. Not Ctrl+Alt+Del: the kernel is handed to the emulator directly rather than loaded from the disk, so a guest reboot would leave SeaBIOS with nothing to boot.'}
+						? $t('vm.button.restartHintX64')
+						: $t('vm.button.restartHintX86')}
 					class="px-2.5 py-1 border border-[#e5c07b]/50 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 hover:bg-[#e5c07b]/20"
 				>
-					↻ RESTART
+					{$t('vm.button.restart')}
 				</button>
 				<button
 					onclick={stop}
 					class="px-2.5 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer transition-colors active:scale-95 hover:bg-[#e06c75] hover:text-black"
 				>
-					POWER OFF
+					{$t('vm.button.powerOff')}
 				</button>
 			{:else if phase === 'loading'}
 				<span class="text-xs font-mono text-[#e5c07b] blink-live">◐ {status}</span>
@@ -1134,14 +1148,14 @@
 					onclick={stop}
 					class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 hover:bg-white/10"
 				>
-					CANCEL
+					{$t('vm.button.cancel')}
 				</button>
 			{:else}
 				<button
 					onclick={boot}
 					class="px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer transition-colors active:scale-95 hover:bg-[#98c379] hover:text-black"
 				>
-					▶ BOOT
+					{$t('vm.button.boot')}
 				</button>
 			{/if}
 		</div>
@@ -1150,28 +1164,23 @@
 	{#if phase === 'idle' || phase === 'error'}
 		<div class="space-y-3">
 			<p class="text-[11px] sm:text-xs text-white/60 leading-relaxed max-w-3xl">
-				A real x86 PC, emulated in this tab — an actual Linux kernel on an emulated
-				disk and network card, not a shell simulation. Two machines to pick from:
-				<span class="font-mono text-white/75">i686</span> under v86, which adds a VGA
-				adapter and a graphical desktop, and <span class="font-mono text-white/75">x86-64</span>
-				under QEMU. Either boots to a root shell, reaches the network through a relay on
-				this origin, and keeps what you change in this browser.
+				{$t('vm.intro', { i686: 'i686', x8664: 'x86-64' })}
 			</p>
 
 			<div class="border border-[#56b6c2]/40 bg-black/30 rounded-xs p-2.5 space-y-2.5">
 				<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
-						<span class="text-xs font-black font-mono text-[#56b6c2]">MACHINE CONFIG</span>
+						<span class="text-xs font-black font-mono text-[#56b6c2]">{$t('vm.config.title')}</span>
 						<div class="flex items-center gap-2">
-							<span class="text-[10px] font-mono text-white/35">saved in this browser · applies at next boot</span>
+							<span class="text-[10px] font-mono text-white/35">{$t('vm.config.savedNote')}</span>
 							<button onclick={resetSettings} class="press text-[10px] font-mono text-white/45 hover:text-white cursor-pointer underline transition-colors">
-								reset
+								{$t('vm.config.reset')}
 							</button>
 						</div>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">MACHINE</span>
-						{#each [['x86', 'i686', 'v86: a 32-bit x86 PC, JIT-compiled to WebAssembly. The one with a graphical desktop and a saved disk.'], ['x86_64', 'x86-64', 'QEMU itself, compiled to WebAssembly: the same emulator you would run on a desktop, translating x86-64 as it goes, on a worker thread that shares memory with the page.']] as const as [value, label, hint] (value)}
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.machine')}</span>
+						{#each [['x86', 'i686', $t('vm.config.machineX86Hint')], ['x86_64', 'x86-64', $t('vm.config.machineX64Hint')]] as const as [value, label, hint] (value)}
 							<button
 								onclick={() => (settings.machine = value)}
 								title={hint}
@@ -1183,11 +1192,11 @@
 								{label}
 							</button>
 						{/each}
-						<span class="text-[10px] font-mono text-white/40">different emulators, not settings</span>
+						<span class="text-[10px] font-mono text-white/40">{$t('vm.config.machineNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">GUEST RAM</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.guestRam')}</span>
 						{#each MEMORY_CHOICES as mb (mb)}
 							<button
 								onclick={() => (settings.memoryMb = mb)}
@@ -1198,43 +1207,43 @@
 								{mb} MB
 							</button>
 						{/each}
-						<span class="text-[10px] font-mono text-white/30">this is browser memory, not your machine's</span>
+						<span class="text-[10px] font-mono text-white/30">{$t('vm.config.guestRamNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">NETWORK</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.network')}</span>
 						<button
 							onclick={() => (settings.network = !settings.network)}
-							title="Attach a virtio NIC and put a gateway behind it — DHCP, DNS and TCP — whose connections leave through the relay on this origin. Reachable destinations are limited by an allowlist enforced at the edge."
+							title={$t('vm.config.networkHint')}
 							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.network
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
-							NET: {settings.network ? 'ON' : 'OFF'}
+							{settings.network ? $t('vm.config.networkOn') : $t('vm.config.networkOff')}
 						</button>
-						<span class="text-[10px] font-mono text-white/40">nothing on the internet can reach in</span>
+						<span class="text-[10px] font-mono text-white/40">{$t('vm.config.networkNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2 min-h-[30px]">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">DISK</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.disk')}</span>
 						<button
 							onclick={() => (settings.persistDisk = !settings.persistDisk)}
-							title="Keep what the guest writes in this browser's origin-private filesystem and replay it on the next boot. The image itself stays read-only and shared; only the difference is stored, and only in this browser."
+							title={$t('vm.config.diskHint')}
 							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.persistDisk
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
-							PERSIST: {settings.persistDisk ? 'ON' : 'OFF'}
+							{settings.persistDisk ? $t('vm.config.persistOn') : $t('vm.config.persistOff')}
 						</button>
 						<button
 							onclick={wipeOverlay}
-							title="Delete the saved changes. The next boot starts from the image exactly as built."
+							title={$t('vm.config.wipeHint')}
 							class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:bg-[#e06c75]/20"
 						>
-							WIPE
+							{$t('vm.config.wipe')}
 						</button>
 						<span class="text-[10px] font-mono text-white/40">
-							{overlayStored ? `${formatBytes(overlayStored)} saved` : 'nothing saved'}{overlayNote
+							{overlayStored ? $t('vm.overlay.savedCount', { size: formatBytes(overlayStored) }) : $t('vm.overlay.nothingSaved')}{overlayNote
 								? ` · ${overlayNote}`
 								: ''}
 						</span>
@@ -1242,7 +1251,7 @@
 
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">VGA RAM</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.vgaRam')}</span>
 						{#each VGA_CHOICES as mb (mb)}
 							<button
 								onclick={() => (settings.vgaMemoryMb = mb)}
@@ -1258,13 +1267,13 @@
 
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">SCREEN</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.screen')}</span>
 						{#each RESOLUTIONS as res (res)}
 							<button
 								onclick={() => (settings.resolution = res)}
 								title={res === 'auto'
-									? 'Leave the mode to the guest, which with no monitor to ask lands on 1024x768'
-									: `Ask X for ${res}. Takes effect the next time startx runs.`}
+									? $t('vm.config.screenAutoHint')
+									: $t('vm.config.screenResHint', { resolution: res })}
 								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.resolution ===
 								res
 									? 'border-[#d19a66] bg-[#d19a66]/20 text-[#d19a66]'
@@ -1276,7 +1285,7 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">SCALING</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.scaling')}</span>
 						{#each SCALING_CHOICES as [value, label, hint] (value)}
 							<button
 								onclick={() => {
@@ -1297,15 +1306,15 @@
 
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">BOOT</span>
-						{#each [['auto', 'AUTO'], ['kernel', 'DIRECT KERNEL'], ['cdrom', 'ISO BOOTLOADER']] as const as [value, label] (value)}
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.boot')}</span>
+						{#each [['auto', $t('vm.config.bootAuto')], ['kernel', $t('vm.config.bootKernel')], ['cdrom', $t('vm.config.bootCdrom')]] as const as [value, label] (value)}
 							<button
 								onclick={() => (settings.boot = value)}
 								title={value === 'auto'
-									? 'Use the purpose-built image when one is published, otherwise the stock ISO'
+									? $t('vm.config.bootAutoHint')
 									: value === 'kernel'
-										? 'Load the kernel and initramfs directly, with the command line below'
-										: 'Boot the stock Alpine ISO through its bootloader'}
+										? $t('vm.config.bootKernelHint')
+										: $t('vm.config.bootCdromHint')}
 								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.boot === value
 									? 'border-[#61afef] bg-[#61afef]/20 text-[#61afef]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
@@ -1316,58 +1325,53 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">CMDLINE</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.cmdline')}</span>
 						<input
 							type="text"
 							bind:value={settings.cmdline}
 							spellcheck="false"
-							title="Kernel command line, used only by direct kernel boot"
+							title={$t('vm.config.cmdlineHint')}
 							class="flex-1 min-w-[240px] px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-[11px] font-mono text-[#d8dee9] outline-none transition-colors focus:border-[#56b6c2]"
 						/>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-3">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">CPU</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.cpu')}</span>
 						<button
 							onclick={() => (settings.jit = !settings.jit)}
 							aria-pressed={settings.jit}
-							title="v86 interprets code until a block is hot, then compiles it to WebAssembly. Turning this off is much slower and only useful for comparison."
+							title={$t('vm.config.jitHint')}
 							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.jit
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
-							JIT: {settings.jit ? 'ON' : 'OFF'}
+							{settings.jit ? $t('vm.config.jitOn') : $t('vm.config.jitOff')}
 						</button>
 						<button
 							onclick={() => (settings.acpi = !settings.acpi)}
 							aria-pressed={settings.acpi}
-							title="Expose an ACPI table to the guest. Off by default: it gives the kernel more hardware to probe, and probing is where this emulator is weakest."
+							title={$t('vm.config.acpiHint')}
 							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.acpi
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
-							ACPI: {settings.acpi ? 'ON' : 'OFF'}
+							{settings.acpi ? $t('vm.config.acpiOn') : $t('vm.config.acpiOff')}
 						</button>
 						<button
 							onclick={resetSettings}
-							title="Put every setting on this panel back to its default, including the command line. The saved disk is left alone."
+							title={$t('vm.config.resetHint')}
 							class="press ml-auto px-2 py-0.5 border border-white/20 text-white/55 rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:border-white/50"
 						>
-							RESET
+							{$t('vm.config.resetButton')}
 						</button>
 					</div>
 					{/if}
 
 					<p class="text-[10px] font-mono text-white/35 leading-relaxed">
 						{#if settings.machine === 'x86'}
-							RAM, VGA RAM, boot mode and the command line take effect on the next boot;
-							screen size applies the next time <span class="text-white/50">startx</span> runs.
+							{$t('vm.config.footnoteX86', { startx: 'startx' })}
 						{:else}
-							RAM, network and disk take effect on the next boot. This machine has
-							no VGA side, so it is the serial terminal throughout; it needs a
-							cross-origin isolated page for its CPU thread, and downloads a 66 MB
-							emulator before it starts — the disk itself is still streamed a
-							megabyte at a time.
+							{$t('vm.config.footnoteX64')}
 						{/if}
 					</p>
 				</div>
@@ -1382,49 +1386,38 @@
 			</div>
 
 			<div class="border border-[#98c379]/40 bg-[#98c379]/5 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-xs font-black font-mono text-[#98c379]">BOOTS STRAIGHT INTO A ROOT SHELL</div>
+				<div class="text-xs font-black font-mono text-[#98c379]">{$t('vm.section.rootShellTitle')}</div>
 				<p class="text-[11px] text-white/65 leading-relaxed">
-					Either machine: the kernel starts, the initramfs mounts the root filesystem off the
-					emulated disk, OpenRC brings the system up and a serial getty logs you in — no
-					prompt, no password, nothing listening.
-					<span class="font-mono">apk</span> installs packages over the relay and
-					<span class="font-mono">tmux</span> has the mouse. On
-					<span class="font-mono">i686</span> there is a VGA side too, and
-					<span class="font-mono">startx</span> opens an openbox desktop on it.
+					{$t('vm.section.rootShellBody1', { apk: 'apk', tmux: 'tmux', i686: 'i686', startx: 'startx' })}
 				</p>
 				<p class="text-[11px] text-white/45 leading-relaxed">
-					Two decisions shape the rest of it. On the i686 machine hardware autodetection is
-					off — walking the PCI bus triple-faults v86 — so the drivers it needs are named
-					outright, which is also why the display driver only loads when
-					<span class="font-mono">startx</span> asks for it. And both images are served
-					immutable but rebuilt in place, so every URL carries a version: without one the edge
-					kept handing back the previous build, and every fix looked like it had failed.
+					{$t('vm.section.rootShellBody2', { startx: 'startx' })}
 				</p>
 			</div>
 
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1.5">
 				<div class="flex items-baseline justify-between gap-2">
-					<span class="text-xs font-black font-mono text-[#d19a66]">WHAT LEAVES THE TAB</span>
-					<span class="text-[10px] font-mono text-white/35">every hop exists in the repo</span>
+					<span class="text-xs font-black font-mono text-[#d19a66]">{$t('vm.section.topologyTitle')}</span>
+					<span class="text-[10px] font-mono text-white/35">{$t('vm.section.topologyNote')}</span>
 				</div>
 				<MermaidDiagram chart={TOPOLOGY} accent="#d19a66" />
 			</div>
 
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1">
-				<div class="text-xs font-black font-mono text-white/60">WHAT ALREADY WORKS</div>
+				<div class="text-xs font-black font-mono text-white/60">{$t('vm.section.worksTitle')}</div>
 				<ul class="text-[11px] text-white/55 leading-relaxed list-disc pl-4 space-y-0.5">
-					<li>Neither image is downloaded whole: 1 MiB chunks go over HTTP Range as the guest touches them, through a proxy that caches each chunk at the edge. A boot to a shell moves about 60 MiB of the i686 machine's gigabyte, and under 40 MiB of the x86-64 machine's 410.</li>
-					<li>The kernel and initramfs are built in CI and loaded directly, with no bootloader, so the command line is set by the page rather than typed into a prompt.</li>
-					<li>Everything the guest writes is kept in this browser and replayed over the image on the next boot — install a package once and it is still there tomorrow. CONFIG · DISK turns that off or wipes it.</li>
-					<li>The guest's own TCP goes out through a relay on this origin, and its name lookups through a DNS-over-HTTPS endpoint here; nothing on the internet can reach in. Both machines use the same gateway — v86 brings one, and the x86-64 machine borrows it, because QEMU's own is not in this build.</li>
-					<li>Nothing starts on its own — opening this tab costs you nothing until you press BOOT.</li>
-					<li>While the machine runs it has the keyboard, so the site's own shortcuts step aside; Ctrl+0-5 still switches tabs, and on the i686 machine's VGA screen two Escapes hand the keyboard back.</li>
+					<li>{$t('vm.section.worksItem1')}</li>
+					<li>{$t('vm.section.worksItem2')}</li>
+					<li>{$t('vm.section.worksItem3', { label: $t('vm.section.worksItem3Label') })}</li>
+					<li>{$t('vm.section.worksItem4')}</li>
+					<li>{$t('vm.section.worksItem5')}</li>
+					<li>{$t('vm.section.worksItem6')}</li>
 				</ul>
 			</div>
 
 			{#if errorText}
 				<div class="border border-[#e06c75]/50 bg-[#e06c75]/10 rounded-xs p-2.5">
-					<div class="text-xs font-black font-mono text-[#e06c75]">BOOT FAILED</div>
+					<div class="text-xs font-black font-mono text-[#e06c75]">{$t('vm.error.bootFailedTitle')}</div>
 					<div class="text-[11px] font-mono text-white/70 mt-1 break-all">{errorText}</div>
 				</div>
 			{/if}
@@ -1443,7 +1436,7 @@
 		bind:this={screenWrap}
 		tabindex={phase === 'running' && view !== 'terminal' ? 0 : -1}
 		role="application"
-		aria-label="Emulated PC screen"
+		aria-label={$t('vm.screen.ariaLabel')}
 		onfocus={captureKeyboard}
 		onblur={releaseKeyboard}
 		onmousedown={captureKeyboard}
@@ -1493,7 +1486,7 @@
 				transition:fade={{ duration: 180 }}
 			>
 				<span class="px-2.5 py-1 rounded-xs bg-black/85 border border-white/25 text-[11px] font-mono text-white/75">
-					click to type into the machine — Esc twice gives the keyboard back
+					{$t('vm.screen.clickToType')}
 				</span>
 			</div>
 		{/if}
@@ -1508,23 +1501,23 @@
 	{#if phase === 'running' || phase === 'loading'}
 		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-white/40 shrink-0">
 			<span>
-				IMAGE <span class="text-[#56b6c2]">{imageMiB === null ? '—' : `${imageMiB.toFixed(0)} MiB`}</span>
+				{$t('vm.statusbar.image')} <span class="text-[#56b6c2]">{imageMiB === null ? '—' : `${imageMiB.toFixed(0)} MiB`}</span>
 			</span>
-			<span title="Chunks actually pulled by this boot — the rest of the image was never downloaded">
-				STREAMED <span class="text-[#98c379]">{(fetchedBytes / 1024 / 1024).toFixed(0)} MiB</span>
-				<span class="text-white/25">({chunksFetched} × 1 MiB chunks)</span>
+			<span title={$t('vm.statusbar.streamedHint')}>
+				{$t('vm.statusbar.streamed')} <span class="text-[#98c379]">{(fetchedBytes / 1024 / 1024).toFixed(0)} MiB</span>
+				<span class="text-white/25">{$t('vm.statusbar.streamedChunks', { count: chunksFetched })}</span>
 			</span>
-			<span>MODE <span class="text-[#c678dd]">{graphical ? 'graphical' : 'text'}</span></span>
-			<span>BOOT <span class="text-[#61afef]">{mode === 'kernel' ? 'direct kernel' : 'ISO bootloader'}</span></span>
+			<span>{$t('vm.statusbar.mode')} <span class="text-[#c678dd]">{graphical ? $t('vm.statusbar.modeGraphical') : $t('vm.statusbar.modeText')}</span></span>
+			<span>{$t('vm.statusbar.boot')} <span class="text-[#61afef]">{mode === 'kernel' ? $t('vm.statusbar.bootDirect') : $t('vm.statusbar.bootIso')}</span></span>
 			{#if bootLineSent}
-				<span title="Typed at the ISOLINUX prompt to control the kernel cmdline">
-					CMDLINE <span class="text-[#e5c07b]">{BOOT_LINE}</span>
+				<span title={$t('vm.statusbar.cmdlineHint')}>
+					{$t('vm.config.cmdline')} <span class="text-[#e5c07b]">{BOOT_LINE}</span>
 				</span>
 			{/if}
 			<span class="text-white/25"
 				>{settings.persistDisk
-					? 'image read-only · changes kept in this browser'
-					: 'read-only · nothing is persisted'}</span
+					? $t('vm.statusbar.persistNote')
+					: $t('vm.statusbar.noPersistNote')}</span
 			>
 		</div>
 	{/if}

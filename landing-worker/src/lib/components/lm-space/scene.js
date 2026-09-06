@@ -13,6 +13,8 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
+import { get } from 'svelte/store';
+import { tr, locale } from '$lib/i18n';
 
 const ASSETS = '/lm-space';
 
@@ -41,7 +43,7 @@ function prepare(payload) {
     out.push({
       n: m.name,
       s: m.slug ?? '',
-      c: m.model_creator?.name ?? 'Unknown',
+      c: m.model_creator?.name ?? tr('lmspace.card.unknownCreator'),
       d: m.release_date ?? null,
       i,
       cd: e.artificial_analysis_coding_index ?? null,
@@ -814,17 +816,15 @@ function buildAnnexes() {
 
   // B: price is real, so the annexe spans the full price axis.
   annexGroup.add(boxWire([-S - 6, -S, zB - 6], [S + 6, S, zA + 6], AMBER, 0.34));
-  const bTag = tag('SPEED  ?', new THREE.Vector3(0, S + 6, (zA + zB) / 2), 'rgba(209,154,102,.85)',
-                   'tag zone', 'Speed was never measured for these models. Price and height are real; ' +
-                   'they drift along depth because that axis has no value.');
+  const bTag = tag(tr('lmspace.zone.speedUnknown'), new THREE.Vector3(0, S + 6, (zA + zB) / 2), 'rgba(209,154,102,.85)',
+                   'tag zone', tr('lmspace.zone.speedUnknownTip'));
   annexGroup.add(bTag);
 
   // D: only intelligence is real, so the annexe is a corner block.
   annexGroup.add(boxWire([zB - 6, -S, zB - 6], [zA + 6, S, zA + 6], GREY, 0.30));
-  annexGroup.add(tag('PRICE  ?   SPEED  ?', new THREE.Vector3((zA + zB) / 2, S + 6, (zA + zB) / 2),
+  annexGroup.add(tag(tr('lmspace.zone.priceSpeedUnknown'), new THREE.Vector3((zA + zB) / 2, S + 6, (zA + zB) / 2),
                      'rgba(124,135,148,.8)', 'tag zone',
-                     'Only an intelligence score exists upstream. Height is real; both ' +
-                     'horizontal positions drift because neither axis has a value.'));
+                     tr('lmspace.zone.priceSpeedUnknownTip')));
 
   // A floor for each annexe, so they read as rooms rather than floating cages.
   for (const [min, max, hex] of [
@@ -908,9 +908,8 @@ scene.add(spineGroup);
     spineGroup.add(t);
   }
 
-  spineGroup.add(tag('INTELLIGENCE', new THREE.Vector3(cx, S + 12, cz), 'rgba(86,182,194,.95)',
-                     'tag axmain', 'The one axis every model is measured on. Its rings reach ' +
-                     'across all regions: the same height always means the same score.'));
+  spineGroup.add(tag(tr('lmspace.axis.intelligence'), new THREE.Vector3(cx, S + 12, cz), 'rgba(86,182,194,.95)',
+                     'tag axmain', tr('lmspace.axis.intelligenceTip')));
 }
 
 /* ---------- the spiral's own spine and wall ---------- *
@@ -1005,12 +1004,10 @@ scene.add(timeSpineGroup);
                        major ? 'rgba(86,182,194,1)' : 'rgba(86,182,194,.7)', 'tag spinenum'));
   }
 
-  timeSpineGroup.add(tag('INTELLIGENCE', new THREE.Vector3(cx, S + 12, cz), 'rgba(86,182,194,.95)',
-                     'tag axmain', 'The one axis every model is measured on, read the same way ' +
-                     'here as through the centre of the box: height alone is the score.'));
-  timeSpineGroup.add(tag('← EARLIEST', new THREE.Vector3(cx, -S - 10, cz), 'rgba(229,192,123,.85)',
-                     'tag axmain', 'The spiral winds outward from here -- the centre is the ' +
-                     'earliest release date in the field, and each later model lands further round.'));
+  timeSpineGroup.add(tag(tr('lmspace.axis.intelligence'), new THREE.Vector3(cx, S + 12, cz), 'rgba(86,182,194,.95)',
+                     'tag axmain', tr('lmspace.axis.intelligenceSpiralTip')));
+  timeSpineGroup.add(tag(tr('lmspace.axis.earliest'), new THREE.Vector3(cx, -S - 10, cz), 'rgba(229,192,123,.85)',
+                     'tag axmain', tr('lmspace.axis.earliestTip')));
 }
 
 
@@ -1045,13 +1042,13 @@ function buildAxisLabels(mode) {
   axisLabels.length = 0;
   const mk = (t, p, c, cls) => { const l = tag(t, p, c, cls); axisLabels.push(l); host.add(l); };
   if (mode === 'space') {
-    mk('PRICE  $/1M →', new THREE.Vector3(S + 6, -S, -S), AX.x);
-    mk('SPEED  tok/s →', new THREE.Vector3(-S, -S, S + 6), AX.z);
+    mk(tr('lmspace.axis.priceLabel'), new THREE.Vector3(S + 6, -S, -S), AX.x);
+    mk(tr('lmspace.axis.speedLabel'), new THREE.Vector3(-S, -S, S + 6), AX.z);
     // Ticks are chosen from the scale the data produced, not hardcoded: a
     // fixed list either falls outside the axis or bunches at one end whenever
     // the distribution shifts.
     for (const v of niceTicks(pLo, pHi, 5)) {
-      mk(v === 0 ? 'free' : '$' + fmtTick(v),
+      mk(v === 0 ? tr('lmspace.axis.free') : '$' + fmtTick(v),
          new THREE.Vector3((norm(lg(v), pLo, pHi) - 0.5) * 2 * S, -S - 7, -S), 'rgba(229,192,123,.55)');
     }
     for (const v of niceTicks(sLo, sHi, 5)) {
@@ -1062,11 +1059,10 @@ function buildAxisLabels(mode) {
     // Month ticks sit on the spiral itself rather than an edge, at the same
     // radius and angle release dates from that month land at -- an edge label
     // has no fixed meaning left to point at once time is wound into a curve.
-    // Every one is spelled out as "Aug/2024" and drawn as a filled chip
-    // rather than a bare number: against a cloud of hundreds of spheres a
-    // faint letter was unreadable, and half a date is ambiguous the moment
-    // the spiral has wound past one full year.
-    const MONTH3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Every one is spelled out as a short month and year ("Aug/2024" in
+    // English) and drawn as a filled chip rather than a bare number: against
+    // a cloud of hundreds of spheres a faint letter was unreadable, and half
+    // a date is ambiguous the moment the spiral has wound past one full year.
     let cursor = new Date(dLo); cursor.setUTCDate(1); cursor.setUTCHours(0, 0, 0, 0);
     if (cursor.getTime() < dLo) cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     for (; cursor.getTime() <= dHi; cursor.setUTCMonth(cursor.getUTCMonth() + 1)) {
@@ -1075,7 +1071,9 @@ function buildAxisLabels(mode) {
       const angle = t01 * SPIRAL_TURNS * Math.PI * 2;
       const radius = t01 * SPIRAL_R;
       const pos = new THREE.Vector3(Math.cos(angle) * radius, -S - 4, Math.sin(angle) * radius);
-      mk(`${MONTH3[cursor.getUTCMonth()]}/${cursor.getUTCFullYear()}`, pos, '#e5c07b', 'tmonth');
+      const label = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), 1))
+        .toLocaleDateString(get(locale), { month: 'short', year: 'numeric', timeZone: 'UTC' });
+      mk(label, pos, '#e5c07b', 'tmonth');
     }
   }
   // No intelligence numbers here: that scale lives on the central spine, which
@@ -1109,8 +1107,8 @@ const agE = ext((m) => (m.ag == null ? NaN : m.ag));
  * of those into size too would just repeat an axis instead of adding one --
  * agentic and coding are the two the box has no other way to see. */
 const RADIUS_FIELDS = {
-  agentic: { get: (m) => m.ag, label: 'agentic', ext: agE },
-  coding: { get: (m) => m.cd, label: 'coding', ext: ext((m) => (m.cd == null ? NaN : m.cd)) }
+  agentic: { get: (m) => m.ag, label: 'lmspace.field.agentic', ext: agE },
+  coding: { get: (m) => m.cd, label: 'lmspace.field.coding', ext: ext((m) => (m.cd == null ? NaN : m.cd)) }
 };
 let radiusField = 'agentic';
 const radiusOf = (m) => {
@@ -2179,7 +2177,7 @@ function updateRange() {
   if (shown !== lastRangeShown || exact !== lastRangeExact) {
     lastRangeShown = shown; lastRangeExact = exact;
     rangeEl.innerHTML =
-      `<span class="rg-lab">${exact ? 'MODEL' : 'LEVEL'}</span> ` +
+      `<span class="rg-lab">${exact ? tr('lmspace.range.model') : tr('lmspace.range.level')}</span> ` +
       `<span class="rg-num">${shown}</span>`;
   }
   // The out-of-bounds warning is its own badge above the crosshair: sharing a
@@ -2315,7 +2313,7 @@ function crosshairHover() {
 /* ---------- card ---------- */
 const card = $('card');
 const fmt = (v, d = 1) => (v == null ? '—' : (+v).toFixed(d));
-const money = (v) => (v == null ? '—' : v === 0 ? 'free' : '$' + (+v).toFixed(v < 1 ? 2 : v < 10 ? 2 : 0));
+const money = (v) => (v == null ? '—' : v === 0 ? tr('lmspace.axis.free') : '$' + (+v).toFixed(v < 1 ? 2 : v < 10 ? 2 : 0));
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const kv = (k, v, c) => `<div class="kv"><div class="k">${k}</div><div class="v" style="color:${c}">${v}</div></div>`;
 function rank(m, keyName, lowBest) {
@@ -2341,35 +2339,35 @@ function select(i) {
           -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></div>
         <div style="min-width:0">
           <div class="nm" style="color:${col}">${esc(m.n)}</div>
-          <div class="cr">${esc(m.c)} &middot; released ${m.d ?? '—'}</div>
-          ${famCount(i) > 1 ? `<div class="cr" style="color:var(--cyan)">stands for ${famCount(i)} effort settings &middot; the trail is the rest</div>` : ''}
+          <div class="cr">${esc(m.c)} &middot; ${tr('lmspace.card.released', { date: m.d ?? '—' })}</div>
+          ${famCount(i) > 1 ? `<div class="cr" style="color:var(--cyan)">${tr('lmspace.card.familyCount', { n: famCount(i) })}</div>` : ''}
           ${m.q === 'A' ? '' :
             `<div class="qwarn">${
-              m.q === 'B' ? 'no speed measured &mdash; its depth in the box is a parking slot, not a value'
-              : m.q === 'D' ? 'intelligence only &mdash; its horizontal position is a parking slot, not a value'
-              : 'not measured at all &mdash; this model has no position, it drifts'
+              m.q === 'B' ? tr('lmspace.card.qwarnB')
+              : m.q === 'D' ? tr('lmspace.card.qwarnD')
+              : tr('lmspace.card.qwarnX')
             }</div>`}
         </div>
       </div>
-      <button class="x" id="cardx" title="Close (X, or click empty space)">✕</button>
+      <button class="x" id="cardx" title="${tr('lmspace.card.close')}">✕</button>
     </div>
     <div class="bd">
       <div class="grid">
-        ${kv('intelligence', fmt(m.i), '#56b6c2')}
-        ${kv('coding', fmt(m.cd), '#98c379')}
-        ${kv('agentic', fmt(m.ag), '#c678dd')}
-        ${kv('blended 3:1', money(m.p), '#e5c07b')}
-        ${kv('speed', fmt(m.sp, 0) + ' tok/s', '#61afef')}
-        ${kv('ttft', m.t == null ? '—' : fmt(m.t, 2) + 's', '#e06c75')}
-        ${kv('input', money(m.pi), 'rgba(255,255,255,.7)')}
-        ${kv('output', money(m.po), 'rgba(255,255,255,.7)')}
-        ${kv('slug', esc(m.s || '—'), 'rgba(255,255,255,.5)')}
+        ${kv(tr('lmspace.field.intelligence'), fmt(m.i), '#56b6c2')}
+        ${kv(tr('lmspace.field.coding'), fmt(m.cd), '#98c379')}
+        ${kv(tr('lmspace.field.agentic'), fmt(m.ag), '#c678dd')}
+        ${kv(tr('lmspace.card.blended31'), money(m.p), '#e5c07b')}
+        ${kv(tr('lmspace.field.speed'), fmt(m.sp, 0) + ' tok/s', '#61afef')}
+        ${kv(tr('lmspace.card.ttft'), m.t == null ? '—' : fmt(m.t, 2) + 's', '#e06c75')}
+        ${kv(tr('lmspace.card.input'), money(m.pi), 'rgba(255,255,255,.7)')}
+        ${kv(tr('lmspace.card.output'), money(m.po), 'rgba(255,255,255,.7)')}
+        ${kv(tr('lmspace.card.slug'), esc(m.s || '—'), 'rgba(255,255,255,.5)')}
       </div>
       <div class="ranks">
-        <span style="color:rgba(255,255,255,.3)">rank among ${MODELS.filter((x) => !isOff(x)).length} visible:</span>
-        <span>INTEL <b style="color:#56b6c2">${rank(m, 'i', false)}</b></span>
-        <span>PRICE <b style="color:#e5c07b">${rank(m, 'p', true)}</b></span>
-        <span>SPEED <b style="color:#61afef">${rank(m, 'sp', false)}</b></span>
+        <span style="color:rgba(255,255,255,.3)">${tr('lmspace.card.rankAmong', { n: MODELS.filter((x) => !isOff(x)).length })}</span>
+        <span>${tr('lmspace.card.rankIntel')} <b style="color:#56b6c2">${rank(m, 'i', false)}</b></span>
+        <span>${tr('lmspace.card.rankPrice')} <b style="color:#e5c07b">${rank(m, 'p', true)}</b></span>
+        <span>${tr('lmspace.card.rankSpeed')} <b style="color:#61afef">${rank(m, 'sp', false)}</b></span>
       </div>
     </div>`;
   card.style.display = 'block';
@@ -2416,14 +2414,14 @@ function onFilterChanged() {
 function updateFilterCount() {
   const shown = MODELS.reduce((n, m) => n + (isOff(m) ? 0 : 1), 0);
   const el = $('filtercount');
-  if (el) el.textContent = `${shown} / ${MODELS.length} shown`;
+  if (el) el.textContent = tr('lmspace.filter.shown', { shown, total: MODELS.length });
 }
 
 const RANGE_UI = [
-  { key: 'price', label: 'price $/1M', fmt: (v) => money(v), step: 0.01 },
-  { key: 'intel', label: 'intelligence', fmt: (v) => fmt(v, 0), step: 1 },
-  { key: 'speed', label: 'speed tok/s', fmt: (v) => fmt(v, 0), step: 1 },
-  { key: 'agentic', label: 'agentic', fmt: (v) => fmt(v, 0), step: 1 }
+  { key: 'price', label: tr('lmspace.field.priceUnit'), fmt: (v) => money(v), step: 0.01 },
+  { key: 'intel', label: tr('lmspace.field.intelligence'), fmt: (v) => fmt(v, 0), step: 1 },
+  { key: 'speed', label: tr('lmspace.field.speedUnit'), fmt: (v) => fmt(v, 0), step: 1 },
+  { key: 'agentic', label: tr('lmspace.field.agentic'), fmt: (v) => fmt(v, 0), step: 1 }
 ];
 
 /** Log fields are dragged in log space so the handle sits where the field's
@@ -2451,9 +2449,9 @@ legend.innerHTML =
     </div>`;
   }).join('') +
   '</div>' +
-  '<button id="freset" class="x" style="margin-top:2px">reset filters</button>' +
+  `<button id="freset" class="x" style="margin-top:2px">${tr('lmspace.filter.resetFilters')}</button>` +
   '<div id="fcreators">' +
-  '<div class="lbl" style="margin:8px 0 5px">creators</div>' +
+  `<div class="lbl" style="margin:8px 0 5px">${tr('lmspace.filter.creators')}</div>` +
   CREATORS.map(([c, n]) => {
     const cell = ATLAS.index[c] ?? 0;
     const bx = (cell % ATLAS.cols) * 100 / (ATLAS.cols - 1);
@@ -2466,8 +2464,8 @@ legend.innerHTML =
         -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></span>
       <span class="dot" style="background:${colorOf.get(c)}"></span>
       <span class="lgname">${esc(c)}</span><span class="lgn">${n}</span>
-      <button type="button" class="lgm" data-c="${esc(c)}" title="Mute ${esc(c)}">M</button>
-      <button type="button" class="lgs" data-c="${esc(c)}" title="Solo ${esc(c)}">S</button>
+      <button type="button" class="lgm" data-c="${esc(c)}" title="${tr('lmspace.filter.mute', { name: esc(c) })}">M</button>
+      <button type="button" class="lgs" data-c="${esc(c)}" title="${tr('lmspace.filter.solo', { name: esc(c) })}">S</button>
       </div>`;
   }).join('') +
   '</div>';
@@ -2757,18 +2755,21 @@ $('pareto-toggle').onclick = () => {
  * is a choice, not a fixed fact about the plot the way X/Y/Z are, so it gets
  * its own render pass wired up after the innerHTML swap rather than baked
  * into the string like the fixed axes. */
-const AXTEXT = {
-  space: '<span title="US dollars per million tokens, blended 3:1 input to output. Log scale."><b style="color:#e5c07b">X</b> price</span><br>' +
-         '<span title="Artificial Analysis Intelligence Index. The one axis every model has."><b style="color:#56b6c2">Y</b> intelligence</span><br>' +
-         '<span title="Median output tokens per second. Log scale."><b style="color:#61afef">Z</b> speed</span><br>' +
-         '<span id="rfield"></span><br>' +
-         '<span class="hint-tip" title="Models missing a field upstream sit outside the ' +
-         'measured box and drift along the axis they were never measured on." ' +
-         'style="color:#d19a66">unmeasured &#9432;</span>',
-  time:  '<span title="Release date, run out as a spiral instead of a straight line: the earliest model sits at the centre, and each later one lands further round and further out."><b style="color:#e5c07b">X&#8226;Z</b> released, spiralled</span><br>' +
-         '<span title="Artificial Analysis Intelligence Index."><b style="color:#56b6c2">Y</b> intelligence</span><br>' +
-         '<span id="rfield"></span>'
-};
+/** Resolved at use, not at import: the panel is rebuilt every time the view
+ *  or the locale changes, so a lazily-built string keeps both in step. */
+function axText(mode) {
+  if (mode === 'space') {
+    return `<span title="${tr('lmspace.axes.priceTip')}"><b style="color:#e5c07b">X</b> ${tr('lmspace.axes.price')}</span><br>` +
+           `<span title="${tr('lmspace.axes.intelTip')}"><b style="color:#56b6c2">Y</b> ${tr('lmspace.axes.intel')}</span><br>` +
+           `<span title="${tr('lmspace.axes.speedTip')}"><b style="color:#61afef">Z</b> ${tr('lmspace.axes.speed')}</span><br>` +
+           '<span id="rfield"></span><br>' +
+           `<span class="hint-tip" title="${tr('lmspace.axes.unmeasuredTip')}" ` +
+           `style="color:#d19a66">${tr('lmspace.axes.unmeasured')} &#9432;</span>`;
+  }
+  return `<span title="${tr('lmspace.axes.releasedTip')}"><b style="color:#e5c07b">X&#8226;Z</b> ${tr('lmspace.axes.released')}</span><br>` +
+         `<span title="${tr('lmspace.axes.intelTipShort')}"><b style="color:#56b6c2">Y</b> ${tr('lmspace.axes.intel')}</span><br>` +
+         '<span id="rfield"></span>';
+}
 
 /** Wires an existing ◄ value ► triple (prev/val/next ids already in the
  *  markup) to step through a small list -- the one shape used for every short
@@ -2800,7 +2801,7 @@ function renderRadiusField() {
     '<button type="button" class="cval" id="r-val"></button>' +
     '<button type="button" class="carrow" id="r-next">&#9654;</button></span>';
   wireCycle('r-prev', 'r-val', 'r-next', RADIUS_ORDER,
-    () => radiusField, (v) => { radiusField = v; }, (k) => RADIUS_FIELDS[k].label);
+    () => radiusField, (v) => { radiusField = v; }, (k) => tr(RADIUS_FIELDS[k].label));
 }
 
 function setView(v) {
@@ -2811,7 +2812,7 @@ function setView(v) {
     to[i].copy(v === 'space' ? posSpace(MODELS[i], i) : posTime(MODELS[i], i));
   }
   morph = 0;
-  $('axinfo').innerHTML = AXTEXT[v];
+  $('axinfo').innerHTML = axText(v);
   renderRadiusField();
   annexGroup.visible = v === 'space';
   spineGroup.visible = v === 'space';
@@ -2852,7 +2853,7 @@ function syncProjUI() {
 
 const PROJ_ORDER = ['persp', 'ortho'];
 paintProjCycle = wireCycle('proj-prev', 'proj-val', 'proj-next', PROJ_ORDER,
-  () => projMode, (v) => setProjection(v), (k) => (k === 'persp' ? 'PERSP' : 'ORTHO'));
+  () => projMode, (v) => setProjection(v), (k) => tr(k === 'persp' ? 'lmspace.hud.persp' : 'lmspace.hud.ortho'));
 syncProjUI();
 
 /* RACE only ever replays the timeline with the release-date axis animated, so
@@ -2883,9 +2884,9 @@ function setViewMode(v) {
   setView(v);
 }
 paintViewCycle = wireCycle('view-prev', 'view-val', 'view-next', VIEW_ORDER,
-  viewModeNow, setViewMode, (k) => (k === 'space' ? 'SPACE' : k === 'time' ? 'TIMELINE' : 'RACE'));
+  viewModeNow, setViewMode, (k) => tr(k === 'space' ? 'lmspace.modes.space' : k === 'time' ? 'lmspace.hud.timeline' : 'lmspace.hud.race'));
 
-$('axinfo').innerHTML = AXTEXT.space;
+$('axinfo').innerHTML = axText('space');
 renderRadiusField();
 buildAxisLabels('space');
 
@@ -2908,7 +2909,7 @@ modesHd.onclick = () => {
   if (wasCollapsed && NARROW()) setCollapsed(legend, true);
 };
 legend.insertAdjacentHTML('afterbegin',
-  '<button type="button" id="legendhd" class="phd"><span class="lbl">filter</span><span class="pcaret">&#9662;</span></button>');
+  `<button type="button" id="legendhd" class="phd"><span class="lbl">${tr('lmspace.filter.heading')}</span><span class="pcaret">&#9662;</span></button>`);
 $('legendhd').onclick = () => {
   const wasCollapsed = legend.classList.contains('collapsed');
   setCollapsed(legend, !wasCollapsed);
@@ -2931,15 +2932,15 @@ let missionOn = false, missionTarget = -1, missionT0 = 0, missionN = 0, missionH
 const vis = () => MODELS.map((m, i) => [m, i]).filter(([m]) => !isOff(m) && m.q === 'A');
 const MISSIONS = [
   () => { const p = vis().filter(([m]) => m.p <= 2 && m.p > 0); if (!p.length) return null;
-    return { q: 'Find the highest INTELLIGENCE under $2/1M', i: p.reduce((a, b) => (b[0].i > a[0].i ? b : a))[1] }; },
+    return { q: tr('lmspace.mission.q1'), i: p.reduce((a, b) => (b[0].i > a[0].i ? b : a))[1] }; },
   () => { const p = vis().filter(([m]) => m.sp >= 300); if (!p.length) return null;
-    return { q: 'Find the smartest model running at 300+ tok/s', i: p.reduce((a, b) => (b[0].i > a[0].i ? b : a))[1] }; },
+    return { q: tr('lmspace.mission.q2'), i: p.reduce((a, b) => (b[0].i > a[0].i ? b : a))[1] }; },
   () => { const p = vis().filter(([m]) => m.i >= 45); if (!p.length) return null;
-    return { q: 'Find the cheapest model with intelligence 45+', i: p.reduce((a, b) => (b[0].p < a[0].p ? b : a))[1] }; },
+    return { q: tr('lmspace.mission.q3'), i: p.reduce((a, b) => (b[0].p < a[0].p ? b : a))[1] }; },
   () => { const p = vis().filter(([m]) => m.cd != null); if (!p.length) return null;
-    return { q: 'Find the highest CODING index in the field', i: p.reduce((a, b) => (b[0].cd > a[0].cd ? b : a))[1] }; },
+    return { q: tr('lmspace.mission.q4'), i: p.reduce((a, b) => (b[0].cd > a[0].cd ? b : a))[1] }; },
   () => { const p = vis().filter(([m]) => m.t != null && m.i >= 35); if (!p.length) return null;
-    return { q: 'Fastest first token among models at index 35+', i: p.reduce((a, b) => (b[0].t < a[0].t ? b : a))[1] }; }
+    return { q: tr('lmspace.mission.q5'), i: p.reduce((a, b) => (b[0].t < a[0].t ? b : a))[1] }; }
 ];
 function nextMission() {
   const opts = MISSIONS.map((f) => f()).filter(Boolean);
@@ -2947,7 +2948,7 @@ function nextMission() {
   const m = opts[(Math.random() * opts.length) | 0];
   missionTarget = m.i; missionQ = m.q; missionT0 = performance.now(); missionN++;
   missionEl.style.display = 'block';
-  missionEl.innerHTML = `<div class="q">${esc(m.q)}</div><div class="m">fly to it and click the node &middot; ${missionN} of 5</div>`;
+  missionEl.innerHTML = `<div class="q">${esc(m.q)}</div><div class="m">${tr('lmspace.mission.flyToIt', { n: missionN })}</div>`;
 }
 function checkAnswer(i) {
   if (!missionOn || missionTarget === -1) return;
@@ -2956,13 +2957,13 @@ function checkAnswer(i) {
   if (right) missionHit++;
   missionEl.innerHTML = `<div class="q">${esc(missionQ)}</div>
     <div class="res" style="color:${right ? 'var(--green)' : 'var(--red)'}">
-      ${right ? 'CORRECT' : 'MISS — the answer was ' + esc(MODELS[missionTarget].n)} &middot; ${dt}s</div>`;
+      ${right ? tr('lmspace.mission.correct') : tr('lmspace.mission.miss', { name: esc(MODELS[missionTarget].n) })} &middot; ${dt}s</div>`;
   const done = missionN >= 5;
   missionTarget = -1;
   setTimeout(() => {
     if (!missionOn) return;
     if (done) {
-      missionEl.innerHTML = `<div class="q">RUN COMPLETE &mdash; ${missionHit}/5</div><div class="m">press START for another run</div>`;
+      missionEl.innerHTML = `<div class="q">${tr('lmspace.mission.runComplete', { hit: missionHit })}</div><div class="m">${tr('lmspace.mission.pressStart')}</div>`;
       missionOn = false;
     } else nextMission();
   }, right ? 1400 : 2600);
@@ -3098,7 +3099,7 @@ const RACE_STEP = 0.01;   // one nudge, in the same 0..1 units raceT itself uses
 function paintRaceCtl() {
   const playBtn = $('race-play');
   playBtn.innerHTML = racePaused || raceDone ? '&#9654;' : '&#10074;&#10074;';
-  playBtn.title = racePaused || raceDone ? 'Play' : 'Pause';
+  playBtn.title = racePaused || raceDone ? tr('lmspace.race.play') : tr('lmspace.race.pause');
   playBtn.classList.toggle('on', !racePaused && !raceDone);
 }
 function raceSeek(t) {
@@ -3137,8 +3138,8 @@ function renderRacePanel() {
   const pickRank = racePick === -1 ? null : live.indexOf(racePick);
   raceEl.innerHTML = `
     <div class="rhd">
-      <span class="q">${when.toLocaleDateString('en-AU', { year: 'numeric', month: 'short' })}</span>
-      <span class="m">${live.length} models shipped</span>
+      <span class="q">${when.toLocaleDateString(get(locale), { year: 'numeric', month: 'short' })}</span>
+      <span class="m">${tr('lmspace.race.modelsShipped', { n: live.length })}</span>
     </div>
     ${top.map((i, k) => {
       const m = MODELS[i];
@@ -3161,10 +3162,10 @@ function renderRacePanel() {
          <span class="rn">${esc(MODELS[racePick].n.replace(/\s*\(.*$/, ''))}</span>
          <span class="rv">${MODELS[racePick].i.toFixed(1)}</span></div>` : ''}
     ${racePick === -1
-      ? `<div class="rhint">click any node to back a runner</div>`
+      ? `<div class="rhint">${tr('lmspace.race.clickToBack')}</div>`
       : raceDone
         ? `<div class="rhint" style="color:${pickRank === 0 ? 'var(--green)' : 'var(--yellow)'}">
-             your pick finished #${pickRank + 1} of ${live.length}</div>`
+             ${tr('lmspace.race.pickFinished', { rank: pickRank + 1, total: live.length })}</div>`
         : ''}`;
 }
 
@@ -3488,10 +3489,14 @@ $('g-start').onclick = () => (gravityOn ? stopGravity() : startGravity());
 
 // Cycle how a cluster is shown: its volume, its membership, both, or neither.
 const CLUSTER_MODES = ['hull', 'link', 'both', 'off'];
+const CLUSTER_MODE_LABEL = {
+  hull: 'lmspace.hud.hull', link: 'lmspace.hud.link',
+  both: 'lmspace.hud.both', off: 'common.off'
+};
 $('g-hull').onclick = () => {
   clusterMode = CLUSTER_MODES[(CLUSTER_MODES.indexOf(clusterMode) + 1) % CLUSTER_MODES.length];
   const btn = $('g-hull');
-  btn.textContent = clusterMode.toUpperCase();
+  btn.textContent = tr(CLUSTER_MODE_LABEL[clusterMode]);
   btn.classList.toggle('on', clusterMode !== 'off');
   if (gravityOn) { lastClusterSig = ''; renderGravityPanel(); }
 };
@@ -3830,8 +3835,8 @@ function renderGravityPanel() {
   }
 
   gravEl.innerHTML = `
-    <div class="rhd"><span class="q">GRAVITY</span>
-      <span class="m">${gravityFrozen ? 'frozen' : gravSettled ? 'settled' : 'settling'} &middot; ${cl.length} clusters</span></div>
+    <div class="rhd"><span class="q">${tr('lmspace.hud.gravity')}</span>
+      <span class="m">${gravityFrozen ? tr('lmspace.gravity.frozen') : gravSettled ? tr('lmspace.gravity.settled') : tr('lmspace.gravity.settling')} &middot; ${tr('lmspace.gravity.clusters', { n: cl.length })}</span></div>
     ${cl.slice(0, 5).map((g, k) => {
       // Name a cluster by the creator that dominates it.
       const tally = new Map();
@@ -3839,13 +3844,13 @@ function renderGravityPanel() {
       const top = [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2);
       const tint = CLUSTER_TINTS[k % CLUSTER_TINTS.length];
       return `<div class="gcl" style="border-left:3px solid ${tint}; padding-left:6px">
-        <div class="gcl-h"><b style="color:${tint}">#${k + 1}</b> ${g.length} models
+        <div class="gcl-h"><b style="color:${tint}">#${k + 1}</b> ${tr('lmspace.gravity.models', { n: g.length })}
           <span style="opacity:.5">&middot; ${top.map(([c, n]) => esc(c) + ' ' + n).join(', ')}</span></div>
-        <div class="gcl-m">intel ${fm(g, 'i')} &middot; $${fm(g, 'p', 2)}/1M &middot; ${fm(g, 'sp', 0)} tok/s</div>
+        <div class="gcl-m">${tr('lmspace.gravity.stats', { intel: fm(g, 'i'), price: fm(g, 'p', 2), speed: fm(g, 'sp', 0) })}</div>
       </div>`;
     }).join('')}
-    <div class="rhint">mass = intelligence &middot; attraction = capability similarity<br>
-      <kbd>F</kbd> freeze / release &middot; click a body to inspect it</div>`;
+    <div class="rhint">${tr('lmspace.gravity.legend')}<br>
+      <kbd>F</kbd> ${tr('lmspace.gravity.freezeHint')}</div>`;
 }
 
 
@@ -3915,13 +3920,13 @@ onWin('resize', hideTip);
 const QN = { A: 0, B: 0, D: 0, X: 0 };
 for (const m of MODELS) QN[m.q] = (QN[m.q] || 0) + 1;
 $('meta').innerHTML =
-  `${N} models &middot; <b style="color:#98c379">${QN.A} measured</b> ` +
-  `<span class="hint-tip" title="${QN.B} without a speed figure, ${QN.D} with only an ` +
-  `intelligence score, ${QN.X} with nothing measured.">+${QN.B + QN.D + QN.X} partial &#9432;</span> &middot; ` +
+  `${tr('lmspace.meta.models', { n: N })} &middot; <b style="color:#98c379">${tr('lmspace.meta.measured', { n: QN.A })}</b> ` +
+  `<span class="hint-tip" title="${tr('lmspace.meta.partialTip', { b: QN.B, d: QN.D, x: QN.X })}">` +
+  `${tr('lmspace.meta.partial', { n: QN.B + QN.D + QN.X })} &#9432;</span> &middot; ` +
   `v${DATA.v} &middot; ` +
   (DATA.fetchedAt
-    ? `upstream fetched ${new Date(DATA.fetchedAt).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}`
-    : 'upstream time unknown');
+    ? tr('lmspace.meta.fetched', { when: new Date(DATA.fetchedAt).toLocaleString(get(locale), { dateStyle: 'medium', timeStyle: 'short' }) })
+    : tr('lmspace.meta.fetchedUnknown'));
 
 /* ---------- loop ---------- */
 function applySize() {

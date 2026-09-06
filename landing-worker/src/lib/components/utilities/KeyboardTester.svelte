@@ -4,6 +4,7 @@
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { t } from '$lib/i18n';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -145,29 +146,29 @@
 	<!-- Readout strip -->
 	<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs">
-			<span class="text-white/50">KEY:</span>
+			<span class="text-white/50">{$t('utilities.keyboard.readout.key')}</span>
 			<span class="font-black" style="color: {themeStyles.cursorColor}">{last?.key ?? '—'}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs">
-			<span class="text-white/50">CODE:</span>
+			<span class="text-white/50">{$t('utilities.keyboard.readout.code')}</span>
 			<span class="text-[#e5c07b] font-bold">{last?.code ?? '—'}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs">
-			<span class="text-white/50">keyCode:</span>
+			<span class="text-white/50">{$t('utilities.keyboard.readout.keyCode')}</span>
 			<span class="text-[#c678dd] font-bold">{last?.keyCode ?? '—'}</span>
 		</span>
-		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs" title="0 standard · 1 left · 2 right · 3 numpad">
-			<span class="text-white/50">LOC:</span>
+		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs" title={$t('utilities.keyboard.readout.loc.title')}>
+			<span class="text-white/50">{$t('utilities.keyboard.readout.loc')}</span>
 			<span class="text-white/80 font-bold">{last?.location ?? '—'}</span>
 		</span>
-		<span class="px-2 py-1 border border-[#56b6c2]/40 bg-[#56b6c2]/10 rounded-xs text-[#56b6c2]" title="Highest number of keys held simultaneously — OS/hardware may cap this (ghosting/NKRO limit)">
-			ROLLOVER MAX: <span class="font-black">{maxRollover}</span>
+		<span class="px-2 py-1 border border-[#56b6c2]/40 bg-[#56b6c2]/10 rounded-xs text-[#56b6c2]" title={$t('utilities.keyboard.readout.rollover.title')}>
+			{$t('utilities.keyboard.readout.rollover')} <span class="font-black">{maxRollover}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			TESTED: <span class="text-[#98c379] font-bold">{tested.size}</span> · DOWN NOW: <span class="font-bold" style="color: {themeStyles.cursorColor}">{pressed.size}</span>
+			{$t('utilities.keyboard.readout.tested')} <span class="text-[#98c379] font-bold">{tested.size}</span> · {$t('utilities.keyboard.readout.downNow')} <span class="font-bold" style="color: {themeStyles.cursorColor}">{pressed.size}</span>
 		</span>
 		<button onclick={reset} class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
-			✕ RESET
+			{$t('utilities.keyboard.reset')}
 		</button>
 	</div>
 
@@ -206,7 +207,7 @@
 	</div>
 
 	<div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono text-white/40">
-		<span>Press any key — green = tested, highlighted = held. Every key is captured here — but Ctrl+0-3 tab navigation still works.</span>
-		<span class="ml-auto">Keys pressed: {eventCount}</span>
+		<span>{$t('utilities.keyboard.hint')}</span>
+		<span class="ml-auto">{$t('utilities.keyboard.keysPressed', { count: eventCount })}</span>
 	</div>
 </div>

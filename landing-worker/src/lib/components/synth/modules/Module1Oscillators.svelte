@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { t } from '../../../i18n';
 	import { resetRack1 } from '../../../stores/synth-reset';
 	import type { SynthWaveform, CustomWave, WaveParams } from '../../../synth';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
@@ -48,10 +49,10 @@
 	<div class="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
 		<span class="whitespace-nowrap">1. DUAL OSC</span>
 		<div class="flex items-center gap-1.5">
-			<span class="text-white/40 flex items-center" title="Signal Flow: To Timbre Fusion">
+			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToFusion')}>
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
 			</span>
-			<button onclick={resetRack1} title="RST — reset: put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack1} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 
@@ -89,8 +90,8 @@
 				{/each}
 			</div>
 			<div class="shrink-0 flex flex-col justify-around items-center border-l border-white/10 pl-1.5">
-				<RotaryKnob label="OSC1" value={Math.round($currentTrack.osc1Gain * 100)} min={0} max={100} unit="%" color="#e5c07b" size={32} description="Oscillator 1 Level — Output volume of the first oscillator" reset={100} onChange={(v) => updateActiveTrack({ osc1Gain: v / 100 })} />
-				<RotaryKnob label="OSC2" value={Math.round($currentTrack.osc2Gain * 100)} min={0} max={100} unit="%" color="#56b6c2" size={32} description="Oscillator 2 Level — Output volume of the second oscillator" reset={0} onChange={(v) => updateActiveTrack({ osc2Gain: v / 100 })} />
+				<RotaryKnob label="OSC1" value={Math.round($currentTrack.osc1Gain * 100)} min={0} max={100} unit="%" color="#e5c07b" size={32} description={$t('synthPanels.osc.osc1LevelDesc')} reset={100} onChange={(v) => updateActiveTrack({ osc1Gain: v / 100 })} />
+				<RotaryKnob label="OSC2" value={Math.round($currentTrack.osc2Gain * 100)} min={0} max={100} unit="%" color="#56b6c2" size={32} description={$t('synthPanels.osc.osc2LevelDesc')} reset={0} onChange={(v) => updateActiveTrack({ osc2Gain: v / 100 })} />
 			</div>
 		</div>
 		<button
@@ -98,7 +99,7 @@
 				setEqlComp(!$eqlCompSetting);
 				playSound('click');
 			}}
-			title="Equal Loudness (ISO 226): Automatically balances perceptual loudness across Square, Saw, Triangle, and Sine waveforms"
+			title={$t('synthPanels.osc.eqlHint')}
 			class="press w-full px-1 py-0.5 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border shrink-0 {$eqlCompSetting
 				? 'bg-[#98c379]/20 border-[#98c379]/60 text-[#98c379]'
 				: 'bg-white/5 border-white/20 text-white/40 hover:text-white/70'}"

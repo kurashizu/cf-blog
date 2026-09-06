@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { pulseStep } from '../../stores/clock';
@@ -172,7 +173,7 @@
 				</button>
 			{/each}
 			{#if suggestions.length > 12}
-				<span class="text-white/30">+{suggestions.length - 12} more</span>
+				<span class="text-white/30">{$t('chrome.console.moreSuggestions', { count: suggestions.length - 12 })}</span>
 			{/if}
 		</div>
 	{/if}
@@ -206,7 +207,7 @@
 			{/if}
 			{#if !commandInput}
 				<span class="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">
-					Type "help" — Tab completes & cycles, → accepts, ↑↓ history, Ctrl+L clears...
+					{$t('chrome.console.inputHint')}
 				</span>
 			{/if}
 
@@ -224,7 +225,7 @@
 		</div>
 
 		<button type="submit" class="press text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80 transition-opacity" style="color: {themeStyles.cursorColor}">
-			[EXEC]
+			[{$t('chrome.console.exec')}]
 		</button>
 	</form>
 </div>

@@ -13,6 +13,7 @@
 	import BoxHeader from './BoxHeader.svelte';
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
+	import { t } from '$lib/i18n';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { playSound } from '../../sound';
 
@@ -35,77 +36,79 @@
 
 	/* Grouped by the part of the site each one is responsible for, so the list
 	   reads as an explanation of how the thing is put together rather than a
-	   flat dump of package names. */
-	const GROUPS: Group[] = [
+	   flat dump of package names. Titles/descriptions resolve through $t() in
+	   the $derived below, not here, since the locale isn't known at module
+	   load time. */
+	let GROUPS: Group[] = $derived([
 		{
-			title: 'FRAMEWORK',
+			title: $t('chrome.credits.groupFramework'),
 			colour: '#98c379',
 			items: [
-				{ name: 'Svelte', url: 'https://github.com/sveltejs/svelte', licence: 'MIT', what: 'Every view on this site' },
-				{ name: 'SvelteKit', url: 'https://github.com/sveltejs/kit', licence: 'MIT', what: 'Routing, prerendering, the worker build' },
-				{ name: 'Vite', url: 'https://github.com/vitejs/vite', licence: 'MIT', what: 'Bundler and dev server' },
-				{ name: 'Tailwind CSS', url: 'https://github.com/tailwindlabs/tailwindcss', licence: 'MIT', what: 'The whole visual layer' },
-				{ name: 'Wrangler', url: 'https://github.com/cloudflare/workers-sdk', licence: 'MIT / Apache-2.0', what: 'Builds and deploys the Worker' },
-				{ name: 'TypeScript', url: 'https://github.com/microsoft/TypeScript', licence: 'Apache-2.0', what: 'Types across the codebase' }
+				{ name: 'Svelte', url: 'https://github.com/sveltejs/svelte', licence: 'MIT', what: $t('chrome.credits.svelte') },
+				{ name: 'SvelteKit', url: 'https://github.com/sveltejs/kit', licence: 'MIT', what: $t('chrome.credits.sveltekit') },
+				{ name: 'Vite', url: 'https://github.com/vitejs/vite', licence: 'MIT', what: $t('chrome.credits.vite') },
+				{ name: 'Tailwind CSS', url: 'https://github.com/tailwindlabs/tailwindcss', licence: 'MIT', what: $t('chrome.credits.tailwind') },
+				{ name: 'Wrangler', url: 'https://github.com/cloudflare/workers-sdk', licence: 'MIT / Apache-2.0', what: $t('chrome.credits.wrangler') },
+				{ name: 'TypeScript', url: 'https://github.com/microsoft/TypeScript', licence: 'Apache-2.0', what: $t('chrome.credits.typescript') }
 			]
 		},
 		{
-			title: 'TYPEFACE',
+			title: $t('chrome.credits.groupTypeface'),
 			colour: '#e5c07b',
 			items: [
-				{ name: 'Jelly Pixel Font', url: 'https://github.com/TakWolf/jelly-pixel-font', licence: 'SIL OFL 1.1', what: 'Every glyph you are reading, at 12px' }
+				{ name: 'Jelly Pixel Font', url: 'https://github.com/TakWolf/jelly-pixel-font', licence: 'SIL OFL 1.1', what: $t('chrome.credits.jellyPixel') }
 			]
 		},
 		{
 			title: 'LM.SPACE',
 			colour: '#61afef',
 			items: [
-				{ name: 'three.js', url: 'https://github.com/mrdoob/three.js', licence: 'MIT', what: 'The model field, rendered in WebGL' },
-				{ name: 'Artificial Analysis', url: 'https://artificialanalysis.ai', licence: 'Data source', what: 'Every model coordinate is a field of their payload' }
+				{ name: 'three.js', url: 'https://github.com/mrdoob/three.js', licence: 'MIT', what: $t('chrome.credits.threejs') },
+				{ name: 'Artificial Analysis', url: 'https://artificialanalysis.ai', licence: 'Data source', what: $t('chrome.credits.artificialAnalysis') }
 			]
 		},
 		{
 			title: 'KRSZ-VM',
 			colour: '#c678dd',
 			items: [
-				{ name: 'v86', url: 'https://github.com/copy/v86', licence: 'BSD-2-Clause', what: 'An x86 PC emulated in the tab' },
-				{ name: 'SeaBIOS', url: 'https://github.com/coreboot/seabios', licence: 'LGPLv3', what: 'The BIOS that machine boots' },
-				{ name: 'xterm.js', url: 'https://github.com/xtermjs/xterm.js', licence: 'MIT', what: 'The serial console' },
-				{ name: 'xterm-pty', url: 'https://github.com/mame/xterm-pty', licence: 'MIT', what: 'Line discipline for that console' }
+				{ name: 'v86', url: 'https://github.com/copy/v86', licence: 'BSD-2-Clause', what: $t('chrome.credits.v86') },
+				{ name: 'SeaBIOS', url: 'https://github.com/coreboot/seabios', licence: 'LGPLv3', what: $t('chrome.credits.seabios') },
+				{ name: 'xterm.js', url: 'https://github.com/xtermjs/xterm.js', licence: 'MIT', what: $t('chrome.credits.xtermjs') },
+				{ name: 'xterm-pty', url: 'https://github.com/mame/xterm-pty', licence: 'MIT', what: $t('chrome.credits.xtermPty') }
 			]
 		},
 		{
 			title: 'WEB-LM',
 			colour: '#56b6c2',
 			items: [
-				{ name: 'wllama', url: 'https://github.com/ngxson/wllama', licence: 'MIT', what: 'Runs a language model in the browser' },
-				{ name: 'llama.cpp', url: 'https://github.com/ggml-org/llama.cpp', licence: 'MIT', what: 'The inference engine underneath it' }
+				{ name: 'wllama', url: 'https://github.com/ngxson/wllama', licence: 'MIT', what: $t('chrome.credits.wllama') },
+				{ name: 'llama.cpp', url: 'https://github.com/ggml-org/llama.cpp', licence: 'MIT', what: $t('chrome.credits.llamacpp') }
 			]
 		},
 		{
-			title: 'CONTENT',
+			title: $t('chrome.credits.groupContent'),
 			colour: '#e06c75',
 			items: [
-				{ name: 'KaTeX', url: 'https://github.com/KaTeX/KaTeX', licence: 'MIT', what: 'Maths in chat and articles' },
-				{ name: 'Mermaid', url: 'https://github.com/mermaid-js/mermaid', licence: 'MIT', what: 'The architecture diagrams in modules' }
+				{ name: 'KaTeX', url: 'https://github.com/KaTeX/KaTeX', licence: 'MIT', what: $t('chrome.credits.katex') },
+				{ name: 'Mermaid', url: 'https://github.com/mermaid-js/mermaid', licence: 'MIT', what: $t('chrome.credits.mermaid') }
 			]
 		},
 		{
-			title: 'PALETTES',
+			title: $t('chrome.credits.groupPalettes'),
 			colour: '#d19a66',
 			items: [
-				{ name: 'Nord', url: 'https://github.com/nordtheme/nord', licence: 'MIT', what: 'The nord-terminal theme' },
-				{ name: 'Gruvbox', url: 'https://github.com/morhetz/gruvbox', licence: 'MIT', what: 'The gruvbox-dark theme' }
+				{ name: 'Nord', url: 'https://github.com/nordtheme/nord', licence: 'MIT', what: $t('chrome.credits.nord') },
+				{ name: 'Gruvbox', url: 'https://github.com/morhetz/gruvbox', licence: 'MIT', what: $t('chrome.credits.gruvbox') }
 			]
 		},
 		{
-			title: 'INFRASTRUCTURE',
+			title: $t('chrome.credits.groupInfrastructure'),
 			colour: '#98c379',
 			items: [
-				{ name: 'Cloudflare Workers', url: 'https://developers.cloudflare.com/workers/', licence: 'Platform', what: 'Runs this site, and D1 / R2 / KV / Vectorize behind it' }
+				{ name: 'Cloudflare Workers', url: 'https://developers.cloudflare.com/workers/', licence: 'Platform', what: $t('chrome.credits.cloudflareWorkers') }
 			]
 		}
-	];
+	]);
 
 	function onWindowKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
@@ -148,8 +151,7 @@
 
 		<div class="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto custom-scrollbar">
 			<p class="text-xs text-white/50 leading-relaxed">
-				This site is assembled almost entirely out of other people's work. Everything below is
-				something it actually ships or runs, with the licence it carries.
+				{$t('chrome.credits.intro')}
 			</p>
 
 			{#each GROUPS as g (g.title)}
@@ -173,7 +175,7 @@
 			{/each}
 
 			<p class="text-xs text-white/35 leading-relaxed border-t border-white/10 pt-2.5">
-				If something here is miscredited or missing, that is a mistake worth telling me about.
+				{$t('chrome.credits.outro')}
 			</p>
 		</div>
 	</div>

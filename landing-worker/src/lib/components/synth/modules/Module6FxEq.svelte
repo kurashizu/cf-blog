@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { t } from '../../../i18n';
 	import { resetRack6 } from '../../../stores/synth-reset';
 	import { EQ_6_BANDS } from '../../../synth';
 	import {
@@ -86,7 +87,7 @@
 					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'fx'
 						? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
-					title="Main FX: Tape Delay, Space Reverb & Tape Overdrive Saturation"
+					title={$t('synthPanels.fx.mainTabHint')}
 				>
 					MAIN
 				</button>
@@ -95,7 +96,7 @@
 					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'eq'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
-					title="Per-Track 6-Band Graphic EQ — shapes the active track only"
+					title={$t('synthPanels.fx.eqTabHint')}
 				>
 					EQ
 				</button>
@@ -106,17 +107,17 @@
 						: duckOn
 							? 'border-[#e5c07b]/60 text-[#e5c07b] hover:text-white'
 							: 'border-white/20 text-white/60 hover:text-white'}"
-					title="Sidechain ducking — the active track dips every time the SRC track (or one KEY of it) plays, so a drum cuts through for the instant it lasts"
+					title={$t('synthPanels.fx.duckTabHint')}
 				>
 					DUCK
 				</button>
 			</div>
 		</div>
 		<div class="flex items-center gap-1.5">
-			<span class="text-white/40 flex items-center" title="Signal Flow: To Master Output & Visualizers">
+			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToOut')}>
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
 			</span>
-			<button onclick={resetRack6} title="RST — reset: put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack6} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 
@@ -124,7 +125,7 @@
 		<div class="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="TIME" value={Math.round($delayTime * 1000)} min={50} max={800} step={10} unit="ms" color="#e06c75" size={40} description="Delay Time — Milliseconds between the dry signal and its first echo" reset={300} onChange={(v) => setDelayTime(v / 1000)} />
+					<RotaryKnob label="TIME" value={Math.round($delayTime * 1000)} min={50} max={800} step={10} unit="ms" color="#e06c75" size={40} description={$t('synthPanels.fx.delayTimeDesc')} reset={300} onChange={(v) => setDelayTime(v / 1000)} />
 				</div>
 				<div class="col-span-2 flex justify-center">
 					<RotaryKnob label="FDBK" value={Math.round($delayFeedback * 100)} min={0} max={85} step={5} unit="%" color="#e06c75" size={40} reset={0} onChange={(v) => setDelayFeedback(v / 100)} />
@@ -151,7 +152,7 @@
 						unit="%"
 						color="#e06c75"
 						size={40}
-						description="Master Output Volume — global gain for the whole sound engine, persisted in the browser"
+						description={$t('synthPanels.fx.masterVolumeDesc')}
 						reset={100}
 						onChange={(v) => setVolume(v / 100)}
 					/>
@@ -161,14 +162,14 @@
 	{:else if $activeFxTab === 'duck'}
 		<div class="flex-1 min-h-0 flex flex-col justify-between py-0.5 gap-0.5">
 			<!-- Two steppers, OCT-style, then the envelope of the dip -->
-			<div class="flex items-center gap-1 px-0.5 shrink-0" title="SRC — the track whose notes trigger the dip">
+			<div class="flex items-center gap-1 px-0.5 shrink-0" title={$t('synthPanels.fx.srcHint')}>
 				<span class="text-white/50 text-[10px] font-bold w-7 shrink-0">SRC</span>
-				<button onclick={() => stepSource(-1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title="Previous source track">◄</button>
+				<button onclick={() => stepSource(-1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title={$t('synthPanels.fx.prevSourceHint')}>◄</button>
 				<span class="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-center truncate leading-none {duckSource < 0 ? 'text-white/40' : 'text-[#e5c07b]'}">{sourceLabel}</span>
-				<button onclick={() => stepSource(1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title="Next source track">►</button>
+				<button onclick={() => stepSource(1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title={$t('synthPanels.fx.nextSourceHint')}>►</button>
 			</div>
 			{#if sourceIsPerc}
-				<div class="flex items-start gap-1 px-0.5 shrink-0" title="KEY — which keys of the source's kit trigger the dip; none lit = every key">
+				<div class="flex items-start gap-1 px-0.5 shrink-0" title={$t('synthPanels.fx.keyRowHint')}>
 					<span class="text-white/50 text-[10px] font-bold w-7 shrink-0 pt-0.5">KEY</span>
 					<!-- One row that scrolls sideways when the kit has more keys than fit;
 					     a plain wheel scrolls it too, so no need to hold Shift. -->
@@ -185,7 +186,7 @@
 							{@const on = duckKeys.includes(n)}
 							<button
 								onclick={() => toggleKey(n)}
-								title={on ? `${noteNameOf(n)} triggers the dip — click to drop it` : `Add ${noteNameOf(n)} to the trigger keys`}
+								title={on ? $t('synthPanels.fx.dropKeyHint', { note: noteNameOf(n) }) : $t('synthPanels.fx.addKeyHint', { note: noteNameOf(n) })}
 								class="press shrink-0 px-1 py-0.5 text-[9px] font-mono font-bold rounded-xs border leading-none cursor-pointer transition-colors {on
 									? 'border-[#e5c07b] bg-[#e5c07b] text-black'
 									: 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'}"
@@ -194,23 +195,23 @@
 							</button>
 						{/each}
 						{#if !kitKeys.length}
-							<span class="text-[9px] text-white/30 font-mono pt-0.5">no keys in this kit yet</span>
+							<span class="text-[9px] text-white/30 font-mono pt-0.5">{$t('synthPanels.fx.noKitKeys')}</span>
 						{/if}
 					</div>
 				</div>
 			{/if}
 			<div class="grid grid-cols-4 gap-0.5 items-center flex-1 min-h-0">
 				<div class="flex justify-center">
-					<RotaryKnob label="DEPTH" value={Math.round((activeTrack?.duckDepth ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={32} description="How far this track dips on each trigger (100% = to silence)" reset={0} onChange={(v) => updateActiveTrack({ duckDepth: v / 100 })} />
+					<RotaryKnob label="DEPTH" value={Math.round((activeTrack?.duckDepth ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckDepthDesc')} reset={0} onChange={(v) => updateActiveTrack({ duckDepth: v / 100 })} />
 				</div>
 				<div class="flex justify-center">
-					<RotaryKnob label="DIP" value={activeTrack?.duckDip ?? 5} min={1} max={50} step={1} unit="ms" color="#e5c07b" size={32} description="Time to reach the floor after the trigger" reset={5} onChange={(v) => updateActiveTrack({ duckDip: v })} />
+					<RotaryKnob label="DIP" value={activeTrack?.duckDip ?? 5} min={1} max={50} step={1} unit="ms" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckDipDesc')} reset={5} onChange={(v) => updateActiveTrack({ duckDip: v })} />
 				</div>
 				<div class="flex justify-center">
-					<RotaryKnob label="HOLD" value={activeTrack?.duckHold ?? 40} min={0} max={300} step={10} unit="ms" color="#e5c07b" size={32} description="Time held at the floor before the release" reset={40} onChange={(v) => updateActiveTrack({ duckHold: v })} />
+					<RotaryKnob label="HOLD" value={activeTrack?.duckHold ?? 40} min={0} max={300} step={10} unit="ms" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckHoldDesc')} reset={40} onChange={(v) => updateActiveTrack({ duckHold: v })} />
 				</div>
 				<div class="flex justify-center">
-					<RotaryKnob label="REL" value={activeTrack?.duckRelease ?? 150} min={20} max={800} step={10} unit="ms" color="#e5c07b" size={32} description="Time back to full level — long values pump, short ones just clear the hit" reset={150} onChange={(v) => updateActiveTrack({ duckRelease: v })} />
+					<RotaryKnob label="REL" value={activeTrack?.duckRelease ?? 150} min={20} max={800} step={10} unit="ms" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckReleaseDesc')} reset={150} onChange={(v) => updateActiveTrack({ duckRelease: v })} />
 				</div>
 			</div>
 		</div>
@@ -226,7 +227,7 @@
 					class="press px-2 py-0.2 text-[9px] rounded-xs border font-black cursor-pointer transition-all {trackEqOn
 						? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_6px_#98c379]'
 						: 'border-white/20 bg-white/5 text-white/40 hover:text-white'}"
-					title="Toggle this track's 6-band graphic EQ (per-track; saved and shared with the patch)"
+					title={$t('synthPanels.fx.eqToggleHint')}
 				>
 					EQ: {trackEqOn ? 'ON' : 'OFF'}
 				</button>
@@ -244,7 +245,14 @@
 							unit="dB"
 							color={band.color}
 							height={48}
-							description={`${band.type === 'lowshelf' ? 'Low Shelf' : band.type === 'highshelf' ? 'High Shelf' : 'Peaking Band'} — Boost/cut around ${band.label}Hz`}
+							description={$t(
+								band.type === 'lowshelf'
+									? 'synthPanels.fx.eqBandLowShelfDesc'
+									: band.type === 'highshelf'
+										? 'synthPanels.fx.eqBandHighShelfDesc'
+										: 'synthPanels.fx.eqBandPeakingDesc',
+								{ label: band.label }
+							)}
 							reset={0}
 							onChange={(v) => setBand(idx, v)}
 						/>

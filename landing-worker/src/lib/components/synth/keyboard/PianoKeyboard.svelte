@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { t } from '../../../i18n';
 	import { PIANO_ROLL_NOTES } from '../../../synth';
 	import { activeTrackId } from '../../../stores/synth-transport';
 	import { currentTrack, tracksState, isOverlayMode, overlayTrackIds, activePlayingNotes, holdManualNote, releaseManualNote } from '../../../stores/synth-tracks';
@@ -198,7 +199,7 @@
 
 		<div class="flex items-center gap-2">
 			<div class="flex items-center gap-1 text-xs">
-				<span class="opacity-60 text-xs font-bold" title="Keyboard Octave Range (FROM - TO) — Changes visible keybed range">OCT:</span>
+				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.keyboard.octRangeHint')}>OCT:</span>
 
 				<div class="flex items-center gap-0.5">
 					<span class="text-white/50 text-[10px] font-bold">FROM</span>
@@ -209,7 +210,7 @@
 						}}
 						disabled={kbOctaveFrom <= 1}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Lower starting octave"
+						title={$t('synthPanels.keyboard.lowerStartHint')}
 					>
 						◄
 					</button>
@@ -221,7 +222,7 @@
 						}}
 						disabled={kbOctaveFrom >= kbOctaveTo}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Raise starting octave"
+						title={$t('synthPanels.keyboard.raiseStartHint')}
 					>
 						►
 					</button>
@@ -236,7 +237,7 @@
 						}}
 						disabled={kbOctaveTo <= kbOctaveFrom}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Lower ending octave"
+						title={$t('synthPanels.keyboard.lowerEndHint')}
 					>
 						◄
 					</button>
@@ -248,7 +249,7 @@
 						}}
 						disabled={kbOctaveTo >= 7}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Raise ending octave"
+						title={$t('synthPanels.keyboard.raiseEndHint')}
 					>
 						►
 					</button>
@@ -262,12 +263,12 @@
 				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {qwertyOn
 					? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_#56b6c2]'
 					: 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'}"
-				title="Play with your computer keyboard — Z-row = base octave, Q-row = octave above. Ctrl = octave down, Shift = octave up (the [ and ] keys also work), hold Space = sustain pedal. Ctrl+0-3 tab navigation keeps working."
+				title={$t('synthPanels.keyboard.qwertyToggleHint')}
 			>
 				KBD: {qwertyOn ? 'ON' : 'OFF'}
 			</button>
 			{#if qwertyOn}
-				<span class="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2]" title="QWERTY base octave — Ctrl = down, Shift = up (the [ and ] keys also work)">C{qwertyOctave}</span>
+				<span class="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2]" title={$t('synthPanels.keyboard.qwertyOctaveHint')}>C{qwertyOctave}</span>
 			{/if}
 
 			<span class="opacity-30">|</span>
@@ -280,7 +281,7 @@
 				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {$isSustainActive
 					? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-[0_0_6px_#e5c07b]'
 					: 'border-white/20 bg-white/5 text-white/50 hover:text-white hover:border-white/40'}"
-				title="Sustain Pedal (PEDAL / CC64) — Keeps sounding notes sustained until released"
+				title={$t('synthPanels.keyboard.sustainHint')}
 			>
 				SUS: {$isSustainActive ? 'ON' : 'OFF'}
 			</button>
@@ -301,7 +302,7 @@
 							: $velocityCurve === 'HARD'
 								? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-[0_0_6px_#e06c75]'
 								: 'border-white/20 bg-white/5 text-white/40 hover:text-white hover:border-white/40'}"
-				title={`MIDI Velocity Curve: ${$velocityCurve} (Click to cycle: EXP [Natural Piano] → LIN [Linear 1:1] → LOG [Soft Touch] → HARD [Aggressive] → OFF [Fixed Volume])`}
+				title={$t('synthPanels.keyboard.velocityCurveHint', { curve: $velocityCurve })}
 			>
 				VEL: {$velocityCurve === 'LINEAR' ? 'LIN' : $velocityCurve}
 			</button>
@@ -334,7 +335,7 @@
 							? 'shadow-[0_0_10px_currentColor]'
 							: 'bg-[#e8e6e1] hover:bg-white text-black/70 border-black/30'}"
 						style={isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}
-						title={`Play ${wk.note} (${PIANO_ROLL_NOTES[wk.idx]?.freq.toFixed(1)} Hz)`}
+						title={$t('synthPanels.keyboard.playNoteHint', { note: wk.note, freq: PIANO_ROLL_NOTES[wk.idx]?.freq.toFixed(1) ?? '' })}
 					>
 						<!-- Only the Cs are named, and only by their octave number.
 					     Seven octaves of white keys is 49 labels across the strip;
@@ -377,7 +378,7 @@
 						? 'shadow-[0_0_10px_currentColor]'
 						: 'bg-[#181a1f] hover:bg-[#282c34] text-white/60 border-black'}"
 					style="left: {leftPos}%; width: {bWidth}%; {isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}"
-					title={`Play ${bk.note} (${PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1)} Hz)`}
+					title={$t('synthPanels.keyboard.playNoteHint', { note: bk.note, freq: PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1) ?? '' })}
 				>
 					<!-- Unlabelled: a black key is barely wider than the text that
 					     was on it, so those labels were the densest part of the

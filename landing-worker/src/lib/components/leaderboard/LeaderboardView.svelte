@@ -5,6 +5,7 @@
 	import Dropdown from '../chrome/Dropdown.svelte';
 	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';
+	import { t, locale } from '$lib/i18n';
 	import {
 		loadLeaderboard,
 		leaderboard,
@@ -19,87 +20,89 @@
 
 	interface Metric {
 		key: MetricKey;
-		label: string;
-		short: string;
+		/** Message keys, resolved at render via $t -- this table is built once at
+		 *  module init, so the label/short/hint text cannot be baked in here. */
+		labelKey: string;
+		shortKey: string;
+		hintKey: string;
 		color: string;
 		/** null when the model has no value for this metric. */
 		value: (m: LeaderboardModel) => number | null;
 		format: (v: number) => string;
 		/** Sort direction that puts "best" first. */
 		bestIsLow: boolean;
-		hint: string;
 	}
 
 	const METRICS: Metric[] = [
 		{
 			key: 'intelligence',
-			label: 'INTELLIGENCE',
-			short: 'INTEL',
+			labelKey: 'community.leaderboard.metricIntelligence',
+			shortKey: 'community.leaderboard.metricIntelligenceShort',
+			hintKey: 'community.leaderboard.metricIntelligenceHint',
 			color: '#56b6c2',
 			value: (m) => m.evaluations?.artificial_analysis_intelligence_index ?? null,
 			format: (v) => v.toFixed(1),
-			bestIsLow: false,
-			hint: 'Artificial Analysis Intelligence Index'
+			bestIsLow: false
 		},
 		{
 			key: 'coding',
-			label: 'CODING',
-			short: 'CODE',
+			labelKey: 'community.leaderboard.metricCoding',
+			shortKey: 'community.leaderboard.metricCodingShort',
+			hintKey: 'community.leaderboard.metricCodingHint',
 			color: '#98c379',
 			value: (m) => m.evaluations?.artificial_analysis_coding_index ?? null,
 			format: (v) => v.toFixed(1),
-			bestIsLow: false,
-			hint: 'Artificial Analysis Coding Index'
+			bestIsLow: false
 		},
 		{
 			key: 'agentic',
-			label: 'AGENTIC',
-			short: 'AGENT',
+			labelKey: 'community.leaderboard.metricAgentic',
+			shortKey: 'community.leaderboard.metricAgenticShort',
+			hintKey: 'community.leaderboard.metricAgenticHint',
 			color: '#c678dd',
 			value: (m) => m.evaluations?.artificial_analysis_agentic_index ?? null,
 			format: (v) => v.toFixed(1),
-			bestIsLow: false,
-			hint: 'Artificial Analysis Agentic Index'
+			bestIsLow: false
 		},
 		{
 			key: 'price',
-			label: 'PRICE',
-			short: '$/1M',
+			labelKey: 'community.leaderboard.metricPrice',
+			shortKey: 'community.leaderboard.metricPriceShort',
+			hintKey: 'community.leaderboard.metricPriceHint',
 			color: '#e5c07b',
 			value: (m) => m.pricing?.price_1m_blended_3_to_1 ?? null,
 			format: (v) => (v === 0 ? 'free' : `$${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 0)}`),
-			bestIsLow: true,
-			hint: 'USD per 1M tokens, blended 3:1 input:output'
+			bestIsLow: true
 		},
 		{
 			key: 'speed',
-			label: 'SPEED',
-			short: 'TOK/S',
+			labelKey: 'community.leaderboard.metricSpeed',
+			shortKey: 'community.leaderboard.metricSpeedShort',
+			hintKey: 'community.leaderboard.metricSpeedHint',
 			color: '#61afef',
 			value: (m) => m.median_output_tokens_per_second ?? null,
 			format: (v) => v.toFixed(0),
-			bestIsLow: false,
-			hint: 'Median output tokens per second'
+			bestIsLow: false
 		},
 		{
 			key: 'ttft',
-			label: 'LATENCY',
-			short: 'TTFT',
+			labelKey: 'community.leaderboard.metricLatency',
+			shortKey: 'community.leaderboard.metricLatencyShort',
+			hintKey: 'community.leaderboard.metricLatencyHint',
 			color: '#e06c75',
 			value: (m) => m.median_time_to_first_token_seconds ?? null,
 			format: (v) => `${v.toFixed(v < 10 ? 2 : 1)}s`,
-			bestIsLow: true,
-			hint: 'Median time to first token, seconds'
+			bestIsLow: true
 		},
 		{
 			key: 'date',
-			label: 'RELEASED',
-			short: 'DATE',
+			labelKey: 'community.leaderboard.metricReleased',
+			shortKey: 'community.leaderboard.metricReleasedShort',
+			hintKey: 'community.leaderboard.metricReleasedHint',
 			color: '#d19a66',
 			value: (m) => (m.release_date ? Date.parse(m.release_date) || null : null),
 			format: () => '',
-			bestIsLow: false,
-			hint: 'Model release date'
+			bestIsLow: false
 		}
 	];
 
@@ -221,22 +224,25 @@
 		requestAnimationFrame(placeCard);
 	});
 
-	/** Every field the payload carries for one model, with nothing filled in. */
-	function detailRows(m: LeaderboardModel): { label: string; value: string }[] {
+	/** Every field the payload carries for one model, with nothing filled in.
+	 *  `labelKey` is resolved with $t at render, so the row keeps its own
+	 *  identity (row.labelKey) for the {#each} key while the shown text follows
+	 *  the locale. */
+	function detailRows(m: LeaderboardModel): { labelKey: string; value: string }[] {
 		const price = m.pricing ?? {};
 		const num = (v: number | null | undefined, unit = '') => (v === null || v === undefined ? '—' : `${v}${unit}`);
 		return [
-			{ label: 'slug', value: m.slug || '—' },
-			{ label: 'creator', value: m.model_creator?.name ?? '—' },
-			{ label: 'released', value: m.release_date ?? '—' },
-			{ label: 'intelligence', value: num(m.evaluations?.artificial_analysis_intelligence_index) },
-			{ label: 'coding', value: num(m.evaluations?.artificial_analysis_coding_index) },
-			{ label: 'agentic', value: num(m.evaluations?.artificial_analysis_agentic_index) },
-			{ label: 'blended 3:1', value: price.price_1m_blended_3_to_1 === null || price.price_1m_blended_3_to_1 === undefined ? '—' : `$${price.price_1m_blended_3_to_1} / 1M` },
-			{ label: 'input', value: price.price_1m_input_tokens === null || price.price_1m_input_tokens === undefined ? '—' : `$${price.price_1m_input_tokens} / 1M` },
-			{ label: 'output', value: price.price_1m_output_tokens === null || price.price_1m_output_tokens === undefined ? '—' : `$${price.price_1m_output_tokens} / 1M` },
-			{ label: 'output speed', value: num(m.median_output_tokens_per_second, ' tok/s') },
-			{ label: 'time to first token', value: num(m.median_time_to_first_token_seconds, ' s') }
+			{ labelKey: 'community.leaderboard.detailSlug', value: m.slug || '—' },
+			{ labelKey: 'community.leaderboard.detailCreator', value: m.model_creator?.name ?? '—' },
+			{ labelKey: 'community.leaderboard.detailReleased', value: m.release_date ?? '—' },
+			{ labelKey: 'community.leaderboard.detailIntelligence', value: num(m.evaluations?.artificial_analysis_intelligence_index) },
+			{ labelKey: 'community.leaderboard.detailCoding', value: num(m.evaluations?.artificial_analysis_coding_index) },
+			{ labelKey: 'community.leaderboard.detailAgentic', value: num(m.evaluations?.artificial_analysis_agentic_index) },
+			{ labelKey: 'community.leaderboard.detailBlended', value: price.price_1m_blended_3_to_1 === null || price.price_1m_blended_3_to_1 === undefined ? '—' : `$${price.price_1m_blended_3_to_1} / 1M` },
+			{ labelKey: 'community.leaderboard.detailInput', value: price.price_1m_input_tokens === null || price.price_1m_input_tokens === undefined ? '—' : `$${price.price_1m_input_tokens} / 1M` },
+			{ labelKey: 'community.leaderboard.detailOutput', value: price.price_1m_output_tokens === null || price.price_1m_output_tokens === undefined ? '—' : `$${price.price_1m_output_tokens} / 1M` },
+			{ labelKey: 'community.leaderboard.detailSpeed', value: num(m.median_output_tokens_per_second, ' tok/s') },
+			{ labelKey: 'community.leaderboard.detailTtft', value: num(m.median_time_to_first_token_seconds, ' s') }
 		];
 	}
 
@@ -248,7 +254,7 @@
 			.map((x) => spec.value(x))
 			.filter((v): v is number => v !== null)
 			.sort((a, b) => (spec.bestIsLow ? a - b : b - a));
-		return `#${ranked.indexOf(mine) + 1} of ${ranked.length}`;
+		return $t('community.leaderboard.rankOf', { rank: ranked.indexOf(mine) + 1, total: ranked.length });
 	}
 
 	function onWindowKeydown(e: KeyboardEvent) {
@@ -260,7 +266,7 @@
 
 	let fetchedLabel = $derived(
 		$leaderboard?.fetchedAt
-			? new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Australia/Sydney' }).format(
+			? new Intl.DateTimeFormat($locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Australia/Sydney' }).format(
 					new Date($leaderboard.fetchedAt)
 				)
 			: null
@@ -288,19 +294,19 @@
 
 		<div class="text-[10px] sm:text-xs font-mono text-white/45 text-right leading-relaxed max-w-[440px]">
 			<div>
-				Source: <span class="text-[#e5c07b]">Artificial Analysis</span> language-models API
+				{$t('community.leaderboard.sourcePrefix')} <span class="text-[#e5c07b]">Artificial Analysis</span> {$t('community.leaderboard.sourceSuffix')}
 				{#if $leaderboard?.intelligenceIndexVersion}
-					<span class="text-white/60">· index v{$leaderboard.intelligenceIndexVersion}</span>
+					<span class="text-white/60">{$t('community.leaderboard.indexVersion', { version: $leaderboard.intelligenceIndexVersion })}</span>
 				{/if}
 			</div>
 			<div class="text-white/35">
-				cached by cache.krsz.in into D1, read from
+				{$t('community.leaderboard.cachedBy')}
 				<a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer" class="text-[#61afef] hover:underline">blog.krsz.in</a>
 			</div>
 			{#if fetchedLabel}
 				<div class="text-[#98c379]">
-					upstream fetched {fetchedLabel} · {models.length} models
-					{#if $leaderboardMs !== null}<span class="text-white/35"> · {$leaderboardMs}ms to load here</span>{/if}
+					{$t('community.leaderboard.fetchedLine', { when: fetchedLabel, count: models.length })}
+					{#if $leaderboardMs !== null}<span class="text-white/35">{$t('community.leaderboard.loadMs', { ms: $leaderboardMs })}</span>{/if}
 				</div>
 			{/if}
 		</div>
@@ -308,17 +314,20 @@
 
 	<!-- Sort selector: the chosen metric drives both the ordering and the bars -->
 	<div class="flex flex-wrap items-center gap-1.5 shrink-0">
-		<span class="text-[10px] font-mono font-bold text-white/40 uppercase mr-0.5">RANK BY</span>
+		<span class="text-[10px] font-mono font-bold text-white/40 uppercase mr-0.5">{$t('community.leaderboard.rankBy')}</span>
 		{#each METRICS as m (m.key)}
 			<button
 				onclick={() => pick(m.key)}
-				title={`${m.hint} — ${m.bestIsLow ? 'lower is better' : 'higher is better'}`}
+				title={$t('community.leaderboard.metricHint', {
+					hint: $t(m.hintKey),
+					direction: m.bestIsLow ? $t('community.leaderboard.lowerBetter') : $t('community.leaderboard.higherBetter')
+				})}
 				class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {sortKey === m.key
 					? 'bg-white/15 text-white'
 					: 'border-white/20 text-white/55 hover:border-white/50'}"
 				style={sortKey === m.key ? `border-color: ${m.color}; color: ${m.color}` : undefined}
 			>
-				{m.label}
+				{$t(m.labelKey)}
 			</button>
 		{/each}
 	</div>
@@ -327,7 +336,7 @@
 		<input
 			type="text"
 			bind:value={query}
-			placeholder="filter by model or creator…"
+			placeholder={$t('community.leaderboard.filterPlaceholder')}
 			class="focus-glow px-2 py-1 bg-black/60 border border-white/20 rounded-xs text-xs font-mono text-[#d8dee9] outline-none min-w-[180px] flex-1 max-w-[320px] transition-colors"
 			style="--krsz-focus-color: #56b6c2"
 		/>
@@ -335,10 +344,10 @@
 			bind:value={creator}
 			color="#61afef"
 			width="220px"
-			placeholder="all creators"
-			title="Filter by model creator"
+			placeholder={$t('community.leaderboard.allCreators')}
+			title={$t('community.leaderboard.filterByCreator')}
 			options={[
-				{ value: '', label: 'all creators', note: String(creators.length) },
+				{ value: '', label: $t('community.leaderboard.allCreators'), note: String(creators.length) },
 				...creators.map((c) => ({ value: c, label: c }))
 			]}
 		/>
@@ -350,19 +359,19 @@
 						? 'border-white bg-white/15 text-white'
 						: 'border-white/20 text-white/55 hover:border-white/50'}"
 				>
-					{n === 0 ? 'ALL' : `TOP ${n}`}
+					{n === 0 ? $t('community.leaderboard.limitAll') : $t('community.leaderboard.limitTop', { n })}
 				</button>
 			{/each}
 		</div>
-		<span class="text-[10px] font-mono text-white/35">{filtered.length} match{filtered.length === 1 ? '' : 'es'}</span>
+		<span class="text-[10px] font-mono text-white/35">{$t('community.leaderboard.matchCount', { count: filtered.length })}</span>
 	</div>
 
 	{#if $leaderboardStatus === 'loading'}
-		<div class="text-xs font-mono text-white/45">Loading the model table…</div>
+		<div class="text-xs font-mono text-white/45">{$t('community.leaderboard.loading')}</div>
 	{:else if $leaderboardStatus === 'error'}
 		<div class="text-xs font-mono text-[#e06c75]">
-			Could not load the leaderboard: {$leaderboardError}
-			<button onclick={() => loadLeaderboard(true)} class="press ml-2 underline cursor-pointer hover:text-white transition-colors">retry</button>
+			{$t('community.leaderboard.loadError', { error: $leaderboardError ?? '' })}
+			<button onclick={() => loadLeaderboard(true)} class="press ml-2 underline cursor-pointer hover:text-white transition-colors">{$t('community.leaderboard.retry')}</button>
 		</div>
 	{/if}
 
@@ -371,20 +380,23 @@
 			<table class="w-full text-xs font-mono border-collapse">
 				<thead class="sticky top-0 bg-[#14161b] z-10">
 					<tr class="text-[10px] uppercase text-white/40 border-b border-white/15">
-						<th class="text-right px-2 py-1.5 w-10">#</th>
-						<th class="text-left px-2 py-1.5">model</th>
-						<th class="text-left px-2 py-1.5 hidden md:table-cell">creator</th>
+						<th class="text-right px-2 py-1.5 w-10">{$t('community.leaderboard.colRank')}</th>
+						<th class="text-left px-2 py-1.5">{$t('community.leaderboard.colModel')}</th>
+						<th class="text-left px-2 py-1.5 hidden md:table-cell">{$t('community.leaderboard.colCreator')}</th>
 						<th class="text-left px-2 py-1.5 w-[110px] sm:w-[160px]" style="color: {metric.color}">
-							{metric.short} {metric.bestIsLow ? '↑' : '↓'}
+							{$t(metric.shortKey)} {metric.bestIsLow ? '↑' : '↓'}
 						</th>
 						{#each METRICS.filter((m) => m.key !== sortKey) as m (m.key)}
 							<th class="text-right px-2 py-1.5 hidden lg:table-cell">
 								<button
 									onclick={() => pick(m.key)}
-									title={`Sort by ${m.hint} — ${m.bestIsLow ? 'lower is better' : 'higher is better'}`}
+									title={$t('community.leaderboard.sortByHint', {
+										hint: $t(m.hintKey),
+										direction: m.bestIsLow ? $t('community.leaderboard.lowerBetter') : $t('community.leaderboard.higherBetter')
+									})}
 									class="press cursor-pointer hover:text-white transition-colors uppercase"
 								>
-									{m.short}
+									{$t(m.shortKey)}
 								</button>
 							</th>
 						{/each}
@@ -397,7 +409,7 @@
 						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 						<tr
 							onclick={(e) => openCard(m, e)}
-							title="Every field the source has for this model"
+							title={$t('community.leaderboard.rowDetailHint')}
 							class="border-b border-white/5 last:border-0 cursor-pointer transition-colors {open
 								? 'bg-white/10'
 								: 'hover:bg-white/5'}"
@@ -423,10 +435,9 @@
 		</div>
 
 		<div class="text-[10px] font-mono text-white/30 shrink-0">
-			Click a row for every field the source carries, or a column heading to rank by it. Blank
-			cells mean Artificial Analysis has no measurement for that model — nothing is inferred.
+			{$t('community.leaderboard.footerHint')}
 			{#if limit !== 0 && sorted.length > limit}
-				Showing {shown.length} of {sorted.length}; press ALL for the rest.
+				{$t('community.leaderboard.showingOf', { shown: shown.length, total: sorted.length })}
 			{/if}
 		</div>
 	{/if}
@@ -456,18 +467,18 @@
 
 		<div class="p-2.5 space-y-2">
 			<div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
-				{#each detailRows(m) as row (row.label)}
+				{#each detailRows(m) as row (row.labelKey)}
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1 flex items-baseline justify-between gap-2">
-						<span class="text-[10px] text-white/40 shrink-0">{row.label}</span>
+						<span class="text-[10px] text-white/40 shrink-0">{$t(row.labelKey)}</span>
 						<span class="text-[11px] text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
 					</div>
 				{/each}
 			</div>
 
 			<div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/45 border-t border-white/10 pt-1.5">
-				<span class="text-white/30">rank among the {filtered.length} filtered:</span>
+				<span class="text-white/30">{$t('community.leaderboard.rankAmong', { count: filtered.length })}</span>
 				{#each METRICS.filter((x) => x.key !== 'date') as x (x.key)}
-					<span>{x.short} <span style="color: {x.color}">{rankFor(m, x)}</span></span>
+					<span>{$t(x.shortKey)} <span style="color: {x.color}">{rankFor(m, x)}</span></span>
 				{/each}
 			</div>
 
@@ -479,7 +490,7 @@
 					}}
 					class="press text-[10px] text-white/45 hover:text-white cursor-pointer underline transition-colors"
 				>
-					filter the table to {m.model_creator?.name ?? 'this creator'}
+					{$t('community.leaderboard.filterToCreator', { creator: m.model_creator?.name ?? $t('community.leaderboard.thisCreator') })}
 				</button>
 				{#if m.slug}
 					<a
@@ -488,7 +499,7 @@
 						rel="noopener noreferrer"
 						class="press text-[10px] text-[#61afef] hover:underline"
 					>
-						open on Artificial Analysis ↗
+						{$t('community.leaderboard.openOnSource')}
 					</a>
 				{/if}
 			</div>

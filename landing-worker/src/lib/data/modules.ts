@@ -7,9 +7,13 @@ export interface ModuleSpec {
 	tag: string;
 	badge: string;
 	desc: string;
+	/** i18n key for `desc`, resolved at render time by i18n-aware consumers. */
+	descKey: string;
 	tech: string[];
 	/** Short, verified real facts — no invented precision (latency numbers, fake %s, etc). */
 	facts: string[];
+	/** i18n keys for `facts`, same order, resolved at render time by i18n-aware consumers. */
+	factKeys: string[];
 	/** Real request/data-flow as a Mermaid flowchart definition. */
 	topology: string;
 	color: string;
@@ -26,12 +30,14 @@ export const MODULES: ModuleSpec[] = [
 		tag: 'NEXTJS_D1_VECTORIZE',
 		badge: 'NODE_01',
 		desc: 'Technical research log with real semantic search — full article bodies in D1, embedded and indexed for retrieval, not just tagged.',
+		descKey: 'home.modules.blog.desc',
 		tech: ['Next.js 15 + OpenNext on Workers', 'D1 SQL (full article body)', 'Vectorize 768-D (gemini-embedding-2)', 'R2 + KV + per-route rate limits'],
 		facts: [
 			'D1 stores the complete article body, not just metadata',
 			'Semantic search via Vectorize, embedded with Gemini Embedding 2 (768-D)',
 			'Per-route rate limiting and a full audit log on every write'
 		],
+		factKeys: ['home.modules.blog.fact1', 'home.modules.blog.fact2', 'home.modules.blog.fact3'],
 		topology: `flowchart LR
     A(["Client"]) --> B["Next.js Worker"]
     B --> C[("D1: article body")]
@@ -50,12 +56,14 @@ export const MODULES: ModuleSpec[] = [
 		tag: 'AUTONOMOUS_LLM_AGENT',
 		badge: 'NODE_02',
 		desc: 'An actual multi-step tool-calling agent, not a single prompt-and-response wrapper — runs its own tool loop with real fallback logic.',
+		descKey: 'home.modules.agent.desc',
 		tech: ['gemma-4-31b-it → gemma-4-26b-a4b-it fallback', 'Brave Search + hand-written AST evaluator', 'KV session store, 1h TTL'],
 		facts: [
 			'5 real tools: web_search (Brave), eval_expression (a hand-written parser, not raw eval), get_time, blog_read, blog_search',
 			'Automatic model fallback: gemma-4-31b-it → gemma-4-26b-a4b-it',
 			'Up to 5 tool-call iterations per request, 5s timeout per call'
 		],
+		factKeys: ['home.modules.agent.fact1', 'home.modules.agent.fact2', 'home.modules.agent.fact3'],
 		topology: `sequenceDiagram
     participant C as Client
     participant W as Agent Worker
@@ -89,12 +97,14 @@ export const MODULES: ModuleSpec[] = [
 		tag: 'S3_COMPATIBLE_RELAY',
 		badge: 'NODE_03',
 		desc: 'Ephemeral file and clipboard relay. Presigned direct-to-storage uploads, 4-character codes, links that actually expire.',
+		descKey: 'home.modules.share.desc',
 		tech: ['SvelteKit on Cloudflare Workers', 'Self-hosted S3-compatible storage', 'D1 quotas + audit log', 'Cron TTL purge every 5 min'],
 		facts: [
 			'Uploads go straight to storage via presigned PUT/multipart — the Worker never touches file bytes',
 			'Up to 5 GB per file (100 GB for admin uploads); links expire 5 minutes to 7 days',
 			'Password-protected downloads, plus an admin panel with a full audit log'
 		],
+		factKeys: ['home.modules.share.fact1', 'home.modules.share.fact2', 'home.modules.share.fact3'],
 		topology: `sequenceDiagram
     participant C as Client
     participant W as SvelteKit Worker
@@ -123,6 +133,7 @@ export const MODULES: ModuleSpec[] = [
 		tag: 'YTDLP_FFMPEG_PIPELINE',
 		badge: 'NODE_04',
 		desc: 'Paste a video URL, get a shareable link. A real yt-dlp → ffmpeg pipeline runs on GitHub Actions and hands the result to share.krsz.in.',
+		descKey: 'home.modules.sharetube.desc',
 		tech: [
 			'SvelteKit job queue (D1) on Cloudflare Workers',
 			'yt-dlp → ffmpeg, macOS VideoToolbox by default',
@@ -134,6 +145,7 @@ export const MODULES: ModuleSpec[] = [
 			'Every video gets a burned-in, CJK-capable watermark — the job fails loudly if no CJK font is found',
 			'Egress through Cloudflare WARP (WireGuard) by default, with an Oracle-hosted proxy as fallback'
 		],
+		factKeys: ['home.modules.sharetube.fact1', 'home.modules.sharetube.fact2', 'home.modules.sharetube.fact3'],
 		topology: `sequenceDiagram
     participant C as Client
     participant W as SvelteKit Worker
@@ -163,12 +175,14 @@ export const MODULES: ModuleSpec[] = [
 		tag: 'SELFHOSTED_WEBMAIL',
 		badge: 'NODE_05',
 		desc: 'A real private mailbox with its own webmail UI — not a routing gateway. Open signup, no tracking.',
+		descKey: 'home.modules.mail.desc',
 		tech: ['SvelteKit SSR on Cloudflare Workers', 'D1 (accounts/folders/messages) + R2 (bodies/attachments)', 'Email Routing triggers inbound parsing only', 'Resend (external) + in-Worker delivery (internal)'],
 		facts: [
 			'Full webmail UI — inbox/sent/drafts/trash/junk/starred, drag-drop attachments, search',
 			'Open signup, PBKDF2-SHA256 password hashing, JWT sessions in KV',
 			'Per-account quotas (200 MiB / 1,000 messages) with a nightly cleanup cron'
 		],
+		factKeys: ['home.modules.mail.fact1', 'home.modules.mail.fact2', 'home.modules.mail.fact3'],
 		topology: `flowchart LR
     A(["Inbound: *@krsz.in"]) --> B["Email Routing"]
     B --> C["Worker parses MIME"]
@@ -188,12 +202,14 @@ export const MODULES: ModuleSpec[] = [
 		tag: 'ENGINEERING_RULES',
 		badge: 'NODE_06',
 		desc: 'The actual engineering rulebook these projects follow — not a mission statement, a working style guide.',
+		descKey: 'home.modules.skill.desc',
 		tech: ['SvelteKit for all web work', 'uv for Python', 'ffmpeg for all media processing', 'Pre-authenticated wrangler / gh / hf CLIs'],
 		facts: [
 			'Code and docs default to English; chat defaults to Chinese unless switched',
 			'ffmpeg is the standard for every audio/video/image operation, no exceptions',
 			'Background jobs run in tmux panes, not nohup; long tasks get polled, not blocked on'
 		],
+		factKeys: ['home.modules.skill.fact1', 'home.modules.skill.fact2', 'home.modules.skill.fact3'],
 		topology: `flowchart LR
     A[("kurashizu/rules repo")] --> B["skill.krsz.in"]
     B -->|"referenced by"| C["blog / agent / share / sharetube / mail"]`,

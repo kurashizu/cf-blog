@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
+	import { t } from '$lib/i18n';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -134,8 +135,8 @@
 <div class="space-y-2">
 	{#if !pad}
 		<div class="border border-white/15 bg-black/40 rounded-xs p-6 text-center space-y-2">
-			<div class="text-sm font-mono text-white/60">{everConnected ? 'CONTROLLER DISCONNECTED' : 'NO CONTROLLER DETECTED'}</div>
-			<div class="text-xs font-mono text-white/35">Connect a gamepad and press any button — browsers hide devices until first input.</div>
+			<div class="text-sm font-mono text-white/60">{everConnected ? $t('utilities.gamepad.disconnected') : $t('utilities.gamepad.none')}</div>
+			<div class="text-xs font-mono text-white/35">{$t('utilities.gamepad.hint')}</div>
 		</div>
 	{:else}
 		<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
@@ -143,13 +144,13 @@
 				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live shrink-0"></span>
 				{pad.id}
 			</span>
-			<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">MAPPING: <span class="font-bold text-white/80">{pad.mapping || 'custom'}</span></span>
+			<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">{$t('utilities.gamepad.mapping')} <span class="font-bold text-white/80">{pad.mapping || $t('utilities.gamepad.mapping.custom')}</span></span>
 			<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-				TESTED: <span class="font-bold text-white/80">{testedButtons.size}/{pad.buttons.length}</span> btn · <span class="font-bold text-white/80">{testedAxes.size}/{pad.axes.length}</span> axis
+				{$t('utilities.gamepad.tested')} <span class="font-bold text-white/80">{testedButtons.size}/{pad.buttons.length}</span> {$t('utilities.gamepad.tested.btn')} <span class="font-bold text-white/80">{testedAxes.size}/{pad.axes.length}</span> {$t('utilities.gamepad.tested.axis')}
 			</span>
 			{#if pad.canRumble}
 				<button onclick={rumble} class="press px-2 py-1 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold cursor-pointer transition-colors">
-					◉ RUMBLE TEST
+					{$t('utilities.gamepad.rumble')}
 				</button>
 			{/if}
 		</div>
@@ -157,7 +158,7 @@
 		{#if isStandard}
 			<!-- The pad itself. Held buttons light up where they sit on the device. -->
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5">
-				<svg viewBox="0 0 300 180" class="w-full max-h-[280px]" role="img" aria-label="Gamepad state">
+				<svg viewBox="0 0 300 180" class="w-full max-h-[280px]" role="img" aria-label={$t('utilities.gamepad.svgLabel')}>
 					<!-- Body -->
 					<path
 						d="M78 42 h144 a34 34 0 0 1 33 26 l14 62 a26 26 0 0 1 -47 20 l-20 -26 h-104 l-20 26 a26 26 0 0 1 -47 -20 l14 -62 a34 34 0 0 1 33 -26 z"
@@ -223,7 +224,7 @@
 		     and a non-standard pad has nothing but these. -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">Buttons ({testedButtons.size}/{pad.buttons.length} tested)</div>
+				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.buttonsHeading', { tested: testedButtons.size, total: pad.buttons.length })}</div>
 				<div class="grid grid-cols-2 gap-x-3 gap-y-1">
 					{#each pad.buttons as b, i (i)}
 						<div class="flex items-center gap-1.5 text-[10px] font-mono">
@@ -239,10 +240,10 @@
 			</div>
 
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">Axes</div>
+				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.axesHeading')}</div>
 				{#each pad.axes as a, i (i)}
 					<div class="flex items-center gap-1.5 text-[10px] font-mono">
-						<span class="w-14 shrink-0 {testedAxes.has(i) ? 'text-[#98c379]' : 'text-white/40'}">AXIS {i}</span>
+						<span class="w-14 shrink-0 {testedAxes.has(i) ? 'text-[#98c379]' : 'text-white/40'}">{$t('utilities.gamepad.axisLabel', { index: i })}</span>
 						<div class="flex-1 h-2.5 bg-black/60 border border-white/10 rounded-xs relative overflow-hidden">
 							<div class="absolute top-0 bottom-0 left-1/2 w-px bg-white/25"></div>
 							<div
@@ -253,7 +254,7 @@
 						<span class="w-12 text-right shrink-0 transition-colors duration-75 {Math.abs(a) > 0.05 ? 'text-[#e5c07b] font-bold' : 'text-white/35'}">{a.toFixed(2)}</span>
 					</div>
 				{/each}
-				<div class="text-[10px] font-mono text-white/30 pt-1">Sticks centered read ~0.00 — persistent offset at rest = drift.</div>
+				<div class="text-[10px] font-mono text-white/30 pt-1">{$t('utilities.gamepad.driftNote')}</div>
 			</div>
 		</div>
 	{/if}

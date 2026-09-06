@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { playSound } from '../../sound';
+	import { t } from '$lib/i18n';
 
 	/** Bump to re-trigger .value-in on the result number even if it repeats the same ms. */
 	let resultGen = $state(0);
@@ -77,17 +78,17 @@
 <div class="space-y-2">
 	<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			LAST: <span class="font-black text-[#e5c07b] inline-block">{#key `${lastMs}-${resultGen}`}<span class="value-in inline-block">{lastMs === null ? '—' : `${lastMs}ms`}</span>{/key}</span>
+			{$t('utilities.reaction.last')} <span class="font-black text-[#e5c07b] inline-block">{#key `${lastMs}-${resultGen}`}<span class="value-in inline-block">{lastMs === null ? '—' : $t('utilities.reaction.ms', { ms: lastMs })}</span>{/key}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			BEST: <span class="font-black text-[#98c379] inline-block">{#key best}<span class="value-in inline-block">{best === null ? '—' : `${best}ms`}</span>{/key}</span>
+			{$t('utilities.reaction.best')} <span class="font-black text-[#98c379] inline-block">{#key best}<span class="value-in inline-block">{best === null ? '—' : $t('utilities.reaction.ms', { ms: best })}</span>{/key}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			AVG: <span class="font-black text-[#56b6c2] inline-block">{#key avg}<span class="value-in inline-block">{avg === null ? '—' : `${avg}ms`}</span>{/key}</span>
+			{$t('utilities.reaction.avg')} <span class="font-black text-[#56b6c2] inline-block">{#key avg}<span class="value-in inline-block">{avg === null ? '—' : $t('utilities.reaction.ms', { ms: avg })}</span>{/key}</span>
 			<span class="text-white/35">({results.length}/10)</span>
 		</span>
 		<button onclick={reset} class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
-			✕ RESET
+			{$t('utilities.reaction.reset')}
 		</button>
 	</div>
 
@@ -98,18 +99,18 @@
 			{phase === 'early' ? 'shake-once' : ''}"
 	>
 		{#if phase === 'idle'}
-			<span class="text-sm font-black text-white/80">CLICK OR PRESS SPACE TO START</span>
-			<span class="text-xs text-white/40">Wait for green, then react as fast as you can — Space works throughout</span>
+			<span class="text-sm font-black text-white/80">{$t('utilities.reaction.idle.title')}</span>
+			<span class="text-xs text-white/40">{$t('utilities.reaction.idle.hint')}</span>
 		{:else if phase === 'waiting'}
-			<span class="text-sm font-black text-[#e06c75]">WAIT FOR GREEN…</span>
+			<span class="text-sm font-black text-[#e06c75]">{$t('utilities.reaction.waiting')}</span>
 		{:else if phase === 'go'}
-			<span class="text-2xl font-black text-[#98c379]">NOW! (click / Space)</span>
+			<span class="text-2xl font-black text-[#98c379]">{$t('utilities.reaction.go')}</span>
 		{:else if phase === 'early'}
-			<span class="text-sm font-black text-[#e06c75]">FALSE START</span>
-			<span class="text-xs text-white/40">Triggered before green — click or Space to retry</span>
+			<span class="text-sm font-black text-[#e06c75]">{$t('utilities.reaction.early.title')}</span>
+			<span class="text-xs text-white/40">{$t('utilities.reaction.early.hint')}</span>
 		{:else}
-			<span class="text-3xl font-black text-[#e5c07b] value-in">{lastMs}ms</span>
-			<span class="text-xs text-white/40">Click or Space to go again · timing includes your display & input latency</span>
+			<span class="text-3xl font-black text-[#e5c07b] value-in">{$t('utilities.reaction.ms', { ms: lastMs ?? 0 })}</span>
+			<span class="text-xs text-white/40">{$t('utilities.reaction.result.hint')}</span>
 		{/if}
 	</button>
 </div>

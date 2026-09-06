@@ -2,6 +2,7 @@
 	import { fade } from '$lib/perf-transitions';
 	import { playSound } from '../../sound';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
+	import { t } from '$lib/i18n';
 
 	type Step =
 		| { group: string; name: string; kind: 'fill'; bg: string; hintDark?: boolean }
@@ -12,88 +13,91 @@
 		| { group: string; name: string; kind: 'text'; inverted: boolean }
 		| { group: string; name: string; kind: 'ghosting' };
 
+	// group/name hold i18n keys (translated lazily at render, never at import time).
 	const PIXEL_STEPS: Step[] = [
-		{ group: 'DEAD PIXELS', name: 'WHITE', kind: 'fill', bg: '#ffffff', hintDark: true },
-		{ group: 'DEAD PIXELS', name: 'BLACK', kind: 'fill', bg: '#000000' },
-		{ group: 'DEAD PIXELS', name: 'RED', kind: 'fill', bg: '#ff0000' },
-		{ group: 'DEAD PIXELS', name: 'GREEN', kind: 'fill', bg: '#00ff00', hintDark: true },
-		{ group: 'DEAD PIXELS', name: 'BLUE', kind: 'fill', bg: '#0000ff' },
-		{ group: 'DEAD PIXELS', name: 'GRAY 50%', kind: 'fill', bg: '#808080' }
+		{ group: 'utilities.screen.mode.pixels.label', name: 'utilities.screen.step.white', kind: 'fill', bg: '#ffffff', hintDark: true },
+		{ group: 'utilities.screen.mode.pixels.label', name: 'utilities.screen.step.black', kind: 'fill', bg: '#000000' },
+		{ group: 'utilities.screen.mode.pixels.label', name: 'utilities.screen.step.red', kind: 'fill', bg: '#ff0000' },
+		{ group: 'utilities.screen.mode.pixels.label', name: 'utilities.screen.step.green', kind: 'fill', bg: '#00ff00', hintDark: true },
+		{ group: 'utilities.screen.mode.pixels.label', name: 'utilities.screen.step.blue', kind: 'fill', bg: '#0000ff' },
+		{ group: 'utilities.screen.mode.pixels.label', name: 'utilities.screen.step.gray50', kind: 'fill', bg: '#808080' }
 	];
 
 	const GRAYSCALE_STEPS: Step[] = [
-		{ group: 'GRAYSCALE', name: '8 STEPS', kind: 'bars', n: 8 },
-		{ group: 'GRAYSCALE', name: '16 STEPS', kind: 'bars', n: 16 },
-		{ group: 'GRAYSCALE', name: '32 STEPS', kind: 'bars', n: 32 },
-		{ group: 'GRAYSCALE', name: '64 STEPS', kind: 'bars', n: 64 },
-		{ group: 'GRAYSCALE', name: 'CONTINUOUS', kind: 'gradient', css: 'linear-gradient(90deg,#000,#fff)' }
+		{ group: 'utilities.screen.mode.grayscale.label', name: 'utilities.screen.step.steps8', kind: 'bars', n: 8 },
+		{ group: 'utilities.screen.mode.grayscale.label', name: 'utilities.screen.step.steps16', kind: 'bars', n: 16 },
+		{ group: 'utilities.screen.mode.grayscale.label', name: 'utilities.screen.step.steps32', kind: 'bars', n: 32 },
+		{ group: 'utilities.screen.mode.grayscale.label', name: 'utilities.screen.step.steps64', kind: 'bars', n: 64 },
+		{ group: 'utilities.screen.mode.grayscale.label', name: 'utilities.screen.step.continuous', kind: 'gradient', css: 'linear-gradient(90deg,#000,#fff)' }
 	];
 
 	const GRADIENT_STEPS: Step[] = [
-		{ group: 'GRADIENTS', name: 'RED RAMP', kind: 'gradient', css: 'linear-gradient(90deg,#000,#f00)' },
-		{ group: 'GRADIENTS', name: 'GREEN RAMP', kind: 'gradient', css: 'linear-gradient(90deg,#000,#0f0)' },
-		{ group: 'GRADIENTS', name: 'BLUE RAMP', kind: 'gradient', css: 'linear-gradient(90deg,#000,#00f)' },
-		{ group: 'GRADIENTS', name: 'HUE SWEEP', kind: 'gradient', css: 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)' }
+		{ group: 'utilities.screen.mode.gradients.label', name: 'utilities.screen.step.redRamp', kind: 'gradient', css: 'linear-gradient(90deg,#000,#f00)' },
+		{ group: 'utilities.screen.mode.gradients.label', name: 'utilities.screen.step.greenRamp', kind: 'gradient', css: 'linear-gradient(90deg,#000,#0f0)' },
+		{ group: 'utilities.screen.mode.gradients.label', name: 'utilities.screen.step.blueRamp', kind: 'gradient', css: 'linear-gradient(90deg,#000,#00f)' },
+		{ group: 'utilities.screen.mode.gradients.label', name: 'utilities.screen.step.hueSweep', kind: 'gradient', css: 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)' }
 	];
 
 	const CRUSH_STEPS: Step[] = [
-		{ group: 'LEVELS', name: 'BLACK CRUSH', kind: 'crush', side: 'black' },
-		{ group: 'LEVELS', name: 'WHITE SATURATION', kind: 'crush', side: 'white' }
+		{ group: 'utilities.screen.mode.levels.label', name: 'utilities.screen.step.blackCrush', kind: 'crush', side: 'black' },
+		{ group: 'utilities.screen.mode.levels.label', name: 'utilities.screen.step.whiteSaturation', kind: 'crush', side: 'white' }
 	];
 
 	const SHARPNESS_STEPS: Step[] = [
 		{
-			group: 'SHARPNESS',
-			name: '1PX CHECKERBOARD',
+			group: 'utilities.screen.mode.sharpness.label',
+			name: 'utilities.screen.step.checkerboard',
 			kind: 'pattern',
 			css: 'background-image: conic-gradient(#fff 0 25%, #000 0 50%, #fff 0 75%, #000 0); background-size: 2px 2px;'
 		},
 		{
-			group: 'SHARPNESS',
-			name: '1PX VERTICAL LINES',
+			group: 'utilities.screen.mode.sharpness.label',
+			name: 'utilities.screen.step.verticalLines',
 			kind: 'pattern',
 			css: 'background-image: repeating-linear-gradient(90deg, #000 0 1px, #fff 1px 2px);'
 		},
 		{
-			group: 'SHARPNESS',
-			name: '1PX HORIZONTAL LINES',
+			group: 'utilities.screen.mode.sharpness.label',
+			name: 'utilities.screen.step.horizontalLines',
 			kind: 'pattern',
 			css: 'background-image: repeating-linear-gradient(0deg, #000 0 1px, #fff 1px 2px);'
 		},
 		{
-			group: 'SHARPNESS',
-			name: '8PX GRID',
+			group: 'utilities.screen.mode.sharpness.label',
+			name: 'utilities.screen.step.grid8px',
 			kind: 'pattern',
 			css: 'background-color:#fff; background-image: repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 8px), repeating-linear-gradient(0deg, #000 0 1px, transparent 1px 8px);'
 		}
 	];
 
 	const TEXT_STEPS: Step[] = [
-		{ group: 'TEXT CLARITY', name: 'LIGHT ON DARK', kind: 'text', inverted: false },
-		{ group: 'TEXT CLARITY', name: 'DARK ON LIGHT', kind: 'text', inverted: true }
+		{ group: 'utilities.screen.mode.text.label', name: 'utilities.screen.step.lightOnDark', kind: 'text', inverted: false },
+		{ group: 'utilities.screen.mode.text.label', name: 'utilities.screen.step.darkOnLight', kind: 'text', inverted: true }
 	];
 
-	const GHOSTING_STEPS: Step[] = [{ group: 'GHOSTING', name: 'MOVING BLOCKS', kind: 'ghosting' }];
+	const GHOSTING_STEPS: Step[] = [{ group: 'utilities.screen.mode.ghosting.label', name: 'utilities.screen.step.movingBlocks', kind: 'ghosting' }];
 
 	interface Mode {
 		id: string;
-		label: string;
+		labelKey: string;
 		color: string;
-		desc: string;
+		descKey: string;
 		steps: Step[];
 	}
 
-	const MODES: Mode[] = [
-		{ id: 'pixels', label: 'DEAD PIXELS', color: '#e5c07b', desc: '6 solid fills — stuck or dead subpixels show as off-color dots', steps: PIXEL_STEPS },
-		{ id: 'grayscale', label: 'GRAYSCALE', color: '#98c379', desc: 'Stepped ramps 8→64 plus continuous — banding and gamma tracking', steps: GRAYSCALE_STEPS },
-		{ id: 'gradients', label: 'GRADIENTS', color: '#56b6c2', desc: 'Continuous R/G/B and hue ramps — color banding and tint shifts', steps: GRADIENT_STEPS },
-		{ id: 'levels', label: 'B/W LEVELS', color: '#c678dd', desc: 'Near-black and near-white patches — shadow crush, highlight clipping', steps: CRUSH_STEPS },
-		{ id: 'sharpness', label: 'SHARPNESS', color: '#e06c75', desc: '1px checkerboard, lines, grid — scaling blur and moiré', steps: SHARPNESS_STEPS },
-		{ id: 'text', label: 'TEXT CLARITY', color: '#61afef', desc: 'Font rendering 8–20px, three families, both polarities', steps: TEXT_STEPS },
-		{ id: 'ghosting', label: 'GHOSTING', color: '#d19a66', desc: 'Moving blocks at three speeds — pixel-response trails', steps: GHOSTING_STEPS }
+	const MODE_DEFS: Mode[] = [
+		{ id: 'pixels', labelKey: 'utilities.screen.mode.pixels.label', color: '#e5c07b', descKey: 'utilities.screen.mode.pixels.desc', steps: PIXEL_STEPS },
+		{ id: 'grayscale', labelKey: 'utilities.screen.mode.grayscale.label', color: '#98c379', descKey: 'utilities.screen.mode.grayscale.desc', steps: GRAYSCALE_STEPS },
+		{ id: 'gradients', labelKey: 'utilities.screen.mode.gradients.label', color: '#56b6c2', descKey: 'utilities.screen.mode.gradients.desc', steps: GRADIENT_STEPS },
+		{ id: 'levels', labelKey: 'utilities.screen.mode.levels.label', color: '#c678dd', descKey: 'utilities.screen.mode.levels.desc', steps: CRUSH_STEPS },
+		{ id: 'sharpness', labelKey: 'utilities.screen.mode.sharpness.label', color: '#e06c75', descKey: 'utilities.screen.mode.sharpness.desc', steps: SHARPNESS_STEPS },
+		{ id: 'text', labelKey: 'utilities.screen.mode.text.label', color: '#61afef', descKey: 'utilities.screen.mode.text.desc', steps: TEXT_STEPS },
+		{ id: 'ghosting', labelKey: 'utilities.screen.mode.ghosting.label', color: '#d19a66', descKey: 'utilities.screen.mode.ghosting.desc', steps: GHOSTING_STEPS }
 	];
 
-	const ALL_STEPS: Step[] = MODES.flatMap((m) => m.steps);
+	let MODES = $derived(MODE_DEFS.map((m) => ({ ...m, label: $t(m.labelKey), desc: $t(m.descKey) })));
+
+	const ALL_STEPS: Step[] = MODE_DEFS.flatMap((m) => m.steps);
 
 	// Near-black / near-white patch luminances (percent). The first 2-3 dark patches
 	// merging into the background is normal on most panels; more than that is crush.
@@ -177,9 +181,8 @@
 
 <div class="space-y-2">
 	<div class="border border-white/15 bg-black/40 rounded-xs p-3 sm:p-4 space-y-3">
-		<p class="text-xs font-mono text-white/60 leading-relaxed">
-			Fullscreen display test suite — {ALL_STEPS.length} patterns across {MODES.length} groups. Inside a test:
-			click / any key = next pattern, ← = previous, Esc = exit (Ctrl+0-3 navigation keeps working).
+		<p class="text-xs font-mono text-white/60 leading-relaxed whitespace-pre-line">
+			{$t('utilities.screen.intro', { steps: ALL_STEPS.length, groups: MODES.length })}
 		</p>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5">
@@ -191,7 +194,7 @@
 				>
 					<div class="flex items-center justify-between">
 						<span class="font-black text-xs" style="color: {mode.color}">▶ {mode.label}</span>
-						<span class="text-[10px] font-mono text-white/35">{mode.steps.length} pattern{mode.steps.length > 1 ? 's' : ''}</span>
+						<span class="text-[10px] font-mono text-white/35">{mode.steps.length > 1 ? $t('utilities.screen.pattern.count.plural', { count: mode.steps.length }) : $t('utilities.screen.pattern.count', { count: mode.steps.length })}</span>
 					</div>
 					<div class="text-[10px] font-mono text-white/45 leading-snug mt-0.5">{mode.desc}</div>
 				</button>
@@ -202,7 +205,7 @@
 			onclick={() => start(ALL_STEPS)}
 			class="press w-full px-3 py-1.5 border border-[#e5c07b]/60 bg-[#e5c07b]/10 text-[#e5c07b] hover:bg-[#e5c07b]/25 rounded-xs font-black text-xs cursor-pointer transition-colors"
 		>
-			▶▶ RUN FULL SEQUENCE ({ALL_STEPS.length} patterns)
+			{$t('utilities.screen.runAll', { count: ALL_STEPS.length })}
 		</button>
 	</div>
 </div>
@@ -235,9 +238,7 @@
 					{/each}
 				</div>
 				<p class="text-xs font-mono px-6 text-center max-w-xl" style="color: {step.side === 'black' ? '#666' : '#999'}">
-					{step.side === 'black'
-						? 'Each square should be barely distinguishable from pure black. If 4%+ squares vanish, shadows are being crushed.'
-						: 'Each square should be barely distinguishable from pure white. If 96%- squares vanish, highlights are clipping.'}
+					{step.side === 'black' ? $t('utilities.screen.crush.black.hint') : $t('utilities.screen.crush.white.hint')}
 				</p>
 			</div>
 		{:else if step.kind === 'pattern'}
@@ -249,26 +250,26 @@
 			>
 				{#each TEXT_SIZES as px (px)}
 					<div style="font-size: {px}px" class="leading-snug space-y-0.5">
-						<div style="font-family: 'JetBrains Mono', monospace">{px}px mono — {TEXT_SAMPLE}</div>
-						<div style="font-family: ui-sans-serif, system-ui, sans-serif">{px}px sans — Sphinx of black quartz, judge my vow. {TEXT_SAMPLE.slice(-14)}</div>
-						<div style="font-family: Georgia, 'Times New Roman', serif">{px}px serif — Waltz, bad nymph, for quick jigs vex. {TEXT_SAMPLE.slice(-14)}</div>
+						<div style="font-family: 'JetBrains Mono', monospace">{$t('utilities.screen.text.mono', { px, sample: TEXT_SAMPLE })}</div>
+						<div style="font-family: ui-sans-serif, system-ui, sans-serif">{$t('utilities.screen.text.sans', { px, sample: TEXT_SAMPLE.slice(-14) })}</div>
+						<div style="font-family: Georgia, 'Times New Roman', serif">{$t('utilities.screen.text.serif', { px, sample: TEXT_SAMPLE.slice(-14) })}</div>
 					</div>
 				{/each}
 				<p class="text-xs pt-2" style="color: {step.inverted ? '#888' : '#777'}; font-family: 'JetBrains Mono', monospace">
-					Small sizes should stay legible with clean stroke edges — fringing or smearing points at subpixel rendering / scaling issues.
+					{$t('utilities.screen.text.hint')}
 				</p>
 			</div>
 		{:else if step.kind === 'ghosting'}
 			<div class="absolute inset-0 flex flex-col justify-center gap-8" style="background: #7f7f7f">
-				{#each [{ label: 'SLOW', dur: 4 }, { label: 'MEDIUM', dur: 2 }, { label: 'FAST', dur: 1 }] as lane (lane.label)}
+				{#each [{ key: 'utilities.screen.ghosting.slow', dur: 4 }, { key: 'utilities.screen.ghosting.medium', dur: 2 }, { key: 'utilities.screen.ghosting.fast', dur: 1 }] as lane (lane.key)}
 					<div class="relative h-24">
-						<span class="absolute left-3 top-1 text-[10px] font-mono font-bold text-black/50">{lane.label}</span>
+						<span class="absolute left-3 top-1 text-[10px] font-mono font-bold text-black/50">{$t(lane.key)}</span>
 						<div class="ghost-box bg-white border border-black/30" style="animation-duration: {lane.dur}s; top: 24px;"></div>
 						<div class="ghost-box bg-black border border-white/30" style="animation-duration: {lane.dur}s; animation-delay: -{lane.dur / 2}s; top: 24px;"></div>
 					</div>
 				{/each}
 				<p class="text-xs font-mono text-black/60 text-center px-6">
-					Follow a block with your eyes — visible trails behind the edges are pixel-response ghosting / overdrive artifacts. Motion is refresh-rate locked.
+					{$t('utilities.screen.ghosting.hint')}
 				</p>
 			</div>
 		{/if}
@@ -278,9 +279,9 @@
 				class="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/85 border border-white/20 rounded-xs text-xs font-mono text-white/85 pointer-events-none whitespace-nowrap"
 				transition:fade={{ duration: 150 }}
 			>
-				{step.group} · {step.name} ({stepIdx + 1}/{steps.length})
-				{#if step.kind === 'pattern'}&nbsp;· 1 css px = {dpr}× device px{/if}
-				&nbsp;— click/key next · ← prev · Esc exit
+				{$t('utilities.screen.overlay.stepCounter', { group: $t(step.group), name: $t(step.name), index: stepIdx + 1, total: steps.length })}
+				{#if step.kind === 'pattern'}{$t('utilities.screen.overlay.devicePixels', { dpr })}{/if}
+				{$t('utilities.screen.overlay.nav')}
 			</div>
 		{/if}
 	</div>

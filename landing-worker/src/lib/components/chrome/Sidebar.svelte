@@ -4,6 +4,7 @@
 	import AsciiArt from './AsciiArt.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { theme, cycleTheme, THEME_STYLES, resolvedTheme, KRSZ_LETTER_COLORS } from '../../stores/theme';
 	import { spinnerFrame } from '../../stores/clock';
@@ -41,16 +42,16 @@
 	   tile is to say what's on screen right now, and "auto" alone doesn't. */
 	let themeLabel = $derived($theme === 'auto' ? `auto·${$resolvedTheme.split('-')[0]}` : $theme.split('-')[0]);
 
-	const HOTKEY_TILES = [
-		{ id: 0, key: '0', title: 'MODULES', desc: 'Projects', color: '#56b6c2', icon: '◈', tooltip: '0: Modules — Live Project Portal & Architecture Deep Dives [Hotkey: Ctrl+0]' },
-		{ id: 1, key: '1', title: 'GUESTBOOK', desc: 'Packets', color: '#e06c75', icon: '✉', tooltip: '1: Guestbook — Send message packets across edge workers [Hotkey: Ctrl+1]' },
-		{ id: 2, key: '2', title: 'SYNTH', desc: 'WebAudio', color: '#c678dd', icon: '♫', tooltip: '2: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: Ctrl+2]' },
-		{ id: 3, key: '3', title: 'UTILITIES', desc: 'HW Test', color: '#e5c07b', icon: '⌨', tooltip: '3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
-		{ id: 4, key: '4', title: 'LM.SPACE', desc: 'Model volume', color: '#98c379', icon: '▤', tooltip: '4: LM.SPACE — the Artificial Analysis model table as a navigable volume [Hotkey: Ctrl+4]' },
-		{ id: 5, key: '5', title: 'KRSZ-VM', desc: 'PC Emu', color: '#d19a66', icon: '⬢', tooltip: '5: krsz-vm — Alpine Linux on an emulated x86 PC, i686 or x86-64 [Hotkey: Ctrl+5]' },
-		{ id: 6, key: '6', title: 'WEB-LM', desc: 'On-GPU', color: '#61afef', icon: '◑', tooltip: '6: web-lm — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]' },
-		{ id: 7, key: '7', title: 'LIFE.LAB', desc: 'Conway', color: '#98c379', icon: '⬗', tooltip: "7: lifelab — Conway's Game of Life, as a campaign: the two rules, still lifes, gliders, collisions, and the glider gun [Hotkey: Ctrl+7]" }
-	];
+	let HOTKEY_TILES = $derived([
+		{ id: 0, key: '0', title: 'MODULES', desc: $t('chrome.sidebar.tileProjects'), color: '#56b6c2', icon: '◈', tooltip: $t('chrome.sidebar.tooltip0') },
+		{ id: 1, key: '1', title: 'GUESTBOOK', desc: $t('chrome.sidebar.tilePackets'), color: '#e06c75', icon: '✉', tooltip: $t('chrome.sidebar.tooltip1') },
+		{ id: 2, key: '2', title: 'SYNTH', desc: $t('chrome.sidebar.tileWebAudio'), color: '#c678dd', icon: '♫', tooltip: $t('chrome.sidebar.tooltip2') },
+		{ id: 3, key: '3', title: 'UTILITIES', desc: $t('chrome.sidebar.tileHwTest'), color: '#e5c07b', icon: '⌨', tooltip: $t('chrome.sidebar.tooltip3') },
+		{ id: 4, key: '4', title: 'LM.SPACE', desc: $t('chrome.sidebar.tileModelVolume'), color: '#98c379', icon: '▤', tooltip: $t('chrome.sidebar.tooltip4') },
+		{ id: 5, key: '5', title: 'KRSZ-VM', desc: $t('chrome.sidebar.tilePcEmu'), color: '#d19a66', icon: '⬢', tooltip: $t('chrome.sidebar.tooltip5') },
+		{ id: 6, key: '6', title: 'WEB-LM', desc: $t('chrome.sidebar.tileOnGpu'), color: '#61afef', icon: '◑', tooltip: $t('chrome.sidebar.tooltip6') },
+		{ id: 7, key: '7', title: 'LIFE.LAB', desc: $t('chrome.sidebar.tileConway'), color: '#98c379', icon: '⬗', tooltip: $t('chrome.sidebar.tooltip7') }
+	]);
 
 	function nav(id: number) {
 		goto(TAB_ROUTES[id]);
@@ -72,7 +73,7 @@
 	     inside this panel's own border, which is what is being aligned. -->
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-[10px]">
 		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
-			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} RUNNING</span>
+			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} {$t('chrome.sidebar.running')}</span>
 		</BoxHeader>
 
 		{#key krszMark.font}
@@ -106,7 +107,7 @@
 	<!-- Operator profile -->
 	<div class="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">
 		<BoxHeader title="OPERATOR_PROFILE" short={['OPERATOR', 'OP']} class="text-xs sm:text-sm font-bold text-[#61afef] border-b border-white/10 pb-1 shrink-0">
-			<span class="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs">VERIFIED</span>
+			<span class="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs">{$t('chrome.sidebar.verified')}</span>
 		</BoxHeader>
 		<!-- Label over value, not beside it.
 		     Side by side, the label ate a third of a sidebar this narrow and left
@@ -122,10 +123,10 @@
 			<div><div class="text-[#56b6c2] font-bold">[STACK]</div><div class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</div></div>
 		</div>
 		<div class="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1">
-			<span>STATUS: OPEN FOR RESEARCH</span>
+			<span>{$t('chrome.sidebar.statusOpen')}</span>
 			<span class="inline-flex items-center gap-1">
 				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live"></span>
-				AVAILABLE NOW
+				{$t('chrome.sidebar.availableNow')}
 			</span>
 		</div>
 	</div>
@@ -133,7 +134,7 @@
 	<!-- Hotkey launchpad -->
 	<div data-tour="launchpad" class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
 		<BoxHeader title="QUICK_HOTKEYS // LAUNCHPAD" short={['HOTKEYS // LAUNCHPAD', 'LAUNCHPAD', 'PADS']} class="text-xs font-bold text-[#e5c07b] border-b border-white/10 pb-0.5 shrink-0">
-			<span class="text-white/50 text-xs" title="CTRL+0-7 jumps to a tab · T cycles the theme · ? lists every hotkey">[CTRL+0-7 · T · ?]</span>
+			<span class="text-white/50 text-xs" title={$t('chrome.sidebar.launchpadHint')}>[CTRL+0-7 · T · ?]</span>
 		</BoxHeader>
 
 		<div class="grid grid-cols-3 gap-1.5 py-1">
@@ -172,15 +173,15 @@
 					<span class="text-xs text-[#e5c07b] group-hover:rotate-45 transition-transform">◐</span>
 				</div>
 				<div class="mt-1 w-full min-w-0">
-					<div class="font-bold text-xs text-[#d8dee9] leading-tight truncate">THEME</div>
+					<div class="font-bold text-xs text-[#d8dee9] leading-tight truncate">{$t('chrome.sidebar.theme')}</div>
 					<div class="text-xs opacity-60 font-mono uppercase truncate" title={themeLabel}>{themeLabel}</div>
 				</div>
 			</button>
 		</div>
 
 		<div class="border-t border-white/10 pt-1 text-xs text-white/50 flex flex-wrap justify-between gap-x-2 shrink-0 font-mono whitespace-nowrap">
-			<span>PADS: 7 ACTIVE NODES</span>
-			<span class="ml-auto">HOTKEY [CTRL+0-7 · T · ?]</span>
+			<span>{$t('chrome.sidebar.padsActive', { count: 7 })}</span>
+			<span class="ml-auto">{$t('chrome.sidebar.hotkeyHint')}</span>
 		</div>
 	</div>
 	</div>

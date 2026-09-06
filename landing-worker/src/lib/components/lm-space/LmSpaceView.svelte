@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
+	import { t } from '$lib/i18n';
 	import LeaderboardView from '$lib/components/leaderboard/LeaderboardView.svelte';
 	import {
 		loadLeaderboard,
@@ -33,8 +34,8 @@
 	   old one -- which threw each_key_duplicate and aborted the update, so the
 	   GUIDE panel never mounted. */
 	const MODES = [
-		{ k: 'space' as const, label: 'SPACE' },
-		{ k: 'table' as const, label: 'TABLE' }
+		{ k: 'space' as const, label: 'lmspace.modes.space' },
+		{ k: 'table' as const, label: 'lmspace.modes.table' }
 	];
 
 	let mode = $state<'space' | 'table'>('space');
@@ -75,7 +76,7 @@
 			if (!host) return;
 			dispose = await mountLmSpace(host, payload);
 		} catch (e) {
-			engineError = e instanceof Error ? e.message : 'failed to start';
+			engineError = e instanceof Error ? e.message : $t('lmspace.error.failedToStart');
 		} finally {
 			booting = false;
 			// Offered only after the volume is drawn: three of the steps point at
@@ -100,7 +101,7 @@
 
 <div class="flex-1 min-h-0 flex flex-col">
 	<div class="flex items-center gap-1.5 pb-1.5 shrink-0" data-tour="lms-modes">
-		<span class="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest mr-0.5">VIEW AS</span>
+		<span class="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest mr-0.5">{$t('lmspace.modes.viewAs')}</span>
 		{#each MODES as { k, label } (k)}
 			<button
 				onclick={() => { mode = k; playSound('click'); }}
@@ -108,34 +109,32 @@
 					? 'border-[#56b6c2] text-[#56b6c2] bg-[#56b6c2]/10'
 					: 'border-white/20 text-white/55 hover:border-white/50'}"
 			>
-				{label}
+				{$t(label)}
 			</button>
 		{/each}
 		<button
 			onclick={() => { openOnboardingNow(TOUR); playSound('click'); }}
-			title="What this view is showing"
+			title={$t('lmspace.guide.hint')}
 			class="press ml-auto px-2 py-1 border border-white/20 text-white/55 rounded-xs text-xs font-bold
 				cursor-pointer transition-colors hover:border-[#56b6c2] hover:text-[#56b6c2]"
 		>
-			? GUIDE
+			? {$t('lmspace.guide.button')}
 		</button>
 	</div>
 
 	{#if $guideActive}
-		<Onboarding steps={LM_SPACE_TOUR} heading="LM.SPACE TOUR" onClose={closeGuide} />
+		<Onboarding steps={LM_SPACE_TOUR()} heading={$t('lmspace.tour.heading')} onClose={closeGuide} />
 	{/if}
 
 	{#if mobile && mobileNoteOpen}
 		<div class="shrink-0 mb-1.5 px-2.5 py-2 border border-[#e5c07b]/50 bg-[#e5c07b]/10 rounded-xs text-xs font-mono text-[#e5c07b] flex items-start gap-2" transition:fade={{ duration: 160 }}>
 			<span class="flex-1">
-				<b>DESKTOP RECOMMENDED.</b> The 3D volume is flown with a keyboard and mouse and does not
-				work well on a touch screen. You have been put on the TABLE view; SPACE is still there
-				above if you want to try it anyway.
+				<b>{$t('lmspace.mobile.title')}</b> {$t('lmspace.mobile.body')}
 			</span>
 			<button
 				onclick={() => { mobileNoteOpen = false; playSound('click'); }}
-				title="Dismiss"
-				aria-label="Dismiss"
+				title={$t('common.close')}
+				aria-label={$t('common.close')}
 				class="press shrink-0 px-1 text-[#e5c07b]/70 hover:text-[#e5c07b] cursor-pointer transition-colors"
 			>&#10005;</button>
 		</div>
@@ -157,49 +156,49 @@
 			  <div>
 			    <div class="title">LM.SPACE</div>
 			    <div class="sub">
-			      <span id="meta">loading&hellip;</span><br>
-			      <span class="hint-tip" title="Artificial Analysis language-models API. Every coordinate is a field of the payload; nothing is inferred.">source &#9432;</span>
+			      <span id="meta">{$t('common.loading')}</span><br>
+			      <span class="hint-tip" title={$t('lmspace.hud.sourceTip')}>{$t('lmspace.hud.source')} &#9432;</span>
 			    </div>
 			  </div>
 			  <div id="ctl" data-tour="lms-ctl">
 			    <div class="grp" style="--g:#56b6c2">
-			      <span class="ghd">VIEW</span>
+			      <span class="ghd">{$t('lmspace.hud.view')}</span>
 			      <div class="gbtns">
 			        <!-- RACE only ever replays the timeline with the release-date axis
 			             animated, so it is a third position on this same axis rather than
 			             a whole separate TIMELAPSE group next to it. -->
 			        <span class="cyc" id="view-cyc">
-			          <button class="carrow" id="view-prev" title="Previous view">&#9664;</button>
-			          <button class="cval" id="view-val" title="SPACE — every model at a position. TIMELINE — released along X. RACE — TIMELINE, replayed."></button>
-			          <button class="carrow" id="view-next" title="Next view">&#9654;</button>
+			          <button class="carrow" id="view-prev" title={$t('lmspace.hud.prevView')}>&#9664;</button>
+			          <button class="cval" id="view-val" title={$t('lmspace.hud.viewTip')}></button>
+			          <button class="carrow" id="view-next" title={$t('lmspace.hud.nextView')}>&#9654;</button>
 			        </span>
 			      </div>
 			    </div>
 			    <div class="grp" style="--g:#61afef">
-			      <span class="ghd">PROJECTION</span>
+			      <span class="ghd">{$t('lmspace.hud.projection')}</span>
 			      <div class="gbtns">
 			        <!-- Two states, cycled rather than picked: the same ◄ value ► shape
 			             as the synth's METER stepper, so a binary choice looks like every
 			             other stepped choice on this HUD instead of a pair of toggle buttons. -->
 			        <span class="cyc" id="proj-cyc">
-			          <button class="carrow" id="proj-prev" title="Previous projection">&#9664;</button>
-			          <button class="cval" id="proj-val" title="Perspective — natural depth, free flight / Orthographic — no foreshortening, reads as a flat plot"></button>
-			          <button class="carrow" id="proj-next" title="Next projection">&#9654;</button>
+			          <button class="carrow" id="proj-prev" title={$t('lmspace.hud.prevProjection')}>&#9664;</button>
+			          <button class="cval" id="proj-val" title={$t('lmspace.hud.projectionTip')}></button>
+			          <button class="carrow" id="proj-next" title={$t('lmspace.hud.nextProjection')}>&#9654;</button>
 			        </span>
-			        <button class="btn" id="vp-cycle" title="Look straight down one axis — click to cycle the pair">$ &times; I</button>
+			        <button class="btn" id="vp-cycle" title={$t('lmspace.hud.vpCycleTip')}>$ &times; I</button>
 			      </div>
 			    </div>
 			    <div class="grp" style="--g:#d19a66">
-			      <span class="ghd">GRAVITY</span>
+			      <span class="ghd">{$t('lmspace.hud.gravity')}</span>
 			      <div class="gbtns">
-			      <button class="btn" id="g-start" title="N-body clustering in capability space">SIMULATE</button>
-			      <button class="btn on" id="g-hull" title="How each cluster is drawn">LINK</button>
+			      <button class="btn" id="g-start" title={$t('lmspace.hud.simulateTip')}>{$t('lmspace.hud.simulate')}</button>
+			      <button class="btn on" id="g-hull" title={$t('lmspace.hud.linkTip')}>{$t('lmspace.hud.link')}</button>
 			      </div>
 			    </div>
 			    <div class="grp" style="--g:#98c379">
-			      <span class="ghd">PARETO</span>
+			      <span class="ghd">{$t('lmspace.hud.pareto')}</span>
 			      <div class="gbtns">
-			      <button class="btn" id="pareto-toggle" title="No model beats every one on this surface at once — cheaper, smarter and faster all at the same time">FRONTIER</button>
+			      <button class="btn" id="pareto-toggle" title={$t('lmspace.hud.frontierTip')}>{$t('lmspace.hud.frontier')}</button>
 			      </div>
 			    </div>
 			  </div>
@@ -212,7 +211,7 @@
 			         barely taller than one of them, so both start collapsed there
 			         and a tap on the heading is what opens either one. -->
 			    <button type="button" id="modeshd" class="phd">
-			      <span class="lbl">axes</span><span class="pcaret">&#9662;</span>
+			      <span class="lbl">{$t('lmspace.axes.heading')}</span><span class="pcaret">&#9662;</span>
 			    </button>
 			    <div id="axinfo" style="font-size:1.1667rem;line-height:1.75;color:rgba(255,255,255,.55)"></div>
 			  </div>
@@ -221,24 +220,24 @@
 			<div class="panel" id="legend"></div>
 
 			<div id="hint">
-			  <span title="W A S D fly · Q E up/down · Shift boost · drag left to pan · right-drag or click the canvas to look · click a node to inspect · click empty space or press X to deselect · in look mode aim with the crosshair · Esc releases the cursor · R resets the view · L logos · C variant links · F freeze gravity">
-			    <kbd>WASD</kbd> fly &middot; <kbd>R</kbd> reset &middot; controls &#9432;
+			  <span title={$t('lmspace.hint.full')}>
+			    <kbd>WASD</kbd> {$t('lmspace.hint.fly')} &middot; <kbd>R</kbd> {$t('lmspace.hint.reset')} &middot; {$t('lmspace.hint.controls')} &#9432;
 			  </span>
 			</div>
 
-			<div id="fps" title="Frames per second, triangles drawn, and how many bodies are at each level of detail"></div>
+			<div id="fps" title={$t('lmspace.fps.tip')}></div>
 			<div id="crosshair"></div>
 			<div id="range"></div>
-			<div id="outwarn">OUTSIDE &middot; <kbd>R</kbd> to return</div>
+			<div id="outwarn">{$t('lmspace.outwarn.outside')} &middot; <kbd>R</kbd> {$t('lmspace.outwarn.toReturn')}</div>
 			<div id="mission"></div>
 			<!-- Built once, outside #race's own innerHTML: that panel is rebuilt
 			     wholesale four times a second while playing, and re-wiring click
 			     handlers on every rebuild is wasted work a static sibling avoids. -->
 			<div id="racectl">
-				<button type="button" id="race-restart" title="Back to the start">&#9198;</button>
-				<button type="button" id="race-back" title="Step back one increment">&#9664;&#9664;</button>
-				<button type="button" id="race-play" title="Play / pause">&#9654;</button>
-				<button type="button" id="race-fwd" title="Step forward one increment">&#9654;&#9654;</button>
+				<button type="button" id="race-restart" title={$t('lmspace.race.restart')}>&#9198;</button>
+				<button type="button" id="race-back" title={$t('lmspace.race.stepBack')}>&#9664;&#9664;</button>
+				<button type="button" id="race-play" title={$t('lmspace.race.playPause')}>&#9654;</button>
+				<button type="button" id="race-fwd" title={$t('lmspace.race.stepFwd')}>&#9654;&#9654;</button>
 			</div>
 			<div id="race"></div>
 			<div id="gravity"></div>
@@ -246,7 +245,7 @@
 
 			{#if booting}
 				<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-[#56b6c2] pointer-events-none" out:fade={{ duration: 150 }}>
-					<span class="blink-live">building the volume&hellip;</span>
+					<span class="blink-live">{$t('lmspace.booting')}</span>
 				</div>
 			{/if}
 
@@ -258,9 +257,9 @@
 					>
 						{engineError ?? $leaderboardError}
 						<button onclick={() => { started = false; engineError = null; booting = true; void start(); }}
-							class="press ml-2 underline cursor-pointer hover:text-white transition-colors">retry</button>
+							class="press ml-2 underline cursor-pointer hover:text-white transition-colors">{$t('common.retry')}</button>
 						<div class="text-white/35 mt-1">
-							source: <a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer"
+							{$t('lmspace.error.source')}: <a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer"
 								class="text-[#61afef] hover:underline">blog.krsz.in</a>
 						</div>
 					</div>

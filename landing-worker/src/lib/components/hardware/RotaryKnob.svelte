@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { playSound } from '../../sound';
+	import { t } from '../../i18n';
 	import { draggable } from './draggable';
-	import { PARAM_DESCRIPTIONS } from './param-descriptions';
+	import { paramDescriptionKey } from './param-descriptions';
 
 	let {
 		label,
@@ -41,9 +42,12 @@
 		return v.toFixed(1);
 	}
 
-	let desc = $derived(description || PARAM_DESCRIPTIONS[label.toUpperCase()] || '');
+	let desc = $derived(description || (paramDescriptionKey(label.toUpperCase()) ? $t(paramDescriptionKey(label.toUpperCase())) : '') || '');
+	let descPart = $derived(desc ? ` (${desc})` : '');
 	let tooltipText = $derived(
-		`${label}${desc ? ` (${desc})` : ''}: ${formatDisplay(value)}${unit} — Drag up/down or scroll wheel to adjust${reset !== undefined ? ' · right-click resets' : ''}`
+		reset !== undefined
+			? $t('synthPanels.knob.rotaryHintReset', { label, descPart, value: formatDisplay(value), unit })
+			: $t('synthPanels.knob.rotaryHint', { label, descPart, value: formatDisplay(value), unit })
 	);
 
 	// SVG arc calculation

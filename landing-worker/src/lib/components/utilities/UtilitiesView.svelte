@@ -15,6 +15,7 @@
 	import TouchTest from './TouchTest.svelte';
 	import NetPowerInfo from './NetPowerInfo.svelte';
 	import { fade } from '$lib/perf-transitions';
+	import { t } from '$lib/i18n';
 
 	type ToolId =
 		| 'keyboard'
@@ -30,19 +31,19 @@
 		| 'net'
 		| 'display';
 
-	const TOOLS: { id: ToolId; label: string; color: string; desc: string }[] = [
-		{ id: 'keyboard', label: 'KEYBOARD', color: '#56b6c2', desc: 'Key events, rollover, per-key coverage' },
-		{ id: 'mouse', label: 'MOUSE', color: '#c678dd', desc: 'Buttons, wheel, double-click timing, move rate' },
-		{ id: 'touch', label: 'TOUCH / PEN', color: '#56b6c2', desc: 'Multi-touch points, stylus pressure, tilt and contact size' },
-		{ id: 'typing', label: 'TYPING', color: '#e5c07b', desc: '30-second WPM and accuracy test' },
-		{ id: 'gamepad', label: 'GAMEPAD', color: '#e06c75', desc: 'Buttons, axes/drift, rumble (Gamepad API)' },
-		{ id: 'reaction', label: 'REACTION', color: '#61afef', desc: 'Visual reaction time, best/avg of 10' },
-		{ id: 'pixels', label: 'SCREEN', color: '#d19a66', desc: 'Dead pixels, grayscale, banding, sharpness, text, ghosting' },
-		{ id: 'audioout', label: 'AUDIO OUT', color: '#98c379', desc: 'Channel routing, phase, 20Hz-20kHz sweep, device latency' },
-		{ id: 'mic', label: 'MIC IN', color: '#e5c07b', desc: 'Level in dBFS, clipping, live spectrum, dominant pitch' },
-		{ id: 'camera', label: 'CAMERA', color: '#c678dd', desc: 'Resolution, declared vs delivered frame rate, capabilities' },
-		{ id: 'net', label: 'NET / PWR', color: '#e06c75', desc: 'Cloudflare PoP, link estimate, battery, storage, permissions' },
-		{ id: 'display', label: 'DISPLAY / SYS', color: '#98c379', desc: 'Resolution, refresh rate, browser environment' }
+	const TOOL_DEFS: { id: ToolId; color: string }[] = [
+		{ id: 'keyboard', color: '#56b6c2' },
+		{ id: 'mouse', color: '#c678dd' },
+		{ id: 'touch', color: '#56b6c2' },
+		{ id: 'typing', color: '#e5c07b' },
+		{ id: 'gamepad', color: '#e06c75' },
+		{ id: 'reaction', color: '#61afef' },
+		{ id: 'pixels', color: '#d19a66' },
+		{ id: 'audioout', color: '#98c379' },
+		{ id: 'mic', color: '#e5c07b' },
+		{ id: 'camera', color: '#c678dd' },
+		{ id: 'net', color: '#e06c75' },
+		{ id: 'display', color: '#98c379' }
 	];
 
 	let activeTool = $state<ToolId>('keyboard');
@@ -52,7 +53,15 @@
 		playSound('click');
 	}
 
-	let current = $derived(TOOLS.find((t) => t.id === activeTool) ?? TOOLS[0]);
+	let TOOLS = $derived(
+		TOOL_DEFS.map((tool) => ({
+			...tool,
+			label: $t(`utilities.view.tool.${tool.id}.label`),
+			desc: $t(`utilities.view.tool.${tool.id}.desc`)
+		}))
+	);
+
+	let current = $derived(TOOLS.find((tool) => tool.id === activeTool) ?? TOOLS[0]);
 </script>
 
 <div class="space-y-3 sm:space-y-4 flex-1">
@@ -78,7 +87,7 @@
 			{@const isActive = activeTool === tool.id}
 			<button
 				onclick={() => select(tool.id)}
-				title={`${tool.label} — ${tool.desc}`}
+				title={$t('utilities.view.tool.hint', { label: tool.label, desc: tool.desc })}
 				class="lift press border rounded-xs p-1.5 flex flex-col items-start text-left cursor-pointer transition-all min-w-0 {isActive
 					? 'border-white bg-white/20 text-white shadow-md'
 					: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"

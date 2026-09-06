@@ -2,6 +2,7 @@ import { SPAIN_STEPS } from '../songs/spain';
 import { TAKE_FIVE_STEPS } from '../songs/take-five';
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { tr } from '$lib/i18n';
 import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-codec';
 import { playSound } from '../sound';
 import { modularSynth, type TrackData, type TimeSignature } from '../synth';
@@ -75,7 +76,7 @@ export function handleNewProject(): void {
 	timeMeter.set('4/4');
 	refreshTracks();
 	currentSongName.set('blank');
-	showSaveStatus('✓ NEW');
+	showSaveStatus(tr('synth.status.newOk'));
 	playSound('click');
 }
 
@@ -92,7 +93,7 @@ export function handleLoadBuiltinSong(idx: number): void {
 	overlayTrackIds.set([0, 1, 2, 3]);
 	refreshTracks();
 	currentSongName.set(song.name);
-	showSaveStatus(`✓ ${song.name}`);
+	showSaveStatus(tr('synth.status.songLoaded', { name: song.name }));
 	playSound('toggle');
 }
 
@@ -168,10 +169,10 @@ function applyPatchData(raw: SynthPatchData): void {
 export function handleSavePatch(): void {
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(gatherPatchData()));
-		showSaveStatus('✓ SAVED');
+		showSaveStatus(tr('synth.status.savedOk'));
 		playSound('click');
 	} catch {
-		showSaveStatus('X ERR');
+		showSaveStatus(tr('synth.status.saveErr'));
 	}
 }
 
@@ -180,13 +181,13 @@ export function handleLoadPatch(): void {
 		const stored = localStorage.getItem(STORAGE_KEY);
 		if (stored) {
 			applyPatchData(JSON.parse(stored));
-			showSaveStatus('✓ LOADED');
+			showSaveStatus(tr('synth.status.loadedOk'));
 			playSound('toggle');
 		} else {
-			showSaveStatus('X EMPTY');
+			showSaveStatus(tr('synth.status.loadEmpty'));
 		}
 	} catch {
-		showSaveStatus('X ERR');
+		showSaveStatus(tr('synth.status.loadErr'));
 	}
 }
 
@@ -252,7 +253,7 @@ export async function copyText(text: string): Promise<boolean> {
 /** SHARE: serialize the whole patch into a compressed #patch= URL and copy it. */
 export async function handleSharePatch(): Promise<void> {
 	if (!codecSupported()) {
-		showSaveStatus('X NO CODEC');
+		showSaveStatus(tr('synth.status.noCodec'));
 		return;
 	}
 	let url: string;
@@ -260,12 +261,12 @@ export async function handleSharePatch(): Promise<void> {
 		const fragment = await encodeToFragment(gatherPatchData());
 		url = `${location.origin}/synth#patch=${fragment}`;
 	} catch {
-		showSaveStatus('X ENCODE ERR');
+		showSaveStatus(tr('synth.status.encodeErr'));
 		return;
 	}
 	if (await copyText(url)) {
 		shareUrlFallback.set(null);
-		showSaveStatus(`✓ LINK COPIED (${(url.length / 1024).toFixed(1)}KB)`);
+		showSaveStatus(tr('synth.status.linkCopied', { size: (url.length / 1024).toFixed(1) }));
 		playSound('toggle');
 	} else {
 		// Clipboard fully blocked — hand the link over for manual copy instead of erroring out.
@@ -280,17 +281,17 @@ export async function tryLoadSharedPatch(): Promise<void> {
 	const m = location.hash.match(/^#patch=([A-Za-z0-9_-]+)$/);
 	if (!m) return;
 	if (!codecSupported()) {
-		showSaveStatus('X NO CODEC');
+		showSaveStatus(tr('synth.status.noCodec'));
 		return;
 	}
 	try {
 		const data = await decodeFromFragment<SynthPatchData>(m[1]);
 		applyPatchData(data);
 		history.replaceState(null, '', location.pathname);
-		showSaveStatus('✓ SHARED PATCH LOADED');
+		showSaveStatus(tr('synth.status.sharedPatchLoaded'));
 		playSound('toggle');
 	} catch {
-		showSaveStatus('X BAD SHARE LINK');
+		showSaveStatus(tr('synth.status.badShareLink'));
 	}
 }
 
@@ -305,7 +306,7 @@ export async function handleImportPatchFile(file: File): Promise<void> {
 		let text: string;
 		if (await isGzip(file)) {
 			if (!codecSupported()) {
-				showSaveStatus('X NO CODEC');
+				showSaveStatus(tr('synth.status.noCodec'));
 				return;
 			}
 			const stream = file.stream().pipeThrough(new DecompressionStream('gzip'));
@@ -326,9 +327,9 @@ export async function handleImportPatchFile(file: File): Promise<void> {
 			return;
 		}
 		applyPatchData(parsed);
-		showSaveStatus('✓ IMPORTED');
+		showSaveStatus(tr('synth.status.importedOk'));
 		playSound('toggle');
 	} catch {
-		showSaveStatus('X INVALID');
+		showSaveStatus(tr('synth.status.importInvalid'));
 	}
 }

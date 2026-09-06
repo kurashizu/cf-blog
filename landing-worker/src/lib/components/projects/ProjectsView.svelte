@@ -8,6 +8,7 @@
 	import { MODULES } from '../../data/modules';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import MermaidDiagram from './MermaidDiagram.svelte';
+	import { t } from '$lib/i18n';
 
 	let hoveredCard = $state<string | null>(null);
 	let selectedModule = $derived(MODULES.find((m) => m.id === $selectedModuleId) ?? MODULES[0]);
@@ -32,7 +33,7 @@
 		/>
 		<span class="text-xs sm:text-sm text-[#98c379] flex items-center gap-1.5 shrink-0">
 			<span>{SPINNER_FRAMES[$spinnerFrame]}</span>
-			<span>6 PROJECTS</span>
+			<span>{$t('home.projects.count', { n: 6 })}</span>
 		</span>
 	</div>
 
@@ -47,7 +48,7 @@
 				}}
 				onmouseleave={() => (hoveredCard = null)}
 				onclick={() => inspect(m.id)}
-				title={`Inspect ${m.name} (${m.tag})`}
+				title={$t('home.projects.inspectTitle', { name: m.name, tag: m.tag })}
 				style="background-color: {m.bgTint}; border-color: {isSelected ? m.color : m.borderColor};"
 				class="text-left border {isSelected ? 'border-2' : ''} p-3.5 rounded-xs cursor-pointer transition-all hover:scale-[1.015] hover:brightness-110 active:scale-[0.985] active:brightness-95 flex flex-col justify-between h-40 group relative overflow-hidden"
 			>
@@ -60,10 +61,10 @@
 						<PixelIcon name={m.icon} size={18} />
 						<span style="color: {m.color}">{m.name}</span>
 					</div>
-					<p class="text-xs opacity-80 line-clamp-2 mt-1.5 leading-snug">{m.desc}</p>
+					<p class="text-xs opacity-80 line-clamp-2 mt-1.5 leading-snug">{$t(m.descKey)}</p>
 				</div>
 				<div class="flex items-center justify-end border-t border-white/10 pt-2 text-xs">
-					<span class="font-bold text-xs flex items-center gap-1" style="color: {m.color}"><span>{isSelected ? 'VIEWING ▼' : 'INSPECT ->'}</span></span>
+					<span class="font-bold text-xs flex items-center gap-1" style="color: {m.color}"><span>{isSelected ? $t('home.projects.viewing') : $t('home.projects.inspect')}</span></span>
 				</div>
 			</button>
 		{/each}
@@ -77,7 +78,7 @@
 		>
 			<div class="flex items-start justify-between">
 				<div>
-					<span class="text-xs opacity-70 font-bold" style="color: {selectedModule.color}">NODE_ID // {selectedModule.badge}</span>
+					<span class="text-xs opacity-70 font-bold" style="color: {selectedModule.color}">{$t('home.projects.nodeId', { badge: selectedModule.badge })}</span>
 					<h3 class="text-base sm:text-xl font-bold flex items-center gap-2 mt-0.5">
 						<span style="color: {selectedModule.color}">{selectedModule.name}</span>
 						<span class="text-xs font-normal border border-current px-2 py-0.5 rounded-xs">{selectedModule.tag}</span>
@@ -88,33 +89,33 @@
 					target="_blank"
 					rel="noopener noreferrer"
 					onclick={() => playSound('click')}
-					title={`Launch ${selectedModule.url} in a new tab`}
+					title={$t('home.projects.launchTitle', { url: selectedModule.url })}
 					style="background-color: {selectedModule.color}"
 					class="press px-3 sm:px-4 py-1.5 sm:py-2 rounded-xs text-black font-bold text-xs sm:text-sm flex items-center gap-1.5 hover:opacity-90 transition-opacity shrink-0"
 				>
-					<span>LAUNCH</span>
+					<span>{$t('home.projects.launch')}</span>
 					<PixelIcon name="arrowUpRight" size={16} />
 				</a>
 			</div>
-			<p class="text-xs sm:text-base leading-relaxed text-[#eceff4]">{selectedModule.desc}</p>
+			<p class="text-xs sm:text-base leading-relaxed text-[#eceff4]">{$t(selectedModule.descKey)}</p>
 
 			<div class="flex flex-wrap gap-1.5 text-xs">
-				{#each selectedModule.tech as t (t)}
-					<span class="px-2 py-0.5 border border-white/15 bg-black/30 rounded-xs text-white/70 font-mono">{t}</span>
+				{#each selectedModule.tech as tech (tech)}
+					<span class="px-2 py-0.5 border border-white/15 bg-black/30 rounded-xs text-white/70 font-mono">{tech}</span>
 				{/each}
 			</div>
 
 			<ul class="space-y-1.5 text-xs sm:text-sm">
-				{#each selectedModule.facts as fact (fact)}
+				{#each selectedModule.factKeys as factKey (factKey)}
 					<li class="flex items-start gap-2 border border-white/10 bg-black/30 rounded-xs px-2.5 py-2">
 						<span class="shrink-0 font-bold" style="color: {selectedModule.color}">›</span>
-						<span class="text-[#eceff4] leading-relaxed">{fact}</span>
+						<span class="text-[#eceff4] leading-relaxed">{$t(factKey)}</span>
 					</li>
 				{/each}
 			</ul>
 
 			<div class="border border-white/10 bg-black/40 rounded-xs p-2.5 sm:p-3">
-				<BoxHeader title="REQUEST FLOW" short="FLOW" class="text-xs font-bold mb-1.5 border-b border-white/10 pb-1" style="color: {selectedModule.color}" />
+				<BoxHeader title={$t('home.projects.flow')} short={$t('home.projects.flowShort')} class="text-xs font-bold mb-1.5 border-b border-white/10 pb-1" style="color: {selectedModule.color}" />
 				<MermaidDiagram chart={selectedModule.topology} accent={selectedModule.color} />
 			</div>
 		</div>

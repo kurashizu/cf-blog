@@ -22,6 +22,7 @@ import { CHUNK, type OverlayBlocks } from './qemu-disk';
 import { createLazyImage } from './qemu-disk';
 import { WispAdapter } from './v86net/adapter.js';
 import { NET_HOST, installNetShim, sendToGuest } from './qemu-net-shim';
+import { tr } from '$lib/i18n';
 
 /** Where the built binaries are served from — see routes/vm/qemu. */
 const BINARY_BASE = '/vm/qemu';
@@ -169,13 +170,10 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// server for them properly. navigateTo() in routes-map should make this
 		// unreachable; the message is here for the paths it cannot cover, such as
 		// a restored bfcache entry or a link from another site.
-		throw new Error(
-			'This page is not cross-origin isolated, so QEMU cannot start its CPU thread. ' +
-				'Reload this page (Cmd/Ctrl+R) to fix it.'
-		);
+		throw new Error(tr('vm.error.notCrossOriginIsolated'));
 	}
 
-	options.onStatus?.('loading QEMU');
+	options.onStatus?.(tr('vm.status.loadingQemu'));
 
 	// The line discipline QEMU was built to talk to. The master half is an xterm
 	// addon, the slave half is what the glue picks up as Module["pty"].
@@ -218,16 +216,16 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	// Fetched before the module is built, because preRun runs synchronously and
 	// the kernel has to be a file by the time QEMU looks for one.
-	options.onStatus?.('fetching the kernel');
+	options.onStatus?.(tr('vm.status.fetchingKernel'));
 	const kernelResponse = await fetch(options.kernelUrl);
 	if (!kernelResponse.ok) {
-		throw new Error(`The kernel could not be fetched (${kernelResponse.status}).`);
+		throw new Error(tr('vm.error.kernelFetchFailed', { status: kernelResponse.status }));
 	}
 	const kernelBytes = new Uint8Array(await kernelResponse.arrayBuffer());
 
 	const initrdResponse = await fetch(options.initrdUrl);
 	if (!initrdResponse.ok) {
-		throw new Error(`The initramfs could not be fetched (${initrdResponse.status}).`);
+		throw new Error(tr('vm.error.initramfsFetchFailed', { status: initrdResponse.status }));
 	}
 	const initrdBytes = new Uint8Array(await initrdResponse.arrayBuffer());
 
@@ -250,7 +248,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		await Promise.all(
 			wanted.map(async (name) => {
 				const response = await fetch(`${BINARY_BASE}/pc-bios-${name}`);
-				if (!response.ok) throw new Error(`The ROM ${name} is missing (${response.status}).`);
+				if (!response.ok) throw new Error(tr('vm.error.romMissing', { name, status: response.status }));
 				roms.push([name, new Uint8Array(await response.arrayBuffer())]);
 			})
 		);
@@ -343,7 +341,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 					// this page, and a public one is a cross-origin request the
 					// browser will not make.
 					doh_server: location.host,
-					onStatus: (text: string) => options.onStatus?.(`network: ${text}`)
+					onStatus: (text: string) => options.onStatus?.(tr('vm.status.network', { text }))
 				}
 			)
 		: null;
@@ -425,7 +423,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	// By the time this resolves QEMU is already running: the glue called main
 	// itself, with the arguments above, once preRun had put the disk in place.
-	options.onStatus?.('booting');
+	options.onStatus?.(tr('vm.status.booting'));
 
 	return {
 		// The gateway, for ?debug: whether a frame ever reached the page, and what
@@ -436,7 +434,7 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 			dirty,
 			chunkBytes: CHUNK,
 			ensureChunk: (index: number) => {
-				if (!image) throw new Error('The disk is not set up yet.');
+				if (!image) throw new Error(tr('vm.error.diskNotReady'));
 				return image.writableChunk(index);
 			}
 		},

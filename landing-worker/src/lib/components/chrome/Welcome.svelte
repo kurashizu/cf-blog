@@ -2,6 +2,7 @@
 	import { fade, fly } from '$lib/perf-transitions';
 	import KrszLogo from './KrszLogo.svelte';
 	import { playSound } from '../../sound';
+	import { t } from '$lib/i18n';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { privacyOpen } from '../../stores/chrome';
 
@@ -15,17 +16,19 @@
 
 	/** Mirrors Sidebar.svelte's HOTKEY_TILES -- same eight views, same colours,
 	 *  so the preview grid here reads as the same set rather than a second,
-	 *  slightly different one. */
-	const VIEWS = [
-		{ key: '0', title: 'MODULES', desc: 'Live projects', color: '#56b6c2', icon: '◈' },
-		{ key: '1', title: 'GUESTBOOK', desc: 'Packet messages', color: '#e06c75', icon: '✉' },
-		{ key: '2', title: 'SYNTH', desc: '8-track WebAudio', color: '#c678dd', icon: '♫' },
-		{ key: '3', title: 'UTILITIES', desc: 'Hardware testers', color: '#e5c07b', icon: '⌨' },
-		{ key: '4', title: 'LM.SPACE', desc: 'Model table as a volume', color: '#98c379', icon: '▤' },
-		{ key: '5', title: 'KRSZ-VM', desc: 'x86 PC, emulated', color: '#d19a66', icon: '⬢' },
-		{ key: '6', title: 'WEB-LM', desc: 'On-GPU, no server', color: '#61afef', icon: '◑' },
-		{ key: '7', title: 'LIFE.LAB', desc: "Conway's Game of Life", color: '#98c379', icon: '⬗' }
-	];
+	 *  slightly different one. desc resolves through $t() in this $derived,
+	 *  not a module-level constant, since the locale isn't known at module
+	 *  load time. */
+	let VIEWS = $derived([
+		{ key: '0', title: 'MODULES', desc: $t('chrome.welcome.viewModules'), color: '#56b6c2', icon: '◈' },
+		{ key: '1', title: 'GUESTBOOK', desc: $t('chrome.welcome.viewGuestbook'), color: '#e06c75', icon: '✉' },
+		{ key: '2', title: 'SYNTH', desc: $t('chrome.welcome.viewSynth'), color: '#c678dd', icon: '♫' },
+		{ key: '3', title: 'UTILITIES', desc: $t('chrome.welcome.viewUtilities'), color: '#e5c07b', icon: '⌨' },
+		{ key: '4', title: 'LM.SPACE', desc: $t('chrome.welcome.viewLmSpace'), color: '#98c379', icon: '▤' },
+		{ key: '5', title: 'KRSZ-VM', desc: $t('chrome.welcome.viewKrszVm'), color: '#d19a66', icon: '⬢' },
+		{ key: '6', title: 'WEB-LM', desc: $t('chrome.welcome.viewWebLm'), color: '#61afef', icon: '◑' },
+		{ key: '7', title: 'LIFE.LAB', desc: $t('chrome.welcome.viewLifelab'), color: '#98c379', icon: '⬗' }
+	]);
 
 	let closing = $state(false);
 	const EXIT_MS = 220;
@@ -70,10 +73,9 @@
 			<div class="flex flex-col items-center text-center gap-3" in:fly={{ y: -10, duration: 320, opacity: 0 }}>
 				<KrszLogo size={56} />
 				<div class="space-y-1.5">
-					<h1 class="text-2xl sm:text-4xl font-black tracking-tight text-[#eceff4]">Welcome to krsz.in</h1>
+					<h1 class="text-2xl sm:text-4xl font-black tracking-tight text-[#eceff4]">{$t('chrome.welcome.title')}</h1>
 					<p class="text-xs sm:text-sm text-white/55 max-w-md mx-auto leading-relaxed">
-						Kurashizu's random-stuff zone — eight real, working tools in one edge-native workbench.
-						Everything you see is live, not a mockup.
+						{$t('chrome.welcome.subtitle')}
 					</p>
 				</div>
 			</div>
@@ -96,14 +98,14 @@
 					onclick={start}
 					class="press modal-pop px-6 py-2.5 border-2 border-[#98c379] bg-[#98c379]/15 text-[#98c379] rounded-xs text-sm font-black tracking-wide cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors"
 				>
-					LET'S GET STARTED →
+					{$t('chrome.welcome.getStarted')}
 				</button>
 				<p class="text-[10px] text-white/35">
-					By clicking "let's get started", you agree to our
-					<button onclick={() => privacyOpen.set(true)} class="underline hover:text-white/60 cursor-pointer transition-colors">privacy policy</button>.
+					{$t('chrome.welcome.agreeTo', { action: $t('chrome.welcome.getStartedPlain') })}
+					<button onclick={() => privacyOpen.set(true)} class="underline hover:text-white/60 cursor-pointer transition-colors">{$t('chrome.welcome.privacyPolicy')}</button>.
 				</p>
 				<button onclick={finish} class="press text-xs text-white/40 hover:text-white cursor-pointer transition-colors">
-					skip — I've got it
+					{$t('chrome.welcome.skip')}
 				</button>
 			</div>
 		</div>

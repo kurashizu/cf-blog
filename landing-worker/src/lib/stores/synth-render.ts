@@ -1,4 +1,5 @@
 import { get, writable } from 'svelte/store';
+import { tr } from '$lib/i18n';
 import { playSound } from '../sound';
 import { modularSynth } from '../synth';
 import { encodeWav, bufferLevels } from '../wav';
@@ -63,17 +64,17 @@ export async function handleRenderWav(): Promise<void> {
 		renderPhase.set('done');
 		renderProgress.set(null);
 		renderReport.set([
-			`✓ ${a.download}`,
-			`${formatDuration(buffer.duration)} · ${buffer.sampleRate / 1000} kHz · 16-bit stereo · ${(blob.size / 1024 / 1024).toFixed(1)} MB`,
-			`peak ${peakDb.toFixed(1)} dBFS · rms ${rmsDb.toFixed(1)} dBFS`,
-			`rendered in ${elapsed.toFixed(1)}s (${(buffer.duration / elapsed).toFixed(1)}× real time)`,
-			...(peakDb > -0.1 ? ['peak is at full scale — lower the master or track volumes to avoid clipping'] : [])
+			tr('synth.render.done', { filename: a.download }),
+			tr('synth.render.summary', { duration: formatDuration(buffer.duration), rate: buffer.sampleRate / 1000, size: (blob.size / 1024 / 1024).toFixed(1) }),
+			tr('synth.render.levels', { peak: peakDb.toFixed(1), rms: rmsDb.toFixed(1) }),
+			tr('synth.render.speed', { elapsed: elapsed.toFixed(1), multiple: (buffer.duration / elapsed).toFixed(1) }),
+			...(peakDb > -0.1 ? [tr('synth.render.clippingWarning')] : [])
 		]);
 		playSound('ping', true);
 	} catch (e) {
 		renderPhase.set('error');
 		renderProgress.set(null);
-		renderReport.set(['✕ Render failed', e instanceof Error ? e.message : String(e)]);
+		renderReport.set([`✕ ${tr('synth.render.failed')}`, e instanceof Error ? e.message : String(e)]);
 		playSound('ping', false);
 	}
 }

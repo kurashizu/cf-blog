@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
+	import { t } from '$lib/i18n';
 	import BoxHeader from './BoxHeader.svelte';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 
@@ -15,100 +16,102 @@
 		keys: { key: string; desc: string }[];
 	}
 
-	/** Mirrors the real bindings in +layout.svelte, CommandConsole and PianoKeyboard. */
-	const GROUPS: Group[] = [
+	/** Mirrors the real bindings in +layout.svelte, CommandConsole and PianoKeyboard.
+	 *  Titles/notes/descriptions resolve through $t() in this $derived, not a
+	 *  module-level constant, since the locale isn't known at module load time. */
+	let GROUPS: Group[] = $derived([
 		{
-			title: 'GLOBAL',
+			title: $t('chrome.hotkeys.global'),
 			color: '#56b6c2',
-			note: 'Ctrl+0-5 works everywhere, including inside the key-capturing testers',
+			note: $t('chrome.hotkeys.globalNote'),
 			keys: [
-				{ key: 'Ctrl+0', desc: 'View 0 — modules' },
-				{ key: 'Ctrl+1', desc: 'View 1 — guestbook' },
-				{ key: 'Ctrl+2', desc: 'View 2 — synth' },
-				{ key: 'Ctrl+3', desc: 'View 3 — utils' },
-				{ key: 'Ctrl+4', desc: 'View 4 — lm-space' },
-				{ key: 'Ctrl+5', desc: 'View 5 — krsz-vm (PC emulator)' },
-				{ key: 'T', desc: 'Cycle theme (tokyo / gruvbox / nord / amber)' },
-				{ key: '`', desc: 'Drop-down console — same as the ~ button, top-left' },
-				{ key: '? or F1', desc: 'This reference' },
-				{ key: 'guide', desc: 'Console command (or the [?] button) for the walkthrough' },
-				{ key: 'Esc', desc: 'Close the console overlay or this panel' }
+				{ key: 'Ctrl+0', desc: $t('chrome.hotkeys.view0') },
+				{ key: 'Ctrl+1', desc: $t('chrome.hotkeys.view1') },
+				{ key: 'Ctrl+2', desc: $t('chrome.hotkeys.view2') },
+				{ key: 'Ctrl+3', desc: $t('chrome.hotkeys.view3') },
+				{ key: 'Ctrl+4', desc: $t('chrome.hotkeys.view4') },
+				{ key: 'Ctrl+5', desc: $t('chrome.hotkeys.view5') },
+				{ key: 'T', desc: $t('chrome.hotkeys.cycleTheme') },
+				{ key: '`', desc: $t('chrome.hotkeys.dropdownConsole') },
+				{ key: '? or F1', desc: $t('chrome.hotkeys.thisReference') },
+				{ key: 'guide', desc: $t('chrome.hotkeys.guideCmd') },
+				{ key: 'Esc', desc: $t('chrome.hotkeys.closeOverlay') }
 			]
 		},
 		{
-			title: 'CONSOLE',
+			title: $t('chrome.hotkeys.console'),
 			color: '#98c379',
-			note: 'Type "help" for commands, "man <cmd>" for one of them',
+			note: $t('chrome.hotkeys.consoleNote'),
 			keys: [
-				{ key: 'Tab', desc: 'Complete, then cycle through candidates' },
-				{ key: '→ / End', desc: 'Accept the inline ghost completion' },
-				{ key: '↑ / ↓', desc: 'Walk command history (persisted)' },
-				{ key: 'Ctrl+L', desc: 'Clear the screen' },
-				{ key: 'Esc', desc: 'Clear the current input line' },
-				{ key: '|', desc: 'Pipe into grep / head / tail / sort / uniq / wc' }
+				{ key: 'Tab', desc: $t('chrome.hotkeys.consoleTab') },
+				{ key: '→ / End', desc: $t('chrome.hotkeys.consoleGhost') },
+				{ key: '↑ / ↓', desc: $t('chrome.hotkeys.consoleHistory') },
+				{ key: 'Ctrl+L', desc: $t('chrome.hotkeys.consoleClear') },
+				{ key: 'Esc', desc: $t('chrome.hotkeys.consoleClearLine') },
+				{ key: '|', desc: $t('chrome.hotkeys.consolePipe') }
 			]
 		},
 		{
-			title: 'SYNTH — TRANSPORT',
+			title: $t('chrome.hotkeys.synthTransport'),
 			color: '#98c379',
-			note: 'Active on view 2 whenever no text field, menu or settings panel has focus',
+			note: $t('chrome.hotkeys.synthTransportNote'),
 			keys: [
-				{ key: 'Space / Enter', desc: 'Play / pause where it is (Space is the sustain pedal while QWERTY is on)' },
-				{ key: 'Home', desc: 'Rewind to bar 1' },
-				{ key: 'Backspace', desc: 'Stop and rewind to bar 1' },
-				{ key: '← / →', desc: 'Previous / next page (Shift: move the cursor a bar)' },
-				{ key: '↑ / ↓', desc: 'Next / previous sound preset (applied to the active track)' },
-				{ key: '1 – 8', desc: 'Select track 1–8' },
-				{ key: 'M / S / L / F', desc: 'Mute / solo the active track; LOOP–ONCE; follow the playhead across pages' },
-				{ key: ', / .', desc: 'Cursor back / forward one bar' },
-				{ key: 'Right-click', desc: 'Reset a knob or fader to its neutral value; RST on a rack does the whole rack' },
-				{ key: '- / =', desc: 'Tempo −1 / +1 BPM (hold to ramp)' }
+				{ key: 'Space / Enter', desc: $t('chrome.hotkeys.transportPlay') },
+				{ key: 'Home', desc: $t('chrome.hotkeys.transportRewind') },
+				{ key: 'Backspace', desc: $t('chrome.hotkeys.transportStopRewind') },
+				{ key: '← / →', desc: $t('chrome.hotkeys.transportPage') },
+				{ key: '↑ / ↓', desc: $t('chrome.hotkeys.transportPreset') },
+				{ key: '1 – 8', desc: $t('chrome.hotkeys.transportTrack') },
+				{ key: 'M / S / L / F', desc: $t('chrome.hotkeys.transportMuteSolo') },
+				{ key: ', / .', desc: $t('chrome.hotkeys.transportCursorBar') },
+				{ key: 'Right-click', desc: $t('chrome.hotkeys.transportResetKnob') },
+				{ key: '- / =', desc: $t('chrome.hotkeys.transportTempo') }
 			]
 		},
 		{
-			title: 'SYNTH — PIANO ROLL',
+			title: $t('chrome.hotkeys.synthPianoRoll'),
 			color: '#c678dd',
-			note: 'Letters, digits and , . belong to the QWERTY piano while it is on; a tap of Ctrl / Shift shifts its octave',
+			note: $t('chrome.hotkeys.synthPianoRollNote'),
 			keys: [
-				{ key: 'click / drag', desc: 'Place a note / box-select (Shift adds)' },
-				{ key: 'click a note', desc: 'Select it (Shift toggles); drag to move, drag its right end to resize, Alt-drag copies' },
-				{ key: 'Right-click', desc: 'Delete the note under the pointer; drag to erase more' },
-				{ key: '← ↑ → ↓', desc: 'Nudge the selection a grid step / semitone (Shift: a bar / an octave)' },
-				{ key: 'Delete / Esc', desc: 'Delete the selection / clear it' },
-				{ key: 'Ctrl+A', desc: 'Select the page; again for the whole track' },
-				{ key: 'Ctrl+C / X / V', desc: 'Copy / cut / paste at the cursor (the cyan ruler cell); clips cross tracks, patches and tabs' },
-				{ key: 'Ctrl+D', desc: 'Repeat the selection right after itself' },
-				{ key: 'Ctrl+Z / Ctrl+Shift+Z', desc: 'Undo / redo (also Ctrl+Y)' }
+				{ key: 'click / drag', desc: $t('chrome.hotkeys.rollPlace') },
+				{ key: 'click a note', desc: $t('chrome.hotkeys.rollSelect') },
+				{ key: 'Right-click', desc: $t('chrome.hotkeys.rollDelete') },
+				{ key: '← ↑ → ↓', desc: $t('chrome.hotkeys.rollNudge') },
+				{ key: 'Delete / Esc', desc: $t('chrome.hotkeys.rollDeleteSel') },
+				{ key: 'Ctrl+A', desc: $t('chrome.hotkeys.rollSelectAll') },
+				{ key: 'Ctrl+C / X / V', desc: $t('chrome.hotkeys.rollCopyPaste') },
+				{ key: 'Ctrl+D', desc: $t('chrome.hotkeys.rollRepeat') },
+				{ key: 'Ctrl+Z / Ctrl+Shift+Z', desc: $t('chrome.hotkeys.rollUndoRedo') }
 			]
 		},
 		{
-			title: 'LIFELAB — THE DISH',
+			title: $t('chrome.hotkeys.lifelab'),
 			color: '#61afef',
-			note: 'Active on view 7 whenever no text field has focus',
+			note: $t('chrome.hotkeys.lifelabNote'),
 			keys: [
-				{ key: 'Space', desc: 'Run / pause' },
-				{ key: 'N or .', desc: 'Step one generation' },
-				{ key: 'click / drag', desc: 'Put down the piece in hand / move it' },
-				{ key: 'R / F', desc: 'Rotate / mirror the piece' },
-				{ key: '← ↑ → ↓', desc: 'Nudge the piece one cell (Shift: ten)' },
-				{ key: 'Enter / Esc / Del', desc: 'Drop it / put it back / delete it' },
-				{ key: 'Ctrl+Z', desc: 'Undo the last edit' },
-				{ key: 'Ctrl+C / V / D / S', desc: 'Copy as RLE / paste / stamp a copy / save to CUSTOM' },
-				{ key: 'wheel / pinch', desc: 'Zoom; right-drag or two fingers pan' }
+				{ key: 'Space', desc: $t('chrome.hotkeys.lifelabRunPause') },
+				{ key: 'N or .', desc: $t('chrome.hotkeys.lifelabStep') },
+				{ key: 'click / drag', desc: $t('chrome.hotkeys.lifelabPlace') },
+				{ key: 'R / F', desc: $t('chrome.hotkeys.lifelabRotate') },
+				{ key: '← ↑ → ↓', desc: $t('chrome.hotkeys.lifelabNudge') },
+				{ key: 'Enter / Esc / Del', desc: $t('chrome.hotkeys.lifelabDrop') },
+				{ key: 'Ctrl+Z', desc: $t('chrome.hotkeys.lifelabUndo') },
+				{ key: 'Ctrl+C / V / D / S', desc: $t('chrome.hotkeys.lifelabCopyPaste') },
+				{ key: 'wheel / pinch', desc: $t('chrome.hotkeys.lifelabZoom') }
 			]
 		},
 		{
-			title: 'SYNTH — QWERTY PIANO',
+			title: $t('chrome.hotkeys.synthQwerty'),
 			color: '#c678dd',
-			note: 'Active on view 2 whenever no text field has focus',
+			note: $t('chrome.hotkeys.synthQwertyNote'),
 			keys: [
-				{ key: 'Z S X D C V G B H N J M , L .', desc: 'Lower octave, white + black keys' },
-				{ key: 'Q 2 W 3 E R 5 T 6 Y 7 U I 9 O 0 P', desc: 'Upper octave' },
-				{ key: 'Ctrl / Shift', desc: 'Octave down / up (also [ and ])' },
-				{ key: 'Space', desc: 'Sustain pedal — momentary, held = pedal down' }
+				{ key: 'Z S X D C V G B H N J M , L .', desc: $t('chrome.hotkeys.qwertyLower') },
+				{ key: 'Q 2 W 3 E R 5 T 6 Y 7 U I 9 O 0 P', desc: $t('chrome.hotkeys.qwertyUpper') },
+				{ key: 'Ctrl / Shift', desc: $t('chrome.hotkeys.qwertyOctave') },
+				{ key: 'Space', desc: $t('chrome.hotkeys.qwertySustain') }
 			]
 		}
-	];
+	]);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->

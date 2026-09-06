@@ -4,6 +4,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
+	import { t, tr } from '$lib/i18n';
 	import { isLooping } from './markdown';
 	import {
 		CONFIG_LIMITS,
@@ -110,7 +111,9 @@
 	 * on its own.
 	 */
 	let waitLabel = $derived(
-		usedTokens > 0 && waitedSecs >= 4 ? 'reading the conversation…' : 'processing…'
+		usedTokens > 0 && waitedSecs >= 4
+			? $t('chatbot.turn.waitReading')
+			: $t('chatbot.turn.waitProcessing')
 	);
 	let thinkMode = $state(false);
 	let sessions = $state<Session[]>([]);
@@ -139,11 +142,11 @@
 	let busy = $derived(phase === 'loading' || phase === 'generating');
 
 	const COMMANDS = [
-		{ name: 'help', hint: 'list these commands' },
-		{ name: 'clear', hint: 'wipe the conversation' },
-		{ name: 'new', hint: 'start a fresh conversation, keeping this one' },
-		{ name: 'compact', hint: 'summarise the history, freeing context' },
-		{ name: 'stats', hint: 'last decode speed and turn count' }
+		{ name: 'help', hintKey: 'chatbot.command.help.hint' },
+		{ name: 'clear', hintKey: 'chatbot.command.clear.hint' },
+		{ name: 'new', hintKey: 'chatbot.command.new.hint' },
+		{ name: 'compact', hintKey: 'chatbot.command.compact.hint' },
+		{ name: 'stats', hintKey: 'chatbot.command.stats.hint' }
 	] as const;
 
 	let completions = $derived.by(() => {
@@ -254,15 +257,22 @@
 		const denom = total || TOTAL_DOWNLOAD_MB * 1048576;
 		progressPct = Math.min(99, Math.round((loaded / denom) * 100));
 		progressText = loaded
-			? `${fmtMb(loaded / 1048576)} of ${fmtMb(denom / 1048576)}`
-			: 'preparing the model…';
+			? tr('chatbot.loading.progress', {
+					loaded: fmtMb(loaded / 1048576),
+					total: fmtMb(denom / 1048576)
+				})
+			: tr('chatbot.loading.preparing');
 	}
 
 	function onWorkerError(message: string) {
 		if (phase === 'generating') {
 			// A failed turn keeps the session: the model is still resident.
 			const next = [...turns];
-			next[next.length - 1] = { role: 'assistant', content: `that turn failed: ${message}`, notice: true };
+			next[next.length - 1] = {
+				role: 'assistant',
+				content: tr('chatbot.notice.turnFailed', { message }),
+				notice: true
+			};
 			turns = next;
 			phase = 'ready';
 		} else {
@@ -309,9 +319,11 @@
 			compacting = '';
 			if (summary) {
 				dropAttachments();
-				turns = [{ role: 'assistant', content: `[compacted]\n${summary}`, notice: true }];
+				turns = [
+					{ role: 'assistant', content: tr('chatbot.notice.compacted', { summary }), notice: true }
+				];
 			} else {
-				notice('compact failed — the model returned nothing.');
+				notice(tr('chatbot.notice.compactFailed'));
 			}
 		}
 		phase = 'ready';
@@ -326,14 +338,14 @@
 		// runtime with an opaque error; say so here instead.
 		if (!gpu?.ok) {
 			phase = 'error';
-			errorText = gpu?.reason ?? 'WebGPU is unavailable.';
+			errorText = gpu?.reason ?? tr('chatbot.error.webgpuUnavailable');
 			return;
 		}
 		phase = 'loading';
 		errorText = '';
 		progressPct = 0;
 		fileProgress = {};
-		progressText = 'requesting the weights…';
+		progressText = tr('chatbot.loading.requestingWeights');
 		playSound('click');
 		worker = spawnWorker();
 		worker.postMessage({ type: 'load', contextWindow: config.contextWindow });
@@ -457,7 +469,11 @@
 			await refreshModelCache();
 			playSound('click');
 		} catch (e) {
-			notice(`could not clear the model cache: ${e instanceof Error ? e.message : String(e)}`);
+			notice(
+				tr('chatbot.notice.clearCacheFailed', {
+					message: e instanceof Error ? e.message : String(e)
+				})
+			);
 		} finally {
 			wipingModel = false;
 		}
@@ -515,7 +531,7 @@
 		const [cmd] = raw.slice(1).trim().split(/\s+/);
 		switch (cmd.toLowerCase()) {
 			case 'help':
-				notice(COMMANDS.map((c) => `/${c.name} — ${c.hint}`).join('\n'));
+				notice(COMMANDS.map((c) => `/${c.name} — ${tr(c.hintKey)}`).join('\n'));
 				return;
 			case 'clear':
 				dropAttachments();
@@ -526,16 +542,20 @@
 				return;
 			case 'stats':
 				notice(
-					`last decode ${lastStats || '—'}\n` +
-						`turns ${turns.filter((t) => !t.notice).length}\n` +
-						`attachments ${turns.reduce((a, t) => a + (t.attachments?.length ?? 0), 0)}`
+					[
+						tr('chatbot.stats.lastDecode', { stats: lastStats || tr('chatbot.stats.none') }),
+						tr('chatbot.stats.turns', { count: turns.filter((t) => !t.notice).length }),
+						tr('chatbot.stats.attachments', {
+							count: turns.reduce((a, t) => a + (t.attachments?.length ?? 0), 0)
+						})
+					].join('\n')
 				);
 				return;
 			case 'compact':
 				compact();
 				return;
 			default:
-				notice(`unknown command: /${cmd} — try /help`);
+				notice(tr('chatbot.notice.unknownCommand', { cmd }));
 		}
 	}
 
@@ -546,18 +566,18 @@
 	function compact() {
 		const real = turns.filter((t) => !t.notice);
 		if (phase !== 'ready' || !worker) {
-			notice('nothing to compact — the model is not loaded.');
+			notice(tr('chatbot.notice.nothingToCompactNotLoaded'));
 			return;
 		}
 		if (real.length < 2) {
-			notice('nothing to compact yet.');
+			notice(tr('chatbot.notice.nothingToCompactYet'));
 			return;
 		}
 		const transcript = real
 			.map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`)
 			.join('\n');
 
-		compacting = `summarising ${real.length} messages…`;
+		compacting = tr('chatbot.notice.compacting', { count: real.length });
 		turns = [...turns, { role: 'assistant', content: '' }];
 		phase = 'generating';
 		worker.postMessage({
@@ -585,7 +605,7 @@
 		if (!files) return;
 		for (const f of Array.from(files)) {
 			if (!f.type.startsWith('image/')) {
-				notice(`${f.name} is not an image — skipped.`);
+				notice(tr('chatbot.notice.notImage', { name: f.name }));
 				continue;
 			}
 			pending = [...pending, { kind: 'image', url: URL.createObjectURL(f), name: f.name }];
@@ -818,7 +838,7 @@
 	>
 		<span class="font-black text-[#61afef]">6:web-lm</span>
 		<span class="text-white/40 hidden sm:inline">
-			text · images · tools, all on your machine
+			{$t('chatbot.strip.subtitle')}
 		</span>
 
 		<div class="flex-1"></div>
@@ -826,7 +846,7 @@
 		{#if usedTokens > 0}
 			<span
 				class="hidden sm:flex items-center gap-1.5 font-mono"
-				title="How much of the {config.contextWindow}-token context window the conversation occupies. /compact summarises it."
+				title={$t('chatbot.strip.ctxHint', { contextWindow: config.contextWindow })}
 			>
 				<span class="text-white/35">ctx</span>
 				<span class="block h-1 w-14 bg-white/10 rounded-full overflow-hidden">
@@ -846,7 +866,7 @@
 		{#if compacting}
 			<span class="text-[#e5c07b] font-mono">◐ {compacting}</span>
 		{:else if lastStats}
-			<span class="text-[#98c379] tabular-nums" title="Decode speed of the last reply">{lastStats}</span>
+			<span class="text-[#98c379] tabular-nums" title={$t('chatbot.strip.decodeSpeedHint')}>{lastStats}</span>
 		{/if}
 
 		<button
@@ -855,12 +875,12 @@
 				if (configOpen) storageOpen = false;
 				playSound('toggle');
 			}}
-			title="Generation limits and sampling"
+			title={$t('chatbot.strip.configHint')}
 			class="press px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {configOpen
 				? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 				: 'border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20'}"
 		>
-			CONFIG
+			{$t('chatbot.strip.config')}
 		</button>
 
 		<button
@@ -872,12 +892,12 @@
 				}
 				playSound('toggle');
 			}}
-			title="What this page downloads and stores in your browser"
+			title={$t('chatbot.strip.storageHint')}
 			class="press px-2 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {storageOpen
 				? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 				: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
 		>
-			STORAGE
+			{$t('chatbot.strip.storage')}
 		</button>
 
 		{#if phase === 'ready' || phase === 'generating'}
@@ -893,25 +913,25 @@
 				}}
 				class="press px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10"
 			>
-				CLEAR
+				{$t('chatbot.strip.clear')}
 			</button>
 		{/if}
 	</div>
 
 	{#if configOpen}
 		{@const F = [
-			{ k: 'contextWindow' as const, label: 'context window', hint: 'budget before /compact' },
-			{ k: 'maxTokens' as const, label: 'max output', hint: 'tokens per reply' },
-			{ k: 'temperature' as const, label: 'temperature', hint: 'lower is steadier' },
-			{ k: 'topP' as const, label: 'top_p', hint: 'nucleus sampling' },
-			{ k: 'topK' as const, label: 'top_k', hint: 'candidates considered' },
-			{ k: 'repetitionPenalty' as const, label: 'repetition penalty', hint: 'discourages repeats' }
+			{ k: 'contextWindow' as const, labelKey: 'chatbot.config.contextWindow.label', hintKey: 'chatbot.config.contextWindow.hint' },
+			{ k: 'maxTokens' as const, labelKey: 'chatbot.config.maxTokens.label', hintKey: 'chatbot.config.maxTokens.hint' },
+			{ k: 'temperature' as const, labelKey: 'chatbot.config.temperature.label', hintKey: 'chatbot.config.temperature.hint' },
+			{ k: 'topP' as const, labelKey: 'chatbot.config.topP.label', hintKey: 'chatbot.config.topP.hint' },
+			{ k: 'topK' as const, labelKey: 'chatbot.config.topK.label', hintKey: 'chatbot.config.topK.hint' },
+			{ k: 'repetitionPenalty' as const, labelKey: 'chatbot.config.repetitionPenalty.label', hintKey: 'chatbot.config.repetitionPenalty.hint' }
 		]}
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-2" transition:fly={{ y: -6, duration: 150, opacity: 0 }}>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
 				{#each F as f (f.k)}
 					<label class="flex items-center gap-2 font-mono">
-						<span class="text-white/60 w-36 shrink-0" title={f.hint}>{f.label}</span>
+						<span class="text-white/60 w-36 shrink-0" title={$t(f.hintKey)}>{$t(f.labelKey)}</span>
 						<input
 							type="number"
 							bind:value={config[f.k]}
@@ -926,9 +946,9 @@
 				<div class="flex items-center gap-2 font-mono">
 					<span
 						class="text-white/60 w-36 shrink-0"
-						title="Let the model reason before answering. Applies to the whole conversation, so it belongs here rather than beside the message box."
+						title={$t('chatbot.config.reasoning.hint')}
 					>
-						reasoning
+						{$t('chatbot.config.reasoning.label')}
 					</span>
 					<button
 						onclick={() => setThinkMode(!thinkMode)}
@@ -937,13 +957,13 @@
 							? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
 							: 'border-white/20 text-white/55 hover:border-white/50'}"
 					>
-						{thinkMode ? 'ON' : 'OFF'}
+						{thinkMode ? $t('chatbot.config.on') : $t('chatbot.config.off')}
 					</button>
-					<span class="text-white/30 text-[11px]">also on the THINK button, beside the message box</span>
+					<span class="text-white/30 text-[11px]">{$t('chatbot.config.reasoning.also')}</span>
 				</div>
 				<div class="flex items-center gap-2 font-mono">
-					<span class="text-white/60 w-36 shrink-0" title="Sample, rather than always take the likeliest token">
-						sampling
+					<span class="text-white/60 w-36 shrink-0" title={$t('chatbot.config.sampling.hint')}>
+						{$t('chatbot.config.sampling.label')}
 					</span>
 					<button
 						onclick={() => {
@@ -955,12 +975,12 @@
 							? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 							: 'border-white/20 text-white/55 hover:border-white/50'}"
 					>
-						{config.doSample ? 'ON' : 'OFF'}
+						{config.doSample ? $t('chatbot.config.on') : $t('chatbot.config.off')}
 					</button>
 				</div>
 				<div class="flex items-center gap-2 font-mono">
-					<span class="text-white/60 w-36 shrink-0" title="Stop a reply that collapses into repetition">
-						loop guard
+					<span class="text-white/60 w-36 shrink-0" title={$t('chatbot.config.loopGuard.hint')}>
+						{$t('chatbot.config.loopGuard.label')}
 					</span>
 					<button
 						onclick={() => {
@@ -972,13 +992,13 @@
 							? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 							: 'border-white/20 text-white/55 hover:border-white/50'}"
 					>
-						{config.loopGuard ? 'ON' : 'OFF'}
+						{config.loopGuard ? $t('chatbot.config.on') : $t('chatbot.config.off')}
 					</button>
 				</div>
 			</div>
 			<div class="flex items-center gap-2 border-t border-white/10 pt-1.5">
 				<span class="text-white/35 flex-1">
-					Saved in this browser. Sampling applies to the next message; the backend needs a reload.
+					{$t('chatbot.config.footnote')}
 				</span>
 				<button
 					onclick={() => {
@@ -988,7 +1008,7 @@
 					}}
 					class="press px-2 py-0.5 border border-white/25 text-white/70 rounded-xs font-bold cursor-pointer hover:bg-white/10"
 				>
-					DEFAULTS
+					{$t('chatbot.config.defaults')}
 				</button>
 			</div>
 		</div>
@@ -997,32 +1017,30 @@
 	{#if storageOpen}
 		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5" transition:fly={{ y: -6, duration: 150, opacity: 0 }}>
 			<div class="text-white/50 leading-relaxed">
-				The model downloads once and is cached by the browser, so a second visit skips it. Both the
-				weights and the inference runtime come from this site's own storage — nothing is fetched
-				from a third party.
+				{$t('chatbot.storage.explain')}
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
-				<span>language model</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.model)}</span>
-				<span>vision projector</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
+				<span>{$t('chatbot.storage.languageModel')}</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.model)}</span>
+				<span>{$t('chatbot.storage.visionProjector')}</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
 			</div>
 			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1 flex items-center justify-between gap-2">
 				<span>
-					total {fmtMb(TOTAL_DOWNLOAD_MB)}
+					{$t('chatbot.storage.total', { size: fmtMb(TOTAL_DOWNLOAD_MB) })}
 					{#if modelCacheSize}
 						<span class="text-white/35">
 							· {modelCacheSize.count
-								? `${fmtBytes(modelCacheSize.bytes)} cached here`
-								: 'not downloaded yet'}
+								? $t('chatbot.storage.cachedHere', { size: fmtBytes(modelCacheSize.bytes) })
+								: $t('chatbot.storage.notDownloaded')}
 						</span>
 					{/if}
 				</span>
 				<button
 					onclick={wipeModelCache}
 					disabled={wipingModel || !modelCacheSize?.count}
-					title="Delete the downloaded weights from this device. The next load downloads them again."
+					title={$t('chatbot.storage.wipeModelHint')}
 					class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
 				>
-					{wipingModel ? 'CLEARING…' : 'WIPE MODEL'}
+					{wipingModel ? $t('chatbot.storage.wiping') : $t('chatbot.storage.wipeModel')}
 				</button>
 			</div>
 
@@ -1030,10 +1048,10 @@
 			<div class="border-t border-white/10 pt-1.5 flex flex-col gap-1.5">
 				<div class="flex items-center justify-between gap-2">
 					<span class="text-white/50">
-						conversations
+						{$t('chatbot.storage.conversations')}
 						{#if savedSize}
 							<span class="font-mono text-white/35">
-								· {savedSize.count} saved · {fmtBytes(savedSize.bytes)}
+								· {$t('chatbot.storage.conversationsCount', { count: savedSize.count, size: fmtBytes(savedSize.bytes) })}
 							</span>
 						{/if}
 					</span>
@@ -1042,20 +1060,19 @@
 							onclick={startSession}
 							class="press px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] rounded-xs font-bold cursor-pointer hover:bg-[#98c379]/20"
 						>
-							NEW
+							{$t('chatbot.storage.new')}
 						</button>
 						<button
 							onclick={wipeSessions}
 							disabled={!sessions.length}
 							class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs font-bold cursor-pointer hover:bg-[#e06c75]/20 disabled:opacity-30 disabled:cursor-not-allowed"
 						>
-							DELETE ALL
+							{$t('chatbot.storage.deleteAll')}
 						</button>
 					</div>
 				</div>
 				<div class="text-white/35 leading-relaxed">
-					Conversations, including the images and audio in them, are kept in this browser only —
-					they are never uploaded.
+					{$t('chatbot.storage.conversationsExplain')}
 				</div>
 				{#if sessions.length}
 					<div class="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
@@ -1078,12 +1095,12 @@
 									<span class="text-[#c678dd]/70 font-mono text-[10px] shrink-0">THINK</span>
 								{/if}
 								<span class="font-mono text-white/30 text-[10px] tabular-nums shrink-0">
-									{sess.turns.length} turns
+									{$t('chatbot.storage.turnsCount', { count: sess.turns.length })}
 								</span>
 								<button
 									onclick={() => removeSession(sess.id)}
-									title="Delete this conversation"
-									aria-label="Delete conversation"
+									title={$t('chatbot.storage.deleteConversationHint')}
+									aria-label={$t('chatbot.storage.deleteConversationLabel')}
 									class="press text-white/30 hover:text-[#e06c75] cursor-pointer shrink-0 px-1 transition-colors"
 								>
 									×
@@ -1092,7 +1109,7 @@
 						{/each}
 					</div>
 				{:else}
-					<div class="text-white/25 font-mono">no saved conversations yet</div>
+					<div class="text-white/25 font-mono">{$t('chatbot.storage.noSaved')}</div>
 				{/if}
 			</div>
 		</div>
@@ -1121,22 +1138,20 @@
 						onclick={load}
 						class="press mx-auto px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors"
 					>
-						RETRY
+						{$t('chatbot.error.retry')}
 					</button>
 				{/if}
 			</div>
 		{:else if phase === 'idle'}
 			<div class="m-auto max-w-lg text-center flex flex-col gap-4">
 				<div class="text-white/70 text-sm leading-relaxed">
-					A model that reads <span class="text-[#61afef] font-bold">text and images</span>, and
-					<span class="text-[#e5c07b] font-bold">runs code</span> when a number has to be exact, works
-					entirely in this tab, on your own hardware. Nothing you send leaves the machine — there is
-					no server on the other end of this box.
+					{@html $t('chatbot.idle.pitch', {
+						textImages: `<span class="text-[#61afef] font-bold">${$t('chatbot.idle.pitchTextImages')}</span>`,
+						runsCode: `<span class="text-[#e5c07b] font-bold">${$t('chatbot.idle.pitchRunsCode')}</span>`
+					})}
 				</div>
 				<div class="text-white/40 text-xs">
-					First run downloads {fmtMb(TOTAL_DOWNLOAD_MB)} and caches it, so later visits start
-					immediately. Runs on the GPU through WebGPU and wants roughly 4 GB of video memory —
-					integrated graphics will struggle.
+					{$t('chatbot.idle.downloadNote', { size: fmtMb(TOTAL_DOWNLOAD_MB) })}
 				</div>
 				{#if gpu && !gpu.ok}
 					<!-- Loading cannot work here, so lead with why and what to do about it. -->
@@ -1158,11 +1173,11 @@
 						disabled={!gpu}
 						class="press mx-auto px-4 py-2 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
 					>
-						{gpu ? '▶ LOAD MODEL' : 'checking WebGPU…'}
+						{gpu ? $t('chatbot.idle.loadModel') : $t('chatbot.idle.checkingWebgpu')}
 					</button>
 				{/if}
 				{#if gpu?.adapterLabel}
-					<div class="text-white/30 text-[10px] font-mono">gpu: {gpu.adapterLabel}</div>
+					<div class="text-white/30 text-[10px] font-mono">{$t('chatbot.idle.gpuLabel', { label: gpu.adapterLabel })}</div>
 				{/if}
 			</div>
 		{:else if phase === 'loading'}
@@ -1173,7 +1188,7 @@
 					in that gap reads as a crash.
 				-->
 				<div class="text-[#e5c07b] text-xs font-mono">
-					◐ {progressText || 'preparing the model…'}
+					◐ {progressText || $t('chatbot.loading.preparing')}
 				</div>
 				<div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
 					<div class="h-full bg-[#98c379] transition-[width] duration-200" style="width: {progressPct}%"></div>
@@ -1182,8 +1197,8 @@
 			</div>
 		{:else if turns.filter((t) => !t.notice).length === 0}
 			<div class="m-auto text-white/30 text-xs font-mono text-center leading-relaxed">
-				ready — say something, or drop in an image.<br />
-				<span class="text-white/20">/help lists the commands</span>
+				{$t('chatbot.empty.ready')}<br />
+				<span class="text-white/20">{$t('chatbot.empty.helpHint')}</span>
 			</div>
 		{/if}
 		<!--
@@ -1244,13 +1259,14 @@
 					{#if turn.reasoning}
 						<button
 							onclick={() => toggleThink(i)}
-							title="The model's reasoning, kept folded away."
+							title={$t('chatbot.turn.reasoningToggleHint')}
 							class="press self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer transition-colors"
 						>
 							{openThink.has(i) ? '▾' : '▸'}
 							{phase === 'generating' && i === turns.length - 1 && !turn.content
-								? 'thinking…'
-								: 'reasoning'} ({turn.reasoning.length} chars)
+								? $t('chatbot.turn.thinking')
+								: $t('chatbot.turn.reasoningLabel')}
+							{$t('chatbot.turn.reasoningChars', { count: turn.reasoning.length })}
 
 						</button>
 						{#if openThink.has(i)}
@@ -1300,7 +1316,7 @@
 							<span class="text-[#61afef]">{SPINNER[spinnerTick % SPINNER.length]}</span>
 							<span>{waitLabel}</span>
 							{#if waitedSecs >= 2}
-								<span class="text-white/25 tabular-nums">{waitedSecs}s</span>
+								<span class="text-white/25 tabular-nums">{$t('chatbot.turn.waitSeconds', { seconds: waitedSecs })}</span>
 							{/if}
 						</div>
 					{:else if !turn.reasoning && !turn.toolCalls?.length}
@@ -1311,7 +1327,7 @@
 						<div
 							class="self-start px-3 py-2 rounded-md text-xs bg-white/[0.03] border border-white/10 text-white/40 italic"
 						>
-							no reply — the model stopped without generating anything.
+							{$t('chatbot.turn.noReply')}
 						</div>
 						{/if}
 					</div>
@@ -1337,11 +1353,11 @@
 							: 'text-[#d8dee9] hover:bg-white/10'}"
 					>
 						<span class="font-bold">/{c.name}</span>
-						<span class="text-white/40 truncate">{c.hint}</span>
+						<span class="text-white/40 truncate">{$t(c.hintKey)}</span>
 					</button>
 				{/each}
 				<div class="px-2 pt-1 text-[10px] text-white/25 border-t border-white/10 mt-1">
-					tab completes · ↑↓ to choose · esc dismisses
+					{$t('chatbot.composer.completionsHint')}
 				</div>
 			</div>
 		{/if}
@@ -1360,7 +1376,7 @@
 						<span class="text-white/60 max-w-32 truncate">{a.name}</span>
 						<button
 							onclick={() => removePending(pi)}
-							aria-label="remove {a.name}"
+							aria-label={$t('chatbot.composer.removeAttachment', { name: a.name })}
 							class="press text-white/40 hover:text-[#e06c75] cursor-pointer px-1 transition-colors"
 						>
 							×
@@ -1387,10 +1403,10 @@
 			<button
 				onclick={() => fileEl?.click()}
 				disabled={phase === 'generating'}
-				title="Attach an image — you can also paste or drag one in"
+				title={$t('chatbot.composer.attachHint')}
 				class="press px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] rounded-xs text-xs font-bold cursor-pointer hover:bg-[#c678dd]/20 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5"
 			>
-				IMAGE
+				{$t('chatbot.composer.image')}
 			</button>
 			<!--
 				Beside IMAGE rather than buried in CONFIG: this model reads
@@ -1401,12 +1417,12 @@
 			<button
 				onclick={() => setThinkMode(!thinkMode)}
 				disabled={phase === 'generating'}
-				title="Let the model reason before answering. Slower, and better on anything with steps."
+				title={$t('chatbot.composer.thinkHint')}
 				class="press px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {thinkMode
 					? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
 					: 'border-[#c678dd]/50 text-[#c678dd]/60 hover:bg-[#c678dd]/20'}"
 			>
-				THINK
+				{$t('chatbot.composer.think')}
 			</button>
 			<!-- Divides the action buttons from the message field. -->
 			<div class="self-stretch w-px bg-white/15 shrink-0 my-0.5" aria-hidden="true"></div>
@@ -1419,8 +1435,8 @@
 				disabled={phase !== 'ready' && phase !== 'generating'}
 				rows="1"
 				placeholder={phase === 'ready' || phase === 'generating'
-					? 'message, or /help'
-					: 'Load the model first.'}
+					? $t('chatbot.composer.placeholderReady')
+					: $t('chatbot.composer.placeholderNotReady')}
 				style="caret-color: {themeStyles.cursorColor}"
 				class="flex-1 resize-none bg-transparent border-0 outline-none font-mono text-sm text-[#d8dee9] leading-relaxed disabled:opacity-40 placeholder:text-white/25 max-h-40"
 			></textarea>
@@ -1429,7 +1445,7 @@
 					onclick={stopGenerating}
 					class="press px-3 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black shrink-0 transition-colors"
 				>
-					STOP
+					{$t('chatbot.composer.stop')}
 				</button>
 			{:else}
 				<button
@@ -1437,7 +1453,7 @@
 					disabled={phase !== 'ready' || (!draft.trim() && !pending.length)}
 					class="press px-3 py-1 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black disabled:opacity-30 disabled:cursor-not-allowed shrink-0 transition-colors"
 				>
-					SEND
+					{$t('chatbot.composer.send')}
 				</button>
 			{/if}
 		</div>

@@ -8,6 +8,7 @@
 	import { pulseStep } from '../../stores/clock';
 	import { performanceMode } from '../../stores/performance';
 	import { textSize } from '../../stores/text-scale';
+	import { t } from '$lib/i18n';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -401,12 +402,12 @@
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!gbName.trim() || !gbEmail.trim() || !gbContent.trim()) {
-			gbStatus = 'ERROR: ALL FIELDS REQUIRED.';
+			gbStatus = $t('community.guestbook.errorAllFields');
 			gbShakeGen++;
 			playSound('click');
 			return;
 		}
-		gbStatus = 'TRANSMITTING TO BLOG.KRSZ.IN...';
+		gbStatus = $t('community.guestbook.transmitting');
 		playSound('click');
 
 		try {
@@ -417,19 +418,21 @@
 			});
 			const data = (await resp.json().catch(() => ({}))) as { error?: string };
 			if (resp.ok) {
-				gbStatus = 'TRANSMITTED: 201 OK DISPATCHED TO BLOG GUESTBOOK';
+				gbStatus = $t('community.guestbook.transmitted');
 				gbName = '';
 				gbEmail = '';
 				gbContent = '';
 				playSound('power');
 				loadMessages();
 			} else {
-				gbStatus = `ERROR: ${data.error || `HTTP ${resp.status}`}`;
+				gbStatus = $t('community.guestbook.errorWithReason', { reason: data.error || `HTTP ${resp.status}` });
 				gbShakeGen++;
 				playSound('click');
 			}
 		} catch (err: any) {
-			gbStatus = `NETWORK ERROR: ${err?.message || 'TRANSMISSION FAILED'}`;
+			gbStatus = $t('community.guestbook.networkError', {
+				reason: err?.message || $t('community.guestbook.transmissionFailed')
+			});
 			gbShakeGen++;
 			playSound('click');
 		}
@@ -472,14 +475,14 @@
 	<form onsubmit={handleSubmit} use:shakeOn={gbShakeGen} class="border border-white/10 p-4 bg-black/30 space-y-3.5 text-xs sm:text-sm rounded-xs">
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
 			<div class="space-y-1">
-				<label class="block text-xs font-bold text-[#56b6c2]" for="gb-name">CALLSIGN / NAME</label>
+				<label class="block text-xs font-bold text-[#56b6c2]" for="gb-name">{$t('community.guestbook.nameLabel')}</label>
 				<div class="relative border border-white/20 focus-within:border-[#56b6c2] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]">
 					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbName}</span>{#if gbFocusedField === 'name'}<span
 							class="inline-block w-[8px] h-[16px] shrink-0"
 							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
 						></span>{/if}
 					{#if !gbName && gbFocusedField !== 'name'}
-						<span class="text-xs opacity-40 select-none pointer-events-none">e.g. Satoshi</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none">{$t('community.guestbook.namePlaceholder')}</span>
 					{/if}
 					<input
 						id="gb-name"
@@ -493,14 +496,14 @@
 				</div>
 			</div>
 			<div class="space-y-1">
-				<label class="block text-xs font-bold text-[#e5c07b]" for="gb-email">CONTACT EMAIL</label>
+				<label class="block text-xs font-bold text-[#e5c07b]" for="gb-email">{$t('community.guestbook.emailLabel')}</label>
 				<div class="relative border border-white/20 focus-within:border-[#e5c07b] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]">
 					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbEmail}</span>{#if gbFocusedField === 'email'}<span
 							class="inline-block w-[8px] h-[16px] shrink-0"
 							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
 						></span>{/if}
 					{#if !gbEmail && gbFocusedField !== 'email'}
-						<span class="text-xs opacity-40 select-none pointer-events-none">e.g. dev@domain.com</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none">{$t('community.guestbook.emailPlaceholder')}</span>
 					{/if}
 					<input
 						id="gb-email"
@@ -516,7 +519,7 @@
 		</div>
 
 		<div class="space-y-1">
-			<label class="block text-xs font-bold text-[#e06c75]" for="gb-content">TRANSMISSION PAYLOAD</label>
+			<label class="block text-xs font-bold text-[#e06c75]" for="gb-content">{$t('community.guestbook.contentLabel')}</label>
 			<div class="relative border border-white/20 focus-within:border-[#e06c75] transition-colors bg-black/60 p-3 rounded-xs min-h-[80px]">
 				<!-- The caret follows the text with no separator between them: under
 				     whitespace-pre-wrap the newline that used to sit between the value
@@ -528,7 +531,7 @@
 							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
 						></span>{/if}
 					{#if !gbContent && gbFocusedField !== 'content'}
-						<span class="text-xs opacity-40 select-none pointer-events-none block">Enter message for the blog.krsz.in guestbook...</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none block">{$t('community.guestbook.contentPlaceholder')}</span>
 					{/if}
 				</div>
 				<textarea
@@ -547,10 +550,9 @@
 			<div class="border border-[#98c379] p-2.5 text-xs sm:text-sm font-bold text-[#98c379] bg-black/40 rounded-xs" in:fade={{ duration: 160 }}>{gbStatus}</div>
 		{/if}
 		<p class="text-[10px] sm:text-xs text-white/40 leading-relaxed">
-			Unlike the rest of this site, this is sent to blog.krsz.in and shown publicly below. Sending confirms
-			you're fine with that.
+			{$t('community.guestbook.disclaimer')}
 		</p>
-		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">DISPATCH PACKET TO BLOG.KRSZ.IN -&gt;</button>
+		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">{$t('community.guestbook.submit')}</button>
 	</form>
 
 	<!-- Live feed from blog.krsz.in's guestbook API -- each message drifts
@@ -563,25 +565,25 @@
 	     separation pass had nowhere to put anything and the cards sat jammed
 	     against each other. 380px gives it room to read as a field. -->
 	<div class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2 flex-1 min-h-[380px]">
-		<BoxHeader title="RECEIVED PACKETS" short="PACKETS" class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5 shrink-0">
+		<BoxHeader title={$t('community.guestbook.received')} short={$t('community.guestbook.receivedShort')} class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5 shrink-0">
 			<button
 				onclick={() => {
 					loadMessages();
 					playSound('click');
 				}}
 				class="press text-xs font-bold text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors"
-				title="Reload messages from blog.krsz.in"
+				title={$t('community.guestbook.refreshHint')}
 			>
-				⟳ REFRESH
+				{$t('community.guestbook.refresh')}
 			</button>
 		</BoxHeader>
 
 		{#if messagesState === 'loading'}
-			<div class="text-xs font-mono text-white/40 py-2">FETCHING FROM BLOG.KRSZ.IN…</div>
+			<div class="text-xs font-mono text-white/40 py-2">{$t('community.guestbook.fetching')}</div>
 		{:else if messagesState === 'error'}
-			<div class="text-xs font-mono text-[#e06c75] py-2">FAILED TO REACH THE GUESTBOOK API — TRY REFRESH</div>
+			<div class="text-xs font-mono text-[#e06c75] py-2">{$t('community.guestbook.fetchError')}</div>
 		{:else if messages.length === 0}
-			<div class="text-xs font-mono text-white/40 py-2">NO MESSAGES YET — SEND THE FIRST PACKET</div>
+			<div class="text-xs font-mono text-white/40 py-2">{$t('community.guestbook.empty')}</div>
 		{:else}
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<!-- The field itself only listens so that clicking the empty space
@@ -609,7 +611,7 @@
 								role="button"
 								tabindex="0"
 								aria-expanded={open}
-								aria-label="Message from {p.name}"
+								aria-label={$t('community.guestbook.messageFrom', { name: p.name })}
 								onpointerdown={(e) => grab(e, p, i)}
 								onkeydown={(e) => {
 									if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = open ? null : p.id; playSound('click'); }
@@ -637,7 +639,10 @@
 					{/each}
 			</div>
 			<div class="text-[10px] font-mono text-white/30 shrink-0">
-				{messages.length} messages · drag a packet to throw it · click to read it in full{$performanceMode ? '' : ' · they collide'} · new entries may await moderation
+				{$t('community.guestbook.fieldStatus', {
+					count: messages.length,
+					collideNote: $performanceMode ? '' : $t('community.guestbook.collideNote')
+				})}
 			</div>
 		{/if}
 	</div>

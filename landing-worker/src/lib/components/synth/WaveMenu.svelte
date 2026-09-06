@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { t, locale } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { BASIC_WAVES, NOISE_WAVES, ADVANCED_WAVES, WAVE_PARAM_SPECS, waveParam, getWaveformAbbr, type SynthWaveform, type CustomWave, type WaveParams } from '../../synth';
 	import { customWaves, deleteCustomWave, findCustomWave, WAVE_LABELS } from '../../stores/synth-waves';
-	import { WAVE_TOOLTIPS } from './tooltips';
+	import { waveTooltips } from './tooltips';
 	import RotaryKnob from '../hardware/RotaryKnob.svelte';
 
 	/* The same cascading menu as PRESET: sections on the left, the section's
@@ -33,12 +34,12 @@
 	} = $props();
 
 	type SectionId = 'BASIC' | 'NOISE' | 'ADVANCED' | 'CUSTOM';
-	const SECTIONS: { id: SectionId; label: string; hint: string; waves: SynthWaveform[] }[] = [
-		{ id: 'BASIC', label: 'BASIC', hint: 'The four analogue shapes', waves: BASIC_WAVES },
-		{ id: 'NOISE', label: 'NOISE', hint: 'Buffer sources: white noise and the 808 cymbal bank (OSC1 only; on OSC2 they play as a saw)', waves: NOISE_WAVES },
-		{ id: 'ADVANCED', label: 'ADVANCED', hint: 'Stacked and tabled waves: sweeping PWM, a five-saw stack, drawbars, a folded sine', waves: ADVANCED_WAVES },
-		{ id: 'CUSTOM', label: 'CUSTOM', hint: 'Waves you drew — one cycle, any shape', waves: [] }
-	];
+	let SECTIONS = $derived<{ id: SectionId; label: string; hint: string; waves: SynthWaveform[] }[]>([
+		{ id: 'BASIC', label: 'BASIC', hint: $t('synth.wave.basicHint'), waves: BASIC_WAVES },
+		{ id: 'NOISE', label: 'NOISE', hint: $t('synth.wave.noiseHint'), waves: NOISE_WAVES },
+		{ id: 'ADVANCED', label: 'ADVANCED', hint: $t('synth.wave.advancedHint'), waves: ADVANCED_WAVES },
+		{ id: 'CUSTOM', label: 'CUSTOM', hint: $t('synth.wave.customHint'), waves: [] }
+	]);
 
 	let open = $state(false);
 	let section = $state<SectionId | null>(null);
@@ -61,7 +62,13 @@
 
 	let current = $derived(findCustomWave(value));
 	let shown = $derived(current ? current.name.slice(0, 6) : getWaveformAbbr(value));
-	let currentTitle = $derived(current ? `${current.name} — a wave you drew` : WAVE_TOOLTIPS[value] || WAVE_LABELS[value] || value);
+	// $locale is read here only to give this $derived a tracked dependency —
+	// waveTooltips() itself resolves strings through tr(), which is not reactive.
+	let WAVE_TOOLTIPS = $derived.by(() => {
+		void $locale;
+		return waveTooltips();
+	});
+	let currentTitle = $derived(current ? $t('synth.wave.drawnHint', { name: current.name }) : WAVE_TOOLTIPS[value] || WAVE_LABELS[value] || value);
 
 	function toggle() {
 		open = !open;
@@ -112,7 +119,7 @@
 	<button
 		bind:this={trigger}
 		onclick={toggle}
-		title={`${label} waveform — ${currentTitle}`}
+		title={$t('synth.wave.pickHint', { label, title: currentTitle })}
 		class="press w-full px-1.5 py-0.5 border rounded-xs font-black transition-colors cursor-pointer text-[10px] flex items-center justify-between gap-1 {open
 			? 'text-black'
 			: 'bg-white/5 hover:bg-white/15 text-white'}"
@@ -133,7 +140,7 @@
 			class="origin-top fixed z-[130] min-w-[150px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 			transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 		>
-			<div class="px-2.5 pt-0.5 pb-1 text-[10px] font-bold text-white/40 select-none border-b border-white/10 mb-1">{label} WAVE</div>
+			<div class="px-2.5 pt-0.5 pb-1 text-[10px] font-bold text-white/40 select-none border-b border-white/10 mb-1">{$t('synth.wave.panelLabel', { label })}</div>
 			{#each SECTIONS as sec (sec.id)}
 				{@const isOpen = section === sec.id}
 				{@const count = sec.id === 'CUSTOM' ? $customWaves.length : sec.waves.length}
@@ -174,7 +181,7 @@
 										class="absolute left-full ml-0.5 z-50 bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] px-1.5 pt-1 pb-1.5 text-xs font-mono"
 										transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
 									>
-										<div class="text-[10px] font-bold text-white/40 select-none border-b border-white/10 pb-0.5 mb-1 whitespace-nowrap">{getWaveformAbbr(pw)} PARAMS</div>
+										<div class="text-[10px] font-bold text-white/40 select-none border-b border-white/10 pb-0.5 mb-1 whitespace-nowrap">{$t('synth.wave.paramsLabel', { wave: getWaveformAbbr(pw) })}</div>
 										<div class="grid gap-y-1" style="grid-template-columns: repeat({Math.min(3, specs.length)}, 44px)">
 											{#each specs as sp (sp.key)}
 												<div class="flex justify-center">
@@ -189,23 +196,23 @@
 							{@render flyout(customList, true)}
 							{#snippet customList()}
 								{#if $customWaves.length === 0}
-									<div class="px-2.5 py-1.5 text-[10px] text-white/30 select-none max-w-[220px]">none yet — draw one below</div>
+									<div class="px-2.5 py-1.5 text-[10px] text-white/30 select-none max-w-[220px]">{$t('synth.wave.noneYet')}</div>
 								{/if}
 								{#each $customWaves as cw (cw.id)}
 									{@const on = value === `custom:${cw.id}`}
 									<div class="relative flex items-center transition-colors {on ? rowOn : rowIdle}">
-										<button onclick={() => pick(`custom:${cw.id}`)} class="press flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={`Use ${cw.name} on ${label}`}>
+										<button onclick={() => pick(`custom:${cw.id}`)} class="press flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={$t('synth.wave.useHint', { name: cw.name, label })}>
 											<span class="shrink-0 {on ? 'text-[#98c379]' : 'text-white/25'}">{on ? '●' : '○'}</span>
 											<span class="truncate">{cw.name}</span>
 										</button>
-										<button onclick={() => { close(); onEdit(cw); }} class="press shrink-0 px-1.5 py-1.5 text-white/30 hover:text-[#56b6c2] cursor-pointer transition-colors" title={`Edit ${cw.name} (shape and name)`} aria-label={`Edit ${cw.name}`}>✎</button>
-										<button onclick={() => { deleteCustomWave(cw.id); playSound('click'); }} class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/30 hover:text-[#e06c75] cursor-pointer transition-colors" title={`Remove ${cw.name}`} aria-label={`Remove ${cw.name}`}>✕</button>
+										<button onclick={() => { close(); onEdit(cw); }} class="press shrink-0 px-1.5 py-1.5 text-white/30 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.wave.editHint', { name: cw.name })} aria-label={$t('synth.wave.editAria', { name: cw.name })}>✎</button>
+										<button onclick={() => { deleteCustomWave(cw.id); playSound('click'); }} class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/30 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.wave.removeHint', { name: cw.name })} aria-label={$t('synth.wave.removeAria', { name: cw.name })}>✕</button>
 									</div>
 								{/each}
 								<div class="border-t border-white/10 mt-1 pt-1">
-									<button onclick={() => { close(); onDraw(); }} class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title="Draw one cycle of a wave with the mouse; it is saved in this browser and applied here">
+									<button onclick={() => { close(); onDraw(); }} class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.wave.drawNewHint')}>
 										<span class="shrink-0">＋</span>
-										<span>DRAW NEW…</span>
+										<span>{$t('synth.wave.drawNew')}</span>
 									</button>
 								</div>
 							{/snippet}

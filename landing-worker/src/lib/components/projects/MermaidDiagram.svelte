@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { textSize } from '../../stores/text-scale';
+	import { t, tr } from '$lib/i18n';
 
 	let { chart, accent = '#56b6c2' }: { chart: string; accent?: string } = $props();
 
@@ -80,7 +81,7 @@
 			renderError = null;
 		} catch (err) {
 			if (myId !== renderId) return;
-			renderError = err instanceof Error ? err.message : 'Diagram failed to render';
+			renderError = err instanceof Error ? err.message : tr('home.diagram.failed');
 		}
 	}
 
@@ -94,7 +95,7 @@
 
 <div class="overflow-x-auto custom-scrollbar py-1">
 	{#if renderError}
-		<div class="text-xs text-[#e06c75] font-mono">Diagram error: {renderError}</div>
+		<div class="text-xs text-[#e06c75] font-mono">{$t('home.diagram.error', { message: renderError })}</div>
 	{/if}
 	<div bind:this={container} class="mermaid-container inline-block min-w-full"></div>
 </div>

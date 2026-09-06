@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { playSound } from '../../sound';
+	import { t } from '../../i18n';
 	import { draggable } from './draggable';
-	import { PARAM_DESCRIPTIONS } from './param-descriptions';
+	import { paramDescriptionKey } from './param-descriptions';
 
 	let {
 		label,
@@ -44,9 +45,12 @@
 		return `${v}${unit}`;
 	}
 
-	let desc = $derived(description || (label ? PARAM_DESCRIPTIONS[label.toUpperCase()] : '') || '');
+	let desc = $derived(description || (label && paramDescriptionKey(label.toUpperCase()) ? $t(paramDescriptionKey(label.toUpperCase())) : '') || '');
+	let labelPart = $derived(label ? `${label}${desc ? ` (${desc})` : ''}: ` : '');
 	let tooltipText = $derived(
-		`${label ? `${label}${desc ? ` (${desc})` : ''}: ` : ''}${formatDisplay(value)}${unit} — Click, drag left/right, or scroll wheel${reset !== undefined ? ' · right-click resets' : ''}`
+		reset !== undefined
+			? $t('synthPanels.knob.hFaderHintReset', { labelPart, value: formatDisplay(value), unit })
+			: $t('synthPanels.knob.hFaderHint', { labelPart, value: formatDisplay(value), unit })
 	);
 
 	function handleWheel(e: WheelEvent) {

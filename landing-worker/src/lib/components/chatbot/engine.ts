@@ -1,3 +1,4 @@
+import { tr } from '$lib/i18n';
 
 /**
  * The chatbot's model, and everything configurable about how it generates.
@@ -149,22 +150,22 @@ export async function probeGpu(): Promise<GpuSupport> {
 			return {
 				ok: false,
 				f16: false,
-				reason: 'WebGPU needs a secure context, and this page is plain http on something other than localhost.',
+				reason: tr('chatbot.gpu.insecureContext.reason'),
 				fixes: [
-					'Open the page over https, or from http://localhost — both count as secure.',
-					'Chrome can be told to trust this one origin: launch it with --unsafely-treat-insecure-origin-as-secure=<this page’s origin>',
-					'Firefox has no equivalent switch, so https is the only route there.'
+					tr('chatbot.gpu.insecureContext.fix1'),
+					tr('chatbot.gpu.insecureContext.fix2'),
+					tr('chatbot.gpu.insecureContext.fix3')
 				]
 			};
 		}
 		return {
 			ok: false,
 			f16: false,
-			reason: 'This browser does not expose WebGPU.',
+			reason: tr('chatbot.gpu.noWebgpu.reason'),
 			fixes: [
-				'Chrome or Edge 113+, or Safari 18+, support it without any setting.',
-				'Firefox: open about:config and set dom.webgpu.enabled to true, then restart the browser.',
-				'Firefox on Linux also needs dom.webgpu.workers.enabled — the model runs in a worker — and a working Vulkan driver (mesa-vulkan-drivers).'
+				tr('chatbot.gpu.noWebgpu.fix1'),
+				tr('chatbot.gpu.noWebgpu.fix2'),
+				tr('chatbot.gpu.noWebgpu.fix3')
 			]
 		};
 	}
@@ -175,19 +176,19 @@ export async function probeGpu(): Promise<GpuSupport> {
 		return {
 			ok: false,
 			f16: false,
-			reason: `WebGPU adapter request failed: ${(err as Error).message}`,
-			fixes: ['Update your graphics driver, then restart the browser.']
+			reason: tr('chatbot.gpu.adapterRequestFailed.reason', { message: (err as Error).message }),
+			fixes: [tr('chatbot.gpu.adapterRequestFailed.fix1')]
 		};
 	}
 	if (!adapter) {
 		return {
 			ok: false,
 			f16: false,
-			reason: 'WebGPU is present but no GPU adapter was granted — usually a blocklisted or missing driver.',
+			reason: tr('chatbot.gpu.noAdapter.reason'),
 			fixes: [
-				'Update your graphics driver and restart the browser.',
-				'On Linux, check that Vulkan works: run `vulkaninfo --summary`, and install mesa-vulkan-drivers if it fails.',
-				'Chrome: chrome://gpu lists what was blocklisted and why.'
+				tr('chatbot.gpu.noAdapter.fix1'),
+				tr('chatbot.gpu.noAdapter.fix2'),
+				tr('chatbot.gpu.noAdapter.fix3')
 			]
 		};
 	}

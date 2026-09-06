@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { fade, fly } from '$lib/perf-transitions';
+	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
@@ -31,71 +32,73 @@
 		closeAndRun?: boolean;
 	}
 
-	const SITE_STEPS: Step[] = [
+	/** Titles/bodies/key descriptions resolve through $t() in this $derived, not
+	 *  a module-level constant, since the locale isn't known at module load time. */
+	let SITE_STEPS: Step[] = $derived([
 		{
 			target: 'tabs',
-			title: 'EIGHT VIEWS',
-			body: 'Everything on this site lives in one of eight views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
+			title: $t('chrome.onboarding.eightViewsTitle'),
+			body: $t('chrome.onboarding.eightViewsBody'),
 			keys: [
-				{ key: 'Ctrl+0', desc: 'modules — the live projects, with real architecture diagrams' },
-				{ key: 'Ctrl+1', desc: 'guestbook — posts to blog.krsz.in' },
-				{ key: 'Ctrl+2', desc: 'synth — 8-track WebAudio workstation, .mid in, WAV out' },
-				{ key: 'Ctrl+3', desc: 'utils — twelve hardware testers' },
-				{ key: 'Ctrl+4', desc: 'lm-space — the model table as a navigable volume' },
-				{ key: 'Ctrl+5', desc: 'krsz-vm — a real x86 PC, emulated in the tab' },
-				{ key: 'Ctrl+6', desc: 'web-lm — a language model on your own GPU, no server' },
-				{ key: 'Ctrl+7', desc: "lifelab — Conway's Game of Life, as a campaign" }
+				{ key: 'Ctrl+0', desc: $t('chrome.onboarding.eightViewsModules') },
+				{ key: 'Ctrl+1', desc: $t('chrome.onboarding.eightViewsGuestbook') },
+				{ key: 'Ctrl+2', desc: $t('chrome.onboarding.eightViewsSynth') },
+				{ key: 'Ctrl+3', desc: $t('chrome.onboarding.eightViewsUtils') },
+				{ key: 'Ctrl+4', desc: $t('chrome.onboarding.eightViewsLmSpace') },
+				{ key: 'Ctrl+5', desc: $t('chrome.onboarding.eightViewsKrszVm') },
+				{ key: 'Ctrl+6', desc: $t('chrome.onboarding.eightViewsWebLm') },
+				{ key: 'Ctrl+7', desc: $t('chrome.onboarding.eightViewsLifelab') }
 			],
 			color: '#56b6c2'
 		},
 		{
 			target: 'panel',
-			title: 'THE WORKBENCH',
-			body: 'The active view fills this panel. Nothing in it is decorative: every latency, level and capability you see was measured in your browser or read from the service it describes. Where a browser refuses to answer, it prints "n/a" instead of a plausible number.',
+			title: $t('chrome.onboarding.workbenchTitle'),
+			body: $t('chrome.onboarding.workbenchBody'),
 			color: '#e5c07b'
 		},
 		{
 			target: 'console-btn',
-			title: 'THE CONSOLE',
-			body: 'A small shell, dropped down over whatever view you are on. Its filesystem is a live projection of this site’s own data, so it cannot drift out of date.',
+			title: $t('chrome.onboarding.consoleTitle'),
+			body: $t('chrome.onboarding.consoleBody'),
 			keys: [
-				{ key: '` backquote', desc: 'open or close it from anywhere' },
-				{ key: 'help', desc: 'the command list; man <cmd> explains one' },
-				{ key: 'ls / cd / cat', desc: 'browse /projects, /operator, /synth, /edge' },
-				{ key: 'cmd | cmd', desc: 'pipe into grep, head, tail, sort, uniq, wc' },
-				{ key: 'trace', desc: 'the Cloudflare PoP actually serving you' }
+				{ key: '` backquote', desc: $t('chrome.onboarding.consoleToggle') },
+				{ key: 'help', desc: $t('chrome.onboarding.consoleHelp') },
+				{ key: 'ls / cd / cat', desc: $t('chrome.onboarding.consoleBrowse') },
+				{ key: 'cmd | cmd', desc: $t('chrome.onboarding.consolePipe') },
+				{ key: 'trace', desc: $t('chrome.onboarding.consoleTrace') }
 			],
 			color: '#98c379',
-			action: { label: 'OPEN IT', run: () => consoleOverlayOpen.set(true) }
+			action: { label: $t('chrome.onboarding.openIt'), run: () => consoleOverlayOpen.set(true) }
 		},
 		{
 			target: 'launchpad',
-			title: 'LAUNCHPAD',
-			body: 'The same five views as pads, plus the theme switch. The sidebar above it is the operator profile; the banner at the top is just the name.',
-			keys: [{ key: 'T', desc: 'cycle theme — tokyo, gruvbox, nord, amber' }],
+			title: $t('chrome.onboarding.launchpadTitle'),
+			body: $t('chrome.onboarding.launchpadBody'),
+			keys: [{ key: 'T', desc: $t('chrome.onboarding.launchpadCycleTheme') }],
 			color: '#c678dd'
 		},
 		{
 			target: 'edge',
-			title: 'REAL EDGE, NOT A BADGE',
-			body: 'This reads /cdn-cgi/trace on every load: the Cloudflare point of presence that actually served you, the negotiated protocol and the TLS version. Run "trace" in the console for the full record with a measured round trip.',
+			title: $t('chrome.onboarding.edgeTitle'),
+			body: $t('chrome.onboarding.edgeBody'),
 			color: '#61afef'
 		},
 		{
 			target: 'guide-btn',
-			title: 'THAT IS THE TOUR',
-			body: 'This button reopens the walkthrough any time — so does the "guide" command.',
+			title: $t('chrome.onboarding.tourTitle'),
+			body: $t('chrome.onboarding.tourBody'),
 			color: '#e06c75'
 		},
 		{
 			target: 'guide-btn',
-			title: 'ONE MORE THING — THE KEYMAP',
-			body: 'Every shortcut on this site, in one place.',
+			title: $t('chrome.onboarding.keymapTitle'),
+			body: $t('chrome.onboarding.keymapBody'),
 			color: '#e06c75',
-			action: { label: 'SHOW KEYMAP', run: () => hotkeyOverlayOpen.set(true) },
+			action: { label: $t('chrome.onboarding.showKeymap'), run: () => hotkeyOverlayOpen.set(true) },
 			closeAndRun: true
 		}
-	];
+	]);
 
 	interface Box {
 		x: number;
@@ -374,12 +377,12 @@
 							direction = i > index ? 1 : -1;
 							index = i;
 						}}
-						aria-label={`Step ${i + 1}: ${s.title}`}
+						aria-label={$t('chrome.onboarding.stepLabel', { n: i + 1, title: s.title })}
 						class="press w-1.5 h-1.5 rounded-full cursor-pointer transition-all {i === index ? 'scale-125' : 'bg-white/20 hover:bg-white/45'}"
 						style={i === index ? `background-color: ${s.color}` : undefined}
 					></button>
 				{/each}
-				<button onclick={() => { dismissed = true; onClose(); }} class="press ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer transition-colors">SKIP</button>
+				<button onclick={() => { dismissed = true; onClose(); }} class="press ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer transition-colors">{$t('common.skip').toUpperCase()}</button>
 			</div>
 
 			<div class="flex items-center gap-1.5">
@@ -397,14 +400,14 @@
 					disabled={index === 0}
 					class="press px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 				>
-					BACK
+					{$t('common.back').toUpperCase()}
 				</button>
 				<button
 					onclick={next}
 					class="press px-3 py-1 border rounded-xs text-[11px] font-black cursor-pointer hover:bg-white/10 transition-colors"
 					style="border-color: {step.color}; color: {step.color}"
 				>
-					{isLast ? 'DONE' : 'NEXT →'}
+					{isLast ? $t('common.done').toUpperCase() : `${$t('common.next').toUpperCase()} →`}
 				</button>
 			</div>
 		</div>

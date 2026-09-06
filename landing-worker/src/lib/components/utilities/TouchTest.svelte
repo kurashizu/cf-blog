@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	interface Pt {
 		id: number;
@@ -90,21 +91,21 @@
 <div class="space-y-3">
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-mono">
 		<span class="text-white/45">
-			MAX TOUCH POINTS <span class="text-[#e5c07b]">{navigator.maxTouchPoints}</span>
-			<span class="text-white/30">(reported)</span>
+			{$t('utilities.touch.maxPoints')} <span class="text-[#e5c07b]">{navigator.maxTouchPoints}</span>
+			<span class="text-white/30">{$t('utilities.touch.maxPoints.reported')}</span>
 		</span>
-		<span class="text-white/45">CONCURRENT SEEN <span class="text-[#98c379]">{maxSeen}</span></span>
+		<span class="text-white/45">{$t('utilities.touch.concurrentSeen')} <span class="text-[#98c379]">{maxSeen}</span></span>
 		<span class="text-white/45">
-			PRESSURE <span class="transition-colors {anyPressure ? 'text-[#98c379]' : 'text-white/35'}">{anyPressure ? 'variable — real sensor' : 'not observed'}</span>
+			{$t('utilities.touch.pressure')} <span class="transition-colors {anyPressure ? 'text-[#98c379]' : 'text-white/35'}">{anyPressure ? $t('utilities.touch.pressure.variable') : $t('utilities.touch.pressure.notObserved')}</span>
 		</span>
 		<span class="text-white/45">
-			TILT <span class="transition-colors {anyTilt ? 'text-[#98c379]' : 'text-white/35'}">{anyTilt ? 'reported' : 'not observed'}</span>
+			{$t('utilities.touch.tilt')} <span class="transition-colors {anyTilt ? 'text-[#98c379]' : 'text-white/35'}">{anyTilt ? $t('utilities.touch.tilt.reported') : $t('utilities.touch.tilt.notObserved')}</span>
 		</span>
 		<button
 			onclick={reset}
 			class="press px-2 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 		>
-			RESET
+			{$t('utilities.touch.reset')}
 		</button>
 	</div>
 
@@ -119,9 +120,8 @@
 		class="relative w-full h-56 sm:h-72 border border-white/20 bg-black/50 rounded-xs overflow-hidden touch-none select-none cursor-crosshair"
 	>
 		{#if pointers.length === 0}
-			<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-white/30 text-center px-4">
-				Touch, click or draw here — every active pointer is drawn with its real
-				pressure, contact size and tilt.
+			<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-white/30 text-center px-4 whitespace-pre-line">
+				{$t('utilities.touch.surfaceHint')}
 			</div>
 		{/if}
 
@@ -150,14 +150,14 @@
 			<table class="w-full text-xs font-mono">
 				<thead>
 					<tr class="text-white/40 text-[10px] uppercase border-b border-white/10">
-						<th class="text-left px-2 py-1">id</th>
-						<th class="text-left px-2 py-1">type</th>
-						<th class="text-right px-2 py-1">pressure</th>
-						<th class="text-right px-2 py-1">tangential</th>
-						<th class="text-right px-2 py-1">tilt x/y</th>
-						<th class="text-right px-2 py-1">twist</th>
-						<th class="text-right px-2 py-1">contact</th>
-						<th class="text-right px-2 py-1">primary</th>
+						<th class="text-left px-2 py-1">{$t('utilities.touch.table.id')}</th>
+						<th class="text-left px-2 py-1">{$t('utilities.touch.table.type')}</th>
+						<th class="text-right px-2 py-1">{$t('utilities.touch.table.pressure')}</th>
+						<th class="text-right px-2 py-1">{$t('utilities.touch.table.tangential')}</th>
+						<th class="text-right px-2 py-1">{$t('utilities.touch.table.tilt')}</th>
+						<th class="text-right px-2 py-1">{$t('utilities.touch.table.twist')}</th>
+						<th class="text-right px-2 py-1">{$t('utilities.touch.table.contact')}</th>
+						<th class="text-right px-2 py-1">{$t('utilities.touch.table.primary')}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -170,7 +170,7 @@
 							<td class="px-2 py-1 text-right text-white/60">{p.tiltX}° / {p.tiltY}°</td>
 							<td class="px-2 py-1 text-right text-white/60">{p.twist}°</td>
 							<td class="px-2 py-1 text-right text-white/60">{p.width}×{p.height}</td>
-							<td class="px-2 py-1 text-right text-white/60">{p.isPrimary ? 'yes' : 'no'}</td>
+							<td class="px-2 py-1 text-right text-white/60">{p.isPrimary ? $t('utilities.touch.table.yes') : $t('utilities.touch.table.no')}</td>
 						</tr>
 					{/each}
 				</tbody>

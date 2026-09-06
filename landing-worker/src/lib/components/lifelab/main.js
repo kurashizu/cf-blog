@@ -6,8 +6,9 @@
 // -- the automaton, the pattern library, the level data and the save format --
 // are checked: engine.js, patterns.js and levels.js all pass.
 import { Life } from './engine.js';
-import { pattern, transformCells, nextOrientation, sameCells, kindOf, CATEGORIES, patternMeta, custom, parseRLE, decodeRLE, encodeRLE, normalizeCells } from './patterns.js';
+import { pattern, transformCells, nextOrientation, sameCells, kindOf, CATEGORIES, categoryMeta, patternMeta, custom, parseRLE, decodeRLE, encodeRLE, normalizeCells } from './patterns.js';
 import { LEVELS } from './levels.js';
+import { tr } from '$lib/i18n';
 
 const $ = s => document.querySelector(s);
 // Bound in start(), not at import. A module is evaluated once and cached, but
@@ -52,12 +53,12 @@ function bind() {
   // The two sidebar-header buttons were the only text-only controls left, and
   // one of them erases the save -- the control that most needs to be
   // recognisable at a glance was the least marked.
-  wipeBtn.innerHTML = ICONS.wipe + '<span>CLEAR ALL</span>';
+  wipeBtn.innerHTML = ICONS.wipe + '<span>' + tr('lifelab.ui.clearAll') + '</span>';
   // Dish size sits with CLEAR ALL: both are about the board itself, not
   // about editing it, and the control row below is full.
   el.dish = document.createElement('button');
   el.dish.id = 'dishbtn';
-  el.dish.title = 'Dish size — cycles 320×200, 640×400, 1280×800, 2000×1800. Cells are kept; shrinking asks first if any would be lost.';
+  el.dish.title = tr('lifelab.ui.dishHint');
   el.dish.onclick = cycleDish;
   wipeBtn.parentNode.insertBefore(el.dish, wipeBtn);
   if (S.L) syncDishBtn();
@@ -67,7 +68,7 @@ function bind() {
     logToggle.onclick = () => {
       const min = logWrap.classList.toggle('min');
       logToggle.textContent = min ? '\u25A1' : '_';
-      logToggle.title = min ? 'Show the log' : 'Hide the log';
+      logToggle.title = min ? tr('lifelab.ui.showLog') : tr('lifelab.ui.hideLog');
     };
   }
   ro?.disconnect();
@@ -190,41 +191,41 @@ function buildTopbar() {
   tbScroll.id = 'tbscroll';
   topbar.appendChild(tbScroll);
   const L = S.L;
-  el.run = mkBtn(ICONS.play, 'RUN', startPause);
+  el.run = mkBtn(ICONS.play, tr('lifelab.ui.run'), startPause);
   // Anchors for the walkthrough. The toolbar is rebuilt per level, so they are
   // set here rather than in the markup.
   el.run.dataset.tour = 'll-run';
-  el.step = mkBtn(ICONS.step, 'STEP', stepOnce);
-  if (has('undo')) mkBtn(ICONS.back, 'BACK', stepBack);
+  el.step = mkBtn(ICONS.step, tr('lifelab.ui.step'), stepOnce);
+  if (has('undo')) mkBtn(ICONS.back, tr('lifelab.ui.back'), stepBack);
   /* No CLEAR here. The header's CLEAR ALL already empties the board and does
      it behind a confirmation, which a destructive, un-undoable action wants;
      this one did the same thing one row away with no prompt at all, so the
      panel offered two buttons with the same name and the same effect. */
-  mkBtn(ICONS.soup, 'SOUP', soup);
+  mkBtn(ICONS.soup, tr('lifelab.ui.soup'), soup);
   mkSep();
   el.toolBtns = {};
   const addTool = (name, icon, label) => {
     el.toolBtns[name] = mkBtn(icon, label, () => { S.tool = name; syncTools(); });
   };
-  addTool('pan', ICONS.pan, 'PAN');
+  addTool('pan', ICONS.pan, tr('lifelab.ui.pan'));
   el.toolBtns.pan.dataset.tour = 'll-tools';
   // No ERASE tool: DRAW clears a live cell it is clicked on, and SELECT +
   // Delete clears any area. A third way to do the same thing was one more
   // button to understand.
   if ((L.tools || []).includes('draw')) {
-    addTool('draw', ICONS.draw, 'DRAW');
-    el.toolBtns.draw.title = 'Paint cells — click a live cell to clear it. To clear an area, SELECT it and press Delete';
+    addTool('draw', ICONS.draw, tr('lifelab.ui.draw'));
+    el.toolBtns.draw.title = tr('lifelab.ui.drawHint');
   }
   // SELECT: drag a box; the bar that follows saves it as a pattern of your
   // own, copies it as RLE, or clears it.
-  addTool('sel', ICONS.sel, 'SELECT');
-  el.toolBtns.sel.title = 'Drag a box around cells to pick them up: then drag to move, R / F to turn, Enter to drop, Delete to remove, Ctrl+S to save';
+  addTool('sel', ICONS.sel, tr('lifelab.ui.select'));
+  el.toolBtns.sel.title = tr('lifelab.ui.selectHint');
   // No separator before the speed control: it is part of the same "how you
   // work" half as the tools, and the extra 9px was enough to push it onto a
   // second row of its own at ordinary window widths.
-  el.spd = mkBtn('', 'SPD ' + SPEEDS[S.speed] + '/s', () => {
+  el.spd = mkBtn('', tr('lifelab.ui.speed', { rate: SPEEDS[S.speed] }), () => {
     S.speed = (S.speed + 1) % SPEEDS.length;
-    el.spd.querySelector('span').textContent = 'SPD ' + SPEEDS[S.speed] + '/s';
+    el.spd.querySelector('span').textContent = tr('lifelab.ui.speed', { rate: SPEEDS[S.speed] });
   });
 
   const stats = document.createElement('div');
@@ -234,8 +235,8 @@ function buildTopbar() {
   // No RULE readout: the brand line already says B3/S23, and the row's width
   // is better spent on the controls.
   stats.innerHTML =
-    field('GEN', '<b id="stGen">0</b>') +
-    field('POP', '<b id="stPop">0</b>');
+    field(tr('lifelab.ui.gen'), '<b id="stGen">0</b>') +
+    field(tr('lifelab.ui.pop'), '<b id="stPop">0</b>');
   topbar.appendChild(stats);
   el.gen = stats.querySelector('#stGen');
   el.pop = stats.querySelector('#stPop');
@@ -283,7 +284,7 @@ function buildTray() {
   el.stampBtns = {};
   tray.style.removeProperty('display');
   const search = document.createElement('input');
-  search.id = 'trsearch'; search.type = 'search'; search.placeholder = 'search patterns'; search.value = trayQuery;
+  search.id = 'trsearch'; search.type = 'search'; search.placeholder = tr('lifelab.ui.searchPlaceholder'); search.value = trayQuery;
   search.autocomplete = 'off'; search.spellcheck = false;
   search.oninput = () => { trayQuery = search.value.trim().toLowerCase(); renderTray(); };
   tray.appendChild(search);
@@ -298,8 +299,8 @@ function renderTray() {
   el.stampBtns = {};
   const folded = loadFolded();
   const q = trayQuery;
-  const sections = CATEGORIES.map(c => ({ ...c, items: c.of }));
-  sections.push({ id: 'custom', label: 'CUSTOM', hint: 'yours, kept in this browser', items: custom.list().map(c => c.key), mine: true });
+  const sections = CATEGORIES.map(c => ({ ...c, ...categoryMeta(c), items: c.of }));
+  sections.push({ id: 'custom', label: tr('lifelab.ui.customLabel'), hint: tr('lifelab.ui.customHint'), items: custom.list().map(c => c.key), mine: true });
   let colour = 0;
   for (const sec of sections) {
     const items = sec.items.filter(k => {
@@ -320,12 +321,12 @@ function renderTray() {
     for (const k of items) grid.appendChild(stampButton(k, PCOLORS[colour++ % PCOLORS.length], sec.mine));
     if (sec.mine) {
       const add = document.createElement('button'); add.className = 'stamp tradd';
-      add.innerHTML = ICONS.sel + '<span>FROM SELECTION</span>';
-      add.title = 'Switch to SELECT, drag a box on the dish, then SAVE from the bar that appears';
-      add.onclick = () => { S.tool = 'sel'; syncTools(); tlog('> SELECT: drag a box around cells to pick them up, then SAVE from the bar', 't-sys'); };
+      add.innerHTML = ICONS.sel + '<span>' + tr('lifelab.ui.fromSelection') + '</span>';
+      add.title = tr('lifelab.ui.fromSelectionHint');
+      add.onclick = () => { S.tool = 'sel'; syncTools(); tlog('> ' + tr('lifelab.log.selectHint'), 't-sys'); };
       const paste = document.createElement('button'); paste.className = 'stamp tradd';
-      paste.innerHTML = ICONS.draw + '<span>PASTE RLE</span>';
-      paste.title = 'Paste a pattern in RLE, the format LifeWiki and Golly use';
+      paste.innerHTML = ICONS.draw + '<span>' + tr('lifelab.ui.pasteRle') + '</span>';
+      paste.title = tr('lifelab.ui.pasteRleHint');
       paste.onclick = importRLE;
       grid.append(add, paste);
     }
@@ -344,13 +345,13 @@ function stampButton(k, color, mine) {
   const big = p.w > S.L.w || p.h > S.L.h;
   b.innerHTML = thumb(k, color) + '<span>' + m.label + '</span>' +
     (p.w * p.h >= 2500 ? '<i' + (big ? ' class="big"' : '') + '>' + p.w + '&times;' + p.h + '</i>' : '');
-  b.title = m.label + ' — ' + p.w + '×' + p.h + ', ' + p.cells.length + ' cells' +
+  b.title = tr('lifelab.ui.stampTooltip', { label: m.label, w: p.w, h: p.h, cells: p.cells.length }) +
     (m.note ? '\n' + m.note : '') + (m.credit ? '\n' + m.credit : '') +
-    (big ? '\nBigger than the dish — selecting it offers to enlarge the dish' : '');
+    (big ? tr('lifelab.ui.biggerThanDish') : '');
   b.onclick = () => pickPiece(k);
   if (mine) {
-    const x = document.createElement('span'); x.className = 'del'; x.innerHTML = '&#10005;'; x.title = 'Delete this pattern';
-    x.onclick = (e) => { e.stopPropagation(); custom.remove(k); renderTray(); tlog('> deleted ' + m.label, 't-warn'); };
+    const x = document.createElement('span'); x.className = 'del'; x.innerHTML = '&#10005;'; x.title = tr('lifelab.ui.deletePattern');
+    x.onclick = (e) => { e.stopPropagation(); custom.remove(k); renderTray(); tlog('> ' + tr('lifelab.log.deletedPattern', { label: m.label }), 't-warn'); };
     b.appendChild(x);
   }
   el.stampBtns[k] = b;
@@ -374,7 +375,7 @@ function stampButton(k, color, mine) {
  * drops it first, so it never has to be thought about.
  */
 function makePiece(cells, w, h, extra) {
-  return { cells, w, h, x: 0, y: 0, follow: false, origin: null, key: null, label: 'PIECE', rot: 0, flip: false, ...extra };
+  return { cells, w, h, x: 0, y: 0, follow: false, origin: null, key: null, label: tr('lifelab.ui.piece'), rot: 0, flip: false, ...extra };
 }
 function isTouch() { return matchMedia('(hover: none)').matches; }
 function pieceCenterAt(pc, cx, cy) { pc.x = cx - (pc.w >> 1); pc.y = cy - (pc.h >> 1); }
@@ -386,12 +387,11 @@ function pickPiece(k) {
   if (p.w > S.L.w || p.h > S.L.h) {
     const [nw, nh] = fitDish(p.w, p.h);
     showMsg(
-      'BIGGER THAN THE DISH',
-      m.label + ' is ' + p.w + '×' + p.h + ' cells; the dish is ' + S.L.w + '×' + S.L.h + '.\n' +
-      'Enlarge the dish to ' + nw + '×' + nh + '? Everything on it is kept.' +
-      (nw * nh > 2e6 ? '\n\nA dish this size steps slowly — expect a few generations a second, not hundreds.' : ''),
+      tr('lifelab.dialog.biggerThanDishTitle'),
+      tr('lifelab.dialog.biggerThanDishBody', { label: m.label, pw: p.w, ph: p.h, dw: S.L.w, dh: S.L.h, nw, nh }) +
+      (nw * nh > 2e6 ? tr('lifelab.dialog.biggerThanDishSlow') : ''),
       [
-        { label: 'ENLARGE & PLACE', fn: () => {
+        { label: tr('lifelab.dialog.enlargeAndPlace'), fn: () => {
           hideMsg();
           commitPiece();
           resizeDish(nw, nh);
@@ -402,7 +402,7 @@ function pickPiece(k) {
           commitPiece();
           fitCamera();
         } },
-        { label: 'CANCEL', fn: hideMsg },
+        { label: tr('lifelab.dialog.cancel'), fn: hideMsg },
       ]
     );
     return;
@@ -434,15 +434,15 @@ function liftSelection() {
   const raw = [];
   for (let y = r.y; y < r.y + r.h; y++)
     for (let x = r.x; x < r.x + r.w; x++) if (S.eng.get(x, y)) raw.push([x, y]);
-  if (!raw.length) { deny('nothing in that box'); return; }
+  if (!raw.length) { deny(tr('lifelab.log.nothingInBox')); return; }
   pushUndo();
   let bx = Infinity, by = Infinity;
   for (const [x, y] of raw) { if (x < bx) bx = x; if (y < by) by = y; }
   for (const [x, y] of raw) S.eng.set(x, y, 0);
   const n = normalizeCells(raw);
-  S.piece = makePiece(n.cells, n.w, n.h, { x: bx, y: by, label: 'SELECTION', origin: { x: bx, y: by, cells: n.cells.slice() } });
+  S.piece = makePiece(n.cells, n.w, n.h, { x: bx, y: by, label: tr('lifelab.ui.selection'), origin: { x: bx, y: by, cells: n.cells.slice() } });
   syncPieceBar(true);
-  tlog('> picked up ' + raw.length + ' cells — drag to move, R/F to turn, Enter to drop, Esc to put back', 't-sys');
+  tlog('> ' + tr('lifelab.log.pickedUp', { n: raw.length }), 't-sys');
 }
 
 /** Puts the piece down on the board. With keep, a copy lands and the piece stays in hand. */
@@ -456,7 +456,9 @@ function commitPiece(keep) {
     S.eng.set(gx, gy, 1);
   }
   S.stampsUsed++;
-  tlog('> ' + pc.label + ' @ (' + pc.x + ',' + pc.y + ')' + (lost ? ' — ' + lost + ' cells fell off the edge' : ''), lost ? 't-warn' : 't-sys');
+  tlog('> ' + (lost
+    ? tr('lifelab.log.placedFellOff', { label: pc.label, x: pc.x, y: pc.y, n: lost })
+    : tr('lifelab.log.placed', { label: pc.label, x: pc.x, y: pc.y })), lost ? 't-warn' : 't-sys');
   if (!keep) S.piece = null;
   syncPieceBar(true);
 }
@@ -468,7 +470,7 @@ function cancelPiece() {
 }
 function deletePiece() {
   const pc = S.piece; if (!pc) return;
-  tlog('> ' + (pc.origin ? 'deleted ' + pc.cells.length + ' cells' : 'dropped ' + pc.label), 't-sys');
+  tlog('> ' + (pc.origin ? tr('lifelab.log.deletedCells', { n: pc.cells.length }) : tr('lifelab.log.dropped', { label: pc.label })), 't-sys');
   S.piece = null; syncPieceBar(true);
 }
 function rotatePiece() {
@@ -491,10 +493,10 @@ function nudgePiece(dx, dy) { const pc = S.piece; if (!pc) return; pc.x += dx; p
 
 function savePiece() {
   const pc = S.piece; if (!pc) return;
-  showPrompt('SAVE AS PATTERN', pc.w + '×' + pc.h + ', ' + pc.cells.length + ' cells. Name it:', pc.key ? pc.label : 'MY PATTERN', (name) => {
+  showPrompt(tr('lifelab.dialog.saveAsPatternTitle'), tr('lifelab.dialog.saveAsPatternBody', { w: pc.w, h: pc.h, cells: pc.cells.length }), pc.key ? pc.label : tr('lifelab.ui.myPattern'), (name) => {
     const key = custom.add(name, pc.cells, pc.w, pc.h);
     hideMsg(); renderTray();
-    tlog('> saved ' + patternMeta(key).label + ' to CUSTOM', 't-sys');
+    tlog('> ' + tr('lifelab.log.savedToCustom', { label: patternMeta(key).label }), 't-sys');
   });
 }
 /** The piece as RLE, to the clipboard and to an in-page clip for Ctrl+V. */
@@ -504,9 +506,9 @@ function copyPiece() {
   clip = { cells: pc.cells.map(c => [c[0], c[1]]), w: pc.w, h: pc.h, label: pc.label };
   const { header, body } = encodeRLE(pc.cells, pc.w, pc.h);
   const text = header + '\n' + body;
-  const done = () => tlog('> copied ' + pc.cells.length + ' cells as RLE', 't-sys');
-  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => showPrompt('RLE', 'Clipboard access was refused; copy it from here:', '', null, text));
-  else showPrompt('RLE', 'Copy it from here:', '', null, text);
+  const done = () => tlog('> ' + tr('lifelab.log.copiedAsRle', { n: pc.cells.length }), 't-sys');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => showPrompt(tr('lifelab.dialog.rleTitle'), tr('lifelab.dialog.rleClipboardRefused'), '', null, text));
+  else showPrompt(tr('lifelab.dialog.rleTitle'), tr('lifelab.dialog.rleCopyFromHere'), '', null, text);
 }
 /** Ctrl+V: the in-page clip, else whatever RLE the system clipboard holds. */
 function pasteClip() {
@@ -519,14 +521,14 @@ function pasteClip() {
     S.piece = pc; syncPieceBar(true);
   };
   if (clip) { put(clip.cells.map(c => [c[0], c[1]]), clip.w, clip.h, clip.label); return; }
-  if (!navigator.clipboard?.readText) { deny('nothing to paste — copy a piece first'); return; }
+  if (!navigator.clipboard?.readText) { deny(tr('lifelab.log.nothingToPaste')); return; }
   navigator.clipboard.readText().then((t) => {
     const parsed = parseRLE(t || '');
-    if (!parsed.rle) { deny('the clipboard holds no RLE'); return; }
+    if (!parsed.rle) { deny(tr('lifelab.log.clipboardNoRle')); return; }
     const d = normalizeCells(decodeRLE(parsed.rle).cells);
-    if (!d.cells.length) { deny('the clipboard holds no RLE'); return; }
-    put(d.cells, d.w, d.h, parsed.name || 'PASTED');
-  }, () => deny('clipboard access was refused'));
+    if (!d.cells.length) { deny(tr('lifelab.log.clipboardNoRle')); return; }
+    put(d.cells, d.w, d.h, parsed.name || tr('lifelab.ui.pasted'));
+  }, () => deny(tr('lifelab.log.clipboardRefused')));
 }
 
 /**
@@ -544,16 +546,16 @@ function syncPieceBar(rebuild) {
     const touch = isTouch();
     pieceBar.hidden = false;
     pieceBar.innerHTML =
-      '<span class="sbthumb" style="color:' + color + '" title="As it will land">' + thumbOf(pc, color, 30) + '</span>' +
+      '<span class="sbthumb" style="color:' + color + '" title="' + tr('lifelab.ui.asLanded') + '">' + thumbOf(pc, color, 30) + '</span>' +
       '<b style="color:' + color + '">' + pc.label + '</b><small>' + pc.w + '&times;' + pc.h + ' &middot; ' + pc.cells.length + '</small>' +
-      '<button class="tb" id="pb-rot" title="Turn a quarter turn clockwise [R]">' + ICONS.rot + '<span>ROTATE</span></button>' +
-      '<button class="tb" id="pb-flip" title="Mirror left-to-right [F]">' + ICONS.flip + '<span>FLIP</span></button>' +
-      '<button class="tb" id="pb-copy" title="Copy as RLE [Ctrl+C]">' + ICONS.draw + '<span>COPY</span></button>' +
-      '<button class="tb" id="pb-save" title="Save to the CUSTOM shelf [Ctrl+S]">' + ICONS.lab + '<span>SAVE</span></button>' +
-      '<button class="tb go" id="pb-drop" title="Put it down here [Enter, or click outside it]">' + ICONS.check + '<span>DROP</span></button>' +
-      '<button class="tb" id="pb-again" title="Put a copy down and keep this one in hand [Ctrl+D]">' + ICONS.soup + '<span>STAMP</span></button>' +
-      '<button class="tb bad" id="pb-del" title="' + (pc.origin ? 'Delete these cells [Delete]' : 'Throw it away without placing it [Delete]') + '">' + ICONS.wipe + '<span>DELETE</span></button>' +
-      '<em>' + (pc.follow ? 'click to put it down · shift-click to stamp copies' : touch ? 'drag to move · tap outside to drop' : 'drag to move · arrows nudge · click outside or Enter drops · Esc ' + (pc.origin ? 'puts it back' : 'cancels') + ' · Ctrl+Z undoes') + '</em>';
+      '<button class="tb" id="pb-rot" title="' + tr('lifelab.ui.rotateHint') + '">' + ICONS.rot + '<span>' + tr('lifelab.ui.rotate') + '</span></button>' +
+      '<button class="tb" id="pb-flip" title="' + tr('lifelab.ui.flipHint') + '">' + ICONS.flip + '<span>' + tr('lifelab.ui.flip') + '</span></button>' +
+      '<button class="tb" id="pb-copy" title="' + tr('lifelab.ui.copyHint') + '">' + ICONS.draw + '<span>' + tr('lifelab.ui.copy') + '</span></button>' +
+      '<button class="tb" id="pb-save" title="' + tr('lifelab.ui.saveHint') + '">' + ICONS.lab + '<span>' + tr('lifelab.ui.save') + '</span></button>' +
+      '<button class="tb go" id="pb-drop" title="' + tr('lifelab.ui.dropHint') + '">' + ICONS.check + '<span>' + tr('lifelab.ui.drop') + '</span></button>' +
+      '<button class="tb" id="pb-again" title="' + tr('lifelab.ui.stampHint') + '">' + ICONS.soup + '<span>' + tr('lifelab.ui.stamp') + '</span></button>' +
+      '<button class="tb bad" id="pb-del" title="' + (pc.origin ? tr('lifelab.ui.deleteCellsHint') : tr('lifelab.ui.throwAwayHint')) + '">' + ICONS.wipe + '<span>' + tr('lifelab.ui.delete') + '</span></button>' +
+      '<em>' + (pc.follow ? tr('lifelab.ui.followHint') : touch ? tr('lifelab.ui.touchHint') : (pc.origin ? tr('lifelab.ui.dragHintOrigin') : tr('lifelab.ui.dragHintCancel'))) + '</em>';
     pieceBar.querySelector('#pb-rot').onclick = rotatePiece;
     pieceBar.querySelector('#pb-flip').onclick = flipPiece;
     pieceBar.querySelector('#pb-copy').onclick = copyPiece;
@@ -596,12 +598,12 @@ function pushUndo() {
 }
 function undoEdit() {
   const snap = undoStack.pop();
-  if (!snap) { deny('nothing to undo'); return; }
+  if (!snap) { deny(tr('lifelab.log.nothingToUndo')); return; }
   undoBytes -= snap.a.byteLength;
   if (S.piece) { S.piece = null; syncPieceBar(true); }
   S.eng.restore(snap);
   S.running = false; syncRun();
-  tlog('> undo', 't-sys');
+  tlog('> ' + tr('lifelab.log.undo'), 't-sys');
 }
 
 /** The smallest shelf size with margin around w×h, or a custom one past the shelf. */
@@ -627,14 +629,14 @@ function selRect() {
 
 
 function importRLE() {
-  showPrompt('PASTE RLE', 'A whole .rle file or just the body (b = dead, o = alive, $ = next row, ! = end).', 'NAME', (name, text) => {
+  showPrompt(tr('lifelab.dialog.pasteRleTitle'), tr('lifelab.dialog.pasteRleBody'), tr('lifelab.dialog.namePlaceholder'), (name, text) => {
     const parsed = parseRLE(text || '');
     let d;
     try { d = parsed.rle ? normalizeCells(decodeRLE(parsed.rle).cells) : null; } catch { d = null; }
-    if (!d || !d.cells.length) { deny('that is not RLE I can read'); return; }
-    const key = custom.add(name || parsed.name || 'PASTED', d.cells, d.w, d.h, parsed.comments[0]);
+    if (!d || !d.cells.length) { deny(tr('lifelab.log.notRle')); return; }
+    const key = custom.add(name || parsed.name || tr('lifelab.ui.pasted'), d.cells, d.w, d.h, parsed.comments[0]);
     hideMsg(); renderTray();
-    tlog('> imported ' + patternMeta(key).label + ' (' + d.w + '×' + d.h + ', ' + d.cells.length + ' cells)', 't-sys');
+    tlog('> ' + tr('lifelab.log.imported', { label: patternMeta(key).label, w: d.w, h: d.h, n: d.cells.length }), 't-sys');
     pickPiece(key);
   }, '', true);
 }
@@ -677,7 +679,7 @@ function resizeDish(w, h) {
   S.sel = null;
   clampCam();
   syncDishBtn(); renderTray();
-  tlog('> DISH ' + w + '×' + h, 't-sys');
+  tlog('> ' + tr('lifelab.log.dishSize', { w, h }), 't-sys');
 }
 
 function syncDishBtn() {
@@ -691,8 +693,8 @@ function cycleDish() {
   const [w, h] = DISH_SIZES[(i + 1) % DISH_SIZES.length];
   const lost = (w < S.L.w || h < S.L.h) ? S.eng.pop - S.eng.rectCount({ x: 0, y: 0, w: Math.min(w, S.L.w), h: Math.min(h, S.L.h) }) : 0;
   if (lost > 0) {
-    showMsg('SHRINK THE DISH?', lost + ' cells lie outside ' + w + '×' + h + ' and would be lost.',
-      [{ label: 'SHRINK IT', fn: () => { hideMsg(); resizeDish(w, h); } }, { label: 'KEEP IT', fn: hideMsg }], true);
+    showMsg(tr('lifelab.dialog.shrinkTitle'), tr('lifelab.dialog.shrinkBody', { lost, w, h }),
+      [{ label: tr('lifelab.dialog.shrinkIt'), fn: () => { hideMsg(); resizeDish(w, h); } }, { label: tr('lifelab.dialog.keepIt'), fn: hideMsg }], true);
     return;
   }
   resizeDish(w, h);
@@ -709,13 +711,13 @@ function rewindCap() { return Math.max(3, Math.min(40, Math.floor(1.6e7 / (S.L.w
  * board can hold a lot of work, which is why it asks first.
  */
 function wipeSave() {
-  if (S.eng.pop === 0) { deny('the dish is already empty'); return; }
+  if (S.eng.pop === 0) { deny(tr('lifelab.log.dishAlreadyEmpty')); return; }
   showMsg(
-    'CLEAR THE DISH?',
-    'This removes every cell on the board. Nothing can undo it.',
+    tr('lifelab.dialog.clearTitle'),
+    tr('lifelab.dialog.clearBody'),
     [
       {
-        label: 'CLEAR IT',
+        label: tr('lifelab.dialog.clearIt'),
         fn: () => {
           pushUndo();
           S.piece = null; syncPieceBar(true);
@@ -724,10 +726,10 @@ function wipeSave() {
           S.rewind.length = 0;
           S.running = false; S.phase = 'edit'; S.snap = null;
           hideMsg(); syncRun();
-          tlog('> DISH CLEARED', 't-warn');
+          tlog('> ' + tr('lifelab.log.dishCleared'), 't-warn');
         },
       },
-      { label: 'KEEP IT', fn: hideMsg },
+      { label: tr('lifelab.dialog.keepIt'), fn: hideMsg },
     ],
     true
   );
@@ -739,12 +741,12 @@ function wipeSave() {
 function startPause() {
   if (S.running) { S.running = false; syncRun(); return; }
   commitPiece();
-  if (S.eng.pop === 0) { deny('the dish is empty'); return; }
+  if (S.eng.pop === 0) { deny(tr('lifelab.log.dishEmpty')); return; }
   S.running = true; syncRun();
 }
 function stepOnce() {
   commitPiece();
-  if (S.eng.pop === 0) { deny('the dish is empty'); return; }
+  if (S.eng.pop === 0) { deny(tr('lifelab.log.dishEmpty')); return; }
   S.running = false; doStep(); syncRun();
 }
 function soup() {
@@ -754,7 +756,7 @@ function soup() {
   for (let y = 0; y < S.L.h; y++)
     for (let x = 0; x < S.L.w; x++)
       e.set(x, y, Math.random() < 0.12 ? 1 : 0);
-  tlog('> SOUP — 12% random fill', 't-sys');
+  tlog('> ' + tr('lifelab.log.soupFill'), 't-sys');
 }
 
 function doStep() {
@@ -768,17 +770,17 @@ function doStep() {
 
 function stepBack() {
   const prev = S.rewind.pop();
-  if (!prev) { deny('nothing further back is kept'); return; }
+  if (!prev) { deny(tr('lifelab.log.rewindNothing')); return; }
   S.running = false;
   S.eng.restore(prev);
   syncRun(); updateStats(); draw();
-  tlog('> REWIND to gen ' + S.eng.gen, 't-sys');
+  tlog('> ' + tr('lifelab.log.rewindTo', { gen: S.eng.gen }), 't-sys');
 }
 
 function syncRun() {
   if (!el.run) return;
   el.run.innerHTML = (S.running ? ICONS.pause : ICONS.play) +
-    '<span>' + (S.running ? 'PAUSE' : 'RUN') + '</span>';
+    '<span>' + (S.running ? tr('lifelab.ui.pause') : tr('lifelab.ui.run')) + '</span>';
 }
 function syncTools() {
   for (const [n, b] of Object.entries(el.toolBtns)) b.classList.toggle('on', S.tool === n);
@@ -791,10 +793,10 @@ function syncTools() {
 function inGrid(c) { return c.x >= 0 && c.y >= 0 && c.x < S.L.w && c.y < S.L.h; }
 
 function canEditCell(x, y, quiet) {
-  if (!S.L.sandbox && S.phase !== 'edit') { if (!quiet) deny('Cannot edit while running — RESET to gen 0 first'); return false; }
+  if (!S.L.sandbox && S.phase !== 'edit') { if (!quiet) deny(tr('lifelab.log.cannotEditWhileRunning')); return false; }
   const z = S.L.editable;
   if (z && !(x >= z.x && y >= z.y && x < z.x + z.w && y < z.y + z.h)) {
-    if (!quiet) deny('Placement allowed only inside the dashed LAUNCH zone');
+    if (!quiet) deny(tr('lifelab.log.placementLaunchZone'));
     return false;
   }
   return true;
@@ -805,7 +807,7 @@ function paint(x, y, v) {
   if (!canEditCell(x, y)) return;
   if (v > 0 && !S.L.sandbox && S.L.budget &&
       !S.eng.get(x, y) && (S.eng.pop - S.presetPop) >= S.L.budget) {
-    deny('Cell budget exhausted (limit ' + S.L.budget + ')'); return;
+    deny(tr('lifelab.log.budgetExhausted', { n: S.L.budget })); return;
   }
   S.eng.set(x, y, v);
 }
@@ -849,17 +851,17 @@ function showPrompt(title, text, placeholder, onOk, body = '', withBody = false)
   }
   if (withBody || body) {
     area = document.createElement('textarea'); area.className = 'pta'; area.spellcheck = false;
-    area.placeholder = 'x = 3, y = 3\nbob$2bo$3o!';
+    area.placeholder = tr('lifelab.ui.rlePlaceholder');
     if (body) { area.value = body; area.readOnly = true; }
     box.appendChild(area);
   }
   const row = document.createElement('div'); row.className = 'row';
   if (onOk) {
-    const ok = document.createElement('button'); ok.className = 'tb'; ok.innerHTML = '<span>OK</span>';
+    const ok = document.createElement('button'); ok.className = 'tb'; ok.innerHTML = '<span>' + tr('lifelab.dialog.ok') + '</span>';
     ok.onclick = () => onOk(input.value.trim(), area ? area.value : '');
     row.appendChild(ok);
   }
-  const cancel = document.createElement('button'); cancel.className = 'tb'; cancel.innerHTML = '<span>' + (onOk ? 'CANCEL' : 'CLOSE') + '</span>';
+  const cancel = document.createElement('button'); cancel.className = 'tb'; cancel.innerHTML = '<span>' + (onOk ? tr('lifelab.dialog.cancel') : tr('lifelab.dialog.close')) + '</span>';
   cancel.onclick = hideMsg;
   row.appendChild(cancel);
   box.appendChild(row); msgEl.appendChild(box);
@@ -1448,7 +1450,7 @@ function updateGuide() {
   guideEl.style.display = 'flex';
   gstep.style.color = L.accent || '#56b6c2';
   gstep.textContent = 'B3/S23';
-  gtext.textContent = L.steps[0].text;
+  gtext.textContent = tr(L.steps[0].text);
   syncPointer(null);
 }
 
@@ -1572,8 +1574,8 @@ export function start() {
   // headless driver for automated checks
   window.lifelab = { S, loadLevel, doStep, startPause, step: n => { for (let i = 0; i < n; i++) doStep(); draw(); updateStats(); } };
 
-  tlog('LIFE.LAB v0.2 — cellular automaton laboratory', 't-hd');
-  tlog('rule: B3/S23 | grid: 320x200 bounded | host: krsz.in');
+  tlog(tr('lifelab.log.boot1'), 't-hd');
+  tlog(tr('lifelab.log.boot2'));
   // Straight into the dish. There is only one, and a chooser over a single
   // choice is a door with nothing behind it.
   S.mode = 'sandbox';

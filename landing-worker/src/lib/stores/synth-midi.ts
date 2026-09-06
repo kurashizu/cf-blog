@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { tr } from '$lib/i18n';
 import { modularSynth, PIANO_ROLL_NOTES, type VelocityCurve } from '../synth';
 import { activeTrackId } from './synth-transport';
 import { holdManualNote, releaseManualNote } from './synth-tracks';
@@ -69,7 +70,7 @@ export function initMidi(): () => void {
 		let firstDeviceName: string | null = null;
 		for (const input of access.inputs.values()) {
 			input.onmidimessage = handleMidiMessage;
-			const name = input.name || `MIDI Device (${input.id})`;
+			const name = input.name || tr('synth.midi.deviceFallbackName', { id: input.id });
 			devList.push({ id: input.id, name });
 			if (!firstDeviceName) firstDeviceName = name;
 		}

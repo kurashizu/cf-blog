@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade } from '$lib/perf-transitions';
 	import Dropdown from '../chrome/Dropdown.svelte';
+	import { t, tr } from '$lib/i18n';
 
 	let stream: MediaStream | null = null;
 	let video: HTMLVideoElement | undefined = $state();
@@ -28,7 +29,7 @@
 				video: deviceId ? { deviceId: { exact: deviceId } } : true
 			});
 		} catch (e) {
-			error = e instanceof Error ? `${e.name}: ${e.message}` : 'Camera access denied';
+			error = e instanceof Error ? tr('utilities.camera.error.named', { name: e.name, message: e.message }) : tr('utilities.camera.error.deniedFallback');
 			return;
 		}
 		running = true;
@@ -49,17 +50,17 @@
 		const s = track.getSettings();
 		const caps = track.getCapabilities?.();
 		settings = [
-			{ label: 'DEVICE', value: track.label || '(label withheld)' },
-			{ label: 'RESOLUTION', value: s.width && s.height ? `${s.width} × ${s.height}` : 'n/a' },
-			{ label: 'DECLARED FPS', value: s.frameRate ? `${Math.round(s.frameRate)} fps` : 'n/a' },
-			{ label: 'ASPECT', value: s.aspectRatio ? s.aspectRatio.toFixed(3) : 'n/a' },
-			{ label: 'FACING', value: s.facingMode ?? 'n/a (desktop cameras omit it)' },
+			{ label: tr('utilities.camera.settings.device'), value: track.label || tr('utilities.camera.settings.device.labelWithheld') },
+			{ label: tr('utilities.camera.settings.resolution'), value: s.width && s.height ? `${s.width} × ${s.height}` : tr('utilities.camera.settings.resolution.na') },
+			{ label: tr('utilities.camera.settings.declaredFps'), value: s.frameRate ? tr('utilities.camera.settings.declaredFps.value', { fps: Math.round(s.frameRate) }) : tr('utilities.camera.settings.declaredFps.na') },
+			{ label: tr('utilities.camera.settings.aspect'), value: s.aspectRatio ? s.aspectRatio.toFixed(3) : tr('utilities.camera.settings.aspect.na') },
+			{ label: tr('utilities.camera.settings.facing'), value: s.facingMode ?? tr('utilities.camera.settings.facing.na') },
 			{
-				label: 'MAX CAPABILITY',
+				label: tr('utilities.camera.settings.maxCapability'),
 				value:
 					caps?.width && caps?.height
 						? `${(caps.width as { max?: number }).max ?? '?'} × ${(caps.height as { max?: number }).max ?? '?'}`
-						: 'n/a'
+						: tr('utilities.camera.settings.maxCapability.na')
 			}
 		];
 	}
@@ -107,14 +108,14 @@
 				onclick={stop}
 				class="press px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black transition-colors"
 			>
-				STOP &amp; RELEASE CAMERA
+				{$t('utilities.camera.stop')}
 			</button>
 		{:else}
 			<button
 				onclick={() => start()}
 				class="press px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors {error ? 'shake-once' : ''}"
 			>
-				GRANT CAMERA &amp; START
+				{$t('utilities.camera.start')}
 			</button>
 		{/if}
 
@@ -124,14 +125,14 @@
 				onchange={(v) => start(v)}
 				color="#c678dd"
 				width="260px"
-				placeholder="camera"
-				title="Capture device"
-				options={devices.map((d) => ({ value: d.deviceId, label: d.label || `camera ${d.deviceId.slice(0, 6)}` }))}
+				placeholder={$t('utilities.camera.device.placeholder')}
+				title={$t('utilities.camera.device.title')}
+				options={devices.map((d) => ({ value: d.deviceId, label: d.label || $t('utilities.camera.device.fallback', { id: d.deviceId.slice(0, 6) }) }))}
 			/>
 		{/if}
 
 		<span class="text-[11px] font-mono text-white/40">
-			The preview stays in this tab — no frame is stored or sent anywhere.
+			{$t('utilities.camera.privacyNote')}
 		</span>
 	</div>
 
@@ -144,10 +145,10 @@
 		<video bind:this={video} muted playsinline class="max-h-[42vh] w-auto transition-opacity duration-200 {running ? 'opacity-100' : 'opacity-0 absolute'}"></video>
 		{#if running}
 			<span class="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 bg-black/70 border border-[#e06c75]/50 rounded-xs text-[10px] font-mono font-bold text-[#e06c75]">
-				<span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>LIVE
+				<span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>{$t('utilities.camera.live')}
 			</span>
 		{:else}
-			<span class="text-xs font-mono text-white/30 py-12">no stream</span>
+			<span class="text-xs font-mono text-white/30 py-12">{$t('utilities.camera.noStream')}</span>
 		{/if}
 	</div>
 
@@ -160,12 +161,12 @@
 				</div>
 			{/each}
 			<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2">
-				<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">MEASURED FPS</span>
+				<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{$t('utilities.camera.measuredFps')}</span>
 				<span class="text-xs font-mono font-bold text-[#98c379] truncate">
 					{#if !frameCallbackSupported}
-						n/a (no requestVideoFrameCallback)
+						{$t('utilities.camera.measuredFps.unsupported')}
 					{:else}
-						{measuredFps === null ? 'sampling…' : `${measuredFps} fps`}
+						{measuredFps === null ? $t('utilities.camera.measuredFps.sampling') : $t('utilities.camera.measuredFps.value', { fps: measuredFps })}
 					{/if}
 				</span>
 			</div>

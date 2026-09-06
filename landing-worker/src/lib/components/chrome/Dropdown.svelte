@@ -8,6 +8,7 @@
 	 */
 	import { scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
+	import { t } from '$lib/i18n';
 	export interface Option {
 		value: string;
 		label: string;
@@ -19,7 +20,7 @@
 		value = $bindable(),
 		options,
 		color = '#56b6c2',
-		placeholder = 'select…',
+		placeholder,
 		title,
 		disabled = false,
 		width = '260px',
@@ -67,7 +68,7 @@
 			: 'hover:bg-white/5'}"
 		style="border-color: {open ? color : `${color}66`}; color: {color}; width: {width}"
 	>
-		<span class="truncate">{selected?.label ?? placeholder}</span>
+		<span class="truncate">{selected?.label ?? placeholder ?? $t('chrome.dropdown.placeholder')}</span>
 		<span class="text-[9px] leading-none opacity-70 inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
 	</button>
 

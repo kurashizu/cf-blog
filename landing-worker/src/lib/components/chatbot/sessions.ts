@@ -1,3 +1,5 @@
+import { tr } from '$lib/i18n';
+
 /**
  * Saved conversations, in IndexedDB.
  *
@@ -151,7 +153,7 @@ export async function sessionsSize(): Promise<{ count: number; bytes: number }> 
 /** A short name for the list, taken from the first thing the visitor said. */
 export function titleFor(turns: { role: string; content: string; notice?: boolean }[]): string {
 	const first = turns.find((t) => t.role === 'user' && !t.notice && t.content.trim());
-	if (!first) return 'new conversation';
+	if (!first) return tr('chatbot.session.newConversation');
 	const line = first.content.trim().split('\n')[0];
 	return line.length > 40 ? line.slice(0, 40) + '…' : line;
 }

@@ -1,3 +1,4 @@
+import { tr } from '$lib/i18n';
 import type { Step } from '../chrome/Onboarding.svelte';
 
 /**
@@ -7,58 +8,64 @@ import type { Step } from '../chrome/Onboarding.svelte';
  *
  * Every binding here is the real one; see PianoKeyboard.svelte for the QWERTY
  * map and PatchManager.svelte for the transport row.
+ *
+ * A function, not a module-level constant: title/body/desc strings are
+ * translated, so they must be resolved at call time (when the tour opens),
+ * not frozen at import time.
  */
-export const SYNTH_TOUR: Step[] = [
-	{
-		target: 'synth-tracks',
-		title: 'TRACKS',
-		body: 'Each chip is one voice with its own oscillators, filter, envelopes and EQ. Click a chip to make it the one every rack below is editing; M and S mute and solo it. OVERLAY draws the other tracks behind the one you are editing so parts line up.',
-		color: '#c678dd'
-	},
-	{
-		target: 'synth-roll',
-		title: 'PIANO ROLL',
-		body: 'Click a cell to place a note, drag across to paint a run, click again to erase. SNAP is the grid the cursor lands on and DUR is how long a placed note is — both go down to 1/12 for triplets. A held note is the same index repeated across cells, so a longer bar really is one longer note.',
-		keys: [
-			{ key: 'LEN', desc: 'pattern length, counted in pages' },
-			{ key: 'METER', desc: '4/4, 3/4, 2/4, 5/4, 6/8 or 7/8' },
-			{ key: 'ACC', desc: 'per-step accent, +1 to +4 dB' }
-		],
-		color: '#56b6c2'
-	},
-	{
-		target: 'synth-keys',
-		title: 'PLAY IT',
-		body: 'Audition the active track from these keys, from a QWERTY row, or from a real MIDI controller if one is plugged in. Notes played here are heard, not recorded — the piano roll above is where a pattern is written.',
-		keys: [
-			{ key: 'Z S X D C…', desc: 'lower octave, white and black keys' },
-			{ key: 'Q 2 W 3 E…', desc: 'upper octave' },
-			{ key: 'Ctrl / Shift', desc: 'octave down / up (also [ and ])' },
-			{ key: 'Space', desc: 'sustain pedal, held = pedal down' }
-		],
-		color: '#98c379'
-	},
-	{
-		target: 'synth-side',
-		title: 'VOICE: RACKS 1-3',
-		body: 'Where the sound is made, in signal order: two oscillators, a fusion stage that layers them or uses one to modulate the other (FM, ring, sync), and a resonant multi-mode filter. Every knob here edits the track selected above.',
-		color: '#e5c07b'
-	},
-	{
-		target: 'synth-rack',
-		title: 'SHAPE: RACKS 4-7',
-		body: 'What happens to that sound over time: dual envelopes for amplitude and filter, an LFO matrix that can drive pitch, cutoff, pan or volume, per-track FX and a six-band EQ, then the output strip with the visualisers.',
-		color: '#61afef'
-	},
-	{
-		target: 'synth-transport',
-		title: 'LOAD, RECORD, BOUNCE',
-		body: 'LOAD picks a built-in song, IMP takes a previously exported patch or a .mid file — every MIDI track becomes a sequencer track, keeping the file’s tempo and time signature. You can drop a .mid anywhere on this page.',
-		keys: [
-			{ key: 'WAV', desc: 'render the pattern offline and download it' },
-			{ key: 'SHARE', desc: 'pack the whole patch into a URL' },
-			{ key: 'SETTINGS', desc: 'global audio and DSP configuration' }
-		],
-		color: '#e06c75'
-	}
-];
+export function synthTour(): Step[] {
+	return [
+		{
+			target: 'synth-tracks',
+			title: tr('synth.tour.tracksTitle'),
+			body: tr('synth.tour.tracksBody'),
+			color: '#c678dd'
+		},
+		{
+			target: 'synth-roll',
+			title: tr('synth.tour.rollTitle'),
+			body: tr('synth.tour.rollBody'),
+			keys: [
+				{ key: 'LEN', desc: tr('synth.tour.rollKeyLen') },
+				{ key: 'METER', desc: tr('synth.tour.rollKeyMeter') },
+				{ key: 'ACC', desc: tr('synth.tour.rollKeyAcc') }
+			],
+			color: '#56b6c2'
+		},
+		{
+			target: 'synth-keys',
+			title: tr('synth.tour.playTitle'),
+			body: tr('synth.tour.playBody'),
+			keys: [
+				{ key: 'Z S X D C…', desc: tr('synth.tour.playKeyLower') },
+				{ key: 'Q 2 W 3 E…', desc: tr('synth.tour.playKeyUpper') },
+				{ key: 'Ctrl / Shift', desc: tr('synth.tour.playKeyOctave') },
+				{ key: 'Space', desc: tr('synth.tour.playKeySustain') }
+			],
+			color: '#98c379'
+		},
+		{
+			target: 'synth-side',
+			title: tr('synth.tour.voiceTitle'),
+			body: tr('synth.tour.voiceBody'),
+			color: '#e5c07b'
+		},
+		{
+			target: 'synth-rack',
+			title: tr('synth.tour.shapeTitle'),
+			body: tr('synth.tour.shapeBody'),
+			color: '#61afef'
+		},
+		{
+			target: 'synth-transport',
+			title: tr('synth.tour.transportTitle'),
+			body: tr('synth.tour.transportBody'),
+			keys: [
+				{ key: 'WAV', desc: tr('synth.tour.transportKeyWav') },
+				{ key: 'SHARE', desc: tr('synth.tour.transportKeyShare') },
+				{ key: 'SETTINGS', desc: tr('synth.tour.transportKeySettings') }
+			],
+			color: '#e06c75'
+		}
+	];
+}

@@ -1,6 +1,7 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { playSound } from '../sound';
+import { tr } from '../i18n';
 import { KEY_TIMBRE_KEYS, type TrackData } from '../synth';
 import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack } from './synth-tracks';
@@ -746,14 +747,22 @@ export const SOUND_PRESETS: SoundPreset[] = [
 
 export const PRESET_CATEGORIES: PresetCategory[] = ['BASS', 'LEAD', 'PLUCK', 'KEYS', 'PAD', 'DRUMS'];
 
-export const CATEGORY_HINTS: Record<PresetCategory, string> = {
-	BASS: 'Low end — subs, acid, FM; play them under C3',
-	LEAD: 'Melody voices — pulses, detuned saws, sync, brass',
-	PLUCK: 'Struck and plucked — fast attack, no sustain',
-	KEYS: 'Keyboards — tines, drawbars, clav, harpsichord',
-	PAD: 'Slow attack, long release, movement from the LFO',
-	DRUMS: 'Single drum sounds; put one on a key in percussion mode, or on a whole track'
+const CATEGORY_HINT_KEYS: Record<PresetCategory, string> = {
+	BASS: 'synthPanels.presets.hintBass',
+	LEAD: 'synthPanels.presets.hintLead',
+	PLUCK: 'synthPanels.presets.hintPluck',
+	KEYS: 'synthPanels.presets.hintKeys',
+	PAD: 'synthPanels.presets.hintPad',
+	DRUMS: 'synthPanels.presets.hintDrums'
 };
+
+/* A sibling component (PresetMenu.svelte) indexes this by category as a plain
+   Record; the Proxy resolves each hint through `tr()` at access time (never
+   at import time), so it always reads in the current locale without either
+   side needing to change shape. */
+export const CATEGORY_HINTS: Record<PresetCategory, string> = new Proxy({} as Record<PresetCategory, string>, {
+	get: (_target, prop: string) => tr(CATEGORY_HINT_KEYS[prop as PresetCategory])
+});
 
 /* What a preset is: the sound of a track, and nothing about where it sits in
    the mix or what it plays -- the engine's KEY_TIMBRE_KEYS, plus the per-track
@@ -872,7 +881,7 @@ export function saveActiveAsPreset(): void {
 	if (!trk) return;
 	const name = uniqueName(presetNameFor(trk), get(allPresets).map((p) => p.name));
 	upsertUserPreset({ name, preset: pickTimbre(trk as unknown as Record<string, unknown>) });
-	showSaveStatus(`✓ PRESET ${name}`);
+	showSaveStatus(tr('synthPanels.toast.presetSaved', { name }));
 	playSound('click');
 }
 
@@ -936,7 +945,7 @@ export function applyPresetFile(file: PresetFile): void {
 		: base;
 	upsertUserPreset({ name, preset: timbre });
 	updateActiveTrack(timbre);
-	showSaveStatus(`✓ PRESET ${name}`);
+	showSaveStatus(tr('synthPanels.toast.presetSaved', { name }));
 	playSound('toggle');
 }
 
@@ -948,7 +957,7 @@ export function handleImportPresetFile(file: File): void {
 			if (!isPresetFile(parsed)) throw new Error('not a preset');
 			applyPresetFile(parsed);
 		} catch {
-			showSaveStatus('X NOT A PRESET');
+			showSaveStatus(tr('synthPanels.toast.notAPreset'));
 		}
 	};
 	reader.readAsText(file);
@@ -1060,7 +1069,7 @@ function kitNames(): string[] {
 /** Put a kit on the active track: percussion on, key table replaced. */
 export function applyKit(kit: DrumKit): void {
 	applyKitToActiveTrack(kit.keys);
-	showSaveStatus(`✓ KIT ${kit.name}`);
+	showSaveStatus(tr('synthPanels.toast.kitApplied', { name: kit.name }));
 	playSound('toggle');
 }
 
@@ -1081,13 +1090,13 @@ export function saveActiveAsKit(): void {
 	const row = get(activeTrackRow);
 	const keys = row?.percussion ? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>) : {};
 	if (!Object.keys(keys).length) {
-		showSaveStatus('X NO KIT — turn on P and give keys their sounds first');
+		showSaveStatus(tr('synthPanels.toast.noKitYet'));
 		return;
 	}
 	const base = row!.name.replace(/^TRK\s*\d+\s*:\s*/i, '').trim().toUpperCase() || 'KIT';
 	const name = uniqueName(`${base} KIT`, kitNames());
 	upsertUserKit({ name, keys });
-	showSaveStatus(`✓ KIT ${name}`);
+	showSaveStatus(tr('synthPanels.toast.kitApplied', { name }));
 	playSound('click');
 }
 
@@ -1112,7 +1121,7 @@ export function exportActiveKit(): void {
 	const row = get(activeTrackRow);
 	const keys = row?.percussion ? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>) : {};
 	if (!Object.keys(keys).length) {
-		showSaveStatus('X NO KIT — turn on P and give keys their sounds first');
+		showSaveStatus(tr('synthPanels.toast.noKitYet'));
 		return;
 	}
 	const name = row!.name.replace(/^TRK\s*\d+\s*:\s*/i, '').trim().toUpperCase() || 'KIT';
@@ -1137,7 +1146,7 @@ export function applyKitFile(file: KitFile): void {
 	const name = BUILTIN_KITS.some((k) => k.name === base) ? uniqueName(base, kitNames()) : base;
 	upsertUserKit({ name, keys });
 	applyKitToActiveTrack(keys);
-	showSaveStatus(`✓ KIT ${name}`);
+	showSaveStatus(tr('synthPanels.toast.kitApplied', { name }));
 	playSound('toggle');
 }
 
@@ -1150,7 +1159,7 @@ export function handleImportKitFile(file: File): void {
 			else if (isPresetFile(parsed)) applyPresetFile(parsed);
 			else throw new Error('not a kit');
 		} catch {
-			showSaveStatus('X NOT A KIT');
+			showSaveStatus(tr('synthPanels.toast.notAKit'));
 		}
 	};
 	reader.readAsText(file);

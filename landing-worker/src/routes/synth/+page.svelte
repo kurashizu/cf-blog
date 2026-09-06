@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import SynthWorkspace from '$lib/components/synth/SynthWorkspace.svelte';
 	import { TAB_TITLES } from '$lib/routes-map';
 	import { handleImportMidiFile, isMidiFile } from '$lib/stores/synth-import';
@@ -55,9 +56,9 @@
 	{#if dragging}
 		<div class="absolute inset-0 z-[110] border-2 border-dashed border-[#c678dd] bg-black/70 flex items-center justify-center pointer-events-none rounded-sm">
 			<div class="text-center font-mono px-4">
-				<div class="text-sm sm:text-base font-black text-[#c678dd]">DROP TO LOAD</div>
+				<div class="text-sm sm:text-base font-black text-[#c678dd]">{$t('synth.drop.title')}</div>
 				<div class="text-[11px] sm:text-xs text-white/60 mt-1">
-					.mid → one sequencer track per MIDI track · .json → synth patch, or a preset onto the active track
+					{$t('synth.drop.body')}
 				</div>
 			</div>
 		</div>

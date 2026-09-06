@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { edgeTrace, edgeTraceMs, edgeTraceStatus, loadEdgeTrace } from '../../stores/edge';
+	import { t, tr } from '$lib/i18n';
 
 	interface Row {
 		label: string;
@@ -9,7 +10,7 @@
 		title?: string;
 	}
 
-	let battery = $state<Row[]>([{ label: 'BATTERY', value: 'reading…' }]);
+	let battery = $state<Row[]>([{ label: tr('utilities.net.battery.label'), value: tr('utilities.net.battery.reading') }]);
 	let network = $state<Row[]>([]);
 	let storage = $state<Row[]>([]);
 	let permissions = $state<Row[]>([]);
@@ -22,31 +23,31 @@
 	}
 
 	function formatSeconds(s: number): string {
-		if (!isFinite(s) || s === 0) return 'n/a';
+		if (!isFinite(s) || s === 0) return tr('utilities.net.battery.time.na');
 		const h = Math.floor(s / 3600);
 		const m = Math.round((s % 3600) / 60);
-		return h ? `${h}h ${m}m` : `${m}m`;
+		return h ? tr('utilities.net.battery.time.hoursMinutes', { h, m }) : tr('utilities.net.battery.time.minutes', { m });
 	}
 
 	async function readBattery(): Promise<() => void> {
 		const nav = navigator as Navigator & { getBattery?: () => Promise<BatteryLike> };
 		if (!nav.getBattery) {
-			battery = [{ label: 'BATTERY', value: 'n/a — Battery API removed in this browser', color: '#e5c07b' }];
+			battery = [{ label: tr('utilities.net.battery.label'), value: tr('utilities.net.battery.removed'), color: '#e5c07b' }];
 			return () => {};
 		}
 		let b: BatteryLike;
 		try {
 			b = await nav.getBattery();
 		} catch {
-			battery = [{ label: 'BATTERY', value: 'n/a (blocked)', color: '#e5c07b' }];
+			battery = [{ label: tr('utilities.net.battery.label'), value: tr('utilities.net.battery.blocked'), color: '#e5c07b' }];
 			return () => {};
 		}
 		const render = () => {
 			battery = [
-				{ label: 'CHARGE', value: `${Math.round(b.level * 100)}%`, color: b.level > 0.2 ? '#98c379' : '#e06c75' },
-				{ label: 'STATE', value: b.charging ? 'charging' : 'on battery', color: b.charging ? '#98c379' : '#e5c07b' },
-				{ label: 'TIME TO FULL', value: b.charging ? formatSeconds(b.chargingTime) : '—' },
-				{ label: 'TIME REMAINING', value: b.charging ? '—' : formatSeconds(b.dischargingTime) }
+				{ label: tr('utilities.net.battery.charge'), value: `${Math.round(b.level * 100)}%`, color: b.level > 0.2 ? '#98c379' : '#e06c75' },
+				{ label: tr('utilities.net.battery.state'), value: b.charging ? tr('utilities.net.battery.state.charging') : tr('utilities.net.battery.state.onBattery'), color: b.charging ? '#98c379' : '#e5c07b' },
+				{ label: tr('utilities.net.battery.timeToFull'), value: b.charging ? formatSeconds(b.chargingTime) : tr('utilities.net.battery.dash') },
+				{ label: tr('utilities.net.battery.timeRemaining'), value: b.charging ? tr('utilities.net.battery.dash') : formatSeconds(b.dischargingTime) }
 			];
 		};
 		render();
@@ -61,15 +62,15 @@
 		}).connection;
 		const render = () => {
 			network = [
-				{ label: 'ONLINE', value: navigator.onLine ? 'yes' : 'no', color: navigator.onLine ? '#98c379' : '#e06c75' },
+				{ label: tr('utilities.net.network.online'), value: navigator.onLine ? tr('utilities.net.network.online.yes') : tr('utilities.net.network.online.no'), color: navigator.onLine ? '#98c379' : '#e06c75' },
 				...(conn
 					? [
-							{ label: 'EFFECTIVE TYPE', value: conn.effectiveType ?? 'n/a', color: '#56b6c2', title: 'Network Information API — a bucket derived from recent throughput, not the physical link' },
-							{ label: 'DOWNLINK EST.', value: conn.downlink === undefined ? 'n/a' : `${conn.downlink} Mbit/s` },
-							{ label: 'RTT EST.', value: conn.rtt === undefined ? 'n/a' : `${conn.rtt} ms` },
-							{ label: 'DATA SAVER', value: conn.saveData ? 'on' : 'off' }
+							{ label: tr('utilities.net.network.effectiveType'), value: conn.effectiveType ?? tr('utilities.net.network.effectiveType.na'), color: '#56b6c2', title: tr('utilities.net.network.effectiveType.title') },
+							{ label: tr('utilities.net.network.downlink'), value: conn.downlink === undefined ? tr('utilities.net.network.downlink.na') : tr('utilities.net.network.downlink.value', { mbit: conn.downlink }) },
+							{ label: tr('utilities.net.network.rtt'), value: conn.rtt === undefined ? tr('utilities.net.network.rtt.na') : tr('utilities.net.network.rtt.value', { ms: conn.rtt }) },
+							{ label: tr('utilities.net.network.dataSaver'), value: conn.saveData ? tr('utilities.net.network.dataSaver.on') : tr('utilities.net.network.dataSaver.off') }
 						]
-					: [{ label: 'CONNECTION API', value: 'n/a — Chromium only', color: '#e5c07b' }])
+					: [{ label: tr('utilities.net.network.connectionApi.label'), value: tr('utilities.net.network.connectionApi.na'), color: '#e5c07b' }])
 			];
 		};
 		render();
@@ -86,21 +87,21 @@
 
 	async function readStorage() {
 		if (!navigator.storage?.estimate) {
-			storage = [{ label: 'STORAGE', value: 'n/a', color: '#e5c07b' }];
+			storage = [{ label: tr('utilities.net.storage.label'), value: tr('utilities.net.storage.na'), color: '#e5c07b' }];
 			return;
 		}
 		const { quota, usage } = await navigator.storage.estimate();
 		const persisted = navigator.storage.persisted ? await navigator.storage.persisted() : null;
 		storage = [
-			{ label: 'QUOTA', value: quota === undefined ? 'n/a' : `${(quota / 1024 ** 3).toFixed(2)} GB`, color: '#56b6c2' },
-			{ label: 'USED', value: usage === undefined ? 'n/a' : `${(usage / 1024 ** 2).toFixed(2)} MB` },
-			{ label: 'PERSISTED', value: persisted === null ? 'n/a' : persisted ? 'yes' : 'no (evictable)' }
+			{ label: tr('utilities.net.storage.quota'), value: quota === undefined ? tr('utilities.net.storage.quota.na') : tr('utilities.net.storage.quota.value', { gb: (quota / 1024 ** 3).toFixed(2) }), color: '#56b6c2' },
+			{ label: tr('utilities.net.storage.used'), value: usage === undefined ? tr('utilities.net.storage.used.na') : tr('utilities.net.storage.used.value', { mb: (usage / 1024 ** 2).toFixed(2) }) },
+			{ label: tr('utilities.net.storage.persisted'), value: persisted === null ? tr('utilities.net.storage.persisted.na') : persisted ? tr('utilities.net.storage.persisted.yes') : tr('utilities.net.storage.persisted.no') }
 		];
 	}
 
 	async function readPermissions() {
 		if (!navigator.permissions?.query) {
-			permissions = [{ label: 'PERMISSIONS API', value: 'n/a', color: '#e5c07b' }];
+			permissions = [{ label: tr('utilities.net.permissions.label'), value: tr('utilities.net.permissions.na'), color: '#e5c07b' }];
 			return;
 		}
 		const names = ['camera', 'microphone', 'geolocation', 'notifications', 'midi'];
@@ -114,7 +115,7 @@
 					color: status.state === 'granted' ? '#98c379' : status.state === 'denied' ? '#e06c75' : '#e5c07b'
 				});
 			} catch {
-				rows.push({ label: name.toUpperCase(), value: 'not queryable' });
+				rows.push({ label: name.toUpperCase(), value: tr('utilities.net.permissions.notQueryable') });
 			}
 		}
 		permissions = rows;
@@ -132,25 +133,27 @@
 	let traceRows = $derived<Row[]>(
 		$edgeTrace
 			? [
-					{ label: 'COLO', value: `${$edgeTrace.colo}${$edgeTrace.loc ? ` / ${$edgeTrace.loc}` : ''}`, color: '#98c379', title: 'The Cloudflare point of presence serving you right now' },
-					{ label: 'PROTOCOL', value: $edgeTrace.http, color: '#56b6c2' },
-					{ label: 'TLS', value: $edgeTrace.tls },
-					{ label: 'KEY EXCHANGE', value: $edgeTrace.kex || 'n/a' },
-					{ label: 'CLIENT IP', value: $edgeTrace.ip },
-					{ label: 'WARP', value: $edgeTrace.warp },
-					{ label: 'TRACE RTT', value: $edgeTraceMs === null ? 'n/a' : `${$edgeTraceMs} ms`, color: '#e5c07b' },
-					{ label: 'REQUEST ID', value: $edgeTrace.fl }
+					{ label: $t('utilities.net.edge.colo'), value: `${$edgeTrace.colo}${$edgeTrace.loc ? ` / ${$edgeTrace.loc}` : ''}`, color: '#98c379', title: $t('utilities.net.edge.colo.title') },
+					{ label: $t('utilities.net.edge.protocol'), value: $edgeTrace.http, color: '#56b6c2' },
+					{ label: $t('utilities.net.edge.tls'), value: $edgeTrace.tls },
+					{ label: $t('utilities.net.edge.keyExchange'), value: $edgeTrace.kex || $t('utilities.net.edge.na') },
+					{ label: $t('utilities.net.edge.clientIp'), value: $edgeTrace.ip },
+					{ label: $t('utilities.net.edge.warp'), value: $edgeTrace.warp },
+					{ label: $t('utilities.net.edge.traceRtt'), value: $edgeTraceMs === null ? $t('utilities.net.edge.traceRtt.na') : $t('utilities.net.edge.traceRtt.value', { ms: $edgeTraceMs }), color: '#e5c07b' },
+					{ label: $t('utilities.net.edge.requestId'), value: $edgeTrace.fl }
 				]
-			: [{ label: 'EDGE TRACE', value: $edgeTraceStatus === 'probing' ? 'probing…' : 'unavailable', color: '#e5c07b' }]
+			: [{ label: $t('utilities.net.edge.status'), value: $edgeTraceStatus === 'probing' ? $t('utilities.net.edge.status.probing') : $t('utilities.net.edge.status.unavailable'), color: '#e5c07b' }]
 	);
 
-	const SECTIONS = [
-		{ key: 'edge', title: 'CLOUDFLARE EDGE', color: '#98c379', note: 'live from /cdn-cgi/trace' },
-		{ key: 'network', title: 'NETWORK', color: '#56b6c2', note: 'browser-reported' },
-		{ key: 'battery', title: 'POWER', color: '#e5c07b', note: 'Battery Status API' },
-		{ key: 'storage', title: 'STORAGE', color: '#c678dd', note: 'StorageManager estimate' },
-		{ key: 'permissions', title: 'PERMISSIONS', color: '#61afef', note: 'Permissions API state' }
+	const SECTION_DEFS = [
+		{ key: 'edge', color: '#98c379', titleKey: 'utilities.net.section.edge', noteKey: 'utilities.net.section.edge.note' },
+		{ key: 'network', color: '#56b6c2', titleKey: 'utilities.net.section.network', noteKey: 'utilities.net.section.network.note' },
+		{ key: 'battery', color: '#e5c07b', titleKey: 'utilities.net.section.battery', noteKey: 'utilities.net.section.battery.note' },
+		{ key: 'storage', color: '#c678dd', titleKey: 'utilities.net.section.storage', noteKey: 'utilities.net.section.storage.note' },
+		{ key: 'permissions', color: '#61afef', titleKey: 'utilities.net.section.permissions', noteKey: 'utilities.net.section.permissions.note' }
 	] as const;
+
+	let SECTIONS = $derived(SECTION_DEFS.map((s) => ({ ...s, title: $t(s.titleKey), note: $t(s.noteKey) })));
 
 	let sectionRows = $derived<Record<string, Row[]>>({
 		edge: traceRows,
@@ -167,7 +170,7 @@
 			onclick={() => loadEdgeTrace(true)}
 			class="press px-2.5 py-1.5 border border-[#98c379]/50 text-[#98c379] rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
 		>
-			RE-TRACE EDGE
+			{$t('utilities.net.retrace')}
 		</button>
 	</div>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { activeTrackId } from '../../stores/synth-transport';
 	import { tracksState, isOverlayMode, overlayTrackIds, toggleTrackMute, toggleTrackSolo } from '../../stores/synth-tracks';
@@ -48,8 +49,8 @@
 			? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_rgba(86,182,194,0.5)]'
 			: 'border-white/20 text-white/60 hover:text-white hover:border-white/50'}"
 		title={$isOverlayMode
-			? 'Multi-Track Overlay Mode: ACTIVE — Click TRKs to multi-select and layer on Piano Roll'
-			: 'Multi-Track Overlay Mode: OFF — Click to enable multi-track layered view on Piano Roll'}
+			? $t('synth.tracks.overlayOnHint')
+			: $t('synth.tracks.overlayOffHint')}
 	>
 		<span>⧉</span>
 		<span>OVERLAY</span>
@@ -57,7 +58,7 @@
 
 	<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
 	<!-- One label for the row; the chips carry only the number, so eight of them still fit. -->
-	<span class="text-white/50 font-bold text-xs shrink-0 select-none" title="Tracks — click a number to edit that track; in OVERLAY mode click it to show or hide it on the roll">TRK:</span>
+	<span class="text-white/50 font-bold text-xs shrink-0 select-none" title={$t('synth.tracks.trkLabelHint')}>TRK:</span>
 
 	{#each $tracksState as trk (trk.id)}
 		{@const isSelected = $isOverlayMode ? $overlayTrackIds.includes(trk.id) : $activeTrackId === trk.id}
@@ -76,7 +77,7 @@
 					selectActiveTrack(trk.id);
 				}}
 				class="press pl-1.5 pr-0.5 py-1 flex items-center justify-center cursor-pointer group"
-				title={`Set ${trk.name} as Exclusive Active Track (Controls Modules 1-7, Piano Roll Editing & Piano Keyboard Audition) — Currently ${isActiveEditingTrack ? 'ACTIVE [SOLID]' : 'INACTIVE [HOLLOW]'}`}
+				title={$t('synth.tracks.setActiveHint', { name: trk.name, state: isActiveEditingTrack ? $t('synth.tracks.activeSolid') : $t('synth.tracks.inactiveHollow') })}
 			>
 				<span
 					class="w-2.5 h-2.5 inline-block shrink-0 rounded-[1px] transition-all {isActiveEditingTrack
@@ -91,7 +92,7 @@
 				onclick={() => toggleOverlayVisibility(trk.id)}
 				class="press pl-1 pr-2 py-0.5 font-bold text-xs cursor-pointer flex items-center transition-colors"
 				style={isSelected ? `color: ${trk.color}` : ''}
-				title={$isOverlayMode ? `${trk.name} — Click name to toggle overlay visibility. Active Editing: ${isActiveEditingTrack ? 'YES' : 'NO'}` : `Select ${trk.name}`}
+				title={$isOverlayMode ? $t('synth.tracks.overlayToggleHint', { name: trk.name, state: isActiveEditingTrack ? $t('common.yes') : $t('common.no') }) : $t('synth.tracks.selectHint', { name: trk.name })}
 			>
 				<span class="font-mono">{trk.id + 1}</span>
 			</button>
@@ -104,7 +105,7 @@
 						playSound('click');
 					}}
 					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'}"
-					title={`Mute ${trk.name}`}
+					title={$t('synth.tracks.muteHint', { name: trk.name })}
 				>
 					M
 				</button>
@@ -115,7 +116,7 @@
 						playSound('click');
 					}}
 					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'}"
-					title={`Solo ${trk.name} — additive: solo several tracks to hear them together`}
+					title={$t('synth.tracks.soloHint', { name: trk.name })}
 				>
 					S
 				</button>

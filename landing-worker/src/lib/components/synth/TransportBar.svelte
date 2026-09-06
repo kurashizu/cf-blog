@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { setMuted } from '../../stores/sound';
 	import { MAX_GRID_STEPS, METER_SPECS, type TimeSignature, type NoteDurationDiv } from '../../synth';
@@ -223,12 +224,12 @@
 		<div class="w-px h-4 bg-white/15 mx-1"></div>
 
 		<div class="flex items-center gap-1">
-			<span class="opacity-60 font-bold" title="Pattern Length in PAGES (1 page = 1 bar of the current METER) — the loop point">LEN:</span>
-			<button onclick={cycleLen} class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1" title="Cycle page-length presets: 1 → 2 → 4 → 8 → 16 → 32 pages">
+			<span class="opacity-60 font-bold" title={$t('synth.transport.lenHint')}>LEN:</span>
+			<button onclick={cycleLen} class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1" title={$t('synth.transport.lenCycleHint')}>
 				<span>{LEN_PAGE_PRESETS.includes(lenPages) ? lenPages : LEN_PAGE_PRESETS[0]}</span>
 				<span class="text-[10px] opacity-70">⟳</span>
 			</button>
-			<span class="text-white/40 text-[10px] font-bold px-0.5 select-none">OR</span>
+			<span class="text-white/40 text-[10px] font-bold px-0.5 select-none">{$t('synth.transport.or')}</span>
 			<input
 				type="text"
 				inputmode="numeric"
@@ -238,16 +239,16 @@
 				class="w-10 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none {lenIsCustom
 					? 'border-[#98c379] text-[#98c379]'
 					: 'border-white/20 text-white/70 focus:border-white/60'}"
-				title={`Pattern length in pages — ${lenPages} × ${stepsPerBarNow} steps (${$timeMeter}) = ${$totalPatternSteps} steps`}
+				title={$t('synth.transport.lenInputHint', { pages: lenPages, steps: stepsPerBarNow, meter: $timeMeter, total: $totalPatternSteps })}
 			/>
-			<span class="text-white/40 text-[10px] font-bold select-none" title={`${lenPages} pages × ${stepsPerBarNow} steps/page (${$timeMeter}) = ${$totalPatternSteps} steps`}>PGS</span>
+			<span class="text-white/40 text-[10px] font-bold select-none" title={$t('synth.transport.lenPagesHint', { pages: lenPages, steps: stepsPerBarNow, meter: $timeMeter, total: $totalPatternSteps })}>PGS</span>
 		</div>
 
 		<div class="w-px h-4 bg-white/15 mx-1"></div>
 
 		<div class="flex items-center gap-1">
-			<span class="opacity-70 font-bold" title="Time Signature (METER) — Defines beats per measure and metric pulse subdivision">METER:</span>
-			<button onclick={() => stepMeter(-1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title="Previous Time Signature">◄</button>
+			<span class="opacity-70 font-bold" title={$t('synth.transport.meterHint')}>METER:</span>
+			<button onclick={() => stepMeter(-1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title={$t('synth.transport.meterPrevHint')}>◄</button>
 			<button
 				onclick={() => stepMeter(1)}
 				class="px-1.5 py-0.5 border border-[#c678dd]/50 hover:border-[#c678dd] bg-[#c678dd]/10 hover:bg-[#c678dd]/20 rounded-xs font-black text-[#c678dd] hover:text-white cursor-pointer transition-colors min-w-[3.2rem] text-center"
@@ -255,7 +256,7 @@
 			>
 				{$timeMeter}
 			</button>
-			<button onclick={() => stepMeter(1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title="Next Time Signature">►</button>
+			<button onclick={() => stepMeter(1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title={$t('synth.transport.meterNextHint')}>►</button>
 		</div>
 		<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
 		<button
@@ -264,10 +265,10 @@
 				playSound('click');
 			}}
 			class="px-2 py-0.5 border border-[#e5c07b]/50 hover:border-[#e5c07b] bg-[#e5c07b]/10 hover:bg-[#e5c07b]/20 text-[#e5c07b] hover:text-white rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0"
-			title="Open Synthesizer & Audio DSP Global Configuration [SETTINGS]"
+			title={$t('synth.transport.settingsHint')}
 		>
 			<span>⚙</span>
-			<span>SETTINGS</span>
+			<span>{$t('synth.transport.settings')}</span>
 		</button>
 	</div>
 </div>
@@ -281,7 +282,7 @@
 				playSound('click');
 			}}
 			class="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
-			title="Rewind to Beginning (Step 1 / Bar 1.1) — Home; Backspace also stops"
+			title={$t('synth.transport.rewindHint')}
 		>
 			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
 				<rect x="2" y="2.5" width="2" height="11" rx="0.5" />
@@ -295,7 +296,7 @@
 				playSound('click');
 			}}
 			class="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
-			title="Step 1 Bar Backward (◄◄)"
+			title={$t('synth.transport.stepBackHint')}
 		>
 			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
 				<polygon points="8,2.5 2,8 8,13.5" />
@@ -305,7 +306,7 @@
 
 		<button
 			onclick={togglePlayback}
-			title="Play / Stop Sequencer (Resumes from current paused position) — Enter"
+			title={$t('synth.transport.playToggleHint')}
 			class="h-6 px-3 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center justify-center {$isSeqPlaying
 				? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
 				: 'bg-[#98c379] text-black hover:opacity-90'}"
@@ -319,7 +320,7 @@
 				playSound('click');
 			}}
 			class="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
-			title="Step 1 Bar Forward (►►)"
+			title={$t('synth.transport.stepFwdHint')}
 		>
 			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
 				<polygon points="8,2.5 14,8 8,13.5" />
@@ -337,7 +338,7 @@
 			class="h-6 px-2 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0 {$loopMode
 				? 'border-[#98c379]/60 bg-[#98c379]/15 text-[#98c379] hover:bg-[#98c379]/25'
 				: 'border-[#e5c07b]/60 bg-[#e5c07b]/15 text-[#e5c07b] hover:bg-[#e5c07b]/25'}"
-			title={$loopMode ? 'LOOP — the pattern repeats until you stop it. Click for ONCE.' : 'ONCE — plays the pattern through, lets the tails ring and rewinds to bar 1. Click for LOOP.'}
+			title={$loopMode ? $t('synth.transport.loopOnHint') : $t('synth.transport.loopOffHint')}
 		>
 			<span>{$loopMode ? '⟲' : '→'}</span>
 			<span>{$loopMode ? 'LOOP' : 'ONCE'}</span>
@@ -349,7 +350,7 @@
 				playSound('click');
 			}}
 			class="h-6 px-2 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0"
-			title={`Jump Playhead to Cursor Position (Bar ${cursorPosition.bar}.${cursorPosition.beat}, Step ${$cursorStep + 1}/${$totalPatternSteps}) — Click to jump`}
+			title={$t('synth.transport.jumpToCursorHint', { bar: cursorPosition.bar, beat: cursorPosition.beat, step: $cursorStep + 1, total: $totalPatternSteps })}
 		>
 			<span>⤹ CUR:</span>
 			<span class="font-mono font-black">{cursorPosition.bar}.{cursorPosition.beat}</span>
@@ -367,7 +368,7 @@
 
 	<div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
 		<div class="flex items-center gap-1">
-			<span class="opacity-60 font-bold" title="Grid Quantization / Snap Alignment">SNAP:</span>
+			<span class="opacity-60 font-bold" title={$t('synth.transport.snapHint')}>SNAP:</span>
 			{#each DIVS as d (d)}
 				<button
 					onclick={() => {
@@ -382,7 +383,7 @@
 		</div>
 
 		<div class="flex items-center gap-1 border-l border-white/15 pl-1.5">
-			<span class="opacity-60 font-bold" title="Placed Note Duration / Length">DUR:</span>
+			<span class="opacity-60 font-bold" title={$t('synth.transport.durHint')}>DUR:</span>
 			{#each DIVS as d (d)}
 				<button
 					onclick={() => {
@@ -398,13 +399,13 @@
 	</div>
 
 	<div class="flex items-center justify-end gap-1">
-		<span class="opacity-60 font-bold" title="Step Page Navigation">PAGE:</span>
-		<button onclick={prevPage} disabled={$activeStepPage === 0} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title="Previous Page (◄)">
+		<span class="opacity-60 font-bold" title={$t('synth.transport.pageNavHint')}>PAGE:</span>
+		<button onclick={prevPage} disabled={$activeStepPage === 0} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pagePrevHint')}>
 			◄
 		</button>
 		<div
 			class="flex items-center bg-white/10 border border-white/20 hover:border-white/40 rounded-xs px-1 py-0.5 text-xs font-mono font-bold"
-			title={`Active Measure Page: Page ${$activeStepPage + 1} of ${totalPages} — Click/type number to jump`}
+			title={$t('synth.transport.pageJumpHint', { page: $activeStepPage + 1, total: totalPages })}
 		>
 			<input
 				type="text"
@@ -419,7 +420,7 @@
 			/>
 			<span class="opacity-40 select-none">/{totalPages}</span>
 		</div>
-		<button onclick={nextPage} disabled={$activeStepPage >= totalPages - 1} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title="Next Page (►)">
+		<button onclick={nextPage} disabled={$activeStepPage >= totalPages - 1} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pageNextHint')}>
 			►
 		</button>
 		<button
@@ -428,7 +429,7 @@
 				playSound('toggle');
 			}}
 			class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs {$pageFollow ? 'border-[#98c379] bg-[#98c379] text-black font-black' : 'border-white/20 text-white/50'}"
-			title="Follow Playhead Mode (FLW) — Automatically turns pages as the sequencer plays"
+			title={$t('synth.transport.followHint')}
 		>
 			FLW
 		</button>

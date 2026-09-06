@@ -10,11 +10,16 @@
 // `done` predicates are handed the live game state, which is main.js's own S --
 // too large and too mutable to describe usefully here, so it is named rather
 // than typed.
+//
+// `name`, `intro` and `steps[].text` below are i18n keys, not display text --
+// there is only one level, so main.js resolves them with `tr()` in
+// loadLevel/updateGuide at the point they are shown, which keeps them current
+// if the language changes while the dish is open.
 /** @typedef {any} GameState */
 export const LEVELS = [
   {
     tab: 'DISH',
-    name: 'THE DISH',
+    name: 'lifelab.level.dish.name',
     // Big enough that a glider takes a couple of hundred generations to cross
     // and a gun has somewhere to fire into.
     w: 320,
@@ -23,9 +28,9 @@ export const LEVELS = [
     accent: '#61afef',
     tools: ['pan', 'draw'],
     stamps: 'all',
-    intro: ['> B3/S23 — a cell lives on 2 or 3 neighbours, and is born on exactly 3.'],
+    intro: ['lifelab.level.dish.intro'],
     steps: [
-      { text: 'pick a pattern and click to put it down · SELECT picks cells up to move, R / F to turn · Ctrl+Z undoes · RUN' },
+      { text: 'lifelab.level.dish.step1' },
     ],
   },
 ];

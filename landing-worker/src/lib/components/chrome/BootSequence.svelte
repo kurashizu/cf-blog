@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fade, fly } from '$lib/perf-transitions';
+	import { t } from '$lib/i18n';
 	import { loadEdgeTrace } from '../../stores/edge';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 
@@ -232,8 +233,8 @@
 	in:fade={{ duration: 260 }}
 >
 	<div class="text-[10px] sm:text-xs text-white/40 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5">
-		<span>KRSZ EDGE WORKBENCH — POWER-ON SELF TEST</span>
-		<span>press any key to skip</span>
+		<span>{$t('chrome.boot.title')}</span>
+		<span>{$t('chrome.boot.skipHint')}</span>
 	</div>
 
 	<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pt-2 sm:pt-3 text-[11px] sm:text-sm leading-relaxed">
@@ -249,9 +250,9 @@
 
 		{#if finished}
 			<div class="mt-2 sm:mt-3 pt-2 border-t border-white/10 text-[#56b6c2] font-bold" in:fade={{ duration: 200 }}>
-				POST COMPLETE — {rows.filter((r) => r.state === 'ok').length}/{rows.length} checks answered
+				{$t('chrome.boot.complete', { ok: rows.filter((r) => r.state === 'ok').length, total: rows.length })}
 			</div>
-			<div class="text-white/40" in:fade={{ duration: 200, delay: 60 }}>booting workbench…</div>
+			<div class="text-white/40" in:fade={{ duration: 200, delay: 60 }}>{$t('chrome.boot.booting')}</div>
 		{:else}
 			<div class="text-white/30">
 				<span class="inline-block w-[8px] h-[14px] align-middle bg-[#56b6c2] animate-pulse"></span>

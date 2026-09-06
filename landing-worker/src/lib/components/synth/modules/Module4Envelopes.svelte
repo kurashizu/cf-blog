@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { t } from '../../../i18n';
 	import { resetRack4 } from '../../../stores/synth-reset';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
@@ -37,15 +38,14 @@
 	);
 	let envColor = $derived(activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b');
 
-	const ENV_TARGET = { amp: 'volume', vcf: 'filter cutoff', pit: 'pitch' } as const;
-	let attackDesc = $derived(`Attack — Time to ramp the ${ENV_TARGET[activeEnvTab]} envelope up from zero to peak after the note starts`);
-	let decayDesc = $derived(`Decay — Time for the ${ENV_TARGET[activeEnvTab]} envelope to fall from peak down to its sustain level`);
+	const ENV_TARGET_KEY = { amp: 'synthPanels.env.targetVolume', vcf: 'synthPanels.env.targetFilterCutoff', pit: 'synthPanels.env.targetPitch' } as const;
+	let envTarget = $derived($t(ENV_TARGET_KEY[activeEnvTab]));
+	let attackDesc = $derived($t('synthPanels.env.attackDesc', { target: envTarget }));
+	let decayDesc = $derived($t('synthPanels.env.decayDesc', { target: envTarget }));
 	let thirdDesc = $derived(
-		activeEnvTab === 'pit'
-			? 'Pitch Envelope Amount — Depth of the pitch sweep in octaves, positive rises or negative falls from the note'
-			: `Sustain — The steady ${ENV_TARGET[activeEnvTab]} level held for as long as the note is held down`
+		activeEnvTab === 'pit' ? $t('synthPanels.env.pitchAmountDesc') : $t('synthPanels.env.sustainDesc', { target: envTarget })
 	);
-	let releaseDesc = $derived(`Release — Time for the ${ENV_TARGET[activeEnvTab]} envelope to fade back to zero after the note is released`);
+	let releaseDesc = $derived($t('synthPanels.env.releaseDesc', { target: envTarget }));
 
 	function setTab(tab: 'amp' | 'vcf' | 'pit') {
 		activeEnvTab = tab;
@@ -80,7 +80,7 @@
 			<div class="flex items-center gap-1">
 				<button
 					onclick={() => setTab('amp')}
-					title="Amplitude Envelope (AMP) — Shapes volume and loudness contour over time via ADSR"
+					title={$t('synthPanels.env.ampTabHint')}
 					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'amp'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
@@ -89,7 +89,7 @@
 				</button>
 				<button
 					onclick={() => setTab('vcf')}
-					title="Filter Envelope (VCF) — Sweeps filter cutoff frequency over time via ADSR"
+					title={$t('synthPanels.env.vcfTabHint')}
 					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'vcf'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
@@ -98,7 +98,7 @@
 				</button>
 				<button
 					onclick={() => setTab('pit')}
-					title="Pitch Envelope (PIT) — Modulates transient oscillator pitch over time (ideal for punchy kick drums and laser FX)"
+					title={$t('synthPanels.env.pitTabHint')}
 					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'pit'
 						? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
@@ -108,10 +108,10 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-1.5">
-			<span class="text-white/40 flex items-center" title="Signal Flow: To LFO & Dynamic Modulation">
+			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToLfo')}>
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
 			</span>
-			<button onclick={resetRack4} title="RST — reset: put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack4} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 

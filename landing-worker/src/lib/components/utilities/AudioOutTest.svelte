@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 	import Dropdown from '../chrome/Dropdown.svelte';
+	import { t, tr } from '$lib/i18n';
 
 	/**
 	 * This tool owns its own AudioContext rather than borrowing the site's sound
@@ -48,7 +49,7 @@
 			await c.setSinkId(deviceId);
 			readInfo();
 		} catch (e) {
-			error = e instanceof Error ? `Could not switch output: ${e.message}` : 'Could not switch output';
+			error = e instanceof Error ? tr('utilities.audioout.error.sinkSwitch', { message: e.message }) : tr('utilities.audioout.error.sinkSwitchGeneric');
 		}
 	}
 
@@ -57,7 +58,7 @@
 		try {
 			const Klass = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 			if (!Klass) {
-				error = 'WebAudio unavailable in this browser';
+				error = tr('utilities.audioout.error.webAudioUnavailable');
 				return null;
 			}
 			ctx = new Klass();
@@ -69,7 +70,7 @@
 			readInfo();
 			return ctx;
 		} catch {
-			error = 'Could not open an AudioContext';
+			error = tr('utilities.audioout.error.contextFailed');
 			return null;
 		}
 	}
@@ -78,25 +79,25 @@
 	function readInfo() {
 		if (!ctx) return;
 		const rows: { label: string; value: string }[] = [
-			{ label: 'SAMPLE RATE', value: `${ctx.sampleRate} Hz` },
-			{ label: 'STATE', value: ctx.state },
-			{ label: 'CHANNELS', value: `${ctx.destination.channelCount} of max ${ctx.destination.maxChannelCount}` },
-			{ label: 'BASE LATENCY', value: ctx.baseLatency === undefined ? 'n/a' : `${(ctx.baseLatency * 1000).toFixed(1)} ms` }
+			{ label: tr('utilities.audioout.info.sampleRate'), value: `${ctx.sampleRate} Hz` },
+			{ label: tr('utilities.audioout.info.state'), value: ctx.state },
+			{ label: tr('utilities.audioout.info.channels'), value: tr('utilities.audioout.info.channels.value', { count: ctx.destination.channelCount, max: ctx.destination.maxChannelCount }) },
+			{ label: tr('utilities.audioout.info.baseLatency'), value: ctx.baseLatency === undefined ? tr('utilities.audioout.info.baseLatency.na') : tr('utilities.audioout.info.baseLatency.value', { ms: (ctx.baseLatency * 1000).toFixed(1) }) }
 		];
 		// A flat 0 means "not reported" here, not a latency-free device — say so
 		// rather than printing a number no output could actually achieve.
 		const outLatency = (ctx as unknown as { outputLatency?: number }).outputLatency;
 		rows.push({
-			label: 'OUTPUT LATENCY',
-			value: !outLatency ? 'not reported by this browser' : `${(outLatency * 1000).toFixed(1)} ms`
+			label: tr('utilities.audioout.info.outputLatency'),
+			value: !outLatency ? tr('utilities.audioout.info.outputLatency.notReported') : tr('utilities.audioout.info.baseLatency.value', { ms: (outLatency * 1000).toFixed(1) })
 		});
 		const sink = (ctx as unknown as { sinkId?: string }).sinkId;
 		rows.push({
-			label: 'SINK',
+			label: tr('utilities.audioout.info.sink'),
 			value: !sinkSupported
-				? 'system default (setSinkId unsupported)'
+				? tr('utilities.audioout.info.sink.unsupported')
 				: !sink
-					? 'system default'
+					? tr('utilities.audioout.info.sink.default')
 					: (outputs.find((d) => d.deviceId === sink)?.label ?? sink.slice(0, 12))
 		});
 		info = rows;
@@ -170,7 +171,7 @@
 		src.loop = true;
 		connectRouted(src, mode);
 		src.start();
-		running = `NOISE ${mode.toUpperCase()}`;
+		running = tr('utilities.audioout.noise.running', { channel: mode.toUpperCase() });
 		active = { stop: () => src.stop() };
 	}
 
@@ -194,7 +195,7 @@
 		env.connect(master!);
 		osc.start();
 		osc.stop(t0 + duration);
-		running = 'SWEEP 20 Hz → 20 kHz';
+		running = tr('utilities.audioout.sweep.running');
 
 		// The readout tracks the same exponential curve the oscillator follows.
 		let raf = 0;
@@ -236,12 +237,13 @@
 		};
 	});
 
-	const CHANNEL_TESTS = [
-		{ label: 'LEFT ONLY', mode: 'left' as const, color: '#61afef', hint: 'Sound must come from the left speaker only' },
-		{ label: 'RIGHT ONLY', mode: 'right' as const, color: '#e06c75', hint: 'Sound must come from the right speaker only' },
-		{ label: 'BOTH', mode: 'both' as const, color: '#98c379', hint: 'Centred between both speakers' },
-		{ label: 'OUT OF PHASE', mode: 'inverted' as const, color: '#c678dd', hint: 'Right channel inverted — should sound hollow, and near-silent in mono' }
+	const CHANNEL_TEST_DEFS = [
+		{ labelKey: 'utilities.audioout.channel.left.label', mode: 'left' as const, color: '#61afef', hintKey: 'utilities.audioout.channel.left.hint' },
+		{ labelKey: 'utilities.audioout.channel.right.label', mode: 'right' as const, color: '#e06c75', hintKey: 'utilities.audioout.channel.right.hint' },
+		{ labelKey: 'utilities.audioout.channel.both.label', mode: 'both' as const, color: '#98c379', hintKey: 'utilities.audioout.channel.both.hint' },
+		{ labelKey: 'utilities.audioout.channel.inverted.label', mode: 'inverted' as const, color: '#c678dd', hintKey: 'utilities.audioout.channel.inverted.hint' }
 	];
+	let CHANNEL_TESTS = $derived(CHANNEL_TEST_DEFS.map((c) => ({ ...c, label: $t(c.labelKey), hint: $t(c.hintKey) })));
 </script>
 
 <div class="space-y-3">
@@ -249,74 +251,73 @@
 		<div class="text-xs text-[#e06c75] font-mono">{error}</div>
 	{/if}
 
-	<div class="text-[11px] sm:text-xs text-white/45 font-mono leading-relaxed">
-		Runs on its own AudioContext, so it plays even while the workbench is muted.
-		Start at a low level — the sweep reaches full-scale 20 kHz.
+	<div class="text-[11px] sm:text-xs text-white/45 font-mono leading-relaxed whitespace-pre-line">
+		{$t('utilities.audioout.intro')}
 	</div>
 
 	<div class="flex flex-wrap items-center gap-2">
-		{#each CHANNEL_TESTS as t (t.mode)}
+		{#each CHANNEL_TESTS as ct (ct.mode)}
 			<button
-				onclick={() => tone(t.mode, `440 Hz ${t.label}`)}
-				title={t.hint}
+				onclick={() => tone(ct.mode, $t('utilities.audioout.channel.toneRunning', { label: ct.label }))}
+				title={ct.hint}
 				class="press px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors hover:bg-white/10"
-				style="border-color: {t.color}66; color: {t.color}"
+				style="border-color: {ct.color}66; color: {ct.color}"
 			>
-				440Hz {t.label}
+				{$t('utilities.audioout.channel.tone', { label: ct.label })}
 			</button>
 		{/each}
 		<button
 			onclick={sweep}
 			class="press px-2.5 py-1.5 border border-[#e5c07b]/40 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
-			title="Logarithmic sine sweep, 20 Hz to 20 kHz over 8 seconds — reveals resonances and rolloff"
+			title={$t('utilities.audioout.sweep.title')}
 		>
-			SWEEP 20Hz→20kHz
+			{$t('utilities.audioout.sweep.button')}
 		</button>
 		{#each ['left', 'right', 'both'] as const as m (m)}
 			<button
 				onclick={() => noise(m)}
 				class="press px-2.5 py-1.5 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer hover:bg-white/10 transition-colors"
-				title="White noise on the {m} channel"
+				title={$t('utilities.audioout.noise.title', { channel: m })}
 			>
-				NOISE {m.toUpperCase()}
+				{$t('utilities.audioout.noise.button', { channel: m.toUpperCase() })}
 			</button>
 		{/each}
 		<button
 			onclick={stopAll}
 			class="press px-2.5 py-1.5 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer hover:bg-[#e06c75] hover:text-black transition-colors"
 		>
-			STOP
+			{$t('utilities.audioout.stop')}
 		</button>
 	</div>
 
 	<div class="flex flex-wrap items-center gap-2">
-		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">OUTPUT</span>
+		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.audioout.output.label')}</span>
 		<Dropdown
 			bind:value={selectedOutput}
 			onchange={applySink}
 			disabled={!sinkSupported}
 			color="#98c379"
 			width="280px"
-			placeholder="system default"
+			placeholder={$t('utilities.audioout.output.placeholder')}
 			title={sinkSupported
-				? 'Route the test tones to a specific output device'
-				: 'This browser cannot redirect WebAudio to a chosen output — it always uses the system default'}
+				? $t('utilities.audioout.output.title.supported')
+				: $t('utilities.audioout.output.title.unsupported')}
 			options={[
-				{ value: '', label: `system default`, note: outputs.length ? `${outputs.length} available` : undefined },
-				...outputs.map((d) => ({ value: d.deviceId, label: d.label || `output ${d.deviceId.slice(0, 6)}` }))
+				{ value: '', label: $t('utilities.audioout.output.systemDefault'), note: outputs.length ? $t('utilities.audioout.output.available', { count: outputs.length }) : undefined },
+				...outputs.map((d) => ({ value: d.deviceId, label: d.label || $t('utilities.audioout.output.deviceFallback', { id: d.deviceId.slice(0, 6) }) }))
 			]}
 		/>
 		{#if !sinkSupported}
-			<span class="text-[11px] font-mono text-[#e5c07b]">setSinkId unsupported — playing on the system default</span>
+			<span class="text-[11px] font-mono text-[#e5c07b]">{$t('utilities.audioout.output.unsupportedNote')}</span>
 		{:else if labelsHidden}
 			<span class="text-[11px] font-mono text-white/40">
-				Device names stay hidden until a microphone grant exists — the MIC IN tool unlocks them.
+				{$t('utilities.audioout.output.labelsHiddenNote')}
 			</span>
 		{/if}
 	</div>
 
 	<div class="flex flex-wrap items-center gap-3 border border-white/15 bg-black/40 rounded-xs px-2.5 py-2">
-		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">LEVEL</span>
+		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.audioout.level.label')}</span>
 		<div class="flex-1 min-w-[120px]">
 			<HorizontalHardwareFader
 				value={gain}
@@ -331,7 +332,7 @@
 		<span class="text-xs font-mono text-[#98c379] w-12 text-right">{Math.round(gain * 100)}%</span>
 		<span class="text-xs font-mono transition-colors min-w-[160px] flex items-center gap-1.5 {running ? 'text-[#e5c07b]' : 'text-white/35'}">
 			{#if running}<span class="w-1.5 h-1.5 rounded-full bg-[#e5c07b] blink-live shrink-0"></span>{/if}
-			{running ?? 'idle'}{sweepHz ? ` · ${sweepHz} Hz` : ''}
+			{running ?? $t('utilities.audioout.level.idle')}{sweepHz ? $t('utilities.audioout.level.hzSuffix', { hz: sweepHz }) : ''}
 		</span>
 	</div>
 
@@ -345,6 +346,6 @@
 			{/each}
 		</div>
 	{:else}
-		<div class="text-[11px] font-mono text-white/35">Press a test to open the audio device and read its real parameters.</div>
+		<div class="text-[11px] font-mono text-white/35">{$t('utilities.audioout.info.hint')}</div>
 	{/if}
 </div>

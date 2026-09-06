@@ -27,7 +27,7 @@
 	} from '$lib/stores/chrome';
 	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
 	import { textSize, initTextSize } from '$lib/stores/text-scale';
-	import { initLocale } from '$lib/i18n';
+	import { initLocale, t } from '$lib/i18n';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
 	import Sidebar from '$lib/components/chrome/Sidebar.svelte';
@@ -293,7 +293,7 @@
 </script>
 
 <svelte:head>
-	<title>KRSZ™ — Kurashizu's Random-Stuff Zone | Serverless Edge Portal</title>
+	<title>{$t('chrome.layout.pageTitle')}</title>
 </svelte:head>
 
 <ThemeBackgroundVideo />
@@ -368,7 +368,7 @@
 	>
 		<div class="flex items-center justify-between text-xs font-mono font-bold pb-1">
 			<span style="color: {themeStyles.cursorColor}">~ KRSZ CONSOLE // DROP-DOWN</span>
-			<span class="text-white/40">` or Esc to close</span>
+			<span class="text-white/40">{$t('chrome.layout.consoleCloseHint')}</span>
 		</div>
 		<CommandConsole />
 	</div>

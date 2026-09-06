@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { setMuted } from '../../stores/sound';
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
@@ -21,16 +22,18 @@
 		return [...names, ...names.map((n) => `AUTO·${n}`)].reduce((a, b) => (b.length > a.length ? b : a));
 	})();
 
-	const TABS = [
-		{ id: 0, label: '0:modules', color: '#56b6c2', title: 'View 0: Modules — Live Project Portal & Technical Deep Dives [Hotkey: Ctrl+0]' },
-		{ id: 1, label: '1:guestbook', color: '#e06c75', title: 'View 1: Guestbook — Distributed Edge Packet Messenger [Hotkey: Ctrl+1]' },
-		{ id: 2, label: '2:synth', color: '#c678dd', title: 'View 2: Synth — 8-Track WebAudio Modular Synthesizer & Sequencer [Hotkey: Ctrl+2]' },
-		{ id: 3, label: '3:utils', color: '#e5c07b', title: 'View 3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
-		{ id: 4, label: '4:lm-space', color: '#98c379', title: 'View 4: LM.SPACE — the Artificial Analysis model table as a navigable volume, cached through blog.krsz.in [Hotkey: Ctrl+4]' },
-		{ id: 5, label: '5:krsz-vm', color: '#d19a66', title: 'View 5: krsz-vm — a real x86 PC emulated in the browser, running Alpine Linux [Hotkey: Ctrl+5]' },
-		{ id: 6, label: '6:web-lm', color: '#61afef', title: 'View 6: web-lm — a language model running entirely on your GPU via WebGPU, no server [Hotkey: Ctrl+6]' },
-		{ id: 7, label: '7:lifelab', color: '#98c379', title: "View 7: lifelab — Conway's Game of Life as a 25-level campaign, ending at the glider gun [Hotkey: Ctrl+7]" }
-	];
+	/** Tooltip resolves through $t() in this $derived, not a module-level
+	 *  constant, since the locale isn't known at module load time. */
+	let TABS = $derived([
+		{ id: 0, label: '0:modules', color: '#56b6c2', title: $t('chrome.tabbar.tab0') },
+		{ id: 1, label: '1:guestbook', color: '#e06c75', title: $t('chrome.tabbar.tab1') },
+		{ id: 2, label: '2:synth', color: '#c678dd', title: $t('chrome.tabbar.tab2') },
+		{ id: 3, label: '3:utils', color: '#e5c07b', title: $t('chrome.tabbar.tab3') },
+		{ id: 4, label: '4:lm-space', color: '#98c379', title: $t('chrome.tabbar.tab4') },
+		{ id: 5, label: '5:krsz-vm', color: '#d19a66', title: $t('chrome.tabbar.tab5') },
+		{ id: 6, label: '6:web-lm', color: '#61afef', title: $t('chrome.tabbar.tab6') },
+		{ id: 7, label: '7:lifelab', color: '#98c379', title: $t('chrome.tabbar.tab7') }
+	]);
 
 	let tabStrip: HTMLDivElement | undefined = $state();
 	let tabsRow: HTMLDivElement | undefined = $state();
@@ -137,7 +140,7 @@
 	     overflowed -- exactly when a way home is most useful. -->
 	<a
 		href="/"
-		title="krsz.in — Kurashizu's Random-Stuff Zone"
+		title={$t('chrome.tabbar.logoTitle')}
 		class="press bg-black/40 px-0.5 rounded flex items-center shrink-0 hover:bg-black/60 transition-colors"
 	>
 		<!-- Sized against the tab buttons' own line box (30px including their
@@ -155,12 +158,12 @@
 			playSound('toggle');
 		}}
 		data-tour="console-btn"
-		title="Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]"
+		title={$t('chrome.tabbar.consoleTitle')}
 		class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border {$consoleOverlayOpen
 			? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 			: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
 	>
-		<span class="btnlabel">[~]&nbsp;CONSOLE</span><span class="btnlabel-off">[~]</span>
+		<span class="btnlabel">[~]&nbsp;{$t('chrome.tabbar.console')}</span><span class="btnlabel-off">[~]</span>
 	</button>
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -205,7 +208,7 @@
 	<div class="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
 		<button
 			onclick={togglePlayback}
-			title="Master Audio & Sequencer Playback Toggle — Start / Stop Music & Sound Engine"
+			title={$t('chrome.tabbar.playbackTitle')}
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-all whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border {$isSeqPlaying
 				? 'border-[#e06c75] bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75] hover:text-black shadow-[0_0_8px_#e06c75]'
 				: 'border-[#98c379] bg-[#98c379]/10 text-[#98c379] hover:bg-[#98c379] hover:text-black'}"
@@ -220,7 +223,7 @@
 				{/if}
 				<!-- The word sheds with every other button label; the bracket and the
 				     glyph stay, so the control keeps its shape and its state. -->
-				<span class="btnlabel">{$isSeqPlaying ? 'STOP' : 'PLAY'}</span><span>]</span>
+				<span class="btnlabel">{$isSeqPlaying ? $t('chrome.tabbar.stop') : $t('chrome.tabbar.play')}</span><span>]</span>
 			</span>
 		</button>
 		<button
@@ -229,31 +232,31 @@
 				playSound('click');
 			}}
 			data-tour="guide-btn"
-			title="Open the walkthrough — what each view does and every keyboard shortcut"
+			title={$t('chrome.tabbar.guideTitle')}
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
 		>
-			<span class="btnlabel">[?]&nbsp;GUIDE</span><span class="btnlabel-off">[?]</span>
+			<span class="btnlabel">[?]&nbsp;{$t('chrome.tabbar.guide')}</span><span class="btnlabel-off">[?]</span>
 		</button>
 		<button
 			onclick={() => {
 				globalSettingsOpen.set(true);
 				playSound('click');
 			}}
-			title="Global settings — sound, and clearing anything the site has stored in this browser"
+			title={$t('chrome.tabbar.settingsTitle')}
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-white/25 text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] hover:bg-[#56b6c2]/20"
 		>
-			[CFG]
+			[{$t('chrome.tabbar.cfg')}]
 		</button>
 		<button
 			onclick={cycleTheme}
-			title="Color Theme Switcher — Cycle palette (Auto by time of day, Tokyo Matte, Gruvbox Dark, Nord Terminal, Cyber Amber) [Hotkey: T]"
+			title={$t('chrome.tabbar.themeTitle')}
 			class="themebadge press hover:underline cursor-pointer grid text-[#e5c07b] text-center"
 		>
-			<span class="col-start-1 row-start-1 invisible" aria-hidden="true">[THEME: {THEME_LABEL_WIDEST}]</span>
-			<span class="col-start-1 row-start-1">[THEME: {themeLabel}]</span>
+			<span class="col-start-1 row-start-1 invisible" aria-hidden="true">[{$t('chrome.tabbar.themeLabel', { theme: THEME_LABEL_WIDEST })}]</span>
+			<span class="col-start-1 row-start-1">[{$t('chrome.tabbar.themeLabel', { theme: themeLabel })}]</span>
 		</button>
 		<span
-			title="Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers"
+			title={$t('chrome.tabbar.serverlessTitle')}
 			class="servbadge bg-black/40 px-2 py-0.5 text-[#56b6c2]">100%_SERVERLESS</span
 		>
 	</div>

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
+	import { t, tr } from '$lib/i18n';
 	import BoxHeader from './BoxHeader.svelte';
 	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
@@ -101,11 +102,13 @@
 		const list: Section[] = [
 			{
 				id: 'chatbot-model',
-				label: 'WEB-LM MODEL WEIGHTS',
+				label: tr('chrome.settings.storage.modelWeightsLabel'),
 				color: '#61afef',
 				size: modelCache?.bytes ?? null,
 				count: modelCache?.count,
-				detail: modelCache ? `${modelCache.count} file${modelCache.count === 1 ? '' : 's'} — the downloaded GGUF weights, re-fetched on next load` : 'not available in this browser',
+				detail: modelCache
+					? tr('chrome.settings.storage.modelWeightsDetail', { count: modelCache.count })
+					: tr('chrome.settings.storage.notAvailable'),
 				clear: async () => {
 					const { CacheManager } = await import('@wllama/wllama/esm/index.js');
 					await new CacheManager().clear();
@@ -113,61 +116,61 @@
 			},
 			{
 				id: 'chatbot-sessions',
-				label: 'WEB-LM CONVERSATIONS',
+				label: tr('chrome.settings.storage.conversationsLabel'),
 				color: '#c678dd',
 				size: chatBytes.bytes,
 				count: chatBytes.count,
-				detail: `${chatBytes.count} saved conversation${chatBytes.count === 1 ? '' : 's'}, including any attached images`,
+				detail: tr('chrome.settings.storage.conversationsDetail', { count: chatBytes.count }),
 				clear: () => clearSessions()
 			},
 			{
 				id: 'vm-disks',
-				label: 'KRSZ-VM DISK CHANGES',
+				label: tr('chrome.settings.storage.vmDisksLabel'),
 				color: '#d19a66',
 				size: vmBytes,
-				detail: 'everything written to disk inside either emulated machine (i686 and x86-64 each keep their own)',
+				detail: tr('chrome.settings.storage.vmDisksDetail'),
 				clear: async () => {
 					await Promise.all(VM_OVERLAYS.map((n) => clearOverlay(n)));
 				}
 			},
 			{
 				id: 'synth-patch',
-				label: 'SYNTH AUTOSAVE',
+				label: tr('chrome.settings.storage.synthAutosaveLabel'),
 				color: '#98c379',
 				size: localStorageBytes([SYNTH_PATCH_KEY]),
-				detail: 'the last patch you were editing, restored automatically next visit',
+				detail: tr('chrome.settings.storage.synthAutosaveDetail'),
 				clear: async () => removeKeys([SYNTH_PATCH_KEY])
 			},
 			{
 				id: 'console-history',
-				label: 'CONSOLE HISTORY & ALIASES',
+				label: tr('chrome.settings.storage.consoleHistoryLabel'),
 				color: '#56b6c2',
 				size: localStorageBytes(CONSOLE_KEYS),
-				detail: '↑↓ command recall, and any `alias` you defined',
+				detail: tr('chrome.settings.storage.consoleHistoryDetail'),
 				clear: async () => removeKeys(CONSOLE_KEYS)
 			},
 			{
 				id: 'vm-settings',
-				label: 'KRSZ-VM MACHINE CONFIG',
+				label: tr('chrome.settings.storage.vmConfigLabel'),
 				color: '#e5c07b',
 				size: localStorageBytes([VM_SETTINGS_KEY]),
-				detail: 'the RAM / network / boot-mode choices on the krsz-vm config screen',
+				detail: tr('chrome.settings.storage.vmConfigDetail'),
 				clear: async () => removeKeys([VM_SETTINGS_KEY])
 			},
 			{
 				id: 'chatbot-config',
-				label: 'WEB-LM GENERATION CONFIG',
+				label: tr('chrome.settings.storage.genConfigLabel'),
 				color: '#61afef',
 				size: localStorageBytes([CHATBOT_CONFIG_KEY]),
-				detail: 'temperature, top_p and the other sampling settings from the web-lm config panel',
+				detail: tr('chrome.settings.storage.genConfigDetail'),
 				clear: async () => removeKeys([CHATBOT_CONFIG_KEY])
 			},
 			{
 				id: 'tours',
-				label: 'WELCOME & GUIDED TOURS SEEN',
+				label: tr('chrome.settings.storage.toursLabel'),
 				color: '#e06c75',
 				size: localStorageBytes(GUIDE_KEYS),
-				detail: 'the welcome screen, the site tour and every per-view walkthrough offer themselves again on next visit',
+				detail: tr('chrome.settings.storage.toursDetail'),
 				clear: async () => removeKeys(GUIDE_KEYS)
 			}
 		];
@@ -261,9 +264,9 @@
 		<div class="p-3 sm:p-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
 			<!-- Sound -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2.5">
-				<div class="text-xs sm:text-sm font-black text-[#98c379] border-b border-white/10 pb-1">SOUND</div>
+				<div class="text-xs sm:text-sm font-black text-[#98c379] border-b border-white/10 pb-1">{$t('chrome.settings.sound')}</div>
 				<div class="flex items-center justify-between gap-3">
-					<span class="text-xs text-white/70">UI &amp; synth sound effects</span>
+					<span class="text-xs text-white/70">{$t('chrome.settings.soundDesc')}</span>
 					<button
 						onclick={() => {
 							setSoundMuted(!soundMuted);
@@ -273,7 +276,7 @@
 							? 'border-white/20 text-white/40 hover:border-white/40'
 							: 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]'}"
 					>
-						{soundMuted ? 'MUTED' : 'ON'}
+						{soundMuted ? $t('chrome.settings.muted') : $t('common.on')}
 					</button>
 				</div>
 				<div class="flex items-center {soundMuted ? 'opacity-30 pointer-events-none' : ''}">
@@ -294,12 +297,10 @@
 
 			<!-- Text size -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
-				<div class="text-xs sm:text-sm font-black text-[#e5c07b] border-b border-white/10 pb-1">TEXT SIZE</div>
+				<div class="text-xs sm:text-sm font-black text-[#e5c07b] border-b border-white/10 pb-1">{$t('chrome.settings.textSize')}</div>
 				<div class="flex items-center justify-between gap-3 flex-wrap">
 					<span class="text-xs text-white/70 max-w-[70%]">
-						Scales the whole site. AUTO follows the screen — 12 at 720p, 14 at 1080p, 16 at 2K,
-						20 at 4K, 24 at 8K. The typeface is drawn on a 12px grid, so 12 and 24 are exactly
-						sharp and the sizes between them are interpolated a little.
+						{$t('chrome.settings.textSizeDesc')}
 					</span>
 					<div class="flex items-center gap-1 shrink-0">
 						<button
@@ -307,12 +308,12 @@
 								setTextSizeAuto();
 								playSound('click');
 							}}
-							title="Follow the screen's resolution (currently {autoTextSize(screenWidth)}px)"
+							title={$t('chrome.settings.textSizeAutoHint', { px: autoTextSize(screenWidth) })}
 							class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {$textSizeAuto
 								? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
 								: 'border-white/20 text-white/40 hover:border-white/40'}"
 						>
-							AUTO
+							{$t('common.lang.auto').toUpperCase()}
 						</button>
 						{#each TEXT_SIZES as px (px)}
 							<button
@@ -320,7 +321,7 @@
 									setTextSize(px);
 									playSound('click');
 								}}
-								title="{px}px{px % 12 === 0 ? ' — exact on the 12px grid' : ''}{px === DEFAULT_TEXT_SIZE ? ' (default)' : ''}"
+								title="{px}px{px % 12 === 0 ? $t('chrome.settings.textSizeExact') : ''}{px === DEFAULT_TEXT_SIZE ? ` ${$t('chrome.settings.textSizeDefault')}` : ''}"
 								class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {!$textSizeAuto &&
 								$textSize === px
 									? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
@@ -335,11 +336,10 @@
 
 			<!-- Performance -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
-				<div class="text-xs sm:text-sm font-black text-[#61afef] border-b border-white/10 pb-1">PERFORMANCE</div>
+				<div class="text-xs sm:text-sm font-black text-[#61afef] border-b border-white/10 pb-1">{$t('chrome.settings.performance')}</div>
 				<div class="flex items-center justify-between gap-3">
 					<span class="text-xs text-white/70 max-w-[70%]">
-						Drop the background video, every panel's blur, and every hover/press animation. For a slow
-						device or battery saving, not a visual preference.
+						{$t('chrome.settings.performanceDesc')}
 					</span>
 					<button
 						onclick={() => {
@@ -350,7 +350,7 @@
 							? 'border-[#61afef] bg-[#61afef]/15 text-[#61afef]'
 							: 'border-white/20 text-white/40 hover:border-white/40'}"
 					>
-						{$performanceMode ? 'ON' : 'OFF'}
+						{$performanceMode ? $t('common.on') : $t('common.off')}
 					</button>
 				</div>
 			</div>
@@ -358,22 +358,21 @@
 			<!-- Storage -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
 				<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1">
-					<span class="text-xs sm:text-sm font-black text-[#e06c75]">STORAGE ON THIS DEVICE</span>
+					<span class="text-xs sm:text-sm font-black text-[#e06c75]">{$t('chrome.settings.storageTitle')}</span>
 					<button
 						onclick={clearEverything}
 						disabled={clearingAll || clearingId !== null || nothingStored}
 						class="press px-2 py-0.5 border border-[#e06c75]/60 text-[#e06c75] rounded-xs text-[10px] font-bold cursor-pointer hover:bg-[#e06c75]/15 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 					>
-						{clearingAll ? 'CLEARING…' : 'CLEAR EVERYTHING'}
+						{clearingAll ? $t('chrome.settings.clearing') : $t('chrome.settings.clearEverything')}
 					</button>
 				</div>
 				<p class="text-[10px] text-white/40 leading-relaxed">
-					Everything below lives only in this browser — nothing here was ever sent anywhere. Clearing a
-					row deletes it right away; there is no undo.
+					{$t('chrome.settings.storageDesc')}
 				</p>
 
 				{#if sections.length === 0}
-					<div class="text-xs text-white/40 py-2">measuring…</div>
+					<div class="text-xs text-white/40 py-2">{$t('chrome.settings.measuring')}</div>
 				{:else}
 					<div class="space-y-1">
 						{#each sections as s (s.id)}
@@ -382,7 +381,7 @@
 									<div class="flex items-baseline gap-2">
 										<span class="text-[11px] font-bold" style="color: {s.color}">{s.label}</span>
 										<span class="text-[10px] text-white/35 tabular-nums">
-											{s.size === null ? '—' : s.size === 0 ? 'empty' : fmtBytes(s.size)}
+											{s.size === null ? '—' : s.size === 0 ? $t('chrome.settings.empty') : fmtBytes(s.size)}
 										</span>
 									</div>
 									<div class="text-[10px] text-white/40 leading-snug">{s.detail}</div>
@@ -395,7 +394,7 @@
 										? 'border-[#98c379] text-[#98c379]'
 										: 'border-white/25 text-white/60 hover:border-white/50 hover:text-white'}"
 								>
-									{clearingId === s.id ? '…' : doneId === s.id ? 'CLEARED' : 'CLEAR'}
+									{clearingId === s.id ? '…' : doneId === s.id ? $t('chrome.settings.cleared') : $t('chrome.settings.clear')}
 								</button>
 							</div>
 						{/each}

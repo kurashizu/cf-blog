@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { playSound } from '../../../sound';
+	import { t } from '../../../i18n';
 	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId } from '../../../stores/synth-transport';
 	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, cycleAccent, updateTrack } from '../../../stores/synth-tracks';
@@ -460,14 +461,14 @@
 					onblur={commitRename}
 					maxlength={NAME_MAX}
 					spellcheck="false"
-					aria-label="Track name"
+					aria-label={$t('synthPanels.roll.trackNameLabel')}
 					class="w-[190px] px-1.5 py-0.5 text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none text-white"
 					style="border-color: {$currentTrack.color}"
 				/>
 			{:else}
 				<button
 					onclick={startRename}
-					title={`${trackName} — click to rename TRK ${$activeTrackId + 1} (${NAME_MAX} characters; ${NAME_SHOW} show here)`}
+					title={$t('synthPanels.roll.renameHint', { name: trackName, track: $activeTrackId + 1, max: NAME_MAX, show: NAME_SHOW })}
 					class="press px-1.5 py-0.5 text-xs font-mono font-bold rounded-xs border cursor-pointer transition-colors hover:brightness-125 max-w-[190px] truncate"
 					style="color: {$currentTrack.color}; border-color: color-mix(in srgb, {$currentTrack.color} 50%, transparent); background: color-mix(in srgb, {$currentTrack.color} 12%, transparent)"
 				>
@@ -476,7 +477,7 @@
 			{/if}
 			{#if percussion}
 				<!-- Which key the racks are editing, and whether it has its own sound yet -->
-				<span class="text-xs font-mono font-bold text-[#c678dd]" title={activeKeyCustom ? `Racks are editing ${noteNameOf($activeKey)}'s own sound. Right-click a key label to drop its sound.` : `Racks are editing ${noteNameOf($activeKey)}; it still plays the track's sound until you change something.`}>
+				<span class="text-xs font-mono font-bold text-[#c678dd]" title={activeKeyCustom ? $t('synthPanels.roll.keyCustomHint', { note: noteNameOf($activeKey) }) : $t('synthPanels.roll.keyDefaultHint', { note: noteNameOf($activeKey) })}>
 					KEY {noteNameOf($activeKey)} {activeKeyCustom ? '●' : '○'}
 				</span>
 			{/if}
@@ -487,20 +488,20 @@
 
 		<div class="flex items-center gap-1.5 text-xs">
 			{#if $selection.size}
-				<span class="text-xs font-mono font-bold text-white/80 px-1.5 py-0.5 border border-white/40 rounded-xs" title="Selected notes — drag to move (Alt: copy), drag the right end to resize, arrows nudge (Shift: bar / octave), Delete removes, Ctrl+C/X/V/D copy / cut / paste at the cursor / repeat, Esc clears">
+				<span class="text-xs font-mono font-bold text-white/80 px-1.5 py-0.5 border border-white/40 rounded-xs" title={$t('synthPanels.roll.selectionHint')}>
 					SEL {$selection.size}
 				</span>
 			{/if}
-			<button onclick={() => { if (undo()) playSound('click'); }} disabled={!$canUndo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title="Undo the last roll edit (Ctrl+Z)">↶</button>
-			<button onclick={() => { if (redo()) playSound('click'); }} disabled={!$canRedo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title="Redo (Ctrl+Shift+Z / Ctrl+Y)">↷</button>
-			<button onclick={clearPage} class="press border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold transition-colors" title="Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track (undoable)">
+			<button onclick={() => { if (undo()) playSound('click'); }} disabled={!$canUndo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title={$t('synthPanels.roll.undoHint')}>↶</button>
+			<button onclick={() => { if (redo()) playSound('click'); }} disabled={!$canRedo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title={$t('synthPanels.roll.redoHint')}>↷</button>
+			<button onclick={clearPage} class="press border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold transition-colors" title={$t('synthPanels.roll.clearPageHint')}>
 				✕ CLR
 			</button>
 
 			<span class="opacity-30">|</span>
 
 			<div class="flex items-center gap-1 text-xs">
-				<span class="opacity-60 text-xs font-bold" title="Octave Scope Range (FROM - TO) — Limits visible pitch range in the piano roll without altering grid cell dimensions">OCT:</span>
+				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.roll.octScopeHint')}>OCT:</span>
 
 				<div class="flex items-center gap-0.5">
 					<span class="text-white/50 text-[10px] font-bold">FROM</span>
@@ -511,11 +512,11 @@
 						}}
 						disabled={octaveFrom <= 1}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Lower starting octave (Octave down)"
+						title={$t('synthPanels.roll.lowerStartHint')}
 					>
 						◄
 					</button>
-					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center" title={`Starting Octave: Octave ${octaveFrom} (C${octaveFrom})`}>{octaveFrom}</span>
+					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center" title={$t('synthPanels.roll.startOctaveHint', { octave: octaveFrom })}>{octaveFrom}</span>
 					<button
 						onclick={() => {
 							octaveFrom = Math.min(octaveTo, octaveFrom + 1);
@@ -523,7 +524,7 @@
 						}}
 						disabled={octaveFrom >= octaveTo}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Raise starting octave (Octave up)"
+						title={$t('synthPanels.roll.raiseStartHint')}
 					>
 						►
 					</button>
@@ -538,11 +539,11 @@
 						}}
 						disabled={octaveTo <= octaveFrom}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Lower ending octave"
+						title={$t('synthPanels.roll.lowerEndHint')}
 					>
 						◄
 					</button>
-					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#e5c07b] min-w-[20px] text-center" title={`Ending Octave: Octave ${octaveTo} (B${octaveTo})`}>{octaveTo}</span>
+					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#e5c07b] min-w-[20px] text-center" title={$t('synthPanels.roll.endOctaveHint', { octave: octaveTo })}>{octaveTo}</span>
 					<button
 						onclick={() => {
 							octaveTo = Math.min(7, octaveTo + 1);
@@ -550,7 +551,7 @@
 						}}
 						disabled={octaveTo >= 7}
 						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
-						title="Raise ending octave"
+						title={$t('synthPanels.roll.raiseEndHint')}
 					>
 						►
 					</button>
@@ -591,7 +592,7 @@
 														: isBeatStart && subCol === 0
 															? 'bg-white/15 text-white font-bold'
 															: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
-											title={`Click to set Playback Cursor to Step ${step + 1} (Bar ${barNum}.${beatNum})`}
+											title={$t('synthPanels.roll.jumpToStepHint', { step: step + 1, bar: barNum, beat: beatNum })}
 										>
 											{subCol === 0 ? (isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`) : '+'}
 										</button>
@@ -609,7 +610,7 @@
 												: isBeatStart
 													? 'bg-white/15 text-white'
 													: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
-									title={`Click to set Playback Cursor to Column ${colIdx + 1} (Step ${globalCol * spc + 1}, Bar ${barNum}.${beatNum})`}
+									title={$t('synthPanels.roll.jumpToColumnHint', { column: colIdx + 1, step: globalCol * spc + 1, bar: barNum, beat: beatNum })}
 								>
 									{isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
 								</button>
@@ -667,7 +668,7 @@
 			<!-- Fixed accent track -->
 			<div class="flex items-center gap-1 pt-1 border-t border-white/10 text-xs font-mono shrink-0 select-none">
 				<div class="w-9 text-right pr-1 font-black text-[#e06c75] shrink-0 select-none text-xs flex items-center justify-end">
-					<span title="Accent Velocity Track — 3-Level Cycle: OFF (0dB) -> Amber (+3dB) -> Red (+6dB)">ACC</span>
+					<span title={$t('synthPanels.roll.accentTrackHint')}>ACC</span>
 				</div>
 				<div class="flex-1 gap-0.5" style="display: grid; grid-template-columns: repeat({colsPerPage}, minmax(0, 1fr));">
 					{#each Array.from({ length: colsPerPage }) as _, colIdx (colIdx)}
@@ -698,7 +699,7 @@
 																: isBeatStart && subCol === 0
 																	? 'border-y border-r border-white/15 border-l border-l-white/40 bg-black/50 text-white/50 hover:border-white/40'
 																	: 'border border-white/10 bg-black/40 text-white/40 hover:border-white/30'}"
-										title={`Step ${step + 1} (${subCol === 0 ? 'L' : 'R'}) Accent: ${accVal > 0 ? `+${accVal}dB` : 'OFF (0dB)'} — Click to cycle`}
+										title={$t('synthPanels.roll.accentStepHint', { step: step + 1, side: subCol === 0 ? 'L' : 'R', value: accVal > 0 ? `+${accVal}dB` : 'OFF (0dB)' })}
 									>
 										{accVal > 0 ? `+${accVal}` : subCol === 0 ? `${colIdx + 1}` : '·'}
 									</button>

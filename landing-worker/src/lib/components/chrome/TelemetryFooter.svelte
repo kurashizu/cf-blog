@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../sound';
+	import { t } from '$lib/i18n';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { edgeTrace, edgeTraceMs, edgeTraceStatus, traceSummary } from '../../stores/edge';
 	import PixelIcon from '../pixel/PixelIcon.svelte';
@@ -13,29 +14,42 @@
 		$edgeTraceStatus === 'ok'
 			? traceSummary($edgeTrace)
 			: $edgeTraceStatus === 'probing'
-				? 'TRACING EDGE…'
+				? $t('chrome.footer.tracingEdge')
 				: $edgeTraceStatus === 'unavailable'
-					? 'EDGE TRACE N/A'
+					? $t('chrome.footer.edgeTraceNA')
 					: ''
 	);
 	let edgeTitle = $derived(
 		$edgeTrace
-			? `Served by Cloudflare PoP ${$edgeTrace.colo}${$edgeTrace.loc ? ` (${$edgeTrace.loc})` : ''} over ${$edgeTrace.http}, ${$edgeTrace.tls}${$edgeTrace.kex ? ` / ${$edgeTrace.kex}` : ''}${$edgeTraceMs === null ? '' : ` — trace round trip ${$edgeTraceMs}ms`}. Read live from /cdn-cgi/trace; type "trace" in the console for the full record.`
-			: 'Cloudflare /cdn-cgi/trace — type "trace" in the console to probe the edge.'
+			? $t('chrome.footer.edgeTitleKnown', {
+					colo: $edgeTrace.colo,
+					loc: $edgeTrace.loc ? ` (${$edgeTrace.loc})` : '',
+					http: $edgeTrace.http,
+					tls: $edgeTrace.tls,
+					kex: $edgeTrace.kex ? ` / ${$edgeTrace.kex}` : '',
+					rtt: $edgeTraceMs === null ? '' : $t('chrome.footer.edgeTitleRtt', { ms: $edgeTraceMs })
+				})
+			: $t('chrome.footer.edgeTitleUnknown')
 	);
 
-	const LINKS = [
-		{ href: 'https://github.com/kurashizu', icon: 'github', label: '1:github', title: 'GitHub Profile — Open https://github.com/kurashizu in a new tab', color: 'text-[#61afef] hover:text-[#98c379]' },
-		{ href: 'https://huggingface.co/kurashizu', icon: 'huggingface', label: '2:huggingface', title: 'Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab', color: 'text-[#e5c07b] hover:text-[#e06c75]' },
-		{ href: 'https://oshwhub.com/Kurashizu', icon: 'hardware', label: '3:oshwhub', title: 'OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab', color: 'text-[#e06c75] hover:text-[#56b6c2]' },
-		{ href: 'https://skill.krsz.in/rules', icon: 'rules', label: '4:rules', title: 'Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab', color: 'text-[#98c379] hover:text-[#56b6c2]' }
-	] as const;
+	let LINKS = $derived([
+		{ href: 'https://github.com/kurashizu', icon: 'github', label: '1:github', title: $t('chrome.footer.linkGithub'), color: 'text-[#61afef] hover:text-[#98c379]' },
+		{ href: 'https://huggingface.co/kurashizu', icon: 'huggingface', label: '2:huggingface', title: $t('chrome.footer.linkHuggingface'), color: 'text-[#e5c07b] hover:text-[#e06c75]' },
+		{ href: 'https://oshwhub.com/Kurashizu', icon: 'hardware', label: '3:oshwhub', title: $t('chrome.footer.linkOshwhub'), color: 'text-[#e06c75] hover:text-[#56b6c2]' },
+		{ href: 'https://skill.krsz.in/rules', icon: 'rules', label: '4:rules', title: $t('chrome.footer.linkRules'), color: 'text-[#98c379] hover:text-[#56b6c2]' }
+	] as const);
 
 	/** Which build this is — commit and time baked in by vite.config.ts, never computed at runtime. */
 	const BUILD_URL = __BUILD_COMMIT_FULL__
 		? `https://github.com/kurashizu/cf-blog/commit/${__BUILD_COMMIT_FULL__}`
 		: undefined;
-	const BUILD_TITLE = `Build ${__BUILD_COMMIT__} — ${__BUILD_TIME__} (${__BUILD_TIME_SYDNEY__} Sydney)${BUILD_URL ? '. Open the commit on GitHub in a new tab.' : ''}`;
+	let BUILD_TITLE = $derived(
+		$t(BUILD_URL ? 'chrome.footer.buildTitleLinked' : 'chrome.footer.buildTitle', {
+			commit: __BUILD_COMMIT__,
+			time: __BUILD_TIME__,
+			sydney: __BUILD_TIME_SYDNEY__
+		})
+	);
 </script>
 
 <!-- A single row, always -- like TabBar, never a scrollbar: footer-fit is a
@@ -105,10 +119,10 @@
 				creditsOpen.set(true);
 				playSound('click');
 			}}
-			title="The open-source projects this site is built on"
+			title={$t('chrome.footer.creditsTitle')}
 			class="press text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors shrink-0"
 		>
-			[credits]
+			[{$t('chrome.footer.credits')}]
 		</button>
 		<LanguageMenu />
 	</div>

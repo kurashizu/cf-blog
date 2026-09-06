@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { tr } from '$lib/i18n';
 import { playSound } from '../sound';
 import { parseMidiFile, splitByChannel, MidiParseError, type MidiTrack } from '../midi-file';
 import { MAX_GRID_STEPS, METER_SPECS, modularSynth, PIANO_ROLL_NOTES, STEPS_PER_BEAT, type TimeSignature } from '../synth';
@@ -87,7 +88,7 @@ function convertTrack(track: MidiTrack, ticksPerQuarter: number, index: number):
 
 	return {
 		converted: {
-			name: (track.name || `MIDI TRK ${index + 1}`).slice(0, 24).toUpperCase(),
+			name: (track.name || tr('synth.midiImport.defaultTrackName', { index: index + 1 })).slice(0, 24).toUpperCase(),
 			grid,
 			accents,
 			noteCount,
@@ -109,7 +110,7 @@ export async function handleImportMidiFile(file: File): Promise<void> {
 	try {
 		parsed = parseMidiFile(await file.arrayBuffer());
 	} catch (e) {
-		const message = e instanceof MidiParseError ? e.message : 'Could not read this file as MIDI.';
+		const message = e instanceof MidiParseError ? e.message : tr('synth.midiImport.unreadable');
 		importReport.set([`✕ ${file.name}`, message]);
 		playSound('ping', false);
 		return;
@@ -177,17 +178,32 @@ export async function handleImportMidiFile(file: File): Promise<void> {
 
 	const bars = Math.round(totalSteps / stepsPerBar);
 	const report = [
-		`✓ ${file.name}`,
-		`${results.length} track${results.length === 1 ? '' : 's'} · ${results.reduce((a, r) => a + r.converted.noteCount, 0)} notes · ${bars} bars`,
-		`${parsed.bpm} BPM${parsed.bpmFromFile ? '' : ' (file states none — MIDI default)'} · ${meter}${
-			isSupportedMeter(parsed.timeSignature) ? '' : ` (${parsed.timeSignature} unsupported, using 4/4)`
-		}`,
-		...results.map((r, i) => `  ${i + 1}. ${r.converted.name.padEnd(24)} ${r.converted.noteCount} notes${r.converted.isDrums ? '  [GM drum channel]' : ''}`),
-		...(droppedNotes ? [`${droppedNotes} note${droppedNotes === 1 ? '' : 's'} outside the 88-key range were dropped`] : []),
-		...(skipped.length ? [`${skipped.length} further part${skipped.length === 1 ? '' : 's'} skipped — the rack holds ${capacity} tracks`] : [])
+		tr('synth.status.importedFile', { name: file.name }),
+		tr('synth.midiImport.tracksNotesBars', {
+			tracks: results.length,
+			tracksPlural: results.length === 1 ? '' : 's',
+			notes: results.reduce((a, r) => a + r.converted.noteCount, 0),
+			bars
+		}),
+		tr('synth.midiImport.bpmMeter', {
+			bpm: parsed.bpm,
+			bpmNote: parsed.bpmFromFile ? '' : tr('synth.midiImport.bpmDefaultNote'),
+			meter,
+			meterNote: isSupportedMeter(parsed.timeSignature) ? '' : tr('synth.midiImport.meterUnsupportedNote', { meter: parsed.timeSignature })
+		}),
+		...results.map((r, i) =>
+			tr('synth.midiImport.trackLine', {
+				index: i + 1,
+				name: r.converted.name.padEnd(24),
+				notes: r.converted.noteCount,
+				drum: r.converted.isDrums ? tr('synth.midiImport.drumChannelNote') : ''
+			})
+		),
+		...(droppedNotes ? [tr('synth.midiImport.notesDropped', { count: droppedNotes, plural: droppedNotes === 1 ? '' : 's' })] : []),
+		...(skipped.length ? [tr('synth.midiImport.partsSkipped', { count: skipped.length, plural: skipped.length === 1 ? '' : 's', capacity })] : [])
 	];
 	importReport.set(report);
-	saveStatus.set(`✓ ${file.name.replace(/\.midi?$/i, '').slice(0, 18)}`);
+	saveStatus.set(tr('synth.status.importedFile', { name: file.name.replace(/\.midi?$/i, '').slice(0, 18) }));
 	setTimeout(() => saveStatus.set(null), 2000);
 	playSound('toggle');
 }

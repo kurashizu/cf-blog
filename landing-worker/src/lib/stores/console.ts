@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
+import { tr, locale } from '$lib/i18n';
 import { evaluateSafeJS } from '../evaluator';
 import { METER_SPECS, type NoteDurationDiv, type TimeSignature, type BlendMode } from '../synth';
 import { MODULES } from '../data/modules';
@@ -111,92 +112,100 @@ function rollBanner(): string[] {
 	return [...mark.art.split('\n'), '', BANNER_TAGLINE];
 }
 
-const HELP: ConsoleLine[] = [
-	accent('── NAVIGATION ──────────────────────────────'),
-	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm  6|web-lm  7|lifelab'),
-	out('  open <project>     launch a project in a new tab'),
-	out('  ' + Object.keys(EXTERNAL_LINKS).filter((k) => k !== 'rules').join(' · ')),
-	accent('── FILESYSTEM ──────────────────────────────'),
-	out('  pwd · cd <path> · ls [-l] [path] · tree [path]'),
-	out('  cat <file>      print a file'),
-	out('  grep [-i] <pat> [file]   filter lines'),
-	out('  head/tail [-n N] · sort · uniq · wc'),
-	out('  cmd | cmd       pipe output into a filter'),
-	out('  alias ll="ls -l" · unalias ll'),
-	accent('── EDGE ────────────────────────────────────'),
-	out('  trace (edge)   real Cloudflare PoP, protocol, TLS (/cdn-cgi/trace)'),
-	accent('── INFO ────────────────────────────────────'),
-	out('  whoami      operator profile'),
-	out('  tracks      sequencer track states'),
-	out('  songs       built-in songs (● = loaded)'),
-	out('  midi        MIDI device status'),
-	out('  date        current time (Sydney / UTC)'),
-	out('  history     recent commands'),
-	out('  banner      print the KRSZ banner'),
-	out('  man <cmd>   usage for one command'),
-	accent('── SYNTH ───────────────────────────────────'),
-	out('  play / stop / seq        transport control'),
-	out('  load <song>              load built-in song'),
-	out('  bpm [40-300]             show / set tempo'),
-	out('  vol [0-100] · mute · unmute   master volume'),
-	out('  snap <div> · dur <div>   grid: 4 2 1 1/2 1/3 1/4 1/6 1/8 1/12'),
-	out('  meter <sig>              4/4 3/4 2/4 5/4 6/8 7/8'),
-	out('  blend <layer|fm|ring|sync>   active track blend'),
-	accent('── MISC ────────────────────────────────────'),
-	out('  eval <expr>     safe math (e.g. eval 2**16)'),
-	out('  echo <text>     print text'),
-	out('  theme [name]    cycle or set: auto tokyo gruvbox nord amber'),
-	out('  clear / Ctrl+L  clear screen · Tab completes/cycles · ↑↓ history'),
-	out('  guide           replay the getting-started walkthrough'),
-	out('  ` (backquote)   open/close this console over any view'),
-	out('  keys            full hotkey reference (or press ? / F1 outside this console)')
-];
+/** Resolved lazily (called at use time, not at module load) so the console
+ *  help text follows the active locale. The command syntax/flags stay as
+ *  literal shell text (README: command names stay English); only the
+ *  trailing descriptions are translated. */
+function helpLines(): ConsoleLine[] {
+	return [
+		accent('── NAVIGATION ──────────────────────────────'),
+		out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm  6|web-lm  7|lifelab'),
+		out(`  open <project>     ${tr('chrome.console.help.open')}`),
+		out('  ' + Object.keys(EXTERNAL_LINKS).filter((k) => k !== 'rules').join(' · ')),
+		accent('── FILESYSTEM ──────────────────────────────'),
+		out('  pwd · cd <path> · ls [-l] [path] · tree [path]'),
+		out(`  cat <file>      ${tr('chrome.console.help.cat')}`),
+		out(`  grep [-i] <pat> [file]   ${tr('chrome.console.help.grep')}`),
+		out('  head/tail [-n N] · sort · uniq · wc'),
+		out(`  cmd | cmd       ${tr('chrome.console.help.pipe')}`),
+		out('  alias ll="ls -l" · unalias ll'),
+		accent('── EDGE ────────────────────────────────────'),
+		out(`  trace (edge)   ${tr('chrome.console.help.trace')}`),
+		accent('── INFO ────────────────────────────────────'),
+		out(`  whoami      ${tr('chrome.console.help.whoami')}`),
+		out(`  tracks      ${tr('chrome.console.help.tracks')}`),
+		out(`  songs       ${tr('chrome.console.help.songs')}`),
+		out(`  midi        ${tr('chrome.console.help.midi')}`),
+		out(`  date        ${tr('chrome.console.help.date')}`),
+		out(`  history     ${tr('chrome.console.help.history')}`),
+		out(`  banner      ${tr('chrome.console.help.banner')}`),
+		out(`  man <cmd>   ${tr('chrome.console.help.man')}`),
+		accent('── SYNTH ───────────────────────────────────'),
+		out(`  play / stop / seq        ${tr('chrome.console.help.transport')}`),
+		out(`  load <song>              ${tr('chrome.console.help.load')}`),
+		out(`  bpm [40-300]             ${tr('chrome.console.help.bpm')}`),
+		out(`  vol [0-100] · mute · unmute   ${tr('chrome.console.help.vol')}`),
+		out(`  snap <div> · dur <div>   ${tr('chrome.console.help.snapDur')}`),
+		out(`  meter <sig>              4/4 3/4 2/4 5/4 6/8 7/8`),
+		out(`  blend <layer|fm|ring|sync>   ${tr('chrome.console.help.blend')}`),
+		accent('── MISC ────────────────────────────────────'),
+		out(`  eval <expr>     ${tr('chrome.console.help.eval')}`),
+		out(`  echo <text>     ${tr('chrome.console.help.echo')}`),
+		out(`  theme [name]    ${tr('chrome.console.help.theme')}`),
+		out(`  clear / Ctrl+L  ${tr('chrome.console.help.clear')}`),
+		out(`  guide           ${tr('chrome.console.help.guide')}`),
+		out(`  \` (backquote)   ${tr('chrome.console.help.backquote')}`),
+		out(`  keys            ${tr('chrome.console.help.keys')}`)
+	];
+}
 
-/** One-line usage strings for `man <cmd>`. */
-const USAGE: Record<string, string[]> = {
-	cd: ['cd [path]', 'Change the virtual working directory. Supports .. and absolute paths.', 'With no argument, returns to /.'],
-	ls: ['ls [-l] [path]', 'List a directory. -l adds the annotation column.'],
-	cat: ['cat <file>', 'Print a file. /synth and /edge files are rendered from live state.'],
-	tree: ['tree [path]', 'Recursive listing of a subtree.'],
-	grep: ['grep [-i] <pattern> [file]', 'Keep matching lines. Reads a pipe when no file is given.', 'The pattern is a JavaScript regular expression.'],
-	head: ['head [-n N] [file]', 'First N lines (default 10).'],
-	tail: ['tail [-n N] [file]', 'Last N lines (default 10).'],
-	wc: ['wc [file]', 'Count lines, words and characters.'],
-	sort: ['sort [-r] [file]', 'Sort lines; -r reverses.'],
-	uniq: ['uniq [file]', 'Collapse adjacent duplicate lines.'],
-	alias: ['alias [name="command"]', 'Define or list shell aliases. Persisted in localStorage.'],
-	unalias: ['unalias <name>', 'Remove one alias.'],
-	trace: ['trace', 'Fetch /cdn-cgi/trace and print the serving Cloudflare PoP,', 'negotiated protocol, TLS version and key-exchange group.'],
-	open: ['open <project>', 'Open a project in a new tab.'],
-	eval: ['eval <expression>', 'Evaluate arithmetic with a hand-written parser — never raw eval().'],
-	bpm: ['bpm [40-300]', 'Show or set the sequencer tempo.'],
-	vol: ['vol [0-100]', 'Show or set master volume.'],
-	load: ['load <song>', 'Load a built-in song by name fragment. See "songs".'],
-	theme: ['theme [name]', 'Cycle, or set one of: ' + Object.keys(THEME_ALIASES).join(', ')],
-	echo: ['echo <text>', 'Print text. Useful as a pipe source.'],
-	history: ['history', 'The last 15 commands. Persisted across visits.'],
-	guide: ['guide', 'Reopen the getting-started walkthrough.'],
-	keys: ['keys', 'Open the full keyboard reference. Not the same as typing "?" here — that prints help; press the actual ? or F1 key (outside a text field) for this instead.'],
-	man: ['man <cmd>', 'Usage for one command.'],
-	help: ['help', 'The full command list, grouped by section.'],
-	whoami: ['whoami', 'Operator profile — name, location, motto, stack.'],
-	date: ['date', 'Current time in Sydney and UTC.'],
-	tracks: ['tracks', 'Sequencer track states — which are muted, soloed, and their blend mode.'],
-	songs: ['songs', 'Built-in songs (● marks the one currently loaded).'],
-	midi: ['midi', 'Connected MIDI device status, if any.'],
-	banner: ['banner', 'Print the KRSZ banner — a fresh block-letter rendering each time.'],
-	play: ['play', 'Start sequencer playback.'],
-	stop: ['stop', 'Stop sequencer playback.'],
-	seq: ['seq', 'Toggle sequencer playback.'],
-	mute: ['mute', 'Mute master output.'],
-	unmute: ['unmute', 'Unmute master output.'],
-	snap: ['snap <div>', 'Set the sequencer grid snap. One of: ' + VALID_DIVS.join(', ')],
-	dur: ['dur <div>', 'Set the default note duration. One of: ' + VALID_DIVS.join(', ')],
-	meter: ['meter <sig>', 'Set the time signature. One of: ' + VALID_METERS.join(', ')],
-	blend: ['blend <mode>', 'Set the active track\'s blend mode: layer, fm, ring, or sync.'],
-	clear: ['clear', 'Clear the console scrollback.'],
-	pwd: ['pwd', 'Print the current virtual working directory.']
-};
+/** One-line usage strings for `man <cmd>`, resolved lazily (see helpLines). */
+function usageTable(): Record<string, string[]> {
+	return {
+		cd: ['cd [path]', tr('chrome.console.usage.cd1'), tr('chrome.console.usage.cd2')],
+		ls: ['ls [-l] [path]', tr('chrome.console.usage.ls')],
+		cat: ['cat <file>', tr('chrome.console.usage.cat')],
+		tree: ['tree [path]', tr('chrome.console.usage.tree')],
+		grep: ['grep [-i] <pattern> [file]', tr('chrome.console.usage.grep1'), tr('chrome.console.usage.grep2')],
+		head: ['head [-n N] [file]', tr('chrome.console.usage.head')],
+		tail: ['tail [-n N] [file]', tr('chrome.console.usage.tail')],
+		wc: ['wc [file]', tr('chrome.console.usage.wc')],
+		sort: ['sort [-r] [file]', tr('chrome.console.usage.sort')],
+		uniq: ['uniq [file]', tr('chrome.console.usage.uniq')],
+		alias: ['alias [name="command"]', tr('chrome.console.usage.alias')],
+		unalias: ['unalias <name>', tr('chrome.console.usage.unalias')],
+		trace: ['trace', tr('chrome.console.usage.trace1'), tr('chrome.console.usage.trace2')],
+		open: ['open <project>', tr('chrome.console.usage.open')],
+		eval: ['eval <expression>', tr('chrome.console.usage.eval')],
+		bpm: ['bpm [40-300]', tr('chrome.console.usage.bpm')],
+		vol: ['vol [0-100]', tr('chrome.console.usage.vol')],
+		load: ['load <song>', tr('chrome.console.usage.load')],
+		theme: ['theme [name]', tr('chrome.console.usage.theme', { list: Object.keys(THEME_ALIASES).join(', ') })],
+		echo: ['echo <text>', tr('chrome.console.usage.echo')],
+		history: ['history', tr('chrome.console.usage.history')],
+		guide: ['guide', tr('chrome.console.usage.guide')],
+		keys: ['keys', tr('chrome.console.usage.keys')],
+		man: ['man <cmd>', tr('chrome.console.usage.man')],
+		help: ['help', tr('chrome.console.usage.help')],
+		whoami: ['whoami', tr('chrome.console.usage.whoami')],
+		date: ['date', tr('chrome.console.usage.date')],
+		tracks: ['tracks', tr('chrome.console.usage.tracks')],
+		songs: ['songs', tr('chrome.console.usage.songs')],
+		midi: ['midi', tr('chrome.console.usage.midi')],
+		banner: ['banner', tr('chrome.console.usage.banner')],
+		play: ['play', tr('chrome.console.usage.play')],
+		stop: ['stop', tr('chrome.console.usage.stop')],
+		seq: ['seq', tr('chrome.console.usage.seq')],
+		mute: ['mute', tr('chrome.console.usage.mute')],
+		unmute: ['unmute', tr('chrome.console.usage.unmute')],
+		snap: ['snap <div>', tr('chrome.console.usage.snap', { list: VALID_DIVS.join(', ') })],
+		dur: ['dur <div>', tr('chrome.console.usage.dur', { list: VALID_DIVS.join(', ') })],
+		meter: ['meter <sig>', tr('chrome.console.usage.meter', { list: VALID_METERS.join(', ') })],
+		blend: ['blend <mode>', tr('chrome.console.usage.blend')],
+		clear: ['clear', tr('chrome.console.usage.clear')],
+		pwd: ['pwd', tr('chrome.console.usage.pwd')]
+	};
+}
 
 // ── pipe filters ────────────────────────────────────────────────────────────
 
@@ -406,23 +415,23 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	}
 
 	// ── info ──
-	if (cmd === 'help' || cmd === '?') return HELP;
+	if (cmd === 'help' || cmd === '?') return helpLines();
 
 	if (cmd === 'guide' || cmd === 'tour' || cmd === 'intro') {
 		openOnboardingNow('site-tour');
-		return [ok('Opened the getting-started walkthrough.')];
+		return [ok(tr('chrome.console.openedWalkthrough'))];
 	}
 
 	if (cmd === 'keys' || cmd === 'keymap') {
 		hotkeyOverlayOpen.set(true);
-		return [ok('Opened the keymap.')];
+		return [ok(tr('chrome.console.openedKeymap'))];
 	}
 
 	if (cmd === 'man') {
 		const name = args.trim().toLowerCase();
-		if (!name) return HELP;
-		const page = USAGE[name];
-		if (!page) return [err(`No manual entry for "${name}". Type "help" for the command list.`)];
+		if (!name) return helpLines();
+		const page = usageTable()[name];
+		if (!page) return [err(tr('chrome.console.noManualEntry', { name }))];
 		return [accent(page[0]), ...page.slice(1).map((l) => out(`  ${l}`))];
 	}
 
@@ -471,7 +480,7 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 
 	if (cmd === 'date' || cmd === 'time') {
 		const now = new Date();
-		const syd = new Intl.DateTimeFormat('en-AU', {
+		const syd = new Intl.DateTimeFormat(get(locale), {
 			timeZone: 'Australia/Sydney',
 			dateStyle: 'medium',
 			timeStyle: 'medium'
@@ -643,6 +652,16 @@ const RESERVED_ALIAS_NAMES = new Set(COMMAND_NAMES);
 /** Commands whose argument is a VFS path. */
 const PATH_COMMANDS = new Set(['cd', 'ls', 'll', 'cat', 'tree', 'grep', 'head', 'tail', 'wc', 'sort', 'uniq']);
 
+/** Command names `man` has a page for -- kept as a plain list (not
+ *  `Object.keys(usageTable())`) so completion doesn't call tr() at every
+ *  keystroke; the set of covered commands doesn't change with locale. */
+const USAGE_COMMANDS = [
+	'cd', 'ls', 'cat', 'tree', 'grep', 'head', 'tail', 'wc', 'sort', 'uniq', 'alias', 'unalias', 'trace', 'open',
+	'eval', 'bpm', 'vol', 'load', 'theme', 'echo', 'history', 'guide', 'keys', 'man', 'help', 'whoami', 'date',
+	'tracks', 'songs', 'midi', 'banner', 'play', 'stop', 'seq', 'mute', 'unmute', 'snap', 'dur', 'meter', 'blend',
+	'clear', 'pwd'
+];
+
 const ARG_COMPLETIONS: Record<string, string[]> = {
 	open: [...Object.keys(EXTERNAL_LINKS)],
 	load: BUILTIN_SONGS.map((s) => s.id.toLowerCase()),
@@ -651,7 +670,7 @@ const ARG_COMPLETIONS: Record<string, string[]> = {
 	snap: VALID_DIVS,
 	dur: VALID_DIVS,
 	meter: VALID_METERS,
-	man: Object.keys(USAGE)
+	man: USAGE_COMMANDS
 };
 
 /**

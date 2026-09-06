@@ -4,6 +4,7 @@
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { suspendNavHotkeys } from '../../stores/hotkeys';
+	import { t } from '$lib/i18n';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -136,16 +137,16 @@
 <div class="space-y-2">
 	<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
 		<span class="px-2 py-1 border rounded-xs font-black {running ? 'border-[#e5c07b] text-[#e5c07b]' : 'border-white/15 text-white/60'}">
-			⏱ {timeLeft}s
+			{$t('utilities.typing.timer', { seconds: timeLeft })}
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			WPM: <span class="font-black text-[#56b6c2]">{finished || running ? wpm : '—'}</span>
+			{$t('utilities.typing.wpm')} <span class="font-black text-[#56b6c2]">{finished || running ? wpm : '—'}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			ACC: <span class="font-black text-[#c678dd]">{keystrokes > 0 ? `${accuracy}%` : '—'}</span>
+			{$t('utilities.typing.acc')} <span class="font-black text-[#c678dd]">{keystrokes > 0 ? `${accuracy}%` : '—'}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			WORDS: <span class="font-black text-[#98c379]">{correctWords}</span><span class="text-white/40">/{submitted.length}</span>
+			{$t('utilities.typing.words')} <span class="font-black text-[#98c379]">{correctWords}</span><span class="text-white/40">/{submitted.length}</span>
 		</span>
 		<button
 			onclick={() => {
@@ -154,17 +155,17 @@
 			}}
 			class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#56b6c2] text-white/60 hover:text-[#56b6c2] rounded-xs font-bold cursor-pointer transition-colors"
 		>
-			⟳ RESTART
+			{$t('utilities.typing.restart')}
 		</button>
 	</div>
 
 	{#if finished}
 		<div class="border p-4 rounded-xs text-center space-y-1.5" style="border-color: {themeStyles.cursorColor}66;" in:fade={{ duration: 200 }}>
-			<div class="text-2xl font-black font-mono value-in" style="color: {themeStyles.cursorColor}">{wpm} WPM</div>
+			<div class="text-2xl font-black font-mono value-in" style="color: {themeStyles.cursorColor}">{$t('utilities.typing.result.wpm', { wpm })}</div>
 			<div class="text-xs font-mono text-white/60">
-				{accuracy}% accuracy · {correctWords}/{submitted.length} words correct in {DURATION}s
+				{$t('utilities.typing.result.summary', { accuracy, correct: correctWords, total: submitted.length, duration: DURATION })}
 			</div>
-			<div class="text-[10px] font-mono text-white/35">Press Enter or RESTART to go again</div>
+			<div class="text-[10px] font-mono text-white/35">{$t('utilities.typing.result.again')}</div>
 		</div>
 	{:else}
 		<div class="border border-white/15 bg-black/50 rounded-xs p-3 font-mono text-sm sm:text-base leading-loose select-none min-h-[120px]">
@@ -178,7 +179,7 @@
 			{/each}
 		</div>
 		<div class="text-[10px] font-mono text-white/40">
-			{running ? 'GO — space submits a word, backspace edits' : 'Start typing to begin the 30-second test. Nav hotkeys are paused on this tool.'}
+			{running ? $t('utilities.typing.status.running') : $t('utilities.typing.status.idle')}
 		</div>
 	{/if}
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
+	import { t } from '../../../i18n';
 	import { resetRack7 } from '../../../stores/synth-reset';
 	import { currentTrack, updateActiveTrack } from '../../../stores/synth-tracks';
 	import { isRecording, recSeconds, recError, toggleRecording } from '../../../stores/recorder';
@@ -21,7 +22,7 @@
 			<div class="flex items-center gap-1">
 				<button
 					onclick={() => setMode('fft')}
-					title="Visualizer Mode: FFT Log Spectrum Analyzer — Shows frequency distribution across 20Hz to 20kHz"
+					title={$t('synthPanels.out.fftModeHint')}
 					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'fft'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
@@ -30,7 +31,7 @@
 				</button>
 				<button
 					onclick={() => setMode('scope')}
-					title="Visualizer Mode: Oscilloscope Waveform — Real-time time-domain audio wave display"
+					title={$t('synthPanels.out.scopeModeHint')}
 					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'scope'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
@@ -39,7 +40,7 @@
 				</button>
 				<button
 					onclick={() => setMode('loudness')}
-					title="Visualizer Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)"
+					title={$t('synthPanels.out.loudnessModeHint')}
 					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'loudness'
 						? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
@@ -63,8 +64,8 @@
 			<button
 				onclick={toggleRecording}
 				title={$isRecording
-					? `Recording — ${$recSeconds}s. Click to stop and download.`
-					: 'Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)'}
+					? $t('synthPanels.out.recordingHint', { seconds: $recSeconds })
+					: $t('synthPanels.out.recordIdleHint')}
 				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-black cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap shrink-0 {$isRecording
 					? 'border-[#e06c75] bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
 					: 'border-[#e06c75]/50 bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75]/25'}"
@@ -75,7 +76,7 @@
 					<span class="tabular-nums text-right" style="min-width: 3ch;">{$recSeconds}s</span>
 				{/if}
 			</button>
-			<button onclick={resetRack7} title="RST — reset: put this rack at its neutral values, where it does nothing to the sound" class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack7} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 
@@ -91,7 +92,7 @@
 				unit="%"
 				color="#e5c07b"
 				size={40}
-				description="Air Shelf EQ — Boosts/cuts high-end brilliance (±8dB @ 10kHz)"
+				description={$t('synthPanels.out.airDesc')}
 				reset={0}
 				onChange={(v) => updateActiveTrack({ airGain: v / 100 })}
 			/>

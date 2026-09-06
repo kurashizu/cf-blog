@@ -1,5 +1,6 @@
 // LIFE.LAB — pattern library (RLE) + decode/rotate helpers.
 import { EXT } from './library-ext.js';
+import { tr } from '$lib/i18n';
 
 export const RLES = {
   block:     { label: 'BLOCK',        rle: '2o$2o!' },
@@ -168,52 +169,66 @@ export function normalizeCells(cells) {
   return { cells: cells.map(([x, y]) => [x - x0, y - y0]), w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
-/** One phrase per hand-typed pattern. Simulated, not remembered. @type {Record<string, string>} */
+/**
+ * One i18n key per hand-typed pattern's note, resolved at use time in
+ * `patternMeta` so it follows the current language rather than the one
+ * active when this module first loaded. @type {Record<string, string>}
+ */
 const NOTES = {
-  block: '4 cells, the simplest stable shape', beehive: 'stable, 6 cells', loaf: 'stable, 7 cells',
-  tub: 'stable, 4 cells', boat: 'stable, 5 cells', pond: 'stable, 8 cells',
-  eater: 'stable — and it swallows a glider that hits it',
-  blinker: 'period 2, the smallest oscillator', toad: 'period 2', beacon: 'period 2', clock: 'period 2',
-  pulsar: 'period 3, 48 cells', figure8: 'period 8', pentadec: 'period 15',
-  glider: 'period 4, travels diagonally', lwss: 'period 4, travels sideways',
-  mwss: 'period 4, one cell wider than the LWSS', hwss: 'period 4, the widest of the three',
-  flotilla: 'three lightweights flying in formation',
-  loafer: 'one cell every 7 generations — found by a search program',
-  copperhead: 'one cell every 10 — not discovered until 2016',
-  rpent: '5 cells, still going 1000 generations later', acorn: '7 cells that take 5000 generations to settle',
-  diehard: '7 cells that vanish completely at generation 130',
-  bunnies: '9 cells, runs for thousands', rabbits: '9 cells, likewise',
-  switchEngine: 'grows forever, leaving debris behind it',
-  gosperGun: 'fires a glider every 30 generations, for ever',
-  annihilate: 'two gliders head-on — both destroyed, nothing left. A NOT gate',
-  sink: 'a glider flies into an eater and is gone; the eater repairs itself',
-  gunSink: 'an endless stream, absorbed. Population stays bounded for ever',
+  block: 'lifelab.note.block', beehive: 'lifelab.note.beehive', loaf: 'lifelab.note.loaf',
+  tub: 'lifelab.note.tub', boat: 'lifelab.note.boat', pond: 'lifelab.note.pond',
+  eater: 'lifelab.note.eater',
+  blinker: 'lifelab.note.blinker', toad: 'lifelab.note.toad', beacon: 'lifelab.note.beacon', clock: 'lifelab.note.clock',
+  pulsar: 'lifelab.note.pulsar', figure8: 'lifelab.note.figure8', pentadec: 'lifelab.note.pentadec',
+  glider: 'lifelab.note.glider', lwss: 'lifelab.note.lwss',
+  mwss: 'lifelab.note.mwss', hwss: 'lifelab.note.hwss',
+  flotilla: 'lifelab.note.flotilla',
+  loafer: 'lifelab.note.loafer',
+  copperhead: 'lifelab.note.copperhead',
+  rpent: 'lifelab.note.rpent', acorn: 'lifelab.note.acorn',
+  diehard: 'lifelab.note.diehard',
+  bunnies: 'lifelab.note.bunnies', rabbits: 'lifelab.note.rabbits',
+  switchEngine: 'lifelab.note.switchEngine',
+  gosperGun: 'lifelab.note.gosperGun',
+  annihilate: 'lifelab.note.annihilate',
+  sink: 'lifelab.note.sink',
+  gunSink: 'lifelab.note.gunSink',
 };
 
 /**
  * The shelf, in the order the tray shows it. Keys refer to RLES or EXT (the
  * Golly set in library-ext.js); anything the user saves goes in CUSTOM below.
+ *
+ * `label`/`hint` are i18n keys, not display text -- resolve them with
+ * `tr()` (or `$t`) at render time via `categoryMeta`, so the tray picks up
+ * the current language on every rebuild rather than the one active at
+ * import.
  */
 export const CATEGORIES = [
-  { id: 'still', label: 'STILL LIFES', hint: 'never change',
+  { id: 'still', label: 'lifelab.cat.still.label', hint: 'lifelab.cat.still.hint',
     of: ['block', 'beehive', 'loaf', 'tub', 'boat', 'pond', 'eater', 'eaters'] },
-  { id: 'osc', label: 'OSCILLATORS', hint: 'repeat forever',
+  { id: 'osc', label: 'lifelab.cat.osc.label', hint: 'lifelab.cat.osc.hint',
     of: ['blinker', 'toad', 'beacon', 'clock', 'pulsar', 'figure8', 'pentadec', 'lowPeriod'] },
-  { id: 'ship', label: 'SPACESHIPS', hint: 'move across the dish',
+  { id: 'ship', label: 'lifelab.cat.ship.label', hint: 'lifelab.cat.ship.hint',
     of: ['glider', 'lwss', 'mwss', 'hwss', 'flotilla', 'loafer', 'copperhead', 'orthoShips', 'diagShips', 'corderships'] },
-  { id: 'meth', label: 'METHUSELAHS', hint: 'small starts, long lives',
+  { id: 'meth', label: 'lifelab.cat.meth.label', hint: 'lifelab.cat.meth.hint',
     of: ['rpent', 'acorn', 'diehard', 'bunnies', 'rabbits', 'blom', 'lidka', 'iwona', 'justyna', 'm52513'] },
-  { id: 'puff', label: 'PUFFERS & RAKES', hint: 'travel, and leave things behind',
+  { id: 'puff', label: 'lifelab.cat.puff.label', hint: 'lifelab.cat.puff.hint',
     of: ['switchEngine', 'pufferTrain', 'piFuse', 'linePuffer', 'puffer2c5', 'basicRakes'] },
-  { id: 'gun', label: 'GUNS', hint: 'fire for ever',
+  { id: 'gun', label: 'lifelab.cat.gun.label', hint: 'lifelab.cat.gun.hint',
     of: ['gosperGun', 'p52gun', 'vacuum', 'mwssGun', 'loaferGun', 'p59gun'] },
-  { id: 'grow', label: 'GROWTH', hint: 'breeders, fillers, sawtooths',
+  { id: 'grow', label: 'lifelab.cat.grow.label', hint: 'lifelab.cat.grow.hint',
     of: ['spacefiller', 'quartermax', 'quad20', 'seBreeder', 'c4Breeder', 'rakeFactory', 'sawtooth'] },
-  { id: 'logic', label: 'SIGNALS & LOGIC', hint: 'the parts a computer is made of',
+  { id: 'logic', label: 'lifelab.cat.logic.label', hint: 'lifelab.cat.logic.hint',
     of: ['annihilate', 'sink', 'gunSink', 'advancer', 'heisenblinker', 'heisenburpNat', 'heisenburp30', 'heisenburp46', 'stargate', 'racetrack', 'hotel', 'reflectors', 'fizzles'] },
-  { id: 'turing', label: 'TURING MACHINE', hint: 'computation, in full — needs a bigger dish',
+  { id: 'turing', label: 'lifelab.cat.turing.label', hint: 'lifelab.cat.turing.hint',
     of: ['turing', 'chase', 'unitCell'] },
 ];
+
+/** Translates a CATEGORIES entry's `label`/`hint` (i18n keys) at call time. @param {{ label: string, hint: string }} cat */
+export function categoryMeta(cat) {
+  return { label: tr(cat.label), hint: tr(cat.hint) };
+}
 
 /* ---- the user's own shelf ---- */
 const CUSTOM_KEY = 'lifelab.custom.v1';
@@ -238,7 +253,8 @@ export const custom = {
     const list = loadCustom();
     const key = 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const { body } = encodeRLE(cells, w, h);
-    list.push({ key, label: String(label || 'CUSTOM').trim().slice(0, 28).toUpperCase() || 'CUSTOM', rle: body.replace(/\n/g, ''), w, h, note });
+    const fallback = tr('lifelab.ui.customFallbackName');
+    list.push({ key, label: String(label || fallback).trim().slice(0, 28).toUpperCase() || fallback, rle: body.replace(/\n/g, ''), w, h, note });
     saveCustom();
     return key;
   },
@@ -252,12 +268,39 @@ export const custom = {
   has(key) { return loadCustom().some(c => c.key === key); },
 };
 
+/**
+ * i18n keys for library-ext.js's `note` field, one per EXT entry. EXT itself
+ * (label, credit, cat, w/h, rle) is generated by scratchpad gen-ext.mjs and
+ * left in English there -- labels are canonical Life terminology and
+ * credits are proper-noun attribution, neither of which is translated; only
+ * the descriptive `note` is, and it is intercepted here rather than edited
+ * into the generated file. @type {Record<string, string>}
+ */
+const EXT_NOTES = {
+  blom: 'lifelab.ext.blom', iwona: 'lifelab.ext.iwona', justyna: 'lifelab.ext.justyna',
+  lidka: 'lifelab.ext.lidka', m52513: 'lifelab.ext.m52513',
+  pufferTrain: 'lifelab.ext.pufferTrain', piFuse: 'lifelab.ext.piFuse', linePuffer: 'lifelab.ext.linePuffer',
+  puffer2c5: 'lifelab.ext.puffer2c5', basicRakes: 'lifelab.ext.basicRakes',
+  p52gun: 'lifelab.ext.p52gun', vacuum: 'lifelab.ext.vacuum', mwssGun: 'lifelab.ext.mwssGun',
+  loaferGun: 'lifelab.ext.loaferGun', p59gun: 'lifelab.ext.p59gun',
+  spacefiller: 'lifelab.ext.spacefiller', quartermax: 'lifelab.ext.quartermax', quad20: 'lifelab.ext.quad20',
+  seBreeder: 'lifelab.ext.seBreeder', c4Breeder: 'lifelab.ext.c4Breeder', rakeFactory: 'lifelab.ext.rakeFactory',
+  sawtooth: 'lifelab.ext.sawtooth',
+  advancer: 'lifelab.ext.advancer', heisenblinker: 'lifelab.ext.heisenblinker',
+  heisenburpNat: 'lifelab.ext.heisenburpNat', heisenburp30: 'lifelab.ext.heisenburp30', heisenburp46: 'lifelab.ext.heisenburp46',
+  stargate: 'lifelab.ext.stargate', racetrack: 'lifelab.ext.racetrack', hotel: 'lifelab.ext.hotel',
+  reflectors: 'lifelab.ext.reflectors', fizzles: 'lifelab.ext.fizzles',
+  turing: 'lifelab.ext.turing', chase: 'lifelab.ext.chase', unitCell: 'lifelab.ext.unitCell',
+  orthoShips: 'lifelab.ext.orthoShips', diagShips: 'lifelab.ext.diagShips', corderships: 'lifelab.ext.corderships',
+  lowPeriod: 'lifelab.ext.lowPeriod', eaters: 'lifelab.ext.eaters',
+};
+
 /** @param {string} key @returns {{ label: string, note?: string, credit?: string, cat?: string, custom?: boolean } | null} */
 export function patternMeta(key) {
-  if (key in RLES) return { label: RLES[/** @type {keyof typeof RLES} */ (key)].label, note: NOTES[key] };
-  if (key in EXT) return EXT[key];
+  if (key in RLES) return { label: RLES[/** @type {keyof typeof RLES} */ (key)].label, note: tr(NOTES[key]) };
+  if (key in EXT) { const e = EXT[key]; return { ...e, note: EXT_NOTES[key] ? tr(EXT_NOTES[key]) : e.note }; }
   const c = loadCustom().find(x => x.key === key);
-  return c ? { label: c.label, note: c.note || 'yours — saved in this browser', custom: true } : null;
+  return c ? { label: c.label, note: c.note || tr('lifelab.note.custom'), custom: true } : null;
 }
 
 /** @type {Record<string, Pattern>} */
