@@ -395,7 +395,7 @@ const GRIDS: Record<number, number[][]> = {
    Hz HPF it used to have); the kick's low-pass at KEY TRK 1 (r = 0.88); the
    snare's first tuned version (a 40% triangle body held at 60% over the
    run, envelope r = 0.85 against the reference) was rejected by ear as a
-   tuned boing, so it is a decaying noise hit with a sine a fifth up. Every hit starts on its
+   tuned boing, so it is a decaying noise hit with no tonal part at all. Every hit starts on its
    first sample. */
 const NES_HAT: Partial<TrackData> = {
   osc1Waveform: 'noise', osc1Gain: 1.0,
@@ -414,18 +414,16 @@ const NES_HAT: Partial<TrackData> = {
 export const SMB1_NOISE_KEYS: Record<number, Partial<TrackData>> = {
   // F3: hat -- the track's own sound; the entry exists so the key shows as part of the kit.
   55: { ampDecay: 0.1, decay: 0.1 },
-  // D3: snare. A pitched triangle body at D3 (147 Hz) under a 60% sustain
-  // was a tuned boing that hung for the whole run. Now the noise is OSC1
-  // and the only tone is a sine a fifth up (220 Hz at this key, where a
-  // snare's body sits), with a pitch snap on both and an exponential 150 ms
-  // decay -- the DRUMS preset's recipe, on this key.
+  // D3: snare. Noise only -- no body, no pitch snap, nothing that follows
+  // the key -- starting on its first sample and decaying over 180 ms. What
+  // separates it from the hat is length and a darker top (6 kHz low-pass).
   58: {
-    osc1Waveform: 'noise', osc1Gain: 1.0, osc2Waveform: 'sine', osc2Gain: 0.45, osc2Semitone: 7,
+    osc1Waveform: 'noise', osc1Gain: 1.0, osc2Gain: 0.0, osc2Semitone: 0,
     noiseGain: 0.0, keyTracking: 0.0,
-    filterType: 'lowpass', cutoff: 9000, resonance: 0.4,
-    filterEnvAmount: 0.3, filterAttack: 0, filterDecay: 0.08, filterSustain: 0.0,
-    pitchEnvAmount: 1.0, pitchAttack: 0.001, pitchDecay: 0.02,
-    ampDecay: 0.15, decay: 0.15, ampSustain: 0.0, sustain: 0.0, ampRelease: 0.05, release: 0.05, airGain: 0.15,
+    filterType: 'lowpass', cutoff: 6000, resonance: 0.3,
+    filterEnvAmount: 0.0, filterAttack: 0, filterDecay: 0.08, filterSustain: 0.0,
+    pitchEnvAmount: 0.0, pitchAttack: 0.001, pitchDecay: 0.02,
+    ampAttack: 0, attack: 0, ampDecay: 0.18, decay: 0.18, ampSustain: 0.0, sustain: 0.0, ampRelease: 0.05, release: 0.05, airGain: 0.0,
   },
   // C3: the strong beat -- KEY TRK 1 at C3 halves the noise rate and scales
   // the low-pass to ~2.4 kHz, the nearest this engine gets to the 2.3 kHz
