@@ -171,12 +171,18 @@ used_drums = sorted({n for _, _, n, _ in notes[9]})
 KEY_TIMBRES = {108 - n: KIT_GM[n] for n in used_drums if n in KIT_GM}
 
 TRACKS = [
-    dict(id=0, name='TRK 1: ALTO SAX', color='#e5c07b', volume=1.15, pan=0.15,
-         timbre=synth(osc1Waveform='sawtooth', osc1Gain=0.9, osc2Waveform='sawtooth', osc2Gain=0.5, osc2Semitone=0, detuneCents=6,
-                      filterType='bandpass', cutoff=1500, resonance=2.2, keyTracking=0.6, envFilterMod=0,
-                      filterAttack=0.02, filterDecay=0.2, filterSustain=0.7, filterEnvAmount=0.35,
-                      noiseGain=0.06, ampAttack=0.02, ampDecay=0.15, ampSustain=0.85, ampRelease=0.12,
-                      lfoRate=5.2, lfoPitchAmt=0.015, lfoFadeTime=200, airGain=0.15),
+    # A bandpass at a fixed-ish center (keyTracking 0.6) scooped out the
+    # fundamental on some notes and the presence on others -- thin and
+    # buried under the piano/guitar/ride. Lowpass with full key tracking
+    # keeps the filter locked to the note's own harmonics as the melody
+    # moves, and a higher cutoff + airGain give it the reed's bite instead
+    # of relying on a narrow resonant peak to carve out its space.
+    dict(id=0, name='TRK 1: ALTO SAX', color='#e5c07b', volume=1.3, pan=0.15,
+         timbre=synth(osc1Waveform='sawtooth', osc1Gain=0.9, osc2Waveform='sawtooth', osc2Gain=0.6, osc2Semitone=0, detuneCents=8,
+                      filterType='lowpass', cutoff=3200, resonance=1.4, keyTracking=1.0, envFilterMod=0,
+                      filterAttack=0.015, filterDecay=0.2, filterSustain=0.8, filterEnvAmount=0.4,
+                      noiseGain=0.08, ampAttack=0.015, ampDecay=0.1, ampSustain=0.9, ampRelease=0.12,
+                      lfoRate=5.2, lfoPitchAmt=0.015, lfoFadeTime=200, airGain=0.3),
          # the drums here are a near-continuous ride ostinato, not sparse hits;
          # ducking the melody off every one of them (Spain's trick for a solo
          # popping over a sparse kit) would just flatten it, so it doesn't duck

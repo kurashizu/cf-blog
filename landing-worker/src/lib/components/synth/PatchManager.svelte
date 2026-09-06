@@ -78,14 +78,18 @@
 		if (fileInput) fileInput.value = '';
 	}
 
+	/* Loading closed the menu immediately, so the "loaded" confirmation had
+	   nowhere to land but the toolbar's shared status slot next to SHARE --
+	   easy to miss, and not obviously about LOAD. Keep the menu open long
+	   enough to show it in place, then close. */
 	function loadLocal() {
-		isLoadMenuOpen = false;
 		handleLoadPatch();
+		setTimeout(() => (isLoadMenuOpen = false), 900);
 	}
 
 	function loadBuiltin(idx: number) {
-		isLoadMenuOpen = false;
 		handleLoadBuiltinSong(idx);
+		setTimeout(() => (isLoadMenuOpen = false), 900);
 	}
 
 	function onWindowKeydown(e: KeyboardEvent) {
@@ -145,6 +149,10 @@
 				class="origin-top absolute left-0 top-full mt-1 z-50 w-max min-w-[290px] max-w-[90vw] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
+				{#if $saveStatus}
+					<div class="px-2.5 pb-1.5 mb-1 border-b border-white/10 text-[#98c379] font-bold">{$saveStatus}</div>
+				{/if}
+
 				<button onclick={loadLocal} class="press w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[#56b6c2] hover:bg-[#56b6c2]/20 cursor-pointer font-bold transition-colors" title="Restore saved synth parameters and sequencer patterns from browser LocalStorage">
 					<span class="shrink-0">▣</span>
 					<span>LOCAL PATCH (BROWSER)</span>
@@ -240,7 +248,7 @@
 		{/if}
 	</div>
 
-	{#if $saveStatus}
+	{#if $saveStatus && !isLoadMenuOpen}
 		<span class="text-[#98c379] font-bold text-xs ml-1">{$saveStatus}</span>
 	{/if}
 </div>
