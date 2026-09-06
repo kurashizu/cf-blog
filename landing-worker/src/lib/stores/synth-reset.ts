@@ -88,7 +88,7 @@ export const RACK7_NEUTRAL: Partial<TrackData> = {
 /** The DUCK tab of rack 6: sidechain off, timing at its defaults. */
 export const RACK6_DUCK_NEUTRAL: Partial<TrackData> = {
 	duckSource: -1,
-	duckKey: -1,
+	duckKeys: [],
 	duckDepth: 0,
 	duckDip: 5,
 	duckHold: 40,

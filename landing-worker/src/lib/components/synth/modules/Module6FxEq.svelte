@@ -39,20 +39,23 @@
 	}
 
 	/* DUCK tab: sidechain for the active track. SRC steps through the other
-	   tracks, KEY through the notes the source actually plays (a percussion
-	   track's kick / snare / hat) plus ANY. Steppers, like OCT and METER, not
-	   native selects. */
+	   tracks (a stepper, like OCT and METER). When the source is a percussion
+	   track its kit is laid out as key chips -- toggle any set of them; none
+	   lit means every key triggers. A melodic source has no key row: any note
+	   of it triggers. */
 	let duckSource = $derived(activeTrack?.duckSource ?? -1);
-	let duckKey = $derived(activeTrack?.duckKey ?? -1);
+	let duckKeys = $derived(activeTrack?.duckKeys ?? []);
 	let duckOn = $derived(duckSource >= 0 && (activeTrack?.duckDepth ?? 0) > 0);
 	let sourceIds = $derived($tracksState.filter((t) => t.id !== $activeTrackId).map((t) => t.id));
-	let keyOptions = $derived.by(() => {
-		const src = $tracksState[duckSource];
-		if (!src) return [] as number[];
-		const notes = new Set<number>();
-		for (const r of allRuns(src.grid, $totalPatternSteps)) notes.add(r.note);
-		if (duckKey >= 0) notes.add(duckKey);
-		return [...notes].sort((a, b) => a - b);
+	let sourceTrack = $derived($tracksState[duckSource]);
+	let sourceIsPerc = $derived(!!sourceTrack?.percussion);
+	/* The kit's keys: every key with its own sound plus every key the grid plays, low to high. */
+	let kitKeys = $derived.by(() => {
+		if (!sourceTrack?.percussion) return [] as number[];
+		const notes = new Set<number>(Object.keys(sourceTrack.keyTimbres ?? {}).map(Number));
+		for (const r of allRuns(sourceTrack.grid, $totalPatternSteps)) notes.add(r.note);
+		for (const k of duckKeys) notes.add(k);
+		return [...notes].sort((a, b) => b - a);
 	});
 	let sourceLabel = $derived(duckSource < 0 ? 'OFF' : `T${duckSource + 1} ${($tracksState[duckSource]?.name ?? '').replace(/^TRK \d+:\s*/, '')}`);
 
@@ -62,14 +65,13 @@
 		const next = list[(Math.max(0, i) + dir + list.length) % list.length];
 		// Picking a source with the depth still at zero would do nothing audible.
 		const depth = (activeTrack?.duckDepth ?? 0) > 0 || next < 0 ? {} : { duckDepth: 0.6 };
-		updateActiveTrack({ duckSource: next, duckKey: -1, ...depth });
+		updateActiveTrack({ duckSource: next, duckKeys: [], ...depth });
 		playSound('click');
 	}
 
-	function stepKey(dir: number) {
-		const list = [-1, ...keyOptions];
-		const i = list.indexOf(duckKey);
-		updateActiveTrack({ duckKey: list[(Math.max(0, i) + dir + list.length) % list.length] });
+	function toggleKey(n: number) {
+		const next = duckKeys.includes(n) ? duckKeys.filter((k) => k !== n) : [...duckKeys, n].sort((a, b) => b - a);
+		updateActiveTrack({ duckKeys: next });
 		playSound('click');
 	}
 </script>
@@ -165,12 +167,28 @@
 				<span class="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-center truncate leading-none {duckSource < 0 ? 'text-white/40' : 'text-[#e5c07b]'}">{sourceLabel}</span>
 				<button onclick={() => stepSource(1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title="Next source track">►</button>
 			</div>
-			<div class="flex items-center gap-1 px-0.5 shrink-0" title="KEY — trigger on one key of the source only (its kick, say), or on any of its notes">
-				<span class="text-white/50 text-[10px] font-bold w-7 shrink-0">KEY</span>
-				<button onclick={() => stepKey(-1)} disabled={duckSource < 0} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-[10px] leading-none transition-colors" title="Previous key">◄</button>
-				<span class="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-center truncate leading-none {duckSource < 0 ? 'text-white/30' : duckKey < 0 ? 'text-white/70' : 'text-[#c678dd]'}">{duckKey < 0 ? 'ANY' : noteNameOf(duckKey)}</span>
-				<button onclick={() => stepKey(1)} disabled={duckSource < 0} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-[10px] leading-none transition-colors" title="Next key">►</button>
-			</div>
+			{#if sourceIsPerc}
+				<div class="flex items-start gap-1 px-0.5 shrink-0" title="KEY — which keys of the source's kit trigger the dip; none lit = every key">
+					<span class="text-white/50 text-[10px] font-bold w-7 shrink-0 pt-0.5">KEY</span>
+					<div class="flex-1 min-w-0 flex flex-wrap gap-0.5 max-h-[34px] overflow-y-auto custom-scrollbar">
+						{#each kitKeys as n (n)}
+							{@const on = duckKeys.includes(n)}
+							<button
+								onclick={() => toggleKey(n)}
+								title={on ? `${noteNameOf(n)} triggers the dip — click to drop it` : `Add ${noteNameOf(n)} to the trigger keys`}
+								class="press px-1 py-0.5 text-[9px] font-mono font-bold rounded-xs border leading-none cursor-pointer transition-colors {on
+									? 'border-[#e5c07b] bg-[#e5c07b] text-black'
+									: 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'}"
+							>
+								{noteNameOf(n)}
+							</button>
+						{/each}
+						{#if !kitKeys.length}
+							<span class="text-[9px] text-white/30 font-mono pt-0.5">no keys in this kit yet</span>
+						{/if}
+					</div>
+				</div>
+			{/if}
 			<div class="grid grid-cols-4 gap-0.5 items-center flex-1 min-h-0">
 				<div class="flex justify-center">
 					<RotaryKnob label="DEPTH" value={Math.round((activeTrack?.duckDepth ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={32} description="How far this track dips on each trigger (100% = to silence)" reset={0} onChange={(v) => updateActiveTrack({ duckDepth: v / 100 })} />

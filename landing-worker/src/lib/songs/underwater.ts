@@ -599,7 +599,7 @@ export const UNDERWATER_TRACKS: TrackData[] = [
     volume: 0.85,
     pan: 0.2,
     // Sidechain: the second voice gives the brush its instant
-    duckSource: 3, duckKey: -1, duckDepth: 0.25, duckDip: 3, duckHold: 30, duckRelease: 90,
+    duckSource: 3, duckKeys: [], duckDepth: 0.25, duckDip: 3, duckHold: 30, duckRelease: 90,
     muted: false,
     solo: false,
 
@@ -657,7 +657,7 @@ export const UNDERWATER_TRACKS: TrackData[] = [
     volume: 1.0,
     pan: 0.0,
     // Sidechain: the triangle bass makes room for the drum
-    duckSource: 3, duckKey: -1, duckDepth: 0.4, duckDip: 3, duckHold: 30, duckRelease: 90,
+    duckSource: 3, duckKeys: [], duckDepth: 0.4, duckDip: 3, duckHold: 30, duckRelease: 90,
     muted: false,
     solo: false,
 

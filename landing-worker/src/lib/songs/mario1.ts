@@ -440,13 +440,13 @@ export const SMB1_NOISE_KEYS: Record<number, Partial<TrackData>> = {
 /* Sidechain, per track, keyed to TRK 4's kit: the bass ducks on the kick (C3),
    the harmony on the snare (D3), the pad on every hit; the lead stays steady.
    Set for every track because OVERWORLD_TRACKS carries SMB3's own keys. */
-const OFF = { duckSource: -1, duckKey: -1, duckDepth: 0 };
+const OFF = { duckSource: -1, duckKeys: [], duckDepth: 0 };
 const MARIO1_DUCK: Record<number, Partial<TrackData>> = {
   0: OFF,
-  1: { duckSource: 3, duckKey: 58, duckDepth: 0.3, duckDip: 3, duckHold: 40, duckRelease: 100 },
-  2: { duckSource: 3, duckKey: -1, duckDepth: 0.35, duckDip: 5, duckHold: 20, duckRelease: 80 },
+  1: { duckSource: 3, duckKeys: [58], duckDepth: 0.3, duckDip: 3, duckHold: 40, duckRelease: 100 },
+  2: { duckSource: 3, duckKeys: [], duckDepth: 0.35, duckDip: 5, duckHold: 20, duckRelease: 80 },
   3: OFF,
-  4: { duckSource: 3, duckKey: 60, duckDepth: 0.55, duckDip: 3, duckHold: 30, duckRelease: 90 },
+  4: { duckSource: 3, duckKeys: [60], duckDepth: 0.55, duckDip: 3, duckHold: 30, duckRelease: 90 },
   5: OFF,
 };
 

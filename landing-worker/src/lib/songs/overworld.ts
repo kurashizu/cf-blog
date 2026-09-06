@@ -2705,7 +2705,7 @@ const OVERWORLD_TRK2_ACCENTS: number[] = [
 // SMB3's engine has two pulse channels, a triangle and noise: there was never a
 // third melodic voice. The slot stays so the track ids (and SMB1, which
 // borrows these tracks) do not shift, but it is empty.
-const OVERWORLD_TRK3_GRID: number[][] = Array.from({ length: 674 }, () => []);
+const OVERWORLD_TRK3_GRID: number[][] = Array.from({ length: 672 }, () => []);
 const OVERWORLD_TRK3_ACCENTS: number[] = [
   0,
   0,
@@ -7496,7 +7496,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     volume: 0.62,
     pan: -0.28,
     // Sidechain: the harmony steps back for the snare/hat lane (TRK 4 F3)
-    duckSource: 3, duckKey: 55, duckDepth: 0.25, duckDip: 3, duckHold: 40, duckRelease: 100,
+    duckSource: 3, duckKeys: [55], duckDepth: 0.25, duckDip: 3, duckHold: 40, duckRelease: 100,
     muted: false,
     solo: false,
 
@@ -7682,7 +7682,7 @@ export const OVERWORLD_TRACKS: TrackData[] = [
     volume: 0.92,
     pan: 0.0,
     // Sidechain: the bass makes room for the kick (TRK 4 A1)
-    duckSource: 3, duckKey: 75, duckDepth: 0.55, duckDip: 3, duckHold: 30, duckRelease: 90,
+    duckSource: 3, duckKeys: [75], duckDepth: 0.55, duckDip: 3, duckHold: 30, duckRelease: 90,
     muted: false,
     solo: false,
 

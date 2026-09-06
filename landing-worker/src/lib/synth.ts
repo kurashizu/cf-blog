@@ -219,7 +219,7 @@ export interface TrackData {
 
   // Sidechain ducking (7.OUT): this track dips whenever the source track fires a note.
   duckSource?: number;     // source track id, -1 = off
-  duckKey?: number;        // only this note index on the source triggers it, -1 = any key
+  duckKeys?: number[];     // only these note indices on the source trigger it; empty = any key
   duckDepth?: number;      // 0.0 to 1.0 -- how far the track dips (1 = to silence)
   duckDip?: number;        // ms to reach the floor
   duckHold?: number;       // ms held at the floor
@@ -1126,8 +1126,8 @@ class ModularSynth {
       if (j === sourceId || trk.duckSource !== sourceId) continue;
       const depth = trk.duckDepth ?? 0;
       if (depth <= 0) continue;
-      const key = trk.duckKey ?? -1;
-      if (key >= 0 && key !== noteIndex) continue;
+      const keys = trk.duckKeys;
+      if (keys?.length && !keys.includes(noteIndex)) continue;
       const bus = this.trackBuses[j];
       if (!bus) continue;
       const g = bus.duck.gain;
