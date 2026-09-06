@@ -170,13 +170,23 @@
 			{#if sourceIsPerc}
 				<div class="flex items-start gap-1 px-0.5 shrink-0" title="KEY — which keys of the source's kit trigger the dip; none lit = every key">
 					<span class="text-white/50 text-[10px] font-bold w-7 shrink-0 pt-0.5">KEY</span>
-					<div class="flex-1 min-w-0 flex flex-wrap gap-0.5 max-h-[34px] overflow-y-auto custom-scrollbar">
+					<!-- One row that scrolls sideways when the kit has more keys than fit;
+					     a plain wheel scrolls it too, so no need to hold Shift. -->
+					<div
+						class="flex-1 min-w-0 flex flex-nowrap gap-0.5 overflow-x-auto overflow-y-hidden custom-scrollbar pb-0.5"
+						onwheel={(e) => {
+							const el = e.currentTarget;
+							if (el.scrollWidth <= el.clientWidth || e.deltaX !== 0) return;
+							e.preventDefault();
+							el.scrollLeft += e.deltaY;
+						}}
+					>
 						{#each kitKeys as n (n)}
 							{@const on = duckKeys.includes(n)}
 							<button
 								onclick={() => toggleKey(n)}
 								title={on ? `${noteNameOf(n)} triggers the dip — click to drop it` : `Add ${noteNameOf(n)} to the trigger keys`}
-								class="press px-1 py-0.5 text-[9px] font-mono font-bold rounded-xs border leading-none cursor-pointer transition-colors {on
+								class="press shrink-0 px-1 py-0.5 text-[9px] font-mono font-bold rounded-xs border leading-none cursor-pointer transition-colors {on
 									? 'border-[#e5c07b] bg-[#e5c07b] text-black'
 									: 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'}"
 							>
