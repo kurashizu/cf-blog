@@ -170,35 +170,35 @@
 					<!-- Shoulders: L1/R1 as pads, L2/R2 filling with their analogue value -->
 					{#each [{ i: 4, x: 74, label: 'L1' }, { i: 5, x: 190, label: 'R1' }] as s (s.i)}
 						<rect x={s.x} y="26" width="36" height="11" rx="4" fill={fill(s.i)} stroke={stroke(s.i)} stroke-width="1.2" />
-						<text x={s.x + 18} y="34.5" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.75)" font-family="monospace">{s.label}</text>
+						<text x={s.x + 18} y="34.5" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.75)" font-family="'Jelly Pixel', ui-monospace, monospace">{s.label}</text>
 					{/each}
 					{#each [{ i: 6, x: 74, label: 'L2' }, { i: 7, x: 190, label: 'R2' }] as t (t.i)}
 						<rect x={t.x} y="12" width="36" height="11" rx="4" fill="rgba(255,255,255,0.05)" stroke={stroke(t.i)} stroke-width="1.2" />
 						<!-- Analogue travel, drawn as fill rather than a separate bar -->
 						<rect x={t.x} y="12" width={36 * value(t.i)} height="11" rx="4" fill={themeStyles.cursorColor} opacity="0.75" />
-						<text x={t.x + 18} y="20.5" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.75)" font-family="monospace">{t.label}</text>
+						<text x={t.x + 18} y="20.5" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.75)" font-family="'Jelly Pixel', ui-monospace, monospace">{t.label}</text>
 					{/each}
 
 					<!-- D-pad -->
 					{#each DPAD as d (d.i)}
 						<rect x={d.x} y={d.y} width={d.w} height={d.h} rx="2" fill={fill(d.i)} stroke={stroke(d.i)} stroke-width="1.2" />
-						<text x={d.x + d.w / 2} y={d.y + d.h / 2 + 3} text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.6)" font-family="monospace">{d.glyph}</text>
+						<text x={d.x + d.w / 2} y={d.y + d.h / 2 + 3} text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.6)" font-family="'Jelly Pixel', ui-monospace, monospace">{d.glyph}</text>
 					{/each}
 
 					<!-- Face buttons -->
 					{#each FACE as f (f.i)}
 						<circle cx={f.cx} cy={f.cy} r="10" fill={fill(f.i)} stroke={stroke(f.i)} stroke-width="1.4" />
-						<text x={f.cx} y={f.cy + 3.5} text-anchor="middle" font-size="9" font-weight="bold" fill="rgba(255,255,255,0.8)" font-family="monospace">{f.label}</text>
+						<text x={f.cx} y={f.cy + 3.5} text-anchor="middle" font-size="9" font-weight="bold" fill="rgba(255,255,255,0.8)" font-family="'Jelly Pixel', ui-monospace, monospace">{f.label}</text>
 					{/each}
 
 					<!-- SELECT / START / HOME, in the middle between the two clusters -->
 					<rect x="126" y="62" width="18" height="7" rx="3" fill={fill(8)} stroke={stroke(8)} stroke-width="1.1" />
 					<rect x="156" y="62" width="18" height="7" rx="3" fill={fill(9)} stroke={stroke(9)} stroke-width="1.1" />
-					<text x="135" y="57" text-anchor="middle" font-size="5.5" fill="rgba(255,255,255,0.45)" font-family="monospace">SELECT</text>
-					<text x="165" y="57" text-anchor="middle" font-size="5.5" fill="rgba(255,255,255,0.45)" font-family="monospace">START</text>
+					<text x="135" y="57" text-anchor="middle" font-size="5.5" fill="rgba(255,255,255,0.45)" font-family="'Jelly Pixel', ui-monospace, monospace">SELECT</text>
+					<text x="165" y="57" text-anchor="middle" font-size="5.5" fill="rgba(255,255,255,0.45)" font-family="'Jelly Pixel', ui-monospace, monospace">START</text>
 					{#if pad.buttons.length > 16}
 						<circle cx="150" cy="84" r="6.5" fill={fill(16)} stroke={stroke(16)} stroke-width="1.2" />
-						<text x="150" y="86.5" text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.55)" font-family="monospace">⌂</text>
+						<text x="150" y="86.5" text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.55)" font-family="'Jelly Pixel', ui-monospace, monospace">⌂</text>
 					{/if}
 
 					<!-- Sticks: the well, then the cap at its axis position. L3/R3 light the ring. -->
@@ -214,7 +214,7 @@
 							stroke="rgba(0,0,0,0.5)"
 							stroke-width="1"
 						/>
-						<text x={st.cx} y={st.cy + 29} text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.4)" font-family="monospace">{st.label}</text>
+						<text x={st.cx} y={st.cy + 29} text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.4)" font-family="'Jelly Pixel', ui-monospace, monospace">{st.label}</text>
 					{/each}
 				</svg>
 			</div>

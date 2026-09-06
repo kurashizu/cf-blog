@@ -3,6 +3,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '$lib/sound';
 	import { LOCALES, locale, localeAuto, setLocale, detectLocale, t, type Locale } from '$lib/i18n';
+	import PixelIcon from '../pixel/PixelIcon.svelte';
 
 	/* The footer's language picker: the same list-with-a-dot menu the synth's
 	   LOAD and the workbench Dropdown use, opening upward from the corner. The
@@ -12,7 +13,6 @@
 	let trigger = $state<HTMLButtonElement | null>(null);
 	let anchor = $state({ right: 0, bottom: 0 });
 
-	let current = $derived(LOCALES.find((l) => l.id === $locale) ?? LOCALES[0]);
 	let detected = $derived(LOCALES.find((l) => l.id === detectLocale()) ?? LOCALES[0]);
 
 	function portal(node: HTMLElement) {
@@ -56,9 +56,10 @@
 	onclick={toggle}
 	title={$t('common.lang.title')}
 	data-tour="lang"
-	class="press text-xs cursor-pointer transition-colors shrink-0 whitespace-nowrap {open ? 'text-white' : 'text-white/40 hover:text-white/70'}"
+	aria-label={$t('common.lang.menu')}
+	class="press flex items-center cursor-pointer transition-colors shrink-0 {open ? 'text-white' : 'text-white/40 hover:text-white/70'}"
 >
-	[{current.code}<span class="text-[8px] leading-none inline-block ml-0.5 transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▲</span>]
+	<PixelIcon name="globe" size={16} />
 </button>
 
 {#if open}

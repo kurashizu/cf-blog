@@ -56,7 +56,8 @@
 			title: $t('chrome.credits.groupTypeface'),
 			colour: '#e5c07b',
 			items: [
-				{ name: 'Jelly Pixel Font', url: 'https://github.com/TakWolf/jelly-pixel-font', licence: 'SIL OFL 1.1', what: $t('chrome.credits.jellyPixel') }
+				{ name: 'Jelly Pixel Font', url: 'https://github.com/TakWolf/jelly-pixel-font', licence: 'SIL OFL 1.1', what: $t('chrome.credits.jellyPixel') },
+				{ name: 'Fusion Pixel Font', url: 'https://github.com/TakWolf/fusion-pixel-font', licence: 'SIL OFL 1.1', what: $t('chrome.credits.fusionPixel') }
 			]
 		},
 		{

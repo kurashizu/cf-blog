@@ -250,12 +250,12 @@
 			>
 				{#each TEXT_SIZES as px (px)}
 					<div style="font-size: {px}px" class="leading-snug space-y-0.5">
-						<div style="font-family: 'JetBrains Mono', monospace">{$t('utilities.screen.text.mono', { px, sample: TEXT_SAMPLE })}</div>
+						<div style="font-family: 'Jelly Pixel', 'JetBrains Mono', monospace">{$t('utilities.screen.text.mono', { px, sample: TEXT_SAMPLE })}</div>
 						<div style="font-family: ui-sans-serif, system-ui, sans-serif">{$t('utilities.screen.text.sans', { px, sample: TEXT_SAMPLE.slice(-14) })}</div>
 						<div style="font-family: Georgia, 'Times New Roman', serif">{$t('utilities.screen.text.serif', { px, sample: TEXT_SAMPLE.slice(-14) })}</div>
 					</div>
 				{/each}
-				<p class="text-xs pt-2" style="color: {step.inverted ? '#888' : '#777'}; font-family: 'JetBrains Mono', monospace">
+				<p class="text-xs pt-2" style="color: {step.inverted ? '#888' : '#777'}; font-family: 'Jelly Pixel', 'JetBrains Mono', monospace">
 					{$t('utilities.screen.text.hint')}
 				</p>
 			</div>

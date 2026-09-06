@@ -29,31 +29,70 @@
 	   which is what drew them correctly before. */
 	unicode-range: U+0000-024F, U+2000-206F, U+2190-21FF, U+2700-27BF, U+FE70-FEFF, U+FF00-FFEF;
 }
+/* Jelly Pixel stops at Latin: upstream ships 389 Han glyphs and no Hangul at
+   all, so with it alone a translated sentence came out as pixel Latin with
+   system-font CJK stitched in between. The CJK ranges are served instead by
+   Fusion Pixel (same author, same 12px grid, same 600/1200 advance widths,
+   SIL OFL -- static/fonts/fusion-OFL.txt), declared under the SAME family
+   name so every font-family stack on the site keeps working untouched.
+   Subset from the release files by scripts/build-fonts.sh. */
 @font-face {
 	font-family: 'Jelly Pixel';
-	src: url('/fonts/jelly-zh_cn.woff2') format('woff2');
+	src: url('/fonts/fusion-han.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
-	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+3000-303F, U+FF01-FF60;
+	/* The whole CJK Unified block plus extension A, compatibility ideographs,
+	   radicals, CJK punctuation and full-width forms: 19k glyphs, ~480KB,
+	   fetched only when a page actually shows Han text. */
+	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60, U+FFE0-FFE6;
 }
 @font-face {
 	font-family: 'Jelly Pixel';
-	src: url('/fonts/jelly-ja.woff2') format('woff2');
+	src: url('/fonts/fusion-kana.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
-	/* Kana only: the Han range is already served by the file above, and
-	   claiming it twice would make the winner depend on declaration order. */
 	unicode-range: U+3040-309F, U+30A0-30FF, U+31F0-31FF;
 }
 @font-face {
 	font-family: 'Jelly Pixel';
-	src: url('/fonts/jelly-ko.woff2') format('woff2');
+	src: url('/fonts/fusion-hangul.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
-	unicode-range: U+AC00-D7AF, U+1100-11FF, U+3130-318F;
+	unicode-range: U+AC00-D7AF, U+1100-11FF, U+3130-318F, U+A960-A97F, U+D7B0-D7FF;
+}
+/* Han glyph forms differ by region (骨 直 者 …). The default above is the
+   simplified-Chinese flavour; when the site is in Traditional Chinese or
+   Japanese, a flavour-specific Han file is put in front of it. Only the Han
+   ranges are declared under these names, so Latin, kana and Hangul still
+   resolve through 'Jelly Pixel' behind them. */
+@font-face {
+	font-family: 'Jelly Pixel Hant';
+	src: url('/fonts/fusion-han-hant.woff2') format('woff2');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60, U+FFE0-FFE6;
+}
+@font-face {
+	font-family: 'Jelly Pixel JA';
+	src: url('/fonts/fusion-han-ja.woff2') format('woff2');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60, U+FFE0-FFE6;
+}
+/* Applied to everything rather than to body: Tailwind's font-mono and a few
+   component stylesheets set font-family themselves, and each of those would
+   otherwise fall back to the simplified flavour. The ASCII banners keep
+   their own stack (see .ascii-art below). */
+:root:lang(zh-TW) *:not(.ascii-art):not(.ascii-art *) {
+	font-family: 'Jelly Pixel Hant', 'Jelly Pixel', 'JetBrains Mono', ui-monospace, monospace;
+}
+:root:lang(ja) *:not(.ascii-art):not(.ascii-art *) {
+	font-family: 'Jelly Pixel JA', 'Jelly Pixel', 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* A bitmap face must not be smoothed: the antialiasing that makes an outline

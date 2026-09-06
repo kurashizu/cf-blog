@@ -51,7 +51,7 @@
 		};
 
 		/** Font size in backing-store pixels, so labels stay ~9 CSS px at any DPR. */
-		const labelFont = () => `${Math.round(9 * (window.devicePixelRatio || 1))}px monospace`;
+		const labelFont = () => `${Math.round(9 * (window.devicePixelRatio || 1))}px 'Jelly Pixel', monospace`;
 
 		const render = () => {
 			animId = requestAnimationFrame(render);

@@ -1467,7 +1467,7 @@
 		>
 			<!-- Line height has to exceed the font size or descenders are clipped:
 			     v86 lays each text row out in exactly this box. -->
-			<div style="white-space: pre; font: 15px/18px monospace; color: #d8dee9; padding: 6px;"></div>
+			<div style="white-space: pre; font: 15px/18px 'Jelly Pixel', monospace; color: #d8dee9; padding: 6px;"></div>
 			<!-- The canvas holds exactly as many pixels as the guest is drawing, and
 			     the panel is bigger than that, so something has to invent the rest.
 			     Nearest-neighbour keeps a pixel a pixel instead of smearing it. -->

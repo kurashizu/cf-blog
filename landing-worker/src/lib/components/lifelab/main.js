@@ -1366,7 +1366,7 @@ function drawGhostFrame() {
 function drawHeat() {
   if (!has('heat') || S.running || S.cam.s < 13) return;
   ctx.save();
-  ctx.font = Math.floor(S.cam.s * 0.5) + 'px ui-monospace, monospace';
+  ctx.font = Math.floor(S.cam.s * 0.5) + "px 'Jelly Pixel', ui-monospace, monospace";
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const v = visibleRange();
   for (let y = v.y0; y < v.y1; y++)
@@ -1397,7 +1397,7 @@ function drawHover() {
     for (let dx = -1; dx <= 1; dx++)
       if ((dx || dy) && S.eng.get(c.x + dx, c.y + dy)) n++;
   ctx.fillStyle = 'rgba(209,154,102,.9)';
-  ctx.font = '11px monospace';
+  ctx.font = "12px 'Jelly Pixel', monospace";
   ctx.fillText(String(n), sx + sw + 4, sy + 10);
 }
 

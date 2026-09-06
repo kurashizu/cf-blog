@@ -29,6 +29,11 @@ export const PIXEL_ICON_PATHS = {
 	// than part of the face outline.
 	huggingface: 'M6 1h4v1h-4zM5 2h6v1h-6zM4 3h8v1h-8zM3 4h10v1h-10zM2 5h12v1h-12zM1 6h2v1h-2zM5 6h6v1h-6zM13 6h2v1h-2zM1 7h14v1h-14zM1 8h2v1h-2zM5 8h6v1h-6zM13 8h2v1h-2zM2 9h12v1h-12zM3 10h2v1h-2zM11 10h2v1h-2zM0 12h2v1h-2zM14 12h2v1h-2zM0 13h3v1h-3zM13 13h3v1h-3zM1 14h3v1h-3zM12 14h3v1h-3zM2 15h2v1h-2zM12 15h2v1h-2z',
 	help: 'M5 2h6v1H5V2zM4 3h1v2H4V3zm7 0h1v3h-1V3zM9 6h2v1H9V6zM8 7h2v1H8V7zm-1 1h2v3H7V8zm0 4h2v2H7v-2z',
+	// The language menu: a globe -- circle outline, equator and central
+	// meridian both two pixels so they hold at 16px, an inner meridian
+	// ellipse and two latitude rings. Rasterised from the geometry rather than
+	// drawn freehand so the two hemispheres are exact mirrors.
+	globe: 'M7 0h2v1h-2zM4 1h8v1h-8zM3 2h1v1h-1zM5 2h1v1h-1zM7 2h2v1h-2zM10 2h1v1h-1zM12 2h1v1h-1zM2 3h12v1h-12zM1 4h1v1h-1zM4 4h1v1h-1zM7 4h2v1h-2zM11 4h1v1h-1zM14 4h1v1h-1zM1 5h1v1h-1zM4 5h1v1h-1zM7 5h2v1h-2zM11 5h1v1h-1zM14 5h1v1h-1zM1 6h1v1h-1zM4 6h1v1h-1zM7 6h2v1h-2zM11 6h1v1h-1zM14 6h1v1h-1zM0 7h16v1h-16zM0 8h16v1h-16zM1 9h1v1h-1zM4 9h1v1h-1zM7 9h2v1h-2zM11 9h1v1h-1zM14 9h1v1h-1zM1 10h1v1h-1zM4 10h1v1h-1zM7 10h2v1h-2zM11 10h1v1h-1zM14 10h1v1h-1zM1 11h1v1h-1zM4 11h1v1h-1zM7 11h2v1h-2zM11 11h1v1h-1zM14 11h1v1h-1zM2 12h12v1h-12zM3 13h1v1h-1zM5 13h1v1h-1zM7 13h2v1h-2zM10 13h1v1h-1zM12 13h1v1h-1zM4 14h8v1h-8zM7 15h2v1h-2z',
 	// A solid IC chip with block pins on all four sides -- the earlier
 	// version was a thin single-pixel outline with hairline pins that read
 	// noticeably lighter than the other footer icons at the same size.
