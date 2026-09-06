@@ -31,6 +31,15 @@ export const PRESET_TOOLTIPS: Record<string, string> = {
 	'8-BIT BASS': 'Preset: 8-Bit Bass — Retro chiptune square/triangle bass with snappy VCF filter envelope',
 	PLUCK: 'Preset: Pluck — Short transient acoustic/electronic synth pluck with fast filter decay',
 	BRASS: 'Preset: Brass — Dual detuned sawtooth oscillators with dynamic filter sweep',
-	LEAD: 'Preset: Lead — Cutting pulse/sawtooth sync lead with resonant filter and full sustain',
-	'HI-HAT': 'Preset: Hi-Hat — Highpass filtered white noise percussive transient'
+	LEAD: 'Preset: Lead — Cutting 25% pulse + sawtooth lead with resonant filter and full sustain',
+	'KICK 808': 'Preset: 808 Kick — Sine with a 2.5-octave pitch drop and a sub underneath; sequence it low (C2-C3)',
+	'KICK PUNCH': 'Preset: Punch Kick — Shorter, harder triangle kick with a noise beater click',
+	SNARE: 'Preset: Snare — Triangle + fifth body with a noise rattle; KEY TRK brightens it up the keyboard',
+	CLAP: 'Preset: Clap — Three noise bursts 11 ms apart, then the tail (RPT / GAP in rack 1)',
+	'CLOSED HAT': 'Preset: Closed Hat — 45 ms of high-passed noise; higher keys are brighter',
+	'OPEN HAT': 'Preset: Open Hat — The closed hat left to ring for 350 ms',
+	TOM: 'Preset: Tom — Shallow pitch drop on a sine + triangle; play across a few keys for a rack',
+	RIMSHOT: 'Preset: Rimshot — Ring-modulated 40 ms ping',
+	COWBELL: 'Preset: Cowbell — Two squares a fifth apart (the 808 pair), band-passed at 1.5 kHz',
+	SHAKER: 'Preset: Shaker — Soft-attack noise with a filter that opens and closes with the hit'
 };

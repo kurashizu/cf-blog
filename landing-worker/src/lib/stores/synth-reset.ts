@@ -22,7 +22,9 @@ export const RACK1_NEUTRAL: Partial<TrackData> = {
 	pulseWidth: 50,
 	phaseOffset: 0,
 	subOscGain: 0,
-	noiseGain: 0
+	noiseGain: 0,
+	noiseRetrig: 1,
+	noiseRetrigGap: 12
 };
 
 export const RACK2_NEUTRAL: Partial<TrackData> = {

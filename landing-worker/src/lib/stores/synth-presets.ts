@@ -1,7 +1,7 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { playSound } from '../sound';
-import { type TrackData, type SynthWaveform, type FilterType } from '../synth';
+import type { TrackData } from '../synth';
 import { activeTrackId } from './synth-transport';
 import { tracksState, updateActiveTrack } from './synth-tracks';
 import { showSaveStatus } from './synth-patch';
@@ -9,17 +9,106 @@ import { showSaveStatus } from './synth-patch';
 const STORAGE_KEY = 'krsz-synth-presets-v1';
 const FILE_FORMAT = 'krsz-synth-preset';
 
+export type PresetCategory = 'SYNTH' | 'DRUMS';
+
 export interface SoundPreset {
 	name: string;
+	category?: PresetCategory;
 	preset: Partial<TrackData>;
+}
+
+/* Every built-in starts from a full, neutral timbre and overrides what it
+   needs. A preset that only set the fields it cared about left the rest --
+   an LFO, a noise mix, a sub, a pulse width -- over from whatever the track
+   was before, so the same preset sounded different on every track. Now a
+   preset is the whole sound. */
+const BASE: Partial<TrackData> = {
+	osc1Waveform: 'square',
+	osc1Gain: 0.9,
+	osc2Waveform: 'sawtooth',
+	osc2Gain: 0.5,
+	osc2Ratio: 1,
+	detuneCents: 0,
+	phaseOffset: 0,
+	osc2Semitone: 0,
+	pulseWidth: 50,
+	subOscGain: 0,
+	noiseGain: 0,
+	noiseRetrig: 1,
+	noiseRetrigGap: 12,
+	blendMode: 'layer',
+	morphAmount: 0,
+	glideTime: 0,
+	xfade: 0.5,
+	filterType: 'lowpass',
+	cutoff: 12000,
+	resonance: 0.2,
+	envFilterMod: 0,
+	keyTracking: 0,
+	attack: 0.005,
+	decay: 0.15,
+	sustain: 0.7,
+	release: 0.1,
+	ampAttack: 0.005,
+	ampDecay: 0.15,
+	ampSustain: 0.7,
+	ampRelease: 0.1,
+	filterAttack: 0.005,
+	filterDecay: 0.15,
+	filterSustain: 0.3,
+	filterRelease: 0.1,
+	filterEnvAmount: 0,
+	pitchAttack: 0.001,
+	pitchDecay: 0.03,
+	pitchEnvAmount: 0,
+	lfoWaveform: 'sine',
+	lfoRate: 5,
+	lfoPitchAmt: 0,
+	lfoCutoffAmt: 0,
+	lfoPanAmt: 0,
+	lfoAmpAmt: 0,
+	lfoFadeTime: 0,
+	eqOn: false,
+	eqGains: [0, 0, 0, 0, 0, 0],
+	airGain: 0
+};
+
+/* A one-shot: instant on, no sustain, and the legacy attack/decay/sustain/
+   release aliases kept in step with the AMP envelope so an old reader of the
+   patch agrees with a new one. */
+function hit(ampDecay: number, ampRelease: number, extra: Partial<TrackData>): Partial<TrackData> {
+	return {
+		...BASE,
+		osc2Gain: 0,
+		ampAttack: 0.001,
+		ampDecay,
+		ampSustain: 0,
+		ampRelease,
+		attack: 0.001,
+		decay: ampDecay,
+		sustain: 0,
+		release: ampRelease,
+		...extra
+	};
+}
+
+function synth(extra: Partial<TrackData>): Partial<TrackData> {
+	const p = { ...BASE, ...extra };
+	// keep the legacy aliases in step
+	p.attack = p.ampAttack;
+	p.decay = p.ampDecay;
+	p.sustain = p.ampSustain;
+	p.release = p.ampRelease;
+	return p;
 }
 
 export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		name: '8-BIT BASS',
-		preset: {
-			osc1Waveform: 'square' as SynthWaveform,
-			osc2Waveform: 'triangle' as SynthWaveform,
+		category: 'SYNTH',
+		preset: synth({
+			osc1Waveform: 'square',
+			osc2Waveform: 'triangle',
 			cutoff: 1200,
 			resonance: 4.2,
 			ampAttack: 0.003,
@@ -31,13 +120,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			filterSustain: 0.3,
 			filterRelease: 0.08,
 			filterEnvAmount: 0.6
-		}
+		})
 	},
 	{
 		name: 'PLUCK',
-		preset: {
-			osc1Waveform: 'square' as SynthWaveform,
-			osc2Waveform: 'sawtooth' as SynthWaveform,
+		category: 'SYNTH',
+		preset: synth({
+			osc1Waveform: 'square',
+			osc2Waveform: 'sawtooth',
 			cutoff: 1800,
 			resonance: 3.5,
 			ampAttack: 0.003,
@@ -49,13 +139,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			filterSustain: 0.0,
 			filterRelease: 0.06,
 			filterEnvAmount: 0.85
-		}
+		})
 	},
 	{
 		name: 'BRASS',
-		preset: {
-			osc1Waveform: 'sawtooth' as SynthWaveform,
-			osc2Waveform: 'sawtooth' as SynthWaveform,
+		category: 'SYNTH',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc2Waveform: 'sawtooth',
 			detuneCents: 12,
 			cutoff: 2400,
 			resonance: 2.0,
@@ -68,13 +159,18 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			filterSustain: 0.5,
 			filterRelease: 0.15,
 			filterEnvAmount: 0.55
-		}
+		})
 	},
 	{
+		// Was osc1Waveform 'pulse', which is not a Web Audio oscillator type:
+		// every note threw on osc.type and the preset was silent. A pulse is a
+		// square with PW off 50%, which the engine now actually builds.
 		name: 'LEAD',
-		preset: {
-			osc1Waveform: 'pulse' as SynthWaveform,
-			osc2Waveform: 'sawtooth' as SynthWaveform,
+		category: 'SYNTH',
+		preset: synth({
+			osc1Waveform: 'square',
+			pulseWidth: 25,
+			osc2Waveform: 'sawtooth',
 			detuneCents: 8,
 			cutoff: 6500,
 			resonance: 2.8,
@@ -87,33 +183,188 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			filterSustain: 0.6,
 			filterRelease: 0.12,
 			filterEnvAmount: 0.4
-		}
+		})
+	},
+
+	/* DRUMS. Sequence them on any key; the pitched ones follow the note, the
+	   noise ones use KEY TRK to get brighter up the keyboard. Numbers were
+	   settled by rendering each hit offline and reading its length, peak and
+	   spectral centroid, then listening -- see the commit that added them. */
+	{
+		// Sine with a 2.5-octave pitch drop over 45 ms and a sub underneath it.
+		name: 'KICK 808',
+		category: 'DRUMS',
+		preset: hit(0.32, 0.06, {
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			subOscGain: 0.6,
+			pitchEnvAmount: 2.5,
+			pitchAttack: 0.001,
+			pitchDecay: 0.045,
+			cutoff: 3000
+		})
 	},
 	{
-		name: 'HI-HAT',
-		preset: {
-			osc1Waveform: 'noise' as SynthWaveform,
-			osc2Waveform: 'triangle' as SynthWaveform,
-			osc2Gain: 0.0,
-			filterType: 'highpass' as FilterType,
-			cutoff: 40,
-			resonance: 0.0,
-			envFilterMod: 0.0,
-			ampAttack: 0.001,
-			ampDecay: 0.2,
-			ampSustain: 0.0,
-			ampRelease: 0.04,
+		// Shorter, harder, a triangle for some edge and a burst of noise for the beater.
+		name: 'KICK PUNCH',
+		category: 'DRUMS',
+		preset: hit(0.17, 0.04, {
+			osc1Waveform: 'triangle',
+			osc1Gain: 1,
+			subOscGain: 0.4,
+			noiseGain: 0.15,
+			pitchEnvAmount: 3,
+			pitchAttack: 0.001,
+			pitchDecay: 0.03,
+			cutoff: 5000,
+			filterEnvAmount: -0.6,
 			filterAttack: 0.001,
 			filterDecay: 0.05,
-			filterSustain: 0.0,
-			filterRelease: 0.03,
-			filterEnvAmount: 0.0,
-			pitchEnvAmount: 0.0,
+			filterSustain: 0
+		})
+	},
+	{
+		// Body from a triangle and a sine a fifth up, rattle from the NOISE mix,
+		// a short pitch snap on the body.
+		name: 'SNARE',
+		category: 'DRUMS',
+		preset: hit(0.18, 0.05, {
+			osc1Waveform: 'triangle',
+			osc1Gain: 0.8,
+			osc2Waveform: 'sine',
+			osc2Gain: 0.5,
+			osc2Semitone: 7,
+			noiseGain: 0.9,
+			pitchEnvAmount: 1,
 			pitchAttack: 0.001,
-			pitchDecay: 0.03
-		}
+			pitchDecay: 0.02,
+			cutoff: 8000,
+			resonance: 0.5,
+			keyTracking: 0.5,
+			filterEnvAmount: 0.3,
+			filterAttack: 0.001,
+			filterDecay: 0.08,
+			filterSustain: 0,
+			airGain: 0.2
+		})
+	},
+	{
+		// Three noise bursts 11 ms apart, high-passed at 1 kHz with the top
+		// shelved down -- a band-pass there was 10 dB quieter than the hats.
+		name: 'CLAP',
+		category: 'DRUMS',
+		preset: hit(0.25, 0.08, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			noiseRetrig: 3,
+			noiseRetrigGap: 11,
+			filterType: 'highpass',
+			cutoff: 1000,
+			resonance: 0.7,
+			airGain: -0.4
+		})
+	},
+	{
+		name: 'CLOSED HAT',
+		category: 'DRUMS',
+		preset: hit(0.045, 0.02, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			filterType: 'highpass',
+			cutoff: 7000,
+			resonance: 0.5,
+			keyTracking: 0.8,
+			airGain: 0.4
+		})
+	},
+	{
+		name: 'OPEN HAT',
+		category: 'DRUMS',
+		preset: hit(0.35, 0.15, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			filterType: 'highpass',
+			cutoff: 7000,
+			resonance: 0.5,
+			keyTracking: 0.8,
+			airGain: 0.4
+		})
+	},
+	{
+		// Like the kick but a shallower drop and longer body; play it across a few keys for a rack of toms.
+		name: 'TOM',
+		category: 'DRUMS',
+		preset: hit(0.35, 0.08, {
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			osc2Waveform: 'triangle',
+			osc2Gain: 0.3,
+			subOscGain: 0.3,
+			noiseGain: 0.12,
+			pitchEnvAmount: 1.2,
+			pitchAttack: 0.001,
+			pitchDecay: 0.08,
+			cutoff: 2500
+		})
+	},
+	{
+		// Two oscillators ring-modulated (sum and difference tones two octaves
+		// apart), 40 ms, high-passed so the ping is what is left.
+		name: 'RIMSHOT',
+		category: 'DRUMS',
+		preset: hit(0.04, 0.02, {
+			osc1Waveform: 'triangle',
+			osc1Gain: 1,
+			osc2Waveform: 'square',
+			osc2Gain: 1,
+			osc2Ratio: 4,
+			blendMode: 'ring',
+			filterType: 'highpass',
+			cutoff: 600,
+			resonance: 2,
+			pitchEnvAmount: 0.5,
+			pitchAttack: 0.001,
+			pitchDecay: 0.01,
+			airGain: 0.3
+		})
+	},
+	{
+		// Two squares a fifth-ish apart (the 808 uses 540 and 800 Hz), band-passed.
+		name: 'COWBELL',
+		category: 'DRUMS',
+		preset: hit(0.3, 0.1, {
+			osc1Waveform: 'square',
+			osc1Gain: 1,
+			osc2Waveform: 'square',
+			osc2Gain: 1,
+			osc2Ratio: 1.5,
+			filterType: 'bandpass',
+			cutoff: 1500,
+			resonance: 1
+		})
+	},
+	{
+		// Noise with a soft attack and a filter that opens and closes with it.
+		name: 'SHAKER',
+		category: 'DRUMS',
+		preset: hit(0.08, 0.05, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			ampAttack: 0.012,
+			attack: 0.012,
+			filterType: 'bandpass',
+			cutoff: 6000,
+			resonance: 2,
+			keyTracking: 0.6,
+			filterEnvAmount: 0.4,
+			filterAttack: 0.01,
+			filterDecay: 0.05,
+			filterSustain: 0
+		})
 	}
 ];
+
+export const PRESET_CATEGORIES: PresetCategory[] = ['SYNTH', 'DRUMS'];
 
 /* What a preset is: the sound of a track, and nothing about where it sits in
    the mix or what it plays. So every rack 1-6 parameter plus the AIR shelf
@@ -122,7 +373,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
    only ever set fields the synth actually has. */
 const TIMBRE_KEYS = [
 	'osc1Waveform', 'osc1Gain', 'osc2Waveform', 'osc2Gain', 'osc2Ratio', 'detuneCents', 'phaseOffset',
-	'osc2Semitone', 'pulseWidth', 'subOscGain', 'noiseGain',
+	'osc2Semitone', 'pulseWidth', 'subOscGain', 'noiseGain', 'noiseRetrig', 'noiseRetrigGap',
 	'blendMode', 'morphAmount', 'glideTime', 'xfade',
 	'filterType', 'cutoff', 'resonance', 'envFilterMod', 'keyTracking',
 	'attack', 'decay', 'sustain', 'release',
@@ -253,6 +504,25 @@ export function deleteUserPreset(userIdx: number): void {
 	userPresets.update((list) => list.filter((_, i) => i !== userIdx));
 	soundPresetIdx.update((i) => (i === removedAbs ? 0 : i > removedAbs ? i - 1 : i));
 	playSound('click');
+}
+
+/**
+ * Rename a user preset in place. Empty names are ignored; a name another
+ * preset (built-in or user) already has gets a numeric suffix rather than
+ * silently merging two sounds under one label. Returns the name actually used.
+ */
+export function renameUserPreset(userIdx: number, rawName: string): string | null {
+	const name = rawName.trim().toUpperCase().slice(0, 40);
+	if (!name) return null;
+	const list = get(userPresets);
+	const current = list[userIdx];
+	if (!current) return null;
+	if (name === current.name) return name;
+	const taken = get(allPresets).map((p) => p.name).filter((n) => n !== current.name);
+	const finalName = uniqueName(name, taken);
+	userPresets.update((l) => l.map((p, i) => (i === userIdx ? { ...p, name: finalName } : p)));
+	playSound('click');
+	return finalName;
 }
 
 export function exportActivePreset(): void {

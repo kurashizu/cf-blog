@@ -5,6 +5,8 @@ export const PARAM_DESCRIPTIONS: Record<string, string> = {
 	PW: 'Pulse Width — Duty cycle of square pulse waveform (narrow spike to symmetric square)',
 	SUB: 'Sub-Oscillator Gain — Adds 1-octave-down sine wave for extra low-end sub bass',
 	NOISE: 'White Noise Level — Adds breath, transient impact click, or airy percussive sizzle',
+	RPT: 'Noise Repeats — Number of noise bursts per hit (1 = one burst; 3-4 = the 808 clap stutter)',
+	GAP: 'Noise Burst Gap — Milliseconds between repeated noise bursts',
 	DET: 'Fine Detune in Cents — ±50 cents pitch shift for rich analog chorus thickness',
 	SEMI: 'Semitone Pitch Offset — Transposes pitch by ±24 semitones (up to ±2 full octaves)',
 	RATIO: 'FM Harmonic Multiplier — Frequency ratio (1x to 4x) for Frequency Modulation',

@@ -86,6 +86,10 @@
 			<RotaryKnob label="PHS" value={$currentTrack.phaseOffset} min={0} max={360} step={15} unit="°" color="#98c379" size={32} reset={0} onChange={(v) => updateActiveTrack({ phaseOffset: v })} />
 			<RotaryKnob label="SUB" value={Math.round(($currentTrack.subOscGain ?? 0) * 100)} min={0} max={100} unit="%" color="#61afef" size={32} reset={0} onChange={(v) => updateActiveTrack({ subOscGain: v / 100 })} />
 			<RotaryKnob label="NOISE" value={Math.round(($currentTrack.noiseGain ?? 0) * 100)} min={0} max={100} unit="%" color="#abb2bf" size={32} reset={0} onChange={(v) => updateActiveTrack({ noiseGain: v / 100 })} />
+			<!-- Burst count and spacing for the noise sources -- the 808 clap's
+			     stutter. At 1 the GAP does nothing, which is what its dimmed value says. -->
+			<RotaryKnob label="RPT" value={$currentTrack.noiseRetrig ?? 1} min={1} max={4} step={1} unit="x" color="#e06c75" size={32} reset={1} onChange={(v) => updateActiveTrack({ noiseRetrig: v })} />
+			<RotaryKnob label="GAP" value={$currentTrack.noiseRetrigGap ?? 12} min={5} max={40} step={1} unit="ms" color="#e06c75" size={32} reset={12} onChange={(v) => updateActiveTrack({ noiseRetrigGap: v })} />
 		</div>
 	</div>
 </div>

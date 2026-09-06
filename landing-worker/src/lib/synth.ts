@@ -161,6 +161,8 @@ export interface TrackData {
   pulseWidth: number;   // 5 to 95 percent (square wave duty cycle)
   subOscGain: number;   // 0.0 to 1.0 (sub-oscillator one octave below)
   noiseGain: number;    // 0.0 to 1.0 (noise generator mix level)
+  noiseRetrig?: number;    // 1 to 4 bursts per hit -- the 808 clap's stutter; 1 = plain noise
+  noiseRetrigGap?: number; // 5 to 40 ms between bursts
 
   // Node 2: Timbre Fusion Node
   blendMode: BlendMode; // 'layer' | 'fm' | 'ring' | 'sync'
@@ -333,6 +335,8 @@ interface ActiveVoice {
   osc1?: OscillatorNode;
   osc2?: OscillatorNode;
   noise?: AudioBufferSourceNode;
+  /** Sub oscillator and the NOISE-knob source: started and stopped with the rest. */
+  extras?: AudioScheduledSourceNode[];
   filter: BiquadFilterNode;
   gain: GainNode;
   lfo?: OscillatorNode;
@@ -985,6 +989,56 @@ class ModularSynth {
   /*                      COMPLETE MODULAR SIGNAL FLOW DSP                      */
   /* -------------------------------------------------------------------------- */
 
+  /* Web Audio has no pulse oscillator, only a 50% square. PW is a PeriodicWave
+     built from the pulse's Fourier series -- a_n = (2/nπ) sin(nπd) for duty d --
+     cached per context and duty so a hat pattern does not rebuild it every
+     step. 64 harmonics: at C4 that reaches 16 kHz, above it the wave aliases
+     less than the built-in square already does. */
+  private pulseWaves: WeakMap<BaseAudioContext, Map<number, PeriodicWave>> = new WeakMap();
+  private pulseWave(ctx: BaseAudioContext, dutyPct: number): PeriodicWave {
+    const duty = Math.round(Math.max(5, Math.min(95, dutyPct)));
+    let perCtx = this.pulseWaves.get(ctx);
+    if (!perCtx) {
+      perCtx = new Map();
+      this.pulseWaves.set(ctx, perCtx);
+    }
+    let wave = perCtx.get(duty);
+    if (!wave) {
+      const N = 64;
+      const real = new Float32Array(N + 1);
+      const imag = new Float32Array(N + 1);
+      const d = duty / 100;
+      for (let n = 1; n <= N; n++) real[n] = (2 / (n * Math.PI)) * Math.sin(n * Math.PI * d);
+      wave = ctx.createPeriodicWave(real, imag, { disableNormalization: false });
+      perCtx.set(duty, wave);
+    }
+    return wave;
+  }
+
+  private applyWaveform(osc: OscillatorNode, w: SynthWaveform, pulseWidth: number | undefined, ctx: BaseAudioContext) {
+    const pw = pulseWidth ?? 50;
+    if (w === 'square' && Math.round(pw) !== 50) osc.setPeriodicWave(this.pulseWave(ctx, pw));
+    else osc.type = w === 'noise' ? 'sawtooth' : w;
+  }
+
+  /* The 808 clap is one noise burst repeated three or four times a few ms
+     apart, then left to ring. Done as gain gating on the one source rather
+     than several start() calls, so the bursts are sample-exact and the amp
+     envelope and filter still shape the whole hit. The last burst stays open. */
+  private gateNoiseBursts(g: AudioParam, level: number, t: number, track: TrackData) {
+    const bursts = Math.max(1, Math.min(4, Math.round(track.noiseRetrig ?? 1)));
+    if (bursts <= 1) {
+      g.setValueAtTime(level, t);
+      return;
+    }
+    const gap = Math.max(0.005, Math.min(0.04, (track.noiseRetrigGap ?? 12) / 1000));
+    for (let i = 0; i < bursts; i++) {
+      const on = t + i * gap;
+      g.setValueAtTime(level, on);
+      if (i < bursts - 1) g.setValueAtTime(0.0001, on + gap * 0.55);
+    }
+  }
+
   public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number, rawVelocity?: number) {
     const track = this.tracks[trackId];
     // Muting silences live playback, but must not silence an offline render.
@@ -1024,6 +1078,7 @@ class ModularSynth {
     let osc1: OscillatorNode | undefined;
     let osc2: OscillatorNode | undefined;
     let noiseSource: AudioBufferSourceNode | undefined;
+    const extras: AudioScheduledSourceNode[] = [];
 
     // Notify realtime visual keyboard listeners
     if (this.onNoteListeners.size > 0) {
@@ -1067,7 +1122,10 @@ class ModularSynth {
       } else if (noiseRate !== 1.0) {
         noiseSource.playbackRate.setValueAtTime(noiseRate, t);
       }
-      noiseSource.connect(voiceMix);
+      const gN = ctx.createGain();
+      this.gateNoiseBursts(gN.gain, 1.0, t, track);
+      noiseSource.connect(gN);
+      gN.connect(voiceMix);
       noiseSource.start(startT1);
     } else {
       if (track.osc1Waveform === 'noise') {
@@ -1083,7 +1141,7 @@ class ModularSynth {
           noiseSource.playbackRate.setValueAtTime(noiseRate, t);
         }
         const g1 = ctx.createGain();
-        g1.gain.setValueAtTime(track.osc1Gain, t);
+        this.gateNoiseBursts(g1.gain, track.osc1Gain, t, track);
         noiseSource.connect(g1);
         g1.connect(voiceMix);
         noiseSource.start(startT1);
@@ -1095,7 +1153,7 @@ class ModularSynth {
         const startFreq = (glideSec > 0 && lastFreq && isLegato) ? lastFreq : baseFreq;
 
         osc1 = ctx.createOscillator();
-        osc1.type = track.osc1Waveform;
+        this.applyWaveform(osc1, track.osc1Waveform, track.pulseWidth, ctx);
         osc1.frequency.setValueAtTime(startFreq, t);
         if (glideSec > 0 && startFreq !== baseFreq) {
           osc1.frequency.exponentialRampToValueAtTime(baseFreq, t + glideSec);
@@ -1106,16 +1164,18 @@ class ModularSynth {
         }
       }
 
-      const osc2Freq = baseFreq * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200);
+      // SEMI transposes OSC2 in semitones on top of RATIO and DET; it was a knob
+      // with nothing behind it until now.
+      const osc2Freq = baseFreq * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200) * Math.pow(2, (track.osc2Semitone ?? 0) / 12);
       const glideSec2 = (track.glideTime ?? 0) / 1000;
       const lastFreq2 = this.lastTrackFreqs.get(track.id);
       const lastTime2 = this.lastTrackNoteTimes.get(track.id) ?? 0;
       const isLegato2 = (t - lastTime2) < 1.5;
-      const prevOsc2Freq = lastFreq2 ? lastFreq2 * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200) : osc2Freq;
+      const prevOsc2Freq = lastFreq2 ? lastFreq2 * track.osc2Ratio * Math.pow(2, track.detuneCents / 1200) * Math.pow(2, (track.osc2Semitone ?? 0) / 12) : osc2Freq;
       const startFreq2 = (glideSec2 > 0 && lastFreq2 && isLegato2) ? prevOsc2Freq : osc2Freq;
 
       osc2 = ctx.createOscillator();
-      osc2.type = track.osc2Waveform === 'noise' ? 'sawtooth' : track.osc2Waveform;
+      this.applyWaveform(osc2, track.osc2Waveform, track.pulseWidth, ctx);
       osc2.frequency.setValueAtTime(startFreq2, t);
       if (glideSec2 > 0 && startFreq2 !== osc2Freq) {
         osc2.frequency.exponentialRampToValueAtTime(osc2Freq, t + glideSec2);
@@ -1177,6 +1237,52 @@ class ModularSynth {
 
       if (osc1) osc1.start(startT1);
       osc2.start(startT2);
+
+      // SUB: a sine an octave under OSC1, following its glide and pitch envelope.
+      // Was a knob with nothing behind it; a kick without it has no weight.
+      const subGainAmt = track.subOscGain ?? 0;
+      if (subGainAmt > 0 && osc1) {
+        const subStart = (glideSec2 > 0 && lastFreq2 && isLegato2) ? lastFreq2 : baseFreq;
+        const sub = ctx.createOscillator();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(subStart / 2, t);
+        if (glideSec2 > 0 && subStart !== baseFreq) sub.frequency.exponentialRampToValueAtTime(baseFreq / 2, t + glideSec2);
+        if (pEnvAmt !== 0) {
+          sub.frequency.exponentialRampToValueAtTime((baseFreq / 2) * pRatio, t + glideSec2 + pAtt);
+          sub.frequency.exponentialRampToValueAtTime(baseFreq / 2, t + glideSec2 + pAtt + pDec);
+        }
+        const gSub = ctx.createGain();
+        gSub.gain.setValueAtTime(subGainAmt * 0.9, t);
+        sub.connect(gSub);
+        gSub.connect(voiceMix);
+        sub.start(startT1);
+        extras.push(sub);
+      }
+    }
+
+    // NOISE: the mix knob's own source, so a snare can keep both oscillators
+    // for its body and still have its rattle. Same key-tracked rate and pitch
+    // envelope as OSC1-as-noise, same burst gating. Skipped when OSC1 is
+    // already the noise source -- that would just be the same buffer twice.
+    const noiseMixAmt = track.noiseGain ?? 0;
+    if (noiseMixAmt > 0 && track.osc1Waveform !== 'noise') {
+      if (!this.noiseBuffer) this.initNoiseBuffer();
+      const nz = ctx.createBufferSource();
+      nz.buffer = this.noiseBuffer;
+      nz.loop = true;
+      if (pEnvAmt !== 0) {
+        nz.playbackRate.setValueAtTime(noiseRate, t);
+        nz.playbackRate.exponentialRampToValueAtTime(noiseRate * pRatio, t + pAtt);
+        nz.playbackRate.exponentialRampToValueAtTime(noiseRate, t + pAtt + pDec);
+      } else if (noiseRate !== 1.0) {
+        nz.playbackRate.setValueAtTime(noiseRate, t);
+      }
+      const gN = ctx.createGain();
+      this.gateNoiseBursts(gN.gain, noiseMixAmt * 0.8, t, track);
+      nz.connect(gN);
+      gN.connect(voiceMix);
+      nz.start(startT1);
+      extras.push(nz);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -1383,6 +1489,7 @@ class ModularSynth {
       if (osc1) osc1.stop(stopTime);
       if (osc2) osc2.stop(stopTime);
       if (noiseSource) noiseSource.stop(stopTime);
+      for (const x of extras) x.stop(stopTime);
       if (lfo) lfo.stop(stopTime);
 
       // onended fires off the audio clock even when background-tab timer
@@ -1432,6 +1539,7 @@ class ModularSynth {
         osc1,
         osc2,
         noise: noiseSource,
+        extras,
         filter,
         gain: gainNode,
         lfo,
@@ -1518,7 +1626,7 @@ class ModularSynth {
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const { gain, filter, ampRel, vcfRel, baseCutoff, osc1, osc2, noise, lfo } = voice;
+    const { gain, filter, ampRel, vcfRel, baseCutoff, osc1, osc2, noise, lfo, extras } = voice;
 
     try {
       gain.gain.cancelScheduledValues(now);
@@ -1533,6 +1641,7 @@ class ModularSynth {
       if (osc1) osc1.stop(stopTime);
       if (osc2) osc2.stop(stopTime);
       if (noise) noise.stop(stopTime);
+      for (const x of extras ?? []) x.stop(stopTime);
       if (lfo) lfo.stop(stopTime);
 
       const endSrc = voice.osc1 ?? voice.osc2 ?? voice.noise;
@@ -1551,6 +1660,7 @@ class ModularSynth {
       if (voice.osc1) voice.osc1.stop();
       if (voice.osc2) voice.osc2.stop();
       if (voice.noise) voice.noise.stop();
+      for (const x of voice.extras ?? []) x.stop();
       if (voice.lfo) voice.lfo.stop();
     } catch {}
     this.reapVoice(voiceKey);
