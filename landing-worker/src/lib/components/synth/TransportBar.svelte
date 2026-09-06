@@ -22,7 +22,9 @@
 		toggle,
 		rewindToStart,
 		stepBar,
-		jumpPlayheadToCursor
+		jumpPlayheadToCursor,
+		loopMode,
+		setLoopMode
 	} from '../../stores/synth-transport';
 	import { stepPreset } from '../../stores/synth-presets';
 	import { hotkeyOverlayOpen, consoleOverlayOpen } from '../../stores/chrome';
@@ -287,6 +289,22 @@
 				<polygon points="8,2.5 14,8 8,13.5" />
 				<polygon points="2,2.5 8,8 2,13.5" />
 			</svg>
+		</button>
+
+		<!-- LOOP repeats the pattern; ONCE plays it through, lets the last
+		     notes ring out and rewinds to bar 1. -->
+		<button
+			onclick={() => {
+				setLoopMode(!$loopMode);
+				playSound('toggle');
+			}}
+			class="h-6 px-2 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0 {$loopMode
+				? 'border-[#98c379]/60 bg-[#98c379]/15 text-[#98c379] hover:bg-[#98c379]/25'
+				: 'border-[#e5c07b]/60 bg-[#e5c07b]/15 text-[#e5c07b] hover:bg-[#e5c07b]/25'}"
+			title={$loopMode ? 'LOOP — the pattern repeats until you stop it. Click for ONCE.' : 'ONCE — plays the pattern through, lets the tails ring and rewinds to bar 1. Click for LOOP.'}
+		>
+			<span>{$loopMode ? '⟲' : '→'}</span>
+			<span>{$loopMode ? 'LOOP' : 'ONCE'}</span>
 		</button>
 
 		<button

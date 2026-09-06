@@ -1789,11 +1789,32 @@ class ModularSynth {
   private scheduleAheadSec = 0.2; // 200ms lookahead — wider buffer against main thread jank
   private scheduledStepQueue: { step: number; time: number }[] = [];
   private lastAudibleStep: number = 0;
+  /* ONCE mode: the scheduler stops booking steps after the last one and notes
+     the audio-clock time the pattern ends; the UI tick sees that time pass,
+     drops the timers, lets the last notes ring out and rewinds. */
+  private loopMode = true;
+  private endAtTime: number | null = null;
+  private onEndedListeners: Set<() => void> = new Set();
   private _voiceSeq = 0; // monotonic voice counter — avoids Math.random() hot-path allocation
+
+  public isLoopMode(): boolean {
+    return this.loopMode;
+  }
+
+  public setLoopMode(loop: boolean) {
+    this.loopMode = loop;
+    if (loop) this.endAtTime = null;
+  }
+
+  public subscribeEnded(listener: () => void): () => void {
+    this.onEndedListeners.add(listener);
+    return () => this.onEndedListeners.delete(listener);
+  }
 
   public startSequencer(fromStep?: number) {
     if (this.isSequencerPlaying) return;
     this.isSequencerPlaying = true;
+    this.endAtTime = null;
     if (fromStep !== undefined && fromStep >= 0 && fromStep < this.totalSteps) {
       this.currentStep = fromStep;
       this.lastAudibleStep = fromStep;
@@ -1828,8 +1849,9 @@ class ModularSynth {
     this.onStepListeners.forEach((fn) => fn(this.currentStep));
   }
 
-  public stopSequencer() {
+  public stopSequencer(cutVoices = true) {
     this.isSequencerPlaying = false;
+    this.endAtTime = null;
     if (this.lookaheadTimer) {
       clearInterval(this.lookaheadTimer);
       this.lookaheadTimer = null;
@@ -1841,7 +1863,8 @@ class ModularSynth {
     // Set sequencer internal currentStep to the exact last heard audible step so next start resumes right where it stopped
     this.currentStep = this.lastAudibleStep;
     this.scheduledStepQueue = [];
-    this.stopAll();
+    // A natural end in ONCE mode leaves the tails to ring; a STOP cuts them.
+    if (cutVoices) this.stopAll();
   }
 
   private restartSequencerTimer() {
@@ -2005,10 +2028,15 @@ class ModularSynth {
     // bridge that, so widen the window while hidden to keep playback gapless.
     const aheadSec = typeof document !== 'undefined' && document.hidden ? 1.6 : this.scheduleAheadSec;
 
+    if (this.endAtTime !== null) return;
     while (this.nextStepTime < ctx.currentTime + aheadSec) {
       this.scheduleStepAudio(this.currentStep, this.nextStepTime);
       this.scheduledStepQueue.push({ step: this.currentStep, time: this.nextStepTime });
       this.nextStepTime += stepDuration;
+      if (!this.loopMode && this.currentStep === this.totalSteps - 1) {
+        this.endAtTime = this.nextStepTime;
+        break;
+      }
       this.currentStep = (this.currentStep + 1) % this.totalSteps;
     }
   }
@@ -2068,6 +2096,14 @@ class ModularSynth {
     if (latestStep !== null) {
       this.lastAudibleStep = latestStep;
       this.onStepListeners.forEach((fn) => fn(latestStep!));
+    }
+
+    if (this.endAtTime !== null && currentTime >= this.endAtTime) {
+      this.stopSequencer(false);
+      this.currentStep = 0;
+      this.lastAudibleStep = 0;
+      this.onStepListeners.forEach((fn) => fn(0));
+      this.onEndedListeners.forEach((fn) => fn());
     }
   }
 }

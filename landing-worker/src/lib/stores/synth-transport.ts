@@ -16,6 +16,13 @@ export const noteDur = writable<NoteDurationDiv>('1/4');
 export const activeStepPage = writable<number>(0);
 export const pageInputStr = writable<string>('1');
 export const pageFollow = writable<boolean>(true);
+/** LOOP: the pattern repeats; ONCE: it plays through, lets the tails ring and rewinds. */
+export const loopMode = writable<boolean>(modularSynth.isLoopMode());
+
+export function setLoopMode(loop: boolean): void {
+	modularSynth.setLoopMode(loop);
+	loopMode.set(loop);
+}
 
 let stepUnsub: (() => void) | null = null;
 
@@ -44,9 +51,16 @@ export function initTransport(): () => void {
 		}
 	});
 
+	const endedUnsub = modularSynth.subscribeEnded(() => {
+		isSeqPlaying.set(false);
+		seqCurrentStep.set(0);
+		cursorStep.set(0);
+	});
+
 	return () => {
 		stepUnsub?.();
 		stepUnsub = null;
+		endedUnsub();
 		if (animId) cancelAnimationFrame(animId);
 	};
 }
