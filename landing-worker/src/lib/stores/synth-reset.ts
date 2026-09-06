@@ -82,7 +82,11 @@ export const RACK6_EQ_NEUTRAL: Partial<TrackData> = {
 export const RACK7_NEUTRAL: Partial<TrackData> = {
 	pan: 0,
 	airGain: 0,
-	volume: 1,
+	volume: 1
+};
+
+/** The DUCK tab of rack 6: sidechain off, timing at its defaults. */
+export const RACK6_DUCK_NEUTRAL: Partial<TrackData> = {
 	duckSource: -1,
 	duckKey: -1,
 	duckDepth: 0,
@@ -106,13 +110,13 @@ export const resetRack4 = () => resetTrackRack(RACK4_NEUTRAL);
 export const resetRack5 = () => resetTrackRack(RACK5_NEUTRAL);
 export const resetRack7 = () => resetTrackRack(RACK7_NEUTRAL);
 
-/** Both tabs at once: the global delay/reverb/drive and the active track's EQ. MASTER is a level, not an effect, and stays. */
+/** All three tabs at once: the global delay/reverb/drive, the active track's EQ and its DUCK. MASTER is a level, not an effect, and stays. */
 export function resetRack6(): void {
 	setDelayTime(FX_NEUTRAL.delayTime);
 	setDelayFeedback(FX_NEUTRAL.delayFeedback);
 	setDelayMix(FX_NEUTRAL.delayMix);
 	setReverbMix(FX_NEUTRAL.reverbMix);
 	setDrive(FX_NEUTRAL.drive);
-	updateActiveTrack(RACK6_EQ_NEUTRAL);
+	updateActiveTrack({ ...RACK6_EQ_NEUTRAL, ...RACK6_DUCK_NEUTRAL });
 	playSound('toggle');
 }

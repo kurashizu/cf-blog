@@ -6,7 +6,7 @@ export const delayTime = writable<number>(modularSynth.getDelayTime());
 export const delayFeedback = writable<number>(modularSynth.getDelayFeedback());
 export const reverbMix = writable<number>(modularSynth.getReverbMix());
 export const drive = writable<number>(modularSynth.getDrive());
-export const activeFxTab = writable<'fx' | 'eq'>('fx');
+export const activeFxTab = writable<'fx' | 'eq' | 'duck'>('fx');
 
 export function setDelayMix(v: number): void {
 	modularSynth.setDelayMix(v);

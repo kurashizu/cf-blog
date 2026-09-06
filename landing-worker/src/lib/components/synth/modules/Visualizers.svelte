@@ -280,7 +280,7 @@
 	});
 </script>
 
-<div class="col-span-7 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
+<div class="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
 	<div class="flex items-center justify-between text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
 		<span class={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : activeOutVisualizer === 'scope' ? 'text-[#98c379] font-black' : 'text-[#e06c75] font-black'}>
 			{activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : activeOutVisualizer === 'scope' ? 'OSCILLOSCOPE WAVE' : 'RMS LOUDNESS GRAPH'}
