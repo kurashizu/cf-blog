@@ -78,10 +78,10 @@
 
 	let percussion = $derived(!!$activeTrackRow?.percussion);
 
-	/* The track's name, in the roll header, editable in place. Ten characters
+	/* The track's name, in the roll header, editable in place. Twenty characters
 	   show; the rest is an ellipsis and the tooltip. Short names are what the
 	   DUCK source stepper and the chips read, so renaming is worth a click. */
-	const NAME_SHOW = 10;
+	const NAME_SHOW = 20;
 	const NAME_MAX = 24;
 	let trackName = $derived($activeTrackRow?.name ?? '');
 	let shortName = $derived(trackName.length > NAME_SHOW ? trackName.slice(0, NAME_SHOW) + '…' : trackName);
@@ -460,14 +460,14 @@
 					maxlength={NAME_MAX}
 					spellcheck="false"
 					aria-label="Track name"
-					class="w-[120px] px-1.5 py-0.5 text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none text-white"
+					class="w-[190px] px-1.5 py-0.5 text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none text-white"
 					style="border-color: {$currentTrack.color}"
 				/>
 			{:else}
 				<button
 					onclick={startRename}
 					title={`${trackName} — click to rename TRK ${$activeTrackId + 1} (${NAME_MAX} characters; ${NAME_SHOW} show here)`}
-					class="press px-1.5 py-0.5 text-xs font-mono font-bold rounded-xs border cursor-pointer transition-colors hover:brightness-125 max-w-[120px] truncate"
+					class="press px-1.5 py-0.5 text-xs font-mono font-bold rounded-xs border cursor-pointer transition-colors hover:brightness-125 max-w-[190px] truncate"
 					style="color: {$currentTrack.color}; border-color: color-mix(in srgb, {$currentTrack.color} 50%, transparent); background: color-mix(in srgb, {$currentTrack.color} 12%, transparent)"
 				>
 					{shortName}
