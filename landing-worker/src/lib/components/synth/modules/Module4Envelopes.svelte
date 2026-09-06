@@ -114,7 +114,7 @@
 
 		<!-- Fixed width so the four faders never get crushed when the rack is at its narrowest -->
 		<div class="w-32 shrink-0 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5">
-			<HardwareFader label="A" value={attackVal} min={0.001} max={0.8} step={0.01} color={envColor} height={46} reset={0.001} onChange={onAttackChange} />
+			<HardwareFader label="A" value={attackVal} min={0} max={0.8} step={0.001} color={envColor} height={46} reset={0} onChange={onAttackChange} />
 			<HardwareFader label="D" value={decayVal} min={0.01} max={1.0} step={0.01} color={envColor} height={46} reset={0.01} onChange={onDecayChange} />
 			<HardwareFader
 				label={activeEnvTab === 'pit' ? 'AMT' : 'S'}

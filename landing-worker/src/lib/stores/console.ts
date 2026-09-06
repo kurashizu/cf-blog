@@ -86,7 +86,7 @@ const NAV_WORDS: Record<string, number> = {
 	'3': 3, utilities: 3, utils: 3, tools: 3, hw: 3,
 	'4': 4, 'lm-space': 4, lmspace: 4, leaderboard: 4, llm: 4, models: 4, ranks: 4,
 	'5': 5, 'krsz-vm': 5, krszvm: 5, x86sim: 5, linux: 5, vm: 5, alpine: 5, x86: 5, sim: 5,
-	'6': 6, chatbot: 6, llm2: 6, gpu: 6, webgpu: 6,
+	'6': 6, 'web-lm': 6, weblm: 6, chatbot: 6, llm2: 6, gpu: 6, webgpu: 6,
 	'7': 7, lifelab: 7, life: 7, conway: 7, gol: 7, automaton: 7
 };
 
@@ -113,7 +113,7 @@ function rollBanner(): string[] {
 
 const HELP: ConsoleLine[] = [
 	accent('── NAVIGATION ──────────────────────────────'),
-	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm  6|chatbot  7|lifelab'),
+	out('  0|modules  1|guestbook  2|synth  3|utils  4|lm-space  5|krsz-vm  6|web-lm  7|lifelab'),
 	out('  open <project>     launch a project in a new tab'),
 	out('  ' + Object.keys(EXTERNAL_LINKS).filter((k) => k !== 'rules').join(' · ')),
 	accent('── FILESYSTEM ──────────────────────────────'),

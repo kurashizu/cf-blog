@@ -409,7 +409,7 @@ class ModularSynth {
      dry, square and short by nature -- came out washed and distant. Low enough
      now to give the room a little depth without smearing the attacks; the
      R-MIX knob still reaches the old value and beyond. */
-  private reverbMix: number = 0.06;
+  private reverbMix: number = 0.0;
   private driveAmount: number = 0.0;
 
   // Master Audio FX Nodes
@@ -1349,12 +1349,17 @@ class ModularSynth {
     filter.type = track.filterType;
 
     // 1. Dual Envelope Parameters
-    const ampAtt = Math.max(0.003, track.ampAttack ?? track.attack ?? 0.005);
+    // ATK 0 is a real zero: the gain is set, not ramped, so a drum starts on
+    // its first sample the way a chip's length-counter burst does. Anything
+    // above zero still gets at least one 1 ms ramp so it cannot alias.
+    const ampAttRaw = Math.max(0, track.ampAttack ?? track.attack ?? 0.005);
+    const ampAtt = ampAttRaw < 0.0005 ? 0 : Math.max(0.001, ampAttRaw);
     const ampDec = Math.max(0.01, track.ampDecay ?? track.decay ?? 0.15);
     const ampSus = Math.max(0.0001, track.ampSustain ?? track.sustain ?? 0.5);
     const ampRel = Math.max(0.01, track.ampRelease ?? track.release ?? 0.1);
 
-    const vcfAtt = Math.max(0.003, track.filterAttack ?? 0.005);
+    const vcfAttRaw = Math.max(0, track.filterAttack ?? 0.005);
+    const vcfAtt = vcfAttRaw < 0.0005 ? 0 : Math.max(0.001, vcfAttRaw);
     const vcfDec = Math.max(0.01, track.filterDecay ?? 0.18);
     const vcfSus = Math.max(0.0, track.filterSustain ?? 0.25);
     const vcfRel = Math.max(0.01, track.filterRelease ?? 0.1);
@@ -1408,8 +1413,8 @@ class ModularSynth {
     const sustainCutoff = Math.max(40, Math.min(20000, baseCutoff + peakDelta * vcfSus));
 
     // VCF Dynamic Sweep
-    filter.frequency.setValueAtTime(baseCutoff, t);
-    filter.frequency.exponentialRampToValueAtTime(peakCutoff, t + vcfAtt);
+    filter.frequency.setValueAtTime(vcfAtt === 0 ? peakCutoff : baseCutoff, t);
+    if (vcfAtt > 0) filter.frequency.exponentialRampToValueAtTime(peakCutoff, t + vcfAtt);
     filter.frequency.exponentialRampToValueAtTime(sustainCutoff, t + vcfAtt + vcfDec);
     filter.Q.setValueAtTime(dynamicResonance, t);
 
@@ -1445,8 +1450,12 @@ class ModularSynth {
     const peakGain = gainBase * track.volume;
     const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
-    gainNode.gain.setValueAtTime(0.0001, t);
-    gainNode.gain.linearRampToValueAtTime(peakGain, t + ampAtt);
+    if (ampAtt === 0) {
+      gainNode.gain.setValueAtTime(peakGain, t);
+    } else {
+      gainNode.gain.setValueAtTime(0.0001, t);
+      gainNode.gain.linearRampToValueAtTime(peakGain, t + ampAtt);
+    }
     gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + ampAtt + ampDec);
 
     // ──────────────────────────────────────────────────────────────────────────

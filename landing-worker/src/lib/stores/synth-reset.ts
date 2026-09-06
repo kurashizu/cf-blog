@@ -47,15 +47,15 @@ export const RACK3_NEUTRAL: Partial<TrackData> = {
 // The release floors are one fader step above zero rather than zero: a hard
 // cut at note-off clicks, which is an effect of its own.
 export const RACK4_NEUTRAL: Partial<TrackData> = {
-	ampAttack: 0.001,
-	attack: 0.001,
+	ampAttack: 0,
+	attack: 0,
 	ampDecay: 0.01,
 	decay: 0.01,
 	ampSustain: 1,
 	sustain: 1,
 	ampRelease: 0.02,
 	release: 0.02,
-	filterAttack: 0.001,
+	filterAttack: 0,
 	filterDecay: 0.01,
 	filterSustain: 0,
 	filterRelease: 0,

@@ -86,7 +86,7 @@
 		if (!gpu) return 'n/a (no navigator.gpu)';
 		try {
 			const adapter = await gpu.requestAdapter();
-			return adapter ? 'adapter granted — the chatbot can run on-GPU' : 'n/a (no adapter — driver blocklisted or missing)';
+			return adapter ? 'adapter granted — web-lm can run on-GPU' : 'n/a (no adapter — driver blocklisted or missing)';
 		} catch {
 			return 'n/a';
 		}

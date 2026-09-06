@@ -810,13 +810,13 @@
 		void addFiles(e.dataTransfer?.files ?? null);
 	}}
 	role="region"
-	aria-label="chatbot"
+	aria-label="web-lm"
 >
 	<!-- Control strip -->
 	<div
 		class="flex flex-wrap items-center gap-2 px-2 py-1.5 border {themeStyles.border} rounded-xs bg-black/30 text-xs"
 	>
-		<span class="font-black text-[#61afef]">6:chatbot</span>
+		<span class="font-black text-[#61afef]">6:web-lm</span>
 		<span class="text-white/40 hidden sm:inline">
 			text · images · tools, all on your machine
 		</span>

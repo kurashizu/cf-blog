@@ -75,7 +75,7 @@
 			]
 		},
 		{
-			title: 'CHATBOT',
+			title: 'WEB-LM',
 			colour: '#56b6c2',
 			items: [
 				{ name: 'wllama', url: 'https://github.com/ngxson/wllama', licence: 'MIT', what: 'Runs a language model in the browser' },

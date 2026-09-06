@@ -48,7 +48,7 @@
 		{ id: 3, key: '3', title: 'UTILITIES', desc: 'HW Test', color: '#e5c07b', icon: '⌨', tooltip: '3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]' },
 		{ id: 4, key: '4', title: 'LM.SPACE', desc: 'Model volume', color: '#98c379', icon: '▤', tooltip: '4: LM.SPACE — the Artificial Analysis model table as a navigable volume [Hotkey: Ctrl+4]' },
 		{ id: 5, key: '5', title: 'KRSZ-VM', desc: 'PC Emu', color: '#d19a66', icon: '⬢', tooltip: '5: krsz-vm — Alpine Linux on an emulated x86 PC, i686 or x86-64 [Hotkey: Ctrl+5]' },
-		{ id: 6, key: '6', title: 'CHATBOT', desc: 'On-GPU', color: '#61afef', icon: '◑', tooltip: '6: chatbot — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]' },
+		{ id: 6, key: '6', title: 'WEB-LM', desc: 'On-GPU', color: '#61afef', icon: '◑', tooltip: '6: web-lm — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]' },
 		{ id: 7, key: '7', title: 'LIFE.LAB', desc: 'Conway', color: '#98c379', icon: '⬗', tooltip: "7: lifelab — Conway's Game of Life, as a campaign: the two rules, still lifes, gliders, collisions, and the glider gun [Hotkey: Ctrl+7]" }
 	];
 

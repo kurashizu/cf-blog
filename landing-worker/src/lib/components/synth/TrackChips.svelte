@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { playSound } from '../../sound';
 	import { activeTrackId } from '../../stores/synth-transport';
-	import { tracksState, isOverlayMode, overlayTrackIds, toggleTrackMute, toggleTrackSolo, toggleTrackPercussion } from '../../stores/synth-tracks';
+	import { tracksState, isOverlayMode, overlayTrackIds, toggleTrackMute, toggleTrackSolo } from '../../stores/synth-tracks';
 
 	function toggleOverlayMode() {
 		const next = !$isOverlayMode;
@@ -116,21 +116,6 @@
 					title={`Solo ${trk.name} — additive: solo several tracks to hear them together`}
 				>
 					S
-				</button>
-				<!-- Percussion mode: each key on this track can carry its own sound.
-				     The racks then edit the key last placed, auditioned or pressed. -->
-				<button
-					onclick={(e) => {
-						e.stopPropagation();
-						toggleTrackPercussion(trk.id);
-						playSound('toggle');
-					}}
-					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.percussion ? 'bg-[#c678dd] text-black font-black' : 'text-white/40 hover:text-white'}"
-					title={trk.percussion
-						? `${trk.name} is in PERCUSSION mode — every key has its own sound; racks edit the active key. Click to return to one sound per track (the key table is kept).`
-						: `Percussion mode for ${trk.name} — give each key its own sound, like a drum machine`}
-				>
-					P
 				</button>
 			</div>
 		</div>

@@ -82,11 +82,11 @@ function hit(ampDecay: number, ampRelease: number, extra: Partial<TrackData>): P
 	return {
 		...BASE,
 		osc2Gain: 0,
-		ampAttack: 0.001,
+		ampAttack: 0,
 		ampDecay,
 		ampSustain: 0,
 		ampRelease,
-		attack: 0.001,
+		attack: 0,
 		decay: ampDecay,
 		sustain: 0,
 		release: ampRelease,

@@ -5,7 +5,7 @@ export const TAB_ROUTES = [
 	'/utils',
 	'/lm-space',
 	'/krsz-vm',
-	'/chatbot',
+	'/web-lm',
 	'/lifelab'
 ] as const;
 
@@ -16,7 +16,7 @@ export const TAB_TITLES = [
 	'KRSZ™ // 3:utils — Hardware Test Bench',
 	'KRSZ™ // 4:lm-space — The Leaderboard as a Volume',
 	'KRSZ™ // 5:krsz-vm — x86 PC Emulator',
-	'KRSZ™ // 6:chatbot — In-Browser LLM on WebGPU',
+	'KRSZ™ // 6:web-lm — In-Browser LLM on WebGPU',
 	'KRSZ™ // 7:lifelab — Conway Automaton Laboratory'
 ];
 
@@ -34,7 +34,7 @@ export function tabIndexFromPath(pathname: string): number {
  * QEMU shares memory with the worker running its CPU, which needs
  * SharedArrayBuffer, which a browser only grants when the page was *delivered*
  * with COOP and COEP. `_headers` sets those on /krsz-vm alone: isolation also
- * requires every cross-origin subresource to opt in, and the chatbot's model
+ * requires every cross-origin subresource to opt in, and web-lm's model
  * host does not send cross-origin-resource-policy, so making the headers
  * site-wide would trade a broken VM for a broken 1.2GB model download.
  *

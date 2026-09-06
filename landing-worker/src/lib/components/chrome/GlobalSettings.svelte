@@ -101,7 +101,7 @@
 		const list: Section[] = [
 			{
 				id: 'chatbot-model',
-				label: 'CHATBOT MODEL WEIGHTS',
+				label: 'WEB-LM MODEL WEIGHTS',
 				color: '#61afef',
 				size: modelCache?.bytes ?? null,
 				count: modelCache?.count,
@@ -113,7 +113,7 @@
 			},
 			{
 				id: 'chatbot-sessions',
-				label: 'CHATBOT CONVERSATIONS',
+				label: 'WEB-LM CONVERSATIONS',
 				color: '#c678dd',
 				size: chatBytes.bytes,
 				count: chatBytes.count,
@@ -156,10 +156,10 @@
 			},
 			{
 				id: 'chatbot-config',
-				label: 'CHATBOT GENERATION CONFIG',
+				label: 'WEB-LM GENERATION CONFIG',
 				color: '#61afef',
 				size: localStorageBytes([CHATBOT_CONFIG_KEY]),
-				detail: 'temperature, top_p and the other sampling settings from the chatbot config panel',
+				detail: 'temperature, top_p and the other sampling settings from the web-lm config panel',
 				clear: async () => removeKeys([CHATBOT_CONFIG_KEY])
 			},
 			{

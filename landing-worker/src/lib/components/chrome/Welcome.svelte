@@ -23,7 +23,7 @@
 		{ key: '3', title: 'UTILITIES', desc: 'Hardware testers', color: '#e5c07b', icon: '⌨' },
 		{ key: '4', title: 'LM.SPACE', desc: 'Model table as a volume', color: '#98c379', icon: '▤' },
 		{ key: '5', title: 'KRSZ-VM', desc: 'x86 PC, emulated', color: '#d19a66', icon: '⬢' },
-		{ key: '6', title: 'CHATBOT', desc: 'On-GPU, no server', color: '#61afef', icon: '◑' },
+		{ key: '6', title: 'WEB-LM', desc: 'On-GPU, no server', color: '#61afef', icon: '◑' },
 		{ key: '7', title: 'LIFE.LAB', desc: "Conway's Game of Life", color: '#98c379', icon: '⬗' }
 	];
 

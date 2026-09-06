@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 export const prerender = false;
 
 /**
- * The chatbot's weights and runtime, served from this origin.
+ * web-lm's weights and runtime, served from this origin.
  *
  * They live in the same R2 bucket as everything else and were fetched straight
  * from bucket.krsz.in, which worked until the site became cross-origin

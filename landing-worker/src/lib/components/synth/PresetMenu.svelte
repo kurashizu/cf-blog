@@ -26,7 +26,8 @@
 		type PresetCategory,
 		type DrumKit
 	} from '../../stores/synth-presets';
-	import { activeTrackRow } from '../../stores/synth-tracks';
+	import { activeTrackRow, toggleTrackPercussion } from '../../stores/synth-tracks';
+	import { activeTrackId } from '../../stores/synth-transport';
 	import { PRESET_TOOLTIPS } from './tooltips';
 
 	/* A cascading menu, like a DAW's browser: the first level is categories,
@@ -327,4 +328,22 @@
 			</div>
 		{/if}
 	</div>
+
+	<!-- Percussion mode for the active track: every key gets its own sound and
+	     the racks edit the active key. Lives here because it changes what the
+	     PRESET menu applies to (a key rather than the track). -->
+	<button
+		onclick={() => {
+			toggleTrackPercussion($activeTrackId);
+			playSound('toggle');
+		}}
+		class="press px-1.5 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-colors flex items-center gap-1 {percussion
+			? 'border-[#c678dd] bg-[#c678dd] text-black font-black shadow-[0_0_6px_rgba(198,120,221,0.5)]'
+			: 'border-white/20 text-white/60 hover:text-white hover:border-[#c678dd]/60'}"
+		title={percussion
+			? `${$activeTrackRow?.name ?? 'This track'} is in PERCUSSION mode — every key has its own sound; racks and presets edit the active key. Click to return to one sound per track (the key table is kept).`
+			: `Percussion mode for ${$activeTrackRow?.name ?? 'the active track'} — give each key its own sound, like a drum machine`}
+	>
+		PERC
+	</button>
 </div>
