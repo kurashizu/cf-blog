@@ -5,7 +5,7 @@
  * recorded, so they're worth pinning down independently of the route.
  */
 import { describe, it, expect } from "vitest";
-import { deriveFootprint, summarizeCountries } from "./footprints";
+import { deriveFootprint, deriveFromAccessLog, sqliteToIso, summarizeCountries } from "./footprints";
 
 describe("deriveFootprint", () => {
     it("returns null when cf is missing (local dev, non-CF request)", () => {
@@ -83,5 +83,56 @@ describe("summarizeCountries", () => {
 
     it("returns an empty array for no rows", () => {
         expect(summarizeCountries([])).toEqual([]);
+    });
+});
+
+describe("deriveFromAccessLog", () => {
+    const CHROME_MAC =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+
+    it("maps a visitor-info group to a blog-sourced row keyed by the first log id", () => {
+        const fp = deriveFromAccessLog({
+            id: 4242,
+            country: "JP",
+            user_agent: CHROME_MAC,
+            ts: "2026-09-07 06:43:19",
+        });
+        expect(fp).toEqual({
+            country: "JP",
+            timezone: "",
+            browser: "Chrome",
+            os: "macOS",
+            colo: "",
+            at: "2026-09-07T06:43:19.000Z",
+            source: "blog",
+            sourceRef: "blog:4242",
+        });
+    });
+
+    it("skips groups without a country", () => {
+        expect(
+            deriveFromAccessLog({ id: 1, country: null, user_agent: CHROME_MAC, ts: "2026-09-07 00:00:00" }),
+        ).toBeNull();
+        expect(
+            deriveFromAccessLog({ id: 1, country: "", user_agent: CHROME_MAC, ts: "2026-09-07 00:00:00" }),
+        ).toBeNull();
+    });
+
+    it("skips callers with no recognisable browser family (curl, monitors)", () => {
+        expect(
+            deriveFromAccessLog({ id: 1, country: "DE", user_agent: "curl/8.4.0", ts: "2026-09-07 00:00:00" }),
+        ).toBeNull();
+        expect(
+            deriveFromAccessLog({ id: 1, country: "DE", user_agent: null, ts: "2026-09-07 00:00:00" }),
+        ).toBeNull();
+    });
+});
+
+describe("sqliteToIso", () => {
+    it("treats SQLite datetime('now') output as UTC", () => {
+        expect(sqliteToIso("2026-01-02 03:04:05")).toBe("2026-01-02T03:04:05.000Z");
+    });
+    it("passes ISO input through", () => {
+        expect(sqliteToIso("2026-01-02T03:04:05.000Z")).toBe("2026-01-02T03:04:05.000Z");
     });
 });

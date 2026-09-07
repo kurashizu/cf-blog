@@ -43,26 +43,57 @@
 		| 'color'
 		| 'display';
 
-	const TOOL_DEFS: { id: ToolId; color: string }[] = [
-		{ id: 'keyboard', color: '#56b6c2' },
-		{ id: 'mouse', color: '#c678dd' },
-		{ id: 'touch', color: '#56b6c2' },
-		{ id: 'typing', color: '#e5c07b' },
-		{ id: 'gamepad', color: '#e06c75' },
-		{ id: 'reaction', color: '#61afef' },
-		{ id: 'pixels', color: '#d19a66' },
-		{ id: 'audioout', color: '#98c379' },
-		{ id: 'mic', color: '#e5c07b' },
-		{ id: 'camera', color: '#c678dd' },
-		{ id: 'net', color: '#e06c75' },
-		{ id: 'speed', color: '#61afef' },
-		{ id: 'gpu', color: '#98c379' },
-		{ id: 'sensors', color: '#d19a66' },
-		{ id: 'midi', color: '#c678dd' },
-		{ id: 'usb', color: '#56b6c2' },
-		{ id: 'color', color: '#e5c07b' },
-		{ id: 'display', color: '#98c379' }
+	type GroupId = 'input' | 'display' | 'av' | 'system' | 'skill';
+
+	/* Eighteen tools is too many for one flat grid, so the launchpad is
+	   sectioned by what the tool exercises. Order inside a group is the order
+	   a person would reach for them. */
+	const GROUP_DEFS: { id: GroupId; tools: { id: ToolId; color: string }[] }[] = [
+		{
+			id: 'input',
+			tools: [
+				{ id: 'keyboard', color: '#56b6c2' },
+				{ id: 'mouse', color: '#c678dd' },
+				{ id: 'touch', color: '#56b6c2' },
+				{ id: 'gamepad', color: '#e06c75' },
+				{ id: 'midi', color: '#c678dd' },
+				{ id: 'usb', color: '#56b6c2' }
+			]
+		},
+		{
+			id: 'display',
+			tools: [
+				{ id: 'pixels', color: '#d19a66' },
+				{ id: 'color', color: '#e5c07b' },
+				{ id: 'display', color: '#98c379' },
+				{ id: 'gpu', color: '#98c379' }
+			]
+		},
+		{
+			id: 'av',
+			tools: [
+				{ id: 'audioout', color: '#98c379' },
+				{ id: 'mic', color: '#e5c07b' },
+				{ id: 'camera', color: '#c678dd' }
+			]
+		},
+		{
+			id: 'system',
+			tools: [
+				{ id: 'net', color: '#e06c75' },
+				{ id: 'speed', color: '#61afef' },
+				{ id: 'sensors', color: '#d19a66' }
+			]
+		},
+		{
+			id: 'skill',
+			tools: [
+				{ id: 'typing', color: '#e5c07b' },
+				{ id: 'reaction', color: '#61afef' }
+			]
+		}
 	];
+	const TOOL_DEFS = GROUP_DEFS.flatMap((g) => g.tools);
 
 	let activeTool = $state<ToolId>('keyboard');
 
@@ -80,6 +111,13 @@
 	);
 
 	let current = $derived(TOOLS.find((tool) => tool.id === activeTool) ?? TOOLS[0]);
+	let GROUPS = $derived(
+		GROUP_DEFS.map((g) => ({
+			id: g.id,
+			label: $t(`utilities.view.group.${g.id}`),
+			tools: g.tools.map((tool) => TOOLS.find((x) => x.id === tool.id)!)
+		}))
+	);
 </script>
 
 <div class="space-y-3 sm:space-y-4 flex-1">
@@ -100,20 +138,34 @@
 	     card per tool instead of a flat row of pills, so this reads as one
 	     consistent pattern across the site rather than two different ways
 	     of picking from a list. -->
-	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
-		{#each TOOLS as tool (tool.id)}
-			{@const isActive = activeTool === tool.id}
-			<button
-				onclick={() => select(tool.id)}
-				title={$t('utilities.view.tool.hint', { label: tool.label, desc: tool.desc })}
-				class="lift press border rounded-xs p-1.5 flex flex-col items-start text-left cursor-pointer transition-all min-w-0 {isActive
-					? 'border-white bg-white/20 text-white shadow-md'
-					: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
-				style={isActive ? `border-color: ${tool.color}` : undefined}
-			>
-				<div class="font-bold text-xs leading-tight tracking-tight truncate w-full" style="color: {isActive ? '#fff' : tool.color}">{tool.label}</div>
-				<div class="text-[10px] sm:text-xs opacity-60 font-mono truncate w-full">{tool.desc}</div>
-			</button>
+	<div class="space-y-2">
+		{#each GROUPS as group (group.id)}
+			{@const groupActive = group.tools.some((tool) => tool.id === activeTool)}
+			<div>
+				<!-- Section rule in the same ruled-heading idiom as the console's
+				     help sections: a short label, then a hairline to the edge. -->
+				<div class="flex items-center gap-2 mb-1">
+					<span class="text-[10px] font-bold tracking-wider {groupActive ? 'text-white/70' : 'text-white/35'}">{group.label}</span>
+					<span class="flex-1 border-t border-white/10"></span>
+					<span class="text-[9px] font-mono text-white/25">{group.tools.length}</span>
+				</div>
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
+					{#each group.tools as tool (tool.id)}
+						{@const isActive = activeTool === tool.id}
+						<button
+							onclick={() => select(tool.id)}
+							title={$t('utilities.view.tool.hint', { label: tool.label, desc: tool.desc })}
+							class="lift press border rounded-xs p-1.5 flex flex-col items-start text-left cursor-pointer transition-all min-w-0 {isActive
+								? 'border-white bg-white/20 text-white shadow-md'
+								: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
+							style={isActive ? `border-color: ${tool.color}` : undefined}
+						>
+							<div class="font-bold text-xs leading-tight tracking-tight truncate w-full" style="color: {isActive ? '#fff' : tool.color}">{tool.label}</div>
+							<div class="text-[10px] sm:text-xs opacity-60 font-mono truncate w-full">{tool.desc}</div>
+						</button>
+					{/each}
+				</div>
+			</div>
 		{/each}
 	</div>
 

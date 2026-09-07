@@ -122,11 +122,21 @@ CREATE TABLE IF NOT EXISTS footprints (
     browser    TEXT NOT NULL DEFAULT '',
     os         TEXT NOT NULL DEFAULT '',
     colo       TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    -- 'stamp' = explicit click on krsz.in; 'blog' = anonymised blog.krsz.in
+    -- visit lifted from api_access_log (/api/visitor-info rows, one per
+    -- ip+day). source_ref is 'blog:<first log row id of that ip+day>' —
+    -- the dedupe key that makes the import idempotent. NULL for stamps.
+    source     TEXT NOT NULL DEFAULT 'stamp',
+    source_ref TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_footprints_created_at
     ON footprints(created_at DESC);
+-- The unique index on source_ref (WHERE source_ref IS NOT NULL) and the
+-- source/source_ref columns for a table created before they existed are
+-- added at runtime by lib/footprints.ts ensureSchema(): an index statement
+-- here would fail this file on a pre-migration table and block the deploy.
 
 -- ============================================
 -- Generic cache key-value store (replaces R2 bucket for small caches)

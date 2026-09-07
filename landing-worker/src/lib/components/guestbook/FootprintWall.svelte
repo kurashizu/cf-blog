@@ -6,6 +6,7 @@
 	import { t, locale } from '$lib/i18n';
 
 	interface Footprint {
+		source: 'stamp' | 'blog';
 		id: string;
 		country: string;
 		timezone: string;
@@ -230,7 +231,10 @@
 		{/if}
 
 		<div class="min-w-0">
-			<div class="text-[10px] font-bold text-white/40 tracking-wide mb-1">{$t('community.footprints.recentHeading')}</div>
+			<div class="flex flex-wrap items-baseline justify-between gap-x-3 mb-1">
+				<div class="text-[10px] font-bold text-white/40 tracking-wide">{$t('community.footprints.recentHeading')}</div>
+				<div class="text-[9px] text-white/30 min-w-0">{$t('community.footprints.blogNote')}</div>
+			</div>
 			{#if summary.recent.length === 0}
 				<div class="text-xs font-mono text-white/40 py-1">{$t('community.footprints.empty')}</div>
 			{:else}
@@ -250,6 +254,9 @@
 							<span class="hidden md:inline shrink-0 truncate max-w-[100px] text-[9px] text-white/35">
 								{fp.browser || $t('community.footprints.unknownBrowser')} / {fp.os || $t('community.footprints.unknownOs')}
 							</span>
+							{#if fp.source === 'blog'}
+								<span class="shrink-0 text-[8px] font-mono px-1 rounded-xs border border-white/15 text-white/35" title={$t('community.footprints.sourceBlogTitle')}>{$t('community.footprints.sourceBlog')}</span>
+							{/if}
 							{#if mine}
 								<span class="shrink-0 text-[9px] font-black text-[#98c379]">{$t('community.footprints.you')}</span>
 							{/if}

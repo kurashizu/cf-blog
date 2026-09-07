@@ -25,6 +25,15 @@ export async function GET(request: NextRequest) {
             const repo = createFootprintsRepo();
             const summary = await repo.getSummary();
             audit.set({ metadata: { total: summary.total } });
+            // Pull new blog visits in after answering, never before: the
+            // wall shows them on the next fetch (30 s browser cache) and a
+            // slow or failing import can't delay or break this response.
+            const { ctx } = getCloudflareContext();
+            ctx?.waitUntil?.(
+                repo.importFromAccessLog().catch((err) => {
+                    console.error("Footprints import error:", err);
+                }),
+            );
             return NextResponse.json(summary, {
                 headers: {
                     ...CORS_HEADERS,
