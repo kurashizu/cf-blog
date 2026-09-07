@@ -1,7 +1,8 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
-import { tr, locale } from '$lib/i18n';
+import { page } from '$app/state';
+import { tr, locale, setLocale, localeAuto, LOCALES, LOCALE_IDS, type Locale } from '$lib/i18n';
 import { evaluateSafeJS } from '../evaluator';
 import { METER_SPECS, type NoteDurationDiv, type TimeSignature, type BlendMode } from '../synth';
 import { MODULES } from '../data/modules';
@@ -12,12 +13,26 @@ import { theme, cycleTheme, resolvedTheme, type WorkspaceTheme } from './theme';
 import { bpm, setBpm, setSnapDiv, setNoteDur, setTimeMeter, toggle as toggleSeq, play, stop, isSeqPlaying } from './synth-transport';
 import { updateActiveTrack, tracksState } from './synth-tracks';
 import { activeTrackId } from './synth-transport';
-import { BUILTIN_SONGS, builtinSongIdx, handleLoadBuiltinSong } from './synth-patch';
+import {
+	BUILTIN_SONGS,
+	builtinSongIdx,
+	handleLoadBuiltinSong,
+	handleNewProject,
+	handleSavePatch,
+	handleLoadPatch,
+	handleSharePatch,
+	copyText,
+	shareUrlFallback
+} from './synth-patch';
 import { midiConnectedDevice, midiDevices } from './synth-midi';
 import { soundState, setMuted, setVolume } from './sound';
 import { edgeTraceMs, loadEdgeTrace } from './edge';
-import { openOnboardingNow, hotkeyOverlayOpen } from './chrome';
+import { openOnboardingNow, hotkeyOverlayOpen, globalSettingsOpen, creditsOpen, privacyOpen, consoleOverlayOpen } from './chrome';
 import { KRSZ_MARKS } from '../krsz-marks';
+import { TEXT_SIZES, textSize, textSizeAuto, setTextSize, setTextSizeAuto } from './text-scale';
+import { isRecording, recSeconds, recError, startRecording, stopRecording, toggleRecording } from './recorder';
+import { getLifelabControl, type LifelabControl } from './lifelab-bridge';
+import { CATEGORIES, categoryMeta, patternMeta as lifelabPatternMeta } from '../components/lifelab/patterns.js';
 
 export type LineKind = 'cmd' | 'out' | 'ok' | 'err' | 'accent' | 'gold';
 export interface ConsoleLine {
@@ -105,6 +120,33 @@ const THEME_ALIASES: Record<string, WorkspaceTheme> = {
 const VALID_DIVS = ['4', '2', '1', '1/2', '1/3', '1/4', '1/6', '1/8', '1/12'];
 const VALID_METERS = Object.keys(METER_SPECS);
 
+/** Short forms accepted by `lang`, beyond the locale ids themselves. */
+const LANG_ALIASES: Record<string, Locale | 'auto'> = {
+	auto: 'auto',
+	en: 'en',
+	zh: 'zh-CN', cn: 'zh-CN', 'zh-cn': 'zh-CN',
+	tw: 'zh-TW', 'zh-tw': 'zh-TW',
+	jp: 'ja', ja: 'ja',
+	kr: 'ko', ko: 'ko'
+};
+
+const SCALE_VALUES = TEXT_SIZES.map(String);
+
+/** `life <sub>` control targets — kept as a plain list (see USAGE_COMMANDS'
+ *  own comment) for ARG_COMPLETIONS without re-deriving it from runLife(). */
+const LIFE_SUBCOMMANDS = ['run', 'pause', 'toggle', 'step', 'clear', 'random', 'speed', 'size', 'load', 'patterns', 'info'];
+
+/** DNS RR types this shell's tiny wire-format codec knows how to build/parse. */
+const DNS_TYPES: Record<string, number> = { A: 1, NS: 2, CNAME: 5, MX: 15, TXT: 16, AAAA: 28 };
+const DNS_TYPE_NAMES: Record<number, string> = Object.fromEntries(Object.entries(DNS_TYPES).map(([k, v]) => [v, k]));
+
+/** Every VFS text file `fortune` may quote from — real content the console already serves. */
+const FORTUNE_SOURCES = ['/operator/profile.txt', '/etc/motd', '/etc/hotkeys'];
+
+/** Cancels whatever long-running console animation (currently just `sl`) is in
+ *  flight -- CommandConsole.svelte calls this on Esc/Ctrl+C. null when idle. */
+export const cancelActiveAnimation = writable<(() => void) | null>(null);
+
 const BANNER_TAGLINE = " Kurashizu's Random-Stuff Zone — 100% serverless edge";
 
 /** Picks one of the same ten figlet renderings the Sidebar mark uses (see
@@ -151,6 +193,34 @@ function helpLines(): ConsoleLine[] {
 		out(`  snap <div> · dur <div>   ${tr('chrome.console.help.snapDur')}`),
 		out(`  meter <sig>              4/4 3/4 2/4 5/4 6/8 7/8`),
 		out(`  blend <layer|fm|ring|sync>   ${tr('chrome.console.help.blend')}`),
+		accent('── LIFE.LAB ─────────────────────────────────'),
+		out(`  life run|pause|toggle|step [n]         ${tr('chrome.console.help.lifeRun')}`),
+		out(`  life clear|random [d]|speed <n>        ${tr('chrome.console.help.lifeEdit')}`),
+		out(`  life size <W>x<H>|load <pat>|patterns  ${tr('chrome.console.help.lifeBoard')}`),
+		out(`  life info                              ${tr('chrome.console.help.lifeInfo')}`),
+		accent('── SYSTEM ───────────────────────────────────'),
+		out(`  sysinfo|neofetch|fetch   ${tr('chrome.console.help.sysinfo')}`),
+		out(`  uptime                   ${tr('chrome.console.help.uptime')}`),
+		out(`  ver | version            ${tr('chrome.console.help.ver')}`),
+		out(`  lang [locale]            ${tr('chrome.console.help.lang')}`),
+		out(`  scale [size|auto]        ${tr('chrome.console.help.scale')}`),
+		out(`  settings · credits · privacy   ${tr('chrome.console.help.dialogs')}`),
+		out(`  exit | quit | q          ${tr('chrome.console.help.exit')}`),
+		accent('── RECORDING / PATCH ────────────────────────'),
+		out(`  rec start|stop|toggle          ${tr('chrome.console.help.rec')}`),
+		out(`  patch new|save|load|share      ${tr('chrome.console.help.patch')}`),
+		accent('── TOOLS ────────────────────────────────────'),
+		out(`  dig <name> [type]             ${tr('chrome.console.help.dig')}`),
+		out(`  sha256/sha1 · base64 [-d] · hex   ${tr('chrome.console.help.hash')}`),
+		out(`  uuid · random [max] · roll NdM    ${tr('chrome.console.help.rand')}`),
+		out(`  unix [ts|iso]                 ${tr('chrome.console.help.unix')}`),
+		out(`  which <cmd>                   ${tr('chrome.console.help.which')}`),
+		out(`  fonts · fortune                ${tr('chrome.console.help.miscTools')}`),
+		out(`  cowsay <text> · sl             ${tr('chrome.console.help.fun')}`),
+		accent('── HISTORY & CHAINING ───────────────────────'),
+		out(`  !! · !n · !prefix              ${tr('chrome.console.help.bang')}`),
+		out(`  cmd ; cmd  ·  cmd && cmd        ${tr('chrome.console.help.chain')}`),
+		out(`  history -c                     ${tr('chrome.console.help.historyClear')}`),
 		accent('── MISC ────────────────────────────────────'),
 		out(`  eval <expr>     ${tr('chrome.console.help.eval')}`),
 		out(`  echo <text>     ${tr('chrome.console.help.echo')}`),
@@ -206,7 +276,33 @@ function usageTable(): Record<string, string[]> {
 		meter: ['meter <sig>', tr('chrome.console.usage.meter', { list: VALID_METERS.join(', ') })],
 		blend: ['blend <mode>', tr('chrome.console.usage.blend')],
 		clear: ['clear', tr('chrome.console.usage.clear')],
-		pwd: ['pwd', tr('chrome.console.usage.pwd')]
+		pwd: ['pwd', tr('chrome.console.usage.pwd')],
+		lang: ['lang [en|zh-CN|zh-TW|ja|ko|auto]', tr('chrome.console.usage.lang')],
+		life: ['life <sub>', tr('chrome.console.usage.life1'), tr('chrome.console.usage.life2')],
+		sysinfo: ['sysinfo', tr('chrome.console.usage.sysinfo')],
+		uptime: ['uptime', tr('chrome.console.usage.uptime')],
+		ver: ['ver', tr('chrome.console.usage.ver')],
+		settings: ['settings', tr('chrome.console.usage.settings')],
+		credits: ['credits', tr('chrome.console.usage.credits')],
+		privacy: ['privacy', tr('chrome.console.usage.privacy')],
+		exit: ['exit', tr('chrome.console.usage.exit')],
+		scale: ['scale [12|14|16|20|24|auto]', tr('chrome.console.usage.scale')],
+		rec: ['rec start|stop|toggle', tr('chrome.console.usage.rec')],
+		patch: ['patch new|save|load|share', tr('chrome.console.usage.patch')],
+		dig: ['dig <name> [type]', tr('chrome.console.usage.dig1'), tr('chrome.console.usage.dig2')],
+		sha256: ['sha256 <text>', tr('chrome.console.usage.sha256')],
+		sha1: ['sha1 <text>', tr('chrome.console.usage.sha1')],
+		base64: ['base64 [-d] <text>', tr('chrome.console.usage.base64')],
+		hex: ['hex <text>', tr('chrome.console.usage.hex')],
+		uuid: ['uuid', tr('chrome.console.usage.uuid')],
+		random: ['random [max]', tr('chrome.console.usage.random')],
+		roll: ['roll NdM', tr('chrome.console.usage.roll')],
+		unix: ['unix [ts|iso]', tr('chrome.console.usage.unix')],
+		which: ['which <cmd>', tr('chrome.console.usage.which')],
+		fonts: ['fonts', tr('chrome.console.usage.fonts')],
+		fortune: ['fortune', tr('chrome.console.usage.fortune')],
+		cowsay: ['cowsay <text>', tr('chrome.console.usage.cowsay')],
+		sl: ['sl', tr('chrome.console.usage.sl')]
 	};
 }
 
@@ -253,6 +349,10 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 	const rest = tokens.slice(1);
 	const args = rest.join(' ');
 	const base = get(cwd);
+
+	// ── LIFE.LAB control (checked ahead of NAV_WORDS: `life` alone still
+	// navigates to tab 7 via the branch below, `life <sub>` controls the dish) ──
+	if (cmd === 'life' && rest.length > 0) return runLife(rest);
 
 	// ── navigation ──
 	if (cmd in NAV_WORDS) {
@@ -585,7 +685,720 @@ async function runOne(segment: string, ctx: Ctx): Promise<ConsoleLine[]> {
 		return [];
 	}
 
+	// ── language ──
+	if (cmd === 'lang' || cmd === 'language') {
+		const q = args.trim().toLowerCase();
+		if (!q) {
+			const l = get(locale);
+			const row = LOCALES.find((x) => x.id === l);
+			return [
+				out(tr('chrome.console.run.langStatus', { locale: l, native: row?.native ?? l, mode: get(localeAuto) ? tr('chrome.console.run.langAuto') : tr('chrome.console.run.langManual') })),
+				out(`  ${LOCALE_IDS.join(', ')}`)
+			];
+		}
+		const target = (LOCALE_IDS as readonly string[]).includes(q) ? (q as Locale) : LANG_ALIASES[q];
+		if (!target) return [err(tr('chrome.console.run.unknownLang', { q, list: [...LOCALE_IDS, 'auto'].join(', ') }))];
+		setLocale(target);
+		return [ok(tr('chrome.console.run.langSet', { locale: target === 'auto' ? `auto (${get(locale)})` : target }))];
+	}
+
+	// ── text scale ──
+	if (cmd === 'scale') {
+		const q = args.trim().toLowerCase();
+		if (!q) return [out(tr('chrome.console.run.scaleStatus', { px: get(textSize), mode: get(textSizeAuto) ? tr('chrome.console.run.langAuto') : tr('chrome.console.run.langManual') }))];
+		if (q === 'auto') {
+			setTextSizeAuto();
+			return [ok(tr('chrome.console.run.scaleSetAuto', { px: get(textSize) }))];
+		}
+		const px = parseInt(q, 10);
+		if (!SCALE_VALUES.includes(q) || isNaN(px)) return [err(tr('chrome.console.run.usageScale', { list: [...SCALE_VALUES, 'auto'].join(', ') }))];
+		setTextSize(px);
+		return [ok(tr('chrome.console.run.scaleSet', { px }))];
+	}
+
+	// ── dialogs / overlay control ──
+	if (cmd === 'settings' || cmd === 'config') {
+		globalSettingsOpen.set(true);
+		return [ok(tr('chrome.console.run.openedSettings'))];
+	}
+	if (cmd === 'credits') {
+		creditsOpen.set(true);
+		return [ok(tr('chrome.console.run.openedCredits'))];
+	}
+	if (cmd === 'privacy') {
+		privacyOpen.set(true);
+		return [ok(tr('chrome.console.run.openedPrivacy'))];
+	}
+	if (cmd === 'exit' || cmd === 'quit' || cmd === 'q') {
+		consoleOverlayOpen.set(false);
+		return [ok(tr('chrome.console.run.closedConsole'))];
+	}
+
+	// ── recorder ──
+	if (cmd === 'rec' || cmd === 'record') {
+		const sub = args.trim().toLowerCase();
+		if (sub === 'start') {
+			startRecording();
+		} else if (sub === 'stop') {
+			stopRecording();
+		} else if (sub === 'toggle' || !sub) {
+			toggleRecording();
+		} else {
+			return [err(tr('chrome.console.usage.rec'))];
+		}
+		const recording = get(isRecording);
+		const errText = get(recError);
+		if (errText && !recording) return [err(errText)];
+		return [ok(recording ? tr('chrome.console.run.recStarted') : tr('chrome.console.run.recStopped', { seconds: get(recSeconds) }))];
+	}
+
+	// ── synth patch ──
+	if (cmd === 'patch') {
+		const sub = args.trim().toLowerCase();
+		if (sub === 'new') {
+			handleNewProject();
+			return [ok(tr('chrome.console.run.patchNew'))];
+		}
+		if (sub === 'save') {
+			handleSavePatch();
+			return [ok(tr('chrome.console.run.patchSaved'))];
+		}
+		if (sub === 'load') {
+			handleLoadPatch();
+			return [ok(tr('chrome.console.run.patchLoaded'))];
+		}
+		if (sub === 'share') {
+			await handleSharePatch();
+			const fallback = get(shareUrlFallback);
+			if (fallback) return [out(fallback)];
+			return [ok(tr('chrome.console.run.patchShared'))];
+		}
+		return [err(tr('chrome.console.usage.patch'))];
+	}
+
+	// ── build / session info ──
+	if (cmd === 'ver' || cmd === 'version') {
+		return [
+			out(`build   ${__BUILD_COMMIT__}`),
+			out(`time    ${__BUILD_TIME__}`),
+			out(`sydney  ${__BUILD_TIME_SYDNEY__}`)
+		];
+	}
+
+	if (cmd === 'uptime') return runUptime();
+
+	if (cmd === 'sysinfo' || cmd === 'neofetch' || cmd === 'fetch') return await runSysinfo();
+
+	// ── DNS ──
+	if (cmd === 'dig') return await runDig(rest);
+
+	// ── hash / encoding tools (stdin-aware) ──
+	if (cmd === 'sha256' || cmd === 'sha1') return await runHash(cmd, ctx.stdin, args);
+	if (cmd === 'base64') return await runBase64(rest, ctx.stdin, args);
+	if (cmd === 'hex') return runHex(ctx.stdin, args);
+	if (cmd === 'uuid') return [out(crypto.randomUUID())];
+	if (cmd === 'random') return runRandom(args);
+	if (cmd === 'roll') return runRoll(args);
+	if (cmd === 'unix') return runUnix(args);
+	if (cmd === 'which') return runWhich(args);
+	if (cmd === 'fonts') return runFonts();
+	if (cmd === 'fortune') return runFortune();
+	if (cmd === 'cowsay') return runCowsay(ctx.stdin, args);
+	if (cmd === 'sl') return runTrain();
+
 	return [err(tr('chrome.console.run.commandNotRecognized', { cmd }))];
+}
+
+// ── LIFE.LAB ─────────────────────────────────────────────────────────────────
+
+/** Every key `patterns.js`'s library covers, flattened for `life patterns` / tab completion. */
+function lifePatternKeys(): string[] {
+	return CATEGORIES.flatMap((c: { of: string[] }) => c.of);
+}
+
+async function runLife(rest: string[]): Promise<ConsoleLine[]> {
+	const sub = (rest[0] ?? '').toLowerCase();
+	const subArgs = rest.slice(1);
+	if (!LIFE_SUBCOMMANDS.includes(sub)) return [err(tr('chrome.console.usage.life2'))];
+
+	if (page.url.pathname !== TAB_ROUTES[7]) {
+		goto(TAB_ROUTES[7]);
+		return [accent(tr('chrome.console.run.lifeLoading'))];
+	}
+
+	const api: LifelabControl | null = await getLifelabControl();
+	if (!api) return [err(tr('chrome.console.run.lifeNotReady'))];
+
+	switch (sub) {
+		case 'run':
+			api.run();
+			return [ok(tr('chrome.console.run.lifeRunning'))];
+		case 'pause':
+			api.pause();
+			return [ok(tr('chrome.console.run.lifePaused'))];
+		case 'toggle': {
+			api.toggle();
+			const info = api.info();
+			return [ok(info.running ? tr('chrome.console.run.lifeRunning') : tr('chrome.console.run.lifePaused'))];
+		}
+		case 'step': {
+			const n = subArgs[0] ? parseInt(subArgs[0], 10) : 1;
+			if (isNaN(n) || n < 1) return [err(tr('chrome.console.usage.life2'))];
+			api.step(n);
+			return [ok(tr('chrome.console.run.lifeStepped', { n }))];
+		}
+		case 'clear':
+			api.clear();
+			return [ok(tr('chrome.console.run.lifeCleared'))];
+		case 'random': {
+			const d = subArgs[0] ? parseFloat(subArgs[0]) : undefined;
+			if (d !== undefined && (isNaN(d) || d <= 0 || d > 1)) return [err(tr('chrome.console.run.lifeBadDensity'))];
+			api.random(d);
+			return [ok(tr('chrome.console.run.lifeRandomized', { pct: Math.round((d ?? 0.12) * 100) }))];
+		}
+		case 'speed': {
+			const n = parseInt(subArgs[0] ?? '', 10);
+			if (isNaN(n) || !api.setSpeed(n)) return [err(tr('chrome.console.run.lifeBadSpeed', { list: api.speeds().join(', ') }))];
+			return [ok(tr('chrome.console.run.lifeSpeedSet', { n }))];
+		}
+		case 'size': {
+			const m = (subArgs[0] ?? '').match(/^(\d+)x(\d+)$/i);
+			if (!m) return [err(tr('chrome.console.usage.life2'))];
+			const w = Math.max(4, Math.min(4000, parseInt(m[1], 10)));
+			const h = Math.max(4, Math.min(4000, parseInt(m[2], 10)));
+			const size = api.resize(w, h);
+			return [ok(tr('chrome.console.run.lifeResized', { w: size.w, h: size.h }))];
+		}
+		case 'load': {
+			const q = subArgs.join(' ').trim();
+			if (!q) return [err(tr('chrome.console.usage.life2'))];
+			const keys = lifePatternKeys();
+			const key = keys.find((k) => k.toLowerCase() === q.toLowerCase()) ?? keys.find((k) => k.toLowerCase().includes(q.toLowerCase()));
+			if (!key || !api.loadPattern(key)) return [err(tr('chrome.console.run.lifeNoPattern', { q }))];
+			const meta = api.patternMeta(key);
+			return [ok(tr('chrome.console.run.lifeLoaded', { label: meta?.label ?? key }))];
+		}
+		case 'patterns':
+			return [
+				accent(tr('chrome.console.run.lifePatternsHeading')),
+				...(CATEGORIES as { id: string; label: string; hint: string; of: string[] }[]).flatMap((c) => {
+					const meta = categoryMeta(c);
+					return [accent(`  ${meta.label}`), ...c.of.map((k) => out(`    ${k.padEnd(16)} ${lifelabPatternMeta(k)?.label ?? ''}`))];
+				})
+			];
+		case 'info': {
+			const info = api.info();
+			return [
+				accent(tr('chrome.console.run.lifeInfoHeading')),
+				out(`  generation   ${info.gen}`),
+				out(`  population   ${info.pop}`),
+				out(`  dish         ${info.w}x${info.h}`),
+				out(`  running      ${info.running ? tr('chrome.console.run.statePlaying') : tr('chrome.console.run.stateStopped')}`),
+				out(`  speed        ${info.speed} gen/s`)
+			];
+		}
+		default:
+			return [err(tr('chrome.console.usage.life2'))];
+	}
+}
+
+// ── sysinfo / uptime ─────────────────────────────────────────────────────────
+
+const NA = 'n/a';
+
+function fmtDuration(ms: number): string {
+	const s = Math.floor(ms / 1000);
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
+	const sec = s % 60;
+	return h > 0 ? `${h}h ${m}m ${sec}s` : m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+/** Conservative UA parse — only used when userAgentData is unavailable. Reports n/a rather than guessing at anything the string doesn't say outright. */
+function parseUA(ua: string): { browser: string; os: string } {
+	let browser = NA;
+	const bm = ua.match(/(Firefox|Edg|OPR|Chrome|Safari)\/([\d.]+)/);
+	if (bm) {
+		const name = bm[1] === 'Edg' ? 'Edge' : bm[1] === 'OPR' ? 'Opera' : bm[1];
+		// Chrome's UA also contains "Safari/x" — Safari proper is only claimed when Chrome/Edg/OPR are absent.
+		if (name !== 'Safari' || !/Chrome|Edg|OPR/.test(ua)) browser = `${name} ${bm[2]}`;
+		else {
+			const cm = ua.match(/(Edg|OPR|Chrome)\/([\d.]+)/);
+			if (cm) browser = `${cm[1] === 'Edg' ? 'Edge' : cm[1] === 'OPR' ? 'Opera' : cm[1]} ${cm[2]}`;
+		}
+	}
+	let os = NA;
+	if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+	else if (/Windows NT ([\d.]+)/.test(ua)) os = `Windows NT ${ua.match(/Windows NT ([\d.]+)/)![1]}`;
+	else if (/Mac OS X ([\d_]+)/.test(ua)) os = `macOS ${ua.match(/Mac OS X ([\d_]+)/)![1].replace(/_/g, '.')}`;
+	else if (/Android ([\d.]+)/.test(ua)) os = `Android ${ua.match(/Android ([\d.]+)/)![1]}`;
+	else if (/iPhone OS ([\d_]+)/.test(ua)) os = `iOS ${ua.match(/iPhone OS ([\d_]+)/)![1].replace(/_/g, '.')}`;
+	else if (/Linux/.test(ua)) os = 'Linux';
+	return { browser, os };
+}
+
+interface UAHighEntropy {
+	getHighEntropyValues(hints: string[]): Promise<Record<string, unknown>>;
+}
+
+async function browserOsInfo(): Promise<{ browser: string; os: string }> {
+	const uaData = (navigator as unknown as { userAgentData?: UAHighEntropy }).userAgentData;
+	if (uaData) {
+		try {
+			const hi = await uaData.getHighEntropyValues(['platformVersion', 'fullVersionList', 'model']);
+			const brands = (hi.fullVersionList as { brand: string; version: string }[] | undefined)?.filter(
+				(b) => !/Not.?A.?Brand/i.test(b.brand)
+			);
+			const brand = brands?.[brands.length - 1] ?? brands?.[0];
+			const browser = brand ? `${brand.brand} ${brand.version}` : NA;
+			const platform = (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform ?? NA;
+			const pv = hi.platformVersion as string | undefined;
+			const os = pv ? `${platform} ${pv}` : platform;
+			return { browser, os };
+		} catch {
+			/* fall through to UA string parse */
+		}
+	}
+	return parseUA(navigator.userAgent);
+}
+
+/** Creates and immediately loses a throwaway WebGL context purely to read the renderer string. */
+function gpuRenderer(): string {
+	try {
+		const canvas = document.createElement('canvas');
+		const gl = (canvas.getContext('webgl') ?? canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
+		if (!gl) return NA;
+		const ext = gl.getExtension('WEBGL_debug_renderer_info');
+		const renderer = ext ? (gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) as string) : (gl.getParameter(gl.RENDERER) as string);
+		gl.getExtension('WEBGL_lose_context')?.loseContext();
+		return renderer || NA;
+	} catch {
+		return NA;
+	}
+}
+
+async function runSysinfo(): Promise<ConsoleLine[]> {
+	const { browser: browserName, os } = await browserOsInfo();
+	const nav = navigator as Navigator & { deviceMemory?: number; connection?: { effectiveType?: string } };
+	const mark = KRSZ_MARKS[Math.floor(Math.random() * KRSZ_MARKS.length)];
+	const art = mark.art.split('\n');
+	const pairs: [string, string][] = [
+		[tr('chrome.console.run.sysinfoBrowser'), `${browserName}`],
+		[tr('chrome.console.run.sysinfoOs'), `${os}`],
+		[tr('chrome.console.run.sysinfoPlatform'), `${navigator.platform || NA}`],
+		[tr('chrome.console.run.sysinfoCores'), `${nav.hardwareConcurrency ?? NA}`],
+		[tr('chrome.console.run.sysinfoMemory'), `${nav.deviceMemory ? `${nav.deviceMemory} GB` : NA}`],
+		[tr('chrome.console.run.sysinfoScreen'), `${screen.width}x${screen.height} @${window.devicePixelRatio}x, ${screen.colorDepth}-bit`],
+		[tr('chrome.console.run.sysinfoGpu'), `${gpuRenderer()}`],
+		[tr('chrome.console.run.sysinfoTimezone'), `${Intl.DateTimeFormat().resolvedOptions().timeZone || NA}`],
+		[tr('chrome.console.run.sysinfoLangs'), `${navigator.languages?.join(', ') || navigator.language || NA}`],
+		[tr('chrome.console.run.sysinfoOnline'), `${navigator.onLine ? tr('chrome.console.run.sysinfoYes') : tr('chrome.console.run.sysinfoNo')}`],
+		[tr('chrome.console.run.sysinfoLocale'), `${get(locale)}`],
+		[tr('chrome.console.run.sysinfoTheme'), `${get(resolvedTheme)}`],
+		[tr('chrome.console.run.sysinfoScale'), `${get(textSize)}px`],
+		[tr('chrome.console.run.sysinfoUptime'), `${fmtDuration(performance.now())}`],
+		[tr('chrome.console.run.sysinfoBuild'), `${__BUILD_COMMIT__}`]
+	];
+	// Labels are translated, so their widths differ per locale: pad to the
+	// widest one instead of hard-coding the gap, or the value column drifts.
+	// Han/kana/Hangul glyphs take two cells in the pixel face, so measure in
+	// cells, not code units.
+	const cells = (t: string) => [...t].reduce((n, ch) => n + (ch.charCodeAt(0) >= 0x2e80 ? 2 : 1), 0);
+	const labelWidth = Math.max(...pairs.map(([l]) => cells(l))) + 2;
+	const facts = pairs.map(([l, v]) => l + ' '.repeat(labelWidth - cells(l)) + v);
+	const width = Math.max(...art.map((l) => l.length)) + 2;
+	const lines: ConsoleLine[] = [];
+	const rows = Math.max(art.length, facts.length);
+	for (let i = 0; i < rows; i++) {
+		const left = (art[i] ?? '').padEnd(width);
+		const right = facts[i] ?? '';
+		lines.push({ kind: i < art.length ? 'gold' : 'out', text: `${left}${right}` });
+	}
+	return lines;
+}
+
+function runUptime(): ConsoleLine[] {
+	const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+	return [
+		accent(tr('chrome.console.run.uptimeHeading')),
+		out(`  session      ${fmtDuration(performance.now())}`),
+		out(`  DOMContentLoaded  ${nav ? `${Math.round(nav.domContentLoadedEventEnd)}ms` : NA}`),
+		out(`  load              ${nav ? `${Math.round(nav.loadEventEnd)}ms` : NA}`),
+		out(`  visibility        ${document.visibilityState}`)
+	];
+}
+
+// ── dig — a tiny DNS wire-format (RFC 1035) codec against /dns-query ────────
+
+function encodeQName(name: string): number[] {
+	const bytes: number[] = [];
+	for (const label of name.replace(/\.$/, '').split('.')) {
+		const enc = new TextEncoder().encode(label);
+		bytes.push(enc.length, ...enc);
+	}
+	bytes.push(0);
+	return bytes;
+}
+
+function buildQuery(name: string, type: number): Uint8Array<ArrayBuffer> {
+	const id = Math.floor(Math.random() * 0x10000);
+	const header = [id >> 8, id & 0xff, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+	const question = [...encodeQName(name), type >> 8, type & 0xff, 0x00, 0x01];
+	return new Uint8Array([...header, ...question]);
+}
+
+interface DnsAnswer {
+	name: string;
+	ttl: number;
+	type: number;
+	data: string;
+}
+
+/** Reads a possibly-compressed name starting at `off`; returns the name and the offset just past it. */
+function readName(buf: DataView, off: number): { name: string; next: number } {
+	const labels: string[] = [];
+	let cur = off;
+	let jumped = false;
+	let guard = 0;
+	let afterPointer = -1;
+	while (guard++ < 128) {
+		const len = buf.getUint8(cur);
+		if (len === 0) {
+			cur += 1;
+			break;
+		}
+		if ((len & 0xc0) === 0xc0) {
+			const pointer = ((len & 0x3f) << 8) | buf.getUint8(cur + 1);
+			if (!jumped) afterPointer = cur + 2;
+			cur = pointer;
+			jumped = true;
+			continue;
+		}
+		const start = cur + 1;
+		const bytes = new Uint8Array(buf.buffer, buf.byteOffset + start, len);
+		labels.push(new TextDecoder().decode(bytes));
+		cur = start + len;
+	}
+	return { name: labels.join('.'), next: jumped ? afterPointer : cur };
+}
+
+function parseResponse(bytes: Uint8Array): { answers: DnsAnswer[]; rcode: number } {
+	const buf = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+	const rcode = buf.getUint8(3) & 0x0f;
+	const qdcount = buf.getUint16(4);
+	const ancount = buf.getUint16(6);
+	let off = 12;
+	for (let i = 0; i < qdcount; i++) {
+		off = readName(buf, off).next;
+		off += 4; // QTYPE + QCLASS
+	}
+	const answers: DnsAnswer[] = [];
+	for (let i = 0; i < ancount; i++) {
+		const { name, next } = readName(buf, off);
+		off = next;
+		const type = buf.getUint16(off);
+		off += 2;
+		off += 2; // class
+		const ttl = buf.getUint32(off);
+		off += 4;
+		const rdlength = buf.getUint16(off);
+		off += 2;
+		const rdataStart = off;
+		let data = '';
+		if (type === DNS_TYPES.A) {
+			data = Array.from(bytes.slice(rdataStart, rdataStart + 4)).join('.');
+		} else if (type === DNS_TYPES.AAAA) {
+			const groups: string[] = [];
+			for (let g = 0; g < 8; g++) groups.push(buf.getUint16(rdataStart + g * 2).toString(16));
+			data = groups.join(':');
+		} else if (type === DNS_TYPES.CNAME || type === DNS_TYPES.NS) {
+			data = readName(buf, rdataStart).name;
+		} else if (type === DNS_TYPES.MX) {
+			const pref = buf.getUint16(rdataStart);
+			data = `${pref} ${readName(buf, rdataStart + 2).name}`;
+		} else if (type === DNS_TYPES.TXT) {
+			let p = rdataStart;
+			const chunks: string[] = [];
+			while (p < rdataStart + rdlength) {
+				const len = buf.getUint8(p);
+				chunks.push(new TextDecoder().decode(bytes.slice(p + 1, p + 1 + len)));
+				p += 1 + len;
+			}
+			data = chunks.map((c) => `"${c}"`).join(' ');
+		} else {
+			data = `(${rdlength} bytes)`;
+		}
+		off = rdataStart + rdlength;
+		answers.push({ name, ttl, type, data });
+	}
+	return { answers, rcode };
+}
+
+async function runDig(rest: string[]): Promise<ConsoleLine[]> {
+	const name = rest[0];
+	if (!name) return [err(tr('chrome.console.usage.dig2'))];
+	const typeName = (rest[1] ?? 'A').toUpperCase();
+	const type = DNS_TYPES[typeName];
+	if (!type) return [err(tr('chrome.console.run.digBadType', { list: Object.keys(DNS_TYPES).join(', ') }))];
+
+	const query = buildQuery(name, type);
+	let res: Response;
+	try {
+		res = await fetch('/dns-query', {
+			method: 'POST',
+			headers: { 'content-type': 'application/dns-message', accept: 'application/dns-message' },
+			body: query
+		});
+	} catch {
+		return [err(tr('chrome.console.run.digNetworkError'))];
+	}
+	if (!res.ok) return [err(tr('chrome.console.run.digHttpError', { status: res.status }))];
+	const bytes = new Uint8Array(await res.arrayBuffer());
+	if (bytes.length < 12) return [err(tr('chrome.console.run.digBadResponse'))];
+	const { answers, rcode } = parseResponse(bytes);
+	if (rcode !== 0) return [err(tr('chrome.console.run.digRcode', { rcode }))];
+	if (answers.length === 0) return [out(tr('chrome.console.run.digNoAnswers', { name, type: typeName }))];
+	return [
+		accent(tr('chrome.console.run.digHeading', { name, type: typeName })),
+		...answers.map((a) => out(`  ${a.name.padEnd(24)} ${String(a.ttl).padStart(6)}  IN  ${(DNS_TYPE_NAMES[a.type] ?? a.type).toString().padEnd(6)} ${a.data}`))
+	];
+}
+
+// ── small tools ──────────────────────────────────────────────────────────────
+
+/** stdin lines joined, or the trailing args -- the shared "text or pipe" input used by hash/encode/cowsay. */
+function textInput(stdin: ConsoleLine[] | null, args: string): string {
+	return stdin ? stdin.map((l) => l.text).join('\n') : args;
+}
+
+function toHex(buf: ArrayBuffer): string {
+	return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function runHash(algo: 'sha256' | 'sha1', stdin: ConsoleLine[] | null, args: string): Promise<ConsoleLine[]> {
+	const text = textInput(stdin, args);
+	if (!text) return [err(tr('chrome.console.run.usageTextArg', { cmd: algo }))];
+	if (!crypto.subtle) return [err(tr('chrome.console.run.subtleCryptoUnavailable'))];
+	const digest = await crypto.subtle.digest(algo === 'sha256' ? 'SHA-256' : 'SHA-1', new TextEncoder().encode(text));
+	return [out(toHex(digest))];
+}
+
+async function runBase64(rest: string[], stdin: ConsoleLine[] | null, args: string): Promise<ConsoleLine[]> {
+	const decode = rest[0] === '-d' || rest[0] === '--decode';
+	const rawArgs = decode ? rest.slice(1).join(' ') : args;
+	const text = textInput(stdin, rawArgs);
+	if (!text) return [err(tr('chrome.console.usage.base64'))];
+	try {
+		if (decode) {
+			const binary = atob(text.trim());
+			const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+			return [out(new TextDecoder().decode(bytes))];
+		}
+		const bytes = new TextEncoder().encode(text);
+		let binary = '';
+		for (const b of bytes) binary += String.fromCharCode(b);
+		return [out(btoa(binary))];
+	} catch {
+		return [err(tr('chrome.console.run.base64Invalid'))];
+	}
+}
+
+function runHex(stdin: ConsoleLine[] | null, args: string): ConsoleLine[] {
+	const text = textInput(stdin, args);
+	if (!text) return [err(tr('chrome.console.usage.hex'))];
+	return [out(toHex(new TextEncoder().encode(text).buffer))];
+}
+
+function runRandom(args: string): ConsoleLine[] {
+	const q = args.trim();
+	const max = q ? parseInt(q, 10) : 100;
+	if (isNaN(max) || max < 1) return [err(tr('chrome.console.usage.random'))];
+	return [out(String(1 + Math.floor(Math.random() * max)))];
+}
+
+function runRoll(args: string): ConsoleLine[] {
+	const m = args.trim().match(/^(\d*)d(\d+)$/i);
+	if (!m) return [err(tr('chrome.console.usage.roll'))];
+	const n = Math.min(100, Math.max(1, m[1] ? parseInt(m[1], 10) : 1));
+	const sides = parseInt(m[2], 10);
+	if (!sides || sides < 2) return [err(tr('chrome.console.usage.roll'))];
+	const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * sides));
+	const total = rolls.reduce((a, b) => a + b, 0);
+	return [out(tr('chrome.console.run.rollResult', { dice: `${n}d${sides}`, rolls: rolls.join(', '), total }))];
+}
+
+function runUnix(args: string): ConsoleLine[] {
+	const q = args.trim();
+	let date: Date;
+	if (!q) date = new Date();
+	else if (/^-?\d+$/.test(q)) date = new Date(parseInt(q, 10) * (q.length > 10 ? 1 : 1000));
+	else {
+		const parsed = new Date(q);
+		if (isNaN(parsed.getTime())) return [err(tr('chrome.console.usage.unix'))];
+		date = parsed;
+	}
+	return [
+		out(`unix    ${Math.floor(date.getTime() / 1000)}`),
+		out(`iso     ${date.toISOString()}`),
+		out(`local   ${date.toLocaleString(get(locale))}`)
+	];
+}
+
+function runWhich(args: string): ConsoleLine[] {
+	const name = args.trim().toLowerCase();
+	if (!name) return [err(tr('chrome.console.usage.which'))];
+	const aliasTable = get(aliases);
+	if (name in aliasTable) return [out(tr('chrome.console.run.whichAlias', { name, expansion: aliasTable[name] }))];
+	if (name in NAV_WORDS) return [out(tr('chrome.console.run.whichNav', { name, path: TAB_ROUTES[NAV_WORDS[name]] }))];
+	if (name in EXTERNAL_LINKS) return [out(tr('chrome.console.run.whichExternal', { name, url: EXTERNAL_LINKS[name] }))];
+	if (COMMAND_NAMES.includes(name)) return [out(tr('chrome.console.run.whichBuiltin', { name }))];
+	return [err(tr('chrome.console.run.whichNotFound', { name }))];
+}
+
+async function runFonts(): Promise<ConsoleLine[]> {
+	if (!('fonts' in document) || typeof (document as unknown as { fonts?: unknown }).fonts !== 'object') {
+		return [err(tr('chrome.console.run.fontsUnavailable'))];
+	}
+	await document.fonts.ready;
+	const faces: FontFace[] = [];
+	document.fonts.forEach((f) => faces.push(f));
+	if (faces.length === 0) return [out(tr('chrome.console.run.fontsEmpty'))];
+	return [
+		accent(tr('chrome.console.run.fontsHeading', { count: faces.length })),
+		...faces.map((f) => out(`  ${f.family.padEnd(20)} ${f.status.padEnd(8)} ${f.unicodeRange}`))
+	];
+}
+
+function runFortune(): ConsoleLine[] {
+	const path = FORTUNE_SOURCES[Math.floor(Math.random() * FORTUNE_SOURCES.length)];
+	const node = lookup(path);
+	if (!node || node.type !== 'file') return [err(tr('chrome.console.run.fortuneUnavailable'))];
+	const content = node.read();
+	if (content.length === 0) return [err(tr('chrome.console.run.fortuneUnavailable'))];
+	return [...content.map(out), { kind: 'out', text: tr('chrome.console.run.fortuneSource', { path }) }];
+}
+
+/** Wraps at `width` columns on word boundaries -- same approach as vfs.ts's wrap(), duplicated locally rather than exported since it is the only other caller. */
+function wrapText(text: string, width: number): string[] {
+	const words = text.split(/\s+/).filter(Boolean);
+	if (words.length === 0) return [''];
+	const rows: string[] = [];
+	let row = '';
+	for (const w of words) {
+		if (row && row.length + 1 + w.length > width) {
+			rows.push(row);
+			row = w;
+		} else {
+			row = row ? `${row} ${w}` : w;
+		}
+	}
+	if (row) rows.push(row);
+	return rows;
+}
+
+function runCowsay(stdin: ConsoleLine[] | null, args: string): ConsoleLine[] {
+	const text = textInput(stdin, args) || tr('chrome.console.run.cowsayDefault');
+	const lines = wrapText(text, 40);
+	const width = Math.max(...lines.map((l) => l.length));
+	const border = '-'.repeat(width + 2);
+	const bubble: string[] = [`  ${border}`];
+	lines.forEach((line, i) => {
+		const padded = line.padEnd(width);
+		const left = lines.length === 1 ? '<' : i === 0 ? '/' : i === lines.length - 1 ? '\\' : '|';
+		const right = lines.length === 1 ? '>' : i === 0 ? '\\' : i === lines.length - 1 ? '/' : '|';
+		bubble.push(`  ${left} ${padded} ${right}`);
+	});
+	bubble.push(`  ${border}`);
+	const cow = [
+		'        \\   ^__^',
+		'         \\  (oo)\\_______',
+		'            (__)\\       )\\/\\',
+		'                ||----w |',
+		'                ||     ||'
+	];
+	return [...bubble.map(out), ...cow.map(out)];
+}
+
+// ── sl — the classic locomotive easter egg ──────────────────────────────────
+
+/** One rendering of the classic `sl` engine, ASCII-only. Fixed width so scroll math is simple. */
+const TRAIN_ART = [
+	'      ====        ________                ___________ ',
+	'  _D _|  |_______/        \\__I_I_____===__|_________| ',
+	'   |(_)---  |   H\\________/ |   |        =|___ ___|   ',
+	'   /     |  |   H  |  |     |   |         ||_| |_||   ',
+	'  |      |  |   H  |__--------------------| [___] |   ',
+	'  | ________|___H__/__|_____/[][]~\\_______|       |   ',
+	'  |/ |   |-----------I_____I [][] []  D   |=======|__ '
+];
+const TRAIN_WIDTH = Math.max(...TRAIN_ART.map((l) => l.length));
+const TRAIN_DURATION_MS = 3000;
+const TRAIN_TRACK_WIDTH = 80;
+
+function runTrain(): ConsoleLine[] {
+	// Runs as a side effect over time rather than returning lines synchronously:
+	// each frame replaces the trailing MAX_LINES-bounded slice of the buffer that
+	// belongs to this render, so it never grows the scrollback per frame.
+	const scrollWidth = TRAIN_TRACK_WIDTH + TRAIN_WIDTH;
+	const start = performance.now();
+	let raf = 0;
+	let cancelled = false;
+
+	function render(x: number): ConsoleLine[] {
+		return TRAIN_ART.map((row) => {
+			const pos = Math.round(x);
+			let line = '';
+			for (let col = 0; col < TRAIN_TRACK_WIDTH; col++) {
+				const idx = col - pos;
+				line += idx >= 0 && idx < row.length ? row[idx] : ' ';
+			}
+			return out(line);
+		});
+	}
+
+	function stopFrame(finalLine?: ConsoleLine) {
+		if (cancelled) return;
+		cancelled = true;
+		cancelActiveAnimation.set(null);
+		consoleBuffer.update((buf) => {
+			const trimmed = buf.slice(0, Math.max(0, buf.length - TRAIN_ART.length));
+			return [...trimmed, ...(finalLine ? [finalLine] : [])].slice(-MAX_LINES);
+		});
+	}
+
+	function frame(t: number) {
+		if (cancelled) return;
+		const elapsed = t - start;
+		const progress = Math.min(1, elapsed / TRAIN_DURATION_MS);
+		// Right to left: starts fully off the right edge, ends fully off the left.
+		const x = scrollWidth - progress * scrollWidth * 2;
+		consoleBuffer.update((buf) => {
+			const trimmed = buf.slice(0, Math.max(0, buf.length - TRAIN_ART.length));
+			return [...trimmed, ...render(x)].slice(-MAX_LINES);
+		});
+		if (progress >= 1) {
+			stopFrame(ok(tr('chrome.console.run.slDone')));
+			return;
+		}
+		raf = requestAnimationFrame(frame);
+	}
+
+	cancelActiveAnimation.set(() => {
+		cancelAnimationFrame(raf);
+		stopFrame(out(tr('chrome.console.run.slCancelled')));
+	});
+	raf = requestAnimationFrame(frame);
+	// Placeholder lines the animation immediately overwrites -- keeps the "one
+	// call returns lines" contract every other command follows, and reserves
+	// the slice stopFrame()/frame() trim back out.
+	return TRAIN_ART.map(() => out(''));
+}
+
+/** Called from CommandConsole.svelte's onMount cleanup so a closed/unmounted
+ *  console cannot leave `sl`'s requestAnimationFrame loop running against a
+ *  buffer nobody is reading. Safe to call when nothing is animating. */
+export function cancelConsoleAnimation(): void {
+	get(cancelActiveAnimation)?.();
 }
 
 function formatEntry(node: VNode, long: boolean): string {
@@ -608,18 +1421,10 @@ function expandAliases(segment: string): string {
 	return current;
 }
 
-export async function executeCommand(raw: string): Promise<void> {
-	const input = raw.trim();
-	if (!input) return;
-
-	commandHistory.update((h) => {
-		const next = (h[h.length - 1] === input ? h : [...h, input]).slice(-100);
-		persist(HISTORY_KEY, next);
-		return next;
-	});
-	push([{ kind: 'cmd', text: input }]);
-
-	const segments = input.split('|').map((s) => s.trim()).filter(Boolean);
+/** Runs one `|`-chained pipeline (no `;`/`&&` inside it — those are split
+ *  before this is called). Returns the final stage's output. */
+async function runPipeline(pipeline: string): Promise<ConsoleLine[]> {
+	const segments = pipeline.split('|').map((s) => s.trim()).filter(Boolean);
 	let stdin: ConsoleLine[] | null = null;
 	for (let i = 0; i < segments.length; i++) {
 		const piped = segments.length > 1;
@@ -628,7 +1433,88 @@ export async function executeCommand(raw: string): Promise<void> {
 		// than feeding an error string into the next filter.
 		if (i < segments.length - 1 && stdin.some((l) => l.kind === 'err')) break;
 	}
-	push(stdin ?? []);
+	return stdin ?? [];
+}
+
+/** Splits on top-level `;` and `&&`, keeping the operator with each piece so
+ *  the executor knows whether to stop the chain on failure. `|` is left alone
+ *  here — it is handled inside runPipeline() once a `;`/`&&`-delimited piece
+ *  has been isolated, so `a | b && c | d` composes as documented. */
+function splitChain(input: string): { pipeline: string; stopOnError: boolean }[] {
+	const parts: { pipeline: string; stopOnError: boolean }[] = [];
+	let rest = input;
+	while (rest.length > 0) {
+		const andIdx = rest.indexOf('&&');
+		const semiIdx = rest.indexOf(';');
+		let cut = -1;
+		let stopOnError = false;
+		if (andIdx !== -1 && (semiIdx === -1 || andIdx < semiIdx)) {
+			cut = andIdx;
+			stopOnError = true;
+		} else if (semiIdx !== -1) {
+			cut = semiIdx;
+			stopOnError = false;
+		}
+		if (cut === -1) {
+			const pipeline = rest.trim();
+			if (pipeline) parts.push({ pipeline, stopOnError: false });
+			break;
+		}
+		const pipeline = rest.slice(0, cut).trim();
+		if (pipeline) parts.push({ pipeline, stopOnError });
+		rest = rest.slice(cut + (stopOnError ? 2 : 1));
+	}
+	return parts;
+}
+
+/** Expands `!!`, `!n` and `!prefix` against the history that existed before
+ *  this input was typed (so `!!` on the very first command, or `!3` past the
+ *  end of a short history, fails clearly rather than recalling itself). */
+function expandBang(input: string): string | null {
+	if (!input.startsWith('!')) return input;
+	const priorHistory = get(commandHistory);
+	if (input === '!!') return priorHistory[priorHistory.length - 1] ?? null;
+	const nMatch = input.match(/^!(\d+)$/);
+	if (nMatch) return priorHistory[parseInt(nMatch[1], 10) - 1] ?? null;
+	const prefixMatch = input.match(/^!(\S+)$/);
+	if (prefixMatch) {
+		const hit = [...priorHistory].reverse().find((h) => h.startsWith(prefixMatch[1]));
+		return hit ?? null;
+	}
+	return input;
+}
+
+export async function executeCommand(raw: string): Promise<void> {
+	const typed = raw.trim();
+	if (!typed) return;
+
+	const input = expandBang(typed);
+	if (input === null) {
+		push([{ kind: 'cmd', text: typed }, err(tr('chrome.console.run.bangNoMatch', { input: typed }))]);
+		return;
+	}
+
+	commandHistory.update((h) => {
+		const next = (h[h.length - 1] === input ? h : [...h, input]).slice(-100);
+		persist(HISTORY_KEY, next);
+		return next;
+	});
+	push([{ kind: 'cmd', text: input !== typed ? `${typed} → ${input}` : input }]);
+
+	if (input.trim().toLowerCase() === 'history -c') {
+		commandHistory.set([]);
+		persist(HISTORY_KEY, []);
+		push([ok(tr('chrome.console.run.historyCleared'))]);
+		return;
+	}
+
+	const chain = splitChain(input);
+	let last: ConsoleLine[] = [];
+	for (const { pipeline, stopOnError } of chain) {
+		last = await runPipeline(pipeline);
+		push(last);
+		if (stopOnError && last.some((l) => l.kind === 'err')) break;
+	}
 }
 
 // ── Tab completion ──────────────────────────────────────────────────────────
@@ -645,6 +1531,10 @@ const COMMAND_NAMES = [
 	'songs', 'load', 'play', 'stop', 'seq', 'sequence', 'bpm', 'vol', 'volume', 'mute', 'unmute', 'midi', 'theme', 'eval', 'js', 'calc',
 	'echo', 'snap', 'dur', 'meter', 'blend',
 	'trace', 'edge', 'guide', 'tour', 'keys', 'keymap', 'intro',
+	'life', 'lang', 'language', 'scale', 'sysinfo', 'neofetch', 'fetch', 'uptime', 'ver', 'version',
+	'settings', 'config', 'credits', 'privacy', 'exit', 'quit', 'q',
+	'rec', 'record', 'patch',
+	'dig', 'sha256', 'sha1', 'base64', 'hex', 'uuid', 'random', 'roll', 'unix', 'which', 'fonts', 'fortune', 'cowsay', 'sl',
 	...Object.keys(NAV_WORDS),
 	...Object.keys(EXTERNAL_LINKS)
 ];
@@ -662,7 +1552,9 @@ const USAGE_COMMANDS = [
 	'cd', 'ls', 'cat', 'tree', 'grep', 'head', 'tail', 'wc', 'sort', 'uniq', 'alias', 'unalias', 'trace', 'open',
 	'eval', 'bpm', 'vol', 'load', 'theme', 'echo', 'history', 'guide', 'keys', 'man', 'help', 'whoami', 'date',
 	'tracks', 'songs', 'midi', 'banner', 'play', 'stop', 'seq', 'mute', 'unmute', 'snap', 'dur', 'meter', 'blend',
-	'clear', 'pwd'
+	'clear', 'pwd', 'lang', 'life', 'sysinfo', 'uptime', 'ver', 'settings', 'credits', 'privacy', 'exit', 'scale',
+	'rec', 'patch', 'dig', 'sha256', 'sha1', 'base64', 'hex', 'uuid', 'random', 'roll', 'unix', 'which', 'fonts',
+	'fortune', 'cowsay', 'sl'
 ];
 
 const ARG_COMPLETIONS: Record<string, string[]> = {
@@ -673,7 +1565,14 @@ const ARG_COMPLETIONS: Record<string, string[]> = {
 	snap: VALID_DIVS,
 	dur: VALID_DIVS,
 	meter: VALID_METERS,
-	man: USAGE_COMMANDS
+	man: USAGE_COMMANDS,
+	lang: [...LOCALE_IDS, 'auto', 'zh', 'cn', 'tw', 'jp', 'kr'],
+	scale: [...SCALE_VALUES, 'auto'],
+	life: LIFE_SUBCOMMANDS,
+	rec: ['start', 'stop', 'toggle'],
+	patch: ['new', 'save', 'load', 'share'],
+	dig: Object.keys(DNS_TYPES),
+	base64: ['-d']
 };
 
 /**
@@ -692,6 +1591,12 @@ export function getSuggestions(input: string): string[] {
 	}
 	const head = parts[0].toLowerCase();
 	const q = parts[parts.length - 1].toLowerCase();
+	if (head === 'life' && parts.length >= 3) {
+		const sub = parts[1].toLowerCase();
+		if (sub === 'load') return lifePatternKeys().filter((k) => k.toLowerCase().startsWith(q));
+		if (sub === 'speed') return ['2', '8', '30', '120', '480'].filter((s) => s.startsWith(q));
+		return [];
+	}
 	if (PATH_COMMANDS.has(head)) {
 		const base = get(cwd);
 		// Absolute matches, plus names directly inside the working directory.

@@ -280,21 +280,24 @@
 	});
 </script>
 
-<div class="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full">
-	<div class="flex items-center justify-between text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
-		<span class={activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : activeOutVisualizer === 'scope' ? 'text-[#98c379] font-black' : 'text-[#e06c75] font-black'}>
-			{activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : activeOutVisualizer === 'scope' ? 'OSCILLOSCOPE WAVE' : 'RMS LOUDNESS GRAPH'}
+<!-- min-w-0 + overflow-hidden on the panel and truncate on the title: the header
+     row's min-content width (title + six time-base buttons in SCOPE mode) must
+     never size the grid track, or module 7 grows wider than in FFT/LOUD mode. -->
+<div class="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full min-w-0 overflow-hidden">
+	<div class="flex items-center justify-between gap-1 min-w-0 text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
+		<span class="truncate {activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : activeOutVisualizer === 'scope' ? 'text-[#98c379] font-black' : 'text-[#e06c75] font-black'}">
+			{activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : activeOutVisualizer === 'scope' ? 'SCOPE' : 'RMS LOUDNESS GRAPH'}
 		</span>
 		{#if activeOutVisualizer === 'fft'}
-			<span class="text-[9px] text-white/50 font-bold">20Hz-20k</span>
+			<span class="text-[9px] text-white/50 font-bold shrink-0">20Hz-20k</span>
 		{:else if activeOutVisualizer === 'loudness'}
-			<span class="text-[9px] text-white/50 font-bold">-60dB to +6dB</span>
+			<span class="text-[9px] text-white/50 font-bold shrink-0">-60dB to +6dB</span>
 		{:else}
-			<div class="flex items-center gap-0.5">
+			<div class="flex items-center gap-0.5 shrink-0">
 				{#each TIME_BASES as tb (tb)}
 					<button
 						onclick={() => setTimeBase(tb)}
-						class="press px-1 py-0.2 rounded-xs border text-[8px] cursor-pointer font-black leading-none transition-colors {timeBase === tb
+						class="press px-0.5 py-0.2 rounded-xs border text-[8px] cursor-pointer font-black leading-none transition-colors {timeBase === tb
 							? 'border-[#98c379] bg-[#98c379] text-black font-black'
 							: 'border-white/20 text-white/60 hover:text-white'}"
 					>

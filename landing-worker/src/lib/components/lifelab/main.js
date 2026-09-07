@@ -1569,6 +1569,75 @@ function relabel() {
 }
 
 /**
+ * Console bridge -- the `life` command in the site's drop-down shell drives
+ * the dish through this object rather than reaching into S/engine internals
+ * directly, so the console stays a thin caller of the game's own functions
+ * (loadLevel, resizeDish, fitDish, importRLE, the run/step/clear paths behind
+ * the toolbar buttons) and never duplicates game logic. Set at the end of
+ * start() once the dish exists, cleared in stop() so a call after the view
+ * has been left (or before it has mounted) reports "not running" instead of
+ * touching a torn-down or absent board.
+ * @type {import('./lifelab-control').LifelabControl | null}
+ */
+export let consoleControl = null;
+
+function buildConsoleControl() {
+  return {
+    run() { if (!S.running) startPause(); },
+    pause() { if (S.running) startPause(); },
+    toggle() { startPause(); },
+    step(n = 1) { S.running = false; for (let i = 0; i < Math.max(1, n | 0); i++) doStep(); draw(); updateStats(); syncRun(); },
+    clear() {
+      commitPiece();
+      pushUndo();
+      S.piece = null; syncPieceBar(true);
+      S.eng.clear();
+      S.ghost.fill(0);
+      S.rewind.length = 0;
+      S.running = false; S.phase = 'edit'; S.snap = null;
+      syncRun();
+    },
+    random(density) {
+      const d = typeof density === 'number' && density > 0 && density <= 1 ? density : 0.12;
+      commitPiece();
+      pushUndo();
+      const e = S.eng;
+      for (let y = 0; y < S.L.h; y++)
+        for (let x = 0; x < S.L.w; x++)
+          e.set(x, y, Math.random() < d ? 1 : 0);
+      draw(); updateStats();
+    },
+    setSpeed(gen) {
+      const i = SPEEDS.indexOf(gen);
+      if (i === -1) return false;
+      S.speed = i;
+      if (el.spd) el.spd.querySelector('span').textContent = tr('lifelab.ui.speed', { rate: SPEEDS[S.speed] });
+      return true;
+    },
+    speeds() { return SPEEDS.slice(); },
+    resize(w, h) { resizeDish(w, h); return { w: S.L.w, h: S.L.h }; },
+    /** Places a library/custom pattern key centered on the dish, enlarging it first if needed (same path as the tray). */
+    loadPattern(key) {
+      try { pattern(key); } catch { return false; }
+      pickPiece(key);
+      commitPiece();
+      return true;
+    },
+    patternMeta(key) { return patternMeta(key); },
+    info() {
+      return {
+        gen: S.eng ? S.eng.gen : 0,
+        pop: S.eng ? S.eng.pop : 0,
+        w: S.L ? S.L.w : 0,
+        h: S.L ? S.L.h : 0,
+        running: S.running,
+        speed: SPEEDS[S.speed],
+      };
+    },
+  };
+}
+
+/**
  * Binds to the markup the page has just rendered and starts the machine.
  *
  * Called on every mount rather than at import, because the module is cached
@@ -1602,6 +1671,7 @@ export function start() {
 
   // headless driver for automated checks
   window.lifelab = { S, loadLevel, doStep, startPause, step: n => { for (let i = 0; i < n; i++) doStep(); draw(); updateStats(); } };
+  consoleControl = buildConsoleControl();
 
   tlog(tr('lifelab.log.boot1'), 't-hd');
   tlog(tr('lifelab.log.boot2'));
@@ -1625,4 +1695,5 @@ export function stop() {
   unbindInput();
   S.running = false;
   clearTimeout(winTimer);
+  consoleControl = null;
 }

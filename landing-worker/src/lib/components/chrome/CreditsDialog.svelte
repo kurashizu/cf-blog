@@ -61,6 +61,13 @@
 			]
 		},
 		{
+			title: $t('chrome.credits.groupUtils'),
+			colour: '#61afef',
+			items: [
+				{ name: '@cloudflare/speedtest', url: 'https://github.com/cloudflare/speedtest', licence: 'MIT', what: $t('chrome.credits.cfSpeedtest') }
+			]
+		},
+		{
 			title: 'LM.SPACE',
 			colour: '#61afef',
 			items: [

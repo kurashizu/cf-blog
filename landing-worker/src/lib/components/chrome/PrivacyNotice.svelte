@@ -47,7 +47,13 @@
 
 			<section class="border border-[#e06c75]/40 bg-[#e06c75]/10 rounded-xs p-2.5 space-y-1.5">
 				<h2 class="text-[11px] sm:text-xs font-black tracking-wide text-[#e06c75]">{$t('chrome.privacy.section2Title')}</h2>
-				<p class="text-[#e06c75]/90 leading-relaxed">{$t('chrome.privacy.section2Body')}</p>
+				<p class="text-[#e06c75]/90 leading-relaxed">{$t('chrome.privacy.section2Intro')}</p>
+				<ul class="space-y-1 pl-3 text-[#e06c75]/90 leading-relaxed list-['·_']">
+					<li>{$t('chrome.privacy.section2Guestbook')}</li>
+					<li>{$t('chrome.privacy.section2Footprint')}</li>
+					<li>{$t('chrome.privacy.section2Speed')}</li>
+					<li>{$t('chrome.privacy.section2Dig')}</li>
+				</ul>
 			</section>
 
 			<section class="space-y-1.5">

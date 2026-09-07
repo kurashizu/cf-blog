@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BoxHeader from '../chrome/BoxHeader.svelte';
 	import AsciiArt from '../chrome/AsciiArt.svelte';
+	import FootprintWall from './FootprintWall.svelte';
 	import { onMount, tick } from 'svelte';
 	import { fade } from '$lib/perf-transitions';
 	import { playSound } from '../../sound';
@@ -554,6 +555,12 @@
 		</p>
 		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">{$t('community.guestbook.submit')}</button>
 	</form>
+
+	<!-- Zero-typing companion to the form above: one button records only
+	     coarse, edge-derived facts (country/timezone/browser/OS family) and
+	     shows them on a public wall. Its own fetch/state, so a slow or failed
+	     footprints API never blocks the guestbook feed below it. -->
+	<FootprintWall />
 
 	<!-- Live feed from blog.krsz.in's guestbook API -- each message drifts
 	     slowly around a bounded field instead of sitting in a static list,

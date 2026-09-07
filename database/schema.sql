@@ -108,6 +108,27 @@ CREATE INDEX IF NOT EXISTS idx_guestbook_approved
     ON guestbook_messages(approved);
 
 -- ============================================
+-- Footprint wall — coarse, edge-derived visitor "stamps"
+-- ============================================
+-- One row per IP per day (enforced at the app layer via SESSION_KV, not
+-- here). Deliberately narrow: no IP, city, region, ASN, browser/OS version,
+-- device model, or raw User-Agent is ever stored — only country, timezone
+-- and colo from Cloudflare's edge-resolved `request.cf`, plus browser/OS
+-- *family* names from ua-parser-js. See app/api/footprints/route.ts.
+CREATE TABLE IF NOT EXISTS footprints (
+    id         TEXT PRIMARY KEY,
+    country    TEXT NOT NULL,
+    timezone   TEXT NOT NULL DEFAULT '',
+    browser    TEXT NOT NULL DEFAULT '',
+    os         TEXT NOT NULL DEFAULT '',
+    colo       TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_footprints_created_at
+    ON footprints(created_at DESC);
+
+-- ============================================
 -- Generic cache key-value store (replaces R2 bucket for small caches)
 -- ============================================
 CREATE TABLE IF NOT EXISTS cache_entries (

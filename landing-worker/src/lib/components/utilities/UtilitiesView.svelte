@@ -14,6 +14,12 @@
 	import CameraTest from './CameraTest.svelte';
 	import TouchTest from './TouchTest.svelte';
 	import NetPowerInfo from './NetPowerInfo.svelte';
+	import SpeedTest from './SpeedTest.svelte';
+	import GpuTest from './GpuTest.svelte';
+	import SensorsTest from './SensorsTest.svelte';
+	import MidiMonitor from './MidiMonitor.svelte';
+	import UsbHidTest from './UsbHidTest.svelte';
+	import ColorTest from './ColorTest.svelte';
 	import { fade } from '$lib/perf-transitions';
 	import { t } from '$lib/i18n';
 
@@ -29,6 +35,12 @@
 		| 'mic'
 		| 'camera'
 		| 'net'
+		| 'speed'
+		| 'gpu'
+		| 'sensors'
+		| 'midi'
+		| 'usb'
+		| 'color'
 		| 'display';
 
 	const TOOL_DEFS: { id: ToolId; color: string }[] = [
@@ -43,6 +55,12 @@
 		{ id: 'mic', color: '#e5c07b' },
 		{ id: 'camera', color: '#c678dd' },
 		{ id: 'net', color: '#e06c75' },
+		{ id: 'speed', color: '#61afef' },
+		{ id: 'gpu', color: '#98c379' },
+		{ id: 'sensors', color: '#d19a66' },
+		{ id: 'midi', color: '#c678dd' },
+		{ id: 'usb', color: '#56b6c2' },
+		{ id: 'color', color: '#e5c07b' },
 		{ id: 'display', color: '#98c379' }
 	];
 
@@ -120,6 +138,18 @@
 					<CameraTest />
 				{:else if activeTool === 'net'}
 					<NetPowerInfo />
+				{:else if activeTool === 'speed'}
+					<SpeedTest />
+				{:else if activeTool === 'gpu'}
+					<GpuTest />
+				{:else if activeTool === 'sensors'}
+					<SensorsTest />
+				{:else if activeTool === 'midi'}
+					<MidiMonitor />
+				{:else if activeTool === 'usb'}
+					<UsbHidTest />
+				{:else if activeTool === 'color'}
+					<ColorTest />
 				{:else if activeTool === 'typing'}
 					<TypingTest />
 				{:else if activeTool === 'gamepad'}

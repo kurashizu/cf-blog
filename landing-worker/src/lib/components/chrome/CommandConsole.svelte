@@ -11,6 +11,8 @@
 		executeCommand,
 		getSuggestions,
 		applyCompletion,
+		cancelActiveAnimation,
+		cancelConsoleAnimation,
 		type LineKind
 	} from '../../stores/console';
 
@@ -48,7 +50,12 @@
 	// an element that mounts into an already-loaded page.
 	onMount(() => {
 		const id = requestAnimationFrame(() => inputEl?.focus());
-		return () => cancelAnimationFrame(id);
+		return () => {
+			cancelAnimationFrame(id);
+			// A closed/unmounted console must not leave `sl`'s scroll animation
+			// running against a scrollback buffer nobody is looking at.
+			cancelConsoleAnimation();
+		};
 	});
 
 	// Keep the scrollback pinned to the newest line.
@@ -131,9 +138,25 @@
 			return;
 		}
 		if (e.key === 'Escape') {
+			// Esc cancels a running animation (`sl`) first -- only clears the
+			// input line once nothing is scrolling.
+			const cancel = $cancelActiveAnimation;
+			if (cancel) {
+				e.preventDefault();
+				cancel();
+				return;
+			}
 			commandInput = '';
 			historyIdx = null;
 			tabCycle = null;
+			return;
+		}
+		if (e.key === 'c' && e.ctrlKey) {
+			const cancel = $cancelActiveAnimation;
+			if (cancel) {
+				e.preventDefault();
+				cancel();
+			}
 			return;
 		}
 		if (e.key === 'l' && e.ctrlKey) {
