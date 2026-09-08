@@ -108,24 +108,27 @@ in the same commit.
 | --- | --- | --- |
 | `relay-allowlist.ts` | 100% | 97% |
 | `engine.js` | 100% | 95% |
+| `omniproxy-protocol.ts` | 100% | 91% |
 | `vm-storage.ts` | 100% | 90% |
-| `omniproxy-protocol.ts` | 100% | 90% |
 | `routes-map.ts` | 100% | 85% |
 | `evaluator.ts` | 100% | 83% |
 | `midi-file.ts` | 98% | 83% |
 | `dns-message.ts` | 100% | 82% |
-| `text-scale.ts` | 55%¹ | 81%² |
-| `disk-overlay.ts` | 53%¹ | 71%² |
-| `markdown.ts` | 95% | 52%³ |
-| `patterns.js` | 53% | 30%⁴ |
+| `patterns.js` | 83% | 82%¹ |
+| `text-scale.ts` | 40%² | 81%¹ |
+| `disk-overlay.ts` | 88% | 75% |
+| `markdown.ts` | 98% | 71%¹ |
 
-¹ The uncovered part is browser-only: `text-scale` writes to localStorage and
-listens for resize, `disk-overlay` reads and writes OPFS files. The pure logic
-around both is covered. ² Stryker's "covered" column, which excludes mutants in
-those functions. ³ Many of markdown's survivors are inside the syntax
-highlighter, where a changed token class is a colour difference no assertion is
-worth writing for. ⁴ Diluted by the untested pattern library; the functions
-under test score 73–90% individually.
+Across the tested set: 92% of statements, 93% of lines, 76% mutation score.
+
+¹ Stryker's "covered" column, which excludes mutants in functions no test
+reaches. ² The uncovered part is browser-only — localStorage writes and a
+resize listener; the pure `autoTextSize` ladder beneath them is fully covered.
+
+Some survivors are equivalent rather than missed. Many of markdown's are
+inside the syntax highlighter, where a changed token class is a colour
+difference no assertion is worth writing for; in `engine.js`, `v < 250` →
+`v <= 250` changes an age cap that would take 250 generations to observe.
 
 `npm test` runs in CI before the build, so a failing test stops the deploy
 rather than being reported after the fact.
@@ -152,6 +155,7 @@ rather than being reported after the fact.
   skips DOM nodes while walking the emulator, and `instanceof Node` throws a
   ReferenceError under plain Node. That is cheaper than adding jsdom for one
   identity check, and nothing under test constructs one.
-- Some surviving mutants are equivalent, not missed: in `engine.js`,
-  `v < 250` → `v <= 250` changes an age cap that would take 250 generations to
-  observe. Not every survivor is worth a test.
+- `npm run test:mutation` takes about 15 minutes now, most of it `kindOf`:
+  mutating a 40-generation simulation produces a lot of timeouts, and a
+  timeout has to wait out the clock. Timeouts count as killed, so the score is
+  right — it is just slow. The unit suite itself is under three seconds.
