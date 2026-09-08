@@ -76,7 +76,7 @@
      document that wants a margin, this one is an application that draws to its
      own edges. -->
 <div id="lifelab" class="-m-2.5 sm:-m-3.5">
-	<div id="stage">
+	<main id="stage">
 		<!-- The sidebar is gone: once the pattern library moved to the tray and
 		     the log began floating, a whole column held a wordmark and two
 		     buttons. Both now sit in the header beside the controls, and the
@@ -114,7 +114,7 @@
 			</div>
 			<div id="tray" data-tour="ll-tray"></div>
 		</div>
-	</div>
+	</main>
 </div>
 
 {#if $guideActive}
@@ -123,6 +123,6 @@
 
 {#if !mounted}
 	<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-		<span class="font-mono text-xs text-white/60">{$t('lifelab.page.loading')}</span>
+		<span class="font-mono text-xs text-white/40">{$t('lifelab.page.loading')}</span>
 	</div>
 {/if}

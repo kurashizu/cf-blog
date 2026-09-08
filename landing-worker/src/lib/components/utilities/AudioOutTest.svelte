@@ -251,7 +251,7 @@
 		<div class="text-xs text-[#e06c75] font-mono">{error}</div>
 	{/if}
 
-	<div class="text-[11px] sm:text-xs text-white/60 font-mono leading-relaxed whitespace-pre-line">
+	<div class="text-[11px] sm:text-xs text-white/45 font-mono leading-relaxed whitespace-pre-line">
 		{$t('utilities.audioout.intro')}
 	</div>
 
@@ -291,7 +291,7 @@
 	</div>
 
 	<div class="flex flex-wrap items-center gap-2">
-		<span class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.audioout.output.label')}</span>
+		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.audioout.output.label')}</span>
 		<Dropdown
 			bind:value={selectedOutput}
 			onchange={applySink}
@@ -310,14 +310,14 @@
 		{#if !sinkSupported}
 			<span class="text-[11px] font-mono text-[#e5c07b]">{$t('utilities.audioout.output.unsupportedNote')}</span>
 		{:else if labelsHidden}
-			<span class="text-[11px] font-mono text-white/60">
+			<span class="text-[11px] font-mono text-white/40">
 				{$t('utilities.audioout.output.labelsHiddenNote')}
 			</span>
 		{/if}
 	</div>
 
 	<div class="flex flex-wrap items-center gap-3 border border-white/15 bg-black/40 rounded-xs px-2.5 py-2">
-		<span class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.audioout.level.label')}</span>
+		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.audioout.level.label')}</span>
 		<div class="flex-1 min-w-[120px]">
 			<HorizontalHardwareFader
 				value={gain}
@@ -330,7 +330,7 @@
 			/>
 		</div>
 		<span class="text-xs font-mono text-[#98c379] w-12 text-right">{Math.round(gain * 100)}%</span>
-		<span class="text-xs font-mono transition-colors min-w-[160px] flex items-center gap-1.5 {running ? 'text-[#e5c07b]' : 'text-white/50'}">
+		<span class="text-xs font-mono transition-colors min-w-[160px] flex items-center gap-1.5 {running ? 'text-[#e5c07b]' : 'text-white/35'}">
 			{#if running}<span class="w-1.5 h-1.5 rounded-full bg-[#e5c07b] blink-live shrink-0"></span>{/if}
 			{running ?? $t('utilities.audioout.level.idle')}{sweepHz ? $t('utilities.audioout.level.hzSuffix', { hz: sweepHz }) : ''}
 		</span>
@@ -340,12 +340,12 @@
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 			{#each info as row (row.label)}
 				<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2">
-					<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{row.label}</span>
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
 					<span class="text-xs font-mono font-bold text-[#d8dee9] truncate">{row.value}</span>
 				</div>
 			{/each}
 		</div>
 	{:else}
-		<div class="text-[11px] font-mono text-white/50">{$t('utilities.audioout.info.hint')}</div>
+		<div class="text-[11px] font-mono text-white/35">{$t('utilities.audioout.info.hint')}</div>
 	{/if}
 </div>

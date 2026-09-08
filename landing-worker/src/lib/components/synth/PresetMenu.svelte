@@ -199,11 +199,11 @@
 			/>
 		{:else}
 			<button onclick={onPick} class="press flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={pickTitle}>
-				<span class="shrink-0 {isOn ? 'text-[#98c379]' : 'text-white/50'}">{isOn ? '●' : '○'}</span>
+				<span class="shrink-0 {isOn ? 'text-[#98c379]' : 'text-white/25'}">{isOn ? '●' : '○'}</span>
 				<span class="truncate">{name}</span>
 			</button>
-			<button onclick={() => startRename(list, i)} class="press shrink-0 px-1.5 py-1.5 text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.preset.renameHint', { name })} aria-label={$t('synth.preset.renameAria', { name })}>✎</button>
-			<button onclick={onDelete} class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/50 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.preset.removeHint', { name })} aria-label={$t('synth.preset.removeAria', { name })}>✕</button>
+			<button onclick={() => startRename(list, i)} class="press shrink-0 px-1.5 py-1.5 text-white/30 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.preset.renameHint', { name })} aria-label={$t('synth.preset.renameAria', { name })}>✎</button>
+			<button onclick={onDelete} class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/30 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.preset.removeHint', { name })} aria-label={$t('synth.preset.removeAria', { name })}>✕</button>
 		{/if}
 	</div>
 {/snippet}
@@ -243,9 +243,9 @@
 						>
 							<span class="flex items-center gap-2 min-w-0">
 								<span class="truncate">{sec.label}</span>
-								<span class="text-[10px] text-white/50">{count}</span>
+								<span class="text-[10px] text-white/30">{count}</span>
 							</span>
-							<span class="text-[9px] text-white/60">►</span>
+							<span class="text-[9px] text-white/40">►</span>
 						</button>
 
 						{#if isOpen}
@@ -255,7 +255,7 @@
 									{#each SOUND_PRESETS as p, idx (p.name)}
 										{#if p.category === sec.id}
 											<button onclick={() => pick(idx)} class="{rowBase} {$soundPresetIdx === idx ? rowOn : rowIdle}" title={PRESET_TOOLTIPS[p.name] || p.name}>
-												<span class="shrink-0 {$soundPresetIdx === idx ? 'text-[#98c379]' : 'text-white/50'}">{$soundPresetIdx === idx ? '●' : '○'}</span>
+												<span class="shrink-0 {$soundPresetIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$soundPresetIdx === idx ? '●' : '○'}</span>
 												<span class="truncate">{p.name}</span>
 											</button>
 										{/if}
@@ -264,22 +264,22 @@
 							{:else if sec.id === 'KITS'}
 								{@render flyout(kitList)}
 								{#snippet kitList()}
-									<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/60 select-none">{$t('synth.preset.builtInLabel')}</div>
+									<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/40 select-none">{$t('synth.preset.builtInLabel')}</div>
 									{#each BUILTIN_KITS as kit (kit.name)}
 										<button onclick={() => pickKit(kit)} class="{rowBase} {rowIdle}" title={$t('synth.preset.loadKitHint', { name: kit.name, count: Object.keys(kit.keys).length })}>
-											<span class="shrink-0 text-white/50">○</span>
+											<span class="shrink-0 text-white/25">○</span>
 											<span class="truncate">{kit.name}</span>
-											<span class="ml-auto text-[10px] text-white/50">{Object.keys(kit.keys).length} keys</span>
+											<span class="ml-auto text-[10px] text-white/30">{Object.keys(kit.keys).length} keys</span>
 										</button>
 									{/each}
 									{#if $userKits.length}
-										<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/60 border-t border-white/10 mt-1 select-none">{$t('synth.preset.myKitsLabel')}</div>
+										<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none">{$t('synth.preset.myKitsLabel')}</div>
 										{#each $userKits as kit, i (i)}
 											{@render editRow('kit', i, kit.name, false, () => pickKit(kit), () => deleteUserKit(i), $t('synth.preset.loadKitShortHint', { name: kit.name, count: Object.keys(kit.keys).length }))}
 										{/each}
 									{/if}
 									<div class="border-t border-white/10 mt-1 pt-1">
-										<button onclick={saveKit} class="{actionRow} {percussion ? 'text-[#98c379] hover:bg-[#98c379]/20' : 'text-white/50 cursor-not-allowed'}" title={percussion ? $t('synth.preset.saveKitOnHint') : $t('synth.preset.saveKitOffHint')}>
+										<button onclick={saveKit} class="{actionRow} {percussion ? 'text-[#98c379] hover:bg-[#98c379]/20' : 'text-white/30 cursor-not-allowed'}" title={percussion ? $t('synth.preset.saveKitOnHint') : $t('synth.preset.saveKitOffHint')}>
 											<span class="shrink-0">＋</span>
 											<span>{$t('synth.preset.saveTrackAsKit')}</span>
 										</button>
@@ -287,7 +287,7 @@
 											<span class="shrink-0">▲</span>
 											<span>{$t('synth.preset.importKit')}</span>
 										</button>
-										<button onclick={exportKit} class="{actionRow} {percussion ? 'text-[#56b6c2] hover:bg-[#56b6c2]/20' : 'text-white/50 cursor-not-allowed'}" title={percussion ? $t('synth.preset.exportKitOnHint') : $t('synth.preset.saveKitOffHint')}>
+										<button onclick={exportKit} class="{actionRow} {percussion ? 'text-[#56b6c2] hover:bg-[#56b6c2]/20' : 'text-white/30 cursor-not-allowed'}" title={percussion ? $t('synth.preset.exportKitOnHint') : $t('synth.preset.saveKitOffHint')}>
 											<span class="shrink-0">▼</span>
 											<span>{$t('synth.preset.exportKit')}</span>
 										</button>
@@ -297,17 +297,17 @@
 								{@render flyout(mineList)}
 								{#snippet mineList()}
 									{#if $userPresets.length === 0 && $userKits.length === 0}
-										<div class="px-2.5 py-1.5 text-[10px] text-white/50 select-none max-w-[240px]">{$t('synth.preset.noneYet', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower') })}</div>
+										<div class="px-2.5 py-1.5 text-[10px] text-white/30 select-none max-w-[240px]">{$t('synth.preset.noneYet', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower') })}</div>
 									{/if}
 									{#if $userPresets.length}
-										<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/60 select-none">{$t('synth.preset.presetsLabel')}</div>
+										<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/40 select-none">{$t('synth.preset.presetsLabel')}</div>
 										{#each $userPresets as p, i (i)}
 											{@const idx = SOUND_PRESETS.length + i}
 											{@render editRow('preset', i, p.name, $soundPresetIdx === idx, () => pick(idx), () => deleteUserPreset(i), $t('synth.preset.loadPresetHint', { name: p.name, target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower') }))}
 										{/each}
 									{/if}
 									{#if $userKits.length}
-										<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/60 select-none {$userPresets.length ? 'border-t border-white/10 mt-1' : ''}">{$t('synth.preset.kitsLabel')}</div>
+										<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 select-none {$userPresets.length ? 'border-t border-white/10 mt-1' : ''}">{$t('synth.preset.kitsLabel')}</div>
 										{#each $userKits as kit, i (i)}
 											{@render editRow('kit', i, kit.name, false, () => pickKit(kit), () => deleteUserKit(i), $t('synth.preset.loadKitShortHint', { name: kit.name, count: Object.keys(kit.keys).length }))}
 										{/each}

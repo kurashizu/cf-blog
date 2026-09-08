@@ -16,7 +16,7 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#e5c07b] font-black">{$t('synthPanels.midi.deviceTitle')}</span>
-			<span class="text-white/60 text-[10px]">{$t('synthPanels.midi.deviceSelector')}</span>
+			<span class="text-white/40 text-[10px]">{$t('synthPanels.midi.deviceSelector')}</span>
 		</div>
 
 		<div class="space-y-2 pt-1">
@@ -37,7 +37,7 @@
 							: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 					>
 						<div>{$t('synthPanels.midi.allDevicesOmni')}</div>
-						<div class="text-[9px] {$selectedMidiDevice === 'all' ? 'text-black/80' : 'text-white/60'}">{$t('synthPanels.midi.allDevicesOmniDesc')}</div>
+						<div class="text-[9px] {$selectedMidiDevice === 'all' ? 'text-black/80' : 'text-white/40'}">{$t('synthPanels.midi.allDevicesOmniDesc')}</div>
 					</button>
 					{#each $midiDevices as dev (dev.id)}
 						<button
@@ -50,12 +50,12 @@
 								: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 						>
 							<div class="font-bold truncate">{dev.name}</div>
-							<div class="text-[9px] {$selectedMidiDevice === dev.id ? 'text-black/80' : 'text-white/60'}">{$t('synthPanels.midi.deviceIdLabel', { id: dev.id })}</div>
+							<div class="text-[9px] {$selectedMidiDevice === dev.id ? 'text-black/80' : 'text-white/40'}">{$t('synthPanels.midi.deviceIdLabel', { id: dev.id })}</div>
 						</button>
 					{/each}
 				</div>
 			{:else}
-				<div class="p-3 border border-white/5 bg-black/20 rounded-xs text-white/60 text-[11px]">
+				<div class="p-3 border border-white/5 bg-black/20 rounded-xs text-white/40 text-[11px]">
 					{$t('synthPanels.midi.noDevicesHint')}
 				</div>
 			{/if}
@@ -66,13 +66,13 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#e5c07b] font-black">{$t('synthPanels.midi.channelRoutingTitle')}</span>
-			<span class="text-white/60 text-[10px]">{$t('synthPanels.midi.trackFiltering')}</span>
+			<span class="text-white/40 text-[10px]">{$t('synthPanels.midi.trackFiltering')}</span>
 		</div>
 
 		<div class="flex items-center justify-between pt-1">
 			<div>
 				<p class="text-white/80 font-bold">{$midiOmniSetting ? $t('synthPanels.midi.omniModeOn') : $t('synthPanels.midi.omniModeOff')}</p>
-				<p class="text-white/60 text-[10px]">
+				<p class="text-white/40 text-[10px]">
 					{$midiOmniSetting ? $t('synthPanels.midi.omniModeOnDesc') : $t('synthPanels.midi.omniModeOffDesc')}
 				</p>
 			</div>

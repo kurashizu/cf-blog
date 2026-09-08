@@ -90,16 +90,16 @@
 
 <div class="space-y-3">
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-mono">
-		<span class="text-white/60">
+		<span class="text-white/45">
 			{$t('utilities.touch.maxPoints')} <span class="text-[#e5c07b]">{navigator.maxTouchPoints}</span>
-			<span class="text-white/50">{$t('utilities.touch.maxPoints.reported')}</span>
+			<span class="text-white/30">{$t('utilities.touch.maxPoints.reported')}</span>
 		</span>
-		<span class="text-white/60">{$t('utilities.touch.concurrentSeen')} <span class="text-[#98c379]">{maxSeen}</span></span>
-		<span class="text-white/60">
-			{$t('utilities.touch.pressure')} <span class="transition-colors {anyPressure ? 'text-[#98c379]' : 'text-white/50'}">{anyPressure ? $t('utilities.touch.pressure.variable') : $t('utilities.touch.pressure.notObserved')}</span>
+		<span class="text-white/45">{$t('utilities.touch.concurrentSeen')} <span class="text-[#98c379]">{maxSeen}</span></span>
+		<span class="text-white/45">
+			{$t('utilities.touch.pressure')} <span class="transition-colors {anyPressure ? 'text-[#98c379]' : 'text-white/35'}">{anyPressure ? $t('utilities.touch.pressure.variable') : $t('utilities.touch.pressure.notObserved')}</span>
 		</span>
-		<span class="text-white/60">
-			{$t('utilities.touch.tilt')} <span class="transition-colors {anyTilt ? 'text-[#98c379]' : 'text-white/50'}">{anyTilt ? $t('utilities.touch.tilt.reported') : $t('utilities.touch.tilt.notObserved')}</span>
+		<span class="text-white/45">
+			{$t('utilities.touch.tilt')} <span class="transition-colors {anyTilt ? 'text-[#98c379]' : 'text-white/35'}">{anyTilt ? $t('utilities.touch.tilt.reported') : $t('utilities.touch.tilt.notObserved')}</span>
 		</span>
 		<button
 			onclick={reset}
@@ -120,7 +120,7 @@
 		class="relative w-full h-56 sm:h-72 border border-white/20 bg-black/50 rounded-xs overflow-hidden touch-none select-none cursor-crosshair"
 	>
 		{#if pointers.length === 0}
-			<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-white/50 text-center px-4 whitespace-pre-line">
+			<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-white/30 text-center px-4 whitespace-pre-line">
 				{$t('utilities.touch.surfaceHint')}
 			</div>
 		{/if}
@@ -149,7 +149,7 @@
 		<div class="border border-white/15 bg-black/40 rounded-xs overflow-x-auto">
 			<table class="w-full text-xs font-mono">
 				<thead>
-					<tr class="text-white/60 text-[10px] uppercase border-b border-white/10">
+					<tr class="text-white/40 text-[10px] uppercase border-b border-white/10">
 						<th class="text-left px-2 py-1">{$t('utilities.touch.table.id')}</th>
 						<th class="text-left px-2 py-1">{$t('utilities.touch.table.type')}</th>
 						<th class="text-right px-2 py-1">{$t('utilities.touch.table.pressure')}</th>

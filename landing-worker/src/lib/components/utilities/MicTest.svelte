@@ -471,7 +471,7 @@
 			</button>
 		{/if}
 
-		<span class="text-[11px] font-mono text-white/60">
+		<span class="text-[11px] font-mono text-white/40">
 			{$t('utilities.mic.privacyNote')}
 		</span>
 	</div>
@@ -488,7 +488,7 @@
 
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-2">
 		<div class="flex items-center gap-2">
-			<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-10">{$t('utilities.mic.rms.label')}</span>
+			<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-10">{$t('utilities.mic.rms.label')}</span>
 			<div class="flex-1 h-3 bg-black/60 border border-white/10 rounded-xs overflow-hidden">
 				<div
 					class="h-full transition-[width] duration-75"
@@ -500,8 +500,8 @@
 			</span>
 		</div>
 		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono">
-			<span class="text-white/60">{$t('utilities.mic.peak.label')} <span class="text-[#e5c07b]">{peak === -Infinity ? '—' : $t('utilities.mic.rms.value', { db: peak.toFixed(1) })}</span></span>
-			<span class="text-white/60">
+			<span class="text-white/45">{$t('utilities.mic.peak.label')} <span class="text-[#e5c07b]">{peak === -Infinity ? '—' : $t('utilities.mic.rms.value', { db: peak.toFixed(1) })}</span></span>
+			<span class="text-white/45">
 				{$t('utilities.mic.dominant.label')} <span class="text-[#56b6c2]">{dominantHz ? $t('utilities.mic.dominant.value', { hz: dominantHz }) : '—'}</span>
 				{#if dominantHz}<span class="text-[#c678dd]"> · {noteFor(dominantHz)}</span>{/if}
 			</span>
@@ -547,7 +547,7 @@
 				{$t('utilities.mic.save')}
 			</button>
 
-			<span class="text-[11px] font-mono text-white/60">
+			<span class="text-[11px] font-mono text-white/40">
 				{#if recording}
 					{$t('utilities.mic.status.recording', { seconds: MAX_REC_MS / 1000 })}
 				{:else if decoding}
@@ -575,7 +575,7 @@
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 			{#each settings as row (row.label)}
 				<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2">
-					<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{row.label}</span>
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
 					<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
 				</div>
 			{/each}

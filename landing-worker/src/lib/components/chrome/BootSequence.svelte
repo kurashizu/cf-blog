@@ -232,7 +232,7 @@
 		: 'opacity-100'}"
 	in:fade={{ duration: 260 }}
 >
-	<div class="text-[10px] sm:text-xs text-white/60 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+	<div class="text-[10px] sm:text-xs text-white/40 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5">
 		<span>{$t('chrome.boot.title')}</span>
 		<span>{$t('chrome.boot.skipHint')}</span>
 	</div>
@@ -243,8 +243,8 @@
 				<span class="shrink-0 font-bold {row.state === 'ok' ? 'text-[#98c379]' : 'text-[#e5c07b]'}">
 					[{row.state === 'ok' ? ' OK ' : ' -- '}]
 				</span>
-				<span class="shrink-0 text-white/60 w-[104px] sm:w-[150px]">{row.label}</span>
-				<span class="break-all {row.state === 'ok' ? 'text-[#d8dee9]' : 'text-white/60'}">{row.value}</span>
+				<span class="shrink-0 text-white/45 w-[104px] sm:w-[150px]">{row.label}</span>
+				<span class="break-all {row.state === 'ok' ? 'text-[#d8dee9]' : 'text-white/40'}">{row.value}</span>
 			</div>
 		{/each}
 
@@ -252,9 +252,9 @@
 			<div class="mt-2 sm:mt-3 pt-2 border-t border-white/10 text-[#56b6c2] font-bold" in:fade={{ duration: 200 }}>
 				{$t('chrome.boot.complete', { ok: rows.filter((r) => r.state === 'ok').length, total: rows.length })}
 			</div>
-			<div class="text-white/60" in:fade={{ duration: 200, delay: 60 }}>{$t('chrome.boot.booting')}</div>
+			<div class="text-white/40" in:fade={{ duration: 200, delay: 60 }}>{$t('chrome.boot.booting')}</div>
 		{:else}
-			<div class="text-white/50">
+			<div class="text-white/30">
 				<span class="inline-block w-[8px] h-[14px] align-middle bg-[#56b6c2] animate-pulse"></span>
 			</div>
 		{/if}

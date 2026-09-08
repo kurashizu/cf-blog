@@ -131,7 +131,7 @@
 			/>
 		{/if}
 
-		<span class="text-[11px] font-mono text-white/60">
+		<span class="text-[11px] font-mono text-white/40">
 			{$t('utilities.camera.privacyNote')}
 		</span>
 	</div>
@@ -148,7 +148,7 @@
 				<span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>{$t('utilities.camera.live')}
 			</span>
 		{:else}
-			<span class="text-xs font-mono text-white/50 py-12">{$t('utilities.camera.noStream')}</span>
+			<span class="text-xs font-mono text-white/30 py-12">{$t('utilities.camera.noStream')}</span>
 		{/if}
 	</div>
 
@@ -156,12 +156,12 @@
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 			{#each settings as row (row.label)}
 				<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2">
-					<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{row.label}</span>
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
 					<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
 				</div>
 			{/each}
 			<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2">
-				<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{$t('utilities.camera.measuredFps')}</span>
+				<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{$t('utilities.camera.measuredFps')}</span>
 				<span class="text-xs font-mono font-bold text-[#98c379] truncate">
 					{#if !frameCallbackSupported}
 						{$t('utilities.camera.measuredFps.unsupported')}

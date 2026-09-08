@@ -130,7 +130,7 @@
 			if (ci < typed.length) return typed[ci] === ch ? 'text-[#98c379]' : 'text-[#e06c75] underline';
 			return 'text-white/70';
 		}
-		return 'text-white/50';
+		return 'text-white/35';
 	}
 </script>
 
@@ -146,7 +146,7 @@
 			{$t('utilities.typing.acc')} <span class="font-black text-[#c678dd]">{keystrokes > 0 ? `${accuracy}%` : '—'}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			{$t('utilities.typing.words')} <span class="font-black text-[#98c379]">{correctWords}</span><span class="text-white/60">/{submitted.length}</span>
+			{$t('utilities.typing.words')} <span class="font-black text-[#98c379]">{correctWords}</span><span class="text-white/40">/{submitted.length}</span>
 		</span>
 		<button
 			onclick={() => {
@@ -165,7 +165,7 @@
 			<div class="text-xs font-mono text-white/60">
 				{$t('utilities.typing.result.summary', { accuracy, correct: correctWords, total: submitted.length, duration: DURATION })}
 			</div>
-			<div class="text-[10px] font-mono text-white/50">{$t('utilities.typing.result.again')}</div>
+			<div class="text-[10px] font-mono text-white/35">{$t('utilities.typing.result.again')}</div>
 		</div>
 	{:else}
 		<div class="border border-white/15 bg-black/50 rounded-xs p-3 font-mono text-sm sm:text-base leading-loose select-none min-h-[120px]">
@@ -178,7 +178,7 @@
 				</span>
 			{/each}
 		</div>
-		<div class="text-[10px] font-mono text-white/60">
+		<div class="text-[10px] font-mono text-white/40">
 			{running ? $t('utilities.typing.status.running') : $t('utilities.typing.status.idle')}
 		</div>
 	{/if}

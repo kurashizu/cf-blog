@@ -101,7 +101,7 @@
 
 <div class="flex-1 min-h-0 flex flex-col">
 	<div class="flex items-center gap-1.5 pb-1.5 shrink-0" data-tour="lms-modes">
-		<span class="text-[10px] font-mono font-bold text-white/60 uppercase tracking-widest mr-0.5">{$t('lmspace.modes.viewAs')}</span>
+		<span class="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest mr-0.5">{$t('lmspace.modes.viewAs')}</span>
 		{#each MODES as { k, label } (k)}
 			<button
 				onclick={() => { mode = k; playSound('click'); }}
@@ -258,7 +258,7 @@
 						{engineError ?? $leaderboardError}
 						<button onclick={() => { started = false; engineError = null; booting = true; void start(); }}
 							class="press ml-2 underline cursor-pointer hover:text-white transition-colors">{$t('common.retry')}</button>
-						<div class="text-white/50 mt-1">
+						<div class="text-white/35 mt-1">
 							{$t('lmspace.error.source')}: <a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer"
 								class="text-[#61afef] hover:underline">blog.krsz.in</a>
 						</div>

@@ -136,8 +136,8 @@
 					<div class="border rounded-tl-2xl rounded-bl-xs h-[76px] flex items-end justify-center pb-1 text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(0)}" style={isDown(0) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}>L</div>
 					<div class="flex flex-col items-center justify-start pt-1 gap-1">
 						<div class="border rounded-full w-4 h-9 flex items-center justify-center text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(1)}" style={isDown(1) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''} title={$t('utilities.mouse.button.middle')}>M</div>
-						<div class="text-[9px] font-mono transition-colors {lastWheelDelta < 0 ? 'text-[#56b6c2] font-bold' : 'text-white/50'}">▲{wheelUp}</div>
-						<div class="text-[9px] font-mono transition-colors {lastWheelDelta > 0 ? 'text-[#e5c07b] font-bold' : 'text-white/50'}">▼{wheelDown}</div>
+						<div class="text-[9px] font-mono transition-colors {lastWheelDelta < 0 ? 'text-[#56b6c2] font-bold' : 'text-white/30'}">▲{wheelUp}</div>
+						<div class="text-[9px] font-mono transition-colors {lastWheelDelta > 0 ? 'text-[#e5c07b] font-bold' : 'text-white/30'}">▼{wheelDown}</div>
 					</div>
 					<div class="border rounded-tr-2xl rounded-br-xs h-[76px] flex items-end justify-center pb-1 text-[9px] font-mono font-bold transition-colors duration-75 {btnClass(2)}" style={isDown(2) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}>R</div>
 				</div>
@@ -145,7 +145,7 @@
 			<div class="w-full border border-white/10 rounded-b-2xl rounded-t-xs h-16 bg-black/30"></div>
 			<div class="w-full space-y-0.5 text-[10px] font-mono">
 				{#each BUTTON_NAMES as name, i (i)}
-					<div class="flex justify-between {testedButtons[i] ? 'text-[#98c379]' : 'text-white/60'}">
+					<div class="flex justify-between {testedButtons[i] ? 'text-[#98c379]' : 'text-white/40'}">
 						<span>{testedButtons[i] ? '●' : '○'} {name}</span>
 						<span class="font-bold">{clickCounts[i]}</span>
 					</div>
@@ -165,7 +165,7 @@
 			class="border border-white/15 bg-black/60 rounded-xs min-h-[240px] relative overflow-hidden cursor-crosshair select-none"
 		>
 			<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-				<span class="text-white/50 text-xs font-mono text-center px-4 whitespace-pre-line">{$t('utilities.mouse.surface.hint')}</span>
+				<span class="text-white/25 text-xs font-mono text-center px-4 whitespace-pre-line">{$t('utilities.mouse.surface.hint')}</span>
 			</div>
 			{#if buttonsMask !== 0}
 				<div class="absolute top-2 left-2 px-2 py-1 bg-black/70 border rounded-xs text-xs font-mono font-bold" style="color: {themeStyles.cursorColor}; border-color: {themeStyles.cursorColor};">

@@ -5,7 +5,6 @@
 	import { t } from '$lib/i18n';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { privacyOpen } from '../../stores/chrome';
-	import { modal } from '$lib/actions/modal';
 
 	let { onDone }: { onDone: () => void } = $props();
 
@@ -68,8 +67,6 @@
 		? 'opacity-0'
 		: 'opacity-100'}"
 	in:fade={{ duration: 280 }}
-
-	use:modal={{ onClose: finish, closeOnBackdrop: false, label: $t('a11y.dialog.welcome') }}
 >
 	<div class="min-h-full flex flex-col items-center justify-center p-4 sm:p-8">
 		<div class="w-full max-w-2xl space-y-5 sm:space-y-6 py-8">
@@ -91,7 +88,7 @@
 							<span class="text-sm leading-none" style="color: {v.color}">{v.icon}</span>
 						</div>
 						<div class="text-[11px] font-bold truncate" style="color: {v.color}">{v.title}</div>
-						<div class="text-[10px] text-white/60 truncate">{v.desc}</div>
+						<div class="text-[10px] text-white/45 truncate">{v.desc}</div>
 					</div>
 				{/each}
 			</div>
@@ -103,11 +100,11 @@
 				>
 					{$t('chrome.welcome.getStarted')}
 				</button>
-				<p class="text-[10px] text-white/50">
+				<p class="text-[10px] text-white/35">
 					{$t('chrome.welcome.agreeTo', { action: $t('chrome.welcome.getStartedPlain') })}
 					<button onclick={() => privacyOpen.set(true)} class="underline hover:text-white/60 cursor-pointer transition-colors">{$t('chrome.welcome.privacyPolicy')}</button>.
 				</p>
-				<button onclick={finish} class="press text-xs text-white/60 hover:text-white cursor-pointer transition-colors">
+				<button onclick={finish} class="press text-xs text-white/40 hover:text-white cursor-pointer transition-colors">
 					{$t('chrome.welcome.skip')}
 				</button>
 			</div>

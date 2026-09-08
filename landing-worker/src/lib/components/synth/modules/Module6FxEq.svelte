@@ -114,10 +114,10 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-1.5">
-			<span class="text-white/60 flex items-center" title={$t('synthPanels.rack.flowToOut')}>
+			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToOut')}>
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
 			</span>
-			<button onclick={resetRack6} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/60 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack6} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 
@@ -165,7 +165,7 @@
 			<div class="flex items-center gap-1 px-0.5 shrink-0" title={$t('synthPanels.fx.srcHint')}>
 				<span class="text-white/50 text-[10px] font-bold w-7 shrink-0">SRC</span>
 				<button onclick={() => stepSource(-1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title={$t('synthPanels.fx.prevSourceHint')}>◄</button>
-				<span class="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-center truncate leading-none {duckSource < 0 ? 'text-white/60' : 'text-[#e5c07b]'}">{sourceLabel}</span>
+				<span class="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-center truncate leading-none {duckSource < 0 ? 'text-white/40' : 'text-[#e5c07b]'}">{sourceLabel}</span>
 				<button onclick={() => stepSource(1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title={$t('synthPanels.fx.nextSourceHint')}>►</button>
 			</div>
 			{#if sourceIsPerc}
@@ -195,7 +195,7 @@
 							</button>
 						{/each}
 						{#if !kitKeys.length}
-							<span class="text-[9px] text-white/50 font-mono pt-0.5">{$t('synthPanels.fx.noKitKeys')}</span>
+							<span class="text-[9px] text-white/30 font-mono pt-0.5">{$t('synthPanels.fx.noKitKeys')}</span>
 						{/if}
 					</div>
 				</div>
@@ -226,7 +226,7 @@
 					}}
 					class="press px-2 py-0.2 text-[9px] rounded-xs border font-black cursor-pointer transition-all {trackEqOn
 						? 'border-[#98c379] bg-[#98c379] text-black shadow-[0_0_6px_#98c379]'
-						: 'border-white/20 bg-white/5 text-white/60 hover:text-white'}"
+						: 'border-white/20 bg-white/5 text-white/40 hover:text-white'}"
 					title={$t('synthPanels.fx.eqToggleHint')}
 				>
 					EQ: {trackEqOn ? 'ON' : 'OFF'}

@@ -85,7 +85,7 @@
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
 			{$t('utilities.reaction.avg')} <span class="font-black text-[#56b6c2] inline-block">{#key avg}<span class="value-in inline-block">{avg === null ? '—' : $t('utilities.reaction.ms', { ms: avg })}</span>{/key}</span>
-			<span class="text-white/50">({results.length}/10)</span>
+			<span class="text-white/35">({results.length}/10)</span>
 		</span>
 		<button onclick={reset} class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
 			{$t('utilities.reaction.reset')}
@@ -100,17 +100,17 @@
 	>
 		{#if phase === 'idle'}
 			<span class="text-sm font-black text-white/80">{$t('utilities.reaction.idle.title')}</span>
-			<span class="text-xs text-white/60">{$t('utilities.reaction.idle.hint')}</span>
+			<span class="text-xs text-white/40">{$t('utilities.reaction.idle.hint')}</span>
 		{:else if phase === 'waiting'}
 			<span class="text-sm font-black text-[#e06c75]">{$t('utilities.reaction.waiting')}</span>
 		{:else if phase === 'go'}
 			<span class="text-2xl font-black text-[#98c379]">{$t('utilities.reaction.go')}</span>
 		{:else if phase === 'early'}
 			<span class="text-sm font-black text-[#e06c75]">{$t('utilities.reaction.early.title')}</span>
-			<span class="text-xs text-white/60">{$t('utilities.reaction.early.hint')}</span>
+			<span class="text-xs text-white/40">{$t('utilities.reaction.early.hint')}</span>
 		{:else}
 			<span class="text-3xl font-black text-[#e5c07b] value-in">{$t('utilities.reaction.ms', { ms: lastMs ?? 0 })}</span>
-			<span class="text-xs text-white/60">{$t('utilities.reaction.result.hint')}</span>
+			<span class="text-xs text-white/40">{$t('utilities.reaction.result.hint')}</span>
 		{/if}
 	</button>
 </div>

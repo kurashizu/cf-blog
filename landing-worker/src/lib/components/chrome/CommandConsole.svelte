@@ -37,7 +37,7 @@
 	);
 
 	const LINE_CLASS: Record<LineKind, string> = {
-		cmd: 'text-white/60',
+		cmd: 'text-white/45',
 		out: 'text-[#d8dee9]/90',
 		ok: 'text-[#98c379]',
 		err: 'text-[#e06c75]',
@@ -185,7 +185,7 @@
 	<!-- Live completion bar: matches for the current token, click or Tab-cycle to apply -->
 	{#if suggestions.length > 0 && !(suggestions.length === 1 && suggestions[0] === lastToken)}
 		<div class="flex items-center gap-1 flex-wrap font-mono text-xs">
-			<span class="text-white/50 select-none">⇥</span>
+			<span class="text-white/30 select-none">⇥</span>
 			{#each suggestions.slice(0, 12) as s (s)}
 				<button
 					type="button"
@@ -196,7 +196,7 @@
 				</button>
 			{/each}
 			{#if suggestions.length > 12}
-				<span class="text-white/50">{$t('chrome.console.moreSuggestions', { count: suggestions.length - 12 })}</span>
+				<span class="text-white/30">{$t('chrome.console.moreSuggestions', { count: suggestions.length - 12 })}</span>
 			{/if}
 		</div>
 	{/if}
@@ -211,7 +211,7 @@
 			: 'border-white/20'}"
 	>
 		{#if $cwd !== '/'}
-			<span class="font-mono text-xs sm:text-sm text-white/60 select-none shrink-0 hidden sm:inline">{$cwd}</span>
+			<span class="font-mono text-xs sm:text-sm text-white/40 select-none shrink-0 hidden sm:inline">{$cwd}</span>
 		{/if}
 		<span class="font-black text-sm select-none" style="color: {themeStyles.cursorColor}">:</span>
 
@@ -226,7 +226,7 @@
 						: 0.15};"
 			></span>
 			{#if ghost}
-				<span class="whitespace-pre text-white/50 select-none pointer-events-none">{ghost}</span>
+				<span class="whitespace-pre text-white/25 select-none pointer-events-none">{ghost}</span>
 			{/if}
 			{#if !commandInput}
 				<span class="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">

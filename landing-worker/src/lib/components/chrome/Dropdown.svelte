@@ -6,7 +6,8 @@
 	 * fonts, system blue and rounded corners that belong to nothing else on the
 	 * page. Everywhere a list needs picking from, this is used instead.
 	 */
-	import { Menu, MenuItem } from '$lib/components/ui';
+	import { scale } from '$lib/perf-transitions';
+	import { cubicOut } from 'svelte/easing';
 	import { t } from '$lib/i18n';
 	export interface Option {
 		value: string;
@@ -40,30 +41,28 @@
 	let selected = $derived(options.find((o) => o.value === value));
 
 	function pick(option: Option) {
-		close();
+		open = false;
 		if (option.value === value) return;
 		value = option.value;
 		onchange?.(option.value);
 	}
 
-	let trigger = $state<HTMLButtonElement | null>(null);
-	/* The menu takes focus while open; give it back to the button on close so
-	   a keyboard user is where they were, not at the top of the document. */
-	function close() {
-		open = false;
-		trigger?.focus({ preventScroll: true });
+	function onWindowKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape' && open) {
+			e.stopPropagation();
+			open = false;
+		}
 	}
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="relative shrink-0" style="max-width: {width}">
 	<button
 		type="button"
-		bind:this={trigger}
 		{title}
 		{disabled}
-		aria-haspopup="menu"
-		aria-expanded={open}
-		onclick={() => (open ? close() : (open = true))}
+		onclick={() => (open = !open)}
 		class="press w-full px-2 py-1 border rounded-xs font-mono text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed {open
 			? 'bg-white/10'
 			: 'hover:bg-white/5'}"
@@ -74,20 +73,37 @@
 	</button>
 
 	{#if open && !disabled}
-		<Menu
-			onClose={close}
-			{color}
-			label={title}
-			class="absolute left-0 top-full mt-1 z-50 max-h-[42vh] overflow-y-auto custom-scrollbar origin-top"
-			style="min-width: {width}"
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
+
+		<div
+			class="absolute left-0 top-full mt-1 z-50 max-h-[42vh] overflow-y-auto custom-scrollbar bg-[#121417] border rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono origin-top"
+			style="border-color: {color}80; min-width: {width}"
+			transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 		>
 			<!-- Keyed by position: device lists hand back empty deviceIds before a
 			     permission grant, so values are not unique until then. -->
 			{#each options as option, i (i)}
-				<MenuItem checked={option.value === value} note={option.note} {color} onclick={() => pick(option)}>
-					{option.label}
-				</MenuItem>
+				<button
+					type="button"
+					onclick={() => pick(option)}
+					class="w-full text-left px-2.5 py-1.5 flex items-center justify-between gap-2 cursor-pointer transition-colors {option.value ===
+					value
+						? 'text-white bg-white/10 font-bold'
+						: 'text-white/80 hover:bg-white/10'}"
+				>
+					<span class="flex items-center gap-2 min-w-0">
+						<span class="shrink-0" style="color: {option.value === value ? color : 'rgba(255,255,255,0.2)'}">
+							{option.value === value ? '●' : '○'}
+						</span>
+						<span class="truncate">{option.label}</span>
+					</span>
+					{#if option.note}
+						<span class="shrink-0 text-[10px] text-white/40">{option.note}</span>
+					{/if}
+				</button>
 			{/each}
-		</Menu>
+		</div>
 	{/if}
 </div>

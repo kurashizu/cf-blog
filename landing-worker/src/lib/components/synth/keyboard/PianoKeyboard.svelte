@@ -194,7 +194,7 @@
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-mono">
 		<div class="flex items-center gap-1.5">
 			<span class="font-black text-[#56b6c2]">PIANO KEYBOARD</span>
-			<span class="text-white/60 text-[10px] hidden sm:inline">| C{kbOctaveFrom} - B{kbOctaveTo} AUDITION</span>
+			<span class="text-white/40 text-[10px] hidden sm:inline">| C{kbOctaveFrom} - B{kbOctaveTo} AUDITION</span>
 		</div>
 
 		<div class="flex items-center gap-2">
@@ -301,7 +301,7 @@
 							? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-[0_0_6px_#e5c07b]'
 							: $velocityCurve === 'HARD'
 								? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-[0_0_6px_#e06c75]'
-								: 'border-white/20 bg-white/5 text-white/60 hover:text-white hover:border-white/40'}"
+								: 'border-white/20 bg-white/5 text-white/40 hover:text-white hover:border-white/40'}"
 				title={$t('synthPanels.keyboard.velocityCurveHint', { curve: $velocityCurve })}
 			>
 				VEL: {$velocityCurve === 'LINEAR' ? 'LIN' : $velocityCurve}
@@ -309,7 +309,7 @@
 
 			<!-- Pinned right: a device name is as long as its maker made it, and
 			     letting it sit inline shifted every control before it. -->
-			<div class="ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap {$midiConnectedDevice ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' : 'border-white/20 bg-white/5 text-white/60'}">
+			<div class="ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap {$midiConnectedDevice ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' : 'border-white/20 bg-white/5 text-white/40'}">
 				<span class="w-1.5 h-1.5 rounded-full {$midiConnectedDevice ? 'bg-[#98c379] animate-pulse' : 'bg-white/30'}"></span>
 				<span>MIDI: {$midiConnectedDevice ? $midiConnectedDevice.toUpperCase() : 'STANDBY'}</span>
 			</div>

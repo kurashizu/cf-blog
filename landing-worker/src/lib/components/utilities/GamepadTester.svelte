@@ -136,7 +136,7 @@
 	{#if !pad}
 		<div class="border border-white/15 bg-black/40 rounded-xs p-6 text-center space-y-2">
 			<div class="text-sm font-mono text-white/60">{everConnected ? $t('utilities.gamepad.disconnected') : $t('utilities.gamepad.none')}</div>
-			<div class="text-xs font-mono text-white/50">{$t('utilities.gamepad.hint')}</div>
+			<div class="text-xs font-mono text-white/35">{$t('utilities.gamepad.hint')}</div>
 		</div>
 	{:else}
 		<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
@@ -224,11 +224,11 @@
 		     and a non-standard pad has nothing but these. -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1">
-				<div class="text-[10px] font-mono font-bold text-white/60 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.buttonsHeading', { tested: testedButtons.size, total: pad.buttons.length })}</div>
+				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.buttonsHeading', { tested: testedButtons.size, total: pad.buttons.length })}</div>
 				<div class="grid grid-cols-2 gap-x-3 gap-y-1">
 					{#each pad.buttons as b, i (i)}
 						<div class="flex items-center gap-1.5 text-[10px] font-mono">
-							<span class="w-14 shrink-0 truncate transition-colors duration-75 {b.pressed ? 'font-black' : testedButtons.has(i) ? 'text-[#98c379]' : 'text-white/60'}" style={b.pressed ? `color: ${themeStyles.cursorColor}` : ''}>
+							<span class="w-14 shrink-0 truncate transition-colors duration-75 {b.pressed ? 'font-black' : testedButtons.has(i) ? 'text-[#98c379]' : 'text-white/40'}" style={b.pressed ? `color: ${themeStyles.cursorColor}` : ''}>
 								{buttonName(i)}
 							</span>
 							<div class="flex-1 h-2 bg-black/60 border border-white/10 rounded-xs overflow-hidden">
@@ -240,10 +240,10 @@
 			</div>
 
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-[10px] font-mono font-bold text-white/60 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.axesHeading')}</div>
+				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.axesHeading')}</div>
 				{#each pad.axes as a, i (i)}
 					<div class="flex items-center gap-1.5 text-[10px] font-mono">
-						<span class="w-14 shrink-0 {testedAxes.has(i) ? 'text-[#98c379]' : 'text-white/60'}">{$t('utilities.gamepad.axisLabel', { index: i })}</span>
+						<span class="w-14 shrink-0 {testedAxes.has(i) ? 'text-[#98c379]' : 'text-white/40'}">{$t('utilities.gamepad.axisLabel', { index: i })}</span>
 						<div class="flex-1 h-2.5 bg-black/60 border border-white/10 rounded-xs relative overflow-hidden">
 							<div class="absolute top-0 bottom-0 left-1/2 w-px bg-white/25"></div>
 							<div
@@ -251,10 +251,10 @@
 								style="left: calc({((a + 1) / 2) * 100}% - 3px); background-color: {Math.abs(a) > 0.05 ? themeStyles.cursorColor : 'rgba(255,255,255,0.35)'};"
 							></div>
 						</div>
-						<span class="w-12 text-right shrink-0 transition-colors duration-75 {Math.abs(a) > 0.05 ? 'text-[#e5c07b] font-bold' : 'text-white/50'}">{a.toFixed(2)}</span>
+						<span class="w-12 text-right shrink-0 transition-colors duration-75 {Math.abs(a) > 0.05 ? 'text-[#e5c07b] font-bold' : 'text-white/35'}">{a.toFixed(2)}</span>
 					</div>
 				{/each}
-				<div class="text-[10px] font-mono text-white/50 pt-1">{$t('utilities.gamepad.driftNote')}</div>
+				<div class="text-[10px] font-mono text-white/30 pt-1">{$t('utilities.gamepad.driftNote')}</div>
 			</div>
 		</div>
 	{/if}

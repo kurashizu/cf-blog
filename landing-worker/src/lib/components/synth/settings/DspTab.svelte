@@ -22,7 +22,7 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#c678dd] font-black">{$t('synthPanels.dsp.noiseBufferTitle')}</span>
-			<span class="text-white/60 text-[10px]">{$t('synthPanels.dsp.audioBufferAllocation')}</span>
+			<span class="text-white/40 text-[10px]">{$t('synthPanels.dsp.audioBufferAllocation')}</span>
 		</div>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -40,7 +40,7 @@
 					width="100%"
 					onChange={setNoiseDuration}
 				/>
-				<div class="flex justify-between text-[9px] text-white/60 mt-0.5">
+				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
 					<span>{$t('synthPanels.dsp.noiseDurationMin')}</span>
 					<span>{$t('synthPanels.dsp.noiseDurationDefault')}</span>
 					<span>{$t('synthPanels.dsp.noiseDurationMax')}</span>
@@ -75,7 +75,7 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#c678dd] font-black">{$t('synthPanels.dsp.reverbBufferTitle')}</span>
-			<span class="text-white/60 text-[10px]">{$t('synthPanels.dsp.stereoIrBuffer')}</span>
+			<span class="text-white/40 text-[10px]">{$t('synthPanels.dsp.stereoIrBuffer')}</span>
 		</div>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -93,7 +93,7 @@
 					width="100%"
 					onChange={setReverbDuration}
 				/>
-				<div class="flex justify-between text-[9px] text-white/60 mt-0.5">
+				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
 					<span>{$t('synthPanels.dsp.reverbDurationRoom')}</span>
 					<span>{$t('synthPanels.dsp.reverbDurationPlate')}</span>
 					<span>{$t('synthPanels.dsp.reverbDurationCathedral')}</span>
@@ -114,7 +114,7 @@
 					width="100%"
 					onChange={setReverbDecay}
 				/>
-				<div class="flex justify-between text-[9px] text-white/60 mt-0.5">
+				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
 					<span>{$t('synthPanels.dsp.decayDark')}</span>
 					<span>{$t('synthPanels.dsp.decayWarm')}</span>
 					<span>{$t('synthPanels.dsp.decayBrightAir')}</span>

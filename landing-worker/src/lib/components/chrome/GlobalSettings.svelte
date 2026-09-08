@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, scale } from '$lib/perf-transitions';
+	import { cubicOut } from 'svelte/easing';
 	import { t, tr } from '$lib/i18n';
-	import { Dialog, Card, Toggle, Button } from '$lib/components/ui';
-	import { reduceMotion, setReduceMotion, singleKeyHotkeys, setSingleKeyHotkeys, announce } from '../../stores/a11y';
+	import BoxHeader from './BoxHeader.svelte';
 	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { playSound, soundEngine, setSoundMuted, setSoundVolume } from '../../sound';
@@ -225,6 +226,12 @@
 		return unsub;
 	});
 
+	function onWindowKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			e.stopPropagation();
+			onClose();
+		}
+	}
 
 	/* Only so AUTO's tooltip can name the size it would pick. Tracks the window
 	   so the number stays honest if the panel is open while the window is moved
@@ -235,159 +242,165 @@
 	}
 </script>
 
-<svelte:window onresize={syncScreenWidth} />
+<svelte:window onkeydown={onWindowKeydown} onresize={syncScreenWidth} />
 
-<Dialog title="GLOBAL_SETTINGS // KRSZ.IN" short="SETTINGS" label={$t('a11y.dialog.settings')} {onClose} bodyClass="p-3 sm:p-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
-	<!-- Sound -->
-	<Card tone="flat" title={$t('chrome.settings.sound')} color="#98c379" class="space-y-2.5">
-		<div class="flex items-center justify-between gap-3">
-			<span class="text-xs text-white/70">{$t('chrome.settings.soundDesc')}</span>
-			<Toggle
-				checked={!soundMuted}
-				label={$t('chrome.settings.sound')}
-				color="#98c379"
-				offText={$t('chrome.settings.muted')}
-				onchange={(on) => setSoundMuted(!on)}
-			/>
-		</div>
-		<div class="flex items-center {soundMuted ? 'opacity-30 pointer-events-none' : ''}">
-			<HorizontalHardwareFader
-				label="VOLUME"
-				value={Math.round(soundVolume * 100)}
-				min={0}
-				max={100}
-				step={1}
-				unit="%"
-				width={140}
-				showValue
-				color="#98c379"
-				onChange={(v) => setSoundVolume(v / 100)}
-			/>
-		</div>
-	</Card>
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="fixed inset-0 z-[160] bg-black/70 backdrop-blur-[2px] flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto"
+	onclick={onClose}
+	transition:fade={{ duration: 180 }}
+>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="w-full max-w-2xl {themeStyles.cardBgVideo} border {themeStyles.border} rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.8)] font-mono my-auto transform-gpu"
+		onclick={(e) => e.stopPropagation()}
+		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
+	>
+		<BoxHeader title="GLOBAL_SETTINGS // KRSZ.IN" short="SETTINGS" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm" style="color: {themeStyles.cursorColor}">
+			<button onclick={onClose} class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors">[ Esc ]</button>
+		</BoxHeader>
 
-	<!-- Text size -->
-	<Card tone="flat" title={$t('chrome.settings.textSize')} color="#e5c07b" class="space-y-2">
-		<div class="flex items-center justify-between gap-3 flex-wrap">
-			<span class="text-xs text-white/70 max-w-[70%]">
-				{$t('chrome.settings.textSizeDesc')}
-			</span>
-			<div class="flex items-center gap-1 shrink-0" role="group" aria-label={$t('chrome.settings.textSize')}>
-				<Button
-					variant="neutral"
-					color="#e5c07b"
-					active={$textSizeAuto}
-					title={$t('chrome.settings.textSizeAutoHint', { px: autoTextSize(screenWidth) })}
-					onclick={setTextSizeAuto}
-				>
-					{$t('common.lang.auto').toUpperCase()}
-				</Button>
-				{#each TEXT_SIZES as px (px)}
-					<Button
-						variant="neutral"
-						color="#e5c07b"
-						active={!$textSizeAuto && $textSize === px}
-						title="{px}px{px % 12 === 0 ? $t('chrome.settings.textSizeExact') : ''}{px === DEFAULT_TEXT_SIZE ? ` ${$t('chrome.settings.textSizeDefault')}` : ''}"
-						onclick={() => setTextSize(px)}
+		<div class="p-3 sm:p-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+			<!-- Sound -->
+			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2.5">
+				<div class="text-xs sm:text-sm font-black text-[#98c379] border-b border-white/10 pb-1">{$t('chrome.settings.sound')}</div>
+				<div class="flex items-center justify-between gap-3">
+					<span class="text-xs text-white/70">{$t('chrome.settings.soundDesc')}</span>
+					<button
+						onclick={() => {
+							setSoundMuted(!soundMuted);
+							playSound('toggle');
+						}}
+						class="press px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {soundMuted
+							? 'border-white/20 text-white/40 hover:border-white/40'
+							: 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]'}"
 					>
-						{px}
-					</Button>
-				{/each}
+						{soundMuted ? $t('chrome.settings.muted') : $t('common.on')}
+					</button>
+				</div>
+				<div class="flex items-center {soundMuted ? 'opacity-30 pointer-events-none' : ''}">
+					<HorizontalHardwareFader
+						label="VOLUME"
+						value={Math.round(soundVolume * 100)}
+						min={0}
+						max={100}
+						step={1}
+						unit="%"
+						width={140}
+						showValue
+						color="#98c379"
+						onChange={(v) => setSoundVolume(v / 100)}
+					/>
+				</div>
 			</div>
-		</div>
-	</Card>
 
-	<!-- Accessibility -->
-	<Card tone="flat" title={$t('a11y.settings.title')} color="#56b6c2" class="space-y-2.5">
-		<div class="flex items-center justify-between gap-3">
-			<div class="min-w-0">
-				<div class="text-xs font-bold text-white/80">{$t('a11y.settings.reduceMotion')}</div>
-				<div class="text-[10px] text-white/60 leading-snug">{$t('a11y.settings.reduceMotionDesc')}</div>
-			</div>
-			<Toggle
-				checked={$reduceMotion}
-				label={$t('a11y.settings.reduceMotion')}
-				color="#56b6c2"
-				onchange={(on) => {
-					setReduceMotion(on);
-					announce($t(on ? 'a11y.announce.on' : 'a11y.announce.off', { name: $t('a11y.settings.reduceMotion') }));
-				}}
-			/>
-		</div>
-		<div class="flex items-center justify-between gap-3">
-			<div class="min-w-0">
-				<div class="text-xs font-bold text-white/80">{$t('a11y.settings.singleKey')}</div>
-				<div class="text-[10px] text-white/60 leading-snug">{$t('a11y.settings.singleKeyDesc')}</div>
-			</div>
-			<Toggle
-				checked={$singleKeyHotkeys}
-				label={$t('a11y.settings.singleKey')}
-				color="#56b6c2"
-				onchange={(on) => {
-					setSingleKeyHotkeys(on);
-					announce($t(on ? 'a11y.announce.on' : 'a11y.announce.off', { name: $t('a11y.settings.singleKey') }));
-				}}
-			/>
-		</div>
-		<p class="text-[10px] text-white/60 leading-relaxed">{$t('a11y.settings.textSizeNote')}</p>
-	</Card>
-
-	<!-- Performance -->
-	<Card tone="flat" title={$t('chrome.settings.performance')} color="#61afef" class="space-y-2">
-		<div class="flex items-center justify-between gap-3">
-			<span class="text-xs text-white/70 max-w-[70%]">
-				{$t('chrome.settings.performanceDesc')}
-			</span>
-			<Toggle checked={$performanceMode} label={$t('chrome.settings.performance')} color="#61afef" onchange={setPerformanceMode} />
-		</div>
-	</Card>
-
-	<!-- Storage -->
-	<Card tone="flat" title={$t('chrome.settings.storageTitle')} color="#e06c75" class="space-y-2">
-		{#snippet titleRight()}
-			<Button
-				variant="outline"
-				color="#e06c75"
-				size="xs"
-				onclick={clearEverything}
-				disabled={clearingAll || clearingId !== null || nothingStored}
-			>
-				{clearingAll ? $t('chrome.settings.clearing') : $t('chrome.settings.clearEverything')}
-			</Button>
-		{/snippet}
-		<p class="text-[10px] text-white/60 leading-relaxed">
-			{$t('chrome.settings.storageDesc')}
-		</p>
-
-		{#if sections.length === 0}
-			<div class="text-xs text-white/60 py-2" aria-live="polite">{$t('chrome.settings.measuring')}</div>
-		{:else}
-			<ul class="space-y-1">
-				{#each sections as s (s.id)}
-					<li class="flex items-center justify-between gap-2 border border-white/10 bg-black/30 rounded-xs px-2.5 py-1.5">
-						<div class="min-w-0">
-							<div class="flex items-baseline gap-2">
-								<span class="text-[11px] font-bold" style="color: {s.color}">{s.label}</span>
-								<span class="text-[10px] text-white/50 tabular-nums">
-									{s.size === null ? '—' : s.size === 0 ? $t('chrome.settings.empty') : fmtBytes(s.size)}
-								</span>
-							</div>
-							<div class="text-[10px] text-white/60 leading-snug">{s.detail}</div>
-						</div>
-						<Button
-							variant="neutral"
-							color="#98c379"
-							size="xs"
-							active={doneId === s.id}
-							label="{$t('chrome.settings.clear')}: {s.label}"
-							onclick={() => clearOne(s)}
-							disabled={clearingId !== null || clearingAll || !s.size}
+			<!-- Text size -->
+			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
+				<div class="text-xs sm:text-sm font-black text-[#e5c07b] border-b border-white/10 pb-1">{$t('chrome.settings.textSize')}</div>
+				<div class="flex items-center justify-between gap-3 flex-wrap">
+					<span class="text-xs text-white/70 max-w-[70%]">
+						{$t('chrome.settings.textSizeDesc')}
+					</span>
+					<div class="flex items-center gap-1 shrink-0">
+						<button
+							onclick={() => {
+								setTextSizeAuto();
+								playSound('click');
+							}}
+							title={$t('chrome.settings.textSizeAutoHint', { px: autoTextSize(screenWidth) })}
+							class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {$textSizeAuto
+								? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
+								: 'border-white/20 text-white/40 hover:border-white/40'}"
 						>
-							{clearingId === s.id ? '…' : doneId === s.id ? $t('chrome.settings.cleared') : $t('chrome.settings.clear')}
-						</Button>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</Card>
-</Dialog>
+							{$t('common.lang.auto').toUpperCase()}
+						</button>
+						{#each TEXT_SIZES as px (px)}
+							<button
+								onclick={() => {
+									setTextSize(px);
+									playSound('click');
+								}}
+								title="{px}px{px % 12 === 0 ? $t('chrome.settings.textSizeExact') : ''}{px === DEFAULT_TEXT_SIZE ? ` ${$t('chrome.settings.textSizeDefault')}` : ''}"
+								class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {!$textSizeAuto &&
+								$textSize === px
+									? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
+									: 'border-white/20 text-white/40 hover:border-white/40'}"
+							>
+								{px}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</div>
+
+			<!-- Performance -->
+			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
+				<div class="text-xs sm:text-sm font-black text-[#61afef] border-b border-white/10 pb-1">{$t('chrome.settings.performance')}</div>
+				<div class="flex items-center justify-between gap-3">
+					<span class="text-xs text-white/70 max-w-[70%]">
+						{$t('chrome.settings.performanceDesc')}
+					</span>
+					<button
+						onclick={() => {
+							setPerformanceMode(!$performanceMode);
+							playSound('toggle');
+						}}
+						class="press px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors shrink-0 {$performanceMode
+							? 'border-[#61afef] bg-[#61afef]/15 text-[#61afef]'
+							: 'border-white/20 text-white/40 hover:border-white/40'}"
+					>
+						{$performanceMode ? $t('common.on') : $t('common.off')}
+					</button>
+				</div>
+			</div>
+
+			<!-- Storage -->
+			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
+				<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1">
+					<span class="text-xs sm:text-sm font-black text-[#e06c75]">{$t('chrome.settings.storageTitle')}</span>
+					<button
+						onclick={clearEverything}
+						disabled={clearingAll || clearingId !== null || nothingStored}
+						class="press px-2 py-0.5 border border-[#e06c75]/60 text-[#e06c75] rounded-xs text-[10px] font-bold cursor-pointer hover:bg-[#e06c75]/15 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+					>
+						{clearingAll ? $t('chrome.settings.clearing') : $t('chrome.settings.clearEverything')}
+					</button>
+				</div>
+				<p class="text-[10px] text-white/40 leading-relaxed">
+					{$t('chrome.settings.storageDesc')}
+				</p>
+
+				{#if sections.length === 0}
+					<div class="text-xs text-white/40 py-2">{$t('chrome.settings.measuring')}</div>
+				{:else}
+					<div class="space-y-1">
+						{#each sections as s (s.id)}
+							<div class="flex items-center justify-between gap-2 border border-white/10 bg-black/30 rounded-xs px-2.5 py-1.5">
+								<div class="min-w-0">
+									<div class="flex items-baseline gap-2">
+										<span class="text-[11px] font-bold" style="color: {s.color}">{s.label}</span>
+										<span class="text-[10px] text-white/35 tabular-nums">
+											{s.size === null ? '—' : s.size === 0 ? $t('chrome.settings.empty') : fmtBytes(s.size)}
+										</span>
+									</div>
+									<div class="text-[10px] text-white/40 leading-snug">{s.detail}</div>
+								</div>
+								<button
+									onclick={() => clearOne(s)}
+									disabled={clearingId !== null || clearingAll || !s.size}
+									class="press shrink-0 px-2 py-1 border rounded-xs text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed {doneId ===
+									s.id
+										? 'border-[#98c379] text-[#98c379]'
+										: 'border-white/25 text-white/60 hover:border-white/50 hover:text-white'}"
+								>
+									{clearingId === s.id ? '…' : doneId === s.id ? $t('chrome.settings.cleared') : $t('chrome.settings.clear')}
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+</div>

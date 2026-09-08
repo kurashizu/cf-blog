@@ -292,21 +292,21 @@
 ╚══════╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ `}
 		/>
 
-		<div class="text-[10px] sm:text-xs font-mono text-white/60 text-right leading-relaxed max-w-[440px]">
+		<div class="text-[10px] sm:text-xs font-mono text-white/45 text-right leading-relaxed max-w-[440px]">
 			<div>
 				{$t('community.leaderboard.sourcePrefix')} <span class="text-[#e5c07b]">Artificial Analysis</span> {$t('community.leaderboard.sourceSuffix')}
 				{#if $leaderboard?.intelligenceIndexVersion}
 					<span class="text-white/60">{$t('community.leaderboard.indexVersion', { version: $leaderboard.intelligenceIndexVersion })}</span>
 				{/if}
 			</div>
-			<div class="text-white/50">
+			<div class="text-white/35">
 				{$t('community.leaderboard.cachedBy')}
 				<a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer" class="text-[#61afef] hover:underline">blog.krsz.in</a>
 			</div>
 			{#if fetchedLabel}
 				<div class="text-[#98c379]">
 					{$t('community.leaderboard.fetchedLine', { when: fetchedLabel, count: models.length })}
-					{#if $leaderboardMs !== null}<span class="text-white/50">{$t('community.leaderboard.loadMs', { ms: $leaderboardMs })}</span>{/if}
+					{#if $leaderboardMs !== null}<span class="text-white/35">{$t('community.leaderboard.loadMs', { ms: $leaderboardMs })}</span>{/if}
 				</div>
 			{/if}
 		</div>
@@ -314,7 +314,7 @@
 
 	<!-- Sort selector: the chosen metric drives both the ordering and the bars -->
 	<div class="flex flex-wrap items-center gap-1.5 shrink-0">
-		<span class="text-[10px] font-mono font-bold text-white/60 uppercase mr-0.5">{$t('community.leaderboard.rankBy')}</span>
+		<span class="text-[10px] font-mono font-bold text-white/40 uppercase mr-0.5">{$t('community.leaderboard.rankBy')}</span>
 		{#each METRICS as m (m.key)}
 			<button
 				onclick={() => pick(m.key)}
@@ -363,11 +363,11 @@
 				</button>
 			{/each}
 		</div>
-		<span class="text-[10px] font-mono text-white/50">{$t('community.leaderboard.matchCount', { count: filtered.length })}</span>
+		<span class="text-[10px] font-mono text-white/35">{$t('community.leaderboard.matchCount', { count: filtered.length })}</span>
 	</div>
 
 	{#if $leaderboardStatus === 'loading'}
-		<div class="text-xs font-mono text-white/60">{$t('community.leaderboard.loading')}</div>
+		<div class="text-xs font-mono text-white/45">{$t('community.leaderboard.loading')}</div>
 	{:else if $leaderboardStatus === 'error'}
 		<div class="text-xs font-mono text-[#e06c75]">
 			{$t('community.leaderboard.loadError', { error: $leaderboardError ?? '' })}
@@ -379,7 +379,7 @@
 		<div class="flex-1 min-h-0 overflow-auto custom-scrollbar border border-white/10 rounded-xs">
 			<table class="w-full text-xs font-mono border-collapse">
 				<thead class="sticky top-0 bg-[#14161b] z-10">
-					<tr class="text-[10px] uppercase text-white/60 border-b border-white/15">
+					<tr class="text-[10px] uppercase text-white/40 border-b border-white/15">
 						<th class="text-right px-2 py-1.5 w-10">{$t('community.leaderboard.colRank')}</th>
 						<th class="text-left px-2 py-1.5">{$t('community.leaderboard.colModel')}</th>
 						<th class="text-left px-2 py-1.5 hidden md:table-cell">{$t('community.leaderboard.colCreator')}</th>
@@ -414,7 +414,7 @@
 								? 'bg-white/10'
 								: 'hover:bg-white/5'}"
 						>
-							<td class="px-2 py-1 text-right text-white/50">{i + 1}</td>
+							<td class="px-2 py-1 text-right text-white/35">{i + 1}</td>
 							<td class="px-2 py-1 text-[#eceff4] max-w-[240px] truncate" title={m.name}>{m.name}</td>
 							<td class="px-2 py-1 text-white/50 hidden md:table-cell max-w-[130px] truncate">
 								{m.model_creator?.name ?? '—'}
@@ -434,7 +434,7 @@
 			</table>
 		</div>
 
-		<div class="text-[10px] font-mono text-white/50 shrink-0">
+		<div class="text-[10px] font-mono text-white/30 shrink-0">
 			{$t('community.leaderboard.footerHint')}
 			{#if limit !== 0 && sorted.length > limit}
 				{$t('community.leaderboard.showingOf', { shown: shown.length, total: sorted.length })}
@@ -460,7 +460,7 @@
 	>
 		<div class="flex items-start justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
 			<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
-			<button onclick={() => (popover = null)} class="press text-[10px] text-white/60 hover:text-white cursor-pointer shrink-0 transition-colors">
+			<button onclick={() => (popover = null)} class="press text-[10px] text-white/40 hover:text-white cursor-pointer shrink-0 transition-colors">
 				[ ✕ ]
 			</button>
 		</div>
@@ -469,14 +469,14 @@
 			<div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
 				{#each detailRows(m) as row (row.labelKey)}
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1 flex items-baseline justify-between gap-2">
-						<span class="text-[10px] text-white/60 shrink-0">{$t(row.labelKey)}</span>
+						<span class="text-[10px] text-white/40 shrink-0">{$t(row.labelKey)}</span>
 						<span class="text-[11px] text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
 					</div>
 				{/each}
 			</div>
 
-			<div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/60 border-t border-white/10 pt-1.5">
-				<span class="text-white/50">{$t('community.leaderboard.rankAmong', { count: filtered.length })}</span>
+			<div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/45 border-t border-white/10 pt-1.5">
+				<span class="text-white/30">{$t('community.leaderboard.rankAmong', { count: filtered.length })}</span>
 				{#each METRICS.filter((x) => x.key !== 'date') as x (x.key)}
 					<span>{$t(x.shortKey)} <span style="color: {x.color}">{rankFor(m, x)}</span></span>
 				{/each}
@@ -488,7 +488,7 @@
 						query = m.model_creator?.name ?? '';
 						popover = null;
 					}}
-					class="press text-[10px] text-white/60 hover:text-white cursor-pointer underline transition-colors"
+					class="press text-[10px] text-white/45 hover:text-white cursor-pointer underline transition-colors"
 				>
 					{$t('community.leaderboard.filterToCreator', { creator: m.model_creator?.name ?? $t('community.leaderboard.thisCreator') })}
 				</button>

@@ -3,7 +3,6 @@
 	import { t } from '../../i18n';
 	import { draggable } from './draggable';
 	import { paramDescriptionKey } from './param-descriptions';
-	import { sliderKeyValue } from './slider-keys';
 
 	let {
 		label,
@@ -76,41 +75,15 @@
 		onChange(reset);
 		playSound('click');
 	}
-
-	/* Keyboard, per the ARIA slider pattern (see slider-keys.ts). The control
-	   is a focusable role=slider; the read-out the reader hears is
-	   aria-valuetext, the same formatted number a sighted user sees. */
-	function handleKeydown(e: KeyboardEvent) {
-		const next = sliderKeyValue(e, { value, min, max, step, reset });
-		if (next === null) return;
-		e.preventDefault();
-		if (next === value) return;
-		onChange(next);
-		playSound('click');
-	}
-
-	let a11yLabel = $derived(desc ? `${label}, ${desc}` : label);
-	const hintId = $props.id();
-	let a11yHint = $derived(reset !== undefined ? `${$t('a11y.slider.hint')}. ${$t('a11y.slider.reset')}` : $t('a11y.slider.hint'));
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	role="slider"
-	tabindex="0"
-	aria-label={a11yLabel}
-	aria-describedby={hintId}
-	aria-valuemin={min}
-	aria-valuemax={max}
-	aria-valuenow={value}
-	aria-valuetext={formatDisplay(value)}
-	aria-orientation="vertical"
 	onwheel={handleWheel}
 	oncontextmenu={handleContextMenu}
-	onkeydown={handleKeydown}
 	class="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none h-full justify-between py-0.5"
 	title={tooltipText}
 >
-	<span id={hintId} class="sr-only">{a11yHint}</span>
 	<span class="text-xs opacity-85 uppercase font-black block group-hover:text-white transition-colors leading-none">{label}</span>
 
 	<div

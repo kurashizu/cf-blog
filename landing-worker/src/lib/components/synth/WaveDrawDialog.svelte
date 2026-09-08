@@ -190,8 +190,8 @@
 	transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 >
 	<div class="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
-		<span class="font-black text-[#56b6c2]">{initial ? $t('synth.waveDraw.editHeading') : $t('synth.waveDraw.drawHeading')} <span class="text-white/60 font-bold">// {forLabel}</span></span>
-		<span class="text-white/60 text-[10px] whitespace-nowrap">{$t('synth.waveDraw.dragHint')}</span>
+		<span class="font-black text-[#56b6c2]">{initial ? $t('synth.waveDraw.editHeading') : $t('synth.waveDraw.drawHeading')} <span class="text-white/40 font-bold">// {forLabel}</span></span>
+		<span class="text-white/40 text-[10px] whitespace-nowrap">{$t('synth.waveDraw.dragHint')}</span>
 	</div>
 
 	<canvas
@@ -204,7 +204,7 @@
 	></canvas>
 
 	<div class="flex flex-wrap items-center gap-1 mt-2">
-		<span class="text-white/60 text-[10px] font-bold mr-1">{$t('synth.waveDraw.startFrom')}</span>
+		<span class="text-white/40 text-[10px] font-bold mr-1">{$t('synth.waveDraw.startFrom')}</span>
 		<button onclick={() => setSeed('sine')} class={btn} title={$t('synth.waveDraw.sineHint')}>SIN</button>
 		<button onclick={() => setSeed('saw')} class={btn} title={$t('synth.waveDraw.sawHint')}>SAW</button>
 		<button onclick={() => setSeed('tri')} class={btn} title={$t('synth.waveDraw.triHint')}>TRI</button>
@@ -216,7 +216,7 @@
 	</div>
 
 	<div class="flex items-center gap-2 mt-3">
-		<span class="text-white/60 text-[10px] font-bold">{$t('synth.waveDraw.nameLabel')}</span>
+		<span class="text-white/40 text-[10px] font-bold">{$t('synth.waveDraw.nameLabel')}</span>
 		<input
 			bind:this={nameInput}
 			bind:value={name}

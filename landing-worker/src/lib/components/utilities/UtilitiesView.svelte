@@ -145,9 +145,9 @@
 				<!-- Section rule in the same ruled-heading idiom as the console's
 				     help sections: a short label, then a hairline to the edge. -->
 				<div class="flex items-center gap-2 mb-1">
-					<span class="text-[10px] font-bold tracking-wider {groupActive ? 'text-white/70' : 'text-white/50'}">{group.label}</span>
+					<span class="text-[10px] font-bold tracking-wider {groupActive ? 'text-white/70' : 'text-white/35'}">{group.label}</span>
 					<span class="flex-1 border-t border-white/10"></span>
-					<span class="text-[9px] font-mono text-white/50">{group.tools.length}</span>
+					<span class="text-[9px] font-mono text-white/25">{group.tools.length}</span>
 				</div>
 				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
 					{#each group.tools as tool (tool.id)}
@@ -171,7 +171,7 @@
 
 	<div style="border-color: {current.color}66;" class="border p-3 sm:p-4 rounded-sm space-y-2 bg-black/20">
 		<BoxHeader title={current.label} class="font-black text-xs sm:text-sm border-b border-white/10 pb-1.5" style="color: {current.color}">
-			<span class="text-[10px] sm:text-xs text-white/60 font-mono font-normal">{current.desc}</span>
+			<span class="text-[10px] sm:text-xs text-white/40 font-mono font-normal">{current.desc}</span>
 		</BoxHeader>
 
 		{#key activeTool}

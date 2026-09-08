@@ -2,7 +2,6 @@ import { fade as svelteFade, fly as svelteFly, scale as svelteScale } from 'svel
 import type { TransitionConfig } from 'svelte/transition';
 import { get } from 'svelte/store';
 import { performanceMode } from './stores/performance';
-import { isMotionReduced } from './stores/a11y';
 
 /**
  * Drop-in replacements for svelte/transition's fade/fly/scale that collapse
@@ -15,25 +14,18 @@ import { isMotionReduced } from './stores/a11y';
  * omitting the transition function entirely -- the element still needs to
  * mount/unmount correctly, just without motion, and Svelte already treats
  * a zero-duration transition as an instant no-op.
- *
- * Reduced motion (the OS query or the site's own switch, stores/a11y.ts)
- * takes the same exit: app.css's media-query block cannot reach these
- * inline-style transitions any more than the perf block can.
  */
-function still(): boolean {
-	return get(performanceMode) || isMotionReduced();
-}
 export function fade(node: Element, params: Parameters<typeof svelteFade>[1] = {}): TransitionConfig {
-	if (still()) return { duration: 0 };
+	if (get(performanceMode)) return { duration: 0 };
 	return svelteFade(node, params);
 }
 
 export function fly(node: Element, params: Parameters<typeof svelteFly>[1] = {}): TransitionConfig {
-	if (still()) return { duration: 0 };
+	if (get(performanceMode)) return { duration: 0 };
 	return svelteFly(node, params);
 }
 
 export function scale(node: Element, params: Parameters<typeof svelteScale>[1] = {}): TransitionConfig {
-	if (still()) return { duration: 0 };
+	if (get(performanceMode)) return { duration: 0 };
 	return svelteScale(node, params);
 }

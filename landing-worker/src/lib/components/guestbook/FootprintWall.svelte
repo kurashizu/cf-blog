@@ -199,7 +199,7 @@
 	</BoxHeader>
 
 	{#if wallState === 'loading'}
-		<div class="text-xs font-mono text-white/60 py-2">{$t('community.footprints.loading')}</div>
+		<div class="text-xs font-mono text-white/40 py-2">{$t('community.footprints.loading')}</div>
 	{:else if wallState === 'error'}
 		<div class="text-xs font-mono text-[#e06c75] py-2">{$t('community.footprints.error')}</div>
 	{:else}
@@ -215,7 +215,7 @@
 
 		{#if topCountries.length > 0}
 			<div class="space-y-1 min-w-0">
-				<div class="text-[10px] font-bold text-white/60 tracking-wide">{$t('community.footprints.countriesHeading')}</div>
+				<div class="text-[10px] font-bold text-white/40 tracking-wide">{$t('community.footprints.countriesHeading')}</div>
 				{#each topCountries as c (c.code)}
 					{@const pct = Math.max(4, Math.round((c.count / maxCount) * 100))}
 					<div class="flex items-center gap-1.5 min-w-0">
@@ -224,7 +224,7 @@
 							<span class="block h-full rounded-xs" style="width: {pct}%; background-color: {colorFor(c.code)};"></span>
 						</span>
 						<span class="w-5 shrink-0 text-right text-[10px] font-mono text-white/50">{c.count}</span>
-						<span class="hidden sm:inline w-24 shrink-0 truncate text-[10px] text-white/60" title={countryName(c.code)}>{countryName(c.code)}</span>
+						<span class="hidden sm:inline w-24 shrink-0 truncate text-[10px] text-white/40" title={countryName(c.code)}>{countryName(c.code)}</span>
 					</div>
 				{/each}
 			</div>
@@ -232,11 +232,11 @@
 
 		<div class="min-w-0">
 			<div class="flex flex-wrap items-baseline justify-between gap-x-3 mb-1">
-				<div class="text-[10px] font-bold text-white/60 tracking-wide">{$t('community.footprints.recentHeading')}</div>
-				<div class="text-[9px] text-white/50 min-w-0">{$t('community.footprints.blogNote')}</div>
+				<div class="text-[10px] font-bold text-white/40 tracking-wide">{$t('community.footprints.recentHeading')}</div>
+				<div class="text-[9px] text-white/30 min-w-0">{$t('community.footprints.blogNote')}</div>
 			</div>
 			{#if summary.recent.length === 0}
-				<div class="text-xs font-mono text-white/60 py-1">{$t('community.footprints.empty')}</div>
+				<div class="text-xs font-mono text-white/40 py-1">{$t('community.footprints.empty')}</div>
 			{:else}
 				<div class="max-h-40 overflow-y-auto space-y-1 pr-1">
 					{#each summary.recent as fp (fp.id)}
@@ -249,18 +249,18 @@
 							<span class="shrink-0 text-[9px] font-mono font-bold px-1 rounded-xs" style="color: {colorFor(fp.country)}; border: 1px solid {colorFor(fp.country)}66;">{fp.country}</span>
 							<span class="flex-1 min-w-0 truncate text-[10px] text-white/70">{countryName(fp.country)}</span>
 							{#if fp.timezone}
-								<span class="hidden sm:inline shrink-0 truncate max-w-[80px] text-[9px] text-white/50">{tzCity(fp.timezone)}</span>
+								<span class="hidden sm:inline shrink-0 truncate max-w-[80px] text-[9px] text-white/35">{tzCity(fp.timezone)}</span>
 							{/if}
-							<span class="hidden md:inline shrink-0 truncate max-w-[100px] text-[9px] text-white/50">
+							<span class="hidden md:inline shrink-0 truncate max-w-[100px] text-[9px] text-white/35">
 								{fp.browser || $t('community.footprints.unknownBrowser')} / {fp.os || $t('community.footprints.unknownOs')}
 							</span>
 							{#if fp.source === 'blog'}
-								<span class="shrink-0 text-[8px] font-mono px-1 rounded-xs border border-white/15 text-white/50" title={$t('community.footprints.sourceBlogTitle')}>{$t('community.footprints.sourceBlog')}</span>
+								<span class="shrink-0 text-[8px] font-mono px-1 rounded-xs border border-white/15 text-white/35" title={$t('community.footprints.sourceBlogTitle')}>{$t('community.footprints.sourceBlog')}</span>
 							{/if}
 							{#if mine}
 								<span class="shrink-0 text-[9px] font-black text-[#98c379]">{$t('community.footprints.you')}</span>
 							{/if}
-							<span class="shrink-0 text-[9px] font-mono text-white/50">{relativeTime(fp.at, clock)}</span>
+							<span class="shrink-0 text-[9px] font-mono text-white/30">{relativeTime(fp.at, clock)}</span>
 						</div>
 					{/each}
 				</div>
@@ -269,7 +269,7 @@
 
 		<div class="pt-1 border-t border-white/10 space-y-1.5">
 			{#if stampStatus === 'already' || (stampedToday && stampStatus === 'idle')}
-				<div class="text-[10px] sm:text-xs font-bold text-white/60">{$t('community.footprints.alreadyStamped')}</div>
+				<div class="text-[10px] sm:text-xs font-bold text-white/40">{$t('community.footprints.alreadyStamped')}</div>
 			{:else if stampStatus === 'done'}
 				<div class="text-[10px] sm:text-xs font-bold text-[#98c379]">{$t('community.footprints.stamped')}</div>
 			{:else if stampStatus === 'rate'}
@@ -287,7 +287,7 @@
 				>
 					{stampStatus === 'sending' ? $t('community.footprints.stamping') : $t('community.footprints.stamp')}
 				</button>
-				<p class="flex-1 min-w-[140px] text-[10px] text-white/60 leading-relaxed">
+				<p class="flex-1 min-w-[140px] text-[10px] text-white/40 leading-relaxed">
 					{$t('community.footprints.disclaimer')}
 				</p>
 			</div>

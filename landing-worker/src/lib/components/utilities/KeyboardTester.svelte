@@ -206,7 +206,7 @@
 		</div>
 	</div>
 
-	<div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono text-white/60">
+	<div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono text-white/40">
 		<span>{$t('utilities.keyboard.hint')}</span>
 		<span class="ml-auto">{$t('utilities.keyboard.keysPressed', { count: eventCount })}</span>
 	</div>
