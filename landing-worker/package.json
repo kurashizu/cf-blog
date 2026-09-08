@@ -11,9 +11,9 @@
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "prepare": "svelte-kit sync || echo ''",
         "deploy:cf": "wrangler deploy",
-        "test": "vitest run",
+        "test": "svelte-kit sync && vitest run",
         "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage",
+        "test:coverage": "svelte-kit sync && vitest run --coverage",
         "test:mutation": "stryker run",
         "crap": "node scripts/crap.mjs"
     },

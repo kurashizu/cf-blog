@@ -141,6 +141,13 @@ jobs:
                   cd landing-worker
                   npm ci --legacy-peer-deps
 
+            # Ahead of the build so a failing test stops the deploy rather than
+            # shipping and reporting afterwards. See landing-worker/docs/crap.md.
+            - name: Test
+              run: |
+                  cd landing-worker
+                  npm test
+
             - name: Build
               run: |
                   cd landing-worker

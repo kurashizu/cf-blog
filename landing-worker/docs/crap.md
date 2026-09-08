@@ -70,16 +70,52 @@ a glob: CRAP is complexity weighted by coverage, so sweeping untestable files
 into the denominator would move every score without telling you anything.
 
 The list holds what is genuinely unit-testable — no SvelteKit runtime, no
-browser globals, no Web Audio:
+browser globals, no Web Audio. The first four read input the site does not
+control, which is why they were tested first:
 
+- `src/lib/vm-storage.ts` — parses the `Range` header into byte offsets
+- `src/lib/relay-allowlist.ts` — decides what the relay endpoints will connect to
+- `src/lib/dns-message.ts` — parses wire-format DNS queries and base64url
+- `src/lib/components/chatbot/markdown.ts` — renders untrusted model output
 - `src/lib/evaluator.ts` — the console's sandboxed maths evaluator
 - `src/lib/routes-map.ts` — tab/path mapping and isolated-route navigation
 - `src/lib/midi-file.ts` — the Standard MIDI File reader
-- `src/lib/components/chatbot/markdown.ts` — the renderer for model output
 - `src/lib/components/lifelab/engine.js` — the Life automaton
 - `src/lib/components/lifelab/patterns.js` — RLE encode/decode and geometry
 
 Add a file to both lists in the same commit that adds its tests, never before.
+
+`tests/unit/route-guards.test.ts` is the exception to that rule: the filename
+guards on `/model/[file]` and `/vm/qemu/[file]` are three lines inside route
+handlers that also need `platform`, `error()` and a live bucket, so the
+patterns are duplicated into the test rather than imported. They are the only
+thing standing between a caller and a composed R2 key, and a duplicate that
+fails loudly beats no test at all — but if you change a route, change its twin
+in the same commit.
+
+## Where the numbers stand
+
+| file | coverage | mutation |
+| --- | --- | --- |
+| `relay-allowlist.ts` | 100% | 97% |
+| `engine.js` | 100% | 95% |
+| `vm-storage.ts` | 52%¹ | 89%² |
+| `routes-map.ts` | 100% | 85% |
+| `evaluator.ts` | 100% | 83% |
+| `midi-file.ts` | 98% | 83% |
+| `dns-message.ts` | 100% | 82% |
+| `markdown.ts` | 95% | 52%³ |
+| `patterns.js` | 53% | 30%⁴ |
+
+¹ `loadChunk` and `readAll` need a live R2 binding and `fetch`; the pure
+parsers around them are covered. ² Stryker's "covered" column, which excludes
+the mutants in those two functions. ³ Many of markdown's surviving mutants are
+inside the syntax highlighter, where a changed token class is a colour
+difference no assertion is worth writing for. ⁴ Diluted by the untested
+pattern library; the functions under test score 73–90% individually.
+
+`npm test` runs in CI before the build, so a failing test stops the deploy
+rather than being reported after the fact.
 
 ## Notes on the toolchain
 
@@ -91,6 +127,12 @@ Add a file to both lists in the same commit that adds its tests, never before.
   because `tsconfig.json` extends that generated file, and Stryker's sandbox
   would not otherwise copy it — without it every transform fails with
   `TSCONFIG_ERROR`.
+- `npm test` runs `svelte-kit sync` first. It has to: the tests resolve through
+  Vite, which loads `tsconfig.json`, which extends the generated
+  `.svelte-kit/tsconfig.json`. CI skips `npm ci` — and therefore `prepare` —
+  whenever the node_modules cache hits, and `.svelte-kit/` is not cached, so
+  without the explicit sync the whole suite fails to import on exactly the runs
+  that are otherwise fastest.
 - Tests stub `$app/environment` (see `tests/unit/stubs/`) rather than booting
   SvelteKit; `browser` is false, so browser-only branches stay skipped.
 - Some surviving mutants are equivalent, not missed: in `engine.js`,

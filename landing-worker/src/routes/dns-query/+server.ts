@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { isNameAllowed, parseAllowlist } from '$lib/relay-allowlist';
+import { fromBase64Url, parseQuestion } from '$lib/dns-message';
 
 export const prerender = false;
 
@@ -104,35 +105,6 @@ function policy(query: Uint8Array, platform: App.Platform | undefined): Response
 	return refused(query, question.end);
 }
 
-interface Question {
-	name: string;
-	/** Byte after the question's QTYPE/QCLASS — where a truncated reply ends. */
-	end: number;
-}
-
-function parseQuestion(msg: Uint8Array): Question | null {
-	if (msg.length < 17) return null;
-	const qdcount = (msg[4] << 8) | msg[5];
-	if (qdcount < 1) return null;
-	const labels: string[] = [];
-	let off = 12;
-	while (off < msg.length) {
-		const len = msg[off];
-		// Compression pointers cannot appear in the first question — nothing has
-		// been written yet for one to point back at.
-		if (len & 0xc0) return null;
-		if (len === 0) {
-			const end = off + 5;
-			return end <= msg.length && labels.length ? { name: labels.join('.'), end } : null;
-		}
-		off += 1;
-		if (off + len > msg.length || labels.length > 63) return null;
-		labels.push(new TextDecoder().decode(msg.subarray(off, off + len)));
-		off += len;
-	}
-	return null;
-}
-
 /**
  * The query echoed back with RCODE=REFUSED and every section after the question
  * dropped — a resolver reads that as "this name is not answerable here" and
@@ -146,16 +118,4 @@ function refused(query: Uint8Array, end: number): Response {
 	out[8] = out[9] = 0; // NSCOUNT
 	out[10] = out[11] = 0; // ARCOUNT
 	return new Response(out, { status: 200, headers: { 'content-type': DNS_MESSAGE } });
-}
-
-function fromBase64Url(text: string): Uint8Array | null {
-	const padded = text.replace(/-/g, '+').replace(/_/g, '/');
-	try {
-		const raw = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
-		const out = new Uint8Array(raw.length);
-		for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-		return out;
-	} catch {
-		return null;
-	}
 }

@@ -36,6 +36,9 @@ export default defineConfig({
 			include: [
 				'src/lib/evaluator.ts',
 				'src/lib/routes-map.ts',
+				'src/lib/vm-storage.ts',
+				'src/lib/relay-allowlist.ts',
+				'src/lib/dns-message.ts',
 				'src/lib/midi-file.ts',
 				'src/lib/components/chatbot/markdown.ts',
 				'src/lib/components/lifelab/engine.js',
