@@ -12,7 +12,7 @@ const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
 const FILE_FORMAT = 'krsz-synth-preset';
 const KIT_FILE_FORMAT = 'krsz-synth-kit';
 
-export type PresetCategory = 'BASS' | 'LEAD' | 'PLUCK' | 'KEYS' | 'PAD' | 'DRUMS';
+export type PresetCategory = 'BASS' | 'LEAD' | 'PLUCK' | 'KEYS' | 'PAD' | 'DRUMS' | 'ACOUSTIC';
 
 export interface SoundPreset {
 	name: string;
@@ -743,9 +743,129 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			filterSustain: 0
 		})
 	}
+,
+
+	/* ACOUSTIC. These are not subtractive patches with a filter doing the work:
+	   each one is an excitation shaped by the amp envelope, driven into a
+	   resonator and a body from the patch bay (ADV -> RACK). That chain is what
+	   a real instrument is, and what the racks alone cannot reach -- a plucked
+	   string needs partials that decay at different rates, which no single
+	   filter produces.
+
+	   Measured at C4 (peak / spectral centroid / length):
+	     PIANO    -12.2 dB   596 Hz  1.81 s
+	     GUITAR   -12.4 dB   475 Hz  1.00 s
+	     BASS     -14.2 dB   467 Hz  1.37 s
+	     STRINGS  -16.1 dB  2050 Hz  0.65 s
+	     CLARINET -18.6 dB  4092 Hz  0.55 s
+	     FLUTE    -16.7 dB  4520 Hz  0.42 s */
+	{
+		// A hammer, a stiff string and a soundboard. STIF is what stretches the
+		// partials sharp of the harmonic series -- the reason a piano does not
+		// sound like an organ.
+		name: 'PIANO',
+		category: 'ACOUSTIC',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			cutoff: 9000,
+			ampAttack: 0.001,
+			ampDecay: 0.06,
+			ampSustain: 0,
+			ampRelease: 0.03,
+			rackChain: ['string', 'body'],
+			rackParams: { decayTime: 4, damping: 22, stiffness: 45, strBlend: 100, bodySize: 35, bodyDepth: 55, bodyMix: 55 }
+		})
+	},
+	{
+		// The same pluck on a slack string in a bigger box.
+		name: 'GUITAR',
+		category: 'ACOUSTIC',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			cutoff: 9000,
+			ampAttack: 0.001,
+			ampDecay: 0.06,
+			ampSustain: 0,
+			ampRelease: 0.03,
+			rackChain: ['string', 'body'],
+			rackParams: { decayTime: 2.2, damping: 34, stiffness: 6, strBlend: 100, bodySize: 62, bodyDepth: 65, bodyMix: 70 }
+		})
+	},
+	{
+		// Heavily damped, in the largest body: an upright rather than a synth bass.
+		name: 'UPRIGHT BASS',
+		category: 'ACOUSTIC',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			cutoff: 9000,
+			ampAttack: 0.001,
+			ampDecay: 0.06,
+			ampSustain: 0,
+			ampRelease: 0.03,
+			rackChain: ['string', 'body'],
+			rackParams: { decayTime: 3, damping: 52, stiffness: 3, strBlend: 100, bodySize: 88, bodyDepth: 60, bodyMix: 60 }
+		})
+	},
+	{
+		// A bow, not a pluck: the excitation sustains, so the envelope holds.
+		name: 'BOWED STRINGS',
+		category: 'ACOUSTIC',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			cutoff: 6000,
+			ampAttack: 0.09,
+			ampDecay: 0.3,
+			ampSustain: 0.8,
+			ampRelease: 0.25,
+			rackChain: ['string', 'body'],
+			rackParams: { decayTime: 1.4, damping: 40, stiffness: 2, strBlend: 75, bodySize: 55, bodyDepth: 50, bodyMix: 60 }
+		})
+	},
+	{
+		// Breath into a tube closed at one end: odd harmonics only.
+		name: 'CLARINET',
+		category: 'ACOUSTIC',
+		preset: synth({
+			osc1Waveform: 'noise',
+			osc1Gain: 0.6,
+			osc2Gain: 0,
+			cutoff: 5000,
+			ampAttack: 0.05,
+			ampDecay: 0.2,
+			ampSustain: 0.85,
+			ampRelease: 0.15,
+			rackChain: ['tube', 'body'],
+			rackParams: { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100, tubeMix: 85, bodySize: 45, bodyDepth: 40, bodyMix: 40 }
+		})
+	},
+	{
+		// Open at both ends, so all the harmonics are there.
+		name: 'FLUTE',
+		category: 'ACOUSTIC',
+		preset: synth({
+			osc1Waveform: 'noise',
+			osc1Gain: 0.6,
+			osc2Gain: 0,
+			cutoff: 5000,
+			ampAttack: 0.05,
+			ampDecay: 0.2,
+			ampSustain: 0.85,
+			ampRelease: 0.15,
+			rackChain: ['tube', 'body'],
+			rackParams: { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0, tubeMix: 80, bodySize: 38, bodyDepth: 30, bodyMix: 35 }
+		})
+	}
 ];
 
-export const PRESET_CATEGORIES: PresetCategory[] = ['BASS', 'LEAD', 'PLUCK', 'KEYS', 'PAD', 'DRUMS'];
+export const PRESET_CATEGORIES: PresetCategory[] = ['BASS', 'LEAD', 'PLUCK', 'KEYS', 'PAD', 'DRUMS', 'ACOUSTIC'];
 
 const CATEGORY_HINT_KEYS: Record<PresetCategory, string> = {
 	BASS: 'synthPanels.presets.hintBass',
@@ -753,7 +873,8 @@ const CATEGORY_HINT_KEYS: Record<PresetCategory, string> = {
 	PLUCK: 'synthPanels.presets.hintPluck',
 	KEYS: 'synthPanels.presets.hintKeys',
 	PAD: 'synthPanels.presets.hintPad',
-	DRUMS: 'synthPanels.presets.hintDrums'
+	DRUMS: 'synthPanels.presets.hintDrums',
+	ACOUSTIC: 'synthPanels.presets.hintAcoustic'
 };
 
 /* A sibling component (PresetMenu.svelte) indexes this by category as a plain

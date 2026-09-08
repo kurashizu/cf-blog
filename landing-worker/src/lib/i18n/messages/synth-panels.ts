@@ -258,6 +258,7 @@ export default {
 		'synthPanels.presets.hintKeys': 'Keyboards — tines, drawbars, clav, harpsichord',
 		'synthPanels.presets.hintPad': 'Slow attack, long release, movement from the LFO',
 		'synthPanels.presets.hintDrums': 'Single drum sounds; put one on a key in percussion mode, or on a whole track',
+		'synthPanels.presets.hintAcoustic': 'Excitation into a resonator and a body: the patch bay, not the filter',
 
 		// Toasts (synth-presets.ts)
 		'synthPanels.toast.presetSaved': '✓ PRESET {name}',
@@ -500,6 +501,7 @@ export default {
 		'synthPanels.presets.hintKeys': '键盘类——电钢音簧、拉杆音栓、Clav、拨弦古钢琴',
 		'synthPanels.presets.hintPad': '起音缓慢，释音悠长，由 LFO 带来律动',
 		'synthPanels.presets.hintDrums': '单个鼓声音色；可在打击乐模式下放到某个按键，也可放到整条音轨',
+		'synthPanels.presets.hintAcoustic': '激励 → 共鸣器 → 共鸣体：靠连线机架，不是滤波器',
 
 		'synthPanels.toast.presetSaved': '✓ 音色 {name}',
 		'synthPanels.toast.notAPreset': 'X 不是有效的音色文件',
@@ -741,6 +743,7 @@ export default {
 		'synthPanels.presets.hintKeys': '鍵盤類——電鋼簧片、拉桿音栓、Clav、撥弦大鍵琴',
 		'synthPanels.presets.hintPad': '起音緩慢，釋音悠長，由 LFO 帶來律動',
 		'synthPanels.presets.hintDrums': '單一鼓聲音色；可在打擊樂模式下放到某個按鍵，也可放到整條音軌',
+		'synthPanels.presets.hintAcoustic': '激發 → 共鳴器 → 共鳴體：靠連線機架，不是濾波器',
 
 		'synthPanels.toast.presetSaved': '✓ 音色 {name}',
 		'synthPanels.toast.notAPreset': 'X 不是有效的音色檔案',
@@ -982,6 +985,7 @@ export default {
 		'synthPanels.presets.hintKeys': '鍵盤系 — エレピのタイン、ドローバー、クラビ、ハープシコード',
 		'synthPanels.presets.hintPad': 'ゆっくりしたアタックと長いリリース、LFOによる動き',
 		'synthPanels.presets.hintDrums': '単発のドラム音。パーカッションモードでキーに割り当てるか、トラック全体に使用します',
+		'synthPanels.presets.hintAcoustic': '励振→共鳴体→ボディ。フィルターではなくパッチベイで作ります',
 
 		'synthPanels.toast.presetSaved': '✓ プリセット {name}',
 		'synthPanels.toast.notAPreset': 'X プリセットファイルではありません',
@@ -1223,6 +1227,7 @@ export default {
 		'synthPanels.presets.hintKeys': '건반 계열 — 일렉트릭 피아노 타인, 드로바, 클라비넷, 하프시코드',
 		'synthPanels.presets.hintPad': '느린 어택, 긴 릴리스, LFO에서 오는 움직임',
 		'synthPanels.presets.hintDrums': '단일 드럼 사운드; 퍼커션 모드에서 키 하나에 넣거나 트랙 전체에 사용하세요',
+		'synthPanels.presets.hintAcoustic': '여기 → 공명체 → 몸통: 필터가 아니라 패치 베이로 만듭니다',
 
 		'synthPanels.toast.presetSaved': '✓ 프리셋 {name}',
 		'synthPanels.toast.notAPreset': 'X 프리셋 파일이 아닙니다',
