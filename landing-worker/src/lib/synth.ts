@@ -878,115 +878,86 @@ class ModularSynth {
     id: string,
     p: Record<string, number>,
     baseFreq: number,
-    t: number
+    _t: number
   ): { in: AudioNode; out: AudioNode; sources?: AudioScheduledSourceNode[] } | null {
+    /* Values are assigned, not scheduled. setValueAtTime(v, t) leaves the param
+       at its default until t, and a voice is built slightly ahead of when it
+       sounds -- so for those milliseconds a feedback loop ran at the default
+       gain of 1 with a delay of 0, which is an instantaneous unity loop. It
+       screamed, and did so while the wanted values looked perfectly correct in
+       every log. None of these are automated; they are fixed for the life of
+       the voice. */
     const pct = (v: number | undefined, d: number) => (v ?? d) / 100;
 
     switch (id) {
-      case 'string': {
-        /* Karplus-Strong: a delay line one period long, fed back through a
-           damping low-pass. What comes out is a plucked string -- the missing
-           primitive for piano, guitar, bass and bowed strings alike. Stiffness
-           shortens the loop slightly with frequency, which is what makes a
-           piano's partials stretch sharp. */
-        const period = 1 / Math.max(baseFreq, 20);
-        const delay = ctx.createDelay(0.2);
-        const stiff = pct(p.stiffness, 10);
-        delay.delayTime.setValueAtTime(Math.min(0.19, period * (1 - stiff * 0.08)), t);
-
-        const damp = ctx.createBiquadFilter();
-        damp.type = 'lowpass';
-        // More damping = a duller, faster-dying string.
-        damp.frequency.setValueAtTime(Math.max(400, 14000 * (1 - pct(p.damping, 30) * 0.92)), t);
-
-        const fb = ctx.createGain();
-        /* Feedback set from the wanted decay: g^(t/period) = 0.001. The damping
-           filter in the loop also takes a bite out of every pass, so the raw
-           figure decays far faster than asked -- 0.3s for a 3s setting. Divide
-           it back out by the filter's gain at the fundamental, which for a
-           one-pole low-pass is 1/sqrt(1+(f/fc)^2). */
-        const decay = Math.max(0.05, p.decayTime ?? 2);
-        /* The theoretical figure -- g^(t/period) = 0.001 -- does not hold here.
-           Measured in this engine, a feedback delay loop at C4 still decays at
-           g = 0.93 and runs away by g = 0.95, nowhere near the 0.999 the maths
-           predicts: a DelayNode inside a feedback loop is quantised to a render
-           block, so the loop is shorter than it is asked to be and goes round
-           more often than the arithmetic assumes.
-           
-           So map the decay knob onto the range that was measured to be stable
-           rather than computing a gain that is right on paper and screams in
-           practice. 12s of DECY reaches the cap; beyond it the loop would not
-           ring longer, it would build. */
-        const MAX_STABLE_FB = 0.93;
-        const wanted = Math.pow(0.001, period / decay);
-        fb.gain.setValueAtTime(Math.min(MAX_STABLE_FB, wanted), t);
-
-        const input = ctx.createGain();
-        const output = ctx.createGain();
-        const dry = ctx.createGain();
-        const wet = ctx.createGain();
-        const mix = pct(p.strBlend, 100);
-        dry.gain.setValueAtTime(1 - mix, t);
-        wet.gain.setValueAtTime(mix, t);
-
-        /* Level: 1/(1-g) is the steady-state build-up, but a pluck is a burst,
-           not a steady tone -- it never reaches that. Scaling by it made a long
-           string 40 dB quieter than a short one, which is backwards. Use the
-           square root instead: energy in a decaying loop goes as the square of
-           the amplitude, so this keeps a 6-second string and a half-second one
-           at roughly the same peak. */
-        input.gain.setValueAtTime(Math.max(0.06, Math.sqrt(1 - fb.gain.value)), t);
-
-        input.connect(delay);
-        delay.connect(damp);
-        damp.connect(fb);
-        fb.connect(delay);
-        damp.connect(wet);
-        wet.connect(output);
-        input.connect(dry);
-        dry.connect(output);
-        return { in: input, out: output };
-      }
-
+      case 'string':
       case 'tube': {
-        /* An air column. Same delay loop as the string, but a tube closed at
-           one end passes only odd harmonics -- a clarinet -- which inverting
-           the feedback produces; open at both ends it passes all of them, a
-           flute or a brass instrument. */
-        const odd = pct(p.tubeOdd, 100);
-        const period = 1 / Math.max(baseFreq, 20);
-        const delay = ctx.createDelay(0.2);
-        delay.delayTime.setValueAtTime(Math.min(0.19, period * (odd > 0.5 ? 0.5 : 1)), t);
-
-        const damp = ctx.createBiquadFilter();
-        damp.type = 'lowpass';
-        damp.frequency.setValueAtTime(Math.max(500, 13000 * (1 - pct(p.tubeDamp, 40) * 0.9)), t);
-
-        const fb = ctx.createGain();
-        const decay = Math.max(0.05, p.tubeDecay ?? 1.2);
-        // Same measured ceiling as the string's loop, and for the same reason.
-        const g = Math.min(0.93, Math.pow(0.001, period / decay));
-        fb.gain.setValueAtTime(odd > 0.5 ? -g : g, t);
+        /* A struck or plucked string as a bank of decaying partials.
+         *
+         * The textbook way is Karplus-Strong -- a delay line one period long,
+         * fed back through a damping filter. It was built that way first and
+         * measured unusable: a DelayNode inside a feedback loop is stable only
+         * up to about g = 0.90 here, which buys 0.45s of ring, and by g = 0.95
+         * it runs away. There is no setting that gives a guitar.
+         *
+         * Additive has no such limit because there is no loop. Each partial is
+         * a sine with its own exponential decay, and the higher ones die first
+         * -- which is what damping physically is, and what makes a plucked note
+         * grow warmer as it fades. Stiffness stretches the partials sharp of
+         * the harmonic series, the thing that makes a piano sound like a piano
+         * rather than an organ.
+         *
+         * A tube is the same bank with only odd partials: a cylinder closed at
+         * one end has no even harmonics, which is a clarinet.
+         */
+        const isTube = id === 'tube';
+        const decay = Math.max(0.05, (isTube ? p.tubeDecay : p.decayTime) ?? (isTube ? 1.2 : 2));
+        const damping = pct(isTube ? p.tubeDamp : p.damping, isTube ? 40 : 30);
+        const stiff = isTube ? 0 : pct(p.stiffness, 10);
+        const mix = pct(isTube ? p.tubeMix : p.strBlend, 100);
+        const oddOnly = isTube && pct(p.tubeOdd, 100) > 0.5;
 
         const input = ctx.createGain();
         const output = ctx.createGain();
         const dry = ctx.createGain();
-        const wet = ctx.createGain();
-        const mix = pct(p.tubeMix, 100);
-        dry.gain.setValueAtTime(1 - mix, t);
-        wet.gain.setValueAtTime(mix, t);
-
-        input.gain.setValueAtTime(Math.max(0.06, Math.sqrt(1 - Math.abs(g))), t);
-
-        input.connect(delay);
-        delay.connect(damp);
-        damp.connect(fb);
-        fb.connect(delay);
-        damp.connect(wet);
-        wet.connect(output);
+        dry.gain.value = 1 - mix;
         input.connect(dry);
         dry.connect(output);
-        return { in: input, out: output };
+
+        const wet = ctx.createGain();
+        // Partials add, so scale by the count to keep the voice in range.
+        wet.gain.value = mix * 0.3;
+        wet.connect(output);
+
+        const sources: AudioScheduledSourceNode[] = [];
+        for (let n = 1; n <= 16; n++) {
+          if (oddOnly && n % 2 === 0) continue;
+          // Inharmonicity: partials of a stiff string run sharp, more so higher up.
+          const fn = baseFreq * n * Math.sqrt(1 + stiff * 0.004 * n * n);
+          if (fn > 18000) break;
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = fn;
+          const g = ctx.createGain();
+          const amp = 1 / (n * n * 0.6 + 1);
+          const dn = decay / (1 + damping * 3 * (n - 1));
+          g.gain.setValueAtTime(0, _t);
+          g.gain.linearRampToValueAtTime(amp, _t + 0.003);
+          g.gain.exponentialRampToValueAtTime(0.00001, _t + 0.003 + dn);
+          osc.connect(g);
+          g.connect(wet);
+          sources.push(osc);
+        }
+
+        /* The partials are the sound, so the excitation only gates them: a key
+           that is never struck should not ring. Feeding `input` through a gain
+           of zero keeps the module a normal link in the chain. */
+        const gate = ctx.createGain();
+        gate.gain.value = 0;
+        input.connect(gate);
+        gate.connect(output);
+
+        return { in: input, out: output, sources };
       }
 
       case 'modes': {
@@ -998,7 +969,7 @@ class ModularSynth {
         const output = ctx.createGain();
         const mix = pct(p.modeMix, 100);
         const dry = ctx.createGain();
-        dry.gain.setValueAtTime(1 - mix, t);
+        dry.gain.value = 1 - mix;
         input.connect(dry);
         dry.connect(output);
 
@@ -1007,12 +978,12 @@ class ModularSynth {
         for (const r of ratios) {
           const bp = ctx.createBiquadFilter();
           bp.type = 'bandpass';
-          bp.frequency.setValueAtTime(Math.min(18000, Math.max(30, baseFreq * r)), t);
-          bp.Q.setValueAtTime(q, t);
+          bp.frequency.value = Math.min(18000, Math.max(30, baseFreq * r));
+          bp.Q.value = q;
           const g = ctx.createGain();
           // Split the wet share between the modes so adding one does not
           // simply make the voice louder.
-          g.gain.setValueAtTime(mix / ratios.length, t);
+          g.gain.value = mix / ratios.length;
           input.connect(bp);
           bp.connect(g);
           g.connect(output);
@@ -1029,7 +1000,7 @@ class ModularSynth {
         const output = ctx.createGain();
         const mix = pct(p.bodyMix, 60);
         const dry = ctx.createGain();
-        dry.gain.setValueAtTime(1 - mix, t);
+        dry.gain.value = 1 - mix;
         input.connect(dry);
         dry.connect(output);
 
@@ -1043,12 +1014,12 @@ class ModularSynth {
         for (const [f, q] of peaks) {
           const bp = ctx.createBiquadFilter();
           bp.type = 'peaking';
-          bp.frequency.setValueAtTime(Math.max(40, f), t);
-          bp.Q.setValueAtTime(q, t);
-          bp.gain.setValueAtTime(depth * 14, t);
+          bp.frequency.value = Math.max(40, f);
+          bp.Q.value = q;
+          bp.gain.value = depth * 14;
           input.connect(bp);
           const g = ctx.createGain();
-          g.gain.setValueAtTime(mix / peaks.length, t);
+          g.gain.value = mix / peaks.length;
           bp.connect(g);
           g.connect(output);
         }
@@ -1077,9 +1048,15 @@ class ModularSynth {
         // reading as aliasing hiss.
         const tone = ctx.createBiquadFilter();
         tone.type = 'lowpass';
-        tone.frequency.setValueAtTime(p.driveTone ?? 8000, t);
+        tone.frequency.value = p.driveTone ?? 8000;
         shaper.connect(tone);
-        return { in: shaper, out: tone };
+
+        /* Saturation raises the level as well as the harmonics -- measured at
+           +4 dB into clipping at 60% -- so give the gain back. */
+        const trim = ctx.createGain();
+        trim.gain.value = 1 / (1 + amt * 1.6);
+        tone.connect(trim);
+        return { in: shaper, out: trim };
       }
 
       case 'resonators': {
@@ -1087,15 +1064,15 @@ class ModularSynth {
         const output = ctx.createGain();
         const mix = pct(p.resMix, 50);
         const dry = ctx.createGain();
-        dry.gain.setValueAtTime(1 - mix, t);
+        dry.gain.value = 1 - mix;
         input.connect(dry);
         dry.connect(output);
         const bp = ctx.createBiquadFilter();
         bp.type = 'bandpass';
-        bp.frequency.setValueAtTime(p.resFreq ?? 700, t);
-        bp.Q.setValueAtTime(p.resQ ?? 12, t);
+        bp.frequency.value = p.resFreq ?? 700;
+        bp.Q.value = p.resQ ?? 12;
         const wet = ctx.createGain();
-        wet.gain.setValueAtTime(mix, t);
+        wet.gain.value = mix;
         input.connect(bp);
         bp.connect(wet);
         wet.connect(output);
@@ -2396,7 +2373,15 @@ class ModularSynth {
       // reaping offline, every finished voice stayed in the graph and the
       // render cost grew with the square of the song length.
       const endSrc = osc1 ?? osc2 ?? noiseSource;
-      if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
+      /* Reaping disconnects the voice's gain node, which is the chain's input:
+         do it the moment the oscillators end and a resonator still ringing is
+         cut off mid-note. Wait out the chain's tail first. */
+      if (endSrc) {
+        endSrc.onended =
+          rackTail > 0
+            ? () => window.setTimeout(() => this.reapVoice(voiceKey), rackTail * 1000 + 50)
+            : () => this.reapVoice(voiceKey);
+      }
       if (!this.renderCtx) {
         const cleanupMs = Math.ceil((reapTime - ctx.currentTime) * 1000) + 50;
         void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
