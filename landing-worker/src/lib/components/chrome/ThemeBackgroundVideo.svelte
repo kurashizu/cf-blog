@@ -3,6 +3,7 @@
 	import { resolvedTheme, THEME_VIDEO, type FixedTheme } from '../../stores/theme';
 	import { performanceMode } from '../../stores/performance';
 	import { audioContextRunning } from '../../sound';
+	import { isSeqPlaying } from '../../stores/synth-transport';
 
 	/*
 	 * Safari + a running AudioContext + this muted video = 2-3 fps site-wide.
@@ -14,11 +15,18 @@
 	 * software path it has to read back and blend under the backdrop-filter
 	 * panels. It stayed that way on every view until the page was reloaded.
 	 * So on Safari the visible layer is frozen on its current frame (paused)
-	 * while the context is running, and resumes when the engine suspends.
+	 * while the sequencer is playing, and resumes when it stops.
+	 *
+	 * "Sequencer playing", not "context running": the context is shared with
+	 * the UI click sounds, starts on the first click anywhere (opening the
+	 * credits, say) and is never suspended afterwards, so a hold keyed on the
+	 * context alone froze the video for the rest of the visit after any
+	 * click. The recording that motivated the hold was made with the synth
+	 * transport running; that is the case that costs, and the one held.
 	 */
 	const isSafari =
 		typeof navigator !== 'undefined' && /safari/i.test(navigator.userAgent) && !/chrome|chromium|crios|fxios|android|edg/i.test(navigator.userAgent);
-	let holdVideo = $derived(isSafari && $audioContextRunning);
+	let holdVideo = $derived(isSafari && $audioContextRunning && $isSeqPlaying);
 
 	/*
 	 * Two stacked <video> elements rather than one whose src is swapped: a src
