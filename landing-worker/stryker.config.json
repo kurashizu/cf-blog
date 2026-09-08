@@ -16,6 +16,7 @@
   "mutate": [
     "src/lib/evaluator.ts",
     "src/lib/routes-map.ts",
+    "src/lib/vfs.ts",
     "src/lib/vm-storage.ts",
     "src/lib/relay-allowlist.ts",
     "src/lib/dns-message.ts",
@@ -25,7 +26,8 @@
     "src/lib/midi-file.ts",
     "src/lib/components/chatbot/markdown.ts",
     "src/lib/components/lifelab/engine.js",
-    "src/lib/components/lifelab/patterns.js"
+    "src/lib/components/lifelab/patterns.js",
+    "src/lib/components/krsz-vm/qemu-disk.ts"
   ],
   "thresholds": {
     "high": 80,
