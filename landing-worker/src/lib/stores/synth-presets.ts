@@ -752,13 +752,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	   string needs partials that decay at different rates, which no single
 	   filter produces.
 
-	   Measured at C4 (peak / spectral centroid / length):
+	   Measured at C4, key held 1.5s (peak / spectral centroid / length):
 	     PIANO    -12.2 dB   596 Hz  1.81 s
 	     GUITAR   -12.4 dB   475 Hz  1.00 s
 	     BASS     -14.2 dB   467 Hz  1.37 s
-	     STRINGS  -16.1 dB  2050 Hz  0.65 s
-	     CLARINET -18.6 dB  4092 Hz  0.55 s
-	     FLUTE    -16.7 dB  4520 Hz  0.42 s */
+	     STRINGS  -16.1 dB  1287 Hz  1.62 s
+	     CLARINET -17.9 dB  2281 Hz  1.66 s
+	     FLUTE    -15.6 dB  2384 Hz  1.66 s
+
+	   The plucked three ignore how long the key is held, as a struck string
+	   does; the blown three sound for as long as they are blown. */
 	{
 		// A hammer, a stiff string and a soundboard. STIF is what stretches the
 		// partials sharp of the harmonic series -- the reason a piano does not

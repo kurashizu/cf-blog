@@ -855,7 +855,9 @@ class ModularSynth {
     let tail = 0;
     for (const id of chain) {
       if (id === 'string') tail = Math.max(tail, p.decayTime ?? 2);
-      else if (id === 'tube') tail = Math.max(tail, p.tubeDecay ?? 1.2);
+      // A tube's partials hold with the key and then fall away quickly, so its
+      // ring-out is that fall, not the full decay setting.
+      else if (id === 'tube') tail = Math.max(tail, Math.min(p.tubeDecay ?? 1.2, 0.35));
       // MODES and BODY are filters, not loops: they stop when their input does.
     }
     return Math.min(12, tail);
@@ -878,7 +880,10 @@ class ModularSynth {
     id: string,
     p: Record<string, number>,
     baseFreq: number,
-    _t: number
+    _t: number,
+    /** How long the key is held. A blown instrument sounds for as long as it is
+     *  blown; a struck one does not care. */
+    heldSec: number
   ): { in: AudioNode; out: AudioNode; sources?: AudioScheduledSourceNode[] } | null {
     /* Values are assigned, not scheduled. setValueAtTime(v, t) leaves the param
        at its default until t, and a voice is built slightly ahead of when it
@@ -941,9 +946,22 @@ class ModularSynth {
           const g = ctx.createGain();
           const amp = 1 / (n * n * 0.6 + 1);
           const dn = decay / (1 + damping * 3 * (n - 1));
-          g.gain.setValueAtTime(0, _t);
-          g.gain.linearRampToValueAtTime(amp, _t + 0.003);
-          g.gain.exponentialRampToValueAtTime(0.00001, _t + 0.003 + dn);
+          if (isTube) {
+            /* A tube is blown, not struck: the excitation continues, so the
+               partials hold for as long as the key does and only then fall
+               away. Letting them decay from the attack the way a string's do
+               put a 14 dB bump on the first tenth of a second -- audible as a
+               chiff on every note, and nothing like a clarinet. */
+            const att = Math.max(0.01, 0.04 / (1 + (n - 1) * 0.4));
+            g.gain.setValueAtTime(0, _t);
+            g.gain.linearRampToValueAtTime(amp, _t + att);
+            g.gain.setValueAtTime(amp, _t + Math.max(att, heldSec));
+            g.gain.exponentialRampToValueAtTime(0.00001, _t + Math.max(att, heldSec) + Math.min(dn, 0.35));
+          } else {
+            g.gain.setValueAtTime(0, _t);
+            g.gain.linearRampToValueAtTime(amp, _t + 0.003);
+            g.gain.exponentialRampToValueAtTime(0.00001, _t + 0.003 + dn);
+          }
           osc.connect(g);
           g.connect(wet);
           sources.push(osc);
@@ -2405,9 +2423,14 @@ class ModularSynth {
     let chainOut: AudioNode = gainNode;
     const rackChain = track.rackChain;
     if (Array.isArray(rackChain) && rackChain.length) {
+      /* How long the note is held, for modules that are driven rather than
+         struck. Continuous hold (durationSec 0) has no known length, so give a
+         blown instrument a generous one and let the release close it. */
+      const heldSec =
+        durationSec === 0 ? 8 : durationSec !== undefined ? Math.max(0.02, durationSec) : 60 / this.bpm / 8;
       const rackParams = track.rackParams ?? {};
       for (const id of rackChain) {
-        const mod = this.buildRackModule(ctx, id, rackParams, baseFreq, t);
+        const mod = this.buildRackModule(ctx, id, rackParams, baseFreq, t, heldSec);
         if (!mod) continue;
         chainOut.connect(mod.in);
         chainOut = mod.out;
