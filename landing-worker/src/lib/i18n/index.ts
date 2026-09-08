@@ -21,7 +21,7 @@ export type Locale = 'en' | 'zh-CN' | 'zh-TW' | 'ja' | 'ko';
 export const LOCALES: readonly { id: Locale; /** Short badge for the footer button. */ code: string; /** Its own name, never translated. */ native: string }[] = [
 	{ id: 'en', code: 'EN', native: 'English (UK)' },
 	{ id: 'zh-CN', code: '简', native: '简体中文' },
-	{ id: 'zh-TW', code: '繁', native: '繁體中文' },
+	{ id: 'zh-TW', code: '正', native: '正體中文' },
 	{ id: 'ja', code: '日', native: '日本語' },
 	{ id: 'ko', code: '한', native: '한국어' }
 ];

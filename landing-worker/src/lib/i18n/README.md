@@ -1,6 +1,6 @@
 # i18n — how text is translated on this site
 
-Locales: `en` (source) · `zh-CN` 简体中文 · `zh-TW` 繁體中文 · `ja` 日本語 · `ko` 한국어.
+Locales: `en` (source) · `zh-CN` 简体中文 · `zh-TW` 正體中文 · `ja` 日本語 · `ko` 한국어.
 The user picks one in the footer (`[EN▲]`) or the site follows the browser. Everything user-visible is translated **except** the professional terms listed under "Do not translate".
 
 ## The three doors
