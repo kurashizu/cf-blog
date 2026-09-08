@@ -159,3 +159,34 @@ rather than being reported after the fact.
   mutating a 40-generation simulation produces a lot of timeouts, and a
   timeout has to wait out the clock. Timeouts count as killed, so the score is
   right — it is just slow. The unit suite itself is under three seconds.
+
+## What is not covered, and why
+
+The numbers above describe the 14 modules in the list — not the codebase. For
+scale: 166 source files, 84 of them Svelte components, and 68 untested .ts/.js
+modules totalling about 20,000 lines. Across all of it, 265 functions score
+above CRAP 30; 136 have coverage data at all.
+
+That gap is mostly deliberate. What is left divides into three:
+
+**Needs a browser, not a test runner.** `lm-space/scene.js` (WebGL), `sound.ts`
+and `synth.ts` (Web Audio), `lifelab/main.js` (canvas), `krsz-vm/qemu.ts` (an
+Emscripten module). These are exercised by using the site; a unit test would
+either mock the whole API surface — testing the mock — or need a real browser,
+which is a different kind of suite.
+
+**Svelte components.** None are tested. Rendering them needs a DOM and a
+component testing setup, and the last attempt to touch components broadly on
+this site had to be reverted. Worth doing per-view, one at a time, if ever.
+
+**Genuinely testable, not yet done.** `stores/console.ts` and `synth.ts` are
+the two big ones, and both are here because `runOne` and `triggerTrackVoice`
+reach straight into stores and Web Audio. Extracting the command table from
+`runOne` would make most of it testable — that is a refactor of the console,
+not a test-writing exercise, and worth doing when something there needs to
+change anyway. `stores/synth-presets.ts`, `synth-patch.ts` and
+`v86net/fake-network.js` are smaller versions of the same shape.
+
+The honest summary: the parts that read input the site does not control are
+covered and hold up under mutation testing. The parts that draw pixels and
+make sound are not, and are not going to be by this route.
