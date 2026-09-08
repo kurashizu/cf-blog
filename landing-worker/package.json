@@ -10,7 +10,12 @@
         "preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "prepare": "svelte-kit sync || echo ''",
-        "deploy:cf": "wrangler deploy"
+        "deploy:cf": "wrangler deploy",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "test:mutation": "stryker run",
+        "crap": "node scripts/crap.mjs"
     },
     "dependencies": {
         "@cloudflare/speedtest": "^1.13.1",
@@ -25,11 +30,14 @@
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20250520.0",
+        "@stryker-mutator/core": "^10.0.0",
+        "@stryker-mutator/vitest-runner": "^10.0.0",
         "@sveltejs/adapter-cloudflare": "^7.2.8",
         "@sveltejs/kit": "^2.63.0",
         "@sveltejs/vite-plugin-svelte": "^7.1.2",
         "@types/katex": "^0.16.8",
         "@types/node": "^26.4.0",
+        "@vitest/coverage-v8": "~4.1.11",
         "@webgpu/types": "^0.1.72",
         "autoprefixer": "^10.4.20",
         "postcss": "^8.4.49",
@@ -38,6 +46,7 @@
         "tailwindcss": "^3.4.17",
         "typescript": "^5.7.2",
         "vite": "^8.0.16",
+        "vitest": "~4.1.11",
         "wrangler": "^4.86.0"
     },
     "allowScripts": {

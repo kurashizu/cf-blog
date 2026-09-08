@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Mutation testing for the unit-tested modules. Coverage says a line ran; the mutation score says the tests would have caught it changing. Keep `mutate` in step with the coverage include list in vitest.config.ts.",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "vitest": { "configFile": "vitest.config.ts" },
+  "reporters": ["html", "clear-text", "progress", "json"],
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/lib/evaluator.ts",
+    "src/lib/routes-map.ts",
+    "src/lib/midi-file.ts",
+    "src/lib/components/chatbot/markdown.ts",
+    "src/lib/components/lifelab/engine.js",
+    "src/lib/components/lifelab/patterns.js"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": null
+  },
+  "_comment_sandbox": "tsconfig.json extends .svelte-kit/tsconfig.json, which svelte-kit sync generates and Stryker's sandbox would not otherwise copy; without it every transform fails with TSCONFIG_ERROR.",
+  "ignorePatterns": ["!.svelte-kit/tsconfig.json"],
+  "tempDirName": ".stryker-tmp",
+  "htmlReporter": { "fileName": "reports/mutation/index.html" },
+  "jsonReporter": { "fileName": "reports/mutation/report.json" }
+}

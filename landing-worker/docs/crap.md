@@ -1,0 +1,98 @@
+# CRAP — change risk in this codebase
+
+CRAP (Change Risk Anti-Patterns) scores a function on how dangerous it is to
+change: complexity weighted by how well tests cover it.
+
+```
+CRAP(m) = CC(m)² × (1 − cov(m)/100)³ + CC(m)
+```
+
+`CC` is cyclomatic complexity, `cov` the percentage of the function's
+statements that tests execute. Fully covered, CRAP collapses to `CC` itself.
+Uncovered, it is `CC² + CC` — a CC of 10 scores 110, a CC of 5 scores 30.
+**30 is the usual threshold**; above it, either the function is too complex or
+it needs tests, and the score does not say which.
+
+## Running it
+
+```sh
+npm run test              # unit tests
+npm run test:coverage     # tests + coverage/ (CRAP reads this)
+npm run crap              # the report, highest risk first
+npm run crap -- --covered # only files that have coverage data
+npm run crap -- --all     # every function, not just the top 40
+npm run test:mutation     # Stryker, writes reports/mutation/
+```
+
+`npm run crap` needs `coverage/coverage-final.json`, so run `test:coverage`
+first. When `reports/mutation/report.json` exists it adds a `mut%` column.
+
+## Why the mutation score is there too
+
+Coverage says a line *ran*. It does not say a test would *notice* that line
+changing. Mutation testing answers the second question: Stryker rewrites the
+source (`<` to `<=`, `+` to `-`, deleting a call) and re-runs the suite; a
+mutant that survives is a change no assertion caught.
+
+The gap is real and it is the reason both columns are here. Before this pass,
+`decodeRLE` and `encodeRLE` sat at 100% statement coverage while
+`nextOrientation` scored 22% on mutation — its test asserted that four
+rotations return to the start, which is true whichever direction the function
+turns, so it could not catch the direction being reversed. That is invisible
+to coverage and obvious to mutation testing.
+
+Treat CRAP as "where should tests go" and the mutation score as "are the tests
+that exist worth anything".
+
+## What the numbers currently say
+
+The two functions at the top of the whole-codebase list are far beyond
+anything else:
+
+| function | file | CC |
+| --- | --- | --- |
+| `runOne` | `src/lib/stores/console.ts:345` | 189 |
+| `triggerTrackVoice` | `src/lib/synth.ts:1517` | 169 |
+
+Third place is 54. Both are command dispatchers — a long `if/else if` chain
+over command names, or over track parameters — so the complexity is a shape,
+not a tangle, and splitting them into per-command handlers is the obvious
+move if either ever needs to change often. Neither is unit tested: both reach
+straight into Svelte stores, the SvelteKit runtime and Web Audio.
+
+Below them, 109 functions have CC ≥ 10 and 15 have CC ≥ 30.
+
+## Which files have tests
+
+`vitest.config.ts` lists the modules in `coverage.include`, and
+`stryker.config.json` mutates the same list. Both are hand-written rather than
+a glob: CRAP is complexity weighted by coverage, so sweeping untestable files
+into the denominator would move every score without telling you anything.
+
+The list holds what is genuinely unit-testable — no SvelteKit runtime, no
+browser globals, no Web Audio:
+
+- `src/lib/evaluator.ts` — the console's sandboxed maths evaluator
+- `src/lib/routes-map.ts` — tab/path mapping and isolated-route navigation
+- `src/lib/midi-file.ts` — the Standard MIDI File reader
+- `src/lib/components/chatbot/markdown.ts` — the renderer for model output
+- `src/lib/components/lifelab/engine.js` — the Life automaton
+- `src/lib/components/lifelab/patterns.js` — RLE encode/decode and geometry
+
+Add a file to both lists in the same commit that adds its tests, never before.
+
+## Notes on the toolchain
+
+- **Vitest is pinned to 4.x.** With Vitest 5, `@stryker-mutator/vitest-runner@10`
+  finishes its dry run and then runs zero tests per mutant, reporting a 0%
+  mutation score for a suite that is entirely green. Re-check before lifting
+  the pin in `package.json`.
+- `stryker.config.json` carries `"ignorePatterns": ["!.svelte-kit/tsconfig.json"]`
+  because `tsconfig.json` extends that generated file, and Stryker's sandbox
+  would not otherwise copy it — without it every transform fails with
+  `TSCONFIG_ERROR`.
+- Tests stub `$app/environment` (see `tests/unit/stubs/`) rather than booting
+  SvelteKit; `browser` is false, so browser-only branches stay skipped.
+- Some surviving mutants are equivalent, not missed: in `engine.js`,
+  `v < 250` → `v <= 250` changes an age cap that would take 250 generations to
+  observe. Not every survivor is worth a test.

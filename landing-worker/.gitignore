@@ -10,3 +10,10 @@ dist
 .output
 .netlify
 .wrangler
+
+# test + metrics output (npm run test:coverage / test:mutation)
+/coverage
+/reports
+/.stryker-tmp
+/.shots
+/test-results
