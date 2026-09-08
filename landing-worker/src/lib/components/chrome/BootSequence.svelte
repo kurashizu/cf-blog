@@ -37,7 +37,7 @@
 			}
 		},
 		{ label: 'DISPLAY', run: () => `${screen.width}x${screen.height} @ ${window.devicePixelRatio}x` },
-		{ label: 'COLOR DEPTH', run: () => `${screen.colorDepth}-bit` },
+		{ label: 'COLOUR DEPTH', run: () => `${screen.colorDepth}-bit` },
 		{ label: 'ORIENTATION', run: () => screen.orientation?.type ?? (screen.width >= screen.height ? 'landscape' : 'portrait') },
 		{ label: 'TOUCH', run: () => (navigator.maxTouchPoints > 0 ? `${navigator.maxTouchPoints} point${navigator.maxTouchPoints === 1 ? '' : 's'}` : 'n/a (no touch surface)') },
 		{ label: 'GPU', run: readGpu },

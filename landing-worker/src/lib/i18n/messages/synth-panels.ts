@@ -16,7 +16,7 @@ export default {
 		'synthPanels.rack.flowToEnvelopes': 'Signal Flow: To Envelopes & VCA',
 		'synthPanels.rack.flowToLfo': 'Signal Flow: To LFO & Dynamic Modulation',
 		'synthPanels.rack.flowToFxEq': 'Signal Flow: To Master FX & EQ',
-		'synthPanels.rack.flowToOut': 'Signal Flow: To Master Output & Visualizers',
+		'synthPanels.rack.flowToOut': 'Signal Flow: To Master Output & Visualisers',
 
 		// Hardware knob/fader tooltip templates ({descPart}/{labelPart} are pre-formatted punctuation, not prose)
 		'synthPanels.knob.rotaryHint': '{label}{descPart}: {value}{unit} — Drag up/down or scroll wheel to adjust',
@@ -117,9 +117,9 @@ export default {
 		'synthPanels.fx.eqBandPeakingDesc': 'Peaking Band — Boost/cut around {label}Hz',
 
 		// Module 7 — Out
-		'synthPanels.out.fftModeHint': 'Visualizer Mode: FFT Log Spectrum Analyzer — Shows frequency distribution across 20Hz to 20kHz',
-		'synthPanels.out.scopeModeHint': 'Visualizer Mode: Oscilloscope Waveform — Real-time time-domain audio wave display',
-		'synthPanels.out.loudnessModeHint': 'Visualizer Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)',
+		'synthPanels.out.fftModeHint': 'Visualiser Mode: FFT Log Spectrum Analyser — Shows frequency distribution across 20Hz to 20kHz',
+		'synthPanels.out.scopeModeHint': 'Visualiser Mode: Oscilloscope Waveform — Real-time time-domain audio wave display',
+		'synthPanels.out.loudnessModeHint': 'Visualiser Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)',
 		'synthPanels.out.recordingHint': 'Recording — {seconds}s. Click to stop and download.',
 		'synthPanels.out.recordIdleHint': 'Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)',
 		'synthPanels.out.recorderUnsupported': 'MediaRecorder unsupported in this browser',
@@ -209,7 +209,7 @@ export default {
 		'synthPanels.dsp.noiseDurationMin': '0.5s (22k samples)',
 		'synthPanels.dsp.noiseDurationDefault': '2.0s (Default)',
 		'synthPanels.dsp.noiseDurationMax': '5.0s (220k samples)',
-		'synthPanels.dsp.noiseColorLabel': 'Noise Color Spectrum:',
+		'synthPanels.dsp.noiseColorLabel': 'Noise Colour Spectrum:',
 		'synthPanels.dsp.reverbBufferTitle': 'CONVOLUTION REVERB IMPULSE RESPONSE BUFFER',
 		'synthPanels.dsp.stereoIrBuffer': 'Stereo IR Buffer',
 		'synthPanels.dsp.impulseDuration': 'Impulse Duration (RT60):',

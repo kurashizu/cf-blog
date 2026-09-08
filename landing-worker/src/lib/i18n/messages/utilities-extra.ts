@@ -91,7 +91,7 @@ export default {
 		'utilities.color.swatch.red': 'Red',
 		'utilities.color.swatch.green': 'Green',
 		'utilities.color.swatch.blue': 'Blue',
-		'utilities.color.wideHint': 'sRGB next to display-p3 and rec2020 versions of the same nominal color. If both halves of a pair look identical, this display or browser is limited to sRGB.',
+		'utilities.color.wideHint': 'sRGB next to display-p3 and rec2020 versions of the same nominal colour. If both halves of a pair look identical, this display or browser is limited to sRGB.',
 		'utilities.color.gammaHint': 'A solid grey next to a 1px black/white line pattern that averages to 50% luminance. The pair that blends together at a distance is this display\'s gamma.',
 		'utilities.color.gammaDpr': 'pattern drawn at device pixels, devicePixelRatio {dpr}',
 		'utilities.color.blackHint': 'Count how many squares you can tell apart from pure black. The first 2-3 merging into the background is normal on most panels.',
