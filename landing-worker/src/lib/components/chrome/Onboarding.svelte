@@ -5,7 +5,8 @@
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
-	import { Kbd } from '$lib/components/ui';
+	import { Kbd, Button } from '$lib/components/ui';
+	import { modal } from '$lib/actions/modal';
 
 	let {
 		onClose,
@@ -323,9 +324,7 @@
 
 	<div
 		bind:this={bubbleEl}
-		role="dialog"
-		aria-modal="true"
-		aria-label={$t('a11y.dialog.tour')}
+		use:modal={{ onClose: () => { dismissed = true; onClose(); }, closeOnBackdrop: false, label: $t('a11y.dialog.tour') }}
 		aria-describedby={bodyId}
 		class="fixed z-[170] max-w-[min(480px,94vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono transition-[border-color] duration-200"
 		style="{bubbleStyle} border-color: {step.color}88;"
@@ -378,37 +377,44 @@
 							index = i;
 						}}
 						aria-label={$t('chrome.onboarding.stepLabel', { n: i + 1, title: s.title })}
+						aria-current={i === index ? 'step' : undefined}
 						class="press w-1.5 h-1.5 rounded-full cursor-pointer transition-all {i === index ? 'scale-125' : 'bg-white/20 hover:bg-white/45'}"
 						style={i === index ? `background-color: ${s.color}` : undefined}
 					></button>
 				{/each}
-				<button onclick={() => { dismissed = true; onClose(); }} class="press ml-1.5 text-xs text-white/60 hover:text-white cursor-pointer transition-colors">{$t('common.skip').toUpperCase()}</button>
+				<Button variant="ghost" onclick={() => { dismissed = true; onClose(); }} class="ml-1.5 text-xs text-white/60">{$t('common.skip').toUpperCase()}</Button>
 			</div>
 
 			<div class="flex items-center gap-1.5">
 				{#if step.action}
-					<button
+					<Button
+						variant="outline"
+						color={step.color}
+						size="xs"
 						onclick={runAction}
-						class="press px-2.5 py-1 border rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 transition-colors"
-						style="border-color: {step.color}88; color: {step.color}"
+						class="text-[11px]"
 					>
 						{step.action.label}
-					</button>
+					</Button>
 				{/if}
-				<button
+				<Button
+					variant="neutral"
+					size="xs"
 					onclick={back}
 					disabled={index === 0}
-					class="press px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-[11px] font-bold cursor-pointer hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+					class="text-[11px]"
 				>
 					{$t('common.back').toUpperCase()}
-				</button>
-				<button
+				</Button>
+				<Button
+					variant="outline"
+					color={step.color}
+					size="xs"
 					onclick={next}
-					class="press px-3 py-1 border rounded-xs text-[11px] font-black cursor-pointer hover:bg-white/10 transition-colors"
-					style="border-color: {step.color}; color: {step.color}"
+					class="text-[11px] font-black"
 				>
 					{isLast ? $t('common.done').toUpperCase() : `${$t('common.next').toUpperCase()} →`}
-				</button>
+				</Button>
 			</div>
 		</div>
 	</div>

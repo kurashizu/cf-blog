@@ -395,7 +395,7 @@
 		<!-- Held notes strip -->
 		<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1 min-w-0">
 			<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.midi.heldNotes')}</div>
-			<div class="flex gap-px overflow-x-auto custom-scrollbar">
+			<div class="flex gap-px overflow-x-auto custom-scrollbar" tabindex="0" role="region" aria-label={$t('utilities.view.tool.midi.label')}>
 				{#each stripNotes as n (n)}
 					{@const v = held[n]}
 					{@const isC = n % 12 === 0}

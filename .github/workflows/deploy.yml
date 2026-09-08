@@ -154,6 +154,47 @@ jobs:
                   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
                   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+    # Accessibility audit of the landing site: Playwright + axe over every
+    # view at three widths plus keyboard journeys (landing-worker/tests/a11y).
+    # Advisory, not a deploy gate -- the blocking a11y checks are the ones
+    # inside `npm run build:cf` (svelte.config.js turns every a11y_* compiler
+    # warning into an error). Runs in the runner's preinstalled Google Chrome;
+    # no browser download (see landing-worker/.npmrc).
+    a11y-landing:
+        runs-on: ubuntu-latest
+        continue-on-error: true
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: "22"
+
+            - uses: actions/cache@v5
+              with:
+                  path: landing-worker/node_modules
+                  key: landing-node-${{ hashFiles('landing-worker/package-lock.json') }}
+                  restore-keys: |
+                      landing-node-
+
+            - name: Install dependencies
+              run: |
+                  cd landing-worker
+                  npm ci --legacy-peer-deps
+
+            - name: Audit
+              run: |
+                  cd landing-worker
+                  npm run a11y
+
+            - name: Upload audit output
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: a11y-audit
+                  path: landing-worker/test-results
+                  if-no-files-found: ignore
+
     update-db:
         runs-on: ubuntu-latest
         steps:

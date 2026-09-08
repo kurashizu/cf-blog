@@ -3,6 +3,7 @@
 	import { playSound } from '../../sound';
 	import { activeTrackId } from '../../stores/synth-transport';
 	import { tracksState, isOverlayMode, overlayTrackIds, toggleTrackMute, toggleTrackSolo } from '../../stores/synth-tracks';
+	import { Button } from '$lib/components/ui';
 
 	function toggleOverlayMode() {
 		const next = !$isOverlayMode;
@@ -43,18 +44,20 @@
 </script>
 
 <div data-tour="synth-tracks" class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar ml-auto">
-	<button
+	<Button
+		variant="outline"
+		color="#56b6c2"
+		active={$isOverlayMode}
+		sound="toggle"
 		onclick={toggleOverlayMode}
-		class="press px-2 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0 {$isOverlayMode
-			? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_rgba(86,182,194,0.5)]'
-			: 'border-white/20 text-white/60 hover:text-white hover:border-white/50'}"
+		class="flex items-center gap-1 shrink-0"
 		title={$isOverlayMode
 			? $t('synth.tracks.overlayOnHint')
 			: $t('synth.tracks.overlayOffHint')}
 	>
-		<span>⧉</span>
+		<span aria-hidden="true">⧉</span>
 		<span>OVERLAY</span>
-	</button>
+	</Button>
 
 	<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
 	<!-- One label for the row; the chips carry only the number, so eight of them still fit. -->
@@ -76,7 +79,8 @@
 					e.stopPropagation();
 					selectActiveTrack(trk.id);
 				}}
-				class="press pl-1.5 pr-0.5 py-1 flex items-center justify-center cursor-pointer group"
+				class="press min-w-[24px] min-h-[24px] pl-1.5 pr-0.5 py-1 flex items-center justify-center cursor-pointer group"
+				aria-label={$t('synth.tracks.setActiveHint', { name: trk.name, state: isActiveEditingTrack ? $t('synth.tracks.activeSolid') : $t('synth.tracks.inactiveHollow') })}
 				title={$t('synth.tracks.setActiveHint', { name: trk.name, state: isActiveEditingTrack ? $t('synth.tracks.activeSolid') : $t('synth.tracks.inactiveHollow') })}
 			>
 				<span
@@ -84,17 +88,19 @@
 						? 'shadow-[0_0_6px_currentColor]'
 						: 'border border-current bg-transparent opacity-60 group-hover:opacity-100 group-hover:bg-white/20'}"
 					style="color: {trk.color}; background-color: {isActiveEditingTrack ? trk.color : 'transparent'}; border-color: {trk.color};"
+					aria-hidden="true"
 				></span>
 			</button>
 
 			<button
 				type="button"
 				onclick={() => toggleOverlayVisibility(trk.id)}
-				class="press pl-1 pr-2 py-0.5 font-bold text-xs cursor-pointer flex items-center transition-colors"
+				class="press min-w-[24px] min-h-[24px] pl-1 pr-2 py-0.5 font-bold text-xs cursor-pointer flex items-center justify-center transition-colors"
 				style={isSelected ? `color: ${trk.color}` : ''}
+				aria-label={$isOverlayMode ? $t('synth.tracks.overlayToggleHint', { name: trk.name, state: isActiveEditingTrack ? $t('common.yes') : $t('common.no') }) : $t('synth.tracks.selectHint', { name: trk.name })}
 				title={$isOverlayMode ? $t('synth.tracks.overlayToggleHint', { name: trk.name, state: isActiveEditingTrack ? $t('common.yes') : $t('common.no') }) : $t('synth.tracks.selectHint', { name: trk.name })}
 			>
-				<span class="font-mono">{trk.id + 1}</span>
+				<span class="font-mono" aria-hidden="true">{trk.id + 1}</span>
 			</button>
 
 			<div class="flex items-center border-l border-white/15 px-1 gap-0.5">
@@ -104,10 +110,12 @@
 						toggleTrackMute(trk.id);
 						playSound('click');
 					}}
-					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/60 hover:text-white'}"
+					class="press min-w-[24px] min-h-[24px] px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors flex items-center justify-center {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/60 hover:text-white'}"
+					aria-pressed={trk.muted}
+					aria-label={$t('synth.tracks.muteHint', { name: trk.name })}
 					title={$t('synth.tracks.muteHint', { name: trk.name })}
 				>
-					M
+					<span aria-hidden="true">M</span>
 				</button>
 				<button
 					onclick={(e) => {
@@ -115,10 +123,12 @@
 						toggleTrackSolo(trk.id);
 						playSound('click');
 					}}
-					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/60 hover:text-white'}"
+					class="press min-w-[24px] min-h-[24px] px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors flex items-center justify-center {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/60 hover:text-white'}"
+					aria-pressed={trk.solo}
+					aria-label={$t('synth.tracks.soloHint', { name: trk.name })}
 					title={$t('synth.tracks.soloHint', { name: trk.name })}
 				>
-					S
+					<span aria-hidden="true">S</span>
 				</button>
 			</div>
 		</div>

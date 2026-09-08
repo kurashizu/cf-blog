@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BoxHeader from '../chrome/BoxHeader.svelte';
 	import AsciiArt from '../chrome/AsciiArt.svelte';
+	import { Button } from '$lib/components/ui';
 	import { playSound } from '../../sound';
 	import KeyboardTester from './KeyboardTester.svelte';
 	import MouseTester from './MouseTester.svelte';
@@ -96,10 +97,23 @@
 	const TOOL_DEFS = GROUP_DEFS.flatMap((g) => g.tools);
 
 	let activeTool = $state<ToolId>('keyboard');
+	let panelHeading = $state<HTMLHeadingElement>();
+	let launchpadEl = $state<HTMLDivElement>();
 
 	function select(id: ToolId) {
 		activeTool = id;
 		playSound('click');
+		// Move a screen-reader user into the panel that just changed -- a sighted
+		// visitor sees the swap below the grid, but nothing here would otherwise
+		// draw the reader's attention past the tile that was just activated.
+		panelHeading?.focus();
+	}
+
+	/** Returns focus to the launchpad grid (its first tile) for a keyboard/reader
+	 *  user who came from the panel and wants back rather than Shift+Tab-ing out. */
+	function backToLaunchpad() {
+		playSound('click');
+		launchpadEl?.querySelector<HTMLButtonElement>('button')?.focus();
 	}
 
 	let TOOLS = $derived(
@@ -124,7 +138,7 @@
 	<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
 		<AsciiArt
 			color="#e5c07b"
-			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-hidden"
 			art={`██╗   ██╗████████╗██╗██╗     ███████╗
 ██║   ██║╚══██╔══╝██║██║     ██╔════╝
 ██║   ██║   ██║   ██║██║     ███████╗
@@ -138,23 +152,27 @@
 	     card per tool instead of a flat row of pills, so this reads as one
 	     consistent pattern across the site rather than two different ways
 	     of picking from a list. -->
-	<div class="space-y-2">
+	<div class="space-y-2" bind:this={launchpadEl}>
 		{#each GROUPS as group (group.id)}
 			{@const groupActive = group.tools.some((tool) => tool.id === activeTool)}
+			{@const groupHeadingId = `utils-group-${group.id}`}
 			<div>
 				<!-- Section rule in the same ruled-heading idiom as the console's
-				     help sections: a short label, then a hairline to the edge. -->
+				     help sections: a short label, then a hairline to the edge. A real
+				     h2 so a reader can jump section to section the way a sighted
+				     visitor scans the ruled labels. -->
 				<div class="flex items-center gap-2 mb-1">
-					<span class="text-[10px] font-bold tracking-wider {groupActive ? 'text-white/70' : 'text-white/50'}">{group.label}</span>
+					<h2 id={groupHeadingId} class="text-[10px] font-bold tracking-wider {groupActive ? 'text-white/70' : 'text-white/50'}">{group.label}</h2>
 					<span class="flex-1 border-t border-white/10"></span>
 					<span class="text-[9px] font-mono text-white/50">{group.tools.length}</span>
 				</div>
-				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5" role="group" aria-labelledby={groupHeadingId}>
 					{#each group.tools as tool (tool.id)}
 						{@const isActive = activeTool === tool.id}
 						<button
 							onclick={() => select(tool.id)}
 							title={$t('utilities.view.tool.hint', { label: tool.label, desc: tool.desc })}
+							aria-current={isActive ? 'true' : undefined}
 							class="lift press border rounded-xs p-1.5 flex flex-col items-start text-left cursor-pointer transition-all min-w-0 {isActive
 								? 'border-white bg-white/20 text-white shadow-md'
 								: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
@@ -172,7 +190,11 @@
 	<div style="border-color: {current.color}66;" class="border p-3 sm:p-4 rounded-sm space-y-2 bg-black/20">
 		<BoxHeader title={current.label} class="font-black text-xs sm:text-sm border-b border-white/10 pb-1.5" style="color: {current.color}">
 			<span class="text-[10px] sm:text-xs text-white/60 font-mono font-normal">{current.desc}</span>
+			<Button variant="ghost" size="xs" onclick={backToLaunchpad} class="font-normal shrink-0">
+				{$t('utilities.view.backToLaunchpad')}
+			</Button>
 		</BoxHeader>
+		<h2 bind:this={panelHeading} tabindex="-1" class="sr-only">{current.label}: {current.desc}</h2>
 
 		{#key activeTool}
 			<div in:fade={{ duration: 140 }}>

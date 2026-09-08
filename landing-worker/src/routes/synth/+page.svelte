@@ -36,18 +36,32 @@
 		if (isMidiFile(file)) void handleImportMidiFile(file);
 		else if (/\.(json|json\.gz|gz)$/i.test(file.name)) void handleImportPatchFile(file);
 	}
+
+	function dropZone(node: HTMLElement) {
+		node.addEventListener('dragenter', onDragEnter);
+		node.addEventListener('dragover', onDragOver);
+		node.addEventListener('dragleave', onDragLeave);
+		node.addEventListener('drop', onDrop);
+		return {
+			destroy() {
+				node.removeEventListener('dragenter', onDragEnter);
+				node.removeEventListener('dragover', onDragOver);
+				node.removeEventListener('dragleave', onDragLeave);
+				node.removeEventListener('drop', onDrop);
+			}
+		};
+	}
 </script>
 
 <svelte:head>
 	<title>{$t('common.tabTitle.2')}</title>
 </svelte:head>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- Drag-and-drop lands here (a .mid or patch file anywhere on the page);
+     wired as an action -- it is a drop target, not a control, so it has no
+     role and no keyboard path of its own (IMP in the transport is that). -->
 <div
-	ondragenter={onDragEnter}
-	ondragover={onDragOver}
-	ondragleave={onDragLeave}
-	ondrop={onDrop}
+	use:dropZone
 	class="relative flex-1 min-h-0 flex flex-col"
 >
 	<SynthWorkspace />

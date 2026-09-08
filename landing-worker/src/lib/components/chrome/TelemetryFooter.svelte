@@ -6,6 +6,8 @@
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import { creditsOpen } from '../../stores/chrome';
 	import LanguageMenu from './LanguageMenu.svelte';
+	import A11yMenu from './A11yMenu.svelte';
+	import { Button } from '$lib/components/ui';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -66,7 +68,7 @@
 >
 	<div class="flex items-center footer-gap shrink-0 min-w-0">
 		<span class="shrink-0">[0] 0:krsz.in*</span>
-		<span class="footer-div opacity-40 text-white/50 shrink-0">|</span>
+		<span class="footer-div text-white/50 shrink-0" aria-hidden="true">|</span>
 		{#each LINKS as link (link.href)}
 			<a
 				href={link.href}
@@ -74,10 +76,11 @@
 				rel="noopener noreferrer"
 				onclick={() => playSound('click')}
 				title={link.title}
-				class="press hover:underline flex items-center gap-1 transition-colors shrink-0 {link.color}"
+				aria-label={link.title}
+				class="press hover:underline flex items-center gap-1 min-h-[24px] min-w-[24px] transition-colors shrink-0 {link.color}"
 			>
-				<PixelIcon name={link.icon} size={16} />
-				<span class="footer-linklabel">{link.label}</span>
+				<PixelIcon name={link.icon} size={16} class="pointer-events-none" />
+				<span class="footer-linklabel" aria-hidden="true">{link.label}</span>
 			</a>
 		{/each}
 	</div>
@@ -90,12 +93,13 @@
 				class="footer-edgelabel shrink-0 inline-flex items-center gap-1 transition-colors {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/60'}"
 			>
 				{#if $edgeTraceStatus === 'ok'}
-					<span class="w-1 h-1 rounded-full bg-[#98c379] blink-live"></span>
+					<span class="w-1 h-1 rounded-full bg-[#98c379] blink-live" aria-hidden="true"></span>
 				{/if}
-				{edgeLabel}
+				<span class="sr-only">{edgeTitle}</span>
+				<span aria-hidden="true">{edgeLabel}</span>
 			</span>
 		{/if}
-		<span class="footer-div opacity-40 text-white/50 shrink-0">|</span>
+		<span class="footer-div text-white/50 shrink-0" aria-hidden="true">|</span>
 		<span class="footer-copyright text-xs sm:text-sm text-white/60 shrink-0" title="© {new Date().getFullYear()} kurashizu">© kurashizu</span>
 		<span class="text-[10px] sm:text-xs text-white/60 whitespace-nowrap shrink-0" title={BUILD_TITLE}>
 			{#if BUILD_URL}
@@ -104,6 +108,7 @@
 					target="_blank"
 					rel="noopener noreferrer"
 					onclick={() => playSound('click')}
+					aria-label={BUILD_TITLE}
 					class="press hover:underline hover:text-white/70 transition-colors"
 				>
 					{__BUILD_COMMIT__}
@@ -115,16 +120,15 @@
 		</span>
 		<!-- Beside the commit because it answers the neighbouring question: that
 		     one says which build this is, this one says what it is made of. -->
-		<button
-			onclick={() => {
-				creditsOpen.set(true);
-				playSound('click');
-			}}
+		<Button
+			variant="link"
+			onclick={() => creditsOpen.set(true)}
 			title={$t('chrome.footer.creditsTitle')}
-			class="press text-xs text-white/60 hover:text-white/70 cursor-pointer transition-colors shrink-0"
+			class="text-xs text-white/60 shrink-0"
 		>
 			[{$t('chrome.footer.credits')}]
-		</button>
+		</Button>
+		<A11yMenu />
 		<LanguageMenu />
 	</div>
 </footer>

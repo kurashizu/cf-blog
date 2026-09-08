@@ -44,6 +44,26 @@ export async function audit(page: Page, label: string, minImpact: 'serious' | 'm
 		// The theme video is decorative and has no track; the site says so.
 		.disableRules(['video-caption'])
 		.analyze();
+	// WCAG 2.5.8 exempts targets whose size is essential to the information
+	// being conveyed: a piano's keys and the note rows of a sequencer grid
+	// are that. Elements under data-target-size-essential are dropped from
+	// the target-size rule only; every other rule still sees them.
+	const essential = await page.evaluate((selectors: string[][]) =>
+		selectors.map((sel) => {
+			try {
+				return !!document.querySelector(sel.join(' '))?.closest('[data-target-size-essential]');
+			} catch {
+				return false;
+			}
+		}),
+		results.violations.flatMap((v) => (v.id === 'target-size' ? v.nodes.map((n) => n.target as string[]) : []))
+	);
+	let k = 0;
+	for (const v of results.violations) {
+		if (v.id !== 'target-size') continue;
+		v.nodes = v.nodes.filter(() => !essential[k++]);
+	}
+	results.violations = results.violations.filter((v) => v.nodes.length > 0);
 	const order = ['minor', 'moderate', 'serious', 'critical'];
 	const min = order.indexOf(minImpact);
 	const all: Violation[] = results.violations.map((v) => ({
@@ -57,11 +77,12 @@ export async function audit(page: Page, label: string, minImpact: 'serious' | 'm
 	}
 	// Machine-readable copy of the whole audit (every node, with axe's own
 	// explanation) for sorting by rule or by selector across views.
-	mkdirSync('test-results', { recursive: true });
+	const out = process.env.PW_OUT ?? 'test-results';
+	mkdirSync(out, { recursive: true });
 	for (const v of results.violations) {
 		for (const n of v.nodes) {
 			appendFileSync(
-				'test-results/axe.jsonl',
+				`${out}/axe.jsonl`,
 				JSON.stringify({ label, id: v.id, impact: v.impact, target: n.target.join(' '), html: n.html.slice(0, 200), summary: n.failureSummary?.split('\n').slice(1, 3).join(' ') }) + '\n'
 			);
 		}

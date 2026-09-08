@@ -109,7 +109,7 @@
 						<span>{$t('lifelab.page.logLabel')}</span><small>{$t('lifelab.page.logSubtitle')}</small>
 						<button id="logtoggle" title={$t('lifelab.page.hideLogHint')}>_</button>
 					</div>
-					<div id="term"></div>
+					<div id="term" tabindex="0" role="log" aria-label={$t('lifelab.page.logLabel')}></div>
 				</div>
 			</div>
 			<div id="tray" data-tour="ll-tray"></div>

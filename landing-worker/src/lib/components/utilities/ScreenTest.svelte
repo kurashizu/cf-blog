@@ -138,6 +138,7 @@
 		// Fullscreen is best-effort — the fixed overlay covers the viewport either way.
 		await new Promise((r) => requestAnimationFrame(r));
 		overlayEl?.requestFullscreen?.().catch(() => {});
+		overlayEl?.focus();
 	}
 
 	function close() {
@@ -211,9 +212,20 @@
 </div>
 
 {#if active && step}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div bind:this={overlayEl} onclick={next} class="fixed inset-0 z-[300] cursor-pointer overflow-auto bg-black">
+	<div
+		bind:this={overlayEl}
+		role="button"
+		tabindex="0"
+		aria-label={$t('utilities.screen.overlay.a11yLabel')}
+		onclick={next}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				next();
+			}
+		}}
+		class="fixed inset-0 z-[300] cursor-pointer overflow-auto bg-black"
+	>
 		{#if step.kind === 'fill'}
 			<div class="absolute inset-0" style="background-color: {step.bg}"></div>
 		{:else if step.kind === 'bars'}

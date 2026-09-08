@@ -227,6 +227,9 @@
      fade+rise on the way in, and a quicker fade on the way out so dismissing
      it (any key, or the auto-continue) never cuts straight to the shell. -->
 <div
+	role="status"
+	aria-live="polite"
+	aria-label={$t('chrome.boot.title')}
 	class="fixed inset-0 z-[200] {bgColorClass} backdrop-blur-xl text-[#d8dee9] font-mono overflow-hidden flex flex-col p-3 sm:p-6 md:p-10 transform-gpu transition-opacity duration-200 {closing
 		? 'opacity-0'
 		: 'opacity-100'}"

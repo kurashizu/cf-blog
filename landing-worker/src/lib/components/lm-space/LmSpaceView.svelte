@@ -3,6 +3,7 @@
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	import { t } from '$lib/i18n';
+	import { Button } from '$lib/components/ui';
 	import LeaderboardView from '$lib/components/leaderboard/LeaderboardView.svelte';
 	import {
 		loadLeaderboard,
@@ -102,24 +103,27 @@
 <div class="flex-1 min-h-0 flex flex-col">
 	<div class="flex items-center gap-1.5 pb-1.5 shrink-0" data-tour="lms-modes">
 		<span class="text-[10px] font-mono font-bold text-white/60 uppercase tracking-widest mr-0.5">{$t('lmspace.modes.viewAs')}</span>
-		{#each MODES as { k, label } (k)}
-			<button
-				onclick={() => { mode = k; playSound('click'); }}
-				class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {mode === k
-					? 'border-[#56b6c2] text-[#56b6c2] bg-[#56b6c2]/10'
-					: 'border-white/20 text-white/55 hover:border-white/50'}"
-			>
-				{$t(label)}
-			</button>
-		{/each}
-		<button
-			onclick={() => { openOnboardingNow(TOUR); playSound('click'); }}
+		<div role="group" aria-label={$t('lmspace.modes.viewAs')} class="flex items-center gap-1.5">
+			{#each MODES as { k, label } (k)}
+				<Button
+					variant="outline"
+					color="#56b6c2"
+					active={mode === k}
+					onclick={() => { mode = k; playSound('click'); }}
+				>
+					{$t(label)}
+				</Button>
+			{/each}
+		</div>
+		<Button
+			variant="outline"
+			color="#56b6c2"
+			class="ml-auto"
 			title={$t('lmspace.guide.hint')}
-			class="press ml-auto px-2 py-1 border border-white/20 text-white/55 rounded-xs text-xs font-bold
-				cursor-pointer transition-colors hover:border-[#56b6c2] hover:text-[#56b6c2]"
+			onclick={() => { openOnboardingNow(TOUR); playSound('click'); }}
 		>
 			? {$t('lmspace.guide.button')}
-		</button>
+		</Button>
 	</div>
 
 	{#if $guideActive}
@@ -131,12 +135,14 @@
 			<span class="flex-1">
 				<b>{$t('lmspace.mobile.title')}</b> {$t('lmspace.mobile.body')}
 			</span>
-			<button
-				onclick={() => { mobileNoteOpen = false; playSound('click'); }}
+			<Button
+				variant="ghost"
+				color="#e5c07b"
+				label={$t('common.close')}
 				title={$t('common.close')}
-				aria-label={$t('common.close')}
-				class="press shrink-0 px-1 text-[#e5c07b]/70 hover:text-[#e5c07b] cursor-pointer transition-colors"
-			>&#10005;</button>
+				class="shrink-0"
+				onclick={() => { mobileNoteOpen = false; playSound('click'); }}
+			>&#10005;</Button>
 		</div>
 	{/if}
 
@@ -149,8 +155,9 @@
 	<div class="lmspace relative flex-1 min-h-0 overflow-hidden border border-white/10 rounded-xs"
 		class:lms-off={mode !== 'space'}
 		data-tour="lms-stage" bind:this={host}>
-			<div id="app" class="absolute inset-0"></div>
+			<div id="app" class="absolute inset-0" role="img" aria-label={$t('lmspace.stage.ariaLabelLoading')}></div>
 			<div id="labels" class="absolute inset-0 z-10 pointer-events-none overflow-hidden"></div>
+			<div id="selstatus" class="sr-only" aria-live="polite"></div>
 
 			<div class="hud" id="topbar">
 			  <div>
@@ -161,6 +168,14 @@
 			    </div>
 			  </div>
 			  <div id="ctl" data-tour="lms-ctl">
+			    <div class="grp" style="--g:#e06c75">
+			      <label class="ghd" for="model-select">{$t('lmspace.hud.select')}</label>
+			      <div class="gbtns">
+			        <select id="model-select" class="modelselect" aria-label={$t('lmspace.hud.selectHint')}>
+			          <option value="">{$t('lmspace.hud.selectPlaceholder')}</option>
+			        </select>
+			      </div>
+			    </div>
 			    <div class="grp" style="--g:#56b6c2">
 			      <span class="ghd">{$t('lmspace.hud.view')}</span>
 			      <div class="gbtns">
@@ -168,9 +183,9 @@
 			             animated, so it is a third position on this same axis rather than
 			             a whole separate TIMELAPSE group next to it. -->
 			        <span class="cyc" id="view-cyc">
-			          <button class="carrow" id="view-prev" title={$t('lmspace.hud.prevView')}>&#9664;</button>
-			          <button class="cval" id="view-val" title={$t('lmspace.hud.viewTip')}></button>
-			          <button class="carrow" id="view-next" title={$t('lmspace.hud.nextView')}>&#9654;</button>
+			          <button class="carrow" id="view-prev" title={$t('lmspace.hud.prevView')} aria-label={$t('lmspace.hud.prevView')}>&#9664;</button>
+			          <button class="cval" id="view-val" title={$t('lmspace.hud.viewTip')} aria-label={$t('lmspace.hud.viewTip')}></button>
+			          <button class="carrow" id="view-next" title={$t('lmspace.hud.nextView')} aria-label={$t('lmspace.hud.nextView')}>&#9654;</button>
 			        </span>
 			      </div>
 			    </div>
@@ -181,24 +196,24 @@
 			             as the synth's METER stepper, so a binary choice looks like every
 			             other stepped choice on this HUD instead of a pair of toggle buttons. -->
 			        <span class="cyc" id="proj-cyc">
-			          <button class="carrow" id="proj-prev" title={$t('lmspace.hud.prevProjection')}>&#9664;</button>
-			          <button class="cval" id="proj-val" title={$t('lmspace.hud.projectionTip')}></button>
-			          <button class="carrow" id="proj-next" title={$t('lmspace.hud.nextProjection')}>&#9654;</button>
+			          <button class="carrow" id="proj-prev" title={$t('lmspace.hud.prevProjection')} aria-label={$t('lmspace.hud.prevProjection')}>&#9664;</button>
+			          <button class="cval" id="proj-val" title={$t('lmspace.hud.projectionTip')} aria-label={$t('lmspace.hud.projectionTip')}></button>
+			          <button class="carrow" id="proj-next" title={$t('lmspace.hud.nextProjection')} aria-label={$t('lmspace.hud.nextProjection')}>&#9654;</button>
 			        </span>
-			        <button class="btn" id="vp-cycle" title={$t('lmspace.hud.vpCycleTip')}>$ &times; I</button>
+			        <button class="btn" id="vp-cycle" title={$t('lmspace.hud.vpCycleTip')} aria-label={$t('lmspace.hud.vpCycleTip')} aria-pressed="false">$ &times; I</button>
 			      </div>
 			    </div>
 			    <div class="grp" style="--g:#d19a66">
 			      <span class="ghd">{$t('lmspace.hud.gravity')}</span>
 			      <div class="gbtns">
-			      <button class="btn" id="g-start" title={$t('lmspace.hud.simulateTip')}>{$t('lmspace.hud.simulate')}</button>
-			      <button class="btn on" id="g-hull" title={$t('lmspace.hud.linkTip')}>{$t('lmspace.hud.link')}</button>
+			      <button class="btn" id="g-start" title={$t('lmspace.hud.simulateTip')} aria-pressed="false">{$t('lmspace.hud.simulate')}</button>
+			      <button class="btn on" id="g-hull" title={$t('lmspace.hud.linkTip')} aria-pressed="true">{$t('lmspace.hud.link')}</button>
 			      </div>
 			    </div>
 			    <div class="grp" style="--g:#98c379">
 			      <span class="ghd">{$t('lmspace.hud.pareto')}</span>
 			      <div class="gbtns">
-			      <button class="btn" id="pareto-toggle" title={$t('lmspace.hud.frontierTip')}>{$t('lmspace.hud.frontier')}</button>
+			      <button class="btn" id="pareto-toggle" title={$t('lmspace.hud.frontierTip')} aria-pressed="false">{$t('lmspace.hud.frontier')}</button>
 			      </div>
 			    </div>
 			  </div>
@@ -234,10 +249,10 @@
 			     wholesale four times a second while playing, and re-wiring click
 			     handlers on every rebuild is wasted work a static sibling avoids. -->
 			<div id="racectl">
-				<button type="button" id="race-restart" title={$t('lmspace.race.restart')}>&#9198;</button>
-				<button type="button" id="race-back" title={$t('lmspace.race.stepBack')}>&#9664;&#9664;</button>
-				<button type="button" id="race-play" title={$t('lmspace.race.playPause')}>&#9654;</button>
-				<button type="button" id="race-fwd" title={$t('lmspace.race.stepFwd')}>&#9654;&#9654;</button>
+				<button type="button" id="race-restart" title={$t('lmspace.race.restart')} aria-label={$t('lmspace.race.restart')}>&#9198;</button>
+				<button type="button" id="race-back" title={$t('lmspace.race.stepBack')} aria-label={$t('lmspace.race.stepBack')}>&#9664;&#9664;</button>
+				<button type="button" id="race-play" title={$t('lmspace.race.playPause')} aria-label={$t('lmspace.race.playPause')} aria-pressed="false">&#9654;</button>
+				<button type="button" id="race-fwd" title={$t('lmspace.race.stepFwd')} aria-label={$t('lmspace.race.stepFwd')}>&#9654;&#9654;</button>
 			</div>
 			<div id="race"></div>
 			<div id="gravity"></div>
@@ -256,8 +271,12 @@
 						transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 					>
 						{engineError ?? $leaderboardError}
-						<button onclick={() => { started = false; engineError = null; booting = true; void start(); }}
-							class="press ml-2 underline cursor-pointer hover:text-white transition-colors">{$t('common.retry')}</button>
+						<Button
+							variant="link"
+							color="#e06c75"
+							class="ml-2"
+							onclick={() => { started = false; engineError = null; booting = true; void start(); }}
+						>{$t('common.retry')}</Button>
 						<div class="text-white/50 mt-1">
 							{$t('lmspace.error.source')}: <a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer"
 								class="text-[#61afef] hover:underline">blog.krsz.in</a>
@@ -317,12 +336,25 @@
 :global(.lmspace .btn.on) { color:#0a0b0d; background:var(--g,#fff); border-color:var(--g,#fff); }
 :global(.lmspace .btn.inert) { opacity:.28; cursor:default; pointer-events:none; }
 :global(.lmspace #vp-cycle) { min-width:8ch; text-align:center; }
+/* A keyboard path to the same picking a click on a body does: a native
+   <select> reads and operates with Tab/arrows/typeahead alone, no raycast
+   needed. Same field metrics as .cval so it sits in the HUD without its own
+   recipe. */
+:global(.lmspace .modelselect) { max-width:26ch; padding:4px 6px; border:1px solid rgba(255,255,255,.18);
+    border-radius:2px; background:rgba(0,0,0,.45); color:rgba(255,255,255,.75); font:inherit;
+    font-size:0.8333rem; font-weight:700; cursor:pointer; }
+:global(.lmspace .modelselect:hover) { border-color:rgba(255,255,255,.5); color:#fff; }
 /* The synth's own METER stepper shape: a plain arrow either side of a
    bordered, filled value -- a binary or short cycle reads as one stepped
    control here instead of a row of toggle buttons for each option. */
 :global(.lmspace .cyc) { display:flex; align-items:center; gap:1px; }
-:global(.lmspace .carrow) { padding:0 2px; background:none; border:none; font:inherit;
+/* The glyph stays its printed size; the hit area is a 24x24 invisible
+   pseudo-element centred on it, so WCAG 2.5.8 is met without the arrow
+   growing or the row getting wider. */
+:global(.lmspace .carrow) { position:relative; min-width:24px; min-height:24px; padding:0 2px; background:none; border:none; font:inherit;
     font-size:0.75rem; color:var(--g); cursor:pointer; font-weight:700; }
+:global(.lmspace .carrow::before) { content:''; position:absolute; left:50%; top:50%;
+    width:24px; height:24px; transform:translate(-50%,-50%); }
 :global(.lmspace .carrow:hover) { color:#fff; }
 :global(.lmspace .cval) { padding:4px 9px; border:1px solid color-mix(in srgb, var(--g) 50%, transparent);
     background:color-mix(in srgb, var(--g) 12%, transparent); border-radius:2px;
@@ -366,13 +398,18 @@
    synth's own TRK chips -- a name, then a divider, then two small letter
    buttons that light up filled rather than just changing text colour. */
 :global(.lmspace .lg) { display:flex; align-items:center; gap:6px; font-size:0.9167rem;
-    color:rgba(255,255,255,.55); padding:2px 0; }
+    color:rgba(255,255,255,.55); padding:4px 0; }
 :global(.lmspace .lg.mute) { opacity:.4; }
 :global(.lmspace .dot) { display:none; }
 :global(.lmspace .lgname) { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 :global(.lmspace .lgn) { opacity:.45; }
+/* 20px squares (the dense-grid floor the a11y brief allows when 24px does not
+   fit) plus 6px of margin either side, so the safe clickable space between M,
+   S and the next row's M clears 24px even though the glyph itself stays
+   small -- widening the whole legend column would have pushed the panel past
+   its fixed 220px width. */
 :global(.lmspace .lgm), :global(.lmspace .lgs) { font: inherit; font-size:0.8333rem; font-weight:700;
-    width:15px; height:15px; line-height:15px; text-align:center; padding:0; margin-left:2px;
+    width:20px; height:20px; line-height:20px; text-align:center; padding:0; margin-left:6px;
     border:1px solid rgba(255,255,255,.18); border-radius:2px; background:rgba(0,0,0,.4);
     color:rgba(255,255,255,.4); cursor:pointer; flex:none; }
 :global(.lmspace .lgm:hover), :global(.lmspace .lgs:hover) { color:#fff; border-color:rgba(255,255,255,.5); }

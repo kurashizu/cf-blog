@@ -101,7 +101,8 @@ export default {
 		'utilities.color.whitePoint.pure': 'pure white',
 		'utilities.color.whitePoint.cool': 'cool',
 		'utilities.color.whitePointHint': 'Reference strip only — how warm or cool "white" looks depends on the display and the light around you.',
-		'utilities.color.overlay.hint': 'Esc or click to leave'
+		'utilities.color.overlay.hint': 'Esc or click to leave',
+		'utilities.color.overlay.a11yLabel': 'Full-screen color test pattern. Click, Enter, Space or Escape to leave.'
 	},
 	'zh-CN': {
 		'utilities.midi.notSupported': '此浏览器不支持 Web MIDI。',
@@ -200,7 +201,8 @@ export default {
 		'utilities.color.whitePoint.pure': '纯白',
 		'utilities.color.whitePoint.cool': '偏冷',
 		'utilities.color.whitePointHint': '仅作参考 — "白色"看起来偏暖或偏冷取决于显示器和周围的环境光。',
-		'utilities.color.overlay.hint': '按 Esc 或点击退出'
+		'utilities.color.overlay.hint': '按 Esc 或点击退出',
+		'utilities.color.overlay.a11yLabel': '全屏颜色测试图案。点击、回车、空格或 Esc 退出。'
 	},
 	'zh-TW': {
 		'utilities.midi.notSupported': '此瀏覽器不支援 Web MIDI。',
@@ -299,7 +301,8 @@ export default {
 		'utilities.color.whitePoint.pure': '純白',
 		'utilities.color.whitePoint.cool': '偏冷',
 		'utilities.color.whitePointHint': '僅供參考 — 「白色」看起來偏暖或偏冷取決於顯示器與周圍的環境光。',
-		'utilities.color.overlay.hint': '按 Esc 或點擊離開'
+		'utilities.color.overlay.hint': '按 Esc 或點擊離開',
+		'utilities.color.overlay.a11yLabel': '全螢幕顏色測試圖案。點擊、Enter、空白鍵或 Esc 離開。'
 	},
 	ja: {
 		'utilities.midi.notSupported': 'このブラウザは Web MIDI に対応していません。',
@@ -398,7 +401,8 @@ export default {
 		'utilities.color.whitePoint.pure': '純白',
 		'utilities.color.whitePoint.cool': '寒色寄り',
 		'utilities.color.whitePointHint': '参考用の帯です — 「白」が暖かく見えるか冷たく見えるかは、ディスプレイと周囲の光によって変わります。',
-		'utilities.color.overlay.hint': 'Esc またはクリックで終了'
+		'utilities.color.overlay.hint': 'Esc またはクリックで終了',
+		'utilities.color.overlay.a11yLabel': '全画面カラーテストパターン。クリック、Enter、スペース、または Esc で終了します。'
 	},
 	ko: {
 		'utilities.midi.notSupported': '이 브라우저는 Web MIDI를 지원하지 않습니다.',
@@ -497,6 +501,7 @@ export default {
 		'utilities.color.whitePoint.pure': '순백색',
 		'utilities.color.whitePoint.cool': '차가운 톤',
 		'utilities.color.whitePointHint': '참고용 띠입니다 — "흰색"이 따뜻하거나 차갑게 보이는 정도는 디스플레이와 주변 조명에 따라 달라집니다.',
-		'utilities.color.overlay.hint': 'Esc 또는 클릭하여 나가기'
+		'utilities.color.overlay.hint': 'Esc 또는 클릭하여 나가기',
+		'utilities.color.overlay.a11yLabel': '전체 화면 색상 테스트 패턴입니다. 클릭, Enter, 스페이스 또는 Esc로 나갑니다.'
 	}
 } satisfies Messages;

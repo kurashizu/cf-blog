@@ -109,9 +109,10 @@
 		</button>
 	</div>
 
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={surface}
+		role="img"
+		aria-label={$t('utilities.touch.surface.a11yLabel', { count: pointers.length })}
 		onpointerdown={onDown}
 		onpointermove={onMove}
 		onpointerup={onUp}

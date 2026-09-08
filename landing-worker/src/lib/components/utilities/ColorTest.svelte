@@ -113,6 +113,7 @@
 		playSound('click');
 		await new Promise((r) => requestAnimationFrame(r));
 		overlayEl?.requestFullscreen?.().catch(() => {});
+		overlayEl?.focus();
 	}
 
 	function close() {
@@ -125,6 +126,13 @@
 		if (!active) return;
 		if (e.ctrlKey || e.metaKey || e.altKey) return;
 		if (e.key === 'Escape') close();
+	}
+
+	function onOverlaySurfaceKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			close();
+		}
 	}
 
 	const SECTIONS: { id: SectionId; labelKey: string; color: string }[] = [
@@ -188,9 +196,15 @@
 </div>
 
 {#if active}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div bind:this={overlayEl} class="fixed inset-0 z-[300] bg-black overflow-auto cursor-pointer" onclick={close}>
+	<div
+		bind:this={overlayEl}
+		role="button"
+		tabindex="0"
+		aria-label={$t('utilities.color.overlay.a11yLabel')}
+		class="fixed inset-0 z-[300] bg-black overflow-auto cursor-pointer"
+		onclick={close}
+		onkeydown={onOverlaySurfaceKeydown}
+	>
 		<div class="min-h-full flex flex-col items-center justify-center gap-6 p-6">
 			{#if section === 'wide'}
 				<div class="w-full max-w-3xl space-y-3">

@@ -78,11 +78,11 @@
 		>
 			<div class="flex items-start justify-between">
 				<div>
-					<span class="text-xs opacity-70 font-bold" style="color: {selectedModule.color}">{$t('home.projects.nodeId', { badge: selectedModule.badge })}</span>
-					<h3 class="text-base sm:text-xl font-bold flex items-center gap-2 mt-0.5">
+					<span class="text-xs font-bold" style="color: {selectedModule.color}">{$t('home.projects.nodeId', { badge: selectedModule.badge })}</span>
+					<h2 class="text-base sm:text-xl font-bold flex items-center gap-2 mt-0.5">
 						<span style="color: {selectedModule.color}">{selectedModule.name}</span>
 						<span class="text-xs font-normal border border-current px-2 py-0.5 rounded-xs">{selectedModule.tag}</span>
-					</h3>
+					</h2>
 				</div>
 				<a
 					href={selectedModule.url}

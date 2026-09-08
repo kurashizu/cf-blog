@@ -45,6 +45,7 @@ export default {
 		'utilities.view.group.av': 'AUDIO / VIDEO',
 		'utilities.view.group.system': 'NETWORK / SYSTEM',
 		'utilities.view.group.skill': 'REFLEX / SKILL',
+		'utilities.view.backToLaunchpad': '[ Back to tools ]',
 
 		'utilities.display.row.screen': 'SCREEN',
 		'utilities.display.row.available': 'AVAILABLE',
@@ -103,6 +104,7 @@ export default {
 		'utilities.mouse.button.backName': 'BACK (X1)',
 		'utilities.mouse.button.fwdName': 'FWD (X2)',
 		'utilities.mouse.surface.hint': 'TEST SURFACE — click any button, scroll, double-click.\nRight-click menu is suppressed here.',
+		'utilities.mouse.surface.a11yLabel': 'Mouse test surface. Buttons mask {mask}, last wheel delta {delta}.',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δwheel: {delta}',
 
@@ -117,6 +119,7 @@ export default {
 		'utilities.touch.tilt.notObserved': 'not observed',
 		'utilities.touch.reset': 'RESET',
 		'utilities.touch.surfaceHint': 'Touch, click or draw here — every active pointer is drawn with its real\n\t\t\tpressure, contact size and tilt.',
+		'utilities.touch.surface.a11yLabel': 'Touch and pointer test surface, {count} active pointers drawn.',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': 'type',
 		'utilities.touch.table.pressure': 'pressure',
@@ -222,6 +225,7 @@ export default {
 		'utilities.screen.overlay.stepCounter': '{group} · {name} ({index}/{total})',
 		'utilities.screen.overlay.devicePixels': ' · 1 css px = {dpr}× device px',
 		'utilities.screen.overlay.nav': ' — click/key next · ← prev · Esc exit',
+		'utilities.screen.overlay.a11yLabel': 'Full-screen test pattern. Click, Enter or Space for the next step, Left arrow for the previous, Escape to exit.',
 
 		'utilities.audioout.intro': 'Runs on its own AudioContext, so it plays even while the workbench is muted.\n\t\tStart at a low level — the sweep reaches full-scale 20 kHz.',
 		'utilities.audioout.channel.left.label': 'LEFT ONLY',
@@ -326,6 +330,7 @@ export default {
 		'utilities.camera.device.fallback': 'camera {id}',
 		'utilities.camera.privacyNote': 'The preview stays in this tab — no frame is stored or sent anywhere.',
 		'utilities.camera.live': 'LIVE',
+		'utilities.camera.live.a11yLabel': 'Live camera preview, not recorded or sent anywhere.',
 		'utilities.camera.noStream': 'no stream',
 		'utilities.camera.settings.device': 'DEVICE',
 		'utilities.camera.settings.device.labelWithheld': '(label withheld)',
@@ -580,6 +585,7 @@ export default {
 		'utilities.view.group.av': '音频 / 视频',
 		'utilities.view.group.system': '网络 / 系统',
 		'utilities.view.group.skill': '反应 / 技能',
+		'utilities.view.backToLaunchpad': '[ 返回工具 ]',
 
 		'utilities.display.row.screen': '屏幕',
 		'utilities.display.row.available': '可用区域',
@@ -638,6 +644,7 @@ export default {
 		'utilities.mouse.button.backName': '后退（X1）',
 		'utilities.mouse.button.fwdName': '前进（X2）',
 		'utilities.mouse.surface.hint': '测试区域 — 点击任意按键、滚动、双击。\n右键菜单在此已被禁用。',
+		'utilities.mouse.surface.a11yLabel': '鼠标测试区域。按键掩码 {mask}，最近滚轮增量 {delta}。',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δ滚轮：{delta}',
 
@@ -652,6 +659,7 @@ export default {
 		'utilities.touch.tilt.notObserved': '未检测到',
 		'utilities.touch.reset': '重置',
 		'utilities.touch.surfaceHint': '在此触摸、点击或绘制 — 每个活动指针都会以其真实的\n压力、接触面积和倾角绘制出来。',
+		'utilities.touch.surface.a11yLabel': '触控与指针测试区域，当前绘制 {count} 个活动指针。',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': '类型',
 		'utilities.touch.table.pressure': '压力',
@@ -757,6 +765,7 @@ export default {
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · 1 CSS 像素 = {dpr}× 设备像素',
 		'utilities.screen.overlay.nav': ' — 点击/按键下一个 · ← 上一个 · Esc 退出',
+		'utilities.screen.overlay.a11yLabel': '全屏测试图案。点击、回车或空格进入下一步，← 键返回上一步，Esc 退出。',
 
 		'utilities.audioout.intro': '此工具运行在独立的 AudioContext 上，即使工作台已静音也能发声。\n请从低音量开始 — 扫频会到达满幅 20 kHz。',
 		'utilities.audioout.channel.left.label': '仅左声道',
@@ -861,6 +870,7 @@ export default {
 		'utilities.camera.device.fallback': '摄像头 {id}',
 		'utilities.camera.privacyNote': '预览画面仅停留在此标签页 — 不会保存或发送任何画面。',
 		'utilities.camera.live': '直播中',
+		'utilities.camera.live.a11yLabel': '摄像头实时预览，不会被录制或发送到任何地方。',
 		'utilities.camera.noStream': '无画面',
 		'utilities.camera.settings.device': '设备',
 		'utilities.camera.settings.device.labelWithheld': '（名称未提供）',
@@ -1115,6 +1125,7 @@ export default {
 		'utilities.view.group.av': '音訊 / 視訊',
 		'utilities.view.group.system': '網路 / 系統',
 		'utilities.view.group.skill': '反應 / 技能',
+		'utilities.view.backToLaunchpad': '[ 返回工具 ]',
 
 		'utilities.display.row.screen': '螢幕',
 		'utilities.display.row.available': '可用區域',
@@ -1173,6 +1184,7 @@ export default {
 		'utilities.mouse.button.backName': '後退（X1）',
 		'utilities.mouse.button.fwdName': '前進（X2）',
 		'utilities.mouse.surface.hint': '測試區域 — 點擊任意按鍵、滾動、雙擊。\n右鍵選單在此已停用。',
+		'utilities.mouse.surface.a11yLabel': '滑鼠測試區域。按鍵遮罩 {mask}，最近滾輪增量 {delta}。',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δ滾輪：{delta}',
 
@@ -1187,6 +1199,7 @@ export default {
 		'utilities.touch.tilt.notObserved': '未偵測到',
 		'utilities.touch.reset': '重置',
 		'utilities.touch.surfaceHint': '在此觸摸、點擊或繪圖 — 每個作用中的指標都會以其真實的\n壓力、接觸面積與傾角繪出。',
+		'utilities.touch.surface.a11yLabel': '觸控與指標測試區域，目前繪出 {count} 個作用中的指標。',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': '類型',
 		'utilities.touch.table.pressure': '壓力',
@@ -1292,6 +1305,7 @@ export default {
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · 1 CSS 像素 = {dpr}× 裝置像素',
 		'utilities.screen.overlay.nav': ' — 點擊/按鍵下一個 · ← 上一個 · Esc 離開',
+		'utilities.screen.overlay.a11yLabel': '全螢幕測試圖案。點擊、Enter 或空白鍵進入下一步，← 鍵回到上一步，Esc 離開。',
 
 		'utilities.audioout.intro': '此工具執行在獨立的 AudioContext 上，即使工作台已靜音也能發聲。\n請從低音量開始 — 掃頻會到達滿幅 20 kHz。',
 		'utilities.audioout.channel.left.label': '僅左聲道',
@@ -1396,6 +1410,7 @@ export default {
 		'utilities.camera.device.fallback': '相機 {id}',
 		'utilities.camera.privacyNote': '預覽畫面僅停留在此分頁 — 不會儲存或傳送任何畫面。',
 		'utilities.camera.live': '直播中',
+		'utilities.camera.live.a11yLabel': '攝影機即時預覽，不會被錄製或傳送到任何地方。',
 		'utilities.camera.noStream': '無畫面',
 		'utilities.camera.settings.device': '裝置',
 		'utilities.camera.settings.device.labelWithheld': '（名稱未提供）',
@@ -1650,6 +1665,7 @@ export default {
 		'utilities.view.group.av': '音声 / 映像',
 		'utilities.view.group.system': 'ネットワーク / システム',
 		'utilities.view.group.skill': '反射 / スキル',
+		'utilities.view.backToLaunchpad': '[ ツールに戻る ]',
 
 		'utilities.display.row.screen': 'スクリーン',
 		'utilities.display.row.available': '利用可能領域',
@@ -1708,6 +1724,7 @@ export default {
 		'utilities.mouse.button.backName': '戻る（X1）',
 		'utilities.mouse.button.fwdName': '進む（X2）',
 		'utilities.mouse.surface.hint': 'テストエリア — 任意のボタンをクリック、スクロール、ダブルクリックしてください。\nここでは右クリックメニューが無効化されています。',
+		'utilities.mouse.surface.a11yLabel': 'マウステスト領域。ボタンマスク {mask}、直近のホイール差分 {delta}。',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δホイール：{delta}',
 
@@ -1722,6 +1739,7 @@ export default {
 		'utilities.touch.tilt.notObserved': '未検出',
 		'utilities.touch.reset': 'リセット',
 		'utilities.touch.surfaceHint': 'ここでタッチ、クリック、または描画してください — アクティブな各ポインターは、実際の\n圧力、接触サイズ、傾きに基づいて描画されます。',
+		'utilities.touch.surface.a11yLabel': 'タッチ / ポインターのテスト領域。現在 {count} 個のアクティブなポインターを描画中。',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': 'タイプ',
 		'utilities.touch.table.pressure': '圧力',
@@ -1827,6 +1845,7 @@ export default {
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · CSSピクセル1 = デバイスピクセル{dpr}×',
 		'utilities.screen.overlay.nav': ' — クリック/キーで次へ · ←で前へ · Escで終了',
+		'utilities.screen.overlay.a11yLabel': '全画面テストパターン。クリック、Enter、またはスペースで次のステップへ、←キーで前のステップへ、Escで終了します。',
 
 		'utilities.audioout.intro': 'このツールは独自のAudioContextで動作するため、ワークベンチがミュートされていても再生されます。\n低い音量から始めてください — スイープはフルスケールの20kHzに達します。',
 		'utilities.audioout.channel.left.label': '左のみ',
@@ -1931,6 +1950,7 @@ export default {
 		'utilities.camera.device.fallback': 'カメラ {id}',
 		'utilities.camera.privacyNote': 'プレビューはこのタブ内にとどまります — フレームが保存・送信されることはありません。',
 		'utilities.camera.live': 'ライブ',
+		'utilities.camera.live.a11yLabel': 'カメラのライブプレビュー。録画も送信もされません。',
 		'utilities.camera.noStream': '映像なし',
 		'utilities.camera.settings.device': 'デバイス',
 		'utilities.camera.settings.device.labelWithheld': '（名前は非公開）',
@@ -2185,6 +2205,7 @@ export default {
 		'utilities.view.group.av': '오디오 / 비디오',
 		'utilities.view.group.system': '네트워크 / 시스템',
 		'utilities.view.group.skill': '반응 / 숙련',
+		'utilities.view.backToLaunchpad': '[ 도구로 돌아가기 ]',
 
 		'utilities.display.row.screen': '화면',
 		'utilities.display.row.available': '사용 가능 영역',
@@ -2243,6 +2264,7 @@ export default {
 		'utilities.mouse.button.backName': '뒤로（X1）',
 		'utilities.mouse.button.fwdName': '앞으로（X2）',
 		'utilities.mouse.surface.hint': '테스트 영역 — 아무 버튼이나 클릭, 스크롤, 더블클릭해 보세요.\n여기서는 우클릭 메뉴가 비활성화되어 있습니다.',
+		'utilities.mouse.surface.a11yLabel': '마우스 테스트 영역. 버튼 마스크 {mask}, 최근 휠 변화량 {delta}.',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δ휠：{delta}',
 
@@ -2257,6 +2279,7 @@ export default {
 		'utilities.touch.tilt.notObserved': '감지되지 않음',
 		'utilities.touch.reset': '초기화',
 		'utilities.touch.surfaceHint': '여기를 터치, 클릭 또는 드래그해 보세요 — 활성 상태인 각 포인터는 실제\n압력, 접촉 크기, 기울기 값으로 그려집니다.',
+		'utilities.touch.surface.a11yLabel': '터치 / 포인터 테스트 영역, 현재 활성 포인터 {count}개 표시 중.',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': '유형',
 		'utilities.touch.table.pressure': '압력',
@@ -2362,6 +2385,7 @@ export default {
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · CSS 픽셀 1 = 기기 픽셀 {dpr}×',
 		'utilities.screen.overlay.nav': ' — 클릭/키로 다음 · ←로 이전 · Esc로 종료',
+		'utilities.screen.overlay.a11yLabel': '전체 화면 테스트 패턴입니다. 클릭, Enter 또는 스페이스로 다음 단계, ← 키로 이전 단계, Esc로 종료합니다.',
 
 		'utilities.audioout.intro': '이 도구는 자체 AudioContext에서 실행되므로 워크벤치가 음소거되어 있어도 소리가 재생됩니다.\n낮은 볼륨에서 시작하세요 — 스윕은 풀스케일 20kHz까지 도달합니다.',
 		'utilities.audioout.channel.left.label': '왼쪽만',
@@ -2466,6 +2490,7 @@ export default {
 		'utilities.camera.device.fallback': '카메라 {id}',
 		'utilities.camera.privacyNote': '미리보기는 이 탭 안에만 머무릅니다 — 어떤 프레임도 저장되거나 전송되지 않습니다.',
 		'utilities.camera.live': '실시간',
+		'utilities.camera.live.a11yLabel': '카메라 실시간 미리보기입니다. 녹화되거나 어디로도 전송되지 않습니다.',
 		'utilities.camera.noStream': '영상 없음',
 		'utilities.camera.settings.device': '장치',
 		'utilities.camera.settings.device.labelWithheld': '（이름 비공개）',

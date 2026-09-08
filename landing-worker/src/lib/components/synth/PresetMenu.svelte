@@ -4,6 +4,7 @@
 	import { scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '../../sound';
+	import { Button } from '$lib/components/ui';
 	import {
 		SOUND_PRESETS,
 		PRESET_CATEGORIES,
@@ -70,6 +71,18 @@
 		open = false;
 		section = null;
 		editing = null;
+	}
+
+	/* pointerdown rather than click: a click on the backdrop would otherwise
+	   also reach whatever is under it once the backdrop unmounts mid-gesture
+	   (see ui/Menu.svelte, which does the same). */
+	function closeOnPointer(node: HTMLElement) {
+		const h = (e: PointerEvent) => {
+			e.preventDefault();
+			close();
+		};
+		node.addEventListener('pointerdown', h);
+		return { destroy: () => node.removeEventListener('pointerdown', h) };
 	}
 
 	function toggle() {
@@ -198,12 +211,12 @@
 				aria-label={$t('synth.preset.nameAria')}
 			/>
 		{:else}
-			<button onclick={onPick} class="press flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={pickTitle}>
-				<span class="shrink-0 {isOn ? 'text-[#98c379]' : 'text-white/50'}">{isOn ? '●' : '○'}</span>
+			<button onclick={onPick} role="menuitemradio" aria-checked={isOn} class="press min-h-[24px] flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={pickTitle}>
+				<span class="shrink-0" aria-hidden="true" style="color: {isOn ? '#98c379' : 'rgba(255,255,255,0.5)'}">{isOn ? '●' : '○'}</span>
 				<span class="truncate">{name}</span>
 			</button>
-			<button onclick={() => startRename(list, i)} class="press shrink-0 px-1.5 py-1.5 text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.preset.renameHint', { name })} aria-label={$t('synth.preset.renameAria', { name })}>✎</button>
-			<button onclick={onDelete} class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/50 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.preset.removeHint', { name })} aria-label={$t('synth.preset.removeAria', { name })}>✕</button>
+			<button onclick={() => startRename(list, i)} role="menuitem" class="press min-w-[24px] min-h-[24px] shrink-0 px-1.5 py-1.5 text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.preset.renameHint', { name })} aria-label={$t('synth.preset.renameAria', { name })}>✎</button>
+			<button onclick={onDelete} role="menuitem" class="press min-w-[24px] min-h-[24px] shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/50 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.preset.removeHint', { name })} aria-label={$t('synth.preset.removeAria', { name })}>✕</button>
 		{/if}
 	</div>
 {/snippet}
@@ -213,31 +226,36 @@
 	<div class="relative">
 		<button
 			onclick={toggle}
+			aria-haspopup="true"
+			aria-expanded={open}
 			title={$t('synth.preset.pickHint', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower'), name: PRESET_TOOLTIPS[current?.name] || current?.name })}
 			class="press px-1.5 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 {open
 				? 'border-[#56b6c2] bg-[#56b6c2] text-black'
 				: 'border-white/20 hover:border-[#56b6c2] bg-white/5 hover:bg-white/15 text-white hover:text-[#56b6c2]'}"
 		>
 			<span>{current?.name}</span>
-			<span class="text-[9px] leading-none inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
+			<span aria-hidden="true" class="text-[9px] leading-none inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
 		</button>
 
 		{#if open}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="fixed inset-0 z-40" onclick={close}></div>
+			<div class="fixed inset-0 z-40" use:closeOnPointer aria-hidden="true"></div>
 
 			<div
+				role="menu"
+				aria-label={$t('synth.preset.pickHint', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower'), name: PRESET_TOOLTIPS[current?.name] || current?.name })}
 				class="origin-top absolute left-0 top-full mt-1 z-50 min-w-[230px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
 				{#each SECTIONS as sec (sec.id)}
 					{@const isOpen = section === sec.id}
 					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'KITS' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => p.category === sec.id).length}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div class="relative" onmouseenter={() => (section = sec.id)}>
+					<div class="relative" role="presentation" onmouseenter={() => (section = sec.id)}>
 						<button
 							onclick={() => (section = isOpen ? null : sec.id)}
+							onfocus={() => (section = sec.id)}
+							role="menuitem"
+							aria-haspopup="true"
+							aria-expanded={isOpen}
 							class="{rowBase} justify-between {isOpen ? rowOn : rowIdle}"
 							title={sec.hint}
 						>
@@ -254,8 +272,8 @@
 								{#snippet presetList()}
 									{#each SOUND_PRESETS as p, idx (p.name)}
 										{#if p.category === sec.id}
-											<button onclick={() => pick(idx)} class="{rowBase} {$soundPresetIdx === idx ? rowOn : rowIdle}" title={PRESET_TOOLTIPS[p.name] || p.name}>
-												<span class="shrink-0 {$soundPresetIdx === idx ? 'text-[#98c379]' : 'text-white/50'}">{$soundPresetIdx === idx ? '●' : '○'}</span>
+											<button onclick={() => pick(idx)} role="menuitemradio" aria-checked={$soundPresetIdx === idx} class="{rowBase} {$soundPresetIdx === idx ? rowOn : rowIdle}" title={PRESET_TOOLTIPS[p.name] || p.name}>
+												<span class="shrink-0" aria-hidden="true" style="color: {$soundPresetIdx === idx ? '#98c379' : 'rgba(255,255,255,0.5)'}">{$soundPresetIdx === idx ? '●' : '○'}</span>
 												<span class="truncate">{p.name}</span>
 											</button>
 										{/if}
@@ -266,8 +284,8 @@
 								{#snippet kitList()}
 									<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/60 select-none">{$t('synth.preset.builtInLabel')}</div>
 									{#each BUILTIN_KITS as kit (kit.name)}
-										<button onclick={() => pickKit(kit)} class="{rowBase} {rowIdle}" title={$t('synth.preset.loadKitHint', { name: kit.name, count: Object.keys(kit.keys).length })}>
-											<span class="shrink-0 text-white/50">○</span>
+										<button onclick={() => pickKit(kit)} role="menuitem" class="{rowBase} {rowIdle}" title={$t('synth.preset.loadKitHint', { name: kit.name, count: Object.keys(kit.keys).length })}>
+											<span class="shrink-0 text-white/50" aria-hidden="true">○</span>
 											<span class="truncate">{kit.name}</span>
 											<span class="ml-auto text-[10px] text-white/50">{Object.keys(kit.keys).length} keys</span>
 										</button>
@@ -279,16 +297,16 @@
 										{/each}
 									{/if}
 									<div class="border-t border-white/10 mt-1 pt-1">
-										<button onclick={saveKit} class="{actionRow} {percussion ? 'text-[#98c379] hover:bg-[#98c379]/20' : 'text-white/50 cursor-not-allowed'}" title={percussion ? $t('synth.preset.saveKitOnHint') : $t('synth.preset.saveKitOffHint')}>
-											<span class="shrink-0">＋</span>
+										<button onclick={saveKit} role="menuitem" aria-disabled={!percussion} class="{actionRow} {percussion ? 'text-[#98c379] hover:bg-[#98c379]/20' : 'text-white/50 cursor-not-allowed'}" title={percussion ? $t('synth.preset.saveKitOnHint') : $t('synth.preset.saveKitOffHint')}>
+											<span class="shrink-0" aria-hidden="true">＋</span>
 											<span>{$t('synth.preset.saveTrackAsKit')}</span>
 										</button>
-										<button onclick={importKit} class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importKitHint')}>
-											<span class="shrink-0">▲</span>
+										<button onclick={importKit} role="menuitem" class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importKitHint')}>
+											<span class="shrink-0" aria-hidden="true">▲</span>
 											<span>{$t('synth.preset.importKit')}</span>
 										</button>
-										<button onclick={exportKit} class="{actionRow} {percussion ? 'text-[#56b6c2] hover:bg-[#56b6c2]/20' : 'text-white/50 cursor-not-allowed'}" title={percussion ? $t('synth.preset.exportKitOnHint') : $t('synth.preset.saveKitOffHint')}>
-											<span class="shrink-0">▼</span>
+										<button onclick={exportKit} role="menuitem" aria-disabled={!percussion} class="{actionRow} {percussion ? 'text-[#56b6c2] hover:bg-[#56b6c2]/20' : 'text-white/50 cursor-not-allowed'}" title={percussion ? $t('synth.preset.exportKitOnHint') : $t('synth.preset.saveKitOffHint')}>
+											<span class="shrink-0" aria-hidden="true">▼</span>
 											<span>{$t('synth.preset.exportKit')}</span>
 										</button>
 									</div>
@@ -319,16 +337,16 @@
 				{/each}
 
 				<div class="border-t border-white/10 mt-1 pt-1">
-					<button onclick={save} class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.preset.saveActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
-						<span class="shrink-0">＋</span>
+					<button onclick={save} role="menuitem" class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.preset.saveActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
+						<span class="shrink-0" aria-hidden="true">＋</span>
 						<span>{$t('synth.preset.saveActive', { target: percussion ? $t('synth.preset.targetKey') : $t('synth.preset.targetTrack') })}</span>
 					</button>
-					<button onclick={importPreset} class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importFileHint')}>
-						<span class="shrink-0">▲</span>
+					<button onclick={importPreset} role="menuitem" class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importFileHint')}>
+						<span class="shrink-0" aria-hidden="true">▲</span>
 						<span>{$t('synth.preset.importFile')}</span>
 					</button>
-					<button onclick={exportPreset} class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.exportActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
-						<span class="shrink-0">▼</span>
+					<button onclick={exportPreset} role="menuitem" class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.exportActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
+						<span class="shrink-0" aria-hidden="true">▼</span>
 						<span>{$t('synth.preset.exportActive', { target: percussion ? $t('synth.preset.targetKey') : $t('synth.preset.targetTrack') })}</span>
 					</button>
 				</div>
@@ -339,18 +357,17 @@
 	<!-- Percussion mode for the active track: every key gets its own sound and
 	     the racks edit the active key. Lives here because it changes what the
 	     PRESET menu applies to (a key rather than the track). -->
-	<button
-		onclick={() => {
-			toggleTrackPercussion($activeTrackId);
-			playSound('toggle');
-		}}
-		class="press px-1.5 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-colors flex items-center gap-1 {percussion
-			? 'border-[#c678dd] bg-[#c678dd] text-black font-black shadow-[0_0_6px_rgba(198,120,221,0.5)]'
-			: 'border-white/20 text-white/60 hover:text-white hover:border-[#c678dd]/60'}"
+	<Button
+		variant="outline"
+		color="#c678dd"
+		active={percussion}
+		sound="toggle"
+		onclick={() => toggleTrackPercussion($activeTrackId)}
+		class="flex items-center gap-1"
 		title={percussion
 			? $t('synth.preset.percussionOnHint', { track: $activeTrackRow?.name ?? $t('synth.preset.thisTrack') })
 			: $t('synth.preset.percussionOffHint', { track: $activeTrackRow?.name ?? $t('synth.preset.theActiveTrack') })}
 	>
 		PERC
-	</button>
+	</Button>
 </div>

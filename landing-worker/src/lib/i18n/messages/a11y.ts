@@ -12,7 +12,7 @@ export default {
 		'a11y.landmark.footer': 'Links, edge trace and language',
 		'a11y.landmark.main': 'Active view',
 		'a11y.dialog.close': 'Close dialog',
-		'a11y.dialog.settings': 'Global settings',
+		'a11y.dialog.settings': 'Global config',
 		'a11y.dialog.keymap': 'Keyboard shortcuts',
 		'a11y.dialog.credits': 'Open-source credits',
 		'a11y.dialog.privacy': 'Privacy notice',
@@ -35,7 +35,12 @@ export default {
 		'a11y.menu.language': 'Language menu',
 		'a11y.theme.cycle': 'Cycle theme',
 		'a11y.playback.play': 'Play the sequencer',
-		'a11y.playback.stop': 'Stop the sequencer'
+		'a11y.playback.stop': 'Stop the sequencer',
+		'a11y.menu.open': 'Accessibility menu',
+		'a11y.menu.title': 'ACCESSIBILITY',
+		'a11y.menu.textSize': 'Text size',
+		'a11y.menu.keymap': 'Keyboard shortcuts',
+		'a11y.menu.allSettings': 'All config…'
 	},
 	'zh-CN': {
 		'a11y.skipToContent': '跳到主内容',
@@ -44,7 +49,7 @@ export default {
 		'a11y.landmark.footer': '链接、边缘追踪与语言',
 		'a11y.landmark.main': '当前视图',
 		'a11y.dialog.close': '关闭对话框',
-		'a11y.dialog.settings': '全局设置',
+		'a11y.dialog.settings': '全局配置',
 		'a11y.dialog.keymap': '键盘快捷键',
 		'a11y.dialog.credits': '开源致谢',
 		'a11y.dialog.privacy': '隐私声明',
@@ -67,7 +72,12 @@ export default {
 		'a11y.menu.language': '语言菜单',
 		'a11y.theme.cycle': '切换主题',
 		'a11y.playback.play': '播放音序器',
-		'a11y.playback.stop': '停止音序器'
+		'a11y.playback.stop': '停止音序器',
+		'a11y.menu.open': '无障碍菜单',
+		'a11y.menu.title': '无障碍',
+		'a11y.menu.textSize': '文字大小',
+		'a11y.menu.keymap': '键盘快捷键',
+		'a11y.menu.allSettings': '全部配置…'
 	},
 	'zh-TW': {
 		'a11y.skipToContent': '跳到主內容',
@@ -76,7 +86,7 @@ export default {
 		'a11y.landmark.footer': '連結、邊緣追蹤與語言',
 		'a11y.landmark.main': '目前視圖',
 		'a11y.dialog.close': '關閉對話框',
-		'a11y.dialog.settings': '全域設定',
+		'a11y.dialog.settings': '全域配置',
 		'a11y.dialog.keymap': '鍵盤快捷鍵',
 		'a11y.dialog.credits': '開源致謝',
 		'a11y.dialog.privacy': '隱私聲明',
@@ -99,7 +109,12 @@ export default {
 		'a11y.menu.language': '語言選單',
 		'a11y.theme.cycle': '切換主題',
 		'a11y.playback.play': '播放音序器',
-		'a11y.playback.stop': '停止音序器'
+		'a11y.playback.stop': '停止音序器',
+		'a11y.menu.open': '無障礙選單',
+		'a11y.menu.title': '無障礙',
+		'a11y.menu.textSize': '文字大小',
+		'a11y.menu.keymap': '鍵盤快捷鍵',
+		'a11y.menu.allSettings': '全部配置…'
 	},
 	ja: {
 		'a11y.skipToContent': '本文へスキップ',
@@ -108,7 +123,7 @@ export default {
 		'a11y.landmark.footer': 'リンク、エッジトレース、言語',
 		'a11y.landmark.main': '現在のビュー',
 		'a11y.dialog.close': 'ダイアログを閉じる',
-		'a11y.dialog.settings': 'グローバル設定',
+		'a11y.dialog.settings': 'グローバル構成',
 		'a11y.dialog.keymap': 'キーボードショートカット',
 		'a11y.dialog.credits': 'オープンソースクレジット',
 		'a11y.dialog.privacy': 'プライバシー通知',
@@ -131,7 +146,12 @@ export default {
 		'a11y.menu.language': '言語メニュー',
 		'a11y.theme.cycle': 'テーマを切り替え',
 		'a11y.playback.play': 'シーケンサーを再生',
-		'a11y.playback.stop': 'シーケンサーを停止'
+		'a11y.playback.stop': 'シーケンサーを停止',
+		'a11y.menu.open': 'アクセシビリティメニュー',
+		'a11y.menu.title': 'アクセシビリティ',
+		'a11y.menu.textSize': '文字サイズ',
+		'a11y.menu.keymap': 'キーボードショートカット',
+		'a11y.menu.allSettings': 'すべての構成…'
 	},
 	ko: {
 		'a11y.skipToContent': '본문으로 건너뛰기',
@@ -140,7 +160,7 @@ export default {
 		'a11y.landmark.footer': '링크, 엣지 추적, 언어',
 		'a11y.landmark.main': '현재 보기',
 		'a11y.dialog.close': '대화 상자 닫기',
-		'a11y.dialog.settings': '전역 설정',
+		'a11y.dialog.settings': '전역 구성',
 		'a11y.dialog.keymap': '키보드 단축키',
 		'a11y.dialog.credits': '오픈소스 크레딧',
 		'a11y.dialog.privacy': '개인정보 안내',
@@ -163,6 +183,11 @@ export default {
 		'a11y.menu.language': '언어 메뉴',
 		'a11y.theme.cycle': '테마 전환',
 		'a11y.playback.play': '시퀀서 재생',
-		'a11y.playback.stop': '시퀀서 정지'
+		'a11y.playback.stop': '시퀀서 정지',
+		'a11y.menu.open': '접근성 메뉴',
+		'a11y.menu.title': '접근성',
+		'a11y.menu.textSize': '글자 크기',
+		'a11y.menu.keymap': '키보드 단축키',
+		'a11y.menu.allSettings': '모든 구성…'
 	}
 } satisfies Messages;

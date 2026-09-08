@@ -74,17 +74,22 @@
 	     inside this panel's own border, which is what is being aligned. -->
 	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-[10px]">
 		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
-			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} {$t('chrome.sidebar.running')}</span>
+			<span class="text-[#98c379] font-mono text-xs">
+				<span aria-hidden="true">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]}</span>
+				{$t('chrome.sidebar.running')}
+			</span>
 		</BoxHeader>
 
 		{#key krszMark.font}
-			<AsciiArt
-				color="#e5c07b"
-				colorRanges={krszColorRanges}
-				class="krsz-logo leading-none font-black tracking-tight overflow-x-auto py-0.5"
-				title="krsz.in — {krszMark.font}"
-				art={krszMark.art}
-			/>
+			<div role="img" aria-label="KRSZ">
+				<AsciiArt
+					color="#e5c07b"
+					colorRanges={krszColorRanges}
+					class="krsz-logo leading-none font-black tracking-tight overflow-x-auto py-0.5"
+					title="krsz.in — {krszMark.font}"
+					art={krszMark.art}
+				/>
+			</div>
 		{/key}
 
 		<!-- Columns come and go with the width; a cell never splits its own two words. -->
@@ -116,17 +121,17 @@
 		     wrapped and hung under itself -- five ragged two-line blocks that read
 		     as broken rather than as a record. Stacked, each value gets the full
 		     width and most fit on one line. -->
-		<div class="space-y-2 py-1 text-xs sm:text-sm">
-			<div><div class="text-[#e5c07b] font-bold">{$t('chrome.sidebar.labelOperator')}</div><div class="text-[#eceff4] font-medium">{$t('chrome.sidebar.operatorValue')}</div></div>
-			<div><div class="text-[#61afef] font-bold">{$t('chrome.sidebar.labelLocation')}</div><div class="text-[#eceff4]">{$t('chrome.sidebar.locationValue')}</div></div>
-			<div><div class="text-[#e06c75] font-bold">{$t('chrome.sidebar.labelMotto')}</div><div class="text-[#eceff4] italic">"{$t('chrome.sidebar.mottoValue')}"</div></div>
-			<div><div class="text-[#98c379] font-bold">{$t('chrome.sidebar.labelRuntime')}</div><div class="text-[#eceff4]">{$t('chrome.sidebar.runtimeValue')}</div></div>
-			<div><div class="text-[#56b6c2] font-bold">{$t('chrome.sidebar.labelStack')}</div><div class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</div></div>
-		</div>
+		<dl class="space-y-2 py-1 text-xs sm:text-sm">
+			<div><dt class="text-[#e5c07b] font-bold">{$t('chrome.sidebar.labelOperator')}</dt><dd class="text-[#eceff4] font-medium">{$t('chrome.sidebar.operatorValue')}</dd></div>
+			<div><dt class="text-[#61afef] font-bold">{$t('chrome.sidebar.labelLocation')}</dt><dd class="text-[#eceff4]">{$t('chrome.sidebar.locationValue')}</dd></div>
+			<div><dt class="text-[#e06c75] font-bold">{$t('chrome.sidebar.labelMotto')}</dt><dd class="text-[#eceff4] italic">"{$t('chrome.sidebar.mottoValue')}"</dd></div>
+			<div><dt class="text-[#98c379] font-bold">{$t('chrome.sidebar.labelRuntime')}</dt><dd class="text-[#eceff4]">{$t('chrome.sidebar.runtimeValue')}</dd></div>
+			<div><dt class="text-[#56b6c2] font-bold">{$t('chrome.sidebar.labelStack')}</dt><dd class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</dd></div>
+		</dl>
 		<div class="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1">
 			<span>{$t('chrome.sidebar.statusOpen')}</span>
 			<span class="inline-flex items-center gap-1">
-				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live"></span>
+				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live" aria-hidden="true"></span>
 				{$t('chrome.sidebar.availableNow')}
 			</span>
 		</div>
@@ -156,11 +161,11 @@
 						>
 							[{tab.key}]
 						</span>
-						<span class="text-base leading-none opacity-85 group-hover:opacity-100 group-hover:scale-110 transition-transform" style="color: {tab.color}">{tab.icon}</span>
+						<span class="text-base leading-none group-hover:scale-110 transition-transform" style="color: color-mix(in srgb, {tab.color} 85%, black)">{tab.icon}</span>
 					</div>
 					<div class="mt-1 w-full min-w-0">
 						<div class="font-bold text-xs leading-tight tracking-tight truncate" style="color: {isActive ? '#fff' : tab.color}">{tab.title}</div>
-						<div class="text-xs opacity-60 font-mono truncate">{tab.desc}</div>
+						<div class="text-xs text-white/60 font-mono truncate">{tab.desc}</div>
 					</div>
 				</button>
 			{/each}
@@ -175,7 +180,7 @@
 				</div>
 				<div class="mt-1 w-full min-w-0">
 					<div class="font-bold text-xs text-[#d8dee9] leading-tight truncate">{$t('chrome.sidebar.theme')}</div>
-					<div class="text-xs opacity-60 font-mono uppercase truncate" title={themeLabel}>{themeLabel}</div>
+					<div class="text-xs text-white/60 font-mono uppercase truncate" title={themeLabel}>{themeLabel}</div>
 				</div>
 			</button>
 		</div>

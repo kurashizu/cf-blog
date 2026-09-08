@@ -5,24 +5,14 @@
 	import { playSound } from '../../sound';
 	import { setMuted } from '../../stores/sound';
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
-	import { theme, cycleTheme, THEME_STYLES, resolvedTheme } from '../../stores/theme';
+	import { THEME_STYLES, resolvedTheme } from '../../stores/theme';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 	import { consoleOverlayOpen, globalSettingsOpen, toggleConsoleOverlay, openOnboardingNow } from '../../stores/chrome';
 	import KrszLogo from './KrszLogo.svelte';
 	import { Button } from '$lib/components/ui';
-	import { announce } from '../../stores/a11y';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
-	/* AUTO alone doesn't say what's actually on screen — pair it with the hour's pick. */
-	let themeLabel = $derived($theme === 'auto' ? `AUTO·${$resolvedTheme.toUpperCase()}` : $theme.toUpperCase());
-	/* The button reserves the width of the longest label it can ever show, so
-	   cycling themes never shoves GUIDE and the rest sideways. Found, not
-	   hardcoded, so a renamed theme cannot quietly make it wrong. */
-	const THEME_LABEL_WIDEST = (() => {
-		const names = Object.keys(THEME_STYLES).map((t) => t.toUpperCase());
-		return [...names, ...names.map((n) => `AUTO·${n}`)].reduce((a, b) => (b.length > a.length ? b : a));
-	})();
 
 	/** Tooltip resolves through $t() in this $derived, not a module-level
 	 *  constant, since the locale isn't known at module load time. */
@@ -155,10 +145,6 @@
 		btns[next].focus();
 	}
 
-	function onCycleTheme() {
-		cycleTheme();
-		announce($t('a11y.announce.theme', { theme: themeLabel }));
-	}
 
 	function togglePlayback() {
 		if ($isSeqPlaying) {
@@ -252,7 +238,7 @@
 					title={tab.title}
 					aria-current={activeTab === tab.id ? 'page' : undefined}
 					aria-label="{tab.id}: {tab.label}"
-					class="press relative z-10 px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
+					class="press relative z-10 min-w-[24px] px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
 						? 'text-black font-black'
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
 				>
@@ -295,6 +281,12 @@
 		>
 			<span class="btnlabel" aria-hidden="true">[?]&nbsp;{$t('chrome.tabbar.guide')}</span><span class="btnlabel-off" aria-hidden="true">[?]</span>
 		</Button>
+		<span
+			title={$t('chrome.tabbar.serverlessTitle')}
+			class="servbadge bg-black/40 px-2 py-0.5 text-[#56b6c2]">100%_SERVERLESS</span
+		>
+		<!-- Settings sits last: the corner is where a settings control is
+		     expected, and nothing to its right ever sheds under it. -->
 		<Button
 			variant="neutral"
 			color="#56b6c2"
@@ -305,19 +297,6 @@
 		>
 			[{$t('chrome.tabbar.cfg')}]
 		</Button>
-		<button
-			onclick={onCycleTheme}
-			title={$t('chrome.tabbar.themeTitle')}
-			aria-label="{$t('a11y.theme.cycle')}: {themeLabel}"
-			class="themebadge press hover:underline cursor-pointer grid text-[#e5c07b] text-center"
-		>
-			<span class="col-start-1 row-start-1 invisible" aria-hidden="true">[{$t('chrome.tabbar.themeLabel', { theme: THEME_LABEL_WIDEST })}]</span>
-			<span class="col-start-1 row-start-1" aria-hidden="true">[{$t('chrome.tabbar.themeLabel', { theme: themeLabel })}]</span>
-		</button>
-		<span
-			title={$t('chrome.tabbar.serverlessTitle')}
-			class="servbadge bg-black/40 px-2 py-0.5 text-[#56b6c2]">100%_SERVERLESS</span
-		>
 	</div>
 </header>
 
@@ -357,9 +336,6 @@
 	.btnlabel-off { display: none; }
 	@container header-fit (max-width: 1660px) {
 		.servbadge { display: none; }
-	}
-	@container header-fit (max-width: 1610px) {
-		.themebadge { display: none; }
 	}
 	@container header-fit (max-width: 1050px) {
 		.btnlabel { display: none; }

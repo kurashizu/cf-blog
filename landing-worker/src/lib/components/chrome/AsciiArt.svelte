@@ -22,6 +22,7 @@
 		colorRanges,
 		class: className = '',
 		onclick,
+		label,
 		title
 	}: {
 		/** Raw multi-line block-letter text, exactly as it would sit inside a <pre>. */
@@ -33,6 +34,8 @@
 		class?: string;
 		/** Omit for a purely decorative banner -- the burst still plays on click, it just does nothing else. */
 		onclick?: () => void;
+		/** Accessible name for the banner when `onclick` makes it a real control. Required together with `onclick`; ignored otherwise (the art is `aria-hidden` and never reaches a screen reader when it is not interactive). */
+		label?: string;
 		title?: string;
 	} = $props();
 
@@ -76,7 +79,7 @@
 		glyphs = out;
 	});
 
-	let containerEl: HTMLDivElement | undefined = $state();
+	let containerEl: HTMLElement | undefined = $state();
 	let preEl: HTMLPreElement | undefined = $state();
 	let hovering = $state(false);
 	let bursting = $state(false);
@@ -211,37 +214,68 @@
      glyph to be one cell wide with ink running edge to edge; Jelly's block is
      two cells against its own six-pixel letter, so the shapes came apart. -->
 <div class="ascii-art overflow-x-auto {className}">
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex -- role/tabindex are only ever both set together, when onclick is provided; the linter can't see that from the dynamic role expression. -->
-	<div
-		bind:this={containerEl}
-		onpointermove={(e) => {
-			hovering = true;
-			onPointerMove(e);
-		}}
-		onpointerleave={onPointerLeave}
-		onclick={handleClick}
-		role={onclick ? 'button' : undefined}
-		tabindex={onclick ? 0 : undefined}
-		onkeydown={onclick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleClick()) : undefined}
-		{title}
-		class="relative select-none overflow-hidden w-fit {onclick ? 'cursor-pointer' : 'cursor-default'}"
-		style={colorRanges ? undefined : `color: ${color}`}
-	>
-		<!-- Sizes the box exactly like the <pre> it replaces: same text, same font,
-		     invisible, so its rendered box gives the real glyph cell size in px
-		     (measure() above) rather than assuming 1ch/1em -- leading-tight and
-		     leading-none aren't the same, and callers pass either one. -->
-		<pre bind:this={preEl} class="invisible pointer-events-none">{art}</pre>
+	{#if onclick}
+		<!-- A real button when the banner is a control: name from `label`, pointer
+		     hover-scatter layered on top as pure decoration. -->
+		<button
+			type="button"
+			bind:this={containerEl}
+			onpointermove={(e) => {
+				hovering = true;
+				onPointerMove(e);
+			}}
+			onpointerleave={onPointerLeave}
+			onclick={handleClick}
+			aria-label={label}
+			{title}
+			class="relative select-none overflow-hidden w-fit cursor-pointer text-left"
+			style={colorRanges ? undefined : `color: ${color}`}
+		>
+			<!-- Sizes the box exactly like the <pre> it replaces: same text, same font,
+			     invisible, so its rendered box gives the real glyph cell size in px
+			     (measure() above) rather than assuming 1ch/1em -- leading-tight and
+			     leading-none aren't the same, and callers pass either one. -->
+			<pre bind:this={preEl} class="invisible pointer-events-none" aria-hidden="true">{art}</pre>
 
-		{#each glyphs as g (g.row + ':' + g.col)}
-			<span
-				class="absolute top-0 left-0 transition-transform {hovering || bursting ? 'will-change-transform' : ''}"
-				style="{colorRanges ? `color: ${colorForCell(g.col, g.row)};` : ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
-					? '60ms'
-					: hovering
-						? '90ms'
-						: '260ms'}; transition-timing-function: {bursting ? 'linear' : hovering ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)'};"
-			>{g.ch}</span>
-		{/each}
-	</div>
+			{#each glyphs as g (g.row + ':' + g.col)}
+				<span
+					aria-hidden="true"
+					class="absolute top-0 left-0 transition-transform {hovering || bursting ? 'will-change-transform' : ''}"
+					style="{colorRanges ? `color: ${colorForCell(g.col, g.row)};` : ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
+						? '60ms'
+						: hovering
+							? '90ms'
+							: '260ms'}; transition-timing-function: {bursting ? 'linear' : hovering ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)'};"
+				>{g.ch}</span>
+			{/each}
+		</button>
+	{:else}
+		<!-- Purely decorative: hidden from assistive tech, hover-scatter is a
+		     cosmetic pointer-only effect with nothing for a keyboard user to do. -->
+		<div
+			bind:this={containerEl}
+			aria-hidden="true"
+			onpointermove={(e) => {
+				hovering = true;
+				onPointerMove(e);
+			}}
+			onpointerleave={onPointerLeave}
+			{title}
+			class="relative select-none overflow-hidden w-fit cursor-default"
+			style={colorRanges ? undefined : `color: ${color}`}
+		>
+			<pre bind:this={preEl} class="invisible pointer-events-none">{art}</pre>
+
+			{#each glyphs as g (g.row + ':' + g.col)}
+				<span
+					class="absolute top-0 left-0 transition-transform {hovering || bursting ? 'will-change-transform' : ''}"
+					style="{colorRanges ? `color: ${colorForCell(g.col, g.row)};` : ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
+						? '60ms'
+						: hovering
+							? '90ms'
+							: '260ms'}; transition-timing-function: {bursting ? 'linear' : hovering ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)'};"
+				>{g.ch}</span>
+			{/each}
+		</div>
+	{/if}
 </div>

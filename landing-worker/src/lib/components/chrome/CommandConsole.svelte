@@ -21,6 +21,7 @@
 	let commandInput = $state('');
 	let inputEl: HTMLInputElement | undefined = $state();
 	let focused = $state(false);
+	const inputId = $props.id();
 	let scrollEl: HTMLDivElement | undefined = $state();
 	/** null = editing a fresh line; otherwise index into commandHistory being recalled. */
 	let historyIdx = $state<number | null>(null);
@@ -46,8 +47,10 @@
 	};
 
 	// The console is a drop-down now, so it is opened deliberately — put the caret
-	// in it rather than making the user click. autofocus alone is unreliable for
-	// an element that mounts into an already-loaded page.
+	// in it rather than making the user click. Focusing here (instead of the
+	// autofocus attribute) is legitimate for the same reason and keeps the
+	// element free of a lint ignore: this mounts into an already-loaded page,
+	// on demand, as an overlay -- not on initial page load.
 	onMount(() => {
 		const id = requestAnimationFrame(() => inputEl?.focus());
 		return () => {
@@ -173,6 +176,10 @@
 	<!-- Scrollback -->
 	<div
 		bind:this={scrollEl}
+		role="log"
+		aria-live="polite"
+		aria-label={$t('chrome.console.scrollbackLabel')}
+		tabindex="0"
 		class="min-h-[3rem] max-h-[55vh] overflow-y-auto custom-scrollbar scroll-instant font-mono text-[13px] leading-relaxed pr-1"
 	>
 		{#each $consoleBuffer as line, i (i)}
@@ -201,12 +208,12 @@
 		</div>
 	{/if}
 
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- Clicking anywhere in the bar focuses the input underneath -- the label
+	     wraps the whole bar so that is a native label/for relationship instead
+	     of a click handler on a non-interactive element. -->
 	<form
 		onsubmit={handleSubmit}
-		onclick={() => inputEl?.focus()}
-		class="flex items-center gap-2 sm:gap-2.5 border bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs cursor-text relative min-h-[40px] sm:min-h-[42px] max-w-full transition-colors {focused
+		class="flex items-center gap-2 sm:gap-2.5 border bg-black/60 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xs relative min-h-[40px] sm:min-h-[42px] max-w-full transition-colors {focused
 			? 'border-white/60 bg-black/80'
 			: 'border-white/20'}"
 	>
@@ -215,9 +222,10 @@
 		{/if}
 		<span class="font-black text-sm select-none" style="color: {themeStyles.cursorColor}">:</span>
 
-		<div class="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden">
-			<span class="whitespace-pre">{commandInput}</span>
+		<label for={inputId} class="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden cursor-text">
+			<span aria-hidden="true" class="whitespace-pre">{commandInput}</span>
 			<span
+				aria-hidden="true"
 				class="inline-block w-[9px] h-[18px] shrink-0 transition-opacity duration-75"
 				style="background-color: {themeStyles.cursorColor}; opacity: {!focused
 					? 0.2
@@ -226,26 +234,27 @@
 						: 0.15};"
 			></span>
 			{#if ghost}
-				<span class="whitespace-pre text-white/50 select-none pointer-events-none">{ghost}</span>
+				<span aria-hidden="true" class="whitespace-pre text-white/50 select-none pointer-events-none">{ghost}</span>
 			{/if}
 			{#if !commandInput}
-				<span class="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">
+				<span aria-hidden="true" class="text-xs text-white/50 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">
 					{$t('chrome.console.inputHint')}
 				</span>
 			{/if}
 
-			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				bind:this={inputEl}
+				id={inputId}
 				type="text"
 				bind:value={commandInput}
 				onkeydown={handleKeydown}
 				onfocus={() => (focused = true)}
 				onblur={() => (focused = false)}
+				aria-label={$t('chrome.console.inputLabel')}
+				autocomplete="off"
 				class="absolute inset-0 w-full h-full opacity-0 cursor-text outline-none font-mono z-10"
-				autofocus
 			/>
-		</div>
+		</label>
 
 		<button type="submit" class="press text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80 transition-opacity" style="color: {themeStyles.cursorColor}">
 			[{$t('chrome.console.exec')}]

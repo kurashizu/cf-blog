@@ -2,13 +2,15 @@
 	/**
 	 * One row of a Menu. Pass `checked` (true/false) for a pick-one list and
 	 * the row becomes a menuitemradio with the ● / ○ dot; leave it undefined
-	 * for a plain action row. `note` is the right-aligned annotation column.
+	 * for a plain action row; `kind="checkbox"` makes it an on/off row that
+	 * stays open when toggled. `note` is the right-aligned annotation column.
 	 */
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
 
 	let {
 		checked,
+		kind = 'radio',
 		note,
 		color = '#98c379',
 		class: cls = '',
@@ -16,6 +18,8 @@
 		...rest
 	}: {
 		checked?: boolean;
+		/** With `checked`: a pick-one row (radio, ● / ○) or an on/off row (checkbox, [x] / [ ]). */
+		kind?: 'radio' | 'checkbox';
 		note?: string;
 		color?: string;
 		class?: string;
@@ -25,7 +29,7 @@
 
 <button
 	type="button"
-	role={checked === undefined ? 'menuitem' : 'menuitemradio'}
+	role={checked === undefined ? 'menuitem' : kind === 'checkbox' ? 'menuitemcheckbox' : 'menuitemradio'}
 	aria-checked={checked}
 	tabindex="-1"
 	class="ui-menu-item press {cls}"
@@ -33,7 +37,9 @@
 >
 	<span class="flex items-center gap-2 min-w-0">
 		{#if checked !== undefined}
-			<span class="shrink-0" style="color: {checked ? color : 'rgba(255,255,255,0.25)'}" aria-hidden="true">{checked ? '●' : '○'}</span>
+			<span class="shrink-0" style="color: {checked ? color : 'rgba(255,255,255,0.25)'}" aria-hidden="true">
+				{kind === 'checkbox' ? (checked ? '[x]' : '[ ]') : checked ? '●' : '○'}
+			</span>
 		{/if}
 		<span class="truncate">{@render children?.()}</span>
 	</span>
