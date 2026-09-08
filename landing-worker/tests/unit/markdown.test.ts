@@ -117,11 +117,22 @@ describe('inline spans', () => {
 		expect(out).toContain('<em>italic</em>');
 	});
 
-	it('cannot be tricked by a literal placeholder in the input', () => {
-		// the input is escaped before inline() runs, so this stays text
-		const out = renderMarkdown('< code0 > and `real`');
+	it('leaves text that merely looks like the placeholder alone', () => {
+		const out = renderMarkdown('CODE0 and `real`');
 		expect(out).toContain('<code>real</code>');
-		expect(out).toContain('&lt; code0 &gt;');
+		expect(out).toContain('CODE0');
+	});
+
+	it('renders several code spans on one line', () => {
+		const out = renderMarkdown('`one` then `two` then `three`');
+		expect(out).toContain('<code>one</code>');
+		expect(out).toContain('<code>two</code>');
+		expect(out).toContain('<code>three</code>');
+	});
+
+	it('does not leave a NUL marker behind in the output', () => {
+		const out = renderMarkdown('`a` **b** `c`');
+		expect(out).not.toContain('\u0000');
 	});
 });
 
