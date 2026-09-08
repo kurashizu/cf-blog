@@ -2,8 +2,6 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { playSound } from '../../../sound';
-	import { advancedMode } from '../../../stores/synth-view';
-	import ViewTabs from '../patch/ViewTabs.svelte';
 	import { t } from '../../../i18n';
 	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId } from '../../../stores/synth-transport';
@@ -455,13 +453,7 @@
 <div class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
 		<div class="flex items-center gap-2">
-			<!-- In ADV the panel is shared with the patch bay, so its name becomes
-			     the switcher between the two -- same spot, same row, no extra line. -->
-			{#if $advancedMode}
-				<ViewTabs />
-			{:else}
-				<span class="font-black text-xs" style="color: {$currentTrack.color}">PIANO ROLL</span>
-			{/if}
+			<span class="font-black text-xs" style="color: {$currentTrack.color}">PIANO ROLL</span>
 			{#if editingName}
 				<input
 					bind:this={nameInput}

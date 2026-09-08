@@ -13,7 +13,6 @@
 	 */
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
-	import ViewTabs from './ViewTabs.svelte';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 	import { currentTrack, activeTrackRow, activeKey } from '../../../stores/synth-tracks';
 	import {
@@ -75,9 +74,7 @@
 	<!-- Header: same shape as every module panel, plus the toggle back to the roll. -->
 	<div class="flex justify-between items-center font-black text-[#61afef] text-xs border-b border-white/10 px-1.5 py-1 shrink-0">
 		<div class="flex items-center gap-2">
-			<!-- The same switcher the roll's header carries, in the same place: the
-			     two views share this panel, so the control has to live in both. -->
-			<ViewTabs />
+			<span>PATCH RACK</span>
 			<span class="text-white/40 font-normal text-[10px]">
 				{$currentTrack.name}{percussion ? ` · KEY ${$activeKey}` : ''}
 			</span>

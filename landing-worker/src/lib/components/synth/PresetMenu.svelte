@@ -32,6 +32,7 @@
 	import { activeTrackRow, toggleTrackPercussion } from '../../stores/synth-tracks';
 	import { activeTrackId } from '../../stores/synth-transport';
 	import { advancedMode, toggleAdvanced } from '../../stores/synth-view';
+	import ViewTabs from './patch/ViewTabs.svelte';
 	import { presetTooltips } from './tooltips';
 
 	/* A cascading menu, like a DAW's browser: the first level is categories,
@@ -228,8 +229,6 @@
 	     the roll or the patch bay. First in the row and styled apart from the
 	     rest -- the others change what the synth sounds like, this one changes
 	     what the page is, so it should not read as one more toggle. -->
-	<div class="relative flex items-center">
-		{#if $advancedMode}<div class="advgroup"></div>{/if}
 	<button
 		onclick={() => {
 			toggleAdvanced();
@@ -243,7 +242,12 @@
 		<span class="text-[8px] leading-none">{$advancedMode ? '\u25c6' : '\u25c7'}</span>
 		ADV
 	</button>
-	</div>
+	<!-- The view switcher belongs with ADV, not in the panel it switches: they
+	     are one control -- turn the mode on, then pick the view -- and only
+	     meaningful together, so it appears here and only while ADV is on. -->
+	{#if $advancedMode}
+		<ViewTabs />
+	{/if}
 	<span class="text-white/60 font-bold text-[11px] pl-2">PRESET:</span>
 	<div class="relative">
 		<button
@@ -389,28 +393,3 @@
 		PERC
 	</button>
 </div>
-
-<style>
-	/* ADV and the PIANO ROLL/RACK switch are one control in two parts -- turn the
-	   mode on, then pick the view -- but they cannot share a row: ADV belongs
-	   with PRESET, the switch belongs to the panel it switches. They do align on
-	   the same left edge one row apart, so draw one outline around both instead
-	   of hinting at a link.
-	   
-	   The two are different widths, so the shape has to step: this half runs
-	   round the button and stops at its own right edge, and the row below picks
-	   the line up and carries it out to its wider edge. Open at the bottom,
-	   because the other half closes it. */
-	.advgroup {
-		position: absolute;
-		left: -7px;
-		right: -5px;
-		top: -4px;
-		bottom: -6px;
-		border: 2px solid rgba(97, 175, 239, 0.55);
-		border-bottom: none;
-		border-top-left-radius: 5px;
-		border-top-right-radius: 5px;
-		pointer-events: none;
-	}
-</style>

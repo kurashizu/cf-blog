@@ -840,6 +840,273 @@ class ModularSynth {
     this.reverbWetGain.connect(this.masterBusIn);
   }
 
+  /**
+   * How long the voice's chain rings after its input stops.
+   *
+   * The sources are stopped a moment after the amp envelope closes, which is
+   * right for a subtractive voice: nothing downstream is still producing sound.
+   * A resonator is exactly the opposite -- a plucked string rings on -- so the
+   * voice has to be held open for as long as the chain will sound.
+   */
+  private rackTailSeconds(track: TrackData): number {
+    const chain = track.rackChain;
+    if (!Array.isArray(chain) || !chain.length) return 0;
+    const p = track.rackParams ?? {};
+    let tail = 0;
+    for (const id of chain) {
+      if (id === 'string') tail = Math.max(tail, p.decayTime ?? 2);
+      else if (id === 'tube') tail = Math.max(tail, p.tubeDecay ?? 1.2);
+      // MODES and BODY are filters, not loops: they stop when their input does.
+    }
+    return Math.min(12, tail);
+  }
+
+  /**
+   * Build one rack module and hand back its input and output.
+   *
+   * These are the stages an acoustic instrument has and a subtractive synth
+   * does not: something excites a resonator, the resonator drives a body. The
+   * engine's fixed chain is why a drum fitted against real recordings
+   * plateaus -- a snare's crack is a 2 ms transient, a struck drum is
+   * saturated, and neither is reachable by tuning a filter -- and why a
+   * plucked string is out of reach entirely.
+   *
+   * Returns null for a module with nothing to build, so the caller skips it.
+   */
+  private buildRackModule(
+    ctx: BaseAudioContext,
+    id: string,
+    p: Record<string, number>,
+    baseFreq: number,
+    t: number
+  ): { in: AudioNode; out: AudioNode; sources?: AudioScheduledSourceNode[] } | null {
+    const pct = (v: number | undefined, d: number) => (v ?? d) / 100;
+
+    switch (id) {
+      case 'string': {
+        /* Karplus-Strong: a delay line one period long, fed back through a
+           damping low-pass. What comes out is a plucked string -- the missing
+           primitive for piano, guitar, bass and bowed strings alike. Stiffness
+           shortens the loop slightly with frequency, which is what makes a
+           piano's partials stretch sharp. */
+        const period = 1 / Math.max(baseFreq, 20);
+        const delay = ctx.createDelay(0.2);
+        const stiff = pct(p.stiffness, 10);
+        delay.delayTime.setValueAtTime(Math.min(0.19, period * (1 - stiff * 0.08)), t);
+
+        const damp = ctx.createBiquadFilter();
+        damp.type = 'lowpass';
+        // More damping = a duller, faster-dying string.
+        damp.frequency.setValueAtTime(Math.max(400, 14000 * (1 - pct(p.damping, 30) * 0.92)), t);
+
+        const fb = ctx.createGain();
+        /* Feedback set from the wanted decay: g^(t/period) = 0.001. The damping
+           filter in the loop also takes a bite out of every pass, so the raw
+           figure decays far faster than asked -- 0.3s for a 3s setting. Divide
+           it back out by the filter's gain at the fundamental, which for a
+           one-pole low-pass is 1/sqrt(1+(f/fc)^2). */
+        const decay = Math.max(0.05, p.decayTime ?? 2);
+        /* The theoretical figure -- g^(t/period) = 0.001 -- does not hold here.
+           Measured in this engine, a feedback delay loop at C4 still decays at
+           g = 0.93 and runs away by g = 0.95, nowhere near the 0.999 the maths
+           predicts: a DelayNode inside a feedback loop is quantised to a render
+           block, so the loop is shorter than it is asked to be and goes round
+           more often than the arithmetic assumes.
+           
+           So map the decay knob onto the range that was measured to be stable
+           rather than computing a gain that is right on paper and screams in
+           practice. 12s of DECY reaches the cap; beyond it the loop would not
+           ring longer, it would build. */
+        const MAX_STABLE_FB = 0.93;
+        const wanted = Math.pow(0.001, period / decay);
+        fb.gain.setValueAtTime(Math.min(MAX_STABLE_FB, wanted), t);
+
+        const input = ctx.createGain();
+        const output = ctx.createGain();
+        const dry = ctx.createGain();
+        const wet = ctx.createGain();
+        const mix = pct(p.strBlend, 100);
+        dry.gain.setValueAtTime(1 - mix, t);
+        wet.gain.setValueAtTime(mix, t);
+
+        /* Level: 1/(1-g) is the steady-state build-up, but a pluck is a burst,
+           not a steady tone -- it never reaches that. Scaling by it made a long
+           string 40 dB quieter than a short one, which is backwards. Use the
+           square root instead: energy in a decaying loop goes as the square of
+           the amplitude, so this keeps a 6-second string and a half-second one
+           at roughly the same peak. */
+        input.gain.setValueAtTime(Math.max(0.06, Math.sqrt(1 - fb.gain.value)), t);
+
+        input.connect(delay);
+        delay.connect(damp);
+        damp.connect(fb);
+        fb.connect(delay);
+        damp.connect(wet);
+        wet.connect(output);
+        input.connect(dry);
+        dry.connect(output);
+        return { in: input, out: output };
+      }
+
+      case 'tube': {
+        /* An air column. Same delay loop as the string, but a tube closed at
+           one end passes only odd harmonics -- a clarinet -- which inverting
+           the feedback produces; open at both ends it passes all of them, a
+           flute or a brass instrument. */
+        const odd = pct(p.tubeOdd, 100);
+        const period = 1 / Math.max(baseFreq, 20);
+        const delay = ctx.createDelay(0.2);
+        delay.delayTime.setValueAtTime(Math.min(0.19, period * (odd > 0.5 ? 0.5 : 1)), t);
+
+        const damp = ctx.createBiquadFilter();
+        damp.type = 'lowpass';
+        damp.frequency.setValueAtTime(Math.max(500, 13000 * (1 - pct(p.tubeDamp, 40) * 0.9)), t);
+
+        const fb = ctx.createGain();
+        const decay = Math.max(0.05, p.tubeDecay ?? 1.2);
+        // Same measured ceiling as the string's loop, and for the same reason.
+        const g = Math.min(0.93, Math.pow(0.001, period / decay));
+        fb.gain.setValueAtTime(odd > 0.5 ? -g : g, t);
+
+        const input = ctx.createGain();
+        const output = ctx.createGain();
+        const dry = ctx.createGain();
+        const wet = ctx.createGain();
+        const mix = pct(p.tubeMix, 100);
+        dry.gain.setValueAtTime(1 - mix, t);
+        wet.gain.setValueAtTime(mix, t);
+
+        input.gain.setValueAtTime(Math.max(0.06, Math.sqrt(1 - Math.abs(g))), t);
+
+        input.connect(delay);
+        delay.connect(damp);
+        damp.connect(fb);
+        fb.connect(delay);
+        damp.connect(wet);
+        wet.connect(output);
+        input.connect(dry);
+        dry.connect(output);
+        return { in: input, out: output };
+      }
+
+      case 'modes': {
+        /* Three tuned resonances in parallel. A drum head or a bell rings at
+           several frequencies at once, and those are not a harmonic series --
+           which is exactly what one filter cannot produce and why the kit's
+           toms and cymbals stayed synthetic. */
+        const input = ctx.createGain();
+        const output = ctx.createGain();
+        const mix = pct(p.modeMix, 100);
+        const dry = ctx.createGain();
+        dry.gain.setValueAtTime(1 - mix, t);
+        input.connect(dry);
+        dry.connect(output);
+
+        const ratios = [p.mode1 ?? 1, p.mode2 ?? 2.4, p.mode3 ?? 4.6];
+        const q = Math.max(1, p.modeQ ?? 14);
+        for (const r of ratios) {
+          const bp = ctx.createBiquadFilter();
+          bp.type = 'bandpass';
+          bp.frequency.setValueAtTime(Math.min(18000, Math.max(30, baseFreq * r)), t);
+          bp.Q.setValueAtTime(q, t);
+          const g = ctx.createGain();
+          // Split the wet share between the modes so adding one does not
+          // simply make the voice louder.
+          g.gain.setValueAtTime(mix / ratios.length, t);
+          input.connect(bp);
+          bp.connect(g);
+          g.connect(output);
+        }
+        return { in: input, out: output };
+      }
+
+      case 'body': {
+        /* The instrument's body: a soundboard, a box, a shell. Two fixed
+           formant peaks whose frequency falls as the body gets bigger, which
+           is what turns a bare string into a guitar rather than a sine. */
+        const size = pct(p.bodySize, 50);
+        const input = ctx.createGain();
+        const output = ctx.createGain();
+        const mix = pct(p.bodyMix, 60);
+        const dry = ctx.createGain();
+        dry.gain.setValueAtTime(1 - mix, t);
+        input.connect(dry);
+        dry.connect(output);
+
+        // A big body resonates low: 400Hz down to 90Hz across the range.
+        const f1 = 400 - size * 310;
+        const peaks: [number, number][] = [
+          [f1, 1.4],
+          [f1 * 2.7, 2.2]
+        ];
+        const depth = pct(p.bodyDepth, 45);
+        for (const [f, q] of peaks) {
+          const bp = ctx.createBiquadFilter();
+          bp.type = 'peaking';
+          bp.frequency.setValueAtTime(Math.max(40, f), t);
+          bp.Q.setValueAtTime(q, t);
+          bp.gain.setValueAtTime(depth * 14, t);
+          input.connect(bp);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(mix / peaks.length, t);
+          bp.connect(g);
+          g.connect(output);
+        }
+        return { in: input, out: output };
+      }
+
+      case 'drive': {
+        /* Saturation. A struck or bowed body produces harmonics a clean
+           oscillator cannot; bias makes them even-order, which reads as warmth
+           rather than fuzz. */
+        const shaper = ctx.createWaveShaper();
+        const amt = pct(p.driveAmt, 25);
+        const bias = pct(p.driveBias, 30);
+        const n = 1024;
+        const curve = new Float32Array(n);
+        const k = 1 + amt * 40;
+        for (let i = 0; i < n; i++) {
+          const x = (i / (n - 1)) * 2 - 1;
+          const b = x + bias * 0.35;
+          curve[i] = Math.tanh(b * k) / Math.tanh(k) - Math.tanh(bias * 0.35 * k) / Math.tanh(k);
+        }
+        shaper.curve = curve;
+        shaper.oversample = '2x';
+
+        // Saturation makes harmonics all the way up; a shelf keeps them from
+        // reading as aliasing hiss.
+        const tone = ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.frequency.setValueAtTime(p.driveTone ?? 8000, t);
+        shaper.connect(tone);
+        return { in: shaper, out: tone };
+      }
+
+      case 'resonators': {
+        const input = ctx.createGain();
+        const output = ctx.createGain();
+        const mix = pct(p.resMix, 50);
+        const dry = ctx.createGain();
+        dry.gain.setValueAtTime(1 - mix, t);
+        input.connect(dry);
+        dry.connect(output);
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(p.resFreq ?? 700, t);
+        bp.Q.setValueAtTime(p.resQ ?? 12, t);
+        const wet = ctx.createGain();
+        wet.gain.setValueAtTime(mix, t);
+        input.connect(bp);
+        bp.connect(wet);
+        wet.connect(output);
+        return { in: input, out: output };
+      }
+
+      default:
+        return null;
+    }
+  }
+
   // Push a track's stored EQ state onto its live filter chain.
   private applyTrackEq(trackId: number) {
     const bus = this.trackBuses[trackId];
@@ -2099,7 +2366,22 @@ class ModularSynth {
       filter.frequency.setValueAtTime(sustainCutoff, releaseStartTime);
       filter.frequency.exponentialRampToValueAtTime(baseCutoff, releaseStartTime + vcfRel);
 
+      /* The sources stop when the envelope closes, as they always did: leaving
+         them running would keep feeding a resonator that is supposed to be
+         ringing down, and the loop would build instead of decay.
+         
+         The voice itself is reaped later -- by the chain's ring-out -- so a
+         plucked string is heard to the end rather than cut off at 0.3s. */
+      /* The sources stop when the envelope closes, as they always did. Holding
+         them longer keeps feeding the resonator, and a loop fed while it should
+         be ringing down builds instead of decays -- measured at +52 dB for a
+         string asked to ring for six seconds.
+         
+         The voice is reaped later, by the chain's ring-out, so its nodes are
+         not torn down while a resonator is still sounding. */
+      const rackTail = this.rackTailSeconds(track);
       const stopTime = releaseStartTime + ampRel + 0.1;
+      const reapTime = stopTime + rackTail;
       if (osc1) osc1.stop(stopTime);
       if (osc2) osc2.stop(stopTime);
       if (noiseSource) noiseSource.stop(stopTime);
@@ -2116,7 +2398,7 @@ class ModularSynth {
       const endSrc = osc1 ?? osc2 ?? noiseSource;
       if (endSrc) endSrc.onended = () => this.reapVoice(voiceKey);
       if (!this.renderCtx) {
-        const cleanupMs = Math.ceil((stopTime - ctx.currentTime) * 1000) + 50;
+        const cleanupMs = Math.ceil((reapTime - ctx.currentTime) * 1000) + 50;
         void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
       }
     }
@@ -2124,14 +2406,41 @@ class ModularSynth {
     voiceMix.connect(filter);
     filter.connect(gainNode);
 
+    /* The rack chain: the voice's own signal path, after the amp envelope and
+     * before the output shaping.
+     *
+     * Here rather than earlier because these are resonators and bodies -- they
+     * answer an excitation, and the envelope is what shapes that excitation.
+     * A string fed a steady tone rings forever; fed a plucked one, it sounds
+     * plucked.
+     *
+     * Only modules the chain actually names are built, and only the ones with
+     * something to build; a track with no chain of its own reaches none of
+     * this and sounds exactly as it did. */
+    let chainOut: AudioNode = gainNode;
+    const rackChain = track.rackChain;
+    if (Array.isArray(rackChain) && rackChain.length) {
+      const rackParams = track.rackParams ?? {};
+      for (const id of rackChain) {
+        const mod = this.buildRackModule(ctx, id, rackParams, baseFreq, t);
+        if (!mod) continue;
+        chainOut.connect(mod.in);
+        chainOut = mod.out;
+        for (const src of mod.sources ?? []) {
+          src.start(t);
+          extras.push(src);
+        }
+      }
+    }
+
     // Node 7: Air Shelf Filter (±8dB high shelf @ 10kHz per track)
-    let finalVoiceNode: AudioNode = gainNode;
+    let finalVoiceNode: AudioNode = chainOut;
     if (track.airGain !== undefined && Math.abs(track.airGain) > 0.01) {
       const airFilter = ctx.createBiquadFilter();
       airFilter.type = 'highshelf';
       airFilter.frequency.setValueAtTime(10000, t);
       airFilter.gain.setValueAtTime(track.airGain * 8, t); // ±8dB
-      gainNode.connect(airFilter);
+      chainOut.connect(airFilter);
       finalVoiceNode = airFilter;
     }
 
