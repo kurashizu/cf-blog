@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fade, scale } from '$lib/perf-transitions';
+	import { fade, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
-	import { modal } from '$lib/actions/modal';
 	import type { CustomWave } from '../../synth';
 	import { WAVE_SAMPLES } from '../../stores/synth-waves';
 
@@ -115,44 +114,6 @@
 		}
 	}
 
-	/* Keyboard alternative to the pointer draw: Left/Right move a cursor
-	   sample, Up/Down raise or lower its level in fixed steps. The reading
-	   is exposed as a live sr-only text rather than announce() -- it changes
-	   on every keypress, which announce()'s throttling is not meant for. */
-	let cursorIdx = $state(0);
-	const KEY_STEP = 0.05;
-	let canvasLiveText = $derived(
-		$t('synth.waveDraw.cursorLive', { index: cursorIdx + 1, total: N, value: samples[cursorIdx].toFixed(2) })
-	);
-
-	function onCanvasKeydown(e: KeyboardEvent) {
-		switch (e.key) {
-			case 'ArrowLeft':
-				cursorIdx = Math.max(0, cursorIdx - 1);
-				break;
-			case 'ArrowRight':
-				cursorIdx = Math.min(N - 1, cursorIdx + 1);
-				break;
-			case 'ArrowUp':
-				samples[cursorIdx] = Math.min(1, samples[cursorIdx] + KEY_STEP);
-				samples = samples;
-				break;
-			case 'ArrowDown':
-				samples[cursorIdx] = Math.max(-1, samples[cursorIdx] - KEY_STEP);
-				samples = samples;
-				break;
-			case 'Home':
-				cursorIdx = 0;
-				break;
-			case 'End':
-				cursorIdx = N - 1;
-				break;
-			default:
-				return;
-		}
-		e.preventDefault();
-	}
-
 	function draw() {
 		if (!canvas) return;
 		const dpr = window.devicePixelRatio || 1;
@@ -198,6 +159,18 @@
 		draw();
 	});
 
+	onMount(() => {
+		nameInput?.focus();
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				e.stopPropagation();
+				onClose();
+			}
+		};
+		window.addEventListener('keydown', onKey, true);
+		return () => window.removeEventListener('keydown', onKey, true);
+	});
+
 	function save() {
 		onSave(name, samples, initial?.id);
 		playSound('toggle');
@@ -206,63 +179,56 @@
 	const btn = 'press px-2 py-0.5 border border-white/20 rounded-xs text-[10px] font-bold cursor-pointer hover:border-white/50 transition-colors';
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div use:portal class="fixed inset-0 z-[160] bg-black/60" onclick={onClose} transition:fade={{ duration: 120 }}></div>
 <div
 	use:portal
-	use:modal={{ onClose, label: $t('synth.waveDraw.title') }}
-	class="fixed inset-0 z-[160] bg-black/60 flex items-center justify-center"
-	transition:fade={{ duration: 120 }}
+	class="fixed z-[170] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[440px] max-w-[95vw] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 text-xs font-mono"
+	role="dialog"
+	aria-label={$t('synth.waveDraw.title')}
+	transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 >
-	<div
-		class="w-[440px] max-w-[95vw] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 text-xs font-mono"
-		transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
-	>
-		<div class="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
-			<span class="font-black text-[#56b6c2]">{initial ? $t('synth.waveDraw.editHeading') : $t('synth.waveDraw.drawHeading')} <span class="text-white/60 font-bold">// {forLabel}</span></span>
-			<span class="text-white/60 text-[10px] whitespace-nowrap">{$t('synth.waveDraw.dragHint')}</span>
-		</div>
+	<div class="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
+		<span class="font-black text-[#56b6c2]">{initial ? $t('synth.waveDraw.editHeading') : $t('synth.waveDraw.drawHeading')} <span class="text-white/60 font-bold">// {forLabel}</span></span>
+		<span class="text-white/60 text-[10px] whitespace-nowrap">{$t('synth.waveDraw.dragHint')}</span>
+	</div>
 
-		<canvas
-			bind:this={canvas}
-			tabindex="0"
-			aria-label={$t('synth.waveDraw.canvasAria')}
-			onpointerdown={onDown}
-			onpointermove={onMove}
-			onpointerup={onUp}
-			onpointercancel={onUp}
-			onkeydown={onCanvasKeydown}
-			class="w-full h-[140px] border border-white/15 rounded-xs cursor-crosshair touch-none select-none focus-glow"
+	<canvas
+		bind:this={canvas}
+		class="w-full h-[140px] border border-white/15 rounded-xs cursor-crosshair touch-none select-none"
+		onpointerdown={onDown}
+		onpointermove={onMove}
+		onpointerup={onUp}
+		onpointercancel={onUp}
+	></canvas>
+
+	<div class="flex flex-wrap items-center gap-1 mt-2">
+		<span class="text-white/60 text-[10px] font-bold mr-1">{$t('synth.waveDraw.startFrom')}</span>
+		<button onclick={() => setSeed('sine')} class={btn} title={$t('synth.waveDraw.sineHint')}>SIN</button>
+		<button onclick={() => setSeed('saw')} class={btn} title={$t('synth.waveDraw.sawHint')}>SAW</button>
+		<button onclick={() => setSeed('tri')} class={btn} title={$t('synth.waveDraw.triHint')}>TRI</button>
+		<button onclick={() => setSeed('square')} class={btn} title={$t('synth.waveDraw.squareHint')}>SQR</button>
+		<button onclick={() => setSeed('flat')} class={btn} title={$t('synth.waveDraw.clearHint')}>CLEAR</button>
+		<span class="w-px h-3.5 bg-white/15 mx-1"></span>
+		<button onclick={smooth} class={btn} title={$t('synth.waveDraw.smoothHint')}>SMOOTH</button>
+		<button onclick={normalise} class={btn} title={$t('synth.waveDraw.normHint')}>NORM</button>
+	</div>
+
+	<div class="flex items-center gap-2 mt-3">
+		<span class="text-white/60 text-[10px] font-bold">{$t('synth.waveDraw.nameLabel')}</span>
+		<input
+			bind:this={nameInput}
+			bind:value={name}
+			onkeydown={(e) => { if (e.key === 'Enter') save(); }}
+			maxlength="24"
+			spellcheck="false"
+			placeholder={$t('synth.waveDraw.namePlaceholder')}
+			class="focus-glow flex-1 min-w-0 px-1.5 py-0.5 bg-black/60 border border-[#56b6c2]/50 text-white text-xs font-mono font-bold uppercase rounded-xs outline-none"
 			style="--krsz-focus-color: #56b6c2"
-		></canvas>
-		<span class="sr-only" aria-live="polite">{canvasLiveText}</span>
-
-		<div class="flex flex-wrap items-center gap-1 mt-2">
-			<span class="text-white/60 text-[10px] font-bold mr-1">{$t('synth.waveDraw.startFrom')}</span>
-			<button onclick={() => setSeed('sine')} class="{btn} min-w-[24px] min-h-[24px]" title={$t('synth.waveDraw.sineHint')}>SIN</button>
-			<button onclick={() => setSeed('saw')} class="{btn} min-w-[24px] min-h-[24px]" title={$t('synth.waveDraw.sawHint')}>SAW</button>
-			<button onclick={() => setSeed('tri')} class="{btn} min-w-[24px] min-h-[24px]" title={$t('synth.waveDraw.triHint')}>TRI</button>
-			<button onclick={() => setSeed('square')} class="{btn} min-w-[24px] min-h-[24px]" title={$t('synth.waveDraw.squareHint')}>SQR</button>
-			<button onclick={() => setSeed('flat')} class="{btn} min-w-[24px] min-h-[24px]" title={$t('synth.waveDraw.clearHint')}>CLEAR</button>
-			<span class="w-px h-3.5 bg-white/15 mx-1"></span>
-			<button onclick={smooth} class="{btn} min-w-[24px] min-h-[24px]" title={$t('synth.waveDraw.smoothHint')}>SMOOTH</button>
-			<button onclick={normalise} class="{btn} min-w-[24px] min-h-[24px]" title={$t('synth.waveDraw.normHint')}>NORM</button>
-		</div>
-
-		<div class="flex items-center gap-2 mt-3">
-			<span class="text-white/60 text-[10px] font-bold">{$t('synth.waveDraw.nameLabel')}</span>
-			<input
-				bind:this={nameInput}
-				bind:value={name}
-				data-autofocus
-				onkeydown={(e) => { if (e.key === 'Enter') save(); }}
-				maxlength="24"
-				spellcheck="false"
-				placeholder={$t('synth.waveDraw.namePlaceholder')}
-				class="focus-glow flex-1 min-w-0 px-1.5 py-0.5 bg-black/60 border border-[#56b6c2]/50 text-white text-xs font-mono font-bold uppercase rounded-xs outline-none"
-				style="--krsz-focus-color: #56b6c2"
-				aria-label={$t('synth.waveDraw.nameAria')}
-			/>
-			<button onclick={onClose} class="{btn} min-w-[24px] min-h-[24px] text-white/60">{$t('synth.waveDraw.cancel')}</button>
-			<button onclick={save} class="press min-h-[24px] px-3 py-0.5 border border-[#98c379] bg-[#98c379] text-black rounded-xs text-[10px] font-black cursor-pointer hover:brightness-110" title={$t('synth.waveDraw.saveHint', { forLabel })}>{initial ? $t('synth.waveDraw.save') : $t('synth.waveDraw.saveAndUse')}</button>
-		</div>
+			aria-label={$t('synth.waveDraw.nameAria')}
+		/>
+		<button onclick={onClose} class="{btn} text-white/60">{$t('synth.waveDraw.cancel')}</button>
+		<button onclick={save} class="press px-3 py-0.5 border border-[#98c379] bg-[#98c379] text-black rounded-xs text-[10px] font-black cursor-pointer hover:brightness-110" title={$t('synth.waveDraw.saveHint', { forLabel })}>{initial ? $t('synth.waveDraw.save') : $t('synth.waveDraw.saveAndUse')}</button>
 	</div>
 </div>

@@ -88,9 +88,6 @@ export const THEME_STYLES: Record<FixedTheme, ThemeStyle> = {
  * lifelab game, which reads these vars directly rather than taking Tailwind
  * classes) goes through this table instead.
  */
-/* --text-tertiary values sit at >= 4.5:1 on --bg-card (WCAG AA for the
-   12px pixel face, which counts as normal text) -- lifelab's muted labels
-   read this variable directly. */
 export const THEME_CSS_VARS: Record<FixedTheme, Record<string, string>> = {
 	'tokyo-matte': {
 		'--bg': '#16171d',
@@ -98,7 +95,7 @@ export const THEME_CSS_VARS: Record<FixedTheme, Record<string, string>> = {
 		'--border': '#2e3440',
 		'--text-primary': '#d8dee9',
 		'--text-secondary': '#90949d',
-		'--text-tertiary': '#8d92a0',
+		'--text-tertiary': '#545863',
 		'--selection': '#56b6c2'
 	},
 	'gruvbox-dark': {
@@ -107,7 +104,7 @@ export const THEME_CSS_VARS: Record<FixedTheme, Record<string, string>> = {
 		'--border': '#3c3836',
 		'--text-primary': '#ebdbb2',
 		'--text-secondary': '#a89984',
-		'--text-tertiary': '#a39a8b',
+		'--text-tertiary': '#665c54',
 		'--selection': '#b8bb26'
 	},
 	'nord-terminal': {
@@ -116,7 +113,7 @@ export const THEME_CSS_VARS: Record<FixedTheme, Record<string, string>> = {
 		'--border': '#3b4252',
 		'--text-primary': '#eceff4',
 		'--text-secondary': '#9aa5b8',
-		'--text-tertiary': '#8f9bb1',
+		'--text-tertiary': '#5f6b81',
 		'--selection': '#88c0d0'
 	},
 	'cyber-amber': {
@@ -125,7 +122,7 @@ export const THEME_CSS_VARS: Record<FixedTheme, Record<string, string>> = {
 		'--border': '#3d311c',
 		'--text-primary': '#e5be7a',
 		'--text-secondary': '#a8875a',
-		'--text-tertiary': '#a88a60',
+		'--text-tertiary': '#6b5638',
 		'--selection': '#ffd166'
 	}
 };

@@ -12,6 +12,6 @@ dist
 .wrangler
 
 # playwright
-/test-results*
+/test-results
 /playwright-report
 /.shots

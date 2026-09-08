@@ -154,10 +154,9 @@
 		</div>
 
 		<!-- Test surface -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			bind:this={surfaceEl}
-			role="img"
-			aria-label={$t('utilities.mouse.surface.a11yLabel', { mask: buttonsMask, delta: lastWheelDelta })}
 			onpointerdown={handlePointerDown}
 			onpointerup={handlePointerUp}
 			onpointermove={handlePointerMove}

@@ -4,8 +4,6 @@
 	import { fade } from '$lib/perf-transitions';
 	import { playSound } from '../../sound';
 	import { t, locale } from '$lib/i18n';
-	import { Button } from '$lib/components/ui';
-	import { announce } from '$lib/stores/a11y';
 
 	interface Footprint {
 		source: 'stamp' | 'blog';
@@ -152,28 +150,22 @@
 				stampedToday = true;
 				stampStatus = 'done';
 				playSound('power');
-				announce($t('community.footprints.stamped'));
 			} else if (resp.status === 429) {
 				const data = (await resp.json().catch(() => ({}))) as { error?: string };
 				if (data.error === 'already') {
 					writeStampedAt(new Date().toISOString());
 					stampedToday = true;
 					stampStatus = 'already';
-					announce($t('community.footprints.errorAlready'), 'assertive');
 				} else {
 					stampStatus = 'rate';
-					announce($t('community.footprints.errorRate'), 'assertive');
 				}
 			} else if (resp.status === 503) {
 				stampStatus = 'no-edge';
-				announce($t('community.footprints.errorNoEdge'), 'assertive');
 			} else {
 				stampStatus = 'network';
-				announce($t('community.footprints.errorNetwork', { reason: 'fetch failed' }), 'assertive');
 			}
 		} catch {
 			stampStatus = 'network';
-			announce($t('community.footprints.errorNetwork', { reason: 'fetch failed' }), 'assertive');
 		}
 	}
 
@@ -195,17 +187,15 @@
 
 <div class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2.5 text-xs sm:text-sm min-w-0">
 	<BoxHeader title={$t('community.footprints.title')} short={$t('community.footprints.titleShort')} class="text-xs font-black text-[#61afef] border-b border-white/10 pb-1.5 shrink-0">
-		<Button
-			variant="link"
-			label={$t('community.footprints.refresh')}
+		<button
 			onclick={() => {
 				load();
 				playSound('click');
 			}}
-			class="text-xs text-white/50"
+			class="press text-xs font-bold text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors"
 		>
-			<span aria-hidden="true">⟳</span>
-		</Button>
+			⟳
+		</button>
 	</BoxHeader>
 
 	{#if wallState === 'loading'}
@@ -224,21 +214,20 @@
 		</div>
 
 		{#if topCountries.length > 0}
-			<ul class="space-y-1 min-w-0 list-none">
-				<li class="text-[10px] font-bold text-white/60 tracking-wide" aria-hidden="true">{$t('community.footprints.countriesHeading')}</li>
+			<div class="space-y-1 min-w-0">
+				<div class="text-[10px] font-bold text-white/60 tracking-wide">{$t('community.footprints.countriesHeading')}</div>
 				{#each topCountries as c (c.code)}
 					{@const pct = Math.max(4, Math.round((c.count / maxCount) * 100))}
-					<li class="flex items-center gap-1.5 min-w-0">
-						<span class="sr-only">{$t('community.footprints.countryCount', { country: countryName(c.code), count: c.count })}</span>
-						<span aria-hidden="true" class="w-6 shrink-0 text-[10px] font-mono font-bold" style="color: {colorFor(c.code)}">{c.code}</span>
-						<span aria-hidden="true" class="flex-1 min-w-0 h-3 bg-white/5 rounded-xs overflow-hidden">
+					<div class="flex items-center gap-1.5 min-w-0">
+						<span class="w-6 shrink-0 text-[10px] font-mono font-bold" style="color: {colorFor(c.code)}">{c.code}</span>
+						<span class="flex-1 min-w-0 h-3 bg-white/5 rounded-xs overflow-hidden">
 							<span class="block h-full rounded-xs" style="width: {pct}%; background-color: {colorFor(c.code)};"></span>
 						</span>
-						<span aria-hidden="true" class="w-5 shrink-0 text-right text-[10px] font-mono text-white/50">{c.count}</span>
-						<span aria-hidden="true" class="hidden sm:inline w-24 shrink-0 truncate text-[10px] text-white/60" title={countryName(c.code)}>{countryName(c.code)}</span>
-					</li>
+						<span class="w-5 shrink-0 text-right text-[10px] font-mono text-white/50">{c.count}</span>
+						<span class="hidden sm:inline w-24 shrink-0 truncate text-[10px] text-white/60" title={countryName(c.code)}>{countryName(c.code)}</span>
+					</div>
 				{/each}
-			</ul>
+			</div>
 		{/if}
 
 		<div class="min-w-0">
@@ -249,20 +238,15 @@
 			{#if summary.recent.length === 0}
 				<div class="text-xs font-mono text-white/60 py-1">{$t('community.footprints.empty')}</div>
 			{:else}
-				<ul
-					role="list"
-					aria-label={$t('community.footprints.recentHeading')}
-					tabindex="0"
-					class="max-h-40 overflow-y-auto space-y-1 pr-1 list-none"
-				>
+				<div class="max-h-40 overflow-y-auto space-y-1 pr-1">
 					{#each summary.recent as fp (fp.id)}
 						{@const mine = fp.id === yourId}
-						<li
+						<div
 							class="flex items-center gap-1.5 min-w-0 border rounded-xs px-1.5 py-1 bg-black/40"
 							style="border-color: {mine ? colorFor(fp.country) : 'rgba(255,255,255,0.08)'};"
 							in:fade={{ duration: 160 }}
 						>
-							<span aria-hidden="true" class="shrink-0 text-[9px] font-mono font-bold px-1 rounded-xs" style="color: {colorFor(fp.country)}; border: 1px solid {colorFor(fp.country)}66;">{fp.country}</span>
+							<span class="shrink-0 text-[9px] font-mono font-bold px-1 rounded-xs" style="color: {colorFor(fp.country)}; border: 1px solid {colorFor(fp.country)}66;">{fp.country}</span>
 							<span class="flex-1 min-w-0 truncate text-[10px] text-white/70">{countryName(fp.country)}</span>
 							{#if fp.timezone}
 								<span class="hidden sm:inline shrink-0 truncate max-w-[80px] text-[9px] text-white/50">{tzCity(fp.timezone)}</span>
@@ -277,36 +261,32 @@
 								<span class="shrink-0 text-[9px] font-black text-[#98c379]">{$t('community.footprints.you')}</span>
 							{/if}
 							<span class="shrink-0 text-[9px] font-mono text-white/50">{relativeTime(fp.at, clock)}</span>
-						</li>
+						</div>
 					{/each}
-				</ul>
+				</div>
 			{/if}
 		</div>
 
 		<div class="pt-1 border-t border-white/10 space-y-1.5">
-			<div aria-live="polite">
-				{#if stampStatus === 'already' || (stampedToday && stampStatus === 'idle')}
-					<div class="text-[10px] sm:text-xs font-bold text-white/60">{$t('community.footprints.alreadyStamped')}</div>
-				{:else if stampStatus === 'done'}
-					<div class="text-[10px] sm:text-xs font-bold text-[#98c379]">{$t('community.footprints.stamped')}</div>
-				{:else if stampStatus === 'rate'}
-					<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorRate')}</div>
-				{:else if stampStatus === 'no-edge'}
-					<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorNoEdge')}</div>
-				{:else if stampStatus === 'network'}
-					<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorNetwork', { reason: 'fetch failed' })}</div>
-				{/if}
-			</div>
+			{#if stampStatus === 'already' || (stampedToday && stampStatus === 'idle')}
+				<div class="text-[10px] sm:text-xs font-bold text-white/60">{$t('community.footprints.alreadyStamped')}</div>
+			{:else if stampStatus === 'done'}
+				<div class="text-[10px] sm:text-xs font-bold text-[#98c379]">{$t('community.footprints.stamped')}</div>
+			{:else if stampStatus === 'rate'}
+				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorRate')}</div>
+			{:else if stampStatus === 'no-edge'}
+				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorNoEdge')}</div>
+			{:else if stampStatus === 'network'}
+				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorNetwork', { reason: 'fetch failed' })}</div>
+			{/if}
 			<div class="flex flex-wrap items-center gap-2">
-				<Button
-					variant="outline"
-					color="#61afef"
+				<button
 					onclick={stamp}
 					disabled={stampedToday || stampStatus === 'sending'}
-					class="text-xs"
+					class="press border border-[#61afef] px-3 py-1.5 rounded-xs text-[#61afef] font-bold text-xs hover:bg-[#61afef] hover:text-black cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#61afef]"
 				>
 					{stampStatus === 'sending' ? $t('community.footprints.stamping') : $t('community.footprints.stamp')}
-				</Button>
+				</button>
 				<p class="flex-1 min-w-[140px] text-[10px] text-white/60 leading-relaxed">
 					{$t('community.footprints.disclaimer')}
 				</p>

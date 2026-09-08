@@ -10,8 +10,6 @@
 	import { performanceMode } from '../../stores/performance';
 	import { textSize } from '../../stores/text-scale';
 	import { t } from '$lib/i18n';
-	import { Button, Dialog } from '$lib/components/ui';
-	import { announce } from '$lib/stores/a11y';
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -81,9 +79,6 @@
 	// svelte-ignore non_reactive_update
 	let nodes: (HTMLElement | null)[] = [];
 	let selected = $state<string | null>(null);
-	/** Full text shown in a dialog for keyboard/screen-reader users -- opening a
-	 *  packet does not depend on the field's own drag/hover interaction. */
-	let openPacket = $state<Packet | null>(null);
 	/** Which body the pointer is currently carrying, if any. */
 	let dragId: string | null = null;
 
@@ -409,13 +404,11 @@
 		e.preventDefault();
 		if (!gbName.trim() || !gbEmail.trim() || !gbContent.trim()) {
 			gbStatus = $t('community.guestbook.errorAllFields');
-			announce(gbStatus, 'assertive');
 			gbShakeGen++;
 			playSound('click');
 			return;
 		}
 		gbStatus = $t('community.guestbook.transmitting');
-		announce(gbStatus);
 		playSound('click');
 
 		try {
@@ -427,7 +420,6 @@
 			const data = (await resp.json().catch(() => ({}))) as { error?: string };
 			if (resp.ok) {
 				gbStatus = $t('community.guestbook.transmitted');
-				announce(gbStatus);
 				gbName = '';
 				gbEmail = '';
 				gbContent = '';
@@ -435,7 +427,6 @@
 				loadMessages();
 			} else {
 				gbStatus = $t('community.guestbook.errorWithReason', { reason: data.error || `HTTP ${resp.status}` });
-				announce(gbStatus, 'assertive');
 				gbShakeGen++;
 				playSound('click');
 			}
@@ -443,7 +434,6 @@
 			gbStatus = $t('community.guestbook.networkError', {
 				reason: err?.message || $t('community.guestbook.transmissionFailed')
 			});
-			announce(gbStatus, 'assertive');
 			gbShakeGen++;
 			playSound('click');
 		}
@@ -478,8 +468,8 @@
  ╚═════╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝`}
 		/>
 		<div class="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm shrink-0">
-			<Button variant="outline" color="#e06c75" onclick={() => handleCopy('krsz.dev@gmail.com')} title={$t('community.guestbook.copyHint')}>[krsz.dev@gmail.com]</Button>
-			<Button variant="outline" color="#e06c75" onclick={() => handleCopy('admin@krsz.in')} title={$t('community.guestbook.copyHint')}>[admin@krsz.in]</Button>
+			<button onclick={() => handleCopy('krsz.dev@gmail.com')} class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[krsz.dev@gmail.com]</button>
+			<button onclick={() => handleCopy('admin@krsz.in')} class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[admin@krsz.in]</button>
 		</div>
 	</div>
 
@@ -488,19 +478,17 @@
 			<div class="space-y-1">
 				<label class="block text-xs font-bold text-[#56b6c2]" for="gb-name">{$t('community.guestbook.nameLabel')}</label>
 				<div class="relative border border-white/20 focus-within:border-[#56b6c2] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]">
-					<span aria-hidden="true" class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbName}</span>{#if gbFocusedField === 'name'}<span
-							aria-hidden="true"
+					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbName}</span>{#if gbFocusedField === 'name'}<span
 							class="inline-block w-[8px] h-[16px] shrink-0"
 							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
 						></span>{/if}
 					{#if !gbName && gbFocusedField !== 'name'}
-						<span aria-hidden="true" class="text-xs text-white/50 select-none pointer-events-none">{$t('community.guestbook.namePlaceholder')}</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none">{$t('community.guestbook.namePlaceholder')}</span>
 					{/if}
 					<input
 						id="gb-name"
 						type="text"
 						required
-						placeholder={$t('community.guestbook.namePlaceholder')}
 						bind:value={gbName}
 						onfocus={() => (gbFocusedField = 'name')}
 						onblur={() => (gbFocusedField = null)}
@@ -511,19 +499,17 @@
 			<div class="space-y-1">
 				<label class="block text-xs font-bold text-[#e5c07b]" for="gb-email">{$t('community.guestbook.emailLabel')}</label>
 				<div class="relative border border-white/20 focus-within:border-[#e5c07b] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]">
-					<span aria-hidden="true" class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbEmail}</span>{#if gbFocusedField === 'email'}<span
-							aria-hidden="true"
+					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbEmail}</span>{#if gbFocusedField === 'email'}<span
 							class="inline-block w-[8px] h-[16px] shrink-0"
 							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
 						></span>{/if}
 					{#if !gbEmail && gbFocusedField !== 'email'}
-						<span aria-hidden="true" class="text-xs text-white/50 select-none pointer-events-none">{$t('community.guestbook.emailPlaceholder')}</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none">{$t('community.guestbook.emailPlaceholder')}</span>
 					{/if}
 					<input
 						id="gb-email"
 						type="email"
 						required
-						placeholder={$t('community.guestbook.emailPlaceholder')}
 						bind:value={gbEmail}
 						onfocus={() => (gbFocusedField = 'email')}
 						onblur={() => (gbFocusedField = null)}
@@ -541,19 +527,18 @@
 				     and this span rendered as a real space, so the caret floated a
 				     character-width past the last glyph instead of sitting against it.
 				     Kept on one line for that reason, and with no left margin. -->
-				<div aria-hidden="true" class="font-mono text-sm text-[#eceff4] whitespace-pre-wrap break-words leading-relaxed">{gbContent}{#if gbFocusedField === 'content'}<span
+				<div class="font-mono text-sm text-[#eceff4] whitespace-pre-wrap break-words leading-relaxed">{gbContent}{#if gbFocusedField === 'content'}<span
 							class="inline-block w-[8px] h-[16px] align-text-bottom shrink-0"
 							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
 						></span>{/if}
 					{#if !gbContent && gbFocusedField !== 'content'}
-						<span class="text-xs text-white/50 select-none pointer-events-none block">{$t('community.guestbook.contentPlaceholder')}</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none block">{$t('community.guestbook.contentPlaceholder')}</span>
 					{/if}
 				</div>
 				<textarea
 					id="gb-content"
 					required
 					rows="3"
-					placeholder={$t('community.guestbook.contentPlaceholder')}
 					bind:value={gbContent}
 					onfocus={() => (gbFocusedField = 'content')}
 					onblur={() => (gbFocusedField = null)}
@@ -568,7 +553,7 @@
 		<p class="text-[10px] sm:text-xs text-white/60 leading-relaxed">
 			{$t('community.guestbook.disclaimer')}
 		</p>
-		<Button type="submit" variant="solid" color="#e06c75" size="lg" class="w-full uppercase">{$t('community.guestbook.submit')}</Button>
+		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">{$t('community.guestbook.submit')}</button>
 	</form>
 
 	<!-- Zero-typing companion to the form above: one button records only
@@ -588,17 +573,16 @@
 	     against each other. 380px gives it room to read as a field. -->
 	<div class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2 flex-1 min-h-[380px]">
 		<BoxHeader title={$t('community.guestbook.received')} short={$t('community.guestbook.receivedShort')} class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5 shrink-0">
-			<Button
-				variant="link"
+			<button
 				onclick={() => {
 					loadMessages();
 					playSound('click');
 				}}
-				class="text-xs text-white/50"
+				class="press text-xs font-bold text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors"
 				title={$t('community.guestbook.refreshHint')}
 			>
 				{$t('community.guestbook.refresh')}
-			</Button>
+			</button>
 		</BoxHeader>
 
 		{#if messagesState === 'loading'}
@@ -608,58 +592,58 @@
 		{:else if messages.length === 0}
 			<div class="text-xs font-mono text-white/60 py-2">{$t('community.guestbook.empty')}</div>
 		{:else}
-			<!-- The field only listens for pointerdown so that clicking the empty
-			     space between packets closes an open one; every packet is its own
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<!-- The field itself only listens so that clicking the empty space
+			     between packets closes an open one; every packet is its own
 			     focusable button, which is what actually carries the interaction. -->
 			<div
 				bind:this={fieldEl}
-				role="region"
-				aria-label={$t('community.guestbook.fieldLabel')}
+				role="list"
 				class="relative flex-1 min-h-0 overflow-hidden rounded-xs touch-none"
 				style="background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 22px 22px;"
 				onpointerdown={(e) => { if (e.target === e.currentTarget) selected = null; }}
 			>
-				<ul class="contents">
-					{#each bodies as p, i (p.id)}
-							{@const open = selected === p.id}
-							<!-- Positioned by the loop writing transform straight to this node;
-							     left/top stay at 0 so translate3d is the only thing moving it. -->
-							<li
-								use:register={i}
-								class="absolute left-0 top-0 will-change-transform list-none"
-								style="width: {open ? 17.143 * $textSize : 10.714 * $textSize}px; z-index: {open ? 30 : 10};"
-								in:fade={{ duration: 220 }}
+				{#each bodies as p, i (p.id)}
+						{@const open = selected === p.id}
+						<!-- Positioned by the loop writing transform straight to this node;
+						     left/top stay at 0 so translate3d is the only thing moving it. -->
+						<div
+							use:register={i}
+							role="listitem"
+							class="absolute left-0 top-0 will-change-transform"
+							style="width: {open ? 17.143 * $textSize : 10.714 * $textSize}px; z-index: {open ? 30 : 10};"
+							in:fade={{ duration: 220 }}
+						>
+							<div
+								role="button"
+								tabindex="0"
+								aria-expanded={open}
+								aria-label={$t('community.guestbook.messageFrom', { name: p.name })}
+								onpointerdown={(e) => grab(e, p, i)}
+								onkeydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = open ? null : p.id; playSound('click'); }
+									if (e.key === 'Escape' && open) selected = null;
+								}}
+								class="border rounded-xs px-2 py-1.5 bg-black/80 backdrop-blur-[1px] select-none transition-[box-shadow,border-color] hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.7)] focus:outline-none focus-visible:ring-1"
+								class:cursor-grab={!open}
+								class:cursor-default={open}
+								style="border-color: {p.color}{open ? 'cc' : '55'}; {open ? `height: ${10.714 * $textSize}px;` : ''} --tw-ring-color: {p.color};"
 							>
-								<button
-									type="button"
-									aria-expanded={open}
-									aria-label={$t('community.guestbook.messageFrom', { name: p.name })}
-									onpointerdown={(e) => grab(e, p, i)}
-									onkeydown={(e) => {
-										if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPacket = p; playSound('click'); }
-										if (e.key === 'Escape' && open) selected = null;
-									}}
-									class="press w-full text-left border rounded-xs px-2 py-1.5 bg-black/80 backdrop-blur-[1px] select-none transition-[box-shadow,border-color] hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.7)] focus:outline-none focus-visible:ring-1"
-									class:cursor-grab={!open}
-									class:cursor-default={open}
-									style="border-color: {p.color}{open ? 'cc' : '55'}; {open ? `height: ${10.714 * $textSize}px;` : ''} --tw-ring-color: {p.color};"
+								<div class="flex items-baseline justify-between gap-1.5">
+									<span class="text-[11px] font-bold truncate" style="color: {p.color}">{p.name}</span>
+									<span class="text-[9px] font-mono text-white/50 shrink-0">{fmtTime(p.timestamp)}</span>
+								</div>
+								<div
+									class="text-[10px] text-[#eceff4]/80 leading-snug mt-0.5 break-words"
+									class:line-clamp-2={!open}
+									class:overflow-y-auto={open}
+									style={open ? `max-height: ${10.714 * $textSize - 34}px;` : ''}
 								>
-									<div class="flex items-baseline justify-between gap-1.5">
-										<span class="text-[11px] font-bold truncate" style="color: {p.color}">{p.name}</span>
-										<span class="text-[9px] font-mono text-white/50 shrink-0">{fmtTime(p.timestamp)}</span>
-									</div>
-									<div
-										class="text-[10px] text-[#eceff4]/80 leading-snug mt-0.5 break-words"
-										class:line-clamp-2={!open}
-										class:overflow-y-auto={open}
-										style={open ? `max-height: ${10.714 * $textSize - 34}px;` : ''}
-									>
-										{p.content}
-									</div>
-								</button>
-							</li>
-						{/each}
-				</ul>
+									{p.content}
+								</div>
+							</div>
+						</div>
+					{/each}
 			</div>
 			<div class="text-[10px] font-mono text-white/50 shrink-0">
 				{$t('community.guestbook.fieldStatus', {
@@ -670,18 +654,6 @@
 		{/if}
 	</div>
 </div>
-
-{#if openPacket}
-	{@const p = openPacket}
-	<Dialog
-		title={$t('community.guestbook.messageFrom', { name: p.name })}
-		label={$t('community.guestbook.messageFrom', { name: p.name })}
-		onClose={() => (openPacket = null)}
-	>
-		<div class="text-[10px] font-mono text-white/50">{fmtTime(p.timestamp)}</div>
-		<p class="text-sm text-[#eceff4] leading-relaxed whitespace-pre-wrap break-words">{p.content}</p>
-	</Dialog>
-{/if}
 
 <style>
 	/* The packets used to drift on a CSS keyframe per card. They are driven by

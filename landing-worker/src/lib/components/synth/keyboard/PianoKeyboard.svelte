@@ -316,7 +316,7 @@
 		</div>
 	</div>
 
-	<div data-target-size-essential class="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden">
+	<div class="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden">
 		{#if whiteKeys.length > 0}
 			<div class="flex w-full h-full gap-0.5">
 				{#each whiteKeys as wk (wk.note)}

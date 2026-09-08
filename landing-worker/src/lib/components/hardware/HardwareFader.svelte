@@ -107,7 +107,7 @@
 	onwheel={handleWheel}
 	oncontextmenu={handleContextMenu}
 	onkeydown={handleKeydown}
-	class="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-[24px] leading-none h-full justify-between py-0.5"
+	class="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none h-full justify-between py-0.5"
 	title={tooltipText}
 >
 	<span id={hintId} class="sr-only">{a11yHint}</span>

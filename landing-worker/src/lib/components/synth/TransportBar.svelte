@@ -36,7 +36,6 @@
 	import PresetMenu from './PresetMenu.svelte';
 	import TrackChips from './TrackChips.svelte';
 	import HorizontalHardwareFader from '../hardware/HorizontalHardwareFader.svelte';
-	import { Button } from '$lib/components/ui';
 
 	const METERS: TimeSignature[] = ['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'];
 	const DIVS: NoteDurationDiv[] = ['4', '2', '1', '1/2', '1/3', '1/4', '1/6', '1/8', '1/12'];
@@ -226,10 +225,10 @@
 
 		<div class="flex items-center gap-1">
 			<span class="opacity-60 font-bold" title={$t('synth.transport.lenHint')}>LEN:</span>
-			<Button variant="outline" color="#98c379" size="xs" onclick={cycleLen} class="font-mono flex items-center gap-1" title={$t('synth.transport.lenCycleHint')}>
+			<button onclick={cycleLen} class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1" title={$t('synth.transport.lenCycleHint')}>
 				<span>{LEN_PAGE_PRESETS.includes(lenPages) ? lenPages : LEN_PAGE_PRESETS[0]}</span>
 				<span class="text-[10px] opacity-70">⟳</span>
-			</Button>
+			</button>
 			<span class="text-white/60 text-[10px] font-bold px-0.5 select-none">{$t('synth.transport.or')}</span>
 			<input
 				type="text"
@@ -237,7 +236,6 @@
 				value={lenPages}
 				oninput={onLenInput}
 				onblur={onLenBlur}
-				aria-label={$t('synth.transport.lenInputAria')}
 				class="w-10 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none {lenIsCustom
 					? 'border-[#98c379] text-[#98c379]'
 					: 'border-white/20 text-white/70 focus:border-white/60'}"
@@ -250,114 +248,114 @@
 
 		<div class="flex items-center gap-1">
 			<span class="opacity-70 font-bold" title={$t('synth.transport.meterHint')}>METER:</span>
-			<Button variant="ghost" color="#c678dd" onclick={() => stepMeter(-1)} label={$t('synth.transport.meterPrevHint')} title={$t('synth.transport.meterPrevHint')} class="min-w-[24px] min-h-[24px] px-1 font-bold select-none">◄</Button>
-			<Button
-				variant="outline"
-				color="#c678dd"
+			<button onclick={() => stepMeter(-1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title={$t('synth.transport.meterPrevHint')}>◄</button>
+			<button
 				onclick={() => stepMeter(1)}
-				class="font-black min-w-[3.2rem] text-center"
+				class="px-1.5 py-0.5 border border-[#c678dd]/50 hover:border-[#c678dd] bg-[#c678dd]/10 hover:bg-[#c678dd]/20 rounded-xs font-black text-[#c678dd] hover:text-white cursor-pointer transition-colors min-w-[3.2rem] text-center"
 				title={METER_SPECS[$timeMeter].name}
 			>
 				{$timeMeter}
-			</Button>
-			<Button variant="ghost" color="#c678dd" onclick={() => stepMeter(1)} label={$t('synth.transport.meterNextHint')} title={$t('synth.transport.meterNextHint')} class="min-w-[24px] min-h-[24px] px-1 font-bold select-none">►</Button>
+			</button>
+			<button onclick={() => stepMeter(1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title={$t('synth.transport.meterNextHint')}>►</button>
 		</div>
 		<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
-		<Button
-			variant="outline"
-			color="#e5c07b"
-			onclick={() => isSynthSettingsOpen.set(true)}
-			class="font-black flex items-center gap-1 shrink-0"
+		<button
+			onclick={() => {
+				isSynthSettingsOpen.set(true);
+				playSound('click');
+			}}
+			class="px-2 py-0.5 border border-[#e5c07b]/50 hover:border-[#e5c07b] bg-[#e5c07b]/10 hover:bg-[#e5c07b]/20 text-[#e5c07b] hover:text-white rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0"
 			title={$t('synth.transport.settingsHint')}
 		>
-			<span aria-hidden="true">⚙</span>
+			<span>⚙</span>
 			<span>{$t('synth.transport.settings')}</span>
-		</Button>
+		</button>
 	</div>
 </div>
 
 <!-- Row 2: transport playback + track chips -->
 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/30 px-2 py-1 rounded-xs text-xs shrink-0">
 	<div class="flex items-center gap-1">
-		<Button
-			variant="outline"
-			color="#ffffff"
-			onclick={rewindToStart}
-			label={$t('synth.transport.rewindHint')}
+		<button
+			onclick={() => {
+				rewindToStart();
+				playSound('click');
+			}}
+			class="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
 			title={$t('synth.transport.rewindHint')}
-			class="h-[24px] min-w-[24px] px-1.5 flex items-center justify-center"
 		>
-			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
 				<rect x="2" y="2.5" width="2" height="11" rx="0.5" />
 				<polygon points="14,2.5 5,8 14,13.5" />
 			</svg>
-		</Button>
+		</button>
 
-		<Button
-			variant="outline"
-			color="#ffffff"
-			onclick={() => stepBar(-1)}
-			label={$t('synth.transport.stepBackHint')}
+		<button
+			onclick={() => {
+				stepBar(-1);
+				playSound('click');
+			}}
+			class="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
 			title={$t('synth.transport.stepBackHint')}
-			class="h-[24px] min-w-[24px] px-1.5 flex items-center justify-center"
 		>
-			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
 				<polygon points="8,2.5 2,8 8,13.5" />
 				<polygon points="14,2.5 8,8 14,13.5" />
 			</svg>
-		</Button>
+		</button>
 
-		<Button
-			variant="solid"
-			color={$isSeqPlaying ? '#e06c75' : '#98c379'}
+		<button
 			onclick={togglePlayback}
 			title={$t('synth.transport.playToggleHint')}
-			sound={null}
-			class="h-6 px-3 font-black flex items-center justify-center {$isSeqPlaying ? 'shadow-[0_0_8px_#e06c75]' : ''}"
+			class="h-6 px-3 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center justify-center {$isSeqPlaying
+				? 'bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
+				: 'bg-[#98c379] text-black hover:opacity-90'}"
 		>
 			<span>{$isSeqPlaying ? '■ STOP' : '► PLAY'}</span>
-		</Button>
+		</button>
 
-		<Button
-			variant="outline"
-			color="#ffffff"
-			onclick={() => stepBar(1)}
-			label={$t('synth.transport.stepFwdHint')}
+		<button
+			onclick={() => {
+				stepBar(1);
+				playSound('click');
+			}}
+			class="h-6 px-1.5 border border-white/20 hover:border-white/60 text-white/70 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center"
 			title={$t('synth.transport.stepFwdHint')}
-			class="h-[24px] min-w-[24px] px-1.5 flex items-center justify-center"
 		>
-			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+			<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
 				<polygon points="8,2.5 14,8 8,13.5" />
 				<polygon points="2,2.5 8,8 2,13.5" />
 			</svg>
-		</Button>
+		</button>
 
 		<!-- LOOP repeats the pattern; ONCE plays it through, lets the last
 		     notes ring out and rewinds to bar 1. -->
-		<Button
-			variant="outline"
-			color={$loopMode ? '#98c379' : '#e5c07b'}
-			active={$loopMode}
-			sound="toggle"
-			onclick={() => setLoopMode(!$loopMode)}
-			class="h-6 px-2 flex items-center gap-1 shrink-0"
+		<button
+			onclick={() => {
+				setLoopMode(!$loopMode);
+				playSound('toggle');
+			}}
+			class="h-6 px-2 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0 {$loopMode
+				? 'border-[#98c379]/60 bg-[#98c379]/15 text-[#98c379] hover:bg-[#98c379]/25'
+				: 'border-[#e5c07b]/60 bg-[#e5c07b]/15 text-[#e5c07b] hover:bg-[#e5c07b]/25'}"
 			title={$loopMode ? $t('synth.transport.loopOnHint') : $t('synth.transport.loopOffHint')}
 		>
-			<span aria-hidden="true">{$loopMode ? '⟲' : '→'}</span>
+			<span>{$loopMode ? '⟲' : '→'}</span>
 			<span>{$loopMode ? 'LOOP' : 'ONCE'}</span>
-		</Button>
+		</button>
 
-		<Button
-			variant="outline"
-			color="#56b6c2"
-			onclick={jumpPlayheadToCursor}
-			class="h-6 px-2 flex items-center gap-1 shrink-0"
+		<button
+			onclick={() => {
+				jumpPlayheadToCursor();
+				playSound('click');
+			}}
+			class="h-6 px-2 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0"
 			title={$t('synth.transport.jumpToCursorHint', { bar: cursorPosition.bar, beat: cursorPosition.beat, step: $cursorStep + 1, total: $totalPatternSteps })}
 		>
-			<span aria-hidden="true">⤹ CUR:</span>
+			<span>⤹ CUR:</span>
 			<span class="font-mono font-black">{cursorPosition.bar}.{cursorPosition.beat}</span>
-			<span class="text-[10px] text-white/60 font-mono">({$cursorStep + 1})</span>
-		</Button>
+			<span class="text-[10px] opacity-60 font-mono">({$cursorStep + 1})</span>
+		</button>
 	</div>
 
 	<TrackChips />
@@ -369,42 +367,42 @@
 	<PresetMenu />
 
 	<div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-		<div class="flex items-center gap-1" role="group" aria-label={$t('synth.transport.snapHint')}>
+		<div class="flex items-center gap-1">
 			<span class="opacity-60 font-bold" title={$t('synth.transport.snapHint')}>SNAP:</span>
 			{#each DIVS as d (d)}
-				<Button
-					variant="outline"
-					color="#56b6c2"
-					active={$snapDiv === d}
-					onclick={() => setSnapDiv(d)}
-					class="min-w-[24px] min-h-[24px]"
+				<button
+					onclick={() => {
+						setSnapDiv(d);
+						playSound('click');
+					}}
+					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {$snapDiv === d ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black' : 'border-white/20 text-white/70 hover:border-white/50'}"
 				>
 					{d}
-				</Button>
+				</button>
 			{/each}
 		</div>
 
-		<div class="flex items-center gap-1 border-l border-white/15 pl-1.5" role="group" aria-label={$t('synth.transport.durHint')}>
+		<div class="flex items-center gap-1 border-l border-white/15 pl-1.5">
 			<span class="opacity-60 font-bold" title={$t('synth.transport.durHint')}>DUR:</span>
 			{#each DIVS as d (d)}
-				<Button
-					variant="outline"
-					color="#e5c07b"
-					active={$noteDur === d}
-					onclick={() => setNoteDur(d)}
-					class="min-w-[24px] min-h-[24px]"
+				<button
+					onclick={() => {
+						setNoteDur(d);
+						playSound('click');
+					}}
+					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {$noteDur === d ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black' : 'border-white/20 text-white/70 hover:border-white/50'}"
 				>
 					{d}
-				</Button>
+				</button>
 			{/each}
 		</div>
 	</div>
 
 	<div class="flex items-center justify-end gap-1">
 		<span class="opacity-60 font-bold" title={$t('synth.transport.pageNavHint')}>PAGE:</span>
-		<Button variant="outline" color="#ffffff" onclick={prevPage} disabled={$activeStepPage === 0} label={$t('synth.transport.pagePrevHint')} title={$t('synth.transport.pagePrevHint')} class="min-w-[24px] min-h-[24px]">
+		<button onclick={prevPage} disabled={$activeStepPage === 0} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pagePrevHint')}>
 			◄
-		</Button>
+		</button>
 		<div
 			class="flex items-center bg-white/10 border border-white/20 hover:border-white/40 rounded-xs px-1 py-0.5 text-xs font-mono font-bold"
 			title={$t('synth.transport.pageJumpHint', { page: $activeStepPage + 1, total: totalPages })}
@@ -418,25 +416,23 @@
 				oninput={onPageInput}
 				onblur={onPageBlur}
 				onkeydown={onPageKeydown}
-				aria-label={$t('synth.transport.pageInputAria', { total: totalPages })}
 				class="w-8 text-center bg-transparent text-white font-mono font-black focus:outline-none focus:bg-white/20 rounded-xs p-0 m-0"
 			/>
-			<span class="text-white/60 select-none">/{totalPages}</span>
+			<span class="opacity-40 select-none">/{totalPages}</span>
 		</div>
-		<Button variant="outline" color="#ffffff" onclick={nextPage} disabled={$activeStepPage >= totalPages - 1} label={$t('synth.transport.pageNextHint')} title={$t('synth.transport.pageNextHint')} class="min-w-[24px] min-h-[24px]">
+		<button onclick={nextPage} disabled={$activeStepPage >= totalPages - 1} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pageNextHint')}>
 			►
-		</Button>
-		<Button
-			variant="outline"
-			color="#98c379"
-			active={$pageFollow}
-			sound="toggle"
-			onclick={() => pageFollow.update((v) => !v)}
-			class="min-w-[24px] min-h-[24px]"
+		</button>
+		<button
+			onclick={() => {
+				pageFollow.update((v) => !v);
+				playSound('toggle');
+			}}
+			class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs {$pageFollow ? 'border-[#98c379] bg-[#98c379] text-black font-black' : 'border-white/20 text-white/50'}"
 			title={$t('synth.transport.followHint')}
 		>
 			FLW
-		</Button>
+		</button>
 
 	</div>
 </div>

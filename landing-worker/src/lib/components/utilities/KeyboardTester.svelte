@@ -173,7 +173,7 @@
 	</div>
 
 	<!-- Keyboard -->
-	<div class="overflow-x-auto custom-scrollbar" tabindex="0" role="region" aria-label={$t('utilities.view.tool.keyboard.label')}>
+	<div class="overflow-x-auto custom-scrollbar">
 		<div class="min-w-[720px] flex gap-2">
 			<div class="flex-1 flex flex-col gap-1">
 				{#each MAIN_ROWS as row, ri (ri)}

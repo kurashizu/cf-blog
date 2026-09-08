@@ -3,7 +3,7 @@
 	import { textSize } from '../../stores/text-scale';
 	import { t, tr } from '$lib/i18n';
 
-	let { chart, accent = '#56b6c2', label }: { chart: string; accent?: string; /** Accessible name of the (horizontally scrollable) diagram region. */ label?: string } = $props();
+	let { chart, accent = '#56b6c2' }: { chart: string; accent?: string } = $props();
 
 	let container: HTMLDivElement | undefined = $state();
 	let renderError = $state<string | null>(null);
@@ -93,7 +93,7 @@
 	});
 </script>
 
-<div class="overflow-x-auto custom-scrollbar py-1" tabindex="0" role="region" aria-label={label ?? $t('home.diagram.region')}>
+<div class="overflow-x-auto custom-scrollbar py-1">
 	{#if renderError}
 		<div class="text-xs text-[#e06c75] font-mono">{$t('home.diagram.error', { message: renderError })}</div>
 	{/if}

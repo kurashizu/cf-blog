@@ -141,15 +141,8 @@
 	{/if}
 
 	<div class="border border-white/15 bg-black/50 rounded-xs overflow-hidden flex items-center justify-center min-h-[180px] relative">
-		<video
-			bind:this={video}
-			muted
-			playsinline
-			aria-label={$t('utilities.camera.live.a11yLabel')}
-			class="max-h-[42vh] w-auto transition-opacity duration-200 {running ? 'opacity-100' : 'opacity-0 absolute'}"
-		>
-			<track kind="captions" />
-		</video>
+		<!-- svelte-ignore a11y_media_has_caption -->
+		<video bind:this={video} muted playsinline class="max-h-[42vh] w-auto transition-opacity duration-200 {running ? 'opacity-100' : 'opacity-0 absolute'}"></video>
 		{#if running}
 			<span class="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 bg-black/70 border border-[#e06c75]/50 rounded-xs text-[10px] font-mono font-bold text-[#e06c75]">
 				<span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>{$t('utilities.camera.live')}

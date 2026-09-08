@@ -447,28 +447,6 @@
 			window.removeEventListener('paste', onPaste, true);
 		};
 	});
-
-	function pointerEdit(node: HTMLElement) {
-		const h_pointerdown = onPointerDown;
-		node.addEventListener('pointerdown', h_pointerdown as EventListener);
-		const h_pointermove = onPointerMove;
-		node.addEventListener('pointermove', h_pointermove as EventListener);
-		const h_pointerup = (e: PointerEvent) => finishDrag(e, true);
-		node.addEventListener('pointerup', h_pointerup as EventListener);
-		const h_pointercancel = (e: PointerEvent) => finishDrag(e, false);
-		node.addEventListener('pointercancel', h_pointercancel as EventListener);
-		const h_contextmenu = (e: MouseEvent) => e.preventDefault();
-		node.addEventListener('contextmenu', h_contextmenu as EventListener);
-		return {
-			destroy() {
-				node.removeEventListener('pointerdown', h_pointerdown as EventListener);
-				node.removeEventListener('pointermove', h_pointermove as EventListener);
-				node.removeEventListener('pointerup', h_pointerup as EventListener);
-				node.removeEventListener('pointercancel', h_pointercancel as EventListener);
-				node.removeEventListener('contextmenu', h_contextmenu as EventListener);
-			}
-		};
-	}
 </script>
 
 <div class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
@@ -642,14 +620,18 @@
 				</div>
 			</div>
 
-			<!-- Scrollable note rows. Pointer editing is attached as an action: the rows are a drawing surface, not a control; the keyboard path is the grid above. -->
+			<!-- Scrollable note rows; one pointer handler edits, see the script -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				bind:this={rows}
-				data-target-size-essential
 				bind:clientWidth={rowsWidth}
 				class="relative flex-1 min-h-0 space-y-0.5 font-mono text-xs pr-0.5 flex flex-col overflow-y-auto custom-scrollbar select-none"
 				style="cursor: {hoverCursor || 'auto'}; touch-action: pan-y;"
-				use:pointerEdit
+				onpointerdown={onPointerDown}
+				onpointermove={onPointerMove}
+				onpointerup={(e) => finishDrag(e, true)}
+				onpointercancel={(e) => finishDrag(e, false)}
+				oncontextmenu={(e) => e.preventDefault()}
 			>
 				{#each visibleNotes as { nInfo, actualIdx } (nInfo.note)}
 					<PianoRollRow
@@ -683,10 +665,9 @@
 				{/if}
 			</div>
 
-			<!-- Fixed accent track: one cell per half-step, so its targets are the
-			     grid itself (WCAG 2.5.8 essential-size exception, see tests/a11y). -->
-			<div data-target-size-essential class="flex items-center gap-1 pt-1 border-t border-white/10 text-xs font-mono shrink-0 select-none">
-				<div class="w-9 text-right pr-1 font-black text-[#e06c75] shrink-0 select-none text-xs flex items-center justify-end min-h-[24px]">
+			<!-- Fixed accent track -->
+			<div class="flex items-center gap-1 pt-1 border-t border-white/10 text-xs font-mono shrink-0 select-none">
+				<div class="w-9 text-right pr-1 font-black text-[#e06c75] shrink-0 select-none text-xs flex items-center justify-end">
 					<span title={$t('synthPanels.roll.accentTrackHint')}>ACC</span>
 				</div>
 				<div class="flex-1 gap-0.5" style="display: grid; grid-template-columns: repeat({colsPerPage}, minmax(0, 1fr));">

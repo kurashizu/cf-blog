@@ -237,7 +237,7 @@
 
 <svelte:window onresize={syncScreenWidth} />
 
-<Dialog title="GLOBAL_CONFIG // KRSZ.IN" short="CONFIG" label={$t('a11y.dialog.settings')} {onClose} bodyClass="p-3 sm:p-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+<Dialog title="GLOBAL_SETTINGS // KRSZ.IN" short="SETTINGS" label={$t('a11y.dialog.settings')} {onClose} bodyClass="p-3 sm:p-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
 	<!-- Sound -->
 	<Card tone="flat" title={$t('chrome.settings.sound')} color="#98c379" class="space-y-2.5">
 		<div class="flex items-center justify-between gap-3">

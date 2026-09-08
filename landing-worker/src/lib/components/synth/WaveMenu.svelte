@@ -60,18 +60,6 @@
 		};
 	}
 
-	/* pointerdown rather than click: a click on the backdrop would otherwise
-	   also reach whatever is under it once the backdrop unmounts mid-gesture
-	   (see ui/Menu.svelte, which does the same). */
-	function closeOnPointer(node: HTMLElement) {
-		const h = (e: PointerEvent) => {
-			e.preventDefault();
-			close();
-		};
-		node.addEventListener('pointerdown', h);
-		return { destroy: () => node.removeEventListener('pointerdown', h) };
-	}
-
 	let current = $derived(findCustomWave(value));
 	let shown = $derived(current ? current.name.slice(0, 6) : getWaveformAbbr(value));
 	// $locale is read here only to give this $derived a tracked dependency —
@@ -131,8 +119,6 @@
 	<button
 		bind:this={trigger}
 		onclick={toggle}
-		aria-haspopup="true"
-		aria-expanded={open}
 		title={$t('synth.wave.pickHint', { label, title: currentTitle })}
 		class="press w-full px-1.5 py-0.5 border rounded-xs font-black transition-colors cursor-pointer text-[10px] flex items-center justify-between gap-1 {open
 			? 'text-black'
@@ -140,16 +126,16 @@
 		style={open ? `background: ${color}; border-color: ${color}` : `border-color: color-mix(in srgb, ${color} 55%, transparent)`}
 	>
 		<span class="truncate" style={open ? '' : `color: ${color}`}>{shown}</span>
-		<span aria-hidden="true" class="text-[8px] leading-none inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
+		<span class="text-[8px] leading-none inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
 	</button>
 
 	{#if open}
-		<div use:portal use:closeOnPointer class="fixed inset-0 z-[120]" aria-hidden="true"></div>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div use:portal class="fixed inset-0 z-[120]" onclick={close}></div>
 
 		<div
 			use:portal
-			role="menu"
-			aria-label={$t('synth.wave.panelLabel', { label })}
 			style="left: {anchor.left}px; top: {anchor.top}px"
 			class="origin-top fixed z-[130] min-w-[150px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 			transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
@@ -158,16 +144,9 @@
 			{#each SECTIONS as sec (sec.id)}
 				{@const isOpen = section === sec.id}
 				{@const count = sec.id === 'CUSTOM' ? $customWaves.length : sec.waves.length}
-				<div class="relative" role="presentation" onmouseenter={() => { section = sec.id; paramWave = null; }}>
-					<button
-						onclick={() => (section = isOpen ? null : sec.id)}
-						onfocus={() => { section = sec.id; paramWave = null; }}
-						role="menuitem"
-						aria-haspopup="true"
-						aria-expanded={isOpen}
-						class="{rowBase} justify-between {isOpen ? rowOn : rowIdle}"
-						title={sec.hint}
-					>
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="relative" onmouseenter={() => { section = sec.id; paramWave = null; }}>
+					<button onclick={() => (section = isOpen ? null : sec.id)} class="{rowBase} justify-between {isOpen ? rowOn : rowIdle}" title={sec.hint}>
 						<span class="flex items-center gap-2 min-w-0">
 							<span class="truncate">{sec.label}</span>
 							<span class="text-[10px] text-white/50">{count}</span>
@@ -182,18 +161,12 @@
 								{#each sec.waves as w (w)}
 									{@const on = value === w}
 									{@const specs = WAVE_PARAM_SPECS[w]}
-									<div class="relative" role="presentation" onmouseenter={(e) => { paramWave = specs ? w : null; paramTop = e.currentTarget.offsetTop; }}>
-										<button
-											onclick={() => pick(w)}
-											onfocus={(e) => { paramWave = specs ? w : null; paramTop = (e.currentTarget as HTMLElement).offsetTop; }}
-											role="menuitemradio"
-											aria-checked={on}
-											class="{rowBase} {on ? rowOn : rowIdle}"
-											title={WAVE_TOOLTIPS[w] || w}
-										>
-											<span class="shrink-0" aria-hidden="true" style="color: {on ? '#98c379' : 'rgba(255,255,255,0.5)'}">{on ? '●' : '○'}</span>
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div class="relative" onmouseenter={(e) => { paramWave = specs ? w : null; paramTop = e.currentTarget.offsetTop; }}>
+										<button onclick={() => pick(w)} class="{rowBase} {on ? rowOn : rowIdle}" title={WAVE_TOOLTIPS[w] || w}>
+											<span class="shrink-0 {on ? 'text-[#98c379]' : 'text-white/50'}">{on ? '●' : '○'}</span>
 											<span class="truncate">{WAVE_LABELS[w] ?? w}</span>
-											{#if specs}<span class="ml-auto pl-2 text-[9px] text-white/60" aria-hidden="true">►</span>{/if}
+											{#if specs}<span class="ml-auto pl-2 text-[9px] text-white/60">►</span>{/if}
 										</button>
 									</div>
 								{/each}
@@ -228,17 +201,17 @@
 								{#each $customWaves as cw (cw.id)}
 									{@const on = value === `custom:${cw.id}`}
 									<div class="relative flex items-center transition-colors {on ? rowOn : rowIdle}">
-										<button onclick={() => pick(`custom:${cw.id}`)} role="menuitemradio" aria-checked={on} class="press min-h-[24px] flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={$t('synth.wave.useHint', { name: cw.name, label })}>
-											<span class="shrink-0" aria-hidden="true" style="color: {on ? '#98c379' : 'rgba(255,255,255,0.5)'}">{on ? '●' : '○'}</span>
+										<button onclick={() => pick(`custom:${cw.id}`)} class="press flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={$t('synth.wave.useHint', { name: cw.name, label })}>
+											<span class="shrink-0 {on ? 'text-[#98c379]' : 'text-white/50'}">{on ? '●' : '○'}</span>
 											<span class="truncate">{cw.name}</span>
 										</button>
-										<button onclick={() => { close(); onEdit(cw); }} role="menuitem" class="press min-w-[24px] min-h-[24px] shrink-0 px-1.5 py-1.5 text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.wave.editHint', { name: cw.name })} aria-label={$t('synth.wave.editAria', { name: cw.name })}>✎</button>
-										<button onclick={() => { deleteCustomWave(cw.id); playSound('click'); }} role="menuitem" class="press min-w-[24px] min-h-[24px] shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/50 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.wave.removeHint', { name: cw.name })} aria-label={$t('synth.wave.removeAria', { name: cw.name })}>✕</button>
+										<button onclick={() => { close(); onEdit(cw); }} class="press shrink-0 px-1.5 py-1.5 text-white/50 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.wave.editHint', { name: cw.name })} aria-label={$t('synth.wave.editAria', { name: cw.name })}>✎</button>
+										<button onclick={() => { deleteCustomWave(cw.id); playSound('click'); }} class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/50 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.wave.removeHint', { name: cw.name })} aria-label={$t('synth.wave.removeAria', { name: cw.name })}>✕</button>
 									</div>
 								{/each}
 								<div class="border-t border-white/10 mt-1 pt-1">
-									<button onclick={() => { close(); onDraw(); }} role="menuitem" class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.wave.drawNewHint')}>
-										<span class="shrink-0" aria-hidden="true">＋</span>
+									<button onclick={() => { close(); onDraw(); }} class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.wave.drawNewHint')}>
+										<span class="shrink-0">＋</span>
 										<span>{$t('synth.wave.drawNew')}</span>
 									</button>
 								</div>

@@ -6,7 +6,6 @@
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { privacyOpen } from '../../stores/chrome';
 	import { modal } from '$lib/actions/modal';
-	import { Button } from '$lib/components/ui';
 
 	let { onDone }: { onDone: () => void } = $props();
 
@@ -84,36 +83,33 @@
 				</div>
 			</div>
 
-			<ul class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 list-none" in:fly={{ y: 10, duration: 320, delay: 80, opacity: 0 }}>
+			<div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2" in:fly={{ y: 10, duration: 320, delay: 80, opacity: 0 }}>
 				{#each VIEWS as v (v.key)}
-					<li class="border border-white/15 bg-black/30 rounded-xs p-2 flex flex-col gap-0.5 min-w-0">
+					<div class="border border-white/15 bg-black/30 rounded-xs p-2 flex flex-col gap-0.5 min-w-0">
 						<div class="flex items-center justify-between">
 							<span class="px-1 py-0.2 rounded-xs font-mono font-bold text-[10px] border" style="border-color: {v.color}; color: {v.color}">[{v.key}]</span>
-							<span class="text-sm leading-none" aria-hidden="true" style="color: {v.color}">{v.icon}</span>
+							<span class="text-sm leading-none" style="color: {v.color}">{v.icon}</span>
 						</div>
 						<div class="text-[11px] font-bold truncate" style="color: {v.color}">{v.title}</div>
 						<div class="text-[10px] text-white/60 truncate">{v.desc}</div>
-					</li>
+					</div>
 				{/each}
-			</ul>
+			</div>
 
 			<div class="flex flex-col items-center gap-2 pt-1" in:fade={{ duration: 300, delay: 120 }}>
-				<Button
-					variant="solid"
-					color="#98c379"
-					size="lg"
+				<button
 					onclick={start}
-					class="modal-pop px-6 py-2.5 text-sm tracking-wide"
+					class="press modal-pop px-6 py-2.5 border-2 border-[#98c379] bg-[#98c379]/15 text-[#98c379] rounded-xs text-sm font-black tracking-wide cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors"
 				>
 					{$t('chrome.welcome.getStarted')}
-				</Button>
+				</button>
 				<p class="text-[10px] text-white/50">
 					{$t('chrome.welcome.agreeTo', { action: $t('chrome.welcome.getStartedPlain') })}
-					<Button variant="link" onclick={() => privacyOpen.set(true)} sound={null} class="text-[10px]">{$t('chrome.welcome.privacyPolicy')}</Button>.
+					<button onclick={() => privacyOpen.set(true)} class="underline hover:text-white/60 cursor-pointer transition-colors">{$t('chrome.welcome.privacyPolicy')}</button>.
 				</p>
-				<Button variant="ghost" onclick={finish} class="text-xs text-white/60">
+				<button onclick={finish} class="press text-xs text-white/60 hover:text-white cursor-pointer transition-colors">
 					{$t('chrome.welcome.skip')}
-				</Button>
+				</button>
 			</div>
 		</div>
 	</div>

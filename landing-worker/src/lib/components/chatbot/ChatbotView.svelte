@@ -1425,7 +1425,7 @@
 				title={$t('chatbot.composer.thinkHint')}
 				class="press px-2 py-0.5 border rounded-xs text-xs font-bold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shrink-0 self-end mb-0.5 transition-colors {thinkMode
 					? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
-					: 'border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20'}"
+					: 'border-[#c678dd]/50 text-[#c678dd]/60 hover:bg-[#c678dd]/20'}"
 			>
 				{$t('chatbot.composer.think')}
 			</button>

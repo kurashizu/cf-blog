@@ -35,10 +35,10 @@ test.describe('keyboard journeys', () => {
 	});
 
 	test('settings dialog: focus in, trapped, Escape returns focus', async ({ page }) => {
-		const cfg = page.getByRole('button', { name: /global config/i });
+		const cfg = page.getByRole('button', { name: /global settings/i });
 		await cfg.focus();
 		await page.keyboard.press('Enter');
-		const dialog = page.getByRole('dialog', { name: /global config/i });
+		const dialog = page.getByRole('dialog', { name: /global settings/i });
 		await expect(dialog).toBeVisible();
 		await expect(dialog.locator(':focus')).toHaveCount(1);
 		await expect(page.locator('[data-app-root]')).toHaveAttribute('inert', '');
@@ -53,7 +53,7 @@ test.describe('keyboard journeys', () => {
 	});
 
 	test('accessibility switches persist', async ({ page }) => {
-		await page.getByRole('button', { name: /global config/i }).click();
+		await page.getByRole('button', { name: /global settings/i }).click();
 		const motion = page.getByRole('switch', { name: /reduce motion/i });
 		await expect(motion).toHaveAttribute('aria-checked', 'false');
 		await motion.click();

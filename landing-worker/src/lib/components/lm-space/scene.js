@@ -15,7 +15,6 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
 import { get } from 'svelte/store';
 import { tr, locale } from '$lib/i18n';
-import { announce } from '$lib/stores/a11y';
 
 const ASSETS = '/lm-space';
 
@@ -79,14 +78,6 @@ const [ATLAS, BRAND] = await Promise.all([
 
 const $ = (id) => root.querySelector('#' + id);
 const S = 100;
-
-/** The HUD's `.on` class is the visual state of a toggle button; aria-pressed
- *  is the same state for a screen reader. Kept together so no future .on
- *  toggle can add one without the other, the way the original ones did. */
-function setPressed(el, on) {
-  el.classList.toggle('on', on);
-  el.setAttribute('aria-pressed', String(!!on));
-}
 
 /* Listeners are registered through these so they can all be released together:
    the view is mounted and unmounted with its tab, and a stray keydown handler
@@ -2093,7 +2084,7 @@ cv.addEventListener('pointermove', (e) => {
   }
 });
 function clearSnap() {
-  setPressed($('vp-cycle'), false);
+  $('vp-cycle').classList.remove('on');
   vpAt = -1;
 }
 function applyLook(dx, dy) {
@@ -2241,7 +2232,7 @@ function snapTo(key) {
   yawPitch.pitch = Math.asin(THREE.MathUtils.clamp(look.y, -1, 1));
   vel.set(0, 0, 0);
   const cyc = $('vp-cycle');
-  setPressed(cyc, true);
+  cyc.classList.add('on');
   cyc.textContent = vp.short;
 
 }
@@ -2386,18 +2377,6 @@ function select(i) {
   if (missionOn) checkAnswer(i);
   // During a race, clicking a node backs it as your runner.
   if (raceOn && !raceDone) { racePick = i; renderRacePanel(); }
-  // The card above is already readable DOM text for anyone looking at the
-  // screen; a screen-reader user gets the same fact -- which model, and its
-  // headline numbers -- as a status line plus a one-off announcement, since
-  // selecting a body moves no focus of its own.
-  const statusText = tr('lmspace.stage.selected', {
-    name: m.n, creator: m.c, intelligence: fmt(m.i), price: money(m.p)
-  });
-  const statusEl = $('selstatus');
-  if (statusEl) statusEl.textContent = statusText;
-  announce(statusText);
-  const picker = $('model-select');
-  if (picker) picker.value = String(i);
 }
 function placeCard() {
   if (selIdx === -1) return;
@@ -2414,10 +2393,6 @@ function closeCard() {
   card.style.display = 'none';
   $('hint').style.visibility = '';
   selIdx = -1;
-  const statusEl = $('selstatus');
-  if (statusEl) statusEl.textContent = '';
-  const picker = $('model-select');
-  if (picker) picker.value = '';
 }
 
 /* ---------- filter panel ----------------------------------------------------
@@ -2489,8 +2464,8 @@ legend.innerHTML =
         -webkit-mask-position:${bx}% ${by}%; mask-position:${bx}% ${by}%"></span>
       <span class="dot" style="background:${colorOf.get(c)}"></span>
       <span class="lgname">${esc(c)}</span><span class="lgn">${n}</span>
-      <button type="button" class="lgm" data-c="${esc(c)}" title="${tr('lmspace.filter.mute', { name: esc(c) })}" aria-label="${tr('lmspace.filter.mute', { name: esc(c) })}">M</button>
-      <button type="button" class="lgs" data-c="${esc(c)}" title="${tr('lmspace.filter.solo', { name: esc(c) })}" aria-label="${tr('lmspace.filter.solo', { name: esc(c) })}">S</button>
+      <button type="button" class="lgm" data-c="${esc(c)}" title="${tr('lmspace.filter.mute', { name: esc(c) })}">M</button>
+      <button type="button" class="lgs" data-c="${esc(c)}" title="${tr('lmspace.filter.solo', { name: esc(c) })}">S</button>
       </div>`;
   }).join('') +
   '</div>';
@@ -2499,8 +2474,8 @@ function refreshCreatorRows() {
   legend.querySelectorAll('.lg').forEach((el) => {
     const c = el.dataset.c;
     el.classList.toggle('mute', hidden.has(c));
-    setPressed(el.querySelector('.lgm'), hidden.has(c));
-    setPressed(el.querySelector('.lgs'), soloed.has(c));
+    el.querySelector('.lgm').classList.toggle('on', hidden.has(c));
+    el.querySelector('.lgs').classList.toggle('on', soloed.has(c));
   });
 }
 legend.querySelectorAll('.lgm').forEach((btn) => {
@@ -2768,7 +2743,7 @@ function buildParetoViz() {
 
 $('pareto-toggle').onclick = () => {
   paretoOn = !paretoOn;
-  setPressed($('pareto-toggle'), paretoOn);
+  $('pareto-toggle').classList.toggle('on', paretoOn);
   paretoGroup.visible = paretoOn;
   paretoBGroup.visible = paretoOn;
   buildParetoViz();
@@ -2822,9 +2797,9 @@ function renderRadiusField() {
   const el = $('rfield');
   if (!el) return;
   el.innerHTML = '<span class="cyc" style="--g:#c678dd">r&nbsp;' +
-    `<button type="button" class="carrow" id="r-prev" title="${tr('lmspace.hud.prevRadius')}" aria-label="${tr('lmspace.hud.prevRadius')}">&#9664;</button>` +
-    `<button type="button" class="cval" id="r-val" title="${tr('lmspace.hud.radiusTip')}" aria-label="${tr('lmspace.hud.radiusTip')}"></button>` +
-    `<button type="button" class="carrow" id="r-next" title="${tr('lmspace.hud.nextRadius')}" aria-label="${tr('lmspace.hud.nextRadius')}">&#9654;</button></span>`;
+    '<button type="button" class="carrow" id="r-prev">&#9664;</button>' +
+    '<button type="button" class="cval" id="r-val"></button>' +
+    '<button type="button" class="carrow" id="r-next">&#9654;</button></span>';
   wireCycle('r-prev', 'r-val', 'r-next', RADIUS_ORDER,
     () => radiusField, (v) => { radiusField = v; }, (k) => tr(RADIUS_FIELDS[k].label));
 }
@@ -2873,7 +2848,7 @@ function syncProjUI() {
   // sideways as the projection was switched.
   cyc.classList.toggle('inert', !on);
   cyc.disabled = !on;
-  if (!on) { setPressed(cyc, false); vpAt = -1; }
+  if (!on) { cyc.classList.remove('on'); vpAt = -1; }
 }
 
 const PROJ_ORDER = ['persp', 'ortho'];
@@ -3125,8 +3100,7 @@ function paintRaceCtl() {
   const playBtn = $('race-play');
   playBtn.innerHTML = racePaused || raceDone ? '&#9654;' : '&#10074;&#10074;';
   playBtn.title = racePaused || raceDone ? tr('lmspace.race.play') : tr('lmspace.race.pause');
-  playBtn.setAttribute('aria-label', playBtn.title);
-  setPressed(playBtn, !racePaused && !raceDone);
+  playBtn.classList.toggle('on', !racePaused && !raceDone);
 }
 function raceSeek(t) {
   raceT = THREE.MathUtils.clamp(t, 0, 1);
@@ -3477,7 +3451,7 @@ function startGravity() {
   computeMembership();      // fixed groups, before any body moves
   gravityOn = true; gravityFrozen = false;
   gravAnneal = 0; gravMotion = Infinity; gravSettled = false; gravCalm = 0;
-  setPressed($('g-start'), true);
+  $('g-start').classList.add('on');
   gravEl.style.display = 'block';
   syncLeftColumn();
   /* Seed from the SPACE layout with a small random kick, so you can see the
@@ -3504,7 +3478,7 @@ function stopGravity() {
   dimFrame(false);
   disposeClusterViz();
   lastClusterSig = '';
-  setPressed($('g-start'), false);
+  $('g-start').classList.remove('on');
   gravEl.style.display = 'none';
   syncLeftColumn();
   // Fall back to the axes layout.
@@ -3523,7 +3497,7 @@ $('g-hull').onclick = () => {
   clusterMode = CLUSTER_MODES[(CLUSTER_MODES.indexOf(clusterMode) + 1) % CLUSTER_MODES.length];
   const btn = $('g-hull');
   btn.textContent = tr(CLUSTER_MODE_LABEL[clusterMode]);
-  setPressed(btn, clusterMode !== 'off');
+  btn.classList.toggle('on', clusterMode !== 'off');
   if (gravityOn) { lastClusterSig = ''; renderGravityPanel(); }
 };
 
@@ -3953,29 +3927,6 @@ $('meta').innerHTML =
   (DATA.fetchedAt
     ? tr('lmspace.meta.fetched', { when: new Date(DATA.fetchedAt).toLocaleString(get(locale), { dateStyle: 'medium', timeStyle: 'short' }) })
     : tr('lmspace.meta.fetchedUnknown'));
-
-// The scene is one canvas with no DOM nodes per model, so the summary a mouse
-// user reads off the plotted shape becomes this one sentence for role="img".
-const appEl = $('app');
-if (appEl) appEl.setAttribute('aria-label', tr('lmspace.stage.ariaLabel', { n: N }));
-
-/* ---------- keyboard model picker -------------------------------------
- * Every other way into a model's details is a raycast off the mouse or the
- * locked crosshair, neither of which a keyboard-only visitor has. A native
- * <select> lists every model by name and creator and needs nothing but Tab,
- * typeahead and Enter -- picking one calls the same select(i) a click does,
- * so the DOM card, the live status line and the announce() all fire exactly
- * as they would for a pointer. */
-const picker = $('model-select');
-if (picker) {
-  const opts = MODELS.map((m, i) => `<option value="${i}">${esc(m.n)} — ${esc(m.c)}</option>`).join('');
-  picker.insertAdjacentHTML('beforeend', opts);
-  picker.onchange = () => {
-    const v = picker.value;
-    if (v === '') { closeCard(); return; }
-    select(Number(v));
-  };
-}
 
 /* ---------- loop ---------- */
 function applySize() {

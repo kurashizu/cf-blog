@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fade } from '$lib/perf-transitions';
-	import { Button, Toggle } from '$lib/components/ui';
 	import AsciiArt from '../chrome/AsciiArt.svelte';
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
@@ -528,11 +527,7 @@
 				fontSize: 12,
 				theme: { background: '#000000', foreground: '#d8dee9' },
 				convertEol: false,
-				cursorBlink: true,
-				// Mirrors every printed line into an off-screen live region xterm
-				// itself manages, so a screen reader hears the guest's serial
-				// console the same way a sighted visitor reads it off the grid.
-				screenReaderMode: true
+				cursorBlink: true
 			});
 			FitAddonCtor = fitMod.FitAddon;
 			fitAddon = new FitAddonCtor();
@@ -1072,34 +1067,13 @@
 		{ label: $t('vm.facts.status'), value: $t('vm.facts.statusValueX86') }
 			]
 	);
-
-	/* The machine screen's focus/keyboard/mouse wiring as an action: the
-	   wrapper is role=application (it owns every key while captured), which
-	   the compiler does not count as interactive, so handlers on the element
-	   itself would trip its static-element rule. */
-	function screenEvents(node: HTMLElement) {
-		node.addEventListener('focus', captureKeyboard);
-		node.addEventListener('blur', releaseKeyboard);
-		node.addEventListener('mousedown', captureKeyboard);
-		node.addEventListener('keydown', onScreenKeydown);
-		node.addEventListener('contextmenu', onScreenContextMenu);
-		return {
-			destroy() {
-				node.removeEventListener('focus', captureKeyboard);
-				node.removeEventListener('blur', releaseKeyboard);
-				node.removeEventListener('mousedown', captureKeyboard);
-				node.removeEventListener('keydown', onScreenKeydown);
-				node.removeEventListener('contextmenu', onScreenContextMenu);
-			}
-		};
-	}
 </script>
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
 	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
 		<AsciiArt
 			color="#d19a66"
-			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-hidden"
+			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
 			art={`██╗  ██╗██████╗ ███████╗███████╗       ██╗   ██╗███╗   ███╗
 ██║ ██╔╝██╔══██╗██╔════╝╚══███╔╝       ██║   ██║████╗ ████║
 █████╔╝ ██████╔╝███████╗  ███╔╝ ██████╗██║   ██║██╔████╔██║
@@ -1111,7 +1085,7 @@
 		<div class="flex flex-wrap items-center gap-2">
 			{#if phase === 'running'}
 				<div class="flex items-center gap-2 mr-1">
-					<span class="flex items-center gap-1.5 text-xs font-mono font-bold text-[#98c379]" role="status">
+					<span class="flex items-center gap-1.5 text-xs font-mono font-bold text-[#98c379]">
 						<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] animate-pulse"></span>
 						{$t('vm.running.label')}
 					</span>
@@ -1133,47 +1107,56 @@
 				     has no equivalent of -- offering either would be a button that
 				     does nothing, or worse, shows a black rectangle. -->
 				{#if settings.machine === 'x86'}
-				<Button
-					variant="outline"
-					color="#c678dd"
-					active={viewMode !== 'auto'}
+				<button
 					onclick={cycleView}
 					title={$t('vm.view.hint')}
+					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {viewMode ===
+					'auto'
+						? 'border-white/25 text-white/70 hover:bg-white/10'
+						: 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'}"
 				>
 					{VIEW_LABEL[viewMode]}
-				</Button>
-				<Button
-					variant="outline"
-					color="#56b6c2"
-					active={showKeyboard}
+				</button>
+				<button
 					onclick={() => (showKeyboard = !showKeyboard)}
 					title={$t('vm.button.keysHint')}
+					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {showKeyboard
+						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+						: 'border-white/25 text-white/70 hover:bg-white/10'}"
 				>
 					{$t('vm.button.keys')}
-				</Button>
+				</button>
 				{/if}
-				<Button
-					variant="outline"
-					color="#e5c07b"
+				<button
 					onclick={restart}
 					title={settings.machine === 'x86_64'
 						? $t('vm.button.restartHintX64')
 						: $t('vm.button.restartHintX86')}
+					class="px-2.5 py-1 border border-[#e5c07b]/50 text-[#e5c07b] rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 hover:bg-[#e5c07b]/20"
 				>
 					{$t('vm.button.restart')}
-				</Button>
-				<Button variant="solid" color="#e06c75" onclick={stop}>
+				</button>
+				<button
+					onclick={stop}
+					class="px-2.5 py-1 border border-[#e06c75] text-[#e06c75] rounded-xs text-xs font-black cursor-pointer transition-colors active:scale-95 hover:bg-[#e06c75] hover:text-black"
+				>
 					{$t('vm.button.powerOff')}
-				</Button>
+				</button>
 			{:else if phase === 'loading'}
-				<span class="text-xs font-mono text-[#e5c07b] blink-live" role="status">◐ {status}</span>
-				<Button variant="outline" color="#d8dee9" onclick={stop}>
+				<span class="text-xs font-mono text-[#e5c07b] blink-live">◐ {status}</span>
+				<button
+					onclick={stop}
+					class="px-2.5 py-1 border border-white/25 text-white/70 rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 hover:bg-white/10"
+				>
 					{$t('vm.button.cancel')}
-				</Button>
+				</button>
 			{:else}
-				<Button variant="outline" color="#98c379" size="md" onclick={boot}>
+				<button
+					onclick={boot}
+					class="px-3 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer transition-colors active:scale-95 hover:bg-[#98c379] hover:text-black"
+				>
 					{$t('vm.button.boot')}
-				</Button>
+				</button>
 			{/if}
 		</div>
 	</div>
@@ -1189,74 +1172,77 @@
 						<span class="text-xs font-black font-mono text-[#56b6c2]">{$t('vm.config.title')}</span>
 						<div class="flex items-center gap-2">
 							<span class="text-[10px] font-mono text-white/50">{$t('vm.config.savedNote')}</span>
-							<Button variant="link" color="#d8dee9" onclick={resetSettings}>
+							<button onclick={resetSettings} class="press text-[10px] font-mono text-white/60 hover:text-white cursor-pointer underline transition-colors">
 								{$t('vm.config.reset')}
-							</Button>
+							</button>
 						</div>
 					</div>
 
-					<div class="flex flex-wrap items-center gap-2" role="group" aria-label={$t('vm.config.machine')}>
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.machine')}</span>
 						{#each [['x86', 'i686', $t('vm.config.machineX86Hint')], ['x86_64', 'x86-64', $t('vm.config.machineX64Hint')]] as const as [value, label, hint] (value)}
-							<Button
-								variant="outline"
-								color="#98c379"
-								active={settings.machine === value}
+							<button
 								onclick={() => (settings.machine = value)}
 								title={hint}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.machine ===
+								value
+									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{label}
-							</Button>
+							</button>
 						{/each}
 						<span class="text-[10px] font-mono text-white/60">{$t('vm.config.machineNote')}</span>
 					</div>
 
-					<div class="flex flex-wrap items-center gap-2" role="group" aria-label={$t('vm.config.guestRam')}>
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.guestRam')}</span>
 						{#each MEMORY_CHOICES as mb (mb)}
-							<Button
-								variant="outline"
-								color="#98c379"
-								active={settings.memoryMb === mb}
+							<button
 								onclick={() => (settings.memoryMb = mb)}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.memoryMb === mb
+									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{mb} MB
-							</Button>
+							</button>
 						{/each}
 						<span class="text-[10px] font-mono text-white/50">{$t('vm.config.guestRamNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.network')}</span>
-						<span title={$t('vm.config.networkHint')}>
-							<Toggle
-								checked={settings.network}
-								onchange={(v) => (settings.network = v)}
-								label={$t('vm.config.network')}
-								color="#98c379"
-								onText={$t('vm.config.networkOn')}
-								offText={$t('vm.config.networkOff')}
-							/>
-						</span>
+						<button
+							onclick={() => (settings.network = !settings.network)}
+							title={$t('vm.config.networkHint')}
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.network
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							{settings.network ? $t('vm.config.networkOn') : $t('vm.config.networkOff')}
+						</button>
 						<span class="text-[10px] font-mono text-white/60">{$t('vm.config.networkNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2 min-h-[30px]">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.disk')}</span>
-						<span title={$t('vm.config.diskHint')}>
-							<Toggle
-								checked={settings.persistDisk}
-								onchange={(v) => (settings.persistDisk = v)}
-								label={$t('vm.config.disk')}
-								color="#98c379"
-								onText={$t('vm.config.persistOn')}
-								offText={$t('vm.config.persistOff')}
-							/>
-						</span>
-						<Button variant="outline" color="#e06c75" onclick={wipeOverlay} title={$t('vm.config.wipeHint')}>
+						<button
+							onclick={() => (settings.persistDisk = !settings.persistDisk)}
+							title={$t('vm.config.diskHint')}
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.persistDisk
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							{settings.persistDisk ? $t('vm.config.persistOn') : $t('vm.config.persistOff')}
+						</button>
+						<button
+							onclick={wipeOverlay}
+							title={$t('vm.config.wipeHint')}
+							class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:bg-[#e06c75]/20"
+						>
 							{$t('vm.config.wipe')}
-						</Button>
-						<span class="text-[10px] font-mono text-white/60" role="status">
+						</button>
+						<span class="text-[10px] font-mono text-white/60">
 							{overlayStored ? $t('vm.overlay.savedCount', { size: formatBytes(overlayStored) }) : $t('vm.overlay.nothingSaved')}{overlayNote
 								? ` · ${overlayNote}`
 								: ''}
@@ -1264,82 +1250,83 @@
 					</div>
 
 					{#if settings.machine === 'x86'}
-					<div class="flex flex-wrap items-center gap-2" role="group" aria-label={$t('vm.config.vgaRam')}>
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.vgaRam')}</span>
 						{#each VGA_CHOICES as mb (mb)}
-							<Button
-								variant="outline"
-								color="#c678dd"
-								active={settings.vgaMemoryMb === mb}
+							<button
 								onclick={() => (settings.vgaMemoryMb = mb)}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.vgaMemoryMb === mb
+									? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{mb} MB
-							</Button>
+							</button>
 						{/each}
 					</div>
 					{/if}
 
 					{#if settings.machine === 'x86'}
-					<div class="flex flex-wrap items-center gap-2" role="group" aria-label={$t('vm.config.screen')}>
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.screen')}</span>
 						{#each RESOLUTIONS as res (res)}
-							<Button
-								variant="outline"
-								color="#d19a66"
-								active={settings.resolution === res}
+							<button
 								onclick={() => (settings.resolution = res)}
 								title={res === 'auto'
 									? $t('vm.config.screenAutoHint')
 									: $t('vm.config.screenResHint', { resolution: res })}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.resolution ===
+								res
+									? 'border-[#d19a66] bg-[#d19a66]/20 text-[#d19a66]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{res}
-							</Button>
+							</button>
 						{/each}
 					</div>
 
-					<div class="flex flex-wrap items-center gap-2" role="group" aria-label={$t('vm.config.scaling')}>
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.scaling')}</span>
 						{#each SCALING_CHOICES as [value, label, hint] (value)}
-							<Button
-								variant="outline"
-								color="#56b6c2"
-								active={settings.scaling === value}
+							<button
 								onclick={() => {
 									settings.scaling = value;
 									fitScreen();
 								}}
 								title={hint}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.scaling ===
+								value
+									? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{label}
-							</Button>
+							</button>
 						{/each}
 					</div>
 					{/if}
 
 					{#if settings.machine === 'x86'}
-					<div class="flex flex-wrap items-center gap-2" role="group" aria-label={$t('vm.config.boot')}>
+					<div class="flex flex-wrap items-center gap-2">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.boot')}</span>
 						{#each [['auto', $t('vm.config.bootAuto')], ['kernel', $t('vm.config.bootKernel')], ['cdrom', $t('vm.config.bootCdrom')]] as const as [value, label] (value)}
-							<Button
-								variant="outline"
-								color="#61afef"
-								active={settings.boot === value}
+							<button
 								onclick={() => (settings.boot = value)}
 								title={value === 'auto'
 									? $t('vm.config.bootAutoHint')
 									: value === 'kernel'
 										? $t('vm.config.bootKernelHint')
 										: $t('vm.config.bootCdromHint')}
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.boot === value
+									? 'border-[#61afef] bg-[#61afef]/20 text-[#61afef]'
+									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
 								{label}
-							</Button>
+							</button>
 						{/each}
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<label for="vm-cmdline" class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.cmdline')}</label>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.cmdline')}</span>
 						<input
-							id="vm-cmdline"
 							type="text"
 							bind:value={settings.cmdline}
 							spellcheck="false"
@@ -1350,35 +1337,33 @@
 
 					<div class="flex flex-wrap items-center gap-3">
 						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.cpu')}</span>
-						<span title={$t('vm.config.jitHint')}>
-							<Toggle
-								checked={settings.jit}
-								onchange={(v) => (settings.jit = v)}
-								label={$t('vm.config.jitLabel')}
-								color="#98c379"
-								onText={$t('vm.config.jitOn')}
-								offText={$t('vm.config.jitOff')}
-							/>
-						</span>
-						<span title={$t('vm.config.acpiHint')}>
-							<Toggle
-								checked={settings.acpi}
-								onchange={(v) => (settings.acpi = v)}
-								label={$t('vm.config.acpiLabel')}
-								color="#98c379"
-								onText={$t('vm.config.acpiOn')}
-								offText={$t('vm.config.acpiOff')}
-							/>
-						</span>
-						<Button
-							variant="ghost"
-							color="#d8dee9"
-							class="ml-auto"
+						<button
+							onclick={() => (settings.jit = !settings.jit)}
+							aria-pressed={settings.jit}
+							title={$t('vm.config.jitHint')}
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.jit
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							{settings.jit ? $t('vm.config.jitOn') : $t('vm.config.jitOff')}
+						</button>
+						<button
+							onclick={() => (settings.acpi = !settings.acpi)}
+							aria-pressed={settings.acpi}
+							title={$t('vm.config.acpiHint')}
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.acpi
+								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+								: 'border-white/20 text-white/55 hover:border-white/50'}"
+						>
+							{settings.acpi ? $t('vm.config.acpiOn') : $t('vm.config.acpiOff')}
+						</button>
+						<button
 							onclick={resetSettings}
 							title={$t('vm.config.resetHint')}
+							class="press ml-auto px-2 py-0.5 border border-white/20 text-white/55 rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:border-white/50"
 						>
 							{$t('vm.config.resetButton')}
-						</Button>
+						</button>
 					</div>
 					{/if}
 
@@ -1441,6 +1426,8 @@
 
 	<!-- v86 wants exactly this shape: a <div> it fills in text mode and a <canvas>
 	     for graphics. The wrapper is focusable so releasing the keyboard works. -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<!-- max-lg:min-h is for phones: there this panel is a scrolling column with no
 	     height of its own, so flex-1 resolved to the content's height, and the
 	     content is an absolutely positioned terminal — two pixels of machine. On a
@@ -1450,7 +1437,11 @@
 		tabindex={phase === 'running' && view !== 'terminal' ? 0 : -1}
 		role="application"
 		aria-label={$t('vm.screen.ariaLabel')}
-		use:screenEvents
+		onfocus={captureKeyboard}
+		onblur={releaseKeyboard}
+		onmousedown={captureKeyboard}
+		onkeydown={onScreenKeydown}
+		oncontextmenu={onScreenContextMenu}
 		class="relative flex-1 min-h-0 max-lg:min-h-[60vh] border bg-black rounded-xs overflow-hidden outline-none transition-colors {phase ===
 		'idle' || phase === 'error'
 			? 'hidden'
@@ -1466,7 +1457,7 @@
 		     cut in half. Measured: a 530px box with 12px of padding leaves 506,
 		     which is 25 rows of 20px, and xterm asked for 26. -->
 		<div class="absolute inset-0 p-3 {view === 'terminal' ? '' : 'hidden'}">
-			<div bind:this={termEl} class="w-full h-full" aria-label={$t('vm.terminal.ariaLabel')}></div>
+			<div bind:this={termEl} class="w-full h-full"></div>
 		</div>
 
 		<div
@@ -1487,16 +1478,17 @@
 		     mouse events itself, and an overlay would swallow the very clicks that
 		     terminal mode exists to deliver. -->
 		{#if phase === 'running' && !screenHinted && view === 'screen'}
-			<button
-				type="button"
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
 				onclick={captureKeyboard}
-				class="press absolute inset-0 flex items-end justify-center pb-3 bg-black/25 cursor-pointer"
+				class="absolute inset-0 flex items-end justify-center pb-3 bg-black/25 cursor-pointer"
 				transition:fade={{ duration: 180 }}
 			>
 				<span class="px-2.5 py-1 rounded-xs bg-black/85 border border-white/25 text-[11px] font-mono text-white/75">
 					{$t('vm.screen.clickToType')}
 				</span>
-			</button>
+			</div>
 		{/if}
 	</div>
 

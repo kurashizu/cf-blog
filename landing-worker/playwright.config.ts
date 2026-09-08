@@ -11,9 +11,6 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
 	testDir: 'tests/a11y',
-	// Per-run output dir so parallel audits (one per area) do not wipe each other:
-	//   PW_OUT=test-results-synth npx playwright test --grep /synth
-	outputDir: process.env.PW_OUT ?? 'test-results',
 	timeout: 90_000,
 	fullyParallel: false,
 	workers: 1,
