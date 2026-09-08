@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
 import {
 	BLOCK_BYTES,
 	OVERLAY_LIMIT,
@@ -7,6 +7,11 @@ import {
 	findDiskBuffer,
 	overlayStats,
 	replayOverlay,
+	saveOverlay,
+	loadOverlay,
+	readOverlay,
+	clearOverlay,
+	storedOverlaySize,
 	type DiskBuffer
 } from '../../src/lib/components/krsz-vm/disk-overlay';
 
@@ -29,6 +34,9 @@ beforeAll(() => {
 });
 afterAll(() => {
 	if (addedNode) delete (globalThis as { Node?: unknown }).Node;
+});
+afterEach(() => {
+	vi.unstubAllGlobals();
 });
 
 // Must match MAGIC in the module under test.
@@ -405,6 +413,220 @@ describe('findDiskBuffer', () => {
 		const b: Record<string, unknown> = { a };
 		a.b = b;
 		expect(findDiskBuffer(a)).toBeNull();
+	});
+});
+
+/* ---- OPFS-backed halves ------------------------------------------------ */
+
+/** A minimal in-memory stand-in for the origin private file system. */
+function fakeOpfs(opts: { failWrite?: boolean; failRead?: boolean } = {}) {
+	const files = new Map<string, Uint8Array>();
+	const dir = {
+		getFileHandle: async (name: string, o?: { create?: boolean }) => {
+			if (!files.has(name) && !o?.create) throw new Error('NotFoundError');
+			if (!files.has(name)) files.set(name, new Uint8Array(0));
+			return {
+				getFile: async () => {
+					if (opts.failRead) throw new Error('read failed');
+					const bytes = files.get(name)!;
+					return {
+						size: bytes.length,
+						arrayBuffer: async () => bytes.slice().buffer
+					};
+				},
+				createWritable: async () => {
+					if (opts.failWrite) throw new Error('write failed');
+					return {
+						write: async (data: Uint8Array) => files.set(name, new Uint8Array(data)),
+						close: async () => {}
+					};
+				}
+			};
+		},
+		removeEntry: async (name: string) => {
+			if (!files.delete(name)) throw new Error('NotFoundError');
+		}
+	};
+	return { files, navigator: { storage: { getDirectory: async () => dir } } };
+}
+
+describe('save and load round-trip', () => {
+	it('writes the dirty blocks and reads them back onto a fresh disk', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+
+		const source = emptyBuffer();
+		const write = bufferStore(source);
+		write.writeBlock(2, blockOf(0xaa));
+		write.writeBlock(9, blockOf(0xbb));
+
+		const saved = await saveOverlay('i686', 'v1', bufferStore(source));
+		expect(saved).toEqual({ blocks: 2, bytes: 2 * BLOCK_BYTES });
+
+		const target = emptyBuffer();
+		const loaded = await loadOverlay('i686', 'v1', bufferStore(target));
+		expect(loaded).toEqual({ blocks: 2, bytes: 2 * BLOCK_BYTES });
+		expect(target.block_cache.get(2)?.[0]).toBe(0xaa);
+		expect(target.block_cache.get(9)?.[0]).toBe(0xbb);
+	});
+
+	it('keeps each machine\'s disk in its own file', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		const a = emptyBuffer();
+		bufferStore(a).writeBlock(0, blockOf(1));
+		await saveOverlay('i686', 'v1', bufferStore(a));
+		const b = emptyBuffer();
+		bufferStore(b).writeBlock(0, blockOf(2));
+		await saveOverlay('x86-64', 'v1', bufferStore(b));
+		expect(opfs.files.size).toBe(2);
+
+		const target = emptyBuffer();
+		await loadOverlay('i686', 'v1', bufferStore(target));
+		expect(target.block_cache.get(0)?.[0]).toBe(1);
+	});
+
+	it('refuses to load an overlay saved against another image version', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		const source = emptyBuffer();
+		bufferStore(source).writeBlock(0, blockOf(1));
+		await saveOverlay('i686', 'v1', bufferStore(source));
+
+		const target = emptyBuffer();
+		expect(await loadOverlay('i686', 'v2', bufferStore(target))).toBeNull();
+		expect(target.block_cache.size).toBe(0);
+	});
+
+	it('pads a short block rather than shifting everything after it', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		// a store whose readBlock lies about the length
+		const store = {
+			dirtyBlocks: () => [0, 1],
+			readBlock: (b: number) => (b === 0 ? new Uint8Array(4) : blockOf(0xcd)),
+			writeBlock: () => {}
+		};
+		await saveOverlay('i686', 'v1', store);
+
+		const target = emptyBuffer();
+		await loadOverlay('i686', 'v1', bufferStore(target));
+		// the short one is zero-filled, the one after it survives intact
+		expect(target.block_cache.get(0)?.length).toBe(BLOCK_BYTES);
+		expect(target.block_cache.get(1)?.[0]).toBe(0xcd);
+	});
+
+	it('saves an untouched disk as an empty overlay', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		expect(await saveOverlay('i686', 'v1', bufferStore(emptyBuffer()))).toEqual({
+			blocks: 0,
+			bytes: 0
+		});
+	});
+
+	it('refuses to save more than the overlay limit', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		// more blocks than the limit can hold
+		const tooMany = Math.ceil(OVERLAY_LIMIT / BLOCK_BYTES) + 1;
+		const store = {
+			dirtyBlocks: () => Array.from({ length: tooMany }, (_, i) => i),
+			readBlock: () => blockOf(1),
+			writeBlock: () => {}
+		};
+		expect(await saveOverlay('i686', 'v1', store)).toBeNull();
+		expect(opfs.files.size).toBe(0);
+	});
+});
+
+describe('OPFS is not always there', () => {
+	it('saves nothing when the browser has no OPFS', async () => {
+		vi.stubGlobal('navigator', {});
+		expect(await saveOverlay('i686', 'v1', bufferStore(emptyBuffer()))).toBeNull();
+	});
+
+	it('reads nothing when the browser has no OPFS', async () => {
+		vi.stubGlobal('navigator', {});
+		expect(await readOverlay('i686')).toBeNull();
+		expect(await storedOverlaySize('i686')).toBe(0);
+	});
+
+	it('clears without complaint when the browser has no OPFS', async () => {
+		vi.stubGlobal('navigator', {});
+		await expect(clearOverlay('i686')).resolves.toBeUndefined();
+	});
+
+	it('reads nothing when nothing was saved', async () => {
+		vi.stubGlobal('navigator', fakeOpfs().navigator);
+		expect(await readOverlay('never-saved')).toBeNull();
+		expect(await storedOverlaySize('never-saved')).toBe(0);
+	});
+
+	it('returns null when the write fails', async () => {
+		vi.stubGlobal('navigator', fakeOpfs({ failWrite: true }).navigator);
+		const source = emptyBuffer();
+		bufferStore(source).writeBlock(0, blockOf(1));
+		expect(await saveOverlay('i686', 'v1', bufferStore(source))).toBeNull();
+	});
+
+	it('returns null when the read fails', async () => {
+		const opfs = fakeOpfs({ failRead: true });
+		vi.stubGlobal('navigator', opfs.navigator);
+		// the file exists; opening it is what throws
+		await saveOverlay('i686', 'v1', bufferStore(emptyBuffer()));
+		expect(opfs.files.size).toBe(1);
+		expect(await readOverlay('i686')).toBeNull();
+		expect(await storedOverlaySize('i686')).toBe(0);
+	});
+});
+
+describe('clearOverlay and storedOverlaySize', () => {
+	it('reports the size of what was saved', async () => {
+		vi.stubGlobal('navigator', fakeOpfs().navigator);
+		const source = emptyBuffer();
+		bufferStore(source).writeBlock(0, blockOf(1));
+		await saveOverlay('i686', 'v1', bufferStore(source));
+		expect(await storedOverlaySize('i686')).toBeGreaterThan(BLOCK_BYTES);
+	});
+
+	it('removes the file, so a later load finds nothing', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		const source = emptyBuffer();
+		bufferStore(source).writeBlock(0, blockOf(1));
+		await saveOverlay('i686', 'v1', bufferStore(source));
+		expect(opfs.files.size).toBe(1);
+
+		await clearOverlay('i686');
+		expect(opfs.files.size).toBe(0);
+		expect(await readOverlay('i686')).toBeNull();
+	});
+
+	it('clears one machine without touching the other', async () => {
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		const s = emptyBuffer();
+		bufferStore(s).writeBlock(0, blockOf(1));
+		await saveOverlay('i686', 'v1', bufferStore(s));
+		await saveOverlay('x86-64', 'v1', bufferStore(s));
+		await clearOverlay('i686');
+		expect(opfs.files.size).toBe(1);
+		expect(await readOverlay('x86-64')).not.toBeNull();
+	});
+
+	it('does not complain about clearing what is not there', async () => {
+		vi.stubGlobal('navigator', fakeOpfs().navigator);
+		await expect(clearOverlay('never-saved')).resolves.toBeUndefined();
+	});
+
+	it('keeps the file name the view had before it was renamed', async () => {
+		// renaming would orphan every disk saved before the view was called
+		// krsz-vm, and a name is not worth someone's installed packages
+		const opfs = fakeOpfs();
+		vi.stubGlobal('navigator', opfs.navigator);
+		await saveOverlay('i686', 'v1', bufferStore(emptyBuffer()));
+		expect([...opfs.files.keys()]).toEqual(['x86sim-i686.overlay']);
 	});
 });
 

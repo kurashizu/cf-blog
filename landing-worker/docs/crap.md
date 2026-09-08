@@ -62,6 +62,11 @@ straight into Svelte stores, the SvelteKit runtime and Web Audio.
 
 Below them, 109 functions have CC ≥ 10 and 15 have CC ≥ 30.
 
+Among the files that *are* tested, nothing now scores above 42. The previous
+holder was `kindOf` at 702 (CC 26, no coverage); it classifies a Life pattern
+by simulating it, so it could be checked against facts — a block is a still
+life, a glider is a ship — and the score fell to 26.
+
 ## Which files have tests
 
 `vitest.config.ts` lists the modules in `coverage.include`, and
