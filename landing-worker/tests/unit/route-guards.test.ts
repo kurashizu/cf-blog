@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 /**
  * The filename guards on the public asset routes.
@@ -126,5 +128,36 @@ describe('qemu route guard', () => {
 
 	it('rejects a slash inside a ROM name', () => {
 		expect(qemuGuard('pc-bios-sub/dir.bin')).toBeNull();
+	});
+});
+
+describe('the copies still match the routes', () => {
+	/* The guards above are duplicated from the route handlers, which cannot be
+	   imported here. That is only safe if the duplicates are the same text, so
+	   read the routes and check. A rename or a rewrite fails this rather than
+	   silently leaving the tests guarding a pattern nobody runs. */
+	const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf8');
+
+	it('model route still uses the pattern this file tests', () => {
+		const src = read('src/routes/model/[file]/+server.ts');
+		expect(src).toContain('/^[A-Za-z0-9._-]+\\.gguf$/');
+		expect(src).toContain("!file.includes('..')");
+		expect(src).toContain('/^wllama\\.wasm$/');
+	});
+
+	it('qemu route still uses the pattern this file tests', () => {
+		const src = read('src/routes/vm/qemu/[file]/+server.ts');
+		expect(src).toContain('/^qemu-system-x86_64(\\.wasm|\\.worker\\.js|\\.js)$/');
+		expect(src).toContain('/^pc-bios-[A-Za-z0-9_.-]+$/');
+		expect(src).toContain("!file.includes('..')");
+	});
+
+	it('both routes still reject before touching the bucket', () => {
+		for (const p of ['src/routes/model/[file]/+server.ts', 'src/routes/vm/qemu/[file]/+server.ts']) {
+			const src = read(p);
+			// the 404 has to come before the bucket is read, or a composed key
+			// reaches R2 whatever the guard decided
+			expect(src.indexOf("error(404")).toBeLessThan(src.indexOf('bucket.get'));
+		}
 	});
 });
