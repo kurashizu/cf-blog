@@ -300,6 +300,13 @@ export interface TrackData {
   // Node 6: Per-Track 6-Band Graphic EQ (gains in dB for EQ_6_BANDS, default flat & off)
   eqOn?: boolean;
   eqGains?: number[];
+  /** Per-key EQ in dB, one per EQ_6_BANDS entry. Kits use this; the track-wide
+   *  eqGains above cannot shape a kick and a hi-hat differently. */
+  keyEqGains?: number[];
+  /** The voice's signal path, as module ids -- see stores/synth-rack.ts. Absent
+   *  means the chain the engine has always built. Per key in percussion mode,
+   *  so a kick and a hi-hat need not share one. */
+  rackChain?: string[];
 
   // Node 7: Master Output Channel Strip
   airGain?: number;        // -1.0 to +1.0 (Air Shelf EQ / Tone Shaping, ±8dB at 10kHz)
@@ -321,6 +328,20 @@ export interface TrackData {
      patch or a share link. Off, the table is kept but ignored. */
   percussion?: boolean;
   keyTimbres?: Record<number, Partial<TrackData>>;
+
+  /* Advanced layout, per track: the racks give way to the patch bay for this
+     track alone, so one track can be edited as a signal path while the next is
+     still edited on the knobs. Only one of the two is in force at a time --
+     they are the same track seen two ways, not two patches -- but the setting
+     is per track and travels in the patch file, since which view a sound wants
+     is a property of that sound. */
+  advanced?: boolean;
+  /** Which view owns the lower panel while `advanced` is on. */
+  advancedView?: 'roll' | 'rack';
+  /** Values for the rack modules' own knobs, keyed by param id. Flat rather
+   *  than nested per module: a module appears once in a chain, so its keys
+   *  cannot collide, and a flat record survives reordering untouched. */
+  rackParams?: Record<string, number>;
 
   // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes) & Accents (0 = Off, 1 = +3dB, 2 = +6dB)
   grid: number[][];
@@ -432,7 +453,7 @@ export const KEY_TIMBRE_KEYS = [
   'filterAttack', 'filterDecay', 'filterSustain', 'filterRelease', 'filterEnvAmount',
   'pitchAttack', 'pitchDecay', 'pitchEnvAmount',
   'lfoWaveform', 'lfoRate', 'lfoPitchAmt', 'lfoCutoffAmt', 'lfoPanAmt', 'lfoAmpAmt', 'lfoFadeTime',
-  'lfoDepth', 'lfoTarget', 'airGain'
+  'lfoDepth', 'lfoTarget', 'airGain', 'keyEqGains', 'rackChain', 'rackParams'
 ] as const satisfies readonly (keyof TrackData)[];
 
 export type KeyTimbreKey = (typeof KEY_TIMBRE_KEYS)[number];
@@ -445,7 +466,13 @@ export function isKeyTimbreKey(k: string): k is KeyTimbreKey {
 export function effectiveTimbre(track: TrackData, noteIndex: number): TrackData {
   if (!track.percussion) return track;
   const kt = track.keyTimbres?.[noteIndex];
-  return kt ? { ...track, ...kt } : track;
+  // A percussion track is a kit, not an instrument: a key the kit does not
+  // define has no sound. Falling back to the track's own timbre played it as a
+  // pitched note instead, so every key outside the kit answered with whatever
+  // the track happened to be before percussion was switched on -- a bass note
+  // in the middle of a drum part.
+  if (!kt) return { ...track, osc1Gain: 0, osc2Gain: 0, subOscGain: 0, noiseGain: 0 };
+  return { ...track, ...kt };
 }
 
 /** The rack always has this many tracks; songs that define fewer get blank ones appended. */
@@ -574,8 +601,15 @@ class ModularSynth {
   private reverbDecayRate: number = 0.6;     // 0.1 to 2.0 (High Frequency Air Absorption)
   private masterTuningFreq: number = 440.0;  // 430Hz to 450Hz
   private maxPolyphony: number = 8;          // 1 to 16 voices per track
-  private midiOmniMode: boolean = false;     // false = active track only, true = all tracks (Omni)
   private midiSelectedDeviceId: string = 'all'; // 'all' or specific MIDI device ID
+  /* Which tracks each MIDI input plays. One keyboard is often two inputs -- a
+     Roland GO:KEYS on USB is advertised over Bluetooth too -- so leaving every
+     input on the active track voiced each key press twice, about 10 ms apart,
+     which sounds like a flam on every note. A device routed here plays exactly
+     the tracks it lists: several to layer them under one key, one to keep two
+     keyboards apart, none to switch the input off. An input with no entry at
+     all follows the active track. */
+  private midiDeviceTracks: Record<string, number[]> = {};
   private latencyHintMode: 'interactive' | 'balanced' | 'playback' = 'balanced';
   private masterLimiterEnabled: boolean = true; // Brickwall Soft Peak Limiter
   private voiceStealingMode: 'oldest' | 'quietest' | 'lowest' = 'oldest';
@@ -1183,20 +1217,88 @@ class ModularSynth {
     this.maxPolyphony = Math.max(1, Math.min(16, poly));
   }
 
-  public isMidiOmniMode(): boolean {
-    return this.midiOmniMode;
-  }
-
-  public setMidiOmniMode(omni: boolean) {
-    this.midiOmniMode = omni;
-  }
-
   public getMidiSelectedDeviceId(): string {
     return this.midiSelectedDeviceId;
   }
 
   public setMidiSelectedDeviceId(deviceId: string) {
     this.midiSelectedDeviceId = deviceId;
+  }
+
+  /* Inputs already given a default, so replugging a cable cannot overwrite a
+     routing the player chose. Separate from midiDeviceTracks because "follow
+     the active track" is stored as the absence of an entry there. */
+  private midiDevicesSeen = new Set<string>();
+
+  /**
+   * Give inputs their first routing, in the order the browser lists them: the
+   * first plays (follows the active track), every other one starts switched
+   * off. A keyboard the OS advertises twice would otherwise voice each key
+   * press on both entries at once. Devices already seen keep their routing.
+   */
+  public defaultUnroutedMidiDevices(deviceIds: string[]) {
+    for (const [i, id] of deviceIds.entries()) {
+      if (this.midiDevicesSeen.has(id)) continue;
+      this.midiDevicesSeen.add(id);
+      if (i > 0) this.midiDeviceTracks[id] = [];
+    }
+  }
+
+  /** The whole device -> tracks table, for the settings panel to render. */
+  public getMidiDeviceTracks(): Record<string, number[]> {
+    const out: Record<string, number[]> = {};
+    for (const [id, tracks] of Object.entries(this.midiDeviceTracks)) out[id] = [...tracks];
+    return out;
+  }
+
+  /**
+   * Every input whose routing has been decided, for storage. "Follow the active
+   * track" is the absence of a row in the table, so the table alone cannot say
+   * whether a device was set that way on purpose or simply never seen -- and
+   * without that, reloading would default a deliberate ACTIVE back to off.
+   */
+  public getMidiDevicesSeen(): string[] {
+    return [...this.midiDevicesSeen];
+  }
+
+  public markMidiDevicesSeen(deviceIds: string[]) {
+    for (const id of deviceIds) this.midiDevicesSeen.add(id);
+  }
+
+  /** Route one input to a set of tracks, or pass null to let it follow the active track. */
+  public setMidiDeviceTracks(deviceId: string, trackIds: number[] | null) {
+    // Deciding a device's routing -- including restoring one from storage --
+    // is what "seen" means, so the defaulting pass leaves it alone afterwards.
+    this.midiDevicesSeen.add(deviceId);
+    if (trackIds === null) delete this.midiDeviceTracks[deviceId];
+    else this.midiDeviceTracks[deviceId] = [...new Set(trackIds)].sort((a, b) => a - b);
+  }
+
+  /**
+   * Add or remove one track from a device's set. Coming from "follow the active
+   * track" the pick replaces rather than extends: following the selection and
+   * naming a fixed set are alternatives, so the first number chosen is the
+   * whole answer, not the active track plus one.
+   */
+  public toggleMidiDeviceTrack(deviceId: string, trackId: number) {
+    this.midiDevicesSeen.add(deviceId);
+    const current = this.midiDeviceTracks[deviceId];
+    if (current === undefined) {
+      this.midiDeviceTracks[deviceId] = [trackId];
+      return;
+    }
+    const next = current.includes(trackId) ? current.filter((t) => t !== trackId) : [...current, trackId];
+    this.midiDeviceTracks[deviceId] = next.sort((a, b) => a - b);
+  }
+
+  /**
+   * The tracks a device plays: its own binding, else the active track. An empty
+   * list means the input is switched off and the caller drops it -- the
+   * duplicate input of a keyboard the OS lists twice is silenced this way.
+   */
+  public getMidiTracksFor(deviceId: string | undefined, activeTrackId: number): number[] {
+    if (deviceId !== undefined && deviceId in this.midiDeviceTracks) return this.midiDeviceTracks[deviceId];
+    return [activeTrackId];
   }
 
   public getLatencyHintMode(): 'interactive' | 'balanced' | 'playback' {
@@ -2031,6 +2133,34 @@ class ModularSynth {
       airFilter.gain.setValueAtTime(track.airGain * 8, t); // ±8dB
       gainNode.connect(airFilter);
       finalVoiceNode = airFilter;
+    }
+
+    /* Node 7b: this key's own EQ, for a percussion track only.
+     *
+     * The six-band EQ above is per *track*, which a kit cannot use: one curve
+     * cannot serve a kick and a hi-hat, since they need opposite shaping. But
+     * matching a real drum needs more than the one filter a voice otherwise
+     * has -- a snare's spectrum dips at 2.5 kHz and rises again above it, and
+     * no single low-pass does that. `track` here is the merged timbre from
+     * effectiveTimbre(), so a key that carries keyEqGains gets its own chain,
+     * built beside the air shelf and torn down with the voice.
+     *
+     * Only when the key actually asks for it: percussion tracks are the only
+     * ones that set it, and a voice with no entry pays nothing.
+     */
+    const keyEq = track.keyEqGains;
+    if (keyEq && keyEq.some((g) => Math.abs(g) > 0.05)) {
+      for (const [i, band] of EQ_6_BANDS.entries()) {
+        const g = keyEq[i] ?? 0;
+        if (Math.abs(g) <= 0.05) continue;
+        const f = ctx.createBiquadFilter();
+        f.type = i === 0 ? 'lowshelf' : i === EQ_6_BANDS.length - 1 ? 'highshelf' : 'peaking';
+        f.frequency.setValueAtTime(band.freq, t);
+        if (f.type === 'peaking') f.Q.setValueAtTime(1.0, t);
+        f.gain.setValueAtTime(g, t);
+        finalVoiceNode.connect(f);
+        finalVoiceNode = f;
+      }
     }
 
     // Route through this track's own EQ chain (delay/reverb sends tap pre-EQ).

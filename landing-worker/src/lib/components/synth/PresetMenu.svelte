@@ -10,6 +10,7 @@
 		userPresets,
 		allPresets,
 		soundPresetIdx,
+		activeKitName,
 		applyPresetAt,
 		saveActiveAsPreset,
 		deleteUserPreset,
@@ -30,6 +31,7 @@
 	} from '../../stores/synth-presets';
 	import { activeTrackRow, toggleTrackPercussion } from '../../stores/synth-tracks';
 	import { activeTrackId } from '../../stores/synth-transport';
+	import { advancedMode, toggleAdvanced } from '../../stores/synth-view';
 	import { presetTooltips } from './tooltips';
 
 	/* A cascading menu, like a DAW's browser: the first level is categories,
@@ -50,6 +52,19 @@
 	let kitInput: HTMLInputElement | undefined = $state();
 
 	let current = $derived($allPresets[$soundPresetIdx] ?? $allPresets[0]);
+	/* A kit is a whole key table, so no single preset names it; while one is
+	   loaded the trigger says the kit rather than a preset the track dropped
+	   the moment the kit went on. */
+	/* The trigger sits in a fixed toolbar row, so the name cannot set its width:
+	   a user preset may be named anything, and "MY FAVOURITE LEAD SOUND" pushed
+	   PERC and the snap buttons off to the right. Eight characters is what the
+	   longest built-in ("HARPSICHORD" -> "HARPSIC…") needs to stay readable; the
+	   full name is on the title. */
+	const TRIGGER_MAX = 8;
+	let triggerName = $derived.by(() => {
+		const n = $activeKitName ?? current?.name ?? '';
+		return n.length > TRIGGER_MAX ? `${n.slice(0, TRIGGER_MAX)}…` : n;
+	});
 	let percussion = $derived(!!$activeTrackRow?.percussion);
 	// $locale is read here only to give this $derived a tracked dependency —
 	// presetTooltips() itself resolves strings through tr(), which is not reactive.
@@ -209,16 +224,36 @@
 {/snippet}
 
 <div class="flex items-center gap-1 text-xs">
-	<span class="text-white/60 font-bold text-[11px] pl-0.5">PRESET:</span>
+	<!-- Advanced layout: drops modules 1-7 and gives the lower panel to one view,
+	     the roll or the patch bay. First in the row and styled apart from the
+	     rest -- the others change what the synth sounds like, this one changes
+	     what the page is, so it should not read as one more toggle. -->
+	<div class="relative flex items-center">
+		{#if $advancedMode}<div class="advgroup"></div>{/if}
+	<button
+		onclick={() => {
+			toggleAdvanced();
+			playSound('toggle');
+		}}
+		class="relative press mr-1 px-2 py-0.5 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1 border-2 {$advancedMode
+			? 'border-[#61afef] bg-gradient-to-b from-[#61afef] to-[#4d8fd6] text-black shadow-[0_0_10px_rgba(97,175,239,0.6)]'
+			: 'border-[#61afef]/50 bg-[#61afef]/10 text-[#61afef] hover:bg-[#61afef]/25 hover:border-[#61afef]'}"
+		title={$advancedMode ? $t('synth.preset.advancedOnHint') : $t('synth.preset.advancedOffHint')}
+	>
+		<span class="text-[8px] leading-none">{$advancedMode ? '\u25c6' : '\u25c7'}</span>
+		ADV
+	</button>
+	</div>
+	<span class="text-white/60 font-bold text-[11px] pl-2">PRESET:</span>
 	<div class="relative">
 		<button
 			onclick={toggle}
-			title={$t('synth.preset.pickHint', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower'), name: PRESET_TOOLTIPS[current?.name] || current?.name })}
+			title={$t('synth.preset.pickHint', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower'), name: $activeKitName ?? (PRESET_TOOLTIPS[current?.name] || current?.name) })}
 			class="press px-1.5 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 {open
 				? 'border-[#56b6c2] bg-[#56b6c2] text-black'
 				: 'border-white/20 hover:border-[#56b6c2] bg-white/5 hover:bg-white/15 text-white hover:text-[#56b6c2]'}"
 		>
-			<span>{current?.name}</span>
+			<span>{triggerName}</span>
 			<span class="text-[9px] leading-none inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
 		</button>
 
@@ -354,3 +389,28 @@
 		PERC
 	</button>
 </div>
+
+<style>
+	/* ADV and the PIANO ROLL/RACK switch are one control in two parts -- turn the
+	   mode on, then pick the view -- but they cannot share a row: ADV belongs
+	   with PRESET, the switch belongs to the panel it switches. They do align on
+	   the same left edge one row apart, so draw one outline around both instead
+	   of hinting at a link.
+	   
+	   The two are different widths, so the shape has to step: this half runs
+	   round the button and stops at its own right edge, and the row below picks
+	   the line up and carries it out to its wider edge. Open at the bottom,
+	   because the other half closes it. */
+	.advgroup {
+		position: absolute;
+		left: -7px;
+		right: -5px;
+		top: -4px;
+		bottom: -6px;
+		border: 2px solid rgba(97, 175, 239, 0.55);
+		border-bottom: none;
+		border-top-left-radius: 5px;
+		border-top-right-radius: 5px;
+		pointer-events: none;
+	}
+</style>

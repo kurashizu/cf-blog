@@ -3,8 +3,23 @@
 	import { t } from '../../../i18n';
 	import { PIANO_ROLL_NOTES } from '../../../synth';
 	import { activeTrackId } from '../../../stores/synth-transport';
-	import { currentTrack, tracksState, isOverlayMode, overlayTrackIds, activePlayingNotes, holdManualNote, releaseManualNote } from '../../../stores/synth-tracks';
-	import { midiConnectedDevice, isSustainActive, setSustainPedal, velocityCurve, cycleVelocityCurve } from '../../../stores/synth-midi';
+	import { currentTrack, tracksState, isOverlayMode, overlayTrackIds, activePlayingNotes, holdManualNote, releaseManualNote, activeTrackRow, activeKey, keyIsCustomised } from '../../../stores/synth-tracks';
+	import { midiInputsForActiveTrack, isSustainActive, setSustainPedal, velocityCurve, cycleVelocityCurve } from '../../../stores/synth-midi';
+	import { isSynthSettingsOpen, synthSettingsTab } from '../../../stores/synth-settings';
+
+	/* The badge sits in a fixed row beside the octave and velocity controls, so
+	   it cannot grow with the device names: "GO:KEYS 3 MIDI BLUETOOTH + ROLAND
+	   DIGITAL PIANO" pushed the row wider than the keyboard. Name the first
+	   input, trimmed to a readable stub, and count the rest -- the full list is
+	   one click away in the settings this badge opens. */
+	const MIDI_NAME_MAX = 16;
+
+	function midiBadgeLabel(names: string[]): string {
+		if (!names.length) return 'STANDBY';
+		const first = names[0].toUpperCase();
+		const head = first.length > MIDI_NAME_MAX ? `${first.slice(0, MIDI_NAME_MAX - 1)}…` : first;
+		return names.length > 1 ? `${head} +${names.length - 1}` : head;
+	}
 	import { suspendNavHotkeys } from '../../../stores/hotkeys';
 
 	let kbOctaveFrom = $state(1);
@@ -53,6 +68,7 @@
 	});
 
 	let keyWidthPct = $derived(whiteKeys.length > 0 ? 100 / whiteKeys.length : 0);
+	let percussion = $derived(!!$activeTrackRow?.percussion);
 
 	function keyColorFor(idx: number): string {
 		const entry = $activePlayingNotes.get(idx);
@@ -68,8 +84,12 @@
 	}
 
 	function pressKey(idx: number) {
+		/* In percussion mode a key is a sound of its own, so pressing one selects
+		   it for editing the way the piano roll does -- otherwise the knobs kept
+		   editing whatever key was last touched over in the roll. */
+		if ($activeTrackRow?.percussion) activeKey.set(idx);
+		// No UI click over the top: the note is the feedback.
 		holdManualNote($activeTrackId, idx, 80);
-		playSound('click');
 	}
 	function releaseKey(idx: number) {
 		releaseManualNote($activeTrackId, idx);
@@ -308,11 +328,21 @@
 			</button>
 
 			<!-- Pinned right: a device name is as long as its maker made it, and
-			     letting it sit inline shifted every control before it. -->
-			<div class="ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap {$midiConnectedDevice ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' : 'border-white/20 bg-white/5 text-white/40'}">
-				<span class="w-1.5 h-1.5 rounded-full {$midiConnectedDevice ? 'bg-[#98c379] animate-pulse' : 'bg-white/30'}"></span>
-				<span>MIDI: {$midiConnectedDevice ? $midiConnectedDevice.toUpperCase() : 'STANDBY'}</span>
-			</div>
+			     letting it sit inline shifted every control before it. Names the
+			     inputs routed to *this* track rather than the first one connected,
+			     which said GO:KEYS on a track GO:KEYS does not play. -->
+			<button
+				onclick={() => {
+					synthSettingsTab.set('midi');
+					isSynthSettingsOpen.set(true);
+					playSound('click');
+				}}
+				title={$t('synthPanels.midi.openSettingsHint')}
+				class="press ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap cursor-pointer {$midiInputsForActiveTrack.length ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' : 'border-white/20 bg-white/5 text-white/40 hover:text-white/70'}"
+			>
+				<span class="w-1.5 h-1.5 rounded-full {$midiInputsForActiveTrack.length ? 'bg-[#98c379] animate-pulse' : 'bg-white/30'}"></span>
+				<span>MIDI: {midiBadgeLabel($midiInputsForActiveTrack)}</span>
+			</button>
 		</div>
 	</div>
 
@@ -342,9 +372,25 @@
 					     at that density every one of them collided with its
 					     neighbours and none could be read. One number per octave is
 					     what the eye actually navigates by -- find C4, count from
-					     there -- and it leaves each label room to be legible. -->
+					     there -- and it leaves each label room to be legible.
+
+					     Above the dot, not below it: stacked the other way a key that
+					     carried both sat its number one dot higher than its
+					     neighbours, so the octave numbers no longer lined up. -->
 					{#if wk.note.startsWith('C') && !wk.note.includes('#')}
 						<span class="text-[9px] font-mono font-black opacity-70 leading-none">{wk.note.slice(1)}</span>
+					{/if}
+						<!-- A kit key carries its own sound, and the piano roll marks those
+					     with a dot. The keyboard is where they are actually played, so
+					     it needs the same mark -- without it the only way to find which
+					     keys the kit fills was to press all 88. The slot is always
+					     there, so a dot appearing cannot move the number above it. -->
+					{#if percussion}
+						<span class="w-2 h-2 mt-0.5 rounded-full {keyIsCustomised($activeTrackRow, wk.idx)
+							? $activeKey === wk.idx
+								? 'bg-[#c678dd] shadow-[0_0_5px_#c678dd]'
+								: 'bg-[#c678dd]/70'
+							: ''}"></span>
 					{/if}
 					</button>
 				{/each}
@@ -383,7 +429,11 @@
 					<!-- Unlabelled: a black key is barely wider than the text that
 					     was on it, so those labels were the densest part of the
 					     collision. Their names are on the title, and a keyboard is
-					     read from the Cs and the black-key groups anyway. -->
+					     read from the Cs and the black-key groups anyway. The kit dot
+					     still fits, and GM puts real sounds on the black keys. -->
+					{#if percussion && keyIsCustomised($activeTrackRow, bk.idx)}
+						<span class="w-1.5 h-1.5 rounded-full mb-1 {$activeKey === bk.idx ? 'bg-[#c678dd] shadow-[0_0_5px_#c678dd]' : 'bg-[#c678dd]/80'}"></span>
+					{/if}
 				</button>
 			{/each}
 		{/if}

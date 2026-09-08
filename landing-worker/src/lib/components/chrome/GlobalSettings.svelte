@@ -20,6 +20,8 @@
 		TEXT_SIZES,
 		DEFAULT_TEXT_SIZE
 	} from '../../stores/text-scale';
+	import { MIDI_ROUTING_KEY } from '../../stores/synth-midi';
+	import { ADV_DEFAULT_KEY } from '../../stores/synth-view';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -28,7 +30,8 @@
 	/** Every localStorage key any part of the site writes, gathered from each
 	 *  owner's own constant so this list cannot silently drift out of sync --
 	 *  see sound.ts, stores/chrome.ts, stores/synth-patch.ts, stores/console.ts,
-	 *  krsz-vm/KrszVmView.svelte and chatbot/engine.ts for where each is read. */
+	 *  stores/synth-midi.ts, krsz-vm/KrszVmView.svelte and chatbot/engine.ts for
+	 *  where each is read. */
 	const GUIDE_KEYS = ['krsz.guide.seen', 'krsz.guide.synth', 'krsz.guide.lm-space', 'krsz.guide.lifelab', 'krsz.welcome.seen'];
 	const SYNTH_PATCH_KEY = 'krsz-synth-patch-v1';
 	const CONSOLE_KEYS = ['krsz.console.history', 'krsz.console.aliases'];
@@ -42,8 +45,16 @@
 		return `${(b / 1048576).toFixed(1)} MB`;
 	}
 
+	/* Storage is grouped by the part of the site that wrote it, in the order the
+	   tab bar lists those parts. Nine entries in one flat column mixed a VM disk
+	   image between a synth autosave and a chatbot config, so nothing could be
+	   found by the app it belongs to. */
+	type Group = 'synth' | 'lmSpace' | 'vm' | 'site';
+	const GROUP_ORDER: Group[] = ['synth', 'lmSpace', 'vm', 'site'];
+
 	interface Section {
 		id: string;
+		group: Group;
 		label: string;
 		color: string;
 		/** null while still measuring, 0 for "nothing stored" -- both render differently. */
@@ -102,6 +113,7 @@
 		const list: Section[] = [
 			{
 				id: 'chatbot-model',
+				group: 'lmSpace',
 				label: tr('chrome.settings.storage.modelWeightsLabel'),
 				color: '#61afef',
 				size: modelCache?.bytes ?? null,
@@ -116,6 +128,7 @@
 			},
 			{
 				id: 'chatbot-sessions',
+				group: 'lmSpace',
 				label: tr('chrome.settings.storage.conversationsLabel'),
 				color: '#c678dd',
 				size: chatBytes.bytes,
@@ -125,6 +138,7 @@
 			},
 			{
 				id: 'vm-disks',
+				group: 'vm',
 				label: tr('chrome.settings.storage.vmDisksLabel'),
 				color: '#d19a66',
 				size: vmBytes,
@@ -135,6 +149,7 @@
 			},
 			{
 				id: 'synth-patch',
+				group: 'synth',
 				label: tr('chrome.settings.storage.synthAutosaveLabel'),
 				color: '#98c379',
 				size: localStorageBytes([SYNTH_PATCH_KEY]),
@@ -143,6 +158,7 @@
 			},
 			{
 				id: 'console-history',
+				group: 'site',
 				label: tr('chrome.settings.storage.consoleHistoryLabel'),
 				color: '#56b6c2',
 				size: localStorageBytes(CONSOLE_KEYS),
@@ -151,6 +167,7 @@
 			},
 			{
 				id: 'vm-settings',
+				group: 'vm',
 				label: tr('chrome.settings.storage.vmConfigLabel'),
 				color: '#e5c07b',
 				size: localStorageBytes([VM_SETTINGS_KEY]),
@@ -159,6 +176,7 @@
 			},
 			{
 				id: 'chatbot-config',
+				group: 'lmSpace',
 				label: tr('chrome.settings.storage.genConfigLabel'),
 				color: '#61afef',
 				size: localStorageBytes([CHATBOT_CONFIG_KEY]),
@@ -166,7 +184,26 @@
 				clear: async () => removeKeys([CHATBOT_CONFIG_KEY])
 			},
 			{
+				id: 'midi-routing',
+				group: 'synth',
+				label: tr('chrome.settings.storage.midiRoutingLabel'),
+				color: '#c678dd',
+				size: localStorageBytes([MIDI_ROUTING_KEY]),
+				detail: tr('chrome.settings.storage.midiRoutingDetail'),
+				clear: async () => removeKeys([MIDI_ROUTING_KEY])
+			},
+			{
+				id: 'synth-layout',
+				group: 'synth',
+				label: tr('chrome.settings.storage.synthLayoutLabel'),
+				color: '#61afef',
+				size: localStorageBytes([ADV_DEFAULT_KEY]),
+				detail: tr('chrome.settings.storage.synthLayoutDetail'),
+				clear: async () => removeKeys([ADV_DEFAULT_KEY])
+			},
+			{
 				id: 'tours',
+				group: 'site',
 				label: tr('chrome.settings.storage.toursLabel'),
 				color: '#e06c75',
 				size: localStorageBytes(GUIDE_KEYS),
@@ -208,6 +245,11 @@
 			await refresh();
 		}
 	}
+
+	/** The sections under each group heading, empty groups dropped. */
+	let grouped = $derived(
+		GROUP_ORDER.map((g) => ({ group: g, items: sections.filter((s) => s.group === g) })).filter((x) => x.items.length)
+	);
 
 	/** True once every measurable section reads zero -- "clear all" has nothing left to do. */
 	let nothingStored = $derived(sections.length > 0 && sections.every((s) => !s.size));
@@ -374,8 +416,13 @@
 				{#if sections.length === 0}
 					<div class="text-xs text-white/40 py-2">{$t('chrome.settings.measuring')}</div>
 				{:else}
-					<div class="space-y-1">
-						{#each sections as s (s.id)}
+					<div class="space-y-3">
+						{#each grouped as g (g.group)}
+						<div class="space-y-1">
+							<div class="text-[9px] uppercase tracking-wider text-white/30 border-b border-white/10 pb-0.5">
+								{$t(`chrome.settings.storage.group.${g.group}`)}
+							</div>
+						{#each g.items as s (s.id)}
 							<div class="flex items-center justify-between gap-2 border border-white/10 bg-black/30 rounded-xs px-2.5 py-1.5">
 								<div class="min-w-0">
 									<div class="flex items-baseline gap-2">
@@ -397,6 +444,8 @@
 									{clearingId === s.id ? '…' : doneId === s.id ? $t('chrome.settings.cleared') : $t('chrome.settings.clear')}
 								</button>
 							</div>
+						{/each}
+						</div>
 						{/each}
 					</div>
 				{/if}

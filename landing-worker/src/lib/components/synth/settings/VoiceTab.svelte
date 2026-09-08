@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
+	import { advancedByDefault, setAdvancedByDefault } from '../../../stores/synth-view';
 	import {
 		masterTuningSetting,
 		setMasterTuning,
@@ -102,6 +103,35 @@
 					<div class="text-[9px] {$voiceStealingSetting === item.id ? 'text-black/80' : 'text-white/40'}">{$t(item.descKey)}</div>
 				</button>
 			{/each}
+		</div>
+	</div>
+
+	<!-- Editing layout, not a voice parameter -- but this is the tab about how a
+	     patch is worked on, and a preference needs somewhere it can be found. -->
+	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
+		<div class="flex items-center justify-between border-b border-white/10 pb-1">
+			<span class="text-[#e5c07b] font-black">{$t('synthPanels.voice.advDefaultTitle')}</span>
+			<span class="text-white/40 text-[10px]">{$t('synthPanels.voice.editingLayout')}</span>
+		</div>
+
+		<div class="flex items-center justify-between pt-1">
+			<div>
+				<p class="text-white/80 font-bold">
+					{$advancedByDefault ? $t('synthPanels.voice.advDefaultOn') : $t('synthPanels.voice.advDefaultOff')}
+				</p>
+				<p class="text-white/40 text-[10px]">{$t('synthPanels.voice.advDefaultDesc')}</p>
+			</div>
+			<button
+				onclick={() => {
+					setAdvancedByDefault(!$advancedByDefault);
+					playSound('toggle');
+				}}
+				class="press px-3 py-1 rounded-xs border font-black text-xs cursor-pointer transition-all {$advancedByDefault
+					? 'border-[#61afef] bg-[#61afef] text-black shadow-[0_0_8px_#61afef]'
+					: 'border-white/20 bg-white/5 text-white/60 hover:text-white'}"
+			>
+				{$advancedByDefault ? 'ADV: ON' : 'ADV: OFF'}
+			</button>
 		</div>
 	</div>
 </div>

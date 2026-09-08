@@ -6,7 +6,7 @@ import { tr } from '$lib/i18n';
 import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-codec';
 import { playSound } from '../sound';
 import { modularSynth, type TrackData, type TimeSignature } from '../synth';
-import { isPresetFile, applyPresetFile, isKitFile, applyKitFile } from './synth-presets';
+import { isPresetFile, applyPresetFile, isKitFile, applyKitFile, activeKitName } from './synth-presets';
 import { ensureCustomWaves, wavesUsedBy } from './synth-waves';
 import type { CustomWave } from '../synth';
 import {
@@ -75,6 +75,8 @@ export function handleNewProject(): void {
 	setBpm(120);
 	timeMeter.set('4/4');
 	refreshTracks();
+	// The blank track carries no kit, so the preset trigger must stop naming one.
+	activeKitName.set(null);
 	currentSongName.set('blank');
 	showSaveStatus(tr('synth.status.newOk'));
 	playSound('click');
