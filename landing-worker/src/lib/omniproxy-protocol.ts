@@ -87,12 +87,20 @@ export function splitHostPort(target: string): { host: string; port: number | nu
 	if (trimmed.startsWith('[')) {
 		const end = trimmed.indexOf(']');
 		if (end > 0) {
-			const port = Number(trimmed.slice(end + 2));
+			// Only when a ':' actually follows the bracket. Slicing blindly gives
+			// '' for a bare "[::1]", and Number('') is 0 — which read as port 0
+			// rather than "no port", so an allowlist entry written that way
+			// matched nothing instead of matching every port.
+			const rest = trimmed.slice(end + 1);
+			const digits = rest.startsWith(':') ? rest.slice(1) : '';
+			const port = digits === '' ? NaN : Number(digits);
 			return { host: trimmed.slice(1, end), port: Number.isFinite(port) ? port : null };
 		}
 	}
 	const colon = trimmed.lastIndexOf(':');
 	if (colon <= 0) return { host: trimmed, port: null };
-	const port = Number(trimmed.slice(colon + 1));
+	const rest = trimmed.slice(colon + 1);
+	// Same reason as above: an empty port is absent, not zero.
+	const port = rest === '' ? NaN : Number(rest);
 	return { host: trimmed.slice(0, colon), port: Number.isFinite(port) ? port : null };
 }

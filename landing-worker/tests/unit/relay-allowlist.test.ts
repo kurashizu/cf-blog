@@ -58,6 +58,28 @@ describe('parseAllowlist', () => {
 		expect(parseAllowlist('a.com,*')).toBeNull();
 	});
 
+	it('reads a bracketed IPv6 entry with no port as any port', () => {
+		// splitHostPort used to return port 0 here, because Number('') is 0 --
+		// which turned "this host, any port" into "this host, port 0", an entry
+		// that silently matched nothing
+		const allow = parseAllowlist('[2001:db8::1]');
+		expect(allow).toEqual([{ host: '2001:db8::1', port: null }]);
+		expect(isAllowed('2001:db8::1', 443, allow)).toBe(true);
+		expect(isAllowed('2001:db8::1', 80, allow)).toBe(true);
+	});
+
+	it('reads a bracketed IPv6 entry with a port', () => {
+		const allow = parseAllowlist('[2001:db8::1]:443');
+		expect(allow).toEqual([{ host: '2001:db8::1', port: 443 }]);
+		expect(isAllowed('2001:db8::1', 443, allow)).toBe(true);
+		expect(isAllowed('2001:db8::1', 80, allow)).toBe(false);
+	});
+
+	it('treats a trailing colon as no port rather than port 0', () => {
+		expect(parseAllowlist('example.com:')).toEqual([{ host: 'example.com', port: null }]);
+		expect(isAllowed('example.com', 443, parseAllowlist('example.com:'))).toBe(true);
+	});
+
 	it('keeps a port-only star as an entry, not a bypass', () => {
 		// "*:443" means any host but only that port -- it must not become null
 		const allow = parseAllowlist('*:443');

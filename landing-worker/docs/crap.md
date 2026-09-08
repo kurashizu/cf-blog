@@ -70,15 +70,19 @@ a glob: CRAP is complexity weighted by coverage, so sweeping untestable files
 into the denominator would move every score without telling you anything.
 
 The list holds what is genuinely unit-testable — no SvelteKit runtime, no
-browser globals, no Web Audio. The first four read input the site does not
-control, which is why they were tested first:
+browser globals, no Web Audio. The ones at the top read input the site does
+not control — a `Range` header, a relay frame, a DNS query, a model reply, a
+saved disk overlay — which is why they were tested first:
 
 - `src/lib/vm-storage.ts` — parses the `Range` header into byte offsets
 - `src/lib/relay-allowlist.ts` — decides what the relay endpoints will connect to
+- `src/lib/omniproxy-protocol.ts` — decodes relay frames; splits allowlist entries
 - `src/lib/dns-message.ts` — parses wire-format DNS queries and base64url
 - `src/lib/components/chatbot/markdown.ts` — renders untrusted model output
+- `src/lib/components/krsz-vm/disk-overlay.ts` — replays saved blocks onto a VM disk
 - `src/lib/evaluator.ts` — the console's sandboxed maths evaluator
 - `src/lib/routes-map.ts` — tab/path mapping and isolated-route navigation
+- `src/lib/stores/text-scale.ts` — the screen-size to font-size ladder
 - `src/lib/midi-file.ts` — the Standard MIDI File reader
 - `src/lib/components/lifelab/engine.js` — the Life automaton
 - `src/lib/components/lifelab/patterns.js` — RLE encode/decode and geometry
@@ -99,20 +103,24 @@ in the same commit.
 | --- | --- | --- |
 | `relay-allowlist.ts` | 100% | 97% |
 | `engine.js` | 100% | 95% |
-| `vm-storage.ts` | 52%¹ | 89%² |
+| `vm-storage.ts` | 100% | 90% |
+| `omniproxy-protocol.ts` | 100% | 90% |
 | `routes-map.ts` | 100% | 85% |
 | `evaluator.ts` | 100% | 83% |
 | `midi-file.ts` | 98% | 83% |
 | `dns-message.ts` | 100% | 82% |
+| `text-scale.ts` | 55%¹ | 81%² |
+| `disk-overlay.ts` | 53%¹ | 71%² |
 | `markdown.ts` | 95% | 52%³ |
 | `patterns.js` | 53% | 30%⁴ |
 
-¹ `loadChunk` and `readAll` need a live R2 binding and `fetch`; the pure
-parsers around them are covered. ² Stryker's "covered" column, which excludes
-the mutants in those two functions. ³ Many of markdown's surviving mutants are
-inside the syntax highlighter, where a changed token class is a colour
-difference no assertion is worth writing for. ⁴ Diluted by the untested
-pattern library; the functions under test score 73–90% individually.
+¹ The uncovered part is browser-only: `text-scale` writes to localStorage and
+listens for resize, `disk-overlay` reads and writes OPFS files. The pure logic
+around both is covered. ² Stryker's "covered" column, which excludes mutants in
+those functions. ³ Many of markdown's survivors are inside the syntax
+highlighter, where a changed token class is a colour difference no assertion is
+worth writing for. ⁴ Diluted by the untested pattern library; the functions
+under test score 73–90% individually.
 
 `npm test` runs in CI before the build, so a failing test stops the deploy
 rather than being reported after the fact.
@@ -135,6 +143,10 @@ rather than being reported after the fact.
   that are otherwise fastest.
 - Tests stub `$app/environment` (see `tests/unit/stubs/`) rather than booting
   SvelteKit; `browser` is false, so browser-only branches stay skipped.
+- `disk-overlay.test.ts` defines a stand-in `Node` class: `findDiskBuffer`
+  skips DOM nodes while walking the emulator, and `instanceof Node` throws a
+  ReferenceError under plain Node. That is cheaper than adding jsdom for one
+  identity check, and nothing under test constructs one.
 - Some surviving mutants are equivalent, not missed: in `engine.js`,
   `v < 250` → `v <= 250` changes an age cap that would take 250 generations to
   observe. Not every survivor is worth a test.
