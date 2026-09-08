@@ -300,6 +300,17 @@ export function renderMarkdown(src: string, math: MathSpan[] = []): string {
 			para.push(lines[i]);
 			i++;
 		}
+		if (!para.length) {
+			// The line starts a block this loop refuses to absorb, but no block
+			// above claimed it either — a fence whose info string is not a bare
+			// word ("```js\"x") reaches here, since the fence pattern wants
+			// `\w+`. Without this the index never moves and the outer loop spins
+			// forever, appending an empty paragraph each time until the tab dies.
+			// Take the line as literal text and move on.
+			out.push(`<p>${inline(escapeHtml(lines[i])).replace(/\n/g, '<br>')}</p>`);
+			i++;
+			continue;
+		}
 		out.push(`<p>${inline(escapeHtml(para.join('\n'))).replace(/\n/g, '<br>')}</p>`);
 	}
 

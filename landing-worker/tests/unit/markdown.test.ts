@@ -193,6 +193,205 @@ describe('tables', () => {
 	});
 });
 
+describe('syntax highlighting', () => {
+	/** The text of a rendered block, with the highlight spans stripped. */
+	const plain = (html: string) => html.replace(/<[^>]+>/g, '');
+	/** Which token classes a rendered block used. */
+	const classes = (html: string) => [...html.matchAll(/tok-([a-z])/g)].map((m) => m[1]);
+
+	it('marks keywords, numbers, strings, comments and calls', () => {
+		const out = renderMarkdown('```js\nconst n = 0x1f; // note\nfoo("s");\n```');
+		const seen = new Set(classes(out));
+		expect(seen).toContain('k'); // const
+		expect(seen).toContain('n'); // 0x1f
+		expect(seen).toContain('c'); // // note
+		expect(seen).toContain('s'); // "s"
+		expect(seen).toContain('f'); // foo(
+	});
+
+	it('leaves the source readable once the spans are stripped', () => {
+		const src = 'const a = 1;\nreturn foo(a);';
+		const out = renderMarkdown('```js\n' + src + '\n```');
+		expect(plain(out)).toBe(src);
+	});
+
+	it('does not recolour a keyword inside a string', () => {
+		// the placeholder pass exists for exactly this
+		const out = renderMarkdown('```js\nconst s = "return if for";\n```');
+		const stringSpan = out.match(/<span class="tok-s">([^<]*)<\/span>/)?.[1] ?? '';
+		expect(stringSpan).toContain('return if for');
+		expect(stringSpan).not.toContain('tok-k');
+	});
+
+	it('does not recolour a keyword inside a comment', () => {
+		const out = renderMarkdown('```js\n// return if for\n```');
+		const commentSpan = out.match(/<span class="tok-c">([^<]*)<\/span>/)?.[1] ?? '';
+		expect(commentSpan).toContain('return if for');
+		expect(out.match(/tok-k/)).toBeNull();
+	});
+
+	it('survives more than ten held tokens, where the index needs two letters', () => {
+		// indices are written in letters, not digits, so a placeholder is not
+		// itself matched by the number pattern on a later pass
+		const src = Array.from({ length: 15 }, (_, i) => 'const x' + i + ' = ' + i + ';').join('\n');
+		const out = renderMarkdown('```js\n' + src + '\n```');
+		expect(plain(out)).toBe(src);
+		expect(out).not.toContain('\u0000');
+	});
+
+	it('leaves no placeholder in the output for any input', () => {
+		for (const src of ['a', '// c', '"s"', '1 2 3', 'f(1)', 'const x = "1" // 2']) {
+			const out = renderMarkdown('```js\n' + src + '\n```');
+			expect(out).not.toContain('\u0000');
+		}
+	});
+
+	it('leaves prose fences uncoloured', () => {
+		for (const lang of ['text', 'txt', 'plain', 'md', 'markdown', 'output']) {
+			const out = renderMarkdown('```' + lang + '\nconst return 1\n```');
+			expect(out).not.toContain('tok-');
+		}
+	});
+
+	it('matches the prose languages case-insensitively', () => {
+		expect(renderMarkdown('```TEXT\nconst x\n```')).not.toContain('tok-');
+	});
+
+	it('still highlights a fence with no language', () => {
+		// no language named is not the same as "prose"
+		expect(renderMarkdown('```\nconst x = 1;\n```')).toContain('tok-');
+	});
+
+	it('escapes the language before putting it in an attribute', () => {
+		// only a bare word reaches data-lang, so the escaping is belt-and-braces
+		// rather than the thing standing between a reply and an attribute break
+		const out = renderMarkdown('```js\ncode\n```');
+		expect(out).toContain('data-lang="js"');
+		expect(out).not.toMatch(/data-lang="[^"]*"[^>]*=/);
+	});
+
+	it('highlights decimals and hex but not a bare word', () => {
+		const out = renderMarkdown('```js\n1.5 0xff word\n```');
+		expect(out).toContain('>1.5<');
+		expect(out).toContain('>0xff<');
+		expect(plain(out)).toContain('word');
+	});
+});
+
+describe('mermaid blocks', () => {
+	it('hands a closed diagram to the page rather than rendering it', () => {
+		const out = renderMarkdown('```mermaid\ngraph TD;\nA-->B;\n```');
+		expect(out).toContain('data-mermaid=');
+		expect(out).not.toContain('<pre');
+	});
+
+	it('keeps the source escaped inside the attribute', () => {
+		const out = renderMarkdown('```mermaid\nA["<b>"]-->B;\n```');
+		expect(out).not.toContain('<b>');
+		expect(out).toContain('&lt;b&gt;');
+	});
+
+	it('shows an unclosed diagram as code, not as a diagram', () => {
+		// half a diagram is not a diagram, and mermaid is loud about it
+		const out = renderMarkdown('```mermaid\ngraph TD;');
+		expect(out).not.toContain('data-mermaid=');
+		expect(out).toContain('data-lang="mermaid"');
+	});
+});
+
+describe('paragraphs and block boundaries', () => {
+	it('joins consecutive lines into one paragraph', () => {
+		const out = renderMarkdown('one\ntwo');
+		expect(out.match(/<p>/g)?.length).toBe(1);
+	});
+
+	it('splits paragraphs on a blank line', () => {
+		const out = renderMarkdown('one\n\ntwo');
+		expect(out.match(/<p>/g)?.length).toBe(2);
+	});
+
+	it.each([
+		['a fence', '```'],
+		['a heading', '# h'],
+		['a quote', '> q'],
+		['a bullet', '- b'],
+		['a numbered item', '1. n'],
+		['a paren-numbered item', '1) n']
+	])('ends a paragraph at %s', (_label, starter) => {
+		const out = renderMarkdown('text\n' + starter);
+		expect(out).toMatch(/<p>text<\/p>/);
+	});
+
+	it('ends a paragraph at a table header', () => {
+		const out = renderMarkdown('text\n| a |\n| --- |\n| 1 |');
+		expect(out).toMatch(/<p>text<\/p>/);
+		expect(out).toContain('<table>');
+	});
+
+	it('keeps a lone pipe line inside the paragraph', () => {
+		// it only ends the paragraph when an alignment row follows
+		const out = renderMarkdown('text\na | b');
+		expect(out).not.toContain('<table>');
+		expect(out.match(/<p>/g)?.length).toBe(1);
+	});
+
+	it('closes an open list before a new block', () => {
+		const out = renderMarkdown('- a\n# heading');
+		expect(out.indexOf('</ul>')).toBeLessThan(out.indexOf('<h1'));
+	});
+
+	it('closes an open list at the end of the input', () => {
+		expect(renderMarkdown('- a\n- b')).toContain('</ul>');
+	});
+
+	it('switches between list kinds rather than nesting them', () => {
+		const out = renderMarkdown('- a\n1. b');
+		expect(out).toContain('</ul>');
+		expect(out).toContain('<ol>');
+	});
+});
+
+describe('lines no block claims', () => {
+	/* A fence whose info string is not a bare word does not match the fence
+	   pattern (`\w+`), and the paragraph loop refuses to absorb anything
+	   starting with three backticks. Nothing consumed the line, so the index
+	   never advanced and renderMarkdown spun until the tab ran out of memory.
+	   Model replies are untrusted input, so this was a hang anyone could
+	   trigger. */
+
+	it.each([
+		['a quoted info string', '```js"onload="x'],
+		['a dotted info string', '```a.b'],
+		['a hyphenated info string', '```c-lang'],
+		['punctuation only', '```!!!'],
+		['a space in the info string', '```js extra']
+	])('renders %s as text instead of hanging', (_label, src) => {
+		const out = renderMarkdown(src);
+		expect(out).toContain('```');
+		// one paragraph, not thousands
+		expect(out.match(/<p>/g)?.length ?? 0).toBeLessThanOrEqual(1);
+	});
+
+	it('keeps rendering the lines after one', () => {
+		const out = renderMarkdown('```js"x\nafter');
+		expect(out).toContain('after');
+	});
+
+	it('escapes such a line rather than emitting it', () => {
+		const out = renderMarkdown('```<script>alert(1)</script>');
+		expect(out).not.toMatch(/<script/i);
+		expect(out).toContain('&lt;script&gt;');
+	});
+
+	it('finishes promptly for a reply full of them', () => {
+		const src = Array.from({ length: 200 }, () => '```js"x').join('\n');
+		const started = Date.now();
+		const out = renderMarkdown(src);
+		expect(Date.now() - started).toBeLessThan(1000);
+		expect(out.length).toBeLessThan(200_000);
+	});
+});
+
 describe('edge cases', () => {
 	it('renders empty input without throwing', () => {
 		expect(() => renderMarkdown('')).not.toThrow();
