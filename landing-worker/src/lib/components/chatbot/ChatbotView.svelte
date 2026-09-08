@@ -842,7 +842,7 @@
 		class="flex flex-wrap items-center gap-2 px-2 py-1.5 border {themeStyles.border} rounded-xs bg-black/30 text-xs"
 	>
 		<span class="font-black text-[#61afef]">6:web-lm</span>
-		<span class="text-white/40 hidden sm:inline">
+		<span class="text-white/60 hidden sm:inline">
 			{$t('chatbot.strip.subtitle')}
 		</span>
 
@@ -853,7 +853,7 @@
 				class="hidden sm:flex items-center gap-1.5 font-mono"
 				title={$t('chatbot.strip.ctxHint', { contextWindow: config.contextWindow })}
 			>
-				<span class="text-white/35">ctx</span>
+				<span class="text-white/50">ctx</span>
 				<span class="block h-1 w-14 bg-white/10 rounded-full overflow-hidden">
 					<span
 						class="block h-full transition-[width] duration-300 {ctxPct > 85
@@ -964,7 +964,7 @@
 					>
 						{thinkMode ? $t('chatbot.config.on') : $t('chatbot.config.off')}
 					</button>
-					<span class="text-white/30 text-[11px]">{$t('chatbot.config.reasoning.also')}</span>
+					<span class="text-white/50 text-[11px]">{$t('chatbot.config.reasoning.also')}</span>
 				</div>
 				<div class="flex items-center gap-2 font-mono">
 					<span class="text-white/60 w-36 shrink-0" title={$t('chatbot.config.sampling.hint')}>
@@ -1002,7 +1002,7 @@
 				</div>
 			</div>
 			<div class="flex items-center gap-2 border-t border-white/10 pt-1.5">
-				<span class="text-white/35 flex-1">
+				<span class="text-white/50 flex-1">
 					{$t('chatbot.config.footnote')}
 				</span>
 				<button
@@ -1024,7 +1024,7 @@
 			<div class="text-white/50 leading-relaxed">
 				{$t('chatbot.storage.explain')}
 			</div>
-			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
+			<div class="font-mono text-white/60 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
 				<span>{$t('chatbot.storage.languageModel')}</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.model)}</span>
 				<span>{$t('chatbot.storage.visionProjector')}</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
 			</div>
@@ -1032,7 +1032,7 @@
 				<span>
 					{$t('chatbot.storage.total', { size: fmtMb(TOTAL_DOWNLOAD_MB) })}
 					{#if modelCacheSize}
-						<span class="text-white/35">
+						<span class="text-white/50">
 							· {modelCacheSize.count
 								? $t('chatbot.storage.cachedHere', { size: fmtBytes(modelCacheSize.bytes) })
 								: $t('chatbot.storage.notDownloaded')}
@@ -1055,7 +1055,7 @@
 					<span class="text-white/50">
 						{$t('chatbot.storage.conversations')}
 						{#if savedSize}
-							<span class="font-mono text-white/35">
+							<span class="font-mono text-white/50">
 								· {$t('chatbot.storage.conversationsCount', { count: savedSize.count, size: fmtBytes(savedSize.bytes) })}
 							</span>
 						{/if}
@@ -1076,7 +1076,7 @@
 						</button>
 					</div>
 				</div>
-				<div class="text-white/35 leading-relaxed">
+				<div class="text-white/50 leading-relaxed">
 					{$t('chatbot.storage.conversationsExplain')}
 				</div>
 				{#if sessions.length}
@@ -1099,14 +1099,14 @@
 								{#if sess.think}
 									<span class="text-[#c678dd]/70 font-mono text-[10px] shrink-0">THINK</span>
 								{/if}
-								<span class="font-mono text-white/30 text-[10px] tabular-nums shrink-0">
+								<span class="font-mono text-white/50 text-[10px] tabular-nums shrink-0">
 									{$t('chatbot.storage.turnsCount', { count: sess.turns.length })}
 								</span>
 								<button
 									onclick={() => removeSession(sess.id)}
 									title={$t('chatbot.storage.deleteConversationHint')}
 									aria-label={$t('chatbot.storage.deleteConversationLabel')}
-									class="press text-white/30 hover:text-[#e06c75] cursor-pointer shrink-0 px-1 transition-colors"
+									class="press text-white/50 hover:text-[#e06c75] cursor-pointer shrink-0 px-1 transition-colors"
 								>
 									×
 								</button>
@@ -1114,7 +1114,7 @@
 						{/each}
 					</div>
 				{:else}
-					<div class="text-white/25 font-mono">{$t('chatbot.storage.noSaved')}</div>
+					<div class="text-white/50 font-mono">{$t('chatbot.storage.noSaved')}</div>
 				{/if}
 			</div>
 		</div>
@@ -1155,7 +1155,7 @@
 						runsCode: `<span class="text-[#e5c07b] font-bold">${$t('chatbot.idle.pitchRunsCode')}</span>`
 					})}
 				</div>
-				<div class="text-white/40 text-xs">
+				<div class="text-white/60 text-xs">
 					{$t('chatbot.idle.downloadNote', { size: fmtMb(TOTAL_DOWNLOAD_MB) })}
 				</div>
 				{#if gpu && !gpu.ok}
@@ -1182,7 +1182,7 @@
 					</button>
 				{/if}
 				{#if gpu?.adapterLabel}
-					<div class="text-white/30 text-[10px] font-mono">{$t('chatbot.idle.gpuLabel', { label: gpu.adapterLabel })}</div>
+					<div class="text-white/50 text-[10px] font-mono">{$t('chatbot.idle.gpuLabel', { label: gpu.adapterLabel })}</div>
 				{/if}
 			</div>
 		{:else if phase === 'loading'}
@@ -1198,12 +1198,12 @@
 				<div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
 					<div class="h-full bg-[#98c379] transition-[width] duration-200" style="width: {progressPct}%"></div>
 				</div>
-				<div class="text-white/40 text-[10px] font-mono text-right">{progressPct}%</div>
+				<div class="text-white/60 text-[10px] font-mono text-right">{progressPct}%</div>
 			</div>
 		{:else if turns.filter((t) => !t.notice).length === 0}
-			<div class="m-auto text-white/30 text-xs font-mono text-center leading-relaxed">
+			<div class="m-auto text-white/50 text-xs font-mono text-center leading-relaxed">
 				{$t('chatbot.empty.ready')}<br />
-				<span class="text-white/20">{$t('chatbot.empty.helpHint')}</span>
+				<span class="text-white/50">{$t('chatbot.empty.helpHint')}</span>
 			</div>
 		{/if}
 		<!--
@@ -1228,7 +1228,7 @@
 			<div in:fly={{ y: 6, duration: 160, opacity: 0 }}>
 			{#if turn.toolResult}
 				<div
-					class="self-start font-mono text-[11px] text-white/45 border-l-2 border-[#e5c07b]/40 pl-2 py-0.5 whitespace-pre-wrap max-w-[85%] overflow-x-auto"
+					class="self-start font-mono text-[11px] text-white/60 border-l-2 border-[#e5c07b]/40 pl-2 py-0.5 whitespace-pre-wrap max-w-[85%] overflow-x-auto"
 				>
 					{turn.toolName} → {turn.content}
 				</div>
@@ -1256,7 +1256,7 @@
 					{/if}
 				</div>
 			{:else if turn.notice}
-				<div class="text-[11px] font-mono text-white/35 whitespace-pre-wrap border-l-2 border-white/15 pl-2">
+				<div class="text-[11px] font-mono text-white/50 whitespace-pre-wrap border-l-2 border-white/15 pl-2">
 					{turn.content}
 				</div>
 			{:else}
@@ -1276,7 +1276,7 @@
 						</button>
 						{#if openThink.has(i)}
 							<div
-								class="text-xs font-mono text-white/45 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5 max-h-64 overflow-y-auto"
+								class="text-xs font-mono text-white/60 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5 max-h-64 overflow-y-auto"
 							>
 								{turn.reasoning}
 							</div>
@@ -1316,12 +1316,12 @@
 							cold cache, that a bare cursor made look like a hang.
 						-->
 						<div
-							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/45 text-sm flex items-center gap-2 font-mono"
+							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/60 text-sm flex items-center gap-2 font-mono"
 						>
 							<span class="text-[#61afef]">{SPINNER[spinnerTick % SPINNER.length]}</span>
 							<span>{waitLabel}</span>
 							{#if waitedSecs >= 2}
-								<span class="text-white/25 tabular-nums">{$t('chatbot.turn.waitSeconds', { seconds: waitedSecs })}</span>
+								<span class="text-white/50 tabular-nums">{$t('chatbot.turn.waitSeconds', { seconds: waitedSecs })}</span>
 							{/if}
 						</div>
 					{:else if !turn.reasoning && !turn.toolCalls?.length}
@@ -1330,7 +1330,7 @@
 							left such a turn looking permanently stuck.
 						-->
 						<div
-							class="self-start px-3 py-2 rounded-md text-xs bg-white/[0.03] border border-white/10 text-white/40 italic"
+							class="self-start px-3 py-2 rounded-md text-xs bg-white/[0.03] border border-white/10 text-white/60 italic"
 						>
 							{$t('chatbot.turn.noReply')}
 						</div>
@@ -1358,10 +1358,10 @@
 							: 'text-[#d8dee9] hover:bg-white/10'}"
 					>
 						<span class="font-bold">/{c.name}</span>
-						<span class="text-white/40 truncate">{$t(c.hintKey)}</span>
+						<span class="text-white/60 truncate">{$t(c.hintKey)}</span>
 					</button>
 				{/each}
-				<div class="px-2 pt-1 text-[10px] text-white/25 border-t border-white/10 mt-1">
+				<div class="px-2 pt-1 text-[10px] text-white/50 border-t border-white/10 mt-1">
 					{$t('chatbot.composer.completionsHint')}
 				</div>
 			</div>
@@ -1382,7 +1382,7 @@
 						<button
 							onclick={() => removePending(pi)}
 							aria-label={$t('chatbot.composer.removeAttachment', { name: a.name })}
-							class="press text-white/40 hover:text-[#e06c75] cursor-pointer px-1 transition-colors"
+							class="press text-white/60 hover:text-[#e06c75] cursor-pointer px-1 transition-colors"
 						>
 							×
 						</button>
@@ -1443,7 +1443,7 @@
 					? $t('chatbot.composer.placeholderReady')
 					: $t('chatbot.composer.placeholderNotReady')}
 				style="caret-color: {themeStyles.cursorColor}"
-				class="flex-1 resize-none bg-transparent border-0 outline-none font-mono text-sm text-[#d8dee9] leading-relaxed disabled:opacity-40 placeholder:text-white/25 max-h-40"
+				class="flex-1 resize-none bg-transparent border-0 outline-none font-mono text-sm text-[#d8dee9] leading-relaxed disabled:opacity-40 placeholder:text-white/50 max-h-40"
 			></textarea>
 			{#if phase === 'generating'}
 				<button

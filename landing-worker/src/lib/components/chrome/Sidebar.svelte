@@ -59,7 +59,8 @@
 	}
 </script>
 
-<div
+<aside
+	aria-label={$t('a11y.landmark.sidebar')}
 	class="order-2 lg:order-none col-span-12 lg:col-[span_5_/_span_5] border {themeStyles.border} p-2 sm:p-2.5 pr-0 sm:pr-0 flex flex-col gap-2 {themeStyles.cardBgVideo} rounded-sm min-h-0 max-w-full"
 >
 	<!-- ASCII brand & acronym breakdown -- pinned, not part of the scroll
@@ -185,5 +186,5 @@
 		</div>
 	</div>
 	</div>
-</div>
+</aside>
 

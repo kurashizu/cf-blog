@@ -3,6 +3,7 @@
 	import { t } from '../../i18n';
 	import { draggable } from './draggable';
 	import { paramDescriptionKey } from './param-descriptions';
+	import { sliderKeyValue } from './slider-keys';
 
 	let {
 		label,
@@ -90,15 +91,41 @@
 		onChange(reset);
 		playSound('click');
 	}
+
+	/* Keyboard, per the ARIA slider pattern (see slider-keys.ts). The control
+	   is a focusable role=slider; the read-out the reader hears is
+	   aria-valuetext, the same formatted number a sighted user sees. */
+	function handleKeydown(e: KeyboardEvent) {
+		const next = sliderKeyValue(e, { value, min, max, step, reset });
+		if (next === null) return;
+		e.preventDefault();
+		if (next === value) return;
+		onChange(next);
+		playSound('click');
+	}
+
+	let a11yLabel = $derived(desc ? `${label}, ${desc}` : label);
+	const hintId = $props.id();
+	let a11yHint = $derived(reset !== undefined ? `${$t('a11y.slider.hint')}. ${$t('a11y.slider.reset')}` : $t('a11y.slider.hint'));
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+	role="slider"
+	tabindex="0"
+	aria-label={a11yLabel}
+	aria-describedby={hintId}
+	aria-valuemin={min}
+	aria-valuemax={max}
+	aria-valuenow={value}
+	aria-valuetext="{formatDisplay(value)}{unit}"
+	aria-orientation="vertical"
 	onwheel={handleWheel}
 	oncontextmenu={handleContextMenu}
-	class="flex flex-col items-center select-none group cursor-ns-resize shrink-0 min-w-0 leading-none"
+	onkeydown={handleKeydown}
+	class="flex flex-col items-center select-none group cursor-ns-resize shrink-0 min-w-0 leading-none rounded-full"
 	title={tooltipText}
 >
+	<span id={hintId} class="sr-only">{a11yHint}</span>
 	<div
 		use:draggable={{
 			mode: 'relative',
@@ -113,7 +140,7 @@
 		style="width: {size}px; height: {size}px"
 		class="relative rounded-full transition-transform duration-150 active:scale-95 hover:scale-[1.04] {isDragging ? 'shadow-[0_0_8px_rgba(255,255,255,0.4)]' : ''}"
 	>
-		<svg viewBox="0 0 100 100" class="w-full h-full overflow-visible select-none pointer-events-none">
+		<svg viewBox="0 0 100 100" class="w-full h-full overflow-visible select-none pointer-events-none" aria-hidden="true">
 			<circle cx="50" cy="50" r="46" fill="#12151a" stroke="rgba(255,255,255,0.25)" stroke-width="3" class="group-hover:stroke-white/60 transition-colors" />
 			<path d="M 21.72 78.28 A 40 40 0 1 1 78.28 78.28" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4" stroke-linecap="round" />
 			{#if arcPath}

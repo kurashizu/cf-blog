@@ -194,9 +194,9 @@
 				>
 					<div class="flex items-center justify-between">
 						<span class="font-black text-xs" style="color: {mode.color}">▶ {mode.label}</span>
-						<span class="text-[10px] font-mono text-white/35">{mode.steps.length > 1 ? $t('utilities.screen.pattern.count.plural', { count: mode.steps.length }) : $t('utilities.screen.pattern.count', { count: mode.steps.length })}</span>
+						<span class="text-[10px] font-mono text-white/50">{mode.steps.length > 1 ? $t('utilities.screen.pattern.count.plural', { count: mode.steps.length }) : $t('utilities.screen.pattern.count', { count: mode.steps.length })}</span>
 					</div>
-					<div class="text-[10px] font-mono text-white/45 leading-snug mt-0.5">{mode.desc}</div>
+					<div class="text-[10px] font-mono text-white/60 leading-snug mt-0.5">{mode.desc}</div>
 				</button>
 			{/each}
 		</div>

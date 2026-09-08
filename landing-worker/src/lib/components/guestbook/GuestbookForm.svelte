@@ -550,7 +550,7 @@
 		{#if gbStatus}
 			<div class="border border-[#98c379] p-2.5 text-xs sm:text-sm font-bold text-[#98c379] bg-black/40 rounded-xs" in:fade={{ duration: 160 }}>{gbStatus}</div>
 		{/if}
-		<p class="text-[10px] sm:text-xs text-white/40 leading-relaxed">
+		<p class="text-[10px] sm:text-xs text-white/60 leading-relaxed">
 			{$t('community.guestbook.disclaimer')}
 		</p>
 		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">{$t('community.guestbook.submit')}</button>
@@ -586,11 +586,11 @@
 		</BoxHeader>
 
 		{#if messagesState === 'loading'}
-			<div class="text-xs font-mono text-white/40 py-2">{$t('community.guestbook.fetching')}</div>
+			<div class="text-xs font-mono text-white/60 py-2">{$t('community.guestbook.fetching')}</div>
 		{:else if messagesState === 'error'}
 			<div class="text-xs font-mono text-[#e06c75] py-2">{$t('community.guestbook.fetchError')}</div>
 		{:else if messages.length === 0}
-			<div class="text-xs font-mono text-white/40 py-2">{$t('community.guestbook.empty')}</div>
+			<div class="text-xs font-mono text-white/60 py-2">{$t('community.guestbook.empty')}</div>
 		{:else}
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<!-- The field itself only listens so that clicking the empty space
@@ -631,7 +631,7 @@
 							>
 								<div class="flex items-baseline justify-between gap-1.5">
 									<span class="text-[11px] font-bold truncate" style="color: {p.color}">{p.name}</span>
-									<span class="text-[9px] font-mono text-white/30 shrink-0">{fmtTime(p.timestamp)}</span>
+									<span class="text-[9px] font-mono text-white/50 shrink-0">{fmtTime(p.timestamp)}</span>
 								</div>
 								<div
 									class="text-[10px] text-[#eceff4]/80 leading-snug mt-0.5 break-words"
@@ -645,7 +645,7 @@
 						</div>
 					{/each}
 			</div>
-			<div class="text-[10px] font-mono text-white/30 shrink-0">
+			<div class="text-[10px] font-mono text-white/50 shrink-0">
 				{$t('community.guestbook.fieldStatus', {
 					count: messages.length,
 					collideNote: $performanceMode ? '' : $t('community.guestbook.collideNote')

@@ -179,7 +179,7 @@
 					<span>{$t('synth.patch.loadLocalLabel')}</span>
 				</button>
 
-				<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none">{$t('synth.patch.builtinSongsLabel')}</div>
+				<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/60 border-t border-white/10 mt-1 select-none">{$t('synth.patch.builtinSongsLabel')}</div>
 
 				{#each BUILTIN_SONGS as song, idx (song.id)}
 					<button
@@ -190,10 +190,10 @@
 						title={$t('synth.patch.loadSongHint', { name: song.name, bpm: song.bpm, meter: song.meter, steps: song.steps })}
 					>
 						<span class="flex items-center gap-2 min-w-0">
-							<span class="shrink-0 {$builtinSongIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$builtinSongIdx === idx ? '●' : '○'}</span>
+							<span class="shrink-0 {$builtinSongIdx === idx ? 'text-[#98c379]' : 'text-white/50'}">{$builtinSongIdx === idx ? '●' : '○'}</span>
 							<span class="whitespace-nowrap">{song.name}</span>
 						</span>
-						<span class="shrink-0 whitespace-nowrap text-[10px] text-white/40">{song.bpm}bpm · {song.meter}</span>
+						<span class="shrink-0 whitespace-nowrap text-[10px] text-white/60">{song.bpm}bpm · {song.meter}</span>
 					</button>
 				{/each}
 			</div>

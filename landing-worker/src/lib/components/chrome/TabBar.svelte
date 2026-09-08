@@ -9,6 +9,8 @@
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 	import { consoleOverlayOpen, globalSettingsOpen, toggleConsoleOverlay, openOnboardingNow } from '../../stores/chrome';
 	import KrszLogo from './KrszLogo.svelte';
+	import { Button } from '$lib/components/ui';
+	import { announce } from '../../stores/a11y';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
@@ -35,8 +37,8 @@
 		{ id: 7, label: $t('common.tabName.7'), color: '#98c379', title: $t('chrome.tabbar.tab7') }
 	]);
 
-	let tabStrip: HTMLDivElement | undefined = $state();
-	let tabsRow: HTMLDivElement | undefined = $state();
+	let tabStrip: HTMLElement | undefined = $state();
+	let tabsRow: HTMLElement | undefined = $state();
 	let tabBtns: (HTMLButtonElement | undefined)[] = [];
 
 	/**
@@ -112,6 +114,10 @@
 	 * axes into horizontal scroll, and only swallow the event when there is
 	 * actually somewhere to go, so the page still scrolls otherwise.
 	 */
+	function wheelScroll(node: HTMLElement) {
+		node.addEventListener('wheel', onStripWheel, { passive: false });
+		return { destroy: () => node.removeEventListener('wheel', onStripWheel) };
+	}
 	function onStripWheel(e: WheelEvent) {
 		const el = tabStrip;
 		if (!el) return;
@@ -128,6 +134,30 @@
 	function nav(id: number) {
 		goto(TAB_ROUTES[id]);
 		playSound('click');
+	}
+
+	/* Left/Right/Home/End walk the view buttons without leaving the strip,
+	   so the bar is one Tab stop plus arrows rather than eight stops -- the
+	   roving-tabindex pattern, but every button stays in the tab order (a
+	   route change re-renders the active one and would otherwise lose the
+	   single tabbable slot). */
+	function onTabsKeydown(e: KeyboardEvent) {
+		const btns = tabBtns.filter((b): b is HTMLButtonElement => !!b);
+		const i = btns.indexOf(document.activeElement as HTMLButtonElement);
+		if (i < 0) return;
+		let next = -1;
+		if (e.key === 'ArrowRight') next = (i + 1) % btns.length;
+		else if (e.key === 'ArrowLeft') next = (i - 1 + btns.length) % btns.length;
+		else if (e.key === 'Home') next = 0;
+		else if (e.key === 'End') next = btns.length - 1;
+		if (next < 0) return;
+		e.preventDefault();
+		btns[next].focus();
+	}
+
+	function onCycleTheme() {
+		cycleTheme();
+		announce($t('a11y.announce.theme', { theme: themeLabel }));
 	}
 
 	function togglePlayback() {
@@ -175,32 +205,32 @@
 	<!-- Pinned beside the mark for the same reason: the console opens over any
 	     view, so its handle belongs with the fixed chrome rather than among the
 	     tabs it scrolls away with. -->
-	<button
-		onclick={() => {
-			toggleConsoleOverlay();
-			playSound('toggle');
-		}}
+	<Button
+		color="#98c379"
+		sound="toggle"
+		active={$consoleOverlayOpen}
+		onclick={toggleConsoleOverlay}
 		data-tour="console-btn"
 		title={$t('chrome.tabbar.consoleTitle')}
-		class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border {$consoleOverlayOpen
-			? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-			: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
+		label={$t('chrome.tabbar.console')}
+		class="shrink-0 sm:text-sm"
 	>
-		<span class="btnlabel">[~]&nbsp;{$t('chrome.tabbar.console')}</span><span class="btnlabel-off">[~]</span>
-	</button>
+		<span class="btnlabel" aria-hidden="true">[~]&nbsp;{$t('chrome.tabbar.console')}</span><span class="btnlabel-off" aria-hidden="true">[~]</span>
+	</Button>
 
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- The strip is a container query root: below the width where all eight
 	     full labels fit, tabs collapse to their number and only the active one
 	     keeps its name -- the row stays one line, no clipping, no hidden
-	     sideways scroll to discover. -->
-	<div
+	     sideways scroll to discover. A <nav>: these are the site's routes, and
+	     aria-current marks the one on screen. -->
+	<nav
 		bind:this={tabStrip}
-		onwheel={onStripWheel}
+		use:wheelScroll
+		aria-label={$t('a11y.landmark.views')}
 		class="tabstrip flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1"
 		class:names-off={namesCollapsed}
 	>
-		<div bind:this={tabsRow} class="relative flex items-center gap-0.5 sm:gap-2" data-tour="tabs">
+		<div bind:this={tabsRow} class="relative flex items-center gap-0.5 sm:gap-2" data-tour="tabs" onkeydown={onTabsKeydown} role="presentation">
 			<!-- The one element that actually moves -- everything else here is a
 			     colour transition on a fixed element, this is the only spot on the
 			     page where a highlight has to travel between siblings. Absolutely
@@ -211,6 +241,7 @@
 			{#if indicator}
 				<div
 					class="absolute inset-y-0 rounded pointer-events-none transition-[transform,width,background-color] duration-200 z-0"
+					aria-hidden="true"
 					style="transform: translateX({indicator.left}px); width: {indicator.width}px; background-color: {indicator.color}; transition-timing-function: cubic-bezier(0.2, 0, 0, 1);"
 				></div>
 			{/if}
@@ -219,26 +250,30 @@
 					bind:this={tabBtns[tab.id]}
 					onclick={() => nav(tab.id)}
 					title={tab.title}
+					aria-current={activeTab === tab.id ? 'page' : undefined}
+					aria-label="{tab.id}: {tab.label}"
 					class="press relative z-10 px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
 						? 'text-black font-black'
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
 				>
-					{tab.id}<span class="tabname" class:on={activeTab === tab.id}>:{tab.label}</span>
+					<span aria-hidden="true">{tab.id}<span class="tabname" class:on={activeTab === tab.id}>:{tab.label}</span></span>
 				</button>
 			{/each}
 		</div>
-	</div>
+	</nav>
 
 	<div class="flex items-center gap-1.5 sm:gap-3 shrink-0 text-xs sm:text-sm pl-1">
 		<button
 			onclick={togglePlayback}
 			title={$t('chrome.tabbar.playbackTitle')}
+			aria-label={$isSeqPlaying ? $t('a11y.playback.stop') : $t('a11y.playback.play')}
+			aria-pressed={$isSeqPlaying}
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-all whitespace-nowrap shrink-0 text-xs sm:text-sm font-black border {$isSeqPlaying
 				? 'border-[#e06c75] bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75] hover:text-black shadow-[0_0_8px_#e06c75]'
 				: 'border-[#98c379] bg-[#98c379]/10 text-[#98c379] hover:bg-[#98c379] hover:text-black'}"
 		>
 			<!-- SVG glyph instead of ►/■ text — the font glyphs sit off the text baseline -->
-			<span class="inline-flex items-center gap-1">
+			<span class="inline-flex items-center gap-1" aria-hidden="true">
 				<span>[</span>
 				{#if $isSeqPlaying}
 					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0 blink-live"><rect x="1" y="1" width="6" height="6" fill="currentColor" /></svg>
@@ -250,34 +285,34 @@
 				<span class="btnlabel">{$isSeqPlaying ? $t('chrome.tabbar.stop') : $t('chrome.tabbar.play')}</span><span>]</span>
 			</span>
 		</button>
-		<button
-			onclick={() => {
-				openOnboardingNow('site-tour');
-				playSound('click');
-			}}
+		<Button
+			color="#61afef"
+			onclick={() => openOnboardingNow('site-tour')}
 			data-tour="guide-btn"
 			title={$t('chrome.tabbar.guideTitle')}
-			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
+			label={$t('chrome.tabbar.guide')}
+			class="shrink-0 sm:text-sm"
 		>
-			<span class="btnlabel">[?]&nbsp;{$t('chrome.tabbar.guide')}</span><span class="btnlabel-off">[?]</span>
-		</button>
-		<button
-			onclick={() => {
-				globalSettingsOpen.set(true);
-				playSound('click');
-			}}
+			<span class="btnlabel" aria-hidden="true">[?]&nbsp;{$t('chrome.tabbar.guide')}</span><span class="btnlabel-off" aria-hidden="true">[?]</span>
+		</Button>
+		<Button
+			variant="neutral"
+			color="#56b6c2"
+			onclick={() => globalSettingsOpen.set(true)}
 			title={$t('chrome.tabbar.settingsTitle')}
-			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-white/25 text-white/60 hover:border-[#56b6c2] hover:text-[#56b6c2] hover:bg-[#56b6c2]/20"
+			label={$t('a11y.dialog.settings')}
+			class="shrink-0 sm:text-sm"
 		>
 			[{$t('chrome.tabbar.cfg')}]
-		</button>
+		</Button>
 		<button
-			onclick={cycleTheme}
+			onclick={onCycleTheme}
 			title={$t('chrome.tabbar.themeTitle')}
+			aria-label="{$t('a11y.theme.cycle')}: {themeLabel}"
 			class="themebadge press hover:underline cursor-pointer grid text-[#e5c07b] text-center"
 		>
 			<span class="col-start-1 row-start-1 invisible" aria-hidden="true">[{$t('chrome.tabbar.themeLabel', { theme: THEME_LABEL_WIDEST })}]</span>
-			<span class="col-start-1 row-start-1">[{$t('chrome.tabbar.themeLabel', { theme: themeLabel })}]</span>
+			<span class="col-start-1 row-start-1" aria-hidden="true">[{$t('chrome.tabbar.themeLabel', { theme: themeLabel })}]</span>
 		</button>
 		<span
 			title={$t('chrome.tabbar.serverlessTitle')}

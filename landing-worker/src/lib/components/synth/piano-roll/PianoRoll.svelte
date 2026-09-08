@@ -591,7 +591,7 @@
 														? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
 														: isBeatStart && subCol === 0
 															? 'bg-white/15 text-white font-bold'
-															: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
+															: 'text-white/50 hover:bg-white/10 hover:text-white/70'}"
 											title={$t('synthPanels.roll.jumpToStepHint', { step: step + 1, bar: barNum, beat: beatNum })}
 										>
 											{subCol === 0 ? (isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`) : '+'}
@@ -609,7 +609,7 @@
 												? 'bg-[#56b6c2]/25 text-[#56b6c2] border border-[#56b6c2]/50 font-black'
 												: isBeatStart
 													? 'bg-white/15 text-white'
-													: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
+													: 'text-white/50 hover:bg-white/10 hover:text-white/70'}"
 									title={$t('synthPanels.roll.jumpToColumnHint', { column: colIdx + 1, step: globalCol * spc + 1, bar: barNum, beat: beatNum })}
 								>
 									{isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
@@ -698,7 +698,7 @@
 																? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-black/50 text-white/70 hover:border-white/40'
 																: isBeatStart && subCol === 0
 																	? 'border-y border-r border-white/15 border-l border-l-white/40 bg-black/50 text-white/50 hover:border-white/40'
-																	: 'border border-white/10 bg-black/40 text-white/40 hover:border-white/30'}"
+																	: 'border border-white/10 bg-black/40 text-white/60 hover:border-white/30'}"
 										title={$t('synthPanels.roll.accentStepHint', { step: step + 1, side: subCol === 0 ? 'L' : 'R', value: accVal > 0 ? `+${accVal}dB` : 'OFF (0dB)' })}
 									>
 										{accVal > 0 ? `+${accVal}` : subCol === 0 ? `${colIdx + 1}` : '·'}

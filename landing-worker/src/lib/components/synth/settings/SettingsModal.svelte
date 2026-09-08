@@ -88,7 +88,7 @@
 
 			<!-- Modal Footer -->
 			<div class="flex items-center justify-between px-4 py-2 bg-black/60 border-t border-white/10 shrink-0 text-xs">
-				<span class="text-white/40 text-[11px]">{$t('synthPanels.settings.footerNote')}</span>
+				<span class="text-white/60 text-[11px]">{$t('synthPanels.settings.footerNote')}</span>
 				<button onclick={close} class="press px-4 py-1 bg-[#e5c07b] text-black font-black rounded-xs hover:opacity-90 cursor-pointer shadow-xs transition-opacity">
 					{$t('common.done')}
 				</button>

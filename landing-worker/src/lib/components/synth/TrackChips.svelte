@@ -104,7 +104,7 @@
 						toggleTrackMute(trk.id);
 						playSound('click');
 					}}
-					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'}"
+					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/60 hover:text-white'}"
 					title={$t('synth.tracks.muteHint', { name: trk.name })}
 				>
 					M
@@ -115,7 +115,7 @@
 						toggleTrackSolo(trk.id);
 						playSound('click');
 					}}
-					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'}"
+					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/60 hover:text-white'}"
 					title={$t('synth.tracks.soloHint', { name: trk.name })}
 				>
 					S

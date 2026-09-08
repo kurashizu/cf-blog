@@ -1097,7 +1097,7 @@
 							class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60"
 							title={$t('vm.running.mipsHint')}
 						>
-							{mips.toFixed(2)} <span class="text-white/35">MIPS</span>
+							{mips.toFixed(2)} <span class="text-white/50">MIPS</span>
 						</span>
 					{/if}
 				</div>
@@ -1171,15 +1171,15 @@
 				<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
 						<span class="text-xs font-black font-mono text-[#56b6c2]">{$t('vm.config.title')}</span>
 						<div class="flex items-center gap-2">
-							<span class="text-[10px] font-mono text-white/35">{$t('vm.config.savedNote')}</span>
-							<button onclick={resetSettings} class="press text-[10px] font-mono text-white/45 hover:text-white cursor-pointer underline transition-colors">
+							<span class="text-[10px] font-mono text-white/50">{$t('vm.config.savedNote')}</span>
+							<button onclick={resetSettings} class="press text-[10px] font-mono text-white/60 hover:text-white cursor-pointer underline transition-colors">
 								{$t('vm.config.reset')}
 							</button>
 						</div>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.machine')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.machine')}</span>
 						{#each [['x86', 'i686', $t('vm.config.machineX86Hint')], ['x86_64', 'x86-64', $t('vm.config.machineX64Hint')]] as const as [value, label, hint] (value)}
 							<button
 								onclick={() => (settings.machine = value)}
@@ -1192,11 +1192,11 @@
 								{label}
 							</button>
 						{/each}
-						<span class="text-[10px] font-mono text-white/40">{$t('vm.config.machineNote')}</span>
+						<span class="text-[10px] font-mono text-white/60">{$t('vm.config.machineNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.guestRam')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.guestRam')}</span>
 						{#each MEMORY_CHOICES as mb (mb)}
 							<button
 								onclick={() => (settings.memoryMb = mb)}
@@ -1207,11 +1207,11 @@
 								{mb} MB
 							</button>
 						{/each}
-						<span class="text-[10px] font-mono text-white/30">{$t('vm.config.guestRamNote')}</span>
+						<span class="text-[10px] font-mono text-white/50">{$t('vm.config.guestRamNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.network')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.network')}</span>
 						<button
 							onclick={() => (settings.network = !settings.network)}
 							title={$t('vm.config.networkHint')}
@@ -1221,11 +1221,11 @@
 						>
 							{settings.network ? $t('vm.config.networkOn') : $t('vm.config.networkOff')}
 						</button>
-						<span class="text-[10px] font-mono text-white/40">{$t('vm.config.networkNote')}</span>
+						<span class="text-[10px] font-mono text-white/60">{$t('vm.config.networkNote')}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2 min-h-[30px]">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.disk')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.disk')}</span>
 						<button
 							onclick={() => (settings.persistDisk = !settings.persistDisk)}
 							title={$t('vm.config.diskHint')}
@@ -1242,7 +1242,7 @@
 						>
 							{$t('vm.config.wipe')}
 						</button>
-						<span class="text-[10px] font-mono text-white/40">
+						<span class="text-[10px] font-mono text-white/60">
 							{overlayStored ? $t('vm.overlay.savedCount', { size: formatBytes(overlayStored) }) : $t('vm.overlay.nothingSaved')}{overlayNote
 								? ` · ${overlayNote}`
 								: ''}
@@ -1251,7 +1251,7 @@
 
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.vgaRam')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.vgaRam')}</span>
 						{#each VGA_CHOICES as mb (mb)}
 							<button
 								onclick={() => (settings.vgaMemoryMb = mb)}
@@ -1267,7 +1267,7 @@
 
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.screen')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.screen')}</span>
 						{#each RESOLUTIONS as res (res)}
 							<button
 								onclick={() => (settings.resolution = res)}
@@ -1285,7 +1285,7 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.scaling')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.scaling')}</span>
 						{#each SCALING_CHOICES as [value, label, hint] (value)}
 							<button
 								onclick={() => {
@@ -1306,7 +1306,7 @@
 
 					{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.boot')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.boot')}</span>
 						{#each [['auto', $t('vm.config.bootAuto')], ['kernel', $t('vm.config.bootKernel')], ['cdrom', $t('vm.config.bootCdrom')]] as const as [value, label] (value)}
 							<button
 								onclick={() => (settings.boot = value)}
@@ -1325,7 +1325,7 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.cmdline')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.cmdline')}</span>
 						<input
 							type="text"
 							bind:value={settings.cmdline}
@@ -1336,7 +1336,7 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-3">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.cpu')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase w-[92px]">{$t('vm.config.cpu')}</span>
 						<button
 							onclick={() => (settings.jit = !settings.jit)}
 							aria-pressed={settings.jit}
@@ -1367,7 +1367,7 @@
 					</div>
 					{/if}
 
-					<p class="text-[10px] font-mono text-white/35 leading-relaxed">
+					<p class="text-[10px] font-mono text-white/50 leading-relaxed">
 						{#if settings.machine === 'x86'}
 							{$t('vm.config.footnoteX86', { startx: 'startx' })}
 						{:else}
@@ -1379,7 +1379,7 @@
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 				{#each FACTS as fact (fact.label)}
 					<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2" title={fact.title}>
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{fact.label}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{fact.label}</span>
 						<span class="text-xs font-mono font-bold text-[#d8dee9] text-right">{fact.value}</span>
 					</div>
 				{/each}
@@ -1390,7 +1390,7 @@
 				<p class="text-[11px] text-white/65 leading-relaxed">
 					{$t('vm.section.rootShellBody1', { apk: 'apk', tmux: 'tmux', i686: 'i686', startx: 'startx' })}
 				</p>
-				<p class="text-[11px] text-white/45 leading-relaxed">
+				<p class="text-[11px] text-white/60 leading-relaxed">
 					{$t('vm.section.rootShellBody2', { startx: 'startx' })}
 				</p>
 			</div>
@@ -1398,7 +1398,7 @@
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1.5">
 				<div class="flex items-baseline justify-between gap-2">
 					<span class="text-xs font-black font-mono text-[#d19a66]">{$t('vm.section.topologyTitle')}</span>
-					<span class="text-[10px] font-mono text-white/35">{$t('vm.section.topologyNote')}</span>
+					<span class="text-[10px] font-mono text-white/50">{$t('vm.section.topologyNote')}</span>
 				</div>
 				<MermaidDiagram chart={TOPOLOGY} accent="#d19a66" />
 			</div>
@@ -1499,13 +1499,13 @@
 	{/if}
 
 	{#if phase === 'running' || phase === 'loading'}
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-white/40 shrink-0">
+		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-white/60 shrink-0">
 			<span>
 				{$t('vm.statusbar.image')} <span class="text-[#56b6c2]">{imageMiB === null ? '—' : `${imageMiB.toFixed(0)} MiB`}</span>
 			</span>
 			<span title={$t('vm.statusbar.streamedHint')}>
 				{$t('vm.statusbar.streamed')} <span class="text-[#98c379]">{(fetchedBytes / 1024 / 1024).toFixed(0)} MiB</span>
-				<span class="text-white/25">{$t('vm.statusbar.streamedChunks', { count: chunksFetched })}</span>
+				<span class="text-white/50">{$t('vm.statusbar.streamedChunks', { count: chunksFetched })}</span>
 			</span>
 			<span>{$t('vm.statusbar.mode')} <span class="text-[#c678dd]">{graphical ? $t('vm.statusbar.modeGraphical') : $t('vm.statusbar.modeText')}</span></span>
 			<span>{$t('vm.statusbar.boot')} <span class="text-[#61afef]">{mode === 'kernel' ? $t('vm.statusbar.bootDirect') : $t('vm.statusbar.bootIso')}</span></span>
@@ -1514,7 +1514,7 @@
 					{$t('vm.config.cmdline')} <span class="text-[#e5c07b]">{BOOT_LINE}</span>
 				</span>
 			{/if}
-			<span class="text-white/25"
+			<span class="text-white/50"
 				>{settings.persistDisk
 					? $t('vm.statusbar.persistNote')
 					: $t('vm.statusbar.noPersistNote')}</span

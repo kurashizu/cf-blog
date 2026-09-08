@@ -49,10 +49,10 @@
 	<div class="flex justify-between items-center font-black text-[#e5c07b] text-xs border-b border-white/10 pb-0.5 shrink-0">
 		<span class="whitespace-nowrap">1. DUAL OSC</span>
 		<div class="flex items-center gap-1.5">
-			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToFusion')}>
+			<span class="text-white/60 flex items-center" title={$t('synthPanels.rack.flowToFusion')}>
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
 			</span>
-			<button onclick={resetRack1} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack1} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/60 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 
@@ -102,7 +102,7 @@
 			title={$t('synthPanels.osc.eqlHint')}
 			class="press w-full px-1 py-0.5 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border shrink-0 {$eqlCompSetting
 				? 'bg-[#98c379]/20 border-[#98c379]/60 text-[#98c379]'
-				: 'bg-white/5 border-white/20 text-white/40 hover:text-white/70'}"
+				: 'bg-white/5 border-white/20 text-white/60 hover:text-white/70'}"
 		>
 			EQL:{$eqlCompSetting ? 'AUTO' : 'RAW'}
 		</button>

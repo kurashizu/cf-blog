@@ -108,10 +108,10 @@
 			</div>
 		</div>
 		<div class="flex items-center gap-1.5">
-			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToLfo')}>
+			<span class="text-white/60 flex items-center" title={$t('synthPanels.rack.flowToLfo')}>
 				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
 			</span>
-			<button onclick={resetRack4} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack4} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/60 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 

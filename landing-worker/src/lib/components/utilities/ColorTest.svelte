@@ -142,16 +142,16 @@
 <div class="space-y-2">
 	<!-- Capabilities -->
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5">
-		<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.color.capabilities')}</div>
+		<div class="text-[10px] font-mono font-bold text-white/60 uppercase pb-1 border-b border-white/10">{$t('utilities.color.capabilities')}</div>
 		<div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[10px] font-mono">
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.gamut')}</span> <span class="font-bold text-[#56b6c2]">{caps.colorGamut}</span></div>
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.dynamicRange')}</span> <span class="font-bold text-[#98c379]">{caps.dynamicRange}</span></div>
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.videoDynamicRange')}</span> <span class="font-bold text-[#98c379]">{caps.videoDynamicRange}</span></div>
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.colorDepth')}</span> <span class="font-bold text-[#e5c07b]">{caps.colorDepth}</span></div>
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.forcedColors')}</span> <span class="font-bold text-white/70">{caps.forcedColors}</span></div>
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.prefersContrast')}</span> <span class="font-bold text-white/70">{caps.prefersContrast}</span></div>
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.cssP3')}</span> <span class="font-bold {caps.supportsP3 ? 'text-[#98c379]' : 'text-[#e06c75]'}">{caps.supportsP3 ? $t('utilities.color.yes') : $t('utilities.color.no')}</span></div>
-			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/40">{$t('utilities.color.cap.cssRec2020')}</span> <span class="font-bold {caps.supportsRec2020 ? 'text-[#98c379]' : 'text-[#e06c75]'}">{caps.supportsRec2020 ? $t('utilities.color.yes') : $t('utilities.color.no')}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.gamut')}</span> <span class="font-bold text-[#56b6c2]">{caps.colorGamut}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.dynamicRange')}</span> <span class="font-bold text-[#98c379]">{caps.dynamicRange}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.videoDynamicRange')}</span> <span class="font-bold text-[#98c379]">{caps.videoDynamicRange}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.colorDepth')}</span> <span class="font-bold text-[#e5c07b]">{caps.colorDepth}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.forcedColors')}</span> <span class="font-bold text-white/70">{caps.forcedColors}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.prefersContrast')}</span> <span class="font-bold text-white/70">{caps.prefersContrast}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.cssP3')}</span> <span class="font-bold {caps.supportsP3 ? 'text-[#98c379]' : 'text-[#e06c75]'}">{caps.supportsP3 ? $t('utilities.color.yes') : $t('utilities.color.no')}</span></div>
+			<div class="border border-white/10 bg-black/30 rounded-xs p-1.5"><span class="text-white/60">{$t('utilities.color.cap.cssRec2020')}</span> <span class="font-bold {caps.supportsRec2020 ? 'text-[#98c379]' : 'text-[#e06c75]'}">{caps.supportsRec2020 ? $t('utilities.color.yes') : $t('utilities.color.no')}</span></div>
 		</div>
 	</div>
 
@@ -169,7 +169,7 @@
 		<p class="text-xs font-mono text-white/60 leading-relaxed">{$t('utilities.color.intro')}</p>
 
 		<div class="space-y-1">
-			<div class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.color.section.wide')}</div>
+			<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.color.section.wide')}</div>
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
 				{#each WIDE_PAIRS as pair (pair.nameKey)}
 					<div class="border border-white/10 rounded-xs overflow-hidden">
@@ -182,7 +182,7 @@
 					</div>
 				{/each}
 			</div>
-			<div class="text-[10px] font-mono text-white/35">{$t('utilities.color.wideHint')}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.color.wideHint')}</div>
 		</div>
 	</div>
 </div>
@@ -222,20 +222,20 @@
 						</div>
 					{/each}
 					<p class="text-white/50 text-xs font-mono text-center max-w-xl mx-auto">{$t('utilities.color.gammaHint')}</p>
-					<p class="text-white/30 text-[10px] font-mono text-center">{$t('utilities.color.gammaDpr', { dpr })}</p>
+					<p class="text-white/50 text-[10px] font-mono text-center">{$t('utilities.color.gammaDpr', { dpr })}</p>
 				</div>
 			{:else if section === 'black'}
 				<div class="w-full flex flex-col items-center gap-4" style="background: #000;">
-					<h2 class="text-white/40 text-sm font-mono font-bold">{$t('utilities.color.section.black')}</h2>
+					<h2 class="text-white/60 text-sm font-mono font-bold">{$t('utilities.color.section.black')}</h2>
 					<div class="flex flex-wrap items-center justify-center gap-3 px-6">
 						{#each BLACK_STEPS as v (v)}
 							<div class="flex flex-col items-center gap-1">
 								<div class="w-14 h-14 rounded-xs" style="background: rgb({v},{v},{v})"></div>
-								<span class="text-[10px] font-mono text-white/30">{v}</span>
+								<span class="text-[10px] font-mono text-white/50">{v}</span>
 							</div>
 						{/each}
 					</div>
-					<p class="text-white/30 text-xs font-mono text-center max-w-xl px-6">{$t('utilities.color.blackHint')}</p>
+					<p class="text-white/50 text-xs font-mono text-center max-w-xl px-6">{$t('utilities.color.blackHint')}</p>
 				</div>
 			{:else if section === 'white'}
 				<div class="w-full flex flex-col items-center gap-4" style="background: #fff;">
@@ -264,7 +264,7 @@
 							</div>
 						</div>
 					{/each}
-					<p class="text-white/40 text-xs font-mono text-center pt-1">{$t('utilities.color.saturationHint')}</p>
+					<p class="text-white/60 text-xs font-mono text-center pt-1">{$t('utilities.color.saturationHint')}</p>
 				</div>
 			{:else if section === 'whitepoint'}
 				<div class="w-full max-w-2xl space-y-3">

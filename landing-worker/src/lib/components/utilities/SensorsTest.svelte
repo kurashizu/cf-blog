@@ -261,7 +261,7 @@
 			>
 				{$t('utilities.sensors.enable')}
 			</button>
-			<span class="text-[11px] font-mono text-white/40">{$t('utilities.sensors.enable.hint')}</span>
+			<span class="text-[11px] font-mono text-white/60">{$t('utilities.sensors.enable.hint')}</span>
 		</div>
 	{/if}
 
@@ -270,11 +270,11 @@
 	{/if}
 
 	{#if !needsGesture && !gotAnyEvent && !noEvents}
-		<div class="text-xs font-mono text-white/40">{$t('utilities.sensors.waiting')}</div>
+		<div class="text-xs font-mono text-white/60">{$t('utilities.sensors.waiting')}</div>
 	{/if}
 
 	{#if noEvents}
-		<div class="text-xs font-mono text-white/40">{$t('utilities.sensors.none')}</div>
+		<div class="text-xs font-mono text-white/60">{$t('utilities.sensors.none')}</div>
 	{/if}
 
 	{#if gotAnyEvent}
@@ -291,19 +291,19 @@
 			</div>
 			<div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
 				<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1.5 flex flex-col gap-0.5 min-w-0">
-					<span class="text-[10px] font-mono font-bold text-white/45 truncate">{$t('utilities.sensors.orientation.alpha')}</span>
+					<span class="text-[10px] font-mono font-bold text-white/60 truncate">{$t('utilities.sensors.orientation.alpha')}</span>
 					<span class="text-xs font-mono font-bold text-[#56b6c2] truncate">{deg(orientation?.alpha ?? null)}</span>
 				</div>
 				<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1.5 flex flex-col gap-0.5 min-w-0">
-					<span class="text-[10px] font-mono font-bold text-white/45 truncate">{$t('utilities.sensors.orientation.beta')}</span>
+					<span class="text-[10px] font-mono font-bold text-white/60 truncate">{$t('utilities.sensors.orientation.beta')}</span>
 					<span class="text-xs font-mono font-bold text-[#56b6c2] truncate">{deg(orientation?.beta ?? null)}</span>
 				</div>
 				<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1.5 flex flex-col gap-0.5 min-w-0">
-					<span class="text-[10px] font-mono font-bold text-white/45 truncate">{$t('utilities.sensors.orientation.gamma')}</span>
+					<span class="text-[10px] font-mono font-bold text-white/60 truncate">{$t('utilities.sensors.orientation.gamma')}</span>
 					<span class="text-xs font-mono font-bold text-[#56b6c2] truncate">{deg(orientation?.gamma ?? null)}</span>
 				</div>
 				<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1.5 flex flex-col gap-0.5 min-w-0">
-					<span class="text-[10px] font-mono font-bold text-white/45 truncate">{$t('utilities.sensors.orientation.absolute')}</span>
+					<span class="text-[10px] font-mono font-bold text-white/60 truncate">{$t('utilities.sensors.orientation.absolute')}</span>
 					<span class="text-xs font-mono font-bold text-[#d8dee9] truncate">{orientation?.absolute ? $t('utilities.sensors.orientation.yes') : $t('utilities.sensors.orientation.no')}</span>
 				</div>
 			</div>
@@ -317,19 +317,19 @@
 				</div>
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex flex-col gap-0.5 min-w-0">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase truncate">{$t('utilities.sensors.motion.acceleration')} ({$t('utilities.sensors.motion.ms2')})</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase truncate">{$t('utilities.sensors.motion.acceleration')} ({$t('utilities.sensors.motion.ms2')})</span>
 						<span class="text-xs font-mono font-bold text-[#e5c07b] truncate">{$t('utilities.sensors.motion.axes', { x: ms2(motion.acceleration.x), y: ms2(motion.acceleration.y), z: ms2(motion.acceleration.z) })}</span>
 					</div>
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex flex-col gap-0.5 min-w-0">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase truncate">{$t('utilities.sensors.motion.accelerationGravity')} ({$t('utilities.sensors.motion.ms2')})</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase truncate">{$t('utilities.sensors.motion.accelerationGravity')} ({$t('utilities.sensors.motion.ms2')})</span>
 						<span class="text-xs font-mono font-bold text-[#e5c07b] truncate">{$t('utilities.sensors.motion.axes', { x: ms2(motion.accelerationIncludingGravity.x), y: ms2(motion.accelerationIncludingGravity.y), z: ms2(motion.accelerationIncludingGravity.z) })}</span>
 					</div>
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex flex-col gap-0.5 min-w-0">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase truncate">{$t('utilities.sensors.motion.rotationRate')} ({$t('utilities.sensors.motion.degs')})</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase truncate">{$t('utilities.sensors.motion.rotationRate')} ({$t('utilities.sensors.motion.degs')})</span>
 						<span class="text-xs font-mono font-bold text-[#e5c07b] truncate">{$t('utilities.sensors.motion.axesDeg', { alpha: degs(motion.rotationRate.alpha), beta: degs(motion.rotationRate.beta), gamma: degs(motion.rotationRate.gamma) })}</span>
 					</div>
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex flex-col gap-0.5 min-w-0">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase truncate">{$t('utilities.sensors.motion.interval')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase truncate">{$t('utilities.sensors.motion.interval')}</span>
 						<span class="text-xs font-mono font-bold text-[#d8dee9] truncate">{motion.interval === null ? $t('utilities.sensors.motion.na') : $t('utilities.sensors.motion.interval.ms', { ms: Math.round(motion.interval * 100) / 100 })}</span>
 					</div>
 				</div>
@@ -343,7 +343,7 @@
 					<span class="text-xs font-black font-mono" style="color: #61afef">{$t('utilities.sensors.section.level')}</span>
 				</div>
 				<canvas bind:this={canvasEl} width="180" height="180" class="mx-auto block max-w-full"></canvas>
-				<div class="text-[10px] font-mono text-white/35 mt-1.5 text-center">{$t('utilities.sensors.level.hint')}</div>
+				<div class="text-[10px] font-mono text-white/50 mt-1.5 text-center">{$t('utilities.sensors.level.hint')}</div>
 			</div>
 
 			<div class="border rounded-xs bg-black/25 p-2.5 border-[#c678dd]/20 min-w-0 flex flex-col">
@@ -356,10 +356,10 @@
 						<div class="w-full h-2 bg-black/60 border border-white/10 rounded-xs relative overflow-hidden">
 							<div class="absolute top-0 bottom-0 w-1.5 rounded-xs bg-[#c678dd]" style="left: calc({(heading.deg / 360) * 100}% - 3px)"></div>
 						</div>
-						<div class="text-[10px] font-mono text-white/30">{heading.source}</div>
+						<div class="text-[10px] font-mono text-white/50">{heading.source}</div>
 					</div>
 				{:else}
-					<div class="flex-1 flex items-center justify-center text-[11px] font-mono text-white/35 text-center">{$t('utilities.sensors.compass.na')}</div>
+					<div class="flex-1 flex items-center justify-center text-[11px] font-mono text-white/50 text-center">{$t('utilities.sensors.compass.na')}</div>
 				{/if}
 			</div>
 		</div>
@@ -371,14 +371,14 @@
 			<span class="text-xs font-black font-mono" style="color: #98c379">{$t('utilities.sensors.section.light')}</span>
 		</div>
 		{#if lightState === 'unsupported'}
-			<div class="text-xs font-mono text-white/40">{$t('utilities.sensors.light.unavailable')}</div>
+			<div class="text-xs font-mono text-white/60">{$t('utilities.sensors.light.unavailable')}</div>
 		{:else if lightState === 'blocked'}
 			<div class="text-xs font-mono text-[#e5c07b]">{$t('utilities.sensors.light.blocked')}</div>
 		{:else if lightState === 'error'}
 			<div class="text-xs font-mono text-[#e06c75]">{$t('utilities.sensors.light.error', { message: lightErrorMessage })}</div>
 		{:else}
 			<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0 max-w-xs">
-				<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{$t('utilities.sensors.light.value')}</span>
+				<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{$t('utilities.sensors.light.value')}</span>
 				<span class="text-xs font-mono font-bold text-[#98c379] truncate">{lux === null ? $t('utilities.sensors.eventRate.na') : $t('utilities.sensors.light.lux', { lux })}</span>
 			</div>
 		{/if}

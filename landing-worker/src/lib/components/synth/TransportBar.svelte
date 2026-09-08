@@ -229,7 +229,7 @@
 				<span>{LEN_PAGE_PRESETS.includes(lenPages) ? lenPages : LEN_PAGE_PRESETS[0]}</span>
 				<span class="text-[10px] opacity-70">⟳</span>
 			</button>
-			<span class="text-white/40 text-[10px] font-bold px-0.5 select-none">{$t('synth.transport.or')}</span>
+			<span class="text-white/60 text-[10px] font-bold px-0.5 select-none">{$t('synth.transport.or')}</span>
 			<input
 				type="text"
 				inputmode="numeric"
@@ -241,7 +241,7 @@
 					: 'border-white/20 text-white/70 focus:border-white/60'}"
 				title={$t('synth.transport.lenInputHint', { pages: lenPages, steps: stepsPerBarNow, meter: $timeMeter, total: $totalPatternSteps })}
 			/>
-			<span class="text-white/40 text-[10px] font-bold select-none" title={$t('synth.transport.lenPagesHint', { pages: lenPages, steps: stepsPerBarNow, meter: $timeMeter, total: $totalPatternSteps })}>PGS</span>
+			<span class="text-white/60 text-[10px] font-bold select-none" title={$t('synth.transport.lenPagesHint', { pages: lenPages, steps: stepsPerBarNow, meter: $timeMeter, total: $totalPatternSteps })}>PGS</span>
 		</div>
 
 		<div class="w-px h-4 bg-white/15 mx-1"></div>

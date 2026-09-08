@@ -229,11 +229,11 @@
 			{/each}
 		</div>
 		<div class="flex items-center gap-2">
-			<span class="text-[10px] font-mono text-white/30 hidden sm:inline">
+			<span class="text-[10px] font-mono text-white/50 hidden sm:inline">
 				{$t('vm.keyboard.modifierNote')}
 			</span>
 			{#if onClose}
-				<button onclick={onClose} class="press text-[10px] font-mono text-white/40 hover:text-white cursor-pointer transition-colors">
+				<button onclick={onClose} class="press text-[10px] font-mono text-white/60 hover:text-white cursor-pointer transition-colors">
 					{$t('vm.keyboard.hide')}
 				</button>
 			{/if}

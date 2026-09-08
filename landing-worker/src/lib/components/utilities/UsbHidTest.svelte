@@ -249,7 +249,7 @@
 	<!-- WebUSB -->
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5 min-w-0">
 		<div class="flex items-center justify-between gap-2">
-			<div class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.usb.section.usb')}</div>
+			<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.usb.section.usb')}</div>
 			{#if usbApi}
 				<button onclick={pickUsb} class="press px-2 py-1 border border-[#56b6c2]/50 text-[#56b6c2] hover:bg-[#56b6c2]/20 rounded-xs font-bold text-[10px] cursor-pointer transition-colors">
 					{$t('utilities.usb.pickDevice')}
@@ -257,9 +257,9 @@
 			{/if}
 		</div>
 		{#if !usbApi}
-			<div class="text-[10px] font-mono text-white/35">{$t('utilities.usb.notAvailable')}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.usb.notAvailable')}</div>
 		{:else if usbDevices.length === 0}
-			<div class="text-[10px] font-mono text-white/30">{$t('utilities.usb.noDevices')}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.usb.noDevices')}</div>
 		{:else}
 			<div class="space-y-1.5">
 				{#each usbDevices as d, i (i)}
@@ -267,16 +267,16 @@
 						<div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
 							<span class="font-bold text-[#56b6c2]">{hexId(d.vendorId)}:{hexId(d.productId)}</span>
 							<span class="text-white/70 truncate">{d.productName || 'n/a'}</span>
-							<span class="text-white/35 truncate">{d.manufacturerName || 'n/a'}</span>
+							<span class="text-white/50 truncate">{d.manufacturerName || 'n/a'}</span>
 						</div>
-						<div class="flex flex-wrap gap-x-3 gap-y-0.5 text-white/40">
+						<div class="flex flex-wrap gap-x-3 gap-y-0.5 text-white/60">
 							<span>{$t('utilities.usb.serial')}: {d.serialNumber ? $t('utilities.usb.serial.yes') : $t('utilities.usb.serial.no')}</span>
 							<span>{$t('utilities.usb.usbVersion')}: {d.deviceVersionMajor}.{d.deviceVersionMinor}</span>
 							<span>{$t('utilities.usb.deviceClass')}: 0x{d.deviceClass.toString(16).padStart(2, '0')}/0x{d.deviceSubclass.toString(16).padStart(2, '0')}/0x{d.deviceProtocol.toString(16).padStart(2, '0')}</span>
 							<span>{$t('utilities.usb.configs', { count: d.configurations.length })}</span>
 						</div>
 						{#each d.configurations as cfg, ci (ci)}
-							<div class="text-white/35 pl-2">
+							<div class="text-white/50 pl-2">
 								{$t('utilities.usb.interfaces', { count: cfg.interfaces.length })}:
 								{cfg.interfaces.map((iface) => `0x${(iface.alternates[0]?.interfaceClass ?? 0).toString(16).padStart(2, '0')}`).join(', ')}
 							</div>
@@ -290,7 +290,7 @@
 	<!-- WebHID -->
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5 min-w-0">
 		<div class="flex items-center justify-between gap-2">
-			<div class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.usb.section.hid')}</div>
+			<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.usb.section.hid')}</div>
 			{#if hidApi}
 				<button onclick={pickHid} class="press px-2 py-1 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold text-[10px] cursor-pointer transition-colors">
 					{$t('utilities.usb.pickDevice')}
@@ -298,11 +298,11 @@
 			{/if}
 		</div>
 		{#if !hidApi}
-			<div class="text-[10px] font-mono text-white/35">{$t('utilities.usb.notAvailable')}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.usb.notAvailable')}</div>
 		{:else}
-			<div class="text-[10px] font-mono text-white/30">{$t('utilities.usb.hid.protectedHint')}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.usb.hid.protectedHint')}</div>
 			{#if hidDevices.length === 0}
-				<div class="text-[10px] font-mono text-white/30">{$t('utilities.usb.noDevices')}</div>
+				<div class="text-[10px] font-mono text-white/50">{$t('utilities.usb.noDevices')}</div>
 			{:else}
 				<div class="space-y-1.5">
 					{#each hidDevices as d, i (i)}
@@ -314,7 +314,7 @@
 									{monitoringId === deviceKey(d) ? $t('utilities.usb.hid.stopMonitor') : $t('utilities.usb.hid.monitor')}
 								</button>
 							</div>
-							<div class="text-white/40">
+							<div class="text-white/60">
 								{#each d.collections as c, ci (ci)}
 									<div>{$t('utilities.usb.hid.collection', { usagePage: usagePageName(c.usagePage), usage: usageName(c.usagePage, c.usage), inputs: c.inputReports?.length ?? 0, outputs: c.outputReports?.length ?? 0, features: c.featureReports?.length ?? 0 })}</div>
 								{/each}
@@ -336,7 +336,7 @@
 	<!-- Web Serial -->
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5 min-w-0">
 		<div class="flex items-center justify-between gap-2">
-			<div class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.usb.section.serial')}</div>
+			<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.usb.section.serial')}</div>
 			{#if serialApi}
 				<button onclick={pickSerial} class="press px-2 py-1 border border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20 rounded-xs font-bold text-[10px] cursor-pointer transition-colors">
 					{$t('utilities.usb.pickDevice')}
@@ -344,9 +344,9 @@
 			{/if}
 		</div>
 		{#if !serialApi}
-			<div class="text-[10px] font-mono text-white/35">{$t('utilities.usb.notAvailable')}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.usb.notAvailable')}</div>
 		{:else if serialPorts.length === 0}
-			<div class="text-[10px] font-mono text-white/30">{$t('utilities.usb.noDevices')}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.usb.noDevices')}</div>
 		{:else}
 			<div class="space-y-1">
 				{#each serialPorts as p, i (i)}

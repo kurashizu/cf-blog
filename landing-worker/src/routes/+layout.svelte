@@ -4,7 +4,7 @@
 	import { fade, fly } from '$lib/perf-transitions';
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
+	import { goto, afterNavigate } from '$app/navigation';
 	import { playSound } from '$lib/sound';
 	import '../app.css';
 	import { cycleTheme, THEME_STYLES, THEME_CSS_VARS, resolvedTheme, refreshAutoTheme } from '$lib/stores/theme';
@@ -27,6 +27,8 @@
 	} from '$lib/stores/chrome';
 	import { performanceMode, initPerformanceMode } from '$lib/stores/performance';
 	import { textSize, initTextSize } from '$lib/stores/text-scale';
+	import { initA11y, singleKeyHotkeys, motionReduced, announce } from '$lib/stores/a11y';
+	import { modal } from '$lib/actions/modal';
 	import { initLocale, t } from '$lib/i18n';
 	import TabBar from '$lib/components/chrome/TabBar.svelte';
 	import ThemeBackgroundVideo from '$lib/components/chrome/ThemeBackgroundVideo.svelte';
@@ -40,12 +42,22 @@
 	import PrivacyNotice from '$lib/components/chrome/PrivacyNotice.svelte';
 	import GlobalSettings from '$lib/components/chrome/GlobalSettings.svelte';
 	import CreditsDialog from '$lib/components/chrome/CreditsDialog.svelte';
+	import LiveRegion from '$lib/components/chrome/LiveRegion.svelte';
 
 	/* Read at init rather than in an effect: bootVisible's own initialiser
 	   consults it, and an effect would run after the first paint -- which is
 	   the flicker this is here to prevent. */
 	const PREFERS_REDUCED_MOTION =
-		typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+		(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+		/* The site's own switch (stores/a11y.ts) -- read raw here for the same
+		   before-first-paint reason; initA11y() loads it properly in onMount. */
+		(() => {
+			try {
+				return localStorage.getItem('krsz.a11y.reduceMotion') === '1';
+			} catch {
+				return false;
+			}
+		})();
 
 	let { children } = $props();
 
@@ -68,6 +80,11 @@
 	   outside this layout needs to know performance mode exists. */
 	$effect(() => {
 		document.documentElement.dataset.perf = $performanceMode ? 'on' : 'off';
+	});
+	/* Same again for reduced motion: app.css keys its manual-switch twin of
+	   the prefers-reduced-motion block on this attribute. */
+	$effect(() => {
+		document.documentElement.dataset.motion = $motionReduced ? 'reduce' : 'full';
 	});
 	/* One root font-size drives the whole type scale, which is written in rem
 	   (tailwind.config.js) -- so the CFG text-size setting moves the site
@@ -197,7 +214,14 @@
 		// Quake-style console: backquote toggles from anywhere, Esc closes —
 		// both work even while the console's own input has focus. A view that
 		// owns the keyboard blocks it unless it says the key is free (LIFE.LAB).
-		if (e.code === 'Backquote' && !e.metaKey && !e.ctrlKey && !e.altKey && (!$suspendNavHotkeys || $consoleHotkeyWhileSuspended)) {
+		if (
+			e.code === 'Backquote' &&
+			!e.metaKey &&
+			!e.ctrlKey &&
+			!e.altKey &&
+			$singleKeyHotkeys &&
+			(!$suspendNavHotkeys || $consoleHotkeyWhileSuspended)
+		) {
 			e.preventDefault();
 			consoleOverlayOpen.update((v) => !v);
 			playSound('toggle');
@@ -228,6 +252,9 @@
 		const isInput = ['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '');
 		if (isInput) return;
 		if (e.ctrlKey || e.metaKey || e.altKey) return;
+		// The bare printable shortcuts can be switched off (WCAG 2.1.4); F1 and
+		// Ctrl+digit above are the paths that stay.
+		if (!$singleKeyHotkeys) return;
 
 		if (e.key === '?') {
 			e.preventDefault();
@@ -241,12 +268,26 @@
 		}
 	}
 
+	/* A client-side navigation changes what fills the panel but moves focus
+	   nowhere, so a screen reader hears nothing and the keyboard is left on a
+	   tab button that now belongs to a different view. Standard SPA remedy:
+	   put focus on the <main> (tabindex=-1, no ring) and say which view this
+	   is. Skipped on the initial load, where the document itself is announced. */
+	let mainEl: HTMLElement | undefined = $state();
+	afterNavigate((nav) => {
+		if (nav.type === 'enter') return;
+		const idx = tabIndexFromPath(nav.to?.url.pathname ?? '');
+		if (idx >= 0) announce($t('a11y.announce.view', { name: $t(`common.tabName.${idx}`) }));
+		mainEl?.focus({ preventScroll: true });
+	});
+
 	onMount(() => {
 		const stopClock = initClock();
 		const stopTransport = initTransport();
 		initConsoleState();
 		initPerformanceMode();
 		initTextSize();
+		initA11y();
 		window.addEventListener('keydown', handleKeydown);
 
 		// The auto theme only ever changes on the hour, but a minute-granularity
@@ -299,7 +340,10 @@
 
 <ThemeBackgroundVideo />
 
-<div class="relative z-10 w-full min-h-screen lg:h-screen lg:max-h-screen overflow-x-hidden lg:overflow-hidden font-mono text-sm sm:text-base {themeStyles.text} flex flex-col justify-between select-none p-1.5 sm:p-3 md:p-4 transition-colors duration-200">
+<a href="#main" class="skip-link font-mono text-xs font-bold">{$t('a11y.skipToContent')}</a>
+<LiveRegion />
+
+<div data-app-root class="relative z-10 w-full min-h-screen lg:h-screen lg:max-h-screen overflow-x-hidden lg:overflow-hidden font-mono text-sm sm:text-base {themeStyles.text} flex flex-col justify-between select-none p-1.5 sm:p-3 md:p-4 transition-colors duration-200">
 	<TabBar />
 
 	<div class="grid grid-cols-12 lg:grid-cols-[repeat(24,minmax(0,1fr))] gap-1.5 sm:gap-2 flex-1 min-h-0 w-full max-w-full">
@@ -318,7 +362,18 @@
 		     it; without it, resizing the window enough times left whole synth rack
 		     modules rendering empty in Safari despite their content being intact
 		     in the DOM. -->
-		<div data-tour="panel" class="order-1 lg:order-none col-span-12 lg:col-[span_19_/_span_19] border {themeStyles.border} flex flex-col {themeStyles.cardBgVideo} rounded-sm min-h-[70svh] lg:min-h-0 lg:overflow-hidden transform-gpu">
+		<main
+			id="main"
+			tabindex="-1"
+			bind:this={mainEl}
+			aria-label={$t('a11y.landmark.main')}
+			data-tour="panel"
+			class="order-1 lg:order-none col-span-12 lg:col-[span_19_/_span_19] border {themeStyles.border} flex flex-col {themeStyles.cardBgVideo} rounded-sm min-h-[70svh] lg:min-h-0 lg:overflow-hidden transform-gpu"
+		>
+			<!-- The page's one h1: every view fills this panel, so the heading is
+			     the view's own title, read by assistive tech and nothing else --
+			     the visual heading is the tab bar. -->
+			<h1 class="sr-only">{$t(`common.tabTitle.${activeTab}`)}</h1>
 			<!-- The console lives only in the drop-down overlay now, so every view
 			     gets the full panel and no view has an autofocused input competing
 			     with the keyboard testers or the QWERTY piano. -->
@@ -353,25 +408,30 @@
 					</div>
 				{/key}
 			</div>
-		</div>
+		</main>
 	</div>
 
 	<TelemetryFooter />
 </div>
 
 {#if $consoleOverlayOpen}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[140] bg-black/50" onclick={() => consoleOverlayOpen.set(false)} transition:fade={{ duration: 150 }}></div>
+	<!-- The scrim holds the sheet so use:modal (focus, Esc, backdrop click,
+	     inert page) can treat the pair as one dialog. -->
 	<div
-		class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBgVideo} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3"
-		transition:fly={{ y: -16, duration: 180, opacity: 0 }}
+		class="fixed inset-0 z-[140] bg-black/50"
+		use:modal={{ onClose: () => consoleOverlayOpen.set(false), label: $t('a11y.dialog.console') }}
+		transition:fade={{ duration: 150 }}
 	>
-		<div class="flex items-center justify-between text-xs font-mono font-bold pb-1">
-			<span style="color: {themeStyles.cursorColor}">~ KRSZ CONSOLE // DROP-DOWN</span>
-			<span class="text-white/40">{$t('chrome.layout.consoleCloseHint')}</span>
+		<div
+			class="fixed inset-x-0 top-0 z-[150] {themeStyles.headerBgVideo} border-b-2 {themeStyles.border} shadow-[0_12px_32px_rgba(0,0,0,0.8)] px-3 sm:px-4 pt-2 pb-3"
+			transition:fly={{ y: -16, duration: 180, opacity: 0 }}
+		>
+			<div class="flex items-center justify-between text-xs font-mono font-bold pb-1">
+				<span style="color: {themeStyles.cursorColor}">~ KRSZ CONSOLE // DROP-DOWN</span>
+				<span class="text-white/60">{$t('chrome.layout.consoleCloseHint')}</span>
+			</div>
+			<CommandConsole />
 		</div>
-		<CommandConsole />
 	</div>
 {/if}
 

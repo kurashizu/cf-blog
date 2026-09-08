@@ -326,7 +326,7 @@
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
 				{#each webglRows as row (row.label)}
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0" title={row.title}>
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{row.label}</span>
 						<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
 					</div>
 				{/each}
@@ -360,7 +360,7 @@
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
 				{#each webgpuRows as row (row.label)}
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{row.label}</span>
 						<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
 					</div>
 				{/each}
@@ -386,7 +386,7 @@
 		<div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 mb-1.5">
 			<span class="text-xs font-black font-mono" style="color: #98c379">{$t('utilities.gpu.section.benchmark')}</span>
 		</div>
-		<div class="text-[11px] font-mono text-white/40 leading-relaxed mb-2">{$t('utilities.gpu.benchmark.hint')}</div>
+		<div class="text-[11px] font-mono text-white/60 leading-relaxed mb-2">{$t('utilities.gpu.benchmark.hint')}</div>
 		{#if !benchAvailable}
 			<div class="text-xs font-mono text-[#e06c75]">{$t('utilities.gpu.benchmark.unavailable')}</div>
 		{:else}
@@ -412,21 +412,21 @@
 				{/if}
 			</div>
 			{#if fillResults.length}
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase mb-1">{$t('utilities.gpu.benchmark.fillrate')}</div>
+				<div class="text-[10px] font-mono font-bold text-white/60 uppercase mb-1">{$t('utilities.gpu.benchmark.fillrate')}</div>
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mb-2">
 					{#each fillResults as r (r.layers)}
 						<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex flex-col gap-0.5 min-w-0">
-							<span class="text-[10px] font-mono font-bold text-white/45 truncate">{$t('utilities.gpu.benchmark.fillrate.layers', { layers: r.layers })}</span>
+							<span class="text-[10px] font-mono font-bold text-white/60 truncate">{$t('utilities.gpu.benchmark.fillrate.layers', { layers: r.layers })}</span>
 							<span class="text-xs font-mono font-bold text-[#98c379] truncate">{$t('utilities.gpu.benchmark.fillrate.mpixels', { mpixels: r.mpixelsPerSec })}</span>
-							<span class="text-[10px] font-mono text-white/40 truncate">{$t('utilities.gpu.benchmark.fillrate.fps', { fps: r.fps })}</span>
+							<span class="text-[10px] font-mono text-white/60 truncate">{$t('utilities.gpu.benchmark.fillrate.fps', { fps: r.fps })}</span>
 						</div>
 					{/each}
 				</div>
 			{/if}
 			{#if triangleResult}
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase mb-1">{$t('utilities.gpu.benchmark.triangles')}</div>
+				<div class="text-[10px] font-mono font-bold text-white/60 uppercase mb-1">{$t('utilities.gpu.benchmark.triangles')}</div>
 				<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0">
-					<span class="text-[10px] font-mono text-white/45 truncate">{$t('utilities.gpu.benchmark.triangles.count', { count: TRIANGLE_INSTANCES.toLocaleString() })}</span>
+					<span class="text-[10px] font-mono text-white/60 truncate">{$t('utilities.gpu.benchmark.triangles.count', { count: TRIANGLE_INSTANCES.toLocaleString() })}</span>
 					<span class="text-xs font-mono font-bold text-[#98c379] truncate">{$t('utilities.gpu.benchmark.triangles.value', { value: formatCompact(triangleResult.trisPerSec) })}</span>
 				</div>
 			{/if}

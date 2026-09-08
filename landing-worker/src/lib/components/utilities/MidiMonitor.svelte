@@ -348,30 +348,30 @@
 		<!-- Ports -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1 min-w-0">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.midi.inputs', { count: inputs.length })}</div>
+				<div class="text-[10px] font-mono font-bold text-white/60 uppercase pb-1 border-b border-white/10">{$t('utilities.midi.inputs', { count: inputs.length })}</div>
 				{#if inputs.length === 0}
-					<div class="text-[10px] font-mono text-white/30">{$t('utilities.midi.noPorts')}</div>
+					<div class="text-[10px] font-mono text-white/50">{$t('utilities.midi.noPorts')}</div>
 				{/if}
 				{#each inputs as p (p.id)}
 					<div class="text-[10px] font-mono flex items-center gap-1.5 min-w-0">
 						<span class="w-1.5 h-1.5 rounded-full shrink-0 {p.state === 'connected' ? 'bg-[#98c379]' : 'bg-white/20'}"></span>
 						<span class="truncate font-bold text-white/80" title={p.name}>{p.name}</span>
-						<span class="text-white/35 truncate shrink-0">{p.manufacturer}</span>
-						<span class="text-white/30 shrink-0 ml-auto">{p.state}/{p.connection}</span>
+						<span class="text-white/50 truncate shrink-0">{p.manufacturer}</span>
+						<span class="text-white/50 shrink-0 ml-auto">{p.state}/{p.connection}</span>
 					</div>
 				{/each}
 			</div>
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1 min-w-0">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.midi.outputs', { count: outputs.length })}</div>
+				<div class="text-[10px] font-mono font-bold text-white/60 uppercase pb-1 border-b border-white/10">{$t('utilities.midi.outputs', { count: outputs.length })}</div>
 				{#if outputs.length === 0}
-					<div class="text-[10px] font-mono text-white/30">{$t('utilities.midi.noPorts')}</div>
+					<div class="text-[10px] font-mono text-white/50">{$t('utilities.midi.noPorts')}</div>
 				{/if}
 				{#each outputs as p (p.id)}
 					<div class="text-[10px] font-mono flex items-center gap-1.5 min-w-0">
 						<span class="w-1.5 h-1.5 rounded-full shrink-0 {p.state === 'connected' ? 'bg-[#98c379]' : 'bg-white/20'}"></span>
 						<span class="truncate font-bold text-white/80" title={p.name}>{p.name}</span>
-						<span class="text-white/35 truncate shrink-0">{p.manufacturer}</span>
-						<span class="text-white/30 shrink-0 ml-auto">{p.state}/{p.connection}</span>
+						<span class="text-white/50 truncate shrink-0">{p.manufacturer}</span>
+						<span class="text-white/50 shrink-0 ml-auto">{p.state}/{p.connection}</span>
 					</div>
 				{/each}
 				{#if outputs.length > 0}
@@ -394,7 +394,7 @@
 
 		<!-- Held notes strip -->
 		<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1 min-w-0">
-			<div class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.midi.heldNotes')}</div>
+			<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.midi.heldNotes')}</div>
 			<div class="flex gap-px overflow-x-auto custom-scrollbar">
 				{#each stripNotes as n (n)}
 					{@const v = held[n]}
@@ -406,13 +406,13 @@
 					></div>
 				{/each}
 			</div>
-			<div class="text-[10px] font-mono text-white/30">{$t('utilities.midi.heldNotesRange', { from: noteName(STRIP_START), to: noteName(STRIP_START + STRIP_LEN - 1) })}</div>
+			<div class="text-[10px] font-mono text-white/50">{$t('utilities.midi.heldNotesRange', { from: noteName(STRIP_START), to: noteName(STRIP_START + STRIP_LEN - 1) })}</div>
 		</div>
 
 		<!-- Channel activity + rate -->
 		<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5">
 			<div class="flex items-center justify-between">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.midi.channelActivity')}</div>
+				<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.midi.channelActivity')}</div>
 				<div class="text-[10px] font-mono text-white/50">{$t('utilities.midi.rate', { rate: msgRate })}</div>
 			</div>
 			<div class="grid grid-cols-8 sm:grid-cols-16 gap-1">
@@ -420,7 +420,7 @@
 					{@const active = now - ts < 200}
 					<div class="flex flex-col items-center gap-0.5">
 						<div class="w-full h-3 rounded-xs border border-white/10" style="background-color: {active ? '#98c379' : 'rgba(255,255,255,0.05)'};"></div>
-						<span class="text-[8px] font-mono text-white/30">{i + 1}</span>
+						<span class="text-[8px] font-mono text-white/50">{i + 1}</span>
 					</div>
 				{/each}
 			</div>
@@ -429,7 +429,7 @@
 		<!-- Log -->
 		<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5 min-w-0">
 			<div class="flex flex-wrap items-center gap-2">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.midi.log')}</div>
+				<div class="text-[10px] font-mono font-bold text-white/60 uppercase">{$t('utilities.midi.log')}</div>
 				<label class="flex items-center gap-1 text-[10px] font-mono text-white/50 cursor-pointer ml-2">
 					<input type="checkbox" bind:checked={showClock} class="accent-[#c678dd]" />
 					{$t('utilities.midi.showClock')}
@@ -440,18 +440,18 @@
 			</div>
 			<div bind:this={logEl} class="h-56 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-0.5 bg-black/60 border border-white/10 rounded-xs p-1.5">
 				{#if log.length === 0}
-					<div class="text-[10px] font-mono text-white/25 p-1">{$t('utilities.midi.logEmpty')}</div>
+					<div class="text-[10px] font-mono text-white/50 p-1">{$t('utilities.midi.logEmpty')}</div>
 				{/if}
 				{#each log as line (line.id)}
 					<div class="text-[10px] font-mono flex flex-wrap items-baseline gap-x-1.5 min-w-0">
-						<span class="text-white/25 shrink-0 w-12 truncate">+{line.dt.toFixed(0)}ms</span>
-						<span class="text-white/35 shrink-0 truncate max-w-[80px]" title={line.portName}>{line.portName}</span>
+						<span class="text-white/50 shrink-0 w-12 truncate">+{line.dt.toFixed(0)}ms</span>
+						<span class="text-white/50 shrink-0 truncate max-w-[80px]" title={line.portName}>{line.portName}</span>
 						{#if line.channel !== null}
-							<span class="text-white/30 shrink-0">ch{line.channel}</span>
+							<span class="text-white/50 shrink-0">ch{line.channel}</span>
 						{/if}
 						<span class="font-bold shrink-0" style="color: {line.color}">{line.kind}</span>
 						<span class="text-white/70 truncate min-w-0">{line.detail}</span>
-						<span class="text-white/20 shrink-0 ml-auto truncate">{line.hex}</span>
+						<span class="text-white/50 shrink-0 ml-auto truncate">{line.hex}</span>
 					</div>
 				{/each}
 			</div>

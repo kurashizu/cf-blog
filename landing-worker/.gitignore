@@ -10,3 +10,8 @@ dist
 .output
 .netlify
 .wrangler
+
+# playwright
+/test-results
+/playwright-report
+/.shots

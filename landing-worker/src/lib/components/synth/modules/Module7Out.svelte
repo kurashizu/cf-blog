@@ -76,7 +76,7 @@
 					<span class="tabular-nums text-right" style="min-width: 3ch;">{$recSeconds}s</span>
 				{/if}
 			</button>
-			<button onclick={resetRack7} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">RST</button>
+			<button onclick={resetRack7} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/60 hover:text-white hover:border-white/60">RST</button>
 		</div>
 	</div>
 

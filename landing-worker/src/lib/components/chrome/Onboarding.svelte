@@ -5,12 +5,14 @@
 	import { playSound } from '../../sound';
 	import { resolvedTheme, THEME_STYLES } from '../../stores/theme';
 	import { consoleOverlayOpen, hotkeyOverlayOpen } from '../../stores/chrome';
+	import { Kbd } from '$lib/components/ui';
 
 	let {
 		onClose,
 		steps,
 		heading = 'GETTING STARTED'
 	}: { onClose: () => void; steps?: Step[]; heading?: string } = $props();
+	const bodyId = $props.id();
 
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
@@ -304,10 +306,9 @@
 
 {#if !dismissed}
 <div use:portal out:fade={{ duration: 180 }}>
-	<!-- Click catcher: the tour drives itself, so nothing underneath is clickable -->
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[166]" onclick={(e) => e.stopPropagation()}></div>
+	<!-- Click catcher: the tour drives itself, so nothing underneath is
+	     clickable. Covering is enough -- a click lands here and goes nowhere. -->
+	<div class="fixed inset-0 z-[166]" aria-hidden="true"></div>
 
 	{#if box}
 		<!-- Spotlight: a hole punched out of a huge shadow, so the anchor stays lit -->
@@ -322,6 +323,10 @@
 
 	<div
 		bind:this={bubbleEl}
+		role="dialog"
+		aria-modal="true"
+		aria-label={$t('a11y.dialog.tour')}
+		aria-describedby={bodyId}
 		class="fixed z-[170] max-w-[min(480px,94vw)] {themeStyles.cardBg} border rounded-sm shadow-[0_16px_48px_rgba(0,0,0,0.85)] font-mono transition-[border-color] duration-200"
 		style="{bubbleStyle} border-color: {step.color}88;"
 		in:fade={{ duration: 200 }}
@@ -342,22 +347,17 @@
 			<div in:fly={{ x: direction * 24, duration: 180, opacity: 0 }}>
 				<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
 					<span class="text-sm font-black tracking-wide" style="color: {step.color}">{step.title}</span>
-					<span class="text-xs text-white/45">{index + 1}/{STEPS.length}</span>
+					<span class="text-xs text-white/60">{index + 1}/{STEPS.length}</span>
 				</div>
 
 			<div class="px-2.5 py-2 space-y-2">
-				<p class="text-xs sm:text-sm text-white/75 leading-relaxed">{step.body}</p>
+				<p id={bodyId} class="text-xs sm:text-sm text-white/75 leading-relaxed">{step.body}</p>
 
 				{#if step.keys}
 					<div class="space-y-1">
 						{#each step.keys as k (k.key)}
 							<div class="flex items-baseline gap-2">
-								<kbd
-									class="shrink-0 px-2 py-1 rounded-xs border bg-black/50 text-[11px] sm:text-xs font-bold whitespace-nowrap min-w-[100px] text-center"
-									style="border-color: {step.color}55; color: {step.color}"
-								>
-									{k.key}
-								</kbd>
+								<Kbd color={step.color} class="shrink-0 min-w-[100px] text-center">{k.key}</Kbd>
 								<span class="text-[11px] sm:text-xs text-white/70 leading-snug">{k.desc}</span>
 							</div>
 						{/each}
@@ -382,7 +382,7 @@
 						style={i === index ? `background-color: ${s.color}` : undefined}
 					></button>
 				{/each}
-				<button onclick={() => { dismissed = true; onClose(); }} class="press ml-1.5 text-xs text-white/45 hover:text-white cursor-pointer transition-colors">{$t('common.skip').toUpperCase()}</button>
+				<button onclick={() => { dismissed = true; onClose(); }} class="press ml-1.5 text-xs text-white/60 hover:text-white cursor-pointer transition-colors">{$t('common.skip').toUpperCase()}</button>
 			</div>
 
 			<div class="flex items-center gap-1.5">

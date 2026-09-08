@@ -28,18 +28,18 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#56b6c2] font-black">{$t('synthPanels.audioHw.contextTitle')}</span>
-			<span class="text-white/40 text-[10px]">{$t('synthPanels.audioHw.webAudioApi')}</span>
+			<span class="text-white/60 text-[10px]">{$t('synthPanels.audioHw.webAudioApi')}</span>
 		</div>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
 			<div class="p-2 border border-white/10 bg-black/30 rounded-xs">
-				<div class="text-white/40 text-[10px] uppercase">{$t('synthPanels.audioHw.dacSampleRate')}</div>
+				<div class="text-white/60 text-[10px] uppercase">{$t('synthPanels.audioHw.dacSampleRate')}</div>
 				<div class="text-white font-bold text-sm">{$audioSampleRate} Hz</div>
 				<div class="text-white/50 text-[10px] mt-0.5">{$t('synthPanels.audioHw.deviceClock')}</div>
 			</div>
 
 			<div class="p-2 border border-white/10 bg-black/30 rounded-xs">
-				<div class="text-white/40 text-[10px] uppercase">{$t('synthPanels.audioHw.engineState')}</div>
+				<div class="text-white/60 text-[10px] uppercase">{$t('synthPanels.audioHw.engineState')}</div>
 				<div class="text-[#98c379] font-bold text-sm uppercase">{soundEngine.getAudioContextState()}</div>
 				<div class="text-white/50 text-[10px] mt-0.5">{$t('synthPanels.audioHw.directRouting')}</div>
 			</div>
@@ -50,7 +50,7 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2.5">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#56b6c2] font-black">{$t('synthPanels.audioHw.latencyTitle')}</span>
-			<span class="text-white/40 text-[10px]">{$t('synthPanels.audioHw.bufferTradeoff')}</span>
+			<span class="text-white/60 text-[10px]">{$t('synthPanels.audioHw.bufferTradeoff')}</span>
 		</div>
 
 		<div class="grid grid-cols-3 gap-2 pt-1">
@@ -62,7 +62,7 @@
 						: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 				>
 					<div class="font-bold">{$t(item.labelKey)}</div>
-					<div class="text-[9px] {$latencyHintSetting === item.id ? 'text-black/80' : 'text-white/40'}">{$t(item.descKey)}</div>
+					<div class="text-[9px] {$latencyHintSetting === item.id ? 'text-black/80' : 'text-white/60'}">{$t(item.descKey)}</div>
 				</button>
 			{/each}
 		</div>
@@ -72,7 +72,7 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-3">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#56b6c2] font-black">{$t('synthPanels.audioHw.fftTitle')}</span>
-			<span class="text-white/40 text-[10px]">{$t('synthPanels.audioHw.analyserSpec')}</span>
+			<span class="text-white/60 text-[10px]">{$t('synthPanels.audioHw.analyserSpec')}</span>
 		</div>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -109,7 +109,7 @@
 					width="100%"
 					onChange={setFftSmoothing}
 				/>
-				<div class="flex justify-between text-[9px] text-white/40 mt-0.5">
+				<div class="flex justify-between text-[9px] text-white/60 mt-0.5">
 					<span>{$t('synthPanels.audioHw.smoothingFast')}</span>
 					<span>{$t('synthPanels.audioHw.smoothingDefault')}</span>
 					<span>{$t('synthPanels.audioHw.smoothingCinema')}</span>
@@ -122,13 +122,13 @@
 	<div class="border border-white/10 bg-black/40 rounded-xs p-3 space-y-2">
 		<div class="flex items-center justify-between border-b border-white/10 pb-1">
 			<span class="text-[#56b6c2] font-black">{$t('synthPanels.audioHw.limiterTitle')}</span>
-			<span class="text-white/40 text-[10px]">{$t('synthPanels.audioHw.outputProtection')}</span>
+			<span class="text-white/60 text-[10px]">{$t('synthPanels.audioHw.outputProtection')}</span>
 		</div>
 
 		<div class="flex items-center justify-between pt-1">
 			<div>
 				<p class="text-white/80 font-bold">{$masterLimiterSetting ? $t('synthPanels.audioHw.limiterActive') : $t('synthPanels.audioHw.limiterBypassed')}</p>
-				<p class="text-white/40 text-[10px]">{$t('synthPanels.audioHw.limiterDesc')}</p>
+				<p class="text-white/60 text-[10px]">{$t('synthPanels.audioHw.limiterDesc')}</p>
 			</div>
 			<button
 				onclick={() => setMasterLimiter(!$masterLimiterSetting)}

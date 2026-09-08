@@ -95,14 +95,14 @@
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 		{#each rows as row (row.label)}
 			<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2" title={row.title}>
-				<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
+				<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{row.label}</span>
 				<span class="text-xs font-mono font-bold truncate" style="color: {row.color ?? '#d8dee9'}">{row.value}</span>
 			</div>
 		{/each}
 	</div>
 
 	<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2">
-		<div class="text-[10px] font-mono font-bold text-white/45 uppercase mb-1">{$t('utilities.display.userAgent')}</div>
+		<div class="text-[10px] font-mono font-bold text-white/60 uppercase mb-1">{$t('utilities.display.userAgent')}</div>
 		<div class="text-[10px] font-mono text-white/70 break-all leading-relaxed">{userAgent}</div>
 	</div>
 </div>

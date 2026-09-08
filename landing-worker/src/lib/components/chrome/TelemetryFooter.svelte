@@ -61,11 +61,12 @@
      icon-only. [0] 0:krsz.in* and the commit hash are the two things that
      never go, so there is always a floor of real content, never an empty bar. -->
 <footer
+	aria-label={$t('a11y.landmark.footer')}
 	class="footer-fit w-full max-w-full {themeStyles.headerBgVideo} px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-nowrap items-center justify-between font-bold text-xs sm:text-sm tracking-wide border {themeStyles.border} rounded-b-sm mt-1.5 sm:mt-2 footer-gap overflow-hidden"
 >
 	<div class="flex items-center footer-gap shrink-0 min-w-0">
 		<span class="shrink-0">[0] 0:krsz.in*</span>
-		<span class="footer-div opacity-40 text-white/30 shrink-0">|</span>
+		<span class="footer-div opacity-40 text-white/50 shrink-0">|</span>
 		{#each LINKS as link (link.href)}
 			<a
 				href={link.href}
@@ -86,7 +87,7 @@
 			<span
 				data-tour="edge"
 				title={edgeTitle}
-				class="footer-edgelabel shrink-0 inline-flex items-center gap-1 transition-colors {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
+				class="footer-edgelabel shrink-0 inline-flex items-center gap-1 transition-colors {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/60'}"
 			>
 				{#if $edgeTraceStatus === 'ok'}
 					<span class="w-1 h-1 rounded-full bg-[#98c379] blink-live"></span>
@@ -94,9 +95,9 @@
 				{edgeLabel}
 			</span>
 		{/if}
-		<span class="footer-div opacity-40 text-white/30 shrink-0">|</span>
-		<span class="footer-copyright text-xs sm:text-sm text-white/40 shrink-0" title="© {new Date().getFullYear()} kurashizu">© kurashizu</span>
-		<span class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap shrink-0" title={BUILD_TITLE}>
+		<span class="footer-div opacity-40 text-white/50 shrink-0">|</span>
+		<span class="footer-copyright text-xs sm:text-sm text-white/60 shrink-0" title="© {new Date().getFullYear()} kurashizu">© kurashizu</span>
+		<span class="text-[10px] sm:text-xs text-white/60 whitespace-nowrap shrink-0" title={BUILD_TITLE}>
 			{#if BUILD_URL}
 				<a
 					href={BUILD_URL}
@@ -120,7 +121,7 @@
 				playSound('click');
 			}}
 			title={$t('chrome.footer.creditsTitle')}
-			class="press text-xs text-white/40 hover:text-white/70 cursor-pointer transition-colors shrink-0"
+			class="press text-xs text-white/60 hover:text-white/70 cursor-pointer transition-colors shrink-0"
 		>
 			[{$t('chrome.footer.credits')}]
 		</button>

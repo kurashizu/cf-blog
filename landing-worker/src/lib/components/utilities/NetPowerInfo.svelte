@@ -178,12 +178,12 @@
 		<div class="border rounded-xs bg-black/25 p-2.5" style="border-color: {section.color}33">
 			<div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 mb-1.5">
 				<span class="text-xs font-black font-mono" style="color: {section.color}">{section.title}</span>
-				<span class="text-[10px] font-mono text-white/35">{section.note}</span>
+				<span class="text-[10px] font-mono text-white/50">{section.note}</span>
 			</div>
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
 				{#each sectionRows[section.key] as row (row.label)}
 					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2" title={row.title}>
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
+						<span class="text-[10px] font-mono font-bold text-white/60 uppercase shrink-0">{row.label}</span>
 						<span class="text-xs font-mono font-bold truncate" style="color: {row.color ?? '#d8dee9'}" title={row.value}>{row.value}</span>
 					</div>
 				{/each}
