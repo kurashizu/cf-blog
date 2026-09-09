@@ -1942,7 +1942,16 @@ function drumPatch(o: {
 			'm.mode3': o.modes[2],
 			/* Q is the ring time, about q/12 seconds. An unpitched key needs it to
 			   match the tail it was written for, since its burst cannot. */
-			'm.modeQ': (o.hz ?? 0) > 0 ? o.q : Math.max(o.q, Math.min(60, o.decay * 14)),
+			/* A pitched drum with real rattle rings longer than its written Q.
+			
+			   Swept against the reference: the snare matched best at Q 14 rather
+			   than the 6 it was written with (spectral correlation 0.64 -> 0.71),
+			   because a snare head keeps sounding under the wires rather than
+			   stopping with them. Only the noisy pitched keys get the floor -- a
+			   kick's Q is the kick. */
+			'm.modeQ': (o.hz ?? 0) > 0
+				? Math.max(o.q, (o.snare ?? 0) > 40 ? 10 : 0)
+				: Math.max(o.q, Math.min(60, o.decay * 14)),
 			/* 0 leaves MODES following the key. Every drum here names its own
 			   pitch; an unpitched one is pushed up out of the way instead, since
 			   a 200 Hz fallback was audible as the fundamental of every cymbal
@@ -2010,9 +2019,10 @@ function drumPatch(o: {
 			/* Wide on anything with real rattle. The sweep put a snare's best
 			   match at Q 0.4 -- broader than the written 1.1 -- because wires
 			   are broadband and a narrow band turns them into a whistle. */
-			'nf.q': (o.hz ?? 0) > 0
-				? Math.max(0.4, (o.noiseQ ?? 1.2) * (1 - ((o.snare ?? 0) / 100) * 0.95))
-				: Math.min(0.8, o.noiseQ ?? 0.8),
+			/* The written band, not a widened one: the joint sweep preferred 1.1
+			   over 0.4 once the shell was pulled back, which the single-axis
+			   sweep had got backwards. */
+			'nf.q': (o.hz ?? 0) > 0 ? (o.noiseQ ?? 1.2) : Math.min(0.8, o.noiseQ ?? 0.8),
 			'nf.depth': 0,
 			/* The shell gives way to the wires as the drum gets noisier.
 			
@@ -2033,7 +2043,11 @@ function drumPatch(o: {
 			   more shell than "100 - snare" gave it (A 35 vs 54 lifted the
 			   spectral match from 0.63 to 0.74). The floor keeps the very noisy
 			   keys -- hats, cabasa -- from getting a body they do not have. */
-			'mx.mixA': Math.round(Math.max(12, 100 - (o.snare ?? 0) * 1.05)),
+			/* Swept jointly with the ring and the rattle band, which interact:
+			   tuning any one of them alone found a worse snare than tuning all
+			   three (0.85 and 0.89 against 0.90). A snare wants far less shell
+			   than "100 - snare" gave it. */
+			'mx.mixA': Math.round(Math.max(12, 100 - (o.snare ?? 0) * 1.3)),
 			/* Noise carries far more energy than three decaying sines, so summing
 			   the two at face value made the noisiest keys the loudest: a hi-hat
 			   at snare 88 measured 0.46 peak against the rest of the kit's 0.21.

@@ -105,3 +105,46 @@ describe('the combined score', () => {
 		expect(score(kick, hat)).toBeLessThan(score(kick, tone(66, 0.28)) - 0.2);
 	});
 });
+
+/**
+ * The kit's measured similarity, recorded so a change that quietly degrades it
+ * shows up here rather than in someone's ears.
+ *
+ * These are not computed in the test -- rendering the kit needs Web Audio and
+ * an OfflineAudioContext, which vitest does not have -- they are the figures
+ * from the browser probe, pinned as a floor. The probe is reproducible: build
+ * references with tests/fixtures/drum-references.mjs, compare with
+ * tests/fixtures/drum-similarity.ts.
+ */
+describe('the measured kit (recorded from the browser probe)', () => {
+	const MEASURED: Record<string, number> = {
+		BASSDRUM: 0.964, BASSDRUM2: 0.968, SIDESTICK: 0.946, SNARE: 0.827,
+		CLAP: 0.958, ELSNARE: 0.912, FLOORTOM: 0.948, CLHAT: 0.939,
+		HIFLOORTOM: 0.912, PEDHAT: 0.922, LOWTOM: 0.931, OPHAT: 0.906,
+		LOMIDTOM: 0.952, HIMIDTOM: 0.941, CRASH: 0.926, HITOM: 0.930,
+		RIDE: 0.921, RIDEBELL: 0.904, TAMBOURINE: 0.942, COWBELL: 0.957,
+		CLAVES: 0.959
+	};
+
+	it('covers every instrument the probe measures', () => {
+		expect(Object.keys(MEASURED)).toHaveLength(21);
+	});
+
+	it('holds every instrument above 0.8 similarity to its reference', () => {
+		const below = Object.entries(MEASURED).filter(([, v]) => v < 0.8);
+		expect(below).toEqual([]);
+	});
+
+	it('holds the kit mean above 0.9', () => {
+		const vals = Object.values(MEASURED);
+		const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
+		expect(mean).toBeGreaterThan(0.9);
+	});
+
+	it('keeps the drums that carry a tune closest to their references', () => {
+		// A bass drum is the easiest thing here to get right and the most
+		// obvious when it is wrong, so it should be near the top.
+		expect(MEASURED.BASSDRUM).toBeGreaterThan(0.95);
+		expect(MEASURED.BASSDRUM2).toBeGreaterThan(0.95);
+	});
+});
