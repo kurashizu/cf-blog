@@ -21,7 +21,7 @@
 		DEFAULT_TEXT_SIZE
 	} from '../../stores/text-scale';
 	import { MIDI_ROUTING_KEY } from '../../stores/synth-midi';
-	import { ADV_DEFAULT_KEY } from '../../stores/synth-view';
+	import { ADV_DEFAULT_KEY, ADV_VIEW_KEY } from '../../stores/synth-view';
 
 	let { onClose }: { onClose: () => void } = $props();
 
@@ -197,9 +197,9 @@
 				group: 'synth',
 				label: tr('chrome.settings.storage.synthLayoutLabel'),
 				color: '#61afef',
-				size: localStorageBytes([ADV_DEFAULT_KEY]),
+				size: localStorageBytes([ADV_DEFAULT_KEY, ADV_VIEW_KEY]),
 				detail: tr('chrome.settings.storage.synthLayoutDetail'),
-				clear: async () => removeKeys([ADV_DEFAULT_KEY])
+				clear: async () => removeKeys([ADV_DEFAULT_KEY, ADV_VIEW_KEY])
 			},
 			{
 				id: 'tours',

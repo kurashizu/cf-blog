@@ -5,6 +5,7 @@
 	import { t } from '../../../i18n';
 	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId, pageInputStr, pageFollow, prevPatternPage, nextPatternPage, goToPage, totalPatternPages } from '../../../stores/synth-transport';
+	import { advancedMode, rollFullscreen, toggleRollFullscreen } from '../../../stores/synth-view';
 	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, cycleAccent, updateTrack } from '../../../stores/synth-tracks';
 	import {
 		selection, canUndo, canRedo, undo, redo, runKey, runAt, runsIn, selectedRuns, selectRuns, toggleRun, clearSelection, selectAll,
@@ -493,7 +494,26 @@
 <div class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
 		<div class="flex items-center gap-2">
-			<span class="font-black text-xs" style="color: {$currentTrack.color}">PIANO ROLL</span>
+			<!-- Same name the ADV view switcher uses for it, so the two agree. -->
+			<span class="font-black text-xs" style="color: {$currentTrack.color}">P.ROLL</span>
+			<!-- The roll on its own, without racks 1-7: the same room ADV gives the
+			     patch bay, for the same reason -- a long pattern needs the panel.
+			     Hidden in ADV, where the panel is already exclusive. -->
+			{#if !$advancedMode}
+				<button
+					onclick={() => {
+						toggleRollFullscreen();
+						playSound('toggle');
+					}}
+					title={$rollFullscreen ? $t('synthPanels.roll.fullscreenOffHint') : $t('synthPanels.roll.fullscreenOnHint')}
+					aria-label={$rollFullscreen ? $t('synthPanels.roll.fullscreenOffHint') : $t('synthPanels.roll.fullscreenOnHint')}
+					class="press h-5 w-5 flex items-center justify-center border rounded-xs text-[10px] leading-none cursor-pointer transition-colors shrink-0 {$rollFullscreen
+						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+						: 'border-white/20 text-white/40 hover:text-white hover:border-white/60'}"
+				>
+					{$rollFullscreen ? '\u2921' : '\u2922'}
+				</button>
+			{/if}
 			{#if editingName}
 				<input
 					bind:this={nameInput}

@@ -139,6 +139,8 @@ export default {
 		'synthPanels.keyboard.playNoteHint': 'Play {note} ({freq} Hz)',
 
 		// Piano roll
+		'synthPanels.roll.fullscreenOnHint': 'Full panel — hide racks 1-7 and give the whole lower panel to the roll',
+		'synthPanels.roll.fullscreenOffHint': 'Full panel: ON — click to bring racks 1-7 back',
 		'synthPanels.roll.trackNameLabel': 'Track name',
 		'synthPanels.roll.renameHint': '{name} — click to rename TRK {track} ({max} characters; {show} show here)',
 		'synthPanels.roll.keyCustomHint': "Racks are editing {note}'s own sound. Right-click a key label to drop its sound.",
@@ -393,6 +395,8 @@ export default {
 		'synthPanels.keyboard.velocityCurveHint': 'MIDI 力度曲线：{curve}（点击循环切换：EXP【自然钢琴】→ LIN【线性 1:1】→ LOG【轻触】→ HARD【激进】→ OFF【固定音量】）',
 		'synthPanels.keyboard.playNoteHint': '播放 {note}（{freq} Hz）',
 
+		'synthPanels.roll.fullscreenOnHint': '全面板 — 隐藏 1-7 号机架，把整个下部面板让给钢琴卷帘',
+		'synthPanels.roll.fullscreenOffHint': '全面板：已开启 — 点击恢复 1-7 号机架',
 		'synthPanels.roll.trackNameLabel': '音轨名称',
 		'synthPanels.roll.renameHint': '{name} —— 点击重命名 TRK {track}（最多 {max} 个字符；此处显示 {show} 个）',
 		'synthPanels.roll.keyCustomHint': '机架正在编辑 {note} 自己的音色。右键点击按键标签可移除其音色。',
@@ -640,6 +644,8 @@ export default {
 		'synthPanels.keyboard.velocityCurveHint': 'MIDI 力度曲線：{curve}（點擊循環切換：EXP【自然鋼琴】→ LIN【線性 1:1】→ LOG【輕觸】→ HARD【激進】→ OFF【固定音量】）',
 		'synthPanels.keyboard.playNoteHint': '播放 {note}（{freq} Hz）',
 
+		'synthPanels.roll.fullscreenOnHint': '全面板 — 隱藏 1-7 號機架，把整個下部面板讓給鋼琴捲軸',
+		'synthPanels.roll.fullscreenOffHint': '全面板：已開啟 — 點擊恢復 1-7 號機架',
 		'synthPanels.roll.trackNameLabel': '音軌名稱',
 		'synthPanels.roll.renameHint': '{name} —— 點擊重新命名 TRK {track}（最多 {max} 個字元；此處顯示 {show} 個）',
 		'synthPanels.roll.keyCustomHint': '機架正在編輯 {note} 專屬的音色。按右鍵點擊按鍵標籤可移除其音色。',
@@ -887,6 +893,8 @@ export default {
 		'synthPanels.keyboard.velocityCurveHint': 'MIDIベロシティカーブ：{curve}（クリックで切り替え：EXP【自然なピアノ】→ LIN【リニア1:1】→ LOG【ソフトタッチ】→ HARD【アグレッシブ】→ OFF【固定音量】）',
 		'synthPanels.keyboard.playNoteHint': '{note} を再生（{freq} Hz）',
 
+		'synthPanels.roll.fullscreenOnHint': 'フルパネル — ラック1〜7を隠し、下部パネル全体をロールに割り当てます',
+		'synthPanels.roll.fullscreenOffHint': 'フルパネル：オン — クリックでラック1〜7を戻します',
 		'synthPanels.roll.trackNameLabel': 'トラック名',
 		'synthPanels.roll.renameHint': '{name} — クリックしてTRK {track}の名前を変更（最大{max}文字、ここには{show}文字まで表示）',
 		'synthPanels.roll.keyCustomHint': 'ラックは{note}専用のサウンドを編集しています。キーラベルを右クリックするとそのサウンドを削除できます。',
@@ -1134,6 +1142,8 @@ export default {
 		'synthPanels.keyboard.velocityCurveHint': 'MIDI 벨로시티 커브: {curve}(클릭하여 순환: EXP[자연스러운 피아노] → LIN[선형 1:1] → LOG[소프트 터치] → HARD[강한 타건] → OFF[고정 음량])',
 		'synthPanels.keyboard.playNoteHint': '{note} 재생({freq} Hz)',
 
+		'synthPanels.roll.fullscreenOnHint': '전체 패널 — 랙 1-7을 숨기고 아래 패널 전체를 롤에 사용합니다',
+		'synthPanels.roll.fullscreenOffHint': '전체 패널: 켜짐 — 클릭하면 랙 1-7이 돌아옵니다',
 		'synthPanels.roll.trackNameLabel': '트랙 이름',
 		'synthPanels.roll.renameHint': '{name} — 클릭하여 TRK {track}의 이름 변경(최대 {max}자, 여기에는 {show}자까지 표시)',
 		'synthPanels.roll.keyCustomHint': '랙이 {note}만의 사운드를 편집 중입니다. 키 라벨을 우클릭하면 해당 사운드를 삭제할 수 있습니다.',

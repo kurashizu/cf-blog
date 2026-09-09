@@ -12,7 +12,7 @@
 	import Module6FxEq from './modules/Module6FxEq.svelte';
 	import Module7Out from './modules/Module7Out.svelte';
 	import PatchRack from './patch/PatchRack.svelte';
-	import { advancedMode, centreView } from '../../stores/synth-view';
+	import { advancedMode, centreView, panelIsExclusive } from '../../stores/synth-view';
 	import PianoRoll from './piano-roll/PianoRoll.svelte';
 	import PianoKeyboard from './keyboard/PianoKeyboard.svelte';
 	import SettingsModal from './settings/SettingsModal.svelte';
@@ -50,11 +50,11 @@
 		     In ADV the modules are not rendered at all -- not hidden, not shrunk -- and the centre column
 		     spans the full width, because a patch bay needs the room a 250px rack column would take. -->
 		<div
-			class="flex flex-col xl:flex-1 xl:min-h-0 gap-1.5 xl:overflow-hidden {$advancedMode
+			class="flex flex-col xl:flex-1 xl:min-h-0 gap-1.5 xl:overflow-hidden {$panelIsExclusive
 				? ''
 				: 'xl:grid xl:grid-cols-[250px_minmax(0,1fr)]'}"
 		>
-			{#if !$advancedMode}
+			{#if !$panelIsExclusive}
 				<!-- Modules 1-3: own scrollable group — natural content height is the floor (never overlaps),
 				     extra vertical space distributes 5:3:3 so tall screens fill instead of leaving whitespace -->
 				<div data-tour="synth-side" class="order-2 xl:order-1 flex flex-col gap-1.5 min-w-[260px] xl:min-w-0 xl:h-full xl:overflow-y-auto overflow-x-hidden custom-scrollbar pr-0.5">
@@ -89,7 +89,7 @@
 		     260px box left 85px of nothing under it while the module column beside
 		     the roll was 94px short and scrolling. shrink-0 keeps it from being
 		     squeezed; the flex parent gives what it does not take to the row above. -->
-		{#if !$advancedMode}
+		{#if !$panelIsExclusive}
 			<div data-tour="synth-rack" class="shrink-0 xl:max-h-[260px] h-fit overflow-auto custom-scrollbar no-gutter">
 				<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[repeat(24,minmax(0,1fr))] xl:min-w-[1000px] gap-1.5 text-xs">
 					<Module4Envelopes />

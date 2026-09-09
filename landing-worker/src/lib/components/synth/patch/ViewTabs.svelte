@@ -12,9 +12,11 @@
 	import { t } from '../../../i18n';
 	import { centreView, setCentreView, type CentreView } from '../../../stores/synth-view';
 
+	/* RACK first: ADV exists for the patch bay, so the view it is switched on
+	   for should be the one the pair opens with. */
 	const VIEWS: { id: CentreView; label: string; hint: string }[] = [
-		{ id: 'roll', label: 'P.ROLL', hint: 'synthPatch.showRollHint' },
-		{ id: 'rack', label: 'RACK', hint: 'synthPatch.showRackHint' }
+		{ id: 'rack', label: 'RACK', hint: 'synthPatch.showRackHint' },
+		{ id: 'roll', label: 'P.ROLL', hint: 'synthPatch.showRollHint' }
 	];
 </script>
 

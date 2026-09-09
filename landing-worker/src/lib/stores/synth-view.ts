@@ -30,6 +30,15 @@ import { activeTrackRow, refreshTracks, notifyTrackEdited } from './synth-tracks
  * every other preference -- GlobalSettings.svelte imports this key. */
 export const ADV_DEFAULT_KEY = 'krsz.synth.adv-default.v1';
 
+/* Which of the two ADV views was last used.
+ *
+ * A track that has never been in ADV opens on the patch bay, since that is the
+ * thing the mode exists for -- but after that it should open where you left it,
+ * because whichever one you were working in is the one you want back. Stored
+ * rather than per-track: it says how you work, like advancedByDefault, not what
+ * a given sound is. Cleared from CFG with the rest. */
+export const ADV_VIEW_KEY = 'krsz.synth.adv-view.v1';
+
 function loadAdvDefault(): boolean {
 	if (!browser) return false;
 	try {
@@ -40,6 +49,15 @@ function loadAdvDefault(): boolean {
 }
 
 export const advancedByDefault = writable<boolean>(loadAdvDefault());
+
+function loadLastAdvView(): 'roll' | 'rack' {
+	if (!browser) return 'rack';
+	try {
+		return localStorage.getItem(ADV_VIEW_KEY) === 'roll' ? 'roll' : 'rack';
+	} catch {
+		return 'rack';
+	}
+}
 
 export function setAdvancedByDefault(on: boolean): void {
 	advancedByDefault.set(on);
@@ -53,6 +71,24 @@ export function setAdvancedByDefault(on: boolean): void {
 
 export type CentreView = 'roll' | 'rack';
 
+/* The roll on its own, in the normal view.
+ *
+ * ADV gives the whole lower panel to one thing because a patch bay needs the
+ * room. Editing a long pattern wants the same room for the same reason, but
+ * not the patch bay -- so this drops racks 1-7 and leaves the roll, which is
+ * ADV's layout without ADV's engine.
+ *
+ * Not stored on the track: it says how you are looking at the sound right now,
+ * not what the sound is, so it has no business in a patch file. Leaving ADV or
+ * switching to a track that is in ADV clears it, since there would be no racks
+ * to come back to. */
+export const rollFullscreen = writable<boolean>(false);
+
+export function toggleRollFullscreen(): void {
+	rollFullscreen.update((v) => !v);
+}
+
+
 /* A track that has never been switched follows the preference; one that has
    keeps its own choice, so the default cannot overrule a deliberate setting. */
 export const advancedMode = derived(
@@ -61,11 +97,20 @@ export const advancedMode = derived(
 );
 
 /** Which view owns the lower panel while the active track is in ADV. */
-export const centreView = derived(activeTrackRow, ($row): CentreView => $row?.advancedView ?? 'roll');
+export const centreView = derived(activeTrackRow, ($row): CentreView => $row?.advancedView ?? loadLastAdvView());
+
+/** True when racks 1-7 should not be rendered: either mode takes the panel. */
+export const panelIsExclusive = derived(
+	[advancedMode, rollFullscreen],
+	([$adv, $full]) => $adv || $full
+);
 
 export function toggleAdvanced(): void {
 	const id = get(activeTrackId);
 	const on = !get(advancedMode);
+	// ADV owns the panel on its own terms; a fullscreen roll underneath it would
+	// have nothing to restore when ADV was switched back off.
+	if (on) rollFullscreen.set(false);
 	const track = modularSynth.getTrack(id);
 
 	/* Switching a track into ADV that has no signal path yet gives it one.
@@ -86,9 +131,11 @@ export function toggleAdvanced(): void {
 
 	modularSynth.updateTrack(id, {
 		advanced: on,
-		// Leaving ADV parks the view on the roll, so coming back lands where the
-		// racks were rather than on a patch bay the user did not ask for again.
-		advancedView: on ? get(centreView) : 'roll',
+		/* A track with no view of its own opens on whichever one was last used --
+		   the patch bay the first time, since that is what the mode exists for.
+		   Leaving keeps that choice rather than resetting it, so coming back
+		   lands where you were working. */
+		advancedView: get(centreView),
 		...(needsChain ? { rackChain: ['string', 'body'], rackParams: {} } : {})
 	});
 	refreshTracks();
@@ -96,5 +143,13 @@ export function toggleAdvanced(): void {
 
 export function setCentreView(v: CentreView): void {
 	modularSynth.updateTrack(get(activeTrackId), { advancedView: v });
+	// Remembered for the next track that enters ADV without a view of its own.
+	if (browser) {
+		try {
+			localStorage.setItem(ADV_VIEW_KEY, v);
+		} catch {
+			/* quota / private mode */
+		}
+	}
 	refreshTracks();
 }
