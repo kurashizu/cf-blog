@@ -3,6 +3,7 @@ import { browser } from '$app/environment';
 import { modularSynth } from '../synth';
 import { activeTrackId } from './synth-transport';
 import { activeTrackRow, refreshTracks, notifyTrackEdited } from './synth-tracks';
+import { startingGraph } from './graph-model';
 
 /**
  * How the synth page is laid out, per track.
@@ -125,15 +126,22 @@ export function toggleAdvanced(): void {
 	rollFullscreen.set(on ? false : nextView === 'roll');
 
 	/* Switching a track into ADV that has no signal path yet gives it one.
-	   Without this the mode appears to do nothing: the patch bay opens on an
-	   empty chain, the sound is unchanged because there is nothing to route
-	   through, and there is no way to tell that from a bug. A string into a
-	   body is the shape most acoustic instruments take, so it is somewhere to
-	   start rather than a blank page.
+	   Without this the mode appears to do nothing: the patch bay opens empty,
+	   the sound is unchanged because there is nothing to route through, and
+	   there is no way to tell that from a bug.
 	   
-	   Only when the track has never had one -- a chain the player built is left
+	   The graph matters more than the chain here. ENTRY and OUTPUT are the two
+	   ends every patch has -- neither can be added from the palette -- so a
+	   canvas without them cannot be built on at all: there is nowhere for the
+	   note to arrive and nowhere for the sound to leave. This seeded only the
+	   chain, so entering ADV on a fresh track opened on a blank canvas with no
+	   ENTRY and no OUTPUT, and the only way to get them was to load a patch
+	   that already had them.
+	   
+	   Only when the track has never had one -- a path the player built is left
 	   alone, including one they deliberately emptied. */
 	const needsChain = on && !Array.isArray(track?.rackChain);
+	const needsGraph = on && !track?.rackGraph?.nodes?.length;
 
 	/* Switching modes is an edit: the two carry different signal paths, so the
 	   preset stops describing what is heard the moment the mode changes. The
@@ -147,7 +155,8 @@ export function toggleAdvanced(): void {
 		   never been in ADV falls back to the last view used anywhere, which is
 		   the patch bay the very first time. */
 		advancedView: nextView,
-		...(needsChain ? { rackChain: ['string', 'body'], rackParams: {} } : {})
+		...(needsChain ? { rackChain: ['string', 'body'], rackParams: {} } : {}),
+		...(needsGraph ? { rackGraph: startingGraph(), graphParams: {} } : {})
 	});
 	refreshTracks();
 }

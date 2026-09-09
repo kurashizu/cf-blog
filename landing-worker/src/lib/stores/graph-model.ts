@@ -127,18 +127,50 @@ export function isFixedNode(id: string): boolean {
  * on load rather than left to fail quietly. */
 const RENAMED_PORTS: Record<string, string> = { in2: 'b' };
 
-/** A patch file is user data: anything that is not a graph reads as an empty one. */
+/**
+ * The graph as the editor should see it: always with both of its ends.
+ *
+ * ENTRY and OUTPUT are not optional and not addable -- they are missing from
+ * the palette on purpose -- so a canvas without them cannot be built on: there
+ * is nowhere for the note to arrive and nowhere for the sound to leave. Rather
+ * than have every path that creates a track remember to seed them (which is
+ * exactly what one of them forgot, leaving a fresh ADV track staring at a blank
+ * canvas), they are guaranteed here, where every reader passes.
+ *
+ * A graph is only ever read through this, so restoring a missing end is enough
+ * -- nothing downstream has to check. The pair is placed where startingGraph
+ * puts them, and are only cabled to each other when the canvas was otherwise
+ * empty: joining them across someone's existing patch would invent a
+ * connection they did not make.
+ */
 export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph {
 	const g = track?.rackGraph;
-	if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.cables)) return { nodes: [], cables: [] };
-	if (!g.cables.some((c) => RENAMED_PORTS[c.toPort] || RENAMED_PORTS[c.fromPort])) return g;
+	if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.cables)) return startingGraph();
+
+	const cables = g.cables.some((c) => RENAMED_PORTS[c.toPort] || RENAMED_PORTS[c.fromPort])
+		? g.cables.map((c) => ({
+				...c,
+				fromPort: RENAMED_PORTS[c.fromPort] ?? c.fromPort,
+				toPort: RENAMED_PORTS[c.toPort] ?? c.toPort
+			}))
+		: g.cables;
+
+	const hasEntry = g.nodes.some((n) => n.id === ENTRY_ID);
+	const hasOutput = g.nodes.some((n) => n.id === OUTPUT_ID);
+	if (hasEntry && hasOutput) return cables === g.cables ? g : { nodes: g.nodes, cables };
+
+	const seed = startingGraph();
+	const nodes = [...g.nodes];
+	if (!hasEntry) nodes.unshift(seed.nodes[0]);
+	if (!hasOutput) {
+		// Clear of whatever is already there, so a restored end is not buried.
+		const right = g.nodes.reduce((m, n) => Math.max(m, n.x), 0);
+		nodes.push({ ...seed.nodes[1], x: Math.max(seed.nodes[1].x, right + 200) });
+	}
 	return {
-		nodes: g.nodes,
-		cables: g.cables.map((c) => ({
-			...c,
-			fromPort: RENAMED_PORTS[c.fromPort] ?? c.fromPort,
-			toPort: RENAMED_PORTS[c.toPort] ?? c.toPort
-		}))
+		nodes,
+		// Only wire the pair together on an otherwise blank canvas.
+		cables: g.nodes.length === 0 ? seed.cables : cables
 	};
 }
 

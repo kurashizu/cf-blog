@@ -269,8 +269,8 @@ export default {
 		'synthPanels.presets.hintFx': 'Noise, sweeps and textures',
 
 		// Toasts (synth-presets.ts)
-		'synthPanels.toast.presetSaved': '✓ PRESET {name}',
-		'synthPanels.toast.notAPreset': 'X NOT A PRESET',
+		'synthPanels.toast.presetSaved': '✓ PATCH {name}',
+		'synthPanels.toast.notAPreset': 'X NOT A PATCH',
 		'synthPanels.toast.kitApplied': '✓ KIT {name}',
 		'synthPanels.toast.newPreset': '✓ New patch',
 		'synthPanels.toast.newAdvancedPreset': '✓ New advanced patch',

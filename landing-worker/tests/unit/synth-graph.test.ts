@@ -40,9 +40,44 @@ function graph(ids: string[], cables: GraphCable[] = []): RackGraph {
 }
 
 describe('graphOf', () => {
-	it('reads a well-formed graph back', () => {
-		const g = graph(['osc', 'vcf'], [cable('osc', 'vcf')]);
+	/* Every graph has both of its ends, whatever it was read from.
+	
+	   ENTRY and OUTPUT are missing from the palette on purpose, so a canvas
+	   without them cannot be built on -- there is nowhere for the note to
+	   arrive and nowhere for the sound to leave. Guaranteeing it here rather
+	   than at each place a track is created is the point: one of those places
+	   forgot, and entering ADV on a fresh track opened a blank canvas that
+	   could not be recovered from without loading someone else's patch. */
+	it('hands a well-formed graph back untouched when it already has both ends', () => {
+		const g: RackGraph = {
+			nodes: [node(ENTRY_ID), node('vcf'), node(OUTPUT_ID)],
+			cables: [cable(ENTRY_ID, 'vcf'), cable('vcf', OUTPUT_ID)]
+		};
 		expect(graphOf({ rackGraph: g })).toBe(g);
+	});
+
+	it('restores an entry that is missing, keeping the rest', () => {
+		const g: RackGraph = { nodes: [node('vcf'), node(OUTPUT_ID)], cables: [] };
+		const out = graphOf({ rackGraph: g });
+		expect(out.nodes.map((n) => n.id)).toContain(ENTRY_ID);
+		expect(out.nodes.map((n) => n.id)).toContain('vcf');
+	});
+
+	it('restores an output clear of the modules already placed', () => {
+		const g: RackGraph = {
+			nodes: [{ id: ENTRY_ID, type: 'in', x: 0, y: 0 }, { id: 'vcf', type: 'vcf', x: 900, y: 0 }],
+			cables: []
+		};
+		const out = graphOf({ rackGraph: g });
+		const put = out.nodes.find((n) => n.id === OUTPUT_ID)!;
+		expect(put.x).toBeGreaterThan(900);
+	});
+
+	it('does not invent a cable across someone else\u2019s patch', () => {
+		// Joining the restored pair would connect two ends of a graph that has
+		// modules between them, which is a connection nobody made.
+		const g: RackGraph = { nodes: [node('vcf')], cables: [] };
+		expect(graphOf({ rackGraph: g }).cables).toEqual([]);
 	});
 
 	// A patch file is user data and may be hand-edited or from an older build.
@@ -51,8 +86,17 @@ describe('graphOf', () => {
 		['no graph', {}],
 		['nodes not an array', { rackGraph: { nodes: 'x', cables: [] } }],
 		['cables not an array', { rackGraph: { nodes: [], cables: null } }]
-	])('returns an empty graph for %s', (_label, track) => {
-		expect(graphOf(track as never)).toEqual({ nodes: [], cables: [] });
+	])('falls back to a starting graph for %s', (_label, track) => {
+		const out = graphOf(track as never);
+		expect(out.nodes.map((n) => n.id)).toEqual([ENTRY_ID, OUTPUT_ID]);
+		expect(out.cables).toHaveLength(1);
+	});
+
+	it('wires the pair together only when the canvas was blank', () => {
+		const blank = graphOf({ rackGraph: { nodes: [], cables: [] } });
+		expect(blank.cables).toEqual([
+			{ from: ENTRY_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
+		]);
 	});
 });
 
