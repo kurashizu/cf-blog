@@ -132,6 +132,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		name: '8-BIT BASS',
 		category: 'BASS',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'square',
 			osc2Waveform: 'triangle',
@@ -152,6 +153,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// One sine and the SUB under it, nothing above 800 Hz: weight, no edge.
 		name: 'SUB BASS',
 		category: 'BASS',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
@@ -169,6 +171,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// A saw into a high-Q low-pass that the envelope sweeps, with glide: the 303 recipe.
 		name: 'ACID BASS',
 		category: 'BASS',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
@@ -191,6 +194,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Sine modulated by a sine an octave up; the envelope on the filter stands in for an FM index envelope.
 		name: 'FM BASS',
 		category: 'BASS',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
@@ -218,6 +222,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// square with PW off 50%, which the engine now actually builds.
 		name: 'LEAD',
 		category: 'LEAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'square',
 			pulseWidth: 25,
@@ -240,6 +245,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Two saws 14 cents apart with a delayed vibrato.
 		name: 'SAW LEAD',
 		category: 'LEAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
@@ -262,6 +268,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// SYNC mode with the second oscillator at a fifth; the filter envelope gives it the rip.
 		name: 'SYNC LEAD',
 		category: 'LEAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
@@ -285,6 +292,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// A 15% pulse, no filter, a fast vibrato: the NES lead voice.
 		name: 'CHIP LEAD',
 		category: 'LEAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'square',
 			osc1Gain: 1,
@@ -305,6 +313,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		name: 'BRASS',
 		category: 'LEAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc2Waveform: 'sawtooth',
@@ -327,6 +336,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		name: 'PLUCK',
 		category: 'PLUCK',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'square',
 			osc2Waveform: 'sawtooth',
@@ -394,6 +404,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Two sines ring-modulated at a 3.5 ratio: inharmonic partials, long tail, air.
 		name: 'BELL',
 		category: 'MALLET',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
@@ -416,6 +427,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Sine carrier, sine modulator four octaves up at a light index: the tine.
 		name: 'E-PIANO',
 		category: 'KEYBOARD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
@@ -439,6 +451,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Drawbars: fundamental, octave, and the SUB below; no envelope to speak of; a slow tremolo.
 		name: 'ORGAN',
 		category: 'ORGAN',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 0.8,
@@ -461,6 +474,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// A 25% pulse through a resonant low-pass that closes fast.
 		name: 'CLAV',
 		category: 'KEYBOARD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'square',
 			osc1Gain: 1,
@@ -509,6 +523,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Detuned saws behind a low filter that breathes with a slow LFO.
 		name: 'WARM PAD',
 		category: 'PAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
@@ -534,6 +549,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Wider detune, brighter filter, a vibrato that fades in.
 		name: 'STRINGS',
 		category: 'PAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
@@ -556,6 +572,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Triangle and a sine an octave up, open filter, air on top, drifting in the stereo field.
 		name: 'GLASS PAD',
 		category: 'PAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'triangle',
 			osc1Gain: 0.9,
@@ -579,6 +596,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Square with a square an octave below, a low filter the LFO opens and closes.
 		name: 'HOLLOW PAD',
 		category: 'PAD',
+		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'square',
 			osc1Gain: 0.8,
@@ -722,6 +740,169 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 0.15,
 			rackChain: ['tube', 'body'],
 			rackParams: { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0, tubeMix: 80, bodySize: 38, bodyDepth: 30, bodyMix: 35 }
+		})
+	},
+
+	/* FX -- the sounds that are not an instrument.
+	   Everything here is a noise, a sweep or a texture rather than something you
+	   would play a melody on, which is why they share a heading instead of being
+	   filed under whichever family they happen to resemble. These are E: they are
+	   made from the oscillators, the filter and the LFO, none of which needs the
+	   patch bay to do what it does here. */
+	{
+		// White noise through a filter the envelope drags down from wide open:
+		// the shape of a wave falling back, hence the long release.
+		name: 'SEA WASH',
+		category: 'FX',
+		kind: 'E',
+		preset: synth({
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			noiseGain: 0.5,
+			filterType: 'lowpass',
+			cutoff: 900,
+			resonance: 2.5,
+			ampAttack: 0.9,
+			ampDecay: 1.2,
+			ampSustain: 0.55,
+			ampRelease: 1.8,
+			filterAttack: 1.1,
+			filterDecay: 1.6,
+			filterSustain: 0.2,
+			filterRelease: 2,
+			filterEnvAmount: 0.85,
+			lfoWaveform: 'sine',
+			lfoRate: 0.35,
+			lfoCutoffAmt: 0.4
+		})
+	},
+	{
+		// A pitch envelope that falls two octaves into a resonant filter. The
+		// drop is the sound; the note only says where it starts.
+		name: 'LASER ZAP',
+		category: 'FX',
+		kind: 'E',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			filterType: 'lowpass',
+			cutoff: 6000,
+			resonance: 9,
+			ampAttack: 0.001,
+			ampDecay: 0.28,
+			ampSustain: 0,
+			ampRelease: 0.12,
+			pitchAttack: 0.001,
+			pitchDecay: 0.22,
+			pitchEnvAmount: -24
+		})
+	},
+	{
+		// Two saws a long way apart, swept slowly: the beating is the texture,
+		// so the detune is deliberately past what would be called in tune.
+		name: 'DRONE',
+		category: 'FX',
+		kind: 'E',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 0.8,
+			osc2Waveform: 'sawtooth',
+			osc2Gain: 0.8,
+			detuneCents: 34,
+			subOscGain: 0.5,
+			filterType: 'lowpass',
+			cutoff: 1400,
+			resonance: 5,
+			ampAttack: 1.4,
+			ampDecay: 1,
+			ampSustain: 0.9,
+			ampRelease: 2.2,
+			lfoWaveform: 'triangle',
+			lfoRate: 0.18,
+			lfoCutoffAmt: 0.55,
+			lfoPitchAmt: 0.05
+		})
+	},
+	{
+		// Noise retriggered fast enough to have a pitch of its own, which is what
+		// makes it read as a machine rather than as wind.
+		name: 'STATIC',
+		category: 'FX',
+		kind: 'E',
+		preset: synth({
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			osc2Gain: 0,
+			noiseGain: 0.85,
+			noiseRetrig: 1,
+			noiseRetrigGap: 3,
+			/* A wide bandpass: at Q=7 the filter discards most of what a noise
+			   source has to offer and the texture thins out. */
+			filterType: 'bandpass',
+			cutoff: 2600,
+			resonance: 2.5,
+			ampAttack: 0.004,
+			ampDecay: 0.25,
+			ampSustain: 0.5,
+			ampRelease: 0.2,
+			lfoWaveform: 'square',
+			lfoRate: 11,
+			lfoCutoffAmt: 0.6
+		})
+	},
+	{
+		// A square gated by the LFO faster than the ear separates: one note
+		// arrives as a run of them.
+		name: 'STUTTER',
+		category: 'FX',
+		kind: 'E',
+		preset: synth({
+			osc1Waveform: 'square',
+			osc1Gain: 1,
+			osc2Waveform: 'square',
+			osc2Gain: 0.5,
+			osc2Semitone: 12,
+			filterType: 'lowpass',
+			cutoff: 3200,
+			resonance: 3,
+			ampAttack: 0.002,
+			ampDecay: 0.3,
+			ampSustain: 0.7,
+			ampRelease: 0.08,
+			lfoWaveform: 'square',
+			lfoRate: 16,
+			lfoAmpAmt: 0.95
+		})
+	},
+	{
+		// The filter opening slowly under a bright saw: a riser, which is only
+		// interesting held.
+		name: 'RISER',
+		category: 'FX',
+		kind: 'E',
+		preset: synth({
+			osc1Waveform: 'sawtooth',
+			osc1Gain: 1,
+			osc2Waveform: 'sawtooth',
+			osc2Gain: 0.6,
+			detuneCents: 12,
+			filterType: 'lowpass',
+			cutoff: 300,
+			resonance: 8,
+			ampAttack: 0.6,
+			ampDecay: 1,
+			ampSustain: 0.95,
+			ampRelease: 0.5,
+			filterAttack: 2.6,
+			filterDecay: 1,
+			filterSustain: 1,
+			filterRelease: 0.4,
+			filterEnvAmount: 0.95,
+			lfoWaveform: 'sine',
+			lfoRate: 5.5,
+			lfoPitchAmt: 0.12
 		})
 	}
 ];
