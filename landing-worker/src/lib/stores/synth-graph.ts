@@ -83,12 +83,19 @@ export function moveNode(graph: RackGraph, id: string, x: number, y: number): vo
 	commit({ ...graph, nodes: graph.nodes.map((n) => (n.id === id ? { ...n, x, y } : n)) });
 }
 
-export function removeNode(graph: RackGraph, id: string): void {
-	commit({
-		nodes: graph.nodes.filter((n) => n.id !== id),
-		// A node's cables go with it; a cable to nothing is not a patch.
-		cables: graph.cables.filter((c) => c.from !== id && c.to !== id)
-	});
+export function removeNode(graph: RackGraph, id: string, params?: Record<string, number>): void {
+	const trackId = get(activeTrackId);
+	modularSynth.updateTrack(trackId, {
+		rackGraph: {
+			nodes: graph.nodes.filter((n) => n.id !== id),
+			// A node's cables go with it; a cable to nothing is not a patch.
+			cables: graph.cables.filter((c) => c.from !== id && c.to !== id)
+		},
+		// ...and so do its knob settings, or a patch accumulates dead keys that
+		// would silently reattach to a later node that reused the id.
+		graphParams: pruneGraphParams(params, id)
+	} as Partial<TrackData>);
+	refreshTracks();
 }
 
 /**
@@ -149,4 +156,45 @@ export function topoOrder(graph: RackGraph, audioCables: GraphCable[]): GraphNod
 		}
 	}
 	return out.length === graph.nodes.length ? out : null;
+}
+
+/**
+ * A node's parameters live on the track, not on the node, keyed
+ * `<nodeId>.<param>` -- the same key the engine reads in buildGraphNode. Keeping
+ * them off the node means a patch file stays readable and a param a module no
+ * longer has is simply ignored rather than corrupting the graph.
+ */
+export function graphParamKey(nodeId: string, param: string): string {
+	return `${nodeId}.${param}`;
+}
+
+export function getGraphParam(
+	params: Record<string, number> | undefined,
+	nodeId: string,
+	param: string,
+	def: number
+): number {
+	return params?.[graphParamKey(nodeId, param)] ?? def;
+}
+
+export function setGraphParam(
+	params: Record<string, number> | undefined,
+	nodeId: string,
+	param: string,
+	value: number
+): void {
+	const next = { ...(params ?? {}), [graphParamKey(nodeId, param)]: value };
+	modularSynth.updateTrack(get(activeTrackId), { graphParams: next } as Partial<TrackData>);
+	refreshTracks();
+}
+
+/** Drop a removed node's parameters, so a patch does not accumulate dead keys. */
+export function pruneGraphParams(
+	params: Record<string, number> | undefined,
+	nodeId: string
+): Record<string, number> {
+	const out: Record<string, number> = {};
+	const prefix = `${nodeId}.`;
+	for (const [k, v] of Object.entries(params ?? {})) if (!k.startsWith(prefix)) out[k] = v;
+	return out;
 }

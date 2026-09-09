@@ -21,6 +21,10 @@ export interface ModuleParam {
 	step: number;
 	unit?: string;
 	def: number;
+	/* A parameter that selects rather than sweeps gets buttons instead of a
+	   knob -- the same segmented row rack 3 uses for its filter types, because
+	   "which one" reads badly as an angle. */
+	choices?: string[];
 }
 
 export interface ModuleSpec {
@@ -33,6 +37,9 @@ export interface ModuleSpec {
 	inputs: PortSpec[];
 	outputs: PortSpec[];
 	params: ModuleParam[];
+	/* A live picture of what the knobs are doing, like racks 1-7 carry: an
+	   envelope drawn as its own curve says more than four numbers do. */
+	viz?: 'adsr' | 'wave' | 'curve';
 }
 
 const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
@@ -49,7 +56,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'fm', label: 'FM', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0 },
+			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'SAW', 'SQR', 'TRI'] },
 			{ key: 'ratio', label: 'RATIO', min: 0.25, max: 8, step: 0.01, unit: '×', def: 1 },
 			{ key: 'detune', label: 'DET', min: -50, max: 50, step: 1, unit: 'c', def: 0 },
 			{ key: 'level', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 80 }
@@ -93,7 +100,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'fm', label: 'FM', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'type', label: 'TYPE', min: 0, max: 3, step: 1, def: 0 },
+			{ key: 'type', label: 'TYPE', min: 0, max: 3, step: 1, def: 0, choices: ['LPF', 'BPF', 'HPF', 'NTCH'] },
 			{ key: 'cutoff', label: 'FREQ', min: 40, max: 18000, step: 10, unit: 'Hz', def: 4000 },
 			{ key: 'q', label: 'RESO', min: 0.1, max: 24, step: 0.1, def: 1 },
 			{ key: 'depth', label: 'DEPTH', min: 0, max: 100, step: 1, unit: '%', def: 50 }
@@ -215,7 +222,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ key: 'envD', label: 'D', min: 0, max: 6, step: 0.005, unit: 's', def: 0.2 },
 			{ key: 'envS', label: 'S', min: 0, max: 100, step: 1, unit: '%', def: 60 },
 			{ key: 'envR', label: 'R', min: 0, max: 8, step: 0.005, unit: 's', def: 0.2 }
-		]
+		],
+		viz: 'adsr'
 	},
 	{
 		id: 'lfo',
@@ -226,10 +234,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'fm', label: 'FM', kind: 'mod' }],
 		outputs: [{ id: 'cv', label: 'CV', kind: 'mod' }],
 		params: [
-			{ key: 'lfoWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0 },
+			{ key: 'lfoWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'SAW', 'SQR', 'TRI'] },
 			{ key: 'lfoRate', label: 'RATE', min: 0.02, max: 40, step: 0.01, unit: 'Hz', def: 5 },
 			{ key: 'lfoAmt', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 50 }
-		]
+		],
+		viz: 'wave'
 	},
 
 	/* UTILITY: the plumbing a patch needs once it stops being a straight line. */

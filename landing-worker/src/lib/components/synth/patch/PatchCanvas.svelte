@@ -21,21 +21,23 @@
 		removeNode,
 		addCable,
 		removeCable,
+		setGraphParam,
 		selectedNode,
 		type GraphNode,
 		type PortKind
 	} from '../../../stores/synth-graph';
-	import { MODULE_SPECS, MODULE_GROUPS, moduleSpec } from '../../../stores/synth-modules';
+	import { MODULE_SPECS, MODULE_GROUPS, moduleSpec, type ModuleSpec } from '../../../stores/synth-modules';
+	import ModuleCard from './ModuleCard.svelte';
 
 	let graph = $derived(graphOf($currentTrack));
+	let graphParams = $derived($currentTrack?.graphParams);
 
 	/** Camera: pan in px, scale about the pointer. Same shape LIFE.LAB uses. */
 	let cam = $state({ x: 40, y: 40, s: 1 });
 	let canvasEl = $state<HTMLDivElement | undefined>();
 
 	const GRID = 16;
-	const NODE_W = 118;
-	const NODE_H = 74;
+	const NODE_W = 124;
 	/* Port geometry, in one place because two formulas have to agree exactly:
 	   the dots are laid out by CSS inside the node, and the cables are drawn in
 	   SVG from portPos(). When they disagreed, every cable ended in mid-air a
@@ -50,10 +52,65 @@
 	const BORDER = 2;
 	const HEADER_H = 20;
 	const PORT_R = 6;
-	const BODY_H = NODE_H - 2 * BORDER - HEADER_H;
+
+	/* A card is as tall as its own controls, so the ports have to be spread over
+	   a height that varies per module. Computing it rather than measuring the
+	   DOM keeps the cables right on the first frame, before layout has happened
+	   -- but it only works if the numbers match what the card actually renders,
+	   so these were measured off the rendered cards rather than estimated:
+	   a knob row is 42, a segmented selector 30, the LFO curve 26 and the
+	   compact ADSR panel 58, with a 4px gap between parts and 4px of padding
+	   either end. */
+	const KNOB_ROW_H = 42;
+	const SELECTOR_H = 30;
+	const GAP = 4;
+	const BODY_PAD = 4;
+	const VIZ_H: Record<string, number> = { adsr: 58, wave: 26, curve: 26 };
+
+	function bodyHeight(spec: ModuleSpec): number {
+		const knobs = spec.params.filter((p) => !p.choices).length;
+		const selectors = spec.params.filter((p) => p.choices).length;
+		const rows = Math.ceil(knobs / 2);
+		const parts: number[] = [];
+		for (let i = 0; i < selectors; i++) parts.push(SELECTOR_H);
+		if (spec.viz) parts.push(VIZ_H[spec.viz] ?? 26);
+		if (rows) parts.push(rows * KNOB_ROW_H + (rows - 1) * 2);
+		if (!parts.length) return BODY_PAD * 2;
+		return BODY_PAD * 2 + parts.reduce((a, b) => a + b, 0) + (parts.length - 1) * GAP;
+	}
+
+	/* The computed height is only an estimate for the very first frame. Once a
+	   card has laid out it reports its real height here, and the ports and
+	   cables follow that instead -- so restyling a card can no longer silently
+	   pull the cables off their sockets, which is exactly what the hand-counted
+	   constants above did twice. */
+	let measured = $state<Record<string, number>>({});
+
+	function bodyOf(node: GraphNode, spec: ModuleSpec): number {
+		return measured[node.id] ?? bodyHeight(spec);
+	}
+
+	function nodeHeight(node: GraphNode, spec: ModuleSpec): number {
+		return 2 * BORDER + HEADER_H + bodyOf(node, spec);
+	}
+
+	/** Watch a card's box, so the ports track whatever it actually renders as. */
+	function measure(el: HTMLElement, id: string) {
+		const ro = new ResizeObserver(() => {
+			const h = el.getBoundingClientRect().height / cam.s;
+			if (h > 0 && Math.abs((measured[id] ?? -1) - h) > 0.5) measured = { ...measured, [id]: h };
+		});
+		ro.observe(el);
+		return {
+			destroy() {
+				ro.disconnect();
+			}
+		};
+	}
+
 	/** The centre of port i, measured from the node's border-box top-left. */
-	function portOffset(count: number, i: number) {
-		return BORDER + HEADER_H + (BODY_H / (count + 1)) * (i + 1);
+	function portOffset(node: GraphNode, spec: ModuleSpec, count: number, i: number) {
+		return BORDER + HEADER_H + (bodyOf(node, spec) / (count + 1)) * (i + 1);
 	}
 
 	/** Drag state: a module being moved, or a cable being pulled. */
@@ -78,11 +135,12 @@
 		const spec = moduleSpec(n.type);
 		const list = isOutput ? (spec?.outputs ?? []) : (spec?.inputs ?? []);
 		const i = Math.max(0, list.findIndex((p) => p.id === port));
+		if (!spec) return { x: 0, y: 0 };
 		return {
 			// The dots straddle the border, so their centres land on the node's
 			// two vertical edges -- a cable meets the socket, not the wall.
 			x: n.x + (isOutput ? NODE_W : 0),
-			y: n.y + portOffset(list.length, i)
+			y: n.y + portOffset(n, spec, list.length, i)
 		};
 	}
 
@@ -140,6 +198,9 @@
 	}
 
 	function startDrag(e: PointerEvent, n: GraphNode) {
+		// Right button belongs to the canvas: panning must work wherever the
+		// pointer happens to be, and a module under it is not a reason to refuse.
+		if (e.button === 2) return;
 		e.stopPropagation();
 		const p = toCanvas(e.clientX, e.clientY);
 		dragNode = { id: n.id, dx: p.x - n.x, dy: p.y - n.y };
@@ -147,6 +208,7 @@
 	}
 
 	function startCable(e: PointerEvent, nodeId: string, port: string, kind: PortKind) {
+		if (e.button === 2) return;
 		e.stopPropagation();
 		const p = portPos(nodeId, port, true);
 		pullFrom = { node: nodeId, port, kind, x: p.x, y: p.y };
@@ -213,7 +275,7 @@
 			// Where it was dropped, snapped -- so a patch stays legible.
 			const p = toCanvas(e.clientX, e.clientY);
 			selectedNode.set(
-				addNode(graph, type, Math.round((p.x - NODE_W / 2) / GRID) * GRID, Math.round((p.y - NODE_H / 2) / GRID) * GRID)
+				addNode(graph, type, Math.round((p.x - NODE_W / 2) / GRID) * GRID, Math.round((p.y - 40) / GRID) * GRID)
 			);
 			dragType = null;
 			playSound('click');
@@ -273,7 +335,7 @@
 						class="absolute border-2 bg-black/85 rounded-xs select-none {$selectedNode === n.id
 							? 'shadow-[0_0_10px_rgba(97,175,239,0.5)]'
 							: ''}"
-						style="left: {n.x}px; top: {n.y}px; width: {NODE_W}px; min-height: {NODE_H}px; border-color: {spec.color}{$selectedNode ===
+						style="left: {n.x}px; top: {n.y}px; width: {NODE_W}px; height: {nodeHeight(n, spec)}px; border-color: {spec.color}{$selectedNode ===
 						n.id
 							? ''
 							: '80'}"
@@ -285,9 +347,11 @@
 						>
 							<span>{spec.label}</span>
 							<button
-								onpointerdown={(e) => e.stopPropagation()}
+								onpointerdown={(e) => {
+									if (e.button !== 2) e.stopPropagation();
+								}}
 								onclick={() => {
-									removeNode(graph, n.id);
+									removeNode(graph, n.id, graphParams);
 									playSound('click');
 								}}
 								class="text-[#e06c75] hover:text-white cursor-pointer leading-none"
@@ -298,16 +362,18 @@
 						<!-- Ports: inputs down the left, outputs down the right. Positioned
 						     from portOffset() against the node's own top, which is what
 						     portPos() draws the cables to -- one formula, one place. -->
-						<div class="absolute pointer-events-none" style="left: {-BORDER}px; top: {-BORDER}px; width: {NODE_W}px; height: {NODE_H}px">
+						<div class="absolute pointer-events-none" style="left: {-BORDER}px; top: {-BORDER}px; width: {NODE_W}px; height: {nodeHeight(n, spec)}px">
 							{#each spec.inputs as p, i (p.id)}
 								<button
-									onpointerdown={(e) => e.stopPropagation()}
+									onpointerdown={(e) => {
+										if (e.button !== 2) e.stopPropagation();
+									}}
 									onpointerup={(e) => endCable(e, n.id, p.id, p.kind)}
 									title={p.label}
 									class="absolute w-3 h-3 rounded-full border cursor-crosshair pointer-events-auto {p.kind === 'mod'
 										? 'bg-[#e5c07b] border-[#e5c07b]'
 										: 'bg-black border-white/60'}"
-									style="left: {-PORT_R}px; top: {portOffset(spec.inputs.length, i) - PORT_R}px; position: absolute"
+									style="left: {-PORT_R}px; top: {portOffset(n, spec, spec.inputs.length, i) - PORT_R}px; position: absolute"
 								></button>
 							{/each}
 							{#each spec.outputs as p, i (p.id)}
@@ -317,16 +383,18 @@
 									class="absolute w-3 h-3 rounded-full border cursor-crosshair pointer-events-auto {p.kind === 'mod'
 										? 'bg-[#e5c07b] border-[#e5c07b]'
 										: 'bg-white/80 border-white'}"
-									style="left: {NODE_W - PORT_R}px; top: {portOffset(spec.outputs.length, i) - PORT_R}px; position: absolute"
+									style="left: {NODE_W - PORT_R}px; top: {portOffset(n, spec, spec.outputs.length, i) - PORT_R}px; position: absolute"
 								></button>
 							{/each}
 						</div>
-						<div
-							class="absolute left-0 right-0 flex items-center justify-center text-[8px] text-white/25 pointer-events-none"
-							style="top: {HEADER_H}px; height: {BODY_H}px"
-						>
-							{spec.params.length}
-							{$t('synthPatch.paramCount')}
+						<div use:measure={n.id}>
+						<ModuleCard
+							{spec}
+							nodeId={n.id}
+							params={graphParams}
+							onParam={(key, value) => setGraphParam(graphParams, n.id, key, value)}
+							onReset={() => {}}
+						/>
 						</div>
 					</div>
 				{/if}

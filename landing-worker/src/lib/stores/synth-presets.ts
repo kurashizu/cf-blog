@@ -889,7 +889,16 @@ export function newPreset(): void {
 }
 
 function doNewPreset(): void {
-	updateActiveTrack({ ...blankTimbre(), rackChain: [], rackParams: {}, advanced: false });
+	/* The graph goes too. A patch that kept the last one's wiring is not new,
+	   and the modules would be invisible until ADV was switched back on. */
+	updateActiveTrack({
+		...blankTimbre(),
+		rackChain: [],
+		rackParams: {},
+		rackGraph: { nodes: [], cables: [] },
+		graphParams: {},
+		advanced: false
+	});
 	presetModified.set(true);
 	showSaveStatus(tr('synthPanels.toast.newPreset'));
 	playSound('click');
@@ -919,6 +928,10 @@ function doNewAdvancedPreset(): void {
 		release: 0.05,
 		rackChain: ['string', 'body'],
 		rackParams: {},
+		// An empty canvas, so the seeded chain is what sounds: a leftover graph
+		// takes precedence over the chain and would silently win.
+		rackGraph: { nodes: [], cables: [] },
+		graphParams: {},
 		advanced: true,
 		advancedView: 'rack'
 	});

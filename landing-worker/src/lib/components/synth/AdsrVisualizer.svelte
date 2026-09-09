@@ -4,8 +4,19 @@
 		decay = 0.15,
 		sustain = 0.5,
 		release = 0.1,
-		color = '#98c379'
-	}: { attack?: number; decay?: number; sustain?: number; release?: number; color?: string } = $props();
+		color = '#98c379',
+		/* The numbers under the curve repeat whatever knobs sit beside it. On a
+		   patch-bay card the knobs are directly below, so the curve alone is the
+		   useful half. */
+		compact = false
+	}: {
+		attack?: number;
+		decay?: number;
+		sustain?: number;
+		release?: number;
+		color?: string;
+		compact?: boolean;
+	} = $props();
 
 	const width = 160;
 	const height = 46;
@@ -60,6 +71,7 @@
 		<circle cx={x3} cy={y3} r="2" fill="#fff" />
 	</svg>
 
+	{#if !compact}
 	<div class="w-full flex flex-col gap-0.5 border-t border-white/10 pt-0.5 font-mono leading-none">
 		<div class="grid grid-cols-4 text-center text-xs font-black text-white/60">
 			<span>A</span>
@@ -74,4 +86,5 @@
 			<span class="truncate" style="color: {color}">{Math.round(release * 1000)}ms</span>
 		</div>
 	</div>
+	{/if}
 </div>
