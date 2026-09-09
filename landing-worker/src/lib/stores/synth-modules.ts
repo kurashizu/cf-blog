@@ -46,7 +46,18 @@ const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
 const AUDIO_OUT: PortSpec = { id: 'out', label: 'OUT', kind: 'audio' };
 
 export const MODULE_SPECS: ModuleSpec[] = [
-	/* SOURCE: things that make sound from nothing. */
+	/* SOURCE: things that make sound from nothing -- and the one thing that
+	   brings sound in from outside the patch. */
+	{
+		id: 'in',
+		label: 'IN',
+		group: 'SOURCE',
+		color: '#98c379',
+		descKey: 'synthPatch.mod.in',
+		inputs: [],
+		outputs: [AUDIO_OUT],
+		params: [{ key: 'inLevel', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
+	},
 	{
 		id: 'osc',
 		label: 'OSC',
@@ -381,6 +392,62 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'panPos', label: 'POS', min: -100, max: 100, step: 1, def: 0 },
 			{ key: 'panDepth', label: 'DPTH', min: 0, max: 100, step: 1, unit: '%', def: 100 }
+		]
+	},
+	{
+		id: 'sum',
+		label: 'SUM',
+		group: 'UTILITY',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.sum',
+		inputs: [AUDIO_IN, { id: 'b', label: 'B', kind: 'audio' }],
+		outputs: [AUDIO_OUT],
+		params: [{ key: 'sumGain', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
+	},
+	{
+		/* Not 'sub': that id is the sub-oscillator's, and a duplicate silently
+		   shadowed this one -- the engine matched the oscillator and subtraction
+		   never happened. */
+		id: 'diff',
+		label: 'DIFF',
+		group: 'UTILITY',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.subtract',
+		inputs: [{ id: 'in', label: 'A', kind: 'audio' }, { id: 'b', label: 'B', kind: 'audio' }],
+		outputs: [AUDIO_OUT],
+		params: [{ key: 'subAmount', label: 'AMT', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
+	},
+	{
+		id: 'ring',
+		label: 'RING',
+		group: 'UTILITY',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.ring',
+		inputs: [{ id: 'in', label: 'A', kind: 'audio' }, { id: 'b', label: 'B', kind: 'audio' }],
+		outputs: [AUDIO_OUT],
+		params: [{ key: 'ringDepth', label: 'DPTH', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
+	},
+	{
+		id: 'invert',
+		label: 'INV',
+		group: 'UTILITY',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.invert',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: []
+	},
+	{
+		id: 'out',
+		label: 'OUT',
+		group: 'UTILITY',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.out',
+		inputs: [AUDIO_IN],
+		outputs: [],
+		params: [
+			{ key: 'outPan', label: 'PAN', min: -100, max: 100, step: 1, def: 0 },
+			{ key: 'outLevel', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }
 		]
 	},
 	{

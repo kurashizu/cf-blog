@@ -960,8 +960,18 @@ class ModularSynth {
     }
     if (order.length !== graph.nodes.length) return null;
 
-    const built = new Map<string, { in: AudioNode | null; out: AudioNode; mod: Map<string, AudioParam> }>();
+    const built = new Map<
+      string,
+      { in: AudioNode | null; in2?: AudioNode; out: AudioNode; mod: Map<string, AudioParam>; isVoiceIn?: boolean; isOutput?: boolean }
+    >();
     const sources: AudioScheduledSourceNode[] = [];
+    /* With an IN module the patch says where the voice enters, so nothing else
+       should also receive it by default. */
+    const hasExplicitIn = graph.nodes.some((n) => n.type === 'in');
+    const typeById = new Map(graph.nodes.map((n) => [n.id, n.type]));
+    /* Modules whose output is control rather than sound. They are never part of
+       the mix, however they are wired. */
+    const MOD_ONLY_TYPES = new Set(['env', 'lfo']);
 
     for (const node of order) {
       const p = (key: string, def: number) => params[`${node.id}.${key}`] ?? def;
@@ -969,12 +979,19 @@ class ModularSynth {
       if (!made) continue;
       built.set(node.id, made);
 
-      // Feed it: whatever is patched in, or the voice when nothing is.
+      /* Feed it. A cable decides where a signal goes; the voice from racks 1-7
+         only arrives on its own when the patch has no IN module to say so, which
+         keeps older patches sounding as they did. */
       const feeds = audioCables.filter((c) => c.to === node.id);
+      if (made.isVoiceIn) voiceIn.connect(made.out);
       if (made.in) {
         if (feeds.length) {
-          for (const c of feeds) built.get(c.from)?.out.connect(made.in);
-        } else {
+          for (const c of feeds) {
+            // A module with two inlets takes its second signal on 'b'.
+            const dest = c.toPort === 'b' && made.in2 ? made.in2 : made.in;
+            built.get(c.from)?.out.connect(dest);
+          }
+        } else if (!hasExplicitIn) {
           voiceIn.connect(made.in);
         }
       }
@@ -988,15 +1005,31 @@ class ModularSynth {
       if (src && param) src.out.connect(param);
     }
 
-    /* The patch's output: every node nothing else listens to. A patch with two
-       loose ends is two voices in parallel, which is what a modular does. */
+    /* Where the patch leaves.
+    
+       With an OUT module, only what reaches it is heard -- so a module dragged
+       onto the canvas and not yet wired is silent, which is what anyone would
+       expect while building. Without one the old rule stands: every node nothing
+       else listens to is an output, which keeps existing patches sounding as
+       they did and lets a two-ended patch run two voices in parallel. */
     const sink = ctx.createGain();
     let any = false;
-    for (const [id, made] of built) {
-      if (audioCables.some((c) => c.from === id)) continue;
-      if (modCables.some((c) => c.from === id)) continue;
-      made.out.connect(sink);
-      any = true;
+    const outs = [...built.values()].filter((m) => m.isOutput);
+    if (outs.length) {
+      for (const m of outs) {
+        m.out.connect(sink);
+        any = true;
+      }
+    } else {
+      for (const [id, made] of built) {
+        if (audioCables.some((c) => c.from === id)) continue;
+        if (modCables.some((c) => c.from === id)) continue;
+        // A modulator is not a voice: ENV and LFO exist to drive a param, so an
+        // unpatched one is a mistake to leave silent rather than a tone to mix in.
+        if (MOD_ONLY_TYPES.has(typeById.get(id) ?? '')) continue;
+        made.out.connect(sink);
+        any = true;
+      }
     }
     if (!any) return null;
     return { out: sink, sources };
@@ -1011,7 +1044,17 @@ class ModularSynth {
     t: number,
     heldSec: number,
     sources: AudioScheduledSourceNode[]
-  ): { in: AudioNode | null; out: AudioNode; mod: Map<string, AudioParam> } | null {
+  ): {
+    in: AudioNode | null;
+    /** A second audio inlet, for the modules that take two signals. */
+    in2?: AudioNode;
+    out: AudioNode;
+    mod: Map<string, AudioParam>;
+    /** Receives the voice from racks 1-7 rather than a cable. */
+    isVoiceIn?: boolean;
+    /** The patch's output; when present, only what reaches it is heard. */
+    isOutput?: boolean;
+  } | null {
     const mod = new Map<string, AudioParam>();
     const WAVES: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square'];
 
@@ -1397,6 +1440,73 @@ class ModularSynth {
         makeup.gain.value = Math.pow(10, p('compGain', 0) / 20);
         c.connect(makeup);
         return { in: c, out: makeup, mod };
+      }
+
+      case 'in': {
+        /* The voice arriving from racks 1-7: the oscillators, the filter and the
+           amp envelope, before the patch bay touches them. Explicit, so a patch
+           says where its signal enters instead of leaving it to be guessed at
+           from which modules have nothing plugged in. */
+        const g = ctx.createGain();
+        g.gain.value = p('inLevel', 100) / 100;
+        return { in: null, out: g, mod, isVoiceIn: true };
+      }
+
+      case 'out': {
+        /* Where the patch leaves. Everything reaching this is what you hear;
+           anything not reaching it is silent, which is what lets a module sit
+           on the canvas unwired without being heard. */
+        const g = ctx.createGain();
+        g.gain.value = p('outLevel', 100) / 100;
+        const pan = ctx.createStereoPanner();
+        pan.pan.value = Math.max(-1, Math.min(1, p('outPan', 0) / 100));
+        g.connect(pan);
+        return { in: g, out: pan, mod, isOutput: true };
+      }
+
+      case 'sum': {
+        /* Adds its inputs. Web Audio sums anything sharing a destination, so
+           this is a named place for it -- a patch reads better with the addition
+           drawn than with three cables converging on one inlet. */
+        const g = ctx.createGain();
+        g.gain.value = p('sumGain', 100) / 100;
+        return { in: g, out: g, mod };
+      }
+
+      case 'diff': {
+        /* Subtracts B from A: A arrives at IN, B at the inverting inlet. Cancels
+           what two signals share and leaves the difference, which is how a
+           phase-flipped copy becomes a filter you cannot build from a biquad. */
+        const out = ctx.createGain();
+        const a = ctx.createGain();
+        a.gain.value = 1;
+        a.connect(out);
+        const b = ctx.createGain();
+        b.gain.value = -(p('subAmount', 100) / 100);
+        b.connect(out);
+        return { in: a, in2: b, out, mod };
+      }
+
+      case 'ring': {
+        /* Ring modulation: one signal multiplies another. A gain node whose gain
+           is driven by audio is exactly that, and the sum and difference tones it
+           makes are inharmonic -- bells, gongs, and the metallic half of a drum
+           kit. */
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        const depth = ctx.createGain();
+        depth.gain.value = p('ringDepth', 100) / 100;
+        depth.connect(g.gain);
+        return { in: g, in2: depth, out: g, mod };
+      }
+
+      case 'invert': {
+        /* Flips the sign. On its own it is inaudible; against a copy of itself
+           it is cancellation, which is what makes it a tool rather than a
+           curiosity. */
+        const g = ctx.createGain();
+        g.gain.value = -1;
+        return { in: g, out: g, mod };
       }
 
       default: {
