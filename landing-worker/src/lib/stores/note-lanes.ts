@@ -266,3 +266,57 @@ export function lanesOf(track: { noteLanes?: NoteLane[] } | undefined): NoteLane
 export function laneToVelocity(v: number): number {
 	return Math.max(1, Math.min(127, Math.round(v * 127)));
 }
+
+/* How many lanes a track may carry.
+ *
+ * The plain view gets the velocity lane and nothing else: it is the one every
+ * part needs, and a second lane there would have nowhere to go -- racks 1-7
+ * have no sockets to patch it into, so it would draw a curve that did nothing.
+ *
+ * ADV lifts that, because there the lane IS a socket on ENTRY: a curve you draw
+ * can be cabled to any knob in the patch. Four is the ceiling either way --
+ * enough for a part's dynamics plus a few shaped parameters, and few enough
+ * that the folded strip stays readable. */
+export const MAX_LANES_PLAIN = 1;
+export const MAX_LANES_ADV = 4;
+
+export function laneLimit(advanced: boolean): number {
+	return advanced ? MAX_LANES_ADV : MAX_LANES_PLAIN;
+}
+
+/** The colours new lanes take, in order, after velocity's amber. */
+const LANE_COLORS = ['#56b6c2', '#c678dd', '#98c379'];
+
+/** A new lane, named and coloured so it is distinguishable at a glance. */
+export function newLane(existing: NoteLane[]): NoteLane {
+	const used = new Set(existing.map((l) => l.id));
+	let n = 1;
+	while (used.has(`lane${n}`)) n++;
+	return {
+		id: `lane${n}`,
+		name: `L${n}`,
+		/* Continuous by default: a second lane exists to shape something over
+		   time, which is the half velocity cannot do. */
+		mode: 'continuous',
+		color: LANE_COLORS[(n - 1) % LANE_COLORS.length],
+		points: [],
+		def: 0.5
+	};
+}
+
+/** Add a lane if there is room, otherwise leave the set alone. */
+export function addLane(lanes: NoteLane[], advanced: boolean): NoteLane[] {
+	if (lanes.length >= laneLimit(advanced)) return lanes;
+	return [...lanes, newLane(lanes)];
+}
+
+/** Remove a lane. Velocity cannot go: every note needs one. */
+export function removeLane(lanes: NoteLane[], id: string): NoteLane[] {
+	if (id === VELOCITY_LANE_ID) return lanes;
+	return lanes.filter((l) => l.id !== id);
+}
+
+/** The graph param a lane's socket drives, so cables can name it. */
+export function laneSocketId(laneId: string): string {
+	return `lane:${laneId}`;
+}

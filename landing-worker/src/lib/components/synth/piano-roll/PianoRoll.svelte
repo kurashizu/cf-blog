@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LaneStrip from './LaneStrip.svelte';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { playSound } from '../../../sound';
@@ -6,7 +7,7 @@
 	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
 	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId, pageInputStr, pageFollow, prevPatternPage, nextPatternPage, goToPage, totalPatternPages } from '../../../stores/synth-transport';
 	import { advancedMode, rollFullscreen, toggleRollFullscreen } from '../../../stores/synth-view';
-	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, cycleAccent, updateTrack } from '../../../stores/synth-tracks';
+	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, updateTrack } from '../../../stores/synth-tracks';
 	import {
 		selection, canUndo, canRedo, undo, redo, runKey, runAt, runsIn, selectedRuns, selectRuns, toggleRun, clearSelection, selectAll,
 		deleteRuns, deleteSelection, moveSelection, resizeSelection, duplicateSelection, copySelection, cutSelection, pasteClip,
@@ -127,11 +128,6 @@
 			modularSynth.setPlaybackStep(step);
 			seqCurrentStep.set(step);
 		}
-		playSound('click');
-	}
-
-	function handleCycleAccent(step: number) {
-		cycleAccent(step);
 		playSound('click');
 	}
 
@@ -765,50 +761,20 @@
 				{/if}
 			</div>
 
-			<!-- Fixed accent track -->
-			<div class="flex items-center gap-1 pt-1 border-t border-white/10 text-xs font-mono shrink-0 select-none">
-				<div class="w-9 text-right pr-1 font-black text-[#e06c75] shrink-0 select-none text-xs flex items-center justify-end">
-					<span title={$t('synthPanels.roll.accentTrackHint')}>ACC</span>
-				</div>
-				<div class="flex-1 gap-0.5" style="display: grid; grid-template-columns: repeat({colsPerPage}, minmax(0, 1fr));">
-					{#each Array.from({ length: colsPerPage }) as _, colIdx (colIdx)}
-						{@const globalCol = viewportStartCol + colIdx}
-						{@const colInBar = globalCol % effColsPerBar}
-						{@const isBarStart = colInBar === 0}
-						{@const isBeatStart = colInBar % effColsPerBeat === 0}
-						<div class="h-full">
-							<div class="flex h-full gap-0.5">
-								{#each [0, 1] as subCol (subCol)}
-									{@const step = globalCol * spc + subCol * (spc / 2)}
-									{@const accVal = Number($currentTrack.accents[step] || 0)}
-									{@const isSubCurrent = playCol === globalCol && playSubCol === subCol}
-									<button
-										onclick={() => handleCycleAccent(step)}
-										class="press flex-1 py-0.5 text-center text-xs font-bold rounded-xs cursor-pointer border transition-all {isSubCurrent
-											? 'border-white bg-white text-black font-black shadow-[0_0_8px_#fff]'
-											: accVal === 4
-												? 'border-[#e06c75] bg-[#e06c75] text-black font-black shadow-xs'
-												: accVal === 3
-													? 'border-[#d19a66] bg-[#d19a66] text-black font-black shadow-xs'
-													: accVal === 2
-														? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black shadow-xs'
-														: accVal === 1
-															? 'border-[#98c379] bg-[#98c379] text-black font-black shadow-xs'
-															: isBarStart && subCol === 0
-																? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-black/50 text-white/70 hover:border-white/40'
-																: isBeatStart && subCol === 0
-																	? 'border-y border-r border-white/15 border-l border-l-white/40 bg-black/50 text-white/50 hover:border-white/40'
-																	: 'border border-white/10 bg-black/40 text-white/40 hover:border-white/30'}"
-										title={$t('synthPanels.roll.accentStepHint', { step: step + 1, side: subCol === 0 ? 'L' : 'R', value: accVal > 0 ? `+${accVal}dB` : 'OFF (0dB)' })}
-									>
-										{accVal > 0 ? `+${accVal}` : subCol === 0 ? `${colIdx + 1}` : '·'}
-									</button>
-								{/each}
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
+			<!-- Automation lanes, where the accent row was.
+			     ACC held one value per step, cycled 0..+4 dB by clicking, which cannot
+			     say crescendo, cannot move under a held note, and cannot drive
+			     anything but level. A lane can do all three, and in ADV it is a socket
+			     on ENTRY as well as a curve. -->
+			<LaneStrip
+				steps={stepsPerPage}
+				startStep={$activeStepPage * stepsPerPage}
+				{snapSteps}
+				{colsPerPage}
+				{spc}
+				{effColsPerBar}
+				rollHeight={visibleNotes.length * 20}
+			/>
 		</div>
 	</div>
 </div>

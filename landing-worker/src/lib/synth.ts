@@ -1,3 +1,4 @@
+import { laneAt, lanesOf, laneToVelocity, VELOCITY_LANE_ID, type NoteLane } from './stores/note-lanes';
 import { MOD_PORT_IDS } from './stores/synth-modules';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
@@ -368,9 +369,17 @@ export interface TrackData {
    *  cannot collide, and a flat record survives reordering untouched. */
   rackParams?: Record<string, number>;
 
-  // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes) & Accents (0 = Off, 1 = +3dB, 2 = +6dB)
+  // Sequencer Grid (Polyphonic: array of note indices per step, up to 8 notes)
   grid: number[][];
+  /* The accent row this replaced: one value per step, cycled 0..+4 dB by
+     clicking. Kept only so the bundled songs -- which store it -- can be read
+     into the velocity lane on load; nothing writes it any more. */
   accents: (number | boolean)[];
+  /* Automation lanes: curves drawn under the roll, published as sockets on
+     ENTRY so the same shape can drive any parameter. Absent means the track
+     has only the default velocity lane, which is materialised rather than
+     stored -- most tracks never draw one. */
+  noteLanes?: NoteLane[];
 }
 
 export const PIANO_ROLL_NOTES = [
@@ -2166,6 +2175,25 @@ class ModularSynth {
     }
   }
 
+  /**
+   * How hard a note at this step is struck, 1..127.
+   *
+   * The velocity lane if the track has one, and otherwise the accent row the
+   * lane replaced -- the bundled songs were written against that row, and
+   * rewriting several thousand lines of song data to say the same thing in a
+   * new place would risk them for nothing. Accent was 0..+4 dB; mapped onto
+   * the lane's range so a written accent still sounds like an accent.
+   */
+  public trackVelocityAt(track: TrackData, step: number): number {
+    const lanes = track.noteLanes;
+    const vel = Array.isArray(lanes) ? lanes.find((l) => l.id === VELOCITY_LANE_ID) : undefined;
+    if (vel && vel.points[step] !== undefined) return laneToVelocity(laneAt(vel, step));
+
+    const acc = Number(track.accents?.[step] ?? 0);
+    if (acc > 0) return Math.min(127, Math.round(100 + acc * 6.75));
+    return vel ? laneToVelocity(laneAt(vel, step)) : 100;
+  }
+
   public setTrackAccent(trackId: number, stepIndex: number, level: number) {
     if (this.tracks[trackId]?.accents) {
       this.tracks[trackId].accents[stepIndex] = level;
@@ -2766,7 +2794,7 @@ class ModularSynth {
     }
   }
 
-  public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number, rawVelocity?: number) {
+  public triggerTrackVoice(trackId: number, noteIndex: number, accentLevel: number | boolean = 0, startTime?: number, durationSec?: number, rawVelocity?: number, laneVelocity?: number) {
     const trackRow = this.tracks[trackId];
     // Muting silences live playback, but must not silence an offline render.
     if (!trackRow || (!this.renderCtx && soundEngine.isMuted())) return;
@@ -3147,7 +3175,13 @@ class ModularSynth {
     let gainBase = 0.28 * accGainMult;
 
     // Apply MIDI Velocity Sensitivity based on the active velocity curve (EXP / LINEAR / LOG / HARD / OFF)
-    if (this.velocityCurve !== 'OFF' && rawVelocity !== undefined && rawVelocity > 0) {
+    /* OFF flattens the *keyboard's* touch response, which is a property of the
+       controller. A curve drawn in a lane is not touch -- it is the part as
+       written -- so it still applies, linearly, rather than being discarded
+       along with the velocity a key press happened to report. */
+    if (this.velocityCurve === 'OFF' && laneVelocity !== undefined && laneVelocity > 0) {
+      gainBase = 0.28 * (0.15 + (Math.max(1, Math.min(127, laneVelocity)) / 127) * 1.1);
+    } else if (this.velocityCurve !== 'OFF' && rawVelocity !== undefined && rawVelocity > 0) {
       const v = Math.max(1, Math.min(127, rawVelocity)) / 127;
       let velGainScale = 1.0;
 
@@ -4024,7 +4058,13 @@ class ModularSynth {
       const stepNotes = track.grid[step] || [];
       const prevStep = (step - 1 + this.totalSteps) % this.totalSteps;
       const prevStepNotes = track.grid[prevStep] || [];
-      const isAccent = track.accents[step] || 0;
+      /* Velocity comes from the lane now, not the accent row.
+      
+         A lane holds 0..1 per step and falls back to its own default where
+         nothing was drawn, so a track nobody has touched plays at a normal
+         level rather than silently. The bundled songs still carry accents;
+         readTrackVelocity folds those in so they sound as written. */
+      const vel = this.trackVelocityAt(track, step);
 
       stepNotes.forEach((noteIdx) => {
         if (noteIdx !== null && noteIdx !== undefined && PIANO_ROLL_NOTES[noteIdx]) {
@@ -4044,7 +4084,7 @@ class ModularSynth {
           }
           const noteHoldSec = durSteps * stepDuration;
 
-          this.triggerTrackVoice(track.id, noteIdx, isAccent, time, noteHoldSec);
+          this.triggerTrackVoice(track.id, noteIdx, 0, time, noteHoldSec, vel, vel);
         }
       });
     });
