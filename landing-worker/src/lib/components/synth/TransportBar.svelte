@@ -311,10 +311,13 @@
 			}}
 			class="h-6 px-2 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0"
 			title={$t('synth.transport.jumpToCursorHint', { bar: cursorPosition.bar, beat: cursorPosition.beat, step: $cursorStep + 1, total: $totalPatternSteps })}
+			aria-label={$t('synth.transport.jumpToCursorHint', { bar: cursorPosition.bar, beat: cursorPosition.beat, step: $cursorStep + 1, total: $totalPatternSteps })}
 		>
-			<span>⤹ CUR:</span>
+			<!-- The glyph is the label. "CUR:" was 54px of a 128px button -- 42% of it
+			     spent on a word the arrow already says -- and the raw step number
+			     beside the bar.beat duplicated what the tooltip states exactly. -->
+			<span>⤹</span>
 			<span class="font-mono font-black">{cursorPosition.bar}.{cursorPosition.beat}</span>
-			<span class="text-[10px] opacity-60 font-mono">({$cursorStep + 1})</span>
 		</button>
 	</div>
 
