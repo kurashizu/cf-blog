@@ -364,7 +364,9 @@
 						ontouchend={() => releaseKey(wk.idx)}
 						class="flex-1 h-full rounded-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer transition-all border {isPlaying
 							? 'shadow-[0_0_10px_currentColor]'
-							: 'bg-[#e8e6e1] hover:bg-white text-black/70 border-black/30'}"
+							: percussion && $activeKey === wk.idx
+								? 'bg-[#c678dd] text-black border-[#c678dd] shadow-[0_0_8px_rgba(198,120,221,0.7)]'
+								: 'bg-[#e8e6e1] hover:bg-white text-black/70 border-black/30'}"
 						style={isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}
 						title={$t('synthPanels.keyboard.playNoteHint', { note: wk.note, freq: PIANO_ROLL_NOTES[wk.idx]?.freq.toFixed(1) ?? '' })}
 					>
@@ -389,7 +391,7 @@
 					{#if percussion}
 						<span class="w-2 h-2 mt-0.5 rounded-full {keyIsCustomised($activeTrackRow, wk.idx)
 							? $activeKey === wk.idx
-								? 'bg-[#c678dd] shadow-[0_0_5px_#c678dd]'
+								? 'bg-black/70'
 								: 'bg-[#c678dd]/70'
 							: ''}"></span>
 					{/if}
@@ -423,7 +425,9 @@
 					}}
 					class="absolute top-0 h-[62%] rounded-b-xs flex flex-col justify-end pb-0.5 items-center cursor-pointer z-10 transition-all border {isPlaying
 						? 'shadow-[0_0_10px_currentColor]'
-						: 'bg-[#181a1f] hover:bg-[#282c34] text-white/60 border-black'}"
+						: percussion && $activeKey === bk.idx
+							? 'bg-[#c678dd] text-black border-[#c678dd] shadow-[0_0_8px_rgba(198,120,221,0.7)]'
+							: 'bg-[#181a1f] hover:bg-[#282c34] text-white/60 border-black'}"
 					style="left: {leftPos}%; width: {bWidth}%; {isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}"
 					title={$t('synthPanels.keyboard.playNoteHint', { note: bk.note, freq: PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1) ?? '' })}
 				>
@@ -433,7 +437,7 @@
 					     read from the Cs and the black-key groups anyway. The kit dot
 					     still fits, and GM puts real sounds on the black keys. -->
 					{#if percussion && keyIsCustomised($activeTrackRow, bk.idx)}
-						<span class="w-1.5 h-1.5 rounded-full mb-1 {$activeKey === bk.idx ? 'bg-[#c678dd] shadow-[0_0_5px_#c678dd]' : 'bg-[#c678dd]/80'}"></span>
+						<span class="w-1.5 h-1.5 rounded-full mb-1 {$activeKey === bk.idx ? 'bg-black/70' : 'bg-[#c678dd]/80'}"></span>
 					{/if}
 				</button>
 			{/each}

@@ -536,12 +536,6 @@
 					{shortName}
 				</button>
 			{/if}
-			{#if percussion}
-				<!-- Which key the racks are editing, and whether it has its own sound yet -->
-				<span class="text-xs font-mono font-bold text-[#c678dd]" title={activeKeyCustom ? $t('synthPanels.roll.keyCustomHint', { note: noteNameOf($activeKey) }) : $t('synthPanels.roll.keyDefaultHint', { note: noteNameOf($activeKey) })}>
-					KEY {noteNameOf($activeKey)} {activeKeyCustom ? '●' : '○'}
-				</span>
-			{/if}
 			<span class="text-xs text-[#98c379] font-mono font-bold">
 				BAR {Math.floor($seqCurrentStep / stepsPerPage) + 1}.{Math.floor(($seqCurrentStep % stepsPerPage) / (stepsPerPage / meterSpec.beatsPerBar)) + 1} (STEP {$seqCurrentStep + 1}/{$totalPatternSteps})
 			</span>

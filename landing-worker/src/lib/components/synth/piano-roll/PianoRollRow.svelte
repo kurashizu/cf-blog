@@ -108,7 +108,7 @@
 					: $t('synthPanels.roll.auditionKeyDefaultHint', { note: nInfo.note }))
 			: $t('synthPanels.roll.auditionNoteHint', { note: nInfo.note, freq: Math.round(nInfo.freq) })}
 		class="w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end gap-0.5 select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 {isActiveKey
-			? 'ring-1 ring-[#c678dd] shadow-[0_0_6px_rgba(198,120,221,0.6)]'
+			? '!bg-[#c678dd] !text-black !border-[#c678dd] ring-1 ring-[#c678dd] shadow-[0_0_6px_rgba(198,120,221,0.6)]'
 			: ''} {isRootC
 			? 'bg-[#56b6c2]/30 text-[#56b6c2] border border-[#56b6c2]/40 hover:bg-[#56b6c2]/50'
 			: nInfo.isBlack
@@ -116,7 +116,7 @@
 				: 'bg-white/10 text-[#eceff4] hover:bg-white/20'}"
 	>
 		{#if isCustomKey}
-			<span class="w-1 h-1 rounded-full bg-[#c678dd] shrink-0" aria-hidden="true"></span>
+			<span class="w-1 h-1 rounded-full shrink-0 {isActiveKey ? 'bg-black/60' : 'bg-[#c678dd]'}" aria-hidden="true"></span>
 		{/if}
 		{nInfo.note}
 	</button>
