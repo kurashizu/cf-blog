@@ -7,6 +7,7 @@ import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack, setTrackEditedHook } from './synth-tracks';
 import { showSaveStatus } from './synth-patch';
 import { askConfirm } from './synth-confirm';
+import type { GraphNode, GraphCable } from './graph-model';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
 const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
@@ -125,6 +126,46 @@ function synth(extra: Partial<TrackData>): Partial<TrackData> {
 	p.sustain = p.ampSustain;
 	p.release = p.ampRelease;
 	return p;
+}
+
+/**
+ * The same signal path, drawn.
+ *
+ * The AC presets are built as a chain, and a chain is what the engine plays --
+ * but ADV opens on the patch bay, and a canvas reading "add modules from the
+ * palette" while a piano is sounding says the wrong thing entirely. So each
+ * chain preset also ships the graph that draws it: the same modules in the same
+ * order, wired left to right, laid out on the grid.
+ *
+ * The engine prefers a graph over a chain when both are present, and these two
+ * describe the same path, so what you hear does not change -- it just becomes
+ * something you can see and take apart.
+ */
+function chainGraph(chain: string[]): { nodes: GraphNode[]; cables: GraphCable[] } {
+	const nodes = chain.map((type, i) => ({
+		id: `${type}-${i}`,
+		type,
+		// Spread along the grid with room for a card between each.
+		x: 64 + i * 192,
+		y: 96
+	}));
+	const cables = nodes.slice(1).map((n, i) => ({
+		from: nodes[i].id,
+		fromPort: 'out',
+		to: n.id,
+		toPort: 'in'
+	}));
+	return { nodes, cables };
+}
+
+/** A chain preset, plus the graph that draws it and the params keyed per node. */
+function acoustic(chain: string[], params: Record<string, number>): Partial<TrackData> {
+	const graph = chainGraph(chain);
+	const graphParams: Record<string, number> = {};
+	for (const n of graph.nodes) {
+		for (const [k, v] of Object.entries(params)) graphParams[`${n.id}.${k}`] = v;
+	}
+	return { rackChain: chain, rackParams: params, rackGraph: graph, graphParams };
 }
 
 export const SOUND_PRESETS: SoundPreset[] = [
@@ -375,8 +416,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.4,
 			ampSustain: 0,
 			ampRelease: 0.3,
-			rackChain: ['string', 'body'],
-			rackParams: { decayTime: 1.8, damping: 26, stiffness: 55, strBlend: 100, bodySize: 40, bodyDepth: 45, bodyMix: 50 }
+			...acoustic(['string', 'body'], { decayTime: 1.8, damping: 26, stiffness: 55, strBlend: 100, bodySize: 40, bodyDepth: 45, bodyMix: 50 })
 		})
 	},
 	{
@@ -396,8 +436,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.35,
 			ampSustain: 0,
 			ampRelease: 0.25,
-			rackChain: ['modes', 'body'],
-			rackParams: { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22, modeMix: 85, bodySize: 45, bodyDepth: 50, bodyMix: 55 }
+			...acoustic(['modes', 'body'], { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22, modeMix: 85, bodySize: 45, bodyDepth: 50, bodyMix: 55 })
 		})
 	},
 	{
@@ -513,8 +552,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.5,
 			ampSustain: 0,
 			ampRelease: 0.2,
-			rackChain: ['string', 'body'],
-			rackParams: { decayTime: 1.1, damping: 6, stiffness: 85, strBlend: 100, bodySize: 25, bodyDepth: 35, bodyMix: 25 }
+			...acoustic(['string', 'body'], { decayTime: 1.1, damping: 6, stiffness: 85, strBlend: 100, bodySize: 25, bodyDepth: 35, bodyMix: 25 })
 		})
 	},
 
@@ -648,8 +686,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			rackChain: ['string', 'body'],
-			rackParams: { decayTime: 4, damping: 22, stiffness: 45, strBlend: 100, bodySize: 35, bodyDepth: 55, bodyMix: 55 }
+			...acoustic(['string', 'body'], { decayTime: 4, damping: 22, stiffness: 45, strBlend: 100, bodySize: 35, bodyDepth: 55, bodyMix: 55 })
 		})
 	},
 	{
@@ -666,8 +703,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			rackChain: ['string', 'body'],
-			rackParams: { decayTime: 2.2, damping: 34, stiffness: 6, strBlend: 100, bodySize: 62, bodyDepth: 65, bodyMix: 70 }
+			...acoustic(['string', 'body'], { decayTime: 2.2, damping: 34, stiffness: 6, strBlend: 100, bodySize: 62, bodyDepth: 65, bodyMix: 70 })
 		})
 	},
 	{
@@ -684,8 +720,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			rackChain: ['string', 'body'],
-			rackParams: { decayTime: 3, damping: 52, stiffness: 3, strBlend: 100, bodySize: 88, bodyDepth: 60, bodyMix: 60 }
+			...acoustic(['string', 'body'], { decayTime: 3, damping: 52, stiffness: 3, strBlend: 100, bodySize: 88, bodyDepth: 60, bodyMix: 60 })
 		})
 	},
 	{
@@ -702,8 +737,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.3,
 			ampSustain: 0.8,
 			ampRelease: 0.25,
-			rackChain: ['string', 'body'],
-			rackParams: { decayTime: 1.4, damping: 40, stiffness: 2, strBlend: 75, bodySize: 55, bodyDepth: 50, bodyMix: 60 }
+			...acoustic(['string', 'body'], { decayTime: 1.4, damping: 40, stiffness: 2, strBlend: 75, bodySize: 55, bodyDepth: 50, bodyMix: 60 })
 		})
 	},
 	{
@@ -720,8 +754,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.2,
 			ampSustain: 0.85,
 			ampRelease: 0.15,
-			rackChain: ['tube', 'body'],
-			rackParams: { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100, tubeMix: 85, bodySize: 45, bodyDepth: 40, bodyMix: 40 }
+			...acoustic(['tube', 'body'], { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100, tubeMix: 85, bodySize: 45, bodyDepth: 40, bodyMix: 40 })
 		})
 	},
 	{
@@ -738,8 +771,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.2,
 			ampSustain: 0.85,
 			ampRelease: 0.15,
-			rackChain: ['tube', 'body'],
-			rackParams: { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0, tubeMix: 80, bodySize: 38, bodyDepth: 30, bodyMix: 35 }
+			...acoustic(['tube', 'body'], { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0, tubeMix: 80, bodySize: 38, bodyDepth: 30, bodyMix: 35 })
 		})
 	},
 
