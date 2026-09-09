@@ -50,6 +50,11 @@ export interface SoundPreset {
    was before, so the same preset sounded different on every track. Now a
    preset is the whole sound. */
 const BASE: Partial<TrackData> = {
+	/* Every preset carries its own level. Measured across all 37, onset energy
+	   spanned 18.8 dB -- a CLAV arrived 10 dB under an ORGAN -- so switching
+	   patches meant riding the fader. 1 is unchanged, and the two patches that
+	   are meant to be faint (RISER's swell, STATIC's bed) keep it. */
+	presetGain: 1,
 	osc1Waveform: 'square',
 	osc1Gain: 0.9,
 	osc2Waveform: 'sawtooth',
@@ -231,6 +236,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'BASS',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.22,
 			osc1Waveform: 'square',
 			osc2Waveform: 'triangle',
 			cutoff: 1200,
@@ -252,6 +258,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'BASS',
 		kind: 'E',
 		preset: synth({
+			presetGain: 0.65,
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -270,6 +277,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'BASS',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.4,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -293,6 +301,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'BASS',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.04,
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
 			osc2Waveform: 'sine',
@@ -321,6 +330,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'LEAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.49,
 			osc1Waveform: 'square',
 			pulseWidth: 25,
 			osc2Waveform: 'sawtooth',
@@ -344,6 +354,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'LEAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.46,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
 			osc2Waveform: 'sawtooth',
@@ -367,6 +378,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'LEAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.21,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Waveform: 'square',
@@ -391,6 +403,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'LEAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.94,
 			osc1Waveform: 'square',
 			osc1Gain: 1,
 			pulseWidth: 15,
@@ -412,6 +425,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'LEAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.52,
 			osc1Waveform: 'sawtooth',
 			osc2Waveform: 'sawtooth',
 			detuneCents: 12,
@@ -435,6 +449,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PLUCK',
 		kind: 'E',
 		preset: synth({
+			presetGain: 0.78,
 			osc1Waveform: 'square',
 			osc2Waveform: 'sawtooth',
 			cutoff: 1800,
@@ -456,6 +471,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PLUCK',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 1.16,
 			osc1Waveform: 'triangle',
 			osc1Gain: 1,
 			osc2Waveform: 'sine',
@@ -494,6 +510,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'MALLET',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.81,
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
 			osc2Waveform: 'triangle',
@@ -529,6 +546,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'MALLET',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.22,
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
 			osc2Waveform: 'sine',
@@ -552,6 +570,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 0.68,
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
 			osc2Waveform: 'sine',
@@ -576,6 +595,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'ORGAN',
 		kind: 'E',
 		preset: synth({
+			presetGain: 0.6,
 			osc1Waveform: 'sine',
 			osc1Gain: 0.8,
 			osc2Waveform: 'sine',
@@ -603,6 +623,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'ORGAN',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.73,
 			osc1Gain: 0,
 			osc2Gain: 0,
 			subOscGain: 0,
@@ -640,6 +661,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'MALLET',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.51,
 			osc1Gain: 0,
 			osc2Gain: 0,
 			subOscGain: 0,
@@ -673,6 +695,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.34,
 			osc1Gain: 0,
 			osc2Gain: 0,
 			subOscGain: 0,
@@ -707,6 +730,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PLUCK',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 1.42,
 			osc1Gain: 0,
 			osc2Gain: 0,
 			subOscGain: 0,
@@ -736,6 +760,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 2.14,
 			osc1Waveform: 'square',
 			osc1Gain: 1,
 			pulseWidth: 25,
@@ -759,6 +784,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.75,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
 			osc2Waveform: 'square',
@@ -797,6 +823,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.34,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
 			osc2Waveform: 'sawtooth',
@@ -823,6 +850,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.55,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
 			osc2Waveform: 'sawtooth',
@@ -846,6 +874,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.89,
 			osc1Waveform: 'triangle',
 			osc1Gain: 0.9,
 			osc2Waveform: 'sine',
@@ -870,6 +899,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PAD',
 		kind: 'E',
 		preset: synth({
+			presetGain: 0.94,
 			osc1Waveform: 'square',
 			osc1Gain: 0.8,
 			osc2Waveform: 'square',
@@ -912,6 +942,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'KEYBOARD',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 1.13,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -946,6 +977,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'PLUCK',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.88,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -976,6 +1008,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'BASS',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.53,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -1007,6 +1040,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 1.36,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -1040,6 +1074,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.34,
 			osc1Waveform: 'noise',
 			osc1Gain: 0.6,
 			osc2Gain: 0,
@@ -1071,6 +1106,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'STRING',
 		kind: 'AC',
 		preset: synth({
+			presetGain: 0.36,
 			osc1Waveform: 'noise',
 			osc1Gain: 0.6,
 			osc2Gain: 0,
@@ -1111,6 +1147,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'FX',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.26,
 			osc1Waveform: 'noise',
 			osc1Gain: 1,
 			osc2Gain: 0,
@@ -1148,6 +1185,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'FX',
 		kind: 'E',
 		preset: synth({
+			presetGain: 1.09,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
 			osc2Waveform: 'square',
@@ -1172,6 +1210,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'FX',
 		kind: 'E',
 		preset: synth({
+			presetGain: 0.95,
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.8,
 			osc2Waveform: 'sawtooth',
@@ -1229,6 +1268,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		category: 'FX',
 		kind: 'E',
 		preset: synth({
+			presetGain: 0.3,
 			osc1Waveform: 'square',
 			osc1Gain: 1,
 			osc2Waveform: 'square',
@@ -1922,7 +1962,11 @@ function drumPatch(o: {
 			   drums are struck and short, so they carry less energy per note
 			   than a rung string; the trim makes up for that rather than the
 			   voicing being wrong. */
-			[`${OUTPUT_ID}.outLevel`]: 70,
+			/* Levelled by onset energy, not peak. A drum's peak is a transient and
+			   overstates how loud it seems next to a sustained note: trimmed to
+			   match on peak, the kit measured 9 dB under the presets by the
+			   measure that actually tracks perceived loudness. */
+			[`${OUTPUT_ID}.outLevel`]: 168,
 			[`${OUTPUT_ID}.outPan`]: 0
 		},
 		// The graph makes the sound; the oscillators are off.

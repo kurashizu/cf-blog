@@ -380,6 +380,15 @@ export interface TrackData {
      has only the default velocity lane, which is materialised rather than
      stored -- most tracks never draw one. */
   noteLanes?: NoteLane[];
+  /* A preset's own level, so the built-ins sit at a common loudness.
+   *
+   * Separate from `volume`, which is the player's fader and must not move when
+   * a patch is loaded. This is part of the sound: measured across the 24
+   * electric presets, onset energy spanned 18.8 dB -- a CLAV arrived 10 dB
+   * under an ORGAN -- which is a defect rather than a voicing choice, and
+   * fixing it by editing every oscillator gain would have meant re-voicing 24
+   * patches to correct one number. 1 means unchanged. */
+  presetGain?: number;
 }
 
 export const PIANO_ROLL_NOTES = [
@@ -488,6 +497,7 @@ export const KEY_TIMBRE_KEYS = [
   'pitchAttack', 'pitchDecay', 'pitchEnvAmount',
   'lfoWaveform', 'lfoRate', 'lfoPitchAmt', 'lfoCutoffAmt', 'lfoPanAmt', 'lfoAmpAmt', 'lfoFadeTime',
   'lfoDepth', 'lfoTarget', 'airGain', 'keyEqGains', 'rackChain', 'rackParams', 'rackGraph', 'graphParams',
+  'presetGain',
   // Per key: which sounds cannot coexist is a property of the sound, not the track.
   'muteGroup'
 ] as const satisfies readonly (keyof TrackData)[];
@@ -967,7 +977,8 @@ class ModularSynth {
     baseFreq: number,
     t: number,
     heldSec: number,
-    laneValues: Record<string, number> = {}
+    laneValues: Record<string, number> = {},
+    presetGain = 1
   ): { out: AudioNode; sources: AudioScheduledSourceNode[] } | null {
     /* Read from the catalogue rather than listed here. The list this replaces
        said ['fm','cv'] and had fallen behind the modules: pwm, trig and do are
@@ -1092,7 +1103,17 @@ class ModularSynth {
       }
     }
     if (!any) return null;
-    return { out: sink, sources };
+    /* The preset's own level applies here too.
+    
+       presetGain multiplies the voice, which is the whole signal for a rack
+       patch but only the excitation for a graph one -- a graph builds its own
+       sound downstream of it, so the five patches whose sources are EXCT or
+       NOISE ignored the field entirely and stayed where they were while the
+       other 32 moved. One multiply at the sink covers both kinds. */
+    const level = ctx.createGain();
+    level.gain.value = presetGain;
+    sink.connect(level);
+    return { out: level, sources };
   }
 
   /** One graph node. Returns its audio ends and the params a cable may drive. */
@@ -3278,7 +3299,11 @@ class ModularSynth {
     // A one-shot (no sustain) is over in 50-200 ms; at the same peak the ear
     // hears it 6-10 dB under a held note. Give hits back some of that.
     const oneShot = ampSus <= 0.001 ? 1.8 : 1;
-    const peakGain = gainBase * track.volume * oneShot;
+    /* presetGain is applied at the graph's sink for a patched voice, so it must
+       not also scale the voice feeding it -- that would square it. A rack voice
+       has no sink, so it takes the factor here instead. */
+    const graphed = !!(track.advanced && track.rackGraph?.nodes?.length);
+    const peakGain = gainBase * track.volume * oneShot * (graphed ? 1 : (track.presetGain ?? 1));
     const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
     if (ampAtt === 0) {
@@ -3474,7 +3499,7 @@ class ModularSynth {
       for (const l of lanesOf(trackRow as { noteLanes?: NoteLane[] })) {
         laneValues[l.id] = laneAt(l, this.currentStep);
       }
-      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, gainNode, baseFreq, t, heldSec, laneValues);
+      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, gainNode, baseFreq, t, heldSec, laneValues, track.presetGain ?? 1);
       if (built) {
         chainOut = built.out;
         for (const src of built.sources) {
