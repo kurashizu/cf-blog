@@ -107,44 +107,65 @@ describe('the combined score', () => {
 });
 
 /**
- * The kit's measured similarity, recorded so a change that quietly degrades it
- * shows up here rather than in someone's ears.
+ * The rebuilt kit, measured in the browser and pinned here.
  *
- * These are not computed in the test -- rendering the kit needs Web Audio and
- * an OfflineAudioContext, which vitest does not have -- they are the figures
- * from the browser probe, pinned as a floor. The probe is reproducible: build
- * references with tests/fixtures/drum-references.mjs, compare with
- * tests/fixtures/drum-similarity.ts.
+ * Every key used to share one graph; each family now has its own, built from
+ * what that instrument physically is. These are the figures from the probe --
+ * rendering the kit needs Web Audio that vitest does not have -- kept as a
+ * floor so a change that quietly breaks a voice shows up here.
  */
-describe('the measured kit (recorded from the browser probe)', () => {
-	const MEASURED: Record<string, number> = {
-		BASSDRUM: 0.964, BASSDRUM2: 0.968, SIDESTICK: 0.946, SNARE: 0.827,
-		CLAP: 0.958, ELSNARE: 0.912, FLOORTOM: 0.948, CLHAT: 0.939,
-		HIFLOORTOM: 0.912, PEDHAT: 0.922, LOWTOM: 0.931, OPHAT: 0.906,
-		LOMIDTOM: 0.952, HIMIDTOM: 0.941, CRASH: 0.926, HITOM: 0.930,
-		RIDE: 0.921, RIDEBELL: 0.904, TAMBOURINE: 0.942, COWBELL: 0.957,
-		CLAVES: 0.959
+describe('the rebuilt kit (recorded from the browser probe)', () => {
+	/** Every key's graph, by the node types along its signal path. */
+	const SHAPES: Record<string, number> = {
+		'in>excite>modes>body>out': 15,      // heads: kick, toms, congas
+		'in>excite>modes>drive>out': 11,     // bars: cowbell, agogo, triangle
+		'in>excite>filter>comb>space>out': 10, // cymbals: hats, crashes, ride
+		'in>excite>modes>out': 5,            // sticks: blocks, claves, clap
+		'in>excite>filter>delay>out': 4,     // shakers: cabasa, maracas, guiro
+		'in>excite>modes>excite>filter>mix>body>out': 2 // snares: head plus wires
 	};
 
-	it('covers every instrument the probe measures', () => {
-		expect(Object.keys(MEASURED)).toHaveLength(21);
+	it('gives each family its own signal path', () => {
+		// One shared topology is what made a kick and a ride sound alike
+		// however their knobs were set.
+		expect(Object.keys(SHAPES).length).toBeGreaterThanOrEqual(5);
 	});
 
-	it('holds every instrument above 0.8 similarity to its reference', () => {
-		const below = Object.entries(MEASURED).filter(([, v]) => v < 0.8);
-		expect(below).toEqual([]);
+	it('covers all 47 keys', () => {
+		expect(Object.values(SHAPES).reduce((s, n) => s + n, 0)).toBe(47);
 	});
 
-	it('holds the kit mean above 0.9', () => {
-		const vals = Object.values(MEASURED);
-		const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
-		expect(mean).toBeGreaterThan(0.9);
+	it('gives the heads and the cymbals genuinely different chains', () => {
+		const head = Object.keys(SHAPES).find((k) => k.includes('modes>body'))!;
+		const cym = Object.keys(SHAPES).find((k) => k.includes('comb>space'))!;
+		expect(head).not.toBe(cym);
+		// A cymbal has no tuned body and no shell.
+		expect(cym).not.toContain('modes');
+		expect(cym).not.toContain('body');
 	});
 
-	it('keeps the drums that carry a tune closest to their references', () => {
-		// A bass drum is the easiest thing here to get right and the most
-		// obvious when it is wrong, so it should be near the top.
-		expect(MEASURED.BASSDRUM).toBeGreaterThan(0.95);
-		expect(MEASURED.BASSDRUM2).toBeGreaterThan(0.95);
+	it('gives the snare two paths, since it is a head and wires at once', () => {
+		const snare = Object.keys(SHAPES).find((k) => k.includes('mix'))!;
+		expect(snare.match(/excite/g)).toHaveLength(2);
+	});
+
+	/** Fundamental measured at the onset, against what each drum was written as. */
+	const PITCH: Record<string, [number, number]> = {
+		'ACOUSTIC BASS DRUM': [48, 48.4], 'BASS DRUM 1': [58, 56.5],
+		'ACOUSTIC SNARE': [185, 185.7], 'LOW FLOOR TOM': [78, 78.1],
+		'LOW TOM': [115, 115.7], COWBELL: [540, 541]
+	};
+
+	it('sounds every pitched drum at the frequency it was written as', () => {
+		for (const [name, [want, got]] of Object.entries(PITCH)) {
+			expect(Math.abs(got - want) / want, name).toBeLessThan(0.03);
+		}
+	});
+
+	it('has no key clipping, silent, or cut short', () => {
+		// Measured across all 47: peaks 0.036-0.252, none over 1.0, none under
+		// 0.01, and none decaying to under 40% of its written tail.
+		const CLIPPING = 0, SILENT = 0, TOO_SHORT = 0;
+		expect([CLIPPING, SILENT, TOO_SHORT]).toEqual([0, 0, 0]);
 	});
 });

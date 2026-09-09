@@ -1982,20 +1982,29 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 			node(ENTRY_ID, 'in', 0),
 			node('n', 'excite', 1),
 			node('bp', 'filter', 2),
-			node(OUTPUT_ID, 'out', 3)
+			node('sh', 'delay', 3),
+			node(OUTPUT_ID, 'out', 4)
 		];
-		cables = [wire('n', 'bp'), wire('bp', OUTPUT_ID)];
+		cables = [wire('n', 'bp'), wire('bp', 'sh'), wire('sh', OUTPUT_ID)];
 		gp = {
 			'n.hardness': o.hard,
-			/* The burst IS the shaker, so it runs as long as the instrument
-			   does rather than as a fixed strike -- a cabasa measured a 0.01 s
-			   decay when its length was tied to the strike instead. */
 			'n.exLength': Math.min(60, Math.max(6, Math.round(o.decay * 220))),
 			'n.exTone': o.tone,
 			'bp.type': 1,
 			'bp.cutoff': o.tone,
 			'bp.q': 0.8,
-			'bp.depth': 0
+			'bp.depth': 0,
+			/* The shell the grains rattle inside. EXCT's burst caps at 60 ms, so
+			   without something to sustain it a cabasa was over in 0.02 s.
+			
+			   A short delay with feedback, not a comb: COMB is feed-forward --
+			   it notches, it never rings -- so it left the tail exactly as
+			   short. Each lap is another handful of beads hitting the shell,
+			   which is what a shaker is. */
+			'sh.dlTime': 11,
+			'sh.dlFeedback': Math.round(Math.min(82, 30 + o.decay * 110)),
+			'sh.dlTone': Math.min(12000, o.tone),
+			'sh.dlMix': 78
 		};
 	} else if (o.family === 'bar') {
 		/* A stiff bar rings at a few strong, widely spaced partials and has
@@ -2045,7 +2054,10 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 			'm.mode1': 1,
 			'm.mode2': 2.8,
 			'm.mode3': 5.4,
-			'm.modeQ': Math.max(1, Math.round(o.decay * 12)),
+			/* Q well above decay*12: the higher partials are damped by r^0.6, so
+			   the audible tail is a fraction of what the lowest mode promises.
+			   A clave measured 0.03 s against the 0.09 it was written for. */
+			'm.modeQ': Math.max(3, Math.round(o.decay * 40)),
 			'm.modeMix': 82,
 			'm.modeHz': hz
 		};
