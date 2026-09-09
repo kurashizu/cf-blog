@@ -4,7 +4,7 @@
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
 	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
-	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId } from '../../../stores/synth-transport';
+	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId, pageInputStr, pageFollow, prevPatternPage, nextPatternPage, goToPage, totalPatternPages } from '../../../stores/synth-transport';
 	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, cycleAccent, updateTrack } from '../../../stores/synth-tracks';
 	import {
 		selection, canUndo, canRedo, undo, redo, runKey, runAt, runsIn, selectedRuns, selectRuns, toggleRun, clearSelection, selectAll,
@@ -448,6 +448,46 @@
 			window.removeEventListener('paste', onPaste, true);
 		};
 	});
+
+	let totalPages = $derived(Math.max(1, Math.ceil($totalPatternSteps / ((METER_SPECS[$timeMeter] || METER_SPECS['4/4']).stepsPerBar))));
+
+
+
+	function onPageInput(e: Event) {
+		const raw = (e.target as HTMLInputElement).value;
+		if (raw === '') {
+			pageInputStr.set('');
+			return;
+		}
+		const digits = raw.replace(/\D/g, '');
+		if (digits === '') {
+			pageInputStr.set('');
+			return;
+		}
+		const num = parseInt(digits, 10);
+		const clamped = Math.max(1, Math.min(totalPages, num));
+		pageInputStr.set(digits);
+		activeStepPage.set(clamped - 1);
+	}
+
+	function onPageBlur() {
+		const parsed = parseInt($pageInputStr, 10);
+		if ($pageInputStr === '' || isNaN(parsed)) {
+			pageInputStr.set(String($activeStepPage + 1));
+		} else {
+			const clamped = Math.max(1, Math.min(totalPages, parsed));
+			pageInputStr.set(String(clamped));
+			activeStepPage.set(clamped - 1);
+		}
+	}
+
+	function onPageKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			(e.target as HTMLInputElement).blur();
+			playSound('click');
+		}
+	}
+
 </script>
 
 <div class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
@@ -558,6 +598,50 @@
 					</button>
 				</div>
 			</div>
+			<span class="opacity-30">|</span>
+
+			<!-- PAGE lives with the roll it pages through, not with the transport:
+			     it is a view control, and beside OCT it reads as one. -->
+			<div class="flex items-center gap-1 text-xs">
+			<span class="opacity-60 font-bold" title={$t('synth.transport.pageNavHint')}>PAGE:</span>
+			<button onclick={prevPatternPage} disabled={$activeStepPage === 0} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pagePrevHint')}>
+				◄
+			</button>
+			<div
+				class="flex items-center bg-white/10 border border-white/20 hover:border-white/40 rounded-xs px-1 py-0.5 text-xs font-mono font-bold"
+				title={$t('synth.transport.pageJumpHint', { page: $activeStepPage + 1, total: totalPages })}
+			>
+				<input
+					type="text"
+					inputmode="numeric"
+					pattern="[0-9]*"
+					value={$pageInputStr}
+					onfocus={(e) => (e.target as HTMLInputElement).select()}
+					oninput={onPageInput}
+					onblur={onPageBlur}
+					onkeydown={onPageKeydown}
+					class="w-8 text-center bg-transparent text-white font-mono font-black focus:outline-none focus:bg-white/20 rounded-xs p-0 m-0"
+				/>
+				<span class="opacity-40 select-none">/{totalPages}</span>
+			</div>
+			<button onclick={nextPatternPage} disabled={$activeStepPage >= totalPages - 1} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pageNextHint')}>
+				►
+			</button>
+			<button
+				onclick={() => {
+					pageFollow.update((v) => !v);
+					playSound('toggle');
+				}}
+				class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs {$pageFollow ? 'border-[#98c379] bg-[#98c379] text-black font-black' : 'border-white/20 text-white/50'}"
+				title={$t('synth.transport.followHint')}
+			>
+				FLW
+			</button>
+
+			</div>
+
+			<span class="opacity-30">|</span>
+
 		</div>
 	</div>
 

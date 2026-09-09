@@ -252,6 +252,7 @@
 			toggleAdvanced();
 			playSound('toggle');
 		}}
+		data-tour="synth-adv"
 		class="relative press mr-1 px-2 py-0.5 rounded-xs font-black text-xs cursor-pointer transition-all flex items-center gap-1 border-2 {$advancedMode
 			? 'border-[#61afef] bg-gradient-to-b from-[#61afef] to-[#4d8fd6] text-black shadow-[0_0_10px_rgba(97,175,239,0.6)]'
 			: 'border-[#61afef]/50 bg-[#61afef]/10 text-[#61afef] hover:bg-[#61afef]/25 hover:border-[#61afef]'}"

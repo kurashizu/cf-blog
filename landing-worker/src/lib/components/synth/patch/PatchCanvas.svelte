@@ -177,6 +177,7 @@
 	<div
 		bind:this={canvasEl}
 		data-canvas="bg"
+		data-tour="synth-canvas"
 		role="application"
 		tabindex="-1"
 		onwheel={onWheel}
@@ -321,7 +322,7 @@
 	</div>
 
 	<!-- The palette, on the right like LIFE.LAB's library. -->
-	<div class="shrink-0 flex flex-col gap-1 {paletteOpen ? 'w-[112px]' : 'w-6'} transition-all">
+	<div data-tour="synth-palette" class="shrink-0 flex flex-col gap-1 {paletteOpen ? 'w-[112px]' : 'w-6'} transition-all">
 		<button
 			onclick={() => (paletteOpen = !paletteOpen)}
 			class="press text-[9px] text-white/40 hover:text-white border border-white/15 rounded-xs py-0.5 cursor-pointer"

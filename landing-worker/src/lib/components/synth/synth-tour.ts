@@ -1,5 +1,7 @@
 import { tr } from '$lib/i18n';
+import { get } from 'svelte/store';
 import type { Step } from '../chrome/Onboarding.svelte';
+import { advancedMode, toggleAdvanced, setCentreView } from '../../stores/synth-view';
 
 /**
  * The synth's own walkthrough, shown by the `?` on the KRSZ SYNTH badge. Same
@@ -55,6 +57,39 @@ export function synthTour(): Step[] {
 			title: tr('synth.tour.shapeTitle'),
 			body: tr('synth.tour.shapeBody'),
 			color: '#61afef'
+		},
+		{
+			/* The tour turns ADV on itself rather than describing it. The mode is
+			   the other half of the synth, and reading about a patch bay is not
+			   the same as watching the racks give way to one. */
+			target: 'synth-adv',
+			title: tr('synth.tour.advTitle'),
+			body: tr('synth.tour.advBody'),
+			color: '#61afef',
+			action: {
+				label: tr('synth.tour.advAction'),
+				run: () => {
+					if (!get(advancedMode)) toggleAdvanced();
+					setCentreView('rack');
+				}
+			}
+		},
+		{
+			target: 'synth-canvas',
+			title: tr('synth.tour.canvasTitle'),
+			body: tr('synth.tour.canvasBody'),
+			color: '#61afef',
+			keys: [
+				{ key: 'DRAG', desc: tr('synth.tour.canvasKeyDrag') },
+				{ key: 'RMB', desc: tr('synth.tour.canvasKeyPan') },
+				{ key: 'WHEEL', desc: tr('synth.tour.canvasKeyZoom') }
+			]
+		},
+		{
+			target: 'synth-palette',
+			title: tr('synth.tour.paletteTitle'),
+			body: tr('synth.tour.paletteBody'),
+			color: '#98c379'
 		},
 		{
 			target: 'synth-transport',

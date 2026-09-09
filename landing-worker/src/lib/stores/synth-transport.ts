@@ -15,6 +15,28 @@ export const snapDiv = writable<NoteDurationDiv>('1/4');
 export const noteDur = writable<NoteDurationDiv>('1/4');
 export const activeStepPage = writable<number>(0);
 export const pageInputStr = writable<string>('1');
+
+/* Page navigation lives here rather than in whichever component draws the
+   buttons: the roll's header has them, and the transport's arrow keys drive the
+   same thing. Two copies would be two behaviours. */
+export function totalPatternPages(): number {
+	const spec = METER_SPECS[get(timeMeter)] || METER_SPECS['4/4'];
+	return Math.max(1, Math.ceil(get(totalPatternSteps) / spec.stepsPerBar));
+}
+
+export function goToPage(page: number): void {
+	const clamped = Math.max(0, Math.min(totalPatternPages() - 1, page));
+	activeStepPage.set(clamped);
+	pageInputStr.set(String(clamped + 1));
+}
+
+export function prevPatternPage(): void {
+	goToPage(get(activeStepPage) - 1);
+}
+
+export function nextPatternPage(): void {
+	goToPage(get(activeStepPage) + 1);
+}
 export const pageFollow = writable<boolean>(true);
 /** LOOP: the pattern repeats; ONCE: it plays through, lets the tails ring and rewinds. */
 export const loopMode = writable<boolean>(modularSynth.isLoopMode());
