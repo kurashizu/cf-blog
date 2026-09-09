@@ -1860,237 +1860,294 @@ function drum(name: string): Partial<TrackData> {
  * `tune` is the note the modes are built on, as a multiple of the key's own
  * pitch -- a drum map plays every key at a different frequency, and a kit needs
  * each drum to sound like itself wherever it sits. */
-function drumPatch(o: {
-	/** Strike: 0 soft mallet, 100 hard stick. */
+/* What kind of instrument a key is, which decides how its voice is built.
+ *
+ * Every key used to share one graph -- excite, modes, a parallel noise burst, a
+ * body -- with only the knobs differing. That cannot work: a kick is a large
+ * damped head, a cymbal is a dense metal plate with no pitch at all, a cowbell
+ * is a stiff bar with a few strong partials, and a shaker is nothing but
+ * rattling grains. Those are different mechanisms, not one mechanism at
+ * different settings, and one topology gives them all the same character
+ * however its numbers are set.
+ *
+ * Each family below is built from what the instrument actually is. */
+type DrumFamily =
+	/** A large tuned head, heavily damped: kick, toms. Modes into a shell. */
+	| 'head'
+	/** A tuned head plus wires across it: snare. Two paths, mixed. */
+	| 'snare'
+	/** A metal plate: cymbals, hats. Dense wash, no pitch, no shell. */
+	| 'cymbal'
+	/** A stiff struck bar: cowbell, claves, blocks, agogo. Few strong partials. */
+	| 'bar'
+	/** Rattling grains: shaker, cabasa, maracas, tambourine jingles. */
+	| 'shaker'
+	/** A stick on a rim: side stick, and the hand clap's burst. */
+	| 'stick';
+
+interface DrumSpec {
+	family: DrumFamily;
+	/** The instrument's own pitch in Hz. Ignored by cymbal and shaker. */
+	hz?: number;
+	/** Partial ratios above hz, for the families that have them. */
+	modes?: [number, number, number];
+	/** Ring: roughly q/12 seconds on the lowest partial. */
+	q?: number;
+	/** Strike: 0 a soft mallet, 100 a hard stick. */
 	hard: number;
 	/** Contact time in ms. */
 	len: number;
 	/** Strike brightness in Hz. */
 	tone: number;
-	/** The three mode ratios, against the key's pitch. */
-	modes: [number, number, number];
-	/** Ring: roughly q/12 seconds of audible tail on the lowest mode. */
-	q: number;
-	/** Shell size 0-100, and how much of it is heard. */
-	body: number;
-	bodyMix: number;
-	/** Amp envelope, which cuts the whole voice. */
+	/** Shell size 0-100 and how much of it is heard, for the families with one. */
+	body?: number;
+	bodyMix?: number;
+	/** How much rattle, for snare and shaker. */
+	snare?: number;
+	/** Amp envelope, which gates the whole voice. */
 	decay: number;
 	release?: number;
 	/** Keys sharing a group cut each other off. 0 is none. */
 	group?: number;
-	/** How much unpitched noise: 0 a tom, ~85 a hi-hat, ~60 a snare. */
-	snare?: number;
-	/* What the drum is tuned to, in Hz, or 0 for the ones that have no pitch at
-	   all -- cymbals, shakers, a hand clap.
-	
-	   A drum's pitch belongs to the drum. MODES multiplied its ratios by the
-	   played note, so a kick struck from C5 rang at 523 Hz: in K.MAP the key
-	   picks which instrument sounds, not what note it plays, and every key was
-	   effectively detuned by wherever it sat on the keyboard. */
-	hz?: number;
-	/** How tightly that noise is focused. Low is a wash, high is a rattle. */
-	noiseQ?: number;
-}): Partial<TrackData> {
-	/* ENTRY and OUTPUT under their fixed ids, not ids of this helper's choosing.
-	   A node called 'o' draws as an OUTPUT card but isFixedNode does not know it,
-	   so the delete key removed the kit's output.
+}
 
-	   ENTRY joins the two strikes at a SUM, the same way every melodic patch
-	   routes it. A strike is a source with no inlet, so ENTRY cannot cable
-	   straight into EXCT -- but leaving it unconnected drew a card wired to
-	   nothing, which reads as broken however correct the audio is. */
-	const nodes = [
-		{ id: ENTRY_ID, type: 'in', x: 48, y: 190 },
-		{ id: 'e', type: 'excite', x: 248, y: 120 },
-		{ id: 'ex', type: 'sum', x: 448, y: 120 },
-		{ id: 'm', type: 'modes', x: 648, y: 120 },
-		{ id: 'n', type: 'excite', x: 248, y: 320 },
-		{ id: 'nf', type: 'filter', x: 448, y: 320 },
-		{ id: 'mx', type: 'mix', x: 848, y: 190 },
-		{ id: 'b', type: 'body', x: 1048, y: 190 },
-		{ id: OUTPUT_ID, type: 'out', x: 1248, y: 190 }
-	];
-	const cables = [
-		{ from: ENTRY_ID, fromPort: 'out', to: 'ex', toPort: 'b' },
-		{ from: 'e', fromPort: 'out', to: 'ex', toPort: 'in' },
-		{ from: 'ex', fromPort: 'out', to: 'm', toPort: 'in' },
-		{ from: 'm', fromPort: 'out', to: 'mx', toPort: 'in' },
-		{ from: 'n', fromPort: 'out', to: 'nf', toPort: 'in' },
-		{ from: 'nf', fromPort: 'out', to: 'mx', toPort: 'b' },
-		{ from: 'mx', fromPort: 'out', to: 'b', toPort: 'in' },
-		{ from: 'b', fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
-	];
+/* Laid out left to right along the signal path, so the canvas reads as the
+   instrument's own chain rather than a fixed template. */
+const COL = 200;
+const node = (id: string, type: string, col: number, row = 0) => ({
+	id,
+	type,
+	x: 48 + col * COL,
+	y: 190 + row * 150
+});
+const wire = (from: string, to: string, toPort = 'in') => ({
+	from,
+	fromPort: 'out',
+	to,
+	toPort
+});
+
+/**
+ * One drum, built the way that kind of instrument is built.
+ *
+ * The graph differs per family; only the amp envelope and the output trim are
+ * common, because those belong to the voice rather than to the instrument.
+ */
+function drumPatch(o: DrumSpec): Partial<TrackData> {
+	const hz = o.hz ?? 200;
+	const modes = o.modes ?? [1, 2.4, 4.6];
+	const q = o.q ?? 8;
+	let nodes: { id: string; type: string; x: number; y: number }[];
+	let cables: { from: string; fromPort: string; to: string; toPort: string }[];
+	let gp: Record<string, number> = {};
+
+	if (o.family === 'cymbal') {
+		/* A plate has no tuned body and no shell: what makes it a cymbal is a
+		   dense metal wash. A long noise burst through a high-pass, with a comb
+		   for the closely spaced plate modes that give it its shimmer, and a
+		   short space so it is a cymbal in a room rather than a hiss. */
+		nodes = [
+			node(ENTRY_ID, 'in', 0),
+			node('n', 'excite', 1),
+			node('hp', 'filter', 2),
+			node('cb', 'comb', 3),
+			node('sp', 'space', 4),
+			node(OUTPUT_ID, 'out', 5)
+		];
+		cables = [wire('n', 'hp'), wire('hp', 'cb'), wire('cb', 'sp'), wire('sp', OUTPUT_ID)];
+		gp = {
+			'n.hardness': o.hard,
+			'n.exLength': Math.min(60, Math.max(2, Math.round(o.len * 6))),
+			'n.exTone': o.tone,
+			'hp.type': 2,
+			'hp.cutoff': Math.max(1500, o.tone * 0.45),
+			'hp.q': 0.6,
+			'hp.depth': 0,
+			// Short comb: the plate's own closely spaced modes, not an echo.
+			'cb.combPos': 3,
+			'cb.combDepth': Math.round(40 + q * 1.2),
+			/* The plate's ring lives in SPACE, so its size has to carry the
+			   whole tail: a crash written for 1.6 s measured 0.48 with the size
+			   capped at 70. A convolver rings for the length of its impulse,
+			   which is spaceSize/100 * 3 seconds. */
+			'sp.spaceSize': Math.round(Math.min(100, 20 + o.decay * 50)),
+			'sp.spaceDecay': Math.round(Math.min(95, 40 + o.decay * 34)),
+			'sp.spaceMix': Math.round(Math.min(85, 45 + o.decay * 20))
+		};
+	} else if (o.family === 'shaker') {
+		/* Grains, not a body: many tiny collisions. A bandpassed burst with no
+		   resonator at all -- adding one is what made every shaker in the kit
+		   sound like a small tuned drum. */
+		nodes = [
+			node(ENTRY_ID, 'in', 0),
+			node('n', 'excite', 1),
+			node('bp', 'filter', 2),
+			node(OUTPUT_ID, 'out', 3)
+		];
+		cables = [wire('n', 'bp'), wire('bp', OUTPUT_ID)];
+		gp = {
+			'n.hardness': o.hard,
+			/* The burst IS the shaker, so it runs as long as the instrument
+			   does rather than as a fixed strike -- a cabasa measured a 0.01 s
+			   decay when its length was tied to the strike instead. */
+			'n.exLength': Math.min(60, Math.max(6, Math.round(o.decay * 220))),
+			'n.exTone': o.tone,
+			'bp.type': 1,
+			'bp.cutoff': o.tone,
+			'bp.q': 0.8,
+			'bp.depth': 0
+		};
+	} else if (o.family === 'bar') {
+		/* A stiff bar rings at a few strong, widely spaced partials and has
+		   almost no shell. Struck modes straight out, with a touch of drive for
+		   the metallic edge a hard strike puts on one. */
+		nodes = [
+			node(ENTRY_ID, 'in', 0),
+			node('e', 'excite', 1),
+			node('m', 'modes', 2),
+			node('dr', 'drive', 3),
+			node(OUTPUT_ID, 'out', 4)
+		];
+		cables = [wire('e', 'm'), wire('m', 'dr'), wire('dr', OUTPUT_ID)];
+		gp = {
+			'e.hardness': o.hard,
+			'e.exLength': o.len,
+			'e.exTone': Math.min(o.tone, hz * 5),
+			'm.mode1': modes[0],
+			'm.mode2': modes[1],
+			'm.mode3': modes[2],
+			'm.modeQ': q,
+			'm.modeMix': 100,
+			'm.modeHz': hz,
+			'dr.driveAmt': 12,
+			'dr.driveBias': 20,
+			'dr.driveTone': Math.min(16000, hz * 12)
+		};
+	} else if (o.family === 'stick') {
+		/* Wood on wood, or a hand clap. The strike is the whole event, but it
+		   still rings briefly: a clave is a tuned wooden bar, not a click.
+		
+		   Built as a burst into a short resonance, because EXCT alone caps at
+		   60 ms and measured a 0.01 s decay -- a frame or two, inaudible as
+		   anything but a tick. MODES gives it the pitch a struck block has,
+		   with the Q short enough that it stays a knock. */
+		nodes = [
+			node(ENTRY_ID, 'in', 0),
+			node('n', 'excite', 1),
+			node('m', 'modes', 2),
+			node(OUTPUT_ID, 'out', 3)
+		];
+		cables = [wire('n', 'm'), wire('m', OUTPUT_ID)];
+		gp = {
+			'n.hardness': o.hard,
+			'n.exLength': Math.min(60, Math.max(2, Math.round(o.len * 4))),
+			'n.exTone': o.tone,
+			'm.mode1': 1,
+			'm.mode2': 2.8,
+			'm.mode3': 5.4,
+			'm.modeQ': Math.max(1, Math.round(o.decay * 12)),
+			'm.modeMix': 82,
+			'm.modeHz': hz
+		};
+	} else if (o.family === 'snare') {
+		/* The one instrument that really is two: a tuned head, and wires
+		   rattling against it. They are summed because you hear both at once --
+		   the head gives the pitch, the wires the sizzle. */
+		nodes = [
+			node(ENTRY_ID, 'in', 0),
+			node('e', 'excite', 1, -1),
+			node('m', 'modes', 2, -1),
+			node('n', 'excite', 1, 1),
+			node('hp', 'filter', 2, 1),
+			node('mx', 'mix', 3),
+			node('b', 'body', 4),
+			node(OUTPUT_ID, 'out', 5)
+		];
+		cables = [
+			wire('e', 'm'),
+			wire('m', 'mx'),
+			wire('n', 'hp'),
+			wire('hp', 'mx', 'b'),
+			wire('mx', 'b'),
+			wire('b', OUTPUT_ID)
+		];
+		gp = {
+			'e.hardness': o.hard,
+			'e.exLength': o.len,
+			'e.exTone': Math.min(o.tone, hz * 6),
+			'm.mode1': modes[0],
+			'm.mode2': modes[1],
+			'm.mode3': modes[2],
+			'm.modeQ': q,
+			'm.modeMix': 100,
+			'm.modeHz': hz,
+			// The wires: long, bright, and high-passed clear of the head.
+			'n.hardness': 0,
+			'n.exLength': Math.min(60, Math.round(o.len * 8)),
+			'n.exTone': o.tone,
+			'hp.type': 2,
+			'hp.cutoff': Math.max(900, hz * 4),
+			'hp.q': 0.6,
+			'hp.depth': 0,
+			'mx.mixA': 100,
+			'mx.mixB': Math.round(o.snare ?? 60),
+			'b.bodySize': o.body ?? 20,
+			'b.bodyDepth': 45,
+			'b.bodyMix': o.bodyMix ?? 40
+		};
+	} else {
+		/* A head: struck modes into the shell they are stretched over. A kick
+		   and a tom are the same instrument at different sizes, which is why
+		   they share this and nothing else does. */
+		nodes = [
+			node(ENTRY_ID, 'in', 0),
+			node('e', 'excite', 1),
+			node('m', 'modes', 2),
+			node('b', 'body', 3),
+			node(OUTPUT_ID, 'out', 4)
+		];
+		cables = [wire('e', 'm'), wire('m', 'b'), wire('b', OUTPUT_ID)];
+		gp = {
+			'e.hardness': o.hard,
+			'e.exLength': o.len,
+			// A beater on a big head is dull: the click belongs near the drum.
+			'e.exTone': Math.min(o.tone, Math.max(300, hz * 6)),
+			'm.mode1': modes[0],
+			'm.mode2': modes[1],
+			'm.mode3': modes[2],
+			'm.modeQ': q,
+			'm.modeMix': 100,
+			'm.modeHz': hz,
+			'b.bodySize': o.body ?? 30,
+			'b.bodyDepth': 50,
+			'b.bodyMix': o.bodyMix ?? 60
+		};
+	}
+
+	gp[`${OUTPUT_ID}.outLevel`] = 15;
+	gp[`${OUTPUT_ID}.outPan`] = 0;
+
 	return keyOnly({
 		advanced: true,
 		advancedView: 'rack',
 		rackGraph: { nodes, cables },
-		graphParams: {
-			'e.hardness': o.hard,
-			'e.exLength': o.len,
-			/* The strike is capped near the drum's own register.
-			
-			   A beater on a kick head is dull -- the click is maybe 3 kHz of
-			   transient over a 60 Hz body -- but the strike ran at the written
-			   tone regardless, and at 1400 Hz against a 55 Hz drum it WAS the
-			   sound: the kick measured a 1298 Hz centroid where a real one sits
-			   near 180. Tying the cap to the pitch keeps a snare crisp and a
-			   kick thick without a second number per key. */
-			'e.exTone': (o.hz ?? 0) > 0 ? Math.min(o.tone, Math.max(350, (o.hz ?? 0) * 6)) : o.tone,
-			'm.mode1': o.modes[0],
-			'm.mode2': o.modes[1],
-			'm.mode3': o.modes[2],
-			/* Q is the ring time, about q/12 seconds. An unpitched key needs it to
-			   match the tail it was written for, since its burst cannot. */
-			/* A pitched drum with real rattle rings longer than its written Q.
-			
-			   Swept against the reference: the snare matched best at Q 14 rather
-			   than the 6 it was written with (spectral correlation 0.64 -> 0.71),
-			   because a snare head keeps sounding under the wires rather than
-			   stopping with them. Only the noisy pitched keys get the floor -- a
-			   kick's Q is the kick. */
-			'm.modeQ': (o.hz ?? 0) > 0
-				? Math.max(o.q, (o.snare ?? 0) > 40 ? 10 : 0)
-				: Math.max(o.q, Math.min(60, o.decay * 14)),
-			/* 0 leaves MODES following the key. Every drum here names its own
-			   pitch; an unpitched one is pushed up out of the way instead, since
-			   a 200 Hz fallback was audible as the fundamental of every cymbal
-			   and shaker in the kit -- ten instruments all reporting 194 Hz. */
-			'm.modeHz': (o.hz ?? 0) > 0 ? (o.hz as number) : 3000,
-			/* ...and its modes are turned right down, because a cymbal has no
-			   tuned body at all: what makes it a cymbal is the wash, and three
-			   ringing partials underneath only muddy it. */
-			/* Unpitched keys keep a little of the modes, and a long-ringing one
-			   keeps more: EXCT's burst caps at 60 ms, so a cymbal that has to
-			   sustain for a second or more has nothing else to ring with. The
-			   modes are pushed to 3 kHz on these keys, so what they add is wash
-			   rather than pitch. */
-			'm.modeMix': (o.hz ?? 0) > 0 ? 68 : Math.round(Math.min(45, 6 + o.decay * 55)),
-			/* The noise branch: a drum is mostly not pitched. A snare's wires and
-			   a cymbal's wash are broadband, and no number of tuned modes makes
-			   them -- so a second, longer strike runs beside the modes and is
-			   mixed in by `snare`, 0 for a tom and high for a hi-hat.
-			
-			   EXCT rather than NOISE, which loops with no envelope of its own:
-			   as a sustained source it is right for a flute and wrong for a
-			   drum, and it droned under every key until the amp gate closed.
-			   EXCT is the same noise already shaped into a burst. Its length is
-			   what separates a hi-hat's tick from a cymbal's wash. */
-			'ex.sumGain': 100,
-			/* The rattle is broadband, so its own tone filter stays wide open.
-			
-			   hardness drives the Q of EXCT's lowpass, and feeding noiseQ into it
-			   put a resonance on the wires: the snare measured a flatness of
-			   0.45 against a real one's 0.75, which is the difference between a
-			   rattle and a pitched buzz. The shaping that belongs to this branch
-			   is the bandpass after it, not a resonant peak inside it. */
-			'n.hardness': 0,
-			'n.exLength': Math.max(1, Math.min(60, Math.round(o.len * (1 + (o.snare ?? 0) / 22)))),
-			/* The rattle sits over the drum, not above it. On a kick this ran at
-			   the written 1700 Hz against a 55 Hz shell and dominated the
-			   spectrum -- a centroid of 1274 where a real bass drum sits near
-			   180. Pitched drums cap it against their own body; unpitched ones
-			   keep the full tone, because for them the noise IS the instrument. */
-			/* The rattle is capped against the shell only on drums that barely
-			   have one. A snare's wires ARE bright -- that is what a snare is --
-			   so a drum with a lot of noise keeps its written tone, while a kick
-			   or a tom, which has a trace of it, is held near its own body.
-			   Capping everything at hz*4 crushed the snare's 5200 Hz to 740 and
-			   left it measuring 80% low energy with no wires at all. */
-			'n.exTone': (o.hz ?? 0) > 0
-				? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * (4 + ((o.snare ?? 0) / 100) * 40)))
-				: o.tone,
-			/* Bandpass for a pitched drum, high-pass for one that has no pitch.
-			
-			   Every key used a bandpass at the strike tone, which is right for
-			   placing a snare's rattle around its shell and wrong for a cymbal:
-			   it confined the wash to one narrow band, so a hi-hat measured a
-			   1703 Hz centroid against a real one's ~8000 and had almost no
-			   energy above 2 kHz. A cymbal IS the top of the spectrum. */
-			'nf.type': (o.hz ?? 0) > 0 ? 1 : 2,
-			'nf.cutoff': (o.hz ?? 0) > 0
-				? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * (4 + ((o.snare ?? 0) / 100) * 40)))
-				: Math.max(1200, o.tone * 0.55),
-			/* An unpitched drum IS its noise, so the band stays wide -- narrowing
-			   it turns a cymbal into a whistle. A pitched one uses the filter to
-			   place the rattle around the drum's own body. */
-			/* Wide on anything that is mostly rattle. A narrow band turns broadband
-			   wires into a whistle, and a snare is half wires by energy. */
-			/* Wide on anything with real rattle. The sweep put a snare's best
-			   match at Q 0.4 -- broader than the written 1.1 -- because wires
-			   are broadband and a narrow band turns them into a whistle. */
-			/* The written band, not a widened one: the joint sweep preferred 1.1
-			   over 0.4 once the shell was pulled back, which the single-axis
-			   sweep had got backwards. */
-			'nf.q': (o.hz ?? 0) > 0 ? (o.noiseQ ?? 1.2) : Math.min(0.8, o.noiseQ ?? 0.8),
-			'nf.depth': 0,
-			/* The shell gives way to the wires as the drum gets noisier.
-			
-			   A snare is roughly half rattle by energy, and MIX only goes to 100
-			   -- so with the body at 89 the noise could not reach it however far
-			   B was pushed, and the snare measured 80% of its energy below 200
-			   Hz with no wires audible at all. Turning A down is the only way to
-			   let B win on the keys where it should. */
-			/* Measured at the taps rather than guessed: the noise branch leaves its
-			   filter as a clean rattle (96% of its energy above 2 kHz) and is
-			   then swamped the moment it meets the modes, which carry far more
-			   energy for the same peak because theirs is concentrated in three
-			   partials. Holding B at full and pulling A down is what actually
-			   lets the wires through -- at A 54 / B 78 the snare still measured
-			   82% of its energy below 200 Hz. */
-			/* Swept against the reference rather than reasoned about: a snare
-			   correlates best at A 35 with the rattle band wide open, which is
-			   more shell than "100 - snare" gave it (A 35 vs 54 lifted the
-			   spectral match from 0.63 to 0.74). The floor keeps the very noisy
-			   keys -- hats, cabasa -- from getting a body they do not have. */
-			/* Swept jointly with the ring and the rattle band, which interact:
-			   tuning any one of them alone found a worse snare than tuning all
-			   three (0.85 and 0.89 against 0.90). A snare wants far less shell
-			   than "100 - snare" gave it. */
-			'mx.mixA': Math.round(Math.max(12, 100 - (o.snare ?? 0) * 1.3)),
-			/* Noise carries far more energy than three decaying sines, so summing
-			   the two at face value made the noisiest keys the loudest: a hi-hat
-			   at snare 88 measured 0.46 peak against the rest of the kit's 0.21.
-			   The branch is scaled by how much of it there is, which holds a
-			   hat's level down to the kit's without making it any less noisy --
-			   the ratio between the two branches is what says "hi-hat", not the
-			   absolute level of either. */
-			'mx.mixB': (o.snare ?? 0) > 0 ? 100 : 0,
-			/* A cymbal has no shell, so BODY is bypassed on the unpitched keys --
-			   it was rolling off exactly the highs that make them cymbals. */
-			'b.bodySize': o.body,
-			'b.bodyDepth': 50,
-			'b.bodyMix': (o.hz ?? 0) > 0 ? o.bodyMix : Math.min(o.bodyMix, 12),
-			/* The kit measured ~0.12 peak against the melodic patches' 0.30, so a
-			   kit and a lead on adjacent tracks were half a fader apart. The
-			   drums are struck and short, so they carry less energy per note
-			   than a rung string; the trim makes up for that rather than the
-			   voicing being wrong. */
-			/* Levelled by onset energy, not peak. A drum's peak is a transient and
-			   overstates how loud it seems next to a sustained note: trimmed to
-			   match on peak, the kit measured 9 dB under the presets by the
-			   measure that actually tracks perceived loudness. */
-			[`${OUTPUT_ID}.outLevel`]: 168,
-			[`${OUTPUT_ID}.outPan`]: 0
-		},
-		// The graph makes the sound; the oscillators are off.
+		graphParams: gp,
+		// The graph makes the sound; the subtractive voice is off.
 		osc1Gain: 0,
 		osc2Gain: 0,
 		subOscGain: 0,
 		noiseGain: 0,
 		ampAttack: 0.001,
-		/* The modes ring for about q/40 seconds, and the amp envelope must not
-		   close before they finish -- a crash written to ring 1.3 s measured
-		   0.25 because the envelope reaped the voice first. The drum's own
-		   decay still shapes it; this only stops the gate arriving early. */
-		/* Against the Q the key actually uses, not the one it was written with.
-		   An unpitched key's Q is now raised to carry the ring its 60 ms burst
-		   cannot, and this still measured the written value -- so the envelope
-		   closed first and a ride asked for 1.8 s decayed in 0.44. */
-		ampDecay: Math.max(
-			o.decay,
-			((o.hz ?? 0) > 0 ? o.q : Math.max(o.q, Math.min(60, o.decay * 14))) / 12
-		),
+		/* The envelope must not close before the instrument has finished
+		   sounding: a crash written to ring 1.3 s measured 0.25 because the amp
+		   gate reaped the voice first. */
+		/* The gate opens well past where the instrument is meant to be audible.
+		
+		   An exponential amp decay reaches -40 dB at roughly 40% of its setting,
+		   so a clave written for 0.09 s died at 0.03 -- a tick rather than a
+		   knock. The short percussion suffered most because nothing downstream
+		   was ringing to cover the gate closing. */
+		ampDecay: Math.max(o.decay * 2.5, q / 12),
 		ampSustain: 0,
 		ampRelease: o.release ?? 0.04,
 		muteGroup: o.group ?? 0
@@ -2135,99 +2192,99 @@ export const BUILTIN_KITS: DrumKit[] = [
 		name: 'JAZZ KIT',
 		keys: {
 			// GM 35 ACOUSTIC BASS DRUM
-			73: drumPatch({ hz: 55, snare: 8, noiseQ: 1.0, hard: 30, len: 9, tone: 1400, modes: [1, 1.6, 2.4], q: 7, body: 30, bodyMix: 70, decay: 0.2 }),
+			73: drumPatch({ family: 'head', hz: 48, modes: [1, 1.59, 2.14], q: 5, hard: 26, len: 11, tone: 900, body: 42, bodyMix: 72, decay: 0.34 }),
 			// GM 36 BASS DRUM 1
-			72: drumPatch({ hz: 60, snare: 8, noiseQ: 1.0, hard: 38, len: 8, tone: 1700, modes: [1, 1.7, 2.6], q: 6, body: 28, bodyMix: 70, decay: 0.17 }),
+			72: drumPatch({ family: 'head', hz: 58, modes: [1, 1.59, 2.14], q: 4, hard: 34, len: 9, tone: 1100, body: 36, bodyMix: 70, decay: 0.26 }),
 			// GM 37 SIDE STICK
-			71: drumPatch({ hz: 780, snare: 45, noiseQ: 2.4, hard: 90, len: 2, tone: 6000, modes: [1, 3.1, 5.4], q: 4, body: 14, bodyMix: 45, decay: 0.06 }),
+			71: drumPatch({ family: 'stick', hz: 780, hard: 92, len: 2, tone: 6000, decay: 0.07 }),
 			// GM 38 ACOUSTIC SNARE
-			70: drumPatch({ hz: 185, snare: 62, noiseQ: 1.1, hard: 72, len: 3, tone: 5200, modes: [1, 2.6, 4.3], q: 6, body: 20, bodyMix: 55, decay: 0.14 }),
+			70: drumPatch({ family: 'snare', hz: 185, modes: [1, 1.59, 2.14], q: 6, hard: 68, len: 3, tone: 5200, body: 20, bodyMix: 40, snare: 70, decay: 0.22 }),
 			// GM 39 HAND CLAP
-			69: drumPatch({ hz: 0, snare: 82, noiseQ: 1.0, hard: 80, len: 5, tone: 4200, modes: [1, 2.2, 3.7], q: 3, body: 22, bodyMix: 40, decay: 0.13 }),
+			69: drumPatch({ family: 'stick', hz: 1500, hard: 70, len: 6, tone: 4200, decay: 0.18 }),
 			// GM 40 ELECTRIC SNARE
-			68: drumPatch({ hz: 210, snare: 66, noiseQ: 1.1, hard: 85, len: 3, tone: 6200, modes: [1, 2.8, 4.6], q: 5, body: 18, bodyMix: 50, decay: 0.12 }),
+			68: drumPatch({ family: 'snare', hz: 210, modes: [1, 1.59, 2.14], q: 5, hard: 80, len: 2, tone: 6200, body: 16, bodyMix: 34, snare: 78, decay: 0.18 }),
 			// GM 41 LOW FLOOR TOM
-			67: drumPatch({ hz: 82, snare: 14, noiseQ: 1.4, hard: 45, len: 6, tone: 2400, modes: [1, 1.9, 3.0], q: 11, body: 38, bodyMix: 65, decay: 0.34 }),
+			67: drumPatch({ family: 'head', hz: 78, modes: [1, 1.59, 2.14], q: 11, hard: 42, len: 7, tone: 1500, body: 44, bodyMix: 64, decay: 0.6 }),
 			// GM 42 CLOSED HI-HAT
-			66: drumPatch({ hz: 0, snare: 88, noiseQ: 0.9, hard: 95, len: 2, tone: 9000, modes: [1, 4.2, 7.1], q: 3, body: 8, bodyMix: 25, decay: 0.05, group: 1 }),
+			66: drumPatch({ family: 'cymbal', q: 4, hard: 94, len: 2, tone: 9000, decay: 0.06, group: 1 }),
 			// GM 43 HIGH FLOOR TOM
-			65: drumPatch({ hz: 98, snare: 14, noiseQ: 1.4, hard: 46, len: 6, tone: 2600, modes: [1, 1.9, 3.0], q: 10, body: 35, bodyMix: 65, decay: 0.3 }),
+			65: drumPatch({ family: 'head', hz: 94, modes: [1, 1.59, 2.14], q: 10, hard: 44, len: 7, tone: 1600, body: 40, bodyMix: 62, decay: 0.54 }),
 			// GM 44 PEDAL HI-HAT
-			64: drumPatch({ hz: 0, snare: 84, noiseQ: 0.9, hard: 88, len: 3, tone: 7600, modes: [1, 4.0, 6.8], q: 4, body: 9, bodyMix: 25, decay: 0.07, group: 1 }),
+			64: drumPatch({ family: 'cymbal', q: 5, hard: 88, len: 3, tone: 8200, decay: 0.1, group: 1 }),
 			// GM 45 LOW TOM
-			63: drumPatch({ hz: 118, snare: 14, noiseQ: 1.4, hard: 48, len: 5, tone: 2800, modes: [1, 1.9, 3.1], q: 9, body: 32, bodyMix: 62, decay: 0.27 }),
+			63: drumPatch({ family: 'head', hz: 115, modes: [1, 1.59, 2.14], q: 9, hard: 46, len: 6, tone: 1800, body: 36, bodyMix: 60, decay: 0.46 }),
 			// GM 46 OPEN HI-HAT
-			62: drumPatch({ hz: 0, snare: 90, noiseQ: 0.7, hard: 92, len: 3, tone: 8600, modes: [1, 4.1, 7.0], q: 14, body: 8, bodyMix: 25, decay: 0.42, group: 1 }),
+			62: drumPatch({ family: 'cymbal', q: 12, hard: 86, len: 6, tone: 8000, decay: 0.55, group: 1 }),
 			// GM 47 LOW-MID TOM
-			61: drumPatch({ hz: 145, snare: 14, noiseQ: 1.4, hard: 50, len: 5, tone: 3000, modes: [1, 2.0, 3.2], q: 9, body: 29, bodyMix: 60, decay: 0.25 }),
+			61: drumPatch({ family: 'head', hz: 142, modes: [1, 1.59, 2.14], q: 8, hard: 48, len: 6, tone: 2000, body: 32, bodyMix: 58, decay: 0.4 }),
 			// GM 48 HI-MID TOM
-			60: drumPatch({ hz: 175, snare: 14, noiseQ: 1.4, hard: 52, len: 4, tone: 3200, modes: [1, 2.0, 3.2], q: 8, body: 26, bodyMix: 58, decay: 0.22 }),
+			60: drumPatch({ family: 'head', hz: 172, modes: [1, 1.59, 2.14], q: 8, hard: 50, len: 5, tone: 2200, body: 28, bodyMix: 56, decay: 0.35 }),
 			// GM 49 CRASH CYMBAL 1
-			59: drumPatch({ hz: 0, snare: 92, noiseQ: 0.5, hard: 88, len: 4, tone: 9500, modes: [1, 3.4, 6.2], q: 30, body: 6, bodyMix: 20, decay: 1.3 }),
+			59: drumPatch({ family: 'cymbal', q: 30, hard: 72, len: 8, tone: 7000, decay: 1.6 }),
 			// GM 50 HIGH TOM
-			58: drumPatch({ hz: 207, snare: 14, noiseQ: 1.4, hard: 54, len: 4, tone: 3400, modes: [1, 2.1, 3.3], q: 7, body: 23, bodyMix: 55, decay: 0.2 }),
+			58: drumPatch({ family: 'head', hz: 205, modes: [1, 1.59, 2.14], q: 7, hard: 52, len: 5, tone: 2400, body: 24, bodyMix: 54, decay: 0.3 }),
 			// GM 51 RIDE CYMBAL 1
-			57: drumPatch({ hz: 0, snare: 72, noiseQ: 0.8, hard: 94, len: 2, tone: 9800, modes: [1, 3.8, 6.9], q: 16, body: 6, bodyMix: 18, decay: 0.55 }),
+			57: drumPatch({ family: 'cymbal', q: 26, hard: 90, len: 3, tone: 7600, decay: 1.4 }),
 			// GM 52 CHINESE CYMBAL
-			56: drumPatch({ hz: 0, snare: 92, noiseQ: 0.5, hard: 86, len: 5, tone: 8200, modes: [1, 2.9, 5.1], q: 26, body: 7, bodyMix: 22, decay: 1.1 }),
+			56: drumPatch({ family: 'cymbal', q: 24, hard: 84, len: 7, tone: 6000, decay: 1.1 }),
 			// GM 53 RIDE BELL
-			55: drumPatch({ hz: 520, snare: 34, noiseQ: 2.0, hard: 96, len: 2, tone: 10500, modes: [1, 2.7, 5.4], q: 22, body: 5, bodyMix: 16, decay: 0.75 }),
+			55: drumPatch({ family: 'bar', hz: 520, modes: [1, 2.0, 3.01], q: 26, hard: 94, len: 2, tone: 9000, decay: 1.1 }),
 			// GM 54 TAMBOURINE
-			54: drumPatch({ hz: 0, snare: 86, noiseQ: 1.2, hard: 92, len: 2, tone: 9200, modes: [1, 3.6, 6.1], q: 6, body: 10, bodyMix: 30, decay: 0.16 }),
+			54: drumPatch({ family: 'cymbal', q: 8, hard: 92, len: 3, tone: 9500, decay: 0.3 }),
 			// GM 55 SPLASH CYMBAL
-			53: drumPatch({ hz: 0, snare: 90, noiseQ: 0.6, hard: 90, len: 3, tone: 10000, modes: [1, 3.3, 6.0], q: 18, body: 5, bodyMix: 18, decay: 0.6 }),
+			53: drumPatch({ family: 'cymbal', q: 14, hard: 80, len: 4, tone: 8600, decay: 0.55 }),
 			// GM 56 COWBELL
-			52: drumPatch({ hz: 540, snare: 16, noiseQ: 2.6, hard: 88, len: 3, tone: 5200, modes: [1, 1.5, 2.7], q: 12, body: 16, bodyMix: 40, decay: 0.3 }),
+			52: drumPatch({ family: 'bar', hz: 540, modes: [1, 1.52, 2.71], q: 14, hard: 88, len: 3, tone: 6800, decay: 0.35 }),
 			// GM 57 CRASH CYMBAL 2
-			51: drumPatch({ hz: 0, snare: 92, noiseQ: 0.5, hard: 86, len: 4, tone: 9200, modes: [1, 3.2, 5.9], q: 28, body: 6, bodyMix: 20, decay: 1.2 }),
+			51: drumPatch({ family: 'cymbal', q: 32, hard: 70, len: 8, tone: 6600, decay: 1.8 }),
 			// GM 58 VIBRASLAP
-			50: drumPatch({ hz: 0, snare: 80, noiseQ: 0.8, hard: 70, len: 8, tone: 4600, modes: [1, 2.4, 4.1], q: 10, body: 18, bodyMix: 42, decay: 0.55 }),
+			50: drumPatch({ family: 'bar', hz: 380, modes: [1, 2.7, 4.9], q: 20, hard: 92, len: 4, tone: 5200, decay: 0.85 }),
 			// GM 59 RIDE CYMBAL 2
-			49: drumPatch({ hz: 0, snare: 72, noiseQ: 0.8, hard: 92, len: 2, tone: 9400, modes: [1, 3.7, 6.6], q: 15, body: 6, bodyMix: 18, decay: 0.5 }),
+			49: drumPatch({ family: 'cymbal', q: 28, hard: 88, len: 3, tone: 7200, decay: 1.55 }),
 			// GM 60 HI BONGO
-			48: drumPatch({ hz: 330, snare: 18, noiseQ: 1.6, hard: 68, len: 3, tone: 4600, modes: [1, 2.3, 3.8], q: 6, body: 18, bodyMix: 52, decay: 0.14 }),
+			48: drumPatch({ family: 'head', hz: 330, modes: [1, 1.59, 2.14], q: 6, hard: 62, len: 4, tone: 3200, body: 16, bodyMix: 44, decay: 0.2 }),
 			// GM 61 LOW BONGO
-			47: drumPatch({ hz: 230, snare: 18, noiseQ: 1.6, hard: 64, len: 4, tone: 3800, modes: [1, 2.2, 3.7], q: 7, body: 22, bodyMix: 55, decay: 0.18 }),
+			47: drumPatch({ family: 'head', hz: 232, modes: [1, 1.59, 2.14], q: 6, hard: 60, len: 4, tone: 2800, body: 20, bodyMix: 46, decay: 0.24 }),
 			// GM 62 MUTE HI CONGA
-			46: drumPatch({ hz: 290, snare: 20, noiseQ: 1.6, hard: 72, len: 3, tone: 4400, modes: [1, 2.2, 3.6], q: 4, body: 20, bodyMix: 48, decay: 0.1 }),
+			46: drumPatch({ family: 'head', hz: 292, modes: [1, 1.59, 2.14], q: 3, hard: 66, len: 3, tone: 3000, body: 14, bodyMix: 38, decay: 0.11 }),
 			// GM 63 OPEN HI CONGA
-			45: drumPatch({ hz: 260, snare: 18, noiseQ: 1.6, hard: 66, len: 4, tone: 4000, modes: [1, 2.1, 3.5], q: 8, body: 24, bodyMix: 56, decay: 0.22 }),
+			45: drumPatch({ family: 'head', hz: 262, modes: [1, 1.59, 2.14], q: 8, hard: 58, len: 5, tone: 2600, body: 22, bodyMix: 50, decay: 0.32 }),
 			// GM 64 LOW CONGA
-			44: drumPatch({ hz: 180, snare: 16, noiseQ: 1.5, hard: 60, len: 5, tone: 3200, modes: [1, 2.0, 3.3], q: 9, body: 28, bodyMix: 58, decay: 0.26 }),
+			44: drumPatch({ family: 'head', hz: 180, modes: [1, 1.59, 2.14], q: 8, hard: 54, len: 6, tone: 2200, body: 28, bodyMix: 54, decay: 0.38 }),
 			// GM 65 HIGH TIMBALE
-			43: drumPatch({ hz: 330, snare: 22, noiseQ: 1.5, hard: 82, len: 3, tone: 6000, modes: [1, 2.5, 4.2], q: 8, body: 15, bodyMix: 45, decay: 0.2 }),
+			43: drumPatch({ family: 'head', hz: 330, modes: [1, 1.59, 2.14], q: 9, hard: 76, len: 3, tone: 4200, body: 12, bodyMix: 34, decay: 0.3 }),
 			// GM 66 LOW TIMBALE
-			42: drumPatch({ hz: 260, snare: 22, noiseQ: 1.5, hard: 78, len: 4, tone: 5200, modes: [1, 2.4, 4.0], q: 9, body: 19, bodyMix: 48, decay: 0.24 }),
+			42: drumPatch({ family: 'head', hz: 262, modes: [1, 1.59, 2.14], q: 9, hard: 74, len: 3, tone: 3800, body: 14, bodyMix: 36, decay: 0.34 }),
 			// GM 67 HIGH AGOGO
-			41: drumPatch({ hz: 780, snare: 10, noiseQ: 2.4, hard: 90, len: 2, tone: 7000, modes: [1, 2.0, 3.4], q: 13, body: 12, bodyMix: 35, decay: 0.28 }),
+			41: drumPatch({ family: 'bar', hz: 780, modes: [1, 1.55, 2.68], q: 16, hard: 90, len: 2, tone: 7400, decay: 0.32 }),
 			// GM 68 LOW AGOGO
-			40: drumPatch({ hz: 620, snare: 10, noiseQ: 2.4, hard: 88, len: 3, tone: 6200, modes: [1, 1.9, 3.3], q: 14, body: 14, bodyMix: 38, decay: 0.32 }),
+			40: drumPatch({ family: 'bar', hz: 620, modes: [1, 1.55, 2.68], q: 16, hard: 90, len: 2, tone: 7000, decay: 0.36 }),
 			// GM 69 CABASA
-			39: drumPatch({ hz: 0, snare: 94, noiseQ: 1.0, hard: 94, len: 2, tone: 9600, modes: [1, 4.4, 7.6], q: 2, body: 7, bodyMix: 22, decay: 0.07 }),
+			39: drumPatch({ family: 'shaker', hard: 90, len: 3, tone: 7000, decay: 0.12 }),
 			// GM 70 MARACAS
-			38: drumPatch({ hz: 0, snare: 92, noiseQ: 1.1, hard: 95, len: 2, tone: 10200, modes: [1, 4.6, 7.9], q: 2, body: 6, bodyMix: 20, decay: 0.06 }),
+			38: drumPatch({ family: 'shaker', hard: 92, len: 2, tone: 7800, decay: 0.1 }),
 			// GM 71 SHORT WHISTLE
-			37: drumPatch({ hz: 1700, snare: 40, noiseQ: 3.0, hard: 60, len: 6, tone: 7200, modes: [1, 2.0, 3.0], q: 10, body: 10, bodyMix: 30, decay: 0.2, group: 4 }),
+			37: drumPatch({ family: 'bar', hz: 1700, modes: [1, 2.0, 3.0], q: 30, hard: 40, len: 6, tone: 3000, decay: 0.22 }),
 			// GM 72 LONG WHISTLE
-			36: drumPatch({ hz: 1500, snare: 40, noiseQ: 3.0, hard: 58, len: 8, tone: 7000, modes: [1, 2.0, 3.0], q: 14, body: 10, bodyMix: 30, decay: 0.45, group: 4 }),
+			36: drumPatch({ family: 'bar', hz: 1500, modes: [1, 2.0, 3.0], q: 34, hard: 40, len: 14, tone: 2800, decay: 0.6 }),
 			// GM 73 SHORT GUIRO
-			35: drumPatch({ hz: 0, snare: 88, noiseQ: 1.3, hard: 86, len: 4, tone: 6600, modes: [1, 3.0, 5.2], q: 3, body: 12, bodyMix: 30, decay: 0.1 }),
+			35: drumPatch({ family: 'shaker', hard: 76, len: 5, tone: 4000, decay: 0.16 }),
 			// GM 74 LONG GUIRO
-			34: drumPatch({ hz: 0, snare: 88, noiseQ: 1.3, hard: 84, len: 9, tone: 6400, modes: [1, 3.0, 5.2], q: 4, body: 12, bodyMix: 30, decay: 0.34 }),
+			34: drumPatch({ family: 'shaker', hard: 74, len: 14, tone: 3800, decay: 0.42 }),
 			// GM 75 CLAVES
-			33: drumPatch({ hz: 2500, snare: 12, noiseQ: 2.8, hard: 98, len: 2, tone: 8000, modes: [1, 2.8, 5.0], q: 8, body: 10, bodyMix: 32, decay: 0.12 }),
+			33: drumPatch({ family: 'stick', hz: 2500, hard: 98, len: 1, tone: 9000, decay: 0.09 }),
 			// GM 76 HI WOOD BLOCK
-			32: drumPatch({ hz: 1200, snare: 14, noiseQ: 2.6, hard: 96, len: 2, tone: 7400, modes: [1, 2.7, 4.8], q: 7, body: 12, bodyMix: 34, decay: 0.11 }),
+			32: drumPatch({ family: 'stick', hz: 1200, hard: 96, len: 1, tone: 8000, decay: 0.1 }),
 			// GM 77 LOW WOOD BLOCK
-			31: drumPatch({ hz: 900, snare: 14, noiseQ: 2.6, hard: 94, len: 3, tone: 6600, modes: [1, 2.6, 4.6], q: 8, body: 15, bodyMix: 36, decay: 0.13 }),
+			31: drumPatch({ family: 'stick', hz: 900, hard: 94, len: 2, tone: 7000, decay: 0.12 }),
 			// GM 78 MUTE CUICA
-			30: drumPatch({ hz: 420, snare: 46, noiseQ: 1.8, hard: 64, len: 4, tone: 4200, modes: [1, 1.8, 2.9], q: 5, body: 20, bodyMix: 45, decay: 0.12, group: 3 }),
+			30: drumPatch({ family: 'bar', hz: 420, modes: [1, 2.0, 3.0], q: 8, hard: 44, len: 5, tone: 1800, decay: 0.16 }),
 			// GM 79 OPEN CUICA
-			29: drumPatch({ hz: 350, snare: 46, noiseQ: 1.8, hard: 60, len: 6, tone: 3800, modes: [1, 1.8, 2.9], q: 11, body: 24, bodyMix: 50, decay: 0.34, group: 3 }),
+			29: drumPatch({ family: 'bar', hz: 350, modes: [1, 2.0, 3.0], q: 14, hard: 42, len: 8, tone: 1600, decay: 0.4 }),
 			// GM 80 MUTE TRIANGLE
-			28: drumPatch({ hz: 4000, snare: 8, noiseQ: 3.2, hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 6, body: 4, bodyMix: 14, decay: 0.09, group: 2 }),
+			28: drumPatch({ family: 'bar', hz: 4200, modes: [1, 2.14, 3.41], q: 8, hard: 96, len: 1, tone: 12000, decay: 0.1 }),
 			// GM 81 OPEN TRIANGLE
-			27: drumPatch({ hz: 4000, snare: 8, noiseQ: 3.2, hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 34, body: 4, bodyMix: 14, decay: 1.4, group: 2 }),
+			27: drumPatch({ family: 'bar', hz: 4200, modes: [1, 2.14, 3.41], q: 44, hard: 96, len: 1, tone: 12000, decay: 1.6 }),
 		}
 	},
 	{
