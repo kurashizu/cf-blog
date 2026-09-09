@@ -218,57 +218,58 @@
 		</div>
 
 		<div class="flex items-center gap-2">
+			<!-- One range, not two numbers. FROM and TO named what the arrows on
+			     either side of each number already say, and "OCT:" carries the
+			     rest; the two ends read as a span now. -->
 			<div class="flex items-center gap-1 text-xs">
 				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.keyboard.octRangeHint')}>OCT:</span>
 
 				<div class="flex items-center gap-0.5">
-					<span class="text-white/50 text-[10px] font-bold">FROM</span>
 					<button
 						onclick={() => {
 							kbOctaveFrom = Math.max(1, kbOctaveFrom - 1);
 							playSound('click');
 						}}
 						disabled={kbOctaveFrom <= 1}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.keyboard.lowerStartHint')}
 					>
 						◄
 					</button>
-					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center">{kbOctaveFrom}</span>
+					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center">{kbOctaveFrom}</span>
 					<button
 						onclick={() => {
 							kbOctaveFrom = Math.min(kbOctaveTo, kbOctaveFrom + 1);
 							playSound('click');
 						}}
 						disabled={kbOctaveFrom >= kbOctaveTo}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.keyboard.raiseStartHint')}
 					>
 						►
 					</button>
-				</div>
 
-				<div class="flex items-center gap-0.5">
-					<span class="text-white/50 text-[10px] font-bold">TO</span>
+					<span class="text-white/30 text-[10px] px-0.5 select-none">–</span>
+
 					<button
 						onclick={() => {
 							kbOctaveTo = Math.max(kbOctaveFrom, kbOctaveTo - 1);
 							playSound('click');
 						}}
 						disabled={kbOctaveTo <= kbOctaveFrom}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.keyboard.lowerEndHint')}
 					>
 						◄
 					</button>
-					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center">{kbOctaveTo}</span>
+					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center">{kbOctaveTo}</span>
 					<button
 						onclick={() => {
 							kbOctaveTo = Math.min(7, kbOctaveTo + 1);
 							playSound('click');
 						}}
 						disabled={kbOctaveTo >= 7}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.keyboard.raiseEndHint')}
 					>
 						►

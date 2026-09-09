@@ -561,57 +561,58 @@
 
 			<span class="opacity-30">|</span>
 
+			<!-- One range, not two numbers. FROM and TO were 64px of a 238px group
+			     naming what the arrows either side of each number already say, and
+			     "OCT:" carries the rest. The two ends read as a span now: 3-5. -->
 			<div class="flex items-center gap-1 text-xs">
 				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.roll.octScopeHint')}>OCT:</span>
 
 				<div class="flex items-center gap-0.5">
-					<span class="text-white/50 text-[10px] font-bold">FROM</span>
 					<button
 						onclick={() => {
 							octaveFrom = Math.max(1, octaveFrom - 1);
 							playSound('click');
 						}}
 						disabled={octaveFrom <= 1}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.roll.lowerStartHint')}
 					>
 						◄
 					</button>
-					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[20px] text-center" title={$t('synthPanels.roll.startOctaveHint', { octave: octaveFrom })}>{octaveFrom}</span>
+					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center" title={$t('synthPanels.roll.startOctaveHint', { octave: octaveFrom })}>{octaveFrom}</span>
 					<button
 						onclick={() => {
 							octaveFrom = Math.min(octaveTo, octaveFrom + 1);
 							playSound('click');
 						}}
 						disabled={octaveFrom >= octaveTo}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.roll.raiseStartHint')}
 					>
 						►
 					</button>
-				</div>
 
-				<div class="flex items-center gap-0.5 ml-1">
-					<span class="text-white/50 text-[10px] font-bold">TO</span>
+					<span class="text-white/30 text-[10px] px-0.5 select-none">–</span>
+
 					<button
 						onclick={() => {
 							octaveTo = Math.max(octaveFrom, octaveTo - 1);
 							playSound('click');
 						}}
 						disabled={octaveTo <= octaveFrom}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.roll.lowerEndHint')}
 					>
 						◄
 					</button>
-					<span class="px-1.5 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#e5c07b] min-w-[20px] text-center" title={$t('synthPanels.roll.endOctaveHint', { octave: octaveTo })}>{octaveTo}</span>
+					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#e5c07b] min-w-[16px] text-center" title={$t('synthPanels.roll.endOctaveHint', { octave: octaveTo })}>{octaveTo}</span>
 					<button
 						onclick={() => {
 							octaveTo = Math.min(7, octaveTo + 1);
 							playSound('click');
 						}}
 						disabled={octaveTo >= 7}
-						class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs transition-colors"
+						class="press px-1 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs leading-none transition-colors"
 						title={$t('synthPanels.roll.raiseEndHint')}
 					>
 						►

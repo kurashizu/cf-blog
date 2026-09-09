@@ -79,9 +79,9 @@ export type CentreView = 'roll' | 'rack';
  * ADV's layout without ADV's engine.
  *
  * Not stored on the track: it says how you are looking at the sound right now,
- * not what the sound is, so it has no business in a patch file. Leaving ADV or
- * switching to a track that is in ADV clears it, since there would be no racks
- * to come back to. */
+ * not what the sound is, so it has no business in a patch file. It is the same
+ * layout ADV's P.ROLL view gives, so toggleAdvanced carries one into the other
+ * rather than resetting the arrangement you were working in. */
 export const rollFullscreen = writable<boolean>(false);
 
 export function toggleRollFullscreen(): void {
@@ -108,10 +108,21 @@ export const panelIsExclusive = derived(
 export function toggleAdvanced(): void {
 	const id = get(activeTrackId);
 	const on = !get(advancedMode);
-	// ADV owns the panel on its own terms; a fullscreen roll underneath it would
-	// have nothing to restore when ADV was switched back off.
-	if (on) rollFullscreen.set(false);
 	const track = modularSynth.getTrack(id);
+
+	/* The two modes describe the same two layouts, so the switch carries the
+	   layout across rather than resetting it.
+	
+	     roll full screen  <->  ADV showing P.ROLL   (one panel, the roll)
+	     racks 1-7 shown   <->  ADV showing RACK     (one panel, the patch bay)
+	
+	   Going in, a fullscreen roll picks P.ROLL and racks pick RACK; coming out,
+	   P.ROLL leaves the roll full screen and RACK puts the racks back. Without
+	   this, toggling ADV threw away the arrangement you were working in and you
+	   had to rebuild it on the other side. */
+	const wasFullscreen = get(rollFullscreen);
+	const nextView: CentreView = on ? (wasFullscreen ? 'roll' : 'rack') : get(centreView);
+	rollFullscreen.set(on ? false : nextView === 'roll');
 
 	/* Switching a track into ADV that has no signal path yet gives it one.
 	   Without this the mode appears to do nothing: the patch bay opens on an
@@ -131,11 +142,11 @@ export function toggleAdvanced(): void {
 
 	modularSynth.updateTrack(id, {
 		advanced: on,
-		/* A track with no view of its own opens on whichever one was last used --
-		   the patch bay the first time, since that is what the mode exists for.
-		   Leaving keeps that choice rather than resetting it, so coming back
-		   lands where you were working. */
-		advancedView: get(centreView),
+		/* Entering keeps the layout that was on screen; leaving keeps the view
+		   that was open, so coming back lands where you left. A track that has
+		   never been in ADV falls back to the last view used anywhere, which is
+		   the patch bay the very first time. */
+		advancedView: nextView,
 		...(needsChain ? { rackChain: ['string', 'body'], rackParams: {} } : {})
 	});
 	refreshTracks();
