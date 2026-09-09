@@ -207,12 +207,19 @@ function patch(
 		const row = peers.indexOf(id);
 		return { x: 48 + c * COL, y: 168 + (row - (peers.length - 1) / 2) * ROW };
 	};
+	/* The trim is a VCA in front of OUT, not a knob on it.
+	
+	   OUT sends the patch to the master and does nothing else, so the one place
+	   a patch's own level belongs is a gain stage on the canvas -- where it can
+	   be seen, moved, and driven by a cable like any other. */
+	const TRIM_ID = 'trim';
 	const graphNodes: GraphNode[] = [
 		{ id: ENTRY_ID, type: 'in', x: 48, y: 168 },
 		...nodes.map(([id, type]) => ({ id, type, ...posOf(id) })),
-		{ id: OUTPUT_ID, type: 'out', x: 48 + (lastCol + 1) * COL, y: 168 }
+		{ id: TRIM_ID, type: 'vca', x: 48 + (lastCol + 1) * COL, y: 168 },
+		{ id: OUTPUT_ID, type: 'out', x: 48 + (lastCol + 2) * COL, y: 168 }
 	];
-	const graphParams: Record<string, number> = { [`${OUTPUT_ID}.outLevel`]: outLevel };
+	const graphParams: Record<string, number> = { [`${TRIM_ID}.gain`]: outLevel };
 	for (const [id, , params] of nodes) {
 		for (const [k, v] of Object.entries(params ?? {})) graphParams[`${id}.${k}`] = v;
 	}
@@ -224,8 +231,15 @@ function patch(
 		const [lhs, rest] = c.split('>');
 		const [from, fromPort] = lhs.split('.');
 		const [to, toPort] = rest.split(':');
-		return { from, fromPort: fromPort || 'out', to, toPort: toPort || 'in' };
+		/* Anything a patch sends to OUT goes through the trim on its way, which
+		   is what makes the gain stage part of the signal path rather than a
+		   setting hidden on the endpoint. */
+		const dest = to === OUTPUT_ID ? TRIM_ID : to;
+		return { from, fromPort: fromPort || 'out', to: dest, toPort: toPort || 'in' };
 	});
+	graphCables.push({ from: TRIM_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' });
+	// OUT runs when the note does; without this the patch builds and stays mute.
+	graphCables.push({ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' });
 	return { rackGraph: { nodes: graphNodes, cables: graphCables }, graphParams };
 }
 
@@ -494,12 +508,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['pk', 'excite', { hardness: 72, exLength: 3, exTone: 5200 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['str', 'string', { decayTime: 1.8, damping: 26, stiffness: 55 }],
 					['brg', 'comb', { combPos: 14, combDepth: 45 }],
 					['bod', 'body', { bodySize: 40, bodyDepth: 45, bodyMix: 50 }]
 				],
-				['entry>ex:b', 'pk>ex', 'ex>str', 'str>brg', 'brg>bod', 'bod>output'],
+				['pk>ex', 'ex>str', 'str>brg', 'brg>bod', 'bod>output'],
 				33
 			)
 		})
@@ -529,13 +543,13 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['mal', 'excite', { hardness: 30, exLength: 11, exTone: 2200 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['bar', 'modes', { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22 }],
 					['tub', 'tube', { tubeDecay: 0.5, tubeDamp: 55, tubeOdd: 100 }],
 					['mx', 'mix', { mixA: 100, mixB: 38 }],
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
-				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:b', 'mx>bod', 'bod>output'],
+				['mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:b', 'mx>bod', 'bod>output'],
 				26
 			)
 		})
@@ -633,19 +647,38 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampSustain: 1,
 			ampRelease: 0.08,
 			...patch(
+				/* Drawbars, built the way the instrument is: four oscillators at
+				   whole-number multiples of the note, each with its own level,
+				   summed. The multiples used to be a RATIO knob on the oscillator
+				   and the levels a LVL knob; both were separate primitives inside
+				   OSC, so they are a MUL on the frequency and a VCA on the output
+				   now -- more modules, and each one says what it does. */
 				[
-					['d16', 'osc', { wave: 0, ratio: 1, level: 62 }],
-					['d8', 'osc', { wave: 0, ratio: 2, level: 40 }],
-					['d5', 'osc', { wave: 0, ratio: 3, level: 24 }],
-					['d4', 'osc', { wave: 0, ratio: 4, level: 16 }],
-					['lo', 'sum', { sumGain: 62 }],
-					['hi', 'sum', { sumGain: 62 }],
-					['all', 'sum', { sumGain: 54 }],
+					['pf', 'tofreq'],
+					['x2', 'mul', { mulB: 2 }],
+					['x3', 'mul', { mulB: 3 }],
+					['x4', 'mul', { mulB: 4 }],
+					['d16', 'osc', { wave: 0 }],
+					['d8', 'osc', { wave: 0 }],
+					['d5', 'osc', { wave: 0 }],
+					['d4', 'osc', { wave: 0 }],
+					['g16', 'vca', { gain: 62 }],
+					['g8', 'vca', { gain: 40 }],
+					['g5', 'vca', { gain: 24 }],
+					['g4', 'vca', { gain: 16 }],
+					['lo', 'sum'],
+					['hi', 'sum'],
+					['all', 'sum'],
+					['trim', 'vca', { gain: 54 }],
 					['cab', 'space', { spaceSize: 22, spaceDecay: 34, spaceMix: 20 }]
 				],
 				[
-					'entry>lo', 'd16>lo:b', 'd8>hi', 'd5>hi:b',
-					'lo>all', 'hi>all:b', 'd4>all', 'all>cab', 'cab>output'
+					'entry.pitch>pf:a',
+					'pf>d16:pitch', 'pf>x2:a', 'pf>x3:a', 'pf>x4:a',
+					'x2>d8:pitch', 'x3>d5:pitch', 'x4>d4:pitch',
+					'd16>g16', 'd8>g8', 'd5>g5', 'd4>g4',
+					'g16>lo', 'g8>lo:b', 'g5>hi', 'g4>hi:b',
+					'lo>all', 'hi>all:b', 'all>trim', 'trim>cab', 'cab>output'
 				],
 				68
 			)
@@ -673,14 +706,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['mal', 'excite', { hardness: 26, exLength: 9, exTone: 2600 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['bar', 'modes', { mode1: 1, mode2: 2.7, mode3: 5.4, modeQ: 44 }],
 					['trm', 'vca', { gain: 100, depth: 34 }],
 					['fan', 'lfo', { lfoWave: 0, lfoRate: 5.5, lfoAmt: 60 }],
 					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 100 }],
 					['mx', 'mix', { mixA: 100, mixB: 44 }]
 				],
-				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>trm', 'fan.cv>trm:cv', 'trm>mx', 'ex>res', 'res>mx:b', 'mx>output'],
+				['mal>ex', 'ex>bar', 'bar>trm', 'fan.cv>trm:cv', 'trm>mx', 'ex>res', 'res>mx:b', 'mx>output'],
 				42
 			)
 		})
@@ -707,7 +740,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['air', 'noise', { colour: 0, level: 100 }],
-					['ex', 'sum', { sumGain: 200 }],
+					['ex', 'vca', { gain: 200 }],
 					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1, depth: 25 }],
 					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 100 }],
 					['sp', 'split', {}],
@@ -715,7 +748,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mg', 'merge', {}],
 					['rm', 'space', { spaceSize: 44, spaceDecay: 50, spaceMix: 24 }]
 				],
-				['entry>ex:b', 'air>ex', 'ex>edge', 'edge>pipe', 'pipe>sp', 'sp>mg', 'sp.r>wid', 'wid>mg:r', 'mg>rm', 'rm>output'],
+				['air>ex', 'ex>edge', 'edge>pipe', 'pipe>sp', 'sp>mg', 'sp.r>wid', 'wid>mg:r', 'mg>rm', 'rm>output'],
 				124
 			)
 		})
@@ -742,14 +775,15 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['ham', 'excite', { hardness: 78, exLength: 3, exTone: 6400 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['c1', 'string', { decayTime: 2.4, damping: 18, stiffness: 40 }],
 					['c2', 'string', { decayTime: 2.1, damping: 22, stiffness: 46 }],
 					['rg', 'ring', { ringDepth: 110 }],
-					['sm', 'sum', { sumGain: 130 }],
+					['sm', 'sum'],
+					['smg', 'vca', { gain: 130 }],
 					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
 				],
-				['entry>ex:b', 'ham>ex', 'ex>c1', 'ex>c2', 'c1>rg', 'c2>rg:b', 'c1>sm', 'rg>sm:b', 'sm>bod', 'bod>output'],
+				['ham>ex', 'ex>c1', 'ex>c2', 'c1>rg', 'c2>rg:b', 'c1>sm', 'rg>sm:b', 'sm>smg', 'smg>bod', 'bod>output'],
 				14
 			)
 		})
@@ -805,12 +839,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['qul', 'excite', { hardness: 92, exLength: 2, exTone: 8200 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['str', 'string', { decayTime: 1.1, damping: 6, stiffness: 85 }],
 					['edg', 'drive', { driveAmt: 16, driveBias: 20, driveTone: 11000 }],
 					['bod', 'body', { bodySize: 25, bodyDepth: 35, bodyMix: 25 }]
 				],
-				['entry>ex:b', 'qul>ex', 'ex>str', 'str>edg', 'edg>bod', 'bod>output'],
+				['qul>ex', 'ex>str', 'str>edg', 'edg>bod', 'bod>output'],
 				25
 			)
 		})
@@ -959,14 +993,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['ham', 'excite', { hardness: 44, exLength: 9, exTone: 3400 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['s1', 'string', { decayTime: 4, damping: 22, stiffness: 45 }],
 					['s2', 'string', { decayTime: 3.6, damping: 26, stiffness: 48 }],
 					['mx', 'mix', { mixA: 100, mixB: 64 }],
 					['bod', 'body', { bodySize: 35, bodyDepth: 55, bodyMix: 55 }],
 					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
 				],
-				['entry>ex:b', 'ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:b', 'mx>bod', 'bod>symp', 'symp>output'],
+				['ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:b', 'mx>bod', 'bod>symp', 'symp>output'],
 				13
 			)
 		})
@@ -992,12 +1026,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['pic', 'excite', { hardness: 62, exLength: 4, exTone: 4600 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['str', 'string', { decayTime: 2.2, damping: 34, stiffness: 6 }],
 					['bod', 'body', { bodySize: 62, bodyDepth: 65, bodyMix: 70 }],
 					['eq', 'eq', { lowGain: 2, midGain: -3, midFreq: 480, highGain: 2 }]
 				],
-				['entry>ex:b', 'pic>ex', 'ex>str', 'str>bod', 'bod>eq', 'eq>output'],
+				['pic>ex', 'ex>str', 'str>bod', 'bod>eq', 'eq>output'],
 				36
 			)
 		})
@@ -1024,12 +1058,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['fin', 'excite', { hardness: 18, exLength: 22, exTone: 1100 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['str', 'string', { decayTime: 3, damping: 52, stiffness: 3 }],
 					['bod', 'body', { bodySize: 88, bodyDepth: 60, bodyMix: 60 }],
 					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
 				],
-				['entry>ex:b', 'fin>ex', 'ex>str', 'str>bod', 'bod>cmp', 'cmp>output'],
+				['fin>ex', 'ex>str', 'str>bod', 'bod>cmp', 'cmp>output'],
 				48
 			)
 		})
@@ -1056,14 +1090,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['bw', 'bow', { bowPressure: 62, bowNoise: 30, bowBite: 42, bowLevel: 100 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['str', 'string', { decayTime: 1.4, damping: 40, stiffness: 2 }],
 					['bod', 'body', { bodySize: 55, bodyDepth: 50, bodyMix: 60 }],
 					['lfo', 'lfo', { lfoWave: 0, lfoRate: 0.4, lfoAmt: 22 }],
 					['pn', 'pan', { panPos: 0, panDepth: 100 }],
 					['rm', 'space', { spaceSize: 52, spaceDecay: 62, spaceMix: 26 }]
 				],
-				['entry>ex:b', 'bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:cv', 'pn>rm', 'rm>output'],
+				['bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:cv', 'pn>rm', 'rm>output'],
 				47
 			)
 		})
@@ -1090,12 +1124,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['air', 'noise', { colour: 1, level: 66 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['ex', 'sum'],
 					['rd', 'reed', { reedStiff: 54, reedBias: 42 }],
 					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100 }],
 					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
 				],
-				['entry>ex:b', 'air>ex', 'ex>rd', 'rd>br', 'br>bel', 'bel>output'],
+				['air>ex', 'ex>rd', 'rd>br', 'br>bel', 'bel>output'],
 				66
 			)
 		})
@@ -1122,13 +1156,13 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['air', 'noise', { colour: 2, level: 100 }],
-					['ex', 'sum', { sumGain: 200 }],
+					['ex', 'vca', { gain: 200 }],
 					['fl', 'filter', { type: 1, cutoff: 2600, q: 3, depth: 20 }],
 					['br', 'tube', { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0 }],
 					['mx', 'mix', { mixA: 100, mixB: 12 }],
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
 				],
-				['entry>ex:b', 'air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:b', 'mx>bel', 'bel>output'],
+				['air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:b', 'mx>bel', 'bel>output'],
 				60
 			)
 		})
@@ -1927,6 +1961,29 @@ const wire = (from: string, to: string, toPort = 'in') => ({
 	toPort
 });
 
+
+/* Struck harder means struck brighter.
+ *
+ * A drum hit hard is not the same sound louder: the stick is in contact for
+ * less time, so the strike itself carries more high frequency, and the head is
+ * stretched tighter under it. Velocity reached the amp gain and nothing else
+ * before ENTRY published it as a pin, which is a large part of why the kit
+ * sounded mechanical however carefully the rest was voiced -- every hit was the
+ * same timbre at a different level.
+ *
+ * REMAP rather than a raw cable because EXCT's TONE is in Hz: velocity arrives
+ * 0..1 and the knob wants hundreds, which is exactly the conversion the node
+ * exists for. */
+const velToTone = (target: string, lo: number, hi: number) => ({
+	nodes: [{ id: 'vt', type: 'remap', x: 48, y: 40 }],
+	cables: [
+		{ from: ENTRY_ID, fromPort: 'vel', to: 'vt', toPort: 'a' },
+		{ from: 'vt', fromPort: 'out', to: target, toPort: 'exTone' }
+	],
+	params: { 'vt.inLo': 0, 'vt.inHi': 1, 'vt.outLo': Math.round(lo), 'vt.outHi': Math.round(hi) }
+});
+
+
 /**
  * One drum, built the way that kind of instrument is built.
  *
@@ -2136,19 +2193,38 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 		};
 	}
 
-	gp[`${OUTPUT_ID}.outLevel`] = 15;
-	gp[`${OUTPUT_ID}.outPan`] = 0;
+	/* Velocity into the strike's brightness, for every family that has a strike.
+	   The shaker and the cymbal have one too -- a hard shake is a sharper rattle
+	   -- so this is not limited to the drums with heads. */
+	const strike = nodes.find((n) => n.type === 'excite');
+	if (strike) {
+		const base = Math.min(o.tone, 12000);
+		const vt = velToTone(strike.id, base * 0.45, base);
+		nodes = [...nodes, ...vt.nodes];
+		cables = [...cables, ...vt.cables];
+		gp = { ...gp, ...vt.params };
+	}
+
+	/* The kit's own trim, as a gain stage rather than a knob on OUT: a drum
+	   graph arrives far hotter than a melodic one, and 15% is where the 47 keys
+	   sit level with the rest of the instrument. */
+	const TRIM = 'trim';
+	const outNode = nodes.find((n) => n.id === OUTPUT_ID)!;
+	nodes = [...nodes, { id: TRIM, type: 'vca', x: outNode.x, y: outNode.y }];
+	outNode.x += COL;
+	cables = cables.map((c) => (c.to === OUTPUT_ID ? { ...c, to: TRIM } : c));
+	cables = [
+		...cables,
+		wire(TRIM, OUTPUT_ID),
+		{ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' }
+	];
+	gp[`${TRIM}.gain`] = 15;
 
 	return keyOnly({
 		advanced: true,
 		advancedView: 'rack',
 		rackGraph: { nodes, cables },
 		graphParams: gp,
-		// The graph makes the sound; the subtractive voice is off.
-		osc1Gain: 0,
-		osc2Gain: 0,
-		subOscGain: 0,
-		noiseGain: 0,
 		ampAttack: 0.001,
 		/* The envelope must not close before the instrument has finished
 		   sounding: a crash written to ring 1.3 s measured 0.25 because the amp

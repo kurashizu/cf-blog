@@ -47,8 +47,8 @@
 		type PortKind,
 		type PortRole
 	} from '../../../stores/synth-graph';
-	import { PALETTE_SPECS, MODULE_GROUPS, moduleSpec, type ModuleSpec } from '../../../stores/synth-modules';
-	import { laneSocketId } from '../../../stores/note-lanes';
+	import { PALETTE_SPECS, MODULE_GROUPS, moduleSpec, CONST_KINDS, type ModuleSpec } from '../../../stores/synth-modules';
+	import { laneSocketId, VELOCITY_LANE_ID } from '../../../stores/note-lanes';
 	import { trackLanes } from '../../../stores/lane-edit';
 	import ModuleCard from './ModuleCard.svelte';
 	import ModuleIcon from './ModuleIcon.svelte';
@@ -70,6 +70,20 @@
 	   longer ones (DECAY, DEPTH, RESO) crowded and clipped. 176 gives each knob
 	   column room for its caption at the size the rest of the synth uses. */
 	const NODE_W = 176;
+
+	/* How wide a card is.
+	
+	   Not one width for everything. A card is 176 wide because that is what two
+	   knobs side by side need, but OUT takes no settings at all -- giving it the
+	   same width made a long thin strip with one socket on it, which reads as a
+	   bar rather than as a module. A card with nothing to show is as wide as its
+	   own name needs, which is also what makes it obvious at a glance that there
+	   is nothing to set on it. */
+	const NARROW_W = 96;
+
+	function nodeWidth(spec: ModuleSpec): number {
+		return spec.params.length || spec.viz ? NODE_W : NARROW_W;
+	}
 	/* Port geometry, in one place because two formulas have to agree exactly:
 	   the dots are laid out by CSS inside the node, and the cables are drawn in
 	   SVG from portPos(). When they disagreed, every cable ended in mid-air a
@@ -107,7 +121,13 @@
 		for (let i = 0; i < selectors; i++) parts.push(SELECTOR_H);
 		if (spec.viz) parts.push(VIZ_H[spec.viz] ?? 26);
 		if (rows) parts.push(rows * KNOB_ROW_H + (rows - 1) * 2);
-		if (!parts.length) return BODY_PAD * 2;
+		/* A module with no controls still needs a card.
+		
+		   OUT and MONO have nothing to show -- they do one thing and take no
+		   settings -- and the padding alone left an 8px sliver under the header
+		   with a socket floating off its edge. A knob row is what every other
+		   card is at least as tall as, so an empty one matches it. */
+		if (!parts.length) return KNOB_ROW_H;
 		return BODY_PAD * 2 + parts.reduce((a, b) => a + b, 0) + (parts.length - 1) * GAP;
 	}
 
@@ -119,7 +139,13 @@
 	let measured = $state<Record<string, number>>({});
 
 	function bodyOf(node: GraphNode, spec: ModuleSpec): number {
-		return measured[node.id] ?? bodyHeight(spec);
+		/* Never below the computed height.
+		
+		   The measurement is what the card actually rendered as, which is the
+		   right answer whenever the card has something in it -- but a module
+		   with no controls renders as nothing at all, and taking that literally
+		   collapsed OUT to a title bar with its socket hanging off the edge. */
+		return Math.max(measured[node.id] ?? 0, bodyHeight(spec));
 	}
 
 	function nodeHeight(node: GraphNode, spec: ModuleSpec): number {
@@ -196,7 +222,7 @@
 		return {
 			// The dots straddle the border, so their centres land on the node's
 			// two vertical edges -- a cable meets the socket, not the wall.
-			x: n.x + (isOutput ? NODE_W : 0),
+			x: n.x + (isOutput ? nodeWidth(spec) : 0),
 			y: n.y + portOffset(n, spec, list.length, i)
 		};
 	}
@@ -383,7 +409,7 @@
 			   shrinking the box drops what it no longer covers. */
 			const hit = nodesInRect(graph, rectOf(marquee), (n) => {
 				const spec = moduleSpec(n.type);
-				return { w: NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
+				return { w: spec ? nodeWidth(spec) : NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
 			});
 			selectedNodes.set(new Set([...marqueeBase, ...hit]));
 			return;
@@ -420,7 +446,7 @@
 			if (rect.w > 3 || rect.h > 3) {
 				const hit = nodesInRect(graph, rect, (n) => {
 					const spec = moduleSpec(n.type);
-					return { w: NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
+					return { w: spec ? nodeWidth(spec) : NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
 				});
 				if (hit.length === 1) selectedNode.set(hit[0]);
 			}
@@ -445,7 +471,7 @@
 				if (!spec) return false;
 				const h = nodeHeight(n, spec);
 				const p = toCanvas(pointer.x, pointer.y);
-				return p.x >= n.x - PORT_R && p.x <= n.x + NODE_W + PORT_R && p.y >= n.y && p.y <= n.y + h;
+				return p.x >= n.x - PORT_R && p.x <= n.x + nodeWidth(spec) + PORT_R && p.y >= n.y && p.y <= n.y + h;
 			});
 			if (!overNode) {
 				const p = toCanvas(pointer.x, pointer.y);
@@ -469,18 +495,32 @@
 		if (!d) return [];
 		const q = searchQuery.trim().toLowerCase();
 		return PALETTE_SPECS.filter((spec) => {
-			const takes = spec.inputs.some((i) => rolesCompatible(d.from.role, roleOf(i)));
+			const takes = landingOn(spec, d.from.role) !== null;
 			if (!takes) return false;
 			if (!q) return true;
 			return spec.label.toLowerCase().includes(q) || spec.id.toLowerCase().includes(q);
 		}).slice(0, 40);
 	});
 
+	/* Where a cable of this role would land on a module, or null if nowhere.
+	
+	   A knob counts. Every parameter is reachable by cable now, so a value
+	   dragged into empty space should offer the modules whose *knobs* it could
+	   drive, not only those with a matching socket -- otherwise ENTRY's VEL
+	   offers almost nothing, which is the opposite of the truth. */
+	function landingOn(spec: ModuleSpec, role: PortRole): { id: string; kind: PortKind } | null {
+		const inlet = spec.inputs.find((i) => rolesCompatible(role, roleOf(i)));
+		if (inlet) return { id: inlet.id, kind: inlet.kind };
+		const knob = spec.params.find((q) => !q.choices);
+		if (knob && rolesCompatible(role, 'cv')) return { id: knob.key, kind: 'mod' };
+		return null;
+	}
+
 	/** Place the chosen module where the cable was dropped and wire it up. */
 	function placeFromSearch(spec: ModuleSpec) {
 		const d = dropSearch;
 		if (!d) return;
-		const inlet = spec.inputs.find((i) => rolesCompatible(d.from.role, roleOf(i)));
+		const inlet = landingOn(spec, d.from.role);
 		if (!inlet) return;
 		const x = Math.round((d.x - 8) / GRID) * GRID;
 		const y = Math.round((d.y - 20) / GRID) * GRID;
@@ -531,7 +571,16 @@
 	function endCable(e: PointerEvent, nodeId: string, port: string, kind: PortKind) {
 		e.stopPropagation();
 		if (!pullFrom) return;
-		if (pullFrom.kind !== kind) {
+		/* Roles, not just families.
+		
+		   This compared `kind` alone, and exec is carried on cables whose ends
+		   are exec pins -- so ENTRY's THEN landed happily on OUTPUT's audio
+		   inlet, drawing a cable that could never carry anything. canLand()
+		   already knew better and was only being used to dim the sockets, which
+		   is the worst of both: the interface said no and the drop said yes. */
+		const node = graph.nodes.find((n) => n.id === nodeId);
+		const target = (node && moduleSpec(node.type))?.inputs.find((p) => p.id === port);
+		if (!target || !rolesCompatible(pullFrom.role, roleOf(target))) {
 			// Audio into a mod inlet is not a patching mistake worth guessing at:
 			// they are different signals with different ranges.
 			message = $t('synthPatch.mismatch');
@@ -572,19 +621,45 @@
 	   without colour asks you to compare outlines at 12px. Together they say
 	   what a socket carries before you drag anything at it.
 	
+	     exec    chevron, white    execution: what this note runs
 	     signal  round, white      ordinary sound
+	     mono    square, white     definitely one channel
+	     stereo  round, cyan       definitely two, on one cable -- doubled ring
 	     left    half-round, cyan  one side of a split pair
 	     right   half-round, cyan
 	     cv      diamond, amber    a control value
-	     trigger square, green     a note happening
-	     flow    square, purple    the logic chain's order */
+	     pitch   step, green      a note on a scale
+	     hz      triangle, blue    a frequency
+	     unit    diamond, red      an amount, 0..1
+	     index   hexagon, purple   a count
+	     time    square, cyan      a length of time
+	
+	   Every socket is filled. Shape and colour carry the meaning between them,
+	   and an outlined one read as disabled next to the solid ones rather than as
+	   a different kind of thing. */
 	const PORT_STYLE: Record<PortRole, { cls: string; color: string }> = {
+		exec: { cls: 'clip-chevron', color: '#ffffff' },
 		signal: { cls: 'rounded-full', color: '#ffffff' },
+		mono: { cls: 'rounded-[2px]', color: '#ffffff' },
+		stereo: { cls: 'rounded-full port-stereo', color: '#56b6c2' },
 		left: { cls: 'rounded-l-full', color: '#56b6c2' },
 		right: { cls: 'rounded-r-full', color: '#56b6c2' },
 		cv: { cls: 'rotate-45', color: '#e5c07b' },
-		trigger: { cls: 'rounded-[1px]', color: '#98c379' },
-		flow: { cls: 'rounded-[1px]', color: '#c678dd' }
+		/* One shape per kind of value, not one diamond for all of them.
+		
+		   A patch reads by shape before it reads by label, and every data pin
+		   looking alike meant a frequency and a count were the same socket until
+		   you leaned in. These are told apart at a glance and the colours follow
+		   the meaning: pitch and time are the two a musician thinks in. */
+		/* A pitch and a frequency are different types, so they are different
+		   sockets: a note on a scale is a step, a frequency is a continuous
+		   quantity pointing somewhere. Converting between them is a node, and
+		   the two shapes are what make the missing converter obvious. */
+		pitch: { cls: 'clip-step', color: '#98c379' },
+		hz: { cls: 'clip-triangle', color: '#61afef' },
+		unit: { cls: 'clip-drop', color: '#e06c75' },
+		index: { cls: 'clip-hex', color: '#c678dd' },
+		time: { cls: 'rounded-[1px] rotate-45', color: '#56b6c2' }
 	};
 
 	function portStyle(p: { kind: PortKind; role?: PortRole }) {
@@ -603,15 +678,31 @@
 	   track carries, so a curve drawn in the roll can be cabled to any knob.
 	   Every other module's ports come straight from its spec. */
 	function outletsOf(n: GraphNode, spec: ModuleSpec) {
+		/* CONST's outlet is whatever type it was set to, so a pitch constant
+		   carries a pitch socket and will not drop onto an amount. */
+		if (spec.variant && n.type === 'const') {
+			const k = CONST_KINDS[Math.round(graphParams?.[`${n.id}.kind`] ?? 0)] ?? CONST_KINDS[0];
+			return spec.outputs.map((p) => ({ ...p, role: k.role, label: k.label }));
+		}
 		if (n.type !== 'in') return spec.outputs;
+		/* One VEL, not two.
+		
+		   The velocity lane and a key's own velocity are the same quantity read
+		   two ways: the engine takes the lane when the part is playing back and
+		   the key press when it is played live. Drawing both put two sockets
+		   reading "VEL" next to each other that could only ever carry the same
+		   number, so the lane's own outlet is dropped and ENTRY's VEL pin is it.
+		   Every other lane still gets a socket, because those have no pin. */
 		return [
 			...spec.outputs,
-			...$trackLanes.map((l) => ({
-				id: laneSocketId(l.id),
-				label: l.name,
-				kind: 'mod' as const,
-				role: 'cv' as const
-			}))
+			...$trackLanes
+				.filter((l) => l.id !== VELOCITY_LANE_ID)
+				.map((l) => ({
+					id: laneSocketId(l.id),
+					label: l.name,
+					kind: 'mod' as const,
+					role: 'cv' as const
+				}))
 		];
 	}
 
@@ -744,7 +835,7 @@
 					{@const a = portPos(c.from, c.fromPort, true)}
 					{@const b = portPos(c.to, c.toPort, false)}
 					{@const role = cableRole(c)}
-					{@const isControl = role === 'cv' || role === 'trigger' || role === 'flow'}
+					{@const isControl = role === 'cv'}
 					<!-- A wide invisible path takes the clicks. A cable is 1.5-2.5px
 					     wide, which is far below what anyone can reliably hit with a
 					     mouse, so the visible line is left to look right and this
@@ -780,8 +871,8 @@
 						d={cablePath(a, b)}
 						fill="none"
 						stroke={selectedCable === i ? '#ffffff' : PORT_STYLE[role].color}
-						stroke-width={selectedCable === i ? 3.5 : isControl ? 1.5 : 2.5}
-						stroke-dasharray={role === 'cv' ? '4 3' : role === 'trigger' || role === 'flow' ? '2 3' : undefined}
+						stroke-width={selectedCable === i ? 3.5 : role === 'exec' ? 3 : isControl ? 1.5 : 2.5}
+						stroke-dasharray={role === 'cv' ? '4 3' : undefined}
 						opacity={selectedCable === i ? 1 : 0.8}
 						class="pointer-events-none"
 					/>
@@ -822,7 +913,7 @@
 							: $selectedNode === n.id
 								? 'shadow-[0_0_10px_rgba(97,175,239,0.5)]'
 								: ''}"
-						style="left: {n.x}px; top: {n.y}px; width: {NODE_W}px; height: {nodeHeight(n, spec)}px; border-color: {spec.color}{$selectedNode ===
+						style="left: {n.x}px; top: {n.y}px; width: {nodeWidth(spec)}px; height: {nodeHeight(n, spec)}px; border-color: {spec.color}{$selectedNode ===
 						n.id
 							? ''
 							: '80'}"
@@ -856,7 +947,7 @@
 						<!-- Ports: inputs down the left, outputs down the right. Positioned
 						     from portOffset() against the node's own top, which is what
 						     portPos() draws the cables to -- one formula, one place. -->
-						<div class="absolute pointer-events-none" style="left: {-BORDER}px; top: {-BORDER}px; width: {NODE_W}px; height: {nodeHeight(n, spec)}px">
+						<div class="absolute pointer-events-none" style="left: {-BORDER}px; top: {-BORDER}px; width: {nodeWidth(spec)}px; height: {nodeHeight(n, spec)}px">
 							<!-- Each socket carries its own name. Four identical dots in a
 							     column cannot be told apart or aimed at, and the tooltip only
 							     helped once you had already found the right one. Inlets label
@@ -876,11 +967,11 @@
 										? 'scale-125 shadow-[0_0_6px_currentColor]'
 										: ''}"
 									style="left: {-PORT_R}px; top: {y - PORT_R}px; position: absolute; color: {portStyle(p)
-										.color}; background: {roleOf(p) === 'signal' ? '#000' : portStyle(p).color}; border-color: {portStyle(p).color}"
+										.color}; background: {portStyle(p).color}; border-color: {portStyle(p).color}"
 								></button>
 								<span
 									class="absolute text-[7px] font-mono font-bold leading-none pointer-events-none whitespace-nowrap"
-									style="left: {PORT_R + 2}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
+									style="left: {PORT_R + 8}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
 								>{p.label}</span>
 							{/each}
 							{#each outletsOf(n, spec) as p, i (p.id)}
@@ -889,12 +980,12 @@
 									onpointerdown={(e) => startCable(e, n.id, p.id, p.kind)}
 									title={p.label}
 									class="absolute w-3 h-3 border cursor-crosshair pointer-events-auto transition-opacity {portStyle(p).cls}"
-									style="left: {NODE_W - PORT_R}px; top: {y - PORT_R}px; position: absolute; color: {portStyle(p)
+									style="left: {nodeWidth(spec) - PORT_R}px; top: {y - PORT_R}px; position: absolute; color: {portStyle(p)
 										.color}; background: {portStyle(p).color}; border-color: {portStyle(p).color}"
 								></button>
 								<span
 									class="absolute text-[7px] font-mono font-bold leading-none pointer-events-none whitespace-nowrap text-right"
-									style="right: {PORT_R + 2}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
+									style="right: {PORT_R + 8}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
 								>{p.label}</span>
 							{/each}
 						</div>
@@ -1046,3 +1137,38 @@
 	</div>
 </div>
 </div>
+
+<style>
+	/* Blueprint's execution pin: a chevron rather than a dot, because execution
+	   is the one thing on the canvas that has a direction. A round socket says
+	   "something connects here"; this says which way it goes. */
+	:global(.clip-chevron) {
+		clip-path: polygon(0% 0%, 55% 0%, 100% 50%, 55% 100%, 0% 100%, 40% 50%);
+	}
+
+	/* Two channels on one cable, drawn as two rings. Countable at a glance,
+	   which is the question a stereo socket is actually answering. */
+	:global(.port-stereo) {
+		box-shadow: 0 0 0 1px #000, 0 0 0 2.5px currentColor;
+	}
+
+	/* A pitch is discrete -- a step on a scale, not a point on a continuum. */
+	:global(.clip-step) {
+		clip-path: polygon(0% 50%, 50% 50%, 50% 0%, 100% 0%, 100% 50%, 50% 50%, 50% 100%, 0% 100%);
+	}
+
+	/* A frequency points somewhere on a continuum. */
+	:global(.clip-triangle) {
+		clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+	}
+
+	/* An amount, drawn as one: full at the top, nothing at the point. */
+	:global(.clip-drop) {
+		clip-path: polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%);
+	}
+
+	/* A count -- discrete, so a shape with sides you could number. */
+	:global(.clip-hex) {
+		clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+	}
+</style>

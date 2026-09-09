@@ -46,7 +46,32 @@
 		ring: 'M8 8m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0M4 4l8 8M12 4l-8 8',
 		invert: 'M2 5h5q3 0 3 3t3 3h1M2 11h5',
 		mix: 'M2 4h4l4 4 4 4M2 12h4l4-4',
-		out: 'M4 8h9M10 5l3 3-3 3M2 3v10'
+		out: 'M4 8h9M10 5l3 3-3 3M2 3v10',
+		// STEREO: one line in, two out -- and the pair that turns sound into numbers.
+		split: 'M2 8h5l5-4M7 8l5 4',
+		merge: 'M2 4l5 4H2m0 0h5m0 0l5-4v8z',
+		break: 'M2 8h4M10 4h4M10 12h4M6 8l4-4M6 8l4 4',
+		make: 'M2 4h4M2 12h4M6 4l4 4-4 4M10 8h4',
+		mono: 'M2 5h4M2 11h4M6 5l4 3-4 3M10 8h4',
+		// METER: what the signal looks like at this point.
+		scope: 'M1 8q3-6 5 0t5 0 4-4M1 2v12',
+		fft: 'M2 13V7M5 13V4M8 13V9M11 13V6M14 13V11',
+		loud: 'M2 11h2v2H2zM6 8h2v5H6zM10 5h2v8h-2z',
+		// LOGIC: the execution chain.
+		seq: 'M2 8h4M6 5l3 3-3 3M10 8h4M12 4v8',
+		when: 'M8 2l6 6-6 6-6-6z',
+		act: 'M4 2v12l9-6z',
+		// MATH: the operator, or the shape of what it does to a value.
+		const: 'M4 4h8M8 4v9M5 13h6',
+		add: 'M8 3v10M3 8h10',
+		mul: 'M4 4l8 8M12 4l-8 8',
+		remap: 'M2 12h5M9 4h5M2 12l7-8',
+		clamp: 'M2 5h12M2 11h12M8 5v6',
+		lerp: 'M2 12L14 4M2 12h2M12 4h2M7 8h2',
+		curve: 'M2 13q8 0 11-10',
+		// The two conversions: a note becoming a wave, and a wave becoming a note.
+		tofreq: 'M3 4v7a2 2 0 1 0 2-2V4h3M11 8q1.5-3 3 0',
+		topitch: 'M2 8q1.5-3 3 0M8 4v7a2 2 0 1 0 2-2V4h3'
 	};
 
 	let d = $derived(PATHS[type] ?? 'M8 8m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0');

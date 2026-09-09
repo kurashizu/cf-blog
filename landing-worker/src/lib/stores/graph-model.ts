@@ -21,20 +21,52 @@
  * and what the search offers when you drag into empty space -- so that "what
  * can I plug in here" is answerable before you try it rather than after.
  */
-export type PortKind = 'audio' | 'mod';
+/* Three families of cable, after Unreal's Blueprints.
+ *
+ *   exec  -- execution. Which modules this note runs, in what order. White.
+ *   audio -- sound.
+ *   mod   -- control values.
+ *
+ * The split is the whole point. Before it, a source scheduled its envelope
+ * against the note time and sounded whether or not anything was patched into
+ * it: ENTRY could sit unwired and the drum still played, so editing the canvas
+ * changed nothing you could hear. Execution being its own wire is what makes a
+ * cable mean something -- an unreached module never runs. */
+export type PortKind = 'exec' | 'audio' | 'mod';
 
 export type PortRole =
 	/** Ordinary sound, mono or stereo -- whatever arrives. */
 	| 'signal'
+	/** Sound that is definitely one channel. */
+	| 'mono'
+	/** Sound that is definitely two: a pair travelling one cable. */
+	| 'stereo'
 	/** One side of a split pair. */
 	| 'left'
 	| 'right'
 	/** A control voltage: an envelope, an LFO, anything that drives a param. */
 	| 'cv'
-	/** A note happening. Carries timing, not a value. */
-	| 'trigger'
-	/** The logic chain's execution order -- WHEN's answer into ACT. */
-	| 'flow';
+	/** A frequency in Hz: a continuous quantity an oscillator can take. */
+	| 'hz'
+	/**
+	 * A pitch: a place on a scale, counted in semitones.
+	 *
+	 * Not the same type as a frequency, and not interchangeable with one. Pitch
+	 * to frequency is exact; frequency to pitch is a quantisation, and which
+	 * note 452 Hz "is" depends on a tuning reference and a rounding rule. Making
+	 * them one type would hide that decision inside whichever module happened to
+	 * do the conversion -- so the conversion is a node you can see, and an
+	 * oscillator takes the frequency because that is what it oscillates at.
+	 */
+	| 'pitch'
+	/** How hard, how much: 0..1. */
+	| 'unit'
+	/** A count of something -- a key, a step, a mode. */
+	| 'index'
+	/** A length of time. */
+	| 'time'
+	/** Blueprint's white execution pin: this module runs when the note fires. */
+	| 'exec';
 
 export interface PortSpec {
 	id: string;
@@ -46,7 +78,9 @@ export interface PortSpec {
 
 /** The role a port plays, falling back to its family's ordinary one. */
 export function roleOf(p: { kind: PortKind; role?: PortRole }): PortRole {
-	return p.role ?? (p.kind === 'audio' ? 'signal' : 'cv');
+	if (p.role) return p.role;
+	if (p.kind === 'exec') return 'exec';
+	return p.kind === 'audio' ? 'signal' : 'cv';
 }
 
 /* Which roles may meet.
@@ -58,15 +92,50 @@ export function roleOf(p: { kind: PortKind; role?: PortRole }): PortRole {
  * -- which is what the two families already encoded. Roles sharpen the message
  * and the highlighting rather than adding new prohibitions. */
 export function rolesCompatible(from: PortRole, to: PortRole): boolean {
-	const AUDIO: PortRole[] = ['signal', 'left', 'right'];
-	const fromAudio = AUDIO.includes(from);
-	const toAudio = AUDIO.includes(to);
-	if (fromAudio !== toAudio) return false;
-	if (fromAudio) return true;
-	// Control side: a trigger drives flow and triggers; a CV drives CV.
-	if (to === 'flow') return from === 'trigger' || from === 'flow';
-	if (to === 'trigger') return from === 'trigger';
-	return from === 'cv';
+	const family = (r: PortRole): 'exec' | 'audio' | 'control' => {
+		if (r === 'exec') return 'exec';
+		if (r === 'signal' || r === 'mono' || r === 'stereo' || r === 'left' || r === 'right') return 'audio';
+		return 'control';
+	};
+	// Like joins like. Execution is not sound and sound is not a value; a cable
+	// between two of them could not carry anything, so it is not drawn.
+	if (family(from) !== family(to)) return false;
+	if (family(from) === 'audio') {
+		/* One channel and two are different types, and converting between them
+		   is a node you can see.
+		
+		   Web Audio would fold a pair into a mono inlet and centre a single into
+		   a stereo one without saying so, which is convenient and hides what
+		   happened: a patch that sounds narrow gives no hint that a stereo stage
+		   was collapsed three modules upstream. Refusing the cable puts MONO or
+		   MERGE on the canvas, where the conversion is visible and movable.
+		
+		   `signal` stays permissive, for the modules that take whatever arrives
+		   and hand back the same shape: a filter does not care how many channels
+		   it is given, and making every one of them declare a width would be
+		   noise rather than information. */
+		if (from === 'signal' || to === 'signal') return true;
+		/* Width is the only thing that discriminates, and `left`, `right` and
+		   `mono` are all one channel.
+		
+		   Grouping the sides with `stereo` was the obvious reading and made three
+		   ordinary patches undrawable: MONO could not reach OUT at all -- the one
+		   thing the module exists to do -- and neither BREAK's MID into MERGE nor
+		   SPLIT's L into MAKE would connect, so the two decompose/recompose pairs
+		   were walled off from each other. A side of a split pair is a single
+		   channel; that is what splitting it produced. */
+		const width = (r: PortRole) => (r === 'stereo' ? 2 : 1);
+		return width(from) === width(to);
+	}
+	/* A pitch is not a frequency.
+	
+	   One is a place on a scale, the other a rate in hertz. Converting is FREQ
+	   or PITCH on the canvas: one direction is exact and the other quantises,
+	   and which note a stray frequency becomes depends on a tuning reference and
+	   a rounding rule. Both are decisions worth seeing rather than ones made
+	   silently inside whichever module happened to take the cable. */
+	if (from === 'pitch' || to === 'pitch') return from === 'pitch' && to === 'pitch';
+	return true;
 }
 
 export interface GraphNode {
@@ -102,14 +171,44 @@ export const EMPTY_GRAPH: RackGraph = { nodes: [], cables: [] };
 export const ENTRY_ID = 'entry';
 export const OUTPUT_ID = 'output';
 
-/** A patch with nothing in it yet: the note arrives, and leaves unchanged. */
+/** The oscillator every blank patch starts as. */
+export const SEED_OSC_ID = 'osc-1';
+
+/** The pitch-to-frequency converter every blank patch starts with. */
+export const SEED_FREQ_ID = 'freq-1';
+
+/**
+ * A new patch: the smallest thing that plays.
+ *
+ * An oscillator following the keyboard into the output -- three modules and two
+ * cables, which is a sine you can play the moment ADV is switched on. A blank
+ * canvas is technically the honest starting point and practically the wrong
+ * one: it says nothing about how the pieces go together, and the first thing
+ * anyone does is rebuild this by hand before they can hear anything at all.
+ *
+ * It also shows the rule that is easiest to miss: PITCH is a cable. Unplug it
+ * and the oscillator holds its own frequency, which is what makes a drone or a
+ * drum; leave it and the patch tracks the keys.
+ */
 export function startingGraph(): RackGraph {
 	return {
 		nodes: [
 			{ id: ENTRY_ID, type: 'in', x: 64, y: 128 },
-			{ id: OUTPUT_ID, type: 'out', x: 448, y: 128 }
+			{ id: SEED_FREQ_ID, type: 'tofreq', x: 264, y: 176 },
+			{ id: SEED_OSC_ID, type: 'osc', x: 456, y: 144 },
+			{ id: OUTPUT_ID, type: 'out', x: 688, y: 128 }
 		],
-		cables: [{ from: ENTRY_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }]
+		cables: [
+			/* Execution first: OUT hands the patch to the master when the note
+			   runs it, so without this the sound arrives and is never let out. */
+			{ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' },
+			/* The note is a pitch; an oscillator takes a frequency. The converter
+			   between them is the fourth module here rather than something the
+			   oscillator does quietly, because the tuning reference is a choice. */
+			{ from: ENTRY_ID, fromPort: 'pitch', to: SEED_FREQ_ID, toPort: 'a' },
+			{ from: SEED_FREQ_ID, fromPort: 'out', to: SEED_OSC_ID, toPort: 'pitch' },
+			{ from: SEED_OSC_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
+		]
 	};
 }
 
@@ -159,18 +258,31 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 	const hasOutput = g.nodes.some((n) => n.id === OUTPUT_ID);
 	if (hasEntry && hasOutput) return cables === g.cables ? g : { nodes: g.nodes, cables };
 
+	/* Nothing on the canvas at all: this is a new patch, so it becomes the seed
+	   rather than a bare pair of endpoints with the seed's cables pointing at an
+	   oscillator that was never added. */
+	if (g.nodes.length === 0) return startingGraph();
+
+	/* Restore whichever end is missing.
+	
+	   By id, not by position: the seed patch has an oscillator in the middle of
+	   it now, so `nodes[1]` is no longer the output and taking it by index would
+	   graft an OSC onto a patch that only wanted its endpoint back. */
 	const seed = startingGraph();
+	const seedEntry = seed.nodes.find((n) => n.id === ENTRY_ID)!;
+	const seedOutput = seed.nodes.find((n) => n.id === OUTPUT_ID)!;
 	const nodes = [...g.nodes];
-	if (!hasEntry) nodes.unshift(seed.nodes[0]);
+	if (!hasEntry) nodes.unshift(seedEntry);
 	if (!hasOutput) {
 		// Clear of whatever is already there, so a restored end is not buried.
 		const right = g.nodes.reduce((m, n) => Math.max(m, n.x), 0);
-		nodes.push({ ...seed.nodes[1], x: Math.max(seed.nodes[1].x, right + 200) });
+		nodes.push({ ...seedOutput, x: Math.max(seedOutput.x, right + 200) });
 	}
 	return {
 		nodes,
-		// Only wire the pair together on an otherwise blank canvas.
-		cables: g.nodes.length === 0 ? seed.cables : cables
+		// A patch that already has modules keeps its own wiring: the seed's
+		// cables name nodes it does not have.
+		cables
 	};
 }
 

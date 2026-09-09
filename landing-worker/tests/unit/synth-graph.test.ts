@@ -3,6 +3,8 @@ import {
 	ENTRY_ID,
 	OUTPUT_ID,
 	startingGraph,
+	SEED_OSC_ID,
+	SEED_FREQ_ID,
 	isFixedNode,
 	graphOf,
 	wouldCycle,
@@ -13,8 +15,10 @@ import {
 	graphParamKey,
 	pruneGraphParams,
 	type RackGraph,
-	type GraphCable
+	type GraphCable,
+	rolesCompatible
 } from '../../src/lib/stores/graph-model';
+import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
 
 /**
  * The two rules the patch bay rests on: which cables are legal, and what order
@@ -88,15 +92,24 @@ describe('graphOf', () => {
 		['cables not an array', { rackGraph: { nodes: [], cables: null } }]
 	])('falls back to a starting graph for %s', (_label, track) => {
 		const out = graphOf(track as never);
-		expect(out.nodes.map((n) => n.id)).toEqual([ENTRY_ID, OUTPUT_ID]);
-		expect(out.cables).toHaveLength(1);
+		expect(out.nodes.map((n) => n.type)).toEqual(['in', 'tofreq', 'osc', 'out']);
+		expect(out.cables.length).toBeGreaterThan(0);
 	});
 
-	it('wires the pair together only when the canvas was blank', () => {
+	it('seeds a playable patch only when the canvas was blank', () => {
 		const blank = graphOf({ rackGraph: { nodes: [], cables: [] } });
-		expect(blank.cables).toEqual([
-			{ from: ENTRY_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
-		]);
+		expect(blank.nodes.map((n) => n.type)).toEqual(['in', 'tofreq', 'osc', 'out']);
+		/* The note is a pitch and an oscillator takes a frequency, so the
+		   converter between them is part of the seed. */
+		expect(blank.cables).toContainEqual({
+			from: ENTRY_ID, fromPort: 'pitch', to: SEED_FREQ_ID, toPort: 'a'
+		});
+		expect(blank.cables).toContainEqual({
+			from: SEED_FREQ_ID, fromPort: 'out', to: SEED_OSC_ID, toPort: 'pitch'
+		});
+		expect(blank.cables).toContainEqual({
+			from: SEED_OSC_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in'
+		});
 	});
 });
 
@@ -233,13 +246,19 @@ describe('graph parameters', () => {
  * loudly -- it just drew a patch you could not have built yourself.
  */
 describe('the fixed ends', () => {
-	it('starts every graph with an entry and an output, already wired', () => {
+	it('starts as the smallest patch that plays', () => {
+		/* Not a blank canvas. An empty patch is the honest starting point and
+		   the useless one: it says nothing about how the pieces fit, and the
+		   first thing anyone does is rebuild this by hand before they can hear
+		   anything. */
 		const g = startingGraph();
-		expect(g.nodes.map((n) => n.type)).toEqual(['in', 'out']);
-		expect(g.nodes.map((n) => n.id)).toEqual([ENTRY_ID, OUTPUT_ID]);
-		expect(g.cables).toEqual([
-			{ from: ENTRY_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
-		]);
+		expect(g.nodes.map((n) => n.type)).toEqual(['in', 'tofreq', 'osc', 'out']);
+		expect(g.nodes.map((n) => n.id)).toEqual([ENTRY_ID, SEED_FREQ_ID, SEED_OSC_ID, OUTPUT_ID]);
+		// OUT is an action: without the exec cable the sound arrives and is
+		// never let out.
+		expect(g.cables).toContainEqual({
+			from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec'
+		});
 	});
 
 	it('protects both ends and nothing else', () => {
@@ -254,10 +273,11 @@ describe('the fixed ends', () => {
 	it('hands back a fresh graph each time, so one patch cannot edit another', () => {
 		const a = startingGraph();
 		const b = startingGraph();
+		const before = b.cables.length;
 		a.nodes[0].x = 999;
 		a.cables.push(cable(ENTRY_ID, ENTRY_ID));
 		expect(b.nodes[0].x).not.toBe(999);
-		expect(b.cables).toHaveLength(1);
+		expect(b.cables).toHaveLength(before);
 	});
 
 	it('orders the entry before everything and the output after', () => {
@@ -267,5 +287,81 @@ describe('the fixed ends', () => {
 		};
 		const order = topoOrder(g, g.cables)?.map((n) => n.id);
 		expect(order).toEqual([ENTRY_ID, 'str', OUTPUT_ID]);
+	});
+});
+
+/**
+ * The Blueprint rules: execution is its own wire, and ADV is its own instrument.
+ *
+ * Both are pinned here because both were silently broken for a long time and
+ * neither failed loudly. Every source used to schedule its envelope against the
+ * note time and sound whatever the canvas said, so ENTRY could sit unwired and a
+ * drum still played -- cables were decorative, and editing them changed nothing
+ * you could hear. And ENTRY handed the racks 1-7 voice into every patch, so an
+ * ADV kit built entirely from EXCT and MODES still had an oscillator underneath
+ * it that could only be silenced by zeroing four gains in each preset.
+ */
+describe('execution flow', () => {
+	const specOf = (id: string) => MODULE_SPECS.find((m) => m.id === id)!;
+
+	it('gives ENTRY a THEN pin and no audio outlet', () => {
+		const entry = specOf('in');
+		expect(entry.outputs.some((p) => p.kind === 'exec')).toBe(true);
+		// ADV is a complete signal path; nothing hands racks 1-7 into it.
+		expect(entry.outputs.some((p) => p.kind === 'audio')).toBe(false);
+	});
+
+	it('publishes what the key press was, so velocity can drive timbre', () => {
+		const outs = specOf('in').outputs.map((p) => p.id);
+		for (const pin of ['pitch', 'vel', 'note', 'gate']) expect(outs).toContain(pin);
+	});
+
+	it('keeps exec off the sound modules', () => {
+		/* Execution says which nodes run; audio runs because audio is wired into
+		   it. Giving a source an exec pin as well meant two cables saying one
+		   thing, with silence as the penalty for drawing only the obvious one. */
+		for (const id of ['osc', 'noise', 'excite', 'sub', 'pulse', 'bow', 'reed', 'modes', 'env', 'lfo']) {
+			expect(specOf(id).inputs.some((p) => p.kind === 'exec')).toBe(false);
+		}
+	});
+
+	it('leaves the pure nodes without exec pins, as Blueprint does', () => {
+		// A filter starts nothing and holds nothing: asking when it runs has no
+		// answer to give. Same for the arithmetic.
+		for (const id of ['filter', 'vca', 'add', 'mul', 'remap', 'clamp', 'lerp', 'curve', 'const']) {
+			expect(specOf(id).inputs.some((p) => p.kind === 'exec')).toBe(false);
+		}
+	});
+
+	it('keeps each family of cable to itself', () => {
+		expect(rolesCompatible('exec', 'exec')).toBe(true);
+		expect(rolesCompatible('exec', 'signal')).toBe(false);
+		expect(rolesCompatible('signal', 'exec')).toBe(false);
+		expect(rolesCompatible('cv', 'exec')).toBe(false);
+		// The bug this pins: THEN landed on OUTPUT's audio inlet, because the
+		// canvas compared kind and never role.
+		expect(rolesCompatible('exec', 'mono')).toBe(false);
+		expect(rolesCompatible('cv', 'signal')).toBe(false);
+	});
+
+	it('gives WHEN and ACT exec pins rather than a second kind of trigger', () => {
+		// ENTRY had a TRIG outlet for the logic chain alongside THEN, which is
+		// two pins for one idea: Blueprint runs a branch on the execution wire.
+		expect(specOf('in').outputs.some((p) => p.id === 'trig')).toBe(false);
+		expect(specOf('when').inputs.some((p) => p.kind === 'exec')).toBe(true);
+		expect(specOf('act').inputs.some((p) => p.kind === 'exec')).toBe(true);
+	});
+
+	it('makes one channel and two different types', () => {
+		/* Web Audio would fold a pair into a mono inlet without saying so, and a
+		   patch that sounds narrow gives no hint that a stereo stage collapsed
+		   three modules upstream. Refusing the cable puts MONO or MERGE on the
+		   canvas, where the conversion can be seen. */
+		expect(rolesCompatible('stereo', 'mono')).toBe(false);
+		expect(rolesCompatible('mono', 'stereo')).toBe(false);
+		// `signal` stays permissive: a filter does not care how many channels
+		// it is given, and making every one declare a width would be noise.
+		expect(rolesCompatible('mono', 'signal')).toBe(true);
+		expect(rolesCompatible('signal', 'stereo')).toBe(true);
 	});
 });

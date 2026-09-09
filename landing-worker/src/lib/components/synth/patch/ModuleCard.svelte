@@ -58,9 +58,12 @@
 </script>
 
 <!-- Wider side padding than top and bottom: the port labels are drawn over the
-     card's edges by the canvas, and with even padding they sat right against
+     card's edges by the canvas, so the controls need a gutter to keep out of.
+     Twelve pixels was not enough once the labels moved clear of the sockets --
+     OSC's waveform row ran under its own FREQ label. The old note said they sat
+     right against
      the knob names -- IN touching AMT, OUT touching BIAS. The gutter is theirs. -->
-<div class="flex flex-col gap-1 py-1 px-3">
+<div class="flex flex-col gap-1 py-1 px-6">
 	{#each selectors as p (p.key)}
 		<div class="grid gap-0.5" style="grid-template-columns: repeat({p.choices?.length ?? 1}, minmax(0, 1fr))">
 			{#each p.choices ?? [] as choice, ci (choice)}
@@ -136,6 +139,7 @@
 						color={spec.color}
 						size={26}
 						reset={p.def}
+						scale={p.scale ?? 'linear'}
 						onChange={(v) => onParam(p.key, v)}
 					/>
 				</div>

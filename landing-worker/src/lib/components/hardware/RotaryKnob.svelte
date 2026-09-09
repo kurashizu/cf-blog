@@ -15,6 +15,7 @@
 		size = 26,
 		description,
 		reset,
+		scale = 'linear',
 		onChange
 	}: {
 		label: string;
@@ -28,13 +29,44 @@
 		description?: string;
 		/** Neutral value the control snaps back to on right-click; omit to disable. */
 		reset?: number;
+		/* How the angle maps to the value.
+		
+		   `log` is for the multiplying controls -- a ratio, a rate -- where
+		   halving and doubling are the same size of change. A RATIO of
+		   0.125..8 on a linear dial puts 1x an eighth of the way round, so
+		   every interval anyone reaches for is crushed into the first sliver of
+		   travel; in log space 1x sits at twelve o'clock with an octave either
+		   side of centre. Requires a positive range, since log of zero or a
+		   negative has no meaning. */
+		scale?: 'linear' | 'log';
 		onChange: (val: number) => void;
 	} = $props();
 
 	let isDragging = $state(false);
 
-	let pct = $derived(Math.max(0, Math.min(1, (value - min) / (max - min))));
+	/* Value <-> knob travel. Kept as a pair so the dial and the drag agree: they
+	   were two separate mappings once, and a log knob would have drawn its
+	   pointer in one place and moved in another. */
+	const logOk = $derived(scale === 'log' && min > 0 && max > 0);
+	function toPct(v: number): number {
+		const t = logOk
+			? (Math.log(Math.max(min, v)) - Math.log(min)) / (Math.log(max) - Math.log(min))
+			: (v - min) / (max - min);
+		return Math.max(0, Math.min(1, t));
+	}
+	function fromPct(t: number): number {
+		const c = Math.max(0, Math.min(1, t));
+		return logOk ? Math.exp(Math.log(min) + c * (Math.log(max) - Math.log(min))) : min + c * (max - min);
+	}
+
+	let pct = $derived(toPct(value));
 	let angle = $derived(-135 + pct * 270);
+
+	/* Back onto the declared step, so a ratio reads 2 rather than 1.99. */
+	function snapLog(v: number): number {
+		const snapped = Math.round(v / step) * step;
+		return Math.max(min, Math.min(max, snapped));
+	}
 
 	function formatDisplay(v: number): string {
 		if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
@@ -102,11 +134,14 @@
 	<div
 		use:draggable={{
 			mode: 'relative',
-			min,
-			max,
-			step,
-			getValue: () => value,
-			onChange,
+			/* A log knob drags in travel, not in value: a fixed step in Hz is a
+			   huge move at the bottom of the range and imperceptible at the top,
+			   which is the same crushing the scale exists to undo. */
+			min: logOk ? 0 : min,
+			max: logOk ? 1 : max,
+			step: logOk ? 0.005 : step,
+			getValue: () => (logOk ? toPct(value) : value),
+			onChange: (v: number) => onChange(logOk ? snapLog(fromPct(v)) : v),
 			onDragStart: () => (isDragging = true),
 			onDragEnd: () => (isDragging = false)
 		}}

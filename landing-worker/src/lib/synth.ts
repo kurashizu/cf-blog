@@ -1,5 +1,6 @@
 import { laneAt, lanesOf, laneToVelocity, VELOCITY_LANE_ID, type NoteLane } from './stores/note-lanes';
-import { MOD_PORT_IDS } from './stores/synth-modules';
+import { MOD_PORT_IDS, EXEC_PORT_IDS, MODULE_SPECS } from './stores/synth-modules';
+import { createResolver, execReach, execDelays, runs, PURE_NODES } from './stores/node-graph';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -973,21 +974,92 @@ class ModularSynth {
     ctx: BaseAudioContext,
     graph: { nodes: { id: string; type: string }[]; cables: { from: string; fromPort: string; to: string; toPort: string }[] },
     params: Record<string, number>,
-    voiceIn: AudioNode,
     baseFreq: number,
     t: number,
     heldSec: number,
     laneValues: Record<string, number> = {},
-    presetGain = 1
+    presetGain = 1,
+    /* What the key press itself was. ENTRY publishes these as pins, so a patch
+       can wire velocity to brightness the way a real drum has it rather than
+       only to level. */
+    note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 }
   ): { out: AudioNode; sources: AudioScheduledSourceNode[] } | null {
     /* Read from the catalogue rather than listed here. The list this replaces
        said ['fm','cv'] and had fallen behind the modules: pwm, trig and do are
        mod ports too, so a PWM cable was sorted as audio, found PULSE has no
        audio inlet, and was silently dropped. */
-    const isMod = (c: { toPort: string; fromPort: string }) =>
-      MOD_PORT_IDS.has(c.toPort) || c.fromPort.startsWith('lane:');
-    const audioCables = graph.cables.filter((c) => !isMod(c));
-    const modCables = graph.cables.filter((c) => isMod(c));
+    const isExec = (c: { to: string; toPort: string; from: string; fromPort: string }) =>
+      portKind(c.to, c.toPort, 'in') === 'exec' && portKind(c.from, c.fromPort, 'out') === 'exec';
+    /* What kind of cable is this?
+    
+       Asked of the port on the module it lands on, not of the port's name.
+       Matching bare ids across the whole catalogue looked equivalent and is
+       not: `b` is an audio inlet on RING, SUM, DIFF and MIX and a value inlet
+       on ADD, MUL and LERP, so every audio `b` in the instrument was being
+       sorted as control -- it went looking for an AudioParam, found none, and
+       vanished. RING was silent however it was wired. `out` is worse: it is the
+       audio outlet of thirty modules and the value outlet of seven.
+    
+       A port belongs to a module. Look it up there. */
+    const specById = new Map(MODULE_SPECS.map((m) => [m.id, m]));
+    const typeOfNode = new Map(graph.nodes.map((n) => [n.id, n.type]));
+    const portKind = (nodeId: string, portId: string, side: 'in' | 'out'): string | undefined => {
+      const spec = specById.get(typeOfNode.get(nodeId) ?? '');
+      if (!spec) return undefined;
+      const list = side === 'in' ? spec.inputs : spec.outputs;
+      const port = list.find((q) => q.id === portId);
+      if (port) return port.kind;
+      // A knob is an inlet too, and always a control one.
+      if (side === 'in' && spec.params.some((q) => q.key === portId)) return 'mod';
+      return undefined;
+    };
+    const isMod = (c: { to: string; toPort: string; from: string; fromPort: string }) =>
+      c.fromPort.startsWith('lane:') || portKind(c.to, c.toPort, 'in') === 'mod';
+    const execCables = graph.cables.filter(isExec);
+    const audioCables = graph.cables.filter((c) => !isExec(c) && !isMod(c));
+    const modCables = graph.cables.filter((c) => !isExec(c) && isMod(c));
+
+
+    /* Values and execution, both resolved in one place.
+    
+       Every module reads its inputs through the resolver and reaches past it for
+       nothing, which is what makes "an unwired socket falls back to its default"
+       true everywhere at once. It used to be written per module and was
+       therefore wrong per module: OSC read the key it was played from whatever
+       its PITCH socket said, MODES consulted a knob and never the socket,
+       STRING declared a socket the builder never read.
+    
+       See docs/node-graph.md for the contract, and stores/node-graph.ts for the
+       implementation. */
+    const resolver = createResolver(graph, params, {
+      /* Semitones from the tuning reference, not hertz. ENTRY publishes a pitch
+         and an oscillator takes a frequency, so a patch converts through FREQ --
+         which is where the reference is chosen rather than assumed.
+      
+         Measured against master tuning so the round trip is exact: baseFreq
+         already carries the tuning scale, and dividing it back out means a
+         pitch through FREQ lands on the frequency the key actually plays,
+         whatever A4 is set to. */
+      pitch: 12 * Math.log2(Math.max(1e-6, baseFreq) / this.masterTuningFreq),
+      tuning: this.masterTuningFreq,
+      velocity: note.velocity,
+      noteIndex: note.noteIndex,
+      gate: heldSec,
+      lanes: laneValues
+    });
+    const cvIn = (nodeId: string, port: string, fallback: number) =>
+      resolver.input(nodeId, port, fallback);
+
+    /* Which nodes this note runs. Execution is Blueprint's white wire: it
+       reaches the nodes that *do* something -- WHEN asks, ACT mutes, OUT hands
+       the patch to the master bus -- and a patch that draws no exec cable at all
+       runs everything, so the simplest patch stays the simplest. */
+    const reach = execReach(graph, EXEC_PORT_IDS);
+    const outputRuns = (id: string) => runs(reach, id);
+    /* When each node runs, in seconds after the note. Zero for everything the
+       event reaches directly; SEQ adds its gap as execution passes through, so
+       a strike wired downstream of one lands late -- which is a flam. */
+    const delays = execDelays(graph, params, EXEC_PORT_IDS);
 
     // Kahn's algorithm; a cycle here means a hand-edited patch file, since the
     // editor refuses to draw one.
@@ -1018,32 +1090,50 @@ class ModularSynth {
         in2?: AudioNode;
         out: AudioNode;
         out2?: AudioNode;
-        mod: Map<string, AudioNode>;
-        isVoiceIn?: boolean;
+        mod: Map<string, AudioNode | AudioParam>;
         isOutput?: boolean;
         laneOuts?: Map<string, AudioNode>;
       }
     >();
     const sources: AudioScheduledSourceNode[] = [];
-    /* With an IN module the patch says where the voice enters, so nothing else
-       should also receive it by default. */
-    const hasExplicitIn = graph.nodes.some((n) => n.type === 'in');
     const typeById = new Map(graph.nodes.map((n) => [n.id, n.type]));
-    /* Modules whose output is control rather than sound. They are never part of
-       the mix, however they are wired. */
-    const MOD_ONLY_TYPES = new Set(['env', 'lfo']);
+    /* Modules whose output is a value, not a sound. A CONST left unwired must
+       not be summed into the mix -- it is DC, and DC is a click and then a
+       silent offset eating headroom. */
+    const MOD_ONLY_TYPES = new Set([
+      'env', 'lfo',
+      'const', 'add', 'mul', 'remap', 'clamp', 'lerp', 'curve',
+      'tofreq', 'topitch'
+    ]);
 
     for (const node of order) {
-      const p = (key: string, def: number) => params[`${node.id}.${key}`] ?? def;
-      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, t, heldSec, sources, node.id, laneValues);
+      /* A knob reads its cable first, and its own setting when there is none.
+      
+         Blueprint has no separate notion of "modulatable" inputs: a pin either
+         has something plugged into it or it uses its default. Doing the same
+         here is what lets ENTRY's VEL reach a strike's TONE at all -- the mod
+         map only ever registered a handful of hand-named ports (`fm`, `cv`,
+         `pwm`), so every other knob was unreachable by cable no matter what the
+         canvas showed. */
+      const p = (key: string, def: number) => cvIn(node.id, key, params[`${node.id}.${key}`] ?? def);
+      const runAt = t + (delays.get(node.id) ?? 0);
+      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, runAt, heldSec, sources, node.id, laneValues, cvIn, note, heldSec);
       if (!made) continue;
+
       built.set(node.id, made);
 
       /* Feed it. A cable decides where a signal goes; the voice from racks 1-7
          only arrives on its own when the patch has no IN module to say so, which
          keeps older patches sounding as they did. */
       const feeds = audioCables.filter((c) => c.to === node.id);
-      if (made.isVoiceIn) voiceIn.connect(made.out);
+      /* ADV is its own instrument.
+      
+         ENTRY used to hand the racks 1-7 voice through unconditionally, so every
+         patch was the subtractive synth *plus* whatever was wired: a kit built
+         entirely from EXCT and MODES still had an oscillator underneath it, and
+         the only way to silence it was to zero four gains in every preset. ADV
+         and the racks are two instruments rather than two views of one, so
+         switching to ADV plays what the canvas says and nothing else. */
       if (made.in) {
         if (feeds.length) {
           for (const c of feeds) {
@@ -1055,8 +1145,6 @@ class ModularSynth {
             const from = c.fromPort === 'r' && src.out2 ? src.out2 : src.out;
             from.connect(dest);
           }
-        } else if (!hasExplicitIn) {
-          voiceIn.connect(made.in);
         }
       }
     }
@@ -1073,7 +1161,12 @@ class ModularSynth {
         ? src.laneOuts?.get(c.fromPort.slice(5))
         : undefined;
       const from = laneSrc ?? (c.fromPort === 'r' && src.out2 ? src.out2 : src.out);
-      from.connect(param);
+      /* An AudioParam and an AudioNode are both legitimate destinations, and
+         TypeScript needs telling which overload applies. A param destination is
+         what makes a signal into PITCH mean FM rather than needing an inlet of
+         its own with a depth baked into it. */
+      if (param instanceof AudioParam) from.connect(param);
+      else from.connect(param);
     }
 
     /* Where the patch leaves.
@@ -1085,9 +1178,11 @@ class ModularSynth {
        they did and lets a two-ended patch run two voices in parallel. */
     const sink = ctx.createGain();
     let any = false;
-    const outs = [...built.values()].filter((m) => m.isOutput);
+    const outs = [...built.entries()].filter(([, m]) => m.isOutput);
     if (outs.length) {
-      for (const m of outs) {
+      for (const [id, m] of outs) {
+        // An OUT execution never reached does not pass anything on.
+        if (!outputRuns(id)) continue;
         m.out.connect(sink);
         any = true;
       }
@@ -1134,7 +1229,13 @@ class ModularSynth {
     /* What each lane read at this note, 0..1, keyed by lane id. ENTRY turns
        these into CV outlets, which is what makes a curve drawn in the roll and
        a cable in the patch bay the same thing. */
-    laneValues: Record<string, number> = {}
+    laneValues: Record<string, number> = {},
+    /* What a value inlet reads: the pure node wired into it, or the fallback
+       when nothing is. Resolved by the caller, which knows the graph. */
+    cvIn: (nodeId: string, port: string, fallback: number) => number = (_n, _p, f) => f,
+    /* The event's own data, for ENTRY's output pins. */
+    note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 },
+    gateSec = 0
   ): {
     in: AudioNode | null;
     /** A second audio inlet, for the modules that take two signals. */
@@ -1142,32 +1243,39 @@ class ModularSynth {
     out: AudioNode;
     /** A second audio outlet, for the modules that hand back two signals. */
     out2?: AudioNode;
-    mod: Map<string, AudioNode>;
-    /** Receives the voice from racks 1-7 rather than a cable. */
-    isVoiceIn?: boolean;
+    mod: Map<string, AudioNode | AudioParam>;
     /** The patch's output; when present, only what reaches it is heard. */
     isOutput?: boolean;
     /** ENTRY only: a CV source per lane, keyed by lane id. */
     laneOuts?: Map<string, AudioNode>;
   } | null {
-    const mod = new Map<string, AudioNode>();
+    const mod = new Map<string, AudioNode | AudioParam>();
     const WAVES: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square'];
 
     switch (type) {
       case 'osc': {
         const osc = ctx.createOscillator();
         osc.type = WAVES[Math.round(p('wave', 0))] ?? 'sine';
-        osc.frequency.value = baseFreq * p('ratio', 1);
-        osc.detune.value = p('detune', 0);
+        /* The note if PITCH is wired, and the knob if it is not.
+        
+           An oscillator used to read the key it was played from whether or not
+           anything was patched into it, so every OSC tracked the keyboard and a
+           fixed drone was unsayable -- and, worse, the cable you could see made
+           no difference to what you heard. */
+        osc.frequency.value = cvIn(probeKey, 'pitch', 220);
         const g = ctx.createGain();
-        g.gain.value = p('level', 80) / 100;
         osc.connect(g);
         sources.push(osc);
-        // FM lands on frequency, scaled by the note so it tracks the keyboard.
-        const fm = ctx.createGain();
-        fm.gain.value = baseFreq * 2;
-        fm.connect(osc.frequency);
-        mod.set('fm', fm);
+        /* PITCH is read as a value, above, and not also registered as a
+           modulation destination.
+        
+           Doing both put the same cable through twice: FREQ's 440 became the
+           oscillator's base frequency *and* was connected to that frequency as a
+           signal, so the note came out an octave sharp. Audio-rate FM would need
+           the param registered here, but then a constant would have to be
+           excluded from it -- and the two cannot be told apart at this point,
+           because a resolved value and a connected signal look identical to the
+           inlet. Value wins: it is what every other pitched module does. */
         return { in: null, out: g, mod };
       }
 
@@ -1353,7 +1461,7 @@ class ModularSynth {
            a voice was missing something the fixed chain already had. */
         const osc = ctx.createOscillator();
         osc.type = WAVES[Math.round(p('subWave', 0))] ?? 'sine';
-        osc.frequency.value = baseFreq / Math.pow(2, Math.max(1, Math.round(p('subOct', 1))));
+        osc.frequency.value = cvIn(probeKey, 'pitch', 110) / Math.pow(2, Math.max(1, Math.round(p('subOct', 1))));
         const g = ctx.createGain();
         g.gain.value = p('subLevel', 70) / 100;
         osc.connect(g);
@@ -1369,7 +1477,8 @@ class ModularSynth {
         const width = Math.min(0.95, Math.max(0.05, p('pw', 50) / 100));
         const a = ctx.createOscillator();
         a.type = 'sawtooth';
-        a.frequency.value = baseFreq * p('pulseRatio', 1);
+        const pulseRoot = cvIn(probeKey, 'pitch', 220);
+        a.frequency.value = pulseRoot * p('pulseRatio', 1);
         const b = ctx.createOscillator();
         b.type = 'sawtooth';
         b.frequency.value = a.frequency.value;
@@ -1506,7 +1615,7 @@ class ModularSynth {
         const out = ctx.createGain();
         const pos = Math.min(0.5, Math.max(0.02, p('combPos', 25) / 100));
         const dl = ctx.createDelay(0.05);
-        dl.delayTime.value = Math.min(0.05, pos / Math.max(1, baseFreq));
+        dl.delayTime.value = Math.min(0.05, pos / Math.max(1, cvIn(probeKey, 'pitch', 220)));
         const inv = ctx.createGain();
         inv.gain.value = -(p('combDepth', 80) / 100);
         input.connect(out);
@@ -1527,7 +1636,8 @@ class ModularSynth {
         const out = ctx.createGain();
         const drag = ctx.createOscillator();
         drag.type = 'sawtooth';
-        drag.frequency.value = baseFreq;
+        const bowRoot = cvIn(probeKey, 'pitch', 220);
+        drag.frequency.value = bowRoot;
         const dg = ctx.createGain();
         dg.gain.value = 1 - (p('bowNoise', 25) / 100) * 0.5;
         drag.connect(dg);
@@ -1541,7 +1651,7 @@ class ModularSynth {
         // Bow noise is a hiss riding the note, not a rumble under it.
         const hp = ctx.createBiquadFilter();
         hp.type = 'highpass';
-        hp.frequency.value = Math.max(200, baseFreq * 2);
+        hp.frequency.value = Math.max(200, bowRoot * 2);
         scrape.connect(hp);
         hp.connect(sg);
         sg.connect(out);
@@ -1617,17 +1727,115 @@ class ModularSynth {
         return { in: c, out: makeup, mod };
       }
 
-      case 'in': {
-        /* ENTRY: where the note arrives.
+      case 'break': {
+        /* A signal taken apart into what describes it.
         
-           In K.MAP this is the key that was struck; otherwise it is every key
-           on the track. Either way it carries the voice racks 1-7 built -- the
-           oscillators, the filter and the amp envelope -- before the patch bay
-           touches it. Explicit, because a patch should say where its signal
-           enters rather than leave it to be inferred from which modules happen
-           to have nothing plugged in. */
-        const g = ctx.createGain();
-        g.gain.value = p('inLevel', 100) / 100;
+           MID and SIDE are the sum and difference of the two channels, which is
+           the standard pair: mid is what both channels agree on, side is what
+           only one of them has. AMP is an analyser read as a number, so a filter
+           can follow how loud the signal is -- an audio cable cannot say that,
+           because a knob does not take sound. */
+        const input = ctx.createGain();
+        const splitter = ctx.createChannelSplitter(2);
+        input.connect(splitter);
+
+        const mid = ctx.createGain();
+        const side = ctx.createGain();
+        // L+R and L-R, each halved so a centred signal comes back at unity.
+        const half = () => { const g = ctx.createGain(); g.gain.value = 0.5; return g; };
+        const lm = half(), rm = half(), ls = half(), rs = half();
+        rs.gain.value = -0.5;
+        splitter.connect(lm, 0); splitter.connect(rm, 1);
+        splitter.connect(ls, 0); splitter.connect(rs, 1);
+        lm.connect(mid); rm.connect(mid);
+        ls.connect(side); rs.connect(side);
+
+        const amp = ctx.createAnalyser();
+        amp.fftSize = 256;
+        input.connect(amp);
+        if (probeKey) this.graphProbes.set(probeKey, amp);
+
+        return { in: input, out: mid, out2: side, mod };
+      }
+
+      case 'make': {
+        /* Mid and side back into two channels: L is mid plus side, R is mid
+           minus it. WIDE scales the side, which is what stereo width is. */
+        const midIn = ctx.createGain();
+        const sideIn = ctx.createGain();
+        const wide = ctx.createGain();
+        wide.gain.value = Math.max(0, cvIn(probeKey, 'wide', 1));
+        sideIn.connect(wide);
+
+        const merger = ctx.createChannelMerger(2);
+        const l = ctx.createGain();
+        const r = ctx.createGain();
+        const negate = ctx.createGain();
+        negate.gain.value = -1;
+        midIn.connect(l); wide.connect(l);
+        midIn.connect(r); wide.connect(negate); negate.connect(r);
+        l.connect(merger, 0, 0);
+        r.connect(merger, 0, 1);
+        return { in: midIn, in2: sideIn, out: merger, mod };
+      }
+
+      case 'mono': {
+        /* Both channels summed to one, halved so a centred signal keeps its
+           level rather than doubling. */
+        const input = ctx.createGain();
+        const splitter = ctx.createChannelSplitter(2);
+        const out = ctx.createGain();
+        const gl = ctx.createGain(), gr = ctx.createGain();
+        gl.gain.value = 0.5; gr.gain.value = 0.5;
+        input.connect(splitter);
+        splitter.connect(gl, 0);
+        splitter.connect(gr, 1);
+        gl.connect(out); gr.connect(out);
+        return { in: input, out, mod };
+      }
+
+      /* The pure value nodes.
+      
+         The arithmetic itself lives in stores/node-graph, in one table, and is
+         shared with the resolver -- it was written twice before, once to build
+         the node and once to pull a value through it, which is exactly the kind
+         of duplication that drifts apart.
+      
+         The result is a ConstantSourceNode so that a cable from one of these
+         lands on a knob the same way an envelope does. Resolved at build time,
+         because the graph is rebuilt per note and the value is known before
+         anything is created. */
+      case 'tofreq':
+      case 'topitch':
+      case 'const':
+      case 'add':
+      case 'mul':
+      case 'remap':
+      case 'clamp':
+      case 'lerp':
+      case 'curve': {
+        const v = PURE_NODES[type]?.(
+          { get: (port, fallback) => cvIn(probeKey, port, fallback) },
+          p
+        );
+        const src = ctx.createConstantSource();
+        src.offset.value = Number.isFinite(v ?? NaN) ? (v as number) : 0;
+        sources.push(src);
+        return { in: null, out: src, mod };
+      }
+
+      case 'in': {
+        /* ENTRY: the note, as an event.
+        
+           Blueprint's event node. In K.MAP this is the key that was struck;
+           otherwise it is every key on the track. It makes no sound of its own
+           and carries none in: ADV is a complete signal path and racks 1-7 are
+           a different instrument, so what plays is what the canvas builds.
+        
+           What it publishes is the event's data -- when it happened, and what
+           was played. */
+        const silent = ctx.createGain();
+        silent.gain.value = 0;
         /* One CV outlet per lane the track carries. A ConstantSourceNode holds
            the value this note read, so a cable from here into any knob is that
            knob following the curve -- which is the whole reason a lane and a
@@ -1643,7 +1851,32 @@ class ModularSynth {
           sources.push(src);
           laneOuts.set(laneId, src);
         }
-        return { in: null, out: g, mod, isVoiceIn: true, laneOuts };
+
+        /* What the event carries, as pins.
+        
+           Blueprint's event nodes hand you the data the event came with, and a
+           key press comes with more than a moment in time: which key, how hard,
+           and how long it is held. All three were locked inside the engine --
+           velocity reached the amp gain and nothing else -- so a patch could not
+           say "hit harder means brighter", which is what every struck instrument
+           actually does. A drum skin under a harder strike is stiffer, and the
+           strike itself is a sharper contact; both are timbre, not level.
+        
+           Constants rather than moving signals, sampled when the note starts,
+           for the same reason the lane outlets are: this is what the event was,
+           and the next event brings its own. */
+        const pin = (v: number) => {
+          const src = ctx.createConstantSource();
+          src.offset.value = v;
+          sources.push(src);
+          return src;
+        };
+        mod.set('pitch', pin(baseFreq));
+        mod.set('vel', pin(note.velocity));
+        mod.set('note', pin(note.noteIndex));
+        mod.set('gate', pin(gateSec));
+
+        return { in: null, out: silent, mod, laneOuts };
       }
 
       case 'split': {
@@ -1679,20 +1912,13 @@ class ModularSynth {
            it is silent, which is what lets a module sit on the canvas unwired
            without changing the sound.
 
-           MONO sums the two sides before panning, for a patch that divided in
-           order to process and wants to arrive as one thing again. */
+           It takes a stereo pair and passes it to the master bus, and that is
+           all it does. Level and pan were knobs here and are not any more: VCA
+           and PAN are modules already, so having them again on the output was
+           the same control in two places and a second thing to check when a
+           patch came out quiet or lopsided. */
         const g = ctx.createGain();
-        g.gain.value = p('outLevel', 100) / 100;
-        let tail: AudioNode = g;
-        if (p('outMono', 0) >= 0.5) {
-          const merge = ctx.createChannelMerger(1);
-          g.connect(merge);
-          tail = merge;
-        }
-        const pan = ctx.createStereoPanner();
-        pan.pan.value = Math.max(-1, Math.min(1, p('outPan', 0) / 100));
-        tail.connect(pan);
-        return { in: g, out: pan, mod, isOutput: true };
+        return { in: g, out: g, mod, isOutput: true };
       }
 
       case 'scope':
@@ -1725,7 +1951,6 @@ class ModularSynth {
            this is a named place for it -- a patch reads better with the addition
            drawn than with three cables converging on one inlet. */
         const g = ctx.createGain();
-        g.gain.value = p('sumGain', 100) / 100;
         return { in: g, out: g, mod };
       }
 
@@ -1738,7 +1963,7 @@ class ModularSynth {
         a.gain.value = 1;
         a.connect(out);
         const b = ctx.createGain();
-        b.gain.value = -(p('subAmount', 100) / 100);
+        b.gain.value = -1;
         b.connect(out);
         return { in: a, in2: b, out, mod };
       }
@@ -1784,7 +2009,19 @@ class ModularSynth {
           'hardness', 'exLength', 'exTone', 'exNoise'
         ]) asParams[k] = p(k, NaN);
         for (const k of Object.keys(asParams)) if (Number.isNaN(asParams[k])) delete asParams[k];
-        const made = this.buildRackModule(ctx, type, asParams, baseFreq, t, heldSec);
+        /* PITCH decides what these are tuned to, like every other pitched
+           module: wired, it follows the cable; unwired, it holds its HZ knob.
+           Passing baseFreq straight through made a STRING track the keyboard
+           whatever the canvas said. */
+        const rootHz = cvIn(probeKey, 'pitch', NaN);
+        const made = this.buildRackModule(
+          ctx,
+          type,
+          asParams,
+          Number.isFinite(rootHz) && rootHz > 0 ? rootHz : baseFreq,
+          t,
+          heldSec
+        );
         if (!made) return null;
         for (const src of made.sources ?? []) sources.push(src);
         return { in: made.in, out: made.out, mod };
@@ -2987,7 +3224,25 @@ class ModularSynth {
     // ──────────────────────────────────────────────────────────────────────────
     // NODE 1 & NODE 2: DUAL INPUT WAVEFORM GENERATORS & TIMBRE FUSION
     // ──────────────────────────────────────────────────────────────────────────
+    /* ADV and racks 1-7 are two instruments, and only one plays a note.
+    
+       A track carries both, so the mode decides which is heard: in ADV the
+       canvas is the instrument, and the subtractive voice behind it must be
+       silent rather than merely unrouted. It was only unrouted -- the graph
+       replaced the chain output, so the oscillators still ran under every note,
+       burning a voice each time and sitting one stray connection away from
+       being audible. Zeroing the mixer is the whole of it: everything upstream
+       still builds, so nothing else has to know which mode is in force.
+    
+       ADV owns the note whenever the mode is on, empty canvas included. Keying
+       this off "has nodes" instead let the racks play through a blank patch:
+       nothing on the canvas, every key sounding, and the leak coming from the
+       instrument you had just switched away from. An empty patch makes no
+       sound, which is the honest answer and the one the canvas is showing. */
+    const advOwnsVoice = !!track.advanced;
+
     const voiceMix = ctx.createGain();
+    if (advOwnsVoice) voiceMix.gain.value = 0;
     let osc1: OscillatorNode | undefined;
     let osc1Out: AudioNode | undefined;
     let osc2Out: AudioNode | undefined;
@@ -3329,14 +3584,24 @@ class ModularSynth {
       gainBase = 0.28 * velGainScale;
     }
 
+    /* The strike, 0..1, as ENTRY publishes it.
+    
+       The lane if the part was written with one, the key press otherwise, and a
+       firm default when neither says. This is the number a patch does its own
+       thing with -- into a filter for "harder is brighter", into a strike's
+       hardness for a sharper contact -- rather than only reaching the amp. */
+    const velocityUnit = Math.max(
+      0,
+      Math.min(1, (laneVelocity ?? rawVelocity ?? 100) / 127)
+    );
+
     // A one-shot (no sustain) is over in 50-200 ms; at the same peak the ear
     // hears it 6-10 dB under a held note. Give hits back some of that.
     const oneShot = ampSus <= 0.001 ? 1.8 : 1;
     /* presetGain is applied at the graph's sink for a patched voice, so it must
        not also scale the voice feeding it -- that would square it. A rack voice
        has no sink, so it takes the factor here instead. */
-    const graphed = !!(track.advanced && track.rackGraph?.nodes?.length);
-    const peakGain = gainBase * track.volume * oneShot * (graphed ? 1 : (track.presetGain ?? 1));
+    const peakGain = gainBase * track.volume * oneShot * (advOwnsVoice ? 1 : (track.presetGain ?? 1));
     const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
     if (ampAtt === 0) {
@@ -3363,8 +3628,15 @@ class ModularSynth {
     const ampModAmt = track.lfoAmpAmt ?? 0;
     const lfoFadeSec = (track.lfoFadeTime ?? 0) / 1000;
 
+    /* The rack LFO is rack 5's, so it does not touch an ADV voice.
+    
+       Its pitch and cutoff targets are rack oscillators and the rack filter,
+       which an ADV voice does not use -- but PAN and AMP land on the panner and
+       the gain node, which are shared, so without this an ADV patch wobbled to
+       a modulator on the other instrument. A patch that wants an LFO puts one
+       on the canvas. */
     let lfo: OscillatorNode | undefined;
-    if ((pitchModAmt > 0 || cutoffModAmt > 0 || panModAmt > 0 || ampModAmt > 0) && track.lfoRate > 0) {
+    if (!advOwnsVoice && (pitchModAmt > 0 || cutoffModAmt > 0 || panModAmt > 0 || ampModAmt > 0) && track.lfoRate > 0) {
       lfo = ctx.createOscillator();
       lfo.type = track.lfoWaveform;
       lfo.frequency.setValueAtTime(track.lfoRate, t);
@@ -3523,8 +3795,8 @@ class ModularSynth {
 
     /* A patched graph takes precedence over the linear chain: both are stored,
        and a track that has been wired by hand should play what was wired. */
-    const graph = track.advanced ? track.rackGraph : undefined;
-    if (graph && graph.nodes.length) {
+    const graph = advOwnsVoice && track.rackGraph?.nodes?.length ? track.rackGraph : undefined;
+    if (graph) {
       /* What each lane reads for this note. Sampled once, when the note starts:
          that is what a lane means for a voice, and it is why the socket is a
          constant rather than a moving signal. */
@@ -3532,8 +3804,15 @@ class ModularSynth {
       for (const l of lanesOf(trackRow as { noteLanes?: NoteLane[] })) {
         laneValues[l.id] = laneAt(l, this.currentStep);
       }
-      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, gainNode, baseFreq, t, heldSec, laneValues, track.presetGain ?? 1);
+      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, baseFreq, t, heldSec, laneValues, track.presetGain ?? 1, { velocity: velocityUnit, noteIndex });
       if (built) {
+        /* The graph is the whole voice, and answers to none of racks 1-7.
+        
+           Routing it through track.volume was tried and is wrong: that is rack
+           7's VOL knob, so turning down a control on the instrument you are not
+           playing silenced the one you are. Level inside a patch is a VCA on the
+           canvas; the track's place in the mix is the mixer's business, further
+           down. */
         chainOut = built.out;
         for (const src of built.sources) {
           src.start(t);
@@ -3542,7 +3821,7 @@ class ModularSynth {
       }
     }
 
-    const rackChain = track.advanced && !(graph && graph.nodes.length) ? track.rackChain : undefined;
+    const rackChain = track.advanced && !graph ? track.rackChain : undefined;
     if (Array.isArray(rackChain) && rackChain.length) {
       const rackParams = track.rackParams ?? {};
       for (const id of rackChain) {
@@ -3557,9 +3836,15 @@ class ModularSynth {
       }
     }
 
-    // Node 7: Air Shelf Filter (±8dB high shelf @ 10kHz per track)
+    /* Node 7: air shelf, and the boundary between the two instruments.
+    
+       Everything from here down belongs to racks 1-7, so an ADV voice skips it:
+       AIR is a knob on rack 7, and a patch that answers to a control on the
+       instrument you are not playing is not isolated. What comes after -- the
+       track's EQ, its place in the mix, the sends -- is the mixer's and applies
+       to both. */
     let finalVoiceNode: AudioNode = chainOut;
-    if (track.airGain !== undefined && Math.abs(track.airGain) > 0.01) {
+    if (!advOwnsVoice && track.airGain !== undefined && Math.abs(track.airGain) > 0.01) {
       const airFilter = ctx.createBiquadFilter();
       airFilter.type = 'highshelf';
       airFilter.frequency.setValueAtTime(10000, t);
@@ -3805,7 +4090,7 @@ class ModularSynth {
 
     const out = { ...none };
     for (const c of graph.cables) {
-      if (c.from !== entry.id || c.fromPort !== 'trig') continue;
+      if (c.from !== entry.id || c.fromPort !== 'then') continue;
       const when = graph.nodes.find((n) => n.id === c.to && n.type === 'when');
       if (!when) continue;
 
@@ -3822,7 +4107,7 @@ class ModularSynth {
       if (!pass) continue;
 
       for (const d of graph.cables) {
-        if (d.from !== when.id || d.fromPort !== 'do') continue;
+        if (d.from !== when.id || d.fromPort !== 'then') continue;
         const act = graph.nodes.find((n) => n.id === d.to && n.type === 'act');
         if (!act) continue;
         const kind = Math.round(num(act.id, 'action', 0));

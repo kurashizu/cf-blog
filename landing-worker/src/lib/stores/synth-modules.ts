@@ -1,4 +1,4 @@
-import type { PortSpec } from './graph-model';
+import type { PortSpec, PortRole } from './graph-model';
 
 /**
  * The module catalogue for the patch bay.
@@ -25,6 +25,16 @@ export interface ModuleParam {
 	   knob -- the same segmented row rack 3 uses for its filter types, because
 	   "which one" reads badly as an angle. */
 	choices?: string[];
+	/* How the knob's angle maps to its value.
+	
+	   `linear` is the default and right for most things. `log` is for the
+	   multiplying ones -- a ratio, a rate, anything where halving and doubling
+	   are the same size of change. On a linear knob a RATIO of 0.25..8 puts 1x a
+	   tenth of the way round, so every useful interval is crushed into the first
+	   sliver of travel and the whole upper half is octaves nobody reaches for.
+	   Logarithmic puts 1x in the middle, an octave down at a quarter turn left
+	   and an octave up at a quarter turn right, which is how the ear hears it. */
+	scale?: 'linear' | 'log';
 }
 
 export interface ModuleSpec {
@@ -37,12 +47,52 @@ export interface ModuleSpec {
 	inputs: PortSpec[];
 	outputs: PortSpec[];
 	params: ModuleParam[];
+	/* A type chosen in the title bar. Only CONST has one: it is the node's own
+	   kind rather than a setting, so it belongs beside the name. */
+	variant?: { key: string; choices: string[] };
 	/* A live picture of what the knobs are doing, like racks 1-7 carry: an
 	   envelope drawn as its own curve says more than four numbers do. */
 	viz?: 'adsr' | 'wave' | 'curve' | 'scope' | 'fft' | 'meter';
 }
 
+const CV_A: PortSpec = { id: 'a', label: 'A', kind: 'mod' };
+const CV_B: PortSpec = { id: 'b', label: 'B', kind: 'mod' };
+const CV_OUT: PortSpec = { id: 'out', label: 'OUT', kind: 'mod' };
+/* What each CONST variant emits: the role its outlet takes, and the range the
+   value field allows. A pitch runs to 20 kHz and a velocity stops at 1, which is
+   the whole reason the variants exist -- one untyped number with a -1000..10000
+   range could be wired anywhere and was useful nowhere. */
+export const CONST_KINDS: { label: string; role: PortRole; min: number; max: number; step: number; def: number; unit?: string }[] = [
+	{ label: 'NUM', role: 'cv', min: -1000, max: 10000, step: 0.01, def: 1 },
+	{ label: 'PITCH', role: 'hz', min: 20, max: 20000, step: 1, def: 440, unit: 'Hz' },
+	{ label: 'VEL', role: 'unit', min: 0, max: 1, step: 0.01, def: 1 },
+	{ label: 'NOTE', role: 'index', min: 0, max: 127, step: 1, def: 48 },
+	{ label: 'TIME', role: 'time', min: 0, max: 60, step: 0.001, def: 0.5, unit: 's' }
+];
+
 const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
+
+/* Blueprint's white execution pins.
+ *
+ * A module with an EXEC_IN is *impure* in Blueprint's sense: running it does
+ * something -- a source starts sounding, an envelope begins its curve. It runs
+ * when execution reaches it and not otherwise, which is what makes a cable
+ * carry meaning.
+ *
+ * EXEC_OUT is the narrower one, and only three modules have it. A THEN pin says
+ * "and afterwards, this", so it needs an afterwards to point at: EXCT is a
+ * strike that lands and is over, MODES rings and decays, ENV finishes its
+ * curve. An oscillator does not finish -- it runs for as long as the note does
+ * -- so a THEN on OSC would be a socket for a moment that never arrives. The
+ * same goes for NOISE, SUB, PULSE, BOW, REED and LFO: they are states, not
+ * events. Blueprint draws the same line, giving an output execution pin to the
+ * latent nodes and not to the ones that merely start something.
+ *
+ * Filters, gains and the arithmetic have no exec pins at all, exactly as
+ * Blueprint's pure nodes do not: they hold no state and start nothing. They
+ * process whatever arrives, so asking when they run has no answer to give. */
+const EXEC_IN: PortSpec = { id: 'exec', label: '', kind: 'exec', role: 'exec' };
+const EXEC_OUT: PortSpec = { id: 'then', label: '', kind: 'exec', role: 'exec' };
 const AUDIO_OUT: PortSpec = { id: 'out', label: 'OUT', kind: 'audio' };
 
 export const MODULE_SPECS: ModuleSpec[] = [
@@ -55,11 +105,31 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		color: '#98c379',
 		descKey: 'synthPatch.mod.in',
 		inputs: [],
-		/* The note itself leaves by TRIG, so the logic chain can hang off it: a
-		   cable from there to a WHEN node is "every time this sounds, ask
-		   something". Audio leaves by OUT as usual. */
-		outputs: [AUDIO_OUT, { id: 'trig', label: 'TRIG', kind: 'mod', role: 'trigger' }],
-		params: [{ key: 'inLevel', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
+		/* Blueprint's event node: pressing a key is the event, and THEN is the
+		   white pin the rest of the patch hangs off. Whatever THEN reaches runs
+		   for this note; whatever it does not reach stays silent.
+		
+		   TRIG is the older logic pin and stays: a cable from there to a WHEN
+		   node asks a question about the note rather than running a module.
+		   Audio leaves by OUT as usual. */
+		/* No audio outlet. ADV is a complete signal path in its own right and
+		   has nothing to do with racks 1-7 -- they are two instruments, and a
+		   socket handing one into the other would only invite the confusion the
+		   split exists to remove. What the canvas says is what plays. */
+		outputs: [
+			EXEC_OUT,
+			/* What the key press was. Blueprint's event nodes hand you the data
+			   the event carried, and these are a note's: which key, how hard, how
+			   long. Velocity reached the amp gain and nothing else before this,
+			   so a patch could not say "struck harder means brighter" -- which is
+			   what every struck instrument does, and why a kit built on one graph
+			   sounded like one drum at different pitches. */
+			{ id: 'pitch', label: 'PITCH', kind: 'mod', role: 'pitch' },
+			{ id: 'vel', label: 'VEL', kind: 'mod', role: 'unit' },
+			{ id: 'note', label: 'NOTE', kind: 'mod', role: 'index' },
+			{ id: 'gate', label: 'GATE', kind: 'mod', role: 'time' }
+		],
+		params: []
 	},
 	{
 		id: 'osc',
@@ -67,13 +137,24 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'SOURCE',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.osc',
-		inputs: [{ id: 'fm', label: 'FM', kind: 'mod' }],
+		/* An oscillator, and only that: a shape and a frequency.
+		
+		   Everything else it used to carry was another primitive in disguise.
+		   RATIO multiplied the pitch, which is MUL. DET did the same in cents.
+		   LVL scaled the output, which is VCA. FM was an inlet that multiplied
+		   what arrived by the note frequency times two -- a depth control that
+		   appeared on no card at all.
+		
+		   PITCH is a cable rather than a given, so the keyboard is something you
+		   wire rather than something that happens: unpatched, the oscillator
+		   sits at its own frequency, which is what makes a drone or an untuned
+		   drum expressible. And because PITCH is an AudioParam, a signal into it
+		   *is* FM -- adding to a frequency is the whole definition -- with a VCA
+		   in front of it as the depth. */
+		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'SAW', 'SQR', 'TRI'] },
-			{ key: 'ratio', label: 'RATIO', min: 0.25, max: 8, step: 0.01, unit: '×', def: 1 },
-			{ key: 'detune', label: 'DET', min: -50, max: 50, step: 1, unit: 'c', def: 0 },
-			{ key: 'level', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 80 }
+			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'SAW', 'SQR', 'TRI'] }
 		]
 	},
 	{
@@ -85,7 +166,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'colour', label: 'COL', min: 0, max: 2, step: 1, def: 0 },
+			/* Three kinds of noise, not a sweep: a dial reading "0", "1", "2"
+			   says nothing about which is which. */
+			{ key: 'colour', label: 'COL', min: 0, max: 2, step: 1, def: 0, choices: ['WHT', 'PNK', 'BRN'] },
 			{ key: 'level', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 60 }
 		]
 	},
@@ -100,7 +183,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'hardness', label: 'HARD', min: 0, max: 100, step: 1, unit: '%', def: 50 },
 			{ key: 'exLength', label: 'LEN', min: 1, max: 60, step: 1, unit: 'ms', def: 6 },
-			{ key: 'exTone', label: 'TONE', min: 200, max: 12000, step: 100, unit: 'Hz', def: 3000 }
+			{ key: 'exTone', label: 'TONE', min: 200, max: 12000, step: 100, unit: 'Hz', def: 3000, scale: 'log' }
 		]
 	},
 
@@ -110,7 +193,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'SOURCE',
 		color: '#61afef',
 		descKey: 'synthPatch.mod.sub',
-		inputs: [],
+		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'subWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'TRI', 'SAW', 'SQR'] },
@@ -124,11 +207,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'SOURCE',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.pulse',
-		inputs: [{ id: 'pwm', label: 'PWM', kind: 'mod' }],
+		inputs: [{ id: 'pitch', label: 'PITCH', kind: 'mod', role: 'hz' }, { id: 'pwm', label: 'PWM', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'pw', label: 'PW', min: 5, max: 95, step: 1, unit: '%', def: 50 },
-			{ key: 'pulseRatio', label: 'RATIO', min: 0.25, max: 8, step: 0.01, unit: '\u00d7', def: 1 },
+			{ key: 'pulseRatio', label: 'RATIO', min: 0.125, max: 8, step: 0.01, unit: '\u00d7', def: 1, scale: 'log' },
 			{ key: 'pulseLevel', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 80 }
 		]
 	},
@@ -138,7 +221,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'SOURCE',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.bow',
-		inputs: [],
+		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'bowPressure', label: 'PRES', min: 0, max: 100, step: 1, unit: '%', def: 50 },
@@ -159,7 +242,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'type', label: 'TYPE', min: 0, max: 3, step: 1, def: 0, choices: ['LPF', 'BPF', 'HPF', 'NCH'] },
-			{ key: 'cutoff', label: 'FREQ', min: 40, max: 18000, step: 10, unit: 'Hz', def: 4000 },
+			{ key: 'cutoff', label: 'FREQ', min: 40, max: 18000, step: 10, unit: 'Hz', def: 4000, scale: 'log' },
 			{ key: 'q', label: 'RESO', min: 0.1, max: 24, step: 0.1, def: 1 },
 			{ key: 'depth', label: 'DEPTH', min: 0, max: 100, step: 1, unit: '%', def: 50 }
 		]
@@ -188,7 +271,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'driveAmt', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 25 },
 			{ key: 'driveBias', label: 'BIAS', min: 0, max: 100, step: 1, unit: '%', def: 30 },
-			{ key: 'driveTone', label: 'TONE', min: 500, max: 16000, step: 100, unit: 'Hz', def: 8000 }
+			{ key: 'driveTone', label: 'TONE', min: 500, max: 16000, step: 100, unit: 'Hz', def: 8000, scale: 'log' }
 		]
 	},
 	{
@@ -202,7 +285,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'lowGain', label: 'LOW', min: -18, max: 18, step: 0.5, unit: 'dB', def: 0 },
 			{ key: 'midGain', label: 'MID', min: -18, max: 18, step: 0.5, unit: 'dB', def: 0 },
-			{ key: 'midFreq', label: 'FREQ', min: 200, max: 8000, step: 50, unit: 'Hz', def: 1200 },
+			{ key: 'midFreq', label: 'FREQ', min: 200, max: 8000, step: 50, unit: 'Hz', def: 1200, scale: 'log' },
 			{ key: 'highGain', label: 'HIGH', min: -18, max: 18, step: 0.5, unit: 'dB', def: 0 }
 		]
 	},
@@ -218,7 +301,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'blendMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 50 },
-			{ key: 'blendTone', label: 'TONE', min: 100, max: 8000, step: 50, unit: 'Hz', def: 800 }
+			{ key: 'blendTone', label: 'TONE', min: 100, max: 8000, step: 50, unit: 'Hz', def: 800, scale: 'log' }
 		]
 	},
 	{
@@ -246,6 +329,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ key: 'compThresh', label: 'THRS', min: -60, max: 0, step: 1, unit: 'dB', def: -18 },
 			{ key: 'compRatio', label: 'RTO', min: 1, max: 20, step: 0.5, def: 4 },
 			{ key: 'compAttack', label: 'ATK', min: 0, max: 100, step: 1, unit: 'ms', def: 5 },
+			/* Makeup. A compressor that can only make things quieter is half a
+			   module: the point of holding a transient down is that the rest
+			   comes up. The engine read this all along; nothing declared it, so
+			   it sat at 0 dB and could not be reached. */
+			{ key: 'compGain', label: 'GAIN', min: 0, max: 24, step: 0.5, unit: 'dB', def: 0 },
 			{ key: 'compRelease', label: 'REL', min: 10, max: 1000, step: 10, unit: 'ms', def: 120 }
 		]
 	},
@@ -255,7 +343,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'RESONATE',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.string',
-		inputs: [AUDIO_IN],
+		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }, AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'decayTime', label: 'DECAY', min: 0.05, max: 12, step: 0.05, unit: 's', def: 2 },
@@ -283,13 +371,17 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'RESONATE',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.modes',
-		inputs: [AUDIO_IN],
+		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }, AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'mode1', label: 'M1', min: 0.5, max: 12, step: 0.01, unit: '×', def: 1 },
 			{ key: 'mode2', label: 'M2', min: 0.5, max: 12, step: 0.01, unit: '×', def: 2.4 },
 			{ key: 'mode3', label: 'M3', min: 0.5, max: 12, step: 0.01, unit: '×', def: 4.6 },
 			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.5, def: 14 },
+			/* How much of what arrives is replaced by the body ringing. The
+			   engine read this all along and nothing declared it, so the balance
+			   between a strike and the thing it strikes had no knob. */
+			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 100 },
 			/* The pitch the ratios multiply. 0 follows the key, which is what a
 			   marimba wants; any other value pins the resonator to that frequency
 			   however it was struck, which is what a drum is -- a kick is 55 Hz
@@ -319,7 +411,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'RESONATE',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.comb',
-		inputs: [AUDIO_IN],
+		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }, AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'combPos', label: 'POS', min: 2, max: 50, step: 1, unit: '%', def: 25 },
@@ -333,7 +425,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		color: '#61afef',
 		descKey: 'synthPatch.mod.space',
 		inputs: [AUDIO_IN],
-		outputs: [AUDIO_OUT],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
 		params: [
 			{ key: 'spaceSize', label: 'SIZE', min: 0, max: 100, step: 1, unit: '%', def: 40 },
 			{ key: 'spaceDecay', label: 'DECY', min: 0, max: 100, step: 1, unit: '%', def: 60 },
@@ -368,7 +460,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		outputs: [{ id: 'cv', label: 'CV', kind: 'mod' }],
 		params: [
 			{ key: 'lfoWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'SAW', 'SQR', 'TRI'] },
-			{ key: 'lfoRate', label: 'RATE', min: 0.02, max: 40, step: 0.01, unit: 'Hz', def: 5 },
+			{ key: 'lfoRate', label: 'RATE', min: 0.02, max: 40, step: 0.01, unit: 'Hz', def: 5, scale: 'log' },
 			{ key: 'lfoAmt', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 50 }
 		],
 		viz: 'wave'
@@ -386,7 +478,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'dlTime', label: 'TIME', min: 1, max: 2000, step: 1, unit: 'ms', def: 220 },
 			{ key: 'dlFeedback', label: 'FDBK', min: 0, max: 85, step: 1, unit: '%', def: 35 },
-			{ key: 'dlTone', label: 'TONE', min: 200, max: 12000, step: 100, unit: 'Hz', def: 6000 },
+			{ key: 'dlTone', label: 'TONE', min: 200, max: 12000, step: 100, unit: 'Hz', def: 6000, scale: 'log' },
 			{ key: 'dlMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 30 }
 		]
 	},
@@ -397,7 +489,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.pan',
 		inputs: [AUDIO_IN, { id: 'cv', label: 'CV', kind: 'mod' }],
-		outputs: [AUDIO_OUT],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
 		params: [
 			{ key: 'panPos', label: 'POS', min: -100, max: 100, step: 1, def: 0 },
 			{ key: 'panDepth', label: 'DPTH', min: 0, max: 100, step: 1, unit: '%', def: 100 }
@@ -426,7 +518,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ id: 'in', label: 'L', kind: 'audio', role: 'left' },
 			{ id: 'r', label: 'R', kind: 'audio', role: 'right' }
 		],
-		outputs: [AUDIO_OUT],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
 		params: []
 	},
 	{
@@ -463,6 +555,22 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		viz: 'meter'
 	},
 	{
+		/* Blueprint's Sequence, which is the one exec node a patch cannot do
+		   without: one input, several outputs, run in order. Here the order is a
+		   gap in milliseconds rather than a sequence point, because audio has no
+		   "afterwards" -- two strikes at the same instant are one strike. A few
+		   milliseconds apart is a flam, a grace note, or the two layers a
+		   sampled kick is built from, which is what drummers actually play. */
+		id: 'seq',
+		label: 'SEQ',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.seq',
+		inputs: [EXEC_IN],
+		outputs: [EXEC_OUT],
+		params: [{ key: 'gapMs', label: 'GAP', min: 0, max: 200, step: 1, unit: 'ms', def: 0 }]
+	},
+	{
 		/* WHEN: the condition half of the logic chain.
 		
 		   A cable from ENTRY's TRIG says "each time a note starts, ask this",
@@ -476,8 +584,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'LOGIC',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.when',
-		inputs: [{ id: 'trig', label: 'TRIG', kind: 'mod', role: 'trigger' }],
-		outputs: [{ id: 'do', label: 'DO', kind: 'mod', role: 'flow' }],
+		inputs: [EXEC_IN],
+		outputs: [{ id: 'then', label: 'TRUE', kind: 'exec', role: 'exec' }],
 		params: [
 			{
 				key: 'test',
@@ -486,7 +594,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 				max: 3,
 				step: 1,
 				def: 0,
-				choices: ['ALWAYS', 'ABOVE', 'BELOW', 'BUSY']
+				/* Three or four characters, like every other selector here. The
+				   cells are a fixed width so a row of them lines up, and longer
+				   words were being cut to "ALW..." -- which is not a label. */
+				choices: ['ANY', 'ABV', 'BLW', 'BUSY']
 			},
 			{ key: 'testNote', label: 'NOTE', min: 0, max: 87, step: 1, def: 48 }
 		]
@@ -504,7 +615,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'LOGIC',
 		color: '#e06c75',
 		descKey: 'synthPatch.mod.act',
-		inputs: [{ id: 'do', label: 'DO', kind: 'mod', role: 'flow' }],
+		inputs: [EXEC_IN],
 		outputs: [],
 		params: [
 			{ key: 'action', label: 'DO', min: 0, max: 2, step: 1, def: 0, choices: ['CUT', 'SOLO', 'GLIDE'] },
@@ -513,6 +624,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
+		/* A + B, and nothing else. The LVL knob that used to sit here was a VCA
+		   welded onto an adder: two primitives in one box, so "why is this patch
+		   quiet" had a second place to hide. Scaling is what VCA is for. */
 		id: 'sum',
 		label: 'SUM',
 		group: 'MATH',
@@ -520,7 +634,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.sum',
 		inputs: [AUDIO_IN, { id: 'b', label: 'B', kind: 'audio' }],
 		outputs: [AUDIO_OUT],
-		params: [{ key: 'sumGain', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
+		params: []
 	},
 	{
 		/* Not 'sub': that id is the sub-oscillator's, and a duplicate silently
@@ -533,7 +647,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.subtract',
 		inputs: [{ id: 'in', label: 'A', kind: 'audio' }, { id: 'b', label: 'B', kind: 'audio' }],
 		outputs: [AUDIO_OUT],
-		params: [{ key: 'subAmount', label: 'AMT', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
+		// A - B. Scaling the result is VCA's job, as it is for SUM.
+		params: []
 	},
 	{
 		id: 'ring',
@@ -556,18 +671,237 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: []
 	},
 	{
+		/* Blueprint's Break Vector, for sound.
+		 *
+		 * SPLIT next to this takes a stereo pair apart into two audio cables --
+		 * two signals you go on processing. This takes a signal apart into the
+		 * numbers that describe it: how loud it is, and how far left or right it
+		 * sits. Those are values, so they drive knobs.
+		 *
+		 * The pair is the distinction the pure nodes draw everywhere else: a
+		 * channel is sound, a level is a number, and a patch needs both -- "make
+		 * the filter follow how loud this is" cannot be said with an audio cable,
+		 * because a knob does not take sound. */
+		id: 'break',
+		label: 'BREAK',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.break',
+		inputs: [AUDIO_IN],
+		outputs: [
+			{ id: 'mid', label: 'MID', kind: 'audio', role: 'mono' },
+			{ id: 'side', label: 'SIDE', kind: 'audio', role: 'mono' },
+			{ id: 'out', label: 'AMP', kind: 'mod' }
+		],
+		params: []
+	},
+	{
+		/* Blueprint's Make Vector: the parts back into one thing. Mid and side
+		   rather than left and right, because that is the pair worth rebuilding
+		   by hand -- widening is a gain on the side, and there is no other way
+		   to say it. */
+		id: 'make',
+		label: 'MAKE',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.make',
+		inputs: [
+			{ id: 'in', label: 'MID', kind: 'audio', role: 'mono' },
+			{ id: 'b', label: 'SIDE', kind: 'audio', role: 'mono' },
+			{ id: 'wide', label: 'WIDE', kind: 'mod', role: 'unit' }
+		],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
+		/* No WIDE knob beside the WIDE socket: the knob stopped mattering the
+		   moment a cable was drawn. The socket's own default is the width. */
+		params: []
+	},
+	{
+		/* Two channels down to one. A stereo source into a mono chain otherwise
+		   keeps only whatever the next module happens to take. */
+		id: 'mono',
+		label: 'MONO',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.mono',
+		inputs: [AUDIO_IN],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'mono' }],
+		params: []
+	},
+	{
+		/* A pitch made into the frequency it names.
+		 *
+		 * Exact, and the direction you nearly always want: ENTRY publishes a
+		 * pitch, an oscillator needs a frequency, and this is the step between.
+		 * It is a node rather than something an oscillator does quietly because
+		 * the tuning reference is a decision -- A4 is 440 Hz by convention, not
+		 * by nature -- and a patch should be able to say it took a different
+		 * one. */
+		id: 'tofreq',
+		label: 'FREQ',
+		group: 'MATH',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.tofreq',
+		inputs: [{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' }],
+		outputs: [{ id: 'out', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		params: [
+			{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 },
+			{ key: 'shift', label: 'TRSP', min: -48, max: 48, step: 1, unit: 'st', def: 0 }
+		]
+	},
+	{
+		/* A frequency read back as the pitch nearest to it.
+		 *
+		 * The lossy direction. 452 Hz is not a pitch; it is between two, and
+		 * which one it becomes depends on the reference and on where you round.
+		 * Both are knobs here rather than assumptions, and the quantisation is
+		 * visible on the canvas -- which is the whole reason the two are separate
+		 * types and this is a separate node. */
+		id: 'topitch',
+		label: 'PITCH',
+		group: 'MATH',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.topitch',
+		inputs: [{ id: 'a', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		outputs: [{ id: 'out', label: 'PITCH', kind: 'mod', role: 'pitch' }],
+		params: [
+			{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 },
+			{ key: 'quantise', label: 'QNT', min: 0, max: 1, step: 1, def: 1, choices: ['OFF', 'SEMI'] }
+		]
+	},
+	{
+		/* Blueprint's pure value nodes.
+		 *
+		 * Everything below computes a number from its inputs and holds no state,
+		 * so none of them carry exec pins -- asking when a multiply "runs" has no
+		 * answer, exactly as in Blueprint. They exist because ENTRY now publishes
+		 * the note's own facts (pitch, velocity, gate) and a patch needs to do
+		 * arithmetic on them: half the velocity, add a fixed offset, clamp the
+		 * result, then send it at a knob.
+		 *
+		 * These are control-rate, not audio-rate. SUM and DIFF next to them add
+		 * signals; these add values. The distinction is the same one Web Audio
+		 * makes between a node's input and its AudioParam, and keeping both is
+		 * what lets a patch treat a number as a number. */
+		/* A literal, in whichever type the socket it is going to expects.
+		 *
+		 * One node with variants rather than five near-identical ones: a pitch,
+		 * an amount and a length of time are the same idea -- a number you typed
+		 * -- and splitting them into separate palette entries would say they were
+		 * different things. The variant picks the socket's colour and shape, so a
+		 * CONST wired into a frequency looks like a frequency and cannot be
+		 * dropped onto something that wanted an amount.
+		 *
+		 * The type sits in the title bar rather than among the knobs because it
+		 * is what the node *is*, not what it is set to -- the same reason a
+		 * Blueprint literal shows its type on the node and its value in the
+		 * field. */
+		id: 'const',
+		label: 'CONST',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.const',
+		inputs: [],
+		outputs: [CV_OUT],
+		/* Chosen in the header, and it retypes the outlet: see CONST_KINDS. */
+		variant: {
+			key: 'kind',
+			choices: ['NUM', 'PITCH', 'VEL', 'NOTE', 'TIME']
+		},
+		params: [{ key: 'value', label: 'VAL', min: -20000, max: 20000, step: 0.01, def: 1 }]
+	},
+	{
+		id: 'add',
+		label: 'ADD',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.add',
+		inputs: [CV_A, CV_B],
+		outputs: [CV_OUT],
+		params: [{ key: 'addB', label: 'B', min: -1000, max: 10000, step: 1, def: 0 }]
+	},
+	{
+		id: 'mul',
+		label: 'MUL',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.mul',
+		inputs: [CV_A, CV_B],
+		outputs: [CV_OUT],
+		params: [{ key: 'mulB', label: 'B', min: -100, max: 100, step: 0.01, def: 1 }]
+	},
+	{
+		/* Blueprint's MapRangeClamped, which is the node you actually reach for:
+		   velocity arrives 0..1 and a cutoff wants 200..8000, and doing that by
+		   hand is a multiply, an add and a clamp every time. */
+		id: 'remap',
+		label: 'REMAP',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.remap',
+		inputs: [CV_A],
+		outputs: [CV_OUT],
+		params: [
+			{ key: 'inLo', label: 'IN.LO', min: -1000, max: 10000, step: 1, def: 0 },
+			{ key: 'inHi', label: 'IN.HI', min: -1000, max: 10000, step: 1, def: 1 },
+			{ key: 'outLo', label: 'TO.LO', min: -1000, max: 10000, step: 1, def: 0 },
+			{ key: 'outHi', label: 'TO.HI', min: -1000, max: 10000, step: 1, def: 100 }
+		]
+	},
+	{
+		id: 'clamp',
+		label: 'CLAMP',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.clamp',
+		inputs: [CV_A],
+		outputs: [CV_OUT],
+		params: [
+			{ key: 'clampLo', label: 'MIN', min: -1000, max: 10000, step: 1, def: 0 },
+			{ key: 'clampHi', label: 'MAX', min: -1000, max: 10000, step: 1, def: 1 }
+		]
+	},
+	{
+		/* Blueprint's Lerp: A and B with a weight between them. */
+		id: 'lerp',
+		label: 'LERP',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.lerp',
+		inputs: [CV_A, CV_B, { id: 'alpha', label: 'ALPHA', kind: 'mod' }],
+		outputs: [CV_OUT],
+		params: [{ key: 'lerpAlpha', label: 'ALPHA', min: 0, max: 100, step: 1, unit: '%', def: 50 }]
+	},
+	{
+		id: 'curve',
+		label: 'CURVE',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.curve',
+		inputs: [CV_A],
+		outputs: [CV_OUT],
+		params: [{ key: 'exp', label: 'EXP', min: 0.1, max: 8, step: 0.1, def: 1 }]
+	},
+	{
 		id: 'out',
 		label: 'OUT',
 		group: 'UTILITY',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.out',
-		inputs: [AUDIO_IN],
+		/* Stereo in. Folding to one channel is MONO's job now -- a button here
+		   did the same thing invisibly, three panels away from the cable it
+		   changed. */
+		/* Both chains end here. Audio arrives on IN and goes to the master; the
+		   logic chain arrives on the exec pin and is simply over. A patch reads
+		   left to right and finishes in one place, rather than having its white
+		   wire trail off after the last ACT with nowhere to land. */
+		inputs: [EXEC_IN, { id: 'in', label: 'IN', kind: 'audio', role: 'stereo' }],
 		outputs: [],
-		params: [
-			{ key: 'outMono', label: 'CHAN', min: 0, max: 1, step: 1, def: 0, choices: ['ST', 'MONO'] },
-			{ key: 'outPan', label: 'PAN', min: -100, max: 100, step: 1, def: 0 },
-			{ key: 'outLevel', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }
-		]
+		/* No knobs. OUT sends the patch to the master bus and does nothing else:
+		   panning is PAN's job and level is VCA's, both of which are already
+		   modules you can put in front of it. A primitive that also mixes is two
+		   primitives wearing one coat, and the duplicate controls were a second
+		   place to look when a patch came out quiet. */
+		params: []
 	},
 	{
 		id: 'mix',
@@ -609,6 +943,15 @@ export const MOD_PORT_IDS: ReadonlySet<string> = new Set(
 	MODULE_SPECS.flatMap((m) => [
 		...m.inputs.filter((p) => p.kind === 'mod').map((p) => p.id),
 		...m.outputs.filter((p) => p.kind === 'mod').map((p) => p.id)
+	])
+);
+
+/* The exec pins, derived from the catalogue for the same reason the mod ones
+   are: a hardcoded list falls behind the modules and misroutes cables. */
+export const EXEC_PORT_IDS: ReadonlySet<string> = new Set(
+	MODULE_SPECS.flatMap((m) => [
+		...m.inputs.filter((p) => p.kind === 'exec').map((p) => p.id),
+		...m.outputs.filter((p) => p.kind === 'exec').map((p) => p.id)
 	])
 );
 

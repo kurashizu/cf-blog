@@ -1,0 +1,335 @@
+/**
+ * The node model, after Unreal's Blueprints.
+ *
+ * This exists because the engine had the rules written out once per module and
+ * so had them wrong in a different way each time. An oscillator read the key it
+ * was played from whether or not anything was wired into its PITCH socket; MODES
+ * consulted a knob first and the socket never; STRING declared a socket the
+ * builder did not read at all. Three sockets on three cards that did nothing,
+ * and no way to notice short of playing each one and listening.
+ *
+ * The fix is not another check. It is that a module should not be able to reach
+ * past its own inputs: if every value a node uses arrives already resolved --
+ * cable if there is one, declared default if not -- then "an unwired socket
+ * falls back to its default" is true by construction rather than by 46 separate
+ * authors remembering it.
+ *
+ * So this module owns the resolution and nothing else does. Blueprint's split
+ * is kept exactly:
+ *
+ *   exec   which nodes run, and in what order. Actions only.
+ *   data   values, pulled on demand: a consumer asks, the producer computes.
+ *
+ * Pure nodes (arithmetic, filters) have no exec pins because asking when they
+ * run has no answer; impure ones (a strike, an output) do, because running them
+ * does something.
+ */
+
+/** A value flowing between nodes. Numbers today; the shape is what matters. */
+export type NodeValue = number;
+
+export interface ResolvedInputs {
+	/** What arrived at this inlet, already resolved from cable or default. */
+	get(port: string, fallback: number): number;
+}
+
+export interface EvalNode {
+	id: string;
+	type: string;
+}
+
+export interface EvalCable {
+	from: string;
+	fromPort: string;
+	to: string;
+	toPort: string;
+}
+
+export interface EvalGraph {
+	nodes: EvalNode[];
+	cables: EvalCable[];
+}
+
+/** Computes a pure node's output from its already-resolved inputs. */
+export type PureFn = (
+	inputs: ResolvedInputs,
+	param: (key: string, def: number) => number,
+	/* The note being played, for the few nodes whose default depends on the
+	   instrument rather than on their own knobs -- the tuning reference. */
+	note?: NoteEvent
+) => number;
+
+/**
+ * The pure nodes: a value computed from other values, holding no state.
+ *
+ * Kept as a table rather than a switch so that adding one is adding a row. The
+ * engine had this same arithmetic written twice -- once to build the node and
+ * once to resolve it -- which is exactly the kind of duplication that drifts.
+ */
+
+/** Semitones above the reference as a frequency. */
+const hzOf = (semis: number, a4: number) => a4 * Math.pow(2, semis / 12);
+
+export const PURE_NODES: Record<string, PureFn> = {
+	/* Pitch to frequency: exact, and the direction nearly every patch wants. */
+	tofreq: (i, p, note) => hzOf(i.get('a', 0) + p('shift', 0), p('tuning', note?.tuning ?? 440)),
+	/* Frequency to pitch: the lossy direction. Which note 452 Hz "is" depends on
+	   the reference and on whether you round, so both are knobs rather than
+	   assumptions baked into whichever module happened to convert. */
+	topitch: (i, p, note) => {
+		const hz = i.get('a', 0);
+		if (!(hz > 0)) return 0;
+		const semis = 12 * Math.log2(hz / p('tuning', note?.tuning ?? 440));
+		return p('quantise', 1) >= 0.5 ? Math.round(semis) : semis;
+	},
+	const: (_i, p) => p('value', 1),
+	add: (i, p) => i.get('a', 0) + i.get('b', p('addB', 0)),
+	mul: (i, p) => i.get('a', 1) * i.get('b', p('mulB', 1)),
+	remap: (i, p) => {
+		const lo = p('inLo', 0);
+		const hi = p('inHi', 1);
+		const span = hi - lo;
+		// A zero-width input range means "always the low end" rather than NaN.
+		const k = span === 0 ? 0 : (i.get('a', 0) - lo) / span;
+		const outLo = p('outLo', 0);
+		return outLo + Math.max(0, Math.min(1, k)) * (p('outHi', 100) - outLo);
+	},
+	clamp: (i, p) => Math.max(p('clampLo', 0), Math.min(p('clampHi', 1), i.get('a', 0))),
+	lerp: (i, p) => {
+		const a = i.get('a', 0);
+		const b = i.get('b', 0);
+		const alpha = Math.max(0, Math.min(1, i.get('alpha', p('lerpAlpha', 50) / 100)));
+		return a + (b - a) * alpha;
+	},
+	curve: (i, p) => {
+		const x = i.get('a', 0);
+		// Shaping is defined on 0..1; outside it a fractional power of a negative
+		// base is NaN, so the value passes through unchanged.
+		return x >= 0 && x <= 1 ? Math.pow(x, Math.max(0.1, p('exp', 1))) : x;
+	}
+};
+
+export function isPureNode(type: string): boolean {
+	return type in PURE_NODES;
+}
+
+/** What ENTRY publishes about the note that is playing. */
+export interface NoteEvent {
+	pitch: number;
+	/**
+	 * What A4 is, in hertz.
+	 *
+	 * The instrument's master tuning, so a patch converting pitch to frequency
+	 * agrees with the rest of the synth by default. A converter can still name
+	 * its own reference -- an ensemble tuned to A=415 against a modern one is a
+	 * real thing to want -- but the setting is where it starts.
+	 */
+	tuning?: number;
+	velocity: number;
+	noteIndex: number;
+	gate: number;
+	/** One value per lane the track carries, keyed by lane id. */
+	lanes: Record<string, number>;
+}
+
+/**
+ * A resolver for one note.
+ *
+ * Values are pulled, not pushed: nobody runs a pure node, its consumer asks it
+ * for a number and it asks its own inputs in turn. That is how Blueprint
+ * evaluates a pure node, and it means the arithmetic costs nothing when nothing
+ * reads it.
+ *
+ * Memoised per note, so a value feeding three knobs is computed once. Cycles
+ * are caught by tracking the path rather than by counting depth: a hand-edited
+ * patch file can hold a loop the editor would refuse to draw, but so can a
+ * perfectly legitimate chain of forty additions, and a depth cutoff cannot tell
+ * them apart -- it answered 0 for the long chain, memoised that 0, and then
+ * handed it to every later reader, so the same node gave different answers
+ * depending on which query happened to run first.
+ */
+export function createResolver(
+	graph: EvalGraph,
+	params: Record<string, number>,
+	note: NoteEvent,
+	entryType = 'in'
+) {
+	const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
+	const entryIds = new Set(graph.nodes.filter((n) => n.type === entryType).map((n) => n.id));
+	const memo = new Map<string, number>();
+
+	/* Cables into a given inlet, indexed once: a patch with two hundred cables
+	   was being scanned end to end for every socket of every node. */
+	const feeds = new Map<string, EvalCable>();
+	for (const c of graph.cables) {
+		const key = `${c.to}.${c.toPort}`;
+		if (!feeds.has(key)) feeds.set(key, c);
+	}
+
+	const param = (nodeId: string) => (key: string, def: number) =>
+		params[`${nodeId}.${key}`] ?? def;
+
+	/** What ENTRY hands out. Lane outlets are named `lane:<id>`. */
+	function entryValue(port: string, fallback: number): number {
+		/* A pitch, in semitones from the tuning reference -- not a frequency.
+		   An oscillator takes Hz, so a patch converts explicitly through FREQ,
+		   which is where the tuning decision lives. */
+		if (port === 'pitch') return note.pitch;
+		if (port === 'vel') return note.velocity;
+		if (port === 'note') return note.noteIndex;
+		if (port === 'gate') return note.gate;
+		if (port.startsWith('lane:')) return note.lanes[port.slice(5)] ?? fallback;
+		return fallback;
+	}
+
+	/* The nodes on the path currently being pulled. A node that appears twice
+	   closes a cycle, which the editor will not draw but a hand-edited patch
+	   file can contain. */
+	const onPath = new Set<string>();
+
+	function valueOf(nodeId: string): number {
+		const hit = memo.get(nodeId);
+		if (hit !== undefined) return hit;
+		const node = nodeById.get(nodeId);
+		if (!node) return 0;
+		const fn = PURE_NODES[node.type];
+		// A node that is not pure has no value to pull: its output is sound, and
+		// sound is carried by the audio graph rather than computed here.
+		if (!fn) return 0;
+		/* Part of a cycle. Zero, and deliberately not memoised: this node's real
+		   value is undefined rather than zero, and writing the zero down would
+		   hand it to every later reader as though it were settled. */
+		if (onPath.has(nodeId)) return 0;
+		onPath.add(nodeId);
+		const p = param(nodeId);
+		const inputs: ResolvedInputs = {
+			get: (port, fallback) => read(nodeId, port, fallback)
+		};
+		const v = fn(inputs, p, note);
+		onPath.delete(nodeId);
+		const out = Number.isFinite(v) ? v : 0;
+		memo.set(nodeId, out);
+		return out;
+	}
+
+	/**
+	 * What arrives at one inlet.
+	 *
+	 * In order: the cable if one is drawn, then the node's own stored setting,
+	 * then the caller's default. The middle step is what makes a knob an inlet
+	 * -- `in('cutoff', 800)` returns whatever the knob was turned to, and the
+	 * 800 is only the value for a knob that has never been touched. Skipping it
+	 * would hand back the code default and quietly ignore every setting in the
+	 * patch file.
+	 */
+	function read(nodeId: string, port: string, fallback: number): number {
+		const c = feeds.get(`${nodeId}.${port}`);
+		if (c) {
+			if (entryIds.has(c.from)) return entryValue(c.fromPort, fallback);
+			return valueOf(c.from);
+		}
+		return params[`${nodeId}.${port}`] ?? fallback;
+	}
+
+	return {
+		/**
+		 * The value a node should use for one of its inputs.
+		 *
+		 * Every module reads through this and none reaches past it, which is what
+		 * makes "unwired falls back to the default" true everywhere at once
+		 * rather than in each place someone remembered to write it.
+		 */
+		input: (nodeId: string, port: string, fallback: number) => read(nodeId, port, fallback),
+		/** Is anything wired into this inlet? For modules that branch on it. */
+		isWired: (nodeId: string, port: string) => feeds.has(`${nodeId}.${port}`),
+		param
+	};
+}
+
+export type Resolver = ReturnType<typeof createResolver>;
+
+/**
+ * Which nodes execution reaches, following the exec cables from ENTRY.
+ *
+ * An empty exec socket means the node does not run. There is no "unless the
+ * patch has no exec cables at all" exemption: that was tried, on the reasoning
+ * that a bare source into OUT should play without a second cable, and it makes
+ * the pin decorative in precisely the case where it is empty -- OUT sitting
+ * with nothing on its exec socket, sounding anyway. A pin that only means
+ * something once you have used it elsewhere means nothing.
+ *
+ * The seed patch draws the cable, so the simplest patch is still one you can
+ * play without building it.
+ */
+export function execReach(graph: EvalGraph, execPorts: ReadonlySet<string>, entryType = 'in'): {
+	gated: boolean;
+	reached: Set<string>;
+} {
+	const execCables = graph.cables.filter(
+		(c) => execPorts.has(c.toPort) && execPorts.has(c.fromPort)
+	);
+
+	const reached = new Set<string>();
+	const queue = graph.nodes.filter((n) => n.type === entryType).map((n) => n.id);
+	for (const id of queue) reached.add(id);
+	while (queue.length) {
+		const id = queue.shift()!;
+		for (const c of execCables) {
+			if (c.from !== id || reached.has(c.to)) continue;
+			reached.add(c.to);
+			queue.push(c.to);
+		}
+	}
+	return { gated: true, reached };
+}
+
+/** Does this node run for this note? */
+export function runs(reach: { gated: boolean; reached: Set<string> }, id: string): boolean {
+	return !reach.gated || reach.reached.has(id);
+}
+
+/**
+ * How long after the note each node runs, following the exec cables.
+ *
+ * Blueprint's Sequence runs Then 0 before Then 1. Audio has no "afterwards" --
+ * two strikes at the same instant are one strike -- so SEQ expresses the order
+ * as a gap in milliseconds instead, which is the thing anyone actually wants
+ * it for: a flam, a grace note, the two layers a sampled kick is built from.
+ *
+ * The earliest arrival wins, as it would in Blueprint: a node reached by two
+ * paths runs at the first of them.
+ */
+export function execDelays(
+	graph: EvalGraph,
+	params: Record<string, number>,
+	execPorts: ReadonlySet<string>,
+	entryType = 'in'
+): Map<string, number> {
+	const execCables = graph.cables.filter(
+		(c) => execPorts.has(c.toPort) && execPorts.has(c.fromPort)
+	);
+	const at = new Map<string, number>();
+	if (!execCables.length) return at;
+
+	const gapOf = (id: string) => {
+		const n = graph.nodes.find((m) => m.id === id);
+		if (n?.type !== 'seq') return 0;
+		return Math.max(0, params[`${id}.gapMs`] ?? 0) / 1000;
+	};
+
+	const queue = graph.nodes.filter((n) => n.type === entryType).map((n) => n.id);
+	for (const id of queue) at.set(id, 0);
+	let guard = 0;
+	while (queue.length && guard++ < 4096) {
+		const id = queue.shift()!;
+		const after = (at.get(id) ?? 0) + gapOf(id);
+		for (const c of execCables) {
+			if (c.from !== id) continue;
+			const prev = at.get(c.to);
+			if (prev !== undefined && prev <= after) continue;
+			at.set(c.to, after);
+			queue.push(c.to);
+		}
+	}
+	return at;
+}
