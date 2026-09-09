@@ -2007,8 +2007,18 @@ class ModularSynth {
           bp.type = 'bandpass';
           bp.frequency.value = f;
           bp.Q.value = q;
+          /* Quiet against the struck sines. sqrt(q) was compensating for how
+             little a narrow bandpass passes of a sustained tone, but a strike
+             is 8 ms of broadband noise: at q 7 that came to 0.88 per band, so
+             three filters handed almost the whole strike straight to the output
+             and MODES alone measured a 1144 Hz centroid on a drum whose
+             partials sit at 55, 94 and 143 Hz.
+          
+             The struck half IS the drum. This half exists so the module still
+             colours something continuous fed into it -- a pad, a held note --
+             and at that job it does not need to be loud. */
           const fg = ctx.createGain();
-          fg.gain.value = (mix / ratios.length) * Math.sqrt(q);
+          fg.gain.value = (mix / ratios.length) * Math.min(1.2, Math.sqrt(q) * 0.25);
           input.connect(bp);
           bp.connect(fg);
           fg.connect(output);

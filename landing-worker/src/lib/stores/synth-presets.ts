@@ -1968,7 +1968,15 @@ function drumPatch(o: {
 			   spectrum -- a centroid of 1274 where a real bass drum sits near
 			   180. Pitched drums cap it against their own body; unpitched ones
 			   keep the full tone, because for them the noise IS the instrument. */
-			'n.exTone': (o.hz ?? 0) > 0 ? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * 4)) : o.tone,
+			/* The rattle is capped against the shell only on drums that barely
+			   have one. A snare's wires ARE bright -- that is what a snare is --
+			   so a drum with a lot of noise keeps its written tone, while a kick
+			   or a tom, which has a trace of it, is held near its own body.
+			   Capping everything at hz*4 crushed the snare's 5200 Hz to 740 and
+			   left it measuring 80% low energy with no wires at all. */
+			'n.exTone': (o.hz ?? 0) > 0
+				? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * (4 + ((o.snare ?? 0) / 100) * 40)))
+				: o.tone,
 			/* Bandpass for a pitched drum, high-pass for one that has no pitch.
 			
 			   Every key used a bandpass at the strike tone, which is right for
@@ -1978,14 +1986,21 @@ function drumPatch(o: {
 			   energy above 2 kHz. A cymbal IS the top of the spectrum. */
 			'nf.type': (o.hz ?? 0) > 0 ? 1 : 2,
 			'nf.cutoff': (o.hz ?? 0) > 0
-				? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * 4))
+				? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * (4 + ((o.snare ?? 0) / 100) * 40)))
 				: Math.max(1200, o.tone * 0.55),
 			/* An unpitched drum IS its noise, so the band stays wide -- narrowing
 			   it turns a cymbal into a whistle. A pitched one uses the filter to
 			   place the rattle around the drum's own body. */
 			'nf.q': (o.hz ?? 0) > 0 ? (o.noiseQ ?? 1.2) : Math.min(0.8, o.noiseQ ?? 0.8),
 			'nf.depth': 0,
-			'mx.mixA': Math.round(100 - (o.snare ?? 0) * 0.18),
+			/* The shell gives way to the wires as the drum gets noisier.
+			
+			   A snare is roughly half rattle by energy, and MIX only goes to 100
+			   -- so with the body at 89 the noise could not reach it however far
+			   B was pushed, and the snare measured 80% of its energy below 200
+			   Hz with no wires audible at all. Turning A down is the only way to
+			   let B win on the keys where it should. */
+			'mx.mixA': Math.round(100 - (o.snare ?? 0) * 0.75),
 			/* Noise carries far more energy than three decaying sines, so summing
 			   the two at face value made the noisiest keys the loudest: a hi-hat
 			   at snare 88 measured 0.46 peak against the rest of the kit's 0.21.
@@ -1993,7 +2008,7 @@ function drumPatch(o: {
 			   hat's level down to the kit's without making it any less noisy --
 			   the ratio between the two branches is what says "hi-hat", not the
 			   absolute level of either. */
-			'mx.mixB': Math.round((o.snare ?? 0) * 0.55 * (1 - (o.snare ?? 0) / 260)),
+			'mx.mixB': Math.round(Math.min(100, (o.snare ?? 0) * 1.25)),
 			/* A cymbal has no shell, so BODY is bypassed on the unpitched keys --
 			   it was rolling off exactly the highs that make them cymbals. */
 			'b.bodySize': o.body,
