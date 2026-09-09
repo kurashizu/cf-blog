@@ -983,7 +983,13 @@ class ModularSynth {
        can wire velocity to brightness the way a real drum has it rather than
        only to level. */
     note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 }
-  ): { out: AudioNode; sources: AudioScheduledSourceNode[] } | null {
+  ): {
+    out: AudioNode;
+    sources: AudioScheduledSourceNode[];
+    /** When each source starts, so a SEQ gap reaches the sound and not only
+        the modules that happen to schedule against the note time. */
+    startAt: Map<AudioScheduledSourceNode, number>;
+  } | null {
     /* Read from the catalogue rather than listed here. The list this replaces
        said ['fm','cv'] and had fallen behind the modules: pwm, trig and do are
        mod ports too, so a PWM cable was sorted as audio, found PULSE has no
@@ -1096,6 +1102,13 @@ class ModularSynth {
       }
     >();
     const sources: AudioScheduledSourceNode[] = [];
+    /* When each source starts, keyed by the node that made it.
+    
+       SEQ's gap reaches a module that schedules against `t` -- an envelope, a
+       strike -- but every AudioScheduledSourceNode was started at the note
+       regardless, so an oscillator behind a SEQ played on the beat and the flam
+       the module exists for did not happen. */
+    const startAt = new Map<AudioScheduledSourceNode, number>();
     const typeById = new Map(graph.nodes.map((n) => [n.id, n.type]));
     /* Modules whose output is a value, not a sound. A CONST left unwired must
        not be summed into the mix -- it is DC, and DC is a click and then a
@@ -1117,8 +1130,11 @@ class ModularSynth {
          canvas showed. */
       const p = (key: string, def: number) => cvIn(node.id, key, params[`${node.id}.${key}`] ?? def);
       const runAt = t + (delays.get(node.id) ?? 0);
+      const madeBefore = sources.length;
       const made = this.buildGraphNode(ctx, node.type, p, baseFreq, runAt, heldSec, sources, node.id, laneValues, cvIn, note, heldSec);
       if (!made) continue;
+      // Whatever this node just created starts when this node runs.
+      for (let i = madeBefore; i < sources.length; i++) startAt.set(sources[i], runAt);
 
       built.set(node.id, made);
 
@@ -1208,7 +1224,7 @@ class ModularSynth {
     const level = ctx.createGain();
     level.gain.value = presetGain;
     sink.connect(level);
-    return { out: level, sources };
+    return { out: level, sources, startAt };
   }
 
   /** One graph node. Returns its audio ends and the params a cable may drive. */
@@ -3815,7 +3831,7 @@ class ModularSynth {
            down. */
         chainOut = built.out;
         for (const src of built.sources) {
-          src.start(t);
+          src.start(built.startAt.get(src) ?? t);
           extras.push(src);
         }
       }
@@ -4088,41 +4104,65 @@ class ModularSynth {
     const entry = graph.nodes.find((n) => n.type === 'in');
     if (!entry) return none;
 
+    /* Follow the execution wire wherever it goes.
+    
+       This used to be hardcoded as ENTRY -> WHEN -> ACT, exactly two hops, so a
+       SEQ anywhere in the chain silently dropped the rest of it: the walk found
+       a node that was not a WHEN and gave up without a word. Worse, it
+       disagreed with execReach, which traverses correctly -- so the audio side
+       and the action side of the same patch reached different conclusions about
+       the same white cable.
+    
+       WHEN is a branch: execution carries on out of it only when its test
+       holds. Everything else passes execution straight through. */
     const out = { ...none };
-    for (const c of graph.cables) {
-      if (c.from !== entry.id || c.fromPort !== 'then') continue;
-      const when = graph.nodes.find((n) => n.id === c.to && n.type === 'when');
-      if (!when) continue;
+    const execCables = graph.cables.filter(
+      (c) => EXEC_PORT_IDS.has(c.toPort) && EXEC_PORT_IDS.has(c.fromPort)
+    );
 
-      // Does the condition hold for this note?
+    const holds = (when: { id: string }): boolean => {
       const test = Math.round(num(when.id, 'test', 0));
       const at = Math.round(num(when.id, 'testNote', 48));
-      let pass = true;
-      if (test === 1) pass = noteIndex < at; // ABOVE: the roll counts downward
-      else if (test === 2) pass = noteIndex > at;
-      else if (test === 3) {
-        pass = false;
-        for (const v of this.activeVoices.values()) if (v.trackId === trackId) { pass = true; break; }
+      if (test === 1) return noteIndex < at; // ABOVE: the roll counts downward
+      if (test === 2) return noteIndex > at;
+      if (test === 3) {
+        for (const v of this.activeVoices.values()) if (v.trackId === trackId) return true;
+        return false;
       }
-      if (!pass) continue;
+      return true;
+    };
 
-      for (const d of graph.cables) {
-        if (d.from !== when.id || d.fromPort !== 'then') continue;
-        const act = graph.nodes.find((n) => n.id === d.to && n.type === 'act');
-        if (!act) continue;
-        const kind = Math.round(num(act.id, 'action', 0));
-        const ms = num(act.id, 'actMs', 6);
-        out.fadeSec = Math.max(0.001, ms / 1000);
-        if (kind === 0) {
-          out.cut = true;
-          out.cutGroup = Math.round(num(act.id, 'actGroup', 0));
-        } else if (kind === 1) {
-          out.solo = true;
-          out.cutGroup = Math.round(num(act.id, 'actGroup', 0));
-        } else {
-          out.glide = true;
-          out.cut = true;
+    const seen = new Set<string>([entry.id]);
+    const queue = [entry.id];
+    while (queue.length) {
+      const id = queue.shift()!;
+      for (const c of execCables) {
+        if (c.from !== id || seen.has(c.to)) continue;
+        const node = graph.nodes.find((n) => n.id === c.to);
+        if (!node) continue;
+        seen.add(node.id);
+
+        if (node.type === 'when') {
+          // A branch: the chain past it only runs when the answer is yes.
+          if (holds(node)) queue.push(node.id);
+          continue;
         }
+
+        if (node.type === 'act') {
+          const kind = Math.round(num(node.id, 'action', 0));
+          const ms = num(node.id, 'actMs', 6);
+          out.fadeSec = Math.max(0.001, ms / 1000);
+          if (kind === 0) {
+            out.cut = true;
+            out.cutGroup = Math.round(num(node.id, 'actGroup', 0));
+          } else if (kind === 1) {
+            out.solo = true;
+            out.cutGroup = Math.round(num(node.id, 'actGroup', 0));
+          } else {
+            out.glide = true;
+          }
+        }
+        queue.push(node.id);
       }
     }
     return out;

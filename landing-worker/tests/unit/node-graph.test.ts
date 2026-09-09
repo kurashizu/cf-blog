@@ -4,6 +4,7 @@ import { rolesCompatible } from '../../src/lib/stores/graph-model';
 import {
 	createResolver,
 	execReach,
+	execDelays,
 	runs,
 	isPureNode,
 	PURE_NODES,
@@ -503,5 +504,117 @@ describe('pitch and frequency', () => {
 		expect(rolesCompatible('hz', 'pitch')).toBe(false);
 		expect(rolesCompatible('pitch', 'pitch')).toBe(true);
 		expect(rolesCompatible('hz', 'hz')).toBe(true);
+	});
+});
+
+/**
+ * SEQ, and the gap that makes a flam.
+ *
+ * Blueprint's Sequence runs Then 0 before Then 1. Audio has no "afterwards" --
+ * two strikes at the same instant are one strike -- so SEQ says the order as a
+ * gap in milliseconds, which is what anyone actually wants it for: a grace
+ * note, a flam, the two layers a sampled kick is built from.
+ */
+describe('execution timing', () => {
+	it('delays what follows a gap', () => {
+		const graph = g(
+			[['e', 'in'], ['s', 'seq'], ['o', 'out']],
+			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
+		);
+		const at = execDelays(graph, { 's.gapMs': 50 }, EXEC);
+		// The gap applies downstream of the SEQ, not to the SEQ itself.
+		expect(at.get('s')).toBe(0);
+		expect(at.get('o')).toBeCloseTo(0.05, 6);
+	});
+
+	it('accumulates along a chain of gaps', () => {
+		const graph = g(
+			[['e', 'in'], ['a', 'seq'], ['b', 'seq'], ['o', 'out']],
+			[wire('e', 'then', 'a', 'exec'), wire('a', 'then', 'b', 'exec'), wire('b', 'then', 'o', 'exec')]
+		);
+		const at = execDelays(graph, { 'a.gapMs': 50, 'b.gapMs': 30 }, EXEC);
+		expect(at.get('o')).toBeCloseTo(0.08, 6);
+	});
+
+	it('takes the earliest of two paths', () => {
+		/* A node reached by two routes runs at the first of them, as it would in
+		   Blueprint -- so a direct cable beats a delayed one however the cables
+		   happen to be ordered. */
+		const graph = g(
+			[['e', 'in'], ['s', 'seq'], ['o', 'out']],
+			[
+				wire('e', 'then', 's', 'exec'),
+				wire('s', 'then', 'o', 'exec'),
+				wire('e', 'then', 'o', 'exec')
+			]
+		);
+		expect(execDelays(graph, { 's.gapMs': 100 }, EXEC).get('o')).toBe(0);
+	});
+
+	it('terminates on a loop of gaps', () => {
+		const graph = g(
+			[['e', 'in'], ['a', 'seq'], ['b', 'seq']],
+			[
+				wire('e', 'then', 'a', 'exec'),
+				wire('a', 'then', 'b', 'exec'),
+				wire('b', 'then', 'a', 'exec')
+			]
+		);
+		const at = execDelays(graph, { 'a.gapMs': 10, 'b.gapMs': 10 }, EXEC);
+		expect(Number.isFinite(at.get('b') ?? NaN)).toBe(true);
+	});
+
+	it('treats a missing gap as no gap', () => {
+		const graph = g(
+			[['e', 'in'], ['s', 'seq'], ['o', 'out']],
+			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
+		);
+		expect(execDelays(graph, {}, EXEC).get('o')).toBe(0);
+		// A negative gap is a hand-edited file, not a rewind.
+		expect(execDelays(graph, { 's.gapMs': -500 }, EXEC).get('o')).toBe(0);
+	});
+});
+
+/**
+ * The logic chain is walked, not pattern-matched.
+ *
+ * `noteActions` hardcoded exactly two hops -- ENTRY to a WHEN, that WHEN to an
+ * ACT -- so a SEQ anywhere along the chain dropped the rest of it without a
+ * word: the walk found a node that was not a WHEN and gave up. It also
+ * disagreed with execReach, which traverses properly, so the audio side and the
+ * action side of one patch reached different conclusions about the same white
+ * cable.
+ *
+ * These assert the shape rather than calling the engine, which needs a live
+ * synth; the traversal itself is exercised in the browser.
+ */
+describe('the logic chain', () => {
+	const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+
+	it('follows exec cables rather than matching a fixed shape', () => {
+		// The old walk named the node types it expected at each hop.
+		expect(SYNTH).not.toContain("n.id === c.to && n.type === 'when'");
+		expect(SYNTH).not.toContain("d.from !== when.id");
+		expect(SYNTH).toContain('const execCables = graph.cables.filter(');
+	});
+
+	it('treats WHEN as a branch on the chain', () => {
+		/* Execution carries on past a WHEN only when its test holds -- which is
+		   what makes it a branch rather than a node that happens to sit there. */
+		expect(SYNTH).toContain("if (node.type === 'when') {");
+		expect(SYNTH).toContain('if (holds(node)) queue.push(node.id);');
+	});
+
+	it('cannot loop on a cycle of exec cables', () => {
+		expect(SYNTH).toContain('const seen = new Set<string>([entry.id]);');
+		expect(SYNTH).toContain('if (c.from !== id || seen.has(c.to)) continue;');
+	});
+
+	it('starts each source when its own node runs', () => {
+		/* A SEQ gap reached the modules that schedule against the note time --
+		   an envelope, a strike -- but every source was started at the note
+		   regardless, so an oscillator behind a SEQ played on the beat and the
+		   flam the module exists for did not happen. */
+		expect(SYNTH).toContain('src.start(built.startAt.get(src) ?? t);');
 	});
 });

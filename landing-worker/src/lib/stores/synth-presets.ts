@@ -213,6 +213,13 @@ function patch(
 	   a patch's own level belongs is a gain stage on the canvas -- where it can
 	   be seen, moved, and driven by a cable like any other. */
 	const TRIM_ID = 'trim';
+	/* The trim is injected, so a preset that also names a node `trim` would end
+	   up with two -- and a duplicate id makes the topological sort fail, which
+	   silences the whole patch rather than pointing at the clash. Caught here,
+	   where the name is chosen, rather than left to be heard. */
+	if (nodes.some(([id]) => id === TRIM_ID)) {
+		throw new Error(`preset node id "${TRIM_ID}" collides with the injected trim`);
+	}
 	const graphNodes: GraphNode[] = [
 		{ id: ENTRY_ID, type: 'in', x: 48, y: 168 },
 		...nodes.map(([id, type]) => ({ id, type, ...posOf(id) })),
@@ -669,7 +676,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['lo', 'sum'],
 					['hi', 'sum'],
 					['all', 'sum'],
-					['trim', 'vca', { gain: 54 }],
+					['lvl', 'vca', { gain: 54 }],
 					['cab', 'space', { spaceSize: 22, spaceDecay: 34, spaceMix: 20 }]
 				],
 				[
@@ -678,7 +685,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'x2>d8:pitch', 'x3>d5:pitch', 'x4>d4:pitch',
 					'd16>g16', 'd8>g8', 'd5>g5', 'd4>g4',
 					'g16>lo', 'g8>lo:b', 'g5>hi', 'g4>hi:b',
-					'lo>all', 'hi>all:b', 'all>trim', 'trim>cab', 'cab>output'
+					'lo>all', 'hi>all:b', 'all>lvl', 'lvl>cab', 'cab>output'
 				],
 				68
 			)
