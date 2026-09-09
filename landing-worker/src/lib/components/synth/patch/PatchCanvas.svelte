@@ -28,6 +28,7 @@
 	} from '../../../stores/synth-graph';
 	import { MODULE_SPECS, MODULE_GROUPS, moduleSpec, type ModuleSpec } from '../../../stores/synth-modules';
 	import ModuleCard from './ModuleCard.svelte';
+	import ModuleIcon from './ModuleIcon.svelte';
 
 	let graph = $derived(graphOf($currentTrack));
 	let graphParams = $derived($currentTrack?.graphParams);
@@ -358,6 +359,10 @@
 							style="height: {HEADER_H}px; color: {spec.color}; border-color: {spec.color}40"
 						>
 							<span>{spec.label}</span>
+							<span class="flex items-center gap-1">
+								<!-- The same glyph the palette shows, so a placed module is
+								     recognisable at a glance on a crowded canvas. -->
+								<ModuleIcon type={n.type} size={9} color={spec.color} />
 							<button
 								onpointerdown={(e) => {
 									if (e.button !== 2) e.stopPropagation();
@@ -369,6 +374,7 @@
 								class="text-[#e06c75] hover:text-white cursor-pointer leading-none"
 								title={$t('synthPatch.removeHint')}>×</button
 							>
+							</span>
 						</div>
 
 						<!-- Ports: inputs down the left, outputs down the right. Positioned
@@ -426,7 +432,9 @@
 	</div>
 
 	<!-- The palette, on the right like LIFE.LAB's library. -->
-	<div data-tour="synth-palette" class="shrink-0 flex flex-col gap-1 {paletteOpen ? 'w-[112px]' : 'w-6'} transition-all">
+	<!-- Two columns: thirty modules in one column ran past the height of the
+	     canvas beside it, so most of the palette was below the fold. -->
+	<div data-tour="synth-palette" class="shrink-0 flex flex-col gap-1 {paletteOpen ? 'w-[168px]' : 'w-6'} transition-all">
 		<button
 			onclick={() => (paletteOpen = !paletteOpen)}
 			class="press text-[9px] text-white/40 hover:text-white border border-white/15 rounded-xs py-0.5 cursor-pointer"
@@ -441,7 +449,7 @@
 							<div class="text-[8px] uppercase tracking-wider text-white/30 border-b border-white/10 pb-0.5 mb-1">
 								{g}
 							</div>
-							<div class="space-y-0.5">
+							<div class="grid grid-cols-2 gap-0.5">
 								{#each mods as m (m.id)}
 									<!-- Draggable as well as clickable: dragging says where it goes,
 									     clicking is the shortcut when you do not care yet. -->
@@ -454,9 +462,14 @@
 										ondragend={() => (dragType = null)}
 										onclick={() => place(m.id)}
 										title={$t(m.descKey)}
-										class="press w-full text-left px-1.5 py-0.5 border rounded-xs text-[10px] font-black cursor-grab active:cursor-grabbing bg-black/40 hover:bg-white/10"
-										style="border-color: {m.color}55; color: {m.color}">{m.label}</button
+										class="press w-full px-1.5 py-0.5 border rounded-xs text-[10px] font-black cursor-grab active:cursor-grabbing bg-black/40 hover:bg-white/10 flex items-center justify-between gap-1"
+										style="border-color: {m.color}55; color: {m.color}"
 									>
+										<!-- Name left, glyph right: the eye scans the column of names
+										     and the icons line up as a second column of shapes. -->
+										<span class="truncate">{m.label}</span>
+										<ModuleIcon type={m.id} />
+									</button>
 								{/each}
 							</div>
 						</div>
