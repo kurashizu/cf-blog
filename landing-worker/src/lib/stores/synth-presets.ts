@@ -484,7 +484,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 40, bodyDepth: 45, bodyMix: 50 }]
 				],
 				['entry>ex:b', 'pk>ex', 'ex>str', 'str>brg', 'brg>bod', 'bod>output'],
-				89
+				33
 			)
 		})
 	},
@@ -519,7 +519,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
 				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:b', 'mx>bod', 'bod>output'],
-				71
+				26
 			)
 		})
 	},
@@ -626,7 +626,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'entry>lo', 'd16>lo:b', 'd8>hi', 'd5>hi:b',
 					'lo>all', 'hi>all:b', 'd4>all', 'all>cab', 'cab>output'
 				],
-				185
+				68
 			)
 		})
 	},
@@ -659,7 +659,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mx', 'mix', { mixA: 100, mixB: 44 }]
 				],
 				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>trm', 'fan.cv>trm:cv', 'trm>mx', 'ex>res', 'res>mx:b', 'mx>output'],
-				110
+				42
 			)
 		})
 	},
@@ -693,7 +693,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['rm', 'space', { spaceSize: 44, spaceDecay: 50, spaceMix: 24 }]
 				],
 				['entry>ex:b', 'air>ex', 'ex>edge', 'edge>pipe', 'pipe>sp', 'sp>mg', 'sp.r>wid', 'wid>mg:r', 'mg>rm', 'rm>output'],
-				200
+				124
 			)
 		})
 	},
@@ -726,7 +726,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
 				],
 				['entry>ex:b', 'ham>ex', 'ex>c1', 'ex>c2', 'c1>rg', 'c2>rg:b', 'c1>sm', 'rg>sm:b', 'sm>bod', 'bod>output'],
-				38
+				14
 			)
 		})
 	},
@@ -785,7 +785,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 25, bodyDepth: 35, bodyMix: 25 }]
 				],
 				['entry>ex:b', 'qul>ex', 'ex>str', 'str>edg', 'edg>bod', 'bod>output'],
-				69
+				25
 			)
 		})
 	},
@@ -936,7 +936,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
 				],
 				['entry>ex:b', 'ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:b', 'mx>bod', 'bod>symp', 'symp>output'],
-				37
+				13
 			)
 		})
 	},
@@ -966,7 +966,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['eq', 'eq', { lowGain: 2, midGain: -3, midFreq: 480, highGain: 2 }]
 				],
 				['entry>ex:b', 'pic>ex', 'ex>str', 'str>bod', 'bod>eq', 'eq>output'],
-				97
+				36
 			)
 		})
 	},
@@ -997,7 +997,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
 				],
 				['entry>ex:b', 'fin>ex', 'ex>str', 'str>bod', 'bod>cmp', 'cmp>output'],
-				130
+				48
 			)
 		})
 	},
@@ -1030,7 +1030,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['rm', 'space', { spaceSize: 52, spaceDecay: 62, spaceMix: 26 }]
 				],
 				['entry>ex:b', 'bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:cv', 'pn>rm', 'rm>output'],
-				129
+				47
 			)
 		})
 	},
@@ -1061,7 +1061,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
 				],
 				['entry>ex:b', 'air>ex', 'ex>rd', 'rd>br', 'br>bel', 'bel>output'],
-				179
+				66
 			)
 		})
 	},
@@ -1093,7 +1093,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
 				],
 				['entry>ex:b', 'air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:b', 'mx>bel', 'bel>output'],
-				164
+				60
 			)
 		})
 	},
@@ -1922,7 +1922,7 @@ function drumPatch(o: {
 			   drums are struck and short, so they carry less energy per note
 			   than a rung string; the trim makes up for that rather than the
 			   voicing being wrong. */
-			[`${OUTPUT_ID}.outLevel`]: 190,
+			[`${OUTPUT_ID}.outLevel`]: 70,
 			[`${OUTPUT_ID}.outPan`]: 0
 		},
 		// The graph makes the sound; the oscillators are off.
