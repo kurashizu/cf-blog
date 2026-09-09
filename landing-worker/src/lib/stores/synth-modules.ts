@@ -90,6 +90,50 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 
+	{
+		id: 'sub',
+		label: 'SUB',
+		group: 'SOURCE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.sub',
+		inputs: [],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'subWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'TRI', 'SAW', 'SQR'] },
+			{ key: 'subOct', label: 'OCT', min: 1, max: 3, step: 1, def: 1 },
+			{ key: 'subLevel', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 70 }
+		]
+	},
+	{
+		id: 'pulse',
+		label: 'PULSE',
+		group: 'SOURCE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.pulse',
+		inputs: [{ id: 'pwm', label: 'PWM', kind: 'mod' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'pw', label: 'PW', min: 5, max: 95, step: 1, unit: '%', def: 50 },
+			{ key: 'pulseRatio', label: 'RATIO', min: 0.25, max: 8, step: 0.01, unit: '\u00d7', def: 1 },
+			{ key: 'pulseLevel', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 80 }
+		]
+	},
+	{
+		id: 'bow',
+		label: 'BOW',
+		group: 'SOURCE',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.bow',
+		inputs: [],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'bowPressure', label: 'PRES', min: 0, max: 100, step: 1, unit: '%', def: 50 },
+			{ key: 'bowNoise', label: 'HAIR', min: 0, max: 100, step: 1, unit: '%', def: 25 },
+			{ key: 'bowBite', label: 'BITE', min: 0, max: 100, step: 1, unit: '%', def: 40 },
+			{ key: 'bowLevel', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 70 }
+		]
+	},
+
 	/* SHAPE: things that change a signal already flowing. */
 	{
 		id: 'filter',
@@ -100,7 +144,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'fm', label: 'FM', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'type', label: 'TYPE', min: 0, max: 3, step: 1, def: 0, choices: ['LPF', 'BPF', 'HPF', 'NTCH'] },
+			{ key: 'type', label: 'TYPE', min: 0, max: 3, step: 1, def: 0, choices: ['LPF', 'BPF', 'HPF', 'NCH'] },
 			{ key: 'cutoff', label: 'FREQ', min: 40, max: 18000, step: 10, unit: 'Hz', def: 4000 },
 			{ key: 'q', label: 'RESO', min: 0.1, max: 24, step: 0.1, def: 1 },
 			{ key: 'depth', label: 'DEPTH', min: 0, max: 100, step: 1, unit: '%', def: 50 }
@@ -150,6 +194,47 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	},
 
 	/* RESONATE: the acoustic primitives -- what a body does to an excitation. */
+	{
+		id: 'blend',
+		label: 'BLEND',
+		group: 'SHAPE',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.blend',
+		inputs: [AUDIO_IN, { id: 'cv', label: 'CV', kind: 'mod' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'blendMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 50 },
+			{ key: 'blendTone', label: 'TONE', min: 100, max: 8000, step: 50, unit: 'Hz', def: 800 }
+		]
+	},
+	{
+		id: 'reed',
+		label: 'REED',
+		group: 'SHAPE',
+		color: '#e06c75',
+		descKey: 'synthPatch.mod.reed',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'reedStiff', label: 'STIF', min: 0, max: 100, step: 1, unit: '%', def: 50 },
+			{ key: 'reedBias', label: 'BIAS', min: 0, max: 100, step: 1, unit: '%', def: 40 }
+		]
+	},
+	{
+		id: 'comp',
+		label: 'COMP',
+		group: 'SHAPE',
+		color: '#98c379',
+		descKey: 'synthPatch.mod.comp',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'compThresh', label: 'THRS', min: -60, max: 0, step: 1, unit: 'dB', def: -18 },
+			{ key: 'compRatio', label: 'RTO', min: 1, max: 20, step: 0.5, def: 4 },
+			{ key: 'compAttack', label: 'ATK', min: 0, max: 100, step: 1, unit: 'ms', def: 5 },
+			{ key: 'compRelease', label: 'REL', min: 10, max: 1000, step: 10, unit: 'ms', def: 120 }
+		]
+	},
 	{
 		id: 'string',
 		label: 'STRING',
@@ -208,6 +293,34 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 
+	{
+		id: 'comb',
+		label: 'COMB',
+		group: 'RESONATE',
+		color: '#98c379',
+		descKey: 'synthPatch.mod.comb',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'combPos', label: 'POS', min: 2, max: 50, step: 1, unit: '%', def: 25 },
+			{ key: 'combDepth', label: 'DPTH', min: 0, max: 100, step: 1, unit: '%', def: 80 }
+		]
+	},
+	{
+		id: 'space',
+		label: 'SPACE',
+		group: 'RESONATE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.space',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'spaceSize', label: 'SIZE', min: 0, max: 100, step: 1, unit: '%', def: 40 },
+			{ key: 'spaceDecay', label: 'DECY', min: 0, max: 100, step: 1, unit: '%', def: 60 },
+			{ key: 'spaceMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 30 }
+		]
+	},
+
 	/* MODULATE: sources of control rather than of sound. */
 	{
 		id: 'env',
@@ -242,6 +355,34 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	},
 
 	/* UTILITY: the plumbing a patch needs once it stops being a straight line. */
+	{
+		id: 'delay',
+		label: 'DELAY',
+		group: 'UTILITY',
+		color: '#d19a66',
+		descKey: 'synthPatch.mod.delay',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'dlTime', label: 'TIME', min: 1, max: 2000, step: 1, unit: 'ms', def: 220 },
+			{ key: 'dlFeedback', label: 'FDBK', min: 0, max: 85, step: 1, unit: '%', def: 35 },
+			{ key: 'dlTone', label: 'TONE', min: 200, max: 12000, step: 100, unit: 'Hz', def: 6000 },
+			{ key: 'dlMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 30 }
+		]
+	},
+	{
+		id: 'pan',
+		label: 'PAN',
+		group: 'UTILITY',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.pan',
+		inputs: [AUDIO_IN, { id: 'cv', label: 'CV', kind: 'mod' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'panPos', label: 'POS', min: -100, max: 100, step: 1, def: 0 },
+			{ key: 'panDepth', label: 'DPTH', min: 0, max: 100, step: 1, unit: '%', def: 100 }
+		]
+	},
 	{
 		id: 'mix',
 		label: 'MIX',

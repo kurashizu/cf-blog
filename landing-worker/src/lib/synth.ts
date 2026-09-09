@@ -862,16 +862,53 @@ class ModularSynth {
    */
   private rackTailSeconds(track: TrackData): number {
     // Same rule as the chain itself: no ADV, no resonator, no ring-out.
-    const chain = track.advanced ? track.rackChain : undefined;
-    if (!Array.isArray(chain) || !chain.length) return 0;
-    const p = track.rackParams ?? {};
+    if (!track.advanced) return 0;
+
+    /* How long a module keeps sounding after its input stops. Everything not
+       listed is a filter or a gain, which stops when its input does.
+
+       This has to cover the graph as well as the chain. It did not, and a
+       patched DELAY measured a 0.33s ring at every feedback setting from 0 to
+       85% -- the tail was there, but the voice was torn down at the amp
+       release before any of it could be heard. */
+    const tailOf = (id: string, p: Record<string, number>): number => {
+      switch (id) {
+        case 'string': return p.decayTime ?? 2;
+        // A tube's partials hold with the key and then fall away quickly, so
+        // its ring-out is that fall, not the full decay setting.
+        case 'tube': return Math.min(p.tubeDecay ?? 1.2, 0.35);
+        /* A delay line's tail is how long its echoes stay audible: each lap
+           loses (1 - feedback), so the time to fall 60 dB is time * 3 /
+           -log10(g). Capped, because g near 1 diverges. */
+        case 'delay': {
+          const time = Math.max(0.001, (p.dlTime ?? 220) / 1000);
+          const g = Math.min(0.85, Math.max(0, (p.dlFeedback ?? 35) / 100));
+          if (g <= 0.01) return time;
+          return Math.min(8, (time * 3) / -Math.log10(g));
+        }
+        // A convolver rings for exactly the length of its impulse.
+        case 'space': return Math.min(4, Math.max(0.05, ((p.spaceSize ?? 40) / 100) * 3));
+        default: return 0;
+      }
+    };
+
     let tail = 0;
-    for (const id of chain) {
-      if (id === 'string') tail = Math.max(tail, p.decayTime ?? 2);
-      // A tube's partials hold with the key and then fall away quickly, so its
-      // ring-out is that fall, not the full decay setting.
-      else if (id === 'tube') tail = Math.max(tail, Math.min(p.tubeDecay ?? 1.2, 0.35));
-      // MODES and BODY are filters, not loops: they stop when their input does.
+    const chain = track.rackChain;
+    if (Array.isArray(chain) && chain.length) {
+      const p = track.rackParams ?? {};
+      for (const id of chain) tail = Math.max(tail, tailOf(id, p));
+    }
+
+    const graph = track.rackGraph;
+    if (graph && Array.isArray(graph.nodes)) {
+      const gp = track.graphParams ?? {};
+      for (const n of graph.nodes) {
+        // Graph params are keyed per node; collect this node's into a flat set.
+        const p: Record<string, number> = {};
+        const prefix = `${n.id}.`;
+        for (const [k, v] of Object.entries(gp)) if (k.startsWith(prefix)) p[k.slice(prefix.length)] = v;
+        tail = Math.max(tail, tailOf(n.type, p));
+      }
     }
     return Math.min(12, tail);
   }
@@ -1090,6 +1127,276 @@ class ModularSynth {
         low.connect(mid);
         mid.connect(high);
         return { in: low, out: high, mod };
+      }
+
+      case 'sub': {
+        /* An octave (or two) below the note, as a pure shape. Racks 1-7 have
+           this on the oscillator page; a patch that could not put weight under
+           a voice was missing something the fixed chain already had. */
+        const osc = ctx.createOscillator();
+        osc.type = WAVES[Math.round(p('subWave', 0))] ?? 'sine';
+        osc.frequency.value = baseFreq / Math.pow(2, Math.max(1, Math.round(p('subOct', 1))));
+        const g = ctx.createGain();
+        g.gain.value = p('subLevel', 70) / 100;
+        osc.connect(g);
+        sources.push(osc);
+        return { in: null, out: g, mod };
+      }
+
+      case 'pulse': {
+        /* A square whose width is settable and modulatable. Web Audio has no
+           pulse oscillator, so it is built the standard way: a sawtooth minus
+           a phase-shifted copy of itself is a rectangle whose duty cycle is the
+           shift. PWM is what makes a single oscillator sound like two. */
+        const width = Math.min(0.95, Math.max(0.05, p('pw', 50) / 100));
+        const a = ctx.createOscillator();
+        a.type = 'sawtooth';
+        a.frequency.value = baseFreq * p('pulseRatio', 1);
+        const b = ctx.createOscillator();
+        b.type = 'sawtooth';
+        b.frequency.value = a.frequency.value;
+        // The delay that sets the duty cycle: one period times the width.
+        const period = 1 / Math.max(1, a.frequency.value);
+        const dl = ctx.createDelay(1);
+        dl.delayTime.value = period * width;
+        const inv = ctx.createGain();
+        inv.gain.value = -1;
+        const sum = ctx.createGain();
+        sum.gain.value = p('pulseLevel', 80) / 100;
+        a.connect(sum);
+        b.connect(dl);
+        dl.connect(inv);
+        inv.connect(sum);
+        sources.push(a, b);
+        // Modulating the delay sweeps the width, which is the PWM everyone wants.
+        const pwm = ctx.createGain();
+        pwm.gain.value = period * 0.4;
+        pwm.connect(dl.delayTime);
+        mod.set('pwm', pwm.gain);
+        return { in: null, out: sum, mod };
+      }
+
+      case 'blend': {
+        /* Tilt between what arrives here and a filtered copy of it: rack 2's
+           MORPH as a cable. One input, like every other module -- the graph
+           joins several cables into one inlet by summing them, so a second
+           inlet would be a second sum, not a second signal.
+
+           MIX drives the balance from a CV, so an envelope can sweep a voice
+           from dark to bright across the note. */
+        const x = Math.min(1, Math.max(0, p('blendMix', 50) / 100));
+        const input = ctx.createGain();
+        const out = ctx.createGain();
+        const dark = ctx.createBiquadFilter();
+        dark.type = 'lowpass';
+        dark.frequency.value = p('blendTone', 800);
+        const ga = ctx.createGain();
+        const gb = ctx.createGain();
+        ga.gain.value = 1 - x;
+        gb.gain.value = x;
+        input.connect(dark);
+        dark.connect(ga);
+        ga.connect(out);
+        input.connect(gb);
+        gb.connect(out);
+        /* One CV moves both gains in opposite directions, so the pair stays a
+           crossfade rather than becoming a level control. */
+        const up = ctx.createGain();
+        up.gain.value = 1;
+        up.connect(gb.gain);
+        const down = ctx.createGain();
+        down.gain.value = -1;
+        up.connect(down);
+        down.connect(ga.gain);
+        mod.set('cv', up.gain);
+        return { in: input, out, mod };
+      }
+
+      case 'delay': {
+        /* A tap with feedback. Rack 6 has one on the master bus; here it is a
+           module, so it can sit inside a voice -- a slapback on the string but
+           not on the body, which the fixed chain cannot do.
+
+           The feedback gain is assigned, not scheduled: setValueAtTime leaves
+           a param at its default until the given time, and a voice is built
+           slightly ahead of when it sounds, so for those milliseconds the loop
+           would run at a gain of 1 with a delay of 0. */
+        const input = ctx.createGain();
+        const out = ctx.createGain();
+        const dl = ctx.createDelay(2);
+        dl.delayTime.value = Math.min(2, Math.max(0.001, p('dlTime', 220) / 1000));
+        const fb = ctx.createGain();
+        // Capped below unity: a delay line at g >= 1 never stops growing.
+        fb.gain.value = Math.min(0.85, Math.max(0, p('dlFeedback', 35) / 100));
+        const damp = ctx.createBiquadFilter();
+        damp.type = 'lowpass';
+        damp.frequency.value = p('dlTone', 6000);
+        const wet = ctx.createGain();
+        wet.gain.value = p('dlMix', 30) / 100;
+        const dry = ctx.createGain();
+        dry.gain.value = 1 - wet.gain.value;
+        input.connect(dry);
+        dry.connect(out);
+        input.connect(dl);
+        dl.connect(damp);
+        damp.connect(fb);
+        fb.connect(dl);
+        dl.connect(wet);
+        wet.connect(out);
+        return { in: input, out, mod };
+      }
+
+      case 'space': {
+        /* A room. Every acoustic instrument is heard in one, and a bare
+           resonator sounds like a recording made inside a box of cotton wool.
+           A short generated impulse rather than a file: the size is a knob, and
+           a patch has to stay self-contained. */
+        const input = ctx.createGain();
+        const out = ctx.createGain();
+        const seconds = Math.min(4, Math.max(0.05, p('spaceSize', 40) / 100 * 3));
+        const decay = Math.max(0.1, p('spaceDecay', 60) / 100 * 3);
+        const rate = ctx.sampleRate;
+        const len = Math.max(1, Math.floor(seconds * rate));
+        const buf = ctx.createBuffer(2, len, rate);
+        for (let ch = 0; ch < 2; ch++) {
+          const d = buf.getChannelData(ch);
+          for (let i = 0; i < len; i++) {
+            // Noise under an exponential envelope is the cheapest honest room.
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay * 2 + 1);
+          }
+        }
+        const cv = ctx.createConvolver();
+        cv.buffer = buf;
+        const wet = ctx.createGain();
+        wet.gain.value = p('spaceMix', 30) / 100;
+        const dry = ctx.createGain();
+        dry.gain.value = 1 - wet.gain.value;
+        input.connect(dry);
+        dry.connect(out);
+        input.connect(cv);
+        cv.connect(wet);
+        wet.connect(out);
+        return { in: input, out, mod };
+      }
+
+      case 'comb': {
+        /* Where the string is struck or plucked. A comb filter notches out the
+           partials that have a node at that point, which is why a guitar
+           plucked at the bridge is thin and nasal and the same string plucked
+           over the hole is round. The fixed chain has no way to say this. */
+        const input = ctx.createGain();
+        const out = ctx.createGain();
+        const pos = Math.min(0.5, Math.max(0.02, p('combPos', 25) / 100));
+        const dl = ctx.createDelay(0.05);
+        dl.delayTime.value = Math.min(0.05, pos / Math.max(1, baseFreq));
+        const inv = ctx.createGain();
+        inv.gain.value = -(p('combDepth', 80) / 100);
+        input.connect(out);
+        input.connect(dl);
+        dl.connect(inv);
+        inv.connect(out);
+        return { in: input, out, mod };
+      }
+
+      case 'bow': {
+        /* Friction. A bow does not strike and then let go -- it grabs the
+           string, drags it, slips, and grabs again, hundreds of times a second,
+           which is why a violin sustains and a plucked string does not.
+
+           The slip-stick is a sawtooth at the note, roughened by noise: the
+           scrape is what separates a bowed string from an organ. It is a source
+           because a bow starts the sound rather than shaping one. */
+        const out = ctx.createGain();
+        const drag = ctx.createOscillator();
+        drag.type = 'sawtooth';
+        drag.frequency.value = baseFreq;
+        const dg = ctx.createGain();
+        dg.gain.value = 1 - (p('bowNoise', 25) / 100) * 0.5;
+        drag.connect(dg);
+        dg.connect(out);
+        if (!this.noiseBuffer) this.initNoiseBuffer();
+        const scrape = ctx.createBufferSource();
+        scrape.buffer = this.noiseBuffer;
+        scrape.loop = true;
+        const sg = ctx.createGain();
+        sg.gain.value = (p('bowNoise', 25) / 100) * 0.6;
+        // Bow noise is a hiss riding the note, not a rumble under it.
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = Math.max(200, baseFreq * 2);
+        scrape.connect(hp);
+        hp.connect(sg);
+        sg.connect(out);
+        /* Pressure is how hard the bow bites: more pressure, more of the
+           sawtooth's upper corner, which is the sound of digging in. */
+        const tone = ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.frequency.value = 400 + (p('bowPressure', 50) / 100) * 7000;
+        const level = ctx.createGain();
+        level.gain.value = p('bowLevel', 70) / 100;
+        out.connect(tone);
+        tone.connect(level);
+        // The bow speaks rather than starting instantly: rosin has to catch.
+        const att = Math.max(0.005, (p('bowBite', 40) / 100) * 0.12);
+        level.gain.setValueAtTime(0, t);
+        level.gain.linearRampToValueAtTime(p('bowLevel', 70) / 100, t + att);
+        sources.push(drag, scrape);
+        return { in: null, out: level, mod };
+      }
+
+      case 'reed': {
+        /* A reed is a valve, not a tone. Blowing harder does not make a
+           clarinet louder in a straight line -- past a point the reed slams
+           shut and the waveform squares off, which is where the honk lives.
+           A tanh with an offset is that curve, and it belongs on its own so it
+           can sit between a breath source and a tube. */
+        const shaper = ctx.createWaveShaper();
+        const stiff = p('reedStiff', 50) / 100;
+        const bias = p('reedBias', 40) / 100;
+        const n = 1024;
+        const curve = new Float32Array(n);
+        const k = 1 + stiff * 25;
+        for (let i = 0; i < n; i++) {
+          const x = (i / (n - 1)) * 2 - 1;
+          // Asymmetric: a reed closes one way and cannot open past its rest.
+          const v = Math.tanh((x + bias * 0.5) * k);
+          curve[i] = Math.min(1, v) * 0.8;
+        }
+        shaper.curve = curve;
+        shaper.oversample = '2x';
+        const trim = ctx.createGain();
+        trim.gain.value = 1 / (1 + stiff);
+        shaper.connect(trim);
+        return { in: shaper, out: trim, mod };
+      }
+
+      case 'pan': {
+        /* Placing the instrument. Rack 7 has it on the output; as a module it
+           can differ per branch, so a patch can put the body somewhere the
+           string is not. */
+        const pn = ctx.createStereoPanner();
+        pn.pan.value = Math.max(-1, Math.min(1, p('panPos', 0) / 100));
+        const depth = ctx.createGain();
+        depth.gain.value = p('panDepth', 100) / 100;
+        depth.connect(pn.pan);
+        mod.set('cv', depth.gain);
+        return { in: pn, out: pn, mod };
+      }
+
+      case 'comp': {
+        /* Rack 6's compressor, as a module. A struck body has a transient far
+           above its own sustain, and something has to hold it down before the
+           output does it less kindly. */
+        const c = ctx.createDynamicsCompressor();
+        c.threshold.value = Math.max(-60, Math.min(0, p('compThresh', -18)));
+        c.ratio.value = Math.max(1, Math.min(20, p('compRatio', 4)));
+        c.attack.value = Math.max(0, Math.min(1, p('compAttack', 5) / 1000));
+        c.release.value = Math.max(0.01, Math.min(1, p('compRelease', 120) / 1000));
+        c.knee.value = 6;
+        const makeup = ctx.createGain();
+        makeup.gain.value = Math.pow(10, p('compGain', 0) / 20);
+        c.connect(makeup);
+        return { in: c, out: makeup, mod };
       }
 
       default: {

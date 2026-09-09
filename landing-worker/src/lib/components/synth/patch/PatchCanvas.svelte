@@ -37,7 +37,10 @@
 	let canvasEl = $state<HTMLDivElement | undefined>();
 
 	const GRID = 16;
-	const NODE_W = 124;
+	/* Wide enough for the widest selector row. A four-way row of 8px labels
+	   wants 118px of content; NTCH was being cut off at 124px total, which
+	   leaves 112 inside the border and the padding. */
+	const NODE_W = 136;
 	/* Port geometry, in one place because two formulas have to agree exactly:
 	   the dots are laid out by CSS inside the node, and the cables are drawn in
 	   SVG from portPos(). When they disagreed, every cable ended in mid-air a
@@ -231,15 +234,24 @@
 	}
 
 	function place(type: string) {
-		// Drop new modules into open space near the middle of the view.
-		const p = toCanvas(
-			(canvasEl?.getBoundingClientRect().left ?? 0) + 220,
-			(canvasEl?.getBoundingClientRect().top ?? 0) + 120
-		);
-		const x = Math.round((p.x + graph.nodes.length * 12) / GRID) * GRID;
-		const y = Math.round((p.y + (graph.nodes.length % 3) * 90) / GRID) * GRID;
-		selectedNode.set(addNode(graph, type, x, y));
-		playSound('click');
+		/* Clicking the palette drops into the first free cell of a grid rather
+		   than onto a fixed point: the old 12px stagger was smaller than a card
+		   is wide, so clicking several entries buried them in a pile. Columns
+		   run left to right, then wrap. */
+		const r = canvasEl?.getBoundingClientRect();
+		const origin = toCanvas((r?.left ?? 0) + 40, (r?.top ?? 0) + 40);
+		const COL = NODE_W + 48;
+		const ROW = 200;
+		const perRow = Math.max(1, Math.floor(((r?.width ?? 800) / cam.s - 40) / COL));
+		const taken = new Set(graph.nodes.map((n) => `${n.x},${n.y}`));
+		for (let i = 0; i < 200; i++) {
+			const x = Math.round((origin.x + (i % perRow) * COL) / GRID) * GRID;
+			const y = Math.round((origin.y + Math.floor(i / perRow) * ROW) / GRID) * GRID;
+			if (taken.has(`${x},${y}`)) continue;
+			selectedNode.set(addNode(graph, type, x, y));
+			playSound('click');
+			return;
+		}
 	}
 
 	/** A cable's path: horizontal-ish bezier, so it reads as a cable not a line. */

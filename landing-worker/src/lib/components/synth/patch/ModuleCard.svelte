@@ -70,7 +70,7 @@
 						playSound('click');
 					}}
 					title={p.label}
-					class="press text-[8px] leading-none py-0.5 border rounded-xs font-black cursor-pointer transition-colors {on
+					class="press text-[8px] leading-none py-0.5 px-0 border rounded-xs font-black cursor-pointer transition-colors min-w-0 overflow-hidden text-ellipsis whitespace-nowrap {on
 						? 'text-black'
 						: 'border-white/20 text-white/60 hover:bg-white/10'}"
 					style={on ? `border-color: ${spec.color}; background: ${spec.color}` : ''}
