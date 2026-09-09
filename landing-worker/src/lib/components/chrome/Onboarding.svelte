@@ -24,6 +24,20 @@
 		color: string;
 		/** Optional button that demonstrates the step instead of describing it. */
 		action?: { label: string; run: () => void };
+		/** Put the view into the state this step's anchor needs, before the step
+		 *  is measured.
+		 *
+		 *  Half the synth's anchors only exist in one of its two modes -- the
+		 *  racks are gone in ADV, the patch canvas and its palette do not exist
+		 *  outside it -- so a step could point at an element that was not on the
+		 *  page. place() falls back to centring the bubble with no spotlight when
+		 *  that happens, which reads as a caption floating over nothing rather
+		 *  than as a broken anchor, so the tour looked like it worked while
+		 *  explaining something you could not see.
+		 *
+		 *  Runs on entering the step from either direction, and must be
+		 *  idempotent -- stepping back and forward over one re-runs it. */
+		enter?: () => void;
 		/** Skip this step's own bubble entirely -- close the tour and run its
 		 *  action straight away instead. For a step whose whole point IS the
 		 *  thing the action opens (the closing keymap step): showing a bubble
@@ -139,7 +153,11 @@
 		return r.width > 0 && r.height > 0 ? el : null;
 	}
 
-	/** Measure the current target and park the bubble beside it, inside the viewport. */
+	/** Measure the current target and park the bubble beside it, inside the viewport.
+	 *
+	 *  The step's enter() runs first: it may switch modes to bring the anchor
+	 *  into existence, and Svelte needs a tick to render what that changed
+	 *  before there is anything to measure. */
 	async function place() {
 		const el = targetEl(step.target);
 		if (!el) {
@@ -241,9 +259,20 @@
 		}
 	}
 
-	// Re-measure whenever the step changes, and keep up with layout changes.
+	/* Bring the step's anchor into existence, then measure it.
+	
+	   Keyed on the step index rather than folded into place(), which also runs
+	   on resize, on scroll and every frame of the settle window after mount --
+	   enter() switches modes, so running it there would fight the user for
+	   control of the view hundreds of times a second. Once per step change is
+	   what "before this step is shown" means. */
+	let entered = $state(-1);
 	$effect(() => {
-		index;
+		const at = index;
+		if (entered !== at) {
+			entered = at;
+			STEPS[at]?.enter?.();
+		}
 		$resolvedTheme;
 		void place();
 	});

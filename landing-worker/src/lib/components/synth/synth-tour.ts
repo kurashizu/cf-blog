@@ -1,7 +1,7 @@
 import { tr } from '$lib/i18n';
 import { get } from 'svelte/store';
 import type { Step } from '../chrome/Onboarding.svelte';
-import { advancedMode, toggleAdvanced, setCentreView } from '../../stores/synth-view';
+import { advancedMode, toggleAdvanced, setCentreView, rollFullscreen } from '../../stores/synth-view';
 
 /**
  * The synth's own walkthrough, shown by the `?` on the KRSZ SYNTH badge. Same
@@ -15,10 +15,26 @@ import { advancedMode, toggleAdvanced, setCentreView } from '../../stores/synth-
  * translated, so they must be resolved at call time (when the tour opens),
  * not frozen at import time.
  */
+/* The two halves of the synth show different things, and a step can only point
+   at what is on the page. These put the view where the step's anchor lives, so
+   no step is left pointing at nothing.
+   
+   Both are idempotent: stepping back and forward over a step re-runs them. */
+function showRacks(): void {
+	if (get(advancedMode)) toggleAdvanced();
+	rollFullscreen.set(false);
+}
+
+function showPatchBay(): void {
+	if (!get(advancedMode)) toggleAdvanced();
+	setCentreView('rack');
+}
+
 export function synthTour(): Step[] {
 	return [
 		{
 			target: 'synth-tracks',
+			enter: showRacks,
 			title: tr('synth.tour.tracksTitle'),
 			body: tr('synth.tour.tracksBody'),
 			color: '#c678dd'
@@ -48,12 +64,16 @@ export function synthTour(): Step[] {
 		},
 		{
 			target: 'synth-side',
+			enter: showRacks,
 			title: tr('synth.tour.voiceTitle'),
 			body: tr('synth.tour.voiceBody'),
 			color: '#e5c07b'
 		},
 		{
+			/* Racks 1-7 are replaced by the patch bay in ADV, so this step has to
+			   leave that mode to have anything to point at. */
 			target: 'synth-rack',
+			enter: showRacks,
 			title: tr('synth.tour.shapeTitle'),
 			body: tr('synth.tour.shapeBody'),
 			color: '#61afef'
@@ -63,6 +83,7 @@ export function synthTour(): Step[] {
 			   the other half of the synth, and reading about a patch bay is not
 			   the same as watching the racks give way to one. */
 			target: 'synth-adv',
+			enter: showRacks,
 			title: tr('synth.tour.advTitle'),
 			body: tr('synth.tour.advBody'),
 			color: '#61afef',
@@ -75,7 +96,12 @@ export function synthTour(): Step[] {
 			}
 		},
 		{
+			/* Reached with Next as well as by the previous step's button: the
+			   canvas does not exist outside ADV, and a step that only worked for
+			   someone who pressed the button pointed at nothing for everyone
+			   who did not. */
 			target: 'synth-canvas',
+			enter: showPatchBay,
 			title: tr('synth.tour.canvasTitle'),
 			body: tr('synth.tour.canvasBody'),
 			color: '#61afef',
@@ -87,6 +113,7 @@ export function synthTour(): Step[] {
 		},
 		{
 			target: 'synth-palette',
+			enter: showPatchBay,
 			title: tr('synth.tour.paletteTitle'),
 			body: tr('synth.tour.paletteBody'),
 			color: '#98c379'
