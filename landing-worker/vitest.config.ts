@@ -49,7 +49,8 @@ export default defineConfig({
 				'src/lib/components/lifelab/engine.js',
 				'src/lib/components/lifelab/patterns.js',
 				'src/lib/stores/graph-model.ts',
-				'src/lib/stores/note-lanes.ts'
+				'src/lib/stores/note-lanes.ts',
+				'src/lib/stores/graph-history.ts'
 			],
 			// Report every listed file, including any with no test yet, so a
 			// zero row is visible rather than silently absent.

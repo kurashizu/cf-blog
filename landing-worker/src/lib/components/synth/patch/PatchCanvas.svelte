@@ -15,6 +15,7 @@
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
 	import { currentTrack } from '../../../stores/synth-tracks';
+	import { activeTrackId } from '../../../stores/synth-transport';
 	import {
 		graphOf,
 		addNode,
@@ -27,6 +28,13 @@
 		selectedNodes,
 		graphClipboard,
 		moveSelection,
+		beginGraphDrag,
+		endGraphDrag,
+		undoGraph,
+		redoGraph,
+		canUndo,
+		canRedo,
+		historyVersion,
 		deleteSelection,
 		copySelection,
 		pasteClipboard,
@@ -211,6 +219,20 @@
 		}
 		if (!(e.ctrlKey || e.metaKey)) return;
 		const k = e.key.toLowerCase();
+		if (k === 'z') {
+			// Shift+Ctrl+Z redoes, the binding every editor on the machine uses.
+			if (e.shiftKey) redoGraph();
+			else undoGraph();
+			playSound('click');
+			e.preventDefault();
+			return;
+		}
+		if (k === 'y') {
+			redoGraph();
+			playSound('click');
+			e.preventDefault();
+			return;
+		}
 		if (k === 'a') {
 			selectedNodes.set(new Set(graph.nodes.map((n) => n.id)));
 			e.preventDefault();
@@ -334,8 +356,68 @@
 		panning = null;
 		groupDrag = null;
 		dragNode = null;
-		// A cable dropped on nothing is not a cable.
+		endGraphDrag();
+		/* A cable dropped on empty canvas asks what to connect, rather than
+		   being thrown away.
+		
+		   Dropping it was the honest reading of the gesture and the least useful
+		   one: you drag out of a socket because you know what you want next, and
+		   the old behaviour made you cancel, find it in the palette, place it,
+		   then come back and draw the cable again. The search lists only modules
+		   with a socket that can take what is being held, so the answer is
+		   always a working connection. */
+		if (pullFrom) {
+			const overNode = graph.nodes.some((n) => {
+				const spec = moduleSpec(n.type);
+				if (!spec) return false;
+				const h = nodeHeight(n, spec);
+				const p = toCanvas(pointer.x, pointer.y);
+				return p.x >= n.x - PORT_R && p.x <= n.x + NODE_W + PORT_R && p.y >= n.y && p.y <= n.y + h;
+			});
+			if (!overNode) {
+				const p = toCanvas(pointer.x, pointer.y);
+				dropSearch = { from: pullFrom, x: p.x, y: p.y, screenX: pointer.x, screenY: pointer.y };
+				searchQuery = '';
+			}
+		}
 		pullFrom = null;
+	}
+
+	/* The drop-search: where the cable was let go, and what it is carrying. */
+	let dropSearch = $state<
+		| { from: { node: string; port: string; kind: PortKind; role: PortRole }; x: number; y: number; screenX: number; screenY: number }
+		| null
+	>(null);
+	let searchQuery = $state('');
+
+	/** Modules with an inlet this cable could land on, filtered by the query. */
+	let searchHits = $derived.by(() => {
+		const d = dropSearch;
+		if (!d) return [];
+		const q = searchQuery.trim().toLowerCase();
+		return PALETTE_SPECS.filter((spec) => {
+			const takes = spec.inputs.some((i) => rolesCompatible(d.from.role, roleOf(i)));
+			if (!takes) return false;
+			if (!q) return true;
+			return spec.label.toLowerCase().includes(q) || spec.id.toLowerCase().includes(q);
+		}).slice(0, 40);
+	});
+
+	/** Place the chosen module where the cable was dropped and wire it up. */
+	function placeFromSearch(spec: ModuleSpec) {
+		const d = dropSearch;
+		if (!d) return;
+		const inlet = spec.inputs.find((i) => rolesCompatible(d.from.role, roleOf(i)));
+		if (!inlet) return;
+		const x = Math.round((d.x - 8) / GRID) * GRID;
+		const y = Math.round((d.y - 20) / GRID) * GRID;
+		const id = addNode(graph, spec.id, x, y);
+		// addNode committed a new graph; wire against that one, not the stale copy.
+		const next = graphOf(get(currentTrack));
+		addCable(next, { from: d.from.node, fromPort: d.from.port, to: id, toPort: inlet.id }, inlet.kind);
+		selectedNode.set(id);
+		dropSearch = null;
+		playSound('click');
 	}
 
 	function startDrag(e: PointerEvent, n: GraphNode) {
@@ -344,6 +426,8 @@
 		if (e.button === 2) return;
 		e.stopPropagation();
 		const p = toCanvas(e.clientX, e.clientY);
+		// One history entry for the whole drag, not one per frame.
+		beginGraphDrag();
 		dragNode = { id: n.id, dx: p.x - n.x, dy: p.y - n.y };
 		selectedNode.set(n.id);
 		/* Shift adds to the selection; clicking a module already in one keeps it,
@@ -469,7 +553,68 @@
 
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} />
 
-<div class="flex-1 min-h-0 flex gap-1.5 overflow-hidden">
+<div class="flex-1 min-h-0 flex flex-col gap-1 overflow-hidden">
+	<!-- The editing toolbar.
+	
+	     The canvas has had LIFE.LAB's editing set for a while -- marquee, group
+	     move, copy, paste, duplicate, delete -- but every one of them was a
+	     keyboard shortcut with nothing on screen to say so, which is the same as
+	     not having them unless you already knew. The buttons name the gestures
+	     and carry the bindings in their tooltips. -->
+	<div class="flex items-center gap-1 shrink-0 text-[10px] font-mono">
+		{#key $historyVersion}
+			<button
+				onclick={() => { undoGraph(); playSound('click'); }}
+				disabled={!canUndo($activeTrackId)}
+				class="press px-1.5 py-0.5 border rounded-xs font-bold transition-colors {canUndo($activeTrackId)
+					? 'border-white/25 text-white/70 hover:text-white hover:border-white/60 cursor-pointer'
+					: 'border-white/10 text-white/20 cursor-default'}"
+				title={$t('synthPatch.undoHint')}>UNDO</button>
+			<button
+				onclick={() => { redoGraph(); playSound('click'); }}
+				disabled={!canRedo($activeTrackId)}
+				class="press px-1.5 py-0.5 border rounded-xs font-bold transition-colors {canRedo($activeTrackId)
+					? 'border-white/25 text-white/70 hover:text-white hover:border-white/60 cursor-pointer'
+					: 'border-white/10 text-white/20 cursor-default'}"
+				title={$t('synthPatch.redoHint')}>REDO</button>
+		{/key}
+
+		<div class="w-px h-3.5 bg-white/15 mx-0.5"></div>
+
+		{#each [['COPY', () => copySelection(graph, $selectedNodes), $t('synthPatch.copyHint')], ['PASTE', () => pasteClipboard(graph, graphParams), $t('synthPatch.pasteHint')], ['DUPE', () => { copySelection(graph, $selectedNodes); pasteClipboard(graph, graphParams); }, $t('synthPatch.dupeHint')]] as [label, run, hint] (label)}
+			<button
+				onclick={() => { (run as () => void)(); playSound('click'); }}
+				class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+				title={hint as string}>{label}</button>
+		{/each}
+
+		<button
+			onclick={() => { deleteSelection(graph, $selectedNodes, graphParams); playSound('click'); }}
+			class="press px-1.5 py-0.5 border border-[#e06c75]/50 text-[#e06c75] hover:border-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.deleteHint')}>DEL</button>
+
+		<div class="w-px h-3.5 bg-white/15 mx-0.5"></div>
+
+		<button
+			onclick={() => { selectedNodes.set(new Set(graph.nodes.map((n) => n.id))); playSound('click'); }}
+			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.selectAllHint')}>ALL</button>
+		<button
+			onclick={() => { selectedNodes.set(new Set()); selectedNode.set(null); playSound('click'); }}
+			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.selectNoneHint')}>NONE</button>
+
+		<span class="text-white/35 ml-1">{$selectedNodes.size ? `${$selectedNodes.size} SEL` : ''}</span>
+
+		<span class="flex-1"></span>
+
+		<button
+			onclick={() => { cam = { x: 40, y: 40, s: 1 }; playSound('click'); }}
+			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.resetViewHint')}>FIT</button>
+	</div>
+
+	<div class="flex-1 min-h-0 flex gap-1.5 overflow-hidden">
 	<!-- The workspace. role="application" with a tabindex is what a canvas that
 	     takes keys is: the rule is written for plain divs. -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -659,6 +804,48 @@
 			{/each}
 		</div>
 
+		<!-- Dropped a cable on empty canvas: what should it connect to?
+		     Only modules with a socket that can take what is held, so whatever is
+		     picked is wired and working rather than merely placed. -->
+		{#if dropSearch}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="absolute z-30 w-44 border border-white/25 rounded-xs bg-black shadow-lg"
+				style="left: {Math.min(dropSearch.screenX - (canvasEl?.getBoundingClientRect().left ?? 0), (canvasEl?.clientWidth ?? 400) - 180)}px; top: {Math.min(
+					dropSearch.screenY - (canvasEl?.getBoundingClientRect().top ?? 0),
+					(canvasEl?.clientHeight ?? 400) - 220
+				)}px"
+				onpointerdown={(e) => e.stopPropagation()}
+			>
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					autofocus
+					bind:value={searchQuery}
+					onkeydown={(e) => {
+						if (e.key === 'Escape') dropSearch = null;
+						if (e.key === 'Enter' && searchHits[0]) placeFromSearch(searchHits[0]);
+						e.stopPropagation();
+					}}
+					placeholder={$t('synthPatch.searchPlaceholder')}
+					class="w-full px-1.5 py-1 bg-black text-white text-[10px] font-mono border-b border-white/15 outline-none placeholder:text-white/30"
+				/>
+				<div class="max-h-40 overflow-y-auto custom-scrollbar">
+					{#each searchHits as spec (spec.id)}
+						<button
+							onclick={() => placeFromSearch(spec)}
+							class="w-full flex items-center gap-1.5 px-1.5 py-1 text-[10px] font-mono font-bold text-left hover:bg-white/10 cursor-pointer transition-colors"
+							style="color: {spec.color}"
+						>
+							<ModuleIcon type={spec.id} size={9} color={spec.color} />
+							<span>{spec.label}</span>
+						</button>
+					{:else}
+						<div class="px-1.5 py-2 text-[10px] text-white/35">{$t('synthPatch.searchNone')}</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		{#if message}
 			<div class="absolute bottom-1 left-1 text-[10px] text-[#e06c75] bg-black/80 px-1.5 py-0.5 rounded-xs">
 				{message}
@@ -718,4 +905,5 @@
 			</div>
 		{/if}
 	</div>
+</div>
 </div>

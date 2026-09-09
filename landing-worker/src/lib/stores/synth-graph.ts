@@ -1,4 +1,14 @@
 import { writable, get } from 'svelte/store';
+import {
+	emptyHistory,
+	push as pushHistory,
+	undo as undoHistory,
+	redo as redoHistory,
+	canUndo as historyCanUndo,
+	canRedo as historyCanRedo,
+	type History,
+	type Snapshot
+} from './graph-history';
 import { modularSynth, type TrackData } from '../synth';
 import { activeTrackId } from './synth-transport';
 import { refreshTracks } from './synth-tracks';
@@ -60,9 +70,82 @@ export type { RackGraph, GraphCable, GraphNode, PortKind, PortRole, PortSpec } f
  *   MOD carries control. A cycle is fine and often the point (an LFO whose
  *     rate is modulated by another LFO), because these land on AudioParams.
  */
+/* Undo history, per track. The rules live in graph-history, which has no Web
+   Audio in it and so can be tested; this half holds the stacks and knows how to
+   read and write a track. */
+const histories = new Map<number, History>();
+
+/** Bumped on every history change, so the toolbar can grey its buttons out. */
+export const historyVersion = writable(0);
+
+function snapshot(id: number): Snapshot {
+	const t = modularSynth.getTrack(id);
+	return {
+		graph: JSON.parse(JSON.stringify(graphOf(t))),
+		params: JSON.parse(JSON.stringify(t?.graphParams ?? {}))
+	};
+}
+
+/** Record the state before an edit, so it can be returned to. */
+function pushUndo(id: number): void {
+	histories.set(id, pushHistory(histories.get(id) ?? emptyHistory(), snapshot(id)));
+	/* Announced after the edit lands, not here: historyVersion is a store, so
+	   updating it runs subscribers synchronously, and this is called before the
+	   write it is recording. A subscriber that re-read the graph would see it as
+	   it was a moment ago. */
+	pendingHistoryBump = true;
+}
+
+/* Set by pushUndo, flushed once the edit has been written. */
+let pendingHistoryBump = false;
+
+function flushHistoryBump(): void {
+	if (!pendingHistoryBump) return;
+	pendingHistoryBump = false;
+	historyVersion.update((v) => v + 1);
+}
+
+function restore(id: number, snap: Snapshot): void {
+	modularSynth.updateTrack(id, {
+		rackGraph: snap.graph,
+		graphParams: snap.params
+	} as Partial<TrackData>);
+	refreshTracks();
+}
+
+export function undoGraph(): boolean {
+	const id = get(activeTrackId);
+	const step = undoHistory(histories.get(id) ?? emptyHistory(), snapshot(id));
+	if (!step) return false;
+	histories.set(id, step.history);
+	restore(id, step.restore);
+	historyVersion.update((v) => v + 1);
+	return true;
+}
+
+export function redoGraph(): boolean {
+	const id = get(activeTrackId);
+	const step = redoHistory(histories.get(id) ?? emptyHistory(), snapshot(id));
+	if (!step) return false;
+	histories.set(id, step.history);
+	restore(id, step.restore);
+	historyVersion.update((v) => v + 1);
+	return true;
+}
+
+export function canUndo(trackId: number): boolean {
+	return historyCanUndo(histories.get(trackId));
+}
+
+export function canRedo(trackId: number): boolean {
+	return historyCanRedo(histories.get(trackId));
+}
+
 function commit(graph: RackGraph): void {
+	pushUndo(get(activeTrackId));
 	modularSynth.updateTrack(get(activeTrackId), { rackGraph: graph } as Partial<TrackData>);
 	refreshTracks();
+	flushHistoryBump();
 }
 
 /** The node the canvas is editing, or null. */
@@ -80,10 +163,11 @@ export function addNode(graph: RackGraph, type: string, x: number, y: number): s
 }
 
 export function moveNode(graph: RackGraph, id: string, x: number, y: number): void {
-	commit({ ...graph, nodes: graph.nodes.map((n) => (n.id === id ? { ...n, x, y } : n)) });
+	commitDuringDrag({ ...graph, nodes: graph.nodes.map((n) => (n.id === id ? { ...n, x, y } : n)) });
 }
 
 export function removeNode(graph: RackGraph, id: string, params?: Record<string, number>): void {
+	pushUndo(get(activeTrackId));
 	modularSynth.updateTrack(get(activeTrackId), {
 		rackGraph: withoutNode(graph, id),
 		// A node's knob settings go with it, or a patch accumulates dead keys
@@ -91,6 +175,7 @@ export function removeNode(graph: RackGraph, id: string, params?: Record<string,
 		graphParams: pruneGraphParams(params, id)
 	} as Partial<TrackData>);
 	refreshTracks();
+	flushHistoryBump();
 }
 
 export function addCable(graph: RackGraph, cable: GraphCable, kind: PortKind): 'ok' | 'cycle' | 'duplicate' {
@@ -106,15 +191,29 @@ export function removeCable(graph: RackGraph, i: number): void {
 	commit({ ...graph, cables: graph.cables.filter((_, n) => n !== i) });
 }
 
+/* The last param touched, and when. A knob drag fires setGraphParam on every
+   pointermove; recording each one would make undo step back a pixel at a time
+   and fill the stack in a second. Consecutive changes to the same knob within
+   this window count as one edit. */
+let lastParamKey = '';
+let lastParamAt = 0;
+const PARAM_COALESCE_MS = 600;
+
 export function setGraphParam(
 	params: Record<string, number> | undefined,
 	nodeId: string,
 	param: string,
 	value: number
 ): void {
+	const key = `${nodeId}.${param}`;
+	const now = Date.now();
+	if (key !== lastParamKey || now - lastParamAt > PARAM_COALESCE_MS) pushUndo(get(activeTrackId));
+	lastParamKey = key;
+	lastParamAt = now;
 	const next = { ...(params ?? {}), [`${nodeId}.${param}`]: value };
 	modularSynth.updateTrack(get(activeTrackId), { graphParams: next } as Partial<TrackData>);
 	refreshTracks();
+	flushHistoryBump();
 }
 
 /* The nodes a box-select or a shift-click has gathered. Separate from
@@ -125,11 +224,36 @@ export const selectedNodes = writable<Set<string>>(new Set());
 /** What Ctrl+C put aside, in memory rather than the system clipboard. */
 export const graphClipboard = writable<RackGraph | null>(null);
 
+/* A drag is one edit, not one per frame.
+ *
+ * moveNode and moveSelection fire on every pointermove, so recording each would
+ * bury the stack under a hundred one-pixel steps and make undo useless for the
+ * thing people most want to undo. beginDrag() marks the start of a gesture;
+ * everything until it ends folds into that single entry. */
+let dragOpen = false;
+
+export function beginGraphDrag(): void {
+	if (dragOpen) return;
+	pushUndo(get(activeTrackId));
+	dragOpen = true;
+}
+
+export function endGraphDrag(): void {
+	dragOpen = false;
+}
+
+/** Write without recording: the gesture already pushed its own entry. */
+function commitDuringDrag(graph: RackGraph): void {
+	modularSynth.updateTrack(get(activeTrackId), { rackGraph: graph } as Partial<TrackData>);
+	refreshTracks();
+}
+
 export function moveSelection(graph: RackGraph, ids: Set<string>, dx: number, dy: number): void {
-	commit(moveNodes(graph, ids, dx, dy));
+	commitDuringDrag(moveNodes(graph, ids, dx, dy));
 }
 
 export function deleteSelection(graph: RackGraph, ids: Set<string>, params?: Record<string, number>): void {
+	pushUndo(get(activeTrackId));
 	let next = params ?? {};
 	for (const id of ids) next = pruneGraphParams(next, id);
 	modularSynth.updateTrack(get(activeTrackId), {
@@ -138,6 +262,7 @@ export function deleteSelection(graph: RackGraph, ids: Set<string>, params?: Rec
 	} as Partial<TrackData>);
 	selectedNodes.set(new Set());
 	refreshTracks();
+	flushHistoryBump();
 }
 
 export function copySelection(graph: RackGraph, ids: Set<string>): number {
@@ -150,6 +275,7 @@ export function copySelection(graph: RackGraph, ids: Set<string>): number {
 export function pasteClipboard(graph: RackGraph, params?: Record<string, number>): number {
 	const clip = get(graphClipboard);
 	if (!clip || !clip.nodes.length) return 0;
+	pushUndo(get(activeTrackId));
 	const idFor = (type: string) => `${type}-${Date.now().toString(36)}-${seq++}`;
 	const oldIds = clip.nodes.map((n) => n.id);
 	const { graph: next, ids } = pasteNodes(graph, clip, 32, idFor);
@@ -166,5 +292,6 @@ export function pasteClipboard(graph: RackGraph, params?: Record<string, number>
 	modularSynth.updateTrack(get(activeTrackId), { rackGraph: next, graphParams: gp } as Partial<TrackData>);
 	selectedNodes.set(ids);
 	refreshTracks();
+	flushHistoryBump();
 	return ids.size;
 }
