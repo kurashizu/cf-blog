@@ -58,7 +58,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		/* The note itself leaves by TRIG, so the logic chain can hang off it: a
 		   cable from there to a WHEN node is "every time this sounds, ask
 		   something". Audio leaves by OUT as usual. */
-		outputs: [AUDIO_OUT, { id: 'trig', label: 'TRIG', kind: 'mod' }],
+		outputs: [AUDIO_OUT, { id: 'trig', label: 'TRIG', kind: 'mod', role: 'trigger' }],
 		params: [{ key: 'inLevel', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
 	},
 	{
@@ -405,8 +405,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.split',
 		inputs: [AUDIO_IN],
 		outputs: [
-			{ id: 'out', label: 'L', kind: 'audio' },
-			{ id: 'r', label: 'R', kind: 'audio' }
+			{ id: 'out', label: 'L', kind: 'audio', role: 'left' },
+			{ id: 'r', label: 'R', kind: 'audio', role: 'right' }
 		],
 		params: []
 	},
@@ -417,8 +417,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		color: '#56b6c2',
 		descKey: 'synthPatch.mod.merge',
 		inputs: [
-			{ id: 'in', label: 'L', kind: 'audio' },
-			{ id: 'r', label: 'R', kind: 'audio' }
+			{ id: 'in', label: 'L', kind: 'audio', role: 'left' },
+			{ id: 'r', label: 'R', kind: 'audio', role: 'right' }
 		],
 		outputs: [AUDIO_OUT],
 		params: []
@@ -470,8 +470,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'LOGIC',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.when',
-		inputs: [{ id: 'trig', label: 'TRIG', kind: 'mod' }],
-		outputs: [{ id: 'do', label: 'DO', kind: 'mod' }],
+		inputs: [{ id: 'trig', label: 'TRIG', kind: 'mod', role: 'trigger' }],
+		outputs: [{ id: 'do', label: 'DO', kind: 'mod', role: 'flow' }],
 		params: [
 			{
 				key: 'test',
@@ -498,7 +498,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'LOGIC',
 		color: '#e06c75',
 		descKey: 'synthPatch.mod.act',
-		inputs: [{ id: 'do', label: 'DO', kind: 'mod' }],
+		inputs: [{ id: 'do', label: 'DO', kind: 'mod', role: 'flow' }],
 		outputs: [],
 		params: [
 			{ key: 'action', label: 'DO', min: 0, max: 2, step: 1, def: 0, choices: ['CUT', 'SOLO', 'GLIDE'] },
@@ -571,7 +571,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.mix',
 		inputs: [
 			{ id: 'in', label: 'A', kind: 'audio' },
-			{ id: 'in2', label: 'B', kind: 'audio' }
+			{ id: 'b', label: 'B', kind: 'audio' }
 		],
 		outputs: [AUDIO_OUT],
 		params: [

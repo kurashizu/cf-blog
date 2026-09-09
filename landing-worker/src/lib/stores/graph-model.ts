@@ -8,12 +8,65 @@
  * legal, and what order nodes are built in -- are exactly the parts worth
  * pinning down with tests.
  */
+/**
+ * What a socket carries.
+ *
+ * Two families, and the family is what decides whether a cable is legal:
+ * `audio` is sound, `mod` is control. That distinction is not cosmetic -- the
+ * engine sorts audio cables topologically and refuses cycles in them, while mod
+ * cables are connected afterwards, land on AudioParams, and may cycle.
+ *
+ * Within a family the *role* says what it is for. A role never blocks a cable
+ * on its own; it drives what you see -- socket colour and shape, wire colour,
+ * and what the search offers when you drag into empty space -- so that "what
+ * can I plug in here" is answerable before you try it rather than after.
+ */
 export type PortKind = 'audio' | 'mod';
+
+export type PortRole =
+	/** Ordinary sound, mono or stereo -- whatever arrives. */
+	| 'signal'
+	/** One side of a split pair. */
+	| 'left'
+	| 'right'
+	/** A control voltage: an envelope, an LFO, anything that drives a param. */
+	| 'cv'
+	/** A note happening. Carries timing, not a value. */
+	| 'trigger'
+	/** The logic chain's execution order -- WHEN's answer into ACT. */
+	| 'flow';
 
 export interface PortSpec {
 	id: string;
 	label: string;
 	kind: PortKind;
+	/** Defaults to the family's ordinary role: `signal` for audio, `cv` for mod. */
+	role?: PortRole;
+}
+
+/** The role a port plays, falling back to its family's ordinary one. */
+export function roleOf(p: { kind: PortKind; role?: PortRole }): PortRole {
+	return p.role ?? (p.kind === 'audio' ? 'signal' : 'cv');
+}
+
+/* Which roles may meet.
+ *
+ * Deliberately permissive inside a family: L into a mono inlet is a real patch
+ * (take the left side and carry on in mono), and an envelope into any param is
+ * the point of a modular. What it refuses is the pair that is never meaningful
+ * -- sound into a control inlet, or a trigger into something expecting a level
+ * -- which is what the two families already encoded. Roles sharpen the message
+ * and the highlighting rather than adding new prohibitions. */
+export function rolesCompatible(from: PortRole, to: PortRole): boolean {
+	const AUDIO: PortRole[] = ['signal', 'left', 'right'];
+	const fromAudio = AUDIO.includes(from);
+	const toAudio = AUDIO.includes(to);
+	if (fromAudio !== toAudio) return false;
+	if (fromAudio) return true;
+	// Control side: a trigger drives flow and triggers; a CV drives CV.
+	if (to === 'flow') return from === 'trigger' || from === 'flow';
+	if (to === 'trigger') return from === 'trigger';
+	return from === 'cv';
 }
 
 export interface GraphNode {
@@ -65,11 +118,28 @@ export function isFixedNode(id: string): boolean {
 	return id === ENTRY_ID || id === OUTPUT_ID;
 }
 
+/* Port ids that were renamed, and what they are now.
+ *
+ * MIX called its second inlet `in2` while every other two-inlet module called
+ * the same thing `b`, so the id you needed depended on which module you were
+ * wiring. Saved patches still name the old one; a cable pointing at a port that
+ * no longer exists draws to nowhere and carries no sound, so they are rewritten
+ * on load rather than left to fail quietly. */
+const RENAMED_PORTS: Record<string, string> = { in2: 'b' };
+
 /** A patch file is user data: anything that is not a graph reads as an empty one. */
 export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph {
 	const g = track?.rackGraph;
 	if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.cables)) return { nodes: [], cables: [] };
-	return g;
+	if (!g.cables.some((c) => RENAMED_PORTS[c.toPort] || RENAMED_PORTS[c.fromPort])) return g;
+	return {
+		nodes: g.nodes,
+		cables: g.cables.map((c) => ({
+			...c,
+			fromPort: RENAMED_PORTS[c.fromPort] ?? c.fromPort,
+			toPort: RENAMED_PORTS[c.toPort] ?? c.toPort
+		}))
+	};
 }
 
 /**

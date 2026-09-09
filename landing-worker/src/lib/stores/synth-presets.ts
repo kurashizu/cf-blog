@@ -214,7 +214,7 @@ function patch(
 	/* 'a>b' is the common case: the OUT socket into the IN socket. A source
 	   port is named after a dot ('sp.r>x') for the modules with two outlets --
 	   SPLIT's R, ENTRY's TRIG -- and a destination port after a colon
-	   ('x>mx:in2') for the ones with two inlets. */
+	   ('x>mx:b') for the ones with two inlets. */
 	const graphCables: GraphCable[] = cables.map((c) => {
 		const [lhs, rest] = c.split('>');
 		const [from, fromPort] = lhs.split('.');
@@ -518,7 +518,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mx', 'mix', { mixA: 100, mixB: 38 }],
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
-				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:in2', 'mx>bod', 'bod>output'],
+				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:b', 'mx>bod', 'bod>output'],
 				97
 			)
 		})
@@ -658,7 +658,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 100 }],
 					['mx', 'mix', { mixA: 100, mixB: 44 }]
 				],
-				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>trm', 'fan>trm:cv', 'trm>mx', 'ex>res', 'res>mx:in2', 'mx>output'],
+				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>trm', 'fan.cv>trm:cv', 'trm>mx', 'ex>res', 'res>mx:b', 'mx>output'],
 				76
 			)
 		})
@@ -935,7 +935,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 35, bodyDepth: 55, bodyMix: 55 }],
 					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
 				],
-				['entry>ex:b', 'ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:in2', 'mx>bod', 'bod>symp', 'symp>output'],
+				['entry>ex:b', 'ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:b', 'mx>bod', 'bod>symp', 'symp>output'],
 				90
 			)
 		})
@@ -1029,7 +1029,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['pn', 'pan', { panPos: 0, panDepth: 100 }],
 					['rm', 'space', { spaceSize: 52, spaceDecay: 62, spaceMix: 26 }]
 				],
-				['entry>ex:b', 'bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo>pn:cv', 'pn>rm', 'rm>output'],
+				['entry>ex:b', 'bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:cv', 'pn>rm', 'rm>output'],
 				200
 			)
 		})
@@ -1092,7 +1092,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mx', 'mix', { mixA: 100, mixB: 12 }],
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
 				],
-				['entry>ex:b', 'air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:in2', 'mx>bel', 'bel>output'],
+				['entry>ex:b', 'air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:b', 'mx>bel', 'bel>output'],
 				91
 			)
 		})
@@ -1863,7 +1863,7 @@ function drumPatch(o: {
 		{ from: 'ex', fromPort: 'out', to: 'm', toPort: 'in' },
 		{ from: 'm', fromPort: 'out', to: 'mx', toPort: 'in' },
 		{ from: 'n', fromPort: 'out', to: 'nf', toPort: 'in' },
-		{ from: 'nf', fromPort: 'out', to: 'mx', toPort: 'in2' },
+		{ from: 'nf', fromPort: 'out', to: 'mx', toPort: 'b' },
 		{ from: 'mx', fromPort: 'out', to: 'b', toPort: 'in' },
 		{ from: 'b', fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
 	];
