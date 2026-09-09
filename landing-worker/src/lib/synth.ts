@@ -877,6 +877,242 @@ class ModularSynth {
   }
 
   /**
+   * Build a patched graph: modules as nodes, cables between named ports.
+   *
+   * Audio cables are followed in topological order, so a node's inputs exist
+   * before it does. Mod cables are connected afterwards and land on AudioParams
+   * rather than on inputs -- that is the whole difference between the two, and
+   * why a mod cable may form a cycle while an audio one may not.
+   *
+   * A node with no audio input is fed the voice itself, so dropping a filter on
+   * an empty canvas and wiring it to nothing still makes a sound: the patch is
+   * discovered by connecting things, not by getting it right first time.
+   */
+  private buildRackGraph(
+    ctx: BaseAudioContext,
+    graph: { nodes: { id: string; type: string }[]; cables: { from: string; fromPort: string; to: string; toPort: string }[] },
+    params: Record<string, number>,
+    voiceIn: AudioNode,
+    baseFreq: number,
+    t: number,
+    heldSec: number
+  ): { out: AudioNode; sources: AudioScheduledSourceNode[] } | null {
+    const MOD_PORTS = new Set(['fm', 'cv']);
+    const audioCables = graph.cables.filter((c) => !MOD_PORTS.has(c.toPort));
+    const modCables = graph.cables.filter((c) => MOD_PORTS.has(c.toPort));
+
+    // Kahn's algorithm; a cycle here means a hand-edited patch file, since the
+    // editor refuses to draw one.
+    const indeg = new Map<string, number>();
+    for (const n of graph.nodes) indeg.set(n.id, 0);
+    for (const c of audioCables) if (indeg.has(c.to)) indeg.set(c.to, (indeg.get(c.to) ?? 0) + 1);
+    const queue = graph.nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0);
+    const order: typeof graph.nodes = [];
+    while (queue.length) {
+      const n = queue.shift()!;
+      order.push(n);
+      for (const c of audioCables) {
+        if (c.from !== n.id) continue;
+        const left = (indeg.get(c.to) ?? 0) - 1;
+        indeg.set(c.to, left);
+        if (left === 0) {
+          const next = graph.nodes.find((m) => m.id === c.to);
+          if (next) queue.push(next);
+        }
+      }
+    }
+    if (order.length !== graph.nodes.length) return null;
+
+    const built = new Map<string, { in: AudioNode | null; out: AudioNode; mod: Map<string, AudioParam> }>();
+    const sources: AudioScheduledSourceNode[] = [];
+
+    for (const node of order) {
+      const p = (key: string, def: number) => params[`${node.id}.${key}`] ?? def;
+      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, t, heldSec, sources);
+      if (!made) continue;
+      built.set(node.id, made);
+
+      // Feed it: whatever is patched in, or the voice when nothing is.
+      const feeds = audioCables.filter((c) => c.to === node.id);
+      if (made.in) {
+        if (feeds.length) {
+          for (const c of feeds) built.get(c.from)?.out.connect(made.in);
+        } else {
+          voiceIn.connect(made.in);
+        }
+      }
+    }
+
+    // Mod cables last, so both ends exist however the graph was ordered.
+    for (const c of modCables) {
+      const src = built.get(c.from);
+      const dst = built.get(c.to);
+      const param = dst?.mod.get(c.toPort);
+      if (src && param) src.out.connect(param);
+    }
+
+    /* The patch's output: every node nothing else listens to. A patch with two
+       loose ends is two voices in parallel, which is what a modular does. */
+    const sink = ctx.createGain();
+    let any = false;
+    for (const [id, made] of built) {
+      if (audioCables.some((c) => c.from === id)) continue;
+      if (modCables.some((c) => c.from === id)) continue;
+      made.out.connect(sink);
+      any = true;
+    }
+    if (!any) return null;
+    return { out: sink, sources };
+  }
+
+  /** One graph node. Returns its audio ends and the params a cable may drive. */
+  private buildGraphNode(
+    ctx: BaseAudioContext,
+    type: string,
+    p: (key: string, def: number) => number,
+    baseFreq: number,
+    t: number,
+    heldSec: number,
+    sources: AudioScheduledSourceNode[]
+  ): { in: AudioNode | null; out: AudioNode; mod: Map<string, AudioParam> } | null {
+    const mod = new Map<string, AudioParam>();
+    const WAVES: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square'];
+
+    switch (type) {
+      case 'osc': {
+        const osc = ctx.createOscillator();
+        osc.type = WAVES[Math.round(p('wave', 0))] ?? 'sine';
+        osc.frequency.value = baseFreq * p('ratio', 1);
+        osc.detune.value = p('detune', 0);
+        const g = ctx.createGain();
+        g.gain.value = p('level', 80) / 100;
+        osc.connect(g);
+        sources.push(osc);
+        // FM lands on frequency, scaled by the note so it tracks the keyboard.
+        const fm = ctx.createGain();
+        fm.gain.value = baseFreq * 2;
+        fm.connect(osc.frequency);
+        mod.set('fm', fm.gain);
+        return { in: null, out: g, mod };
+      }
+
+      case 'noise': {
+        if (!this.noiseBuffer) this.initNoiseBuffer();
+        const nz = ctx.createBufferSource();
+        nz.buffer = this.noiseBuffer;
+        nz.loop = true;
+        const g = ctx.createGain();
+        g.gain.value = p('level', 60) / 100;
+        nz.connect(g);
+        sources.push(nz);
+        return { in: null, out: g, mod };
+      }
+
+      case 'filter': {
+        const TYPES: BiquadFilterType[] = ['lowpass', 'bandpass', 'highpass', 'notch'];
+        const f = ctx.createBiquadFilter();
+        f.type = TYPES[Math.round(p('type', 0))] ?? 'lowpass';
+        f.frequency.value = p('cutoff', 4000);
+        f.Q.value = p('q', 1);
+        const depth = ctx.createGain();
+        depth.gain.value = p('cutoff', 4000) * (p('depth', 50) / 100);
+        depth.connect(f.frequency);
+        mod.set('fm', depth.gain);
+        return { in: f, out: f, mod };
+      }
+
+      case 'vca': {
+        const g = ctx.createGain();
+        g.gain.value = p('gain', 100) / 100;
+        const depth = ctx.createGain();
+        depth.gain.value = p('depth', 100) / 100;
+        depth.connect(g.gain);
+        mod.set('cv', depth.gain);
+        return { in: g, out: g, mod };
+      }
+
+      case 'env': {
+        /* An envelope is a source of control, not of sound: a constant of 1
+           through a gain the envelope shapes, so a cable from it carries the
+           envelope's value. */
+        const dc = ctx.createConstantSource();
+        dc.offset.value = 1;
+        const g = ctx.createGain();
+        const a = p('envA', 0.005);
+        const d = p('envD', 0.2);
+        const sus = p('envS', 60) / 100;
+        const r = p('envR', 0.2);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(1, t + Math.max(0.001, a));
+        g.gain.linearRampToValueAtTime(Math.max(0.0001, sus), t + Math.max(0.001, a) + Math.max(0.001, d));
+        g.gain.setValueAtTime(Math.max(0.0001, sus), t + Math.max(a + d, heldSec));
+        g.gain.linearRampToValueAtTime(0, t + Math.max(a + d, heldSec) + Math.max(0.001, r));
+        dc.connect(g);
+        sources.push(dc);
+        return { in: null, out: g, mod };
+      }
+
+      case 'lfo': {
+        const osc = ctx.createOscillator();
+        osc.type = WAVES[Math.round(p('lfoWave', 0))] ?? 'sine';
+        osc.frequency.value = p('lfoRate', 5);
+        const g = ctx.createGain();
+        g.gain.value = p('lfoAmt', 50) / 100;
+        osc.connect(g);
+        sources.push(osc);
+        const fm = ctx.createGain();
+        fm.gain.value = p('lfoRate', 5);
+        fm.connect(osc.frequency);
+        mod.set('fm', fm.gain);
+        return { in: null, out: g, mod };
+      }
+
+      case 'mix': {
+        const g = ctx.createGain();
+        g.gain.value = 1;
+        return { in: g, out: g, mod };
+      }
+
+      case 'eq': {
+        const low = ctx.createBiquadFilter();
+        low.type = 'lowshelf';
+        low.frequency.value = 200;
+        low.gain.value = p('lowGain', 0);
+        const mid = ctx.createBiquadFilter();
+        mid.type = 'peaking';
+        mid.frequency.value = p('midFreq', 1200);
+        mid.Q.value = 1;
+        mid.gain.value = p('midGain', 0);
+        const high = ctx.createBiquadFilter();
+        high.type = 'highshelf';
+        high.frequency.value = 5000;
+        high.gain.value = p('highGain', 0);
+        low.connect(mid);
+        mid.connect(high);
+        return { in: low, out: high, mod };
+      }
+
+      default: {
+        // The acoustic modules are the same ones the linear chain builds.
+        const asParams: Record<string, number> = {};
+        for (const k of [
+          'decayTime', 'damping', 'stiffness', 'strBlend',
+          'tubeDecay', 'tubeDamp', 'tubeOdd', 'tubeMix',
+          'mode1', 'mode2', 'mode3', 'modeQ', 'modeMix',
+          'bodySize', 'bodyDepth', 'bodyMix',
+          'driveAmt', 'driveBias', 'driveTone',
+          'hardness', 'exLength', 'exTone', 'exNoise'
+        ]) asParams[k] = p(k, NaN);
+        for (const k of Object.keys(asParams)) if (Number.isNaN(asParams[k])) delete asParams[k];
+        const made = this.buildRackModule(ctx, type, asParams, baseFreq, t, heldSec);
+        if (!made) return null;
+        for (const src of made.sources ?? []) sources.push(src);
+        return { in: made.in, out: made.out, mod };
+      }
+    }
+  }
+
+  /**
    * Build one rack module and hand back its input and output.
    *
    * These are the stages an acoustic instrument has and a subtractive synth
@@ -2465,13 +2701,29 @@ class ModularSynth {
      * the mode switches the sound, which is the point of having the mode --
      * a track carries both and plays whichever is in force. */
     let chainOut: AudioNode = gainNode;
-    const rackChain = track.advanced ? track.rackChain : undefined;
+
+    /* How long the note is held, for modules that are driven rather than
+       struck. Continuous hold (durationSec 0) has no known length, so give a
+       blown instrument a generous one and let the release close it. */
+    const heldSec =
+      durationSec === 0 ? 8 : durationSec !== undefined ? Math.max(0.02, durationSec) : 60 / this.bpm / 8;
+
+    /* A patched graph takes precedence over the linear chain: both are stored,
+       and a track that has been wired by hand should play what was wired. */
+    const graph = track.advanced ? track.rackGraph : undefined;
+    if (graph && graph.nodes.length) {
+      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, gainNode, baseFreq, t, heldSec);
+      if (built) {
+        chainOut = built.out;
+        for (const src of built.sources) {
+          src.start(t);
+          extras.push(src);
+        }
+      }
+    }
+
+    const rackChain = track.advanced && !(graph && graph.nodes.length) ? track.rackChain : undefined;
     if (Array.isArray(rackChain) && rackChain.length) {
-      /* How long the note is held, for modules that are driven rather than
-         struck. Continuous hold (durationSec 0) has no known length, so give a
-         blown instrument a generous one and let the release close it. */
-      const heldSec =
-        durationSec === 0 ? 8 : durationSec !== undefined ? Math.max(0.02, durationSec) : 60 / this.bpm / 8;
       const rackParams = track.rackParams ?? {};
       for (const id of rackChain) {
         const mod = this.buildRackModule(ctx, id, rackParams, baseFreq, t, heldSec);
