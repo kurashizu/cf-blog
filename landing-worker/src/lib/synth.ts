@@ -1172,6 +1172,44 @@ class ModularSynth {
         return { in: low, out: high, mod };
       }
 
+      case 'excite': {
+        /* The strike, pluck or breath that starts an acoustic sound.
+        
+           A resonator needs something to hit it: a few milliseconds of noise
+           shaped by how hard and how bright the contact is. Hardness moves it
+           between a soft mallet and a stick, LEN is the contact time, and TONE
+           is the filter the burst arrives through.
+        
+           This had a palette entry and no implementation -- it fell through to
+           buildRackModule, which does not handle it either -- so every EXCT
+           placed on a canvas was silent. */
+        if (!this.noiseBuffer) this.initNoiseBuffer();
+        const nz = ctx.createBufferSource();
+        nz.buffer = this.noiseBuffer;
+        nz.loop = true;
+
+        const tone = ctx.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.frequency.value = p('exTone', 3000);
+        // A harder strike is a brighter, tighter contact.
+        tone.Q.value = 0.7 + (p('hardness', 50) / 100) * 3;
+
+        const g = ctx.createGain();
+        const len = Math.max(0.001, p('exLength', 6) / 1000);
+        /* A burst, not a tone: up in well under a millisecond and gone by LEN.
+           Ending on an exponential leaves a step to silence, so it finishes on
+           a short linear ramp to zero. */
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(1, t + 0.0004);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        g.gain.linearRampToValueAtTime(0, t + len + 0.002);
+
+        nz.connect(tone);
+        tone.connect(g);
+        sources.push(nz);
+        return { in: null, out: g, mod };
+      }
+
       case 'sub': {
         /* An octave (or two) below the note, as a pure shape. Racks 1-7 have
            this on the oscillator page; a patch that could not put weight under
@@ -1683,9 +1721,13 @@ class ModularSynth {
           bp.frequency.value = Math.min(18000, Math.max(30, baseFreq * r));
           bp.Q.value = q;
           const g = ctx.createGain();
-          // Split the wet share between the modes so adding one does not
-          // simply make the voice louder.
-          g.gain.value = mix / ratios.length;
+          /* Split the wet share between the modes so adding one does not simply
+             make the voice louder -- then give back what the bandpass took. A
+             bandpass passes roughly 1/Q of a broadband burst, so a strike into
+             three modes at Q 20 measured 0.001 peak against 0.11 for the strike
+             alone: a hundredfold drop that made every modal drum inaudible.
+             sqrt(q) rather than q, which is loud but not explosive. */
+          g.gain.value = (mix / ratios.length) * Math.sqrt(q);
           input.connect(bp);
           bp.connect(g);
           g.connect(output);

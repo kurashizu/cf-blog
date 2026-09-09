@@ -296,7 +296,10 @@
 	{#if $advancedMode}
 		<ViewTabs />
 	{/if}
-	<span class="text-white/60 font-bold text-[11px] pl-2">PRESET:</span>
+	<!-- PATCH, not PRESET: this holds two sounds you build and save -- the
+	     subtractive voice and the patch bay -- rather than a fixed choice you
+	     pick from a list. -->
+	<span class="text-white/60 font-bold text-[11px] pl-2">PATCH:</span>
 	<div class="relative">
 		<button
 			onclick={toggle}
