@@ -810,25 +810,36 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
-		// A pitch envelope that falls two octaves into a resonant filter. The
-		// drop is the sound; the note only says where it starts.
+		/* A pitch envelope that falls into a resonant filter. The drop is the
+		   sound; the note only says where it starts.
+
+		   The drop costs level -- the fundamental walks down out of the band
+		   the filter passes -- and the first version paid for it twice: -24
+		   semitones took it to around 16 Hz, and an amp decay of 0.28 into
+		   zero sustain had the voice nearly gone before the step released it.
+		   Measured 0.005 peak against 0.05-0.13 for the rest of the presets,
+		   which is inaudible next to any of them. Shorter drop, a sustain to
+		   hold it, and a sub and a square under the saw to carry the weight
+		   the falling fundamental gives up: 0.052. */
 		name: 'LASER ZAP',
 		category: 'FX',
 		kind: 'E',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
-			osc2Gain: 0,
+			osc2Waveform: 'square',
+			osc2Gain: 0.7,
+			subOscGain: 0.5,
 			filterType: 'lowpass',
 			cutoff: 6000,
 			resonance: 9,
 			ampAttack: 0.001,
-			ampDecay: 0.28,
-			ampSustain: 0,
-			ampRelease: 0.12,
+			ampDecay: 0.5,
+			ampSustain: 0.6,
+			ampRelease: 0.3,
 			pitchAttack: 0.001,
-			pitchDecay: 0.22,
-			pitchEnvAmount: -24
+			pitchDecay: 0.3,
+			pitchEnvAmount: -18
 		})
 	},
 	{
@@ -870,14 +881,18 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			noiseGain: 0.85,
 			noiseRetrig: 1,
 			noiseRetrigGap: 3,
-			/* A wide bandpass: at Q=7 the filter discards most of what a noise
-			   source has to offer and the texture thins out. */
+			/* A wide bandpass, held. A bandpass is what makes this read as a
+			   machine rather than as wind, so it stays -- but a narrow one
+			   throws away most of what a noise source has to offer: at Q=7 this
+			   measured 0.029 peak against a 0.056 median, the quietest preset in
+			   the library. Wider, lower and sustaining brings it to 0.053
+			   without turning it into a wash. */
 			filterType: 'bandpass',
-			cutoff: 2600,
-			resonance: 2.5,
+			cutoff: 1800,
+			resonance: 1,
 			ampAttack: 0.004,
-			ampDecay: 0.25,
-			ampSustain: 0.5,
+			ampDecay: 0.12,
+			ampSustain: 0.9,
 			ampRelease: 0.2,
 			lfoWaveform: 'square',
 			lfoRate: 11,
