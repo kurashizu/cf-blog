@@ -1,3 +1,4 @@
+import { migratePatch, trackResetDefaults, blankTrack, type SynthPatchFile } from './patch-format';
 import { SPAIN_STEPS } from '../songs/spain';
 import { TAKE_FIVE_STEPS } from '../songs/take-five';
 import { writable, get } from 'svelte/store';
@@ -131,23 +132,13 @@ function gatherPatchData(): SynthPatchData {
 	};
 }
 
-/** Legacy patches were saved on the 1/8-beat grid — expand to the 1/24-beat grid. */
-function migratePatchData(data: SynthPatchData): SynthPatchData {
-	if (data.stepsPerBeat === 24) return data;
-	return {
-		...data,
-		totalSteps: data.totalSteps ? data.totalSteps * 3 : data.totalSteps,
-		tracks: (data.tracks ?? []).map((t) => ({
-			...t,
-			grid: t.grid ? t.grid.flatMap((cell) => [[...cell], [...cell], [...cell]]) : t.grid,
-			accents: t.accents ? (t.accents as number[]).flatMap((a) => [Number(a) || 0, 0, 0]) : t.accents
-		})),
-		stepsPerBeat: 24
-	};
-}
+/* Migration and the reset defaults live in patch-format, which has no Web Audio
+   in it and so can be tested -- the questions that break a saved file are
+   whether an old one still loads and whether loading one leaves anything of the
+   previous song behind, and both are answerable without an audio context. */
 
 function applyPatchData(raw: SynthPatchData): void {
-	const data = migratePatchData(raw);
+	const data = migratePatch(raw as SynthPatchFile) as SynthPatchData;
 	ensureCustomWaves(data.waves);
 	resetPlayheadState();
 	if (data.bpm) setBpm(data.bpm);
@@ -159,15 +150,7 @@ function applyPatchData(raw: SynthPatchData): void {
 		const present = new Set(data.tracks.map((t) => t.id));
 		for (const trk of modularSynth.getTracks()) {
 			if (present.has(trk.id)) continue;
-			const len = trk.grid.length;
-			modularSynth.updateTrack(trk.id, {
-				name: `TRK ${trk.id + 1}`, muted: false, solo: false, eqOn: false, eqGains: [0, 0, 0, 0, 0, 0],
-				percussion: false, keyTimbres: {}, duckSource: -1, duckKeys: [], duckDepth: 0,
-				/* Lanes and the preset's own level belong to the part, so a track
-				   this project does not mention must not keep the last song's. */
-				noteLanes: undefined, presetGain: 1,
-				grid: Array.from({ length: len }, () => []), accents: Array.from({ length: len }, () => 0)
-			});
+			modularSynth.updateTrack(trk.id, blankTrack(trk.id, trk.grid.length));
 		}
 		data.tracks.forEach((tData) => {
 			// Patches predating per-track EQ carry no eq fields — reset to flat instead
@@ -175,14 +158,9 @@ function applyPatchData(raw: SynthPatchData): void {
 			// Likewise percussion mode: a patch that predates it, or one saved with
 			// it off, must not inherit the live track's key table.
 			if (tData.id !== undefined)
-				modularSynth.updateTrack(tData.id, {
-					eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], percussion: false, keyTimbres: {},
-					duckSource: -1, duckKeys: [], duckDepth: 0,
-					/* Reset before the spread, so a project saved before lanes
-					   existed loads without the live track's curves under it. */
-					noteLanes: undefined, presetGain: 1,
-					...tData
-				});
+				// Reset first, so a project saved before a field existed gets the
+				// default rather than whatever the live track was holding.
+				modularSynth.updateTrack(tData.id, { ...trackResetDefaults(), ...tData });
 		});
 		refreshTracks();
 	}
