@@ -53,7 +53,9 @@
 			: $t('synth.tracks.overlayOffHint')}
 	>
 		<span>⧉</span>
-		<span>OVERLAY</span>
+		<!-- Four characters, like SNAP and DUR beside it. The tooltip spells out
+		     what it does, so the button does not have to. -->
+		<span>OVLY</span>
 	</button>
 
 	<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>

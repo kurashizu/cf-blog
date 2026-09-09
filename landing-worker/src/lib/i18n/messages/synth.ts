@@ -230,7 +230,7 @@ export default {
 
 		'synth.tracks.overlayOnHint': 'Multi-Track Overlay Mode: ACTIVE — Click TRKs to multi-select and layer on Piano Roll',
 		'synth.tracks.overlayOffHint': 'Multi-Track Overlay Mode: OFF — Click to enable multi-track layered view on Piano Roll',
-		'synth.tracks.trkLabelHint': 'Tracks — click a number to edit that track; in OVERLAY mode click it to show or hide it on the roll',
+		'synth.tracks.trkLabelHint': 'Tracks — click a number to edit that track; in OVLY mode click it to show or hide it on the roll',
 		'synth.tracks.setActiveHint': 'Set {name} as Exclusive Active Track (Controls Modules 1-7, Piano Roll Editing & Piano Keyboard Audition) — Currently {state}',
 		'synth.tracks.activeSolid': 'ACTIVE [SOLID]',
 		'synth.tracks.inactiveHollow': 'INACTIVE [HOLLOW]',
@@ -297,7 +297,7 @@ export default {
 		'synth.tooltip.presetShaker': 'Preset: Shaker — Soft-attack noise with a filter that opens and closes with the hit',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': 'Each chip is one voice with its own oscillators, filter, envelopes and EQ. Click a chip to make it the one every rack below is editing; M and S mute and solo it. OVERLAY draws the other tracks behind the one you are editing so parts line up.',
+		'synth.tour.tracksBody': 'Each chip is one voice with its own oscillators, filter, envelopes and EQ. Click a chip to make it the one every rack below is editing; M and S mute and solo it. OVLY draws the other tracks behind the one you are editing so parts line up.',
 		'synth.tour.rollTitle': 'PIANO ROLL',
 		'synth.tour.rollBody': 'Click a cell to place a note, drag across to paint a run, click again to erase. SNAP is the grid the cursor lands on and DUR is how long a placed note is — both go down to 1/12 for triplets. A held note is the same index repeated across cells, so a longer bar really is one longer note.',
 		'synth.tour.rollKeyLen': 'pattern length, counted in pages',
@@ -557,7 +557,7 @@ export default {
 
 		'synth.tracks.overlayOnHint': '多轨叠加模式：已开启 — 点击 TRK 可多选并在钢琴卷帘上叠加显示',
 		'synth.tracks.overlayOffHint': '多轨叠加模式：关闭 — 点击可在钢琴卷帘上启用多轨叠加视图',
-		'synth.tracks.trkLabelHint': '音轨 — 点击数字编辑该音轨；在 OVERLAY 模式下点击可在卷帘上显示或隐藏它',
+		'synth.tracks.trkLabelHint': '音轨 — 点击数字编辑该音轨；在 OVLY 模式下点击可在卷帘上显示或隐藏它',
 		'synth.tracks.setActiveHint': '将 {name} 设为唯一当前音轨（控制机架 1-7、钢琴卷帘编辑与键盘试听）— 当前状态：{state}',
 		'synth.tracks.activeSolid': '已激活【实心】',
 		'synth.tracks.inactiveHollow': '未激活【空心】',
@@ -624,7 +624,7 @@ export default {
 		'synth.tooltip.presetShaker': '预设：Shaker — 柔和起音的噪声，滤波器随敲击开合',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '每个音轨条代表一个独立声部，拥有自己的振荡器、滤波器、包络和均衡器。点击一个音轨条，让它成为下方所有机架正在编辑的对象；M 和 S 分别静音和独奏它。OVERLAY 会在你正在编辑的音轨背后绘出其他音轨，方便对齐声部。',
+		'synth.tour.tracksBody': '每个音轨条代表一个独立声部，拥有自己的振荡器、滤波器、包络和均衡器。点击一个音轨条，让它成为下方所有机架正在编辑的对象；M 和 S 分别静音和独奏它。OVLY 会在你正在编辑的音轨背后绘出其他音轨，方便对齐声部。',
 		'synth.tour.rollTitle': 'PIANO ROLL',
 		'synth.tour.rollBody': '点击单元格放置一个音符，拖动可连续绘制一段，再次点击可擦除。SNAP 是光标吸附的网格，DUR 是放置音符的时长 — 两者最小都可到 1/12 以支持三连音。一个延音音符就是同一个音高在多个格子中重复出现，因此更长的一小节其实就是一个更长的音符。',
 		'synth.tour.rollKeyLen': '图形长度，以页为单位',
@@ -884,7 +884,7 @@ export default {
 
 		'synth.tracks.overlayOnHint': '多軌疊加模式：已啟用 — 點擊 TRK 可多選並在鋼琴捲軸上疊加顯示',
 		'synth.tracks.overlayOffHint': '多軌疊加模式：關閉 — 點擊可在鋼琴捲軸上啟用多軌疊加檢視',
-		'synth.tracks.trkLabelHint': '音軌 — 點擊數字編輯該音軌；在 OVERLAY 模式下點擊可在捲軸上顯示或隱藏它',
+		'synth.tracks.trkLabelHint': '音軌 — 點擊數字編輯該音軌；在 OVLY 模式下點擊可在捲軸上顯示或隱藏它',
 		'synth.tracks.setActiveHint': '將 {name} 設為唯一目前音軌（控制機架 1-7、鋼琴捲軸編輯與鍵盤試聽）— 目前狀態：{state}',
 		'synth.tracks.activeSolid': '已啟用【實心】',
 		'synth.tracks.inactiveHollow': '未啟用【空心】',
@@ -951,7 +951,7 @@ export default {
 		'synth.tooltip.presetShaker': '預設：Shaker — 柔和起音的雜訊，濾波器隨敲擊開合',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '每個音軌條代表一個獨立聲部，擁有自己的振盪器、濾波器、包絡和等化器。點擊一個音軌條，讓它成為下方所有機架正在編輯的對象；M 和 S 分別靜音和獨奏它。OVERLAY 會在你正在編輯的音軌背後繪出其他音軌，方便對齊聲部。',
+		'synth.tour.tracksBody': '每個音軌條代表一個獨立聲部，擁有自己的振盪器、濾波器、包絡和等化器。點擊一個音軌條，讓它成為下方所有機架正在編輯的對象；M 和 S 分別靜音和獨奏它。OVLY 會在你正在編輯的音軌背後繪出其他音軌，方便對齊聲部。',
 		'synth.tour.rollTitle': 'PIANO ROLL',
 		'synth.tour.rollBody': '點擊儲存格放置一個音符，拖曳可連續繪製一段，再次點擊可清除。SNAP 是游標吸附的網格，DUR 是放置音符的時長 — 兩者最小都可到 1/12 以支援三連音。一個延音音符就是同一個音高在多個格子中重複出現，因此更長的一小節其實就是一個更長的音符。',
 		'synth.tour.rollKeyLen': '圖形長度，以頁為單位',
@@ -1211,7 +1211,7 @@ export default {
 
 		'synth.tracks.overlayOnHint': 'マルチトラックオーバーレイモード：有効 — TRK をクリックして複数選択し、ピアノロールに重ねて表示します',
 		'synth.tracks.overlayOffHint': 'マルチトラックオーバーレイモード：無効 — クリックするとピアノロールでの多トラック重ね表示を有効にします',
-		'synth.tracks.trkLabelHint': 'トラック — 番号をクリックするとそのトラックを編集します。OVERLAY モードではクリックでロール上の表示・非表示を切り替えます',
+		'synth.tracks.trkLabelHint': 'トラック — 番号をクリックするとそのトラックを編集します。OVLY モードではクリックでロール上の表示・非表示を切り替えます',
 		'synth.tracks.setActiveHint': '{name} を単独のアクティブトラックに設定（ラック1-7、ピアノロール編集、鍵盤試奏を制御）— 現在の状態：{state}',
 		'synth.tracks.activeSolid': 'アクティブ【塗りつぶし】',
 		'synth.tracks.inactiveHollow': '非アクティブ【枠のみ】',
@@ -1278,7 +1278,7 @@ export default {
 		'synth.tooltip.presetShaker': 'プリセット：Shaker — ソフトアタックのノイズに、ヒットに合わせて開閉するフィルター',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '各チップは、独自のオシレーター、フィルター、エンベロープ、EQ を持つ1つのボイスです。チップをクリックすると、下のすべてのラックがそのトラックを編集対象にします。M と S でミュート／ソロを切り替えます。OVERLAY は編集中のトラックの背後に他のトラックを表示し、パート同士の位置を揃えやすくします。',
+		'synth.tour.tracksBody': '各チップは、独自のオシレーター、フィルター、エンベロープ、EQ を持つ1つのボイスです。チップをクリックすると、下のすべてのラックがそのトラックを編集対象にします。M と S でミュート／ソロを切り替えます。OVLY は編集中のトラックの背後に他のトラックを表示し、パート同士の位置を揃えやすくします。',
 		'synth.tour.rollTitle': 'PIANO ROLL',
 		'synth.tour.rollBody': 'セルをクリックしてノートを配置し、ドラッグで連続配置、再クリックで消去します。SNAP はカーソルが吸着するグリッド、DUR は配置するノートの長さで、どちらも3連符に対応する 1/12 まで細分できます。伸ばしたノートは同じインデックスがセルにまたがって並んでいる状態なので、長い小節は実質1つの長いノートです。',
 		'synth.tour.rollKeyLen': 'ページ数で数えるパターン長',
@@ -1538,7 +1538,7 @@ export default {
 
 		'synth.tracks.overlayOnHint': '멀티트랙 오버레이 모드: 켜짐 — TRK를 클릭해 여러 개를 선택하고 피아노 롤에 겹쳐 표시합니다',
 		'synth.tracks.overlayOffHint': '멀티트랙 오버레이 모드: 꺼짐 — 클릭하면 피아노 롤에서 다중 트랙 겹침 보기를 켭니다',
-		'synth.tracks.trkLabelHint': '트랙 — 숫자를 클릭해 해당 트랙을 편집합니다. OVERLAY 모드에서는 클릭으로 롤에서 표시/숨김을 전환합니다',
+		'synth.tracks.trkLabelHint': '트랙 — 숫자를 클릭해 해당 트랙을 편집합니다. OVLY 모드에서는 클릭으로 롤에서 표시/숨김을 전환합니다',
 		'synth.tracks.setActiveHint': '{name}을(를) 단독 활성 트랙으로 설정 (랙 1-7, 피아노 롤 편집, 건반 시청을 제어) — 현재 상태: {state}',
 		'synth.tracks.activeSolid': '활성 [채움]',
 		'synth.tracks.inactiveHollow': '비활성 [테두리만]',
@@ -1605,7 +1605,7 @@ export default {
 		'synth.tooltip.presetShaker': '프리셋: Shaker — 부드러운 어택의 노이즈에 타격에 맞춰 여닫히는 필터',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '각 칩은 고유한 오실레이터, 필터, 엔벨로프, EQ를 가진 하나의 보이스입니다. 칩을 클릭하면 아래의 모든 랙이 그 트랙을 편집 대상으로 삼습니다. M과 S는 음소거와 솔로를 전환합니다. OVERLAY는 편집 중인 트랙 뒤에 다른 트랙을 그려 파트를 맞추기 쉽게 해 줍니다.',
+		'synth.tour.tracksBody': '각 칩은 고유한 오실레이터, 필터, 엔벨로프, EQ를 가진 하나의 보이스입니다. 칩을 클릭하면 아래의 모든 랙이 그 트랙을 편집 대상으로 삼습니다. M과 S는 음소거와 솔로를 전환합니다. OVLY는 편집 중인 트랙 뒤에 다른 트랙을 그려 파트를 맞추기 쉽게 해 줍니다.',
 		'synth.tour.rollTitle': 'PIANO ROLL',
 		'synth.tour.rollBody': '셀을 클릭해 노트를 배치하고, 드래그해 연속으로 칠하고, 다시 클릭해 지웁니다. SNAP은 커서가 놓이는 그리드이고 DUR는 배치되는 노트의 길이입니다 — 둘 다 셋잇단음표를 위해 1/12까지 내려갑니다. 길게 누른 노트는 같은 인덱스가 여러 셀에 걸쳐 반복되는 것이므로, 더 긴 마디는 실제로는 하나의 더 긴 노트입니다.',
 		'synth.tour.rollKeyLen': '페이지 단위로 세는 패턴 길이',
