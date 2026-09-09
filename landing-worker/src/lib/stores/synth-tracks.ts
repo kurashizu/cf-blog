@@ -70,12 +70,22 @@ export function noteNameOf(noteIndex: number): string {
 	return PIANO_ROLL_NOTES[noteIndex]?.note ?? `#${noteIndex}`;
 }
 
+/* Set by synth-presets, which imports this module and so cannot be imported
+   back. Editing a track is what makes a preset "modified", and this is where
+   every edit passes through. */
+let onTrackEdited: (() => void) | null = null;
+
+export function setTrackEditedHook(fn: () => void): void {
+	onTrackEdited = fn;
+}
+
 /**
  * Edit the active track. In percussion mode the sound fields go to the active
  * key's entry and everything else (volume, pan, EQ, name...) to the track row,
  * so the racks, the presets and RST all work per key without knowing about it.
  */
 export function updateActiveTrack(partial: Partial<TrackData>): void {
+	onTrackEdited?.();
 	const id = get(activeTrackId);
 	const trk = modularSynth.getTrack(id);
 	if (trk?.percussion) {

@@ -13,6 +13,9 @@
 		activeKitName,
 		applyPresetAt,
 		saveActiveAsPreset,
+		newPreset,
+		newAdvancedPreset,
+		presetModified,
 		deleteUserPreset,
 		renameUserPreset,
 		exportActivePreset,
@@ -40,10 +43,11 @@
 	   one long column, twenty rows before you reached your own presets, and it
 	   only gets longer. Now it is five rows, and each flyout is short enough
 	   to read at a glance. Hover opens a flyout; so does click, for touch. */
-	type Section = PresetCategory | 'KITS' | 'MINE';
+	/* DRUM is the kits: a single snare is not something a player picks, so the
+	   drums are only reachable as a kit and that section lists them. */
+	type Section = PresetCategory | 'MINE';
 	let SECTIONS = $derived<{ id: Section; label: string; hint: string }[]>([
 		...PRESET_CATEGORIES.map((c) => ({ id: c as Section, label: c, hint: CATEGORY_HINTS[c] })),
-		{ id: 'KITS', label: 'KITS', hint: $t('synth.preset.kitsHint') },
 		{ id: 'MINE', label: $t('synth.preset.myPresetsLabel'), hint: $t('synth.preset.mineHint') }
 	]);
 
@@ -63,6 +67,10 @@
 	   full name is on the title. */
 	const TRIGGER_MAX = 8;
 	let triggerName = $derived.by(() => {
+		/* Once the track has been edited the name no longer describes the sound,
+		   so stop claiming it does. MODIFIED is also the cue that there is
+		   something here worth saving. */
+		if ($presetModified) return 'MODIFIED';
 		const n = $activeKitName ?? current?.name ?? '';
 		return n.length > TRIGGER_MAX ? `${n.slice(0, TRIGGER_MAX)}…` : n;
 	});
@@ -110,6 +118,16 @@
 	function save() {
 		close();
 		saveActiveAsPreset();
+	}
+
+	function startNew() {
+		close();
+		newPreset();
+	}
+
+	function startNewAdvanced() {
+		close();
+		newAdvancedPreset();
 	}
 
 	function saveKit() {
@@ -272,7 +290,7 @@
 			>
 				{#each SECTIONS as sec (sec.id)}
 					{@const isOpen = section === sec.id}
-					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'KITS' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => p.category === sec.id).length}
+					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'DRUM' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => p.category === sec.id).length}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div class="relative" onmouseenter={() => (section = sec.id)}>
 						<button
@@ -288,7 +306,7 @@
 						</button>
 
 						{#if isOpen}
-							{#if sec.id !== 'KITS' && sec.id !== 'MINE'}
+							{#if sec.id !== 'DRUM' && sec.id !== 'MINE'}
 								{@render flyout(presetList)}
 								{#snippet presetList()}
 									{#each SOUND_PRESETS as p, idx (p.name)}
@@ -296,11 +314,16 @@
 											<button onclick={() => pick(idx)} class="{rowBase} {$soundPresetIdx === idx ? rowOn : rowIdle}" title={PRESET_TOOLTIPS[p.name] || p.name}>
 												<span class="shrink-0 {$soundPresetIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$soundPresetIdx === idx ? '●' : '○'}</span>
 												<span class="truncate">{p.name}</span>
+												<!-- Says which of the synth's two instruments this is, since the
+												     patch bay only sounds in ADV and picking one switches the mode. -->
+												{#if p.preset.rackChain?.length}
+													<span class="shrink-0 ml-auto text-[8px] font-black tracking-wide {$soundPresetIdx === idx ? 'text-black/60' : 'text-[#61afef]/70'}">ADV</span>
+												{/if}
 											</button>
 										{/if}
 									{/each}
 								{/snippet}
-							{:else if sec.id === 'KITS'}
+							{:else if sec.id === 'DRUM'}
 								{@render flyout(kitList)}
 								{#snippet kitList()}
 									<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/40 select-none">{$t('synth.preset.builtInLabel')}</div>
@@ -358,6 +381,18 @@
 				{/each}
 
 				<div class="border-t border-white/10 mt-1 pt-1">
+					<!-- Start from nothing. Two of them, because the synth has two
+					     instruments in it: a subtractive voice edited on racks 1-7, and a
+					     signal path edited in the patch bay. -->
+					<button onclick={startNew} class="{actionRow} text-[#e5c07b] hover:bg-[#e5c07b]/20" title={$t('synth.preset.newHint')}>
+						<span class="shrink-0">✧</span>
+						<span>{$t('synth.preset.newLabel')}</span>
+					</button>
+					<button onclick={startNewAdvanced} class="{actionRow} text-[#61afef] hover:bg-[#61afef]/20" title={$t('synth.preset.newAdvancedHint')}>
+						<span class="shrink-0">◆</span>
+						<span>{$t('synth.preset.newAdvancedLabel')}</span>
+					</button>
+					<div class="border-t border-white/10 my-1"></div>
 					<button onclick={save} class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.preset.saveActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
 						<span class="shrink-0">＋</span>
 						<span>{$t('synth.preset.saveActive', { target: percussion ? $t('synth.preset.targetKey') : $t('synth.preset.targetTrack') })}</span>

@@ -66,9 +66,26 @@ export const centreView = derived(activeTrackRow, ($row): CentreView => $row?.ad
 export function toggleAdvanced(): void {
 	const id = get(activeTrackId);
 	const on = !get(advancedMode);
-	// Leaving ADV parks the view on the roll, so coming back lands where the
-	// racks were rather than on a patch bay the user did not ask for again.
-	modularSynth.updateTrack(id, { advanced: on, advancedView: on ? get(centreView) : 'roll' });
+	const track = modularSynth.getTrack(id);
+
+	/* Switching a track into ADV that has no signal path yet gives it one.
+	   Without this the mode appears to do nothing: the patch bay opens on an
+	   empty chain, the sound is unchanged because there is nothing to route
+	   through, and there is no way to tell that from a bug. A string into a
+	   body is the shape most acoustic instruments take, so it is somewhere to
+	   start rather than a blank page.
+	   
+	   Only when the track has never had one -- a chain the player built is left
+	   alone, including one they deliberately emptied. */
+	const needsChain = on && !Array.isArray(track?.rackChain);
+
+	modularSynth.updateTrack(id, {
+		advanced: on,
+		// Leaving ADV parks the view on the roll, so coming back lands where the
+		// racks were rather than on a patch bay the user did not ask for again.
+		advancedView: on ? get(centreView) : 'roll',
+		...(needsChain ? { rackChain: ['string', 'body'], rackParams: {} } : {})
+	});
 	refreshTracks();
 }
 

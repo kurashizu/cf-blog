@@ -2,9 +2,9 @@ import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { playSound } from '../sound';
 import { tr } from '../i18n';
-import { KEY_TIMBRE_KEYS, type TrackData } from '../synth';
+import { KEY_TIMBRE_KEYS, BLANK_TRACK_TIMBRE, type TrackData } from '../synth';
 import { SMB1_NOISE_KEYS } from '../songs/mario1';
-import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack } from './synth-tracks';
+import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack, setTrackEditedHook } from './synth-tracks';
 import { showSaveStatus } from './synth-patch';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
@@ -12,12 +12,32 @@ const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
 const FILE_FORMAT = 'krsz-synth-preset';
 const KIT_FILE_FORMAT = 'krsz-synth-kit';
 
-export type PresetCategory = 'BASS' | 'LEAD' | 'PLUCK' | 'KEYS' | 'PAD' | 'DRUMS' | 'ACOUSTIC';
+/* Ten families, each of which can hold both kinds of sound: an electric one
+   built by subtraction on racks 1-7, and an acoustic one built as a signal path
+   in the patch bay. The pair is the point -- a LEAD is a lead whether it is a
+   saw through a filter or a bowed string -- so they share a heading and `kind`
+   separates them within it. */
+export type PresetCategory =
+	| 'LEAD'
+	| 'PAD'
+	| 'BASS'
+	| 'PLUCK'
+	| 'KEYBOARD'
+	| 'ORGAN'
+	| 'STRING'
+	| 'MALLET'
+	| 'FX'
+	| 'DRUM';
+
+/** E = electric, built by subtraction. AC = acoustic, built as a signal path. */
+export type PresetKind = 'E' | 'AC';
 
 export interface SoundPreset {
 	name: string;
 	/** Built-ins carry one; user presets are listed under MY PRESETS regardless. */
 	category?: PresetCategory;
+	/** Which half of its family this is. Absent means electric. */
+	kind?: PresetKind;
 	preset: Partial<TrackData>;
 }
 
@@ -326,6 +346,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// Triangle with a sine an octave up, a filter that snaps shut, no sustain: a plucked string.
 		name: 'KOTO',
 		category: 'PLUCK',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'triangle',
 			osc1Gain: 1,
@@ -342,13 +363,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampAttack: 0.002,
 			ampDecay: 0.4,
 			ampSustain: 0,
-			ampRelease: 0.3
+			ampRelease: 0.3,
+			rackChain: ['string', 'body'],
+			rackParams: { decayTime: 1.8, damping: 26, stiffness: 55, strBlend: 100, bodySize: 40, bodyDepth: 45, bodyMix: 50 }
 		})
 	},
 	{
 		// Sine body and a quieter triangle an octave up, decaying together.
 		name: 'MARIMBA',
-		category: 'PLUCK',
+		category: 'MALLET',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
@@ -360,13 +384,15 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampAttack: 0,
 			ampDecay: 0.35,
 			ampSustain: 0,
-			ampRelease: 0.25
+			ampRelease: 0.25,
+			rackChain: ['modes', 'body'],
+			rackParams: { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22, modeMix: 85, bodySize: 45, bodyDepth: 50, bodyMix: 55 }
 		})
 	},
 	{
 		// Two sines ring-modulated at a 3.5 ratio: inharmonic partials, long tail, air.
 		name: 'BELL',
-		category: 'PLUCK',
+		category: 'MALLET',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
@@ -388,7 +414,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// Sine carrier, sine modulator four octaves up at a light index: the tine.
 		name: 'E-PIANO',
-		category: 'KEYS',
+		category: 'KEYBOARD',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 1,
@@ -411,7 +437,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// Drawbars: fundamental, octave, and the SUB below; no envelope to speak of; a slow tremolo.
 		name: 'ORGAN',
-		category: 'KEYS',
+		category: 'ORGAN',
 		preset: synth({
 			osc1Waveform: 'sine',
 			osc1Gain: 0.8,
@@ -433,7 +459,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// A 25% pulse through a resonant low-pass that closes fast.
 		name: 'CLAV',
-		category: 'KEYS',
+		category: 'KEYBOARD',
 		preset: synth({
 			osc1Waveform: 'square',
 			osc1Gain: 1,
@@ -455,7 +481,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// Saw with a square an octave up, plucked and bright.
 		name: 'HARPSICHORD',
-		category: 'KEYS',
+		category: 'KEYBOARD',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 0.9,
@@ -470,7 +497,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampAttack: 0,
 			ampDecay: 0.5,
 			ampSustain: 0,
-			ampRelease: 0.2
+			ampRelease: 0.2,
+			rackChain: ['string', 'body'],
+			rackParams: { decayTime: 1.1, damping: 6, stiffness: 85, strBlend: 100, bodySize: 25, bodyDepth: 35, bodyMix: 25 }
 		})
 	},
 
@@ -567,184 +596,6 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 
-	/* DRUMS. Sequence them on any key; the pitched ones follow the note, the
-	   noise ones use KEY TRK to get brighter up the keyboard. Numbers were
-	   settled by rendering each hit offline and reading its length, peak and
-	   spectral centroid, then listening -- see the commit that added them. */
-	{
-		// Sine with a 2.5-octave pitch drop over 45 ms and a sub underneath it.
-		name: 'KICK 808',
-		category: 'DRUMS',
-		preset: hit(0.32, 0.06, {
-			osc1Waveform: 'sine',
-			osc1Gain: 1,
-			subOscGain: 0.6,
-			pitchEnvAmount: 2.5,
-			pitchAttack: 0.001,
-			pitchDecay: 0.045,
-			cutoff: 3000
-		})
-	},
-	{
-		// Shorter, harder, a triangle for some edge and a burst of noise for the beater.
-		name: 'KICK PUNCH',
-		category: 'DRUMS',
-		preset: hit(0.17, 0.04, {
-			osc1Waveform: 'triangle',
-			osc1Gain: 1,
-			subOscGain: 0.4,
-			noiseGain: 0.15,
-			pitchEnvAmount: 3,
-			pitchAttack: 0.001,
-			pitchDecay: 0.03,
-			cutoff: 5000,
-			filterEnvAmount: -0.6,
-			filterAttack: 0.001,
-			filterDecay: 0.05,
-			filterSustain: 0
-		})
-	},
-	{
-		// Body from a triangle and a sine a fifth up, rattle from the NOISE mix,
-		// a short pitch snap on the body.
-		name: 'SNARE',
-		category: 'DRUMS',
-		preset: hit(0.18, 0.05, {
-			osc1Waveform: 'triangle',
-			osc1Gain: 0.8,
-			osc2Waveform: 'sine',
-			osc2Gain: 0.5,
-			osc2Semitone: 7,
-			noiseGain: 0.9,
-			pitchEnvAmount: 1,
-			pitchAttack: 0.001,
-			pitchDecay: 0.02,
-			cutoff: 8000,
-			resonance: 0.5,
-			keyTracking: 0.5,
-			filterEnvAmount: 0.3,
-			filterAttack: 0.001,
-			filterDecay: 0.08,
-			filterSustain: 0,
-			airGain: 0.2
-		})
-	},
-	{
-		// Three noise bursts 11 ms apart, high-passed at 1 kHz with the top
-		// shelved down -- a band-pass there was 10 dB quieter than the hats.
-		name: 'CLAP',
-		category: 'DRUMS',
-		preset: hit(0.25, 0.08, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			noiseRetrig: 3,
-			noiseRetrigGap: 11,
-			filterType: 'highpass',
-			cutoff: 1000,
-			resonance: 0.7,
-			airGain: -0.4
-		})
-	},
-	{
-		name: 'CLOSED HAT',
-		category: 'DRUMS',
-		preset: hit(0.045, 0.02, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			filterType: 'highpass',
-			cutoff: 7000,
-			resonance: 0.5,
-			keyTracking: 0.8,
-			airGain: 0.4
-		})
-	},
-	{
-		name: 'OPEN HAT',
-		category: 'DRUMS',
-		preset: hit(0.35, 0.15, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			filterType: 'highpass',
-			cutoff: 7000,
-			resonance: 0.5,
-			keyTracking: 0.8,
-			airGain: 0.4
-		})
-	},
-	{
-		// Like the kick but a shallower drop and longer body; play it across a few keys for a rack of toms.
-		name: 'TOM',
-		category: 'DRUMS',
-		preset: hit(0.35, 0.08, {
-			osc1Waveform: 'sine',
-			osc1Gain: 1,
-			osc2Waveform: 'triangle',
-			osc2Gain: 0.3,
-			subOscGain: 0.3,
-			noiseGain: 0.12,
-			pitchEnvAmount: 1.2,
-			pitchAttack: 0.001,
-			pitchDecay: 0.08,
-			cutoff: 2500
-		})
-	},
-	{
-		// Two oscillators ring-modulated (sum and difference tones two octaves
-		// apart), 40 ms, high-passed so the ping is what is left.
-		name: 'RIMSHOT',
-		category: 'DRUMS',
-		preset: hit(0.04, 0.02, {
-			osc1Waveform: 'triangle',
-			osc1Gain: 1,
-			osc2Waveform: 'square',
-			osc2Gain: 1,
-			osc2Ratio: 4,
-			blendMode: 'ring',
-			filterType: 'highpass',
-			cutoff: 600,
-			resonance: 2,
-			pitchEnvAmount: 0.5,
-			pitchAttack: 0.001,
-			pitchDecay: 0.01,
-			airGain: 0.3
-		})
-	},
-	{
-		// Two squares a fifth-ish apart (the 808 uses 540 and 800 Hz), band-passed.
-		name: 'COWBELL',
-		category: 'DRUMS',
-		preset: hit(0.3, 0.1, {
-			osc1Waveform: 'square',
-			osc1Gain: 1,
-			osc2Waveform: 'square',
-			osc2Gain: 1,
-			osc2Ratio: 1.5,
-			filterType: 'bandpass',
-			cutoff: 1500,
-			resonance: 1
-		})
-	},
-	{
-		// Noise with a soft attack and a filter that opens and closes with it.
-		name: 'SHAKER',
-		category: 'DRUMS',
-		preset: hit(0.08, 0.05, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			ampAttack: 0.012,
-			attack: 0.012,
-			filterType: 'bandpass',
-			cutoff: 6000,
-			resonance: 2,
-			keyTracking: 0.6,
-			filterEnvAmount: 0.4,
-			filterAttack: 0.01,
-			filterDecay: 0.05,
-			filterSustain: 0
-		})
-	}
-,
-
 	/* ACOUSTIC. These are not subtractive patches with a filter doing the work:
 	   each one is an excitation shaped by the amp envelope, driven into a
 	   resonator and a body from the patch bay (ADV -> RACK). That chain is what
@@ -767,7 +618,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		// partials sharp of the harmonic series -- the reason a piano does not
 		// sound like an organ.
 		name: 'PIANO',
-		category: 'ACOUSTIC',
+		category: 'KEYBOARD',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
@@ -784,7 +636,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// The same pluck on a slack string in a bigger box.
 		name: 'GUITAR',
-		category: 'ACOUSTIC',
+		category: 'PLUCK',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
@@ -801,7 +654,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// Heavily damped, in the largest body: an upright rather than a synth bass.
 		name: 'UPRIGHT BASS',
-		category: 'ACOUSTIC',
+		category: 'BASS',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
@@ -818,7 +672,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// A bow, not a pluck: the excitation sustains, so the envelope holds.
 		name: 'BOWED STRINGS',
-		category: 'ACOUSTIC',
+		category: 'STRING',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'sawtooth',
 			osc1Gain: 1,
@@ -835,7 +690,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// Breath into a tube closed at one end: odd harmonics only.
 		name: 'CLARINET',
-		category: 'ACOUSTIC',
+		category: 'STRING',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'noise',
 			osc1Gain: 0.6,
@@ -852,7 +708,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	{
 		// Open at both ends, so all the harmonics are there.
 		name: 'FLUTE',
-		category: 'ACOUSTIC',
+		category: 'STRING',
+		kind: 'AC',
 		preset: synth({
 			osc1Waveform: 'noise',
 			osc1Gain: 0.6,
@@ -868,16 +725,30 @@ export const SOUND_PRESETS: SoundPreset[] = [
 	}
 ];
 
-export const PRESET_CATEGORIES: PresetCategory[] = ['BASS', 'LEAD', 'PLUCK', 'KEYS', 'PAD', 'DRUMS', 'ACOUSTIC'];
+export const PRESET_CATEGORIES: PresetCategory[] = [
+	'LEAD',
+	'PAD',
+	'BASS',
+	'PLUCK',
+	'KEYBOARD',
+	'ORGAN',
+	'STRING',
+	'MALLET',
+	'FX',
+	'DRUM'
+];
 
 const CATEGORY_HINT_KEYS: Record<PresetCategory, string> = {
-	BASS: 'synthPanels.presets.hintBass',
 	LEAD: 'synthPanels.presets.hintLead',
-	PLUCK: 'synthPanels.presets.hintPluck',
-	KEYS: 'synthPanels.presets.hintKeys',
 	PAD: 'synthPanels.presets.hintPad',
-	DRUMS: 'synthPanels.presets.hintDrums',
-	ACOUSTIC: 'synthPanels.presets.hintAcoustic'
+	BASS: 'synthPanels.presets.hintBass',
+	PLUCK: 'synthPanels.presets.hintPluck',
+	KEYBOARD: 'synthPanels.presets.hintKeyboard',
+	ORGAN: 'synthPanels.presets.hintOrgan',
+	STRING: 'synthPanels.presets.hintString',
+	MALLET: 'synthPanels.presets.hintMallet',
+	FX: 'synthPanels.presets.hintFx',
+	DRUM: 'synthPanels.presets.hintDrums'
 };
 
 /* A sibling component (PresetMenu.svelte) indexes this by category as a plain
@@ -953,6 +824,17 @@ export const allPresets = derived(userPresets, ($user) => [...SOUND_PRESETS, ...
 /** Index into allPresets of the last preset applied (or picked) — what the menu trigger names. */
 export const soundPresetIdx = writable<number>(0);
 
+/* True once the track has been edited away from the preset it was loaded from.
+   The trigger then reads MODIFIED rather than naming a preset the sound is no
+   longer -- which is what tells the player there is something worth saving, and
+   stops a name from vouching for a sound it does not describe.
+
+   Hooked into updateActiveTrack, which every edit passes through, so no knob
+   has to remember to report itself. Applying a preset goes through the same
+   function and clears the flag again afterwards. */
+export const presetModified = writable<boolean>(false);
+setTrackEditedHook(() => presetModified.set(true));
+
 /* The name of the kit on the active track, or null when a single preset is
    what was last applied. A kit replaces the whole key table rather than the
    track's one timbre, so soundPresetIdx cannot describe it -- it kept naming
@@ -965,8 +847,65 @@ export function applyPresetAt(idx: number): void {
 	if (!sel) return;
 	soundPresetIdx.set(idx);
 	activeKitName.set(null);
-	updateActiveTrack(sel.preset);
+	/* A preset built as a signal path turns ADV on and opens the patch bay: the
+	   chain only sounds in ADV, so applying one without switching would leave
+	   the player hearing the bare excitation and wondering what broke. One that
+	   is not built that way turns ADV off, which is what makes it sound like
+	   itself -- but the chain stays on the track rather than being cleared, so
+	   coming back to an acoustic preset finds its path intact. */
+	const isChainPreset = Array.isArray(sel.preset.rackChain) && sel.preset.rackChain.length > 0;
+	updateActiveTrack({
+		...sel.preset,
+		advanced: isChainPreset,
+		...(isChainPreset ? { advancedView: 'rack' as const } : {})
+	});
+	presetModified.set(false);
 	playSound('toggle');
+}
+
+/* Start from nothing rather than from whatever happened to be loaded.
+ *
+ * Two of them, because the synth has two instruments in it: the plain one is a
+ * neutral subtractive voice edited on racks 1-7, and the advanced one is a
+ * signal path with a string and a body already placed -- the shape most
+ * acoustic instruments take -- so there is something to hear while the rest is
+ * built up. Both count as modified from the start: there is no preset they came
+ * from, and the point is to save what you make. */
+function blankTimbre(): Partial<TrackData> {
+	const blank = JSON.parse(JSON.stringify(BLANK_TRACK_TIMBRE)) as Record<string, unknown>;
+	const out: Record<string, unknown> = {};
+	for (const k of TIMBRE_KEYS) if (blank[k] !== undefined) out[k] = blank[k];
+	return out as Partial<TrackData>;
+}
+
+export function newPreset(): void {
+	updateActiveTrack({ ...blankTimbre(), rackChain: [], rackParams: {}, advanced: false });
+	presetModified.set(true);
+	showSaveStatus(tr('synthPanels.toast.newPreset'));
+	playSound('click');
+}
+
+export function newAdvancedPreset(): void {
+	updateActiveTrack({
+		...blankTimbre(),
+		// A short excitation: a resonator answers a strike, and a blank ADV patch
+		// that droned would teach the wrong thing about what the chain is for.
+		ampAttack: 0.002,
+		ampDecay: 0.08,
+		ampSustain: 0,
+		ampRelease: 0.05,
+		attack: 0.002,
+		decay: 0.08,
+		sustain: 0,
+		release: 0.05,
+		rackChain: ['string', 'body'],
+		rackParams: {},
+		advanced: true,
+		advancedView: 'rack'
+	});
+	presetModified.set(true);
+	showSaveStatus(tr('synthPanels.toast.newAdvancedPreset'));
+	playSound('click');
 }
 
 /** Arrow-key cycling from the transport hotkeys: wraps through built-ins and user presets alike. */
@@ -1115,9 +1054,150 @@ function keyOnly(p: Partial<TrackData>): Partial<TrackData> {
 	return out as Partial<TrackData>;
 }
 
+/* The single drums.
+ *
+ * Not presets: a player wants a kit, not a lone snare, so these never appear
+ * in the menu. They exist because the kits below name them, and because each
+ * one is a voice worth keeping the working for -- see BUILTIN_KITS for the
+ * measured numbers behind the KRSZ kit.
+ */
+const DRUM_VOICES: Record<string, Partial<TrackData>> = {
+	// Sine with a 2.5-octave pitch drop over 45 ms and a sub underneath it.
+	'KICK 808': hit(0.32, 0.06, {
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			subOscGain: 0.6,
+			pitchEnvAmount: 2.5,
+			pitchAttack: 0.001,
+			pitchDecay: 0.045,
+			cutoff: 3000
+		}),
+	// Shorter, harder, a triangle for some edge and a burst of noise for the beater.
+	'KICK PUNCH': hit(0.17, 0.04, {
+			osc1Waveform: 'triangle',
+			osc1Gain: 1,
+			subOscGain: 0.4,
+			noiseGain: 0.15,
+			pitchEnvAmount: 3,
+			pitchAttack: 0.001,
+			pitchDecay: 0.03,
+			cutoff: 5000,
+			filterEnvAmount: -0.6,
+			filterAttack: 0.001,
+			filterDecay: 0.05,
+			filterSustain: 0
+		}),
+	// Body from a triangle and a sine a fifth up, rattle from the NOISE mix,
+	// a short pitch snap on the body.
+	'SNARE': hit(0.18, 0.05, {
+			osc1Waveform: 'triangle',
+			osc1Gain: 0.8,
+			osc2Waveform: 'sine',
+			osc2Gain: 0.5,
+			osc2Semitone: 7,
+			noiseGain: 0.9,
+			pitchEnvAmount: 1,
+			pitchAttack: 0.001,
+			pitchDecay: 0.02,
+			cutoff: 8000,
+			resonance: 0.5,
+			keyTracking: 0.5,
+			filterEnvAmount: 0.3,
+			filterAttack: 0.001,
+			filterDecay: 0.08,
+			filterSustain: 0,
+			airGain: 0.2
+		}),
+	// Three noise bursts 11 ms apart, high-passed at 1 kHz with the top
+	// shelved down -- a band-pass there was 10 dB quieter than the hats.
+	'CLAP': hit(0.25, 0.08, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			noiseRetrig: 3,
+			noiseRetrigGap: 11,
+			filterType: 'highpass',
+			cutoff: 1000,
+			resonance: 0.7,
+			airGain: -0.4
+		}),
+	'CLOSED HAT': hit(0.045, 0.02, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			filterType: 'highpass',
+			cutoff: 7000,
+			resonance: 0.5,
+			keyTracking: 0.8,
+			airGain: 0.4
+		}),
+	'OPEN HAT': hit(0.35, 0.15, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			filterType: 'highpass',
+			cutoff: 7000,
+			resonance: 0.5,
+			keyTracking: 0.8,
+			airGain: 0.4
+		}),
+	// Like the kick but a shallower drop and longer body; play it across a few keys for a rack of toms.
+	'TOM': hit(0.35, 0.08, {
+			osc1Waveform: 'sine',
+			osc1Gain: 1,
+			osc2Waveform: 'triangle',
+			osc2Gain: 0.3,
+			subOscGain: 0.3,
+			noiseGain: 0.12,
+			pitchEnvAmount: 1.2,
+			pitchAttack: 0.001,
+			pitchDecay: 0.08,
+			cutoff: 2500
+		}),
+	// Two oscillators ring-modulated (sum and difference tones two octaves
+	// apart), 40 ms, high-passed so the ping is what is left.
+	'RIMSHOT': hit(0.04, 0.02, {
+			osc1Waveform: 'triangle',
+			osc1Gain: 1,
+			osc2Waveform: 'square',
+			osc2Gain: 1,
+			osc2Ratio: 4,
+			blendMode: 'ring',
+			filterType: 'highpass',
+			cutoff: 600,
+			resonance: 2,
+			pitchEnvAmount: 0.5,
+			pitchAttack: 0.001,
+			pitchDecay: 0.01,
+			airGain: 0.3
+		}),
+	// Two squares a fifth-ish apart (the 808 uses 540 and 800 Hz), band-passed.
+	'COWBELL': hit(0.3, 0.1, {
+			osc1Waveform: 'square',
+			osc1Gain: 1,
+			osc2Waveform: 'square',
+			osc2Gain: 1,
+			osc2Ratio: 1.5,
+			filterType: 'bandpass',
+			cutoff: 1500,
+			resonance: 1
+		}),
+	// Noise with a soft attack and a filter that opens and closes with it.
+	'SHAKER': hit(0.08, 0.05, {
+			osc1Waveform: 'noise',
+			osc1Gain: 1,
+			ampAttack: 0.012,
+			attack: 0.012,
+			filterType: 'bandpass',
+			cutoff: 6000,
+			resonance: 2,
+			keyTracking: 0.6,
+			filterEnvAmount: 0.4,
+			filterAttack: 0.01,
+			filterDecay: 0.05,
+			filterSustain: 0
+		}),
+};
+
 function drum(name: string): Partial<TrackData> {
-	const p = SOUND_PRESETS.find((x) => x.name === name)?.preset ?? {};
-	return keyOnly(p);
+	return keyOnly(DRUM_VOICES[name] ?? {});
 }
 
 /* Indices count down from C8 = 0; C4 = 48. The pitched drums were voiced at
@@ -2031,6 +2111,7 @@ function kitNames(): string[] {
 export function applyKit(kit: DrumKit): void {
 	applyKitToActiveTrack(kit.keys);
 	activeKitName.set(kit.name);
+	presetModified.set(false);
 	showSaveStatus(tr('synthPanels.toast.kitApplied', { name: kit.name }));
 	playSound('toggle');
 }

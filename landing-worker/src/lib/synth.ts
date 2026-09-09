@@ -307,6 +307,16 @@ export interface TrackData {
    *  means the chain the engine has always built. Per key in percussion mode,
    *  so a kick and a hi-hat need not share one. */
   rackChain?: string[];
+  /* The patch bay as a graph: modules placed on a canvas, cables between named
+     ports. Kept beside rackChain rather than replacing it -- they are two ways
+     of building a voice and only one is in force, so switching between them
+     must not destroy the other's work. See stores/synth-graph.ts. */
+  rackGraph?: {
+    nodes: { id: string; type: string; x: number; y: number }[];
+    cables: { from: string; fromPort: string; to: string; toPort: string }[];
+  };
+  /** Per-node knob values, keyed `${nodeId}.${paramKey}`. */
+  graphParams?: Record<string, number>;
 
   // Node 7: Master Output Channel Strip
   airGain?: number;        // -1.0 to +1.0 (Air Shelf EQ / Tone Shaping, ±8dB at 10kHz)
@@ -453,7 +463,7 @@ export const KEY_TIMBRE_KEYS = [
   'filterAttack', 'filterDecay', 'filterSustain', 'filterRelease', 'filterEnvAmount',
   'pitchAttack', 'pitchDecay', 'pitchEnvAmount',
   'lfoWaveform', 'lfoRate', 'lfoPitchAmt', 'lfoCutoffAmt', 'lfoPanAmt', 'lfoAmpAmt', 'lfoFadeTime',
-  'lfoDepth', 'lfoTarget', 'airGain', 'keyEqGains', 'rackChain', 'rackParams'
+  'lfoDepth', 'lfoTarget', 'airGain', 'keyEqGains', 'rackChain', 'rackParams', 'rackGraph', 'graphParams'
 ] as const satisfies readonly (keyof TrackData)[];
 
 export type KeyTimbreKey = (typeof KEY_TIMBRE_KEYS)[number];
@@ -480,7 +490,9 @@ export const TRACK_COUNT = 8;
 const EXTRA_TRACK_COLORS = ['#e06c75', '#d19a66'];
 
 /** A neutral sound for a track a song does not use: square + saw, open filter, plain envelope. */
-const BLANK_TRACK_TIMBRE: Omit<TrackData, 'id' | 'name' | 'color' | 'grid' | 'accents'> = {
+/** A neutral timbre, exported so "start from nothing" means the same thing
+ *  wherever it is offered. */
+export const BLANK_TRACK_TIMBRE: Omit<TrackData, 'id' | 'name' | 'color' | 'grid' | 'accents'> = {
   volume: 0.8, pan: 0, muted: false, solo: false,
   osc1Waveform: 'square', osc1Gain: 0.9, osc2Waveform: 'sawtooth', osc2Gain: 0.5, osc2Ratio: 1, detuneCents: 0, phaseOffset: 0,
   osc2Semitone: 0, pulseWidth: 50, subOscGain: 0, noiseGain: 0, noiseRetrig: 1, noiseRetrigGap: 12,
@@ -849,7 +861,8 @@ class ModularSynth {
    * voice has to be held open for as long as the chain will sound.
    */
   private rackTailSeconds(track: TrackData): number {
-    const chain = track.rackChain;
+    // Same rule as the chain itself: no ADV, no resonator, no ring-out.
+    const chain = track.advanced ? track.rackChain : undefined;
     if (!Array.isArray(chain) || !chain.length) return 0;
     const p = track.rackParams ?? {};
     let tail = 0;
@@ -944,8 +957,18 @@ class ModularSynth {
           osc.type = 'sine';
           osc.frequency.value = fn;
           const g = ctx.createGain();
-          const amp = 1 / (n * n * 0.6 + 1);
-          const dn = decay / (1 + damping * 3 * (n - 1));
+          /* Partial levels and decays.
+           *
+           * 1/n^2 alone gives a hollow, guitar-like tone whatever the decay is
+           * set to: a piano has far more upper partial energy than that, and
+           * its low ones ring for many seconds while the top of the spectrum is
+           * gone in under one. Stiffness stands in for how piano-like the
+           * string is, so it also controls how much of that spread there is --
+           * a stiff string keeps its upper partials and spreads its decays,
+           * which is the difference between a struck piano wire and a plucked
+           * nylon one. */
+          const amp = 1 / Math.pow(n, 1.9 - stiff * 0.7);
+          const dn = decay / Math.pow(n, 0.55 + damping * 1.4 + stiff * 0.5);
           if (isTube) {
             /* A tube is blown, not struck: the excitation continues, so the
                partials hold for as long as the key does and only then fall
@@ -956,11 +979,19 @@ class ModularSynth {
             g.gain.setValueAtTime(0, _t);
             g.gain.linearRampToValueAtTime(amp, _t + att);
             g.gain.setValueAtTime(amp, _t + Math.max(att, heldSec));
-            g.gain.exponentialRampToValueAtTime(0.00001, _t + Math.max(att, heldSec) + Math.min(dn, 0.35));
+            const fall = Math.min(dn, 0.35);
+            g.gain.exponentialRampToValueAtTime(0.00001, _t + Math.max(att, heldSec) + fall);
+            // To zero, for the same reason as the string's.
+            g.gain.linearRampToValueAtTime(0, _t + Math.max(att, heldSec) + fall + 0.06);
           } else {
             g.gain.setValueAtTime(0, _t);
             g.gain.linearRampToValueAtTime(amp, _t + 0.003);
+            /* Exponential to nearly nothing, then linearly to actual zero: an
+               exponential ramp cannot reach 0, so ending on one leaves a step
+               from -100 dB to silence when the node stops. Small, but it is a
+               click, and on a long piano note it is the last thing heard. */
             g.gain.exponentialRampToValueAtTime(0.00001, _t + 0.003 + dn);
+            g.gain.linearRampToValueAtTime(0, _t + 0.003 + dn + 0.12);
           }
           osc.connect(g);
           g.connect(wet);
@@ -2377,10 +2408,19 @@ class ModularSynth {
       const rackTail = this.rackTailSeconds(track);
       const stopTime = releaseStartTime + ampRel + 0.1;
       const reapTime = stopTime + rackTail;
+      /* A resonator's partials are sources of their own and outlive the
+         excitation -- a piano string rings for seconds after the hammer. Stop
+         them at the reap, not with the oscillators, or the note is cut off
+         mid-decay however long its DECY says.
+         
+         Half a second past it, because the ring-out is where the partial
+         envelope reaches -80 dB, not silence: stopping exactly there leaves a
+         step from a quiet note to nothing, which is heard as a click. */
+      const extrasStop = rackTail > 0 ? reapTime + 0.5 : stopTime;
       if (osc1) osc1.stop(stopTime);
       if (osc2) osc2.stop(stopTime);
       if (noiseSource) noiseSource.stop(stopTime);
-      for (const x of extras) x.stop(stopTime);
+      for (const x of extras) x.stop(extrasStop);
       if (lfo) lfo.stop(stopTime);
 
       // onended fires off the audio clock even when background-tab timer
@@ -2397,11 +2437,13 @@ class ModularSynth {
       if (endSrc) {
         endSrc.onended =
           rackTail > 0
-            ? () => window.setTimeout(() => this.reapVoice(voiceKey), rackTail * 1000 + 50)
+            ? () => window.setTimeout(() => this.reapVoice(voiceKey), rackTail * 1000 + 600)
             : () => this.reapVoice(voiceKey);
       }
       if (!this.renderCtx) {
-        const cleanupMs = Math.ceil((reapTime - ctx.currentTime) * 1000) + 50;
+        // Past extrasStop, so the graph outlives the partials rather than
+        // cutting them: disconnecting mid-decay is an audible click.
+        const cleanupMs = Math.ceil((reapTime - ctx.currentTime) * 1000) + 600;
         void window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
       }
     }
@@ -2417,11 +2459,13 @@ class ModularSynth {
      * A string fed a steady tone rings forever; fed a plucked one, it sounds
      * plucked.
      *
-     * Only modules the chain actually names are built, and only the ones with
-     * something to build; a track with no chain of its own reaches none of
-     * this and sounds exactly as it did. */
+     * Only while the track is in ADV. The two are different instruments, not
+     * two views of one: without ADV a track is the subtractive synth racks 1-7
+     * describe, and with it the signal path the patch bay describes. Switching
+     * the mode switches the sound, which is the point of having the mode --
+     * a track carries both and plays whichever is in force. */
     let chainOut: AudioNode = gainNode;
-    const rackChain = track.rackChain;
+    const rackChain = track.advanced ? track.rackChain : undefined;
     if (Array.isArray(rackChain) && rackChain.length) {
       /* How long the note is held, for modules that are driven rather than
          struck. Continuous hold (durationSec 0) has no known length, so give a
