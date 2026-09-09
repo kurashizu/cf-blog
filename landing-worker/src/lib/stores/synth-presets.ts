@@ -683,8 +683,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 0.18,
 			...patch(
 				[
-					['air', 'noise', { colour: 55, level: 100 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['air', 'noise', { colour: 0, level: 100 }],
+					['ex', 'sum', { sumGain: 200 }],
 					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1, depth: 25 }],
 					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 100 }],
 					['sp', 'split', {}],
@@ -1054,7 +1054,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   that makes the bore oscillate at all. */
 			...patch(
 				[
-					['air', 'noise', { colour: 30, level: 66 }],
+					['air', 'noise', { colour: 1, level: 66 }],
 					['ex', 'sum', { sumGain: 100 }],
 					['rd', 'reed', { reedStiff: 54, reedBias: 42 }],
 					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100 }],
@@ -1085,8 +1085,8 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   an audible amount of a flute is air that never became a note. */
 			...patch(
 				[
-					['air', 'noise', { colour: 62, level: 52 }],
-					['ex', 'sum', { sumGain: 100 }],
+					['air', 'noise', { colour: 2, level: 100 }],
+					['ex', 'sum', { sumGain: 200 }],
 					['fl', 'filter', { type: 1, cutoff: 2600, q: 3, depth: 20 }],
 					['br', 'tube', { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0 }],
 					['mx', 'mix', { mixA: 100, mixB: 12 }],

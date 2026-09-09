@@ -1157,7 +1157,30 @@ class ModularSynth {
         nz.loop = true;
         const g = ctx.createGain();
         g.gain.value = p('level', 60) / 100;
-        nz.connect(g);
+        /* COL picks the noise's slope. The card has drawn this knob since the
+           module was added and the engine never read it, so all three settings
+           sounded identical -- white, whatever the label said.
+        
+           White is the buffer as generated. Pink falls about 3 dB per octave
+           and brown about 6, which one-pole low-passes approximate closely
+           enough at these gains; the make-up gain is because each pole throws
+           away most of the energy and an unlifted brown setting simply reads as
+           "quieter" rather than "darker". */
+        const colour = Math.round(p('colour', 0));
+        let tail: AudioNode = nz;
+        if (colour >= 1) {
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = colour >= 2 ? 440 : 1800;
+          lp.Q.value = 0.0001;
+          tail.connect(lp);
+          tail = lp;
+          const makeup = ctx.createGain();
+          makeup.gain.value = colour >= 2 ? 5.5 : 2.2;
+          tail.connect(makeup);
+          tail = makeup;
+        }
+        tail.connect(g);
         sources.push(nz);
         return { in: null, out: g, mod };
       }

@@ -43,6 +43,7 @@
 		roleOf,
 		rolesCompatible,
 		type GraphNode,
+		type GraphCable,
 		type PortKind,
 		type PortRole
 	} from '../../../stores/synth-graph';
@@ -542,6 +543,22 @@
 		];
 	}
 
+	/* A cable is drawn as what it carries.
+	
+	   The sockets say this already; the cables did not -- they only split mod
+	   from audio, and a lane outlet is not in spec.outputs at all so it fell
+	   through to the default grey. On a patch with a dozen cables that made the
+	   interesting ones (an envelope into a cutoff, a lane into a level) the
+	   hardest to follow. Same palette as the sockets, so a wire and the socket
+	   it leaves are obviously the same thing. */
+	function cableRole(c: GraphCable): PortRole {
+		const from = graph.nodes.find((n) => n.id === c.from);
+		const spec = from && moduleSpec(from.type);
+		if (!spec) return 'signal';
+		const socket = outletsOf(from, spec).find((o) => o.id === c.fromPort);
+		return socket ? roleOf(socket) : 'signal';
+	}
+
 	/** A cable's path: horizontal-ish bezier, so it reads as a cable not a line. */
 	function cablePath(a: { x: number; y: number }, b: { x: number; y: number }) {
 		const dx = Math.max(30, Math.abs(b.x - a.x) * 0.5);
@@ -667,14 +684,14 @@
 				{#each graph.cables as c, i (i)}
 					{@const a = portPos(c.from, c.fromPort, true)}
 					{@const b = portPos(c.to, c.toPort, false)}
-					{@const spec = moduleSpec(graph.nodes.find((n) => n.id === c.from)?.type ?? '')}
-					{@const isMod = spec?.outputs.find((p) => p.id === c.fromPort)?.kind === 'mod'}
+					{@const role = cableRole(c)}
+					{@const isControl = role === 'cv' || role === 'trigger' || role === 'flow'}
 					<path
 						d={cablePath(a, b)}
 						fill="none"
-						stroke={isMod ? '#e5c07b' : (spec?.color ?? '#8a8a8a')}
-						stroke-width={isMod ? 1.5 : 2.5}
-						stroke-dasharray={isMod ? '4 3' : undefined}
+						stroke={PORT_STYLE[role].color}
+						stroke-width={isControl ? 1.5 : 2.5}
+						stroke-dasharray={role === 'cv' ? '4 3' : role === 'trigger' || role === 'flow' ? '2 3' : undefined}
 						opacity="0.8"
 						class="pointer-events-auto cursor-pointer"
 						role="button"
@@ -690,7 +707,7 @@
 					<path
 						d={cablePath({ x: pullFrom.x, y: pullFrom.y }, liveEnd)}
 						fill="none"
-						stroke="#61afef"
+						stroke={PORT_STYLE[pullFrom.role].color}
 						stroke-width="2"
 						stroke-dasharray="5 4"
 						opacity="0.7"
