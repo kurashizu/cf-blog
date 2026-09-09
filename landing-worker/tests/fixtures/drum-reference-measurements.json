@@ -1,0 +1,178 @@
+{
+ "BASSDRUM": {
+  "decay": 1.173,
+  "centroid": 62,
+  "low": 0.994,
+  "mid": 0.004,
+  "high": 0,
+  "flat": 0
+ },
+ "BASSDRUM2": {
+  "decay": 0.975,
+  "centroid": 75,
+  "low": 0.991,
+  "mid": 0.007,
+  "high": 0.001,
+  "flat": 0.001
+ },
+ "SNARE": {
+  "decay": 0.72,
+  "centroid": 795,
+  "low": 0.793,
+  "mid": 0.143,
+  "high": 0.064,
+  "flat": 0.049
+ },
+ "ELSNARE": {
+  "decay": 0.592,
+  "centroid": 822,
+  "low": 0.07,
+  "mid": 0.864,
+  "high": 0.066,
+  "flat": 0.054
+ },
+ "FLOORTOM": {
+  "decay": 1.591,
+  "centroid": 113,
+  "low": 0.951,
+  "mid": 0.044,
+  "high": 0.002,
+  "flat": 0.002
+ },
+ "HIFLOORTOM": {
+  "decay": 1.474,
+  "centroid": 109,
+  "low": 0.963,
+  "mid": 0.037,
+  "high": 0,
+  "flat": 0
+ },
+ "LOWTOM": {
+  "decay": 1.289,
+  "centroid": 136,
+  "low": 0.945,
+  "mid": 0.054,
+  "high": 0,
+  "flat": 0.001
+ },
+ "LOMIDTOM": {
+  "decay": 1.184,
+  "centroid": 188,
+  "low": 0.828,
+  "mid": 0.169,
+  "high": 0.003,
+  "flat": 0.004
+ },
+ "HIMIDTOM": {
+  "decay": 1.091,
+  "centroid": 198,
+  "low": 0.858,
+  "mid": 0.141,
+  "high": 0.001,
+  "flat": 0.001
+ },
+ "HITOM": {
+  "decay": 0.998,
+  "centroid": 235,
+  "low": 0.043,
+  "mid": 0.956,
+  "high": 0.001,
+  "flat": 0.001
+ },
+ "CLHAT": {
+  "decay": 0.244,
+  "centroid": 5069,
+  "low": 0,
+  "mid": 0.324,
+  "high": 0.676,
+  "flat": 0.095
+ },
+ "PEDHAT": {
+  "decay": 0.325,
+  "centroid": 4995,
+  "low": 0,
+  "mid": 0.335,
+  "high": 0.665,
+  "flat": 0.079
+ },
+ "OPHAT": {
+  "decay": 1.37,
+  "centroid": 5375,
+  "low": 0,
+  "mid": 0.329,
+  "high": 0.671,
+  "flat": 0.073
+ },
+ "CRASH": {
+  "decay": 2.554,
+  "centroid": 5584,
+  "low": 0.001,
+  "mid": 0.308,
+  "high": 0.691,
+  "flat": 0.093
+ },
+ "RIDE": {
+  "decay": 2.786,
+  "centroid": 5423,
+  "low": 0,
+  "mid": 0.313,
+  "high": 0.687,
+  "flat": 0.073
+ },
+ "RIDEBELL": {
+  "decay": 1.765,
+  "centroid": 939,
+  "low": 0,
+  "mid": 0.897,
+  "high": 0.103,
+  "flat": 0.007
+ },
+ "TAMBOURINE": {
+  "decay": 0.673,
+  "centroid": 5358,
+  "low": 0,
+  "mid": 0.296,
+  "high": 0.704,
+  "flat": 0.105
+ },
+ "COWBELL": {
+  "decay": 0.894,
+  "centroid": 759,
+  "low": 0,
+  "mid": 0.948,
+  "high": 0.052,
+  "flat": 0.001
+ },
+ "CLAVES": {
+  "decay": 0.325,
+  "centroid": 3991,
+  "low": 0,
+  "mid": 0.001,
+  "high": 0.999,
+  "flat": 0.003
+ },
+ "SIDESTICK": {
+  "decay": 0.279,
+  "centroid": 1084,
+  "low": 0,
+  "mid": 0.948,
+  "high": 0.052,
+  "flat": 0.012
+ },
+ "CLAP": {
+  "decay": 0.592,
+  "centroid": 8650,
+  "low": 0,
+  "mid": 0.066,
+  "high": 0.933,
+  "flat": 0.514
+ },
+ "LOWTOM2": {
+  "decay": 1.277,
+  "centroid": 129,
+  "low": 0.947,
+  "mid": 0.051,
+  "high": 0.001,
+  "flat": 0.001
+ }
+}

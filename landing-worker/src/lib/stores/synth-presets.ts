@@ -2007,8 +2007,11 @@ function drumPatch(o: {
 			   place the rattle around the drum's own body. */
 			/* Wide on anything that is mostly rattle. A narrow band turns broadband
 			   wires into a whistle, and a snare is half wires by energy. */
+			/* Wide on anything with real rattle. The sweep put a snare's best
+			   match at Q 0.4 -- broader than the written 1.1 -- because wires
+			   are broadband and a narrow band turns them into a whistle. */
 			'nf.q': (o.hz ?? 0) > 0
-				? Math.max(0.5, (o.noiseQ ?? 1.2) * (1 - ((o.snare ?? 0) / 100) * 0.7))
+				? Math.max(0.4, (o.noiseQ ?? 1.2) * (1 - ((o.snare ?? 0) / 100) * 0.95))
 				: Math.min(0.8, o.noiseQ ?? 0.8),
 			'nf.depth': 0,
 			/* The shell gives way to the wires as the drum gets noisier.
@@ -2025,7 +2028,12 @@ function drumPatch(o: {
 			   partials. Holding B at full and pulling A down is what actually
 			   lets the wires through -- at A 54 / B 78 the snare still measured
 			   82% of its energy below 200 Hz. */
-			'mx.mixA': Math.round(Math.max(8, 100 - (o.snare ?? 0) * 1.05)),
+			/* Swept against the reference rather than reasoned about: a snare
+			   correlates best at A 35 with the rattle band wide open, which is
+			   more shell than "100 - snare" gave it (A 35 vs 54 lifted the
+			   spectral match from 0.63 to 0.74). The floor keeps the very noisy
+			   keys -- hats, cabasa -- from getting a body they do not have. */
+			'mx.mixA': Math.round(Math.max(12, 100 - (o.snare ?? 0) * 1.05)),
 			/* Noise carries far more energy than three decaying sines, so summing
 			   the two at face value made the noisiest keys the loudest: a hi-hat
 			   at snare 88 measured 0.46 peak against the rest of the kit's 0.21.
