@@ -1962,7 +1962,9 @@ class ModularSynth {
            the mode climbs because higher partials of a struck body die first. */
         const modeSources: AudioScheduledSourceNode[] = [];
         const struck = ctx.createGain();
-        struck.gain.value = mix * 0.5;
+        /* Not halved. The dry strike passes at (1 - mix) squared, so halving
+           the body on top of that let the broadband strike decide the timbre. */
+        struck.gain.value = mix;
         struck.connect(output);
 
         /* What the ratios are relative to. 0 means the key, which is the tuned
@@ -1984,11 +1986,18 @@ class ModularSynth {
              audible tail where the knob says it is. */
           const decay = Math.max(0.02, (q / 12) / Math.pow(r, 0.6));
           const amp = 1 / (i + 1);
+          /* The attack is a fraction of the partial's own period, not a fixed
+             2 ms. On a 55 Hz kick, 2 ms is a tenth of a cycle -- a step, which
+             is broadband, and it put a 1414 Hz centroid on a drum whose three
+             partials sit at 55, 94 and 143 Hz. A low mode needs a slower rise
+             for the same reason a subwoofer does; a cymbal's partials are short
+             enough that the cap never binds. */
+          const rise = Math.min(0.008, Math.max(0.0004, 1.2 / f));
           g.gain.setValueAtTime(0, _t);
-          g.gain.linearRampToValueAtTime(amp, _t + 0.002);
-          g.gain.exponentialRampToValueAtTime(0.00001, _t + 0.002 + decay);
+          g.gain.linearRampToValueAtTime(amp, _t + rise);
+          g.gain.exponentialRampToValueAtTime(0.00001, _t + rise + decay);
           // To true zero: an exponential cannot reach it, and the step is a click.
-          g.gain.linearRampToValueAtTime(0, _t + 0.002 + decay + 0.03);
+          g.gain.linearRampToValueAtTime(0, _t + rise + decay + 0.03);
           osc.connect(g);
           g.connect(struck);
           modeSources.push(osc);

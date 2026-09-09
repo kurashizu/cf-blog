@@ -1936,7 +1936,7 @@ function drumPatch(o: {
 			   sound: the kick measured a 1298 Hz centroid where a real one sits
 			   near 180. Tying the cap to the pitch keeps a snare crisp and a
 			   kick thick without a second number per key. */
-			'e.exTone': (o.hz ?? 0) > 0 ? Math.min(o.tone, Math.max(400, (o.hz ?? 0) * 12)) : o.tone,
+			'e.exTone': (o.hz ?? 0) > 0 ? Math.min(o.tone, Math.max(350, (o.hz ?? 0) * 6)) : o.tone,
 			'm.mode1': o.modes[0],
 			'm.mode2': o.modes[1],
 			'm.mode3': o.modes[2],
@@ -1968,7 +1968,7 @@ function drumPatch(o: {
 			   spectrum -- a centroid of 1274 where a real bass drum sits near
 			   180. Pitched drums cap it against their own body; unpitched ones
 			   keep the full tone, because for them the noise IS the instrument. */
-			'n.exTone': (o.hz ?? 0) > 0 ? Math.min(o.tone, Math.max(300, (o.hz ?? 0) * 8)) : o.tone,
+			'n.exTone': (o.hz ?? 0) > 0 ? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * 4)) : o.tone,
 			/* Bandpass for a pitched drum, high-pass for one that has no pitch.
 			
 			   Every key used a bandpass at the strike tone, which is right for
@@ -1978,7 +1978,7 @@ function drumPatch(o: {
 			   energy above 2 kHz. A cymbal IS the top of the spectrum. */
 			'nf.type': (o.hz ?? 0) > 0 ? 1 : 2,
 			'nf.cutoff': (o.hz ?? 0) > 0
-				? Math.min(o.tone, Math.max(300, (o.hz ?? 0) * 8))
+				? Math.min(o.tone, Math.max(250, (o.hz ?? 0) * 4))
 				: Math.max(1200, o.tone * 0.55),
 			/* An unpitched drum IS its noise, so the band stays wide -- narrowing
 			   it turns a cymbal into a whistle. A pitched one uses the filter to
