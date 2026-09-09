@@ -32,15 +32,8 @@
 		type PresetCategory,
 		type DrumKit
 	} from '../../stores/synth-presets';
-	import { activeTrackRow, currentTrack, toggleTrackPercussion, updateActiveTrack, updateTrack } from '../../stores/synth-tracks';
+	import { activeTrackRow, toggleTrackPercussion } from '../../stores/synth-tracks';
 
-	/* POLY is a keyboard, MONO is a bass line, LEGATO is a phrase. They differ
-	   in what a new note does to the tail of the one before it. */
-	const VOICE_MODES: { id: 'poly' | 'mono' | 'legato'; label: string; hint: string }[] = [
-		{ id: 'poly', label: 'POLY', hint: 'synth.preset.voicePolyHint' },
-		{ id: 'mono', label: 'MONO', hint: 'synth.preset.voiceMonoHint' },
-		{ id: 'legato', label: 'LEG', hint: 'synth.preset.voiceLegatoHint' }
-	];
 	import { activeTrackId } from '../../stores/synth-transport';
 	import { advancedMode, toggleAdvanced } from '../../stores/synth-view';
 	import ViewTabs from './patch/ViewTabs.svelte';
@@ -500,47 +493,4 @@
 		K.MAP
 	</button>
 
-	<!-- What a new note does to the one before it. The two controls are the same
-	     question asked of the two modes, so only the one that applies is shown:
-	     off K.MAP a track is an instrument and the question is how many notes it
-	     has; on K.MAP it is a kit and the question is which sounds cannot
-	     coexist. -->
-	{#if percussion}
-		<span class="text-white/40 text-[10px] font-bold pl-1" title={$t('synth.preset.muteGroupHint')}>GRP:</span>
-		<div class="flex items-center gap-0.5">
-			{#each [0, 1, 2, 3, 4] as g (g)}
-				{@const on = ($currentTrack?.muteGroup ?? 0) === g}
-				<button
-					onclick={() => {
-						updateActiveTrack({ muteGroup: g });
-						playSound('click');
-					}}
-					title={g === 0 ? $t('synth.preset.muteGroupNoneHint') : $t('synth.preset.muteGroupNHint', { n: g })}
-					class="press w-4 h-5 flex items-center justify-center rounded-xs text-[10px] font-black cursor-pointer transition-colors {on
-						? 'bg-[#c678dd] text-black'
-						: 'text-white/40 hover:text-white hover:bg-white/10'}"
-				>
-					{g === 0 ? '–' : g}
-				</button>
-			{/each}
-		</div>
-	{:else}
-		<div class="flex items-center gap-0.5 pl-1">
-			{#each VOICE_MODES as m (m.id)}
-				{@const on = ($activeTrackRow?.voiceMode ?? 'poly') === m.id}
-				<button
-					onclick={() => {
-						updateTrack($activeTrackId, { voiceMode: m.id });
-						playSound('click');
-					}}
-					title={$t(m.hint)}
-					class="press px-1 py-0.5 rounded-xs text-[10px] font-black cursor-pointer transition-colors {on
-						? 'bg-[#98c379] text-black'
-						: 'text-white/40 hover:text-white hover:bg-white/10'}"
-				>
-					{m.label}
-				</button>
-			{/each}
-		</div>
-	{/if}
 </div>

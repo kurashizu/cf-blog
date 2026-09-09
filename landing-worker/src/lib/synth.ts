@@ -2785,27 +2785,20 @@ class ModularSynth {
        Offline renders schedule every voice with explicit times and never hold
        anything in activeVoices, so none of this applies there. */
     if (!this.renderCtx) {
-      const group = trackRow.percussion ? (track.muteGroup ?? 0) : 0;
-      if (group > 0) {
-        /* A key silences the others in its group -- including itself, so a
-           re-struck closed hat does not stack. Quickly rather than instantly:
-           a hard cut on a ringing cymbal is a click. */
-        for (const [k, v] of this.activeVoices) {
-          if (v.trackId !== trackId || v.muteGroup !== group) continue;
-          this.chokeVoice(k, ctx.currentTime);
-        }
-      }
-
-      const mode = trackRow.voiceMode ?? 'poly';
-      if (!trackRow.percussion && mode !== 'poly') {
-        /* Both take the voice; they differ in how the new note starts. MONO
-           strikes it -- a fresh attack every time, which is a repeated bass
-           note. LEGATO slides into it: the envelope is not restruck, so a
-           phrase reads as one breath, and rack 2's glideTime carries the pitch
-           across. */
+      const act = this.noteActions(track, noteIndex, trackId);
+      if (act.cut || act.solo) {
+        /* Choked rather than stopped: a few milliseconds of fade is inaudible
+           as a fade and audible as the absence of a click, which a hard cut on
+           a ringing cymbal would be.
+        
+           CUT with a group takes only that group -- the hi-hat case. CUT with
+           no group takes everything on the track, which is what MONO is. SOLO
+           is the inverse: everything except the group. */
         for (const [k, v] of this.activeVoices) {
           if (v.trackId !== trackId) continue;
-          this.chokeVoice(k, ctx.currentTime, mode === 'legato' ? 0.04 : 0.006);
+          const inGroup = act.cutGroup === 0 || v.muteGroup === act.cutGroup;
+          if (act.solo ? inGroup : !inGroup) continue;
+          this.chokeVoice(k, ctx.currentTime, act.fadeSec);
         }
       }
     }
@@ -3452,7 +3445,10 @@ class ModularSynth {
         baseCutoff,
         isContinuousHold,
         trackId,
-        muteGroup: trackRow.percussion ? (track.muteGroup ?? 0) : 0,
+        /* Which group this voice belongs to, so a later CUT can find it. Read
+           from the ACT that fired for it, or the track field when there is no
+           chain. */
+        muteGroup: trackRow.percussion ? this.noteActions(track, noteIndex, trackId).cutGroup : 0,
       });
     }
 
@@ -3586,6 +3582,82 @@ class ModularSynth {
     this.activeVoices.delete(voiceKey);
     // Detach after the fade rather than during it.
     setTimeout(() => this.reapVoice(voiceKey), Math.ceil((fadeSec + 0.05) * 1000));
+  }
+
+  /**
+   * Walk the logic chain hanging off ENTRY, and say what this note should do.
+   *
+   * A patch says its rules as a chain rather than as a setting: ENTRY's TRIG
+   * goes to a WHEN, whose DO goes to an ACT. "When a note starts, if it is
+   * above C3, cut the others." The shape is Scratch's, and it reads left to
+   * right for the same reason.
+   *
+   * Only ENTRY -> WHEN -> ACT is walked; a chain is short by nature and the
+   * cost is paid once per note. A track with no graph falls back to its own
+   * fields, so nothing built before this stops working.
+   */
+  private noteActions(
+    track: TrackData,
+    noteIndex: number,
+    trackId: number
+  ): { cut: boolean; cutGroup: number; solo: boolean; glide: boolean; fadeSec: number } {
+    const none = { cut: false, cutGroup: 0, solo: false, glide: false, fadeSec: 0.006 };
+    const graph = track.advanced ? track.rackGraph : undefined;
+    if (!graph?.nodes?.length) {
+      // The old track-level fields, for a patch that has no chain.
+      const mode = track.voiceMode ?? 'poly';
+      return {
+        ...none,
+        cut: mode !== 'poly',
+        glide: mode === 'legato',
+        fadeSec: mode === 'legato' ? 0.04 : 0.006,
+        cutGroup: track.muteGroup ?? 0
+      };
+    }
+
+    const p = track.graphParams ?? {};
+    const num = (id: string, key: string, def: number) => p[`${id}.${key}`] ?? def;
+    const entry = graph.nodes.find((n) => n.type === 'in');
+    if (!entry) return none;
+
+    const out = { ...none };
+    for (const c of graph.cables) {
+      if (c.from !== entry.id || c.fromPort !== 'trig') continue;
+      const when = graph.nodes.find((n) => n.id === c.to && n.type === 'when');
+      if (!when) continue;
+
+      // Does the condition hold for this note?
+      const test = Math.round(num(when.id, 'test', 0));
+      const at = Math.round(num(when.id, 'testNote', 48));
+      let pass = true;
+      if (test === 1) pass = noteIndex < at; // ABOVE: the roll counts downward
+      else if (test === 2) pass = noteIndex > at;
+      else if (test === 3) {
+        pass = false;
+        for (const v of this.activeVoices.values()) if (v.trackId === trackId) { pass = true; break; }
+      }
+      if (!pass) continue;
+
+      for (const d of graph.cables) {
+        if (d.from !== when.id || d.fromPort !== 'do') continue;
+        const act = graph.nodes.find((n) => n.id === d.to && n.type === 'act');
+        if (!act) continue;
+        const kind = Math.round(num(act.id, 'action', 0));
+        const ms = num(act.id, 'actMs', 6);
+        out.fadeSec = Math.max(0.001, ms / 1000);
+        if (kind === 0) {
+          out.cut = true;
+          out.cutGroup = Math.round(num(act.id, 'actGroup', 0));
+        } else if (kind === 1) {
+          out.solo = true;
+          out.cutGroup = Math.round(num(act.id, 'actGroup', 0));
+        } else {
+          out.glide = true;
+          out.cut = true;
+        }
+      }
+    }
+    return out;
   }
 
   public stopVoice(voiceKey: string) {

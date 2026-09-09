@@ -31,7 +31,7 @@ export interface ModuleSpec {
 	id: string;
 	label: string;
 	/** Which shelf of the palette it appears on. */
-	group: 'SOURCE' | 'SHAPE' | 'RESONATE' | 'MODULATE' | 'STEREO' | 'MATH' | 'METER' | 'UTILITY';
+	group: 'SOURCE' | 'LOGIC' | 'SHAPE' | 'RESONATE' | 'MODULATE' | 'STEREO' | 'MATH' | 'METER' | 'UTILITY';
 	color: string;
 	descKey: string;
 	inputs: PortSpec[];
@@ -55,7 +55,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		color: '#98c379',
 		descKey: 'synthPatch.mod.in',
 		inputs: [],
-		outputs: [AUDIO_OUT],
+		/* The note itself leaves by TRIG, so the logic chain can hang off it: a
+		   cable from there to a WHEN node is "every time this sounds, ask
+		   something". Audio leaves by OUT as usual. */
+		outputs: [AUDIO_OUT, { id: 'trig', label: 'TRIG', kind: 'mod' }],
 		params: [{ key: 'inLevel', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }]
 	},
 	{
@@ -454,6 +457,56 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		viz: 'meter'
 	},
 	{
+		/* WHEN: the condition half of the logic chain.
+		
+		   A cable from ENTRY's TRIG says "each time a note starts, ask this",
+		   and what it asks is set by TEST -- always, or only for notes above or
+		   below a pitch, or only when something is already sounding. It passes
+		   the trigger on through DO when the answer is yes, which is what makes
+		   the chain readable left to right: when a note starts, if it is above
+		   C3, then mute the others. */
+		id: 'when',
+		label: 'WHEN',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.when',
+		inputs: [{ id: 'trig', label: 'TRIG', kind: 'mod' }],
+		outputs: [{ id: 'do', label: 'DO', kind: 'mod' }],
+		params: [
+			{
+				key: 'test',
+				label: 'TEST',
+				min: 0,
+				max: 3,
+				step: 1,
+				def: 0,
+				choices: ['ALWAYS', 'ABOVE', 'BELOW', 'BUSY']
+			},
+			{ key: 'testNote', label: 'NOTE', min: 0, max: 87, step: 1, def: 48 }
+		]
+	},
+	{
+		/* ACT: the action half. What to do when the WHEN before it says yes.
+		
+		   CUT stops everything else already sounding on this track, which is the
+		   mute group written as a chain -- and being a chain it can be made
+		   conditional, which a group number cannot. SOLO cuts everything except
+		   this note's own group; GLIDE slides in from the last pitch instead of
+		   striking. */
+		id: 'act',
+		label: 'ACT',
+		group: 'LOGIC',
+		color: '#e06c75',
+		descKey: 'synthPatch.mod.act',
+		inputs: [{ id: 'do', label: 'DO', kind: 'mod' }],
+		outputs: [],
+		params: [
+			{ key: 'action', label: 'DO', min: 0, max: 2, step: 1, def: 0, choices: ['CUT', 'SOLO', 'GLIDE'] },
+			{ key: 'actGroup', label: 'GRP', min: 0, max: 4, step: 1, def: 0 },
+			{ key: 'actMs', label: 'TIME', min: 0, max: 500, step: 5, unit: 'ms', def: 6 }
+		]
+	},
+	{
 		id: 'sum',
 		label: 'SUM',
 		group: 'MATH',
@@ -549,6 +602,7 @@ export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS.filter((m) => !FIXED_MOD
    No IO shelf: ENTRY and OUTPUT are in every patch already. */
 export const MODULE_GROUPS: ModuleSpec['group'][] = [
 	'SOURCE',
+	'LOGIC',
 	'SHAPE',
 	'RESONATE',
 	'MODULATE',
