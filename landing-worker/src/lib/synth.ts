@@ -317,6 +317,20 @@ export interface TrackData {
   };
   /** Per-node knob values, keyed `${nodeId}.${paramKey}`. */
   graphParams?: Record<string, number>;
+  /* How a new note treats the one before it.
+   *
+   *   POLY   -- they overlap, which is what a keyboard does.
+   *   MONO   -- the new note takes the voice; the old tail stops at once.
+   *   LEGATO -- the same, but the envelope is not retriggered while a key is
+   *             still held, so a phrase played overlapping is one breath.
+   *
+   * Glide is not here: rack 2's glideTime already slides the pitch from the
+   * last note, and it applies to all three modes. One knob, one meaning. */
+  voiceMode?: 'poly' | 'mono' | 'legato';
+  /* Which keys silence which, in K.MAP. Keys sharing a group number cut each
+   * other off -- the closed hi-hat stopping the open one is the reason this
+   * exists, and a triangle or a cuica needs the same. 0 means no group. */
+  muteGroup?: number;
 
   // Node 7: Master Output Channel Strip
   airGain?: number;        // -1.0 to +1.0 (Air Shelf EQ / Tone Shaping, ±8dB at 10kHz)
@@ -463,7 +477,9 @@ export const KEY_TIMBRE_KEYS = [
   'filterAttack', 'filterDecay', 'filterSustain', 'filterRelease', 'filterEnvAmount',
   'pitchAttack', 'pitchDecay', 'pitchEnvAmount',
   'lfoWaveform', 'lfoRate', 'lfoPitchAmt', 'lfoCutoffAmt', 'lfoPanAmt', 'lfoAmpAmt', 'lfoFadeTime',
-  'lfoDepth', 'lfoTarget', 'airGain', 'keyEqGains', 'rackChain', 'rackParams', 'rackGraph', 'graphParams'
+  'lfoDepth', 'lfoTarget', 'airGain', 'keyEqGains', 'rackChain', 'rackParams', 'rackGraph', 'graphParams',
+  // Per key: which sounds cannot coexist is a property of the sound, not the track.
+  'muteGroup'
 ] as const satisfies readonly (keyof TrackData)[];
 
 export type KeyTimbreKey = (typeof KEY_TIMBRE_KEYS)[number];
@@ -562,6 +578,9 @@ interface ActiveVoice {
   vcfRel: number;
   baseCutoff: number;
   isContinuousHold?: boolean;
+  /** Which track and mute group this voice belongs to, for the choke rules. */
+  trackId?: number;
+  muteGroup?: number;
 }
 
 class ModularSynth {
@@ -2753,6 +2772,44 @@ class ModularSynth {
 
     this.initMasterFX(ctx);
 
+    /* Voice allocation: what this note does to the ones already sounding.
+    
+       Three separate rules, because they answer different questions. A mute
+       group is about which sounds cannot coexist -- a hi-hat cannot be open and
+       closed at once, so the closed one has to cut the open one's tail. MONO is
+       about how many notes a part has: a bass line is one voice, and the tail
+       of the last note ringing under the next is not how a bass behaves.
+       LEGATO is about phrasing: overlapping keys should be one breath rather
+       than a stack of retriggers.
+    
+       Offline renders schedule every voice with explicit times and never hold
+       anything in activeVoices, so none of this applies there. */
+    if (!this.renderCtx) {
+      const group = trackRow.percussion ? (track.muteGroup ?? 0) : 0;
+      if (group > 0) {
+        /* A key silences the others in its group -- including itself, so a
+           re-struck closed hat does not stack. Quickly rather than instantly:
+           a hard cut on a ringing cymbal is a click. */
+        for (const [k, v] of this.activeVoices) {
+          if (v.trackId !== trackId || v.muteGroup !== group) continue;
+          this.chokeVoice(k, ctx.currentTime);
+        }
+      }
+
+      const mode = trackRow.voiceMode ?? 'poly';
+      if (!trackRow.percussion && mode !== 'poly') {
+        /* Both take the voice; they differ in how the new note starts. MONO
+           strikes it -- a fresh attack every time, which is a repeated bass
+           note. LEGATO slides into it: the envelope is not restruck, so a
+           phrase reads as one breath, and rack 2's glideTime carries the pitch
+           across. */
+        for (const [k, v] of this.activeVoices) {
+          if (v.trackId !== trackId) continue;
+          this.chokeVoice(k, ctx.currentTime, mode === 'legato' ? 0.04 : 0.006);
+        }
+      }
+    }
+
     // Overload guard: steal the oldest voice rather than let the live graph
     // grow without bound (Map iteration order is insertion order). Offline
     // voices all carry explicit start/stop times, so none of them is "active".
@@ -3394,6 +3451,8 @@ class ModularSynth {
         vcfRel,
         baseCutoff,
         isContinuousHold,
+        trackId,
+        muteGroup: trackRow.percussion ? (track.muteGroup ?? 0) : 0,
       });
     }
 
@@ -3494,6 +3553,39 @@ class ModularSynth {
       const cleanupMs = Math.ceil((stopTime - now) * 1000) + 50;
       window.setTimeout(() => this.reapVoice(voiceKey), cleanupMs);
     } catch {}
+  }
+
+  /**
+   * Cut a voice short because another one took its place.
+   *
+   * Not stopVoice: that ends everything at once, which on a ringing cymbal is a
+   * click rather than a choke. A few milliseconds of fade is inaudible as a
+   * fade and audible as the absence of a click, which is what a sampler's mute
+   * group has always done. The nodes are torn down after it, so a choked voice
+   * does not keep a graph alive.
+   */
+  private chokeVoice(voiceKey: string, now: number, fadeSec = 0.006) {
+    const voice = this.activeVoices.get(voiceKey);
+    if (!voice) return;
+    try {
+      const g = voice.gain.gain;
+      g.cancelScheduledValues(now);
+      // From wherever it actually is, or the ramp starts by jumping.
+      g.setValueAtTime(Math.max(0.0001, g.value), now);
+      g.exponentialRampToValueAtTime(0.0001, now + fadeSec);
+      g.linearRampToValueAtTime(0, now + fadeSec + 0.002);
+      const end = now + fadeSec + 0.01;
+      if (voice.osc1) voice.osc1.stop(end);
+      if (voice.osc2) voice.osc2.stop(end);
+      if (voice.noise) voice.noise.stop(end);
+      for (const x of voice.extras ?? []) x.stop(end);
+      if (voice.lfo) voice.lfo.stop(end);
+    } catch {
+      /* already stopped */
+    }
+    this.activeVoices.delete(voiceKey);
+    // Detach after the fade rather than during it.
+    setTimeout(() => this.reapVoice(voiceKey), Math.ceil((fadeSec + 0.05) * 1000));
   }
 
   public stopVoice(voiceKey: string) {

@@ -31,7 +31,7 @@ export interface ModuleSpec {
 	id: string;
 	label: string;
 	/** Which shelf of the palette it appears on. */
-	group: 'SOURCE' | 'SHAPE' | 'RESONATE' | 'MODULATE' | 'UTILITY';
+	group: 'IO' | 'SOURCE' | 'SHAPE' | 'RESONATE' | 'MODULATE' | 'STEREO' | 'MATH' | 'METER' | 'UTILITY';
 	color: string;
 	descKey: string;
 	inputs: PortSpec[];
@@ -51,7 +51,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'in',
 		label: 'ENTRY',
-		group: 'SOURCE',
+		group: 'IO',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.in',
 		inputs: [],
@@ -384,7 +384,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'pan',
 		label: 'PAN',
-		group: 'UTILITY',
+		group: 'STEREO',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.pan',
 		inputs: [AUDIO_IN, { id: 'cv', label: 'CV', kind: 'mod' }],
@@ -397,7 +397,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'split',
 		label: 'SPLIT',
-		group: 'UTILITY',
+		group: 'STEREO',
 		color: '#56b6c2',
 		descKey: 'synthPatch.mod.split',
 		inputs: [AUDIO_IN],
@@ -410,7 +410,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'merge',
 		label: 'MERGE',
-		group: 'UTILITY',
+		group: 'STEREO',
 		color: '#56b6c2',
 		descKey: 'synthPatch.mod.merge',
 		inputs: [
@@ -423,7 +423,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'scope',
 		label: 'SCOPE',
-		group: 'UTILITY',
+		group: 'METER',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.scope',
 		inputs: [AUDIO_IN],
@@ -434,7 +434,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'fft',
 		label: 'FFT',
-		group: 'UTILITY',
+		group: 'METER',
 		color: '#61afef',
 		descKey: 'synthPatch.mod.fft',
 		inputs: [AUDIO_IN],
@@ -445,7 +445,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'loud',
 		label: 'LOUD',
-		group: 'UTILITY',
+		group: 'METER',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.loud',
 		inputs: [AUDIO_IN],
@@ -456,7 +456,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'sum',
 		label: 'SUM',
-		group: 'UTILITY',
+		group: 'MATH',
 		color: '#abb2bf',
 		descKey: 'synthPatch.mod.sum',
 		inputs: [AUDIO_IN, { id: 'b', label: 'B', kind: 'audio' }],
@@ -469,7 +469,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   never happened. */
 		id: 'diff',
 		label: 'DIFF',
-		group: 'UTILITY',
+		group: 'MATH',
 		color: '#abb2bf',
 		descKey: 'synthPatch.mod.subtract',
 		inputs: [{ id: 'in', label: 'A', kind: 'audio' }, { id: 'b', label: 'B', kind: 'audio' }],
@@ -479,7 +479,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'ring',
 		label: 'RING',
-		group: 'UTILITY',
+		group: 'MATH',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.ring',
 		inputs: [{ id: 'in', label: 'A', kind: 'audio' }, { id: 'b', label: 'B', kind: 'audio' }],
@@ -489,7 +489,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'invert',
 		label: 'INV',
-		group: 'UTILITY',
+		group: 'MATH',
 		color: '#abb2bf',
 		descKey: 'synthPatch.mod.invert',
 		inputs: [AUDIO_IN],
@@ -499,7 +499,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'out',
 		label: 'OUT',
-		group: 'UTILITY',
+		group: 'IO',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.out',
 		inputs: [AUDIO_IN],
@@ -532,4 +532,18 @@ export function moduleSpec(id: string): ModuleSpec | undefined {
 	return MODULE_SPECS.find((m) => m.id === id);
 }
 
-export const MODULE_GROUPS: ModuleSpec['group'][] = ['SOURCE', 'SHAPE', 'RESONATE', 'MODULATE', 'UTILITY'];
+/* Ordered the way a patch is read: what comes in, what makes sound, what
+   shapes it, what rings, what controls it, then the stereo work, the
+   arithmetic, the meters and the plumbing. UTILITY had grown to twelve
+   entries, which is not a category any more. */
+export const MODULE_GROUPS: ModuleSpec['group'][] = [
+	'IO',
+	'SOURCE',
+	'SHAPE',
+	'RESONATE',
+	'MODULATE',
+	'STEREO',
+	'MATH',
+	'METER',
+	'UTILITY'
+];

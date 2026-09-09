@@ -1508,6 +1508,8 @@ function drumPatch(o: {
 	/** Amp envelope, which cuts the whole voice. */
 	decay: number;
 	release?: number;
+	/** Keys sharing a group cut each other off. 0 is none. */
+	group?: number;
 }): Partial<TrackData> {
 	const nodes = [
 		{ id: 'e', type: 'excite', x: 64, y: 96 },
@@ -1551,7 +1553,8 @@ function drumPatch(o: {
 		   decay still shapes it; this only stops the gate arriving early. */
 		ampDecay: Math.max(o.decay, o.q / 12),
 		ampSustain: 0,
-		ampRelease: o.release ?? 0.04
+		ampRelease: o.release ?? 0.04,
+		muteGroup: o.group ?? 0
 	});
 }
 
@@ -1607,15 +1610,15 @@ export const BUILTIN_KITS: DrumKit[] = [
 			// GM 41 LOW FLOOR TOM
 			67: drumPatch({ hard: 45, len: 6, tone: 2400, modes: [1, 1.9, 3.0], q: 11, body: 38, bodyMix: 65, decay: 0.34 }),
 			// GM 42 CLOSED HI-HAT
-			66: drumPatch({ hard: 95, len: 2, tone: 9000, modes: [1, 4.2, 7.1], q: 3, body: 8, bodyMix: 25, decay: 0.05 }),
+			66: drumPatch({ hard: 95, len: 2, tone: 9000, modes: [1, 4.2, 7.1], q: 3, body: 8, bodyMix: 25, decay: 0.05, group: 1 }),
 			// GM 43 HIGH FLOOR TOM
 			65: drumPatch({ hard: 46, len: 6, tone: 2600, modes: [1, 1.9, 3.0], q: 10, body: 35, bodyMix: 65, decay: 0.3 }),
 			// GM 44 PEDAL HI-HAT
-			64: drumPatch({ hard: 88, len: 3, tone: 7600, modes: [1, 4.0, 6.8], q: 4, body: 9, bodyMix: 25, decay: 0.07 }),
+			64: drumPatch({ hard: 88, len: 3, tone: 7600, modes: [1, 4.0, 6.8], q: 4, body: 9, bodyMix: 25, decay: 0.07, group: 1 }),
 			// GM 45 LOW TOM
 			63: drumPatch({ hard: 48, len: 5, tone: 2800, modes: [1, 1.9, 3.1], q: 9, body: 32, bodyMix: 62, decay: 0.27 }),
 			// GM 46 OPEN HI-HAT
-			62: drumPatch({ hard: 92, len: 3, tone: 8600, modes: [1, 4.1, 7.0], q: 14, body: 8, bodyMix: 25, decay: 0.42 }),
+			62: drumPatch({ hard: 92, len: 3, tone: 8600, modes: [1, 4.1, 7.0], q: 14, body: 8, bodyMix: 25, decay: 0.42, group: 1 }),
 			// GM 47 LOW-MID TOM
 			61: drumPatch({ hard: 50, len: 5, tone: 3000, modes: [1, 2.0, 3.2], q: 9, body: 29, bodyMix: 60, decay: 0.25 }),
 			// GM 48 HI-MID TOM
@@ -1665,9 +1668,9 @@ export const BUILTIN_KITS: DrumKit[] = [
 			// GM 70 MARACAS
 			38: drumPatch({ hard: 95, len: 2, tone: 10200, modes: [1, 4.6, 7.9], q: 2, body: 6, bodyMix: 20, decay: 0.06 }),
 			// GM 71 SHORT WHISTLE
-			37: drumPatch({ hard: 60, len: 6, tone: 7200, modes: [1, 2.0, 3.0], q: 10, body: 10, bodyMix: 30, decay: 0.2 }),
+			37: drumPatch({ hard: 60, len: 6, tone: 7200, modes: [1, 2.0, 3.0], q: 10, body: 10, bodyMix: 30, decay: 0.2, group: 4 }),
 			// GM 72 LONG WHISTLE
-			36: drumPatch({ hard: 58, len: 8, tone: 7000, modes: [1, 2.0, 3.0], q: 14, body: 10, bodyMix: 30, decay: 0.45 }),
+			36: drumPatch({ hard: 58, len: 8, tone: 7000, modes: [1, 2.0, 3.0], q: 14, body: 10, bodyMix: 30, decay: 0.45, group: 4 }),
 			// GM 73 SHORT GUIRO
 			35: drumPatch({ hard: 86, len: 4, tone: 6600, modes: [1, 3.0, 5.2], q: 3, body: 12, bodyMix: 30, decay: 0.1 }),
 			// GM 74 LONG GUIRO
@@ -1679,13 +1682,13 @@ export const BUILTIN_KITS: DrumKit[] = [
 			// GM 77 LOW WOOD BLOCK
 			31: drumPatch({ hard: 94, len: 3, tone: 6600, modes: [1, 2.6, 4.6], q: 8, body: 15, bodyMix: 36, decay: 0.13 }),
 			// GM 78 MUTE CUICA
-			30: drumPatch({ hard: 64, len: 4, tone: 4200, modes: [1, 1.8, 2.9], q: 5, body: 20, bodyMix: 45, decay: 0.12 }),
+			30: drumPatch({ hard: 64, len: 4, tone: 4200, modes: [1, 1.8, 2.9], q: 5, body: 20, bodyMix: 45, decay: 0.12, group: 3 }),
 			// GM 79 OPEN CUICA
-			29: drumPatch({ hard: 60, len: 6, tone: 3800, modes: [1, 1.8, 2.9], q: 11, body: 24, bodyMix: 50, decay: 0.34 }),
+			29: drumPatch({ hard: 60, len: 6, tone: 3800, modes: [1, 1.8, 2.9], q: 11, body: 24, bodyMix: 50, decay: 0.34, group: 3 }),
 			// GM 80 MUTE TRIANGLE
-			28: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 6, body: 4, bodyMix: 14, decay: 0.09 }),
+			28: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 6, body: 4, bodyMix: 14, decay: 0.09, group: 2 }),
 			// GM 81 OPEN TRIANGLE
-			27: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 34, body: 4, bodyMix: 14, decay: 1.4 }),
+			27: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 34, body: 4, bodyMix: 14, decay: 1.4, group: 2 }),
 		}
 	},
 	{
