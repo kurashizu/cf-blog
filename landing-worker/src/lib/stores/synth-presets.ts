@@ -6,6 +6,7 @@ import { KEY_TIMBRE_KEYS, BLANK_TRACK_TIMBRE, type TrackData } from '../synth';
 import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack, setTrackEditedHook } from './synth-tracks';
 import { showSaveStatus } from './synth-patch';
+import { askConfirm } from './synth-confirm';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
 const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';
@@ -879,6 +880,15 @@ function blankTimbre(): Partial<TrackData> {
 }
 
 export function newPreset(): void {
+	askConfirm({
+		title: tr('synth.confirm.newPatchTitle'),
+		body: tr('synth.confirm.newPatchBody'),
+		confirmLabel: tr('synth.confirm.discard'),
+		onConfirm: doNewPreset
+	});
+}
+
+function doNewPreset(): void {
 	updateActiveTrack({ ...blankTimbre(), rackChain: [], rackParams: {}, advanced: false });
 	presetModified.set(true);
 	showSaveStatus(tr('synthPanels.toast.newPreset'));
@@ -886,6 +896,15 @@ export function newPreset(): void {
 }
 
 export function newAdvancedPreset(): void {
+	askConfirm({
+		title: tr('synth.confirm.newAdvPatchTitle'),
+		body: tr('synth.confirm.newAdvPatchBody'),
+		confirmLabel: tr('synth.confirm.discard'),
+		onConfirm: doNewAdvancedPreset
+	});
+}
+
+function doNewAdvancedPreset(): void {
 	updateActiveTrack({
 		...blankTimbre(),
 		// A short excitation: a resonator answers a strike, and a blank ADV patch

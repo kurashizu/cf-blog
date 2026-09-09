@@ -16,6 +16,7 @@
 	import PianoRoll from './piano-roll/PianoRoll.svelte';
 	import PianoKeyboard from './keyboard/PianoKeyboard.svelte';
 	import SettingsModal from './settings/SettingsModal.svelte';
+	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	onMount(() => {
 		tryLoadSharedPatch();
@@ -102,3 +103,4 @@
 </div>
 
 <SettingsModal />
+<ConfirmDialog />

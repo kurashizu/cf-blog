@@ -21,6 +21,7 @@ import {
 	stop as stopTransport
 } from './synth-transport';
 import { tracksState, isOverlayMode, overlayTrackIds } from './synth-tracks';
+import { askConfirm } from './synth-confirm';
 
 const STORAGE_KEY = 'krsz-synth-patch-v1';
 
@@ -69,6 +70,15 @@ function resetPlayheadState(): void {
 }
 
 export function handleNewProject(): void {
+	askConfirm({
+		title: tr('synth.confirm.newProjectTitle'),
+		body: tr('synth.confirm.newProjectBody'),
+		confirmLabel: tr('synth.confirm.discard'),
+		onConfirm: doNewProject
+	});
+}
+
+function doNewProject(): void {
 	resetPlayheadState();
 	modularSynth.resetToBlank(192);
 	totalPatternSteps.set(192);

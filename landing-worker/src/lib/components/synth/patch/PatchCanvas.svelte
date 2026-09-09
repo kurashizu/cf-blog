@@ -22,8 +22,6 @@
 		addCable,
 		removeCable,
 		selectedNode,
-		GRAPH_IN,
-		GRAPH_OUT,
 		type GraphNode,
 		type PortKind
 	} from '../../../stores/synth-graph';
@@ -38,6 +36,25 @@
 	const GRID = 16;
 	const NODE_W = 118;
 	const NODE_H = 74;
+	/* Port geometry, in one place because two formulas have to agree exactly:
+	   the dots are laid out by CSS inside the node, and the cables are drawn in
+	   SVG from portPos(). When they disagreed, every cable ended in mid-air a
+	   few pixels off its socket -- so both now come from portOffset(), and the
+	   header is given a fixed height rather than being left to whatever its
+	   text and padding happen to measure (it came out 29px, not the 18 the
+	   cables assumed).
+
+	   BORDER is counted because `left`/`top` place the node's border box while
+	   the ports are positioned inside its content box, and PORT_R is half a
+	   w-3 dot, which straddles the edge so a cable meets a socket, not a wall. */
+	const BORDER = 2;
+	const HEADER_H = 20;
+	const PORT_R = 6;
+	const BODY_H = NODE_H - 2 * BORDER - HEADER_H;
+	/** The centre of port i, measured from the node's border-box top-left. */
+	function portOffset(count: number, i: number) {
+		return BORDER + HEADER_H + (BODY_H / (count + 1)) * (i + 1);
+	}
 
 	/** Drag state: a module being moved, or a cable being pulled. */
 	let dragNode = $state<{ id: string; dx: number; dy: number } | null>(null);
@@ -56,15 +73,17 @@
 
 	/** Where a port sits in canvas space, so a cable can be drawn to it. */
 	function portPos(nodeId: string, port: string, isOutput: boolean) {
-		if (nodeId === GRAPH_IN) return { x: 0, y: 120 };
-		if (nodeId === GRAPH_OUT) return { x: 520, y: 120 };
 		const n = graph.nodes.find((m) => m.id === nodeId);
 		if (!n) return { x: 0, y: 0 };
 		const spec = moduleSpec(n.type);
 		const list = isOutput ? (spec?.outputs ?? []) : (spec?.inputs ?? []);
 		const i = Math.max(0, list.findIndex((p) => p.id === port));
-		const step = NODE_H / (list.length + 1);
-		return { x: n.x + (isOutput ? NODE_W : 0), y: n.y + step * (i + 1) };
+		return {
+			// The dots straddle the border, so their centres land on the node's
+			// two vertical edges -- a cable meets the socket, not the wall.
+			x: n.x + (isOutput ? NODE_W : 0),
+			y: n.y + portOffset(list.length, i)
+		};
 	}
 
 	function onWheel(e: WheelEvent) {
@@ -261,8 +280,8 @@
 						onpointerdown={(e) => startDrag(e, n)}
 					>
 						<div
-							class="flex items-center justify-between px-1 py-0.5 border-b text-[10px] font-black cursor-grab"
-							style="color: {spec.color}; border-color: {spec.color}40"
+							class="flex items-center justify-between px-1 border-b text-[10px] font-black cursor-grab overflow-hidden"
+							style="height: {HEADER_H}px; color: {spec.color}; border-color: {spec.color}40"
 						>
 							<span>{spec.label}</span>
 							<button
@@ -276,33 +295,38 @@
 							>
 						</div>
 
-						<!-- Ports: inputs down the left, outputs down the right. -->
-						<div class="relative" style="height: {NODE_H - 18}px">
+						<!-- Ports: inputs down the left, outputs down the right. Positioned
+						     from portOffset() against the node's own top, which is what
+						     portPos() draws the cables to -- one formula, one place. -->
+						<div class="absolute pointer-events-none" style="left: {-BORDER}px; top: {-BORDER}px; width: {NODE_W}px; height: {NODE_H}px">
 							{#each spec.inputs as p, i (p.id)}
 								<button
 									onpointerdown={(e) => e.stopPropagation()}
 									onpointerup={(e) => endCable(e, n.id, p.id, p.kind)}
 									title={p.label}
-									class="absolute -left-1.5 w-3 h-3 rounded-full border cursor-crosshair {p.kind === 'mod'
+									class="absolute w-3 h-3 rounded-full border cursor-crosshair pointer-events-auto {p.kind === 'mod'
 										? 'bg-[#e5c07b] border-[#e5c07b]'
 										: 'bg-black border-white/60'}"
-									style="top: {((NODE_H - 18) / (spec.inputs.length + 1)) * (i + 1) - 6}px"
+									style="left: {-PORT_R}px; top: {portOffset(spec.inputs.length, i) - PORT_R}px; position: absolute"
 								></button>
 							{/each}
 							{#each spec.outputs as p, i (p.id)}
 								<button
 									onpointerdown={(e) => startCable(e, n.id, p.id, p.kind)}
 									title={p.label}
-									class="absolute -right-1.5 w-3 h-3 rounded-full border cursor-crosshair {p.kind === 'mod'
+									class="absolute w-3 h-3 rounded-full border cursor-crosshair pointer-events-auto {p.kind === 'mod'
 										? 'bg-[#e5c07b] border-[#e5c07b]'
 										: 'bg-white/80 border-white'}"
-									style="top: {((NODE_H - 18) / (spec.outputs.length + 1)) * (i + 1) - 6}px"
+									style="left: {NODE_W - PORT_R}px; top: {portOffset(spec.outputs.length, i) - PORT_R}px; position: absolute"
 								></button>
 							{/each}
-							<div class="absolute inset-0 flex items-center justify-center text-[8px] text-white/25 pointer-events-none">
-								{spec.params.length}
-								{$t('synthPatch.paramCount')}
-							</div>
+						</div>
+						<div
+							class="absolute left-0 right-0 flex items-center justify-center text-[8px] text-white/25 pointer-events-none"
+							style="top: {HEADER_H}px; height: {BODY_H}px"
+						>
+							{spec.params.length}
+							{$t('synthPatch.paramCount')}
 						</div>
 					</div>
 				{/if}
