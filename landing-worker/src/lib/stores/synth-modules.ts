@@ -289,7 +289,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ key: 'mode1', label: 'M1', min: 0.5, max: 12, step: 0.01, unit: '×', def: 1 },
 			{ key: 'mode2', label: 'M2', min: 0.5, max: 12, step: 0.01, unit: '×', def: 2.4 },
 			{ key: 'mode3', label: 'M3', min: 0.5, max: 12, step: 0.01, unit: '×', def: 4.6 },
-			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.5, def: 14 }
+			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.5, def: 14 },
+			/* The pitch the ratios multiply. 0 follows the key, which is what a
+			   marimba wants; any other value pins the resonator to that frequency
+			   however it was struck, which is what a drum is -- a kick is 55 Hz
+			   whether you hit it from C2 or C5, and in K.MAP the key chooses which
+			   instrument sounds rather than what note it plays. */
+			{ key: 'modeHz', label: 'HZ', min: 0, max: 2000, step: 1, unit: 'Hz', def: 0 }
 		]
 	},
 	{

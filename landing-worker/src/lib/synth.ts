@@ -1766,12 +1766,19 @@ class ModularSynth {
       }
 
       default: {
-        // The acoustic modules are the same ones the linear chain builds.
+        /* The acoustic modules are the same ones the linear chain builds.
+        
+           This list is a silent filter -- a param not named here never reaches
+           the module, with no error and no clue. modeHz was added to the
+           catalogue and to MODES and did nothing for exactly that reason: three
+           separate fixes to the kick's brightness all measured identical
+           because the value was being dropped here. Adding a param to a module
+           means adding it here too. */
         const asParams: Record<string, number> = {};
         for (const k of [
           'decayTime', 'damping', 'stiffness', 'strBlend',
           'tubeDecay', 'tubeDamp', 'tubeOdd', 'tubeMix',
-          'mode1', 'mode2', 'mode3', 'modeQ', 'modeMix',
+          'mode1', 'mode2', 'mode3', 'modeQ', 'modeMix', 'modeHz',
           'bodySize', 'bodyDepth', 'bodyMix',
           'driveAmt', 'driveBias', 'driveTone',
           'hardness', 'exLength', 'exTone', 'exNoise'
@@ -1941,7 +1948,10 @@ class ModularSynth {
         const output = ctx.createGain();
         const mix = pct(p.modeMix, 100);
         const dry = ctx.createGain();
-        dry.gain.value = 1 - mix;
+        /* Squared, so the dry strike falls away faster than the body rises as
+           MIX is turned up: at 68 that is 0.10 of raw strike under a body at
+           0.68, which reads as a beater on a drum rather than as two sounds. */
+        dry.gain.value = (1 - mix) * (1 - mix);
         input.connect(dry);
         dry.connect(output);
 
@@ -1955,8 +1965,12 @@ class ModularSynth {
         struck.gain.value = mix * 0.5;
         struck.connect(output);
 
+        /* What the ratios are relative to. 0 means the key, which is the tuned
+           case; anything else pins the body to an absolute pitch, which is what
+           an untuned drum is. */
+        const root = (p.modeHz ?? 0) > 0 ? (p.modeHz as number) : baseFreq;
         ratios.forEach((r, i) => {
-          const f = Math.min(18000, Math.max(30, baseFreq * r));
+          const f = Math.min(18000, Math.max(20, root * r));
 
           // The struck half: a decaying sine per mode.
           const osc = ctx.createOscillator();

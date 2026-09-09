@@ -163,6 +163,9 @@ function applyPatchData(raw: SynthPatchData): void {
 			modularSynth.updateTrack(trk.id, {
 				name: `TRK ${trk.id + 1}`, muted: false, solo: false, eqOn: false, eqGains: [0, 0, 0, 0, 0, 0],
 				percussion: false, keyTimbres: {}, duckSource: -1, duckKeys: [], duckDepth: 0,
+				/* Lanes and the preset's own level belong to the part, so a track
+				   this project does not mention must not keep the last song's. */
+				noteLanes: undefined, presetGain: 1,
 				grid: Array.from({ length: len }, () => []), accents: Array.from({ length: len }, () => 0)
 			});
 		}
@@ -172,7 +175,14 @@ function applyPatchData(raw: SynthPatchData): void {
 			// Likewise percussion mode: a patch that predates it, or one saved with
 			// it off, must not inherit the live track's key table.
 			if (tData.id !== undefined)
-				modularSynth.updateTrack(tData.id, { eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], percussion: false, keyTimbres: {}, duckSource: -1, duckKeys: [], duckDepth: 0, ...tData });
+				modularSynth.updateTrack(tData.id, {
+					eqOn: false, eqGains: [0, 0, 0, 0, 0, 0], percussion: false, keyTimbres: {},
+					duckSource: -1, duckKeys: [], duckDepth: 0,
+					/* Reset before the spread, so a project saved before lanes
+					   existed loads without the live track's curves under it. */
+					noteLanes: undefined, presetGain: 1,
+					...tData
+				});
 		});
 		refreshTracks();
 	}
