@@ -171,10 +171,10 @@ function patch(
 	   put a late node above an early one and drew its cable backwards across
 	   the canvas, which is unreadable however correct the audio is. */
 	/* Tight enough that a six-module patch shows both its ends at the default
-	   zoom. A card is 136 wide, so 152 leaves a 16px gutter -- room for the
-	   cable to read as a cable without pushing OUTPUT off the right edge, which
-	   is where a patch stops being self-explanatory. */
-	const COL = 152;
+	   zoom. A card is 176 wide, so 200 leaves a 24px gutter -- room for the
+	   cable to read as a cable, and for the port names drawn inside each edge,
+	   without pushing OUTPUT off the right edge. */
+	const COL = 200;
 	const ROW = 124;
 	const feeders = new Map<string, string[]>();
 	for (const c of cables) {
@@ -1888,14 +1888,14 @@ function drumPatch(o: {
 	   nothing, which reads as broken however correct the audio is. */
 	const nodes = [
 		{ id: ENTRY_ID, type: 'in', x: 48, y: 190 },
-		{ id: 'e', type: 'excite', x: 210, y: 120 },
-		{ id: 'ex', type: 'sum', x: 372, y: 120 },
-		{ id: 'm', type: 'modes', x: 534, y: 120 },
-		{ id: 'n', type: 'excite', x: 210, y: 300 },
-		{ id: 'nf', type: 'filter', x: 372, y: 300 },
-		{ id: 'mx', type: 'mix', x: 696, y: 190 },
-		{ id: 'b', type: 'body', x: 858, y: 190 },
-		{ id: OUTPUT_ID, type: 'out', x: 1020, y: 190 }
+		{ id: 'e', type: 'excite', x: 248, y: 120 },
+		{ id: 'ex', type: 'sum', x: 448, y: 120 },
+		{ id: 'm', type: 'modes', x: 648, y: 120 },
+		{ id: 'n', type: 'excite', x: 248, y: 320 },
+		{ id: 'nf', type: 'filter', x: 448, y: 320 },
+		{ id: 'mx', type: 'mix', x: 848, y: 190 },
+		{ id: 'b', type: 'body', x: 1048, y: 190 },
+		{ id: OUTPUT_ID, type: 'out', x: 1248, y: 190 }
 	];
 	const cables = [
 		{ from: ENTRY_ID, fromPort: 'out', to: 'ex', toPort: 'b' },

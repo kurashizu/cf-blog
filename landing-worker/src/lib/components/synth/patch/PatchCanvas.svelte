@@ -61,10 +61,15 @@
 	let canvasEl = $state<HTMLDivElement | undefined>();
 
 	const GRID = 16;
-	/* Wide enough for the widest selector row. A four-way row of 8px labels
-	   wants 118px of content; NTCH was being cut off at 124px total, which
-	   leaves 112 inside the border and the padding. */
-	const NODE_W = 136;
+	/* Wide enough for the widest selector row AND the port labels drawn inside
+	   the card's edges.
+	
+	   136 was measured against the selectors alone, before the sockets carried
+	   names: with IN and OUT taking a gutter either side, a four-knob module had
+	   about 100px left for two columns of knobs and their captions, so the
+	   longer ones (DECAY, DEPTH, RESO) crowded and clipped. 176 gives each knob
+	   column room for its caption at the size the rest of the synth uses. */
+	const NODE_W = 176;
 	/* Port geometry, in one place because two formulas have to agree exactly:
 	   the dots are laid out by CSS inside the node, and the cables are drawn in
 	   SVG from portPos(). When they disagreed, every cable ended in mid-air a
@@ -277,6 +282,21 @@
 	/* Where a multi-node drag started, so the whole selection moves together. */
 	let groupDrag = $state<{ x: number; y: number } | null>(null);
 
+	/* The box as a rectangle. Shared so the live hit test, the commit and the
+	   drawn outline cannot disagree about what is inside it. */
+	function rectOf(m: { x0: number; y0: number; x1: number; y1: number }) {
+		return {
+			x: Math.min(m.x0, m.x1),
+			y: Math.min(m.y0, m.y1),
+			w: Math.abs(m.x1 - m.x0),
+			h: Math.abs(m.y1 - m.y0)
+		};
+	}
+
+	/* What was selected before the drag began: Shift adds to it, so the live
+	   update has to start from it rather than from whatever the last move set. */
+	let marqueeBase = $state<Set<string>>(new Set());
+
 	let marqueeRect = $derived(
 		marquee
 			? {
@@ -308,6 +328,8 @@
 				selectedNode.set(null);
 				selectedNodes.set(new Set());
 			}
+			// Shift keeps what was already chosen and adds to it.
+			marqueeBase = e.shiftKey ? new Set(get(selectedNodes)) : new Set();
 		}
 	}
 
@@ -316,6 +338,16 @@
 		if (marquee) {
 			const p = toCanvas(e.clientX, e.clientY);
 			marquee = { ...marquee, x1: p.x, y1: p.y };
+			/* Select as the box grows, not on release. Waiting for pointerup meant
+			   dragging across six modules while nothing lit up, so there was no
+			   way to tell what you were about to get until you had already got
+			   it. Recomputed from the base each move rather than accumulated, so
+			   shrinking the box drops what it no longer covers. */
+			const hit = nodesInRect(graph, rectOf(marquee), (n) => {
+				const spec = moduleSpec(n.type);
+				return { w: NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
+			});
+			selectedNodes.set(new Set([...marqueeBase, ...hit]));
 			return;
 		}
 		if (groupDrag && dragNode) {
@@ -343,22 +375,15 @@
 
 	function onPointerUp() {
 		if (marquee) {
-			/* Computed from marquee here rather than read from the marqueeRect
-			   derived: this handler runs straight off a DOM event, where reading
-			   the live state is one less thing that has to have flushed first. */
-			const rect = {
-				x: Math.min(marquee.x0, marquee.x1),
-				y: Math.min(marquee.y0, marquee.y1),
-				w: Math.abs(marquee.x1 - marquee.x0),
-				h: Math.abs(marquee.y1 - marquee.y0)
-			};
-			// A click rather than a drag leaves the selection alone.
+			/* The selection is already correct -- onPointerMove has been keeping
+			   it up to date as the box grew. All that is left is to name the
+			   single-module case, so its knobs show without a second click. */
+			const rect = rectOf(marquee);
 			if (rect.w > 3 || rect.h > 3) {
 				const hit = nodesInRect(graph, rect, (n) => {
 					const spec = moduleSpec(n.type);
 					return { w: NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
 				});
-				selectedNodes.update((prev) => new Set([...prev, ...hit]));
 				if (hit.length === 1) selectedNode.set(hit[0]);
 			}
 			marquee = null;
@@ -677,19 +702,6 @@
 		<!-- Cables sit under the modules: a cable must never cover a knob. -->
 		<svg class="absolute inset-0 w-full h-full pointer-events-none" style="overflow: visible">
 			<g transform="translate({cam.x} {cam.y}) scale({cam.s})">
-				{#if marqueeRect}
-					<rect
-						x={marqueeRect.x}
-						y={marqueeRect.y}
-						width={marqueeRect.w}
-						height={marqueeRect.h}
-						fill="rgba(97,175,239,0.10)"
-						stroke="#61afef"
-						stroke-width="1"
-						stroke-dasharray="4 3"
-						vector-effect="non-scaling-stroke"
-					/>
-				{/if}
 				{#each graph.cables as c, i (i)}
 					{@const a = portPos(c.from, c.fromPort, true)}
 					{@const b = portPos(c.to, c.toPort, false)}
@@ -725,9 +737,17 @@
 			</g>
 		</svg>
 
-		<!-- Modules. -->
+		<!-- Modules.
+		
+		     pointer-events-none on the layer, restored on each card. The layer
+		     stretches over the whole canvas, so it was swallowing every press
+		     that landed between the cards: onPointerDown only starts a marquee
+		     when the target is the canvas itself, and the target was always this
+		     div instead. Dragging on empty canvas did nothing at all, which is
+		     the bug -- the cards still get their own events because each one
+		     turns them back on. -->
 		<div
-			class="absolute inset-0"
+			class="absolute inset-0 pointer-events-none"
 			style="transform: translate({cam.x}px, {cam.y}px) scale({cam.s}); transform-origin: 0 0"
 		>
 			{#each graph.nodes as n (n.id)}
@@ -735,7 +755,7 @@
 				{#if spec}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
-						class="absolute border-2 bg-black/85 rounded-xs select-none {$selectedNodes.has(n.id)
+						class="absolute border-2 bg-black/85 rounded-xs select-none pointer-events-auto {$selectedNodes.has(n.id)
 							? 'shadow-[0_0_0_2px_#61afef,0_0_10px_rgba(97,175,239,0.5)]'
 							: $selectedNode === n.id
 								? 'shadow-[0_0_10px_rgba(97,175,239,0.5)]'
@@ -833,6 +853,30 @@
 		<!-- Dropped a cable on empty canvas: what should it connect to?
 		     Only modules with a socket that can take what is held, so whatever is
 		     picked is wired and working rather than merely placed. -->
+		<!-- The selection box, in its own layer above the modules.
+		
+		     It lived in the cable SVG, which is deliberately under the cards so a
+		     cable never covers a knob -- which meant the marquee was drawn under
+		     them too and vanished behind every module it was being dragged
+		     across, exactly where you most need to see it. -->
+		{#if marqueeRect}
+			<svg class="absolute inset-0 w-full h-full pointer-events-none z-10" style="overflow: visible">
+				<g transform="translate({cam.x} {cam.y}) scale({cam.s})">
+					<rect
+						x={marqueeRect.x}
+						y={marqueeRect.y}
+						width={marqueeRect.w}
+						height={marqueeRect.h}
+						fill="rgba(97,175,239,0.10)"
+						stroke="#61afef"
+						stroke-width="1"
+						stroke-dasharray="4 3"
+						vector-effect="non-scaling-stroke"
+					/>
+				</g>
+			</svg>
+		{/if}
+
 		{#if dropSearch}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
