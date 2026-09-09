@@ -214,6 +214,15 @@
 		if (e.key === 'Escape') {
 			selectedNodes.set(new Set());
 			selectedNode.set(null);
+			selectedCable = null;
+			dropSearch = null;
+			e.preventDefault();
+			return;
+		}
+		if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCable !== null) {
+			removeCable(graph, selectedCable);
+			selectedCable = null;
+			playSound('click');
 			e.preventDefault();
 			return;
 		}
@@ -264,6 +273,23 @@
 	}
 
 	function onWheel(e: WheelEvent) {
+		/* Zoom only when the wheel is over the canvas itself.
+		
+		   This is bound on the canvas and preventDefault'd unconditionally, so a
+		   scrollable child inside it -- the drop-search list -- could not scroll:
+		   the wheel zoomed the patch behind it instead, and a list longer than
+		   its box had no way to reach the rest. Anything that wants its own
+		   scrolling stops the event; this checks for that having happened. */
+		/* Leave the event alone when it belongs to something that scrolls itself.
+		
+		   preventDefault here is what stops a scrollable child from scrolling, and
+		   stopPropagation on that child cannot undo it: this handler sits on the
+		   canvas, an ancestor, so by the time the child speaks the default is
+		   already cancelled. Deciding from the target is the only order that
+		   works -- the drop-search list is 800px of modules in a 160px box, and
+		   the wheel zoomed the patch behind it instead of reaching the rest. */
+		const scrollable = (e.target as HTMLElement | null)?.closest?.('[data-scrollable]');
+		if (scrollable) return;
 		e.preventDefault();
 		const r = canvasEl?.getBoundingClientRect();
 		if (!r) return;
@@ -296,6 +322,11 @@
 	/* What was selected before the drag began: Shift adds to it, so the live
 	   update has to start from it rather than from whatever the last move set. */
 	let marqueeBase = $state<Set<string>>(new Set());
+
+	/* The cable under the cursor's last click, by index. Cables are selected
+	   rather than deleted on contact so you can see which one you have before it
+	   goes -- one of them is the difference between a patch and silence. */
+	let selectedCable = $state<number | null>(null);
 
 	let marqueeRect = $derived(
 		marquee
@@ -330,6 +361,13 @@
 			}
 			// Shift keeps what was already chosen and adds to it.
 			marqueeBase = e.shiftKey ? new Set(get(selectedNodes)) : new Set();
+			selectedCable = null;
+		}
+		/* Pressing anywhere dismisses the drop-search, which otherwise had no way
+		   out but Escape while its input still had focus -- click away once and it
+		   was stuck on screen over the patch. */
+		if (dropSearch) {
+			dropSearch = null;
 		}
 	}
 
@@ -707,21 +745,45 @@
 					{@const b = portPos(c.to, c.toPort, false)}
 					{@const role = cableRole(c)}
 					{@const isControl = role === 'cv' || role === 'trigger' || role === 'flow'}
+					<!-- A wide invisible path takes the clicks. A cable is 1.5-2.5px
+					     wide, which is far below what anyone can reliably hit with a
+					     mouse, so the visible line is left to look right and this
+					     carries the hit area. -->
 					<path
 						d={cablePath(a, b)}
 						fill="none"
-						stroke={PORT_STYLE[role].color}
-						stroke-width={isControl ? 1.5 : 2.5}
-						stroke-dasharray={role === 'cv' ? '4 3' : role === 'trigger' || role === 'flow' ? '2 3' : undefined}
-						opacity="0.8"
+						stroke="transparent"
+						stroke-width="14"
 						class="pointer-events-auto cursor-pointer"
 						role="button"
 						tabindex="-1"
-						onclick={() => {
-							removeCable(graph, i);
+						aria-label={$t('synthPatch.cableHint')}
+						onclick={(e) => {
+							/* Click selects; a second click on the same cable, or Delete,
+							   removes it. Deleting outright meant a mis-aimed click on a
+							   crowded patch silently unwired something, with nothing shown
+							   first and only undo to notice it by. */
+							if (selectedCable === i) {
+								removeCable(graph, i);
+								selectedCable = null;
+							} else {
+								selectedCable = i;
+								selectedNodes.set(new Set());
+								selectedNode.set(null);
+							}
+							e.stopPropagation();
 							playSound('click');
 						}}
 						onkeydown={() => {}}
+					/>
+					<path
+						d={cablePath(a, b)}
+						fill="none"
+						stroke={selectedCable === i ? '#ffffff' : PORT_STYLE[role].color}
+						stroke-width={selectedCable === i ? 3.5 : isControl ? 1.5 : 2.5}
+						stroke-dasharray={role === 'cv' ? '4 3' : role === 'trigger' || role === 'flow' ? '2 3' : undefined}
+						opacity={selectedCable === i ? 1 : 0.8}
+						class="pointer-events-none"
 					/>
 				{/each}
 				{#if pullFrom && liveEnd}
@@ -879,6 +941,7 @@
 
 		{#if dropSearch}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="absolute z-30 w-44 border border-white/25 rounded-xs bg-black shadow-lg"
 				style="left: {Math.min(dropSearch.screenX - (canvasEl?.getBoundingClientRect().left ?? 0), (canvasEl?.clientWidth ?? 400) - 180)}px; top: {Math.min(
@@ -887,6 +950,7 @@
 				)}px"
 				onpointerdown={(e) => e.stopPropagation()}
 			>
+				<div class="flex items-center border-b border-white/15">
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					autofocus
@@ -897,9 +961,14 @@
 						e.stopPropagation();
 					}}
 					placeholder={$t('synthPatch.searchPlaceholder')}
-					class="w-full px-1.5 py-1 bg-black text-white text-[10px] font-mono border-b border-white/15 outline-none placeholder:text-white/30"
+					class="flex-1 min-w-0 px-1.5 py-1 bg-black text-white text-[10px] font-mono outline-none placeholder:text-white/30"
 				/>
-				<div class="max-h-40 overflow-y-auto custom-scrollbar">
+				<button
+					onclick={() => { dropSearch = null; playSound('click'); }}
+					class="press px-1.5 py-1 text-[#e06c75] hover:text-white cursor-pointer leading-none text-xs"
+					title={$t('synthPatch.searchCloseHint')}>×</button>
+				</div>
+				<div data-scrollable class="max-h-40 overflow-y-auto custom-scrollbar">
 					{#each searchHits as spec (spec.id)}
 						<button
 							onclick={() => placeFromSearch(spec)}
