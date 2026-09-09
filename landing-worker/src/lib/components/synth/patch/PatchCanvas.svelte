@@ -69,7 +69,7 @@
 	const SELECTOR_H = 30;
 	const GAP = 4;
 	const BODY_PAD = 4;
-	const VIZ_H: Record<string, number> = { adsr: 58, wave: 26, curve: 26 };
+	const VIZ_H: Record<string, number> = { adsr: 58, wave: 26, curve: 26, scope: 26, fft: 26, meter: 26 };
 
 	function bodyHeight(spec: ModuleSpec): number {
 		const knobs = spec.params.filter((p) => !p.choices).length;

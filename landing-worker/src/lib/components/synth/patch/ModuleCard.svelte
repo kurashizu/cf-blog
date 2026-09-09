@@ -15,6 +15,7 @@
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
 	import type { ModuleSpec } from '../../../stores/synth-modules';
+	import ProbeDisplay from './ProbeDisplay.svelte';
 
 	let {
 		spec,
@@ -81,7 +82,9 @@
 		</div>
 	{/each}
 
-	{#if spec.viz === 'adsr'}
+	{#if spec.viz === 'scope' || spec.viz === 'fft' || spec.viz === 'meter'}
+		<ProbeDisplay kind={spec.viz} {nodeId} color={spec.color} />
+	{:else if spec.viz === 'adsr'}
 		<AdsrVisualizer
 			attack={val('envA', 0.005)}
 			decay={val('envD', 0.2)}

@@ -967,7 +967,15 @@ class ModularSynth {
 
     const built = new Map<
       string,
-      { in: AudioNode | null; in2?: AudioNode; out: AudioNode; mod: Map<string, AudioParam>; isVoiceIn?: boolean; isOutput?: boolean }
+      {
+        in: AudioNode | null;
+        in2?: AudioNode;
+        out: AudioNode;
+        out2?: AudioNode;
+        mod: Map<string, AudioParam>;
+        isVoiceIn?: boolean;
+        isOutput?: boolean;
+      }
     >();
     const sources: AudioScheduledSourceNode[] = [];
     /* With an IN module the patch says where the voice enters, so nothing else
@@ -980,7 +988,7 @@ class ModularSynth {
 
     for (const node of order) {
       const p = (key: string, def: number) => params[`${node.id}.${key}`] ?? def;
-      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, t, heldSec, sources);
+      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, t, heldSec, sources, node.id);
       if (!made) continue;
       built.set(node.id, made);
 
@@ -992,9 +1000,13 @@ class ModularSynth {
       if (made.in) {
         if (feeds.length) {
           for (const c of feeds) {
-            // A module with two inlets takes its second signal on 'b'.
-            const dest = c.toPort === 'b' && made.in2 ? made.in2 : made.in;
-            built.get(c.from)?.out.connect(dest);
+            // A module with two inlets takes its second signal on 'b' (or 'r').
+            const dest = (c.toPort === 'b' || c.toPort === 'r') && made.in2 ? made.in2 : made.in;
+            const src = built.get(c.from);
+            if (!src) continue;
+            // ...and one with two outlets sends its second from 'r'.
+            const from = c.fromPort === 'r' && src.out2 ? src.out2 : src.out;
+            from.connect(dest);
           }
         } else if (!hasExplicitIn) {
           voiceIn.connect(made.in);
@@ -1007,7 +1019,7 @@ class ModularSynth {
       const src = built.get(c.from);
       const dst = built.get(c.to);
       const param = dst?.mod.get(c.toPort);
-      if (src && param) src.out.connect(param);
+      if (src && param) (c.fromPort === 'r' && src.out2 ? src.out2 : src.out).connect(param);
     }
 
     /* Where the patch leaves.
@@ -1041,6 +1053,11 @@ class ModularSynth {
   }
 
   /** One graph node. Returns its audio ends and the params a cable may drive. */
+  /* Analysers placed by SCOPE / FFT / LOUD modules, so the patch canvas can
+     draw what is flowing at that point. Keyed `<trackId>:<nodeId>`; cleared
+     when a track's graph is rebuilt. */
+  public graphProbes = new Map<string, AnalyserNode>();
+
   private buildGraphNode(
     ctx: BaseAudioContext,
     type: string,
@@ -1048,12 +1065,15 @@ class ModularSynth {
     baseFreq: number,
     t: number,
     heldSec: number,
-    sources: AudioScheduledSourceNode[]
+    sources: AudioScheduledSourceNode[],
+    probeKey = ''
   ): {
     in: AudioNode | null;
     /** A second audio inlet, for the modules that take two signals. */
     in2?: AudioNode;
     out: AudioNode;
+    /** A second audio outlet, for the modules that hand back two signals. */
+    out2?: AudioNode;
     mod: Map<string, AudioParam>;
     /** Receives the voice from racks 1-7 rather than a cable. */
     isVoiceIn?: boolean;
@@ -1486,25 +1506,91 @@ class ModularSynth {
       }
 
       case 'in': {
-        /* The voice arriving from racks 1-7: the oscillators, the filter and the
-           amp envelope, before the patch bay touches them. Explicit, so a patch
-           says where its signal enters instead of leaving it to be guessed at
-           from which modules have nothing plugged in. */
+        /* ENTRY: where the note arrives.
+        
+           In K.MAP this is the key that was struck; otherwise it is every key
+           on the track. Either way it carries the voice racks 1-7 built -- the
+           oscillators, the filter and the amp envelope -- before the patch bay
+           touches it. Explicit, because a patch should say where its signal
+           enters rather than leave it to be inferred from which modules happen
+           to have nothing plugged in. */
         const g = ctx.createGain();
         g.gain.value = p('inLevel', 100) / 100;
         return { in: null, out: g, mod, isVoiceIn: true };
       }
 
+      case 'split': {
+        /* Takes a stereo signal apart so the two sides can be processed
+           separately: L out of one socket, R out of the other. A patch that
+           filters the left and saturates the right is not reachable any other
+           way, since every other module treats what it is given as one thing. */
+        const input = ctx.createGain();
+        const splitter = ctx.createChannelSplitter(2);
+        input.connect(splitter);
+        const l = ctx.createGain();
+        const r = ctx.createGain();
+        splitter.connect(l, 0);
+        splitter.connect(r, 1);
+        return { in: input, out: l, out2: r, mod };
+      }
+
+      case 'merge': {
+        /* Puts two mono paths back into one stereo signal: whatever arrives at
+           L lands left, whatever arrives at R lands right. The other half of
+           SPLIT, and the only way a divided patch becomes one output again. */
+        const l = ctx.createGain();
+        const r = ctx.createGain();
+        const merger = ctx.createChannelMerger(2);
+        l.connect(merger, 0, 0);
+        r.connect(merger, 0, 1);
+        return { in: l, in2: r, out: merger, mod };
+      }
+
       case 'out': {
-        /* Where the patch leaves. Everything reaching this is what you hear;
-           anything not reaching it is silent, which is what lets a module sit
-           on the canvas unwired without being heard. */
+        /* OUTPUT: where the patch leaves, and the end of every signal path in
+           it. Everything reaching this is what you hear; anything not reaching
+           it is silent, which is what lets a module sit on the canvas unwired
+           without changing the sound.
+
+           MONO sums the two sides before panning, for a patch that divided in
+           order to process and wants to arrive as one thing again. */
         const g = ctx.createGain();
         g.gain.value = p('outLevel', 100) / 100;
+        let tail: AudioNode = g;
+        if (p('outMono', 0) >= 0.5) {
+          const merge = ctx.createChannelMerger(1);
+          g.connect(merge);
+          tail = merge;
+        }
         const pan = ctx.createStereoPanner();
         pan.pan.value = Math.max(-1, Math.min(1, p('outPan', 0) / 100));
-        g.connect(pan);
+        tail.connect(pan);
         return { in: g, out: pan, mod, isOutput: true };
+      }
+
+      case 'scope':
+      case 'fft':
+      case 'loud': {
+        /* A probe: passes its input through untouched and taps it for the
+           canvas to draw. Debugging a patch by ear alone means guessing which
+           of six modules turned the signal to mud; a meter in the middle of the
+           chain says where it happened.
+        
+           Analysers are cheap and do not alter what passes through them, so the
+           node is a plain wire as far as the sound is concerned -- placing one
+           can never change the patch, which is the only way a debugging tool is
+           worth having. */
+        const g = ctx.createGain();
+        const an = ctx.createAnalyser();
+        // Small for a scope, large for a spectrum: one trades time for frequency.
+        an.fftSize = type === 'fft' ? 2048 : 512;
+        an.smoothingTimeConstant = type === 'loud' ? 0.6 : 0.2;
+        g.connect(an);
+        /* Offline renders have no frames to draw on, and the map is read by the
+           canvas while a live voice is sounding. Keyed by node so several
+           probes in one patch stay apart. */
+        if (!this.renderCtx) this.graphProbes.set(probeKey, an);
+        return { in: g, out: g, mod };
       }
 
       case 'sum': {

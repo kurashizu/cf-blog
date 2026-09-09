@@ -39,7 +39,7 @@ export interface ModuleSpec {
 	params: ModuleParam[];
 	/* A live picture of what the knobs are doing, like racks 1-7 carry: an
 	   envelope drawn as its own curve says more than four numbers do. */
-	viz?: 'adsr' | 'wave' | 'curve';
+	viz?: 'adsr' | 'wave' | 'curve' | 'scope' | 'fft' | 'meter';
 }
 
 const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
@@ -50,7 +50,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	   brings sound in from outside the patch. */
 	{
 		id: 'in',
-		label: 'IN',
+		label: 'ENTRY',
 		group: 'SOURCE',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.in',
@@ -395,6 +395,65 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
+		id: 'split',
+		label: 'SPLIT',
+		group: 'UTILITY',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.split',
+		inputs: [AUDIO_IN],
+		outputs: [
+			{ id: 'out', label: 'L', kind: 'audio' },
+			{ id: 'r', label: 'R', kind: 'audio' }
+		],
+		params: []
+	},
+	{
+		id: 'merge',
+		label: 'MERGE',
+		group: 'UTILITY',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.merge',
+		inputs: [
+			{ id: 'in', label: 'L', kind: 'audio' },
+			{ id: 'r', label: 'R', kind: 'audio' }
+		],
+		outputs: [AUDIO_OUT],
+		params: []
+	},
+	{
+		id: 'scope',
+		label: 'SCOPE',
+		group: 'UTILITY',
+		color: '#98c379',
+		descKey: 'synthPatch.mod.scope',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [],
+		viz: 'scope'
+	},
+	{
+		id: 'fft',
+		label: 'FFT',
+		group: 'UTILITY',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.fft',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [],
+		viz: 'fft'
+	},
+	{
+		id: 'loud',
+		label: 'LOUD',
+		group: 'UTILITY',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.loud',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [],
+		viz: 'meter'
+	},
+	{
 		id: 'sum',
 		label: 'SUM',
 		group: 'UTILITY',
@@ -446,6 +505,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [],
 		params: [
+			{ key: 'outMono', label: 'CHAN', min: 0, max: 1, step: 1, def: 0, choices: ['ST', 'MONO'] },
 			{ key: 'outPan', label: 'PAN', min: -100, max: 100, step: 1, def: 0 },
 			{ key: 'outLevel', label: 'LVL', min: 0, max: 200, step: 1, unit: '%', def: 100 }
 		]
