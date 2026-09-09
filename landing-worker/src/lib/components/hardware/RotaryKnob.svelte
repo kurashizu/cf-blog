@@ -111,6 +111,7 @@
 			onDragEnd: () => (isDragging = false)
 		}}
 		style="width: {size}px; height: {size}px"
+		data-knob-dial
 		class="relative rounded-full transition-transform duration-150 active:scale-95 hover:scale-[1.04] {isDragging ? 'shadow-[0_0_8px_rgba(255,255,255,0.4)]' : ''}"
 	>
 		<svg viewBox="0 0 100 100" class="w-full h-full overflow-visible select-none pointer-events-none">

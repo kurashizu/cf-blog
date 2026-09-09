@@ -106,10 +106,20 @@
 			{#each knobs as p (p.key)}
 				<!-- The knob owns the drag, so the module underneath must not also
 				     move when a knob is turned; right-click still reaches the canvas
-				     to pan, and is the knob's own reset gesture on the way past. -->
+				     to pan, and is the knob's own reset gesture on the way past.
+				
+				     Only when the press is actually on the dial. RotaryKnob is a
+				     flex column -- a round dial with its label under it -- and
+				     use:draggable sits on the dial alone, so swallowing every
+				     pointerdown on the wrapper killed the card drag across the
+				     label and the space either side of it without turning
+				     anything. That is most of a knob cell's area, which is why
+				     modules felt immovable. -->
 				<div
 					onpointerdown={(e) => {
-						if (e.button !== 2) e.stopPropagation();
+						if (e.button === 2) return;
+						const dial = (e.target as HTMLElement)?.closest?.('[data-knob-dial]');
+						if (dial) e.stopPropagation();
 					}}
 					role="presentation"
 				>

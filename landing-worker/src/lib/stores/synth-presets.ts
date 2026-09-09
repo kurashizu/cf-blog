@@ -519,7 +519,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
 				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:in2', 'mx>bod', 'bod>output'],
-				67
+				97
 			)
 		})
 	},
@@ -726,7 +726,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
 				],
 				['entry>ex:b', 'ham>ex', 'ex>c1', 'ex>c2', 'c1>rg', 'c2>rg:b', 'c1>sm', 'rg>sm:b', 'sm>bod', 'bod>output'],
-				126
+				184
 			)
 		})
 	},
@@ -936,7 +936,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
 				],
 				['entry>ex:b', 'ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:in2', 'mx>bod', 'bod>symp', 'symp>output'],
-				63
+				90
 			)
 		})
 	},
@@ -1093,7 +1093,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
 				],
 				['entry>ex:b', 'air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:in2', 'mx>bel', 'bel>output'],
-				58
+				91
 			)
 		})
 	},
@@ -1833,26 +1833,38 @@ function drumPatch(o: {
 	release?: number;
 	/** Keys sharing a group cut each other off. 0 is none. */
 	group?: number;
+	/** How much unpitched noise: 0 a tom, ~85 a hi-hat, ~60 a snare. */
+	snare?: number;
+	/** How tightly that noise is focused. Low is a wash, high is a rattle. */
+	noiseQ?: number;
 }): Partial<TrackData> {
 	/* ENTRY and OUTPUT under their fixed ids, not ids of this helper's choosing.
 	   A node called 'o' draws as an OUTPUT card but isFixedNode does not know it,
-	   so the delete key removed the kit's output; and with no ENTRY the strike
-	   had no visible origin.
+	   so the delete key removed the kit's output.
 
-	   ENTRY is placed but not cabled into EXCT: a strike is a source with no
-	   inlet, so there is no port for that cable to land on. The note reaches it
-	   the way it reaches any source -- by triggering the voice the graph is
-	   built for. */
+	   ENTRY joins the two strikes at a SUM, the same way every melodic patch
+	   routes it. A strike is a source with no inlet, so ENTRY cannot cable
+	   straight into EXCT -- but leaving it unconnected drew a card wired to
+	   nothing, which reads as broken however correct the audio is. */
 	const nodes = [
-		{ id: ENTRY_ID, type: 'in', x: 64, y: 128 },
-		{ id: 'e', type: 'excite', x: 256, y: 128 },
-		{ id: 'm', type: 'modes', x: 448, y: 128 },
-		{ id: 'b', type: 'body', x: 640, y: 128 },
-		{ id: OUTPUT_ID, type: 'out', x: 832, y: 128 }
+		{ id: ENTRY_ID, type: 'in', x: 48, y: 190 },
+		{ id: 'e', type: 'excite', x: 210, y: 120 },
+		{ id: 'ex', type: 'sum', x: 372, y: 120 },
+		{ id: 'm', type: 'modes', x: 534, y: 120 },
+		{ id: 'n', type: 'excite', x: 210, y: 300 },
+		{ id: 'nf', type: 'filter', x: 372, y: 300 },
+		{ id: 'mx', type: 'mix', x: 696, y: 190 },
+		{ id: 'b', type: 'body', x: 858, y: 190 },
+		{ id: OUTPUT_ID, type: 'out', x: 1020, y: 190 }
 	];
 	const cables = [
-		{ from: 'e', fromPort: 'out', to: 'm', toPort: 'in' },
-		{ from: 'm', fromPort: 'out', to: 'b', toPort: 'in' },
+		{ from: ENTRY_ID, fromPort: 'out', to: 'ex', toPort: 'b' },
+		{ from: 'e', fromPort: 'out', to: 'ex', toPort: 'in' },
+		{ from: 'ex', fromPort: 'out', to: 'm', toPort: 'in' },
+		{ from: 'm', fromPort: 'out', to: 'mx', toPort: 'in' },
+		{ from: 'n', fromPort: 'out', to: 'nf', toPort: 'in' },
+		{ from: 'nf', fromPort: 'out', to: 'mx', toPort: 'in2' },
+		{ from: 'mx', fromPort: 'out', to: 'b', toPort: 'in' },
 		{ from: 'b', fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
 	];
 	return keyOnly({
@@ -1867,7 +1879,34 @@ function drumPatch(o: {
 			'm.mode2': o.modes[1],
 			'm.mode3': o.modes[2],
 			'm.modeQ': o.q,
-			'm.modeMix': 100,
+			/* Not 100. modeMix is a dry/wet: at 100 the dry gain is zero, so the
+			   EXCT strike was thrown away entirely and only the three decaying
+			   sines reached the output. Three sines is a tuned bar, which is why
+			   every key in the kit sounded like a marimba however its ratios
+			   were set -- measured spectral flatness 0.45 for a kick against
+			   0.43 for a snare, nearly the same sound. Letting a third of the
+			   strike through puts the stick back on the drum. */
+			'm.modeMix': 68,
+			/* The noise branch: a drum is mostly not pitched. A snare's wires and
+			   a cymbal's wash are broadband, and no number of tuned modes makes
+			   them -- so a second, longer strike runs beside the modes and is
+			   mixed in by `snare`, 0 for a tom and high for a hi-hat.
+			
+			   EXCT rather than NOISE, which loops with no envelope of its own:
+			   as a sustained source it is right for a flute and wrong for a
+			   drum, and it droned under every key until the amp gate closed.
+			   EXCT is the same noise already shaped into a burst. Its length is
+			   what separates a hi-hat's tick from a cymbal's wash. */
+			'ex.sumGain': 100,
+			'n.hardness': Math.max(0, Math.min(100, Math.round((o.noiseQ ?? 1.2) * 26))),
+			'n.exLength': Math.max(1, Math.min(60, Math.round(o.len * (1 + (o.snare ?? 0) / 22)))),
+			'n.exTone': o.tone,
+			'nf.type': 1,
+			'nf.cutoff': o.tone,
+			'nf.q': o.noiseQ ?? 1.2,
+			'nf.depth': 0,
+			'mx.mixA': 100,
+			'mx.mixB': Math.round((o.snare ?? 0) * 0.55),
 			'b.bodySize': o.body,
 			'b.bodyDepth': 50,
 			'b.bodyMix': o.bodyMix,
@@ -1929,99 +1968,99 @@ export const BUILTIN_KITS: DrumKit[] = [
 		name: 'JAZZ KIT',
 		keys: {
 			// GM 35 ACOUSTIC BASS DRUM
-			73: drumPatch({ hard: 30, len: 9, tone: 1400, modes: [1, 1.6, 2.4], q: 7, body: 30, bodyMix: 70, decay: 0.2 }),
+			73: drumPatch({ snare: 8, noiseQ: 1.0, hard: 30, len: 9, tone: 1400, modes: [1, 1.6, 2.4], q: 7, body: 30, bodyMix: 70, decay: 0.2 }),
 			// GM 36 BASS DRUM 1
-			72: drumPatch({ hard: 38, len: 8, tone: 1700, modes: [1, 1.7, 2.6], q: 6, body: 28, bodyMix: 70, decay: 0.17 }),
+			72: drumPatch({ snare: 8, noiseQ: 1.0, hard: 38, len: 8, tone: 1700, modes: [1, 1.7, 2.6], q: 6, body: 28, bodyMix: 70, decay: 0.17 }),
 			// GM 37 SIDE STICK
-			71: drumPatch({ hard: 90, len: 2, tone: 6000, modes: [1, 3.1, 5.4], q: 4, body: 14, bodyMix: 45, decay: 0.06 }),
+			71: drumPatch({ snare: 45, noiseQ: 2.4, hard: 90, len: 2, tone: 6000, modes: [1, 3.1, 5.4], q: 4, body: 14, bodyMix: 45, decay: 0.06 }),
 			// GM 38 ACOUSTIC SNARE
-			70: drumPatch({ hard: 72, len: 3, tone: 5200, modes: [1, 2.6, 4.3], q: 6, body: 20, bodyMix: 55, decay: 0.14 }),
+			70: drumPatch({ snare: 62, noiseQ: 1.1, hard: 72, len: 3, tone: 5200, modes: [1, 2.6, 4.3], q: 6, body: 20, bodyMix: 55, decay: 0.14 }),
 			// GM 39 HAND CLAP
-			69: drumPatch({ hard: 80, len: 5, tone: 4200, modes: [1, 2.2, 3.7], q: 3, body: 22, bodyMix: 40, decay: 0.13 }),
+			69: drumPatch({ snare: 82, noiseQ: 1.0, hard: 80, len: 5, tone: 4200, modes: [1, 2.2, 3.7], q: 3, body: 22, bodyMix: 40, decay: 0.13 }),
 			// GM 40 ELECTRIC SNARE
-			68: drumPatch({ hard: 85, len: 3, tone: 6200, modes: [1, 2.8, 4.6], q: 5, body: 18, bodyMix: 50, decay: 0.12 }),
+			68: drumPatch({ snare: 66, noiseQ: 1.1, hard: 85, len: 3, tone: 6200, modes: [1, 2.8, 4.6], q: 5, body: 18, bodyMix: 50, decay: 0.12 }),
 			// GM 41 LOW FLOOR TOM
-			67: drumPatch({ hard: 45, len: 6, tone: 2400, modes: [1, 1.9, 3.0], q: 11, body: 38, bodyMix: 65, decay: 0.34 }),
+			67: drumPatch({ snare: 14, noiseQ: 1.4, hard: 45, len: 6, tone: 2400, modes: [1, 1.9, 3.0], q: 11, body: 38, bodyMix: 65, decay: 0.34 }),
 			// GM 42 CLOSED HI-HAT
-			66: drumPatch({ hard: 95, len: 2, tone: 9000, modes: [1, 4.2, 7.1], q: 3, body: 8, bodyMix: 25, decay: 0.05, group: 1 }),
+			66: drumPatch({ snare: 88, noiseQ: 0.9, hard: 95, len: 2, tone: 9000, modes: [1, 4.2, 7.1], q: 3, body: 8, bodyMix: 25, decay: 0.05, group: 1 }),
 			// GM 43 HIGH FLOOR TOM
-			65: drumPatch({ hard: 46, len: 6, tone: 2600, modes: [1, 1.9, 3.0], q: 10, body: 35, bodyMix: 65, decay: 0.3 }),
+			65: drumPatch({ snare: 14, noiseQ: 1.4, hard: 46, len: 6, tone: 2600, modes: [1, 1.9, 3.0], q: 10, body: 35, bodyMix: 65, decay: 0.3 }),
 			// GM 44 PEDAL HI-HAT
-			64: drumPatch({ hard: 88, len: 3, tone: 7600, modes: [1, 4.0, 6.8], q: 4, body: 9, bodyMix: 25, decay: 0.07, group: 1 }),
+			64: drumPatch({ snare: 84, noiseQ: 0.9, hard: 88, len: 3, tone: 7600, modes: [1, 4.0, 6.8], q: 4, body: 9, bodyMix: 25, decay: 0.07, group: 1 }),
 			// GM 45 LOW TOM
-			63: drumPatch({ hard: 48, len: 5, tone: 2800, modes: [1, 1.9, 3.1], q: 9, body: 32, bodyMix: 62, decay: 0.27 }),
+			63: drumPatch({ snare: 14, noiseQ: 1.4, hard: 48, len: 5, tone: 2800, modes: [1, 1.9, 3.1], q: 9, body: 32, bodyMix: 62, decay: 0.27 }),
 			// GM 46 OPEN HI-HAT
-			62: drumPatch({ hard: 92, len: 3, tone: 8600, modes: [1, 4.1, 7.0], q: 14, body: 8, bodyMix: 25, decay: 0.42, group: 1 }),
+			62: drumPatch({ snare: 90, noiseQ: 0.7, hard: 92, len: 3, tone: 8600, modes: [1, 4.1, 7.0], q: 14, body: 8, bodyMix: 25, decay: 0.42, group: 1 }),
 			// GM 47 LOW-MID TOM
-			61: drumPatch({ hard: 50, len: 5, tone: 3000, modes: [1, 2.0, 3.2], q: 9, body: 29, bodyMix: 60, decay: 0.25 }),
+			61: drumPatch({ snare: 14, noiseQ: 1.4, hard: 50, len: 5, tone: 3000, modes: [1, 2.0, 3.2], q: 9, body: 29, bodyMix: 60, decay: 0.25 }),
 			// GM 48 HI-MID TOM
-			60: drumPatch({ hard: 52, len: 4, tone: 3200, modes: [1, 2.0, 3.2], q: 8, body: 26, bodyMix: 58, decay: 0.22 }),
+			60: drumPatch({ snare: 14, noiseQ: 1.4, hard: 52, len: 4, tone: 3200, modes: [1, 2.0, 3.2], q: 8, body: 26, bodyMix: 58, decay: 0.22 }),
 			// GM 49 CRASH CYMBAL 1
-			59: drumPatch({ hard: 88, len: 4, tone: 9500, modes: [1, 3.4, 6.2], q: 30, body: 6, bodyMix: 20, decay: 1.3 }),
+			59: drumPatch({ snare: 92, noiseQ: 0.5, hard: 88, len: 4, tone: 9500, modes: [1, 3.4, 6.2], q: 30, body: 6, bodyMix: 20, decay: 1.3 }),
 			// GM 50 HIGH TOM
-			58: drumPatch({ hard: 54, len: 4, tone: 3400, modes: [1, 2.1, 3.3], q: 7, body: 23, bodyMix: 55, decay: 0.2 }),
+			58: drumPatch({ snare: 14, noiseQ: 1.4, hard: 54, len: 4, tone: 3400, modes: [1, 2.1, 3.3], q: 7, body: 23, bodyMix: 55, decay: 0.2 }),
 			// GM 51 RIDE CYMBAL 1
-			57: drumPatch({ hard: 94, len: 2, tone: 9800, modes: [1, 3.8, 6.9], q: 16, body: 6, bodyMix: 18, decay: 0.55 }),
+			57: drumPatch({ snare: 72, noiseQ: 0.8, hard: 94, len: 2, tone: 9800, modes: [1, 3.8, 6.9], q: 16, body: 6, bodyMix: 18, decay: 0.55 }),
 			// GM 52 CHINESE CYMBAL
-			56: drumPatch({ hard: 86, len: 5, tone: 8200, modes: [1, 2.9, 5.1], q: 26, body: 7, bodyMix: 22, decay: 1.1 }),
+			56: drumPatch({ snare: 92, noiseQ: 0.5, hard: 86, len: 5, tone: 8200, modes: [1, 2.9, 5.1], q: 26, body: 7, bodyMix: 22, decay: 1.1 }),
 			// GM 53 RIDE BELL
-			55: drumPatch({ hard: 96, len: 2, tone: 10500, modes: [1, 2.7, 5.4], q: 22, body: 5, bodyMix: 16, decay: 0.75 }),
+			55: drumPatch({ snare: 34, noiseQ: 2.0, hard: 96, len: 2, tone: 10500, modes: [1, 2.7, 5.4], q: 22, body: 5, bodyMix: 16, decay: 0.75 }),
 			// GM 54 TAMBOURINE
-			54: drumPatch({ hard: 92, len: 2, tone: 9200, modes: [1, 3.6, 6.1], q: 6, body: 10, bodyMix: 30, decay: 0.16 }),
+			54: drumPatch({ snare: 86, noiseQ: 1.2, hard: 92, len: 2, tone: 9200, modes: [1, 3.6, 6.1], q: 6, body: 10, bodyMix: 30, decay: 0.16 }),
 			// GM 55 SPLASH CYMBAL
-			53: drumPatch({ hard: 90, len: 3, tone: 10000, modes: [1, 3.3, 6.0], q: 18, body: 5, bodyMix: 18, decay: 0.6 }),
+			53: drumPatch({ snare: 90, noiseQ: 0.6, hard: 90, len: 3, tone: 10000, modes: [1, 3.3, 6.0], q: 18, body: 5, bodyMix: 18, decay: 0.6 }),
 			// GM 56 COWBELL
-			52: drumPatch({ hard: 88, len: 3, tone: 5200, modes: [1, 1.5, 2.7], q: 12, body: 16, bodyMix: 40, decay: 0.3 }),
+			52: drumPatch({ snare: 16, noiseQ: 2.6, hard: 88, len: 3, tone: 5200, modes: [1, 1.5, 2.7], q: 12, body: 16, bodyMix: 40, decay: 0.3 }),
 			// GM 57 CRASH CYMBAL 2
-			51: drumPatch({ hard: 86, len: 4, tone: 9200, modes: [1, 3.2, 5.9], q: 28, body: 6, bodyMix: 20, decay: 1.2 }),
+			51: drumPatch({ snare: 92, noiseQ: 0.5, hard: 86, len: 4, tone: 9200, modes: [1, 3.2, 5.9], q: 28, body: 6, bodyMix: 20, decay: 1.2 }),
 			// GM 58 VIBRASLAP
-			50: drumPatch({ hard: 70, len: 8, tone: 4600, modes: [1, 2.4, 4.1], q: 10, body: 18, bodyMix: 42, decay: 0.55 }),
+			50: drumPatch({ snare: 80, noiseQ: 0.8, hard: 70, len: 8, tone: 4600, modes: [1, 2.4, 4.1], q: 10, body: 18, bodyMix: 42, decay: 0.55 }),
 			// GM 59 RIDE CYMBAL 2
-			49: drumPatch({ hard: 92, len: 2, tone: 9400, modes: [1, 3.7, 6.6], q: 15, body: 6, bodyMix: 18, decay: 0.5 }),
+			49: drumPatch({ snare: 72, noiseQ: 0.8, hard: 92, len: 2, tone: 9400, modes: [1, 3.7, 6.6], q: 15, body: 6, bodyMix: 18, decay: 0.5 }),
 			// GM 60 HI BONGO
-			48: drumPatch({ hard: 68, len: 3, tone: 4600, modes: [1, 2.3, 3.8], q: 6, body: 18, bodyMix: 52, decay: 0.14 }),
+			48: drumPatch({ snare: 18, noiseQ: 1.6, hard: 68, len: 3, tone: 4600, modes: [1, 2.3, 3.8], q: 6, body: 18, bodyMix: 52, decay: 0.14 }),
 			// GM 61 LOW BONGO
-			47: drumPatch({ hard: 64, len: 4, tone: 3800, modes: [1, 2.2, 3.7], q: 7, body: 22, bodyMix: 55, decay: 0.18 }),
+			47: drumPatch({ snare: 18, noiseQ: 1.6, hard: 64, len: 4, tone: 3800, modes: [1, 2.2, 3.7], q: 7, body: 22, bodyMix: 55, decay: 0.18 }),
 			// GM 62 MUTE HI CONGA
-			46: drumPatch({ hard: 72, len: 3, tone: 4400, modes: [1, 2.2, 3.6], q: 4, body: 20, bodyMix: 48, decay: 0.1 }),
+			46: drumPatch({ snare: 20, noiseQ: 1.6, hard: 72, len: 3, tone: 4400, modes: [1, 2.2, 3.6], q: 4, body: 20, bodyMix: 48, decay: 0.1 }),
 			// GM 63 OPEN HI CONGA
-			45: drumPatch({ hard: 66, len: 4, tone: 4000, modes: [1, 2.1, 3.5], q: 8, body: 24, bodyMix: 56, decay: 0.22 }),
+			45: drumPatch({ snare: 18, noiseQ: 1.6, hard: 66, len: 4, tone: 4000, modes: [1, 2.1, 3.5], q: 8, body: 24, bodyMix: 56, decay: 0.22 }),
 			// GM 64 LOW CONGA
-			44: drumPatch({ hard: 60, len: 5, tone: 3200, modes: [1, 2.0, 3.3], q: 9, body: 28, bodyMix: 58, decay: 0.26 }),
+			44: drumPatch({ snare: 16, noiseQ: 1.5, hard: 60, len: 5, tone: 3200, modes: [1, 2.0, 3.3], q: 9, body: 28, bodyMix: 58, decay: 0.26 }),
 			// GM 65 HIGH TIMBALE
-			43: drumPatch({ hard: 82, len: 3, tone: 6000, modes: [1, 2.5, 4.2], q: 8, body: 15, bodyMix: 45, decay: 0.2 }),
+			43: drumPatch({ snare: 22, noiseQ: 1.5, hard: 82, len: 3, tone: 6000, modes: [1, 2.5, 4.2], q: 8, body: 15, bodyMix: 45, decay: 0.2 }),
 			// GM 66 LOW TIMBALE
-			42: drumPatch({ hard: 78, len: 4, tone: 5200, modes: [1, 2.4, 4.0], q: 9, body: 19, bodyMix: 48, decay: 0.24 }),
+			42: drumPatch({ snare: 22, noiseQ: 1.5, hard: 78, len: 4, tone: 5200, modes: [1, 2.4, 4.0], q: 9, body: 19, bodyMix: 48, decay: 0.24 }),
 			// GM 67 HIGH AGOGO
-			41: drumPatch({ hard: 90, len: 2, tone: 7000, modes: [1, 2.0, 3.4], q: 13, body: 12, bodyMix: 35, decay: 0.28 }),
+			41: drumPatch({ snare: 10, noiseQ: 2.4, hard: 90, len: 2, tone: 7000, modes: [1, 2.0, 3.4], q: 13, body: 12, bodyMix: 35, decay: 0.28 }),
 			// GM 68 LOW AGOGO
-			40: drumPatch({ hard: 88, len: 3, tone: 6200, modes: [1, 1.9, 3.3], q: 14, body: 14, bodyMix: 38, decay: 0.32 }),
+			40: drumPatch({ snare: 10, noiseQ: 2.4, hard: 88, len: 3, tone: 6200, modes: [1, 1.9, 3.3], q: 14, body: 14, bodyMix: 38, decay: 0.32 }),
 			// GM 69 CABASA
-			39: drumPatch({ hard: 94, len: 2, tone: 9600, modes: [1, 4.4, 7.6], q: 2, body: 7, bodyMix: 22, decay: 0.07 }),
+			39: drumPatch({ snare: 94, noiseQ: 1.0, hard: 94, len: 2, tone: 9600, modes: [1, 4.4, 7.6], q: 2, body: 7, bodyMix: 22, decay: 0.07 }),
 			// GM 70 MARACAS
-			38: drumPatch({ hard: 95, len: 2, tone: 10200, modes: [1, 4.6, 7.9], q: 2, body: 6, bodyMix: 20, decay: 0.06 }),
+			38: drumPatch({ snare: 92, noiseQ: 1.1, hard: 95, len: 2, tone: 10200, modes: [1, 4.6, 7.9], q: 2, body: 6, bodyMix: 20, decay: 0.06 }),
 			// GM 71 SHORT WHISTLE
-			37: drumPatch({ hard: 60, len: 6, tone: 7200, modes: [1, 2.0, 3.0], q: 10, body: 10, bodyMix: 30, decay: 0.2, group: 4 }),
+			37: drumPatch({ snare: 40, noiseQ: 3.0, hard: 60, len: 6, tone: 7200, modes: [1, 2.0, 3.0], q: 10, body: 10, bodyMix: 30, decay: 0.2, group: 4 }),
 			// GM 72 LONG WHISTLE
-			36: drumPatch({ hard: 58, len: 8, tone: 7000, modes: [1, 2.0, 3.0], q: 14, body: 10, bodyMix: 30, decay: 0.45, group: 4 }),
+			36: drumPatch({ snare: 40, noiseQ: 3.0, hard: 58, len: 8, tone: 7000, modes: [1, 2.0, 3.0], q: 14, body: 10, bodyMix: 30, decay: 0.45, group: 4 }),
 			// GM 73 SHORT GUIRO
-			35: drumPatch({ hard: 86, len: 4, tone: 6600, modes: [1, 3.0, 5.2], q: 3, body: 12, bodyMix: 30, decay: 0.1 }),
+			35: drumPatch({ snare: 88, noiseQ: 1.3, hard: 86, len: 4, tone: 6600, modes: [1, 3.0, 5.2], q: 3, body: 12, bodyMix: 30, decay: 0.1 }),
 			// GM 74 LONG GUIRO
-			34: drumPatch({ hard: 84, len: 9, tone: 6400, modes: [1, 3.0, 5.2], q: 4, body: 12, bodyMix: 30, decay: 0.34 }),
+			34: drumPatch({ snare: 88, noiseQ: 1.3, hard: 84, len: 9, tone: 6400, modes: [1, 3.0, 5.2], q: 4, body: 12, bodyMix: 30, decay: 0.34 }),
 			// GM 75 CLAVES
-			33: drumPatch({ hard: 98, len: 2, tone: 8000, modes: [1, 2.8, 5.0], q: 8, body: 10, bodyMix: 32, decay: 0.12 }),
+			33: drumPatch({ snare: 12, noiseQ: 2.8, hard: 98, len: 2, tone: 8000, modes: [1, 2.8, 5.0], q: 8, body: 10, bodyMix: 32, decay: 0.12 }),
 			// GM 76 HI WOOD BLOCK
-			32: drumPatch({ hard: 96, len: 2, tone: 7400, modes: [1, 2.7, 4.8], q: 7, body: 12, bodyMix: 34, decay: 0.11 }),
+			32: drumPatch({ snare: 14, noiseQ: 2.6, hard: 96, len: 2, tone: 7400, modes: [1, 2.7, 4.8], q: 7, body: 12, bodyMix: 34, decay: 0.11 }),
 			// GM 77 LOW WOOD BLOCK
-			31: drumPatch({ hard: 94, len: 3, tone: 6600, modes: [1, 2.6, 4.6], q: 8, body: 15, bodyMix: 36, decay: 0.13 }),
+			31: drumPatch({ snare: 14, noiseQ: 2.6, hard: 94, len: 3, tone: 6600, modes: [1, 2.6, 4.6], q: 8, body: 15, bodyMix: 36, decay: 0.13 }),
 			// GM 78 MUTE CUICA
-			30: drumPatch({ hard: 64, len: 4, tone: 4200, modes: [1, 1.8, 2.9], q: 5, body: 20, bodyMix: 45, decay: 0.12, group: 3 }),
+			30: drumPatch({ snare: 46, noiseQ: 1.8, hard: 64, len: 4, tone: 4200, modes: [1, 1.8, 2.9], q: 5, body: 20, bodyMix: 45, decay: 0.12, group: 3 }),
 			// GM 79 OPEN CUICA
-			29: drumPatch({ hard: 60, len: 6, tone: 3800, modes: [1, 1.8, 2.9], q: 11, body: 24, bodyMix: 50, decay: 0.34, group: 3 }),
+			29: drumPatch({ snare: 46, noiseQ: 1.8, hard: 60, len: 6, tone: 3800, modes: [1, 1.8, 2.9], q: 11, body: 24, bodyMix: 50, decay: 0.34, group: 3 }),
 			// GM 80 MUTE TRIANGLE
-			28: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 6, body: 4, bodyMix: 14, decay: 0.09, group: 2 }),
+			28: drumPatch({ snare: 8, noiseQ: 3.2, hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 6, body: 4, bodyMix: 14, decay: 0.09, group: 2 }),
 			// GM 81 OPEN TRIANGLE
-			27: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 34, body: 4, bodyMix: 14, decay: 1.4, group: 2 }),
+			27: drumPatch({ snare: 8, noiseQ: 3.2, hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 34, body: 4, bodyMix: 14, decay: 1.4, group: 2 }),
 		}
 	},
 	{

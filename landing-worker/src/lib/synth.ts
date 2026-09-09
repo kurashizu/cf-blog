@@ -1192,9 +1192,20 @@ class ModularSynth {
       }
 
       case 'mix': {
-        const g = ctx.createGain();
-        g.gain.value = 1;
-        return { in: g, out: g, mod };
+        /* Two inlets with their own levels. The card has drawn A and B knobs
+           since the module was added, but this returned a single gain node as
+           both inlets and ignored both values -- so turning either knob did
+           nothing, and every patch that leaned on the balance (MARIMBA's
+           resonator against its bar, PIANO's second string) got whatever the
+           raw sum happened to be. */
+        const out = ctx.createGain();
+        const a = ctx.createGain();
+        a.gain.value = p('mixA', 100) / 100;
+        a.connect(out);
+        const b = ctx.createGain();
+        b.gain.value = p('mixB', 100) / 100;
+        b.connect(out);
+        return { in: a, in2: b, out, mod };
       }
 
       case 'eq': {
