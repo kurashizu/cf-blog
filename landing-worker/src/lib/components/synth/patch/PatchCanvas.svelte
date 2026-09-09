@@ -342,10 +342,19 @@
 	}
 
 	function onPointerUp() {
-		if (marqueeRect) {
+		if (marquee) {
+			/* Computed from marquee here rather than read from the marqueeRect
+			   derived: this handler runs straight off a DOM event, where reading
+			   the live state is one less thing that has to have flushed first. */
+			const rect = {
+				x: Math.min(marquee.x0, marquee.x1),
+				y: Math.min(marquee.y0, marquee.y1),
+				w: Math.abs(marquee.x1 - marquee.x0),
+				h: Math.abs(marquee.y1 - marquee.y0)
+			};
 			// A click rather than a drag leaves the selection alone.
-			if (marqueeRect.w > 3 || marqueeRect.h > 3) {
-				const hit = nodesInRect(graph, marqueeRect, (n) => {
+			if (rect.w > 3 || rect.h > 3) {
+				const hit = nodesInRect(graph, rect, (n) => {
 					const spec = moduleSpec(n.type);
 					return { w: NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
 				});
