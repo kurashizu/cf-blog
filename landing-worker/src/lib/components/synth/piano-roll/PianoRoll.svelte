@@ -773,6 +773,7 @@
 				{colsPerPage}
 				{spc}
 				{effColsPerBar}
+				{effColsPerBeat}
 				rollHeight={visibleNotes.length * 20}
 			/>
 		</div>

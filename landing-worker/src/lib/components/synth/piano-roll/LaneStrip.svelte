@@ -33,6 +33,7 @@
 		colsPerPage,
 		spc,
 		effColsPerBar,
+		effColsPerBeat,
 		rollHeight
 	}: {
 		/** Steps visible on this page. */
@@ -42,11 +43,16 @@
 		colsPerPage: number;
 		spc: number;
 		effColsPerBar: number;
+		effColsPerBeat: number;
 		/** How tall the roll is, so the expanded editor can cover it. */
 		rollHeight: number;
 	} = $props();
 
 	const FOLDED_H = 26;
+	/* The beat numbers along the bottom of the plot. Named because three things
+	   have to agree on it: the ruler itself, the 0 label above it, and the value
+	   axis, which would otherwise put its last reading underneath the numbers. */
+	const BEAT_RULER_H = 10;
 	/* Tall enough to place a value by eye, short enough that the notes it is
 	   drawn over are still readable underneath. */
 	let expandedH = $derived(Math.max(120, Math.min(260, rollHeight - 60)));
@@ -182,6 +188,39 @@
 					title={$t('synthPanels.lane.closeHint')}>▾</button>
 			</div>
 
+			<div class="flex" style="height: {expandedH - 20}px">
+			<!-- A value scale down the left, in exactly the 40px the roll reserves
+			     for its note names. Same gutter, so step 0 of the lane sits above
+			     step 0 of the grid: a curve is drawn at particular notes, and a
+			     plot offset by even a few pixels from the notes it shapes is
+			     worse than no ruler at all.
+			
+			     Percent, because a lane is normalised and does not know what it
+			     will end up driving. -->
+			<div class="shrink-0 relative border-r border-white/10 text-[8px] font-mono text-white/40 select-none" style="width: 40px">
+				{#each [1, 0.75, 0.5, 0.25, 0] as v (v)}
+					<!-- Nudged inward at both ends rather than centred on the line.
+					
+					     A label is centred on its value, so at 100 the top half sat
+					     above the plot and at 0 the bottom half sat below it -- both
+					     clipped by the panel edge. The two extremes hang inside
+					     instead: 100 sits just under its line, 0 just above its own,
+					     which is how a fader scale is printed anyway. -->
+					<!-- Both extremes hang INSIDE their line rather than straddling it:
+					     100 sits just below the top, 0 just above the bottom. Centred,
+					     each had half its height outside the plot and was clipped by
+					     the panel -- and at the bottom the beat ruler took that space
+					     as well, so 0 overflowed twice over. -->
+					<span
+						class="absolute right-1 leading-none"
+						style="top: {v === 1
+							? 1
+							: v === 0
+								? expandedH - 20 - BEAT_RULER_H - 14
+								: (1 - v) * (expandedH - 20) - 4}px"
+						>{Math.round(v * 100)}</span>
+				{/each}
+			</div>
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				bind:this={stripEl}
@@ -189,19 +228,35 @@
 				onpointermove={onMove}
 				onpointerup={onUp}
 				onpointercancel={onUp}
-				class="relative cursor-crosshair"
+				class="relative cursor-crosshair flex-1"
 				style="height: {expandedH - 20}px"
 			>
 				<svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 {expandedH - 20}" preserveAspectRatio="none">
-					<!-- Bar lines, so a curve can be aimed at the bar it belongs to. -->
-					{#each Array.from({ length: Math.ceil(colsPerPage / effColsPerBar) + 1 }) as _, b (b)}
+					<!-- The same divisions the roll draws: a line per snap column, a
+					     brighter one per beat, brightest per bar. Without them the plot
+					     was an undivided rectangle and a point could not be placed at a
+					     beat except by eye. -->
+					{#each Array.from({ length: colsPerPage + 1 }) as _, c (c)}
+						{@const isBar = c % effColsPerBar === 0}
+						{@const isBeat = c % effColsPerBeat === 0}
 						<line
-							x1={(b * effColsPerBar * spc / steps) * 100} x2={(b * effColsPerBar * spc / steps) * 100}
+							x1={((c * spc) / steps) * 100} x2={((c * spc) / steps) * 100}
 							y1="0" y2={expandedH - 20}
-							stroke="rgba(86,182,194,0.35)" stroke-width="0.4" vector-effect="non-scaling-stroke" />
+							stroke={isBar
+								? 'rgba(86,182,194,0.55)'
+								: isBeat
+									? 'rgba(255,255,255,0.22)'
+									: 'rgba(255,255,255,0.08)'}
+							stroke-width={isBar ? 1 : 0.5} vector-effect="non-scaling-stroke" />
 					{/each}
-					<line x1="0" x2="100" y1={(expandedH - 20) / 2} y2={(expandedH - 20) / 2}
-						stroke="rgba(255,255,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke" />
+					<!-- Quarter lines, so the scale on the left has something to read
+					     against: a number in the margin says nothing without a rule
+					     across the plot at the same height. -->
+					{#each [0.25, 0.5, 0.75] as v (v)}
+						<line x1="0" x2="100" y1={(1 - v) * (expandedH - 20)} y2={(1 - v) * (expandedH - 20)}
+							stroke={v === 0.5 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.07)'}
+							stroke-width="1" vector-effect="non-scaling-stroke" />
+					{/each}
 
 					<!-- Every lane at once, like OVLY draws every track: the one being
 					     edited is solid and the rest sit behind it, so a curve can be
@@ -218,6 +273,22 @@
 							stroke={$activeLane.color} stroke-width="2" vector-effect="non-scaling-stroke" />
 					{/if}
 				</svg>
+
+				<!-- Beat marks along the bottom, numbered within the bar.
+				
+				     This was bar numbers, which read "1" and nothing else: the editor
+				     shows one bar at a time, so numbering bars said only which page
+				     you were already looking at. Beats are the useful subdivision
+				     here, and they line up with the roll's ruler above. -->
+				<div class="absolute left-0 right-0 bottom-0 pointer-events-none" style="height: {BEAT_RULER_H}px">
+					{#each Array.from({ length: Math.max(1, Math.floor(colsPerPage / effColsPerBeat)) }) as _, b (b)}
+						<span
+							class="absolute text-[7px] font-mono text-white/30 leading-none"
+							style="left: calc({((b * effColsPerBeat * spc) / steps) * 100}% + 2px); bottom: 1px"
+						>{b + 1}</span>
+					{/each}
+				</div>
+			</div>
 			</div>
 		</div>
 	{/if}
@@ -226,7 +297,8 @@
 	<div class="flex items-center gap-1 pt-1 border-t border-white/10 text-xs font-mono">
 		<button
 			onclick={() => { toggleLaneEditor(); playSound('click'); }}
-			class="w-9 shrink-0 text-right pr-1 font-black cursor-pointer transition-colors {$laneEditorOpen
+			style="width: 40px"
+			class="shrink-0 text-right pr-1 font-black cursor-pointer transition-colors {$laneEditorOpen
 				? 'text-[#e5c07b]'
 				: 'text-[#e06c75] hover:text-white'}"
 			title={$t('synthPanels.lane.toggleHint')}

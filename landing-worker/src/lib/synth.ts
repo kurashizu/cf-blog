@@ -966,14 +966,17 @@ class ModularSynth {
     voiceIn: AudioNode,
     baseFreq: number,
     t: number,
-    heldSec: number
+    heldSec: number,
+    laneValues: Record<string, number> = {}
   ): { out: AudioNode; sources: AudioScheduledSourceNode[] } | null {
     /* Read from the catalogue rather than listed here. The list this replaces
        said ['fm','cv'] and had fallen behind the modules: pwm, trig and do are
        mod ports too, so a PWM cable was sorted as audio, found PULSE has no
        audio inlet, and was silently dropped. */
-    const audioCables = graph.cables.filter((c) => !MOD_PORT_IDS.has(c.toPort));
-    const modCables = graph.cables.filter((c) => MOD_PORT_IDS.has(c.toPort));
+    const isMod = (c: { toPort: string; fromPort: string }) =>
+      MOD_PORT_IDS.has(c.toPort) || c.fromPort.startsWith('lane:');
+    const audioCables = graph.cables.filter((c) => !isMod(c));
+    const modCables = graph.cables.filter((c) => isMod(c));
 
     // Kahn's algorithm; a cycle here means a hand-edited patch file, since the
     // editor refuses to draw one.
@@ -1004,9 +1007,10 @@ class ModularSynth {
         in2?: AudioNode;
         out: AudioNode;
         out2?: AudioNode;
-        mod: Map<string, AudioParam>;
+        mod: Map<string, AudioNode>;
         isVoiceIn?: boolean;
         isOutput?: boolean;
+        laneOuts?: Map<string, AudioNode>;
       }
     >();
     const sources: AudioScheduledSourceNode[] = [];
@@ -1020,7 +1024,7 @@ class ModularSynth {
 
     for (const node of order) {
       const p = (key: string, def: number) => params[`${node.id}.${key}`] ?? def;
-      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, t, heldSec, sources, node.id);
+      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, t, heldSec, sources, node.id, laneValues);
       if (!made) continue;
       built.set(node.id, made);
 
@@ -1051,7 +1055,14 @@ class ModularSynth {
       const src = built.get(c.from);
       const dst = built.get(c.to);
       const param = dst?.mod.get(c.toPort);
-      if (src && param) (c.fromPort === 'r' && src.out2 ? src.out2 : src.out).connect(param);
+      if (!src || !param) continue;
+      /* A lane outlet is named `lane:<id>`, so ENTRY can publish as many as the
+         track carries without the port list being fixed at build time. */
+      const laneSrc = c.fromPort.startsWith('lane:')
+        ? src.laneOuts?.get(c.fromPort.slice(5))
+        : undefined;
+      const from = laneSrc ?? (c.fromPort === 'r' && src.out2 ? src.out2 : src.out);
+      from.connect(param);
     }
 
     /* Where the patch leaves.
@@ -1098,7 +1109,11 @@ class ModularSynth {
     t: number,
     heldSec: number,
     sources: AudioScheduledSourceNode[],
-    probeKey = ''
+    probeKey = '',
+    /* What each lane read at this note, 0..1, keyed by lane id. ENTRY turns
+       these into CV outlets, which is what makes a curve drawn in the roll and
+       a cable in the patch bay the same thing. */
+    laneValues: Record<string, number> = {}
   ): {
     in: AudioNode | null;
     /** A second audio inlet, for the modules that take two signals. */
@@ -1106,13 +1121,15 @@ class ModularSynth {
     out: AudioNode;
     /** A second audio outlet, for the modules that hand back two signals. */
     out2?: AudioNode;
-    mod: Map<string, AudioParam>;
+    mod: Map<string, AudioNode>;
     /** Receives the voice from racks 1-7 rather than a cable. */
     isVoiceIn?: boolean;
     /** The patch's output; when present, only what reaches it is heard. */
     isOutput?: boolean;
+    /** ENTRY only: a CV source per lane, keyed by lane id. */
+    laneOuts?: Map<string, AudioNode>;
   } | null {
-    const mod = new Map<string, AudioParam>();
+    const mod = new Map<string, AudioNode>();
     const WAVES: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square'];
 
     switch (type) {
@@ -1129,7 +1146,7 @@ class ModularSynth {
         const fm = ctx.createGain();
         fm.gain.value = baseFreq * 2;
         fm.connect(osc.frequency);
-        mod.set('fm', fm.gain);
+        mod.set('fm', fm);
         return { in: null, out: g, mod };
       }
 
@@ -1154,17 +1171,25 @@ class ModularSynth {
         const depth = ctx.createGain();
         depth.gain.value = p('cutoff', 4000) * (p('depth', 50) / 100);
         depth.connect(f.frequency);
-        mod.set('fm', depth.gain);
+        mod.set('fm', depth);
         return { in: f, out: f, mod };
       }
 
       case 'vca': {
         const g = ctx.createGain();
         g.gain.value = p('gain', 100) / 100;
+        /* The modulation inlet is `depth`'s INPUT, not its gain.
+        
+           Registering depth.gain made a cable land on the amount knob rather
+           than on the signal path: depth has nothing feeding it, so its output
+           was always zero and the destination never moved however hard it was
+           driven. Every mod cable in the patch bay was silently inert. The
+           inlet is a gain node whose output is scaled by DEPTH and summed into
+           the target param, which is what a CV input is. */
         const depth = ctx.createGain();
         depth.gain.value = p('depth', 100) / 100;
         depth.connect(g.gain);
-        mod.set('cv', depth.gain);
+        mod.set('cv', depth);
         return { in: g, out: g, mod };
       }
 
@@ -1200,7 +1225,7 @@ class ModularSynth {
         const fm = ctx.createGain();
         fm.gain.value = p('lfoRate', 5);
         fm.connect(osc.frequency);
-        mod.set('fm', fm.gain);
+        mod.set('fm', fm);
         return { in: null, out: g, mod };
       }
 
@@ -1321,7 +1346,7 @@ class ModularSynth {
         const pwm = ctx.createGain();
         pwm.gain.value = period * 0.4;
         pwm.connect(dl.delayTime);
-        mod.set('pwm', pwm.gain);
+        mod.set('pwm', pwm);
         return { in: null, out: sum, mod };
       }
 
@@ -1357,7 +1382,7 @@ class ModularSynth {
         down.gain.value = -1;
         up.connect(down);
         down.connect(ga.gain);
-        mod.set('cv', up.gain);
+        mod.set('cv', up);
         return { in: input, out, mod };
       }
 
@@ -1528,7 +1553,7 @@ class ModularSynth {
         const depth = ctx.createGain();
         depth.gain.value = p('panDepth', 100) / 100;
         depth.connect(pn.pan);
-        mod.set('cv', depth.gain);
+        mod.set('cv', depth);
         return { in: pn, out: pn, mod };
       }
 
@@ -1559,7 +1584,22 @@ class ModularSynth {
            to have nothing plugged in. */
         const g = ctx.createGain();
         g.gain.value = p('inLevel', 100) / 100;
-        return { in: null, out: g, mod, isVoiceIn: true };
+        /* One CV outlet per lane the track carries. A ConstantSourceNode holds
+           the value this note read, so a cable from here into any knob is that
+           knob following the curve -- which is the whole reason a lane and a
+           socket are the same object seen twice.
+        
+           Constant per note rather than swept: a lane is sampled when the note
+           starts. A continuous lane still moves between notes, because the next
+           note reads it again. */
+        const laneOuts = new Map<string, AudioNode>();
+        for (const [laneId, v] of Object.entries(laneValues)) {
+          const src = ctx.createConstantSource();
+          src.offset.value = v;
+          sources.push(src);
+          laneOuts.set(laneId, src);
+        }
+        return { in: null, out: g, mod, isVoiceIn: true, laneOuts };
       }
 
       case 'split': {
@@ -3398,7 +3438,14 @@ class ModularSynth {
        and a track that has been wired by hand should play what was wired. */
     const graph = track.advanced ? track.rackGraph : undefined;
     if (graph && graph.nodes.length) {
-      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, gainNode, baseFreq, t, heldSec);
+      /* What each lane reads for this note. Sampled once, when the note starts:
+         that is what a lane means for a voice, and it is why the socket is a
+         constant rather than a moving signal. */
+      const laneValues: Record<string, number> = {};
+      for (const l of lanesOf(trackRow as { noteLanes?: NoteLane[] })) {
+        laneValues[l.id] = laneAt(l, this.currentStep);
+      }
+      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, gainNode, baseFreq, t, heldSec, laneValues);
       if (built) {
         chainOut = built.out;
         for (const src of built.sources) {

@@ -32,10 +32,15 @@
 		pasteClipboard,
 		nodesInRect,
 		isFixedNode,
+		roleOf,
+		rolesCompatible,
 		type GraphNode,
-		type PortKind
+		type PortKind,
+		type PortRole
 	} from '../../../stores/synth-graph';
 	import { PALETTE_SPECS, MODULE_GROUPS, moduleSpec, type ModuleSpec } from '../../../stores/synth-modules';
+	import { laneSocketId } from '../../../stores/note-lanes';
+	import { trackLanes } from '../../../stores/lane-edit';
 	import ModuleCard from './ModuleCard.svelte';
 	import ModuleIcon from './ModuleIcon.svelte';
 
@@ -104,7 +109,14 @@
 	}
 
 	function nodeHeight(node: GraphNode, spec: ModuleSpec): number {
-		return 2 * BORDER + HEADER_H + bodyOf(node, spec);
+		return 2 * BORDER + HEADER_H + bodySpaced(node, spec);
+	}
+
+	/* bodyOf() is what both the ports and the cables measure against, so a card
+	   whose sockets need more room than its controls take grows here rather
+	   than having the ports overflow it. */
+	function bodySpaced(node: GraphNode, spec: ModuleSpec): number {
+		return Math.max(bodyOf(node, spec), portsHeight(spec, node));
 	}
 
 	/** Watch a card's box, so the ports track whatever it actually renders as. */
@@ -121,14 +133,31 @@
 		};
 	}
 
+	/* Sockets never sit closer than this. Spreading them evenly over the body
+	   was fine for two, but ENTRY now publishes one per lane, and four over a
+	   short card put them touching -- an unlabelled column of identical dots
+	   nobody could aim at or tell apart. Below this spacing the card grows
+	   instead. */
+	const PORT_GAP = 22;
+
 	/** The centre of port i, measured from the node's border-box top-left. */
 	function portOffset(node: GraphNode, spec: ModuleSpec, count: number, i: number) {
-		return BORDER + HEADER_H + (bodyOf(node, spec) / (count + 1)) * (i + 1);
+		const body = bodySpaced(node, spec);
+		const even = (body / (count + 1)) * (i + 1);
+		if (count < 2 || body / (count + 1) >= PORT_GAP) return BORDER + HEADER_H + even;
+		// Too tight to spread: stack from the top at a fixed pitch instead.
+		return BORDER + HEADER_H + PORT_GAP * (i + 0.5);
+	}
+
+	/** How tall a card must be for its own sockets to fit at PORT_GAP apart. */
+	function portsHeight(spec: ModuleSpec, n: GraphNode): number {
+		const count = Math.max(spec.inputs.length, outletsOf(n, spec).length);
+		return count < 2 ? 0 : PORT_GAP * count;
 	}
 
 	/** Drag state: a module being moved, or a cable being pulled. */
 	let dragNode = $state<{ id: string; dx: number; dy: number } | null>(null);
-	let pullFrom = $state<{ node: string; port: string; kind: PortKind; x: number; y: number } | null>(null);
+	let pullFrom = $state<{ node: string; port: string; kind: PortKind; role: PortRole; x: number; y: number } | null>(null);
 	let pointer = $state({ x: 0, y: 0 });
 	let paletteOpen = $state(true);
 	let message = $state('');
@@ -146,9 +175,10 @@
 		const n = graph.nodes.find((m) => m.id === nodeId);
 		if (!n) return { x: 0, y: 0 };
 		const spec = moduleSpec(n.type);
-		const list = isOutput ? (spec?.outputs ?? []) : (spec?.inputs ?? []);
-		const i = Math.max(0, list.findIndex((p) => p.id === port));
 		if (!spec) return { x: 0, y: 0 };
+		// The same list the sockets are drawn from, so a cable lands on its dot.
+		const list = isOutput ? outletsOf(n, spec) : spec.inputs;
+		const i = Math.max(0, list.findIndex((p) => p.id === port));
 		return {
 			// The dots straddle the border, so their centres land on the node's
 			// two vertical edges -- a cable meets the socket, not the wall.
@@ -335,7 +365,10 @@
 		if (e.button === 2) return;
 		e.stopPropagation();
 		const p = portPos(nodeId, port, true);
-		pullFrom = { node: nodeId, port, kind, x: p.x, y: p.y };
+		const n = graph.nodes.find((m) => m.id === nodeId);
+		const spec = n && moduleSpec(n.type);
+		const socket = spec && outletsOf(n, spec).find((o) => o.id === port);
+		pullFrom = { node: nodeId, port, kind, role: socket ? roleOf(socket) : 'signal', x: p.x, y: p.y };
 	}
 
 	function endCable(e: PointerEvent, nodeId: string, port: string, kind: PortKind) {
@@ -373,6 +406,56 @@
 			playSound('click');
 			return;
 		}
+	}
+
+	/* How a socket of each role is drawn.
+	
+	   Shape and colour both, because either alone is ambiguous: a round amber
+	   dot beside a round white one is two colours of the same thing, and shape
+	   without colour asks you to compare outlines at 12px. Together they say
+	   what a socket carries before you drag anything at it.
+	
+	     signal  round, white      ordinary sound
+	     left    half-round, cyan  one side of a split pair
+	     right   half-round, cyan
+	     cv      diamond, amber    a control value
+	     trigger square, green     a note happening
+	     flow    square, purple    the logic chain's order */
+	const PORT_STYLE: Record<PortRole, { cls: string; color: string }> = {
+		signal: { cls: 'rounded-full', color: '#ffffff' },
+		left: { cls: 'rounded-l-full', color: '#56b6c2' },
+		right: { cls: 'rounded-r-full', color: '#56b6c2' },
+		cv: { cls: 'rotate-45', color: '#e5c07b' },
+		trigger: { cls: 'rounded-[1px]', color: '#98c379' },
+		flow: { cls: 'rounded-[1px]', color: '#c678dd' }
+	};
+
+	function portStyle(p: { kind: PortKind; role?: PortRole }) {
+		return PORT_STYLE[roleOf(p)];
+	}
+
+	/* Can the cable being dragged land here? Answered while dragging rather than
+	   on release, so an inlet that cannot take what you are holding dims before
+	   you try it instead of returning an error afterwards. */
+	function canLand(p: { kind: PortKind; role?: PortRole }): boolean {
+		if (!pullFrom) return false;
+		return rolesCompatible(pullFrom.role, roleOf(p));
+	}
+
+	/* ENTRY's outlets are not fixed: it publishes one CV socket per lane the
+	   track carries, so a curve drawn in the roll can be cabled to any knob.
+	   Every other module's ports come straight from its spec. */
+	function outletsOf(n: GraphNode, spec: ModuleSpec) {
+		if (n.type !== 'in') return spec.outputs;
+		return [
+			...spec.outputs,
+			...$trackLanes.map((l) => ({
+				id: laneSocketId(l.id),
+				label: l.name,
+				kind: 'mod' as const,
+				role: 'cv' as const
+			}))
+		];
 	}
 
 	/** A cable's path: horizontal-ish bezier, so it reads as a cable not a line. */
@@ -521,28 +604,45 @@
 						     from portOffset() against the node's own top, which is what
 						     portPos() draws the cables to -- one formula, one place. -->
 						<div class="absolute pointer-events-none" style="left: {-BORDER}px; top: {-BORDER}px; width: {NODE_W}px; height: {nodeHeight(n, spec)}px">
+							<!-- Each socket carries its own name. Four identical dots in a
+							     column cannot be told apart or aimed at, and the tooltip only
+							     helped once you had already found the right one. Inlets label
+							     to the right of the dot, outlets to the left, both inside the
+							     card where there is room. Shape says the family: a round dot
+							     is audio, a diamond is control. -->
 							{#each spec.inputs as p, i (p.id)}
+								{@const y = portOffset(n, spec, spec.inputs.length, i)}
 								<button
 									onpointerdown={(e) => {
 										if (e.button !== 2) e.stopPropagation();
 									}}
 									onpointerup={(e) => endCable(e, n.id, p.id, p.kind)}
 									title={p.label}
-									class="absolute w-3 h-3 rounded-full border cursor-crosshair pointer-events-auto {p.kind === 'mod'
-										? 'bg-[#e5c07b] border-[#e5c07b]'
-										: 'bg-black border-white/60'}"
-									style="left: {-PORT_R}px; top: {portOffset(n, spec, spec.inputs.length, i) - PORT_R}px; position: absolute"
+									class="absolute w-3 h-3 border cursor-crosshair pointer-events-auto transition-opacity {portStyle(p)
+										.cls} {pullFrom && !canLand(p) ? 'opacity-25' : ''} {pullFrom && canLand(p)
+										? 'scale-125 shadow-[0_0_6px_currentColor]'
+										: ''}"
+									style="left: {-PORT_R}px; top: {y - PORT_R}px; position: absolute; color: {portStyle(p)
+										.color}; background: {roleOf(p) === 'signal' ? '#000' : portStyle(p).color}; border-color: {portStyle(p).color}"
 								></button>
+								<span
+									class="absolute text-[7px] font-mono font-bold leading-none pointer-events-none whitespace-nowrap"
+									style="left: {PORT_R + 2}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
+								>{p.label}</span>
 							{/each}
-							{#each spec.outputs as p, i (p.id)}
+							{#each outletsOf(n, spec) as p, i (p.id)}
+								{@const y = portOffset(n, spec, outletsOf(n, spec).length, i)}
 								<button
 									onpointerdown={(e) => startCable(e, n.id, p.id, p.kind)}
 									title={p.label}
-									class="absolute w-3 h-3 rounded-full border cursor-crosshair pointer-events-auto {p.kind === 'mod'
-										? 'bg-[#e5c07b] border-[#e5c07b]'
-										: 'bg-white/80 border-white'}"
-									style="left: {NODE_W - PORT_R}px; top: {portOffset(n, spec, spec.outputs.length, i) - PORT_R}px; position: absolute"
+									class="absolute w-3 h-3 border cursor-crosshair pointer-events-auto transition-opacity {portStyle(p).cls}"
+									style="left: {NODE_W - PORT_R}px; top: {y - PORT_R}px; position: absolute; color: {portStyle(p)
+										.color}; background: {portStyle(p).color}; border-color: {portStyle(p).color}"
 								></button>
+								<span
+									class="absolute text-[7px] font-mono font-bold leading-none pointer-events-none whitespace-nowrap text-right"
+									style="right: {PORT_R + 2}px; top: {y - 3.5}px; color: {portStyle(p).color}99"
+								>{p.label}</span>
 							{/each}
 						</div>
 						<div use:measure={n.id}>

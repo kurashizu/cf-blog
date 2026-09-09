@@ -38,9 +38,11 @@ export {
 	nodesInRect,
 	ENTRY_ID,
 	OUTPUT_ID,
-	EMPTY_GRAPH
+	EMPTY_GRAPH,
+	roleOf,
+	rolesCompatible
 } from './graph-model';
-export type { RackGraph, GraphCable, GraphNode, PortKind, PortSpec } from './graph-model';
+export type { RackGraph, GraphCable, GraphNode, PortKind, PortRole, PortSpec } from './graph-model';
 
 /**
  * The patch bay as a graph, not a chain.
