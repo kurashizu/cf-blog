@@ -1001,6 +1001,11 @@ interface PresetFile {
 	timbre: Partial<TrackData>;
 }
 
+/* The keys whose value is a plain object rather than a scalar or an array.
+   Everything else is copied by value; these are cloned, so a saved preset does
+   not share a graph with the track it was saved from. */
+const OBJECT_TIMBRE_KEYS = new Set<string>(['rackGraph', 'rackParams', 'graphParams', 'waveParams', 'modRoutes']);
+
 function pickTimbre(src: Record<string, unknown>): Partial<TrackData> {
 	const out: Record<string, unknown> = {};
 	for (const k of TIMBRE_KEYS) {
@@ -1008,6 +1013,11 @@ function pickTimbre(src: Record<string, unknown>): Partial<TrackData> {
 		if (v === undefined || v === null) continue;
 		const t = typeof v;
 		if (t === 'number' || t === 'string' || t === 'boolean' || Array.isArray(v)) out[k] = v;
+		/* Objects were dropped here, which is why a patch bay never survived a
+		   save: rackGraph and graphParams are plain objects, so every preset came
+		   back with an empty rack however it was built. Deep-copied rather than
+		   referenced, or editing the track afterwards would rewrite the preset. */
+		else if (t === 'object' && OBJECT_TIMBRE_KEYS.has(k)) out[k] = JSON.parse(JSON.stringify(v));
 	}
 	return out as Partial<TrackData>;
 }
@@ -1076,17 +1086,25 @@ export function applyPresetAt(idx: number): void {
 	if (!sel) return;
 	soundPresetIdx.set(idx);
 	activeKitName.set(null);
-	/* A preset built as a signal path turns ADV on and opens the patch bay: the
-	   chain only sounds in ADV, so applying one without switching would leave
-	   the player hearing the bare excitation and wondering what broke. One that
-	   is not built that way turns ADV off, which is what makes it sound like
-	   itself -- but the chain stays on the track rather than being cleared, so
-	   coming back to an acoustic preset finds its path intact. */
+	/* A patch is two sounds that share a track: the subtractive voice racks 1-7
+	   edit, and the signal path the patch bay edits. Both travel with the preset
+	   and only one is in force, so applying one has to set both sides -- the ADV
+	   half explicitly, even when the preset has none.
+
+	   Spreading the preset alone only writes the keys it happens to carry, so a
+	   preset with no rack inherited whatever the last one left behind: loading
+	   PIANO then SUB BASS and switching to ADV showed PIANO's string and body
+	   under the bass. Every preset owns its own rack now, empty included. */
 	const isChainPreset = Array.isArray(sel.preset.rackChain) && sel.preset.rackChain.length > 0;
+	const hasGraph = !!sel.preset.rackGraph?.nodes?.length;
 	updateActiveTrack({
 		...sel.preset,
-		advanced: isChainPreset,
-		...(isChainPreset ? { advancedView: 'rack' as const } : {})
+		rackChain: sel.preset.rackChain ?? [],
+		rackParams: sel.preset.rackParams ?? {},
+		rackGraph: sel.preset.rackGraph ?? { nodes: [], cables: [] },
+		graphParams: sel.preset.graphParams ?? {},
+		advanced: isChainPreset || hasGraph,
+		...(isChainPreset || hasGraph ? { advancedView: 'rack' as const } : {})
 	});
 	presetModified.set(false);
 	playSound('toggle');

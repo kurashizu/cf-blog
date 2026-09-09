@@ -147,7 +147,18 @@ export function applyKitToActiveTrack(keys: Record<number, Partial<TrackData>>):
 	const id = get(activeTrackId);
 	const copy: Record<number, Partial<TrackData>> = {};
 	for (const [k, v] of Object.entries(keys)) copy[Number(k)] = { ...v };
-	modularSynth.updateTrack(id, { percussion: true, keyTimbres: copy });
+	/* The kit brings the whole sound, so the track's ADV half goes with the old
+	   one. Without this a kit loaded after an acoustic preset kept that preset's
+	   rack, and switching to ADV played a drum kit through a piano string. */
+	modularSynth.updateTrack(id, {
+		percussion: true,
+		keyTimbres: copy,
+		advanced: false,
+		rackChain: [],
+		rackParams: {},
+		rackGraph: { nodes: [], cables: [] },
+		graphParams: {}
+	});
 	refreshTracks();
 }
 
