@@ -48,7 +48,7 @@
 	type Section = PresetCategory | 'MINE';
 	let SECTIONS = $derived<{ id: Section; label: string; hint: string }[]>([
 		...PRESET_CATEGORIES.map((c) => ({ id: c as Section, label: c, hint: CATEGORY_HINTS[c] })),
-		{ id: 'MINE', label: $t('synth.preset.myPresetsLabel'), hint: $t('synth.preset.mineHint') }
+		{ id: 'MINE', label: $t('synth.preset.myPresetsShort'), hint: $t('synth.preset.mineHint') }
 	]);
 
 	let open = $state(false);
@@ -62,32 +62,18 @@
 	   open and again on resize, and written as a custom property so the class
 	   stays static. */
 	function fitMenu() {
-		if (!menuEl || !listEl) return;
+		if (!menuEl) return;
+		/* Cap the whole window to the gap under the button; the list inside
+		   scrolls, so nothing else needs measuring. The floor is small on
+		   purpose -- a larger one pushed the panel back off the bottom edge on
+		   a short window, which is the bug this cap exists to prevent. */
 		const top = menuEl.getBoundingClientRect().top;
-		const room = window.innerHeight - top - 12;
-
-		/* The action rows sit below the scrolling list, so the space they need
-		   comes off the list's cap. Measure them directly: deriving it from
-		   menuEl.scrollHeight gives a negative number, because the cap already
-		   applied is what that height is clamped by.
-
-		   When even the actions do not fit -- a very short window -- the list
-		   gets a floor and the panel scrolls as a whole instead. It clips the
-		   flyouts in that state, which is the lesser of the two problems: a
-		   menu you cannot reach the bottom of is worse than one whose
-		   submenus need a scroll first. */
-		let actions = 0;
-		for (const child of menuEl.children) if (child !== listEl) actions += child.getBoundingClientRect().height;
-
-		const forList = room - actions;
-		const tight = forList < 120;
-		listEl.style.setProperty('--krsz-menu-max', `${Math.round(Math.max(120, forList))}px`);
-		menuEl.style.maxHeight = tight ? `${Math.round(Math.max(160, room))}px` : '';
-		menuEl.style.overflowY = tight ? 'auto' : '';
+		const room = Math.max(120, window.innerHeight - top - 12);
+		menuEl.style.setProperty('--krsz-menu-max', `${Math.round(room)}px`);
 	}
 
 	$effect(() => {
-		if (!open || !menuEl || !listEl) return;
+		if (!open || !menuEl) return;
 		fitMenu();
 		window.addEventListener('resize', fitMenu);
 		return () => window.removeEventListener('resize', fitMenu);
@@ -139,7 +125,9 @@
 		if (open) close();
 		else {
 			open = true;
-			section = null;
+			// Open on the family the current preset belongs to, so the panel
+			// shows where you already are rather than an empty pane.
+			section = (current?.category as Section) ?? SECTIONS[0]?.id ?? null;
 		}
 		playSound('click');
 	}
@@ -235,6 +223,7 @@
 		if (e.key === 'Escape' && open) close();
 	}
 
+
 	const rowBase = 'press w-full text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer transition-colors';
 	const rowIdle = 'text-white/80 hover:bg-white/10';
 	const rowOn = 'text-white bg-white/10 font-bold';
@@ -247,10 +236,11 @@
 <input bind:this={kitInput} type="file" onchange={onKitImportChange} accept=".json,application/json" class="hidden" />
 
 {#snippet flyout(children: import('svelte').Snippet)}
-	<div
-		class="absolute left-full top-0 -mt-px ml-0.5 z-50 min-w-[220px] max-h-[70vh] overflow-y-auto custom-scrollbar bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
-		transition:scale={{ duration: 120, start: 0.97, opacity: 0, easing: cubicOut }}
-	>
+	<!-- The right-hand pane. Not a submenu any more: a cascading menu meant one
+	     level nested inside another, and the outer one has to scroll, which
+	     clips whatever the inner one draws outside it. One window with a column
+	     of tabs has no outside to escape from. -->
+	<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
 		{@render children()}
 	</div>
 {/snippet}
@@ -324,36 +314,55 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="fixed inset-0 z-40" onclick={close}></div>
 
-			<!-- The panel itself stays unclipped: the category flyouts open
-			     sideways out of it, and a scroll container clips them. Asking for
-			     overflow-x: visible does not help -- a box that scrolls on one
-			     axis computes the other to auto, which is what made the flyouts
-			     disappear. So the cap and the scrolling go on the list of
-			     categories inside, and the actions below it stay put. -->
+			<!-- One window rather than a cascade: a strip of tabs across the top,
+			     the chosen category's entries under it, the actions along the
+			     bottom. Same shape as the site's own tab bar, and nothing has to
+			     escape a scrolling ancestor to be seen. -->
 			<div
 				bind:this={menuEl}
-				class="origin-top absolute left-0 top-full mt-1 z-50 min-w-[230px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
+				class="origin-top absolute left-0 top-full mt-1 z-50 w-[460px] max-w-[92vw] flex flex-col bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] text-xs font-mono overflow-hidden"
+				style="max-height: var(--krsz-menu-max, 60vh)"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
-			<div bind:this={listEl} class="max-h-[var(--krsz-menu-max,60vh)] overflow-y-auto custom-scrollbar">
+			<!-- Creating comes before browsing: you either start from nothing or
+			     pick something that exists, and that choice is the first thing
+			     the menu should offer. The two NEWs are one group because the
+			     synth has two instruments in it -- a subtractive voice on racks
+			     1-7, and a signal path in the patch bay. -->
+			<div class="shrink-0 flex items-center gap-1 px-1 py-1 border-b border-white/10">
+				<button onclick={startNew} class="press flex-1 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 border border-[#e5c07b]/40 text-[#e5c07b] hover:bg-[#e5c07b]/20" title={$t('synth.preset.newHint')}>
+					<span class="shrink-0">✧</span>
+					<span class="truncate">{$t('synth.preset.newLabel')}</span>
+				</button>
+				<button onclick={startNewAdvanced} class="press flex-1 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 border border-[#61afef]/40 text-[#61afef] hover:bg-[#61afef]/20" title={$t('synth.preset.newAdvancedHint')}>
+					<span class="shrink-0">◆</span>
+					<span class="truncate">{$t('synth.preset.newAdvancedLabel')}</span>
+				</button>
+			</div>
+
+			<div class="flex min-h-0 flex-1">
+			<div bind:this={listEl} class="w-[136px] shrink-0 overflow-y-auto custom-scrollbar py-1 border-r border-white/10">
 				{#each SECTIONS as sec (sec.id)}
 					{@const isOpen = section === sec.id}
 					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'DRUM' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => p.category === sec.id).length}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div class="relative" onmouseenter={() => (section = sec.id)}>
-						<button
-							onclick={() => (section = isOpen ? null : sec.id)}
-							class="{rowBase} justify-between {isOpen ? rowOn : rowIdle}"
-							title={sec.hint}
-						>
-							<span class="flex items-center gap-2 min-w-0">
-								<span class="truncate">{sec.label}</span>
-								<span class="text-[10px] text-white/30">{count}</span>
-							</span>
-							<span class="text-[9px] text-white/40">►</span>
-						</button>
+					<button
+						onclick={() => (section = sec.id)}
+						onmouseenter={() => (section = sec.id)}
+						class="press w-full px-2 py-1 cursor-pointer transition-colors flex items-center justify-between gap-1 border-l-2 {isOpen
+							? 'border-[#56b6c2] bg-[#56b6c2]/15 text-[#56b6c2] font-black'
+							: 'border-transparent text-white/60 hover:bg-white/5 hover:text-white font-bold'}"
+						title={sec.hint}
+					>
+						<span class="truncate">{sec.label}</span>
+						<span class="text-[9px] shrink-0 {isOpen ? 'text-[#56b6c2]/60' : 'text-white/30'}">{count}</span>
+					</button>
+				{/each}
+			</div>
 
-						{#if isOpen}
+			<!-- The pane for the selected tab, a sibling of the strip rather than
+			     a child of it: one container per level, side by side. -->
+			{#each SECTIONS as sec (sec.id)}
+				{#if section === sec.id}
 							{#if sec.id !== 'DRUM' && sec.id !== 'MINE'}
 								{@render flyout(presetList)}
 								{#snippet presetList()}
@@ -424,35 +433,29 @@
 									{/if}
 								{/snippet}
 							{/if}
-						{/if}
-					</div>
-				{/each}
+				{/if}
+			{/each}
+			{#if !section}
+				<div class="flex-1 min-h-0 flex items-center justify-center px-4 py-6 text-[10px] text-white/30 text-center">
+					{$t('synth.preset.pickCategoryHint')}
+				</div>
+			{/if}
 			</div>
 
-				<div class="border-t border-white/10 mt-1 pt-1">
-					<!-- Start from nothing. Two of them, because the synth has two
-					     instruments in it: a subtractive voice edited on racks 1-7, and a
-					     signal path edited in the patch bay. -->
-					<button onclick={startNew} class="{actionRow} text-[#e5c07b] hover:bg-[#e5c07b]/20" title={$t('synth.preset.newHint')}>
-						<span class="shrink-0">✧</span>
-						<span>{$t('synth.preset.newLabel')}</span>
-					</button>
-					<button onclick={startNewAdvanced} class="{actionRow} text-[#61afef] hover:bg-[#61afef]/20" title={$t('synth.preset.newAdvancedHint')}>
-						<span class="shrink-0">◆</span>
-						<span>{$t('synth.preset.newAdvancedLabel')}</span>
-					</button>
-					<div class="border-t border-white/10 my-1"></div>
-					<button onclick={save} class="{actionRow} text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.preset.saveActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
+				<!-- These act on what is loaded now, not on the library, so they
+				     sit apart from the browsing above them. -->
+				<div class="border-t border-white/10 shrink-0 flex items-center gap-1 px-1 py-1">
+					<button onclick={save} class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.preset.saveActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
 						<span class="shrink-0">＋</span>
-						<span>{$t('synth.preset.saveActive', { target: percussion ? $t('synth.preset.targetKey') : $t('synth.preset.targetTrack') })}</span>
+						<span>{$t('synth.preset.saveShort')}</span>
 					</button>
-					<button onclick={importPreset} class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importFileHint')}>
+					<button onclick={importPreset} class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importFileHint')}>
 						<span class="shrink-0">▲</span>
-						<span>{$t('synth.preset.importFile')}</span>
+						<span>{$t('synth.preset.importShort')}</span>
 					</button>
-					<button onclick={exportPreset} class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.exportActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
+					<button onclick={exportPreset} class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.exportActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
 						<span class="shrink-0">▼</span>
-						<span>{$t('synth.preset.exportActive', { target: percussion ? $t('synth.preset.targetKey') : $t('synth.preset.targetTrack') })}</span>
+						<span>{$t('synth.preset.exportShort')}</span>
 					</button>
 				</div>
 			</div>
