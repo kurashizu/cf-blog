@@ -1940,7 +1940,9 @@ function drumPatch(o: {
 			'm.mode1': o.modes[0],
 			'm.mode2': o.modes[1],
 			'm.mode3': o.modes[2],
-			'm.modeQ': o.q,
+			/* Q is the ring time, about q/12 seconds. An unpitched key needs it to
+			   match the tail it was written for, since its burst cannot. */
+			'm.modeQ': (o.hz ?? 0) > 0 ? o.q : Math.max(o.q, Math.min(60, o.decay * 14)),
 			/* 0 leaves MODES following the key. Every drum here names its own
 			   pitch; an unpitched one is pushed up out of the way instead, since
 			   a 200 Hz fallback was audible as the fundamental of every cymbal
@@ -1949,7 +1951,12 @@ function drumPatch(o: {
 			/* ...and its modes are turned right down, because a cymbal has no
 			   tuned body at all: what makes it a cymbal is the wash, and three
 			   ringing partials underneath only muddy it. */
-			'm.modeMix': (o.hz ?? 0) > 0 ? 68 : 6,
+			/* Unpitched keys keep a little of the modes, and a long-ringing one
+			   keeps more: EXCT's burst caps at 60 ms, so a cymbal that has to
+			   sustain for a second or more has nothing else to ring with. The
+			   modes are pushed to 3 kHz on these keys, so what they add is wash
+			   rather than pitch. */
+			'm.modeMix': (o.hz ?? 0) > 0 ? 68 : Math.round(Math.min(45, 6 + o.decay * 55)),
 			/* The noise branch: a drum is mostly not pitched. A snare's wires and
 			   a cymbal's wash are broadband, and no number of tuned modes makes
 			   them -- so a second, longer strike runs beside the modes and is
@@ -2054,7 +2061,14 @@ function drumPatch(o: {
 		   close before they finish -- a crash written to ring 1.3 s measured
 		   0.25 because the envelope reaped the voice first. The drum's own
 		   decay still shapes it; this only stops the gate arriving early. */
-		ampDecay: Math.max(o.decay, o.q / 12),
+		/* Against the Q the key actually uses, not the one it was written with.
+		   An unpitched key's Q is now raised to carry the ring its 60 ms burst
+		   cannot, and this still measured the written value -- so the envelope
+		   closed first and a ride asked for 1.8 s decayed in 0.44. */
+		ampDecay: Math.max(
+			o.decay,
+			((o.hz ?? 0) > 0 ? o.q : Math.max(o.q, Math.min(60, o.decay * 14))) / 12
+		),
 		ampSustain: 0,
 		ampRelease: o.release ?? 0.04,
 		muteGroup: o.group ?? 0
