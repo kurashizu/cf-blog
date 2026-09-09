@@ -1942,17 +1942,14 @@ function drumPatch(o: {
 			'm.mode3': o.modes[2],
 			'm.modeQ': o.q,
 			/* 0 leaves MODES following the key. Every drum here names its own
-			   pitch, and the unpitched ones get a low root so their ratios land
-			   in the body of the sound rather than tracking the keyboard. */
-			'm.modeHz': o.hz && o.hz > 0 ? o.hz : 200,
-			/* Not 100. modeMix is a dry/wet: at 100 the dry gain is zero, so the
-			   EXCT strike was thrown away entirely and only the three decaying
-			   sines reached the output. Three sines is a tuned bar, which is why
-			   every key in the kit sounded like a marimba however its ratios
-			   were set -- measured spectral flatness 0.45 for a kick against
-			   0.43 for a snare, nearly the same sound. Letting a third of the
-			   strike through puts the stick back on the drum. */
-			'm.modeMix': 68,
+			   pitch; an unpitched one is pushed up out of the way instead, since
+			   a 200 Hz fallback was audible as the fundamental of every cymbal
+			   and shaker in the kit -- ten instruments all reporting 194 Hz. */
+			'm.modeHz': (o.hz ?? 0) > 0 ? (o.hz as number) : 3000,
+			/* ...and its modes are turned right down, because a cymbal has no
+			   tuned body at all: what makes it a cymbal is the wash, and three
+			   ringing partials underneath only muddy it. */
+			'm.modeMix': (o.hz ?? 0) > 0 ? 68 : 6,
 			/* The noise branch: a drum is mostly not pitched. A snare's wires and
 			   a cymbal's wash are broadband, and no number of tuned modes makes
 			   them -- so a second, longer strike runs beside the modes and is
@@ -1966,7 +1963,12 @@ function drumPatch(o: {
 			'ex.sumGain': 100,
 			'n.hardness': Math.max(0, Math.min(100, Math.round((o.noiseQ ?? 1.2) * 26))),
 			'n.exLength': Math.max(1, Math.min(60, Math.round(o.len * (1 + (o.snare ?? 0) / 22)))),
-			'n.exTone': o.tone,
+			/* The rattle sits over the drum, not above it. On a kick this ran at
+			   the written 1700 Hz against a 55 Hz shell and dominated the
+			   spectrum -- a centroid of 1274 where a real bass drum sits near
+			   180. Pitched drums cap it against their own body; unpitched ones
+			   keep the full tone, because for them the noise IS the instrument. */
+			'n.exTone': (o.hz ?? 0) > 0 ? Math.min(o.tone, Math.max(300, (o.hz ?? 0) * 8)) : o.tone,
 			/* Bandpass for a pitched drum, high-pass for one that has no pitch.
 			
 			   Every key used a bandpass at the strike tone, which is right for
@@ -1975,7 +1977,9 @@ function drumPatch(o: {
 			   1703 Hz centroid against a real one's ~8000 and had almost no
 			   energy above 2 kHz. A cymbal IS the top of the spectrum. */
 			'nf.type': (o.hz ?? 0) > 0 ? 1 : 2,
-			'nf.cutoff': (o.hz ?? 0) > 0 ? o.tone : Math.max(1200, o.tone * 0.55),
+			'nf.cutoff': (o.hz ?? 0) > 0
+				? Math.min(o.tone, Math.max(300, (o.hz ?? 0) * 8))
+				: Math.max(1200, o.tone * 0.55),
 			/* An unpitched drum IS its noise, so the band stays wide -- narrowing
 			   it turns a cymbal into a whistle. A pitched one uses the filter to
 			   place the rattle around the drum's own body. */
