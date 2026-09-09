@@ -10,7 +10,7 @@ import type { Messages } from '../types';
 export default {
 	en: {
 		// Shared rack chrome
-		'synthPanels.rack.resetHint': 'RST — reset: put this rack at its neutral values, where it does nothing to the sound',
+		'synthPanels.rack.resetHint': 'R — reset: put this rack at its neutral values, where it does nothing to the sound',
 		'synthPanels.rack.flowToFusion': 'Signal Flow: To Timbre Fusion',
 		'synthPanels.rack.flowToFilter': 'Signal Flow: To VCF Filter',
 		'synthPanels.rack.flowToEnvelopes': 'Signal Flow: To Envelopes & VCA',
@@ -273,7 +273,7 @@ export default {
 		'synthPanels.toast.notAKit': 'X NOT A KIT'
 	},
 	'zh-CN': {
-		'synthPanels.rack.resetHint': 'RST——复位：将此机架恢复到中性值，对声音不产生任何影响',
+		'synthPanels.rack.resetHint': 'R——复位：将此机架恢复到中性值，对声音不产生任何影响',
 		'synthPanels.rack.flowToFusion': '信号流向：至音色融合',
 		'synthPanels.rack.flowToFilter': '信号流向：至 VCF 滤波器',
 		'synthPanels.rack.flowToEnvelopes': '信号流向：至包络与 VCA',
@@ -520,7 +520,7 @@ export default {
 		'synthPanels.toast.notAKit': 'X 不是有效的鼓组文件'
 	},
 	'zh-TW': {
-		'synthPanels.rack.resetHint': 'RST——重設：將此機架恢復為中性值，對聲音不產生任何影響',
+		'synthPanels.rack.resetHint': 'R——重設：將此機架恢復為中性值，對聲音不產生任何影響',
 		'synthPanels.rack.flowToFusion': '訊號流向：至音色融合',
 		'synthPanels.rack.flowToFilter': '訊號流向：至 VCF 濾波器',
 		'synthPanels.rack.flowToEnvelopes': '訊號流向：至包絡與 VCA',
@@ -767,7 +767,7 @@ export default {
 		'synthPanels.toast.notAKit': 'X 不是有效的鼓組檔案'
 	},
 	ja: {
-		'synthPanels.rack.resetHint': 'RST — リセット：このラックをニュートラルな値に戻し、音に影響しない状態にします',
+		'synthPanels.rack.resetHint': 'R — リセット：このラックをニュートラルな値に戻し、音に影響しない状態にします',
 		'synthPanels.rack.flowToFusion': '信号の流れ：ティンバー・フュージョンへ',
 		'synthPanels.rack.flowToFilter': '信号の流れ：VCF フィルターへ',
 		'synthPanels.rack.flowToEnvelopes': '信号の流れ：エンベロープ＆VCAへ',
@@ -1014,7 +1014,7 @@ export default {
 		'synthPanels.toast.notAKit': 'X キットファイルではありません'
 	},
 	ko: {
-		'synthPanels.rack.resetHint': 'RST — 초기화: 이 랙을 사운드에 아무 영향도 주지 않는 중립 값으로 되돌립니다',
+		'synthPanels.rack.resetHint': 'R — 초기화: 이 랙을 사운드에 아무 영향도 주지 않는 중립 값으로 되돌립니다',
 		'synthPanels.rack.flowToFusion': '신호 흐름: 팀버 퓨전으로',
 		'synthPanels.rack.flowToFilter': '신호 흐름: VCF 필터로',
 		'synthPanels.rack.flowToEnvelopes': '신호 흐름: 엔벨로프 및 VCA로',

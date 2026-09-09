@@ -53,6 +53,45 @@
 
 	let open = $state(false);
 	let section: Section | null = $state(null);
+	let menuEl: HTMLDivElement | undefined = $state();
+	let listEl: HTMLDivElement | undefined = $state();
+
+	/* Cap the menu to the gap that actually exists under the button rather than
+	   to a fixed fraction of the window: the toolbar wraps, so how far down the
+	   trigger sits depends on the width as well as the height. Measured once on
+	   open and again on resize, and written as a custom property so the class
+	   stays static. */
+	function fitMenu() {
+		if (!menuEl || !listEl) return;
+		const top = menuEl.getBoundingClientRect().top;
+		const room = window.innerHeight - top - 12;
+
+		/* The action rows sit below the scrolling list, so the space they need
+		   comes off the list's cap. Measure them directly: deriving it from
+		   menuEl.scrollHeight gives a negative number, because the cap already
+		   applied is what that height is clamped by.
+
+		   When even the actions do not fit -- a very short window -- the list
+		   gets a floor and the panel scrolls as a whole instead. It clips the
+		   flyouts in that state, which is the lesser of the two problems: a
+		   menu you cannot reach the bottom of is worse than one whose
+		   submenus need a scroll first. */
+		let actions = 0;
+		for (const child of menuEl.children) if (child !== listEl) actions += child.getBoundingClientRect().height;
+
+		const forList = room - actions;
+		const tight = forList < 120;
+		listEl.style.setProperty('--krsz-menu-max', `${Math.round(Math.max(120, forList))}px`);
+		menuEl.style.maxHeight = tight ? `${Math.round(Math.max(160, room))}px` : '';
+		menuEl.style.overflowY = tight ? 'auto' : '';
+	}
+
+	$effect(() => {
+		if (!open || !menuEl || !listEl) return;
+		fitMenu();
+		window.addEventListener('resize', fitMenu);
+		return () => window.removeEventListener('resize', fitMenu);
+	});
 	let fileInput: HTMLInputElement | undefined = $state();
 	let kitInput: HTMLInputElement | undefined = $state();
 
@@ -285,10 +324,18 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="fixed inset-0 z-40" onclick={close}></div>
 
+			<!-- The panel itself stays unclipped: the category flyouts open
+			     sideways out of it, and a scroll container clips them. Asking for
+			     overflow-x: visible does not help -- a box that scrolls on one
+			     axis computes the other to auto, which is what made the flyouts
+			     disappear. So the cap and the scrolling go on the list of
+			     categories inside, and the actions below it stay put. -->
 			<div
+				bind:this={menuEl}
 				class="origin-top absolute left-0 top-full mt-1 z-50 min-w-[230px] bg-[#121417] border border-[#56b6c2]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] py-1 text-xs font-mono"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
+			<div bind:this={listEl} class="max-h-[var(--krsz-menu-max,60vh)] overflow-y-auto custom-scrollbar">
 				{#each SECTIONS as sec (sec.id)}
 					{@const isOpen = section === sec.id}
 					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'DRUM' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => p.category === sec.id).length}
@@ -380,6 +427,7 @@
 						{/if}
 					</div>
 				{/each}
+			</div>
 
 				<div class="border-t border-white/10 mt-1 pt-1">
 					<!-- Start from nothing. Two of them, because the synth has two

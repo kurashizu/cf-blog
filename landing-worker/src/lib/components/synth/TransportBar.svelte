@@ -292,13 +292,16 @@
 				setLoopMode(!$loopMode);
 				playSound('toggle');
 			}}
-			class="h-6 px-2 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0 {$loopMode
+			class="h-6 w-6 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center justify-center shrink-0 {$loopMode
 				? 'border-[#98c379]/60 bg-[#98c379]/15 text-[#98c379] hover:bg-[#98c379]/25'
 				: 'border-[#e5c07b]/60 bg-[#e5c07b]/15 text-[#e5c07b] hover:bg-[#e5c07b]/25'}"
 			title={$loopMode ? $t('synth.transport.loopOnHint') : $t('synth.transport.loopOffHint')}
+			aria-label={$loopMode ? $t('synth.transport.loopOnHint') : $t('synth.transport.loopOffHint')}
 		>
+			<!-- The glyph is the label: a cycle repeats, an arrow runs off the
+			     end. Colour separates the two states as well, and the tooltip
+			     says which is which in full. -->
 			<span>{$loopMode ? '⟲' : '→'}</span>
-			<span>{$loopMode ? 'LOOP' : 'ONCE'}</span>
 		</button>
 
 		<button
