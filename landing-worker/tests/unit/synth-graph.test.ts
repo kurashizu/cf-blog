@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+	ENTRY_ID,
+	OUTPUT_ID,
+	startingGraph,
+	isFixedNode,
 	graphOf,
 	wouldCycle,
 	topoOrder,
@@ -168,5 +172,56 @@ describe('graph parameters', () => {
 
 	it('prunes nothing from no parameters', () => {
 		expect(pruneGraphParams(undefined, 'osc-1')).toEqual({});
+	});
+});
+
+/**
+ * The two ends every patch has.
+ *
+ * ENTRY and OUTPUT are not palette items -- a graph without them has nowhere
+ * for the note to arrive and nowhere for the sound to leave -- and the editor
+ * refuses to delete either. That rule is only worth anything if the graphs
+ * shipped with the built-in patches actually carry them, which for a while they
+ * did not: the presets were generated from a bare module chain, so opening ADV
+ * on a KOTO showed a string and a body floating with no ENTRY in sight. The
+ * engine still made a sound, because a graph with no IN feeds every unwired
+ * module and a graph with no OUT mixes every unlistened one, so nothing failed
+ * loudly -- it just drew a patch you could not have built yourself.
+ */
+describe('the fixed ends', () => {
+	it('starts every graph with an entry and an output, already wired', () => {
+		const g = startingGraph();
+		expect(g.nodes.map((n) => n.type)).toEqual(['in', 'out']);
+		expect(g.nodes.map((n) => n.id)).toEqual([ENTRY_ID, OUTPUT_ID]);
+		expect(g.cables).toEqual([
+			{ from: ENTRY_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
+		]);
+	});
+
+	it('protects both ends and nothing else', () => {
+		expect(isFixedNode(ENTRY_ID)).toBe(true);
+		expect(isFixedNode(OUTPUT_ID)).toBe(true);
+		// An OUT-type node under some other id is a module, not the fixed end --
+		// which is exactly how a hand-written preset lost its output to Delete.
+		expect(isFixedNode('o')).toBe(false);
+		expect(isFixedNode('out-1')).toBe(false);
+	});
+
+	it('hands back a fresh graph each time, so one patch cannot edit another', () => {
+		const a = startingGraph();
+		const b = startingGraph();
+		a.nodes[0].x = 999;
+		a.cables.push(cable(ENTRY_ID, ENTRY_ID));
+		expect(b.nodes[0].x).not.toBe(999);
+		expect(b.cables).toHaveLength(1);
+	});
+
+	it('orders the entry before everything and the output after', () => {
+		const g: RackGraph = {
+			nodes: [node(OUTPUT_ID), node('str'), node(ENTRY_ID)],
+			cables: [cable(ENTRY_ID, 'str'), cable('str', OUTPUT_ID)]
+		};
+		const order = topoOrder(g, g.cables)?.map((n) => n.id);
+		expect(order).toEqual([ENTRY_ID, 'str', OUTPUT_ID]);
 	});
 });

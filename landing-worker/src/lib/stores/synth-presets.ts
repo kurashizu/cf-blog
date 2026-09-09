@@ -7,7 +7,7 @@ import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack, setTrackEditedHook } from './synth-tracks';
 import { showSaveStatus } from './synth-patch';
 import { askConfirm } from './synth-confirm';
-import { startingGraph } from './graph-model';
+import { ENTRY_ID, OUTPUT_ID, startingGraph } from './graph-model';
 import type { GraphNode, GraphCable } from './graph-model';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
@@ -130,43 +130,92 @@ function synth(extra: Partial<TrackData>): Partial<TrackData> {
 }
 
 /**
- * The same signal path, drawn.
+ * An acoustic patch with a topology of its own.
  *
- * The AC presets are built as a chain, and a chain is what the engine plays --
- * but ADV opens on the patch bay, and a canvas reading "add modules from the
- * palette" while a piano is sounding says the wrong thing entirely. So each
- * chain preset also ships the graph that draws it: the same modules in the same
- * order, wired left to right, laid out on the grid.
+ * Every AC preset is a graph rather than a chain, because an instrument's
+ * character usually comes from two things happening at once -- a piano's
+ * detuned string pair, a marimba's resonator tube under the bar, a flute's
+ * breath heard beside the note. A straight line of modules cannot express any
+ * of those; branches into a MIX, a modulated pan, or a resonator fed in
+ * parallel can.
  *
- * The engine prefers a graph over a chain when both are present, and these two
- * describe the same path, so what you hear does not change -- it just becomes
- * something you can see and take apart.
+ * Nodes are given as [id, type, params], cables as 'a>b' or 'a>b:port', and
+ * ENTRY and OUTPUT are added around them -- every patch has both, and writing
+ * them out 9 times invites the one typo that drops an end. A node with no
+ * incoming cable is left for the engine to feed from the voice, which is how a
+ * source with no inlet gets struck.
  */
-function chainGraph(chain: string[]): { nodes: GraphNode[]; cables: GraphCable[] } {
-	const nodes = chain.map((type, i) => ({
-		id: `${type}-${i}`,
-		type,
-		// Spread along the grid with room for a card between each.
-		x: 64 + i * 192,
-		y: 96
-	}));
-	const cables = nodes.slice(1).map((n, i) => ({
-		from: nodes[i].id,
-		fromPort: 'out',
-		to: n.id,
-		toPort: 'in'
-	}));
-	return { nodes, cables };
-}
-
-/** A chain preset, plus the graph that draws it and the params keyed per node. */
-function acoustic(chain: string[], params: Record<string, number>): Partial<TrackData> {
-	const graph = chainGraph(chain);
-	const graphParams: Record<string, number> = {};
-	for (const n of graph.nodes) {
-		for (const [k, v] of Object.entries(params)) graphParams[`${n.id}.${k}`] = v;
+function patch(
+	nodes: [string, string, Record<string, number>?][],
+	cables: string[],
+	/* Output trim, so the set is level.
+	
+	   These patches differ in how much of the signal survives to the end: a
+	   struck string with a parallel pair behind it arrives far hotter than a
+	   bowed one through a reverb, and measured across the nine the spread was
+	   14 dB. That is loud enough that auditioning patches means riding the
+	   volume, which is not a judgement about the sound but a defect. Trimmed
+	   here rather than by re-voicing, since the voicing is the instrument. */
+	outLevel = 100
+): Partial<TrackData> {
+	/* Laid out along the signal path rather than wrapped into rows.
+	
+	   Each node sits one column right of the furthest node feeding it, so a
+	   cable always runs left to right and a branch (a hammer into two strings,
+	   both into a MIX) reads as a fork that rejoins. Wrapping by index instead
+	   put a late node above an early one and drew its cable backwards across
+	   the canvas, which is unreadable however correct the audio is. */
+	/* Tight enough that a six-module patch shows both its ends at the default
+	   zoom. A card is 136 wide, so 152 leaves a 16px gutter -- room for the
+	   cable to read as a cable without pushing OUTPUT off the right edge, which
+	   is where a patch stops being self-explanatory. */
+	const COL = 152;
+	const ROW = 124;
+	const feeders = new Map<string, string[]>();
+	for (const c of cables) {
+		const [from, rest] = c.split('>');
+		const to = rest.split(':')[0];
+		feeders.set(to, [...(feeders.get(to) ?? []), from]);
 	}
-	return { rackChain: chain, rackParams: params, rackGraph: graph, graphParams };
+	const col = new Map<string, number>([[ENTRY_ID, 0]]);
+	const depth = (id: string, seen = new Set<string>()): number => {
+		if (col.has(id)) return col.get(id)!;
+		if (seen.has(id)) return 1;
+		seen.add(id);
+		const ins = feeders.get(id) ?? [];
+		const d = ins.length ? Math.max(...ins.map((f) => depth(f, seen))) + 1 : 1;
+		col.set(id, d);
+		return d;
+	};
+	for (const [id] of nodes) depth(id);
+	// Nodes sharing a column stack vertically, centred on the ENTRY/OUTPUT line.
+	const inColumn = new Map<number, string[]>();
+	for (const [id] of nodes) {
+		const c = col.get(id) ?? 1;
+		inColumn.set(c, [...(inColumn.get(c) ?? []), id]);
+	}
+	const lastCol = Math.max(1, ...[...inColumn.keys()]);
+	const posOf = (id: string) => {
+		const c = col.get(id) ?? 1;
+		const peers = inColumn.get(c) ?? [id];
+		const row = peers.indexOf(id);
+		return { x: 48 + c * COL, y: 168 + (row - (peers.length - 1) / 2) * ROW };
+	};
+	const graphNodes: GraphNode[] = [
+		{ id: ENTRY_ID, type: 'in', x: 48, y: 168 },
+		...nodes.map(([id, type]) => ({ id, type, ...posOf(id) })),
+		{ id: OUTPUT_ID, type: 'out', x: 48 + (lastCol + 1) * COL, y: 168 }
+	];
+	const graphParams: Record<string, number> = { [`${OUTPUT_ID}.outLevel`]: outLevel };
+	for (const [id, , params] of nodes) {
+		for (const [k, v] of Object.entries(params ?? {})) graphParams[`${id}.${k}`] = v;
+	}
+	const graphCables: GraphCable[] = cables.map((c) => {
+		const [from, rest] = c.split('>');
+		const [to, toPort] = rest.split(':');
+		return { from, fromPort: 'out', to, toPort: toPort || 'in' };
+	});
+	return { rackGraph: { nodes: graphNodes, cables: graphCables }, graphParams };
 }
 
 export const SOUND_PRESETS: SoundPreset[] = [
@@ -417,7 +466,19 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.4,
 			ampSustain: 0,
 			ampRelease: 0.3,
-			...acoustic(['string', 'body'], { decayTime: 1.8, damping: 26, stiffness: 55, strBlend: 100, bodySize: 40, bodyDepth: 45, bodyMix: 50 })
+			/* Pluck -> string -> the bridge -> the paulownia box. The comb is the
+			   koto's signature: a short delay at the bridge gives the nasal buzz
+			   that a plain string-into-body cannot make. */
+			...patch(
+				[
+					['pk', 'excite', { hardness: 72, exLength: 3, exTone: 5200 }],
+					['str', 'string', { decayTime: 1.8, damping: 26, stiffness: 55 }],
+					['brg', 'comb', { combPos: 14, combDepth: 45 }],
+					['bod', 'body', { bodySize: 40, bodyDepth: 45, bodyMix: 50 }]
+				],
+				['pk>str', 'str>brg', 'brg>bod', 'bod>output'],
+				185
+			)
 		})
 	},
 	{
@@ -437,7 +498,21 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.35,
 			ampSustain: 0,
 			ampRelease: 0.25,
-			...acoustic(['modes', 'body'], { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22, modeMix: 85, bodySize: 45, bodyDepth: 50, bodyMix: 55 })
+			/* A rosewood bar is struck, and a tuned tube hangs under it. The bar's
+			   modes (1 : 3.9 : 9.2 -- the arch cut into its underside) and the
+			   tube run in parallel into a MIX, because the tube resonates the
+			   fundamental rather than colouring everything the bar does. */
+			...patch(
+				[
+					['mal', 'excite', { hardness: 30, exLength: 11, exTone: 2200 }],
+					['bar', 'modes', { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22 }],
+					['tub', 'tube', { tubeDecay: 0.5, tubeDamp: 55, tubeOdd: 100 }],
+					['mx', 'mix', { mixA: 100, mixB: 38 }],
+					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
+				],
+				['mal>bar', 'bar>mx', 'mal>tub', 'tub>mx:in2', 'mx>bod', 'bod>output'],
+				88
+			)
 		})
 	},
 	{
@@ -553,7 +628,19 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.5,
 			ampSustain: 0,
 			ampRelease: 0.2,
-			...acoustic(['string', 'body'], { decayTime: 1.1, damping: 6, stiffness: 85, strBlend: 100, bodySize: 25, bodyDepth: 35, bodyMix: 25 })
+			/* A quill plucks the string and the jack falls back: bright, thin, and
+			   entirely without dynamics. The DRIVE is the quill's edge, not
+			   distortion -- a plectrum clips the string's first cycle. */
+			...patch(
+				[
+					['qul', 'excite', { hardness: 92, exLength: 2, exTone: 8200 }],
+					['str', 'string', { decayTime: 1.1, damping: 6, stiffness: 85 }],
+					['edg', 'drive', { driveAmt: 16, driveBias: 20, driveTone: 11000 }],
+					['bod', 'body', { bodySize: 25, bodyDepth: 35, bodyMix: 25 }]
+				],
+				['qul>str', 'str>edg', 'edg>bod', 'bod>output'],
+				80
+			)
 		})
 	},
 
@@ -687,7 +774,23 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			...acoustic(['string', 'body'], { decayTime: 4, damping: 22, stiffness: 45, strBlend: 100, bodySize: 35, bodyDepth: 55, bodyMix: 55 })
+			/* Felt hammer, string, and the rest of the instrument ringing with it.
+			   The second string is the una corda pair detuned a little against
+			   the first -- that beating is most of what makes a piano sound like
+			   a piano -- and SPACE stands in for the sympathetic resonance of
+			   the undamped strings above. */
+			...patch(
+				[
+					['ham', 'excite', { hardness: 44, exLength: 9, exTone: 3400 }],
+					['s1', 'string', { decayTime: 4, damping: 22, stiffness: 45 }],
+					['s2', 'string', { decayTime: 3.6, damping: 26, stiffness: 48 }],
+					['mx', 'mix', { mixA: 100, mixB: 64 }],
+					['bod', 'body', { bodySize: 35, bodyDepth: 55, bodyMix: 55 }],
+					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
+				],
+				['ham>s1', 's1>mx', 'ham>s2', 's2>mx:in2', 'mx>bod', 'bod>symp', 'symp>output'],
+				63
+			)
 		})
 	},
 	{
@@ -704,7 +807,19 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			...acoustic(['string', 'body'], { decayTime: 2.2, damping: 34, stiffness: 6, strBlend: 100, bodySize: 62, bodyDepth: 65, bodyMix: 70 })
+			/* Pick, steel string, spruce top with a soundhole. The EQ scoops the
+			   low mids the way a dreadnought's air resonance does, which is what
+			   keeps it from sounding like a plain plucked string. */
+			...patch(
+				[
+					['pic', 'excite', { hardness: 62, exLength: 4, exTone: 4600 }],
+					['str', 'string', { decayTime: 2.2, damping: 34, stiffness: 6 }],
+					['bod', 'body', { bodySize: 62, bodyDepth: 65, bodyMix: 70 }],
+					['eq', 'eq', { lowGain: 2, midGain: -3, midFreq: 480, highGain: 2 }]
+				],
+				['pic>str', 'str>bod', 'bod>eq', 'eq>output'],
+				180
+			)
 		})
 	},
 	{
@@ -721,7 +836,20 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.06,
 			ampSustain: 0,
 			ampRelease: 0.03,
-			...acoustic(['string', 'body'], { decayTime: 3, damping: 52, stiffness: 3, strBlend: 100, bodySize: 88, bodyDepth: 60, bodyMix: 60 })
+			/* Pulled with the side of a finger, not picked: soft and slow, so the
+			   attack is long and dull. The COMP is the one an upright always goes
+			   through on a record, and it is what makes the note bloom after the
+			   pluck rather than just decay. */
+			...patch(
+				[
+					['fin', 'excite', { hardness: 18, exLength: 22, exTone: 1100 }],
+					['str', 'string', { decayTime: 3, damping: 52, stiffness: 3 }],
+					['bod', 'body', { bodySize: 88, bodyDepth: 60, bodyMix: 60 }],
+					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
+				],
+				['fin>str', 'str>bod', 'bod>cmp', 'cmp>output'],
+				83
+			)
 		})
 	},
 	{
@@ -738,7 +866,22 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.3,
 			ampSustain: 0.8,
 			ampRelease: 0.25,
-			...acoustic(['string', 'body'], { decayTime: 1.4, damping: 40, stiffness: 2, strBlend: 75, bodySize: 55, bodyDepth: 50, bodyMix: 60 })
+			/* A bow, not a strike: BOW drives the string continuously for as long
+			   as the note is held, which is the whole difference between this and
+			   every plucked patch above. The LFO into PAN is the section moving
+			   rather than one player, and SPACE is the room they are in. */
+			...patch(
+				[
+					['bw', 'bow', { bowPressure: 62, bowNoise: 30, bowBite: 42, bowLevel: 100 }],
+					['str', 'string', { decayTime: 1.4, damping: 40, stiffness: 2 }],
+					['bod', 'body', { bodySize: 55, bodyDepth: 50, bodyMix: 60 }],
+					['lfo', 'lfo', { lfoWave: 0, lfoRate: 0.4, lfoAmt: 22 }],
+					['pn', 'pan', { panPos: 0, panDepth: 100 }],
+					['rm', 'space', { spaceSize: 52, spaceDecay: 62, spaceMix: 26 }]
+				],
+				['bw>str', 'str>bod', 'bod>pn', 'lfo>pn:cv', 'pn>rm', 'rm>output'],
+				200
+			)
 		})
 	},
 	{
@@ -755,7 +898,20 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.2,
 			ampSustain: 0.85,
 			ampRelease: 0.15,
-			...acoustic(['tube', 'body'], { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100, tubeMix: 85, bodySize: 45, bodyDepth: 40, bodyMix: 40 })
+			/* Breath -> reed -> a cylindrical bore closed at one end, which is why
+			   tubeOdd is 100: a clarinet's even harmonics are nearly absent, and
+			   that hollow quality is the instrument. REED is the nonlinearity
+			   that makes the bore oscillate at all. */
+			...patch(
+				[
+					['air', 'noise', { colour: 30, level: 66 }],
+					['rd', 'reed', { reedStiff: 54, reedBias: 42 }],
+					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100 }],
+					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
+				],
+				['air>rd', 'rd>br', 'br>bel', 'bel>output'],
+				195
+			)
 		})
 	},
 	{
@@ -772,7 +928,21 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampDecay: 0.2,
 			ampSustain: 0.85,
 			ampRelease: 0.15,
-			...acoustic(['tube', 'body'], { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0, tubeMix: 80, bodySize: 38, bodyDepth: 30, bodyMix: 35 })
+			/* An edge tone, not a reed: breath split across the embouchure hole
+			   drives an open tube, so all harmonics are present (tubeOdd 0). The
+			   breath is mixed in alongside rather than only through the tube --
+			   an audible amount of a flute is air that never became a note. */
+			...patch(
+				[
+					['air', 'noise', { colour: 62, level: 52 }],
+					['fl', 'filter', { type: 1, cutoff: 2600, q: 3, depth: 20 }],
+					['br', 'tube', { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0 }],
+					['mx', 'mix', { mixA: 100, mixB: 12 }],
+					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
+				],
+				['air>fl', 'fl>br', 'br>mx', 'fl>mx:in2', 'mx>bel', 'bel>output'],
+				65
+			)
 		})
 	},
 
@@ -1512,16 +1682,26 @@ function drumPatch(o: {
 	/** Keys sharing a group cut each other off. 0 is none. */
 	group?: number;
 }): Partial<TrackData> {
+	/* ENTRY and OUTPUT under their fixed ids, not ids of this helper's choosing.
+	   A node called 'o' draws as an OUTPUT card but isFixedNode does not know it,
+	   so the delete key removed the kit's output; and with no ENTRY the strike
+	   had no visible origin.
+
+	   ENTRY is placed but not cabled into EXCT: a strike is a source with no
+	   inlet, so there is no port for that cable to land on. The note reaches it
+	   the way it reaches any source -- by triggering the voice the graph is
+	   built for. */
 	const nodes = [
-		{ id: 'e', type: 'excite', x: 64, y: 96 },
-		{ id: 'm', type: 'modes', x: 256, y: 96 },
-		{ id: 'b', type: 'body', x: 448, y: 96 },
-		{ id: 'o', type: 'out', x: 640, y: 96 }
+		{ id: ENTRY_ID, type: 'in', x: 64, y: 128 },
+		{ id: 'e', type: 'excite', x: 256, y: 128 },
+		{ id: 'm', type: 'modes', x: 448, y: 128 },
+		{ id: 'b', type: 'body', x: 640, y: 128 },
+		{ id: OUTPUT_ID, type: 'out', x: 832, y: 128 }
 	];
 	const cables = [
 		{ from: 'e', fromPort: 'out', to: 'm', toPort: 'in' },
 		{ from: 'm', fromPort: 'out', to: 'b', toPort: 'in' },
-		{ from: 'b', fromPort: 'out', to: 'o', toPort: 'in' }
+		{ from: 'b', fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
 	];
 	return keyOnly({
 		advanced: true,
@@ -1539,8 +1719,8 @@ function drumPatch(o: {
 			'b.bodySize': o.body,
 			'b.bodyDepth': 50,
 			'b.bodyMix': o.bodyMix,
-			'o.outLevel': 100,
-			'o.outPan': 0
+			[`${OUTPUT_ID}.outLevel`]: 100,
+			[`${OUTPUT_ID}.outPan`]: 0
 		},
 		// The graph makes the sound; the oscillators are off.
 		osc1Gain: 0,
