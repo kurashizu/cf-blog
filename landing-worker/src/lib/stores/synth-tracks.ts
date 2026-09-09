@@ -148,12 +148,19 @@ export function applyKitToActiveTrack(keys: Record<number, Partial<TrackData>>):
 	const copy: Record<number, Partial<TrackData>> = {};
 	for (const [k, v] of Object.entries(keys)) copy[Number(k)] = { ...v };
 	/* The kit brings the whole sound, so the track's ADV half goes with the old
-	   one. Without this a kit loaded after an acoustic preset kept that preset's
-	   rack, and switching to ADV played a drum kit through a piano string. */
+	   one -- without this a kit loaded after an acoustic preset kept that
+	   preset's rack, and switching to ADV played a drum kit through a piano
+	   string.
+	
+	   Unless the kit is itself patched. A kit whose keys carry their own graphs
+	   needs ADV on to be heard at all, and each key brings its own rack through
+	   effectiveTimbre, so the track-level one stays empty either way. */
+	const isPatched = Object.values(copy).some((k) => (k.rackGraph?.nodes?.length ?? 0) > 0);
 	modularSynth.updateTrack(id, {
 		percussion: true,
 		keyTimbres: copy,
-		advanced: false,
+		advanced: isPatched,
+		...(isPatched ? { advancedView: 'rack' as const } : {}),
 		rackChain: [],
 		rackParams: {},
 		rackGraph: { nodes: [], cables: [] },

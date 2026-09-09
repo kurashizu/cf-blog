@@ -391,7 +391,14 @@
 										<button onclick={() => pickKit(kit)} class="{rowBase} {rowIdle}" title={$t('synth.preset.loadKitHint', { name: kit.name, count: Object.keys(kit.keys).length })}>
 											<span class="shrink-0 text-white/25">○</span>
 											<span class="truncate">{kit.name}</span>
-											<span class="ml-auto text-[10px] text-white/30">{Object.keys(kit.keys).length} keys</span>
+											<!-- Says the kit is built in the patch bay, the same badge a patch
+											     carries: picking it switches the track into ADV. -->
+											{#if Object.values(kit.keys).some((k) => (k as { rackGraph?: { nodes?: unknown[] } }).rackGraph?.nodes?.length)}
+												<span class="shrink-0 ml-auto text-[8px] font-black tracking-wide text-[#61afef]/70">ADV</span>
+												<span class="text-[10px] text-white/30">{Object.keys(kit.keys).length} keys</span>
+											{:else}
+												<span class="ml-auto text-[10px] text-white/30">{Object.keys(kit.keys).length} keys</span>
+											{/if}
 										</button>
 									{/each}
 									{#if $userKits.length}

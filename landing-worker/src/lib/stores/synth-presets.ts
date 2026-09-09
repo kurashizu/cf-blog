@@ -1480,6 +1480,81 @@ function drum(name: string): Partial<TrackData> {
 
 /* Indices count down from C8 = 0; C4 = 48. The pitched drums were voiced at
    the key they sit on here (kicks at C2, the tom at C3, the rest around C4). */
+/* A drum built the acoustic way: a strike into a set of modes into a body.
+ *
+ * The three modules and their wiring are the same for every drum in the kit --
+ * what changes is the numbers, which is the point: a kick and a ride differ in
+ * how hard they are hit, what they ring at and how long, not in what they are
+ * made of. Written as one function so a drum reads as its physics rather than
+ * as forty lines of graph.
+ *
+ * `tune` is the note the modes are built on, as a multiple of the key's own
+ * pitch -- a drum map plays every key at a different frequency, and a kit needs
+ * each drum to sound like itself wherever it sits. */
+function drumPatch(o: {
+	/** Strike: 0 soft mallet, 100 hard stick. */
+	hard: number;
+	/** Contact time in ms. */
+	len: number;
+	/** Strike brightness in Hz. */
+	tone: number;
+	/** The three mode ratios, against the key's pitch. */
+	modes: [number, number, number];
+	/** Ring: roughly q/12 seconds of audible tail on the lowest mode. */
+	q: number;
+	/** Shell size 0-100, and how much of it is heard. */
+	body: number;
+	bodyMix: number;
+	/** Amp envelope, which cuts the whole voice. */
+	decay: number;
+	release?: number;
+}): Partial<TrackData> {
+	const nodes = [
+		{ id: 'e', type: 'excite', x: 64, y: 96 },
+		{ id: 'm', type: 'modes', x: 256, y: 96 },
+		{ id: 'b', type: 'body', x: 448, y: 96 },
+		{ id: 'o', type: 'out', x: 640, y: 96 }
+	];
+	const cables = [
+		{ from: 'e', fromPort: 'out', to: 'm', toPort: 'in' },
+		{ from: 'm', fromPort: 'out', to: 'b', toPort: 'in' },
+		{ from: 'b', fromPort: 'out', to: 'o', toPort: 'in' }
+	];
+	return keyOnly({
+		advanced: true,
+		advancedView: 'rack',
+		rackGraph: { nodes, cables },
+		graphParams: {
+			'e.hardness': o.hard,
+			'e.exLength': o.len,
+			'e.exTone': o.tone,
+			'm.mode1': o.modes[0],
+			'm.mode2': o.modes[1],
+			'm.mode3': o.modes[2],
+			'm.modeQ': o.q,
+			'm.modeMix': 100,
+			'b.bodySize': o.body,
+			'b.bodyDepth': 50,
+			'b.bodyMix': o.bodyMix,
+			'o.outLevel': 100,
+			'o.outPan': 0
+		},
+		// The graph makes the sound; the oscillators are off.
+		osc1Gain: 0,
+		osc2Gain: 0,
+		subOscGain: 0,
+		noiseGain: 0,
+		ampAttack: 0.001,
+		/* The modes ring for about q/40 seconds, and the amp envelope must not
+		   close before they finish -- a crash written to ring 1.3 s measured
+		   0.25 because the envelope reaped the voice first. The drum's own
+		   decay still shapes it; this only stops the gate arriving early. */
+		ampDecay: Math.max(o.decay, o.q / 12),
+		ampSustain: 0,
+		ampRelease: o.release ?? 0.04
+	});
+}
+
 export const BUILTIN_KITS: DrumKit[] = [
 	{
 		name: '808 KIT',
@@ -1497,832 +1572,120 @@ export const BUILTIN_KITS: DrumKit[] = [
 		}
 	},
 	{
-		/* Voiced against the 808 kit's two measured faults rather than by taste
-		   alone. Every hit here was rendered offline at the key it sits on and
-		   measured for peak, spectral centroid and decay; the numbers below are
-		   what that pass settled on.
-
-		   The 808 kit spans 11 dB peak-to-peak, so its cowbell and shaker
-		   disappear under its own kick and have to be ridden by hand. This one
-		   spans 7.6 dB, and what is left is deliberate -- hats and shaker are
-		   meant to sit under the kick, not level with it.
-
-		   Its clap also centred at 11 kHz, which is hiss rather than hands (a
-		   real 808 clap sits at 1-2 kHz). The fix was not a narrower filter: a
-		   bandpass tight enough to darken it cost ~9 dB that no gain could win
-		   back, since osc1Gain was already at 1. A gentle low-pass gets the
-		   same 3.2 kHz centre 6 dB louder, and the same trade is why the
-		   rimshot and shaker high-pass instead of band-passing.
-
-		   All 47 General MIDI percussion notes (35-81), not a selection: a drum
-		   part written anywhere else names its sounds by GM number, so a kit
-		   that stops after ten of them drops whatever it does not cover. The
-		   808 kit's own arrangement had no standard behind it -- ten sounds
-		   spread over three octaves -- and a pattern imported onto it landed
-		   wherever. Indices count down from C8 = 0, so a key here is 108 - the
-		   GM note, and they read high to low because pitch runs the other way.
-
-		   The kick, snare, hats and cymbals are not tuned by ear but fitted to
-		   real acoustic recordings -- Dirt-Samples (github.com/tidalcycles),
-		   which is public domain. Each reference is reduced to a fingerprint:
-		   spectral centroid, 85% rolloff, decay to -40 dB, and the share of
-		   energy in seven octave bands. A hill-climb then searches the voice's
-		   parameters to minimise the distance to that fingerprint. Guessing at
-		   numbers and listening did not converge; a target does. The comment on
-		   each of those keys names its reference and the two headline numbers.
-
-		   Fitting them needed per-key EQ, which is why `keyEqGains` exists: a
-		   real snare's spectrum dips at 2.5 kHz and rises again above it, and
-		   no single filter does that. The six-band EQ the synth already had is
-		   per *track*, so one curve would have to serve the kick and the hat.
-
-		   The whole set was balanced in one pass against the kick at -12 dB,
-		   each voice rendered at its own key and its gains scaled until it hit
-		   a target chosen per instrument (toms near the kick, cymbals and
-		   shakers well under it). That leaves 10.6 dB between the loudest and
-		   quietest voice, none of it accidental, and nothing clipping. The
-		   cymbals sit at the bottom because they are gain-capped -- osc1Gain
-		   is already 1 and the high-pass takes the rest. */
-		name: 'KRSZ KIT',
+		/* JAZZ KIT -- built in the patch bay rather than from oscillators.
+		 *
+		 * Every drum here is the same three ideas an acoustic drum actually is:
+		 * something strikes a surface (EXCT), the surface rings at frequencies
+		 * that are not a harmonic series (MODES), and a shell or a cymbal body
+		 * colours what comes off it (BODY). The 808 kit next to it is the other
+		 * way of doing this -- oscillators and envelopes, which is what a drum
+		 * machine is -- so the two are different instruments rather than two
+		 * attempts at one.
+		 *
+		 * A jazz kit rather than a rock one: smaller shells tuned higher, sticks
+		 * rather than beaters, and cymbals that are thin and quick. That is what
+		 * the numbers below say -- short decays, high mode ratios, and a light
+		 * strike.
+		 *
+		 * Laid out on the General MIDI map (notes 35-81), so a MIDI drum part
+		 * written anywhere else plays correctly here.
+		 */
+		name: 'JAZZ KIT',
 		keys: {
-			// B1 / GM 35 ACOUSTIC BASS DRUM -- -13.8 dB, 700 Hz, 0.18 s.
-			73: keyOnly(
-				hit(0.16, 0.04, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 0.5129,
-					subOscGain: 0.2308,
-					noiseGain: 0.0923,
-					cutoff: 4200,
-					filterAttack: 0.001,
-					filterDecay: 0.045,
-					filterSustain: 0,
-					filterEnvAmount: -0.55,
-					pitchDecay: 0.028,
-					pitchEnvAmount: 2.8
-				})
-			),
-			/* C2 / GM 36 BASS DRUM 1. Fitted to Dirt-Samples drum/000_drum1.wav: centroid
-			   1080 Hz against 1194, decay 0.197 s against 0.202. */
-			72: keyOnly(
-				hit(0.42, 0.07, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.58,
-					subOscGain: 0.28,
-					noiseGain: 0.03,
-					cutoff: 5625,
-					resonance: 0.6,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: -0.1,
-					pitchDecay: 0.055,
-					pitchEnvAmount: 2.4,
-					airGain: 0.57,
-					keyEqGains: [-1.4, -4, 6.4, -10, 6, 8]
-				})
-			),
-			// C#2 / GM 37 SIDE STICK -- -12.1 dB, 4832 Hz, 0.09 s.
-			71: keyOnly(
-				hit(0.045, 0.02, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 0.011,
-					osc2Waveform: 'square',
-					osc2Gain: 0.011,
-					osc2Ratio: 4,
-					blendMode: 'ring',
-					filterType: 'highpass',
-					cutoff: 700,
-					resonance: 1.2,
-					pitchDecay: 0.01,
-					pitchEnvAmount: 0.5,
-					airGain: 0.2
-				})
-			),
-			/* D2 / GM 38 ACOUSTIC SNARE. Fitted to Dirt-Samples drum/001_drum2.wav: centroid
-			   4966 Hz against 5092, decay 0.143 s against 0.151. */
-			70: keyOnly(
-				hit(0.2954, 0.05, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 0.1285,
-					osc2Waveform: 'sine',
-					osc2Gain: 0.6,
-					osc2Semitone: 7,
-					noiseGain: 1,
-					cutoff: 6000,
-					resonance: 1,
-					filterAttack: 0.001,
-					filterDecay: 0.06,
-					filterSustain: 0,
-					filterEnvAmount: 0.9,
-					pitchDecay: 0.02,
-					pitchEnvAmount: 0.7,
-					airGain: 0.1928,
-					keyEqGains: [8.4, 10.398, 6, -1.229, 0, 0]
-				})
-			),
-			// D#2 / GM 39 HAND CLAP -- -16.6 dB, 3264 Hz, 0.24 s.
-			69: keyOnly(
-				hit(0.22, 0.07, {
-					osc1Waveform: 'noise',
-					osc1Gain: 1,
-					noiseRetrig: 3,
-					noiseRetrigGap: 11,
-					cutoff: 3000,
-					resonance: 1,
-					airGain: -0.5
-				})
-			),
-			// E2 / GM 40 ELECTRIC SNARE -- -13.8 dB, 4823 Hz, 0.17 s.
-			68: keyOnly(
-				hit(0.14, 0.04, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 0.5309,
-					osc2Waveform: 'sine',
-					osc2Gain: 0.2124,
-					osc2Semitone: 7,
-					noiseGain: 0.5309,
-					cutoff: 6500,
-					resonance: 1.2,
-					keyTracking: 0.3,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.4,
-					pitchDecay: 0.015,
-					pitchEnvAmount: 1.2,
-					airGain: 0.15
-				})
-			),
-			// F2 / GM 41 LOW FLOOR TOM -- 100 Hz body, -15.6 dB, 0.42 s.
-			67: keyOnly(
-				hit(0.42, 0.06, {
-					osc1Gain: 0,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 1.2599,
-					noiseGain: 0.4772,
-					cutoff: 3600,
-					resonance: 0.9,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.5,
-					pitchDecay: 0.035,
-					pitchEnvAmount: 0.45,
-					airGain: 0.2
-				})
-			),
-			/* F#2 / GM 42 CLOSED HI-HAT. Fitted to Dirt-Samples drum/002_drum3.wav: centroid
-			   9334 Hz against 9674, decay 0.085 s against 0.087. */
-			66: keyOnly(
-				hit(0.1628, 0.04, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.5412,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.4725,
-					osc2Ratio: 1.5874,
-					noiseGain: 0.8,
-					blendMode: 'ring',
-					cutoff: 18000,
-					resonance: 1.3171,
-					keyTracking: 0.4,
-					filterAttack: 0.001,
-					filterDecay: 0.04,
-					filterSustain: 0,
-					filterEnvAmount: 0.9,
-					airGain: 0.8,
-					keyEqGains: [8.4, -9.627, -8.4, -8.4, 6.4721, 5.2309]
-				})
-			),
-			// G2 / GM 43 HIGH FLOOR TOM -- 138 Hz body, -15.1 dB, 0.38 s.
-			65: keyOnly(
-				hit(0.38, 0.06, {
-					osc1Gain: 0,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 1.3265,
-					noiseGain: 0.4698,
-					cutoff: 3900,
-					resonance: 0.9,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.5,
-					pitchDecay: 0.035,
-					pitchEnvAmount: 0.45,
-					airGain: 0.2
-				})
-			),
-			// G#2 / GM 44 PEDAL HI-HAT -- the closed hat, shorter still. -17.3 dB, 9548 Hz, 0.11 s.
-			64: keyOnly(
-				hit(0.075, 0.035, {
-					osc1Waveform: 'metal',
-					osc1Gain: 1,
-					osc2Waveform: 'metal',
-					osc2Gain: 1,
-					osc2Ratio: 1.5874,
-					noiseGain: 0.3794,
-					blendMode: 'ring',
-					filterType: 'highpass',
-					cutoff: 4600,
-					resonance: 1,
-					keyTracking: 0.6,
-					filterAttack: 0.001,
-					filterDecay: 0.03,
-					filterSustain: 0,
-					filterEnvAmount: 0.35,
-					airGain: 0.3
-				})
-			),
-			// A2 / GM 45 LOW TOM -- 150 Hz body, -15.7 dB, 0.35 s.
-			63: keyOnly(
-				hit(0.35, 0.06, {
-					osc1Gain: 0,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 1.4091,
-					noiseGain: 0.4183,
-					cutoff: 4200,
-					resonance: 0.9,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.5,
-					pitchDecay: 0.035,
-					pitchEnvAmount: 0.45,
-					airGain: 0.2
-				})
-			),
-			/* A#2 / GM 46 OPEN HI-HAT. Fitted to Dirt-Samples ho/HHOD0.wav: centroid
-			   8307 Hz against 8820, decay 0.271 s against 0.253. */
-			62: keyOnly(
-				hit(0.4755, 0.14, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.3987,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.9293,
-					osc2Ratio: 1.5874,
-					noiseGain: 0.8,
-					blendMode: 'ring',
-					cutoff: 18000,
-					resonance: 0.4373,
-					keyTracking: 0.4,
-					filterAttack: 0.001,
-					filterDecay: 0.04,
-					filterSustain: 0,
-					filterEnvAmount: 0.74,
-					airGain: 0.6282,
-					keyEqGains: [-11.629, -2.002, -10.402, 2.002, 0, 0]
-				})
-			),
-			// B2 / GM 47 LOW-MID TOM -- 188 Hz body, -16.6 dB, 0.32 s.
-			61: keyOnly(
-				hit(0.32, 0.06, {
-					osc1Gain: 0,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 1.4983,
-					noiseGain: 0.4171,
-					cutoff: 4600,
-					resonance: 0.9,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.5,
-					pitchDecay: 0.035,
-					pitchEnvAmount: 0.45,
-					airGain: 0.2
-				})
-			),
-			// C3 / GM 48 HI-MID TOM -- 213 Hz body, -14.8 dB, 0.29 s.
-			60: keyOnly(
-				hit(0.29, 0.06, {
-					osc1Gain: 0,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 1.6818,
-					noiseGain: 0.4724,
-					cutoff: 5000,
-					resonance: 0.9,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.5,
-					pitchDecay: 0.035,
-					pitchEnvAmount: 0.45,
-					airGain: 0.2
-				})
-			),
-			/* C#3 / GM 49 CRASH CYMBAL 1. Fitted to Dirt-Samples hh/001_hh3crash.wav: centroid
-			   5768 Hz against 5709, decay 1.337 s against 1.469. */
-			59: keyOnly(
-				hit(2.4, 0.85, {
-					osc1Waveform: 'metal',
-					osc1Gain: 1,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.886,
-					osc2Ratio: 1.732,
-					noiseGain: 1,
-					blendMode: 'ring',
-					cutoff: 10000,
-					resonance: 0.7801,
-					keyTracking: 0.4,
-					filterAttack: 0.001,
-					filterDecay: 0.04,
-					filterSustain: 0,
-					filterEnvAmount: 0.2,
-					airGain: 0.8,
-					ampAttack: 0.003,
-					keyEqGains: [0, 0, 0, -2.002, 0, 0]
-				})
-			),
-			// D3 / GM 50 HIGH TOM -- 263 Hz body, -16.5 dB, 0.26 s.
-			58: keyOnly(
-				hit(0.26, 0.06, {
-					osc1Gain: 0,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 1.7708,
-					noiseGain: 0.4461,
-					cutoff: 5400,
-					resonance: 0.9,
-					filterAttack: 0.001,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.5,
-					pitchDecay: 0.035,
-					pitchEnvAmount: 0.45,
-					airGain: 0.2
-				})
-			),
-			/* D#3 / GM 51 RIDE CYMBAL 1. Fitted to Dirt-Samples cr/RIDED0.wav: centroid
-			   8816 Hz against 8923, decay 1.139 s against 1.151. */
-			57: keyOnly(
-				hit(2.0166, 0.55, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.7,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.7,
-					osc2Ratio: 1.4142,
-					noiseGain: 0.5347,
-					blendMode: 'ring',
-					cutoff: 18000,
-					resonance: 0.8232,
-					keyTracking: 0.4,
-					filterAttack: 0.001,
-					filterDecay: 0.04,
-					filterSustain: 0,
-					filterEnvAmount: 0.3272,
-					airGain: 0.35,
-					keyEqGains: [8.4, -11.629, -8.4, -5.208, 8.4, 2.002]
-				})
-			),
-			// E3 / GM 52 CHINESE CYMBAL -- darker and trashier than the crashes. -14.8 dB, 11494 Hz, 1.31 s.
-			56: keyOnly(
-				hit(1.5, 0.9, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.3468,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.3468,
-					osc2Ratio: 1.732,
-					noiseGain: 0.4211,
-					blendMode: 'ring',
-					filterType: 'highpass',
-					cutoff: 3200,
-					resonance: 0.8,
-					keyTracking: 0.3,
-					airGain: 0.5,
-					ampAttack: 0.004
-				})
-			),
-			// F3 / GM 53 RIDE BELL -- the bell: tighter ratio, no wash. -15.5 dB, 2166 Hz, 0.42 s.
-			55: keyOnly(
-				hit(0.42, 0.22, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.7586,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.7586,
-					osc2Ratio: 1.26,
-					noiseGain: 0.0379,
-					blendMode: 'ring',
-					cutoff: 5500,
-					resonance: 2.2,
-					keyTracking: 0.3,
-					airGain: 0.2
-				})
-			),
-			// F#3 / GM 54 TAMBOURINE -- -15.4 dB, 11398 Hz, 0.19 s.
-			54: keyOnly(
-				hit(0.16, 0.08, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.912,
-					noiseGain: 0.456,
-					filterType: 'highpass',
-					cutoff: 5500,
-					resonance: 0.8,
-					keyTracking: 0.5,
-					airGain: 0.2
-				})
-			),
-			// G3 / GM 55 SPLASH CYMBAL -- a short crash. -16.7 dB, 12678 Hz, 0.74 s.
-			53: keyOnly(
-				hit(0.8, 0.5, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.2952,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.2952,
-					osc2Ratio: 1.732,
-					noiseGain: 0.3584,
-					blendMode: 'ring',
-					filterType: 'highpass',
-					cutoff: 5200,
-					resonance: 0.8,
-					keyTracking: 0.3,
-					airGain: 0.5,
-					ampAttack: 0.004
-				})
-			),
-			// G#3 / GM 56 COWBELL -- -16 dB, 2712 Hz, 0.29 s.
-			52: keyOnly(
-				hit(0.28, 0.1, {
-					osc1Gain: 0.6237,
-					osc2Waveform: 'square',
-					osc2Gain: 0.6237,
-					osc2Ratio: 1.5,
-					filterType: 'bandpass',
-					cutoff: 1800,
-					resonance: 0.5,
-					airGain: 0.1
-				})
-			),
-			// A3 / GM 57 CRASH CYMBAL 2 -- the second crash, a touch brighter. -14.8 dB, 12568 Hz, 1.51 s.
-			51: keyOnly(
-				hit(1.7, 1, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.335,
-					osc2Waveform: 'metal',
-					osc2Gain: 0.335,
-					osc2Ratio: 1.732,
-					noiseGain: 0.4068,
-					blendMode: 'ring',
-					filterType: 'highpass',
-					cutoff: 4200,
-					resonance: 0.8,
-					keyTracking: 0.3,
-					airGain: 0.5,
-					ampAttack: 0.004
-				})
-			),
-			// A#3 / GM 58 VIBRASLAP -- -18.1 dB, 5506 Hz, 0.45 s.
-			50: keyOnly(
-				hit(0.45, 0.15, {
-					osc1Waveform: 'metal',
-					osc1Gain: 1,
-					noiseGain: 0.8977,
-					noiseRetrig: 4,
-					noiseRetrigGap: 22,
-					filterType: 'bandpass',
-					cutoff: 2600,
-					resonance: 1.2,
-					airGain: 0.1
-				})
-			),
-			/* B3 / GM 59 RIDE CYMBAL 2. Fitted to Dirt-Samples cr/RIDED8.wav: centroid
-			   11494 Hz against 11133, decay 0.65 s against 0.655. */
-			49: keyOnly(
-				hit(1.204, 0.32, {
-					osc1Waveform: 'metal',
-					osc1Gain: 0.4697,
-					osc2Waveform: 'metal',
-					osc2Gain: 1,
-					osc2Ratio: 1.4142,
-					noiseGain: 0.8303,
-					blendMode: 'ring',
-					cutoff: 18000,
-					resonance: 0.96,
-					keyTracking: 0.4,
-					filterAttack: 0.001,
-					filterDecay: 0.04,
-					filterSustain: 0,
-					filterEnvAmount: 0.2,
-					airGain: 0.8,
-					keyEqGains: [-2.002, -14, -4.4332, -11.629, 0, 0]
-				})
-			),
-			// C4 / GM 60 HI BONGO -- -15.1 dB, 640 Hz, 0.19 s.
-			48: keyOnly(
-				hit(0.16, 0.06, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.507,
-					osc2Waveform: 'triangle',
-					osc2Gain: 0.1774,
-					noiseGain: 0.0406,
-					cutoff: 3600,
-					resonance: 0.6,
-					pitchDecay: 0.04,
-					pitchEnvAmount: 0.9
-				})
-			),
-			// C#4 / GM 61 LOW BONGO -- -14.9 dB, 586 Hz, 0.21 s.
-			47: keyOnly(
-				hit(0.19, 0.06, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.5129,
-					osc2Waveform: 'triangle',
-					osc2Gain: 0.1795,
-					noiseGain: 0.041,
-					cutoff: 3000,
-					resonance: 0.6,
-					pitchDecay: 0.04,
-					pitchEnvAmount: 0.85
-				})
-			),
-			// D4 / GM 62 MUTE HI CONGA -- -15.7 dB, 603 Hz, 0.13 s.
-			46: keyOnly(
-				hit(0.1, 0.06, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.4786,
-					osc2Waveform: 'triangle',
-					osc2Gain: 0.1675,
-					noiseGain: 0.0383,
-					cutoff: 2800,
-					resonance: 0.6,
-					pitchDecay: 0.04,
-					pitchEnvAmount: 0.8
-				})
-			),
-			// D#4 / GM 63 OPEN HI CONGA -- -14.5 dB, 570 Hz, 0.27 s.
-			45: keyOnly(
-				hit(0.26, 0.06, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.5309,
-					osc2Waveform: 'triangle',
-					osc2Gain: 0.1858,
-					noiseGain: 0.0425,
-					cutoff: 2600,
-					resonance: 0.6,
-					pitchDecay: 0.04,
-					pitchEnvAmount: 0.9
-				})
-			),
-			// E4 / GM 64 LOW CONGA -- -14.3 dB, 547 Hz, 0.3 s.
-			44: keyOnly(
-				hit(0.3, 0.06, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.5309,
-					osc2Waveform: 'triangle',
-					osc2Gain: 0.1858,
-					noiseGain: 0.0425,
-					cutoff: 2200,
-					resonance: 0.6,
-					pitchDecay: 0.04,
-					pitchEnvAmount: 0.85
-				})
-			),
-			// F4 / GM 65 HIGH TIMBALE -- -15.4 dB, 1212 Hz, 0.24 s.
-			43: keyOnly(
-				hit(0.22, 0.06, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 0.537,
-					osc2Waveform: 'sine',
-					osc2Gain: 0.2148,
-					noiseGain: 0.0644,
-					cutoff: 4200,
-					resonance: 1.2,
-					pitchEnvAmount: 0.7,
-					airGain: 0.1
-				})
-			),
-			// F#4 / GM 66 LOW TIMBALE -- -14.6 dB, 1069 Hz, 0.27 s.
-			42: keyOnly(
-				hit(0.26, 0.07, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 0.5689,
-					osc2Waveform: 'sine',
-					osc2Gain: 0.2275,
-					noiseGain: 0.0683,
-					cutoff: 3400,
-					resonance: 1.2,
-					pitchDecay: 0.035,
-					pitchEnvAmount: 0.7,
-					airGain: 0.1
-				})
-			),
-			// G4 / GM 67 HIGH AGOGO -- -16 dB, 3291 Hz, 0.27 s.
-			41: keyOnly(
-				hit(0.26, 0.1, {
-					osc1Gain: 0.6607,
-					osc2Waveform: 'square',
-					osc2Gain: 0.5946,
-					osc2Ratio: 1.5,
-					filterType: 'bandpass',
-					cutoff: 2400,
-					resonance: 0.6,
-					airGain: 0.15
-				})
-			),
-			// G#4 / GM 68 LOW AGOGO -- -16 dB, 2849 Hz, 0.29 s.
-			40: keyOnly(
-				hit(0.28, 0.1, {
-					osc1Gain: 0.631,
-					osc2Waveform: 'square',
-					osc2Gain: 0.5679,
-					osc2Ratio: 1.5,
-					filterType: 'bandpass',
-					cutoff: 1900,
-					resonance: 0.6,
-					airGain: 0.15
-				})
-			),
-			// A4 / GM 69 CABASA -- -18.2 dB, 14773 Hz, 0.11 s.
-			39: keyOnly(
-				hit(0.07, 0.05, {
-					ampAttack: 0.004,
-					attack: 0.004,
-					osc1Waveform: 'noise',
-					osc1Gain: 0.4315,
-					filterType: 'highpass',
-					cutoff: 5000,
-					resonance: 0.7,
-					keyTracking: 0.6,
-					filterAttack: 0.01,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.4
-				})
-			),
-			// A#4 / GM 70 MARACAS -- -19.6 dB, 14425 Hz, 0.14 s.
-			38: keyOnly(
-				hit(0.09, 0.05, {
-					ampAttack: 0.012,
-					attack: 0.012,
-					osc1Waveform: 'noise',
-					osc1Gain: 0.3981,
-					filterType: 'highpass',
-					cutoff: 4000,
-					resonance: 0.7,
-					keyTracking: 0.6,
-					filterAttack: 0.01,
-					filterDecay: 0.05,
-					filterSustain: 0,
-					filterEnvAmount: 0.4
-				})
-			),
-			// B4 / GM 71 SHORT WHISTLE -- -17 dB, 593 Hz, 0.15 s.
-			37: keyOnly(
-				hit(0.12, 0.04, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.3981,
-					osc2Waveform: 'sine',
-					osc2Gain: 0.1991,
-					osc2Ratio: 1.5,
-					lfoRate: 9,
-					lfoPitchAmt: 0.08,
-					airGain: 0.2
-				})
-			),
-			// C5 / GM 72 LONG WHISTLE -- -17 dB, 577 Hz, 0.37 s.
-			36: keyOnly(
-				hit(0.38, 0.1, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.3846,
-					osc2Waveform: 'sine',
-					osc2Gain: 0.1923,
-					osc2Ratio: 1.5,
-					lfoRate: 9,
-					lfoPitchAmt: 0.08,
-					airGain: 0.2
-				})
-			),
-			// C#5 / GM 73 SHORT GUIRO -- -17.3 dB, 6455 Hz, 0.15 s.
-			35: keyOnly(
-				hit(0.12, 0.04, {
-					osc1Waveform: 'noise',
-					osc1Gain: 1,
-					noiseRetrig: 4,
-					noiseRetrigGap: 14,
-					filterType: 'bandpass',
-					cutoff: 3200,
-					resonance: 1.4
-				})
-			),
-			// D5 / GM 74 LONG GUIRO -- -17.7 dB, 6407 Hz, 0.4 s.
-			34: keyOnly(
-				hit(0.4, 0.1, {
-					osc1Waveform: 'noise',
-					osc1Gain: 1,
-					noiseRetrig: 4,
-					noiseRetrigGap: 34,
-					filterType: 'bandpass',
-					cutoff: 3000,
-					resonance: 1.4
-				})
-			),
-			// D#5 / GM 75 CLAVES -- -18.9 dB, 3404 Hz, 0.1 s.
-			33: keyOnly(
-				hit(0.055, 0.02, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 1,
-					osc2Waveform: 'square',
-					osc2Gain: 0.6982,
-					osc2Ratio: 3,
-					blendMode: 'ring',
-					filterType: 'bandpass',
-					cutoff: 2500,
-					resonance: 2.2,
-					pitchDecay: 0.008,
-					pitchEnvAmount: 0.4,
-					airGain: 0.15
-				})
-			),
-			// E5 / GM 76 HI WOOD BLOCK -- -19.6 dB, 3226 Hz, 0.1 s.
-			32: keyOnly(
-				hit(0.06, 0.02, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 1,
-					osc2Waveform: 'square',
-					osc2Gain: 0.7568,
-					osc2Ratio: 3,
-					blendMode: 'ring',
-					filterType: 'bandpass',
-					cutoff: 2100,
-					resonance: 2,
-					pitchDecay: 0.008,
-					pitchEnvAmount: 0.4,
-					airGain: 0.15
-				})
-			),
-			// F5 / GM 77 LOW WOOD BLOCK -- -18.4 dB, 2734 Hz, 0.11 s.
-			31: keyOnly(
-				hit(0.07, 0.02, {
-					osc1Waveform: 'triangle',
-					osc1Gain: 1,
-					osc2Waveform: 'square',
-					osc2Gain: 0.6591,
-					osc2Ratio: 3,
-					blendMode: 'ring',
-					filterType: 'bandpass',
-					cutoff: 1600,
-					resonance: 2,
-					pitchDecay: 0.008,
-					pitchEnvAmount: 0.4,
-					airGain: 0.15
-				})
-			),
-			// F#5 / GM 78 MUTE CUICA -- -16 dB, 840 Hz, 0.15 s.
-			30: keyOnly(
-				hit(0.12, 0.04, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.4842,
-					glideTime: 40,
-					cutoff: 2600,
-					resonance: 2.5,
-					pitchAttack: 0.002,
-					pitchDecay: 0.05,
-					pitchEnvAmount: 0.8
-				})
-			),
-			// G5 / GM 79 OPEN CUICA -- -16 dB, 808 Hz, 0.31 s.
-			29: keyOnly(
-				hit(0.3, 0.1, {
-					osc1Waveform: 'sine',
-					osc1Gain: 0.4624,
-					glideTime: 90,
-					cutoff: 3000,
-					resonance: 2.5,
-					pitchAttack: 0.003,
-					pitchDecay: 0.12,
-					pitchEnvAmount: 1.2
-				})
-			),
-			// G#5 / GM 80 MUTE TRIANGLE -- -20 dB, 3855 Hz, 0.13 s.
-			28: keyOnly(
-				hit(0.09, 0.04, {
-					osc1Waveform: 'sine',
-					osc1Gain: 1,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 3.5,
-					blendMode: 'ring',
-					filterType: 'highpass',
-					cutoff: 5000,
-					airGain: 0.3
-				})
-			),
-			// A5 / GM 81 OPEN TRIANGLE -- -18 dB, 3717 Hz, 0.73 s.
-			27: keyOnly(
-				hit(0.8, 0.5, {
-					osc1Waveform: 'sine',
-					osc1Gain: 1,
-					osc2Waveform: 'sine',
-					osc2Gain: 1,
-					osc2Ratio: 3.5,
-					blendMode: 'ring',
-					filterType: 'highpass',
-					cutoff: 5000,
-					airGain: 0.3
-				})
-			)
+			// GM 35 ACOUSTIC BASS DRUM
+			73: drumPatch({ hard: 30, len: 9, tone: 1400, modes: [1, 1.6, 2.4], q: 7, body: 30, bodyMix: 70, decay: 0.2 }),
+			// GM 36 BASS DRUM 1
+			72: drumPatch({ hard: 38, len: 8, tone: 1700, modes: [1, 1.7, 2.6], q: 6, body: 28, bodyMix: 70, decay: 0.17 }),
+			// GM 37 SIDE STICK
+			71: drumPatch({ hard: 90, len: 2, tone: 6000, modes: [1, 3.1, 5.4], q: 4, body: 14, bodyMix: 45, decay: 0.06 }),
+			// GM 38 ACOUSTIC SNARE
+			70: drumPatch({ hard: 72, len: 3, tone: 5200, modes: [1, 2.6, 4.3], q: 6, body: 20, bodyMix: 55, decay: 0.14 }),
+			// GM 39 HAND CLAP
+			69: drumPatch({ hard: 80, len: 5, tone: 4200, modes: [1, 2.2, 3.7], q: 3, body: 22, bodyMix: 40, decay: 0.13 }),
+			// GM 40 ELECTRIC SNARE
+			68: drumPatch({ hard: 85, len: 3, tone: 6200, modes: [1, 2.8, 4.6], q: 5, body: 18, bodyMix: 50, decay: 0.12 }),
+			// GM 41 LOW FLOOR TOM
+			67: drumPatch({ hard: 45, len: 6, tone: 2400, modes: [1, 1.9, 3.0], q: 11, body: 38, bodyMix: 65, decay: 0.34 }),
+			// GM 42 CLOSED HI-HAT
+			66: drumPatch({ hard: 95, len: 2, tone: 9000, modes: [1, 4.2, 7.1], q: 3, body: 8, bodyMix: 25, decay: 0.05 }),
+			// GM 43 HIGH FLOOR TOM
+			65: drumPatch({ hard: 46, len: 6, tone: 2600, modes: [1, 1.9, 3.0], q: 10, body: 35, bodyMix: 65, decay: 0.3 }),
+			// GM 44 PEDAL HI-HAT
+			64: drumPatch({ hard: 88, len: 3, tone: 7600, modes: [1, 4.0, 6.8], q: 4, body: 9, bodyMix: 25, decay: 0.07 }),
+			// GM 45 LOW TOM
+			63: drumPatch({ hard: 48, len: 5, tone: 2800, modes: [1, 1.9, 3.1], q: 9, body: 32, bodyMix: 62, decay: 0.27 }),
+			// GM 46 OPEN HI-HAT
+			62: drumPatch({ hard: 92, len: 3, tone: 8600, modes: [1, 4.1, 7.0], q: 14, body: 8, bodyMix: 25, decay: 0.42 }),
+			// GM 47 LOW-MID TOM
+			61: drumPatch({ hard: 50, len: 5, tone: 3000, modes: [1, 2.0, 3.2], q: 9, body: 29, bodyMix: 60, decay: 0.25 }),
+			// GM 48 HI-MID TOM
+			60: drumPatch({ hard: 52, len: 4, tone: 3200, modes: [1, 2.0, 3.2], q: 8, body: 26, bodyMix: 58, decay: 0.22 }),
+			// GM 49 CRASH CYMBAL 1
+			59: drumPatch({ hard: 88, len: 4, tone: 9500, modes: [1, 3.4, 6.2], q: 30, body: 6, bodyMix: 20, decay: 1.3 }),
+			// GM 50 HIGH TOM
+			58: drumPatch({ hard: 54, len: 4, tone: 3400, modes: [1, 2.1, 3.3], q: 7, body: 23, bodyMix: 55, decay: 0.2 }),
+			// GM 51 RIDE CYMBAL 1
+			57: drumPatch({ hard: 94, len: 2, tone: 9800, modes: [1, 3.8, 6.9], q: 16, body: 6, bodyMix: 18, decay: 0.55 }),
+			// GM 52 CHINESE CYMBAL
+			56: drumPatch({ hard: 86, len: 5, tone: 8200, modes: [1, 2.9, 5.1], q: 26, body: 7, bodyMix: 22, decay: 1.1 }),
+			// GM 53 RIDE BELL
+			55: drumPatch({ hard: 96, len: 2, tone: 10500, modes: [1, 2.7, 5.4], q: 22, body: 5, bodyMix: 16, decay: 0.75 }),
+			// GM 54 TAMBOURINE
+			54: drumPatch({ hard: 92, len: 2, tone: 9200, modes: [1, 3.6, 6.1], q: 6, body: 10, bodyMix: 30, decay: 0.16 }),
+			// GM 55 SPLASH CYMBAL
+			53: drumPatch({ hard: 90, len: 3, tone: 10000, modes: [1, 3.3, 6.0], q: 18, body: 5, bodyMix: 18, decay: 0.6 }),
+			// GM 56 COWBELL
+			52: drumPatch({ hard: 88, len: 3, tone: 5200, modes: [1, 1.5, 2.7], q: 12, body: 16, bodyMix: 40, decay: 0.3 }),
+			// GM 57 CRASH CYMBAL 2
+			51: drumPatch({ hard: 86, len: 4, tone: 9200, modes: [1, 3.2, 5.9], q: 28, body: 6, bodyMix: 20, decay: 1.2 }),
+			// GM 58 VIBRASLAP
+			50: drumPatch({ hard: 70, len: 8, tone: 4600, modes: [1, 2.4, 4.1], q: 10, body: 18, bodyMix: 42, decay: 0.55 }),
+			// GM 59 RIDE CYMBAL 2
+			49: drumPatch({ hard: 92, len: 2, tone: 9400, modes: [1, 3.7, 6.6], q: 15, body: 6, bodyMix: 18, decay: 0.5 }),
+			// GM 60 HI BONGO
+			48: drumPatch({ hard: 68, len: 3, tone: 4600, modes: [1, 2.3, 3.8], q: 6, body: 18, bodyMix: 52, decay: 0.14 }),
+			// GM 61 LOW BONGO
+			47: drumPatch({ hard: 64, len: 4, tone: 3800, modes: [1, 2.2, 3.7], q: 7, body: 22, bodyMix: 55, decay: 0.18 }),
+			// GM 62 MUTE HI CONGA
+			46: drumPatch({ hard: 72, len: 3, tone: 4400, modes: [1, 2.2, 3.6], q: 4, body: 20, bodyMix: 48, decay: 0.1 }),
+			// GM 63 OPEN HI CONGA
+			45: drumPatch({ hard: 66, len: 4, tone: 4000, modes: [1, 2.1, 3.5], q: 8, body: 24, bodyMix: 56, decay: 0.22 }),
+			// GM 64 LOW CONGA
+			44: drumPatch({ hard: 60, len: 5, tone: 3200, modes: [1, 2.0, 3.3], q: 9, body: 28, bodyMix: 58, decay: 0.26 }),
+			// GM 65 HIGH TIMBALE
+			43: drumPatch({ hard: 82, len: 3, tone: 6000, modes: [1, 2.5, 4.2], q: 8, body: 15, bodyMix: 45, decay: 0.2 }),
+			// GM 66 LOW TIMBALE
+			42: drumPatch({ hard: 78, len: 4, tone: 5200, modes: [1, 2.4, 4.0], q: 9, body: 19, bodyMix: 48, decay: 0.24 }),
+			// GM 67 HIGH AGOGO
+			41: drumPatch({ hard: 90, len: 2, tone: 7000, modes: [1, 2.0, 3.4], q: 13, body: 12, bodyMix: 35, decay: 0.28 }),
+			// GM 68 LOW AGOGO
+			40: drumPatch({ hard: 88, len: 3, tone: 6200, modes: [1, 1.9, 3.3], q: 14, body: 14, bodyMix: 38, decay: 0.32 }),
+			// GM 69 CABASA
+			39: drumPatch({ hard: 94, len: 2, tone: 9600, modes: [1, 4.4, 7.6], q: 2, body: 7, bodyMix: 22, decay: 0.07 }),
+			// GM 70 MARACAS
+			38: drumPatch({ hard: 95, len: 2, tone: 10200, modes: [1, 4.6, 7.9], q: 2, body: 6, bodyMix: 20, decay: 0.06 }),
+			// GM 71 SHORT WHISTLE
+			37: drumPatch({ hard: 60, len: 6, tone: 7200, modes: [1, 2.0, 3.0], q: 10, body: 10, bodyMix: 30, decay: 0.2 }),
+			// GM 72 LONG WHISTLE
+			36: drumPatch({ hard: 58, len: 8, tone: 7000, modes: [1, 2.0, 3.0], q: 14, body: 10, bodyMix: 30, decay: 0.45 }),
+			// GM 73 SHORT GUIRO
+			35: drumPatch({ hard: 86, len: 4, tone: 6600, modes: [1, 3.0, 5.2], q: 3, body: 12, bodyMix: 30, decay: 0.1 }),
+			// GM 74 LONG GUIRO
+			34: drumPatch({ hard: 84, len: 9, tone: 6400, modes: [1, 3.0, 5.2], q: 4, body: 12, bodyMix: 30, decay: 0.34 }),
+			// GM 75 CLAVES
+			33: drumPatch({ hard: 98, len: 2, tone: 8000, modes: [1, 2.8, 5.0], q: 8, body: 10, bodyMix: 32, decay: 0.12 }),
+			// GM 76 HI WOOD BLOCK
+			32: drumPatch({ hard: 96, len: 2, tone: 7400, modes: [1, 2.7, 4.8], q: 7, body: 12, bodyMix: 34, decay: 0.11 }),
+			// GM 77 LOW WOOD BLOCK
+			31: drumPatch({ hard: 94, len: 3, tone: 6600, modes: [1, 2.6, 4.6], q: 8, body: 15, bodyMix: 36, decay: 0.13 }),
+			// GM 78 MUTE CUICA
+			30: drumPatch({ hard: 64, len: 4, tone: 4200, modes: [1, 1.8, 2.9], q: 5, body: 20, bodyMix: 45, decay: 0.12 }),
+			// GM 79 OPEN CUICA
+			29: drumPatch({ hard: 60, len: 6, tone: 3800, modes: [1, 1.8, 2.9], q: 11, body: 24, bodyMix: 50, decay: 0.34 }),
+			// GM 80 MUTE TRIANGLE
+			28: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 6, body: 4, bodyMix: 14, decay: 0.09 }),
+			// GM 81 OPEN TRIANGLE
+			27: drumPatch({ hard: 98, len: 2, tone: 11000, modes: [1, 2.6, 4.9], q: 34, body: 4, bodyMix: 14, decay: 1.4 }),
 		}
 	},
 	{

@@ -888,6 +888,11 @@ class ModularSynth {
         }
         // A convolver rings for exactly the length of its impulse.
         case 'space': return Math.min(4, Math.max(0.05, ((p.spaceSize ?? 40) / 100) * 3));
+        /* A struck mode rings on after the strike, the same way a string does:
+           roughly q/40 seconds on the lowest one. Without this the amp envelope
+           reaped the voice first, and a crash written to ring for 1.3 s
+           measured 0.25 -- every cymbal in the kit cut short. */
+        case 'modes': return Math.min(8, Math.max(0.02, (p.modeQ ?? 14) / 12));
         default: return 0;
       }
     };
@@ -1701,10 +1706,18 @@ class ModularSynth {
       }
 
       case 'modes': {
-        /* Three tuned resonances in parallel. A drum head or a bell rings at
-           several frequencies at once, and those are not a harmonic series --
-           which is exactly what one filter cannot produce and why the kit's
-           toms and cymbals stayed synthetic. */
+        /* Three tuned resonances at once. A drum head or a bell rings at several
+           frequencies that are not a harmonic series, which is exactly what one
+           filter cannot produce and why the kit's toms and cymbals stayed
+           synthetic.
+
+           Struck, not filtered. Three bandpasses fed a strike measured 0.008
+           peak against 0.137 for the strike alone -- a resonant filter needs
+           sustained input to ring up, and a 10 ms burst never gets it there.
+           A struck mode is a sine that starts loud and decays, so that is what
+           this builds, the same way STRING does. The filters stay in parallel
+           with them: fed something continuous, they still colour it, which is
+           what makes the module useful on a pad as well as on a drum. */
         const input = ctx.createGain();
         const output = ctx.createGain();
         const mix = pct(p.modeMix, 100);
@@ -1715,24 +1728,53 @@ class ModularSynth {
 
         const ratios = [p.mode1 ?? 1, p.mode2 ?? 2.4, p.mode3 ?? 4.6];
         const q = Math.max(1, p.modeQ ?? 14);
-        for (const r of ratios) {
+        /* Q is the ring: a mode at Q 40 rings for about a second, one at Q 2
+           for a few tens of milliseconds. Roughly q/40 seconds, scaled down as
+           the mode climbs because higher partials of a struck body die first. */
+        const modeSources: AudioScheduledSourceNode[] = [];
+        const struck = ctx.createGain();
+        struck.gain.value = mix * 0.5;
+        struck.connect(output);
+
+        ratios.forEach((r, i) => {
+          const f = Math.min(18000, Math.max(30, baseFreq * r));
+
+          // The struck half: a decaying sine per mode.
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = f;
+          const g = ctx.createGain();
+          /* Q is the ring time. Measured against the -40 dB point rather than
+             the nominal time constant, which is what anyone actually hears:
+             q/40 gave 0.25 s at Q 30 where the number promised 0.75, so a
+             crash asked for 1.3 s came out a quarter of that. q/12 puts the
+             audible tail where the knob says it is. */
+          const decay = Math.max(0.02, (q / 12) / Math.pow(r, 0.6));
+          const amp = 1 / (i + 1);
+          g.gain.setValueAtTime(0, _t);
+          g.gain.linearRampToValueAtTime(amp, _t + 0.002);
+          g.gain.exponentialRampToValueAtTime(0.00001, _t + 0.002 + decay);
+          // To true zero: an exponential cannot reach it, and the step is a click.
+          g.gain.linearRampToValueAtTime(0, _t + 0.002 + decay + 0.03);
+          osc.connect(g);
+          g.connect(struck);
+          modeSources.push(osc);
+
+          // The filtered half, for input that keeps arriving.
           const bp = ctx.createBiquadFilter();
           bp.type = 'bandpass';
-          bp.frequency.value = Math.min(18000, Math.max(30, baseFreq * r));
+          bp.frequency.value = f;
           bp.Q.value = q;
-          const g = ctx.createGain();
-          /* Split the wet share between the modes so adding one does not simply
-             make the voice louder -- then give back what the bandpass took. A
-             bandpass passes roughly 1/Q of a broadband burst, so a strike into
-             three modes at Q 20 measured 0.001 peak against 0.11 for the strike
-             alone: a hundredfold drop that made every modal drum inaudible.
-             sqrt(q) rather than q, which is loud but not explosive. */
-          g.gain.value = (mix / ratios.length) * Math.sqrt(q);
+          const fg = ctx.createGain();
+          fg.gain.value = (mix / ratios.length) * Math.sqrt(q);
           input.connect(bp);
-          bp.connect(g);
-          g.connect(output);
-        }
-        return { in: input, out: output };
+          bp.connect(fg);
+          fg.connect(output);
+        });
+
+        /* The strike gates the modes rather than passing through them: a key
+           that is never struck should not ring. Same shape STRING uses. */
+        return { in: input, out: output, sources: modeSources };
       }
 
       case 'body': {
