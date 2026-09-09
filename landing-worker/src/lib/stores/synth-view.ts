@@ -2,7 +2,7 @@ import { derived, get, writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { modularSynth } from '../synth';
 import { activeTrackId } from './synth-transport';
-import { activeTrackRow, refreshTracks } from './synth-tracks';
+import { activeTrackRow, refreshTracks, notifyTrackEdited } from './synth-tracks';
 
 /**
  * How the synth page is laid out, per track.
@@ -78,6 +78,11 @@ export function toggleAdvanced(): void {
 	   Only when the track has never had one -- a chain the player built is left
 	   alone, including one they deliberately emptied. */
 	const needsChain = on && !Array.isArray(track?.rackChain);
+
+	/* Switching modes is an edit: the two carry different signal paths, so the
+	   preset stops describing what is heard the moment the mode changes. The
+	   label has to say MODIFIED, or there is no way to save what you now have. */
+	notifyTrackEdited();
 
 	modularSynth.updateTrack(id, {
 		advanced: on,

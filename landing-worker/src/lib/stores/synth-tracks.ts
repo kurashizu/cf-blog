@@ -80,6 +80,18 @@ export function setTrackEditedHook(fn: () => void): void {
 }
 
 /**
+ * Say the track's sound changed, for edits that do not go through
+ * updateActiveTrack.
+ *
+ * Switching a track into ADV is one: it changes which engine plays the voice,
+ * so the preset no longer describes what is heard, but it writes to the track
+ * directly rather than through the racks.
+ */
+export function notifyTrackEdited(): void {
+	onTrackEdited?.();
+}
+
+/**
  * Edit the active track. In percussion mode the sound fields go to the active
  * key's entry and everything else (volume, pan, EQ, name...) to the track row,
  * so the racks, the presets and RST all work per key without knowing about it.
@@ -109,6 +121,11 @@ export function updateTrack(trackId: number, partial: Partial<TrackData>): void 
 export function toggleTrackPercussion(trackId: number): void {
 	const trk = modularSynth.getTrack(trackId);
 	if (!trk) return;
+	/* An edit, like any other: percussion decides whether the track is one voice
+	   or a table of them, so the preset stops describing what is loaded. Only
+	   for the active track -- the label follows that one, and flipping a track
+	   you are not editing should not rename what you are. */
+	if (trackId === get(activeTrackId)) onTrackEdited?.();
 	// The key table survives a round trip through off, so a mis-click does not lose a kit.
 	modularSynth.updateTrack(trackId, { percussion: !trk.percussion, keyTimbres: trk.keyTimbres ?? {} });
 	refreshTracks();
