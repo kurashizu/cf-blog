@@ -22,6 +22,7 @@ import {
 	seqCurrentStep
 } from './synth-transport';
 import { withUndo, selectRuns, clearSelection } from './synth-edit';
+import { startingGraph } from './graph-model';
 
 export const tracksState = writable<TrackData[]>(modularSynth.getTracks());
 export const isOverlayMode = writable<boolean>(true);
@@ -163,7 +164,7 @@ export function applyKitToActiveTrack(keys: Record<number, Partial<TrackData>>):
 		...(isPatched ? { advancedView: 'rack' as const } : {}),
 		rackChain: [],
 		rackParams: {},
-		rackGraph: { nodes: [], cables: [] },
+		rackGraph: startingGraph(),
 		graphParams: {}
 	});
 	refreshTracks();

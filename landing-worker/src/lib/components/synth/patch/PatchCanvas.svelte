@@ -11,6 +11,7 @@
 	 * Cables are drawn as bezier curves in an SVG layer beneath the modules, so
 	 * a cable never covers a knob and a module never hides a cable's endpoint.
 	 */
+	import { get } from 'svelte/store';
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
 	import { currentTrack } from '../../../stores/synth-tracks';
@@ -23,10 +24,18 @@
 		removeCable,
 		setGraphParam,
 		selectedNode,
+		selectedNodes,
+		graphClipboard,
+		moveSelection,
+		deleteSelection,
+		copySelection,
+		pasteClipboard,
+		nodesInRect,
+		isFixedNode,
 		type GraphNode,
 		type PortKind
 	} from '../../../stores/synth-graph';
-	import { MODULE_SPECS, MODULE_GROUPS, moduleSpec, type ModuleSpec } from '../../../stores/synth-modules';
+	import { PALETTE_SPECS, MODULE_GROUPS, moduleSpec, type ModuleSpec } from '../../../stores/synth-modules';
 	import ModuleCard from './ModuleCard.svelte';
 	import ModuleIcon from './ModuleIcon.svelte';
 
@@ -148,6 +157,54 @@
 		};
 	}
 
+	/* The editing keys, LIFE.LAB's set: Delete removes, Ctrl+C/V copy and paste,
+	   Ctrl+A takes everything, Escape clears. Only while the canvas has focus,
+	   so they cannot fire while a name is being typed somewhere else. */
+	function onKeyDown(e: KeyboardEvent) {
+		const target = e.target as HTMLElement | null;
+		const tag = target?.tagName?.toLowerCase() ?? '';
+		if (['input', 'textarea', 'select'].includes(tag) || target?.isContentEditable) return;
+		if (!canvasEl?.contains(target) && target !== canvasEl) return;
+
+		const sel = $selectedNodes;
+		if (e.key === 'Escape') {
+			selectedNodes.set(new Set());
+			selectedNode.set(null);
+			e.preventDefault();
+			return;
+		}
+		if ((e.key === 'Delete' || e.key === 'Backspace') && sel.size) {
+			deleteSelection(graph, sel, graphParams);
+			playSound('click');
+			e.preventDefault();
+			return;
+		}
+		if (!(e.ctrlKey || e.metaKey)) return;
+		const k = e.key.toLowerCase();
+		if (k === 'a') {
+			selectedNodes.set(new Set(graph.nodes.map((n) => n.id)));
+			e.preventDefault();
+		} else if (k === 'c' && sel.size) {
+			const n = copySelection(graph, sel);
+			message = n ? $t('synthPatch.copied', { count: n }) : '';
+			playSound('click');
+			e.preventDefault();
+		} else if (k === 'v') {
+			const n = pasteClipboard(graph, graphParams);
+			if (n) {
+				message = $t('synthPatch.pasted', { count: n });
+				playSound('click');
+			}
+			e.preventDefault();
+		} else if (k === 'd' && sel.size) {
+			// Duplicate: copy and paste in one gesture, which is what it is.
+			copySelection(graph, sel);
+			const n = pasteClipboard(graph, graphParams);
+			if (n) playSound('click');
+			e.preventDefault();
+		}
+	}
+
 	function onWheel(e: WheelEvent) {
 		e.preventDefault();
 		const r = canvasEl?.getBoundingClientRect();
@@ -162,6 +219,21 @@
 	}
 
 	let panning = $state<{ x: number; y: number } | null>(null);
+	/* A box being dragged on empty canvas, in canvas coordinates. */
+	let marquee = $state<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+	/* Where a multi-node drag started, so the whole selection moves together. */
+	let groupDrag = $state<{ x: number; y: number } | null>(null);
+
+	let marqueeRect = $derived(
+		marquee
+			? {
+					x: Math.min(marquee.x0, marquee.x1),
+					y: Math.min(marquee.y0, marquee.y1),
+					w: Math.abs(marquee.x1 - marquee.x0),
+					h: Math.abs(marquee.y1 - marquee.y0)
+				}
+			: null
+	);
 
 	function onPointerDown(e: PointerEvent) {
 		/* Right button pans, anywhere -- including over a module, since wanting to
@@ -174,13 +246,35 @@
 		}
 		if (e.button !== 0) return;
 		if (e.target === canvasEl || (e.target as HTMLElement)?.dataset?.canvas === 'bg') {
-			panning = { x: e.clientX - cam.x, y: e.clientY - cam.y };
-			selectedNode.set(null);
+			/* Left-drag on empty canvas selects, the way LIFE.LAB's does. Panning
+			   is the right button, which works over a module too, so nothing is
+			   lost by giving the left one to the marquee. */
+			const p = toCanvas(e.clientX, e.clientY);
+			marquee = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+			if (!e.shiftKey) {
+				selectedNode.set(null);
+				selectedNodes.set(new Set());
+			}
 		}
 	}
 
 	function onPointerMove(e: PointerEvent) {
 		pointer = { x: e.clientX, y: e.clientY };
+		if (marquee) {
+			const p = toCanvas(e.clientX, e.clientY);
+			marquee = { ...marquee, x1: p.x, y1: p.y };
+			return;
+		}
+		if (groupDrag && dragNode) {
+			const p = toCanvas(e.clientX, e.clientY);
+			const nx = Math.round((p.x - dragNode.dx) / GRID) * GRID;
+			const ny = Math.round((p.y - dragNode.dy) / GRID) * GRID;
+			const anchor = graph.nodes.find((n) => n.id === dragNode!.id);
+			if (anchor && (nx !== anchor.x || ny !== anchor.y)) {
+				moveSelection(graph, $selectedNodes, nx - anchor.x, ny - anchor.y);
+			}
+			return;
+		}
 		if (panning) {
 			cam = { ...cam, x: e.clientX - panning.x, y: e.clientY - panning.y };
 			return;
@@ -195,7 +289,20 @@
 	}
 
 	function onPointerUp() {
+		if (marqueeRect) {
+			// A click rather than a drag leaves the selection alone.
+			if (marqueeRect.w > 3 || marqueeRect.h > 3) {
+				const hit = nodesInRect(graph, marqueeRect, (n) => {
+					const spec = moduleSpec(n.type);
+					return { w: NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
+				});
+				selectedNodes.update((prev) => new Set([...prev, ...hit]));
+				if (hit.length === 1) selectedNode.set(hit[0]);
+			}
+			marquee = null;
+		}
 		panning = null;
+		groupDrag = null;
 		dragNode = null;
 		// A cable dropped on nothing is not a cable.
 		pullFrom = null;
@@ -209,6 +316,19 @@
 		const p = toCanvas(e.clientX, e.clientY);
 		dragNode = { id: n.id, dx: p.x - n.x, dy: p.y - n.y };
 		selectedNode.set(n.id);
+		/* Shift adds to the selection; clicking a module already in one keeps it,
+		   so a group can be dragged by any of its members. Clicking outside the
+		   selection starts a new one. */
+		selectedNodes.update((prev) => {
+			if (e.shiftKey) {
+				const next = new Set(prev);
+				if (next.has(n.id)) next.delete(n.id);
+				else next.add(n.id);
+				return next;
+			}
+			return prev.has(n.id) ? prev : new Set([n.id]);
+		});
+		groupDrag = get(selectedNodes).size > 1 ? { x: p.x, y: p.y } : null;
 	}
 
 	function startCable(e: PointerEvent, nodeId: string, port: string, kind: PortKind) {
@@ -267,7 +387,9 @@
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} />
 
 <div class="flex-1 min-h-0 flex gap-1.5 overflow-hidden">
-	<!-- The workspace. -->
+	<!-- The workspace. role="application" with a tabindex is what a canvas that
+	     takes keys is: the rule is written for plain divs. -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		bind:this={canvasEl}
 		data-canvas="bg"
@@ -275,6 +397,7 @@
 		role="application"
 		tabindex="-1"
 		onwheel={onWheel}
+		onkeydown={onKeyDown}
 		onpointerdown={onPointerDown}
 		oncontextmenu={(e) => e.preventDefault()}
 		ondragover={(e) => {
@@ -300,6 +423,19 @@
 		<!-- Cables sit under the modules: a cable must never cover a knob. -->
 		<svg class="absolute inset-0 w-full h-full pointer-events-none" style="overflow: visible">
 			<g transform="translate({cam.x} {cam.y}) scale({cam.s})">
+				{#if marqueeRect}
+					<rect
+						x={marqueeRect.x}
+						y={marqueeRect.y}
+						width={marqueeRect.w}
+						height={marqueeRect.h}
+						fill="rgba(97,175,239,0.10)"
+						stroke="#61afef"
+						stroke-width="1"
+						stroke-dasharray="4 3"
+						vector-effect="non-scaling-stroke"
+					/>
+				{/if}
 				{#each graph.cables as c, i (i)}
 					{@const a = portPos(c.from, c.fromPort, true)}
 					{@const b = portPos(c.to, c.toPort, false)}
@@ -345,9 +481,11 @@
 				{#if spec}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
-						class="absolute border-2 bg-black/85 rounded-xs select-none {$selectedNode === n.id
-							? 'shadow-[0_0_10px_rgba(97,175,239,0.5)]'
-							: ''}"
+						class="absolute border-2 bg-black/85 rounded-xs select-none {$selectedNodes.has(n.id)
+							? 'shadow-[0_0_0_2px_#61afef,0_0_10px_rgba(97,175,239,0.5)]'
+							: $selectedNode === n.id
+								? 'shadow-[0_0_10px_rgba(97,175,239,0.5)]'
+								: ''}"
 						style="left: {n.x}px; top: {n.y}px; width: {NODE_W}px; height: {nodeHeight(n, spec)}px; border-color: {spec.color}{$selectedNode ===
 						n.id
 							? ''
@@ -363,6 +501,7 @@
 								<!-- The same glyph the palette shows, so a placed module is
 								     recognisable at a glance on a crowded canvas. -->
 								<ModuleIcon type={n.type} size={9} color={spec.color} />
+							{#if !isFixedNode(n.id)}
 							<button
 								onpointerdown={(e) => {
 									if (e.button !== 2) e.stopPropagation();
@@ -374,6 +513,7 @@
 								class="text-[#e06c75] hover:text-white cursor-pointer leading-none"
 								title={$t('synthPatch.removeHint')}>×</button
 							>
+							{/if}
 							</span>
 						</div>
 
@@ -443,7 +583,7 @@
 		{#if paletteOpen}
 			<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-1.5 pr-0.5">
 				{#each MODULE_GROUPS as g (g)}
-					{@const mods = MODULE_SPECS.filter((m) => m.group === g)}
+					{@const mods = PALETTE_SPECS.filter((m) => m.group === g)}
 					{#if mods.length}
 						<div>
 							<div class="text-[8px] uppercase tracking-wider text-white/30 border-b border-white/10 pb-0.5 mb-1">

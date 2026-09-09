@@ -31,7 +31,7 @@ export interface ModuleSpec {
 	id: string;
 	label: string;
 	/** Which shelf of the palette it appears on. */
-	group: 'IO' | 'SOURCE' | 'SHAPE' | 'RESONATE' | 'MODULATE' | 'STEREO' | 'MATH' | 'METER' | 'UTILITY';
+	group: 'SOURCE' | 'SHAPE' | 'RESONATE' | 'MODULATE' | 'STEREO' | 'MATH' | 'METER' | 'UTILITY';
 	color: string;
 	descKey: string;
 	inputs: PortSpec[];
@@ -51,7 +51,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'in',
 		label: 'ENTRY',
-		group: 'IO',
+		group: 'SOURCE',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.in',
 		inputs: [],
@@ -499,7 +499,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		id: 'out',
 		label: 'OUT',
-		group: 'IO',
+		group: 'UTILITY',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.out',
 		inputs: [AUDIO_IN],
@@ -532,12 +532,22 @@ export function moduleSpec(id: string): ModuleSpec | undefined {
 	return MODULE_SPECS.find((m) => m.id === id);
 }
 
-/* Ordered the way a patch is read: what comes in, what makes sound, what
-   shapes it, what rings, what controls it, then the stereo work, the
-   arithmetic, the meters and the plumbing. UTILITY had grown to twelve
-   entries, which is not a category any more. */
+/* ENTRY and OUTPUT are in every patch already and cannot be removed, so there
+   is nothing to drag out of a palette -- but they still need their specs, since
+   the canvas draws their ports and knobs from the same place as everything
+   else. They are filtered out of the palette rather than deleted. */
+export const FIXED_MODULE_IDS = new Set(['in', 'out']);
+
+/** The modules a player can actually add. */
+export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS.filter((m) => !FIXED_MODULE_IDS.has(m.id));
+
+/* Ordered the way a patch is read: what makes sound, what shapes it, what
+   rings, what controls it, then the stereo work, the arithmetic, the meters and
+   the plumbing. UTILITY had grown to twelve entries, which is not a category
+   any more.
+
+   No IO shelf: ENTRY and OUTPUT are in every patch already. */
 export const MODULE_GROUPS: ModuleSpec['group'][] = [
-	'IO',
 	'SOURCE',
 	'SHAPE',
 	'RESONATE',

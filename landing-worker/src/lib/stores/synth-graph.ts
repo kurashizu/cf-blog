@@ -8,6 +8,10 @@ import {
 	hasCable,
 	withoutNode,
 	pruneGraphParams,
+	moveNodes,
+	withoutNodes,
+	copyNodes,
+	pasteNodes,
 	type RackGraph,
 	type GraphCable,
 	type GraphNode,
@@ -25,6 +29,15 @@ export {
 	graphParamKey,
 	getGraphParam,
 	pruneGraphParams,
+	isFixedNode,
+	startingGraph,
+	moveNodes,
+	withoutNodes,
+	copyNodes,
+	pasteNodes,
+	nodesInRect,
+	ENTRY_ID,
+	OUTPUT_ID,
 	EMPTY_GRAPH
 } from './graph-model';
 export type { RackGraph, GraphCable, GraphNode, PortKind, PortSpec } from './graph-model';
@@ -100,4 +113,56 @@ export function setGraphParam(
 	const next = { ...(params ?? {}), [`${nodeId}.${param}`]: value };
 	modularSynth.updateTrack(get(activeTrackId), { graphParams: next } as Partial<TrackData>);
 	refreshTracks();
+}
+
+/* The nodes a box-select or a shift-click has gathered. Separate from
+   selectedNode, which is the one whose knobs the canvas is showing: a selection
+   of six modules has no single one to edit. */
+export const selectedNodes = writable<Set<string>>(new Set());
+
+/** What Ctrl+C put aside, in memory rather than the system clipboard. */
+export const graphClipboard = writable<RackGraph | null>(null);
+
+export function moveSelection(graph: RackGraph, ids: Set<string>, dx: number, dy: number): void {
+	commit(moveNodes(graph, ids, dx, dy));
+}
+
+export function deleteSelection(graph: RackGraph, ids: Set<string>, params?: Record<string, number>): void {
+	let next = params ?? {};
+	for (const id of ids) next = pruneGraphParams(next, id);
+	modularSynth.updateTrack(get(activeTrackId), {
+		rackGraph: withoutNodes(graph, ids),
+		graphParams: next
+	} as Partial<TrackData>);
+	selectedNodes.set(new Set());
+	refreshTracks();
+}
+
+export function copySelection(graph: RackGraph, ids: Set<string>): number {
+	const clip = copyNodes(graph, ids);
+	graphClipboard.set(clip.nodes.length ? clip : null);
+	return clip.nodes.length;
+}
+
+/** Paste the clipboard, carrying each node's knob settings across with it. */
+export function pasteClipboard(graph: RackGraph, params?: Record<string, number>): number {
+	const clip = get(graphClipboard);
+	if (!clip || !clip.nodes.length) return 0;
+	const idFor = (type: string) => `${type}-${Date.now().toString(36)}-${seq++}`;
+	const oldIds = clip.nodes.map((n) => n.id);
+	const { graph: next, ids } = pasteNodes(graph, clip, 32, idFor);
+	// The knobs come too: a pasted module that lost its settings is not a copy.
+	const newIds = [...ids];
+	const gp: Record<string, number> = { ...(params ?? {}) };
+	oldIds.forEach((oldId, i) => {
+		const newIdStr = newIds[i];
+		if (!newIdStr) return;
+		for (const [k, v] of Object.entries(params ?? {})) {
+			if (k.startsWith(`${oldId}.`)) gp[`${newIdStr}.${k.slice(oldId.length + 1)}`] = v;
+		}
+	});
+	modularSynth.updateTrack(get(activeTrackId), { rackGraph: next, graphParams: gp } as Partial<TrackData>);
+	selectedNodes.set(ids);
+	refreshTracks();
+	return ids.size;
 }

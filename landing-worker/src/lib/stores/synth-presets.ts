@@ -7,6 +7,7 @@ import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack, setTrackEditedHook } from './synth-tracks';
 import { showSaveStatus } from './synth-patch';
 import { askConfirm } from './synth-confirm';
+import { startingGraph } from './graph-model';
 import type { GraphNode, GraphCable } from './graph-model';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
@@ -1141,7 +1142,7 @@ function doNewPreset(): void {
 		...blankTimbre(),
 		rackChain: [],
 		rackParams: {},
-		rackGraph: { nodes: [], cables: [] },
+		rackGraph: startingGraph(),
 		graphParams: {},
 		advanced: false
 	});
@@ -1176,7 +1177,7 @@ function doNewAdvancedPreset(): void {
 		rackParams: {},
 		// An empty canvas, so the seeded chain is what sounds: a leftover graph
 		// takes precedence over the chain and would silently win.
-		rackGraph: { nodes: [], cables: [] },
+		rackGraph: startingGraph(),
 		graphParams: {},
 		advanced: true,
 		advancedView: 'rack'
