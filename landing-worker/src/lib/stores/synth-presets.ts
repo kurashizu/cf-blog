@@ -1961,7 +1961,14 @@ function drumPatch(o: {
 			   EXCT is the same noise already shaped into a burst. Its length is
 			   what separates a hi-hat's tick from a cymbal's wash. */
 			'ex.sumGain': 100,
-			'n.hardness': Math.max(0, Math.min(100, Math.round((o.noiseQ ?? 1.2) * 26))),
+			/* The rattle is broadband, so its own tone filter stays wide open.
+			
+			   hardness drives the Q of EXCT's lowpass, and feeding noiseQ into it
+			   put a resonance on the wires: the snare measured a flatness of
+			   0.45 against a real one's 0.75, which is the difference between a
+			   rattle and a pitched buzz. The shaping that belongs to this branch
+			   is the bandpass after it, not a resonant peak inside it. */
+			'n.hardness': 0,
 			'n.exLength': Math.max(1, Math.min(60, Math.round(o.len * (1 + (o.snare ?? 0) / 22)))),
 			/* The rattle sits over the drum, not above it. On a kick this ran at
 			   the written 1700 Hz against a 55 Hz shell and dominated the
@@ -1991,7 +1998,11 @@ function drumPatch(o: {
 			/* An unpitched drum IS its noise, so the band stays wide -- narrowing
 			   it turns a cymbal into a whistle. A pitched one uses the filter to
 			   place the rattle around the drum's own body. */
-			'nf.q': (o.hz ?? 0) > 0 ? (o.noiseQ ?? 1.2) : Math.min(0.8, o.noiseQ ?? 0.8),
+			/* Wide on anything that is mostly rattle. A narrow band turns broadband
+			   wires into a whistle, and a snare is half wires by energy. */
+			'nf.q': (o.hz ?? 0) > 0
+				? Math.max(0.5, (o.noiseQ ?? 1.2) * (1 - ((o.snare ?? 0) / 100) * 0.7))
+				: Math.min(0.8, o.noiseQ ?? 0.8),
 			'nf.depth': 0,
 			/* The shell gives way to the wires as the drum gets noisier.
 			
@@ -2000,7 +2011,14 @@ function drumPatch(o: {
 			   B was pushed, and the snare measured 80% of its energy below 200
 			   Hz with no wires audible at all. Turning A down is the only way to
 			   let B win on the keys where it should. */
-			'mx.mixA': Math.round(100 - (o.snare ?? 0) * 0.75),
+			/* Measured at the taps rather than guessed: the noise branch leaves its
+			   filter as a clean rattle (96% of its energy above 2 kHz) and is
+			   then swamped the moment it meets the modes, which carry far more
+			   energy for the same peak because theirs is concentrated in three
+			   partials. Holding B at full and pulling A down is what actually
+			   lets the wires through -- at A 54 / B 78 the snare still measured
+			   82% of its energy below 200 Hz. */
+			'mx.mixA': Math.round(Math.max(8, 100 - (o.snare ?? 0) * 1.05)),
 			/* Noise carries far more energy than three decaying sines, so summing
 			   the two at face value made the noisiest keys the loudest: a hi-hat
 			   at snare 88 measured 0.46 peak against the rest of the kit's 0.21.
@@ -2008,7 +2026,7 @@ function drumPatch(o: {
 			   hat's level down to the kit's without making it any less noisy --
 			   the ratio between the two branches is what says "hi-hat", not the
 			   absolute level of either. */
-			'mx.mixB': Math.round(Math.min(100, (o.snare ?? 0) * 1.25)),
+			'mx.mixB': (o.snare ?? 0) > 0 ? 100 : 0,
 			/* A cymbal has no shell, so BODY is bypassed on the unpitched keys --
 			   it was rolling off exactly the highs that make them cymbals. */
 			'b.bodySize': o.body,
