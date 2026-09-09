@@ -1832,7 +1832,13 @@ class ModularSynth {
 
         const wet = ctx.createGain();
         // Partials add, so scale by the count to keep the voice in range.
-        wet.gain.value = mix * 0.3;
+        /* 0.3 was headroom for summing many partials, but the partials already
+           scale by 1/n and STRING and TUBE have no mix knob in the palette --
+           strBlend and tubeMix are not in the spec, so mix is always 1 and this
+           was a fixed 10.5 dB cut nobody could undo. Measured through PAN
+           FLUTE: 0.316 into the tube, 0.058 out, which is most of why the
+           breath patches sat 19 dB under the struck ones. */
+        wet.gain.value = mix * 0.85;
         wet.connect(output);
 
         const sources: AudioScheduledSourceNode[] = [];

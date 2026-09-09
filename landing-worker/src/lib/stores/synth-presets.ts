@@ -484,7 +484,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 40, bodyDepth: 45, bodyMix: 50 }]
 				],
 				['entry>ex:b', 'pk>ex', 'ex>str', 'str>brg', 'brg>bod', 'bod>output'],
-				185
+				89
 			)
 		})
 	},
@@ -519,7 +519,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
 				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:b', 'mx>bod', 'bod>output'],
-				97
+				71
 			)
 		})
 	},
@@ -626,7 +626,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'entry>lo', 'd16>lo:b', 'd8>hi', 'd5>hi:b',
 					'lo>all', 'hi>all:b', 'd4>all', 'all>cab', 'cab>output'
 				],
-				28
+				185
 			)
 		})
 	},
@@ -659,7 +659,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mx', 'mix', { mixA: 100, mixB: 44 }]
 				],
 				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>trm', 'fan.cv>trm:cv', 'trm>mx', 'ex>res', 'res>mx:b', 'mx>output'],
-				76
+				110
 			)
 		})
 	},
@@ -726,7 +726,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
 				],
 				['entry>ex:b', 'ham>ex', 'ex>c1', 'ex>c2', 'c1>rg', 'c2>rg:b', 'c1>sm', 'rg>sm:b', 'sm>bod', 'bod>output'],
-				184
+				38
 			)
 		})
 	},
@@ -785,7 +785,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bod', 'body', { bodySize: 25, bodyDepth: 35, bodyMix: 25 }]
 				],
 				['entry>ex:b', 'qul>ex', 'ex>str', 'str>edg', 'edg>bod', 'bod>output'],
-				80
+				69
 			)
 		})
 	},
@@ -936,7 +936,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
 				],
 				['entry>ex:b', 'ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:b', 'mx>bod', 'bod>symp', 'symp>output'],
-				90
+				37
 			)
 		})
 	},
@@ -966,7 +966,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['eq', 'eq', { lowGain: 2, midGain: -3, midFreq: 480, highGain: 2 }]
 				],
 				['entry>ex:b', 'pic>ex', 'ex>str', 'str>bod', 'bod>eq', 'eq>output'],
-				180
+				97
 			)
 		})
 	},
@@ -997,7 +997,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
 				],
 				['entry>ex:b', 'fin>ex', 'ex>str', 'str>bod', 'bod>cmp', 'cmp>output'],
-				83
+				130
 			)
 		})
 	},
@@ -1030,7 +1030,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['rm', 'space', { spaceSize: 52, spaceDecay: 62, spaceMix: 26 }]
 				],
 				['entry>ex:b', 'bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:cv', 'pn>rm', 'rm>output'],
-				200
+				129
 			)
 		})
 	},
@@ -1061,7 +1061,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
 				],
 				['entry>ex:b', 'air>ex', 'ex>rd', 'rd>br', 'br>bel', 'bel>output'],
-				195
+				179
 			)
 		})
 	},
@@ -1093,7 +1093,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
 				],
 				['entry>ex:b', 'air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:b', 'mx>bel', 'bel>output'],
-				91
+				164
 			)
 		})
 	},
@@ -1905,12 +1905,24 @@ function drumPatch(o: {
 			'nf.cutoff': o.tone,
 			'nf.q': o.noiseQ ?? 1.2,
 			'nf.depth': 0,
-			'mx.mixA': 100,
-			'mx.mixB': Math.round((o.snare ?? 0) * 0.55),
+			'mx.mixA': Math.round(100 - (o.snare ?? 0) * 0.18),
+			/* Noise carries far more energy than three decaying sines, so summing
+			   the two at face value made the noisiest keys the loudest: a hi-hat
+			   at snare 88 measured 0.46 peak against the rest of the kit's 0.21.
+			   The branch is scaled by how much of it there is, which holds a
+			   hat's level down to the kit's without making it any less noisy --
+			   the ratio between the two branches is what says "hi-hat", not the
+			   absolute level of either. */
+			'mx.mixB': Math.round((o.snare ?? 0) * 0.55 * (1 - (o.snare ?? 0) / 260)),
 			'b.bodySize': o.body,
 			'b.bodyDepth': 50,
 			'b.bodyMix': o.bodyMix,
-			[`${OUTPUT_ID}.outLevel`]: 100,
+			/* The kit measured ~0.12 peak against the melodic patches' 0.30, so a
+			   kit and a lead on adjacent tracks were half a fader apart. The
+			   drums are struck and short, so they carry less energy per note
+			   than a rung string; the trim makes up for that rather than the
+			   voicing being wrong. */
+			[`${OUTPUT_ID}.outLevel`]: 190,
 			[`${OUTPUT_ID}.outPan`]: 0
 		},
 		// The graph makes the sound; the oscillators are off.
