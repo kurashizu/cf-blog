@@ -173,7 +173,8 @@ function patch(
 	const ROW = 124;
 	const feeders = new Map<string, string[]>();
 	for (const c of cables) {
-		const [from, rest] = c.split('>');
+		const [lhs, rest] = c.split('>');
+		const from = lhs.split('.')[0];
 		const to = rest.split(':')[0];
 		feeders.set(to, [...(feeders.get(to) ?? []), from]);
 	}
@@ -210,10 +211,15 @@ function patch(
 	for (const [id, , params] of nodes) {
 		for (const [k, v] of Object.entries(params ?? {})) graphParams[`${id}.${k}`] = v;
 	}
+	/* 'a>b' is the common case: the OUT socket into the IN socket. A source
+	   port is named after a dot ('sp.r>x') for the modules with two outlets --
+	   SPLIT's R, ENTRY's TRIG -- and a destination port after a colon
+	   ('x>mx:in2') for the ones with two inlets. */
 	const graphCables: GraphCable[] = cables.map((c) => {
-		const [from, rest] = c.split('>');
+		const [lhs, rest] = c.split('>');
+		const [from, fromPort] = lhs.split('.');
 		const [to, toPort] = rest.split(':');
-		return { from, fromPort: 'out', to, toPort: toPort || 'in' };
+		return { from, fromPort: fromPort || 'out', to, toPort: toPort || 'in' };
 	});
 	return { rackGraph: { nodes: graphNodes, cables: graphCables }, graphParams };
 }
@@ -472,11 +478,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['pk', 'excite', { hardness: 72, exLength: 3, exTone: 5200 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['str', 'string', { decayTime: 1.8, damping: 26, stiffness: 55 }],
 					['brg', 'comb', { combPos: 14, combDepth: 45 }],
 					['bod', 'body', { bodySize: 40, bodyDepth: 45, bodyMix: 50 }]
 				],
-				['pk>str', 'str>brg', 'brg>bod', 'bod>output'],
+				['entry>ex:b', 'pk>ex', 'ex>str', 'str>brg', 'brg>bod', 'bod>output'],
 				185
 			)
 		})
@@ -505,13 +512,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['mal', 'excite', { hardness: 30, exLength: 11, exTone: 2200 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['bar', 'modes', { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22 }],
 					['tub', 'tube', { tubeDecay: 0.5, tubeDamp: 55, tubeOdd: 100 }],
 					['mx', 'mix', { mixA: 100, mixB: 38 }],
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
-				['mal>bar', 'bar>mx', 'mal>tub', 'tub>mx:in2', 'mx>bod', 'bod>output'],
-				88
+				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>mx', 'ex>tub', 'tub>mx:in2', 'mx>bod', 'bod>output'],
+				67
 			)
 		})
 	},
@@ -586,6 +594,143 @@ export const SOUND_PRESETS: SoundPreset[] = [
 		})
 	},
 	{
+		/* Drawbars, as an organ actually is: separate pipes sounding together,
+		   not one oscillator filtered. Four OSC nodes at 1 / 2 / 3 / 4 -- the
+		   16', 8', 5 1/3' and 4' drawbars -- summed in pairs and rung through a
+		   short SPACE for the Leslie cabinet's room. The odd 3rd is what gives
+		   a Hammond its reedy edge; without it this is just a stack of sines. */
+		name: 'DRAWBAR ORGAN',
+		category: 'ORGAN',
+		kind: 'AC',
+		preset: synth({
+			osc1Gain: 0,
+			osc2Gain: 0,
+			subOscGain: 0,
+			noiseGain: 0,
+			ampAttack: 0.006,
+			ampDecay: 0.04,
+			ampSustain: 1,
+			ampRelease: 0.08,
+			...patch(
+				[
+					['d16', 'osc', { wave: 0, ratio: 1, level: 62 }],
+					['d8', 'osc', { wave: 0, ratio: 2, level: 40 }],
+					['d5', 'osc', { wave: 0, ratio: 3, level: 24 }],
+					['d4', 'osc', { wave: 0, ratio: 4, level: 16 }],
+					['lo', 'sum', { sumGain: 62 }],
+					['hi', 'sum', { sumGain: 62 }],
+					['all', 'sum', { sumGain: 54 }],
+					['cab', 'space', { spaceSize: 22, spaceDecay: 34, spaceMix: 20 }]
+				],
+				[
+					'entry>lo', 'd16>lo:b', 'd8>hi', 'd5>hi:b',
+					'lo>all', 'hi>all:b', 'd4>all', 'all>cab', 'cab>output'
+				],
+				28
+			)
+		})
+	},
+	{
+		/* A struck bar with no body at all: steel, not wood, so the modes are
+		   far apart (1 : 2.7 : 5.4) and ring long. The tremolo is the pair of
+		   fans a real vibraphone spins over its resonator tubes -- an LFO into
+		   PAN would move it across the stereo field, but a vibraphone's tremolo
+		   is amplitude, so it goes into a VCA instead. */
+		name: 'VIBRAPHONE',
+		category: 'MALLET',
+		kind: 'AC',
+		preset: synth({
+			osc1Gain: 0,
+			osc2Gain: 0,
+			subOscGain: 0,
+			noiseGain: 0,
+			ampAttack: 0.001,
+			ampDecay: 3.2,
+			ampSustain: 0,
+			ampRelease: 1.4,
+			...patch(
+				[
+					['mal', 'excite', { hardness: 26, exLength: 9, exTone: 2600 }],
+					['ex', 'sum', { sumGain: 100 }],
+					['bar', 'modes', { mode1: 1, mode2: 2.7, mode3: 5.4, modeQ: 44 }],
+					['trm', 'vca', { gain: 100, depth: 34 }],
+					['fan', 'lfo', { lfoWave: 0, lfoRate: 5.5, lfoAmt: 60 }],
+					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 100 }],
+					['mx', 'mix', { mixA: 100, mixB: 44 }]
+				],
+				['entry>ex:b', 'mal>ex', 'ex>bar', 'bar>trm', 'fan>trm:cv', 'trm>mx', 'ex>res', 'res>mx:in2', 'mx>output'],
+				76
+			)
+		})
+	},
+	{
+		/* A tube closed at one end, overblown: a pan flute is mostly breath.
+		   The noise is split, one side delayed a few milliseconds against the
+		   other and merged back -- that tiny decorrelation is what makes air
+		   sound wide rather than centred, and it is the reason SPLIT and MERGE
+		   exist. */
+		name: 'PAN FLUTE',
+		category: 'STRING',
+		kind: 'AC',
+		preset: synth({
+			osc1Gain: 0,
+			osc2Gain: 0,
+			subOscGain: 0,
+			noiseGain: 0,
+			ampAttack: 0.05,
+			ampDecay: 0.2,
+			ampSustain: 0.8,
+			ampRelease: 0.18,
+			...patch(
+				[
+					['air', 'noise', { colour: 55, level: 100 }],
+					['ex', 'sum', { sumGain: 100 }],
+					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1, depth: 25 }],
+					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 100 }],
+					['sp', 'split', {}],
+					['wid', 'delay', { dlTime: 7, dlFeedback: 0, dlTone: 9000, dlMix: 60 }],
+					['mg', 'merge', {}],
+					['rm', 'space', { spaceSize: 44, spaceDecay: 50, spaceMix: 24 }]
+				],
+				['entry>ex:b', 'air>ex', 'ex>edge', 'edge>pipe', 'pipe>sp', 'sp>mg', 'sp.r>wid', 'wid>mg:r', 'mg>rm', 'rm>output'],
+				200
+			)
+		})
+	},
+	{
+		/* Two strings a fifth apart struck as one, the way a hammered dulcimer
+		   is strung in courses. RING multiplies them rather than adding, which
+		   makes the sum and difference tones a struck metal course actually
+		   has -- adding them would just be two notes. Blended back against the
+		   plain pair so it reads as an instrument, not an effect. */
+		name: 'DULCIMER',
+		category: 'PLUCK',
+		kind: 'AC',
+		preset: synth({
+			osc1Gain: 0,
+			osc2Gain: 0,
+			subOscGain: 0,
+			noiseGain: 0,
+			ampAttack: 0.001,
+			ampDecay: 1.6,
+			ampSustain: 0,
+			ampRelease: 0.9,
+			...patch(
+				[
+					['ham', 'excite', { hardness: 78, exLength: 3, exTone: 6400 }],
+					['ex', 'sum', { sumGain: 100 }],
+					['c1', 'string', { decayTime: 2.4, damping: 18, stiffness: 40 }],
+					['c2', 'string', { decayTime: 2.1, damping: 22, stiffness: 46 }],
+					['rg', 'ring', { ringDepth: 110 }],
+					['sm', 'sum', { sumGain: 130 }],
+					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
+				],
+				['entry>ex:b', 'ham>ex', 'ex>c1', 'ex>c2', 'c1>rg', 'c2>rg:b', 'c1>sm', 'rg>sm:b', 'sm>bod', 'bod>output'],
+				126
+			)
+		})
+	},
+	{
 		// A 25% pulse through a resonant low-pass that closes fast.
 		name: 'CLAV',
 		category: 'KEYBOARD',
@@ -634,11 +779,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['qul', 'excite', { hardness: 92, exLength: 2, exTone: 8200 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['str', 'string', { decayTime: 1.1, damping: 6, stiffness: 85 }],
 					['edg', 'drive', { driveAmt: 16, driveBias: 20, driveTone: 11000 }],
 					['bod', 'body', { bodySize: 25, bodyDepth: 35, bodyMix: 25 }]
 				],
-				['qul>str', 'str>edg', 'edg>bod', 'bod>output'],
+				['entry>ex:b', 'qul>ex', 'ex>str', 'str>edg', 'edg>bod', 'bod>output'],
 				80
 			)
 		})
@@ -782,13 +928,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['ham', 'excite', { hardness: 44, exLength: 9, exTone: 3400 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['s1', 'string', { decayTime: 4, damping: 22, stiffness: 45 }],
 					['s2', 'string', { decayTime: 3.6, damping: 26, stiffness: 48 }],
 					['mx', 'mix', { mixA: 100, mixB: 64 }],
 					['bod', 'body', { bodySize: 35, bodyDepth: 55, bodyMix: 55 }],
 					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
 				],
-				['ham>s1', 's1>mx', 'ham>s2', 's2>mx:in2', 'mx>bod', 'bod>symp', 'symp>output'],
+				['entry>ex:b', 'ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:in2', 'mx>bod', 'bod>symp', 'symp>output'],
 				63
 			)
 		})
@@ -813,11 +960,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['pic', 'excite', { hardness: 62, exLength: 4, exTone: 4600 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['str', 'string', { decayTime: 2.2, damping: 34, stiffness: 6 }],
 					['bod', 'body', { bodySize: 62, bodyDepth: 65, bodyMix: 70 }],
 					['eq', 'eq', { lowGain: 2, midGain: -3, midFreq: 480, highGain: 2 }]
 				],
-				['pic>str', 'str>bod', 'bod>eq', 'eq>output'],
+				['entry>ex:b', 'pic>ex', 'ex>str', 'str>bod', 'bod>eq', 'eq>output'],
 				180
 			)
 		})
@@ -843,11 +991,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['fin', 'excite', { hardness: 18, exLength: 22, exTone: 1100 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['str', 'string', { decayTime: 3, damping: 52, stiffness: 3 }],
 					['bod', 'body', { bodySize: 88, bodyDepth: 60, bodyMix: 60 }],
 					['cmp', 'comp', { compThresh: -22, compRatio: 4, compAttack: 12 }]
 				],
-				['fin>str', 'str>bod', 'bod>cmp', 'cmp>output'],
+				['entry>ex:b', 'fin>ex', 'ex>str', 'str>bod', 'bod>cmp', 'cmp>output'],
 				83
 			)
 		})
@@ -873,13 +1022,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['bw', 'bow', { bowPressure: 62, bowNoise: 30, bowBite: 42, bowLevel: 100 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['str', 'string', { decayTime: 1.4, damping: 40, stiffness: 2 }],
 					['bod', 'body', { bodySize: 55, bodyDepth: 50, bodyMix: 60 }],
 					['lfo', 'lfo', { lfoWave: 0, lfoRate: 0.4, lfoAmt: 22 }],
 					['pn', 'pan', { panPos: 0, panDepth: 100 }],
 					['rm', 'space', { spaceSize: 52, spaceDecay: 62, spaceMix: 26 }]
 				],
-				['bw>str', 'str>bod', 'bod>pn', 'lfo>pn:cv', 'pn>rm', 'rm>output'],
+				['entry>ex:b', 'bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo>pn:cv', 'pn>rm', 'rm>output'],
 				200
 			)
 		})
@@ -905,11 +1055,12 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['air', 'noise', { colour: 30, level: 66 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['rd', 'reed', { reedStiff: 54, reedBias: 42 }],
 					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100 }],
 					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
 				],
-				['air>rd', 'rd>br', 'br>bel', 'bel>output'],
+				['entry>ex:b', 'air>ex', 'ex>rd', 'rd>br', 'br>bel', 'bel>output'],
 				195
 			)
 		})
@@ -935,13 +1086,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			...patch(
 				[
 					['air', 'noise', { colour: 62, level: 52 }],
+					['ex', 'sum', { sumGain: 100 }],
 					['fl', 'filter', { type: 1, cutoff: 2600, q: 3, depth: 20 }],
 					['br', 'tube', { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0 }],
 					['mx', 'mix', { mixA: 100, mixB: 12 }],
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
 				],
-				['air>fl', 'fl>br', 'br>mx', 'fl>mx:in2', 'mx>bel', 'bel>output'],
-				65
+				['entry>ex:b', 'air>ex', 'ex>fl', 'fl>br', 'br>mx', 'fl>mx:in2', 'mx>bel', 'bel>output'],
+				58
 			)
 		})
 	},
