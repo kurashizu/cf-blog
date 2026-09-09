@@ -1,3 +1,4 @@
+import { MOD_PORT_IDS } from './stores/synth-modules';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -958,9 +959,12 @@ class ModularSynth {
     t: number,
     heldSec: number
   ): { out: AudioNode; sources: AudioScheduledSourceNode[] } | null {
-    const MOD_PORTS = new Set(['fm', 'cv']);
-    const audioCables = graph.cables.filter((c) => !MOD_PORTS.has(c.toPort));
-    const modCables = graph.cables.filter((c) => MOD_PORTS.has(c.toPort));
+    /* Read from the catalogue rather than listed here. The list this replaces
+       said ['fm','cv'] and had fallen behind the modules: pwm, trig and do are
+       mod ports too, so a PWM cable was sorted as audio, found PULSE has no
+       audio inlet, and was silently dropped. */
+    const audioCables = graph.cables.filter((c) => !MOD_PORT_IDS.has(c.toPort));
+    const modCables = graph.cables.filter((c) => MOD_PORT_IDS.has(c.toPort));
 
     // Kahn's algorithm; a cycle here means a hand-edited patch file, since the
     // editor refuses to draw one.

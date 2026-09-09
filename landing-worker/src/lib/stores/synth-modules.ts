@@ -589,6 +589,23 @@ export function moduleSpec(id: string): ModuleSpec | undefined {
    is nothing to drag out of a palette -- but they still need their specs, since
    the canvas draws their ports and knobs from the same place as everything
    else. They are filtered out of the palette rather than deleted. */
+/* Which port ids carry control rather than sound.
+ *
+ * Derived from the catalogue instead of written out, because the engine used to
+ * keep its own hardcoded list -- ['fm','cv'] -- and it had fallen behind: pwm,
+ * trig and do are all mod ports it classified as audio. A cable into PULSE's
+ * PWM inlet went down the audio path, found that PULSE has no audio inlet, and
+ * was dropped, so pulse-width modulation could not work at all; the WHEN/ACT
+ * chain was being topologically sorted as though triggers were sound.
+ *
+ * One source of truth: a port is a mod port because its spec says so. */
+export const MOD_PORT_IDS: ReadonlySet<string> = new Set(
+	MODULE_SPECS.flatMap((m) => [
+		...m.inputs.filter((p) => p.kind === 'mod').map((p) => p.id),
+		...m.outputs.filter((p) => p.kind === 'mod').map((p) => p.id)
+	])
+);
+
 export const FIXED_MODULE_IDS = new Set(['in', 'out']);
 
 /** The modules a player can actually add. */
