@@ -1,4 +1,4 @@
-import type { PortSpec } from './synth-graph';
+import type { PortSpec } from './graph-model';
 
 /**
  * The module catalogue for the patch bay.

@@ -47,7 +47,8 @@ export default defineConfig({
 				'src/lib/midi-file.ts',
 				'src/lib/components/chatbot/markdown.ts',
 				'src/lib/components/lifelab/engine.js',
-				'src/lib/components/lifelab/patterns.js'
+				'src/lib/components/lifelab/patterns.js',
+				'src/lib/stores/graph-model.ts'
 			],
 			// Report every listed file, including any with no test yet, so a
 			// zero row is visible rather than silently absent.
