@@ -1057,7 +1057,6 @@
 							nodeId={n.id}
 							params={graphParams}
 							onParam={(key, value) => setGraphParam(graphParams, n.id, key, value)}
-							onReset={() => {}}
 						/>
 						</div>
 					</div>

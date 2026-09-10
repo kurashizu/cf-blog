@@ -4,7 +4,7 @@
 	 * a label.
 	 *
 	 * The rack idiom is a bordered panel in the module's own colour, a title bar
-	 * carrying its name and RST, a segmented row for the parameter that selects
+	 * carrying its name, a segmented row for the parameter that selects
 	 * rather than sweeps, real knobs for the ones that do sweep, and a live curve
 	 * where the knobs describe a shape. A patch is easier to read when every
 	 * module shows its own settings, so the knobs are here and not in a side
@@ -26,14 +26,12 @@
 		spec,
 		nodeId,
 		params,
-		onParam,
-		onReset
+		onParam
 	}: {
 		spec: ModuleSpec;
 		nodeId: string;
 		params: Record<string, number> | undefined;
 		onParam: (key: string, value: number) => void;
-		onReset: () => void;
 	} = $props();
 
 	function val(key: string, def: number): number {

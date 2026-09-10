@@ -685,7 +685,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   A cable from ENTRY's TRIG says "each time a note starts, ask this",
 		   and what it asks is set by TEST -- always, or only for notes above or
 		   below a pitch, or only when something is already sounding. It passes
-		   the trigger on through DO when the answer is yes, which is what makes
+		   the trigger on through TRUE when the answer is yes, which is what makes
 		   the chain readable left to right: when a note starts, if it is above
 		   C3, then mute the others. */
 		id: 'when',

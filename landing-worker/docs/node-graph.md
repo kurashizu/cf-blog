@@ -171,7 +171,7 @@ One entry in `MODULE_SPECS` (`stores/synth-modules.ts`):
     group: 'SOURCE',
     color: '#c678dd',
     descKey: 'synthPatch.mod.osc',
-    inputs: [{ id: 'pitch', label: 'PITCH', kind: 'mod', role: 'hz' }],
+    inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
     outputs: [AUDIO_OUT],
     params: [...]
 }
@@ -310,7 +310,7 @@ keep out of two gutters. **The gutter is measured from the longest label the
 card carries**, not fixed:
 
 ```
-gutter = max(12, 14 + longestLabel * 4.4)     // 7px monospace, label starts 14px in
+gutter = longest ? max(12, ceil(14 + longestLabel * 4.4)) : 8   // 7px mono, label 14px in
 ```
 
 A fixed padding is a guess, and it was wrong twice. At `px-3` the labels sat on

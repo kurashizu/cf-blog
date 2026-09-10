@@ -1,0 +1,18 @@
+# Generated and vendored code keeps the formatting of whatever produced it.
+#
+# songs/* come out of scripts/gen-*.py and would be rewritten by the next
+# generation; v86net/* is vendored from upstream and is kept diffable against
+# it (the files say so themselves, with @ts-nocheck and a note). Reformatting
+# either buys nothing and loses the property that makes them readable.
+src/lib/songs/
+src/lib/components/krsz-vm/v86net/
+
+# Build output and dependencies.
+.svelte-kit/
+build/
+node_modules/
+coverage/
+package-lock.json
+
+# Fixtures are byte-exact on purpose.
+tests/fixtures/
