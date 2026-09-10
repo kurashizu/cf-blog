@@ -3490,6 +3490,20 @@ class ModularSynth {
     
        Offline renders schedule every voice with explicit times and never hold
        anything in activeVoices, so none of this applies there. */
+    /* Was this track already sounding when the note arrived?
+    
+       Read before the choke loop below, which is about to empty `activeVoices`
+       for this track -- asking afterwards would always answer no. */
+    let legatoTakeover = false;
+    if (!this.renderCtx && (track.voiceMode ?? 'poly') === 'legato') {
+      for (const v of this.activeVoices.values()) {
+        if (v.trackId === trackId) {
+          legatoTakeover = true;
+          break;
+        }
+      }
+    }
+
     if (!this.renderCtx) {
       const act = this.noteActions(track, noteIndex, trackId);
       if (act.cut || act.solo) {
@@ -3825,7 +3839,17 @@ class ModularSynth {
     // its first sample the way a chip's length-counter burst does. Anything
     // above zero still gets at least one 1 ms ramp so it cannot alias.
     const ampAttRaw = Math.max(0, track.ampAttack ?? track.attack ?? 0.005);
-    const ampAtt = ampAttRaw < 0.0005 ? 0 : Math.max(0.001, ampAttRaw);
+    /* LEGATO: a note that arrives while another is sounding does not re-attack.
+    
+       This is the whole difference between LEGATO and MONO, and it was missing
+       -- the two modes produced byte-identical envelopes, so LEGATO was a
+       slower MONO. A phrase played overlapping is one breath: the pitch moves
+       and the envelope carries on, which is what a wind or bowed instrument
+       does and why the mode exists.
+    
+       `legatoTakeover` is decided before the choke loop runs, since that loop
+       is about to empty `activeVoices` for this track. */
+    const ampAtt = legatoTakeover ? 0 : ampAttRaw < 0.0005 ? 0 : Math.max(0.001, ampAttRaw);
     const ampDec = Math.max(0.01, track.ampDecay ?? track.decay ?? 0.15);
     const ampSus = Math.max(0.0001, track.ampSustain ?? track.sustain ?? 0.5);
     const ampRel = Math.max(0.01, track.ampRelease ?? track.release ?? 0.1);
@@ -3959,13 +3983,20 @@ class ModularSynth {
     const peakGain = gainBase * track.volume * oneShot * (advOwnsVoice ? 1 : (track.presetGain ?? 1));
     const sustainGain = Math.max(0.0001, peakGain * ampSus);
     const gainNode = ctx.createGain();
-    if (ampAtt === 0) {
+    if (legatoTakeover) {
+      /* Taking over a phrase already in progress: start where the last note
+         had got to rather than at the top of a fresh attack. Jumping to
+         `peakGain` here would be a click on every slurred note, which is the
+         opposite of what the mode is for. */
+      gainNode.gain.setValueAtTime(sustainGain, t);
+    } else if (ampAtt === 0) {
       gainNode.gain.setValueAtTime(peakGain, t);
+      gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + ampDec);
     } else {
       gainNode.gain.setValueAtTime(0.0001, t);
       gainNode.gain.linearRampToValueAtTime(peakGain, t + ampAtt);
+      gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + ampAtt + ampDec);
     }
-    gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + ampAtt + ampDec);
 
     // ──────────────────────────────────────────────────────────────────────────
     // NODE 5: STEREO PAN & MASTER FX ROUTING
