@@ -354,19 +354,14 @@ describe('execution flow', () => {
 		/* Execution says which nodes run; audio runs because audio is wired into
 		   it. Giving a source an exec pin as well meant two cables saying one
 		   thing, with silence as the penalty for drawing only the obvious one. */
-		for (const id of [
-			'osc',
-			'noise',
-			'excite',
-			'sub',
-			'pulse',
-			'bow',
-			'reed',
-			'modes',
-			'env',
-			'lfo'
-		]) {
-			expect(specOf(id).inputs.some((p) => p.kind === 'exec')).toBe(false);
+		/* Named rather than derived, so deleting a module fails here instead of
+		   quietly shrinking what is checked -- but each name has to resolve, or
+		   a typo would be indistinguishable from a module that has no exec pin. */
+		const ids = ['osc', 'noise', 'excite', 'pulse', 'bow', 'reed', 'modes', 'env', 'lfo'];
+		for (const id of ids) {
+			const spec = specOf(id);
+			expect(spec, id).toBeDefined();
+			expect(spec.inputs.some((p) => p.kind === 'exec')).toBe(false);
 		}
 	});
 

@@ -285,22 +285,6 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		/* No LVL knob. A level on a source is a VCA welded to it -- the same
 		   knob OSC lost -- and it gave "why is this quiet" a second place to
 		   hide. Put a VCA after it. */
-		id: 'sub',
-		label: 'SUB',
-		group: 'SOURCE',
-		color: '#61afef',
-		descKey: 'synthPatch.mod.sub',
-		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
-		outputs: [AUDIO_OUT],
-		params: [
-			{ key: 'subWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: WAVE_LABELS },
-			{ key: 'subOct', label: 'OCT', min: 1, max: 3, step: 1, def: 1, fixed: true }
-		]
-	},
-	{
-		/* No LVL knob. A level on a source is a VCA welded to it -- the same
-		   knob OSC lost -- and it gave "why is this quiet" a second place to
-		   hide. Put a VCA after it. */
 		id: 'pulse',
 		label: 'PULSE',
 		group: 'SOURCE',

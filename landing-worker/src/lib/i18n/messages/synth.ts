@@ -234,7 +234,6 @@ export default {
 		'synthPatch.mod.modes': 'Three tuned resonances at once, the way a drum head or a bell rings.',
 		'synthPatch.mod.body':
 			'The instrument body: soundboard, box or shell. What turns a bare string into a guitar.',
-		'synthPatch.mod.sub': 'An octave or two below the note. Weight under a voice.',
 		'synthPatch.mod.pulse':
 			'A square whose width you can set and sweep. One oscillator that sounds like two.',
 		'synthPatch.mod.bow':
@@ -704,7 +703,6 @@ export default {
 		'synthPatch.mod.tube': '共鸣气柱。奇次谐波做单簧管，全谐波做长笛或铜管。',
 		'synthPatch.mod.modes': '同时三个共振模态，就像鼓面或钟体的振动方式。',
 		'synthPatch.mod.body': '乐器共鸣体：音板、琴箱或鼓腔。让一根弦变成一把吉他的东西。',
-		'synthPatch.mod.sub': '低八度或两个八度，为音色垫上重量。',
 		'synthPatch.mod.pulse': '脉宽可调可扫的方波。一个振荡器听起来像两个。',
 		'synthPatch.mod.bow':
 			'琴弓：咬住琴弦、拖动、打滑、再咬住。这就是小提琴能持续发声而拨弦不能的原因。',
@@ -1142,7 +1140,6 @@ export default {
 		'synthPatch.mod.tube': '共鳴氣柱。奇次諧波做單簧管，全諧波做長笛或銅管。',
 		'synthPatch.mod.modes': '同時三個共振模態，就像鼓面或鐘體的振動方式。',
 		'synthPatch.mod.body': '樂器共鳴體：音板、琴箱或鼓腔。讓一根弦變成一把吉他的東西。',
-		'synthPatch.mod.sub': '低八度或兩個八度，為音色墊上重量。',
 		'synthPatch.mod.pulse': '脈寬可調可掃的方波。一個振盪器聽起來像兩個。',
 		'synthPatch.mod.bow':
 			'琴弓：咬住琴弦、拖動、打滑、再咬住。這就是小提琴能持續發聲而撥弦不能的原因。',
@@ -1604,7 +1601,6 @@ export default {
 		'synthPatch.mod.tube': '共鳴する気柱。奇数倍音でクラリネット、全倍音でフルートや金管。',
 		'synthPatch.mod.modes': '3つの共振モードを同時に。太鼓の皮や鐘の鳴り方です。',
 		'synthPatch.mod.body': '楽器の胴：響板、ボディ、シェル。ただの弦をギターに変えるものです。',
-		'synthPatch.mod.sub': 'ノートの1〜2オクターブ下。音に重さを加えます。',
 		'synthPatch.mod.pulse':
 			'パルス幅を設定でき、スイープもできる矩形波。1つのオシレーターが2つに聞こえます。',
 		'synthPatch.mod.bow':
@@ -2093,7 +2089,6 @@ export default {
 		'synthPatch.mod.tube': '공명하는 공기 기둥. 홀수 배음은 클라리넷, 전체 배음은 플루트나 금관.',
 		'synthPatch.mod.modes': '세 개의 공진 모드를 동시에. 북 가죽이나 종이 울리는 방식입니다.',
 		'synthPatch.mod.body': '악기의 몸통: 향판, 통, 셸. 맨 현을 기타로 바꾸는 것.',
-		'synthPatch.mod.sub': '노트보다 한두 옥타브 아래. 소리에 무게를 더합니다.',
 		'synthPatch.mod.pulse': '폭을 정하고 훑을 수 있는 사각파. 오실레이터 하나가 둘처럼 들립니다.',
 		'synthPatch.mod.bow':
 			'활: 현을 붙잡고 끌다가 미끄러지고 다시 붙잡습니다. 바이올린은 지속되고 뜯은 현은 그렇지 않은 이유입니다.',

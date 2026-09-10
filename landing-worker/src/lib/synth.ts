@@ -1264,21 +1264,6 @@ class ModularSynth {
 				return { in: null, out: g, mod };
 			}
 
-			case 'sub': {
-				/* An octave (or two) below the note, as a pure shape. Racks 1-7 have
-           this on the oscillator page; a patch that could not put weight under
-           a voice was missing something the fixed chain already had. */
-				const osc = ctx.createOscillator();
-				osc.type = WAVES[Math.round(p('subWave', 0))] ?? 'sine';
-				osc.frequency.value =
-					cvIn(probeKey, 'pitch', 110) / Math.pow(2, Math.max(1, Math.round(p('subOct', 1))));
-				const g = ctx.createGain();
-				g.gain.value = 1;
-				osc.connect(g);
-				sources.push(osc);
-				return { in: null, out: g, mod };
-			}
-
 			case 'pulse': {
 				/* A square whose width is settable and modulatable. Web Audio has no
            pulse oscillator, so it is built the standard way: a sawtooth minus
