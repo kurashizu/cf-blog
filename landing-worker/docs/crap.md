@@ -91,8 +91,26 @@ saved disk overlay — which is why they were tested first:
 - `src/lib/midi-file.ts` — the Standard MIDI File reader
 - `src/lib/components/lifelab/engine.js` — the Life automaton
 - `src/lib/components/lifelab/patterns.js` — RLE encode/decode and geometry
+- `src/lib/components/krsz-vm/qemu-disk.ts` — the VM's lazy disk reads
+- `src/lib/vfs.ts` — the console's in-memory filesystem
+
+Then the patch bay's pure half, which is where the synth's rules live and the
+only part of it that runs without Web Audio:
+
+- `src/lib/stores/graph-model.ts` — which cables are legal, what order nodes build in
+- `src/lib/stores/node-graph.ts` — the resolver and the pure-node table
+- `src/lib/stores/note-lanes.ts` — automation lanes sampled per note
+- `src/lib/stores/graph-history.ts` — undo/redo over the patch
+- `src/lib/stores/patch-format.ts` — the saved patch file
+
+`node-graph.ts` was in neither list for a while, which is worth saying plainly:
+it holds the rule every module in the patch bay reads its inputs through, and a
+green suite never noticed that a cable from an ENV resolved to zero. Untested
+and unmutated is how that survives.
 
 Add a file to both lists in the same commit that adds its tests, never before.
+The two lists are the same list written twice; four files had drifted into one
+and not the other.
 
 `tests/unit/route-guards.test.ts` is the exception to that rule: the filename
 guards on `/model/[file]` and `/vm/qemu/[file]` are three lines inside route

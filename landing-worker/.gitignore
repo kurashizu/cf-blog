@@ -17,3 +17,7 @@ dist
 /.stryker-tmp
 /.shots
 /test-results
+
+# Scratch probes: exploratory test files, never committed. They run in the
+# local suite otherwise, so `npm test` and CI disagree about what ran.
+tests/**/_scratch*/

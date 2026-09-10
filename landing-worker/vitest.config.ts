@@ -51,7 +51,13 @@ export default defineConfig({
 				'src/lib/stores/graph-model.ts',
 				'src/lib/stores/note-lanes.ts',
 				'src/lib/stores/graph-history.ts',
-				'src/lib/stores/patch-format.ts'
+				'src/lib/stores/patch-format.ts',
+				/* The resolver and the pure-node table: the rules every module in
+				   the patch bay reads its inputs through. It was missing from
+				   both this list and Stryker's, which is how a suite that was
+				   green the whole time never noticed that a cable from an ENV
+				   resolved to zero. */
+				'src/lib/stores/node-graph.ts'
 			],
 			// Report every listed file, including any with no test yet, so a
 			// zero row is visible rather than silently absent.

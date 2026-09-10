@@ -306,9 +306,14 @@ export interface TrackData {
   /** Per-key EQ in dB, one per EQ_6_BANDS entry. Kits use this; the track-wide
    *  eqGains above cannot shape a kick and a hi-hat differently. */
   keyEqGains?: number[];
-  /** The voice's signal path, as module ids -- see stores/synth-rack.ts. Absent
+  /** The voice's signal path, as module ids, built by `buildRackModule`. Absent
    *  means the chain the engine has always built. Per key in percussion mode,
-   *  so a kick and a hi-hat need not share one. */
+   *  so a kick and a hi-hat need not share one.
+   *
+   *  This pointed at stores/synth-rack.ts, which had no importers left and is
+   *  gone: it declared a second `moduleSpec` and a rival set of param specs
+   *  that nothing read, so following the comment landed you in the abandoned
+   *  model of the thing you were looking at. */
   rackChain?: string[];
   /* The patch bay as a graph: modules placed on a canvas, cables between named
      ports. Kept beside rackChain rather than replacing it -- they are two ways
@@ -2345,10 +2350,11 @@ class ModularSynth {
         /* A switch, not a percentage: it chose between two outcomes and was
            drawn as a dial with 101 positions.
         
-           Racks 1-7 declare it 0..100 and the shipped presets write 100, while
-           ADV declares it as the two-position selector it always was. Either
-           scale reads the same here: anything past half means odd partials
-           only, which 1 and 100 both are and 0 is not. */
+           ADV declares it as the two-position selector it always was, and the
+           shipped presets were migrated to match. The threshold rather than an
+           equality test is deliberate: a patch file saved before that migration
+           holds 100, and reading it as "not odd" would turn every clarinet in
+           it into an open pipe. 1 and 100 both mean odd; 0 does not. */
         const oddOnly = isTube && (p.tubeOdd ?? 1) >= 0.5;
 
         const input = ctx.createGain();
