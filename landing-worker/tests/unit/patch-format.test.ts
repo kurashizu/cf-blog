@@ -8,6 +8,7 @@ import {
 	PATCH_VERSION,
 	type SynthPatchFile
 } from '../../src/lib/stores/patch-format';
+import { pickTimbre } from '../../src/lib/stores/synth-presets';
 
 /**
  * Saving and loading a project.
@@ -179,56 +180,73 @@ describe('nothing of the previous song survives a load', () => {
  * bay never survived a save; and arrays were copied by reference, so a saved
  * patch shared its automation lanes with the track it came from and drawing on
  * the track afterwards silently rewrote the file that was already on disk.
+ *
+ * These called a `pick()` written in this file that reimplemented `pickTimbre`,
+ * and then tested the reimplementation -- the product could have stopped deep
+ * cloning entirely and they would all still have passed. The justification was
+ * that pickTimbre "lives beside the Web Audio engine and cannot be imported",
+ * which was not true: it is in a plain store module that another test in this
+ * suite already imports.
  */
 describe('a saved patch is a copy, not a view', () => {
-	/* The same shape pickTimbre produces: scalars by value, objects and arrays
-	   deep-cloned. Reproduced here because pickTimbre lives beside the Web Audio
-	   engine and cannot be imported into a unit test. */
-	const OBJECT_KEYS = new Set(['rackGraph', 'rackParams', 'graphParams', 'waveParams', 'modRoutes']);
-	function pick(src: Record<string, unknown>, keys: string[]): Record<string, unknown> {
-		const out: Record<string, unknown> = {};
-		for (const k of keys) {
-			const v = src[k];
-			if (v === undefined || v === null) continue;
-			const t = typeof v;
-			if (t === 'number' || t === 'string' || t === 'boolean') out[k] = v;
-			else if (Array.isArray(v)) out[k] = JSON.parse(JSON.stringify(v));
-			else if (t === 'object' && OBJECT_KEYS.has(k)) out[k] = JSON.parse(JSON.stringify(v));
-		}
-		return out;
-	}
-
 	it('keeps the graph, which is an object and was once dropped', () => {
 		const track = { rackGraph: { nodes: [{ id: 'a' }], cables: [] }, presetGain: 1.3 };
-		const saved = pick(track, ['rackGraph', 'presetGain']);
+		const saved = pickTimbre(track);
 		expect(saved.rackGraph).toEqual(track.rackGraph);
 		expect(saved.presetGain).toBe(1.3);
 	});
 
 	it('does not let a later edit to the track reach the saved graph', () => {
 		const track = { rackGraph: { nodes: [{ id: 'a' }], cables: [] } };
-		const saved = pick(track, ['rackGraph']);
+		const saved = pickTimbre(track);
 		track.rackGraph.nodes.push({ id: 'b' });
-		expect((saved.rackGraph as { nodes: unknown[] }).nodes).toHaveLength(1);
+		expect((saved.rackGraph as unknown as { nodes: unknown[] }).nodes).toHaveLength(1);
 	});
 
-	it('does not let a later edit to a lane reach the saved patch', () => {
-		// An array of objects: copying the reference is the bug this catches.
-		const track = { noteLanes: [{ id: 'vel', points: [0.5] }] };
-		const saved = pick(track, ['noteLanes']);
-		track.noteLanes[0].points.push(0.9);
-		expect((saved.noteLanes as { points: number[] }[])[0].points).toEqual([0.5]);
+	it('does not let a later edit to an array reach the saved patch', () => {
+		/* Copying the reference is the bug this catches. `modRoutes` is the
+		   array of objects a preset does carry -- the local reimplementation
+		   this file used to test asserted the same thing about `noteLanes`,
+		   which a preset deliberately does not save at all: a preset is a sound,
+		   not what the track plays. Testing the real function is what surfaced
+		   the difference. */
+		const track = { modRoutes: [{ enabled: true, source: 'velocity', dest: 'cutoff', amount: 1 }] };
+		const saved = pickTimbre(track);
+		track.modRoutes[0].amount = 0.2;
+		expect((saved.modRoutes as unknown as { amount: number }[])[0].amount).toBe(1);
+	});
+
+	it('does not save what the track plays, only how it sounds', () => {
+		const saved = pickTimbre({ noteLanes: [{ id: 'vel', points: [0.5] }], cutoff: 900 });
+		expect(saved.noteLanes).toBeUndefined();
+		expect(saved.cutoff).toBe(900);
 	});
 
 	it('skips a field the track does not have rather than writing null', () => {
-		const saved = pick({ presetGain: 1 }, ['presetGain', 'rackGraph', 'noteLanes']);
+		const saved = pickTimbre({ presetGain: 1, rackGraph: undefined, graphParams: null });
 		expect(Object.keys(saved)).toEqual(['presetGain']);
 	});
 
 	it('copies an array of plain numbers too', () => {
 		const track = { eqGains: [1, 2, 3] };
-		const saved = pick(track, ['eqGains']);
+		const saved = pickTimbre(track);
 		track.eqGains[0] = 9;
 		expect(saved.eqGains).toEqual([1, 2, 3]);
+	});
+
+	it('carries every field a saved patch is supposed to hold', () => {
+		/* The list itself, which the local reimplementation could not check: a
+		   key dropped from TIMBRE_KEYS silently stops being saved, and the only
+		   symptom is a preset that comes back missing part of its sound. */
+		const saved = pickTimbre({
+			cutoff: 3000,
+			rackGraph: { nodes: [], cables: [] },
+			graphParams: { 'a.b': 1 },
+			eqGains: [0, 0, 0, 0, 0, 0],
+			eqOn: true
+		});
+		expect(saved.cutoff).toBe(3000);
+		expect(saved.graphParams).toEqual({ 'a.b': 1 });
+		expect(saved.eqOn).toBe(true);
 	});
 });

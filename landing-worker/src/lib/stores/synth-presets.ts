@@ -1415,7 +1415,7 @@ interface PresetFile {
    not share a graph with the track it was saved from. */
 const OBJECT_TIMBRE_KEYS = new Set<string>(['rackGraph', 'rackParams', 'graphParams', 'waveParams', 'modRoutes']);
 
-function pickTimbre(src: Record<string, unknown>): Partial<TrackData> {
+export function pickTimbre(src: Record<string, unknown>): Partial<TrackData> {
 	const out: Record<string, unknown> = {};
 	for (const k of TIMBRE_KEYS) {
 		const v = src[k];

@@ -28,6 +28,11 @@ export class FakeParam {
 	) {}
 	setValueAtTime(v: number, t: number) {
 		this.events.push(['set', v, t]);
+		/* A real param takes the value immediately when the time has passed, and
+		   engine code reads `.value` back. Recording the event without moving the
+		   value made a scheduled setting invisible to anything that asked what
+		   the param currently held. */
+		this.value = v;
 		return this;
 	}
 	linearRampToValueAtTime(v: number, t: number) {
@@ -60,6 +65,10 @@ export class FakeNode {
 		public ctx: FakeCtx
 	) {
 		ctx.nodes.push(this);
+	}
+	/** Real nodes carry their context, and engine code reads it back off them. */
+	get context(): FakeCtx {
+		return this.ctx;
 	}
 	connect(dest: FakeNode | FakeParam, fromChannel?: number, toChannel?: number) {
 		this.outgoing.push({ to: dest, fromChannel, toChannel });
