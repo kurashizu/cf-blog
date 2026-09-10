@@ -2295,18 +2295,32 @@ class ModularSynth {
 		this.trackBuses.forEach((_, i) => this.applyTrackEq(i));
 	}
 
+	/**
+	 * The DRIVE curve, normalised so the knob adds character and not a cliff.
+	 *
+	 * The shape is the usual arctan-ish soft clip, and it is kept. What was
+	 * wrong is that it was used raw: its own output at full scale is about
+	 * 0.335 for every k in the range, so the first click of the knob -- 5% --
+	 * dropped the entire master bus by 9.4 dB and clamped every peak to a
+	 * third of full scale. It only clawed back to unity somewhere past 50%.
+	 * Nobody turns a drive knob expecting the mix to duck.
+	 *
+	 * Dividing by the curve's own peak keeps the shape exactly and removes the
+	 * step: at 5% the small-signal gain is now +0.14 dB rather than -9.4, and
+	 * it rises from there, which is what drive is supposed to do.
+	 */
 	private makeDistortionCurve(amount: number): Float32Array {
 		const k = typeof amount === 'number' ? amount * 50 : 0;
 		const n_samples = 44100;
 		const curve = new Float32Array(n_samples);
 		const deg = Math.PI / 180;
+		const shape = (x: number) =>
+			k === 0 ? x : ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+		// What the shape yields at full scale, so the curve can be scaled to it.
+		const peak = Math.abs(shape(1)) || 1;
 		for (let i = 0; i < n_samples; ++i) {
 			const x = (i * 2) / n_samples - 1;
-			if (k === 0) {
-				curve[i] = x;
-			} else {
-				curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
-			}
+			curve[i] = shape(x) / peak;
 		}
 		return curve;
 	}
@@ -2605,6 +2619,16 @@ class ModularSynth {
        `lastAudibleStep` pointing past its end. */
 		if (this.currentStep >= this.totalSteps) this.currentStep = 0;
 		if (this.lastAudibleStep >= this.totalSteps) this.lastAudibleStep = 0;
+		/* And the lookahead that was booked against the old length.
+		
+		   Clamping the two cursors was not enough: `scheduledStepQueue` still
+		   held entries for steps the pattern no longer has, and `checkUIQueue`
+		   publishes those to the step listeners as their times arrive. Shrinking
+		   a 200-step pattern to 16 while playing sent the playhead to steps 44
+		   through 51 for a whole lookahead window. Notes already sounding are in
+		   flight and keep their tails; what has not been heard yet should not
+		   claim to be somewhere that no longer exists. */
+		this.scheduledStepQueue = this.scheduledStepQueue.filter((e) => e.step < this.totalSteps);
 	}
 
 	public getCurrentStep(): number {
@@ -3322,6 +3346,15 @@ class ModularSynth {
 		let osc1Out: AudioNode | undefined;
 		let osc2Out: AudioNode | undefined;
 		const companions: OscillatorNode[] = [];
+		/* The oscillators that make up OSC1's tone, kept apart from OSC2's.
+
+		   In FM, OSC2 is the modulator and OSC1 the carrier, so the modulator's
+		   output goes to the carrier's frequency. `companions` holds *both* stacks
+		   by the time FM is wired, and the guard there excluded only the osc2
+		   primary -- so a SUPERSAW on OSC2 had its own four companions patched to
+		   the summed output they themselves produce. An audio-rate self-FM loop,
+		   and a timbre unrelated to the index the MORPH knob sets. */
+		const carrierVoices: OscillatorNode[] = [];
 		const helpers: AudioScheduledSourceNode[] = [];
 		let osc2: OscillatorNode | undefined;
 		let noiseSource: AudioBufferSourceNode | undefined;
@@ -3427,6 +3460,7 @@ class ModularSynth {
 				this.applyFreqPlan(osc1.frequency, plan1);
 				const stack1 = this.buildToneStack(ctx, osc1, track.osc1Waveform, plan1, track.waveParams);
 				osc1Out = stack1.out;
+				carrierVoices.push(...stack1.companions);
 				companions.push(...stack1.companions);
 				helpers.push(...stack1.helpers);
 			}
@@ -3482,7 +3516,8 @@ class ModularSynth {
 				fmGain.gain.setValueAtTime(fmIndex, t);
 				osc2Out!.connect(fmGain);
 				fmGain.connect(osc1.frequency);
-				for (const c of companions) if (c !== osc2) fmGain.connect(c.frequency);
+				// The carrier's own stack only: never the modulator's.
+				for (const c of carrierVoices) fmGain.connect(c.frequency);
 
 				const osc1GainNode = ctx.createGain();
 				osc1GainNode.gain.setValueAtTime(track.osc1Gain * osc1Bal, t);
