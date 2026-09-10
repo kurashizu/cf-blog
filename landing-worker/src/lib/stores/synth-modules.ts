@@ -460,7 +460,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   however it was struck, which is what a drum is -- a kick is 55 Hz
 			   whether you hit it from C2 or C5, and in K.MAP the key chooses which
 			   instrument sounds rather than what note it plays. */
-			{ key: 'modeHz', label: 'HZ', min: 0, max: 2000, step: 1, unit: 'Hz', def: 0 }
+			/* Up to the top of hearing, because struck bars go there: the kit's
+			   triangle is a 4200 Hz body and its click is 2500, both of which
+			   were silently clamped to 2000 -- the knob could not reach the
+			   value the preset asked for, so those keys never sounded as
+			   written. */
+			{ key: 'modeHz', label: 'HZ', min: 0, max: 16000, step: 1, unit: 'Hz', def: 0 }
 		]
 	},
 	{
@@ -932,8 +937,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'inLo', label: 'IN.LO', min: -1000, max: 10000, step: 1, def: 0 },
 			{ key: 'inHi', label: 'IN.HI', min: -1000, max: 10000, step: 1, def: 1 },
-			{ key: 'outLo', label: 'TO.LO', min: -1000, max: 10000, step: 1, def: 0 },
-			{ key: 'outHi', label: 'TO.HI', min: -1000, max: 10000, step: 1, def: 100 }
+			{ key: 'outLo', label: 'TO.LO', min: -20000, max: 20000, step: 1, def: 0 },
+			{ key: 'outHi', label: 'TO.HI', min: -20000, max: 20000, step: 1, def: 100 }
 		]
 	},
 	{

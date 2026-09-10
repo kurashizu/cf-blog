@@ -553,7 +553,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mal', 'excite', { hardness: 30, exLength: 11, exTone: 2200 }],
 					['ex', 'sum'],
 					['bar', 'modes', { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22 }],
-					['tub', 'tube', { tubeDecay: 0.5, tubeDamp: 55, tubeOdd: 100 }],
+					['tub', 'tube', { tubeDecay: 0.5, tubeDamp: 55, tubeOdd: 1 }],
 					['mx', 'mix', { mixA: 100, mixB: 38 }],
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
 				],
@@ -720,7 +720,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					/* AMT carries what the VCA's DEPTH used to: 60% through a
 					   depth of 34 is the same 20% swing, now set in one place. */
 					['fan', 'lfo', { lfoWave: 0, lfoRate: 5.5, lfoAmt: 20 }],
-					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 100 }],
+					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 1 }],
 					['mx', 'mix', { mixA: 100, mixB: 44 }]
 				],
 				['mal>ex', 'ex>bar', 'bar>trm', 'fan.cv>trm:cv', 'trm>mx', 'ex>res', 'res>mx:b', 'mx>output'],
@@ -752,7 +752,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['air', 'noise', { colour: 0 }],
 					['ex', 'vca', { gain: 200 }],
 					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1, depth: 550 }],
-					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 100 }],
+					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 1 }],
 					['sp', 'split', {}],
 					['wid', 'delay', { dlTime: 7, dlFeedback: 0, dlTone: 9000, dlMix: 60 }],
 					['mg', 'merge', {}],
@@ -1128,7 +1128,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampSustain: 0.85,
 			ampRelease: 0.15,
 			/* Breath -> reed -> a cylindrical bore closed at one end, which is why
-			   tubeOdd is 100: a clarinet's even harmonics are nearly absent, and
+			   tubeOdd is ODD: a clarinet's even harmonics are nearly absent, and
 			   that hollow quality is the instrument. REED is the nonlinearity
 			   that makes the bore oscillate at all. */
 			...patch(
@@ -1138,7 +1138,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					   welded to it -- so the 66% it used to carry is a VCA. */
 					['ex', 'vca', { gain: 66 }],
 					['rd', 'reed', { reedStiff: 54, reedBias: 42 }],
-					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100 }],
+					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 1 }],
 					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
 				],
 				['air>ex', 'ex>rd', 'rd>br', 'br>bel', 'bel>output'],
@@ -1162,7 +1162,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampSustain: 0.85,
 			ampRelease: 0.15,
 			/* An edge tone, not a reed: breath split across the embouchure hole
-			   drives an open tube, so all harmonics are present (tubeOdd 0). The
+			   drives an open tube, so all harmonics are present (tubeOdd ALL). The
 			   breath is mixed in alongside rather than only through the tube --
 			   an audible amount of a flute is air that never became a note. */
 			...patch(

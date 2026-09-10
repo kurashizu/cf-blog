@@ -982,7 +982,11 @@ class ModularSynth {
     /* What the key press itself was. ENTRY publishes these as pins, so a patch
        can wire velocity to brightness the way a real drum has it rather than
        only to level. */
-    note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 }
+    note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 },
+    /* Whose voice this is. WHEN's "ANY VOICE" test asks what is sounding on
+       this track, so the audio side needs it to answer the same question the
+       action side does. */
+    trackId?: number
   ): {
     out: AudioNode;
     sources: AudioScheduledSourceNode[];
@@ -1065,7 +1069,9 @@ class ModularSynth {
        play without building it. This comment used to claim the opposite of what
        execReach does, which is how the exemption stayed alive in the branch
        below long after it was deleted from the resolver. */
-    const reach = execReach(graph, EXEC_PORT_IDS);
+    const reach = execReach(graph, EXEC_PORT_IDS, 'in', (id) =>
+      this.whenHolds(params, id, note.noteIndex, trackId ?? -1)
+    );
     const outputRuns = (id: string) => runs(reach, id);
     /* When each node runs, in seconds after the note. Zero for everything the
        event reaches directly; SEQ adds its gap as execution passes through, so
@@ -4013,7 +4019,7 @@ class ModularSynth {
       for (const l of lanesOf(trackRow as { noteLanes?: NoteLane[] })) {
         laneValues[l.id] = laneAt(l, this.currentStep);
       }
-      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, baseFreq, t, heldSec, laneValues, track.presetGain ?? 1, { velocity: velocityUnit, noteIndex });
+      const built = this.buildRackGraph(ctx, graph, track.graphParams ?? {}, baseFreq, t, heldSec, laneValues, track.presetGain ?? 1, { velocity: velocityUnit, noteIndex }, trackId);
       if (built) {
         /* The graph is the whole voice, and answers to none of racks 1-7.
         
@@ -4273,6 +4279,32 @@ class ModularSynth {
    * cost is paid once per note. A track with no graph falls back to its own
    * fields, so nothing built before this stops working.
    */
+  /**
+   * Does a WHEN's test hold for this note?
+   *
+   * One predicate, consulted by both halves of the white wire. It was written
+   * only inside `noteActions`, so `execReach` -- which decides what *sounds* --
+   * took every branch unconditionally: a WHEN muted the right notes and let
+   * every note through, which is the two sides of one cable disagreeing.
+   */
+  private whenHolds(
+    params: Record<string, number>,
+    id: string,
+    noteIndex: number,
+    trackId: number
+  ): boolean {
+    const num = (key: string, def: number) => params[`${id}.${key}`] ?? def;
+    const test = Math.round(num('test', 0));
+    const at = Math.round(num('testNote', 48));
+    if (test === 1) return noteIndex < at; // ABOVE: the roll counts downward
+    if (test === 2) return noteIndex > at;
+    if (test === 3) {
+      for (const v of this.activeVoices.values()) if (v.trackId === trackId) return true;
+      return false;
+    }
+    return true;
+  }
+
   private noteActions(
     track: TrackData,
     noteIndex: number,
@@ -4313,17 +4345,7 @@ class ModularSynth {
       (c) => EXEC_PORT_IDS.has(c.toPort) && EXEC_PORT_IDS.has(c.fromPort)
     );
 
-    const holds = (when: { id: string }): boolean => {
-      const test = Math.round(num(when.id, 'test', 0));
-      const at = Math.round(num(when.id, 'testNote', 48));
-      if (test === 1) return noteIndex < at; // ABOVE: the roll counts downward
-      if (test === 2) return noteIndex > at;
-      if (test === 3) {
-        for (const v of this.activeVoices.values()) if (v.trackId === trackId) return true;
-        return false;
-      }
-      return true;
-    };
+    const holds = (id: string) => this.whenHolds(p, id, noteIndex, trackId);
 
     const seen = new Set<string>([entry.id]);
     const queue = [entry.id];
@@ -4337,7 +4359,7 @@ class ModularSynth {
 
         if (node.type === 'when') {
           // A branch: the chain past it only runs when the answer is yes.
-          if (holds(node)) queue.push(node.id);
+          if (holds(node.id)) queue.push(node.id);
           continue;
         }
 

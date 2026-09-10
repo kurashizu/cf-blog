@@ -77,11 +77,30 @@ describe('graphOf', () => {
 		expect(put.x).toBeGreaterThan(900);
 	});
 
-	it('does not invent a cable across someone else\u2019s patch', () => {
+	it('does not invent an audio cable across someone else’s patch', () => {
 		// Joining the restored pair would connect two ends of a graph that has
 		// modules between them, which is a connection nobody made.
 		const g: RackGraph = { nodes: [node('vcf')], cables: [] };
-		expect(graphOf({ rackGraph: g }).cables).toEqual([]);
+		const out = graphOf({ rackGraph: g });
+		expect(out.cables.filter((c) => c.toPort !== 'exec')).toEqual([]);
+	});
+
+	it('reaches a restored OUT, so migrating a patch does not silence it', () => {
+		/* An OUT with an empty exec socket does not run. Injecting one bare
+		   turned every patch that predates OUT from audible into silent the
+		   moment it was migrated -- it played when loaded and went quiet for
+		   good as soon as any node was touched and the migration was committed.
+
+		   Execution is not sound: the exec cable says the end runs, and says
+		   nothing about what reaches it. */
+		const g: RackGraph = { nodes: [node(ENTRY_ID), node('vcf')], cables: [] };
+		const out = graphOf({ rackGraph: g });
+		expect(out.cables).toContainEqual({
+			from: ENTRY_ID,
+			fromPort: 'exec',
+			to: OUTPUT_ID,
+			toPort: 'exec'
+		});
 	});
 
 	// A patch file is user data and may be hand-edited or from an older build.

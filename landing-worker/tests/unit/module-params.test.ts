@@ -332,4 +332,27 @@ describe('presets match the catalogue', () => {
 		}
 		expect(bad).toEqual([]);
 	});
+
+	it('sets them to values the knob can actually reach', () => {
+		/* Checking only that the key exists let four presets write `tubeOdd: 100`
+		   against a 0..1 selector: the card lit no button at all, and touching
+		   either one rewrote the stored value -- so opening a preset and looking
+		   at it changed it. A value out of range is a knob the card cannot
+		   draw. */
+		const bad: string[] = [];
+		for (const [label, g, params] of graphs) {
+			if (!g?.nodes?.length || !params) continue;
+			for (const [key, value] of Object.entries(params)) {
+				const dot = key.lastIndexOf('.');
+				const node = g.nodes.find((n) => n.id === key.slice(0, dot));
+				const spec = node && specOf(node.type);
+				const param = spec?.params.find((q) => q.key === key.slice(dot + 1));
+				if (!param || typeof value !== 'number') continue;
+				if (value < param.min || value > param.max) {
+					bad.push(`${label}: ${node!.type}.${param.key} = ${value} (${param.min}..${param.max})`);
+				}
+			}
+		}
+		expect(bad).toEqual([]);
+	});
 });

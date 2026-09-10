@@ -298,19 +298,41 @@ export type Resolver = ReturnType<typeof createResolver>;
  * The seed patch draws the cable, so the simplest patch is still one you can
  * play without building it.
  */
-export function execReach(graph: EvalGraph, execPorts: ReadonlySet<string>, entryType = 'in'): {
+export function execReach(
+	graph: EvalGraph,
+	execPorts: ReadonlySet<string>,
+	entryType = 'in',
+	/**
+	 * Does this WHEN's test hold for this note?
+	 *
+	 * Optional because the test needs things only the engine knows -- which
+	 * voices are sounding right now. Left out, every branch is taken, which is
+	 * what the editor and the structural tests want: they ask which nodes a
+	 * patch *can* reach, not which it reaches this time.
+	 *
+	 * Supplied, a WHEN whose test fails stops execution at that node. It used to
+	 * branch only on the action side, so `noteActions` and `execReach` gave
+	 * different answers about the same white cable: a patch gating *sound* on a
+	 * WHEN muted correctly and played every note anyway.
+	 */
+	whenHolds?: (nodeId: string) => boolean
+): {
 	gated: boolean;
 	reached: Set<string>;
 } {
 	const execCables = graph.cables.filter(
 		(c) => execPorts.has(c.toPort) && execPorts.has(c.fromPort)
 	);
+	const typeOf = new Map(graph.nodes.map((n) => [n.id, n.type]));
 
 	const reached = new Set<string>();
 	const queue = graph.nodes.filter((n) => n.type === entryType).map((n) => n.id);
 	for (const id of queue) reached.add(id);
 	while (queue.length) {
 		const id = queue.shift()!;
+		/* A WHEN is reached -- it ran, and it asked -- but execution only leaves
+		   it by the outlet its answer chose. With no test to consult, both go. */
+		if (whenHolds && typeOf.get(id) === 'when' && !whenHolds(id)) continue;
 		for (const c of execCables) {
 			if (c.from !== id || reached.has(c.to)) continue;
 			reached.add(c.to);
@@ -366,6 +388,37 @@ export function execDelays(
 			if (prev !== undefined && prev <= after) continue;
 			at.set(c.to, after);
 			queue.push(c.to);
+		}
+	}
+
+	/* Now carry it back up the audio graph.
+	
+	   Only SEQ, WHEN, ACT and OUT have exec inlets -- sound modules deliberately
+	   have none, because THEN is logic and not part of the signal path -- so the
+	   walk above assigns a delay to nodes that make no sound and to nothing that
+	   does. Every source started at the note however the gap was set, and SEQ,
+	   whose whole purpose is the flam, produced a byte-identical render at 0 ms
+	   and at 200 ms.
+	
+	   An OUT that execution reaches late means everything feeding that OUT
+	   sounds late, so the delay flows backwards along the audio cables from it.
+	   A node feeding two OUTs takes the earlier: it is one voice, and the first
+	   time it is asked for is when it has to exist. */
+	const audioFeeds = graph.cables.filter((c) => !execPorts.has(c.toPort));
+	const back = [...at.keys()].filter((id) => {
+		const t = graph.nodes.find((n) => n.id === id)?.type;
+		return t === 'out';
+	});
+	guard = 0;
+	while (back.length && guard++ < 4096) {
+		const id = back.shift()!;
+		const t = at.get(id) ?? 0;
+		for (const c of audioFeeds) {
+			if (c.to !== id) continue;
+			const prev = at.get(c.from);
+			if (prev !== undefined && prev <= t) continue;
+			at.set(c.from, t);
+			back.push(c.from);
 		}
 	}
 	return at;

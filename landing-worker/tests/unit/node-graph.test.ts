@@ -608,11 +608,25 @@ describe('the logic chain', () => {
 		expect(SYNTH).toContain('const execCables = graph.cables.filter(');
 	});
 
-	it('treats WHEN as a branch on the chain', () => {
+	it('treats WHEN as a branch, on the audio side as well as the actions', () => {
 		/* Execution carries on past a WHEN only when its test holds -- which is
-		   what makes it a branch rather than a node that happens to sit there. */
-		expect(SYNTH).toContain("if (node.type === 'when') {");
-		expect(SYNTH).toContain('if (holds(node)) queue.push(node.id);');
+		   what makes it a branch rather than a node that happens to sit there.
+		
+		   `execReach` used to take every branch unconditionally while
+		   `noteActions` evaluated the test, so the same white cable got two
+		   answers: a WHEN muted the right notes and let every note sound. The
+		   predicate is now one method both sides call. */
+		const graph = g(
+			[['e', 'in'], ['w', 'when'], ['o', 'out']],
+			[wire('e', 'exec', 'w', 'exec'), wire('w', 'then', 'o', 'exec')]
+		);
+		// No predicate: every branch is taken, which is what the editor wants.
+		expect(runs(execReach(graph, EXEC), 'o')).toBe(true);
+		// A test that fails stops execution at the WHEN.
+		expect(runs(execReach(graph, EXEC, 'in', () => false), 'o')).toBe(false);
+		expect(runs(execReach(graph, EXEC, 'in', () => true), 'o')).toBe(true);
+		// The WHEN itself still ran -- it was reached, and it asked.
+		expect(runs(execReach(graph, EXEC, 'in', () => false), 'w')).toBe(true);
 	});
 
 	it('cannot loop on a cycle of exec cables', () => {

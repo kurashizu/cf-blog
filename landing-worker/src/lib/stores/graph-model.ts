@@ -258,8 +258,11 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 			}))
 		: g.cables;
 
-	const hasEntry = g.nodes.some((n) => n.id === ENTRY_ID);
-	const hasOutput = g.nodes.some((n) => n.id === OUTPUT_ID);
+	/* By type as well as by id. Matching the fixed id alone meant a patch whose
+	   ENTRY was saved under any other id got a *second* one injected beside it,
+	   and two ENTRYs both publish a full set of event pins. */
+	const hasEntry = g.nodes.some((n) => n.id === ENTRY_ID || n.type === 'in');
+	const hasOutput = g.nodes.some((n) => n.id === OUTPUT_ID || n.type === 'out');
 	if (hasEntry && hasOutput) return cables === g.cables ? g : { nodes: g.nodes, cables };
 
 	/* Nothing on the canvas at all: this is a new patch, so it becomes the seed
@@ -277,16 +280,29 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 	const seedOutput = seed.nodes.find((n) => n.id === OUTPUT_ID)!;
 	const nodes = [...g.nodes];
 	if (!hasEntry) nodes.unshift(seedEntry);
+	const restored = [...cables];
 	if (!hasOutput) {
 		// Clear of whatever is already there, so a restored end is not buried.
 		const right = g.nodes.reduce((m, n) => Math.max(m, n.x), 0);
 		nodes.push({ ...seedOutput, x: Math.max(seedOutput.x, right + 200) });
+		/* And reach it, so restoring the end does not silence the patch.
+		
+		   An OUT with an empty exec socket does not run -- which is the rule --
+		   so injecting one bare turned every patch that predates OUT from
+		   audible into silent the moment it was migrated: it played when loaded,
+		   and went quiet for good as soon as any node was touched and the
+		   migrated graph was committed.
+		
+		   The entry is what execution starts from, so that is the cable to
+		   draw. It is the one the seed patch draws too. */
+		const entryId = nodes.find((n) => n.type === 'in' || n.id === ENTRY_ID)?.id;
+		if (entryId) restored.push({ from: entryId, fromPort: 'exec', to: OUTPUT_ID, toPort: 'exec' });
 	}
 	return {
 		nodes,
 		// A patch that already has modules keeps its own wiring: the seed's
 		// cables name nodes it does not have.
-		cables
+		cables: restored
 	};
 }
 
