@@ -1041,6 +1041,9 @@ class ModularSynth {
     
        See docs/node-graph.md for the contract, and stores/node-graph.ts for the
        implementation. */
+    // Analysers for nodes this patch no longer holds are not coming back.
+    if (!this.renderCtx) this.pruneProbes(graph);
+
     const resolver = createResolver(graph, params, {
       /* Semitones from the tuning reference, not hertz. ENTRY publishes a pitch
          and an oscillator takes a frequency, so a patch converts through FREQ --
@@ -1275,11 +1278,29 @@ class ModularSynth {
     return { out: level, sources, startAt };
   }
 
-  /** One graph node. Returns its audio ends and the params a cable may drive. */
-  /* Analysers placed by SCOPE / FFT / LOUD modules, so the patch canvas can
-     draw what is flowing at that point. Keyed `<trackId>:<nodeId>`; cleared
-     when a track's graph is rebuilt. */
+  /**
+   * Analysers placed by SCOPE / FFT / LOUD, so the canvas can draw what is
+   * flowing at that point.
+   *
+   * Keyed by node id alone, which is what ProbeDisplay looks up. The docstring
+   * here used to claim `<trackId>:<nodeId>` and that the map was cleared on
+   * rebuild; neither was true, and a comment asserting an invariant nobody
+   * maintains is worse than no comment. Two tracks holding a node with the same
+   * id would share an entry -- only the active track's canvas reads it, so the
+   * last note to build wins, which is the one being looked at.
+   *
+   * Each note replaces its own entries, and `pruneProbes` drops the ones whose
+   * nodes are gone, so it tracks the patch rather than growing with it.
+   */
   public graphProbes = new Map<string, AnalyserNode>();
+
+  /** Forget analysers for nodes the patch no longer has. */
+  private pruneProbes(graph: { nodes: { id: string }[] }): void {
+    const live = new Set(graph.nodes.map((n) => n.id));
+    for (const id of this.graphProbes.keys()) if (!live.has(id)) this.graphProbes.delete(id);
+  }
+
+  /** One graph node. Returns its audio ends and the params a cable may drive. */
 
   private buildGraphNode(
     ctx: BaseAudioContext,
