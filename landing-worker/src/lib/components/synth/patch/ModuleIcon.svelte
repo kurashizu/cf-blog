@@ -68,6 +68,8 @@
 		   traced, and a level that becomes one. */
 		follow: 'M1 12q2-8 3 0t3-6 3 5 3-4M1 13h14',
 		tosig: 'M2 8h4M6 8q1.5-4 3 0t3 0M2 5v6',
+		// The same door the other way: a wave arriving, a value leaving.
+		tocv: 'M1 8q1.5-4 3 0t3 0M7 8h4M11 5v6M13 5v6',
 		// LOGIC: the execution chain.
 		seq: 'M2 8h4M6 5l3 3-3 3M10 8h4M12 4v8',
 		when: 'M8 2l6 6-6 6-6-6z',

@@ -729,6 +729,44 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
+		/* Sound read as a value, sign and all.
+		 *
+		 * The bridge FOLLOW is not. FOLLOW answers "how loud", and loudness has
+		 * no negative half -- it rectifies, so a 1 Hz sine comes out as a 2 Hz
+		 * run of humps with the waveform gone. Measured: a sine at -0.71, -1,
+		 * -0.71 through its second half follows out at 1.05, 1.57, 1.16, exactly
+		 * the values its first half gave. That is the right answer for ducking
+		 * and the wrong one for a tremolo, which needs the negative half to pull
+		 * the level *down*.
+		 *
+		 * This does nothing to the signal. A Web Audio node connected to an
+		 * AudioParam already is a control voltage -- that is what a modular
+		 * means by the two being one kind of electricity, and the engine does it
+		 * internally in a dozen places. The wall between the families is ours,
+		 * put there so a waveform cannot land on a knob by accident. This is the
+		 * door through it, so crossing stays a thing you can see on the canvas.
+		 *
+		 * It is also why there is no LFO module: a low-frequency oscillator is an
+		 * oscillator set to a low frequency, and OSC through here is that. A
+		 * separate LFO card would be the same primitive a second time, with its
+		 * own smaller list of waveforms and its own rate knob duplicating FREQ.
+		 *
+		 * Its outlet is `cv` -- the role that reaches any knob. Deliberately not
+		 * `unit`, which is what FOLLOW hands back: 0..1 describes a loudness and
+		 * would be a lie about a signal that swings either way. */
+		id: 'tocv',
+		label: 'TO-CV',
+		group: 'MODULATE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.tocv',
+		inputs: [AUDIO_IN],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'mod', role: 'cv' }],
+		/* No knobs. Scaling a control value is MUL's job and attenuating a signal
+		   is GAIN's, both of which can sit on either side of this. A depth knob
+		   here would be a third place the same multiplication lives. */
+		params: []
+	},
+	{
 		/* A number becoming sound.
 		 *
 		 * The other direction across the same line, and its point is not

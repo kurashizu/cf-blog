@@ -1201,6 +1201,34 @@ class ModularSynth {
 				return { in: finp, out: lift, mod };
 			}
 
+			case 'tocv': {
+				/* Sound read as a value, with its sign intact.
+        
+           The other bridge, and not the one FOLLOW is. FOLLOW answers "how
+           loud", which has no negative half -- it rectifies, so a 1 Hz sine
+           arrives as a 2 Hz run of humps and the waveform is gone. That is the
+           right answer for ducking and auto-wah and the wrong one for
+           everything that wanted the shape: a tremolo needs the negative half
+           to pull the level down, and a rectified LFO pushes it up twice per
+           cycle instead.
+        
+           This one does nothing to the signal at all. It is a gain of 1 whose
+           output is registered as a value, because a Web Audio node connected
+           to an AudioParam already *is* a control voltage -- `fm.connect(
+           osc.frequency)` is the same operation the engine does in a dozen
+           places. The wall between the families is ours, put there so a
+           waveform cannot land on a knob by accident, and this is the door
+           through it rather than a hole in it.
+        
+           That makes an oscillator a usable LFO, which is why there is no LFO
+           module: a low-frequency oscillator is an oscillator at a low
+           frequency, and giving it its own card would be the same primitive
+           twice. */
+				const g = ctx.createGain();
+				g.gain.value = 1;
+				return { in: g, out: g, mod };
+			}
+
 			case 'tosig': {
 				/* A number becoming sound: the other direction across the same line.
 
