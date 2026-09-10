@@ -170,11 +170,12 @@ function patch(
 	   both into a MIX) reads as a fork that rejoins. Wrapping by index instead
 	   put a late node above an early one and drew its cable backwards across
 	   the canvas, which is unreadable however correct the audio is. */
-	/* Tight enough that a six-module patch shows both its ends at the default
-	   zoom. A card is 176 wide, so 200 leaves a 24px gutter -- room for the
-	   cable to read as a cable, and for the port names drawn inside each edge,
-	   without pushing OUTPUT off the right edge. */
-	const COL = 200;
+	/* Wide enough for the cards as they actually draw.
+	
+	   A card is its controls plus the gutters its port labels need, so it is no
+	   longer a flat 176: a module with a four-character label on both sides is
+	   half again as wide. At 200 apart those overlapped their neighbours. */
+	const COL = 300;
 	const ROW = 124;
 	const feeders = new Map<string, string[]>();
 	for (const c of cables) {
@@ -1954,7 +1955,7 @@ interface DrumSpec {
 
 /* Laid out left to right along the signal path, so the canvas reads as the
    instrument's own chain rather than a fixed template. */
-const COL = 200;
+const COL = 300;
 const node = (id: string, type: string, col: number, row = 0) => ({
 	id,
 	type,

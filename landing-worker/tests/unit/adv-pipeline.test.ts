@@ -347,8 +347,9 @@ describe('what the renders proved', () => {
 		const measured = ALL.filter((id) => audioOut(id) || valueOut(id));
 		const neither = ALL.filter((id) => !audioOut(id) && !valueOut(id));
 		/* ENTRY is not among them: it publishes the note as values, which is
-		   exactly what the sweep drives knobs with. */
-		expect(neither.sort()).toEqual(['act', 'out', 'seq', 'when']);
+		   exactly what the sweep drives knobs with. The meters are: they observe
+		   a signal and hand nothing back, so they sit at the end of a branch. */
+		expect(neither.sort()).toEqual(['act', 'fft', 'loud', 'out', 'scope', 'seq', 'when']);
 		expect(measured.length).toBe(ALL.length - neither.length);
 	});
 

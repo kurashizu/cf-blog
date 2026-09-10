@@ -47,7 +47,7 @@
 		type PortKind,
 		type PortRole
 	} from '../../../stores/synth-graph';
-	import { PALETTE_SPECS, MODULE_GROUPS, moduleSpec, CONST_KINDS, type ModuleSpec } from '../../../stores/synth-modules';
+	import { PALETTE_SPECS, MODULE_GROUPS, moduleSpec, moduleWidth, CONST_KINDS, type ModuleSpec } from '../../../stores/synth-modules';
 	import { laneSocketId, VELOCITY_LANE_ID } from '../../../stores/note-lanes';
 	import { trackLanes } from '../../../stores/lane-edit';
 	import ModuleCard from './ModuleCard.svelte';
@@ -81,9 +81,9 @@
 	   is nothing to set on it. */
 	const NARROW_W = 96;
 
-	function nodeWidth(spec: ModuleSpec): number {
-		return spec.params.length || spec.viz ? NODE_W : NARROW_W;
-	}
+	/* Defined beside the catalogue, so a preset laying itself out and the canvas
+	   drawing it cannot disagree about how much room a card takes. */
+	const nodeWidth = moduleWidth;
 	/* Port geometry, in one place because two formulas have to agree exactly:
 	   the dots are laid out by CSS inside the node, and the cables are drawn in
 	   SVG from portPos(). When they disagreed, every cable ended in mid-air a
@@ -109,16 +109,30 @@
 	   either end. */
 	const KNOB_ROW_H = 42;
 	const SELECTOR_H = 30;
+	const FIELD_H = 18;
 	const GAP = 4;
 	const BODY_PAD = 4;
-	const VIZ_H: Record<string, number> = { adsr: 58, wave: 26, curve: 26, scope: 26, fft: 26, meter: 26 };
+	/* A picture is the module, not a decoration on it.
+	
+	   SCOPE and FFT exist only to be looked at -- their audio passes through
+	   untouched -- so 26px of trace told you a signal was present and nothing
+	   else, which is what the level meter already does. A waveform needs height
+	   to show its shape and a spectrum needs it to separate the bands.
+	
+	   The others stay small on purpose: ADSR and the LFO's curve are read
+	   alongside knobs that set them, and a large one would push the controls
+	   apart for no more information. */
+	const VIZ_H: Record<string, number> = { adsr: 58, wave: 26, curve: 26, scope: 96, fft: 96, meter: 40 };
 
 	function bodyHeight(spec: ModuleSpec): number {
-		const knobs = spec.params.filter((p) => !p.choices).length;
+		const knobs = spec.params.filter((p) => !p.choices && !p.field).length;
+		const fields = spec.params.filter((p) => !p.choices && p.field).length;
 		const selectors = spec.params.filter((p) => p.choices).length;
 		const rows = Math.ceil(knobs / 2);
 		const parts: number[] = [];
 		for (let i = 0; i < selectors; i++) parts.push(SELECTOR_H);
+		// A typed field is one line, not a dial's two.
+		if (fields) parts.push(fields * FIELD_H + (fields - 1) * 2);
 		if (spec.viz) parts.push(VIZ_H[spec.viz] ?? 26);
 		if (rows) parts.push(rows * KNOB_ROW_H + (rows - 1) * 2);
 		/* A module with no controls still needs a card.
@@ -680,7 +694,7 @@
 	function outletsOf(n: GraphNode, spec: ModuleSpec) {
 		/* CONST's outlet is whatever type it was set to, so a pitch constant
 		   carries a pitch socket and will not drop onto an amount. */
-		if (spec.variant && n.type === 'const') {
+		if (n.type === 'const') {
 			const k = CONST_KINDS[Math.round(graphParams?.[`${n.id}.kind`] ?? 0)] ?? CONST_KINDS[0];
 			return spec.outputs.map((p) => ({ ...p, role: k.role, label: k.label }));
 		}

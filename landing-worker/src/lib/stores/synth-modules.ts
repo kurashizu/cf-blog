@@ -25,6 +25,13 @@ export interface ModuleParam {
 	   knob -- the same segmented row rack 3 uses for its filter types, because
 	   "which one" reads badly as an angle. */
 	choices?: string[];
+	/* Typed rather than turned.
+	
+	   A dial answers "how much", by feel, and that is most of an instrument. A
+	   literal is the other thing: CONST's job is to say 440, or 0.75, or 48, and
+	   spelling that out on a 26px dial spanning four million positions is not
+	   possible at all. Numbers you know in advance are typed. */
+	field?: boolean;
 	/* How the knob's angle maps to its value.
 	
 	   `linear` is the default and right for most things. `log` is for the
@@ -41,15 +48,26 @@ export interface ModuleSpec {
 	id: string;
 	label: string;
 	/** Which shelf of the palette it appears on. */
-	group: 'SOURCE' | 'LOGIC' | 'SHAPE' | 'RESONATE' | 'MODULATE' | 'STEREO' | 'MATH' | 'METER' | 'UTILITY';
+	group:
+		| 'SOURCE'
+		| 'LOGIC'
+		| 'SHAPE'
+		| 'RESONATE'
+		| 'MODULATE'
+		| 'STEREO'
+		| 'MATH'
+		/* Changing what a value *is* rather than what it equals. Kept apart from
+		   MATH because that is the distinction the type system exists to make:
+		   nothing converts a pitch to a frequency implicitly, so the nodes that
+		   do it should be easy to find rather than buried among the operators. */
+		| 'CONVERT'
+		| 'METER'
+		| 'UTILITY';
 	color: string;
 	descKey: string;
 	inputs: PortSpec[];
 	outputs: PortSpec[];
 	params: ModuleParam[];
-	/* A type chosen in the title bar. Only CONST has one: it is the node's own
-	   kind rather than a setting, so it belongs beside the name. */
-	variant?: { key: string; choices: string[] };
 	/* A live picture of what the knobs are doing, like racks 1-7 carry: an
 	   envelope drawn as its own curve says more than four numbers do. */
 	viz?: 'adsr' | 'wave' | 'curve' | 'scope' | 'fft' | 'meter';
@@ -154,7 +172,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'SAW', 'SQR', 'TRI'] }
+			/* In the engine's order, which is also harmonic order: a sine has no
+			   partials, a triangle has weak odd ones, a square strong odd ones, a
+			   sawtooth all of them. The labels used to read SIN/SAW/SQR/TRI over
+			   that same table, so three of the four buttons named a wave other
+			   than the one they selected. */
+			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'TRI', 'SAW', 'SQR'] }
 		]
 	},
 	{
@@ -459,7 +482,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'fm', label: 'FM', kind: 'mod' }],
 		outputs: [{ id: 'cv', label: 'CV', kind: 'mod' }],
 		params: [
-			{ key: 'lfoWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'SAW', 'SQR', 'TRI'] },
+			{ key: 'lfoWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'TRI', 'SAW', 'SQR'] },
 			{ key: 'lfoRate', label: 'RATE', min: 0.02, max: 40, step: 0.01, unit: 'Hz', def: 5, scale: 'log' },
 			{ key: 'lfoAmt', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 50 }
 		],
@@ -522,14 +545,24 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: []
 	},
 	{
+		/* A meter observes; it does not process.
+		
+		   These used to pass their input through, so a patch could be built with
+		   one in the middle of the chain -- which reads as though looking at a
+		   signal were a stage in making it. Tap the signal instead: run a cable
+		   from wherever you want to look, and the meter is a leaf. That is also
+		   what makes it impossible to break a patch by adding one. */
 		id: 'scope',
 		label: 'SCOPE',
 		group: 'METER',
 		color: '#98c379',
 		descKey: 'synthPatch.mod.scope',
 		inputs: [AUDIO_IN],
-		outputs: [AUDIO_OUT],
-		params: [],
+		outputs: [],
+		params: [
+			{ key: 'scopeSpan', label: 'SPAN', min: 1, max: 100, step: 1, unit: 'ms', def: 20, scale: 'log' },
+			{ key: 'scopeGain', label: 'GAIN', min: 0, max: 40, step: 1, unit: 'dB', def: 0 }
+		],
 		viz: 'scope'
 	},
 	{
@@ -539,8 +572,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		color: '#61afef',
 		descKey: 'synthPatch.mod.fft',
 		inputs: [AUDIO_IN],
-		outputs: [AUDIO_OUT],
-		params: [],
+		outputs: [],
+		params: [
+			{ key: 'fftFloor', label: 'FLOOR', min: -120, max: -30, step: 1, unit: 'dB', def: -90 },
+			{ key: 'fftSmooth', label: 'SMTH', min: 0, max: 95, step: 5, unit: '%', def: 20 }
+		],
 		viz: 'fft'
 	},
 	{
@@ -550,8 +586,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.loud',
 		inputs: [AUDIO_IN],
-		outputs: [AUDIO_OUT],
-		params: [],
+		outputs: [],
+		params: [
+			{ key: 'loudSmooth', label: 'SMTH', min: 0, max: 95, step: 5, unit: '%', def: 60 }
+		],
 		viz: 'meter'
 	},
 	{
@@ -737,8 +775,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * by nature -- and a patch should be able to say it took a different
 		 * one. */
 		id: 'tofreq',
-		label: 'FREQ',
-		group: 'MATH',
+		label: 'TO-FREQ',
+		group: 'CONVERT',
 		color: '#61afef',
 		descKey: 'synthPatch.mod.tofreq',
 		inputs: [{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' }],
@@ -757,8 +795,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * visible on the canvas -- which is the whole reason the two are separate
 		 * types and this is a separate node. */
 		id: 'topitch',
-		label: 'PITCH',
-		group: 'MATH',
+		label: 'TO-PITCH',
+		group: 'CONVERT',
 		color: '#61afef',
 		descKey: 'synthPatch.mod.topitch',
 		inputs: [{ id: 'a', label: 'FREQ', kind: 'mod', role: 'hz' }],
@@ -802,12 +840,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.const',
 		inputs: [],
 		outputs: [CV_OUT],
-		/* Chosen in the header, and it retypes the outlet: see CONST_KINDS. */
-		variant: {
-			key: 'kind',
-			choices: ['NUM', 'PITCH', 'VEL', 'NOTE', 'TIME']
-		},
-		params: [{ key: 'value', label: 'VAL', min: -20000, max: 20000, step: 0.01, def: 1 }]
+		params: [
+			/* Which kind of number this is. It retypes the outlet, so a pitch
+			   constant carries a pitch socket and will not drop onto an inlet
+			   that wanted an amount -- see CONST_KINDS. */
+			{ key: 'kind', label: 'TYPE', min: 0, max: 4, step: 1, def: 0, choices: ['NUM', 'PITCH', 'VEL', 'NOTE', 'TIME'] },
+			{ key: 'value', label: 'VAL', min: -20000, max: 20000, step: 0.01, def: 1, field: true }
+		]
 	},
 	{
 		id: 'add',
@@ -955,6 +994,53 @@ export const EXEC_PORT_IDS: ReadonlySet<string> = new Set(
 	])
 );
 
+/**
+ * How wide a module's card draws, in canvas units.
+ *
+ * The card is its controls plus the gutters its port labels are drawn into, so
+ * it is not a single constant: a module with a four-character label on both
+ * sides is half again as wide as one with none. Laying patches out against a
+ * flat 176 put the oscillator on top of the output.
+ *
+ * Shared with the canvas so a preset and the thing it draws as cannot disagree
+ * -- which they did, silently, until the cards grew.
+ */
+export function moduleWidth(spec: ModuleSpec): number {
+	/* Each side is padded for the labels on that side, not for the longest label
+	   anywhere on the card. FREQ has PITCH in and FREQ out, so both sides are
+	   wide; a module with a bare `in` and `out` gets almost none, and padding it
+	   as though it had five-character labels left two knobs adrift in a card
+	   half again as wide as they needed. */
+	const side = (ports: { label: string }[]) => {
+		const longest = Math.max(0, ...ports.map((p) => p.label.length));
+		return longest ? Math.max(12, Math.ceil(14 + longest * 4.4)) : 8;
+	};
+
+	/* What the controls themselves need. A row of segmented buttons has to stay
+	   legible at 8px, which is what sets the wide case; two knobs side by side
+	   want less, and a card with nothing to show wants least. */
+	const selectors = spec.params.filter((p) => p.choices);
+	const knobs = spec.params.filter((p) => !p.choices && !p.field);
+	const fields = spec.params.filter((p) => !p.choices && p.field);
+	let controls = 96;
+	if (selectors.length) {
+		const widest = Math.max(...selectors.map((p) => (p.choices ?? []).length));
+		controls = Math.max(controls, widest * 40);
+	}
+	if (knobs.length) controls = Math.max(controls, knobs.length > 1 ? 128 : 72);
+	if (fields.length) controls = Math.max(controls, 104);
+	/* A scope or a spectrum is the module rather than a gauge beside one, so it
+	   gets room to be read: a trace 112px wide showed that a signal was present
+	   and nothing about its shape. */
+	if (spec.viz === 'scope' || spec.viz === 'fft') controls = Math.max(controls, 224);
+	else if (spec.viz) controls = Math.max(controls, 128);
+
+	return controls + side(spec.inputs) + side(spec.outputs);
+}
+
+/** The widest card in the catalogue, for laying out a patch with room to spare. */
+export const WIDEST_MODULE = Math.max(...MODULE_SPECS.map(moduleWidth));
+
 export const FIXED_MODULE_IDS = new Set(['in', 'out']);
 
 /** The modules a player can actually add. */
@@ -974,6 +1060,7 @@ export const MODULE_GROUPS: ModuleSpec['group'][] = [
 	'MODULATE',
 	'STEREO',
 	'MATH',
+	'CONVERT',
 	'METER',
 	'UTILITY'
 ];

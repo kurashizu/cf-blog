@@ -13,6 +13,7 @@
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
+	import { CONST_KINDS } from '../../../stores/synth-modules';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
 	import type { ModuleSpec } from '../../../stores/synth-modules';
 	import ProbeDisplay from './ProbeDisplay.svelte';
@@ -35,8 +36,45 @@
 		return params?.[`${nodeId}.${key}`] ?? def;
 	}
 
-	let knobs = $derived(spec.params.filter((p) => !p.choices));
+	/* How much room the port labels need on either side.
+	
+	   The canvas draws them over the card's edges, so the controls have to keep
+	   out of the way -- and a fixed padding is a guess that was wrong twice.
+	   OSC's FREQ label ran under its own waveform buttons at 24px, because the
+	   label is four characters of 7px monospace starting 14px in.
+	
+	   Measured from the longest label the card actually carries, so a module
+	   with only short ones is not padded for a long one it does not have. */
+	const LABEL_START = 14;
+	const CHAR_W = 4.4;
+	/* Each side keeps room for its own labels, matching moduleWidth exactly --
+	   the two have to agree or the controls drift off centre inside the card. */
+	const sideGutter = (ports: { label: string }[]) => {
+		const longest = Math.max(0, ...ports.map((p) => p.label.length));
+		return longest ? Math.max(12, Math.ceil(LABEL_START + longest * CHAR_W)) : 8;
+	};
+	let padLeft = $derived(sideGutter(spec.inputs));
+	let padRight = $derived(sideGutter(spec.outputs));
+
+	/* Three kinds of control, because they answer three kinds of question:
+	   "which one" is a row of buttons, "what number exactly" is a field you
+	   type into, and "how much" is a dial you turn by feel. */
 	let selectors = $derived(spec.params.filter((p) => p.choices));
+	let fields = $derived(
+		spec.params
+			.filter((p) => !p.choices && p.field)
+			.map((p) => {
+				/* CONST's value takes the range of the kind it was set to: a
+				   velocity stops at 1 and a pitch runs to the top of hearing.
+				   Leaving one -20000..20000 range for all five made the types
+				   cosmetic -- the socket changed colour and the field would still
+				   take a number that meant nothing there. */
+				if (spec.id !== 'const' || p.key !== 'value') return p;
+				const k = CONST_KINDS[Math.round(val('kind', 0))] ?? CONST_KINDS[0];
+				return { ...p, min: k.min, max: k.max, step: k.step, unit: k.unit ?? '' };
+			})
+	);
+	let knobs = $derived(spec.params.filter((p) => !p.choices && !p.field));
 
 	/* The LFO's shape, drawn over one cycle. A picture of the wave says which
 	   one is selected faster than the word does. */
@@ -63,7 +101,7 @@
      OSC's waveform row ran under its own FREQ label. The old note said they sat
      right against
      the knob names -- IN touching AMT, OUT touching BIAS. The gutter is theirs. -->
-<div class="flex flex-col gap-1 py-1 px-6">
+<div class="flex flex-col gap-1 py-1" style="padding-left: {padLeft}px; padding-right: {padRight}px">
 	{#each selectors as p (p.key)}
 		<div class="grid gap-0.5" style="grid-template-columns: repeat({p.choices?.length ?? 1}, minmax(0, 1fr))">
 			{#each p.choices ?? [] as choice, ci (choice)}
@@ -89,7 +127,12 @@
 	{/each}
 
 	{#if spec.viz === 'scope' || spec.viz === 'fft' || spec.viz === 'meter'}
-		<ProbeDisplay kind={spec.viz} {nodeId} color={spec.color} />
+		<ProbeDisplay
+			kind={spec.viz}
+			{nodeId}
+			color={spec.color}
+			params={Object.fromEntries(spec.params.map((q) => [q.key, val(q.key, q.def)]))}
+		/>
 	{:else if spec.viz === 'adsr'}
 		<AdsrVisualizer
 			attack={val('envA', 0.005)}
@@ -104,6 +147,32 @@
 			<svg viewBox="0 0 100 28" class="w-full h-[24px]" preserveAspectRatio="none">
 				<path d={wavePath(Math.round(val('lfoWave', 0)))} fill="none" stroke={spec.color} stroke-width="1.5" vector-effect="non-scaling-stroke" />
 			</svg>
+		</div>
+	{/if}
+
+	{#if fields.length}
+		<!-- Typed, not turned. A literal is a number you know in advance, and a
+		     dial cannot spell out 440 -- see the `field` note in synth-modules. -->
+		<div class="flex flex-col gap-0.5">
+			{#each fields as p (p.key)}
+				<label class="flex items-center gap-1 text-[8px] font-mono font-bold leading-none">
+					<span class="shrink-0 opacity-70" style="color: {spec.color}">{p.label}</span>
+					<input
+						type="number"
+						value={val(p.key, p.def)}
+						min={p.min}
+						max={p.max}
+						step={p.step}
+						onpointerdown={(e) => e.stopPropagation()}
+						oninput={(e) => {
+							const v = Number((e.currentTarget as HTMLInputElement).value);
+							if (Number.isFinite(v)) onParam(p.key, Math.max(p.min, Math.min(p.max, v)));
+						}}
+						class="min-w-0 flex-1 bg-black/60 border border-white/20 rounded-xs px-1 py-0.5 text-[9px] font-mono text-right text-white focus:border-white/60 focus:outline-none"
+					/>
+					{#if p.unit}<span class="shrink-0 opacity-50">{p.unit}</span>{/if}
+				</label>
+			{/each}
 		</div>
 	{/if}
 

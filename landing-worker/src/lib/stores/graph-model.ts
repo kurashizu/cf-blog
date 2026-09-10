@@ -193,10 +193,14 @@ export const SEED_FREQ_ID = 'freq-1';
 export function startingGraph(): RackGraph {
 	return {
 		nodes: [
-			{ id: ENTRY_ID, type: 'in', x: 64, y: 128 },
-			{ id: SEED_FREQ_ID, type: 'tofreq', x: 264, y: 176 },
-			{ id: SEED_OSC_ID, type: 'osc', x: 456, y: 144 },
-			{ id: OUTPUT_ID, type: 'out', x: 688, y: 128 }
+			/* Spaced for the cards as they actually draw. A card is its controls
+			   plus the gutters its port labels need, so FREQ (a PITCH inlet and a
+			   FREQ outlet) is far wider than the 176 the old spacing assumed --
+			   and at 192 apart the oscillator sat on top of the output. */
+			{ id: ENTRY_ID, type: 'in', x: 48, y: 128 },
+			{ id: SEED_FREQ_ID, type: 'tofreq', x: 320, y: 184 },
+			{ id: SEED_OSC_ID, type: 'osc', x: 640, y: 128 },
+			{ id: OUTPUT_ID, type: 'out', x: 960, y: 128 }
 		],
 		cables: [
 			/* Execution first: OUT hands the patch to the master when the note

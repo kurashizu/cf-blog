@@ -1940,25 +1940,32 @@ class ModularSynth {
       case 'scope':
       case 'fft':
       case 'loud': {
-        /* A probe: passes its input through untouched and taps it for the
-           canvas to draw. Debugging a patch by ear alone means guessing which
-           of six modules turned the signal to mud; a meter in the middle of the
-           chain says where it happened.
+        /* A probe: it looks at a signal and hands nothing back.
         
-           Analysers are cheap and do not alter what passes through them, so the
-           node is a plain wire as far as the sound is concerned -- placing one
-           can never change the patch, which is the only way a debugging tool is
-           worth having. */
+           Debugging a patch by ear alone means guessing which of six modules
+           turned the signal to mud; a meter tapped off the point in question
+           says where it happened. It has no outlet, because observing is not a
+           stage in making a sound -- run a second cable to it from wherever you
+           want to look, and it sits at the end of that branch.
+        
+           Placing one therefore cannot change the patch, which is the only way
+           a debugging tool is worth having. */
         const g = ctx.createGain();
         const an = ctx.createAnalyser();
-        // Small for a scope, large for a spectrum: one trades time for frequency.
-        an.fftSize = type === 'fft' ? 2048 : 512;
+        /* A spectrum trades time for frequency resolution; a scope wants a
+           window long enough to hold what SPAN asks for. 512 samples is 10.7 ms
+           at 48 kHz, so a knob that went to 100 ms did nothing above a tenth of
+           its travel -- 8192 covers 170 ms with room to spare, and the display
+           reads back only as many samples as the span needs. */
+        an.fftSize = type === 'fft' ? 2048 : 8192;
         an.smoothingTimeConstant = type === 'loud' ? 0.6 : 0.2;
         g.connect(an);
         /* Offline renders have no frames to draw on, and the map is read by the
            canvas while a live voice is sounding. Keyed by node so several
            probes in one patch stay apart. */
         if (!this.renderCtx) this.graphProbes.set(probeKey, an);
+        // No `out`: the sink only gathers nodes marked isOutput, and a meter is
+        // not one, so a dangling gain here is heard by nobody.
         return { in: g, out: g, mod };
       }
 

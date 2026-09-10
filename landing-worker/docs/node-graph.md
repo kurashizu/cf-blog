@@ -202,3 +202,140 @@ disguise, and the ones already found this way were all the same shape:
 
 The test is whether the knob would still make sense if you had to draw it. A
 patch that comes out quiet should have one place to look, not three.
+
+## Card layout
+
+The rules below are all things that were got wrong at least once, each time in
+a way that looked fine in code and broken on screen. Check a card against them
+before adding a module or changing how one draws.
+
+### The port labels are drawn outside the card
+
+The canvas paints them over the card's edges, so the card's own controls must
+keep out of two gutters. **The gutter is measured from the longest label the
+card carries**, not fixed:
+
+```
+gutter = max(12, 14 + longestLabel * 4.4)     // 7px monospace, label starts 14px in
+```
+
+A fixed padding is a guess, and it was wrong twice. At `px-3` the labels sat on
+top of the controls; at `px-6` OSC's four-character `FREQ` still ran under its
+own waveform buttons, because four characters of 7px monospace starting 14px in
+end around 31px and the gutter was 24.
+
+### The gutters are added to the card, not carved out of it
+
+`NODE_W` is what the *controls* need — four waveform buttons legible at 8px, or
+two knobs side by side. The gutters go on top:
+
+```
+width = NODE_W + 2 * gutter        // right
+width = NODE_W                     // wrong: buttons truncate to "S..." "S..."
+```
+
+Subtracting the gutters from the same 176 is what turned SIN/SAW/SQR/TRI into
+four identical ellipses.
+
+### A card is as tall as the taller of its controls and its sockets
+
+`portsHeight` spreads sockets at a minimum 22px apart; `bodyHeight` adds up the
+control rows. The card takes the larger. ENTRY has five outlets and no knobs, so
+its height comes entirely from the sockets.
+
+Two traps here:
+
+- **A measured height of zero is not a height.** The `ResizeObserver` reports
+  what the card actually rendered as, which is the right answer whenever there
+  is something in it — but a module with no controls renders as nothing, and
+  taking that literally collapsed OUT to a title bar with its socket hanging off
+  the edge. Floor the measurement at the computed height.
+- **A module with no controls still needs a body.** Padding alone left an 8px
+  sliver. An empty body is one knob row tall.
+
+### Three kinds of control, for three kinds of question
+
+| question | control | declared by |
+|---|---|---|
+| which one? | segmented buttons | `choices: [...]` |
+| what number exactly? | typed field | `field: true` |
+| how much? | dial | neither |
+
+A literal is typed, not turned. CONST's job is to say 440, or 0.75, or 48, and
+spelling that out on a 26px dial spanning four million positions is not possible
+at all. Conversely a cutoff is a dial: you find it by ear, not by knowing it.
+
+**Labels are three or four characters.** The cells are a fixed width so a row of
+them lines up, and `ALWAYS`/`ABOVE`/`BELOW` were being cut to `ALW...`, which is
+not a label. They are `ANY`/`ABV`/`BLW` now.
+
+### Frequency and ratio dials are logarithmic
+
+Pitch is heard as a ratio: an octave is a doubling wherever you are. On a linear
+dial a 40–18000 Hz cutoff puts everything under 1 kHz — most of what a lowpass
+is for — in the bottom five percent of the sweep. Declare `scale: 'log'`; it
+needs a strictly positive range, and a ratio should be symmetric about 1 so that
+unity sits at twelve o'clock.
+
+And check it reaches the knob. `scale` was declared, tested, and not passed
+through `ModuleCard` for a while, so every log dial rendered linear while the
+tests went green over the declaration.
+
+### Every socket type has its own shape and colour
+
+Shape and colour both, because either alone is ambiguous: a round amber dot
+beside a round white one is two colours of one thing, and shape without colour
+asks you to compare outlines at 12px. All sockets are filled — an outlined one
+read as disabled rather than as a different kind.
+
+The full table is in the `PORT_STYLE` comment in `PatchCanvas.svelte`, and it
+must stay exhaustive: `Record<PortRole, …>` means adding a role without a style
+is a type error rather than a silent fallback.
+
+### A visualiser is the module, not a badge on it
+
+SCOPE and FFT exist only to be looked at. At 26px a trace told you a signal was
+present and nothing else, which the level meter already does — so they get
+96px of height and a 224px-wide card, and the canvas backing store matches so
+the drawing is not done at a quarter resolution and stretched.
+
+The small ones stay small on purpose: ADSR and the LFO's curve are read beside
+the knobs that set them, and enlarging those would push the controls apart for
+no more information.
+
+**A meter has no outlet.** It observes; observing is not a stage in making a
+sound. Run a second cable to it from wherever you want to look and it sits at
+the end of that branch — which is also what makes it impossible to break a
+patch by adding one.
+
+**And it needs its own controls**, for the same reason rack 7's meters have
+them: a fixed view hides every other. A scope at one span cannot resolve a kick
+and a hi-hat both; a spectrum at one floor either buries the quiet detail or
+fills with noise.
+
+When a control sets a window, **check the buffer can hold it**. SPAN went to
+100 ms over a 512-sample analyser — 10.7 ms at 48 kHz — so the top ninety
+percent of the knob did nothing at all.
+
+### A label must name what it selects
+
+OSC's waveform buttons read SIN / SAW / SQR / TRI over an engine table of
+`['sine', 'triangle', 'sawtooth', 'square']`, so three of the four named a wave
+other than the one they chose: picking SAW gave a triangle. The choices array
+and the table it indexes are the same list written twice — keep them in the
+same order, and prefer an order that means something (here, harmonic content:
+none, weak odd, strong odd, all).
+
+### The unit decides the shape of the control
+
+`unit: '×'` says a multiplier, which is checked to be log-scaled and centred on
+1. A scope's GAIN is not that — it only ever magnifies — so it is dB, like every
+other one-way gain. Getting this wrong is caught by test rather than by eye.
+
+### Name a converter for what it does
+
+`TO-FREQ`, not `FREQ`. The bare noun names the destination and reads as though
+the node *is* a frequency; the hyphen reads as an arrow. Conversions live on
+their own `CONVERT` shelf rather than among the arithmetic, because changing
+what a value *is* is not the same as changing what it equals — and the whole
+reason those nodes exist is that nothing does it implicitly.

@@ -14,13 +14,29 @@
 	import { onMount } from 'svelte';
 	import { modularSynth } from '../../../synth';
 
-	let { kind, nodeId, color }: { kind: 'scope' | 'fft' | 'meter'; nodeId: string; color: string } = $props();
+	let {
+		kind,
+		nodeId,
+		color,
+		/* The module's own knobs. A meter you cannot adjust shows one view of the
+		   signal and hides every other: a scope at a fixed span cannot resolve a
+		   kick and a hi-hat both, and a spectrum at a fixed floor either buries
+		   the quiet detail or fills with noise. */
+		params = {}
+	}: {
+		kind: 'scope' | 'fft' | 'meter';
+		nodeId: string;
+		color: string;
+		params?: Record<string, number>;
+	} = $props();
+
+	const p = (key: string, def: number) => params[key] ?? def;
 
 	let canvas = $state<HTMLCanvasElement | null>(null);
 
 	onMount(() => {
 		let raf = 0;
-		const time = new Uint8Array(2048);
+		const time = new Uint8Array(8192);
 		const freq = new Uint8Array(1024);
 
 		function frame() {
@@ -40,30 +56,54 @@
 			ctx.lineWidth = 1;
 
 			if (kind === 'scope') {
-				const n = Math.min(an.fftSize, time.length);
 				an.getByteTimeDomainData(time);
+				/* SPAN is a window in milliseconds, so a 20 ms setting shows about
+				   one cycle of a bass note and forty of a cymbal -- which is what
+				   makes a scope readable at both ends rather than at neither. */
+				const rate = an.context.sampleRate;
+				const want = Math.round((p('scopeSpan', 20) / 1000) * rate);
+				const n = Math.max(8, Math.min(Math.min(an.fftSize, time.length), want));
+				const gain = Math.pow(10, p('scopeGain', 0) / 20);
 				ctx.beginPath();
 				for (let i = 0; i < n; i++) {
 					const x = (i / (n - 1)) * w;
-					const y = h - ((time[i] - 128) / 128) * (h / 2) - h / 2;
+					const v = Math.max(-1, Math.min(1, ((time[i] - 128) / 128) * gain));
+					const y = h / 2 - v * (h / 2);
 					if (i === 0) ctx.moveTo(x, y);
 					else ctx.lineTo(x, y);
 				}
 				ctx.stroke();
+				// Centre line, so a trace at rest reads as silence and not as an
+				// absent signal.
+				ctx.globalAlpha = 0.25;
+				ctx.beginPath();
+				ctx.moveTo(0, h / 2);
+				ctx.lineTo(w, h / 2);
+				ctx.stroke();
+				ctx.globalAlpha = 1;
 			} else if (kind === 'fft') {
 				const n = Math.min(an.frequencyBinCount, freq.length);
 				an.getByteFrequencyData(freq);
 				// Log-spaced, so the bottom four octaves are not one pixel wide.
-				const bars = 32;
+				an.smoothingTimeConstant = Math.max(0, Math.min(0.95, p('fftSmooth', 20) / 100));
+				/* FLOOR is where the display bottoms out. The analyser reports
+				   0..255 across its own dB range, so the floor is read back onto
+				   that: raise it to see the quiet detail, lower it to keep the
+				   noise out. */
+				const floorDb = p('fftFloor', -90);
+				const span = Math.max(1, an.maxDecibels - floorDb);
+				const bars = 40;
 				for (let b = 0; b < bars; b++) {
 					const lo = Math.floor(Math.pow(n, b / bars));
 					const hi = Math.max(lo + 1, Math.floor(Math.pow(n, (b + 1) / bars)));
 					let peak = 0;
 					for (let i = lo; i < hi && i < n; i++) if (freq[i] > peak) peak = freq[i];
-					const bh = (peak / 255) * h;
+					const db = an.minDecibels + (peak / 255) * (an.maxDecibels - an.minDecibels);
+					const bh = Math.max(0, Math.min(1, (db - floorDb) / span)) * h;
 					ctx.fillRect((b / bars) * w, h - bh, w / bars - 1, bh);
 				}
 			} else {
+				an.smoothingTimeConstant = Math.max(0, Math.min(0.95, p('loudSmooth', 60) / 100));
 				const n = Math.min(an.fftSize, time.length);
 				an.getByteTimeDomainData(time);
 				let sum = 0;
@@ -84,10 +124,13 @@
 	});
 </script>
 
+<!-- A scope and a spectrum are the module; a level meter is a reading beside
+     one. Sized accordingly, and the backing store matches so the trace is not
+     drawn at a quarter resolution and stretched. -->
 <canvas
 	bind:this={canvas}
-	width="112"
-	height="26"
+	width={kind === 'meter' ? 224 : 320}
+	height={kind === 'meter' ? 80 : 192}
 	class="w-full bg-black/70 border border-white/15 rounded-xs"
-	style="height: 26px"
+	style="height: {kind === 'meter' ? 40 : 96}px"
 ></canvas>
