@@ -90,6 +90,27 @@ describe('GAIN, the audio half of multiplication', () => {
 		expect(made!.mod.has('level')).toBe(true);
 	});
 
+	it('draws the socket the engine will accept a cable on', () => {
+		/* The engine half and the card half, checked together. GAIN shipped for
+		   one commit with `level` registered as a modulation target and no inlet
+		   declared: reachable in principle, with nowhere on the card to plug in.
+		   Neither half alone catches that -- the knob test sees a bound target
+		   and the socket test sees no orphan socket, so it takes asking whether
+		   the two agree. */
+		const declared = spec('gain').inputs.map((q) => q.id);
+		expect(declared).toContain('level');
+		expect(build('gain').made!.mod.has('level')).toBe(true);
+	});
+
+	it('centres silence, so the settings anyone reaches for are findable', () => {
+		/* On -4..4 unity sits at 62.5% of the travel and 12 dB of inverted boost
+		   sits at the end. On -2..2 silence is dead centre, unity is at three
+		   quarters and its mirror at a quarter. */
+		const lvl = spec('gain').params.find((q) => q.key === 'level')!;
+		expect((0 - lvl.min) / (lvl.max - lvl.min)).toBe(0.5);
+		expect((lvl.def - lvl.min) / (lvl.max - lvl.min)).toBe(0.75);
+	});
+
 	it('goes negative, which is what makes a separate INV unnecessary', () => {
 		/* -1 is the same signal upside down. An invert module would be this one
 		   with its knob welded to a single value, which is a module that asks no

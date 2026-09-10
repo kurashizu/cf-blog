@@ -517,11 +517,33 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'SHAPE',
 		color: '#61afef',
 		descKey: 'synthPatch.mod.gain',
-		inputs: [AUDIO_IN],
+		/* LVL is a socket *and* a knob, and here that pairing is the point rather
+		   than a trap.
+
+		   The engine registers `level` as a modulation target, so a cable onto it
+		   lands on the GainNode's own AudioParam and *adds* to what the knob is
+		   set to. That is what a VCA is: the knob is the resting level and the
+		   envelope opens it from there. Declaring only the audio inlet left the
+		   destination reachable by the engine and undrawable on the canvas --
+		   modulatable in principle, with nowhere to plug in.
+
+		   This is the opposite case to PW and PHS, which are sockets with no
+		   knob. Those two feed a wave table rather than a param, so summing has
+		   nothing coherent to land on and a knob beside them would be a second
+		   opinion that quietly added. Here summing is the behaviour wanted, so
+		   the knob stays and the socket joins it. */
+		inputs: [AUDIO_IN, { id: 'level', label: 'LVL', kind: 'mod', role: 'cv' }],
 		outputs: [AUDIO_OUT],
-		params: [
-			{ key: 'level', label: 'LVL', min: -4, max: 4, step: 0.01, def: 1 }
-		]
+		/* -2..2 rather than -4..4, and the reason is where 1 lands.
+
+		   A level control's most common setting is unity, and on -4..4 unity sits
+		   at 62.5% of the travel -- an arbitrary place to hunt for, with silence
+		   at the halfway mark and 12 dB of inverted boost at the end that nothing
+		   asks for. On -2..2 unity is at three quarters, its mirror -1 is at a
+		   quarter, and silence is dead centre, so the three settings anyone
+		   reaches for are the three positions findable without looking.
+		   Right-click still returns it to 1. */
+		params: [{ key: 'level', label: 'LVL', min: -2, max: 2, step: 0.01, def: 1 }]
 	},
 	{
 		/* A literal, in whichever type the socket it is going to expects.

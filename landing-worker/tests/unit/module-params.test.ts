@@ -4,6 +4,8 @@ import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
 import { SOUND_PRESETS, BUILTIN_KITS } from '../../src/lib/stores/synth-presets';
 import { roleOf, rolesCompatible } from '../../src/lib/stores/graph-model';
 import { isPureNode, PURE_NODES } from '../../src/lib/stores/node-graph';
+import { modularSynth } from '../../src/lib/synth';
+import { FakeCtx } from './stubs/audio-context';
 
 /**
  * Every parameter a module declares must actually reach the engine.
@@ -23,6 +25,38 @@ import { isPureNode, PURE_NODES } from '../../src/lib/stores/node-graph';
 
 const SOURCE = fs.readFileSync('src/lib/synth.ts', 'utf8');
 const NODE_GRAPH = fs.readFileSync('src/lib/stores/node-graph.ts', 'utf8');
+
+/**
+ * The keys the engine binds to an AudioParam for one module.
+ *
+ * Built against the recording context rather than read out of the catalogue,
+ * so a module cannot earn an exemption by claiming one -- the answer is
+ * whatever the engine actually registered. Null when the module builds no
+ * audio node at all.
+ */
+function modTargets(type: string): Set<string> | null {
+	const S = modularSynth as unknown as {
+		noiseBuffer: unknown;
+		buildGraphNode(...a: unknown[]): { mod: Map<string, unknown> } | null;
+	};
+	const ctx = new FakeCtx();
+	S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+	const made = S.buildGraphNode(
+		ctx,
+		type,
+		(_k: string, d: number) => d,
+		220,
+		0,
+		0.5,
+		[],
+		'n1',
+		{},
+		(_n: string, _port: string, f: number) => f,
+		{ velocity: 0.8, noteIndex: 48, tuning: 440 },
+		0.5
+	);
+	return made ? new Set(made.mod.keys()) : null;
+}
 
 /** The names the default branch forwards. */
 function forwardedParams(): Set<string> {
@@ -231,12 +265,30 @@ describe('the node contract', () => {
 		   field beside a socket is where the value sits when nothing drives it,
 		   which is exactly what CLAMP's bounds want. On an audio module a signal
 		   *adds* to the knob instead, so the same pairing would double: that is
-		   the trap PWM's PW was pulled out of. */
+		   the trap PWM's PW was pulled out of.
+
+		   The audio half of the rule is about *where the pairing lands*, not
+		   about the pairing existing. A knob whose key the engine registers as a
+		   modulation target is an AudioParam, and a signal summing onto an
+		   AudioParam is the definition of a VCA: GAIN's knob is the resting
+		   level and an envelope opens it from there. What the rule forbids is
+		   the pairing with nowhere coherent to sum -- PW and PHS feed a wave
+		   table rather than a param, so a knob beside them would be a second
+		   opinion that quietly added, and OSC's old HZ knob simply stopped
+		   working the moment a cable arrived.
+
+		   So: a knob may share a name with a socket exactly when the engine
+		   binds that key to an AudioParam. That is checked against the built
+		   node rather than asserted, so a module cannot claim the exemption by
+		   declaring it. */
 		const clashes: string[] = [];
 		for (const m of MODULE_SPECS) {
 			if (isPureNode(m.id)) continue;
+			const bound = modTargets(m.id);
 			for (const port of m.inputs) {
-				if (m.params.some((q) => q.key === port.id)) clashes.push(`${m.id}.${port.id}`);
+				if (!m.params.some((q) => q.key === port.id)) continue;
+				if (bound?.has(port.id)) continue;
+				clashes.push(`${m.id}.${port.id}`);
 			}
 		}
 		expect(clashes).toEqual([]);
