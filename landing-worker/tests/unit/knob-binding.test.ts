@@ -96,6 +96,13 @@ describe('every knob is what the card says it is', () => {
 				   the note an octave sharp. Matched by port id -- the role is
 				   `hz` on most of them and `pitch` only on ENTRY's. */
 				if (q.id === 'pitch') continue;
+				/* PHS is the second, and it is not registered because there is
+				   nothing to register it *on*: an OscillatorNode has no phase
+				   AudioParam. The offset is rotated into the wave table when the
+				   note is built, so it is read as a value like PITCH and is fixed
+				   for the life of the note -- an LFO cannot sweep it, and the
+				   socket takes a CONST or anything else resolved per note. */
+				if (m.id === 'osc' && q.id === 'phase') continue;
 				if (!made.mod.has(q.id)) missing.push(`${m.id}.${q.id}`);
 			}
 		}

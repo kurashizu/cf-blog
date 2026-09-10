@@ -106,7 +106,16 @@ class Osc extends FakeNode {
 	type = 'sine';
 	frequency = new FakeParam(this, 'frequency', 440);
 	detune = new FakeParam(this, 'detune');
-	setPeriodicWave() {}
+	/* The wave it was actually given, kept rather than dropped.
+	
+	   `setPeriodicWave` used to be a no-op, which meant a test could check that
+	   an oscillator was built and never that it was built with the right
+	   harmonics -- and phase lives entirely in those coefficients, so there was
+	   nothing to assert against. */
+	periodic: { real: Float32Array; imag: Float32Array } | null = null;
+	setPeriodicWave(w: { real: Float32Array; imag: Float32Array }) {
+		this.periodic = w;
+	}
 }
 class Gain extends FakeNode {
 	gain = new FakeParam(this, 'gain', 1);
@@ -220,8 +229,9 @@ export class FakeCtx {
 	createChannelMerger(n = 2) {
 		return new Merger('merger', this, n);
 	}
-	createPeriodicWave() {
-		return {};
+	createPeriodicWave(real: Float32Array, imag: Float32Array) {
+		// Handed back whole, so a test can read the harmonics the engine computed.
+		return { real, imag };
 	}
 	createBuffer(channels: number, length: number, rate: number) {
 		const data = Array.from({ length: channels }, () => new Float32Array(length));

@@ -27,6 +27,9 @@
 		// SHAPE
 		filter: 'M1 4h7q4 0 5 8',
 		vca: 'M2 13L14 3v10z',
+		// The amplifier triangle, with the line through it that says it can go
+		// either way up: this is a VCA and an inverter at once.
+		gain: 'M3 3l10 5-10 5zM1 8h2M13 8h2',
 		drive: 'M1 8q2-6 4 0t4 0 4-6',
 		eq: 'M3 13V6M8 13V3M13 13V9M1 6h4M6 3h4M11 9h4',
 		blend: 'M1 4h6q3 0 3 4t3 4h2M1 12h6',

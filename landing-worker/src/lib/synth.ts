@@ -1048,7 +1048,28 @@ class ModularSynth {
            drawn table works in both without a second code path. It is given a
            name rather than an index because that is what survives its
            neighbours being deleted. */
-				this.applyWaveform(osc, (wave as SynthWaveform) ?? 'sine', undefined, undefined, ctx);
+				const shape = (wave as SynthWaveform) ?? 'sine';
+				/* PHS, as a fraction of a turn.
+
+           Read as a value rather than registered as a modulation destination,
+           because the offset is rotated into the wave table when the note is
+           built -- there is no AudioParam for a cable to land on. An
+           oscillator has no phase input in Web Audio, and a delay is not one
+           either: a fixed delay is a different phase at every frequency, so it
+           would drift as soon as the note changed pitch.
+
+           Only the four named shapes take this path. A drawn or generated table
+           is already a table, and rotating it is the same operation -- but the
+           basic shapes reach `osc.type` directly, which is cheaper and has no
+           phase, so asking for one is what turns them into a table. Zero keeps
+           the cheap path, which is what nearly every note wants. */
+				const phase = cvIn(probeKey, 'phase', 0);
+				const turns = ((phase % 1) + 1) % 1;
+				if (turns !== 0 && ['sine', 'square', 'sawtooth', 'triangle'].includes(shape)) {
+					osc.setPeriodicWave(this.phasedWave(ctx, `shape:${shape}`, this.shapeTable(shape), turns));
+				} else {
+					this.applyWaveform(osc, shape, undefined, undefined, ctx);
+				}
 				/* The note if PITCH is wired, and the knob if it is not.
         
            An oscillator used to read the key it was played from whether or not
@@ -1089,6 +1110,24 @@ class ModularSynth {
 				nz.connect(g);
 				sources.push(nz);
 				return { in: null, out: g, mod };
+			}
+
+			case 'gain': {
+				/* Sound times a number.
+
+           MUL cannot do this and adding an audio inlet to it would not help:
+           MUL is a pure node, so its whole result is one number pulled once per
+           note, while multiplying sound has to happen sample by sample inside
+           the audio graph. They are two mechanisms, and a card that switched
+           between them depending on what you patched would be two modules
+           wearing one name.
+
+           The range goes negative, which is what makes this VCA and INV at
+           once: -1 is the same signal upside down, and a separate invert module
+           would be this one with its knob welded. */
+				const g = ctx.createGain();
+				knob(g.gain, 'level', 1);
+				return { in: g, out: g, mod };
 			}
 
 			case 'filter': {
@@ -2987,6 +3026,101 @@ class ModularSynth {
 			}
 			wave = ctx.createPeriodicWave(real, imag, { disableNormalization: false });
 			perCtx.set(key, wave);
+		}
+		return wave;
+	}
+
+	/* One cycle of each of the four named shapes, for the case where a phase has
+	   been asked for. `osc.type = 'sawtooth'` is the cheap path and has no phase
+	   to speak of, so a rotated wave has to be built from samples like every
+	   other table -- these are the samples. 2048 points is well past the 64
+	   harmonics the DFT keeps, so the table is not what limits the result. */
+	private shapeTables = new Map<string, Float32Array>();
+	private shapeTable(w: string): Float32Array {
+		let t = this.shapeTables.get(w);
+		if (!t) {
+			const N = 2048;
+			t = new Float32Array(N);
+			for (let i = 0; i < N; i++) {
+				const x = i / N;
+				t[i] =
+					w === 'square'
+						? x < 0.5
+							? 1
+							: -1
+						: w === 'sawtooth'
+							? 2 * x - 1
+							: w === 'triangle'
+								? 4 * Math.abs(x - 0.5) - 1
+								: Math.sin(2 * Math.PI * x);
+			}
+			this.shapeTables.set(w, t);
+		}
+		return t;
+	}
+
+	private phasedWaves: WeakMap<BaseAudioContext, Map<string, PeriodicWave>> = new WeakMap();
+	/**
+	 * One cycle of samples, rotated by a fraction of a turn.
+	 *
+	 * A phase offset is a rotation of every harmonic, and the nth harmonic turns
+	 * n times as far -- which is exactly what `createPeriodicWave` takes, since
+	 * it is given the real and imaginary coefficients separately. That is why
+	 * this is possible at all: `OscillatorNode` has no phase parameter, and
+	 * delaying it would not be one either, because a fixed delay is a different
+	 * phase at every frequency, so the offset would drift the moment the note
+	 * changed pitch.
+	 *
+	 * The cost is that the rotation is baked into the wave table, so it is fixed
+	 * when the note starts and an LFO cannot sweep it. Sweeping phase needs two
+	 * oscillators beating against each other, which is a patch rather than a
+	 * knob.
+	 */
+	private phasedWave(
+		ctx: BaseAudioContext,
+		key: string,
+		samples: ArrayLike<number>,
+		turns: number
+	): PeriodicWave {
+		let perCtx = this.phasedWaves.get(ctx);
+		if (!perCtx) {
+			perCtx = new Map();
+			this.phasedWaves.set(ctx, perCtx);
+		}
+		/* Quantised into the cache key, because phase is a continuous value and
+		   an un-rounded one would make a new wave table for every note. A
+		   thousandth of a turn is a third of a degree, which is finer than the
+		   ear resolves in a beating pair. */
+		const q = Math.round(turns * 1000) / 1000;
+		const ck = `${key}@${q}`;
+		let wave = perCtx.get(ck);
+		if (!wave) {
+			const N = samples.length;
+			const H = 64;
+			const real = new Float32Array(H + 1);
+			const imag = new Float32Array(H + 1);
+			const phi = 2 * Math.PI * q;
+			for (let n = 1; n <= H; n++) {
+				let re = 0,
+					im = 0;
+				for (let i = 0; i < N; i++) {
+					const ph = (2 * Math.PI * n * i) / N;
+					re += samples[i] * Math.cos(ph);
+					im += samples[i] * Math.sin(ph);
+				}
+				re *= 2 / N;
+				im *= 2 / N;
+				/* Rotate this harmonic by n turns of the offset. Rotating all of
+				   them by the same angle would smear the shape instead of sliding
+				   it: what makes this a delay of the whole wave rather than a new
+				   waveform is that the nth partial moves n times as far. */
+				const c = Math.cos(n * phi);
+				const s = Math.sin(n * phi);
+				real[n] = re * c - im * s;
+				imag[n] = im * c + re * s;
+			}
+			wave = ctx.createPeriodicWave(real, imag, { disableNormalization: false });
+			perCtx.set(ck, wave);
 		}
 		return wave;
 	}

@@ -373,7 +373,23 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'SOURCE',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.osc',
-		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		/* PHS is a socket and not a knob, for the reason PW is one: a signal
+		   arriving at a knob *adds* to it, so a knob at 0 and a CONST of 0.25
+		   would be two opinions about one value, and the pair would sum. What
+		   the offset is when nothing is patched is zero, which is the shape the
+		   module boots as.
+
+		   Typed `unit` rather than a role of its own. A new role is worth it when
+		   a value cannot be converted to its neighbours by arithmetic -- which is
+		   why `pitch` and `bool` are separate -- but a phase is a fraction of a
+		   turn, and a fraction of a turn is a 0..1 the same way a duty cycle and
+		   a velocity are. Giving it its own role would cut every one of those
+		   cables for a type safety that is not real: 0.25 of a turn and 0.25 of
+		   a pulse width are the same number meaning the same proportion. */
+		inputs: [
+			{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' },
+			{ id: 'phase', label: 'PHS', kind: 'mod', role: 'unit' }
+		],
 		outputs: [AUDIO_OUT],
 		/* The same picker racks 1-7 use, minus the shelves that are not periodic
 		   waves: NOISE is not one, and the ADVANCED four are other primitives
@@ -476,6 +492,38 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * signals; these add values. The distinction is the same one Web Audio
 		 * makes between a node's input and its AudioParam, and keeping both is
 		 * what lets a patch treat a number as a number. */
+		/* Sound times a number.
+		 *
+		 * The audio half of multiplication, and the reason MUL is not it: MUL is
+		 * a pure node, so its result is one number pulled once per note, while
+		 * multiplying sound happens sample by sample inside the audio graph.
+		 * Giving MUL an audio inlet would not merge them -- it would make one
+		 * card behave as a pure node or an audio node depending on what was
+		 * patched, which is two modules wearing one name. The names differ
+		 * because the mechanisms do.
+		 *
+		 * This is VCA and INV at once, which is what the negative range is for:
+		 * -1 is the same signal upside down, and an invert module would be this
+		 * one with its knob welded to a single value. Above 1 it is drive into
+		 * whatever follows, which is the other thing a level control is for.
+		 *
+		 * LVL is a knob *and* a modulation target rather than a socket, unlike
+		 * PW and PHS: a signal arriving at an AudioParam adds to it, and adding
+		 * is what an envelope onto a level should do -- that is a VCA. The trap
+		 * PW was pulled out of was a knob that duplicated a *socket*; here there
+		 * is one inlet and it is the knob. */
+		id: 'gain',
+		label: 'GAIN',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.gain',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'level', label: 'LVL', min: -4, max: 4, step: 0.01, def: 1 }
+		]
+	},
+	{
 		/* A literal, in whichever type the socket it is going to expects.
 		 *
 		 * One node with variants rather than five near-identical ones: a pitch,

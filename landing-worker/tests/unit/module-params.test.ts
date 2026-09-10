@@ -324,7 +324,17 @@ describe('every parameter the engine reads is declared', () => {
 		   the engine. That is the half that catches a knob wired to nothing,
 		   which is the failure this file exists for, and it gets stricter rather
 		   than weaker as modules come back. */
-		const read = new Set([...SOURCE.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1]));
+		/* `p('key')` is one of two ways the engine reads a knob. The other is
+		   `knob(param, 'key', def)`, which reads it *and* registers the
+		   AudioParam so a cable can land on it -- scraping only the first
+		   reported GAIN's LVL as dead when it is the one knob the module has.
+		   Both forms count, along with the two scaled variants. */
+		const read = new Set([
+			...[...SOURCE.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1]),
+			...[...SOURCE.matchAll(/\bknob(?:At|Pct)?\([^,]+,\s*'([a-zA-Z][a-zA-Z0-9]*)'/g)].map(
+				(m) => m[1]
+			)
+		]);
 		const pureRead = new Set(
 			[...NODE_GRAPH.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1])
 		);
