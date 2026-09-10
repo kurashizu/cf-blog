@@ -808,8 +808,21 @@ class ModularSynth {
     });
   }
 
+  /** Which context the master chain currently belongs to. */
+  private masterFXCtx: BaseAudioContext | null = null;
+
   private initMasterFX(ctx: AudioContext) {
-    if (this.delayNode) return;
+    /* One chain per context, and the guard has to say *which* context.
+    
+       `if (this.delayNode) return;` asked only whether a chain existed, so
+       calling this with a second context silently kept the first one's nodes --
+       and the next `connect` across the boundary throws
+       "cannot connect to an AudioNode belonging to a different audio context",
+       taking the note with it. It held together only because `renderOffline`
+       happens to clear the cache first; anything else that acquires a context
+       (a recreated one after `close()`, a suspended-context recovery) hit it. */
+    if (this.delayNode && this.masterFXCtx === ctx) return;
+    this.masterFXCtx = ctx;
 
     // Stereo Tape Delay
     this.delayNode = ctx.createDelay(2.0);
@@ -3847,8 +3860,14 @@ class ModularSynth {
        controller. A curve drawn in a lane is not touch -- it is the part as
        written -- so it still applies, linearly, rather than being discarded
        along with the velocity a key press happened to report. */
-    if (this.velocityCurve === 'OFF' && laneVelocity !== undefined && laneVelocity > 0) {
-      gainBase = 0.28 * (0.15 + (Math.max(1, Math.min(127, laneVelocity)) / 127) * 1.1);
+    /* Velocity 0 is a note-off in MIDI, and here it fell through the `> 0`
+       guards to the *default* gain -- so vel 0 measured 0.224 where vel 1
+       measured 0.014, a sixteenfold jump at the bottom of the range. Treat it
+       as the quietest note rather than as no opinion. */
+    if (rawVelocity !== undefined && rawVelocity <= 0) {
+      gainBase = 0.28 * accGainMult * 0.05;
+    } else if (this.velocityCurve === 'OFF' && laneVelocity !== undefined && laneVelocity > 0) {
+      gainBase = 0.28 * accGainMult * (0.15 + (Math.max(1, Math.min(127, laneVelocity)) / 127) * 1.1);
     } else if (this.velocityCurve !== 'OFF' && rawVelocity !== undefined && rawVelocity > 0) {
       const v = Math.max(1, Math.min(127, rawVelocity)) / 127;
       let velGainScale = 1.0;
@@ -3871,7 +3890,15 @@ class ModularSynth {
           velGainScale = 0.04 + Math.pow(v, 3.0) * 1.50;
           break;
       }
-      gainBase = 0.28 * velGainScale;
+      /* Accent and velocity multiply.
+      
+         `gainBase` was set from the accent above and then *overwritten* here,
+         so accent's level never reached audio on any note that carried a
+         velocity -- which is every note the sequencer plays and every note
+         `noteOn` makes. Only its cutoff and resonance side-effects survived.
+         They are different things: velocity is how hard this note was struck,
+         accent is that this step is stressed. */
+      gainBase = 0.28 * accGainMult * velGainScale;
     }
 
     /* The strike, 0..1, as ENTRY publishes it.
@@ -4221,9 +4248,14 @@ class ModularSynth {
       this.noteOff(trackId, noteIndex);
     }
 
-    const accent = velocity > 100 ? 2 : velocity > 70 ? 1 : 0;
-    // Pass durationSec = 0 to indicate continuous hold until noteOff, and pass raw velocity
-    const voiceKey = this.triggerTrackVoice(trackId, noteIndex, accent, undefined, 0, velocity);
+    /* No accent: the velocity is the dynamic here.
+    
+       This used to derive one from the velocity and pass both, which now that
+       the two multiply would count the same strike twice -- a hard key press
+       reading as a hard press *on a stressed step*. Accent is a property of the
+       step in a written part, not of a key someone pressed. */
+    // durationSec = 0 means hold until noteOff.
+    const voiceKey = this.triggerTrackVoice(trackId, noteIndex, 0, undefined, 0, velocity);
     if (voiceKey) {
       this.trackHeldVoices.set(key, voiceKey);
     }
@@ -4665,6 +4697,9 @@ class ModularSynth {
   /** The node cache that belongs to one AudioContext and cannot outlive it. */
   private graphCache() {
     return {
+      /* Which context these nodes belong to. Held with them because that is
+         what makes them valid: a node cannot connect across contexts. */
+      masterFXCtx: this.masterFXCtx as BaseAudioContext | null,
       noiseBuffer: this.noiseBuffer,
       metalBuffer: this.metalBuffer,
       delayNode: this.delayNode,
@@ -4693,10 +4728,15 @@ class ModularSynth {
     this.shaperBypass = cache.shaperBypass;
     this.masterBusIn = cache.masterBusIn;
     this.trackBuses = cache.trackBuses;
+    /* The chain and the context it belongs to travel together. Restoring the
+       live chain after a render has to restore *its* context too, or the guard
+       in `initMasterFX` would take the offline one for the live one's. */
+    this.masterFXCtx = cache.masterFXCtx ?? null;
   }
 
   private clearGraphCache() {
     this.restoreGraphCache({
+      masterFXCtx: null,
       noiseBuffer: null,
       metalBuffer: null,
       delayNode: null,
