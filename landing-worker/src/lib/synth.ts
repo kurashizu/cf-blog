@@ -604,6 +604,8 @@ interface ActiveVoice {
   vcfRel: number;
   baseCutoff: number;
   isContinuousHold?: boolean;
+  /** Which key this voice is playing, so LOWEST can pick a victim by pitch. */
+  noteIndex: number;
   /** Which track and mute group this voice belongs to, for the choke rules. */
   trackId?: number;
   muteGroup?: number;
@@ -3523,12 +3525,30 @@ class ModularSynth {
       }
     }
 
-    // Overload guard: steal the oldest voice rather than let the live graph
-    // grow without bound (Map iteration order is insertion order). Offline
-    // voices all carry explicit start/stop times, so none of them is "active".
-    if (!this.renderCtx && this.activeVoices.size >= 64) {
-      const oldest = this.activeVoices.keys().next().value;
-      if (oldest) this.stopVoice(oldest);
+    /* Voice allocation limits.
+    
+       Two of these are settings the user can turn -- POLY on the voice tab, and
+       which voice gets taken -- and neither was consulted: `maxPolyphony` at 2
+       still allowed eight voices on a track, because the only limit here was
+       the global 64. Both are honoured now.
+    
+       Per track first, because that is what POLY means: how many notes this
+       part has. Then the global ceiling, which is about the audio thread rather
+       than the music. Offline voices carry explicit start/stop times, so none
+       of them is "active". */
+    if (!this.renderCtx) {
+      const onThisTrack: string[] = [];
+      for (const [k, v] of this.activeVoices) if (v.trackId === trackId) onThisTrack.push(k);
+      while (onThisTrack.length >= this.maxPolyphony) {
+        const victim = this.pickVictim(onThisTrack);
+        if (!victim) break;
+        this.stopVoice(victim);
+        onThisTrack.splice(onThisTrack.indexOf(victim), 1);
+      }
+      if (this.activeVoices.size >= 64) {
+        const victim = this.pickVictim([...this.activeVoices.keys()]);
+        if (victim) this.stopVoice(victim);
+      }
     }
 
     const voiceKey = `v${++this._voiceSeq}`;
@@ -4307,6 +4327,7 @@ class ModularSynth {
         osc2,
         noise: noiseSource,
         extras,
+        noteIndex,
         filter,
         gain: gainNode,
         lfo,
@@ -4469,6 +4490,34 @@ class ModularSynth {
        Hold the voice itself: it is the thing being torn down, and the map is
        only ever the way to find it. */
     setTimeout(() => this.detachVoice(voice), Math.ceil((fadeSec + 0.05) * 1000));
+  }
+
+  /**
+   * Which voice to take when one has to go.
+   *
+   * `voiceStealingMode` is a setting on the voice tab that had no reader: every
+   * steal took the oldest whatever it said. Map iteration order is insertion
+   * order, so the head of the list is the oldest either way -- the other two
+   * modes have to look at the voices themselves.
+   */
+  private pickVictim(keys: string[]): string | undefined {
+    if (!keys.length) return undefined;
+    if (this.voiceStealingMode === 'oldest') return keys[0];
+    let best = keys[0];
+    let bestScore = Infinity;
+    for (const k of keys) {
+      const v = this.activeVoices.get(k);
+      if (!v) continue;
+      /* QUIETEST takes the one contributing least, which is the least missed.
+         LOWEST takes the bottom note, which in a dense chord is the one whose
+         absence changes the harmony least. */
+      const score = this.voiceStealingMode === 'quietest' ? v.gain.gain.value : v.noteIndex;
+      if (score < bestScore) {
+        bestScore = score;
+        best = k;
+      }
+    }
+    return best;
   }
 
   /**
