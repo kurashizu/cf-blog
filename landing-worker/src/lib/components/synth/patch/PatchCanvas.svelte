@@ -24,6 +24,7 @@
 		addCable,
 		removeCable,
 		setGraphParam,
+		setGraphWave,
 		selectedNode,
 		selectedNodes,
 		graphClipboard,
@@ -58,10 +59,36 @@
 	import { laneSocketId, VELOCITY_LANE_ID } from '../../../stores/note-lanes';
 	import { trackLanes } from '../../../stores/lane-edit';
 	import ModuleCard from './ModuleCard.svelte';
+	import WaveDrawDialog from '../WaveDrawDialog.svelte';
+	import { saveCustomWave, updateCustomWave } from '../../../stores/synth-waves';
+	import type { CustomWave } from '../../../track-data';
 	import ModuleIcon from './ModuleIcon.svelte';
 
 	let graph = $derived(graphOf($currentTrack));
 	let graphParams = $derived($currentTrack?.graphParams);
+	let graphWaves = $derived($currentTrack?.graphWaves);
+
+	/* The wave editor, opened from a card's picker. Keyed by node and param
+	   rather than by oscillator number, since a patch may hold any number of
+	   oscillators -- and the saved table is written back to the node that
+	   asked for it, so drawing from one card cannot retune another. */
+	let drawFor = $state<{ node: string; key: string } | null>(null);
+	let drawEditing = $state<CustomWave | null>(null);
+
+	function openWaveDraw(node: string, key: string, editing?: CustomWave) {
+		drawFor = { node, key };
+		drawEditing = editing ?? null;
+		playSound('click');
+	}
+
+	function onSaveWave(name: string, samples: number[], id?: string) {
+		let waveId = id;
+		if (id) updateCustomWave(id, { name, samples });
+		else waveId = saveCustomWave(name, samples).id;
+		if (drawFor) setGraphWave(graphWaves, drawFor.node, drawFor.key, `custom:${waveId}`);
+		drawFor = null;
+		drawEditing = null;
+	}
 
 	/** Camera: pan in px, scale about the pointer. Same shape LIFE.LAB uses. */
 	let cam = $state({ x: 40, y: 40, s: 1 });
@@ -1171,7 +1198,10 @@
 									{spec}
 									nodeId={n.id}
 									params={graphParams}
+									waves={graphWaves}
 									onParam={(key, value) => setGraphParam(graphParams, n.id, key, value)}
+									onWave={(key, value) => setGraphWave(graphWaves, n.id, key, value)}
+									onDrawWave={(key, editing) => openWaveDraw(n.id, key, editing)}
 								/>
 							</div>
 						</div>
@@ -1338,6 +1368,18 @@
 		</div>
 	</div>
 </div>
+
+{#if drawFor}
+	<WaveDrawDialog
+		initial={drawEditing}
+		forLabel={drawFor.node.toUpperCase()}
+		onSave={onSaveWave}
+		onClose={() => {
+			drawFor = null;
+			drawEditing = null;
+		}}
+	/>
+{/if}
 
 <style>
 	/* Blueprint's execution pin: a chevron rather than a dot, because execution

@@ -32,6 +32,16 @@ export interface ModuleParam {
 	   spelling that out on a 26px dial spanning four million positions is not
 	   possible at all. Numbers you know in advance are typed. */
 	field?: boolean;
+	/* Picked from the wave menu rather than turned or typed.
+	
+	   A periodic wave is its harmonic content, and how many of those there are
+	   is not fixed: the four named shapes are joined by however many the player
+	   has drawn. A `choices` row cannot say that -- its length is baked into
+	   the spec, and the value it stores is a position, so deleting one drawn
+	   table would move every other patch's oscillator onto a different shape.
+	   The menu stores the wave's own name instead, and `custom:<id>` survives
+	   its neighbours being deleted. */
+	wave?: boolean;
 	/* Read once, when the note starts, and not modulatable.
 	
 	   Most knobs are AudioParams and a cable into one is heard immediately. Some
@@ -204,6 +214,66 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ id: 'gate', label: 'GATE', kind: 'mod', role: 'time' }
 		],
 		params: []
+	},
+	{
+		/* One oscillator: a shape and a frequency.
+		 *
+		 * The way in for every periodic sound, which is the whole of what it is
+		 * for. A periodic wave *is* its harmonic content, and the four named
+		 * shapes are four points in that space rather than a privileged set --
+		 * sine has only the fundamental, triangle weak odd partials, square
+		 * strong odd ones, sawtooth all of them. A drawn wave is the same kind
+		 * of thing with no name, so it belongs on the same knob rather than
+		 * behind a second module.
+		 *
+		 * It stays one primitive because `setPeriodicWave` is the oscillator's
+		 * own method: any wave in that space costs the same single node.
+		 *
+		 * What rack 1 puts on this list and this does not: PWM and SUPERSAW are
+		 * several oscillators and a delay, NOISE is not periodic at all, and
+		 * ORGAN and FOLD carry their own banks of knobs. Each is a different
+		 * primitive wearing a waveform's name, and pulling them in would make
+		 * the one node five.
+		 *
+		 * FREQ is a cable rather than a given, so an unpatched oscillator holds
+		 * its own frequency -- which is what makes a drone or an untuned drum
+		 * sayable, and what makes the cable you can see the thing you hear. */
+		id: 'osc',
+		label: 'OSC',
+		group: 'SOURCE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.osc',
+		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		outputs: [AUDIO_OUT],
+		/* The same picker racks 1-7 use, minus the shelves that are not periodic
+		   waves: NOISE is not one, and the ADVANCED four are other primitives
+		   wearing a waveform's name. BASIC and the drawn tables are what is
+		   left, which is exactly the set this module is the way in to. */
+		params: [{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, wave: true }]
+	},
+	{
+		/* A pitch made into the frequency it names.
+		 *
+		 * ENTRY publishes a pitch and an oscillator takes a frequency, so this
+		 * is the step between them -- and it is a node rather than something the
+		 * oscillator does quietly, because the tuning reference is a decision.
+		 * A4 is 440 Hz by convention, not by nature, and a patch should be able
+		 * to say it took a different one.
+		 *
+		 * A4 is the only knob. Moving a pitch by semitones is TRSP's own card:
+		 * welded here it could not take a cable, so the transpose was fixed for
+		 * the life of the patch. A4 stays because it is not an addend -- it is
+		 * the base of `a4 * 2^(n/12)`, so without it a semitone has no size --
+		 * and it already defaults to the instrument's own tuning rather than
+		 * repeating it. */
+		id: 'tofreq',
+		label: 'TO-FREQ',
+		group: 'CONVERT',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.tofreq',
+		inputs: [{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' }],
+		outputs: [{ id: 'out', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 }]
 	},
 	{
 		id: 'out',

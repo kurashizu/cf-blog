@@ -18,6 +18,8 @@
 		customWaves,
 		deleteCustomWave,
 		findCustomWave,
+		previewSamples,
+		previewPath,
 		WAVE_LABELS
 	} from '../../stores/synth-waves';
 	import { waveTooltips } from './tooltips';
@@ -28,6 +30,8 @@
 	   panel on hover; turning a knob there also selects the wave, so the
 	   change is heard, and leaves the menu open. CUSTOM holds the drawn tables
 	   with edit / delete, and the DRAW NEW action opens the editor. */
+	type SectionId = 'BASIC' | 'NOISE' | 'ADVANCED' | 'CUSTOM';
+
 	let {
 		label,
 		value,
@@ -36,7 +40,9 @@
 		onPick,
 		onParam,
 		onDraw,
-		onEdit
+		onEdit,
+		sections,
+		compact
 	}: {
 		label: string;
 		value: SynthWaveform;
@@ -46,21 +52,37 @@
 		onParam: (patch: WaveParams) => void;
 		onDraw: () => void;
 		onEdit: (wave: CustomWave) => void;
+		/* Lead with the shape rather than the name.
+		
+		   On a patch-bay card the wave *is* the label: the drawn tables all
+		   abbreviate to USR while their curves are all different, and the card
+		   has no room to spell a name out. The rack panels keep the wordy
+		   trigger, where there is width for it and the wave sits in a row of
+		   other named controls. */
+		compact?: boolean;
+		/* Which shelves to show. Racks 1-7 take all four; ADV's OSC asks for
+		   the periodic ones only, because NOISE is not a periodic wave and the
+		   ADVANCED four are other primitives wearing a waveform's name -- PWM
+		   is an oscillator and a delay, SUPERSAW is several oscillators, and
+		   ORGAN and FOLD each carry their own bank of knobs. On the patch bay
+		   those are modules you wire, not shapes you pick. */
+		sections?: SectionId[];
 	} = $props();
 
-	type SectionId = 'BASIC' | 'NOISE' | 'ADVANCED' | 'CUSTOM';
 	let SECTIONS = $derived<{ id: SectionId; label: string; hint: string; waves: SynthWaveform[] }[]>(
-		[
-			{ id: 'BASIC', label: 'BASIC', hint: $t('synth.wave.basicHint'), waves: BASIC_WAVES },
-			{ id: 'NOISE', label: 'NOISE', hint: $t('synth.wave.noiseHint'), waves: NOISE_WAVES },
-			{
-				id: 'ADVANCED',
-				label: 'ADVANCED',
-				hint: $t('synth.wave.advancedHint'),
-				waves: ADVANCED_WAVES
-			},
-			{ id: 'CUSTOM', label: 'CUSTOM', hint: $t('synth.wave.customHint'), waves: [] }
-		]
+		(
+			[
+				{ id: 'BASIC', label: 'BASIC', hint: $t('synth.wave.basicHint'), waves: BASIC_WAVES },
+				{ id: 'NOISE', label: 'NOISE', hint: $t('synth.wave.noiseHint'), waves: NOISE_WAVES },
+				{
+					id: 'ADVANCED',
+					label: 'ADVANCED',
+					hint: $t('synth.wave.advancedHint'),
+					waves: ADVANCED_WAVES
+				},
+				{ id: 'CUSTOM', label: 'CUSTOM', hint: $t('synth.wave.customHint'), waves: [] }
+			] as { id: SectionId; label: string; hint: string; waves: SynthWaveform[] }[]
+		).filter((sec) => !sections || sections.includes(sec.id))
 	);
 
 	let open = $state(false);
@@ -164,6 +186,17 @@
 			? `background: ${color}; border-color: ${color}`
 			: `border-color: color-mix(in srgb, ${color} 55%, transparent)`}
 	>
+		{#if compact}
+			<svg viewBox="0 0 100 28" class="h-[14px] w-[34px] shrink-0" preserveAspectRatio="none">
+				<path
+					d={previewPath(previewSamples(value, 96, params))}
+					fill="none"
+					stroke={open ? '#000' : color}
+					stroke-width="1.5"
+					vector-effect="non-scaling-stroke"
+				/>
+			</svg>
+		{/if}
 		<span class="truncate" style={open ? '' : `color: ${color}`}>{shown}</span>
 		<span
 			class="text-[8px] leading-none inline-block transition-transform duration-150"

@@ -323,7 +323,9 @@ describe('every parameter the engine reads is declared', () => {
 		expect(read.size, 'engine keys scraped empty').toBeGreaterThan(10);
 		const dead = MODULE_SPECS.flatMap((m) =>
 			m.params
-				.filter((q) => !read.has(q.key) && !pureRead.has(q.key))
+				/* A wave picker is not read through `p()`: it holds a name, so it
+				   arrives beside the numeric map and goes to `applyWaveform` whole. */
+				.filter((q) => !q.wave && !read.has(q.key) && !pureRead.has(q.key))
 				.map((q) => `${m.id}.${q.key}`)
 		);
 		expect(dead).toEqual([]);

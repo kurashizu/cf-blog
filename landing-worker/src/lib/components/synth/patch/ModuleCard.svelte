@@ -19,6 +19,9 @@
 		labelGutter,
 		type ModuleSpec
 	} from '../../../stores/synth-modules';
+	import WaveMenu from '../WaveMenu.svelte';
+	import { previewSamples, previewPath, findCustomWave } from '../../../stores/synth-waves';
+	import { getWaveformAbbr, type SynthWaveform, type CustomWave } from '../../../track-data';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
 	import ProbeDisplay from './ProbeDisplay.svelte';
 
@@ -26,13 +29,26 @@
 		spec,
 		nodeId,
 		params,
-		onParam
+		waves,
+		onParam,
+		onWave,
+		onDrawWave
 	}: {
 		spec: ModuleSpec;
 		nodeId: string;
 		params: Record<string, number> | undefined;
+		/* Kept apart from `params` because a waveform is a name, not a quantity:
+		   see `graphWaves` on TrackData. */
+		waves?: Record<string, string>;
 		onParam: (key: string, value: number) => void;
+		onWave?: (key: string, value: SynthWaveform) => void;
+		onDrawWave?: (key: string, editing?: CustomWave) => void;
 	} = $props();
+
+	/** The wave a node's picker is set to, defaulting to the first basic shape. */
+	function waveOf(key: string): SynthWaveform {
+		return (waves?.[`${nodeId}.${key}`] as SynthWaveform) ?? 'sine';
+	}
 
 	function val(key: string, def: number): number {
 		return params?.[`${nodeId}.${key}`] ?? def;
@@ -58,9 +74,10 @@
 	   "which one" is a row of buttons, "what number exactly" is a field you
 	   type into, and "how much" is a dial you turn by feel. */
 	let selectors = $derived(spec.params.filter((p) => p.choices));
+	let wavePickers = $derived(spec.params.filter((p) => p.wave));
 	let fields = $derived(
 		spec.params
-			.filter((p) => !p.choices && p.field)
+			.filter((p) => !p.choices && !p.wave && p.field)
 			.map((p) => {
 				/* CONST's value takes the range of the kind it was set to: a
 				   velocity stops at 1 and a pitch runs to the top of hearing.
@@ -72,7 +89,7 @@
 				return { ...p, min: k.min, max: k.max, step: k.step, unit: k.unit ?? '' };
 			})
 	);
-	let knobs = $derived(spec.params.filter((p) => !p.choices && !p.field));
+	let knobs = $derived(spec.params.filter((p) => !p.choices && !p.field && !p.wave));
 
 	/* The LFO's shape, drawn over one cycle. A picture of the wave says which
 	   one is selected faster than the word does. */
@@ -115,6 +132,32 @@
 	class="flex flex-col gap-1 py-1"
 	style="padding-left: {padLeft}px; padding-right: {padRight}px"
 >
+	<!-- The wave picker: what the oscillator is set to, drawn rather than named.
+
+	     A shape is quicker to read than a word, and the drawn tables have no
+	     word worth reading -- every one abbreviates to USR, while their curves
+	     are all different. The name sits beside it for the built-ins, where the
+	     opposite is true: a sine and a triangle are hard to tell apart at 24px.
+
+	     One button, whatever the wave, because the list grows: four shapes plus
+	     however many have been drawn. A segmented row would set the card's width
+	     from the number of waves, so a player who drew twenty would get a card
+	     twenty buttons wide. The menu itself is the one racks 1-7 use. -->
+	{#each wavePickers as p (p.key)}
+		{@const w = waveOf(p.key)}
+		<WaveMenu
+			label={p.label}
+			value={w}
+			color={spec.color}
+			sections={['BASIC', 'CUSTOM']}
+			compact
+			onPick={(nw) => onWave?.(p.key, nw)}
+			onParam={() => {}}
+			onDraw={() => onDrawWave?.(p.key)}
+			onEdit={(cw) => onDrawWave?.(p.key, cw)}
+		/>
+	{/each}
+
 	{#each selectors as p (p.key)}
 		<div
 			class="grid gap-0.5"

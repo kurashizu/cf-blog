@@ -162,6 +162,7 @@ export function trackResetDefaults(): Partial<TrackData> {
 		advancedView: undefined,
 		rackGraph: undefined,
 		graphParams: undefined,
+		graphWaves: undefined,
 		rackChain: undefined,
 		rackParams: undefined,
 		waveParams: undefined,

@@ -550,7 +550,11 @@ class ModularSynth {
 		/* Whose voice this is. WHEN's "ANY VOICE" test asks what is sounding on
        this track, so the audio side needs it to answer the same question the
        action side does. */
-		trackId?: number
+		trackId?: number,
+		/* Per-node settings that are names rather than numbers -- an oscillator's
+       waveform is the only one so far. Kept out of `params` because everything
+       reading that map treats a value as a quantity. */
+		waves: Record<string, string> = {}
 	): {
 		out: AudioNode;
 		sources: AudioScheduledSourceNode[];
@@ -745,7 +749,8 @@ class ModularSynth {
 				laneValues,
 				cvIn,
 				{ ...note, tuning: this.masterTuningFreq },
-				heldSec
+				heldSec,
+				waves[`${node.id}.wave`]
 			);
 			if (!made) continue;
 			// Whatever this node just created starts when this node runs.
@@ -910,7 +915,11 @@ class ModularSynth {
 		/* The event's own data, for ENTRY's output pins and for the converters,
        which read the master tuning off it. */
 		note: { velocity: number; noteIndex: number; tuning?: number } = { velocity: 1, noteIndex: 48 },
-		gateSec = 0
+		gateSec = 0,
+		/* The waveform this node is set to, if it has a picker. A name rather
+       than an index, so a drawn table keeps its identity when its neighbours
+       are deleted. */
+		wave?: string
 	): {
 		in: AudioNode | null;
 		/** A second audio inlet, for the modules that take two signals. */
@@ -1034,7 +1043,12 @@ class ModularSynth {
 		switch (type) {
 			case 'osc': {
 				const osc = ctx.createOscillator();
-				osc.type = WAVES[Math.round(p('wave', 0))] ?? 'sine';
+				/* The same resolver racks 1-7 use, so a shape picked on a card and
+           the same shape picked on the rack panel are the same sound -- and a
+           drawn table works in both without a second code path. It is given a
+           name rather than an index because that is what survives its
+           neighbours being deleted. */
+				this.applyWaveform(osc, (wave as SynthWaveform) ?? 'sine', undefined, undefined, ctx);
 				/* The note if PITCH is wired, and the knob if it is not.
         
            An oscillator used to read the key it was played from whether or not
@@ -4079,7 +4093,8 @@ class ModularSynth {
 				laneValues,
 				track.presetGain ?? 1,
 				{ velocity: velocityUnit, noteIndex },
-				trackId
+				trackId,
+				track.graphWaves ?? {}
 			);
 			if (built) {
 				/* The graph is the whole voice, and answers to none of racks 1-7.

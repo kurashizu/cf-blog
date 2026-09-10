@@ -94,6 +94,7 @@ describe('loading a project does not keep the last one’s patch bay', () => {
 			'advancedView',
 			'rackGraph',
 			'graphParams',
+			'graphWaves',
 			'rackChain',
 			'rackParams'
 		])

@@ -295,6 +295,29 @@ export function setGraphParam(
 	flushHistoryBump();
 }
 
+/**
+ * Set a per-node setting that is a name rather than a number.
+ *
+ * The same door as `setGraphParam`, and deliberately a separate one: a waveform
+ * is `sine` or `custom:<id>`, while everything reading the numeric map
+ * interpolates, clamps and NaN-checks what it finds there. Undo is not
+ * coalesced either -- picking a wave is one discrete choice, not a hand resting
+ * on a knob, so each pick is its own step.
+ */
+export function setGraphWave(
+	waves: Record<string, string> | undefined,
+	nodeId: string,
+	param: string,
+	value: string
+): void {
+	if (!value) return;
+	pushUndo(get(activeTrackId));
+	const next = { ...(waves ?? {}), [`${nodeId}.${param}`]: value };
+	modularSynth.updateTrack(get(activeTrackId), { graphWaves: next } as Partial<TrackData>);
+	refreshTracks();
+	flushHistoryBump();
+}
+
 /* The nodes a box-select or a shift-click has gathered. Separate from
    selectedNode, which is the one whose knobs the canvas is showing: a selection
    of six modules has no single one to edit. */

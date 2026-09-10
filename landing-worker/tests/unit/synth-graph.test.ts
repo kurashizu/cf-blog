@@ -3,6 +3,8 @@ import {
 	ENTRY_ID,
 	OUTPUT_ID,
 	startingGraph,
+	SEED_OSC_ID,
+	SEED_FREQ_ID,
 	isFixedNode,
 	graphOf,
 	wouldCycle,
@@ -113,22 +115,32 @@ describe('graphOf', () => {
 		['cables not an array', { rackGraph: { nodes: [], cables: null } }]
 	])('falls back to a starting graph for %s', (_label, track) => {
 		const out = graphOf(track as never);
-		expect(out.nodes.map((n) => n.type)).toEqual(['in', 'out']);
+		expect(out.nodes.map((n) => n.type)).toEqual(['in', 'tofreq', 'osc', 'out']);
 		expect(out.cables.length).toBeGreaterThan(0);
 	});
 
-	it('seeds the two ends when the canvas was blank', () => {
-		/* The seed was ENTRY -> TO-FREQ -> OSC -> OUT and should be again once
-		   those primitives exist. It cannot name them while the catalogue is
-		   rebuilt, so what is left is the pair plus the exec cable that makes
-		   OUT run -- which is the part that is not a sound. */
+	it('seeds a playable patch only when the canvas was blank', () => {
 		const blank = graphOf({ rackGraph: { nodes: [], cables: [] } });
-		expect(blank.nodes.map((n) => n.type)).toEqual(['in', 'out']);
+		expect(blank.nodes.map((n) => n.type)).toEqual(['in', 'tofreq', 'osc', 'out']);
+		/* The note is a pitch and an oscillator takes a frequency, so the
+		   converter between them is part of the seed. */
 		expect(blank.cables).toContainEqual({
 			from: ENTRY_ID,
-			fromPort: 'then',
+			fromPort: 'pitch',
+			to: SEED_FREQ_ID,
+			toPort: 'a'
+		});
+		expect(blank.cables).toContainEqual({
+			from: SEED_FREQ_ID,
+			fromPort: 'out',
+			to: SEED_OSC_ID,
+			toPort: 'pitch'
+		});
+		expect(blank.cables).toContainEqual({
+			from: SEED_OSC_ID,
+			fromPort: 'out',
 			to: OUTPUT_ID,
-			toPort: 'exec'
+			toPort: 'in'
 		});
 	});
 });
@@ -266,14 +278,14 @@ describe('graph parameters', () => {
  * loudly -- it just drew a patch you could not have built yourself.
  */
 describe('the fixed ends', () => {
-	it('starts as the two ends, already joined', () => {
-		/* This seeded a sounding voice -- ENTRY into TO-FREQ into OSC into OUT --
-		   and should again once those primitives exist. While the catalogue is
-		   rebuilt it cannot name them: a seed referring to a type the palette
-		   does not carry hands every new track a node the engine skips. */
+	it('starts as the smallest patch that plays', () => {
+		/* Not a blank canvas. An empty patch is the honest starting point and
+		   the useless one: it says nothing about how the pieces fit, and the
+		   first thing anyone does is rebuild this by hand before they can hear
+		   anything. */
 		const g = startingGraph();
-		expect(g.nodes.map((n) => n.type)).toEqual(['in', 'out']);
-		expect(g.nodes.map((n) => n.id)).toEqual([ENTRY_ID, OUTPUT_ID]);
+		expect(g.nodes.map((n) => n.type)).toEqual(['in', 'tofreq', 'osc', 'out']);
+		expect(g.nodes.map((n) => n.id)).toEqual([ENTRY_ID, SEED_FREQ_ID, SEED_OSC_ID, OUTPUT_ID]);
 		// OUT is an action: without the exec cable the sound arrives and is
 		// never let out.
 		expect(g.cables).toContainEqual({

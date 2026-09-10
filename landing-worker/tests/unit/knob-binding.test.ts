@@ -68,7 +68,7 @@ describe('every knob is what the card says it is', () => {
 			const { made } = build(m.id);
 			if (!made) continue;
 			for (const q of m.params) {
-				if (q.choices || q.field || q.fixed) continue;
+				if (q.choices || q.field || q.fixed || q.wave) continue;
 				if (!made.mod.has(q.key)) wrong.push(`${m.id}.${q.key}`);
 			}
 		}
@@ -115,7 +115,7 @@ describe('every knob is what the card says it is', () => {
 			const { made } = build(m.id);
 			if (made) continue;
 			for (const q of m.params) {
-				if (q.choices || q.field || q.fixed) continue;
+				if (q.choices || q.field || q.fixed || q.wave) continue;
 				wrong.push(`${m.id}.${q.key} is driveable on a module with no audio node`);
 			}
 		}
@@ -147,7 +147,7 @@ describe('every knob is what the card says it is', () => {
 			const { made } = build(m.id);
 			if (!made) continue;
 			for (const q of m.params) {
-				if (q.choices || q.field || q.fixed) continue;
+				if (q.choices || q.field || q.fixed || q.wave) continue;
 				const target = made.mod.get(q.key);
 				if (target instanceof FakeParam) continue;
 				const node = target as Parameters<typeof reaches>[0] | undefined;
@@ -174,7 +174,7 @@ describe('every knob is what the card says it is', () => {
 		for (const m of MODULE_SPECS) {
 			if (isPureNode(m.id) || NOT_AUDIO.has(m.id)) continue;
 			for (const q of m.params) {
-				if (q.choices || q.field || q.fixed) continue;
+				if (q.choices || q.field || q.fixed || q.wave) continue;
 				/* A value inside the knob's own range and away from its default,
 				   so the param cannot hold it by coincidence. */
 				const probe = q.min + (q.max - q.min) * 0.37;

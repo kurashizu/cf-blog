@@ -536,6 +536,19 @@ export interface TrackData {
 	};
 	/** Per-node knob values, keyed `${nodeId}.${paramKey}`. */
 	graphParams?: Record<string, number>;
+	/* Per-node settings that are names rather than numbers, keyed the same way.
+
+	   A waveform is the one of these so far: OSC's is `sine` or `custom:<id>`,
+	   and neither is a quantity. Kept apart from `graphParams` rather than
+	   widening it, because everything that reads that map treats a value as a
+	   number -- it is interpolated, clamped, checked for NaN, and dropped if it
+	   is not finite. A string arriving in there would pass the finite check by
+	   failing it, which is how a knob ends up silently at zero.
+
+	   Storing the wave's name rather than its position in a list also means a
+	   drawn table can be deleted without moving every other patch's oscillator
+	   onto whichever shape shuffled into its place. */
+	graphWaves?: Record<string, string>;
 	/* How a new note treats the one before it.
 	 *
 	 *   POLY   -- they overlap, which is what a keyboard does.
@@ -772,6 +785,7 @@ export const KEY_TIMBRE_KEYS = [
 	'rackParams',
 	'rackGraph',
 	'graphParams',
+	'graphWaves',
 	'presetGain',
 	// Per key: which sounds cannot coexist is a property of the sound, not the track.
 	'muteGroup'

@@ -172,37 +172,48 @@ export const EMPTY_GRAPH: RackGraph = { nodes: [], cables: [] };
 export const ENTRY_ID = 'entry';
 export const OUTPUT_ID = 'output';
 
+/** The oscillator every blank patch starts as. */
+export const SEED_OSC_ID = 'osc-1';
+
+/** The pitch-to-frequency converter every blank patch starts with. */
+export const SEED_FREQ_ID = 'freq-1';
+
 /**
- * A new patch: the two ends, already joined.
+ * A new patch: the smallest thing that plays.
  *
- * This used to seed a sounding voice -- ENTRY into TO-FREQ into OSC into OUT --
- * on the argument that a blank canvas says nothing about how the pieces go
- * together. That argument still holds, and the seed should come back as soon as
- * the primitives it names exist again. It cannot name them now: the catalogue is
- * being rebuilt, and a seed referring to a type the palette does not carry would
- * hand every new track a node the engine silently skips.
+ * An oscillator following the keyboard into the output. A blank canvas is the
+ * honest starting point and the useless one: it says nothing about how the
+ * pieces go together, and the first thing anyone does is rebuild this by hand
+ * before they can hear anything at all.
  *
- * What stays is the exec cable, which is not a sound. It is what makes OUT run
- * at all, and leaving it out would start everyone with a puzzle -- a patch wired
- * correctly for audio that is silent until you find the white wire.
+ * It also shows the two rules easiest to miss. PITCH is a cable -- unplug it and
+ * the oscillator holds its own frequency, which is what makes a drone or a drum.
+ * And the white wire is not a sound: it is what makes OUT run, so a patch wired
+ * correctly for audio and missing that one is silent.
  */
 export function startingGraph(): RackGraph {
 	return {
-		/* The two ends and the wire that runs between them.
-
-		   This used to seed a sounding patch -- ENTRY into TO-FREQ into OSC into
-		   OUT -- so a new track made a noise before anything was drawn. While the
-		   catalogue is rebuilt from primitives there is no OSC to seed with, and
-		   naming one that the palette does not carry would leave every new track
-		   holding a node the engine skips. The exec cable stays because it is not
-		   a sound: it is what makes OUT run at all, and a patch that has to
-		   discover that wire before hearing anything starts with a puzzle rather
-		   than an instrument. */
+		/* Spaced for the cards as they actually draw. A card is its controls plus
+		   the gutters its port labels need, so TO-FREQ (a PITCH inlet and a FREQ
+		   outlet) is far wider than the 176 the old spacing assumed -- and at 192
+		   apart the oscillator sat on top of the output. */
 		nodes: [
 			{ id: ENTRY_ID, type: 'in', x: 48, y: 128 },
+			{ id: SEED_FREQ_ID, type: 'tofreq', x: 320, y: 184 },
+			{ id: SEED_OSC_ID, type: 'osc', x: 640, y: 128 },
 			{ id: OUTPUT_ID, type: 'out', x: 960, y: 128 }
 		],
-		cables: [{ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' }]
+		cables: [
+			/* Execution first: OUT hands the patch to the master when the note
+			   runs it, so without this the sound arrives and is never let out. */
+			{ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' },
+			/* The note is a pitch; an oscillator takes a frequency. The converter
+			   between them is the third module here rather than something the
+			   oscillator does quietly, because the tuning reference is a choice. */
+			{ from: ENTRY_ID, fromPort: 'pitch', to: SEED_FREQ_ID, toPort: 'a' },
+			{ from: SEED_FREQ_ID, fromPort: 'out', to: SEED_OSC_ID, toPort: 'pitch' },
+			{ from: SEED_OSC_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' }
+		]
 	};
 }
 
