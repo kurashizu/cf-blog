@@ -1073,36 +1073,20 @@ class ModularSynth {
 			}
 
 			case 'noise': {
+				/* White, and only white.
+        
+           COL used to pick a slope here: pink and brown were the same buffer
+           through a one-pole low-pass with make-up gain. That is a FILTER and a
+           VCA, both of which are modules you can already put after this one, so
+           welding them in made three settings the card called colours and the
+           patch could not take apart. */
 				if (!this.noiseBuffer) this.initNoiseBuffer();
 				const nz = ctx.createBufferSource();
 				nz.buffer = this.noiseBuffer;
 				nz.loop = true;
 				const g = ctx.createGain();
 				g.gain.value = 1;
-				/* COL picks the noise's slope. The card has drawn this knob since the
-           module was added and the engine never read it, so all three settings
-           sounded identical -- white, whatever the label said.
-        
-           White is the buffer as generated. Pink falls about 3 dB per octave
-           and brown about 6, which one-pole low-passes approximate closely
-           enough at these gains; the make-up gain is because each pole throws
-           away most of the energy and an unlifted brown setting simply reads as
-           "quieter" rather than "darker". */
-				const colour = Math.round(p('colour', 0));
-				let tail: AudioNode = nz;
-				if (colour >= 1) {
-					const lp = ctx.createBiquadFilter();
-					lp.type = 'lowpass';
-					lp.frequency.value = colour >= 2 ? 440 : 1800;
-					lp.Q.value = 0.0001;
-					tail.connect(lp);
-					tail = lp;
-					const makeup = ctx.createGain();
-					makeup.gain.value = colour >= 2 ? 5.5 : 2.2;
-					tail.connect(makeup);
-					tail = makeup;
-				}
-				tail.connect(g);
+				nz.connect(g);
 				sources.push(nz);
 				return { in: null, out: g, mod };
 			}
@@ -1278,12 +1262,20 @@ class ModularSynth {
 				return { in: null, out: g, mod };
 			}
 
-			case 'pulse': {
+			case 'pwm': {
 				/* A square whose width is settable and modulatable. Web Audio has no
            pulse oscillator, so it is built the standard way: a sawtooth minus
            a phase-shifted copy of itself is a rectangle whose duty cycle is the
            shift. PWM is what makes a single oscillator sound like two. */
-				const width = Math.min(0.95, Math.max(0.05, p('pw', 50) / 100));
+				/* The width, 0..1, read off the inlet rather than a knob.
+        
+           `unit` is the socket's declared range, so a CONST of 0.25 is a
+           quarter-open pulse and ENTRY's VEL is a pulse that opens with how
+           hard the key was struck. Clamped short of both ends because 0 and 1
+           are each a constant rather than a wave -- silence with two
+           oscillators still running -- and a patch reaching past them means
+           something the width cannot express. */
+				const width = Math.min(0.95, Math.max(0.05, cvIn(probeKey, 'pw', 0.5)));
 				const a = ctx.createOscillator();
 				a.type = 'sawtooth';
 				/* No RATIO. Multiplying the pitch is what MUL does, and the knob was
@@ -1306,11 +1298,21 @@ class ModularSynth {
 				dl.connect(inv);
 				inv.connect(sum);
 				sources.push(a, b);
-				// Modulating the delay sweeps the width, which is the PWM everyone wants.
-				const pwm = ctx.createGain();
-				pwm.gain.value = period * 0.4;
-				pwm.connect(dl.delayTime);
-				mod.set('pwm', pwm);
+				/* A signal into PW sweeps the width, in the same units the value has.
+        
+           The delay is `period * width`, so one unit of CV is one period --
+           which makes an LFO of depth 0.3 a sweep of thirty percent of the
+           cycle, the number it reads on its own card. It used to be
+           `period * 0.4` against a port of its own, a depth nobody could
+           predict from what they typed.
+        
+           A resolved value has already been applied above, so this connection
+           is only ever reached by a signal: the mod loop skips a cable from a
+           pure node onto a port the module reads as a value. */
+				const pw = ctx.createGain();
+				pw.gain.value = period;
+				pw.connect(dl.delayTime);
+				mod.set('pw', pw);
 				return { in: null, out: sum, mod };
 			}
 

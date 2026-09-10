@@ -321,11 +321,23 @@ describe('every parameter the engine reads is declared', () => {
 			[...NODE_GRAPH.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1])
 		);
 		expect(read.size, 'engine keys scraped empty').toBeGreaterThan(10);
+		/* Two kinds of setting are not read through `p()` and are not dead.
+		
+		   A wave picker holds a name, so it arrives beside the numeric map and
+		   goes to `applyWaveform` whole. CONST's `kind` is read by the canvas
+		   (PatchCanvas, where the outlet is retyped) rather than by the engine:
+		   it decides what the socket *is*, which is a question answered before
+		   any note is built. */
+		const CANVAS_READ = new Set(['const.kind']);
 		const dead = MODULE_SPECS.flatMap((m) =>
 			m.params
-				/* A wave picker is not read through `p()`: it holds a name, so it
-				   arrives beside the numeric map and goes to `applyWaveform` whole. */
-				.filter((q) => !q.wave && !read.has(q.key) && !pureRead.has(q.key))
+				.filter(
+					(q) =>
+						!q.wave &&
+						!CANVAS_READ.has(`${m.id}.${q.key}`) &&
+						!read.has(q.key) &&
+						!pureRead.has(q.key)
+				)
 				.map((q) => `${m.id}.${q.key}`)
 		);
 		expect(dead).toEqual([]);

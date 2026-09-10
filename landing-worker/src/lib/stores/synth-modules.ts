@@ -276,6 +276,199 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 }]
 	},
 	{
+		/* White noise, and only that.
+		 *
+		 * No COL knob. Pink and brown are white through a one-pole low-pass with
+		 * make-up gain -- which is a FILTER and a VCA, both of which are modules
+		 * you can already put after it. Welding them here made three settings
+		 * that the card called colours and the patch could not take apart.
+		 *
+		 * No LVL knob either, for the reason every source lost one: a level on a
+		 * source is a VCA welded to it, and it gave "why is this quiet" a second
+		 * place to hide. */
+		id: 'noise',
+		label: 'NOISE',
+		group: 'SOURCE',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.noise',
+		inputs: [],
+		outputs: [AUDIO_OUT],
+		params: []
+	},
+	{
+		/* A pulse wave, and the width is the point.
+		 *
+		 * Web Audio has no pulse oscillator, so this is the standard
+		 * construction: a sawtooth minus a copy of itself delayed by part of a
+		 * period, which leaves a rectangle whose duty cycle is that fraction.
+		 * That is a mechanism rather than a thing anyone patches -- nobody
+		 * thinks of a pulse as "a saw minus a delayed saw" -- so it lives inside
+		 * the module. Handing it out as four cards would put the delay maths on
+		 * the player, and the delay has to track the pitch or the width drifts
+		 * across the keyboard.
+		 *
+		 * PW is the knob and MOD is the socket, named apart because they do not
+		 * do the same thing. The knob declares the range -- a bare CV inlet has
+		 * no units, so a cable could arrive holding anything and the module
+		 * would have to guess -- and it is where the width sits when nothing is
+		 * patched. A cable *adds* to it, which is what a signal into a knob
+		 * always means here, so an LFO through MOD sweeps either side of
+		 * whatever PW is set to. Naming both `pw` would have read as one
+		 * control and behaved as two: knob 50 plus a CONST of 50 is 100, not
+		 * 50. The ends are clamped away because a pulse at 0 or 100 is a
+		 * constant, which is silence with the oscillators still running. */
+		id: 'pwm',
+		label: 'PWM',
+		group: 'SOURCE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.pwm',
+		inputs: [
+			{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' },
+			{ id: 'pw', label: 'PW', kind: 'mod', role: 'unit' }
+		],
+		outputs: [AUDIO_OUT],
+		params: []
+	},
+	{
+		/* Blueprint's pure value nodes.
+		 *
+		 * Everything below computes a number from its inputs and holds no state,
+		 * so none of them carry exec pins -- asking when a multiply "runs" has no
+		 * answer, exactly as in Blueprint. They exist because ENTRY now publishes
+		 * the note's own facts (pitch, velocity, gate) and a patch needs to do
+		 * arithmetic on them: half the velocity, add a fixed offset, clamp the
+		 * result, then send it at a knob.
+		 *
+		 * These are control-rate, not audio-rate. SUM and DIFF next to them add
+		 * signals; these add values. The distinction is the same one Web Audio
+		 * makes between a node's input and its AudioParam, and keeping both is
+		 * what lets a patch treat a number as a number. */
+		/* A literal, in whichever type the socket it is going to expects.
+		 *
+		 * One node with variants rather than five near-identical ones: a pitch,
+		 * an amount and a length of time are the same idea -- a number you typed
+		 * -- and splitting them into separate palette entries would say they were
+		 * different things. The variant picks the socket's colour and shape, so a
+		 * CONST wired into a frequency looks like a frequency and cannot be
+		 * dropped onto something that wanted an amount.
+		 *
+		 * The type sits in the title bar rather than among the knobs because it
+		 * is what the node *is*, not what it is set to -- the same reason a
+		 * Blueprint literal shows its type on the node and its value in the
+		 * field. */
+		id: 'const',
+		label: 'CONST',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.const',
+		inputs: [],
+		outputs: [CV_OUT],
+		params: [
+			/* Which kind of number this is. It retypes the outlet, so a pitch
+			   constant carries a pitch socket and will not drop onto an inlet
+			   that wanted an amount -- see CONST_KINDS. */
+			{
+				key: 'kind',
+				label: 'TYPE',
+				min: 0,
+				max: 4,
+				step: 1,
+				def: 0,
+				choices: ['NUM', 'PITCH', 'VEL', 'NOTE', 'TIME']
+			},
+			{ key: 'value', label: 'VAL', min: -20000, max: 20000, step: 0.01, def: 1, field: true }
+		]
+	},
+	{
+		id: 'add',
+		label: 'ADD',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.add',
+		inputs: [CV_A, CV_B],
+		outputs: [CV_OUT],
+		params: [{ key: 'addB', label: 'B', min: -1000, max: 10000, step: 1, def: 0 }]
+	},
+	{
+		id: 'mul',
+		label: 'MUL',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.mul',
+		inputs: [CV_A, CV_B],
+		outputs: [CV_OUT],
+		params: [{ key: 'mulB', label: 'B', min: -100, max: 100, step: 0.01, def: 1 }]
+	},
+	{
+		id: 'clamp',
+		label: 'CLAMP',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.clamp',
+		inputs: [CV_A],
+		outputs: [CV_OUT],
+		params: [
+			{ key: 'clampLo', label: 'MIN', min: -1000, max: 10000, step: 1, def: 0 },
+			{ key: 'clampHi', label: 'MAX', min: -1000, max: 10000, step: 1, def: 1 }
+		]
+	},
+	{
+		id: 'curve',
+		label: 'CURVE',
+		group: 'MATH',
+		color: '#abb2bf',
+		descKey: 'synthPatch.mod.curve',
+		inputs: [CV_A],
+		outputs: [CV_OUT],
+		params: [{ key: 'exp', label: 'EXP', min: 0.1, max: 8, step: 0.1, def: 1 }]
+	},
+	{
+		/* A frequency read back as the pitch nearest to it.
+		 *
+		 * The lossy direction. 452 Hz is not a pitch; it is between two, and
+		 * which one it becomes depends on the reference and on where you round.
+		 * Both are knobs here rather than assumptions, and the quantisation is
+		 * visible on the canvas -- which is the whole reason the two are separate
+		 * types and this is a separate node. */
+		id: 'topitch',
+		label: 'TO-PITCH',
+		group: 'CONVERT',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.topitch',
+		inputs: [{ id: 'a', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		outputs: [{ id: 'out', label: 'PITCH', kind: 'mod', role: 'pitch' }],
+		/* Only the reference, for the same reason TO-FREQ carries only A4.
+		   Rounding a pitch to the nearest semitone is QNT the module: a decision
+		   about a value, not part of what "how many semitones is this frequency"
+		   means. Keeping it here made the quantise invisible unless you opened
+		   this card, which is the opposite of what the comment above wants. */
+		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 }]
+	},
+	{
+		/* Move a pitch by whole semitones.
+		 *
+		 * PITCH in, PITCH out, so the role survives the trip: ADD would do the
+		 * arithmetic but its ports are plain `cv`, and running a pitch through
+		 * one launders it into a bare number that any control inlet would then
+		 * accept. The lattice refuses `pitch` everywhere except another `pitch`
+		 * precisely so that cannot happen quietly.
+		 *
+		 * BY is an inlet as well as a knob, which is what the welded TRSP on
+		 * TO-FREQ could not be: an LFO into it is a vibrato measured in
+		 * semitones, and a CONST is the fixed transpose it replaces. */
+		id: 'trsp',
+		label: 'TRSP',
+		group: 'CONVERT',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.trsp',
+		inputs: [
+			{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' },
+			{ id: 'b', label: 'BY', kind: 'mod' }
+		],
+		outputs: [{ id: 'out', label: 'PITCH', kind: 'mod', role: 'pitch' }],
+		params: [{ key: 'by', label: 'BY', min: -48, max: 48, step: 1, unit: 'st', def: 0 }]
+	},
+	{
 		id: 'out',
 		label: 'OUT',
 		group: 'UTILITY',

@@ -73,12 +73,13 @@
 		clamp: 'M2 5h12M2 11h12M8 5v6',
 		lerp: 'M2 12L14 4M2 12h2M12 4h2M7 8h2',
 		curve: 'M2 13q8 0 11-10',
+		// A rectangle, because the width is the whole point of it.
+		pwm: 'M2 11h3V5h4v6h3V5h2',
 		// The two conversions: a note becoming a wave, and a wave becoming a note.
 		tofreq: 'M3 4v7a2 2 0 1 0 2-2V4h3M11 8q1.5-3 3 0',
 		topitch: 'M2 8q1.5-3 3 0M8 4v7a2 2 0 1 0 2-2V4h3',
-		// A note moved up a step, and a value snapped onto a grid.
-		trsp: 'M3 6v6a1.5 1.5 0 1 0 1.5-1.5V6h2.5M10 10l2-2 2 2M12 8v5',
-		quant: 'M2 12h3v-3h3v-3h3V4h2'
+		// A note moved up a step.
+		trsp: 'M3 6v6a1.5 1.5 0 1 0 1.5-1.5V6h2.5M10 10l2-2 2 2M12 8v5'
 	};
 
 	let d = $derived(PATHS[type] ?? 'M8 8m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0');

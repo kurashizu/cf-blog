@@ -74,8 +74,9 @@ export const PURE_NODES: Record<string, PureFn> = {
 	/* Pitch to frequency: exact, and the direction nearly every patch wants. */
 	tofreq: (i, p, note) => hzOf(i.get('a', 0), p('tuning', note?.tuning ?? 440)),
 	/* Frequency to pitch: the lossy direction. Which note 452 Hz "is" depends on
-	   the reference, which is the knob. Whether to round is QNT's question and
-	   is asked on its own card, so the conversion no longer decides it. */
+	   the reference, which is the knob. It answers exactly rather than rounding:
+	   a frequency between two notes is between two notes, and a patch that wants
+	   whole semitones can say so. */
 	topitch: (i, p, note) => {
 		const hz = i.get('a', 0);
 		if (!(hz > 0)) return 0;
@@ -83,13 +84,6 @@ export const PURE_NODES: Record<string, PureFn> = {
 	},
 	/* Semitones onto a pitch, keeping it a pitch. */
 	trsp: (i, p) => i.get('a', 0) + i.get('b', p('by', 0)),
-	/* Round to a grid. A zero or negative step would divide by nothing, so it
-	   falls through as the value it was given rather than as NaN. */
-	quant: (i, p) => {
-		const v = i.get('a', 0);
-		const step = p('step', 1);
-		return step > 0 ? Math.round(v / step) * step : v;
-	},
 	const: (_i, p) => p('value', 1),
 	add: (i, p) => i.get('a', 0) + i.get('b', p('addB', 0)),
 	mul: (i, p) => i.get('a', 1) * i.get('b', p('mulB', 1)),
