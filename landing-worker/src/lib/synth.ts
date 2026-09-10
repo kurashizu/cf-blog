@@ -2936,20 +2936,51 @@ class ModularSynth {
 
   public setBpm(newBpm: number) {
     this.bpm = Math.max(40, Math.min(260, newBpm));
-    if (this.isSequencerPlaying) {
-      this.restartSequencerTimer();
+    if (!this.isSequencerPlaying) return;
+    /* Notes already sounding keep the tempo they were booked at -- they are in
+       flight and cannot be recalled -- but the lookahead that has not been
+       heard yet should not be.
+    
+       `restartSequencerTimer` alone accomplished nothing here: the interval
+       period is tempo-independent, so the queue kept its old spacing and the
+       playhead, which is driven from that queue, advanced at the previous rate
+       for up to a whole window after the change. Rebasing from the last step
+       actually heard puts the grid back under the new tempo at once. */
+    const ctx = this.audioCtx();
+    if (ctx) {
+      const stepDuration = 60 / this.bpm / STEPS_PER_BEAT;
+      this.scheduledStepQueue = this.scheduledStepQueue.filter((e) => e.time <= ctx.currentTime);
+      const last = this.scheduledStepQueue[this.scheduledStepQueue.length - 1];
+      if (last) {
+        this.currentStep = (last.step + 1) % this.totalSteps;
+        this.nextStepTime = Math.max(ctx.currentTime, last.time + stepDuration);
+      }
     }
+    this.restartSequencerTimer();
   }
 
   public getTotalSteps(): number {
     return this.totalSteps;
   }
 
+  /**
+   * The meter, which the scheduler does not read.
+   *
+   * The grid is a flat 1/24 beat with no notion of a bar: `METER_SPECS` drives
+   * paging and the lines the roll draws, and nothing else. That is deliberate
+   * -- an absolute grid means a pattern is a length of time rather than a count
+   * of bars -- but it has one consequence worth stating: `totalSteps` is not
+   * constrained to whole bars, so in 7/8 a default 96-step pattern is 1.14 bars
+   * and the loop point lands mid-bar. Picking a multiple of `stepsPerBar` is
+   * what makes a loop line up, and nothing enforces it.
+   */
   public setTotalSteps(steps: number) {
     this.totalSteps = Math.max(8, Math.min(MAX_GRID_STEPS, steps));
-    if (this.currentStep >= this.totalSteps) {
-      this.currentStep = 0;
-    }
+    /* Both step cursors move together, or they disagree about where the
+       playhead is. Only `currentStep` was clamped, so shrinking a pattern left
+       `lastAudibleStep` pointing past its end. */
+    if (this.currentStep >= this.totalSteps) this.currentStep = 0;
+    if (this.lastAudibleStep >= this.totalSteps) this.lastAudibleStep = 0;
   }
 
   public getCurrentStep(): number {
@@ -4873,11 +4904,35 @@ class ModularSynth {
       clearInterval(this.uiTimer);
       this.uiTimer = null;
     }
-    // Set sequencer internal currentStep to the exact last heard audible step so next start resumes right where it stopped
-    this.currentStep = this.lastAudibleStep;
+    /* Resume where the music actually got to.
+    
+       `lastAudibleStep` is only advanced by `checkUIQueue` once a step's time
+       has passed, while the scheduler has already *sounded* up to a window
+       beyond it -- so restarting replayed everything in between: up to 200 ms
+       of material in the foreground, and up to 1.6 s while hidden. The right
+       step is the last one whose start time the clock has reached, which is
+       what the queue holds. */
+    const now = this.audioCtx()?.currentTime ?? 0;
+    let resumeAt = this.lastAudibleStep;
+    for (const entry of this.scheduledStepQueue) {
+      if (entry.time <= now) resumeAt = entry.step;
+      else break;
+    }
+    this.currentStep = resumeAt;
+    this.lastAudibleStep = resumeAt;
     this.scheduledStepQueue = [];
-    // A natural end in ONCE mode leaves the tails to ring; a STOP cuts them.
+    /* A natural end in ONCE mode leaves the tails to ring; a STOP cuts them.
+    
+       The held-key bookkeeping goes either way. `stopAll` is what clears it, so
+       the natural end left a key held at the end of a pattern mapped to a voice
+       forever -- and the sustain pedal latched down across every stop. Neither
+       is about whether the tails ring. */
     if (cutVoices) this.stopAll();
+    else {
+      this.trackHeldVoices.clear();
+      this.sustainedVoiceKeys.clear();
+    }
+    this.isSustainPedalDown = false;
   }
 
   private restartSequencerTimer() {

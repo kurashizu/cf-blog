@@ -29,6 +29,16 @@ export interface MidiFile {
 	bpm: number;
 	/** Whether that tempo came from the file or is the MIDI default. */
 	bpmFromFile: boolean;
+	/**
+	 * How many distinct tempi the file declared.
+	 *
+	 * Only the first is used -- the synth has one tempo -- so a file that
+	 * changes speed halfway plays its second half at the wrong one. That was
+	 * silent: worth telling the user rather than letting them wonder.
+	 */
+	tempoCount: number;
+	/** Likewise for a meter that changes part-way through. */
+	meterCount: number;
 	timeSignature: string;
 	tracks: MidiTrack[];
 	totalTicks: number;
@@ -41,27 +51,45 @@ class Reader {
 	get done(): boolean {
 		return this.pos >= this.view.byteLength;
 	}
+	/**
+	 * Is there room for `n` more bytes?
+	 *
+	 * A MIDI file is user data and may be truncated, or may declare a chunk
+	 * longer than what follows it. Without this the DataView throws its own
+	 * `RangeError: Offset is outside the bounds`, which is not a
+	 * `MidiParseError` and says nothing a reader could act on.
+	 */
+	private need(n: number): void {
+		if (this.pos + n > this.view.byteLength) {
+			throw new MidiParseError(tr('synth.midiImport.truncated'));
+		}
+	}
 	u8(): number {
+		this.need(1);
 		return this.view.getUint8(this.pos++);
 	}
 	u16(): number {
+		this.need(2);
 		const v = this.view.getUint16(this.pos);
 		this.pos += 2;
 		return v;
 	}
 	u32(): number {
+		this.need(4);
 		const v = this.view.getUint32(this.pos);
 		this.pos += 4;
 		return v;
 	}
 	str(len: number): string {
+		this.need(len);
 		let s = '';
 		for (let i = 0; i < len; i++) s += String.fromCharCode(this.view.getUint8(this.pos + i));
 		this.pos += len;
 		return s;
 	}
+	/** Never backwards: a negative length would rewind into the header. */
 	skip(len: number): void {
-		this.pos += len;
+		this.pos += Math.max(0, len);
 	}
 	/** MIDI variable-length quantity: 7 bits per byte, high bit = continue. */
 	varint(): number {
@@ -94,6 +122,8 @@ export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 
 	let bpm = 120;
 	let bpmFromFile = false;
+	let tempoCount = 0;
+	let meterCount = 0;
 	let timeSignature = '4/4';
 	let sigFromFile = false;
 	const tracks: MidiTrack[] = [];
@@ -136,14 +166,18 @@ export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 				const metaLen = r.varint();
 				if (metaType === 0x51 && metaLen === 3) {
 					const micros = (r.u8() << 16) | (r.u8() << 8) | r.u8();
-					if (!bpmFromFile && micros > 0) {
-						bpm = Math.round(60_000_000 / micros);
-						bpmFromFile = true;
+					if (micros > 0) {
+						tempoCount++;
+						if (!bpmFromFile) {
+							bpm = Math.round(60_000_000 / micros);
+							bpmFromFile = true;
+						}
 					}
 				} else if (metaType === 0x58 && metaLen >= 2) {
 					const numerator = r.u8();
 					const denominator = 2 ** r.u8();
 					r.skip(metaLen - 2);
+					meterCount++;
 					if (!sigFromFile) {
 						timeSignature = `${numerator}/${denominator}`;
 						sigFromFile = true;
@@ -212,7 +246,7 @@ export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 
 	if (tracks.length === 0) throw new MidiParseError(tr('synth.midiImport.noNoteData'));
 
-	return { format, ticksPerQuarter, bpm, bpmFromFile, timeSignature, tracks, totalTicks };
+	return { format, ticksPerQuarter, bpm, bpmFromFile, tempoCount, meterCount, timeSignature, tracks, totalTicks };
 }
 
 /**

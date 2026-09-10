@@ -191,6 +191,11 @@ export async function handleImportMidiFile(file: File): Promise<void> {
 			meter,
 			meterNote: isSupportedMeter(parsed.timeSignature) ? '' : tr('synth.midiImport.meterUnsupportedNote', { meter: parsed.timeSignature })
 		}),
+		/* The synth has one tempo and one meter. A file that changes either
+		   part-way through keeps only the first, so the rest plays at the wrong
+		   speed -- which was silent until now. */
+		...(parsed.tempoCount > 1 ? [tr('synth.midiImport.tempoMapNote', { count: parsed.tempoCount })] : []),
+		...(parsed.meterCount > 1 ? [tr('synth.midiImport.meterChangeNote')] : []),
 		...results.map((r, i) =>
 			tr('synth.midiImport.trackLine', {
 				index: i + 1,

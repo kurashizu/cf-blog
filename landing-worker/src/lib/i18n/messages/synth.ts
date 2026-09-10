@@ -76,6 +76,9 @@ export default {
 
 		'synth.midiImport.unreadable': 'Could not read this file as MIDI.',
 		'synth.midiImport.noHeader': 'Not a MIDI file — missing MThd header.',
+		'synth.midiImport.truncated': 'This MIDI file ends part-way through — it may be incomplete.',
+		'synth.midiImport.tempoMapNote': 'File changes tempo {count} times; only the first is used.',
+		'synth.midiImport.meterChangeNote': 'File changes time signature part-way through; only the first is used.',
 		'synth.midiImport.smpteUnsupported': 'SMPTE-timed MIDI files are not supported — export with metrical (PPQ) timing.',
 		'synth.midiImport.zeroTicks': 'MIDI file declares zero ticks per quarter note.',
 		'synth.midiImport.noNoteData': 'No note data found in this MIDI file.',
@@ -446,6 +449,9 @@ export default {
 
 		'synth.midiImport.unreadable': '无法将该文件读取为 MIDI。',
 		'synth.midiImport.noHeader': '不是 MIDI 文件 — 缺少 MThd 文件头。',
+		'synth.midiImport.truncated': '这个 MIDI 文件在中途结束 — 可能不完整。',
+		'synth.midiImport.tempoMapNote': '文件有 {count} 次速度变化，只使用第一个。',
+		'synth.midiImport.meterChangeNote': '文件中途更换拍号，只使用第一个。',
 		'synth.midiImport.smpteUnsupported': '不支持 SMPTE 计时的 MIDI 文件 — 请以节拍（PPQ）计时方式导出。',
 		'synth.midiImport.zeroTicks': 'MIDI 文件声明每四分音符的 tick 数为零。',
 		'synth.midiImport.noNoteData': '该 MIDI 文件中未找到任何音符数据。',
@@ -814,6 +820,9 @@ export default {
 
 		'synth.midiImport.unreadable': '無法將這個檔案讀取為 MIDI。',
 		'synth.midiImport.noHeader': '不是 MIDI 檔案 — 缺少 MThd 檔頭。',
+		'synth.midiImport.truncated': '這個 MIDI 檔案在中途結束 — 可能不完整。',
+		'synth.midiImport.tempoMapNote': '檔案有 {count} 次速度變化，只使用第一個。',
+		'synth.midiImport.meterChangeNote': '檔案中途更換拍號，只使用第一個。',
 		'synth.midiImport.smpteUnsupported': '不支援 SMPTE 計時的 MIDI 檔案 — 請以節拍（PPQ）計時方式匯出。',
 		'synth.midiImport.zeroTicks': 'MIDI 檔案宣告每四分音符的 tick 數為零。',
 		'synth.midiImport.noNoteData': '這個 MIDI 檔案中沒有找到任何音符資料。',
@@ -1182,6 +1191,9 @@ export default {
 
 		'synth.midiImport.unreadable': 'このファイルを MIDI として読み込めませんでした。',
 		'synth.midiImport.noHeader': 'MIDI ファイルではありません — MThd ヘッダーがありません。',
+		'synth.midiImport.truncated': 'この MIDI ファイルは途中で終わっています — 不完全な可能性があります。',
+		'synth.midiImport.tempoMapNote': 'テンポ変化が {count} 回あります。最初のもののみ使用します。',
+		'synth.midiImport.meterChangeNote': '途中で拍子が変わります。最初のもののみ使用します。',
 		'synth.midiImport.smpteUnsupported': 'SMPTE タイミングの MIDI ファイルには対応していません — メトリカル（PPQ）タイミングで書き出してください。',
 		'synth.midiImport.zeroTicks': 'MIDI ファイルの4分音符あたりのティック数が 0 になっています。',
 		'synth.midiImport.noNoteData': 'この MIDI ファイルにノートデータが見つかりません。',
@@ -1550,6 +1562,9 @@ export default {
 
 		'synth.midiImport.unreadable': '이 파일을 MIDI로 읽을 수 없습니다.',
 		'synth.midiImport.noHeader': 'MIDI 파일이 아닙니다 — MThd 헤더가 없습니다.',
+		'synth.midiImport.truncated': '이 MIDI 파일은 도중에 끝납니다 — 불완전할 수 있습니다.',
+		'synth.midiImport.tempoMapNote': '템포가 {count}번 바뀝니다. 첫 번째만 사용합니다.',
+		'synth.midiImport.meterChangeNote': '도중에 박자가 바뀝니다. 첫 번째만 사용합니다.',
 		'synth.midiImport.smpteUnsupported': 'SMPTE 타이밍 MIDI 파일은 지원되지 않습니다 — 메트리컬(PPQ) 타이밍으로 내보내세요.',
 		'synth.midiImport.zeroTicks': 'MIDI 파일에 4분음표당 틱 수가 0으로 지정되어 있습니다.',
 		'synth.midiImport.noNoteData': '이 MIDI 파일에서 음표 데이터를 찾을 수 없습니다.',
