@@ -13,7 +13,7 @@
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
-	import { CONST_KINDS, WAVE_SHAPES } from '../../../stores/synth-modules';
+	import { CONST_KINDS, WAVE_SHAPES, labelGutter } from '../../../stores/synth-modules';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
 	import type { ModuleSpec } from '../../../stores/synth-modules';
 	import ProbeDisplay from './ProbeDisplay.svelte';
@@ -45,16 +45,12 @@
 	
 	   Measured from the longest label the card actually carries, so a module
 	   with only short ones is not padded for a long one it does not have. */
-	const LABEL_START = 14;
-	const CHAR_W = 4.4;
-	/* Each side keeps room for its own labels, matching moduleWidth exactly --
-	   the two have to agree or the controls drift off centre inside the card. */
-	const sideGutter = (ports: { label: string }[]) => {
-		const longest = Math.max(0, ...ports.map((p) => p.label.length));
-		return longest ? Math.max(12, Math.ceil(LABEL_START + longest * CHAR_W)) : 8;
-	};
-	let padLeft = $derived(sideGutter(spec.inputs));
-	let padRight = $derived(sideGutter(spec.outputs));
+	/* The same gutter the canvas sized the card with, imported rather than
+	   restated: the controls sit inside the width `moduleWidth` chose, so a
+	   second copy of the formula is two numbers that must agree and nothing
+	   making them. */
+	let padLeft = $derived(labelGutter(spec.inputs));
+	let padRight = $derived(labelGutter(spec.outputs));
 
 	/* Three kinds of control, because they answer three kinds of question:
 	   "which one" is a row of buttons, "what number exactly" is a field you

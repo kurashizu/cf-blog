@@ -1,4 +1,4 @@
-import { migratePatch, trackResetDefaults, blankTrack, type SynthPatchFile } from './patch-format';
+import { migratePatch, isPatchFile, trackResetDefaults, blankTrack, type SynthPatchFile } from './patch-format';
 import { SPAIN_STEPS } from '../songs/spain';
 import { TAKE_FIVE_STEPS } from '../songs/take-five';
 import { writable, get } from 'svelte/store';
@@ -137,12 +137,21 @@ function gatherPatchData(): SynthPatchData {
    whether an old one still loads and whether loading one leaves anything of the
    previous song behind, and both are answerable without an audio context. */
 
-function applyPatchData(raw: SynthPatchData): void {
-	const data = migratePatch(raw as SynthPatchFile) as SynthPatchData;
+/** The meters the transport can actually be set to. */
+const METERS: readonly TimeSignature[] = ['4/4', '3/4', '2/4', '5/4', '6/8', '7/8'];
+const isMeter = (v: unknown): v is TimeSignature =>
+	typeof v === 'string' && (METERS as readonly string[]).includes(v);
+
+function applyPatchData(raw: SynthPatchFile): void {
+	const data = migratePatch(raw) as SynthPatchData;
 	ensureCustomWaves(data.waves);
 	resetPlayheadState();
 	if (data.bpm) setBpm(data.bpm);
-	if (data.meter) timeMeter.set(data.meter);
+	/* A saved file's meter is whatever string was in it, which is why
+	   patch-format types it as one. Checking it here rather than casting past it
+	   is the difference between a hand-edited "9/16" being ignored and it
+	   reaching a transport that has no such meter. */
+	if (isMeter(data.meter)) timeMeter.set(data.meter);
 	if (data.totalSteps) totalPatternSteps.set(data.totalSteps);
 	if (data.tracks && Array.isArray(data.tracks)) {
 		// Tracks the patch does not mention (older patches carry six) are
@@ -324,6 +333,16 @@ export async function handleImportPatchFile(file: File): Promise<void> {
 		}
 		if (isKitFile(parsed)) {
 			applyKitFile(parsed);
+			return;
+		}
+		/* A patch is the only thing left it can be, so say so before acting on
+		   it. `isPatchFile` was exported and unit-tested and called from
+		   nowhere: any JSON that was not a preset or a kit went straight in, and
+		   an object with no `tracks` at all reported "imported OK" having set
+		   nothing. The try/catch below only covers a throw, and this does not
+		   throw -- it quietly does nothing. */
+		if (!isPatchFile(parsed)) {
+			showSaveStatus(tr('synth.status.importInvalid'));
 			return;
 		}
 		applyPatchData(parsed);

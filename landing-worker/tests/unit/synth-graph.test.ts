@@ -97,7 +97,7 @@ describe('graphOf', () => {
 		const out = graphOf({ rackGraph: g });
 		expect(out.cables).toContainEqual({
 			from: ENTRY_ID,
-			fromPort: 'exec',
+			fromPort: 'then',
 			to: OUTPUT_ID,
 			toPort: 'exec'
 		});

@@ -112,18 +112,19 @@ const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
  * when execution reaches it and not otherwise, which is what makes a cable
  * carry meaning.
  *
- * EXEC_OUT is the narrower one, and only three modules have it. A THEN pin says
- * "and afterwards, this", so it needs an afterwards to point at: EXCT is a
- * strike that lands and is over, MODES rings and decays, ENV finishes its
- * curve. An oscillator does not finish -- it runs for as long as the note does
- * -- so a THEN on OSC would be a socket for a moment that never arrives. The
- * same goes for NOISE, SUB, PULSE, BOW, REED and LFO: they are states, not
- * events. Blueprint draws the same line, giving an output execution pin to the
- * latent nodes and not to the ones that merely start something.
+ * EXEC_OUT is the narrower one: ENTRY, SEQ and WHEN, and nothing else. A THEN
+ * pin says "and afterwards, this", and only those three have an afterwards to
+ * hand on -- the event fires, the sequence steps, the branch answers.
  *
- * Filters, gains and the arithmetic have no exec pins at all, exactly as
- * Blueprint's pure nodes do not: they hold no state and start nothing. They
- * process whatever arrives, so asking when they run has no answer to give. */
+ * No sound module has either pin. THEN is logic and takes no part in the signal
+ * path: audio runs because audio is wired into it, so an exec pin on an OSC
+ * would be a second cable required to say what the first already said, with
+ * silence as the penalty for drawing only the obvious one.
+ *
+ * This comment used to name EXCT, MODES and ENV as the three -- from an earlier
+ * design where a strike landing was an event you could hang a THEN off. None of
+ * them has carried one since; the list was left describing a shape the
+ * catalogue no longer had. */
 const EXEC_IN: PortSpec = { id: 'exec', label: '', kind: 'exec', role: 'exec' };
 const EXEC_OUT: PortSpec = { id: 'then', label: '', kind: 'exec', role: 'exec' };
 const AUDIO_OUT: PortSpec = { id: 'out', label: 'OUT', kind: 'audio' };
@@ -1075,16 +1076,27 @@ export const EXEC_PORT_IDS: ReadonlySet<string> = new Set(
  * Shared with the canvas so a preset and the thing it draws as cannot disagree
  * -- which they did, silently, until the cards grew.
  */
+/**
+ * How much room one side of a card keeps for its port labels.
+ *
+ * Each side is padded for the labels on that side, not for the longest label
+ * anywhere on the card. TO-FREQ has PITCH in and FREQ out, so both sides are
+ * wide; a module with a bare `in` and `out` gets almost none, and padding it as
+ * though it had five-character labels left two knobs adrift in a card half
+ * again as wide as they needed.
+ *
+ * Exported because ModuleCard needs the same number to lay its controls out
+ * inside the width the canvas drew. It was written out twice, under a comment
+ * in each saying the two had to agree -- which is a note asking the next reader
+ * to do by hand what an import does for free.
+ */
+export function labelGutter(ports: { label: string }[]): number {
+	const longest = Math.max(0, ...ports.map((p) => p.label.length));
+	return longest ? Math.max(12, Math.ceil(14 + longest * 4.4)) : 8;
+}
+
 export function moduleWidth(spec: ModuleSpec): number {
-	/* Each side is padded for the labels on that side, not for the longest label
-	   anywhere on the card. FREQ has PITCH in and FREQ out, so both sides are
-	   wide; a module with a bare `in` and `out` gets almost none, and padding it
-	   as though it had five-character labels left two knobs adrift in a card
-	   half again as wide as they needed. */
-	const side = (ports: { label: string }[]) => {
-		const longest = Math.max(0, ...ports.map((p) => p.label.length));
-		return longest ? Math.max(12, Math.ceil(14 + longest * 4.4)) : 8;
-	};
+	const side = labelGutter;
 
 	/* What the controls themselves need. A row of segmented buttons has to stay
 	   legible at 8px, which is what sets the wide case; two knobs side by side

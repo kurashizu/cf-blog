@@ -296,7 +296,11 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 		   The entry is what execution starts from, so that is the cable to
 		   draw. It is the one the seed patch draws too. */
 		const entryId = nodes.find((n) => n.type === 'in' || n.id === ENTRY_ID)?.id;
-		if (entryId) restored.push({ from: entryId, fromPort: 'exec', to: OUTPUT_ID, toPort: 'exec' });
+		/* ENTRY's exec outlet is THEN; `exec` is the *inlet* name. Both are in
+		   EXEC_PORT_IDS, so the traversal accepted the wrong one and the cable
+		   worked -- but it named a socket ENTRY does not publish, which the
+		   canvas draws cables from. The seed patch has always used `then`. */
+		if (entryId) restored.push({ from: entryId, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' });
 	}
 	return {
 		nodes,
