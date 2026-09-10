@@ -1191,19 +1191,28 @@ class ModularSynth {
       const src = built.get(c.from);
       const dst = built.get(c.to);
       const param = dst?.mod.get(c.toPort);
-      /* No registered target for this inlet.
-      
-         A cable onto a *knob* is resolved as a value instead, by the resolver,
-         before the node was built -- which is right when the source is a pure
-         node, and wrong when it is an ENV or an LFO: those have no value to
-         pull, so the knob read 0. A filter told to follow an envelope sat at
-         0 Hz and the note was silent, with the cable drawn on the canvas.
-      
-         The editor refuses that cable now (see rolesCompatible), so reaching
-         here means a hand-edited patch file. Leaving the knob at its own
-         setting is the honest reading: the module keeps the value the card
-         shows rather than collapsing to zero. */
       if (!src || !param) continue;
+      /* A pure node -- and ENTRY -- is already in the number.
+      
+         The resolver pulled its value and the module set it as the param's
+         `.value` before this loop ran, so connecting it as a signal too would
+         apply it twice: CONST 50 into MIX's A gave a gain of 1.0 rather than
+         0.5, and CONST 100 gave 2.0. ENTRY resolves the same way, by pin name,
+         so its VEL into a knob doubled in exactly the same manner.
+      
+         Only cables onto a *knob* are skipped. A declared mod inlet -- a VCA's
+         CV, a PULSE's PWM -- has no value path at all, so ENTRY's VEL reaching
+         one of those is a signal and must still be connected.
+      
+         The two mechanisms are one decision seen from either side -- a value
+         replaces the knob, a signal adds to it (docs/node-graph.md, "A value
+         replaces a knob; a signal adds to it") -- so exactly one of them may
+         act on any given cable. */
+      const fromType = typeById.get(c.from) ?? '';
+      const ontoKnob = !specById
+        .get(typeOfNode.get(c.to) ?? '')
+        ?.inputs.some((q) => q.id === c.toPort);
+      if (ontoKnob && (isPureNode(fromType) || fromType === 'in')) continue;
       const from = outletOf(src, c.fromPort);
       /* An AudioParam and an AudioNode are both legitimate destinations, and
          TypeScript needs telling which overload applies. A param destination is
@@ -1339,7 +1348,18 @@ class ModularSynth {
     const knobPct = (target: AudioParam, key: string, def: number): number => {
       const v = p(key, def) / 100;
       target.value = v;
-      mod.set(key, target);
+      /* The cable arrives in the knob's units, not the param's.
+      
+         Registering `target` directly made the two disagree by a factor of a
+         hundred: the knob reads 0..100 and divides, so MIX A at 100 is a gain
+         of 1 -- but a CONST of 100 patched into the same inlet landed on the
+         param whole and gave a gain of 101, which is 40 dB of gain nobody
+         asked for. A scaling node in front means "100" means the same thing
+         whether it is turned or patched. */
+      const scale = ctx.createGain();
+      scale.gain.value = 0.01;
+      scale.connect(target);
+      mod.set(key, scale);
       return v;
     };
     /* Indexed straight off the catalogue's list, so the button that says SAW

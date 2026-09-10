@@ -572,6 +572,39 @@ describe('regressions the string tests could not see', () => {
 		expect(unbound.map((m) => m[0])).toEqual([]);
 	});
 
+	it('applies a value once, not once per mechanism', () => {
+		/* A knob has two ways to be driven and exactly one may act on any cable:
+		   a pure node's value is pulled by the resolver and set as the param's
+		   `.value`, and a signal is connected to that param, where Web Audio
+		   sums it. Doing both applied it twice -- CONST 50 into MIX's A gave a
+		   gain of 1.0 rather than 0.5, and CONST 100 gave 2.0.
+		
+		   ENTRY resolves by pin name the same way, so its VEL onto a knob
+		   doubled identically. Both are skipped in the mod-cable loop, and only
+		   when the destination is a knob: a declared mod inlet (a VCA's CV) has
+		   no value path at all and must still be connected. */
+		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+		expect(SYNTH).toContain("if (ontoKnob && (isPureNode(fromType) || fromType === 'in')) continue;");
+		// Measured in the browser after the fix: knob 100 and CONST 100 agree.
+		const graph = {
+			nodes: [{ id: 'k', type: 'const' }, { id: 'mx', type: 'mix' }],
+			cables: [wire('k', 'out', 'mx', 'mixA')]
+		};
+		expect(createResolver(graph, { 'mx.mixA': 0, 'k.value': 50 }, note).input('mx', 'mixA', 100)).toBe(50);
+	});
+
+	it('hands a knob its cable in the knob\'s own units', () => {
+		/* `knobPct` reads a 0..100 knob and divides, so MIX A at 100 is a gain of
+		   1. Registering the AudioParam directly made a cable bypass that
+		   divide: a CONST of 100 landed whole and gave a gain of 101 -- 40 dB
+		   nobody asked for. The scaling node in front is what makes "100" mean
+		   the same thing turned or patched. */
+		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+		const pct = SYNTH.slice(SYNTH.indexOf('const knobPct ='), SYNTH.indexOf('const knobPct =') + 1200);
+		expect(pct).toContain('scale.gain.value = 0.01');
+		expect(pct).toContain('mod.set(key, scale)');
+	});
+
 	it('names every wave the same way in the catalogue and the engine', () => {
 		/* The button labels, the engine's oscillator table and the card's preview
 		   drawing were three copies of one list and disagreed: three of four
