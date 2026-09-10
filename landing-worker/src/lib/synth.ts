@@ -3990,7 +3990,11 @@ class ModularSynth {
          opposite of what the mode is for. */
       gainNode.gain.setValueAtTime(sustainGain, t);
     } else if (ampAtt === 0) {
-      gainNode.gain.setValueAtTime(peakGain, t);
+      /* An exponential ramp from exactly 0 is undefined, and `peakGain` is a
+         product of four factors any one of which can be zero -- a fader at the
+         bottom, a preset gain of nothing. Floor the start so the ramp has
+         somewhere to come from. */
+      gainNode.gain.setValueAtTime(Math.max(0.0001, peakGain), t);
       gainNode.gain.exponentialRampToValueAtTime(sustainGain, t + ampDec);
     } else {
       gainNode.gain.setValueAtTime(0.0001, t);
@@ -4074,7 +4078,20 @@ class ModularSynth {
       // 4. Tremolo / Volume amplitude modulation
       if (ampModAmt > 0) {
         const ampGain = ctx.createGain();
-        const targetAmpGain = ampModAmt * 0.45 * track.volume;
+        /* Tremolo depth, as a fraction of the note's own level.
+        
+           It was `ampModAmt * 0.45 * track.volume` -- a scale unrelated to the
+           envelope it sums into. At the default volume the depth reached 1.71x
+           the envelope's peak, so past about ampModAmt 0.585 the summed gain
+           went negative and the voice phase-inverted on every LFO trough.
+           `track.volume` was also being counted twice, since it is already
+           inside `peakGain`.
+        
+           Half the peak at full depth: the loudest the tremolo gets is the note
+           itself, and the quietest is silence. Capped just under 1 so the
+           trough cannot reach zero, which would make the release ramp start
+           from a gain of nothing. */
+        const targetAmpGain = peakGain * Math.min(0.98, ampModAmt) * 0.5;
         if (lfoFadeSec > 0) {
           ampGain.gain.setValueAtTime(0.0001, t);
           ampGain.gain.linearRampToValueAtTime(targetAmpGain, t + lfoFadeSec);
@@ -4234,7 +4251,8 @@ class ModularSynth {
       const airFilter = ctx.createBiquadFilter();
       airFilter.type = 'highshelf';
       airFilter.frequency.setValueAtTime(10000, t);
-      airFilter.gain.setValueAtTime(track.airGain * 8, t); // ±8dB
+      // ±8 dB, as the field declares. Unclamped, `airGain: 2` gave +16.
+      airFilter.gain.setValueAtTime(Math.max(-1, Math.min(1, track.airGain)) * 8, t);
       chainOut.connect(airFilter);
       finalVoiceNode = airFilter;
     }
@@ -4439,6 +4457,7 @@ class ModularSynth {
       /* already stopped */
     }
     this.activeVoices.delete(voiceKey);
+    this.forgetHeldVoice(voiceKey);
     /* Detach after the fade rather than during it.
     
        This used to re-look-up the voice by key, which the delete above had just
@@ -4450,6 +4469,24 @@ class ModularSynth {
        Hold the voice itself: it is the thing being torn down, and the map is
        only ever the way to find it. */
     setTimeout(() => this.detachVoice(voice), Math.ceil((fadeSec + 0.05) * 1000));
+  }
+
+  /**
+   * Drop a dead voice from the held-key bookkeeping.
+   *
+   * `trackHeldVoices` maps a held key to the voice it started. A voice choked
+   * or stolen out from under a held key left its entry behind, so the map only
+   * ever grew on a MIDI keyboard, and a later note-off found a stale key and
+   * quietly did nothing. Whoever ends a voice forgets it here.
+   */
+  private forgetHeldVoice(voiceKey: string) {
+    for (const [key, v] of this.trackHeldVoices) {
+      if (v === voiceKey) {
+        this.trackHeldVoices.delete(key);
+        break;
+      }
+    }
+    this.sustainedVoiceKeys.delete(voiceKey);
   }
 
   /** Disconnect a voice's nodes. Safe to call more than once. */
@@ -4594,16 +4631,33 @@ class ModularSynth {
   public stopVoice(voiceKey: string) {
     const voice = this.activeVoices.get(voiceKey);
     if (!voice) return;
+    /* A very short fade rather than a hard cut.
+    
+       This wrote `setValueAtTime(0.0001, 0)` -- absolute time zero, long past --
+       and stopped every source at once, which is exactly the click `chokeVoice`
+       exists to avoid. It is reached on the voice-stealing path, so it fires
+       under the densest playing, where a click is most audible.
+    
+       2 ms is short enough that a stolen voice is gone before the new one
+       speaks, and long enough that the step to silence is not a discontinuity. */
+    const now = this.audioCtx()?.currentTime ?? 0;
+    const end = now + 0.002;
     try {
-      voice.gain.gain.cancelScheduledValues(0);
-      voice.gain.gain.setValueAtTime(0.0001, 0);
-      if (voice.osc1) voice.osc1.stop();
-      if (voice.osc2) voice.osc2.stop();
-      if (voice.noise) voice.noise.stop();
-      for (const x of voice.extras ?? []) x.stop();
-      if (voice.lfo) voice.lfo.stop();
-    } catch {}
-    this.reapVoice(voiceKey);
+      const g = voice.gain.gain;
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(Math.max(0.0001, g.value), now);
+      g.linearRampToValueAtTime(0, end);
+      if (voice.osc1) voice.osc1.stop(end);
+      if (voice.osc2) voice.osc2.stop(end);
+      if (voice.noise) voice.noise.stop(end);
+      for (const x of voice.extras ?? []) x.stop(end);
+      if (voice.lfo) voice.lfo.stop(end);
+    } catch {
+      /* already stopped */
+    }
+    this.activeVoices.delete(voiceKey);
+    this.forgetHeldVoice(voiceKey);
+    setTimeout(() => this.detachVoice(voice), 60);
   }
 
   /**
@@ -4617,6 +4671,7 @@ class ModularSynth {
     const voice = this.activeVoices.get(voiceKey);
     if (!voice) return;
     this.activeVoices.delete(voiceKey);
+    this.forgetHeldVoice(voiceKey);
     this.detachVoice(voice);
   }
 
