@@ -54,6 +54,13 @@ const NOT_AUDIO_MODULES = new Set(['when', 'act', 'seq']);
 function fallthroughModules(): string[] {
 	return MODULE_SPECS.filter((m) => {
 		if (NOT_AUDIO_MODULES.has(m.id)) return false;
+		/* A pure node reads its knobs through the resolver's own `p`, not through
+		   the forwarding list -- it never reaches `buildRackModule` at all. Asked
+		   from `PURE_NODES` rather than named here, so adding a value module does
+		   not mean remembering to add it to a second list. That is the exact
+		   failure this file exists to catch, and it would be embarrassing for the
+		   test to have it too. */
+		if (isPureNode(m.id)) return false;
 		// A module with its own `case 'id':` is built directly and reads its
 		// params through p(), so no list stands between it and its knobs.
 		return !new RegExp(`case '${m.id}':`).test(SOURCE);

@@ -251,10 +251,13 @@ export default {
 		'synthPatch.mod.in':
 			'The note itself. THEN runs the patch, PITCH VEL NOTE GATE say what was played. LVL sets the racks 1-7 voice on OUT, which a patch with its own source does not use.',
 		'synthPatch.mod.out': 'Sends the patch to the master bus. Anything not reaching it is silent.',
-		'synthPatch.mod.tofreq':
-			'Turns a pitch into the frequency it names. A4 sets the reference, TRSP shifts by semitones.',
+		'synthPatch.mod.tofreq': 'Turns a pitch into the frequency it names. A4 sets the reference.',
 		'synthPatch.mod.topitch':
-			'Reads a frequency back as a pitch. Between two notes it rounds, unless QNT is off.',
+			'Reads a frequency back as a pitch, exactly. Round it with QNT if you want whole semitones.',
+		'synthPatch.mod.trsp':
+			'Moves a pitch by whole semitones, and hands back a pitch. BY takes a cable, so an LFO here is vibrato.',
+		'synthPatch.mod.quant':
+			'Rounds a value to a grid. STEP is the size of one step: 1 for whole semitones.',
 		'synthPatch.mod.const': 'A fixed number. Wire it into any value inlet.',
 		'synthPatch.mod.add': 'A plus B. Unwired, B is the knob.',
 		'synthPatch.mod.mul': 'A times B. With only A patched it is a gain.',
@@ -716,8 +719,10 @@ export default {
 		'synthPatch.mod.in':
 			'音符本身。THEN 触发整张图，PITCH VEL NOTE GATE 是这一次按键的信息。LVL 只控制 OUT 上那路 1-7 号机架的声音；图里自带音源时用不到。',
 		'synthPatch.mod.out': '这张图的输出，带独立的音量和声相。没有连到这里的东西都不会发声。',
-		'synthPatch.mod.tofreq': '把音高转换成它所对应的频率。A4 设定基准音，TRSP 按半音移调。',
-		'synthPatch.mod.topitch': '把频率读回成音高。落在两个音之间时会取整，除非关掉 QNT。',
+		'synthPatch.mod.tofreq': '把音高转换成它所对应的频率。A4 设定基准音。',
+		'synthPatch.mod.topitch': '把频率精确读回成音高。想要整数半音就接一个 QNT。',
+		'synthPatch.mod.trsp': '按整半音移动音高，输出仍是音高。BY 可以接线，接 LFO 就是颤音。',
+		'synthPatch.mod.quant': '把数值对齐到网格。STEP 是一格的大小，填 1 就是整数半音。',
 		'synthPatch.mod.const': '一个固定的数,接到任何数值输入端。',
 		'synthPatch.mod.add': 'A 加 B。B 没接线时用旋钮的值。',
 		'synthPatch.mod.mul': 'A 乘 B。只接 A 时就是一个增益。',
@@ -1153,8 +1158,10 @@ export default {
 		'synthPatch.mod.in':
 			'音符本身。THEN 觸發整張圖，PITCH VEL NOTE GATE 是這一次按鍵的資訊。LVL 只控制 OUT 上那路 1-7 號機架的聲音；圖裡自帶音源時用不到。',
 		'synthPatch.mod.out': '這張圖的輸出，帶獨立的音量和聲相。沒有連到這裡的東西都不會發聲。',
-		'synthPatch.mod.tofreq': '把音高轉換成它所對應的頻率。A4 設定基準音，TRSP 按半音移調。',
-		'synthPatch.mod.topitch': '把頻率讀回成音高。落在兩個音之間時會取整，除非關掉 QNT。',
+		'synthPatch.mod.tofreq': '把音高轉換成它所對應的頻率。A4 設定基準音。',
+		'synthPatch.mod.topitch': '把頻率精確讀回成音高。想要整數半音就接一個 QNT。',
+		'synthPatch.mod.trsp': '按整半音移動音高，輸出仍是音高。BY 可以接線，接 LFO 就是顫音。',
+		'synthPatch.mod.quant': '把數值對齊到網格。STEP 是一格的大小，填 1 就是整數半音。',
 		'synthPatch.mod.const': '一個固定的數,接到任何數值輸入端。',
 		'synthPatch.mod.add': 'A 加 B。B 沒接線時用旋鈕的值。',
 		'synthPatch.mod.mul': 'A 乘 B。只接 A 時就是一個增益。',
@@ -1617,10 +1624,13 @@ export default {
 		'synthPatch.mod.in':
 			'ノートそのもの。THEN がパッチを実行し、PITCH VEL NOTE GATE が演奏内容を伝えます。LVL は OUT のラック1〜7の音だけに効き、音源を持つパッチでは使いません。',
 		'synthPatch.mod.out': 'パッチの出口。独自の音量とパンを持ち、ここに届かないものは鳴りません。',
-		'synthPatch.mod.tofreq':
-			'音高をそれが指す周波数へ変換します。A4 が基準、TRSP は半音単位の移調です。',
+		'synthPatch.mod.tofreq': '音高をそれが指す周波数へ変換します。A4 が基準です。',
 		'synthPatch.mod.topitch':
-			'周波数を音高として読み戻します。二つの音の間では丸められます（QNT オフを除く）。',
+			'周波数を音高として正確に読み戻します。整数の半音が欲しければ QNT を挟みます。',
+		'synthPatch.mod.trsp':
+			'音高を半音単位で移動し、音高のまま返します。BY はケーブルを受けるので、LFO を挿せばビブラートです。',
+		'synthPatch.mod.quant':
+			'値をグリッドに丸めます。STEP が一目盛りの大きさで、1 なら整数の半音です。',
 		'synthPatch.mod.const': '固定値。任意の値入力につなげます。',
 		'synthPatch.mod.add': 'A + B。B が未接続ならノブの値を使います。',
 		'synthPatch.mod.mul': 'A × B。A だけつなげばゲインになります。',
@@ -2105,10 +2115,13 @@ export default {
 			'음 자체입니다. THEN이 패치를 실행하고 PITCH VEL NOTE GATE가 무엇을 연주했는지 알려줍니다. LVL은 OUT의 랙 1-7 소리에만 적용됩니다.',
 		'synthPatch.mod.out':
 			'패치의 출구. 자체 음량과 팬을 가지며, 여기에 닿지 않는 것은 소리 나지 않습니다.',
-		'synthPatch.mod.tofreq':
-			'음높이를 그것이 가리키는 주파수로 바꿉니다. A4가 기준이고 TRSP는 반음 단위로 옮깁니다.',
+		'synthPatch.mod.tofreq': '음높이를 그것이 가리키는 주파수로 바꿉니다. A4가 기준입니다.',
 		'synthPatch.mod.topitch':
-			'주파수를 음높이로 되읽습니다. 두 음 사이에서는 반올림하며, QNT를 끄면 그대로 둡니다.',
+			'주파수를 음높이로 정확히 되읽습니다. 정수 반음을 원하면 QNT를 거치세요.',
+		'synthPatch.mod.trsp':
+			'음높이를 반음 단위로 옮기고 음높이로 돌려줍니다. BY는 케이블을 받으므로 LFO를 꽂으면 비브라토입니다.',
+		'synthPatch.mod.quant':
+			'값을 격자에 반올림합니다. STEP이 한 칸의 크기이며, 1이면 정수 반음입니다.',
 		'synthPatch.mod.const': '고정된 값. 아무 값 입력에나 연결하세요.',
 		'synthPatch.mod.add': 'A 더하기 B. B가 연결되지 않으면 노브 값을 씁니다.',
 		'synthPatch.mod.mul': 'A 곱하기 B. A만 연결하면 게인이 됩니다.',

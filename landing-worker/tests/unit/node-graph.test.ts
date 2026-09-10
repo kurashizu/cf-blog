@@ -685,7 +685,7 @@ describe('rack controls do not reach an ADV voice', () => {
  */
 describe('pitch and frequency', () => {
 	const conv = (
-		type: 'tofreq' | 'topitch',
+		type: 'tofreq' | 'topitch' | 'trsp' | 'quant',
 		x: number,
 		params: Record<string, number> = {},
 		ev = note
@@ -703,11 +703,14 @@ describe('pitch and frequency', () => {
 		expect(conv('tofreq', -12)).toBeCloseTo(220, 6);
 	});
 
-	it('reads a frequency back as the nearest pitch', () => {
+	it('reads a frequency back as a pitch, exactly', () => {
 		expect(conv('topitch', 440)).toBe(0);
 		expect(conv('topitch', 880)).toBe(12);
-		// 452 Hz is between two notes; quantised, it becomes the nearer one.
-		expect(conv('topitch', 452)).toBe(0);
+		/* 452 Hz is between two notes and stays between them. Rounding is QNT's
+		   question now, asked on its own card: the converter answering it made
+		   the quantise invisible unless you opened this module. */
+		expect(conv('topitch', 452)).toBeCloseTo(0.4658, 3);
+		expect(conv('quant', conv('topitch', 452), { step: 1 })).toBe(0);
 	});
 
 	it('can hand back the unrounded pitch', () => {
@@ -732,9 +735,26 @@ describe('pitch and frequency', () => {
 		expect(conv('tofreq', 0, { tuning: 415 }, at432)).toBeCloseTo(415, 6);
 	});
 
-	it('transposes by whole semitones', () => {
-		expect(conv('tofreq', 0, { shift: 12 })).toBeCloseTo(880, 6);
-		expect(conv('tofreq', 0, { shift: -12 })).toBeCloseTo(220, 6);
+	it('transposes by whole semitones, on its own card', () => {
+		/* TRSP used to be a knob on TO-FREQ. Adding to a pitch is its own
+		   operation, and welding it to the converter meant it could not take a
+		   cable -- so the transpose was fixed for the life of the patch. */
+		expect(conv('trsp', 0, { by: 12 })).toBeCloseTo(12, 6);
+		expect(conv('trsp', 0, { by: -12 })).toBeCloseTo(-12, 6);
+		// And the conversion that follows it is the one that was there before.
+		expect(conv('tofreq', conv('trsp', 0, { by: 12 }))).toBeCloseTo(880, 6);
+		expect(conv('tofreq', conv('trsp', 0, { by: -12 }))).toBeCloseTo(220, 6);
+	});
+
+	it('rounds to a grid on its own card', () => {
+		/* QNT was a two-position knob on TO-PITCH pretending to be a dial. As a
+		   node it rounds to any grid, not only to whole semitones. */
+		expect(conv('quant', 0, { step: 1 })).toBe(0);
+		expect(conv('quant', 3.4, { step: 1 })).toBe(3);
+		expect(conv('quant', 3.6, { step: 1 })).toBe(4);
+		expect(conv('quant', 3.4, { step: 0.5 })).toBe(3.5);
+		// A step of nothing would divide by zero; the value passes through.
+		expect(conv('quant', 3.4, { step: 0 })).toBeCloseTo(3.4, 6);
 	});
 
 	it('survives a frequency of zero or less', () => {

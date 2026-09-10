@@ -1129,10 +1129,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.tofreq',
 		inputs: [{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' }],
 		outputs: [{ id: 'out', label: 'FREQ', kind: 'mod', role: 'hz' }],
-		params: [
-			{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 },
-			{ key: 'shift', label: 'TRSP', min: -48, max: 48, step: 1, unit: 'st', def: 0 }
-		]
+		/* Only the reference. TRSP used to sit here and was the same weld OSC's
+		   DET was: adding to a pitch is what TRSP the module does, and doing it
+		   inside the converter meant a patch could not modulate it. A4 stays
+		   because it is not an addend -- it is the base of `a4 * 2^(n/12)`, so
+		   without it "a semitone" has no definition. */
+		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 }]
 	},
 	{
 		/* A frequency read back as the pitch nearest to it.
@@ -1149,10 +1151,53 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.topitch',
 		inputs: [{ id: 'a', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [{ id: 'out', label: 'PITCH', kind: 'mod', role: 'pitch' }],
-		params: [
-			{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 },
-			{ key: 'quantise', label: 'QNT', min: 0, max: 1, step: 1, def: 1, choices: ['OFF', 'SEMI'] }
-		]
+		/* Only the reference, for the same reason TO-FREQ carries only A4.
+		   Rounding a pitch to the nearest semitone is QNT the module: a decision
+		   about a value, not part of what "how many semitones is this frequency"
+		   means. Keeping it here made the quantise invisible unless you opened
+		   this card, which is the opposite of what the comment above wants. */
+		params: [{ key: 'tuning', label: 'A4', min: 400, max: 480, step: 0.5, unit: 'Hz', def: 440 }]
+	},
+	{
+		/* Move a pitch by whole semitones.
+		 *
+		 * PITCH in, PITCH out, so the role survives the trip: ADD would do the
+		 * arithmetic but its ports are plain `cv`, and running a pitch through
+		 * one launders it into a bare number that any control inlet would then
+		 * accept. The lattice refuses `pitch` everywhere except another `pitch`
+		 * precisely so that cannot happen quietly.
+		 *
+		 * Its BY is a real inlet as well as a knob, which is what the welded
+		 * TRSP could not be: an LFO into it is a vibrato measured in semitones,
+		 * and a CONST is the fixed transpose it replaces. */
+		id: 'trsp',
+		label: 'TRSP',
+		group: 'CONVERT',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.trsp',
+		inputs: [
+			{ id: 'a', label: 'PITCH', kind: 'mod', role: 'pitch' },
+			{ id: 'b', label: 'BY', kind: 'mod' }
+		],
+		outputs: [{ id: 'out', label: 'PITCH', kind: 'mod', role: 'pitch' }],
+		params: [{ key: 'by', label: 'BY', min: -48, max: 48, step: 1, unit: 'st', def: 0 }]
+	},
+	{
+		/* Round a value to whole numbers.
+		 *
+		 * Split out of TO-PITCH, where it was a two-position knob pretending to
+		 * be a dial. It takes a plain value rather than a pitch so it can round
+		 * anything -- a step index, a velocity scaled to a count -- and its
+		 * STEP is the size of the grid rather than a fixed 1, which is the
+		 * generalisation that made it worth being a node at all. */
+		id: 'quant',
+		label: 'QNT',
+		group: 'CONVERT',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.quant',
+		inputs: [CV_A],
+		outputs: [CV_OUT],
+		params: [{ key: 'step', label: 'STEP', min: 0.001, max: 12, step: 0.001, def: 1 }]
 	},
 	{
 		/* Blueprint's pure value nodes.
