@@ -2825,7 +2825,11 @@ class ModularSynth {
   public trackVelocityAt(track: TrackData, step: number): number {
     const lanes = track.noteLanes;
     const vel = Array.isArray(lanes) ? lanes.find((l) => l.id === VELOCITY_LANE_ID) : undefined;
-    if (vel && vel.points[step] !== undefined) return laneToVelocity(laneAt(vel, step));
+    /* Drawn at this step, so the lane wins. `!== undefined` was true for the
+       `null` a saved hole comes back as, which took this branch for steps
+       nobody drew and shadowed the accent row the bundled songs are written
+       with. */
+    if (vel && Number.isFinite(vel.points[step])) return laneToVelocity(laneAt(vel, step));
 
     const acc = Number(track.accents?.[step] ?? 0);
     if (acc > 0) return Math.min(127, Math.round(100 + acc * 6.75));
@@ -3436,6 +3440,14 @@ class ModularSynth {
     const trackRow = this.tracks[trackId];
     // Muting silences live playback, but must not silence an offline render.
     if (!trackRow || (!this.renderCtx && soundEngine.isMuted())) return;
+    /* A note played by hand while a render is running has nowhere to go.
+    
+       `audioCtx()` hands back the offline context during a render, so a key
+       press, a roll audition or an arriving MIDI note was built into the
+       *offline* graph at a live-clock time -- and baked into the exported WAV.
+       The render's own calls all carry an explicit `startTime`; the manual ones
+       never do, which is exactly the difference. */
+    if (this.renderCtx && startTime === undefined) return;
 
     const noteInfo = PIANO_ROLL_NOTES[noteIndex];
     if (!noteInfo) return;
@@ -4326,8 +4338,28 @@ class ModularSynth {
       /* already stopped */
     }
     this.activeVoices.delete(voiceKey);
-    // Detach after the fade rather than during it.
-    setTimeout(() => this.reapVoice(voiceKey), Math.ceil((fadeSec + 0.05) * 1000));
+    /* Detach after the fade rather than during it.
+    
+       This used to re-look-up the voice by key, which the delete above had just
+       removed -- so `reapVoice` returned at its own guard and the gain, filter
+       and panner stayed connected to the track bus for the life of the session.
+       It is the exact pile-up `reapVoice` exists to prevent, reintroduced
+       through the choke path, and it fired on every mono and legato note.
+    
+       Hold the voice itself: it is the thing being torn down, and the map is
+       only ever the way to find it. */
+    setTimeout(() => this.detachVoice(voice), Math.ceil((fadeSec + 0.05) * 1000));
+  }
+
+  /** Disconnect a voice's nodes. Safe to call more than once. */
+  private detachVoice(voice: ActiveVoice) {
+    try {
+      voice.gain.disconnect();
+      voice.filter.disconnect();
+      voice.panNode?.disconnect();
+    } catch {
+      /* already detached */
+    }
   }
 
   /**
@@ -4390,7 +4422,12 @@ class ModularSynth {
       const mode = track.voiceMode ?? 'poly';
       return {
         ...none,
-        cut: mode !== 'poly',
+        /* A mute group is its own reason to choke, independent of the voice
+           mode. `cut` was `mode !== 'poly'` alone, so on a poly track -- which
+           is what every K.MAP kit is -- the group was computed, stored on the
+           voice, and never consulted: the closed hi-hat never stopped the open
+           one, which is the whole reason the field exists. */
+        cut: mode !== 'poly' || (track.muteGroup ?? 0) > 0,
         fadeSec: mode === 'legato' ? 0.04 : 0.006,
         cutGroup: track.muteGroup ?? 0
       };
@@ -4479,11 +4516,7 @@ class ModularSynth {
     const voice = this.activeVoices.get(voiceKey);
     if (!voice) return;
     this.activeVoices.delete(voiceKey);
-    try {
-      voice.gain.disconnect();
-      voice.filter.disconnect();
-      voice.panNode?.disconnect();
-    } catch { /* already detached */ }
+    this.detachVoice(voice);
   }
 
   public stopAll() {
@@ -4768,6 +4801,16 @@ class ModularSynth {
 
   private schedulerLoop() {
     if (!this.isSequencerPlaying) return;
+    /* A render owns the engine while it runs.
+    
+       `audioCtx()` hands back the offline context, and `renderOffline` swaps the
+       graph cache out from under the live one -- but it never stopped this
+       timer, so a step scheduled mid-export was built into the *offline* graph
+       at live-clock times and baked into the WAV. The same held for anything
+       else that makes a voice: a key pressed, a roll note auditioned, a MIDI
+       note arriving. Playback stands still for the length of the render and
+       picks up where it was. */
+    if (this.renderCtx) return;
     const ctx = soundEngine.init();
     if (!ctx) return;
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -4779,7 +4822,31 @@ class ModularSynth {
     const aheadSec = typeof document !== 'undefined' && document.hidden ? 1.6 : this.scheduleAheadSec;
 
     if (this.endAtTime !== null) return;
-    while (this.nextStepTime < ctx.currentTime + aheadSec) {
+
+    /* A tab hidden past five minutes is clamped to one tick a *minute*, which
+       no lookahead window bridges. `nextStepTime` only ever moves forward by a
+       step, so once it falls behind the clock it stays behind: every later note
+       is booked in the past, `triggerTrackVoice` floors them all to
+       `currentTime`, and the whole backlog fires at once on unhide -- 2880
+       steps and 30 voices in one blocking pass, of which the 64-voice guard
+       keeps the last few.
+    
+       Falling more than a window behind is not lateness, it is a gap. Rebase to
+       now and carry on from the step we are actually at; the time that passed
+       was time the tab was not making sound anyway. */
+    if (this.nextStepTime < ctx.currentTime - aheadSec) {
+      const missed = Math.round((ctx.currentTime - this.nextStepTime) / stepDuration);
+      this.nextStepTime = ctx.currentTime;
+      this.currentStep = (this.currentStep + missed) % this.totalSteps;
+      this.scheduledStepQueue.length = 0;
+      this.lastAudibleStep = this.currentStep;
+    }
+
+    /* One window's worth, and no more. Without a bound this loop is however
+       many steps fit in the gap since it last ran. */
+    const maxSteps = Math.ceil(aheadSec / stepDuration) + 2;
+    let booked = 0;
+    while (this.nextStepTime < ctx.currentTime + aheadSec && booked++ < maxSteps) {
       this.scheduleStepAudio(this.currentStep, this.nextStepTime);
       this.scheduledStepQueue.push({ step: this.currentStep, time: this.nextStepTime });
       this.nextStepTime += stepDuration;
@@ -4812,9 +4879,26 @@ class ModularSynth {
 
       stepNotes.forEach((noteIdx) => {
         if (noteIdx !== null && noteIdx !== undefined && PIANO_ROLL_NOTES[noteIdx]) {
-          // If this note was ALREADY ringing on the previous step, it is a sustained continuation:
-          // Do NOT re-trigger the voice attack!
-          if (step > 0 && prevStepNotes.includes(noteIdx)) {
+          /* Already ringing on the previous step: a continuation, not a new
+             note, so do not re-attack it.
+          
+             `prevStep` wraps to the last step of the pattern, and `step > 0`
+             threw that wrap away -- so a note held across the loop point got a
+             fresh attack and an envelope restart on every lap, where the same
+             note held anywhere else in the pattern rings through. Only in LOOP
+             mode: played once, the pattern's first step is a beginning. */
+          const wrapped = step === 0 && this.loopMode;
+          /* At the wrap, a note on the last step only continues if it has been
+             ringing into it -- otherwise the last step is itself an attack, and
+             suppressing step 0 would silence the note on every lap instead of
+             re-attacking it on every lap. Look one further back to tell them
+             apart. */
+          const heldIntoWrap =
+            wrapped &&
+            (track.grid[(this.totalSteps - 2 + this.totalSteps) % this.totalSteps] || []).includes(
+              noteIdx
+            );
+          if ((step > 0 || heldIntoWrap) && prevStepNotes.includes(noteIdx)) {
             return;
           }
 

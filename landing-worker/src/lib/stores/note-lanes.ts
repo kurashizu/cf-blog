@@ -52,11 +52,25 @@ export function velocityLane(): NoteLane {
 	};
 }
 
-/** Read a lane at a step, falling back to its default. */
+/**
+ * Read a lane at a step, falling back to its default.
+ *
+ * A lane is sparse: an undrawn step is a hole in the array and reads as `def`.
+ * `JSON.stringify` writes both a hole and an `undefined` as **null**, so after
+ * one save and load the holes come back as nulls -- and `null === undefined` is
+ * false. Every undrawn step between two drawn points was reading
+ * `clamp(null)` = 0, which is velocity 1 out of 127: a patch played at full
+ * level came back near-silent, through localStorage, share links, exported
+ * files and presets alike.
+ *
+ * Testing for "not a finite number" instead of for `undefined` covers the hole,
+ * the null and the NaN in one, and repairs files already saved rather than only
+ * new ones.
+ */
 export function laneAt(lane: NoteLane | undefined, step: number): number {
 	if (!lane) return 0;
 	const v = lane.points[step];
-	return v === undefined || Number.isNaN(v) ? lane.def : Math.max(0, Math.min(1, v));
+	return Number.isFinite(v) ? Math.max(0, Math.min(1, v as number)) : lane.def;
 }
 
 /**
