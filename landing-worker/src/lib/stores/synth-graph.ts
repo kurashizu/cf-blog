@@ -87,9 +87,31 @@ function snapshot(id: number): Snapshot {
 	};
 }
 
+/**
+ * Forget every track's undo history.
+ *
+ * The stacks are module-global and keyed by track id, and nothing cleared them:
+ * load song A, edit track 0's patch bay, load song B, press undo -- and song
+ * A's graph was written straight onto song B's track 0, with the canvas showing
+ * it as though it belonged there. A history is a history *of a project*, so it
+ * ends when the project does.
+ */
+export function clearGraphHistory(): void {
+	histories.clear();
+	lastParamKey = '';
+	historyVersion.update((v) => v + 1);
+}
+
 /** Record the state before an edit, so it can be returned to. */
 function pushUndo(id: number): void {
 	histories.set(id, pushHistory(histories.get(id) ?? emptyHistory(), snapshot(id)));
+	/* Any edit closes the coalescing window.
+	
+	   The window was only ever written by `setGraphParam`, so turning a knob,
+	   drawing a cable and turning the *same* knob again inside 600 ms recorded
+	   nothing for the second move -- one undo jumped back past both. A window is
+	   a continuous gesture on one control; anything else happening ends it. */
+	lastParamKey = '';
 	/* Announced after the edit lands, not here: historyVersion is a store, so
 	   updating it runs subscribers synchronously, and this is called before the
 	   write it is recording. A subscriber that re-read the graph would see it as
@@ -233,7 +255,13 @@ export function setGraphParam(
 	   mid-build -- so refuse it here, where there is one door, rather than
 	   guarding ninety-nine reads. */
 	if (!Number.isFinite(value)) return;
-	const key = `${nodeId}.${param}`;
+	/* Keyed by track as well as by knob.
+	
+	   Two tracks seeded from the same builtin song share node ids, so turning
+	   `osc-1.oscHz` on track 0 and then on track 1 inside the window left track
+	   1 with no undo entry for its own first edit. A window is about one hand on
+	   one knob, and that knob is on a track. */
+	const key = `${get(activeTrackId)}:${nodeId}.${param}`;
 	const now = Date.now();
 	if (key !== lastParamKey || now - lastParamAt > PARAM_COALESCE_MS) pushUndo(get(activeTrackId));
 	lastParamKey = key;
@@ -259,19 +287,46 @@ export const graphClipboard = writable<RackGraph | null>(null);
  * thing people most want to undo. beginDrag() marks the start of a gesture;
  * everything until it ends folds into that single entry. */
 let dragOpen = false;
+/* Has this drag recorded its starting state yet? */
+let dragRecorded = false;
 
+/**
+ * Open a drag, without recording anything yet.
+ *
+ * This used to push an undo entry on pointer*down*, before it could know whether
+ * the pointer would move -- so selecting a module, or clicking one to reach its
+ * knobs, recorded a snapshot identical to the current state. The stack is sixty
+ * deep, so sixty clicks pushed every real edit out of it; and since a push
+ * clears the redo stack, a single click on a module threw away everything that
+ * had been undone.
+ *
+ * The snapshot is taken on the first movement instead, which is the moment
+ * something is actually about to change.
+ */
 export function beginGraphDrag(): void {
 	if (dragOpen) return;
-	pushUndo(get(activeTrackId));
 	dragOpen = true;
+	dragRecorded = false;
+}
+
+/** Called on the first movement of a drag: record the state it started from. */
+export function markGraphDragMoved(): void {
+	if (!dragOpen || dragRecorded) return;
+	dragRecorded = true;
+	pushUndo(get(activeTrackId));
 }
 
 export function endGraphDrag(): void {
 	dragOpen = false;
+	dragRecorded = false;
 }
 
 /** Write without recording: the gesture already pushed its own entry. */
 function commitDuringDrag(graph: RackGraph): void {
+	/* The first write of a drag is the moment something changes, so that is
+	   when the state it started from is recorded. Recording on pointer-down
+	   instead meant a click that moved nothing still pushed a snapshot. */
+	markGraphDragMoved();
 	modularSynth.updateTrack(get(activeTrackId), { rackGraph: graph } as Partial<TrackData>);
 	refreshTracks();
 }

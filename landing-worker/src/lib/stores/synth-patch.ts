@@ -30,6 +30,7 @@ import {
 	stop as stopTransport
 } from './synth-transport';
 import { tracksState, isOverlayMode, overlayTrackIds } from './synth-tracks';
+import { clearGraphHistory } from './synth-graph';
 import { askConfirm } from './synth-confirm';
 
 const STORAGE_KEY = 'krsz-synth-patch-v1';
@@ -88,6 +89,8 @@ export function handleNewProject(): void {
 }
 
 function doNewProject(): void {
+	// A history belongs to the project it was made in.
+	clearGraphHistory();
 	resetPlayheadState();
 	modularSynth.resetToBlank(192);
 	totalPatternSteps.set(192);
@@ -105,6 +108,7 @@ export function handleLoadBuiltinSong(idx: number): void {
 	const song = BUILTIN_SONGS[idx];
 	if (!song) return;
 	builtinSongIdx.set(idx);
+	clearGraphHistory();
 	resetPlayheadState();
 	modularSynth.loadBuiltInSong(song.id);
 	totalPatternSteps.set(song.steps);
@@ -157,6 +161,11 @@ const isMeter = (v: unknown): v is TimeSignature =>
 	typeof v === 'string' && (METERS as readonly string[]).includes(v);
 
 function applyPatchData(raw: SynthPatchFile): void {
+	/* Undo cannot reach across a load: the stacks are keyed by track id, so
+	   without this, undoing on track 0 after loading a second project wrote the
+	   first project's graph onto it -- and the canvas showed it as though it
+	   belonged there. */
+	clearGraphHistory();
 	const data = migratePatch(raw) as SynthPatchData;
 	ensureCustomWaves(data.waves);
 	resetPlayheadState();
