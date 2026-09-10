@@ -23,6 +23,10 @@ const S = modularSynth as unknown as {
 	nextStepTime: number;
 	bpm: number;
 	setBpm(n: number): void;
+	setSustainPedal(down: boolean): void;
+	isSustainActive(): boolean;
+	subscribeSustain(fn: (down: boolean) => void): () => void;
+	stopSequencer(cutVoices?: boolean): void;
 	setTotalSteps(n: number): void;
 	restartSequencerTimer(): void;
 };
@@ -85,5 +89,51 @@ describe('changing the tempo while it plays', () => {
 		expect(S.bpm).toBe(260);
 		S.setBpm(1);
 		expect(S.bpm).toBe(40);
+	});
+});
+
+describe('the sustain pedal says when it lets go', () => {
+	/* The engine drops the pedal on STOP without anyone asking, and the store
+	   that draws the badge was only ever written from the MIDI handler -- so
+	   stopping with the pedal physically down left the UI reading "sustain on"
+	   against an engine that had already released, and it stayed wrong until
+	   the pedal was next moved. */
+	it('tells its listeners when the pedal is pressed and released', () => {
+		const seen: boolean[] = [];
+		const off = S.subscribeSustain((down) => seen.push(down));
+		try {
+			S.setSustainPedal(true);
+			S.setSustainPedal(false);
+			expect(seen).toEqual([true, false]);
+		} finally {
+			off();
+			S.setSustainPedal(false);
+		}
+	});
+
+	it('says nothing when the pedal has not actually moved', () => {
+		// A controller that resends its state should not redraw anything.
+		S.setSustainPedal(false);
+		const seen: boolean[] = [];
+		const off = S.subscribeSustain((down) => seen.push(down));
+		try {
+			S.setSustainPedal(false);
+			expect(seen).toEqual([]);
+		} finally {
+			off();
+		}
+	});
+
+	it('announces the release that STOP performs by itself', () => {
+		const seen: boolean[] = [];
+		S.setSustainPedal(true);
+		const off = S.subscribeSustain((down) => seen.push(down));
+		try {
+			S.stopSequencer(true);
+			expect(seen).toEqual([false]);
+			expect(S.isSustainActive()).toBe(false);
+		} finally {
+			off();
+		}
 	});
 });

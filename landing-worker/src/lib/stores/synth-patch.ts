@@ -2,6 +2,7 @@ import {
 	migratePatch,
 	isPatchFile,
 	trackResetDefaults,
+	dropNonFiniteNumbers,
 	blankTrack,
 	STEPS_PER_BEAT,
 	PATCH_VERSION,
@@ -204,7 +205,10 @@ function applyPatchData(raw: SynthPatchFile): void {
 			if (tData.id !== undefined)
 				// Reset first, so a project saved before a field existed gets the
 				// default rather than whatever the live track was holding.
-				modularSynth.updateTrack(tData.id, { ...trackResetDefaults(), ...tData });
+				modularSynth.updateTrack(tData.id, {
+					...trackResetDefaults(),
+					...dropNonFiniteNumbers(tData as unknown as Record<string, unknown>)
+				});
 		});
 		refreshTracks();
 	}

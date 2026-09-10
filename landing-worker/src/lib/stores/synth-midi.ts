@@ -97,9 +97,14 @@ export const midiInputsForActiveTrack = derived(
 		$devices.filter((d) => ($bound[d.id] ?? [$active]).includes($active)).map((d) => d.name)
 );
 
+/* The engine is the one that knows. It drops the pedal on STOP without anyone
+   asking, and this store used to be written only from the MIDI handler -- so
+   stopping with the pedal held left the badge lit over an engine that had let
+   go. Following the engine means the two cannot disagree whoever moved it. */
+modularSynth.subscribeSustain((down) => isSustainActive.set(down));
+
 export function setSustainPedal(down: boolean): void {
 	modularSynth.setSustainPedal(down);
-	isSustainActive.set(down);
 }
 
 /** Wires the Web MIDI API — call once, client-side, from onMount. Always routes to the latest activeTrackId. */

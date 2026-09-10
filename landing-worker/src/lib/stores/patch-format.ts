@@ -168,3 +168,37 @@ export function isPatchFile(parsed: unknown): parsed is SynthPatchFile {
 	const p = parsed as Record<string, unknown>;
 	return Array.isArray(p.tracks);
 }
+
+/**
+ * Strip the numbers a saved track cannot legally hold.
+ *
+ * An imported patch is spread straight onto the live track, and from there its
+ * fields are written into AudioParams. Those throw a RangeError on a NaN or an
+ * Infinity, which does not degrade the note -- it kills it, and the failure
+ * surfaces as total silence with the import still reporting success. A
+ * hand-edited .krsz, a truncated share link or a half-written localStorage
+ * entry is enough.
+ *
+ * Deliberately narrow: it drops non-finite numbers and non-finite entries
+ * inside numeric arrays, and touches nothing else. Range clamping belongs to
+ * the engine, which already floors and ceilings the values it uses, and a
+ * value that is merely unusual is the user's business. This is only about
+ * values that are not numbers at all.
+ */
+export function dropNonFiniteNumbers<T extends Record<string, unknown>>(track: T): T {
+	const out: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(track)) {
+		if (typeof v === 'number') {
+			if (Number.isFinite(v)) out[k] = v;
+			continue;
+		}
+		if (Array.isArray(v) && v.some((x) => typeof x === 'number')) {
+			/* A hole in a lane is a legitimate `null` -- it means "nothing drawn
+			   here" -- so only the non-finite *numbers* go. */
+			out[k] = v.map((x) => (typeof x === 'number' && !Number.isFinite(x) ? null : x));
+			continue;
+		}
+		out[k] = v;
+	}
+	return out as T;
+}

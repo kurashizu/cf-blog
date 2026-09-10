@@ -3,6 +3,7 @@ import {
 	migratePatch,
 	trackResetDefaults,
 	blankTrack,
+	dropNonFiniteNumbers,
 	isPatchFile,
 	STEPS_PER_BEAT,
 	PATCH_VERSION,
@@ -257,5 +258,53 @@ describe('a saved patch is a copy, not a view', () => {
 		expect(saved.cutoff).toBe(3000);
 		expect(saved.graphParams).toEqual({ 'a.b': 1 });
 		expect(saved.eqOn).toBe(true);
+	});
+});
+
+/**
+ * A patch file is data from outside, and some of it is not numbers.
+ *
+ * Imported fields are spread onto the live track and from there written into
+ * AudioParams, which throw a RangeError on a NaN or an Infinity -- so one bad
+ * number in a hand-edited .krsz, a truncated share link or a half-written
+ * localStorage entry does not degrade a note, it kills it, and the import
+ * still says it worked.
+ */
+describe('an imported track cannot carry a number that is not one', () => {
+	it('drops a NaN rather than letting it reach an AudioParam', () => {
+		const out = dropNonFiniteNumbers({ cutoff: NaN, resonance: 4 });
+		expect('cutoff' in out).toBe(false);
+		expect(out.resonance).toBe(4);
+	});
+
+	it('drops an Infinity too', () => {
+		const out = dropNonFiniteNumbers({ volume: Infinity, pan: -Infinity, airGain: 0.5 });
+		expect(Object.keys(out)).toEqual(['airGain']);
+	});
+
+	it('leaves a legitimate zero and a legitimate negative alone', () => {
+		// The obvious way to write this check is `if (v)`, which eats both.
+		const out = dropNonFiniteNumbers({ pan: 0, detuneCents: -50 });
+		expect(out.pan).toBe(0);
+		expect(out.detuneCents).toBe(-50);
+	});
+
+	it('cleans a numeric array without collapsing it', () => {
+		const out = dropNonFiniteNumbers({ eqGains: [1, NaN, 3] });
+		expect(out.eqGains).toEqual([1, null, 3]);
+	});
+
+	it('keeps a drawn hole in a lane, which is a real null', () => {
+		// `null` in a lane means "nothing drawn here" and must survive.
+		const out = dropNonFiniteNumbers({ points: [0.5, null, 0.9] });
+		expect(out.points).toEqual([0.5, null, 0.9]);
+	});
+
+	it('does not touch strings, objects or booleans', () => {
+		const graph = { nodes: [], cables: [] };
+		const out = dropNonFiniteNumbers({ name: 'LEAD', percussion: true, rackGraph: graph });
+		expect(out.name).toBe('LEAD');
+		expect(out.percussion).toBe(true);
+		expect(out.rackGraph).toBe(graph);
 	});
 });

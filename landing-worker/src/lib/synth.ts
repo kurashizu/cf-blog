@@ -174,6 +174,12 @@ class ModularSynth {
 	private totalSteps: number = SPAIN_STEPS; // the boot song
 	private sequencerTimer: any = null;
 	private onStepListeners: Set<(step: number) => void> = new Set();
+	/* Told when the pedal changes, including when the engine drops it itself.
+	   STOP clears `isSustainPedalDown` directly, and the store that draws the
+	   badge is only ever written by the MIDI handler -- so stopping with the
+	   pedal physically down left the UI reading "sustain on" against an engine
+	   that had let go, and it stayed wrong until the pedal was moved. */
+	private onSustainListeners: Set<(down: boolean) => void> = new Set();
 	private onNoteListeners: Set<
 		(trackId: number, noteIndex: number, noteName: string, durationMs: number) => void
 	> = new Set();
@@ -402,7 +408,8 @@ class ModularSynth {
 		this.waveShaper.connect(this.masterLimiter);
 		this.masterBusIn.connect(this.shaperBypass);
 		this.shaperBypass.connect(this.masterLimiter);
-		this.applyDriveRouting();
+		// Built, not turned: take the value now rather than gliding to it.
+		this.applyDriveRouting(true);
 
 		// Per-Track 6-Band Graphic EQ chains: voices -> input -> 80Hz -> ... -> 12kHz -> master bus.
 		// Persistent per track (not per voice), so 8 tracks cost at most 48 biquads total.
@@ -2688,10 +2695,30 @@ class ModularSynth {
 	}
 
 	/** Drive on: through the shaper. Drive off: around it, so nothing clips before the master fader. */
-	private applyDriveRouting() {
+	/**
+	 * Which of the two master legs carries the signal.
+	 *
+	 * `immediate` is for the moment the pair is built. Both gains are new, so
+	 * both are 1, and `setTargetAtTime` never actually sets a value -- it decays
+	 * towards one. Live that costs nothing, because the context is minutes old
+	 * before a note arrives. Offline it happens at currentTime 0, which is
+	 * exactly where the song starts, so the first ~50 ms of every rendered file
+	 * went through the bypass *and* the peak-clamping shaper at once: roughly
+	 * double level, clipped, and not what was heard while playing. It could
+	 * trigger the render's own "peak > -0.1 dB" warning by itself.
+	 *
+	 * Turning the knob still ramps, because that is a control being moved and a
+	 * step there would click.
+	 */
+	private applyDriveRouting(immediate = false) {
 		if (!this.shaperIn || !this.shaperBypass) return;
 		const on = this.driveAmount > 0.001;
 		const t = this.shaperIn.context.currentTime;
+		if (immediate) {
+			this.shaperIn.gain.setValueAtTime(on ? 1 : 0, t);
+			this.shaperBypass.gain.setValueAtTime(on ? 0 : 1, t);
+			return;
+		}
 		this.shaperIn.gain.setTargetAtTime(on ? 1 : 0, t, 0.01);
 		this.shaperBypass.gain.setTargetAtTime(on ? 0 : 1, t, 0.01);
 	}
@@ -4222,7 +4249,10 @@ class ModularSynth {
 
 	// Set Sustain Pedal (CC 64) State
 	public setSustainPedal(down: boolean) {
-		this.isSustainPedalDown = down;
+		if (this.isSustainPedalDown !== down) {
+			this.isSustainPedalDown = down;
+			this.onSustainListeners.forEach((fn) => fn(down));
+		}
 		if (!down) {
 			// Release all accumulated sustained voices whose keys are not still physically held
 			this.sustainedVoiceKeys.forEach((vk) => {
@@ -4570,6 +4600,11 @@ class ModularSynth {
 	/*                     CLOSED-LOOP SEQUENCER ENGINE                           */
 	/* -------------------------------------------------------------------------- */
 
+	public subscribeSustain(listener: (down: boolean) => void): () => void {
+		this.onSustainListeners.add(listener);
+		return () => this.onSustainListeners.delete(listener);
+	}
+
 	public subscribeStep(listener: (step: number) => void): () => void {
 		this.onStepListeners.add(listener);
 		return () => this.onStepListeners.delete(listener);
@@ -4700,7 +4735,8 @@ class ModularSynth {
 			this.trackHeldVoices.clear();
 			this.sustainedVoiceKeys.clear();
 		}
-		this.isSustainPedalDown = false;
+		// Through the setter, so anything drawing the pedal hears about it.
+		this.setSustainPedal(false);
 	}
 
 	private restartSequencerTimer() {
