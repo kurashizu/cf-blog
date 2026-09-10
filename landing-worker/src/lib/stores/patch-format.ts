@@ -1,4 +1,4 @@
-import { BLANK_TRACK_TIMBRE, type TrackData } from '../synth';
+import { BLANK_TRACK_TIMBRE, STEPS_PER_BEAT, type TrackData } from '../synth';
 
 /**
  * What a saved project is, as data.
@@ -35,8 +35,13 @@ export interface SynthPatchFile {
 	version?: number;
 }
 
-/** The grid the synth runs on now: 24 steps per beat. */
-export const STEPS_PER_BEAT = 24;
+/* The grid the synth runs on now: 24 steps per beat.
+
+   Re-exported from the engine rather than declared again. The same number was
+   written in both places, and a grid resolution that disagrees between the
+   format and the sequencer is a silent-corruption bug: every saved bar would
+   play at the wrong speed. */
+export { STEPS_PER_BEAT };
 
 /**
  * The current patch format.

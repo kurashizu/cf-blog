@@ -170,7 +170,7 @@ function sydneyHour(): number {
 export const theme = writable<WorkspaceTheme>('auto');
 
 /** Recomputed on each clock tick so `auto` actually moves across the day rather than freezing at load time. */
-export const autoResolvedTheme = writable<FixedTheme>(browser ? themeForHour(sydneyHour()) : 'tokyo-matte');
+const autoResolvedTheme = writable<FixedTheme>(browser ? themeForHour(sydneyHour()) : 'tokyo-matte');
 
 /** Call once a minute (piggybacking the header clock's own tick is enough — the schedule only changes on the hour). */
 export function refreshAutoTheme(): void {

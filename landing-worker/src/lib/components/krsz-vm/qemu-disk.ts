@@ -19,8 +19,15 @@
  * falls back to. See fetchChunk for why it is written the awkward way it is.
  */
 
-/** One request, one cache entry — the same size the routes chunk at. */
-export const CHUNK = 1024 * 1024;
+import { CHUNK } from '$lib/vm-storage';
+import { BLOCK_BYTES } from './disk-overlay';
+
+/* One request, one cache entry -- the same size the routes chunk at.
+
+   Re-exported rather than restated. The comment already said the two had to
+   agree and then wrote the number out a second time; a range request off by a
+   chunk is silent corruption, so let the compiler hold them together. */
+export { CHUNK };
 
 /** Chunk index → the bytes the guest has written into it. */
 export type OverlayBlocks = Map<number, Uint8Array>;
@@ -34,7 +41,7 @@ export type OverlayBlocks = Map<number, Uint8Array>;
  * alongside -- 256 because that is what v86 uses, and both machines then write
  * the same file format.
  */
-export const BLOCK_BYTES = 256;
+export { BLOCK_BYTES };
 
 interface EmscriptenFS {
 	FS: {

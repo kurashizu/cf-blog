@@ -14,10 +14,20 @@ import { browser } from '$app/environment';
 import { tr } from '$lib/i18n';
 import { codecSupported, encodeToFragment, decodeFromFragment } from '../share-codec';
 import { playSound } from '../sound';
-import { modularSynth, type TrackData, type TimeSignature } from '../synth';
+import {
+	modularSynth,
+	type TrackData,
+	type TimeSignature,
+	type CustomWave,
+	type BuiltinSongId
+} from '../synth';
 import { isPresetFile, applyPresetFile, isKitFile, applyKitFile, activeKitName } from './synth-presets';
+import { saveStatus, showSaveStatus, askConfirm } from './synth-confirm';
+
+/* Re-exported from where it now lives, so the menus that read it here still
+   can. synth-presets imports it from synth-confirm directly. */
+export { saveStatus, showSaveStatus };
 import { ensureCustomWaves, wavesUsedBy } from './synth-waves';
-import type { CustomWave } from '../synth';
 import {
 	bpm,
 	setBpm,
@@ -31,12 +41,11 @@ import {
 } from './synth-transport';
 import { tracksState, isOverlayMode, overlayTrackIds } from './synth-tracks';
 import { clearGraphHistory } from './synth-graph';
-import { askConfirm } from './synth-confirm';
 
 const STORAGE_KEY = 'krsz-synth-patch-v1';
 
 export interface BuiltinSong {
-	id: string;
+	id: BuiltinSongId;
 	name: string;
 	steps: number;
 	bpm: number;
@@ -60,12 +69,7 @@ const DEFAULT_SONG_IDX = Math.max(0, BUILTIN_SONGS.findIndex((s) => s.id === 'SP
 export const builtinSongIdx = writable<number>(DEFAULT_SONG_IDX);
 /** What is loaded right now — used to name exports. Set by every loader. */
 export const currentSongName = writable<string>(BUILTIN_SONGS[DEFAULT_SONG_IDX]?.name ?? 'patch');
-export const saveStatus = writable<string | null>(null);
 
-export function showSaveStatus(msg: string): void {
-	saveStatus.set(msg);
-	setTimeout(() => saveStatus.set(null), 2000);
-}
 
 function refreshTracks(): void {
 	tracksState.set([...modularSynth.getTracks()]);

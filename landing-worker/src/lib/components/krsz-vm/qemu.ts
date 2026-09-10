@@ -18,8 +18,7 @@
 
 import { openpty } from 'xterm-pty';
 import type { Terminal } from '@xterm/xterm';
-import { CHUNK, type OverlayBlocks } from './qemu-disk';
-import { createLazyImage } from './qemu-disk';
+import { CHUNK, createLazyImage, type OverlayBlocks } from './qemu-disk';
 import { WispAdapter } from './v86net/adapter.js';
 import { NET_HOST, installNetShim, sendToGuest } from './qemu-net-shim';
 import { tr } from '$lib/i18n';

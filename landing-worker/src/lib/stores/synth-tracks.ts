@@ -28,7 +28,7 @@ export const tracksState = writable<TrackData[]>(modularSynth.getTracks());
 export const isOverlayMode = writable<boolean>(true);
 export const overlayTrackIds = writable<number[]>([0, 1, 2, 3]);
 /** trackId-noteIndex -> held note, from mouse/touch keyboard presses or live MIDI input. */
-export const manualHeldNotes = writable<Map<string, { trackId: number; noteIdx: number }>>(new Map());
+const manualHeldNotes = writable<Map<string, { trackId: number; noteIdx: number }>>(new Map());
 
 /* The key the racks edit in percussion mode: whichever key was last placed on
    the roll, auditioned from its label, or pressed on the keyboard (mouse,
@@ -186,26 +186,10 @@ function currentGlobalCol(colIndex: number): number {
 	return get(activeStepPage) * meterCols + colIndex;
 }
 
-/** Toggle a note in the polyphonic piano roll — up to 8 notes per step, snapped to the current grid division. */
-export function handlePianoRollCellClick(noteIndex: number, colIndex: number): void {
-	const snap = get(snapDiv);
-	const snapSpanCols = divToColumnSpan(snap, snap);
-	const snapInt = snapSpanCols >= 1 ? Math.floor(snapSpanCols) : 1;
-	const snappedCol = Math.floor(colIndex / snapInt) * snapInt;
-	const trackId = get(activeTrackId);
-	const startStep = currentGlobalCol(snappedCol) * stepsPerColumn(snap);
-	activeKey.set(noteIndex);
-	placeOrClearNote(trackId, noteIndex, startStep);
-}
-
-export function handlePianoRollSubCellClick(noteIndex: number, colIndex: number, subCol: number): void {
-	const snap = get(snapDiv);
-	const spc = stepsPerColumn(snap);
-	const trackId = get(activeTrackId);
-	const startStep = currentGlobalCol(colIndex) * spc + subCol * (spc / 2);
-	activeKey.set(noteIndex);
-	placeOrClearNote(trackId, noteIndex, startStep);
-}
+/* Two piano-roll click handlers used to live here, one for a cell and one for
+   a half-cell. The roll calls `placeOrClearNote` directly and has for a while,
+   so both were dead -- and they had each grown their own copy of the snap
+   arithmetic, which is the part that would have drifted. */
 
 /** Put a note of the current NOTE DUR down, or lift the run under the click. Both are one undo step. */
 export function placeOrClearNote(trackId: number, noteIndex: number, startStep: number): void {
@@ -244,12 +228,6 @@ export function placeOrClearNote(trackId: number, noteIndex: number, startStep: 
 		const isAccent = track.accents[startStep] || false;
 		modularSynth.triggerTrackVoice(trackId, noteIndex, isAccent);
 	}
-}
-
-export function cycleAccent(step: number): void {
-	const id = get(activeTrackId);
-	withUndo(id, () => modularSynth.cycleTrackAccent(id, step));
-	refreshTracks();
 }
 
 export function holdManualNote(trackId: number, noteIdx: number, velocity = 100): void {

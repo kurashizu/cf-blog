@@ -1,5 +1,9 @@
-import { fade as svelteFade, fly as svelteFly, scale as svelteScale } from 'svelte/transition';
-import type { TransitionConfig } from 'svelte/transition';
+import {
+	fade as svelteFade,
+	fly as svelteFly,
+	scale as svelteScale,
+	type TransitionConfig
+} from 'svelte/transition';
 import { get } from 'svelte/store';
 import { performanceMode } from './stores/performance';
 

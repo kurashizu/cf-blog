@@ -10,9 +10,19 @@ import { EXTERNAL_LINKS } from '../links';
 import { TAB_ROUTES } from '../routes-map';
 import { allPaths, lookup, renderTree, resolvePath, type VNode } from '../vfs';
 import { theme, cycleTheme, resolvedTheme, type WorkspaceTheme } from './theme';
-import { bpm, setBpm, setSnapDiv, setNoteDur, setTimeMeter, toggle as toggleSeq, play, stop, isSeqPlaying } from './synth-transport';
+import {
+	bpm,
+	setBpm,
+	setSnapDiv,
+	setNoteDur,
+	setTimeMeter,
+	toggle as toggleSeq,
+	play,
+	stop,
+	isSeqPlaying,
+	activeTrackId
+} from './synth-transport';
 import { updateActiveTrack, tracksState } from './synth-tracks';
-import { activeTrackId } from './synth-transport';
 import {
 	BUILTIN_SONGS,
 	builtinSongIdx,

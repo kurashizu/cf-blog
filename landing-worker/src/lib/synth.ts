@@ -493,6 +493,25 @@ export const PIANO_ROLL_NOTES = [
    mix (volume, pan, mute, solo), what it plays (grid, accents) or what it is
    (id, name, colour). The per-track EQ is a bus effect and stays with the
    track. This is what a preset carries and what a percussion key can override. */
+/**
+ * The songs the engine can load, as a closed set.
+ *
+ * The parameter was a bare `string` over an if/else chain with no final else,
+ * so an unrecognised name fell through to the transport reset at the bottom
+ * and reported success while leaving the *previous* song's tracks in place.
+ * The menu's own list lived in synth-patch with `id: string`, so nothing
+ * connected the two -- and this side quietly accepted two extra aliases,
+ * OVERWORLD_FULL and OVERWORLD, that the menu could never send. Now the
+ * compiler holds the menu and the engine to the same six.
+ */
+export type BuiltinSongId =
+  | 'MARIO_1'
+  | 'UNDERWATER'
+  | 'OVERWORLD_1'
+  | 'OVERWORLD_2'
+  | 'SPAIN'
+  | 'TAKE_FIVE';
+
 export const KEY_TIMBRE_KEYS = [
   'osc1Waveform', 'osc1Gain', 'osc2Waveform', 'osc2Gain', 'osc2Ratio', 'detuneCents', 'phaseOffset',
   'osc2Semitone', 'pulseWidth', 'waveParams', 'subOscGain', 'noiseGain', 'noiseRetrig', 'noiseRetrigGap',
@@ -2774,14 +2793,14 @@ class ModularSynth {
     return this.tracks;
   }
 
-  public loadBuiltInSong(songName: string = 'OVERWORLD_1') {
+  public loadBuiltInSong(songName: BuiltinSongId = 'OVERWORLD_1') {
     this.stopAll();
-    if (songName === 'OVERWORLD_1' || songName === 'OVERWORLD_FULL') {
+    if (songName === 'OVERWORLD_1') {
       this.tracks = scaleTracksToFineGrid(JSON.parse(JSON.stringify(OVERWORLD_FULL_TRACKS)));
       this.totalSteps = 10080;
       this.bpm = 150;
       this.meter = '4/4';
-    } else if (songName === 'OVERWORLD_2' || songName === 'OVERWORLD') {
+    } else if (songName === 'OVERWORLD_2') {
       this.tracks = scaleTracksToFineGrid(JSON.parse(JSON.stringify(OVERWORLD_TRACKS)));
       this.totalSteps = 2016;
       this.bpm = 90;

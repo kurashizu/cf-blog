@@ -10,16 +10,10 @@ import {
 	laneSocketId,
 	drawLane,
 	drawLaneRun,
-	applyShape,
-	copyLaneRange,
-	stampLane,
-	scaleLaneRange,
 	clearLane,
 	laneLimit,
 	VELOCITY_LANE_ID,
 	type NoteLane,
-	type LaneShape,
-	type ShapeOptions
 } from './note-lanes';
 
 /**
@@ -41,12 +35,6 @@ export const laneEditorOpen = writable<boolean>(false);
 
 /** Which lane the expanded editor is drawing. */
 export const activeLaneId = writable<string>(VELOCITY_LANE_ID);
-
-/** What a copy put aside, so a bar of groove can be stamped elsewhere. */
-export const laneClipboard = writable<(number | undefined)[] | null>(null);
-
-/** The shape the next drag lays down; `free` means follow the pointer. */
-export const laneTool = writable<'free' | LaneShape>('free');
 
 /** The lanes the active track carries, velocity always present. */
 export const trackLanes = derived(activeTrackRow, ($row) => lanesOf($row as { noteLanes?: NoteLane[] } | undefined));
@@ -126,32 +114,12 @@ export function paintLaneRun(
 	if (l) replace(l.id, (x) => drawLaneRun(x, fromStep, fromValue, toStep, toValue, snap));
 }
 
-export function shapeLane(
-	shape: LaneShape,
-	fromStep: number,
-	toStep: number,
-	opts: ShapeOptions,
-	snap: number
-): void {
-	const l = get(activeLane);
-	if (l) replace(l.id, (x) => applyShape(x, shape, fromStep, toStep, opts, snap));
-}
-
-export function copyLane(fromStep: number, toStep: number): void {
-	const l = get(activeLane);
-	if (l) laneClipboard.set(copyLaneRange(l, fromStep, toStep));
-}
-
-export function pasteLane(atStep: number, repeat = 1): void {
-	const clip = get(laneClipboard);
-	const l = get(activeLane);
-	if (clip && l) replace(l.id, (x) => stampLane(x, clip, atStep, repeat));
-}
-
-export function nudgeLane(fromStep: number, toStep: number, delta: number): void {
-	const l = get(activeLane);
-	if (l) replace(l.id, (x) => scaleLaneRange(x, fromStep, toStep, delta));
-}
+/* A shape/copy/paste/nudge tool set was exported from here and never wired to
+   anything -- six exports, no callers, and neither of the two components that
+   import this module referenced one. The lane operations they wrapped
+   (applyShape, copyLaneRange, stampLane, scaleLaneRange) still live in
+   note-lanes.ts with their own tests, so building the tools later means
+   reconnecting them, not rewriting them. */
 
 export function resetLane(fromStep = 0, toStep = Infinity): void {
 	const l = get(activeLane);

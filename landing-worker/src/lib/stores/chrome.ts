@@ -86,10 +86,6 @@ export function isOnboardingActive(stage: string): Readable<boolean> {
 	return derived(onboardingQueue, (q) => q[0] === stage);
 }
 
-export function onboardingActiveNow(stage: string): boolean {
-	return get(onboardingQueue)[0] === stage;
-}
-
 /** A user explicitly asking for a walkthrough (the [?] button, a console
  *  command) means now, not "whenever its turn in the first-visit queue comes
  *  up" -- jump it to the front instead of appending. */

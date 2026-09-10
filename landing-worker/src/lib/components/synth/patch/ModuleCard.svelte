@@ -13,9 +13,13 @@
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
-	import { CONST_KINDS, WAVE_SHAPES, labelGutter } from '../../../stores/synth-modules';
+	import {
+		CONST_KINDS,
+		WAVE_SHAPES,
+		labelGutter,
+		type ModuleSpec
+	} from '../../../stores/synth-modules';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
-	import type { ModuleSpec } from '../../../stores/synth-modules';
 	import ProbeDisplay from './ProbeDisplay.svelte';
 
 	let {

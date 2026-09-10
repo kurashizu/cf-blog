@@ -5,10 +5,8 @@ import { tr } from '../i18n';
 import { KEY_TIMBRE_KEYS, BLANK_TRACK_TIMBRE, type TrackData } from '../synth';
 import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack, setTrackEditedHook } from './synth-tracks';
-import { showSaveStatus } from './synth-patch';
-import { askConfirm } from './synth-confirm';
-import { ENTRY_ID, OUTPUT_ID, startingGraph } from './graph-model';
-import type { GraphNode, GraphCable } from './graph-model';
+import { showSaveStatus, askConfirm } from './synth-confirm';
+import { ENTRY_ID, OUTPUT_ID, startingGraph, type GraphNode, type GraphCable } from './graph-model';
 
 const STORAGE_KEY = 'krsz-synth-presets-v1';
 const KIT_STORAGE_KEY = 'krsz-synth-kits-v1';

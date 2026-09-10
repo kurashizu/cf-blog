@@ -944,13 +944,10 @@ export const sound = {
 /*                         CONVENIENT DIRECT EXPORTS                          */
 /* -------------------------------------------------------------------------- */
 
-export const playClick = (intensity?: number) => soundEngine.click(intensity);
-export const playToggle = (direction?: boolean | 'up' | 'down') => soundEngine.toggle(direction);
-export const playHover = () => soundEngine.hover();
-export const playSseTick = () => soundEngine.sseTick();
-export const playPing = (success?: boolean) => soundEngine.ping(success);
-export const playKeystroke = (type?: 'char' | 'enter' | 'space' | 'backspace') => soundEngine.keystroke(type);
-export const playPower = () => soundEngine.power();
-export const playSynthPad = (note?: NoteName, duration?: number) => soundEngine.synthPad(note, duration);
+/* The per-sound wrappers that used to live here -- playClick, playToggle,
+   playHover, playSseTick, playPing, playKeystroke, playPower, playSynthPad --
+   had no callers at all. Every one of the ~60 call sites in the app uses the
+   generic `playSound(name)` instead, so they were a second API surface for the
+   same thing, kept alive only by being exported. */
 export const setSoundMuted = (muted: boolean) => soundEngine.setMuted(muted);
 export const setSoundVolume = (vol: number) => soundEngine.setVolume(vol);

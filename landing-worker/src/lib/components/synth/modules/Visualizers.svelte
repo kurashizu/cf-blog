@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { playSound } from '../../../sound';
-	import { sound } from '../../../sound';
+	import { playSound, sound } from '../../../sound';
 	import { soundState } from '../../../stores/sound';
 
 	export type VisualizerMode = 'fft' | 'scope' | 'loudness';

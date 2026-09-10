@@ -174,8 +174,6 @@ function commit(graph: RackGraph): void {
 /** The node the canvas is editing, or null. */
 export const selectedNode = writable<string | null>(null);
 
-/** A cable being dragged: where it started, until it lands or is dropped. */
-export const draggingFrom = writable<{ node: string; port: string; kind: PortKind } | null>(null);
 
 let seq = 0;
 
@@ -332,7 +330,7 @@ export function beginGraphDrag(): void {
 }
 
 /** Called on the first movement of a drag: record the state it started from. */
-export function markGraphDragMoved(): void {
+function markGraphDragMoved(): void {
 	if (!dragOpen || dragRecorded) return;
 	dragRecorded = true;
 	pushUndo(get(activeTrackId));

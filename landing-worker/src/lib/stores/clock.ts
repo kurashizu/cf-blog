@@ -6,7 +6,7 @@ export const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', 
 
 export const spinnerFrame = writable<number>(0);
 export const pulseStep = writable<number>(0);
-export const sydneyTime = writable<string>('');
+const sydneyTime = writable<string>('');
 
 /** Drives the header clock + spinner/pulse ticks — call once, client-side, from the root layout's onMount. */
 export function initClock(): () => void {

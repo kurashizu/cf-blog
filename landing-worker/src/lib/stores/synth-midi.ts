@@ -50,7 +50,6 @@ loadRouting();
 
 export const midiConnectedDevice = writable<string | null>(null);
 export const midiDevices = writable<{ id: string; name: string }[]>([]);
-export const selectedMidiDevice = writable<string>(modularSynth.getMidiSelectedDeviceId());
 export const isSustainActive = writable<boolean>(modularSynth.isSustainActive());
 export const velocityCurve = writable<VelocityCurve>(modularSynth.getVelocityCurve());
 
@@ -58,10 +57,9 @@ export function cycleVelocityCurve(): void {
 	velocityCurve.set(modularSynth.cycleVelocityCurve());
 }
 
-export function setSelectedMidiDevice(deviceId: string): void {
-	modularSynth.setMidiSelectedDeviceId(deviceId);
-	selectedMidiDevice.set(deviceId);
-}
+/* A single "selected device" store and its setter lived here, from before a
+   device could be bound to several tracks. `midiDeviceTracks` below replaced
+   it and nothing referenced either one. */
 
 /** device id -> tracks it plays; a device missing here follows the active track,
     and one listed with no tracks is switched off. */
