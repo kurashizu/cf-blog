@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { handleLoadPatch } from '../../src/lib/stores/synth-patch';
 import { modularSynth } from '../../src/lib/synth';
-import { PATCH_VERSION, STEPS_PER_BEAT } from '../../src/lib/stores/patch-format';
+import {
+	PATCH_VERSION,
+	STEPS_PER_BEAT,
+	trackResetDefaults
+} from '../../src/lib/stores/patch-format';
 
 /**
  * Loading a project that is not entirely made of numbers.
@@ -70,5 +74,32 @@ describe('a loaded project cannot put a non-number on the track', () => {
 			.filter(([, v]) => typeof v === 'number' && !Number.isFinite(v))
 			.map(([k]) => k);
 		expect(bad).toEqual([]);
+	});
+});
+
+describe('loading a project does not keep the last one’s patch bay', () => {
+	it('clears the ADV half of a track the incoming patch does not describe', () => {
+		/* `trackResetDefaults` is derived from `BLANK_TRACK_TIMBRE` precisely so
+		   it cannot fall behind the field list by hand -- and the comment says it
+		   covers "its whole ADV patch bay". It did not: every ADV field is
+		   optional, so omitting it from the blank timbre is legal, spreads to
+		   nothing, and leaves the live track's value standing.
+
+		   The consequence is worse than a stale knob. `advanced` survived too, so
+		   `advOwnsVoice` muted racks 1-7 and the sound the incoming patch
+		   actually describes could not be heard at all. */
+		const d = trackResetDefaults() as Record<string, unknown>;
+		for (const k of [
+			'advanced',
+			'advancedView',
+			'rackGraph',
+			'graphParams',
+			'rackChain',
+			'rackParams'
+		])
+			expect(k in d, k).toBe(true);
+		expect(d.advanced).toBe(false);
+		expect(d.rackGraph).toBeUndefined();
+		expect(d.graphParams).toBeUndefined();
 	});
 });

@@ -171,6 +171,55 @@ describe('a voice takes all of itself away', () => {
 			S.reverbMix = savedMix;
 		}
 	});
+
+	it('does the same for an ADV voice, which has no air shelf to hang it on', () => {
+		/* The fix above collects the send's source in `tailNodes`, and the two
+		   things that fill that list are the AIR shelf and the per-key EQ -- one
+		   gated on `!advOwnsVoice`, the other on percussion. A melodic ADV voice
+		   takes neither branch, so what the send connected was the graph's own
+		   output: a node `detachVoice` had never been told about. The test above
+		   passes either way, because setting `airGain` walks the rack path. */
+		const ctx = onFakeContext();
+		const track = S.tracks[0] as Record<string, unknown>;
+		const saved = JSON.parse(JSON.stringify(track));
+		const savedMix = S.reverbMix;
+		S.reverbMix = 0.4;
+		try {
+			track.advanced = true;
+			track.percussion = false;
+			track.airGain = 0;
+			track.rackGraph = {
+				nodes: [
+					{ id: 'entry', type: 'in', x: 0, y: 0 },
+					{ id: 'o', type: 'osc', x: 1, y: 0 },
+					{ id: 'output', type: 'out', x: 2, y: 0 }
+				],
+				cables: [
+					{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+					{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+				]
+			};
+			track.graphParams = {};
+			S.initMasterFX(ctx);
+			const before = liveEdgesInto(ctx, S.reverbConvolver);
+			const keys: string[] = [];
+			for (let i = 0; i < 8; i++) {
+				const k = S.triggerTrackVoice(0, 40 + i, 0, 0, 0.2, 100, 100);
+				if (k) keys.push(k);
+			}
+			expect(keys.length).toBeGreaterThan(0);
+			// The sends have to exist before their removal means anything.
+			expect(liveEdgesInto(ctx, S.reverbConvolver)).toBeGreaterThan(before);
+			for (const k of keys) {
+				const v = S.activeVoices.get(k);
+				if (v) S.detachVoice(v);
+			}
+			expect(liveEdgesInto(ctx, S.reverbConvolver)).toBe(before);
+		} finally {
+			Object.assign(track, saved);
+			S.reverbMix = savedMix;
+		}
+	});
 });
 
 describe('the master limiter answers its own switch', () => {

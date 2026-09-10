@@ -146,7 +146,28 @@ export function trackResetDefaults(): Partial<TrackData> {
 		percussion: false,
 		keyTimbres: {},
 		noteLanes: undefined,
-		presetGain: 1
+		presetGain: 1,
+		/* The ADV half, which the timbre does not carry either.
+
+		   Deriving from `BLANK_TRACK_TIMBRE` fixed racks 1-7 and left this whole
+		   side untouched: every one of these fields is optional, so omitting it
+		   from the blank timbre is legal, spreads to nothing, and leaves the live
+		   track's value standing. Loading a project over an ADV track therefore
+		   kept the previous song's entire patch bay -- and because `advanced`
+		   survived with it, `advOwnsVoice` muted racks 1-7, so the sound the
+		   incoming patch actually describes could not be heard at all. That is
+		   the leak the comment above says this function exists to stop, still
+		   open for the mode the comment names last. */
+		advanced: false,
+		advancedView: undefined,
+		rackGraph: undefined,
+		graphParams: undefined,
+		rackChain: undefined,
+		rackParams: undefined,
+		waveParams: undefined,
+		modRoutes: undefined,
+		voiceMode: undefined,
+		muteGroup: undefined
 	};
 }
 

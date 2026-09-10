@@ -721,8 +721,16 @@ class ModularSynth {
          map only ever registered a handful of hand-named ports (`fm`, `cv`,
          `pwm`), so every other knob was unreachable by cable no matter what the
          canvas showed. */
-			const p = (key: string, def: number) =>
-				cvIn(node.id, key, params[`${node.id}.${key}`] ?? def);
+			/* The default is the code default, not the stored one.
+
+			   `cvIn` reads `graphParams` itself and guards it: a stored value that
+			   is not finite means the knob is broken, and a broken knob means the
+			   same as an absent one. Passing the raw param back in as the fallback
+			   handed that guard its own rejected value, so `NaN` resolved to `NaN`
+			   and reached `frequency.value`, where Web Audio throws and takes the
+			   note -- and the scheduler tick for every other track -- with it. The
+			   lookup was redundant as well as harmful. */
+			const p = (key: string, def: number) => cvIn(node.id, key, def);
 			const runAt = t + (delays.get(node.id) ?? 0);
 			const madeBefore = sources.length;
 			const made = this.buildGraphNode(
@@ -1621,12 +1629,19 @@ class ModularSynth {
 				const midIn = ctx.createGain();
 				const sideIn = ctx.createGain();
 				const wide = ctx.createGain();
-				wide.gain.value = Math.max(0, cvIn(probeKey, 'wide', 1));
 				/* WIDE is a declared `mod` inlet on the card, so a cable has to be able
            to land on it. It was read as a value and never registered, and since
            MAKE deliberately carries no WIDE knob the resolver fell through to
            the caller's fallback of 1 -- the width was pinned at unity and the
-           socket did nothing at all. */
+           socket did nothing at all.
+
+           Registered only, not also read. A declared inlet is not a knob, so
+           the mod loop does not skip it: it connects the source to `wide.gain`
+           on top of whatever was assigned here. Reading the cable as a value as
+           well applied it twice -- a CONST of 2 gave 4 -- which is the one
+           mechanism-per-cable rule this module was breaking alone. The gain
+           starts at unity so an unpatched MAKE is the identity it was. */
+				wide.gain.value = 1;
 				mod.set('wide', wide.gain);
 				sideIn.connect(wide);
 
@@ -2003,7 +2018,7 @@ class ModularSynth {
 				const decay = Math.max(0.05, (isTube ? p.tubeDecay : p.decayTime) ?? (isTube ? 1.2 : 2));
 				const damping = pct(isTube ? p.tubeDamp : p.damping, isTube ? 40 : 30);
 				const stiff = isTube ? 0 : pct(p.stiffness, 10);
-				const mix = pct(isTube ? p.tubeMix : p.strBlend, 100);
+				const mix = pct(isTube ? p.tubeMix : p.strBlend, 70);
 				/* A switch, not a percentage: it chose between two outcomes and was
            drawn as a dial with 101 positions.
         
@@ -2112,7 +2127,7 @@ class ModularSynth {
            what makes the module useful on a pad as well as on a drum. */
 				const input = ctx.createGain();
 				const output = ctx.createGain();
-				const mix = pct(p.modeMix, 100);
+				const mix = pct(p.modeMix, 70);
 				const dry = ctx.createGain();
 				/* Squared, so the dry strike falls away faster than the body rises as
            MIX is turned up: at 68 that is 0.10 of raw strike under a body at
@@ -4168,6 +4183,19 @@ class ModularSynth {
 
 		// Route through this track's own EQ chain (delay/reverb sends tap pre-EQ).
 		const busInput: AudioNode = this.trackBuses[track.id]?.input ?? this.masterBusIn ?? masterGain;
+
+		/* Whatever ends the voice has to be reapable.
+
+		   `tailNodes` collects the AIR shelf and the per-key EQ, and both are
+		   gated: AIR on `!advOwnsVoice`, keyEq on percussion. An ADV voice on a
+		   melodic track takes neither, so `finalVoiceNode` is still the graph's
+		   own output -- a node `detachVoice` has never heard of. The send below
+		   connects it to `reverbConvolver`, which lives as long as the page, so
+		   the edge kept the whole per-note graph alive on the audio thread after
+		   the voice was released. Same leak `tailNodes` was added to close, on
+		   the one path that reaches the send without passing through either
+		   branch that fills it. */
+		if (!tailNodes.includes(finalVoiceNode)) tailNodes.push(finalVoiceNode);
 
 		if (panner) {
 			finalVoiceNode.connect(panner);

@@ -587,7 +587,12 @@ describe('rack controls do not reach an ADV voice', () => {
 			return ((voice?.tail as FakeNode[] | undefined) ?? []).map((n) => n.kind);
 		};
 		expect(tailKinds(false)).toContain('biquad');
-		expect(tailKinds(true)).toEqual([]);
+		/* No shelf, rather than no tail at all. The tail is the reap list: what a
+		   voice connects to the shared reverb has to be on it or the edge outlives
+		   the note, so an ADV voice puts its own graph output there. Asserting the
+		   list was empty pinned that leak in place -- the question here is whether
+		   the *air shelf* crossed over, and a biquad is what one looks like. */
+		expect(tailKinds(true)).not.toContain('biquad');
 	});
 
 	it('skips the rack LFO', () => {
