@@ -1,4 +1,4 @@
-import type { TrackData } from '../synth';
+import type { TrackData } from '../track-data';
 import { OVERWORLD_TRACKS } from './overworld';
 
 // SUPER MARIO 1 - OVERWORLD — transcribed from the vgmusic.com sequence

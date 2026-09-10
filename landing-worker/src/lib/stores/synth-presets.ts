@@ -2,7 +2,7 @@ import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { playSound } from '../sound';
 import { tr } from '../i18n';
-import { KEY_TIMBRE_KEYS, BLANK_TRACK_TIMBRE, type TrackData } from '../synth';
+import { KEY_TIMBRE_KEYS, BLANK_TRACK_TIMBRE, type TrackData } from '../track-data';
 import { SMB1_NOISE_KEYS } from '../songs/mario1';
 import {
 	activeKey,

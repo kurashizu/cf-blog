@@ -59,7 +59,12 @@ export default defineConfig({
 				   both this list and Stryker's, which is how a suite that was
 				   green the whole time never noticed that a cable from an ENV
 				   resolved to zero. */
-				'src/lib/stores/node-graph.ts'
+				'src/lib/stores/node-graph.ts',
+				/* The track vocabulary, split out of synth.ts so that the six song
+				   files and the pure stores stop dragging the Web Audio engine in
+				   behind one type. It is pure by construction -- a test asserts it
+				   imports nothing else -- which is what makes it measurable here. */
+				'src/lib/track-data.ts'
 			],
 			// Report every listed file, including any with no test yet, so a
 			// zero row is visible rather than silently absent.

@@ -1,4 +1,4 @@
-import { BLANK_TRACK_TIMBRE, STEPS_PER_BEAT, type TrackData } from '../synth';
+import { BLANK_TRACK_TIMBRE, STEPS_PER_BEAT, type TrackData } from '../track-data';
 
 /**
  * What a saved project is, as data.

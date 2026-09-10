@@ -1,4 +1,4 @@
-import type { TrackData } from '../synth';
+import type { TrackData } from '../track-data';
 import { playSound } from '../sound';
 import { updateActiveTrack } from './synth-tracks';
 import { setDelayTime, setDelayFeedback, setDelayMix, setReverbMix, setDrive } from './synth-fx';

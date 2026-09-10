@@ -4,7 +4,12 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { tr, locale, setLocale, localeAuto, LOCALES, LOCALE_IDS, type Locale } from '$lib/i18n';
 import { evaluateSafeJS } from '../evaluator';
-import { METER_SPECS, type NoteDurationDiv, type TimeSignature, type BlendMode } from '../synth';
+import {
+	METER_SPECS,
+	type NoteDurationDiv,
+	type TimeSignature,
+	type BlendMode
+} from '../track-data';
 import { MODULES } from '../data/modules';
 import { EXTERNAL_LINKS } from '../links';
 import { TAB_ROUTES } from '../routes-map';

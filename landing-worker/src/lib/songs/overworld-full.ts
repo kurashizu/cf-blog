@@ -1,4 +1,4 @@
-import type { TrackData } from '../synth';
+import type { TrackData } from '../track-data';
 
 // Super Mario Bros 3 - Full Overworld Theme (150 BPM, 4/4)
 // Total Length: 105 Bars, 3360 Steps
