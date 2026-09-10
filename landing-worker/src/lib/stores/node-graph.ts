@@ -109,6 +109,75 @@ export const PURE_NODES: Record<string, PureFn> = {
 	   operator passes its other leg through rather than zeroing it. */
 	add: (i) => i.get('a', 0) + i.get('b', 0),
 	mul: (i) => i.get('a', 1) * i.get('b', 1),
+	/* Two numbers compared, one truth out.
+
+	   The node where a quantity becomes a yes or no, and the only one: every
+	   other logic module takes truths and hands one back, so this is the single
+	   border crossing between "how much" and "whether". That is why the lattice
+	   can keep `bool` to itself -- there is exactly one door, and it is a card
+	   on the canvas rather than a rule hidden in a branch.
+
+	   One module with a picker rather than six modules, for the reason MAP has
+	   one shape list: the sockets, the output and the shape of the card are
+	   identical across all six and only the test differs. Six cards would be
+	   six ways to write the same node.
+
+	   The equality tests compare within a tolerance. These are floating-point
+	   values that have usually been through a MAP or a division on the way
+	   here, and `0.1 + 0.2 === 0.3` is false -- an `=` that is almost never
+	   true is a trap rather than a test. */
+	cmp: (i, p) => {
+		const a = i.get('a', 0);
+		const b = i.get('b', 0);
+		const near = Math.abs(a - b) <= 1e-9;
+		switch (Math.round(p('test', 0))) {
+			case 1:
+				return a >= b ? 1 : 0;
+			case 2:
+				return a < b ? 1 : 0;
+			case 3:
+				return a <= b ? 1 : 0;
+			case 4:
+				return near ? 1 : 0;
+			case 5:
+				return near ? 0 : 1;
+			default:
+				return a > b ? 1 : 0; // GT
+		}
+	},
+	/* Two truths combined.
+
+	   Anything that is not zero is true, because that is what a truth is once it
+	   has travelled as a number -- and the only thing that reaches these sockets
+	   is a CMP or another logic node, both of which hand out exactly 1 or 0.
+
+	   Unwired reads as false. There is no identity that works for the whole
+	   list the way 0 works for ADD -- false is the identity for OR and true is
+	   the identity for AND -- so rather than have the fallback change meaning
+	   with the picker, an empty socket is simply false everywhere. A half-built
+	   AND is off, which is what a half-built gate should be. */
+	logic: (i, p) => {
+		const a = i.get('a', 0) !== 0;
+		const b = i.get('b', 0) !== 0;
+		switch (Math.round(p('op', 0))) {
+			case 1:
+				return a || b ? 1 : 0;
+			case 2:
+				return a !== b ? 1 : 0; // XOR
+			case 3:
+				return a && b ? 0 : 1; // NAND
+			case 4:
+				return a || b ? 0 : 1; // NOR
+			default:
+				return a && b ? 1 : 0; // AND
+		}
+	},
+	/* The other way round. Its own module rather than a sixth entry in LOGIC's
+	   list, because it takes one operand: folding it in would leave a B socket
+	   that does nothing whenever NOT is picked, and a socket that means nothing
+	   is worse than a card that does one thing. Unwired it reads true, which is
+	   NOT of the false an empty socket is. */
+	not: (i) => (i.get('a', 0) !== 0 ? 0 : 1),
 	/* Bounds in either order. Written the obvious way, MIN 100 with MAX 0 pins
 	   the output at 100 for every input -- the node silently becomes a constant
 	   and the card still looks like a working clamp. Sorting them means the two

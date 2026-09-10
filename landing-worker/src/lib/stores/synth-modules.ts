@@ -194,6 +194,39 @@ export const MAP_SHAPES: { id: string; label: string }[] = [
 	{ id: 'draw', label: 'DRAW' }
 ];
 
+/**
+ * The tests CMP can apply, in the order its picker offers them.
+ *
+ * Symbols rather than words: `>` is read faster than `GT` and fits the four
+ * characters a label gets. The order is the evaluator's, pinned by a test --
+ * two hand-written copies of one order disagree eventually, and the one nobody
+ * corrects is the one that draws.
+ */
+export const CMP_TESTS: { id: string; label: string }[] = [
+	{ id: 'gt', label: '>' },
+	{ id: 'ge', label: '>=' },
+	{ id: 'lt', label: '<' },
+	{ id: 'le', label: '<=' },
+	/* Equality within a tolerance, because these are floating-point values that
+	   have usually been through a MAP or a division on the way here. An `=`
+	   that is almost never true would be a trap rather than a test. */
+	{ id: 'eq', label: '=' },
+	{ id: 'ne', label: '!=' }
+];
+
+/** The ways two truths combine. */
+export const LOGIC_OPS: { id: string; label: string }[] = [
+	{ id: 'and', label: 'AND' },
+	{ id: 'or', label: 'OR' },
+	{ id: 'xor', label: 'XOR' },
+	/* Reachable as AND then NOT, and kept anyway: one card where the
+	   composition is two, and "unless both" is a condition patches state
+	   directly. A primitive is what is conceptually irreducible, and these are
+	   five names for one shape of node rather than five nodes. */
+	{ id: 'nand', label: 'NAND' },
+	{ id: 'nor', label: 'NOR' }
+];
+
 /** MIDI note number for A4, the reference every pitch is counted from. */
 export const MIDI_A4 = 69;
 
@@ -514,6 +547,89 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.mul',
 		inputs: [CV_A, CV_B],
 		outputs: [CV_OUT],
+		params: []
+	},
+	{
+		/* Where a quantity becomes a truth.
+		 *
+		 * The only module that crosses from one to the other. Every other logic
+		 * node takes truths and returns one, so this is the single door between
+		 * "how much" and "whether" -- which is what lets the lattice keep `bool`
+		 * to itself without walling the family off from the rest of the patch.
+		 *
+		 * The test is a picker rather than six separate cards: the two operands,
+		 * the single outlet and the whole shape of the node are the same for all
+		 * six, and only the comparison differs. That is the same reasoning that
+		 * keeps MAP's ten shapes in one list. */
+		id: 'cmp',
+		label: 'CMP',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.cmp',
+		/* No knobs, for the reason ADD has none: what is being compared could be
+		   a frequency, a velocity or a step count, and a dial here would be a
+		   third opinion about which. A fixed operand is a CONST, which is the
+		   module that says what kind of number it is. */
+		inputs: [CV_A, CV_B],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'mod', role: 'bool' }],
+		params: [
+			{
+				key: 'test',
+				label: 'TEST',
+				min: 0,
+				max: CMP_TESTS.length - 1,
+				step: 1,
+				def: 0,
+				choices: CMP_TESTS.map((t) => t.label)
+			}
+		]
+	},
+	{
+		/* Two truths combined.
+		 *
+		 * NAND and NOR are in the list although AND-then-NOT reaches both. They
+		 * are one card where the composition is two, and a gate held open unless
+		 * both conditions hold is a thing patches ask for directly rather than
+		 * as a negated conjunction. The rule this catalogue is built on is that
+		 * a primitive is what is conceptually irreducible -- not what has the
+		 * fewest nodes -- and these are five names for one shape of node, not
+		 * five nodes. */
+		id: 'logic',
+		label: 'LOGIC',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.logic',
+		inputs: [
+			{ id: 'a', label: 'A', kind: 'mod', role: 'bool' },
+			{ id: 'b', label: 'B', kind: 'mod', role: 'bool' }
+		],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'mod', role: 'bool' }],
+		params: [
+			{
+				key: 'op',
+				label: 'OP',
+				min: 0,
+				max: LOGIC_OPS.length - 1,
+				step: 1,
+				def: 0,
+				choices: LOGIC_OPS.map((o) => o.label)
+			}
+		]
+	},
+	{
+		/* The other way round.
+		 *
+		 * Its own card rather than a sixth entry in LOGIC's picker, because it
+		 * takes one operand: inside LOGIC it would leave a B socket that means
+		 * nothing whenever NOT was selected, and a socket that does nothing is
+		 * worse than a card that does one thing. */
+		id: 'not',
+		label: 'NOT',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.not',
+		inputs: [{ id: 'a', label: 'A', kind: 'mod', role: 'bool' }],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'mod', role: 'bool' }],
 		params: []
 	},
 	{

@@ -104,17 +104,36 @@
 	   one is selected faster than the word does. */
 	/** The shape MAP is set to, sampled across its own range. */
 	function curvePath(shape: number): string {
+		/* Swept across the range the card is set to, not across 0..1.
+
+		   Sampling the input at 0..1 drew the right picture only while the ranges
+		   were still at their defaults. Set X to 200..8000 -- the first thing
+		   anyone does with a cutoff -- and all forty samples land below X.LO, so
+		   the evaluator clamps every one of them to the low end and the card
+		   draws a flat line along the floor whichever shape is chosen. The bend
+		   was correct in the sound the whole time; only the drawing of it was
+		   measuring the wrong interval. */
+		const inLo = val('inLo', 0);
+		const inHi = val('inHi', 1);
+		const outLo = val('outLo', 0);
+		const outHi = val('outHi', 1);
 		const pts: string[] = [];
 		for (let i = 0; i <= 40; i++) {
-			const x = i / 40;
+			const t = i / 40;
 			/* Run through the same function the engine runs, so the drawing cannot
 			   drift from the sound. A drawn table lives in the params, which is
 			   why they are handed over whole rather than as a shape number. */
 			const y = PURE_NODES.map(
-				{ get: (port: string, f: number) => (port === 'a' ? x : f) },
+				{ get: (port: string, f: number) => (port === 'a' ? inLo + t * (inHi - inLo) : f) },
 				(key: string, def: number) => (key === 'shape' ? shape : val(key, def))
 			);
-			pts.push(`${(x * 100).toFixed(1)},${(25 - Math.max(0, Math.min(1, y)) * 22).toFixed(1)}`);
+			/* Back to 0..1 for drawing, against the range the output actually
+			   spans -- a cutoff leaving at 8000 is the top of this picture, not
+			   eight thousand times above it. An inverted Y range (Y.LO above
+			   Y.HI) draws upside down, which is what it does. */
+			const span = outHi - outLo;
+			const norm = span === 0 ? 0 : (y - outLo) / span;
+			pts.push(`${(t * 100).toFixed(1)},${(25 - Math.max(0, Math.min(1, norm)) * 22).toFixed(1)}`);
 		}
 		return `M ${pts.join(' L ')}`;
 	}

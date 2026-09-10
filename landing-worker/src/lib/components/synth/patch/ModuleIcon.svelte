@@ -65,6 +65,13 @@
 		seq: 'M2 8h4M6 5l3 3-3 3M10 8h4M12 4v8',
 		when: 'M8 2l6 6-6 6-6-6z',
 		act: 'M4 2v12l9-6z',
+		/* A pair of scales: two quantities weighed against each other, which is
+		   the one node where an amount becomes a yes or a no. */
+		cmp: 'M8 3v10M3 6h10M3 6l-1.5 3.5h3zM13 6l-1.5 3.5h3zM5 13h6',
+		// The gate body every logic symbol is drawn from: two in, one out.
+		logic: 'M4 3v10h3a5 5 0 0 0 0-10zM1 6h3M1 10h3M12 8h3',
+		// The same, with the bubble that is the whole of what NOT means.
+		not: 'M4 3v10l7-5zM1 8h3M13 8h2M12 8m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
 		// MATH: the operator, or the shape of what it does to a value.
 		const: 'M4 4h8M8 4v9M5 13h6',
 		add: 'M8 3v10M3 8h10',
