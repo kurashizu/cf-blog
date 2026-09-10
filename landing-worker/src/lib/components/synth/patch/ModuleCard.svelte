@@ -20,6 +20,7 @@
 		type ModuleSpec
 	} from '../../../stores/synth-modules';
 	import WaveMenu from '../WaveMenu.svelte';
+	import PickMenu from './PickMenu.svelte';
 	import { previewSamples, previewPath, findCustomWave } from '../../../stores/synth-waves';
 	import { getWaveformAbbr, type SynthWaveform, type CustomWave } from '../../../track-data';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
@@ -30,6 +31,7 @@
 		nodeId,
 		params,
 		waves,
+		inlet,
 		onParam,
 		onWave,
 		onDrawWave
@@ -40,6 +42,10 @@
 		/* Kept apart from `params` because a waveform is a name, not a quantity:
 		   see `graphWaves` on TrackData. */
 		waves?: Record<string, string>;
+		/* What an inlet is carrying, resolved against the whole graph. A card
+		   only knows its own id, so anything drawn from a *patched* value -- the
+		   pulse width, which has no knob -- has to be told. */
+		inlet?: (nodeId: string, port: string, def: number) => number;
 		onParam: (key: string, value: number) => void;
 		onWave?: (key: string, value: SynthWaveform) => void;
 		onDrawWave?: (key: string, editing?: CustomWave) => void;
@@ -93,6 +99,13 @@
 
 	/* The LFO's shape, drawn over one cycle. A picture of the wave says which
 	   one is selected faster than the word does. */
+	/** One cycle of a rectangle, `duty` of it high. */
+	function pulsePath(duty: number): string {
+		const x = Math.round(duty * 100);
+		// High for `duty`, then low: two edges, which is the whole shape.
+		return `M0 22 L0 6 L${x} 6 L${x} 22 L100 22`;
+	}
+
 	function wavePath(kind: number): string {
 		/* Drawn by the shape's *name*, not by its index. Switching on the number
 		   made this a third hand-written copy of the wave order, and it was the
@@ -158,39 +171,18 @@
 		/>
 	{/each}
 
+	<!-- A selector, picked from a list rather than from a row of buttons. The row
+	     set the card's width from the number of choices: CONST's five made the
+	     widest card in the catalogue and still cut PITCH down to fit its cell. -->
 	{#each selectors as p (p.key)}
-		<div
-			class="grid gap-0.5"
-			style="grid-template-columns: repeat({p.choices?.length ?? 1}, minmax(0, 1fr))"
-		>
-			{#each p.choices ?? [] as choice, ci (choice)}
-				{@const stride = p.step && p.step > 1 ? p.step : 1}
-				{@const stored = ci * stride}
-				{@const on = Math.round(val(p.key, p.def) / stride) === ci}
-				<button
-					onpointerdown={(e) => {
-						if (e.button !== 2) e.stopPropagation();
-					}}
-					onclick={() => {
-						/* A selector writes the value, not the button's position.
-						   They are the same number when the choices step by one --
-						   which is every wave selector -- but TUBE's ODD is a
-						   switch on a 0..100 scale that racks 1-7 share, so
-						   writing the index would have stored 1 where the engine
-						   expects 100. */
-						onParam(p.key, stored);
-						playSound('click');
-					}}
-					title={p.label}
-					class="press text-[8px] leading-none py-0.5 px-0 border rounded-xs font-black cursor-pointer transition-colors min-w-0 overflow-hidden text-ellipsis whitespace-nowrap {on
-						? 'text-black'
-						: 'border-white/20 text-white/60 hover:bg-white/10'}"
-					style={on ? `border-color: ${spec.color}; background: ${spec.color}` : ''}
-				>
-					{choice}
-				</button>
-			{/each}
-		</div>
+		{@const stride = p.step && p.step > 1 ? p.step : 1}
+		<PickMenu
+			label={p.label}
+			value={Math.round(val(p.key, p.def) / stride)}
+			choices={p.choices ?? []}
+			color={spec.color}
+			onPick={(i) => onParam(p.key, i * stride)}
+		/>
 	{/each}
 
 	{#if spec.viz === 'scope' || spec.viz === 'fft' || spec.viz === 'meter'}
@@ -209,6 +201,23 @@
 			color={spec.color}
 			compact
 		/>
+	{:else if spec.viz === 'pulse'}
+		<!-- Drawn from what PW is actually carrying, so the card shows the wave
+		     the note will play. Unpatched it resolves to 0.5, which is the square
+		     the module boots as; a CONST or an envelope moves the edge here as it
+		     moves it in the sound. -->
+		{@const duty = Math.min(0.95, Math.max(0.05, inlet?.(nodeId, 'pw', 0.5) ?? 0.5))}
+		<div class="bg-black/70 border border-white/15 rounded-xs">
+			<svg viewBox="0 0 100 28" class="w-full h-[24px]" preserveAspectRatio="none">
+				<path
+					d={pulsePath(duty)}
+					fill="none"
+					stroke={spec.color}
+					stroke-width="1.5"
+					vector-effect="non-scaling-stroke"
+				/>
+			</svg>
+		</div>
 	{:else if spec.viz === 'wave'}
 		<div class="bg-black/70 border border-white/15 rounded-xs">
 			<svg viewBox="0 0 100 28" class="w-full h-[24px]" preserveAspectRatio="none">
@@ -241,7 +250,7 @@
 							const v = Number((e.currentTarget as HTMLInputElement).value);
 							if (Number.isFinite(v)) onParam(p.key, Math.max(p.min, Math.min(p.max, v)));
 						}}
-						class="min-w-0 flex-1 bg-black/60 border border-white/20 rounded-xs px-1 py-0.5 text-[9px] font-mono text-right text-white focus:border-white/60 focus:outline-none"
+						class="no-spin min-w-0 flex-1 bg-black/60 border border-white/20 rounded-xs px-1 py-0.5 text-[9px] font-mono text-right text-white focus:border-white/60 focus:outline-none"
 					/>
 					{#if p.unit}<span class="shrink-0 opacity-50">{p.unit}</span>{/if}
 				</label>
@@ -289,3 +298,18 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* No stepper. The arrows are a browser default on `type="number"`, and at
+	   this size they are two targets a pixel apart on a field that is typed
+	   into rather than nudged -- and they overlap the value they change. */
+	.no-spin::-webkit-outer-spin-button,
+	.no-spin::-webkit-inner-spin-button {
+		appearance: none;
+		margin: 0;
+	}
+	.no-spin {
+		appearance: textfield;
+		-moz-appearance: textfield;
+	}
+</style>

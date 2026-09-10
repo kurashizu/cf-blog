@@ -95,7 +95,7 @@ export interface ModuleSpec {
 	params: ModuleParam[];
 	/* A live picture of what the knobs are doing, like racks 1-7 carry: an
 	   envelope drawn as its own curve says more than four numbers do. */
-	viz?: 'adsr' | 'wave' | 'curve' | 'scope' | 'fft' | 'meter';
+	viz?: 'adsr' | 'wave' | 'pulse' | 'curve' | 'scope' | 'fft' | 'meter';
 }
 
 const CV_A: PortSpec = { id: 'a', label: 'A', kind: 'mod' };
@@ -327,7 +327,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ id: 'pw', label: 'PW', kind: 'mod', role: 'unit' }
 		],
 		outputs: [AUDIO_OUT],
-		params: []
+		params: [],
+		/* The width is an inlet, so the card draws what is patched into it
+		   rather than what a knob says -- see `pulse` in ModuleCard. */
+		viz: 'pulse'
 	},
 	{
 		/* Blueprint's pure value nodes.

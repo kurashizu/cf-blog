@@ -57,6 +57,7 @@
 		type ModuleSpec
 	} from '../../../stores/synth-modules';
 	import { laneSocketId, VELOCITY_LANE_ID } from '../../../stores/note-lanes';
+	import { createResolver, type EvalGraph } from '../../../stores/node-graph';
 	import { trackLanes } from '../../../stores/lane-edit';
 	import ModuleCard from './ModuleCard.svelte';
 	import WaveDrawDialog from '../WaveDrawDialog.svelte';
@@ -67,6 +68,36 @@
 	let graph = $derived(graphOf($currentTrack));
 	let graphParams = $derived($currentTrack?.graphParams);
 	let graphWaves = $derived($currentTrack?.graphWaves);
+
+	/* What each inlet is actually carrying, resolved the way the engine does.
+	
+	   A card cannot answer this on its own: PWM's width is an inlet, so the
+	   shape it should draw depends on whatever is patched into PW, and the
+	   module only knows its own id. The canvas has the graph, so it resolves
+	   once and hands the answer down -- the same `createResolver` the voice
+	   builder uses, so a card cannot disagree with the sound. */
+	let resolver = $derived(
+		createResolver(
+			graph as unknown as EvalGraph,
+			graphParams ?? {},
+			{
+				pitch: 0,
+				velocity: 1,
+				noteIndex: 48,
+				gate: 0.5,
+				lanes: {},
+				tuning: 440
+			},
+			'in'
+		)
+	);
+	const inletOf = (nodeId: string, port: string, def: number) => {
+		try {
+			return resolver.input(nodeId, port, def);
+		} catch {
+			return def;
+		}
+	};
 
 	/* The wave editor, opened from a card's picker. Keyed by node and param
 	   rather than by oscillator number, since a patch may hold any number of
@@ -1199,6 +1230,7 @@
 									nodeId={n.id}
 									params={graphParams}
 									waves={graphWaves}
+									inlet={inletOf}
 									onParam={(key, value) => setGraphParam(graphParams, n.id, key, value)}
 									onWave={(key, value) => setGraphWave(graphWaves, n.id, key, value)}
 									onDrawWave={(key, editing) => openWaveDraw(n.id, key, editing)}

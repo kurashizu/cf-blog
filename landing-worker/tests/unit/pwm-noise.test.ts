@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { modularSynth } from '../../src/lib/synth';
 import { FakeCtx, reaches, type FakeNode } from './stubs/audio-context';
+import { createResolver } from '../../src/lib/stores/node-graph';
 
 /**
  * The two sources that are not OSC.
@@ -120,5 +121,43 @@ describe('PWM', () => {
 		// 0 and 1 are both silence with the oscillators running; neither is reached.
 		expect(delayOf(0)).toBeGreaterThan(0);
 		expect(delayOf(1)).toBeLessThan(delayOf(0.95) + 1e-9);
+	});
+});
+
+describe('the PWM card draws what PW carries', () => {
+	/* The preview is resolved through the same `createResolver` the voice
+	   builder uses, so the shape on the card is the shape the note plays. A
+	   card cannot answer this alone -- it knows its own id and nothing else --
+	   which is why the canvas resolves and hands the value down. */
+	const widthSeen = (constValue?: number) => {
+		const nodes = [
+			{ id: 'entry', type: 'in' },
+			{ id: 'p', type: 'pwm' },
+			{ id: 'output', type: 'out' }
+		];
+		const cables = [{ from: 'p', fromPort: 'out', to: 'output', toPort: 'in' }];
+		const params: Record<string, number> = {};
+		if (constValue !== undefined) {
+			nodes.push({ id: 'c', type: 'const' });
+			cables.push({ from: 'c', fromPort: 'out', to: 'p', toPort: 'pw' });
+			params['c.value'] = constValue;
+		}
+		const r = createResolver({ nodes, cables }, params, {
+			pitch: 0,
+			velocity: 1,
+			noteIndex: 48,
+			gate: 0.5,
+			lanes: {}
+		});
+		return r.input('p', 'pw', 0.5);
+	};
+
+	it('shows a square when nothing is patched into PW', () => {
+		expect(widthSeen()).toBe(0.5);
+	});
+
+	it('follows the cable when there is one', () => {
+		expect(widthSeen(0.25)).toBe(0.25);
+		expect(widthSeen(0.8)).toBe(0.8);
 	});
 });
