@@ -3600,7 +3600,11 @@ class ModularSynth {
         noiseSource.playbackRate.setValueAtTime(noiseRate, t);
       }
       const gN = ctx.createGain();
-      this.gateNoiseBursts(gN.gain, 1.0, t, track);
+      /* OSC1's own level, like every other branch passes. A literal 1.0 here
+         made the knob inert whenever both oscillators were noise -- which is
+         how a hi-hat or a snare is built, so the level control was missing from
+         exactly the sounds that use this path. */
+      this.gateNoiseBursts(gN.gain, track.osc1Gain, t, track);
       noiseSource.connect(gN);
       gN.connect(voiceMix);
       noiseSource.start(startT1);
@@ -3691,10 +3695,30 @@ class ModularSynth {
         osc1Out!.connect(osc1GainNode);
         osc1GainNode.connect(voiceMix);
       } else if (track.blendMode === 'ring' && osc1) {
+        /* Ring modulation: one oscillator multiplies the other.
+        
+           Both levels and the crossfade were ignored here -- osc2 arrived at
+           the gain param at full swing with no depth control, and osc1's level
+           knob did nothing, so three knobs on the card were inert in this mode
+           alone.
+        
+           The carrier keeps its own level; the modulator is scaled before it
+           reaches the gain param rather than after, so turning OSC2 down makes
+           the effect shallower instead of the whole voice quieter. MORPH stays
+           out of it: it defaults to 0, and reading it as depth here would
+           silence both shipped ring presets, neither of which sets it. */
+        const carrier = ctx.createGain();
+        carrier.gain.setValueAtTime(track.osc1Gain * osc1Bal, t);
+        osc1Out!.connect(carrier);
+
+        const depth = ctx.createGain();
+        depth.gain.setValueAtTime(track.osc2Gain * osc2Bal, t);
+        osc2Out!.connect(depth);
+
         const ringGain = ctx.createGain();
         ringGain.gain.setValueAtTime(0, t);
-        osc1Out!.connect(ringGain);
-        osc2Out!.connect(ringGain.gain);
+        carrier.connect(ringGain);
+        depth.connect(ringGain.gain);
         ringGain.connect(voiceMix);
       } else if (track.blendMode === 'sync' && osc1) {
         const g1 = ctx.createGain();
@@ -3731,24 +3755,38 @@ class ModularSynth {
 
       // SUB: a sine an octave under OSC1, following its glide and pitch envelope.
       // Was a knob with nothing behind it; a kick without it has no weight.
-      const subGainAmt = track.subOscGain ?? 0;
-      if (subGainAmt > 0 && osc1) {
-        const subStart = (glideSec2 > 0 && lastFreq2 && isLegato2) ? lastFreq2 : baseFreq;
-        const sub = ctx.createOscillator();
-        sub.type = 'sine';
-        sub.frequency.setValueAtTime(subStart / 2, t);
-        if (glideSec2 > 0 && subStart !== baseFreq) sub.frequency.exponentialRampToValueAtTime(baseFreq / 2, t + glideSec2);
-        if (pEnvAmt !== 0) {
-          sub.frequency.exponentialRampToValueAtTime((baseFreq / 2) * pRatio, t + glideSec2 + pAtt);
-          sub.frequency.exponentialRampToValueAtTime(baseFreq / 2, t + glideSec2 + pAtt + pDec);
-        }
-        const gSub = ctx.createGain();
-        gSub.gain.setValueAtTime(subGainAmt * 0.9, t);
-        sub.connect(gSub);
-        gSub.connect(voiceMix);
-        sub.start(startT1);
-        extras.push(sub);
+    }
+
+    /* SUB: a sine an octave under the note, following the same glide and pitch
+       envelope.
+    
+       Outside the oscillator branches, because it belongs to the *note* rather
+       than to OSC1. It used to live inside the `else` and be guarded by
+       `&& osc1` -- `osc1` is undefined whenever OSC1 is a buffer waveform -- so
+       a kick built as noise plus SUB, which is the obvious way to build one and
+       what "a kick without it has no weight" is about, got no sub at all. */
+    const subGainAmt = track.subOscGain ?? 0;
+    if (subGainAmt > 0) {
+      const subGlide = (track.glideTime ?? 0) / 1000;
+      const subLast = this.lastTrackFreqs.get(track.id);
+      const subLegato = (t - (this.lastTrackNoteTimes.get(track.id) ?? 0)) < 1.5;
+      const subStart = (subGlide > 0 && subLast && subLegato) ? subLast : baseFreq;
+      const sub = ctx.createOscillator();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(subStart / 2, t);
+      if (subGlide > 0 && subStart !== baseFreq) {
+        sub.frequency.exponentialRampToValueAtTime(baseFreq / 2, t + subGlide);
       }
+      if (pEnvAmt !== 0) {
+        sub.frequency.exponentialRampToValueAtTime((baseFreq / 2) * pRatio, t + subGlide + pAtt);
+        sub.frequency.exponentialRampToValueAtTime(baseFreq / 2, t + subGlide + pAtt + pDec);
+      }
+      const gSub = ctx.createGain();
+      gSub.gain.setValueAtTime(subGainAmt * 0.9, t);
+      sub.connect(gSub);
+      gSub.connect(voiceMix);
+      sub.start(startT1);
+      extras.push(sub);
     }
 
     // NOISE: the mix knob's own source, so a snare can keep both oscillators
