@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { rolesCompatible } from '../../src/lib/stores/graph-model';
 import { modularSynth } from '../../src/lib/synth';
 import { FakeCtx, FakeParam, type FakeNode } from './stubs/audio-context';
@@ -579,10 +578,16 @@ describe('ADV and racks 1-7 are one instrument at a time', () => {
  * ducked it, all from knobs on the instrument that was not playing.
  */
 describe('rack controls do not reach an ADV voice', () => {
-	const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
-
 	it('skips rack 7 AIR', () => {
-		expect(SYNTH).toContain('if (!advOwnsVoice && track.airGain !== undefined');
+		/* The air shelf is a rack 7 control. An ADV voice must not get one, and
+		   the voice records its tail nodes, so the shelf either is or is not
+		   among them -- a question about the graph rather than about the text. */
+		const tailKinds = (adv: boolean) => {
+			const { voice } = buildVoice(adv, { airGain: 0.5 });
+			return ((voice?.tail as FakeNode[] | undefined) ?? []).map((n) => n.kind);
+		};
+		expect(tailKinds(false)).toContain('biquad');
+		expect(tailKinds(true)).toEqual([]);
 	});
 
 	it('skips the rack LFO', () => {
@@ -632,22 +637,36 @@ describe('rack controls do not reach an ADV voice', () => {
 		expect(built(true)).toBe(false);
 	});
 
-	it('does not route the graph through rack 7 VOL', () => {
-		// track.volume is rack 7's knob: an ADV patch must not answer to it.
-		expect(SYNTH).not.toContain('level.gain.value = track.volume;');
+	it('does not scale the graph by a rack preset level', () => {
+		/* `presetGain` is the level a rack preset was saved at, and it is applied
+		   to the amp envelope's peak. An ADV patch is not that preset -- its
+		   level is a VCA on the canvas -- so it is excluded, and turning a rack
+		   preset's level must not move it. */
+		const peakOf = (adv: boolean, presetGain: number) => {
+			const { voice } = buildVoice(adv, { presetGain });
+			const g = voice?.gain as unknown as { gain: FakeParam } | undefined;
+			// The loudest thing the amp envelope was ever told to reach.
+			return Math.max(0, ...(g?.gain.events ?? []).map((e) => e[1]));
+		};
+		expect(peakOf(false, 0.2)).not.toBeCloseTo(peakOf(false, 1), 6);
+		expect(peakOf(true, 0.2)).toBeCloseTo(peakOf(true, 1), 6);
 	});
 
 	it('leaves the graph output as the voice, unshaped by the racks', () => {
-		expect(SYNTH).toContain('chainOut = built.out;');
-	});
-
-	it('keeps the rack amp envelope upstream of where the graph takes over', () => {
-		/* gainNode carries the rack's amp envelope and is what chainOut starts
-		   as; the graph replaces chainOut, so the envelope cannot reach it. */
-		const assign = SYNTH.indexOf('let chainOut: AudioNode = gainNode;');
-		const replace = SYNTH.indexOf('chainOut = built.out;');
-		expect(assign).toBeGreaterThan(0);
-		expect(replace).toBeGreaterThan(assign);
+		/* The rack chain's amp envelope lives on the voice gain node, and the
+		   graph replaces the signal upstream of it -- so an ADV voice's sources
+		   are the graph's, not the racks'. A rack voice builds oscillators that
+		   reach its filter; an ADV voice's filter is fed by nothing at all. */
+		const filterFed = (adv: boolean) => {
+			const { ctx, voice } = buildVoice(adv);
+			const filter = voice?.filter as FakeNode | undefined;
+			const mixer = ctx.nodes.find(
+				(n) => n.kind === 'gain' && n.outgoing.some((e) => e.to === filter)
+			) as unknown as { gain: FakeParam } | undefined;
+			return mixer?.gain.value ?? -1;
+		};
+		expect(filterFed(false)).toBeGreaterThan(0);
+		expect(filterFed(true)).toBe(0);
 	});
 });
 
@@ -837,13 +856,54 @@ describe('execution timing', () => {
  * synth; the traversal itself is exercised in the browser.
  */
 describe('the logic chain', () => {
-	const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+	/** What the engine decides this note should do, for a given patch. */
+	const actionsFor = (
+		nodes: [string, string][],
+		cables: ReturnType<typeof wire>[],
+		params = {}
+	) => {
+		const S = modularSynth as unknown as Record<string, unknown>;
+		const track = (S.tracks as Record<string, unknown>[])[0];
+		const saved = JSON.parse(JSON.stringify(track));
+		try {
+			track.advanced = true;
+			track.percussion = true;
+			track.rackGraph = { nodes: nodes.map(([id, type]) => ({ id, type, x: 0, y: 0 })), cables };
+			track.graphParams = params;
+			return (
+				S.noteActions as (t: unknown, n: number, id: number) => { cut: boolean; cutGroup: number }
+			).call(S, track, 40, 0);
+		} finally {
+			Object.assign(track, saved);
+		}
+	};
 
 	it('follows exec cables rather than matching a fixed shape', () => {
-		// The old walk named the node types it expected at each hop.
-		expect(SYNTH).not.toContain("n.id === c.to && n.type === 'when'");
-		expect(SYNTH).not.toContain('d.from !== when.id');
-		expect(SYNTH).toContain('const execCables = graph.cables.filter(');
+		/* The old walk hardcoded two hops -- ENTRY to a WHEN, that WHEN to an ACT
+		   -- so a SEQ anywhere along the chain dropped the rest of it silently:
+		   the walk found a node that was not a WHEN and gave up. Asked of the
+		   answer the engine returns, so inserting a node in the middle is the
+		   test rather than the spelling of the traversal. */
+		const direct = actionsFor(
+			[
+				['e', 'in'],
+				['a', 'act']
+			],
+			[wire('e', 'then', 'a', 'exec')],
+			{ 'a.actGroup': 3 }
+		);
+		// The same ACT, one SEQ further along the same white cable.
+		const viaSeq = actionsFor(
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['a', 'act']
+			],
+			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'a', 'exec')],
+			{ 'a.actGroup': 3 }
+		);
+		expect(direct.cutGroup).toBe(3);
+		expect(viaSeq.cutGroup).toBe(3);
 	});
 
 	it('treats WHEN as a branch, on the audio side as well as the actions', () => {
@@ -887,15 +947,74 @@ describe('the logic chain', () => {
 	});
 
 	it('cannot loop on a cycle of exec cables', () => {
-		expect(SYNTH).toContain('const seen = new Set<string>([entry.id]);');
-		expect(SYNTH).toContain('if (c.from !== id || seen.has(c.to)) continue;');
+		/* Two WHENs pointing back at each other, with an ACT hanging off one of
+		   them. ACT is terminal -- it has no outputs at all -- so a cycle can
+		   only be made from the nodes that pass execution on. The walk has to
+		   notice it has been somewhere before; if it does not this hangs rather
+		   than failing, so the test is that it returns at all, with the ACT
+		   beyond the loop still found. */
+		const actions = actionsFor(
+			[
+				['e', 'in'],
+				['w1', 'when'],
+				['w2', 'when'],
+				['a', 'act']
+			],
+			[
+				wire('e', 'then', 'w1', 'exec'),
+				wire('w1', 'then', 'w2', 'exec'),
+				wire('w2', 'then', 'w1', 'exec'),
+				wire('w1', 'then', 'a', 'exec')
+			],
+			{ 'a.actGroup': 2 }
+		);
+		expect(actions.cutGroup).toBe(2);
 	});
 
 	it('starts each source when its own node runs', () => {
 		/* A SEQ gap reached the modules that schedule against the note time --
 		   an envelope, a strike -- but every source was started at the note
 		   regardless, so an oscillator behind a SEQ played on the beat and the
-		   flam the module exists for did not happen. */
-		expect(SYNTH).toContain('src.start(built.startAt.get(src) ?? t);');
+		   flam the module exists for did not happen. Measured as the start time
+		   the oscillator was actually given. */
+		const startTimes = (gapMs: number) => {
+			const ctx = new FakeCtx();
+			const S = modularSynth as unknown as Record<string, unknown>;
+			S.renderCtx = ctx;
+			S.masterFXCtx = null;
+			S.delayNode = null;
+			S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+			(S.activeVoices as Map<string, unknown>).clear();
+			const track = (S.tracks as Record<string, unknown>[])[0];
+			const saved = JSON.parse(JSON.stringify(track));
+			try {
+				track.muted = false;
+				track.advanced = true;
+				track.rackGraph = {
+					nodes: [
+						{ id: 'e', type: 'in', x: 0, y: 0 },
+						{ id: 's', type: 'seq', x: 1, y: 0 },
+						{ id: 'o', type: 'osc', x: 2, y: 0 },
+						{ id: 'out', type: 'out', x: 3, y: 0 }
+					],
+					cables: [
+						{ from: 'e', fromPort: 'then', to: 's', toPort: 'exec' },
+						{ from: 's', fromPort: 'then', to: 'out', toPort: 'exec' },
+						{ from: 'o', fromPort: 'out', to: 'out', toPort: 'in' }
+					]
+				};
+				track.graphParams = { 's.gapMs': gapMs };
+				(S.triggerTrackVoice as (...a: unknown[]) => unknown)(0, 40, 0, 0, 0.4, 100, 100);
+				return ctx.nodes.filter((n) => n.kind === 'osc').map((n) => n.startedAt ?? 0);
+			} finally {
+				Object.assign(track, saved);
+				S.renderCtx = null;
+			}
+		};
+		const onBeat = startTimes(0);
+		const delayed = startTimes(200);
+		expect(onBeat.length).toBeGreaterThan(0);
+		// The oscillator behind the SEQ starts later than it would with no gap.
+		expect(Math.max(...delayed)).toBeGreaterThan(Math.max(...onBeat));
 	});
 });

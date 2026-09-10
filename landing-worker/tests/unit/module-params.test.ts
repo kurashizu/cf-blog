@@ -26,12 +26,19 @@ const NODE_GRAPH = fs.readFileSync('src/lib/stores/node-graph.ts', 'utf8');
 
 /** The names the default branch forwards. */
 function forwardedParams(): Set<string> {
+	/* Located by a declaration whose exact text has to hold. If it ever does
+	   not, `indexOf` returns -1 and every check downstream would pass against an
+	   empty set -- so it is asserted here rather than left to fail quietly, and
+	   the caller checks the size it got as well. */
 	const start = SOURCE.indexOf('const asParams: Record<string, number> = {};');
-	expect(start).toBeGreaterThan(-1);
+	expect(start, 'the forwarding list moved; update this locator').toBeGreaterThan(-1);
 	const listStart = SOURCE.indexOf('[', start);
 	const listEnd = SOURCE.indexOf(']', listStart);
+	expect(listEnd).toBeGreaterThan(listStart);
 	const body = SOURCE.slice(listStart, listEnd);
-	return new Set([...body.matchAll(/'([a-zA-Z0-9]+)'/g)].map((m) => m[1]));
+	const names = new Set([...body.matchAll(/'([a-zA-Z0-9]+)'/g)].map((m) => m[1]));
+	expect(names.size, 'forwarding list scraped empty').toBeGreaterThan(10);
+	return names;
 }
 
 /* WHEN and ACT are read by noteActions, which walks the graph itself and pulls
@@ -113,7 +120,12 @@ describe('the palette', () => {
 			new URL('../../src/lib/components/synth/patch/ModuleIcon.svelte', import.meta.url),
 			'utf8'
 		);
-		const drawn = new Set([...icons.matchAll(/^\t\t([a-z]+): '/gm)].map((m) => m[1]));
+		/* Indentation-independent: this matched `/^\t\t([a-z]+): '/`, exactly two
+		   tabs, so re-indenting the file -- or running a formatter over it --
+		   would have emptied `drawn` and passed every module silently. */
+		const drawn = new Set([...icons.matchAll(/(?:^|[\s{,])([a-z]+):\s*'/gm)].map((m) => m[1]));
+		// And it has to have found something, or the comparison below is vacuous.
+		expect(drawn.size).toBeGreaterThan(MODULE_SPECS.length / 2);
 		expect(MODULE_SPECS.filter((m) => !drawn.has(m.id)).map((m) => m.id)).toEqual([]);
 	});
 });

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { MODULE_SPECS, WAVE_SHAPES, WAVE_LABELS } from '../../src/lib/stores/synth-modules';
+import { modularSynth } from '../../src/lib/synth';
+import { FakeCtx, FakeParam } from './stubs/audio-context';
 import {
 	roleOf,
 	rolesCompatible,
@@ -570,19 +572,59 @@ describe('regressions the string tests could not see', () => {
 		   PITCH connected ENTRY's *silent* gain instead: a hard hit and a soft
 		   one came out at the same level with the cable drawn on the canvas.
 		
-		   Web Audio does not exist under vitest, so this pins the dispatch rather
-		   than the sound: one helper, used by both cable loops, keyed on the port
-		   name -- and no second copy of the `out2`/`r` fallback anywhere else. */
-		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
-		expect(SYNTH).toContain('const outletOf = (');
-		// Both loops go through it, and nothing rolls its own.
-		const rolled = [...SYNTH.matchAll(/=== 'r' && src\.out2/g)];
-		expect(rolled).toHaveLength(1);
-		// ENTRY publishes its pins as outlets, not as modulation targets.
-		expect(SYNTH).toContain("outs.set('vel'");
-		expect(SYNTH).toContain("outs.set('gate'");
-		expect(SYNTH).not.toContain("mod.set('vel'");
-		expect(SYNTH).not.toContain("mod.set('gate'");
+		   Asked of the graph the engine builds: a cable from ENTRY's VEL into a
+		   VCA's CV has to put a *signal* on that gain's param, and a hard hit has
+		   to differ from a soft one. Reading the source for `outs.set('vel'`
+		   proved only that the string was present. */
+		const cvSources = (velocity: number) => {
+			const ctx = new FakeCtx();
+			const S = modularSynth as unknown as Record<string, unknown>;
+			S.renderCtx = ctx;
+			S.masterFXCtx = null;
+			S.delayNode = null;
+			S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+			(S.activeVoices as Map<string, unknown>).clear();
+			const track = (S.tracks as Record<string, unknown>[])[0];
+			const saved = JSON.parse(JSON.stringify(track));
+			try {
+				track.muted = false;
+				track.advanced = true;
+				track.rackGraph = {
+					nodes: [
+						{ id: 'e', type: 'in', x: 0, y: 0 },
+						{ id: 'o', type: 'osc', x: 1, y: 0 },
+						{ id: 'v', type: 'vca', x: 2, y: 0 },
+						{ id: 'out', type: 'out', x: 3, y: 0 }
+					],
+					cables: [
+						{ from: 'e', fromPort: 'then', to: 'out', toPort: 'exec' },
+						{ from: 'o', fromPort: 'out', to: 'v', toPort: 'in' },
+						{ from: 'e', fromPort: 'vel', to: 'v', toPort: 'cv' },
+						{ from: 'v', fromPort: 'out', to: 'out', toPort: 'in' }
+					]
+				};
+				track.graphParams = {};
+				(S.triggerTrackVoice as (...a: unknown[]) => unknown)(0, 40, 0, 0, 0.4, velocity, velocity);
+				/* ENTRY publishes a scalar pin as a ConstantSource, and the cable
+				   connects that source to the destination param. So the question
+				   is twofold: does anything actually reach a param, and does the
+				   value carried change with the strike. */
+				const driven = ctx.nodes.flatMap((n) =>
+					n.outgoing.filter((e) => e.to instanceof FakeParam).map((e) => e.to as FakeParam)
+				);
+				const offsets = ctx.nodes
+					.filter((n) => n.kind === 'const')
+					.map((n) => (n as unknown as { offset: FakeParam }).offset.value);
+				return { driven, offsets };
+			} finally {
+				Object.assign(track, saved);
+				S.renderCtx = null;
+			}
+		};
+		// The VEL cable lands on a param as a signal, not as nothing.
+		expect(cvSources(100).driven.length).toBeGreaterThan(0);
+		// And a hard hit carries a different number than a soft one.
+		expect(cvSources(10).offsets.join(',')).not.toBe(cvSources(127).offsets.join(','));
 	});
 
 	it('does not call a mod cable a cycle', () => {
@@ -664,8 +706,18 @@ describe('regressions the string tests could not see', () => {
 		   hand; the rest were unreachable by cable however the card drew them.
 		   `knob()` reads the value and registers the target in one line, so the
 		   two cannot drift. This fails if someone assigns an AudioParam from a
-		   knob directly again. */
+		   knob directly again.
+		
+		   Deliberately a source scan rather than a behavioural check, and the
+		   only kind left in this file: it is a lint -- "no second way of doing
+		   this may appear" -- and the thing being forbidden is a *shape*, which
+		   has no runtime signature to observe. knob-binding.test.ts covers the
+		   behaviour, by building every module and following what each knob
+		   actually drives. */
 		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+		// The scan has to be looking at something, or it passes on a rename.
+		expect(SYNTH).toContain('const knob = (');
+		expect(SYNTH.length).toBeGreaterThan(10000);
 		const raw = [...SYNTH.matchAll(/(\w+)\.(?:gain|frequency|Q|pan)\.value = p\('(\w+)'/g)];
 		/* One exception, and it is not a knob: LFO's FM inlet takes its depth
 		   from the rate, so binding it would register `lfoRate` twice and
@@ -685,11 +737,54 @@ describe('regressions the string tests could not see', () => {
 		   doubled identically. Both are skipped in the mod-cable loop, and only
 		   when the destination is a knob: a declared mod inlet (a VCA's CV) has
 		   no value path at all and must still be connected. */
-		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
-		expect(SYNTH).toContain(
-			"if (ontoKnob && (isPureNode(fromType) || fromType === 'in')) continue;"
-		);
-		// Measured in the browser after the fix: knob 100 and CONST 100 agree.
+		/* Built, not read. A CONST of 100 into MIX's A knob has to leave that leg
+		   at a gain of 1 -- the same as turning the knob to 100 -- rather than
+		   at 2, which is what applying both mechanisms gave. */
+		const legGain = (cabled: boolean) => {
+			const ctx = new FakeCtx();
+			const S = modularSynth as unknown as Record<string, unknown>;
+			S.renderCtx = ctx;
+			S.masterFXCtx = null;
+			S.delayNode = null;
+			S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+			(S.activeVoices as Map<string, unknown>).clear();
+			const track = (S.tracks as Record<string, unknown>[])[0];
+			const saved = JSON.parse(JSON.stringify(track));
+			try {
+				track.muted = false;
+				track.advanced = true;
+				track.rackGraph = {
+					nodes: [
+						{ id: 'e', type: 'in', x: 0, y: 0 },
+						{ id: 'o', type: 'osc', x: 1, y: 0 },
+						{ id: 'mx', type: 'mix', x: 2, y: 0 },
+						{ id: 'out', type: 'out', x: 3, y: 0 },
+						...(cabled ? [{ id: 'k', type: 'const', x: 1, y: 1 }] : [])
+					],
+					cables: [
+						{ from: 'e', fromPort: 'then', to: 'out', toPort: 'exec' },
+						{ from: 'o', fromPort: 'out', to: 'mx', toPort: 'in' },
+						{ from: 'mx', fromPort: 'out', to: 'out', toPort: 'in' },
+						...(cabled ? [{ from: 'k', fromPort: 'out', to: 'mx', toPort: 'mixA' }] : [])
+					]
+				};
+				track.graphParams = cabled ? { 'k.constVal': 100 } : { 'mx.mixA': 100 };
+				(S.triggerTrackVoice as (...a: unknown[]) => unknown)(0, 40, 0, 0, 0.4, 100, 100);
+				// The A leg is the gain the oscillator feeds inside MIX.
+				const osc = ctx.nodes.find((n) => n.kind === 'osc');
+				const legs = ctx.nodes.filter(
+					(n) => n.kind === 'gain' && n.incoming.some((i) => i === osc || i.kind === 'gain')
+				);
+				return Math.max(...legs.map((g) => (g as unknown as { gain: FakeParam }).gain.value));
+			} finally {
+				Object.assign(track, saved);
+				S.renderCtx = null;
+			}
+		};
+		// Turned to 100 and patched with a CONST of 100 must agree, and both are 1.
+		expect(legGain(true)).toBeCloseTo(legGain(false), 6);
+		expect(legGain(true)).toBeLessThanOrEqual(1.0001);
+
 		const graph = {
 			nodes: [
 				{ id: 'k', type: 'const' },
@@ -708,13 +803,35 @@ describe('regressions the string tests could not see', () => {
 		   divide: a CONST of 100 landed whole and gave a gain of 101 -- 40 dB
 		   nobody asked for. The scaling node in front is what makes "100" mean
 		   the same thing turned or patched. */
-		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
-		const pct = SYNTH.slice(
-			SYNTH.indexOf('const knobPct ='),
-			SYNTH.indexOf('const knobPct =') + 1200
+		const ctx = new FakeCtx();
+		const S = modularSynth as unknown as {
+			noiseBuffer: unknown;
+			buildGraphNode(...a: unknown[]): { mod: Map<string, unknown> } | null;
+		};
+		S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+		const made = S.buildGraphNode(
+			ctx,
+			'mix',
+			(k: string, d: number) => ({ mixA: 100 })[k as 'mixA'] ?? d,
+			220,
+			0,
+			0.5,
+			[],
+			'n1',
+			{},
+			(_n: string, _p: string, f: number) => f,
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 },
+			0.5
 		);
-		expect(pct).toContain('scale.gain.value = 0.01');
-		expect(pct).toContain('mod.set(key, scale)');
+		/* The registered target is a scaling node, not the param itself, and its
+		   gain carries the same divide the knob goes through -- so a CONST of
+		   100 arriving on it means 1, exactly as the knob at 100 does. */
+		const target = made!.mod.get('mixA') as {
+			gain: FakeParam;
+			outgoing: { to: unknown }[];
+		};
+		expect(target.gain.value).toBeCloseTo(0.01, 6);
+		expect(target.outgoing.some((e) => e.to instanceof FakeParam)).toBe(true);
 	});
 
 	it('delays a source behind a SEQ, and says what it cannot do', () => {
@@ -800,8 +917,14 @@ describe('regressions the string tests could not see', () => {
 		   fourth copy appears. */
 		expect(WAVE_SHAPES.map((w) => w.label)).toEqual(WAVE_LABELS);
 		expect(WAVE_SHAPES.map((w) => w.type)).toEqual(['sine', 'triangle', 'sawtooth', 'square']);
+		/* The rest is a lint against a fourth copy appearing, which is a shape
+		   and not a behaviour -- there is nothing to observe at runtime about a
+		   list that does *not* exist. Both negative assertions are paired with a
+		   positive one so a moved or renamed file cannot make them vacuous. */
 		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
 		const CARD = readFileSync('src/lib/components/synth/patch/ModuleCard.svelte', 'utf8');
+		expect(SYNTH).toContain('WAVE_SHAPES');
+		expect(CARD).toContain('WAVE_SHAPES');
 		// Neither may hold its own copy of the order.
 		expect(SYNTH).not.toContain("['sine', 'triangle', 'sawtooth', 'square']");
 		expect(CARD).not.toContain("'SIN'");
