@@ -1,4 +1,12 @@
-import { migratePatch, isPatchFile, trackResetDefaults, blankTrack, type SynthPatchFile } from './patch-format';
+import {
+	migratePatch,
+	isPatchFile,
+	trackResetDefaults,
+	blankTrack,
+	STEPS_PER_BEAT,
+	PATCH_VERSION,
+	type SynthPatchFile
+} from './patch-format';
 import { SPAIN_STEPS } from '../songs/spain';
 import { TAKE_FIVE_STEPS } from '../songs/take-five';
 import { writable, get } from 'svelte/store';
@@ -119,6 +127,8 @@ interface SynthPatchData {
 	stepsPerBeat?: number;
 	/** Drawn waves the tracks reference, so the patch plays in another browser. */
 	waves?: CustomWave[];
+	/** What the file's numbers mean. See PATCH_VERSION in patch-format. */
+	version?: number;
 }
 
 function gatherPatchData(): SynthPatchData {
@@ -127,7 +137,11 @@ function gatherPatchData(): SynthPatchData {
 		bpm: get(bpm),
 		meter: get(timeMeter),
 		totalSteps: get(totalPatternSteps),
-		stepsPerBeat: 24,
+		stepsPerBeat: STEPS_PER_BEAT,
+		/* What the numbers in this file mean, so a later build knows which of
+		   its migrations this one predates. Without it every file looked like
+		   every other and only the grid resolution could be asked about. */
+		version: PATCH_VERSION,
 		waves: wavesUsedBy(modularSynth.getTracks())
 	};
 }

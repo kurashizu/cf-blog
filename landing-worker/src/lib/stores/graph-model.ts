@@ -302,6 +302,24 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 		   canvas draws cables from. The seed patch has always used `then`. */
 		if (entryId) restored.push({ from: entryId, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' });
 	}
+
+	/* A restored ENTRY has to reach the ends too.
+	
+	   The `!hasOutput` branch above draws this cable because an OUT nothing
+	   reaches does not run. The same is true from the other side: restoring a
+	   missing ENTRY beside an OUT that was already there leaves that OUT with
+	   an empty exec socket and the patch silent. Only where nothing already
+	   reaches the end -- a patch with its own logic chain keeps it. */
+	if (!hasEntry) {
+		const entryId = nodes.find((n) => n.type === 'in' || n.id === ENTRY_ID)?.id;
+		for (const out of nodes.filter((n) => n.type === 'out')) {
+			const alreadyReached = restored.some((c) => c.to === out.id && c.toPort === 'exec');
+			if (entryId && !alreadyReached) {
+				restored.push({ from: entryId, fromPort: 'then', to: out.id, toPort: 'exec' });
+			}
+		}
+	}
+
 	return {
 		nodes,
 		// A patch that already has modules keeps its own wiring: the seed's

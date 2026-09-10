@@ -5,6 +5,7 @@ import {
 	blankTrack,
 	isPatchFile,
 	STEPS_PER_BEAT,
+	PATCH_VERSION,
 	type SynthPatchFile
 } from '../../src/lib/stores/patch-format';
 
@@ -24,6 +25,7 @@ const file = (over: Partial<SynthPatchFile> = {}): SynthPatchFile => ({
 	meter: '4/4',
 	totalSteps: 64,
 	stepsPerBeat: STEPS_PER_BEAT,
+	version: PATCH_VERSION,
 	...over
 });
 
@@ -68,6 +70,40 @@ describe('older projects still load', () => {
 	it('leaves a current-format patch untouched', () => {
 		const cur = file({ tracks: [{ id: 0, grid: [[60]] } as never] });
 		expect(migratePatch(cur)).toBe(cur);
+	});
+
+	it('treats a file with no version as one that predates every rule', () => {
+		/* `stepsPerBeat` answers one question -- how fine is the grid -- and the
+		   migration used to key off it alone, so a file already on the 24-step
+		   grid was returned verbatim and no later change reached it. SPACE's
+		   DECAY was inverted under exactly those files. */
+		const old = file({
+			version: undefined,
+			tracks: [{ id: 0, graphParams: { 'sp.spaceDecay': 90, 'tb.tubeOdd': 100 } } as never]
+		});
+		const out = migratePatch(old);
+		expect(out.version).toBe(PATCH_VERSION);
+		expect(out.tracks[0].graphParams?.['sp.spaceDecay']).toBe(10);
+		expect(out.tracks[0].graphParams?.['tb.tubeOdd']).toBe(1);
+	});
+
+	it('does not migrate the same file twice', () => {
+		const once = migratePatch(
+			file({ version: undefined, tracks: [{ id: 0, graphParams: { 'sp.spaceDecay': 90 } } as never] })
+		);
+		expect(migratePatch(once)).toBe(once);
+	});
+
+	it('stretches lanes with the grid they are drawn against', () => {
+		// Left alone, a legacy lane covered the first third of the song.
+		const legacy = file({
+			stepsPerBeat: undefined,
+			version: undefined,
+			tracks: [{ id: 0, grid: [[60], []], noteLanes: [{ id: 'vel', def: 0.8, points: [0.2, 0.9] }] } as never]
+		});
+		const out = migratePatch(legacy);
+		expect(out.tracks[0].grid).toHaveLength(6);
+		expect(out.tracks[0].noteLanes?.[0].points).toEqual([0.2, 0.2, 0.2, 0.9, 0.9, 0.9]);
 	});
 
 	it('survives a patch with no tracks key at all', () => {
