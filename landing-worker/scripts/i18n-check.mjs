@@ -15,6 +15,62 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'lib', 'i18n', 'messages');
+/* Strings that read as English in every locale because they are supposed to.
+   The heuristic below flags any translation identical to its English source,
+   which is the right default -- it catches a block pasted and never gone back
+   to. These are the exceptions, and listing them is what lets a real one stand
+   out instead of being lost among known noise:
+
+   - the chatbot's config *labels* are API parameter names, and sit beside
+     `top_p` and `top_k`; every one of their `.hint` strings *is* translated,
+     which is where the explaining happens
+   - the console lines are shell syntax, an HTTP path and a format template
+   - the operator value is a person's name and their degree
+
+   Anything not here that turns up identical is worth a look. */
+const SAME_ON_PURPOSE = new Set([
+	'chatbot.config.contextWindow.label',
+	'chatbot.config.repetitionPenalty.label',
+	'chrome.console.run.aliasSet',
+	'chrome.console.run.gettingTrace',
+	'chrome.console.run.bpmStatus',
+	'chrome.sidebar.operatorValue',
+	// Pure placeholder templates: there is nothing in them to translate.
+	'synth.patch.renderingStage',
+	'synth.midiImport.bpmMeter',
+	'community.leaderboard.metricHint',
+	'home.projects.nodeId',
+	'vm.facts.ramValueX64',
+	// Product names and versions, which are the same in any language.
+	'community.leaderboard.sourceSuffix',
+	'vm.facts.emulatorValueX86',
+	'vm.facts.guestValueX86',
+	'vm.facts.guestValueX64',
+	'lifelab.log.placed',
+	'utilities.audioout.channel.tone',
+	'utilities.audioout.channel.toneRunning',
+	'utilities.midi.detail.ccNamed',
+	'utilities.mouse.surface.buttons',
+	'utilities.view.tool.hint',
+	// Web platform names: CSS media features, DOM properties, APIs. Translating
+	// these would stop them matching what the browser and the specs call them,
+	// which is the whole point of showing them.
+	'synthPanels.audioHw.webAudioApi',
+	'utilities.net.section.battery.note',
+	'utilities.color.cap.colorDepth',
+	'utilities.color.cap.dynamicRange',
+	'utilities.color.cap.forcedColors',
+	'utilities.color.cap.videoDynamicRange',
+	'utilities.color.cap.prefersContrast',
+	'utilities.net.network.connectionApi.label',
+	'utilities.net.permissions.label',
+	'utilities.sensors.compass.source.webkit',
+	// Units and readouts: the number is the content, the unit is a symbol.
+	'utilities.net.network.downlink.value',
+	'utilities.sensors.motion.axesDeg',
+	'utilities.gpu.benchmark.fillrate.mpixels'
+]);
+
 const LOCALES = ['en', 'zh-CN', 'zh-TW', 'ja', 'ko'];
 const only = process.argv.slice(2);
 
@@ -61,7 +117,12 @@ for (const file of readdirSync(DIR)
 		const extra = Object.keys(d).filter((k) => !(k in m.en));
 		const badVars = en.filter((k) => k in d && placeholders(d[k]) !== placeholders(m.en[k]));
 		const same = en.filter(
-			(k) => k in d && d[k] === m.en[k] && /[a-z]{4,}/i.test(m.en[k]) && m.en[k].length > 12
+			(k) =>
+				k in d &&
+				d[k] === m.en[k] &&
+				/[a-z]{4,}/i.test(m.en[k]) &&
+				m.en[k].length > 12 &&
+				!SAME_ON_PURPOSE.has(k)
 		);
 		if (missing.length)
 			console.log(

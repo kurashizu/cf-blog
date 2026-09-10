@@ -903,13 +903,13 @@ export default {
 		'synth.tour.playKeyUpper': '高八度',
 		'synth.tour.playKeyOctave': '降低 / 升高八度（也可用 [ 和 ]）',
 		'synth.tour.playKeySustain': '延音踏板，按住即为踏下',
-		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
+		'synth.tour.voiceTitle': '音色：机架 1-3',
 		'synth.tour.voiceBody':
 			'声音在这里被塑造，按信号顺序：两个振荡器、一个将它们叠加或让其中一个调制另一个（FM、环形、同步）的融合级，以及一个共振多模滤波器。这里的每个旋钮都编辑上方选中的音轨。',
-		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
+		'synth.tour.shapeTitle': '塑形：机架 4-7',
 		'synth.tour.shapeBody':
 			'声音随时间发生的变化：分别控制振幅与滤波器的双包络、可驱动音高、截止频率、声像或音量的 LFO 矩阵、逐音轨的 FX 与六段均衡器，最后是带有可视化的输出条。',
-		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
+		'synth.tour.transportTitle': '载入、录音、导出',
 		'synth.tour.advTitle': '另一半',
 		'synth.tour.advBody':
 			'机架 1-7 是一件乐器：所有控件铺开，不用接线。ADV 是另一件 —— 机架让位，面板变成连线机架，音色由原语和跳线搭出来。每条音轨只处在其中一种模式，这个选择随音色一起保存。',
@@ -1342,13 +1342,13 @@ export default {
 		'synth.tour.playKeyUpper': '高八度',
 		'synth.tour.playKeyOctave': '降低 / 升高八度（也可用 [ 和 ]）',
 		'synth.tour.playKeySustain': '延音踏板，按住即為踏下',
-		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
+		'synth.tour.voiceTitle': '音色：機架 1-3',
 		'synth.tour.voiceBody':
 			'聲音在這裡被塑造，依訊號順序：兩個振盪器、一個將它們疊加或讓其中一個調變另一個（FM、環形、同步）的融合級，以及一個共振多模濾波器。這裡的每個旋鈕都編輯上方選取的音軌。',
-		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
+		'synth.tour.shapeTitle': '塑形：機架 4-7',
 		'synth.tour.shapeBody':
 			'聲音隨時間發生的變化：分別控制振幅與濾波器的雙包絡、可驅動音高、截止頻率、聲像或音量的 LFO 矩陣、逐音軌的 FX 與六段等化器，最後是帶有視覺化的輸出條。',
-		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
+		'synth.tour.transportTitle': '載入、錄音、匯出',
 		'synth.tour.advTitle': '另一半',
 		'synth.tour.advBody':
 			'機架 1-7 是一件樂器：所有控制項攤開，不用接線。ADV 是另一件 —— 機架讓位，面板變成連線機架，音色由原語和跳線搭出來。每條音軌只處在其中一種模式，這個選擇隨音色一起儲存。',
@@ -1835,13 +1835,13 @@ export default {
 		'synth.tour.playKeyUpper': '上のオクターブ',
 		'synth.tour.playKeyOctave': 'オクターブ下げ／上げ（[ と ] でも可）',
 		'synth.tour.playKeySustain': 'サステインペダル、押している間がペダルダウン',
-		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
+		'synth.tour.voiceTitle': '音色：ラック 1-3',
 		'synth.tour.voiceBody':
 			'音が作られる場所を、信号の順に：2基のオシレーター、それらを重ねる、または一方で他方を変調する（FM・リング・シンク）フュージョン段、そしてレゾナンス付きマルチモードフィルター。ここの各ノブは上で選択したトラックを編集します。',
-		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
+		'synth.tour.shapeTitle': '成形：ラック 4-7',
 		'synth.tour.shapeBody':
 			'その音が時間とともにどう変化するか：振幅とフィルター用の2系統のエンベロープ、ピッチ・カットオフ・パン・音量を駆動できる LFO マトリクス、トラックごとの FX と6バンド EQ、そして可視化付きの出力ストリップ。',
-		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
+		'synth.tour.transportTitle': '読み込み・録音・書き出し',
 		'synth.tour.advTitle': 'もうひとつの姿',
 		'synth.tour.advBody':
 			'ラック1-7はひとつの楽器で、すべてのつまみが並び配線は不要です。ADVはもうひとつの姿 —— ラックが退き、パネルはパッチベイになり、音は原始的な部品とケーブルから組み立てます。トラックはどちらか一方にあり、その選択はパッチとともに保存されます。',
@@ -2320,13 +2320,13 @@ export default {
 		'synth.tour.playKeyUpper': '높은 옥타브',
 		'synth.tour.playKeyOctave': '옥타브 내림/올림 ([ 와 ] 도 가능)',
 		'synth.tour.playKeySustain': '서스테인 페달, 누르고 있으면 페달이 눌린 상태',
-		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
+		'synth.tour.voiceTitle': '음색: 랙 1-3',
 		'synth.tour.voiceBody':
 			'소리가 만들어지는 곳으로, 신호 순서대로: 두 개의 오실레이터, 이를 겹치거나 하나로 다른 하나를 변조하는(FM, 링, 싱크) 퓨전 단계, 그리고 레조넌스가 있는 멀티모드 필터입니다. 여기의 각 노브는 위에서 선택한 트랙을 편집합니다.',
-		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
+		'synth.tour.shapeTitle': '성형: 랙 4-7',
 		'synth.tour.shapeBody':
 			'그 소리가 시간에 따라 어떻게 변하는지: 진폭과 필터를 위한 이중 엔벨로프, 피치·컷오프·팬·볼륨을 구동할 수 있는 LFO 매트릭스, 트랙별 FX와 6밴드 EQ, 그리고 시각화가 포함된 출력 스트립입니다.',
-		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
+		'synth.tour.transportTitle': '불러오기, 녹음, 내보내기',
 		'synth.tour.advTitle': '또 다른 절반',
 		'synth.tour.advBody':
 			'랙 1-7은 하나의 악기입니다. 모든 컨트롤이 펼쳐져 있고 배선할 것이 없습니다. ADV는 다른 하나입니다 — 랙이 물러나고 패널이 패치 베이가 되며, 소리를 원시 모듈과 케이블로 만듭니다. 트랙은 둘 중 하나에 있고, 그 선택은 패치와 함께 저장됩니다.',
