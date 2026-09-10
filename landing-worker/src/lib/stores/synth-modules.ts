@@ -156,6 +156,31 @@ export const CONST_KINDS: {
 	{ label: 'PIT', role: 'pitch', min: 0, max: 127, step: 1, def: 60, notes: true }
 ];
 
+/**
+ * The shapes MAP can bend a value into.
+ *
+ * All of them take 0..1 to 0..1 and pass both ends through unchanged, so
+ * swapping one for another cannot move where a sweep starts or finishes --
+ * only how it travels between them. Named here rather than in the evaluator
+ * because the card draws the same list it selects from.
+ */
+export const MAP_SHAPES: { id: string; label: string }[] = [
+	/* A straight line, which is the honest default: MAP in a patch that has not
+	   been told what to do should do nothing. */
+	{ id: 'lin', label: 'LIN' },
+	/* Slow to start and quick at the end, and its mirror. This is the pair that
+	   makes velocity feel right: EXP opens late, so a soft touch stays soft. */
+	{ id: 'exp', label: 'EXP' },
+	{ id: 'log', label: 'LOG' },
+	/* Slow at both ends, quick through the middle -- the shape a fade wants. */
+	{ id: 'ease', label: 'EASE' },
+	/* Discrete. Turns a sweep into a run of held values, which is how a
+	   continuous control drives something that only has positions. */
+	{ id: 'step', label: 'STEP' },
+	/* Drawn by hand, for the shape none of the above is. */
+	{ id: 'draw', label: 'DRAW' }
+];
+
 /** MIDI note number for A4, the reference every pitch is counted from. */
 export const MIDI_A4 = 69;
 
@@ -481,14 +506,40 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
-		id: 'curve',
-		label: 'CURVE',
+		/* A value bent on its way through, 0..1 in and 0..1 out.
+		 *
+		 * The shape is the module: how a value crosses a range is a decision as
+		 * real as what the range is. Velocity into a cutoff is one thing on a
+		 * straight line and another on a curve that opens late, and a staircase
+		 * turns a sweep into steps -- which is how a continuous LFO drives a
+		 * discrete choice.
+		 *
+		 * Named MAP rather than CURVE because a staircase is not a curve, and
+		 * neither is the straight line it boots as. */
+		id: 'map',
+		label: 'MAP',
 		group: 'MATH',
 		color: '#abb2bf',
-		descKey: 'synthPatch.mod.curve',
+		descKey: 'synthPatch.mod.map',
 		inputs: [CV_A],
 		outputs: [CV_OUT],
-		params: [{ key: 'exp', label: 'EXP', min: 0.1, max: 8, step: 0.1, def: 1 }]
+		params: [
+			{
+				key: 'shape',
+				label: 'SHAPE',
+				min: 0,
+				max: MAP_SHAPES.length - 1,
+				step: 1,
+				def: 0,
+				choices: MAP_SHAPES.map((m) => m.label)
+			},
+			/* What the shape does, where the shape has a degree to speak of. A
+			   line ignores it; an exponential rides it. */
+			{ key: 'amount', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 50 },
+			/* Drawn rather than chosen. Only read when SHAPE is DRAW, which is
+			   what the card's editor writes. */
+			{ key: 'steps', label: 'STEP', min: 2, max: 32, step: 1, def: 4, fixed: true }
+		]
 	},
 	{
 		/* A frequency read back as the pitch nearest to it.

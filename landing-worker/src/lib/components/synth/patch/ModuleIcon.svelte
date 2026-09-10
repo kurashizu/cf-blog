@@ -72,7 +72,8 @@
 		remap: 'M2 12h5M9 4h5M2 12l7-8',
 		clamp: 'M2 5h12M2 11h12M8 5v6',
 		lerp: 'M2 12L14 4M2 12h2M12 4h2M7 8h2',
-		curve: 'M2 13q8 0 11-10',
+		// A value bent on its way through: the shape is the module.
+		map: 'M2 13q8 0 11-10',
 		// A rectangle, because the width is the whole point of it.
 		pwm: 'M2 11h3V5h4v6h3V5h2',
 		// The two conversions: a note becoming a wave, and a wave becoming a note.

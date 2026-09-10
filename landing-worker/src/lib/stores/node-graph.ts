@@ -130,11 +130,57 @@ export const PURE_NODES: Record<string, PureFn> = {
 		const alpha = Math.max(0, Math.min(1, i.get('alpha', p('lerpAlpha', 50) / 100)));
 		return a + (b - a) * alpha;
 	},
-	curve: (i, p) => {
+	/* A value bent on its way through.
+	
+	   Every shape maps 0..1 to 0..1 and leaves both ends alone, so changing one
+	   for another moves how a sweep travels and never where it starts or stops.
+	   Outside that range the value passes through untouched: shaping is defined
+	   on the unit interval, and a fractional power of a negative base is NaN. */
+	map: (i, p) => {
 		const x = i.get('a', 0);
-		// Shaping is defined on 0..1; outside it a fractional power of a negative
-		// base is NaN, so the value passes through unchanged.
-		return x >= 0 && x <= 1 ? Math.pow(x, Math.max(0.1, p('exp', 1))) : x;
+		if (!(x >= 0 && x <= 1)) return x;
+		const amt = Math.max(0, Math.min(1, p('amount', 50) / 100));
+		switch (Math.round(p('shape', 0))) {
+			case 1: {
+				// Slow to start: AMT rides the exponent from a line up to a hard knee.
+				return Math.pow(x, 1 + amt * 7);
+			}
+			case 2: {
+				// Its mirror, quick to start.
+				return Math.pow(x, 1 / (1 + amt * 7));
+			}
+			case 3: {
+				/* Slow at both ends. Blended with the line by AMT so the knob still
+				   means "how much", rather than the shape being all or nothing. */
+				const e = x * x * (3 - 2 * x);
+				return x + (e - x) * amt;
+			}
+			case 4: {
+				/* A staircase, which is what turns a sweep into positions. The last
+				   tread has to reach 1, so it divides by one less than the count --
+				   otherwise a 4-step map would top out at 0.75 and the end of the
+				   range would be unreachable. */
+				const n = Math.max(2, Math.round(p('steps', 4)));
+				return Math.min(n - 1, Math.floor(x * n)) / (n - 1);
+			}
+			case 5: {
+				/* Drawn by hand: the shape is a run of points, read through the same
+				   `p` every knob uses because a table is stored as its own numbered
+				   keys. Between two points it interpolates, so a curve drawn at
+				   sixteen resolution does not arrive as sixteen steps.
+				
+				   Undrawn it is a line. A DRAW that has not been drawn should do
+				   nothing rather than flatten what passes through it. */
+				const n = Math.max(2, Math.round(p('drawN', 0)));
+				if (!p('drawN', 0)) return x;
+				const at = (k: number) => p(`d${Math.max(0, Math.min(n - 1, k))}`, k / (n - 1));
+				const f = x * (n - 1);
+				const lo = Math.floor(f);
+				return at(lo) + (at(lo + 1) - at(lo)) * (f - lo);
+			}
+			default:
+				return x;
+		}
 	}
 };
 

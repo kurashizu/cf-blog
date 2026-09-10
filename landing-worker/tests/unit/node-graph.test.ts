@@ -206,17 +206,35 @@ describe('the pure nodes', () => {
 		expect(evalPure('lerp', { a: 0, b: 10, alpha: 4 })).toBe(10);
 	});
 
-	it('bends a unit value with curve', () => {
-		expect(evalPure('curve', { a: 0.5 }, { exp: 1 })).toBeCloseTo(0.5, 6);
-		expect(evalPure('curve', { a: 0.5 }, { exp: 2 })).toBeCloseTo(0.25, 6);
-		// Outside 0..1 a fractional power of a negative base is NaN, so the
-		// value passes through untouched.
-		expect(evalPure('curve', { a: -3 }, { exp: 0.5 })).toBe(-3);
-		expect(evalPure('curve', { a: 40 }, { exp: 0.5 })).toBe(40);
+	it('bends a unit value with map', () => {
+		// A line is the default, and does nothing.
+		expect(evalPure('map', { a: 0.5 }, { shape: 0 })).toBeCloseTo(0.5, 6);
+		// EXP opens late, LOG opens early, and both keep the ends.
+		expect(evalPure('map', { a: 0.5 }, { shape: 1, amount: 100 })).toBeLessThan(0.5);
+		expect(evalPure('map', { a: 0.5 }, { shape: 2, amount: 100 })).toBeGreaterThan(0.5);
+		for (const shape of [0, 1, 2, 3, 4]) {
+			expect(evalPure('map', { a: 0 }, { shape, amount: 100 }), `shape ${shape}`).toBeCloseTo(0, 6);
+			expect(evalPure('map', { a: 1 }, { shape, amount: 100 }), `shape ${shape}`).toBeCloseTo(1, 6);
+		}
+		// Outside 0..1 the value passes through untouched.
+		expect(evalPure('map', { a: -3 }, { shape: 1 })).toBe(-3);
+		expect(evalPure('map', { a: 40 }, { shape: 1 })).toBe(40);
+	});
+
+	it('turns a sweep into steps, reaching both ends', () => {
+		const step = (x: number) => evalPure('map', { a: x }, { shape: 4, steps: 4 });
+		expect(step(0)).toBeCloseTo(0, 6);
+		expect(step(1)).toBeCloseTo(1, 6);
+		// Four treads: 0, 1/3, 2/3, 1 -- the top one has to be reachable.
+		expect(new Set([0, 0.3, 0.6, 0.99].map((v) => step(v).toFixed(3))).size).toBe(4);
+	});
+
+	it('leaves DRAW alone until something is drawn', () => {
+		expect(evalPure('map', { a: 0.3 }, { shape: 5 })).toBeCloseTo(0.3, 6);
 	});
 
 	it('knows which types are pure', () => {
-		for (const id of ['const', 'add', 'mul', 'remap', 'clamp', 'lerp', 'curve']) {
+		for (const id of ['const', 'add', 'mul', 'remap', 'clamp', 'lerp', 'map']) {
 			expect(isPureNode(id)).toBe(true);
 		}
 		for (const id of ['osc', 'out', 'filter', 'when']) expect(isPureNode(id)).toBe(false);
