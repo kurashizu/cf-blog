@@ -143,7 +143,6 @@
 	let mips = $state<number | null>(null);
 	/** True once the guest has switched the VGA adapter out of text mode. */
 	let graphical = $state(false);
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let diskBuffer: DiskBuffer | null = null;
 	let overlay = $state<OverlayStats>({ blocks: 0, bytes: 0 });
 	let overlayStored = $state(0);
@@ -181,7 +180,6 @@
 		requestAnimationFrame(fitScreen);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let emulator: any = null;
 	let ticker: ReturnType<typeof setInterval> | null = null;
 	let lastInstructions = 0;
@@ -195,11 +193,8 @@
 	let keyboardCaptured = $state(false);
 	let screenWrap: HTMLDivElement | undefined = $state();
 	let termEl: HTMLDivElement | undefined = $state();
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let fitAddon: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let term: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let FitAddonCtor: any = null;
 	let qemu: QemuMachine | null = null;
 
@@ -285,7 +280,6 @@
 			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin|\/vm\/pc\/rootfs\b/.test(String(url))) {
 				this.addEventListener('load', () => chunksFetched++, { once: true });
 			}
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			return original.call(this, method, url as any, ...(rest as [boolean, string?, string?]));
 		};
 		return () => {
@@ -660,7 +654,6 @@
 			// this build of v86 keeps its disk somewhere the search did not reach.
 			overlayNote = tr('vm.overlay.noWritableDisk');
 		}
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(emulator as any)?.run?.();
 	}
 
@@ -795,7 +788,6 @@
 
 	function fitTerminal() {
 		if (!termEl || !FitAddonCtor) return;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		term ??= (emulator as any)?.serial_adapter?.term ?? null;
 		if (!term) return;
 		if (!fitAddon) {
@@ -906,7 +898,6 @@
 			// other engine returns undefined and has already locked.
 			(pending as Promise<void> | undefined)?.catch?.(() => target?.requestPointerLock?.());
 		} catch {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(emulator as any)?.lock_mouse?.();
 		}
 	}

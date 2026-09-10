@@ -215,6 +215,19 @@
 	let pointer = $state({ x: 0, y: 0 });
 	let paletteOpen = $state(true);
 	let message = $state('');
+	let messageTimer: ReturnType<typeof setTimeout> | undefined;
+	/* Says something and then stops saying it.
+	
+	   `message` was only ever overwritten, never cleared on a timer, and the two
+	   paths that matter -- a role mismatch and a refused cycle -- leave it set.
+	   So a red box parked itself over the bottom-left of the patch bay and
+	   stayed there until the user happened to make a *successful* connection.
+	   Every other transient on this screen clears itself. */
+	function say(text: string) {
+		clearTimeout(messageTimer);
+		message = text;
+		if (text) messageTimer = setTimeout(() => (message = ''), 2600);
+	}
 	/** The palette entry being dragged, for browsers that withhold dataTransfer. */
 	let dragType = $state<string | null>(null);
 
@@ -260,7 +273,8 @@
 			return;
 		}
 		if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCable !== null) {
-			removeCable(graph, selectedCable);
+			const at = graph.cables.findIndex((c) => cableKey(c) === selectedCable);
+			if (at >= 0) removeCable(graph, at);
 			selectedCable = null;
 			playSound('click');
 			e.preventDefault();
@@ -293,13 +307,13 @@
 			e.preventDefault();
 		} else if (k === 'c' && sel.size) {
 			const n = copySelection(graph, sel);
-			message = n ? $t('synthPatch.copied', { count: n }) : '';
+			say(n ? $t('synthPatch.copied', { count: n }) : '');
 			playSound('click');
 			e.preventDefault();
 		} else if (k === 'v') {
 			const n = pasteClipboard(graph, graphParams);
 			if (n) {
-				message = $t('synthPatch.pasted', { count: n });
+				say($t('synthPatch.pasted', { count: n }));
 				playSound('click');
 			}
 			e.preventDefault();
@@ -366,7 +380,16 @@
 	/* The cable under the cursor's last click, by index. Cables are selected
 	   rather than deleted on contact so you can see which one you have before it
 	   goes -- one of them is the difference between a patch and silence. */
-	let selectedCable = $state<number | null>(null);
+	/* The chosen cable, held as its identity rather than its position.
+	
+	   This was an index into `graph.cables`, and every path that removes a cable
+	   -- removeCable, deleteSelection, undo, redo -- reindexes the array beneath
+	   it. Selecting one cable and then deleting an earlier one left the white
+	   highlight drawn on a *different* wire, and Delete then unwired that one
+	   instead. A cable is what it connects, so say that. */
+	let selectedCable = $state<string | null>(null);
+	const cableKey = (c: { from: string; fromPort: string; to: string; toPort: string }) =>
+		`${c.from}:${c.fromPort}>${c.to}:${c.toPort}`;
 
 	let marqueeRect = $derived(
 		marquee
@@ -449,6 +472,22 @@
 			const ny = Math.round((p.y - dragNode.dy) / GRID) * GRID;
 			moveNode(graph, dragNode.id, nx, ny);
 		}
+	}
+
+	/* The browser took the pointer away mid-drag -- a touch gesture claimed by
+	   scroll or zoom, a palm rejected, an OS interruption. `pointerup` never
+	   arrives in that case, so without this the card kept following the cursor
+	   with nothing held down and the drag's undo entry was left open. The three
+	   other drag surfaces in the synth all handle it; this one did not. Ends the
+	   gesture without acting on it: a cancelled drop is not a drop, so the
+	   drop-search must not open. */
+	function onPointerCancel() {
+		marquee = null;
+		panning = null;
+		groupDrag = null;
+		dragNode = null;
+		pullFrom = null;
+		endGraphDrag();
 	}
 
 	function onPointerUp() {
@@ -602,12 +641,12 @@
 		if (!target || !rolesCompatible(pullFrom.role, roleOf(target))) {
 			// Audio into a mod inlet is not a patching mistake worth guessing at:
 			// they are different signals with different ranges.
-			message = $t('synthPatch.mismatch');
+			say($t('synthPatch.mismatch'));
 			pullFrom = null;
 			return;
 		}
 		const res = addCable(graph, { from: pullFrom.node, fromPort: pullFrom.port, to: nodeId, toPort: port }, kind);
-		message = res === 'cycle' ? $t('synthPatch.cycle') : res === 'duplicate' ? $t('synthPatch.duplicate') : '';
+		say(res === 'cycle' ? $t('synthPatch.cycle') : res === 'duplicate' ? $t('synthPatch.duplicate') : '');
 		if (res === 'ok') playSound('click');
 		pullFrom = null;
 	}
@@ -750,7 +789,11 @@
 	let liveEnd = $derived(pullFrom ? toCanvas(pointer.x, pointer.y) : null);
 </script>
 
-<svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} />
+<svelte:window
+	onpointermove={onPointerMove}
+	onpointerup={onPointerUp}
+	onpointercancel={onPointerCancel}
+/>
 
 <div class="flex-1 min-h-0 flex flex-col gap-1 overflow-hidden">
 	<!-- The editing toolbar.
@@ -873,11 +916,11 @@
 							   removes it. Deleting outright meant a mis-aimed click on a
 							   crowded patch silently unwired something, with nothing shown
 							   first and only undo to notice it by. */
-							if (selectedCable === i) {
+							if (selectedCable === cableKey(c)) {
 								removeCable(graph, i);
 								selectedCable = null;
 							} else {
-								selectedCable = i;
+								selectedCable = cableKey(c);
 								selectedNodes.set(new Set());
 								selectedNode.set(null);
 							}
@@ -889,10 +932,10 @@
 					<path
 						d={cablePath(a, b)}
 						fill="none"
-						stroke={selectedCable === i ? '#ffffff' : PORT_STYLE[role].color}
-						stroke-width={selectedCable === i ? 3.5 : role === 'exec' ? 3 : isControl ? 1.5 : 2.5}
+						stroke={selectedCable === cableKey(c) ? '#ffffff' : PORT_STYLE[role].color}
+						stroke-width={selectedCable === cableKey(c) ? 3.5 : role === 'exec' ? 3 : isControl ? 1.5 : 2.5}
 						stroke-dasharray={role === 'cv' ? '4 3' : undefined}
-						opacity={selectedCable === i ? 1 : 0.8}
+						opacity={selectedCable === cableKey(c) ? 1 : 0.8}
 						class="pointer-events-none"
 					/>
 				{/each}

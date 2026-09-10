@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { fade, scale } from '$lib/perf-transitions';
 	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '../../../sound';
@@ -20,6 +22,26 @@
 		isSynthSettingsOpen.set(false);
 		playSound('click');
 	}
+
+	/* Escape closes it, as it does the other two modals in this tree.
+	
+	   This one was dismissible only by the backdrop, the corner button or DONE.
+	   It already behaves as modal for the keyboard -- the roll and transport
+	   hotkeys check it and stand down -- so the one key everyone reaches for was
+	   the only one that did nothing. Capture phase, so it is handled before the
+	   canvas below sees it. */
+	onMount(() => {
+		function onKey(e: KeyboardEvent) {
+			if (!get(isSynthSettingsOpen)) return;
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				e.stopPropagation();
+				close();
+			}
+		}
+		window.addEventListener('keydown', onKey, true);
+		return () => window.removeEventListener('keydown', onKey, true);
+	});
 </script>
 
 {#if $isSynthSettingsOpen}
@@ -34,6 +56,9 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="w-full max-w-2xl bg-[#121417] border border-[#e5c07b]/40 rounded-xs shadow-[0_0_24px_rgba(0,0,0,0.8),0_0_12px_rgba(229,192,123,0.15)] flex flex-col max-h-[85vh] overflow-hidden"
+			role="dialog"
+			aria-modal="true"
+			aria-label={$t('synthPanels.settings.title')}
 			onclick={(e) => e.stopPropagation()}
 			transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 		>

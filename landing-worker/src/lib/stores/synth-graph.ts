@@ -218,6 +218,13 @@ function cableIsAudio(graph: RackGraph, cable: GraphCable): boolean {
 	return false;
 }
 
+/** Does this cable land on a port the module declares, rather than on a knob? */
+function isDeclaredInlet(graph: RackGraph, cable: GraphCable): boolean {
+	const type = graph.nodes.find((n) => n.id === cable.to)?.type;
+	const spec = MODULE_SPECS.find((m) => m.id === type);
+	return !!spec?.inputs.some((q) => q.id === cable.toPort);
+}
+
 export function addCable(graph: RackGraph, cable: GraphCable, kind: PortKind): 'ok' | 'cycle' | 'duplicate' {
 	if (hasCable(graph, cable)) return 'duplicate';
 	/* Audio cannot loop -- a delay loop measured stable only to about g = 0.90
@@ -228,7 +235,22 @@ export function addCable(graph: RackGraph, cable: GraphCable, kind: PortKind): '
 	   so feeding that filter looked like a loop and was reported as one. */
 	if (kind === 'audio' && wouldCycle(graph, cable.from, cable.to, (c) => cableIsAudio(graph, c)))
 		return 'cycle';
-	commit({ ...graph, cables: [...graph.cables, cable] });
+	/* A knob takes one cable, and the newest one wins.
+	
+	   A knob is not a summing inlet: a value *replaces* it, and the resolver
+	   reads exactly one cable per socket -- the first it finds. The engine's mod
+	   loop meanwhile connected every cable that landed there, so two cables into
+	   one knob meant the base value came from whichever was drawn first while
+	   both were wired. A CONST and an ENV into VCF's FREQ put the cutoff at 300
+	   or 9000 Hz depending on draw order, and deleting and redrawing the ENV
+	   retuned the patch. Replacing keeps one cable per knob, so there is nothing
+	   for the two to disagree about. A declared inlet is untouched: those really
+	   do sum, and several sources into a VCA's CV is a normal patch. */
+	const ontoKnob = !isDeclaredInlet(graph, cable);
+	const cables = ontoKnob
+		? graph.cables.filter((c) => !(c.to === cable.to && c.toPort === cable.toPort))
+		: graph.cables;
+	commit({ ...graph, cables: [...cables, cable] });
 	return 'ok';
 }
 

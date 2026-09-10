@@ -1,6 +1,7 @@
 import { laneAt, lanesOf, laneToVelocity, VELOCITY_LANE_ID, type NoteLane } from './stores/note-lanes';
 import { EXEC_PORT_IDS, MODULE_SPECS, WAVE_SHAPES } from './stores/synth-modules';
 import { createResolver, execReach, execDelays, runs, isPureNode, PURE_NODES } from './stores/node-graph';
+import { graphOf } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -599,6 +600,8 @@ interface ActiveVoice {
   lfo?: OscillatorNode;
   lfoGain?: GainNode;
   panNode?: StereoPannerNode;
+  /** Air shelf and per-key EQ bands: they hold the reverb send, so they need cutting too. */
+  tail?: AudioNode[];
   startTime: number;
   ampRel: number;
   vcfRel: number;
@@ -890,6 +893,8 @@ class ModularSynth {
     this.masterLimiter.attack.setValueAtTime(0.002, ctx.currentTime);
     this.masterLimiter.release.setValueAtTime(0.1, ctx.currentTime);
     this.masterLimiter.connect(masterGain);
+    // ...unless the user switched it off, which until now the build ignored.
+    this.applyMasterLimiter();
 
     this.masterBusIn.connect(this.shaperIn);
     this.shaperIn.connect(this.waveShaper);
@@ -1455,6 +1460,30 @@ class ModularSynth {
       mod.set(key, scale);
       return v;
     };
+    /**
+     * A wet/dry pair driven as one crossfade, from a knob stored 0..100.
+     *
+     * `knobPct` on the wet leg alone was not a mix: it registered a scaling
+     * node onto `wet.gain` while the dry leg was a plain assignment with no
+     * source, so turning MIX by hand crossfaded but *patching* it only raised
+     * the wet. At MIX 30 with an envelope adding 0.7 the module summed dry 0.7
+     * and wet 1.0 -- louder than either end of the knob, and never reaching
+     * full wet. One CV moving both gains in opposite directions is what BLEND
+     * already does; this is the same thing for the two FX that have a mix.
+     */
+    const knobMix = (wet: GainNode, dry: GainNode, key: string, def: number): void => {
+      const v = p(key, def) / 100;
+      wet.gain.value = v;
+      dry.gain.value = 1 - v;
+      const up = ctx.createGain();
+      up.gain.value = 0.01;
+      up.connect(wet.gain);
+      const down = ctx.createGain();
+      down.gain.value = -1;
+      up.connect(down);
+      down.connect(dry.gain);
+      mod.set(key, up);
+    };
     /* Indexed straight off the catalogue's list, so the button that says SAW
        and the wave that plays cannot disagree -- they did, and three of the
        four labels named the wrong shape. */
@@ -1796,9 +1825,8 @@ class ModularSynth {
         damp.type = 'lowpass';
         knob(damp.frequency, 'dlTone', 6000);
         const wet = ctx.createGain();
-        knobPct(wet.gain, 'dlMix', 30);
         const dry = ctx.createGain();
-        dry.gain.value = 1 - wet.gain.value;
+        knobMix(wet, dry, 'dlMix', 30);
         input.connect(dry);
         dry.connect(out);
         input.connect(dl);
@@ -1838,9 +1866,8 @@ class ModularSynth {
         const cv = ctx.createConvolver();
         cv.buffer = buf;
         const wet = ctx.createGain();
-        knobPct(wet.gain, 'spaceMix', 30);
         const dry = ctx.createGain();
-        dry.gain.value = 1 - wet.gain.value;
+        knobMix(wet, dry, 'spaceMix', 30);
         input.connect(dry);
         dry.connect(out);
         input.connect(cv);
@@ -2046,6 +2073,12 @@ class ModularSynth {
         const sideIn = ctx.createGain();
         const wide = ctx.createGain();
         wide.gain.value = Math.max(0, cvIn(probeKey, 'wide', 1));
+        /* WIDE is a declared `mod` inlet on the card, so a cable has to be able
+           to land on it. It was read as a value and never registered, and since
+           MAKE deliberately carries no WIDE knob the resolver fell through to
+           the caller's fallback of 1 -- the width was pinned at unity and the
+           socket did nothing at all. */
+        mod.set('wide', wide.gain);
         sideIn.connect(wide);
 
         const merger = ctx.createChannelMerger(2);
@@ -2949,12 +2982,23 @@ class ModularSynth {
     const ctx = this.audioCtx();
     if (ctx) {
       const stepDuration = 60 / this.bpm / STEPS_PER_BEAT;
-      this.scheduledStepQueue = this.scheduledStepQueue.filter((e) => e.time <= ctx.currentTime);
-      const last = this.scheduledStepQueue[this.scheduledStepQueue.length - 1];
-      if (last) {
-        this.currentStep = (last.step + 1) % this.totalSteps;
-        this.nextStepTime = Math.max(ctx.currentTime, last.time + stepDuration);
-      }
+      /* Rebase from the last step the clock actually reached.
+      
+         Reading it back off `scheduledStepQueue` could not work: `checkUIQueue`
+         shifts every elapsed entry out as its time passes, so while playing the
+         queue holds only *future* steps by construction. Filtering it to
+         `time <= currentTime` therefore always yielded an empty array, the
+         rebase below never ran, and the one thing the filter did accomplish was
+         to throw away the pending lookahead -- which left the playhead frozen
+         for up to a whole window on every tempo change. `lastAudibleStep` is
+         the value `checkUIQueue` maintains for exactly this question, and is
+         what STOP already resumes from. */
+      const heardAt = this.scheduledStepQueue.length
+        ? this.scheduledStepQueue[0].time
+        : ctx.currentTime;
+      this.scheduledStepQueue = [];
+      this.currentStep = (this.lastAudibleStep + 1) % this.totalSteps;
+      this.nextStepTime = Math.max(ctx.currentTime, Math.min(heardAt, ctx.currentTime + stepDuration));
     }
     this.restartSequencerTimer();
   }
@@ -3203,6 +3247,26 @@ class ModularSynth {
 
   public setMasterLimiterEnabled(enabled: boolean) {
     this.masterLimiterEnabled = enabled;
+    this.applyMasterLimiter();
+  }
+
+  /**
+   * Put the limiter's own settings where the toggle says they should be.
+   *
+   * The flag had a getter and a setter and no reader: `initMasterFX` built the
+   * compressor and wired it in unconditionally, so the AUDIO HW tab could read
+   * "LIMITER: BYPASSED" while it went on gain-reducing the master. Bypassing by
+   * ratio rather than by rerouting keeps the node in circuit, so nothing has to
+   * be disconnected and reconnected under a running graph -- at 1:1 with no
+   * knee a compressor is a wire.
+   */
+  private applyMasterLimiter() {
+    const lim = this.masterLimiter;
+    if (!lim) return;
+    const ctx = this.masterFXCtx;
+    const now = ctx ? ctx.currentTime : 0;
+    lim.threshold.setValueAtTime(this.masterLimiterEnabled ? -1 : 0, now);
+    lim.ratio.setValueAtTime(this.masterLimiterEnabled ? 20 : 1, now);
   }
 
   public getVoiceStealingMode(): 'oldest' | 'quietest' | 'lowest' {
@@ -3969,7 +4033,15 @@ class ModularSynth {
     let accResMult = 1.0;
 
     if (acc > 0) {
-      accGainMult = Math.pow(10, acc / 20); // Exact decibels to amplitude ratio
+      /* Level only when nothing else already carried it. The sequencer raises
+         an accented step's velocity in `trackVelocityAt` and then passes the
+         accent here as well, so applying the dB multiplier again would count
+         the same stress twice and make an accent about 3 dB hotter than the
+         row says. A note played by hand carries no velocity of its own, and
+         for that one the multiplier is the only thing there is. */
+      accGainMult = rawVelocity === undefined && laneVelocity === undefined
+        ? Math.pow(10, acc / 20)
+        : 1.0;
       accCutoffMult = 1.0 + (acc * 0.04);   // Subtle harmonic opening (+1 -> 1.04x, +4 -> 1.16x)
       accResMult = 1.0 + (acc * 0.025);     // Subtle punch increase
     }
@@ -4042,14 +4114,8 @@ class ModularSynth {
           velGainScale = 0.04 + Math.pow(v, 3.0) * 1.50;
           break;
       }
-      /* Accent and velocity multiply.
-      
-         `gainBase` was set from the accent above and then *overwritten* here,
-         so accent's level never reached audio on any note that carried a
-         velocity -- which is every note the sequencer plays and every note
-         `noteOn` makes. Only its cutoff and resonance side-effects survived.
-         They are different things: velocity is how hard this note was struck,
-         accent is that this step is stressed. */
+      /* Velocity carries the level here; see `accGainMult` above for why the
+         accent does not multiply it a second time on a sequenced note. */
       gainBase = 0.28 * accGainMult * velGainScale;
     }
 
@@ -4288,7 +4354,16 @@ class ModularSynth {
 
     /* A patched graph takes precedence over the linear chain: both are stored,
        and a track that has been wired by hand should play what was wired. */
-    const graph = advOwnsVoice && track.rackGraph?.nodes?.length ? track.rackGraph : undefined;
+    /* Through the same migration the canvas applies.
+    
+       The engine played `rackGraph` raw, so the port renames and the restored
+       ENTRY/OUT that `graphOf` performs only ever happened in the editor. A
+       patch saved with the old `in2` port name played its B leg at A's gain
+       while the canvas drew it correctly on B; a patch saved without an ENTRY
+       node was silent until the user happened to touch any node, at which point
+       the canvas committed the migrated graph and it started working with no
+       edit that explained it. One reading of a saved patch, not two. */
+    const graph = advOwnsVoice && track.rackGraph?.nodes?.length ? graphOf(track) : undefined;
     if (graph) {
       /* What each lane reads for this note. Sampled once, when the note starts:
          that is what a lane means for a voice, and it is why the socket is a
@@ -4337,6 +4412,14 @@ class ModularSynth {
        track's EQ, its place in the mix, the sends -- is the mixer's and applies
        to both. */
     let finalVoiceNode: AudioNode = chainOut;
+    /* The nodes past the gain/filter/panner trio, kept so the voice can be
+       taken apart again. The reverb send is taken from `finalVoiceNode`, which
+       is the air shelf or the last key-EQ band rather than the panner -- and
+       `detachVoice` knew about neither, so every note played with AIR up or on
+       a kit key with its own EQ left its filters connected to the shared
+       convolver for the life of the page. Unreachable from upstream, so silent,
+       but still alive on the audio thread. */
+    const tailNodes: AudioNode[] = [];
     if (!advOwnsVoice && track.airGain !== undefined && Math.abs(track.airGain) > 0.01) {
       const airFilter = ctx.createBiquadFilter();
       airFilter.type = 'highshelf';
@@ -4345,6 +4428,7 @@ class ModularSynth {
       airFilter.gain.setValueAtTime(Math.max(-1, Math.min(1, track.airGain)) * 8, t);
       chainOut.connect(airFilter);
       finalVoiceNode = airFilter;
+      tailNodes.push(airFilter);
     }
 
     /* Node 7b: this key's own EQ, for a percussion track only.
@@ -4372,6 +4456,7 @@ class ModularSynth {
         f.gain.setValueAtTime(g, t);
         finalVoiceNode.connect(f);
         finalVoiceNode = f;
+        tailNodes.push(f);
       }
     }
 
@@ -4402,6 +4487,7 @@ class ModularSynth {
         gain: gainNode,
         lfo,
         panNode: panner,
+        tail: tailNodes,
         startTime: t,
         ampRel,
         vcfRel,
@@ -4614,6 +4700,7 @@ class ModularSynth {
       voice.gain.disconnect();
       voice.filter.disconnect();
       voice.panNode?.disconnect();
+      for (const n of voice.tail ?? []) n.disconnect();
     } catch {
       /* already detached */
     }
@@ -5212,17 +5299,34 @@ class ModularSynth {
             return;
           }
 
-          // Measure note duration across consecutive steps
+          /* Measure note duration across consecutive steps.
+          
+             In LOOP mode the run continues past the end of the pattern and on
+             into the next lap, because the step after the last one is step 0.
+             Stopping at `totalSteps` booked a duration that expired exactly at
+             the loop point while `heldIntoWrap` suppressed step 0's re-attack --
+             so a note written across the boundary was audible up to it and then
+             silent for the rest of its length, on every lap. Bounded by the
+             pattern so a row that is held all the way round cannot spin. */
           let durSteps = 1;
+          const maxRun = this.loopMode ? this.totalSteps : this.totalSteps - step;
           while (
-            (step + durSteps) < this.totalSteps &&
-            track.grid[step + durSteps]?.includes(noteIdx)
+            durSteps < maxRun &&
+            track.grid[(step + durSteps) % this.totalSteps]?.includes(noteIdx)
           ) {
             durSteps++;
           }
           const noteHoldSec = durSteps * stepDuration;
 
-          this.triggerTrackVoice(track.id, noteIdx, 0, time, noteHoldSec, vel, vel);
+          /* The accent goes through as itself, not folded away.
+          
+             `trackVelocityAt` already raises the velocity of an accented step,
+             which is what carries its *level*. But accent also opens the filter
+             and drives any `velocity ->` route in the mod matrix, and those read
+             `accentLevel`, not velocity. Passing 0 here left both of them dead
+             on every note the sequencer has ever played. */
+          const stepAccent = Number(track.accents?.[step] ?? 0);
+          this.triggerTrackVoice(track.id, noteIdx, stepAccent, time, noteHoldSec, vel, vel);
         }
       });
     });

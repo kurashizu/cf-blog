@@ -15,7 +15,8 @@
         "test:watch": "vitest",
         "test:coverage": "svelte-kit sync && vitest run --coverage",
         "test:mutation": "stryker run",
-        "crap": "node scripts/crap.mjs"
+        "crap": "node scripts/crap.mjs",
+        "i18n:check": "node scripts/i18n-check.mjs"
     },
     "dependencies": {
         "@cloudflare/speedtest": "^1.13.1",

@@ -65,6 +65,53 @@ describe('every knob is what the card says it is', () => {
 		expect(wrong).toEqual([]);
 	});
 
+	it('accepts a cable on every socket the card draws as a mod inlet', () => {
+		/* The sibling rule, and the one that was missing. These tests walked
+		   `m.params` only, so a declared *input port* of kind `mod` was never
+		   checked against the `mod` map at all -- which is how MAKE's WIDE came
+		   to be a socket the card drew, `rolesCompatible` accepted, the editor
+		   let you draw to, and the engine dropped on the floor. MAKE carries no
+		   WIDE knob either, so the resolver fell through to a fallback of 1 and
+		   the width could not be changed by any means. */
+		const missing: string[] = [];
+		for (const m of MODULE_SPECS) {
+			if (isPureNode(m.id) || NOT_AUDIO.has(m.id)) continue;
+			const { made } = build(m.id);
+			if (!made) continue;
+			for (const q of m.inputs) {
+				if (q.kind !== 'mod') continue;
+				/* PITCH is the documented exception, and the only one: it is read
+				   as a value through `cvIn` and deliberately *not* registered,
+				   because doing both put the same cable through twice and sent
+				   the note an octave sharp. Matched by port id -- the role is
+				   `hz` on most of them and `pitch` only on ENTRY's. */
+				if (q.id === 'pitch') continue;
+				if (!made.mod.has(q.id)) missing.push(`${m.id}.${q.id}`);
+			}
+		}
+		expect(missing).toEqual([]);
+	});
+
+	it('offers no driveable knob on a module that builds to nothing', () => {
+		/* ACT, WHEN and SEQ hold no audio node, so a cable can never land on one
+		   of their knobs. The drop-search picks its target as the first param
+		   that is not a choice, a field or `fixed` -- so ACT's GRP, alone in the
+		   logic chain in carrying no flag, was offered as the destination for
+		   any value cable dragged into empty space, and the cable it drew was
+		   inert. If a module builds to null, every knob on it is fixed. */
+		const wrong: string[] = [];
+		for (const m of MODULE_SPECS) {
+			if (isPureNode(m.id)) continue;
+			const { made } = build(m.id);
+			if (made) continue;
+			for (const q of m.params) {
+				if (q.choices || q.field || q.fixed) continue;
+				wrong.push(`${m.id}.${q.key} is driveable on a module with no audio node`);
+			}
+		}
+		expect(wrong).toEqual([]);
+	});
+
 	it('does not mark a knob fixed that the engine does bind', () => {
 		// The flag has to cost something, or it becomes a place to hide a bug.
 		const stale: string[] = [];
@@ -100,6 +147,59 @@ describe('every knob is what the card says it is', () => {
 			}
 		}
 		expect(dead).toEqual([]);
+	});
+
+	it('drives the same param the knob itself wrote', () => {
+		/* The one this suite could not previously ask. Presence in the `mod` map
+		   was the whole assertion, so replacing every `mod.set(key, target)` in
+		   the engine with a freshly made, unconnected param -- every knob in the
+		   synth wired to nothing -- left all 852 tests green.
+		
+		   A knob writes a value and registers a target, and those must be the
+		   same param. Checked by writing a distinctive value through the knob
+		   and finding a param that carries it, either registered directly or at
+		   the far end of the scaling node. A dangling param is created at 0 and
+		   never written, so it cannot match. */
+		const wrong: string[] = [];
+		for (const m of MODULE_SPECS) {
+			if (isPureNode(m.id) || NOT_AUDIO.has(m.id)) continue;
+			for (const q of m.params) {
+				if (q.choices || q.field || q.fixed) continue;
+				/* A value inside the knob's own range and away from its default,
+				   so the param cannot hold it by coincidence. */
+				const probe = q.min + (q.max - q.min) * 0.37;
+				if (probe === q.def) continue;
+				const { made } = build(m.id, { [q.key]: probe });
+				const target = made?.mod.get(q.key);
+				if (!target) continue;
+
+				const landed: FakeParam[] =
+					target instanceof FakeParam
+						? [target]
+						: (target as { outgoing: { to: unknown }[] }).outgoing
+								.map((e) => e.to)
+								.filter((x): x is FakeParam => x instanceof FakeParam);
+				if (!landed.length) continue;
+
+				/* Either the param holds the knob's number, or it holds it after
+				   the unit conversion the scaling node in front applies. */
+				const scale =
+					target instanceof FakeParam
+						? 1
+						: ((target as { gain?: FakeParam }).gain?.value ?? 1);
+				const ok = landed.some(
+					(pm) =>
+						Math.abs(pm.value - probe) < 1e-6 ||
+						Math.abs(pm.value - probe * scale) < 1e-6 ||
+						pm.events.some(
+							(ev) =>
+								Math.abs(ev[1] - probe) < 1e-6 || Math.abs(ev[1] - probe * scale) < 1e-6
+						)
+				);
+				if (!ok) wrong.push(`${m.id}.${q.key} registers a param the knob never wrote`);
+			}
+		}
+		expect(wrong).toEqual([]);
 	});
 
 	it('scales a percentage knob so turned and patched agree', () => {

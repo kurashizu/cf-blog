@@ -733,7 +733,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   land, and wiring it across would break the isolation on purpose.
 			   A choice the engine cannot honour is worse than a missing one. */
 			{ key: 'action', label: 'DO', min: 0, max: 1, step: 1, def: 0, choices: ['CUT', 'SOLO'] },
-			{ key: 'actGroup', label: 'GRP', min: 0, max: 4, step: 1, def: 0 },
+			/* ACT builds to no audio node, so there is nothing for a cable to
+			   reach. Without this flag `landingOn` offered ACT as the drop target
+			   for any value cable dragged into empty space, and the cable was
+			   drawn and carried nothing. */
+			{ key: 'actGroup', label: 'GRP', min: 0, max: 4, step: 1, def: 0, fixed: true },
 			{ key: 'actMs', label: 'TIME', min: 0, max: 500, step: 5, unit: 'ms', def: 6, fixed: true }
 		]
 	},
