@@ -192,6 +192,14 @@ export function dropNonFiniteNumbers<T extends Record<string, unknown>>(track: T
 			if (Number.isFinite(v)) out[k] = v;
 			continue;
 		}
+		/* A scalar `null` is dropped too, and this is not pedantry: JSON has no
+		   NaN literal, so a corrupted or hand-edited file spells one `null` --
+		   and `null` typed as a number arrives at an AudioParam as 0 or NaN
+		   depending on the arithmetic it passes through first. Checking only
+		   `typeof v === 'number'` let it straight past, which the import-path
+		   test caught. Arrays are handled below: there a null is a drawn hole
+		   and means something. */
+		if (v === null) continue;
 		if (Array.isArray(v) && v.some((x) => typeof x === 'number')) {
 			/* A hole in a lane is a legitimate `null` -- it means "nothing drawn
 			   here" -- so only the non-finite *numbers* go. */
