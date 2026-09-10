@@ -294,6 +294,55 @@ describe('the node contract', () => {
 		expect(clashes).toEqual([]);
 	});
 
+	it('puts a module on the shelf its ports decide', () => {
+		/* The rule written above MODULE_GROUPS, enforced rather than trusted.
+		
+		   The old rule was the reading order -- "what makes sound, what shapes
+		   it, what controls it" -- which is how the list is sorted and cannot
+		   assign: FILTER shapes a sound and is also modulated, so two shelves had
+		   a claim and the answer came down to whoever added it.
+		
+		   What a module *outputs* decides the family. Emitting audio means an
+		   audio shelf; emitting a value means a control shelf. Being CV-driven
+		   does not move anything, because nearly every audio module is
+		   CV-driven and so that criterion separates nothing. */
+		const AUDIO_SHELVES = new Set(['SOURCE', 'SHAPE', 'RESONATE', 'STEREO']);
+		const CONTROL_SHELVES = new Set(['MATH', 'LOGIC', 'CONVERT', 'MODULATE']);
+		const wrong: string[] = [];
+		for (const m of MODULE_SPECS) {
+			/* ENTRY is the one exception and it is a real one: it publishes values,
+			   but it is not a module that computes them -- it is the note itself
+			   arriving, the origin every patch starts from. Filing it with the
+			   arithmetic would put "the key you pressed" on the same shelf as ADD.
+			   It sits with the sources because that is what it is a source of. */
+			if (m.id === 'in') continue;
+			// No outlet at all: it observes or it terminates.
+			if (!m.outputs.length) {
+				if (m.group !== 'METER' && m.group !== 'UTILITY') wrong.push(`${m.id}: ${m.group}`);
+				continue;
+			}
+			const emitsAudio = m.outputs.some((o) => o.kind === 'audio');
+			const emitsValue = m.outputs.some((o) => o.kind === 'mod');
+			if (emitsAudio && !AUDIO_SHELVES.has(m.group)) wrong.push(`${m.id}: ${m.group}`);
+			if (!emitsAudio && emitsValue && !CONTROL_SHELVES.has(m.group))
+				wrong.push(`${m.id}: ${m.group}`);
+		}
+		expect(wrong).toEqual([]);
+	});
+
+	it('separates the control shelves by what they do to the value', () => {
+		/* The second step, needed because the first cannot see it: MATH, LOGIC
+		   and CONVERT are all `ctl -> ctl`, so ports alone would collapse three
+		   shelves into one of eleven entries.
+		
+		   LOGIC is the decidable one and the only one worth pinning: a module
+		   belongs there exactly when what it hands back is a truth. */
+		for (const m of MODULE_SPECS) {
+			const emitsTruth = m.outputs.some((o) => roleOf(o) === 'bool');
+			if (emitsTruth) expect(m.group, m.id).toBe('LOGIC');
+		}
+	});
+
 	it('turns a knob only where a number would not do', () => {
 		/* A dial answers "how much" by feel. That is the right control when the
 		   range is awkward or the response is not linear -- TUNING sweeps 400..480

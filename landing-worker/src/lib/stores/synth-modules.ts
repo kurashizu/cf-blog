@@ -960,12 +960,37 @@ export const FIXED_MODULE_IDS = new Set(['in', 'out']);
 /** The modules a player can actually add. */
 export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS.filter((m) => !FIXED_MODULE_IDS.has(m.id));
 
-/* Ordered the way a patch is read: what makes sound, what shapes it, what
-   rings, what controls it, then the stereo work, the arithmetic, the meters and
-   the plumbing. UTILITY had grown to twelve entries, which is not a category
-   any more.
-
-   No IO shelf: ENTRY and OUTPUT are in every patch already. */
+/* The shelves, and the rule for which one a module goes on.
+ *
+ * Ordered the way a patch is read: what makes sound, what shapes it, what
+ * rings, what controls it, then the stereo work, the arithmetic, the meters and
+ * the plumbing. No IO shelf -- ENTRY and OUTPUT are in every patch already.
+ *
+ * That reading order is how the list is *sorted*. It is not how a module is
+ * *assigned*, and conflating the two left the boundary undecidable: FILTER
+ * shapes a sound and is also a thing you modulate, so "what shapes it" and
+ * "what controls it" both had a claim, and the answer came down to whoever
+ * added it. The same question would have been re-argued for every module still
+ * to come back.
+ *
+ * Assignment goes by the ports, in two steps, because one step is not enough:
+ *
+ *   1. What the module *outputs* picks the family. A module that emits sound
+ *      belongs to the audio shelves; one that emits a value belongs to the
+ *      control shelves. This is the step that decides FILTER: it emits audio,
+ *      so it is SHAPE, and being CV-driven does not move it -- almost every
+ *      audio module is CV-driven, so that criterion separates nothing.
+ *      MODULATE is for what *emits* control, which is what ENV and LFO do.
+ *
+ *   2. Within the control family, what the node does to the value picks the
+ *      shelf, because the ports alone cannot: MATH, LOGIC and CONVERT are all
+ *      `ctl -> ctl` and collapsing them would make one shelf of eleven. MATH
+ *      is arithmetic on a quantity, LOGIC is anything whose output is a truth,
+ *      CONVERT changes what a value *is* rather than what it equals.
+ *
+ * A module with no inlets and an audio outlet is SOURCE; one with no outlet is
+ * METER or UTILITY. Between them these decide every module in the catalogue,
+ * which is the property the previous rule lacked. */
 export const MODULE_GROUPS: ModuleSpec['group'][] = [
 	'SOURCE',
 	'LOGIC',
