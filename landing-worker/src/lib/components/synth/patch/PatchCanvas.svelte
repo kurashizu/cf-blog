@@ -1280,10 +1280,16 @@
 
 		<!-- The palette, on the right like LIFE.LAB's library. -->
 		<!-- Two columns: thirty modules in one column ran past the height of the
-	     canvas beside it, so most of the palette was below the fold. -->
+	     canvas beside it, so most of the palette was below the fold.
+
+	     200px, not 168: at 168 each button gave its name 49px, and TO-PITCH
+	     wants 64, so the two converters were the only modules in the palette
+	     the user could not read the name of -- they rendered as TO-PIT… and
+	     TO-FRE…. The names are what the column is scanned by, so the column
+	     is sized to the longest one rather than the names cut to the column. -->
 		<div
 			data-tour="synth-palette"
-			class="shrink-0 flex flex-col gap-1 {paletteOpen ? 'w-[168px]' : 'w-6'} transition-all"
+			class="shrink-0 flex flex-col gap-1 {paletteOpen ? 'w-[200px]' : 'w-6'} transition-all"
 		>
 			<button
 				onclick={() => (paletteOpen = !paletteOpen)}
