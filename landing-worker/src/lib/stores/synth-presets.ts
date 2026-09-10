@@ -678,7 +678,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['hi', 'sum'],
 					['all', 'sum'],
 					['lvl', 'vca', { gain: 54 }],
-					['cab', 'space', { spaceSize: 22, spaceDecay: 34, spaceMix: 20 }]
+					['cab', 'space', { spaceSize: 22, spaceDecay: 66, spaceMix: 20 }]
 				],
 				[
 					'entry.pitch>pf:a',
@@ -716,8 +716,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mal', 'excite', { hardness: 26, exLength: 9, exTone: 2600 }],
 					['ex', 'sum'],
 					['bar', 'modes', { mode1: 1, mode2: 2.7, mode3: 5.4, modeQ: 44 }],
-					['trm', 'vca', { gain: 100, depth: 34 }],
-					['fan', 'lfo', { lfoWave: 0, lfoRate: 5.5, lfoAmt: 60 }],
+					['trm', 'vca', { gain: 100 }],
+					/* AMT carries what the VCA's DEPTH used to: 60% through a
+					   depth of 34 is the same 20% swing, now set in one place. */
+					['fan', 'lfo', { lfoWave: 0, lfoRate: 5.5, lfoAmt: 20 }],
 					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 100 }],
 					['mx', 'mix', { mixA: 100, mixB: 44 }]
 				],
@@ -747,9 +749,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			ampRelease: 0.18,
 			...patch(
 				[
-					['air', 'noise', { colour: 0, level: 100 }],
+					['air', 'noise', { colour: 0 }],
 					['ex', 'vca', { gain: 200 }],
-					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1, depth: 25 }],
+					['edge', 'filter', { type: 1, cutoff: 2200, q: 1.1, depth: 550 }],
 					['pipe', 'tube', { tubeDecay: 0.7, tubeDamp: 34, tubeOdd: 100 }],
 					['sp', 'split', {}],
 					['wid', 'delay', { dlTime: 7, dlFeedback: 0, dlTone: 9000, dlMix: 60 }],
@@ -1006,7 +1008,7 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['s2', 'string', { decayTime: 3.6, damping: 26, stiffness: 48 }],
 					['mx', 'mix', { mixA: 100, mixB: 64 }],
 					['bod', 'body', { bodySize: 35, bodyDepth: 55, bodyMix: 55 }],
-					['symp', 'space', { spaceSize: 26, spaceDecay: 44, spaceMix: 16 }]
+					['symp', 'space', { spaceSize: 26, spaceDecay: 56, spaceMix: 16 }]
 				],
 				['ham>ex', 'ex>s1', 's1>mx', 'ex>s2', 's2>mx:b', 'mx>bod', 'bod>symp', 'symp>output'],
 				13
@@ -1097,13 +1099,13 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   rather than one player, and SPACE is the room they are in. */
 			...patch(
 				[
-					['bw', 'bow', { bowPressure: 62, bowNoise: 30, bowBite: 42, bowLevel: 100 }],
+					['bw', 'bow', { bowPressure: 62, bowNoise: 30, bowBite: 42 }],
 					['ex', 'sum'],
 					['str', 'string', { decayTime: 1.4, damping: 40, stiffness: 2 }],
 					['bod', 'body', { bodySize: 55, bodyDepth: 50, bodyMix: 60 }],
 					['lfo', 'lfo', { lfoWave: 0, lfoRate: 0.4, lfoAmt: 22 }],
-					['pn', 'pan', { panPos: 0, panDepth: 100 }],
-					['rm', 'space', { spaceSize: 52, spaceDecay: 62, spaceMix: 26 }]
+					['pn', 'pan', { panPos: 0 }],
+					['rm', 'space', { spaceSize: 52, spaceDecay: 38, spaceMix: 26 }]
 				],
 				['bw>ex', 'ex>str', 'str>bod', 'bod>pn', 'lfo.cv>pn:cv', 'pn>rm', 'rm>output'],
 				47
@@ -1131,8 +1133,10 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   that makes the bore oscillate at all. */
 			...patch(
 				[
-					['air', 'noise', { colour: 1, level: 66 }],
-					['ex', 'sum'],
+					['air', 'noise', { colour: 1 }],
+					/* NOISE lost its LVL knob -- a level on a source is a VCA
+					   welded to it -- so the 66% it used to carry is a VCA. */
+					['ex', 'vca', { gain: 66 }],
 					['rd', 'reed', { reedStiff: 54, reedBias: 42 }],
 					['br', 'tube', { tubeDecay: 1.1, tubeDamp: 45, tubeOdd: 100 }],
 					['bel', 'body', { bodySize: 45, bodyDepth: 40, bodyMix: 40 }]
@@ -1163,9 +1167,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   an audible amount of a flute is air that never became a note. */
 			...patch(
 				[
-					['air', 'noise', { colour: 2, level: 100 }],
+					['air', 'noise', { colour: 2 }],
 					['ex', 'vca', { gain: 200 }],
-					['fl', 'filter', { type: 1, cutoff: 2600, q: 3, depth: 20 }],
+					['fl', 'filter', { type: 1, cutoff: 2600, q: 3, depth: 520 }],
 					['br', 'tube', { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0 }],
 					['mx', 'mix', { mixA: 100, mixB: 12 }],
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]
@@ -2034,7 +2038,11 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 			/* The plate's ring lives in SPACE, so its size has to carry the
 			   whole tail: a crash written for 1.6 s measured 0.48 with the size
 			   capped at 70. A convolver rings for the length of its impulse,
-			   which is spaceSize/100 * 3 seconds. */
+			   which is spaceSize/100 * 3 seconds.
+			
+			   DECAY now reads the way it is labelled -- higher is a longer tail
+			   -- so a cymbal written to ring wants more of it, which is the
+			   direction this already asked for. */
 			'sp.spaceSize': Math.round(Math.min(100, 20 + o.decay * 50)),
 			'sp.spaceDecay': Math.round(Math.min(95, 40 + o.decay * 34)),
 			'sp.spaceMix': Math.round(Math.min(85, 45 + o.decay * 20))

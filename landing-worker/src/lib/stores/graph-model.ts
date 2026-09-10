@@ -293,8 +293,20 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 /**
  * Would this cable close an audio loop? Depth-first from the destination: if it
  * can already reach the source, the new cable completes a cycle.
+ *
+ * Only audio cables count, and the caller says which those are. Walking every
+ * cable refused patches the engine builds happily: an envelope follower taps a
+ * signal and drives a filter's cutoff with it, so a mod cable already runs from
+ * the follower back towards the filter, and drawing the audio cable that feeds
+ * it was reported as a cycle. The engine sorts audio cables alone and connects
+ * mod cables afterwards precisely because those may loop.
  */
-export function wouldCycle(graph: RackGraph, from: string, to: string): boolean {
+export function wouldCycle(
+	graph: RackGraph,
+	from: string,
+	to: string,
+	isAudio: (cable: GraphCable) => boolean = () => true
+): boolean {
 	const seen = new Set<string>();
 	const stack = [to];
 	while (stack.length) {
@@ -302,7 +314,7 @@ export function wouldCycle(graph: RackGraph, from: string, to: string): boolean 
 		if (at === from) return true;
 		if (seen.has(at)) continue;
 		seen.add(at);
-		for (const c of graph.cables) if (c.from === at) stack.push(c.to);
+		for (const c of graph.cables) if (c.from === at && isAudio(c)) stack.push(c.to);
 	}
 	return false;
 }

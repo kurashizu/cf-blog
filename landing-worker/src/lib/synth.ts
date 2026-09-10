@@ -1,6 +1,6 @@
 import { laneAt, lanesOf, laneToVelocity, VELOCITY_LANE_ID, type NoteLane } from './stores/note-lanes';
-import { MOD_PORT_IDS, EXEC_PORT_IDS, MODULE_SPECS } from './stores/synth-modules';
-import { createResolver, execReach, execDelays, runs, PURE_NODES } from './stores/node-graph';
+import { EXEC_PORT_IDS, MODULE_SPECS, WAVE_SHAPES } from './stores/synth-modules';
+import { createResolver, execReach, execDelays, runs, isPureNode, PURE_NODES } from './stores/node-graph';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -1058,8 +1058,13 @@ class ModularSynth {
 
     /* Which nodes this note runs. Execution is Blueprint's white wire: it
        reaches the nodes that *do* something -- WHEN asks, ACT mutes, OUT hands
-       the patch to the master bus -- and a patch that draws no exec cable at all
-       runs everything, so the simplest patch stays the simplest. */
+       the patch to the master bus.
+    
+       There is no "unless the patch draws no exec cable" exemption; the seed
+       patch draws the cable instead, so the simplest patch is still one you can
+       play without building it. This comment used to claim the opposite of what
+       execReach does, which is how the exemption stayed alive in the branch
+       below long after it was deleted from the resolver. */
     const reach = execReach(graph, EXEC_PORT_IDS);
     const outputRuns = (id: string) => runs(reach, id);
     /* When each node runs, in seconds after the note. Zero for everything the
@@ -1098,9 +1103,23 @@ class ModularSynth {
         out2?: AudioNode;
         mod: Map<string, AudioNode | AudioParam>;
         isOutput?: boolean;
-        laneOuts?: Map<string, AudioNode>;
+        outs?: Map<string, AudioNode>;
       }
     >();
+    /**
+     * Which node a cable leaves by.
+     *
+     * One lookup for both cable loops, by port name, so a named outlet works
+     * the same wherever it is wired. `out2` keeps serving the two-outlet
+     * modules that name their second port `r`; anything with a name of its own
+     * declares it in `outs`.
+     */
+    const outletOf = (
+      src: { out: AudioNode; out2?: AudioNode; outs?: Map<string, AudioNode> },
+      port: string
+    ): AudioNode =>
+      src.outs?.get(port) ?? (port === 'r' && src.out2 ? src.out2 : src.out);
+
     const sources: AudioScheduledSourceNode[] = [];
     /* When each source starts, keyed by the node that made it.
     
@@ -1113,11 +1132,14 @@ class ModularSynth {
     /* Modules whose output is a value, not a sound. A CONST left unwired must
        not be summed into the mix -- it is DC, and DC is a click and then a
        silent offset eating headroom. */
-    const MOD_ONLY_TYPES = new Set([
-      'env', 'lfo',
-      'const', 'add', 'mul', 'remap', 'clamp', 'lerp', 'curve',
-      'tofreq', 'topitch'
-    ]);
+    /* Modules whose output is a value, not a sound. A CONST left unwired must
+       not be summed into the mix -- it is DC, and DC is a click and then a
+       silent offset eating headroom.
+    
+       Derived from the pure-node table rather than typed out beside it: the
+       hand-written copy happened to be correct, and stayed correct only for as
+       long as whoever added a pure node remembered this list existed. */
+    const isModOnly = (type: string) => isPureNode(type) || type === 'env' || type === 'lfo';
 
     for (const node of order) {
       /* A knob reads its cable first, and its own setting when there is none.
@@ -1131,7 +1153,7 @@ class ModularSynth {
       const p = (key: string, def: number) => cvIn(node.id, key, params[`${node.id}.${key}`] ?? def);
       const runAt = t + (delays.get(node.id) ?? 0);
       const madeBefore = sources.length;
-      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, runAt, heldSec, sources, node.id, laneValues, cvIn, note, heldSec);
+      const made = this.buildGraphNode(ctx, node.type, p, baseFreq, runAt, heldSec, sources, node.id, laneValues, cvIn, { ...note, tuning: this.masterTuningFreq }, heldSec);
       if (!made) continue;
       // Whatever this node just created starts when this node runs.
       for (let i = madeBefore; i < sources.length; i++) startAt.set(sources[i], runAt);
@@ -1158,8 +1180,7 @@ class ModularSynth {
             const src = built.get(c.from);
             if (!src) continue;
             // ...and one with two outlets sends its second from 'r'.
-            const from = c.fromPort === 'r' && src.out2 ? src.out2 : src.out;
-            from.connect(dest);
+            outletOf(src, c.fromPort).connect(dest);
           }
         }
       }
@@ -1170,13 +1191,20 @@ class ModularSynth {
       const src = built.get(c.from);
       const dst = built.get(c.to);
       const param = dst?.mod.get(c.toPort);
+      /* No registered target for this inlet.
+      
+         A cable onto a *knob* is resolved as a value instead, by the resolver,
+         before the node was built -- which is right when the source is a pure
+         node, and wrong when it is an ENV or an LFO: those have no value to
+         pull, so the knob read 0. A filter told to follow an envelope sat at
+         0 Hz and the note was silent, with the cable drawn on the canvas.
+      
+         The editor refuses that cable now (see rolesCompatible), so reaching
+         here means a hand-edited patch file. Leaving the knob at its own
+         setting is the honest reading: the module keeps the value the card
+         shows rather than collapsing to zero. */
       if (!src || !param) continue;
-      /* A lane outlet is named `lane:<id>`, so ENTRY can publish as many as the
-         track carries without the port list being fixed at build time. */
-      const laneSrc = c.fromPort.startsWith('lane:')
-        ? src.laneOuts?.get(c.fromPort.slice(5))
-        : undefined;
-      const from = laneSrc ?? (c.fromPort === 'r' && src.out2 ? src.out2 : src.out);
+      const from = outletOf(src, c.fromPort);
       /* An AudioParam and an AudioNode are both legitimate destinations, and
          TypeScript needs telling which overload applies. A param destination is
          what makes a signal into PITCH mean FM rather than needing an inlet of
@@ -1208,7 +1236,12 @@ class ModularSynth {
         if (modCables.some((c) => c.from === id)) continue;
         // A modulator is not a voice: ENV and LFO exist to drive a param, so an
         // unpatched one is a mistake to leave silent rather than a tone to mix in.
-        if (MOD_ONLY_TYPES.has(typeById.get(id) ?? '')) continue;
+        if (isModOnly(typeById.get(id) ?? '')) continue;
+        /* Execution gates this branch too. Gating only the OUT branch left the
+           removed "runs everything" exemption alive under a new condition --
+           no OUT module rather than no exec cables -- and a terminal node in
+           such a patch sounded whatever the white wire said. */
+        if (!outputRuns(id)) continue;
         made.out.connect(sink);
         any = true;
       }
@@ -1249,8 +1282,9 @@ class ModularSynth {
     /* What a value inlet reads: the pure node wired into it, or the fallback
        when nothing is. Resolved by the caller, which knows the graph. */
     cvIn: (nodeId: string, port: string, fallback: number) => number = (_n, _p, f) => f,
-    /* The event's own data, for ENTRY's output pins. */
-    note: { velocity: number; noteIndex: number } = { velocity: 1, noteIndex: 48 },
+    /* The event's own data, for ENTRY's output pins and for the converters,
+       which read the master tuning off it. */
+    note: { velocity: number; noteIndex: number; tuning?: number } = { velocity: 1, noteIndex: 48 },
     gateSec = 0
   ): {
     in: AudioNode | null;
@@ -1262,11 +1296,56 @@ class ModularSynth {
     mod: Map<string, AudioNode | AudioParam>;
     /** The patch's output; when present, only what reaches it is heard. */
     isOutput?: boolean;
-    /** ENTRY only: a CV source per lane, keyed by lane id. */
-    laneOuts?: Map<string, AudioNode>;
+    /**
+     * Outlets that carry a signal under their own name.
+     *
+     * The destination side of a cable has always been looked up by port name,
+     * in `mod`. The source side was not: it took `out`, or `out2` for the one
+     * port literally called `r`, and everything else fell back to `out`. So a
+     * module publishing a second *named* outlet had nowhere to put it, and
+     * ENTRY -- whose four event pins are its whole reason to exist -- filed
+     * them in `mod`, which is only ever read on the destination. Its VEL pin
+     * connected the silent gain instead, and a hard hit and a soft one came out
+     * at the same level with the cable drawn on the canvas.
+     *
+     * Both ends now resolve a port by name through the same map. `lane:<id>`
+     * lives here too, so ENTRY can publish as many outlets as the track carries
+     * without the port list being fixed at build time.
+     */
+    outs?: Map<string, AudioNode>;
   } | null {
     const mod = new Map<string, AudioNode | AudioParam>();
-    const WAVES: OscillatorType[] = ['sine', 'triangle', 'sawtooth', 'square'];
+    /**
+     * A knob, set from its value and registered as a modulation target.
+     *
+     * `p('cutoff', 4000)` reads the knob; `knob(f.frequency, 'cutoff', 4000)`
+     * reads it *and* records which AudioParam it lives on, so a cable onto that
+     * knob has somewhere to land. Six inlets were registered by hand out of
+     * ninety-nine params, and the other ninety-three were resolved as values --
+     * fine for a CONST, and zero for an ENV or an LFO, which have no value to
+     * pull. A filter told to follow an envelope sat at 0 Hz and played silence
+     * with the cable drawn on the canvas.
+     *
+     * Binding it where the value is read means a knob cannot be modulatable in
+     * the catalogue and inert in the engine: they are the same line.
+     */
+    const knob = (target: AudioParam, key: string, def: number): number => {
+      const v = p(key, def);
+      target.value = v;
+      mod.set(key, target);
+      return v;
+    };
+    /** The same, for a knob stored 0..100 and used as a fraction. */
+    const knobPct = (target: AudioParam, key: string, def: number): number => {
+      const v = p(key, def) / 100;
+      target.value = v;
+      mod.set(key, target);
+      return v;
+    };
+    /* Indexed straight off the catalogue's list, so the button that says SAW
+       and the wave that plays cannot disagree -- they did, and three of the
+       four labels named the wrong shape. */
+    const WAVES: OscillatorType[] = WAVE_SHAPES.map((w) => w.type as OscillatorType);
 
     switch (type) {
       case 'osc': {
@@ -1301,7 +1380,7 @@ class ModularSynth {
         nz.buffer = this.noiseBuffer;
         nz.loop = true;
         const g = ctx.createGain();
-        g.gain.value = p('level', 60) / 100;
+        g.gain.value = 1;
         /* COL picks the noise's slope. The card has drawn this knob since the
            module was added and the engine never read it, so all three settings
            sounded identical -- white, whatever the label said.
@@ -1334,30 +1413,42 @@ class ModularSynth {
         const TYPES: BiquadFilterType[] = ['lowpass', 'bandpass', 'highpass', 'notch'];
         const f = ctx.createBiquadFilter();
         f.type = TYPES[Math.round(p('type', 0))] ?? 'lowpass';
-        f.frequency.value = p('cutoff', 4000);
-        f.Q.value = p('q', 1);
+        knob(f.frequency, 'cutoff', 4000);
+        knob(f.Q, 'q', 1);
+        /* How far the FM inlet swings the cutoff, in hertz.
+        
+           It used to be `cutoff * depth/100`, so the FREQ knob silently scaled
+           it: moving the cutoff changed how far the modulation reached, and two
+           knobs shared one meaning with no way to see it on the card. DEPTH is
+           now the swing itself, which is what its Hz unit says. Scaling a
+           control signal by a value is what MUL is for. */
         const depth = ctx.createGain();
-        depth.gain.value = p('cutoff', 4000) * (p('depth', 50) / 100);
+        knob(depth.gain, 'depth', 2000);
         depth.connect(f.frequency);
         mod.set('fm', depth);
         return { in: f, out: f, mod };
       }
 
       case 'vca': {
-        const g = ctx.createGain();
-        g.gain.value = p('gain', 100) / 100;
-        /* The modulation inlet is `depth`'s INPUT, not its gain.
+        /* An amplifier: one gain, and a CV that adds to it.
         
-           Registering depth.gain made a cable land on the amount knob rather
-           than on the signal path: depth has nothing feeding it, so its output
-           was always zero and the destination never moved however hard it was
-           driven. Every mod cable in the patch bay was silently inert. The
-           inlet is a gain node whose output is scaled by DEPTH and summed into
-           the target param, which is what a CV input is. */
-        const depth = ctx.createGain();
-        depth.gain.value = p('depth', 100) / 100;
-        depth.connect(g.gain);
-        mod.set('cv', depth);
+           DEPTH used to sit on the CV leg, scaling the control signal before it
+           reached the gain -- a second VCA welded onto the first, and the thing
+           OSC's LVL knob was removed for. It also made two different silences
+           with two different causes (GAIN 0 with DEPTH 100, or the other way
+           round), and the sum was unbounded despite a knob reading `%`.
+        
+           A CV that needs attenuating is attenuated at its source: LFO has AMT,
+           ENV has its own shape, and a value can go through MUL. */
+        const g = ctx.createGain();
+        knobPct(g.gain, 'gain', 100);
+        /* The inlet is a node whose output sums into the gain param, not the
+           param itself: registering `g.gain` would make a cable land on the
+           knob, which has nothing feeding it, so the destination never moved. */
+        const cv = ctx.createGain();
+        cv.gain.value = 1;
+        cv.connect(g.gain);
+        mod.set('cv', cv);
         return { in: g, out: g, mod };
       }
 
@@ -1385,11 +1476,15 @@ class ModularSynth {
       case 'lfo': {
         const osc = ctx.createOscillator();
         osc.type = WAVES[Math.round(p('lfoWave', 0))] ?? 'sine';
-        osc.frequency.value = p('lfoRate', 5);
+        knob(osc.frequency, 'lfoRate', 5);
         const g = ctx.createGain();
-        g.gain.value = p('lfoAmt', 50) / 100;
+        knobPct(g.gain, 'lfoAmt', 50);
         osc.connect(g);
         sources.push(osc);
+        /* The FM inlet's depth is the rate itself -- an octave of sweep per
+           unit of CV -- not a knob of its own, so it is set rather than bound:
+           binding it would register `lfoRate` a second time and overwrite the
+           oscillator's own frequency as the knob's target. */
         const fm = ctx.createGain();
         fm.gain.value = p('lfoRate', 5);
         fm.connect(osc.frequency);
@@ -1406,28 +1501,33 @@ class ModularSynth {
            raw sum happened to be. */
         const out = ctx.createGain();
         const a = ctx.createGain();
-        a.gain.value = p('mixA', 100) / 100;
+        knobPct(a.gain, 'mixA', 100);
         a.connect(out);
         const b = ctx.createGain();
-        b.gain.value = p('mixB', 100) / 100;
+        knobPct(b.gain, 'mixB', 100);
         b.connect(out);
         return { in: a, in2: b, out, mod };
       }
 
       case 'eq': {
+        /* Three bands, and all three corners move. LOW and HIGH were literals
+           -- 200 and 5000 -- so a card presenting a three-band EQ had two bands
+           you could only make louder, never place: boosting LOW on a 60 Hz kick
+           lifted everything under 200 Hz equally and muddied it, with no way to
+           reach down to where the weight actually is. */
         const low = ctx.createBiquadFilter();
         low.type = 'lowshelf';
-        low.frequency.value = 200;
-        low.gain.value = p('lowGain', 0);
+        knob(low.frequency, 'lowFreq', 200);
+        knob(low.gain, 'lowGain', 0);
         const mid = ctx.createBiquadFilter();
         mid.type = 'peaking';
-        mid.frequency.value = p('midFreq', 1200);
-        mid.Q.value = 1;
-        mid.gain.value = p('midGain', 0);
+        knob(mid.frequency, 'midFreq', 1200);
+        knob(mid.Q, 'midQ', 1);
+        knob(mid.gain, 'midGain', 0);
         const high = ctx.createBiquadFilter();
         high.type = 'highshelf';
-        high.frequency.value = 5000;
-        high.gain.value = p('highGain', 0);
+        knob(high.frequency, 'highFreq', 5000);
+        knob(high.gain, 'highGain', 0);
         low.connect(mid);
         mid.connect(high);
         return { in: low, out: high, mod };
@@ -1451,7 +1551,7 @@ class ModularSynth {
 
         const tone = ctx.createBiquadFilter();
         tone.type = 'lowpass';
-        tone.frequency.value = p('exTone', 3000);
+        knob(tone.frequency, 'exTone', 3000);
         // A harder strike is a brighter, tighter contact.
         tone.Q.value = 0.7 + (p('hardness', 50) / 100) * 3;
 
@@ -1479,7 +1579,7 @@ class ModularSynth {
         osc.type = WAVES[Math.round(p('subWave', 0))] ?? 'sine';
         osc.frequency.value = cvIn(probeKey, 'pitch', 110) / Math.pow(2, Math.max(1, Math.round(p('subOct', 1))));
         const g = ctx.createGain();
-        g.gain.value = p('subLevel', 70) / 100;
+        g.gain.value = 1;
         osc.connect(g);
         sources.push(osc);
         return { in: null, out: g, mod };
@@ -1493,8 +1593,10 @@ class ModularSynth {
         const width = Math.min(0.95, Math.max(0.05, p('pw', 50) / 100));
         const a = ctx.createOscillator();
         a.type = 'sawtooth';
+        /* No RATIO. Multiplying the pitch is what MUL does, and the knob was
+           the one OSC lost for the same reason: put a MUL on the cable. */
         const pulseRoot = cvIn(probeKey, 'pitch', 220);
-        a.frequency.value = pulseRoot * p('pulseRatio', 1);
+        a.frequency.value = pulseRoot;
         const b = ctx.createOscillator();
         b.type = 'sawtooth';
         b.frequency.value = a.frequency.value;
@@ -1505,7 +1607,7 @@ class ModularSynth {
         const inv = ctx.createGain();
         inv.gain.value = -1;
         const sum = ctx.createGain();
-        sum.gain.value = p('pulseLevel', 80) / 100;
+        sum.gain.value = 1;
         a.connect(sum);
         b.connect(dl);
         dl.connect(inv);
@@ -1532,7 +1634,7 @@ class ModularSynth {
         const out = ctx.createGain();
         const dark = ctx.createBiquadFilter();
         dark.type = 'lowpass';
-        dark.frequency.value = p('blendTone', 800);
+        knob(dark.frequency, 'blendTone', 800);
         const ga = ctx.createGain();
         const gb = ctx.createGain();
         ga.gain.value = 1 - x;
@@ -1573,9 +1675,9 @@ class ModularSynth {
         fb.gain.value = Math.min(0.85, Math.max(0, p('dlFeedback', 35) / 100));
         const damp = ctx.createBiquadFilter();
         damp.type = 'lowpass';
-        damp.frequency.value = p('dlTone', 6000);
+        knob(damp.frequency, 'dlTone', 6000);
         const wet = ctx.createGain();
-        wet.gain.value = p('dlMix', 30) / 100;
+        knobPct(wet.gain, 'dlMix', 30);
         const dry = ctx.createGain();
         dry.gain.value = 1 - wet.gain.value;
         input.connect(dry);
@@ -1597,7 +1699,13 @@ class ModularSynth {
         const input = ctx.createGain();
         const out = ctx.createGain();
         const seconds = Math.min(4, Math.max(0.05, p('spaceSize', 40) / 100 * 3));
-        const decay = Math.max(0.1, p('spaceDecay', 60) / 100 * 3);
+        /* DECAY runs the way its label reads: turn it up and the tail lasts
+           longer. It is the exponent of the impulse envelope, so a *bigger*
+           number decays faster -- the knob was wired straight to it and ran
+           backwards, and the only thing setting the actual tail length was
+           SIZE. Invert it, and floor the exponent so the top of the knob is a
+           slow room rather than an undefined one. */
+        const decay = Math.max(0.1, (1 - p('spaceDecay', 60) / 100) * 3);
         const rate = ctx.sampleRate;
         const len = Math.max(1, Math.floor(seconds * rate));
         const buf = ctx.createBuffer(2, len, rate);
@@ -1611,7 +1719,7 @@ class ModularSynth {
         const cv = ctx.createConvolver();
         cv.buffer = buf;
         const wet = ctx.createGain();
-        wet.gain.value = p('spaceMix', 30) / 100;
+        knobPct(wet.gain, 'spaceMix', 30);
         const dry = ctx.createGain();
         dry.gain.value = 1 - wet.gain.value;
         input.connect(dry);
@@ -1677,13 +1785,14 @@ class ModularSynth {
         tone.type = 'lowpass';
         tone.frequency.value = 400 + (p('bowPressure', 50) / 100) * 7000;
         const level = ctx.createGain();
-        level.gain.value = p('bowLevel', 70) / 100;
         out.connect(tone);
         tone.connect(level);
-        // The bow speaks rather than starting instantly: rosin has to catch.
+        /* The bow speaks rather than starting instantly: rosin has to catch.
+           BITE is that catch time -- 5 to 120 ms -- and read as a percentage
+           because that is the scale its knob is on. */
         const att = Math.max(0.005, (p('bowBite', 40) / 100) * 0.12);
         level.gain.setValueAtTime(0, t);
-        level.gain.linearRampToValueAtTime(p('bowLevel', 70) / 100, t + att);
+        level.gain.linearRampToValueAtTime(1, t + att);
         sources.push(drag, scrape);
         return { in: null, out: level, mod };
       }
@@ -1720,10 +1829,13 @@ class ModularSynth {
            string is not. */
         const pn = ctx.createStereoPanner();
         pn.pan.value = Math.max(-1, Math.min(1, p('panPos', 0) / 100));
-        const depth = ctx.createGain();
-        depth.gain.value = p('panDepth', 100) / 100;
-        depth.connect(pn.pan);
-        mod.set('cv', depth);
+        /* One knob, like VCA: DPTH was a gain stage on the control leg, which
+           is a second module hiding inside this one. A CV is attenuated where
+           it is made. */
+        const cv = ctx.createGain();
+        cv.gain.value = 1;
+        cv.connect(pn.pan);
+        mod.set('cv', cv);
         return { in: pn, out: pn, mod };
       }
 
@@ -1766,12 +1878,40 @@ class ModularSynth {
         lm.connect(mid); rm.connect(mid);
         ls.connect(side); rs.connect(side);
 
-        const amp = ctx.createAnalyser();
-        amp.fftSize = 256;
-        input.connect(amp);
-        if (probeKey) this.graphProbes.set(probeKey, amp);
+        /* The AMP outlet: how loud what arrived is, as a control signal.
+        
+           An AnalyserNode was the wrong instrument -- nothing reads one back as
+           CV, so the socket emitted nothing at all, and because it was declared
+           on port id `out` it fell through to `mid` and connected raw audio
+           into whatever knob it reached. A cable to a VCA's CV gave ring
+           modulation at the signal's own frequency instead of an envelope.
+        
+           A rectifier and a lowpass is what an envelope follower is: square the
+           signal against itself, then smooth. Both ends are real audio nodes,
+           so the value moves with the sound the way ENV's does. */
+        const rect = ctx.createWaveShaper();
+        const curve = new Float32Array(257);
+        for (let i = 0; i < curve.length; i++) {
+          const x = (i / (curve.length - 1)) * 2 - 1;
+          curve[i] = Math.abs(x);
+        }
+        rect.curve = curve;
+        const smooth = ctx.createBiquadFilter();
+        smooth.type = 'lowpass';
+        smooth.frequency.value = 20;
+        input.connect(rect);
+        rect.connect(smooth);
 
-        return { in: input, out: mid, out2: side, mod };
+        /* Named outlets, so each of the three sockets carries what its label
+           says. `mid` and `side` used to ride on `out`/`out2`, which meant the
+           port literally named `side` resolved to the mid gain. */
+        const outs = new Map<string, AudioNode>([
+          ['mid', mid],
+          ['side', side],
+          ['out', smooth]
+        ]);
+
+        return { in: input, out: mid, out2: side, outs, mod };
       }
 
       case 'make': {
@@ -1830,9 +1970,15 @@ class ModularSynth {
       case 'clamp':
       case 'lerp':
       case 'curve': {
+        /* The note goes with it. TO-FREQ and TO-PITCH read the master tuning
+           off the event, so omitting it silently fell back to A=440 -- the same
+           converter answered 432 through the resolver and 440 here, and a
+           filter told to track the note sat a third of a semitone sharp of the
+           oscillator it was tracking. */
         const v = PURE_NODES[type]?.(
           { get: (port, fallback) => cvIn(probeKey, port, fallback) },
-          p
+          p,
+          { pitch: 0, velocity: note.velocity, noteIndex: note.noteIndex, gate: heldSec, lanes: laneValues, tuning: note.tuning }
         );
         const src = ctx.createConstantSource();
         src.offset.value = Number.isFinite(v ?? NaN) ? (v as number) : 0;
@@ -1860,12 +2006,12 @@ class ModularSynth {
            Constant per note rather than swept: a lane is sampled when the note
            starts. A continuous lane still moves between notes, because the next
            note reads it again. */
-        const laneOuts = new Map<string, AudioNode>();
+        const outs = new Map<string, AudioNode>();
         for (const [laneId, v] of Object.entries(laneValues)) {
           const src = ctx.createConstantSource();
           src.offset.value = v;
           sources.push(src);
-          laneOuts.set(laneId, src);
+          outs.set(`lane:${laneId}`, src);
         }
 
         /* What the event carries, as pins.
@@ -1887,12 +2033,22 @@ class ModularSynth {
           sources.push(src);
           return src;
         };
-        mod.set('pitch', pin(baseFreq));
-        mod.set('vel', pin(note.velocity));
-        mod.set('note', pin(note.noteIndex));
-        mod.set('gate', pin(gateSec));
+        /* Published as outlets, not in `mod`: `mod` is the *destination* side of
+           a cable -- what a module offers as a modulation target -- and these
+           are sources. Filed there they were never looked up, and every cable
+           from VEL, GATE, NOTE or PITCH silently carried the zero out of
+           `silent` instead.
+        
+           PITCH is in semitones from the tuning reference, matching what the
+           resolver publishes for the same socket. It used to be `baseFreq`
+           here and semitones there: one outlet, two different quantities,
+           depending on whether it reached a knob or an audio param. */
+        outs.set('pitch', pin(12 * Math.log2(Math.max(1e-6, baseFreq) / this.masterTuningFreq)));
+        outs.set('vel', pin(note.velocity));
+        outs.set('note', pin(note.noteIndex));
+        outs.set('gate', pin(gateSec));
 
-        return { in: null, out: silent, mod, laneOuts };
+        return { in: null, out: silent, mod, outs };
       }
 
       case 'split': {
@@ -1999,7 +2155,7 @@ class ModularSynth {
         const g = ctx.createGain();
         g.gain.value = 0;
         const depth = ctx.createGain();
-        depth.gain.value = p('ringDepth', 100) / 100;
+        knobPct(depth.gain, 'ringDepth', 100);
         depth.connect(g.gain);
         return { in: g, in2: depth, out: g, mod };
       }
@@ -2109,7 +2265,14 @@ class ModularSynth {
         const damping = pct(isTube ? p.tubeDamp : p.damping, isTube ? 40 : 30);
         const stiff = isTube ? 0 : pct(p.stiffness, 10);
         const mix = pct(isTube ? p.tubeMix : p.strBlend, 100);
-        const oddOnly = isTube && pct(p.tubeOdd, 100) > 0.5;
+        /* A switch, not a percentage: it chose between two outcomes and was
+           drawn as a dial with 101 positions.
+        
+           Racks 1-7 declare it 0..100 and the shipped presets write 100, while
+           ADV declares it as the two-position selector it always was. Either
+           scale reads the same here: anything past half means odd partials
+           only, which 1 and 100 both are and 0 is not. */
+        const oddOnly = isTube && (p.tubeOdd ?? 1) >= 0.5;
 
         const input = ctx.createGain();
         const output = ctx.createGain();
@@ -2121,11 +2284,14 @@ class ModularSynth {
         const wet = ctx.createGain();
         // Partials add, so scale by the count to keep the voice in range.
         /* 0.3 was headroom for summing many partials, but the partials already
-           scale by 1/n and STRING and TUBE have no mix knob in the palette --
-           strBlend and tubeMix are not in the spec, so mix is always 1 and this
-           was a fixed 10.5 dB cut nobody could undo. Measured through PAN
-           FLUTE: 0.316 into the tube, 0.058 out, which is most of why the
-           breath patches sat 19 dB under the struck ones. */
+           scale by 1/n, and this was a fixed 10.5 dB cut nobody could undo.
+           Measured through PAN FLUTE: 0.316 into the tube, 0.058 out, which is
+           most of why the breath patches sat 19 dB under the struck ones.
+        
+           MIX is a real knob now. It was read here all along and declared
+           nowhere, so in ADV it was always undefined, always 1, and the dry
+           gain was always 0 -- which made the AUDIO IN socket decorative: a
+           patch heard the same partials whether a strike was wired in or not. */
         wet.gain.value = mix * 0.85;
         wet.connect(output);
 

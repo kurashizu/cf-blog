@@ -94,7 +94,15 @@ export const PURE_NODES: Record<string, PureFn> = {
 		const outLo = p('outLo', 0);
 		return outLo + Math.max(0, Math.min(1, k)) * (p('outHi', 100) - outLo);
 	},
-	clamp: (i, p) => Math.max(p('clampLo', 0), Math.min(p('clampHi', 1), i.get('a', 0))),
+	/* Bounds in either order. Written the obvious way, MIN 100 with MAX 0 pins
+	   the output at 100 for every input -- the node silently becomes a constant
+	   and the card still looks like a working clamp. Sorting them means the two
+	   knobs name a range rather than an order. */
+	clamp: (i, p) => {
+		const lo = p('clampLo', 0);
+		const hi = p('clampHi', 1);
+		return Math.min(Math.max(i.get('a', 0), Math.min(lo, hi)), Math.max(lo, hi));
+	},
 	lerp: (i, p) => {
 		const a = i.get('a', 0);
 		const b = i.get('b', 0);
@@ -186,6 +194,20 @@ export function createResolver(
 	   closes a cycle, which the editor will not draw but a hand-edited patch
 	   file can contain. */
 	const onPath = new Set<string>();
+	/* Has the pull currently in progress touched a cycle?
+	
+	   Not memoising the node that closes the loop is not enough on its own: its
+	   *ancestors* computed real-looking numbers out of that placeholder zero,
+	   and memoising those hands the same poison to every later reader. Whichever
+	   end of the loop was queried first got one answer and the other end got
+	   another, so a patch played differently depending on the order its nodes
+	   happened to sit in the file -- which is exactly the order-dependence the
+	   path check replaced a depth counter to be rid of.
+	
+	   The counter rises when a cycle is found and falls when the pull that found
+	   it unwinds, so a value is written down only if nothing under it was
+	   guesswork. */
+	let cycleHits = 0;
 
 	function valueOf(nodeId: string): number {
 		const hit = memo.get(nodeId);
@@ -199,8 +221,12 @@ export function createResolver(
 		/* Part of a cycle. Zero, and deliberately not memoised: this node's real
 		   value is undefined rather than zero, and writing the zero down would
 		   hand it to every later reader as though it were settled. */
-		if (onPath.has(nodeId)) return 0;
+		if (onPath.has(nodeId)) {
+			cycleHits++;
+			return 0;
+		}
 		onPath.add(nodeId);
+		const before = cycleHits;
 		const p = param(nodeId);
 		const inputs: ResolvedInputs = {
 			get: (port, fallback) => read(nodeId, port, fallback)
@@ -208,7 +234,8 @@ export function createResolver(
 		const v = fn(inputs, p, note);
 		onPath.delete(nodeId);
 		const out = Number.isFinite(v) ? v : 0;
-		memo.set(nodeId, out);
+		// Only settled if no cycle was met anywhere beneath this pull.
+		if (cycleHits === before) memo.set(nodeId, out);
 		return out;
 	}
 
@@ -223,12 +250,22 @@ export function createResolver(
 	 * patch file.
 	 */
 	function read(nodeId: string, port: string, fallback: number): number {
+		const own = params[`${nodeId}.${port}`] ?? fallback;
 		const c = feeds.get(`${nodeId}.${port}`);
 		if (c) {
 			if (entryIds.has(c.from)) return entryValue(c.fromPort, fallback);
+			/* A cable from something with no value to pull -- an ENV, an LFO, a
+			   filter's output -- is a *signal*, and the engine connects it to the
+			   knob's AudioParam so it adds to whatever the knob is set to. The
+			   knob keeps its own value as the base.
+			
+			   Returning 0 here is what made "ENV into the cutoff" silent: the
+			   filter opened at 0 Hz and the envelope added its 0..1 on top, so a
+			   patch anyone would try first played nothing. */
+			if (!isPureNode(nodeById.get(c.from)?.type ?? '')) return own;
 			return valueOf(c.from);
 		}
-		return params[`${nodeId}.${port}`] ?? fallback;
+		return own;
 	}
 
 	return {

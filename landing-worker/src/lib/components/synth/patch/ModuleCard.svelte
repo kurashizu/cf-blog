@@ -13,7 +13,7 @@
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
-	import { CONST_KINDS } from '../../../stores/synth-modules';
+	import { CONST_KINDS, WAVE_SHAPES } from '../../../stores/synth-modules';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
 	import type { ModuleSpec } from '../../../stores/synth-modules';
 	import ProbeDisplay from './ProbeDisplay.svelte';
@@ -79,14 +79,19 @@
 	/* The LFO's shape, drawn over one cycle. A picture of the wave says which
 	   one is selected faster than the word does. */
 	function wavePath(kind: number): string {
+		/* Drawn by the shape's *name*, not by its index. Switching on the number
+		   made this a third hand-written copy of the wave order, and it was the
+		   copy nobody corrected: the card drew a ramp for TRI and a square for
+		   SAW while the engine played the other way round. */
+		const shape = WAVE_SHAPES[Math.round(kind)]?.type ?? 'sine';
 		const pts: string[] = [];
 		for (let i = 0; i <= 40; i++) {
 			const x = i / 40;
 			let y: number;
-			switch (kind) {
-				case 1: y = 2 * x - 1; break;
-				case 2: y = x < 0.5 ? 1 : -1; break;
-				case 3: y = 1 - 4 * Math.abs(x - 0.5); break;
+			switch (shape) {
+				case 'sawtooth': y = 2 * x - 1; break;
+				case 'square': y = x < 0.5 ? 1 : -1; break;
+				case 'triangle': y = 1 - 4 * Math.abs(x - 0.5); break;
 				default: y = Math.sin(2 * Math.PI * x);
 			}
 			pts.push(`${(x * 100).toFixed(1)},${(14 - y * 10).toFixed(1)}`);
@@ -105,13 +110,21 @@
 	{#each selectors as p (p.key)}
 		<div class="grid gap-0.5" style="grid-template-columns: repeat({p.choices?.length ?? 1}, minmax(0, 1fr))">
 			{#each p.choices ?? [] as choice, ci (choice)}
-				{@const on = Math.round(val(p.key, p.def)) === ci}
+				{@const stride = p.step && p.step > 1 ? p.step : 1}
+				{@const stored = ci * stride}
+				{@const on = Math.round(val(p.key, p.def) / stride) === ci}
 				<button
 					onpointerdown={(e) => {
 						if (e.button !== 2) e.stopPropagation();
 					}}
 					onclick={() => {
-						onParam(p.key, ci);
+						/* A selector writes the value, not the button's position.
+						   They are the same number when the choices step by one --
+						   which is every wave selector -- but TUBE's ODD is a
+						   switch on a 0..100 scale that racks 1-7 share, so
+						   writing the index would have stored 1 where the engine
+						   expects 100. */
+						onParam(p.key, stored);
 						playSound('click');
 					}}
 					title={p.label}

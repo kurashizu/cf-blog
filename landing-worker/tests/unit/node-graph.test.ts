@@ -272,15 +272,25 @@ describe('pulling a value through a chain', () => {
 		expect(Number.isFinite(v)).toBe(true);
 	});
 
-	it('reads zero from a node that makes sound rather than a value', () => {
-		// An oscillator's output is audio; there is no number to pull from it.
+	it('leaves a knob at its own value when a signal is patched into it', () => {
+		/* A cable from something with no value to pull -- an oscillator, an ENV,
+		   an LFO -- is a signal. The engine connects it to the knob's AudioParam,
+		   where it *adds* to the setting, so the setting is the base.
+		
+		   This used to read 0, and it is the whole reason "ENV into the filter
+		   cutoff" was silent: the filter opened at 0 Hz and the envelope added
+		   its 0..1 on top of nothing. */
 		const graph = g([['o', 'osc'], ['f', 'filter']], [wire('o', 'out', 'f', 'cutoff')]);
-		expect(createResolver(graph, {}, note).input('f', 'cutoff', 99)).toBe(0);
+		expect(createResolver(graph, { 'f.cutoff': 4000 }, note).input('f', 'cutoff', 99)).toBe(4000);
+		// With no stored setting either, the caller's default stands.
+		expect(createResolver(graph, {}, note).input('f', 'cutoff', 99)).toBe(99);
 	});
 
 	it('ignores a cable from a node that is not there', () => {
+		// A dangling cable is not a setting: the knob keeps its own value.
 		const graph = g([['f', 'filter']], [wire('ghost', 'out', 'f', 'cutoff')]);
-		expect(createResolver(graph, {}, note).input('f', 'cutoff', 99)).toBe(0);
+		expect(createResolver(graph, {}, note).input('f', 'cutoff', 99)).toBe(99);
+		expect(createResolver(graph, { 'f.cutoff': 700 }, note).input('f', 'cutoff', 99)).toBe(700);
 	});
 });
 

@@ -113,6 +113,25 @@ const EXEC_IN: PortSpec = { id: 'exec', label: '', kind: 'exec', role: 'exec' };
 const EXEC_OUT: PortSpec = { id: 'then', label: '', kind: 'exec', role: 'exec' };
 const AUDIO_OUT: PortSpec = { id: 'out', label: 'OUT', kind: 'audio' };
 
+/**
+ * The oscillator shapes, in the one order everything indexes.
+ *
+ * The button labels, the engine's `OscillatorType` table and the card's preview
+ * drawing were three hand-written copies of this list, and they disagreed:
+ * picking SAW gave a triangle, and the card drew a square while the engine
+ * played a sawtooth. Two were corrected once and the third was missed, because
+ * nothing tied them together. Index this instead of retyping it.
+ */
+export const WAVE_SHAPES = [
+	{ label: 'SIN', type: 'sine' },
+	{ label: 'TRI', type: 'triangle' },
+	{ label: 'SAW', type: 'sawtooth' },
+	{ label: 'SQR', type: 'square' }
+] as const;
+
+/** Just the labels, for a `choices` list. */
+export const WAVE_LABELS: string[] = WAVE_SHAPES.map((w) => w.label);
+
 export const MODULE_SPECS: ModuleSpec[] = [
 	/* SOURCE: things that make sound from nothing -- and the one thing that
 	   brings sound in from outside the patch. */
@@ -177,10 +196,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   sawtooth all of them. The labels used to read SIN/SAW/SQR/TRI over
 			   that same table, so three of the four buttons named a wave other
 			   than the one they selected. */
-			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'TRI', 'SAW', 'SQR'] }
+			{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: WAVE_LABELS }
 		]
 	},
 	{
+		/* No LVL knob. A level on a source is a VCA welded to it -- the same
+		   knob OSC lost -- and it gave "why is this quiet" a second place to
+		   hide. Put a VCA after it. */
 		id: 'noise',
 		label: 'NOISE',
 		group: 'SOURCE',
@@ -191,8 +213,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			/* Three kinds of noise, not a sweep: a dial reading "0", "1", "2"
 			   says nothing about which is which. */
-			{ key: 'colour', label: 'COL', min: 0, max: 2, step: 1, def: 0, choices: ['WHT', 'PNK', 'BRN'] },
-			{ key: 'level', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 60 }
+			{ key: 'colour', label: 'COL', min: 0, max: 2, step: 1, def: 0, choices: ['WHT', 'PNK', 'BRN'] }
 		]
 	},
 	{
@@ -211,6 +232,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	},
 
 	{
+		/* No LVL knob. A level on a source is a VCA welded to it -- the same
+		   knob OSC lost -- and it gave "why is this quiet" a second place to
+		   hide. Put a VCA after it. */
 		id: 'sub',
 		label: 'SUB',
 		group: 'SOURCE',
@@ -219,12 +243,14 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'subWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'TRI', 'SAW', 'SQR'] },
-			{ key: 'subOct', label: 'OCT', min: 1, max: 3, step: 1, def: 1 },
-			{ key: 'subLevel', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 70 }
+			{ key: 'subWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: WAVE_LABELS },
+			{ key: 'subOct', label: 'OCT', min: 1, max: 3, step: 1, def: 1 }
 		]
 	},
 	{
+		/* No LVL knob. A level on a source is a VCA welded to it -- the same
+		   knob OSC lost -- and it gave "why is this quiet" a second place to
+		   hide. Put a VCA after it. */
 		id: 'pulse',
 		label: 'PULSE',
 		group: 'SOURCE',
@@ -233,12 +259,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'PITCH', kind: 'mod', role: 'hz' }, { id: 'pwm', label: 'PWM', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'pw', label: 'PW', min: 5, max: 95, step: 1, unit: '%', def: 50 },
-			{ key: 'pulseRatio', label: 'RATIO', min: 0.125, max: 8, step: 0.01, unit: '\u00d7', def: 1, scale: 'log' },
-			{ key: 'pulseLevel', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 80 }
+			{ key: 'pw', label: 'PW', min: 5, max: 95, step: 1, unit: '%', def: 50 }
 		]
 	},
 	{
+		/* No LVL knob. A level on a source is a VCA welded to it -- the same
+		   knob OSC lost -- and it gave "why is this quiet" a second place to
+		   hide. Put a VCA after it. */
 		id: 'bow',
 		label: 'BOW',
 		group: 'SOURCE',
@@ -249,8 +276,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'bowPressure', label: 'PRES', min: 0, max: 100, step: 1, unit: '%', def: 50 },
 			{ key: 'bowNoise', label: 'HAIR', min: 0, max: 100, step: 1, unit: '%', def: 25 },
-			{ key: 'bowBite', label: 'BITE', min: 0, max: 100, step: 1, unit: '%', def: 40 },
-			{ key: 'bowLevel', label: 'LVL', min: 0, max: 100, step: 1, unit: '%', def: 70 }
+			{ key: 'bowBite', label: 'BITE', min: 0, max: 100, step: 1, unit: '%', def: 40 }
 		]
 	},
 
@@ -267,7 +293,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ key: 'type', label: 'TYPE', min: 0, max: 3, step: 1, def: 0, choices: ['LPF', 'BPF', 'HPF', 'NCH'] },
 			{ key: 'cutoff', label: 'FREQ', min: 40, max: 18000, step: 10, unit: 'Hz', def: 4000, scale: 'log' },
 			{ key: 'q', label: 'RESO', min: 0.1, max: 24, step: 0.1, def: 1 },
-			{ key: 'depth', label: 'DEPTH', min: 0, max: 100, step: 1, unit: '%', def: 50 }
+			/* How far the FM inlet swings the cutoff, in hertz. It read as a
+			   percentage and was multiplied by FREQ, so turning the cutoff up
+			   also widened the sweep -- one knob quietly scaling another. */
+			{ key: 'depth', label: 'DEPTH', min: 0, max: 12000, step: 10, unit: 'Hz', def: 2000 }
 		]
 	},
 	{
@@ -279,8 +308,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'cv', label: 'CV', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'gain', label: 'GAIN', min: 0, max: 200, step: 1, unit: '%', def: 100 },
-			{ key: 'depth', label: 'DEPTH', min: 0, max: 100, step: 1, unit: '%', def: 100 }
+			/* One knob. DEPTH scaled the CV on its way in -- a second VCA on
+			   the first one's control leg -- so a quiet patch had two places to
+			   hide. Attenuate a CV where it comes from: LFO has AMT. */
+			{ key: 'gain', label: 'GAIN', min: 0, max: 200, step: 1, unit: '%', def: 100 }
 		]
 	},
 	{
@@ -307,9 +338,14 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'lowGain', label: 'LOW', min: -18, max: 18, step: 0.5, unit: 'dB', def: 0 },
+			/* The shelf corners were hardcoded at 200 and 5000, so two of the
+			   three bands could only be turned up, never aimed. */
+			{ key: 'lowFreq', label: 'L.HZ', min: 40, max: 1000, step: 10, unit: 'Hz', def: 200, scale: 'log' },
 			{ key: 'midGain', label: 'MID', min: -18, max: 18, step: 0.5, unit: 'dB', def: 0 },
-			{ key: 'midFreq', label: 'FREQ', min: 200, max: 8000, step: 50, unit: 'Hz', def: 1200, scale: 'log' },
-			{ key: 'highGain', label: 'HIGH', min: -18, max: 18, step: 0.5, unit: 'dB', def: 0 }
+			{ key: 'midFreq', label: 'M.HZ', min: 200, max: 8000, step: 50, unit: 'Hz', def: 1200, scale: 'log' },
+			{ key: 'midQ', label: 'M.Q', min: 0.2, max: 12, step: 0.1, def: 1 },
+			{ key: 'highGain', label: 'HIGH', min: -18, max: 18, step: 0.5, unit: 'dB', def: 0 },
+			{ key: 'highFreq', label: 'H.HZ', min: 1500, max: 16000, step: 100, unit: 'Hz', def: 5000, scale: 'log' }
 		]
 	},
 
@@ -371,7 +407,15 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'decayTime', label: 'DECAY', min: 0.05, max: 12, step: 0.05, unit: 's', def: 2 },
 			{ key: 'damping', label: 'DAMP', min: 0, max: 100, step: 1, unit: '%', def: 30 },
-			{ key: 'stiffness', label: 'STIFF', min: 0, max: 100, step: 1, unit: '%', def: 10 }
+			{ key: 'stiffness', label: 'STIFF', min: 0, max: 100, step: 1, unit: '%', def: 10 },
+			/* How much of what arrives is replaced by the string ringing.
+			
+			   The engine read this all along and nothing declared it, so it was
+			   always undefined, always 100%, and the dry gain was always 0 --
+			   which meant the AUDIO IN socket was structurally discarded. A
+			   patch heard the same sine bank whether the strike was wired in or
+			   not. Same knob MODES has, for the same reason. */
+			{ key: 'strBlend', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70 }
 		]
 	},
 	{
@@ -385,7 +429,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'tubeDecay', label: 'DECAY', min: 0.05, max: 8, step: 0.05, unit: 's', def: 1.2 },
 			{ key: 'tubeDamp', label: 'DAMP', min: 0, max: 100, step: 1, unit: '%', def: 40 },
-			{ key: 'tubeOdd', label: 'ODD', min: 0, max: 100, step: 1, unit: '%', def: 100 }
+			/* Which partials sound. A cylinder closed at one end has no even
+			   harmonics -- that is a clarinet -- and a knob with 101 positions
+			   and two outcomes was a switch wearing a dial. */
+			{ key: 'tubeOdd', label: 'ODD', min: 0, max: 1, step: 1, def: 1, choices: ['ALL', 'ODD'] },
+			/* See STRING's MIX: read by the engine, declared nowhere, so TUBE's
+			   AUDIO IN was discarded too. */
+			{ key: 'tubeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70 }
 		]
 	},
 	{
@@ -404,7 +454,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			/* How much of what arrives is replaced by the body ringing. The
 			   engine read this all along and nothing declared it, so the balance
 			   between a strike and the thing it strikes had no knob. */
-			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 100 },
+			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70 },
 			/* The pitch the ratios multiply. 0 follows the key, which is what a
 			   marimba wants; any other value pins the resonator to that frequency
 			   however it was struck, which is what a drum is -- a kick is 55 Hz
@@ -482,7 +532,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'fm', label: 'FM', kind: 'mod' }],
 		outputs: [{ id: 'cv', label: 'CV', kind: 'mod' }],
 		params: [
-			{ key: 'lfoWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: ['SIN', 'TRI', 'SAW', 'SQR'] },
+			{ key: 'lfoWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: WAVE_LABELS },
 			{ key: 'lfoRate', label: 'RATE', min: 0.02, max: 40, step: 0.01, unit: 'Hz', def: 5, scale: 'log' },
 			{ key: 'lfoAmt', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 50 }
 		],
@@ -514,8 +564,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'cv', label: 'CV', kind: 'mod' }],
 		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
 		params: [
-			{ key: 'panPos', label: 'POS', min: -100, max: 100, step: 1, def: 0 },
-			{ key: 'panDepth', label: 'DPTH', min: 0, max: 100, step: 1, unit: '%', def: 100 }
+			{ key: 'panPos', label: 'POS', min: -100, max: 100, step: 1, def: 0 }
+
 		]
 	},
 	{

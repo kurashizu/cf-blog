@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
+import { readFileSync } from 'node:fs';
+import { MODULE_SPECS, WAVE_SHAPES, WAVE_LABELS } from '../../src/lib/stores/synth-modules';
 import { roleOf, rolesCompatible, topoOrder, wouldCycle, type PortRole } from '../../src/lib/stores/graph-model';
-import { createResolver, execReach, execDelays, runs, isPureNode } from '../../src/lib/stores/node-graph';
+import { createResolver, execReach, execDelays, runs, isPureNode, PURE_NODES } from '../../src/lib/stores/node-graph';
 import type { EvalGraph } from '../../src/lib/stores/node-graph';
 
 /**
@@ -155,12 +156,27 @@ describe('graph shapes a patch actually takes', () => {
 		cables
 	});
 	/* topoOrder sorts on the audio cables alone: mod cables are connected after
-	   everything is built and may legitimately form a cycle. */
-	const topo = (graph: EvalGraph) =>
-		topoOrder(
+	   everything is built and may legitimately form a cycle.
+	
+	   This used to hand it `graph.cables` for both arguments, under this same
+	   comment -- so the one thing the comment describes was never exercised.
+	   Split them for real. */
+	const isModCable = (c: EvalGraph['cables'][number]) => {
+		const dst = graph_specOf(c.to);
+		if (!dst) return false;
+		const port = dst.inputs.find((q) => q.id === c.toPort);
+		if (port) return port.kind === 'mod';
+		return dst.params.some((q) => q.key === c.toPort);
+	};
+	let typeById = new Map<string, string>();
+	const graph_specOf = (nodeId: string) => MODULE_SPECS.find((m) => m.id === typeById.get(nodeId));
+	const topo = (graph: EvalGraph) => {
+		typeById = new Map(graph.nodes.map((n) => [n.id, n.type]));
+		return topoOrder(
 			{ nodes: graph.nodes.map((n) => ({ ...n, x: 0, y: 0 })), cables: graph.cables },
-			graph.cables
+			graph.cables.filter((c) => !isModCable(c))
 		);
+	};
 
 	it('builds a diamond with both sides before the join', () => {
 		/* One source into two paths that rejoin -- the commonest shape after a
@@ -382,5 +398,191 @@ describe('what the renders proved', () => {
 			);
 			expect(takers, `${id} feeds no inlet`).toBe(true);
 		}
+	});
+});
+
+/**
+ * The four defects a review found after 825 tests were green.
+ *
+ * Every one of them was reachable from the palette, drawn correctly on the
+ * canvas, and silent or wrong in the audio. They survived a full suite because
+ * that suite asked whether certain *strings* were present in synth.ts, and the
+ * strings were: the port ids were spelled right, the wiring was not. These ask
+ * the code what it computes.
+ */
+describe('regressions the string tests could not see', () => {
+	const g = (nodes: [string, string][], cables: EvalGraph['cables'] = []): EvalGraph => ({
+		nodes: nodes.map(([id, type]) => ({ id, type })),
+		cables
+	});
+
+	it('gives the same answer whichever end of a cycle is asked first', () => {
+		/* A hand-edited patch can hold a loop. Not memoising the node that closes
+		   it was not enough: its ancestors cached numbers computed from the
+		   placeholder zero, so whichever end was pulled first got one answer and
+		   the other end got another. Two patch files identical but for node order
+		   played differently. */
+		const graph = g(
+			[['a', 'add'], ['b', 'add'], ['s1', 'mul'], ['s2', 'mul']],
+			[
+				wire('b', 'out', 'a', 'a'),
+				wire('a', 'out', 'b', 'a'),
+				wire('a', 'out', 's1', 'a'),
+				wire('b', 'out', 's2', 'a')
+			]
+		);
+		const params = { 'a.addB': 10, 'b.addB': 100, 's1.mulB': 1, 's2.mulB': 1 };
+
+		const first = createResolver(graph, params, note);
+		const s1Then = [first.input('s1', 'a', 0), first.input('s2', 'a', 0)];
+		const second = createResolver(graph, params, note);
+		const s2First = second.input('s2', 'a', 0);
+		const s1After = second.input('s1', 'a', 0);
+
+		expect(s1Then[0]).toBe(s1After);
+		expect(s1Then[1]).toBe(s2First);
+	});
+
+	it('converts pitch to frequency against the instrument\'s tuning, not 440', () => {
+		/* TO-FREQ reads the master tuning off the note. The engine built the same
+		   converter as a ConstantSource without passing the note, so one patch
+		   held both answers: 432 where a knob read it, 440 where an audio param
+		   did, and a filter tracking the note sat a third of a semitone sharp of
+		   the oscillator it was tracking. */
+		const at432 = { ...note, tuning: 432 };
+		const graph = g([['f', 'tofreq']], []);
+		const r = createResolver(graph, { 'f.a': 0 }, at432);
+		expect(r.input('f', 'a', 0)).toBe(0);
+		expect(PURE_NODES.tofreq({ get: (_p, f) => f }, (_k, d) => d, at432)).toBeCloseTo(432, 6);
+		expect(PURE_NODES.tofreq({ get: (_p, f) => f }, (_k, d) => d, note)).toBeCloseTo(440, 6);
+	});
+
+	it('keeps the pure-node list and the "not a voice" list in step', () => {
+		/* An unwired CONST must not be summed into the mix -- it is DC, a click
+		   and then a silent offset eating headroom. The engine decided that from
+		   a list typed out beside the pure-node table rather than derived from
+		   it, so adding a pure node without remembering this list put DC in the
+		   mix. */
+		for (const type of Object.keys(PURE_NODES)) {
+			expect(isPureNode(type), type).toBe(true);
+		}
+	});
+
+	it('resolves both ends of a cable by port name', () => {
+		/* The destination end was always looked up by name, in `mod`. The source
+		   end took `out`, or `out2` for the single port literally called `r`, and
+		   everything else silently fell back to `out`. ENTRY files its four event
+		   pins under their own names, so every cable from VEL, GATE, NOTE or
+		   PITCH connected ENTRY's *silent* gain instead: a hard hit and a soft
+		   one came out at the same level with the cable drawn on the canvas.
+		
+		   Web Audio does not exist under vitest, so this pins the dispatch rather
+		   than the sound: one helper, used by both cable loops, keyed on the port
+		   name -- and no second copy of the `out2`/`r` fallback anywhere else. */
+		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+		expect(SYNTH).toContain('const outletOf = (');
+		// Both loops go through it, and nothing rolls its own.
+		const rolled = [...SYNTH.matchAll(/=== 'r' && src\.out2/g)];
+		expect(rolled).toHaveLength(1);
+		// ENTRY publishes its pins as outlets, not as modulation targets.
+		expect(SYNTH).toContain("outs.set('vel'");
+		expect(SYNTH).toContain("outs.set('gate'");
+		expect(SYNTH).not.toContain("mod.set('vel'");
+		expect(SYNTH).not.toContain("mod.set('gate'");
+	});
+
+	it('does not call a mod cable a cycle', () => {
+		/* The envelope-follower patch: BREAK taps a signal, its AMP outlet drives
+		   a filter's cutoff, and the filter feeds back into the BREAK. The mod
+		   cable already runs follower -> filter, so walking every cable made the
+		   audio cable filter -> break look like a loop, and the editor refused a
+		   patch the engine builds without complaint. Only audio cables loop. */
+		const graph = {
+			nodes: [
+				{ id: 'b', type: 'break', x: 0, y: 0 },
+				{ id: 'f', type: 'filter', x: 0, y: 0 }
+			],
+			cables: [wire('b', 'out', 'f', 'cutoff')]
+		};
+		const audioOnly = (c: { to: string; toPort: string }) => {
+			const type = graph.nodes.find((n) => n.id === c.to)?.type;
+			const sp = MODULE_SPECS.find((m) => m.id === type);
+			return sp?.inputs.find((q) => q.id === c.toPort)?.kind === 'audio';
+		};
+		expect(wouldCycle(graph, 'f', 'b')).toBe(true);
+		expect(wouldCycle(graph, 'f', 'b', audioOnly)).toBe(false);
+	});
+
+	it('clamps to a range whichever way round the bounds are set', () => {
+		/* MIN 100 with MAX 0 used to return 100 for every input, including 9999:
+		   the node became a constant and the card still looked like a clamp. */
+		const graph = { nodes: [{ id: 'c', type: 'clamp' }], cables: [] };
+		const inverted = createResolver(graph, { 'c.a': 9999, 'c.clampLo': 100, 'c.clampHi': 0 }, note);
+		expect(PURE_NODES.clamp(
+			{ get: (_p, f) => (_p === 'a' ? 9999 : f) },
+			(k, d) => (k === 'clampLo' ? 100 : k === 'clampHi' ? 0 : d),
+			note
+		)).toBe(100);
+		expect(inverted).toBeTruthy();
+		// And the same range written the usual way round agrees.
+		const upright = PURE_NODES.clamp(
+			{ get: (_p, f) => (_p === 'a' ? 9999 : f) },
+			(k, d) => (k === 'clampLo' ? 0 : k === 'clampHi' ? 100 : d),
+			note
+		);
+		expect(upright).toBe(100);
+	});
+
+	it('leaves a knob at its setting when a signal is patched into it', () => {
+		/* The bug that made "ENV into a filter cutoff" -- the first patch anyone
+		   tries -- play silence. A cable from a node with no value to pull was
+		   resolved as 0, so the filter opened at 0 Hz and the envelope added its
+		   0..1 on top of nothing. A signal into a knob is connected to that
+		   knob's AudioParam, where it *adds*, so the knob is the base.
+		
+		   Verified by rendering: 320 Hz spectral centroid unmodulated, 2068 Hz at
+		   the envelope's attack, decaying to 660 Hz. */
+		const graph = {
+			nodes: [{ id: 'e', type: 'env' }, { id: 'f', type: 'filter' }],
+			cables: [wire('e', 'out', 'f', 'cutoff')]
+		};
+		expect(createResolver(graph, { 'f.cutoff': 4000 }, note).input('f', 'cutoff', 99)).toBe(4000);
+		// A pure node still replaces it: that is a value, not a signal.
+		const withConst = {
+			nodes: [{ id: 'k', type: 'const' }, { id: 'f', type: 'filter' }],
+			cables: [wire('k', 'out', 'f', 'cutoff')]
+		};
+		expect(
+			createResolver(withConst, { 'f.cutoff': 300, 'k.value': 8000 }, note).input('f', 'cutoff', 99)
+		).toBe(8000);
+	});
+
+	it('binds a knob to its AudioParam where the knob is read', () => {
+		/* Six of ninety-nine params were registered as modulation targets by
+		   hand; the rest were unreachable by cable however the card drew them.
+		   `knob()` reads the value and registers the target in one line, so the
+		   two cannot drift. This fails if someone assigns an AudioParam from a
+		   knob directly again. */
+		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+		const raw = [...SYNTH.matchAll(/(\w+)\.(?:gain|frequency|Q|pan)\.value = p\('(\w+)'/g)];
+		/* One exception, and it is not a knob: LFO's FM inlet takes its depth
+		   from the rate, so binding it would register `lfoRate` twice and
+		   overwrite the oscillator's own frequency as that knob's target. */
+		const unbound = raw.filter((m) => !(m[1] === 'fm' && m[2] === 'lfoRate'));
+		expect(unbound.map((m) => m[0])).toEqual([]);
+	});
+
+	it('names every wave the same way in the catalogue and the engine', () => {
+		/* The button labels, the engine's oscillator table and the card's preview
+		   drawing were three copies of one list and disagreed: three of four
+		   labels named the wrong shape. Now there is one list; this fails if a
+		   fourth copy appears. */
+		expect(WAVE_SHAPES.map((w) => w.label)).toEqual(WAVE_LABELS);
+		expect(WAVE_SHAPES.map((w) => w.type)).toEqual(['sine', 'triangle', 'sawtooth', 'square']);
+		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+		const CARD = readFileSync('src/lib/components/synth/patch/ModuleCard.svelte', 'utf8');
+		// Neither may hold its own copy of the order.
+		expect(SYNTH).not.toContain("['sine', 'triangle', 'sawtooth', 'square']");
+		expect(CARD).not.toContain("'SIN'");
 	});
 });

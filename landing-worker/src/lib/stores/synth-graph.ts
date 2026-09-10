@@ -10,6 +10,7 @@ import {
 	type Snapshot
 } from './graph-history';
 import { modularSynth, type TrackData } from '../synth';
+import { MODULE_SPECS } from './synth-modules';
 import { activeTrackId } from './synth-transport';
 import { refreshTracks } from './synth-tracks';
 import {
@@ -178,11 +179,33 @@ export function removeNode(graph: RackGraph, id: string, params?: Record<string,
 	flushHistoryBump();
 }
 
+/**
+ * Is this cable carrying sound?
+ *
+ * Asked of the port it lands on, in the module it lands on -- the same question
+ * the engine asks, and for the same reason: `b` is an audio inlet on RING and a
+ * value inlet on ADD, so matching bare port ids across the catalogue gets it
+ * wrong. A knob is an inlet too, and always a control one.
+ */
+function cableIsAudio(graph: RackGraph, cable: GraphCable): boolean {
+	const type = graph.nodes.find((n) => n.id === cable.to)?.type;
+	const spec = MODULE_SPECS.find((m) => m.id === type);
+	if (!spec) return false;
+	const port = spec.inputs.find((q) => q.id === cable.toPort);
+	if (port) return port.kind === 'audio';
+	return false;
+}
+
 export function addCable(graph: RackGraph, cable: GraphCable, kind: PortKind): 'ok' | 'cycle' | 'duplicate' {
 	if (hasCable(graph, cable)) return 'duplicate';
-	// Audio cannot loop -- a delay loop measured stable only to about g = 0.90
-	// and screamed past it -- but modulation can, and often should.
-	if (kind === 'audio' && wouldCycle(graph, cable.from, cable.to)) return 'cycle';
+	/* Audio cannot loop -- a delay loop measured stable only to about g = 0.90
+	   and screamed past it -- but modulation can, and often should.
+	
+	   Only audio cables are walked. Walking all of them refused the envelope
+	   follower patch: BREAK's AMP already reaches the filter over a mod cable,
+	   so feeding that filter looked like a loop and was reported as one. */
+	if (kind === 'audio' && wouldCycle(graph, cable.from, cable.to, (c) => cableIsAudio(graph, c)))
+		return 'cycle';
 	commit({ ...graph, cables: [...graph.cables, cable] });
 	return 'ok';
 }

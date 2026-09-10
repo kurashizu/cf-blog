@@ -87,6 +87,47 @@ A knob is an inlet too. Every parameter can be driven by a cable, and `p(key,
 def)` resolves through the same path -- so a value into a knob works on every
 module without that module knowing about it.
 
+### A value replaces a knob; a signal adds to it
+
+The two kinds of source into a knob are not the same thing, and the difference
+is audible:
+
+| Cable from | What it is | What the knob does |
+| --- | --- | --- |
+| CONST, ADD, TO-FREQ ... (a pure node) | a number | **replaced** by it |
+| ENV, LFO, an audio outlet | a signal | **added to** by it, knob is the base |
+
+A pure node has a value to pull, so the resolver pulls it. Everything else is
+an AudioParam connection, and Web Audio *sums* into a param -- so the knob's own
+setting is the base the signal moves around.
+
+Returning 0 for the second case is what made `ENV -> VCF.FREQ` -- the first
+patch anyone tries -- play silence: the filter opened at 0 Hz and the envelope
+added its 0..1 on top of nothing. Measured after the fix: 320 Hz unmodulated,
+2068 Hz at the attack, 660 Hz as it decays.
+
+### Bind a knob where you read it
+
+```ts
+knob(f.frequency, 'cutoff', 4000);          // right: reads, sets, registers
+f.frequency.value = p('cutoff', 4000);      // wrong: unreachable by cable
+```
+
+`knob()` (and `knobPct()` for a 0..100 knob used as a fraction) reads the value,
+sets the param and registers it as a modulation target in one line. Six inlets
+out of ninety-nine params were registered by hand; the other ninety-three drew a
+cable on the canvas and carried nothing. A knob cannot be modulatable in the
+catalogue and inert in the engine if the two are the same line.
+
+### Both ends of a cable resolve by port name
+
+`outletOf(src, port)` is the source side of what `mod.get(port)` is on the
+destination side. The source end used to take `out`, or `out2` for the one port
+literally called `r`, and everything else silently fell back to `out` -- so
+ENTRY's VEL pin connected ENTRY's *silent* gain, and a hard hit and a soft one
+came out at the same level. If a module publishes an outlet under a name, it
+declares it in `outs`.
+
 ## Declaring a module
 
 One entry in `MODULE_SPECS` (`stores/synth-modules.ts`):
@@ -199,9 +240,30 @@ disguise, and the ones already found this way were all the same shape:
   -- a depth control on no card at all.
 - OUT had level and pan, which are VCA and PAN.
 - MAKE had a WIDE knob beside its WIDE socket.
+- VCA and PAN had a DEPTH on the CV leg: a second VCA scaling the control
+  signal before it arrived. It also made two different silences with two
+  different causes -- GAIN 0 with DEPTH 100, or the other way round. A CV is
+  attenuated where it is made: LFO has AMT.
+- NOISE, SUB, PULSE and BOW each kept the LVL knob OSC lost, and PULSE kept
+  RATIO too.
+- VCF's DEPTH was `cutoff * depth/100`, so the FREQ knob silently scaled the
+  modulation: moving the cutoff changed how far the FM inlet reached. It is now
+  the swing itself, in hertz, which is what its unit says.
+- TUBE's ODD was a two-outcome switch drawn as a 101-position percentage dial.
 
 The test is whether the knob would still make sense if you had to draw it. A
 patch that comes out quiet should have one place to look, not three.
+
+### A declared socket must change the sound
+
+STRING and TUBE declared an AUDIO IN and read a `mix` param the catalogue never
+declared -- so it was always undefined, always 1, the dry gain was always 0, and
+the socket was structurally discarded. A patch heard the same partials whether a
+strike was wired in or not.
+
+If a module declares an inlet, wire a signal into it and confirm the output
+changes. `tests/unit/module-params.test.ts` checks the port *id* appears in
+`synth.ts`, which the spelling satisfies and the wiring does not.
 
 ## Card layout
 
