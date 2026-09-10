@@ -802,6 +802,7 @@
 	     unit    diamond, red      an amount, 0..1
 	     index   hexagon, purple   a count
 	     time    square, cyan      a length of time
+	     bool    circle, yellow    true or false
 	
 	   Every socket is filled. Shape and colour carry the meaning between them,
 	   and an outlined one read as disabled next to the solid ones rather than as
@@ -828,7 +829,10 @@
 		hz: { cls: 'clip-triangle', color: '#61afef' },
 		unit: { cls: 'clip-drop', color: '#e06c75' },
 		index: { cls: 'clip-hex', color: '#c678dd' },
-		time: { cls: 'rounded-[1px] rotate-45', color: '#56b6c2' }
+		time: { cls: 'rounded-[1px] rotate-45', color: '#56b6c2' },
+		/* Yellow, and round like a lamp: a truth is on or off rather than a
+		   quantity, and the shape says so before the colour does. */
+		bool: { cls: 'rounded-full', color: '#e5c07b' }
 	};
 
 	function portStyle(p: { kind: PortKind; role?: PortRole }) {

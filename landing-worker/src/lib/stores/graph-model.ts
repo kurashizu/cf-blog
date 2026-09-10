@@ -65,6 +65,17 @@ export type PortRole =
 	| 'index'
 	/** A length of time. */
 	| 'time'
+	/**
+	 * True or false.
+	 *
+	 * A control value like any other -- it travels a `mod` cable and is carried
+	 * as a number, zero for false and anything else for true -- but its own role
+	 * so the lattice can say where it belongs. A comparison hands one out and a
+	 * branch takes one in; sending a cutoff frequency to a branch, or a truth to
+	 * a filter, is a patch that means nothing, and this is what lets the canvas
+	 * say so before the cable is drawn rather than after it is heard.
+	 */
+	| 'bool'
 	/** Blueprint's white execution pin: this module runs when the note fires. */
 	| 'exec';
 
@@ -136,6 +147,14 @@ export function rolesCompatible(from: PortRole, to: PortRole): boolean {
 	   a rounding rule. Both are decisions worth seeing rather than ones made
 	   silently inside whichever module happened to take the cable. */
 	if (from === 'pitch' || to === 'pitch') return from === 'pitch' && to === 'pitch';
+	/* A truth is not a quantity.
+	
+	   Kept apart for the same reason a pitch is: a comparison hands out yes or
+	   no, and a cutoff frequency arriving at a branch is a patch that means
+	   nothing -- 4000 is not more true than 800. Every other control role is
+	   some amount of something and they convert into each other by arithmetic;
+	   this one does not, so it only meets its own kind. */
+	if (from === 'bool' || to === 'bool') return from === 'bool' && to === 'bool';
 	return true;
 }
 

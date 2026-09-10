@@ -100,18 +100,24 @@
 			>
 				{label}
 			</div>
-			{#each choices as choice, i (choice)}
-				{@const on = i === value}
-				<button
-					onclick={() => pick(i)}
-					class="w-full text-left px-2.5 py-1 flex items-center gap-2 cursor-pointer transition-colors {on
-						? 'bg-white/10'
-						: 'hover:bg-white/10'}"
-				>
-					<span class="text-[8px] w-2 shrink-0" style="color: {color}">{on ? '●' : '○'}</span>
-					<span class="truncate" style={on ? `color: ${color}` : ''}>{choice}</span>
-				</button>
-			{/each}
+			<!-- Two columns once the list is long enough to need scrolling to read.
+			     Ten types in one column is a menu taller than the card it belongs
+			     to; in two it is one glance. Short lists stay single, where a
+			     second column would only make the menu wider than its names. -->
+			<div class="grid" class:grid-cols-2={choices.length > 6}>
+				{#each choices as choice, i (choice)}
+					{@const on = i === value}
+					<button
+						onclick={() => pick(i)}
+						class="w-full text-left px-2.5 py-1 flex items-center gap-2 cursor-pointer transition-colors {on
+							? 'bg-white/10'
+							: 'hover:bg-white/10'}"
+					>
+						<span class="text-[8px] w-2 shrink-0" style="color: {color}">{on ? '●' : '○'}</span>
+						<span class="truncate" style={on ? `color: ${color}` : ''}>{choice}</span>
+					</button>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </div>

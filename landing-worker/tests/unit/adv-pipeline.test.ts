@@ -659,24 +659,19 @@ describe('regressions the string tests could not see', () => {
 
 	it('clamps to a range whichever way round the bounds are set', () => {
 		/* MIN 100 with MAX 0 used to return 100 for every input, including 9999:
-		   the node became a constant and the card still looked like a clamp. */
-		const graph = { nodes: [{ id: 'c', type: 'clamp' }], cables: [] };
-		const inverted = createResolver(graph, { 'c.a': 9999, 'c.clampLo': 100, 'c.clampHi': 0 }, note);
-		expect(
+		   the node became a constant and the card still looked like a clamp.
+		
+		   The bounds are sockets rather than knobs now -- a clamp takes whatever
+		   kind of number it is given, so a knob would have had to pick the range
+		   being clamped -- but the ordering rule is the same either way. */
+		const at = (lo: number, hi: number) =>
 			PURE_NODES.clamp(
-				{ get: (_p, f) => (_p === 'a' ? 9999 : f) },
-				(k, d) => (k === 'clampLo' ? 100 : k === 'clampHi' ? 0 : d),
+				{ get: (port, f) => (port === 'a' ? 9999 : port === 'lo' ? lo : port === 'hi' ? hi : f) },
+				(_k, d) => d,
 				note
-			)
-		).toBe(100);
-		expect(inverted).toBeTruthy();
-		// And the same range written the usual way round agrees.
-		const upright = PURE_NODES.clamp(
-			{ get: (_p, f) => (_p === 'a' ? 9999 : f) },
-			(k, d) => (k === 'clampLo' ? 0 : k === 'clampHi' ? 100 : d),
-			note
-		);
-		expect(upright).toBe(100);
+			);
+		expect(at(100, 0)).toBe(100);
+		expect(at(0, 100)).toBe(100);
 	});
 
 	it('leaves a knob at its setting when a signal is patched into it', () => {

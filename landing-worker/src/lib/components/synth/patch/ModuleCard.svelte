@@ -27,6 +27,7 @@
 	import { getWaveformAbbr, type SynthWaveform, type CustomWave } from '../../../track-data';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
 	import ProbeDisplay from './ProbeDisplay.svelte';
+	import { PURE_NODES } from '../../../stores/node-graph';
 
 	let {
 		spec,
@@ -101,6 +102,23 @@
 
 	/* The LFO's shape, drawn over one cycle. A picture of the wave says which
 	   one is selected faster than the word does. */
+	/** The shape MAP is set to, sampled across its own range. */
+	function curvePath(shape: number): string {
+		const pts: string[] = [];
+		for (let i = 0; i <= 40; i++) {
+			const x = i / 40;
+			/* Run through the same function the engine runs, so the drawing cannot
+			   drift from the sound. A drawn table lives in the params, which is
+			   why they are handed over whole rather than as a shape number. */
+			const y = PURE_NODES.map(
+				{ get: (port: string, f: number) => (port === 'a' ? x : f) },
+				(key: string, def: number) => (key === 'shape' ? shape : val(key, def))
+			);
+			pts.push(`${(x * 100).toFixed(1)},${(25 - Math.max(0, Math.min(1, y)) * 22).toFixed(1)}`);
+		}
+		return `M ${pts.join(' L ')}`;
+	}
+
 	/** One cycle of a rectangle, `duty` of it high. */
 	function pulsePath(duty: number): string {
 		const x = Math.round(duty * 100);
@@ -215,6 +233,21 @@
 			color={spec.color}
 			compact
 		/>
+	{:else if spec.viz === 'curve'}
+		<!-- The bend the value will take, drawn by running the shape rather than
+		     by describing it: the card and the sound read the same function, so a
+		     curve that looks wrong is wrong. -->
+		<div class="bg-black/70 border border-white/15 rounded-xs">
+			<svg viewBox="0 0 100 28" class="w-full h-[24px]" preserveAspectRatio="none">
+				<path
+					d={curvePath(Math.round(val('shape', 0)))}
+					fill="none"
+					stroke={spec.color}
+					stroke-width="1.5"
+					vector-effect="non-scaling-stroke"
+				/>
+			</svg>
+		</div>
 	{:else if spec.viz === 'pulse'}
 		<!-- Drawn from what PW is actually carrying, so the card shows the wave
 		     the note will play. Unpatched it resolves to 0.5, which is the square

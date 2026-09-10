@@ -225,8 +225,16 @@ describe('the node contract', () => {
 		/* OSC had both a PITCH inlet and an HZ knob, so the knob stopped working
 		   the moment a cable was drawn -- worse than not having it. A CONST set
 		   to PITCH is how a frequency is pinned. */
+		/* Pure nodes are the exception, and it is a real one rather than a
+		   loophole. For them a cable *replaces* the stored number -- `read()`
+		   takes the cable if there is one and the field if there is not -- so a
+		   field beside a socket is where the value sits when nothing drives it,
+		   which is exactly what CLAMP's bounds want. On an audio module a signal
+		   *adds* to the knob instead, so the same pairing would double: that is
+		   the trap PWM's PW was pulled out of. */
 		const clashes: string[] = [];
 		for (const m of MODULE_SPECS) {
+			if (isPureNode(m.id)) continue;
 			for (const port of m.inputs) {
 				if (m.params.some((q) => q.key === port.id)) clashes.push(`${m.id}.${port.id}`);
 			}

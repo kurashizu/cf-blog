@@ -91,7 +91,7 @@ export const PURE_NODES: Record<string, PureFn> = {
 		return 12 * Math.log2(hz / p('tuning', note?.tuning ?? 440));
 	},
 	/* Semitones onto a pitch, keeping it a pitch. */
-	trsp: (i, p) => i.get('a', 0) + i.get('b', p('by', 0)),
+	trsp: (i) => i.get('a', 0) + i.get('b', 0),
 	/* A literal, in whichever type the socket it is going to expects.
 	
 	   PIT is the one that is not simply its own number. It is typed and stored
@@ -104,24 +104,22 @@ export const PURE_NODES: Record<string, PureFn> = {
 		const v = p('value', 1);
 		return p('kind', 0) === CONST_PITCH_KIND ? v - MIDI_A4 : v;
 	},
-	add: (i, p) => i.get('a', 0) + i.get('b', p('addB', 0)),
-	mul: (i, p) => i.get('a', 1) * i.get('b', p('mulB', 1)),
-	remap: (i, p) => {
-		const lo = p('inLo', 0);
-		const hi = p('inHi', 1);
-		const span = hi - lo;
-		// A zero-width input range means "always the low end" rather than NaN.
-		const k = span === 0 ? 0 : (i.get('a', 0) - lo) / span;
-		const outLo = p('outLo', 0);
-		return outLo + Math.max(0, Math.min(1, k)) * (p('outHi', 100) - outLo);
-	},
+	/* Both operands come off the sockets. An unwired one is the identity for
+	   the operation -- adding nothing, multiplying by one -- so a half-patched
+	   operator passes its other leg through rather than zeroing it. */
+	add: (i) => i.get('a', 0) + i.get('b', 0),
+	mul: (i) => i.get('a', 1) * i.get('b', 1),
 	/* Bounds in either order. Written the obvious way, MIN 100 with MAX 0 pins
 	   the output at 100 for every input -- the node silently becomes a constant
 	   and the card still looks like a working clamp. Sorting them means the two
 	   knobs name a range rather than an order. */
 	clamp: (i, p) => {
-		const lo = p('clampLo', 0);
-		const hi = p('clampHi', 1);
+		/* Each bound is a socket with a field behind it: `i.get` takes the cable
+		   when there is one and the typed number when there is not, which is what
+		   makes a limit both something you write down and something that can move
+		   with the note. */
+		const lo = i.get('lo', p('lo', 0));
+		const hi = i.get('hi', p('hi', 1));
 		return Math.min(Math.max(i.get('a', 0), Math.min(lo, hi)), Math.max(lo, hi));
 	},
 	lerp: (i, p) => {
@@ -137,33 +135,46 @@ export const PURE_NODES: Record<string, PureFn> = {
 	   Outside that range the value passes through untouched: shaping is defined
 	   on the unit interval, and a fractional power of a negative base is NaN. */
 	map: (i, p) => {
-		const x = i.get('a', 0);
-		if (!(x >= 0 && x <= 1)) return x;
-		const amt = Math.max(0, Math.min(1, p('amount', 50) / 100));
+		/* Normalise, shape, scale.
+		
+		   The incoming range is mapped onto 0..1, the shape bends it there --
+		   which is the only interval a shape is defined on -- and the result is
+		   carried out to the outgoing range. That is REMAP and CURVE as one node,
+		   because they were one operation: the two cards differed only in whether
+		   the line between the ends was straight, and a patch nearly always
+		   wanted both. Velocity 0..1 into a cutoff 200..8000, opening late, is
+		   one card now rather than two. */
+		const lo = p('inLo', 0);
+		const hi = p('inHi', 1);
+		const span = hi - lo;
+		// A zero-width input range means "always the low end" rather than NaN.
+		const x = span === 0 ? 0 : Math.max(0, Math.min(1, (i.get('a', 0) - lo) / span));
+		const outLo = p('outLo', 0);
+		const outHi = p('outHi', 1);
+		const out = (y: number) => outLo + Math.max(0, Math.min(1, y)) * (outHi - outLo);
+		/* Indexed by position in MAP_SHAPES, which is the list the card selects
+		   from. Kept in the same order for the same reason the waveforms are: two
+		   hand-written copies of one order disagree, and the one nobody corrects
+		   is the one that draws. A test pins the two together. */
+		const stair = (n: number) => Math.min(n - 1, Math.floor(x * n)) / (n - 1);
 		switch (Math.round(p('shape', 0))) {
-			case 1: {
-				// Slow to start: AMT rides the exponent from a line up to a hard knee.
-				return Math.pow(x, 1 + amt * 7);
-			}
-			case 2: {
-				// Its mirror, quick to start.
-				return Math.pow(x, 1 / (1 + amt * 7));
-			}
-			case 3: {
-				/* Slow at both ends. Blended with the line by AMT so the knob still
-				   means "how much", rather than the shape being all or nothing. */
-				const e = x * x * (3 - 2 * x);
-				return x + (e - x) * amt;
-			}
-			case 4: {
-				/* A staircase, which is what turns a sweep into positions. The last
-				   tread has to reach 1, so it divides by one less than the count --
-				   otherwise a 4-step map would top out at 0.75 and the end of the
-				   range would be unreachable. */
-				const n = Math.max(2, Math.round(p('steps', 4)));
-				return Math.min(n - 1, Math.floor(x * n)) / (n - 1);
-			}
-			case 5: {
+			case 1:
+				return out(x * x); // EXP
+			case 2:
+				return out(x * x * x * x); // EXP2, the harder knee
+			case 3:
+				return out(Math.sqrt(x)); // LOG
+			case 4:
+				return out(Math.pow(x, 0.25)); // LOG2
+			case 5:
+				return out(x * x * (3 - 2 * x)); // EASE, slow at both ends
+			case 6:
+				return out(stair(4));
+			case 7:
+				return out(stair(8));
+			case 8:
+				return out(1 - x); // INV
+			case 9: {
 				/* Drawn by hand: the shape is a run of points, read through the same
 				   `p` every knob uses because a table is stored as its own numbered
 				   keys. Between two points it interpolates, so a curve drawn at
@@ -172,14 +183,18 @@ export const PURE_NODES: Record<string, PureFn> = {
 				   Undrawn it is a line. A DRAW that has not been drawn should do
 				   nothing rather than flatten what passes through it. */
 				const n = Math.max(2, Math.round(p('drawN', 0)));
-				if (!p('drawN', 0)) return x;
+				if (!p('drawN', 0)) return out(x);
 				const at = (k: number) => p(`d${Math.max(0, Math.min(n - 1, k))}`, k / (n - 1));
 				const f = x * (n - 1);
-				const lo = Math.floor(f);
-				return at(lo) + (at(lo + 1) - at(lo)) * (f - lo);
+				const k0 = Math.floor(f);
+				return out(at(k0) + (at(k0 + 1) - at(k0)) * (f - k0));
 			}
 			default:
-				return x;
+				/* GATE: one step at the halfway point. It sits where a straight line
+				   used to, which with both ranges set was the same as no shape at
+				   all -- and unlike every curve below it, a threshold cannot be
+				   reached by bending one. */
+				return out(x < 0.5 ? 0 : 1);
 		}
 	}
 };

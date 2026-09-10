@@ -165,18 +165,31 @@ export const CONST_KINDS: {
  * because the card draws the same list it selects from.
  */
 export const MAP_SHAPES: { id: string; label: string }[] = [
-	/* A straight line, which is the honest default: MAP in a patch that has not
-	   been told what to do should do nothing. */
-	{ id: 'lin', label: 'LIN' },
+	/* A single step: everything below the middle comes out at the low end and
+	   everything above it at the high end.
+	
+	   Where a straight line used to sit, and it was doing nothing: with X and Y
+	   both set, a line *is* the range remap, so LIN and "no shape at all" were
+	   the same card. A threshold is the shape that has no other way of being
+	   said -- it turns a continuous value into one of two, which is what a gate
+	   is, and no combination of the curves below reaches it. */
+	{ id: 'gate', label: 'GATE' },
 	/* Slow to start and quick at the end, and its mirror. This is the pair that
-	   makes velocity feel right: EXP opens late, so a soft touch stays soft. */
+	   makes velocity feel right: EXP opens late, so a soft touch stays soft.
+	   Two of each, because how far it bends is which shape it is rather than a
+	   dial beside the name. */
 	{ id: 'exp', label: 'EXP' },
+	{ id: 'exp2', label: 'EXP2' },
 	{ id: 'log', label: 'LOG' },
+	{ id: 'log2', label: 'LOG2' },
 	/* Slow at both ends, quick through the middle -- the shape a fade wants. */
 	{ id: 'ease', label: 'EASE' },
-	/* Discrete. Turns a sweep into a run of held values, which is how a
-	   continuous control drives something that only has positions. */
-	{ id: 'step', label: 'STEP' },
+	/* Discrete: a sweep becomes a run of held values, which is how a continuous
+	   control drives something that only has positions. */
+	{ id: 'step4', label: 'ST4' },
+	{ id: 'step8', label: 'ST8' },
+	/* Back the way it came. */
+	{ id: 'inv', label: 'INV' },
 	/* Drawn by hand, for the shape none of the above is. */
 	{ id: 'draw', label: 'DRAW' }
 ];
@@ -473,6 +486,14 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
+		/* A plus B, and nothing else.
+		 *
+		 * No knob for the second operand. A knob has to declare a range, and the
+		 * point of an operator is that it takes whatever arrives: a CONST typed
+		 * as I8 into one leg and a PCT into the other is a legitimate patch, and
+		 * a knob spanning -1000..10000 would have been a third opinion about
+		 * what those are. What B is unwired is a CONST, which is the module for
+		 * saying so and can say which kind of number it means. */
 		id: 'add',
 		label: 'ADD',
 		group: 'MATH',
@@ -480,9 +501,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.add',
 		inputs: [CV_A, CV_B],
 		outputs: [CV_OUT],
-		params: [{ key: 'addB', label: 'B', min: -1000, max: 10000, step: 1, def: 0 }]
+		params: []
 	},
 	{
+		/* A times B, and nothing else. No knob, for the reason ADD has none:
+		 * the operand's range is the operand's business, and CONST is where a
+		 * fixed one is typed along with what kind of number it is. */
 		id: 'mul',
 		label: 'MUL',
 		group: 'MATH',
@@ -490,7 +514,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.mul',
 		inputs: [CV_A, CV_B],
 		outputs: [CV_OUT],
-		params: [{ key: 'mulB', label: 'B', min: -100, max: 100, step: 0.01, def: 1 }]
+		params: []
 	},
 	{
 		id: 'clamp',
@@ -498,11 +522,22 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'MATH',
 		color: '#abb2bf',
 		descKey: 'synthPatch.mod.clamp',
-		inputs: [CV_A],
+		/* The bounds are sockets *and* fields, which is the pair MAP's ranges are.
+		
+		   Typed, because a limit is a number you know: 200 and 8000, not a dial
+		   spanning four decades. Patchable, because a limit that moves with the
+		   note is a real thing to want -- and a cable wins over the field, the
+		   way it does everywhere else, so the number is where the bound sits
+		   when nothing is driving it. */
+		inputs: [
+			CV_A,
+			{ id: 'lo', label: 'MIN', kind: 'mod' },
+			{ id: 'hi', label: 'MAX', kind: 'mod' }
+		],
 		outputs: [CV_OUT],
 		params: [
-			{ key: 'clampLo', label: 'MIN', min: -1000, max: 10000, step: 1, def: 0 },
-			{ key: 'clampHi', label: 'MAX', min: -1000, max: 10000, step: 1, def: 1 }
+			{ key: 'lo', label: 'MIN', min: -3.4e38, max: 3.4e38, step: 0.001, def: 0, field: true },
+			{ key: 'hi', label: 'MAX', min: -3.4e38, max: 3.4e38, step: 0.001, def: 1, field: true }
 		]
 	},
 	{
@@ -523,6 +558,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.map',
 		inputs: [CV_A],
 		outputs: [CV_OUT],
+		/* The shape, and nothing else -- the same shape as OSC, which is a
+		   picker and no knobs. How far a curve bends is part of which curve it
+		   is, so it belongs in the list rather than beside it: EXP and a hard
+		   EXP are two shapes, and giving one of them a dial would have made the
+		   card ask two questions to answer one. */
 		params: [
 			{
 				key: 'shape',
@@ -533,13 +573,23 @@ export const MODULE_SPECS: ModuleSpec[] = [
 				def: 0,
 				choices: MAP_SHAPES.map((m) => m.label)
 			},
-			/* What the shape does, where the shape has a degree to speak of. A
-			   line ignores it; an exponential rides it. */
-			{ key: 'amount', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 50 },
-			/* Drawn rather than chosen. Only read when SHAPE is DRAW, which is
-			   what the card's editor writes. */
-			{ key: 'steps', label: 'STEP', min: 2, max: 32, step: 1, def: 4, fixed: true }
-		]
+			/* The two ranges the shape runs between: what arrives, and what
+			   leaves. Typed rather than turned, because a range is a pair of
+			   numbers you know -- velocity is 0..1 and a cutoff is 200..8000, and
+			   spelling those out on dials spanning four decades is not possible.
+			
+			   This is what REMAP was, and why there is no REMAP: mapping a range
+			   and shaping the way a value crosses it are the same operation done
+			   in one step, and splitting them meant two cards whose only
+			   difference was whether the line between the ends was straight. */
+			{ key: 'inLo', label: 'X.LO', min: -3.4e38, max: 3.4e38, step: 0.001, def: 0, field: true },
+			{ key: 'inHi', label: 'X.HI', min: -3.4e38, max: 3.4e38, step: 0.001, def: 1, field: true },
+			{ key: 'outLo', label: 'Y.LO', min: -3.4e38, max: 3.4e38, step: 0.001, def: 0, field: true },
+			{ key: 'outHi', label: 'Y.HI', min: -3.4e38, max: 3.4e38, step: 0.001, def: 1, field: true }
+		],
+		/* Drawn from the shape that is selected, so the card shows the bend the
+		   value will take. */
+		viz: 'curve'
 	},
 	{
 		/* A frequency read back as the pitch nearest to it.
@@ -572,9 +622,11 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * accept. The lattice refuses `pitch` everywhere except another `pitch`
 		 * precisely so that cannot happen quietly.
 		 *
-		 * BY is an inlet as well as a knob, which is what the welded TRSP on
-		 * TO-FREQ could not be: an LFO into it is a vibrato measured in
-		 * semitones, and a CONST is the fixed transpose it replaces. */
+		 * BY is an inlet and nothing else, for the reason ADD has no knob: what
+		 * an operand is when nothing is patched is a CONST's job, and that is
+		 * where the kind of number gets said. An LFO into it is a vibrato
+		 * measured in semitones; a CONST is the fixed transpose that the welded
+		 * knob on TO-FREQ used to be, and unlike that one it can be driven. */
 		id: 'trsp',
 		label: 'TRSP',
 		group: 'CONVERT',
@@ -585,7 +637,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ id: 'b', label: 'BY', kind: 'mod' }
 		],
 		outputs: [{ id: 'out', label: 'PITCH', kind: 'mod', role: 'pitch' }],
-		params: [{ key: 'by', label: 'BY', min: -48, max: 48, step: 1, unit: 'st', def: 0 }]
+		params: []
 	},
 	{
 		id: 'out',

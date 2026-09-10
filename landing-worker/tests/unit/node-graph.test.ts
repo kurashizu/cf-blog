@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rolesCompatible } from '../../src/lib/stores/graph-model';
+import { MAP_SHAPES } from '../../src/lib/stores/synth-modules';
 import { modularSynth } from '../../src/lib/synth';
 import { FakeCtx, FakeParam, type FakeNode } from './stubs/audio-context';
 
@@ -166,36 +167,51 @@ describe('the pure nodes', () => {
 		expect(evalPure('mul', { a: 3, b: 4 })).toBe(12);
 	});
 
-	it('uses its knob for an unwired second operand', () => {
-		// A MUL with only A patched is a gain, which is the common case and
-		// should not need a second cable to say so.
-		expect(evalPure('mul', { a: 5 }, { mulB: 3 })).toBe(15);
-		expect(evalPure('add', { a: 5 }, { addB: 3 })).toBe(8);
+	it('passes its other leg through when one is unwired', () => {
+		/* An operator takes whatever arrives, so it has no knob to declare a
+		   range with -- what B is when nothing is patched is a CONST's job, and
+		   that is where the kind of number gets said. Unwired, each falls back to
+		   the identity for its own operation, so a half-patched ADD does not zero
+		   what it was given. */
+		expect(evalPure('mul', { a: 5 })).toBe(5);
+		expect(evalPure('add', { a: 5 })).toBe(5);
 	});
 
 	it('remaps a range and clamps to it', () => {
-		const p = { inLo: 0, inHi: 1, outLo: 200, outHi: 8000 };
-		expect(evalPure('remap', { a: 0 }, p)).toBe(200);
-		expect(evalPure('remap', { a: 1 }, p)).toBe(8000);
-		expect(evalPure('remap', { a: 0.5 }, p)).toBe(4100);
+		/* MAP is what does this now: mapping a range and shaping the way a value
+		   crosses it are one operation, and the two cards differed only in
+		   whether the line between the ends was straight. */
+		/* EASE crosses its range symmetrically, so the midpoint lands in the
+		   middle -- which is what this is really asking: that the two ranges are
+		   wired up, not that any particular curve is straight. */
+		const ease = MAP_SHAPES.findIndex((m) => m.id === 'ease');
+		const p = { shape: ease, inLo: 0, inHi: 1, outLo: 200, outHi: 8000 };
+		expect(evalPure('map', { a: 0 }, p)).toBe(200);
+		expect(evalPure('map', { a: 1 }, p)).toBe(8000);
+		expect(evalPure('map', { a: 0.5 }, p)).toBe(4100);
 		// Past either end it holds, rather than running off the scale.
-		expect(evalPure('remap', { a: 2 }, p)).toBe(8000);
-		expect(evalPure('remap', { a: -1 }, p)).toBe(200);
+		expect(evalPure('map', { a: 2 }, p)).toBe(8000);
+		expect(evalPure('map', { a: -1 }, p)).toBe(200);
 	});
 
 	it('survives a zero-width input range', () => {
 		// Dividing by the span would be NaN; "always the low end" is the sane
 		// reading of a range that has not been set.
-		const v = evalPure('remap', { a: 5 }, { inLo: 1, inHi: 1, outLo: 10, outHi: 90 });
+		const v = evalPure('map', { a: 5 }, { inLo: 1, inHi: 1, outLo: 10, outHi: 90 });
 		expect(Number.isFinite(v)).toBe(true);
 		expect(v).toBe(10);
 	});
 
-	it('clamps between its bounds', () => {
-		const p = { clampLo: 2, clampHi: 8 };
-		expect(evalPure('clamp', { a: 0 }, p)).toBe(2);
-		expect(evalPure('clamp', { a: 5 }, p)).toBe(5);
-		expect(evalPure('clamp', { a: 99 }, p)).toBe(8);
+	it('clamps between bounds that are themselves patchable', () => {
+		// The bounds are sockets: a clamp works on whatever kind of number it is
+		// given, so a knob would have had to pick the range being clamped.
+		const at = (a: number) => evalPure('clamp', { a, lo: 2, hi: 8 });
+		expect(at(0)).toBe(2);
+		expect(at(5)).toBe(5);
+		expect(at(99)).toBe(8);
+		// And in either order, so the two sockets name a range rather than a
+		// sequence.
+		expect(evalPure('clamp', { a: 99, lo: 8, hi: 2 })).toBe(8);
 	});
 
 	it('blends with lerp', () => {
@@ -207,22 +223,44 @@ describe('the pure nodes', () => {
 	});
 
 	it('bends a unit value with map', () => {
-		// A line is the default, and does nothing.
-		expect(evalPure('map', { a: 0.5 }, { shape: 0 })).toBeCloseTo(0.5, 6);
-		// EXP opens late, LOG opens early, and both keep the ends.
-		expect(evalPure('map', { a: 0.5 }, { shape: 1, amount: 100 })).toBeLessThan(0.5);
-		expect(evalPure('map', { a: 0.5 }, { shape: 2, amount: 100 })).toBeGreaterThan(0.5);
-		for (const shape of [0, 1, 2, 3, 4]) {
-			expect(evalPure('map', { a: 0 }, { shape, amount: 100 }), `shape ${shape}`).toBeCloseTo(0, 6);
-			expect(evalPure('map', { a: 1 }, { shape, amount: 100 }), `shape ${shape}`).toBeCloseTo(1, 6);
+		const shape = (label: string) => MAP_SHAPES.findIndex((m) => m.label === label);
+		/* GATE is a threshold rather than a curve: below the middle it is the low
+		   end, above it the high one. It replaced a straight line, which with both
+		   ranges set was the same as no shape at all. */
+		expect(evalPure('map', { a: 0.4 }, { shape: shape('GATE') })).toBe(0);
+		expect(evalPure('map', { a: 0.6 }, { shape: shape('GATE') })).toBe(1);
+		// EXP opens late, LOG opens early.
+		expect(evalPure('map', { a: 0.5 }, { shape: shape('EXP') })).toBeLessThan(0.5);
+		expect(evalPure('map', { a: 0.5 }, { shape: shape('LOG') })).toBeGreaterThan(0.5);
+		// And the harder pair bends further in the same direction.
+		expect(evalPure('map', { a: 0.5 }, { shape: shape('EXP2') })).toBeLessThan(
+			evalPure('map', { a: 0.5 }, { shape: shape('EXP') })
+		);
+		/* Past either end it holds. A value outside the incoming range is not a
+		   shape's business -- the range says what arriving means, and beyond it
+		   there is nothing to say. */
+		expect(evalPure('map', { a: -3 }, { shape: shape('EXP') })).toBe(0);
+		expect(evalPure('map', { a: 40 }, { shape: shape('EXP') })).toBe(1);
+	});
+
+	it('keeps both ends wherever the shape bends', () => {
+		/* Every shape maps 0..1 onto 0..1, so swapping one for another moves how
+		   a sweep travels and never where it starts or stops. INV is the one
+		   exception and swaps them on purpose. */
+		for (let i = 0; i < MAP_SHAPES.length; i++) {
+			const m = MAP_SHAPES[i];
+			if (m.id === 'draw') continue;
+			const ends = [
+				evalPure('map', { a: 0 }, { shape: i }),
+				evalPure('map', { a: 1 }, { shape: i })
+			];
+			expect(ends.map((v) => Math.round(v)).sort(), m.label).toEqual([0, 1]);
 		}
-		// Outside 0..1 the value passes through untouched.
-		expect(evalPure('map', { a: -3 }, { shape: 1 })).toBe(-3);
-		expect(evalPure('map', { a: 40 }, { shape: 1 })).toBe(40);
 	});
 
 	it('turns a sweep into steps, reaching both ends', () => {
-		const step = (x: number) => evalPure('map', { a: x }, { shape: 4, steps: 4 });
+		const st4 = MAP_SHAPES.findIndex((m) => m.id === 'step4');
+		const step = (x: number) => evalPure('map', { a: x }, { shape: st4 });
 		expect(step(0)).toBeCloseTo(0, 6);
 		expect(step(1)).toBeCloseTo(1, 6);
 		// Four treads: 0, 1/3, 2/3, 1 -- the top one has to be reachable.
@@ -230,11 +268,23 @@ describe('the pure nodes', () => {
 	});
 
 	it('leaves DRAW alone until something is drawn', () => {
-		expect(evalPure('map', { a: 0.3 }, { shape: 5 })).toBeCloseTo(0.3, 6);
+		const draw = MAP_SHAPES.findIndex((m) => m.id === 'draw');
+		expect(evalPure('map', { a: 0.3 }, { shape: draw })).toBeCloseTo(0.3, 6);
+	});
+
+	it('follows a drawn table, interpolating between its points', () => {
+		const draw = MAP_SHAPES.findIndex((m) => m.id === 'draw');
+		// Three points describing an inverted line: 1, 0.5, 0.
+		const table = { shape: draw, drawN: 3, d0: 1, d1: 0.5, d2: 0 };
+		expect(evalPure('map', { a: 0 }, table)).toBeCloseTo(1, 6);
+		expect(evalPure('map', { a: 0.5 }, table)).toBeCloseTo(0.5, 6);
+		expect(evalPure('map', { a: 1 }, table)).toBeCloseTo(0, 6);
+		// Between two points it interpolates rather than stepping.
+		expect(evalPure('map', { a: 0.25 }, table)).toBeCloseTo(0.75, 6);
 	});
 
 	it('knows which types are pure', () => {
-		for (const id of ['const', 'add', 'mul', 'remap', 'clamp', 'lerp', 'map']) {
+		for (const id of ['const', 'add', 'mul', 'clamp', 'lerp', 'map']) {
 			expect(isPureNode(id)).toBe(true);
 		}
 		for (const id of ['osc', 'out', 'filter', 'when']) expect(isPureNode(id)).toBe(false);
@@ -244,11 +294,11 @@ describe('the pure nodes', () => {
 describe('pulling a value through a chain', () => {
 	it('walks back through several pure nodes', () => {
 		/* Velocity into a cutoff, the way a patch actually says "harder is
-		   brighter": VEL 0..1 through a REMAP into a filter. */
+		   brighter": VEL 0..1 through a MAP into a filter. */
 		const graph = g(
 			[
 				['e', 'in'],
-				['r', 'remap'],
+				['r', 'map'],
 				['f', 'filter']
 			],
 			[wire('e', 'vel', 'r', 'a'), wire('r', 'out', 'f', 'cutoff')]
@@ -256,6 +306,7 @@ describe('pulling a value through a chain', () => {
 		const r = createResolver(
 			graph,
 			{
+				'r.shape': MAP_SHAPES.findIndex((m) => m.id === 'ease'),
 				'r.inLo': 0,
 				'r.inHi': 1,
 				'r.outLo': 200,
@@ -263,8 +314,9 @@ describe('pulling a value through a chain', () => {
 			},
 			note
 		);
-		// velocity 0.8 across 200..1200
-		expect(r.input('f', 'cutoff', 0)).toBeCloseTo(1000, 6);
+		/* Velocity 0.8 across 200..1200, eased: the point is that the chain
+		   resolves end to end, not which curve carries it. */
+		expect(r.input('f', 'cutoff', 0)).toBeCloseTo(200 + 0.896 * 1000, 3);
 	});
 
 	it('computes a shared value once', () => {
@@ -295,14 +347,23 @@ describe('pulling a value through a chain', () => {
 		   depending on which query ran first. Order-dependence in a pure
 		   evaluator is the worst kind of wrong: it looks fine until it doesn't. */
 		const N = 200;
+		/* Seeded by a CONST rather than by a knob: an operator takes whatever
+		   arrives and has none, so the value at the head of the chain is a node
+		   like any other. */
 		const long = {
-			nodes: [...Array(N)].map((_, i) => ({ id: `n${i}`, type: 'add' })),
-			cables: [...Array(N - 1)].map((_, i) => wire(`n${i}`, 'out', `n${i + 1}`, 'a'))
+			nodes: [
+				{ id: 'seed', type: 'const' },
+				...[...Array(N)].map((_, i) => ({ id: `n${i}`, type: 'add' }))
+			],
+			cables: [
+				wire('seed', 'out', 'n0', 'a'),
+				...[...Array(N - 1)].map((_, i) => wire(`n${i}`, 'out', `n${i + 1}`, 'a'))
+			]
 		};
-		const deepFirst = createResolver(long, { 'n0.addB': 7 }, note);
+		const deepFirst = createResolver(long, { 'seed.value': 7 }, note);
 		expect(deepFirst.input(`n${N - 1}`, 'a', -1)).toBe(7);
 
-		const shallowFirst = createResolver(long, { 'n0.addB': 7 }, note);
+		const shallowFirst = createResolver(long, { 'seed.value': 7 }, note);
 		expect(shallowFirst.input('n3', 'a', -1)).toBe(7);
 		expect(shallowFirst.input(`n${N - 1}`, 'a', -1)).toBe(7);
 		// And the shallow node still reads the same after the deep one.
@@ -756,11 +817,20 @@ describe('pitch and frequency', () => {
 		/* TRSP used to be a knob on TO-FREQ. Adding to a pitch is its own
 		   operation, and welding it to the converter meant it could not take a
 		   cable -- so the transpose was fixed for the life of the patch. */
-		expect(conv('trsp', 0, { by: 12 })).toBeCloseTo(12, 6);
-		expect(conv('trsp', 0, { by: -12 })).toBeCloseTo(-12, 6);
+		/* BY is a socket rather than a knob: what an operand is when nothing is
+		   patched is a CONST's job, and that is where the kind of number gets
+		   said. So the amount arrives on the inlet. */
+		const by = (a: number, b: number) =>
+			PURE_NODES.trsp(
+				{ get: (port, f) => (port === 'a' ? a : port === 'b' ? b : f) },
+				(_k, d) => d,
+				note
+			);
+		expect(by(0, 12)).toBeCloseTo(12, 6);
+		expect(by(0, -12)).toBeCloseTo(-12, 6);
 		// And the conversion that follows it is the one that was there before.
-		expect(conv('tofreq', conv('trsp', 0, { by: 12 }))).toBeCloseTo(880, 6);
-		expect(conv('tofreq', conv('trsp', 0, { by: -12 }))).toBeCloseTo(220, 6);
+		expect(conv('tofreq', by(0, 12))).toBeCloseTo(880, 6);
+		expect(conv('tofreq', by(0, -12))).toBeCloseTo(220, 6);
 	});
 
 	it('survives a frequency of zero or less', () => {
