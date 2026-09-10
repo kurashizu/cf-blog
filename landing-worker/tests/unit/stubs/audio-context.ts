@@ -17,15 +17,24 @@
 
 /** An AudioParam that remembers what was set and what was plugged into it. */
 export class FakeParam {
-	value = 0;
+	/* The default matters, and it is not the same for every param. A real
+	   GainNode's gain is 1, an oscillator's detune is 0, a panner's pan is 0.
+	   Every FakeParam started at 0, so a gain the engine deliberately leaves
+	   alone read as silence -- which is indistinguishable from the bug where a
+	   gain is never set at all, and made a test asserting "this leg is open"
+	   impossible to write. Each node now passes the default the spec gives. */
+	value: number;
 	/** Scheduled automation, in the order it was written. */
 	events: [kind: string, value: number, time: number][] = [];
 	/** Nodes connected to this param, which is what modulation *is*. */
 	sources: FakeNode[] = [];
 	constructor(
 		public owner: FakeNode,
-		public name: string
-	) {}
+		public name: string,
+		initial = 0
+	) {
+		this.value = initial;
+	}
 	setValueAtTime(v: number, t: number) {
 		this.events.push(['set', v, t]);
 		return this;
@@ -95,17 +104,17 @@ export class FakeNode {
 
 class Osc extends FakeNode {
 	type = 'sine';
-	frequency = new FakeParam(this, 'frequency');
+	frequency = new FakeParam(this, 'frequency', 440);
 	detune = new FakeParam(this, 'detune');
 	setPeriodicWave() {}
 }
 class Gain extends FakeNode {
-	gain = new FakeParam(this, 'gain');
+	gain = new FakeParam(this, 'gain', 1);
 }
 class Biquad extends FakeNode {
 	type = 'lowpass';
-	frequency = new FakeParam(this, 'frequency');
-	Q = new FakeParam(this, 'Q');
+	frequency = new FakeParam(this, 'frequency', 350);
+	Q = new FakeParam(this, 'Q', 1);
 	gain = new FakeParam(this, 'gain');
 	detune = new FakeParam(this, 'detune');
 }
@@ -119,17 +128,17 @@ class Panner extends FakeNode {
 	pan = new FakeParam(this, 'pan');
 }
 class Comp extends FakeNode {
-	threshold = new FakeParam(this, 'threshold');
-	ratio = new FakeParam(this, 'ratio');
-	attack = new FakeParam(this, 'attack');
-	release = new FakeParam(this, 'release');
-	knee = new FakeParam(this, 'knee');
+	threshold = new FakeParam(this, 'threshold', -24);
+	ratio = new FakeParam(this, 'ratio', 12);
+	attack = new FakeParam(this, 'attack', 0.003);
+	release = new FakeParam(this, 'release', 0.25);
+	knee = new FakeParam(this, 'knee', 30);
 	reduction = 0;
 }
 class BufSrc extends FakeNode {
 	buffer: unknown = null;
 	loop = false;
-	playbackRate = new FakeParam(this, 'playbackRate');
+	playbackRate = new FakeParam(this, 'playbackRate', 1);
 }
 class Shaper extends FakeNode {
 	curve: Float32Array | null = null;

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { rolesCompatible } from '../../src/lib/stores/graph-model';
 import { modularSynth } from '../../src/lib/synth';
-import { FakeCtx } from './stubs/audio-context';
+import { FakeCtx, FakeParam, type FakeNode } from './stubs/audio-context';
 
 /** The smallest patch that makes ADV own the voice. */
 const ADV_GRAPH = {
@@ -471,28 +471,101 @@ describe('execution flow', () => {
  * context: the rack voice is silenced at one choke point, and the graph is
  * routed through the track level rather than around it.
  */
-describe('ADV and racks 1-7 are one instrument at a time', () => {
-	const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
+/**
+ * Build one note and report what the rack chain and the ADV graph each did.
+ *
+ * Asked of the graph the engine actually builds, not of the text of synth.ts.
+ * The assertions here used to be `expect(SYNTH).toContain('...')` over exact
+ * source lines -- which fail when a local is renamed and pass when a node is
+ * wired to the wrong place, the precise inversion of what a test is for. One
+ * of them included its own indentation and was broken by running a formatter.
+ */
+function buildVoice(adv: boolean, over: Record<string, unknown> = {}) {
+	const ctx = new FakeCtx();
+	const S = modularSynth as unknown as Record<string, unknown>;
+	S.renderCtx = ctx;
+	S.masterFXCtx = null;
+	S.delayNode = null;
+	S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+	(S.activeVoices as Map<string, unknown>).clear();
+	const track = (S.tracks as Record<string, unknown>[])[0];
+	const saved = JSON.parse(JSON.stringify(track));
+	try {
+		Object.assign(track, over);
+		track.muted = false;
+		track.advanced = adv;
+		track.rackGraph = adv ? ADV_GRAPH : undefined;
+		const key = (S.triggerTrackVoice as (...a: unknown[]) => string | undefined)(
+			0,
+			40,
+			0,
+			0,
+			0.4,
+			100,
+			100
+		);
+		const voice = (S.activeVoices as Map<string, Record<string, unknown>>).get(key!);
+		return { ctx, voice };
+	} finally {
+		Object.assign(track, saved);
+		S.renderCtx = null;
+	}
+}
 
-	it('silences the rack voice at a single point when ADV is on', () => {
+describe('ADV and racks 1-7 are one instrument at a time', () => {
+	it('silences the rack oscillators when ADV owns the voice', () => {
 		/* Every rack source -- both oscillators, the sub, the noise, the ring and
-		   fusion paths -- funnels into voiceMix, so muting it there covers all of
-		   them and cannot be forgotten when another is added. */
-		expect(SYNTH).toContain('const advOwnsVoice = !!track.advanced;');
-		expect(SYNTH).toContain('if (advOwnsVoice) voiceMix.gain.value = 0;');
+		   fusion paths -- funnels into one mixer before the filter, so muting it
+		   there covers all of them and cannot be forgotten when another source is
+		   added later. The question is whether that mixer is open. */
+		const mixerGain = (r: ReturnType<typeof buildVoice>) => {
+			const filter = r.voice?.filter as FakeNode | undefined;
+			const mixer = r.ctx.nodes.find(
+				(n) => n.kind === 'gain' && n.outgoing.some((e) => e.to === filter)
+			) as unknown as { gain: FakeParam } | undefined;
+			return mixer?.gain.value ?? -1;
+		};
+		expect(mixerGain(buildVoice(false))).toBeGreaterThan(0);
+		expect(mixerGain(buildVoice(true))).toBe(0);
 	});
 
 	it('owns the note whenever ADV is on, empty canvas included', () => {
 		/* Keying this off "the graph has nodes" let the racks play through a
-		   blank patch: nothing on the canvas and every key sounding. */
-		expect(SYNTH).not.toContain('advOwnsVoice = !!(track.advanced && track.rackGraph');
-	});
-
-	it('leaves voiceMix as the only way into the rack chain', () => {
-		// If something else fed the filter, muting the mixer would not be enough.
-		const feeds = [...SYNTH.matchAll(/\.connect\(filter\)/g)];
-		expect(feeds).toHaveLength(1);
-		expect(SYNTH).toContain('voiceMix.connect(filter);');
+		   blank patch: nothing on the canvas and every key still sounding. */
+		const ctx = new FakeCtx();
+		const S = modularSynth as unknown as Record<string, unknown>;
+		S.renderCtx = ctx;
+		S.masterFXCtx = null;
+		S.delayNode = null;
+		S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+		(S.activeVoices as Map<string, unknown>).clear();
+		const track = (S.tracks as Record<string, unknown>[])[0];
+		const saved = JSON.parse(JSON.stringify(track));
+		try {
+			track.muted = false;
+			track.advanced = true;
+			track.rackGraph = { nodes: [], cables: [] };
+			const key = (S.triggerTrackVoice as (...a: unknown[]) => string | undefined)(
+				0,
+				40,
+				0,
+				0,
+				0.4,
+				100,
+				100
+			);
+			const voice = (S.activeVoices as Map<string, Record<string, unknown>>).get(key!);
+			const filter = voice?.filter as FakeNode | undefined;
+			const loudest = filter
+				? ctx.nodes
+						.filter((n) => n.kind === 'gain' && n.outgoing.some((e) => e.to === filter))
+						.reduce((m, g) => Math.max(m, (g as unknown as { gain: FakeParam }).gain.scheduled), 0)
+				: 0;
+			expect(loudest).toBe(0);
+		} finally {
+			Object.assign(track, saved);
+			S.renderCtx = null;
+		}
 	});
 });
 
