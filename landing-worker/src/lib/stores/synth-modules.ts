@@ -101,10 +101,19 @@ export interface ModuleSpec {
 const CV_A: PortSpec = { id: 'a', label: 'A', kind: 'mod' };
 const CV_B: PortSpec = { id: 'b', label: 'B', kind: 'mod' };
 const CV_OUT: PortSpec = { id: 'out', label: 'OUT', kind: 'mod' };
-/* What each CONST variant emits: the role its outlet takes, and the range the
-   value field allows. A pitch runs to 20 kHz and a velocity stops at 1, which is
-   the whole reason the variants exist -- one untyped number with a -1000..10000
-   range could be wired anywhere and was useful nowhere. */
+/**
+ * The types a CONST can be, and what each one means.
+ *
+ * A number on its own is not a value: 440 is a frequency, a duration, or an
+ * eighth of a MIDI note depending on what it was meant as, and the socket is
+ * where that is said. Each entry names the range the field allows and the role
+ * its outlet takes -- which is what `rolesCompatible` then enforces, so a pitch
+ * cannot be dropped on an inlet that wanted an amount.
+ *
+ * The integer widths are the machine's, not the instrument's: they are here so
+ * a patch can say "this is a byte" and have the field refuse 300, which is what
+ * makes a CONST feeding a sample index or a step count self-documenting.
+ */
 export const CONST_KINDS: {
 	label: string;
 	role: PortRole;
@@ -113,13 +122,63 @@ export const CONST_KINDS: {
 	step: number;
 	def: number;
 	unit?: string;
+	/** Shown and typed as a note name, stored as a number. See `pitch` below. */
+	notes?: boolean;
 }[] = [
-	{ label: 'NUM', role: 'cv', min: -1000, max: 10000, step: 0.01, def: 1 },
-	{ label: 'PITCH', role: 'hz', min: 20, max: 20000, step: 1, def: 440, unit: 'Hz' },
-	{ label: 'VEL', role: 'unit', min: 0, max: 1, step: 0.01, def: 1 },
-	{ label: 'NOTE', role: 'index', min: 0, max: 127, step: 1, def: 48 },
-	{ label: 'TIME', role: 'time', min: 0, max: 60, step: 0.001, def: 0.5, unit: 's' }
+	/* Signed and unsigned bytes and words. Integer steps, so the field cannot
+	   hold 2.5 where a count is meant. */
+	{ label: 'I8', role: 'index', min: -128, max: 127, step: 1, def: 0 },
+	{ label: 'U8', role: 'index', min: 0, max: 255, step: 1, def: 0 },
+	{ label: 'I32', role: 'index', min: -2147483648, max: 2147483647, step: 1, def: 0 },
+	{ label: 'U32', role: 'index', min: 0, max: 4294967295, step: 1, def: 0 },
+	/* A signal's own range: what a waveform swings between. */
+	{ label: 'AMP', role: 'cv', min: -1, max: 1, step: 0.001, def: 0 },
+	/* How much of something, as a fraction. The same 0..1 an inlet declaring
+	   `unit` expects, which is what ENTRY's VEL publishes and what PWM's PW
+	   reads. */
+	{ label: 'PCT', role: 'unit', min: 0, max: 1, step: 0.001, def: 1 },
+	/* A plain real number, either sign. */
+	{ label: 'F32', role: 'cv', min: -3.4e38, max: 3.4e38, step: 0.001, def: 0 },
+	/* The two quantities that are always positive, split apart because the
+	   lattice knows the difference: 440 Hz and 440 seconds are both a positive
+	   float and only one of them belongs on an oscillator. */
+	{ label: 'FRQ', role: 'hz', min: 0, max: 20000, step: 0.01, def: 440, unit: 'Hz' },
+	{ label: 'SEC', role: 'time', min: 0, max: 3600, step: 0.001, def: 0.5, unit: 's' },
+	/* A note, typed and shown as a name.
+	
+	   Stored as a MIDI number, which is the one encoding the piano roll, the
+	   keyboard and an imported file already agree on -- so a CONST set to C2 and
+	   a key pressed at C2 are the same number. Its outlet is a `pitch`, and the
+	   engine publishes a pitch as semitones from the tuning reference rather
+	   than as MIDI, so the conversion happens on the way out: middle A is 69
+	   here and 0 there, and getting that wrong would put every patched note
+	   nearly six octaves high. */
+	{ label: 'PIT', role: 'pitch', min: 0, max: 127, step: 1, def: 60, notes: true }
 ];
+
+/** MIDI note number for A4, the reference every pitch is counted from. */
+export const MIDI_A4 = 69;
+
+/* Sharps rather than flats, and one name per number: a picker that offered
+   both spellings would be two buttons for one note. */
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+/** `60` as `C4`. Octave numbering puts middle C at C4, which is what a piano roll shows. */
+export function noteName(midi: number): string {
+	const n = Math.round(midi);
+	return `${NOTE_NAMES[((n % 12) + 12) % 12]}${Math.floor(n / 12) - 1}`;
+}
+
+/** `C4` back to 60, or null if it is not a note name. */
+export function noteNumber(name: string): number | null {
+	const m = /^([A-Ga-g])([#b]?)(-?\d+)$/.exec(name.trim());
+	if (!m) return null;
+	const base = NOTE_NAMES.indexOf(m[1].toUpperCase());
+	if (base < 0) return null;
+	const alter = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0;
+	const midi = (Number(m[3]) + 1) * 12 + base + alter;
+	return midi >= 0 && midi <= 127 ? midi : null;
+}
 
 const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
 
@@ -370,16 +429,22 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			/* Which kind of number this is. It retypes the outlet, so a pitch
 			   constant carries a pitch socket and will not drop onto an inlet
 			   that wanted an amount -- see CONST_KINDS. */
+			/* Derived from the table rather than repeated here: the two lists
+			   disagreeing is exactly the failure the wave order already had
+			   three times, and a type that exists in one and not the other
+			   would silently select its neighbour. */
 			{
 				key: 'kind',
 				label: 'TYPE',
 				min: 0,
-				max: 4,
+				max: CONST_KINDS.length - 1,
 				step: 1,
 				def: 0,
-				choices: ['NUM', 'PITCH', 'VEL', 'NOTE', 'TIME']
+				choices: CONST_KINDS.map((k) => k.label)
 			},
-			{ key: 'value', label: 'VAL', min: -20000, max: 20000, step: 0.01, def: 1, field: true }
+			/* The range shown here is the widest any type allows; the card
+			   narrows it to whichever type is selected. */
+			{ key: 'value', label: 'VAL', min: -3.4e38, max: 3.4e38, step: 0.001, def: 0, field: true }
 		]
 	},
 	{
@@ -569,9 +634,13 @@ export function moduleWidth(spec: ModuleSpec): number {
 	const knobs = spec.params.filter((p) => !p.choices && !p.field);
 	const fields = spec.params.filter((p) => !p.choices && p.field);
 	let controls = 96;
+	/* A selector is a menu, not a row, so its width is the longest name it has
+	   to show rather than the number of choices. It used to be `choices * 40`,
+	   from when they were segmented buttons: CONST's ten types would have asked
+	   for four hundred pixels, and the card would have been mostly empty. */
 	if (selectors.length) {
-		const widest = Math.max(...selectors.map((p) => (p.choices ?? []).length));
-		controls = Math.max(controls, widest * 40);
+		const longest = Math.max(...selectors.flatMap((p) => (p.choices ?? []).map((c) => c.length)));
+		controls = Math.max(controls, 56 + longest * 6);
 	}
 	if (knobs.length) controls = Math.max(controls, knobs.length > 1 ? 128 : 72);
 	if (fields.length) controls = Math.max(controls, 104);

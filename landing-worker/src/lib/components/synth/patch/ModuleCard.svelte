@@ -15,6 +15,8 @@
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 	import {
 		CONST_KINDS,
+		noteName,
+		noteNumber,
 		WAVE_SHAPES,
 		labelGutter,
 		type ModuleSpec
@@ -92,7 +94,7 @@
 				   take a number that meant nothing there. */
 				if (spec.id !== 'const' || p.key !== 'value') return p;
 				const k = CONST_KINDS[Math.round(val('kind', 0))] ?? CONST_KINDS[0];
-				return { ...p, min: k.min, max: k.max, step: k.step, unit: k.unit ?? '' };
+				return { ...p, min: k.min, max: k.max, step: k.step, unit: k.unit ?? '', notes: !!k.notes };
 			})
 	);
 	let knobs = $derived(spec.params.filter((p) => !p.choices && !p.field && !p.wave));
@@ -181,7 +183,19 @@
 			value={Math.round(val(p.key, p.def) / stride)}
 			choices={p.choices ?? []}
 			color={spec.color}
-			onPick={(i) => onParam(p.key, i * stride)}
+			onPick={(i) => {
+				onParam(p.key, i * stride);
+				/* Changing CONST's type changes what its value is allowed to be, so
+				   a number carried over from the last type has to come with it: 128
+				   is a legal U8 and not a note, and leaving it would have shown a
+				   field the engine would clamp behind the player's back. */
+				if (spec.id === 'const' && p.key === 'kind') {
+					const k = CONST_KINDS[i] ?? CONST_KINDS[0];
+					const held = val('value', k.def);
+					const fit = Math.max(k.min, Math.min(k.max, held));
+					if (fit !== held) onParam('value', fit);
+				}
+			}}
 		/>
 	{/each}
 
@@ -239,19 +253,40 @@
 			{#each fields as p (p.key)}
 				<label class="flex items-center gap-1 text-[8px] font-mono font-bold leading-none">
 					<span class="shrink-0 opacity-70" style="color: {spec.color}">{p.label}</span>
-					<input
-						type="number"
-						value={val(p.key, p.def)}
-						min={p.min}
-						max={p.max}
-						step={p.step}
-						onpointerdown={(e) => e.stopPropagation()}
-						oninput={(e) => {
-							const v = Number((e.currentTarget as HTMLInputElement).value);
-							if (Number.isFinite(v)) onParam(p.key, Math.max(p.min, Math.min(p.max, v)));
-						}}
-						class="no-spin min-w-0 flex-1 bg-black/60 border border-white/20 rounded-xs px-1 py-0.5 text-[9px] font-mono text-right text-white focus:border-white/60 focus:outline-none"
-					/>
+					{#if (p as { notes?: boolean }).notes}
+						<!-- A note, typed as a name. The number underneath is MIDI, which
+						     is what the roll and the keyboard use, but nobody thinks in
+						     60 -- and "C4" is the same length to read and unambiguous
+						     about the octave. Anything unparseable leaves the value
+						     alone rather than resetting it to something arbitrary. -->
+						<input
+							type="text"
+							value={noteName(Math.max(p.min, Math.min(p.max, val(p.key, p.def))))}
+							onpointerdown={(e) => e.stopPropagation()}
+							onchange={(e) => {
+								const el = e.currentTarget as HTMLInputElement;
+								const n = noteNumber(el.value);
+								if (n === null)
+									el.value = noteName(Math.max(p.min, Math.min(p.max, val(p.key, p.def))));
+								else onParam(p.key, n);
+							}}
+							class="min-w-0 flex-1 bg-black/60 border border-white/20 rounded-xs px-1 py-0.5 text-[9px] font-mono text-right text-white focus:border-white/60 focus:outline-none"
+						/>
+					{:else}
+						<input
+							type="number"
+							value={val(p.key, p.def)}
+							min={p.min}
+							max={p.max}
+							step={p.step}
+							onpointerdown={(e) => e.stopPropagation()}
+							oninput={(e) => {
+								const v = Number((e.currentTarget as HTMLInputElement).value);
+								if (Number.isFinite(v)) onParam(p.key, Math.max(p.min, Math.min(p.max, v)));
+							}}
+							class="no-spin min-w-0 flex-1 bg-black/60 border border-white/20 rounded-xs px-1 py-0.5 text-[9px] font-mono text-right text-white focus:border-white/60 focus:outline-none"
+						/>
+					{/if}
 					{#if p.unit}<span class="shrink-0 opacity-50">{p.unit}</span>{/if}
 				</label>
 			{/each}

@@ -67,6 +67,14 @@ export type PureFn = (
  * once to resolve it -- which is exactly the kind of duplication that drifts.
  */
 
+/* The PIT entry's index in CONST_KINDS, and the MIDI number of the reference.
+   Stated here rather than imported: synth-modules imports the port types from
+   graph-model and this file is read by the engine, so reaching across for two
+   numbers would tie the value evaluator to the catalogue. The pairing is
+   pinned by a test instead. */
+const CONST_PITCH_KIND = 9;
+const MIDI_A4 = 69;
+
 /** Semitones above the reference as a frequency. */
 const hzOf = (semis: number, a4: number) => a4 * Math.pow(2, semis / 12);
 
@@ -84,7 +92,18 @@ export const PURE_NODES: Record<string, PureFn> = {
 	},
 	/* Semitones onto a pitch, keeping it a pitch. */
 	trsp: (i, p) => i.get('a', 0) + i.get('b', p('by', 0)),
-	const: (_i, p) => p('value', 1),
+	/* A literal, in whichever type the socket it is going to expects.
+	
+	   PIT is the one that is not simply its own number. It is typed and stored
+	   as MIDI, because that is what the piano roll, the keyboard and an imported
+	   file all agree on -- but a `pitch` on a cable is semitones from the tuning
+	   reference, where A4 is 0 rather than 69. Converting here means a CONST set
+	   to C4 and a key pressed at C4 reach an oscillator as the same note; without
+	   it every patched pitch would arrive five and a half octaves high. */
+	const: (_i, p) => {
+		const v = p('value', 1);
+		return p('kind', 0) === CONST_PITCH_KIND ? v - MIDI_A4 : v;
+	},
 	add: (i, p) => i.get('a', 0) + i.get('b', p('addB', 0)),
 	mul: (i, p) => i.get('a', 1) * i.get('b', p('mulB', 1)),
 	remap: (i, p) => {
