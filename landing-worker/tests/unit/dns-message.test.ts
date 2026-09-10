@@ -8,12 +8,18 @@ import { parseQuestion, fromBase64Url } from '../../src/lib/dns-message';
 /** A wire-format query for `name`, with a 12-byte header. */
 function query(name: string, opts: { qdcount?: number; trailing?: number[] } = {}): Uint8Array {
 	const header = [
-		0x12, 0x34, // id
-		0x01, 0x00, // flags: standard query, RD
-		0x00, opts.qdcount ?? 1, // qdcount
-		0x00, 0x00, // ancount
-		0x00, 0x00, // nscount
-		0x00, 0x00 // arcount
+		0x12,
+		0x34, // id
+		0x01,
+		0x00, // flags: standard query, RD
+		0x00,
+		opts.qdcount ?? 1, // qdcount
+		0x00,
+		0x00, // ancount
+		0x00,
+		0x00, // nscount
+		0x00,
+		0x00 // arcount
 	];
 	const labels: number[] = [];
 	for (const label of name.split('.').filter(Boolean)) {
@@ -68,8 +74,7 @@ describe('parseQuestion', () => {
 		// shortest complete query is 18 bytes; the floor is deliberately loose
 		// and the later check is the one that has to be right.
 		const msg = new Uint8Array([
-			0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0,
-			0x01, 0x61, 0x00, 0x00, 0x01
+			0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0x01, 0x61, 0x00, 0x00, 0x01
 		]);
 		expect(msg.length).toBe(17);
 		expect(parseQuestion(msg)).toBeNull();
@@ -91,7 +96,9 @@ describe('parseQuestion', () => {
 	it('refuses a name past the label-count limit', () => {
 		// a message with more labels than any real name carries: the guard keeps
 		// a malformed query from building an unbounded list
-		const name = Array.from({ length: 200 }, (_, i) => String.fromCharCode(97 + (i % 26))).join('.');
+		const name = Array.from({ length: 200 }, (_, i) => String.fromCharCode(97 + (i % 26))).join(
+			'.'
+		);
 		expect(parseQuestion(query(name))).toBeNull();
 	});
 
@@ -124,8 +131,7 @@ describe('parseQuestion', () => {
 	it('returns null for a name with no labels', () => {
 		// header, a root label straight away, then QTYPE/QCLASS
 		const msg = new Uint8Array([
-			0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0,
-			0x00, 0x00, 0x01, 0x00, 0x01
+			0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x00, 0x01, 0x00, 0x01
 		]);
 		expect(parseQuestion(msg)).toBeNull();
 	});
@@ -213,7 +219,19 @@ describe('fromBase64Url', () => {
 	});
 
 	it('never throws on arbitrary text', () => {
-		for (const text of ['', '=', '==', '===', 'a', 'ab', ' ', '\u0000', 'ü', '%%%', 'A'.repeat(999)]) {
+		for (const text of [
+			'',
+			'=',
+			'==',
+			'===',
+			'a',
+			'ab',
+			' ',
+			'\u0000',
+			'ü',
+			'%%%',
+			'A'.repeat(999)
+		]) {
 			expect(() => fromBase64Url(text)).not.toThrow();
 		}
 	});

@@ -47,7 +47,9 @@ describe('decodeRLE', () => {
 	});
 
 	it('ignores whitespace and newlines inside the body', () => {
-		expect(sortCells(decodeRLE('b o b $\n2 b o !').cells)).toEqual(sortCells(decodeRLE('bob$2bo!').cells));
+		expect(sortCells(decodeRLE('b o b $\n2 b o !').cells)).toEqual(
+			sortCells(decodeRLE('bob$2bo!').cells)
+		);
 	});
 
 	it('stops at the terminator', () => {
@@ -127,7 +129,12 @@ describe('encodeRLE', () => {
 
 describe('parseRLE', () => {
 	it('reads name, comments, size and body from a full file', () => {
-		const text = ['#N Glider', '#C The smallest spaceship.', 'x = 3, y = 3, rule = B3/S23', 'bob$2bo$3o!'].join('\n');
+		const text = [
+			'#N Glider',
+			'#C The smallest spaceship.',
+			'x = 3, y = 3, rule = B3/S23',
+			'bob$2bo$3o!'
+		].join('\n');
 		const out = parseRLE(text);
 		expect(out.name).toBe('Glider');
 		expect(out.comments).toEqual(['The smallest spaceship.']);
@@ -183,7 +190,15 @@ describe('normalizeCells', () => {
 });
 
 describe('geometry', () => {
-	const lShape = { cells: [[0, 0], [0, 1], [1, 1]] as Cell[], w: 2, h: 2 };
+	const lShape = {
+		cells: [
+			[0, 0],
+			[0, 1],
+			[1, 1]
+		] as Cell[],
+		w: 2,
+		h: 2
+	};
 
 	it('returns the pattern unchanged at rotation 0', () => {
 		const out = rotateCells(lShape, 0);
@@ -197,7 +212,15 @@ describe('geometry', () => {
 	});
 
 	it('swaps width and height on a quarter turn', () => {
-		const tall = { cells: [[0, 0], [0, 1], [0, 2]] as Cell[], w: 1, h: 3 };
+		const tall = {
+			cells: [
+				[0, 0],
+				[0, 1],
+				[0, 2]
+			] as Cell[],
+			w: 1,
+			h: 3
+		};
 		const turned = rotateCells(tall, 1);
 		expect([turned.w, turned.h]).toEqual([3, 1]);
 	});
@@ -245,14 +268,56 @@ describe('geometry', () => {
 
 	it('compares two patterns cell by cell', () => {
 		const p = (cells: Cell[], w: number, h: number) => ({ cells, w, h });
-		expect(sameCells(p([[0, 0], [1, 1]], 2, 2), p([[0, 0], [1, 1]], 2, 2))).toBe(true);
+		expect(
+			sameCells(
+				p(
+					[
+						[0, 0],
+						[1, 1]
+					],
+					2,
+					2
+				),
+				p(
+					[
+						[0, 0],
+						[1, 1]
+					],
+					2,
+					2
+				)
+			)
+		).toBe(true);
 		// same cells, different cell counts
-		expect(sameCells(p([[0, 0]], 2, 2), p([[0, 0], [1, 1]], 2, 2))).toBe(false);
+		expect(
+			sameCells(
+				p([[0, 0]], 2, 2),
+				p(
+					[
+						[0, 0],
+						[1, 1]
+					],
+					2,
+					2
+				)
+			)
+		).toBe(false);
 	});
 
 	it('ignores the order the cells are listed in', () => {
 		const p = (cells: Cell[]) => ({ cells, w: 2, h: 2 });
-		expect(sameCells(p([[0, 0], [1, 1]]), p([[1, 1], [0, 0]]))).toBe(true);
+		expect(
+			sameCells(
+				p([
+					[0, 0],
+					[1, 1]
+				]),
+				p([
+					[1, 1],
+					[0, 0]
+				])
+			)
+		).toBe(true);
 	});
 
 	it('separates patterns that differ only in width', () => {

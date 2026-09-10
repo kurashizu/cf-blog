@@ -46,7 +46,8 @@ export default {
 		'chatbot.storage.total': 'total {size}',
 		'chatbot.storage.cachedHere': '{size} cached here',
 		'chatbot.storage.notDownloaded': 'not downloaded yet',
-		'chatbot.storage.wipeModelHint': 'Delete the downloaded weights from this device. The next load downloads them again.',
+		'chatbot.storage.wipeModelHint':
+			'Delete the downloaded weights from this device. The next load downloads them again.',
 		'chatbot.storage.wipeModel': 'WIPE MODEL',
 		'chatbot.storage.wiping': 'CLEARING…',
 		'chatbot.storage.conversations': 'conversations',
@@ -86,7 +87,8 @@ export default {
 		'chatbot.composer.removeAttachment': 'remove {name}',
 		'chatbot.composer.attachHint': 'Attach an image — you can also paste or drag one in',
 		'chatbot.composer.image': 'IMAGE',
-		'chatbot.composer.thinkHint': 'Let the model reason before answering. Slower, and better on anything with steps.',
+		'chatbot.composer.thinkHint':
+			'Let the model reason before answering. Slower, and better on anything with steps.',
 		'chatbot.composer.think': 'THINK',
 		'chatbot.composer.placeholderReady': 'message, or /help',
 		'chatbot.composer.placeholderNotReady': 'Load the model first.',
@@ -120,30 +122,36 @@ export default {
 		'chatbot.error.noCode': 'Error: no code given',
 		'chatbot.gpu.insecureContext.reason':
 			'WebGPU needs a secure context, and this page is plain http on something other than localhost.',
-		'chatbot.gpu.insecureContext.fix1': 'Open the page over https, or from http://localhost — both count as secure.',
+		'chatbot.gpu.insecureContext.fix1':
+			'Open the page over https, or from http://localhost — both count as secure.',
 		'chatbot.gpu.insecureContext.fix2':
 			'Chrome can be told to trust this one origin: launch it with --unsafely-treat-insecure-origin-as-secure=<this page’s origin>',
-		'chatbot.gpu.insecureContext.fix3': 'Firefox has no equivalent switch, so https is the only route there.',
+		'chatbot.gpu.insecureContext.fix3':
+			'Firefox has no equivalent switch, so https is the only route there.',
 		'chatbot.gpu.noWebgpu.reason': 'This browser does not expose WebGPU.',
-		'chatbot.gpu.noWebgpu.fix1': 'Chrome or Edge 113+, or Safari 18+, support it without any setting.',
+		'chatbot.gpu.noWebgpu.fix1':
+			'Chrome or Edge 113+, or Safari 18+, support it without any setting.',
 		'chatbot.gpu.noWebgpu.fix2':
 			'Firefox: open about:config and set dom.webgpu.enabled to true, then restart the browser.',
 		'chatbot.gpu.noWebgpu.fix3':
 			'Firefox on Linux also needs dom.webgpu.workers.enabled — the model runs in a worker — and a working Vulkan driver (mesa-vulkan-drivers).',
 		'chatbot.gpu.adapterRequestFailed.reason': 'WebGPU adapter request failed: {message}',
-		'chatbot.gpu.adapterRequestFailed.fix1': 'Update your graphics driver, then restart the browser.',
+		'chatbot.gpu.adapterRequestFailed.fix1':
+			'Update your graphics driver, then restart the browser.',
 		'chatbot.gpu.noAdapter.reason':
 			'WebGPU is present but no GPU adapter was granted — usually a blocklisted or missing driver.',
 		'chatbot.gpu.noAdapter.fix1': 'Update your graphics driver and restart the browser.',
 		'chatbot.gpu.noAdapter.fix2':
 			'On Linux, check that Vulkan works: run `vulkaninfo --summary`, and install mesa-vulkan-drivers if it fails.',
 		'chatbot.gpu.noAdapter.fix3': 'Chrome: chrome://gpu lists what was blocklisted and why.',
-		'chatbot.session.newConversation': 'new conversation',
+		'chatbot.session.newConversation': 'new conversation'
 	},
 	'zh-CN': {
-		'chatbot.meta.description': '完全在你的浏览器中运行的语言模型，基于 WebGPU —— 没有服务器，任何内容都不会离开这个标签页。',
+		'chatbot.meta.description':
+			'完全在你的浏览器中运行的语言模型，基于 WebGPU —— 没有服务器，任何内容都不会离开这个标签页。',
 		'chatbot.strip.subtitle': '文本 · 图片 · 工具，全部在你自己的设备上运行',
-		'chatbot.strip.ctxHint': '对话占用了 {contextWindow} 个 token 上下文窗口中的多少。/compact 可以对其进行摘要。',
+		'chatbot.strip.ctxHint':
+			'对话占用了 {contextWindow} 个 token 上下文窗口中的多少。/compact 可以对其进行摘要。',
 		'chatbot.strip.decodeSpeedHint': '上一条回复的解码速度',
 		'chatbot.strip.configHint': '生成长度与采样设置',
 		'chatbot.strip.config': 'CONFIG',
@@ -163,7 +171,8 @@ export default {
 		'chatbot.config.repetitionPenalty.label': 'repetition penalty',
 		'chatbot.config.repetitionPenalty.hint': '抑制重复',
 		'chatbot.config.reasoning.label': 'reasoning',
-		'chatbot.config.reasoning.hint': '让模型在回答前先推理。作用于整段对话，因此放在这里而不是消息框旁边。',
+		'chatbot.config.reasoning.hint':
+			'让模型在回答前先推理。作用于整段对话，因此放在这里而不是消息框旁边。',
 		'chatbot.config.reasoning.also': '也可以用消息框旁边的 THINK 按钮切换',
 		'chatbot.config.on': 'ON',
 		'chatbot.config.off': 'OFF',
@@ -171,7 +180,8 @@ export default {
 		'chatbot.config.sampling.hint': '进行采样，而不是始终选择概率最高的 token',
 		'chatbot.config.loopGuard.label': 'loop guard',
 		'chatbot.config.loopGuard.hint': '在回复陷入重复时停止生成',
-		'chatbot.config.footnote': '设置保存在此浏览器中。采样设置在下一条消息生效；推理后端需要重新加载。',
+		'chatbot.config.footnote':
+			'设置保存在此浏览器中。采样设置在下一条消息生效；推理后端需要重新加载。',
 		'chatbot.config.defaults': 'DEFAULTS',
 		'chatbot.storage.explain':
 			'模型只需下载一次，之后由浏览器缓存，第二次访问会跳过下载。权重和推理运行时都来自本站自己的存储 —— 不会从第三方获取任何内容。',
@@ -187,7 +197,8 @@ export default {
 		'chatbot.storage.conversationsCount': '已保存 {count} 条 · {size}',
 		'chatbot.storage.new': 'NEW',
 		'chatbot.storage.deleteAll': 'DELETE ALL',
-		'chatbot.storage.conversationsExplain': '对话记录，包括其中的图片和音频，只保存在此浏览器中 —— 永远不会上传。',
+		'chatbot.storage.conversationsExplain':
+			'对话记录，包括其中的图片和音频，只保存在此浏览器中 —— 永远不会上传。',
 		'chatbot.storage.turnsCount': '{count} 轮',
 		'chatbot.storage.deleteConversationHint': '删除此对话',
 		'chatbot.storage.deleteConversationLabel': '删除对话',
@@ -251,28 +262,36 @@ export default {
 		'chatbot.error.unknownTool': '错误：没有名为 {name} 的工具',
 		'chatbot.error.badToolArgs': '错误：参数不是有效的 JSON',
 		'chatbot.error.noCode': '错误：没有提供代码',
-		'chatbot.gpu.insecureContext.reason': 'WebGPU 需要安全上下文，而此页面是以普通 http 方式提供的，并非 localhost。',
-		'chatbot.gpu.insecureContext.fix1': '通过 https 打开此页面，或使用 http://localhost —— 两者都算作安全上下文。',
+		'chatbot.gpu.insecureContext.reason':
+			'WebGPU 需要安全上下文，而此页面是以普通 http 方式提供的，并非 localhost。',
+		'chatbot.gpu.insecureContext.fix1':
+			'通过 https 打开此页面，或使用 http://localhost —— 两者都算作安全上下文。',
 		'chatbot.gpu.insecureContext.fix2':
 			'可以让 Chrome 信任这一个源：启动时加上 --unsafely-treat-insecure-origin-as-secure=<此页面的源>',
 		'chatbot.gpu.insecureContext.fix3': 'Firefox 没有对应的开关，所以那里只能用 https。',
 		'chatbot.gpu.noWebgpu.reason': '此浏览器未提供 WebGPU。',
-		'chatbot.gpu.noWebgpu.fix1': 'Chrome 或 Edge 113 及以上版本、Safari 18 及以上版本，无需任何设置即可支持。',
-		'chatbot.gpu.noWebgpu.fix2': 'Firefox：打开 about:config，将 dom.webgpu.enabled 设为 true，然后重启浏览器。',
+		'chatbot.gpu.noWebgpu.fix1':
+			'Chrome 或 Edge 113 及以上版本、Safari 18 及以上版本，无需任何设置即可支持。',
+		'chatbot.gpu.noWebgpu.fix2':
+			'Firefox：打开 about:config，将 dom.webgpu.enabled 设为 true，然后重启浏览器。',
 		'chatbot.gpu.noWebgpu.fix3':
 			'Linux 上的 Firefox 还需要开启 dom.webgpu.workers.enabled（模型运行在 worker 中），并需要可用的 Vulkan 驱动（mesa-vulkan-drivers）。',
 		'chatbot.gpu.adapterRequestFailed.reason': 'WebGPU 适配器请求失败：{message}',
 		'chatbot.gpu.adapterRequestFailed.fix1': '更新显卡驱动，然后重启浏览器。',
-		'chatbot.gpu.noAdapter.reason': 'WebGPU 已就绪，但未获得任何 GPU 适配器 —— 通常是驱动被列入黑名单或缺失驱动。',
+		'chatbot.gpu.noAdapter.reason':
+			'WebGPU 已就绪，但未获得任何 GPU 适配器 —— 通常是驱动被列入黑名单或缺失驱动。',
 		'chatbot.gpu.noAdapter.fix1': '更新显卡驱动并重启浏览器。',
-		'chatbot.gpu.noAdapter.fix2': '在 Linux 上检查 Vulkan 是否可用：运行 `vulkaninfo --summary`，如果失败请安装 mesa-vulkan-drivers。',
+		'chatbot.gpu.noAdapter.fix2':
+			'在 Linux 上检查 Vulkan 是否可用：运行 `vulkaninfo --summary`，如果失败请安装 mesa-vulkan-drivers。',
 		'chatbot.gpu.noAdapter.fix3': 'Chrome：chrome://gpu 会列出被屏蔽的内容及原因。',
-		'chatbot.session.newConversation': '新对话',
+		'chatbot.session.newConversation': '新对话'
 	},
 	'zh-TW': {
-		'chatbot.meta.description': '完全在你的瀏覽器中執行的語言模型，基於 WebGPU —— 沒有伺服器，任何內容都不會離開這個分頁。',
+		'chatbot.meta.description':
+			'完全在你的瀏覽器中執行的語言模型，基於 WebGPU —— 沒有伺服器，任何內容都不會離開這個分頁。',
 		'chatbot.strip.subtitle': '文字 · 圖片 · 工具，全部在你自己的裝置上執行',
-		'chatbot.strip.ctxHint': '對話占用了 {contextWindow} 個 token 語境視窗中的多少。/compact 可以摘要它。',
+		'chatbot.strip.ctxHint':
+			'對話占用了 {contextWindow} 個 token 語境視窗中的多少。/compact 可以摘要它。',
 		'chatbot.strip.decodeSpeedHint': '上一則回覆的解碼速度',
 		'chatbot.strip.configHint': '生成長度與取樣設定',
 		'chatbot.strip.config': 'CONFIG',
@@ -292,7 +311,8 @@ export default {
 		'chatbot.config.repetitionPenalty.label': 'repetition penalty',
 		'chatbot.config.repetitionPenalty.hint': '抑制重複',
 		'chatbot.config.reasoning.label': 'reasoning',
-		'chatbot.config.reasoning.hint': '讓模型在回答前先推理。作用於整段對話，因此放在這裡而不是訊息框旁邊。',
+		'chatbot.config.reasoning.hint':
+			'讓模型在回答前先推理。作用於整段對話，因此放在這裡而不是訊息框旁邊。',
 		'chatbot.config.reasoning.also': '也可以用訊息框旁邊的 THINK 按鈕切換',
 		'chatbot.config.on': 'ON',
 		'chatbot.config.off': 'OFF',
@@ -300,7 +320,8 @@ export default {
 		'chatbot.config.sampling.hint': '進行取樣，而不是永遠選擇機率最高的 token',
 		'chatbot.config.loopGuard.label': 'loop guard',
 		'chatbot.config.loopGuard.hint': '在回覆陷入重複時停止產生',
-		'chatbot.config.footnote': '設定儲存在此瀏覽器中。取樣設定在下一則訊息生效；推理後端需要重新載入。',
+		'chatbot.config.footnote':
+			'設定儲存在此瀏覽器中。取樣設定在下一則訊息生效；推理後端需要重新載入。',
 		'chatbot.config.defaults': 'DEFAULTS',
 		'chatbot.storage.explain':
 			'模型只需下載一次，之後由瀏覽器快取，第二次造訪會略過下載。權重和推理執行環境都來自本站自己的儲存空間 —— 不會從第三方取得任何內容。',
@@ -316,7 +337,8 @@ export default {
 		'chatbot.storage.conversationsCount': '已儲存 {count} 則 · {size}',
 		'chatbot.storage.new': 'NEW',
 		'chatbot.storage.deleteAll': 'DELETE ALL',
-		'chatbot.storage.conversationsExplain': '對話紀錄，包括其中的圖片和音訊，只儲存在此瀏覽器中 —— 永遠不會上傳。',
+		'chatbot.storage.conversationsExplain':
+			'對話紀錄，包括其中的圖片和音訊，只儲存在此瀏覽器中 —— 永遠不會上傳。',
 		'chatbot.storage.turnsCount': '{count} 輪',
 		'chatbot.storage.deleteConversationHint': '刪除這則對話',
 		'chatbot.storage.deleteConversationLabel': '刪除對話',
@@ -380,26 +402,33 @@ export default {
 		'chatbot.error.unknownTool': '錯誤：沒有名為 {name} 的工具',
 		'chatbot.error.badToolArgs': '錯誤：參數不是有效的 JSON',
 		'chatbot.error.noCode': '錯誤：沒有提供程式碼',
-		'chatbot.gpu.insecureContext.reason': 'WebGPU 需要安全內容環境，而此頁面是以一般 http 提供，並非 localhost。',
-		'chatbot.gpu.insecureContext.fix1': '透過 https 開啟此頁面，或使用 http://localhost —— 兩者都算安全內容環境。',
+		'chatbot.gpu.insecureContext.reason':
+			'WebGPU 需要安全內容環境，而此頁面是以一般 http 提供，並非 localhost。',
+		'chatbot.gpu.insecureContext.fix1':
+			'透過 https 開啟此頁面，或使用 http://localhost —— 兩者都算安全內容環境。',
 		'chatbot.gpu.insecureContext.fix2':
 			'可以讓 Chrome 信任這一個來源：啟動時加上 --unsafely-treat-insecure-origin-as-secure=<此頁面的來源>',
 		'chatbot.gpu.insecureContext.fix3': 'Firefox 沒有對應的開關，所以那裡只能用 https。',
 		'chatbot.gpu.noWebgpu.reason': '此瀏覽器未提供 WebGPU。',
-		'chatbot.gpu.noWebgpu.fix1': 'Chrome 或 Edge 113 以上版本、Safari 18 以上版本，不需任何設定即可支援。',
-		'chatbot.gpu.noWebgpu.fix2': 'Firefox：開啟 about:config，將 dom.webgpu.enabled 設為 true，然後重新啟動瀏覽器。',
+		'chatbot.gpu.noWebgpu.fix1':
+			'Chrome 或 Edge 113 以上版本、Safari 18 以上版本，不需任何設定即可支援。',
+		'chatbot.gpu.noWebgpu.fix2':
+			'Firefox：開啟 about:config，將 dom.webgpu.enabled 設為 true，然後重新啟動瀏覽器。',
 		'chatbot.gpu.noWebgpu.fix3':
 			'Linux 上的 Firefox 還需要開啟 dom.webgpu.workers.enabled（模型執行於 worker 中），並需要可用的 Vulkan 驅動程式（mesa-vulkan-drivers）。',
 		'chatbot.gpu.adapterRequestFailed.reason': 'WebGPU 介面卡請求失敗：{message}',
 		'chatbot.gpu.adapterRequestFailed.fix1': '更新顯示卡驅動程式，然後重新啟動瀏覽器。',
-		'chatbot.gpu.noAdapter.reason': 'WebGPU 已就緒，但未取得任何 GPU 介面卡 —— 通常是驅動程式被列入黑名單或缺少驅動程式。',
+		'chatbot.gpu.noAdapter.reason':
+			'WebGPU 已就緒，但未取得任何 GPU 介面卡 —— 通常是驅動程式被列入黑名單或缺少驅動程式。',
 		'chatbot.gpu.noAdapter.fix1': '更新顯示卡驅動程式並重新啟動瀏覽器。',
-		'chatbot.gpu.noAdapter.fix2': '在 Linux 上檢查 Vulkan 是否可用：執行 `vulkaninfo --summary`，若失敗請安裝 mesa-vulkan-drivers。',
+		'chatbot.gpu.noAdapter.fix2':
+			'在 Linux 上檢查 Vulkan 是否可用：執行 `vulkaninfo --summary`，若失敗請安裝 mesa-vulkan-drivers。',
 		'chatbot.gpu.noAdapter.fix3': 'Chrome：chrome://gpu 會列出被封鎖的項目與原因。',
-		'chatbot.session.newConversation': '新對話',
+		'chatbot.session.newConversation': '新對話'
 	},
 	ja: {
-		'chatbot.meta.description': 'ブラウザ上で完結する言語モデル（WebGPU 使用）—— サーバーはなく、何もタブの外に出ません。',
+		'chatbot.meta.description':
+			'ブラウザ上で完結する言語モデル（WebGPU 使用）—— サーバーはなく、何もタブの外に出ません。',
 		'chatbot.strip.subtitle': 'テキスト・画像・ツール、すべてお使いの端末上で動作',
 		'chatbot.strip.ctxHint':
 			'会話が {contextWindow} トークンのコンテキストウィンドウのうちどれだけを占めているか。/compact で要約できます。',
@@ -431,7 +460,8 @@ export default {
 		'chatbot.config.sampling.hint': '常に最尤トークンを選ぶのではなく、サンプリングします',
 		'chatbot.config.loopGuard.label': 'loop guard',
 		'chatbot.config.loopGuard.hint': '返信が繰り返しに陥ったら生成を停止します',
-		'chatbot.config.footnote': 'このブラウザに保存されます。サンプリングは次のメッセージから反映され、バックエンドは再読み込みが必要です。',
+		'chatbot.config.footnote':
+			'このブラウザに保存されます。サンプリングは次のメッセージから反映され、バックエンドは再読み込みが必要です。',
 		'chatbot.config.defaults': 'DEFAULTS',
 		'chatbot.storage.explain':
 			'モデルは一度ダウンロードされるとブラウザにキャッシュされ、次回訪問時はスキップされます。重みも推論ランタイムも、このサイト自身のストレージから取得しており、第三者から取得するものはありません。',
@@ -440,7 +470,8 @@ export default {
 		'chatbot.storage.total': '合計 {size}',
 		'chatbot.storage.cachedHere': 'この端末に {size} キャッシュ済み',
 		'chatbot.storage.notDownloaded': 'まだダウンロードされていません',
-		'chatbot.storage.wipeModelHint': 'この端末からダウンロード済みの重みを削除します。次回の読み込みで再ダウンロードされます。',
+		'chatbot.storage.wipeModelHint':
+			'この端末からダウンロード済みの重みを削除します。次回の読み込みで再ダウンロードされます。',
 		'chatbot.storage.wipeModel': 'WIPE MODEL',
 		'chatbot.storage.wiping': 'CLEARING…',
 		'chatbot.storage.conversations': '会話',
@@ -480,7 +511,8 @@ export default {
 		'chatbot.composer.removeAttachment': '{name} を削除',
 		'chatbot.composer.attachHint': '画像を添付 —— 貼り付けやドラッグでも可能です',
 		'chatbot.composer.image': 'IMAGE',
-		'chatbot.composer.thinkHint': '回答前にモデルに推論させます。時間はかかりますが、手順が必要な内容には有効です。',
+		'chatbot.composer.thinkHint':
+			'回答前にモデルに推論させます。時間はかかりますが、手順が必要な内容には有効です。',
 		'chatbot.composer.think': 'THINK',
 		'chatbot.composer.placeholderReady': 'メッセージ、または /help',
 		'chatbot.composer.placeholderNotReady': '先にモデルを読み込んでください。',
@@ -495,7 +527,8 @@ export default {
 		'chatbot.notice.compactFailed': '要約に失敗しました —— モデルが何も返しませんでした。',
 		'chatbot.notice.notImage': '{name} は画像ではないためスキップしました。',
 		'chatbot.notice.unknownCommand': '不明なコマンドです：/{cmd} —— /help を試してください',
-		'chatbot.notice.nothingToCompactNotLoaded': '要約する内容がありません —— モデルが読み込まれていません。',
+		'chatbot.notice.nothingToCompactNotLoaded':
+			'要約する内容がありません —— モデルが読み込まれていません。',
 		'chatbot.notice.nothingToCompactYet': 'まだ要約する内容がありません。',
 		'chatbot.notice.compacting': '{count} 件のメッセージを要約しています…',
 		'chatbot.notice.compacted': '[要約済み]\n{summary}',
@@ -514,28 +547,37 @@ export default {
 		'chatbot.error.noCode': 'エラー：コードが指定されていません',
 		'chatbot.gpu.insecureContext.reason':
 			'WebGPU にはセキュアコンテキストが必要ですが、このページは localhost 以外のプレーンな http で配信されています。',
-		'chatbot.gpu.insecureContext.fix1': 'https、または http://localhost からこのページを開いてください —— どちらもセキュアとみなされます。',
+		'chatbot.gpu.insecureContext.fix1':
+			'https、または http://localhost からこのページを開いてください —— どちらもセキュアとみなされます。',
 		'chatbot.gpu.insecureContext.fix2':
 			'Chrome ではこの 1 つのオリジンを信頼させることができます：--unsafely-treat-insecure-origin-as-secure=<このページのオリジン> を付けて起動してください',
-		'chatbot.gpu.insecureContext.fix3': 'Firefox には同等のスイッチがないため、https のみが方法です。',
+		'chatbot.gpu.insecureContext.fix3':
+			'Firefox には同等のスイッチがないため、https のみが方法です。',
 		'chatbot.gpu.noWebgpu.reason': 'このブラウザは WebGPU を提供していません。',
-		'chatbot.gpu.noWebgpu.fix1': 'Chrome や Edge 113 以降、Safari 18 以降なら設定なしで対応しています。',
-		'chatbot.gpu.noWebgpu.fix2': 'Firefox：about:config を開き、dom.webgpu.enabled を true に設定してブラウザを再起動してください。',
+		'chatbot.gpu.noWebgpu.fix1':
+			'Chrome や Edge 113 以降、Safari 18 以降なら設定なしで対応しています。',
+		'chatbot.gpu.noWebgpu.fix2':
+			'Firefox：about:config を開き、dom.webgpu.enabled を true に設定してブラウザを再起動してください。',
 		'chatbot.gpu.noWebgpu.fix3':
 			'Linux 版 Firefox ではさらに dom.webgpu.workers.enabled（モデルは worker 内で動作します）と、動作する Vulkan ドライバー（mesa-vulkan-drivers）が必要です。',
 		'chatbot.gpu.adapterRequestFailed.reason': 'WebGPU アダプターの要求に失敗しました：{message}',
-		'chatbot.gpu.adapterRequestFailed.fix1': 'グラフィックドライバーを更新し、ブラウザを再起動してください。',
-		'chatbot.gpu.noAdapter.reason': 'WebGPU は存在しますが、GPU アダプターが許可されませんでした —— 通常はドライバーがブロックリストに入っているか未導入です。',
+		'chatbot.gpu.adapterRequestFailed.fix1':
+			'グラフィックドライバーを更新し、ブラウザを再起動してください。',
+		'chatbot.gpu.noAdapter.reason':
+			'WebGPU は存在しますが、GPU アダプターが許可されませんでした —— 通常はドライバーがブロックリストに入っているか未導入です。',
 		'chatbot.gpu.noAdapter.fix1': 'グラフィックドライバーを更新してブラウザを再起動してください。',
 		'chatbot.gpu.noAdapter.fix2':
 			'Linux では Vulkan が動作するか確認してください：`vulkaninfo --summary` を実行し、失敗する場合は mesa-vulkan-drivers をインストールしてください。',
-		'chatbot.gpu.noAdapter.fix3': 'Chrome：chrome://gpu でブロックされた内容とその理由を確認できます。',
-		'chatbot.session.newConversation': '新しい会話',
+		'chatbot.gpu.noAdapter.fix3':
+			'Chrome：chrome://gpu でブロックされた内容とその理由を確認できます。',
+		'chatbot.session.newConversation': '新しい会話'
 	},
 	ko: {
-		'chatbot.meta.description': '브라우저 안에서 WebGPU로 완전히 실행되는 언어 모델입니다 —— 서버가 없으며, 어떤 것도 탭 밖으로 나가지 않습니다.',
+		'chatbot.meta.description':
+			'브라우저 안에서 WebGPU로 완전히 실행되는 언어 모델입니다 —— 서버가 없으며, 어떤 것도 탭 밖으로 나가지 않습니다.',
 		'chatbot.strip.subtitle': '텍스트 · 이미지 · 도구, 모두 사용자의 기기에서 실행됩니다',
-		'chatbot.strip.ctxHint': '대화가 {contextWindow} 토큰 컨텍스트 윈도우 중 얼마를 차지하는지 표시합니다. /compact로 요약할 수 있습니다.',
+		'chatbot.strip.ctxHint':
+			'대화가 {contextWindow} 토큰 컨텍스트 윈도우 중 얼마를 차지하는지 표시합니다. /compact로 요약할 수 있습니다.',
 		'chatbot.strip.decodeSpeedHint': '마지막 답변의 디코딩 속도',
 		'chatbot.strip.configHint': '생성 길이와 샘플링 설정',
 		'chatbot.strip.config': 'CONFIG',
@@ -564,7 +606,8 @@ export default {
 		'chatbot.config.sampling.hint': '항상 가장 가능성 높은 토큰을 고르는 대신 샘플링합니다',
 		'chatbot.config.loopGuard.label': 'loop guard',
 		'chatbot.config.loopGuard.hint': '답변이 반복에 빠지면 생성을 중단합니다',
-		'chatbot.config.footnote': '이 브라우저에 저장됩니다. 샘플링 설정은 다음 메시지부터 적용되며, 백엔드는 새로고침이 필요합니다.',
+		'chatbot.config.footnote':
+			'이 브라우저에 저장됩니다. 샘플링 설정은 다음 메시지부터 적용되며, 백엔드는 새로고침이 필요합니다.',
 		'chatbot.config.defaults': 'DEFAULTS',
 		'chatbot.storage.explain':
 			'모델은 한 번 다운로드되면 브라우저에 캐시되어 두 번째 방문부터는 다시 받지 않습니다. 가중치와 추론 런타임 모두 이 사이트 자체 저장소에서 제공되며, 제3자로부터 가져오는 것은 없습니다.',
@@ -573,14 +616,16 @@ export default {
 		'chatbot.storage.total': '총 {size}',
 		'chatbot.storage.cachedHere': '이 기기에 {size} 캐시됨',
 		'chatbot.storage.notDownloaded': '아직 다운로드되지 않음',
-		'chatbot.storage.wipeModelHint': '이 기기에서 다운로드한 가중치를 삭제합니다. 다음 로드 시 다시 다운로드됩니다.',
+		'chatbot.storage.wipeModelHint':
+			'이 기기에서 다운로드한 가중치를 삭제합니다. 다음 로드 시 다시 다운로드됩니다.',
 		'chatbot.storage.wipeModel': 'WIPE MODEL',
 		'chatbot.storage.wiping': 'CLEARING…',
 		'chatbot.storage.conversations': '대화',
 		'chatbot.storage.conversationsCount': '{count}개 저장됨 · {size}',
 		'chatbot.storage.new': 'NEW',
 		'chatbot.storage.deleteAll': 'DELETE ALL',
-		'chatbot.storage.conversationsExplain': '대화는 그 안의 이미지와 오디오를 포함해 이 브라우저에만 저장되며, 절대 업로드되지 않습니다.',
+		'chatbot.storage.conversationsExplain':
+			'대화는 그 안의 이미지와 오디오를 포함해 이 브라우저에만 저장되며, 절대 업로드되지 않습니다.',
 		'chatbot.storage.turnsCount': '{count}턴',
 		'chatbot.storage.deleteConversationHint': '이 대화 삭제',
 		'chatbot.storage.deleteConversationLabel': '대화 삭제',
@@ -612,7 +657,8 @@ export default {
 		'chatbot.composer.removeAttachment': '{name} 제거',
 		'chatbot.composer.attachHint': '이미지 첨부 —— 붙여넣거나 끌어다 놓을 수도 있습니다',
 		'chatbot.composer.image': 'IMAGE',
-		'chatbot.composer.thinkHint': '답변 전에 모델이 추론하도록 합니다. 더 느리지만 단계가 필요한 문제에 유리합니다.',
+		'chatbot.composer.thinkHint':
+			'답변 전에 모델이 추론하도록 합니다. 더 느리지만 단계가 필요한 문제에 유리합니다.',
 		'chatbot.composer.think': 'THINK',
 		'chatbot.composer.placeholderReady': '메시지 또는 /help',
 		'chatbot.composer.placeholderNotReady': '먼저 모델을 로드하세요.',
@@ -627,7 +673,8 @@ export default {
 		'chatbot.notice.compactFailed': '요약에 실패했습니다 —— 모델이 아무것도 반환하지 않았습니다.',
 		'chatbot.notice.notImage': '{name}은(는) 이미지가 아니라 건너뛰었습니다.',
 		'chatbot.notice.unknownCommand': '알 수 없는 명령입니다: /{cmd} —— /help를 시도해 보세요',
-		'chatbot.notice.nothingToCompactNotLoaded': '요약할 내용이 없습니다 —— 모델이 로드되지 않았습니다.',
+		'chatbot.notice.nothingToCompactNotLoaded':
+			'요약할 내용이 없습니다 —— 모델이 로드되지 않았습니다.',
 		'chatbot.notice.nothingToCompactYet': '아직 요약할 내용이 없습니다.',
 		'chatbot.notice.compacting': '메시지 {count}개를 요약하는 중…',
 		'chatbot.notice.compacted': '[요약됨]\n{summary}',
@@ -644,23 +691,30 @@ export default {
 		'chatbot.error.unknownTool': '오류: {name}이라는 도구가 없습니다',
 		'chatbot.error.badToolArgs': '오류: 인자가 올바른 JSON이 아닙니다',
 		'chatbot.error.noCode': '오류: 코드가 제공되지 않았습니다',
-		'chatbot.gpu.insecureContext.reason': 'WebGPU에는 보안 컨텍스트가 필요한데, 이 페이지는 localhost가 아닌 일반 http로 제공되고 있습니다.',
-		'chatbot.gpu.insecureContext.fix1': 'https로, 또는 http://localhost에서 이 페이지를 여세요 —— 둘 다 보안 컨텍스트로 간주됩니다.',
+		'chatbot.gpu.insecureContext.reason':
+			'WebGPU에는 보안 컨텍스트가 필요한데, 이 페이지는 localhost가 아닌 일반 http로 제공되고 있습니다.',
+		'chatbot.gpu.insecureContext.fix1':
+			'https로, 또는 http://localhost에서 이 페이지를 여세요 —— 둘 다 보안 컨텍스트로 간주됩니다.',
 		'chatbot.gpu.insecureContext.fix2':
 			'Chrome은 이 출처 하나만 신뢰하도록 설정할 수 있습니다: --unsafely-treat-insecure-origin-as-secure=<이 페이지의 출처>를 붙여 실행하세요',
 		'chatbot.gpu.insecureContext.fix3': 'Firefox에는 동등한 옵션이 없으므로 https만이 방법입니다.',
 		'chatbot.gpu.noWebgpu.reason': '이 브라우저는 WebGPU를 지원하지 않습니다.',
-		'chatbot.gpu.noWebgpu.fix1': 'Chrome 또는 Edge 113 이상, Safari 18 이상은 별도 설정 없이 지원합니다.',
-		'chatbot.gpu.noWebgpu.fix2': 'Firefox: about:config를 열고 dom.webgpu.enabled를 true로 설정한 뒤 브라우저를 재시작하세요.',
+		'chatbot.gpu.noWebgpu.fix1':
+			'Chrome 또는 Edge 113 이상, Safari 18 이상은 별도 설정 없이 지원합니다.',
+		'chatbot.gpu.noWebgpu.fix2':
+			'Firefox: about:config를 열고 dom.webgpu.enabled를 true로 설정한 뒤 브라우저를 재시작하세요.',
 		'chatbot.gpu.noWebgpu.fix3':
 			'Linux의 Firefox는 dom.webgpu.workers.enabled(모델이 worker에서 실행됨)와 동작하는 Vulkan 드라이버(mesa-vulkan-drivers)도 필요합니다.',
 		'chatbot.gpu.adapterRequestFailed.reason': 'WebGPU 어댑터 요청이 실패했습니다: {message}',
-		'chatbot.gpu.adapterRequestFailed.fix1': '그래픽 드라이버를 업데이트한 뒤 브라우저를 재시작하세요.',
-		'chatbot.gpu.noAdapter.reason': 'WebGPU는 존재하지만 GPU 어댑터가 허용되지 않았습니다 —— 대개 드라이버가 차단 목록에 있거나 없는 경우입니다.',
+		'chatbot.gpu.adapterRequestFailed.fix1':
+			'그래픽 드라이버를 업데이트한 뒤 브라우저를 재시작하세요.',
+		'chatbot.gpu.noAdapter.reason':
+			'WebGPU는 존재하지만 GPU 어댑터가 허용되지 않았습니다 —— 대개 드라이버가 차단 목록에 있거나 없는 경우입니다.',
 		'chatbot.gpu.noAdapter.fix1': '그래픽 드라이버를 업데이트하고 브라우저를 재시작하세요.',
 		'chatbot.gpu.noAdapter.fix2':
 			'Linux에서는 Vulkan이 동작하는지 확인하세요: `vulkaninfo --summary`를 실행하고, 실패하면 mesa-vulkan-drivers를 설치하세요.',
-		'chatbot.gpu.noAdapter.fix3': 'Chrome: chrome://gpu에서 차단된 항목과 이유를 확인할 수 있습니다.',
-		'chatbot.session.newConversation': '새 대화',
+		'chatbot.gpu.noAdapter.fix3':
+			'Chrome: chrome://gpu에서 차단된 항목과 이유를 확인할 수 있습니다.',
+		'chatbot.session.newConversation': '새 대화'
 	}
 } satisfies Messages;

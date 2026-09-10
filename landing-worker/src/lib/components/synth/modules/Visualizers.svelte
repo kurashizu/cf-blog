@@ -20,7 +20,15 @@
 	}
 
 	const TIME_BASES: TimeBase[] = ['0.5x', '1x', '2x', '4x', '8x', '16x'];
-	const WINDOW_SIZES: Record<TimeBase, number> = { '0.25x': 64, '0.5x': 128, '1x': 256, '2x': 512, '4x': 1024, '8x': 2048, '16x': 4096 };
+	const WINDOW_SIZES: Record<TimeBase, number> = {
+		'0.25x': 64,
+		'0.5x': 128,
+		'1x': 256,
+		'2x': 512,
+		'4x': 1024,
+		'8x': 2048,
+		'16x': 4096
+	};
 
 	onMount(() => {
 		const fftCtx = fftCanvas?.getContext('2d');
@@ -39,7 +47,10 @@
 		 * horizontally and blurred everything. Matching the backing store to the
 		 * displayed size (times DPR) draws at the real resolution instead.
 		 */
-		const fitCanvas = (canvas: HTMLCanvasElement | undefined, ctx: CanvasRenderingContext2D | null | undefined) => {
+		const fitCanvas = (
+			canvas: HTMLCanvasElement | undefined,
+			ctx: CanvasRenderingContext2D | null | undefined
+		) => {
 			if (!canvas || !ctx) return;
 			const dpr = window.devicePixelRatio || 1;
 			const w = Math.round(canvas.clientWidth * dpr);
@@ -50,7 +61,8 @@
 		};
 
 		/** Font size in backing-store pixels, so labels stay ~9 CSS px at any DPR. */
-		const labelFont = () => `${Math.round(9 * (window.devicePixelRatio || 1))}px 'Jelly Pixel', monospace`;
+		const labelFont = () =>
+			`${Math.round(9 * (window.devicePixelRatio || 1))}px 'Jelly Pixel', monospace`;
 
 		const render = () => {
 			animId = requestAnimationFrame(render);
@@ -59,7 +71,8 @@
 			   only ever shows one -- two thirds of the work went into elements
 			   the tab had hidden. Pulling the analyser data is skipped with them
 			   when nothing is visible at all. */
-			const shown = fftCanvas?.isConnected || waveCanvas?.isConnected || loudnessCanvas?.isConnected;
+			const shown =
+				fftCanvas?.isConnected || waveCanvas?.isConnected || loudnessCanvas?.isConnected;
 			if (!shown) return;
 			const isMuted = $soundState.muted;
 			const freqData = sound.getByteFrequencyData();
@@ -98,7 +111,11 @@
 				fftCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
 				fftCtx.textBaseline = 'top';
 				// Centre each label on its gridline rather than nudging by a guess.
-				for (const [text, tx] of [['100', tick100], ['1k', tick1k], ['10k', tick10k]] as const) {
+				for (const [text, tx] of [
+					['100', tick100],
+					['1k', tick1k],
+					['10k', tick10k]
+				] as const) {
 					fftCtx.fillText(text, tx - fftCtx.measureText(text).width / 2, 3);
 				}
 
@@ -282,10 +299,24 @@
 <!-- min-w-0 + overflow-hidden on the panel and truncate on the title: the header
      row's min-content width (title + six time-base buttons in SCOPE mode) must
      never size the grid track, or module 7 grows wider than in FFT/LOUD mode. -->
-<div class="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full min-w-0 overflow-hidden">
-	<div class="flex items-center justify-between gap-1 min-w-0 text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0">
-		<span class="truncate {activeOutVisualizer === 'fft' ? 'text-[#56b6c2] font-black' : activeOutVisualizer === 'scope' ? 'text-[#98c379] font-black' : 'text-[#e06c75] font-black'}">
-			{activeOutVisualizer === 'fft' ? 'FFT LOG SPECTRUM' : activeOutVisualizer === 'scope' ? 'SCOPE' : 'RMS LOUDNESS GRAPH'}
+<div
+	class="col-span-8 flex flex-col justify-between border border-white/15 bg-black/90 rounded-xs p-1 h-full min-w-0 overflow-hidden"
+>
+	<div
+		class="flex items-center justify-between gap-1 min-w-0 text-[10px] font-mono text-white/50 px-1 pb-0.5 border-b border-white/10 shrink-0"
+	>
+		<span
+			class="truncate {activeOutVisualizer === 'fft'
+				? 'text-[#56b6c2] font-black'
+				: activeOutVisualizer === 'scope'
+					? 'text-[#98c379] font-black'
+					: 'text-[#e06c75] font-black'}"
+		>
+			{activeOutVisualizer === 'fft'
+				? 'FFT LOG SPECTRUM'
+				: activeOutVisualizer === 'scope'
+					? 'SCOPE'
+					: 'RMS LOUDNESS GRAPH'}
 		</span>
 		{#if activeOutVisualizer === 'fft'}
 			<span class="text-[9px] text-white/50 font-bold shrink-0">20Hz-20k</span>
@@ -296,7 +327,8 @@
 				{#each TIME_BASES as tb (tb)}
 					<button
 						onclick={() => setTimeBase(tb)}
-						class="press px-0.5 py-0.2 rounded-xs border text-[8px] cursor-pointer font-black leading-none transition-colors {timeBase === tb
+						class="press px-0.5 py-0.2 rounded-xs border text-[8px] cursor-pointer font-black leading-none transition-colors {timeBase ===
+						tb
 							? 'border-[#98c379] bg-[#98c379] text-black font-black'
 							: 'border-white/20 text-white/60 hover:text-white'}"
 					>
@@ -308,8 +340,23 @@
 	</div>
 
 	<div class="relative flex-1 min-h-[46px] rounded-xs overflow-hidden mt-0.5">
-		<canvas bind:this={fftCanvas} width="360" height="46" class="w-full h-full {activeOutVisualizer === 'fft' ? 'block' : 'hidden'}"></canvas>
-		<canvas bind:this={waveCanvas} width="360" height="46" class="w-full h-full {activeOutVisualizer === 'scope' ? 'block' : 'hidden'}"></canvas>
-		<canvas bind:this={loudnessCanvas} width="360" height="46" class="w-full h-full {activeOutVisualizer === 'loudness' ? 'block' : 'hidden'}"></canvas>
+		<canvas
+			bind:this={fftCanvas}
+			width="360"
+			height="46"
+			class="w-full h-full {activeOutVisualizer === 'fft' ? 'block' : 'hidden'}"
+		></canvas>
+		<canvas
+			bind:this={waveCanvas}
+			width="360"
+			height="46"
+			class="w-full h-full {activeOutVisualizer === 'scope' ? 'block' : 'hidden'}"
+		></canvas>
+		<canvas
+			bind:this={loudnessCanvas}
+			width="360"
+			height="46"
+			class="w-full h-full {activeOutVisualizer === 'loudness' ? 'block' : 'hidden'}"
+		></canvas>
 	</div>
 </div>

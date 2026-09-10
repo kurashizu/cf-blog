@@ -28,7 +28,11 @@
 	 */
 	const CHECKS: { label: string; run: () => string | Promise<string> }[] = [
 		{ label: 'PLATFORM', run: () => navigator.platform || navigator.userAgent.slice(0, 40) },
-		{ label: 'CPU THREADS', run: () => (navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} logical` : 'n/a') },
+		{
+			label: 'CPU THREADS',
+			run: () =>
+				navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} logical` : 'n/a'
+		},
 		{
 			label: 'DEVICE MEMORY',
 			run: () => {
@@ -36,10 +40,23 @@
 				return gb ? `>= ${gb} GB` : 'n/a (browser withholds)';
 			}
 		},
-		{ label: 'DISPLAY', run: () => `${screen.width}x${screen.height} @ ${window.devicePixelRatio}x` },
+		{
+			label: 'DISPLAY',
+			run: () => `${screen.width}x${screen.height} @ ${window.devicePixelRatio}x`
+		},
 		{ label: 'COLOUR DEPTH', run: () => `${screen.colorDepth}-bit` },
-		{ label: 'ORIENTATION', run: () => screen.orientation?.type ?? (screen.width >= screen.height ? 'landscape' : 'portrait') },
-		{ label: 'TOUCH', run: () => (navigator.maxTouchPoints > 0 ? `${navigator.maxTouchPoints} point${navigator.maxTouchPoints === 1 ? '' : 's'}` : 'n/a (no touch surface)') },
+		{
+			label: 'ORIENTATION',
+			run: () =>
+				screen.orientation?.type ?? (screen.width >= screen.height ? 'landscape' : 'portrait')
+		},
+		{
+			label: 'TOUCH',
+			run: () =>
+				navigator.maxTouchPoints > 0
+					? `${navigator.maxTouchPoints} point${navigator.maxTouchPoints === 1 ? '' : 's'}`
+					: 'n/a (no touch surface)'
+		},
 		{ label: 'GPU', run: readGpu },
 		{ label: 'WEBGPU', run: readWebgpu },
 		{
@@ -56,13 +73,19 @@
 					? 'AudioContext ready (starts on first interaction)'
 					: 'n/a'
 		},
-		{ label: 'MIDI', run: () => ('requestMIDIAccess' in navigator ? 'Web MIDI available' : 'n/a (no Web MIDI)') },
+		{
+			label: 'MIDI',
+			run: () => ('requestMIDIAccess' in navigator ? 'Web MIDI available' : 'n/a (no Web MIDI)')
+		},
 		{ label: 'GAMEPAD', run: () => ('getGamepads' in navigator ? 'Gamepad API available' : 'n/a') },
 		{ label: 'NETWORK', run: readNetwork },
 		{ label: 'STORAGE QUOTA', run: readStorage },
 		{ label: 'PERSISTED', run: readPersisted },
 		{ label: 'SERVICE WORKER', run: readServiceWorker },
-		{ label: 'LOCALE / TZ', run: () => `${navigator.language} · ${Intl.DateTimeFormat().resolvedOptions().timeZone}` },
+		{
+			label: 'LOCALE / TZ',
+			run: () => `${navigator.language} · ${Intl.DateTimeFormat().resolvedOptions().timeZone}`
+		},
 		{ label: 'PAGE LOAD', run: readPageLoad },
 		{ label: 'EDGE POP', run: readEdge }
 	];
@@ -70,7 +93,8 @@
 	function readGpu(): string {
 		try {
 			const canvas = document.createElement('canvas');
-			const gl = (canvas.getContext('webgl2') ?? canvas.getContext('webgl')) as WebGLRenderingContext | null;
+			const gl = (canvas.getContext('webgl2') ??
+				canvas.getContext('webgl')) as WebGLRenderingContext | null;
 			if (!gl) return 'n/a (no WebGL)';
 			const dbg = gl.getExtension('WEBGL_debug_renderer_info');
 			const renderer = dbg
@@ -87,16 +111,31 @@
 		if (!gpu) return 'n/a (no navigator.gpu)';
 		try {
 			const adapter = await gpu.requestAdapter();
-			return adapter ? 'adapter granted — web-lm can run on-GPU' : 'n/a (no adapter — driver blocklisted or missing)';
+			return adapter
+				? 'adapter granted — web-lm can run on-GPU'
+				: 'n/a (no adapter — driver blocklisted or missing)';
 		} catch {
 			return 'n/a';
 		}
 	}
 
 	function readNetwork(): string {
-		const conn = (navigator as unknown as { connection?: { effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean } }).connection;
+		const conn = (
+			navigator as unknown as {
+				connection?: {
+					effectiveType?: string;
+					downlink?: number;
+					rtt?: number;
+					saveData?: boolean;
+				};
+			}
+		).connection;
 		if (!conn) return navigator.onLine ? 'online (detail withheld by browser)' : 'offline';
-		const parts = [conn.effectiveType?.toUpperCase(), conn.downlink !== undefined ? `~${conn.downlink}Mbps` : null, conn.rtt !== undefined ? `${conn.rtt}ms rtt` : null];
+		const parts = [
+			conn.effectiveType?.toUpperCase(),
+			conn.downlink !== undefined ? `~${conn.downlink}Mbps` : null,
+			conn.rtt !== undefined ? `${conn.rtt}ms rtt` : null
+		];
 		return `${navigator.onLine ? 'online' : 'offline'} · ${parts.filter(Boolean).join(' · ') || 'n/a'}${conn.saveData ? ' · data saver on' : ''}`;
 	}
 
@@ -117,7 +156,9 @@
 		if (!navigator.storage?.persisted) return 'n/a';
 		try {
 			const already = await navigator.storage.persisted();
-			return already ? 'granted — storage survives disk pressure' : 'not persisted (browser may evict under pressure)';
+			return already
+				? 'granted — storage survives disk pressure'
+				: 'not persisted (browser may evict under pressure)';
 		} catch {
 			return 'n/a';
 		}
@@ -131,15 +172,25 @@
 	}
 
 	function readPageLoad(): string {
-		const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+		const nav = performance.getEntriesByType('navigation')[0] as
+			PerformanceNavigationTiming | undefined;
 		if (!nav) return 'n/a';
-		const type = nav.type === 'navigate' ? 'fresh load' : nav.type === 'reload' ? 'reload' : nav.type === 'back_forward' ? 'back/forward cache' : nav.type;
+		const type =
+			nav.type === 'navigate'
+				? 'fresh load'
+				: nav.type === 'reload'
+					? 'reload'
+					: nav.type === 'back_forward'
+						? 'back/forward cache'
+						: nav.type;
 		return `${nav.responseEnd.toFixed(0)}ms to first byte-complete response · ${type}`;
 	}
 
 	async function readEdge(): Promise<string> {
 		const t = await loadEdgeTrace();
-		return t ? `${t.colo}${t.loc ? `/${t.loc}` : ''} · ${t.http} · ${t.tls}` : 'n/a (trace unreachable)';
+		return t
+			? `${t.colo}${t.loc ? `/${t.loc}` : ''} · ${t.http} · ${t.tls}`
+			: 'n/a (trace unreachable)';
 	}
 
 	let rows = $state<Row[]>([]);
@@ -189,7 +240,10 @@
 					value = 'n/a';
 				}
 				if (aborted) return;
-				rows = [...rows, { label: check.label, value, state: value.startsWith('n/a') ? 'na' : 'ok' }];
+				rows = [
+					...rows,
+					{ label: check.label, value, state: value.startsWith('n/a') ? 'na' : 'ok' }
+				];
 				await sleep(45);
 			}
 			if (aborted) return;
@@ -232,27 +286,41 @@
 		: 'opacity-100'}"
 	in:fade={{ duration: 260 }}
 >
-	<div class="text-[10px] sm:text-xs text-white/40 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+	<div
+		class="text-[10px] sm:text-xs text-white/40 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5"
+	>
 		<span>{$t('chrome.boot.title')}</span>
 		<span>{$t('chrome.boot.skipHint')}</span>
 	</div>
 
-	<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pt-2 sm:pt-3 text-[11px] sm:text-sm leading-relaxed">
+	<div
+		class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pt-2 sm:pt-3 text-[11px] sm:text-sm leading-relaxed"
+	>
 		{#each rows as row (row.label)}
 			<div class="flex items-baseline gap-2 sm:gap-3" in:fly={{ y: -4, duration: 180 }}>
 				<span class="shrink-0 font-bold {row.state === 'ok' ? 'text-[#98c379]' : 'text-[#e5c07b]'}">
 					[{row.state === 'ok' ? ' OK ' : ' -- '}]
 				</span>
 				<span class="shrink-0 text-white/45 w-[104px] sm:w-[150px]">{row.label}</span>
-				<span class="break-all {row.state === 'ok' ? 'text-[#d8dee9]' : 'text-white/40'}">{row.value}</span>
+				<span class="break-all {row.state === 'ok' ? 'text-[#d8dee9]' : 'text-white/40'}"
+					>{row.value}</span
+				>
 			</div>
 		{/each}
 
 		{#if finished}
-			<div class="mt-2 sm:mt-3 pt-2 border-t border-white/10 text-[#56b6c2] font-bold" in:fade={{ duration: 200 }}>
-				{$t('chrome.boot.complete', { ok: rows.filter((r) => r.state === 'ok').length, total: rows.length })}
+			<div
+				class="mt-2 sm:mt-3 pt-2 border-t border-white/10 text-[#56b6c2] font-bold"
+				in:fade={{ duration: 200 }}
+			>
+				{$t('chrome.boot.complete', {
+					ok: rows.filter((r) => r.state === 'ok').length,
+					total: rows.length
+				})}
 			</div>
-			<div class="text-white/40" in:fade={{ duration: 200, delay: 60 }}>{$t('chrome.boot.booting')}</div>
+			<div class="text-white/40" in:fade={{ duration: 200, delay: 60 }}>
+				{$t('chrome.boot.booting')}
+			</div>
 		{:else}
 			<div class="text-white/30">
 				<span class="inline-block w-[8px] h-[14px] align-middle bg-[#56b6c2] animate-pulse"></span>

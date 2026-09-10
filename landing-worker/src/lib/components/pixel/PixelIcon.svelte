@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { PIXEL_ICON_PATHS, type PixelIconName } from './icons';
 
-	let { name, size = 20, class: className = '' }: { name: PixelIconName; size?: number; class?: string } =
-		$props();
+	let {
+		name,
+		size = 20,
+		class: className = ''
+	}: { name: PixelIconName; size?: number; class?: string } = $props();
 </script>
 
 <svg

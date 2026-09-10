@@ -1,6 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { rolesCompatible } from '../../src/lib/stores/graph-model';
+import { modularSynth } from '../../src/lib/synth';
+import { FakeCtx } from './stubs/audio-context';
+
+/** The smallest patch that makes ADV own the voice. */
+const ADV_GRAPH = {
+	nodes: [
+		{ id: 'entry', type: 'in', x: 0, y: 0 },
+		{ id: 'o', type: 'osc', x: 1, y: 0 },
+		{ id: 'output', type: 'out', x: 2, y: 0 }
+	],
+	cables: [
+		{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+		{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+	]
+};
 import {
 	createResolver,
 	execReach,
@@ -54,7 +69,13 @@ describe('resolving an input', () => {
 
 	it('takes the cable when there is one', () => {
 		const r = createResolver(
-			g([['e', 'in'], ['osc', 'osc']], [wire('e', 'pitch', 'osc', 'pitch')]),
+			g(
+				[
+					['e', 'in'],
+					['osc', 'osc']
+				],
+				[wire('e', 'pitch', 'osc', 'pitch')]
+			),
 			{},
 			note
 		);
@@ -62,7 +83,13 @@ describe('resolving an input', () => {
 	});
 
 	it('says whether an inlet is wired', () => {
-		const graph = g([['e', 'in'], ['osc', 'osc']], [wire('e', 'pitch', 'osc', 'pitch')]);
+		const graph = g(
+			[
+				['e', 'in'],
+				['osc', 'osc']
+			],
+			[wire('e', 'pitch', 'osc', 'pitch')]
+		);
 		const r = createResolver(graph, {}, note);
 		expect(r.isWired('osc', 'pitch')).toBe(true);
 		expect(r.isWired('osc', 'fm')).toBe(false);
@@ -72,7 +99,13 @@ describe('resolving an input', () => {
 		const r = createResolver(g([['f', 'filter']]), { 'f.cutoff': 3000 }, note);
 		expect(r.input('f', 'cutoff', 800)).toBe(3000);
 		const driven = createResolver(
-			g([['c', 'const'], ['f', 'filter']], [wire('c', 'out', 'f', 'cutoff')]),
+			g(
+				[
+					['c', 'const'],
+					['f', 'filter']
+				],
+				[wire('c', 'out', 'f', 'cutoff')]
+			),
 			{ 'f.cutoff': 3000, 'c.value': 120 },
 			note
 		);
@@ -84,7 +117,13 @@ describe('resolving an input', () => {
 describe('what ENTRY publishes', () => {
 	const entry = (port: string, fallback = -1) =>
 		createResolver(
-			g([['e', 'in'], ['x', 'mul']], [wire('e', port, 'x', 'a')]),
+			g(
+				[
+					['e', 'in'],
+					['x', 'mul']
+				],
+				[wire('e', port, 'x', 'a')]
+			),
 			{},
 			note
 		).input('x', 'a', fallback);
@@ -190,15 +229,23 @@ describe('pulling a value through a chain', () => {
 		/* Velocity into a cutoff, the way a patch actually says "harder is
 		   brighter": VEL 0..1 through a REMAP into a filter. */
 		const graph = g(
-			[['e', 'in'], ['r', 'remap'], ['f', 'filter']],
+			[
+				['e', 'in'],
+				['r', 'remap'],
+				['f', 'filter']
+			],
 			[wire('e', 'vel', 'r', 'a'), wire('r', 'out', 'f', 'cutoff')]
 		);
-		const r = createResolver(graph, {
-			'r.inLo': 0,
-			'r.inHi': 1,
-			'r.outLo': 200,
-			'r.outHi': 1200
-		}, note);
+		const r = createResolver(
+			graph,
+			{
+				'r.inLo': 0,
+				'r.inHi': 1,
+				'r.outLo': 200,
+				'r.outHi': 1200
+			},
+			note
+		);
 		// velocity 0.8 across 200..1200
 		expect(r.input('f', 'cutoff', 0)).toBeCloseTo(1000, 6);
 	});
@@ -206,7 +253,12 @@ describe('pulling a value through a chain', () => {
 	it('computes a shared value once', () => {
 		// A constant feeding three knobs is pulled three times and computed one.
 		const graph = g(
-			[['c', 'const'], ['a', 'filter'], ['b', 'filter'], ['d', 'filter']],
+			[
+				['c', 'const'],
+				['a', 'filter'],
+				['b', 'filter'],
+				['d', 'filter']
+			],
 			[
 				wire('c', 'out', 'a', 'cutoff'),
 				wire('c', 'out', 'b', 'cutoff'),
@@ -245,7 +297,11 @@ describe('pulling a value through a chain', () => {
 		   value zero. Writing the zero down would hand it to every later reader
 		   as though it were settled. */
 		const graph = g(
-			[['a', 'add'], ['b', 'add'], ['out', 'add']],
+			[
+				['a', 'add'],
+				['b', 'add'],
+				['out', 'add']
+			],
 			[wire('a', 'out', 'b', 'a'), wire('b', 'out', 'a', 'a'), wire('a', 'out', 'out', 'a')]
 		);
 		const r = createResolver(graph, {}, note);
@@ -254,7 +310,11 @@ describe('pulling a value through a chain', () => {
 
 	it('does not hang on a longer cycle', () => {
 		const graph = g(
-			[['a', 'add'], ['b', 'mul'], ['c', 'clamp']],
+			[
+				['a', 'add'],
+				['b', 'mul'],
+				['c', 'clamp']
+			],
 			[wire('a', 'out', 'b', 'a'), wire('b', 'out', 'c', 'a'), wire('c', 'out', 'a', 'a')]
 		);
 		expect(createResolver(graph, {}, note).input('a', 'a', -1)).toBe(0);
@@ -264,7 +324,10 @@ describe('pulling a value through a chain', () => {
 		/* The editor refuses to draw one, but a patch file is user data and may
 		   be hand-edited. A pull-based evaluator would recurse forever. */
 		const graph = g(
-			[['a', 'add'], ['b', 'add']],
+			[
+				['a', 'add'],
+				['b', 'add']
+			],
 			[wire('a', 'out', 'b', 'a'), wire('b', 'out', 'a', 'a')]
 		);
 		const r = createResolver(graph, {}, note);
@@ -280,7 +343,13 @@ describe('pulling a value through a chain', () => {
 		   This used to read 0, and it is the whole reason "ENV into the filter
 		   cutoff" was silent: the filter opened at 0 Hz and the envelope added
 		   its 0..1 on top of nothing. */
-		const graph = g([['o', 'osc'], ['f', 'filter']], [wire('o', 'out', 'f', 'cutoff')]);
+		const graph = g(
+			[
+				['o', 'osc'],
+				['f', 'filter']
+			],
+			[wire('o', 'out', 'f', 'cutoff')]
+		);
 		expect(createResolver(graph, { 'f.cutoff': 4000 }, note).input('f', 'cutoff', 99)).toBe(4000);
 		// With no stored setting either, the caller's default stands.
 		expect(createResolver(graph, {}, note).input('f', 'cutoff', 99)).toBe(99);
@@ -300,13 +369,23 @@ describe('execution flow', () => {
 		   that has drawn no exec cable at all was tried and makes the pin
 		   decorative in exactly the case where it is empty: OUT sitting
 		   unconnected and sounding anyway. */
-		const reach = execReach(g([['e', 'in'], ['o', 'out']]), EXEC);
+		const reach = execReach(
+			g([
+				['e', 'in'],
+				['o', 'out']
+			]),
+			EXEC
+		);
 		expect(runs(reach, 'o')).toBe(false);
 	});
 
 	it('runs only what ENTRY reaches once any exec cable exists', () => {
 		const graph = g(
-			[['e', 'in'], ['a', 'out'], ['b', 'out']],
+			[
+				['e', 'in'],
+				['a', 'out'],
+				['b', 'out']
+			],
 			[wire('e', 'then', 'a', 'exec')]
 		);
 		const reach = execReach(graph, EXEC);
@@ -319,7 +398,12 @@ describe('execution flow', () => {
 
 	it('follows a chain through the logic nodes', () => {
 		const graph = g(
-			[['e', 'in'], ['w', 'when'], ['act', 'act'], ['o', 'out']],
+			[
+				['e', 'in'],
+				['w', 'when'],
+				['act', 'act'],
+				['o', 'out']
+			],
 			[
 				wire('e', 'then', 'w', 'exec'),
 				wire('w', 'then', 'act', 'exec'),
@@ -331,14 +415,24 @@ describe('execution flow', () => {
 	});
 
 	it('does not reach a node wired backwards', () => {
-		const graph = g([['e', 'in'], ['o', 'out']], [wire('o', 'then', 'e', 'exec')]);
+		const graph = g(
+			[
+				['e', 'in'],
+				['o', 'out']
+			],
+			[wire('o', 'then', 'e', 'exec')]
+		);
 		const reach = execReach(graph, EXEC);
 		expect(runs(reach, 'o')).toBe(false);
 	});
 
 	it('terminates on an exec cycle', () => {
 		const graph = g(
-			[['e', 'in'], ['a', 'seq'], ['b', 'seq']],
+			[
+				['e', 'in'],
+				['a', 'seq'],
+				['b', 'seq']
+			],
 			[
 				wire('e', 'then', 'a', 'exec'),
 				wire('a', 'then', 'b', 'exec'),
@@ -352,7 +446,13 @@ describe('execution flow', () => {
 	it('ignores a cable that is not exec at both ends', () => {
 		// An audio cable is not execution, however it is drawn, so it carries
 		// nothing to OUT's exec socket.
-		const graph = g([['e', 'in'], ['o', 'out']], [wire('e', 'pitch', 'o', 'in')]);
+		const graph = g(
+			[
+				['e', 'in'],
+				['o', 'out']
+			],
+			[wire('e', 'pitch', 'o', 'in')]
+		);
 		expect(runs(execReach(graph, EXEC), 'o')).toBe(false);
 	});
 });
@@ -394,7 +494,6 @@ describe('ADV and racks 1-7 are one instrument at a time', () => {
 		expect(feeds).toHaveLength(1);
 		expect(SYNTH).toContain('voiceMix.connect(filter);');
 	});
-
 });
 
 /**
@@ -410,13 +509,54 @@ describe('rack controls do not reach an ADV voice', () => {
 	const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
 
 	it('skips rack 7 AIR', () => {
-		expect(SYNTH).toContain("if (!advOwnsVoice && track.airGain !== undefined");
+		expect(SYNTH).toContain('if (!advOwnsVoice && track.airGain !== undefined');
 	});
 
 	it('skips the rack LFO', () => {
 		/* PITCH and CUTOFF land on rack nodes an ADV voice never builds, but PAN
-		   and AMP land on the panner and gain node, which are shared. */
-		expect(SYNTH).toContain('let lfo: OscillatorNode | undefined;\n    if (!advOwnsVoice &&');
+		   and AMP land on the panner and gain node, which are shared.
+		
+		   Asserted on the built graph rather than on the text of synth.ts. The
+		   substring this used to match included its own indentation, so running
+		   a formatter over the file failed the test while the guard it checks
+		   was untouched -- the exact failure mode this suite was rewritten to
+		   get away from. */
+		const built = (adv: boolean) => {
+			const ctx = new FakeCtx();
+			const S = modularSynth as unknown as Record<string, unknown>;
+			S.renderCtx = ctx;
+			S.masterFXCtx = null;
+			S.delayNode = null;
+			S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+			(S.activeVoices as Map<string, unknown>).clear();
+			const track = (S.tracks as Record<string, unknown>[])[0];
+			const saved = {
+				advanced: track.advanced,
+				graph: track.rackGraph,
+				rate: track.lfoRate,
+				pitch: track.pitchModAmount
+			};
+			try {
+				track.advanced = adv;
+				track.rackGraph = adv ? ADV_GRAPH : undefined;
+				track.lfoRate = 5;
+				track.pitchModAmount = 50;
+				(S.triggerTrackVoice as (...a: unknown[]) => unknown)(0, 40, 0, 0, 0.3, 100, 100);
+				const voice = [...(S.activeVoices as Map<string, { lfo?: unknown }>).values()][0];
+				return !!voice?.lfo;
+			} finally {
+				Object.assign(track, {
+					advanced: saved.advanced,
+					rackGraph: saved.graph,
+					lfoRate: saved.rate,
+					pitchModAmount: saved.pitch
+				});
+				S.renderCtx = null;
+			}
+		};
+		// The rack voice carries an LFO oscillator; the ADV one is not given one.
+		expect(built(false)).toBe(true);
+		expect(built(true)).toBe(false);
 	});
 
 	it('does not route the graph through rack 7 VOL', () => {
@@ -528,7 +668,11 @@ describe('pitch and frequency', () => {
 describe('execution timing', () => {
 	it('delays what follows a gap', () => {
 		const graph = g(
-			[['e', 'in'], ['s', 'seq'], ['o', 'out']],
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['o', 'out']
+			],
 			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
 		);
 		const at = execDelays(graph, { 's.gapMs': 50 }, EXEC);
@@ -539,8 +683,17 @@ describe('execution timing', () => {
 
 	it('accumulates along a chain of gaps', () => {
 		const graph = g(
-			[['e', 'in'], ['a', 'seq'], ['b', 'seq'], ['o', 'out']],
-			[wire('e', 'then', 'a', 'exec'), wire('a', 'then', 'b', 'exec'), wire('b', 'then', 'o', 'exec')]
+			[
+				['e', 'in'],
+				['a', 'seq'],
+				['b', 'seq'],
+				['o', 'out']
+			],
+			[
+				wire('e', 'then', 'a', 'exec'),
+				wire('a', 'then', 'b', 'exec'),
+				wire('b', 'then', 'o', 'exec')
+			]
 		);
 		const at = execDelays(graph, { 'a.gapMs': 50, 'b.gapMs': 30 }, EXEC);
 		expect(at.get('o')).toBeCloseTo(0.08, 6);
@@ -551,7 +704,11 @@ describe('execution timing', () => {
 		   Blueprint -- so a direct cable beats a delayed one however the cables
 		   happen to be ordered. */
 		const graph = g(
-			[['e', 'in'], ['s', 'seq'], ['o', 'out']],
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['o', 'out']
+			],
 			[
 				wire('e', 'then', 's', 'exec'),
 				wire('s', 'then', 'o', 'exec'),
@@ -563,7 +720,11 @@ describe('execution timing', () => {
 
 	it('terminates on a loop of gaps', () => {
 		const graph = g(
-			[['e', 'in'], ['a', 'seq'], ['b', 'seq']],
+			[
+				['e', 'in'],
+				['a', 'seq'],
+				['b', 'seq']
+			],
 			[
 				wire('e', 'then', 'a', 'exec'),
 				wire('a', 'then', 'b', 'exec'),
@@ -576,7 +737,11 @@ describe('execution timing', () => {
 
 	it('treats a missing gap as no gap', () => {
 		const graph = g(
-			[['e', 'in'], ['s', 'seq'], ['o', 'out']],
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['o', 'out']
+			],
 			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
 		);
 		expect(execDelays(graph, {}, EXEC).get('o')).toBe(0);
@@ -604,7 +769,7 @@ describe('the logic chain', () => {
 	it('follows exec cables rather than matching a fixed shape', () => {
 		// The old walk named the node types it expected at each hop.
 		expect(SYNTH).not.toContain("n.id === c.to && n.type === 'when'");
-		expect(SYNTH).not.toContain("d.from !== when.id");
+		expect(SYNTH).not.toContain('d.from !== when.id');
 		expect(SYNTH).toContain('const execCables = graph.cables.filter(');
 	});
 
@@ -617,16 +782,35 @@ describe('the logic chain', () => {
 		   answers: a WHEN muted the right notes and let every note sound. The
 		   predicate is now one method both sides call. */
 		const graph = g(
-			[['e', 'in'], ['w', 'when'], ['o', 'out']],
+			[
+				['e', 'in'],
+				['w', 'when'],
+				['o', 'out']
+			],
 			[wire('e', 'exec', 'w', 'exec'), wire('w', 'then', 'o', 'exec')]
 		);
 		// No predicate: every branch is taken, which is what the editor wants.
 		expect(runs(execReach(graph, EXEC), 'o')).toBe(true);
 		// A test that fails stops execution at the WHEN.
-		expect(runs(execReach(graph, EXEC, 'in', () => false), 'o')).toBe(false);
-		expect(runs(execReach(graph, EXEC, 'in', () => true), 'o')).toBe(true);
+		expect(
+			runs(
+				execReach(graph, EXEC, 'in', () => false),
+				'o'
+			)
+		).toBe(false);
+		expect(
+			runs(
+				execReach(graph, EXEC, 'in', () => true),
+				'o'
+			)
+		).toBe(true);
 		// The WHEN itself still ran -- it was reached, and it asked.
-		expect(runs(execReach(graph, EXEC, 'in', () => false), 'w')).toBe(true);
+		expect(
+			runs(
+				execReach(graph, EXEC, 'in', () => false),
+				'w'
+			)
+		).toBe(true);
 	});
 
 	it('cannot loop on a cycle of exec cables', () => {

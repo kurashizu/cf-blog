@@ -44,10 +44,18 @@ export const GET: RequestHandler = async ({ params, request, platform, url }) =>
 		// The version is derived from the whole source string, so adding a build
 		// marker to VM_IMAGES is enough to retire every cached chunk. Size alone
 		// was not: a rebuilt image is usually the same size as the one before it.
-		return new Response(JSON.stringify({ name: params.name, size: image.size, chunk: CHUNK, version: sourceVersion(image) }), {
-			status: 200,
-			headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }
-		});
+		return new Response(
+			JSON.stringify({
+				name: params.name,
+				size: image.size,
+				chunk: CHUNK,
+				version: sourceVersion(image)
+			}),
+			{
+				status: 200,
+				headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }
+			}
+		);
 	}
 
 	const rangeHeader = request.headers.get('range');
@@ -56,10 +64,13 @@ export const GET: RequestHandler = async ({ params, request, platform, url }) =>
 		// images are served in full. A root filesystem is not: streaming hundreds
 		// of MB through the worker is never what the caller wants.
 		if (image.size > WHOLE_FILE_LIMIT) {
-			return new Response('Too large to serve whole — use a Range request, or ?info for metadata.', {
-				status: 416,
-				headers: { 'content-range': `bytes */${image.size}`, 'accept-ranges': 'bytes' }
-			});
+			return new Response(
+				'Too large to serve whole — use a Range request, or ?info for metadata.',
+				{
+					status: 416,
+					headers: { 'content-range': `bytes */${image.size}`, 'accept-ranges': 'bytes' }
+				}
+			);
 		}
 		const whole = await readAll(image, env?.VM_BUCKET);
 		if (!whole) {

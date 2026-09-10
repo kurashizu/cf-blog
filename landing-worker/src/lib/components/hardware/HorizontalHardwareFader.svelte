@@ -45,7 +45,13 @@
 		return `${v}${unit}`;
 	}
 
-	let desc = $derived(description || (label && paramDescriptionKey(label.toUpperCase()) ? $t(paramDescriptionKey(label.toUpperCase())) : '') || '');
+	let desc = $derived(
+		description ||
+			(label && paramDescriptionKey(label.toUpperCase())
+				? $t(paramDescriptionKey(label.toUpperCase()))
+				: '') ||
+			''
+	);
 	let labelPart = $derived(label ? `${label}${desc ? ` (${desc})` : ''}: ` : '');
 	let tooltipText = $derived(
 		reset !== undefined
@@ -88,7 +94,9 @@
 	title={tooltipText}
 >
 	{#if label}
-		<span class="text-xs opacity-85 uppercase font-bold group-hover:text-white transition-colors">{label}</span>
+		<span class="text-xs opacity-85 uppercase font-bold group-hover:text-white transition-colors"
+			>{label}</span
+		>
 	{/if}
 
 	<div
@@ -116,10 +124,14 @@
 		{#if bipolar}
 			<div
 				class="absolute top-0.5 bottom-0.5 rounded-xs pointer-events-none opacity-30"
-				style="left: {value >= 0 ? '50%' : `${pct * 100}%`}; width: {Math.abs(pct - 0.5) * 100}%; background-color: {color};"
+				style="left: {value >= 0 ? '50%' : `${pct * 100}%`}; width: {Math.abs(pct - 0.5) *
+					100}%; background-color: {color};"
 			></div>
 		{:else}
-			<div class="absolute top-0.5 bottom-0.5 left-0.5 rounded-xs pointer-events-none opacity-30" style="width: {pct * 100}%; background-color: {color};"></div>
+			<div
+				class="absolute top-0.5 bottom-0.5 left-0.5 rounded-xs pointer-events-none opacity-30"
+				style="width: {pct * 100}%; background-color: {color};"
+			></div>
 		{/if}
 
 		{#if bipolar}
@@ -127,14 +139,20 @@
 		{/if}
 
 		<div
-			class="absolute h-2.5 w-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none {isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''}"
-			style="left: calc({pct * 100}% - 4px); background-color: {color}; box-shadow: {isDragging ? `0 0 8px ${color}` : `0 0 4px ${color}88`};"
+			class="absolute h-2.5 w-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none {isDragging
+				? 'shadow-[0_0_8px_#fff] brightness-125'
+				: ''}"
+			style="left: calc({pct * 100}% - 4px); background-color: {color}; box-shadow: {isDragging
+				? `0 0 8px ${color}`
+				: `0 0 4px ${color}88`};"
 		>
 			<div class="h-1.5 w-0.5 bg-black/90 rounded-full"></div>
 		</div>
 	</div>
 
 	{#if showValue}
-		<span class="text-xs font-black text-right min-w-[28px]" style="color: {color}">{formatDisplay(value)}</span>
+		<span class="text-xs font-black text-right min-w-[28px]" style="color: {color}"
+			>{formatDisplay(value)}</span
+		>
 	{/if}
 </div>

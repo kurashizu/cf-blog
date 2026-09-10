@@ -143,7 +143,9 @@ export const GET: RequestHandler = async ({ request, platform, url }) => {
 			streams.set(streamId, { kind, host, port });
 			// UDP has no connect step upstream — the target rides on every datagram.
 			if (kind !== 0x02) {
-				upstream.send(encodeFrame(streamId, TYPE_TCP_CONNECT, new TextEncoder().encode(`${host}:${port}`)));
+				upstream.send(
+					encodeFrame(streamId, TYPE_TCP_CONNECT, new TextEncoder().encode(`${host}:${port}`))
+				);
 			}
 			return;
 		}
@@ -153,7 +155,9 @@ export const GET: RequestHandler = async ({ request, platform, url }) => {
 			const info = streams.get(streamId);
 			if (!info) return;
 			if (info.kind === 0x02) {
-				upstream.send(encodeFrame(streamId, TYPE_UDP_DATA, encodeUdpPayload(info.host, info.port, payload)));
+				upstream.send(
+					encodeFrame(streamId, TYPE_UDP_DATA, encodeUdpPayload(info.host, info.port, payload))
+				);
 			} else {
 				upstream.send(encodeFrame(streamId, TYPE_TCP_DATA, payload));
 			}
@@ -254,6 +258,7 @@ function wispClose(streamId: number, reason: number): Uint8Array {
 
 function toBytes(data: unknown): Uint8Array | null {
 	if (data instanceof ArrayBuffer) return new Uint8Array(data);
-	if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+	if (ArrayBuffer.isView(data))
+		return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 	return null;
 }

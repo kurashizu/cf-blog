@@ -45,7 +45,9 @@
 	     reserved, and is overflow-hidden at xl, where it was holding 10px open for
 	     a bar that cannot appear. That is what kept the workstation's right edge
 	     inside the header's; the racks' own reserved gutter took the other 10. -->
-	<div class="flex-1 min-h-0 flex flex-col gap-1.5 overflow-y-auto xl:overflow-hidden custom-scrollbar xl-no-gutter">
+	<div
+		class="flex-1 min-h-0 flex flex-col gap-1.5 overflow-y-auto xl:overflow-hidden custom-scrollbar xl-no-gutter"
+	>
 		<!-- Top: modules 1-3 + piano roll/keyboard, side by side once there's enough width to not squeeze either.
 		     In ADV the modules are not rendered at all -- not hidden, not shrunk -- and the centre column
 		     spans the full width, because a patch bay needs the room a 250px rack column would take. -->
@@ -57,14 +59,20 @@
 			{#if !$panelIsExclusive}
 				<!-- Modules 1-3: own scrollable group — natural content height is the floor (never overlaps),
 				     extra vertical space distributes 5:3:3 so tall screens fill instead of leaving whitespace -->
-				<div data-tour="synth-side" class="order-2 xl:order-1 flex flex-col gap-1.5 min-w-[260px] xl:min-w-0 xl:h-full xl:overflow-y-auto overflow-x-hidden custom-scrollbar pr-0.5">
+				<div
+					data-tour="synth-side"
+					class="order-2 xl:order-1 flex flex-col gap-1.5 min-w-[260px] xl:min-w-0 xl:h-full xl:overflow-y-auto overflow-x-hidden custom-scrollbar pr-0.5"
+				>
 					<Module1Oscillators />
 					<Module2TimbreFusion />
 					<Module3Filter />
 				</div>
 			{/if}
 
-			<div data-tour="synth-roll" class="order-1 xl:order-2 flex flex-col gap-1.5 min-h-[420px] xl:min-h-0 xl:h-full xl:overflow-hidden">
+			<div
+				data-tour="synth-roll"
+				class="order-1 xl:order-2 flex flex-col gap-1.5 min-h-[420px] xl:min-h-0 xl:h-full xl:overflow-hidden"
+			>
 				{#if $advancedMode && $centreView === 'rack'}
 					<PatchRack />
 				{:else}
@@ -90,8 +98,13 @@
 		     the roll was 94px short and scrolling. shrink-0 keeps it from being
 		     squeezed; the flex parent gives what it does not take to the row above. -->
 		{#if !$panelIsExclusive}
-			<div data-tour="synth-rack" class="shrink-0 xl:max-h-[260px] h-fit overflow-auto custom-scrollbar no-gutter">
-				<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[repeat(24,minmax(0,1fr))] xl:min-w-[1000px] gap-1.5 text-xs">
+			<div
+				data-tour="synth-rack"
+				class="shrink-0 xl:max-h-[260px] h-fit overflow-auto custom-scrollbar no-gutter"
+			>
+				<div
+					class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[repeat(24,minmax(0,1fr))] xl:min-w-[1000px] gap-1.5 text-xs"
+				>
 					<Module4Envelopes />
 					<Module5Lfo />
 					<Module6FxEq />

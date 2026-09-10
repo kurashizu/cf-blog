@@ -8,7 +8,12 @@
 	import RotaryKnob from '../../hardware/RotaryKnob.svelte';
 
 	const FILTER_TYPES: FilterType[] = ['lowpass', 'bandpass', 'highpass', 'notch'];
-	const FILTER_LABELS: Record<FilterType, string> = { lowpass: 'LPF', bandpass: 'BPF', highpass: 'HPF', notch: 'NTCH' };
+	const FILTER_LABELS: Record<FilterType, string> = {
+		lowpass: 'LPF',
+		bandpass: 'BPF',
+		highpass: 'HPF',
+		notch: 'NTCH'
+	};
 	// $locale is read here only to give this $derived a tracked dependency —
 	// filterTooltips() itself resolves strings through tr(), which is not reactive.
 	let FILTER_TOOLTIPS = $derived.by(() => {
@@ -17,14 +22,32 @@
 	});
 </script>
 
-<div class="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0 xl:grow-[3]">
-	<div class="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0">
+<div
+	class="border border-[#56b6c2]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[115px] shrink-0 xl:grow-[3]"
+>
+	<div
+		class="flex justify-between items-center font-black text-[#56b6c2] text-xs border-b border-white/10 pb-0.5 shrink-0"
+	>
 		<span>3. VCF FILTER</span>
 		<div class="flex items-center gap-1.5">
 			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToEnvelopes')}>
-				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
+				<svg
+					width="10"
+					height="10"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg
+				>
 			</span>
-			<button onclick={resetRack3} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">R</button>
+			<button
+				onclick={resetRack3}
+				title={$t('synthPanels.rack.resetHint')}
+				class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60"
+				>R</button
+			>
 		</div>
 	</div>
 
@@ -37,7 +60,8 @@
 						playSound('click');
 					}}
 					title={FILTER_TOOLTIPS[f] || f}
-					class="press h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.filterType === f
+					class="press h-full w-full flex items-center justify-center text-xs border rounded-xs font-black cursor-pointer transition-colors leading-none text-center {$currentTrack.filterType ===
+					f
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/70 hover:bg-white/10'}"
 				>
@@ -46,20 +70,57 @@
 			{/each}
 		</div>
 
-		<div class="col-span-7 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5">
-			<RotaryKnob label="CUTOFF" value={$currentTrack.cutoff} min={40} max={12000} step={50} unit="Hz" color="#56b6c2" size={32} reset={12000} onChange={(v) => updateActiveTrack({ cutoff: v })} />
-			<RotaryKnob label="RESQ" value={$currentTrack.resonance} min={0.2} max={14} step={0.2} color="#e5c07b" size={32} reset={0.2} onChange={(v) => updateActiveTrack({ resonance: v })} />
-			<RotaryKnob label="KTRK" value={Math.round(($currentTrack.keyTracking ?? 0.0) * 100)} min={0} max={100} step={5} unit="%" color="#61afef" size={32} reset={0} onChange={(v) => updateActiveTrack({ keyTracking: v / 100 })} />
+		<div
+			class="col-span-7 grid grid-cols-2 gap-0.5 border-l border-white/10 pl-1.5 h-full items-center py-0.5"
+		>
+			<RotaryKnob
+				label="CUTOFF"
+				value={$currentTrack.cutoff}
+				min={40}
+				max={12000}
+				step={50}
+				unit="Hz"
+				color="#56b6c2"
+				size={32}
+				reset={12000}
+				onChange={(v) => updateActiveTrack({ cutoff: v })}
+			/>
+			<RotaryKnob
+				label="RESQ"
+				value={$currentTrack.resonance}
+				min={0.2}
+				max={14}
+				step={0.2}
+				color="#e5c07b"
+				size={32}
+				reset={0.2}
+				onChange={(v) => updateActiveTrack({ resonance: v })}
+			/>
+			<RotaryKnob
+				label="KTRK"
+				value={Math.round(($currentTrack.keyTracking ?? 0.0) * 100)}
+				min={0}
+				max={100}
+				step={5}
+				unit="%"
+				color="#61afef"
+				size={32}
+				reset={0}
+				onChange={(v) => updateActiveTrack({ keyTracking: v / 100 })}
+			/>
 			<RotaryKnob
 				label="ENVA"
-				value={Math.round(($currentTrack.filterEnvAmount ?? $currentTrack.envFilterMod ?? 0.5) * 100)}
+				value={Math.round(
+					($currentTrack.filterEnvAmount ?? $currentTrack.envFilterMod ?? 0.5) * 100
+				)}
 				min={-100}
 				max={100}
 				unit="%"
 				color="#98c379"
 				size={32}
 				reset={0}
-				onChange={(v) => updateActiveTrack({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
+				onChange={(v) =>
+					updateActiveTrack({ filterEnvAmount: v / 100, envFilterMod: Math.max(0, v / 100) })}
 			/>
 		</div>
 	</div>

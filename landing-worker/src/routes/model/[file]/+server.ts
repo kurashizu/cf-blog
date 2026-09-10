@@ -44,7 +44,10 @@ export const GET: RequestHandler = async ({ params, platform, request }) => {
 	const object = match
 		? await bucket.get(key, {
 				range: match[1]
-					? { offset: Number(match[1]), length: match[2] ? Number(match[2]) - Number(match[1]) + 1 : undefined }
+					? {
+							offset: Number(match[1]),
+							length: match[2] ? Number(match[2]) - Number(match[1]) + 1 : undefined
+						}
 					: { suffix: Number(match[2]) }
 			})
 		: await bucket.get(key);

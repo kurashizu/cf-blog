@@ -302,7 +302,8 @@ export function replayOverlay(
 	const versionLen = view.getUint32(16, true);
 	if (blockSize !== BLOCK_BYTES) return null;
 	if (bytes.length < HEADER_BYTES + versionLen) return null;
-	if (decoder.decode(bytes.subarray(HEADER_BYTES, HEADER_BYTES + versionLen)) !== version) return null;
+	if (decoder.decode(bytes.subarray(HEADER_BYTES, HEADER_BYTES + versionLen)) !== version)
+		return null;
 
 	let offset = HEADER_BYTES + versionLen;
 	if (bytes.length < offset + count * (4 + BLOCK_BYTES)) return null;

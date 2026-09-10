@@ -147,8 +147,14 @@
 		nodes[i] = node;
 		place(node, bodies[i]);
 		return {
-			update(next: number) { nodes[i] = null; nodes[next] = node; place(node, bodies[next]); },
-			destroy() { nodes[i] = null; }
+			update(next: number) {
+				nodes[i] = null;
+				nodes[next] = node;
+				place(node, bodies[next]);
+			},
+			destroy() {
+				nodes[i] = null;
+			}
 		};
 	}
 
@@ -214,7 +220,7 @@
 
 		let wallHit = 0;
 		for (const b of bodies) {
-			if (b.id === dragId) continue;         // carried, not simulated
+			if (b.id === dragId) continue; // carried, not simulated
 			b.x += b.vx * dt;
 			b.y += b.vy * dt;
 			// Drag: a thrown packet coasts to a stop rather than pinballing forever.
@@ -226,10 +232,26 @@
 			const hh = b.h / 2;
 			// A wall is contact too, so it is worth the same knock -- tracked here
 			// and played once per frame alongside the body-to-body hits below.
-			if (b.x < hw) { b.x = hw; wallHit = Math.max(wallHit, Math.abs(b.vx)); b.vx = Math.abs(b.vx) * 0.6; }
-			if (b.x > W - hw) { b.x = W - hw; wallHit = Math.max(wallHit, Math.abs(b.vx)); b.vx = -Math.abs(b.vx) * 0.6; }
-			if (b.y < hh) { b.y = hh; wallHit = Math.max(wallHit, Math.abs(b.vy)); b.vy = Math.abs(b.vy) * 0.6; }
-			if (b.y > H - hh) { b.y = H - hh; wallHit = Math.max(wallHit, Math.abs(b.vy)); b.vy = -Math.abs(b.vy) * 0.6; }
+			if (b.x < hw) {
+				b.x = hw;
+				wallHit = Math.max(wallHit, Math.abs(b.vx));
+				b.vx = Math.abs(b.vx) * 0.6;
+			}
+			if (b.x > W - hw) {
+				b.x = W - hw;
+				wallHit = Math.max(wallHit, Math.abs(b.vx));
+				b.vx = -Math.abs(b.vx) * 0.6;
+			}
+			if (b.y < hh) {
+				b.y = hh;
+				wallHit = Math.max(wallHit, Math.abs(b.vy));
+				b.vy = Math.abs(b.vy) * 0.6;
+			}
+			if (b.y > H - hh) {
+				b.y = H - hh;
+				wallHit = Math.max(wallHit, Math.abs(b.vy));
+				b.vy = -Math.abs(b.vy) * 0.6;
+			}
 		}
 
 		/* Separation, as axis-aligned boxes rather than circles: the cards are
@@ -243,8 +265,8 @@
 				const b = bodies[j];
 				const dx = b.x - a.x;
 				const dy = b.y - a.y;
-				const ox = (a.w + b.w) / 2 - Math.abs(dx);   // overlap on x
-				const oy = (a.h + b.h) / 2 - Math.abs(dy);   // overlap on y
+				const ox = (a.w + b.w) / 2 - Math.abs(dx); // overlap on x
+				const oy = (a.h + b.h) / 2 - Math.abs(dy); // overlap on y
 				if (ox <= 0 || oy <= 0) continue;
 				const aFixed = a.id === dragId;
 				const bFixed = b.id === dragId;
@@ -363,7 +385,10 @@
 			// Cap the throw so a fast flick cannot send a card across the field
 			// faster than the separation pass can resolve it.
 			const sp = Math.hypot(b.vx, b.vy);
-			if (sp > 900) { b.vx *= 900 / sp; b.vy *= 900 / sp; }
+			if (sp > 900) {
+				b.vx *= 900 / sp;
+				b.vy *= 900 / sp;
+			}
 			// A click is a drag that never moved: that opens the card instead.
 			if (!moved) {
 				selected = selected === b.id ? null : b.id;
@@ -415,7 +440,11 @@
 			const resp = await fetch('https://blog.krsz.in/api/guestbook', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: gbName.trim(), email: gbEmail.trim(), content: gbContent.trim() })
+				body: JSON.stringify({
+					name: gbName.trim(),
+					email: gbEmail.trim(),
+					content: gbContent.trim()
+				})
 			});
 			const data = (await resp.json().catch(() => ({}))) as { error?: string };
 			if (resp.ok) {
@@ -426,7 +455,9 @@
 				playSound('power');
 				loadMessages();
 			} else {
-				gbStatus = $t('community.guestbook.errorWithReason', { reason: data.error || `HTTP ${resp.status}` });
+				gbStatus = $t('community.guestbook.errorWithReason', {
+					reason: data.error || `HTTP ${resp.status}`
+				});
 				gbShakeGen++;
 				playSound('click');
 			}
@@ -468,22 +499,43 @@
  ╚═════╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝`}
 		/>
 		<div class="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm shrink-0">
-			<button onclick={() => handleCopy('krsz.dev@gmail.com')} class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[krsz.dev@gmail.com]</button>
-			<button onclick={() => handleCopy('admin@krsz.in')} class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors">[admin@krsz.in]</button>
+			<button
+				onclick={() => handleCopy('krsz.dev@gmail.com')}
+				class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors"
+				>[krsz.dev@gmail.com]</button
+			>
+			<button
+				onclick={() => handleCopy('admin@krsz.in')}
+				class="press border border-[#e06c75] px-2 py-0.5 rounded-xs text-[#e06c75] hover:bg-[#e06c75] hover:text-black cursor-pointer transition-colors"
+				>[admin@krsz.in]</button
+			>
 		</div>
 	</div>
 
-	<form onsubmit={handleSubmit} use:shakeOn={gbShakeGen} class="border border-white/10 p-4 bg-black/30 space-y-3.5 text-xs sm:text-sm rounded-xs">
+	<form
+		onsubmit={handleSubmit}
+		use:shakeOn={gbShakeGen}
+		class="border border-white/10 p-4 bg-black/30 space-y-3.5 text-xs sm:text-sm rounded-xs"
+	>
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
 			<div class="space-y-1">
-				<label class="block text-xs font-bold text-[#56b6c2]" for="gb-name">{$t('community.guestbook.nameLabel')}</label>
-				<div class="relative border border-white/20 focus-within:border-[#56b6c2] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]">
-					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbName}</span>{#if gbFocusedField === 'name'}<span
+				<label class="block text-xs font-bold text-[#56b6c2]" for="gb-name"
+					>{$t('community.guestbook.nameLabel')}</label
+				>
+				<div
+					class="relative border border-white/20 focus-within:border-[#56b6c2] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]"
+				>
+					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbName}</span
+					>{#if gbFocusedField === 'name'}<span
 							class="inline-block w-[8px] h-[16px] shrink-0"
-							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
+							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4
+								? 0.9
+								: 0.2};"
 						></span>{/if}
 					{#if !gbName && gbFocusedField !== 'name'}
-						<span class="text-xs opacity-40 select-none pointer-events-none">{$t('community.guestbook.namePlaceholder')}</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none"
+							>{$t('community.guestbook.namePlaceholder')}</span
+						>
 					{/if}
 					<input
 						id="gb-name"
@@ -497,14 +549,23 @@
 				</div>
 			</div>
 			<div class="space-y-1">
-				<label class="block text-xs font-bold text-[#e5c07b]" for="gb-email">{$t('community.guestbook.emailLabel')}</label>
-				<div class="relative border border-white/20 focus-within:border-[#e5c07b] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]">
-					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbEmail}</span>{#if gbFocusedField === 'email'}<span
+				<label class="block text-xs font-bold text-[#e5c07b]" for="gb-email"
+					>{$t('community.guestbook.emailLabel')}</label
+				>
+				<div
+					class="relative border border-white/20 focus-within:border-[#e5c07b] transition-colors bg-black/60 px-3 py-2 rounded-xs flex items-center min-h-[40px]"
+				>
+					<span class="font-mono text-sm text-[#eceff4] whitespace-pre">{gbEmail}</span
+					>{#if gbFocusedField === 'email'}<span
 							class="inline-block w-[8px] h-[16px] shrink-0"
-							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
+							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4
+								? 0.9
+								: 0.2};"
 						></span>{/if}
 					{#if !gbEmail && gbFocusedField !== 'email'}
-						<span class="text-xs opacity-40 select-none pointer-events-none">{$t('community.guestbook.emailPlaceholder')}</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none"
+							>{$t('community.guestbook.emailPlaceholder')}</span
+						>
 					{/if}
 					<input
 						id="gb-email"
@@ -520,19 +581,30 @@
 		</div>
 
 		<div class="space-y-1">
-			<label class="block text-xs font-bold text-[#e06c75]" for="gb-content">{$t('community.guestbook.contentLabel')}</label>
-			<div class="relative border border-white/20 focus-within:border-[#e06c75] transition-colors bg-black/60 p-3 rounded-xs min-h-[80px]">
+			<label class="block text-xs font-bold text-[#e06c75]" for="gb-content"
+				>{$t('community.guestbook.contentLabel')}</label
+			>
+			<div
+				class="relative border border-white/20 focus-within:border-[#e06c75] transition-colors bg-black/60 p-3 rounded-xs min-h-[80px]"
+			>
 				<!-- The caret follows the text with no separator between them: under
 				     whitespace-pre-wrap the newline that used to sit between the value
 				     and this span rendered as a real space, so the caret floated a
 				     character-width past the last glyph instead of sitting against it.
 				     Kept on one line for that reason, and with no left margin. -->
-				<div class="font-mono text-sm text-[#eceff4] whitespace-pre-wrap break-words leading-relaxed">{gbContent}{#if gbFocusedField === 'content'}<span
+				<div
+					class="font-mono text-sm text-[#eceff4] whitespace-pre-wrap break-words leading-relaxed"
+				>
+					{gbContent}{#if gbFocusedField === 'content'}<span
 							class="inline-block w-[8px] h-[16px] align-text-bottom shrink-0"
-							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4 ? 0.9 : 0.2};"
+							style="background-color: {themeStyles.cursorColor}; opacity: {$pulseStep % 6 < 4
+								? 0.9
+								: 0.2};"
 						></span>{/if}
 					{#if !gbContent && gbFocusedField !== 'content'}
-						<span class="text-xs opacity-40 select-none pointer-events-none block">{$t('community.guestbook.contentPlaceholder')}</span>
+						<span class="text-xs opacity-40 select-none pointer-events-none block"
+							>{$t('community.guestbook.contentPlaceholder')}</span
+						>
 					{/if}
 				</div>
 				<textarea
@@ -548,12 +620,21 @@
 		</div>
 
 		{#if gbStatus}
-			<div class="border border-[#98c379] p-2.5 text-xs sm:text-sm font-bold text-[#98c379] bg-black/40 rounded-xs" in:fade={{ duration: 160 }}>{gbStatus}</div>
+			<div
+				class="border border-[#98c379] p-2.5 text-xs sm:text-sm font-bold text-[#98c379] bg-black/40 rounded-xs"
+				in:fade={{ duration: 160 }}
+			>
+				{gbStatus}
+			</div>
 		{/if}
 		<p class="text-[10px] sm:text-xs text-white/40 leading-relaxed">
 			{$t('community.guestbook.disclaimer')}
 		</p>
-		<button type="submit" class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity">{$t('community.guestbook.submit')}</button>
+		<button
+			type="submit"
+			class="press w-full border border-[#e06c75] bg-[#e06c75] text-black font-black py-2.5 text-xs sm:text-sm uppercase hover:opacity-90 cursor-pointer rounded-xs transition-opacity"
+			>{$t('community.guestbook.submit')}</button
+		>
 	</form>
 
 	<!-- Zero-typing companion to the form above: one button records only
@@ -571,8 +652,14 @@
 	     field itself came out around 170px, barely three card-heights, so the
 	     separation pass had nowhere to put anything and the cards sat jammed
 	     against each other. 380px gives it room to read as a field. -->
-	<div class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2 flex-1 min-h-[380px]">
-		<BoxHeader title={$t('community.guestbook.received')} short={$t('community.guestbook.receivedShort')} class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5 shrink-0">
+	<div
+		class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2 flex-1 min-h-[380px]"
+	>
+		<BoxHeader
+			title={$t('community.guestbook.received')}
+			short={$t('community.guestbook.receivedShort')}
+			class="text-xs font-black text-[#e06c75] border-b border-white/10 pb-1.5 shrink-0"
+		>
 			<button
 				onclick={() => {
 					loadMessages();
@@ -588,7 +675,9 @@
 		{#if messagesState === 'loading'}
 			<div class="text-xs font-mono text-white/40 py-2">{$t('community.guestbook.fetching')}</div>
 		{:else if messagesState === 'error'}
-			<div class="text-xs font-mono text-[#e06c75] py-2">{$t('community.guestbook.fetchError')}</div>
+			<div class="text-xs font-mono text-[#e06c75] py-2">
+				{$t('community.guestbook.fetchError')}
+			</div>
 		{:else if messages.length === 0}
 			<div class="text-xs font-mono text-white/40 py-2">{$t('community.guestbook.empty')}</div>
 		{:else}
@@ -601,49 +690,62 @@
 				role="list"
 				class="relative flex-1 min-h-0 overflow-hidden rounded-xs touch-none"
 				style="background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 22px 22px;"
-				onpointerdown={(e) => { if (e.target === e.currentTarget) selected = null; }}
+				onpointerdown={(e) => {
+					if (e.target === e.currentTarget) selected = null;
+				}}
 			>
 				{#each bodies as p, i (p.id)}
-						{@const open = selected === p.id}
-						<!-- Positioned by the loop writing transform straight to this node;
+					{@const open = selected === p.id}
+					<!-- Positioned by the loop writing transform straight to this node;
 						     left/top stay at 0 so translate3d is the only thing moving it. -->
+					<div
+						use:register={i}
+						role="listitem"
+						class="absolute left-0 top-0 will-change-transform"
+						style="width: {open ? 17.143 * $textSize : 10.714 * $textSize}px; z-index: {open
+							? 30
+							: 10};"
+						in:fade={{ duration: 220 }}
+					>
 						<div
-							use:register={i}
-							role="listitem"
-							class="absolute left-0 top-0 will-change-transform"
-							style="width: {open ? 17.143 * $textSize : 10.714 * $textSize}px; z-index: {open ? 30 : 10};"
-							in:fade={{ duration: 220 }}
+							role="button"
+							tabindex="0"
+							aria-expanded={open}
+							aria-label={$t('community.guestbook.messageFrom', { name: p.name })}
+							onpointerdown={(e) => grab(e, p, i)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									selected = open ? null : p.id;
+									playSound('click');
+								}
+								if (e.key === 'Escape' && open) selected = null;
+							}}
+							class="border rounded-xs px-2 py-1.5 bg-black/80 backdrop-blur-[1px] select-none transition-[box-shadow,border-color] hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.7)] focus:outline-none focus-visible:ring-1"
+							class:cursor-grab={!open}
+							class:cursor-default={open}
+							style="border-color: {p.color}{open ? 'cc' : '55'}; {open
+								? `height: ${10.714 * $textSize}px;`
+								: ''} --tw-ring-color: {p.color};"
 						>
-							<div
-								role="button"
-								tabindex="0"
-								aria-expanded={open}
-								aria-label={$t('community.guestbook.messageFrom', { name: p.name })}
-								onpointerdown={(e) => grab(e, p, i)}
-								onkeydown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = open ? null : p.id; playSound('click'); }
-									if (e.key === 'Escape' && open) selected = null;
-								}}
-								class="border rounded-xs px-2 py-1.5 bg-black/80 backdrop-blur-[1px] select-none transition-[box-shadow,border-color] hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.7)] focus:outline-none focus-visible:ring-1"
-								class:cursor-grab={!open}
-								class:cursor-default={open}
-								style="border-color: {p.color}{open ? 'cc' : '55'}; {open ? `height: ${10.714 * $textSize}px;` : ''} --tw-ring-color: {p.color};"
-							>
-								<div class="flex items-baseline justify-between gap-1.5">
-									<span class="text-[11px] font-bold truncate" style="color: {p.color}">{p.name}</span>
-									<span class="text-[9px] font-mono text-white/30 shrink-0">{fmtTime(p.timestamp)}</span>
-								</div>
-								<div
-									class="text-[10px] text-[#eceff4]/80 leading-snug mt-0.5 break-words"
-									class:line-clamp-2={!open}
-									class:overflow-y-auto={open}
-									style={open ? `max-height: ${10.714 * $textSize - 34}px;` : ''}
+							<div class="flex items-baseline justify-between gap-1.5">
+								<span class="text-[11px] font-bold truncate" style="color: {p.color}">{p.name}</span
 								>
-									{p.content}
-								</div>
+								<span class="text-[9px] font-mono text-white/30 shrink-0"
+									>{fmtTime(p.timestamp)}</span
+								>
+							</div>
+							<div
+								class="text-[10px] text-[#eceff4]/80 leading-snug mt-0.5 break-words"
+								class:line-clamp-2={!open}
+								class:overflow-y-auto={open}
+								style={open ? `max-height: ${10.714 * $textSize - 34}px;` : ''}
+							>
+								{p.content}
 							</div>
 						</div>
-					{/each}
+					</div>
+				{/each}
 			</div>
 			<div class="text-[10px] font-mono text-white/30 shrink-0">
 				{$t('community.guestbook.fieldStatus', {

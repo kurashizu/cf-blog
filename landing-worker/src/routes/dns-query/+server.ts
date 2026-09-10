@@ -95,7 +95,9 @@ function relay(res: Response): Response {
 
 /** Returns a REFUSED response if the query asks for a name outside the list. */
 function policy(query: Uint8Array, platform: App.Platform | undefined): Response | null {
-	const allow = parseAllowlist((platform?.env as { OMNIPROXY_ALLOW?: string } | undefined)?.OMNIPROXY_ALLOW);
+	const allow = parseAllowlist(
+		(platform?.env as { OMNIPROXY_ALLOW?: string } | undefined)?.OMNIPROXY_ALLOW
+	);
 	const question = parseQuestion(query);
 	// An unparseable query is not this endpoint's to interpret; the upstream will
 	// reject it in the terms its own protocol uses.

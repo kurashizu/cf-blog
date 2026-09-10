@@ -115,7 +115,10 @@ export function parseR2Source(url: string): { key: string; partBytes: number | n
 }
 
 /** Whole small image, for the kernel and initrd that v86 loads in one piece. */
-export async function readAll(image: ImageSpec, bucket: R2Bucket | undefined): Promise<Uint8Array<ArrayBuffer> | null> {
+export async function readAll(
+	image: ImageSpec,
+	bucket: R2Bucket | undefined
+): Promise<Uint8Array<ArrayBuffer> | null> {
 	if (image.url.startsWith('r2:')) {
 		if (!bucket) return null;
 		// Only unsplit objects are served whole; anything large must be ranged.

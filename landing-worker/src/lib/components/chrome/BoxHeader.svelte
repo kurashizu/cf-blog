@@ -48,7 +48,8 @@
 		const vs = variants;
 		if (!el) return;
 		const probe = document.createElement('span');
-		probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;pointer-events:none;left:0;top:0';
+		probe.style.cssText =
+			'position:absolute;visibility:hidden;white-space:nowrap;pointer-events:none;left:0;top:0';
 		el.appendChild(probe);
 		const fit = () => {
 			// column-gap between title and slot is 0.5rem = 8px.
@@ -74,9 +75,15 @@
 	});
 </script>
 
-<div bind:this={row} class="relative flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 whitespace-nowrap min-w-0 {cls}" {style}>
+<div
+	bind:this={row}
+	class="relative flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 whitespace-nowrap min-w-0 {cls}"
+	{style}
+>
 	<span class={titleClass}>{frame(label)}</span>
 	{#if children}
-		<span bind:this={right} class="ml-auto min-w-0 flex items-center {rightClass}">{@render children()}</span>
+		<span bind:this={right} class="ml-auto min-w-0 flex items-center {rightClass}"
+			>{@render children()}</span
+		>
 	{/if}
 </div>

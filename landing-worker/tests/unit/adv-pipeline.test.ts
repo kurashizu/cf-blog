@@ -1,8 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { MODULE_SPECS, WAVE_SHAPES, WAVE_LABELS } from '../../src/lib/stores/synth-modules';
-import { roleOf, rolesCompatible, topoOrder, wouldCycle, type PortRole } from '../../src/lib/stores/graph-model';
-import { createResolver, execReach, execDelays, runs, isPureNode, PURE_NODES } from '../../src/lib/stores/node-graph';
+import {
+	roleOf,
+	rolesCompatible,
+	topoOrder,
+	wouldCycle,
+	type PortRole
+} from '../../src/lib/stores/graph-model';
+import {
+	createResolver,
+	execReach,
+	execDelays,
+	runs,
+	isPureNode,
+	PURE_NODES
+} from '../../src/lib/stores/node-graph';
 import type { EvalGraph } from '../../src/lib/stores/node-graph';
 
 /**
@@ -25,12 +38,15 @@ const note = { pitch: 0, tuning: 440, velocity: 0.8, noteIndex: 48, gate: 0.5, l
 const spec = (id: string) => MODULE_SPECS.find((m) => m.id === id)!;
 const audioIn = (id: string) => spec(id).inputs.find((p) => AUDIO_ROLES.includes(roleOf(p)));
 const audioOut = (id: string) => spec(id).outputs.find((p) => AUDIO_ROLES.includes(roleOf(p)));
-const valueOut = (id: string) => spec(id).outputs.find((p) => !AUDIO_ROLES.includes(roleOf(p)) && roleOf(p) !== 'exec');
+const valueOut = (id: string) =>
+	spec(id).outputs.find((p) => !AUDIO_ROLES.includes(roleOf(p)) && roleOf(p) !== 'exec');
 
-const wire = (from: string, fromPort: string, to: string, toPort: string) => ({ from, fromPort, to, toPort });
-
-
-
+const wire = (from: string, fromPort: string, to: string, toPort: string) => ({
+	from,
+	fromPort,
+	to,
+	toPort
+});
 
 /** Every module, so a new one is covered the day it is added. */
 const ALL = MODULE_SPECS.map((m) => m.id);
@@ -47,9 +63,10 @@ describe('every module is reachable in a patch', () => {
 			const outs = m.outputs.filter((p) => roleOf(p) !== 'exec');
 			// Can anything take what it produces?
 			for (const o of outs) {
-				const takers = MODULE_SPECS.filter((other) =>
-					other.inputs.some((i) => rolesCompatible(roleOf(o), roleOf(i))) ||
-					(other.params.length > 0 && rolesCompatible(roleOf(o), 'cv'))
+				const takers = MODULE_SPECS.filter(
+					(other) =>
+						other.inputs.some((i) => rolesCompatible(roleOf(o), roleOf(i))) ||
+						(other.params.length > 0 && rolesCompatible(roleOf(o), 'cv'))
 				);
 				if (!takers.length) stranded.push(`${id}.${o.id} feeds nothing`);
 			}
@@ -80,7 +97,9 @@ describe('every module is reachable in a patch', () => {
 			const viaOne = PLACEABLE.some((mid) => {
 				const mi = audioIn(mid);
 				const mo = audioOut(mid);
-				return mi && mo && rolesCompatible(roleOf(o), roleOf(mi)) && rolesCompatible(roleOf(mo), outRole);
+				return (
+					mi && mo && rolesCompatible(roleOf(o), roleOf(mi)) && rolesCompatible(roleOf(mo), outRole)
+				);
 			});
 			if (!direct && !viaOne) unreachable.push(id);
 		}
@@ -99,7 +118,20 @@ describe('every module is reachable in a patch', () => {
 });
 
 describe('the type lattice', () => {
-	const ROLES: PortRole[] = ['exec', 'signal', 'mono', 'stereo', 'left', 'right', 'cv', 'pitch', 'hz', 'unit', 'index', 'time'];
+	const ROLES: PortRole[] = [
+		'exec',
+		'signal',
+		'mono',
+		'stereo',
+		'left',
+		'right',
+		'cv',
+		'pitch',
+		'hz',
+		'unit',
+		'index',
+		'time'
+	];
 
 	it('keeps the three families apart', () => {
 		for (const r of ROLES) {
@@ -185,7 +217,13 @@ describe('graph shapes a patch actually takes', () => {
 		/* One source into two paths that rejoin -- the commonest shape after a
 		   straight chain, and the one a topological sort exists for. */
 		const graph = g(
-			[['s', 'osc'], ['a', 'filter'], ['b', 'drive'], ['m', 'mix'], ['o', 'out']],
+			[
+				['s', 'osc'],
+				['a', 'filter'],
+				['b', 'drive'],
+				['m', 'mix'],
+				['o', 'out']
+			],
 			[
 				wire('s', 'out', 'a', 'in'),
 				wire('s', 'out', 'b', 'in'),
@@ -205,7 +243,11 @@ describe('graph shapes a patch actually takes', () => {
 		// Two cables from the same node into the same node: the indegree must be
 		// decremented once per cable, not once per source.
 		const graph = g(
-			[['s', 'osc'], ['m', 'ring'], ['o', 'out']],
+			[
+				['s', 'osc'],
+				['m', 'ring'],
+				['o', 'out']
+			],
 			[wire('s', 'out', 'm', 'in'), wire('s', 'out', 'm', 'b'), wire('m', 'out', 'o', 'in')]
 		);
 		expect(topo(graph)).not.toBeNull();
@@ -228,7 +270,13 @@ describe('graph shapes a patch actually takes', () => {
 	it('refuses an audio cycle', () => {
 		// Web Audio measured stable only to about g = 0.90 in a delay loop and
 		// screamed past it, so a cycle is refused rather than clamped.
-		const graph = { nodes: [{ id: 'a', type: 'filter', x: 0, y: 0 }, { id: 'b', type: 'drive', x: 0, y: 0 }], cables: [wire('a', 'out', 'b', 'in')] };
+		const graph = {
+			nodes: [
+				{ id: 'a', type: 'filter', x: 0, y: 0 },
+				{ id: 'b', type: 'drive', x: 0, y: 0 }
+			],
+			cables: [wire('a', 'out', 'b', 'in')]
+		};
 		expect(wouldCycle(graph, 'b', 'a')).toBe(true);
 		expect(wouldCycle(graph, 'a', 'b')).toBe(false);
 	});
@@ -237,7 +285,11 @@ describe('graph shapes a patch actually takes', () => {
 		/* The editor will not draw one, but a patch file is user data. A pull
 		   evaluator must terminate rather than recurse to the stack limit. */
 		const graph = g(
-			[['a', 'add'], ['b', 'mul'], ['c', 'clamp']],
+			[
+				['a', 'add'],
+				['b', 'mul'],
+				['c', 'clamp']
+			],
 			[wire('a', 'out', 'b', 'a'), wire('b', 'out', 'c', 'a'), wire('c', 'out', 'a', 'a')]
 		);
 		const r = createResolver(graph, {}, note);
@@ -246,7 +298,12 @@ describe('graph shapes a patch actually takes', () => {
 
 	it('resolves a value feeding several knobs to one answer', () => {
 		const graph = g(
-			[['c', 'const'], ['x', 'filter'], ['y', 'filter'], ['z', 'drive']],
+			[
+				['c', 'const'],
+				['x', 'filter'],
+				['y', 'filter'],
+				['z', 'drive']
+			],
 			[
 				wire('c', 'out', 'x', 'cutoff'),
 				wire('c', 'out', 'y', 'cutoff'),
@@ -264,7 +321,10 @@ describe('graph shapes a patch actually takes', () => {
 		   a refactor breaks silently -- and two oscillators at one pitch is not
 		   a patch anyone would notice was wrong. */
 		const graph = g(
-			[['a', 'filter'], ['b', 'filter']],
+			[
+				['a', 'filter'],
+				['b', 'filter']
+			],
 			[]
 		);
 		const r = createResolver(graph, { 'a.cutoff': 200, 'b.cutoff': 9000 }, note);
@@ -275,7 +335,11 @@ describe('graph shapes a patch actually takes', () => {
 	it('leaves an unrelated island alone', () => {
 		// A patch with a stray disconnected module still builds.
 		const graph = g(
-			[['s', 'osc'], ['o', 'out'], ['stray', 'filter']],
+			[
+				['s', 'osc'],
+				['o', 'out'],
+				['stray', 'filter']
+			],
 			[wire('s', 'out', 'o', 'in')]
 		);
 		expect(topo(graph)).not.toBeNull();
@@ -290,7 +354,13 @@ describe('execution across a whole patch', () => {
 
 	it('reaches an output through a chain of logic', () => {
 		const graph = g(
-			[['e', 'in'], ['s', 'seq'], ['w', 'when'], ['a', 'act'], ['o', 'out']],
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['w', 'when'],
+				['a', 'act'],
+				['o', 'out']
+			],
 			[
 				wire('e', 'then', 's', 'exec'),
 				wire('s', 'then', 'w', 'exec'),
@@ -306,7 +376,11 @@ describe('execution across a whole patch', () => {
 		/* Two OUTs is a legitimate patch -- two voices in parallel -- and one of
 		   them being silent has to be a decision the canvas shows. */
 		const graph = g(
-			[['e', 'in'], ['o1', 'out'], ['o2', 'out']],
+			[
+				['e', 'in'],
+				['o1', 'out'],
+				['o2', 'out']
+			],
 			[wire('e', 'then', 'o1', 'exec')]
 		);
 		const reach = execReach(graph, EXEC);
@@ -315,13 +389,24 @@ describe('execution across a whole patch', () => {
 	});
 
 	it('ignores an exec cable drawn backwards', () => {
-		const graph = g([['e', 'in'], ['o', 'out']], [wire('o', 'then', 'e', 'exec')]);
+		const graph = g(
+			[
+				['e', 'in'],
+				['o', 'out']
+			],
+			[wire('o', 'then', 'e', 'exec')]
+		);
 		expect(runs(execReach(graph, EXEC), 'o')).toBe(false);
 	});
 
 	it('delays a whole branch behind one gap', () => {
 		const graph = g(
-			[['e', 'in'], ['s', 'seq'], ['w', 'when'], ['a', 'act']],
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['w', 'when'],
+				['a', 'act']
+			],
 			[
 				wire('e', 'then', 's', 'exec'),
 				wire('s', 'then', 'w', 'exec'),
@@ -382,7 +467,8 @@ describe('what the renders proved', () => {
 				if (!(q.min < q.max)) bad.push(`${m.id}.${q.key} min >= max`);
 				if (q.def < q.min || q.def > q.max) bad.push(`${m.id}.${q.key} def outside range`);
 				if (!(q.step > 0)) bad.push(`${m.id}.${q.key} step`);
-				if (!Number.isFinite(q.min) || !Number.isFinite(q.max)) bad.push(`${m.id}.${q.key} not finite`);
+				if (!Number.isFinite(q.min) || !Number.isFinite(q.max))
+					bad.push(`${m.id}.${q.key} not finite`);
 			}
 		}
 		expect(bad).toEqual([]);
@@ -426,7 +512,12 @@ describe('regressions the string tests could not see', () => {
 		   the other end got another. Two patch files identical but for node order
 		   played differently. */
 		const graph = g(
-			[['a', 'add'], ['b', 'add'], ['s1', 'mul'], ['s2', 'mul']],
+			[
+				['a', 'add'],
+				['b', 'add'],
+				['s1', 'mul'],
+				['s2', 'mul']
+			],
 			[
 				wire('b', 'out', 'a', 'a'),
 				wire('a', 'out', 'b', 'a'),
@@ -446,7 +537,7 @@ describe('regressions the string tests could not see', () => {
 		expect(s1Then[1]).toBe(s2First);
 	});
 
-	it('converts pitch to frequency against the instrument\'s tuning, not 440', () => {
+	it("converts pitch to frequency against the instrument's tuning, not 440", () => {
 		/* TO-FREQ reads the master tuning off the note. The engine built the same
 		   converter as a ConstantSource without passing the note, so one patch
 		   held both answers: 432 where a knob read it, 440 where an audio param
@@ -521,11 +612,13 @@ describe('regressions the string tests could not see', () => {
 		   the node became a constant and the card still looked like a clamp. */
 		const graph = { nodes: [{ id: 'c', type: 'clamp' }], cables: [] };
 		const inverted = createResolver(graph, { 'c.a': 9999, 'c.clampLo': 100, 'c.clampHi': 0 }, note);
-		expect(PURE_NODES.clamp(
-			{ get: (_p, f) => (_p === 'a' ? 9999 : f) },
-			(k, d) => (k === 'clampLo' ? 100 : k === 'clampHi' ? 0 : d),
-			note
-		)).toBe(100);
+		expect(
+			PURE_NODES.clamp(
+				{ get: (_p, f) => (_p === 'a' ? 9999 : f) },
+				(k, d) => (k === 'clampLo' ? 100 : k === 'clampHi' ? 0 : d),
+				note
+			)
+		).toBe(100);
 		expect(inverted).toBeTruthy();
 		// And the same range written the usual way round agrees.
 		const upright = PURE_NODES.clamp(
@@ -546,13 +639,19 @@ describe('regressions the string tests could not see', () => {
 		   Verified by rendering: 320 Hz spectral centroid unmodulated, 2068 Hz at
 		   the envelope's attack, decaying to 660 Hz. */
 		const graph = {
-			nodes: [{ id: 'e', type: 'env' }, { id: 'f', type: 'filter' }],
+			nodes: [
+				{ id: 'e', type: 'env' },
+				{ id: 'f', type: 'filter' }
+			],
 			cables: [wire('e', 'out', 'f', 'cutoff')]
 		};
 		expect(createResolver(graph, { 'f.cutoff': 4000 }, note).input('f', 'cutoff', 99)).toBe(4000);
 		// A pure node still replaces it: that is a value, not a signal.
 		const withConst = {
-			nodes: [{ id: 'k', type: 'const' }, { id: 'f', type: 'filter' }],
+			nodes: [
+				{ id: 'k', type: 'const' },
+				{ id: 'f', type: 'filter' }
+			],
 			cables: [wire('k', 'out', 'f', 'cutoff')]
 		};
 		expect(
@@ -587,23 +686,33 @@ describe('regressions the string tests could not see', () => {
 		   when the destination is a knob: a declared mod inlet (a VCA's CV) has
 		   no value path at all and must still be connected. */
 		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
-		expect(SYNTH).toContain("if (ontoKnob && (isPureNode(fromType) || fromType === 'in')) continue;");
+		expect(SYNTH).toContain(
+			"if (ontoKnob && (isPureNode(fromType) || fromType === 'in')) continue;"
+		);
 		// Measured in the browser after the fix: knob 100 and CONST 100 agree.
 		const graph = {
-			nodes: [{ id: 'k', type: 'const' }, { id: 'mx', type: 'mix' }],
+			nodes: [
+				{ id: 'k', type: 'const' },
+				{ id: 'mx', type: 'mix' }
+			],
 			cables: [wire('k', 'out', 'mx', 'mixA')]
 		};
-		expect(createResolver(graph, { 'mx.mixA': 0, 'k.value': 50 }, note).input('mx', 'mixA', 100)).toBe(50);
+		expect(
+			createResolver(graph, { 'mx.mixA': 0, 'k.value': 50 }, note).input('mx', 'mixA', 100)
+		).toBe(50);
 	});
 
-	it('hands a knob its cable in the knob\'s own units', () => {
+	it("hands a knob its cable in the knob's own units", () => {
 		/* `knobPct` reads a 0..100 knob and divides, so MIX A at 100 is a gain of
 		   1. Registering the AudioParam directly made a cable bypass that
 		   divide: a CONST of 100 landed whole and gave a gain of 101 -- 40 dB
 		   nobody asked for. The scaling node in front is what makes "100" mean
 		   the same thing turned or patched. */
 		const SYNTH = readFileSync('src/lib/synth.ts', 'utf8');
-		const pct = SYNTH.slice(SYNTH.indexOf('const knobPct ='), SYNTH.indexOf('const knobPct =') + 1200);
+		const pct = SYNTH.slice(
+			SYNTH.indexOf('const knobPct ='),
+			SYNTH.indexOf('const knobPct =') + 1200
+		);
 		expect(pct).toContain('scale.gain.value = 0.01');
 		expect(pct).toContain('mod.set(key, scale)');
 	});
@@ -617,7 +726,14 @@ describe('regressions the string tests could not see', () => {
 			cables
 		});
 		const two = g(
-			[['e', 'in'], ['s', 'seq'], ['x1', 'excite'], ['x2', 'excite'], ['o1', 'out'], ['o2', 'out']],
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['x1', 'excite'],
+				['x2', 'excite'],
+				['o1', 'out'],
+				['o2', 'out']
+			],
 			[
 				wire('e', 'then', 'o1', 'exec'),
 				wire('e', 'then', 's', 'exec'),
@@ -634,7 +750,13 @@ describe('regressions the string tests could not see', () => {
 		   once and starts once. That is a limit of the shape, not a bug: a flam
 		   is two strikes, so it takes two EXCTs. */
 		const one = g(
-			[['e', 'in'], ['s', 'seq'], ['x', 'excite'], ['o1', 'out'], ['o2', 'out']],
+			[
+				['e', 'in'],
+				['s', 'seq'],
+				['x', 'excite'],
+				['o1', 'out'],
+				['o2', 'out']
+			],
 			[
 				wire('e', 'then', 'o1', 'exec'),
 				wire('e', 'then', 's', 'exec'),
@@ -660,7 +782,11 @@ describe('regressions the string tests could not see', () => {
 	it('does not turn a broken SEQ gap into a start time', () => {
 		// Math.max(0, NaN) is NaN, and start(NaN) throws.
 		const graph = {
-			nodes: [{ id: 'e', type: 'in' }, { id: 's', type: 'seq' }, { id: 'o', type: 'out' }],
+			nodes: [
+				{ id: 'e', type: 'in' },
+				{ id: 's', type: 'seq' },
+				{ id: 'o', type: 'out' }
+			],
 			cables: [wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
 		};
 		expect(execDelays(graph, { 's.gapMs': NaN }, EXEC).get('o')).toBe(0);

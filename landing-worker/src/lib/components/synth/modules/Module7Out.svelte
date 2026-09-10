@@ -15,15 +15,20 @@
 	}
 </script>
 
-<div class="xl:col-span-8 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
-	<div class="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0">
+<div
+	class="xl:col-span-8 border border-white/20 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0"
+>
+	<div
+		class="flex items-center justify-between font-black text-white text-xs border-b border-white/10 pb-0.5 shrink-0"
+	>
 		<div class="flex items-center gap-2">
 			<span class="text-white text-xs font-black">7. OUT</span>
 			<div class="flex items-center gap-1">
 				<button
 					onclick={() => setMode('fft')}
 					title={$t('synthPanels.out.fftModeHint')}
-					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'fft'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer ===
+					'fft'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -32,7 +37,8 @@
 				<button
 					onclick={() => setMode('scope')}
 					title={$t('synthPanels.out.scopeModeHint')}
-					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'scope'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer ===
+					'scope'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -41,7 +47,8 @@
 				<button
 					onclick={() => setMode('loudness')}
 					title={$t('synthPanels.out.loudnessModeHint')}
-					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer === 'loudness'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeOutVisualizer ===
+					'loudness'
 						? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -70,19 +77,41 @@
 					? 'border-[#e06c75] bg-[#e06c75] text-black shadow-[0_0_8px_#e06c75]'
 					: 'border-[#e06c75]/50 bg-[#e06c75]/10 text-[#e06c75] hover:bg-[#e06c75]/25'}"
 			>
-				<span class="w-1.5 h-1.5 rounded-full shrink-0 {$isRecording ? 'bg-black animate-pulse' : 'bg-[#e06c75]'}"></span>
+				<span
+					class="w-1.5 h-1.5 rounded-full shrink-0 {$isRecording
+						? 'bg-black animate-pulse'
+						: 'bg-[#e06c75]'}"
+				></span>
 				<span>REC</span>
 				{#if $isRecording}
 					<span class="tabular-nums text-right" style="min-width: 3ch;">{$recSeconds}s</span>
 				{/if}
 			</button>
-			<button onclick={resetRack7} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">R</button>
+			<button
+				onclick={resetRack7}
+				title={$t('synthPanels.rack.resetHint')}
+				class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60"
+				>R</button
+			>
 		</div>
 	</div>
 
 	<div class="grid grid-cols-12 gap-1.5 items-center flex-1 min-h-0 my-auto">
-		<div class="col-span-4 grid grid-cols-2 gap-0.5 border-r border-white/10 pr-1 h-full items-center py-0.5">
-			<RotaryKnob label="PAN" value={Math.round($currentTrack.pan * 100)} min={-100} max={100} step={5} unit="" color="#56b6c2" size={40} reset={0} onChange={(v) => updateActiveTrack({ pan: v / 100 })} />
+		<div
+			class="col-span-4 grid grid-cols-2 gap-0.5 border-r border-white/10 pr-1 h-full items-center py-0.5"
+		>
+			<RotaryKnob
+				label="PAN"
+				value={Math.round($currentTrack.pan * 100)}
+				min={-100}
+				max={100}
+				step={5}
+				unit=""
+				color="#56b6c2"
+				size={40}
+				reset={0}
+				onChange={(v) => updateActiveTrack({ pan: v / 100 })}
+			/>
 			<RotaryKnob
 				label="AIR"
 				value={Math.round(($currentTrack.airGain ?? 0) * 100)}
@@ -99,7 +128,17 @@
 			<!-- Third knob centered under the pair — all three are per-track; there is no
 			     fourth real per-track output parameter, and decorative knobs got cut on purpose -->
 			<div class="col-span-2 flex justify-center">
-				<RotaryKnob label="VOL" value={Math.round($currentTrack.volume * 100)} min={0} max={150} unit="%" color="#98c379" size={40} reset={100} onChange={(v) => updateActiveTrack({ volume: v / 100 })} />
+				<RotaryKnob
+					label="VOL"
+					value={Math.round($currentTrack.volume * 100)}
+					min={0}
+					max={150}
+					unit="%"
+					color="#98c379"
+					size={40}
+					reset={100}
+					onChange={(v) => updateActiveTrack({ volume: v / 100 })}
+				/>
 			</div>
 		</div>
 

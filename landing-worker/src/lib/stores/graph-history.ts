@@ -48,7 +48,10 @@ export function push(h: History, before: Snapshot, depth = UNDO_DEPTH): History 
 }
 
 /** Step back one edit. Returns null when there is nothing to undo. */
-export function undo(h: History, current: Snapshot): { history: History; restore: Snapshot } | null {
+export function undo(
+	h: History,
+	current: Snapshot
+): { history: History; restore: Snapshot } | null {
 	if (!h.undo.length) return null;
 	const undoStack = [...h.undo];
 	const restore = undoStack.pop()!;
@@ -56,7 +59,10 @@ export function undo(h: History, current: Snapshot): { history: History; restore
 }
 
 /** Step forward one edit. Returns null when there is nothing to redo. */
-export function redo(h: History, current: Snapshot): { history: History; restore: Snapshot } | null {
+export function redo(
+	h: History,
+	current: Snapshot
+): { history: History; restore: Snapshot } | null {
 	if (!h.redo.length) return null;
 	const redoStack = [...h.redo];
 	const restore = redoStack.pop()!;

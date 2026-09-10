@@ -68,12 +68,9 @@ describe('patterns that do neither', () => {
 		expect(kindOf('diehard')).toBe('chaotic');
 	});
 
-	it.each(['rpent', 'acorn', 'bunnies', 'rabbits', 'switchEngine'])(
-		'calls %s chaotic',
-		(name) => {
-			expect(kindOf(name)).toBe('chaotic');
-		}
-	);
+	it.each(['rpent', 'acorn', 'bunnies', 'rabbits', 'switchEngine'])('calls %s chaotic', (name) => {
+		expect(kindOf(name)).toBe('chaotic');
+	});
 
 	it('calls a gun chaotic rather than an oscillator', () => {
 		// a gun does repeat, but it emits gliders that leave the bounding box,
@@ -92,14 +89,35 @@ describe('the classification is stable', () => {
 
 	it('returns one of the four shapes for every built-in pattern', () => {
 		const names = [
-			'block', 'blinker', 'toad', 'beacon', 'pulsar', 'glider', 'lwss',
-			'rpent', 'acorn', 'beehive', 'loaf', 'tub', 'boat', 'pond', 'clock',
-			'pentadec', 'mwss', 'hwss', 'diehard', 'eater', 'gosperGun',
-			'bunnies', 'rabbits', 'switchEngine'
+			'block',
+			'blinker',
+			'toad',
+			'beacon',
+			'pulsar',
+			'glider',
+			'lwss',
+			'rpent',
+			'acorn',
+			'beehive',
+			'loaf',
+			'tub',
+			'boat',
+			'pond',
+			'clock',
+			'pentadec',
+			'mwss',
+			'hwss',
+			'diehard',
+			'eater',
+			'gosperGun',
+			'bunnies',
+			'rabbits',
+			'switchEngine'
 		];
 		for (const name of names) {
 			const out = kindOf(name);
-			const ok = out === 'still' || out === 'osc' || out === 'dies' || out === 'chaotic' || isShip(out);
+			const ok =
+				out === 'still' || out === 'osc' || out === 'dies' || out === 'chaotic' || isShip(out);
 			expect(ok, `${name} returned ${JSON.stringify(out)}`).toBe(true);
 		}
 	});

@@ -32,7 +32,13 @@
 	 *  see sound.ts, stores/chrome.ts, stores/synth-patch.ts, stores/console.ts,
 	 *  stores/synth-midi.ts, krsz-vm/KrszVmView.svelte and chatbot/engine.ts for
 	 *  where each is read. */
-	const GUIDE_KEYS = ['krsz.guide.seen', 'krsz.guide.synth', 'krsz.guide.lm-space', 'krsz.guide.lifelab', 'krsz.welcome.seen'];
+	const GUIDE_KEYS = [
+		'krsz.guide.seen',
+		'krsz.guide.synth',
+		'krsz.guide.lm-space',
+		'krsz.guide.lifelab',
+		'krsz.welcome.seen'
+	];
 	const SYNTH_PATCH_KEY = 'krsz-synth-patch-v1';
 	const CONSOLE_KEYS = ['krsz.console.history', 'krsz.console.aliases'];
 	const VM_SETTINGS_KEY = 'krsz.vm.settings';
@@ -108,7 +114,11 @@
 	}
 
 	async function buildSections(): Promise<Section[]> {
-		const [modelCache, vmBytes, chatBytes] = await Promise.all([measureModelCache(), measureVmOverlays(), sessionsSize()]);
+		const [modelCache, vmBytes, chatBytes] = await Promise.all([
+			measureModelCache(),
+			measureVmOverlays(),
+			sessionsSize()
+		]);
 
 		const list: Section[] = [
 			{
@@ -248,7 +258,9 @@
 
 	/** The sections under each group heading, empty groups dropped. */
 	let grouped = $derived(
-		GROUP_ORDER.map((g) => ({ group: g, items: sections.filter((s) => s.group === g) })).filter((x) => x.items.length)
+		GROUP_ORDER.map((g) => ({ group: g, items: sections.filter((s) => s.group === g) })).filter(
+			(x) => x.items.length
+		)
 	);
 
 	/** True once every measurable section reads zero -- "clear all" has nothing left to do. */
@@ -299,14 +311,25 @@
 		onclick={(e) => e.stopPropagation()}
 		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
-		<BoxHeader title="GLOBAL_CONFIG // KRSZ.IN" short="CONFIG" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm" style="color: {themeStyles.cursorColor}">
-			<button onclick={onClose} class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors">[ Esc ]</button>
+		<BoxHeader
+			title="GLOBAL_CONFIG // KRSZ.IN"
+			short="CONFIG"
+			class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm"
+			style="color: {themeStyles.cursorColor}"
+		>
+			<button
+				onclick={onClose}
+				class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors"
+				>[ Esc ]</button
+			>
 		</BoxHeader>
 
 		<div class="p-3 sm:p-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
 			<!-- Sound -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2.5">
-				<div class="text-xs sm:text-sm font-black text-[#98c379] border-b border-white/10 pb-1">{$t('chrome.settings.sound')}</div>
+				<div class="text-xs sm:text-sm font-black text-[#98c379] border-b border-white/10 pb-1">
+					{$t('chrome.settings.sound')}
+				</div>
 				<div class="flex items-center justify-between gap-3">
 					<span class="text-xs text-white/70">{$t('chrome.settings.soundDesc')}</span>
 					<button
@@ -339,7 +362,9 @@
 
 			<!-- Text size -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
-				<div class="text-xs sm:text-sm font-black text-[#e5c07b] border-b border-white/10 pb-1">{$t('chrome.settings.textSize')}</div>
+				<div class="text-xs sm:text-sm font-black text-[#e5c07b] border-b border-white/10 pb-1">
+					{$t('chrome.settings.textSize')}
+				</div>
 				<div class="flex items-center justify-between gap-3 flex-wrap">
 					<span class="text-xs text-white/70 max-w-[70%]">
 						{$t('chrome.settings.textSizeDesc')}
@@ -363,7 +388,10 @@
 									setTextSize(px);
 									playSound('click');
 								}}
-								title="{px}px{px % 12 === 0 ? $t('chrome.settings.textSizeExact') : ''}{px === DEFAULT_TEXT_SIZE ? ` ${$t('chrome.settings.textSizeDefault')}` : ''}"
+								title="{px}px{px % 12 === 0 ? $t('chrome.settings.textSizeExact') : ''}{px ===
+								DEFAULT_TEXT_SIZE
+									? ` ${$t('chrome.settings.textSizeDefault')}`
+									: ''}"
 								class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {!$textSizeAuto &&
 								$textSize === px
 									? 'border-[#e5c07b] bg-[#e5c07b]/15 text-[#e5c07b]'
@@ -378,7 +406,9 @@
 
 			<!-- Performance -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
-				<div class="text-xs sm:text-sm font-black text-[#61afef] border-b border-white/10 pb-1">{$t('chrome.settings.performance')}</div>
+				<div class="text-xs sm:text-sm font-black text-[#61afef] border-b border-white/10 pb-1">
+					{$t('chrome.settings.performance')}
+				</div>
 				<div class="flex items-center justify-between gap-3">
 					<span class="text-xs text-white/70 max-w-[70%]">
 						{$t('chrome.settings.performanceDesc')}
@@ -400,7 +430,9 @@
 			<!-- Storage -->
 			<div class="border border-white/15 rounded-xs bg-black/25 p-2.5 space-y-2">
 				<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1">
-					<span class="text-xs sm:text-sm font-black text-[#e06c75]">{$t('chrome.settings.storageTitle')}</span>
+					<span class="text-xs sm:text-sm font-black text-[#e06c75]"
+						>{$t('chrome.settings.storageTitle')}</span
+					>
 					<button
 						onclick={clearEverything}
 						disabled={clearingAll || clearingId !== null || nothingStored}
@@ -418,34 +450,47 @@
 				{:else}
 					<div class="space-y-3">
 						{#each grouped as g (g.group)}
-						<div class="space-y-1">
-							<div class="text-[9px] uppercase tracking-wider text-white/30 border-b border-white/10 pb-0.5">
-								{$t(`chrome.settings.storage.group.${g.group}`)}
-							</div>
-						{#each g.items as s (s.id)}
-							<div class="flex items-center justify-between gap-2 border border-white/10 bg-black/30 rounded-xs px-2.5 py-1.5">
-								<div class="min-w-0">
-									<div class="flex items-baseline gap-2">
-										<span class="text-[11px] font-bold" style="color: {s.color}">{s.label}</span>
-										<span class="text-[10px] text-white/35 tabular-nums">
-											{s.size === null ? '—' : s.size === 0 ? $t('chrome.settings.empty') : fmtBytes(s.size)}
-										</span>
-									</div>
-									<div class="text-[10px] text-white/40 leading-snug">{s.detail}</div>
-								</div>
-								<button
-									onclick={() => clearOne(s)}
-									disabled={clearingId !== null || clearingAll || !s.size}
-									class="press shrink-0 px-2 py-1 border rounded-xs text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed {doneId ===
-									s.id
-										? 'border-[#98c379] text-[#98c379]'
-										: 'border-white/25 text-white/60 hover:border-white/50 hover:text-white'}"
+							<div class="space-y-1">
+								<div
+									class="text-[9px] uppercase tracking-wider text-white/30 border-b border-white/10 pb-0.5"
 								>
-									{clearingId === s.id ? '…' : doneId === s.id ? $t('chrome.settings.cleared') : $t('chrome.settings.clear')}
-								</button>
+									{$t(`chrome.settings.storage.group.${g.group}`)}
+								</div>
+								{#each g.items as s (s.id)}
+									<div
+										class="flex items-center justify-between gap-2 border border-white/10 bg-black/30 rounded-xs px-2.5 py-1.5"
+									>
+										<div class="min-w-0">
+											<div class="flex items-baseline gap-2">
+												<span class="text-[11px] font-bold" style="color: {s.color}">{s.label}</span
+												>
+												<span class="text-[10px] text-white/35 tabular-nums">
+													{s.size === null
+														? '—'
+														: s.size === 0
+															? $t('chrome.settings.empty')
+															: fmtBytes(s.size)}
+												</span>
+											</div>
+											<div class="text-[10px] text-white/40 leading-snug">{s.detail}</div>
+										</div>
+										<button
+											onclick={() => clearOne(s)}
+											disabled={clearingId !== null || clearingAll || !s.size}
+											class="press shrink-0 px-2 py-1 border rounded-xs text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed {doneId ===
+											s.id
+												? 'border-[#98c379] text-[#98c379]'
+												: 'border-white/25 text-white/60 hover:border-white/50 hover:text-white'}"
+										>
+											{clearingId === s.id
+												? '…'
+												: doneId === s.id
+													? $t('chrome.settings.cleared')
+													: $t('chrome.settings.clear')}
+										</button>
+									</div>
+								{/each}
 							</div>
-						{/each}
-						</div>
 						{/each}
 					</div>
 				{/if}

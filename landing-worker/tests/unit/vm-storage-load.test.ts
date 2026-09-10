@@ -137,28 +137,50 @@ describe('loadChunk over http', () => {
 		await loadChunk(image, 1, undefined, undefined, undefined);
 		const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
 		expect(url).toBe('https://cdn.example/alpine.iso');
-		expect((init.headers as Record<string, string>).Range).toBe(
-			`bytes=${CHUNK}-${CHUNK * 2 - 1}`
-		);
+		expect((init.headers as Record<string, string>).Range).toBe(`bytes=${CHUNK}-${CHUNK * 2 - 1}`);
 	});
 
 	it('asks for an identity encoding, so the range means bytes', async () => {
 		const fetchMock = vi.fn(async () => new Response(new Uint8Array(4), { status: 206 }));
 		vi.stubGlobal('fetch', fetchMock);
-		await loadChunk({ url: 'https://cdn.example/a', size: CHUNK }, 0, undefined, undefined, undefined);
+		await loadChunk(
+			{ url: 'https://cdn.example/a', size: CHUNK },
+			0,
+			undefined,
+			undefined,
+			undefined
+		);
 		const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
 		expect((init.headers as Record<string, string>)['Accept-Encoding']).toBe('identity');
 	});
 
 	it('accepts a 200 as well as a 206', async () => {
-		vi.stubGlobal('fetch', vi.fn(async () => new Response(new Uint8Array([1, 2]), { status: 200 })));
-		const out = await loadChunk({ url: 'https://cdn.example/a', size: CHUNK }, 0, undefined, undefined, undefined);
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(new Uint8Array([1, 2]), { status: 200 }))
+		);
+		const out = await loadChunk(
+			{ url: 'https://cdn.example/a', size: CHUNK },
+			0,
+			undefined,
+			undefined,
+			undefined
+		);
 		expect(out).not.toBeNull();
 	});
 
 	it('returns null when upstream refuses', async () => {
-		vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 404 })));
-		const out = await loadChunk({ url: 'https://cdn.example/a', size: CHUNK }, 0, undefined, undefined, undefined);
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('nope', { status: 404 }))
+		);
+		const out = await loadChunk(
+			{ url: 'https://cdn.example/a', size: CHUNK },
+			0,
+			undefined,
+			undefined,
+			undefined
+		);
 		expect(out).toBeNull();
 	});
 });
@@ -189,8 +211,20 @@ describe('loadChunk caching', () => {
 		const bucket = fakeBucket();
 		// the R2 object name stays the same across a rebuild; the size is what
 		// moves, and it is in the key for exactly that reason
-		await loadChunk({ url: 'r2:vm/rootfs', size: CHUNK * 2 }, 0, cache as never, undefined, bucket as never);
-		await loadChunk({ url: 'r2:vm/rootfs', size: CHUNK * 3 }, 0, cache as never, undefined, bucket as never);
+		await loadChunk(
+			{ url: 'r2:vm/rootfs', size: CHUNK * 2 },
+			0,
+			cache as never,
+			undefined,
+			bucket as never
+		);
+		await loadChunk(
+			{ url: 'r2:vm/rootfs', size: CHUNK * 3 },
+			0,
+			cache as never,
+			undefined,
+			bucket as never
+		);
 		expect(cache.store.size).toBe(2);
 		expect(bucket.get).toHaveBeenCalledTimes(2);
 	});
@@ -198,8 +232,20 @@ describe('loadChunk caching', () => {
 	it('keys entries by url, including its build marker', async () => {
 		const cache = fakeCache();
 		const bucket = fakeBucket();
-		await loadChunk({ url: 'r2:vm/rootfs#b1', size: CHUNK }, 0, cache as never, undefined, bucket as never);
-		await loadChunk({ url: 'r2:vm/rootfs#b2', size: CHUNK }, 0, cache as never, undefined, bucket as never);
+		await loadChunk(
+			{ url: 'r2:vm/rootfs#b1', size: CHUNK },
+			0,
+			cache as never,
+			undefined,
+			bucket as never
+		);
+		await loadChunk(
+			{ url: 'r2:vm/rootfs#b2', size: CHUNK },
+			0,
+			cache as never,
+			undefined,
+			bucket as never
+		);
 		expect(cache.store.size).toBe(2);
 	});
 
@@ -219,7 +265,13 @@ describe('loadChunk caching', () => {
 
 	it('still works with no cache at all', async () => {
 		const bucket = fakeBucket();
-		const out = await loadChunk({ url: 'r2:vm/rootfs', size: CHUNK }, 0, undefined, undefined, bucket as never);
+		const out = await loadChunk(
+			{ url: 'r2:vm/rootfs', size: CHUNK },
+			0,
+			undefined,
+			undefined,
+			bucket as never
+		);
 		expect(out).not.toBeNull();
 	});
 });
@@ -252,13 +304,19 @@ describe('readAll', () => {
 	});
 
 	it('fetches an http source whole', async () => {
-		vi.stubGlobal('fetch', vi.fn(async () => new Response(new Uint8Array([7, 7]))));
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(new Uint8Array([7, 7])))
+		);
 		const out = await readAll({ url: 'https://cdn.example/vmlinuz', size: 2 }, undefined);
 		expect([...out!]).toEqual([7, 7]);
 	});
 
 	it('returns null when an http source refuses', async () => {
-		vi.stubGlobal('fetch', vi.fn(async () => new Response('no', { status: 500 })));
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('no', { status: 500 }))
+		);
 		expect(await readAll({ url: 'https://cdn.example/vmlinuz', size: 2 }, undefined)).toBeNull();
 	});
 });

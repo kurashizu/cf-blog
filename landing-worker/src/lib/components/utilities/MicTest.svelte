@@ -78,11 +78,16 @@
 				}
 			});
 		} catch (e) {
-			error = e instanceof Error ? tr('utilities.mic.error.named', { name: e.name, message: e.message }) : tr('utilities.mic.error.deniedFallback');
+			error =
+				e instanceof Error
+					? tr('utilities.mic.error.named', { name: e.name, message: e.message })
+					: tr('utilities.mic.error.deniedFallback');
 			return;
 		}
 
-		const Klass = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+		const Klass =
+			window.AudioContext ??
+			(window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 		ctx = new Klass();
 		source = ctx.createMediaStreamSource(stream);
 		analyser = ctx.createAnalyser();
@@ -104,11 +109,23 @@
 		if (!track || !ctx) return;
 		const s = track.getSettings();
 		settings = [
-			{ label: tr('utilities.mic.settings.device'), value: track.label || tr('utilities.mic.settings.device.labelWithheld') },
-			{ label: tr('utilities.mic.settings.sampleRate'), value: `${s.sampleRate ?? ctx.sampleRate} Hz` },
+			{
+				label: tr('utilities.mic.settings.device'),
+				value: track.label || tr('utilities.mic.settings.device.labelWithheld')
+			},
+			{
+				label: tr('utilities.mic.settings.sampleRate'),
+				value: `${s.sampleRate ?? ctx.sampleRate} Hz`
+			},
 			{ label: tr('utilities.mic.settings.channels'), value: String(s.channelCount ?? 1) },
-			{ label: tr('utilities.mic.settings.echoCancel'), value: String(s.echoCancellation ?? 'n/a') },
-			{ label: tr('utilities.mic.settings.noiseSuppr'), value: String(s.noiseSuppression ?? 'n/a') },
+			{
+				label: tr('utilities.mic.settings.echoCancel'),
+				value: String(s.echoCancellation ?? 'n/a')
+			},
+			{
+				label: tr('utilities.mic.settings.noiseSuppr'),
+				value: String(s.noiseSuppression ?? 'n/a')
+			},
 			{ label: tr('utilities.mic.settings.autoGain'), value: String(s.autoGainControl ?? 'n/a') }
 		];
 	}
@@ -281,7 +298,12 @@
 
 	function pickMimeType(): string | null {
 		if (typeof MediaRecorder === 'undefined') return null;
-		for (const t of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']) {
+		for (const t of [
+			'audio/webm;codecs=opus',
+			'audio/webm',
+			'audio/mp4',
+			'audio/ogg;codecs=opus'
+		]) {
 			if (MediaRecorder.isTypeSupported(t)) return t;
 		}
 		return null;
@@ -432,7 +454,9 @@
 		{:else}
 			<button
 				onclick={() => start(selectedDevice || undefined)}
-				class="press px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors {error ? 'shake-once' : ''}"
+				class="press px-2.5 py-1.5 border border-[#98c379] text-[#98c379] rounded-xs text-xs font-black cursor-pointer hover:bg-[#98c379] hover:text-black transition-colors {error
+					? 'shake-once'
+					: ''}"
 			>
 				{$t('utilities.mic.start')}
 			</button>
@@ -448,8 +472,17 @@
 				? $t('utilities.mic.device.title.labeled')
 				: $t('utilities.mic.device.title.unlabeled')}
 			options={[
-				{ value: '', label: $t('utilities.mic.device.default'), note: devices.length ? $t('utilities.mic.device.available', { count: devices.length }) : undefined },
-				...devices.map((d) => ({ value: d.deviceId, label: d.label || $t('utilities.mic.device.fallback', { id: d.deviceId.slice(0, 6) }) }))
+				{
+					value: '',
+					label: $t('utilities.mic.device.default'),
+					note: devices.length
+						? $t('utilities.mic.device.available', { count: devices.length })
+						: undefined
+				},
+				...devices.map((d) => ({
+					value: d.deviceId,
+					label: d.label || $t('utilities.mic.device.fallback', { id: d.deviceId.slice(0, 6) })
+				}))
 			]}
 		/>
 
@@ -461,7 +494,9 @@
 					? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 					: 'border-white/25 text-white/70 hover:bg-white/10'}"
 			>
-				{$t('utilities.mic.monitor.label', { state: monitor ? $t('utilities.mic.monitor.on') : $t('utilities.mic.monitor.off') })}
+				{$t('utilities.mic.monitor.label', {
+					state: monitor ? $t('utilities.mic.monitor.on') : $t('utilities.mic.monitor.off')
+				})}
 			</button>
 			<button
 				onclick={() => (clipped = false)}
@@ -488,11 +523,14 @@
 
 	<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-2">
 		<div class="flex items-center gap-2">
-			<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-10">{$t('utilities.mic.rms.label')}</span>
+			<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-10"
+				>{$t('utilities.mic.rms.label')}</span
+			>
 			<div class="flex-1 h-3 bg-black/60 border border-white/10 rounded-xs overflow-hidden">
 				<div
 					class="h-full transition-[width] duration-75"
-					style="width: {level * 100}%; background: linear-gradient(90deg, #98c379, #e5c07b 70%, #e06c75 92%)"
+					style="width: {level *
+						100}%; background: linear-gradient(90deg, #98c379, #e5c07b 70%, #e06c75 92%)"
 				></div>
 			</div>
 			<span class="text-xs font-mono text-[#98c379] w-20 text-right">
@@ -500,22 +538,37 @@
 			</span>
 		</div>
 		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono">
-			<span class="text-white/45">{$t('utilities.mic.peak.label')} <span class="text-[#e5c07b]">{peak === -Infinity ? '—' : $t('utilities.mic.rms.value', { db: peak.toFixed(1) })}</span></span>
+			<span class="text-white/45"
+				>{$t('utilities.mic.peak.label')}
+				<span class="text-[#e5c07b]"
+					>{peak === -Infinity ? '—' : $t('utilities.mic.rms.value', { db: peak.toFixed(1) })}</span
+				></span
+			>
 			<span class="text-white/45">
-				{$t('utilities.mic.dominant.label')} <span class="text-[#56b6c2]">{dominantHz ? $t('utilities.mic.dominant.value', { hz: dominantHz }) : '—'}</span>
+				{$t('utilities.mic.dominant.label')}
+				<span class="text-[#56b6c2]"
+					>{dominantHz ? $t('utilities.mic.dominant.value', { hz: dominantHz }) : '—'}</span
+				>
 				{#if dominantHz}<span class="text-[#c678dd]"> · {noteFor(dominantHz)}</span>{/if}
 			</span>
-			{#if clipped}<span class="text-[#e06c75] font-bold" transition:fade={{ duration: 150 }}>{$t('utilities.mic.clip.detected')}</span>{/if}
+			{#if clipped}<span class="text-[#e06c75] font-bold" transition:fade={{ duration: 150 }}
+					>{$t('utilities.mic.clip.detected')}</span
+				>{/if}
 		</div>
 	</div>
 
-	<canvas bind:this={canvas} class="w-full h-28 sm:h-36 border border-white/15 bg-black/50 rounded-xs"></canvas>
+	<canvas
+		bind:this={canvas}
+		class="w-full h-28 sm:h-36 border border-white/15 bg-black/50 rounded-xs"
+	></canvas>
 
 	<!-- Record a take and hear it back — the part of a mic test that tells you
 	     whether the input actually sounds right, not just whether it registers -->
 	<div class="border border-[#e5c07b]/30 bg-black/25 rounded-xs p-2.5 space-y-2">
 		<div class="flex flex-wrap items-center gap-2">
-			<span class="text-xs font-black font-mono text-[#e5c07b]">{$t('utilities.mic.record.heading')}</span>
+			<span class="text-xs font-black font-mono text-[#e5c07b]"
+				>{$t('utilities.mic.record.heading')}</span
+			>
 
 			<button
 				onclick={toggleRecording}
@@ -523,9 +576,16 @@
 				class="press px-2.5 py-1 border rounded-xs text-xs font-black cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed {recording
 					? 'border-[#e06c75] bg-[#e06c75]/25 text-[#e06c75]'
 					: 'border-[#e06c75]/50 text-[#e06c75] hover:bg-[#e06c75]/20'}"
-				title={listening ? $t('utilities.mic.record.title', { seconds: MAX_REC_MS / 1000 }) : $t('utilities.mic.record.titleDisabled')}
+				title={listening
+					? $t('utilities.mic.record.title', { seconds: MAX_REC_MS / 1000 })
+					: $t('utilities.mic.record.titleDisabled')}
 			>
-				{#if recording}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>{$t('utilities.mic.record.stop', { seconds: recSeconds })}</span>{:else}{$t('utilities.mic.record.start')}{/if}
+				{#if recording}<span class="inline-flex items-center gap-1"
+						><span class="w-1.5 h-1.5 rounded-full bg-[#e06c75] blink-live"></span>{$t(
+							'utilities.mic.record.stop',
+							{ seconds: recSeconds }
+						)}</span
+					>{:else}{$t('utilities.mic.record.start')}{/if}
 			</button>
 
 			<button
@@ -556,7 +616,10 @@
 					{$t('utilities.mic.status.take', {
 						duration: take.buffer.duration.toFixed(1),
 						khz: take.buffer.sampleRate / 1000,
-						channels: take.buffer.numberOfChannels === 1 ? $t('utilities.mic.status.take.mono') : $t('utilities.mic.status.take.channels', { count: take.buffer.numberOfChannels }),
+						channels:
+							take.buffer.numberOfChannels === 1
+								? $t('utilities.mic.status.take.mono')
+								: $t('utilities.mic.status.take.channels', { count: take.buffer.numberOfChannels }),
 						kb: (take.blob.size / 1024).toFixed(0),
 						ext: take.ext
 					})}
@@ -567,16 +630,25 @@
 		</div>
 
 		{#if take}
-			<canvas bind:this={takeCanvas} class="w-full h-16 sm:h-20 border border-white/10 bg-black/50 rounded-xs"></canvas>
+			<canvas
+				bind:this={takeCanvas}
+				class="w-full h-16 sm:h-20 border border-white/10 bg-black/50 rounded-xs"
+			></canvas>
 		{/if}
 	</div>
 
 	{#if settings.length}
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 			{#each settings as row (row.label)}
-				<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2">
-					<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
-					<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
+				<div
+					class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2"
+				>
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0"
+						>{row.label}</span
+					>
+					<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}
+						>{row.value}</span
+					>
 				</div>
 			{/each}
 		</div>

@@ -408,7 +408,9 @@ describe('edge cases', () => {
 
 describe('isLooping', () => {
 	it('is false for ordinary prose', () => {
-		expect(isLooping('The quick brown fox jumps over the lazy dog, and then it rests.')).toBe(false);
+		expect(isLooping('The quick brown fox jumps over the lazy dog, and then it rests.')).toBe(
+			false
+		);
 	});
 
 	it('is false for short text', () => {

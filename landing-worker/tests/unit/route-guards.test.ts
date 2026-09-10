@@ -153,11 +153,14 @@ describe('the copies still match the routes', () => {
 	});
 
 	it('both routes still reject before touching the bucket', () => {
-		for (const p of ['src/routes/model/[file]/+server.ts', 'src/routes/vm/qemu/[file]/+server.ts']) {
+		for (const p of [
+			'src/routes/model/[file]/+server.ts',
+			'src/routes/vm/qemu/[file]/+server.ts'
+		]) {
 			const src = read(p);
 			// the 404 has to come before the bucket is read, or a composed key
 			// reaches R2 whatever the guard decided
-			expect(src.indexOf("error(404")).toBeLessThan(src.indexOf('bucket.get'));
+			expect(src.indexOf('error(404')).toBeLessThan(src.indexOf('bucket.get'));
 		}
 	});
 });

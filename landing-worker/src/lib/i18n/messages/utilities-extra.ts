@@ -62,10 +62,12 @@ export default {
 		'utilities.usb.deviceClass': 'class/sub/proto',
 		'utilities.usb.configs': '{count} configuration(s)',
 		'utilities.usb.interfaces': '{count} interface(s), class',
-		'utilities.usb.hid.protectedHint': 'Browser-protected classes (keyboards, mice) will not appear here.',
+		'utilities.usb.hid.protectedHint':
+			'Browser-protected classes (keyboards, mice) will not appear here.',
 		'utilities.usb.hid.monitor': 'MONITOR',
 		'utilities.usb.hid.stopMonitor': 'STOP',
-		'utilities.usb.hid.collection': 'usagePage {usagePage}, usage {usage} — {inputs} in / {outputs} out / {features} feature reports',
+		'utilities.usb.hid.collection':
+			'usagePage {usagePage}, usage {usage} — {inputs} in / {outputs} out / {features} feature reports',
 		'utilities.usb.hid.reportId': 'report id',
 		'utilities.usb.hid.bytes': 'first 16 bytes',
 		'utilities.usb.hid.rate': '{rate} reports/s',
@@ -81,7 +83,8 @@ export default {
 		'utilities.color.cap.cssRec2020': 'CSS supports rec2020',
 		'utilities.color.yes': 'yes',
 		'utilities.color.no': 'no',
-		'utilities.color.intro': 'Patterns and facts only — no automatic verdict. Judge each pair with your own eyes.',
+		'utilities.color.intro':
+			'Patterns and facts only — no automatic verdict. Judge each pair with your own eyes.',
 		'utilities.color.section.wide': 'Wide gamut',
 		'utilities.color.section.gamma': 'Gamma bands',
 		'utilities.color.section.black': 'Black level',
@@ -91,16 +94,21 @@ export default {
 		'utilities.color.swatch.red': 'Red',
 		'utilities.color.swatch.green': 'Green',
 		'utilities.color.swatch.blue': 'Blue',
-		'utilities.color.wideHint': 'sRGB next to display-p3 and rec2020 versions of the same nominal colour. If both halves of a pair look identical, this display or browser is limited to sRGB.',
-		'utilities.color.gammaHint': 'A solid grey next to a 1px black/white line pattern that averages to 50% luminance. The pair that blends together at a distance is this display\'s gamma.',
+		'utilities.color.wideHint':
+			'sRGB next to display-p3 and rec2020 versions of the same nominal colour. If both halves of a pair look identical, this display or browser is limited to sRGB.',
+		'utilities.color.gammaHint':
+			"A solid grey next to a 1px black/white line pattern that averages to 50% luminance. The pair that blends together at a distance is this display's gamma.",
 		'utilities.color.gammaDpr': 'pattern drawn at device pixels, devicePixelRatio {dpr}',
-		'utilities.color.blackHint': 'Count how many squares you can tell apart from pure black. The first 2-3 merging into the background is normal on most panels.',
+		'utilities.color.blackHint':
+			'Count how many squares you can tell apart from pure black. The first 2-3 merging into the background is normal on most panels.',
 		'utilities.color.whiteHint': 'Count how many squares you can tell apart from pure white.',
-		'utilities.color.saturationHint': '8 steps from grey to full saturation, for red / green / blue / cyan / magenta / yellow.',
+		'utilities.color.saturationHint':
+			'8 steps from grey to full saturation, for red / green / blue / cyan / magenta / yellow.',
 		'utilities.color.whitePoint.warm': 'warm',
 		'utilities.color.whitePoint.pure': 'pure white',
 		'utilities.color.whitePoint.cool': 'cool',
-		'utilities.color.whitePointHint': 'Reference strip only — how warm or cool "white" looks depends on the display and the light around you.',
+		'utilities.color.whitePointHint':
+			'Reference strip only — how warm or cool "white" looks depends on the display and the light around you.',
 		'utilities.color.overlay.hint': 'Esc or click to leave'
 	},
 	'zh-CN': {
@@ -164,7 +172,8 @@ export default {
 		'utilities.usb.hid.protectedHint': '浏览器保护的设备类别（键盘、鼠标）不会显示在这里。',
 		'utilities.usb.hid.monitor': '监视',
 		'utilities.usb.hid.stopMonitor': '停止',
-		'utilities.usb.hid.collection': 'usagePage {usagePage}，usage {usage} — {inputs} 输入 / {outputs} 输出 / {features} 特性报告',
+		'utilities.usb.hid.collection':
+			'usagePage {usagePage}，usage {usage} — {inputs} 输入 / {outputs} 输出 / {features} 特性报告',
 		'utilities.usb.hid.reportId': '报告 ID',
 		'utilities.usb.hid.bytes': '前 16 字节',
 		'utilities.usb.hid.rate': '{rate} 报告/秒',
@@ -190,16 +199,20 @@ export default {
 		'utilities.color.swatch.red': '红',
 		'utilities.color.swatch.green': '绿',
 		'utilities.color.swatch.blue': '蓝',
-		'utilities.color.wideHint': 'sRGB 与相同标称颜色的 display-p3、rec2020 版本并列。如果一对中两半看起来一样，说明这台显示器或浏览器只支持 sRGB。',
-		'utilities.color.gammaHint': '一块纯灰与平均亮度为 50% 的 1 像素黑白线条图案并列。远看能融合在一起的那一对就是这台显示器的伽马值。',
+		'utilities.color.wideHint':
+			'sRGB 与相同标称颜色的 display-p3、rec2020 版本并列。如果一对中两半看起来一样，说明这台显示器或浏览器只支持 sRGB。',
+		'utilities.color.gammaHint':
+			'一块纯灰与平均亮度为 50% 的 1 像素黑白线条图案并列。远看能融合在一起的那一对就是这台显示器的伽马值。',
 		'utilities.color.gammaDpr': '图案以设备像素绘制，devicePixelRatio {dpr}',
-		'utilities.color.blackHint': '数一数你能从纯黑中分辨出几个方块。大多数面板前 2-3 个融入背景是正常的。',
+		'utilities.color.blackHint':
+			'数一数你能从纯黑中分辨出几个方块。大多数面板前 2-3 个融入背景是正常的。',
 		'utilities.color.whiteHint': '数一数你能从纯白中分辨出几个方块。',
 		'utilities.color.saturationHint': '红/绿/蓝/青/品红/黄各 8 级，从灰到全饱和。',
 		'utilities.color.whitePoint.warm': '偏暖',
 		'utilities.color.whitePoint.pure': '纯白',
 		'utilities.color.whitePoint.cool': '偏冷',
-		'utilities.color.whitePointHint': '仅作参考 — "白色"看起来偏暖或偏冷取决于显示器和周围的环境光。',
+		'utilities.color.whitePointHint':
+			'仅作参考 — "白色"看起来偏暖或偏冷取决于显示器和周围的环境光。',
 		'utilities.color.overlay.hint': '按 Esc 或点击退出'
 	},
 	'zh-TW': {
@@ -263,7 +276,8 @@ export default {
 		'utilities.usb.hid.protectedHint': '瀏覽器保護的裝置類別（鍵盤、滑鼠）不會顯示在這裡。',
 		'utilities.usb.hid.monitor': '監看',
 		'utilities.usb.hid.stopMonitor': '停止',
-		'utilities.usb.hid.collection': 'usagePage {usagePage}，usage {usage} — {inputs} 輸入 / {outputs} 輸出 / {features} 特性報告',
+		'utilities.usb.hid.collection':
+			'usagePage {usagePage}，usage {usage} — {inputs} 輸入 / {outputs} 輸出 / {features} 特性報告',
 		'utilities.usb.hid.reportId': '報告 ID',
 		'utilities.usb.hid.bytes': '前 16 位元組',
 		'utilities.usb.hid.rate': '{rate} 報告/秒',
@@ -289,16 +303,20 @@ export default {
 		'utilities.color.swatch.red': '紅',
 		'utilities.color.swatch.green': '綠',
 		'utilities.color.swatch.blue': '藍',
-		'utilities.color.wideHint': 'sRGB 與相同標稱色的 display-p3、rec2020 版本並列。如果一組中兩半看起來一樣，代表這台顯示器或瀏覽器僅支援 sRGB。',
-		'utilities.color.gammaHint': '一塊純灰與平均亮度為 50% 的 1 像素黑白線條圖樣並列。遠看會融合在一起的那一組，就是這台顯示器的伽瑪值。',
+		'utilities.color.wideHint':
+			'sRGB 與相同標稱色的 display-p3、rec2020 版本並列。如果一組中兩半看起來一樣，代表這台顯示器或瀏覽器僅支援 sRGB。',
+		'utilities.color.gammaHint':
+			'一塊純灰與平均亮度為 50% 的 1 像素黑白線條圖樣並列。遠看會融合在一起的那一組，就是這台顯示器的伽瑪值。',
 		'utilities.color.gammaDpr': '圖樣以裝置像素繪製，devicePixelRatio {dpr}',
-		'utilities.color.blackHint': '數數看你能從純黑中分辨出幾個方塊。大多數面板前 2-3 個融入背景是正常的。',
+		'utilities.color.blackHint':
+			'數數看你能從純黑中分辨出幾個方塊。大多數面板前 2-3 個融入背景是正常的。',
 		'utilities.color.whiteHint': '數數看你能從純白中分辨出幾個方塊。',
 		'utilities.color.saturationHint': '紅/綠/藍/青/洋紅/黃各 8 級，從灰到全飽和。',
 		'utilities.color.whitePoint.warm': '偏暖',
 		'utilities.color.whitePoint.pure': '純白',
 		'utilities.color.whitePoint.cool': '偏冷',
-		'utilities.color.whitePointHint': '僅供參考 — 「白色」看起來偏暖或偏冷取決於顯示器與周圍的環境光。',
+		'utilities.color.whitePointHint':
+			'僅供參考 — 「白色」看起來偏暖或偏冷取決於顯示器與周圍的環境光。',
 		'utilities.color.overlay.hint': '按 Esc 或點擊離開'
 	},
 	ja: {
@@ -359,10 +377,12 @@ export default {
 		'utilities.usb.deviceClass': 'クラス/サブクラス/プロトコル',
 		'utilities.usb.configs': '{count} 個の構成',
 		'utilities.usb.interfaces': '{count} 個のインターフェース、クラス',
-		'utilities.usb.hid.protectedHint': 'ブラウザが保護しているクラス（キーボード、マウス）はここに表示されません。',
+		'utilities.usb.hid.protectedHint':
+			'ブラウザが保護しているクラス（キーボード、マウス）はここに表示されません。',
 		'utilities.usb.hid.monitor': 'モニター',
 		'utilities.usb.hid.stopMonitor': '停止',
-		'utilities.usb.hid.collection': 'usagePage {usagePage}、usage {usage} — 入力 {inputs} / 出力 {outputs} / フィーチャー {features} レポート',
+		'utilities.usb.hid.collection':
+			'usagePage {usagePage}、usage {usage} — 入力 {inputs} / 出力 {outputs} / フィーチャー {features} レポート',
 		'utilities.usb.hid.reportId': 'レポート ID',
 		'utilities.usb.hid.bytes': '先頭16バイト',
 		'utilities.usb.hid.rate': '{rate} レポート/秒',
@@ -378,7 +398,8 @@ export default {
 		'utilities.color.cap.cssRec2020': 'CSS の rec2020 対応',
 		'utilities.color.yes': 'はい',
 		'utilities.color.no': 'いいえ',
-		'utilities.color.intro': 'パターンと事実のみを提示します — 自動判定はありません。それぞれのペアはご自身の目で判断してください。',
+		'utilities.color.intro':
+			'パターンと事実のみを提示します — 自動判定はありません。それぞれのペアはご自身の目で判断してください。',
 		'utilities.color.section.wide': '広色域',
 		'utilities.color.section.gamma': 'ガンマ帯',
 		'utilities.color.section.black': '黒レベル',
@@ -388,16 +409,21 @@ export default {
 		'utilities.color.swatch.red': '赤',
 		'utilities.color.swatch.green': '緑',
 		'utilities.color.swatch.blue': '青',
-		'utilities.color.wideHint': '同じ名目色の sRGB と display-p3、rec2020 版を並べています。ペアの両側が同じに見える場合、このディスプレイまたはブラウザは sRGB までしか対応していません。',
-		'utilities.color.gammaHint': '無地のグレーと、平均輝度が50%になる1ピクセルの白黒縞模様を並べています。遠くから見て馴染んで見えるペアが、このディスプレイのガンマ値です。',
+		'utilities.color.wideHint':
+			'同じ名目色の sRGB と display-p3、rec2020 版を並べています。ペアの両側が同じに見える場合、このディスプレイまたはブラウザは sRGB までしか対応していません。',
+		'utilities.color.gammaHint':
+			'無地のグレーと、平均輝度が50%になる1ピクセルの白黒縞模様を並べています。遠くから見て馴染んで見えるペアが、このディスプレイのガンマ値です。',
 		'utilities.color.gammaDpr': 'パターンはデバイスピクセルで描画、devicePixelRatio {dpr}',
-		'utilities.color.blackHint': '純黒と見分けられるマス目の数を数えてください。多くのパネルでは最初の2〜3個が背景に溶け込むのは正常です。',
+		'utilities.color.blackHint':
+			'純黒と見分けられるマス目の数を数えてください。多くのパネルでは最初の2〜3個が背景に溶け込むのは正常です。',
 		'utilities.color.whiteHint': '純白と見分けられるマス目の数を数えてください。',
-		'utilities.color.saturationHint': '赤・緑・青・シアン・マゼンタ・黄それぞれ8段階、グレーからフル彩度まで。',
+		'utilities.color.saturationHint':
+			'赤・緑・青・シアン・マゼンタ・黄それぞれ8段階、グレーからフル彩度まで。',
 		'utilities.color.whitePoint.warm': '暖色寄り',
 		'utilities.color.whitePoint.pure': '純白',
 		'utilities.color.whitePoint.cool': '寒色寄り',
-		'utilities.color.whitePointHint': '参考用の帯です — 「白」が暖かく見えるか冷たく見えるかは、ディスプレイと周囲の光によって変わります。',
+		'utilities.color.whitePointHint':
+			'参考用の帯です — 「白」が暖かく見えるか冷たく見えるかは、ディスプレイと周囲の光によって変わります。',
 		'utilities.color.overlay.hint': 'Esc またはクリックで終了'
 	},
 	ko: {
@@ -458,10 +484,12 @@ export default {
 		'utilities.usb.deviceClass': '클래스/서브클래스/프로토콜',
 		'utilities.usb.configs': '구성 {count}개',
 		'utilities.usb.interfaces': '인터페이스 {count}개, 클래스',
-		'utilities.usb.hid.protectedHint': '브라우저가 보호하는 클래스(키보드, 마우스)는 여기에 표시되지 않습니다.',
+		'utilities.usb.hid.protectedHint':
+			'브라우저가 보호하는 클래스(키보드, 마우스)는 여기에 표시되지 않습니다.',
 		'utilities.usb.hid.monitor': '모니터',
 		'utilities.usb.hid.stopMonitor': '중지',
-		'utilities.usb.hid.collection': 'usagePage {usagePage}, usage {usage} — 입력 {inputs} / 출력 {outputs} / 기능 리포트 {features}개',
+		'utilities.usb.hid.collection':
+			'usagePage {usagePage}, usage {usage} — 입력 {inputs} / 출력 {outputs} / 기능 리포트 {features}개',
 		'utilities.usb.hid.reportId': '리포트 ID',
 		'utilities.usb.hid.bytes': '처음 16바이트',
 		'utilities.usb.hid.rate': '{rate} 리포트/초',
@@ -477,7 +505,8 @@ export default {
 		'utilities.color.cap.cssRec2020': 'CSS의 rec2020 지원',
 		'utilities.color.yes': '예',
 		'utilities.color.no': '아니요',
-		'utilities.color.intro': '패턴과 사실만 제공합니다 — 자동 판정은 없습니다. 각 쌍은 직접 눈으로 판단하세요.',
+		'utilities.color.intro':
+			'패턴과 사실만 제공합니다 — 자동 판정은 없습니다. 각 쌍은 직접 눈으로 판단하세요.',
 		'utilities.color.section.wide': '광색역',
 		'utilities.color.section.gamma': '감마 띠',
 		'utilities.color.section.black': '블랙 레벨',
@@ -487,16 +516,21 @@ export default {
 		'utilities.color.swatch.red': '빨강',
 		'utilities.color.swatch.green': '초록',
 		'utilities.color.swatch.blue': '파랑',
-		'utilities.color.wideHint': '같은 명목 색상의 sRGB와 display-p3, rec2020 버전을 나란히 보여줍니다. 한 쌍의 양쪽이 똑같아 보인다면 이 디스플레이나 브라우저가 sRGB까지만 지원하는 것입니다.',
-		'utilities.color.gammaHint': '단색 회색과 평균 휘도가 50%가 되는 1픽셀 흑백 줄무늬 패턴을 나란히 보여줍니다. 멀리서 봤을 때 서로 섞여 보이는 쌍이 이 디스플레이의 감마 값입니다.',
+		'utilities.color.wideHint':
+			'같은 명목 색상의 sRGB와 display-p3, rec2020 버전을 나란히 보여줍니다. 한 쌍의 양쪽이 똑같아 보인다면 이 디스플레이나 브라우저가 sRGB까지만 지원하는 것입니다.',
+		'utilities.color.gammaHint':
+			'단색 회색과 평균 휘도가 50%가 되는 1픽셀 흑백 줄무늬 패턴을 나란히 보여줍니다. 멀리서 봤을 때 서로 섞여 보이는 쌍이 이 디스플레이의 감마 값입니다.',
 		'utilities.color.gammaDpr': '패턴은 장치 픽셀 단위로 그려짐, devicePixelRatio {dpr}',
-		'utilities.color.blackHint': '순수한 검정과 구분되는 사각형이 몇 개인지 세어 보세요. 대부분의 패널에서 처음 2~3개가 배경에 섞이는 것은 정상입니다.',
+		'utilities.color.blackHint':
+			'순수한 검정과 구분되는 사각형이 몇 개인지 세어 보세요. 대부분의 패널에서 처음 2~3개가 배경에 섞이는 것은 정상입니다.',
 		'utilities.color.whiteHint': '순수한 흰색과 구분되는 사각형이 몇 개인지 세어 보세요.',
-		'utilities.color.saturationHint': '빨강/초록/파랑/청록/마젠타/노랑 각각 8단계, 회색에서 완전 채도까지.',
+		'utilities.color.saturationHint':
+			'빨강/초록/파랑/청록/마젠타/노랑 각각 8단계, 회색에서 완전 채도까지.',
 		'utilities.color.whitePoint.warm': '따뜻한 톤',
 		'utilities.color.whitePoint.pure': '순백색',
 		'utilities.color.whitePoint.cool': '차가운 톤',
-		'utilities.color.whitePointHint': '참고용 띠입니다 — "흰색"이 따뜻하거나 차갑게 보이는 정도는 디스플레이와 주변 조명에 따라 달라집니다.',
+		'utilities.color.whitePointHint':
+			'참고용 띠입니다 — "흰색"이 따뜻하거나 차갑게 보이는 정도는 디스플레이와 주변 조명에 따라 달라집니다.',
 		'utilities.color.overlay.hint': 'Esc 또는 클릭하여 나가기'
 	}
 } satisfies Messages;

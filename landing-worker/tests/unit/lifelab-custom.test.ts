@@ -10,7 +10,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
  */
 
 /** A localStorage stand-in whose contents and behaviour the test picks. */
-function fakeStorage(initial?: string | null, opts: { throwOnGet?: boolean; throwOnSet?: boolean } = {}) {
+function fakeStorage(
+	initial?: string | null,
+	opts: { throwOnGet?: boolean; throwOnSet?: boolean } = {}
+) {
 	const store = new Map<string, string>();
 	if (typeof initial === 'string') store.set('lifelab.custom.v1', initial);
 	return {
@@ -95,7 +98,15 @@ describe('adding a pattern', () => {
 	it('saves it and reports it', async () => {
 		const storage = fakeStorage(null);
 		const { custom } = await withStorage(storage);
-		const key = custom.add('my shape', [[0, 0], [1, 0]], 2, 1);
+		const key = custom.add(
+			'my shape',
+			[
+				[0, 0],
+				[1, 0]
+			],
+			2,
+			1
+		);
 		expect(custom.has(key)).toBe(true);
 		expect(custom.list()).toHaveLength(1);
 		expect(storage.store.get('lifelab.custom.v1')).toContain(key);
@@ -123,7 +134,15 @@ describe('adding a pattern', () => {
 
 	it('stores the cells as single-line RLE', async () => {
 		const { custom } = await withStorage(fakeStorage(null));
-		custom.add('shape', [[0, 0], [2, 1]], 3, 2);
+		custom.add(
+			'shape',
+			[
+				[0, 0],
+				[2, 1]
+			],
+			3,
+			2
+		);
 		const rle = custom.list()[0].rle;
 		expect(rle).not.toContain('\n');
 		expect(rle).toContain('!');
@@ -227,7 +246,17 @@ describe('a saved pattern behaves like a built-in one', () => {
 	it('is classified by the same code as a built-in', async () => {
 		const { custom, kindOf } = await withStorage(fakeStorage(null));
 		// a block, saved by hand, is still a still life
-		const key = custom.add('my block', [[0, 0], [1, 0], [0, 1], [1, 1]], 2, 2);
+		const key = custom.add(
+			'my block',
+			[
+				[0, 0],
+				[1, 0],
+				[0, 1],
+				[1, 1]
+			],
+			2,
+			2
+		);
 		expect(kindOf(key)).toBe('still');
 	});
 });

@@ -31,8 +31,16 @@ export interface VDir {
 
 export type VNode = VFile | VDir;
 
-const file = (name: string, read: () => string[], note?: string): VFile => ({ type: 'file', name, read, note });
-const lines = (...xs: string[]) => () => xs;
+const file = (name: string, read: () => string[], note?: string): VFile => ({
+	type: 'file',
+	name,
+	read,
+	note
+});
+const lines =
+	(...xs: string[]) =>
+	() =>
+		xs;
 
 function moduleDir(m: (typeof MODULES)[number]): VDir {
 	return {
@@ -44,7 +52,13 @@ function moduleDir(m: (typeof MODULES)[number]): VDir {
 				'README',
 				// Resolved at read time, not baked in with lines(), so this follows
 				// the active locale the same as the module's own card in /projects.
-				() => [`${m.name}  [${m.badge}]`, `url:  ${m.url}`, `tag:  ${m.tag}`, '', ...wrap(tr(m.descKey), 68)],
+				() => [
+					`${m.name}  [${m.badge}]`,
+					`url:  ${m.url}`,
+					`tag:  ${m.tag}`,
+					'',
+					...wrap(tr(m.descKey), 68)
+				],
 				m.name
 			),
 			file('tech.txt', lines(...m.tech.map((t) => `- ${t}`)), `${m.tech.length} entries`),
@@ -131,16 +145,21 @@ export const ROOT: VDir = {
 			name: 'synth',
 			note: 'live state',
 			children: [
-				file('songs.txt', () => {
-					const current = get(builtinSongIdx);
-					return BUILTIN_SONGS.map(
-						(s, i) =>
-							`${i === current ? '●' : '○'} ${s.name.padEnd(20)} ${String(s.bpm).padStart(3)}bpm · ${s.meter} · ${s.steps} steps`
-					);
-				}, `${BUILTIN_SONGS.length} built-in`),
+				file(
+					'songs.txt',
+					() => {
+						const current = get(builtinSongIdx);
+						return BUILTIN_SONGS.map(
+							(s, i) =>
+								`${i === current ? '●' : '○'} ${s.name.padEnd(20)} ${String(s.bpm).padStart(3)}bpm · ${s.meter} · ${s.steps} steps`
+						);
+					},
+					`${BUILTIN_SONGS.length} built-in`
+				),
 				file('tracks.txt', () =>
 					get(tracksState).map(
-						(t) => `${String(t.id + 1).padStart(2)}  ${t.name.padEnd(24)} ${t.muted ? 'MUTED' : '     '} ${t.solo ? 'SOLO' : ''}`
+						(t) =>
+							`${String(t.id + 1).padStart(2)}  ${t.name.padEnd(24)} ${t.muted ? 'MUTED' : '     '} ${t.solo ? 'SOLO' : ''}`
 					)
 				)
 			]

@@ -3,59 +3,78 @@ import type { Messages } from '../types';
 /* Filled in by the synth i18n pass. One key per line, same order in every locale. */
 export default {
 	en: {
-		'synth.badge.walkthroughHint': 'Walk through the synth — what each rack does, and how to get a sound out of it',
+		'synth.badge.walkthroughHint':
+			'Walk through the synth — what each rack does, and how to get a sound out of it',
 		'synth.badge.walkthroughAria': 'Synth walkthrough',
 		'synth.midi.deviceFallbackName': 'MIDI Device ({id})',
 
-		'synth.transport.lenHint': 'Pattern Length in PAGES (1 page = 1 bar of the current METER) — the loop point',
+		'synth.transport.lenHint':
+			'Pattern Length in PAGES (1 page = 1 bar of the current METER) — the loop point',
 		'synth.transport.lenCycleHint': 'Cycle page-length presets: 1 → 2 → 4 → 8 → 16 → 32 pages',
 		'synth.transport.or': 'OR',
-		'synth.transport.lenInputHint': 'Pattern length in pages — {pages} × {steps} steps ({meter}) = {total} steps',
+		'synth.transport.lenInputHint':
+			'Pattern length in pages — {pages} × {steps} steps ({meter}) = {total} steps',
 		'synth.transport.lenPagesHint': '{pages} pages × {steps} steps/page ({meter}) = {total} steps',
-		'synth.transport.meterHint': 'Time Signature (METER) — Defines beats per measure and metric pulse subdivision',
+		'synth.transport.meterHint':
+			'Time Signature (METER) — Defines beats per measure and metric pulse subdivision',
 		'synth.transport.meterPrevHint': 'Previous Time Signature',
 		'synth.transport.meterNextHint': 'Next Time Signature',
 		'synth.transport.settingsHint': 'Open Synthesizer & Audio DSP Global Configuration [SETTINGS]',
 		'synth.transport.settings': 'SETTINGS',
-		'synth.transport.rewindHint': 'Rewind to Beginning (Step 1 / Bar 1.1) — Home; Backspace also stops',
+		'synth.transport.rewindHint':
+			'Rewind to Beginning (Step 1 / Bar 1.1) — Home; Backspace also stops',
 		'synth.transport.stepBackHint': 'Step 1 Bar Backward (◄◄)',
-		'synth.transport.playToggleHint': 'Play / Stop Sequencer (Resumes from current paused position) — Enter',
+		'synth.transport.playToggleHint':
+			'Play / Stop Sequencer (Resumes from current paused position) — Enter',
 		'synth.transport.stepFwdHint': 'Step 1 Bar Forward (►►)',
 		'synth.transport.loopOnHint': 'LOOP — the pattern repeats until you stop it. Click for ONCE.',
-		'synth.transport.loopOffHint': 'ONCE — plays the pattern through, lets the tails ring and rewinds to bar 1. Click for LOOP.',
-		'synth.transport.jumpToCursorHint': 'Jump Playhead to Cursor Position (Bar {bar}.{beat}, Step {step}/{total}) — Click to jump',
+		'synth.transport.loopOffHint':
+			'ONCE — plays the pattern through, lets the tails ring and rewinds to bar 1. Click for LOOP.',
+		'synth.transport.jumpToCursorHint':
+			'Jump Playhead to Cursor Position (Bar {bar}.{beat}, Step {step}/{total}) — Click to jump',
 		'synth.transport.snapHint': 'Grid Quantization / Snap Alignment',
 		'synth.transport.durHint': 'Placed Note Duration / Length',
 		'synth.transport.pageNavHint': 'Step Page Navigation',
 		'synth.transport.pagePrevHint': 'Previous Page (◄)',
-		'synth.transport.pageJumpHint': 'Active Measure Page: Page {page} of {total} — Click/type number to jump',
+		'synth.transport.pageJumpHint':
+			'Active Measure Page: Page {page} of {total} — Click/type number to jump',
 		'synth.transport.pageNextHint': 'Next Page (►)',
-		'synth.transport.followHint': 'Follow Playhead Mode (FLW) — Automatically turns pages as the sequencer plays',
+		'synth.transport.followHint':
+			'Follow Playhead Mode (FLW) — Automatically turns pages as the sequencer plays',
 
 		'synth.confirm.cancel': 'CANCEL',
 		'synth.confirm.discard': 'DISCARD',
 		'synth.confirm.newPatchTitle': 'DISCARD THIS PATCH?',
-		'synth.confirm.newPatchBody': 'Starting a new patch resets every sound parameter on this track. Anything unsaved is lost.',
+		'synth.confirm.newPatchBody':
+			'Starting a new patch resets every sound parameter on this track. Anything unsaved is lost.',
 		'synth.confirm.newAdvPatchTitle': 'DISCARD THIS PATCH?',
-		'synth.confirm.newAdvPatchBody': 'Starting a new advanced patch resets this track and replaces its rack with an empty string and body. Anything unsaved is lost.',
+		'synth.confirm.newAdvPatchBody':
+			'Starting a new advanced patch resets this track and replaces its rack with an empty string and body. Anything unsaved is lost.',
 		'synth.confirm.newProjectTitle': 'DISCARD THIS PROJECT?',
-		'synth.confirm.newProjectBody': 'A new project clears all 8 tracks, their notes and their sounds. Anything unsaved is lost.',
+		'synth.confirm.newProjectBody':
+			'A new project clears all 8 tracks, their notes and their sounds. Anything unsaved is lost.',
 
 		'synth.patch.newHint': 'New Project — Clear all tracks and reset to blank 64-step sequencer',
-		'synth.patch.saveHint': 'Save Project — Store all 8-track synth parameters and sequencer notes into browser LocalStorage',
+		'synth.patch.saveHint':
+			'Save Project — Store all 8-track synth parameters and sequencer notes into browser LocalStorage',
 		'synth.patch.loadHint': 'Load — a project saved in this browser, or a built-in song',
-		'synth.patch.loadLocalHint': 'Restore saved synth parameters and sequencer patterns from browser LocalStorage',
+		'synth.patch.loadLocalHint':
+			'Restore saved synth parameters and sequencer patterns from browser LocalStorage',
 		'synth.patch.loadLocalLabel': 'LOCAL PROJECT (BROWSER)',
 		'synth.patch.builtinSongsLabel': 'BUILT-IN SONGS',
 		'synth.patch.loadSongHint': 'Load {name} ({bpm} BPM, {meter}, {steps} steps)',
-		"synth.patch.importHint": "Import — A previously exported project (.json or gzipped .json.gz), or a .mid file: every MIDI track becomes a sequencer track, with the file\'s own tempo and time signature. You can also drop the file anywhere on this page.",
-		'synth.patch.exportHint': 'Export Project — Download the complete 8-track synthesizer configuration and patterns, gzip-compressed (.json.gz) since the sequencer grids are mostly repeated empty cells',
-		'synth.patch.renderHint': 'Render WAV — Bounce the whole pattern through the real signal chain offline and download it as 16-bit stereo WAV. A dense multi-minute song can take a minute or two; the button shows live progress.',
+		'synth.patch.importHint':
+			"Import — A previously exported project (.json or gzipped .json.gz), or a .mid file: every MIDI track becomes a sequencer track, with the file\'s own tempo and time signature. You can also drop the file anywhere on this page.",
+		'synth.patch.exportHint':
+			'Export Project — Download the complete 8-track synthesizer configuration and patterns, gzip-compressed (.json.gz) since the sequencer grids are mostly repeated empty cells',
+		'synth.patch.renderHint':
+			'Render WAV — Bounce the whole pattern through the real signal chain offline and download it as 16-bit stereo WAV. A dense multi-minute song can take a minute or two; the button shows live progress.',
 		'synth.patch.renderingStage': '{stage} {percent}%',
 		'synth.patch.renderingStageSchedule': 'SCHED',
 		'synth.patch.renderingStageRender': 'RENDER',
 		'synth.patch.rendering': 'RENDERING…',
-		'synth.patch.shareHint': 'Share Patch — Compress the whole patch into a URL and copy it; anyone opening the link gets your exact tracks and patterns',
+		'synth.patch.shareHint':
+			'Share Patch — Compress the whole patch into a URL and copy it; anyone opening the link gets your exact tracks and patterns',
 		'synth.patch.shareBlocked': 'Clipboard was blocked by the browser — copy the link here:',
 
 		'synth.status.newOk': '✓ NEW',
@@ -78,37 +97,44 @@ export default {
 		'synth.midiImport.noHeader': 'Not a MIDI file — missing MThd header.',
 		'synth.midiImport.truncated': 'This MIDI file ends part-way through — it may be incomplete.',
 		'synth.midiImport.tempoMapNote': 'File changes tempo {count} times; only the first is used.',
-		'synth.midiImport.meterChangeNote': 'File changes time signature part-way through; only the first is used.',
-		'synth.midiImport.smpteUnsupported': 'SMPTE-timed MIDI files are not supported — export with metrical (PPQ) timing.',
+		'synth.midiImport.meterChangeNote':
+			'File changes time signature part-way through; only the first is used.',
+		'synth.midiImport.smpteUnsupported':
+			'SMPTE-timed MIDI files are not supported — export with metrical (PPQ) timing.',
 		'synth.midiImport.zeroTicks': 'MIDI file declares zero ticks per quarter note.',
 		'synth.midiImport.noNoteData': 'No note data found in this MIDI file.',
 		'synth.midiImport.defaultTrackName': 'MIDI TRK {index}',
-		'synth.midiImport.tracksNotesBars': '{tracks} track{tracksPlural} · {notes} notes · {bars} bars',
+		'synth.midiImport.tracksNotesBars':
+			'{tracks} track{tracksPlural} · {notes} notes · {bars} bars',
 		'synth.midiImport.bpmMeter': '{bpm} BPM{bpmNote} · {meter}{meterNote}',
 		'synth.midiImport.bpmDefaultNote': ' (file states none — MIDI default)',
 		'synth.midiImport.meterUnsupportedNote': ' ({meter} unsupported, using 4/4)',
 		'synth.midiImport.trackLine': '  {index}. {name} {notes} notes{drum}',
 		'synth.midiImport.drumChannelNote': '  [GM drum channel]',
 		'synth.midiImport.notesDropped': '{count} note{plural} outside the 88-key range were dropped',
-		'synth.midiImport.partsSkipped': '{count} further part{plural} skipped — the rack holds {capacity} tracks',
+		'synth.midiImport.partsSkipped':
+			'{count} further part{plural} skipped — the rack holds {capacity} tracks',
 		'synth.render.failed': 'Render failed',
 
 		'synth.render.done': '✓ {filename}',
 		'synth.render.summary': '{duration} · {rate} kHz · 16-bit stereo · {size} MB',
 		'synth.render.levels': 'peak {peak} dBFS · rms {rms} dBFS',
 		'synth.render.speed': 'rendered in {elapsed}s ({multiple}× real time)',
-		'synth.render.clippingWarning': 'peak is at full scale — lower the master or track volumes to avoid clipping',
+		'synth.render.clippingWarning':
+			'peak is at full scale — lower the master or track volumes to avoid clipping',
 		'synth.render.offlineUnavailable': 'OfflineAudioContext is unavailable in this browser.',
 		'synth.render.alreadyRunning': 'A render is already running.',
 
 		'synth.preset.pickCategoryHint': 'Pick a category on the left.',
 		'synth.preset.myPresetsLabel': 'MY PATCHES',
-		'synth.preset.kitsHint': 'Whole key tables — turns the active track into a drum machine (percussion mode)',
+		'synth.preset.kitsHint':
+			'Whole key tables — turns the active track into a drum machine (percussion mode)',
 		'synth.preset.mineHint': 'What you saved or imported here; rename and remove in place',
 		'synth.preset.pickHint': 'Patch for the active {target} — {name}. ↑/↓ cycle patches.',
 		'synth.preset.builtInLabel': 'BUILT-IN',
 		'synth.preset.myKitsLabel': 'MY KITS',
-		'synth.preset.loadKitHint': 'Load {name} onto the active track — turns percussion mode on and replaces its key table ({count} keys)',
+		'synth.preset.loadKitHint':
+			'Load {name} onto the active track — turns percussion mode on and replaces its key table ({count} keys)',
 		'synth.preset.loadKitShortHint': 'Load {name} onto the active track ({count} keys)',
 		'synth.preset.renameHint': 'Rename {name}',
 		'synth.preset.renameAria': 'Rename {name}',
@@ -116,35 +142,42 @@ export default {
 		'synth.preset.removeAria': 'Remove {name}',
 		'synth.preset.nameAria': 'Name',
 		'synth.preset.saveTrackAsKit': 'SAVE TRACK AS KIT',
-		"synth.preset.saveKitOnHint": "Keep the active track\'s key table as a kit in this browser",
+		'synth.preset.saveKitOnHint': "Keep the active track\'s key table as a kit in this browser",
 		'synth.preset.saveKitOffHint': 'Turn on P on the active track and give keys their sounds first',
 		'synth.preset.importKit': 'IMPORT KIT…',
-		'synth.preset.importKitHint': 'Import a kit .json onto the active track; dropping the file anywhere on the page works too',
+		'synth.preset.importKitHint':
+			'Import a kit .json onto the active track; dropping the file anywhere on the page works too',
 		'synth.preset.exportKit': 'EXPORT KIT',
-		"synth.preset.exportKitOnHint": "Download the active track\'s key table as a kit .json",
+		'synth.preset.exportKitOnHint': "Download the active track\'s key table as a kit .json",
 		'synth.preset.noneYet': 'none yet — save the active {target} below, or import a file',
 		'synth.preset.presetsLabel': 'PATCHES',
 		'synth.preset.kitsLabel': 'KITS',
 		'synth.preset.loadPresetHint': 'Load {name} onto the active {target}',
 		'synth.preset.saveActive': 'SAVE ACTIVE {target}',
-		'synth.preset.saveActiveHint': 'Keep the active {targetPossessive} current sound (racks 1-6 and AIR; not volume, pan or notes) as a patch in this browser',
+		'synth.preset.saveActiveHint':
+			'Keep the active {targetPossessive} current sound (racks 1-6 and AIR; not volume, pan or notes) as a patch in this browser',
 		'synth.preset.saveShort': 'SAVE',
 		'synth.preset.importShort': 'IMPORT',
 		'synth.preset.exportShort': 'EXPORT',
 		'synth.preset.myPresetsShort': 'MINE',
 		'synth.preset.importFile': 'IMPORT FILE…',
-		'synth.preset.importFileHint': 'Import a patch .json onto the active track or key; it is added to MY PATCHES. Dropping the file anywhere on the page works too.',
+		'synth.preset.importFileHint':
+			'Import a patch .json onto the active track or key; it is added to MY PATCHES. Dropping the file anywhere on the page works too.',
 		'synth.preset.exportActive': 'EXPORT ACTIVE {target}',
-		'synth.preset.exportActiveHint': 'Download the active {targetPossessive} sound as a patch .json',
+		'synth.preset.exportActiveHint':
+			'Download the active {targetPossessive} sound as a patch .json',
 		'synth.preset.targetTrack': 'TRACK',
 		'synth.preset.targetKey': 'KEY',
 		'synth.preset.targetTrackLower': 'track',
 		'synth.preset.targetKeyLower': 'key',
 		'synth.preset.targetTrackPossessive': "track's",
 		'synth.preset.targetKeyPossessive': "key's",
-		'synth.preset.percussionOnHint': '{track} is in K.MAP mode — every key has its own sound; racks and patches edit the active key. Click to return to one sound per track (the key table is kept).',
-		'synth.preset.advancedOnHint': 'ADVANCED: the lower panel is the roll or the patch bay. Click to bring modules 1-7 back.',
-		'synth.preset.advancedOffHint': 'ADVANCED layout: drop modules 1-7 and give the whole lower panel to the roll or the patch bay.',
+		'synth.preset.percussionOnHint':
+			'{track} is in K.MAP mode — every key has its own sound; racks and patches edit the active key. Click to return to one sound per track (the key table is kept).',
+		'synth.preset.advancedOnHint':
+			'ADVANCED: the lower panel is the roll or the patch bay. Click to bring modules 1-7 back.',
+		'synth.preset.advancedOffHint':
+			'ADVANCED layout: drop modules 1-7 and give the whole lower panel to the roll or the patch bay.',
 		'synth.preset.newLabel': 'NEW PATCH',
 		'synth.preset.newHint': 'Start from a neutral sound, edited on racks 1-7',
 		'synth.preset.newAdvancedLabel': 'NEW PATCH (ADV)',
@@ -156,11 +189,13 @@ export default {
 		'synthPatch.copied': 'Copied {count}',
 		'synthPatch.pasted': 'Pasted {count}',
 		'synthPatch.addLabel': 'ADD:',
-		'synthPatch.pickSlot': 'Pick a module in the path above to edit it. Drag to reorder; the order is the sound.',
+		'synthPatch.pickSlot':
+			'Pick a module in the path above to edit it. Drag to reorder; the order is the sound.',
 		'synthPatch.paramsPending': 'Controls for this module are not wired up yet.',
 		'synthPatch.mod.fusion': 'How the two oscillators combine: layer, FM, ring or sync.',
 		'synthPatch.mod.filter': 'The resonant filter, swept by its own envelope.',
-		'synthPatch.mod.transient': 'Shapes the attack apart from the body, where the crack of a snare lives.',
+		'synthPatch.mod.transient':
+			'Shapes the attack apart from the body, where the crack of a snare lives.',
 		'synthPatch.mod.drive': 'Saturation. A struck drum has harmonics a clean sine cannot make.',
 		'synthPatch.mod.resonators': 'Several tuned modes at once, the way a drum shell rings.',
 		'synthPatch.mod.noiseshaper': 'Gives the noise source its own filter and envelope.',
@@ -190,35 +225,50 @@ export default {
 		'synthPatch.mod.env': 'An envelope. Sends CV, not sound.',
 		'synthPatch.mod.lfo': 'A slow oscillator for modulation.',
 		'synthPatch.mod.mix': 'Adds two signals.',
-		'synthPatch.mod.excite': 'The strike, pluck or breath that starts the sound. Every acoustic instrument begins with one.',
-		'synthPatch.mod.string': 'A vibrating string: length from the key, damping and stiffness from the knobs. Piano, guitar, bass, bowed strings.',
-		'synthPatch.mod.tube': 'A resonating air column. Odd harmonics for a clarinet, all of them for a flute or brass.',
+		'synthPatch.mod.excite':
+			'The strike, pluck or breath that starts the sound. Every acoustic instrument begins with one.',
+		'synthPatch.mod.string':
+			'A vibrating string: length from the key, damping and stiffness from the knobs. Piano, guitar, bass, bowed strings.',
+		'synthPatch.mod.tube':
+			'A resonating air column. Odd harmonics for a clarinet, all of them for a flute or brass.',
 		'synthPatch.mod.modes': 'Three tuned resonances at once, the way a drum head or a bell rings.',
-		'synthPatch.mod.body': 'The instrument body: soundboard, box or shell. What turns a bare string into a guitar.',
+		'synthPatch.mod.body':
+			'The instrument body: soundboard, box or shell. What turns a bare string into a guitar.',
 		'synthPatch.mod.sub': 'An octave or two below the note. Weight under a voice.',
-		'synthPatch.mod.pulse': 'A square whose width you can set and sweep. One oscillator that sounds like two.',
-		'synthPatch.mod.bow': 'A bow: it grabs the string, drags, slips and grabs again. Why a violin sustains and a pluck does not.',
-		'synthPatch.mod.blend': 'Tilts between the signal and a darker copy of it. Put an envelope on CV to open a voice over the note.',
-		'synthPatch.mod.reed': 'A reed is a valve. Blow harder and it slams shut, which is where the honk lives.',
+		'synthPatch.mod.pulse':
+			'A square whose width you can set and sweep. One oscillator that sounds like two.',
+		'synthPatch.mod.bow':
+			'A bow: it grabs the string, drags, slips and grabs again. Why a violin sustains and a pluck does not.',
+		'synthPatch.mod.blend':
+			'Tilts between the signal and a darker copy of it. Put an envelope on CV to open a voice over the note.',
+		'synthPatch.mod.reed':
+			'A reed is a valve. Blow harder and it slams shut, which is where the honk lives.',
 		'synthPatch.mod.comp': 'Holds a transient down. A struck body peaks far above its own sustain.',
-		'synthPatch.mod.comb': 'Where the string is struck. Plucked at the bridge is thin, over the hole is round.',
+		'synthPatch.mod.comb':
+			'Where the string is struck. Plucked at the bridge is thin, over the hole is round.',
 		'synthPatch.mod.space': 'A room. Every acoustic instrument is heard in one.',
 		'synthPatch.mod.delay': 'A tap with feedback. Inside a voice, not just on the output.',
 		'synthPatch.mod.pan': 'Places the sound across the stereo field.',
-		'synthPatch.mod.in': 'The note itself. THEN runs the patch, PITCH VEL NOTE GATE say what was played. LVL sets the racks 1-7 voice on OUT, which a patch with its own source does not use.',
+		'synthPatch.mod.in':
+			'The note itself. THEN runs the patch, PITCH VEL NOTE GATE say what was played. LVL sets the racks 1-7 voice on OUT, which a patch with its own source does not use.',
 		'synthPatch.mod.out': 'Sends the patch to the master bus. Anything not reaching it is silent.',
-		'synthPatch.mod.tofreq': 'Turns a pitch into the frequency it names. A4 sets the reference, TRSP shifts by semitones.',
-		'synthPatch.mod.topitch': 'Reads a frequency back as a pitch. Between two notes it rounds, unless QNT is off.',
+		'synthPatch.mod.tofreq':
+			'Turns a pitch into the frequency it names. A4 sets the reference, TRSP shifts by semitones.',
+		'synthPatch.mod.topitch':
+			'Reads a frequency back as a pitch. Between two notes it rounds, unless QNT is off.',
 		'synthPatch.mod.const': 'A fixed number. Wire it into any value inlet.',
 		'synthPatch.mod.add': 'A plus B. Unwired, B is the knob.',
 		'synthPatch.mod.mul': 'A times B. With only A patched it is a gain.',
-		'synthPatch.mod.remap': 'Takes a value from one range to another, clamped. Velocity 0-1 into a cutoff 200-8000.',
+		'synthPatch.mod.remap':
+			'Takes a value from one range to another, clamped. Velocity 0-1 into a cutoff 200-8000.',
 		'synthPatch.mod.clamp': 'Holds a value between MIN and MAX.',
 		'synthPatch.mod.lerp': 'Blends A and B by ALPHA.',
 		'synthPatch.mod.curve': 'Bends a 0-1 value. Above 1 is slow to start, below 1 is quick.',
-		'synthPatch.mod.seq': 'Runs what follows a moment later. GAP apart makes a flam rather than one strike.',
+		'synthPatch.mod.seq':
+			'Runs what follows a moment later. GAP apart makes a flam rather than one strike.',
 		'synthPatch.mod.when': 'A branch. Execution carries on out of TRUE only when the test passes.',
-		'synthPatch.mod.act': 'What to do when the WHEN before it says yes: CUT stops the others, SOLO stops everything but this group, GLIDE slides in from the last pitch.',
+		'synthPatch.mod.act':
+			'What to do when the WHEN before it says yes: CUT stops the others, SOLO stops everything but this group, GLIDE slides in from the last pitch.',
 		'synthPatch.mod.split': 'Takes a stereo signal apart so L and R can be processed separately.',
 		'synthPatch.mod.merge': 'Puts two mono paths back into one stereo signal.',
 		'synthPatch.mod.scope': 'The waveform at this point. Passes the signal through untouched.',
@@ -228,17 +278,21 @@ export default {
 		'synthPatch.mod.subtract': 'A minus B. Cancels what the two share and leaves the difference.',
 		'synthPatch.mod.ring': 'One signal multiplies the other. Inharmonic: bells, gongs, metal.',
 		'synthPatch.mod.invert': 'Flips the sign. Silent alone; against a copy of itself it cancels.',
-		'synthPatch.builtInParams': 'This stage is edited on racks 1-7; its controls are not duplicated here.',
-		'synth.preset.percussionOffHint': 'K.MAP for {track} — give each key its own sound, like a drum machine',
+		'synthPatch.builtInParams':
+			'This stage is edited on racks 1-7; its controls are not duplicated here.',
+		'synth.preset.percussionOffHint':
+			'K.MAP for {track} — give each key its own sound, like a drum machine',
 		'synth.preset.thisTrack': 'This track',
 		'synth.preset.theActiveTrack': 'the active track',
 
 		'synth.wave.basicLabel': 'BASIC',
 		'synth.wave.basicHint': 'The four analogue shapes',
 		'synth.wave.noiseLabel': 'NOISE',
-		'synth.wave.noiseHint': 'Buffer sources: white noise and the 808 cymbal bank (OSC1 only; on OSC2 they play as a saw)',
+		'synth.wave.noiseHint':
+			'Buffer sources: white noise and the 808 cymbal bank (OSC1 only; on OSC2 they play as a saw)',
 		'synth.wave.advancedLabel': 'ADVANCED',
-		'synth.wave.advancedHint': 'Stacked and tabled waves: sweeping PWM, a five-saw stack, drawbars, a folded sine',
+		'synth.wave.advancedHint':
+			'Stacked and tabled waves: sweeping PWM, a five-saw stack, drawbars, a folded sine',
 		'synth.wave.customLabel': 'CUSTOM',
 		'synth.wave.customHint': 'Waves you drew — one cycle, any shape',
 		'synth.wave.drawnHint': '{name} — a wave you drew',
@@ -252,7 +306,8 @@ export default {
 		'synth.wave.removeHint': 'Remove {name}',
 		'synth.wave.removeAria': 'Remove {name}',
 		'synth.wave.drawNew': 'DRAW NEW…',
-		'synth.wave.drawNewHint': 'Draw one cycle of a wave with the mouse; it is saved in this browser and applied here',
+		'synth.wave.drawNewHint':
+			'Draw one cycle of a wave with the mouse; it is saved in this browser and applied here',
 
 		'synth.waveDraw.title': 'Draw a waveform',
 		'synth.waveDraw.editHeading': 'EDIT WAVE',
@@ -274,103 +329,164 @@ export default {
 		'synth.waveDraw.saveAndUse': 'SAVE & USE',
 		'synth.waveDraw.saveHint': 'Save the wave in this browser and use it on {forLabel}',
 
-		'synth.tracks.overlayOnHint': 'Multi-Track Overlay Mode: ACTIVE — Click TRKs to multi-select and layer on Piano Roll',
-		'synth.tracks.overlayOffHint': 'Multi-Track Overlay Mode: OFF — Click to enable multi-track layered view on Piano Roll',
-		'synth.tracks.trkLabelHint': 'Tracks — click a number to edit that track; in OVLY mode click it to show or hide it on the roll',
-		'synth.tracks.setActiveHint': 'Set {name} as Exclusive Active Track (Controls Modules 1-7, Piano Roll Editing & Piano Keyboard Audition) — Currently {state}',
+		'synth.tracks.overlayOnHint':
+			'Multi-Track Overlay Mode: ACTIVE — Click TRKs to multi-select and layer on Piano Roll',
+		'synth.tracks.overlayOffHint':
+			'Multi-Track Overlay Mode: OFF — Click to enable multi-track layered view on Piano Roll',
+		'synth.tracks.trkLabelHint':
+			'Tracks — click a number to edit that track; in OVLY mode click it to show or hide it on the roll',
+		'synth.tracks.setActiveHint':
+			'Set {name} as Exclusive Active Track (Controls Modules 1-7, Piano Roll Editing & Piano Keyboard Audition) — Currently {state}',
 		'synth.tracks.activeSolid': 'ACTIVE [SOLID]',
 		'synth.tracks.inactiveHollow': 'INACTIVE [HOLLOW]',
-		'synth.tracks.overlayToggleHint': '{name} — Click name to toggle overlay visibility. Active Editing: {state}',
+		'synth.tracks.overlayToggleHint':
+			'{name} — Click name to toggle overlay visibility. Active Editing: {state}',
 		'synth.tracks.selectHint': 'Select {name}',
 		'synth.tracks.muteHint': 'Mute {name}',
 		'synth.tracks.soloHint': 'Solo {name} — additive: solo several tracks to hear them together',
 
 		'synth.drop.title': 'DROP TO LOAD',
-		'synth.drop.body': '.mid → one sequencer track per MIDI track · .json → synth patch, or a preset onto the active track',
+		'synth.drop.body':
+			'.mid → one sequencer track per MIDI track · .json → synth patch, or a preset onto the active track',
 
-		'synth.tooltip.square': 'Square Waveform — Hollow timbre rich in odd harmonics, ideal for retro 8-bit leads and chiptune bass',
-		'synth.tooltip.sawtooth': 'Sawtooth Waveform — Bright, buzzy timbre with all harmonics, ideal for aggressive leads, brass, and thick pads',
-		'synth.tooltip.triangle': 'Triangle Waveform — Soft, warm timbre with gentle odd harmonics, ideal for warm basslines and flute sounds',
-		'synth.tooltip.sine': 'Sine Waveform — Pure fundamental frequency without overtones, ideal for deep sub bass and clean tones',
-		'synth.tooltip.noise': 'White Noise Generator — Equal energy across all frequencies, ideal for drums, percussive transients, and sound effects (OSC1; on OSC2 it plays as a saw)',
-		'synth.tooltip.metal': 'METAL — six squares at the 808 cymbal ratios, fixed pitch: the clang of rides, crashes and hats; add NOISE for the sizzle and high-pass the body away (OSC1)',
-		'synth.tooltip.pwm': 'PWM — a pulse whose width sweeps around WIDTH at RATE by DEPTH (knobs in its submenu); the classic moving analogue pad and lead',
-		'synth.tooltip.supersaw': 'SUPERSAW — five saws, the outer pair SPREAD cents away at MIX level (knobs in its submenu); the trance stack, wide without any chorus',
-		'synth.tooltip.organ': 'ORGAN — six drawbars, harmonics 1, 2, 3, 4, 5 and 8 (knobs in its submenu); steady, hollow, sits well under a lead',
-		'synth.tooltip.fold': 'FOLD — a sine driven into a wavefolder by FOLD (knob in its submenu); brighter than a triangle, with the West-coast bite',
-		'synth.tooltips.blendLayer': 'Blend Mode: Layer — Sums Oscillator 1 and Oscillator 2 in parallel for thick dual-oscillator tones',
-		'synth.tooltips.blendFm': 'Blend Mode: FM (Frequency Modulation) — Oscillator 2 modulates the frequency of Oscillator 1 for rich metallic/bell harmonic timbres',
-		'synth.tooltips.blendRing': 'Blend Mode: Ring Modulation — Multiplies Oscillator 1 and 2 signals together creating complex inharmonic textures',
-		'synth.tooltips.blendSync': 'Blend Mode: Hard Sync — Resets Oscillator 2 phase whenever Oscillator 1 completes a cycle for cutting sync lead sweeps',
-		'synth.tooltips.filterLowpass': 'Filter Mode: Low-Pass Filter (LPF) — Allows low frequencies below cutoff to pass through, attenuating highs',
-		'synth.tooltips.filterHighpass': 'Filter Mode: High-Pass Filter (HPF) — Allows high frequencies above cutoff to pass through, attenuating lows',
-		'synth.tooltips.filterBandpass': 'Filter Mode: Band-Pass Filter (BPF) — Passes a resonant narrow band around the cutoff frequency, attenuating lows and highs',
-		'synth.tooltips.filterNotch': 'Filter Mode: Notch / Band-Reject Filter (BRF) — Attenuates a narrow band at cutoff while letting both lows and highs pass',
+		'synth.tooltip.square':
+			'Square Waveform — Hollow timbre rich in odd harmonics, ideal for retro 8-bit leads and chiptune bass',
+		'synth.tooltip.sawtooth':
+			'Sawtooth Waveform — Bright, buzzy timbre with all harmonics, ideal for aggressive leads, brass, and thick pads',
+		'synth.tooltip.triangle':
+			'Triangle Waveform — Soft, warm timbre with gentle odd harmonics, ideal for warm basslines and flute sounds',
+		'synth.tooltip.sine':
+			'Sine Waveform — Pure fundamental frequency without overtones, ideal for deep sub bass and clean tones',
+		'synth.tooltip.noise':
+			'White Noise Generator — Equal energy across all frequencies, ideal for drums, percussive transients, and sound effects (OSC1; on OSC2 it plays as a saw)',
+		'synth.tooltip.metal':
+			'METAL — six squares at the 808 cymbal ratios, fixed pitch: the clang of rides, crashes and hats; add NOISE for the sizzle and high-pass the body away (OSC1)',
+		'synth.tooltip.pwm':
+			'PWM — a pulse whose width sweeps around WIDTH at RATE by DEPTH (knobs in its submenu); the classic moving analogue pad and lead',
+		'synth.tooltip.supersaw':
+			'SUPERSAW — five saws, the outer pair SPREAD cents away at MIX level (knobs in its submenu); the trance stack, wide without any chorus',
+		'synth.tooltip.organ':
+			'ORGAN — six drawbars, harmonics 1, 2, 3, 4, 5 and 8 (knobs in its submenu); steady, hollow, sits well under a lead',
+		'synth.tooltip.fold':
+			'FOLD — a sine driven into a wavefolder by FOLD (knob in its submenu); brighter than a triangle, with the West-coast bite',
+		'synth.tooltips.blendLayer':
+			'Blend Mode: Layer — Sums Oscillator 1 and Oscillator 2 in parallel for thick dual-oscillator tones',
+		'synth.tooltips.blendFm':
+			'Blend Mode: FM (Frequency Modulation) — Oscillator 2 modulates the frequency of Oscillator 1 for rich metallic/bell harmonic timbres',
+		'synth.tooltips.blendRing':
+			'Blend Mode: Ring Modulation — Multiplies Oscillator 1 and 2 signals together creating complex inharmonic textures',
+		'synth.tooltips.blendSync':
+			'Blend Mode: Hard Sync — Resets Oscillator 2 phase whenever Oscillator 1 completes a cycle for cutting sync lead sweeps',
+		'synth.tooltips.filterLowpass':
+			'Filter Mode: Low-Pass Filter (LPF) — Allows low frequencies below cutoff to pass through, attenuating highs',
+		'synth.tooltips.filterHighpass':
+			'Filter Mode: High-Pass Filter (HPF) — Allows high frequencies above cutoff to pass through, attenuating lows',
+		'synth.tooltips.filterBandpass':
+			'Filter Mode: Band-Pass Filter (BPF) — Passes a resonant narrow band around the cutoff frequency, attenuating lows and highs',
+		'synth.tooltips.filterNotch':
+			'Filter Mode: Notch / Band-Reject Filter (BRF) — Attenuates a narrow band at cutoff while letting both lows and highs pass',
 		'synth.tooltips.lfoSine': 'Sine Wave LFO — Smooth, continuous cyclical modulation',
 		'synth.tooltips.lfoTriangle': 'Triangle Wave LFO — Linear ramp up and down modulation',
 		'synth.tooltips.lfoSquare': 'Square Wave LFO — Stepped on/off binary modulation pulse',
 		'synth.tooltips.lfoSawtooth': 'Sawtooth Wave LFO — Linear ramp with sharp instantaneous drop',
-		'synth.tooltip.preset8BitBass': 'Preset: 8-Bit Bass — Retro chiptune square/triangle bass with snappy VCF filter envelope',
-		'synth.tooltip.presetPluck': 'Preset: Pluck — Short transient acoustic/electronic synth pluck with fast filter decay',
-		'synth.tooltip.presetBrass': 'Preset: Brass — Dual detuned sawtooth oscillators with dynamic filter sweep',
-		'synth.tooltip.presetLead': 'Preset: Lead — Cutting 25% pulse + sawtooth lead with resonant filter and full sustain',
-		'synth.tooltip.presetSubBass': 'Preset: Sub Bass — Sine plus the SUB octave under an 800 Hz low-pass; weight without edge',
-		'synth.tooltip.presetAcidBass': 'Preset: Acid Bass — Saw into a Q 8 low-pass swept by the envelope, 60 ms glide',
+		'synth.tooltip.preset8BitBass':
+			'Preset: 8-Bit Bass — Retro chiptune square/triangle bass with snappy VCF filter envelope',
+		'synth.tooltip.presetPluck':
+			'Preset: Pluck — Short transient acoustic/electronic synth pluck with fast filter decay',
+		'synth.tooltip.presetBrass':
+			'Preset: Brass — Dual detuned sawtooth oscillators with dynamic filter sweep',
+		'synth.tooltip.presetLead':
+			'Preset: Lead — Cutting 25% pulse + sawtooth lead with resonant filter and full sustain',
+		'synth.tooltip.presetSubBass':
+			'Preset: Sub Bass — Sine plus the SUB octave under an 800 Hz low-pass; weight without edge',
+		'synth.tooltip.presetAcidBass':
+			'Preset: Acid Bass — Saw into a Q 8 low-pass swept by the envelope, 60 ms glide',
 		'synth.tooltip.presetFmBass': 'Preset: FM Bass — Sine carrier modulated by a sine an octave up',
-		'synth.tooltip.presetSawLead': 'Preset: Saw Lead — Two saws 14 cents apart with a vibrato that fades in',
-		'synth.tooltip.presetSyncLead': 'Preset: Sync Lead — SYNC mode with the second oscillator a fifth up, filter envelope for the rip',
-		'synth.tooltip.presetChipLead': 'Preset: Chip Lead — 15% pulse, no filter, fast vibrato: the NES lead voice',
-		'synth.tooltip.presetKoto': 'Preset: Koto — Triangle with a sine an octave up and a filter that snaps shut; no sustain',
-		'synth.tooltip.presetMarimba': 'Preset: Marimba — Sine body and a quieter triangle an octave up, decaying together',
-		'synth.tooltip.presetBell': 'Preset: Bell — Two sines ring-modulated at a 3.5 ratio; inharmonic partials, long tail',
-		'synth.tooltip.presetEPiano': 'Preset: E-Piano — Sine carrier with a light FM tine four octaves up',
-		'synth.tooltip.presetOrgan': 'Preset: Organ — Fundamental, octave and SUB drawbars, no envelope, slow tremolo',
-		'synth.tooltip.presetClav': 'Preset: Clav — 25% pulse through a resonant low-pass that closes fast',
-		'synth.tooltip.presetHarpsichord': 'Preset: Harpsichord — Saw with a square an octave up, plucked and bright',
-		'synth.tooltip.presetWarmPad': 'Preset: Warm Pad — Detuned saws behind a low filter that breathes with a slow LFO',
-		'synth.tooltip.presetStrings': 'Preset: Strings — Wide detune, brighter filter, vibrato fading in',
-		'synth.tooltip.presetGlassPad': 'Preset: Glass Pad — Triangle and sine an octave up, open filter, air on top, slow auto-pan',
-		'synth.tooltip.presetHollowPad': 'Preset: Hollow Pad — Square with a square an octave below, low filter the LFO opens and closes',
-		'synth.tooltip.presetKick808': 'Preset: 808 Kick — Sine with a 2.5-octave pitch drop and a sub underneath; sequence it low (C2-C3)',
-		'synth.tooltip.presetKickPunch': 'Preset: Punch Kick — Shorter, harder triangle kick with a noise beater click',
-		'synth.tooltip.presetSnare': 'Preset: Snare — Triangle + fifth body with a noise rattle; KEY TRK brightens it up the keyboard',
-		'synth.tooltip.presetClap': 'Preset: Clap — Three noise bursts 11 ms apart, then the tail (RPT / GAP in rack 1)',
-		'synth.tooltip.presetClosedHat': 'Preset: Closed Hat — 45 ms of high-passed noise; higher keys are brighter',
+		'synth.tooltip.presetSawLead':
+			'Preset: Saw Lead — Two saws 14 cents apart with a vibrato that fades in',
+		'synth.tooltip.presetSyncLead':
+			'Preset: Sync Lead — SYNC mode with the second oscillator a fifth up, filter envelope for the rip',
+		'synth.tooltip.presetChipLead':
+			'Preset: Chip Lead — 15% pulse, no filter, fast vibrato: the NES lead voice',
+		'synth.tooltip.presetKoto':
+			'Preset: Koto — Triangle with a sine an octave up and a filter that snaps shut; no sustain',
+		'synth.tooltip.presetMarimba':
+			'Preset: Marimba — Sine body and a quieter triangle an octave up, decaying together',
+		'synth.tooltip.presetBell':
+			'Preset: Bell — Two sines ring-modulated at a 3.5 ratio; inharmonic partials, long tail',
+		'synth.tooltip.presetEPiano':
+			'Preset: E-Piano — Sine carrier with a light FM tine four octaves up',
+		'synth.tooltip.presetOrgan':
+			'Preset: Organ — Fundamental, octave and SUB drawbars, no envelope, slow tremolo',
+		'synth.tooltip.presetClav':
+			'Preset: Clav — 25% pulse through a resonant low-pass that closes fast',
+		'synth.tooltip.presetHarpsichord':
+			'Preset: Harpsichord — Saw with a square an octave up, plucked and bright',
+		'synth.tooltip.presetWarmPad':
+			'Preset: Warm Pad — Detuned saws behind a low filter that breathes with a slow LFO',
+		'synth.tooltip.presetStrings':
+			'Preset: Strings — Wide detune, brighter filter, vibrato fading in',
+		'synth.tooltip.presetGlassPad':
+			'Preset: Glass Pad — Triangle and sine an octave up, open filter, air on top, slow auto-pan',
+		'synth.tooltip.presetHollowPad':
+			'Preset: Hollow Pad — Square with a square an octave below, low filter the LFO opens and closes',
+		'synth.tooltip.presetKick808':
+			'Preset: 808 Kick — Sine with a 2.5-octave pitch drop and a sub underneath; sequence it low (C2-C3)',
+		'synth.tooltip.presetKickPunch':
+			'Preset: Punch Kick — Shorter, harder triangle kick with a noise beater click',
+		'synth.tooltip.presetSnare':
+			'Preset: Snare — Triangle + fifth body with a noise rattle; KEY TRK brightens it up the keyboard',
+		'synth.tooltip.presetClap':
+			'Preset: Clap — Three noise bursts 11 ms apart, then the tail (RPT / GAP in rack 1)',
+		'synth.tooltip.presetClosedHat':
+			'Preset: Closed Hat — 45 ms of high-passed noise; higher keys are brighter',
 		'synth.tooltip.presetOpenHat': 'Preset: Open Hat — The closed hat left to ring for 350 ms',
-		'synth.tooltip.presetTom': 'Preset: Tom — Shallow pitch drop on a sine + triangle; play across a few keys for a rack',
+		'synth.tooltip.presetTom':
+			'Preset: Tom — Shallow pitch drop on a sine + triangle; play across a few keys for a rack',
 		'synth.tooltip.presetRimshot': 'Preset: Rimshot — Ring-modulated 40 ms ping',
-		'synth.tooltip.presetCowbell': 'Preset: Cowbell — Two squares a fifth apart (the 808 pair), band-passed at 1.5 kHz',
-		'synth.tooltip.presetShaker': 'Preset: Shaker — Soft-attack noise with a filter that opens and closes with the hit',
+		'synth.tooltip.presetCowbell':
+			'Preset: Cowbell — Two squares a fifth apart (the 808 pair), band-passed at 1.5 kHz',
+		'synth.tooltip.presetShaker':
+			'Preset: Shaker — Soft-attack noise with a filter that opens and closes with the hit',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': 'Each chip is one voice with its own oscillators, filter, envelopes and EQ. Click a chip to make it the one every rack below is editing; M and S mute and solo it. OVLY draws the other tracks behind the one you are editing so parts line up.',
+		'synth.tour.tracksBody':
+			'Each chip is one voice with its own oscillators, filter, envelopes and EQ. Click a chip to make it the one every rack below is editing; M and S mute and solo it. OVLY draws the other tracks behind the one you are editing so parts line up.',
 		'synth.tour.rollTitle': 'PIANO ROLL',
-		'synth.tour.rollBody': 'Click a cell to place a note, drag across to paint a run, click again to erase. SNAP is the grid the cursor lands on and DUR is how long a placed note is — both go down to 1/12 for triplets. A held note is the same index repeated across cells, so a longer bar really is one longer note.',
+		'synth.tour.rollBody':
+			'Click a cell to place a note, drag across to paint a run, click again to erase. SNAP is the grid the cursor lands on and DUR is how long a placed note is — both go down to 1/12 for triplets. A held note is the same index repeated across cells, so a longer bar really is one longer note.',
 		'synth.tour.rollKeyLen': 'pattern length, counted in pages',
 		'synth.tour.rollKeyMeter': '4/4, 3/4, 2/4, 5/4, 6/8 or 7/8',
 		'synth.tour.rollKeyAcc': 'per-step accent, +1 to +4 dB',
 		'synth.tour.playTitle': 'PLAY IT',
-		'synth.tour.playBody': 'Audition the active track from these keys, from a QWERTY row, or from a real MIDI controller if one is plugged in. Notes played here are heard, not recorded — the piano roll above is where a pattern is written.',
+		'synth.tour.playBody':
+			'Audition the active track from these keys, from a QWERTY row, or from a real MIDI controller if one is plugged in. Notes played here are heard, not recorded — the piano roll above is where a pattern is written.',
 		'synth.tour.playKeyLower': 'lower octave, white and black keys',
 		'synth.tour.playKeyUpper': 'upper octave',
 		'synth.tour.playKeyOctave': 'octave down / up (also [ and ])',
 		'synth.tour.playKeySustain': 'sustain pedal, held = pedal down',
 		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
-		'synth.tour.voiceBody': 'Where the sound is made, in signal order: two oscillators, a fusion stage that layers them or uses one to modulate the other (FM, ring, sync), and a resonant multi-mode filter. Every knob here edits the track selected above.',
+		'synth.tour.voiceBody':
+			'Where the sound is made, in signal order: two oscillators, a fusion stage that layers them or uses one to modulate the other (FM, ring, sync), and a resonant multi-mode filter. Every knob here edits the track selected above.',
 		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
-		'synth.tour.shapeBody': 'What happens to that sound over time: dual envelopes for amplitude and filter, an LFO matrix that can drive pitch, cutoff, pan or volume, per-track FX and a six-band EQ, then the output strip with the visualisers.',
+		'synth.tour.shapeBody':
+			'What happens to that sound over time: dual envelopes for amplitude and filter, an LFO matrix that can drive pitch, cutoff, pan or volume, per-track FX and a six-band EQ, then the output strip with the visualisers.',
 		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
 		'synth.tour.advTitle': 'THE OTHER HALF',
-		'synth.tour.advBody': 'Racks 1-7 are one instrument: every control laid out, nothing to wire. ADV is the other -- the racks give way and the panel becomes a patch bay, where a voice is built from primitives and cables. A track is in one or the other, and the choice travels with the patch.',
+		'synth.tour.advBody':
+			'Racks 1-7 are one instrument: every control laid out, nothing to wire. ADV is the other -- the racks give way and the panel becomes a patch bay, where a voice is built from primitives and cables. A track is in one or the other, and the choice travels with the patch.',
 		'synth.tour.advAction': 'Switch this track to ADV',
 		'synth.tour.canvasTitle': 'THE PATCH BAY',
-		'synth.tour.canvasBody': 'Modules sit on a canvas and cables run between their ports. White ports carry audio, yellow ones carry control -- an envelope onto a filter\u2019s cutoff is a cable, not a knob. Audio cannot loop back on itself and the editor will refuse to draw it; control can, and often should.',
+		'synth.tour.canvasBody':
+			'Modules sit on a canvas and cables run between their ports. White ports carry audio, yellow ones carry control -- an envelope onto a filter\u2019s cutoff is a cable, not a knob. Audio cannot loop back on itself and the editor will refuse to draw it; control can, and often should.',
 		'synth.tour.canvasKeyDrag': 'Move a module, or drag a port to patch',
 		'synth.tour.canvasKeyPan': 'Pan the canvas',
 		'synth.tour.canvasKeyZoom': 'Zoom about the pointer',
 		'synth.tour.paletteTitle': 'THE PARTS',
-		'synth.tour.paletteBody': 'Every entry is one primitive: an oscillator, an envelope, a resonating string. Drag one onto the canvas, or click to drop it in. The interesting sounds come from wiring them in an order nobody shipped.',
-		'synth.tour.transportBody': 'LOAD picks a built-in song, IMP takes a previously exported patch or a .mid file — every MIDI track becomes a sequencer track, keeping the file’s tempo and time signature. You can drop a .mid anywhere on this page.',
+		'synth.tour.paletteBody':
+			'Every entry is one primitive: an oscillator, an envelope, a resonating string. Drag one onto the canvas, or click to drop it in. The interesting sounds come from wiring them in an order nobody shipped.',
+		'synth.tour.transportBody':
+			'LOAD picks a built-in song, IMP takes a previously exported patch or a .mid file — every MIDI track becomes a sequencer track, keeping the file’s tempo and time signature. You can drop a .mid anywhere on this page.',
 		'synth.tour.transportKeyWav': 'render the pattern offline and download it',
 		'synth.tour.transportKeyShare': 'pack the whole patch into a URL',
 		'synth.tour.transportKeySettings': 'global audio and DSP configuration'
@@ -380,7 +496,8 @@ export default {
 		'synth.badge.walkthroughAria': '合成器导览',
 		'synth.midi.deviceFallbackName': 'MIDI 设备（{id}）',
 
-		'synth.transport.lenHint': '以「页」为单位的图形长度（1 页 = 当前 METER 下的 1 小节）— 也就是循环点',
+		'synth.transport.lenHint':
+			'以「页」为单位的图形长度（1 页 = 当前 METER 下的 1 小节）— 也就是循环点',
 		'synth.transport.lenCycleHint': '循环切换页数预设：1 → 2 → 4 → 8 → 16 → 32 页',
 		'synth.transport.or': 'OR',
 		'synth.transport.lenInputHint': '图形长度（页）— {pages} × {steps} 步（{meter}）= {total} 步',
@@ -390,13 +507,16 @@ export default {
 		'synth.transport.meterNextHint': '下一个拍号',
 		'synth.transport.settingsHint': '打开合成器与音频 DSP 的全局设置 [SETTINGS]',
 		'synth.transport.settings': '设置',
-		'synth.transport.rewindHint': '回到开头（第 1 步 / 第 1.1 小节）— Home 键；Backspace 也会停止播放',
+		'synth.transport.rewindHint':
+			'回到开头（第 1 步 / 第 1.1 小节）— Home 键；Backspace 也会停止播放',
 		'synth.transport.stepBackHint': '后退 1 小节 (◄◄)',
 		'synth.transport.playToggleHint': '播放 / 停止音序器（从当前暂停位置继续）— Enter',
 		'synth.transport.stepFwdHint': '前进 1 小节 (►►)',
 		'synth.transport.loopOnHint': 'LOOP — 图形会一直循环，直到你停止。点击切换为 ONCE。',
-		'synth.transport.loopOffHint': 'ONCE — 播放一遍图形，让尾音自然消失后回到第 1 小节。点击切换为 LOOP。',
-		'synth.transport.jumpToCursorHint': '将播放头跳到光标位置（第 {bar}.{beat} 小节，第 {step}/{total} 步）— 点击跳转',
+		'synth.transport.loopOffHint':
+			'ONCE — 播放一遍图形，让尾音自然消失后回到第 1 小节。点击切换为 LOOP。',
+		'synth.transport.jumpToCursorHint':
+			'将播放头跳到光标位置（第 {bar}.{beat} 小节，第 {step}/{total} 步）— 点击跳转',
 		'synth.transport.snapHint': '网格量化 / 吸附对齐',
 		'synth.transport.durHint': '放置音符的持续时长',
 		'synth.transport.pageNavHint': '步进页导航',
@@ -410,25 +530,32 @@ export default {
 		'synth.confirm.newPatchTitle': '丢弃当前音色？',
 		'synth.confirm.newPatchBody': '新建音色会重置本音轨的全部音色参数，未保存的内容将会丢失。',
 		'synth.confirm.newAdvPatchTitle': '丢弃当前音色？',
-		'synth.confirm.newAdvPatchBody': '新建高级音色会重置本音轨，并把机架替换为空白的弦与共鸣体，未保存的内容将会丢失。',
+		'synth.confirm.newAdvPatchBody':
+			'新建高级音色会重置本音轨，并把机架替换为空白的弦与共鸣体，未保存的内容将会丢失。',
 		'synth.confirm.newProjectTitle': '丢弃当前工程？',
-		'synth.confirm.newProjectBody': '新建工程会清空全部 8 条音轨、它们的音符与音色，未保存的内容将会丢失。',
+		'synth.confirm.newProjectBody':
+			'新建工程会清空全部 8 条音轨、它们的音符与音色，未保存的内容将会丢失。',
 
 		'synth.patch.newHint': '新建工程 — 清空所有音轨，重置为空白的 64 步音序器',
-		'synth.patch.saveHint': '保存乐器补丁 — 将全部 8 条音轨的合成器参数与音序器音符存入浏览器本地存储',
+		'synth.patch.saveHint':
+			'保存乐器补丁 — 将全部 8 条音轨的合成器参数与音序器音符存入浏览器本地存储',
 		'synth.patch.loadHint': '加载 — 浏览器本地补丁或内置曲目',
 		'synth.patch.loadLocalHint': '从浏览器本地存储恢复已保存的合成器参数与音序器图形',
 		'synth.patch.loadLocalLabel': '本地补丁（浏览器）',
 		'synth.patch.builtinSongsLabel': '内置曲目',
 		'synth.patch.loadSongHint': '加载 {name}（{bpm} BPM，{meter}，{steps} 步）',
-		'synth.patch.importHint': '导入 — 之前导出的补丁（.json 或压缩后的 .json.gz），或一个 .mid 文件：每条 MIDI 音轨都会变成一条音序器音轨，并保留文件自身的速度与拍号。你也可以把文件直接拖到本页面任意位置。',
-		'synth.patch.exportHint': '导出补丁 — 下载完整的 8 音轨合成器配置与图形，以 gzip 压缩（.json.gz），因为音序器网格大多是重复的空单元格',
-		'synth.patch.renderHint': '渲染 WAV — 让整段图形离线通过真实信号链，导出为 16 位立体声 WAV。较长的多分钟曲目可能需要一两分钟；按钮会显示实时进度。',
+		'synth.patch.importHint':
+			'导入 — 之前导出的补丁（.json 或压缩后的 .json.gz），或一个 .mid 文件：每条 MIDI 音轨都会变成一条音序器音轨，并保留文件自身的速度与拍号。你也可以把文件直接拖到本页面任意位置。',
+		'synth.patch.exportHint':
+			'导出补丁 — 下载完整的 8 音轨合成器配置与图形，以 gzip 压缩（.json.gz），因为音序器网格大多是重复的空单元格',
+		'synth.patch.renderHint':
+			'渲染 WAV — 让整段图形离线通过真实信号链，导出为 16 位立体声 WAV。较长的多分钟曲目可能需要一两分钟；按钮会显示实时进度。',
 		'synth.patch.renderingStage': '{stage} {percent}%',
 		'synth.patch.renderingStageSchedule': '排程',
 		'synth.patch.renderingStageRender': '渲染',
 		'synth.patch.rendering': '渲染中…',
-		'synth.patch.shareHint': '分享补丁 — 将整个补丁压缩进一个链接并复制；打开该链接的任何人都会得到你完全相同的音轨与图形',
+		'synth.patch.shareHint':
+			'分享补丁 — 将整个补丁压缩进一个链接并复制；打开该链接的任何人都会得到你完全相同的音轨与图形',
 		'synth.patch.shareBlocked': '浏览器拦截了剪贴板访问 — 在这里手动复制链接：',
 
 		'synth.status.newOk': '✓ 新建',
@@ -452,18 +579,21 @@ export default {
 		'synth.midiImport.truncated': '这个 MIDI 文件在中途结束 — 可能不完整。',
 		'synth.midiImport.tempoMapNote': '文件有 {count} 次速度变化，只使用第一个。',
 		'synth.midiImport.meterChangeNote': '文件中途更换拍号，只使用第一个。',
-		'synth.midiImport.smpteUnsupported': '不支持 SMPTE 计时的 MIDI 文件 — 请以节拍（PPQ）计时方式导出。',
+		'synth.midiImport.smpteUnsupported':
+			'不支持 SMPTE 计时的 MIDI 文件 — 请以节拍（PPQ）计时方式导出。',
 		'synth.midiImport.zeroTicks': 'MIDI 文件声明每四分音符的 tick 数为零。',
 		'synth.midiImport.noNoteData': '该 MIDI 文件中未找到任何音符数据。',
 		'synth.midiImport.defaultTrackName': 'MIDI 音轨 {index}',
-		'synth.midiImport.tracksNotesBars': '{tracks} 条音轨{tracksPlural} · {notes} 个音符 · {bars} 小节',
+		'synth.midiImport.tracksNotesBars':
+			'{tracks} 条音轨{tracksPlural} · {notes} 个音符 · {bars} 小节',
 		'synth.midiImport.bpmMeter': '{bpm} BPM{bpmNote} · {meter}{meterNote}',
 		'synth.midiImport.bpmDefaultNote': '（文件未指定 — 使用 MIDI 默认值）',
 		'synth.midiImport.meterUnsupportedNote': '（不支持 {meter}，已改用 4/4）',
 		'synth.midiImport.trackLine': '  {index}. {name} {notes} 个音符{drum}',
 		'synth.midiImport.drumChannelNote': '  [GM 打击乐通道]',
 		'synth.midiImport.notesDropped': '{count} 个{plural}超出 88 键范围的音符已被丢弃',
-		'synth.midiImport.partsSkipped': '{count} 个{plural}多余的声部已跳过 — 机架最多容纳 {capacity} 条音轨',
+		'synth.midiImport.partsSkipped':
+			'{count} 个{plural}多余的声部已跳过 — 机架最多容纳 {capacity} 条音轨',
 		'synth.render.failed': '渲染失败',
 
 		'synth.render.done': '✓ {filename}',
@@ -481,7 +611,8 @@ export default {
 		'synth.preset.pickHint': '当前{target}的音色 — {name}。↑/↓ 切换音色。',
 		'synth.preset.builtInLabel': '内置',
 		'synth.preset.myKitsLabel': '我的鼓组',
-		'synth.preset.loadKitHint': '将 {name} 加载到当前音轨 — 开启打击乐模式并替换其按键音色表（{count} 个按键）',
+		'synth.preset.loadKitHint':
+			'将 {name} 加载到当前音轨 — 开启打击乐模式并替换其按键音色表（{count} 个按键）',
 		'synth.preset.loadKitShortHint': '将 {name} 加载到当前音轨（{count} 个按键）',
 		'synth.preset.renameHint': '重命名 {name}',
 		'synth.preset.renameAria': '重命名 {name}',
@@ -500,13 +631,15 @@ export default {
 		'synth.preset.kitsLabel': '鼓组',
 		'synth.preset.loadPresetHint': '将 {name} 加载到当前{target}',
 		'synth.preset.saveActive': '保存当前{target}',
-		'synth.preset.saveActiveHint': '将当前{targetPossessive}音色（机架 1-6 与 AIR；不含音量、声像或音符）保存为浏览器本地的一个音色',
+		'synth.preset.saveActiveHint':
+			'将当前{targetPossessive}音色（机架 1-6 与 AIR；不含音量、声像或音符）保存为浏览器本地的一个音色',
 		'synth.preset.saveShort': '保存',
 		'synth.preset.importShort': '导入',
 		'synth.preset.exportShort': '导出',
 		'synth.preset.myPresetsShort': '我的',
 		'synth.preset.importFile': '导入文件…',
-		'synth.preset.importFileHint': '将一个音色 .json 导入到当前音轨或按键；会被加入「我的音色」。把文件拖到页面任意位置也可以。',
+		'synth.preset.importFileHint':
+			'将一个音色 .json 导入到当前音轨或按键；会被加入「我的音色」。把文件拖到页面任意位置也可以。',
 		'synth.preset.exportActive': '导出当前{target}',
 		'synth.preset.exportActiveHint': '将当前{targetPossessive}音色下载为音色 .json',
 		'synth.preset.targetTrack': '音轨',
@@ -515,9 +648,11 @@ export default {
 		'synth.preset.targetKeyLower': '按键',
 		'synth.preset.targetTrackPossessive': '音轨',
 		'synth.preset.targetKeyPossessive': '按键',
-		'synth.preset.percussionOnHint': '{track} 处于 K.MAP 模式 — 每个按键都有自己的音色；机架和音色编辑的是当前按键。点击可恢复为整条音轨一个音色（按键音色表会保留）。',
+		'synth.preset.percussionOnHint':
+			'{track} 处于 K.MAP 模式 — 每个按键都有自己的音色；机架和音色编辑的是当前按键。点击可恢复为整条音轨一个音色（按键音色表会保留）。',
 		'synth.preset.advancedOnHint': '高级模式：下半部分是钢琴卷帘或连线机架。点击恢复模块 1-7。',
-		'synth.preset.advancedOffHint': '高级布局：隐去模块 1-7，把整个下半部分交给钢琴卷帘或连线机架。',
+		'synth.preset.advancedOffHint':
+			'高级布局：隐去模块 1-7，把整个下半部分交给钢琴卷帘或连线机架。',
 		'synth.preset.newLabel': '新建音色',
 		'synth.preset.newHint': '从一个中性音色开始，用机架 1-7 编辑',
 		'synth.preset.newAdvancedLabel': '新建音色（高级）',
@@ -564,13 +699,15 @@ export default {
 		'synthPatch.mod.lfo': '低频振荡器，用于调制。',
 		'synthPatch.mod.mix': '把两路信号相加。',
 		'synthPatch.mod.excite': '起振：敲击、拨弦或吹气。所有原声乐器都从这里开始。',
-		'synthPatch.mod.string': '振动的弦：长度取自琴键，阻尼和劲度由旋钮控制。钢琴、吉他、贝斯、弓弦乐器。',
+		'synthPatch.mod.string':
+			'振动的弦：长度取自琴键，阻尼和劲度由旋钮控制。钢琴、吉他、贝斯、弓弦乐器。',
 		'synthPatch.mod.tube': '共鸣气柱。奇次谐波做单簧管，全谐波做长笛或铜管。',
 		'synthPatch.mod.modes': '同时三个共振模态，就像鼓面或钟体的振动方式。',
 		'synthPatch.mod.body': '乐器共鸣体：音板、琴箱或鼓腔。让一根弦变成一把吉他的东西。',
 		'synthPatch.mod.sub': '低八度或两个八度，为音色垫上重量。',
 		'synthPatch.mod.pulse': '脉宽可调可扫的方波。一个振荡器听起来像两个。',
-		'synthPatch.mod.bow': '琴弓：咬住琴弦、拖动、打滑、再咬住。这就是小提琴能持续发声而拨弦不能的原因。',
+		'synthPatch.mod.bow':
+			'琴弓：咬住琴弦、拖动、打滑、再咬住。这就是小提琴能持续发声而拨弦不能的原因。',
 		'synthPatch.mod.blend': '在原信号和更暗的副本之间倾斜。把包络接到 CV 上，音色就会随音符打开。',
 		'synthPatch.mod.reed': '簧片是一个阀门。吹得越猛它越会闭合，那种嘶哑就是这么来的。',
 		'synthPatch.mod.comp': '压住瞬态。被敲击的共鸣体，其峰值远高于它自己的延音。',
@@ -578,20 +715,23 @@ export default {
 		'synthPatch.mod.space': '房间。所有原声乐器都是在某个空间里被听到的。',
 		'synthPatch.mod.delay': '带反馈的延时。可以放进音色内部，而不只是挂在输出上。',
 		'synthPatch.mod.pan': '把声音放到立体声场的某个位置。',
-		'synthPatch.mod.in': '音符本身。THEN 触发整张图，PITCH VEL NOTE GATE 是这一次按键的信息。LVL 只控制 OUT 上那路 1-7 号机架的声音；图里自带音源时用不到。',
+		'synthPatch.mod.in':
+			'音符本身。THEN 触发整张图，PITCH VEL NOTE GATE 是这一次按键的信息。LVL 只控制 OUT 上那路 1-7 号机架的声音；图里自带音源时用不到。',
 		'synthPatch.mod.out': '这张图的输出，带独立的音量和声相。没有连到这里的东西都不会发声。',
 		'synthPatch.mod.tofreq': '把音高转换成它所对应的频率。A4 设定基准音，TRSP 按半音移调。',
 		'synthPatch.mod.topitch': '把频率读回成音高。落在两个音之间时会取整，除非关掉 QNT。',
 		'synthPatch.mod.const': '一个固定的数,接到任何数值输入端。',
 		'synthPatch.mod.add': 'A 加 B。B 没接线时用旋钮的值。',
 		'synthPatch.mod.mul': 'A 乘 B。只接 A 时就是一个增益。',
-		'synthPatch.mod.remap': '把数值从一个范围映射到另一个范围并限幅。力度 0-1 映射到截止频率 200-8000。',
+		'synthPatch.mod.remap':
+			'把数值从一个范围映射到另一个范围并限幅。力度 0-1 映射到截止频率 200-8000。',
 		'synthPatch.mod.clamp': '把数值限制在 MIN 和 MAX 之间。',
 		'synthPatch.mod.lerp': '按 ALPHA 在 A 和 B 之间插值。',
 		'synthPatch.mod.curve': '弯曲一个 0-1 的值。大于 1 起步慢,小于 1 起步快。',
 		'synthPatch.mod.seq': '让后面的模块晚一点执行。间隔 GAP 毫秒，两次击打就成了装饰音而不是一下。',
 		'synthPatch.mod.when': '一个分支。判断成立时，执行流才会从 TRUE 继续往下走。',
-		'synthPatch.mod.act': '前面的 WHEN 成立时要做的事：CUT 掐断其他音，SOLO 只留下本组，GLIDE 从上一个音高滑进来。',
+		'synthPatch.mod.act':
+			'前面的 WHEN 成立时要做的事：CUT 掐断其他音，SOLO 只留下本组，GLIDE 从上一个音高滑进来。',
 		'synthPatch.mod.split': '把立体声拆开，左右两路可以各自处理。',
 		'synthPatch.mod.merge': '把两路单声道合回立体声。',
 		'synthPatch.mod.scope': '这一点的波形。信号原样通过，不受影响。',
@@ -609,7 +749,8 @@ export default {
 		'synth.wave.basicLabel': 'BASIC',
 		'synth.wave.basicHint': '四种基础模拟波形',
 		'synth.wave.noiseLabel': 'NOISE',
-		'synth.wave.noiseHint': '缓冲区音源：白噪声和 808 镲片音色库（仅 OSC1；在 OSC2 上会以锯齿波播放）',
+		'synth.wave.noiseHint':
+			'缓冲区音源：白噪声和 808 镲片音色库（仅 OSC1；在 OSC2 上会以锯齿波播放）',
 		'synth.wave.advancedLabel': 'ADVANCED',
 		'synth.wave.advancedHint': '叠加与表格化波形：扫描式 PWM、五锯齿波堆叠、抽风琴音栓、折叠正弦波',
 		'synth.wave.customLabel': 'CUSTOM',
@@ -649,8 +790,10 @@ export default {
 
 		'synth.tracks.overlayOnHint': '多轨叠加模式：已开启 — 点击 TRK 可多选并在钢琴卷帘上叠加显示',
 		'synth.tracks.overlayOffHint': '多轨叠加模式：关闭 — 点击可在钢琴卷帘上启用多轨叠加视图',
-		'synth.tracks.trkLabelHint': '音轨 — 点击数字编辑该音轨；在 OVLY 模式下点击可在卷帘上显示或隐藏它',
-		'synth.tracks.setActiveHint': '将 {name} 设为唯一当前音轨（控制机架 1-7、钢琴卷帘编辑与键盘试听）— 当前状态：{state}',
+		'synth.tracks.trkLabelHint':
+			'音轨 — 点击数字编辑该音轨；在 OVLY 模式下点击可在卷帘上显示或隐藏它',
+		'synth.tracks.setActiveHint':
+			'将 {name} 设为唯一当前音轨（控制机架 1-7、钢琴卷帘编辑与键盘试听）— 当前状态：{state}',
 		'synth.tracks.activeSolid': '已激活【实心】',
 		'synth.tracks.inactiveHollow': '未激活【空心】',
 		'synth.tracks.overlayToggleHint': '{name} — 点击名称切换叠加显示。当前编辑中：{state}',
@@ -659,40 +802,63 @@ export default {
 		'synth.tracks.soloHint': '独奏 {name} — 可叠加：独奏多条音轨可同时听到它们',
 
 		'synth.drop.title': '拖放以加载',
-		'synth.drop.body': '.mid → 每条 MIDI 音轨对应一条音序器音轨 · .json → 合成器补丁，或将音色应用到当前音轨',
+		'synth.drop.body':
+			'.mid → 每条 MIDI 音轨对应一条音序器音轨 · .json → 合成器补丁，或将音色应用到当前音轨',
 
 		'synth.tooltip.square': '方波 — 空洞的音色，富含奇次谐波，适合复古 8 位主音和芯片音乐贝斯',
-		'synth.tooltip.sawtooth': '锯齿波 — 明亮而嘈杂的音色，包含所有谐波，适合激进主音、铜管和厚重的柔音',
-		'synth.tooltip.triangle': '三角波 — 柔和温暖的音色，带有轻微的奇次谐波，适合温暖的贝斯线和长笛音色',
+		'synth.tooltip.sawtooth':
+			'锯齿波 — 明亮而嘈杂的音色，包含所有谐波，适合激进主音、铜管和厚重的柔音',
+		'synth.tooltip.triangle':
+			'三角波 — 柔和温暖的音色，带有轻微的奇次谐波，适合温暖的贝斯线和长笛音色',
 		'synth.tooltip.sine': '正弦波 — 纯净的基频，没有泛音，适合深沉的次贝斯和干净的音色',
-		'synth.tooltip.noise': '白噪声发生器 — 各频率能量均等，适合鼓组、打击乐瞬态和音效（OSC1；在 OSC2 上以锯齿波播放）',
-		'synth.tooltip.metal': 'METAL — 六个方波按 808 镲片比例排列，音高固定：ride、crash 与 hi-hat 的铿锵声；叠加 NOISE 增加噪声感，高通滤掉主体可去掉厚重感（OSC1）',
-		'synth.tooltip.pwm': 'PWM — 脉冲宽度以 WIDTH 为中心，按 RATE 的速度、DEPTH 的幅度扫描（旋钮在其子菜单中）；经典的流动模拟柔音与主音',
-		'synth.tooltip.supersaw': 'SUPERSAW — 五个锯齿波，外侧一对以 SPREAD 音分展开，混合比例为 MIX（旋钮在其子菜单中）；无需合唱效果即可实现宽广的 Trance 堆叠音色',
-		'synth.tooltip.organ': 'ORGAN — 六个音栓，对应第 1、2、3、4、5、8 次谐波（旋钮在其子菜单中）；稳定、空灵，适合垫在主音下方',
-		'synth.tooltip.fold': 'FOLD — 正弦波经 FOLD 驱动进入波形折叠器（旋钮在其子菜单中）；比三角波更明亮，带有西海岸风格的锐利感',
-		'synth.tooltips.blendLayer': '混合模式：叠加 — 将振荡器 1 与振荡器 2 并行相加，形成厚重的双振荡器音色',
-		'synth.tooltips.blendFm': '混合模式：FM（频率调制）— 振荡器 2 调制振荡器 1 的频率，产生丰富的金属或钟铃质感谐波音色',
-		'synth.tooltips.blendRing': '混合模式：环形调制 — 将振荡器 1 与 2 的信号相乘，产生复杂的非谐波纹理',
-		'synth.tooltips.blendSync': '混合模式：硬同步 — 振荡器 1 每完成一个周期就重置振荡器 2 的相位，产生犀利的同步主音扫音',
-		'synth.tooltips.filterLowpass': '滤波器模式：低通滤波器（LPF）— 允许截止频率以下的低频通过，衰减高频',
-		'synth.tooltips.filterHighpass': '滤波器模式：高通滤波器（HPF）— 允许截止频率以上的高频通过，衰减低频',
-		'synth.tooltips.filterBandpass': '滤波器模式：带通滤波器（BPF）— 让截止频率附近的一个共振窄带通过，衰减高低两端',
-		'synth.tooltips.filterNotch': '滤波器模式：陷波 / 带阻滤波器（BRF）— 衰减截止频率处的一个窄带，同时让高低频通过',
+		'synth.tooltip.noise':
+			'白噪声发生器 — 各频率能量均等，适合鼓组、打击乐瞬态和音效（OSC1；在 OSC2 上以锯齿波播放）',
+		'synth.tooltip.metal':
+			'METAL — 六个方波按 808 镲片比例排列，音高固定：ride、crash 与 hi-hat 的铿锵声；叠加 NOISE 增加噪声感，高通滤掉主体可去掉厚重感（OSC1）',
+		'synth.tooltip.pwm':
+			'PWM — 脉冲宽度以 WIDTH 为中心，按 RATE 的速度、DEPTH 的幅度扫描（旋钮在其子菜单中）；经典的流动模拟柔音与主音',
+		'synth.tooltip.supersaw':
+			'SUPERSAW — 五个锯齿波，外侧一对以 SPREAD 音分展开，混合比例为 MIX（旋钮在其子菜单中）；无需合唱效果即可实现宽广的 Trance 堆叠音色',
+		'synth.tooltip.organ':
+			'ORGAN — 六个音栓，对应第 1、2、3、4、5、8 次谐波（旋钮在其子菜单中）；稳定、空灵，适合垫在主音下方',
+		'synth.tooltip.fold':
+			'FOLD — 正弦波经 FOLD 驱动进入波形折叠器（旋钮在其子菜单中）；比三角波更明亮，带有西海岸风格的锐利感',
+		'synth.tooltips.blendLayer':
+			'混合模式：叠加 — 将振荡器 1 与振荡器 2 并行相加，形成厚重的双振荡器音色',
+		'synth.tooltips.blendFm':
+			'混合模式：FM（频率调制）— 振荡器 2 调制振荡器 1 的频率，产生丰富的金属或钟铃质感谐波音色',
+		'synth.tooltips.blendRing':
+			'混合模式：环形调制 — 将振荡器 1 与 2 的信号相乘，产生复杂的非谐波纹理',
+		'synth.tooltips.blendSync':
+			'混合模式：硬同步 — 振荡器 1 每完成一个周期就重置振荡器 2 的相位，产生犀利的同步主音扫音',
+		'synth.tooltips.filterLowpass':
+			'滤波器模式：低通滤波器（LPF）— 允许截止频率以下的低频通过，衰减高频',
+		'synth.tooltips.filterHighpass':
+			'滤波器模式：高通滤波器（HPF）— 允许截止频率以上的高频通过，衰减低频',
+		'synth.tooltips.filterBandpass':
+			'滤波器模式：带通滤波器（BPF）— 让截止频率附近的一个共振窄带通过，衰减高低两端',
+		'synth.tooltips.filterNotch':
+			'滤波器模式：陷波 / 带阻滤波器（BRF）— 衰减截止频率处的一个窄带，同时让高低频通过',
 		'synth.tooltips.lfoSine': '正弦波 LFO — 平滑、连续的周期性调制',
 		'synth.tooltips.lfoTriangle': '三角波 LFO — 线性上升与下降的调制',
 		'synth.tooltips.lfoSquare': '方波 LFO — 阶梯式开关二值调制脉冲',
 		'synth.tooltips.lfoSawtooth': '锯齿波 LFO — 线性上升后瞬间跌落',
-		'synth.tooltip.preset8BitBass': '音色：8-Bit Bass — 复古芯片音乐方波/三角波贝斯，配合灵敏的 VCF 滤波器包络',
+		'synth.tooltip.preset8BitBass':
+			'音色：8-Bit Bass — 复古芯片音乐方波/三角波贝斯，配合灵敏的 VCF 滤波器包络',
 		'synth.tooltip.presetPluck': '音色：Pluck — 短暂的原声/电子拨弦式合成音，滤波器衰减迅速',
 		'synth.tooltip.presetBrass': '音色：Brass — 双失谐锯齿波振荡器，配合动态滤波器扫频',
-		'synth.tooltip.presetLead': '音色：Lead — 犀利的 25% 脉冲波叠加锯齿波主音，共振滤波器，完整延音',
-		'synth.tooltip.presetSubBass': '音色：Sub Bass — 正弦波叠加低八度 SUB，经 800 Hz 低通滤波；厚重而不刺耳',
-		'synth.tooltip.presetAcidBass': '音色：Acid Bass — 锯齿波进入由包络扫描的 Q 8 低通滤波器，60 毫秒滑音',
+		'synth.tooltip.presetLead':
+			'音色：Lead — 犀利的 25% 脉冲波叠加锯齿波主音，共振滤波器，完整延音',
+		'synth.tooltip.presetSubBass':
+			'音色：Sub Bass — 正弦波叠加低八度 SUB，经 800 Hz 低通滤波；厚重而不刺耳',
+		'synth.tooltip.presetAcidBass':
+			'音色：Acid Bass — 锯齿波进入由包络扫描的 Q 8 低通滤波器，60 毫秒滑音',
 		'synth.tooltip.presetFmBass': '音色：FM Bass — 正弦波载波被高八度的正弦波调制',
 		'synth.tooltip.presetSawLead': '音色：Saw Lead — 两个相差 14 音分的锯齿波，带渐入的颤音',
-		'synth.tooltip.presetSyncLead': '音色：Sync Lead — SYNC 模式，第二振荡器高五度，滤波器包络制造撕裂感',
-		'synth.tooltip.presetChipLead': '音色：Chip Lead — 15% 脉冲波，无滤波器，快速颤音：NES 主音音色',
+		'synth.tooltip.presetSyncLead':
+			'音色：Sync Lead — SYNC 模式，第二振荡器高五度，滤波器包络制造撕裂感',
+		'synth.tooltip.presetChipLead':
+			'音色：Chip Lead — 15% 脉冲波，无滤波器，快速颤音：NES 主音音色',
 		'synth.tooltip.presetKoto': '音色：Koto — 三角波叠加高八度正弦波，滤波器骤然闭合；无延音',
 		'synth.tooltip.presetMarimba': '音色：Marimba — 正弦波主体与较轻的高八度三角波，一起衰减',
 		'synth.tooltip.presetBell': '音色：Bell — 两个正弦波以 3.5 的比例环形调制；非谐波泛音，长尾音',
@@ -702,48 +868,63 @@ export default {
 		'synth.tooltip.presetHarpsichord': '音色：Harpsichord — 锯齿波叠加高八度方波，拨弦感明亮',
 		'synth.tooltip.presetWarmPad': '音色：Warm Pad — 失谐锯齿波搭配随慢速 LFO 呼吸的低通滤波器',
 		'synth.tooltip.presetStrings': '音色：Strings — 宽失谐，更明亮的滤波器，渐入的颤音',
-		'synth.tooltip.presetGlassPad': '音色：Glass Pad — 三角波与高八度正弦波，开放的滤波器，高频通透，缓慢自动声像摇摆',
+		'synth.tooltip.presetGlassPad':
+			'音色：Glass Pad — 三角波与高八度正弦波，开放的滤波器，高频通透，缓慢自动声像摇摆',
 		'synth.tooltip.presetHollowPad': '音色：Hollow Pad — 方波叠加低八度方波，低通滤波器随 LFO 开合',
-		'synth.tooltip.presetKick808': '音色：808 Kick — 正弦波带 2.5 个八度的音高下滑，叠加次低音；建议排在低音区（C2-C3）',
+		'synth.tooltip.presetKick808':
+			'音色：808 Kick — 正弦波带 2.5 个八度的音高下滑，叠加次低音；建议排在低音区（C2-C3）',
 		'synth.tooltip.presetKickPunch': '音色：Punch Kick — 更短更硬的三角波底鼓，带噪声击槌声',
-		'synth.tooltip.presetSnare': '音色：Snare — 三角波加五度音体，带噪声嘎啦声；KEY TRK 会让键盘上方的音色更明亮',
-		'synth.tooltip.presetClap': '音色：Clap — 三次相隔 11 毫秒的噪声脉冲，随后是尾音（机架 1 中的 RPT / GAP）',
+		'synth.tooltip.presetSnare':
+			'音色：Snare — 三角波加五度音体，带噪声嘎啦声；KEY TRK 会让键盘上方的音色更明亮',
+		'synth.tooltip.presetClap':
+			'音色：Clap — 三次相隔 11 毫秒的噪声脉冲，随后是尾音（机架 1 中的 RPT / GAP）',
 		'synth.tooltip.presetClosedHat': '音色：Closed Hat — 45 毫秒的高通噪声；音高越高越明亮',
 		'synth.tooltip.presetOpenHat': '音色：Open Hat — 让闭镲延音至 350 毫秒',
-		'synth.tooltip.presetTom': '音色：Tom — 正弦波加三角波的轻微音高下滑；跨几个按键演奏可组成一组嗵鼓',
+		'synth.tooltip.presetTom':
+			'音色：Tom — 正弦波加三角波的轻微音高下滑；跨几个按键演奏可组成一组嗵鼓',
 		'synth.tooltip.presetRimshot': '音色：Rimshot — 环形调制的 40 毫秒短促声',
-		'synth.tooltip.presetCowbell': '音色：Cowbell — 两个相差五度的方波（808 组合），带通滤波于 1.5 kHz',
+		'synth.tooltip.presetCowbell':
+			'音色：Cowbell — 两个相差五度的方波（808 组合），带通滤波于 1.5 kHz',
 		'synth.tooltip.presetShaker': '音色：Shaker — 柔和起音的噪声，滤波器随敲击开合',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '每个音轨条代表一个独立声部，拥有自己的振荡器、滤波器、包络和均衡器。点击一个音轨条，让它成为下方所有机架正在编辑的对象；M 和 S 分别静音和独奏它。OVLY 会在你正在编辑的音轨背后绘出其他音轨，方便对齐声部。',
+		'synth.tour.tracksBody':
+			'每个音轨条代表一个独立声部，拥有自己的振荡器、滤波器、包络和均衡器。点击一个音轨条，让它成为下方所有机架正在编辑的对象；M 和 S 分别静音和独奏它。OVLY 会在你正在编辑的音轨背后绘出其他音轨，方便对齐声部。',
 		'synth.tour.rollTitle': 'PIANO ROLL',
-		'synth.tour.rollBody': '点击单元格放置一个音符，拖动可连续绘制一段，再次点击可擦除。SNAP 是光标吸附的网格，DUR 是放置音符的时长 — 两者最小都可到 1/12 以支持三连音。一个延音音符就是同一个音高在多个格子中重复出现，因此更长的一小节其实就是一个更长的音符。',
+		'synth.tour.rollBody':
+			'点击单元格放置一个音符，拖动可连续绘制一段，再次点击可擦除。SNAP 是光标吸附的网格，DUR 是放置音符的时长 — 两者最小都可到 1/12 以支持三连音。一个延音音符就是同一个音高在多个格子中重复出现，因此更长的一小节其实就是一个更长的音符。',
 		'synth.tour.rollKeyLen': '图形长度，以页为单位',
 		'synth.tour.rollKeyMeter': '4/4、3/4、2/4、5/4、6/8 或 7/8',
 		'synth.tour.rollKeyAcc': '每步重音，+1 到 +4 dB',
 		'synth.tour.playTitle': 'PLAY IT',
-		'synth.tour.playBody': '通过这些按键、QWERTY 键盘行，或已连接的真实 MIDI 控制器试听当前音轨。这里弹奏的音符只会发声，不会被录制 — 上方的钢琴卷帘才是编写图形的地方。',
+		'synth.tour.playBody':
+			'通过这些按键、QWERTY 键盘行，或已连接的真实 MIDI 控制器试听当前音轨。这里弹奏的音符只会发声，不会被录制 — 上方的钢琴卷帘才是编写图形的地方。',
 		'synth.tour.playKeyLower': '低八度，白键与黑键',
 		'synth.tour.playKeyUpper': '高八度',
 		'synth.tour.playKeyOctave': '降低 / 升高八度（也可用 [ 和 ]）',
 		'synth.tour.playKeySustain': '延音踏板，按住即为踏下',
 		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
-		'synth.tour.voiceBody': '声音在这里被塑造，按信号顺序：两个振荡器、一个将它们叠加或让其中一个调制另一个（FM、环形、同步）的融合级，以及一个共振多模滤波器。这里的每个旋钮都编辑上方选中的音轨。',
+		'synth.tour.voiceBody':
+			'声音在这里被塑造，按信号顺序：两个振荡器、一个将它们叠加或让其中一个调制另一个（FM、环形、同步）的融合级，以及一个共振多模滤波器。这里的每个旋钮都编辑上方选中的音轨。',
 		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
-		'synth.tour.shapeBody': '声音随时间发生的变化：分别控制振幅与滤波器的双包络、可驱动音高、截止频率、声像或音量的 LFO 矩阵、逐音轨的 FX 与六段均衡器，最后是带有可视化的输出条。',
+		'synth.tour.shapeBody':
+			'声音随时间发生的变化：分别控制振幅与滤波器的双包络、可驱动音高、截止频率、声像或音量的 LFO 矩阵、逐音轨的 FX 与六段均衡器，最后是带有可视化的输出条。',
 		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
 		'synth.tour.advTitle': '另一半',
-		'synth.tour.advBody': '机架 1-7 是一件乐器：所有控件铺开，不用接线。ADV 是另一件 —— 机架让位，面板变成连线机架，音色由原语和跳线搭出来。每条音轨只处在其中一种模式，这个选择随音色一起保存。',
+		'synth.tour.advBody':
+			'机架 1-7 是一件乐器：所有控件铺开，不用接线。ADV 是另一件 —— 机架让位，面板变成连线机架，音色由原语和跳线搭出来。每条音轨只处在其中一种模式，这个选择随音色一起保存。',
 		'synth.tour.advAction': '把这条音轨切到 ADV',
 		'synth.tour.canvasTitle': '连线机架',
-		'synth.tour.canvasBody': '模块摆在画布上，跳线连接它们的端口。白色端口走音频，黄色端口走控制信号 —— 包络接到滤波器截止频率是一根线，不是一个旋钮。音频不能连成回路，编辑器会拒绝；控制信号可以，而且常常应该。',
+		'synth.tour.canvasBody':
+			'模块摆在画布上，跳线连接它们的端口。白色端口走音频，黄色端口走控制信号 —— 包络接到滤波器截止频率是一根线，不是一个旋钮。音频不能连成回路，编辑器会拒绝；控制信号可以，而且常常应该。',
 		'synth.tour.canvasKeyDrag': '移动模块，或拖端口连线',
 		'synth.tour.canvasKeyPan': '平移画布',
 		'synth.tour.canvasKeyZoom': '以指针为中心缩放',
 		'synth.tour.paletteTitle': '零件',
-		'synth.tour.paletteBody': '每一项都是一个原语：振荡器、包络、共振的弦。拖到画布上，或点击直接放入。有意思的声音来自把它们按没人做过的顺序连起来。',
-		'synth.tour.transportBody': 'LOAD 用于选择内置曲目，IMP 用于导入之前导出的补丁或 .mid 文件 — 每条 MIDI 音轨都会变成一条音序器音轨，并保留文件本身的速度与拍号。你也可以把 .mid 文件拖到页面任意位置。',
+		'synth.tour.paletteBody':
+			'每一项都是一个原语：振荡器、包络、共振的弦。拖到画布上，或点击直接放入。有意思的声音来自把它们按没人做过的顺序连起来。',
+		'synth.tour.transportBody':
+			'LOAD 用于选择内置曲目，IMP 用于导入之前导出的补丁或 .mid 文件 — 每条 MIDI 音轨都会变成一条音序器音轨，并保留文件本身的速度与拍号。你也可以把 .mid 文件拖到页面任意位置。',
 		'synth.tour.transportKeyWav': '离线渲染图形并下载',
 		'synth.tour.transportKeyShare': '将整个补丁打包进一个链接',
 		'synth.tour.transportKeySettings': '全局音频与 DSP 设置'
@@ -753,7 +934,8 @@ export default {
 		'synth.badge.walkthroughAria': '合成器導覽',
 		'synth.midi.deviceFallbackName': 'MIDI 裝置（{id}）',
 
-		'synth.transport.lenHint': '以「頁」為單位的圖形長度（1 頁 = 目前 METER 下的 1 小節）— 也就是循環點',
+		'synth.transport.lenHint':
+			'以「頁」為單位的圖形長度（1 頁 = 目前 METER 下的 1 小節）— 也就是循環點',
 		'synth.transport.lenCycleHint': '循環切換頁數預設：1 → 2 → 4 → 8 → 16 → 32 頁',
 		'synth.transport.or': 'OR',
 		'synth.transport.lenInputHint': '圖形長度（頁）— {pages} × {steps} 步（{meter}）= {total} 步',
@@ -763,13 +945,16 @@ export default {
 		'synth.transport.meterNextHint': '下一個拍號',
 		'synth.transport.settingsHint': '開啟合成器與音訊 DSP 的全域設定 [SETTINGS]',
 		'synth.transport.settings': '設定',
-		'synth.transport.rewindHint': '回到開頭（第 1 步 / 第 1.1 小節）— Home 鍵；Backspace 也會停止播放',
+		'synth.transport.rewindHint':
+			'回到開頭（第 1 步 / 第 1.1 小節）— Home 鍵；Backspace 也會停止播放',
 		'synth.transport.stepBackHint': '後退 1 小節 (◄◄)',
 		'synth.transport.playToggleHint': '播放 / 停止音序器（從目前暫停位置繼續）— Enter',
 		'synth.transport.stepFwdHint': '前進 1 小節 (►►)',
 		'synth.transport.loopOnHint': 'LOOP — 圖形會一直循環，直到你停止。點擊切換為 ONCE。',
-		'synth.transport.loopOffHint': 'ONCE — 播放一次圖形，讓尾音自然消失後回到第 1 小節。點擊切換為 LOOP。',
-		'synth.transport.jumpToCursorHint': '將播放頭跳到游標位置（第 {bar}.{beat} 小節，第 {step}/{total} 步）— 點擊跳轉',
+		'synth.transport.loopOffHint':
+			'ONCE — 播放一次圖形，讓尾音自然消失後回到第 1 小節。點擊切換為 LOOP。',
+		'synth.transport.jumpToCursorHint':
+			'將播放頭跳到游標位置（第 {bar}.{beat} 小節，第 {step}/{total} 步）— 點擊跳轉',
 		'synth.transport.snapHint': '網格量化 / 吸附對齊',
 		'synth.transport.durHint': '放置音符的持續時長',
 		'synth.transport.pageNavHint': '步進頁導覽',
@@ -783,25 +968,32 @@ export default {
 		'synth.confirm.newPatchTitle': '捨棄目前音色？',
 		'synth.confirm.newPatchBody': '新建音色會重設本音軌的全部音色參數，未儲存的內容將會遺失。',
 		'synth.confirm.newAdvPatchTitle': '捨棄目前音色？',
-		'synth.confirm.newAdvPatchBody': '新建進階音色會重設本音軌，並把機架替換為空白的弦與共鳴體，未儲存的內容將會遺失。',
+		'synth.confirm.newAdvPatchBody':
+			'新建進階音色會重設本音軌，並把機架替換為空白的弦與共鳴體，未儲存的內容將會遺失。',
 		'synth.confirm.newProjectTitle': '捨棄目前專案？',
-		'synth.confirm.newProjectBody': '新建專案會清空全部 8 條音軌、它們的音符與音色，未儲存的內容將會遺失。',
+		'synth.confirm.newProjectBody':
+			'新建專案會清空全部 8 條音軌、它們的音符與音色，未儲存的內容將會遺失。',
 
 		'synth.patch.newHint': '新建專案 — 清空所有音軌，重設為空白的 64 步音序器',
-		'synth.patch.saveHint': '儲存音色檔 — 將全部 8 條音軌的合成器參數與音序器音符存入瀏覽器本機儲存',
+		'synth.patch.saveHint':
+			'儲存音色檔 — 將全部 8 條音軌的合成器參數與音序器音符存入瀏覽器本機儲存',
 		'synth.patch.loadHint': '載入 — 瀏覽器本機音色檔或內建曲目',
 		'synth.patch.loadLocalHint': '從瀏覽器本機儲存還原已儲存的合成器參數與音序器圖形',
 		'synth.patch.loadLocalLabel': '本機音色檔（瀏覽器）',
 		'synth.patch.builtinSongsLabel': '內建曲目',
 		'synth.patch.loadSongHint': '載入 {name}（{bpm} BPM，{meter}，{steps} 步）',
-		'synth.patch.importHint': '匯入 — 先前匯出的音色檔（.json 或壓縮後的 .json.gz），或一個 .mid 檔案：每條 MIDI 音軌都會變成一條音序器音軌，並保留檔案本身的速度與拍號。你也可以把檔案直接拖到本頁面任意位置。',
-		'synth.patch.exportHint': '匯出音色檔 — 下載完整的 8 音軌合成器設定與圖形，以 gzip 壓縮（.json.gz），因為音序器網格大多是重複的空儲存格',
-		'synth.patch.renderHint': '轉出 WAV — 讓整段圖形離線通過真實訊號鏈，匯出為 16 位元立體聲 WAV。較長的多分鐘曲目可能需要一兩分鐘；按鈕會顯示即時進度。',
+		'synth.patch.importHint':
+			'匯入 — 先前匯出的音色檔（.json 或壓縮後的 .json.gz），或一個 .mid 檔案：每條 MIDI 音軌都會變成一條音序器音軌，並保留檔案本身的速度與拍號。你也可以把檔案直接拖到本頁面任意位置。',
+		'synth.patch.exportHint':
+			'匯出音色檔 — 下載完整的 8 音軌合成器設定與圖形，以 gzip 壓縮（.json.gz），因為音序器網格大多是重複的空儲存格',
+		'synth.patch.renderHint':
+			'轉出 WAV — 讓整段圖形離線通過真實訊號鏈，匯出為 16 位元立體聲 WAV。較長的多分鐘曲目可能需要一兩分鐘；按鈕會顯示即時進度。',
 		'synth.patch.renderingStage': '{stage} {percent}%',
 		'synth.patch.renderingStageSchedule': '排程',
 		'synth.patch.renderingStageRender': '轉出',
 		'synth.patch.rendering': '轉出中…',
-		'synth.patch.shareHint': '分享音色檔 — 將整個音色檔壓縮進一個連結並複製；打開該連結的任何人都會得到你完全相同的音軌與圖形',
+		'synth.patch.shareHint':
+			'分享音色檔 — 將整個音色檔壓縮進一個連結並複製；打開該連結的任何人都會得到你完全相同的音軌與圖形',
 		'synth.patch.shareBlocked': '瀏覽器封鎖了剪貼簿存取 — 請在這裡手動複製連結：',
 
 		'synth.status.newOk': '✓ 新建',
@@ -825,18 +1017,21 @@ export default {
 		'synth.midiImport.truncated': '這個 MIDI 檔案在中途結束 — 可能不完整。',
 		'synth.midiImport.tempoMapNote': '檔案有 {count} 次速度變化，只使用第一個。',
 		'synth.midiImport.meterChangeNote': '檔案中途更換拍號，只使用第一個。',
-		'synth.midiImport.smpteUnsupported': '不支援 SMPTE 計時的 MIDI 檔案 — 請以節拍（PPQ）計時方式匯出。',
+		'synth.midiImport.smpteUnsupported':
+			'不支援 SMPTE 計時的 MIDI 檔案 — 請以節拍（PPQ）計時方式匯出。',
 		'synth.midiImport.zeroTicks': 'MIDI 檔案宣告每四分音符的 tick 數為零。',
 		'synth.midiImport.noNoteData': '這個 MIDI 檔案中沒有找到任何音符資料。',
 		'synth.midiImport.defaultTrackName': 'MIDI 音軌 {index}',
-		'synth.midiImport.tracksNotesBars': '{tracks} 條音軌{tracksPlural} · {notes} 個音符 · {bars} 小節',
+		'synth.midiImport.tracksNotesBars':
+			'{tracks} 條音軌{tracksPlural} · {notes} 個音符 · {bars} 小節',
 		'synth.midiImport.bpmMeter': '{bpm} BPM{bpmNote} · {meter}{meterNote}',
 		'synth.midiImport.bpmDefaultNote': '（檔案未指定 — 使用 MIDI 預設值）',
 		'synth.midiImport.meterUnsupportedNote': '（不支援 {meter}，已改用 4/4）',
 		'synth.midiImport.trackLine': '  {index}. {name} {notes} 個音符{drum}',
 		'synth.midiImport.drumChannelNote': '  [GM 打擊樂聲道]',
 		'synth.midiImport.notesDropped': '{count} 個{plural}超出 88 鍵範圍的音符已被捨棄',
-		'synth.midiImport.partsSkipped': '{count} 個{plural}多餘的聲部已略過 — 機架最多容納 {capacity} 條音軌',
+		'synth.midiImport.partsSkipped':
+			'{count} 個{plural}多餘的聲部已略過 — 機架最多容納 {capacity} 條音軌',
 		'synth.render.failed': '轉出失敗',
 
 		'synth.render.done': '✓ {filename}',
@@ -854,7 +1049,8 @@ export default {
 		'synth.preset.pickHint': '目前{target}的音色 — {name}。↑/↓ 切換音色。',
 		'synth.preset.builtInLabel': '內建',
 		'synth.preset.myKitsLabel': '我的鼓組',
-		'synth.preset.loadKitHint': '將 {name} 載入到目前音軌 — 開啟打擊樂模式並取代其按鍵音色表（{count} 個按鍵）',
+		'synth.preset.loadKitHint':
+			'將 {name} 載入到目前音軌 — 開啟打擊樂模式並取代其按鍵音色表（{count} 個按鍵）',
 		'synth.preset.loadKitShortHint': '將 {name} 載入到目前音軌（{count} 個按鍵）',
 		'synth.preset.renameHint': '重新命名 {name}',
 		'synth.preset.renameAria': '重新命名 {name}',
@@ -873,13 +1069,15 @@ export default {
 		'synth.preset.kitsLabel': '鼓組',
 		'synth.preset.loadPresetHint': '將 {name} 載入到目前{target}',
 		'synth.preset.saveActive': '儲存目前{target}',
-		'synth.preset.saveActiveHint': '將目前{targetPossessive}音色（機架 1-6 與 AIR；不含音量、聲像或音符）儲存為瀏覽器本機的一個音色',
+		'synth.preset.saveActiveHint':
+			'將目前{targetPossessive}音色（機架 1-6 與 AIR；不含音量、聲像或音符）儲存為瀏覽器本機的一個音色',
 		'synth.preset.saveShort': '儲存',
 		'synth.preset.importShort': '匯入',
 		'synth.preset.exportShort': '匯出',
 		'synth.preset.myPresetsShort': '我的',
 		'synth.preset.importFile': '匯入檔案…',
-		'synth.preset.importFileHint': '將一個音色 .json 匯入到目前音軌或按鍵；會被加入「我的音色」。把檔案拖到頁面任意位置也可以。',
+		'synth.preset.importFileHint':
+			'將一個音色 .json 匯入到目前音軌或按鍵；會被加入「我的音色」。把檔案拖到頁面任意位置也可以。',
 		'synth.preset.exportActive': '匯出目前{target}',
 		'synth.preset.exportActiveHint': '將目前{targetPossessive}音色下載為音色 .json',
 		'synth.preset.targetTrack': '音軌',
@@ -888,9 +1086,11 @@ export default {
 		'synth.preset.targetKeyLower': '按鍵',
 		'synth.preset.targetTrackPossessive': '音軌',
 		'synth.preset.targetKeyPossessive': '按鍵',
-		'synth.preset.percussionOnHint': '{track} 處於 K.MAP 模式 — 每個按鍵都有自己的音色；機架和音色編輯的是目前按鍵。點擊可恢復為整條音軌一個音色（按鍵音色表會保留）。',
+		'synth.preset.percussionOnHint':
+			'{track} 處於 K.MAP 模式 — 每個按鍵都有自己的音色；機架和音色編輯的是目前按鍵。點擊可恢復為整條音軌一個音色（按鍵音色表會保留）。',
 		'synth.preset.advancedOnHint': '進階模式：下半部分是鋼琴捲簾或連線機架。點擊恢復模組 1-7。',
-		'synth.preset.advancedOffHint': '進階佈局：隱去模組 1-7，把整個下半部分交給鋼琴捲簾或連線機架。',
+		'synth.preset.advancedOffHint':
+			'進階佈局：隱去模組 1-7，把整個下半部分交給鋼琴捲簾或連線機架。',
 		'synth.preset.newLabel': '新建音色',
 		'synth.preset.newHint': '從一個中性音色開始，用機架 1-7 編輯',
 		'synth.preset.newAdvancedLabel': '新建音色（進階）',
@@ -937,13 +1137,15 @@ export default {
 		'synthPatch.mod.lfo': '低頻振盪器，用於調變。',
 		'synthPatch.mod.mix': '把兩路訊號相加。',
 		'synthPatch.mod.excite': '起振：敲擊、撥弦或吹氣。所有原聲樂器都從這裡開始。',
-		'synthPatch.mod.string': '振動的弦：長度取自琴鍵，阻尼和勁度由旋鈕控制。鋼琴、吉他、貝斯、弓弦樂器。',
+		'synthPatch.mod.string':
+			'振動的弦：長度取自琴鍵，阻尼和勁度由旋鈕控制。鋼琴、吉他、貝斯、弓弦樂器。',
 		'synthPatch.mod.tube': '共鳴氣柱。奇次諧波做單簧管，全諧波做長笛或銅管。',
 		'synthPatch.mod.modes': '同時三個共振模態，就像鼓面或鐘體的振動方式。',
 		'synthPatch.mod.body': '樂器共鳴體：音板、琴箱或鼓腔。讓一根弦變成一把吉他的東西。',
 		'synthPatch.mod.sub': '低八度或兩個八度，為音色墊上重量。',
 		'synthPatch.mod.pulse': '脈寬可調可掃的方波。一個振盪器聽起來像兩個。',
-		'synthPatch.mod.bow': '琴弓：咬住琴弦、拖動、打滑、再咬住。這就是小提琴能持續發聲而撥弦不能的原因。',
+		'synthPatch.mod.bow':
+			'琴弓：咬住琴弦、拖動、打滑、再咬住。這就是小提琴能持續發聲而撥弦不能的原因。',
 		'synthPatch.mod.blend': '在原訊號和更暗的副本之間傾斜。把包絡接到 CV 上，音色就會隨音符打開。',
 		'synthPatch.mod.reed': '簧片是一個閥門。吹得越猛它越會閉合，那種嘶啞就是這麼來的。',
 		'synthPatch.mod.comp': '壓住瞬態。被敲擊的共鳴體，其峰值遠高於它自己的延音。',
@@ -951,20 +1153,23 @@ export default {
 		'synthPatch.mod.space': '房間。所有原聲樂器都是在某個空間裡被聽到的。',
 		'synthPatch.mod.delay': '帶回授的延時。可以放進音色內部，而不只是掛在輸出上。',
 		'synthPatch.mod.pan': '把聲音放到立體聲場的某個位置。',
-		'synthPatch.mod.in': '音符本身。THEN 觸發整張圖，PITCH VEL NOTE GATE 是這一次按鍵的資訊。LVL 只控制 OUT 上那路 1-7 號機架的聲音；圖裡自帶音源時用不到。',
+		'synthPatch.mod.in':
+			'音符本身。THEN 觸發整張圖，PITCH VEL NOTE GATE 是這一次按鍵的資訊。LVL 只控制 OUT 上那路 1-7 號機架的聲音；圖裡自帶音源時用不到。',
 		'synthPatch.mod.out': '這張圖的輸出，帶獨立的音量和聲相。沒有連到這裡的東西都不會發聲。',
 		'synthPatch.mod.tofreq': '把音高轉換成它所對應的頻率。A4 設定基準音，TRSP 按半音移調。',
 		'synthPatch.mod.topitch': '把頻率讀回成音高。落在兩個音之間時會取整，除非關掉 QNT。',
 		'synthPatch.mod.const': '一個固定的數,接到任何數值輸入端。',
 		'synthPatch.mod.add': 'A 加 B。B 沒接線時用旋鈕的值。',
 		'synthPatch.mod.mul': 'A 乘 B。只接 A 時就是一個增益。',
-		'synthPatch.mod.remap': '把數值從一個範圍映射到另一個範圍並限幅。力度 0-1 映射到截止頻率 200-8000。',
+		'synthPatch.mod.remap':
+			'把數值從一個範圍映射到另一個範圍並限幅。力度 0-1 映射到截止頻率 200-8000。',
 		'synthPatch.mod.clamp': '把數值限制在 MIN 和 MAX 之間。',
 		'synthPatch.mod.lerp': '按 ALPHA 在 A 和 B 之間插值。',
 		'synthPatch.mod.curve': '彎曲一個 0-1 的值。大於 1 起步慢,小於 1 起步快。',
 		'synthPatch.mod.seq': '讓後面的模組晚一點執行。間隔 GAP 毫秒，兩次擊打就成了裝飾音而不是一下。',
 		'synthPatch.mod.when': '一個分支。判斷成立時，執行流才會從 TRUE 繼續往下走。',
-		'synthPatch.mod.act': '前面的 WHEN 成立時要做的事：CUT 掐斷其他音，SOLO 只留下本組，GLIDE 從上一個音高滑進來。',
+		'synthPatch.mod.act':
+			'前面的 WHEN 成立時要做的事：CUT 掐斷其他音，SOLO 只留下本組，GLIDE 從上一個音高滑進來。',
 		'synthPatch.mod.split': '把立體聲拆開，左右兩路可以各自處理。',
 		'synthPatch.mod.merge': '把兩路單聲道合回立體聲。',
 		'synthPatch.mod.scope': '這一點的波形。訊號原樣通過，不受影響。',
@@ -982,9 +1187,11 @@ export default {
 		'synth.wave.basicLabel': 'BASIC',
 		'synth.wave.basicHint': '四種基礎類比波形',
 		'synth.wave.noiseLabel': 'NOISE',
-		'synth.wave.noiseHint': '緩衝區音源：白雜訊和 808 鈸片音色庫（僅 OSC1；在 OSC2 上會以鋸齒波播放）',
+		'synth.wave.noiseHint':
+			'緩衝區音源：白雜訊和 808 鈸片音色庫（僅 OSC1；在 OSC2 上會以鋸齒波播放）',
 		'synth.wave.advancedLabel': 'ADVANCED',
-		'synth.wave.advancedHint': '疊加與表格化波形：掃描式 PWM、五鋸齒波堆疊、拉桿風琴音栓、折疊正弦波',
+		'synth.wave.advancedHint':
+			'疊加與表格化波形：掃描式 PWM、五鋸齒波堆疊、拉桿風琴音栓、折疊正弦波',
 		'synth.wave.customLabel': 'CUSTOM',
 		'synth.wave.customHint': '你繪製的波形 — 一個週期，任意形狀',
 		'synth.wave.drawnHint': '{name} — 你繪製的波形',
@@ -1022,8 +1229,10 @@ export default {
 
 		'synth.tracks.overlayOnHint': '多軌疊加模式：已啟用 — 點擊 TRK 可多選並在鋼琴捲軸上疊加顯示',
 		'synth.tracks.overlayOffHint': '多軌疊加模式：關閉 — 點擊可在鋼琴捲軸上啟用多軌疊加檢視',
-		'synth.tracks.trkLabelHint': '音軌 — 點擊數字編輯該音軌；在 OVLY 模式下點擊可在捲軸上顯示或隱藏它',
-		'synth.tracks.setActiveHint': '將 {name} 設為唯一目前音軌（控制機架 1-7、鋼琴捲軸編輯與鍵盤試聽）— 目前狀態：{state}',
+		'synth.tracks.trkLabelHint':
+			'音軌 — 點擊數字編輯該音軌；在 OVLY 模式下點擊可在捲軸上顯示或隱藏它',
+		'synth.tracks.setActiveHint':
+			'將 {name} 設為唯一目前音軌（控制機架 1-7、鋼琴捲軸編輯與鍵盤試聽）— 目前狀態：{state}',
 		'synth.tracks.activeSolid': '已啟用【實心】',
 		'synth.tracks.inactiveHollow': '未啟用【空心】',
 		'synth.tracks.overlayToggleHint': '{name} — 點擊名稱切換疊加顯示。目前編輯中：{state}',
@@ -1032,40 +1241,63 @@ export default {
 		'synth.tracks.soloHint': '獨奏 {name} — 可疊加：獨奏多條音軌可同時聽到它們',
 
 		'synth.drop.title': '拖放以載入',
-		'synth.drop.body': '.mid → 每條 MIDI 音軌對應一條音序器音軌 · .json → 合成器音色檔，或將音色套用到目前音軌',
+		'synth.drop.body':
+			'.mid → 每條 MIDI 音軌對應一條音序器音軌 · .json → 合成器音色檔，或將音色套用到目前音軌',
 
 		'synth.tooltip.square': '方波 — 空洞的音色，富含奇次諧波，適合復古 8 位元主音和晶片音樂貝斯',
-		'synth.tooltip.sawtooth': '鋸齒波 — 明亮而嘈雜的音色，包含所有諧波，適合激進主音、銅管和厚重的柔音',
-		'synth.tooltip.triangle': '三角波 — 柔和溫暖的音色，帶有輕微的奇次諧波，適合溫暖的貝斯線與長笛音色',
+		'synth.tooltip.sawtooth':
+			'鋸齒波 — 明亮而嘈雜的音色，包含所有諧波，適合激進主音、銅管和厚重的柔音',
+		'synth.tooltip.triangle':
+			'三角波 — 柔和溫暖的音色，帶有輕微的奇次諧波，適合溫暖的貝斯線與長笛音色',
 		'synth.tooltip.sine': '正弦波 — 純淨的基頻，沒有泛音，適合深沉的次貝斯和乾淨的音色',
-		'synth.tooltip.noise': '白雜訊產生器 — 各頻率能量均等，適合鼓組、打擊樂瞬態和音效（OSC1；在 OSC2 上以鋸齒波播放）',
-		'synth.tooltip.metal': 'METAL — 六個方波依 808 鈸片比例排列，音高固定：ride、crash 與 hi-hat 的鏗鏘聲；疊加 NOISE 增加嘶聲，高通濾掉主體可去除厚重感（OSC1）',
-		'synth.tooltip.pwm': 'PWM — 脈衝寬度以 WIDTH 為中心，依 RATE 的速度、DEPTH 的幅度掃描（旋鈕在其子選單中）；經典的流動類比柔音與主音',
-		'synth.tooltip.supersaw': 'SUPERSAW — 五個鋸齒波，外側一對以 SPREAD 音分展開，混合比例為 MIX（旋鈕在其子選單中）；不需和聲效果即可實現寬廣的 Trance 堆疊音色',
-		'synth.tooltip.organ': 'ORGAN — 六個音栓，對應第 1、2、3、4、5、8 次諧波（旋鈕在其子選單中）；穩定、空靈，適合墊在主音下方',
-		'synth.tooltip.fold': 'FOLD — 正弦波經 FOLD 驅動進入波形折疊器（旋鈕在其子選單中）；比三角波更明亮，帶有西岸風格的銳利感',
-		'synth.tooltips.blendLayer': '混合模式：疊加 — 將振盪器 1 與振盪器 2 並行相加，形成厚重的雙振盪器音色',
-		'synth.tooltips.blendFm': '混合模式：FM（頻率調變）— 振盪器 2 調變振盪器 1 的頻率，產生豐富的金屬或鐘鈴質感諧波音色',
-		'synth.tooltips.blendRing': '混合模式：環形調變 — 將振盪器 1 與 2 的訊號相乘，產生複雜的非諧波紋理',
-		'synth.tooltips.blendSync': '混合模式：硬同步 — 振盪器 1 每完成一個週期就重設振盪器 2 的相位，產生犀利的同步主音掃頻',
-		'synth.tooltips.filterLowpass': '濾波器模式：低通濾波器（LPF）— 允許截止頻率以下的低頻通過，衰減高頻',
-		'synth.tooltips.filterHighpass': '濾波器模式：高通濾波器（HPF）— 允許截止頻率以上的高頻通過，衰減低頻',
-		'synth.tooltips.filterBandpass': '濾波器模式：帶通濾波器（BPF）— 讓截止頻率附近的一個共振窄頻帶通過，衰減高低兩端',
-		'synth.tooltips.filterNotch': '濾波器模式：陷波 / 帶阻濾波器（BRF）— 衰減截止頻率處的一個窄頻帶，同時讓高低頻通過',
+		'synth.tooltip.noise':
+			'白雜訊產生器 — 各頻率能量均等，適合鼓組、打擊樂瞬態和音效（OSC1；在 OSC2 上以鋸齒波播放）',
+		'synth.tooltip.metal':
+			'METAL — 六個方波依 808 鈸片比例排列，音高固定：ride、crash 與 hi-hat 的鏗鏘聲；疊加 NOISE 增加嘶聲，高通濾掉主體可去除厚重感（OSC1）',
+		'synth.tooltip.pwm':
+			'PWM — 脈衝寬度以 WIDTH 為中心，依 RATE 的速度、DEPTH 的幅度掃描（旋鈕在其子選單中）；經典的流動類比柔音與主音',
+		'synth.tooltip.supersaw':
+			'SUPERSAW — 五個鋸齒波，外側一對以 SPREAD 音分展開，混合比例為 MIX（旋鈕在其子選單中）；不需和聲效果即可實現寬廣的 Trance 堆疊音色',
+		'synth.tooltip.organ':
+			'ORGAN — 六個音栓，對應第 1、2、3、4、5、8 次諧波（旋鈕在其子選單中）；穩定、空靈，適合墊在主音下方',
+		'synth.tooltip.fold':
+			'FOLD — 正弦波經 FOLD 驅動進入波形折疊器（旋鈕在其子選單中）；比三角波更明亮，帶有西岸風格的銳利感',
+		'synth.tooltips.blendLayer':
+			'混合模式：疊加 — 將振盪器 1 與振盪器 2 並行相加，形成厚重的雙振盪器音色',
+		'synth.tooltips.blendFm':
+			'混合模式：FM（頻率調變）— 振盪器 2 調變振盪器 1 的頻率，產生豐富的金屬或鐘鈴質感諧波音色',
+		'synth.tooltips.blendRing':
+			'混合模式：環形調變 — 將振盪器 1 與 2 的訊號相乘，產生複雜的非諧波紋理',
+		'synth.tooltips.blendSync':
+			'混合模式：硬同步 — 振盪器 1 每完成一個週期就重設振盪器 2 的相位，產生犀利的同步主音掃頻',
+		'synth.tooltips.filterLowpass':
+			'濾波器模式：低通濾波器（LPF）— 允許截止頻率以下的低頻通過，衰減高頻',
+		'synth.tooltips.filterHighpass':
+			'濾波器模式：高通濾波器（HPF）— 允許截止頻率以上的高頻通過，衰減低頻',
+		'synth.tooltips.filterBandpass':
+			'濾波器模式：帶通濾波器（BPF）— 讓截止頻率附近的一個共振窄頻帶通過，衰減高低兩端',
+		'synth.tooltips.filterNotch':
+			'濾波器模式：陷波 / 帶阻濾波器（BRF）— 衰減截止頻率處的一個窄頻帶，同時讓高低頻通過',
 		'synth.tooltips.lfoSine': '正弦波 LFO — 平滑、連續的週期性調變',
 		'synth.tooltips.lfoTriangle': '三角波 LFO — 線性上升與下降的調變',
 		'synth.tooltips.lfoSquare': '方波 LFO — 階梯式開關二值調變脈衝',
 		'synth.tooltips.lfoSawtooth': '鋸齒波 LFO — 線性上升後瞬間跌落',
-		'synth.tooltip.preset8BitBass': '音色：8-Bit Bass — 復古晶片音樂方波/三角波貝斯，搭配靈敏的 VCF 濾波器包絡',
+		'synth.tooltip.preset8BitBass':
+			'音色：8-Bit Bass — 復古晶片音樂方波/三角波貝斯，搭配靈敏的 VCF 濾波器包絡',
 		'synth.tooltip.presetPluck': '音色：Pluck — 短暫的原聲/電子撥弦式合成音，濾波器衰減迅速',
 		'synth.tooltip.presetBrass': '音色：Brass — 雙失諧鋸齒波振盪器，搭配動態濾波器掃頻',
-		'synth.tooltip.presetLead': '音色：Lead — 犀利的 25% 脈衝波疊加鋸齒波主音，共振濾波器，完整延音',
-		'synth.tooltip.presetSubBass': '音色：Sub Bass — 正弦波疊加低八度 SUB，經 800 Hz 低通濾波；厚重而不刺耳',
-		'synth.tooltip.presetAcidBass': '音色：Acid Bass — 鋸齒波進入由包絡掃描的 Q 8 低通濾波器，60 毫秒滑音',
+		'synth.tooltip.presetLead':
+			'音色：Lead — 犀利的 25% 脈衝波疊加鋸齒波主音，共振濾波器，完整延音',
+		'synth.tooltip.presetSubBass':
+			'音色：Sub Bass — 正弦波疊加低八度 SUB，經 800 Hz 低通濾波；厚重而不刺耳',
+		'synth.tooltip.presetAcidBass':
+			'音色：Acid Bass — 鋸齒波進入由包絡掃描的 Q 8 低通濾波器，60 毫秒滑音',
 		'synth.tooltip.presetFmBass': '音色：FM Bass — 正弦波載波被高八度的正弦波調變',
 		'synth.tooltip.presetSawLead': '音色：Saw Lead — 兩個相差 14 音分的鋸齒波，帶漸入的顫音',
-		'synth.tooltip.presetSyncLead': '音色：Sync Lead — SYNC 模式，第二振盪器高五度，濾波器包絡製造撕裂感',
-		'synth.tooltip.presetChipLead': '音色：Chip Lead — 15% 脈衝波，無濾波器，快速顫音：NES 主音音色',
+		'synth.tooltip.presetSyncLead':
+			'音色：Sync Lead — SYNC 模式，第二振盪器高五度，濾波器包絡製造撕裂感',
+		'synth.tooltip.presetChipLead':
+			'音色：Chip Lead — 15% 脈衝波，無濾波器，快速顫音：NES 主音音色',
 		'synth.tooltip.presetKoto': '音色：Koto — 三角波疊加高八度正弦波，濾波器驟然閉合；無延音',
 		'synth.tooltip.presetMarimba': '音色：Marimba — 正弦波主體與較輕的高八度三角波，一起衰減',
 		'synth.tooltip.presetBell': '音色：Bell — 兩個正弦波以 3.5 的比例環形調變；非諧波泛音，長尾音',
@@ -1075,48 +1307,63 @@ export default {
 		'synth.tooltip.presetHarpsichord': '音色：Harpsichord — 鋸齒波疊加高八度方波，撥弦感明亮',
 		'synth.tooltip.presetWarmPad': '音色：Warm Pad — 失諧鋸齒波搭配隨慢速 LFO 呼吸的低通濾波器',
 		'synth.tooltip.presetStrings': '音色：Strings — 寬失諧，更明亮的濾波器，漸入的顫音',
-		'synth.tooltip.presetGlassPad': '音色：Glass Pad — 三角波與高八度正弦波，開放的濾波器，高頻通透，緩慢自動聲像搖擺',
+		'synth.tooltip.presetGlassPad':
+			'音色：Glass Pad — 三角波與高八度正弦波，開放的濾波器，高頻通透，緩慢自動聲像搖擺',
 		'synth.tooltip.presetHollowPad': '音色：Hollow Pad — 方波疊加低八度方波，低通濾波器隨 LFO 開合',
-		'synth.tooltip.presetKick808': '音色：808 Kick — 正弦波帶 2.5 個八度的音高下滑，疊加次低音；建議排在低音區（C2-C3）',
+		'synth.tooltip.presetKick808':
+			'音色：808 Kick — 正弦波帶 2.5 個八度的音高下滑，疊加次低音；建議排在低音區（C2-C3）',
 		'synth.tooltip.presetKickPunch': '音色：Punch Kick — 更短更硬的三角波大鼓，帶雜訊擊槌聲',
-		'synth.tooltip.presetSnare': '音色：Snare — 三角波加五度音體，帶雜訊沙沙聲；KEY TRK 會讓鍵盤上方的音色更明亮',
-		'synth.tooltip.presetClap': '音色：Clap — 三次相隔 11 毫秒的雜訊脈衝，隨後是尾音（機架 1 中的 RPT / GAP）',
+		'synth.tooltip.presetSnare':
+			'音色：Snare — 三角波加五度音體，帶雜訊沙沙聲；KEY TRK 會讓鍵盤上方的音色更明亮',
+		'synth.tooltip.presetClap':
+			'音色：Clap — 三次相隔 11 毫秒的雜訊脈衝，隨後是尾音（機架 1 中的 RPT / GAP）',
 		'synth.tooltip.presetClosedHat': '音色：Closed Hat — 45 毫秒的高通雜訊；音高越高越明亮',
 		'synth.tooltip.presetOpenHat': '音色：Open Hat — 讓閉鈸延音至 350 毫秒',
-		'synth.tooltip.presetTom': '音色：Tom — 正弦波加三角波的輕微音高下滑；跨幾個按鍵演奏可組成一組通鼓',
+		'synth.tooltip.presetTom':
+			'音色：Tom — 正弦波加三角波的輕微音高下滑；跨幾個按鍵演奏可組成一組通鼓',
 		'synth.tooltip.presetRimshot': '音色：Rimshot — 環形調變的 40 毫秒短促聲',
-		'synth.tooltip.presetCowbell': '音色：Cowbell — 兩個相差五度的方波（808 組合），帶通濾波於 1.5 kHz',
+		'synth.tooltip.presetCowbell':
+			'音色：Cowbell — 兩個相差五度的方波（808 組合），帶通濾波於 1.5 kHz',
 		'synth.tooltip.presetShaker': '音色：Shaker — 柔和起音的雜訊，濾波器隨敲擊開合',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '每個音軌條代表一個獨立聲部，擁有自己的振盪器、濾波器、包絡和等化器。點擊一個音軌條，讓它成為下方所有機架正在編輯的對象；M 和 S 分別靜音和獨奏它。OVLY 會在你正在編輯的音軌背後繪出其他音軌，方便對齊聲部。',
+		'synth.tour.tracksBody':
+			'每個音軌條代表一個獨立聲部，擁有自己的振盪器、濾波器、包絡和等化器。點擊一個音軌條，讓它成為下方所有機架正在編輯的對象；M 和 S 分別靜音和獨奏它。OVLY 會在你正在編輯的音軌背後繪出其他音軌，方便對齊聲部。',
 		'synth.tour.rollTitle': 'PIANO ROLL',
-		'synth.tour.rollBody': '點擊儲存格放置一個音符，拖曳可連續繪製一段，再次點擊可清除。SNAP 是游標吸附的網格，DUR 是放置音符的時長 — 兩者最小都可到 1/12 以支援三連音。一個延音音符就是同一個音高在多個格子中重複出現，因此更長的一小節其實就是一個更長的音符。',
+		'synth.tour.rollBody':
+			'點擊儲存格放置一個音符，拖曳可連續繪製一段，再次點擊可清除。SNAP 是游標吸附的網格，DUR 是放置音符的時長 — 兩者最小都可到 1/12 以支援三連音。一個延音音符就是同一個音高在多個格子中重複出現，因此更長的一小節其實就是一個更長的音符。',
 		'synth.tour.rollKeyLen': '圖形長度，以頁為單位',
 		'synth.tour.rollKeyMeter': '4/4、3/4、2/4、5/4、6/8 或 7/8',
 		'synth.tour.rollKeyAcc': '每步重音，+1 到 +4 dB',
 		'synth.tour.playTitle': 'PLAY IT',
-		'synth.tour.playBody': '透過這些按鍵、QWERTY 鍵盤列，或已連接的真實 MIDI 控制器試聽目前音軌。這裡彈奏的音符只會發聲，不會被錄製 — 上方的鋼琴捲軸才是編寫圖形的地方。',
+		'synth.tour.playBody':
+			'透過這些按鍵、QWERTY 鍵盤列，或已連接的真實 MIDI 控制器試聽目前音軌。這裡彈奏的音符只會發聲，不會被錄製 — 上方的鋼琴捲軸才是編寫圖形的地方。',
 		'synth.tour.playKeyLower': '低八度，白鍵與黑鍵',
 		'synth.tour.playKeyUpper': '高八度',
 		'synth.tour.playKeyOctave': '降低 / 升高八度（也可用 [ 和 ]）',
 		'synth.tour.playKeySustain': '延音踏板，按住即為踏下',
 		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
-		'synth.tour.voiceBody': '聲音在這裡被塑造，依訊號順序：兩個振盪器、一個將它們疊加或讓其中一個調變另一個（FM、環形、同步）的融合級，以及一個共振多模濾波器。這裡的每個旋鈕都編輯上方選取的音軌。',
+		'synth.tour.voiceBody':
+			'聲音在這裡被塑造，依訊號順序：兩個振盪器、一個將它們疊加或讓其中一個調變另一個（FM、環形、同步）的融合級，以及一個共振多模濾波器。這裡的每個旋鈕都編輯上方選取的音軌。',
 		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
-		'synth.tour.shapeBody': '聲音隨時間發生的變化：分別控制振幅與濾波器的雙包絡、可驅動音高、截止頻率、聲像或音量的 LFO 矩陣、逐音軌的 FX 與六段等化器，最後是帶有視覺化的輸出條。',
+		'synth.tour.shapeBody':
+			'聲音隨時間發生的變化：分別控制振幅與濾波器的雙包絡、可驅動音高、截止頻率、聲像或音量的 LFO 矩陣、逐音軌的 FX 與六段等化器，最後是帶有視覺化的輸出條。',
 		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
 		'synth.tour.advTitle': '另一半',
-		'synth.tour.advBody': '機架 1-7 是一件樂器：所有控制項攤開，不用接線。ADV 是另一件 —— 機架讓位，面板變成連線機架，音色由原語和跳線搭出來。每條音軌只處在其中一種模式，這個選擇隨音色一起儲存。',
+		'synth.tour.advBody':
+			'機架 1-7 是一件樂器：所有控制項攤開，不用接線。ADV 是另一件 —— 機架讓位，面板變成連線機架，音色由原語和跳線搭出來。每條音軌只處在其中一種模式，這個選擇隨音色一起儲存。',
 		'synth.tour.advAction': '把這條音軌切到 ADV',
 		'synth.tour.canvasTitle': '連線機架',
-		'synth.tour.canvasBody': '模組擺在畫布上，跳線連接它們的端口。白色端口走音訊，黃色端口走控制訊號 —— 包絡接到濾波器截止頻率是一根線，不是一個旋鈕。音訊不能連成迴路，編輯器會拒絕；控制訊號可以，而且常常應該。',
+		'synth.tour.canvasBody':
+			'模組擺在畫布上，跳線連接它們的端口。白色端口走音訊，黃色端口走控制訊號 —— 包絡接到濾波器截止頻率是一根線，不是一個旋鈕。音訊不能連成迴路，編輯器會拒絕；控制訊號可以，而且常常應該。',
 		'synth.tour.canvasKeyDrag': '移動模組，或拖端口連線',
 		'synth.tour.canvasKeyPan': '平移畫布',
 		'synth.tour.canvasKeyZoom': '以指標為中心縮放',
 		'synth.tour.paletteTitle': '零件',
-		'synth.tour.paletteBody': '每一項都是一個原語：振盪器、包絡、共振的弦。拖到畫布上，或點擊直接放入。有意思的聲音來自把它們按沒人做過的順序連起來。',
-		'synth.tour.transportBody': 'LOAD 用於選擇內建曲目，IMP 用於匯入先前匯出的音色檔或 .mid 檔案 — 每條 MIDI 音軌都會變成一條音序器音軌，並保留檔案本身的速度與拍號。你也可以把 .mid 檔案拖到頁面任意位置。',
+		'synth.tour.paletteBody':
+			'每一項都是一個原語：振盪器、包絡、共振的弦。拖到畫布上，或點擊直接放入。有意思的聲音來自把它們按沒人做過的順序連起來。',
+		'synth.tour.transportBody':
+			'LOAD 用於選擇內建曲目，IMP 用於匯入先前匯出的音色檔或 .mid 檔案 — 每條 MIDI 音軌都會變成一條音序器音軌，並保留檔案本身的速度與拍號。你也可以把 .mid 檔案拖到頁面任意位置。',
 		'synth.tour.transportKeyWav': '離線轉出圖形並下載',
 		'synth.tour.transportKeyShare': '將整個音色檔打包進一個連結',
 		'synth.tour.transportKeySettings': '全域音訊與 DSP 設定'
@@ -1126,56 +1373,77 @@ export default {
 		'synth.badge.walkthroughAria': 'シンセのウォークスルー',
 		'synth.midi.deviceFallbackName': 'MIDI デバイス（{id}）',
 
-		'synth.transport.lenHint': 'ページ単位のパターン長（1ページ = 現在の METER の1小節）— ループポイントでもあります',
+		'synth.transport.lenHint':
+			'ページ単位のパターン長（1ページ = 現在の METER の1小節）— ループポイントでもあります',
 		'synth.transport.lenCycleHint': 'ページ数プリセットを循環：1 → 2 → 4 → 8 → 16 → 32 ページ',
 		'synth.transport.or': 'OR',
-		'synth.transport.lenInputHint': 'パターン長（ページ）— {pages} × {steps} ステップ（{meter}）= {total} ステップ',
-		'synth.transport.lenPagesHint': '{pages} ページ × {steps} ステップ/ページ（{meter}）= {total} ステップ',
+		'synth.transport.lenInputHint':
+			'パターン長（ページ）— {pages} × {steps} ステップ（{meter}）= {total} ステップ',
+		'synth.transport.lenPagesHint':
+			'{pages} ページ × {steps} ステップ/ページ（{meter}）= {total} ステップ',
 		'synth.transport.meterHint': '拍子記号（METER）— 1小節の拍数と拍の細分を決めます',
 		'synth.transport.meterPrevHint': '前の拍子記号',
 		'synth.transport.meterNextHint': '次の拍子記号',
-		'synth.transport.settingsHint': 'シンセサイザーとオーディオ DSP のグローバル設定を開く [SETTINGS]',
+		'synth.transport.settingsHint':
+			'シンセサイザーとオーディオ DSP のグローバル設定を開く [SETTINGS]',
 		'synth.transport.settings': '設定',
-		'synth.transport.rewindHint': '先頭に戻る（ステップ1 / 小節1.1）— Home キー、Backspace でも停止します',
+		'synth.transport.rewindHint':
+			'先頭に戻る（ステップ1 / 小節1.1）— Home キー、Backspace でも停止します',
 		'synth.transport.stepBackHint': '1小節戻る (◄◄)',
 		'synth.transport.playToggleHint': 'シーケンサーの再生／停止（一時停止位置から再開）— Enter',
 		'synth.transport.stepFwdHint': '1小節進む (►►)',
-		'synth.transport.loopOnHint': 'LOOP — 停止するまでパターンを繰り返します。クリックで ONCE に切り替え。',
-		'synth.transport.loopOffHint': 'ONCE — パターンを一度再生し、余韻を鳴らし切ってから小節1に戻ります。クリックで LOOP に切り替え。',
-		'synth.transport.jumpToCursorHint': '再生ヘッドをカーソル位置へ移動（{bar}.{beat} 小節、{step}/{total} ステップ）— クリックでジャンプ',
+		'synth.transport.loopOnHint':
+			'LOOP — 停止するまでパターンを繰り返します。クリックで ONCE に切り替え。',
+		'synth.transport.loopOffHint':
+			'ONCE — パターンを一度再生し、余韻を鳴らし切ってから小節1に戻ります。クリックで LOOP に切り替え。',
+		'synth.transport.jumpToCursorHint':
+			'再生ヘッドをカーソル位置へ移動（{bar}.{beat} 小節、{step}/{total} ステップ）— クリックでジャンプ',
 		'synth.transport.snapHint': 'グリッドの量子化 / スナップ位置',
 		'synth.transport.durHint': '配置した音符の長さ',
 		'synth.transport.pageNavHint': 'ステップページのナビゲーション',
 		'synth.transport.pagePrevHint': '前のページ (◄)',
-		'synth.transport.pageJumpHint': '現在の小節ページ：{page} / {total} ページ — クリックまたは数値入力でジャンプ',
+		'synth.transport.pageJumpHint':
+			'現在の小節ページ：{page} / {total} ページ — クリックまたは数値入力でジャンプ',
 		'synth.transport.pageNextHint': '次のページ (►)',
-		'synth.transport.followHint': 'プレイヘッド追従モード（FLW）— シーケンサーの再生に合わせて自動でページ送りします',
+		'synth.transport.followHint':
+			'プレイヘッド追従モード（FLW）— シーケンサーの再生に合わせて自動でページ送りします',
 
 		'synth.confirm.cancel': 'キャンセル',
 		'synth.confirm.discard': '破棄',
 		'synth.confirm.newPatchTitle': 'このパッチを破棄しますか？',
-		'synth.confirm.newPatchBody': '新規パッチを作成するとこのトラックの音色パラメーターがすべてリセットされ、未保存の内容は失われます。',
+		'synth.confirm.newPatchBody':
+			'新規パッチを作成するとこのトラックの音色パラメーターがすべてリセットされ、未保存の内容は失われます。',
 		'synth.confirm.newAdvPatchTitle': 'このパッチを破棄しますか？',
-		'synth.confirm.newAdvPatchBody': '新規アドバンストパッチを作成するとこのトラックがリセットされ、ラックは空の弦とボディに置き換わります。未保存の内容は失われます。',
+		'synth.confirm.newAdvPatchBody':
+			'新規アドバンストパッチを作成するとこのトラックがリセットされ、ラックは空の弦とボディに置き換わります。未保存の内容は失われます。',
 		'synth.confirm.newProjectTitle': 'このプロジェクトを破棄しますか？',
-		'synth.confirm.newProjectBody': '新規プロジェクトは8トラックすべてのノートと音色を消去します。未保存の内容は失われます。',
+		'synth.confirm.newProjectBody':
+			'新規プロジェクトは8トラックすべてのノートと音色を消去します。未保存の内容は失われます。',
 
-		'synth.patch.newHint': '新規プロジェクト — すべてのトラックを消去し、空の64ステップシーケンサーに戻します',
-		'synth.patch.saveHint': 'パッチを保存 — 8トラック分のシンセパラメーターとシーケンサーのノートをブラウザのローカルストレージに保存します',
+		'synth.patch.newHint':
+			'新規プロジェクト — すべてのトラックを消去し、空の64ステップシーケンサーに戻します',
+		'synth.patch.saveHint':
+			'パッチを保存 — 8トラック分のシンセパラメーターとシーケンサーのノートをブラウザのローカルストレージに保存します',
 		'synth.patch.loadHint': 'ロード — ブラウザ内のパッチ、またはビルトイン曲',
-		'synth.patch.loadLocalHint': 'ブラウザのローカルストレージから、保存済みのシンセパラメーターとシーケンサーパターンを復元します',
+		'synth.patch.loadLocalHint':
+			'ブラウザのローカルストレージから、保存済みのシンセパラメーターとシーケンサーパターンを復元します',
 		'synth.patch.loadLocalLabel': 'ローカルパッチ（ブラウザ）',
 		'synth.patch.builtinSongsLabel': 'ビルトイン曲',
 		'synth.patch.loadSongHint': '{name} をロード（{bpm} BPM、{meter}、{steps} ステップ）',
-		'synth.patch.importHint': 'インポート — 以前エクスポートしたパッチ（.json または gzip 圧縮された .json.gz）、または .mid ファイル：各 MIDI トラックがシーケンサーのトラックになり、ファイル自身のテンポと拍子がそのまま使われます。ファイルはこのページのどこにドロップしても構いません。',
-		'synth.patch.exportHint': 'パッチをエクスポート — 8トラック分のシンセ設定とパターンを gzip 圧縮（.json.gz）でダウンロードします。シーケンサーグリッドはほとんどが繰り返しの空セルなので、圧縮が効きます',
-		'synth.patch.renderHint': 'WAV をレンダリング — パターン全体を実際の信号チェーンでオフライン処理し、16bit ステレオ WAV としてダウンロードします。長めの曲では1～2分かかることがあり、ボタンに進捗が表示されます。',
+		'synth.patch.importHint':
+			'インポート — 以前エクスポートしたパッチ（.json または gzip 圧縮された .json.gz）、または .mid ファイル：各 MIDI トラックがシーケンサーのトラックになり、ファイル自身のテンポと拍子がそのまま使われます。ファイルはこのページのどこにドロップしても構いません。',
+		'synth.patch.exportHint':
+			'パッチをエクスポート — 8トラック分のシンセ設定とパターンを gzip 圧縮（.json.gz）でダウンロードします。シーケンサーグリッドはほとんどが繰り返しの空セルなので、圧縮が効きます',
+		'synth.patch.renderHint':
+			'WAV をレンダリング — パターン全体を実際の信号チェーンでオフライン処理し、16bit ステレオ WAV としてダウンロードします。長めの曲では1～2分かかることがあり、ボタンに進捗が表示されます。',
 		'synth.patch.renderingStage': '{stage} {percent}%',
 		'synth.patch.renderingStageSchedule': 'SCHED',
 		'synth.patch.renderingStageRender': 'RENDER',
 		'synth.patch.rendering': 'レンダリング中…',
-		'synth.patch.shareHint': 'パッチを共有 — パッチ全体を1つの URL に圧縮してコピーします。このリンクを開いた人は、あなたと全く同じトラックとパターンを得られます',
-		'synth.patch.shareBlocked': 'ブラウザによってクリップボードがブロックされました — こちらのリンクを手動でコピーしてください：',
+		'synth.patch.shareHint':
+			'パッチを共有 — パッチ全体を1つの URL に圧縮してコピーします。このリンクを開いた人は、あなたと全く同じトラックとパターンを得られます',
+		'synth.patch.shareBlocked':
+			'ブラウザによってクリップボードがブロックされました — こちらのリンクを手動でコピーしてください：',
 
 		'synth.status.newOk': '✓ 新規',
 		'synth.status.savedOk': '✓ 保存しました',
@@ -1195,39 +1463,46 @@ export default {
 
 		'synth.midiImport.unreadable': 'このファイルを MIDI として読み込めませんでした。',
 		'synth.midiImport.noHeader': 'MIDI ファイルではありません — MThd ヘッダーがありません。',
-		'synth.midiImport.truncated': 'この MIDI ファイルは途中で終わっています — 不完全な可能性があります。',
+		'synth.midiImport.truncated':
+			'この MIDI ファイルは途中で終わっています — 不完全な可能性があります。',
 		'synth.midiImport.tempoMapNote': 'テンポ変化が {count} 回あります。最初のもののみ使用します。',
 		'synth.midiImport.meterChangeNote': '途中で拍子が変わります。最初のもののみ使用します。',
-		'synth.midiImport.smpteUnsupported': 'SMPTE タイミングの MIDI ファイルには対応していません — メトリカル（PPQ）タイミングで書き出してください。',
+		'synth.midiImport.smpteUnsupported':
+			'SMPTE タイミングの MIDI ファイルには対応していません — メトリカル（PPQ）タイミングで書き出してください。',
 		'synth.midiImport.zeroTicks': 'MIDI ファイルの4分音符あたりのティック数が 0 になっています。',
 		'synth.midiImport.noNoteData': 'この MIDI ファイルにノートデータが見つかりません。',
 		'synth.midiImport.defaultTrackName': 'MIDI トラック {index}',
-		'synth.midiImport.tracksNotesBars': '{tracks} トラック{tracksPlural} · {notes} ノート · {bars} 小節',
+		'synth.midiImport.tracksNotesBars':
+			'{tracks} トラック{tracksPlural} · {notes} ノート · {bars} 小節',
 		'synth.midiImport.bpmMeter': '{bpm} BPM{bpmNote} · {meter}{meterNote}',
 		'synth.midiImport.bpmDefaultNote': '（ファイルに指定なし — MIDI のデフォルト値）',
 		'synth.midiImport.meterUnsupportedNote': '（{meter} は非対応のため 4/4 を使用）',
 		'synth.midiImport.trackLine': '  {index}. {name} {notes} ノート{drum}',
 		'synth.midiImport.drumChannelNote': '  [GM ドラムチャンネル]',
 		'synth.midiImport.notesDropped': '88鍵の範囲外のノート {count}{plural} 個を破棄しました',
-		'synth.midiImport.partsSkipped': '{count}{plural} 個の追加パートをスキップしました — ラックは {capacity} トラックまで対応',
+		'synth.midiImport.partsSkipped':
+			'{count}{plural} 個の追加パートをスキップしました — ラックは {capacity} トラックまで対応',
 		'synth.render.failed': 'レンダリングに失敗しました',
 
 		'synth.render.done': '✓ {filename}',
 		'synth.render.summary': '{duration} · {rate} kHz · 16bit ステレオ · {size} MB',
 		'synth.render.levels': 'ピーク {peak} dBFS · RMS {rms} dBFS',
 		'synth.render.speed': '{elapsed} 秒でレンダリング（実時間の {multiple} 倍速）',
-		'synth.render.clippingWarning': 'ピークがフルスケールに達しています — クリッピングを避けるため、マスターまたはトラックの音量を下げてください',
+		'synth.render.clippingWarning':
+			'ピークがフルスケールに達しています — クリッピングを避けるため、マスターまたはトラックの音量を下げてください',
 		'synth.render.offlineUnavailable': 'このブラウザでは OfflineAudioContext を利用できません。',
 		'synth.render.alreadyRunning': 'レンダリングはすでに実行中です。',
 
 		'synth.preset.pickCategoryHint': '左のカテゴリーを選んでください。',
 		'synth.preset.myPresetsLabel': 'マイパッチ',
-		'synth.preset.kitsHint': 'キー音色テーブル一式 — アクティブトラックをドラムマシン（パーカッションモード）に変えます',
+		'synth.preset.kitsHint':
+			'キー音色テーブル一式 — アクティブトラックをドラムマシン（パーカッションモード）に変えます',
 		'synth.preset.mineHint': 'ここに保存またはインポートしたもの。その場でリネーム・削除できます',
 		'synth.preset.pickHint': 'アクティブな{target}のパッチ — {name}。↑/↓ でパッチを切り替え。',
 		'synth.preset.builtInLabel': 'ビルトイン',
 		'synth.preset.myKitsLabel': 'マイキット',
-		'synth.preset.loadKitHint': '{name} をアクティブトラックにロード — パーカッションモードを ON にし、キー音色テーブルを置き換えます（{count} キー）',
+		'synth.preset.loadKitHint':
+			'{name} をアクティブトラックにロード — パーカッションモードを ON にし、キー音色テーブルを置き換えます（{count} キー）',
 		'synth.preset.loadKitShortHint': '{name} をアクティブトラックにロード（{count} キー）',
 		'synth.preset.renameHint': '{name} をリネーム',
 		'synth.preset.renameAria': '{name} をリネーム',
@@ -1235,35 +1510,46 @@ export default {
 		'synth.preset.removeAria': '{name} を削除',
 		'synth.preset.nameAria': '名前',
 		'synth.preset.saveTrackAsKit': 'トラックをキットとして保存',
-		'synth.preset.saveKitOnHint': 'アクティブトラックのキー音色テーブルをこのブラウザにキットとして保存します',
-		'synth.preset.saveKitOffHint': 'まずアクティブトラックで P を ON にし、キーに音色を設定してください',
+		'synth.preset.saveKitOnHint':
+			'アクティブトラックのキー音色テーブルをこのブラウザにキットとして保存します',
+		'synth.preset.saveKitOffHint':
+			'まずアクティブトラックで P を ON にし、キーに音色を設定してください',
 		'synth.preset.importKit': 'キットをインポート…',
-		'synth.preset.importKitHint': 'キットの .json をアクティブトラックにインポートします。ファイルをページ内のどこにドロップしても構いません',
+		'synth.preset.importKitHint':
+			'キットの .json をアクティブトラックにインポートします。ファイルをページ内のどこにドロップしても構いません',
 		'synth.preset.exportKit': 'キットをエクスポート',
-		'synth.preset.exportKitOnHint': 'アクティブトラックのキー音色テーブルをキット .json としてダウンロードします',
-		'synth.preset.noneYet': 'まだありません — 下でアクティブな{target}を保存するか、ファイルをインポートしてください',
+		'synth.preset.exportKitOnHint':
+			'アクティブトラックのキー音色テーブルをキット .json としてダウンロードします',
+		'synth.preset.noneYet':
+			'まだありません — 下でアクティブな{target}を保存するか、ファイルをインポートしてください',
 		'synth.preset.presetsLabel': 'パッチ',
 		'synth.preset.kitsLabel': 'キット',
 		'synth.preset.loadPresetHint': '{name} をアクティブな{target}にロード',
 		'synth.preset.saveActive': 'アクティブな{target}を保存',
-		'synth.preset.saveActiveHint': 'アクティブな{targetPossessive}現在のサウンド（ラック1-6と AIR。音量・パン・ノートは含みません）をこのブラウザにパッチとして保存します',
+		'synth.preset.saveActiveHint':
+			'アクティブな{targetPossessive}現在のサウンド（ラック1-6と AIR。音量・パン・ノートは含みません）をこのブラウザにパッチとして保存します',
 		'synth.preset.saveShort': '保存',
 		'synth.preset.importShort': '読込',
 		'synth.preset.exportShort': '書出',
 		'synth.preset.myPresetsShort': 'マイ',
 		'synth.preset.importFile': 'ファイルをインポート…',
-		'synth.preset.importFileHint': 'パッチの .json をアクティブなトラックまたはキーにインポートします。「マイパッチ」に追加されます。ファイルをページ内のどこにドロップしても構いません。',
+		'synth.preset.importFileHint':
+			'パッチの .json をアクティブなトラックまたはキーにインポートします。「マイパッチ」に追加されます。ファイルをページ内のどこにドロップしても構いません。',
 		'synth.preset.exportActive': 'アクティブな{target}をエクスポート',
-		'synth.preset.exportActiveHint': 'アクティブな{targetPossessive}サウンドをパッチ .json としてダウンロードします',
+		'synth.preset.exportActiveHint':
+			'アクティブな{targetPossessive}サウンドをパッチ .json としてダウンロードします',
 		'synth.preset.targetTrack': 'トラック',
 		'synth.preset.targetKey': 'キー',
 		'synth.preset.targetTrackLower': 'トラック',
 		'synth.preset.targetKeyLower': 'キー',
 		'synth.preset.targetTrackPossessive': 'トラックの',
 		'synth.preset.targetKeyPossessive': 'キーの',
-		'synth.preset.percussionOnHint': '{track} は K.MAP モードです — 各キーが個別のサウンドを持ち、ラックとパッチはアクティブなキーを編集します。クリックするとトラック1音色に戻ります（キー音色テーブルは保持されます）。',
-		'synth.preset.advancedOnHint': 'アドバンスト：下段はピアノロールかパッチベイです。クリックでモジュール1-7に戻ります。',
-		'synth.preset.advancedOffHint': 'アドバンスト表示：モジュール1-7を隠し、下段全体をピアノロールかパッチベイに割り当てます。',
+		'synth.preset.percussionOnHint':
+			'{track} は K.MAP モードです — 各キーが個別のサウンドを持ち、ラックとパッチはアクティブなキーを編集します。クリックするとトラック1音色に戻ります（キー音色テーブルは保持されます）。',
+		'synth.preset.advancedOnHint':
+			'アドバンスト：下段はピアノロールかパッチベイです。クリックでモジュール1-7に戻ります。',
+		'synth.preset.advancedOffHint':
+			'アドバンスト表示：モジュール1-7を隠し、下段全体をピアノロールかパッチベイに割り当てます。',
 		'synth.preset.newLabel': '新規パッチ',
 		'synth.preset.newHint': 'ニュートラルな音から始めます。ラック1-7で編集',
 		'synth.preset.newAdvancedLabel': '新規パッチ（ADV）',
@@ -1275,7 +1561,8 @@ export default {
 		'synthPatch.copied': '{count} 個をコピー',
 		'synthPatch.pasted': '{count} 個を貼り付け',
 		'synthPatch.addLabel': '追加：',
-		'synthPatch.pickSlot': '上のパスからモジュールを選ぶと編集できます。ドラッグで並べ替え — 順序が音を決めます。',
+		'synthPatch.pickSlot':
+			'上のパスからモジュールを選ぶと編集できます。ドラッグで並べ替え — 順序が音を決めます。',
 		'synthPatch.paramsPending': 'このモジュールのコントロールはまだ接続されていません。',
 		'synthPatch.mod.fusion': '2つのオシレーターの合成方法：レイヤー、FM、リング、シンク。',
 		'synthPatch.mod.filter': 'レゾナントフィルター。専用エンベロープで掃引します。',
@@ -1286,7 +1573,8 @@ export default {
 		'synthPatch.mod.eq': '6バンドの音色整形。',
 		'synthPatch.mod.air': '10 kHz のハイシェルフ。',
 		'synthPatch.canvasHint': 'ドラッグで移動 · ホイールで拡大 · ポートをドラッグで結線',
-		'synthPatch.emptyCanvas': '右のパレットからモジュールを追加し、ポート間をドラッグして結線します',
+		'synthPatch.emptyCanvas':
+			'右のパレットからモジュールを追加し、ポート間をドラッグして結線します',
 		'synthPatch.undoHint': '元に戻す（Ctrl+Z）',
 		'synthPatch.redoHint': 'やり直し（Ctrl+Shift+Z）',
 		'synthPatch.copyHint': '選択をコピー（Ctrl+C）',
@@ -1309,35 +1597,47 @@ export default {
 		'synthPatch.mod.env': 'エンベロープ。音ではなくCVを出します。',
 		'synthPatch.mod.lfo': '変調用の低周波オシレーター。',
 		'synthPatch.mod.mix': '2つの信号を足します。',
-		'synthPatch.mod.excite': '音の始まりとなる打撃・撥弦・息。すべてのアコースティック楽器はここから始まります。',
-		'synthPatch.mod.string': '振動する弦：長さは鍵盤から、減衰と剛性はノブから。ピアノ、ギター、ベース、擦弦楽器。',
+		'synthPatch.mod.excite':
+			'音の始まりとなる打撃・撥弦・息。すべてのアコースティック楽器はここから始まります。',
+		'synthPatch.mod.string':
+			'振動する弦：長さは鍵盤から、減衰と剛性はノブから。ピアノ、ギター、ベース、擦弦楽器。',
 		'synthPatch.mod.tube': '共鳴する気柱。奇数倍音でクラリネット、全倍音でフルートや金管。',
 		'synthPatch.mod.modes': '3つの共振モードを同時に。太鼓の皮や鐘の鳴り方です。',
 		'synthPatch.mod.body': '楽器の胴：響板、ボディ、シェル。ただの弦をギターに変えるものです。',
 		'synthPatch.mod.sub': 'ノートの1〜2オクターブ下。音に重さを加えます。',
-		'synthPatch.mod.pulse': 'パルス幅を設定でき、スイープもできる矩形波。1つのオシレーターが2つに聞こえます。',
-		'synthPatch.mod.bow': '弓：弦を掴み、引き、滑り、また掴む。ヴァイオリンが持続し、撥弦が持続しない理由です。',
-		'synthPatch.mod.blend': '原音と暗くしたコピーの間を傾けます。CVにエンベロープを挿すと音がノートに沿って開きます。',
+		'synthPatch.mod.pulse':
+			'パルス幅を設定でき、スイープもできる矩形波。1つのオシレーターが2つに聞こえます。',
+		'synthPatch.mod.bow':
+			'弓：弦を掴み、引き、滑り、また掴む。ヴァイオリンが持続し、撥弦が持続しない理由です。',
+		'synthPatch.mod.blend':
+			'原音と暗くしたコピーの間を傾けます。CVにエンベロープを挿すと音がノートに沿って開きます。',
 		'synthPatch.mod.reed': 'リードは弁です。強く吹くほど閉じ、そこにあの唸りが生まれます。',
-		'synthPatch.mod.comp': 'トランジェントを抑えます。叩かれた胴は自身のサステインよりはるかに高く飛び出します。',
+		'synthPatch.mod.comp':
+			'トランジェントを抑えます。叩かれた胴は自身のサステインよりはるかに高く飛び出します。',
 		'synthPatch.mod.comb': '弦を弾く位置。駒の近くは細く、サウンドホールの上では丸くなります。',
 		'synthPatch.mod.space': '部屋。すべてのアコースティック楽器はどこかの空間で聴かれます。',
 		'synthPatch.mod.delay': 'フィードバック付きのディレイ。出力だけでなく音色の内側にも置けます。',
 		'synthPatch.mod.pan': '音をステレオ空間のどこに置くかを決めます。',
-		'synthPatch.mod.in': 'ノートそのもの。THEN がパッチを実行し、PITCH VEL NOTE GATE が演奏内容を伝えます。LVL は OUT のラック1〜7の音だけに効き、音源を持つパッチでは使いません。',
+		'synthPatch.mod.in':
+			'ノートそのもの。THEN がパッチを実行し、PITCH VEL NOTE GATE が演奏内容を伝えます。LVL は OUT のラック1〜7の音だけに効き、音源を持つパッチでは使いません。',
 		'synthPatch.mod.out': 'パッチの出口。独自の音量とパンを持ち、ここに届かないものは鳴りません。',
-		'synthPatch.mod.tofreq': '音高をそれが指す周波数へ変換します。A4 が基準、TRSP は半音単位の移調です。',
-		'synthPatch.mod.topitch': '周波数を音高として読み戻します。二つの音の間では丸められます（QNT オフを除く）。',
+		'synthPatch.mod.tofreq':
+			'音高をそれが指す周波数へ変換します。A4 が基準、TRSP は半音単位の移調です。',
+		'synthPatch.mod.topitch':
+			'周波数を音高として読み戻します。二つの音の間では丸められます（QNT オフを除く）。',
 		'synthPatch.mod.const': '固定値。任意の値入力につなげます。',
 		'synthPatch.mod.add': 'A + B。B が未接続ならノブの値を使います。',
 		'synthPatch.mod.mul': 'A × B。A だけつなげばゲインになります。',
-		'synthPatch.mod.remap': '値を別の範囲へ変換しクランプします。ベロシティ 0-1 をカットオフ 200-8000 へ。',
+		'synthPatch.mod.remap':
+			'値を別の範囲へ変換しクランプします。ベロシティ 0-1 をカットオフ 200-8000 へ。',
 		'synthPatch.mod.clamp': '値を MIN と MAX の間に収めます。',
 		'synthPatch.mod.lerp': 'ALPHA で A と B を補間します。',
 		'synthPatch.mod.curve': '0-1 の値を曲げます。1 より大きいと立ち上がりが遅くなります。',
-		'synthPatch.mod.seq': '続くモジュールを少し遅らせて実行します。GAP だけずらすと一打ではなくフラムになります。',
+		'synthPatch.mod.seq':
+			'続くモジュールを少し遅らせて実行します。GAP だけずらすと一打ではなくフラムになります。',
 		'synthPatch.mod.when': '分岐です。条件を満たしたときだけ TRUE から実行が続きます。',
-		'synthPatch.mod.act': '手前の WHEN が成立したときの動作：CUT は他の音を止め、SOLO はこのグループ以外を止め、GLIDE は前の音程から滑り込みます。',
+		'synthPatch.mod.act':
+			'手前の WHEN が成立したときの動作：CUT は他の音を止め、SOLO はこのグループ以外を止め、GLIDE は前の音程から滑り込みます。',
 		'synthPatch.mod.split': 'ステレオ信号を分け、LとRを別々に処理できるようにします。',
 		'synthPatch.mod.merge': '2つのモノ経路を1つのステレオ信号に戻します。',
 		'synthPatch.mod.scope': 'この地点の波形。信号はそのまま通過します。',
@@ -1346,18 +1646,22 @@ export default {
 		'synthPatch.mod.sum': '2つの信号を足し合わせます。',
 		'synthPatch.mod.subtract': 'AからBを引きます。共通部分が打ち消され、差だけが残ります。',
 		'synthPatch.mod.ring': '一方の信号がもう一方を掛け合わせます。非整数次倍音：鐘、ゴング、金属。',
-		'synthPatch.mod.invert': '位相を反転します。単体では聞こえず、自身の複製と合わせると打ち消し合います。',
+		'synthPatch.mod.invert':
+			'位相を反転します。単体では聞こえず、自身の複製と合わせると打ち消し合います。',
 		'synthPatch.builtInParams': 'この段はラック1-7で編集します。ここには重複させていません。',
-		'synth.preset.percussionOffHint': '{track} の K.MAP — ドラムマシンのように各キーに個別のサウンドを持たせます',
+		'synth.preset.percussionOffHint':
+			'{track} の K.MAP — ドラムマシンのように各キーに個別のサウンドを持たせます',
 		'synth.preset.thisTrack': 'このトラック',
 		'synth.preset.theActiveTrack': 'アクティブトラック',
 
 		'synth.wave.basicLabel': 'BASIC',
 		'synth.wave.basicHint': '4つの基本アナログ波形',
 		'synth.wave.noiseLabel': 'NOISE',
-		'synth.wave.noiseHint': 'バッファ音源：ホワイトノイズと 808 シンバルバンク（OSC1 専用。OSC2 ではソウ波として再生されます）',
+		'synth.wave.noiseHint':
+			'バッファ音源：ホワイトノイズと 808 シンバルバンク（OSC1 専用。OSC2 ではソウ波として再生されます）',
 		'synth.wave.advancedLabel': 'ADVANCED',
-		'synth.wave.advancedHint': '積層・テーブル波形：スイープする PWM、5基のソウ波スタック、ドローバー、フォールドサイン波',
+		'synth.wave.advancedHint':
+			'積層・テーブル波形：スイープする PWM、5基のソウ波スタック、ドローバー、フォールドサイン波',
 		'synth.wave.customLabel': 'CUSTOM',
 		'synth.wave.customHint': '自分で描いた波形 — 1サイクル、自由な形状',
 		'synth.wave.drawnHint': '{name} — あなたが描いた波形',
@@ -1371,7 +1675,8 @@ export default {
 		'synth.wave.removeHint': '{name} を削除',
 		'synth.wave.removeAria': '{name} を削除',
 		'synth.wave.drawNew': '新規波形を描く…',
-		'synth.wave.drawNewHint': 'マウスで1サイクル分の波形を描きます。このブラウザに保存され、ここに適用されます',
+		'synth.wave.drawNewHint':
+			'マウスで1サイクル分の波形を描きます。このブラウザに保存され、ここに適用されます',
 
 		'synth.waveDraw.title': '波形を描く',
 		'synth.waveDraw.editHeading': 'EDIT WAVE',
@@ -1393,103 +1698,165 @@ export default {
 		'synth.waveDraw.saveAndUse': '保存して使用',
 		'synth.waveDraw.saveHint': 'この波形をブラウザに保存し、{forLabel} で使用します',
 
-		'synth.tracks.overlayOnHint': 'マルチトラックオーバーレイモード：有効 — TRK をクリックして複数選択し、ピアノロールに重ねて表示します',
-		'synth.tracks.overlayOffHint': 'マルチトラックオーバーレイモード：無効 — クリックするとピアノロールでの多トラック重ね表示を有効にします',
-		'synth.tracks.trkLabelHint': 'トラック — 番号をクリックするとそのトラックを編集します。OVLY モードではクリックでロール上の表示・非表示を切り替えます',
-		'synth.tracks.setActiveHint': '{name} を単独のアクティブトラックに設定（ラック1-7、ピアノロール編集、鍵盤試奏を制御）— 現在の状態：{state}',
+		'synth.tracks.overlayOnHint':
+			'マルチトラックオーバーレイモード：有効 — TRK をクリックして複数選択し、ピアノロールに重ねて表示します',
+		'synth.tracks.overlayOffHint':
+			'マルチトラックオーバーレイモード：無効 — クリックするとピアノロールでの多トラック重ね表示を有効にします',
+		'synth.tracks.trkLabelHint':
+			'トラック — 番号をクリックするとそのトラックを編集します。OVLY モードではクリックでロール上の表示・非表示を切り替えます',
+		'synth.tracks.setActiveHint':
+			'{name} を単独のアクティブトラックに設定（ラック1-7、ピアノロール編集、鍵盤試奏を制御）— 現在の状態：{state}',
 		'synth.tracks.activeSolid': 'アクティブ【塗りつぶし】',
 		'synth.tracks.inactiveHollow': '非アクティブ【枠のみ】',
-		'synth.tracks.overlayToggleHint': '{name} — 名前をクリックしてオーバーレイ表示を切り替え。編集中：{state}',
+		'synth.tracks.overlayToggleHint':
+			'{name} — 名前をクリックしてオーバーレイ表示を切り替え。編集中：{state}',
 		'synth.tracks.selectHint': '{name} を選択',
 		'synth.tracks.muteHint': '{name} をミュート',
 		'synth.tracks.soloHint': '{name} をソロ — 加算式：複数トラックをソロにすると同時に聴こえます',
 
 		'synth.drop.title': 'ドロップしてロード',
-		'synth.drop.body': '.mid → MIDI トラックごとに1つのシーケンサートラック · .json → シンセパッチ、またはアクティブトラックへのパッチ',
+		'synth.drop.body':
+			'.mid → MIDI トラックごとに1つのシーケンサートラック · .json → シンセパッチ、またはアクティブトラックへのパッチ',
 
-		'synth.tooltip.square': 'スクエア波形 — 奇数次倍音を多く含む空洞的な音色。レトロな 8bit リードやチップチューンベースに最適',
-		'synth.tooltip.sawtooth': 'ソウ波形 — すべての倍音を含む明るく荒々しい音色。攻撃的なリード、ブラス、厚みのあるパッドに最適',
-		'synth.tooltip.triangle': 'トライアングル波形 — わずかな奇数次倍音を持つ柔らかく温かい音色。温かみのあるベースラインやフルート系の音に最適',
-		'synth.tooltip.sine': 'サイン波形 — 倍音を持たない純粋な基音。深いサブベースやクリーンな音色に最適',
-		'synth.tooltip.noise': 'ホワイトノイズジェネレーター — 全周波数で均等なエネルギー。ドラム、パーカッシブなトランジェント、効果音に最適（OSC1。OSC2 ではソウ波として再生されます）',
-		'synth.tooltip.metal': 'METAL — 808 シンバル比率の6つのスクエア波で構成される固定ピッチ音：ライド、クラッシュ、ハイハットの金属音。NOISE を足すとジリジリ感が加わり、ハイパスで本体を削るとその感触が残ります（OSC1）',
-		'synth.tooltip.pwm': 'PWM — パルス幅が WIDTH を中心に RATE の速さ、DEPTH の量でスイープします（ノブはサブメニュー内）。動きのある定番アナログパッド／リード',
-		'synth.tooltip.supersaw': 'SUPERSAW — 5基のソウ波。外側の2基が SPREAD セント分広がり、MIX レベルで混ざります（ノブはサブメニュー内）。コーラス無しで得られる幅広いトランス系スタック',
-		'synth.tooltip.organ': 'ORGAN — 6本のドローバー、倍音1・2・3・4・5・8次に対応（ノブはサブメニュー内）。安定して空洞的で、リードの下に敷くのに向いています',
-		'synth.tooltip.fold': 'FOLD — サイン波を FOLD でウェーブフォルダーに駆動します（ノブはサブメニュー内）。トライアングルより明るく、ウェストコースト系の刺激感があります',
-		'synth.tooltips.blendLayer': 'ブレンドモード：Layer — オシレーター1と2を並列に加算し、厚みのあるデュアルオシレーター音を作ります',
-		'synth.tooltips.blendFm': 'ブレンドモード：FM（周波数変調）— オシレーター2がオシレーター1の周波数を変調し、豊かな金属的／ベル系の倍音を作ります',
-		'synth.tooltips.blendRing': 'ブレンドモード：リングモジュレーション — オシレーター1と2の信号を乗算し、複雑な非整数次倍音のテクスチャーを作ります',
-		'synth.tooltips.blendSync': 'ブレンドモード：ハードシンク — オシレーター1が1サイクル完了するたびにオシレーター2の位相をリセットし、鋭いシンクリードスウィープを作ります',
-		'synth.tooltips.filterLowpass': 'フィルターモード：ローパスフィルター（LPF）— カットオフ以下の低域を通し、高域を減衰させます',
-		'synth.tooltips.filterHighpass': 'フィルターモード：ハイパスフィルター（HPF）— カットオフ以上の高域を通し、低域を減衰させます',
-		'synth.tooltips.filterBandpass': 'フィルターモード：バンドパスフィルター（BPF）— カットオフ周波数付近の共振する狭い帯域を通し、高低域を減衰させます',
-		'synth.tooltips.filterNotch': 'フィルターモード：ノッチ／バンドリジェクトフィルター（BRF）— カットオフ付近の狭い帯域を減衰させつつ、高低域を通します',
+		'synth.tooltip.square':
+			'スクエア波形 — 奇数次倍音を多く含む空洞的な音色。レトロな 8bit リードやチップチューンベースに最適',
+		'synth.tooltip.sawtooth':
+			'ソウ波形 — すべての倍音を含む明るく荒々しい音色。攻撃的なリード、ブラス、厚みのあるパッドに最適',
+		'synth.tooltip.triangle':
+			'トライアングル波形 — わずかな奇数次倍音を持つ柔らかく温かい音色。温かみのあるベースラインやフルート系の音に最適',
+		'synth.tooltip.sine':
+			'サイン波形 — 倍音を持たない純粋な基音。深いサブベースやクリーンな音色に最適',
+		'synth.tooltip.noise':
+			'ホワイトノイズジェネレーター — 全周波数で均等なエネルギー。ドラム、パーカッシブなトランジェント、効果音に最適（OSC1。OSC2 ではソウ波として再生されます）',
+		'synth.tooltip.metal':
+			'METAL — 808 シンバル比率の6つのスクエア波で構成される固定ピッチ音：ライド、クラッシュ、ハイハットの金属音。NOISE を足すとジリジリ感が加わり、ハイパスで本体を削るとその感触が残ります（OSC1）',
+		'synth.tooltip.pwm':
+			'PWM — パルス幅が WIDTH を中心に RATE の速さ、DEPTH の量でスイープします（ノブはサブメニュー内）。動きのある定番アナログパッド／リード',
+		'synth.tooltip.supersaw':
+			'SUPERSAW — 5基のソウ波。外側の2基が SPREAD セント分広がり、MIX レベルで混ざります（ノブはサブメニュー内）。コーラス無しで得られる幅広いトランス系スタック',
+		'synth.tooltip.organ':
+			'ORGAN — 6本のドローバー、倍音1・2・3・4・5・8次に対応（ノブはサブメニュー内）。安定して空洞的で、リードの下に敷くのに向いています',
+		'synth.tooltip.fold':
+			'FOLD — サイン波を FOLD でウェーブフォルダーに駆動します（ノブはサブメニュー内）。トライアングルより明るく、ウェストコースト系の刺激感があります',
+		'synth.tooltips.blendLayer':
+			'ブレンドモード：Layer — オシレーター1と2を並列に加算し、厚みのあるデュアルオシレーター音を作ります',
+		'synth.tooltips.blendFm':
+			'ブレンドモード：FM（周波数変調）— オシレーター2がオシレーター1の周波数を変調し、豊かな金属的／ベル系の倍音を作ります',
+		'synth.tooltips.blendRing':
+			'ブレンドモード：リングモジュレーション — オシレーター1と2の信号を乗算し、複雑な非整数次倍音のテクスチャーを作ります',
+		'synth.tooltips.blendSync':
+			'ブレンドモード：ハードシンク — オシレーター1が1サイクル完了するたびにオシレーター2の位相をリセットし、鋭いシンクリードスウィープを作ります',
+		'synth.tooltips.filterLowpass':
+			'フィルターモード：ローパスフィルター（LPF）— カットオフ以下の低域を通し、高域を減衰させます',
+		'synth.tooltips.filterHighpass':
+			'フィルターモード：ハイパスフィルター（HPF）— カットオフ以上の高域を通し、低域を減衰させます',
+		'synth.tooltips.filterBandpass':
+			'フィルターモード：バンドパスフィルター（BPF）— カットオフ周波数付近の共振する狭い帯域を通し、高低域を減衰させます',
+		'synth.tooltips.filterNotch':
+			'フィルターモード：ノッチ／バンドリジェクトフィルター（BRF）— カットオフ付近の狭い帯域を減衰させつつ、高低域を通します',
 		'synth.tooltips.lfoSine': 'サイン波 LFO — 滑らかで連続的な周期変調',
 		'synth.tooltips.lfoTriangle': 'トライアングル波 LFO — 直線的に上下する変調',
 		'synth.tooltips.lfoSquare': 'スクエア波 LFO — 段階的なオン／オフの二値変調パルス',
 		'synth.tooltips.lfoSawtooth': 'ソウ波 LFO — 直線的に上昇し急激に落ちる変調',
-		'synth.tooltip.preset8BitBass': 'パッチ：8-Bit Bass — 軽快な VCF フィルターエンベロープを持つレトロなチップチューン系スクエア／トライアングルベース',
-		'synth.tooltip.presetPluck': 'パッチ：Pluck — 高速なフィルターディケイを持つ短いアコースティック／エレクトロニック系のプラック音',
-		'synth.tooltip.presetBrass': 'パッチ：Brass — デチューンされた2基のソウ波オシレーターとダイナミックなフィルタースイープ',
-		'synth.tooltip.presetLead': 'パッチ：Lead — 25% パルス波とソウ波を重ねた鋭いリード、レゾナンスフィルターとフルサステイン',
-		'synth.tooltip.presetSubBass': 'パッチ：Sub Bass — サイン波に 800Hz ローパス下の SUB オクターブを重ねた、エッジのない重量感',
-		'synth.tooltip.presetAcidBass': 'パッチ：Acid Bass — ソウ波を、エンベロープでスイープする Q8 のローパスフィルターに通し、60ms のグライド',
-		'synth.tooltip.presetFmBass': 'パッチ：FM Bass — サイン波キャリアを1オクターブ上のサイン波で変調',
-		'synth.tooltip.presetSawLead': 'パッチ：Saw Lead — 14セント離れた2つのソウ波に、フェードインするビブラート',
-		'synth.tooltip.presetSyncLead': 'パッチ：Sync Lead — SYNC モードで第2オシレーターを完全5度上に、フィルターエンベロープで裂けるような質感を作ります',
-		'synth.tooltip.presetChipLead': 'パッチ：Chip Lead — 15% パルス波、フィルターなし、高速ビブラート：NES 系リード音',
-		'synth.tooltip.presetKoto': 'パッチ：Koto — 1オクターブ上のサイン波を重ねたトライアングル波、瞬時に閉じるフィルター、サステインなし',
-		'synth.tooltip.presetMarimba': 'パッチ：Marimba — サイン波の本体と、控えめな1オクターブ上のトライアングル波が共に減衰',
-		'synth.tooltip.presetBell': 'パッチ：Bell — 2つのサイン波を 3.5 の比率でリングモジュレート。非整数次倍音、長い余韻',
-		'synth.tooltip.presetEPiano': 'パッチ：E-Piano — サイン波キャリアに、4オクターブ上の軽い FM タインを重ねたもの',
-		'synth.tooltip.presetOrgan': 'パッチ：Organ — 基音・オクターブ・SUB のドローバー、エンベロープなし、ゆっくりしたトレモロ',
-		'synth.tooltip.presetClav': 'パッチ：Clav — 25% パルス波を素早く閉じる共振ローパスフィルターに通したもの',
-		'synth.tooltip.presetHarpsichord': 'パッチ：Harpsichord — ソウ波に1オクターブ上のスクエア波を重ねた、明るいプラック感',
-		'synth.tooltip.presetWarmPad': 'パッチ：Warm Pad — デチューンしたソウ波の背後で、ゆっくりした LFO で呼吸するローフィルター',
-		'synth.tooltip.presetStrings': 'パッチ：Strings — 広いデチューン、明るめのフィルター、フェードインするビブラート',
-		'synth.tooltip.presetGlassPad': 'パッチ：Glass Pad — トライアングル波と1オクターブ上のサイン波、開いたフィルター、上部の空気感、ゆっくりしたオートパン',
-		'synth.tooltip.presetHollowPad': 'パッチ：Hollow Pad — スクエア波に1オクターブ下のスクエア波を重ね、LFO で開閉するローフィルター',
-		'synth.tooltip.presetKick808': 'パッチ：808 Kick — 2.5オクターブのピッチドロップを持つサイン波にサブを重ねたもの。低い音域（C2-C3）でのシーケンスに向きます',
-		'synth.tooltip.presetKickPunch': 'パッチ：Punch Kick — より短く硬いトライアングル系キック。ノイズのビーター音付き',
-		'synth.tooltip.presetSnare': 'パッチ：Snare — トライアングル波＋完全5度の本体にノイズのラトルを重ねたもの。KEY TRK で鍵盤の上方に行くほど明るくなります',
-		'synth.tooltip.presetClap': 'パッチ：Clap — 11ms 間隔の3回のノイズバーストの後、余韻が続きます（ラック1の RPT / GAP）',
-		'synth.tooltip.presetClosedHat': 'パッチ：Closed Hat — 45ms のハイパス処理されたノイズ。鍵盤が高いほど明るくなります',
+		'synth.tooltip.preset8BitBass':
+			'パッチ：8-Bit Bass — 軽快な VCF フィルターエンベロープを持つレトロなチップチューン系スクエア／トライアングルベース',
+		'synth.tooltip.presetPluck':
+			'パッチ：Pluck — 高速なフィルターディケイを持つ短いアコースティック／エレクトロニック系のプラック音',
+		'synth.tooltip.presetBrass':
+			'パッチ：Brass — デチューンされた2基のソウ波オシレーターとダイナミックなフィルタースイープ',
+		'synth.tooltip.presetLead':
+			'パッチ：Lead — 25% パルス波とソウ波を重ねた鋭いリード、レゾナンスフィルターとフルサステイン',
+		'synth.tooltip.presetSubBass':
+			'パッチ：Sub Bass — サイン波に 800Hz ローパス下の SUB オクターブを重ねた、エッジのない重量感',
+		'synth.tooltip.presetAcidBass':
+			'パッチ：Acid Bass — ソウ波を、エンベロープでスイープする Q8 のローパスフィルターに通し、60ms のグライド',
+		'synth.tooltip.presetFmBass':
+			'パッチ：FM Bass — サイン波キャリアを1オクターブ上のサイン波で変調',
+		'synth.tooltip.presetSawLead':
+			'パッチ：Saw Lead — 14セント離れた2つのソウ波に、フェードインするビブラート',
+		'synth.tooltip.presetSyncLead':
+			'パッチ：Sync Lead — SYNC モードで第2オシレーターを完全5度上に、フィルターエンベロープで裂けるような質感を作ります',
+		'synth.tooltip.presetChipLead':
+			'パッチ：Chip Lead — 15% パルス波、フィルターなし、高速ビブラート：NES 系リード音',
+		'synth.tooltip.presetKoto':
+			'パッチ：Koto — 1オクターブ上のサイン波を重ねたトライアングル波、瞬時に閉じるフィルター、サステインなし',
+		'synth.tooltip.presetMarimba':
+			'パッチ：Marimba — サイン波の本体と、控えめな1オクターブ上のトライアングル波が共に減衰',
+		'synth.tooltip.presetBell':
+			'パッチ：Bell — 2つのサイン波を 3.5 の比率でリングモジュレート。非整数次倍音、長い余韻',
+		'synth.tooltip.presetEPiano':
+			'パッチ：E-Piano — サイン波キャリアに、4オクターブ上の軽い FM タインを重ねたもの',
+		'synth.tooltip.presetOrgan':
+			'パッチ：Organ — 基音・オクターブ・SUB のドローバー、エンベロープなし、ゆっくりしたトレモロ',
+		'synth.tooltip.presetClav':
+			'パッチ：Clav — 25% パルス波を素早く閉じる共振ローパスフィルターに通したもの',
+		'synth.tooltip.presetHarpsichord':
+			'パッチ：Harpsichord — ソウ波に1オクターブ上のスクエア波を重ねた、明るいプラック感',
+		'synth.tooltip.presetWarmPad':
+			'パッチ：Warm Pad — デチューンしたソウ波の背後で、ゆっくりした LFO で呼吸するローフィルター',
+		'synth.tooltip.presetStrings':
+			'パッチ：Strings — 広いデチューン、明るめのフィルター、フェードインするビブラート',
+		'synth.tooltip.presetGlassPad':
+			'パッチ：Glass Pad — トライアングル波と1オクターブ上のサイン波、開いたフィルター、上部の空気感、ゆっくりしたオートパン',
+		'synth.tooltip.presetHollowPad':
+			'パッチ：Hollow Pad — スクエア波に1オクターブ下のスクエア波を重ね、LFO で開閉するローフィルター',
+		'synth.tooltip.presetKick808':
+			'パッチ：808 Kick — 2.5オクターブのピッチドロップを持つサイン波にサブを重ねたもの。低い音域（C2-C3）でのシーケンスに向きます',
+		'synth.tooltip.presetKickPunch':
+			'パッチ：Punch Kick — より短く硬いトライアングル系キック。ノイズのビーター音付き',
+		'synth.tooltip.presetSnare':
+			'パッチ：Snare — トライアングル波＋完全5度の本体にノイズのラトルを重ねたもの。KEY TRK で鍵盤の上方に行くほど明るくなります',
+		'synth.tooltip.presetClap':
+			'パッチ：Clap — 11ms 間隔の3回のノイズバーストの後、余韻が続きます（ラック1の RPT / GAP）',
+		'synth.tooltip.presetClosedHat':
+			'パッチ：Closed Hat — 45ms のハイパス処理されたノイズ。鍵盤が高いほど明るくなります',
 		'synth.tooltip.presetOpenHat': 'パッチ：Open Hat — クローズドハットを350msまで鳴らし続けたもの',
-		'synth.tooltip.presetTom': 'パッチ：Tom — サイン波＋トライアングル波の軽いピッチドロップ。複数の鍵盤にまたがって演奏するとタム一式になります',
+		'synth.tooltip.presetTom':
+			'パッチ：Tom — サイン波＋トライアングル波の軽いピッチドロップ。複数の鍵盤にまたがって演奏するとタム一式になります',
 		'synth.tooltip.presetRimshot': 'パッチ：Rimshot — リングモジュレートされた40msの短い音',
-		'synth.tooltip.presetCowbell': 'パッチ：Cowbell — 完全5度離れた2つのスクエア波（808ペア）を 1.5kHz でバンドパス処理',
-		'synth.tooltip.presetShaker': 'パッチ：Shaker — ソフトアタックのノイズに、ヒットに合わせて開閉するフィルター',
+		'synth.tooltip.presetCowbell':
+			'パッチ：Cowbell — 完全5度離れた2つのスクエア波（808ペア）を 1.5kHz でバンドパス処理',
+		'synth.tooltip.presetShaker':
+			'パッチ：Shaker — ソフトアタックのノイズに、ヒットに合わせて開閉するフィルター',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '各チップは、独自のオシレーター、フィルター、エンベロープ、EQ を持つ1つのボイスです。チップをクリックすると、下のすべてのラックがそのトラックを編集対象にします。M と S でミュート／ソロを切り替えます。OVLY は編集中のトラックの背後に他のトラックを表示し、パート同士の位置を揃えやすくします。',
+		'synth.tour.tracksBody':
+			'各チップは、独自のオシレーター、フィルター、エンベロープ、EQ を持つ1つのボイスです。チップをクリックすると、下のすべてのラックがそのトラックを編集対象にします。M と S でミュート／ソロを切り替えます。OVLY は編集中のトラックの背後に他のトラックを表示し、パート同士の位置を揃えやすくします。',
 		'synth.tour.rollTitle': 'PIANO ROLL',
-		'synth.tour.rollBody': 'セルをクリックしてノートを配置し、ドラッグで連続配置、再クリックで消去します。SNAP はカーソルが吸着するグリッド、DUR は配置するノートの長さで、どちらも3連符に対応する 1/12 まで細分できます。伸ばしたノートは同じインデックスがセルにまたがって並んでいる状態なので、長い小節は実質1つの長いノートです。',
+		'synth.tour.rollBody':
+			'セルをクリックしてノートを配置し、ドラッグで連続配置、再クリックで消去します。SNAP はカーソルが吸着するグリッド、DUR は配置するノートの長さで、どちらも3連符に対応する 1/12 まで細分できます。伸ばしたノートは同じインデックスがセルにまたがって並んでいる状態なので、長い小節は実質1つの長いノートです。',
 		'synth.tour.rollKeyLen': 'ページ数で数えるパターン長',
 		'synth.tour.rollKeyMeter': '4/4、3/4、2/4、5/4、6/8、7/8',
 		'synth.tour.rollKeyAcc': 'ステップごとのアクセント、+1〜+4 dB',
 		'synth.tour.playTitle': 'PLAY IT',
-		'synth.tour.playBody': 'これらのキー、QWERTY キーボード、または接続済みの MIDI コントローラーからアクティブトラックを試奏できます。ここで弾いた音は鳴るだけで録音はされません — パターンを書き込むのは上のピアノロールです。',
+		'synth.tour.playBody':
+			'これらのキー、QWERTY キーボード、または接続済みの MIDI コントローラーからアクティブトラックを試奏できます。ここで弾いた音は鳴るだけで録音はされません — パターンを書き込むのは上のピアノロールです。',
 		'synth.tour.playKeyLower': '下のオクターブ、白鍵と黒鍵',
 		'synth.tour.playKeyUpper': '上のオクターブ',
 		'synth.tour.playKeyOctave': 'オクターブ下げ／上げ（[ と ] でも可）',
 		'synth.tour.playKeySustain': 'サステインペダル、押している間がペダルダウン',
 		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
-		'synth.tour.voiceBody': '音が作られる場所を、信号の順に：2基のオシレーター、それらを重ねる、または一方で他方を変調する（FM・リング・シンク）フュージョン段、そしてレゾナンス付きマルチモードフィルター。ここの各ノブは上で選択したトラックを編集します。',
+		'synth.tour.voiceBody':
+			'音が作られる場所を、信号の順に：2基のオシレーター、それらを重ねる、または一方で他方を変調する（FM・リング・シンク）フュージョン段、そしてレゾナンス付きマルチモードフィルター。ここの各ノブは上で選択したトラックを編集します。',
 		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
-		'synth.tour.shapeBody': 'その音が時間とともにどう変化するか：振幅とフィルター用の2系統のエンベロープ、ピッチ・カットオフ・パン・音量を駆動できる LFO マトリクス、トラックごとの FX と6バンド EQ、そして可視化付きの出力ストリップ。',
+		'synth.tour.shapeBody':
+			'その音が時間とともにどう変化するか：振幅とフィルター用の2系統のエンベロープ、ピッチ・カットオフ・パン・音量を駆動できる LFO マトリクス、トラックごとの FX と6バンド EQ、そして可視化付きの出力ストリップ。',
 		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
 		'synth.tour.advTitle': 'もうひとつの姿',
-		'synth.tour.advBody': 'ラック1-7はひとつの楽器で、すべてのつまみが並び配線は不要です。ADVはもうひとつの姿 —— ラックが退き、パネルはパッチベイになり、音は原始的な部品とケーブルから組み立てます。トラックはどちらか一方にあり、その選択はパッチとともに保存されます。',
+		'synth.tour.advBody':
+			'ラック1-7はひとつの楽器で、すべてのつまみが並び配線は不要です。ADVはもうひとつの姿 —— ラックが退き、パネルはパッチベイになり、音は原始的な部品とケーブルから組み立てます。トラックはどちらか一方にあり、その選択はパッチとともに保存されます。',
 		'synth.tour.advAction': 'このトラックをADVに切り替える',
 		'synth.tour.canvasTitle': 'パッチベイ',
-		'synth.tour.canvasBody': 'モジュールをキャンバスに置き、ポート間をケーブルでつなぎます。白はオーディオ、黄色はコントロール —— エンベロープをフィルターのカットオフへ、はつまみではなくケーブルです。オーディオはループできず、エディタが拒否します。コントロールはループできますし、それが狙いのこともあります。',
+		'synth.tour.canvasBody':
+			'モジュールをキャンバスに置き、ポート間をケーブルでつなぎます。白はオーディオ、黄色はコントロール —— エンベロープをフィルターのカットオフへ、はつまみではなくケーブルです。オーディオはループできず、エディタが拒否します。コントロールはループできますし、それが狙いのこともあります。',
 		'synth.tour.canvasKeyDrag': 'モジュールを移動、またはポートをドラッグして結線',
 		'synth.tour.canvasKeyPan': 'キャンバスを移動',
 		'synth.tour.canvasKeyZoom': 'ポインタを中心に拡大縮小',
 		'synth.tour.paletteTitle': '部品',
-		'synth.tour.paletteBody': 'どれもひとつの原始的な部品です：オシレーター、エンベロープ、共鳴する弦。キャンバスへドラッグするか、クリックで配置します。面白い音は、誰も出荷しなかった順序でつないだときに生まれます。',
-		'synth.tour.transportBody': 'LOAD はビルトイン曲を選び、IMP は以前エクスポートしたパッチや .mid ファイルを取り込みます — 各 MIDI トラックがシーケンサーのトラックになり、ファイルのテンポと拍子がそのまま使われます。.mid はこのページのどこにドロップしても構いません。',
+		'synth.tour.paletteBody':
+			'どれもひとつの原始的な部品です：オシレーター、エンベロープ、共鳴する弦。キャンバスへドラッグするか、クリックで配置します。面白い音は、誰も出荷しなかった順序でつないだときに生まれます。',
+		'synth.tour.transportBody':
+			'LOAD はビルトイン曲を選び、IMP は以前エクスポートしたパッチや .mid ファイルを取り込みます — 各 MIDI トラックがシーケンサーのトラックになり、ファイルのテンポと拍子がそのまま使われます。.mid はこのページのどこにドロップしても構いません。',
 		'synth.tour.transportKeyWav': 'パターンをオフラインでレンダリングしてダウンロード',
 		'synth.tour.transportKeyShare': 'パッチ全体を URL にまとめる',
 		'synth.tour.transportKeySettings': 'グローバルなオーディオ／DSP 設定'
@@ -1499,56 +1866,75 @@ export default {
 		'synth.badge.walkthroughAria': '신디사이저 둘러보기',
 		'synth.midi.deviceFallbackName': 'MIDI 장치({id})',
 
-		'synth.transport.lenHint': '페이지 단위 패턴 길이 (1페이지 = 현재 METER 기준 1마디) — 루프 지점입니다',
+		'synth.transport.lenHint':
+			'페이지 단위 패턴 길이 (1페이지 = 현재 METER 기준 1마디) — 루프 지점입니다',
 		'synth.transport.lenCycleHint': '페이지 길이 프리셋 순환: 1 → 2 → 4 → 8 → 16 → 32 페이지',
 		'synth.transport.or': 'OR',
-		'synth.transport.lenInputHint': '패턴 길이(페이지) — {pages} × {steps} 스텝 ({meter}) = {total} 스텝',
-		'synth.transport.lenPagesHint': '{pages} 페이지 × 페이지당 {steps} 스텝 ({meter}) = {total} 스텝',
+		'synth.transport.lenInputHint':
+			'패턴 길이(페이지) — {pages} × {steps} 스텝 ({meter}) = {total} 스텝',
+		'synth.transport.lenPagesHint':
+			'{pages} 페이지 × 페이지당 {steps} 스텝 ({meter}) = {total} 스텝',
 		'synth.transport.meterHint': '박자표(METER) — 마디당 박수와 박자 세분을 정합니다',
 		'synth.transport.meterPrevHint': '이전 박자표',
 		'synth.transport.meterNextHint': '다음 박자표',
 		'synth.transport.settingsHint': '신디사이저 및 오디오 DSP 전역 설정 열기 [SETTINGS]',
 		'synth.transport.settings': '설정',
-		'synth.transport.rewindHint': '처음으로 되감기 (1스텝 / 1.1마디) — Home 키, Backspace로도 정지됩니다',
+		'synth.transport.rewindHint':
+			'처음으로 되감기 (1스텝 / 1.1마디) — Home 키, Backspace로도 정지됩니다',
 		'synth.transport.stepBackHint': '1마디 뒤로 (◄◄)',
 		'synth.transport.playToggleHint': '시퀀서 재생 / 정지 (일시정지 위치에서 재개) — Enter',
 		'synth.transport.stepFwdHint': '1마디 앞으로 (►►)',
-		'synth.transport.loopOnHint': 'LOOP — 정지할 때까지 패턴을 반복합니다. 클릭하면 ONCE로 전환됩니다.',
-		'synth.transport.loopOffHint': 'ONCE — 패턴을 한 번 재생하고 여운을 다 낸 뒤 1마디로 되감습니다. 클릭하면 LOOP로 전환됩니다.',
-		'synth.transport.jumpToCursorHint': '재생 헤드를 커서 위치로 이동 ({bar}.{beat}마디, {step}/{total} 스텝) — 클릭하여 이동',
+		'synth.transport.loopOnHint':
+			'LOOP — 정지할 때까지 패턴을 반복합니다. 클릭하면 ONCE로 전환됩니다.',
+		'synth.transport.loopOffHint':
+			'ONCE — 패턴을 한 번 재생하고 여운을 다 낸 뒤 1마디로 되감습니다. 클릭하면 LOOP로 전환됩니다.',
+		'synth.transport.jumpToCursorHint':
+			'재생 헤드를 커서 위치로 이동 ({bar}.{beat}마디, {step}/{total} 스텝) — 클릭하여 이동',
 		'synth.transport.snapHint': '그리드 퀀타이즈 / 스냅 정렬',
 		'synth.transport.durHint': '배치된 노트의 길이',
 		'synth.transport.pageNavHint': '스텝 페이지 이동',
 		'synth.transport.pagePrevHint': '이전 페이지 (◄)',
-		'synth.transport.pageJumpHint': '현재 마디 페이지: {page} / {total} 페이지 — 클릭하거나 숫자를 입력해 이동',
+		'synth.transport.pageJumpHint':
+			'현재 마디 페이지: {page} / {total} 페이지 — 클릭하거나 숫자를 입력해 이동',
 		'synth.transport.pageNextHint': '다음 페이지 (►)',
-		'synth.transport.followHint': '재생 헤드 따라가기 모드 (FLW) — 시퀀서 재생에 맞춰 자동으로 페이지를 넘깁니다',
+		'synth.transport.followHint':
+			'재생 헤드 따라가기 모드 (FLW) — 시퀀서 재생에 맞춰 자동으로 페이지를 넘깁니다',
 
 		'synth.confirm.cancel': '취소',
 		'synth.confirm.discard': '버리기',
 		'synth.confirm.newPatchTitle': '이 패치를 버릴까요?',
-		'synth.confirm.newPatchBody': '새 패치를 만들면 이 트랙의 모든 음색 파라미터가 초기화되고 저장하지 않은 내용은 사라집니다.',
+		'synth.confirm.newPatchBody':
+			'새 패치를 만들면 이 트랙의 모든 음색 파라미터가 초기화되고 저장하지 않은 내용은 사라집니다.',
 		'synth.confirm.newAdvPatchTitle': '이 패치를 버릴까요?',
-		'synth.confirm.newAdvPatchBody': '새 고급 패치를 만들면 이 트랙이 초기화되고 랙은 빈 현과 보디로 바뀝니다. 저장하지 않은 내용은 사라집니다.',
+		'synth.confirm.newAdvPatchBody':
+			'새 고급 패치를 만들면 이 트랙이 초기화되고 랙은 빈 현과 보디로 바뀝니다. 저장하지 않은 내용은 사라집니다.',
 		'synth.confirm.newProjectTitle': '이 프로젝트를 버릴까요?',
-		'synth.confirm.newProjectBody': '새 프로젝트는 8개 트랙 전체의 노트와 음색을 모두 지웁니다. 저장하지 않은 내용은 사라집니다.',
+		'synth.confirm.newProjectBody':
+			'새 프로젝트는 8개 트랙 전체의 노트와 음색을 모두 지웁니다. 저장하지 않은 내용은 사라집니다.',
 
 		'synth.patch.newHint': '새 프로젝트 — 모든 트랙을 지우고 빈 64스텝 시퀀서로 초기화합니다',
-		'synth.patch.saveHint': '패치 저장 — 8개 트랙의 신디사이저 파라미터와 시퀀서 노트를 브라우저 로컬 저장소에 저장합니다',
+		'synth.patch.saveHint':
+			'패치 저장 — 8개 트랙의 신디사이저 파라미터와 시퀀서 노트를 브라우저 로컬 저장소에 저장합니다',
 		'synth.patch.loadHint': '불러오기 — 브라우저에 저장된 패치 또는 내장 곡',
-		'synth.patch.loadLocalHint': '브라우저 로컬 저장소에서 저장된 신디사이저 파라미터와 시퀀서 패턴을 복원합니다',
+		'synth.patch.loadLocalHint':
+			'브라우저 로컬 저장소에서 저장된 신디사이저 파라미터와 시퀀서 패턴을 복원합니다',
 		'synth.patch.loadLocalLabel': '로컬 패치 (브라우저)',
 		'synth.patch.builtinSongsLabel': '내장 곡',
 		'synth.patch.loadSongHint': '{name} 불러오기 ({bpm} BPM, {meter}, {steps} 스텝)',
-		'synth.patch.importHint': '가져오기 — 이전에 내보낸 패치(.json 또는 압축된 .json.gz) 또는 .mid 파일: 각 MIDI 트랙이 시퀀서 트랙이 되며, 파일 자체의 템포와 박자표가 그대로 사용됩니다. 파일을 이 페이지 어디에나 끌어다 놓아도 됩니다.',
-		'synth.patch.exportHint': '패치 내보내기 — 8트랙 신디사이저 설정과 패턴 전체를 gzip으로 압축(.json.gz)해 다운로드합니다. 시퀀서 그리드는 대부분 반복되는 빈 셀이기 때문입니다',
-		'synth.patch.renderHint': 'WAV 렌더링 — 패턴 전체를 실제 신호 체인을 통해 오프라인으로 처리해 16비트 스테레오 WAV로 다운로드합니다. 곡이 길면 1~2분 정도 걸릴 수 있으며, 버튼에 진행 상황이 표시됩니다.',
+		'synth.patch.importHint':
+			'가져오기 — 이전에 내보낸 패치(.json 또는 압축된 .json.gz) 또는 .mid 파일: 각 MIDI 트랙이 시퀀서 트랙이 되며, 파일 자체의 템포와 박자표가 그대로 사용됩니다. 파일을 이 페이지 어디에나 끌어다 놓아도 됩니다.',
+		'synth.patch.exportHint':
+			'패치 내보내기 — 8트랙 신디사이저 설정과 패턴 전체를 gzip으로 압축(.json.gz)해 다운로드합니다. 시퀀서 그리드는 대부분 반복되는 빈 셀이기 때문입니다',
+		'synth.patch.renderHint':
+			'WAV 렌더링 — 패턴 전체를 실제 신호 체인을 통해 오프라인으로 처리해 16비트 스테레오 WAV로 다운로드합니다. 곡이 길면 1~2분 정도 걸릴 수 있으며, 버튼에 진행 상황이 표시됩니다.',
 		'synth.patch.renderingStage': '{stage} {percent}%',
 		'synth.patch.renderingStageSchedule': 'SCHED',
 		'synth.patch.renderingStageRender': 'RENDER',
 		'synth.patch.rendering': '렌더링 중…',
-		'synth.patch.shareHint': '패치 공유 — 패치 전체를 하나의 URL로 압축해 복사합니다. 이 링크를 여는 사람은 누구나 당신과 완전히 동일한 트랙과 패턴을 얻습니다',
-		'synth.patch.shareBlocked': '브라우저가 클립보드 접근을 차단했습니다 — 여기서 링크를 직접 복사하세요:',
+		'synth.patch.shareHint':
+			'패치 공유 — 패치 전체를 하나의 URL로 압축해 복사합니다. 이 링크를 여는 사람은 누구나 당신과 완전히 동일한 트랙과 패턴을 얻습니다',
+		'synth.patch.shareBlocked':
+			'브라우저가 클립보드 접근을 차단했습니다 — 여기서 링크를 직접 복사하세요:',
 
 		'synth.status.newOk': '✓ 새로 만듦',
 		'synth.status.savedOk': '✓ 저장됨',
@@ -1571,36 +1957,44 @@ export default {
 		'synth.midiImport.truncated': '이 MIDI 파일은 도중에 끝납니다 — 불완전할 수 있습니다.',
 		'synth.midiImport.tempoMapNote': '템포가 {count}번 바뀝니다. 첫 번째만 사용합니다.',
 		'synth.midiImport.meterChangeNote': '도중에 박자가 바뀝니다. 첫 번째만 사용합니다.',
-		'synth.midiImport.smpteUnsupported': 'SMPTE 타이밍 MIDI 파일은 지원되지 않습니다 — 메트리컬(PPQ) 타이밍으로 내보내세요.',
+		'synth.midiImport.smpteUnsupported':
+			'SMPTE 타이밍 MIDI 파일은 지원되지 않습니다 — 메트리컬(PPQ) 타이밍으로 내보내세요.',
 		'synth.midiImport.zeroTicks': 'MIDI 파일에 4분음표당 틱 수가 0으로 지정되어 있습니다.',
 		'synth.midiImport.noNoteData': '이 MIDI 파일에서 음표 데이터를 찾을 수 없습니다.',
 		'synth.midiImport.defaultTrackName': 'MIDI 트랙 {index}',
-		'synth.midiImport.tracksNotesBars': '{tracks}개 트랙{tracksPlural} · {notes}개 노트 · {bars}마디',
+		'synth.midiImport.tracksNotesBars':
+			'{tracks}개 트랙{tracksPlural} · {notes}개 노트 · {bars}마디',
 		'synth.midiImport.bpmMeter': '{bpm} BPM{bpmNote} · {meter}{meterNote}',
 		'synth.midiImport.bpmDefaultNote': ' (파일에 지정 없음 — MIDI 기본값 사용)',
 		'synth.midiImport.meterUnsupportedNote': ' ({meter}는 지원되지 않아 4/4를 사용)',
 		'synth.midiImport.trackLine': '  {index}. {name} {notes}개 노트{drum}',
 		'synth.midiImport.drumChannelNote': '  [GM 드럼 채널]',
 		'synth.midiImport.notesDropped': '88건반 범위를 벗어난 노트 {count}개{plural}가 제외되었습니다',
-		'synth.midiImport.partsSkipped': '추가 파트 {count}개{plural}를 건너뛰었습니다 — 랙은 최대 {capacity}개 트랙까지 지원합니다',
+		'synth.midiImport.partsSkipped':
+			'추가 파트 {count}개{plural}를 건너뛰었습니다 — 랙은 최대 {capacity}개 트랙까지 지원합니다',
 		'synth.render.failed': '렌더링 실패',
 
 		'synth.render.done': '✓ {filename}',
 		'synth.render.summary': '{duration} · {rate} kHz · 16비트 스테레오 · {size} MB',
 		'synth.render.levels': '피크 {peak} dBFS · RMS {rms} dBFS',
 		'synth.render.speed': '{elapsed}초 만에 렌더링 완료 (실시간의 {multiple}배)',
-		'synth.render.clippingWarning': '피크가 풀스케일에 도달했습니다 — 클리핑을 피하려면 마스터 또는 트랙 볼륨을 낮추세요',
-		'synth.render.offlineUnavailable': '이 브라우저에서는 OfflineAudioContext를 사용할 수 없습니다.',
+		'synth.render.clippingWarning':
+			'피크가 풀스케일에 도달했습니다 — 클리핑을 피하려면 마스터 또는 트랙 볼륨을 낮추세요',
+		'synth.render.offlineUnavailable':
+			'이 브라우저에서는 OfflineAudioContext를 사용할 수 없습니다.',
 		'synth.render.alreadyRunning': '이미 렌더링이 진행 중입니다.',
 
 		'synth.preset.pickCategoryHint': '왼쪽에서 카테고리를 고르세요.',
 		'synth.preset.myPresetsLabel': '내 패치',
-		'synth.preset.kitsHint': '건반 음색 테이블 전체 — 활성 트랙을 드럼머신(퍼커션 모드)으로 바꿉니다',
-		'synth.preset.mineHint': '여기에 저장하거나 가져온 항목입니다. 그 자리에서 이름을 바꾸거나 삭제할 수 있습니다',
+		'synth.preset.kitsHint':
+			'건반 음색 테이블 전체 — 활성 트랙을 드럼머신(퍼커션 모드)으로 바꿉니다',
+		'synth.preset.mineHint':
+			'여기에 저장하거나 가져온 항목입니다. 그 자리에서 이름을 바꾸거나 삭제할 수 있습니다',
 		'synth.preset.pickHint': '활성 {target}의 패치 — {name}. ↑/↓ 로 패치를 전환합니다.',
 		'synth.preset.builtInLabel': '내장',
 		'synth.preset.myKitsLabel': '내 키트',
-		'synth.preset.loadKitHint': '{name}을(를) 활성 트랙에 불러오기 — 퍼커션 모드를 켜고 건반 음색 테이블을 교체합니다 ({count}개 건반)',
+		'synth.preset.loadKitHint':
+			'{name}을(를) 활성 트랙에 불러오기 — 퍼커션 모드를 켜고 건반 음색 테이블을 교체합니다 ({count}개 건반)',
 		'synth.preset.loadKitShortHint': '{name}을(를) 활성 트랙에 불러오기 ({count}개 건반)',
 		'synth.preset.renameHint': '{name} 이름 바꾸기',
 		'synth.preset.renameAria': '{name} 이름 바꾸기',
@@ -1611,32 +2005,40 @@ export default {
 		'synth.preset.saveKitOnHint': '활성 트랙의 건반 음색 테이블을 이 브라우저에 키트로 저장합니다',
 		'synth.preset.saveKitOffHint': '먼저 활성 트랙에서 P를 켜고 건반에 음색을 지정하세요',
 		'synth.preset.importKit': '키트 가져오기…',
-		'synth.preset.importKitHint': '키트 .json 파일을 활성 트랙으로 가져옵니다. 파일을 페이지 어디에나 끌어다 놓아도 됩니다',
+		'synth.preset.importKitHint':
+			'키트 .json 파일을 활성 트랙으로 가져옵니다. 파일을 페이지 어디에나 끌어다 놓아도 됩니다',
 		'synth.preset.exportKit': '키트 내보내기',
 		'synth.preset.exportKitOnHint': '활성 트랙의 건반 음색 테이블을 키트 .json으로 다운로드합니다',
-		'synth.preset.noneYet': '아직 없습니다 — 아래에서 활성 {target}을(를) 저장하거나 파일을 가져오세요',
+		'synth.preset.noneYet':
+			'아직 없습니다 — 아래에서 활성 {target}을(를) 저장하거나 파일을 가져오세요',
 		'synth.preset.presetsLabel': '패치',
 		'synth.preset.kitsLabel': '키트',
 		'synth.preset.loadPresetHint': '{name}을(를) 활성 {target}에 불러오기',
 		'synth.preset.saveActive': '활성 {target} 저장',
-		'synth.preset.saveActiveHint': '활성 {targetPossessive} 현재 사운드(랙 1-6과 AIR, 볼륨·팬·노트는 제외)를 이 브라우저에 패치로 저장합니다',
+		'synth.preset.saveActiveHint':
+			'활성 {targetPossessive} 현재 사운드(랙 1-6과 AIR, 볼륨·팬·노트는 제외)를 이 브라우저에 패치로 저장합니다',
 		'synth.preset.saveShort': '저장',
 		'synth.preset.importShort': '가져오기',
 		'synth.preset.exportShort': '내보내기',
 		'synth.preset.myPresetsShort': '내 것',
 		'synth.preset.importFile': '파일 가져오기…',
-		'synth.preset.importFileHint': '패치 .json 파일을 활성 트랙이나 건반으로 가져옵니다. "내 패치"에 추가됩니다. 파일을 페이지 어디에나 끌어다 놓아도 됩니다.',
+		'synth.preset.importFileHint':
+			'패치 .json 파일을 활성 트랙이나 건반으로 가져옵니다. "내 패치"에 추가됩니다. 파일을 페이지 어디에나 끌어다 놓아도 됩니다.',
 		'synth.preset.exportActive': '활성 {target} 내보내기',
-		'synth.preset.exportActiveHint': '활성 {targetPossessive} 사운드를 패치 .json으로 다운로드합니다',
+		'synth.preset.exportActiveHint':
+			'활성 {targetPossessive} 사운드를 패치 .json으로 다운로드합니다',
 		'synth.preset.targetTrack': '트랙',
 		'synth.preset.targetKey': '건반',
 		'synth.preset.targetTrackLower': '트랙',
 		'synth.preset.targetKeyLower': '건반',
 		'synth.preset.targetTrackPossessive': '트랙의',
 		'synth.preset.targetKeyPossessive': '건반의',
-		'synth.preset.percussionOnHint': '{track}은(는) K.MAP 모드입니다 — 각 건반마다 고유한 사운드를 가지며, 랙과 패치는 활성 건반을 편집합니다. 클릭하면 트랙당 하나의 사운드로 되돌아갑니다(건반 음색 테이블은 유지됩니다).',
-		'synth.preset.advancedOnHint': '고급 모드: 아래 패널은 피아노 롤 또는 패치 베이입니다. 클릭하면 모듈 1-7이 돌아옵니다.',
-		'synth.preset.advancedOffHint': '고급 레이아웃: 모듈 1-7을 숨기고 아래 패널 전체를 피아노 롤 또는 패치 베이에 넘깁니다.',
+		'synth.preset.percussionOnHint':
+			'{track}은(는) K.MAP 모드입니다 — 각 건반마다 고유한 사운드를 가지며, 랙과 패치는 활성 건반을 편집합니다. 클릭하면 트랙당 하나의 사운드로 되돌아갑니다(건반 음색 테이블은 유지됩니다).',
+		'synth.preset.advancedOnHint':
+			'고급 모드: 아래 패널은 피아노 롤 또는 패치 베이입니다. 클릭하면 모듈 1-7이 돌아옵니다.',
+		'synth.preset.advancedOffHint':
+			'고급 레이아웃: 모듈 1-7을 숨기고 아래 패널 전체를 피아노 롤 또는 패치 베이에 넘깁니다.',
 		'synth.preset.newLabel': '새 패치',
 		'synth.preset.newHint': '중립적인 소리에서 시작합니다. 랙 1-7에서 편집',
 		'synth.preset.newAdvancedLabel': '새 패치 (고급)',
@@ -1648,11 +2050,13 @@ export default {
 		'synthPatch.copied': '{count}개 복사됨',
 		'synthPatch.pasted': '{count}개 붙여넣음',
 		'synthPatch.addLabel': '추가:',
-		'synthPatch.pickSlot': '위 경로에서 모듈을 선택해 편집하세요. 드래그로 순서 변경 — 순서가 소리를 결정합니다.',
+		'synthPatch.pickSlot':
+			'위 경로에서 모듈을 선택해 편집하세요. 드래그로 순서 변경 — 순서가 소리를 결정합니다.',
 		'synthPatch.paramsPending': '이 모듈의 컨트롤은 아직 연결되지 않았습니다.',
 		'synthPatch.mod.fusion': '두 오실레이터의 결합 방식: 레이어, FM, 링, 싱크.',
 		'synthPatch.mod.filter': '레조넌트 필터. 자체 엔벨로프로 스윕합니다.',
-		'synthPatch.mod.transient': '어택을 본체와 분리해 다듬습니다. 스네어의 날카로움이 여기 있습니다.',
+		'synthPatch.mod.transient':
+			'어택을 본체와 분리해 다듬습니다. 스네어의 날카로움이 여기 있습니다.',
 		'synthPatch.mod.drive': '새추레이션. 두들긴 드럼에는 순수 사인이 못 내는 배음이 있습니다.',
 		'synthPatch.mod.resonators': '여러 공진 모드를 동시에. 드럼 셸이 울리는 방식입니다.',
 		'synthPatch.mod.noiseshaper': '노이즈 소스에 전용 필터와 엔벨로프를 줍니다.',
@@ -1682,25 +2086,34 @@ export default {
 		'synthPatch.mod.env': '엔벨로프. 소리가 아니라 CV를 보냅니다.',
 		'synthPatch.mod.lfo': '변조용 저주파 오실레이터.',
 		'synthPatch.mod.mix': '두 신호를 더합니다.',
-		'synthPatch.mod.excite': '소리를 시작하는 타격, 뜯기, 숨. 모든 어쿠스틱 악기는 여기서 시작합니다.',
-		'synthPatch.mod.string': '진동하는 현: 길이는 건반에서, 감쇠와 강성은 노브에서. 피아노, 기타, 베이스, 찰현악기.',
+		'synthPatch.mod.excite':
+			'소리를 시작하는 타격, 뜯기, 숨. 모든 어쿠스틱 악기는 여기서 시작합니다.',
+		'synthPatch.mod.string':
+			'진동하는 현: 길이는 건반에서, 감쇠와 강성은 노브에서. 피아노, 기타, 베이스, 찰현악기.',
 		'synthPatch.mod.tube': '공명하는 공기 기둥. 홀수 배음은 클라리넷, 전체 배음은 플루트나 금관.',
 		'synthPatch.mod.modes': '세 개의 공진 모드를 동시에. 북 가죽이나 종이 울리는 방식입니다.',
 		'synthPatch.mod.body': '악기의 몸통: 향판, 통, 셸. 맨 현을 기타로 바꾸는 것.',
 		'synthPatch.mod.sub': '노트보다 한두 옥타브 아래. 소리에 무게를 더합니다.',
 		'synthPatch.mod.pulse': '폭을 정하고 훑을 수 있는 사각파. 오실레이터 하나가 둘처럼 들립니다.',
-		'synthPatch.mod.bow': '활: 현을 붙잡고 끌다가 미끄러지고 다시 붙잡습니다. 바이올린은 지속되고 뜯은 현은 그렇지 않은 이유입니다.',
-		'synthPatch.mod.blend': '원음과 어두운 사본 사이를 기울입니다. CV에 엔벨로프를 걸면 소리가 노트를 따라 열립니다.',
+		'synthPatch.mod.bow':
+			'활: 현을 붙잡고 끌다가 미끄러지고 다시 붙잡습니다. 바이올린은 지속되고 뜯은 현은 그렇지 않은 이유입니다.',
+		'synthPatch.mod.blend':
+			'원음과 어두운 사본 사이를 기울입니다. CV에 엔벨로프를 걸면 소리가 노트를 따라 열립니다.',
 		'synthPatch.mod.reed': '리드는 밸브입니다. 세게 불수록 닫히고, 거기서 그 쉰 소리가 나옵니다.',
-		'synthPatch.mod.comp': '트랜지언트를 눌러 줍니다. 두드린 몸통은 자기 서스테인보다 훨씬 높이 솟습니다.',
+		'synthPatch.mod.comp':
+			'트랜지언트를 눌러 줍니다. 두드린 몸통은 자기 서스테인보다 훨씬 높이 솟습니다.',
 		'synthPatch.mod.comb': '현을 뜯는 위치. 브리지 쪽은 얇고, 사운드홀 위는 둥급니다.',
 		'synthPatch.mod.space': '방. 모든 어쿠스틱 악기는 어떤 공간 안에서 들립니다.',
 		'synthPatch.mod.delay': '피드백이 있는 딜레이. 출력뿐 아니라 음색 안에도 놓을 수 있습니다.',
 		'synthPatch.mod.pan': '소리를 스테레오 공간 어디에 둘지 정합니다.',
-		'synthPatch.mod.in': '음 자체입니다. THEN이 패치를 실행하고 PITCH VEL NOTE GATE가 무엇을 연주했는지 알려줍니다. LVL은 OUT의 랙 1-7 소리에만 적용됩니다.',
-		'synthPatch.mod.out': '패치의 출구. 자체 음량과 팬을 가지며, 여기에 닿지 않는 것은 소리 나지 않습니다.',
-		'synthPatch.mod.tofreq': '음높이를 그것이 가리키는 주파수로 바꿉니다. A4가 기준이고 TRSP는 반음 단위로 옮깁니다.',
-		'synthPatch.mod.topitch': '주파수를 음높이로 되읽습니다. 두 음 사이에서는 반올림하며, QNT를 끄면 그대로 둡니다.',
+		'synthPatch.mod.in':
+			'음 자체입니다. THEN이 패치를 실행하고 PITCH VEL NOTE GATE가 무엇을 연주했는지 알려줍니다. LVL은 OUT의 랙 1-7 소리에만 적용됩니다.',
+		'synthPatch.mod.out':
+			'패치의 출구. 자체 음량과 팬을 가지며, 여기에 닿지 않는 것은 소리 나지 않습니다.',
+		'synthPatch.mod.tofreq':
+			'음높이를 그것이 가리키는 주파수로 바꿉니다. A4가 기준이고 TRSP는 반음 단위로 옮깁니다.',
+		'synthPatch.mod.topitch':
+			'주파수를 음높이로 되읽습니다. 두 음 사이에서는 반올림하며, QNT를 끄면 그대로 둡니다.',
 		'synthPatch.mod.const': '고정된 값. 아무 값 입력에나 연결하세요.',
 		'synthPatch.mod.add': 'A 더하기 B. B가 연결되지 않으면 노브 값을 씁니다.',
 		'synthPatch.mod.mul': 'A 곱하기 B. A만 연결하면 게인이 됩니다.',
@@ -1708,9 +2121,11 @@ export default {
 		'synthPatch.mod.clamp': '값을 MIN과 MAX 사이로 유지합니다.',
 		'synthPatch.mod.lerp': 'ALPHA로 A와 B를 섞습니다.',
 		'synthPatch.mod.curve': '0-1 값을 구부립니다. 1보다 크면 천천히 시작합니다.',
-		'synthPatch.mod.seq': '이어지는 모듈을 조금 늦게 실행합니다. GAP 만큼 벌리면 한 번이 아니라 플램이 됩니다.',
+		'synthPatch.mod.seq':
+			'이어지는 모듈을 조금 늦게 실행합니다. GAP 만큼 벌리면 한 번이 아니라 플램이 됩니다.',
 		'synthPatch.mod.when': '분기입니다. 조건이 맞을 때만 TRUE로 실행이 이어집니다.',
-		'synthPatch.mod.act': '앞의 WHEN이 참일 때 할 일: CUT은 다른 음을 끊고, SOLO는 이 그룹만 남기며, GLIDE는 이전 음정에서 미끄러져 들어옵니다.',
+		'synthPatch.mod.act':
+			'앞의 WHEN이 참일 때 할 일: CUT은 다른 음을 끊고, SOLO는 이 그룹만 남기며, GLIDE는 이전 음정에서 미끄러져 들어옵니다.',
 		'synthPatch.mod.split': '스테레오 신호를 나눠 L과 R을 따로 처리합니다.',
 		'synthPatch.mod.merge': '두 모노 경로를 하나의 스테레오 신호로 되돌립니다.',
 		'synthPatch.mod.scope': '이 지점의 파형. 신호는 그대로 통과합니다.',
@@ -1719,18 +2134,22 @@ export default {
 		'synthPatch.mod.sum': '두 신호를 더합니다.',
 		'synthPatch.mod.subtract': 'A 빼기 B. 공통 부분이 상쇄되고 차이만 남습니다.',
 		'synthPatch.mod.ring': '한 신호가 다른 신호를 곱합니다. 비조화음: 종, 징, 금속.',
-		'synthPatch.mod.invert': '위상을 뒤집습니다. 혼자서는 들리지 않고, 자기 복사본과 만나면 상쇄됩니다.',
+		'synthPatch.mod.invert':
+			'위상을 뒤집습니다. 혼자서는 들리지 않고, 자기 복사본과 만나면 상쇄됩니다.',
 		'synthPatch.builtInParams': '이 단계는 랙 1-7에서 편집하며 여기에 중복하지 않습니다.',
-		'synth.preset.percussionOffHint': '{track}의 K.MAP — 드럼머신처럼 각 건반에 고유한 사운드를 부여합니다',
+		'synth.preset.percussionOffHint':
+			'{track}의 K.MAP — 드럼머신처럼 각 건반에 고유한 사운드를 부여합니다',
 		'synth.preset.thisTrack': '이 트랙',
 		'synth.preset.theActiveTrack': '활성 트랙',
 
 		'synth.wave.basicLabel': 'BASIC',
 		'synth.wave.basicHint': '네 가지 기본 아날로그 파형',
 		'synth.wave.noiseLabel': 'NOISE',
-		'synth.wave.noiseHint': '버퍼 음원: 화이트 노이즈와 808 심벌 뱅크 (OSC1 전용, OSC2에서는 톱니파로 재생됩니다)',
+		'synth.wave.noiseHint':
+			'버퍼 음원: 화이트 노이즈와 808 심벌 뱅크 (OSC1 전용, OSC2에서는 톱니파로 재생됩니다)',
 		'synth.wave.advancedLabel': 'ADVANCED',
-		'synth.wave.advancedHint': '레이어 및 테이블 파형: 스위핑 PWM, 5개 톱니파 스택, 드로바, 폴디드 사인파',
+		'synth.wave.advancedHint':
+			'레이어 및 테이블 파형: 스위핑 PWM, 5개 톱니파 스택, 드로바, 폴디드 사인파',
 		'synth.wave.customLabel': 'CUSTOM',
 		'synth.wave.customHint': '직접 그린 파형 — 한 사이클, 자유로운 모양',
 		'synth.wave.drawnHint': '{name} — 직접 그린 파형',
@@ -1744,7 +2163,8 @@ export default {
 		'synth.wave.removeHint': '{name} 삭제',
 		'synth.wave.removeAria': '{name} 삭제',
 		'synth.wave.drawNew': '새 파형 그리기…',
-		'synth.wave.drawNewHint': '마우스로 한 사이클 분량의 파형을 그립니다. 이 브라우저에 저장되어 여기에 적용됩니다',
+		'synth.wave.drawNewHint':
+			'마우스로 한 사이클 분량의 파형을 그립니다. 이 브라우저에 저장되어 여기에 적용됩니다',
 
 		'synth.waveDraw.title': '파형 그리기',
 		'synth.waveDraw.editHeading': 'EDIT WAVE',
@@ -1766,103 +2186,162 @@ export default {
 		'synth.waveDraw.saveAndUse': '저장 후 사용',
 		'synth.waveDraw.saveHint': '이 파형을 브라우저에 저장하고 {forLabel}에 사용합니다',
 
-		'synth.tracks.overlayOnHint': '멀티트랙 오버레이 모드: 켜짐 — TRK를 클릭해 여러 개를 선택하고 피아노 롤에 겹쳐 표시합니다',
-		'synth.tracks.overlayOffHint': '멀티트랙 오버레이 모드: 꺼짐 — 클릭하면 피아노 롤에서 다중 트랙 겹침 보기를 켭니다',
-		'synth.tracks.trkLabelHint': '트랙 — 숫자를 클릭해 해당 트랙을 편집합니다. OVLY 모드에서는 클릭으로 롤에서 표시/숨김을 전환합니다',
-		'synth.tracks.setActiveHint': '{name}을(를) 단독 활성 트랙으로 설정 (랙 1-7, 피아노 롤 편집, 건반 시청을 제어) — 현재 상태: {state}',
+		'synth.tracks.overlayOnHint':
+			'멀티트랙 오버레이 모드: 켜짐 — TRK를 클릭해 여러 개를 선택하고 피아노 롤에 겹쳐 표시합니다',
+		'synth.tracks.overlayOffHint':
+			'멀티트랙 오버레이 모드: 꺼짐 — 클릭하면 피아노 롤에서 다중 트랙 겹침 보기를 켭니다',
+		'synth.tracks.trkLabelHint':
+			'트랙 — 숫자를 클릭해 해당 트랙을 편집합니다. OVLY 모드에서는 클릭으로 롤에서 표시/숨김을 전환합니다',
+		'synth.tracks.setActiveHint':
+			'{name}을(를) 단독 활성 트랙으로 설정 (랙 1-7, 피아노 롤 편집, 건반 시청을 제어) — 현재 상태: {state}',
 		'synth.tracks.activeSolid': '활성 [채움]',
 		'synth.tracks.inactiveHollow': '비활성 [테두리만]',
-		'synth.tracks.overlayToggleHint': '{name} — 이름을 클릭해 오버레이 표시를 전환합니다. 편집 중: {state}',
+		'synth.tracks.overlayToggleHint':
+			'{name} — 이름을 클릭해 오버레이 표시를 전환합니다. 편집 중: {state}',
 		'synth.tracks.selectHint': '{name} 선택',
 		'synth.tracks.muteHint': '{name} 음소거',
 		'synth.tracks.soloHint': '{name} 솔로 — 누적 방식: 여러 트랙을 솔로로 설정하면 함께 들립니다',
 
 		'synth.drop.title': '끌어다 놓아 불러오기',
-		'synth.drop.body': '.mid → MIDI 트랙마다 시퀀서 트랙 하나씩 · .json → 신디사이저 패치, 또는 활성 트랙에 적용되는 패치',
+		'synth.drop.body':
+			'.mid → MIDI 트랙마다 시퀀서 트랙 하나씩 · .json → 신디사이저 패치, 또는 활성 트랙에 적용되는 패치',
 
-		'synth.tooltip.square': '사각파 — 홀수 배음이 풍부한 공허한 음색. 레트로 8비트 리드와 칩튠 베이스에 적합',
-		'synth.tooltip.sawtooth': '톱니파 — 모든 배음을 포함한 밝고 거친 음색. 공격적인 리드, 브라스, 두꺼운 패드에 적합',
-		'synth.tooltip.triangle': '삼각파 — 부드러운 홀수 배음을 지닌 따뜻하고 부드러운 음색. 따뜻한 베이스라인과 플루트 음색에 적합',
-		'synth.tooltip.sine': '사인파 — 배음 없는 순수한 기본 주파수. 깊은 서브 베이스와 깨끗한 톤에 적합',
-		'synth.tooltip.noise': '화이트 노이즈 발생기 — 모든 주파수에 걸쳐 에너지가 균일. 드럼, 타악기 트랜지언트, 음향 효과에 적합 (OSC1, OSC2에서는 톱니파로 재생)',
-		'synth.tooltip.metal': 'METAL — 808 심벌 비율에 맞춘 6개의 사각파, 고정 피치: 라이드, 크래시, 하이햇의 쨍한 소리. NOISE를 더하면 지글거림이 더해지고, 하이패스로 몸통을 걷어내면 그 질감만 남습니다 (OSC1)',
-		'synth.tooltip.pwm': 'PWM — 펄스 폭이 WIDTH를 중심으로 RATE 속도와 DEPTH 양만큼 스위프합니다 (노브는 하위 메뉴에 있음). 움직이는 클래식 아날로그 패드와 리드',
-		'synth.tooltip.supersaw': 'SUPERSAW — 5개의 톱니파, 바깥쪽 두 개가 SPREAD 센트만큼 벌어지고 MIX 레벨로 섞입니다 (노브는 하위 메뉴에 있음). 코러스 없이도 넓은 트랜스 스택 사운드',
-		'synth.tooltip.organ': 'ORGAN — 배음 1, 2, 3, 4, 5, 8에 대응하는 6개의 드로바 (노브는 하위 메뉴에 있음). 안정적이고 공허하며 리드 아래에 잘 어울립니다',
-		'synth.tooltip.fold': 'FOLD — 사인파를 FOLD로 구동해 웨이브폴더에 통과시킵니다 (노브는 하위 메뉴에 있음). 삼각파보다 밝고 웨스트 코스트 특유의 날카로움이 있습니다',
-		'synth.tooltips.blendLayer': '블렌드 모드: Layer — 오실레이터 1과 2를 병렬로 합산해 두꺼운 듀얼 오실레이터 톤을 만듭니다',
-		'synth.tooltips.blendFm': '블렌드 모드: FM(주파수 변조) — 오실레이터 2가 오실레이터 1의 주파수를 변조해 풍부한 금속/벨 계열 배음을 만듭니다',
-		'synth.tooltips.blendRing': '블렌드 모드: 링 변조 — 오실레이터 1과 2의 신호를 곱해 복잡한 비조화 텍스처를 만듭니다',
-		'synth.tooltips.blendSync': '블렌드 모드: 하드 싱크 — 오실레이터 1이 한 사이클을 마칠 때마다 오실레이터 2의 위상을 리셋해 날카로운 싱크 리드 스윕을 만듭니다',
-		'synth.tooltips.filterLowpass': '필터 모드: 로우패스 필터(LPF) — 컷오프 아래의 저역을 통과시키고 고역을 감쇠시킵니다',
-		'synth.tooltips.filterHighpass': '필터 모드: 하이패스 필터(HPF) — 컷오프 위의 고역을 통과시키고 저역을 감쇠시킵니다',
-		'synth.tooltips.filterBandpass': '필터 모드: 밴드패스 필터(BPF) — 컷오프 주파수 주변의 공진하는 좁은 대역을 통과시키고 고역과 저역을 감쇠시킵니다',
-		'synth.tooltips.filterNotch': '필터 모드: 노치/밴드리젝트 필터(BRF) — 컷오프 부근의 좁은 대역을 감쇠시키면서 고역과 저역은 통과시킵니다',
+		'synth.tooltip.square':
+			'사각파 — 홀수 배음이 풍부한 공허한 음색. 레트로 8비트 리드와 칩튠 베이스에 적합',
+		'synth.tooltip.sawtooth':
+			'톱니파 — 모든 배음을 포함한 밝고 거친 음색. 공격적인 리드, 브라스, 두꺼운 패드에 적합',
+		'synth.tooltip.triangle':
+			'삼각파 — 부드러운 홀수 배음을 지닌 따뜻하고 부드러운 음색. 따뜻한 베이스라인과 플루트 음색에 적합',
+		'synth.tooltip.sine':
+			'사인파 — 배음 없는 순수한 기본 주파수. 깊은 서브 베이스와 깨끗한 톤에 적합',
+		'synth.tooltip.noise':
+			'화이트 노이즈 발생기 — 모든 주파수에 걸쳐 에너지가 균일. 드럼, 타악기 트랜지언트, 음향 효과에 적합 (OSC1, OSC2에서는 톱니파로 재생)',
+		'synth.tooltip.metal':
+			'METAL — 808 심벌 비율에 맞춘 6개의 사각파, 고정 피치: 라이드, 크래시, 하이햇의 쨍한 소리. NOISE를 더하면 지글거림이 더해지고, 하이패스로 몸통을 걷어내면 그 질감만 남습니다 (OSC1)',
+		'synth.tooltip.pwm':
+			'PWM — 펄스 폭이 WIDTH를 중심으로 RATE 속도와 DEPTH 양만큼 스위프합니다 (노브는 하위 메뉴에 있음). 움직이는 클래식 아날로그 패드와 리드',
+		'synth.tooltip.supersaw':
+			'SUPERSAW — 5개의 톱니파, 바깥쪽 두 개가 SPREAD 센트만큼 벌어지고 MIX 레벨로 섞입니다 (노브는 하위 메뉴에 있음). 코러스 없이도 넓은 트랜스 스택 사운드',
+		'synth.tooltip.organ':
+			'ORGAN — 배음 1, 2, 3, 4, 5, 8에 대응하는 6개의 드로바 (노브는 하위 메뉴에 있음). 안정적이고 공허하며 리드 아래에 잘 어울립니다',
+		'synth.tooltip.fold':
+			'FOLD — 사인파를 FOLD로 구동해 웨이브폴더에 통과시킵니다 (노브는 하위 메뉴에 있음). 삼각파보다 밝고 웨스트 코스트 특유의 날카로움이 있습니다',
+		'synth.tooltips.blendLayer':
+			'블렌드 모드: Layer — 오실레이터 1과 2를 병렬로 합산해 두꺼운 듀얼 오실레이터 톤을 만듭니다',
+		'synth.tooltips.blendFm':
+			'블렌드 모드: FM(주파수 변조) — 오실레이터 2가 오실레이터 1의 주파수를 변조해 풍부한 금속/벨 계열 배음을 만듭니다',
+		'synth.tooltips.blendRing':
+			'블렌드 모드: 링 변조 — 오실레이터 1과 2의 신호를 곱해 복잡한 비조화 텍스처를 만듭니다',
+		'synth.tooltips.blendSync':
+			'블렌드 모드: 하드 싱크 — 오실레이터 1이 한 사이클을 마칠 때마다 오실레이터 2의 위상을 리셋해 날카로운 싱크 리드 스윕을 만듭니다',
+		'synth.tooltips.filterLowpass':
+			'필터 모드: 로우패스 필터(LPF) — 컷오프 아래의 저역을 통과시키고 고역을 감쇠시킵니다',
+		'synth.tooltips.filterHighpass':
+			'필터 모드: 하이패스 필터(HPF) — 컷오프 위의 고역을 통과시키고 저역을 감쇠시킵니다',
+		'synth.tooltips.filterBandpass':
+			'필터 모드: 밴드패스 필터(BPF) — 컷오프 주파수 주변의 공진하는 좁은 대역을 통과시키고 고역과 저역을 감쇠시킵니다',
+		'synth.tooltips.filterNotch':
+			'필터 모드: 노치/밴드리젝트 필터(BRF) — 컷오프 부근의 좁은 대역을 감쇠시키면서 고역과 저역은 통과시킵니다',
 		'synth.tooltips.lfoSine': '사인파 LFO — 부드럽고 연속적인 주기 변조',
 		'synth.tooltips.lfoTriangle': '삼각파 LFO — 선형으로 오르내리는 변조',
 		'synth.tooltips.lfoSquare': '사각파 LFO — 단계적인 온/오프 이진 변조 펄스',
 		'synth.tooltips.lfoSawtooth': '톱니파 LFO — 선형으로 상승했다가 급격히 떨어지는 변조',
-		'synth.tooltip.preset8BitBass': '패치: 8-Bit Bass — 경쾌한 VCF 필터 엔벨로프를 지닌 레트로 칩튠풍 사각파/삼각파 베이스',
-		'synth.tooltip.presetPluck': '패치: Pluck — 빠른 필터 디케이를 지닌 짧은 어쿠스틱/일렉트로닉 풍 발현 음',
+		'synth.tooltip.preset8BitBass':
+			'패치: 8-Bit Bass — 경쾌한 VCF 필터 엔벨로프를 지닌 레트로 칩튠풍 사각파/삼각파 베이스',
+		'synth.tooltip.presetPluck':
+			'패치: Pluck — 빠른 필터 디케이를 지닌 짧은 어쿠스틱/일렉트로닉 풍 발현 음',
 		'synth.tooltip.presetBrass': '패치: Brass — 디튠된 이중 톱니파 오실레이터와 다이내믹 필터 스윕',
-		'synth.tooltip.presetLead': '패치: Lead — 25% 펄스파와 톱니파를 겹친 날카로운 리드, 레조넌스 필터와 풀 서스테인',
-		'synth.tooltip.presetSubBass': '패치: Sub Bass — 사인파에 800Hz 로우패스 아래의 SUB 옥타브를 더한, 날카로움 없는 무게감',
-		'synth.tooltip.presetAcidBass': '패치: Acid Bass — 톱니파를 엔벨로프로 스윕되는 Q8 로우패스 필터에 통과시킨 60ms 글라이드',
+		'synth.tooltip.presetLead':
+			'패치: Lead — 25% 펄스파와 톱니파를 겹친 날카로운 리드, 레조넌스 필터와 풀 서스테인',
+		'synth.tooltip.presetSubBass':
+			'패치: Sub Bass — 사인파에 800Hz 로우패스 아래의 SUB 옥타브를 더한, 날카로움 없는 무게감',
+		'synth.tooltip.presetAcidBass':
+			'패치: Acid Bass — 톱니파를 엔벨로프로 스윕되는 Q8 로우패스 필터에 통과시킨 60ms 글라이드',
 		'synth.tooltip.presetFmBass': '패치: FM Bass — 사인파 캐리어를 한 옥타브 위의 사인파로 변조',
-		'synth.tooltip.presetSawLead': '패치: Saw Lead — 14센트 떨어진 두 개의 톱니파에 서서히 커지는 비브라토',
-		'synth.tooltip.presetSyncLead': '패치: Sync Lead — SYNC 모드에서 두 번째 오실레이터가 완전 5도 위, 필터 엔벨로프로 찢어지는 듯한 질감을 만듭니다',
-		'synth.tooltip.presetChipLead': '패치: Chip Lead — 15% 펄스파, 필터 없음, 빠른 비브라토: NES 리드 사운드',
-		'synth.tooltip.presetKoto': '패치: Koto — 한 옥타브 위의 사인파를 더한 삼각파, 순간적으로 닫히는 필터, 서스테인 없음',
-		'synth.tooltip.presetMarimba': '패치: Marimba — 사인파 몸통과 더 작은 한 옥타브 위 삼각파가 함께 감쇠',
-		'synth.tooltip.presetBell': '패치: Bell — 3.5 비율로 링 변조된 두 개의 사인파, 비조화 부분음, 긴 여운',
-		'synth.tooltip.presetEPiano': '패치: E-Piano — 사인파 캐리어에 네 옥타브 위의 가벼운 FM 타인을 더한 사운드',
-		'synth.tooltip.presetOrgan': '패치: Organ — 기본음, 옥타브, SUB 드로바, 엔벨로프 없음, 느린 트레몰로',
+		'synth.tooltip.presetSawLead':
+			'패치: Saw Lead — 14센트 떨어진 두 개의 톱니파에 서서히 커지는 비브라토',
+		'synth.tooltip.presetSyncLead':
+			'패치: Sync Lead — SYNC 모드에서 두 번째 오실레이터가 완전 5도 위, 필터 엔벨로프로 찢어지는 듯한 질감을 만듭니다',
+		'synth.tooltip.presetChipLead':
+			'패치: Chip Lead — 15% 펄스파, 필터 없음, 빠른 비브라토: NES 리드 사운드',
+		'synth.tooltip.presetKoto':
+			'패치: Koto — 한 옥타브 위의 사인파를 더한 삼각파, 순간적으로 닫히는 필터, 서스테인 없음',
+		'synth.tooltip.presetMarimba':
+			'패치: Marimba — 사인파 몸통과 더 작은 한 옥타브 위 삼각파가 함께 감쇠',
+		'synth.tooltip.presetBell':
+			'패치: Bell — 3.5 비율로 링 변조된 두 개의 사인파, 비조화 부분음, 긴 여운',
+		'synth.tooltip.presetEPiano':
+			'패치: E-Piano — 사인파 캐리어에 네 옥타브 위의 가벼운 FM 타인을 더한 사운드',
+		'synth.tooltip.presetOrgan':
+			'패치: Organ — 기본음, 옥타브, SUB 드로바, 엔벨로프 없음, 느린 트레몰로',
 		'synth.tooltip.presetClav': '패치: Clav — 빠르게 닫히는 공진 로우패스 필터를 통과한 25% 펄스파',
-		'synth.tooltip.presetHarpsichord': '패치: Harpsichord — 한 옥타브 위의 사각파를 더한 톱니파, 밝고 튕기는 느낌',
-		'synth.tooltip.presetWarmPad': '패치: Warm Pad — 느린 LFO로 숨쉬는 로우 필터 뒤의 디튠된 톱니파',
-		'synth.tooltip.presetStrings': '패치: Strings — 넓은 디튠, 더 밝은 필터, 서서히 커지는 비브라토',
-		'synth.tooltip.presetGlassPad': '패치: Glass Pad — 삼각파와 한 옥타브 위 사인파, 열린 필터, 상단의 공기감, 느린 오토팬',
-		'synth.tooltip.presetHollowPad': '패치: Hollow Pad — 한 옥타브 아래 사각파를 더한 사각파, LFO로 여닫히는 로우 필터',
-		'synth.tooltip.presetKick808': '패치: 808 Kick — 2.5옥타브 피치 드롭을 지닌 사인파에 서브를 더한 사운드. 낮은 음역(C2-C3)에서 시퀀싱하기 좋습니다',
-		'synth.tooltip.presetKickPunch': '패치: Punch Kick — 더 짧고 단단한 삼각파 킥, 노이즈 비터 클릭 포함',
-		'synth.tooltip.presetSnare': '패치: Snare — 완전 5도 몸통을 지닌 삼각파에 노이즈 래틀을 더한 사운드. KEY TRK로 건반 위쪽으로 갈수록 밝아집니다',
-		'synth.tooltip.presetClap': '패치: Clap — 11ms 간격의 노이즈 버스트 세 번 후 여운이 이어집니다 (랙 1의 RPT / GAP)',
-		'synth.tooltip.presetClosedHat': '패치: Closed Hat — 45ms의 하이패스 처리된 노이즈. 건반이 높을수록 밝아집니다',
+		'synth.tooltip.presetHarpsichord':
+			'패치: Harpsichord — 한 옥타브 위의 사각파를 더한 톱니파, 밝고 튕기는 느낌',
+		'synth.tooltip.presetWarmPad':
+			'패치: Warm Pad — 느린 LFO로 숨쉬는 로우 필터 뒤의 디튠된 톱니파',
+		'synth.tooltip.presetStrings':
+			'패치: Strings — 넓은 디튠, 더 밝은 필터, 서서히 커지는 비브라토',
+		'synth.tooltip.presetGlassPad':
+			'패치: Glass Pad — 삼각파와 한 옥타브 위 사인파, 열린 필터, 상단의 공기감, 느린 오토팬',
+		'synth.tooltip.presetHollowPad':
+			'패치: Hollow Pad — 한 옥타브 아래 사각파를 더한 사각파, LFO로 여닫히는 로우 필터',
+		'synth.tooltip.presetKick808':
+			'패치: 808 Kick — 2.5옥타브 피치 드롭을 지닌 사인파에 서브를 더한 사운드. 낮은 음역(C2-C3)에서 시퀀싱하기 좋습니다',
+		'synth.tooltip.presetKickPunch':
+			'패치: Punch Kick — 더 짧고 단단한 삼각파 킥, 노이즈 비터 클릭 포함',
+		'synth.tooltip.presetSnare':
+			'패치: Snare — 완전 5도 몸통을 지닌 삼각파에 노이즈 래틀을 더한 사운드. KEY TRK로 건반 위쪽으로 갈수록 밝아집니다',
+		'synth.tooltip.presetClap':
+			'패치: Clap — 11ms 간격의 노이즈 버스트 세 번 후 여운이 이어집니다 (랙 1의 RPT / GAP)',
+		'synth.tooltip.presetClosedHat':
+			'패치: Closed Hat — 45ms의 하이패스 처리된 노이즈. 건반이 높을수록 밝아집니다',
 		'synth.tooltip.presetOpenHat': '패치: Open Hat — 클로즈드 햇을 350ms 동안 울리게 둔 사운드',
-		'synth.tooltip.presetTom': '패치: Tom — 사인파와 삼각파의 얕은 피치 드롭. 여러 건반에 걸쳐 연주하면 톰 세트가 됩니다',
+		'synth.tooltip.presetTom':
+			'패치: Tom — 사인파와 삼각파의 얕은 피치 드롭. 여러 건반에 걸쳐 연주하면 톰 세트가 됩니다',
 		'synth.tooltip.presetRimshot': '패치: Rimshot — 링 변조된 40ms의 짧은 소리',
-		'synth.tooltip.presetCowbell': '패치: Cowbell — 완전 5도 떨어진 두 개의 사각파(808 페어)를 1.5kHz에서 밴드패스 처리',
-		'synth.tooltip.presetShaker': '패치: Shaker — 부드러운 어택의 노이즈에 타격에 맞춰 여닫히는 필터',
+		'synth.tooltip.presetCowbell':
+			'패치: Cowbell — 완전 5도 떨어진 두 개의 사각파(808 페어)를 1.5kHz에서 밴드패스 처리',
+		'synth.tooltip.presetShaker':
+			'패치: Shaker — 부드러운 어택의 노이즈에 타격에 맞춰 여닫히는 필터',
 
 		'synth.tour.tracksTitle': 'TRACKS',
-		'synth.tour.tracksBody': '각 칩은 고유한 오실레이터, 필터, 엔벨로프, EQ를 가진 하나의 보이스입니다. 칩을 클릭하면 아래의 모든 랙이 그 트랙을 편집 대상으로 삼습니다. M과 S는 음소거와 솔로를 전환합니다. OVLY는 편집 중인 트랙 뒤에 다른 트랙을 그려 파트를 맞추기 쉽게 해 줍니다.',
+		'synth.tour.tracksBody':
+			'각 칩은 고유한 오실레이터, 필터, 엔벨로프, EQ를 가진 하나의 보이스입니다. 칩을 클릭하면 아래의 모든 랙이 그 트랙을 편집 대상으로 삼습니다. M과 S는 음소거와 솔로를 전환합니다. OVLY는 편집 중인 트랙 뒤에 다른 트랙을 그려 파트를 맞추기 쉽게 해 줍니다.',
 		'synth.tour.rollTitle': 'PIANO ROLL',
-		'synth.tour.rollBody': '셀을 클릭해 노트를 배치하고, 드래그해 연속으로 칠하고, 다시 클릭해 지웁니다. SNAP은 커서가 놓이는 그리드이고 DUR는 배치되는 노트의 길이입니다 — 둘 다 셋잇단음표를 위해 1/12까지 내려갑니다. 길게 누른 노트는 같은 인덱스가 여러 셀에 걸쳐 반복되는 것이므로, 더 긴 마디는 실제로는 하나의 더 긴 노트입니다.',
+		'synth.tour.rollBody':
+			'셀을 클릭해 노트를 배치하고, 드래그해 연속으로 칠하고, 다시 클릭해 지웁니다. SNAP은 커서가 놓이는 그리드이고 DUR는 배치되는 노트의 길이입니다 — 둘 다 셋잇단음표를 위해 1/12까지 내려갑니다. 길게 누른 노트는 같은 인덱스가 여러 셀에 걸쳐 반복되는 것이므로, 더 긴 마디는 실제로는 하나의 더 긴 노트입니다.',
 		'synth.tour.rollKeyLen': '페이지 단위로 세는 패턴 길이',
 		'synth.tour.rollKeyMeter': '4/4, 3/4, 2/4, 5/4, 6/8, 7/8',
 		'synth.tour.rollKeyAcc': '스텝별 악센트, +1 ~ +4 dB',
 		'synth.tour.playTitle': 'PLAY IT',
-		'synth.tour.playBody': '이 건반, QWERTY 자판, 또는 연결된 실제 MIDI 컨트롤러로 활성 트랙을 시청할 수 있습니다. 여기서 연주한 노트는 소리만 날 뿐 녹음되지는 않습니다 — 패턴을 기록하는 곳은 위쪽의 피아노 롤입니다.',
+		'synth.tour.playBody':
+			'이 건반, QWERTY 자판, 또는 연결된 실제 MIDI 컨트롤러로 활성 트랙을 시청할 수 있습니다. 여기서 연주한 노트는 소리만 날 뿐 녹음되지는 않습니다 — 패턴을 기록하는 곳은 위쪽의 피아노 롤입니다.',
 		'synth.tour.playKeyLower': '낮은 옥타브, 흰건반과 검은건반',
 		'synth.tour.playKeyUpper': '높은 옥타브',
 		'synth.tour.playKeyOctave': '옥타브 내림/올림 ([ 와 ] 도 가능)',
 		'synth.tour.playKeySustain': '서스테인 페달, 누르고 있으면 페달이 눌린 상태',
 		'synth.tour.voiceTitle': 'VOICE: RACKS 1-3',
-		'synth.tour.voiceBody': '소리가 만들어지는 곳으로, 신호 순서대로: 두 개의 오실레이터, 이를 겹치거나 하나로 다른 하나를 변조하는(FM, 링, 싱크) 퓨전 단계, 그리고 레조넌스가 있는 멀티모드 필터입니다. 여기의 각 노브는 위에서 선택한 트랙을 편집합니다.',
+		'synth.tour.voiceBody':
+			'소리가 만들어지는 곳으로, 신호 순서대로: 두 개의 오실레이터, 이를 겹치거나 하나로 다른 하나를 변조하는(FM, 링, 싱크) 퓨전 단계, 그리고 레조넌스가 있는 멀티모드 필터입니다. 여기의 각 노브는 위에서 선택한 트랙을 편집합니다.',
 		'synth.tour.shapeTitle': 'SHAPE: RACKS 4-7',
-		'synth.tour.shapeBody': '그 소리가 시간에 따라 어떻게 변하는지: 진폭과 필터를 위한 이중 엔벨로프, 피치·컷오프·팬·볼륨을 구동할 수 있는 LFO 매트릭스, 트랙별 FX와 6밴드 EQ, 그리고 시각화가 포함된 출력 스트립입니다.',
+		'synth.tour.shapeBody':
+			'그 소리가 시간에 따라 어떻게 변하는지: 진폭과 필터를 위한 이중 엔벨로프, 피치·컷오프·팬·볼륨을 구동할 수 있는 LFO 매트릭스, 트랙별 FX와 6밴드 EQ, 그리고 시각화가 포함된 출력 스트립입니다.',
 		'synth.tour.transportTitle': 'LOAD, RECORD, BOUNCE',
 		'synth.tour.advTitle': '또 다른 절반',
-		'synth.tour.advBody': '랙 1-7은 하나의 악기입니다. 모든 컨트롤이 펼쳐져 있고 배선할 것이 없습니다. ADV는 다른 하나입니다 — 랙이 물러나고 패널이 패치 베이가 되며, 소리를 원시 모듈과 케이블로 만듭니다. 트랙은 둘 중 하나에 있고, 그 선택은 패치와 함께 저장됩니다.',
+		'synth.tour.advBody':
+			'랙 1-7은 하나의 악기입니다. 모든 컨트롤이 펼쳐져 있고 배선할 것이 없습니다. ADV는 다른 하나입니다 — 랙이 물러나고 패널이 패치 베이가 되며, 소리를 원시 모듈과 케이블로 만듭니다. 트랙은 둘 중 하나에 있고, 그 선택은 패치와 함께 저장됩니다.',
 		'synth.tour.advAction': '이 트랙을 ADV로 전환',
 		'synth.tour.canvasTitle': '패치 베이',
-		'synth.tour.canvasBody': '모듈을 캔버스에 놓고 포트 사이를 케이블로 연결합니다. 흰색은 오디오, 노란색은 컨트롤입니다 — 엔벨로프를 필터 컷오프로 보내는 것은 노브가 아니라 케이블입니다. 오디오는 되먹임 연결을 할 수 없어 에디터가 거부하고, 컨트롤은 할 수 있으며 종종 그것이 목적입니다.',
+		'synth.tour.canvasBody':
+			'모듈을 캔버스에 놓고 포트 사이를 케이블로 연결합니다. 흰색은 오디오, 노란색은 컨트롤입니다 — 엔벨로프를 필터 컷오프로 보내는 것은 노브가 아니라 케이블입니다. 오디오는 되먹임 연결을 할 수 없어 에디터가 거부하고, 컨트롤은 할 수 있으며 종종 그것이 목적입니다.',
 		'synth.tour.canvasKeyDrag': '모듈 이동, 또는 포트를 끌어 연결',
 		'synth.tour.canvasKeyPan': '캔버스 이동',
 		'synth.tour.canvasKeyZoom': '포인터 기준 확대/축소',
 		'synth.tour.paletteTitle': '부품',
-		'synth.tour.paletteBody': '각 항목은 하나의 원시 모듈입니다: 오실레이터, 엔벨로프, 공명하는 현. 캔버스로 끌거나 클릭해 놓으세요. 흥미로운 소리는 아무도 출시하지 않은 순서로 연결할 때 나옵니다.',
-		'synth.tour.transportBody': 'LOAD는 내장 곡을 선택하고, IMP는 이전에 내보낸 패치나 .mid 파일을 가져옵니다 — 각 MIDI 트랙이 시퀀서 트랙이 되며 파일의 템포와 박자표가 그대로 유지됩니다. .mid 파일을 이 페이지 어디에나 끌어다 놓아도 됩니다.',
+		'synth.tour.paletteBody':
+			'각 항목은 하나의 원시 모듈입니다: 오실레이터, 엔벨로프, 공명하는 현. 캔버스로 끌거나 클릭해 놓으세요. 흥미로운 소리는 아무도 출시하지 않은 순서로 연결할 때 나옵니다.',
+		'synth.tour.transportBody':
+			'LOAD는 내장 곡을 선택하고, IMP는 이전에 내보낸 패치나 .mid 파일을 가져옵니다 — 각 MIDI 트랙이 시퀀서 트랙이 되며 파일의 템포와 박자표가 그대로 유지됩니다. .mid 파일을 이 페이지 어디에나 끌어다 놓아도 됩니다.',
 		'synth.tour.transportKeyWav': '패턴을 오프라인으로 렌더링해 다운로드',
 		'synth.tour.transportKeyShare': '패치 전체를 URL로 묶기',
 		'synth.tour.transportKeySettings': '전역 오디오 및 DSP 설정'

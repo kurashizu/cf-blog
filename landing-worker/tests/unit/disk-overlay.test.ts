@@ -118,7 +118,12 @@ describe('chunkStore', () => {
 			}
 			return chunk;
 		});
-		return { chunks, dirty, ensureChunk, store: chunkStore(chunks, dirty, CHUNK_BYTES, ensureChunk) };
+		return {
+			chunks,
+			dirty,
+			ensureChunk,
+			store: chunkStore(chunks, dirty, CHUNK_BYTES, ensureChunk)
+		};
 	}
 
 	it('writes a block into the chunk that contains it', () => {
@@ -265,13 +270,17 @@ describe('replayOverlay', () => {
 
 	it('refuses a file without the magic', () => {
 		const store = rejectingStore();
-		expect(replayOverlay(overlayFile([[0, blockOf(1)]], { magic: 'NOTMINE1' }), 'v1', store)).toBeNull();
+		expect(
+			replayOverlay(overlayFile([[0, blockOf(1)]], { magic: 'NOTMINE1' }), 'v1', store)
+		).toBeNull();
 		expect(store.writeBlock).not.toHaveBeenCalled();
 	});
 
 	it('refuses a different block size', () => {
 		const store = rejectingStore();
-		expect(replayOverlay(overlayFile([[0, blockOf(1)]], { blockSize: 512 }), 'v1', store)).toBeNull();
+		expect(
+			replayOverlay(overlayFile([[0, blockOf(1)]], { blockSize: 512 }), 'v1', store)
+		).toBeNull();
 		expect(store.writeBlock).not.toHaveBeenCalled();
 	});
 
@@ -279,7 +288,9 @@ describe('replayOverlay', () => {
 		// the whole point: replaying someone's changes onto a different image is
 		// how a restore corrupts a disk
 		const store = rejectingStore();
-		expect(replayOverlay(overlayFile([[0, blockOf(1)]], { version: 'v1' }), 'v2', store)).toBeNull();
+		expect(
+			replayOverlay(overlayFile([[0, blockOf(1)]], { version: 'v1' }), 'v2', store)
+		).toBeNull();
 		expect(store.writeBlock).not.toHaveBeenCalled();
 	});
 
@@ -339,14 +350,18 @@ describe('findDiskBuffer', () => {
 
 	it('finds the buffer at the known v86 path', () => {
 		const target = buffer();
-		const root = { v86: { cpu: { devices: { ide: { primary: { master: { buffer: target } } } } } } };
+		const root = {
+			v86: { cpu: { devices: { ide: { primary: { master: { buffer: target } } } } } }
+		};
 		expect(findDiskBuffer(root)).toBe(target);
 	});
 
 	it('finds the secondary drive and the cdrom', () => {
 		const secondary = buffer();
 		expect(
-			findDiskBuffer({ v86: { cpu: { devices: { ide: { secondary: { master: { buffer: secondary } } } } } } })
+			findDiskBuffer({
+				v86: { cpu: { devices: { ide: { secondary: { master: { buffer: secondary } } } } } }
+			})
 		).toBe(secondary);
 		const cdrom = buffer();
 		expect(findDiskBuffer({ v86: { cpu: { devices: { cdrom: { buffer: cdrom } } } } })).toBe(cdrom);
@@ -470,7 +485,7 @@ describe('save and load round-trip', () => {
 		expect(target.block_cache.get(9)?.[0]).toBe(0xbb);
 	});
 
-	it('keeps each machine\'s disk in its own file', async () => {
+	it("keeps each machine's disk in its own file", async () => {
 		const opfs = fakeOpfs();
 		vi.stubGlobal('navigator', opfs.navigator);
 		const a = emptyBuffer();

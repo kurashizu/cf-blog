@@ -45,7 +45,10 @@ function inline(s: string): string {
 			'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
 		);
 
-	return rendered.replace(/\u0000CODE(\d+)\u0000/g, (_m, i: string) => `<code>${codes[Number(i)]}</code>`);
+	return rendered.replace(
+		/\u0000CODE(\d+)\u0000/g,
+		(_m, i: string) => `<code>${codes[Number(i)]}</code>`
+	);
 }
 
 /**
@@ -133,15 +136,17 @@ function highlight(code: string, lang: string): string {
 			return `\u0000${tag}\u0000`;
 		});
 	}
-	return out.replace(/\u0000([a-j]+)\u0000/g, (_, tag: string) =>
-		held[
-			Number(
-				tag
-					.split('')
-					.map((ch) => ch.charCodeAt(0) - 97)
-					.join('')
-			)
-		]
+	return out.replace(
+		/\u0000([a-j]+)\u0000/g,
+		(_, tag: string) =>
+			held[
+				Number(
+					tag
+						.split('')
+						.map((ch) => ch.charCodeAt(0) - 97)
+						.join('')
+				)
+			]
 	);
 }
 
@@ -224,7 +229,11 @@ export function renderMarkdown(src: string, math: MathSpan[] = []): string {
 
 		// A table: a header row of pipes, then a row of dashes marking alignment.
 		// Both are required — a lone line of pipes is prose, not a table.
-		if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i + 1])) {
+		if (
+			/\|/.test(line) &&
+			i + 1 < lines.length &&
+			/^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i + 1])
+		) {
 			closeList();
 			const cells = (row: string) =>
 				row
@@ -247,8 +256,7 @@ export function renderMarkdown(src: string, math: MathSpan[] = []): string {
 
 			// `<br>` is how a model writes a line break inside a cell, and the
 			// escaper would otherwise show it as text.
-			const cell = (text: string) =>
-				inline(escapeHtml(text)).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+			const cell = (text: string) => inline(escapeHtml(text)).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
 			const rows = body
 				.map((r) => `<tr>${r.map((c) => `<td>${cell(c)}</td>`).join('')}</tr>`)

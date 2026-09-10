@@ -177,7 +177,9 @@
 	>
 		{#each $consoleBuffer as line, i (i)}
 			<div class="whitespace-pre-wrap break-words {LINE_CLASS[line.kind]}">
-				{#if line.kind === 'cmd'}<span style="color: {themeStyles.cursorColor}">$ </span>{/if}{line.text}
+				{#if line.kind === 'cmd'}<span style="color: {themeStyles.cursorColor}"
+						>$
+					</span>{/if}{line.text}
 			</div>
 		{/each}
 	</div>
@@ -196,7 +198,9 @@
 				</button>
 			{/each}
 			{#if suggestions.length > 12}
-				<span class="text-white/30">{$t('chrome.console.moreSuggestions', { count: suggestions.length - 12 })}</span>
+				<span class="text-white/30"
+					>{$t('chrome.console.moreSuggestions', { count: suggestions.length - 12 })}</span
+				>
 			{/if}
 		</div>
 	{/if}
@@ -211,11 +215,15 @@
 			: 'border-white/20'}"
 	>
 		{#if $cwd !== '/'}
-			<span class="font-mono text-xs sm:text-sm text-white/40 select-none shrink-0 hidden sm:inline">{$cwd}</span>
+			<span class="font-mono text-xs sm:text-sm text-white/40 select-none shrink-0 hidden sm:inline"
+				>{$cwd}</span
+			>
 		{/if}
 		<span class="font-black text-sm select-none" style="color: {themeStyles.cursorColor}">:</span>
 
-		<div class="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden">
+		<div
+			class="relative flex-1 flex items-center font-mono text-sm sm:text-base text-[#eceff4] min-h-[24px] overflow-hidden"
+		>
 			<span class="whitespace-pre">{commandInput}</span>
 			<span
 				class="inline-block w-[9px] h-[18px] shrink-0 transition-opacity duration-75"
@@ -229,7 +237,9 @@
 				<span class="whitespace-pre text-white/25 select-none pointer-events-none">{ghost}</span>
 			{/if}
 			{#if !commandInput}
-				<span class="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block">
+				<span
+					class="text-xs opacity-40 ml-1.5 sm:ml-2 select-none pointer-events-none truncate block"
+				>
 					{$t('chrome.console.inputHint')}
 				</span>
 			{/if}
@@ -247,7 +257,11 @@
 			/>
 		</div>
 
-		<button type="submit" class="press text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80 transition-opacity" style="color: {themeStyles.cursorColor}">
+		<button
+			type="submit"
+			class="press text-xs sm:text-sm uppercase font-bold cursor-pointer z-20 hover:opacity-80 transition-opacity"
+			style="color: {themeStyles.cursorColor}"
+		>
 			[{$t('chrome.console.exec')}]
 		</button>
 	</form>

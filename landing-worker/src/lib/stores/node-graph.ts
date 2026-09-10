@@ -174,8 +174,7 @@ export function createResolver(
 		if (!feeds.has(key)) feeds.set(key, c);
 	}
 
-	const param = (nodeId: string) => (key: string, def: number) =>
-		params[`${nodeId}.${key}`] ?? def;
+	const param = (nodeId: string) => (key: string, def: number) => params[`${nodeId}.${key}`] ?? def;
 
 	/** What ENTRY hands out. Lane outlets are named `lane:<id>`. */
 	function entryValue(port: string, fallback: number): number {

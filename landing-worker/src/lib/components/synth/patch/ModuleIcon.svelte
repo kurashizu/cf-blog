@@ -9,7 +9,11 @@
 	 * called: the oscillators show their waveform, the resonators show what
 	 * rings, the maths modules show their operator.
 	 */
-	let { type, size = 10, color = 'currentColor' }: { type: string; size?: number; color?: string } = $props();
+	let {
+		type,
+		size = 10,
+		color = 'currentColor'
+	}: { type: string; size?: number; color?: string } = $props();
 
 	const PATHS: Record<string, string> = {
 		// SOURCE

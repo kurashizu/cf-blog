@@ -55,7 +55,8 @@ export default {
 		'utilities.display.row.colorDepth.value': '{bits}-bit',
 		'utilities.display.row.refresh': 'REFRESH (rAF)',
 		'utilities.display.row.refresh.value': '~{fps} FPS',
-		'utilities.display.row.refresh.title': 'requestAnimationFrame rate over the last 500ms — matches display refresh when the tab is unthrottled',
+		'utilities.display.row.refresh.title':
+			'requestAnimationFrame rate over the last 500ms — matches display refresh when the tab is unthrottled',
 		'utilities.display.row.pointer': 'POINTER',
 		'utilities.display.row.pointer.fine': 'fine (mouse/trackpad)',
 		'utilities.display.row.pointer.coarse': 'coarse (touch)',
@@ -65,7 +66,8 @@ export default {
 		'utilities.display.row.deviceMemory': 'DEVICE MEMORY',
 		'utilities.display.row.deviceMemory.na': 'n/a (browser withholds)',
 		'utilities.display.row.deviceMemory.value': '≥{gb} GB',
-		'utilities.display.row.deviceMemory.title': 'navigator.deviceMemory — a coarse bucket, not exact RAM; some browsers omit it entirely',
+		'utilities.display.row.deviceMemory.title':
+			'navigator.deviceMemory — a coarse bucket, not exact RAM; some browsers omit it entirely',
 		'utilities.display.row.language': 'LANGUAGE',
 		'utilities.display.row.timezone': 'TIMEZONE',
 		'utilities.display.row.network': 'NETWORK',
@@ -79,16 +81,19 @@ export default {
 		'utilities.keyboard.readout.loc': 'LOC:',
 		'utilities.keyboard.readout.loc.title': '0 standard · 1 left · 2 right · 3 numpad',
 		'utilities.keyboard.readout.rollover': 'ROLLOVER MAX:',
-		'utilities.keyboard.readout.rollover.title': 'Highest number of keys held simultaneously — OS/hardware may cap this (ghosting/NKRO limit)',
+		'utilities.keyboard.readout.rollover.title':
+			'Highest number of keys held simultaneously — OS/hardware may cap this (ghosting/NKRO limit)',
 		'utilities.keyboard.readout.tested': 'TESTED:',
 		'utilities.keyboard.readout.downNow': 'DOWN NOW:',
 		'utilities.keyboard.reset': '✕ RESET',
-		'utilities.keyboard.hint': 'Press any key — green = tested, highlighted = held. Every key is captured here — but Ctrl+0-3 tab navigation still works.',
+		'utilities.keyboard.hint':
+			'Press any key — green = tested, highlighted = held. Every key is captured here — but Ctrl+0-3 tab navigation still works.',
 		'utilities.keyboard.keysPressed': 'Keys pressed: {count}',
 
 		'utilities.mouse.readout.pos': 'POS:',
 		'utilities.mouse.readout.moveEvents': 'MOVE EVENTS/s:',
-		'utilities.mouse.readout.moveEvents.title': 'Coalesced pointermove events in the last second — browser-visible report rate, capped by the OS/browser',
+		'utilities.mouse.readout.moveEvents.title':
+			'Coalesced pointermove events in the last second — browser-visible report rate, capped by the OS/browser',
 		'utilities.mouse.readout.clickGap': 'CLICK GAP:',
 		'utilities.mouse.readout.clickGap.title': 'Interval between the last two left-button presses',
 		'utilities.mouse.readout.clickGap.value': '{ms}ms',
@@ -102,7 +107,8 @@ export default {
 		'utilities.mouse.button.right': 'RIGHT',
 		'utilities.mouse.button.backName': 'BACK (X1)',
 		'utilities.mouse.button.fwdName': 'FWD (X2)',
-		'utilities.mouse.surface.hint': 'TEST SURFACE — click any button, scroll, double-click.\nRight-click menu is suppressed here.',
+		'utilities.mouse.surface.hint':
+			'TEST SURFACE — click any button, scroll, double-click.\nRight-click menu is suppressed here.',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δwheel: {delta}',
 
@@ -116,7 +122,8 @@ export default {
 		'utilities.touch.tilt.reported': 'reported',
 		'utilities.touch.tilt.notObserved': 'not observed',
 		'utilities.touch.reset': 'RESET',
-		'utilities.touch.surfaceHint': 'Touch, click or draw here — every active pointer is drawn with its real\n\t\t\tpressure, contact size and tilt.',
+		'utilities.touch.surfaceHint':
+			'Touch, click or draw here — every active pointer is drawn with its real\n\t\t\tpressure, contact size and tilt.',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': 'type',
 		'utilities.touch.table.pressure': 'pressure',
@@ -134,14 +141,17 @@ export default {
 		'utilities.typing.words': 'WORDS:',
 		'utilities.typing.restart': '⟳ RESTART',
 		'utilities.typing.result.wpm': '{wpm} WPM',
-		'utilities.typing.result.summary': '{accuracy}% accuracy · {correct}/{total} words correct in {duration}s',
+		'utilities.typing.result.summary':
+			'{accuracy}% accuracy · {correct}/{total} words correct in {duration}s',
 		'utilities.typing.result.again': 'Press Enter or RESTART to go again',
 		'utilities.typing.status.running': 'GO — space submits a word, backspace edits',
-		'utilities.typing.status.idle': 'Start typing to begin the 30-second test. Nav hotkeys are paused on this tool.',
+		'utilities.typing.status.idle':
+			'Start typing to begin the 30-second test. Nav hotkeys are paused on this tool.',
 
 		'utilities.gamepad.disconnected': 'CONTROLLER DISCONNECTED',
 		'utilities.gamepad.none': 'NO CONTROLLER DETECTED',
-		'utilities.gamepad.hint': 'Connect a gamepad and press any button — browsers hide devices until first input.',
+		'utilities.gamepad.hint':
+			'Connect a gamepad and press any button — browsers hide devices until first input.',
 		'utilities.gamepad.mapping': 'MAPPING:',
 		'utilities.gamepad.mapping.custom': 'custom',
 		'utilities.gamepad.tested': 'TESTED:',
@@ -160,24 +170,32 @@ export default {
 		'utilities.reaction.reset': '✕ RESET',
 		'utilities.reaction.ms': '{ms}ms',
 		'utilities.reaction.idle.title': 'CLICK OR PRESS SPACE TO START',
-		'utilities.reaction.idle.hint': 'Wait for green, then react as fast as you can — Space works throughout',
+		'utilities.reaction.idle.hint':
+			'Wait for green, then react as fast as you can — Space works throughout',
 		'utilities.reaction.waiting': 'WAIT FOR GREEN…',
 		'utilities.reaction.go': 'NOW! (click / Space)',
 		'utilities.reaction.early.title': 'FALSE START',
 		'utilities.reaction.early.hint': 'Triggered before green — click or Space to retry',
-		'utilities.reaction.result.hint': 'Click or Space to go again · timing includes your display & input latency',
+		'utilities.reaction.result.hint':
+			'Click or Space to go again · timing includes your display & input latency',
 
-		'utilities.screen.intro': 'Fullscreen display test suite — {steps} patterns across {groups} groups. Inside a test:\n\t\t\tclick / any key = next pattern, ← = previous, Esc = exit (Ctrl+0-3 navigation keeps working).',
+		'utilities.screen.intro':
+			'Fullscreen display test suite — {steps} patterns across {groups} groups. Inside a test:\n\t\t\tclick / any key = next pattern, ← = previous, Esc = exit (Ctrl+0-3 navigation keeps working).',
 		'utilities.screen.mode.pixels.label': 'DEAD PIXELS',
-		'utilities.screen.mode.pixels.desc': '6 solid fills — stuck or dead subpixels show as off-colour dots',
+		'utilities.screen.mode.pixels.desc':
+			'6 solid fills — stuck or dead subpixels show as off-colour dots',
 		'utilities.screen.mode.grayscale.label': 'GREYSCALE',
-		'utilities.screen.mode.grayscale.desc': 'Stepped ramps 8→64 plus continuous — banding and gamma tracking',
+		'utilities.screen.mode.grayscale.desc':
+			'Stepped ramps 8→64 plus continuous — banding and gamma tracking',
 		'utilities.screen.mode.gradients.label': 'GRADIENTS',
-		'utilities.screen.mode.gradients.desc': 'Continuous R/G/B and hue ramps — colour banding and tint shifts',
+		'utilities.screen.mode.gradients.desc':
+			'Continuous R/G/B and hue ramps — colour banding and tint shifts',
 		'utilities.screen.mode.levels.label': 'B/W LEVELS',
-		'utilities.screen.mode.levels.desc': 'Near-black and near-white patches — shadow crush, highlight clipping',
+		'utilities.screen.mode.levels.desc':
+			'Near-black and near-white patches — shadow crush, highlight clipping',
 		'utilities.screen.mode.sharpness.label': 'SHARPNESS',
-		'utilities.screen.mode.sharpness.desc': '1px checkerboard, lines, grid — scaling blur and moiré',
+		'utilities.screen.mode.sharpness.desc':
+			'1px checkerboard, lines, grid — scaling blur and moiré',
 		'utilities.screen.mode.text.label': 'TEXT CLARITY',
 		'utilities.screen.mode.text.desc': 'Font rendering 8–20px, three families, both polarities',
 		'utilities.screen.mode.ghosting.label': 'GHOSTING',
@@ -209,21 +227,26 @@ export default {
 		'utilities.screen.pattern.count': '{count} pattern',
 		'utilities.screen.pattern.count.plural': '{count} patterns',
 		'utilities.screen.runAll': '▶▶ RUN FULL SEQUENCE ({count} patterns)',
-		'utilities.screen.crush.black.hint': 'Each square should be barely distinguishable from pure black. If 4%+ squares vanish, shadows are being crushed.',
-		'utilities.screen.crush.white.hint': 'Each square should be barely distinguishable from pure white. If 96%- squares vanish, highlights are clipping.',
+		'utilities.screen.crush.black.hint':
+			'Each square should be barely distinguishable from pure black. If 4%+ squares vanish, shadows are being crushed.',
+		'utilities.screen.crush.white.hint':
+			'Each square should be barely distinguishable from pure white. If 96%- squares vanish, highlights are clipping.',
 		'utilities.screen.text.mono': '{px}px mono — {sample}',
 		'utilities.screen.text.sans': '{px}px sans — Sphinx of black quartz, judge my vow. {sample}',
 		'utilities.screen.text.serif': '{px}px serif — Waltz, bad nymph, for quick jigs vex. {sample}',
-		'utilities.screen.text.hint': 'Small sizes should stay legible with clean stroke edges — fringing or smearing points at subpixel rendering / scaling issues.',
+		'utilities.screen.text.hint':
+			'Small sizes should stay legible with clean stroke edges — fringing or smearing points at subpixel rendering / scaling issues.',
 		'utilities.screen.ghosting.slow': 'SLOW',
 		'utilities.screen.ghosting.medium': 'MEDIUM',
 		'utilities.screen.ghosting.fast': 'FAST',
-		'utilities.screen.ghosting.hint': 'Follow a block with your eyes — visible trails behind the edges are pixel-response ghosting / overdrive artifacts. Motion is refresh-rate locked.',
+		'utilities.screen.ghosting.hint':
+			'Follow a block with your eyes — visible trails behind the edges are pixel-response ghosting / overdrive artifacts. Motion is refresh-rate locked.',
 		'utilities.screen.overlay.stepCounter': '{group} · {name} ({index}/{total})',
 		'utilities.screen.overlay.devicePixels': ' · 1 css px = {dpr}× device px',
 		'utilities.screen.overlay.nav': ' — click/key next · ← prev · Esc exit',
 
-		'utilities.audioout.intro': 'Runs on its own AudioContext, so it plays even while the workbench is muted.\n\t\tStart at a low level — the sweep reaches full-scale 20 kHz.',
+		'utilities.audioout.intro':
+			'Runs on its own AudioContext, so it plays even while the workbench is muted.\n\t\tStart at a low level — the sweep reaches full-scale 20 kHz.',
 		'utilities.audioout.channel.left.label': 'LEFT ONLY',
 		'utilities.audioout.channel.left.hint': 'Sound must come from the left speaker only',
 		'utilities.audioout.channel.right.label': 'RIGHT ONLY',
@@ -231,11 +254,13 @@ export default {
 		'utilities.audioout.channel.both.label': 'BOTH',
 		'utilities.audioout.channel.both.hint': 'Centred between both speakers',
 		'utilities.audioout.channel.inverted.label': 'OUT OF PHASE',
-		'utilities.audioout.channel.inverted.hint': 'Right channel inverted — should sound hollow, and near-silent in mono',
+		'utilities.audioout.channel.inverted.hint':
+			'Right channel inverted — should sound hollow, and near-silent in mono',
 		'utilities.audioout.channel.tone': '440Hz {label}',
 		'utilities.audioout.channel.toneRunning': '440 Hz {label}',
 		'utilities.audioout.sweep.button': 'SWEEP 20Hz→20kHz',
-		'utilities.audioout.sweep.title': 'Logarithmic sine sweep, 20 Hz to 20 kHz over 8 seconds — reveals resonances and rolloff',
+		'utilities.audioout.sweep.title':
+			'Logarithmic sine sweep, 20 Hz to 20 kHz over 8 seconds — reveals resonances and rolloff',
 		'utilities.audioout.sweep.running': 'SWEEP 20 Hz → 20 kHz',
 		'utilities.audioout.noise.button': 'NOISE {channel}',
 		'utilities.audioout.noise.title': 'White noise on the {channel} channel',
@@ -247,13 +272,17 @@ export default {
 		'utilities.audioout.output.available': '{count} available',
 		'utilities.audioout.output.deviceFallback': 'output {id}',
 		'utilities.audioout.output.title.supported': 'Route the test tones to a specific output device',
-		'utilities.audioout.output.title.unsupported': 'This browser cannot redirect WebAudio to a chosen output — it always uses the system default',
-		'utilities.audioout.output.unsupportedNote': 'setSinkId unsupported — playing on the system default',
-		'utilities.audioout.output.labelsHiddenNote': 'Device names stay hidden until a microphone grant exists — the MIC IN tool unlocks them.',
+		'utilities.audioout.output.title.unsupported':
+			'This browser cannot redirect WebAudio to a chosen output — it always uses the system default',
+		'utilities.audioout.output.unsupportedNote':
+			'setSinkId unsupported — playing on the system default',
+		'utilities.audioout.output.labelsHiddenNote':
+			'Device names stay hidden until a microphone grant exists — the MIC IN tool unlocks them.',
 		'utilities.audioout.level.label': 'LEVEL',
 		'utilities.audioout.level.idle': 'idle',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
-		'utilities.audioout.info.hint': 'Press a test to open the audio device and read its real parameters.',
+		'utilities.audioout.info.hint':
+			'Press a test to open the audio device and read its real parameters.',
 		'utilities.audioout.info.sampleRate': 'SAMPLE RATE',
 		'utilities.audioout.info.state': 'STATE',
 		'utilities.audioout.info.channels': 'CHANNELS',
@@ -275,17 +304,21 @@ export default {
 		'utilities.mic.stop': 'STOP & RELEASE MIC',
 		'utilities.mic.device.placeholder': 'default input',
 		'utilities.mic.device.title.labeled': 'Input device',
-		'utilities.mic.device.title.unlabeled': 'Device names appear once microphone access has been granted',
+		'utilities.mic.device.title.unlabeled':
+			'Device names appear once microphone access has been granted',
 		'utilities.mic.device.default': 'default input',
 		'utilities.mic.device.available': '{count} available',
 		'utilities.mic.device.fallback': 'input {id}',
-		'utilities.mic.monitor.title': 'Route the microphone straight to the output so you can hear yourself. Use headphones — on speakers this will feed back.',
+		'utilities.mic.monitor.title':
+			'Route the microphone straight to the output so you can hear yourself. Use headphones — on speakers this will feed back.',
 		'utilities.mic.monitor.label': 'MONITOR: {state}',
 		'utilities.mic.monitor.on': 'ON',
 		'utilities.mic.monitor.off': 'OFF',
 		'utilities.mic.resetClip': 'RESET CLIP',
-		'utilities.mic.privacyNote': 'Audio never leaves the page — analysed and played back in the browser, nothing is uploaded.',
-		'utilities.mic.monitorWarning': 'Monitoring is on — wear headphones, or the microphone will pick up its own output.',
+		'utilities.mic.privacyNote':
+			'Audio never leaves the page — analysed and played back in the browser, nothing is uploaded.',
+		'utilities.mic.monitorWarning':
+			'Monitoring is on — wear headphones, or the microphone will pick up its own output.',
 		'utilities.mic.rms.label': 'RMS',
 		'utilities.mic.rms.value': '{db} dBFS',
 		'utilities.mic.peak.label': 'PEAK',
@@ -314,8 +347,10 @@ export default {
 		'utilities.mic.settings.echoCancel': 'ECHO CANCEL',
 		'utilities.mic.settings.noiseSuppr': 'NOISE SUPPR.',
 		'utilities.mic.settings.autoGain': 'AUTO GAIN',
-		'utilities.mic.error.mediaRecorderUnsupported': 'MediaRecorder cannot capture audio in this browser.',
-		'utilities.mic.error.decodeFailed': 'Recorded, but this browser could not decode the take for playback.',
+		'utilities.mic.error.mediaRecorderUnsupported':
+			'MediaRecorder cannot capture audio in this browser.',
+		'utilities.mic.error.decodeFailed':
+			'Recorded, but this browser could not decode the take for playback.',
 		'utilities.mic.error.deniedFallback': 'Microphone access denied',
 		'utilities.mic.error.named': '{name}: {message}',
 
@@ -324,7 +359,8 @@ export default {
 		'utilities.camera.device.placeholder': 'camera',
 		'utilities.camera.device.title': 'Capture device',
 		'utilities.camera.device.fallback': 'camera {id}',
-		'utilities.camera.privacyNote': 'The preview stays in this tab — no frame is stored or sent anywhere.',
+		'utilities.camera.privacyNote':
+			'The preview stays in this tab — no frame is stored or sent anywhere.',
 		'utilities.camera.live': 'LIVE',
 		'utilities.camera.noStream': 'no stream',
 		'utilities.camera.settings.device': 'DEVICE',
@@ -378,7 +414,8 @@ export default {
 		'utilities.net.network.online.no': 'no',
 		'utilities.net.network.effectiveType': 'EFFECTIVE TYPE',
 		'utilities.net.network.effectiveType.na': 'n/a',
-		'utilities.net.network.effectiveType.title': 'Network Information API — a bucket derived from recent throughput, not the physical link',
+		'utilities.net.network.effectiveType.title':
+			'Network Information API — a bucket derived from recent throughput, not the physical link',
 		'utilities.net.network.downlink': 'DOWNLINK EST.',
 		'utilities.net.network.downlink.na': 'n/a',
 		'utilities.net.network.downlink.value': '{mbit} Mbit/s',
@@ -420,7 +457,8 @@ export default {
 		'utilities.net.permissions.na': 'n/a',
 		'utilities.net.permissions.notQueryable': 'not queryable',
 
-		'utilities.speed.intro': 'Random bytes go to speed.cloudflare.com — Cloudflare\'s own public speed-test service — not to a third party, and krsz.in stores nothing from this test.',
+		'utilities.speed.intro':
+			"Random bytes go to speed.cloudflare.com — Cloudflare's own public speed-test service — not to a third party, and krsz.in stores nothing from this test.",
 		'utilities.speed.pop.label': 'SERVING POP',
 		'utilities.speed.pop.na': 'n/a',
 		'utilities.speed.start': 'RUN TEST',
@@ -446,7 +484,8 @@ export default {
 		'utilities.speed.mbps.na': 'n/a',
 		'utilities.speed.totalMoved': 'TOTAL MOVED',
 		'utilities.speed.bytes.mb': '{mb} MB',
-		'utilities.speed.idle': 'Press RUN TEST to measure latency, download and upload against Cloudflare\'s public speed-test service.',
+		'utilities.speed.idle':
+			"Press RUN TEST to measure latency, download and upload against Cloudflare's public speed-test service.",
 
 		'utilities.gpu.section.webgl': 'WEBGL',
 		'utilities.gpu.section.webgpu': 'WEBGPU',
@@ -481,7 +520,8 @@ export default {
 		'utilities.gpu.webgpu.features': 'FEATURES ({count})',
 		'utilities.gpu.webgpu.features.show': 'show list',
 		'utilities.gpu.webgpu.features.hide': 'hide list',
-		'utilities.gpu.benchmark.hint': 'Runs for about 5 seconds: a fullscreen-quad fill-rate pass at increasing overdraw, then an instanced-triangle throughput pass. FPS is capped by vsync, so it reads the same on GPUs far apart in raw power — the Mbps/triangles-per-second figures are the real measurements.',
+		'utilities.gpu.benchmark.hint':
+			'Runs for about 5 seconds: a fullscreen-quad fill-rate pass at increasing overdraw, then an instanced-triangle throughput pass. FPS is capped by vsync, so it reads the same on GPUs far apart in raw power — the Mbps/triangles-per-second figures are the real measurements.',
 		'utilities.gpu.benchmark.start': 'RUN BENCHMARK',
 		'utilities.gpu.benchmark.running': 'benchmarking…',
 		'utilities.gpu.benchmark.unavailable': 'No WebGL context — benchmark unavailable.',
@@ -495,7 +535,8 @@ export default {
 		'utilities.gpu.benchmark.triangles.count': '{count} triangles/draw',
 
 		'utilities.sensors.enable': 'ENABLE SENSORS',
-		'utilities.sensors.enable.hint': 'iOS requires a tap before it will share motion and orientation data.',
+		'utilities.sensors.enable.hint':
+			'iOS requires a tap before it will share motion and orientation data.',
 		'utilities.sensors.denied': 'Sensor access was denied.',
 		'utilities.sensors.waiting': 'Waiting for sensor events…',
 		'utilities.sensors.none': 'No motion events received on this device.',
@@ -525,7 +566,8 @@ export default {
 		'utilities.sensors.motion.ms2': 'm/s²',
 		'utilities.sensors.motion.degs': 'deg/s',
 		'utilities.sensors.motion.na': 'n/a',
-		'utilities.sensors.level.hint': 'Tilt the device — the bubble drifts from beta/gamma, the crosshair marks level.',
+		'utilities.sensors.level.hint':
+			'Tilt the device — the bubble drifts from beta/gamma, the crosshair marks level.',
 		'utilities.sensors.compass.heading': 'HEADING',
 		'utilities.sensors.compass.deg': '{deg}°',
 		'utilities.sensors.compass.na': 'needs absolute orientation',
@@ -534,7 +576,8 @@ export default {
 		'utilities.sensors.light.value': 'LUX',
 		'utilities.sensors.light.lux': '{lux} lx',
 		'utilities.sensors.light.unavailable': 'AmbientLightSensor is not exposed by this browser.',
-		'utilities.sensors.light.blocked': 'AmbientLightSensor is present but access was blocked (permissions policy or user denial).',
+		'utilities.sensors.light.blocked':
+			'AmbientLightSensor is present but access was blocked (permissions policy or user denial).',
 		'utilities.sensors.light.error': 'AmbientLightSensor error: {message}'
 	},
 	'zh-CN': {
@@ -590,7 +633,8 @@ export default {
 		'utilities.display.row.colorDepth.value': '{bits} 位',
 		'utilities.display.row.refresh': '刷新率（rAF）',
 		'utilities.display.row.refresh.value': '~{fps} FPS',
-		'utilities.display.row.refresh.title': 'requestAnimationFrame 在最近 500ms 内的速率 — 标签页未被节流时与显示器刷新率一致',
+		'utilities.display.row.refresh.title':
+			'requestAnimationFrame 在最近 500ms 内的速率 — 标签页未被节流时与显示器刷新率一致',
 		'utilities.display.row.pointer': '指针',
 		'utilities.display.row.pointer.fine': '精细（鼠标/触控板）',
 		'utilities.display.row.pointer.coarse': '粗略（触控）',
@@ -600,7 +644,8 @@ export default {
 		'utilities.display.row.deviceMemory': '设备内存',
 		'utilities.display.row.deviceMemory.na': '不可用（浏览器未提供）',
 		'utilities.display.row.deviceMemory.value': '≥{gb} GB',
-		'utilities.display.row.deviceMemory.title': 'navigator.deviceMemory — 粗略区间，并非精确内存容量；部分浏览器完全不提供此值',
+		'utilities.display.row.deviceMemory.title':
+			'navigator.deviceMemory — 粗略区间，并非精确内存容量；部分浏览器完全不提供此值',
 		'utilities.display.row.language': '语言',
 		'utilities.display.row.timezone': '时区',
 		'utilities.display.row.network': '网络',
@@ -614,16 +659,19 @@ export default {
 		'utilities.keyboard.readout.loc': 'LOC：',
 		'utilities.keyboard.readout.loc.title': '0 标准 · 1 左侧 · 2 右侧 · 3 数字键盘',
 		'utilities.keyboard.readout.rollover': '同时按键上限：',
-		'utilities.keyboard.readout.rollover.title': '同时按下的最大按键数 — 系统/硬件可能有上限（防冲突/NKRO 限制）',
+		'utilities.keyboard.readout.rollover.title':
+			'同时按下的最大按键数 — 系统/硬件可能有上限（防冲突/NKRO 限制）',
 		'utilities.keyboard.readout.tested': '已测试：',
 		'utilities.keyboard.readout.downNow': '当前按下：',
 		'utilities.keyboard.reset': '✕ 重置',
-		'utilities.keyboard.hint': '按下任意键 — 绿色表示已测试，高亮表示正按住。所有按键都会在此被捕获，但 Ctrl+0-3 标签页切换仍然有效。',
+		'utilities.keyboard.hint':
+			'按下任意键 — 绿色表示已测试，高亮表示正按住。所有按键都会在此被捕获，但 Ctrl+0-3 标签页切换仍然有效。',
 		'utilities.keyboard.keysPressed': '按键次数：{count}',
 
 		'utilities.mouse.readout.pos': 'POS：',
 		'utilities.mouse.readout.moveEvents': '移动事件/秒：',
-		'utilities.mouse.readout.moveEvents.title': '最近一秒内合并后的 pointermove 事件数 — 浏览器可见的上报速率，受系统/浏览器限制',
+		'utilities.mouse.readout.moveEvents.title':
+			'最近一秒内合并后的 pointermove 事件数 — 浏览器可见的上报速率，受系统/浏览器限制',
 		'utilities.mouse.readout.clickGap': '点击间隔：',
 		'utilities.mouse.readout.clickGap.title': '最近两次左键按下之间的时间间隔',
 		'utilities.mouse.readout.clickGap.value': '{ms}毫秒',
@@ -651,7 +699,8 @@ export default {
 		'utilities.touch.tilt.reported': '已上报',
 		'utilities.touch.tilt.notObserved': '未检测到',
 		'utilities.touch.reset': '重置',
-		'utilities.touch.surfaceHint': '在此触摸、点击或绘制 — 每个活动指针都会以其真实的\n压力、接触面积和倾角绘制出来。',
+		'utilities.touch.surfaceHint':
+			'在此触摸、点击或绘制 — 每个活动指针都会以其真实的\n压力、接触面积和倾角绘制出来。',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': '类型',
 		'utilities.touch.table.pressure': '压力',
@@ -669,7 +718,8 @@ export default {
 		'utilities.typing.words': '单词数：',
 		'utilities.typing.restart': '⟳ 重新开始',
 		'utilities.typing.result.wpm': '{wpm} WPM',
-		'utilities.typing.result.summary': '准确率 {accuracy}% · {duration} 秒内正确 {correct}/{total} 个单词',
+		'utilities.typing.result.summary':
+			'准确率 {accuracy}% · {duration} 秒内正确 {correct}/{total} 个单词',
 		'utilities.typing.result.again': '按回车或点击重新开始再来一次',
 		'utilities.typing.status.running': '开始 — 空格提交单词，退格键修改',
 		'utilities.typing.status.idle': '开始输入即可进入 30 秒测试。此工具下导航快捷键已暂停。',
@@ -702,7 +752,8 @@ export default {
 		'utilities.reaction.early.hint': '在变绿前触发 — 点击或按空格重试',
 		'utilities.reaction.result.hint': '点击或按空格再来一次 · 计时包含你的显示器与输入延迟',
 
-		'utilities.screen.intro': '全屏显示测试套件 — 共 {groups} 组、{steps} 个图案。测试中：\n点击/任意键 = 下一个图案，← = 上一个，Esc = 退出（Ctrl+0-3 导航仍然有效）。',
+		'utilities.screen.intro':
+			'全屏显示测试套件 — 共 {groups} 组、{steps} 个图案。测试中：\n点击/任意键 = 下一个图案，← = 上一个，Esc = 退出（Ctrl+0-3 导航仍然有效）。',
 		'utilities.screen.mode.pixels.label': '坏点检测',
 		'utilities.screen.mode.pixels.desc': '6 种纯色填充 — 卡死或坏死的子像素会显示为异色斑点',
 		'utilities.screen.mode.grayscale.label': '灰阶',
@@ -744,21 +795,26 @@ export default {
 		'utilities.screen.pattern.count': '{count} 个图案',
 		'utilities.screen.pattern.count.plural': '{count} 个图案',
 		'utilities.screen.runAll': '▶▶ 运行完整序列（{count} 个图案）',
-		'utilities.screen.crush.black.hint': '每个方块应几乎与纯黑难以区分。若 4% 以上亮度的方块消失，说明暗部被压缩了。',
-		'utilities.screen.crush.white.hint': '每个方块应几乎与纯白难以区分。若 96% 以下亮度的方块消失，说明高光被削波了。',
+		'utilities.screen.crush.black.hint':
+			'每个方块应几乎与纯黑难以区分。若 4% 以上亮度的方块消失，说明暗部被压缩了。',
+		'utilities.screen.crush.white.hint':
+			'每个方块应几乎与纯白难以区分。若 96% 以下亮度的方块消失，说明高光被削波了。',
 		'utilities.screen.text.mono': '{px}px 等宽 — {sample}',
 		'utilities.screen.text.sans': '{px}px 无衬线 — Sphinx of black quartz, judge my vow. {sample}',
 		'utilities.screen.text.serif': '{px}px 衬线 — Waltz, bad nymph, for quick jigs vex. {sample}',
-		'utilities.screen.text.hint': '小字号也应保持清晰、笔画边缘干净 — 出现毛边或糊字说明存在次像素渲染/缩放问题。',
+		'utilities.screen.text.hint':
+			'小字号也应保持清晰、笔画边缘干净 — 出现毛边或糊字说明存在次像素渲染/缩放问题。',
 		'utilities.screen.ghosting.slow': '慢速',
 		'utilities.screen.ghosting.medium': '中速',
 		'utilities.screen.ghosting.fast': '快速',
-		'utilities.screen.ghosting.hint': '用眼睛跟随色块移动 — 边缘出现可见拖尾即为像素响应拖影/过冲伪影。运动速度与刷新率同步。',
+		'utilities.screen.ghosting.hint':
+			'用眼睛跟随色块移动 — 边缘出现可见拖尾即为像素响应拖影/过冲伪影。运动速度与刷新率同步。',
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · 1 CSS 像素 = {dpr}× 设备像素',
 		'utilities.screen.overlay.nav': ' — 点击/按键下一个 · ← 上一个 · Esc 退出',
 
-		'utilities.audioout.intro': '此工具运行在独立的 AudioContext 上，即使工作台已静音也能发声。\n请从低音量开始 — 扫频会到达满幅 20 kHz。',
+		'utilities.audioout.intro':
+			'此工具运行在独立的 AudioContext 上，即使工作台已静音也能发声。\n请从低音量开始 — 扫频会到达满幅 20 kHz。',
 		'utilities.audioout.channel.left.label': '仅左声道',
 		'utilities.audioout.channel.left.hint': '声音应仅从左侧扬声器发出',
 		'utilities.audioout.channel.right.label': '仅右声道',
@@ -782,9 +838,11 @@ export default {
 		'utilities.audioout.output.available': '{count} 个可用',
 		'utilities.audioout.output.deviceFallback': '输出设备 {id}',
 		'utilities.audioout.output.title.supported': '将测试音路由到指定的输出设备',
-		'utilities.audioout.output.title.unsupported': '此浏览器无法将 WebAudio 重定向到指定输出 — 将始终使用系统默认设备',
+		'utilities.audioout.output.title.unsupported':
+			'此浏览器无法将 WebAudio 重定向到指定输出 — 将始终使用系统默认设备',
 		'utilities.audioout.output.unsupportedNote': '不支持 setSinkId — 正在系统默认设备上播放',
-		'utilities.audioout.output.labelsHiddenNote': '设备名称在获得麦克风授权前保持隐藏 — 使用麦克风输入工具即可解锁。',
+		'utilities.audioout.output.labelsHiddenNote':
+			'设备名称在获得麦克风授权前保持隐藏 — 使用麦克风输入工具即可解锁。',
 		'utilities.audioout.level.label': '音量',
 		'utilities.audioout.level.idle': '空闲',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
@@ -814,7 +872,8 @@ export default {
 		'utilities.mic.device.default': '默认输入',
 		'utilities.mic.device.available': '{count} 个可用',
 		'utilities.mic.device.fallback': '输入设备 {id}',
-		'utilities.mic.monitor.title': '将麦克风直接路由到输出，以便听到自己的声音。请使用耳机 — 用扬声器会产生反馈啸叫。',
+		'utilities.mic.monitor.title':
+			'将麦克风直接路由到输出，以便听到自己的声音。请使用耳机 — 用扬声器会产生反馈啸叫。',
 		'utilities.mic.monitor.label': '监听：{state}',
 		'utilities.mic.monitor.on': '开',
 		'utilities.mic.monitor.off': '关',
@@ -913,7 +972,8 @@ export default {
 		'utilities.net.network.online.no': '否',
 		'utilities.net.network.effectiveType': '有效网络类型',
 		'utilities.net.network.effectiveType.na': '不可用',
-		'utilities.net.network.effectiveType.title': 'Network Information API — 基于近期吞吐量估算的分档，并非物理链路本身',
+		'utilities.net.network.effectiveType.title':
+			'Network Information API — 基于近期吞吐量估算的分档，并非物理链路本身',
 		'utilities.net.network.downlink': '下行速率估算',
 		'utilities.net.network.downlink.na': '不可用',
 		'utilities.net.network.downlink.value': '{mbit} Mbit/s',
@@ -955,7 +1015,8 @@ export default {
 		'utilities.net.permissions.na': '不可用',
 		'utilities.net.permissions.notQueryable': '无法查询',
 
-		'utilities.speed.intro': '随机数据发往 speed.cloudflare.com——Cloudflare 自己的公开测速服务，不是第三方；krsz.in 不会保存本测试的任何数据。',
+		'utilities.speed.intro':
+			'随机数据发往 speed.cloudflare.com——Cloudflare 自己的公开测速服务，不是第三方；krsz.in 不会保存本测试的任何数据。',
 		'utilities.speed.pop.label': '服务节点',
 		'utilities.speed.pop.na': '不可用',
 		'utilities.speed.start': '开始测试',
@@ -981,7 +1042,8 @@ export default {
 		'utilities.speed.mbps.na': '不可用',
 		'utilities.speed.totalMoved': '总传输量',
 		'utilities.speed.bytes.mb': '{mb} MB',
-		'utilities.speed.idle': '点击「开始测试」以测量与 Cloudflare 公开测速服务之间的延迟、下载与上传速度。',
+		'utilities.speed.idle':
+			'点击「开始测试」以测量与 Cloudflare 公开测速服务之间的延迟、下载与上传速度。',
 
 		'utilities.gpu.section.webgl': 'WEBGL',
 		'utilities.gpu.section.webgpu': 'WEBGPU',
@@ -1016,7 +1078,8 @@ export default {
 		'utilities.gpu.webgpu.features': '特性（{count}）',
 		'utilities.gpu.webgpu.features.show': '显示列表',
 		'utilities.gpu.webgpu.features.hide': '隐藏列表',
-		'utilities.gpu.benchmark.hint': '运行约 5 秒：先以递增的过绘制层数做全屏填充率测试，再做一次实例化三角形吞吐量测试。帧率受垂直同步限制，在性能差异很大的 GPU 上也会显得接近——Mbps／每秒三角形数才是真实的测量值。',
+		'utilities.gpu.benchmark.hint':
+			'运行约 5 秒：先以递增的过绘制层数做全屏填充率测试，再做一次实例化三角形吞吐量测试。帧率受垂直同步限制，在性能差异很大的 GPU 上也会显得接近——Mbps／每秒三角形数才是真实的测量值。',
 		'utilities.gpu.benchmark.start': '运行基准测试',
 		'utilities.gpu.benchmark.running': '测试中…',
 		'utilities.gpu.benchmark.unavailable': '没有 WebGL 上下文——基准测试不可用。',
@@ -1069,7 +1132,8 @@ export default {
 		'utilities.sensors.light.value': '照度',
 		'utilities.sensors.light.lux': '{lux} lx',
 		'utilities.sensors.light.unavailable': '此浏览器未暴露 AmbientLightSensor。',
-		'utilities.sensors.light.blocked': 'AmbientLightSensor 存在，但访问被阻止（权限策略或用户拒绝）。',
+		'utilities.sensors.light.blocked':
+			'AmbientLightSensor 存在，但访问被阻止（权限策略或用户拒绝）。',
 		'utilities.sensors.light.error': 'AmbientLightSensor 错误：{message}'
 	},
 	'zh-TW': {
@@ -1125,7 +1189,8 @@ export default {
 		'utilities.display.row.colorDepth.value': '{bits} 位元',
 		'utilities.display.row.refresh': '更新率（rAF）',
 		'utilities.display.row.refresh.value': '~{fps} FPS',
-		'utilities.display.row.refresh.title': 'requestAnimationFrame 在最近 500ms 內的速率 — 分頁未被節流時會與螢幕更新率一致',
+		'utilities.display.row.refresh.title':
+			'requestAnimationFrame 在最近 500ms 內的速率 — 分頁未被節流時會與螢幕更新率一致',
 		'utilities.display.row.pointer': '指標裝置',
 		'utilities.display.row.pointer.fine': '精細（滑鼠/觸控板）',
 		'utilities.display.row.pointer.coarse': '粗略（觸控）',
@@ -1135,7 +1200,8 @@ export default {
 		'utilities.display.row.deviceMemory': '裝置記憶體',
 		'utilities.display.row.deviceMemory.na': '不適用（瀏覽器未提供）',
 		'utilities.display.row.deviceMemory.value': '≥{gb} GB',
-		'utilities.display.row.deviceMemory.title': 'navigator.deviceMemory — 粗略區間，並非精確容量；部分瀏覽器完全不提供此值',
+		'utilities.display.row.deviceMemory.title':
+			'navigator.deviceMemory — 粗略區間，並非精確容量；部分瀏覽器完全不提供此值',
 		'utilities.display.row.language': '語言',
 		'utilities.display.row.timezone': '時區',
 		'utilities.display.row.network': '網路',
@@ -1149,16 +1215,19 @@ export default {
 		'utilities.keyboard.readout.loc': 'LOC：',
 		'utilities.keyboard.readout.loc.title': '0 標準 · 1 左側 · 2 右側 · 3 數字鍵盤',
 		'utilities.keyboard.readout.rollover': '同時按鍵上限：',
-		'utilities.keyboard.readout.rollover.title': '同時按下的最大按鍵數 — 系統/硬體可能有上限（防連壓/NKRO 限制）',
+		'utilities.keyboard.readout.rollover.title':
+			'同時按下的最大按鍵數 — 系統/硬體可能有上限（防連壓/NKRO 限制）',
 		'utilities.keyboard.readout.tested': '已測試：',
 		'utilities.keyboard.readout.downNow': '目前按下：',
 		'utilities.keyboard.reset': '✕ 重置',
-		'utilities.keyboard.hint': '按下任意按鍵 — 綠色代表已測試，反白代表正按住。所有按鍵都會在此被擷取，但 Ctrl+0-3 分頁切換仍可正常使用。',
+		'utilities.keyboard.hint':
+			'按下任意按鍵 — 綠色代表已測試，反白代表正按住。所有按鍵都會在此被擷取，但 Ctrl+0-3 分頁切換仍可正常使用。',
 		'utilities.keyboard.keysPressed': '按鍵次數：{count}',
 
 		'utilities.mouse.readout.pos': 'POS：',
 		'utilities.mouse.readout.moveEvents': '移動事件/秒：',
-		'utilities.mouse.readout.moveEvents.title': '最近一秒內合併後的 pointermove 事件數 — 瀏覽器可見的回報速率，受系統/瀏覽器限制',
+		'utilities.mouse.readout.moveEvents.title':
+			'最近一秒內合併後的 pointermove 事件數 — 瀏覽器可見的回報速率，受系統/瀏覽器限制',
 		'utilities.mouse.readout.clickGap': '點擊間隔：',
 		'utilities.mouse.readout.clickGap.title': '最近兩次左鍵按下之間的時間間隔',
 		'utilities.mouse.readout.clickGap.value': '{ms}毫秒',
@@ -1186,7 +1255,8 @@ export default {
 		'utilities.touch.tilt.reported': '已回報',
 		'utilities.touch.tilt.notObserved': '未偵測到',
 		'utilities.touch.reset': '重置',
-		'utilities.touch.surfaceHint': '在此觸摸、點擊或繪圖 — 每個作用中的指標都會以其真實的\n壓力、接觸面積與傾角繪出。',
+		'utilities.touch.surfaceHint':
+			'在此觸摸、點擊或繪圖 — 每個作用中的指標都會以其真實的\n壓力、接觸面積與傾角繪出。',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': '類型',
 		'utilities.touch.table.pressure': '壓力',
@@ -1204,7 +1274,8 @@ export default {
 		'utilities.typing.words': '單字數：',
 		'utilities.typing.restart': '⟳ 重新開始',
 		'utilities.typing.result.wpm': '{wpm} WPM',
-		'utilities.typing.result.summary': '正確率 {accuracy}% · {duration} 秒內答對 {correct}/{total} 個單字',
+		'utilities.typing.result.summary':
+			'正確率 {accuracy}% · {duration} 秒內答對 {correct}/{total} 個單字',
 		'utilities.typing.result.again': '按 Enter 或點擊重新開始再玩一次',
 		'utilities.typing.status.running': '開始 — 空白鍵送出單字，Backspace 修改',
 		'utilities.typing.status.idle': '開始輸入即可進入 30 秒測試。此工具下導覽快捷鍵已暫停。',
@@ -1237,7 +1308,8 @@ export default {
 		'utilities.reaction.early.hint': '在變綠前觸發 — 點擊或按空白鍵重試',
 		'utilities.reaction.result.hint': '點擊或按空白鍵再來一次 · 計時包含你的螢幕與輸入延遲',
 
-		'utilities.screen.intro': '全螢幕顯示測試套件 — 共 {groups} 組、{steps} 種圖案。測試中：\n點擊/任意鍵 = 下一個圖案，← = 上一個，Esc = 離開（Ctrl+0-3 導覽仍可使用）。',
+		'utilities.screen.intro':
+			'全螢幕顯示測試套件 — 共 {groups} 組、{steps} 種圖案。測試中：\n點擊/任意鍵 = 下一個圖案，← = 上一個，Esc = 離開（Ctrl+0-3 導覽仍可使用）。',
 		'utilities.screen.mode.pixels.label': '壞點檢測',
 		'utilities.screen.mode.pixels.desc': '6 種純色填滿 — 卡住或壞死的子像素會顯示為異色斑點',
 		'utilities.screen.mode.grayscale.label': '灰階',
@@ -1279,21 +1351,26 @@ export default {
 		'utilities.screen.pattern.count': '{count} 種圖案',
 		'utilities.screen.pattern.count.plural': '{count} 種圖案',
 		'utilities.screen.runAll': '▶▶ 執行完整序列（{count} 種圖案）',
-		'utilities.screen.crush.black.hint': '每個方塊應幾乎與純黑難以區分。若 4% 以上亮度的方塊消失，代表暗部被壓縮了。',
-		'utilities.screen.crush.white.hint': '每個方塊應幾乎與純白難以區分。若 96% 以下亮度的方塊消失，代表高光被削掉了。',
+		'utilities.screen.crush.black.hint':
+			'每個方塊應幾乎與純黑難以區分。若 4% 以上亮度的方塊消失，代表暗部被壓縮了。',
+		'utilities.screen.crush.white.hint':
+			'每個方塊應幾乎與純白難以區分。若 96% 以下亮度的方塊消失，代表高光被削掉了。',
 		'utilities.screen.text.mono': '{px}px 等寬 — {sample}',
 		'utilities.screen.text.sans': '{px}px 無襯線 — Sphinx of black quartz, judge my vow. {sample}',
 		'utilities.screen.text.serif': '{px}px 襯線 — Waltz, bad nymph, for quick jigs vex. {sample}',
-		'utilities.screen.text.hint': '小字級也應保持清晰、筆畫邊緣乾淨 — 出現毛邊或糊字代表存在次像素渲染／縮放問題。',
+		'utilities.screen.text.hint':
+			'小字級也應保持清晰、筆畫邊緣乾淨 — 出現毛邊或糊字代表存在次像素渲染／縮放問題。',
 		'utilities.screen.ghosting.slow': '慢速',
 		'utilities.screen.ghosting.medium': '中速',
 		'utilities.screen.ghosting.fast': '快速',
-		'utilities.screen.ghosting.hint': '用眼睛跟隨色塊移動 — 邊緣出現可見拖尾即為像素反應殘影／過衝偽影。動態速度與更新率同步。',
+		'utilities.screen.ghosting.hint':
+			'用眼睛跟隨色塊移動 — 邊緣出現可見拖尾即為像素反應殘影／過衝偽影。動態速度與更新率同步。',
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · 1 CSS 像素 = {dpr}× 裝置像素',
 		'utilities.screen.overlay.nav': ' — 點擊/按鍵下一個 · ← 上一個 · Esc 離開',
 
-		'utilities.audioout.intro': '此工具執行在獨立的 AudioContext 上，即使工作台已靜音也能發聲。\n請從低音量開始 — 掃頻會到達滿幅 20 kHz。',
+		'utilities.audioout.intro':
+			'此工具執行在獨立的 AudioContext 上，即使工作台已靜音也能發聲。\n請從低音量開始 — 掃頻會到達滿幅 20 kHz。',
 		'utilities.audioout.channel.left.label': '僅左聲道',
 		'utilities.audioout.channel.left.hint': '聲音應僅從左側喇叭發出',
 		'utilities.audioout.channel.right.label': '僅右聲道',
@@ -1317,9 +1394,11 @@ export default {
 		'utilities.audioout.output.available': '{count} 個可用',
 		'utilities.audioout.output.deviceFallback': '輸出裝置 {id}',
 		'utilities.audioout.output.title.supported': '將測試音路由到指定的輸出裝置',
-		'utilities.audioout.output.title.unsupported': '此瀏覽器無法將 WebAudio 重新導向到指定輸出 — 將一律使用系統預設裝置',
+		'utilities.audioout.output.title.unsupported':
+			'此瀏覽器無法將 WebAudio 重新導向到指定輸出 — 將一律使用系統預設裝置',
 		'utilities.audioout.output.unsupportedNote': '不支援 setSinkId — 正在系統預設裝置上播放',
-		'utilities.audioout.output.labelsHiddenNote': '裝置名稱在取得麥克風授權前保持隱藏 — 使用麥克風輸入工具即可解鎖。',
+		'utilities.audioout.output.labelsHiddenNote':
+			'裝置名稱在取得麥克風授權前保持隱藏 — 使用麥克風輸入工具即可解鎖。',
 		'utilities.audioout.level.label': '音量',
 		'utilities.audioout.level.idle': '閒置',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
@@ -1349,7 +1428,8 @@ export default {
 		'utilities.mic.device.default': '預設輸入',
 		'utilities.mic.device.available': '{count} 個可用',
 		'utilities.mic.device.fallback': '輸入裝置 {id}',
-		'utilities.mic.monitor.title': '將麥克風直接路由到輸出，以便聽到自己的聲音。請使用耳機 — 用喇叭會產生回授嘯叫。',
+		'utilities.mic.monitor.title':
+			'將麥克風直接路由到輸出，以便聽到自己的聲音。請使用耳機 — 用喇叭會產生回授嘯叫。',
 		'utilities.mic.monitor.label': '監聽：{state}',
 		'utilities.mic.monitor.on': '開',
 		'utilities.mic.monitor.off': '關',
@@ -1448,7 +1528,8 @@ export default {
 		'utilities.net.network.online.no': '否',
 		'utilities.net.network.effectiveType': '有效網路類型',
 		'utilities.net.network.effectiveType.na': '不適用',
-		'utilities.net.network.effectiveType.title': 'Network Information API — 依近期傳輸量估算的分級，並非實體連線本身',
+		'utilities.net.network.effectiveType.title':
+			'Network Information API — 依近期傳輸量估算的分級，並非實體連線本身',
 		'utilities.net.network.downlink': '下行速率估算',
 		'utilities.net.network.downlink.na': '不適用',
 		'utilities.net.network.downlink.value': '{mbit} Mbit/s',
@@ -1490,7 +1571,8 @@ export default {
 		'utilities.net.permissions.na': '不適用',
 		'utilities.net.permissions.notQueryable': '無法查詢',
 
-		'utilities.speed.intro': '隨機資料會送往 speed.cloudflare.com——Cloudflare 自己的公開測速服務，不是第三方；krsz.in 不會保留這項測試的任何資料。',
+		'utilities.speed.intro':
+			'隨機資料會送往 speed.cloudflare.com——Cloudflare 自己的公開測速服務，不是第三方；krsz.in 不會保留這項測試的任何資料。',
 		'utilities.speed.pop.label': '服務節點',
 		'utilities.speed.pop.na': '不適用',
 		'utilities.speed.start': '開始測試',
@@ -1516,7 +1598,8 @@ export default {
 		'utilities.speed.mbps.na': '不適用',
 		'utilities.speed.totalMoved': '總傳輸量',
 		'utilities.speed.bytes.mb': '{mb} MB',
-		'utilities.speed.idle': '按下「開始測試」以測量與 Cloudflare 公開測速服務之間的延遲、下載與上傳速度。',
+		'utilities.speed.idle':
+			'按下「開始測試」以測量與 Cloudflare 公開測速服務之間的延遲、下載與上傳速度。',
 
 		'utilities.gpu.section.webgl': 'WEBGL',
 		'utilities.gpu.section.webgpu': 'WEBGPU',
@@ -1551,7 +1634,8 @@ export default {
 		'utilities.gpu.webgpu.features': '功能（{count}）',
 		'utilities.gpu.webgpu.features.show': '顯示清單',
 		'utilities.gpu.webgpu.features.hide': '隱藏清單',
-		'utilities.gpu.benchmark.hint': '執行約 5 秒：先以遞增的過度繪製層數做全螢幕填充率測試，再做一次實例化三角形吞吐量測試。畫面更新率受垂直同步限制，在效能差異很大的 GPU 上讀數也會相近——每秒百萬像素／每秒三角形數才是真正的量測值。',
+		'utilities.gpu.benchmark.hint':
+			'執行約 5 秒：先以遞增的過度繪製層數做全螢幕填充率測試，再做一次實例化三角形吞吐量測試。畫面更新率受垂直同步限制，在效能差異很大的 GPU 上讀數也會相近——每秒百萬像素／每秒三角形數才是真正的量測值。',
 		'utilities.gpu.benchmark.start': '執行基準測試',
 		'utilities.gpu.benchmark.running': '測試中…',
 		'utilities.gpu.benchmark.unavailable': '沒有 WebGL 內容——基準測試不可用。',
@@ -1604,7 +1688,8 @@ export default {
 		'utilities.sensors.light.value': '照度',
 		'utilities.sensors.light.lux': '{lux} lx',
 		'utilities.sensors.light.unavailable': '此瀏覽器未提供 AmbientLightSensor。',
-		'utilities.sensors.light.blocked': 'AmbientLightSensor 存在，但存取被封鎖（權限政策或使用者拒絕）。',
+		'utilities.sensors.light.blocked':
+			'AmbientLightSensor 存在，但存取被封鎖（權限政策或使用者拒絕）。',
 		'utilities.sensors.light.error': 'AmbientLightSensor 錯誤：{message}'
 	},
 	ja: {
@@ -1621,15 +1706,19 @@ export default {
 		'utilities.view.tool.reaction.label': '反応速度',
 		'utilities.view.tool.reaction.desc': '視覚反応時間、10回中のベスト/平均',
 		'utilities.view.tool.pixels.label': '画面',
-		'utilities.view.tool.pixels.desc': 'ドット抜け、グレースケール、バンディング、シャープネス、文字、残像',
+		'utilities.view.tool.pixels.desc':
+			'ドット抜け、グレースケール、バンディング、シャープネス、文字、残像',
 		'utilities.view.tool.audioout.label': 'オーディオ出力',
-		'utilities.view.tool.audioout.desc': 'チャンネルルーティング、位相、20Hz-20kHzスイープ、デバイス遅延',
+		'utilities.view.tool.audioout.desc':
+			'チャンネルルーティング、位相、20Hz-20kHzスイープ、デバイス遅延',
 		'utilities.view.tool.mic.label': 'マイク入力',
-		'utilities.view.tool.mic.desc': 'dBFSレベル、クリッピング、リアルタイムスペクトラム、優勢周波数',
+		'utilities.view.tool.mic.desc':
+			'dBFSレベル、クリッピング、リアルタイムスペクトラム、優勢周波数',
 		'utilities.view.tool.camera.label': 'カメラ',
 		'utilities.view.tool.camera.desc': '解像度、公称値と実測フレームレート、機能',
 		'utilities.view.tool.net.label': 'ネット / 電源',
-		'utilities.view.tool.net.desc': 'Cloudflareのアクセスポイント、回線推定、バッテリー、ストレージ、権限',
+		'utilities.view.tool.net.desc':
+			'Cloudflareのアクセスポイント、回線推定、バッテリー、ストレージ、権限',
 		'utilities.view.tool.display.label': 'ディスプレイ / システム',
 		'utilities.view.tool.display.desc': '解像度、リフレッシュレート、ブラウザ環境',
 		'utilities.view.tool.speed.label': '速度',
@@ -1660,7 +1749,8 @@ export default {
 		'utilities.display.row.colorDepth.value': '{bits}ビット',
 		'utilities.display.row.refresh': 'リフレッシュ（rAF）',
 		'utilities.display.row.refresh.value': '~{fps} FPS',
-		'utilities.display.row.refresh.title': '直近500msのrequestAnimationFrame速度 — タブがスロットリングされていなければディスプレイのリフレッシュレートと一致します',
+		'utilities.display.row.refresh.title':
+			'直近500msのrequestAnimationFrame速度 — タブがスロットリングされていなければディスプレイのリフレッシュレートと一致します',
 		'utilities.display.row.pointer': 'ポインター',
 		'utilities.display.row.pointer.fine': '高精度（マウス/トラックパッド）',
 		'utilities.display.row.pointer.coarse': '低精度（タッチ）',
@@ -1670,7 +1760,8 @@ export default {
 		'utilities.display.row.deviceMemory': 'デバイスメモリ',
 		'utilities.display.row.deviceMemory.na': '該当なし（ブラウザが非公開）',
 		'utilities.display.row.deviceMemory.value': '≥{gb} GB',
-		'utilities.display.row.deviceMemory.title': 'navigator.deviceMemory — 大まかな区分であり、正確な搭載メモリではありません。一部のブラウザは値自体を提供しません',
+		'utilities.display.row.deviceMemory.title':
+			'navigator.deviceMemory — 大まかな区分であり、正確な搭載メモリではありません。一部のブラウザは値自体を提供しません',
 		'utilities.display.row.language': '言語',
 		'utilities.display.row.timezone': 'タイムゾーン',
 		'utilities.display.row.network': 'ネットワーク',
@@ -1684,16 +1775,19 @@ export default {
 		'utilities.keyboard.readout.loc': 'LOC：',
 		'utilities.keyboard.readout.loc.title': '0 標準 · 1 左 · 2 右 · 3 テンキー',
 		'utilities.keyboard.readout.rollover': '同時押し上限：',
-		'utilities.keyboard.readout.rollover.title': '同時に押されたキーの最大数 — OS/ハードウェアの制限がかかる場合があります（ゴースティング/NKROの上限）',
+		'utilities.keyboard.readout.rollover.title':
+			'同時に押されたキーの最大数 — OS/ハードウェアの制限がかかる場合があります（ゴースティング/NKROの上限）',
 		'utilities.keyboard.readout.tested': 'テスト済み：',
 		'utilities.keyboard.readout.downNow': '現在押下中：',
 		'utilities.keyboard.reset': '✕ リセット',
-		'utilities.keyboard.hint': '任意のキーを押してください — 緑はテスト済み、ハイライトは押下中を示します。すべてのキーがここで捕捉されますが、Ctrl+0-3によるタブ切り替えは引き続き動作します。',
+		'utilities.keyboard.hint':
+			'任意のキーを押してください — 緑はテスト済み、ハイライトは押下中を示します。すべてのキーがここで捕捉されますが、Ctrl+0-3によるタブ切り替えは引き続き動作します。',
 		'utilities.keyboard.keysPressed': 'キー入力回数：{count}',
 
 		'utilities.mouse.readout.pos': 'POS：',
 		'utilities.mouse.readout.moveEvents': '移動イベント数/秒：',
-		'utilities.mouse.readout.moveEvents.title': '直近1秒間に集約されたpointermoveイベント数 — ブラウザから見える報告レートで、OS/ブラウザによって上限があります',
+		'utilities.mouse.readout.moveEvents.title':
+			'直近1秒間に集約されたpointermoveイベント数 — ブラウザから見える報告レートで、OS/ブラウザによって上限があります',
 		'utilities.mouse.readout.clickGap': 'クリック間隔：',
 		'utilities.mouse.readout.clickGap.title': '直近2回の左クリックの間隔',
 		'utilities.mouse.readout.clickGap.value': '{ms}ms',
@@ -1707,7 +1801,8 @@ export default {
 		'utilities.mouse.button.right': '右ボタン',
 		'utilities.mouse.button.backName': '戻る（X1）',
 		'utilities.mouse.button.fwdName': '進む（X2）',
-		'utilities.mouse.surface.hint': 'テストエリア — 任意のボタンをクリック、スクロール、ダブルクリックしてください。\nここでは右クリックメニューが無効化されています。',
+		'utilities.mouse.surface.hint':
+			'テストエリア — 任意のボタンをクリック、スクロール、ダブルクリックしてください。\nここでは右クリックメニューが無効化されています。',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δホイール：{delta}',
 
@@ -1721,7 +1816,8 @@ export default {
 		'utilities.touch.tilt.reported': '報告あり',
 		'utilities.touch.tilt.notObserved': '未検出',
 		'utilities.touch.reset': 'リセット',
-		'utilities.touch.surfaceHint': 'ここでタッチ、クリック、または描画してください — アクティブな各ポインターは、実際の\n圧力、接触サイズ、傾きに基づいて描画されます。',
+		'utilities.touch.surfaceHint':
+			'ここでタッチ、クリック、または描画してください — アクティブな各ポインターは、実際の\n圧力、接触サイズ、傾きに基づいて描画されます。',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': 'タイプ',
 		'utilities.touch.table.pressure': '圧力',
@@ -1739,14 +1835,17 @@ export default {
 		'utilities.typing.words': '単語数：',
 		'utilities.typing.restart': '⟳ リスタート',
 		'utilities.typing.result.wpm': '{wpm} WPM',
-		'utilities.typing.result.summary': '正確率{accuracy}% · {duration}秒間で{correct}/{total}語が正解',
+		'utilities.typing.result.summary':
+			'正確率{accuracy}% · {duration}秒間で{correct}/{total}語が正解',
 		'utilities.typing.result.again': 'EnterまたはRESTARTでもう一度',
 		'utilities.typing.status.running': 'スタート — スペースで単語を確定、Backspaceで修正',
-		'utilities.typing.status.idle': '入力を始めると30秒テストが始まります。このツールではナビゲーションのショートカットが一時停止されます。',
+		'utilities.typing.status.idle':
+			'入力を始めると30秒テストが始まります。このツールではナビゲーションのショートカットが一時停止されます。',
 
 		'utilities.gamepad.disconnected': 'コントローラーが切断されました',
 		'utilities.gamepad.none': 'コントローラーが検出されません',
-		'utilities.gamepad.hint': 'ゲームパッドを接続し、いずれかのボタンを押してください — ブラウザは最初の入力があるまでデバイスを表示しません。',
+		'utilities.gamepad.hint':
+			'ゲームパッドを接続し、いずれかのボタンを押してください — ブラウザは最初の入力があるまでデバイスを表示しません。',
 		'utilities.gamepad.mapping': 'マッピング：',
 		'utilities.gamepad.mapping.custom': 'カスタム',
 		'utilities.gamepad.tested': 'テスト済み：',
@@ -1757,7 +1856,8 @@ export default {
 		'utilities.gamepad.buttonsHeading': 'ボタン（{tested}/{total} テスト済み）',
 		'utilities.gamepad.axesHeading': '軸',
 		'utilities.gamepad.axisLabel': '軸 {index}',
-		'utilities.gamepad.driftNote': 'スティックを中央にした状態では約0.00になるはずです — 静止時に持続的なズレがあればドリフトです。',
+		'utilities.gamepad.driftNote':
+			'スティックを中央にした状態では約0.00になるはずです — 静止時に持続的なズレがあればドリフトです。',
 
 		'utilities.reaction.last': '直近：',
 		'utilities.reaction.best': 'ベスト：',
@@ -1765,24 +1865,31 @@ export default {
 		'utilities.reaction.reset': '✕ リセット',
 		'utilities.reaction.ms': '{ms}ms',
 		'utilities.reaction.idle.title': 'クリックまたはスペースキーでスタート',
-		'utilities.reaction.idle.hint': '緑になるのを待ってからできるだけ速く反応してください — スペースキーも常時使えます',
+		'utilities.reaction.idle.hint':
+			'緑になるのを待ってからできるだけ速く反応してください — スペースキーも常時使えます',
 		'utilities.reaction.waiting': '緑になるのを待っています…',
 		'utilities.reaction.go': '今！（クリック / スペース）',
 		'utilities.reaction.early.title': 'フライング',
 		'utilities.reaction.early.hint': '緑になる前に反応しました — クリックまたはスペースで再挑戦',
-		'utilities.reaction.result.hint': 'クリックまたはスペースでもう一度 · 計測にはディスプレイと入力の遅延も含まれます',
+		'utilities.reaction.result.hint':
+			'クリックまたはスペースでもう一度 · 計測にはディスプレイと入力の遅延も含まれます',
 
-		'utilities.screen.intro': 'フルスクリーン表示テストスイート — {groups}グループ、計{steps}パターン。テスト中は\nクリック/任意のキーで次のパターン、←で前へ、Escで終了（Ctrl+0-3のナビゲーションは引き続き使用できます）。',
+		'utilities.screen.intro':
+			'フルスクリーン表示テストスイート — {groups}グループ、計{steps}パターン。テスト中は\nクリック/任意のキーで次のパターン、←で前へ、Escで終了（Ctrl+0-3のナビゲーションは引き続き使用できます）。',
 		'utilities.screen.mode.pixels.label': 'ドット抜け',
-		'utilities.screen.mode.pixels.desc': '6種類の単色塗りつぶし — 固着または死んだサブピクセルは色の異なる点として見えます',
+		'utilities.screen.mode.pixels.desc':
+			'6種類の単色塗りつぶし — 固着または死んだサブピクセルは色の異なる点として見えます',
 		'utilities.screen.mode.grayscale.label': 'グレースケール',
-		'utilities.screen.mode.grayscale.desc': '8→64段階のグラデーションと連続グラデーション — バンディングとガンマ追従性',
+		'utilities.screen.mode.grayscale.desc':
+			'8→64段階のグラデーションと連続グラデーション — バンディングとガンマ追従性',
 		'utilities.screen.mode.gradients.label': 'グラデーション',
-		'utilities.screen.mode.gradients.desc': '連続するR/G/Bと色相のグラデーション — カラーバンディングと色かぶり',
+		'utilities.screen.mode.gradients.desc':
+			'連続するR/G/Bと色相のグラデーション — カラーバンディングと色かぶり',
 		'utilities.screen.mode.levels.label': '白黒レベル',
 		'utilities.screen.mode.levels.desc': '黒に近い/白に近いパッチ — 黒つぶれ、白飛び',
 		'utilities.screen.mode.sharpness.label': 'シャープネス',
-		'utilities.screen.mode.sharpness.desc': '1pxの市松模様、ライン、グリッド — スケーリングのぼやけとモアレ',
+		'utilities.screen.mode.sharpness.desc':
+			'1pxの市松模様、ライン、グリッド — スケーリングのぼやけとモアレ',
 		'utilities.screen.mode.text.label': '文字の見やすさ',
 		'utilities.screen.mode.text.desc': '8〜20pxのフォント表示、3書体、明暗両方の配色',
 		'utilities.screen.mode.ghosting.label': '残像',
@@ -1814,21 +1921,27 @@ export default {
 		'utilities.screen.pattern.count': '{count}パターン',
 		'utilities.screen.pattern.count.plural': '{count}パターン',
 		'utilities.screen.runAll': '▶▶ 全シーケンス実行（{count}パターン）',
-		'utilities.screen.crush.black.hint': '各パッチはほぼ純黒と見分けがつかないはずです。4%以上の明るさのパッチが消えて見える場合、黒つぶれが起きています。',
-		'utilities.screen.crush.white.hint': '各パッチはほぼ純白と見分けがつかないはずです。96%以下の明るさのパッチが消えて見える場合、白飛びが起きています。',
+		'utilities.screen.crush.black.hint':
+			'各パッチはほぼ純黒と見分けがつかないはずです。4%以上の明るさのパッチが消えて見える場合、黒つぶれが起きています。',
+		'utilities.screen.crush.white.hint':
+			'各パッチはほぼ純白と見分けがつかないはずです。96%以下の明るさのパッチが消えて見える場合、白飛びが起きています。',
 		'utilities.screen.text.mono': '{px}px 等幅 — {sample}',
-		'utilities.screen.text.sans': '{px}px サンセリフ — Sphinx of black quartz, judge my vow. {sample}',
+		'utilities.screen.text.sans':
+			'{px}px サンセリフ — Sphinx of black quartz, judge my vow. {sample}',
 		'utilities.screen.text.serif': '{px}px セリフ — Waltz, bad nymph, for quick jigs vex. {sample}',
-		'utilities.screen.text.hint': '小さいサイズでも文字が読みやすく、線の輪郭がくっきりしているはずです。にじみやぼやけはサブピクセルレンダリングやスケーリングの問題を示唆します。',
+		'utilities.screen.text.hint':
+			'小さいサイズでも文字が読みやすく、線の輪郭がくっきりしているはずです。にじみやぼやけはサブピクセルレンダリングやスケーリングの問題を示唆します。',
 		'utilities.screen.ghosting.slow': '低速',
 		'utilities.screen.ghosting.medium': '中速',
 		'utilities.screen.ghosting.fast': '高速',
-		'utilities.screen.ghosting.hint': '目でブロックを追ってください — 端に残る軌跡が見える場合、ピクセル応答の残像／オーバードライブのアーティファクトです。動きはリフレッシュレートに同期しています。',
+		'utilities.screen.ghosting.hint':
+			'目でブロックを追ってください — 端に残る軌跡が見える場合、ピクセル応答の残像／オーバードライブのアーティファクトです。動きはリフレッシュレートに同期しています。',
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · CSSピクセル1 = デバイスピクセル{dpr}×',
 		'utilities.screen.overlay.nav': ' — クリック/キーで次へ · ←で前へ · Escで終了',
 
-		'utilities.audioout.intro': 'このツールは独自のAudioContextで動作するため、ワークベンチがミュートされていても再生されます。\n低い音量から始めてください — スイープはフルスケールの20kHzに達します。',
+		'utilities.audioout.intro':
+			'このツールは独自のAudioContextで動作するため、ワークベンチがミュートされていても再生されます。\n低い音量から始めてください — スイープはフルスケールの20kHzに達します。',
 		'utilities.audioout.channel.left.label': '左のみ',
 		'utilities.audioout.channel.left.hint': '音は左スピーカーのみから聞こえるはずです',
 		'utilities.audioout.channel.right.label': '右のみ',
@@ -1836,11 +1949,13 @@ export default {
 		'utilities.audioout.channel.both.label': '両方',
 		'utilities.audioout.channel.both.hint': '両スピーカーの中央に定位します',
 		'utilities.audioout.channel.inverted.label': '位相反転',
-		'utilities.audioout.channel.inverted.hint': '右チャンネルを反転 — 空洞のような音になり、モノラルではほぼ無音になるはずです',
+		'utilities.audioout.channel.inverted.hint':
+			'右チャンネルを反転 — 空洞のような音になり、モノラルではほぼ無音になるはずです',
 		'utilities.audioout.channel.tone': '440Hz {label}',
 		'utilities.audioout.channel.toneRunning': '440 Hz {label}',
 		'utilities.audioout.sweep.button': 'スイープ 20Hz→20kHz',
-		'utilities.audioout.sweep.title': '対数正弦波スイープ、8秒かけて20Hzから20kHzへ — 共振とロールオフを確認できます',
+		'utilities.audioout.sweep.title':
+			'対数正弦波スイープ、8秒かけて20Hzから20kHzへ — 共振とロールオフを確認できます',
 		'utilities.audioout.sweep.running': 'スイープ 20 Hz → 20 kHz',
 		'utilities.audioout.noise.button': '{channel}ノイズ',
 		'utilities.audioout.noise.title': '{channel}チャンネルのホワイトノイズ',
@@ -1852,13 +1967,16 @@ export default {
 		'utilities.audioout.output.available': '{count}件利用可能',
 		'utilities.audioout.output.deviceFallback': '出力 {id}',
 		'utilities.audioout.output.title.supported': 'テスト音を特定の出力デバイスにルーティングします',
-		'utilities.audioout.output.title.unsupported': 'このブラウザはWebAudioの出力先を切り替えられません — 常にシステム既定を使用します',
+		'utilities.audioout.output.title.unsupported':
+			'このブラウザはWebAudioの出力先を切り替えられません — 常にシステム既定を使用します',
 		'utilities.audioout.output.unsupportedNote': 'setSinkId非対応 — システム既定で再生しています',
-		'utilities.audioout.output.labelsHiddenNote': 'マイクの許可が得られるまでデバイス名は非表示です — MIC INツールで解除されます。',
+		'utilities.audioout.output.labelsHiddenNote':
+			'マイクの許可が得られるまでデバイス名は非表示です — MIC INツールで解除されます。',
 		'utilities.audioout.level.label': 'レベル',
 		'utilities.audioout.level.idle': '待機中',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
-		'utilities.audioout.info.hint': 'テストを押すとオーディオデバイスが開き、実際のパラメーターが読み取られます。',
+		'utilities.audioout.info.hint':
+			'テストを押すとオーディオデバイスが開き、実際のパラメーターが読み取られます。',
 		'utilities.audioout.info.sampleRate': 'サンプルレート',
 		'utilities.audioout.info.state': '状態',
 		'utilities.audioout.info.channels': 'チャンネル数',
@@ -1880,17 +1998,21 @@ export default {
 		'utilities.mic.stop': '停止してマイクを解放',
 		'utilities.mic.device.placeholder': '既定の入力',
 		'utilities.mic.device.title.labeled': '入力デバイス',
-		'utilities.mic.device.title.unlabeled': 'マイクへのアクセスが許可されるとデバイス名が表示されます',
+		'utilities.mic.device.title.unlabeled':
+			'マイクへのアクセスが許可されるとデバイス名が表示されます',
 		'utilities.mic.device.default': '既定の入力',
 		'utilities.mic.device.available': '{count}件利用可能',
 		'utilities.mic.device.fallback': '入力 {id}',
-		'utilities.mic.monitor.title': 'マイクの音を直接出力にルーティングして自分の声を聞けるようにします。ヘッドホンを使用してください — スピーカーではハウリングします。',
+		'utilities.mic.monitor.title':
+			'マイクの音を直接出力にルーティングして自分の声を聞けるようにします。ヘッドホンを使用してください — スピーカーではハウリングします。',
 		'utilities.mic.monitor.label': 'モニター：{state}',
 		'utilities.mic.monitor.on': 'ON',
 		'utilities.mic.monitor.off': 'OFF',
 		'utilities.mic.resetClip': 'クリップ表示をリセット',
-		'utilities.mic.privacyNote': '音声はページ外に送信されません — 解析も再生もブラウザ内で完結し、アップロードは行われません。',
-		'utilities.mic.monitorWarning': 'モニターがONになっています — ヘッドホンを着用してください。そうしないとマイクが自身の出力音を拾ってしまいます。',
+		'utilities.mic.privacyNote':
+			'音声はページ外に送信されません — 解析も再生もブラウザ内で完結し、アップロードは行われません。',
+		'utilities.mic.monitorWarning':
+			'モニターがONになっています — ヘッドホンを着用してください。そうしないとマイクが自身の出力音を拾ってしまいます。',
 		'utilities.mic.rms.label': 'RMS',
 		'utilities.mic.rms.value': '{db} dBFS',
 		'utilities.mic.peak.label': 'ピーク',
@@ -1919,8 +2041,10 @@ export default {
 		'utilities.mic.settings.echoCancel': 'エコーキャンセル',
 		'utilities.mic.settings.noiseSuppr': 'ノイズ抑制',
 		'utilities.mic.settings.autoGain': 'オートゲイン',
-		'utilities.mic.error.mediaRecorderUnsupported': 'このブラウザのMediaRecorderは音声を録音できません。',
-		'utilities.mic.error.decodeFailed': '録音はできましたが、このブラウザは再生用にデコードできませんでした。',
+		'utilities.mic.error.mediaRecorderUnsupported':
+			'このブラウザのMediaRecorderは音声を録音できません。',
+		'utilities.mic.error.decodeFailed':
+			'録音はできましたが、このブラウザは再生用にデコードできませんでした。',
 		'utilities.mic.error.deniedFallback': 'マイクへのアクセスが拒否されました',
 		'utilities.mic.error.named': '{name}：{message}',
 
@@ -1929,7 +2053,8 @@ export default {
 		'utilities.camera.device.placeholder': 'カメラ',
 		'utilities.camera.device.title': '撮影デバイス',
 		'utilities.camera.device.fallback': 'カメラ {id}',
-		'utilities.camera.privacyNote': 'プレビューはこのタブ内にとどまります — フレームが保存・送信されることはありません。',
+		'utilities.camera.privacyNote':
+			'プレビューはこのタブ内にとどまります — フレームが保存・送信されることはありません。',
 		'utilities.camera.live': 'ライブ',
 		'utilities.camera.noStream': '映像なし',
 		'utilities.camera.settings.device': 'デバイス',
@@ -1983,7 +2108,8 @@ export default {
 		'utilities.net.network.online.no': 'いいえ',
 		'utilities.net.network.effectiveType': '実効タイプ',
 		'utilities.net.network.effectiveType.na': '該当なし',
-		'utilities.net.network.effectiveType.title': 'Network Information API — 直近のスループットから推定した区分であり、物理回線そのものではありません',
+		'utilities.net.network.effectiveType.title':
+			'Network Information API — 直近のスループットから推定した区分であり、物理回線そのものではありません',
 		'utilities.net.network.downlink': '下り速度の推定',
 		'utilities.net.network.downlink.na': '該当なし',
 		'utilities.net.network.downlink.value': '{mbit} Mbit/s',
@@ -2025,7 +2151,8 @@ export default {
 		'utilities.net.permissions.na': '該当なし',
 		'utilities.net.permissions.notQueryable': '照会不可',
 
-		'utilities.speed.intro': 'ランダムなデータは speed.cloudflare.com——Cloudflare 自身の公開速度測定サービス——に送られ、第三者には送られません。krsz.in はこのテストの内容を一切保存しません。',
+		'utilities.speed.intro':
+			'ランダムなデータは speed.cloudflare.com——Cloudflare 自身の公開速度測定サービス——に送られ、第三者には送られません。krsz.in はこのテストの内容を一切保存しません。',
 		'utilities.speed.pop.label': '応答した拠点',
 		'utilities.speed.pop.na': '該当なし',
 		'utilities.speed.start': 'テスト開始',
@@ -2051,7 +2178,8 @@ export default {
 		'utilities.speed.mbps.na': '該当なし',
 		'utilities.speed.totalMoved': '総転送量',
 		'utilities.speed.bytes.mb': '{mb} MB',
-		'utilities.speed.idle': '「テスト開始」を押すと、Cloudflareの公開速度測定サービスに対するレイテンシ・ダウンロード・アップロードを測定します。',
+		'utilities.speed.idle':
+			'「テスト開始」を押すと、Cloudflareの公開速度測定サービスに対するレイテンシ・ダウンロード・アップロードを測定します。',
 
 		'utilities.gpu.section.webgl': 'WEBGL',
 		'utilities.gpu.section.webgpu': 'WEBGPU',
@@ -2073,7 +2201,8 @@ export default {
 		'utilities.gpu.webgl.extensions.show': '一覧を表示',
 		'utilities.gpu.webgl.extensions.hide': '一覧を隠す',
 		'utilities.gpu.webgpu.unavailable': 'このブラウザではWebGPUが公開されていません。',
-		'utilities.gpu.webgpu.noAdapter': 'navigator.gpuは存在しますが、アダプタを取得できませんでした。',
+		'utilities.gpu.webgpu.noAdapter':
+			'navigator.gpuは存在しますが、アダプタを取得できませんでした。',
 		'utilities.gpu.webgpu.vendor': 'ベンダー',
 		'utilities.gpu.webgpu.architecture': 'アーキテクチャ',
 		'utilities.gpu.webgpu.device': 'デバイス',
@@ -2086,10 +2215,12 @@ export default {
 		'utilities.gpu.webgpu.features': '機能（{count}）',
 		'utilities.gpu.webgpu.features.show': '一覧を表示',
 		'utilities.gpu.webgpu.features.hide': '一覧を隠す',
-		'utilities.gpu.benchmark.hint': '約5秒間実行します：まずオーバードロー層数を増やしながらのフルスクリーン塗りつぶし速度テスト、続いてインスタンス化された三角形のスループットテストを行います。fpsは垂直同期で頭打ちになるため、性能差の大きいGPU間でも近い値になります——本当の測定値はMbps／秒間三角形数です。',
+		'utilities.gpu.benchmark.hint':
+			'約5秒間実行します：まずオーバードロー層数を増やしながらのフルスクリーン塗りつぶし速度テスト、続いてインスタンス化された三角形のスループットテストを行います。fpsは垂直同期で頭打ちになるため、性能差の大きいGPU間でも近い値になります——本当の測定値はMbps／秒間三角形数です。',
 		'utilities.gpu.benchmark.start': 'ベンチマーク実行',
 		'utilities.gpu.benchmark.running': '測定中…',
-		'utilities.gpu.benchmark.unavailable': 'WebGLコンテキストがなく、ベンチマークは利用できません。',
+		'utilities.gpu.benchmark.unavailable':
+			'WebGLコンテキストがなく、ベンチマークは利用できません。',
 		'utilities.gpu.benchmark.hidden': 'タブが非表示のため、ベンチマークを一時停止しました。',
 		'utilities.gpu.benchmark.fillrate': 'フィルレート',
 		'utilities.gpu.benchmark.fillrate.layers': '{layers}× オーバードロー',
@@ -2130,7 +2261,8 @@ export default {
 		'utilities.sensors.motion.ms2': 'm/s²',
 		'utilities.sensors.motion.degs': 'deg/s',
 		'utilities.sensors.motion.na': '該当なし',
-		'utilities.sensors.level.hint': 'デバイスを傾けてください——気泡はbeta/gammaに応じて動き、十字線が水平位置を示します。',
+		'utilities.sensors.level.hint':
+			'デバイスを傾けてください——気泡はbeta/gammaに応じて動き、十字線が水平位置を示します。',
 		'utilities.sensors.compass.heading': '方位',
 		'utilities.sensors.compass.deg': '{deg}°',
 		'utilities.sensors.compass.na': '絶対方位データが必要です',
@@ -2138,8 +2270,10 @@ export default {
 		'utilities.sensors.compass.source.alpha': '360 − alpha',
 		'utilities.sensors.light.value': '照度',
 		'utilities.sensors.light.lux': '{lux} lx',
-		'utilities.sensors.light.unavailable': 'このブラウザではAmbientLightSensorが公開されていません。',
-		'utilities.sensors.light.blocked': 'AmbientLightSensorは存在しますが、アクセスがブロックされました（権限ポリシーまたはユーザーによる拒否）。',
+		'utilities.sensors.light.unavailable':
+			'このブラウザではAmbientLightSensorが公開されていません。',
+		'utilities.sensors.light.blocked':
+			'AmbientLightSensorは存在しますが、アクセスがブロックされました（権限ポリシーまたはユーザーによる拒否）。',
 		'utilities.sensors.light.error': 'AmbientLightSensorエラー：{message}'
 	},
 	ko: {
@@ -2195,7 +2329,8 @@ export default {
 		'utilities.display.row.colorDepth.value': '{bits}비트',
 		'utilities.display.row.refresh': '주사율（rAF）',
 		'utilities.display.row.refresh.value': '~{fps} FPS',
-		'utilities.display.row.refresh.title': '최근 500ms 동안의 requestAnimationFrame 속도 — 탭이 스로틀링되지 않으면 디스플레이 주사율과 일치합니다',
+		'utilities.display.row.refresh.title':
+			'최근 500ms 동안의 requestAnimationFrame 속도 — 탭이 스로틀링되지 않으면 디스플레이 주사율과 일치합니다',
 		'utilities.display.row.pointer': '포인터',
 		'utilities.display.row.pointer.fine': '정밀（마우스/트랙패드）',
 		'utilities.display.row.pointer.coarse': '거침（터치）',
@@ -2205,7 +2340,8 @@ export default {
 		'utilities.display.row.deviceMemory': '기기 메모리',
 		'utilities.display.row.deviceMemory.na': '해당 없음（브라우저 미제공）',
 		'utilities.display.row.deviceMemory.value': '≥{gb} GB',
-		'utilities.display.row.deviceMemory.title': 'navigator.deviceMemory — 대략적인 구간이며 정확한 RAM 용량이 아닙니다. 일부 브라우저는 값 자체를 제공하지 않습니다',
+		'utilities.display.row.deviceMemory.title':
+			'navigator.deviceMemory — 대략적인 구간이며 정확한 RAM 용량이 아닙니다. 일부 브라우저는 값 자체를 제공하지 않습니다',
 		'utilities.display.row.language': '언어',
 		'utilities.display.row.timezone': '시간대',
 		'utilities.display.row.network': '네트워크',
@@ -2219,16 +2355,19 @@ export default {
 		'utilities.keyboard.readout.loc': 'LOC：',
 		'utilities.keyboard.readout.loc.title': '0 표준 · 1 왼쪽 · 2 오른쪽 · 3 넘버패드',
 		'utilities.keyboard.readout.rollover': '동시 입력 최대값：',
-		'utilities.keyboard.readout.rollover.title': '동시에 눌린 키의 최대 개수 — OS/하드웨어에 따라 제한이 있을 수 있습니다（고스팅/NKRO 한계）',
+		'utilities.keyboard.readout.rollover.title':
+			'동시에 눌린 키의 최대 개수 — OS/하드웨어에 따라 제한이 있을 수 있습니다（고스팅/NKRO 한계）',
 		'utilities.keyboard.readout.tested': '테스트됨：',
 		'utilities.keyboard.readout.downNow': '현재 누름：',
 		'utilities.keyboard.reset': '✕ 초기화',
-		'utilities.keyboard.hint': '아무 키나 눌러보세요 — 초록색은 테스트됨, 강조 표시는 누르고 있음을 뜻합니다. 모든 키가 여기서 감지되지만 Ctrl+0-3 탭 이동은 계속 작동합니다.',
+		'utilities.keyboard.hint':
+			'아무 키나 눌러보세요 — 초록색은 테스트됨, 강조 표시는 누르고 있음을 뜻합니다. 모든 키가 여기서 감지되지만 Ctrl+0-3 탭 이동은 계속 작동합니다.',
 		'utilities.keyboard.keysPressed': '키 입력 횟수: {count}',
 
 		'utilities.mouse.readout.pos': 'POS：',
 		'utilities.mouse.readout.moveEvents': '이동 이벤트/초：',
-		'utilities.mouse.readout.moveEvents.title': '최근 1초 동안 병합된 pointermove 이벤트 수 — 브라우저에 보이는 보고 속도이며 OS/브라우저에 의해 제한됩니다',
+		'utilities.mouse.readout.moveEvents.title':
+			'최근 1초 동안 병합된 pointermove 이벤트 수 — 브라우저에 보이는 보고 속도이며 OS/브라우저에 의해 제한됩니다',
 		'utilities.mouse.readout.clickGap': '클릭 간격：',
 		'utilities.mouse.readout.clickGap.title': '마지막 두 번의 좌클릭 사이 간격',
 		'utilities.mouse.readout.clickGap.value': '{ms}ms',
@@ -2242,7 +2381,8 @@ export default {
 		'utilities.mouse.button.right': '오른쪽 버튼',
 		'utilities.mouse.button.backName': '뒤로（X1）',
 		'utilities.mouse.button.fwdName': '앞으로（X2）',
-		'utilities.mouse.surface.hint': '테스트 영역 — 아무 버튼이나 클릭, 스크롤, 더블클릭해 보세요.\n여기서는 우클릭 메뉴가 비활성화되어 있습니다.',
+		'utilities.mouse.surface.hint':
+			'테스트 영역 — 아무 버튼이나 클릭, 스크롤, 더블클릭해 보세요.\n여기서는 우클릭 메뉴가 비활성화되어 있습니다.',
 		'utilities.mouse.surface.buttons': 'buttons = {mask}',
 		'utilities.mouse.surface.deltaWheel': 'Δ휠：{delta}',
 
@@ -2256,7 +2396,8 @@ export default {
 		'utilities.touch.tilt.reported': '보고됨',
 		'utilities.touch.tilt.notObserved': '감지되지 않음',
 		'utilities.touch.reset': '초기화',
-		'utilities.touch.surfaceHint': '여기를 터치, 클릭 또는 드래그해 보세요 — 활성 상태인 각 포인터는 실제\n압력, 접촉 크기, 기울기 값으로 그려집니다.',
+		'utilities.touch.surfaceHint':
+			'여기를 터치, 클릭 또는 드래그해 보세요 — 활성 상태인 각 포인터는 실제\n압력, 접촉 크기, 기울기 값으로 그려집니다.',
 		'utilities.touch.table.id': 'id',
 		'utilities.touch.table.type': '유형',
 		'utilities.touch.table.pressure': '압력',
@@ -2274,14 +2415,17 @@ export default {
 		'utilities.typing.words': '단어 수：',
 		'utilities.typing.restart': '⟳ 다시 시작',
 		'utilities.typing.result.wpm': '{wpm} WPM',
-		'utilities.typing.result.summary': '정확도 {accuracy}% · {duration}초 동안 {correct}/{total}개 단어 정확',
+		'utilities.typing.result.summary':
+			'정확도 {accuracy}% · {duration}초 동안 {correct}/{total}개 단어 정확',
 		'utilities.typing.result.again': 'Enter 또는 다시 시작으로 재도전하세요',
 		'utilities.typing.status.running': '진행 중 — 스페이스로 단어 제출, 백스페이스로 수정',
-		'utilities.typing.status.idle': '입력을 시작하면 30초 테스트가 시작됩니다. 이 도구에서는 탐색 단축키가 일시 중지됩니다.',
+		'utilities.typing.status.idle':
+			'입력을 시작하면 30초 테스트가 시작됩니다. 이 도구에서는 탐색 단축키가 일시 중지됩니다.',
 
 		'utilities.gamepad.disconnected': '컨트롤러 연결 끊김',
 		'utilities.gamepad.none': '컨트롤러가 감지되지 않음',
-		'utilities.gamepad.hint': '게임패드를 연결하고 아무 버튼이나 눌러보세요 — 브라우저는 첫 입력이 있을 때까지 장치를 표시하지 않습니다.',
+		'utilities.gamepad.hint':
+			'게임패드를 연결하고 아무 버튼이나 눌러보세요 — 브라우저는 첫 입력이 있을 때까지 장치를 표시하지 않습니다.',
 		'utilities.gamepad.mapping': '매핑：',
 		'utilities.gamepad.mapping.custom': '커스텀',
 		'utilities.gamepad.tested': '테스트됨：',
@@ -2292,7 +2436,8 @@ export default {
 		'utilities.gamepad.buttonsHeading': '버튼（{tested}/{total} 테스트됨）',
 		'utilities.gamepad.axesHeading': '축',
 		'utilities.gamepad.axisLabel': '축 {index}',
-		'utilities.gamepad.driftNote': '스틱을 중앙에 두면 약 0.00이어야 합니다 — 정지 상태에서 지속적인 편차가 있으면 드리프트입니다.',
+		'utilities.gamepad.driftNote':
+			'스틱을 중앙에 두면 약 0.00이어야 합니다 — 정지 상태에서 지속적인 편차가 있으면 드리프트입니다.',
 
 		'utilities.reaction.last': '최근：',
 		'utilities.reaction.best': '최고：',
@@ -2300,22 +2445,29 @@ export default {
 		'utilities.reaction.reset': '✕ 초기화',
 		'utilities.reaction.ms': '{ms}ms',
 		'utilities.reaction.idle.title': '클릭하거나 스페이스바를 눌러 시작',
-		'utilities.reaction.idle.hint': '초록색이 될 때까지 기다렸다가 최대한 빠르게 반응하세요 — 스페이스바는 항상 사용할 수 있습니다',
+		'utilities.reaction.idle.hint':
+			'초록색이 될 때까지 기다렸다가 최대한 빠르게 반응하세요 — 스페이스바는 항상 사용할 수 있습니다',
 		'utilities.reaction.waiting': '초록색을 기다리는 중…',
 		'utilities.reaction.go': '지금! （클릭 / 스페이스）',
 		'utilities.reaction.early.title': '부정 출발',
-		'utilities.reaction.early.hint': '초록색이 되기 전에 반응했습니다 — 클릭하거나 스페이스바로 다시 시도하세요',
-		'utilities.reaction.result.hint': '클릭하거나 스페이스바로 다시 도전 · 측정값에는 디스플레이 및 입력 지연이 포함됩니다',
+		'utilities.reaction.early.hint':
+			'초록색이 되기 전에 반응했습니다 — 클릭하거나 스페이스바로 다시 시도하세요',
+		'utilities.reaction.result.hint':
+			'클릭하거나 스페이스바로 다시 도전 · 측정값에는 디스플레이 및 입력 지연이 포함됩니다',
 
-		'utilities.screen.intro': '전체 화면 디스플레이 테스트 모음 — {groups}개 그룹, 총 {steps}개 패턴. 테스트 중에는\n클릭/아무 키나 = 다음 패턴, ← = 이전, Esc = 종료（Ctrl+0-3 탐색은 계속 작동합니다）.',
+		'utilities.screen.intro':
+			'전체 화면 디스플레이 테스트 모음 — {groups}개 그룹, 총 {steps}개 패턴. 테스트 중에는\n클릭/아무 키나 = 다음 패턴, ← = 이전, Esc = 종료（Ctrl+0-3 탐색은 계속 작동합니다）.',
 		'utilities.screen.mode.pixels.label': '불량 화소',
-		'utilities.screen.mode.pixels.desc': '단색 채우기 6종 — 고착되거나 죽은 서브픽셀은 색이 다른 점으로 나타납니다',
+		'utilities.screen.mode.pixels.desc':
+			'단색 채우기 6종 — 고착되거나 죽은 서브픽셀은 색이 다른 점으로 나타납니다',
 		'utilities.screen.mode.grayscale.label': '그레이스케일',
-		'utilities.screen.mode.grayscale.desc': '8→64단계 그라데이션과 연속 그라데이션 — 밴딩과 감마 추종성',
+		'utilities.screen.mode.grayscale.desc':
+			'8→64단계 그라데이션과 연속 그라데이션 — 밴딩과 감마 추종성',
 		'utilities.screen.mode.gradients.label': '그라데이션',
 		'utilities.screen.mode.gradients.desc': '연속 R/G/B 및 색상 그라데이션 — 컬러 밴딩과 색 편향',
 		'utilities.screen.mode.levels.label': '흑백 레벨',
-		'utilities.screen.mode.levels.desc': '거의 검은색/흰색에 가까운 패치 — 암부 뭉개짐, 하이라이트 클리핑',
+		'utilities.screen.mode.levels.desc':
+			'거의 검은색/흰색에 가까운 패치 — 암부 뭉개짐, 하이라이트 클리핑',
 		'utilities.screen.mode.sharpness.label': '선명도',
 		'utilities.screen.mode.sharpness.desc': '1px 체커보드, 선, 격자 — 스케일링 흐림과 무아레',
 		'utilities.screen.mode.text.label': '텍스트 선명도',
@@ -2349,21 +2501,27 @@ export default {
 		'utilities.screen.pattern.count': '패턴 {count}개',
 		'utilities.screen.pattern.count.plural': '패턴 {count}개',
 		'utilities.screen.runAll': '▶▶ 전체 시퀀스 실행（패턴 {count}개）',
-		'utilities.screen.crush.black.hint': '각 사각형은 순수한 검은색과 거의 구분되지 않아야 합니다. 밝기 4% 이상 사각형이 사라진다면 암부가 뭉개지고 있는 것입니다.',
-		'utilities.screen.crush.white.hint': '각 사각형은 순수한 흰색과 거의 구분되지 않아야 합니다. 밝기 96% 이하 사각형이 사라진다면 하이라이트가 클리핑되고 있는 것입니다.',
+		'utilities.screen.crush.black.hint':
+			'각 사각형은 순수한 검은색과 거의 구분되지 않아야 합니다. 밝기 4% 이상 사각형이 사라진다면 암부가 뭉개지고 있는 것입니다.',
+		'utilities.screen.crush.white.hint':
+			'각 사각형은 순수한 흰색과 거의 구분되지 않아야 합니다. 밝기 96% 이하 사각형이 사라진다면 하이라이트가 클리핑되고 있는 것입니다.',
 		'utilities.screen.text.mono': '{px}px 고정폭 — {sample}',
-		'utilities.screen.text.sans': '{px}px 산세리프 — Sphinx of black quartz, judge my vow. {sample}',
+		'utilities.screen.text.sans':
+			'{px}px 산세리프 — Sphinx of black quartz, judge my vow. {sample}',
 		'utilities.screen.text.serif': '{px}px 세리프 — Waltz, bad nymph, for quick jigs vex. {sample}',
-		'utilities.screen.text.hint': '작은 크기에서도 글자가 선명하고 획 가장자리가 깔끔해야 합니다 — 번짐이나 뭉개짐은 서브픽셀 렌더링/스케일링 문제를 나타냅니다.',
+		'utilities.screen.text.hint':
+			'작은 크기에서도 글자가 선명하고 획 가장자리가 깔끔해야 합니다 — 번짐이나 뭉개짐은 서브픽셀 렌더링/스케일링 문제를 나타냅니다.',
 		'utilities.screen.ghosting.slow': '느림',
 		'utilities.screen.ghosting.medium': '중간',
 		'utilities.screen.ghosting.fast': '빠름',
-		'utilities.screen.ghosting.hint': '눈으로 블록을 따라가 보세요 — 가장자리에 보이는 잔상은 픽셀 응답 잔상/오버드라이브 아티팩트입니다. 움직임은 주사율에 동기화되어 있습니다.',
+		'utilities.screen.ghosting.hint':
+			'눈으로 블록을 따라가 보세요 — 가장자리에 보이는 잔상은 픽셀 응답 잔상/오버드라이브 아티팩트입니다. 움직임은 주사율에 동기화되어 있습니다.',
 		'utilities.screen.overlay.stepCounter': '{group} · {name}（{index}/{total}）',
 		'utilities.screen.overlay.devicePixels': ' · CSS 픽셀 1 = 기기 픽셀 {dpr}×',
 		'utilities.screen.overlay.nav': ' — 클릭/키로 다음 · ←로 이전 · Esc로 종료',
 
-		'utilities.audioout.intro': '이 도구는 자체 AudioContext에서 실행되므로 워크벤치가 음소거되어 있어도 소리가 재생됩니다.\n낮은 볼륨에서 시작하세요 — 스윕은 풀스케일 20kHz까지 도달합니다.',
+		'utilities.audioout.intro':
+			'이 도구는 자체 AudioContext에서 실행되므로 워크벤치가 음소거되어 있어도 소리가 재생됩니다.\n낮은 볼륨에서 시작하세요 — 스윕은 풀스케일 20kHz까지 도달합니다.',
 		'utilities.audioout.channel.left.label': '왼쪽만',
 		'utilities.audioout.channel.left.hint': '소리는 왼쪽 스피커에서만 들려야 합니다',
 		'utilities.audioout.channel.right.label': '오른쪽만',
@@ -2371,11 +2529,13 @@ export default {
 		'utilities.audioout.channel.both.label': '양쪽',
 		'utilities.audioout.channel.both.hint': '양쪽 스피커 정중앙에 위치해야 합니다',
 		'utilities.audioout.channel.inverted.label': '위상 반전',
-		'utilities.audioout.channel.inverted.hint': '오른쪽 채널이 반전되어 텅 빈 소리가 나고 모노에서는 거의 무음이어야 합니다',
+		'utilities.audioout.channel.inverted.hint':
+			'오른쪽 채널이 반전되어 텅 빈 소리가 나고 모노에서는 거의 무음이어야 합니다',
 		'utilities.audioout.channel.tone': '440Hz {label}',
 		'utilities.audioout.channel.toneRunning': '440 Hz {label}',
 		'utilities.audioout.sweep.button': '스윕 20Hz→20kHz',
-		'utilities.audioout.sweep.title': '대수 사인 스윕, 8초 동안 20Hz에서 20kHz까지 — 공진과 롤오프를 확인할 수 있습니다',
+		'utilities.audioout.sweep.title':
+			'대수 사인 스윕, 8초 동안 20Hz에서 20kHz까지 — 공진과 롤오프를 확인할 수 있습니다',
 		'utilities.audioout.sweep.running': '스윕 20 Hz → 20 kHz',
 		'utilities.audioout.noise.button': '{channel} 노이즈',
 		'utilities.audioout.noise.title': '{channel} 채널 화이트 노이즈',
@@ -2387,9 +2547,12 @@ export default {
 		'utilities.audioout.output.available': '{count}개 사용 가능',
 		'utilities.audioout.output.deviceFallback': '출력 {id}',
 		'utilities.audioout.output.title.supported': '테스트 톤을 지정한 출력 장치로 라우팅합니다',
-		'utilities.audioout.output.title.unsupported': '이 브라우저는 WebAudio 출력을 다른 장치로 전환할 수 없습니다 — 항상 시스템 기본값을 사용합니다',
-		'utilities.audioout.output.unsupportedNote': 'setSinkId 미지원 — 시스템 기본값으로 재생 중입니다',
-		'utilities.audioout.output.labelsHiddenNote': '마이크 권한이 있어야 장치 이름이 표시됩니다 — MIC IN 도구에서 잠금이 해제됩니다.',
+		'utilities.audioout.output.title.unsupported':
+			'이 브라우저는 WebAudio 출력을 다른 장치로 전환할 수 없습니다 — 항상 시스템 기본값을 사용합니다',
+		'utilities.audioout.output.unsupportedNote':
+			'setSinkId 미지원 — 시스템 기본값으로 재생 중입니다',
+		'utilities.audioout.output.labelsHiddenNote':
+			'마이크 권한이 있어야 장치 이름이 표시됩니다 — MIC IN 도구에서 잠금이 해제됩니다.',
 		'utilities.audioout.level.label': '레벨',
 		'utilities.audioout.level.idle': '대기 중',
 		'utilities.audioout.level.hzSuffix': ' · {hz} Hz',
@@ -2406,7 +2569,8 @@ export default {
 		'utilities.audioout.info.sink': '출력 장치',
 		'utilities.audioout.info.sink.unsupported': '시스템 기본값（setSinkId 미지원）',
 		'utilities.audioout.info.sink.default': '시스템 기본값',
-		'utilities.audioout.error.webAudioUnavailable': '이 브라우저에서는 WebAudio를 사용할 수 없습니다',
+		'utilities.audioout.error.webAudioUnavailable':
+			'이 브라우저에서는 WebAudio를 사용할 수 없습니다',
 		'utilities.audioout.error.contextFailed': 'AudioContext를 열 수 없습니다',
 		'utilities.audioout.error.sinkSwitch': '출력을 전환할 수 없습니다: {message}',
 		'utilities.audioout.error.sinkSwitchGeneric': '출력을 전환할 수 없습니다',
@@ -2419,13 +2583,16 @@ export default {
 		'utilities.mic.device.default': '기본 입력',
 		'utilities.mic.device.available': '{count}개 사용 가능',
 		'utilities.mic.device.fallback': '입력 {id}',
-		'utilities.mic.monitor.title': '마이크 소리를 출력으로 바로 라우팅하여 본인 목소리를 들을 수 있게 합니다. 헤드폰을 사용하세요 — 스피커에서는 하울링이 발생합니다.',
+		'utilities.mic.monitor.title':
+			'마이크 소리를 출력으로 바로 라우팅하여 본인 목소리를 들을 수 있게 합니다. 헤드폰을 사용하세요 — 스피커에서는 하울링이 발생합니다.',
 		'utilities.mic.monitor.label': '모니터링: {state}',
 		'utilities.mic.monitor.on': 'ON',
 		'utilities.mic.monitor.off': 'OFF',
 		'utilities.mic.resetClip': '클리핑 표시 초기화',
-		'utilities.mic.privacyNote': '오디오는 페이지 밖으로 전송되지 않습니다 — 분석과 재생 모두 브라우저 안에서 처리되며 업로드되지 않습니다.',
-		'utilities.mic.monitorWarning': '모니터링이 켜져 있습니다 — 헤드폰을 착용하세요, 그렇지 않으면 마이크가 자신의 출력 소리를 다시 수음합니다.',
+		'utilities.mic.privacyNote':
+			'오디오는 페이지 밖으로 전송되지 않습니다 — 분석과 재생 모두 브라우저 안에서 처리되며 업로드되지 않습니다.',
+		'utilities.mic.monitorWarning':
+			'모니터링이 켜져 있습니다 — 헤드폰을 착용하세요, 그렇지 않으면 마이크가 자신의 출력 소리를 다시 수음합니다.',
 		'utilities.mic.rms.label': 'RMS',
 		'utilities.mic.rms.value': '{db} dBFS',
 		'utilities.mic.peak.label': '피크',
@@ -2454,8 +2621,10 @@ export default {
 		'utilities.mic.settings.echoCancel': '에코 제거',
 		'utilities.mic.settings.noiseSuppr': '잡음 억제',
 		'utilities.mic.settings.autoGain': '자동 게인',
-		'utilities.mic.error.mediaRecorderUnsupported': '이 브라우저의 MediaRecorder는 오디오를 캡처할 수 없습니다.',
-		'utilities.mic.error.decodeFailed': '녹음은 되었지만 이 브라우저에서 재생용으로 디코딩할 수 없었습니다.',
+		'utilities.mic.error.mediaRecorderUnsupported':
+			'이 브라우저의 MediaRecorder는 오디오를 캡처할 수 없습니다.',
+		'utilities.mic.error.decodeFailed':
+			'녹음은 되었지만 이 브라우저에서 재생용으로 디코딩할 수 없었습니다.',
 		'utilities.mic.error.deniedFallback': '마이크 접근이 거부되었습니다',
 		'utilities.mic.error.named': '{name}：{message}',
 
@@ -2464,7 +2633,8 @@ export default {
 		'utilities.camera.device.placeholder': '카메라',
 		'utilities.camera.device.title': '촬영 장치',
 		'utilities.camera.device.fallback': '카메라 {id}',
-		'utilities.camera.privacyNote': '미리보기는 이 탭 안에만 머무릅니다 — 어떤 프레임도 저장되거나 전송되지 않습니다.',
+		'utilities.camera.privacyNote':
+			'미리보기는 이 탭 안에만 머무릅니다 — 어떤 프레임도 저장되거나 전송되지 않습니다.',
 		'utilities.camera.live': '실시간',
 		'utilities.camera.noStream': '영상 없음',
 		'utilities.camera.settings.device': '장치',
@@ -2518,7 +2688,8 @@ export default {
 		'utilities.net.network.online.no': '아니오',
 		'utilities.net.network.effectiveType': '유효 네트워크 유형',
 		'utilities.net.network.effectiveType.na': '해당 없음',
-		'utilities.net.network.effectiveType.title': 'Network Information API — 최근 처리량으로 추정한 구간이며 실제 물리 회선이 아닙니다',
+		'utilities.net.network.effectiveType.title':
+			'Network Information API — 최근 처리량으로 추정한 구간이며 실제 물리 회선이 아닙니다',
 		'utilities.net.network.downlink': '다운링크 추정치',
 		'utilities.net.network.downlink.na': '해당 없음',
 		'utilities.net.network.downlink.value': '{mbit} Mbit/s',
@@ -2560,7 +2731,8 @@ export default {
 		'utilities.net.permissions.na': '해당 없음',
 		'utilities.net.permissions.notQueryable': '조회 불가',
 
-		'utilities.speed.intro': '무작위 데이터는 speed.cloudflare.com — Cloudflare 자체의 공개 속도 측정 서비스 — 로 전송되며 제3자에게 전송되지 않습니다. krsz.in은 이 테스트의 어떤 내용도 저장하지 않습니다.',
+		'utilities.speed.intro':
+			'무작위 데이터는 speed.cloudflare.com — Cloudflare 자체의 공개 속도 측정 서비스 — 로 전송되며 제3자에게 전송되지 않습니다. krsz.in은 이 테스트의 어떤 내용도 저장하지 않습니다.',
 		'utilities.speed.pop.label': '응답 엣지',
 		'utilities.speed.pop.na': '해당 없음',
 		'utilities.speed.start': '테스트 시작',
@@ -2586,7 +2758,8 @@ export default {
 		'utilities.speed.mbps.na': '해당 없음',
 		'utilities.speed.totalMoved': '총 전송량',
 		'utilities.speed.bytes.mb': '{mb} MB',
-		'utilities.speed.idle': '「테스트 시작」을 누르면 Cloudflare 공개 속도 측정 서비스에 대한 지연 시간, 다운로드, 업로드를 측정합니다.',
+		'utilities.speed.idle':
+			'「테스트 시작」을 누르면 Cloudflare 공개 속도 측정 서비스에 대한 지연 시간, 다운로드, 업로드를 측정합니다.',
 
 		'utilities.gpu.section.webgl': 'WEBGL',
 		'utilities.gpu.section.webgpu': 'WEBGPU',
@@ -2621,7 +2794,8 @@ export default {
 		'utilities.gpu.webgpu.features': '기능（{count}）',
 		'utilities.gpu.webgpu.features.show': '목록 보기',
 		'utilities.gpu.webgpu.features.hide': '목록 숨기기',
-		'utilities.gpu.benchmark.hint': '약 5초간 실행됩니다: 오버드로우 레이어 수를 늘려가며 전체 화면 채우기 속도를 측정한 뒤, 인스턴싱된 삼각형 처리량을 측정합니다. fps는 수직 동기화로 상한이 걸리므로 성능 차이가 큰 GPU에서도 비슷하게 보일 수 있습니다 — 실제 측정값은 Mbps／초당 삼각형 수입니다.',
+		'utilities.gpu.benchmark.hint':
+			'약 5초간 실행됩니다: 오버드로우 레이어 수를 늘려가며 전체 화면 채우기 속도를 측정한 뒤, 인스턴싱된 삼각형 처리량을 측정합니다. fps는 수직 동기화로 상한이 걸리므로 성능 차이가 큰 GPU에서도 비슷하게 보일 수 있습니다 — 실제 측정값은 Mbps／초당 삼각형 수입니다.',
 		'utilities.gpu.benchmark.start': '벤치마크 실행',
 		'utilities.gpu.benchmark.running': '측정 중…',
 		'utilities.gpu.benchmark.unavailable': 'WebGL 컨텍스트가 없어 벤치마크를 사용할 수 없습니다.',
@@ -2665,7 +2839,8 @@ export default {
 		'utilities.sensors.motion.ms2': 'm/s²',
 		'utilities.sensors.motion.degs': 'deg/s',
 		'utilities.sensors.motion.na': '해당 없음',
-		'utilities.sensors.level.hint': '기기를 기울이세요 — 기포는 beta/gamma에 따라 움직이고, 십자선은 수평 위치를 표시합니다.',
+		'utilities.sensors.level.hint':
+			'기기를 기울이세요 — 기포는 beta/gamma에 따라 움직이고, 십자선은 수평 위치를 표시합니다.',
 		'utilities.sensors.compass.heading': '방위',
 		'utilities.sensors.compass.deg': '{deg}°',
 		'utilities.sensors.compass.na': '절대 방향 데이터 필요',
@@ -2673,8 +2848,10 @@ export default {
 		'utilities.sensors.compass.source.alpha': '360 − alpha',
 		'utilities.sensors.light.value': '조도',
 		'utilities.sensors.light.lux': '{lux} lx',
-		'utilities.sensors.light.unavailable': '이 브라우저에서는 AmbientLightSensor가 노출되지 않습니다.',
-		'utilities.sensors.light.blocked': 'AmbientLightSensor는 있지만 접근이 차단되었습니다（권한 정책 또는 사용자 거부）.',
+		'utilities.sensors.light.unavailable':
+			'이 브라우저에서는 AmbientLightSensor가 노출되지 않습니다.',
+		'utilities.sensors.light.blocked':
+			'AmbientLightSensor는 있지만 접근이 차단되었습니다（권한 정책 또는 사용자 거부）.',
 		'utilities.sensors.light.error': 'AmbientLightSensor 오류: {message}'
 	}
 } satisfies Messages;

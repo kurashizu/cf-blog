@@ -2,7 +2,13 @@
 	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { activeTrackId } from '../../stores/synth-transport';
-	import { tracksState, isOverlayMode, overlayTrackIds, toggleTrackMute, toggleTrackSolo } from '../../stores/synth-tracks';
+	import {
+		tracksState,
+		isOverlayMode,
+		overlayTrackIds,
+		toggleTrackMute,
+		toggleTrackSolo
+	} from '../../stores/synth-tracks';
 
 	function toggleOverlayMode() {
 		const next = !$isOverlayMode;
@@ -42,15 +48,16 @@
 	}
 </script>
 
-<div data-tour="synth-tracks" class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar ml-auto">
+<div
+	data-tour="synth-tracks"
+	class="flex items-center gap-1.5 text-xs overflow-x-auto no-scrollbar ml-auto"
+>
 	<button
 		onclick={toggleOverlayMode}
 		class="press px-2 py-0.5 border rounded-xs font-bold text-xs cursor-pointer transition-all flex items-center gap-1 shrink-0 {$isOverlayMode
 			? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black shadow-[0_0_6px_rgba(86,182,194,0.5)]'
 			: 'border-white/20 text-white/60 hover:text-white hover:border-white/50'}"
-		title={$isOverlayMode
-			? $t('synth.tracks.overlayOnHint')
-			: $t('synth.tracks.overlayOffHint')}
+		title={$isOverlayMode ? $t('synth.tracks.overlayOnHint') : $t('synth.tracks.overlayOffHint')}
 	>
 		<span>⧉</span>
 		<!-- Four characters, like SNAP and DUR beside it. The tooltip spells out
@@ -60,10 +67,15 @@
 
 	<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
 	<!-- One label for the row; the chips carry only the number, so eight of them still fit. -->
-	<span class="text-white/50 font-bold text-xs shrink-0 select-none" title={$t('synth.tracks.trkLabelHint')}>TRK:</span>
+	<span
+		class="text-white/50 font-bold text-xs shrink-0 select-none"
+		title={$t('synth.tracks.trkLabelHint')}>TRK:</span
+	>
 
 	{#each $tracksState as trk (trk.id)}
-		{@const isSelected = $isOverlayMode ? $overlayTrackIds.includes(trk.id) : $activeTrackId === trk.id}
+		{@const isSelected = $isOverlayMode
+			? $overlayTrackIds.includes(trk.id)
+			: $activeTrackId === trk.id}
 		{@const isActiveEditingTrack = $activeTrackId === trk.id}
 		<div
 			class="flex items-center border rounded-xs transition-all {isSelected
@@ -79,13 +91,20 @@
 					selectActiveTrack(trk.id);
 				}}
 				class="press pl-1.5 pr-0.5 py-1 flex items-center justify-center cursor-pointer group"
-				title={$t('synth.tracks.setActiveHint', { name: trk.name, state: isActiveEditingTrack ? $t('synth.tracks.activeSolid') : $t('synth.tracks.inactiveHollow') })}
+				title={$t('synth.tracks.setActiveHint', {
+					name: trk.name,
+					state: isActiveEditingTrack
+						? $t('synth.tracks.activeSolid')
+						: $t('synth.tracks.inactiveHollow')
+				})}
 			>
 				<span
 					class="w-2.5 h-2.5 inline-block shrink-0 rounded-[1px] transition-all {isActiveEditingTrack
 						? 'shadow-[0_0_6px_currentColor]'
 						: 'border border-current bg-transparent opacity-60 group-hover:opacity-100 group-hover:bg-white/20'}"
-					style="color: {trk.color}; background-color: {isActiveEditingTrack ? trk.color : 'transparent'}; border-color: {trk.color};"
+					style="color: {trk.color}; background-color: {isActiveEditingTrack
+						? trk.color
+						: 'transparent'}; border-color: {trk.color};"
 				></span>
 			</button>
 
@@ -94,7 +113,12 @@
 				onclick={() => toggleOverlayVisibility(trk.id)}
 				class="press pl-1 pr-2 py-0.5 font-bold text-xs cursor-pointer flex items-center transition-colors"
 				style={isSelected ? `color: ${trk.color}` : ''}
-				title={$isOverlayMode ? $t('synth.tracks.overlayToggleHint', { name: trk.name, state: isActiveEditingTrack ? $t('common.yes') : $t('common.no') }) : $t('synth.tracks.selectHint', { name: trk.name })}
+				title={$isOverlayMode
+					? $t('synth.tracks.overlayToggleHint', {
+							name: trk.name,
+							state: isActiveEditingTrack ? $t('common.yes') : $t('common.no')
+						})
+					: $t('synth.tracks.selectHint', { name: trk.name })}
 			>
 				<span class="font-mono">{trk.id + 1}</span>
 			</button>
@@ -106,7 +130,9 @@
 						toggleTrackMute(trk.id);
 						playSound('click');
 					}}
-					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.muted ? 'bg-red-500 text-black font-black' : 'text-white/40 hover:text-white'}"
+					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.muted
+						? 'bg-red-500 text-black font-black'
+						: 'text-white/40 hover:text-white'}"
 					title={$t('synth.tracks.muteHint', { name: trk.name })}
 				>
 					M
@@ -117,7 +143,9 @@
 						toggleTrackSolo(trk.id);
 						playSound('click');
 					}}
-					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.solo ? 'bg-amber-500 text-black font-black' : 'text-white/40 hover:text-white'}"
+					class="press px-1.5 py-0.2 text-xs font-bold rounded-xs cursor-pointer transition-colors {trk.solo
+						? 'bg-amber-500 text-black font-black'
+						: 'text-white/40 hover:text-white'}"
 					title={$t('synth.tracks.soloHint', { name: trk.name })}
 				>
 					S
@@ -125,5 +153,4 @@
 			</div>
 		</div>
 	{/each}
-
 </div>

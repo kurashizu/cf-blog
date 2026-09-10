@@ -34,7 +34,9 @@ export async function encodeToFragment(data: unknown): Promise<string> {
 
 export async function decodeFromFragment<T>(fragment: string): Promise<T> {
 	const compressed = base64UrlToBytes(fragment);
-	const stream = new Blob([compressed as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+	const stream = new Blob([compressed as BlobPart])
+		.stream()
+		.pipeThrough(new DecompressionStream('deflate-raw'));
 	const json = await new Response(stream).text();
 	return JSON.parse(json) as T;
 }

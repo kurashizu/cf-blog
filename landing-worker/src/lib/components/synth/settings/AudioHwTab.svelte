@@ -15,9 +15,21 @@
 	} from '../../../stores/synth-settings';
 
 	const LATENCY_HINTS = [
-		{ id: 'balanced', labelKey: 'synthPanels.audioHw.latencyBalanced', descKey: 'synthPanels.audioHw.latencyBalancedDesc' },
-		{ id: 'interactive', labelKey: 'synthPanels.audioHw.latencyInteractive', descKey: 'synthPanels.audioHw.latencyInteractiveDesc' },
-		{ id: 'playback', labelKey: 'synthPanels.audioHw.latencyPlayback', descKey: 'synthPanels.audioHw.latencyPlaybackDesc' }
+		{
+			id: 'balanced',
+			labelKey: 'synthPanels.audioHw.latencyBalanced',
+			descKey: 'synthPanels.audioHw.latencyBalancedDesc'
+		},
+		{
+			id: 'interactive',
+			labelKey: 'synthPanels.audioHw.latencyInteractive',
+			descKey: 'synthPanels.audioHw.latencyInteractiveDesc'
+		},
+		{
+			id: 'playback',
+			labelKey: 'synthPanels.audioHw.latencyPlayback',
+			descKey: 'synthPanels.audioHw.latencyPlaybackDesc'
+		}
 	] as const;
 
 	const FFT_SIZES = [1024, 2048, 4096, 8192];
@@ -33,15 +45,23 @@
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
 			<div class="p-2 border border-white/10 bg-black/30 rounded-xs">
-				<div class="text-white/40 text-[10px] uppercase">{$t('synthPanels.audioHw.dacSampleRate')}</div>
+				<div class="text-white/40 text-[10px] uppercase">
+					{$t('synthPanels.audioHw.dacSampleRate')}
+				</div>
 				<div class="text-white font-bold text-sm">{$audioSampleRate} Hz</div>
 				<div class="text-white/50 text-[10px] mt-0.5">{$t('synthPanels.audioHw.deviceClock')}</div>
 			</div>
 
 			<div class="p-2 border border-white/10 bg-black/30 rounded-xs">
-				<div class="text-white/40 text-[10px] uppercase">{$t('synthPanels.audioHw.engineState')}</div>
-				<div class="text-[#98c379] font-bold text-sm uppercase">{soundEngine.getAudioContextState()}</div>
-				<div class="text-white/50 text-[10px] mt-0.5">{$t('synthPanels.audioHw.directRouting')}</div>
+				<div class="text-white/40 text-[10px] uppercase">
+					{$t('synthPanels.audioHw.engineState')}
+				</div>
+				<div class="text-[#98c379] font-bold text-sm uppercase">
+					{soundEngine.getAudioContextState()}
+				</div>
+				<div class="text-white/50 text-[10px] mt-0.5">
+					{$t('synthPanels.audioHw.directRouting')}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -57,12 +77,17 @@
 			{#each LATENCY_HINTS as item (item.id)}
 				<button
 					onclick={() => setLatencyHint(item.id)}
-					class="press p-2 rounded-xs border text-left cursor-pointer transition-all {$latencyHintSetting === item.id
+					class="press p-2 rounded-xs border text-left cursor-pointer transition-all {$latencyHintSetting ===
+					item.id
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/10 bg-white/5 text-white/70 hover:text-white'}"
 				>
 					<div class="font-bold">{$t(item.labelKey)}</div>
-					<div class="text-[9px] {$latencyHintSetting === item.id ? 'text-black/80' : 'text-white/40'}">{$t(item.descKey)}</div>
+					<div
+						class="text-[9px] {$latencyHintSetting === item.id ? 'text-black/80' : 'text-white/40'}"
+					>
+						{$t(item.descKey)}
+					</div>
 				</button>
 			{/each}
 		</div>
@@ -79,13 +104,19 @@
 			<div>
 				<div class="flex justify-between text-white/70 mb-1">
 					<span>{$t('synthPanels.audioHw.fftSizeLabel')}</span>
-					<span class="text-[#56b6c2] font-bold">{$t('synthPanels.audioHw.fftBinsValue', { size: $fftSizeSetting, bins: $fftSizeSetting / 2 })}</span>
+					<span class="text-[#56b6c2] font-bold"
+						>{$t('synthPanels.audioHw.fftBinsValue', {
+							size: $fftSizeSetting,
+							bins: $fftSizeSetting / 2
+						})}</span
+					>
 				</div>
 				<div class="grid grid-cols-4 gap-1">
 					{#each FFT_SIZES as size (size)}
 						<button
 							onclick={() => setFftSize(size)}
-							class="press py-1 rounded-xs border text-center font-bold text-[11px] transition-all {$fftSizeSetting === size
+							class="press py-1 rounded-xs border text-center font-bold text-[11px] transition-all {$fftSizeSetting ===
+							size
 								? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 								: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
 						>
@@ -127,7 +158,11 @@
 
 		<div class="flex items-center justify-between pt-1">
 			<div>
-				<p class="text-white/80 font-bold">{$masterLimiterSetting ? $t('synthPanels.audioHw.limiterActive') : $t('synthPanels.audioHw.limiterBypassed')}</p>
+				<p class="text-white/80 font-bold">
+					{$masterLimiterSetting
+						? $t('synthPanels.audioHw.limiterActive')
+						: $t('synthPanels.audioHw.limiterBypassed')}
+				</p>
 				<p class="text-white/40 text-[10px]">{$t('synthPanels.audioHw.limiterDesc')}</p>
 			</div>
 			<button

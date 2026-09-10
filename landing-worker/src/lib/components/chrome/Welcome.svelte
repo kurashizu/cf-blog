@@ -20,14 +20,56 @@
 	 *  not a module-level constant, since the locale isn't known at module
 	 *  load time. */
 	let VIEWS = $derived([
-		{ key: '0', title: 'MODULES', desc: $t('chrome.welcome.viewModules'), color: '#56b6c2', icon: '◈' },
-		{ key: '1', title: 'GUESTBOOK', desc: $t('chrome.welcome.viewGuestbook'), color: '#e06c75', icon: '✉' },
+		{
+			key: '0',
+			title: 'MODULES',
+			desc: $t('chrome.welcome.viewModules'),
+			color: '#56b6c2',
+			icon: '◈'
+		},
+		{
+			key: '1',
+			title: 'GUESTBOOK',
+			desc: $t('chrome.welcome.viewGuestbook'),
+			color: '#e06c75',
+			icon: '✉'
+		},
 		{ key: '2', title: 'SYNTH', desc: $t('chrome.welcome.viewSynth'), color: '#c678dd', icon: '♫' },
-		{ key: '3', title: 'UTILITIES', desc: $t('chrome.welcome.viewUtilities'), color: '#e5c07b', icon: '⌨' },
-		{ key: '4', title: 'LM.SPACE', desc: $t('chrome.welcome.viewLmSpace'), color: '#98c379', icon: '▤' },
-		{ key: '5', title: 'KRSZ-VM', desc: $t('chrome.welcome.viewKrszVm'), color: '#d19a66', icon: '⬢' },
-		{ key: '6', title: 'WEB-LM', desc: $t('chrome.welcome.viewWebLm'), color: '#61afef', icon: '◑' },
-		{ key: '7', title: 'LIFE.LAB', desc: $t('chrome.welcome.viewLifelab'), color: '#98c379', icon: '⬗' }
+		{
+			key: '3',
+			title: 'UTILITIES',
+			desc: $t('chrome.welcome.viewUtilities'),
+			color: '#e5c07b',
+			icon: '⌨'
+		},
+		{
+			key: '4',
+			title: 'LM.SPACE',
+			desc: $t('chrome.welcome.viewLmSpace'),
+			color: '#98c379',
+			icon: '▤'
+		},
+		{
+			key: '5',
+			title: 'KRSZ-VM',
+			desc: $t('chrome.welcome.viewKrszVm'),
+			color: '#d19a66',
+			icon: '⬢'
+		},
+		{
+			key: '6',
+			title: 'WEB-LM',
+			desc: $t('chrome.welcome.viewWebLm'),
+			color: '#61afef',
+			icon: '◑'
+		},
+		{
+			key: '7',
+			title: 'LIFE.LAB',
+			desc: $t('chrome.welcome.viewLifelab'),
+			color: '#98c379',
+			icon: '⬗'
+		}
 	]);
 
 	let closing = $state(false);
@@ -70,21 +112,34 @@
 >
 	<div class="min-h-full flex flex-col items-center justify-center p-4 sm:p-8">
 		<div class="w-full max-w-2xl space-y-5 sm:space-y-6 py-8">
-			<div class="flex flex-col items-center text-center gap-3" in:fly={{ y: -10, duration: 320, opacity: 0 }}>
+			<div
+				class="flex flex-col items-center text-center gap-3"
+				in:fly={{ y: -10, duration: 320, opacity: 0 }}
+			>
 				<KrszLogo size={56} />
 				<div class="space-y-1.5">
-					<h1 class="text-2xl sm:text-4xl font-black tracking-tight text-[#eceff4]">{$t('chrome.welcome.title')}</h1>
+					<h1 class="text-2xl sm:text-4xl font-black tracking-tight text-[#eceff4]">
+						{$t('chrome.welcome.title')}
+					</h1>
 					<p class="text-xs sm:text-sm text-white/55 max-w-md mx-auto leading-relaxed">
 						{$t('chrome.welcome.subtitle')}
 					</p>
 				</div>
 			</div>
 
-			<div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2" in:fly={{ y: 10, duration: 320, delay: 80, opacity: 0 }}>
+			<div
+				class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2"
+				in:fly={{ y: 10, duration: 320, delay: 80, opacity: 0 }}
+			>
 				{#each VIEWS as v (v.key)}
-					<div class="border border-white/15 bg-black/30 rounded-xs p-2 flex flex-col gap-0.5 min-w-0">
+					<div
+						class="border border-white/15 bg-black/30 rounded-xs p-2 flex flex-col gap-0.5 min-w-0"
+					>
 						<div class="flex items-center justify-between">
-							<span class="px-1 py-0.2 rounded-xs font-mono font-bold text-[10px] border" style="border-color: {v.color}; color: {v.color}">[{v.key}]</span>
+							<span
+								class="px-1 py-0.2 rounded-xs font-mono font-bold text-[10px] border"
+								style="border-color: {v.color}; color: {v.color}">[{v.key}]</span
+							>
 							<span class="text-sm leading-none" style="color: {v.color}">{v.icon}</span>
 						</div>
 						<div class="text-[11px] font-bold truncate" style="color: {v.color}">{v.title}</div>
@@ -102,9 +157,16 @@
 				</button>
 				<p class="text-[10px] text-white/35">
 					{$t('chrome.welcome.agreeTo', { action: $t('chrome.welcome.getStartedPlain') })}
-					<button onclick={() => privacyOpen.set(true)} class="underline hover:text-white/60 cursor-pointer transition-colors">{$t('chrome.welcome.privacyPolicy')}</button>.
+					<button
+						onclick={() => privacyOpen.set(true)}
+						class="underline hover:text-white/60 cursor-pointer transition-colors"
+						>{$t('chrome.welcome.privacyPolicy')}</button
+					>.
 				</p>
-				<button onclick={finish} class="press text-xs text-white/40 hover:text-white cursor-pointer transition-colors">
+				<button
+					onclick={finish}
+					class="press text-xs text-white/40 hover:text-white cursor-pointer transition-colors"
+				>
 					{$t('chrome.welcome.skip')}
 				</button>
 			</div>

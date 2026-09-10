@@ -190,7 +190,9 @@ describe('the node contract', () => {
 	it('gives an exec outlet only where there is an afterwards', () => {
 		// THEN means "and then this", so it needs a moment to point at. An
 		// oscillator runs for as long as the note does and never finishes.
-		const withThen = MODULE_SPECS.filter((m) => m.outputs.some((p) => p.kind === 'exec')).map((m) => m.id);
+		const withThen = MODULE_SPECS.filter((m) => m.outputs.some((p) => p.kind === 'exec')).map(
+			(m) => m.id
+		);
 		expect(withThen.sort()).toEqual(['in', 'seq', 'when']);
 	});
 
@@ -210,7 +212,9 @@ describe('the node contract', () => {
 	it('uses a log scale only where the range is positive', () => {
 		// log of zero or a negative has no value, so the dial would break.
 		const bad = MODULE_SPECS.flatMap((m) =>
-			m.params.filter((q) => q.scale === 'log' && (q.min <= 0 || q.max <= 0)).map((q) => `${m.id}.${q.key}`)
+			m.params
+				.filter((q) => q.scale === 'log' && (q.min <= 0 || q.max <= 0))
+				.map((q) => `${m.id}.${q.key}`)
 		);
 		expect(bad).toEqual([]);
 	});
@@ -246,11 +250,28 @@ describe('every parameter the engine reads is declared', () => {
 	   engine are allowed to differ. */
 	const NOT_A_KNOB = new Set([
 		// Structural port ids, not parameters.
-		'in', 'out', 'b', 'r', 'exec', 'then', 'a', 'alpha',
+		'in',
+		'out',
+		'b',
+		'r',
+		'exec',
+		'then',
+		'a',
+		'alpha',
 		// ENTRY's event data, published as outlets rather than knobs.
-		'pitch', 'vel', 'note', 'gate',
+		'pitch',
+		'vel',
+		'note',
+		'gate',
 		// Named modulation destinations registered in the mod map.
-		'fm', 'cv', 'pwm', 'wide', 'mid', 'side', 'trig', 'do',
+		'fm',
+		'cv',
+		'pwm',
+		'wide',
+		'mid',
+		'side',
+		'trig',
+		'do',
 		// The kit's per-key fields, which no module card carries.
 		'kind'
 	]);
@@ -276,7 +297,17 @@ describe('every parameter the engine reads is declared', () => {
 describe('presets match the catalogue', () => {
 	const specOf = (type: string) => MODULE_SPECS.find((m) => m.id === type);
 
-	const graphs: [string, { nodes: { id: string; type: string }[]; cables: { from: string; fromPort: string; to: string; toPort: string }[] } | undefined, Record<string, number> | undefined][] = [
+	const graphs: [
+		string,
+		(
+			| {
+					nodes: { id: string; type: string }[];
+					cables: { from: string; fromPort: string; to: string; toPort: string }[];
+			  }
+			| undefined
+		),
+		Record<string, number> | undefined
+	][] = [
 		...SOUND_PRESETS.map(
 			(p) => [`AC:${p.name}`, p.preset.rackGraph, p.preset.graphParams] as const
 		),

@@ -66,7 +66,9 @@
 	/* The whole CJK Unified block plus extension A, compatibility ideographs,
 	   radicals, CJK punctuation and full-width forms: 19k glyphs, ~480KB,
 	   fetched only when a page actually shows Han text. */
-	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60, U+FFE0-FFE6;
+	unicode-range:
+		U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60,
+		U+FFE0-FFE6;
 }
 @font-face {
 	font-family: 'Jelly Pixel';
@@ -95,7 +97,9 @@
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
-	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60, U+FFE0-FFE6;
+	unicode-range:
+		U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60,
+		U+FFE0-FFE6;
 }
 @font-face {
 	font-family: 'Jelly Pixel JA';
@@ -103,17 +107,21 @@
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
-	unicode-range: U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60, U+FFE0-FFE6;
+	unicode-range:
+		U+4E00-9FFF, U+3400-4DBF, U+F900-FAFF, U+2E80-2FDF, U+3000-303F, U+3200-33FF, U+FF01-FF60,
+		U+FFE0-FFE6;
 }
 /* Applied to everything rather than to body: Tailwind's font-mono and a few
    component stylesheets set font-family themselves, and each of those would
    otherwise fall back to the simplified flavour. The ASCII banners and
    LIFE.LAB's box-drawn wordmark keep their own single-cell mono stack. */
 :root:lang(zh-TW) *:not(.ascii-art):not(.ascii-art *):not(#wordmark) {
-	font-family: 'Jelly Pixel Hant', 'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', ui-monospace, monospace;
+	font-family:
+		'Jelly Pixel Hant', 'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', ui-monospace, monospace;
 }
 :root:lang(ja) *:not(.ascii-art):not(.ascii-art *):not(#wordmark) {
-	font-family: 'Jelly Pixel JA', 'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', ui-monospace, monospace;
+	font-family:
+		'Jelly Pixel JA', 'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* A bitmap face must not be smoothed: the antialiasing that makes an outline
@@ -150,7 +158,9 @@ img[data-pixelated],
    cell across the whole banner. */
 .ascii-art,
 .ascii-art * {
-	font-family: 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-family:
+		'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco,
+		Consolas, monospace;
 	/* The rows have to touch for the letterforms to close up. The global 24px
 	   line height (set for the 12px grid) opened a gap between every row of a
 	   banner drawn at 4-8px, slicing the letters into bands. */
@@ -166,11 +176,15 @@ img[data-pixelated],
    The :not(.ascii-art) guard matters: a banner is a picture made of glyphs,
    sized to fit its panel rather than to be read as text, and forcing its 4-8px
    art up to 12px would blow it out of the box it is drawn in. */
-.text-\[4px\]:not(.ascii-art), .text-\[6px\]:not(.ascii-art),
-.text-\[8px\]:not(.ascii-art), .text-\[9px\]:not(.ascii-art),
-.text-\[10px\]:not(.ascii-art), .text-\[11px\]:not(.ascii-art),
+.text-\[4px\]:not(.ascii-art),
+.text-\[6px\]:not(.ascii-art),
+.text-\[8px\]:not(.ascii-art),
+.text-\[9px\]:not(.ascii-art),
+.text-\[10px\]:not(.ascii-art),
+.text-\[11px\]:not(.ascii-art),
 .text-\[13px\]:not(.ascii-art),
-.sm\:text-\[6px\]:not(.ascii-art), .md\:text-\[8px\]:not(.ascii-art) {
+.sm\:text-\[6px\]:not(.ascii-art),
+.md\:text-\[8px\]:not(.ascii-art) {
 	font-size: 1rem;
 	/* 1.5, not 2. The face's ink is short -- an 8px cap on a 12px em -- so a
 	   double-height line box left roughly two blank rows between every wrapped
@@ -185,13 +199,29 @@ img[data-pixelated],
    on 6px, and at 24px it scales with everything around it. Floored to 12px
    instead, like body text, the art would burst its panel; left in px, as it
    was, it stayed the one thing on the page that ignored the setting. */
-.ascii-art.text-\[4px\] { font-size: 0.286rem; }
-.ascii-art.text-\[6px\], .ascii-art.sm\:text-\[6px\] { font-size: 0.429rem; }
-.ascii-art.text-\[8px\], .ascii-art.md\:text-\[8px\] { font-size: 0.571rem; }
-.ascii-art.text-\[9px\] { font-size: 0.643rem; }
-.ascii-art.text-\[10px\] { font-size: 0.714rem; }
-.ascii-art.text-\[11px\] { font-size: 0.786rem; }
-.ascii-art.text-\[13px\] { font-size: 0.929rem; }
+.ascii-art.text-\[4px\] {
+	font-size: 0.286rem;
+}
+.ascii-art.text-\[6px\],
+.ascii-art.sm\:text-\[6px\] {
+	font-size: 0.429rem;
+}
+.ascii-art.text-\[8px\],
+.ascii-art.md\:text-\[8px\] {
+	font-size: 0.571rem;
+}
+.ascii-art.text-\[9px\] {
+	font-size: 0.643rem;
+}
+.ascii-art.text-\[10px\] {
+	font-size: 0.714rem;
+}
+.ascii-art.text-\[11px\] {
+	font-size: 0.786rem;
+}
+.ascii-art.text-\[13px\] {
+	font-size: 0.929rem;
+}
 
 /* The KRSZ mark in the sidebar is the site's logo, not one of the banners above
    -- it wants to read as a mark rather than as small print, so it gets its own
@@ -199,7 +229,9 @@ img[data-pixelated],
    which is the largest the panel takes: the widest of the marks is 22 columns,
    and at JetBrains Mono's 0.6em advance that is 238px inside a content box
    about 248px wide. Anything larger clips the Block mark. */
-.ascii-art.krsz-logo { font-size: 1.286rem; }
+.ascii-art.krsz-logo {
+	font-size: 1.286rem;
+}
 
 :root {
 	--bg: #16171d;
@@ -220,17 +252,8 @@ body {
 	margin: 0;
 	padding: 0;
 	font-family:
-		'Jelly Pixel',
-		'KRSZ Box',
-		'JetBrains Mono',
-		'Fira Code',
-		'Cascadia Code',
-		ui-monospace,
-		SFMono-Regular,
-		Menlo,
-		Monaco,
-		Consolas,
-		monospace;
+		'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace,
+		SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 	/* Neither antialiased nor optimizeLegibility here any more: both soften a
 	   bitmap face, and optimizeLegibility additionally turns on ligatures and
 	   kerning that a fixed 12px grid has no room for. */
@@ -438,9 +461,15 @@ textarea {
 		#c678dd 83.33% 100%
 	);
 }
-::-webkit-scrollbar-thumb:hover { opacity: 0.85; }
-::-webkit-scrollbar-thumb:active { opacity: 1; }
-::-webkit-scrollbar-corner { background: rgba(0, 0, 0, 0.4); }
+::-webkit-scrollbar-thumb:hover {
+	opacity: 0.85;
+}
+::-webkit-scrollbar-thumb:active {
+	opacity: 1;
+}
+::-webkit-scrollbar-corner {
+	background: rgba(0, 0, 0, 0.4);
+}
 /* Re-stated after the global block above, which would otherwise give the tab
    strip and the other deliberately-bare scrollers a visible bar: the class
    exists precisely where a scrollbar is noise, and a class selector only wins
@@ -500,10 +529,14 @@ textarea {
    active, playback starting) rather than every hover. */
 @keyframes krsz-flash {
 	from {
-		box-shadow: 0 0 0 1px currentColor, 0 0 12px 1px currentColor;
+		box-shadow:
+			0 0 0 1px currentColor,
+			0 0 12px 1px currentColor;
 	}
 	to {
-		box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent;
+		box-shadow:
+			0 0 0 0 transparent,
+			0 0 0 0 transparent;
 	}
 }
 .flash-once {

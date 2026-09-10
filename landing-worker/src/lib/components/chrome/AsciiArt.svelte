@@ -222,9 +222,13 @@
 		onclick={handleClick}
 		role={onclick ? 'button' : undefined}
 		tabindex={onclick ? 0 : undefined}
-		onkeydown={onclick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleClick()) : undefined}
+		onkeydown={onclick
+			? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleClick())
+			: undefined}
 		{title}
-		class="relative select-none overflow-hidden w-fit {onclick ? 'cursor-pointer' : 'cursor-default'}"
+		class="relative select-none overflow-hidden w-fit {onclick
+			? 'cursor-pointer'
+			: 'cursor-default'}"
 		style={colorRanges ? undefined : `color: ${color}`}
 	>
 		<!-- Sizes the box exactly like the <pre> it replaces: same text, same font,
@@ -235,13 +239,22 @@
 
 		{#each glyphs as g (g.row + ':' + g.col)}
 			<span
-				class="absolute top-0 left-0 transition-transform {hovering || bursting ? 'will-change-transform' : ''}"
-				style="{colorRanges ? `color: ${colorForCell(g.col, g.row)};` : ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx * cellW}px, {g.dy * cellH}px); transition-duration: {bursting
+				class="absolute top-0 left-0 transition-transform {hovering || bursting
+					? 'will-change-transform'
+					: ''}"
+				style="{colorRanges
+					? `color: ${colorForCell(g.col, g.row)};`
+					: ''} transform: translate({g.col * cellW}px, {g.row * cellH}px) translate({g.dx *
+					cellW}px, {g.dy * cellH}px); transition-duration: {bursting
 					? '60ms'
 					: hovering
 						? '90ms'
-						: '260ms'}; transition-timing-function: {bursting ? 'linear' : hovering ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)'};"
-			>{g.ch}</span>
+						: '260ms'}; transition-timing-function: {bursting
+					? 'linear'
+					: hovering
+						? 'linear'
+						: 'cubic-bezier(0.34, 1.56, 0.64, 1)'};">{g.ch}</span
+			>
 		{/each}
 	</div>
 </div>

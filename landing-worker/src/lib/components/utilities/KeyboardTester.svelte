@@ -88,7 +88,13 @@
 	const tested = new SvelteSet<string>();
 	let maxRollover = $state(0);
 	let eventCount = $state(0);
-	let last = $state<{ key: string; code: string; keyCode: number; location: number; repeat: boolean } | null>(null);
+	let last = $state<{
+		key: string;
+		code: string;
+		keyCode: number;
+		location: number;
+		repeat: boolean;
+	} | null>(null);
 
 	function handleKeydown(e: KeyboardEvent) {
 		// Keep browser side effects (space-scroll, quick-find, tab focus jumps) out of the test.
@@ -99,7 +105,13 @@
 			eventCount++;
 			maxRollover = Math.max(maxRollover, pressed.size);
 		}
-		last = { key: e.key === ' ' ? 'Space' : e.key, code: e.code, keyCode: e.keyCode, location: e.location, repeat: e.repeat };
+		last = {
+			key: e.key === ' ' ? 'Space' : e.key,
+			code: e.code,
+			keyCode: e.keyCode,
+			location: e.location,
+			repeat: e.repeat
+		};
 	}
 
 	function handleKeyup(e: KeyboardEvent) {
@@ -157,17 +169,29 @@
 			<span class="text-white/50">{$t('utilities.keyboard.readout.keyCode')}</span>
 			<span class="text-[#c678dd] font-bold">{last?.keyCode ?? '—'}</span>
 		</span>
-		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs" title={$t('utilities.keyboard.readout.loc.title')}>
+		<span
+			class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs"
+			title={$t('utilities.keyboard.readout.loc.title')}
+		>
 			<span class="text-white/50">{$t('utilities.keyboard.readout.loc')}</span>
 			<span class="text-white/80 font-bold">{last?.location ?? '—'}</span>
 		</span>
-		<span class="px-2 py-1 border border-[#56b6c2]/40 bg-[#56b6c2]/10 rounded-xs text-[#56b6c2]" title={$t('utilities.keyboard.readout.rollover.title')}>
+		<span
+			class="px-2 py-1 border border-[#56b6c2]/40 bg-[#56b6c2]/10 rounded-xs text-[#56b6c2]"
+			title={$t('utilities.keyboard.readout.rollover.title')}
+		>
 			{$t('utilities.keyboard.readout.rollover')} <span class="font-black">{maxRollover}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			{$t('utilities.keyboard.readout.tested')} <span class="text-[#98c379] font-bold">{tested.size}</span> · {$t('utilities.keyboard.readout.downNow')} <span class="font-bold" style="color: {themeStyles.cursorColor}">{pressed.size}</span>
+			{$t('utilities.keyboard.readout.tested')}
+			<span class="text-[#98c379] font-bold">{tested.size}</span>
+			· {$t('utilities.keyboard.readout.downNow')}
+			<span class="font-bold" style="color: {themeStyles.cursorColor}">{pressed.size}</span>
 		</span>
-		<button onclick={reset} class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors">
+		<button
+			onclick={reset}
+			class="press ml-auto px-2 py-1 border border-white/20 hover:border-[#e06c75] text-white/60 hover:text-[#e06c75] rounded-xs font-bold cursor-pointer transition-colors"
+		>
 			{$t('utilities.keyboard.reset')}
 		</button>
 	</div>
@@ -180,8 +204,12 @@
 					<div class="flex gap-1">
 						{#each row as k, ki (ki)}
 							<div
-								class="border rounded-xs h-9 flex items-center justify-center text-[10px] font-mono font-bold transition-colors duration-75 select-none {keyClass(k.code)}"
-								style="flex: {k.w} 1 0%; {pressed.has(k.code) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}"
+								class="border rounded-xs h-9 flex items-center justify-center text-[10px] font-mono font-bold transition-colors duration-75 select-none {keyClass(
+									k.code
+								)}"
+								style="flex: {k.w} 1 0%; {pressed.has(k.code)
+									? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};`
+									: ''}"
 							>
 								{k.label}
 							</div>
@@ -194,8 +222,12 @@
 					<div class="flex gap-1">
 						{#each row as k, ki (ki)}
 							<div
-								class="border rounded-xs h-9 flex-1 flex items-center justify-center text-[10px] font-mono font-bold transition-colors duration-75 select-none {keyClass(k.code)}"
-								style={pressed.has(k.code) ? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};` : ''}
+								class="border rounded-xs h-9 flex-1 flex items-center justify-center text-[10px] font-mono font-bold transition-colors duration-75 select-none {keyClass(
+									k.code
+								)}"
+								style={pressed.has(k.code)
+									? `background-color: ${themeStyles.cursorColor}; border-color: ${themeStyles.cursorColor};`
+									: ''}
 							>
 								{k.label}
 							</div>

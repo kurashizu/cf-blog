@@ -21,12 +21,12 @@ more.
 
 Two kinds of wire, and they do not mix.
 
-**Execution** (white, chevron sockets) says *which nodes run, and in what
-order*. It starts at ENTRY -- a key going down is the event -- and reaches the
+**Execution** (white, chevron sockets) says _which nodes run, and in what
+order_. It starts at ENTRY -- a key going down is the event -- and reaches the
 nodes that do something: ask a question, take an action, hand the patch to the
 master bus.
 
-**Data** (coloured, shaped by type) says *where a value comes from*. It is
+**Data** (coloured, shaped by type) says _where a value comes from_. It is
 pulled, not pushed: nobody runs a data node, its consumer asks it for a value
 and it asks its own inputs in turn.
 
@@ -38,7 +38,7 @@ it "runs" has no answer.
 
 Blueprint's distinction, kept exactly.
 
-A node is **impure** if running it *does something*: ACT mutes a voice, OUT
+A node is **impure** if running it _does something_: ACT mutes a voice, OUT
 hands the patch to the master. Impure nodes have an exec inlet, and they happen
 when execution reaches them.
 
@@ -46,7 +46,7 @@ A node is **pure** if it only computes: the arithmetic, the filters, the
 resonators. Pure nodes have no exec pins at all, because there is no answer to
 "when does this run". They are evaluated when something reads them.
 
-An exec **outlet** (THEN) is narrower still: it means *and afterwards, this*, so
+An exec **outlet** (THEN) is narrower still: it means _and afterwards, this_, so
 it needs an afterwards to point at. SEQ has one because a gap has an end. An
 oscillator does not -- it runs for as long as the note does -- so a THEN on OSC
 would be a socket for a moment that never arrives.
@@ -70,12 +70,12 @@ parameter is read that nothing declares.
 > **A module reads every input through the resolver, and reaches past it for
 > nothing.**
 
-The resolver (`stores/node-graph.ts`) answers one question: *what arrived at
-this inlet?* The cable if there is one, the declared default if there is not.
+The resolver (`stores/node-graph.ts`) answers one question: _what arrived at
+this inlet?_ The cable if there is one, the declared default if there is not.
 
 ```ts
-const root = cvIn(nodeId, 'pitch', 440);   // right
-const root = baseFreq;                      // wrong: ignores the socket
+const root = cvIn(nodeId, 'pitch', 440); // right
+const root = baseFreq; // wrong: ignores the socket
 ```
 
 This is what makes "an unwired socket falls back to its default" true
@@ -92,13 +92,13 @@ module without that module knowing about it.
 The two kinds of source into a knob are not the same thing, and the difference
 is audible:
 
-| Cable from | What it is | What the knob does |
-| --- | --- | --- |
-| CONST, ADD, TO-FREQ ... (a pure node) | a number | **replaced** by it |
-| ENV, LFO, an audio outlet | a signal | **added to** by it, knob is the base |
+| Cable from                            | What it is | What the knob does                   |
+| ------------------------------------- | ---------- | ------------------------------------ |
+| CONST, ADD, TO-FREQ ... (a pure node) | a number   | **replaced** by it                   |
+| ENV, LFO, an audio outlet             | a signal   | **added to** by it, knob is the base |
 
 A pure node has a value to pull, so the resolver pulls it. Everything else is
-an AudioParam connection, and Web Audio *sums* into a param -- so the knob's own
+an AudioParam connection, and Web Audio _sums_ into a param -- so the knob's own
 setting is the base the signal moves around.
 
 Returning 0 for the second case is what made `ENV -> VCF.FREQ` -- the first
@@ -109,8 +109,8 @@ added its 0..1 on top of nothing. Measured after the fix: 320 Hz unmodulated,
 ### Bind a knob where you read it
 
 ```ts
-knob(f.frequency, 'cutoff', 4000);          // right: reads, sets, registers
-f.frequency.value = p('cutoff', 4000);      // wrong: unreachable by cable
+knob(f.frequency, 'cutoff', 4000); // right: reads, sets, registers
+f.frequency.value = p('cutoff', 4000); // wrong: unreachable by cable
 ```
 
 `knob()` (and `knobPct()` for a 0..100 knob used as a fraction) reads the value,
@@ -132,7 +132,7 @@ which is how SEQ's GAP and SCOPE's SPAN got suggested as places to send an
 envelope, neither of which the engine reads through a param at all.
 
 `tests/unit/knob-binding.test.ts` enforces both directions: a knob without the
-flag must be registered in `mod`, and a knob with it must *not* be. The flag has
+flag must be registered in `mod`, and a knob with it must _not_ be. The flag has
 to cost something, or it becomes a place to hide a bug.
 
 ### Convert where the knob is read, not where the cable lands
@@ -156,7 +156,7 @@ and a patch that wants to modulate level uses a VCA.
 `outletOf(src, port)` is the source side of what `mod.get(port)` is on the
 destination side. The source end used to take `out`, or `out2` for the one port
 literally called `r`, and everything else silently fell back to `out` -- so
-ENTRY's VEL pin connected ENTRY's *silent* gain, and a hard hit and a soft one
+ENTRY's VEL pin connected ENTRY's _silent_ gain, and a hard hit and a soft one
 came out at the same level. If a module publishes an outlet under a name, it
 declares it in `outs`.
 
@@ -194,19 +194,19 @@ Rules:
 
 ### Port roles
 
-| role | shape | carries |
-|---|---|---|
-| `exec` | chevron, white | execution |
-| `signal` | circle, white | audio, any width |
-| `mono` | square, white | audio, one channel |
-| `stereo` | double ring, cyan | audio, a pair |
-| `left` / `right` | half-circle, cyan | one side of a split |
-| `cv` | diamond, amber | an untyped value |
-| `pitch` | step, green | a note on a scale, in semitones |
-| `hz` | triangle, blue | a frequency |
-| `unit` | diamond, red | an amount, 0..1 |
-| `index` | hexagon, purple | a count |
-| `time` | square, cyan | a length of time |
+| role             | shape             | carries                         |
+| ---------------- | ----------------- | ------------------------------- |
+| `exec`           | chevron, white    | execution                       |
+| `signal`         | circle, white     | audio, any width                |
+| `mono`           | square, white     | audio, one channel              |
+| `stereo`         | double ring, cyan | audio, a pair                   |
+| `left` / `right` | half-circle, cyan | one side of a split             |
+| `cv`             | diamond, amber    | an untyped value                |
+| `pitch`          | step, green       | a note on a scale, in semitones |
+| `hz`             | triangle, blue    | a frequency                     |
+| `unit`           | diamond, red      | an amount, 0..1                 |
+| `index`          | hexagon, purple   | a count                         |
+| `time`           | square, cyan      | a length of time                |
 
 Types do not mix: exec joins exec, audio joins audio, a value drives a value.
 
@@ -294,7 +294,7 @@ the socket was structurally discarded. A patch heard the same partials whether a
 strike was wired in or not.
 
 If a module declares an inlet, wire a signal into it and confirm the output
-changes. `tests/unit/module-params.test.ts` checks the port *id* appears in
+changes. `tests/unit/module-params.test.ts` checks the port _id_ appears in
 `synth.ts`, which the spelling satisfies and the wiring does not.
 
 ## Card layout
@@ -320,7 +320,7 @@ end around 31px and the gutter was 24.
 
 ### The gutters are added to the card, not carved out of it
 
-`NODE_W` is what the *controls* need — four waveform buttons legible at 8px, or
+`NODE_W` is what the _controls_ need — four waveform buttons legible at 8px, or
 two knobs side by side. The gutters go on top:
 
 ```
@@ -349,11 +349,11 @@ Two traps here:
 
 ### Three kinds of control, for three kinds of question
 
-| question | control | declared by |
-|---|---|---|
-| which one? | segmented buttons | `choices: [...]` |
-| what number exactly? | typed field | `field: true` |
-| how much? | dial | neither |
+| question             | control           | declared by      |
+| -------------------- | ----------------- | ---------------- |
+| which one?           | segmented buttons | `choices: [...]` |
+| what number exactly? | typed field       | `field: true`    |
+| how much?            | dial              | neither          |
 
 A literal is typed, not turned. CONST's job is to say 440, or 0.75, or 48, and
 spelling that out on a 26px dial spanning four million positions is not possible
@@ -423,13 +423,14 @@ none, weak odd, strong odd, all).
 ### The unit decides the shape of the control
 
 `unit: '×'` says a multiplier, which is checked to be log-scaled and centred on
+
 1. A scope's GAIN is not that — it only ever magnifies — so it is dB, like every
-other one-way gain. Getting this wrong is caught by test rather than by eye.
+   other one-way gain. Getting this wrong is caught by test rather than by eye.
 
 ### Name a converter for what it does
 
 `TO-FREQ`, not `FREQ`. The bare noun names the destination and reads as though
-the node *is* a frequency; the hyphen reads as an arrow. Conversions live on
+the node _is_ a frequency; the hyphen reads as an arrow. Conversions live on
 their own `CONVERT` shelf rather than among the arithmetic, because changing
-what a value *is* is not the same as changing what it equals — and the whole
+what a value _is_ is not the same as changing what it equals — and the whole
 reason those nodes exist is that nothing does it implicitly.

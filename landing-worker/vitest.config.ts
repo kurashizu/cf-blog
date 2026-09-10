@@ -24,7 +24,9 @@ export default defineConfig({
 			// supply. Tests run without that plugin, so declare the two the
 			// modules under test actually import.
 			$lib: fileURLToPath(new URL('./src/lib', import.meta.url)),
-			'$app/environment': fileURLToPath(new URL('./tests/unit/stubs/app-environment.ts', import.meta.url))
+			'$app/environment': fileURLToPath(
+				new URL('./tests/unit/stubs/app-environment.ts', import.meta.url)
+			)
 		}
 	},
 	test: {

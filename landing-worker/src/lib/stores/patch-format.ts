@@ -65,8 +65,7 @@ export function migratePatch(data: SynthPatchFile): SynthPatchFile {
 	   names any other resolution is not one this tripling describes, and
 	   tripling it anyway turned a 48-step file into 144. */
 	if (out.stepsPerBeat === undefined || out.stepsPerBeat === 8) {
-		const stretch = <T,>(xs: T[] | undefined, fill: (x: T) => T[]) =>
-			xs ? xs.flatMap(fill) : xs;
+		const stretch = <T>(xs: T[] | undefined, fill: (x: T) => T[]) => (xs ? xs.flatMap(fill) : xs);
 		out = {
 			...out,
 			totalSteps: out.totalSteps ? out.totalSteps * 3 : out.totalSteps,

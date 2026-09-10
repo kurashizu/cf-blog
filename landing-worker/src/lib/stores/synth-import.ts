@@ -2,7 +2,14 @@ import { writable } from 'svelte/store';
 import { tr } from '$lib/i18n';
 import { playSound } from '../sound';
 import { parseMidiFile, splitByChannel, MidiParseError, type MidiTrack } from '../midi-file';
-import { MAX_GRID_STEPS, METER_SPECS, modularSynth, PIANO_ROLL_NOTES, STEPS_PER_BEAT, type TimeSignature } from '../synth';
+import {
+	MAX_GRID_STEPS,
+	METER_SPECS,
+	modularSynth,
+	PIANO_ROLL_NOTES,
+	STEPS_PER_BEAT,
+	type TimeSignature
+} from '../synth';
 import {
 	setBpm,
 	setTimeMeter,
@@ -52,7 +59,11 @@ interface ConvertedTrack {
  * One MIDI track becomes one sequencer track. A note is written into every step
  * it spans, because the scheduler reads a repeated index as one held note.
  */
-function convertTrack(track: MidiTrack, ticksPerQuarter: number, index: number): { converted: ConvertedTrack; dropped: number; lastStep: number } {
+function convertTrack(
+	track: MidiTrack,
+	ticksPerQuarter: number,
+	index: number
+): { converted: ConvertedTrack; dropped: number; lastStep: number } {
 	const grid: number[][] = Array.from({ length: GRID_CAPACITY }, () => []);
 	const accents: number[] = Array.from({ length: GRID_CAPACITY }, () => 0);
 	const toStep = (tick: number) => Math.round((tick * STEPS_PER_BEAT) / ticksPerQuarter);
@@ -88,7 +99,9 @@ function convertTrack(track: MidiTrack, ticksPerQuarter: number, index: number):
 
 	return {
 		converted: {
-			name: (track.name || tr('synth.midiImport.defaultTrackName', { index: index + 1 })).slice(0, 24).toUpperCase(),
+			name: (track.name || tr('synth.midiImport.defaultTrackName', { index: index + 1 }))
+				.slice(0, 24)
+				.toUpperCase(),
 			grid,
 			accents,
 			noteCount,
@@ -134,9 +147,14 @@ export async function handleImportMidiFile(file: File): Promise<void> {
 	const droppedNotes = results.reduce((a, r) => a + r.dropped, 0);
 	const lastStep = Math.max(1, ...results.map((r) => r.lastStep));
 
-	const meter: TimeSignature = isSupportedMeter(parsed.timeSignature) ? parsed.timeSignature : '4/4';
+	const meter: TimeSignature = isSupportedMeter(parsed.timeSignature)
+		? parsed.timeSignature
+		: '4/4';
 	const stepsPerBar = METER_SPECS[meter].stepsPerBar;
-	const totalSteps = Math.min(GRID_CAPACITY, Math.max(stepsPerBar, Math.ceil(lastStep / stepsPerBar) * stepsPerBar));
+	const totalSteps = Math.min(
+		GRID_CAPACITY,
+		Math.max(stepsPerBar, Math.ceil(lastStep / stepsPerBar) * stepsPerBar)
+	);
 
 	// ── apply ──
 	stopTransport();
@@ -189,12 +207,16 @@ export async function handleImportMidiFile(file: File): Promise<void> {
 			bpm: parsed.bpm,
 			bpmNote: parsed.bpmFromFile ? '' : tr('synth.midiImport.bpmDefaultNote'),
 			meter,
-			meterNote: isSupportedMeter(parsed.timeSignature) ? '' : tr('synth.midiImport.meterUnsupportedNote', { meter: parsed.timeSignature })
+			meterNote: isSupportedMeter(parsed.timeSignature)
+				? ''
+				: tr('synth.midiImport.meterUnsupportedNote', { meter: parsed.timeSignature })
 		}),
 		/* The synth has one tempo and one meter. A file that changes either
 		   part-way through keeps only the first, so the rest plays at the wrong
 		   speed -- which was silent until now. */
-		...(parsed.tempoCount > 1 ? [tr('synth.midiImport.tempoMapNote', { count: parsed.tempoCount })] : []),
+		...(parsed.tempoCount > 1
+			? [tr('synth.midiImport.tempoMapNote', { count: parsed.tempoCount })]
+			: []),
 		...(parsed.meterCount > 1 ? [tr('synth.midiImport.meterChangeNote')] : []),
 		...results.map((r, i) =>
 			tr('synth.midiImport.trackLine', {
@@ -204,11 +226,28 @@ export async function handleImportMidiFile(file: File): Promise<void> {
 				drum: r.converted.isDrums ? tr('synth.midiImport.drumChannelNote') : ''
 			})
 		),
-		...(droppedNotes ? [tr('synth.midiImport.notesDropped', { count: droppedNotes, plural: droppedNotes === 1 ? '' : 's' })] : []),
-		...(skipped.length ? [tr('synth.midiImport.partsSkipped', { count: skipped.length, plural: skipped.length === 1 ? '' : 's', capacity })] : [])
+		...(droppedNotes
+			? [
+					tr('synth.midiImport.notesDropped', {
+						count: droppedNotes,
+						plural: droppedNotes === 1 ? '' : 's'
+					})
+				]
+			: []),
+		...(skipped.length
+			? [
+					tr('synth.midiImport.partsSkipped', {
+						count: skipped.length,
+						plural: skipped.length === 1 ? '' : 's',
+						capacity
+					})
+				]
+			: [])
 	];
 	importReport.set(report);
-	saveStatus.set(tr('synth.status.importedFile', { name: file.name.replace(/\.midi?$/i, '').slice(0, 18) }));
+	saveStatus.set(
+		tr('synth.status.importedFile', { name: file.name.replace(/\.midi?$/i, '').slice(0, 18) })
+	);
 	setTimeout(() => saveStatus.set(null), 2000);
 	playSound('toggle');
 }

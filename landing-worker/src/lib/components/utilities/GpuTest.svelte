@@ -21,26 +21,55 @@
 
 	function readWebgl() {
 		const canvas = document.createElement('canvas');
-		const gl = (canvas.getContext('webgl2') ?? canvas.getContext('webgl')) as WebGL2RenderingContext | WebGLRenderingContext | null;
+		const gl = (canvas.getContext('webgl2') ?? canvas.getContext('webgl')) as
+			WebGL2RenderingContext | WebGLRenderingContext | null;
 		if (!gl) {
 			webglAvailable = false;
 			return;
 		}
 		const dbg = gl.getExtension('WEBGL_debug_renderer_info');
 		const vendor = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR);
-		const renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+		const renderer = dbg
+			? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)
+			: gl.getParameter(gl.RENDERER);
 		const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
 
 		webglRows = [
-			{ label: tr('utilities.gpu.webgl.vendor'), value: String(vendor), title: tr(dbg ? 'utilities.gpu.webgl.unmaskedNote' : 'utilities.gpu.webgl.maskedNote') },
-			{ label: tr('utilities.gpu.webgl.renderer'), value: String(renderer), title: tr(dbg ? 'utilities.gpu.webgl.unmaskedNote' : 'utilities.gpu.webgl.maskedNote') },
+			{
+				label: tr('utilities.gpu.webgl.vendor'),
+				value: String(vendor),
+				title: tr(dbg ? 'utilities.gpu.webgl.unmaskedNote' : 'utilities.gpu.webgl.maskedNote')
+			},
+			{
+				label: tr('utilities.gpu.webgl.renderer'),
+				value: String(renderer),
+				title: tr(dbg ? 'utilities.gpu.webgl.unmaskedNote' : 'utilities.gpu.webgl.maskedNote')
+			},
 			{ label: tr('utilities.gpu.webgl.version'), value: String(gl.getParameter(gl.VERSION)) },
-			{ label: tr('utilities.gpu.webgl.glslVersion'), value: String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION)) },
-			{ label: tr('utilities.gpu.webgl.maxTextureSize'), value: `${gl.getParameter(gl.MAX_TEXTURE_SIZE)}` },
-			{ label: tr('utilities.gpu.webgl.maxRenderbufferSize'), value: `${gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)}` },
-			{ label: tr('utilities.gpu.webgl.maxViewportDims'), value: `${viewport[0]} × ${viewport[1]}` },
-			{ label: tr('utilities.gpu.webgl.maxVertexUniforms'), value: `${gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS)}` },
-			{ label: tr('utilities.gpu.webgl.maxFragmentUniforms'), value: `${gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS)}` }
+			{
+				label: tr('utilities.gpu.webgl.glslVersion'),
+				value: String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION))
+			},
+			{
+				label: tr('utilities.gpu.webgl.maxTextureSize'),
+				value: `${gl.getParameter(gl.MAX_TEXTURE_SIZE)}`
+			},
+			{
+				label: tr('utilities.gpu.webgl.maxRenderbufferSize'),
+				value: `${gl.getParameter(gl.MAX_RENDERBUFFER_SIZE)}`
+			},
+			{
+				label: tr('utilities.gpu.webgl.maxViewportDims'),
+				value: `${viewport[0]} × ${viewport[1]}`
+			},
+			{
+				label: tr('utilities.gpu.webgl.maxVertexUniforms'),
+				value: `${gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS)}`
+			},
+			{
+				label: tr('utilities.gpu.webgl.maxFragmentUniforms'),
+				value: `${gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS)}`
+			}
 		];
 		webglExtensions = (gl.getSupportedExtensions() ?? []).slice().sort();
 
@@ -77,7 +106,8 @@
 			// n/a fields rather than guessing.
 			type LegacyAdapter = { requestAdapterInfo?: () => Promise<GPUAdapterInfo> };
 			const legacy = adapter as unknown as LegacyAdapter;
-			const info: Partial<GPUAdapterInfo> = adapter.info ?? (legacy.requestAdapterInfo ? await legacy.requestAdapterInfo() : {});
+			const info: Partial<GPUAdapterInfo> =
+				adapter.info ?? (legacy.requestAdapterInfo ? await legacy.requestAdapterInfo() : {});
 			const limits = adapter.limits;
 			const na = tr('utilities.gpu.na');
 
@@ -86,10 +116,19 @@
 				{ label: tr('utilities.gpu.webgpu.architecture'), value: info.architecture || na },
 				{ label: tr('utilities.gpu.webgpu.device'), value: info.device || na },
 				{ label: tr('utilities.gpu.webgpu.description'), value: info.description || na },
-				{ label: tr('utilities.gpu.webgpu.preferredFormat'), value: gpu.getPreferredCanvasFormat() },
-				{ label: tr('utilities.gpu.webgpu.maxTextureDimension2D'), value: `${limits.maxTextureDimension2D}` },
+				{
+					label: tr('utilities.gpu.webgpu.preferredFormat'),
+					value: gpu.getPreferredCanvasFormat()
+				},
+				{
+					label: tr('utilities.gpu.webgpu.maxTextureDimension2D'),
+					value: `${limits.maxTextureDimension2D}`
+				},
 				{ label: tr('utilities.gpu.webgpu.maxBufferSize'), value: `${limits.maxBufferSize}` },
-				{ label: tr('utilities.gpu.webgpu.maxComputeWorkgroupSizeX'), value: `${limits.maxComputeWorkgroupSizeX}` },
+				{
+					label: tr('utilities.gpu.webgpu.maxComputeWorkgroupSizeX'),
+					value: `${limits.maxComputeWorkgroupSizeX}`
+				},
 				{ label: tr('utilities.gpu.webgpu.maxBindGroups'), value: `${limits.maxBindGroups}` }
 			];
 			webgpuFeatures = [...adapter.features].sort();
@@ -144,7 +183,11 @@
 		void main() { gl_FragColor = vec4(0.38, 0.75, 0.47, 1.0); }
 	`;
 
-	function compileProgram(gl: WebGLRenderingContext, vsSrc: string, fsSrc: string): WebGLProgram | null {
+	function compileProgram(
+		gl: WebGLRenderingContext,
+		vsSrc: string,
+		fsSrc: string
+	): WebGLProgram | null {
 		const vs = gl.createShader(gl.VERTEX_SHADER)!;
 		gl.shaderSource(vs, vsSrc);
 		gl.compileShader(vs);
@@ -222,7 +265,10 @@
 					const fps = frames / elapsedSec;
 					const pixelsPerFrame = BENCH_SIZE * BENCH_SIZE * layers;
 					const mpixelsPerSec = (pixelsPerFrame * frames) / elapsedSec / 1_000_000;
-					fillResults = [...fillResults, { layers, mpixelsPerSec: Math.round(mpixelsPerSec), fps: Math.round(fps * 10) / 10 }];
+					fillResults = [
+						...fillResults,
+						{ layers, mpixelsPerSec: Math.round(mpixelsPerSec), fps: Math.round(fps * 10) / 10 }
+					];
 				}
 				gl.disable(gl.BLEND);
 			}
@@ -318,16 +364,25 @@
 	<!-- WebGL -->
 	<div class="border rounded-xs bg-black/25 p-2.5 border-[#61afef]/20 min-w-0">
 		<div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 mb-1.5">
-			<span class="text-xs font-black font-mono" style="color: #61afef">{$t('utilities.gpu.section.webgl')}</span>
+			<span class="text-xs font-black font-mono" style="color: #61afef"
+				>{$t('utilities.gpu.section.webgl')}</span
+			>
 		</div>
 		{#if !webglAvailable}
 			<div class="text-xs font-mono text-[#e06c75]">{$t('utilities.gpu.webgl.unavailable')}</div>
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
 				{#each webglRows as row (row.label)}
-					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0" title={row.title}>
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
-						<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
+					<div
+						class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0"
+						title={row.title}
+					>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0"
+							>{row.label}</span
+						>
+						<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}
+							>{row.value}</span
+						>
 					</div>
 				{/each}
 			</div>
@@ -335,12 +390,17 @@
 				onclick={() => (webglExtensionsOpen = !webglExtensionsOpen)}
 				class="press mt-1.5 px-2 py-1 border border-white/15 text-white/60 rounded-xs text-[10px] font-bold cursor-pointer hover:bg-white/10 transition-colors"
 			>
-				{$t('utilities.gpu.webgl.extensions', { count: webglExtensions.length })} — {webglExtensionsOpen ? $t('utilities.gpu.webgl.extensions.hide') : $t('utilities.gpu.webgl.extensions.show')}
+				{$t('utilities.gpu.webgl.extensions', { count: webglExtensions.length })} — {webglExtensionsOpen
+					? $t('utilities.gpu.webgl.extensions.hide')
+					: $t('utilities.gpu.webgl.extensions.show')}
 			</button>
 			{#if webglExtensionsOpen}
 				<div class="mt-1.5 flex flex-wrap gap-1">
 					{#each webglExtensions as ext (ext)}
-						<span class="px-1.5 py-0.5 border border-white/10 bg-black/40 rounded-xs text-[10px] font-mono text-white/55 truncate max-w-full">{ext}</span>
+						<span
+							class="px-1.5 py-0.5 border border-white/10 bg-black/40 rounded-xs text-[10px] font-mono text-white/55 truncate max-w-full"
+							>{ext}</span
+						>
 					{/each}
 				</div>
 			{/if}
@@ -350,7 +410,9 @@
 	<!-- WebGPU -->
 	<div class="border rounded-xs bg-black/25 p-2.5 border-[#c678dd]/20 min-w-0">
 		<div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 mb-1.5">
-			<span class="text-xs font-black font-mono" style="color: #c678dd">{$t('utilities.gpu.section.webgpu')}</span>
+			<span class="text-xs font-black font-mono" style="color: #c678dd"
+				>{$t('utilities.gpu.section.webgpu')}</span
+			>
 		</div>
 		{#if webgpuState === 'unavailable'}
 			<div class="text-xs font-mono text-[#e5c07b]">{$t('utilities.gpu.webgpu.unavailable')}</div>
@@ -359,9 +421,15 @@
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
 				{#each webgpuRows as row (row.label)}
-					<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
-						<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
+					<div
+						class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0"
+					>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0"
+							>{row.label}</span
+						>
+						<span class="text-xs font-mono font-bold text-[#d8dee9] truncate" title={row.value}
+							>{row.value}</span
+						>
 					</div>
 				{/each}
 			</div>
@@ -369,12 +437,17 @@
 				onclick={() => (webgpuFeaturesOpen = !webgpuFeaturesOpen)}
 				class="press mt-1.5 px-2 py-1 border border-white/15 text-white/60 rounded-xs text-[10px] font-bold cursor-pointer hover:bg-white/10 transition-colors"
 			>
-				{$t('utilities.gpu.webgpu.features', { count: webgpuFeatures.length })} — {webgpuFeaturesOpen ? $t('utilities.gpu.webgpu.features.hide') : $t('utilities.gpu.webgpu.features.show')}
+				{$t('utilities.gpu.webgpu.features', { count: webgpuFeatures.length })} — {webgpuFeaturesOpen
+					? $t('utilities.gpu.webgpu.features.hide')
+					: $t('utilities.gpu.webgpu.features.show')}
 			</button>
 			{#if webgpuFeaturesOpen}
 				<div class="mt-1.5 flex flex-wrap gap-1">
 					{#each webgpuFeatures as feat (feat)}
-						<span class="px-1.5 py-0.5 border border-white/10 bg-black/40 rounded-xs text-[10px] font-mono text-white/55 truncate max-w-full">{feat}</span>
+						<span
+							class="px-1.5 py-0.5 border border-white/10 bg-black/40 rounded-xs text-[10px] font-mono text-white/55 truncate max-w-full"
+							>{feat}</span
+						>
 					{/each}
 				</div>
 			{/if}
@@ -384,11 +457,17 @@
 	<!-- Benchmark -->
 	<div class="border rounded-xs bg-black/25 p-2.5 border-[#98c379]/20 min-w-0">
 		<div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 mb-1.5">
-			<span class="text-xs font-black font-mono" style="color: #98c379">{$t('utilities.gpu.section.benchmark')}</span>
+			<span class="text-xs font-black font-mono" style="color: #98c379"
+				>{$t('utilities.gpu.section.benchmark')}</span
+			>
 		</div>
-		<div class="text-[11px] font-mono text-white/40 leading-relaxed mb-2">{$t('utilities.gpu.benchmark.hint')}</div>
+		<div class="text-[11px] font-mono text-white/40 leading-relaxed mb-2">
+			{$t('utilities.gpu.benchmark.hint')}
+		</div>
 		{#if !benchAvailable}
-			<div class="text-xs font-mono text-[#e06c75]">{$t('utilities.gpu.benchmark.unavailable')}</div>
+			<div class="text-xs font-mono text-[#e06c75]">
+				{$t('utilities.gpu.benchmark.unavailable')}
+			</div>
 		{:else}
 			<div class="flex flex-wrap items-center gap-2 mb-2">
 				{#if !benchRunning}
@@ -412,22 +491,46 @@
 				{/if}
 			</div>
 			{#if fillResults.length}
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase mb-1">{$t('utilities.gpu.benchmark.fillrate')}</div>
+				<div class="text-[10px] font-mono font-bold text-white/45 uppercase mb-1">
+					{$t('utilities.gpu.benchmark.fillrate')}
+				</div>
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mb-2">
 					{#each fillResults as r (r.layers)}
-						<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex flex-col gap-0.5 min-w-0">
-							<span class="text-[10px] font-mono font-bold text-white/45 truncate">{$t('utilities.gpu.benchmark.fillrate.layers', { layers: r.layers })}</span>
-							<span class="text-xs font-mono font-bold text-[#98c379] truncate">{$t('utilities.gpu.benchmark.fillrate.mpixels', { mpixels: r.mpixelsPerSec })}</span>
-							<span class="text-[10px] font-mono text-white/40 truncate">{$t('utilities.gpu.benchmark.fillrate.fps', { fps: r.fps })}</span>
+						<div
+							class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex flex-col gap-0.5 min-w-0"
+						>
+							<span class="text-[10px] font-mono font-bold text-white/45 truncate"
+								>{$t('utilities.gpu.benchmark.fillrate.layers', { layers: r.layers })}</span
+							>
+							<span class="text-xs font-mono font-bold text-[#98c379] truncate"
+								>{$t('utilities.gpu.benchmark.fillrate.mpixels', {
+									mpixels: r.mpixelsPerSec
+								})}</span
+							>
+							<span class="text-[10px] font-mono text-white/40 truncate"
+								>{$t('utilities.gpu.benchmark.fillrate.fps', { fps: r.fps })}</span
+							>
 						</div>
 					{/each}
 				</div>
 			{/if}
 			{#if triangleResult}
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase mb-1">{$t('utilities.gpu.benchmark.triangles')}</div>
-				<div class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0">
-					<span class="text-[10px] font-mono text-white/45 truncate">{$t('utilities.gpu.benchmark.triangles.count', { count: TRIANGLE_INSTANCES.toLocaleString() })}</span>
-					<span class="text-xs font-mono font-bold text-[#98c379] truncate">{$t('utilities.gpu.benchmark.triangles.value', { value: formatCompact(triangleResult.trisPerSec) })}</span>
+				<div class="text-[10px] font-mono font-bold text-white/45 uppercase mb-1">
+					{$t('utilities.gpu.benchmark.triangles')}
+				</div>
+				<div
+					class="border border-white/10 bg-black/40 rounded-xs px-2.5 py-1.5 flex items-baseline justify-between gap-2 min-w-0"
+				>
+					<span class="text-[10px] font-mono text-white/45 truncate"
+						>{$t('utilities.gpu.benchmark.triangles.count', {
+							count: TRIANGLE_INSTANCES.toLocaleString()
+						})}</span
+					>
+					<span class="text-xs font-mono font-bold text-[#98c379] truncate"
+						>{$t('utilities.gpu.benchmark.triangles.value', {
+							value: formatCompact(triangleResult.trisPerSec)
+						})}</span
+					>
 				</div>
 			{/if}
 		{/if}

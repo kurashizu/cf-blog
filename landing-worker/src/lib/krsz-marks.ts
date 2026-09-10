@@ -26,63 +26,113 @@ export interface KrszMark {
 
 export const KRSZ_MARKS: KrszMark[] = [
 	{
-		font: "ANSI Shadow",
-		art: "██╗  ██╗██████╗ \n██║ ██╔╝██╔══██╗\n█████╔╝ ██████╔╝\n██╔═██╗ ██╔══██╗\n██║  ██╗██║  ██║\n╚═╝  ╚═╝╚═╝  ╚═╝\n███████╗███████╗\n██╔════╝╚══███╔╝\n███████╗  ███╔╝ \n╚════██║ ███╔╝  \n███████║███████╗\n╚══════╝╚══════╝",
+		font: 'ANSI Shadow',
+		art: '██╗  ██╗██████╗ \n██║ ██╔╝██╔══██╗\n█████╔╝ ██████╔╝\n██╔═██╗ ██╔══██╗\n██║  ██╗██║  ██║\n╚═╝  ╚═╝╚═╝  ╚═╝\n███████╗███████╗\n██╔════╝╚══███╔╝\n███████╗  ███╔╝ \n╚════██║ ███╔╝  \n███████║███████╗\n╚══════╝╚══════╝',
 		rowsPerHalf: 6,
-		colorRanges: [{"letter":"K","from":0,"to":7},{"letter":"R","from":8,"to":15},{"letter":"S","from":0,"to":7},{"letter":"Z","from":8,"to":15}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 7 },
+			{ letter: 'R', from: 8, to: 15 },
+			{ letter: 'S', from: 0, to: 7 },
+			{ letter: 'Z', from: 8, to: 15 }
+		]
 	},
 	{
-		font: "Doom",
-		art: " _   ________ \n| | / /| ___ \\\n| |/ / | |_/ /\n|    \\ |    / \n| |\\  \\| |\\ \\ \n\\_| \\_/\\_| \\_|\n _____  ______\n/  ___||___  /\n\\ `--.    / / \n `--. \\  / /  \n/\\__/ /./ /___\n\\____/ \\_____/",
+		font: 'Doom',
+		art: ' _   ________ \n| | / /| ___ \\\n| |/ / | |_/ /\n|    \\ |    / \n| |\\  \\| |\\ \\ \n\\_| \\_/\\_| \\_|\n _____  ______\n/  ___||___  /\n\\ `--.    / / \n `--. \\  / /  \n/\\__/ /./ /___\n\\____/ \\_____/',
 		rowsPerHalf: 6,
-		colorRanges: [{"letter":"K","from":0,"to":6},{"letter":"R","from":7,"to":13},{"letter":"S","from":0,"to":6},{"letter":"Z","from":7,"to":13}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 6 },
+			{ letter: 'R', from: 7, to: 13 },
+			{ letter: 'S', from: 0, to: 6 },
+			{ letter: 'Z', from: 7, to: 13 }
+		]
 	},
 	{
-		font: "Big",
+		font: 'Big',
 		art: "  _  __    _____  \n | |/ /   |  __ \\ \n | ' /    | |__) |\n |  <     |  _  / \n | . \\    | | \\ \\ \n |_|\\_\\   |_|  \\_\\\n   _____   ______ \n  / ____| |___  / \n | (___      / /  \n  \\___ \\    / /   \n  ____) |  / /__  \n |_____/  /_____| ",
 		rowsPerHalf: 6,
-		colorRanges: [{"letter":"K","from":0,"to":8},{"letter":"R","from":9,"to":17},{"letter":"S","from":0,"to":8},{"letter":"Z","from":9,"to":17}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 8 },
+			{ letter: 'R', from: 9, to: 17 },
+			{ letter: 'S', from: 0, to: 8 },
+			{ letter: 'Z', from: 9, to: 17 }
+		]
 	},
 	{
-		font: "Standard",
+		font: 'Standard',
 		art: "  _  __   ____  \n | |/ /  |  _ \\ \n | ' /   | |_) |\n | . \\   |  _ < \n |_|\\_\\  |_| \\_\\\n  ____    _____ \n / ___|  |__  / \n \\___ \\    / /  \n  ___) |  / /_  \n |____/  /____| ",
 		rowsPerHalf: 5,
-		colorRanges: [{"letter":"K","from":0,"to":7},{"letter":"R","from":8,"to":15},{"letter":"S","from":0,"to":7},{"letter":"Z","from":8,"to":15}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 7 },
+			{ letter: 'R', from: 8, to: 15 },
+			{ letter: 'S', from: 0, to: 7 },
+			{ letter: 'Z', from: 8, to: 15 }
+		]
 	},
 	{
-		font: "Chunky",
-		art: " __  __   ______  \n|  |/  | |   __ \\ \n|     <  |      < \n|__|\\__| |___|__| \n _______  _______ \n|     __||__     |\n|__     ||     __|\n|_______||_______|",
+		font: 'Chunky',
+		art: ' __  __   ______  \n|  |/  | |   __ \\ \n|     <  |      < \n|__|\\__| |___|__| \n _______  _______ \n|     __||__     |\n|__     ||     __|\n|_______||_______|',
 		rowsPerHalf: 4,
-		colorRanges: [{"letter":"K","from":0,"to":8},{"letter":"R","from":9,"to":17},{"letter":"S","from":0,"to":8},{"letter":"Z","from":9,"to":17}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 8 },
+			{ letter: 'R', from: 9, to: 17 },
+			{ letter: 'S', from: 0, to: 8 },
+			{ letter: 'Z', from: 9, to: 17 }
+		]
 	},
 	{
-		font: "Ogre",
-		art: "          __  \n  /\\ /\\  /__\\ \n / //_/ / \\// \n/ __ \\ / _  \\ \n\\/  \\/ \\/ \\_/ \n __     _____ \n/ _\\   / _  / \n\\ \\    \\// /  \n_\\ \\    / //\\ \n\\__/   /____/ ",
+		font: 'Ogre',
+		art: '          __  \n  /\\ /\\  /__\\ \n / //_/ / \\// \n/ __ \\ / _  \\ \n\\/  \\/ \\/ \\_/ \n __     _____ \n/ _\\   / _  / \n\\ \\    \\// /  \n_\\ \\    / //\\ \n\\__/   /____/ ',
 		rowsPerHalf: 5,
-		colorRanges: [{"letter":"K","from":0,"to":6},{"letter":"R","from":7,"to":13},{"letter":"S","from":0,"to":6},{"letter":"Z","from":7,"to":13}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 6 },
+			{ letter: 'R', from: 7, to: 13 },
+			{ letter: 'S', from: 0, to: 6 },
+			{ letter: 'Z', from: 7, to: 13 }
+		]
 	},
 	{
-		font: "Slant",
-		art: "    __ __    ____ \n   / //_/   / __ \\\n  / ,<     / /_/ /\n / /| |   / _, _/ \n/_/ |_|  /_/ |_|  \n   _____  _____   \n  / ___/ /__  /   \n  \\__ \\    / /    \n ___/ /   / /__   \n/____/   /____/   ",
+		font: 'Slant',
+		art: '    __ __    ____ \n   / //_/   / __ \\\n  / ,<     / /_/ /\n / /| |   / _, _/ \n/_/ |_|  /_/ |_|  \n   _____  _____   \n  / ___/ /__  /   \n  \\__ \\    / /    \n ___/ /   / /__   \n/____/   /____/   ',
 		rowsPerHalf: 5,
-		colorRanges: [{"letter":"K","from":0,"to":8},{"letter":"R","from":9,"to":17},{"letter":"S","from":0,"to":8},{"letter":"Z","from":9,"to":17}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 8 },
+			{ letter: 'R', from: 9, to: 17 },
+			{ letter: 'S', from: 0, to: 8 },
+			{ letter: 'Z', from: 9, to: 17 }
+		]
 	},
 	{
-		font: "Block",
-		art: " _|    _|   _|_|_|    \n _|  _|     _|    _|  \n _|_|       _|_|_|    \n _|  _|     _|    _|  \n _|    _|   _|    _|  \n   _|_|_|   _|_|_|_|_|\n _|               _|  \n   _|_|         _|    \n       _|     _|      \n _|_|_|     _|_|_|_|_|",
+		font: 'Block',
+		art: ' _|    _|   _|_|_|    \n _|  _|     _|    _|  \n _|_|       _|_|_|    \n _|  _|     _|    _|  \n _|    _|   _|    _|  \n   _|_|_|   _|_|_|_|_|\n _|               _|  \n   _|_|         _|    \n       _|     _|      \n _|_|_|     _|_|_|_|_|',
 		rowsPerHalf: 5,
-		colorRanges: [{"letter":"K","from":0,"to":10},{"letter":"R","from":11,"to":21},{"letter":"S","from":0,"to":10},{"letter":"Z","from":11,"to":21}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 10 },
+			{ letter: 'R', from: 11, to: 21 },
+			{ letter: 'S', from: 0, to: 10 },
+			{ letter: 'Z', from: 11, to: 21 }
+		]
 	},
 	{
-		font: "Bulbhead",
-		art: " _  _  ____ \n( )/ )(  _ \\\n )  (  )   /\n(_)\\_)(_)\\_)\n ___   ____ \n/ __) (_   )\n\\__ \\  / /_ \n(___/ (____)",
+		font: 'Bulbhead',
+		art: ' _  _  ____ \n( )/ )(  _ \\\n )  (  )   /\n(_)\\_)(_)\\_)\n ___   ____ \n/ __) (_   )\n\\__ \\  / /_ \n(___/ (____)',
 		rowsPerHalf: 4,
-		colorRanges: [{"letter":"K","from":0,"to":5},{"letter":"R","from":6,"to":11},{"letter":"S","from":0,"to":5},{"letter":"Z","from":6,"to":11}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 5 },
+			{ letter: 'R', from: 6, to: 11 },
+			{ letter: 'S', from: 0, to: 5 },
+			{ letter: 'Z', from: 6, to: 11 }
+		]
 	},
 	{
-		font: "Modular",
-		art: " ___   _   ______   \n|   | | | |    _ |  \n|   |_| | |   | ||  \n|      _| |   |_||_ \n|     |_  |    __  |\n|    _  | |   |  | |\n|___| |_| |___|  |_|\n _______   _______  \n|       | |       | \n|  _____| |____   | \n| |_____   ____|  | \n|_____  | | ______| \n _____| | | |_____  \n|_______| |_______| ",
+		font: 'Modular',
+		art: ' ___   _   ______   \n|   | | | |    _ |  \n|   |_| | |   | ||  \n|      _| |   |_||_ \n|     |_  |    __  |\n|    _  | |   |  | |\n|___| |_| |___|  |_|\n _______   _______  \n|       | |       | \n|  _____| |____   | \n| |_____   ____|  | \n|_____  | | ______| \n _____| | | |_____  \n|_______| |_______| ',
 		rowsPerHalf: 7,
-		colorRanges: [{"letter":"K","from":0,"to":9},{"letter":"R","from":10,"to":19},{"letter":"S","from":0,"to":9},{"letter":"Z","from":10,"to":19}]
+		colorRanges: [
+			{ letter: 'K', from: 0, to: 9 },
+			{ letter: 'R', from: 10, to: 19 },
+			{ letter: 'S', from: 0, to: 9 },
+			{ letter: 'Z', from: 10, to: 19 }
+		]
 	}
 ];

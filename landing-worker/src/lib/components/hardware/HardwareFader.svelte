@@ -43,13 +43,29 @@
 		return v.toFixed(2);
 	}
 
-	let desc = $derived(description || (paramDescriptionKey(label.toUpperCase()) ? $t(paramDescriptionKey(label.toUpperCase())) : '') || '');
+	let desc = $derived(
+		description ||
+			(paramDescriptionKey(label.toUpperCase())
+				? $t(paramDescriptionKey(label.toUpperCase()))
+				: '') ||
+			''
+	);
 	let descPart = $derived(desc ? ` (${desc})` : '');
 	let unitPart = $derived(unit && unit !== 'ms' ? unit : '');
 	let tooltipText = $derived(
 		reset !== undefined
-			? $t('synthPanels.knob.faderHintReset', { label, descPart, value: formatDisplay(value), unit: unitPart })
-			: $t('synthPanels.knob.faderHint', { label, descPart, value: formatDisplay(value), unit: unitPart })
+			? $t('synthPanels.knob.faderHintReset', {
+					label,
+					descPart,
+					value: formatDisplay(value),
+					unit: unitPart
+				})
+			: $t('synthPanels.knob.faderHint', {
+					label,
+					descPart,
+					value: formatDisplay(value),
+					unit: unitPart
+				})
 	);
 
 	function handleWheel(e: WheelEvent) {
@@ -84,7 +100,10 @@
 	class="flex flex-col items-center select-none font-mono cursor-ns-resize group shrink-0 min-w-0 leading-none h-full justify-between py-0.5"
 	title={tooltipText}
 >
-	<span class="text-xs opacity-85 uppercase font-black block group-hover:text-white transition-colors leading-none">{label}</span>
+	<span
+		class="text-xs opacity-85 uppercase font-black block group-hover:text-white transition-colors leading-none"
+		>{label}</span
+	>
 
 	<div
 		bind:this={trackEl}
@@ -107,14 +126,24 @@
 			: 'border-white/30 hover:border-white/70'}"
 	>
 		<div class="w-0.5 h-full bg-white/20 rounded-full pointer-events-none"></div>
-		<div class="absolute bottom-0 left-0.5 right-0.5 rounded-xs pointer-events-none opacity-30" style="height: {pct * 100}%; background-color: {color};"></div>
 		<div
-			class="absolute w-3 h-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none {isDragging ? 'shadow-[0_0_8px_#fff] brightness-125' : ''}"
-			style="bottom: calc({pct * 100}% - 4px); background-color: {color}; box-shadow: {isDragging ? `0 0 8px ${color}` : `0 0 4px ${color}88`};"
+			class="absolute bottom-0 left-0.5 right-0.5 rounded-xs pointer-events-none opacity-30"
+			style="height: {pct * 100}%; background-color: {color};"
+		></div>
+		<div
+			class="absolute w-3 h-2 rounded-xs border border-white/80 shadow-sm flex items-center justify-center pointer-events-none {isDragging
+				? 'shadow-[0_0_8px_#fff] brightness-125'
+				: ''}"
+			style="bottom: calc({pct * 100}% - 4px); background-color: {color}; box-shadow: {isDragging
+				? `0 0 8px ${color}`
+				: `0 0 4px ${color}88`};"
 		>
 			<div class="w-1.5 h-0.5 bg-black/90 rounded-full"></div>
 		</div>
 	</div>
 
-	<span class="text-[10px] sm:text-xs font-black text-center truncate max-w-[42px] leading-none" style="color: {color}">{formatDisplay(value)}</span>
+	<span
+		class="text-[10px] sm:text-xs font-black text-center truncate max-w-[42px] leading-none"
+		style="color: {color}">{formatDisplay(value)}</span
+	>
 </div>

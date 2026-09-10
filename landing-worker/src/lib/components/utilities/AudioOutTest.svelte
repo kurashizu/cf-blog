@@ -49,14 +49,19 @@
 			await c.setSinkId(deviceId);
 			readInfo();
 		} catch (e) {
-			error = e instanceof Error ? tr('utilities.audioout.error.sinkSwitch', { message: e.message }) : tr('utilities.audioout.error.sinkSwitchGeneric');
+			error =
+				e instanceof Error
+					? tr('utilities.audioout.error.sinkSwitch', { message: e.message })
+					: tr('utilities.audioout.error.sinkSwitchGeneric');
 		}
 	}
 
 	function ensureContext(): AudioContext | null {
 		if (ctx) return ctx;
 		try {
-			const Klass = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+			const Klass =
+				window.AudioContext ??
+				(window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 			if (!Klass) {
 				error = tr('utilities.audioout.error.webAudioUnavailable');
 				return null;
@@ -81,15 +86,31 @@
 		const rows: { label: string; value: string }[] = [
 			{ label: tr('utilities.audioout.info.sampleRate'), value: `${ctx.sampleRate} Hz` },
 			{ label: tr('utilities.audioout.info.state'), value: ctx.state },
-			{ label: tr('utilities.audioout.info.channels'), value: tr('utilities.audioout.info.channels.value', { count: ctx.destination.channelCount, max: ctx.destination.maxChannelCount }) },
-			{ label: tr('utilities.audioout.info.baseLatency'), value: ctx.baseLatency === undefined ? tr('utilities.audioout.info.baseLatency.na') : tr('utilities.audioout.info.baseLatency.value', { ms: (ctx.baseLatency * 1000).toFixed(1) }) }
+			{
+				label: tr('utilities.audioout.info.channels'),
+				value: tr('utilities.audioout.info.channels.value', {
+					count: ctx.destination.channelCount,
+					max: ctx.destination.maxChannelCount
+				})
+			},
+			{
+				label: tr('utilities.audioout.info.baseLatency'),
+				value:
+					ctx.baseLatency === undefined
+						? tr('utilities.audioout.info.baseLatency.na')
+						: tr('utilities.audioout.info.baseLatency.value', {
+								ms: (ctx.baseLatency * 1000).toFixed(1)
+							})
+			}
 		];
 		// A flat 0 means "not reported" here, not a latency-free device — say so
 		// rather than printing a number no output could actually achieve.
 		const outLatency = (ctx as unknown as { outputLatency?: number }).outputLatency;
 		rows.push({
 			label: tr('utilities.audioout.info.outputLatency'),
-			value: !outLatency ? tr('utilities.audioout.info.outputLatency.notReported') : tr('utilities.audioout.info.baseLatency.value', { ms: (outLatency * 1000).toFixed(1) })
+			value: !outLatency
+				? tr('utilities.audioout.info.outputLatency.notReported')
+				: tr('utilities.audioout.info.baseLatency.value', { ms: (outLatency * 1000).toFixed(1) })
 		});
 		const sink = (ctx as unknown as { sinkId?: string }).sinkId;
 		rows.push({
@@ -238,12 +259,34 @@
 	});
 
 	const CHANNEL_TEST_DEFS = [
-		{ labelKey: 'utilities.audioout.channel.left.label', mode: 'left' as const, color: '#61afef', hintKey: 'utilities.audioout.channel.left.hint' },
-		{ labelKey: 'utilities.audioout.channel.right.label', mode: 'right' as const, color: '#e06c75', hintKey: 'utilities.audioout.channel.right.hint' },
-		{ labelKey: 'utilities.audioout.channel.both.label', mode: 'both' as const, color: '#98c379', hintKey: 'utilities.audioout.channel.both.hint' },
-		{ labelKey: 'utilities.audioout.channel.inverted.label', mode: 'inverted' as const, color: '#c678dd', hintKey: 'utilities.audioout.channel.inverted.hint' }
+		{
+			labelKey: 'utilities.audioout.channel.left.label',
+			mode: 'left' as const,
+			color: '#61afef',
+			hintKey: 'utilities.audioout.channel.left.hint'
+		},
+		{
+			labelKey: 'utilities.audioout.channel.right.label',
+			mode: 'right' as const,
+			color: '#e06c75',
+			hintKey: 'utilities.audioout.channel.right.hint'
+		},
+		{
+			labelKey: 'utilities.audioout.channel.both.label',
+			mode: 'both' as const,
+			color: '#98c379',
+			hintKey: 'utilities.audioout.channel.both.hint'
+		},
+		{
+			labelKey: 'utilities.audioout.channel.inverted.label',
+			mode: 'inverted' as const,
+			color: '#c678dd',
+			hintKey: 'utilities.audioout.channel.inverted.hint'
+		}
 	];
-	let CHANNEL_TESTS = $derived(CHANNEL_TEST_DEFS.map((c) => ({ ...c, label: $t(c.labelKey), hint: $t(c.hintKey) })));
+	let CHANNEL_TESTS = $derived(
+		CHANNEL_TEST_DEFS.map((c) => ({ ...c, label: $t(c.labelKey), hint: $t(c.hintKey) }))
+	);
 </script>
 
 <div class="space-y-3">
@@ -258,7 +301,8 @@
 	<div class="flex flex-wrap items-center gap-2">
 		{#each CHANNEL_TESTS as ct (ct.mode)}
 			<button
-				onclick={() => tone(ct.mode, $t('utilities.audioout.channel.toneRunning', { label: ct.label }))}
+				onclick={() =>
+					tone(ct.mode, $t('utilities.audioout.channel.toneRunning', { label: ct.label }))}
 				title={ct.hint}
 				class="press px-2.5 py-1.5 border rounded-xs text-xs font-bold cursor-pointer transition-colors hover:bg-white/10"
 				style="border-color: {ct.color}66; color: {ct.color}"
@@ -291,7 +335,9 @@
 	</div>
 
 	<div class="flex flex-wrap items-center gap-2">
-		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.audioout.output.label')}</span>
+		<span class="text-[10px] font-mono font-bold text-white/45 uppercase"
+			>{$t('utilities.audioout.output.label')}</span
+		>
 		<Dropdown
 			bind:value={selectedOutput}
 			onchange={applySink}
@@ -303,12 +349,25 @@
 				? $t('utilities.audioout.output.title.supported')
 				: $t('utilities.audioout.output.title.unsupported')}
 			options={[
-				{ value: '', label: $t('utilities.audioout.output.systemDefault'), note: outputs.length ? $t('utilities.audioout.output.available', { count: outputs.length }) : undefined },
-				...outputs.map((d) => ({ value: d.deviceId, label: d.label || $t('utilities.audioout.output.deviceFallback', { id: d.deviceId.slice(0, 6) }) }))
+				{
+					value: '',
+					label: $t('utilities.audioout.output.systemDefault'),
+					note: outputs.length
+						? $t('utilities.audioout.output.available', { count: outputs.length })
+						: undefined
+				},
+				...outputs.map((d) => ({
+					value: d.deviceId,
+					label:
+						d.label ||
+						$t('utilities.audioout.output.deviceFallback', { id: d.deviceId.slice(0, 6) })
+				}))
 			]}
 		/>
 		{#if !sinkSupported}
-			<span class="text-[11px] font-mono text-[#e5c07b]">{$t('utilities.audioout.output.unsupportedNote')}</span>
+			<span class="text-[11px] font-mono text-[#e5c07b]"
+				>{$t('utilities.audioout.output.unsupportedNote')}</span
+			>
 		{:else if labelsHidden}
 			<span class="text-[11px] font-mono text-white/40">
 				{$t('utilities.audioout.output.labelsHiddenNote')}
@@ -316,8 +375,12 @@
 		{/if}
 	</div>
 
-	<div class="flex flex-wrap items-center gap-3 border border-white/15 bg-black/40 rounded-xs px-2.5 py-2">
-		<span class="text-[10px] font-mono font-bold text-white/45 uppercase">{$t('utilities.audioout.level.label')}</span>
+	<div
+		class="flex flex-wrap items-center gap-3 border border-white/15 bg-black/40 rounded-xs px-2.5 py-2"
+	>
+		<span class="text-[10px] font-mono font-bold text-white/45 uppercase"
+			>{$t('utilities.audioout.level.label')}</span
+		>
 		<div class="flex-1 min-w-[120px]">
 			<HorizontalHardwareFader
 				value={gain}
@@ -330,17 +393,28 @@
 			/>
 		</div>
 		<span class="text-xs font-mono text-[#98c379] w-12 text-right">{Math.round(gain * 100)}%</span>
-		<span class="text-xs font-mono transition-colors min-w-[160px] flex items-center gap-1.5 {running ? 'text-[#e5c07b]' : 'text-white/35'}">
-			{#if running}<span class="w-1.5 h-1.5 rounded-full bg-[#e5c07b] blink-live shrink-0"></span>{/if}
-			{running ?? $t('utilities.audioout.level.idle')}{sweepHz ? $t('utilities.audioout.level.hzSuffix', { hz: sweepHz }) : ''}
+		<span
+			class="text-xs font-mono transition-colors min-w-[160px] flex items-center gap-1.5 {running
+				? 'text-[#e5c07b]'
+				: 'text-white/35'}"
+		>
+			{#if running}<span class="w-1.5 h-1.5 rounded-full bg-[#e5c07b] blink-live shrink-0"
+				></span>{/if}
+			{running ?? $t('utilities.audioout.level.idle')}{sweepHz
+				? $t('utilities.audioout.level.hzSuffix', { hz: sweepHz })
+				: ''}
 		</span>
 	</div>
 
 	{#if info.length}
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 			{#each info as row (row.label)}
-				<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2">
-					<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{row.label}</span>
+				<div
+					class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2"
+				>
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0"
+						>{row.label}</span
+					>
 					<span class="text-xs font-mono font-bold text-[#d8dee9] truncate">{row.value}</span>
 				</div>
 			{/each}

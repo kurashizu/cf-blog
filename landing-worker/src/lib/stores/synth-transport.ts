@@ -150,6 +150,8 @@ export function stepBar(direction: 1 | -1): void {
 	const barSteps = (METER_SPECS[get(timeMeter)] || METER_SPECS['4/4']).stepsPerBar || 96;
 	const cur = modularSynth.getCurrentStep() || 0;
 	const next =
-		direction === -1 ? Math.max(0, cur - barSteps) : Math.min(get(totalPatternSteps) - 1, cur + barSteps);
+		direction === -1
+			? Math.max(0, cur - barSteps)
+			: Math.min(get(totalPatternSteps) - 1, cur + barSteps);
 	setPlaybackAndCursor(next);
 }

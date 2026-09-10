@@ -21,48 +21,68 @@ const px = (size, line) => [`${size / 12}rem`, { lineHeight: `${line / 12}rem` }
    and made every paragraph look like it had come apart. */
 
 export default {
-  content: [
-    "./src/**/*.{html,js,ts,svelte}",
-  ],
-  darkMode: 'class',
-  theme: {
-    // Replaces the scale rather than extending it: every text-* class in the
-    // codebase has to resolve to a multiple of 12, including the ones written
-    // before this change.
-    /* Body text is 12px -- the face's own design size, and the only one it is
+	content: ['./src/**/*.{html,js,ts,svelte}'],
+	darkMode: 'class',
+	theme: {
+		// Replaces the scale rather than extending it: every text-* class in the
+		// codebase has to resolve to a multiple of 12, including the ones written
+		// before this change.
+		/* Body text is 12px -- the face's own design size, and the only one it is
        exactly sharp at.
        It is genuinely smaller than what it replaced: Jelly's cap-height here is
        8px against the 10.2px the site had in 14px JetBrains Mono. Going up to
        24px was tried and does not fit -- this layout is built for small type,
        and at 24px the card tags, the sidebar and the panel labels all clipped.
        So the size stays and headings carry the contrast instead. */
-    fontSize: {
-      xs: px(12, 18),
-      sm: px(12, 18),
-      base: px(12, 18),
-      lg: px(24, 36),
-      xl: px(24, 36),
-      '2xl': px(24, 36),
-      '3xl': px(36, 54),
-      '4xl': px(36, 54),
-      '5xl': px(48, 72),
-      '6xl': px(48, 72),
-    },
-    extend: {
-      fontFamily: {
-        // The pixel face first, with the old stack kept behind it: a glyph
-        // Jelly does not carry (and the CJK ranges it is not loaded for)
-        // still has somewhere to fall back to.
-        mono: ['Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
-        // Inter Tight and Space Grotesk are gone from these stacks. They were
-        // never reached -- Jelly Pixel wins every latin glyph ahead of them --
-        // but naming them was what kept a render-blocking request for three
-        // families in the document head. The system stack behind Jelly covers
-        // the same job without a network round trip.
-        sans: ['Jelly Pixel', 'KRSZ Box', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
-        display: ['Jelly Pixel', 'KRSZ Box', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
-      },
-    },
-  },
-  plugins: [],
-}
+		fontSize: {
+			xs: px(12, 18),
+			sm: px(12, 18),
+			base: px(12, 18),
+			lg: px(24, 36),
+			xl: px(24, 36),
+			'2xl': px(24, 36),
+			'3xl': px(36, 54),
+			'4xl': px(36, 54),
+			'5xl': px(48, 72),
+			'6xl': px(48, 72)
+		},
+		extend: {
+			fontFamily: {
+				// The pixel face first, with the old stack kept behind it: a glyph
+				// Jelly does not carry (and the CJK ranges it is not loaded for)
+				// still has somewhere to fall back to.
+				mono: [
+					'Jelly Pixel',
+					'KRSZ Box',
+					'JetBrains Mono',
+					'Menlo',
+					'Monaco',
+					'Courier New',
+					'monospace'
+				],
+				// Inter Tight and Space Grotesk are gone from these stacks. They were
+				// never reached -- Jelly Pixel wins every latin glyph ahead of them --
+				// but naming them was what kept a render-blocking request for three
+				// families in the document head. The system stack behind Jelly covers
+				// the same job without a network round trip.
+				sans: [
+					'Jelly Pixel',
+					'KRSZ Box',
+					'-apple-system',
+					'BlinkMacSystemFont',
+					'system-ui',
+					'sans-serif'
+				],
+				display: [
+					'Jelly Pixel',
+					'KRSZ Box',
+					'-apple-system',
+					'BlinkMacSystemFont',
+					'system-ui',
+					'sans-serif'
+				]
+			}
+		}
+	},
+	plugins: []
+};

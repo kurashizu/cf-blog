@@ -89,7 +89,6 @@ export function toggleRollFullscreen(): void {
 	rollFullscreen.update((v) => !v);
 }
 
-
 /* A track that has never been switched follows the preference; one that has
    keeps its own choice, so the default cannot overrule a deliberate setting. */
 export const advancedMode = derived(
@@ -98,7 +97,10 @@ export const advancedMode = derived(
 );
 
 /** Which view owns the lower panel while the active track is in ADV. */
-export const centreView = derived(activeTrackRow, ($row): CentreView => $row?.advancedView ?? loadLastAdvView());
+export const centreView = derived(
+	activeTrackRow,
+	($row): CentreView => $row?.advancedView ?? loadLastAdvView()
+);
 
 /** True when racks 1-7 should not be rendered: either mode takes the panel. */
 export const panelIsExclusive = derived(

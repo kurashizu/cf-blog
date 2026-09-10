@@ -224,17 +224,30 @@
 		if (e.key === 'Escape' && open) close();
 	}
 
-
-	const rowBase = 'press w-full text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer transition-colors';
+	const rowBase =
+		'press w-full text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer transition-colors';
 	const rowIdle = 'text-white/80 hover:bg-white/10';
 	const rowOn = 'text-white bg-white/10 font-bold';
-	const actionRow = 'press w-full text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer font-bold transition-colors';
+	const actionRow =
+		'press w-full text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer font-bold transition-colors';
 </script>
 
 <svelte:window onkeydown={onWindowKeydown} />
 
-<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,application/json" class="hidden" />
-<input bind:this={kitInput} type="file" onchange={onKitImportChange} accept=".json,application/json" class="hidden" />
+<input
+	bind:this={fileInput}
+	type="file"
+	onchange={onImportChange}
+	accept=".json,application/json"
+	class="hidden"
+/>
+<input
+	bind:this={kitInput}
+	type="file"
+	onchange={onKitImportChange}
+	accept=".json,application/json"
+	class="hidden"
+/>
 
 {#snippet flyout(children: import('svelte').Snippet)}
 	<!-- The right-hand pane. Not a submenu any more: a cascading menu meant one
@@ -246,7 +259,15 @@
 	</div>
 {/snippet}
 
-{#snippet editRow(list: 'preset' | 'kit', i: number, name: string, isOn: boolean, onPick: () => void, onDelete: () => void, pickTitle: string)}
+{#snippet editRow(
+	list: 'preset' | 'kit',
+	i: number,
+	name: string,
+	isOn: boolean,
+	onPick: () => void,
+	onDelete: () => void,
+	pickTitle: string
+)}
 	<div class="relative flex items-center transition-colors {isOn ? rowOn : rowIdle}">
 		{#if editing && editing.list === list && editing.i === i}
 			<span class="shrink-0 pl-2.5 text-[#56b6c2]">✎</span>
@@ -262,12 +283,26 @@
 				aria-label={$t('synth.preset.nameAria')}
 			/>
 		{:else}
-			<button onclick={onPick} class="press flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer" title={pickTitle}>
+			<button
+				onclick={onPick}
+				class="press flex-1 min-w-0 text-left px-2.5 py-1.5 flex items-center gap-2 cursor-pointer"
+				title={pickTitle}
+			>
 				<span class="shrink-0 {isOn ? 'text-[#98c379]' : 'text-white/25'}">{isOn ? '●' : '○'}</span>
 				<span class="truncate">{name}</span>
 			</button>
-			<button onclick={() => startRename(list, i)} class="press shrink-0 px-1.5 py-1.5 text-white/30 hover:text-[#56b6c2] cursor-pointer transition-colors" title={$t('synth.preset.renameHint', { name })} aria-label={$t('synth.preset.renameAria', { name })}>✎</button>
-			<button onclick={onDelete} class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/30 hover:text-[#e06c75] cursor-pointer transition-colors" title={$t('synth.preset.removeHint', { name })} aria-label={$t('synth.preset.removeAria', { name })}>✕</button>
+			<button
+				onclick={() => startRename(list, i)}
+				class="press shrink-0 px-1.5 py-1.5 text-white/30 hover:text-[#56b6c2] cursor-pointer transition-colors"
+				title={$t('synth.preset.renameHint', { name })}
+				aria-label={$t('synth.preset.renameAria', { name })}>✎</button
+			>
+			<button
+				onclick={onDelete}
+				class="press shrink-0 pl-1.5 pr-2.5 py-1.5 text-white/30 hover:text-[#e06c75] cursor-pointer transition-colors"
+				title={$t('synth.preset.removeHint', { name })}
+				aria-label={$t('synth.preset.removeAria', { name })}>✕</button
+			>
 		{/if}
 	</div>
 {/snippet}
@@ -304,13 +339,21 @@
 	<div class="relative">
 		<button
 			onclick={toggle}
-			title={$t('synth.preset.pickHint', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower'), name: $activeKitName ?? (PRESET_TOOLTIPS[current?.name] || current?.name) })}
+			title={$t('synth.preset.pickHint', {
+				target: percussion
+					? $t('synth.preset.targetKeyLower')
+					: $t('synth.preset.targetTrackLower'),
+				name: $activeKitName ?? (PRESET_TOOLTIPS[current?.name] || current?.name)
+			})}
 			class="press px-1.5 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 {open
 				? 'border-[#56b6c2] bg-[#56b6c2] text-black'
 				: 'border-white/20 hover:border-[#56b6c2] bg-white/5 hover:bg-white/15 text-white hover:text-[#56b6c2]'}"
 		>
 			<span>{triggerName}</span>
-			<span class="text-[9px] leading-none inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
+			<span
+				class="text-[9px] leading-none inline-block transition-transform duration-150"
+				style={open ? 'transform: rotate(180deg)' : undefined}>▼</span
+			>
 		</button>
 
 		{#if open}
@@ -328,57 +371,88 @@
 				style="max-height: var(--krsz-menu-max, 60vh)"
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
-			<!-- Creating comes before browsing: you either start from nothing or
+				<!-- Creating comes before browsing: you either start from nothing or
 			     pick something that exists, and that choice is the first thing
 			     the menu should offer. The two NEWs are one group because the
 			     synth has two instruments in it -- a subtractive voice on racks
 			     1-7, and a signal path in the patch bay. -->
-			<div class="shrink-0 flex items-center gap-1 px-1 py-1 border-b border-white/10">
-				<button onclick={startNew} class="press flex-1 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 border border-[#e5c07b]/40 text-[#e5c07b] hover:bg-[#e5c07b]/20" title={$t('synth.preset.newHint')}>
-					<span class="shrink-0">✧</span>
-					<span class="truncate">{$t('synth.preset.newLabel')}</span>
-				</button>
-				<button onclick={startNewAdvanced} class="press flex-1 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 border border-[#61afef]/40 text-[#61afef] hover:bg-[#61afef]/20" title={$t('synth.preset.newAdvancedHint')}>
-					<span class="shrink-0">◆</span>
-					<span class="truncate">{$t('synth.preset.newAdvancedLabel')}</span>
-				</button>
-			</div>
-
-			<div class="flex min-h-0 flex-1">
-			<div bind:this={listEl} class="w-[136px] shrink-0 overflow-y-auto custom-scrollbar py-1 border-r border-white/10">
-				{#each SECTIONS as sec (sec.id)}
-					{@const isOpen = section === sec.id}
-					{@const count = sec.id === 'MINE' ? $userPresets.length + $userKits.length : sec.id === 'DRUM' ? BUILTIN_KITS.length : SOUND_PRESETS.filter((p) => p.category === sec.id).length}
+				<div class="shrink-0 flex items-center gap-1 px-1 py-1 border-b border-white/10">
 					<button
-						onclick={() => (section = sec.id)}
-						onmouseenter={() => (section = sec.id)}
-						class="press w-full px-2 py-1 cursor-pointer transition-colors flex items-center justify-between gap-1 border-l-2 {isOpen
-							? 'border-[#56b6c2] bg-[#56b6c2]/15 text-[#56b6c2] font-black'
-							: 'border-transparent text-white/60 hover:bg-white/5 hover:text-white font-bold'}"
-						title={sec.hint}
+						onclick={startNew}
+						class="press flex-1 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 border border-[#e5c07b]/40 text-[#e5c07b] hover:bg-[#e5c07b]/20"
+						title={$t('synth.preset.newHint')}
 					>
-						<span class="truncate">{sec.label}</span>
-						<span class="text-[9px] shrink-0 {isOpen ? 'text-[#56b6c2]/60' : 'text-white/30'}">{count}</span>
+						<span class="shrink-0">✧</span>
+						<span class="truncate">{$t('synth.preset.newLabel')}</span>
 					</button>
-				{/each}
-			</div>
+					<button
+						onclick={startNewAdvanced}
+						class="press flex-1 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 border border-[#61afef]/40 text-[#61afef] hover:bg-[#61afef]/20"
+						title={$t('synth.preset.newAdvancedHint')}
+					>
+						<span class="shrink-0">◆</span>
+						<span class="truncate">{$t('synth.preset.newAdvancedLabel')}</span>
+					</button>
+				</div>
 
-			<!-- The pane for the selected tab, a sibling of the strip rather than
+				<div class="flex min-h-0 flex-1">
+					<div
+						bind:this={listEl}
+						class="w-[136px] shrink-0 overflow-y-auto custom-scrollbar py-1 border-r border-white/10"
+					>
+						{#each SECTIONS as sec (sec.id)}
+							{@const isOpen = section === sec.id}
+							{@const count =
+								sec.id === 'MINE'
+									? $userPresets.length + $userKits.length
+									: sec.id === 'DRUM'
+										? BUILTIN_KITS.length
+										: SOUND_PRESETS.filter((p) => p.category === sec.id).length}
+							<button
+								onclick={() => (section = sec.id)}
+								onmouseenter={() => (section = sec.id)}
+								class="press w-full px-2 py-1 cursor-pointer transition-colors flex items-center justify-between gap-1 border-l-2 {isOpen
+									? 'border-[#56b6c2] bg-[#56b6c2]/15 text-[#56b6c2] font-black'
+									: 'border-transparent text-white/60 hover:bg-white/5 hover:text-white font-bold'}"
+								title={sec.hint}
+							>
+								<span class="truncate">{sec.label}</span>
+								<span class="text-[9px] shrink-0 {isOpen ? 'text-[#56b6c2]/60' : 'text-white/30'}"
+									>{count}</span
+								>
+							</button>
+						{/each}
+					</div>
+
+					<!-- The pane for the selected tab, a sibling of the strip rather than
 			     a child of it: one container per level, side by side. -->
-			{#each SECTIONS as sec (sec.id)}
-				{#if section === sec.id}
+					{#each SECTIONS as sec (sec.id)}
+						{#if section === sec.id}
 							{#if sec.id !== 'DRUM' && sec.id !== 'MINE'}
 								{@render flyout(presetList)}
 								{#snippet presetList()}
 									{#each SOUND_PRESETS as p, idx (p.name)}
 										{#if p.category === sec.id}
-											<button onclick={() => pick(idx)} class="{rowBase} {$soundPresetIdx === idx ? rowOn : rowIdle}" title={PRESET_TOOLTIPS[p.name] || p.name}>
-												<span class="shrink-0 {$soundPresetIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$soundPresetIdx === idx ? '●' : '○'}</span>
+											<button
+												onclick={() => pick(idx)}
+												class="{rowBase} {$soundPresetIdx === idx ? rowOn : rowIdle}"
+												title={PRESET_TOOLTIPS[p.name] || p.name}
+											>
+												<span
+													class="shrink-0 {$soundPresetIdx === idx
+														? 'text-[#98c379]'
+														: 'text-white/25'}">{$soundPresetIdx === idx ? '●' : '○'}</span
+												>
 												<span class="truncate">{p.name}</span>
 												<!-- Says which of the synth's two instruments this is, since the
 												     patch bay only sounds in ADV and picking one switches the mode. -->
 												{#if p.preset.rackChain?.length}
-													<span class="shrink-0 ml-auto text-[8px] font-black tracking-wide {$soundPresetIdx === idx ? 'text-black/60' : 'text-[#61afef]/70'}">ADV</span>
+													<span
+														class="shrink-0 ml-auto text-[8px] font-black tracking-wide {$soundPresetIdx ===
+														idx
+															? 'text-black/60'
+															: 'text-[#61afef]/70'}">ADV</span
+													>
 												{/if}
 											</button>
 										{/if}
@@ -387,37 +461,88 @@
 							{:else if sec.id === 'DRUM'}
 								{@render flyout(kitList)}
 								{#snippet kitList()}
-									<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/40 select-none">{$t('synth.preset.builtInLabel')}</div>
+									<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/40 select-none">
+										{$t('synth.preset.builtInLabel')}
+									</div>
 									{#each BUILTIN_KITS as kit (kit.name)}
-										<button onclick={() => pickKit(kit)} class="{rowBase} {rowIdle}" title={$t('synth.preset.loadKitHint', { name: kit.name, count: Object.keys(kit.keys).length })}>
+										<button
+											onclick={() => pickKit(kit)}
+											class="{rowBase} {rowIdle}"
+											title={$t('synth.preset.loadKitHint', {
+												name: kit.name,
+												count: Object.keys(kit.keys).length
+											})}
+										>
 											<span class="shrink-0 text-white/25">○</span>
 											<span class="truncate">{kit.name}</span>
 											<!-- Says the kit is built in the patch bay, the same badge a patch
 											     carries: picking it switches the track into ADV. -->
 											{#if Object.values(kit.keys).some((k) => (k as { rackGraph?: { nodes?: unknown[] } }).rackGraph?.nodes?.length)}
-												<span class="shrink-0 ml-auto text-[8px] font-black tracking-wide text-[#61afef]/70">ADV</span>
-												<span class="text-[10px] text-white/30">{Object.keys(kit.keys).length} keys</span>
+												<span
+													class="shrink-0 ml-auto text-[8px] font-black tracking-wide text-[#61afef]/70"
+													>ADV</span
+												>
+												<span class="text-[10px] text-white/30"
+													>{Object.keys(kit.keys).length} keys</span
+												>
 											{:else}
-												<span class="ml-auto text-[10px] text-white/30">{Object.keys(kit.keys).length} keys</span>
+												<span class="ml-auto text-[10px] text-white/30"
+													>{Object.keys(kit.keys).length} keys</span
+												>
 											{/if}
 										</button>
 									{/each}
 									{#if $userKits.length}
-										<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none">{$t('synth.preset.myKitsLabel')}</div>
+										<div
+											class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none"
+										>
+											{$t('synth.preset.myKitsLabel')}
+										</div>
 										{#each $userKits as kit, i (i)}
-											{@render editRow('kit', i, kit.name, false, () => pickKit(kit), () => deleteUserKit(i), $t('synth.preset.loadKitShortHint', { name: kit.name, count: Object.keys(kit.keys).length }))}
+											{@render editRow(
+												'kit',
+												i,
+												kit.name,
+												false,
+												() => pickKit(kit),
+												() => deleteUserKit(i),
+												$t('synth.preset.loadKitShortHint', {
+													name: kit.name,
+													count: Object.keys(kit.keys).length
+												})
+											)}
 										{/each}
 									{/if}
 									<div class="border-t border-white/10 mt-1 pt-1">
-										<button onclick={saveKit} class="{actionRow} {percussion ? 'text-[#98c379] hover:bg-[#98c379]/20' : 'text-white/30 cursor-not-allowed'}" title={percussion ? $t('synth.preset.saveKitOnHint') : $t('synth.preset.saveKitOffHint')}>
+										<button
+											onclick={saveKit}
+											class="{actionRow} {percussion
+												? 'text-[#98c379] hover:bg-[#98c379]/20'
+												: 'text-white/30 cursor-not-allowed'}"
+											title={percussion
+												? $t('synth.preset.saveKitOnHint')
+												: $t('synth.preset.saveKitOffHint')}
+										>
 											<span class="shrink-0">＋</span>
 											<span>{$t('synth.preset.saveTrackAsKit')}</span>
 										</button>
-										<button onclick={importKit} class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importKitHint')}>
+										<button
+											onclick={importKit}
+											class="{actionRow} text-[#56b6c2] hover:bg-[#56b6c2]/20"
+											title={$t('synth.preset.importKitHint')}
+										>
 											<span class="shrink-0">▲</span>
 											<span>{$t('synth.preset.importKit')}</span>
 										</button>
-										<button onclick={exportKit} class="{actionRow} {percussion ? 'text-[#56b6c2] hover:bg-[#56b6c2]/20' : 'text-white/30 cursor-not-allowed'}" title={percussion ? $t('synth.preset.exportKitOnHint') : $t('synth.preset.saveKitOffHint')}>
+										<button
+											onclick={exportKit}
+											class="{actionRow} {percussion
+												? 'text-[#56b6c2] hover:bg-[#56b6c2]/20'
+												: 'text-white/30 cursor-not-allowed'}"
+											title={percussion
+												? $t('synth.preset.exportKitOnHint')
+												: $t('synth.preset.saveKitOffHint')}
+										>
 											<span class="shrink-0">▼</span>
 											<span>{$t('synth.preset.exportKit')}</span>
 										</button>
@@ -427,44 +552,106 @@
 								{@render flyout(mineList)}
 								{#snippet mineList()}
 									{#if $userPresets.length === 0 && $userKits.length === 0}
-										<div class="px-2.5 py-1.5 text-[10px] text-white/30 select-none max-w-[240px]">{$t('synth.preset.noneYet', { target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower') })}</div>
+										<div class="px-2.5 py-1.5 text-[10px] text-white/30 select-none max-w-[240px]">
+											{$t('synth.preset.noneYet', {
+												target: percussion
+													? $t('synth.preset.targetKeyLower')
+													: $t('synth.preset.targetTrackLower')
+											})}
+										</div>
 									{/if}
 									{#if $userPresets.length}
-										<div class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/40 select-none">{$t('synth.preset.presetsLabel')}</div>
+										<div
+											class="px-2.5 pt-0.5 pb-0.5 text-[10px] font-bold text-white/40 select-none"
+										>
+											{$t('synth.preset.presetsLabel')}
+										</div>
 										{#each $userPresets as p, i (i)}
 											{@const idx = SOUND_PRESETS.length + i}
-											{@render editRow('preset', i, p.name, $soundPresetIdx === idx, () => pick(idx), () => deleteUserPreset(i), $t('synth.preset.loadPresetHint', { name: p.name, target: percussion ? $t('synth.preset.targetKeyLower') : $t('synth.preset.targetTrackLower') }))}
+											{@render editRow(
+												'preset',
+												i,
+												p.name,
+												$soundPresetIdx === idx,
+												() => pick(idx),
+												() => deleteUserPreset(i),
+												$t('synth.preset.loadPresetHint', {
+													name: p.name,
+													target: percussion
+														? $t('synth.preset.targetKeyLower')
+														: $t('synth.preset.targetTrackLower')
+												})
+											)}
 										{/each}
 									{/if}
 									{#if $userKits.length}
-										<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 select-none {$userPresets.length ? 'border-t border-white/10 mt-1' : ''}">{$t('synth.preset.kitsLabel')}</div>
+										<div
+											class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 select-none {$userPresets.length
+												? 'border-t border-white/10 mt-1'
+												: ''}"
+										>
+											{$t('synth.preset.kitsLabel')}
+										</div>
 										{#each $userKits as kit, i (i)}
-											{@render editRow('kit', i, kit.name, false, () => pickKit(kit), () => deleteUserKit(i), $t('synth.preset.loadKitShortHint', { name: kit.name, count: Object.keys(kit.keys).length }))}
+											{@render editRow(
+												'kit',
+												i,
+												kit.name,
+												false,
+												() => pickKit(kit),
+												() => deleteUserKit(i),
+												$t('synth.preset.loadKitShortHint', {
+													name: kit.name,
+													count: Object.keys(kit.keys).length
+												})
+											)}
 										{/each}
 									{/if}
 								{/snippet}
 							{/if}
-				{/if}
-			{/each}
-			{#if !section}
-				<div class="flex-1 min-h-0 flex items-center justify-center px-4 py-6 text-[10px] text-white/30 text-center">
-					{$t('synth.preset.pickCategoryHint')}
+						{/if}
+					{/each}
+					{#if !section}
+						<div
+							class="flex-1 min-h-0 flex items-center justify-center px-4 py-6 text-[10px] text-white/30 text-center"
+						>
+							{$t('synth.preset.pickCategoryHint')}
+						</div>
+					{/if}
 				</div>
-			{/if}
-			</div>
 
 				<!-- These act on what is loaded now, not on the library, so they
 				     sit apart from the browsing above them. -->
 				<div class="border-t border-white/10 shrink-0 flex items-center gap-1 px-1 py-1">
-					<button onclick={save} class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#98c379] hover:bg-[#98c379]/20" title={$t('synth.preset.saveActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
+					<button
+						onclick={save}
+						class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#98c379] hover:bg-[#98c379]/20"
+						title={$t('synth.preset.saveActiveHint', {
+							targetPossessive: percussion
+								? $t('synth.preset.targetKeyPossessive')
+								: $t('synth.preset.targetTrackPossessive')
+						})}
+					>
 						<span class="shrink-0">＋</span>
 						<span>{$t('synth.preset.saveShort')}</span>
 					</button>
-					<button onclick={importPreset} class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.importFileHint')}>
+					<button
+						onclick={importPreset}
+						class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#56b6c2] hover:bg-[#56b6c2]/20"
+						title={$t('synth.preset.importFileHint')}
+					>
 						<span class="shrink-0">▲</span>
 						<span>{$t('synth.preset.importShort')}</span>
 					</button>
-					<button onclick={exportPreset} class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#56b6c2] hover:bg-[#56b6c2]/20" title={$t('synth.preset.exportActiveHint', { targetPossessive: percussion ? $t('synth.preset.targetKeyPossessive') : $t('synth.preset.targetTrackPossessive') })}>
+					<button
+						onclick={exportPreset}
+						class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#56b6c2] hover:bg-[#56b6c2]/20"
+						title={$t('synth.preset.exportActiveHint', {
+							targetPossessive: percussion
+								? $t('synth.preset.targetKeyPossessive')
+								: $t('synth.preset.targetTrackPossessive')
+						})}
+					>
 						<span class="shrink-0">▼</span>
 						<span>{$t('synth.preset.exportShort')}</span>
 					</button>
@@ -485,12 +672,15 @@
 			? 'border-[#c678dd] bg-[#c678dd] text-black font-black shadow-[0_0_6px_rgba(198,120,221,0.5)]'
 			: 'border-white/20 text-white/60 hover:text-white hover:border-[#c678dd]/60'}"
 		title={percussion
-			? $t('synth.preset.percussionOnHint', { track: $activeTrackRow?.name ?? $t('synth.preset.thisTrack') })
-			: $t('synth.preset.percussionOffHint', { track: $activeTrackRow?.name ?? $t('synth.preset.theActiveTrack') })}
+			? $t('synth.preset.percussionOnHint', {
+					track: $activeTrackRow?.name ?? $t('synth.preset.thisTrack')
+				})
+			: $t('synth.preset.percussionOffHint', {
+					track: $activeTrackRow?.name ?? $t('synth.preset.theActiveTrack')
+				})}
 	>
 		<!-- K.MAP, not PERC: the mode is a key map -- every key its own sound --
 		     and it is used for far more than percussion. -->
 		K.MAP
 	</button>
-
 </div>

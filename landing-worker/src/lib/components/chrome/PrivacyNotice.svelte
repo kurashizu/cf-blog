@@ -33,20 +33,38 @@
 		onclick={(e) => e.stopPropagation()}
 		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
-		<BoxHeader title="PRIVACY_NOTICE // KRSZ.IN" short="PRIVACY" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm" style="color: {themeStyles.cursorColor}">
-			<button onclick={onClose} class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors">[ Esc ]</button>
+		<BoxHeader
+			title="PRIVACY_NOTICE // KRSZ.IN"
+			short="PRIVACY"
+			class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm"
+			style="color: {themeStyles.cursorColor}"
+		>
+			<button
+				onclick={onClose}
+				class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors"
+				>[ Esc ]</button
+			>
 		</BoxHeader>
 
-		<div class="p-3 sm:p-4 space-y-4 text-xs sm:text-sm max-h-[75vh] overflow-y-auto custom-scrollbar">
+		<div
+			class="p-3 sm:p-4 space-y-4 text-xs sm:text-sm max-h-[75vh] overflow-y-auto custom-scrollbar"
+		>
 			<p class="text-white/45 text-[11px]">{$t('chrome.privacy.scope')}</p>
 
 			<section class="space-y-1.5">
-				<h2 class="text-[11px] sm:text-xs font-black tracking-wide" style="color: {themeStyles.cursorColor}">{$t('chrome.privacy.section1Title')}</h2>
+				<h2
+					class="text-[11px] sm:text-xs font-black tracking-wide"
+					style="color: {themeStyles.cursorColor}"
+				>
+					{$t('chrome.privacy.section1Title')}
+				</h2>
 				<p class="text-white/70 leading-relaxed">{$t('chrome.privacy.section1Body')}</p>
 			</section>
 
 			<section class="border border-[#e06c75]/40 bg-[#e06c75]/10 rounded-xs p-2.5 space-y-1.5">
-				<h2 class="text-[11px] sm:text-xs font-black tracking-wide text-[#e06c75]">{$t('chrome.privacy.section2Title')}</h2>
+				<h2 class="text-[11px] sm:text-xs font-black tracking-wide text-[#e06c75]">
+					{$t('chrome.privacy.section2Title')}
+				</h2>
 				<p class="text-[#e06c75]/90 leading-relaxed">{$t('chrome.privacy.section2Intro')}</p>
 				<ul class="space-y-1 pl-3 text-[#e06c75]/90 leading-relaxed list-['·_']">
 					<li>{$t('chrome.privacy.section2Guestbook')}</li>
@@ -57,16 +75,28 @@
 			</section>
 
 			<section class="space-y-1.5">
-				<h2 class="text-[11px] sm:text-xs font-black tracking-wide" style="color: {themeStyles.cursorColor}">{$t('chrome.privacy.section3Title')}</h2>
+				<h2
+					class="text-[11px] sm:text-xs font-black tracking-wide"
+					style="color: {themeStyles.cursorColor}"
+				>
+					{$t('chrome.privacy.section3Title')}
+				</h2>
 				<p class="text-white/70 leading-relaxed">{$t('chrome.privacy.section3Body')}</p>
 				<div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] pt-0.5">
 					{#each MODULE_LINKS as m (m.name)}
-						<a href={m.href} target="_blank" rel="noopener noreferrer" class="text-white/50 hover:text-white underline transition-colors">{m.name}</a>
+						<a
+							href={m.href}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-white/50 hover:text-white underline transition-colors">{m.name}</a
+						>
 					{/each}
 				</div>
 			</section>
 
-			<div class="border-t border-white/10 pt-2 text-[10px] text-white/30">{$t('chrome.privacy.footer')}</div>
+			<div class="border-t border-white/10 pt-2 text-[10px] text-white/30">
+				{$t('chrome.privacy.footer')}
+			</div>
 		</div>
 	</div>
 </div>

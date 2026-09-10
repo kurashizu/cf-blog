@@ -13,7 +13,7 @@ import {
 	clearLane,
 	laneLimit,
 	VELOCITY_LANE_ID,
-	type NoteLane,
+	type NoteLane
 } from './note-lanes';
 
 /**
@@ -37,11 +37,14 @@ export const laneEditorOpen = writable<boolean>(false);
 export const activeLaneId = writable<string>(VELOCITY_LANE_ID);
 
 /** The lanes the active track carries, velocity always present. */
-export const trackLanes = derived(activeTrackRow, ($row) => lanesOf($row as { noteLanes?: NoteLane[] } | undefined));
+export const trackLanes = derived(activeTrackRow, ($row) =>
+	lanesOf($row as { noteLanes?: NoteLane[] } | undefined)
+);
 
 /** The lane being drawn, falling back to velocity if the chosen one is gone. */
-export const activeLane = derived([trackLanes, activeLaneId], ([$lanes, $id]) =>
-	$lanes.find((l) => l.id === $id) ?? $lanes[0]
+export const activeLane = derived(
+	[trackLanes, activeLaneId],
+	([$lanes, $id]) => $lanes.find((l) => l.id === $id) ?? $lanes[0]
 );
 
 /** How many more lanes this track may take, given the mode. */

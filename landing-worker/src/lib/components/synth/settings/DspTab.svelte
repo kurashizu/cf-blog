@@ -29,7 +29,12 @@
 			<div>
 				<div class="flex justify-between text-white/70 mb-1">
 					<span>{$t('synthPanels.dsp.pcmBufferLength')}</span>
-					<span class="text-[#c678dd] font-bold">{$t('synthPanels.dsp.durationSamples', { seconds: $noiseDurationSetting.toFixed(1), samples: ($noiseDurationSetting * $audioSampleRate).toLocaleString() })}</span>
+					<span class="text-[#c678dd] font-bold"
+						>{$t('synthPanels.dsp.durationSamples', {
+							seconds: $noiseDurationSetting.toFixed(1),
+							samples: ($noiseDurationSetting * $audioSampleRate).toLocaleString()
+						})}</span
+					>
 				</div>
 				<HorizontalHardwareFader
 					value={$noiseDurationSetting}
@@ -59,7 +64,8 @@
 								setNoiseColor(col);
 								playSound('toggle');
 							}}
-							class="press py-1 rounded-xs border text-center font-bold uppercase transition-all {$noiseColorSetting === col
+							class="press py-1 rounded-xs border text-center font-bold uppercase transition-all {$noiseColorSetting ===
+							col
 								? 'border-[#c678dd] bg-[#c678dd] text-black font-black'
 								: 'border-white/15 bg-white/5 text-white/60 hover:text-white'} cursor-pointer"
 						>
@@ -82,7 +88,12 @@
 			<div>
 				<div class="flex justify-between text-white/70 mb-1">
 					<span>{$t('synthPanels.dsp.impulseDuration')}</span>
-					<span class="text-[#c678dd] font-bold">{$t('synthPanels.dsp.durationStereoSamples', { seconds: $reverbDurationSetting.toFixed(1), samples: ($reverbDurationSetting * $audioSampleRate * 2).toLocaleString() })}</span>
+					<span class="text-[#c678dd] font-bold"
+						>{$t('synthPanels.dsp.durationStereoSamples', {
+							seconds: $reverbDurationSetting.toFixed(1),
+							samples: ($reverbDurationSetting * $audioSampleRate * 2).toLocaleString()
+						})}</span
+					>
 				</div>
 				<HorizontalHardwareFader
 					value={$reverbDurationSetting}

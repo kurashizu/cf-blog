@@ -56,7 +56,9 @@
 	}
 	function fromPct(t: number): number {
 		const c = Math.max(0, Math.min(1, t));
-		return logOk ? Math.exp(Math.log(min) + c * (Math.log(max) - Math.log(min))) : min + c * (max - min);
+		return logOk
+			? Math.exp(Math.log(min) + c * (Math.log(max) - Math.log(min)))
+			: min + c * (max - min);
 	}
 
 	let pct = $derived(toPct(value));
@@ -74,11 +76,22 @@
 		return v.toFixed(1);
 	}
 
-	let desc = $derived(description || (paramDescriptionKey(label.toUpperCase()) ? $t(paramDescriptionKey(label.toUpperCase())) : '') || '');
+	let desc = $derived(
+		description ||
+			(paramDescriptionKey(label.toUpperCase())
+				? $t(paramDescriptionKey(label.toUpperCase()))
+				: '') ||
+			''
+	);
 	let descPart = $derived(desc ? ` (${desc})` : '');
 	let tooltipText = $derived(
 		reset !== undefined
-			? $t('synthPanels.knob.rotaryHintReset', { label, descPart, value: formatDisplay(value), unit })
+			? $t('synthPanels.knob.rotaryHintReset', {
+					label,
+					descPart,
+					value: formatDisplay(value),
+					unit
+				})
 			: $t('synthPanels.knob.rotaryHint', { label, descPart, value: formatDisplay(value), unit })
 	);
 
@@ -94,7 +107,9 @@
 	let y1 = $derived(cy - r * Math.cos(currentRad));
 	let largeArc = $derived(pct > 0.666 ? 1 : 0);
 	let arcPath = $derived(
-		pct > 0.005 ? `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}` : ''
+		pct > 0.005
+			? `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`
+			: ''
 	);
 
 	function handleWheel(e: WheelEvent) {
@@ -147,29 +162,79 @@
 		}}
 		style="width: {size}px; height: {size}px"
 		data-knob-dial
-		class="relative rounded-full transition-transform duration-150 active:scale-95 hover:scale-[1.04] {isDragging ? 'shadow-[0_0_8px_rgba(255,255,255,0.4)]' : ''}"
+		class="relative rounded-full transition-transform duration-150 active:scale-95 hover:scale-[1.04] {isDragging
+			? 'shadow-[0_0_8px_rgba(255,255,255,0.4)]'
+			: ''}"
 	>
-		<svg viewBox="0 0 100 100" class="w-full h-full overflow-visible select-none pointer-events-none">
-			<circle cx="50" cy="50" r="46" fill="#12151a" stroke="rgba(255,255,255,0.25)" stroke-width="3" class="group-hover:stroke-white/60 transition-colors" />
-			<path d="M 21.72 78.28 A 40 40 0 1 1 78.28 78.28" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4" stroke-linecap="round" />
+		<svg
+			viewBox="0 0 100 100"
+			class="w-full h-full overflow-visible select-none pointer-events-none"
+		>
+			<circle
+				cx="50"
+				cy="50"
+				r="46"
+				fill="#12151a"
+				stroke="rgba(255,255,255,0.25)"
+				stroke-width="3"
+				class="group-hover:stroke-white/60 transition-colors"
+			/>
+			<path
+				d="M 21.72 78.28 A 40 40 0 1 1 78.28 78.28"
+				fill="none"
+				stroke="rgba(255,255,255,0.12)"
+				stroke-width="4"
+				stroke-linecap="round"
+			/>
 			{#if arcPath}
-				<path d={arcPath} fill="none" stroke={color} stroke-width="4.5" stroke-linecap="round" style="filter: drop-shadow(0 0 3px {color}88)" />
+				<path
+					d={arcPath}
+					fill="none"
+					stroke={color}
+					stroke-width="4.5"
+					stroke-linecap="round"
+					style="filter: drop-shadow(0 0 3px {color}88)"
+				/>
 			{/if}
 			<g transform="rotate({angle} 50 50)">
-				<line x1="50" y1="14" x2="50" y2="34" stroke={color} stroke-width="7" stroke-linecap="round" style="filter: drop-shadow(0 0 4px {color})" />
+				<line
+					x1="50"
+					y1="14"
+					x2="50"
+					y2="34"
+					stroke={color}
+					stroke-width="7"
+					stroke-linecap="round"
+					style="filter: drop-shadow(0 0 4px {color})"
+				/>
 				<circle cx="50" cy="16" r="2" fill="#ffffff" />
 			</g>
-			<circle cx="50" cy="50" r="16" fill="#1a1e24" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+			<circle
+				cx="50"
+				cy="50"
+				r="16"
+				fill="#1a1e24"
+				stroke="rgba(255,255,255,0.2)"
+				stroke-width="2"
+			/>
 			<circle cx="50" cy="50" r="5" fill="rgba(255,255,255,0.35)" />
 		</svg>
 	</div>
 
 	<div class="text-center mt-1 leading-none w-full h-3 flex items-center justify-center">
 		{#if isDragging}
-			<span class="text-xs font-black font-mono truncate leading-none" style="color: {color}">{formatDisplay(value)}{unit}</span>
+			<span class="text-xs font-black font-mono truncate leading-none" style="color: {color}"
+				>{formatDisplay(value)}{unit}</span
+			>
 		{:else}
-			<span class="text-xs opacity-85 uppercase font-mono font-bold group-hover:hidden truncate leading-none">{label}</span>
-			<span class="hidden group-hover:block text-xs font-black font-mono truncate leading-none" style="color: {color}">{formatDisplay(value)}{unit}</span>
+			<span
+				class="text-xs opacity-85 uppercase font-mono font-bold group-hover:hidden truncate leading-none"
+				>{label}</span
+			>
+			<span
+				class="hidden group-hover:block text-xs font-black font-mono truncate leading-none"
+				style="color: {color}">{formatDisplay(value)}{unit}</span
+			>
 		{/if}
 	</div>
 </div>

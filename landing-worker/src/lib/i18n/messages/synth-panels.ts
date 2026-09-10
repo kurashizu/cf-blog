@@ -10,7 +10,8 @@ import type { Messages } from '../types';
 export default {
 	en: {
 		// Shared rack chrome
-		'synthPanels.rack.resetHint': 'R — reset: put this rack at its neutral values, where it does nothing to the sound',
+		'synthPanels.rack.resetHint':
+			'R — reset: put this rack at its neutral values, where it does nothing to the sound',
 		'synthPanels.rack.flowToFusion': 'Signal Flow: To Timbre Fusion',
 		'synthPanels.rack.flowToFilter': 'Signal Flow: To VCF Filter',
 		'synthPanels.rack.flowToEnvelopes': 'Signal Flow: To Envelopes & VCA',
@@ -19,143 +20,221 @@ export default {
 		'synthPanels.rack.flowToOut': 'Signal Flow: To Master Output & Visualisers',
 
 		// Hardware knob/fader tooltip templates ({descPart}/{labelPart} are pre-formatted punctuation, not prose)
-		'synthPanels.knob.rotaryHint': '{label}{descPart}: {value}{unit} — Drag up/down or scroll wheel to adjust',
-		'synthPanels.knob.rotaryHintReset': '{label}{descPart}: {value}{unit} — Drag up/down or scroll wheel to adjust · right-click resets',
-		'synthPanels.knob.faderHint': '{label}{descPart}: {value}{unit} — Click, drag up/down, or scroll wheel',
-		'synthPanels.knob.faderHintReset': '{label}{descPart}: {value}{unit} — Click, drag up/down, or scroll wheel · right-click resets',
-		'synthPanels.knob.hFaderHint': '{labelPart}{value}{unit} — Click, drag left/right, or scroll wheel',
-		'synthPanels.knob.hFaderHintReset': '{labelPart}{value}{unit} — Click, drag left/right, or scroll wheel · right-click resets',
+		'synthPanels.knob.rotaryHint':
+			'{label}{descPart}: {value}{unit} — Drag up/down or scroll wheel to adjust',
+		'synthPanels.knob.rotaryHintReset':
+			'{label}{descPart}: {value}{unit} — Drag up/down or scroll wheel to adjust · right-click resets',
+		'synthPanels.knob.faderHint':
+			'{label}{descPart}: {value}{unit} — Click, drag up/down, or scroll wheel',
+		'synthPanels.knob.faderHintReset':
+			'{label}{descPart}: {value}{unit} — Click, drag up/down, or scroll wheel · right-click resets',
+		'synthPanels.knob.hFaderHint':
+			'{labelPart}{value}{unit} — Click, drag left/right, or scroll wheel',
+		'synthPanels.knob.hFaderHintReset':
+			'{labelPart}{value}{unit} — Click, drag left/right, or scroll wheel · right-click resets',
 
 		// Knob/fader label -> explanation sentence (param-descriptions.ts)
 		'synthPanels.param.vol': 'Volume / Output Gain Level',
 		'synthPanels.param.lvl': 'Level / Output Gain',
-		'synthPanels.param.pw': 'Pulse Width — Duty cycle of square pulse waveform (narrow spike to symmetric square)',
-		'synthPanels.param.sub': 'Sub-Oscillator Gain — Adds 1-octave-down sine wave for extra low-end sub bass',
-		'synthPanels.param.noise': 'White Noise Level — Adds breath, transient impact click, or airy percussive sizzle',
-		'synthPanels.param.rpt': 'Noise Repeats — Number of noise bursts per hit (1 = one burst; 3-4 = the 808 clap stutter)',
+		'synthPanels.param.pw':
+			'Pulse Width — Duty cycle of square pulse waveform (narrow spike to symmetric square)',
+		'synthPanels.param.sub':
+			'Sub-Oscillator Gain — Adds 1-octave-down sine wave for extra low-end sub bass',
+		'synthPanels.param.noise':
+			'White Noise Level — Adds breath, transient impact click, or airy percussive sizzle',
+		'synthPanels.param.rpt':
+			'Noise Repeats — Number of noise bursts per hit (1 = one burst; 3-4 = the 808 clap stutter)',
 		'synthPanels.param.gap': 'Noise Burst Gap — Milliseconds between repeated noise bursts',
-		'synthPanels.param.det': 'Fine Detune in Cents — ±50 cents pitch shift for rich analog chorus thickness',
-		'synthPanels.param.semi': 'Semitone Pitch Offset — Transposes pitch by ±24 semitones (up to ±2 full octaves)',
-		'synthPanels.param.ratio': 'FM Harmonic Multiplier — Frequency ratio (1x to 4x) for Frequency Modulation',
-		'synthPanels.param.phase': 'Phase Angle Offset — Waveform starting phase from 0° to 360° for stereo widening',
-		'synthPanels.param.mrp': 'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
-		'synthPanels.param.morph': 'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
-		'synthPanels.param.xfade': 'Crossfade Balance — Static mix between Oscillator 1 and 2 (0% = all OSC1, 100% = all OSC2)',
-		'synthPanels.param.glide': 'Glide Time — Milliseconds for pitch to slide from one note to the next instead of jumping',
-		'synthPanels.param.cut': 'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
-		'synthPanels.param.cutoff': 'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
-		'synthPanels.param.res': 'Resonance / Q-Factor — Emphasizes and boosts frequencies around the cutoff point',
-		'synthPanels.param.resq': 'Resonance / Q-Factor — Emphasizes and boosts frequencies around the cutoff point; high values self-oscillate into a whistle',
-		'synthPanels.param.ktrk': 'Keyboard Tracking — How much the cutoff follows note pitch, so higher notes stay proportionally as bright as low ones',
-		'synthPanels.param.mod': 'Envelope Modulation — Bipolar depth of envelope sweeping the filter cutoff frequency',
-		'synthPanels.param.enva': 'Filter Envelope Amount — Bipolar depth of the filter envelope sweeping the cutoff frequency',
-		'synthPanels.param.a': 'Attack Time — Time taken for envelope to ramp up from zero to peak level',
-		'synthPanels.param.d': 'Decay Time — Time taken for envelope to drop from peak to steady sustain level',
-		'synthPanels.param.s': 'Sustain Level — Constant holding level while note continues to be held down',
-		'synthPanels.param.r': 'Release Time — Time taken to fade out to silence after the note is released',
-		'synthPanels.param.amt': 'Modulation Amount — Overall intensity/depth of the envelope applied to the sound engine',
+		'synthPanels.param.det':
+			'Fine Detune in Cents — ±50 cents pitch shift for rich analog chorus thickness',
+		'synthPanels.param.semi':
+			'Semitone Pitch Offset — Transposes pitch by ±24 semitones (up to ±2 full octaves)',
+		'synthPanels.param.ratio':
+			'FM Harmonic Multiplier — Frequency ratio (1x to 4x) for Frequency Modulation',
+		'synthPanels.param.phase':
+			'Phase Angle Offset — Waveform starting phase from 0° to 360° for stereo widening',
+		'synthPanels.param.mrp':
+			'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
+		'synthPanels.param.morph':
+			'Morph Amount — Continuous crossfade blending between Oscillator 1 and 2',
+		'synthPanels.param.xfade':
+			'Crossfade Balance — Static mix between Oscillator 1 and 2 (0% = all OSC1, 100% = all OSC2)',
+		'synthPanels.param.glide':
+			'Glide Time — Milliseconds for pitch to slide from one note to the next instead of jumping',
+		'synthPanels.param.cut':
+			'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
+		'synthPanels.param.cutoff':
+			'Cutoff Frequency — Frequency threshold in Hertz where filter attenuation begins',
+		'synthPanels.param.res':
+			'Resonance / Q-Factor — Emphasizes and boosts frequencies around the cutoff point',
+		'synthPanels.param.resq':
+			'Resonance / Q-Factor — Emphasizes and boosts frequencies around the cutoff point; high values self-oscillate into a whistle',
+		'synthPanels.param.ktrk':
+			'Keyboard Tracking — How much the cutoff follows note pitch, so higher notes stay proportionally as bright as low ones',
+		'synthPanels.param.mod':
+			'Envelope Modulation — Bipolar depth of envelope sweeping the filter cutoff frequency',
+		'synthPanels.param.enva':
+			'Filter Envelope Amount — Bipolar depth of the filter envelope sweeping the cutoff frequency',
+		'synthPanels.param.a':
+			'Attack Time — Time taken for envelope to ramp up from zero to peak level',
+		'synthPanels.param.d':
+			'Decay Time — Time taken for envelope to drop from peak to steady sustain level',
+		'synthPanels.param.s':
+			'Sustain Level — Constant holding level while note continues to be held down',
+		'synthPanels.param.r':
+			'Release Time — Time taken to fade out to silence after the note is released',
+		'synthPanels.param.amt':
+			'Modulation Amount — Overall intensity/depth of the envelope applied to the sound engine',
 		'synthPanels.param.env': 'Envelope Amount — Overall modulation intensity of the envelope',
-		'synthPanels.param.rate': 'LFO Speed / Frequency — Rate of modulation oscillation in Hertz (0.1Hz to 20Hz)',
-		'synthPanels.param.dep': 'LFO Depth — Intensity/magnitude of modulation applied to the selected target',
-		'synthPanels.param.depth': 'LFO Depth — Intensity/magnitude of modulation applied to the selected target',
-		'synthPanels.param.pan': 'Stereo Panning — Position audio in the stereo field (100% Left to 100% Right)',
-		'synthPanels.param.drive': 'Analog Overdrive / Saturation — Soft-clipping distortion adding warmth and punch',
+		'synthPanels.param.rate':
+			'LFO Speed / Frequency — Rate of modulation oscillation in Hertz (0.1Hz to 20Hz)',
+		'synthPanels.param.dep':
+			'LFO Depth — Intensity/magnitude of modulation applied to the selected target',
+		'synthPanels.param.depth':
+			'LFO Depth — Intensity/magnitude of modulation applied to the selected target',
+		'synthPanels.param.pan':
+			'Stereo Panning — Position audio in the stereo field (100% Left to 100% Right)',
+		'synthPanels.param.drive':
+			'Analog Overdrive / Saturation — Soft-clipping distortion adding warmth and punch',
 		'synthPanels.param.dTime': 'Delay Echo Time — Time delay between echo repeats (10ms to 1000ms)',
-		'synthPanels.param.dFdbk': 'Delay Feedback — Amount of output fed back to input for sustaining echoes',
-		'synthPanels.param.fdbk': 'Delay Feedback — Amount of output fed back to input for sustaining echoes',
-		'synthPanels.param.dMixDot': 'Delay Wet/Dry Mix — Balance between dry un-effected sound and wet echo signal',
-		'synthPanels.param.dMixDash': 'Delay Wet/Dry Mix — Balance between dry un-effected sound and wet echo signal',
-		'synthPanels.param.rMix': 'Reverb Wet/Dry Mix — Balance between dry un-effected sound and wet reverb signal',
-		'synthPanels.param.rev': 'Reverb Space Mix — Wet level of spatial convolution acoustic space reverberation',
+		'synthPanels.param.dFdbk':
+			'Delay Feedback — Amount of output fed back to input for sustaining echoes',
+		'synthPanels.param.fdbk':
+			'Delay Feedback — Amount of output fed back to input for sustaining echoes',
+		'synthPanels.param.dMixDot':
+			'Delay Wet/Dry Mix — Balance between dry un-effected sound and wet echo signal',
+		'synthPanels.param.dMixDash':
+			'Delay Wet/Dry Mix — Balance between dry un-effected sound and wet echo signal',
+		'synthPanels.param.rMix':
+			'Reverb Wet/Dry Mix — Balance between dry un-effected sound and wet reverb signal',
+		'synthPanels.param.rev':
+			'Reverb Space Mix — Wet level of spatial convolution acoustic space reverberation',
 
 		// Module 1 — Oscillators
 		'synthPanels.osc.osc1LevelDesc': 'Oscillator 1 Level — Output volume of the first oscillator',
 		'synthPanels.osc.osc2LevelDesc': 'Oscillator 2 Level — Output volume of the second oscillator',
-		'synthPanels.osc.eqlHint': 'Equal Loudness (ISO 226): Automatically balances perceptual loudness across Square, Saw, Triangle, and Sine waveforms',
+		'synthPanels.osc.eqlHint':
+			'Equal Loudness (ISO 226): Automatically balances perceptual loudness across Square, Saw, Triangle, and Sine waveforms',
 
 		// Module 4 — Envelopes
-		'synthPanels.env.ampTabHint': 'Amplitude Envelope (AMP) — Shapes volume and loudness contour over time via ADSR',
-		'synthPanels.env.vcfTabHint': 'Filter Envelope (VCF) — Sweeps filter cutoff frequency over time via ADSR',
-		'synthPanels.env.pitTabHint': 'Pitch Envelope (PIT) — Modulates transient oscillator pitch over time (ideal for punchy kick drums and laser FX)',
+		'synthPanels.env.ampTabHint':
+			'Amplitude Envelope (AMP) — Shapes volume and loudness contour over time via ADSR',
+		'synthPanels.env.vcfTabHint':
+			'Filter Envelope (VCF) — Sweeps filter cutoff frequency over time via ADSR',
+		'synthPanels.env.pitTabHint':
+			'Pitch Envelope (PIT) — Modulates transient oscillator pitch over time (ideal for punchy kick drums and laser FX)',
 		'synthPanels.env.targetVolume': 'volume',
 		'synthPanels.env.targetFilterCutoff': 'filter cutoff',
 		'synthPanels.env.targetPitch': 'pitch',
-		'synthPanels.env.attackDesc': 'Attack — Time to ramp the {target} envelope up from zero to peak after the note starts',
-		'synthPanels.env.decayDesc': 'Decay — Time for the {target} envelope to fall from peak down to its sustain level',
-		'synthPanels.env.sustainDesc': 'Sustain — The steady {target} level held for as long as the note is held down',
-		'synthPanels.env.pitchAmountDesc': 'Pitch Envelope Amount — Depth of the pitch sweep in octaves, positive rises or negative falls from the note',
-		'synthPanels.env.releaseDesc': 'Release — Time for the {target} envelope to fade back to zero after the note is released',
+		'synthPanels.env.attackDesc':
+			'Attack — Time to ramp the {target} envelope up from zero to peak after the note starts',
+		'synthPanels.env.decayDesc':
+			'Decay — Time for the {target} envelope to fall from peak down to its sustain level',
+		'synthPanels.env.sustainDesc':
+			'Sustain — The steady {target} level held for as long as the note is held down',
+		'synthPanels.env.pitchAmountDesc':
+			'Pitch Envelope Amount — Depth of the pitch sweep in octaves, positive rises or negative falls from the note',
+		'synthPanels.env.releaseDesc':
+			'Release — Time for the {target} envelope to fade back to zero after the note is released',
 
 		// Module 5 — LFO
-		'synthPanels.lfo.rateDesc': 'LFO Speed — How fast the low-frequency oscillator cycles, in Hertz',
-		'synthPanels.lfo.pitchDesc': 'LFO → Pitch — How much the LFO wobbles the oscillator pitch (vibrato depth)',
-		'synthPanels.lfo.cutoffDesc': 'LFO → Cutoff — How much the LFO sweeps the filter cutoff frequency (wah/wobble depth)',
-		'synthPanels.lfo.ampDesc': 'LFO → Amplitude — How much the LFO pumps the volume up and down (tremolo depth)',
-		'synthPanels.lfo.panDesc': 'LFO → Pan — How much the LFO sweeps the stereo position left and right (auto-pan depth)',
-		'synthPanels.lfo.fadeDesc': "LFO Fade-In Time — Milliseconds for the LFO's depth to ramp up from zero after the note starts",
+		'synthPanels.lfo.rateDesc':
+			'LFO Speed — How fast the low-frequency oscillator cycles, in Hertz',
+		'synthPanels.lfo.pitchDesc':
+			'LFO → Pitch — How much the LFO wobbles the oscillator pitch (vibrato depth)',
+		'synthPanels.lfo.cutoffDesc':
+			'LFO → Cutoff — How much the LFO sweeps the filter cutoff frequency (wah/wobble depth)',
+		'synthPanels.lfo.ampDesc':
+			'LFO → Amplitude — How much the LFO pumps the volume up and down (tremolo depth)',
+		'synthPanels.lfo.panDesc':
+			'LFO → Pan — How much the LFO sweeps the stereo position left and right (auto-pan depth)',
+		'synthPanels.lfo.fadeDesc':
+			"LFO Fade-In Time — Milliseconds for the LFO's depth to ramp up from zero after the note starts",
 
 		// Module 6 — FX / EQ
 		'synthPanels.fx.mainTabHint': 'Main FX: Tape Delay, Space Reverb & Tape Overdrive Saturation',
 		'synthPanels.fx.eqTabHint': 'Per-Track 6-Band Graphic EQ — shapes the active track only',
-		'synthPanels.fx.duckTabHint': 'Sidechain ducking — the active track dips every time the SRC track (or one KEY of it) plays, so a drum cuts through for the instant it lasts',
-		'synthPanels.fx.delayTimeDesc': 'Delay Time — Milliseconds between the dry signal and its first echo',
-		'synthPanels.fx.masterVolumeDesc': 'Master Output Volume — global gain for the whole sound engine, persisted in the browser',
+		'synthPanels.fx.duckTabHint':
+			'Sidechain ducking — the active track dips every time the SRC track (or one KEY of it) plays, so a drum cuts through for the instant it lasts',
+		'synthPanels.fx.delayTimeDesc':
+			'Delay Time — Milliseconds between the dry signal and its first echo',
+		'synthPanels.fx.masterVolumeDesc':
+			'Master Output Volume — global gain for the whole sound engine, persisted in the browser',
 		'synthPanels.fx.srcHint': 'SRC — the track whose notes trigger the dip',
 		'synthPanels.fx.prevSourceHint': 'Previous source track',
 		'synthPanels.fx.nextSourceHint': 'Next source track',
-		'synthPanels.fx.keyRowHint': "KEY — which keys of the source's kit trigger the dip; none lit = every key",
+		'synthPanels.fx.keyRowHint':
+			"KEY — which keys of the source's kit trigger the dip; none lit = every key",
 		'synthPanels.fx.dropKeyHint': '{note} triggers the dip — click to drop it',
 		'synthPanels.fx.addKeyHint': 'Add {note} to the trigger keys',
 		'synthPanels.fx.noKitKeys': 'no keys in this kit yet',
 		'synthPanels.fx.duckDepthDesc': 'How far this track dips on each trigger (100% = to silence)',
 		'synthPanels.fx.duckDipDesc': 'Time to reach the floor after the trigger',
 		'synthPanels.fx.duckHoldDesc': 'Time held at the floor before the release',
-		'synthPanels.fx.duckReleaseDesc': 'Time back to full level — long values pump, short ones just clear the hit',
-		'synthPanels.fx.eqToggleHint': "Toggle this track's 6-band graphic EQ (per-track; saved and shared with the patch)",
+		'synthPanels.fx.duckReleaseDesc':
+			'Time back to full level — long values pump, short ones just clear the hit',
+		'synthPanels.fx.eqToggleHint':
+			"Toggle this track's 6-band graphic EQ (per-track; saved and shared with the patch)",
 		'synthPanels.fx.eqBandLowShelfDesc': 'Low Shelf — Boost/cut around {label}Hz',
 		'synthPanels.fx.eqBandHighShelfDesc': 'High Shelf — Boost/cut around {label}Hz',
 		'synthPanels.fx.eqBandPeakingDesc': 'Peaking Band — Boost/cut around {label}Hz',
 
 		// Module 7 — Out
-		'synthPanels.out.fftModeHint': 'Visualiser Mode: FFT Log Spectrum Analyser — Shows frequency distribution across 20Hz to 20kHz',
-		'synthPanels.out.scopeModeHint': 'Visualiser Mode: Oscilloscope Waveform — Real-time time-domain audio wave display',
-		'synthPanels.out.loudnessModeHint': 'Visualiser Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)',
+		'synthPanels.out.fftModeHint':
+			'Visualiser Mode: FFT Log Spectrum Analyser — Shows frequency distribution across 20Hz to 20kHz',
+		'synthPanels.out.scopeModeHint':
+			'Visualiser Mode: Oscilloscope Waveform — Real-time time-domain audio wave display',
+		'synthPanels.out.loudnessModeHint':
+			'Visualiser Mode: RMS Loudness Meter & History — Real-time dynamic decibel range (-60dB to +6dB)',
 		'synthPanels.out.recordingHint': 'Recording — {seconds}s. Click to stop and download.',
-		'synthPanels.out.recordIdleHint': 'Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)',
+		'synthPanels.out.recordIdleHint':
+			'Record the master output and download it when stopped (WebM/Opus, or M4A on Safari)',
 		'synthPanels.out.recorderUnsupported': 'MediaRecorder unsupported in this browser',
 		'synthPanels.out.audioCaptureUnavailable': 'audio capture unavailable',
 		'synthPanels.out.airDesc': 'Air Shelf EQ — Boosts/cuts high-end brilliance (±8dB @ 10kHz)',
 
 		// Piano keyboard
-		'synthPanels.keyboard.octRangeHint': 'Keyboard Octave Range (FROM - TO) — Changes visible keybed range',
+		'synthPanels.keyboard.octRangeHint':
+			'Keyboard Octave Range (FROM - TO) — Changes visible keybed range',
 		'synthPanels.keyboard.lowerStartHint': 'Lower starting octave',
 		'synthPanels.keyboard.raiseStartHint': 'Raise starting octave',
 		'synthPanels.keyboard.lowerEndHint': 'Lower ending octave',
 		'synthPanels.keyboard.raiseEndHint': 'Raise ending octave',
-		'synthPanels.keyboard.qwertyToggleHint': 'Play with your computer keyboard — Z-row = base octave, Q-row = octave above. Ctrl = octave down, Shift = octave up (the [ and ] keys also work), hold Space = sustain pedal. Ctrl+0-3 tab navigation keeps working.',
-		'synthPanels.keyboard.qwertyOctaveHint': 'QWERTY base octave — Ctrl = down, Shift = up (the [ and ] keys also work)',
-		'synthPanels.keyboard.sustainHint': 'Sustain Pedal (PEDAL / CC64) — Keeps sounding notes sustained until released',
-		'synthPanels.keyboard.velocityCurveHint': 'MIDI Velocity Curve: {curve} (Click to cycle: EXP [Natural Piano] → LIN [Linear 1:1] → LOG [Soft Touch] → HARD [Aggressive] → OFF [Fixed Volume])',
+		'synthPanels.keyboard.qwertyToggleHint':
+			'Play with your computer keyboard — Z-row = base octave, Q-row = octave above. Ctrl = octave down, Shift = octave up (the [ and ] keys also work), hold Space = sustain pedal. Ctrl+0-3 tab navigation keeps working.',
+		'synthPanels.keyboard.qwertyOctaveHint':
+			'QWERTY base octave — Ctrl = down, Shift = up (the [ and ] keys also work)',
+		'synthPanels.keyboard.sustainHint':
+			'Sustain Pedal (PEDAL / CC64) — Keeps sounding notes sustained until released',
+		'synthPanels.keyboard.velocityCurveHint':
+			'MIDI Velocity Curve: {curve} (Click to cycle: EXP [Natural Piano] → LIN [Linear 1:1] → LOG [Soft Touch] → HARD [Aggressive] → OFF [Fixed Volume])',
 		'synthPanels.keyboard.playNoteHint': 'Play {note} ({freq} Hz)',
 
 		// Piano roll
-		'synthPanels.roll.fullscreenOnHint': 'Full panel — hide racks 1-7 and give the whole lower panel to the roll',
+		'synthPanels.roll.fullscreenOnHint':
+			'Full panel — hide racks 1-7 and give the whole lower panel to the roll',
 		'synthPanels.roll.fullscreenOffHint': 'Full panel: ON — click to bring racks 1-7 back',
 		'synthPanels.roll.trackNameLabel': 'Track name',
-		'synthPanels.roll.renameHint': '{name} — click to rename TRK {track} ({max} characters; {show} show here)',
-		'synthPanels.roll.selectionHint': 'Selected notes — drag to move (Alt: copy), drag the right end to resize, arrows nudge (Shift: bar / octave), Delete removes, Ctrl+C/X/V/D copy / cut / paste at the cursor / repeat, Esc clears',
+		'synthPanels.roll.renameHint':
+			'{name} — click to rename TRK {track} ({max} characters; {show} show here)',
+		'synthPanels.roll.selectionHint':
+			'Selected notes — drag to move (Alt: copy), drag the right end to resize, arrows nudge (Shift: bar / octave), Delete removes, Ctrl+C/X/V/D copy / cut / paste at the cursor / repeat, Esc clears',
 		'synthPanels.roll.undoHint': 'Undo the last roll edit (Ctrl+Z)',
 		'synthPanels.roll.redoHint': 'Redo (Ctrl+Shift+Z / Ctrl+Y)',
-		'synthPanels.roll.clearPageHint': 'Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track (undoable)',
-		'synthPanels.roll.octScopeHint': 'Octave Scope Range (FROM - TO) — Limits visible pitch range in the piano roll without altering grid cell dimensions',
+		'synthPanels.roll.clearPageHint':
+			'Clear Page (CLR) — Removes all placed notes and chords from the current page on the active track (undoable)',
+		'synthPanels.roll.octScopeHint':
+			'Octave Scope Range (FROM - TO) — Limits visible pitch range in the piano roll without altering grid cell dimensions',
 		'synthPanels.roll.lowerStartHint': 'Lower starting octave (Octave down)',
 		'synthPanels.roll.raiseStartHint': 'Raise starting octave (Octave up)',
 		'synthPanels.roll.startOctaveHint': 'Starting Octave: Octave {octave} (C{octave})',
 		'synthPanels.roll.lowerEndHint': 'Lower ending octave',
 		'synthPanels.roll.raiseEndHint': 'Raise ending octave',
 		'synthPanels.roll.endOctaveHint': 'Ending Octave: Octave {octave} (B{octave})',
-		'synthPanels.roll.jumpToStepHint': 'Click to set Playback Cursor to Step {step} (Bar {bar}.{beat})',
-		'synthPanels.roll.jumpToColumnHint': 'Click to set Playback Cursor to Column {column} (Step {step}, Bar {bar}.{beat})',
+		'synthPanels.roll.jumpToStepHint':
+			'Click to set Playback Cursor to Step {step} (Bar {bar}.{beat})',
+		'synthPanels.roll.jumpToColumnHint':
+			'Click to set Playback Cursor to Column {column} (Step {step}, Bar {bar}.{beat})',
 		'synthPanels.lane.toggleHint': 'Automation lanes — click to open the editor over the roll',
 		'synthPanels.lane.addHint': 'Add a lane (ADV only, up to 4)',
 		'synthPanels.lane.removeHint': 'Delete this lane',
@@ -163,8 +242,10 @@ export default {
 		'synthPanels.lane.closeHint': 'Close the lane editor',
 		'synthPanels.lane.sampledHint': 'Sampled once when the note starts — this is velocity',
 		'synthPanels.lane.continuousHint': 'Continuous — keeps moving under a held note',
-		'synthPanels.roll.auditionKeyCustomHint': '{note} — click to audition and edit this key (has its own sound; right-click to drop it)',
-		'synthPanels.roll.auditionKeyDefaultHint': '{note} — click to audition and edit this key (plays the track sound)',
+		'synthPanels.roll.auditionKeyCustomHint':
+			'{note} — click to audition and edit this key (has its own sound; right-click to drop it)',
+		'synthPanels.roll.auditionKeyDefaultHint':
+			'{note} — click to audition and edit this key (plays the track sound)',
 		'synthPanels.roll.auditionNoteHint': 'Audition {note} ({freq}Hz)',
 		'synthPanels.roll.cellStepHint': '{note} — Step {step}',
 
@@ -175,7 +256,8 @@ export default {
 		'synthPanels.settings.tabDsp': '2. BUFFER & IR SPECS',
 		'synthPanels.settings.tabMidi': '3. MIDI & CONTROLLERS',
 		'synthPanels.settings.tabVoice': '4. VOICE & TUNING',
-		'synthPanels.settings.footerNote': 'Hardware & buffer parameters apply immediately to Web Audio engine graph.',
+		'synthPanels.settings.footerNote':
+			'Hardware & buffer parameters apply immediately to Web Audio engine graph.',
 
 		// Settings — Audio & Hardware tab
 		'synthPanels.audioHw.contextTitle': 'AUDIO CONTEXT & HARDWARE SAMPLE RATE',
@@ -204,7 +286,8 @@ export default {
 		'synthPanels.audioHw.outputProtection': 'Output Protection',
 		'synthPanels.audioHw.limiterActive': 'Brickwall Safety Limiter: ACTIVE',
 		'synthPanels.audioHw.limiterBypassed': 'Safety Limiter: BYPASSED',
-		'synthPanels.audioHw.limiterDesc': 'Prevents hardware clipping and DAC overload distortion when multiple tracks layer',
+		'synthPanels.audioHw.limiterDesc':
+			'Prevents hardware clipping and DAC overload distortion when multiple tracks layer',
 
 		// Settings — Buffer & IR (DSP) tab
 		'synthPanels.dsp.noiseBufferTitle': 'NOISE GENERATOR PCM AUDIO BUFFER',
@@ -239,8 +322,10 @@ export default {
 		'synthPanels.voice.editingLayout': 'Editing Layout',
 		'synthPanels.voice.advDefaultOn': 'Tracks open in ADV',
 		'synthPanels.voice.advDefaultOff': 'Tracks open with the racks',
-		'synthPanels.voice.advDefaultDesc': 'New tracks start in the advanced layout: modules 1-7 give way to the roll or the patch bay. A track you switch by hand keeps its own choice.',
-		'synthPanels.midi.noDevicesHint': 'Plug in any USB/Bluetooth MIDI keyboard or controller. Chrome/Edge/Firefox will automatically detect and bind inputs without driver installation.',
+		'synthPanels.voice.advDefaultDesc':
+			'New tracks start in the advanced layout: modules 1-7 give way to the roll or the patch bay. A track you switch by hand keeps its own choice.',
+		'synthPanels.midi.noDevicesHint':
+			'Plug in any USB/Bluetooth MIDI keyboard or controller. Chrome/Edge/Firefox will automatically detect and bind inputs without driver installation.',
 
 		// Settings — Voice & Tuning tab
 		'synthPanels.voice.tuningTitle': 'MASTER CONCERT TUNING (A4 STANDARD)',
@@ -261,7 +346,8 @@ export default {
 		'synthPanels.presets.hintLead': 'Melody voices — pulses, detuned saws, sync, brass',
 		'synthPanels.presets.hintPluck': 'Struck and plucked — fast attack, no sustain',
 		'synthPanels.presets.hintPad': 'Slow attack, long release, movement from the LFO',
-		'synthPanels.presets.hintDrums': 'Single drum sounds; put one on a key in percussion mode, or on a whole track',
+		'synthPanels.presets.hintDrums':
+			'Single drum sounds; put one on a key in percussion mode, or on a whole track',
 		'synthPanels.presets.hintKeyboard': 'Keyboards: pianos, electric pianos, clavs',
 		'synthPanels.presets.hintOrgan': 'Drawbars and tonewheels',
 		'synthPanels.presets.hintString': 'Bowed and blown sustains',
@@ -287,18 +373,22 @@ export default {
 		'synthPanels.rack.flowToOut': '信号流向：至主输出与可视化',
 
 		'synthPanels.knob.rotaryHint': '{label}{descPart}：{value}{unit} —— 上下拖动或滚动滚轮调整',
-		'synthPanels.knob.rotaryHintReset': '{label}{descPart}：{value}{unit} —— 上下拖动或滚动滚轮调整 · 右键重置',
+		'synthPanels.knob.rotaryHintReset':
+			'{label}{descPart}：{value}{unit} —— 上下拖动或滚动滚轮调整 · 右键重置',
 		'synthPanels.knob.faderHint': '{label}{descPart}：{value}{unit} —— 点击、上下拖动或滚动滚轮',
-		'synthPanels.knob.faderHintReset': '{label}{descPart}：{value}{unit} —— 点击、上下拖动或滚动滚轮 · 右键重置',
+		'synthPanels.knob.faderHintReset':
+			'{label}{descPart}：{value}{unit} —— 点击、上下拖动或滚动滚轮 · 右键重置',
 		'synthPanels.knob.hFaderHint': '{labelPart}{value}{unit} —— 点击、左右拖动或滚动滚轮',
-		'synthPanels.knob.hFaderHintReset': '{labelPart}{value}{unit} —— 点击、左右拖动或滚动滚轮 · 右键重置',
+		'synthPanels.knob.hFaderHintReset':
+			'{labelPart}{value}{unit} —— 点击、左右拖动或滚动滚轮 · 右键重置',
 
 		'synthPanels.param.vol': 'VOL：音量／输出增益',
 		'synthPanels.param.lvl': 'LVL：电平／输出增益',
 		'synthPanels.param.pw': 'PW：脉宽——方波脉冲波形的占空比（从窄尖峰到对称方波）',
 		'synthPanels.param.sub': 'SUB：副振荡器增益——叠加低八度正弦波，增强低频次贝斯',
 		'synthPanels.param.noise': 'NOISE：白噪声电平——增添气声、瞬态冲击感或空气感打击噪音',
-		'synthPanels.param.rpt': 'RPT：噪声重复次数——每次触发的噪声爆发数（1 为单次；3-4 为 808 拍手的连击感）',
+		'synthPanels.param.rpt':
+			'RPT：噪声重复次数——每次触发的噪声爆发数（1 为单次；3-4 为 808 拍手的连击感）',
 		'synthPanels.param.gap': 'GAP：噪声爆发间隔——重复噪声爆发之间的毫秒数',
 		'synthPanels.param.det': 'DET：两个振荡器之间的失谐量（音分），±50 音分带来浓郁的模拟合唱厚度',
 		'synthPanels.param.semi': 'SEMI：半音音高偏移——以 ±24 半音（最多 ±2 个八度）移调',
@@ -306,13 +396,16 @@ export default {
 		'synthPanels.param.phase': 'PHASE：相位角偏移——波形起始相位 0°至 360°，用于拓宽立体声',
 		'synthPanels.param.mrp': 'MRP：融合量——振荡器 1 与 2 之间的连续交叉渐变混合',
 		'synthPanels.param.morph': 'MORPH：融合量——振荡器 1 与 2 之间的连续交叉渐变混合',
-		'synthPanels.param.xfade': 'X-FADE：交叉混合平衡——振荡器 1 与 2 的静态混合比例（0% 为全 OSC1，100% 为全 OSC2）',
-		'synthPanels.param.glide': 'GLIDE：滑音时间——音高从一个音符滑向下一个音符所需的毫秒数，而非直接跳变',
+		'synthPanels.param.xfade':
+			'X-FADE：交叉混合平衡——振荡器 1 与 2 的静态混合比例（0% 为全 OSC1，100% 为全 OSC2）',
+		'synthPanels.param.glide':
+			'GLIDE：滑音时间——音高从一个音符滑向下一个音符所需的毫秒数，而非直接跳变',
 		'synthPanels.param.cut': 'CUT：截止频率——滤波器开始衰减的频率阈值（赫兹）',
 		'synthPanels.param.cutoff': 'CUTOFF：截止频率——滤波器开始衰减的频率阈值（赫兹）',
 		'synthPanels.param.res': 'RES：共振／Q 值——强调并提升截止点附近的频率',
 		'synthPanels.param.resq': 'RESQ：共振／Q 值——强调并提升截止点附近的频率；数值过高会自激啸叫',
-		'synthPanels.param.ktrk': 'KTRK：键盘跟踪——截止频率跟随音高的程度，使高音区与低音区保持相对一致的明亮度',
+		'synthPanels.param.ktrk':
+			'KTRK：键盘跟踪——截止频率跟随音高的程度，使高音区与低音区保持相对一致的明亮度',
 		'synthPanels.param.mod': 'MOD：包络调制——包络扫描滤波截止频率的双极性深度',
 		'synthPanels.param.enva': 'ENVA：滤波包络量——滤波包络扫描截止频率的双极性深度',
 		'synthPanels.param.a': 'A：起音时间——包络从零上升至峰值所需的时间',
@@ -336,18 +429,21 @@ export default {
 
 		'synthPanels.osc.osc1LevelDesc': '振荡器 1 电平——第一振荡器的输出音量',
 		'synthPanels.osc.osc2LevelDesc': '振荡器 2 电平——第二振荡器的输出音量',
-		'synthPanels.osc.eqlHint': '等响度（ISO 226）：自动平衡方波、锯齿波、三角波与正弦波之间的感知响度',
+		'synthPanels.osc.eqlHint':
+			'等响度（ISO 226）：自动平衡方波、锯齿波、三角波与正弦波之间的感知响度',
 
 		'synthPanels.env.ampTabHint': '振幅包络（AMP）——通过 ADSR 塑造音量与响度随时间的变化',
 		'synthPanels.env.vcfTabHint': '滤波包络（VCF）——通过 ADSR 扫描滤波截止频率随时间的变化',
-		'synthPanels.env.pitTabHint': '音高包络（PIT）——随时间调制瞬态振荡器音高（非常适合有力的底鼓与激光音效）',
+		'synthPanels.env.pitTabHint':
+			'音高包络（PIT）——随时间调制瞬态振荡器音高（非常适合有力的底鼓与激光音效）',
 		'synthPanels.env.targetVolume': '音量',
 		'synthPanels.env.targetFilterCutoff': '滤波截止',
 		'synthPanels.env.targetPitch': '音高',
 		'synthPanels.env.attackDesc': '起音——音符开始后，{target}包络从零上升至峰值所需的时间',
 		'synthPanels.env.decayDesc': '衰减——{target}包络从峰值降至延音电平所需的时间',
 		'synthPanels.env.sustainDesc': '延音——音符持续按住期间保持的稳定{target}电平',
-		'synthPanels.env.pitchAmountDesc': '音高包络量——音高扫描的深度（八度），正值上升，负值从音符下降',
+		'synthPanels.env.pitchAmountDesc':
+			'音高包络量——音高扫描的深度（八度），正值上升，负值从音符下降',
 		'synthPanels.env.releaseDesc': '释音——音符释放后，{target}包络淡回零所需的时间',
 
 		'synthPanels.lfo.rateDesc': 'LFO 速度——低频振荡器的循环速率（赫兹）',
@@ -359,7 +455,8 @@ export default {
 
 		'synthPanels.fx.mainTabHint': '主 FX：磁带延迟、空间混响与磁带过载饱和',
 		'synthPanels.fx.eqTabHint': '单轨 6 段图示均衡器——仅作用于当前音轨',
-		'synthPanels.fx.duckTabHint': '侧链闪避——每当 SRC 音轨（或其中一个 KEY）发声时，当前音轨都会瞬间压低，让鼓声穿透混音',
+		'synthPanels.fx.duckTabHint':
+			'侧链闪避——每当 SRC 音轨（或其中一个 KEY）发声时，当前音轨都会瞬间压低，让鼓声穿透混音',
 		'synthPanels.fx.delayTimeDesc': '延迟时间——干声与其首个回声之间的毫秒数',
 		'synthPanels.fx.masterVolumeDesc': '主输出音量——整个音色引擎的全局增益，保存在浏览器中',
 		'synthPanels.fx.srcHint': 'SRC——触发闪避的音轨',
@@ -372,7 +469,8 @@ export default {
 		'synthPanels.fx.duckDepthDesc': '每次触发时该音轨压低的幅度（100% = 静音）',
 		'synthPanels.fx.duckDipDesc': '触发后降至最低点所需的时间',
 		'synthPanels.fx.duckHoldDesc': '在最低点保持、释放前的时间',
-		'synthPanels.fx.duckReleaseDesc': '回升到原音量所需的时间——数值越大越有律动泵感，越小越只是压过重音',
+		'synthPanels.fx.duckReleaseDesc':
+			'回升到原音量所需的时间——数值越大越有律动泵感，越小越只是压过重音',
 		'synthPanels.fx.eqToggleHint': '切换该音轨的 6 段图示均衡器（按音轨设置；随乐段保存并共享）',
 		'synthPanels.fx.eqBandLowShelfDesc': '低架滤波——提升／衰减 {label}Hz 附近',
 		'synthPanels.fx.eqBandHighShelfDesc': '高架滤波——提升／衰减 {label}Hz 附近',
@@ -380,7 +478,8 @@ export default {
 
 		'synthPanels.out.fftModeHint': '可视化模式：FFT 对数频谱分析——显示 20Hz 至 20kHz 的频率分布',
 		'synthPanels.out.scopeModeHint': '可视化模式：示波器波形——实时时域音频波形显示',
-		'synthPanels.out.loudnessModeHint': '可视化模式：RMS 响度表与历史记录——实时动态分贝范围（-60dB 至 +6dB）',
+		'synthPanels.out.loudnessModeHint':
+			'可视化模式：RMS 响度表与历史记录——实时动态分贝范围（-60dB 至 +6dB）',
 		'synthPanels.out.recordingHint': '录制中 —— {seconds}秒。点击停止并下载。',
 		'synthPanels.out.recordIdleHint': '录制主输出，停止后自动下载（WebM/Opus，Safari 上为 M4A）',
 		'synthPanels.out.recorderUnsupported': '此浏览器不支持 MediaRecorder',
@@ -392,21 +491,28 @@ export default {
 		'synthPanels.keyboard.raiseStartHint': '提高起始八度',
 		'synthPanels.keyboard.lowerEndHint': '降低结束八度',
 		'synthPanels.keyboard.raiseEndHint': '提高结束八度',
-		'synthPanels.keyboard.qwertyToggleHint': '使用电脑键盘演奏——Z 行为基础八度，Q 行为高一个八度。Ctrl 降低八度，Shift 升高八度（[ 和 ] 键同样有效），按住空格为延音踏板。Ctrl+0-3 的标签页切换仍然可用。',
-		'synthPanels.keyboard.qwertyOctaveHint': 'QWERTY 基础八度——Ctrl 降低，Shift 升高（[ 和 ] 键同样有效）',
+		'synthPanels.keyboard.qwertyToggleHint':
+			'使用电脑键盘演奏——Z 行为基础八度，Q 行为高一个八度。Ctrl 降低八度，Shift 升高八度（[ 和 ] 键同样有效），按住空格为延音踏板。Ctrl+0-3 的标签页切换仍然可用。',
+		'synthPanels.keyboard.qwertyOctaveHint':
+			'QWERTY 基础八度——Ctrl 降低，Shift 升高（[ 和 ] 键同样有效）',
 		'synthPanels.keyboard.sustainHint': '延音踏板（PEDAL / CC64）——使正在发声的音符持续，直至释放',
-		'synthPanels.keyboard.velocityCurveHint': 'MIDI 力度曲线：{curve}（点击循环切换：EXP【自然钢琴】→ LIN【线性 1:1】→ LOG【轻触】→ HARD【激进】→ OFF【固定音量】）',
+		'synthPanels.keyboard.velocityCurveHint':
+			'MIDI 力度曲线：{curve}（点击循环切换：EXP【自然钢琴】→ LIN【线性 1:1】→ LOG【轻触】→ HARD【激进】→ OFF【固定音量】）',
 		'synthPanels.keyboard.playNoteHint': '播放 {note}（{freq} Hz）',
 
 		'synthPanels.roll.fullscreenOnHint': '全面板 — 隐藏 1-7 号机架，把整个下部面板让给钢琴卷帘',
 		'synthPanels.roll.fullscreenOffHint': '全面板：已开启 — 点击恢复 1-7 号机架',
 		'synthPanels.roll.trackNameLabel': '音轨名称',
-		'synthPanels.roll.renameHint': '{name} —— 点击重命名 TRK {track}（最多 {max} 个字符；此处显示 {show} 个）',
-		'synthPanels.roll.selectionHint': '已选音符——拖动可移动（Alt：复制），拖动右端可调整长度，方向键微调（Shift：小节／八度），Delete 删除，Ctrl+C/X/V/D 在光标处复制／剪切／粘贴／重复，Esc 清除选择',
+		'synthPanels.roll.renameHint':
+			'{name} —— 点击重命名 TRK {track}（最多 {max} 个字符；此处显示 {show} 个）',
+		'synthPanels.roll.selectionHint':
+			'已选音符——拖动可移动（Alt：复制），拖动右端可调整长度，方向键微调（Shift：小节／八度），Delete 删除，Ctrl+C/X/V/D 在光标处复制／剪切／粘贴／重复，Esc 清除选择',
 		'synthPanels.roll.undoHint': '撤销上一次编辑（Ctrl+Z）',
 		'synthPanels.roll.redoHint': '重做（Ctrl+Shift+Z / Ctrl+Y）',
-		'synthPanels.roll.clearPageHint': '清空当前页（CLR）——移除当前音轨当前页面上的所有音符与和弦（可撤销）',
-		'synthPanels.roll.octScopeHint': '八度显示范围（起始 - 结束）——限制钢琴卷帘中可见的音高范围，不改变格子尺寸',
+		'synthPanels.roll.clearPageHint':
+			'清空当前页（CLR）——移除当前音轨当前页面上的所有音符与和弦（可撤销）',
+		'synthPanels.roll.octScopeHint':
+			'八度显示范围（起始 - 结束）——限制钢琴卷帘中可见的音高范围，不改变格子尺寸',
 		'synthPanels.roll.lowerStartHint': '降低起始八度（降八度）',
 		'synthPanels.roll.raiseStartHint': '提高起始八度（升八度）',
 		'synthPanels.roll.startOctaveHint': '起始八度：第 {octave} 八度（C{octave}）',
@@ -414,7 +520,8 @@ export default {
 		'synthPanels.roll.raiseEndHint': '提高结束八度',
 		'synthPanels.roll.endOctaveHint': '结束八度：第 {octave} 八度（B{octave}）',
 		'synthPanels.roll.jumpToStepHint': '点击将播放光标设置到第 {step} 步（第 {bar}.{beat} 小节）',
-		'synthPanels.roll.jumpToColumnHint': '点击将播放光标设置到第 {column} 列（第 {step} 步，第 {bar}.{beat} 小节）',
+		'synthPanels.roll.jumpToColumnHint':
+			'点击将播放光标设置到第 {column} 列（第 {step} 步，第 {bar}.{beat} 小节）',
 		'synthPanels.lane.toggleHint': '自动化 lane —— 点击在卷帘上方展开编辑器',
 		'synthPanels.lane.addHint': '添加 lane（仅 ADV，最多 4 条）',
 		'synthPanels.lane.removeHint': '删除此 lane',
@@ -422,7 +529,8 @@ export default {
 		'synthPanels.lane.closeHint': '收起 lane 编辑器',
 		'synthPanels.lane.sampledHint': '音符触发时采样一次 —— 这就是力度',
 		'synthPanels.lane.continuousHint': '连续 —— 在长音符持续期间继续变化',
-		'synthPanels.roll.auditionKeyCustomHint': '{note} —— 点击试听并编辑此按键（已有专属音色；右键可移除）',
+		'synthPanels.roll.auditionKeyCustomHint':
+			'{note} —— 点击试听并编辑此按键（已有专属音色；右键可移除）',
 		'synthPanels.roll.auditionKeyDefaultHint': '{note} —— 点击试听并编辑此按键（播放音轨音色）',
 		'synthPanels.roll.auditionNoteHint': '试听 {note}（{freq}Hz）',
 		'synthPanels.roll.cellStepHint': '{note} —— 第 {step} 步',
@@ -494,8 +602,10 @@ export default {
 		'synthPanels.voice.editingLayout': '编辑布局',
 		'synthPanels.voice.advDefaultOn': '音轨默认进入 ADV',
 		'synthPanels.voice.advDefaultOff': '音轨默认显示机架',
-		'synthPanels.voice.advDefaultDesc': '新音轨直接进入高级布局：模块 1-7 让位给钢琴卷帘或连线机架。手动切换过的音轨保留自己的选择。',
-		'synthPanels.midi.noDevicesHint': '插入任意 USB／蓝牙 MIDI 键盘或控制器，Chrome／Edge／Firefox 会自动检测并绑定输入，无需安装驱动。',
+		'synthPanels.voice.advDefaultDesc':
+			'新音轨直接进入高级布局：模块 1-7 让位给钢琴卷帘或连线机架。手动切换过的音轨保留自己的选择。',
+		'synthPanels.midi.noDevicesHint':
+			'插入任意 USB／蓝牙 MIDI 键盘或控制器，Chrome／Edge／Firefox 会自动检测并绑定输入，无需安装驱动。',
 
 		'synthPanels.voice.tuningTitle': '主调音基准（A4 标准）',
 		'synthPanels.voice.tuningSubtitle': '振荡器参考校准',
@@ -539,32 +649,40 @@ export default {
 		'synthPanels.rack.flowToOut': '訊號流向：至主輸出與視覺化',
 
 		'synthPanels.knob.rotaryHint': '{label}{descPart}：{value}{unit} —— 上下拖曳或滾動滾輪調整',
-		'synthPanels.knob.rotaryHintReset': '{label}{descPart}：{value}{unit} —— 上下拖曳或滾動滾輪調整 · 按右鍵重設',
+		'synthPanels.knob.rotaryHintReset':
+			'{label}{descPart}：{value}{unit} —— 上下拖曳或滾動滾輪調整 · 按右鍵重設',
 		'synthPanels.knob.faderHint': '{label}{descPart}：{value}{unit} —— 點擊、上下拖曳或滾動滾輪',
-		'synthPanels.knob.faderHintReset': '{label}{descPart}：{value}{unit} —— 點擊、上下拖曳或滾動滾輪 · 按右鍵重設',
+		'synthPanels.knob.faderHintReset':
+			'{label}{descPart}：{value}{unit} —— 點擊、上下拖曳或滾動滾輪 · 按右鍵重設',
 		'synthPanels.knob.hFaderHint': '{labelPart}{value}{unit} —— 點擊、左右拖曳或滾動滾輪',
-		'synthPanels.knob.hFaderHintReset': '{labelPart}{value}{unit} —— 點擊、左右拖曳或滾動滾輪 · 按右鍵重設',
+		'synthPanels.knob.hFaderHintReset':
+			'{labelPart}{value}{unit} —— 點擊、左右拖曳或滾動滾輪 · 按右鍵重設',
 
 		'synthPanels.param.vol': 'VOL：音量／輸出增益',
 		'synthPanels.param.lvl': 'LVL：電平／輸出增益',
 		'synthPanels.param.pw': 'PW：脈寬——方波脈衝波形的工作週期（從窄尖峰到對稱方波）',
 		'synthPanels.param.sub': 'SUB：副振盪器增益——疊加低八度正弦波，增添低頻次貝斯',
 		'synthPanels.param.noise': 'NOISE：白噪聲電平——增添氣聲、瞬態衝擊感或空氣感打擊噪音',
-		'synthPanels.param.rpt': 'RPT：噪聲重複次數——每次觸發的噪聲爆發數（1 為單次；3-4 為 808 拍手的連擊感）',
+		'synthPanels.param.rpt':
+			'RPT：噪聲重複次數——每次觸發的噪聲爆發數（1 為單次；3-4 為 808 拍手的連擊感）',
 		'synthPanels.param.gap': 'GAP：噪聲爆發間隔——重複噪聲爆發之間的毫秒數',
-		'synthPanels.param.det': 'DET：兩個振盪器之間的微調失諧量（音分），±50 音分帶來濃郁的類比合唱厚度',
+		'synthPanels.param.det':
+			'DET：兩個振盪器之間的微調失諧量（音分），±50 音分帶來濃郁的類比合唱厚度',
 		'synthPanels.param.semi': 'SEMI：半音音高偏移——以 ±24 半音（最多 ±2 個八度）移調',
 		'synthPanels.param.ratio': 'RATIO：FM 諧波倍率——頻率調變的頻率比（1 倍至 4 倍）',
 		'synthPanels.param.phase': 'PHASE：相位角偏移——波形起始相位 0°至 360°，用以拓寬立體聲',
 		'synthPanels.param.mrp': 'MRP：融合量——振盪器 1 與 2 之間的連續交叉漸變混合',
 		'synthPanels.param.morph': 'MORPH：融合量——振盪器 1 與 2 之間的連續交叉漸變混合',
-		'synthPanels.param.xfade': 'X-FADE：交叉混合平衡——振盪器 1 與 2 的靜態混合比例（0% 為全 OSC1，100% 為全 OSC2）',
-		'synthPanels.param.glide': 'GLIDE：滑音時間——音高從一個音符滑向下一個音符所需的毫秒數，而非直接跳變',
+		'synthPanels.param.xfade':
+			'X-FADE：交叉混合平衡——振盪器 1 與 2 的靜態混合比例（0% 為全 OSC1，100% 為全 OSC2）',
+		'synthPanels.param.glide':
+			'GLIDE：滑音時間——音高從一個音符滑向下一個音符所需的毫秒數，而非直接跳變',
 		'synthPanels.param.cut': 'CUT：截止頻率——濾波器開始衰減的頻率閾值（赫茲）',
 		'synthPanels.param.cutoff': 'CUTOFF：截止頻率——濾波器開始衰減的頻率閾值（赫茲）',
 		'synthPanels.param.res': 'RES：共振／Q 值——強調並提升截止點附近的頻率',
 		'synthPanels.param.resq': 'RESQ：共振／Q 值——強調並提升截止點附近的頻率；數值過高會自激嘯叫',
-		'synthPanels.param.ktrk': 'KTRK：鍵盤追蹤——截止頻率跟隨音高的程度，使高音區與低音區維持相對一致的明亮度',
+		'synthPanels.param.ktrk':
+			'KTRK：鍵盤追蹤——截止頻率跟隨音高的程度，使高音區與低音區維持相對一致的明亮度',
 		'synthPanels.param.mod': 'MOD：包絡調變——包絡掃描濾波截止頻率的雙極性深度',
 		'synthPanels.param.enva': 'ENVA：濾波包絡量——濾波包絡掃描截止頻率的雙極性深度',
 		'synthPanels.param.a': 'A：起音時間——包絡從零上升至峰值所需的時間',
@@ -588,18 +706,21 @@ export default {
 
 		'synthPanels.osc.osc1LevelDesc': '振盪器 1 電平——第一振盪器的輸出音量',
 		'synthPanels.osc.osc2LevelDesc': '振盪器 2 電平——第二振盪器的輸出音量',
-		'synthPanels.osc.eqlHint': '等響度（ISO 226）：自動平衡方波、鋸齒波、三角波與正弦波之間的感知響度',
+		'synthPanels.osc.eqlHint':
+			'等響度（ISO 226）：自動平衡方波、鋸齒波、三角波與正弦波之間的感知響度',
 
 		'synthPanels.env.ampTabHint': '振幅包絡（AMP）——透過 ADSR 塑造音量與響度隨時間的變化',
 		'synthPanels.env.vcfTabHint': '濾波包絡（VCF）——透過 ADSR 掃描濾波截止頻率隨時間的變化',
-		'synthPanels.env.pitTabHint': '音高包絡（PIT）——隨時間調變瞬態振盪器音高（非常適合有力的大鼓與雷射音效）',
+		'synthPanels.env.pitTabHint':
+			'音高包絡（PIT）——隨時間調變瞬態振盪器音高（非常適合有力的大鼓與雷射音效）',
 		'synthPanels.env.targetVolume': '音量',
 		'synthPanels.env.targetFilterCutoff': '濾波截止',
 		'synthPanels.env.targetPitch': '音高',
 		'synthPanels.env.attackDesc': '起音——音符開始後，{target}包絡從零上升至峰值所需的時間',
 		'synthPanels.env.decayDesc': '衰減——{target}包絡從峰值降至延音電平所需的時間',
 		'synthPanels.env.sustainDesc': '延音——音符持續按住期間維持的穩定{target}電平',
-		'synthPanels.env.pitchAmountDesc': '音高包絡量——音高掃描的深度（八度），正值上升，負值從音符下降',
+		'synthPanels.env.pitchAmountDesc':
+			'音高包絡量——音高掃描的深度（八度），正值上升，負值從音符下降',
 		'synthPanels.env.releaseDesc': '釋音——音符釋放後，{target}包絡淡回零所需的時間',
 
 		'synthPanels.lfo.rateDesc': 'LFO 速度——低頻振盪器的循環速率（赫茲）',
@@ -611,20 +732,23 @@ export default {
 
 		'synthPanels.fx.mainTabHint': '主 FX：磁帶延遲、空間混響與磁帶過載飽和',
 		'synthPanels.fx.eqTabHint': '單軌 6 段圖示等化器——僅作用於目前音軌',
-		'synthPanels.fx.duckTabHint': '側鏈閃避——每當 SRC 音軌（或其中一個 KEY）發聲時，目前音軌都會瞬間壓低，讓鼓聲穿透混音',
+		'synthPanels.fx.duckTabHint':
+			'側鏈閃避——每當 SRC 音軌（或其中一個 KEY）發聲時，目前音軌都會瞬間壓低，讓鼓聲穿透混音',
 		'synthPanels.fx.delayTimeDesc': '延遲時間——乾聲與其首個回聲之間的毫秒數',
 		'synthPanels.fx.masterVolumeDesc': '主輸出音量——整個音色引擎的全域增益，儲存於瀏覽器中',
 		'synthPanels.fx.srcHint': 'SRC——觸發閃避的音軌',
 		'synthPanels.fx.prevSourceHint': '上一個來源音軌',
 		'synthPanels.fx.nextSourceHint': '下一個來源音軌',
-		'synthPanels.fx.keyRowHint': 'KEY——來源音軌鼓組中觸發閃避的按鍵；全部未點亮表示任意按鍵都會觸發',
+		'synthPanels.fx.keyRowHint':
+			'KEY——來源音軌鼓組中觸發閃避的按鍵；全部未點亮表示任意按鍵都會觸發',
 		'synthPanels.fx.dropKeyHint': '{note} 正在觸發閃避——點擊移除',
 		'synthPanels.fx.addKeyHint': '將 {note} 加入觸發按鍵',
 		'synthPanels.fx.noKitKeys': '此鼓組中還沒有按鍵',
 		'synthPanels.fx.duckDepthDesc': '每次觸發時該音軌壓低的幅度（100% = 靜音）',
 		'synthPanels.fx.duckDipDesc': '觸發後降至最低點所需的時間',
 		'synthPanels.fx.duckHoldDesc': '在最低點保持、釋放前的時間',
-		'synthPanels.fx.duckReleaseDesc': '回升到原音量所需的時間——數值越大越有律動泵感，越小越只是壓過重音',
+		'synthPanels.fx.duckReleaseDesc':
+			'回升到原音量所需的時間——數值越大越有律動泵感，越小越只是壓過重音',
 		'synthPanels.fx.eqToggleHint': '切換該音軌的 6 段圖示等化器（依音軌設定；隨樂段儲存並共享）',
 		'synthPanels.fx.eqBandLowShelfDesc': '低架濾波——提升／衰減 {label}Hz 附近',
 		'synthPanels.fx.eqBandHighShelfDesc': '高架濾波——提升／衰減 {label}Hz 附近',
@@ -632,7 +756,8 @@ export default {
 
 		'synthPanels.out.fftModeHint': '視覺化模式：FFT 對數頻譜分析——顯示 20Hz 至 20kHz 的頻率分佈',
 		'synthPanels.out.scopeModeHint': '視覺化模式：示波器波形——即時時域音訊波形顯示',
-		'synthPanels.out.loudnessModeHint': '視覺化模式：RMS 響度表與歷史記錄——即時動態分貝範圍（-60dB 至 +6dB）',
+		'synthPanels.out.loudnessModeHint':
+			'視覺化模式：RMS 響度表與歷史記錄——即時動態分貝範圍（-60dB 至 +6dB）',
 		'synthPanels.out.recordingHint': '錄製中 —— {seconds} 秒。點擊停止並下載。',
 		'synthPanels.out.recordIdleHint': '錄製主輸出，停止後自動下載（WebM/Opus，Safari 上為 M4A）',
 		'synthPanels.out.recorderUnsupported': '此瀏覽器不支援 MediaRecorder',
@@ -644,21 +769,28 @@ export default {
 		'synthPanels.keyboard.raiseStartHint': '提高起始八度',
 		'synthPanels.keyboard.lowerEndHint': '降低結束八度',
 		'synthPanels.keyboard.raiseEndHint': '提高結束八度',
-		'synthPanels.keyboard.qwertyToggleHint': '使用電腦鍵盤演奏——Z 排為基礎八度，Q 排為高一個八度。Ctrl 降低八度，Shift 升高八度（[ 與 ] 鍵同樣有效），按住空白鍵為延音踏板。Ctrl+0-3 的分頁切換仍可使用。',
-		'synthPanels.keyboard.qwertyOctaveHint': 'QWERTY 基礎八度——Ctrl 降低，Shift 升高（[ 與 ] 鍵同樣有效）',
+		'synthPanels.keyboard.qwertyToggleHint':
+			'使用電腦鍵盤演奏——Z 排為基礎八度，Q 排為高一個八度。Ctrl 降低八度，Shift 升高八度（[ 與 ] 鍵同樣有效），按住空白鍵為延音踏板。Ctrl+0-3 的分頁切換仍可使用。',
+		'synthPanels.keyboard.qwertyOctaveHint':
+			'QWERTY 基礎八度——Ctrl 降低，Shift 升高（[ 與 ] 鍵同樣有效）',
 		'synthPanels.keyboard.sustainHint': '延音踏板（PEDAL / CC64）——使正在發聲的音符持續，直到釋放',
-		'synthPanels.keyboard.velocityCurveHint': 'MIDI 力度曲線：{curve}（點擊循環切換：EXP【自然鋼琴】→ LIN【線性 1:1】→ LOG【輕觸】→ HARD【激進】→ OFF【固定音量】）',
+		'synthPanels.keyboard.velocityCurveHint':
+			'MIDI 力度曲線：{curve}（點擊循環切換：EXP【自然鋼琴】→ LIN【線性 1:1】→ LOG【輕觸】→ HARD【激進】→ OFF【固定音量】）',
 		'synthPanels.keyboard.playNoteHint': '播放 {note}（{freq} Hz）',
 
 		'synthPanels.roll.fullscreenOnHint': '全面板 — 隱藏 1-7 號機架，把整個下部面板讓給鋼琴捲軸',
 		'synthPanels.roll.fullscreenOffHint': '全面板：已開啟 — 點擊恢復 1-7 號機架',
 		'synthPanels.roll.trackNameLabel': '音軌名稱',
-		'synthPanels.roll.renameHint': '{name} —— 點擊重新命名 TRK {track}（最多 {max} 個字元；此處顯示 {show} 個）',
-		'synthPanels.roll.selectionHint': '已選音符——拖曳可移動（Alt：複製），拖曳右端可調整長度，方向鍵微調（Shift：小節／八度），Delete 刪除，Ctrl+C/X/V/D 於游標處複製／剪下／貼上／重複，Esc 清除選取',
+		'synthPanels.roll.renameHint':
+			'{name} —— 點擊重新命名 TRK {track}（最多 {max} 個字元；此處顯示 {show} 個）',
+		'synthPanels.roll.selectionHint':
+			'已選音符——拖曳可移動（Alt：複製），拖曳右端可調整長度，方向鍵微調（Shift：小節／八度），Delete 刪除，Ctrl+C/X/V/D 於游標處複製／剪下／貼上／重複，Esc 清除選取',
 		'synthPanels.roll.undoHint': '復原上一次編輯（Ctrl+Z）',
 		'synthPanels.roll.redoHint': '重做（Ctrl+Shift+Z / Ctrl+Y）',
-		'synthPanels.roll.clearPageHint': '清空目前頁面（CLR）——移除目前音軌目前頁面上的所有音符與和弦（可復原）',
-		'synthPanels.roll.octScopeHint': '八度顯示範圍（起始 - 結束）——限制鋼琴捲軸中可見的音高範圍，不改變格線尺寸',
+		'synthPanels.roll.clearPageHint':
+			'清空目前頁面（CLR）——移除目前音軌目前頁面上的所有音符與和弦（可復原）',
+		'synthPanels.roll.octScopeHint':
+			'八度顯示範圍（起始 - 結束）——限制鋼琴捲軸中可見的音高範圍，不改變格線尺寸',
 		'synthPanels.roll.lowerStartHint': '降低起始八度（降八度）',
 		'synthPanels.roll.raiseStartHint': '提高起始八度（升八度）',
 		'synthPanels.roll.startOctaveHint': '起始八度：第 {octave} 八度（C{octave}）',
@@ -666,7 +798,8 @@ export default {
 		'synthPanels.roll.raiseEndHint': '提高結束八度',
 		'synthPanels.roll.endOctaveHint': '結束八度：第 {octave} 八度（B{octave}）',
 		'synthPanels.roll.jumpToStepHint': '點擊將播放游標設定到第 {step} 步（第 {bar}.{beat} 小節）',
-		'synthPanels.roll.jumpToColumnHint': '點擊將播放游標設定到第 {column} 欄（第 {step} 步，第 {bar}.{beat} 小節）',
+		'synthPanels.roll.jumpToColumnHint':
+			'點擊將播放游標設定到第 {column} 欄（第 {step} 步，第 {bar}.{beat} 小節）',
 		'synthPanels.lane.toggleHint': '自動化 lane —— 點擊在捲簾上方展開編輯器',
 		'synthPanels.lane.addHint': '新增 lane（僅 ADV，最多 4 條）',
 		'synthPanels.lane.removeHint': '刪除此 lane',
@@ -674,7 +807,8 @@ export default {
 		'synthPanels.lane.closeHint': '收起 lane 編輯器',
 		'synthPanels.lane.sampledHint': '音符觸發時取樣一次 —— 這就是力度',
 		'synthPanels.lane.continuousHint': '連續 —— 在長音符持續期間繼續變化',
-		'synthPanels.roll.auditionKeyCustomHint': '{note} —— 點擊試聽並編輯此按鍵（已有專屬音色；按右鍵可移除）',
+		'synthPanels.roll.auditionKeyCustomHint':
+			'{note} —— 點擊試聽並編輯此按鍵（已有專屬音色；按右鍵可移除）',
 		'synthPanels.roll.auditionKeyDefaultHint': '{note} —— 點擊試聽並編輯此按鍵（播放音軌音色）',
 		'synthPanels.roll.auditionNoteHint': '試聽 {note}（{freq}Hz）',
 		'synthPanels.roll.cellStepHint': '{note} —— 第 {step} 步',
@@ -746,8 +880,10 @@ export default {
 		'synthPanels.voice.editingLayout': '編輯佈局',
 		'synthPanels.voice.advDefaultOn': '音軌預設進入 ADV',
 		'synthPanels.voice.advDefaultOff': '音軌預設顯示機架',
-		'synthPanels.voice.advDefaultDesc': '新音軌直接進入進階佈局：模組 1-7 讓位給鋼琴捲簾或連線機架。手動切換過的音軌保留自己的選擇。',
-		'synthPanels.midi.noDevicesHint': '插入任何 USB／藍牙 MIDI 鍵盤或控制器，Chrome／Edge／Firefox 會自動偵測並綁定輸入，無需安裝驅動程式。',
+		'synthPanels.voice.advDefaultDesc':
+			'新音軌直接進入進階佈局：模組 1-7 讓位給鋼琴捲簾或連線機架。手動切換過的音軌保留自己的選擇。',
+		'synthPanels.midi.noDevicesHint':
+			'插入任何 USB／藍牙 MIDI 鍵盤或控制器，Chrome／Edge／Firefox 會自動偵測並綁定輸入，無需安裝驅動程式。',
 
 		'synthPanels.voice.tuningTitle': '主調音基準（A4 標準）',
 		'synthPanels.voice.tuningSubtitle': '振盪器參考校準',
@@ -782,7 +918,8 @@ export default {
 		'synthPanels.toast.notAKit': 'X 不是有效的鼓組檔案'
 	},
 	ja: {
-		'synthPanels.rack.resetHint': 'R — リセット：このラックをニュートラルな値に戻し、音に影響しない状態にします',
+		'synthPanels.rack.resetHint':
+			'R — リセット：このラックをニュートラルな値に戻し、音に影響しない状態にします',
 		'synthPanels.rack.flowToFusion': '信号の流れ：ティンバー・フュージョンへ',
 		'synthPanels.rack.flowToFilter': '信号の流れ：VCF フィルターへ',
 		'synthPanels.rack.flowToEnvelopes': '信号の流れ：エンベロープ＆VCAへ',
@@ -790,135 +927,204 @@ export default {
 		'synthPanels.rack.flowToFxEq': '信号の流れ：マスターFX＆EQへ',
 		'synthPanels.rack.flowToOut': '信号の流れ：マスター出力とビジュアライザーへ',
 
-		'synthPanels.knob.rotaryHint': '{label}{descPart}：{value}{unit} — 上下にドラッグ、またはホイールで調整',
-		'synthPanels.knob.rotaryHintReset': '{label}{descPart}：{value}{unit} — 上下にドラッグ、またはホイールで調整・右クリックでリセット',
-		'synthPanels.knob.faderHint': '{label}{descPart}：{value}{unit} — クリック、上下ドラッグ、またはホイールで操作',
-		'synthPanels.knob.faderHintReset': '{label}{descPart}：{value}{unit} — クリック、上下ドラッグ、またはホイールで操作・右クリックでリセット',
-		'synthPanels.knob.hFaderHint': '{labelPart}{value}{unit} — クリック、左右ドラッグ、またはホイールで操作',
-		'synthPanels.knob.hFaderHintReset': '{labelPart}{value}{unit} — クリック、左右ドラッグ、またはホイールで操作・右クリックでリセット',
+		'synthPanels.knob.rotaryHint':
+			'{label}{descPart}：{value}{unit} — 上下にドラッグ、またはホイールで調整',
+		'synthPanels.knob.rotaryHintReset':
+			'{label}{descPart}：{value}{unit} — 上下にドラッグ、またはホイールで調整・右クリックでリセット',
+		'synthPanels.knob.faderHint':
+			'{label}{descPart}：{value}{unit} — クリック、上下ドラッグ、またはホイールで操作',
+		'synthPanels.knob.faderHintReset':
+			'{label}{descPart}：{value}{unit} — クリック、上下ドラッグ、またはホイールで操作・右クリックでリセット',
+		'synthPanels.knob.hFaderHint':
+			'{labelPart}{value}{unit} — クリック、左右ドラッグ、またはホイールで操作',
+		'synthPanels.knob.hFaderHintReset':
+			'{labelPart}{value}{unit} — クリック、左右ドラッグ、またはホイールで操作・右クリックでリセット',
 
 		'synthPanels.param.vol': 'VOL：音量／出力ゲイン',
 		'synthPanels.param.lvl': 'LVL：レベル／出力ゲイン',
-		'synthPanels.param.pw': 'PW：パルス幅 — 矩形パルス波形のデューティ比（細いスパイクから対称な矩形波まで）',
-		'synthPanels.param.sub': 'SUB：サブオシレーター・ゲイン — 1オクターブ下のサイン波を加えて低域のサブベースを強化',
-		'synthPanels.param.noise': 'NOISE：ホワイトノイズ・レベル — 息づかいやアタック感、空気感のあるパーカッシブなノイズを追加',
-		'synthPanels.param.rpt': 'RPT：ノイズ・リピート回数 — 1打あたりのノイズバースト数（1＝単発、3〜4＝808風のクラップの連打感）',
+		'synthPanels.param.pw':
+			'PW：パルス幅 — 矩形パルス波形のデューティ比（細いスパイクから対称な矩形波まで）',
+		'synthPanels.param.sub':
+			'SUB：サブオシレーター・ゲイン — 1オクターブ下のサイン波を加えて低域のサブベースを強化',
+		'synthPanels.param.noise':
+			'NOISE：ホワイトノイズ・レベル — 息づかいやアタック感、空気感のあるパーカッシブなノイズを追加',
+		'synthPanels.param.rpt':
+			'RPT：ノイズ・リピート回数 — 1打あたりのノイズバースト数（1＝単発、3〜4＝808風のクラップの連打感）',
 		'synthPanels.param.gap': 'GAP：ノイズバースト間隔 — 繰り返すノイズバースト間のミリ秒数',
-		'synthPanels.param.det': 'DET：2つのオシレーター間のデチューン量（セント）。±50セントでアナログ的な厚みのあるコーラス感に',
-		'synthPanels.param.semi': 'SEMI：半音単位のピッチオフセット — ±24半音（最大±2オクターブ）まで移調',
+		'synthPanels.param.det':
+			'DET：2つのオシレーター間のデチューン量（セント）。±50セントでアナログ的な厚みのあるコーラス感に',
+		'synthPanels.param.semi':
+			'SEMI：半音単位のピッチオフセット — ±24半音（最大±2オクターブ）まで移調',
 		'synthPanels.param.ratio': 'RATIO：FMハーモニック倍率 — 周波数変調のための周波数比（1倍〜4倍）',
-		'synthPanels.param.phase': 'PHASE：位相角オフセット — 波形の開始位相を0°〜360°で調整し、ステレオを広げる',
+		'synthPanels.param.phase':
+			'PHASE：位相角オフセット — 波形の開始位相を0°〜360°で調整し、ステレオを広げる',
 		'synthPanels.param.mrp': 'MRP：モーフ量 — オシレーター1と2を連続的にクロスフェード・ブレンド',
-		'synthPanels.param.morph': 'MORPH：モーフ量 — オシレーター1と2を連続的にクロスフェード・ブレンド',
-		'synthPanels.param.xfade': 'X-FADE：クロスフェード・バランス — オシレーター1と2の静的なミックス比率（0%＝OSC1のみ、100%＝OSC2のみ）',
-		'synthPanels.param.glide': 'GLIDE：グライドタイム — 音がジャンプせず、次の音へ滑らかに移行するまでのミリ秒数',
-		'synthPanels.param.cut': 'CUT：カットオフ周波数 — フィルターの減衰が始まる周波数のしきい値（Hz）',
-		'synthPanels.param.cutoff': 'CUTOFF：カットオフ周波数 — フィルターの減衰が始まる周波数のしきい値（Hz）',
+		'synthPanels.param.morph':
+			'MORPH：モーフ量 — オシレーター1と2を連続的にクロスフェード・ブレンド',
+		'synthPanels.param.xfade':
+			'X-FADE：クロスフェード・バランス — オシレーター1と2の静的なミックス比率（0%＝OSC1のみ、100%＝OSC2のみ）',
+		'synthPanels.param.glide':
+			'GLIDE：グライドタイム — 音がジャンプせず、次の音へ滑らかに移行するまでのミリ秒数',
+		'synthPanels.param.cut':
+			'CUT：カットオフ周波数 — フィルターの減衰が始まる周波数のしきい値（Hz）',
+		'synthPanels.param.cutoff':
+			'CUTOFF：カットオフ周波数 — フィルターの減衰が始まる周波数のしきい値（Hz）',
 		'synthPanels.param.res': 'RES：レゾナンス／Q値 — カットオフ付近の周波数を強調・ブースト',
-		'synthPanels.param.resq': 'RESQ：レゾナンス／Q値 — カットオフ付近の周波数を強調・ブースト。値が高いと自己発振して発振音になる',
-		'synthPanels.param.ktrk': 'KTRK：キーボード・トラッキング — カットオフが音程にどれだけ追従するか。高音域でも低音域と同じ明るさを保つ',
-		'synthPanels.param.mod': 'MOD：エンベロープ・モジュレーション — フィルターカットオフをスイープするエンベロープの両極性の深さ',
-		'synthPanels.param.enva': 'ENVA：フィルター・エンベロープ量 — フィルターエンベロープがカットオフをスイープする両極性の深さ',
+		'synthPanels.param.resq':
+			'RESQ：レゾナンス／Q値 — カットオフ付近の周波数を強調・ブースト。値が高いと自己発振して発振音になる',
+		'synthPanels.param.ktrk':
+			'KTRK：キーボード・トラッキング — カットオフが音程にどれだけ追従するか。高音域でも低音域と同じ明るさを保つ',
+		'synthPanels.param.mod':
+			'MOD：エンベロープ・モジュレーション — フィルターカットオフをスイープするエンベロープの両極性の深さ',
+		'synthPanels.param.enva':
+			'ENVA：フィルター・エンベロープ量 — フィルターエンベロープがカットオフをスイープする両極性の深さ',
 		'synthPanels.param.a': 'A：アタックタイム — エンベロープがゼロからピークまで立ち上がる時間',
-		'synthPanels.param.d': 'D：ディケイタイム — エンベロープがピークからサステインレベルまで下がる時間',
+		'synthPanels.param.d':
+			'D：ディケイタイム — エンベロープがピークからサステインレベルまで下がる時間',
 		'synthPanels.param.s': 'S：サステインレベル — ノートを押し続けている間保持される一定のレベル',
 		'synthPanels.param.r': 'R：リリースタイム — ノートを離してから無音までフェードアウトする時間',
-		'synthPanels.param.amt': 'AMT：モジュレーション量 — サウンドエンジンに適用されるエンベロープ全体の強さ／深さ',
+		'synthPanels.param.amt':
+			'AMT：モジュレーション量 — サウンドエンジンに適用されるエンベロープ全体の強さ／深さ',
 		'synthPanels.param.env': 'ENV：エンベロープ量 — エンベロープ全体のモジュレーション強度',
-		'synthPanels.param.rate': 'RATE：LFOスピード／周波数 — モジュレーション振動のレート（0.1Hz〜20Hz）',
-		'synthPanels.param.dep': 'DEP：LFOデプス — 選択したターゲットに適用されるモジュレーションの強さ／深さ',
-		'synthPanels.param.depth': 'DEPTH：LFOデプス — 選択したターゲットに適用されるモジュレーションの強さ／深さ',
-		'synthPanels.param.pan': 'PAN：ステレオ・パンニング — ステレオフィールド内の位置（左100%〜右100%）',
-		'synthPanels.param.drive': 'DRIVE：アナログ・オーバードライブ／サチュレーション — 温かみと迫力を加えるソフトクリップ歪み',
-		'synthPanels.param.dTime': 'D.TIME：ディレイ・エコータイム — エコーの繰り返し間の遅延時間（10ms〜1000ms）',
-		'synthPanels.param.dFdbk': 'D.FDBK：ディレイ・フィードバック — 入力に戻してエコーを持続させる量',
+		'synthPanels.param.rate':
+			'RATE：LFOスピード／周波数 — モジュレーション振動のレート（0.1Hz〜20Hz）',
+		'synthPanels.param.dep':
+			'DEP：LFOデプス — 選択したターゲットに適用されるモジュレーションの強さ／深さ',
+		'synthPanels.param.depth':
+			'DEPTH：LFOデプス — 選択したターゲットに適用されるモジュレーションの強さ／深さ',
+		'synthPanels.param.pan':
+			'PAN：ステレオ・パンニング — ステレオフィールド内の位置（左100%〜右100%）',
+		'synthPanels.param.drive':
+			'DRIVE：アナログ・オーバードライブ／サチュレーション — 温かみと迫力を加えるソフトクリップ歪み',
+		'synthPanels.param.dTime':
+			'D.TIME：ディレイ・エコータイム — エコーの繰り返し間の遅延時間（10ms〜1000ms）',
+		'synthPanels.param.dFdbk':
+			'D.FDBK：ディレイ・フィードバック — 入力に戻してエコーを持続させる量',
 		'synthPanels.param.fdbk': 'FDBK：ディレイ・フィードバック — 入力に戻してエコーを持続させる量',
-		'synthPanels.param.dMixDot': 'D.MIX：ディレイ・ウェット／ドライミックス — 原音とウェットなエコー信号のバランス',
-		'synthPanels.param.dMixDash': 'D-MIX：ディレイ・ウェット／ドライミックス — 原音とウェットなエコー信号のバランス',
-		'synthPanels.param.rMix': 'R-MIX：リバーブ・ウェット／ドライミックス — 原音とウェットなリバーブ信号のバランス',
-		'synthPanels.param.rev': 'REV：リバーブ・スペースミックス — 空間畳み込みリバーブのウェットレベル',
+		'synthPanels.param.dMixDot':
+			'D.MIX：ディレイ・ウェット／ドライミックス — 原音とウェットなエコー信号のバランス',
+		'synthPanels.param.dMixDash':
+			'D-MIX：ディレイ・ウェット／ドライミックス — 原音とウェットなエコー信号のバランス',
+		'synthPanels.param.rMix':
+			'R-MIX：リバーブ・ウェット／ドライミックス — 原音とウェットなリバーブ信号のバランス',
+		'synthPanels.param.rev':
+			'REV：リバーブ・スペースミックス — 空間畳み込みリバーブのウェットレベル',
 
 		'synthPanels.osc.osc1LevelDesc': 'オシレーター1レベル — 第1オシレーターの出力音量',
 		'synthPanels.osc.osc2LevelDesc': 'オシレーター2レベル — 第2オシレーターの出力音量',
-		'synthPanels.osc.eqlHint': 'イコールラウドネス（ISO 226）：矩形波・のこぎり波・三角波・サイン波間の知覚的な音量を自動的に均一化します',
+		'synthPanels.osc.eqlHint':
+			'イコールラウドネス（ISO 226）：矩形波・のこぎり波・三角波・サイン波間の知覚的な音量を自動的に均一化します',
 
 		'synthPanels.env.ampTabHint': 'アンプ・エンベロープ（AMP） — ADSRで音量と音圧の時間変化を形成',
-		'synthPanels.env.vcfTabHint': 'フィルター・エンベロープ（VCF） — ADSRでフィルターカットオフの時間変化をスイープ',
-		'synthPanels.env.pitTabHint': 'ピッチ・エンベロープ（PIT） — オシレーターのピッチを時間変化でモジュレーション（迫力のあるキックドラムやレーザーSEに最適）',
+		'synthPanels.env.vcfTabHint':
+			'フィルター・エンベロープ（VCF） — ADSRでフィルターカットオフの時間変化をスイープ',
+		'synthPanels.env.pitTabHint':
+			'ピッチ・エンベロープ（PIT） — オシレーターのピッチを時間変化でモジュレーション（迫力のあるキックドラムやレーザーSEに最適）',
 		'synthPanels.env.targetVolume': '音量',
 		'synthPanels.env.targetFilterCutoff': 'フィルターカットオフ',
 		'synthPanels.env.targetPitch': 'ピッチ',
-		'synthPanels.env.attackDesc': 'アタック — ノート開始後、{target}エンベロープがゼロからピークまで立ち上がる時間',
-		'synthPanels.env.decayDesc': 'ディケイ — {target}エンベロープがピークからサステインレベルまで下がる時間',
-		'synthPanels.env.sustainDesc': 'サステイン — ノートを押し続けている間保持される一定の{target}レベル',
-		'synthPanels.env.pitchAmountDesc': 'ピッチ・エンベロープ量 — ピッチスイープの深さ（オクターブ単位）。正の値で上昇、負の値で下降',
-		'synthPanels.env.releaseDesc': 'リリース — ノートを離した後、{target}エンベロープがゼロにフェードバックする時間',
+		'synthPanels.env.attackDesc':
+			'アタック — ノート開始後、{target}エンベロープがゼロからピークまで立ち上がる時間',
+		'synthPanels.env.decayDesc':
+			'ディケイ — {target}エンベロープがピークからサステインレベルまで下がる時間',
+		'synthPanels.env.sustainDesc':
+			'サステイン — ノートを押し続けている間保持される一定の{target}レベル',
+		'synthPanels.env.pitchAmountDesc':
+			'ピッチ・エンベロープ量 — ピッチスイープの深さ（オクターブ単位）。正の値で上昇、負の値で下降',
+		'synthPanels.env.releaseDesc':
+			'リリース — ノートを離した後、{target}エンベロープがゼロにフェードバックする時間',
 
 		'synthPanels.lfo.rateDesc': 'LFOスピード — 低周波オシレーターが周期する速さ（Hz）',
-		'synthPanels.lfo.pitchDesc': 'LFO → ピッチ — LFOがオシレーターのピッチを揺らす量（ビブラートの深さ）',
-		'synthPanels.lfo.cutoffDesc': 'LFO → カットオフ — LFOがフィルターカットオフをスイープする量（ワウ／ワブルの深さ）',
+		'synthPanels.lfo.pitchDesc':
+			'LFO → ピッチ — LFOがオシレーターのピッチを揺らす量（ビブラートの深さ）',
+		'synthPanels.lfo.cutoffDesc':
+			'LFO → カットオフ — LFOがフィルターカットオフをスイープする量（ワウ／ワブルの深さ）',
 		'synthPanels.lfo.ampDesc': 'LFO → アンプ — LFOが音量を上下させる量（トレモロの深さ）',
-		'synthPanels.lfo.panDesc': 'LFO → パン — LFOがステレオ位置を左右にスイープする量（オートパンの深さ）',
-		'synthPanels.lfo.fadeDesc': 'LFOフェードインタイム — ノート開始後、LFOの深さがゼロから立ち上がるまでのミリ秒数',
+		'synthPanels.lfo.panDesc':
+			'LFO → パン — LFOがステレオ位置を左右にスイープする量（オートパンの深さ）',
+		'synthPanels.lfo.fadeDesc':
+			'LFOフェードインタイム — ノート開始後、LFOの深さがゼロから立ち上がるまでのミリ秒数',
 
-		'synthPanels.fx.mainTabHint': 'メインFX：テープディレイ、スペースリバーブ、テープ・オーバードライブ・サチュレーション',
+		'synthPanels.fx.mainTabHint':
+			'メインFX：テープディレイ、スペースリバーブ、テープ・オーバードライブ・サチュレーション',
 		'synthPanels.fx.eqTabHint': 'トラックごとの6バンド・グラフィックEQ — 現在のトラックのみに作用',
-		'synthPanels.fx.duckTabHint': 'サイドチェイン・ダッキング — SRCトラック（またはその中のひとつのKEY）が鳴るたびに現在のトラックが一瞬凹み、ドラムを前面に押し出す',
+		'synthPanels.fx.duckTabHint':
+			'サイドチェイン・ダッキング — SRCトラック（またはその中のひとつのKEY）が鳴るたびに現在のトラックが一瞬凹み、ドラムを前面に押し出す',
 		'synthPanels.fx.delayTimeDesc': 'ディレイタイム — 原音と最初のエコーの間のミリ秒数',
-		'synthPanels.fx.masterVolumeDesc': 'マスター出力音量 — サウンドエンジン全体のグローバルゲイン。ブラウザに保存されます',
+		'synthPanels.fx.masterVolumeDesc':
+			'マスター出力音量 — サウンドエンジン全体のグローバルゲイン。ブラウザに保存されます',
 		'synthPanels.fx.srcHint': 'SRC — ダッキングを引き起こすトラック',
 		'synthPanels.fx.prevSourceHint': '前のソーストラック',
 		'synthPanels.fx.nextSourceHint': '次のソーストラック',
-		'synthPanels.fx.keyRowHint': 'KEY — ソースのキットのうちダッキングを引き起こすキー。点灯なし＝すべてのキーが対象',
+		'synthPanels.fx.keyRowHint':
+			'KEY — ソースのキットのうちダッキングを引き起こすキー。点灯なし＝すべてのキーが対象',
 		'synthPanels.fx.dropKeyHint': '{note} がダッキングを引き起こしています — クリックで解除',
 		'synthPanels.fx.addKeyHint': '{note} をトリガーキーに追加',
 		'synthPanels.fx.noKitKeys': 'このキットにはまだキーがありません',
 		'synthPanels.fx.duckDepthDesc': 'トリガーごとにこのトラックが凹む深さ（100%＝無音になる）',
 		'synthPanels.fx.duckDipDesc': 'トリガー後に底に達するまでの時間',
 		'synthPanels.fx.duckHoldDesc': 'リリース前に底で保持する時間',
-		'synthPanels.fx.duckReleaseDesc': '元の音量に戻るまでの時間 — 長いとポンピング感、短いとヒットをかわす程度になる',
-		'synthPanels.fx.eqToggleHint': 'このトラックの6バンド・グラフィックEQを切り替え（トラックごとに設定、パッチに保存・共有されます）',
+		'synthPanels.fx.duckReleaseDesc':
+			'元の音量に戻るまでの時間 — 長いとポンピング感、短いとヒットをかわす程度になる',
+		'synthPanels.fx.eqToggleHint':
+			'このトラックの6バンド・グラフィックEQを切り替え（トラックごとに設定、パッチに保存・共有されます）',
 		'synthPanels.fx.eqBandLowShelfDesc': 'ローシェルフ — {label}Hz付近をブースト／カット',
 		'synthPanels.fx.eqBandHighShelfDesc': 'ハイシェルフ — {label}Hz付近をブースト／カット',
 		'synthPanels.fx.eqBandPeakingDesc': 'ピーキングバンド — {label}Hz付近をブースト／カット',
 
-		'synthPanels.out.fftModeHint': 'ビジュアライザーモード：FFTログスペクトラムアナライザー — 20Hz〜20kHzの周波数分布を表示',
-		'synthPanels.out.scopeModeHint': 'ビジュアライザーモード：オシロスコープ波形 — リアルタイム時間軸オーディオ波形表示',
-		'synthPanels.out.loudnessModeHint': 'ビジュアライザーモード：RMSラウドネスメーター＆履歴 — リアルタイムのダイナミックデシベル範囲（-60dB〜+6dB）',
+		'synthPanels.out.fftModeHint':
+			'ビジュアライザーモード：FFTログスペクトラムアナライザー — 20Hz〜20kHzの周波数分布を表示',
+		'synthPanels.out.scopeModeHint':
+			'ビジュアライザーモード：オシロスコープ波形 — リアルタイム時間軸オーディオ波形表示',
+		'synthPanels.out.loudnessModeHint':
+			'ビジュアライザーモード：RMSラウドネスメーター＆履歴 — リアルタイムのダイナミックデシベル範囲（-60dB〜+6dB）',
 		'synthPanels.out.recordingHint': '録音中 — {seconds}秒。クリックで停止してダウンロード。',
-		'synthPanels.out.recordIdleHint': 'マスター出力を録音し、停止時にダウンロードします（WebM/Opus、SafariではM4A）',
+		'synthPanels.out.recordIdleHint':
+			'マスター出力を録音し、停止時にダウンロードします（WebM/Opus、SafariではM4A）',
 		'synthPanels.out.recorderUnsupported': 'このブラウザでは MediaRecorder に対応していません',
 		'synthPanels.out.audioCaptureUnavailable': 'オーディオキャプチャを利用できません',
 		'synthPanels.out.airDesc': 'エア・シェルフEQ — 高域の輝きをブースト／カット（10kHzで±8dB）',
 
-		'synthPanels.keyboard.octRangeHint': 'キーボードのオクターブ範囲（開始〜終了） — 表示される鍵盤の音域を変更',
+		'synthPanels.keyboard.octRangeHint':
+			'キーボードのオクターブ範囲（開始〜終了） — 表示される鍵盤の音域を変更',
 		'synthPanels.keyboard.lowerStartHint': '開始オクターブを下げる',
 		'synthPanels.keyboard.raiseStartHint': '開始オクターブを上げる',
 		'synthPanels.keyboard.lowerEndHint': '終了オクターブを下げる',
 		'synthPanels.keyboard.raiseEndHint': '終了オクターブを上げる',
-		'synthPanels.keyboard.qwertyToggleHint': 'パソコンのキーボードで演奏 — Z列＝基準オクターブ、Q列＝1オクターブ上。Ctrlでオクターブダウン、Shiftでオクターブアップ（[ と ] キーも使用可）、スペースキー長押しでサステインペダル。Ctrl+0〜3のタブ切り替えは引き続き使用できます。',
-		'synthPanels.keyboard.qwertyOctaveHint': 'QWERTYの基準オクターブ — Ctrlで下げる、Shiftで上げる（[ と ] キーも使用可）',
-		'synthPanels.keyboard.sustainHint': 'サステインペダル（PEDAL / CC64） — 離してもノートを鳴らし続けます',
-		'synthPanels.keyboard.velocityCurveHint': 'MIDIベロシティカーブ：{curve}（クリックで切り替え：EXP【自然なピアノ】→ LIN【リニア1:1】→ LOG【ソフトタッチ】→ HARD【アグレッシブ】→ OFF【固定音量】）',
+		'synthPanels.keyboard.qwertyToggleHint':
+			'パソコンのキーボードで演奏 — Z列＝基準オクターブ、Q列＝1オクターブ上。Ctrlでオクターブダウン、Shiftでオクターブアップ（[ と ] キーも使用可）、スペースキー長押しでサステインペダル。Ctrl+0〜3のタブ切り替えは引き続き使用できます。',
+		'synthPanels.keyboard.qwertyOctaveHint':
+			'QWERTYの基準オクターブ — Ctrlで下げる、Shiftで上げる（[ と ] キーも使用可）',
+		'synthPanels.keyboard.sustainHint':
+			'サステインペダル（PEDAL / CC64） — 離してもノートを鳴らし続けます',
+		'synthPanels.keyboard.velocityCurveHint':
+			'MIDIベロシティカーブ：{curve}（クリックで切り替え：EXP【自然なピアノ】→ LIN【リニア1:1】→ LOG【ソフトタッチ】→ HARD【アグレッシブ】→ OFF【固定音量】）',
 		'synthPanels.keyboard.playNoteHint': '{note} を再生（{freq} Hz）',
 
-		'synthPanels.roll.fullscreenOnHint': 'フルパネル — ラック1〜7を隠し、下部パネル全体をロールに割り当てます',
+		'synthPanels.roll.fullscreenOnHint':
+			'フルパネル — ラック1〜7を隠し、下部パネル全体をロールに割り当てます',
 		'synthPanels.roll.fullscreenOffHint': 'フルパネル：オン — クリックでラック1〜7を戻します',
 		'synthPanels.roll.trackNameLabel': 'トラック名',
-		'synthPanels.roll.renameHint': '{name} — クリックしてTRK {track}の名前を変更（最大{max}文字、ここには{show}文字まで表示）',
-		'synthPanels.roll.selectionHint': '選択中のノート — ドラッグで移動（Altでコピー）、右端をドラッグでサイズ変更、矢印キーで微調整（Shiftで小節／オクターブ単位）、Deleteで削除、Ctrl+C/X/V/Dでカーソル位置にコピー／切り取り／貼り付け／複製、Escで選択解除',
+		'synthPanels.roll.renameHint':
+			'{name} — クリックしてTRK {track}の名前を変更（最大{max}文字、ここには{show}文字まで表示）',
+		'synthPanels.roll.selectionHint':
+			'選択中のノート — ドラッグで移動（Altでコピー）、右端をドラッグでサイズ変更、矢印キーで微調整（Shiftで小節／オクターブ単位）、Deleteで削除、Ctrl+C/X/V/Dでカーソル位置にコピー／切り取り／貼り付け／複製、Escで選択解除',
 		'synthPanels.roll.undoHint': '直前の編集を元に戻す（Ctrl+Z）',
 		'synthPanels.roll.redoHint': 'やり直し（Ctrl+Shift+Z / Ctrl+Y）',
-		'synthPanels.roll.clearPageHint': 'このページをクリア（CLR） — 現在のトラックの現在のページにあるすべてのノートとコードを削除（元に戻せます）',
-		'synthPanels.roll.octScopeHint': 'オクターブ表示範囲（開始〜終了） — グリッドのサイズを変えずにピアノロールで表示する音域を制限',
+		'synthPanels.roll.clearPageHint':
+			'このページをクリア（CLR） — 現在のトラックの現在のページにあるすべてのノートとコードを削除（元に戻せます）',
+		'synthPanels.roll.octScopeHint':
+			'オクターブ表示範囲（開始〜終了） — グリッドのサイズを変えずにピアノロールで表示する音域を制限',
 		'synthPanels.roll.lowerStartHint': '開始オクターブを下げる（オクターブダウン）',
 		'synthPanels.roll.raiseStartHint': '開始オクターブを上げる（オクターブアップ）',
 		'synthPanels.roll.startOctaveHint': '開始オクターブ：{octave}オクターブ目（C{octave}）',
 		'synthPanels.roll.lowerEndHint': '終了オクターブを下げる',
 		'synthPanels.roll.raiseEndHint': '終了オクターブを上げる',
 		'synthPanels.roll.endOctaveHint': '終了オクターブ：{octave}オクターブ目（B{octave}）',
-		'synthPanels.roll.jumpToStepHint': 'クリックで再生カーソルをステップ{step}（{bar}小節目の{beat}拍目）に移動',
-		'synthPanels.roll.jumpToColumnHint': 'クリックで再生カーソルを列{column}（ステップ{step}、{bar}小節目の{beat}拍目）に移動',
+		'synthPanels.roll.jumpToStepHint':
+			'クリックで再生カーソルをステップ{step}（{bar}小節目の{beat}拍目）に移動',
+		'synthPanels.roll.jumpToColumnHint':
+			'クリックで再生カーソルを列{column}（ステップ{step}、{bar}小節目の{beat}拍目）に移動',
 		'synthPanels.lane.toggleHint': 'オートメーション・レーン — クリックでロール上にエディタを展開',
 		'synthPanels.lane.addHint': 'レーンを追加（ADVのみ、最大4本）',
 		'synthPanels.lane.removeHint': 'このレーンを削除',
@@ -926,8 +1132,10 @@ export default {
 		'synthPanels.lane.closeHint': 'レーンエディタを閉じる',
 		'synthPanels.lane.sampledHint': 'ノート発音時に一度サンプリング — これがベロシティ',
 		'synthPanels.lane.continuousHint': '連続 — 長いノートの間も変化し続ける',
-		'synthPanels.roll.auditionKeyCustomHint': '{note} — クリックでこのキーを試聴・編集（専用のサウンドあり。右クリックで削除）',
-		'synthPanels.roll.auditionKeyDefaultHint': '{note} — クリックでこのキーを試聴・編集（トラックのサウンドを再生）',
+		'synthPanels.roll.auditionKeyCustomHint':
+			'{note} — クリックでこのキーを試聴・編集（専用のサウンドあり。右クリックで削除）',
+		'synthPanels.roll.auditionKeyDefaultHint':
+			'{note} — クリックでこのキーを試聴・編集（トラックのサウンドを再生）',
 		'synthPanels.roll.auditionNoteHint': '{note} を試聴（{freq}Hz）',
 		'synthPanels.roll.cellStepHint': '{note} — ステップ{step}',
 
@@ -937,7 +1145,8 @@ export default {
 		'synthPanels.settings.tabDsp': '2. バッファとIR仕様',
 		'synthPanels.settings.tabMidi': '3. MIDIとコントローラー',
 		'synthPanels.settings.tabVoice': '4. ボイスとチューニング',
-		'synthPanels.settings.footerNote': 'ハードウェアとバッファのパラメーターは、Web Audioエンジングラフに即座に反映されます。',
+		'synthPanels.settings.footerNote':
+			'ハードウェアとバッファのパラメーターは、Web Audioエンジングラフに即座に反映されます。',
 
 		'synthPanels.audioHw.contextTitle': 'オーディオコンテキストとハードウェアのサンプルレート',
 		'synthPanels.audioHw.webAudioApi': 'Web Audio API',
@@ -965,7 +1174,8 @@ export default {
 		'synthPanels.audioHw.outputProtection': '出力保護',
 		'synthPanels.audioHw.limiterActive': 'ブリックウォール・セーフティリミッター：有効',
 		'synthPanels.audioHw.limiterBypassed': 'セーフティリミッター：バイパス中',
-		'synthPanels.audioHw.limiterDesc': '複数トラックが重なった際のハードウェアクリッピングやDACオーバーロード歪みを防止',
+		'synthPanels.audioHw.limiterDesc':
+			'複数トラックが重なった際のハードウェアクリッピングやDACオーバーロード歪みを防止',
 
 		'synthPanels.dsp.noiseBufferTitle': 'ノイズジェネレーターのPCMオーディオバッファ',
 		'synthPanels.dsp.audioBufferAllocation': 'AudioBufferの割り当て',
@@ -998,8 +1208,10 @@ export default {
 		'synthPanels.voice.editingLayout': '編集レイアウト',
 		'synthPanels.voice.advDefaultOn': 'トラックはADVで開く',
 		'synthPanels.voice.advDefaultOff': 'トラックはラック表示で開く',
-		'synthPanels.voice.advDefaultDesc': '新しいトラックはアドバンストレイアウトで開きます。モジュール1-7の代わりにピアノロールかパッチベイが表示されます。手動で切り替えたトラックはその選択を保ちます。',
-		'synthPanels.midi.noDevicesHint': 'USB／BluetoothのMIDIキーボードやコントローラーを接続してください。Chrome／Edge／Firefoxがドライバー不要で自動的に検出・バインドします。',
+		'synthPanels.voice.advDefaultDesc':
+			'新しいトラックはアドバンストレイアウトで開きます。モジュール1-7の代わりにピアノロールかパッチベイが表示されます。手動で切り替えたトラックはその選択を保ちます。',
+		'synthPanels.midi.noDevicesHint':
+			'USB／BluetoothのMIDIキーボードやコントローラーを接続してください。Chrome／Edge／Firefoxがドライバー不要で自動的に検出・バインドします。',
 
 		'synthPanels.voice.tuningTitle': 'マスター・コンサートチューニング（A4基準）',
 		'synthPanels.voice.tuningSubtitle': 'オシレーター基準キャリブレーション',
@@ -1014,11 +1226,14 @@ export default {
 		'synthPanels.voice.stealQuietestDesc': '振幅が最も小さいボイスを奪う',
 		'synthPanels.voice.stealLowestDesc': '高音のメロディノートを優先的に保持',
 
-		'synthPanels.presets.hintBass': '低域 — サブベース、アシッド、FM。C3より下で演奏するのがおすすめ',
-		'synthPanels.presets.hintLead': 'メロディ用ボイス — パルス波、デチューンしたのこぎり波、シンク、ブラス',
+		'synthPanels.presets.hintBass':
+			'低域 — サブベース、アシッド、FM。C3より下で演奏するのがおすすめ',
+		'synthPanels.presets.hintLead':
+			'メロディ用ボイス — パルス波、デチューンしたのこぎり波、シンク、ブラス',
 		'synthPanels.presets.hintPluck': '弾いた・叩いた系 — 速いアタックでサステインなし',
 		'synthPanels.presets.hintPad': 'ゆっくりしたアタックと長いリリース、LFOによる動き',
-		'synthPanels.presets.hintDrums': '単発のドラム音。パーカッションモードでキーに割り当てるか、トラック全体に使用します',
+		'synthPanels.presets.hintDrums':
+			'単発のドラム音。パーカッションモードでキーに割り当てるか、トラック全体に使用します',
 		'synthPanels.presets.hintKeyboard': '鍵盤楽器：ピアノ、エレピ、クラビ',
 		'synthPanels.presets.hintOrgan': 'ドローバーとトーンホイール',
 		'synthPanels.presets.hintString': '擦弦・吹奏の持続音',
@@ -1030,11 +1245,13 @@ export default {
 		'synthPanels.toast.kitApplied': '✓ キット {name}',
 		'synthPanels.toast.newPreset': '✓ 新規パッチ',
 		'synthPanels.toast.newAdvancedPreset': '✓ 新規アドバンストパッチ',
-		'synthPanels.toast.noKitYet': 'X キットがまだありません — まずP（パーカッションモード）をオンにして、キーにサウンドを設定してください',
+		'synthPanels.toast.noKitYet':
+			'X キットがまだありません — まずP（パーカッションモード）をオンにして、キーにサウンドを設定してください',
 		'synthPanels.toast.notAKit': 'X キットファイルではありません'
 	},
 	ko: {
-		'synthPanels.rack.resetHint': 'R — 초기화: 이 랙을 사운드에 아무 영향도 주지 않는 중립 값으로 되돌립니다',
+		'synthPanels.rack.resetHint':
+			'R — 초기화: 이 랙을 사운드에 아무 영향도 주지 않는 중립 값으로 되돌립니다',
 		'synthPanels.rack.flowToFusion': '신호 흐름: 팀버 퓨전으로',
 		'synthPanels.rack.flowToFilter': '신호 흐름: VCF 필터로',
 		'synthPanels.rack.flowToEnvelopes': '신호 흐름: 엔벨로프 및 VCA로',
@@ -1042,48 +1259,70 @@ export default {
 		'synthPanels.rack.flowToFxEq': '신호 흐름: 마스터 FX 및 EQ로',
 		'synthPanels.rack.flowToOut': '신호 흐름: 마스터 출력 및 시각화로',
 
-		'synthPanels.knob.rotaryHint': '{label}{descPart}: {value}{unit} — 위아래로 드래그하거나 휠로 조정',
-		'synthPanels.knob.rotaryHintReset': '{label}{descPart}: {value}{unit} — 위아래로 드래그하거나 휠로 조정 · 우클릭으로 초기화',
-		'synthPanels.knob.faderHint': '{label}{descPart}: {value}{unit} — 클릭, 위아래 드래그 또는 휠로 조작',
-		'synthPanels.knob.faderHintReset': '{label}{descPart}: {value}{unit} — 클릭, 위아래 드래그 또는 휠로 조작 · 우클릭으로 초기화',
+		'synthPanels.knob.rotaryHint':
+			'{label}{descPart}: {value}{unit} — 위아래로 드래그하거나 휠로 조정',
+		'synthPanels.knob.rotaryHintReset':
+			'{label}{descPart}: {value}{unit} — 위아래로 드래그하거나 휠로 조정 · 우클릭으로 초기화',
+		'synthPanels.knob.faderHint':
+			'{label}{descPart}: {value}{unit} — 클릭, 위아래 드래그 또는 휠로 조작',
+		'synthPanels.knob.faderHintReset':
+			'{label}{descPart}: {value}{unit} — 클릭, 위아래 드래그 또는 휠로 조작 · 우클릭으로 초기화',
 		'synthPanels.knob.hFaderHint': '{labelPart}{value}{unit} — 클릭, 좌우 드래그 또는 휠로 조작',
-		'synthPanels.knob.hFaderHintReset': '{labelPart}{value}{unit} — 클릭, 좌우 드래그 또는 휠로 조작 · 우클릭으로 초기화',
+		'synthPanels.knob.hFaderHintReset':
+			'{labelPart}{value}{unit} — 클릭, 좌우 드래그 또는 휠로 조작 · 우클릭으로 초기화',
 
 		'synthPanels.param.vol': 'VOL: 볼륨 / 출력 게인',
 		'synthPanels.param.lvl': 'LVL: 레벨 / 출력 게인',
-		'synthPanels.param.pw': 'PW: 펄스 폭 — 구형 펄스 파형의 듀티 사이클(좁은 스파이크에서 대칭 구형파까지)',
-		'synthPanels.param.sub': 'SUB: 서브 오실레이터 게인 — 1옥타브 아래 사인파를 더해 저역 서브 베이스를 보강',
-		'synthPanels.param.noise': 'NOISE: 화이트 노이즈 레벨 — 숨소리, 트랜지언트 타격감, 공기감 있는 퍼커시브 사운드를 추가',
-		'synthPanels.param.rpt': 'RPT: 노이즈 반복 횟수 — 한 번 칠 때 노이즈가 터지는 횟수(1=한 번, 3~4=808 클랩의 연타감)',
+		'synthPanels.param.pw':
+			'PW: 펄스 폭 — 구형 펄스 파형의 듀티 사이클(좁은 스파이크에서 대칭 구형파까지)',
+		'synthPanels.param.sub':
+			'SUB: 서브 오실레이터 게인 — 1옥타브 아래 사인파를 더해 저역 서브 베이스를 보강',
+		'synthPanels.param.noise':
+			'NOISE: 화이트 노이즈 레벨 — 숨소리, 트랜지언트 타격감, 공기감 있는 퍼커시브 사운드를 추가',
+		'synthPanels.param.rpt':
+			'RPT: 노이즈 반복 횟수 — 한 번 칠 때 노이즈가 터지는 횟수(1=한 번, 3~4=808 클랩의 연타감)',
 		'synthPanels.param.gap': 'GAP: 노이즈 버스트 간격 — 반복되는 노이즈 버스트 사이의 밀리초',
-		'synthPanels.param.det': 'DET: 두 오실레이터 간의 디튠 양(센트). ±50센트로 풍부한 아날로그 코러스 두께감을 냄',
+		'synthPanels.param.det':
+			'DET: 두 오실레이터 간의 디튠 양(센트). ±50센트로 풍부한 아날로그 코러스 두께감을 냄',
 		'synthPanels.param.semi': 'SEMI: 반음 단위 피치 오프셋 — ±24반음(최대 ±2옥타브)까지 이조',
 		'synthPanels.param.ratio': 'RATIO: FM 하모닉 배율 — 주파수 변조를 위한 주파수 비율(1배~4배)',
-		'synthPanels.param.phase': 'PHASE: 위상각 오프셋 — 파형 시작 위상을 0°~360°로 조정해 스테레오를 넓힘',
+		'synthPanels.param.phase':
+			'PHASE: 위상각 오프셋 — 파형 시작 위상을 0°~360°로 조정해 스테레오를 넓힘',
 		'synthPanels.param.mrp': 'MRP: 모프 양 — 오실레이터 1과 2 사이의 연속적인 크로스페이드 블렌드',
-		'synthPanels.param.morph': 'MORPH: 모프 양 — 오실레이터 1과 2 사이의 연속적인 크로스페이드 블렌드',
-		'synthPanels.param.xfade': 'X-FADE: 크로스페이드 밸런스 — 오실레이터 1과 2의 정적인 믹스 비율(0%=OSC1만, 100%=OSC2만)',
-		'synthPanels.param.glide': 'GLIDE: 글라이드 타임 — 음이 튀지 않고 다음 음으로 미끄러지듯 이동하는 데 걸리는 밀리초',
+		'synthPanels.param.morph':
+			'MORPH: 모프 양 — 오실레이터 1과 2 사이의 연속적인 크로스페이드 블렌드',
+		'synthPanels.param.xfade':
+			'X-FADE: 크로스페이드 밸런스 — 오실레이터 1과 2의 정적인 믹스 비율(0%=OSC1만, 100%=OSC2만)',
+		'synthPanels.param.glide':
+			'GLIDE: 글라이드 타임 — 음이 튀지 않고 다음 음으로 미끄러지듯 이동하는 데 걸리는 밀리초',
 		'synthPanels.param.cut': 'CUT: 컷오프 주파수 — 필터 감쇠가 시작되는 주파수 임계값(Hz)',
 		'synthPanels.param.cutoff': 'CUTOFF: 컷오프 주파수 — 필터 감쇠가 시작되는 주파수 임계값(Hz)',
 		'synthPanels.param.res': 'RES: 레조넌스 / Q값 — 컷오프 지점 주변 주파수를 강조하고 부스트',
-		'synthPanels.param.resq': 'RESQ: 레조넌스 / Q값 — 컷오프 지점 주변 주파수를 강조하고 부스트. 값이 높으면 자체 발진해 휘파람 소리가 남',
-		'synthPanels.param.ktrk': 'KTRK: 키보드 트래킹 — 컷오프가 음높이를 얼마나 따라가는지. 높은 음도 낮은 음과 비례해 밝기를 유지',
-		'synthPanels.param.mod': 'MOD: 엔벨로프 모듈레이션 — 필터 컷오프를 스윕하는 엔벨로프의 양극성 깊이',
-		'synthPanels.param.enva': 'ENVA: 필터 엔벨로프 양 — 필터 엔벨로프가 컷오프를 스윕하는 양극성 깊이',
+		'synthPanels.param.resq':
+			'RESQ: 레조넌스 / Q값 — 컷오프 지점 주변 주파수를 강조하고 부스트. 값이 높으면 자체 발진해 휘파람 소리가 남',
+		'synthPanels.param.ktrk':
+			'KTRK: 키보드 트래킹 — 컷오프가 음높이를 얼마나 따라가는지. 높은 음도 낮은 음과 비례해 밝기를 유지',
+		'synthPanels.param.mod':
+			'MOD: 엔벨로프 모듈레이션 — 필터 컷오프를 스윕하는 엔벨로프의 양극성 깊이',
+		'synthPanels.param.enva':
+			'ENVA: 필터 엔벨로프 양 — 필터 엔벨로프가 컷오프를 스윕하는 양극성 깊이',
 		'synthPanels.param.a': 'A: 어택 타임 — 엔벨로프가 0에서 피크까지 올라가는 데 걸리는 시간',
-		'synthPanels.param.d': 'D: 디케이 타임 — 엔벨로프가 피크에서 서스테인 레벨까지 내려가는 데 걸리는 시간',
+		'synthPanels.param.d':
+			'D: 디케이 타임 — 엔벨로프가 피크에서 서스테인 레벨까지 내려가는 데 걸리는 시간',
 		'synthPanels.param.s': 'S: 서스테인 레벨 — 음을 계속 누르고 있는 동안 유지되는 일정한 레벨',
 		'synthPanels.param.r': 'R: 릴리스 타임 — 음을 뗀 후 무음까지 페이드아웃되는 데 걸리는 시간',
-		'synthPanels.param.amt': 'AMT: 모듈레이션 양 — 사운드 엔진에 적용되는 엔벨로프의 전체 강도/깊이',
+		'synthPanels.param.amt':
+			'AMT: 모듈레이션 양 — 사운드 엔진에 적용되는 엔벨로프의 전체 강도/깊이',
 		'synthPanels.param.env': 'ENV: 엔벨로프 양 — 엔벨로프의 전체 모듈레이션 강도',
 		'synthPanels.param.rate': 'RATE: LFO 속도/주파수 — 모듈레이션 진동의 속도(0.1Hz~20Hz)',
 		'synthPanels.param.dep': 'DEP: LFO 깊이 — 선택한 대상에 적용되는 모듈레이션 강도/크기',
 		'synthPanels.param.depth': 'DEPTH: LFO 깊이 — 선택한 대상에 적용되는 모듈레이션 강도/크기',
 		'synthPanels.param.pan': 'PAN: 스테레오 패닝 — 스테레오 필드 내 위치(왼쪽 100%~오른쪽 100%)',
-		'synthPanels.param.drive': 'DRIVE: 아날로그 오버드라이브 / 새추레이션 — 따뜻함과 펀치감을 더하는 소프트 클리핑 디스토션',
+		'synthPanels.param.drive':
+			'DRIVE: 아날로그 오버드라이브 / 새추레이션 — 따뜻함과 펀치감을 더하는 소프트 클리핑 디스토션',
 		'synthPanels.param.dTime': 'D.TIME: 딜레이 에코 타임 — 에코가 반복되는 간격(10ms~1000ms)',
-		'synthPanels.param.dFdbk': 'D.FDBK: 딜레이 피드백 — 에코를 지속시키기 위해 입력으로 되돌리는 양',
+		'synthPanels.param.dFdbk':
+			'D.FDBK: 딜레이 피드백 — 에코를 지속시키기 위해 입력으로 되돌리는 양',
 		'synthPanels.param.fdbk': 'FDBK: 딜레이 피드백 — 에코를 지속시키기 위해 입력으로 되돌리는 양',
 		'synthPanels.param.dMixDot': 'D.MIX: 딜레이 웻/드라이 믹스 — 원음과 웻 에코 신호 사이의 균형',
 		'synthPanels.param.dMixDash': 'D-MIX: 딜레이 웻/드라이 믹스 — 원음과 웻 에코 신호 사이의 균형',
@@ -1092,53 +1331,73 @@ export default {
 
 		'synthPanels.osc.osc1LevelDesc': '오실레이터 1 레벨 — 첫 번째 오실레이터의 출력 음량',
 		'synthPanels.osc.osc2LevelDesc': '오실레이터 2 레벨 — 두 번째 오실레이터의 출력 음량',
-		'synthPanels.osc.eqlHint': '등감도(ISO 226): 사각파, 톱니파, 삼각파, 사인파 간의 지각 음량을 자동으로 균형 있게 맞춥니다',
+		'synthPanels.osc.eqlHint':
+			'등감도(ISO 226): 사각파, 톱니파, 삼각파, 사인파 간의 지각 음량을 자동으로 균형 있게 맞춥니다',
 
 		'synthPanels.env.ampTabHint': '앰프 엔벨로프(AMP) — ADSR로 시간에 따른 음량과 음압 곡선을 형성',
-		'synthPanels.env.vcfTabHint': '필터 엔벨로프(VCF) — ADSR로 시간에 따라 필터 컷오프 주파수를 스윕',
-		'synthPanels.env.pitTabHint': '피치 엔벨로프(PIT) — 시간에 따라 순간적으로 오실레이터 피치를 모듈레이션(강력한 킥 드럼이나 레이저 효과음에 적합)',
+		'synthPanels.env.vcfTabHint':
+			'필터 엔벨로프(VCF) — ADSR로 시간에 따라 필터 컷오프 주파수를 스윕',
+		'synthPanels.env.pitTabHint':
+			'피치 엔벨로프(PIT) — 시간에 따라 순간적으로 오실레이터 피치를 모듈레이션(강력한 킥 드럼이나 레이저 효과음에 적합)',
 		'synthPanels.env.targetVolume': '음량',
 		'synthPanels.env.targetFilterCutoff': '필터 컷오프',
 		'synthPanels.env.targetPitch': '피치',
-		'synthPanels.env.attackDesc': '어택 — 음이 시작된 후 {target} 엔벨로프가 0에서 피크까지 올라가는 데 걸리는 시간',
-		'synthPanels.env.decayDesc': '디케이 — {target} 엔벨로프가 피크에서 서스테인 레벨까지 내려가는 데 걸리는 시간',
+		'synthPanels.env.attackDesc':
+			'어택 — 음이 시작된 후 {target} 엔벨로프가 0에서 피크까지 올라가는 데 걸리는 시간',
+		'synthPanels.env.decayDesc':
+			'디케이 — {target} 엔벨로프가 피크에서 서스테인 레벨까지 내려가는 데 걸리는 시간',
 		'synthPanels.env.sustainDesc': '서스테인 — 음을 누르고 있는 동안 유지되는 일정한 {target} 레벨',
-		'synthPanels.env.pitchAmountDesc': '피치 엔벨로프 양 — 옥타브 단위의 피치 스윕 깊이. 양수면 상승, 음수면 음에서 하강',
-		'synthPanels.env.releaseDesc': '릴리스 — 음을 뗀 후 {target} 엔벨로프가 0으로 되돌아가는 데 걸리는 시간',
+		'synthPanels.env.pitchAmountDesc':
+			'피치 엔벨로프 양 — 옥타브 단위의 피치 스윕 깊이. 양수면 상승, 음수면 음에서 하강',
+		'synthPanels.env.releaseDesc':
+			'릴리스 — 음을 뗀 후 {target} 엔벨로프가 0으로 되돌아가는 데 걸리는 시간',
 
 		'synthPanels.lfo.rateDesc': 'LFO 속도 — 저주파 오실레이터가 주기하는 속도(Hz)',
 		'synthPanels.lfo.pitchDesc': 'LFO → 피치 — LFO가 오실레이터 피치를 흔드는 정도(비브라토 깊이)',
-		'synthPanels.lfo.cutoffDesc': 'LFO → 컷오프 — LFO가 필터 컷오프를 스윕하는 정도(와우/워블 깊이)',
+		'synthPanels.lfo.cutoffDesc':
+			'LFO → 컷오프 — LFO가 필터 컷오프를 스윕하는 정도(와우/워블 깊이)',
 		'synthPanels.lfo.ampDesc': 'LFO → 앰프 — LFO가 음량을 오르내리게 하는 정도(트레몰로 깊이)',
-		'synthPanels.lfo.panDesc': 'LFO → 팬 — LFO가 스테레오 위치를 좌우로 스윕하는 정도(오토 팬 깊이)',
-		'synthPanels.lfo.fadeDesc': 'LFO 페이드인 타임 — 음이 시작된 후 LFO 깊이가 0에서 올라오는 데 걸리는 밀리초',
+		'synthPanels.lfo.panDesc':
+			'LFO → 팬 — LFO가 스테레오 위치를 좌우로 스윕하는 정도(오토 팬 깊이)',
+		'synthPanels.lfo.fadeDesc':
+			'LFO 페이드인 타임 — 음이 시작된 후 LFO 깊이가 0에서 올라오는 데 걸리는 밀리초',
 
-		'synthPanels.fx.mainTabHint': '메인 FX: 테이프 딜레이, 스페이스 리버브, 테이프 오버드라이브 새추레이션',
+		'synthPanels.fx.mainTabHint':
+			'메인 FX: 테이프 딜레이, 스페이스 리버브, 테이프 오버드라이브 새추레이션',
 		'synthPanels.fx.eqTabHint': '트랙별 6밴드 그래픽 EQ — 현재 트랙에만 적용',
-		'synthPanels.fx.duckTabHint': '사이드체인 덕킹 — SRC 트랙(또는 그중 하나의 KEY)이 울릴 때마다 현재 트랙이 순간적으로 눌려, 드럼이 믹스를 뚫고 나옵니다',
+		'synthPanels.fx.duckTabHint':
+			'사이드체인 덕킹 — SRC 트랙(또는 그중 하나의 KEY)이 울릴 때마다 현재 트랙이 순간적으로 눌려, 드럼이 믹스를 뚫고 나옵니다',
 		'synthPanels.fx.delayTimeDesc': '딜레이 타임 — 원음과 첫 번째 에코 사이의 밀리초',
-		'synthPanels.fx.masterVolumeDesc': '마스터 출력 볼륨 — 사운드 엔진 전체의 전역 게인. 브라우저에 저장됩니다',
+		'synthPanels.fx.masterVolumeDesc':
+			'마스터 출력 볼륨 — 사운드 엔진 전체의 전역 게인. 브라우저에 저장됩니다',
 		'synthPanels.fx.srcHint': 'SRC — 덕킹을 발생시키는 트랙',
 		'synthPanels.fx.prevSourceHint': '이전 소스 트랙',
 		'synthPanels.fx.nextSourceHint': '다음 소스 트랙',
-		'synthPanels.fx.keyRowHint': 'KEY — 소스 킷에서 덕킹을 발생시키는 키. 아무것도 켜지지 않으면 모든 키가 대상',
+		'synthPanels.fx.keyRowHint':
+			'KEY — 소스 킷에서 덕킹을 발생시키는 키. 아무것도 켜지지 않으면 모든 키가 대상',
 		'synthPanels.fx.dropKeyHint': '{note}가 덕킹을 발생시키고 있습니다 — 클릭하여 해제',
 		'synthPanels.fx.addKeyHint': '{note}를 트리거 키에 추가',
 		'synthPanels.fx.noKitKeys': '이 킷에는 아직 키가 없습니다',
 		'synthPanels.fx.duckDepthDesc': '트리거될 때마다 이 트랙이 눌리는 정도(100% = 무음)',
 		'synthPanels.fx.duckDipDesc': '트리거 후 바닥에 도달하는 데 걸리는 시간',
 		'synthPanels.fx.duckHoldDesc': '릴리스 전에 바닥에서 유지되는 시간',
-		'synthPanels.fx.duckReleaseDesc': '원래 레벨로 돌아가는 데 걸리는 시간 — 길면 펌핑감, 짧으면 히트만 살짝 비켜가는 느낌',
-		'synthPanels.fx.eqToggleHint': '이 트랙의 6밴드 그래픽 EQ 켜기/끄기(트랙별 설정, 패치에 저장 및 공유됨)',
+		'synthPanels.fx.duckReleaseDesc':
+			'원래 레벨로 돌아가는 데 걸리는 시간 — 길면 펌핑감, 짧으면 히트만 살짝 비켜가는 느낌',
+		'synthPanels.fx.eqToggleHint':
+			'이 트랙의 6밴드 그래픽 EQ 켜기/끄기(트랙별 설정, 패치에 저장 및 공유됨)',
 		'synthPanels.fx.eqBandLowShelfDesc': '로우 쉘프 — {label}Hz 부근을 부스트/컷',
 		'synthPanels.fx.eqBandHighShelfDesc': '하이 쉘프 — {label}Hz 부근을 부스트/컷',
 		'synthPanels.fx.eqBandPeakingDesc': '피킹 밴드 — {label}Hz 부근을 부스트/컷',
 
-		'synthPanels.out.fftModeHint': '시각화 모드: FFT 로그 스펙트럼 분석기 — 20Hz~20kHz의 주파수 분포를 표시',
-		'synthPanels.out.scopeModeHint': '시각화 모드: 오실로스코프 파형 — 실시간 시간 영역 오디오 파형 표시',
-		'synthPanels.out.loudnessModeHint': '시각화 모드: RMS 러프니스 미터 및 히스토리 — 실시간 다이내믹 데시벨 범위(-60dB~+6dB)',
+		'synthPanels.out.fftModeHint':
+			'시각화 모드: FFT 로그 스펙트럼 분석기 — 20Hz~20kHz의 주파수 분포를 표시',
+		'synthPanels.out.scopeModeHint':
+			'시각화 모드: 오실로스코프 파형 — 실시간 시간 영역 오디오 파형 표시',
+		'synthPanels.out.loudnessModeHint':
+			'시각화 모드: RMS 러프니스 미터 및 히스토리 — 실시간 다이내믹 데시벨 범위(-60dB~+6dB)',
 		'synthPanels.out.recordingHint': '녹음 중 — {seconds}초. 클릭하면 중지하고 다운로드합니다.',
-		'synthPanels.out.recordIdleHint': '마스터 출력을 녹음하고 중지 시 다운로드합니다(WebM/Opus, Safari에서는 M4A)',
+		'synthPanels.out.recordIdleHint':
+			'마스터 출력을 녹음하고 중지 시 다운로드합니다(WebM/Opus, Safari에서는 M4A)',
 		'synthPanels.out.recorderUnsupported': '이 브라우저에서는 MediaRecorder를 지원하지 않습니다',
 		'synthPanels.out.audioCaptureUnavailable': '오디오 캡처를 사용할 수 없습니다',
 		'synthPanels.out.airDesc': '에어 쉘프 EQ — 고음역의 화사함을 부스트/컷(10kHz에서 ±8dB)',
@@ -1148,29 +1407,40 @@ export default {
 		'synthPanels.keyboard.raiseStartHint': '시작 옥타브 높이기',
 		'synthPanels.keyboard.lowerEndHint': '끝 옥타브 낮추기',
 		'synthPanels.keyboard.raiseEndHint': '끝 옥타브 높이기',
-		'synthPanels.keyboard.qwertyToggleHint': '컴퓨터 키보드로 연주 — Z행=기준 옥타브, Q행=한 옥타브 위. Ctrl로 옥타브 낮추기, Shift로 옥타브 높이기([ 및 ] 키도 사용 가능), Space를 누르고 있으면 서스테인 페달. Ctrl+0~3 탭 이동은 계속 사용할 수 있습니다.',
-		'synthPanels.keyboard.qwertyOctaveHint': 'QWERTY 기준 옥타브 — Ctrl로 낮추기, Shift로 높이기([ 및 ] 키도 사용 가능)',
-		'synthPanels.keyboard.sustainHint': '서스테인 페달(PEDAL / CC64) — 놓아도 울리던 음을 계속 지속시킴',
-		'synthPanels.keyboard.velocityCurveHint': 'MIDI 벨로시티 커브: {curve}(클릭하여 순환: EXP[자연스러운 피아노] → LIN[선형 1:1] → LOG[소프트 터치] → HARD[강한 타건] → OFF[고정 음량])',
+		'synthPanels.keyboard.qwertyToggleHint':
+			'컴퓨터 키보드로 연주 — Z행=기준 옥타브, Q행=한 옥타브 위. Ctrl로 옥타브 낮추기, Shift로 옥타브 높이기([ 및 ] 키도 사용 가능), Space를 누르고 있으면 서스테인 페달. Ctrl+0~3 탭 이동은 계속 사용할 수 있습니다.',
+		'synthPanels.keyboard.qwertyOctaveHint':
+			'QWERTY 기준 옥타브 — Ctrl로 낮추기, Shift로 높이기([ 및 ] 키도 사용 가능)',
+		'synthPanels.keyboard.sustainHint':
+			'서스테인 페달(PEDAL / CC64) — 놓아도 울리던 음을 계속 지속시킴',
+		'synthPanels.keyboard.velocityCurveHint':
+			'MIDI 벨로시티 커브: {curve}(클릭하여 순환: EXP[자연스러운 피아노] → LIN[선형 1:1] → LOG[소프트 터치] → HARD[강한 타건] → OFF[고정 음량])',
 		'synthPanels.keyboard.playNoteHint': '{note} 재생({freq} Hz)',
 
-		'synthPanels.roll.fullscreenOnHint': '전체 패널 — 랙 1-7을 숨기고 아래 패널 전체를 롤에 사용합니다',
+		'synthPanels.roll.fullscreenOnHint':
+			'전체 패널 — 랙 1-7을 숨기고 아래 패널 전체를 롤에 사용합니다',
 		'synthPanels.roll.fullscreenOffHint': '전체 패널: 켜짐 — 클릭하면 랙 1-7이 돌아옵니다',
 		'synthPanels.roll.trackNameLabel': '트랙 이름',
-		'synthPanels.roll.renameHint': '{name} — 클릭하여 TRK {track}의 이름 변경(최대 {max}자, 여기에는 {show}자까지 표시)',
-		'synthPanels.roll.selectionHint': '선택된 노트 — 드래그로 이동(Alt: 복사), 오른쪽 끝을 드래그해 길이 조절, 화살표로 미세 조정(Shift: 마디/옥타브 단위), Delete로 삭제, Ctrl+C/X/V/D로 커서 위치에서 복사/잘라내기/붙여넣기/반복, Esc로 선택 해제',
+		'synthPanels.roll.renameHint':
+			'{name} — 클릭하여 TRK {track}의 이름 변경(최대 {max}자, 여기에는 {show}자까지 표시)',
+		'synthPanels.roll.selectionHint':
+			'선택된 노트 — 드래그로 이동(Alt: 복사), 오른쪽 끝을 드래그해 길이 조절, 화살표로 미세 조정(Shift: 마디/옥타브 단위), Delete로 삭제, Ctrl+C/X/V/D로 커서 위치에서 복사/잘라내기/붙여넣기/반복, Esc로 선택 해제',
 		'synthPanels.roll.undoHint': '마지막 편집 실행 취소(Ctrl+Z)',
 		'synthPanels.roll.redoHint': '다시 실행(Ctrl+Shift+Z / Ctrl+Y)',
-		'synthPanels.roll.clearPageHint': '이 페이지 지우기(CLR) — 현재 트랙의 현재 페이지에 놓인 모든 노트와 코드를 제거(실행 취소 가능)',
-		'synthPanels.roll.octScopeHint': '옥타브 표시 범위(시작-끝) — 그리드 셀 크기를 바꾸지 않고 피아노 롤에 표시되는 음역을 제한',
+		'synthPanels.roll.clearPageHint':
+			'이 페이지 지우기(CLR) — 현재 트랙의 현재 페이지에 놓인 모든 노트와 코드를 제거(실행 취소 가능)',
+		'synthPanels.roll.octScopeHint':
+			'옥타브 표시 범위(시작-끝) — 그리드 셀 크기를 바꾸지 않고 피아노 롤에 표시되는 음역을 제한',
 		'synthPanels.roll.lowerStartHint': '시작 옥타브 낮추기(옥타브 다운)',
 		'synthPanels.roll.raiseStartHint': '시작 옥타브 높이기(옥타브 업)',
 		'synthPanels.roll.startOctaveHint': '시작 옥타브: {octave}옥타브(C{octave})',
 		'synthPanels.roll.lowerEndHint': '끝 옥타브 낮추기',
 		'synthPanels.roll.raiseEndHint': '끝 옥타브 높이기',
 		'synthPanels.roll.endOctaveHint': '끝 옥타브: {octave}옥타브(B{octave})',
-		'synthPanels.roll.jumpToStepHint': '클릭하면 재생 커서가 스텝 {step}({bar}마디 {beat}박)로 이동합니다',
-		'synthPanels.roll.jumpToColumnHint': '클릭하면 재생 커서가 {column}열(스텝 {step}, {bar}마디 {beat}박)로 이동합니다',
+		'synthPanels.roll.jumpToStepHint':
+			'클릭하면 재생 커서가 스텝 {step}({bar}마디 {beat}박)로 이동합니다',
+		'synthPanels.roll.jumpToColumnHint':
+			'클릭하면 재생 커서가 {column}열(스텝 {step}, {bar}마디 {beat}박)로 이동합니다',
 		'synthPanels.lane.toggleHint': '오토메이션 레인 — 클릭하면 롤 위에 에디터가 열립니다',
 		'synthPanels.lane.addHint': '레인 추가(ADV 전용, 최대 4개)',
 		'synthPanels.lane.removeHint': '이 레인 삭제',
@@ -1178,8 +1448,10 @@ export default {
 		'synthPanels.lane.closeHint': '레인 에디터 닫기',
 		'synthPanels.lane.sampledHint': '노트가 시작될 때 한 번 샘플링 — 이것이 벨로시티',
 		'synthPanels.lane.continuousHint': '연속 — 길게 눌린 노트 아래에서도 계속 변화',
-		'synthPanels.roll.auditionKeyCustomHint': '{note} — 클릭하여 이 키를 시청하고 편집(전용 사운드 있음, 우클릭으로 삭제)',
-		'synthPanels.roll.auditionKeyDefaultHint': '{note} — 클릭하여 이 키를 시청하고 편집(트랙 사운드 재생)',
+		'synthPanels.roll.auditionKeyCustomHint':
+			'{note} — 클릭하여 이 키를 시청하고 편집(전용 사운드 있음, 우클릭으로 삭제)',
+		'synthPanels.roll.auditionKeyDefaultHint':
+			'{note} — 클릭하여 이 키를 시청하고 편집(트랙 사운드 재생)',
 		'synthPanels.roll.auditionNoteHint': '{note} 시청({freq}Hz)',
 		'synthPanels.roll.cellStepHint': '{note} — 스텝 {step}',
 
@@ -1189,7 +1461,8 @@ export default {
 		'synthPanels.settings.tabDsp': '2. 버퍼 및 IR 사양',
 		'synthPanels.settings.tabMidi': '3. MIDI 및 컨트롤러',
 		'synthPanels.settings.tabVoice': '4. 보이스 및 튜닝',
-		'synthPanels.settings.footerNote': '하드웨어 및 버퍼 파라미터는 Web Audio 엔진 그래프에 즉시 적용됩니다.',
+		'synthPanels.settings.footerNote':
+			'하드웨어 및 버퍼 파라미터는 Web Audio 엔진 그래프에 즉시 적용됩니다.',
 
 		'synthPanels.audioHw.contextTitle': '오디오 컨텍스트 및 하드웨어 샘플 레이트',
 		'synthPanels.audioHw.webAudioApi': 'Web Audio API',
@@ -1217,7 +1490,8 @@ export default {
 		'synthPanels.audioHw.outputProtection': '출력 보호',
 		'synthPanels.audioHw.limiterActive': '브릭월 세이프티 리미터: 활성',
 		'synthPanels.audioHw.limiterBypassed': '세이프티 리미터: 우회됨',
-		'synthPanels.audioHw.limiterDesc': '여러 트랙이 겹칠 때 하드웨어 클리핑과 DAC 과부하 왜곡을 방지',
+		'synthPanels.audioHw.limiterDesc':
+			'여러 트랙이 겹칠 때 하드웨어 클리핑과 DAC 과부하 왜곡을 방지',
 
 		'synthPanels.dsp.noiseBufferTitle': '노이즈 제너레이터 PCM 오디오 버퍼',
 		'synthPanels.dsp.audioBufferAllocation': 'AudioBuffer 할당',
@@ -1250,8 +1524,10 @@ export default {
 		'synthPanels.voice.editingLayout': '편집 레이아웃',
 		'synthPanels.voice.advDefaultOn': '트랙이 ADV로 열림',
 		'synthPanels.voice.advDefaultOff': '트랙이 랙과 함께 열림',
-		'synthPanels.voice.advDefaultDesc': '새 트랙이 고급 레이아웃으로 시작합니다. 모듈 1-7 대신 피아노 롤이나 패치 베이가 표시됩니다. 직접 전환한 트랙은 자체 선택을 유지합니다.',
-		'synthPanels.midi.noDevicesHint': 'USB/블루투스 MIDI 키보드나 컨트롤러를 연결하세요. Chrome/Edge/Firefox가 드라이버 설치 없이 자동으로 감지하고 연결합니다.',
+		'synthPanels.voice.advDefaultDesc':
+			'새 트랙이 고급 레이아웃으로 시작합니다. 모듈 1-7 대신 피아노 롤이나 패치 베이가 표시됩니다. 직접 전환한 트랙은 자체 선택을 유지합니다.',
+		'synthPanels.midi.noDevicesHint':
+			'USB/블루투스 MIDI 키보드나 컨트롤러를 연결하세요. Chrome/Edge/Firefox가 드라이버 설치 없이 자동으로 감지하고 연결합니다.',
 
 		'synthPanels.voice.tuningTitle': '마스터 콘서트 튜닝(A4 표준)',
 		'synthPanels.voice.tuningSubtitle': '오실레이터 기준 보정',
@@ -1270,7 +1546,8 @@ export default {
 		'synthPanels.presets.hintLead': '멜로디 보이스 — 펄스, 디튠된 톱니파, 싱크, 브라스',
 		'synthPanels.presets.hintPluck': '뜯거나 튕기는 계열 — 빠른 어택, 서스테인 없음',
 		'synthPanels.presets.hintPad': '느린 어택, 긴 릴리스, LFO에서 오는 움직임',
-		'synthPanels.presets.hintDrums': '단일 드럼 사운드; 퍼커션 모드에서 키 하나에 넣거나 트랙 전체에 사용하세요',
+		'synthPanels.presets.hintDrums':
+			'단일 드럼 사운드; 퍼커션 모드에서 키 하나에 넣거나 트랙 전체에 사용하세요',
 		'synthPanels.presets.hintKeyboard': '건반: 피아노, 일렉트릭 피아노, 클라비',
 		'synthPanels.presets.hintOrgan': '드로바와 톤휠',
 		'synthPanels.presets.hintString': '활과 숨으로 지속되는 소리',
@@ -1282,7 +1559,8 @@ export default {
 		'synthPanels.toast.kitApplied': '✓ 킷 {name}',
 		'synthPanels.toast.newPreset': '✓ 새 패치',
 		'synthPanels.toast.newAdvancedPreset': '✓ 새 고급 패치',
-		'synthPanels.toast.noKitYet': 'X 킷이 없습니다 — 먼저 P(퍼커션 모드)를 켜고 키에 사운드를 설정하세요',
+		'synthPanels.toast.noKitYet':
+			'X 킷이 없습니다 — 먼저 P(퍼커션 모드)를 켜고 키에 사운드를 설정하세요',
 		'synthPanels.toast.notAKit': 'X 킷 파일이 아닙니다'
 	}
 } satisfies Messages;

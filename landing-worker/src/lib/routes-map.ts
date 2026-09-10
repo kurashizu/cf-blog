@@ -18,7 +18,6 @@ export function tabIndexFromPath(pathname: string): number {
 	return idx === -1 ? 0 : idx;
 }
 
-
 /**
  * Routes that only work on a cross-origin isolated document.
  *

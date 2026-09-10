@@ -276,8 +276,15 @@
 	 */
 	function installFetchCounter() {
 		const original = window.XMLHttpRequest.prototype.open;
-		window.XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, method: string, url: string | URL, ...rest: unknown[]) {
-			if (/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin|\/vm\/pc\/rootfs\b/.test(String(url))) {
+		window.XMLHttpRequest.prototype.open = function (
+			this: XMLHttpRequest,
+			method: string,
+			url: string | URL,
+			...rest: unknown[]
+		) {
+			if (
+				/\/vm\/img\/(alpine|rootfs)\b|\/vm\/rv\/.*blk\d+\.bin|\/vm\/pc\/rootfs\b/.test(String(url))
+			) {
 				this.addEventListener('load', () => chunksFetched++, { once: true });
 			}
 			return original.call(this, method, url as any, ...(rest as [boolean, string?, string?]));
@@ -514,7 +521,8 @@
 				// option rather than inheriting from CSS, so without this the
 				// emulator's console was the one surface still in xterm's own
 				// default monospace.
-				fontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+				fontFamily:
+					"'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
 				// 12, not 15: the face is drawn on a 12px grid and is only exactly
 				// sharp at whole multiples of it, and a terminal is the one place
 				// where every glyph being crisp matters most.
@@ -829,7 +837,8 @@
 		if (settings.scaling === 'none') screenScale = 1;
 		// Whole multiples only, and never below one guest pixel per screen pixel:
 		// a half-pixel scale is where the smearing comes from.
-		else if (settings.scaling === 'integer') screenScale = fitted >= 1 ? Math.floor(fitted) : 1 / Math.ceil(1 / fitted);
+		else if (settings.scaling === 'integer')
+			screenScale = fitted >= 1 ? Math.floor(fitted) : 1 / Math.ceil(1 / fitted);
 		else screenScale = fitted;
 	}
 
@@ -891,7 +900,8 @@
 	 * to a drag it reads as the pointer suddenly bolting.
 	 */
 	function lockPointer() {
-		const target = screenEl as (HTMLElement & { requestPointerLock?: (o?: object) => unknown }) | null;
+		const target = screenEl as
+			(HTMLElement & { requestPointerLock?: (o?: object) => unknown }) | null;
 		try {
 			const pending = target?.requestPointerLock?.({ unadjustedMovement: true });
 			// Chrome rejects the promise when it cannot honour the option; every
@@ -1007,7 +1017,10 @@
 					},
 					{ label: $t('vm.facts.guest'), value: $t('vm.facts.guestValueX64') },
 					{ label: $t('vm.facts.cpu'), value: $t('vm.facts.cpuValueX64') },
-					{ label: $t('vm.facts.ram'), value: $t('vm.facts.ramValueX64', { memoryMb: settings.memoryMb }) },
+					{
+						label: $t('vm.facts.ram'),
+						value: $t('vm.facts.ramValueX64', { memoryMb: settings.memoryMb })
+					},
 					{ label: $t('vm.facts.display'), value: $t('vm.facts.displayValueX64') },
 					{
 						label: $t('vm.facts.disk'),
@@ -1022,46 +1035,69 @@
 					},
 					{
 						label: $t('vm.facts.network'),
-						value: settings.network ? $t('vm.facts.networkValueOn') : $t('vm.facts.networkValueOff'),
+						value: settings.network
+							? $t('vm.facts.networkValueOn')
+							: $t('vm.facts.networkValueOff'),
 						title: $t('vm.facts.networkTitleX64')
 					},
 					{ label: $t('vm.facts.status'), value: $t('vm.facts.statusValueX64') }
 				]
 			: [
-		{ label: $t('vm.facts.emulator'), value: $t('vm.facts.emulatorValueX86'), title: $t('vm.facts.emulatorTitleX86') },
-		{ label: $t('vm.facts.guest'), value: $t('vm.facts.guestValueX86'), title: $t('vm.facts.guestTitleX86') },
-		{ label: $t('vm.facts.cpu'), value: $t('vm.facts.cpuValueX86') },
-		{ label: $t('vm.facts.ram'), value: $t('vm.facts.ramValueX86', { memoryMb: settings.memoryMb, vgaMemoryMb: settings.vgaMemoryMb }) },
-		{
-			label: $t('vm.facts.display'),
-			value: view === 'terminal' ? $t('vm.facts.displayValueTerminal') : $t('vm.facts.displayValueScreen'),
-			title: $t('vm.facts.displayTitleX86')
-		},
-		{
-			label: $t('vm.facts.disk'),
-			value: settings.persistDisk
-				? $t('vm.facts.diskValuePersist', {
-						change: overlay.blocks
-							? $t('vm.facts.diskChanged', { size: formatBytes(overlay.bytes) })
-							: $t('vm.facts.diskUnchanged')
-					})
-				: $t('vm.facts.diskValuePlain'),
-			title: settings.persistDisk
-				? $t('vm.facts.diskTitlePersistX86')
-				: $t('vm.facts.diskTitlePlainX86')
-		},
-		{
-			label: $t('vm.facts.network'),
-			value: settings.network ? $t('vm.facts.networkValueOn') : $t('vm.facts.networkValueOff'),
-			title: $t('vm.facts.networkTitleX86')
-		},
-		{ label: $t('vm.facts.status'), value: $t('vm.facts.statusValueX86') }
-			]
+					{
+						label: $t('vm.facts.emulator'),
+						value: $t('vm.facts.emulatorValueX86'),
+						title: $t('vm.facts.emulatorTitleX86')
+					},
+					{
+						label: $t('vm.facts.guest'),
+						value: $t('vm.facts.guestValueX86'),
+						title: $t('vm.facts.guestTitleX86')
+					},
+					{ label: $t('vm.facts.cpu'), value: $t('vm.facts.cpuValueX86') },
+					{
+						label: $t('vm.facts.ram'),
+						value: $t('vm.facts.ramValueX86', {
+							memoryMb: settings.memoryMb,
+							vgaMemoryMb: settings.vgaMemoryMb
+						})
+					},
+					{
+						label: $t('vm.facts.display'),
+						value:
+							view === 'terminal'
+								? $t('vm.facts.displayValueTerminal')
+								: $t('vm.facts.displayValueScreen'),
+						title: $t('vm.facts.displayTitleX86')
+					},
+					{
+						label: $t('vm.facts.disk'),
+						value: settings.persistDisk
+							? $t('vm.facts.diskValuePersist', {
+									change: overlay.blocks
+										? $t('vm.facts.diskChanged', { size: formatBytes(overlay.bytes) })
+										: $t('vm.facts.diskUnchanged')
+								})
+							: $t('vm.facts.diskValuePlain'),
+						title: settings.persistDisk
+							? $t('vm.facts.diskTitlePersistX86')
+							: $t('vm.facts.diskTitlePlainX86')
+					},
+					{
+						label: $t('vm.facts.network'),
+						value: settings.network
+							? $t('vm.facts.networkValueOn')
+							: $t('vm.facts.networkValueOff'),
+						title: $t('vm.facts.networkTitleX86')
+					},
+					{ label: $t('vm.facts.status'), value: $t('vm.facts.statusValueX86') }
+				]
 	);
 </script>
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
-	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
+	<div
+		class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0"
+	>
 		<AsciiArt
 			color="#d19a66"
 			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
@@ -1080,7 +1116,10 @@
 						<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] animate-pulse"></span>
 						{$t('vm.running.label')}
 					</span>
-					<span class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60" title={$t('vm.running.uptimeHint')}>
+					<span
+						class="px-1.5 py-0.5 rounded-xs bg-black/40 text-[11px] font-mono text-white/60"
+						title={$t('vm.running.uptimeHint')}
+					>
 						{formatUptime(uptime)}
 					</span>
 					{#if mips !== null}
@@ -1098,25 +1137,25 @@
 				     has no equivalent of -- offering either would be a button that
 				     does nothing, or worse, shows a black rectangle. -->
 				{#if settings.machine === 'x86'}
-				<button
-					onclick={cycleView}
-					title={$t('vm.view.hint')}
-					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {viewMode ===
-					'auto'
-						? 'border-white/25 text-white/70 hover:bg-white/10'
-						: 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'}"
-				>
-					{VIEW_LABEL[viewMode]}
-				</button>
-				<button
-					onclick={() => (showKeyboard = !showKeyboard)}
-					title={$t('vm.button.keysHint')}
-					class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {showKeyboard
-						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
-						: 'border-white/25 text-white/70 hover:bg-white/10'}"
-				>
-					{$t('vm.button.keys')}
-				</button>
+					<button
+						onclick={cycleView}
+						title={$t('vm.view.hint')}
+						class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {viewMode ===
+						'auto'
+							? 'border-white/25 text-white/70 hover:bg-white/10'
+							: 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'}"
+					>
+						{VIEW_LABEL[viewMode]}
+					</button>
+					<button
+						onclick={() => (showKeyboard = !showKeyboard)}
+						title={$t('vm.button.keysHint')}
+						class="px-2.5 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors active:scale-95 {showKeyboard
+							? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
+							: 'border-white/25 text-white/70 hover:bg-white/10'}"
+					>
+						{$t('vm.button.keys')}
+					</button>
 				{/if}
 				<button
 					onclick={restart}
@@ -1160,93 +1199,108 @@
 
 			<div class="border border-[#56b6c2]/40 bg-black/30 rounded-xs p-2.5 space-y-2.5">
 				<div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
-						<span class="text-xs font-black font-mono text-[#56b6c2]">{$t('vm.config.title')}</span>
-						<div class="flex items-center gap-2">
-							<span class="text-[10px] font-mono text-white/35">{$t('vm.config.savedNote')}</span>
-							<button onclick={resetSettings} class="press text-[10px] font-mono text-white/45 hover:text-white cursor-pointer underline transition-colors">
-								{$t('vm.config.reset')}
-							</button>
-						</div>
-					</div>
-
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.machine')}</span>
-						{#each [['x86', 'i686', $t('vm.config.machineX86Hint')], ['x86_64', 'x86-64', $t('vm.config.machineX64Hint')]] as const as [value, label, hint] (value)}
-							<button
-								onclick={() => (settings.machine = value)}
-								title={hint}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.machine ===
-								value
-									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-									: 'border-white/20 text-white/55 hover:border-white/50'}"
-							>
-								{label}
-							</button>
-						{/each}
-						<span class="text-[10px] font-mono text-white/40">{$t('vm.config.machineNote')}</span>
-					</div>
-
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.guestRam')}</span>
-						{#each MEMORY_CHOICES as mb (mb)}
-							<button
-								onclick={() => (settings.memoryMb = mb)}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.memoryMb === mb
-									? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
-									: 'border-white/20 text-white/55 hover:border-white/50'}"
-							>
-								{mb} MB
-							</button>
-						{/each}
-						<span class="text-[10px] font-mono text-white/30">{$t('vm.config.guestRamNote')}</span>
-					</div>
-
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.network')}</span>
+					<span class="text-xs font-black font-mono text-[#56b6c2]">{$t('vm.config.title')}</span>
+					<div class="flex items-center gap-2">
+						<span class="text-[10px] font-mono text-white/35">{$t('vm.config.savedNote')}</span>
 						<button
-							onclick={() => (settings.network = !settings.network)}
-							title={$t('vm.config.networkHint')}
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.network
+							onclick={resetSettings}
+							class="press text-[10px] font-mono text-white/45 hover:text-white cursor-pointer underline transition-colors"
+						>
+							{$t('vm.config.reset')}
+						</button>
+					</div>
+				</div>
+
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+						>{$t('vm.config.machine')}</span
+					>
+					{#each [['x86', 'i686', $t('vm.config.machineX86Hint')], ['x86_64', 'x86-64', $t('vm.config.machineX64Hint')]] as const as [value, label, hint] (value)}
+						<button
+							onclick={() => (settings.machine = value)}
+							title={hint}
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.machine ===
+							value
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
-							{settings.network ? $t('vm.config.networkOn') : $t('vm.config.networkOff')}
+							{label}
 						</button>
-						<span class="text-[10px] font-mono text-white/40">{$t('vm.config.networkNote')}</span>
-					</div>
+					{/each}
+					<span class="text-[10px] font-mono text-white/40">{$t('vm.config.machineNote')}</span>
+				</div>
 
-					<div class="flex flex-wrap items-center gap-2 min-h-[30px]">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.disk')}</span>
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+						>{$t('vm.config.guestRam')}</span
+					>
+					{#each MEMORY_CHOICES as mb (mb)}
 						<button
-							onclick={() => (settings.persistDisk = !settings.persistDisk)}
-							title={$t('vm.config.diskHint')}
-							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.persistDisk
+							onclick={() => (settings.memoryMb = mb)}
+							class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.memoryMb ===
+							mb
 								? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 								: 'border-white/20 text-white/55 hover:border-white/50'}"
 						>
-							{settings.persistDisk ? $t('vm.config.persistOn') : $t('vm.config.persistOff')}
+							{mb} MB
 						</button>
-						<button
-							onclick={wipeOverlay}
-							title={$t('vm.config.wipeHint')}
-							class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:bg-[#e06c75]/20"
-						>
-							{$t('vm.config.wipe')}
-						</button>
-						<span class="text-[10px] font-mono text-white/40">
-							{overlayStored ? $t('vm.overlay.savedCount', { size: formatBytes(overlayStored) }) : $t('vm.overlay.nothingSaved')}{overlayNote
-								? ` · ${overlayNote}`
-								: ''}
-						</span>
-					</div>
+					{/each}
+					<span class="text-[10px] font-mono text-white/30">{$t('vm.config.guestRamNote')}</span>
+				</div>
 
-					{#if settings.machine === 'x86'}
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+						>{$t('vm.config.network')}</span
+					>
+					<button
+						onclick={() => (settings.network = !settings.network)}
+						title={$t('vm.config.networkHint')}
+						class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.network
+							? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+							: 'border-white/20 text-white/55 hover:border-white/50'}"
+					>
+						{settings.network ? $t('vm.config.networkOn') : $t('vm.config.networkOff')}
+					</button>
+					<span class="text-[10px] font-mono text-white/40">{$t('vm.config.networkNote')}</span>
+				</div>
+
+				<div class="flex flex-wrap items-center gap-2 min-h-[30px]">
+					<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+						>{$t('vm.config.disk')}</span
+					>
+					<button
+						onclick={() => (settings.persistDisk = !settings.persistDisk)}
+						title={$t('vm.config.diskHint')}
+						class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.persistDisk
+							? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
+							: 'border-white/20 text-white/55 hover:border-white/50'}"
+					>
+						{settings.persistDisk ? $t('vm.config.persistOn') : $t('vm.config.persistOff')}
+					</button>
+					<button
+						onclick={wipeOverlay}
+						title={$t('vm.config.wipeHint')}
+						class="press px-2 py-0.5 border border-[#e06c75]/50 text-[#e06c75] rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors hover:bg-[#e06c75]/20"
+					>
+						{$t('vm.config.wipe')}
+					</button>
+					<span class="text-[10px] font-mono text-white/40">
+						{overlayStored
+							? $t('vm.overlay.savedCount', { size: formatBytes(overlayStored) })
+							: $t('vm.overlay.nothingSaved')}{overlayNote ? ` · ${overlayNote}` : ''}
+					</span>
+				</div>
+
+				{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.vgaRam')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+							>{$t('vm.config.vgaRam')}</span
+						>
 						{#each VGA_CHOICES as mb (mb)}
 							<button
 								onclick={() => (settings.vgaMemoryMb = mb)}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.vgaMemoryMb === mb
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.vgaMemoryMb ===
+								mb
 									? 'border-[#c678dd] bg-[#c678dd]/20 text-[#c678dd]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
@@ -1254,11 +1308,13 @@
 							</button>
 						{/each}
 					</div>
-					{/if}
+				{/if}
 
-					{#if settings.machine === 'x86'}
+				{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.screen')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+							>{$t('vm.config.screen')}</span
+						>
 						{#each RESOLUTIONS as res (res)}
 							<button
 								onclick={() => (settings.resolution = res)}
@@ -1276,7 +1332,9 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.scaling')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+							>{$t('vm.config.scaling')}</span
+						>
 						{#each SCALING_CHOICES as [value, label, hint] (value)}
 							<button
 								onclick={() => {
@@ -1293,11 +1351,13 @@
 							</button>
 						{/each}
 					</div>
-					{/if}
+				{/if}
 
-					{#if settings.machine === 'x86'}
+				{#if settings.machine === 'x86'}
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.boot')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+							>{$t('vm.config.boot')}</span
+						>
 						{#each [['auto', $t('vm.config.bootAuto')], ['kernel', $t('vm.config.bootKernel')], ['cdrom', $t('vm.config.bootCdrom')]] as const as [value, label] (value)}
 							<button
 								onclick={() => (settings.boot = value)}
@@ -1306,7 +1366,8 @@
 									: value === 'kernel'
 										? $t('vm.config.bootKernelHint')
 										: $t('vm.config.bootCdromHint')}
-								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.boot === value
+								class="px-2 py-0.5 border rounded-xs text-[11px] font-mono font-bold cursor-pointer transition-colors active:scale-95 {settings.boot ===
+								value
 									? 'border-[#61afef] bg-[#61afef]/20 text-[#61afef]'
 									: 'border-white/20 text-white/55 hover:border-white/50'}"
 							>
@@ -1316,7 +1377,9 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.cmdline')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+							>{$t('vm.config.cmdline')}</span
+						>
 						<input
 							type="text"
 							bind:value={settings.cmdline}
@@ -1327,7 +1390,9 @@
 					</div>
 
 					<div class="flex flex-wrap items-center gap-3">
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]">{$t('vm.config.cpu')}</span>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase w-[92px]"
+							>{$t('vm.config.cpu')}</span
+						>
 						<button
 							onclick={() => (settings.jit = !settings.jit)}
 							aria-pressed={settings.jit}
@@ -1356,30 +1421,42 @@
 							{$t('vm.config.resetButton')}
 						</button>
 					</div>
-					{/if}
+				{/if}
 
-					<p class="text-[10px] font-mono text-white/35 leading-relaxed">
-						{#if settings.machine === 'x86'}
-							{$t('vm.config.footnoteX86', { startx: 'startx' })}
-						{:else}
-							{$t('vm.config.footnoteX64')}
-						{/if}
-					</p>
-				</div>
+				<p class="text-[10px] font-mono text-white/35 leading-relaxed">
+					{#if settings.machine === 'x86'}
+						{$t('vm.config.footnoteX86', { startx: 'startx' })}
+					{:else}
+						{$t('vm.config.footnoteX64')}
+					{/if}
+				</p>
+			</div>
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
 				{#each FACTS as fact (fact.label)}
-					<div class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2" title={fact.title}>
-						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0">{fact.label}</span>
+					<div
+						class="border border-white/15 bg-black/40 rounded-xs px-2.5 py-2 flex items-baseline justify-between gap-2"
+						title={fact.title}
+					>
+						<span class="text-[10px] font-mono font-bold text-white/45 uppercase shrink-0"
+							>{fact.label}</span
+						>
 						<span class="text-xs font-mono font-bold text-[#d8dee9] text-right">{fact.value}</span>
 					</div>
 				{/each}
 			</div>
 
 			<div class="border border-[#98c379]/40 bg-[#98c379]/5 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-xs font-black font-mono text-[#98c379]">{$t('vm.section.rootShellTitle')}</div>
+				<div class="text-xs font-black font-mono text-[#98c379]">
+					{$t('vm.section.rootShellTitle')}
+				</div>
 				<p class="text-[11px] text-white/65 leading-relaxed">
-					{$t('vm.section.rootShellBody1', { apk: 'apk', tmux: 'tmux', i686: 'i686', startx: 'startx' })}
+					{$t('vm.section.rootShellBody1', {
+						apk: 'apk',
+						tmux: 'tmux',
+						i686: 'i686',
+						startx: 'startx'
+					})}
 				</p>
 				<p class="text-[11px] text-white/45 leading-relaxed">
 					{$t('vm.section.rootShellBody2', { startx: 'startx' })}
@@ -1388,7 +1465,9 @@
 
 			<div class="border border-white/15 bg-black/25 rounded-xs p-2.5 space-y-1.5">
 				<div class="flex items-baseline justify-between gap-2">
-					<span class="text-xs font-black font-mono text-[#d19a66]">{$t('vm.section.topologyTitle')}</span>
+					<span class="text-xs font-black font-mono text-[#d19a66]"
+						>{$t('vm.section.topologyTitle')}</span
+					>
 					<span class="text-[10px] font-mono text-white/35">{$t('vm.section.topologyNote')}</span>
 				</div>
 				<MermaidDiagram chart={TOPOLOGY} accent="#d19a66" />
@@ -1408,7 +1487,9 @@
 
 			{#if errorText}
 				<div class="border border-[#e06c75]/50 bg-[#e06c75]/10 rounded-xs p-2.5">
-					<div class="text-xs font-black font-mono text-[#e06c75]">{$t('vm.error.bootFailedTitle')}</div>
+					<div class="text-xs font-black font-mono text-[#e06c75]">
+						{$t('vm.error.bootFailedTitle')}
+					</div>
 					<div class="text-[11px] font-mono text-white/70 mt-1 break-all">{errorText}</div>
 				</div>
 			{/if}
@@ -1434,7 +1515,7 @@
 		onkeydown={onScreenKeydown}
 		oncontextmenu={onScreenContextMenu}
 		class="relative flex-1 min-h-0 max-lg:min-h-[60vh] border bg-black rounded-xs overflow-hidden outline-none transition-colors {phase ===
-		'idle' || phase === 'error'
+			'idle' || phase === 'error'
 			? 'hidden'
 			: keyboardCaptured
 				? 'border-[#98c379]'
@@ -1458,7 +1539,9 @@
 		>
 			<!-- Line height has to exceed the font size or descenders are clipped:
 			     v86 lays each text row out in exactly this box. -->
-			<div style="white-space: pre; font: 15px/18px 'KRSZ Box', monospace; color: #d8dee9; padding: 6px;"></div>
+			<div
+				style="white-space: pre; font: 15px/18px 'KRSZ Box', monospace; color: #d8dee9; padding: 6px;"
+			></div>
 			<!-- The canvas holds exactly as many pixels as the guest is drawing, and
 			     the panel is bigger than that, so something has to invent the rest.
 			     Nearest-neighbour keeps a pixel a pixel instead of smearing it. -->
@@ -1476,7 +1559,9 @@
 				class="absolute inset-0 flex items-end justify-center pb-3 bg-black/25 cursor-pointer"
 				transition:fade={{ duration: 180 }}
 			>
-				<span class="px-2.5 py-1 rounded-xs bg-black/85 border border-white/25 text-[11px] font-mono text-white/75">
+				<span
+					class="px-2.5 py-1 rounded-xs bg-black/85 border border-white/25 text-[11px] font-mono text-white/75"
+				>
 					{$t('vm.screen.clickToType')}
 				</span>
 			</div>
@@ -1490,16 +1575,32 @@
 	{/if}
 
 	{#if phase === 'running' || phase === 'loading'}
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-white/40 shrink-0">
+		<div
+			class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-white/40 shrink-0"
+		>
 			<span>
-				{$t('vm.statusbar.image')} <span class="text-[#56b6c2]">{imageMiB === null ? '—' : `${imageMiB.toFixed(0)} MiB`}</span>
+				{$t('vm.statusbar.image')}
+				<span class="text-[#56b6c2]">{imageMiB === null ? '—' : `${imageMiB.toFixed(0)} MiB`}</span>
 			</span>
 			<span title={$t('vm.statusbar.streamedHint')}>
-				{$t('vm.statusbar.streamed')} <span class="text-[#98c379]">{(fetchedBytes / 1024 / 1024).toFixed(0)} MiB</span>
-				<span class="text-white/25">{$t('vm.statusbar.streamedChunks', { count: chunksFetched })}</span>
+				{$t('vm.statusbar.streamed')}
+				<span class="text-[#98c379]">{(fetchedBytes / 1024 / 1024).toFixed(0)} MiB</span>
+				<span class="text-white/25"
+					>{$t('vm.statusbar.streamedChunks', { count: chunksFetched })}</span
+				>
 			</span>
-			<span>{$t('vm.statusbar.mode')} <span class="text-[#c678dd]">{graphical ? $t('vm.statusbar.modeGraphical') : $t('vm.statusbar.modeText')}</span></span>
-			<span>{$t('vm.statusbar.boot')} <span class="text-[#61afef]">{mode === 'kernel' ? $t('vm.statusbar.bootDirect') : $t('vm.statusbar.bootIso')}</span></span>
+			<span
+				>{$t('vm.statusbar.mode')}
+				<span class="text-[#c678dd]"
+					>{graphical ? $t('vm.statusbar.modeGraphical') : $t('vm.statusbar.modeText')}</span
+				></span
+			>
+			<span
+				>{$t('vm.statusbar.boot')}
+				<span class="text-[#61afef]"
+					>{mode === 'kernel' ? $t('vm.statusbar.bootDirect') : $t('vm.statusbar.bootIso')}</span
+				></span
+			>
 			{#if bootLineSent}
 				<span title={$t('vm.statusbar.cmdlineHint')}>
 					{$t('vm.config.cmdline')} <span class="text-[#e5c07b]">{BOOT_LINE}</span>

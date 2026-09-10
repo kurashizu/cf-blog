@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { CHUNK, parseImages, parseRange, parseR2Source, sourceVersion } from '../../src/lib/vm-storage';
+import {
+	CHUNK,
+	parseImages,
+	parseRange,
+	parseR2Source,
+	sourceVersion
+} from '../../src/lib/vm-storage';
 
 /* parseRange reads an attacker-controlled HTTP header and turns it into byte
    offsets, so the out-of-bounds cases below are the point of this file. */

@@ -57,14 +57,35 @@
 			</linearGradient>
 		</defs>
 
-		<line x1={padX} y1={padY} x2={width - padX} y2={padY} stroke="rgba(255,255,255,0.08)" stroke-dasharray="2,2" />
+		<line
+			x1={padX}
+			y1={padY}
+			x2={width - padX}
+			y2={padY}
+			stroke="rgba(255,255,255,0.08)"
+			stroke-dasharray="2,2"
+		/>
 		<line x1={padX} y1={y0} x2={width - padX} y2={y0} stroke="rgba(255,255,255,0.2)" />
-		<line x1={x1} y1={padY} x2={x1} y2={y0} stroke="rgba(255,255,255,0.08)" stroke-dasharray="1,2" />
-		<line x1={x2} y1={padY} x2={x2} y2={y0} stroke="rgba(255,255,255,0.08)" stroke-dasharray="1,2" />
-		<line x1={x3} y1={padY} x2={x3} y2={y0} stroke="rgba(255,255,255,0.08)" stroke-dasharray="1,2" />
+		<line {x1} y1={padY} x2={x1} y2={y0} stroke="rgba(255,255,255,0.08)" stroke-dasharray="1,2" />
+		<line x1={x2} y1={padY} {x2} y2={y0} stroke="rgba(255,255,255,0.08)" stroke-dasharray="1,2" />
+		<line
+			x1={x3}
+			y1={padY}
+			x2={x3}
+			y2={y0}
+			stroke="rgba(255,255,255,0.08)"
+			stroke-dasharray="1,2"
+		/>
 
 		<path d={fillD} fill="url(#adsrGrad)" />
-		<path d={pathD} fill="none" stroke={color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		<path
+			d={pathD}
+			fill="none"
+			stroke={color}
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		/>
 
 		<circle cx={x1} cy={y1} r="2.5" fill={color} />
 		<circle cx={x2} cy={y2} r="2" fill="#fff" />
@@ -72,19 +93,21 @@
 	</svg>
 
 	{#if !compact}
-	<div class="w-full flex flex-col gap-0.5 border-t border-white/10 pt-0.5 font-mono leading-none">
-		<div class="grid grid-cols-4 text-center text-xs font-black text-white/60">
-			<span>A</span>
-			<span>D</span>
-			<span>S</span>
-			<span>R</span>
+		<div
+			class="w-full flex flex-col gap-0.5 border-t border-white/10 pt-0.5 font-mono leading-none"
+		>
+			<div class="grid grid-cols-4 text-center text-xs font-black text-white/60">
+				<span>A</span>
+				<span>D</span>
+				<span>S</span>
+				<span>R</span>
+			</div>
+			<div class="grid grid-cols-4 text-center text-[10px] font-black tracking-tight">
+				<span class="truncate" style="color: {color}">{Math.round(attack * 1000)}ms</span>
+				<span class="truncate text-white/90">{Math.round(decay * 1000)}ms</span>
+				<span class="truncate text-white/90">{Math.round(sustain * 100)}%</span>
+				<span class="truncate" style="color: {color}">{Math.round(release * 1000)}ms</span>
+			</div>
 		</div>
-		<div class="grid grid-cols-4 text-center text-[10px] font-black tracking-tight">
-			<span class="truncate" style="color: {color}">{Math.round(attack * 1000)}ms</span>
-			<span class="truncate text-white/90">{Math.round(decay * 1000)}ms</span>
-			<span class="truncate text-white/90">{Math.round(sustain * 100)}%</span>
-			<span class="truncate" style="color: {color}">{Math.round(release * 1000)}ms</span>
-		</div>
-	</div>
 	{/if}
 </div>

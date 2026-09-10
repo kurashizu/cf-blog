@@ -94,7 +94,8 @@ export function roleOf(p: { kind: PortKind; role?: PortRole }): PortRole {
 export function rolesCompatible(from: PortRole, to: PortRole): boolean {
 	const family = (r: PortRole): 'exec' | 'audio' | 'control' => {
 		if (r === 'exec') return 'exec';
-		if (r === 'signal' || r === 'mono' || r === 'stereo' || r === 'left' || r === 'right') return 'audio';
+		if (r === 'signal' || r === 'mono' || r === 'stereo' || r === 'left' || r === 'right')
+			return 'audio';
 		return 'control';
 	};
 	// Like joins like. Execution is not sound and sound is not a value; a cable
@@ -417,7 +418,11 @@ export function pruneGraphParams(
 /** Is this cable already in the graph? Two identical cables are one connection. */
 export function hasCable(graph: RackGraph, cable: GraphCable): boolean {
 	return graph.cables.some(
-		(c) => c.from === cable.from && c.fromPort === cable.fromPort && c.to === cable.to && c.toPort === cable.toPort
+		(c) =>
+			c.from === cable.from &&
+			c.fromPort === cable.fromPort &&
+			c.to === cable.to &&
+			c.toPort === cable.toPort
 	);
 }
 

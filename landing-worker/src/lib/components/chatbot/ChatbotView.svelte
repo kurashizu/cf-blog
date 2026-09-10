@@ -303,7 +303,11 @@
 	function appendReasoning(text: string) {
 		const next = [...turns];
 		const last = next[next.length - 1];
-		next[next.length - 1] = { ...last, role: 'assistant', reasoning: (last.reasoning ?? '') + text };
+		next[next.length - 1] = {
+			...last,
+			role: 'assistant',
+			reasoning: (last.reasoning ?? '') + text
+		};
 		turns = next;
 		void scrollToEnd();
 	}
@@ -335,7 +339,6 @@
 		void persist();
 		void tick().then(() => inputEl?.focus());
 	}
-
 
 	function load() {
 		if (busy) return;
@@ -624,8 +627,6 @@
 		pending = pending.filter((_, n) => n !== i);
 	}
 
-
-
 	async function send() {
 		const text = draft.trim();
 		if (busy || phase !== 'ready' || !worker) return;
@@ -864,14 +865,18 @@
 						style="width: {ctxPct}%"
 					></span>
 				</span>
-				<span class="tabular-nums {ctxPct > 85 ? 'text-[#e06c75]' : 'text-white/50'}">{ctxPct}%</span>
+				<span class="tabular-nums {ctxPct > 85 ? 'text-[#e06c75]' : 'text-white/50'}"
+					>{ctxPct}%</span
+				>
 			</span>
 		{/if}
 
 		{#if compacting}
 			<span class="text-[#e5c07b] font-mono">◐ {compacting}</span>
 		{:else if lastStats}
-			<span class="text-[#98c379] tabular-nums" title={$t('chatbot.strip.decodeSpeedHint')}>{lastStats}</span>
+			<span class="text-[#98c379] tabular-nums" title={$t('chatbot.strip.decodeSpeedHint')}
+				>{lastStats}</span
+			>
 		{/if}
 
 		<button
@@ -925,14 +930,41 @@
 
 	{#if configOpen}
 		{@const F = [
-			{ k: 'contextWindow' as const, labelKey: 'chatbot.config.contextWindow.label', hintKey: 'chatbot.config.contextWindow.hint' },
-			{ k: 'maxTokens' as const, labelKey: 'chatbot.config.maxTokens.label', hintKey: 'chatbot.config.maxTokens.hint' },
-			{ k: 'temperature' as const, labelKey: 'chatbot.config.temperature.label', hintKey: 'chatbot.config.temperature.hint' },
-			{ k: 'topP' as const, labelKey: 'chatbot.config.topP.label', hintKey: 'chatbot.config.topP.hint' },
-			{ k: 'topK' as const, labelKey: 'chatbot.config.topK.label', hintKey: 'chatbot.config.topK.hint' },
-			{ k: 'repetitionPenalty' as const, labelKey: 'chatbot.config.repetitionPenalty.label', hintKey: 'chatbot.config.repetitionPenalty.hint' }
+			{
+				k: 'contextWindow' as const,
+				labelKey: 'chatbot.config.contextWindow.label',
+				hintKey: 'chatbot.config.contextWindow.hint'
+			},
+			{
+				k: 'maxTokens' as const,
+				labelKey: 'chatbot.config.maxTokens.label',
+				hintKey: 'chatbot.config.maxTokens.hint'
+			},
+			{
+				k: 'temperature' as const,
+				labelKey: 'chatbot.config.temperature.label',
+				hintKey: 'chatbot.config.temperature.hint'
+			},
+			{
+				k: 'topP' as const,
+				labelKey: 'chatbot.config.topP.label',
+				hintKey: 'chatbot.config.topP.hint'
+			},
+			{
+				k: 'topK' as const,
+				labelKey: 'chatbot.config.topK.label',
+				hintKey: 'chatbot.config.topK.hint'
+			},
+			{
+				k: 'repetitionPenalty' as const,
+				labelKey: 'chatbot.config.repetitionPenalty.label',
+				hintKey: 'chatbot.config.repetitionPenalty.hint'
+			}
 		]}
-		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-2" transition:fly={{ y: -6, duration: 150, opacity: 0 }}>
+		<div
+			class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-2"
+			transition:fly={{ y: -6, duration: 150, opacity: 0 }}
+		>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
 				{#each F as f (f.k)}
 					<label class="flex items-center gap-2 font-mono">
@@ -949,10 +981,7 @@
 					</label>
 				{/each}
 				<div class="flex items-center gap-2 font-mono">
-					<span
-						class="text-white/60 w-36 shrink-0"
-						title={$t('chatbot.config.reasoning.hint')}
-					>
+					<span class="text-white/60 w-36 shrink-0" title={$t('chatbot.config.reasoning.hint')}>
 						{$t('chatbot.config.reasoning.label')}
 					</span>
 					<button
@@ -1020,15 +1049,24 @@
 	{/if}
 
 	{#if storageOpen}
-		<div class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5" transition:fly={{ y: -6, duration: 150, opacity: 0 }}>
+		<div
+			class="border {themeStyles.border} rounded-xs bg-black/30 px-2 py-2 text-xs flex flex-col gap-1.5"
+			transition:fly={{ y: -6, duration: 150, opacity: 0 }}
+		>
 			<div class="text-white/50 leading-relaxed">
 				{$t('chatbot.storage.explain')}
 			</div>
 			<div class="font-mono text-white/45 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
-				<span>{$t('chatbot.storage.languageModel')}</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.model)}</span>
-				<span>{$t('chatbot.storage.visionProjector')}</span><span class="tabular-nums">{fmtMb(PART_SIZES_MB.vision)}</span>
+				<span>{$t('chatbot.storage.languageModel')}</span><span class="tabular-nums"
+					>{fmtMb(PART_SIZES_MB.model)}</span
+				>
+				<span>{$t('chatbot.storage.visionProjector')}</span><span class="tabular-nums"
+					>{fmtMb(PART_SIZES_MB.vision)}</span
+				>
 			</div>
-			<div class="font-mono text-[#e5c07b] border-t border-white/10 pt-1 flex items-center justify-between gap-2">
+			<div
+				class="font-mono text-[#e5c07b] border-t border-white/10 pt-1 flex items-center justify-between gap-2"
+			>
 				<span>
 					{$t('chatbot.storage.total', { size: fmtMb(TOTAL_DOWNLOAD_MB) })}
 					{#if modelCacheSize}
@@ -1056,7 +1094,10 @@
 						{$t('chatbot.storage.conversations')}
 						{#if savedSize}
 							<span class="font-mono text-white/35">
-								· {$t('chatbot.storage.conversationsCount', { count: savedSize.count, size: fmtBytes(savedSize.bytes) })}
+								· {$t('chatbot.storage.conversationsCount', {
+									count: savedSize.count,
+									size: fmtBytes(savedSize.bytes)
+								})}
 							</span>
 						{/if}
 					</span>
@@ -1089,7 +1130,8 @@
 							>
 								<button
 									onclick={() => restoreSession(sess)}
-									class="press flex-1 text-left truncate cursor-pointer transition-colors {sess.id === sessionId
+									class="press flex-1 text-left truncate cursor-pointer transition-colors {sess.id ===
+									sessionId
 										? 'text-[#61afef]'
 										: 'text-white/70 hover:text-white'}"
 									title={sess.title}
@@ -1182,7 +1224,9 @@
 					</button>
 				{/if}
 				{#if gpu?.adapterLabel}
-					<div class="text-white/30 text-[10px] font-mono">{$t('chatbot.idle.gpuLabel', { label: gpu.adapterLabel })}</div>
+					<div class="text-white/30 text-[10px] font-mono">
+						{$t('chatbot.idle.gpuLabel', { label: gpu.adapterLabel })}
+					</div>
 				{/if}
 			</div>
 		{:else if phase === 'loading'}
@@ -1196,7 +1240,10 @@
 					◐ {progressText || $t('chatbot.loading.preparing')}
 				</div>
 				<div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-					<div class="h-full bg-[#98c379] transition-[width] duration-200" style="width: {progressPct}%"></div>
+					<div
+						class="h-full bg-[#98c379] transition-[width] duration-200"
+						style="width: {progressPct}%"
+					></div>
 				</div>
 				<div class="text-white/40 text-[10px] font-mono text-right">{progressPct}%</div>
 			</div>
@@ -1213,7 +1260,6 @@
 			rather than chained onto it.
 		-->
 
-
 		<!--
 			The transcript only appears once the model is loaded. A restored
 			conversation shown beside a LOAD MODEL button reads as though the chat
@@ -1221,123 +1267,126 @@
 		-->
 		{#if phase === 'ready' || phase === 'generating'}
 			{#each turns as turn, i (i)}
-			<!-- Only the newly-appended turn ever plays this: existing turns keep
+				<!-- Only the newly-appended turn ever plays this: existing turns keep
 			     their old i and never remount, and a streaming turn's own content
 			     changes in place without touching this wrapper, so the entrance
 			     cannot re-fire mid-stream. -->
-			<div in:fly={{ y: 6, duration: 160, opacity: 0 }}>
-			{#if turn.toolResult}
-				<div
-					class="self-start font-mono text-[11px] text-white/45 border-l-2 border-[#e5c07b]/40 pl-2 py-0.5 whitespace-pre-wrap max-w-[85%] overflow-x-auto"
-				>
-					{turn.toolName} → {turn.content}
-				</div>
-			{:else if turn.role === 'user'}
-				<div class="flex flex-col items-end gap-1">
-					{#if turn.attachments?.length}
-						<div class="flex flex-wrap gap-1.5 justify-end max-w-[80%]">
-							{#each turn.attachments as a (a.url)}
-								{#if a.kind === 'image'}
-									<img
-										src={a.url}
-										alt={a.name}
-										class="max-h-40 rounded-md border border-[#61afef]/25"
-									/>
-								{/if}
-							{/each}
-						</div>
-					{/if}
-					{#if turn.content}
+				<div in:fly={{ y: 6, duration: 160, opacity: 0 }}>
+					{#if turn.toolResult}
 						<div
-							class="max-w-[80%] px-3 py-2 rounded-md text-sm bg-[#61afef]/12 border border-[#61afef]/25 text-[#d8dee9] whitespace-pre-wrap break-words"
+							class="self-start font-mono text-[11px] text-white/45 border-l-2 border-[#e5c07b]/40 pl-2 py-0.5 whitespace-pre-wrap max-w-[85%] overflow-x-auto"
+						>
+							{turn.toolName} → {turn.content}
+						</div>
+					{:else if turn.role === 'user'}
+						<div class="flex flex-col items-end gap-1">
+							{#if turn.attachments?.length}
+								<div class="flex flex-wrap gap-1.5 justify-end max-w-[80%]">
+									{#each turn.attachments as a (a.url)}
+										{#if a.kind === 'image'}
+											<img
+												src={a.url}
+												alt={a.name}
+												class="max-h-40 rounded-md border border-[#61afef]/25"
+											/>
+										{/if}
+									{/each}
+								</div>
+							{/if}
+							{#if turn.content}
+								<div
+									class="max-w-[80%] px-3 py-2 rounded-md text-sm bg-[#61afef]/12 border border-[#61afef]/25 text-[#d8dee9] whitespace-pre-wrap break-words"
+								>
+									{turn.content}
+								</div>
+							{/if}
+						</div>
+					{:else if turn.notice}
+						<div
+							class="text-[11px] font-mono text-white/35 whitespace-pre-wrap border-l-2 border-white/15 pl-2"
 						>
 							{turn.content}
 						</div>
-					{/if}
-				</div>
-			{:else if turn.notice}
-				<div class="text-[11px] font-mono text-white/35 whitespace-pre-wrap border-l-2 border-white/15 pl-2">
-					{turn.content}
-				</div>
-			{:else}
-				<div class="flex flex-col gap-1.5 max-w-[85%]">
-					{#if turn.reasoning}
-						<button
-							onclick={() => toggleThink(i)}
-							title={$t('chatbot.turn.reasoningToggleHint')}
-							class="press self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer transition-colors"
-						>
-							{openThink.has(i) ? '▾' : '▸'}
-							{phase === 'generating' && i === turns.length - 1 && !turn.content
-								? $t('chatbot.turn.thinking')
-								: $t('chatbot.turn.reasoningLabel')}
-							{$t('chatbot.turn.reasoningChars', { count: turn.reasoning.length })}
-
-						</button>
-						{#if openThink.has(i)}
-							<div
-								class="text-xs font-mono text-white/45 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5 max-h-64 overflow-y-auto"
-							>
-								{turn.reasoning}
-							</div>
-						{/if}
-					{/if}
-					{#if turn.toolCalls?.length}
-						<!-- What the model ran, so a reply that leans on a result can be checked. -->
-						{#each turn.toolCalls as c (c.id)}
-							<div
-								class="self-start font-mono text-[11px] text-[#e5c07b]/80 border border-[#e5c07b]/25 bg-[#e5c07b]/5 rounded-xs px-2 py-1"
-							>
-								⚙ {c.name}({c.args})
-							</div>
-						{/each}
-					{/if}
-					{#if turn.content}
-						<div
-							class="self-start px-3 py-2 rounded-md text-sm bg-white/[0.06] border border-white/15 text-[#d8dee9] break-words"
-						>
-							{#if phase === 'generating' && i === turns.length - 1}
-								<!--
+					{:else}
+						<div class="flex flex-col gap-1.5 max-w-[85%]">
+							{#if turn.reasoning}
+								<button
+									onclick={() => toggleThink(i)}
+									title={$t('chatbot.turn.reasoningToggleHint')}
+									class="press self-start text-[10px] font-mono text-[#c678dd]/80 hover:text-[#c678dd] cursor-pointer transition-colors"
+								>
+									{openThink.has(i) ? '▾' : '▸'}
+									{phase === 'generating' && i === turns.length - 1 && !turn.content
+										? $t('chatbot.turn.thinking')
+										: $t('chatbot.turn.reasoningLabel')}
+									{$t('chatbot.turn.reasoningChars', { count: turn.reasoning.length })}
+								</button>
+								{#if openThink.has(i)}
+									<div
+										class="text-xs font-mono text-white/45 whitespace-pre-wrap border-l-2 border-[#c678dd]/30 pl-2 py-0.5 max-h-64 overflow-y-auto"
+									>
+										{turn.reasoning}
+									</div>
+								{/if}
+							{/if}
+							{#if turn.toolCalls?.length}
+								<!-- What the model ran, so a reply that leans on a result can be checked. -->
+								{#each turn.toolCalls as c (c.id)}
+									<div
+										class="self-start font-mono text-[11px] text-[#e5c07b]/80 border border-[#e5c07b]/25 bg-[#e5c07b]/5 rounded-xs px-2 py-1"
+									>
+										⚙ {c.name}({c.args})
+									</div>
+								{/each}
+							{/if}
+							{#if turn.content}
+								<div
+									class="self-start px-3 py-2 rounded-md text-sm bg-white/[0.06] border border-white/15 text-[#d8dee9] break-words"
+								>
+									{#if phase === 'generating' && i === turns.length - 1}
+										<!--
 									Do not rebuild the whole Markdown/KaTeX tree for every token.
 									In particular, a completed formula otherwise disappears back
 									to its marker while the async KaTeX pass starts again, which
 									makes the reply flash. Format it once when streaming ends.
 								-->
-								<div class="whitespace-pre-wrap">{turn.content}</div>
-							{:else}
-								<RichReply content={turn.content} />
-							{/if}
-						</div>
-					{:else if phase === 'generating' && i === turns.length - 1 && !turn.reasoning}
-						<!--
+										<div class="whitespace-pre-wrap">{turn.content}</div>
+									{:else}
+										<RichReply content={turn.content} />
+									{/if}
+								</div>
+							{:else if phase === 'generating' && i === turns.length - 1 && !turn.reasoning}
+								<!--
 							Only while nothing at all has arrived. Once reasoning starts
 							streaming the model is plainly working and the reasoning block
 							says so; before that there is a silent gap, seconds long on a
 							cold cache, that a bare cursor made look like a hang.
 						-->
-						<div
-							class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/45 text-sm flex items-center gap-2 font-mono"
-						>
-							<span class="text-[#61afef]">{SPINNER[spinnerTick % SPINNER.length]}</span>
-							<span>{waitLabel}</span>
-							{#if waitedSecs >= 2}
-								<span class="text-white/25 tabular-nums">{$t('chatbot.turn.waitSeconds', { seconds: waitedSecs })}</span>
-							{/if}
-						</div>
-					{:else if !turn.reasoning && !turn.toolCalls?.length}
-						<!--
+								<div
+									class="self-start px-3 py-2 rounded-md bg-white/[0.06] border border-white/15 text-white/45 text-sm flex items-center gap-2 font-mono"
+								>
+									<span class="text-[#61afef]">{SPINNER[spinnerTick % SPINNER.length]}</span>
+									<span>{waitLabel}</span>
+									{#if waitedSecs >= 2}
+										<span class="text-white/25 tabular-nums"
+											>{$t('chatbot.turn.waitSeconds', { seconds: waitedSecs })}</span
+										>
+									{/if}
+								</div>
+							{:else if !turn.reasoning && !turn.toolCalls?.length}
+								<!--
 							Generation finished without producing anything. The cursor alone
 							left such a turn looking permanently stuck.
 						-->
-						<div
-							class="self-start px-3 py-2 rounded-md text-xs bg-white/[0.03] border border-white/10 text-white/40 italic"
-						>
-							{$t('chatbot.turn.noReply')}
+								<div
+									class="self-start px-3 py-2 rounded-md text-xs bg-white/[0.03] border border-white/10 text-white/40 italic"
+								>
+									{$t('chatbot.turn.noReply')}
+								</div>
+							{/if}
 						</div>
-						{/if}
-					</div>
-				{/if}
-			</div>
+					{/if}
+				</div>
 			{/each}
 		{/if}
 	</div>
@@ -1353,7 +1402,8 @@
 					<button
 						onclick={() => acceptCompletion(c.name)}
 						onmouseenter={() => (completionIdx = ci)}
-						class="w-full text-left px-2 py-1 cursor-pointer flex gap-2 transition-colors {ci === completionIdx
+						class="w-full text-left px-2 py-1 cursor-pointer flex gap-2 transition-colors {ci ===
+						completionIdx
 							? 'bg-[#61afef]/20 text-[#61afef]'
 							: 'text-[#d8dee9] hover:bg-white/10'}"
 					>

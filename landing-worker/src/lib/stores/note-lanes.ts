@@ -210,7 +210,11 @@ export function applyShape(
  * A groove is written once and repeated; without this, every bar of the same
  * feel is drawn again by hand and none of them quite match.
  */
-export function copyLaneRange(lane: NoteLane, fromStep: number, toStep: number): (number | undefined)[] {
+export function copyLaneRange(
+	lane: NoteLane,
+	fromStep: number,
+	toStep: number
+): (number | undefined)[] {
 	return lane.points.slice(Math.min(fromStep, toStep), Math.max(fromStep, toStep) + 1);
 }
 

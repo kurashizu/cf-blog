@@ -7,7 +7,12 @@
 	import { isSeqPlaying, cursorStep, play, stop } from '../../stores/synth-transport';
 	import { THEME_STYLES, resolvedTheme } from '../../stores/theme';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
-	import { consoleOverlayOpen, globalSettingsOpen, toggleConsoleOverlay, openOnboardingNow } from '../../stores/chrome';
+	import {
+		consoleOverlayOpen,
+		globalSettingsOpen,
+		toggleConsoleOverlay,
+		openOnboardingNow
+	} from '../../stores/chrome';
 	import KrszLogo from './KrszLogo.svelte';
 
 	let activeTab = $derived(tabIndexFromPath(page.url.pathname));
@@ -49,7 +54,11 @@
 		}
 		const rowRect = row.getBoundingClientRect();
 		const btnRect = btn.getBoundingClientRect();
-		indicator = { left: btnRect.left - rowRect.left, width: btnRect.width, color: TABS[activeTab].color };
+		indicator = {
+			left: btnRect.left - rowRect.left,
+			width: btnRect.width,
+			color: TABS[activeTab].color
+		};
 	}
 
 	$effect(() => {
@@ -176,7 +185,9 @@
 			? 'border-[#98c379] bg-[#98c379]/20 text-[#98c379]'
 			: 'border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20'}"
 	>
-		<span class="btnlabel">[~]&nbsp;{$t('chrome.tabbar.console')}</span><span class="btnlabel-off">[~]</span>
+		<span class="btnlabel">[~]&nbsp;{$t('chrome.tabbar.console')}</span><span class="btnlabel-off"
+			>[~]</span
+		>
 	</button>
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -209,7 +220,8 @@
 					bind:this={tabBtns[tab.id]}
 					onclick={() => nav(tab.id)}
 					title={tab.title}
-					class="press relative z-10 px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab === tab.id
+					class="press relative z-10 px-1.5 sm:px-3 py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 {activeTab ===
+					tab.id
 						? 'text-black font-black'
 						: 'hover:bg-white/10 text-[#d8dee9]'}"
 				>
@@ -231,13 +243,19 @@
 			<span class="inline-flex items-center gap-1">
 				<span>[</span>
 				{#if $isSeqPlaying}
-					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0 blink-live"><rect x="1" y="1" width="6" height="6" fill="currentColor" /></svg>
+					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0 blink-live"
+						><rect x="1" y="1" width="6" height="6" fill="currentColor" /></svg
+					>
 				{:else}
-					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0"><path d="M1.5 0.6 L7.2 4 L1.5 7.4 Z" fill="currentColor" /></svg>
+					<svg width="8" height="8" viewBox="0 0 8 8" class="shrink-0"
+						><path d="M1.5 0.6 L7.2 4 L1.5 7.4 Z" fill="currentColor" /></svg
+					>
 				{/if}
 				<!-- The word sheds with every other button label; the bracket and the
 				     glyph stay, so the control keeps its shape and its state. -->
-				<span class="btnlabel">{$isSeqPlaying ? $t('chrome.tabbar.stop') : $t('chrome.tabbar.play')}</span><span>]</span>
+				<span class="btnlabel"
+					>{$isSeqPlaying ? $t('chrome.tabbar.stop') : $t('chrome.tabbar.play')}</span
+				><span>]</span>
 			</span>
 		</button>
 		<button
@@ -249,7 +267,9 @@
 			title={$t('chrome.tabbar.guideTitle')}
 			class="press px-2 py-0.5 sm:py-1 cursor-pointer rounded transition-colors whitespace-nowrap shrink-0 text-xs sm:text-sm font-bold border border-[#61afef]/50 text-[#61afef] hover:bg-[#61afef]/20"
 		>
-			<span class="btnlabel">[?]&nbsp;{$t('chrome.tabbar.guide')}</span><span class="btnlabel-off">[?]</span>
+			<span class="btnlabel">[?]&nbsp;{$t('chrome.tabbar.guide')}</span><span class="btnlabel-off"
+				>[?]</span
+			>
 		</button>
 		<button
 			onclick={() => {
@@ -301,16 +321,26 @@
 	   pixel with the scroll it exists to prevent. (Tab names are the exception:
 	   their width depends on the language, so they are measured, not
 	   thresholded.) */
-	.btnlabel-off { display: none; }
+	.btnlabel-off {
+		display: none;
+	}
 	@container header-fit (max-width: 1660px) {
-		.servbadge { display: none; }
+		.servbadge {
+			display: none;
+		}
 	}
 	@container header-fit (max-width: 1050px) {
-		.btnlabel { display: none; }
-		.btnlabel-off { display: inline; }
+		.btnlabel {
+			display: none;
+		}
+		.btnlabel-off {
+			display: inline;
+		}
 	}
 	/* The active tab keeps its name at every width -- which view you are on is
 	   worth more than the four characters it costs. Set by fitNames() from a
 	   measurement rather than a container width (see the script). */
-	.tabstrip.names-off .tabname:not(.on) { display: none; }
+	.tabstrip.names-off .tabname:not(.on) {
+		display: none;
+	}
 </style>

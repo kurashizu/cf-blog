@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { TAB_ROUTES, ISOLATED_ROUTES, tabIndexFromPath, navigateTo } from '../../src/lib/routes-map';
+import {
+	TAB_ROUTES,
+	ISOLATED_ROUTES,
+	tabIndexFromPath,
+	navigateTo
+} from '../../src/lib/routes-map';
 
 describe('tabIndexFromPath', () => {
 	it('maps every listed route to its own index', () => {

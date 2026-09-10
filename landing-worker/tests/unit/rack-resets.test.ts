@@ -55,11 +55,17 @@ const PANELS: { file: string; neutral: Partial<TrackData> }[] = [
 function knobsOf(file: string): { field: string; reset: number; divisor: number }[] {
 	const src = readFileSync(`src/lib/components/synth/modules/${file}.svelte`, 'utf8');
 	const out: { field: string; reset: number; divisor: number }[] = [];
-	for (const line of src.split('\n')) {
-		const reset = line.match(/reset=\{(-?[\d.]+)\}/);
-		const write = line.match(/updateActiveTrack\(\{\s*([A-Za-z0-9_]+):\s*v(?:\s*\/\s*(\d+))?\s*\}\)/);
+	/* Per <RotaryKnob ...> element, not per line: the formatter breaks a knob
+	   across a dozen lines, and a line-wise parse silently found nothing. */
+	for (const el of src.match(/<RotaryKnob[\s\S]*?\/>/g) ?? []) {
+		const reset = el.match(/reset=\{(-?[\d.]+)\}/);
+		const write = el.match(/updateActiveTrack\(\{\s*([A-Za-z0-9_]+):\s*v(?:\s*\/\s*(\d+))?\s*\}\)/);
 		if (!reset || !write) continue;
-		out.push({ field: write[1], reset: Number(reset[1]), divisor: write[2] ? Number(write[2]) : 1 });
+		out.push({
+			field: write[1],
+			reset: Number(reset[1]),
+			divisor: write[2] ? Number(write[2]) : 1
+		});
 	}
 	return out;
 }

@@ -16,8 +16,12 @@
 	let percussion = $derived(!!$activeTrackRow?.percussion);
 </script>
 
-<div class="border border-[#61afef]/40 bg-black/60 rounded-xs flex flex-col min-h-0 flex-1 overflow-hidden">
-	<div class="flex justify-between items-center font-black text-[#61afef] text-xs border-b border-white/10 px-1.5 py-1 shrink-0">
+<div
+	class="border border-[#61afef]/40 bg-black/60 rounded-xs flex flex-col min-h-0 flex-1 overflow-hidden"
+>
+	<div
+		class="flex justify-between items-center font-black text-[#61afef] text-xs border-b border-white/10 px-1.5 py-1 shrink-0"
+	>
 		<div class="flex items-center gap-2">
 			<span>PATCH RACK</span>
 			<span class="text-white/40 font-normal text-[10px]">

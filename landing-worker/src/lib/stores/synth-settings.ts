@@ -16,13 +16,17 @@ export const eqlCompSetting = writable<boolean>(modularSynth.getEqlCompensation(
 export const audioSampleRate = writable<number>(soundEngine.getAudioSampleRate());
 export const fftSizeSetting = writable<number>(soundEngine.getFftSize());
 export const fftSmoothingSetting = writable<number>(soundEngine.getFftSmoothing());
-export const latencyHintSetting = writable<'interactive' | 'balanced' | 'playback'>(modularSynth.getLatencyHintMode());
+export const latencyHintSetting = writable<'interactive' | 'balanced' | 'playback'>(
+	modularSynth.getLatencyHintMode()
+);
 export const masterLimiterSetting = writable<boolean>(modularSynth.isMasterLimiterEnabled());
 
 // Voice engine specs
 export const masterTuningSetting = writable<number>(modularSynth.getMasterTuningFreq());
 export const maxPolyphonySetting = writable<number>(modularSynth.getMaxPolyphony());
-export const voiceStealingSetting = writable<'oldest' | 'quietest' | 'lowest'>(modularSynth.getVoiceStealingMode());
+export const voiceStealingSetting = writable<'oldest' | 'quietest' | 'lowest'>(
+	modularSynth.getVoiceStealingMode()
+);
 
 export function setNoiseDuration(sec: number): void {
 	modularSynth.setNoiseBufferDuration(sec);

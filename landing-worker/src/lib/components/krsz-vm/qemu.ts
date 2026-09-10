@@ -134,7 +134,6 @@ function machineArgs(): string[] {
 	return ['-machine', 'pc'];
 }
 
-
 /**
  * The console device: the 16550 every PC has, which `-nographic` points QEMU's
  * own stdio at, and which is what reaches the terminal.
@@ -247,7 +246,8 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		await Promise.all(
 			wanted.map(async (name) => {
 				const response = await fetch(`${BINARY_BASE}/pc-bios-${name}`);
-				if (!response.ok) throw new Error(tr('vm.error.romMissing', { name, status: response.status }));
+				if (!response.ok)
+					throw new Error(tr('vm.error.romMissing', { name, status: response.status }));
 				roms.push([name, new Uint8Array(await response.arrayBuffer())]);
 			})
 		);
@@ -255,7 +255,8 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 
 	const args = [
 		'-nographic',
-		'-m', `${options.memoryMb}M`,
+		'-m',
+		`${options.memoryMb}M`,
 		// tb-size is the translation cache in MB. The default is small enough that
 		// a booting kernel evicts its own hot code; 500 is what upstream's own
 		// examples use.
@@ -263,7 +264,8 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// examples do -- they carry the MTTCG line commented out. The vCPUs still
 		// matter: with one, QEMU's CPU loop and the block layer's completions have
 		// nowhere to run but each other's way.
-		'-accel', 'tcg,tb-size=500',
+		'-accel',
+		'tcg,tb-size=500',
 		// No -smp: with it the machine skips SeaBIOS entirely and the kernel
 		// panics in setup_IO_APIC, where one processor boots through the BIOS and
 		// comes up. Upstream's x86 examples pass none either.
@@ -271,7 +273,8 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		...machineArgs(),
 		// Where QEMU looks for the ROMs it opens at runtime: it cannot start
 		// without its BIOS, and the display adapter runs a VGA BIOS of its own.
-		'-L', '/krsz/pc-bios/',
+		'-L',
+		'/krsz/pc-bios/',
 		// The network, when it is on. `socket` is the only backend this build has
 		// that can work here: libslirp is not compiled in, and every other one
 		// wants a host API a tab does not have. What makes it usable is that
@@ -280,8 +283,10 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// gateway in qemu-net answers them. The host below is never resolved.
 		...(options.network
 			? [
-					'-netdev', `socket,id=vmnic,connect=${NET_HOST}:443`,
-					'-device', 'virtio-net-pci,netdev=vmnic'
+					'-netdev',
+					`socket,id=vmnic,connect=${NET_HOST}:443`,
+					'-device',
+					'virtio-net-pci,netdev=vmnic'
 				]
 			: ['-nic', 'none']),
 		// Spelled out as a drive plus a device rather than the `if=virtio`
@@ -289,10 +294,14 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		// shorthand asks QEMU to pick the transport, and on this board it picks
 		// one the guest then waits on forever.
 		// A drive plus a device, the way upstream's own Alpine example writes it.
-		'-drive', 'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
-		'-device', 'virtio-blk-pci,drive=rootfs',
-		'-kernel', '/krsz/kernel',
-		'-initrd', '/krsz/initramfs',
+		'-drive',
+		'id=rootfs,file=/krsz/rootfs.img,format=raw,if=none',
+		'-device',
+		'virtio-blk-pci,drive=rootfs',
+		'-kernel',
+		'/krsz/kernel',
+		'-initrd',
+		'/krsz/initramfs',
 		// `modules=` is not optional with Alpine's initramfs. Its init modprobes
 		// exactly what this names (plus loop and squashfs) and nothing else, then
 		// hands the root to nlplug-findfs -- which cannot identify a filesystem
@@ -344,7 +353,6 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 				}
 			)
 		: null;
-
 
 	const module = await factory.default({
 		arguments: args,
@@ -453,6 +461,5 @@ export async function startQemu(options: QemuOptions): Promise<QemuMachine> {
 		}
 	};
 }
-
 
 export { CHUNK };

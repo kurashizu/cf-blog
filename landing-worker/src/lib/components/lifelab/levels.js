@@ -17,20 +17,18 @@
 // if the language changes while the dish is open.
 /** @typedef {any} GameState */
 export const LEVELS = [
-  {
-    tab: 'DISH',
-    name: 'lifelab.level.dish.name',
-    // Big enough that a glider takes a couple of hundred generations to cross
-    // and a gun has somewhere to fire into.
-    w: 320,
-    h: 200,
-    sandbox: true,
-    accent: '#61afef',
-    tools: ['pan', 'draw'],
-    stamps: 'all',
-    intro: ['lifelab.level.dish.intro'],
-    steps: [
-      { text: 'lifelab.level.dish.step1' },
-    ],
-  },
+	{
+		tab: 'DISH',
+		name: 'lifelab.level.dish.name',
+		// Big enough that a glider takes a couple of hundred generations to cross
+		// and a gun has somewhere to fire into.
+		w: 320,
+		h: 200,
+		sandbox: true,
+		accent: '#61afef',
+		tools: ['pan', 'draw'],
+		stamps: 'all',
+		intro: ['lifelab.level.dish.intro'],
+		steps: [{ text: 'lifelab.level.dish.step1' }]
+	}
 ];

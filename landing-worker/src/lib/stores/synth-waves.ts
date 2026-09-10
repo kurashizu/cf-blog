@@ -5,14 +5,27 @@
  * so a shared patch still plays.
  */
 import { writable, get } from 'svelte/store';
-import { modularSynth, waveParam, type CustomWave, type SynthWaveform, type TrackData, type WaveParams } from '../synth';
+import {
+	modularSynth,
+	waveParam,
+	type CustomWave,
+	type SynthWaveform,
+	type TrackData,
+	type WaveParams
+} from '../synth';
 
 const KEY = 'krsz-synth-waves-v1';
 export const WAVE_SAMPLES = 128;
 
 function valid(w: unknown): w is CustomWave {
 	const c = w as CustomWave;
-	return !!c && typeof c.id === 'string' && typeof c.name === 'string' && Array.isArray(c.samples) && c.samples.length >= 8;
+	return (
+		!!c &&
+		typeof c.id === 'string' &&
+		typeof c.name === 'string' &&
+		Array.isArray(c.samples) &&
+		c.samples.length >= 8
+	);
 }
 
 function load(): CustomWave[] {
@@ -62,9 +75,20 @@ export function saveCustomWave(name: string, samples: number[]): CustomWave {
 	return wave;
 }
 
-export function updateCustomWave(id: string, patch: Partial<Pick<CustomWave, 'name' | 'samples'>>): void {
+export function updateCustomWave(
+	id: string,
+	patch: Partial<Pick<CustomWave, 'name' | 'samples'>>
+): void {
 	customWaves.update((list) => {
-		const next = list.map((w) => (w.id === id ? { ...w, ...patch, name: (patch.name ?? w.name).trim().slice(0, 24).toUpperCase() || w.name } : w));
+		const next = list.map((w) =>
+			w.id === id
+				? {
+						...w,
+						...patch,
+						name: (patch.name ?? w.name).trim().slice(0, 24).toUpperCase() || w.name
+					}
+				: w
+		);
 		persist(next);
 		return next;
 	});
@@ -144,20 +168,36 @@ export function previewSamples(w: SynthWaveform | string, n = 96, params?: WaveP
 		const ph = 2 * Math.PI * x;
 		let v = 0;
 		switch (w) {
-			case 'square': v = x < 0.5 ? 1 : -1; break;
-			case 'sawtooth': v = 2 * x - 1; break;
-			case 'triangle': v = 1 - 4 * Math.abs(x - 0.5); break;
-			case 'sine': v = Math.sin(ph); break;
-			case 'noise': v = rnd() * 2 - 1; break;
+			case 'square':
+				v = x < 0.5 ? 1 : -1;
+				break;
+			case 'sawtooth':
+				v = 2 * x - 1;
+				break;
+			case 'triangle':
+				v = 1 - 4 * Math.abs(x - 0.5);
+				break;
+			case 'sine':
+				v = Math.sin(ph);
+				break;
+			case 'noise':
+				v = rnd() * 2 - 1;
+				break;
 			case 'metal': {
 				for (const f of [1, 1.48, 1.8, 2.55, 2.63, 3.9]) v += Math.sin(ph * f * 2) >= 0 ? 1 : -1;
 				v /= 6;
 				break;
 			}
-			case 'pwm': v = x < waveParam(params, 'pwmWidth') / 100 ? 1 : -1; break;
-			case 'supersaw': v = (2 * x - 1) * 0.7 + 0.3 * (2 * ((x * 1.03) % 1) - 1); break;
+			case 'pwm':
+				v = x < waveParam(params, 'pwmWidth') / 100 ? 1 : -1;
+				break;
+			case 'supersaw':
+				v = (2 * x - 1) * 0.7 + 0.3 * (2 * ((x * 1.03) % 1) - 1);
+				break;
 			case 'organ': {
-				const bars = (['org1', 'org2', 'org3', 'org4', 'org5', 'org8'] as const).map((k) => waveParam(params, k) / 8);
+				const bars = (['org1', 'org2', 'org3', 'org4', 'org5', 'org8'] as const).map(
+					(k) => waveParam(params, k) / 8
+				);
 				const harm = [1, 2, 3, 4, 5, 8];
 				const at = (a: number) => harm.reduce((acc, h, k) => acc + bars[k] * Math.sin(a * h), 0);
 				let peak = 0;
@@ -165,8 +205,11 @@ export function previewSamples(w: SynthWaveform | string, n = 96, params?: WaveP
 				v = at(ph) / (peak || 1);
 				break;
 			}
-			case 'fold': v = Math.sin(waveParam(params, 'foldAmt') * Math.sin(ph)); break;
-			default: v = Math.sin(ph);
+			case 'fold':
+				v = Math.sin(waveParam(params, 'foldAmt') * Math.sin(ph));
+				break;
+			default:
+				v = Math.sin(ph);
 		}
 		out.push(v);
 	}
@@ -176,5 +219,10 @@ export function previewSamples(w: SynthWaveform | string, n = 96, params?: WaveP
 /** SVG path for a 100×30 viewBox. */
 export function previewPath(samples: number[]): string {
 	const n = samples.length;
-	return samples.map((v, i) => `${i === 0 ? 'M' : 'L'}${((i / (n - 1)) * 100).toFixed(1)},${(15 - v * 13).toFixed(1)}`).join(' ');
+	return samples
+		.map(
+			(v, i) =>
+				`${i === 0 ? 'M' : 'L'}${((i / (n - 1)) * 100).toFixed(1)},${(15 - v * 13).toFixed(1)}`
+		)
+		.join(' ');
 }

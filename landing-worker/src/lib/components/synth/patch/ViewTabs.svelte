@@ -24,7 +24,9 @@
      turn the mode on, then pick the view -- and sitting together in one row says
      that without a frame drawn across the gap between rows. Same language as the
      button next to it: the accent border, the blue, the filled/hollow diamond. -->
-<div class="flex items-center gap-0.5 p-0.5 border-2 border-[#61afef]/50 bg-[#61afef]/10 rounded-xs shrink-0">
+<div
+	class="flex items-center gap-0.5 p-0.5 border-2 border-[#61afef]/50 bg-[#61afef]/10 rounded-xs shrink-0"
+>
 	{#each VIEWS as v (v.id)}
 		{@const on = $centreView === v.id}
 		<button

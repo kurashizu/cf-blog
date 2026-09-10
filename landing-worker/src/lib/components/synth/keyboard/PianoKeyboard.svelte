@@ -3,8 +3,25 @@
 	import { t } from '../../../i18n';
 	import { PIANO_ROLL_NOTES } from '../../../synth';
 	import { activeTrackId } from '../../../stores/synth-transport';
-	import { currentTrack, tracksState, isOverlayMode, overlayTrackIds, activePlayingNotes, holdManualNote, releaseManualNote, activeTrackRow, activeKey, keyIsCustomised } from '../../../stores/synth-tracks';
-	import { midiInputsForActiveTrack, isSustainActive, setSustainPedal, velocityCurve, cycleVelocityCurve } from '../../../stores/synth-midi';
+	import {
+		currentTrack,
+		tracksState,
+		isOverlayMode,
+		overlayTrackIds,
+		activePlayingNotes,
+		holdManualNote,
+		releaseManualNote,
+		activeTrackRow,
+		activeKey,
+		keyIsCustomised
+	} from '../../../stores/synth-tracks';
+	import {
+		midiInputsForActiveTrack,
+		isSustainActive,
+		setSustainPedal,
+		velocityCurve,
+		cycleVelocityCurve
+	} from '../../../stores/synth-midi';
 	import { isSynthSettingsOpen, synthSettingsTab } from '../../../stores/synth-settings';
 
 	/* The badge sits in a fixed row beside the octave and velocity controls, so
@@ -72,7 +89,11 @@
 
 	function keyColorFor(idx: number): string {
 		const entry = $activePlayingNotes.get(idx);
-		const isPlaying = !!entry && ($isOverlayMode ? $overlayTrackIds.includes(entry.trackId) : entry.trackId === $activeTrackId);
+		const isPlaying =
+			!!entry &&
+			($isOverlayMode
+				? $overlayTrackIds.includes(entry.trackId)
+				: entry.trackId === $activeTrackId);
 		if (!isPlaying) return '';
 		const trk = entry && $tracksState[entry.trackId];
 		return trk ? trk.color : $currentTrack.color;
@@ -80,7 +101,10 @@
 
 	function isKeyPlaying(idx: number): boolean {
 		const entry = $activePlayingNotes.get(idx);
-		return !!entry && ($isOverlayMode ? $overlayTrackIds.includes(entry.trackId) : entry.trackId === $activeTrackId);
+		return (
+			!!entry &&
+			($isOverlayMode ? $overlayTrackIds.includes(entry.trackId) : entry.trackId === $activeTrackId)
+		);
 	}
 
 	function pressKey(idx: number) {
@@ -102,11 +126,38 @@
 
 	// semitone offsets from the base octave's C
 	const QWERTY_MAP: Record<string, number> = {
-		KeyZ: 0, KeyS: 1, KeyX: 2, KeyD: 3, KeyC: 4, KeyV: 5, KeyG: 6, KeyB: 7,
-		KeyH: 8, KeyN: 9, KeyJ: 10, KeyM: 11, Comma: 12, KeyL: 13, Period: 14,
-		KeyQ: 12, Digit2: 13, KeyW: 14, Digit3: 15, KeyE: 16, KeyR: 17, Digit5: 18,
-		KeyT: 19, Digit6: 20, KeyY: 21, Digit7: 22, KeyU: 23, KeyI: 24, Digit9: 25,
-		KeyO: 26, Digit0: 27, KeyP: 28
+		KeyZ: 0,
+		KeyS: 1,
+		KeyX: 2,
+		KeyD: 3,
+		KeyC: 4,
+		KeyV: 5,
+		KeyG: 6,
+		KeyB: 7,
+		KeyH: 8,
+		KeyN: 9,
+		KeyJ: 10,
+		KeyM: 11,
+		Comma: 12,
+		KeyL: 13,
+		Period: 14,
+		KeyQ: 12,
+		Digit2: 13,
+		KeyW: 14,
+		Digit3: 15,
+		KeyE: 16,
+		KeyR: 17,
+		Digit5: 18,
+		KeyT: 19,
+		Digit6: 20,
+		KeyY: 21,
+		Digit7: 22,
+		KeyU: 23,
+		KeyI: 24,
+		Digit9: 25,
+		KeyO: 26,
+		Digit0: 27,
+		KeyP: 28
 	};
 
 	function semitoneToNoteIdx(semi: number): number | null {
@@ -129,7 +180,12 @@
 		const target = e.target as HTMLElement | null;
 		if (['input', 'textarea'].includes(target?.tagName?.toLowerCase() ?? '')) return;
 
-		if (e.code === 'ControlLeft' || e.code === 'ControlRight' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+		if (
+			e.code === 'ControlLeft' ||
+			e.code === 'ControlRight' ||
+			e.code === 'ShiftLeft' ||
+			e.code === 'ShiftRight'
+		) {
 			if (!e.repeat) {
 				modHeld = e.code;
 				modUsed = false;
@@ -166,7 +222,10 @@
 
 	function qwertyKeyup(e: KeyboardEvent) {
 		if (e.code === modHeld) {
-			if (!modUsed) qwertyOctave = e.code.startsWith('Control') ? Math.max(1, qwertyOctave - 1) : Math.min(6, qwertyOctave + 1);
+			if (!modUsed)
+				qwertyOctave = e.code.startsWith('Control')
+					? Math.max(1, qwertyOctave - 1)
+					: Math.min(6, qwertyOctave + 1);
 			modHeld = null;
 			return;
 		}
@@ -210,11 +269,16 @@
 	});
 </script>
 
-<div data-tour="synth-keys" class="border border-white/20 bg-black/60 rounded-xs p-1.5 pt-1 flex flex-col gap-1 shrink-0 select-none">
+<div
+	data-tour="synth-keys"
+	class="border border-white/20 bg-black/60 rounded-xs p-1.5 pt-1 flex flex-col gap-1 shrink-0 select-none"
+>
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-mono">
 		<div class="flex items-center gap-1.5">
 			<span class="font-black text-[#56b6c2]">PIANO KEYBOARD</span>
-			<span class="text-white/40 text-[10px] hidden sm:inline">| C{kbOctaveFrom} - B{kbOctaveTo} AUDITION</span>
+			<span class="text-white/40 text-[10px] hidden sm:inline"
+				>| C{kbOctaveFrom} - B{kbOctaveTo} AUDITION</span
+			>
 		</div>
 
 		<div class="flex items-center gap-2">
@@ -222,7 +286,9 @@
 			     either side of each number already say, and "OCT:" carries the
 			     rest; the two ends read as a span now. -->
 			<div class="flex items-center gap-1 text-xs">
-				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.keyboard.octRangeHint')}>OCT:</span>
+				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.keyboard.octRangeHint')}
+					>OCT:</span
+				>
 
 				<div class="flex items-center gap-0.5">
 					<button
@@ -236,7 +302,10 @@
 					>
 						◄
 					</button>
-					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center">{kbOctaveFrom}</span>
+					<span
+						class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center"
+						>{kbOctaveFrom}</span
+					>
 					<button
 						onclick={() => {
 							kbOctaveFrom = Math.min(kbOctaveTo, kbOctaveFrom + 1);
@@ -262,7 +331,10 @@
 					>
 						◄
 					</button>
-					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center">{kbOctaveTo}</span>
+					<span
+						class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center"
+						>{kbOctaveTo}</span
+					>
 					<button
 						onclick={() => {
 							kbOctaveTo = Math.min(7, kbOctaveTo + 1);
@@ -289,7 +361,10 @@
 				KBD: {qwertyOn ? 'ON' : 'OFF'}
 			</button>
 			{#if qwertyOn}
-				<span class="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2]" title={$t('synthPanels.keyboard.qwertyOctaveHint')}>C{qwertyOctave}</span>
+				<span
+					class="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2]"
+					title={$t('synthPanels.keyboard.qwertyOctaveHint')}>C{qwertyOctave}</span
+				>
 			{/if}
 
 			<span class="opacity-30">|</span>
@@ -314,7 +389,8 @@
 					cycleVelocityCurve();
 					playSound('toggle');
 				}}
-				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {$velocityCurve === 'EXP'
+				class="press px-1.5 py-0.2 rounded-xs border text-[10px] font-bold cursor-pointer transition-all {$velocityCurve ===
+				'EXP'
 					? 'border-[#61afef] bg-[#61afef] text-black font-black shadow-[0_0_6px_#61afef]'
 					: $velocityCurve === 'LINEAR'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black shadow-[0_0_6px_#98c379]'
@@ -339,15 +415,23 @@
 					playSound('click');
 				}}
 				title={$t('synthPanels.midi.openSettingsHint')}
-				class="press ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap cursor-pointer {$midiInputsForActiveTrack.length ? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]' : 'border-white/20 bg-white/5 text-white/40 hover:text-white/70'}"
+				class="press ml-auto flex items-center gap-1 px-1.5 py-0.2 rounded-xs border text-[10px] font-bold whitespace-nowrap cursor-pointer {$midiInputsForActiveTrack.length
+					? 'border-[#98c379] bg-[#98c379]/15 text-[#98c379]'
+					: 'border-white/20 bg-white/5 text-white/40 hover:text-white/70'}"
 			>
-				<span class="w-1.5 h-1.5 rounded-full {$midiInputsForActiveTrack.length ? 'bg-[#98c379] animate-pulse' : 'bg-white/30'}"></span>
+				<span
+					class="w-1.5 h-1.5 rounded-full {$midiInputsForActiveTrack.length
+						? 'bg-[#98c379] animate-pulse'
+						: 'bg-white/30'}"
+				></span>
 				<span>MIDI: {midiBadgeLabel($midiInputsForActiveTrack)}</span>
 			</button>
 		</div>
 	</div>
 
-	<div class="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden">
+	<div
+		class="relative h-12 w-full flex bg-black/80 rounded-xs border border-white/15 p-0.5 overflow-hidden"
+	>
 		{#if whiteKeys.length > 0}
 			<div class="flex w-full h-full gap-0.5">
 				{#each whiteKeys as wk (wk.note)}
@@ -367,8 +451,13 @@
 							: percussion && $activeKey === wk.idx
 								? 'bg-[#c678dd] text-black border-[#c678dd] shadow-[0_0_8px_rgba(198,120,221,0.7)]'
 								: 'bg-[#e8e6e1] hover:bg-white text-black/70 border-black/30'}"
-						style={isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}
-						title={$t('synthPanels.keyboard.playNoteHint', { note: wk.note, freq: PIANO_ROLL_NOTES[wk.idx]?.freq.toFixed(1) ?? '' })}
+						style={isPlaying
+							? `background-color: ${color}; border-color: ${color}; color: #000;`
+							: ''}
+						title={$t('synthPanels.keyboard.playNoteHint', {
+							note: wk.note,
+							freq: PIANO_ROLL_NOTES[wk.idx]?.freq.toFixed(1) ?? ''
+						})}
 					>
 						<!-- Only the Cs are named, and only by their octave number.
 					     Seven octaves of white keys is 49 labels across the strip;
@@ -380,21 +469,25 @@
 					     Above the dot, not below it: stacked the other way a key that
 					     carried both sat its number one dot higher than its
 					     neighbours, so the octave numbers no longer lined up. -->
-					{#if wk.note.startsWith('C') && !wk.note.includes('#')}
-						<span class="text-[9px] font-mono font-black opacity-70 leading-none">{wk.note.slice(1)}</span>
-					{/if}
+						{#if wk.note.startsWith('C') && !wk.note.includes('#')}
+							<span class="text-[9px] font-mono font-black opacity-70 leading-none"
+								>{wk.note.slice(1)}</span
+							>
+						{/if}
 						<!-- A kit key carries its own sound, and the piano roll marks those
 					     with a dot. The keyboard is where they are actually played, so
 					     it needs the same mark -- without it the only way to find which
 					     keys the kit fills was to press all 88. The slot is always
 					     there, so a dot appearing cannot move the number above it. -->
-					{#if percussion}
-						<span class="w-2 h-2 mt-0.5 rounded-full {keyIsCustomised($activeTrackRow, wk.idx)
-							? $activeKey === wk.idx
-								? 'bg-black/70'
-								: 'bg-[#c678dd]/70'
-							: ''}"></span>
-					{/if}
+						{#if percussion}
+							<span
+								class="w-2 h-2 mt-0.5 rounded-full {keyIsCustomised($activeTrackRow, wk.idx)
+									? $activeKey === wk.idx
+										? 'bg-black/70'
+										: 'bg-[#c678dd]/70'
+									: ''}"
+							></span>
+						{/if}
 					</button>
 				{/each}
 			</div>
@@ -428,8 +521,13 @@
 						: percussion && $activeKey === bk.idx
 							? 'bg-[#c678dd] text-black border-[#c678dd] shadow-[0_0_8px_rgba(198,120,221,0.7)]'
 							: 'bg-[#181a1f] hover:bg-[#282c34] text-white/60 border-black'}"
-					style="left: {leftPos}%; width: {bWidth}%; {isPlaying ? `background-color: ${color}; border-color: ${color}; color: #000;` : ''}"
-					title={$t('synthPanels.keyboard.playNoteHint', { note: bk.note, freq: PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1) ?? '' })}
+					style="left: {leftPos}%; width: {bWidth}%; {isPlaying
+						? `background-color: ${color}; border-color: ${color}; color: #000;`
+						: ''}"
+					title={$t('synthPanels.keyboard.playNoteHint', {
+						note: bk.note,
+						freq: PIANO_ROLL_NOTES[bk.idx]?.freq.toFixed(1) ?? ''
+					})}
 				>
 					<!-- Unlabelled: a black key is barely wider than the text that
 					     was on it, so those labels were the densest part of the
@@ -437,7 +535,11 @@
 					     read from the Cs and the black-key groups anyway. The kit dot
 					     still fits, and GM puts real sounds on the black keys. -->
 					{#if percussion && keyIsCustomised($activeTrackRow, bk.idx)}
-						<span class="w-1.5 h-1.5 rounded-full mb-1 {$activeKey === bk.idx ? 'bg-black/70' : 'bg-[#c678dd]/80'}"></span>
+						<span
+							class="w-1.5 h-1.5 rounded-full mb-1 {$activeKey === bk.idx
+								? 'bg-black/70'
+								: 'bg-[#c678dd]/80'}"
+						></span>
 					{/if}
 				</button>
 			{/each}

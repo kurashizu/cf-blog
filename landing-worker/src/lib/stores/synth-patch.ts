@@ -21,7 +21,13 @@ import {
 	type CustomWave,
 	type BuiltinSongId
 } from '../synth';
-import { isPresetFile, applyPresetFile, isKitFile, applyKitFile, activeKitName } from './synth-presets';
+import {
+	isPresetFile,
+	applyPresetFile,
+	isKitFile,
+	applyKitFile,
+	activeKitName
+} from './synth-presets';
 import { saveStatus, showSaveStatus, askConfirm } from './synth-confirm';
 
 /* Re-exported from where it now lives, so the menus that read it here still
@@ -64,12 +70,14 @@ export const BUILTIN_SONGS: BuiltinSong[] = [
 // Must match the synth's boot state (INITIAL_TRACKS / bpm / totalSteps), otherwise the
 // selector names one song while the sequencer holds another. Looked up by id so
 // reordering the list can't desync it.
-const DEFAULT_SONG_IDX = Math.max(0, BUILTIN_SONGS.findIndex((s) => s.id === 'SPAIN'));
+const DEFAULT_SONG_IDX = Math.max(
+	0,
+	BUILTIN_SONGS.findIndex((s) => s.id === 'SPAIN')
+);
 
 export const builtinSongIdx = writable<number>(DEFAULT_SONG_IDX);
 /** What is loaded right now — used to name exports. Set by every loader. */
 export const currentSongName = writable<string>(BUILTIN_SONGS[DEFAULT_SONG_IDX]?.name ?? 'patch');
-
 
 function refreshTracks(): void {
 	tracksState.set([...modularSynth.getTracks()]);
@@ -256,7 +264,6 @@ export async function handleExportPatch(): Promise<void> {
 	URL.revokeObjectURL(url);
 	playSound('click');
 }
-
 
 /** Set when programmatic copy is blocked — PatchManager renders it for manual copy. */
 export const shareUrlFallback = writable<string | null>(null);

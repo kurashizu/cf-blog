@@ -206,7 +206,9 @@ rows.sort((a, b) => b.crap - a.crap);
 
 const shown = SHOW_ALL ? rows : rows.slice(0, 40);
 const pad = (s, n) => String(s).padEnd(n);
-console.log(`${pad('CRAP', 8)}${pad('CC', 5)}${pad('cov%', 7)}${pad('mut%', 7)}${pad('location', 60)}name`);
+console.log(
+	`${pad('CRAP', 8)}${pad('CC', 5)}${pad('cov%', 7)}${pad('mut%', 7)}${pad('location', 60)}name`
+);
 console.log('-'.repeat(118));
 for (const r of shown) {
 	const cov = r.measured ? r.cov.toFixed(0) : '—';

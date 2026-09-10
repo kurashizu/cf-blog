@@ -31,7 +31,12 @@ export const MODULES: ModuleSpec[] = [
 		badge: 'NODE_01',
 		desc: 'Technical research log with real semantic search — full article bodies in D1, embedded and indexed for retrieval, not just tagged.',
 		descKey: 'home.modules.blog.desc',
-		tech: ['Next.js 15 + OpenNext on Workers', 'D1 SQL (full article body)', 'Vectorize 768-D (gemini-embedding-2)', 'R2 + KV + per-route rate limits'],
+		tech: [
+			'Next.js 15 + OpenNext on Workers',
+			'D1 SQL (full article body)',
+			'Vectorize 768-D (gemini-embedding-2)',
+			'R2 + KV + per-route rate limits'
+		],
 		facts: [
 			'D1 stores the complete article body, not just metadata',
 			'Semantic search via Vectorize, embedded with Gemini Embedding 2 (768-D)',
@@ -57,7 +62,11 @@ export const MODULES: ModuleSpec[] = [
 		badge: 'NODE_02',
 		desc: 'An actual multi-step tool-calling agent, not a single prompt-and-response wrapper — runs its own tool loop with real fallback logic.',
 		descKey: 'home.modules.agent.desc',
-		tech: ['gemma-4-31b-it → gemma-4-26b-a4b-it fallback', 'Brave Search + hand-written AST evaluator', 'KV session store, 1h TTL'],
+		tech: [
+			'gemma-4-31b-it → gemma-4-26b-a4b-it fallback',
+			'Brave Search + hand-written AST evaluator',
+			'KV session store, 1h TTL'
+		],
 		facts: [
 			'5 real tools: web_search (Brave), eval_expression (a hand-written parser, not raw eval), get_time, blog_read, blog_search',
 			'Automatic model fallback: gemma-4-31b-it → gemma-4-26b-a4b-it',
@@ -98,7 +107,12 @@ export const MODULES: ModuleSpec[] = [
 		badge: 'NODE_03',
 		desc: 'Ephemeral file and clipboard relay. Presigned direct-to-storage uploads, 4-character codes, links that actually expire.',
 		descKey: 'home.modules.share.desc',
-		tech: ['SvelteKit on Cloudflare Workers', 'Self-hosted S3-compatible storage', 'D1 quotas + audit log', 'Cron TTL purge every 5 min'],
+		tech: [
+			'SvelteKit on Cloudflare Workers',
+			'Self-hosted S3-compatible storage',
+			'D1 quotas + audit log',
+			'Cron TTL purge every 5 min'
+		],
 		facts: [
 			'Uploads go straight to storage via presigned PUT/multipart — the Worker never touches file bytes',
 			'Up to 5 GB per file (100 GB for admin uploads); links expire 5 minutes to 7 days',
@@ -145,7 +159,11 @@ export const MODULES: ModuleSpec[] = [
 			'Every video gets a burned-in, CJK-capable watermark — the job fails loudly if no CJK font is found',
 			'Egress through Cloudflare WARP (WireGuard) by default, with an Oracle-hosted proxy as fallback'
 		],
-		factKeys: ['home.modules.sharetube.fact1', 'home.modules.sharetube.fact2', 'home.modules.sharetube.fact3'],
+		factKeys: [
+			'home.modules.sharetube.fact1',
+			'home.modules.sharetube.fact2',
+			'home.modules.sharetube.fact3'
+		],
 		topology: `sequenceDiagram
     participant C as Client
     participant W as SvelteKit Worker
@@ -176,7 +194,12 @@ export const MODULES: ModuleSpec[] = [
 		badge: 'NODE_05',
 		desc: 'A real private mailbox with its own webmail UI — not a routing gateway. Open signup, no tracking.',
 		descKey: 'home.modules.mail.desc',
-		tech: ['SvelteKit SSR on Cloudflare Workers', 'D1 (accounts/folders/messages) + R2 (bodies/attachments)', 'Email Routing triggers inbound parsing only', 'Resend (external) + in-Worker delivery (internal)'],
+		tech: [
+			'SvelteKit SSR on Cloudflare Workers',
+			'D1 (accounts/folders/messages) + R2 (bodies/attachments)',
+			'Email Routing triggers inbound parsing only',
+			'Resend (external) + in-Worker delivery (internal)'
+		],
 		facts: [
 			'Full webmail UI — inbox/sent/drafts/trash/junk/starred, drag-drop attachments, search',
 			'Open signup, PBKDF2-SHA256 password hashing, JWT sessions in KV',
@@ -203,7 +226,12 @@ export const MODULES: ModuleSpec[] = [
 		badge: 'NODE_06',
 		desc: 'The actual engineering rulebook these projects follow — not a mission statement, a working style guide.',
 		descKey: 'home.modules.skill.desc',
-		tech: ['SvelteKit for all web work', 'uv for Python', 'ffmpeg for all media processing', 'Pre-authenticated wrangler / gh / hf CLIs'],
+		tech: [
+			'SvelteKit for all web work',
+			'uv for Python',
+			'ffmpeg for all media processing',
+			'Pre-authenticated wrangler / gh / hf CLIs'
+		],
 		facts: [
 			'Code and docs default to English; chat defaults to Chinese unless switched',
 			'ffmpeg is the standard for every audio/video/image operation, no exceptions',

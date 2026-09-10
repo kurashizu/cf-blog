@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseMidiFile, splitByChannel, MidiParseError, type MidiTrack } from '../../src/lib/midi-file';
+import {
+	parseMidiFile,
+	splitByChannel,
+	MidiParseError,
+	type MidiTrack
+} from '../../src/lib/midi-file';
 
 /* ---- helpers: build Standard MIDI Files byte by byte -------------------- */
 
@@ -19,7 +24,14 @@ const be32 = (n: number) => [(n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff
 const ascii = (s: string) => [...s].map((c) => c.charCodeAt(0));
 
 function header(format: number, ntrks: number, division: number, extra: number[] = []): number[] {
-	return [...ascii('MThd'), ...be32(6 + extra.length), ...be16(format), ...be16(ntrks), ...be16(division), ...extra];
+	return [
+		...ascii('MThd'),
+		...be32(6 + extra.length),
+		...be16(format),
+		...be16(ntrks),
+		...be16(division),
+		...extra
+	];
 }
 
 function chunk(id: string, body: number[]): number[] {
@@ -34,12 +46,20 @@ function file(...parts: number[][]): ArrayBuffer {
 }
 
 /** delta-time + note-on, and delta-time + note-off, as raw events. */
-const noteOn = (delta: number, note: number, vel = 100, ch = 0) => [...vlq(delta), 0x90 | ch, note, vel];
+const noteOn = (delta: number, note: number, vel = 100, ch = 0) => [
+	...vlq(delta),
+	0x90 | ch,
+	note,
+	vel
+];
 const noteOff = (delta: number, note: number, ch = 0) => [...vlq(delta), 0x80 | ch, note, 0x40];
 
 /** A minimal one-note file used by several tests. */
 function oneNoteFile(): ArrayBuffer {
-	return file(header(0, 1, 480), track([...noteOn(0, 60), ...noteOff(480, 60), ...vlq(0), 0xff, 0x2f, 0x00]));
+	return file(
+		header(0, 1, 480),
+		track([...noteOn(0, 60), ...noteOff(480, 60), ...vlq(0), 0xff, 0x2f, 0x00])
+	);
 }
 
 /* ---- header ------------------------------------------------------------ */
@@ -98,16 +118,37 @@ describe('tempo and time signature', () => {
 	it('reads a set-tempo event', () => {
 		// 500000 microseconds per quarter = 120bpm; use 400000 = 150bpm
 		const micros = 400_000;
-		const tempo = [...vlq(0), 0xff, 0x51, 0x03, (micros >> 16) & 0xff, (micros >> 8) & 0xff, micros & 0xff];
-		const mid = parseMidiFile(file(header(0, 1, 480), track([...tempo, ...noteOn(0, 60), ...noteOff(480, 60)])));
+		const tempo = [
+			...vlq(0),
+			0xff,
+			0x51,
+			0x03,
+			(micros >> 16) & 0xff,
+			(micros >> 8) & 0xff,
+			micros & 0xff
+		];
+		const mid = parseMidiFile(
+			file(header(0, 1, 480), track([...tempo, ...noteOn(0, 60), ...noteOff(480, 60)]))
+		);
 		expect(mid.bpm).toBe(150);
 		expect(mid.bpmFromFile).toBe(true);
 	});
 
 	it('keeps the first tempo when a file changes tempo later', () => {
-		const t = (micros: number) => [...vlq(0), 0xff, 0x51, 0x03, (micros >> 16) & 0xff, (micros >> 8) & 0xff, micros & 0xff];
+		const t = (micros: number) => [
+			...vlq(0),
+			0xff,
+			0x51,
+			0x03,
+			(micros >> 16) & 0xff,
+			(micros >> 8) & 0xff,
+			micros & 0xff
+		];
 		const mid = parseMidiFile(
-			file(header(0, 1, 480), track([...t(400_000), ...t(200_000), ...noteOn(0, 60), ...noteOff(480, 60)]))
+			file(
+				header(0, 1, 480),
+				track([...t(400_000), ...t(200_000), ...noteOn(0, 60), ...noteOff(480, 60)])
+			)
 		);
 		expect(mid.bpm).toBe(150);
 	});
@@ -115,13 +156,17 @@ describe('tempo and time signature', () => {
 	it('reads a time signature and its power-of-two denominator', () => {
 		// 6/8 -> numerator 6, denominator exponent 3 (2**3 = 8)
 		const sig = [...vlq(0), 0xff, 0x58, 0x04, 6, 3, 24, 8];
-		const mid = parseMidiFile(file(header(0, 1, 480), track([...sig, ...noteOn(0, 60), ...noteOff(480, 60)])));
+		const mid = parseMidiFile(
+			file(header(0, 1, 480), track([...sig, ...noteOn(0, 60), ...noteOff(480, 60)]))
+		);
 		expect(mid.timeSignature).toBe('6/8');
 	});
 
 	it('ignores a zero tempo rather than dividing by it', () => {
 		const zeroTempo = [...vlq(0), 0xff, 0x51, 0x03, 0, 0, 0];
-		const mid = parseMidiFile(file(header(0, 1, 480), track([...zeroTempo, ...noteOn(0, 60), ...noteOff(480, 60)])));
+		const mid = parseMidiFile(
+			file(header(0, 1, 480), track([...zeroTempo, ...noteOn(0, 60), ...noteOff(480, 60)]))
+		);
 		expect(mid.bpm).toBe(120);
 		expect(mid.bpmFromFile).toBe(false);
 	});
@@ -141,10 +186,19 @@ describe('note events', () => {
 	it('honours running status', () => {
 		// one status byte, then bare data pairs for the following events
 		const body = [
-			...vlq(0), 0x90, 60, 100,   // note on, sets running status
-			...vlq(240), 60, 0,         // running status: note on vel 0 = off
-			...vlq(0), 62, 100,         // running status: note on
-			...vlq(240), 62, 0
+			...vlq(0),
+			0x90,
+			60,
+			100, // note on, sets running status
+			...vlq(240),
+			60,
+			0, // running status: note on vel 0 = off
+			...vlq(0),
+			62,
+			100, // running status: note on
+			...vlq(240),
+			62,
+			0
 		];
 		const mid = parseMidiFile(file(header(0, 1, 480), track(body)));
 		expect(mid.tracks[0].notes.map((n) => n.midi)).toEqual([60, 62]);
@@ -193,12 +247,7 @@ describe('note events', () => {
 	});
 
 	it('sorts notes by start tick then pitch', () => {
-		const body = [
-			...noteOn(0, 67),
-			...noteOn(0, 60),
-			...noteOff(240, 67),
-			...noteOff(0, 60)
-		];
+		const body = [...noteOn(0, 67), ...noteOn(0, 60), ...noteOff(240, 67), ...noteOff(0, 60)];
 		const mid = parseMidiFile(file(header(0, 1, 480), track(body)));
 		expect(mid.tracks[0].notes.map((n) => n.midi)).toEqual([60, 67]);
 	});
@@ -207,11 +256,24 @@ describe('note events', () => {
 describe('events that are skipped, not interpreted', () => {
 	it('skips control change, pitch bend and aftertouch', () => {
 		const body = [
-			...vlq(0), 0xb0, 7, 100,     // control change (2 data bytes)
-			...vlq(0), 0xe0, 0x00, 0x40, // pitch bend (2 data bytes)
-			...vlq(0), 0xa0, 60, 64,     // poly aftertouch (2 data bytes)
-			...vlq(0), 0xc0, 5,          // program change (1 data byte)
-			...vlq(0), 0xd0, 90,         // channel aftertouch (1 data byte)
+			...vlq(0),
+			0xb0,
+			7,
+			100, // control change (2 data bytes)
+			...vlq(0),
+			0xe0,
+			0x00,
+			0x40, // pitch bend (2 data bytes)
+			...vlq(0),
+			0xa0,
+			60,
+			64, // poly aftertouch (2 data bytes)
+			...vlq(0),
+			0xc0,
+			5, // program change (1 data byte)
+			...vlq(0),
+			0xd0,
+			90, // channel aftertouch (1 data byte)
 			...noteOn(0, 60),
 			...noteOff(480, 60)
 		];
@@ -222,13 +284,17 @@ describe('events that are skipped, not interpreted', () => {
 
 	it('skips sysex', () => {
 		const sysex = [...vlq(0), 0xf0, ...vlq(3), 0x7e, 0x00, 0xf7];
-		const mid = parseMidiFile(file(header(0, 1, 480), track([...sysex, ...noteOn(0, 60), ...noteOff(480, 60)])));
+		const mid = parseMidiFile(
+			file(header(0, 1, 480), track([...sysex, ...noteOn(0, 60), ...noteOff(480, 60)]))
+		);
 		expect(mid.tracks[0].notes).toHaveLength(1);
 	});
 
 	it('skips an unknown meta event', () => {
 		const marker = [...vlq(0), 0xff, 0x06, 0x04, ...ascii('mark')];
-		const mid = parseMidiFile(file(header(0, 1, 480), track([...marker, ...noteOn(0, 60), ...noteOff(480, 60)])));
+		const mid = parseMidiFile(
+			file(header(0, 1, 480), track([...marker, ...noteOn(0, 60), ...noteOff(480, 60)]))
+		);
 		expect(mid.tracks[0].notes).toHaveLength(1);
 	});
 
@@ -247,13 +313,17 @@ describe('events that are skipped, not interpreted', () => {
 describe('track names', () => {
 	it('takes the track name meta event', () => {
 		const name = [...vlq(0), 0xff, 0x03, 5, ...ascii('Piano')];
-		const mid = parseMidiFile(file(header(0, 1, 480), track([...name, ...noteOn(0, 60), ...noteOff(480, 60)])));
+		const mid = parseMidiFile(
+			file(header(0, 1, 480), track([...name, ...noteOn(0, 60), ...noteOff(480, 60)]))
+		);
 		expect(mid.tracks[0].name).toBe('Piano');
 	});
 
 	it('takes an instrument name when there is no track name', () => {
 		const instrument = [...vlq(0), 0xff, 0x04, 4, ...ascii('Bass')];
-		const mid = parseMidiFile(file(header(0, 1, 480), track([...instrument, ...noteOn(0, 60), ...noteOff(480, 60)])));
+		const mid = parseMidiFile(
+			file(header(0, 1, 480), track([...instrument, ...noteOn(0, 60), ...noteOff(480, 60)]))
+		);
 		expect(mid.tracks[0].name).toBe('Bass');
 	});
 

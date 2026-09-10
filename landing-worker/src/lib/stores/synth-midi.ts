@@ -25,13 +25,16 @@ function loadRouting(): void {
 				// A stored file is whatever is in localStorage: take only what the
 				// synth can actually route to, and drop the rest silently.
 				if (!Array.isArray(list)) continue;
-				const clean = list.filter((t): t is number => Number.isInteger(t) && t >= 0 && t < TRACK_COUNT);
+				const clean = list.filter(
+					(t): t is number => Number.isInteger(t) && t >= 0 && t < TRACK_COUNT
+				);
 				if (clean.length === list.length) modularSynth.setMidiDeviceTracks(id, clean);
 			}
 		}
 		// Devices set to "follow the active track" have no row above, so without
 		// this they would be defaulted back to off on the next load.
-		if (Array.isArray(seen)) modularSynth.markMidiDevicesSeen(seen.filter((id): id is string => typeof id === 'string'));
+		if (Array.isArray(seen))
+			modularSynth.markMidiDevicesSeen(seen.filter((id): id is string => typeof id === 'string'));
 	} catch {
 		/* unreadable or private mode -- start from the defaults */
 	}
@@ -40,7 +43,10 @@ function loadRouting(): void {
 function saveRouting(tracks: Record<string, number[]>): void {
 	if (!browser) return;
 	try {
-		localStorage.setItem(MIDI_ROUTING_KEY, JSON.stringify({ tracks, seen: modularSynth.getMidiDevicesSeen() }));
+		localStorage.setItem(
+			MIDI_ROUTING_KEY,
+			JSON.stringify({ tracks, seen: modularSynth.getMidiDevicesSeen() })
+		);
 	} catch {
 		/* quota / private mode */
 	}
@@ -63,7 +69,9 @@ export function cycleVelocityCurve(): void {
 
 /** device id -> tracks it plays; a device missing here follows the active track,
     and one listed with no tracks is switched off. */
-export const midiDeviceTracks = writable<Record<string, number[]>>(modularSynth.getMidiDeviceTracks());
+export const midiDeviceTracks = writable<Record<string, number[]>>(
+	modularSynth.getMidiDeviceTracks()
+);
 if (browser) midiDeviceTracks.subscribe(saveRouting);
 
 /** Add or remove one track from a device's set. */

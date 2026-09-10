@@ -19,7 +19,10 @@ import { performanceMode } from './stores/performance';
  * mount/unmount correctly, just without motion, and Svelte already treats
  * a zero-duration transition as an instant no-op.
  */
-export function fade(node: Element, params: Parameters<typeof svelteFade>[1] = {}): TransitionConfig {
+export function fade(
+	node: Element,
+	params: Parameters<typeof svelteFade>[1] = {}
+): TransitionConfig {
 	if (get(performanceMode)) return { duration: 0 };
 	return svelteFade(node, params);
 }
@@ -29,7 +32,10 @@ export function fly(node: Element, params: Parameters<typeof svelteFly>[1] = {})
 	return svelteFly(node, params);
 }
 
-export function scale(node: Element, params: Parameters<typeof svelteScale>[1] = {}): TransitionConfig {
+export function scale(
+	node: Element,
+	params: Parameters<typeof svelteScale>[1] = {}
+): TransitionConfig {
 	if (get(performanceMode)) return { duration: 0 };
 	return svelteScale(node, params);
 }

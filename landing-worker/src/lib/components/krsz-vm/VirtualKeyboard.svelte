@@ -233,7 +233,10 @@
 				{$t('vm.keyboard.modifierNote')}
 			</span>
 			{#if onClose}
-				<button onclick={onClose} class="press text-[10px] font-mono text-white/40 hover:text-white cursor-pointer transition-colors">
+				<button
+					onclick={onClose}
+					class="press text-[10px] font-mono text-white/40 hover:text-white cursor-pointer transition-colors"
+				>
 					{$t('vm.keyboard.hide')}
 				</button>
 			{/if}
@@ -248,7 +251,8 @@
 				<button
 					onclick={() => press(key)}
 					title={key.mod ? $t('vm.keyboard.modHint') : undefined}
-					class="border rounded-xs font-mono cursor-pointer active:scale-95 transition-[color,background-color,border-color,transform] py-1.5 min-w-0 truncate {r === 0
+					class="border rounded-xs font-mono cursor-pointer active:scale-95 transition-[color,background-color,border-color,transform] py-1.5 min-w-0 truncate {r ===
+					0
 						? 'text-[10px]'
 						: 'text-[11px] sm:text-xs'} {isLocked
 						? 'border-[#e06c75] bg-[#e06c75]/30 text-[#e06c75] font-bold'

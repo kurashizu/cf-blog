@@ -64,7 +64,9 @@
 			transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 		>
 			<!-- Modal Header -->
-			<div class="flex items-center justify-between px-3 py-2 bg-black/60 border-b border-white/10 shrink-0">
+			<div
+				class="flex items-center justify-between px-3 py-2 bg-black/60 border-b border-white/10 shrink-0"
+			>
 				<span class="text-[#e5c07b] font-black text-sm">⚙ {$t('synthPanels.settings.title')}</span>
 				<button
 					onclick={close}
@@ -76,14 +78,17 @@
 			</div>
 
 			<!-- Modal Tabs Navigation -->
-			<div class="flex items-center gap-1 px-3 py-1.5 bg-black/40 border-b border-white/10 shrink-0 text-xs">
+			<div
+				class="flex items-center gap-1 px-3 py-1.5 bg-black/40 border-b border-white/10 shrink-0 text-xs"
+			>
 				{#each TABS as tab (tab.id)}
 					<button
 						onclick={() => {
 							synthSettingsTab.set(tab.id);
 							playSound('click');
 						}}
-						class="press px-2.5 py-1 rounded-xs border font-black cursor-pointer transition-all {$synthSettingsTab === tab.id
+						class="press px-2.5 py-1 rounded-xs border font-black cursor-pointer transition-all {$synthSettingsTab ===
+						tab.id
 							? 'font-black shadow-xs'
 							: 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:border-white/30'}"
 						style={$synthSettingsTab === tab.id
@@ -113,9 +118,14 @@
 			</div>
 
 			<!-- Modal Footer -->
-			<div class="flex items-center justify-between px-4 py-2 bg-black/60 border-t border-white/10 shrink-0 text-xs">
+			<div
+				class="flex items-center justify-between px-4 py-2 bg-black/60 border-t border-white/10 shrink-0 text-xs"
+			>
 				<span class="text-white/40 text-[11px]">{$t('synthPanels.settings.footerNote')}</span>
-				<button onclick={close} class="press px-4 py-1 bg-[#e5c07b] text-black font-black rounded-xs hover:opacity-90 cursor-pointer shadow-xs transition-opacity">
+				<button
+					onclick={close}
+					class="press px-4 py-1 bg-[#e5c07b] text-black font-black rounded-xs hover:opacity-90 cursor-pointer shadow-xs transition-opacity"
+				>
 					{$t('common.done')}
 				</button>
 			</div>

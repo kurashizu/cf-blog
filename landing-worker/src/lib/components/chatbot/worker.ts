@@ -36,7 +36,10 @@ type InMsg =
 const post = (m: unknown) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
 
 function rememberNative(level: string, args: unknown[]): void {
-	const text = args.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ').trim();
+	const text = args
+		.map((x) => (typeof x === 'string' ? x : JSON.stringify(x)))
+		.join(' ')
+		.trim();
 	if (!text) return;
 	nativeLogs.push(`[${level}] ${text}`);
 	if (nativeLogs.length > 40) nativeLogs.shift();
@@ -58,9 +61,10 @@ function needsCompatRuntime(): boolean {
 	const wasm = WebAssembly as typeof WebAssembly & { Suspending?: unknown };
 	if (typeof wasm.Suspending !== 'function') return true;
 	try {
-		new WebAssembly.Memory(
-			{ address: 'i64', initial: 1n } as unknown as WebAssembly.MemoryDescriptor
-		);
+		new WebAssembly.Memory({
+			address: 'i64',
+			initial: 1n
+		} as unknown as WebAssembly.MemoryDescriptor);
 		return false;
 	} catch {
 		return true;

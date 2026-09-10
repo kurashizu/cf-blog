@@ -7,13 +7,15 @@ The user picks one in the footer (`[EN▲]`) or the site follows the browser. Ev
 
 ```svelte
 <script lang="ts">
-  import { t } from '$lib/i18n';
+	import { t } from '$lib/i18n';
 </script>
+
 <button title={$t('synth.transport.playHint')}>{$t('synth.transport.play')}</button>
-<span>{$t('vm.status.booted', { seconds: 3.2 })}</span>   <!-- {seconds} in the message -->
+<span>{$t('vm.status.booted', { seconds: 3.2 })}</span>
+<!-- {seconds} in the message -->
 ```
 
-- **`$t('key', vars?)`** — templates, `$derived`, `$effect`. Reactive: switching language re-renders. This is the default door; use it in every `.svelte` file. In `<script>` code that computes a string *once* (an `onMount`, a click handler) it is fine to use `$t(...)` too — Svelte allows `$t` in script code of a component.
+- **`$t('key', vars?)`** — templates, `$derived`, `$effect`. Reactive: switching language re-renders. This is the default door; use it in every `.svelte` file. In `<script>` code that computes a string _once_ (an `onMount`, a click handler) it is fine to use `$t(...)` too — Svelte allows `$t` in script code of a component.
 - **`tr('key', vars?)`** — plain `.ts`/`.js` modules (stores, console commands, tour step definitions, data tables). Non-reactive, resolved at call time. If the module builds an array of strings once at import time, wrap it in a function (`export function bootLines() { return [tr('…'), …] }`) or use `localized`, so it is evaluated when needed, not at import.
 - **`localized({ en: X, 'zh-CN': X, … })`** / **`$pick({…})`** — non-string values (an array of lines, an object). English required; the rest fall back to English.
 
@@ -42,7 +44,7 @@ Translation quality: natural, concise, the register of a technical hobby site (t
 - **Synth rack labels**: every button / knob / fader label on the racks and in the settings tabs that is a ≤4-character abbreviation (`DET`, `SEMI`, `PW`, `PHS`, `SUB`, `RPT`, `GAP`, `LAYR`, `NTCH`, `ATK`, `DCY`, `REL`, `LFO`, `CUT`, `RES`, `EQ`, `FX`, `DUCK`, `KEY`, `BPM`, `H1`…). They are engraved hardware-style labels and stay English in every locale. Module titles like `DUAL OSC`, `FILTER`, `ENVELOPE`, `LFO`, `FX / EQ`, `OUT` also stay.
 - Waveform names (`SAW`, `PWM`, `SUPERSAW`), preset names (`ACID BASS`), song titles, track names (`TRK 1`), note names (`C4`), MIDI/CC numbers, units (`Hz`, `ms`, `dB`, `st`, `ct`, `%`).
 - Brand and proper nouns: `KRSZ`, `krsz.in`, `kurashizu`, `Cloudflare`, `GitHub`, `Hugging Face`, `LIFE.LAB`, `LM-SPACE`, project names, model names, `Jelly Pixel`.
-- Hotkey glyphs and key names, the prompt `>`/`~`, ASCII art, log lines that mimic real system output (kernel / BIOS / POST style lines like `CPU0: …` may stay in English — that is the joke; but any *prose* sentence in them is translated).
+- Hotkey glyphs and key names, the prompt `>`/`~`, ASCII art, log lines that mimic real system output (kernel / BIOS / POST style lines like `CPU0: …` may stay in English — that is the joke; but any _prose_ sentence in them is translated).
 - Command names in the console (`help`, `trace`, `theme`) — only their descriptions are translated.
 
 **Tooltips of rack knobs ARE translated** (the explanation sentence), keeping the parameter name itself in English inside it, e.g. zh-CN: `DET：两个振荡器之间的失谐量（音分）`.

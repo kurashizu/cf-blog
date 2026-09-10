@@ -4,14 +4,73 @@
 	import { get } from 'svelte/store';
 	import { playSound } from '../../../sound';
 	import { t } from '../../../i18n';
-	import { modularSynth, PIANO_ROLL_NOTES, METER_SPECS, stepsPerColumn, hasSubColumns, ternaryColFactor, divToStepSpan } from '../../../synth';
-	import { timeMeter, snapDiv, activeStepPage, cursorStep, seqCurrentStep, isSeqPlaying, totalPatternSteps, activeTrackId, pageInputStr, pageFollow, prevPatternPage, nextPatternPage, goToPage, totalPatternPages } from '../../../stores/synth-transport';
-	import { advancedMode, rollFullscreen, toggleRollFullscreen } from '../../../stores/synth-view';
-	import { currentTrack, activeTrackRow, activeKey, keyIsCustomised, noteNameOf, resetKeyTimbre, visibleTracks, tracksState, placeOrClearNote, updateTrack } from '../../../stores/synth-tracks';
 	import {
-		selection, canUndo, canRedo, undo, redo, runKey, runAt, runsIn, selectedRuns, selectRuns, toggleRun, clearSelection, selectAll,
-		deleteRuns, deleteSelection, moveSelection, resizeSelection, duplicateSelection, copySelection, cutSelection, pasteClip,
-		transformMove, transformResize, withUndo, beginBatch, endBatch, barSteps, type NoteRun
+		modularSynth,
+		PIANO_ROLL_NOTES,
+		METER_SPECS,
+		stepsPerColumn,
+		hasSubColumns,
+		ternaryColFactor,
+		divToStepSpan
+	} from '../../../synth';
+	import {
+		timeMeter,
+		snapDiv,
+		activeStepPage,
+		cursorStep,
+		seqCurrentStep,
+		isSeqPlaying,
+		totalPatternSteps,
+		activeTrackId,
+		pageInputStr,
+		pageFollow,
+		prevPatternPage,
+		nextPatternPage,
+		goToPage,
+		totalPatternPages
+	} from '../../../stores/synth-transport';
+	import { advancedMode, rollFullscreen, toggleRollFullscreen } from '../../../stores/synth-view';
+	import {
+		currentTrack,
+		activeTrackRow,
+		activeKey,
+		keyIsCustomised,
+		noteNameOf,
+		resetKeyTimbre,
+		visibleTracks,
+		tracksState,
+		placeOrClearNote,
+		updateTrack
+	} from '../../../stores/synth-tracks';
+	import {
+		selection,
+		canUndo,
+		canRedo,
+		undo,
+		redo,
+		runKey,
+		runAt,
+		runsIn,
+		selectedRuns,
+		selectRuns,
+		toggleRun,
+		clearSelection,
+		selectAll,
+		deleteRuns,
+		deleteSelection,
+		moveSelection,
+		resizeSelection,
+		duplicateSelection,
+		copySelection,
+		cutSelection,
+		pasteClip,
+		transformMove,
+		transformResize,
+		withUndo,
+		beginBatch,
+		endBatch,
+		barSteps,
+		type NoteRun
 	} from '../../../stores/synth-edit';
 	import { hotkeyOverlayOpen, consoleOverlayOpen } from '../../../stores/chrome';
 	import { isSynthSettingsOpen } from '../../../stores/synth-settings';
@@ -43,7 +102,11 @@
 			({ nInfo }) => nInfo.oct >= octaveFrom && nInfo.oct <= octaveTo
 		)
 	);
-	let activeCol = $derived($isSeqPlaying && Math.floor($seqCurrentStep / stepsPerPage) === $activeStepPage ? Math.floor(($seqCurrentStep % stepsPerPage) / spc) : -1);
+	let activeCol = $derived(
+		$isSeqPlaying && Math.floor($seqCurrentStep / stepsPerPage) === $activeStepPage
+			? Math.floor(($seqCurrentStep % stepsPerPage) / spc)
+			: -1
+	);
 	let activeSubCol = $derived($isSeqPlaying ? Math.floor(($seqCurrentStep % spc) / (spc / 2)) : -1);
 	/* The playhead and the cursor as plain column/sub-column numbers.
 	   Every cell in the ruler and the accent row used to test $seqCurrentStep
@@ -88,7 +151,9 @@
 	const NAME_SHOW = 20;
 	const NAME_MAX = 24;
 	let trackName = $derived($activeTrackRow?.name ?? '');
-	let shortName = $derived(trackName.length > NAME_SHOW ? trackName.slice(0, NAME_SHOW) + '…' : trackName);
+	let shortName = $derived(
+		trackName.length > NAME_SHOW ? trackName.slice(0, NAME_SHOW) + '…' : trackName
+	);
 	let editingName = $state(false);
 	let nameDraft = $state('');
 	let nameInput = $state<HTMLInputElement | null>(null);
@@ -174,13 +239,22 @@
 	let hoverCursor = $state('');
 
 	/* While a move or resize is in flight the primary track is drawn from the transformed copy. */
-	let rowTracks = $derived(preview ? $visibleTracks.map((t) => (t.isPrimary ? { ...t, grid: preview!.grid } : t)) : $visibleTracks);
+	let rowTracks = $derived(
+		preview
+			? $visibleTracks.map((t) => (t.isPrimary ? { ...t, grid: preview!.grid } : t))
+			: $visibleTracks
+	);
 	let shownSelection = $derived(preview ? preview.keys : (marqueeKeys ?? $selection));
 
 	function cellFromEl(el: Element | null): Cell | null {
 		const c = el?.closest?.('[data-step]') as HTMLElement | null;
 		if (!c || !rows.contains(c)) return null;
-		return { note: Number(c.dataset.note), step: Number(c.dataset.step), span: Number(c.dataset.span), el: c };
+		return {
+			note: Number(c.dataset.note),
+			step: Number(c.dataset.step),
+			span: Number(c.dataset.span),
+			el: c
+		};
 	}
 
 	function cellAt(x: number, y: number): Cell | null {
@@ -190,7 +264,9 @@
 	/** Pointer x inside the cell as a fractional step, so a note narrower than the cell still hits. */
 	function fracStep(cell: Cell, x: number): number {
 		const r = cell.el.getBoundingClientRect();
-		return cell.step + Math.min(0.999, Math.max(0, (x - r.left) / Math.max(1, r.width))) * cell.span;
+		return (
+			cell.step + Math.min(0.999, Math.max(0, (x - r.left) / Math.max(1, r.width))) * cell.span
+		);
 	}
 
 	function hitRun(cell: Cell, x: number): { run: NoteRun; edge: boolean } | null {
@@ -219,7 +295,19 @@
 		const cell = cellFromEl(e.target as Element);
 		if (!cell || !$activeTrackRow) return;
 		const total = $totalPatternSteps;
-		const common = { active: false, x0: e.clientX, y0: e.clientY, cell, lastCell: cell, fs0: fracStep(cell, e.clientX), shift: e.shiftKey, copy: e.altKey, base: new Set<string>(), runs: [] as NoteRun[], d: null };
+		const common = {
+			active: false,
+			x0: e.clientX,
+			y0: e.clientY,
+			cell,
+			lastCell: cell,
+			fs0: fracStep(cell, e.clientX),
+			shift: e.shiftKey,
+			copy: e.altKey,
+			base: new Set<string>(),
+			runs: [] as NoteRun[],
+			d: null
+		};
 
 		if (e.button === 2) {
 			e.preventDefault();
@@ -242,7 +330,11 @@
 			}
 			activeKey.set(cell.note);
 			if (e.pointerType === 'touch') return;
-			drag = { ...common, mode: hit.edge ? 'resize' : 'move', runs: selectedRuns($activeTrackRow.grid, total, get(selection)) };
+			drag = {
+				...common,
+				mode: hit.edge ? 'resize' : 'move',
+				runs: selectedRuns($activeTrackRow.grid, total, get(selection))
+			};
 		} else {
 			drag = { ...common, mode: 'marquee', base: e.shiftKey ? new Set(get(selection)) : new Set() };
 		}
@@ -280,7 +372,8 @@
 				const stepLo = Math.min(a.step, cell.step);
 				const stepHi = Math.max(a.step + a.span, cell.step + cell.span);
 				const keys = new Set(drag.base);
-				for (const r of runsIn(trk.grid, total, noteLo, noteHi, stepLo, stepHi)) keys.add(runKey(r.note, r.start));
+				for (const r of runsIn(trk.grid, total, noteLo, noteHi, stepLo, stepHi))
+					keys.add(runKey(r.note, r.start));
 				marqueeKeys = keys;
 				const ra = a.el.getBoundingClientRect();
 				const rb = cell.el.getBoundingClientRect();
@@ -298,7 +391,15 @@
 			case 'move': {
 				const dSteps = Math.round((fracStep(cell, e.clientX) - drag.fs0) / snapSteps) * snapSteps;
 				const dNotes = cell.note - drag.cell.note;
-				const out = transformMove(trk.grid, trk.accents as number[], total, drag.runs, dSteps, dNotes, drag.copy);
+				const out = transformMove(
+					trk.grid,
+					trk.accents as number[],
+					total,
+					drag.runs,
+					dSteps,
+					dNotes,
+					drag.copy
+				);
 				preview = { grid: out.grid, keys: out.keys };
 				drag.d = { dSteps: out.dSteps, dNotes: out.dNotes };
 				break;
@@ -376,9 +477,15 @@
 
 		if (mod && !e.altKey) {
 			switch (e.key.toLowerCase()) {
-				case 'a': selectAll($activeStepPage * stepsPerPage, stepsPerPage); break;
-				case 'c': if (!copySelection()) return; break;
-				case 'x': if (!cutSelection()) return; break;
+				case 'a':
+					selectAll($activeStepPage * stepsPerPage, stepsPerPage);
+					break;
+				case 'c':
+					if (!copySelection()) return;
+					break;
+				case 'x':
+					if (!cutSelection()) return;
+					break;
 				case 'v':
 					// Let the native paste event through: it carries the clipboard text
 					// without a permission prompt. If none arrives (empty clipboard,
@@ -391,10 +498,17 @@
 						}
 					}, 100);
 					return;
-				case 'd': if (!duplicateSelection()) return; break;
-				case 'z': if (!(e.shiftKey ? redo() : undo())) return; break;
-				case 'y': if (!redo()) return; break;
-				default: return;
+				case 'd':
+					if (!duplicateSelection()) return;
+					break;
+				case 'z':
+					if (!(e.shiftKey ? redo() : undo())) return;
+					break;
+				case 'y':
+					if (!redo()) return;
+					break;
+				default:
+					return;
 			}
 			e.preventDefault();
 			e.stopPropagation();
@@ -411,12 +525,23 @@
 		if (!hasSel || e.altKey) return;
 		switch (e.key) {
 			case 'Delete':
-			case 'Backspace': deleteSelection(); break;
-			case 'ArrowLeft': moveSelection(-(e.shiftKey ? barSteps() : snapSteps), 0); break;
-			case 'ArrowRight': moveSelection(e.shiftKey ? barSteps() : snapSteps, 0); break;
-			case 'ArrowUp': moveSelection(0, -(e.shiftKey ? 12 : 1)); break; // lower index = higher pitch
-			case 'ArrowDown': moveSelection(0, e.shiftKey ? 12 : 1); break;
-			default: return;
+			case 'Backspace':
+				deleteSelection();
+				break;
+			case 'ArrowLeft':
+				moveSelection(-(e.shiftKey ? barSteps() : snapSteps), 0);
+				break;
+			case 'ArrowRight':
+				moveSelection(e.shiftKey ? barSteps() : snapSteps, 0);
+				break;
+			case 'ArrowUp':
+				moveSelection(0, -(e.shiftKey ? 12 : 1));
+				break; // lower index = higher pitch
+			case 'ArrowDown':
+				moveSelection(0, e.shiftKey ? 12 : 1);
+				break;
+			default:
+				return;
 		}
 		e.preventDefault();
 		e.stopPropagation();
@@ -446,9 +571,12 @@
 		};
 	});
 
-	let totalPages = $derived(Math.max(1, Math.ceil($totalPatternSteps / ((METER_SPECS[$timeMeter] || METER_SPECS['4/4']).stepsPerBar))));
-
-
+	let totalPages = $derived(
+		Math.max(
+			1,
+			Math.ceil($totalPatternSteps / (METER_SPECS[$timeMeter] || METER_SPECS['4/4']).stepsPerBar)
+		)
+	);
 
 	function onPageInput(e: Event) {
 		const raw = (e.target as HTMLInputElement).value;
@@ -484,10 +612,11 @@
 			playSound('click');
 		}
 	}
-
 </script>
 
-<div class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
+<div
+	class="border border-white/20 p-1.5 bg-black/60 rounded-xs flex-1 min-h-0 flex flex-col overflow-hidden gap-1"
+>
 	<div class="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold shrink-0">
 		<div class="flex items-center gap-2">
 			<!-- Same name the ADV view switcher uses for it, so the two agree. -->
@@ -501,8 +630,12 @@
 						toggleRollFullscreen();
 						playSound('toggle');
 					}}
-					title={$rollFullscreen ? $t('synthPanels.roll.fullscreenOffHint') : $t('synthPanels.roll.fullscreenOnHint')}
-					aria-label={$rollFullscreen ? $t('synthPanels.roll.fullscreenOffHint') : $t('synthPanels.roll.fullscreenOnHint')}
+					title={$rollFullscreen
+						? $t('synthPanels.roll.fullscreenOffHint')
+						: $t('synthPanels.roll.fullscreenOnHint')}
+					aria-label={$rollFullscreen
+						? $t('synthPanels.roll.fullscreenOffHint')
+						: $t('synthPanels.roll.fullscreenOnHint')}
 					class="press h-5 w-5 flex items-center justify-center border rounded-xs text-[10px] leading-none cursor-pointer transition-colors shrink-0 {$rollFullscreen
 						? 'border-[#56b6c2] bg-[#56b6c2]/20 text-[#56b6c2]'
 						: 'border-white/20 text-white/40 hover:text-white hover:border-white/60'}"
@@ -525,7 +658,12 @@
 			{:else}
 				<button
 					onclick={startRename}
-					title={$t('synthPanels.roll.renameHint', { name: trackName, track: $activeTrackId + 1, max: NAME_MAX, show: NAME_SHOW })}
+					title={$t('synthPanels.roll.renameHint', {
+						name: trackName,
+						track: $activeTrackId + 1,
+						max: NAME_MAX,
+						show: NAME_SHOW
+					})}
 					class="press px-1.5 py-0.5 text-xs font-mono font-bold rounded-xs border cursor-pointer transition-colors hover:brightness-125 max-w-[190px] truncate"
 					style="color: {$currentTrack.color}; border-color: color-mix(in srgb, {$currentTrack.color} 50%, transparent); background: color-mix(in srgb, {$currentTrack.color} 12%, transparent)"
 				>
@@ -533,19 +671,42 @@
 				</button>
 			{/if}
 			<span class="text-xs text-[#98c379] font-mono font-bold">
-				BAR {Math.floor($seqCurrentStep / stepsPerPage) + 1}.{Math.floor(($seqCurrentStep % stepsPerPage) / (stepsPerPage / meterSpec.beatsPerBar)) + 1} (STEP {$seqCurrentStep + 1}/{$totalPatternSteps})
+				BAR {Math.floor($seqCurrentStep / stepsPerPage) + 1}.{Math.floor(
+					($seqCurrentStep % stepsPerPage) / (stepsPerPage / meterSpec.beatsPerBar)
+				) + 1} (STEP {$seqCurrentStep + 1}/{$totalPatternSteps})
 			</span>
 		</div>
 
 		<div class="flex items-center gap-1.5 text-xs">
 			{#if $selection.size}
-				<span class="text-xs font-mono font-bold text-white/80 px-1.5 py-0.5 border border-white/40 rounded-xs" title={$t('synthPanels.roll.selectionHint')}>
+				<span
+					class="text-xs font-mono font-bold text-white/80 px-1.5 py-0.5 border border-white/40 rounded-xs"
+					title={$t('synthPanels.roll.selectionHint')}
+				>
 					SEL {$selection.size}
 				</span>
 			{/if}
-			<button onclick={() => { if (undo()) playSound('click'); }} disabled={!$canUndo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title={$t('synthPanels.roll.undoHint')}>↶</button>
-			<button onclick={() => { if (redo()) playSound('click'); }} disabled={!$canRedo} class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors" title={$t('synthPanels.roll.redoHint')}>↷</button>
-			<button onclick={clearPage} class="press border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold transition-colors" title={$t('synthPanels.roll.clearPageHint')}>
+			<button
+				onclick={() => {
+					if (undo()) playSound('click');
+				}}
+				disabled={!$canUndo}
+				class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors"
+				title={$t('synthPanels.roll.undoHint')}>↶</button
+			>
+			<button
+				onclick={() => {
+					if (redo()) playSound('click');
+				}}
+				disabled={!$canRedo}
+				class="press border border-white/20 px-1.5 py-0.5 rounded-xs hover:border-white/50 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors"
+				title={$t('synthPanels.roll.redoHint')}>↷</button
+			>
+			<button
+				onclick={clearPage}
+				class="press border border-white/20 px-2 py-0.5 rounded-xs hover:border-red-400 text-red-300 cursor-pointer text-xs font-bold transition-colors"
+				title={$t('synthPanels.roll.clearPageHint')}
+			>
 				✕ CLR
 			</button>
 
@@ -555,7 +716,9 @@
 			     naming what the arrows either side of each number already say, and
 			     "OCT:" carries the rest. The two ends read as a span now: 3-5. -->
 			<div class="flex items-center gap-1 text-xs">
-				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.roll.octScopeHint')}>OCT:</span>
+				<span class="opacity-60 text-xs font-bold" title={$t('synthPanels.roll.octScopeHint')}
+					>OCT:</span
+				>
 
 				<div class="flex items-center gap-0.5">
 					<button
@@ -569,7 +732,11 @@
 					>
 						◄
 					</button>
-					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center" title={$t('synthPanels.roll.startOctaveHint', { octave: octaveFrom })}>{octaveFrom}</span>
+					<span
+						class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#56b6c2] min-w-[16px] text-center"
+						title={$t('synthPanels.roll.startOctaveHint', { octave: octaveFrom })}
+						>{octaveFrom}</span
+					>
 					<button
 						onclick={() => {
 							octaveFrom = Math.min(octaveTo, octaveFrom + 1);
@@ -595,7 +762,10 @@
 					>
 						◄
 					</button>
-					<span class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#e5c07b] min-w-[16px] text-center" title={$t('synthPanels.roll.endOctaveHint', { octave: octaveTo })}>{octaveTo}</span>
+					<span
+						class="px-1 py-0.5 text-xs font-mono font-bold bg-white/10 rounded-xs text-[#e5c07b] min-w-[16px] text-center"
+						title={$t('synthPanels.roll.endOctaveHint', { octave: octaveTo })}>{octaveTo}</span
+					>
 					<button
 						onclick={() => {
 							octaveTo = Math.min(7, octaveTo + 1);
@@ -614,53 +784,71 @@
 			<!-- PAGE lives with the roll it pages through, not with the transport:
 			     it is a view control, and beside OCT it reads as one. -->
 			<div class="flex items-center gap-1 text-xs">
-			<span class="opacity-60 font-bold" title={$t('synth.transport.pageNavHint')}>PAGE:</span>
-			<button onclick={prevPatternPage} disabled={$activeStepPage === 0} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pagePrevHint')}>
-				◄
-			</button>
-			<div
-				class="flex items-center bg-white/10 border border-white/20 hover:border-white/40 rounded-xs px-1 py-0.5 text-xs font-mono font-bold"
-				title={$t('synth.transport.pageJumpHint', { page: $activeStepPage + 1, total: totalPages })}
-			>
-				<input
-					type="text"
-					inputmode="numeric"
-					pattern="[0-9]*"
-					value={$pageInputStr}
-					onfocus={(e) => (e.target as HTMLInputElement).select()}
-					oninput={onPageInput}
-					onblur={onPageBlur}
-					onkeydown={onPageKeydown}
-					class="w-8 text-center bg-transparent text-white font-mono font-black focus:outline-none focus:bg-white/20 rounded-xs p-0 m-0"
-				/>
-				<span class="opacity-40 select-none">/{totalPages}</span>
-			</div>
-			<button onclick={nextPatternPage} disabled={$activeStepPage >= totalPages - 1} class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs" title={$t('synth.transport.pageNextHint')}>
-				►
-			</button>
-			<button
-				onclick={() => {
-					pageFollow.update((v) => !v);
-					playSound('toggle');
-				}}
-				class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs {$pageFollow ? 'border-[#98c379] bg-[#98c379] text-black font-black' : 'border-white/20 text-white/50'}"
-				title={$t('synth.transport.followHint')}
-			>
-				FLW
-			</button>
-
+				<span class="opacity-60 font-bold" title={$t('synth.transport.pageNavHint')}>PAGE:</span>
+				<button
+					onclick={prevPatternPage}
+					disabled={$activeStepPage === 0}
+					class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+					title={$t('synth.transport.pagePrevHint')}
+				>
+					◄
+				</button>
+				<div
+					class="flex items-center bg-white/10 border border-white/20 hover:border-white/40 rounded-xs px-1 py-0.5 text-xs font-mono font-bold"
+					title={$t('synth.transport.pageJumpHint', {
+						page: $activeStepPage + 1,
+						total: totalPages
+					})}
+				>
+					<input
+						type="text"
+						inputmode="numeric"
+						pattern="[0-9]*"
+						value={$pageInputStr}
+						onfocus={(e) => (e.target as HTMLInputElement).select()}
+						oninput={onPageInput}
+						onblur={onPageBlur}
+						onkeydown={onPageKeydown}
+						class="w-8 text-center bg-transparent text-white font-mono font-black focus:outline-none focus:bg-white/20 rounded-xs p-0 m-0"
+					/>
+					<span class="opacity-40 select-none">/{totalPages}</span>
+				</div>
+				<button
+					onclick={nextPatternPage}
+					disabled={$activeStepPage >= totalPages - 1}
+					class="px-1.5 py-0.5 border border-white/20 rounded-xs font-bold disabled:opacity-30 hover:border-white/50 cursor-pointer disabled:cursor-not-allowed text-xs"
+					title={$t('synth.transport.pageNextHint')}
+				>
+					►
+				</button>
+				<button
+					onclick={() => {
+						pageFollow.update((v) => !v);
+						playSound('toggle');
+					}}
+					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer text-xs {$pageFollow
+						? 'border-[#98c379] bg-[#98c379] text-black font-black'
+						: 'border-white/20 text-white/50'}"
+					title={$t('synth.transport.followHint')}
+				>
+					FLW
+				</button>
 			</div>
 
 			<span class="opacity-30">|</span>
-
 		</div>
 	</div>
 
 	<div class="flex-1 min-h-0 overflow-x-auto no-scrollbar flex flex-col">
 		<div class="min-w-[480px] sm:min-w-0 flex-1 min-h-0 flex flex-col justify-between">
 			<!-- Fixed timeline ruler -->
-			<div class="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0 select-none">
-				<div class="flex-1 gap-0.5" style="display: grid; grid-template-columns: repeat({colsPerPage}, minmax(0, 1fr));">
+			<div
+				class="flex items-center gap-1 pl-10 pr-0.5 text-xs font-mono text-white/50 border-b border-white/10 pb-0.5 shrink-0 select-none"
+			>
+				<div
+					class="flex-1 gap-0.5"
+					style="display: grid; grid-template-columns: repeat({colsPerPage}, minmax(0, 1fr));"
+				>
 					{#each Array.from({ length: colsPerPage }) as _, colIdx (colIdx)}
 						{@const globalCol = viewportStartCol + colIdx}
 						{@const barNum = Math.floor(globalCol / effColsPerBar) + 1}
@@ -688,9 +876,19 @@
 														: isBeatStart && subCol === 0
 															? 'bg-white/15 text-white font-bold'
 															: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
-											title={$t('synthPanels.roll.jumpToStepHint', { step: step + 1, bar: barNum, beat: beatNum })}
+											title={$t('synthPanels.roll.jumpToStepHint', {
+												step: step + 1,
+												bar: barNum,
+												beat: beatNum
+											})}
 										>
-											{subCol === 0 ? (isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`) : '+'}
+											{subCol === 0
+												? isBarStart
+													? `${barNum}.1`
+													: isBeatStart
+														? `${barNum}.${beatNum}`
+														: `${colIdx + 1}`
+												: '+'}
 										</button>
 									{/each}
 								</div>
@@ -706,9 +904,18 @@
 												: isBeatStart
 													? 'bg-white/15 text-white'
 													: 'text-white/30 hover:bg-white/10 hover:text-white/70'}"
-									title={$t('synthPanels.roll.jumpToColumnHint', { column: colIdx + 1, step: globalCol * spc + 1, bar: barNum, beat: beatNum })}
+									title={$t('synthPanels.roll.jumpToColumnHint', {
+										column: colIdx + 1,
+										step: globalCol * spc + 1,
+										bar: barNum,
+										beat: beatNum
+									})}
 								>
-									{isBarStart ? `${barNum}.1` : isBeatStart ? `${barNum}.${beatNum}` : `${colIdx + 1}`}
+									{isBarStart
+										? `${barNum}.1`
+										: isBeatStart
+											? `${barNum}.${beatNum}`
+											: `${colIdx + 1}`}
 								</button>
 							{/if}
 						</div>
@@ -753,11 +960,17 @@
 					{@const sub = hasSubColumns($snapDiv)}
 					<div
 						class="absolute top-0 left-0 !mt-0 z-[1] pointer-events-none rounded-xs bg-white/20 border border-white/60 will-change-transform"
-						style="transform: translateX({40 + (activeCol + (sub ? activeSubCol * 0.5 : 0)) * pitch}px); width: {pitch / (sub ? 2 : 1) - 2}px; height: {visibleNotes.length * 20 - 2}px;"
+						style="transform: translateX({40 +
+							(activeCol + (sub ? activeSubCol * 0.5 : 0)) * pitch}px); width: {pitch /
+							(sub ? 2 : 1) -
+							2}px; height: {visibleNotes.length * 20 - 2}px;"
 					></div>
 				{/if}
 				{#if marquee}
-					<div class="absolute z-[5] pointer-events-none border border-white/70 bg-white/10 rounded-xs" style="left: {marquee.left}px; top: {marquee.top}px; width: {marquee.width}px; height: {marquee.height}px;"></div>
+					<div
+						class="absolute z-[5] pointer-events-none border border-white/70 bg-white/10 rounded-xs"
+						style="left: {marquee.left}px; top: {marquee.top}px; width: {marquee.width}px; height: {marquee.height}px;"
+					></div>
 				{/if}
 			</div>
 

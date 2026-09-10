@@ -3,7 +3,14 @@
 	import { suspendNavHotkeys, consoleHotkeyWhileSuspended } from '$lib/stores/hotkeys';
 	import Onboarding from '$lib/components/chrome/Onboarding.svelte';
 	import { getLifelabTour } from '$lib/components/lifelab/lifelab-tour';
-	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '$lib/stores/chrome';
+	import {
+		guideSeen,
+		markGuideSeen,
+		enqueueOnboarding,
+		dequeueOnboarding,
+		isOnboardingActive,
+		openOnboardingNow
+	} from '$lib/stores/chrome';
 	import { t, locale } from '$lib/i18n';
 
 	/**
@@ -23,7 +30,10 @@
 	let guideActive = isOnboardingActive(TOUR);
 	// Recomputed whenever the language changes, so the tour never opens in a
 	// locale that was current only at the time the page first mounted.
-	let tourSteps = $derived.by(() => { $locale; return getLifelabTour(); });
+	let tourSteps = $derived.by(() => {
+		$locale;
+		return getLifelabTour();
+	});
 
 	function closeGuide() {
 		dequeueOnboarding(TOUR);
@@ -65,10 +75,7 @@
 
 <svelte:head>
 	<title>{$t('lifelab.page.title')}</title>
-	<meta
-		name="description"
-		content={$t('lifelab.page.description')}
-	/>
+	<meta name="description" content={$t('lifelab.page.description')} />
 </svelte:head>
 
 <!-- The ids below are the game's own contract; main.js looks each of them up.
@@ -90,8 +97,11 @@
 				<button
 					id="llguide"
 					title={$t('lifelab.page.guideHint')}
-					onclick={() => openOnboardingNow(TOUR)}>?</button>
-				<button id="wipebtn" title={$t('lifelab.page.clearAllHint')}>{$t('lifelab.ui.clearAll')}</button>
+					onclick={() => openOnboardingNow(TOUR)}>?</button
+				>
+				<button id="wipebtn" title={$t('lifelab.page.clearAllHint')}
+					>{$t('lifelab.ui.clearAll')}</button
+				>
 			</span>
 		</div>
 		<div id="topbar"></div>
@@ -106,7 +116,8 @@
 				     record of what just happened, glanced at, not worked in. -->
 				<div id="logwrap" data-tour="ll-log">
 					<div class="shead" id="loghead">
-						<span>{$t('lifelab.page.logLabel')}</span><small>{$t('lifelab.page.logSubtitle')}</small>
+						<span>{$t('lifelab.page.logLabel')}</span><small>{$t('lifelab.page.logSubtitle')}</small
+						>
 						<button id="logtoggle" title={$t('lifelab.page.hideLogHint')}>_</button>
 					</div>
 					<div id="term"></div>

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { CHUNK, BLOCK_BYTES, createLazyImage, type OverlayBlocks } from '../../src/lib/components/krsz-vm/qemu-disk';
+import {
+	CHUNK,
+	BLOCK_BYTES,
+	createLazyImage,
+	type OverlayBlocks
+} from '../../src/lib/components/krsz-vm/qemu-disk';
 
 /**
  * QEMU's lazy disk: reads fault a megabyte in over HTTP, writes copy that

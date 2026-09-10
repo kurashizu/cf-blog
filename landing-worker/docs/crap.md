@@ -29,7 +29,7 @@ first. When `reports/mutation/report.json` exists it adds a `mut%` column.
 
 ## Why the mutation score is there too
 
-Coverage says a line *ran*. It does not say a test would *notice* that line
+Coverage says a line _ran_. It does not say a test would _notice_ that line
 changing. Mutation testing answers the second question: Stryker rewrites the
 source (`<` to `<=`, `+` to `-`, deleting a call) and re-runs the suite; a
 mutant that survives is a change no assertion caught.
@@ -49,10 +49,10 @@ that exist worth anything".
 The two functions at the top of the whole-codebase list are far beyond
 anything else:
 
-| function | file | CC |
-| --- | --- | --- |
-| `runOne` | `src/lib/stores/console.ts:345` | 189 |
-| `triggerTrackVoice` | `src/lib/synth.ts:1517` | 169 |
+| function            | file                            | CC  |
+| ------------------- | ------------------------------- | --- |
+| `runOne`            | `src/lib/stores/console.ts:345` | 189 |
+| `triggerTrackVoice` | `src/lib/synth.ts:1517`         | 169 |
 
 Third place is 54. Both are command dispatchers — a long `if/else if` chain
 over command names, or over track parameters — so the complexity is a shape,
@@ -62,7 +62,7 @@ straight into Svelte stores, the SvelteKit runtime and Web Audio.
 
 Below them, 109 functions have CC ≥ 10 and 15 have CC ≥ 30.
 
-Among the files that *are* tested, nothing now scores above 42. The previous
+Among the files that _are_ tested, nothing now scores above 42. The previous
 holder was `kindOf` at 702 (CC 26, no coverage); it classifies a Life pattern
 by simulating it, so it could be checked against facts — a block is a still
 life, a glider is a ship — and the score fell to 26.
@@ -122,20 +122,20 @@ in the same commit.
 
 ## Where the numbers stand
 
-| file | coverage | mutation |
-| --- | --- | --- |
-| `relay-allowlist.ts` | 100% | 97% |
-| `engine.js` | 100% | 95% |
-| `omniproxy-protocol.ts` | 100% | 91% |
-| `vm-storage.ts` | 100% | 90% |
-| `routes-map.ts` | 100% | 85% |
-| `evaluator.ts` | 100% | 83% |
-| `midi-file.ts` | 98% | 83% |
-| `dns-message.ts` | 100% | 82% |
-| `patterns.js` | 83% | 82%¹ |
-| `text-scale.ts` | 40%² | 81%¹ |
-| `disk-overlay.ts` | 88% | 75% |
-| `markdown.ts` | 98% | 71%¹ |
+| file                    | coverage | mutation |
+| ----------------------- | -------- | -------- |
+| `relay-allowlist.ts`    | 100%     | 97%      |
+| `engine.js`             | 100%     | 95%      |
+| `omniproxy-protocol.ts` | 100%     | 91%      |
+| `vm-storage.ts`         | 100%     | 90%      |
+| `routes-map.ts`         | 100%     | 85%      |
+| `evaluator.ts`          | 100%     | 83%      |
+| `midi-file.ts`          | 98%      | 83%      |
+| `dns-message.ts`        | 100%     | 82%      |
+| `patterns.js`           | 83%      | 82%¹     |
+| `text-scale.ts`         | 40%²     | 81%¹     |
+| `disk-overlay.ts`       | 88%      | 75%      |
+| `markdown.ts`           | 98%      | 71%¹     |
 
 Across the tested set: 92% of statements, 93% of lines, 76% mutation score.
 

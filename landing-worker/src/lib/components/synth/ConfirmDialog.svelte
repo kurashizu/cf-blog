@@ -64,36 +64,41 @@
 
 <div use:portal class="contents">
 	{#if $confirmRequest}
-	<div class="fixed inset-0 z-[180] bg-black/70" onclick={cancel} role="presentation" in:fade={{ duration: 120 }}></div>
-	<div
-		class="fixed z-[190] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-[#121417] border border-[#e5c07b]/60 rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 text-xs font-mono"
-		role="alertdialog"
-		aria-modal="true"
-		aria-label={$confirmRequest.title}
-		in:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
-	>
-		<div class="flex items-center gap-1.5 pb-2 border-b border-white/10 mb-2">
-			<span class="text-[#e5c07b] text-[10px] leading-none">{'▲'}</span>
-			<span class="font-black text-[#e5c07b]">{$confirmRequest.title}</span>
-		</div>
+		<div
+			class="fixed inset-0 z-[180] bg-black/70"
+			onclick={cancel}
+			role="presentation"
+			in:fade={{ duration: 120 }}
+		></div>
+		<div
+			class="fixed z-[190] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] max-w-[92vw] bg-[#121417] border border-[#e5c07b]/60 rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 text-xs font-mono"
+			role="alertdialog"
+			aria-modal="true"
+			aria-label={$confirmRequest.title}
+			in:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
+		>
+			<div class="flex items-center gap-1.5 pb-2 border-b border-white/10 mb-2">
+				<span class="text-[#e5c07b] text-[10px] leading-none">{'▲'}</span>
+				<span class="font-black text-[#e5c07b]">{$confirmRequest.title}</span>
+			</div>
 
-		<p class="text-white/70 leading-relaxed">{$confirmRequest.body}</p>
+			<p class="text-white/70 leading-relaxed">{$confirmRequest.body}</p>
 
-		<div class="flex items-center justify-end gap-1.5 mt-3">
-			<button
-				bind:this={cancelBtn}
-				onclick={cancel}
-				class="press px-3 py-0.5 border border-white/25 text-white/70 hover:border-white/60 hover:text-white rounded-xs text-[10px] font-bold cursor-pointer transition-colors"
-			>
-				{$t('synth.confirm.cancel')}
-			</button>
-			<button
-				onclick={accept}
-				class="press px-3 py-0.5 border border-[#e5c07b] bg-[#e5c07b] text-black rounded-xs text-[10px] font-black cursor-pointer hover:brightness-110"
-			>
-				{$confirmRequest.confirmLabel}
-			</button>
+			<div class="flex items-center justify-end gap-1.5 mt-3">
+				<button
+					bind:this={cancelBtn}
+					onclick={cancel}
+					class="press px-3 py-0.5 border border-white/25 text-white/70 hover:border-white/60 hover:text-white rounded-xs text-[10px] font-bold cursor-pointer transition-colors"
+				>
+					{$t('synth.confirm.cancel')}
+				</button>
+				<button
+					onclick={accept}
+					class="press px-3 py-0.5 border border-[#e5c07b] bg-[#e5c07b] text-black rounded-xs text-[10px] font-black cursor-pointer hover:brightness-110"
+				>
+					{$confirmRequest.confirmLabel}
+				</button>
+			</div>
 		</div>
-	</div>
 	{/if}
 </div>

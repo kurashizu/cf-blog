@@ -30,7 +30,9 @@ function tone(f: number, tau: number, n = SR): Float64Array {
 function noise(tau: number, n = SR, seed = 1): Float64Array {
 	let s = seed >>> 0 || 1;
 	const rnd = () => {
-		s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
+		s ^= s << 13;
+		s ^= s >>> 17;
+		s ^= s << 5;
 		return ((s >>> 0) % 100000) / 50000 - 1;
 	};
 	const a = new Float64Array(n);
@@ -58,7 +60,8 @@ describe('spectral similarity', () => {
 	});
 
 	it('is symmetric', () => {
-		const a = specOf(tone(120, 0.2)), b = specOf(noise(0.2));
+		const a = specOf(tone(120, 0.2)),
+			b = specOf(noise(0.2));
 		expect(corr(a, b)).toBeCloseTo(corr(b, a), 9);
 	});
 
@@ -92,7 +95,8 @@ describe('envelope similarity', () => {
 
 describe('the combined score', () => {
 	const score = (a: Float64Array, b: Float64Array) =>
-		0.75 * ((corr(specOf(a), specOf(b)) + 1) / 2) + 0.25 * ((convMatch(envOf(a), envOf(b)) + 1) / 2);
+		0.75 * ((corr(specOf(a), specOf(b)) + 1) / 2) +
+		0.25 * ((convMatch(envOf(a), envOf(b)) + 1) / 2);
 
 	it('gives a drum against itself a perfect score', () => {
 		const a = tone(60, 0.3);
@@ -117,11 +121,11 @@ describe('the combined score', () => {
 describe('the rebuilt kit (recorded from the browser probe)', () => {
 	/** Every key's graph, by the node types along its signal path. */
 	const SHAPES: Record<string, number> = {
-		'in>excite>modes>body>out': 15,      // heads: kick, toms, congas
-		'in>excite>modes>drive>out': 11,     // bars: cowbell, agogo, triangle
+		'in>excite>modes>body>out': 15, // heads: kick, toms, congas
+		'in>excite>modes>drive>out': 11, // bars: cowbell, agogo, triangle
 		'in>excite>filter>comb>space>out': 10, // cymbals: hats, crashes, ride
-		'in>excite>modes>out': 5,            // sticks: blocks, claves, clap
-		'in>excite>filter>delay>out': 4,     // shakers: cabasa, maracas, guiro
+		'in>excite>modes>out': 5, // sticks: blocks, claves, clap
+		'in>excite>filter>delay>out': 4, // shakers: cabasa, maracas, guiro
 		'in>excite>modes>excite>filter>mix>body>out': 2 // snares: head plus wires
 	};
 
@@ -151,9 +155,12 @@ describe('the rebuilt kit (recorded from the browser probe)', () => {
 
 	/** Fundamental measured at the onset, against what each drum was written as. */
 	const PITCH: Record<string, [number, number]> = {
-		'ACOUSTIC BASS DRUM': [48, 48.4], 'BASS DRUM 1': [58, 56.5],
-		'ACOUSTIC SNARE': [185, 185.7], 'LOW FLOOR TOM': [78, 78.1],
-		'LOW TOM': [115, 115.7], COWBELL: [540, 541]
+		'ACOUSTIC BASS DRUM': [48, 48.4],
+		'BASS DRUM 1': [58, 56.5],
+		'ACOUSTIC SNARE': [185, 185.7],
+		'LOW FLOOR TOM': [78, 78.1],
+		'LOW TOM': [115, 115.7],
+		COWBELL: [540, 541]
 	};
 
 	it('sounds every pitched drum at the frequency it was written as', () => {
@@ -165,7 +172,9 @@ describe('the rebuilt kit (recorded from the browser probe)', () => {
 	it('has no key clipping, silent, or cut short', () => {
 		// Measured across all 47: peaks 0.036-0.252, none over 1.0, none under
 		// 0.01, and none decaying to under 40% of its written tail.
-		const CLIPPING = 0, SILENT = 0, TOO_SHORT = 0;
+		const CLIPPING = 0,
+			SILENT = 0,
+			TOO_SHORT = 0;
 		expect([CLIPPING, SILENT, TOO_SHORT]).toEqual([0, 0, 0]);
 	});
 });

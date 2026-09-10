@@ -122,15 +122,14 @@
 	     own lines behind every value you were trying to judge. The roll gives up
 	     the height and takes it back on collapse. -->
 	{#if $laneEditorOpen}
-		<div
-			class="border border-white/20 rounded-xs bg-black mb-1"
-			style="height: {expandedH}px"
-		>
+		<div class="border border-white/20 rounded-xs bg-black mb-1" style="height: {expandedH}px">
 			<!-- Chips built like the TRK row: every lane is drawn at once, and the
 			     chip says which one the pointer edits. Same shape, same reading --
 			     a filled square is the one you are working on, a hollow one is
 			     visible but not being drawn. -->
-			<div class="flex items-center gap-1.5 px-1 h-6 border-b border-white/10 text-xs font-mono overflow-x-auto no-scrollbar">
+			<div
+				class="flex items-center gap-1.5 px-1 h-6 border-b border-white/10 text-xs font-mono overflow-x-auto no-scrollbar"
+			>
 				<span class="text-white/50 font-bold shrink-0 select-none">LANE:</span>
 				{#each $trackLanes as l (l.id)}
 					{@const isEditing = $activeLaneId === l.id}
@@ -141,7 +140,10 @@
 					>
 						<button
 							type="button"
-							onclick={() => { selectLane(l.id); playSound('click'); }}
+							onclick={() => {
+								selectLane(l.id);
+								playSound('click');
+							}}
 							class="press pl-1.5 pr-0.5 py-0.5 flex items-center justify-center cursor-pointer group"
 							title={l.mode === 'sampled'
 								? $t('synthPanels.lane.sampledHint')
@@ -151,45 +153,66 @@
 								class="w-2.5 h-2.5 inline-block shrink-0 rounded-[1px] transition-all {isEditing
 									? 'shadow-[0_0_6px_currentColor]'
 									: 'border border-current bg-transparent opacity-60 group-hover:opacity-100'}"
-								style="color: {l.color}; background-color: {isEditing ? l.color : 'transparent'}; border-color: {l.color};"
+								style="color: {l.color}; background-color: {isEditing
+									? l.color
+									: 'transparent'}; border-color: {l.color};"
 							></span>
 						</button>
 						<button
 							type="button"
-							onclick={() => { selectLane(l.id); playSound('click'); }}
+							onclick={() => {
+								selectLane(l.id);
+								playSound('click');
+							}}
 							class="press pl-1 pr-1.5 py-0.5 font-bold cursor-pointer flex items-center transition-colors"
-							style={isEditing ? `color: ${l.color}` : ''}
-						>{l.name}</button>
+							style={isEditing ? `color: ${l.color}` : ''}>{l.name}</button
+						>
 						{#if l.id !== 'vel'}
 							<button
-								onclick={() => { removeTrackLane(l.id); playSound('click'); }}
+								onclick={() => {
+									removeTrackLane(l.id);
+									playSound('click');
+								}}
 								class="press px-1 border-l border-white/15 text-[#e06c75] hover:text-white cursor-pointer leading-none"
-								title={$t('synthPanels.lane.removeHint')}>×</button>
+								title={$t('synthPanels.lane.removeHint')}>×</button
+							>
 						{/if}
 					</div>
 				{/each}
 
 				{#if $lanesRemaining > 0}
 					<button
-						onclick={() => { addTrackLane(); playSound('click'); }}
+						onclick={() => {
+							addTrackLane();
+							playSound('click');
+						}}
 						class="press px-1.5 py-0.5 rounded-xs border border-white/25 text-white/60 hover:text-white hover:border-white/60 cursor-pointer shrink-0 font-bold"
-						title={$t('synthPanels.lane.addHint')}>+</button>
+						title={$t('synthPanels.lane.addHint')}>+</button
+					>
 				{/if}
 
 				<span class="flex-1"></span>
 
 				<button
-					onclick={() => { resetLane(); playSound('click'); }}
+					onclick={() => {
+						resetLane();
+						playSound('click');
+					}}
 					class="press px-1 py-0.5 rounded-xs border border-white/25 text-white/50 hover:text-white hover:border-white/60 cursor-pointer"
-					title={$t('synthPanels.lane.clearHint')}>CLR</button>
+					title={$t('synthPanels.lane.clearHint')}>CLR</button
+				>
 				<button
-					onclick={() => { toggleLaneEditor(); playSound('click'); }}
+					onclick={() => {
+						toggleLaneEditor();
+						playSound('click');
+					}}
 					class="press px-1 py-0.5 rounded-xs border border-white/25 text-white/60 hover:text-white hover:border-white/60 cursor-pointer"
-					title={$t('synthPanels.lane.closeHint')}>▾</button>
+					title={$t('synthPanels.lane.closeHint')}>▾</button
+				>
 			</div>
 
 			<div class="flex" style="height: {expandedH - 20}px">
-			<!-- A value scale down the left, in exactly the 40px the roll reserves
+				<!-- A value scale down the left, in exactly the 40px the roll reserves
 			     for its note names. Same gutter, so step 0 of the lane sits above
 			     step 0 of the grid: a curve is drawn at particular notes, and a
 			     plot offset by even a few pixels from the notes it shapes is
@@ -197,98 +220,130 @@
 			
 			     Percent, because a lane is normalised and does not know what it
 			     will end up driving. -->
-			<div class="shrink-0 relative border-r border-white/10 text-[8px] font-mono text-white/40 select-none" style="width: 40px">
-				{#each [1, 0.75, 0.5, 0.25, 0] as v (v)}
-					<!-- Nudged inward at both ends rather than centred on the line.
+				<div
+					class="shrink-0 relative border-r border-white/10 text-[8px] font-mono text-white/40 select-none"
+					style="width: 40px"
+				>
+					{#each [1, 0.75, 0.5, 0.25, 0] as v (v)}
+						<!-- Nudged inward at both ends rather than centred on the line.
 					
 					     A label is centred on its value, so at 100 the top half sat
 					     above the plot and at 0 the bottom half sat below it -- both
 					     clipped by the panel edge. The two extremes hang inside
 					     instead: 100 sits just under its line, 0 just above its own,
 					     which is how a fader scale is printed anyway. -->
-					<!-- Both extremes hang INSIDE their line rather than straddling it:
+						<!-- Both extremes hang INSIDE their line rather than straddling it:
 					     100 sits just below the top, 0 just above the bottom. Centred,
 					     each had half its height outside the plot and was clipped by
 					     the panel -- and at the bottom the beat ruler took that space
 					     as well, so 0 overflowed twice over. -->
-					<span
-						class="absolute right-1 leading-none"
-						style="top: {v === 1
-							? 1
-							: v === 0
-								? expandedH - 20 - BEAT_RULER_H - 14
-								: (1 - v) * (expandedH - 20) - 4}px"
-						>{Math.round(v * 100)}</span>
-				{/each}
-			</div>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				bind:this={stripEl}
-				onpointerdown={onDown}
-				onpointermove={onMove}
-				onpointerup={onUp}
-				onpointercancel={onUp}
-				class="relative cursor-crosshair flex-1"
-				style="height: {expandedH - 20}px"
-			>
-				<svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 {expandedH - 20}" preserveAspectRatio="none">
-					<!-- The same divisions the roll draws: a line per snap column, a
+						<span
+							class="absolute right-1 leading-none"
+							style="top: {v === 1
+								? 1
+								: v === 0
+									? expandedH - 20 - BEAT_RULER_H - 14
+									: (1 - v) * (expandedH - 20) - 4}px">{Math.round(v * 100)}</span
+						>
+					{/each}
+				</div>
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					bind:this={stripEl}
+					onpointerdown={onDown}
+					onpointermove={onMove}
+					onpointerup={onUp}
+					onpointercancel={onUp}
+					class="relative cursor-crosshair flex-1"
+					style="height: {expandedH - 20}px"
+				>
+					<svg
+						class="absolute inset-0 w-full h-full"
+						viewBox="0 0 100 {expandedH - 20}"
+						preserveAspectRatio="none"
+					>
+						<!-- The same divisions the roll draws: a line per snap column, a
 					     brighter one per beat, brightest per bar. Without them the plot
 					     was an undivided rectangle and a point could not be placed at a
 					     beat except by eye. -->
-					{#each Array.from({ length: colsPerPage + 1 }) as _, c (c)}
-						{@const isBar = c % effColsPerBar === 0}
-						{@const isBeat = c % effColsPerBeat === 0}
-						<line
-							x1={((c * spc) / steps) * 100} x2={((c * spc) / steps) * 100}
-							y1="0" y2={expandedH - 20}
-							stroke={isBar
-								? 'rgba(86,182,194,0.55)'
-								: isBeat
-									? 'rgba(255,255,255,0.22)'
-									: 'rgba(255,255,255,0.08)'}
-							stroke-width={isBar ? 1 : 0.5} vector-effect="non-scaling-stroke" />
-					{/each}
-					<!-- Quarter lines, so the scale on the left has something to read
+						{#each Array.from({ length: colsPerPage + 1 }) as _, c (c)}
+							{@const isBar = c % effColsPerBar === 0}
+							{@const isBeat = c % effColsPerBeat === 0}
+							<line
+								x1={((c * spc) / steps) * 100}
+								x2={((c * spc) / steps) * 100}
+								y1="0"
+								y2={expandedH - 20}
+								stroke={isBar
+									? 'rgba(86,182,194,0.55)'
+									: isBeat
+										? 'rgba(255,255,255,0.22)'
+										: 'rgba(255,255,255,0.08)'}
+								stroke-width={isBar ? 1 : 0.5}
+								vector-effect="non-scaling-stroke"
+							/>
+						{/each}
+						<!-- Quarter lines, so the scale on the left has something to read
 					     against: a number in the margin says nothing without a rule
 					     across the plot at the same height. -->
-					{#each [0.25, 0.5, 0.75] as v (v)}
-						<line x1="0" x2="100" y1={(1 - v) * (expandedH - 20)} y2={(1 - v) * (expandedH - 20)}
-							stroke={v === 0.5 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.07)'}
-							stroke-width="1" vector-effect="non-scaling-stroke" />
-					{/each}
+						{#each [0.25, 0.5, 0.75] as v (v)}
+							<line
+								x1="0"
+								x2="100"
+								y1={(1 - v) * (expandedH - 20)}
+								y2={(1 - v) * (expandedH - 20)}
+								stroke={v === 0.5 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.07)'}
+								stroke-width="1"
+								vector-effect="non-scaling-stroke"
+							/>
+						{/each}
 
-					<!-- Every lane at once, like OVLY draws every track: the one being
+						<!-- Every lane at once, like OVLY draws every track: the one being
 					     edited is solid and the rest sit behind it, so a curve can be
 					     shaped against the others rather than in isolation. -->
-					{#each $trackLanes as l (l.id)}
-						{#if l.id !== $activeLaneId}
-							<polyline points={pathOf(l, expandedH - 20)} fill="none" stroke={l.color}
-								stroke-opacity="0.5" stroke-width="1.5" stroke-dasharray="3 2"
-								vector-effect="non-scaling-stroke" />
+						{#each $trackLanes as l (l.id)}
+							{#if l.id !== $activeLaneId}
+								<polyline
+									points={pathOf(l, expandedH - 20)}
+									fill="none"
+									stroke={l.color}
+									stroke-opacity="0.5"
+									stroke-width="1.5"
+									stroke-dasharray="3 2"
+									vector-effect="non-scaling-stroke"
+								/>
+							{/if}
+						{/each}
+						{#if $activeLane}
+							<polyline
+								points={pathOf($activeLane, expandedH - 20)}
+								fill="none"
+								stroke={$activeLane.color}
+								stroke-width="2"
+								vector-effect="non-scaling-stroke"
+							/>
 						{/if}
-					{/each}
-					{#if $activeLane}
-						<polyline points={pathOf($activeLane, expandedH - 20)} fill="none"
-							stroke={$activeLane.color} stroke-width="2" vector-effect="non-scaling-stroke" />
-					{/if}
-				</svg>
+					</svg>
 
-				<!-- Beat marks along the bottom, numbered within the bar.
+					<!-- Beat marks along the bottom, numbered within the bar.
 				
 				     This was bar numbers, which read "1" and nothing else: the editor
 				     shows one bar at a time, so numbering bars said only which page
 				     you were already looking at. Beats are the useful subdivision
 				     here, and they line up with the roll's ruler above. -->
-				<div class="absolute left-0 right-0 bottom-0 pointer-events-none" style="height: {BEAT_RULER_H}px">
-					{#each Array.from({ length: Math.max(1, Math.floor(colsPerPage / effColsPerBeat)) }) as _, b (b)}
-						<span
-							class="absolute text-[7px] font-mono text-white/30 leading-none"
-							style="left: calc({((b * effColsPerBeat * spc) / steps) * 100}% + 2px); bottom: 1px"
-						>{b + 1}</span>
-					{/each}
+					<div
+						class="absolute left-0 right-0 bottom-0 pointer-events-none"
+						style="height: {BEAT_RULER_H}px"
+					>
+						{#each Array.from( { length: Math.max(1, Math.floor(colsPerPage / effColsPerBeat)) } ) as _, b (b)}
+							<span
+								class="absolute text-[7px] font-mono text-white/30 leading-none"
+								style="left: calc({((b * effColsPerBeat * spc) / steps) * 100}% + 2px); bottom: 1px"
+								>{b + 1}</span
+							>
+						{/each}
+					</div>
 				</div>
-			</div>
 			</div>
 		</div>
 	{/if}
@@ -296,25 +351,41 @@
 	<!-- Folded: every lane at a glance, and the handle that opens the editor. -->
 	<div class="flex items-center gap-1 pt-1 border-t border-white/10 text-xs font-mono">
 		<button
-			onclick={() => { toggleLaneEditor(); playSound('click'); }}
+			onclick={() => {
+				toggleLaneEditor();
+				playSound('click');
+			}}
 			style="width: 40px"
 			class="shrink-0 text-right pr-1 font-black cursor-pointer transition-colors {$laneEditorOpen
 				? 'text-[#e5c07b]'
 				: 'text-[#e06c75] hover:text-white'}"
-			title={$t('synthPanels.lane.toggleHint')}
-		>LANE</button>
+			title={$t('synthPanels.lane.toggleHint')}>LANE</button
+		>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="flex-1 relative border border-white/10 rounded-xs bg-black/40 cursor-pointer"
 			style="height: {FOLDED_H}px"
-			onpointerdown={() => { if (!$laneEditorOpen) { toggleLaneEditor(); playSound('click'); } }}
+			onpointerdown={() => {
+				if (!$laneEditorOpen) {
+					toggleLaneEditor();
+					playSound('click');
+				}
+			}}
 		>
-			<svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 {FOLDED_H}" preserveAspectRatio="none">
+			<svg
+				class="absolute inset-0 w-full h-full"
+				viewBox="0 0 100 {FOLDED_H}"
+				preserveAspectRatio="none"
+			>
 				{#each $trackLanes as l (l.id)}
-					<polyline points={pathOf(l, FOLDED_H)} fill="none" stroke={l.color}
+					<polyline
+						points={pathOf(l, FOLDED_H)}
+						fill="none"
+						stroke={l.color}
 						stroke-width={l.id === $activeLaneId ? 1.6 : 1}
 						stroke-opacity={l.id === $activeLaneId ? 1 : 0.45}
-						vector-effect="non-scaling-stroke" />
+						vector-effect="non-scaling-stroke"
+					/>
 				{/each}
 			</svg>
 		</div>

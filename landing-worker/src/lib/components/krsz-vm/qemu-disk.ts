@@ -108,9 +108,7 @@ function fetchChunk(url: string, index: number, size: number): Uint8Array {
 			lastError = error;
 		}
 	}
-	throw lastError instanceof Error
-		? lastError
-		: new Error(`Chunk ${index} could not be read.`);
+	throw lastError instanceof Error ? lastError : new Error(`Chunk ${index} could not be read.`);
 }
 
 function fetchChunkOnce(url: string, index: number, size: number): Uint8Array {

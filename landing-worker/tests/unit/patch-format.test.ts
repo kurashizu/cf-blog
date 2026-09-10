@@ -90,7 +90,10 @@ describe('older projects still load', () => {
 
 	it('does not migrate the same file twice', () => {
 		const once = migratePatch(
-			file({ version: undefined, tracks: [{ id: 0, graphParams: { 'sp.spaceDecay': 90 } } as never] })
+			file({
+				version: undefined,
+				tracks: [{ id: 0, graphParams: { 'sp.spaceDecay': 90 } } as never]
+			})
 		);
 		expect(migratePatch(once)).toBe(once);
 	});
@@ -100,7 +103,13 @@ describe('older projects still load', () => {
 		const legacy = file({
 			stepsPerBeat: undefined,
 			version: undefined,
-			tracks: [{ id: 0, grid: [[60], []], noteLanes: [{ id: 'vel', def: 0.8, points: [0.2, 0.9] }] } as never]
+			tracks: [
+				{
+					id: 0,
+					grid: [[60], []],
+					noteLanes: [{ id: 'vel', def: 0.8, points: [0.2, 0.9] }]
+				} as never
+			]
 		});
 		const out = migratePatch(legacy);
 		expect(out.tracks[0].grid).toHaveLength(6);

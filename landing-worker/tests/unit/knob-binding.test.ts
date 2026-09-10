@@ -39,8 +39,18 @@ function build(type: string, params: Record<string, number> = {}) {
 	const p = (k: string, d: number) => params[k] ?? d;
 	const cvIn = (_n: string, port: string, f: number) => params[port] ?? f;
 	const made = S.buildGraphNode(
-		ctx, type, p, 220, 0, 0.5, sources, 'n1', {}, cvIn,
-		{ velocity: 0.8, noteIndex: 48, tuning: 440 }, 0.5
+		ctx,
+		type,
+		p,
+		220,
+		0,
+		0.5,
+		sources,
+		'n1',
+		{},
+		cvIn,
+		{ velocity: 0.8, noteIndex: 48, tuning: 440 },
+		0.5
 	);
 	return { ctx, made, sources };
 }
@@ -184,16 +194,13 @@ describe('every knob is what the card says it is', () => {
 				/* Either the param holds the knob's number, or it holds it after
 				   the unit conversion the scaling node in front applies. */
 				const scale =
-					target instanceof FakeParam
-						? 1
-						: ((target as { gain?: FakeParam }).gain?.value ?? 1);
+					target instanceof FakeParam ? 1 : ((target as { gain?: FakeParam }).gain?.value ?? 1);
 				const ok = landed.some(
 					(pm) =>
 						Math.abs(pm.value - probe) < 1e-6 ||
 						Math.abs(pm.value - probe * scale) < 1e-6 ||
 						pm.events.some(
-							(ev) =>
-								Math.abs(ev[1] - probe) < 1e-6 || Math.abs(ev[1] - probe * scale) < 1e-6
+							(ev) => Math.abs(ev[1] - probe) < 1e-6 || Math.abs(ev[1] - probe * scale) < 1e-6
 						)
 				);
 				if (!ok) wrong.push(`${m.id}.${q.key} registers a param the knob never wrote`);

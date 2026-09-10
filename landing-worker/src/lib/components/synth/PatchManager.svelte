@@ -6,7 +6,14 @@
 	import PixelIcon from '../pixel/PixelIcon.svelte';
 	import Onboarding from '../chrome/Onboarding.svelte';
 	import { synthTour } from './synth-tour';
-	import { guideSeen, markGuideSeen, enqueueOnboarding, dequeueOnboarding, isOnboardingActive, openOnboardingNow } from '../../stores/chrome';
+	import {
+		guideSeen,
+		markGuideSeen,
+		enqueueOnboarding,
+		dequeueOnboarding,
+		isOnboardingActive,
+		openOnboardingNow
+	} from '../../stores/chrome';
 	import {
 		BUILTIN_SONGS,
 		builtinSongIdx,
@@ -21,8 +28,19 @@
 		shareUrlFallback,
 		copyText
 	} from '../../stores/synth-patch';
-	import { handleImportMidiFile, isMidiFile, importReport, clearImportReport } from '../../stores/synth-import';
-	import { handleRenderWav, renderPhase, renderProgress, renderReport, clearRenderReport } from '../../stores/synth-render';
+	import {
+		handleImportMidiFile,
+		isMidiFile,
+		importReport,
+		clearImportReport
+	} from '../../stores/synth-import';
+	import {
+		handleRenderWav,
+		renderPhase,
+		renderProgress,
+		renderReport,
+		clearRenderReport
+	} from '../../stores/synth-render';
 
 	const TOUR = 'synth-tour';
 	let guideActive = isOnboardingActive(TOUR);
@@ -121,7 +139,9 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div data-tour="synth-transport" class="flex items-center gap-1.5 flex-wrap">
-	<div class="flex items-center gap-1.5 bg-[#c678dd]/20 border border-[#c678dd]/60 px-2 py-0.5 rounded-xs mr-0.5 select-none shadow-[0_0_8px_rgba(198,120,221,0.25)]">
+	<div
+		class="flex items-center gap-1.5 bg-[#c678dd]/20 border border-[#c678dd]/60 px-2 py-0.5 rounded-xs mr-0.5 select-none shadow-[0_0_8px_rgba(198,120,221,0.25)]"
+	>
 		<PixelIcon name="audio" size={16} class="text-[#c678dd]" />
 		<span class="font-black text-xs text-white tracking-wider">KRSZ SYNTH</span>
 		<button
@@ -138,13 +158,27 @@
 		<Onboarding steps={tourSteps} heading="SYNTH TOUR" onClose={closeGuide} />
 	{/if}
 
-	<input bind:this={fileInput} type="file" onchange={onImportChange} accept=".json,.json.gz,.gz,.mid,.midi,audio/midi" class="hidden" />
+	<input
+		bind:this={fileInput}
+		type="file"
+		onchange={onImportChange}
+		accept=".json,.json.gz,.gz,.mid,.midi,audio/midi"
+		class="hidden"
+	/>
 
-	<button onclick={handleNewProject} title={$t('synth.patch.newHint')} class="press px-2 py-0.5 border border-white/20 text-white/80 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs">
+	<button
+		onclick={handleNewProject}
+		title={$t('synth.patch.newHint')}
+		class="press px-2 py-0.5 border border-white/20 text-white/80 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+	>
 		NEW
 	</button>
 
-	<button onclick={handleSavePatch} title={$t('synth.patch.saveHint')} class="press px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs">
+	<button
+		onclick={handleSavePatch}
+		title={$t('synth.patch.saveHint')}
+		class="press px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs"
+	>
 		SAVE
 	</button>
 
@@ -158,7 +192,10 @@
 				: 'border-[#56b6c2]/50 bg-[#56b6c2]/10 text-[#56b6c2] hover:bg-[#56b6c2]/25'}"
 		>
 			<span>LOAD</span>
-			<span class="text-[9px] leading-none inline-block transition-transform duration-150" style={isLoadMenuOpen ? 'transform: rotate(180deg)' : undefined}>▼</span>
+			<span
+				class="text-[9px] leading-none inline-block transition-transform duration-150"
+				style={isLoadMenuOpen ? 'transform: rotate(180deg)' : undefined}>▼</span
+			>
 		</button>
 
 		{#if isLoadMenuOpen}
@@ -171,54 +208,89 @@
 				transition:scale={{ duration: 140, start: 0.95, opacity: 0, easing: cubicOut }}
 			>
 				{#if $saveStatus}
-					<div class="px-2.5 pb-1.5 mb-1 border-b border-white/10 text-[#98c379] font-bold">{$saveStatus}</div>
+					<div class="px-2.5 pb-1.5 mb-1 border-b border-white/10 text-[#98c379] font-bold">
+						{$saveStatus}
+					</div>
 				{/if}
 
-				<button onclick={loadLocal} class="press w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[#56b6c2] hover:bg-[#56b6c2]/20 cursor-pointer font-bold transition-colors" title={$t('synth.patch.loadLocalHint')}>
+				<button
+					onclick={loadLocal}
+					class="press w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[#56b6c2] hover:bg-[#56b6c2]/20 cursor-pointer font-bold transition-colors"
+					title={$t('synth.patch.loadLocalHint')}
+				>
 					<span class="shrink-0">▣</span>
 					<span>{$t('synth.patch.loadLocalLabel')}</span>
 				</button>
 
-				<div class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none">{$t('synth.patch.builtinSongsLabel')}</div>
+				<div
+					class="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-white/40 border-t border-white/10 mt-1 select-none"
+				>
+					{$t('synth.patch.builtinSongsLabel')}
+				</div>
 
 				{#each BUILTIN_SONGS as song, idx (song.id)}
 					<button
 						onclick={() => loadBuiltin(idx)}
-						class="press w-full text-left px-2.5 py-1.5 flex items-center justify-between gap-2 cursor-pointer transition-colors {$builtinSongIdx === idx
+						class="press w-full text-left px-2.5 py-1.5 flex items-center justify-between gap-2 cursor-pointer transition-colors {$builtinSongIdx ===
+						idx
 							? 'text-white bg-white/10 font-bold'
 							: 'text-white/80 hover:bg-white/10'}"
-						title={$t('synth.patch.loadSongHint', { name: song.name, bpm: song.bpm, meter: song.meter, steps: song.steps })}
+						title={$t('synth.patch.loadSongHint', {
+							name: song.name,
+							bpm: song.bpm,
+							meter: song.meter,
+							steps: song.steps
+						})}
 					>
 						<span class="flex items-center gap-2 min-w-0">
-							<span class="shrink-0 {$builtinSongIdx === idx ? 'text-[#98c379]' : 'text-white/25'}">{$builtinSongIdx === idx ? '●' : '○'}</span>
+							<span class="shrink-0 {$builtinSongIdx === idx ? 'text-[#98c379]' : 'text-white/25'}"
+								>{$builtinSongIdx === idx ? '●' : '○'}</span
+							>
 							<span class="whitespace-nowrap">{song.name}</span>
 						</span>
-						<span class="shrink-0 whitespace-nowrap text-[10px] text-white/40">{song.bpm}bpm · {song.meter}</span>
+						<span class="shrink-0 whitespace-nowrap text-[10px] text-white/40"
+							>{song.bpm}bpm · {song.meter}</span
+						>
 					</button>
 				{/each}
 			</div>
 		{/if}
 	</div>
 
-	<button onclick={() => fileInput?.click()} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title={$t('synth.patch.importHint')}>
+	<button
+		onclick={() => fileInput?.click()}
+		class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+		title={$t('synth.patch.importHint')}
+	>
 		IMP
 	</button>
 
-	<button onclick={handleExportPatch} class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs" title={$t('synth.patch.exportHint')}>
+	<button
+		onclick={handleExportPatch}
+		class="press px-2 py-0.5 border border-white/20 text-white/70 hover:border-white/60 hover:text-white rounded-xs font-bold transition-colors cursor-pointer text-xs"
+		title={$t('synth.patch.exportHint')}
+	>
 		EXP
 	</button>
 
 	<button
 		onclick={handleRenderWav}
 		disabled={$renderPhase === 'rendering'}
-		class="press px-2 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs disabled:cursor-wait {$renderPhase === 'rendering'
+		class="press px-2 py-0.5 border rounded-xs font-bold transition-colors cursor-pointer text-xs disabled:cursor-wait {$renderPhase ===
+		'rendering'
 			? 'border-[#e5c07b] bg-[#e5c07b]/20 text-[#e5c07b]'
 			: 'border-[#e5c07b]/50 text-[#e5c07b] hover:bg-[#e5c07b]/20'}"
 		title={$t('synth.patch.renderHint')}
 	>
 		{#if $renderPhase === 'rendering'}
 			{$renderProgress
-				? $t('synth.patch.renderingStage', { stage: $renderProgress.stage === 'schedule' ? $t('synth.patch.renderingStageSchedule') : $t('synth.patch.renderingStageRender'), percent: Math.round($renderProgress.fraction * 100) })
+				? $t('synth.patch.renderingStage', {
+						stage:
+							$renderProgress.stage === 'schedule'
+								? $t('synth.patch.renderingStageSchedule')
+								: $t('synth.patch.renderingStageRender'),
+						percent: Math.round($renderProgress.fraction * 100)
+					})
 				: $t('synth.patch.rendering')}
 		{:else}
 			WAV
@@ -227,14 +299,21 @@
 
 	<!-- SHARE + its blocked-clipboard popover: absolutely positioned so it never reflows the rack -->
 	<div class="relative">
-		<button onclick={handleSharePatch} class="press px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs" title={$t('synth.patch.shareHint')}>
+		<button
+			onclick={handleSharePatch}
+			class="press px-2 py-0.5 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold transition-colors cursor-pointer text-xs"
+			title={$t('synth.patch.shareHint')}
+		>
 			SHARE
 		</button>
 
 		{#if $shareUrlFallback}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="fixed inset-0 z-40" onclick={() => (shareUrlFallback.set(null), (shareCopied = false))}></div>
+			<div
+				class="fixed inset-0 z-40"
+				onclick={() => (shareUrlFallback.set(null), (shareCopied = false))}
+			></div>
 
 			<div
 				class="origin-top absolute left-0 top-full mt-1 z-50 w-[min(440px,80vw)] bg-[#121417] border border-[#c678dd]/50 rounded-xs shadow-[0_8px_24px_rgba(0,0,0,0.7)] p-2 space-y-1.5"
@@ -248,7 +327,8 @@
 						value={$shareUrlFallback}
 						onfocus={(e) => (e.target as HTMLInputElement).select()}
 						onclick={(e) => (e.target as HTMLInputElement).select()}
-						class="focus-glow flex-1 min-w-0 bg-black/60 border border-[#c678dd]/40 text-[#c678dd] text-[10px] font-mono px-2 py-1 rounded-xs outline-none" style="--krsz-focus-color: #c678dd"
+						class="focus-glow flex-1 min-w-0 bg-black/60 border border-[#c678dd]/40 text-[#c678dd] text-[10px] font-mono px-2 py-1 rounded-xs outline-none"
+						style="--krsz-focus-color: #c678dd"
 					/>
 					<button
 						onclick={copyFromPopover}
@@ -277,17 +357,32 @@
 {#if report}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[120] bg-black/40" onclick={dismissReport} transition:fade={{ duration: 180 }}></div>
 	<div
-		class="fixed z-[130] left-1/2 top-16 -translate-x-1/2 w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 space-y-1 font-mono {reportIsError ? 'shake-once' : ''}"
+		class="fixed inset-0 z-[120] bg-black/40"
+		onclick={dismissReport}
+		transition:fade={{ duration: 180 }}
+	></div>
+	<div
+		class="fixed z-[130] left-1/2 top-16 -translate-x-1/2 w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] p-3 space-y-1 font-mono {reportIsError
+			? 'shake-once'
+			: ''}"
 		style="border-color: {reportIsError ? '#e06c75' : '#98c379'}88"
 		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
 		<div class="flex items-start justify-between gap-2 border-b border-white/10 pb-1.5">
-			<span class="text-xs font-black break-all" style="color: {reportIsError ? '#e06c75' : '#98c379'}">{report[0]}</span>
-			<button onclick={dismissReport} class="press text-xs text-white/50 hover:text-white cursor-pointer shrink-0 transition-colors">[ ✕ ]</button>
+			<span
+				class="text-xs font-black break-all"
+				style="color: {reportIsError ? '#e06c75' : '#98c379'}">{report[0]}</span
+			>
+			<button
+				onclick={dismissReport}
+				class="press text-xs text-white/50 hover:text-white cursor-pointer shrink-0 transition-colors"
+				>[ ✕ ]</button
+			>
 		</div>
-		<div class="text-[11px] text-white/70 leading-relaxed whitespace-pre-wrap max-h-[46vh] overflow-y-auto custom-scrollbar">
+		<div
+			class="text-[11px] text-white/70 leading-relaxed whitespace-pre-wrap max-h-[46vh] overflow-y-auto custom-scrollbar"
+		>
 			{#each report.slice(1) as line, i (i)}
 				<div>{line}</div>
 			{/each}

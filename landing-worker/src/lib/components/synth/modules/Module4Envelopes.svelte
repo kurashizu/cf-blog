@@ -32,18 +32,32 @@
 				: ($currentTrack.pitchEnvAmount ?? 0)
 	);
 	// The graph's sustain axis is 0-1; show the pitch depth as a fraction of its range.
-	let visSustain = $derived(activeEnvTab === 'pit' ? Math.min(1, Math.abs(sustainVal) / 4) : sustainVal);
-	let releaseVal = $derived(
-		activeEnvTab === 'amp' ? ($currentTrack.ampRelease ?? $currentTrack.release) : activeEnvTab === 'vcf' ? $currentTrack.filterRelease : 0.01
+	let visSustain = $derived(
+		activeEnvTab === 'pit' ? Math.min(1, Math.abs(sustainVal) / 4) : sustainVal
 	);
-	let envColor = $derived(activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b');
+	let releaseVal = $derived(
+		activeEnvTab === 'amp'
+			? ($currentTrack.ampRelease ?? $currentTrack.release)
+			: activeEnvTab === 'vcf'
+				? $currentTrack.filterRelease
+				: 0.01
+	);
+	let envColor = $derived(
+		activeEnvTab === 'amp' ? '#98c379' : activeEnvTab === 'vcf' ? '#56b6c2' : '#e5c07b'
+	);
 
-	const ENV_TARGET_KEY = { amp: 'synthPanels.env.targetVolume', vcf: 'synthPanels.env.targetFilterCutoff', pit: 'synthPanels.env.targetPitch' } as const;
+	const ENV_TARGET_KEY = {
+		amp: 'synthPanels.env.targetVolume',
+		vcf: 'synthPanels.env.targetFilterCutoff',
+		pit: 'synthPanels.env.targetPitch'
+	} as const;
 	let envTarget = $derived($t(ENV_TARGET_KEY[activeEnvTab]));
 	let attackDesc = $derived($t('synthPanels.env.attackDesc', { target: envTarget }));
 	let decayDesc = $derived($t('synthPanels.env.decayDesc', { target: envTarget }));
 	let thirdDesc = $derived(
-		activeEnvTab === 'pit' ? $t('synthPanels.env.pitchAmountDesc') : $t('synthPanels.env.sustainDesc', { target: envTarget })
+		activeEnvTab === 'pit'
+			? $t('synthPanels.env.pitchAmountDesc')
+			: $t('synthPanels.env.sustainDesc', { target: envTarget })
 	);
 	let releaseDesc = $derived($t('synthPanels.env.releaseDesc', { target: envTarget }));
 
@@ -73,15 +87,20 @@
 	}
 </script>
 
-<div class="xl:col-span-6 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
-	<div class="flex items-center justify-between font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
+<div
+	class="xl:col-span-6 border border-[#98c379]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0"
+>
+	<div
+		class="flex items-center justify-between font-black text-xs border-b border-white/10 pb-0.5 shrink-0"
+	>
 		<div class="flex items-center gap-2">
 			<span class="text-[#98c379] text-xs font-black">4. ENVELOPES</span>
 			<div class="flex items-center gap-1">
 				<button
 					onclick={() => setTab('amp')}
 					title={$t('synthPanels.env.ampTabHint')}
-					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'amp'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab ===
+					'amp'
 						? 'border-[#98c379] bg-[#98c379] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -90,7 +109,8 @@
 				<button
 					onclick={() => setTab('vcf')}
 					title={$t('synthPanels.env.vcfTabHint')}
-					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'vcf'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab ===
+					'vcf'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -99,7 +119,8 @@
 				<button
 					onclick={() => setTab('pit')}
 					title={$t('synthPanels.env.pitTabHint')}
-					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab === 'pit'
+					class="press px-1.5 py-0.2 text-[10px] sm:text-xs rounded-xs border font-black cursor-pointer transition-colors {activeEnvTab ===
+					'pit'
 						? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 				>
@@ -109,23 +130,67 @@
 		</div>
 		<div class="flex items-center gap-1.5">
 			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToLfo')}>
-				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+				<svg
+					width="10"
+					height="10"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg
+				>
 			</span>
-			<button onclick={resetRack4} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">R</button>
+			<button
+				onclick={resetRack4}
+				title={$t('synthPanels.rack.resetHint')}
+				class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60"
+				>R</button
+			>
 		</div>
 	</div>
 
 	<div class="flex gap-1.5 items-center flex-1 min-h-0 my-auto">
 		<div class="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5">
 			<div class="flex-1 flex items-center justify-center">
-				<AdsrVisualizer attack={attackVal} decay={decayVal} sustain={visSustain} release={releaseVal} color={envColor} />
+				<AdsrVisualizer
+					attack={attackVal}
+					decay={decayVal}
+					sustain={visSustain}
+					release={releaseVal}
+					color={envColor}
+				/>
 			</div>
 		</div>
 
 		<!-- Fixed width so the four faders never get crushed when the rack is at its narrowest -->
-		<div class="w-32 shrink-0 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5">
-			<HardwareFader label="A" value={attackVal} min={0} max={0.8} step={0.001} color={envColor} height={46} description={attackDesc} reset={0} onChange={onAttackChange} />
-			<HardwareFader label="D" value={decayVal} min={0.01} max={1.0} step={0.01} color={envColor} height={46} description={decayDesc} reset={0.01} onChange={onDecayChange} />
+		<div
+			class="w-32 shrink-0 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5"
+		>
+			<HardwareFader
+				label="A"
+				value={attackVal}
+				min={0}
+				max={0.8}
+				step={0.001}
+				color={envColor}
+				height={46}
+				description={attackDesc}
+				reset={0}
+				onChange={onAttackChange}
+			/>
+			<HardwareFader
+				label="D"
+				value={decayVal}
+				min={0.01}
+				max={1.0}
+				step={0.01}
+				color={envColor}
+				height={46}
+				description={decayDesc}
+				reset={0.01}
+				onChange={onDecayChange}
+			/>
 			<HardwareFader
 				label={activeEnvTab === 'pit' ? 'AMT' : 'S'}
 				value={sustainVal}

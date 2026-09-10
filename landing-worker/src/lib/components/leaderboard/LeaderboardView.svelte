@@ -117,8 +117,8 @@
 	let models = $derived($leaderboard?.models ?? []);
 
 	let creators = $derived(
-		[...new Set(models.map((m) => m.model_creator?.name).filter((n): n is string => !!n))].sort((a, b) =>
-			a.localeCompare(b)
+		[...new Set(models.map((m) => m.model_creator?.name).filter((n): n is string => !!n))].sort(
+			(a, b) => a.localeCompare(b)
 		)
 	);
 
@@ -127,7 +127,9 @@
 			if (creator && m.model_creator?.name !== creator) return false;
 			if (!query.trim()) return true;
 			const q = query.trim().toLowerCase();
-			return m.name.toLowerCase().includes(q) || (m.model_creator?.name ?? '').toLowerCase().includes(q);
+			return (
+				m.name.toLowerCase().includes(q) || (m.model_creator?.name ?? '').toLowerCase().includes(q)
+			);
 		})
 	);
 
@@ -154,7 +156,12 @@
 		if (v === null || sortKey === 'date') return 0;
 		if (metric.bestIsLow) {
 			// Cheaper / faster reads as a longer bar.
-			return v <= 0 ? 100 : Math.max(2, Math.min(100, (Math.min(...shown.map((x) => metric.value(x) ?? Infinity)) / v) * 100));
+			return v <= 0
+				? 100
+				: Math.max(
+						2,
+						Math.min(100, (Math.min(...shown.map((x) => metric.value(x) ?? Infinity)) / v) * 100)
+					);
 		}
 		return Math.max(2, Math.min(100, (v / scaleMax) * 100));
 	}
@@ -230,19 +237,53 @@
 	 *  the locale. */
 	function detailRows(m: LeaderboardModel): { labelKey: string; value: string }[] {
 		const price = m.pricing ?? {};
-		const num = (v: number | null | undefined, unit = '') => (v === null || v === undefined ? '—' : `${v}${unit}`);
+		const num = (v: number | null | undefined, unit = '') =>
+			v === null || v === undefined ? '—' : `${v}${unit}`;
 		return [
 			{ labelKey: 'community.leaderboard.detailSlug', value: m.slug || '—' },
 			{ labelKey: 'community.leaderboard.detailCreator', value: m.model_creator?.name ?? '—' },
 			{ labelKey: 'community.leaderboard.detailReleased', value: m.release_date ?? '—' },
-			{ labelKey: 'community.leaderboard.detailIntelligence', value: num(m.evaluations?.artificial_analysis_intelligence_index) },
-			{ labelKey: 'community.leaderboard.detailCoding', value: num(m.evaluations?.artificial_analysis_coding_index) },
-			{ labelKey: 'community.leaderboard.detailAgentic', value: num(m.evaluations?.artificial_analysis_agentic_index) },
-			{ labelKey: 'community.leaderboard.detailBlended', value: price.price_1m_blended_3_to_1 === null || price.price_1m_blended_3_to_1 === undefined ? '—' : `$${price.price_1m_blended_3_to_1} / 1M` },
-			{ labelKey: 'community.leaderboard.detailInput', value: price.price_1m_input_tokens === null || price.price_1m_input_tokens === undefined ? '—' : `$${price.price_1m_input_tokens} / 1M` },
-			{ labelKey: 'community.leaderboard.detailOutput', value: price.price_1m_output_tokens === null || price.price_1m_output_tokens === undefined ? '—' : `$${price.price_1m_output_tokens} / 1M` },
-			{ labelKey: 'community.leaderboard.detailSpeed', value: num(m.median_output_tokens_per_second, ' tok/s') },
-			{ labelKey: 'community.leaderboard.detailTtft', value: num(m.median_time_to_first_token_seconds, ' s') }
+			{
+				labelKey: 'community.leaderboard.detailIntelligence',
+				value: num(m.evaluations?.artificial_analysis_intelligence_index)
+			},
+			{
+				labelKey: 'community.leaderboard.detailCoding',
+				value: num(m.evaluations?.artificial_analysis_coding_index)
+			},
+			{
+				labelKey: 'community.leaderboard.detailAgentic',
+				value: num(m.evaluations?.artificial_analysis_agentic_index)
+			},
+			{
+				labelKey: 'community.leaderboard.detailBlended',
+				value:
+					price.price_1m_blended_3_to_1 === null || price.price_1m_blended_3_to_1 === undefined
+						? '—'
+						: `$${price.price_1m_blended_3_to_1} / 1M`
+			},
+			{
+				labelKey: 'community.leaderboard.detailInput',
+				value:
+					price.price_1m_input_tokens === null || price.price_1m_input_tokens === undefined
+						? '—'
+						: `$${price.price_1m_input_tokens} / 1M`
+			},
+			{
+				labelKey: 'community.leaderboard.detailOutput',
+				value:
+					price.price_1m_output_tokens === null || price.price_1m_output_tokens === undefined
+						? '—'
+						: `$${price.price_1m_output_tokens} / 1M`
+			},
+			{
+				labelKey: 'community.leaderboard.detailSpeed',
+				value: num(m.median_output_tokens_per_second, ' tok/s')
+			},
+			{
+				labelKey: 'community.leaderboard.detailTtft',
+				value: num(m.median_time_to_first_token_seconds, ' s')
+			}
 		];
 	}
 
@@ -254,7 +295,10 @@
 			.map((x) => spec.value(x))
 			.filter((v): v is number => v !== null)
 			.sort((a, b) => (spec.bestIsLow ? a - b : b - a));
-		return $t('community.leaderboard.rankOf', { rank: ranked.indexOf(mine) + 1, total: ranked.length });
+		return $t('community.leaderboard.rankOf', {
+			rank: ranked.indexOf(mine) + 1,
+			total: ranked.length
+		});
 	}
 
 	function onWindowKeydown(e: KeyboardEvent) {
@@ -266,9 +310,11 @@
 
 	let fetchedLabel = $derived(
 		$leaderboard?.fetchedAt
-			? new Intl.DateTimeFormat($locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Australia/Sydney' }).format(
-					new Date($leaderboard.fetchedAt)
-				)
+			? new Intl.DateTimeFormat($locale, {
+					dateStyle: 'medium',
+					timeStyle: 'short',
+					timeZone: 'Australia/Sydney'
+				}).format(new Date($leaderboard.fetchedAt))
 			: null
 	);
 
@@ -280,7 +326,9 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div class="space-y-3 flex-1 min-h-0 flex flex-col">
-	<div class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0">
+	<div
+		class="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2 shrink-0"
+	>
 		<AsciiArt
 			color="#56b6c2"
 			class="text-[4px] sm:text-[6px] md:text-[8px] font-black tracking-tight leading-tight overflow-x-auto"
@@ -292,21 +340,36 @@
 ╚══════╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ `}
 		/>
 
-		<div class="text-[10px] sm:text-xs font-mono text-white/45 text-right leading-relaxed max-w-[440px]">
+		<div
+			class="text-[10px] sm:text-xs font-mono text-white/45 text-right leading-relaxed max-w-[440px]"
+		>
 			<div>
-				{$t('community.leaderboard.sourcePrefix')} <span class="text-[#e5c07b]">Artificial Analysis</span> {$t('community.leaderboard.sourceSuffix')}
+				{$t('community.leaderboard.sourcePrefix')}
+				<span class="text-[#e5c07b]">Artificial Analysis</span>
+				{$t('community.leaderboard.sourceSuffix')}
 				{#if $leaderboard?.intelligenceIndexVersion}
-					<span class="text-white/60">{$t('community.leaderboard.indexVersion', { version: $leaderboard.intelligenceIndexVersion })}</span>
+					<span class="text-white/60"
+						>{$t('community.leaderboard.indexVersion', {
+							version: $leaderboard.intelligenceIndexVersion
+						})}</span
+					>
 				{/if}
 			</div>
 			<div class="text-white/35">
 				{$t('community.leaderboard.cachedBy')}
-				<a href={LEADERBOARD_URL} target="_blank" rel="noopener noreferrer" class="text-[#61afef] hover:underline">blog.krsz.in</a>
+				<a
+					href={LEADERBOARD_URL}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-[#61afef] hover:underline">blog.krsz.in</a
+				>
 			</div>
 			{#if fetchedLabel}
 				<div class="text-[#98c379]">
 					{$t('community.leaderboard.fetchedLine', { when: fetchedLabel, count: models.length })}
-					{#if $leaderboardMs !== null}<span class="text-white/35">{$t('community.leaderboard.loadMs', { ms: $leaderboardMs })}</span>{/if}
+					{#if $leaderboardMs !== null}<span class="text-white/35"
+							>{$t('community.leaderboard.loadMs', { ms: $leaderboardMs })}</span
+						>{/if}
 				</div>
 			{/if}
 		</div>
@@ -314,15 +377,20 @@
 
 	<!-- Sort selector: the chosen metric drives both the ordering and the bars -->
 	<div class="flex flex-wrap items-center gap-1.5 shrink-0">
-		<span class="text-[10px] font-mono font-bold text-white/40 uppercase mr-0.5">{$t('community.leaderboard.rankBy')}</span>
+		<span class="text-[10px] font-mono font-bold text-white/40 uppercase mr-0.5"
+			>{$t('community.leaderboard.rankBy')}</span
+		>
 		{#each METRICS as m (m.key)}
 			<button
 				onclick={() => pick(m.key)}
 				title={$t('community.leaderboard.metricHint', {
 					hint: $t(m.hintKey),
-					direction: m.bestIsLow ? $t('community.leaderboard.lowerBetter') : $t('community.leaderboard.higherBetter')
+					direction: m.bestIsLow
+						? $t('community.leaderboard.lowerBetter')
+						: $t('community.leaderboard.higherBetter')
 				})}
-				class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {sortKey === m.key
+				class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {sortKey ===
+				m.key
 					? 'bg-white/15 text-white'
 					: 'border-white/20 text-white/55 hover:border-white/50'}"
 				style={sortKey === m.key ? `border-color: ${m.color}; color: ${m.color}` : undefined}
@@ -347,7 +415,11 @@
 			placeholder={$t('community.leaderboard.allCreators')}
 			title={$t('community.leaderboard.filterByCreator')}
 			options={[
-				{ value: '', label: $t('community.leaderboard.allCreators'), note: String(creators.length) },
+				{
+					value: '',
+					label: $t('community.leaderboard.allCreators'),
+					note: String(creators.length)
+				},
 				...creators.map((c) => ({ value: c, label: c }))
 			]}
 		/>
@@ -355,15 +427,20 @@
 			{#each LIMITS as n (n)}
 				<button
 					onclick={() => (limit = n)}
-					class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {limit === n
+					class="press px-2 py-1 border rounded-xs text-xs font-bold cursor-pointer transition-colors {limit ===
+					n
 						? 'border-white bg-white/15 text-white'
 						: 'border-white/20 text-white/55 hover:border-white/50'}"
 				>
-					{n === 0 ? $t('community.leaderboard.limitAll') : $t('community.leaderboard.limitTop', { n })}
+					{n === 0
+						? $t('community.leaderboard.limitAll')
+						: $t('community.leaderboard.limitTop', { n })}
 				</button>
 			{/each}
 		</div>
-		<span class="text-[10px] font-mono text-white/35">{$t('community.leaderboard.matchCount', { count: filtered.length })}</span>
+		<span class="text-[10px] font-mono text-white/35"
+			>{$t('community.leaderboard.matchCount', { count: filtered.length })}</span
+		>
 	</div>
 
 	{#if $leaderboardStatus === 'loading'}
@@ -371,7 +448,11 @@
 	{:else if $leaderboardStatus === 'error'}
 		<div class="text-xs font-mono text-[#e06c75]">
 			{$t('community.leaderboard.loadError', { error: $leaderboardError ?? '' })}
-			<button onclick={() => loadLeaderboard(true)} class="press ml-2 underline cursor-pointer hover:text-white transition-colors">{$t('community.leaderboard.retry')}</button>
+			<button
+				onclick={() => loadLeaderboard(true)}
+				class="press ml-2 underline cursor-pointer hover:text-white transition-colors"
+				>{$t('community.leaderboard.retry')}</button
+			>
 		</div>
 	{/if}
 
@@ -382,9 +463,12 @@
 					<tr class="text-[10px] uppercase text-white/40 border-b border-white/15">
 						<th class="text-right px-2 py-1.5 w-10">{$t('community.leaderboard.colRank')}</th>
 						<th class="text-left px-2 py-1.5">{$t('community.leaderboard.colModel')}</th>
-						<th class="text-left px-2 py-1.5 hidden md:table-cell">{$t('community.leaderboard.colCreator')}</th>
+						<th class="text-left px-2 py-1.5 hidden md:table-cell"
+							>{$t('community.leaderboard.colCreator')}</th
+						>
 						<th class="text-left px-2 py-1.5 w-[110px] sm:w-[160px]" style="color: {metric.color}">
-							{$t(metric.shortKey)} {metric.bestIsLow ? '↑' : '↓'}
+							{$t(metric.shortKey)}
+							{metric.bestIsLow ? '↑' : '↓'}
 						</th>
 						{#each METRICS.filter((m) => m.key !== sortKey) as m (m.key)}
 							<th class="text-right px-2 py-1.5 hidden lg:table-cell">
@@ -392,7 +476,9 @@
 									onclick={() => pick(m.key)}
 									title={$t('community.leaderboard.sortByHint', {
 										hint: $t(m.hintKey),
-										direction: m.bestIsLow ? $t('community.leaderboard.lowerBetter') : $t('community.leaderboard.higherBetter')
+										direction: m.bestIsLow
+											? $t('community.leaderboard.lowerBetter')
+											: $t('community.leaderboard.higherBetter')
 									})}
 									class="press cursor-pointer hover:text-white transition-colors uppercase"
 								>
@@ -415,18 +501,27 @@
 								: 'hover:bg-white/5'}"
 						>
 							<td class="px-2 py-1 text-right text-white/35">{i + 1}</td>
-							<td class="px-2 py-1 text-[#eceff4] max-w-[240px] truncate" title={m.name}>{m.name}</td>
+							<td class="px-2 py-1 text-[#eceff4] max-w-[240px] truncate" title={m.name}
+								>{m.name}</td
+							>
 							<td class="px-2 py-1 text-white/50 hidden md:table-cell max-w-[130px] truncate">
 								{m.model_creator?.name ?? '—'}
 							</td>
 							<td class="px-2 py-1">
 								<div class="flex items-center gap-1.5">
-									<div class="h-2 rounded-xs shrink-0 transition-[width] duration-200 ease-out" style="width: {barWidth(m) * 0.6}px; background: {metric.color}; opacity: 0.75"></div>
-									<span class="font-bold shrink-0" style="color: {metric.color}">{cell(m, sortKey)}</span>
+									<div
+										class="h-2 rounded-xs shrink-0 transition-[width] duration-200 ease-out"
+										style="width: {barWidth(m) * 0.6}px; background: {metric.color}; opacity: 0.75"
+									></div>
+									<span class="font-bold shrink-0" style="color: {metric.color}"
+										>{cell(m, sortKey)}</span
+									>
 								</div>
 							</td>
 							{#each METRICS.filter((x) => x.key !== sortKey) as x (x.key)}
-								<td class="px-2 py-1 text-right text-white/60 hidden lg:table-cell">{cell(m, x.key)}</td>
+								<td class="px-2 py-1 text-right text-white/60 hidden lg:table-cell"
+									>{cell(m, x.key)}</td
+								>
 							{/each}
 						</tr>
 					{/each}
@@ -446,64 +541,79 @@
 {#if popover}
 	{@const m = popover.model}
 	<div use:portal>
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-[120]" onclick={() => (popover = null)} transition:fade={{ duration: 180 }}></div>
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		bind:this={cardEl}
-		class="fixed z-[130] w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] font-mono"
-		style="left: {cardPos.left}px; top: {cardPos.top}px; border-color: {metric.color}80"
-		onclick={(e) => e.stopPropagation()}
-		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
-	>
-		<div class="flex items-start justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
-			<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
-			<button onclick={() => (popover = null)} class="press text-[10px] text-white/40 hover:text-white cursor-pointer shrink-0 transition-colors">
-				[ ✕ ]
-			</button>
-		</div>
-
-		<div class="p-2.5 space-y-2">
-			<div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
-				{#each detailRows(m) as row (row.labelKey)}
-					<div class="border border-white/10 bg-black/40 rounded-xs px-2 py-1 flex items-baseline justify-between gap-2">
-						<span class="text-[10px] text-white/40 shrink-0">{$t(row.labelKey)}</span>
-						<span class="text-[11px] text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
-					</div>
-				{/each}
-			</div>
-
-			<div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/45 border-t border-white/10 pt-1.5">
-				<span class="text-white/30">{$t('community.leaderboard.rankAmong', { count: filtered.length })}</span>
-				{#each METRICS.filter((x) => x.key !== 'date') as x (x.key)}
-					<span>{$t(x.shortKey)} <span style="color: {x.color}">{rankFor(m, x)}</span></span>
-				{/each}
-			</div>
-
-			<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="fixed inset-0 z-[120]"
+			onclick={() => (popover = null)}
+			transition:fade={{ duration: 180 }}
+		></div>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			bind:this={cardEl}
+			class="fixed z-[130] w-[min(560px,92vw)] bg-[#121417] border rounded-xs shadow-[0_12px_32px_rgba(0,0,0,0.8)] font-mono"
+			style="left: {cardPos.left}px; top: {cardPos.top}px; border-color: {metric.color}80"
+			onclick={(e) => e.stopPropagation()}
+			transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
+		>
+			<div class="flex items-start justify-between gap-2 px-2.5 py-1.5 border-b border-white/10">
+				<span class="text-xs font-black" style="color: {metric.color}">{m.name}</span>
 				<button
-					onclick={() => {
-						query = m.model_creator?.name ?? '';
-						popover = null;
-					}}
-					class="press text-[10px] text-white/45 hover:text-white cursor-pointer underline transition-colors"
+					onclick={() => (popover = null)}
+					class="press text-[10px] text-white/40 hover:text-white cursor-pointer shrink-0 transition-colors"
 				>
-					{$t('community.leaderboard.filterToCreator', { creator: m.model_creator?.name ?? $t('community.leaderboard.thisCreator') })}
+					[ ✕ ]
 				</button>
-				{#if m.slug}
-					<a
-						href={`https://artificialanalysis.ai/models/${encodeURIComponent(m.slug)}`}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="press text-[10px] text-[#61afef] hover:underline"
+			</div>
+
+			<div class="p-2.5 space-y-2">
+				<div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
+					{#each detailRows(m) as row (row.labelKey)}
+						<div
+							class="border border-white/10 bg-black/40 rounded-xs px-2 py-1 flex items-baseline justify-between gap-2"
+						>
+							<span class="text-[10px] text-white/40 shrink-0">{$t(row.labelKey)}</span>
+							<span class="text-[11px] text-[#d8dee9] truncate" title={row.value}>{row.value}</span>
+						</div>
+					{/each}
+				</div>
+
+				<div
+					class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/45 border-t border-white/10 pt-1.5"
+				>
+					<span class="text-white/30"
+						>{$t('community.leaderboard.rankAmong', { count: filtered.length })}</span
 					>
-						{$t('community.leaderboard.openOnSource')}
-					</a>
-				{/if}
+					{#each METRICS.filter((x) => x.key !== 'date') as x (x.key)}
+						<span>{$t(x.shortKey)} <span style="color: {x.color}">{rankFor(m, x)}</span></span>
+					{/each}
+				</div>
+
+				<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+					<button
+						onclick={() => {
+							query = m.model_creator?.name ?? '';
+							popover = null;
+						}}
+						class="press text-[10px] text-white/45 hover:text-white cursor-pointer underline transition-colors"
+					>
+						{$t('community.leaderboard.filterToCreator', {
+							creator: m.model_creator?.name ?? $t('community.leaderboard.thisCreator')
+						})}
+					</button>
+					{#if m.slug}
+						<a
+							href={`https://artificialanalysis.ai/models/${encodeURIComponent(m.slug)}`}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="press text-[10px] text-[#61afef] hover:underline"
+						>
+							{$t('community.leaderboard.openOnSource')}
+						</a>
+					{/if}
+				</div>
 			</div>
 		</div>
-	</div>
 	</div>
 {/if}

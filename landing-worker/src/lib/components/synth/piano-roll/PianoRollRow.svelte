@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { t } from '../../../i18n';
-	import { METER_SPECS, divToColumnSpan, stepsPerColumn, hasSubColumns, ternaryColFactor, type TimeSignature, type NoteDurationDiv } from '../../../synth';
+	import {
+		METER_SPECS,
+		divToColumnSpan,
+		stepsPerColumn,
+		hasSubColumns,
+		ternaryColFactor,
+		type TimeSignature,
+		type NoteDurationDiv
+	} from '../../../synth';
 
 	interface VisibleTrackItem {
 		id: number;
@@ -103,9 +111,9 @@
 			onResetKey(actualIdx);
 		}}
 		title={percussion
-			? (isCustomKey
-					? $t('synthPanels.roll.auditionKeyCustomHint', { note: nInfo.note })
-					: $t('synthPanels.roll.auditionKeyDefaultHint', { note: nInfo.note }))
+			? isCustomKey
+				? $t('synthPanels.roll.auditionKeyCustomHint', { note: nInfo.note })
+				: $t('synthPanels.roll.auditionKeyDefaultHint', { note: nInfo.note })
 			: $t('synthPanels.roll.auditionNoteHint', { note: nInfo.note, freq: Math.round(nInfo.freq) })}
 		class="w-9 h-full text-right pr-1 font-bold shrink-0 rounded-xs flex items-center justify-end gap-0.5 select-none cursor-pointer transition-all hover:brightness-125 active:scale-95 {isActiveKey
 			? '!bg-[#c678dd] !text-black !border-[#c678dd] ring-1 ring-[#c678dd] shadow-[0_0_6px_rgba(198,120,221,0.6)]'
@@ -116,12 +124,18 @@
 				: 'bg-white/10 text-[#eceff4] hover:bg-white/20'}"
 	>
 		{#if isCustomKey}
-			<span class="w-1 h-1 rounded-full shrink-0 {isActiveKey ? 'bg-black/60' : 'bg-[#c678dd]'}" aria-hidden="true"></span>
+			<span
+				class="w-1 h-1 rounded-full shrink-0 {isActiveKey ? 'bg-black/60' : 'bg-[#c678dd]'}"
+				aria-hidden="true"
+			></span>
 		{/if}
 		{nInfo.note}
 	</button>
 
-	<div class="flex-1 h-full gap-0.5" style="display: grid; grid-template-columns: repeat({colsCount}, minmax(0, 1fr));">
+	<div
+		class="flex-1 h-full gap-0.5"
+		style="display: grid; grid-template-columns: repeat({colsCount}, minmax(0, 1fr));"
+	>
 		{#each Array.from({ length: colsCount }) as _, colIdx (colIdx)}
 			{@const globalCol = viewportStartCol + colIdx}
 			{@const colStart = globalCol * spc}
@@ -141,26 +155,26 @@
 								data-span={half}
 								title={$t('synthPanels.roll.cellStepHint', { note: nInfo.note, step: step + 1 })}
 								class="flex-1 h-full border rounded-xs transition-colors {isBarStart && subCol === 0
+									? isRootC
+										? 'border-l-2 border-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+										: nInfo.isBlack
+											? 'border-l-2 border-[#56b6c2]/70 bg-black/60 hover:bg-white/10'
+											: 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
+									: isBeatStart && subCol === 0
 										? isRootC
-											? 'border-l-2 border-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+											? 'border-l border-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
 											: nInfo.isBlack
-												? 'border-l-2 border-[#56b6c2]/70 bg-black/60 hover:bg-white/10'
-												: 'border-l-2 border-[#56b6c2]/70 bg-white/[0.08] hover:bg-white/20'
-										: isBeatStart && subCol === 0
-											? isRootC
-												? 'border-l border-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
-												: nInfo.isBlack
-													? 'border-l border-white/25 bg-black/60 hover:bg-white/10'
-													: 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
-											: isRootC
-												? 'border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
-												: nInfo.isBlack
-													? subCol === 1
-														? 'border-l border-black/20 bg-black/60 hover:bg-white/10'
-														: 'border-black/20 bg-black/60 hover:bg-white/10'
-													: subCol === 1
-														? 'border-l border-white/10 bg-white/[0.03] hover:bg-white/10'
-														: 'border-white/5 bg-white/[0.03] hover:bg-white/10'}"
+												? 'border-l border-white/25 bg-black/60 hover:bg-white/10'
+												: 'border-l border-white/30 bg-white/[0.04] hover:bg-white/20'
+										: isRootC
+											? 'border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
+											: nInfo.isBlack
+												? subCol === 1
+													? 'border-l border-black/20 bg-black/60 hover:bg-white/10'
+													: 'border-black/20 bg-black/60 hover:bg-white/10'
+												: subCol === 1
+													? 'border-l border-white/10 bg-white/[0.03] hover:bg-white/10'
+													: 'border-white/5 bg-white/[0.03] hover:bg-white/10'}"
 							></div>
 						{/each}
 					</div>
@@ -171,24 +185,24 @@
 						data-span={spc}
 						title={$t('synthPanels.roll.cellStepHint', { note: nInfo.note, step: colStart + 1 })}
 						class="w-full h-full rounded-xs border transition-colors {isBarStart
+							? isRootC
+								? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+								: nInfo.isBlack
+									? 'border-y border-r border-white/10 border-l-2 border-l-[#56b6c2]/80 bg-black/60 hover:bg-white/10'
+									: 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-white/[0.08] hover:bg-white/20'
+							: isBeatStart
 								? isRootC
-									? 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-[#56b6c2]/10 hover:bg-[#56b6c2]/20'
+									? 'border-y border-r border-white/15 border-l border-l-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
 									: nInfo.isBlack
-										? 'border-y border-r border-white/10 border-l-2 border-l-[#56b6c2]/80 bg-black/60 hover:bg-white/10'
-										: 'border-y border-r border-white/15 border-l-2 border-l-[#56b6c2]/80 bg-white/[0.08] hover:bg-white/20'
-								: isBeatStart
-									? isRootC
-										? 'border-y border-r border-white/15 border-l border-l-white/40 bg-[#56b6c2]/[0.07] hover:bg-[#56b6c2]/15'
-										: nInfo.isBlack
-											? 'border-y border-r border-white/10 border-l border-l-white/30 bg-black/60 hover:bg-white/10'
-											: 'border-y border-r border-white/15 border-l border-l-white/40 bg-white/[0.04] hover:bg-white/20'
-									: isRootC
-										? 'border border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
-										: nInfo.isBlack
-											? 'border border-black/20 bg-black/55 hover:bg-white/10'
-											: isDivBlockStart
-												? 'border border-white/20 bg-white/[0.03] hover:bg-white/10'
-												: 'border border-white/10 bg-white/[0.03] hover:bg-white/10'}"
+										? 'border-y border-r border-white/10 border-l border-l-white/30 bg-black/60 hover:bg-white/10'
+										: 'border-y border-r border-white/15 border-l border-l-white/40 bg-white/[0.04] hover:bg-white/20'
+								: isRootC
+									? 'border border-white/10 bg-[#56b6c2]/[0.06] hover:bg-[#56b6c2]/15'
+									: nInfo.isBlack
+										? 'border border-black/20 bg-black/55 hover:bg-white/10'
+										: isDivBlockStart
+											? 'border border-white/20 bg-white/[0.03] hover:bg-white/10'
+											: 'border border-white/10 bg-white/[0.03] hover:bg-white/10'}"
 					></div>
 				{/if}
 
@@ -199,10 +213,16 @@
 						<div
 							class="absolute top-[1px] bottom-[1px] pointer-events-none shadow-xs {seg.startsHere
 								? 'rounded-l-xs border-l-2 border-white/80'
-								: ''} {seg.endsHere ? 'rounded-r-xs' : ''} {t.isPrimary ? 'z-[3] opacity-100' : 'z-[2] opacity-70'} {isSel
+								: ''} {seg.endsHere ? 'rounded-r-xs' : ''} {t.isPrimary
+								? 'z-[3] opacity-100'
+								: 'z-[2] opacity-70'} {isSel
 								? `z-[4] brightness-110 border-2 border-white shadow-[0_0_8px_rgba(255,255,255,0.9)] ${seg.startsHere ? '' : 'border-l-0'} ${seg.endsHere ? '' : 'border-r-0'}`
 								: ''}"
-							style="background-color: {t.color}; left: {seg.startsHere ? `${seg.leftPct}%` : `calc(${seg.leftPct}% - 2px)`}; width: calc({seg.widthPct}% + {(seg.startsHere ? 0 : 2) + (seg.endsHere ? 0 : 2)}px);"
+							style="background-color: {t.color}; left: {seg.startsHere
+								? `${seg.leftPct}%`
+								: `calc(${seg.leftPct}% - 2px)`}; width: calc({seg.widthPct}% + {(seg.startsHere
+								? 0
+								: 2) + (seg.endsHere ? 0 : 2)}px);"
 						></div>
 					{/each}
 				{/each}

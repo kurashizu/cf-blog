@@ -23,7 +23,8 @@
 				// Same face as the rest of the site. Mermaid takes its font as a
 				// config string rather than inheriting from CSS, so this is its own
 				// copy of the stack and had to be updated with it.
-				fontFamily: "'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
+				fontFamily:
+					"'Jelly Pixel', 'KRSZ Box', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
 				themeVariables: {
 					// Baked into the SVG at draw time -- mermaid cannot inherit the
 					// site's rem scale, so the root size is read here and the diagram
@@ -95,7 +96,9 @@
 
 <div class="overflow-x-auto custom-scrollbar py-1">
 	{#if renderError}
-		<div class="text-xs text-[#e06c75] font-mono">{$t('home.diagram.error', { message: renderError })}</div>
+		<div class="text-xs text-[#e06c75] font-mono">
+			{$t('home.diagram.error', { message: renderError })}
+		</div>
 	{/if}
 	<div bind:this={container} class="mermaid-container inline-block min-w-full"></div>
 </div>

@@ -69,7 +69,10 @@ describe('graphOf', () => {
 
 	it('restores an output clear of the modules already placed', () => {
 		const g: RackGraph = {
-			nodes: [{ id: ENTRY_ID, type: 'in', x: 0, y: 0 }, { id: 'vcf', type: 'vcf', x: 900, y: 0 }],
+			nodes: [
+				{ id: ENTRY_ID, type: 'in', x: 0, y: 0 },
+				{ id: 'vcf', type: 'vcf', x: 900, y: 0 }
+			],
 			cables: []
 		};
 		const out = graphOf({ rackGraph: g });
@@ -121,13 +124,22 @@ describe('graphOf', () => {
 		/* The note is a pitch and an oscillator takes a frequency, so the
 		   converter between them is part of the seed. */
 		expect(blank.cables).toContainEqual({
-			from: ENTRY_ID, fromPort: 'pitch', to: SEED_FREQ_ID, toPort: 'a'
+			from: ENTRY_ID,
+			fromPort: 'pitch',
+			to: SEED_FREQ_ID,
+			toPort: 'a'
 		});
 		expect(blank.cables).toContainEqual({
-			from: SEED_FREQ_ID, fromPort: 'out', to: SEED_OSC_ID, toPort: 'pitch'
+			from: SEED_FREQ_ID,
+			fromPort: 'out',
+			to: SEED_OSC_ID,
+			toPort: 'pitch'
 		});
 		expect(blank.cables).toContainEqual({
-			from: SEED_OSC_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in'
+			from: SEED_OSC_ID,
+			fromPort: 'out',
+			to: OUTPUT_ID,
+			toPort: 'in'
 		});
 	});
 });
@@ -276,7 +288,10 @@ describe('the fixed ends', () => {
 		// OUT is an action: without the exec cable the sound arrives and is
 		// never let out.
 		expect(g.cables).toContainEqual({
-			from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec'
+			from: ENTRY_ID,
+			fromPort: 'then',
+			to: OUTPUT_ID,
+			toPort: 'exec'
 		});
 	});
 
@@ -339,7 +354,18 @@ describe('execution flow', () => {
 		/* Execution says which nodes run; audio runs because audio is wired into
 		   it. Giving a source an exec pin as well meant two cables saying one
 		   thing, with silence as the penalty for drawing only the obvious one. */
-		for (const id of ['osc', 'noise', 'excite', 'sub', 'pulse', 'bow', 'reed', 'modes', 'env', 'lfo']) {
+		for (const id of [
+			'osc',
+			'noise',
+			'excite',
+			'sub',
+			'pulse',
+			'bow',
+			'reed',
+			'modes',
+			'env',
+			'lfo'
+		]) {
 			expect(specOf(id).inputs.some((p) => p.kind === 'exec')).toBe(false);
 		}
 	});

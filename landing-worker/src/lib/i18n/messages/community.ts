@@ -9,7 +9,8 @@ export default {
 		'community.guestbook.emailPlaceholder': 'e.g. dev@domain.com',
 		'community.guestbook.contentLabel': 'TRANSMISSION PAYLOAD',
 		'community.guestbook.contentPlaceholder': 'Enter message for the blog.krsz.in guestbook...',
-		'community.guestbook.disclaimer': "Unlike the rest of this site, this is sent to blog.krsz.in and shown publicly below. Sending confirms you're fine with that.",
+		'community.guestbook.disclaimer':
+			"Unlike the rest of this site, this is sent to blog.krsz.in and shown publicly below. Sending confirms you're fine with that.",
 		'community.guestbook.submit': 'DISPATCH PACKET TO BLOG.KRSZ.IN ->',
 		'community.guestbook.errorAllFields': 'ERROR: ALL FIELDS REQUIRED.',
 		'community.guestbook.transmitting': 'TRANSMITTING TO BLOG.KRSZ.IN...',
@@ -25,7 +26,8 @@ export default {
 		'community.guestbook.fetchError': 'FAILED TO REACH THE GUESTBOOK API — TRY REFRESH',
 		'community.guestbook.empty': 'NO MESSAGES YET — SEND THE FIRST PACKET',
 		'community.guestbook.messageFrom': 'Message from {name}',
-		'community.guestbook.fieldStatus': '{count} messages · drag a packet to throw it · click to read it in full{collideNote} · new entries may await moderation',
+		'community.guestbook.fieldStatus':
+			'{count} messages · drag a packet to throw it · click to read it in full{collideNote} · new entries may await moderation',
 		'community.guestbook.collideNote': ' · they collide',
 		'community.footprints.title': 'FOOTPRINT WALL',
 		'community.footprints.titleShort': 'FOOTPRINTS',
@@ -38,7 +40,8 @@ export default {
 		'community.footprints.countriesHeading': 'TOP COUNTRIES',
 		'community.footprints.recentHeading': 'RECENT',
 		'community.footprints.you': 'YOU',
-		'community.footprints.blogNote': 'Also lists visits to blog.krsz.in from its access log: country and browser family only, one per visitor per day.',
+		'community.footprints.blogNote':
+			'Also lists visits to blog.krsz.in from its access log: country and browser family only, one per visitor per day.',
 		'community.footprints.sourceBlog': 'blog',
 		'community.footprints.sourceBlogTitle': 'Anonymised blog.krsz.in visit from the access log',
 		'community.footprints.unknownTz': 'unknown zone',
@@ -48,10 +51,12 @@ export default {
 		'community.footprints.stamping': 'STAMPING…',
 		'community.footprints.stamped': 'STAMPED — THANKS',
 		'community.footprints.alreadyStamped': 'ALREADY STAMPED TODAY',
-		'community.footprints.disclaimer': 'One click records only your country, time zone, and browser/OS family, derived at the edge — no IP address, no exact location, nothing else is kept.',
+		'community.footprints.disclaimer':
+			'One click records only your country, time zone, and browser/OS family, derived at the edge — no IP address, no exact location, nothing else is kept.',
 		'community.footprints.errorAlready': 'YOU ALREADY LEFT A FOOTPRINT TODAY — COME BACK TOMORROW',
 		'community.footprints.errorRate': 'TOO MANY REQUESTS — WAIT A MOMENT AND TRY AGAIN',
-		'community.footprints.errorNoEdge': "COULDN'T READ EDGE DATA FOR THIS REQUEST — TRY AGAIN LATER",
+		'community.footprints.errorNoEdge':
+			"COULDN'T READ EDGE DATA FOR THIS REQUEST — TRY AGAIN LATER",
 		'community.footprints.errorNetwork': 'NETWORK ERROR: {reason}',
 		'community.footprints.justNow': 'just now',
 		'community.footprints.minutesAgo': '{n} m ago',
@@ -84,7 +89,8 @@ export default {
 		'community.leaderboard.colModel': 'model',
 		'community.leaderboard.colCreator': 'creator',
 		'community.leaderboard.rowDetailHint': 'Every field the source has for this model',
-		'community.leaderboard.footerHint': 'Click a row for every field the source carries, or a column heading to rank by it. Blank cells mean Artificial Analysis has no measurement for that model — nothing is inferred.',
+		'community.leaderboard.footerHint':
+			'Click a row for every field the source carries, or a column heading to rank by it. Blank cells mean Artificial Analysis has no measurement for that model — nothing is inferred.',
 		'community.leaderboard.showingOf': 'Showing {shown} of {total}; press ALL for the rest.',
 		'community.leaderboard.detailSlug': 'slug',
 		'community.leaderboard.detailCreator': 'creator',
@@ -132,7 +138,8 @@ export default {
 		'community.guestbook.emailPlaceholder': '例如 dev@domain.com',
 		'community.guestbook.contentLabel': '传输内容',
 		'community.guestbook.contentPlaceholder': '输入要发送到 blog.krsz.in 留言板的内容……',
-		'community.guestbook.disclaimer': '与本站其他内容不同，这条留言会发送到 blog.krsz.in 并在下方公开显示。发送即表示你同意这一点。',
+		'community.guestbook.disclaimer':
+			'与本站其他内容不同，这条留言会发送到 blog.krsz.in 并在下方公开显示。发送即表示你同意这一点。',
 		'community.guestbook.submit': '发送数据包到 BLOG.KRSZ.IN ->',
 		'community.guestbook.errorAllFields': '错误：所有字段均为必填。',
 		'community.guestbook.transmitting': '正在发送到 BLOG.KRSZ.IN……',
@@ -148,7 +155,8 @@ export default {
 		'community.guestbook.fetchError': '无法连接留言板接口 — 请点击刷新重试',
 		'community.guestbook.empty': '暂无留言 — 来发第一条吧',
 		'community.guestbook.messageFrom': '来自 {name} 的留言',
-		'community.guestbook.fieldStatus': '{count} 条留言 · 拖动数据包可以把它扔出去 · 点击可查看全文{collideNote} · 新留言可能需要审核',
+		'community.guestbook.fieldStatus':
+			'{count} 条留言 · 拖动数据包可以把它扔出去 · 点击可查看全文{collideNote} · 新留言可能需要审核',
 		'community.guestbook.collideNote': ' · 它们会相互碰撞',
 		'community.footprints.title': '足迹墙',
 		'community.footprints.titleShort': '足迹',
@@ -161,7 +169,8 @@ export default {
 		'community.footprints.countriesHeading': '国家排行',
 		'community.footprints.recentHeading': '最新足迹',
 		'community.footprints.you': '你',
-		'community.footprints.blogNote': '同时收录 blog.krsz.in 访问日志里的来访：仅国家与浏览器类别，每位访客每天一条。',
+		'community.footprints.blogNote':
+			'同时收录 blog.krsz.in 访问日志里的来访：仅国家与浏览器类别，每位访客每天一条。',
 		'community.footprints.sourceBlog': 'blog',
 		'community.footprints.sourceBlogTitle': '来自访问日志的匿名 blog.krsz.in 来访',
 		'community.footprints.unknownTz': '未知时区',
@@ -171,7 +180,8 @@ export default {
 		'community.footprints.stamping': '正在盖章……',
 		'community.footprints.stamped': '已留下足迹 — 感谢',
 		'community.footprints.alreadyStamped': '今天已经留过足迹',
-		'community.footprints.disclaimer': '点击一次仅记录在边缘节点得到的国家、时区和浏览器/操作系统类别 — 不保存 IP 地址、精确位置或其他任何信息。',
+		'community.footprints.disclaimer':
+			'点击一次仅记录在边缘节点得到的国家、时区和浏览器/操作系统类别 — 不保存 IP 地址、精确位置或其他任何信息。',
 		'community.footprints.errorAlready': '你今天已经留过足迹了 — 明天再来吧',
 		'community.footprints.errorRate': '请求过于频繁 — 请稍等片刻再试',
 		'community.footprints.errorNoEdge': '本次请求无法读取边缘数据 — 请稍后再试',
@@ -207,7 +217,8 @@ export default {
 		'community.leaderboard.colModel': '模型',
 		'community.leaderboard.colCreator': '厂商',
 		'community.leaderboard.rowDetailHint': '查看数据源提供的该模型全部字段',
-		'community.leaderboard.footerHint': '点击某一行可查看数据源提供的全部字段，点击列标题可按该指标排序。空白单元格表示 Artificial Analysis 没有该模型的对应数据 — 不做任何推测填补。',
+		'community.leaderboard.footerHint':
+			'点击某一行可查看数据源提供的全部字段，点击列标题可按该指标排序。空白单元格表示 Artificial Analysis 没有该模型的对应数据 — 不做任何推测填补。',
 		'community.leaderboard.showingOf': '正在显示 {total} 个中的 {shown} 个；按“全部”查看其余的。',
 		'community.leaderboard.detailSlug': '标识',
 		'community.leaderboard.detailCreator': '厂商',
@@ -255,7 +266,8 @@ export default {
 		'community.guestbook.emailPlaceholder': '例如 dev@domain.com',
 		'community.guestbook.contentLabel': '傳輸內容',
 		'community.guestbook.contentPlaceholder': '輸入要傳送到 blog.krsz.in 留言板的內容……',
-		'community.guestbook.disclaimer': '與本站其他內容不同，這則留言會傳送到 blog.krsz.in 並在下方公開顯示。送出即表示你同意這一點。',
+		'community.guestbook.disclaimer':
+			'與本站其他內容不同，這則留言會傳送到 blog.krsz.in 並在下方公開顯示。送出即表示你同意這一點。',
 		'community.guestbook.submit': '傳送封包到 BLOG.KRSZ.IN ->',
 		'community.guestbook.errorAllFields': '錯誤：所有欄位皆為必填。',
 		'community.guestbook.transmitting': '正在傳送到 BLOG.KRSZ.IN……',
@@ -271,7 +283,8 @@ export default {
 		'community.guestbook.fetchError': '無法連上留言板 API — 請按重新整理再試',
 		'community.guestbook.empty': '目前還沒有留言 — 來發第一則吧',
 		'community.guestbook.messageFrom': '來自 {name} 的留言',
-		'community.guestbook.fieldStatus': '{count} 則留言 · 拖曳封包可以把它丟出去 · 點擊可查看全文{collideNote} · 新留言可能需要審核',
+		'community.guestbook.fieldStatus':
+			'{count} 則留言 · 拖曳封包可以把它丟出去 · 點擊可查看全文{collideNote} · 新留言可能需要審核',
 		'community.guestbook.collideNote': ' · 它們會互相碰撞',
 		'community.footprints.title': '足跡牆',
 		'community.footprints.titleShort': '足跡',
@@ -284,7 +297,8 @@ export default {
 		'community.footprints.countriesHeading': '國家排行',
 		'community.footprints.recentHeading': '最新足跡',
 		'community.footprints.you': '你',
-		'community.footprints.blogNote': '同時收錄 blog.krsz.in 存取紀錄裡的來訪：僅國家與瀏覽器類別，每位訪客每天一條。',
+		'community.footprints.blogNote':
+			'同時收錄 blog.krsz.in 存取紀錄裡的來訪：僅國家與瀏覽器類別，每位訪客每天一條。',
 		'community.footprints.sourceBlog': 'blog',
 		'community.footprints.sourceBlogTitle': '來自存取紀錄的匿名 blog.krsz.in 來訪',
 		'community.footprints.unknownTz': '未知時區',
@@ -294,7 +308,8 @@ export default {
 		'community.footprints.stamping': '蓋章中……',
 		'community.footprints.stamped': '已留下足跡 — 謝謝',
 		'community.footprints.alreadyStamped': '今天已經留過足跡',
-		'community.footprints.disclaimer': '點擊一次僅會記錄在邊緣節點取得的國家、時區與瀏覽器／作業系統類別 — 不會保存 IP 位址、確切位置或其他任何資訊。',
+		'community.footprints.disclaimer':
+			'點擊一次僅會記錄在邊緣節點取得的國家、時區與瀏覽器／作業系統類別 — 不會保存 IP 位址、確切位置或其他任何資訊。',
 		'community.footprints.errorAlready': '你今天已經留過足跡了 — 明天再來吧',
 		'community.footprints.errorRate': '請求過於頻繁 — 請稍候再試',
 		'community.footprints.errorNoEdge': '這次請求無法讀取邊緣資料 — 請稍後再試',
@@ -330,7 +345,8 @@ export default {
 		'community.leaderboard.colModel': '模型',
 		'community.leaderboard.colCreator': '廠商',
 		'community.leaderboard.rowDetailHint': '查看資料來源提供的該模型所有欄位',
-		'community.leaderboard.footerHint': '點擊一列可查看資料來源提供的全部欄位，點擊欄標題可依該指標排序。空白儲存格表示 Artificial Analysis 沒有該模型的對應資料 — 不做任何推測填補。',
+		'community.leaderboard.footerHint':
+			'點擊一列可查看資料來源提供的全部欄位，點擊欄標題可依該指標排序。空白儲存格表示 Artificial Analysis 沒有該模型的對應資料 — 不做任何推測填補。',
 		'community.leaderboard.showingOf': '正在顯示 {total} 個中的 {shown} 個；按「全部」查看其餘的。',
 		'community.leaderboard.detailSlug': '識別碼',
 		'community.leaderboard.detailCreator': '廠商',
@@ -378,7 +394,8 @@ export default {
 		'community.guestbook.emailPlaceholder': '例：dev@domain.com',
 		'community.guestbook.contentLabel': '送信内容',
 		'community.guestbook.contentPlaceholder': 'blog.krsz.in のゲストブックに送るメッセージを入力……',
-		'community.guestbook.disclaimer': 'このサイトの他の部分と違い、これは blog.krsz.in に送信され、下に公開表示されます。送信するとこれに同意したことになります。',
+		'community.guestbook.disclaimer':
+			'このサイトの他の部分と違い、これは blog.krsz.in に送信され、下に公開表示されます。送信するとこれに同意したことになります。',
 		'community.guestbook.submit': 'BLOG.KRSZ.IN へパケットを送信 ->',
 		'community.guestbook.errorAllFields': 'エラー：すべての項目が必須です。',
 		'community.guestbook.transmitting': 'BLOG.KRSZ.IN へ送信中……',
@@ -391,15 +408,18 @@ export default {
 		'community.guestbook.refresh': '⟳ 更新',
 		'community.guestbook.refreshHint': 'blog.krsz.in からメッセージを再読み込み',
 		'community.guestbook.fetching': 'BLOG.KRSZ.IN から取得中……',
-		'community.guestbook.fetchError': 'ゲストブックAPIに接続できませんでした — 更新をお試しください',
+		'community.guestbook.fetchError':
+			'ゲストブックAPIに接続できませんでした — 更新をお試しください',
 		'community.guestbook.empty': 'まだメッセージがありません — 最初の一通を送ってみましょう',
 		'community.guestbook.messageFrom': '{name} からのメッセージ',
-		'community.guestbook.fieldStatus': '{count} 件のメッセージ · パケットをドラッグして投げられます · クリックで全文表示{collideNote} · 新着は承認待ちの場合があります',
+		'community.guestbook.fieldStatus':
+			'{count} 件のメッセージ · パケットをドラッグして投げられます · クリックで全文表示{collideNote} · 新着は承認待ちの場合があります',
 		'community.guestbook.collideNote': ' · 互いに衝突します',
 		'community.footprints.title': 'フットプリントウォール',
 		'community.footprints.titleShort': 'フットプリント',
 		'community.footprints.loading': '壁を読み込み中……',
-		'community.footprints.error': 'フットプリントAPIに接続できませんでした — もう一度お試しください',
+		'community.footprints.error':
+			'フットプリントAPIに接続できませんでした — もう一度お試しください',
 		'community.footprints.empty': 'まだ足跡がありません — 最初の一つを残しましょう',
 		'community.footprints.summaryZero': 'まだ足跡はありません。',
 		'community.footprints.summaryOne': '1 か国から 1 件の足跡。',
@@ -407,7 +427,8 @@ export default {
 		'community.footprints.countriesHeading': '国別トップ',
 		'community.footprints.recentHeading': '最新の足跡',
 		'community.footprints.you': 'あなた',
-		'community.footprints.blogNote': 'blog.krsz.in のアクセスログからの訪問も表示します：国とブラウザの種類のみ、訪問者ごとに 1 日 1 件。',
+		'community.footprints.blogNote':
+			'blog.krsz.in のアクセスログからの訪問も表示します：国とブラウザの種類のみ、訪問者ごとに 1 日 1 件。',
 		'community.footprints.sourceBlog': 'blog',
 		'community.footprints.sourceBlogTitle': 'アクセスログ由来の匿名化された blog.krsz.in 訪問',
 		'community.footprints.unknownTz': '不明なタイムゾーン',
@@ -417,10 +438,12 @@ export default {
 		'community.footprints.stamping': 'スタンプ中……',
 		'community.footprints.stamped': '足跡を残しました — ありがとう',
 		'community.footprints.alreadyStamped': '本日はすでにスタンプ済みです',
-		'community.footprints.disclaimer': 'クリック一つでエッジから得た国、タイムゾーン、ブラウザ／OSの種類だけを記録します — IPアドレスや正確な位置情報などは一切保存しません。',
+		'community.footprints.disclaimer':
+			'クリック一つでエッジから得た国、タイムゾーン、ブラウザ／OSの種類だけを記録します — IPアドレスや正確な位置情報などは一切保存しません。',
 		'community.footprints.errorAlready': '本日はすでに足跡を残しています — また明日どうぞ',
 		'community.footprints.errorRate': 'リクエストが多すぎます — 少し待ってから再試行してください',
-		'community.footprints.errorNoEdge': '今回のリクエストではエッジデータを読み取れませんでした — しばらくしてから再試行してください',
+		'community.footprints.errorNoEdge':
+			'今回のリクエストではエッジデータを読み取れませんでした — しばらくしてから再試行してください',
 		'community.footprints.errorNetwork': 'ネットワークエラー：{reason}',
 		'community.footprints.justNow': 'たった今',
 		'community.footprints.minutesAgo': '{n} 分前',
@@ -453,8 +476,10 @@ export default {
 		'community.leaderboard.colModel': 'モデル',
 		'community.leaderboard.colCreator': '開発元',
 		'community.leaderboard.rowDetailHint': 'このモデルについてソースが持つすべての項目',
-		'community.leaderboard.footerHint': '行をクリックするとソースが持つすべての項目を、列見出しをクリックするとその指標で並べ替えます。空欄は Artificial Analysis にそのモデルの計測値がないことを示します — 推測で埋めることはしていません。',
-		'community.leaderboard.showingOf': '{total} 件中 {shown} 件を表示中。残りは「全件」で表示できます。',
+		'community.leaderboard.footerHint':
+			'行をクリックするとソースが持つすべての項目を、列見出しをクリックするとその指標で並べ替えます。空欄は Artificial Analysis にそのモデルの計測値がないことを示します — 推測で埋めることはしていません。',
+		'community.leaderboard.showingOf':
+			'{total} 件中 {shown} 件を表示中。残りは「全件」で表示できます。',
 		'community.leaderboard.detailSlug': 'スラッグ',
 		'community.leaderboard.detailCreator': '開発元',
 		'community.leaderboard.detailReleased': 'リリース日',
@@ -501,7 +526,8 @@ export default {
 		'community.guestbook.emailPlaceholder': '예: dev@domain.com',
 		'community.guestbook.contentLabel': '전송 내용',
 		'community.guestbook.contentPlaceholder': 'blog.krsz.in 방명록에 보낼 메시지를 입력하세요...',
-		'community.guestbook.disclaimer': '이 사이트의 다른 부분과 달리, 이 내용은 blog.krsz.in으로 전송되어 아래에 공개적으로 표시됩니다. 전송하면 이에 동의하는 것입니다.',
+		'community.guestbook.disclaimer':
+			'이 사이트의 다른 부분과 달리, 이 내용은 blog.krsz.in으로 전송되어 아래에 공개적으로 표시됩니다. 전송하면 이에 동의하는 것입니다.',
 		'community.guestbook.submit': 'BLOG.KRSZ.IN으로 패킷 전송 ->',
 		'community.guestbook.errorAllFields': '오류: 모든 항목은 필수입니다.',
 		'community.guestbook.transmitting': 'BLOG.KRSZ.IN으로 전송 중...',
@@ -514,10 +540,12 @@ export default {
 		'community.guestbook.refresh': '⟳ 새로고침',
 		'community.guestbook.refreshHint': 'blog.krsz.in에서 메시지 다시 불러오기',
 		'community.guestbook.fetching': 'BLOG.KRSZ.IN에서 가져오는 중…',
-		'community.guestbook.fetchError': '방명록 API에 연결하지 못했습니다 — 새로고침을 눌러 다시 시도하세요',
+		'community.guestbook.fetchError':
+			'방명록 API에 연결하지 못했습니다 — 새로고침을 눌러 다시 시도하세요',
 		'community.guestbook.empty': '아직 메시지가 없습니다 — 첫 패킷을 보내보세요',
 		'community.guestbook.messageFrom': '{name}님의 메시지',
-		'community.guestbook.fieldStatus': '메시지 {count}개 · 패킷을 드래그해 던질 수 있습니다 · 클릭하면 전체를 볼 수 있습니다{collideNote} · 새 메시지는 승인 대기 중일 수 있습니다',
+		'community.guestbook.fieldStatus':
+			'메시지 {count}개 · 패킷을 드래그해 던질 수 있습니다 · 클릭하면 전체를 볼 수 있습니다{collideNote} · 새 메시지는 승인 대기 중일 수 있습니다',
 		'community.guestbook.collideNote': ' · 서로 충돌합니다',
 		'community.footprints.title': '발자국 벽',
 		'community.footprints.titleShort': '발자국',
@@ -530,7 +558,8 @@ export default {
 		'community.footprints.countriesHeading': '국가별 순위',
 		'community.footprints.recentHeading': '최근 발자국',
 		'community.footprints.you': '나',
-		'community.footprints.blogNote': 'blog.krsz.in 접근 로그의 방문도 표시합니다: 국가와 브라우저 종류만, 방문자당 하루 한 건.',
+		'community.footprints.blogNote':
+			'blog.krsz.in 접근 로그의 방문도 표시합니다: 국가와 브라우저 종류만, 방문자당 하루 한 건.',
 		'community.footprints.sourceBlog': 'blog',
 		'community.footprints.sourceBlogTitle': '접근 로그에서 가져온 익명화된 blog.krsz.in 방문',
 		'community.footprints.unknownTz': '알 수 없는 시간대',
@@ -540,10 +569,12 @@ export default {
 		'community.footprints.stamping': '기록 중…',
 		'community.footprints.stamped': '발자국을 남겼습니다 — 감사합니다',
 		'community.footprints.alreadyStamped': '오늘은 이미 기록했습니다',
-		'community.footprints.disclaimer': '한 번의 클릭으로 엣지에서 얻은 국가, 시간대, 브라우저/OS 종류만 기록합니다 — IP 주소나 정확한 위치 등은 저장하지 않습니다.',
+		'community.footprints.disclaimer':
+			'한 번의 클릭으로 엣지에서 얻은 국가, 시간대, 브라우저/OS 종류만 기록합니다 — IP 주소나 정확한 위치 등은 저장하지 않습니다.',
 		'community.footprints.errorAlready': '오늘은 이미 발자국을 남겼습니다 — 내일 다시 오세요',
 		'community.footprints.errorRate': '요청이 너무 많습니다 — 잠시 후 다시 시도하세요',
-		'community.footprints.errorNoEdge': '이번 요청에서는 엣지 데이터를 읽을 수 없습니다 — 나중에 다시 시도하세요',
+		'community.footprints.errorNoEdge':
+			'이번 요청에서는 엣지 데이터를 읽을 수 없습니다 — 나중에 다시 시도하세요',
 		'community.footprints.errorNetwork': '네트워크 오류: {reason}',
 		'community.footprints.justNow': '방금',
 		'community.footprints.minutesAgo': '{n}분 전',
@@ -576,8 +607,10 @@ export default {
 		'community.leaderboard.colModel': '모델',
 		'community.leaderboard.colCreator': '제작사',
 		'community.leaderboard.rowDetailHint': '이 모델에 대해 출처가 가진 모든 항목',
-		'community.leaderboard.footerHint': '행을 클릭하면 출처가 가진 모든 항목을, 열 제목을 클릭하면 해당 지표로 정렬합니다. 빈 셀은 Artificial Analysis에 해당 모델의 측정값이 없다는 뜻입니다 — 추정으로 채우지 않습니다.',
-		'community.leaderboard.showingOf': '{total}개 중 {shown}개 표시 중. 나머지는 "전체"를 누르세요.',
+		'community.leaderboard.footerHint':
+			'행을 클릭하면 출처가 가진 모든 항목을, 열 제목을 클릭하면 해당 지표로 정렬합니다. 빈 셀은 Artificial Analysis에 해당 모델의 측정값이 없다는 뜻입니다 — 추정으로 채우지 않습니다.',
+		'community.leaderboard.showingOf':
+			'{total}개 중 {shown}개 표시 중. 나머지는 "전체"를 누르세요.',
 		'community.leaderboard.detailSlug': '슬러그',
 		'community.leaderboard.detailCreator': '제작사',
 		'community.leaderboard.detailReleased': '출시일',

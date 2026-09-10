@@ -174,7 +174,6 @@ function commit(graph: RackGraph): void {
 /** The node the canvas is editing, or null. */
 export const selectedNode = writable<string | null>(null);
 
-
 let seq = 0;
 
 export function addNode(graph: RackGraph, type: string, x: number, y: number): string {
@@ -223,7 +222,11 @@ function isDeclaredInlet(graph: RackGraph, cable: GraphCable): boolean {
 	return !!spec?.inputs.some((q) => q.id === cable.toPort);
 }
 
-export function addCable(graph: RackGraph, cable: GraphCable, kind: PortKind): 'ok' | 'cycle' | 'duplicate' {
+export function addCable(
+	graph: RackGraph,
+	cable: GraphCable,
+	kind: PortKind
+): 'ok' | 'cycle' | 'duplicate' {
 	if (hasCable(graph, cable)) return 'duplicate';
 	/* Audio cannot loop -- a delay loop measured stable only to about g = 0.90
 	   and screamed past it -- but modulation can, and often should.
@@ -355,7 +358,11 @@ export function moveSelection(graph: RackGraph, ids: Set<string>, dx: number, dy
 	commitDuringDrag(moveNodes(graph, ids, dx, dy));
 }
 
-export function deleteSelection(graph: RackGraph, ids: Set<string>, params?: Record<string, number>): void {
+export function deleteSelection(
+	graph: RackGraph,
+	ids: Set<string>,
+	params?: Record<string, number>
+): void {
 	pushUndo(get(activeTrackId));
 	let next = params ?? {};
 	for (const id of ids) next = pruneGraphParams(next, id);
@@ -404,7 +411,10 @@ export function pasteClipboard(graph: RackGraph, params?: Record<string, number>
 			if (k.startsWith(`${oldId}.`)) gp[`${newIdStr}.${k.slice(oldId.length + 1)}`] = v;
 		}
 	});
-	modularSynth.updateTrack(get(activeTrackId), { rackGraph: next, graphParams: gp } as Partial<TrackData>);
+	modularSynth.updateTrack(get(activeTrackId), {
+		rackGraph: next,
+		graphParams: gp
+	} as Partial<TrackData>);
 	selectedNodes.set(ids);
 	refreshTracks();
 	flushHistoryBump();

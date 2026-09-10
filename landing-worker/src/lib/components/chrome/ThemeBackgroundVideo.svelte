@@ -25,7 +25,9 @@
 	 * transport running; that is the case that costs, and the one held.
 	 */
 	const isSafari =
-		typeof navigator !== 'undefined' && /safari/i.test(navigator.userAgent) && !/chrome|chromium|crios|fxios|android|edg/i.test(navigator.userAgent);
+		typeof navigator !== 'undefined' &&
+		/safari/i.test(navigator.userAgent) &&
+		!/chrome|chromium|crios|fxios|android|edg/i.test(navigator.userAgent);
 	let holdVideo = $derived(isSafari && $audioContextRunning && $isSeqPlaying);
 
 	/*

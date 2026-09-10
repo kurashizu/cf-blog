@@ -56,7 +56,12 @@ export const visibleTracks = derived(
 		if ($isOverlayMode) {
 			return $tracksState
 				.filter((trk) => $overlayTrackIds.includes(trk.id))
-				.map((trk) => ({ id: trk.id, color: trk.color, grid: trk.grid, isPrimary: trk.id === $activeTrackId }));
+				.map((trk) => ({
+					id: trk.id,
+					color: trk.color,
+					grid: trk.grid,
+					isPrimary: trk.id === $activeTrackId
+				}));
 		}
 		const trk = $tracksState[$activeTrackId] || $tracksState[0];
 		return trk ? [{ id: trk.id, color: trk.color, grid: trk.grid, isPrimary: true }] : [];
@@ -106,7 +111,8 @@ export function updateActiveTrack(partial: Partial<TrackData>): void {
 		const toKey: Record<string, unknown> = {};
 		const toTrack: Record<string, unknown> = {};
 		for (const [k, v] of Object.entries(partial)) (isKeyTimbreKey(k) ? toKey : toTrack)[k] = v;
-		if (Object.keys(toKey).length) modularSynth.updateKeyTimbre(id, key, toKey as Partial<TrackData>);
+		if (Object.keys(toKey).length)
+			modularSynth.updateKeyTimbre(id, key, toKey as Partial<TrackData>);
 		if (Object.keys(toTrack).length) modularSynth.updateTrack(id, toTrack as Partial<TrackData>);
 	} else {
 		modularSynth.updateTrack(id, partial);
@@ -128,7 +134,10 @@ export function toggleTrackPercussion(trackId: number): void {
 	   you are not editing should not rename what you are. */
 	if (trackId === get(activeTrackId)) onTrackEdited?.();
 	// The key table survives a round trip through off, so a mis-click does not lose a kit.
-	modularSynth.updateTrack(trackId, { percussion: !trk.percussion, keyTimbres: trk.keyTimbres ?? {} });
+	modularSynth.updateTrack(trackId, {
+		percussion: !trk.percussion,
+		keyTimbres: trk.keyTimbres ?? {}
+	});
 	refreshTracks();
 }
 
@@ -182,7 +191,8 @@ export function toggleTrackSolo(trackId: number): void {
 
 function currentGlobalCol(colIndex: number): number {
 	const snap = get(snapDiv);
-	const meterCols = (METER_SPECS[get(timeMeter)] || METER_SPECS['4/4']).colsPerBar * ternaryColFactor(snap);
+	const meterCols =
+		(METER_SPECS[get(timeMeter)] || METER_SPECS['4/4']).colsPerBar * ternaryColFactor(snap);
 	return get(activeStepPage) * meterCols + colIndex;
 }
 
@@ -204,7 +214,11 @@ export function placeOrClearNote(trackId: number, noteIndex: number, startStep: 
 			let s = startStep;
 			while (s < total && track.grid[s]?.includes(noteIndex)) {
 				const notes = track.grid[s] || [];
-				modularSynth.setTrackStepNotes(trackId, s, notes.filter((n) => n !== noteIndex));
+				modularSynth.setTrackStepNotes(
+					trackId,
+					s,
+					notes.filter((n) => n !== noteIndex)
+				);
 				s++;
 			}
 		});
@@ -218,7 +232,11 @@ export function placeOrClearNote(trackId: number, noteIndex: number, startStep: 
 			for (let s = startStep; s < endStep; s++) {
 				const notes = track.grid[s] || [];
 				if (!notes.includes(noteIndex) && notes.length < 8) {
-					modularSynth.setTrackStepNotes(trackId, s, [...notes, noteIndex].sort((a, b) => a - b));
+					modularSynth.setTrackStepNotes(
+						trackId,
+						s,
+						[...notes, noteIndex].sort((a, b) => a - b)
+					);
 				}
 			}
 		});
@@ -274,9 +292,10 @@ const activePlayingSig = derived(
 
 export const activePlayingNotes = derived(activePlayingSig, ($sig) => {
 	const activeMap = new Map<number, { trackId: number }>();
-	if ($sig) for (const p of $sig.split(',')) {
-		const [n, t] = p.split(':');
-		activeMap.set(Number(n), { trackId: Number(t) });
-	}
+	if ($sig)
+		for (const p of $sig.split(',')) {
+			const [n, t] = p.split(':');
+			activeMap.set(Number(n), { trackId: Number(t) });
+		}
 	return activeMap;
 });

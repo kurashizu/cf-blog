@@ -61,7 +61,8 @@ function onFakeContext() {
 function modulated(ctx: FakeCtx): FakeParam[] {
 	const out: FakeParam[] = [];
 	for (const n of ctx.nodes) {
-		for (const e of n.outgoing) if (e.to instanceof FakeParam && !out.includes(e.to)) out.push(e.to);
+		for (const e of n.outgoing)
+			if (e.to instanceof FakeParam && !out.includes(e.to)) out.push(e.to);
 	}
 	return out;
 }
@@ -123,8 +124,7 @@ describe('an accented step is not just a louder one', () => {
 				onFakeContext();
 				S.scheduleStepAudio(step, 0);
 				const voice = [...S.activeVoices.values()][0] as
-					| { filter: { frequency: FakeParam } }
-					| undefined;
+					{ filter: { frequency: FakeParam } } | undefined;
 				return voice!.filter.frequency.events.find((e) => e[0] === 'set')![1];
 			};
 			expect(cutoffAtStep(2)).toBeGreaterThan(cutoffAtStep(0));

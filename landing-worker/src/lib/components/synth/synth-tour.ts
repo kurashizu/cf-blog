@@ -1,7 +1,12 @@
 import { tr } from '$lib/i18n';
 import { get } from 'svelte/store';
 import type { Step } from '../chrome/Onboarding.svelte';
-import { advancedMode, toggleAdvanced, setCentreView, rollFullscreen } from '../../stores/synth-view';
+import {
+	advancedMode,
+	toggleAdvanced,
+	setCentreView,
+	rollFullscreen
+} from '../../stores/synth-view';
 
 /**
  * The synth's own walkthrough, shown by the `?` on the KRSZ SYNTH badge. Same

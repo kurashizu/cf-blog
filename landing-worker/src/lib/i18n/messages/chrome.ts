@@ -8,12 +8,14 @@ export default {
 		'chrome.boot.complete': 'POST COMPLETE — {ok}/{total} checks answered',
 		'chrome.boot.booting': 'booting workbench…',
 
-		'chrome.console.inputHint': 'Type "help" — Tab completes & cycles, → accepts, ↑↓ history, Ctrl+L clears...',
+		'chrome.console.inputHint':
+			'Type "help" — Tab completes & cycles, → accepts, ↑↓ history, Ctrl+L clears...',
 		'chrome.console.exec': 'EXEC',
 		'chrome.console.moreSuggestions': '+{count} more',
 		'chrome.console.openedWalkthrough': 'Opened the getting-started walkthrough.',
 		'chrome.console.openedKeymap': 'Opened the keymap.',
-		'chrome.console.noManualEntry': 'No manual entry for "{name}". Type "help" for the command list.',
+		'chrome.console.noManualEntry':
+			'No manual entry for "{name}". Type "help" for the command list.',
 		'chrome.console.help.open': 'launch a project in a new tab',
 		'chrome.console.help.cat': 'print a file',
 		'chrome.console.help.grep': 'filter lines',
@@ -40,10 +42,12 @@ export default {
 		'chrome.console.help.guide': 'replay the getting-started walkthrough',
 		'chrome.console.help.backquote': 'open/close this console over any view',
 		'chrome.console.help.keys': 'full hotkey reference (or press ? / F1 outside this console)',
-		'chrome.console.usage.cd1': 'Change the virtual working directory. Supports .. and absolute paths.',
+		'chrome.console.usage.cd1':
+			'Change the virtual working directory. Supports .. and absolute paths.',
 		'chrome.console.usage.cd2': 'With no argument, returns to /.',
 		'chrome.console.usage.ls': 'List a directory. -l adds the annotation column.',
-		'chrome.console.usage.cat': 'Print a file. /synth and /edge files are rendered from live state.',
+		'chrome.console.usage.cat':
+			'Print a file. /synth and /edge files are rendered from live state.',
 		'chrome.console.usage.tree': 'Recursive listing of a subtree.',
 		'chrome.console.usage.grep1': 'Keep matching lines. Reads a pipe when no file is given.',
 		'chrome.console.usage.grep2': 'The pattern is a JavaScript regular expression.',
@@ -57,7 +61,8 @@ export default {
 		'chrome.console.usage.trace1': 'Fetch /cdn-cgi/trace and print the serving Cloudflare PoP,',
 		'chrome.console.usage.trace2': 'negotiated protocol, TLS version and key-exchange group.',
 		'chrome.console.usage.open': 'Open a project in a new tab.',
-		'chrome.console.usage.eval': 'Evaluate arithmetic with a hand-written parser — never raw eval().',
+		'chrome.console.usage.eval':
+			'Evaluate arithmetic with a hand-written parser — never raw eval().',
 		'chrome.console.usage.bpm': 'Show or set the sequencer tempo.',
 		'chrome.console.usage.vol': 'Show or set master volume.',
 		'chrome.console.usage.load': 'Load a built-in song by name fragment. See "songs".',
@@ -65,15 +70,18 @@ export default {
 		'chrome.console.usage.echo': 'Print text. Useful as a pipe source.',
 		'chrome.console.usage.history': 'The last 15 commands. Persisted across visits.',
 		'chrome.console.usage.guide': 'Reopen the getting-started walkthrough.',
-		'chrome.console.usage.keys': 'Open the full keyboard reference. Not the same as typing "?" here — that prints help; press the actual ? or F1 key (outside a text field) for this instead.',
+		'chrome.console.usage.keys':
+			'Open the full keyboard reference. Not the same as typing "?" here — that prints help; press the actual ? or F1 key (outside a text field) for this instead.',
 		'chrome.console.usage.man': 'Usage for one command.',
 		'chrome.console.usage.help': 'The full command list, grouped by section.',
 		'chrome.console.usage.whoami': 'Operator profile — name, location, motto, stack.',
 		'chrome.console.usage.date': 'Current time in Sydney and UTC.',
-		'chrome.console.usage.tracks': 'Sequencer track states — which are muted, soloed, and their blend mode.',
+		'chrome.console.usage.tracks':
+			'Sequencer track states — which are muted, soloed, and their blend mode.',
 		'chrome.console.usage.songs': 'Built-in songs (● marks the one currently loaded).',
 		'chrome.console.usage.midi': 'Connected MIDI device status, if any.',
-		'chrome.console.usage.banner': 'Print the KRSZ banner — a fresh block-letter rendering each time.',
+		'chrome.console.usage.banner':
+			'Print the KRSZ banner — a fresh block-letter rendering each time.',
 		'chrome.console.usage.play': 'Start sequencer playback.',
 		'chrome.console.usage.stop': 'Stop sequencer playback.',
 		'chrome.console.usage.seq': 'Toggle sequencer playback.',
@@ -90,7 +98,8 @@ export default {
 		'chrome.console.run.navigatedTo': 'Navigated to {path}',
 		'chrome.console.run.unknownProject': 'Unknown project: "{key}". Try: {list}',
 		'chrome.console.run.opened': 'Opened {url}',
-		'chrome.console.run.edgeTraceUnavailable': 'Edge trace unavailable — /cdn-cgi/trace did not answer.',
+		'chrome.console.run.edgeTraceUnavailable':
+			'Edge trace unavailable — /cdn-cgi/trace did not answer.',
 		'chrome.console.run.cdNoSuchDir': 'cd: no such directory: {path}',
 		'chrome.console.run.cdNotADir': 'cd: not a directory: {path}',
 		'chrome.console.run.lsNoSuchPath': 'ls: no such path: {path}',
@@ -188,20 +197,27 @@ export default {
 		'chrome.console.help.chain': 'run several commands in sequence',
 		'chrome.console.help.historyClear': 'clear command history',
 
-		'chrome.console.usage.lang': 'Switch or show the UI language. Accepts zh, cn, tw, jp, kr as short forms.',
-		'chrome.console.usage.life1': 'Control LIFE.LAB (tab 7): run, pause, toggle, step [n], clear, random [density],',
+		'chrome.console.usage.lang':
+			'Switch or show the UI language. Accepts zh, cn, tw, jp, kr as short forms.',
+		'chrome.console.usage.life1':
+			'Control LIFE.LAB (tab 7): run, pause, toggle, step [n], clear, random [density],',
 		'chrome.console.usage.life2': 'speed <gen/s>, size <W>x<H>, load <pattern>, patterns, info.',
-		'chrome.console.usage.sysinfo': 'A neofetch-style block of real browser and system facts. Unavailable ones print n/a.',
-		'chrome.console.usage.uptime': 'Session uptime and Navigation Timing (DOMContentLoaded, load, visibility).',
+		'chrome.console.usage.sysinfo':
+			'A neofetch-style block of real browser and system facts. Unavailable ones print n/a.',
+		'chrome.console.usage.uptime':
+			'Session uptime and Navigation Timing (DOMContentLoaded, load, visibility).',
 		'chrome.console.usage.ver': 'The build commit and build date this page was served from.',
 		'chrome.console.usage.settings': 'Open the global config panel.',
 		'chrome.console.usage.credits': 'Open the open-source credits panel.',
 		'chrome.console.usage.privacy': 'Open the privacy notice.',
 		'chrome.console.usage.exit': 'Close the console overlay.',
-		'chrome.console.usage.scale': 'Show or set the site text size, in pixels, or "auto" to follow the screen.',
+		'chrome.console.usage.scale':
+			'Show or set the site text size, in pixels, or "auto" to follow the screen.',
 		'chrome.console.usage.rec': 'Start, stop, or toggle recording the synth output to a file.',
-		'chrome.console.usage.patch': 'Synth patch management: new blank patch, save, load, or copy a share link.',
-		'chrome.console.usage.dig1': "Resolve <name> through this site's own /dns-query endpoint (RFC 8484 wire format).",
+		'chrome.console.usage.patch':
+			'Synth patch management: new blank patch, save, load, or copy a share link.',
+		'chrome.console.usage.dig1':
+			"Resolve <name> through this site's own /dns-query endpoint (RFC 8484 wire format).",
 		'chrome.console.usage.dig2': 'Type is one of A, AAAA, CNAME, MX, TXT, NS (default A).',
 		'chrome.console.usage.sha256': 'SHA-256 of the text (or piped input), as hex.',
 		'chrome.console.usage.sha1': 'SHA-1 of the text (or piped input), as hex.',
@@ -210,11 +226,16 @@ export default {
 		'chrome.console.usage.uuid': 'Generate a random UUID (v4).',
 		'chrome.console.usage.random': 'A random integer from 1 to max (default 100).',
 		'chrome.console.usage.roll': 'Roll NdM dice, e.g. roll 2d6 — shows each die and the total.',
-		'chrome.console.usage.unix': 'With no argument, the current time. Otherwise a Unix timestamp or an ISO string, converted both ways.',
-		'chrome.console.usage.which': 'Reports whether a name is a builtin command, a navigation word, an external link, or an alias.',
-		'chrome.console.usage.fonts': 'Lists the fonts document.fonts reports as loaded, with their status and unicode range.',
-		'chrome.console.usage.fortune': "A random paragraph from this site's own filesystem, with its source path.",
-		'chrome.console.usage.cowsay': 'An ASCII cow saying the given text (or piped input), wrapped at 40 columns.',
+		'chrome.console.usage.unix':
+			'With no argument, the current time. Otherwise a Unix timestamp or an ISO string, converted both ways.',
+		'chrome.console.usage.which':
+			'Reports whether a name is a builtin command, a navigation word, an external link, or an alias.',
+		'chrome.console.usage.fonts':
+			'Lists the fonts document.fonts reports as loaded, with their status and unicode range.',
+		'chrome.console.usage.fortune':
+			"A random paragraph from this site's own filesystem, with its source path.",
+		'chrome.console.usage.cowsay':
+			'An ASCII cow saying the given text (or piped input), wrapped at 40 columns.',
 		'chrome.console.usage.sl': 'The classic steam locomotive. Esc or Ctrl+C cancels it early.',
 
 		'chrome.console.run.langStatus': 'Language: {locale} ({native}) — {mode}',
@@ -236,8 +257,10 @@ export default {
 		'chrome.console.run.patchSaved': 'Patch saved.',
 		'chrome.console.run.patchLoaded': 'Patch loaded.',
 		'chrome.console.run.patchShared': 'Share link copied to clipboard.',
-		'chrome.console.run.lifeLoading': 'Opening LIFE.LAB — once it has loaded, run this command again.',
-		'chrome.console.run.lifeNotReady': 'LIFE.LAB is not ready yet — give it a moment and try again.',
+		'chrome.console.run.lifeLoading':
+			'Opening LIFE.LAB — once it has loaded, run this command again.',
+		'chrome.console.run.lifeNotReady':
+			'LIFE.LAB is not ready yet — give it a moment and try again.',
 		'chrome.console.run.lifeRunning': 'Running.',
 		'chrome.console.run.lifePaused': 'Paused.',
 		'chrome.console.run.lifeStepped': 'Stepped {n} generation(s).',
@@ -257,7 +280,7 @@ export default {
 		'chrome.console.run.digBadResponse': 'dig: malformed response.',
 		'chrome.console.run.digRcode': 'dig: server returned RCODE {rcode} (failure).',
 		'chrome.console.run.digNoAnswers': 'dig: no {type} records for {name}.',
-		'chrome.console.run.digHeading': 'DIG {name} {type} — via this site\'s own /dns-query',
+		'chrome.console.run.digHeading': "DIG {name} {type} — via this site's own /dns-query",
 		'chrome.console.run.usageTextArg': 'Usage: {cmd} <text> — or pipe text in.',
 		'chrome.console.run.subtleCryptoUnavailable': 'SubtleCrypto is not available in this browser.',
 		'chrome.console.run.base64Invalid': 'Not valid base64.',
@@ -273,7 +296,7 @@ export default {
 		'chrome.console.run.fortuneUnavailable': 'fortune: nothing to quote right now.',
 		'chrome.console.run.fortuneSource': '  — {path}',
 		'chrome.console.run.cowsayDefault': 'Moo.',
-		'chrome.console.run.slDone': 'All aboard — that\'s the 4-6-2, right on time.',
+		'chrome.console.run.slDone': "All aboard — that's the 4-6-2, right on time.",
 		'chrome.console.run.slCancelled': 'Train cancelled.',
 		'chrome.console.run.bangNoMatch': 'No match in history for "{input}".',
 		'chrome.console.run.historyCleared': 'History cleared.',
@@ -310,7 +333,8 @@ export default {
 		'chrome.credits.jellyPixel': 'Every Latin glyph you are reading, at 12px',
 		'chrome.credits.fusionPixel': 'Every Han, kana and Hangul glyph, on the same 12px grid',
 		'chrome.credits.groupUtils': 'UTILS',
-		'chrome.credits.cfSpeedtest': 'Latency, download and upload measured against speed.cloudflare.com, in the SPEED tool',
+		'chrome.credits.cfSpeedtest':
+			'Latency, download and upload measured against speed.cloudflare.com, in the SPEED tool',
 		'chrome.credits.threejs': 'The model field, rendered in WebGL',
 		'chrome.credits.artificialAnalysis': 'Every model coordinate is a field of their payload',
 		'chrome.credits.v86': 'An x86 PC emulated in the tab',
@@ -324,27 +348,36 @@ export default {
 		'chrome.credits.nord': 'The nord-terminal theme',
 		'chrome.credits.gruvbox': 'The gruvbox-dark theme',
 		'chrome.credits.cloudflareWorkers': 'Runs this site, and D1 / R2 / KV / Vectorize behind it',
-		'chrome.credits.intro': "Built by kurashizu, standing on the open-source projects below. Each one is something the site actually ships or runs, listed with the licence it carries.",
-		'chrome.credits.outro': 'If something here is miscredited or missing, that is a mistake worth telling me about.',
+		'chrome.credits.intro':
+			'Built by kurashizu, standing on the open-source projects below. Each one is something the site actually ships or runs, listed with the licence it carries.',
+		'chrome.credits.outro':
+			'If something here is miscredited or missing, that is a mistake worth telling me about.',
 
 		'chrome.dropdown.placeholder': 'select…',
 
 		'chrome.footer.tracingEdge': 'TRACING EDGE…',
 		'chrome.footer.edgeTraceNA': 'EDGE TRACE N/A',
-		'chrome.footer.edgeTitleKnown': 'Served by Cloudflare PoP {colo}{loc} over {http}, {tls}{kex}{rtt}. Read live from /cdn-cgi/trace; type "trace" in the console for the full record.',
+		'chrome.footer.edgeTitleKnown':
+			'Served by Cloudflare PoP {colo}{loc} over {http}, {tls}{kex}{rtt}. Read live from /cdn-cgi/trace; type "trace" in the console for the full record.',
 		'chrome.footer.edgeTitleRtt': ' — trace round trip {ms}ms',
-		'chrome.footer.edgeTitleUnknown': 'Cloudflare /cdn-cgi/trace — type "trace" in the console to probe the edge.',
+		'chrome.footer.edgeTitleUnknown':
+			'Cloudflare /cdn-cgi/trace — type "trace" in the console to probe the edge.',
 		'chrome.footer.linkGithub': 'GitHub Profile — Open https://github.com/kurashizu in a new tab',
-		'chrome.footer.linkHuggingface': 'Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab',
-		'chrome.footer.linkOshwhub': 'OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab',
-		'chrome.footer.linkRules': 'Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab',
+		'chrome.footer.linkHuggingface':
+			'Hugging Face AI Models Hub — Open https://huggingface.co/kurashizu in a new tab',
+		'chrome.footer.linkOshwhub':
+			'OSHWHub Hardware Projects & PCB Schematics — Open https://oshwhub.com/Kurashizu in a new tab',
+		'chrome.footer.linkRules':
+			'Skill & System Rules Reference — Open https://skill.krsz.in/rules in a new tab',
 		'chrome.footer.buildTitle': 'Build {commit} — {time} ({sydney} Sydney)',
-		'chrome.footer.buildTitleLinked': 'Build {commit} — {time} ({sydney} Sydney). Open the commit on GitHub in a new tab.',
+		'chrome.footer.buildTitleLinked':
+			'Build {commit} — {time} ({sydney} Sydney). Open the commit on GitHub in a new tab.',
 		'chrome.footer.creditsTitle': 'The open-source projects this site is built on',
 		'chrome.footer.credits': 'credits',
 
 		'chrome.hotkeys.global': 'GLOBAL',
-		'chrome.hotkeys.globalNote': 'Ctrl+0-5 works everywhere, including inside the key-capturing testers',
+		'chrome.hotkeys.globalNote':
+			'Ctrl+0-5 works everywhere, including inside the key-capturing testers',
 		'chrome.hotkeys.view0': 'View 0 — modules',
 		'chrome.hotkeys.view1': 'View 1 — guestbook',
 		'chrome.hotkeys.view2': 'View 2 — synth',
@@ -365,26 +398,34 @@ export default {
 		'chrome.hotkeys.consoleClearLine': 'Clear the current input line',
 		'chrome.hotkeys.consolePipe': 'Pipe into grep / head / tail / sort / uniq / wc',
 		'chrome.hotkeys.synthTransport': 'SYNTH — TRANSPORT',
-		'chrome.hotkeys.synthTransportNote': 'Active on view 2 whenever no text field, menu or settings panel has focus',
-		'chrome.hotkeys.transportPlay': 'Play / pause where it is (Space is the sustain pedal while QWERTY is on)',
+		'chrome.hotkeys.synthTransportNote':
+			'Active on view 2 whenever no text field, menu or settings panel has focus',
+		'chrome.hotkeys.transportPlay':
+			'Play / pause where it is (Space is the sustain pedal while QWERTY is on)',
 		'chrome.hotkeys.transportRewind': 'Rewind to bar 1',
 		'chrome.hotkeys.transportStopRewind': 'Stop and rewind to bar 1',
 		'chrome.hotkeys.transportPage': 'Previous / next page (Shift: move the cursor a bar)',
 		'chrome.hotkeys.transportPreset': 'Next / previous sound preset (applied to the active track)',
 		'chrome.hotkeys.transportTrack': 'Select track 1–8',
-		'chrome.hotkeys.transportMuteSolo': 'Mute / solo the active track; LOOP–ONCE; follow the playhead across pages',
+		'chrome.hotkeys.transportMuteSolo':
+			'Mute / solo the active track; LOOP–ONCE; follow the playhead across pages',
 		'chrome.hotkeys.transportCursorBar': 'Cursor back / forward one bar',
-		'chrome.hotkeys.transportResetKnob': 'Reset a knob or fader to its neutral value; RST on a rack does the whole rack',
+		'chrome.hotkeys.transportResetKnob':
+			'Reset a knob or fader to its neutral value; RST on a rack does the whole rack',
 		'chrome.hotkeys.transportTempo': 'Tempo −1 / +1 BPM (hold to ramp)',
 		'chrome.hotkeys.synthPianoRoll': 'SYNTH — PIANO ROLL',
-		'chrome.hotkeys.synthPianoRollNote': 'Letters, digits and , . belong to the QWERTY piano while it is on; a tap of Ctrl / Shift shifts its octave',
+		'chrome.hotkeys.synthPianoRollNote':
+			'Letters, digits and , . belong to the QWERTY piano while it is on; a tap of Ctrl / Shift shifts its octave',
 		'chrome.hotkeys.rollPlace': 'Place a note / box-select (Shift adds)',
-		'chrome.hotkeys.rollSelect': 'Select it (Shift toggles); drag to move, drag its right end to resize, Alt-drag copies',
+		'chrome.hotkeys.rollSelect':
+			'Select it (Shift toggles); drag to move, drag its right end to resize, Alt-drag copies',
 		'chrome.hotkeys.rollDelete': 'Delete the note under the pointer; drag to erase more',
-		'chrome.hotkeys.rollNudge': 'Nudge the selection a grid step / semitone (Shift: a bar / an octave)',
+		'chrome.hotkeys.rollNudge':
+			'Nudge the selection a grid step / semitone (Shift: a bar / an octave)',
 		'chrome.hotkeys.rollDeleteSel': 'Delete the selection / clear it',
 		'chrome.hotkeys.rollSelectAll': 'Select the page; again for the whole track',
-		'chrome.hotkeys.rollCopyPaste': 'Copy / cut / paste at the cursor (the cyan ruler cell); clips cross tracks, patches and tabs',
+		'chrome.hotkeys.rollCopyPaste':
+			'Copy / cut / paste at the cursor (the cyan ruler cell); clips cross tracks, patches and tabs',
 		'chrome.hotkeys.rollRepeat': 'Repeat the selection right after itself',
 		'chrome.hotkeys.rollUndoRedo': 'Undo / redo (also Ctrl+Y)',
 		'chrome.hotkeys.lifelab': 'LIFELAB — THE DISH',
@@ -409,8 +450,10 @@ export default {
 		'chrome.layout.consoleCloseHint': '` or Esc to close',
 
 		'chrome.onboarding.eightViewsTitle': 'EIGHT VIEWS',
-		'chrome.onboarding.eightViewsBody': 'Everything on this site lives in one of eight views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
-		'chrome.onboarding.eightViewsModules': 'modules — the live projects, with real architecture diagrams',
+		'chrome.onboarding.eightViewsBody':
+			'Everything on this site lives in one of eight views. Click a tab, or hold Ctrl and press its number — that works everywhere, including inside the keyboard tester and the piano, so nothing can trap you.',
+		'chrome.onboarding.eightViewsModules':
+			'modules — the live projects, with real architecture diagrams',
 		'chrome.onboarding.eightViewsGuestbook': 'guestbook — posts to blog.krsz.in',
 		'chrome.onboarding.eightViewsSynth': 'synth — 8-track WebAudio workstation, .mid in, WAV out',
 		'chrome.onboarding.eightViewsUtils': 'utils — twelve hardware testers',
@@ -419,9 +462,11 @@ export default {
 		'chrome.onboarding.eightViewsWebLm': 'web-lm — a language model on your own GPU, no server',
 		'chrome.onboarding.eightViewsLifelab': "lifelab — Conway's Game of Life, as a campaign",
 		'chrome.onboarding.workbenchTitle': 'THE WORKBENCH',
-		'chrome.onboarding.workbenchBody': 'The active view fills this panel. Nothing in it is decorative: every latency, level and capability you see was measured in your browser or read from the service it describes. Where a browser refuses to answer, it prints "n/a" instead of a plausible number.',
+		'chrome.onboarding.workbenchBody':
+			'The active view fills this panel. Nothing in it is decorative: every latency, level and capability you see was measured in your browser or read from the service it describes. Where a browser refuses to answer, it prints "n/a" instead of a plausible number.',
 		'chrome.onboarding.consoleTitle': 'THE CONSOLE',
-		'chrome.onboarding.consoleBody': 'A small shell, dropped down over whatever view you are on. Its filesystem is a live projection of this site’s own data, so it cannot drift out of date.',
+		'chrome.onboarding.consoleBody':
+			'A small shell, dropped down over whatever view you are on. Its filesystem is a live projection of this site’s own data, so it cannot drift out of date.',
 		'chrome.onboarding.consoleToggle': 'open or close it from anywhere',
 		'chrome.onboarding.consoleHelp': 'the command list; man <cmd> explains one',
 		'chrome.onboarding.consoleBrowse': 'browse /projects, /operator, /synth, /edge',
@@ -429,12 +474,15 @@ export default {
 		'chrome.onboarding.consoleTrace': 'the Cloudflare PoP actually serving you',
 		'chrome.onboarding.openIt': 'OPEN IT',
 		'chrome.onboarding.launchpadTitle': 'LAUNCHPAD',
-		'chrome.onboarding.launchpadBody': 'The same five views as pads, plus the theme switch. The sidebar above it is the operator profile; the banner at the top is just the name.',
+		'chrome.onboarding.launchpadBody':
+			'The same five views as pads, plus the theme switch. The sidebar above it is the operator profile; the banner at the top is just the name.',
 		'chrome.onboarding.launchpadCycleTheme': 'cycle theme — tokyo, gruvbox, nord, amber',
 		'chrome.onboarding.edgeTitle': 'REAL EDGE, NOT A BADGE',
-		'chrome.onboarding.edgeBody': 'This reads /cdn-cgi/trace on every load: the Cloudflare point of presence that actually served you, the negotiated protocol and the TLS version. Run "trace" in the console for the full record with a measured round trip.',
+		'chrome.onboarding.edgeBody':
+			'This reads /cdn-cgi/trace on every load: the Cloudflare point of presence that actually served you, the negotiated protocol and the TLS version. Run "trace" in the console for the full record with a measured round trip.',
 		'chrome.onboarding.tourTitle': 'THAT IS THE TOUR',
-		'chrome.onboarding.tourBody': 'This button reopens the walkthrough any time — so does the "guide" command.',
+		'chrome.onboarding.tourBody':
+			'This button reopens the walkthrough any time — so does the "guide" command.',
 		'chrome.onboarding.keymapTitle': 'ONE MORE THING — THE KEYMAP',
 		'chrome.onboarding.keymapBody': 'Every shortcut on this site, in one place.',
 		'chrome.onboarding.showKeymap': 'SHOW KEYMAP',
@@ -442,29 +490,39 @@ export default {
 
 		'chrome.privacy.scope': 'Scope: krsz.in only — the site you are on right now.',
 		'chrome.privacy.section1Title': '1. WHAT THIS SITE COLLECTS',
-		'chrome.privacy.section1Body': "Nothing. krsz.in has no account system, no analytics, and no tracking of any kind. Your theme, sound settings, console history and everything else this workbench remembers is written only to this browser's own local storage — it never leaves your device, and no server ever sees it. The hardware and display tests under UTILS run entirely in your browser as well.",
+		'chrome.privacy.section1Body':
+			"Nothing. krsz.in has no account system, no analytics, and no tracking of any kind. Your theme, sound settings, console history and everything else this workbench remembers is written only to this browser's own local storage — it never leaves your device, and no server ever sees it. The hardware and display tests under UTILS run entirely in your browser as well.",
 		'chrome.privacy.section2Title': '2. THE EXCEPTIONS',
-		'chrome.privacy.section2Intro': 'Four things do leave your browser, each only when you press the button for it:',
-		'chrome.privacy.section2Guestbook': 'GUESTBOOK message — sent to this site\'s server and displayed publicly. The form carries its own confirmation next to the send button.',
-		'chrome.privacy.section2Footprint': 'FOOTPRINT (Guestbook tab) — asks this site\'s server to record what the Cloudflare edge already resolved for the request: country, time zone and serving PoP, plus your browser and OS family without version numbers. No IP address, city or exact location is stored; one stamp per day, shown publicly on the wall. The same wall also lists visits to blog.krsz.in, taken from that site\'s inbound access log — country and browser family only, one entry per visitor per day, nothing else copied over.',
-		'chrome.privacy.section2Speed': 'SPEED test (Utils tab) — random bytes are exchanged with speed.cloudflare.com, Cloudflare\'s own service under Cloudflare\'s privacy policy; krsz.in stores nothing from it.',
-		'chrome.privacy.section2Dig': 'dig in the console — the name you type goes to this site\'s DNS relay, which forwards it upstream; it is not kept beyond the worker\'s short-lived operational logs.',
+		'chrome.privacy.section2Intro':
+			'Four things do leave your browser, each only when you press the button for it:',
+		'chrome.privacy.section2Guestbook':
+			"GUESTBOOK message — sent to this site's server and displayed publicly. The form carries its own confirmation next to the send button.",
+		'chrome.privacy.section2Footprint':
+			"FOOTPRINT (Guestbook tab) — asks this site's server to record what the Cloudflare edge already resolved for the request: country, time zone and serving PoP, plus your browser and OS family without version numbers. No IP address, city or exact location is stored; one stamp per day, shown publicly on the wall. The same wall also lists visits to blog.krsz.in, taken from that site's inbound access log — country and browser family only, one entry per visitor per day, nothing else copied over.",
+		'chrome.privacy.section2Speed':
+			"SPEED test (Utils tab) — random bytes are exchanged with speed.cloudflare.com, Cloudflare's own service under Cloudflare's privacy policy; krsz.in stores nothing from it.",
+		'chrome.privacy.section2Dig':
+			"dig in the console — the name you type goes to this site's DNS relay, which forwards it upstream; it is not kept beyond the worker's short-lived operational logs.",
 		'chrome.privacy.section3Title': '3. LINKED PROJECTS — SEPARATE POLICIES',
-		'chrome.privacy.section3Body': 'MODULES links out to other, independently run sites under krsz.in — each is its own application with its own server and its own privacy practices, not covered by this notice:',
+		'chrome.privacy.section3Body':
+			'MODULES links out to other, independently run sites under krsz.in — each is its own application with its own server and its own privacy practices, not covered by this notice:',
 		'chrome.privacy.footer': 'krsz.in — privacy notice',
 
 		'chrome.settings.sound': 'SOUND',
 		'chrome.settings.soundDesc': 'UI & synth sound effects',
 		'chrome.settings.muted': 'MUTED',
 		'chrome.settings.textSize': 'TEXT SIZE',
-		'chrome.settings.textSizeDesc': 'Scales the whole site. AUTO follows the screen — 12 at 720p, 14 at 1080p, 16 at 2K, 20 at 4K, 24 at 8K. The typeface is drawn on a 12px grid, so 12 and 24 are exactly sharp and the sizes between them are interpolated a little.',
+		'chrome.settings.textSizeDesc':
+			'Scales the whole site. AUTO follows the screen — 12 at 720p, 14 at 1080p, 16 at 2K, 20 at 4K, 24 at 8K. The typeface is drawn on a 12px grid, so 12 and 24 are exactly sharp and the sizes between them are interpolated a little.',
 		'chrome.settings.textSizeAutoHint': "Follow the screen's resolution (currently {px}px)",
 		'chrome.settings.textSizeExact': ' — exact on the 12px grid',
 		'chrome.settings.textSizeDefault': '(default)',
 		'chrome.settings.performance': 'PERFORMANCE',
-		'chrome.settings.performanceDesc': "Drop the background video, every panel's blur, and every hover/press animation. For a slow device or battery saving, not a visual preference.",
+		'chrome.settings.performanceDesc':
+			"Drop the background video, every panel's blur, and every hover/press animation. For a slow device or battery saving, not a visual preference.",
 		'chrome.settings.storageTitle': 'STORAGE ON THIS DEVICE',
-		'chrome.settings.storageDesc': 'Everything below lives only in this browser — nothing here was ever sent anywhere. Clearing a row deletes it right away; there is no undo.',
+		'chrome.settings.storageDesc':
+			'Everything below lives only in this browser — nothing here was ever sent anywhere. Clearing a row deletes it right away; there is no undo.',
 		'chrome.settings.clearing': 'CLEARING…',
 		'chrome.settings.clearEverything': 'CLEAR EVERYTHING',
 		'chrome.settings.measuring': 'measuring…',
@@ -472,30 +530,39 @@ export default {
 		'chrome.settings.cleared': 'CLEARED',
 		'chrome.settings.clear': 'CLEAR',
 		'chrome.settings.storage.modelWeightsLabel': 'WEB-LM MODEL WEIGHTS',
-		'chrome.settings.storage.modelWeightsDetail': '{count} file(s) — the downloaded GGUF weights, re-fetched on next load',
+		'chrome.settings.storage.modelWeightsDetail':
+			'{count} file(s) — the downloaded GGUF weights, re-fetched on next load',
 		'chrome.settings.storage.notAvailable': 'not available in this browser',
 		'chrome.settings.storage.conversationsLabel': 'WEB-LM CONVERSATIONS',
-		'chrome.settings.storage.conversationsDetail': '{count} saved conversation(s), including any attached images',
+		'chrome.settings.storage.conversationsDetail':
+			'{count} saved conversation(s), including any attached images',
 		'chrome.settings.storage.vmDisksLabel': 'KRSZ-VM DISK CHANGES',
-		'chrome.settings.storage.vmDisksDetail': 'everything written to disk inside either emulated machine (i686 and x86-64 each keep their own)',
+		'chrome.settings.storage.vmDisksDetail':
+			'everything written to disk inside either emulated machine (i686 and x86-64 each keep their own)',
 		'chrome.settings.storage.synthAutosaveLabel': 'SYNTH AUTOSAVE',
-		'chrome.settings.storage.synthAutosaveDetail': 'the last patch you were editing, restored automatically next visit',
+		'chrome.settings.storage.synthAutosaveDetail':
+			'the last patch you were editing, restored automatically next visit',
 		'chrome.settings.storage.consoleHistoryLabel': 'CONSOLE HISTORY & ALIASES',
-		'chrome.settings.storage.consoleHistoryDetail': '↑↓ command recall, and any `alias` you defined',
+		'chrome.settings.storage.consoleHistoryDetail':
+			'↑↓ command recall, and any `alias` you defined',
 		'chrome.settings.storage.vmConfigLabel': 'KRSZ-VM MACHINE CONFIG',
-		'chrome.settings.storage.vmConfigDetail': 'the RAM / network / boot-mode choices on the krsz-vm config screen',
+		'chrome.settings.storage.vmConfigDetail':
+			'the RAM / network / boot-mode choices on the krsz-vm config screen',
 		'chrome.settings.storage.genConfigLabel': 'WEB-LM GENERATION CONFIG',
-		'chrome.settings.storage.genConfigDetail': 'temperature, top_p and the other sampling settings from the web-lm config panel',
+		'chrome.settings.storage.genConfigDetail':
+			'temperature, top_p and the other sampling settings from the web-lm config panel',
 		'chrome.settings.storage.toursLabel': 'WELCOME & GUIDED TOURS SEEN',
 		'chrome.settings.storage.midiRoutingLabel': 'MIDI ROUTING',
-		'chrome.settings.storage.midiRoutingDetail': 'Which MIDI input plays which track, and inputs switched off',
+		'chrome.settings.storage.midiRoutingDetail':
+			'Which MIDI input plays which track, and inputs switched off',
 		'chrome.settings.storage.synthLayoutLabel': 'SYNTH LAYOUT',
 		'chrome.settings.storage.synthLayoutDetail': 'Whether tracks open in the advanced layout',
 		'chrome.settings.storage.group.synth': 'SYNTH',
 		'chrome.settings.storage.group.lmSpace': 'LM SPACE',
 		'chrome.settings.storage.group.vm': 'KRSZ-VM',
 		'chrome.settings.storage.group.site': 'SITE',
-		'chrome.settings.storage.toursDetail': 'the welcome screen, the site tour and every per-view walkthrough offer themselves again on next visit',
+		'chrome.settings.storage.toursDetail':
+			'the welcome screen, the site tour and every per-view walkthrough offer themselves again on next visit',
 
 		'chrome.sidebar.running': 'RUNNING',
 		'chrome.sidebar.verified': 'VERIFIED',
@@ -510,7 +577,8 @@ export default {
 		'chrome.sidebar.locationValue': 'Sydney, Australia [UTC+10/11]',
 		'chrome.sidebar.mottoValue': 'Follow best practices & KISS',
 		'chrome.sidebar.runtimeValue': '100% Serverless Edge Isolates',
-		'chrome.sidebar.launchpadHint': 'CTRL+0-7 jumps to a tab · T cycles the theme · ? lists every hotkey',
+		'chrome.sidebar.launchpadHint':
+			'CTRL+0-7 jumps to a tab · T cycles the theme · ? lists every hotkey',
 		'chrome.sidebar.theme': 'THEME',
 		'chrome.sidebar.padsActive': 'PADS: {count} ACTIVE NODES',
 		'chrome.sidebar.hotkeyHint': 'HOTKEY [CTRL+0-7 · T · ?]',
@@ -522,37 +590,58 @@ export default {
 		'chrome.sidebar.tilePcEmu': 'PC Emu',
 		'chrome.sidebar.tileOnGpu': 'On-GPU',
 		'chrome.sidebar.tileConway': 'Conway',
-		'chrome.sidebar.tooltip0': '0: Modules — Live Project Portal & Architecture Deep Dives [Hotkey: Ctrl+0]',
-		'chrome.sidebar.tooltip1': '1: Guestbook — Send message packets across edge workers [Hotkey: Ctrl+1]',
-		'chrome.sidebar.tooltip2': '2: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: Ctrl+2]',
-		'chrome.sidebar.tooltip3': '3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]',
-		'chrome.sidebar.tooltip4': '4: LM.SPACE — the Artificial Analysis model table as a navigable volume [Hotkey: Ctrl+4]',
-		'chrome.sidebar.tooltip5': '5: krsz-vm — Alpine Linux on an emulated x86 PC, i686 or x86-64 [Hotkey: Ctrl+5]',
-		'chrome.sidebar.tooltip6': '6: web-lm — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]',
-		'chrome.sidebar.tooltip7': "7: lifelab — Conway's Game of Life, as a campaign: the two rules, still lifes, gliders, collisions, and the glider gun [Hotkey: Ctrl+7]",
+		'chrome.sidebar.tooltip0':
+			'0: Modules — Live Project Portal & Architecture Deep Dives [Hotkey: Ctrl+0]',
+		'chrome.sidebar.tooltip1':
+			'1: Guestbook — Send message packets across edge workers [Hotkey: Ctrl+1]',
+		'chrome.sidebar.tooltip2':
+			'2: Synth — 8-Track Modular Synthesizer Workstation [Hotkey: Ctrl+2]',
+		'chrome.sidebar.tooltip3':
+			'3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]',
+		'chrome.sidebar.tooltip4':
+			'4: LM.SPACE — the Artificial Analysis model table as a navigable volume [Hotkey: Ctrl+4]',
+		'chrome.sidebar.tooltip5':
+			'5: krsz-vm — Alpine Linux on an emulated x86 PC, i686 or x86-64 [Hotkey: Ctrl+5]',
+		'chrome.sidebar.tooltip6':
+			'6: web-lm — a language model running on your own GPU via WebGPU, no server [Hotkey: Ctrl+6]',
+		'chrome.sidebar.tooltip7':
+			"7: lifelab — Conway's Game of Life, as a campaign: the two rules, still lifes, gliders, collisions, and the glider gun [Hotkey: Ctrl+7]",
 
 		'chrome.tabbar.logoTitle': "krsz.in — Kurashizu's Random-Stuff Zone",
-		'chrome.tabbar.consoleTitle': 'Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]',
+		'chrome.tabbar.consoleTitle':
+			'Command console — a small shell with a virtual filesystem, pipes and an edge trace. Opens as a drop-down over any view. [Hotkey: ` backquote]',
 		'chrome.tabbar.console': 'CONSOLE',
-		'chrome.tabbar.playbackTitle': 'Master Audio & Sequencer Playback Toggle — Start / Stop Music & Sound Engine',
+		'chrome.tabbar.playbackTitle':
+			'Master Audio & Sequencer Playback Toggle — Start / Stop Music & Sound Engine',
 		'chrome.tabbar.stop': 'STOP',
 		'chrome.tabbar.play': 'PLAY',
-		'chrome.tabbar.guideTitle': 'Open the walkthrough — what each view does and every keyboard shortcut',
+		'chrome.tabbar.guideTitle':
+			'Open the walkthrough — what each view does and every keyboard shortcut',
 		'chrome.tabbar.guide': 'GUIDE',
-		'chrome.tabbar.settingsTitle': 'Global config — sound, and clearing anything the site has stored in this browser',
+		'chrome.tabbar.settingsTitle':
+			'Global config — sound, and clearing anything the site has stored in this browser',
 		'chrome.tabbar.cfg': 'CFG',
-		'chrome.tabbar.serverlessTitle': 'Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers',
-		'chrome.tabbar.tab0': 'View 0: Modules — Live Project Portal & Technical Deep Dives [Hotkey: Ctrl+0]',
+		'chrome.tabbar.serverlessTitle':
+			'Architecture Status — 100% Serverless Edge execution without dedicated backend origin servers',
+		'chrome.tabbar.tab0':
+			'View 0: Modules — Live Project Portal & Technical Deep Dives [Hotkey: Ctrl+0]',
 		'chrome.tabbar.tab1': 'View 1: Guestbook — Distributed Edge Packet Messenger [Hotkey: Ctrl+1]',
-		'chrome.tabbar.tab2': 'View 2: Synth — 8-Track WebAudio Modular Synthesizer & Sequencer [Hotkey: Ctrl+2]',
-		'chrome.tabbar.tab3': 'View 3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]',
-		'chrome.tabbar.tab4': 'View 4: LM.SPACE — the Artificial Analysis model table as a navigable volume, cached through blog.krsz.in [Hotkey: Ctrl+4]',
-		'chrome.tabbar.tab5': 'View 5: krsz-vm — a real x86 PC emulated in the browser, running Alpine Linux [Hotkey: Ctrl+5]',
-		'chrome.tabbar.tab6': 'View 6: web-lm — a language model running entirely on your GPU via WebGPU, no server [Hotkey: Ctrl+6]',
-		'chrome.tabbar.tab7': "View 7: lifelab — Conway's Game of Life as a 25-level campaign, ending at the glider gun [Hotkey: Ctrl+7]",
+		'chrome.tabbar.tab2':
+			'View 2: Synth — 8-Track WebAudio Modular Synthesizer & Sequencer [Hotkey: Ctrl+2]',
+		'chrome.tabbar.tab3':
+			'View 3: Utilities — Keyboard / Mouse / Display Hardware Testers [Hotkey: Ctrl+3]',
+		'chrome.tabbar.tab4':
+			'View 4: LM.SPACE — the Artificial Analysis model table as a navigable volume, cached through blog.krsz.in [Hotkey: Ctrl+4]',
+		'chrome.tabbar.tab5':
+			'View 5: krsz-vm — a real x86 PC emulated in the browser, running Alpine Linux [Hotkey: Ctrl+5]',
+		'chrome.tabbar.tab6':
+			'View 6: web-lm — a language model running entirely on your GPU via WebGPU, no server [Hotkey: Ctrl+6]',
+		'chrome.tabbar.tab7':
+			"View 7: lifelab — Conway's Game of Life as a 25-level campaign, ending at the glider gun [Hotkey: Ctrl+7]",
 
 		'chrome.welcome.title': 'Welcome to krsz.in',
-		'chrome.welcome.subtitle': "Kurashizu's random-stuff zone — eight real, working tools in one edge-native workbench. Everything you see is live, not a mockup.",
+		'chrome.welcome.subtitle':
+			"Kurashizu's random-stuff zone — eight real, working tools in one edge-native workbench. Everything you see is live, not a mockup.",
 		'chrome.welcome.getStarted': "LET'S GET STARTED →",
 		'chrome.welcome.getStartedPlain': "let's get started",
 		'chrome.welcome.agreeTo': 'By clicking "{action}", you agree to our',
@@ -573,7 +662,8 @@ export default {
 		'chrome.boot.complete': '自检完成 — 已回答 {ok}/{total} 项检测',
 		'chrome.boot.booting': '正在启动工作台…',
 
-		'chrome.console.inputHint': '输入 "help" — Tab 补全并循环，→ 接受补全，↑↓ 历史记录，Ctrl+L 清屏...',
+		'chrome.console.inputHint':
+			'输入 "help" — Tab 补全并循环，→ 接受补全，↑↓ 历史记录，Ctrl+L 清屏...',
 		'chrome.console.exec': '执行',
 		'chrome.console.moreSuggestions': '还有 {count} 项',
 		'chrome.console.openedWalkthrough': '已打开新手引导。',
@@ -630,7 +720,8 @@ export default {
 		'chrome.console.usage.echo': '打印文本。可用作管道的输入源。',
 		'chrome.console.usage.history': '最近 15 条命令。跨访问保留。',
 		'chrome.console.usage.guide': '重新打开新手引导。',
-		'chrome.console.usage.keys': '打开完整的键盘参考。和在此输入 "?" 不同 —— 那会打印帮助；请在文本框外按实际的 ? 或 F1 键来打开这个。',
+		'chrome.console.usage.keys':
+			'打开完整的键盘参考。和在此输入 "?" 不同 —— 那会打印帮助；请在文本框外按实际的 ? 或 F1 键来打开这个。',
 		'chrome.console.usage.man': '查看某个命令的用法。',
 		'chrome.console.usage.help': '按分组显示的完整命令列表。',
 		'chrome.console.usage.whoami': '操作者档案 — 姓名、位置、座右铭、技术栈。',
@@ -712,7 +803,8 @@ export default {
 		'chrome.console.run.themeStatus': '主题：{theme}',
 		'chrome.console.run.unknownTheme': '未知主题 "{q}"。可选：{list}',
 		'chrome.console.run.themeSet': '主题已设为 {theme}。',
-		'chrome.console.run.commandNotRecognized': '无法识别的命令："{cmd}"。输入 "help" 查看命令列表。',
+		'chrome.console.run.commandNotRecognized':
+			'无法识别的命令："{cmd}"。输入 "help" 查看命令列表。',
 		'chrome.console.run.entriesHeading': '{path}  —  {count} 项',
 		'chrome.console.run.noMatch': '（没有匹配 /{pattern}/ 的结果）',
 		'chrome.console.run.profileLocation': '澳大利亚悉尼 [UTC+10/11]',
@@ -754,7 +846,8 @@ export default {
 		'chrome.console.help.historyClear': '清空命令历史',
 
 		'chrome.console.usage.lang': '切换或显示界面语言。可用简写：zh、cn、tw、jp、kr。',
-		'chrome.console.usage.life1': '控制 LIFE.LAB（标签7）：run、pause、toggle、step [n]、clear、random [密度]，',
+		'chrome.console.usage.life1':
+			'控制 LIFE.LAB（标签7）：run、pause、toggle、step [n]、clear、random [密度]，',
 		'chrome.console.usage.life2': 'speed <代/秒>、size <宽>x<高>、load <图样>、patterns、info。',
 		'chrome.console.usage.sysinfo': 'neofetch 风格的真实浏览器与系统信息块，取不到的项显示 n/a。',
 		'chrome.console.usage.uptime': '会话运行时长与导航计时（DOMContentLoaded、load、可见性）。',
@@ -775,7 +868,8 @@ export default {
 		'chrome.console.usage.uuid': '生成一个随机 UUID（v4）。',
 		'chrome.console.usage.random': '生成 1 到 max（默认 100）之间的随机整数。',
 		'chrome.console.usage.roll': '掷 NdM 个骰子，例如 roll 2d6 —— 显示每个骰子点数与总和。',
-		'chrome.console.usage.unix': '不带参数时显示当前时间；否则将 Unix 时间戳或 ISO 字符串双向转换。',
+		'chrome.console.usage.unix':
+			'不带参数时显示当前时间；否则将 Unix 时间戳或 ISO 字符串双向转换。',
 		'chrome.console.usage.which': '报告某个名称是内置命令、导航词、外部链接，还是别名。',
 		'chrome.console.usage.fonts': '列出 document.fonts 报告已加载的字体及其状态与 unicode 范围。',
 		'chrome.console.usage.fortune': '从本站自己的文件系统中随机摘一段文字，并附来源路径。',
@@ -889,22 +983,28 @@ export default {
 		'chrome.credits.nord': 'nord-terminal 主题',
 		'chrome.credits.gruvbox': 'gruvbox-dark 主题',
 		'chrome.credits.cloudflareWorkers': '运行本站，以及背后的 D1 / R2 / KV / Vectorize',
-		'chrome.credits.intro': '本站由 kurashizu 构建，站在下面这些开源项目的肩膀上。每一项都是本站实际使用或运行的东西，并附带其许可协议。',
+		'chrome.credits.intro':
+			'本站由 kurashizu 构建，站在下面这些开源项目的肩膀上。每一项都是本站实际使用或运行的东西，并附带其许可协议。',
 		'chrome.credits.outro': '如果这里有署名错误或遗漏，欢迎告诉我。',
 
 		'chrome.dropdown.placeholder': '请选择…',
 
 		'chrome.footer.tracingEdge': '正在追踪边缘节点…',
 		'chrome.footer.edgeTraceNA': '边缘追踪不可用',
-		'chrome.footer.edgeTitleKnown': '由 Cloudflare 节点 {colo}{loc} 提供服务，协议为 {http}，{tls}{kex}{rtt}。数据实时读取自 /cdn-cgi/trace；在控制台输入 "trace" 查看完整记录。',
+		'chrome.footer.edgeTitleKnown':
+			'由 Cloudflare 节点 {colo}{loc} 提供服务，协议为 {http}，{tls}{kex}{rtt}。数据实时读取自 /cdn-cgi/trace；在控制台输入 "trace" 查看完整记录。',
 		'chrome.footer.edgeTitleRtt': ' — 追踪往返耗时 {ms}ms',
-		'chrome.footer.edgeTitleUnknown': 'Cloudflare /cdn-cgi/trace — 在控制台输入 "trace" 以探测边缘节点。',
+		'chrome.footer.edgeTitleUnknown':
+			'Cloudflare /cdn-cgi/trace — 在控制台输入 "trace" 以探测边缘节点。',
 		'chrome.footer.linkGithub': 'GitHub 主页 — 在新标签页打开 https://github.com/kurashizu',
-		'chrome.footer.linkHuggingface': 'Hugging Face AI 模型中心 — 在新标签页打开 https://huggingface.co/kurashizu',
-		'chrome.footer.linkOshwhub': 'OSHWHub 硬件项目与 PCB 原理图 — 在新标签页打开 https://oshwhub.com/Kurashizu',
+		'chrome.footer.linkHuggingface':
+			'Hugging Face AI 模型中心 — 在新标签页打开 https://huggingface.co/kurashizu',
+		'chrome.footer.linkOshwhub':
+			'OSHWHub 硬件项目与 PCB 原理图 — 在新标签页打开 https://oshwhub.com/Kurashizu',
 		'chrome.footer.linkRules': 'Skill 与系统规则参考 — 在新标签页打开 https://skill.krsz.in/rules',
 		'chrome.footer.buildTitle': '构建 {commit} — {time}（悉尼时间 {sydney}）',
-		'chrome.footer.buildTitleLinked': '构建 {commit} — {time}（悉尼时间 {sydney}）。在新标签页于 GitHub 打开该提交。',
+		'chrome.footer.buildTitleLinked':
+			'构建 {commit} — {time}（悉尼时间 {sydney}）。在新标签页于 GitHub 打开该提交。',
 		'chrome.footer.creditsTitle': '本站所基于的开源项目',
 		'chrome.footer.credits': '鸣谢',
 
@@ -930,7 +1030,8 @@ export default {
 		'chrome.hotkeys.consoleClearLine': '清空当前输入行',
 		'chrome.hotkeys.consolePipe': '通过管道传给 grep / head / tail / sort / uniq / wc',
 		'chrome.hotkeys.synthTransport': 'SYNTH — 播放控制',
-		'chrome.hotkeys.synthTransportNote': '在视图 2 上，只要没有文本框、菜单或设置面板获得焦点即生效',
+		'chrome.hotkeys.synthTransportNote':
+			'在视图 2 上，只要没有文本框、菜单或设置面板获得焦点即生效',
 		'chrome.hotkeys.transportPlay': '就地播放 / 暂停（开启 QWERTY 时 Space 是延音踏板）',
 		'chrome.hotkeys.transportRewind': '回退到第 1 小节',
 		'chrome.hotkeys.transportStopRewind': '停止并回退到第 1 小节',
@@ -942,14 +1043,17 @@ export default {
 		'chrome.hotkeys.transportResetKnob': '将旋钮或推子重置为中性值；机架上的 RST 重置整个机架',
 		'chrome.hotkeys.transportTempo': '速度 −1 / +1 BPM（按住持续变化）',
 		'chrome.hotkeys.synthPianoRoll': 'SYNTH — 钢琴卷帘',
-		'chrome.hotkeys.synthPianoRollNote': '开启 QWERTY 钢琴时，字母、数字及 , . 键属于它；轻按 Ctrl / Shift 可切换八度',
+		'chrome.hotkeys.synthPianoRollNote':
+			'开启 QWERTY 钢琴时，字母、数字及 , . 键属于它；轻按 Ctrl / Shift 可切换八度',
 		'chrome.hotkeys.rollPlace': '放置音符 / 框选（Shift 追加）',
-		'chrome.hotkeys.rollSelect': '选中它（Shift 切换选中）；拖动可移动，拖动右端可调整长度，Alt 拖动可复制',
+		'chrome.hotkeys.rollSelect':
+			'选中它（Shift 切换选中）；拖动可移动，拖动右端可调整长度，Alt 拖动可复制',
 		'chrome.hotkeys.rollDelete': '删除指针下的音符；拖动可擦除更多',
 		'chrome.hotkeys.rollNudge': '将选区微移一个网格步长 / 半音（Shift：一个小节 / 一个八度）',
 		'chrome.hotkeys.rollDeleteSel': '删除选区 / 清除选区',
 		'chrome.hotkeys.rollSelectAll': '选中本页；再次按下选中整个轨道',
-		'chrome.hotkeys.rollCopyPaste': '在光标处（青色标尺单元格）复制 / 剪切 / 粘贴；剪贴内容可跨轨道、音色和标签页',
+		'chrome.hotkeys.rollCopyPaste':
+			'在光标处（青色标尺单元格）复制 / 剪切 / 粘贴；剪贴内容可跨轨道、音色和标签页',
 		'chrome.hotkeys.rollRepeat': '将选区紧接着自身重复一次',
 		'chrome.hotkeys.rollUndoRedo': '撤销 / 重做（也可用 Ctrl+Y）',
 		'chrome.hotkeys.lifelab': 'LIFELAB — 培养皿',
@@ -974,7 +1078,8 @@ export default {
 		'chrome.layout.consoleCloseHint': '按 ` 或 Esc 关闭',
 
 		'chrome.onboarding.eightViewsTitle': '八个视图',
-		'chrome.onboarding.eightViewsBody': '本站的一切都分布在八个视图中。点击某个标签，或按住 Ctrl 再按其数字 —— 这在任何地方都有效，包括在键盘测试器和钢琴中，所以你永远不会被困住。',
+		'chrome.onboarding.eightViewsBody':
+			'本站的一切都分布在八个视图中。点击某个标签，或按住 Ctrl 再按其数字 —— 这在任何地方都有效，包括在键盘测试器和钢琴中，所以你永远不会被困住。',
 		'chrome.onboarding.eightViewsModules': 'modules — 真实的在线项目，附带真实的架构图',
 		'chrome.onboarding.eightViewsGuestbook': 'guestbook — 发布到 blog.krsz.in',
 		'chrome.onboarding.eightViewsSynth': 'synth — 8 轨 WebAudio 工作站，输入 .mid，输出 WAV',
@@ -984,9 +1089,11 @@ export default {
 		'chrome.onboarding.eightViewsWebLm': 'web-lm — 在你自己的 GPU 上运行的语言模型，无需服务器',
 		'chrome.onboarding.eightViewsLifelab': 'lifelab — 康威生命游戏，以关卡形式呈现',
 		'chrome.onboarding.workbenchTitle': '工作台',
-		'chrome.onboarding.workbenchBody': '当前视图会填满这个面板。这里没有任何装饰性内容：你看到的每一个延迟、水平和能力值，都是在你的浏览器中实测得出，或从它所描述的服务读取而来。当浏览器拒绝回答时，会打印 "n/a"，而不是一个看似合理的数字。',
+		'chrome.onboarding.workbenchBody':
+			'当前视图会填满这个面板。这里没有任何装饰性内容：你看到的每一个延迟、水平和能力值，都是在你的浏览器中实测得出，或从它所描述的服务读取而来。当浏览器拒绝回答时，会打印 "n/a"，而不是一个看似合理的数字。',
 		'chrome.onboarding.consoleTitle': '控制台',
-		'chrome.onboarding.consoleBody': '一个小型 shell，会下拉覆盖在你所在的任意视图之上。它的文件系统是本站自身数据的实时投影，因此永远不会过时。',
+		'chrome.onboarding.consoleBody':
+			'一个小型 shell，会下拉覆盖在你所在的任意视图之上。它的文件系统是本站自身数据的实时投影，因此永远不会过时。',
 		'chrome.onboarding.consoleToggle': '从任何地方打开或关闭它',
 		'chrome.onboarding.consoleHelp': '命令列表；man <cmd> 可查看某个命令的说明',
 		'chrome.onboarding.consoleBrowse': '浏览 /projects、/operator、/synth、/edge',
@@ -994,10 +1101,12 @@ export default {
 		'chrome.onboarding.consoleTrace': '实际为你提供服务的 Cloudflare 节点',
 		'chrome.onboarding.openIt': '打开它',
 		'chrome.onboarding.launchpadTitle': '启动面板',
-		'chrome.onboarding.launchpadBody': '与另外五个视图相同的快捷方块，外加主题切换。它上方的侧栏是操作者档案；顶部的横幅只是名字而已。',
+		'chrome.onboarding.launchpadBody':
+			'与另外五个视图相同的快捷方块，外加主题切换。它上方的侧栏是操作者档案；顶部的横幅只是名字而已。',
 		'chrome.onboarding.launchpadCycleTheme': '循环切换主题 — tokyo、gruvbox、nord、amber',
 		'chrome.onboarding.edgeTitle': '真实的边缘信息，不是徽章',
-		'chrome.onboarding.edgeBody': '每次加载都会读取 /cdn-cgi/trace：实际为你提供服务的 Cloudflare 接入点、协商的协议以及 TLS 版本。在控制台运行 "trace" 可查看包含实测往返时间的完整记录。',
+		'chrome.onboarding.edgeBody':
+			'每次加载都会读取 /cdn-cgi/trace：实际为你提供服务的 Cloudflare 接入点、协商的协议以及 TLS 版本。在控制台运行 "trace" 可查看包含实测往返时间的完整记录。',
 		'chrome.onboarding.tourTitle': '这就是导览',
 		'chrome.onboarding.tourBody': '这个按钮可以随时重新打开导览 —— "guide" 命令也一样。',
 		'chrome.onboarding.keymapTitle': '还有一件事 — 快捷键表',
@@ -1007,29 +1116,38 @@ export default {
 
 		'chrome.privacy.scope': '范围：仅限 krsz.in —— 也就是你现在所在的这个网站。',
 		'chrome.privacy.section1Title': '1. 本站收集的内容',
-		'chrome.privacy.section1Body': '什么都不收集。krsz.in 没有账户系统，没有数据分析，也没有任何形式的追踪。你的主题、声音设置、控制台历史记录，以及这个工作台记住的其他一切，都只写入这个浏览器自身的本地存储 —— 它们从不离开你的设备，也没有任何服务器会看到它们。 工具页里的硬件与显示测试同样完全在你的浏览器内运行。',
+		'chrome.privacy.section1Body':
+			'什么都不收集。krsz.in 没有账户系统，没有数据分析，也没有任何形式的追踪。你的主题、声音设置、控制台历史记录，以及这个工作台记住的其他一切，都只写入这个浏览器自身的本地存储 —— 它们从不离开你的设备，也没有任何服务器会看到它们。 工具页里的硬件与显示测试同样完全在你的浏览器内运行。',
 		'chrome.privacy.section2Title': '2. 例外情况',
 		'chrome.privacy.section2Intro': '以下四件事会离开你的浏览器，且都只在你按下对应按钮时发生：',
-		'chrome.privacy.section2Guestbook': '留言板消息 —— 发送到本站服务器并公开显示。表单在发送按钮旁附有自己的确认提示。',
-		'chrome.privacy.section2Footprint': '足迹（留言板页）—— 请求本站服务器记录 Cloudflare 边缘节点已为该请求解析出的信息：国家、时区、服务节点，以及不含版本号的浏览器与操作系统类别。不存 IP、城市或精确位置；每天一枚，公开显示在足迹墙上。 这面墙同时收录 blog.krsz.in 的来访，取自该站的入站访问日志 —— 仅国家与浏览器类别，每位访客每天一条，不复制其他任何字段。',
-		'chrome.privacy.section2Speed': '网速测试（工具页）—— 与 speed.cloudflare.com 交换随机字节，那是 Cloudflare 自己的服务，适用 Cloudflare 的隐私政策；krsz.in 不保存其中任何内容。',
-		'chrome.privacy.section2Dig': '控制台的 dig 命令 —— 你输入的域名会发到本站的 DNS 中继并转发到上游；除 Worker 短期的运行日志外不做保留。',
+		'chrome.privacy.section2Guestbook':
+			'留言板消息 —— 发送到本站服务器并公开显示。表单在发送按钮旁附有自己的确认提示。',
+		'chrome.privacy.section2Footprint':
+			'足迹（留言板页）—— 请求本站服务器记录 Cloudflare 边缘节点已为该请求解析出的信息：国家、时区、服务节点，以及不含版本号的浏览器与操作系统类别。不存 IP、城市或精确位置；每天一枚，公开显示在足迹墙上。 这面墙同时收录 blog.krsz.in 的来访，取自该站的入站访问日志 —— 仅国家与浏览器类别，每位访客每天一条，不复制其他任何字段。',
+		'chrome.privacy.section2Speed':
+			'网速测试（工具页）—— 与 speed.cloudflare.com 交换随机字节，那是 Cloudflare 自己的服务，适用 Cloudflare 的隐私政策；krsz.in 不保存其中任何内容。',
+		'chrome.privacy.section2Dig':
+			'控制台的 dig 命令 —— 你输入的域名会发到本站的 DNS 中继并转发到上游；除 Worker 短期的运行日志外不做保留。',
 		'chrome.privacy.section3Title': '3. 关联项目 —— 各自独立的政策',
-		'chrome.privacy.section3Body': 'MODULES 链接到 krsz.in 下其他独立运行的网站 —— 每一个都是拥有自己的服务器和隐私规范的独立应用，不在本声明的覆盖范围内：',
+		'chrome.privacy.section3Body':
+			'MODULES 链接到 krsz.in 下其他独立运行的网站 —— 每一个都是拥有自己的服务器和隐私规范的独立应用，不在本声明的覆盖范围内：',
 		'chrome.privacy.footer': 'krsz.in — 隐私声明',
 
 		'chrome.settings.sound': '声音',
 		'chrome.settings.soundDesc': '界面与合成器音效',
 		'chrome.settings.muted': '已静音',
 		'chrome.settings.textSize': '文字大小',
-		'chrome.settings.textSizeDesc': '缩放整个站点。AUTO 会跟随屏幕分辨率 — 720p 为 12，1080p 为 14，2K 为 16，4K 为 20，8K 为 24。字体基于 12px 网格绘制，因此 12 和 24 完全清晰锐利，介于两者之间的尺寸会做少量插值处理。',
+		'chrome.settings.textSizeDesc':
+			'缩放整个站点。AUTO 会跟随屏幕分辨率 — 720p 为 12，1080p 为 14，2K 为 16，4K 为 20，8K 为 24。字体基于 12px 网格绘制，因此 12 和 24 完全清晰锐利，介于两者之间的尺寸会做少量插值处理。',
 		'chrome.settings.textSizeAutoHint': '跟随屏幕分辨率（当前为 {px}px）',
 		'chrome.settings.textSizeExact': ' — 恰好落在 12px 网格上',
 		'chrome.settings.textSizeDefault': '（默认）',
 		'chrome.settings.performance': '性能',
-		'chrome.settings.performanceDesc': '关闭背景视频、所有面板的模糊效果，以及所有悬停/按下动画。适用于低性能设备或省电场景，而非外观偏好。',
+		'chrome.settings.performanceDesc':
+			'关闭背景视频、所有面板的模糊效果，以及所有悬停/按下动画。适用于低性能设备或省电场景，而非外观偏好。',
 		'chrome.settings.storageTitle': '本设备上的存储',
-		'chrome.settings.storageDesc': '以下内容只保存在这个浏览器中 —— 从未发送到任何地方。清除某一行会立即删除，且无法撤销。',
+		'chrome.settings.storageDesc':
+			'以下内容只保存在这个浏览器中 —— 从未发送到任何地方。清除某一行会立即删除，且无法撤销。',
 		'chrome.settings.clearing': '正在清除…',
 		'chrome.settings.clearEverything': '清除全部',
 		'chrome.settings.measuring': '正在测量…',
@@ -1037,12 +1155,14 @@ export default {
 		'chrome.settings.cleared': '已清除',
 		'chrome.settings.clear': '清除',
 		'chrome.settings.storage.modelWeightsLabel': 'WEB-LM 模型权重',
-		'chrome.settings.storage.modelWeightsDetail': '{count} 个文件 — 已下载的 GGUF 权重，下次加载时会重新获取',
+		'chrome.settings.storage.modelWeightsDetail':
+			'{count} 个文件 — 已下载的 GGUF 权重，下次加载时会重新获取',
 		'chrome.settings.storage.notAvailable': '此浏览器不支持',
 		'chrome.settings.storage.conversationsLabel': 'WEB-LM 对话记录',
 		'chrome.settings.storage.conversationsDetail': '{count} 条已保存的对话，包括任何附带的图片',
 		'chrome.settings.storage.vmDisksLabel': 'KRSZ-VM 磁盘变更',
-		'chrome.settings.storage.vmDisksDetail': '写入两台模拟机器磁盘的所有内容（i686 和 x86-64 各自独立保存）',
+		'chrome.settings.storage.vmDisksDetail':
+			'写入两台模拟机器磁盘的所有内容（i686 和 x86-64 各自独立保存）',
 		'chrome.settings.storage.synthAutosaveLabel': 'SYNTH 自动保存',
 		'chrome.settings.storage.synthAutosaveDetail': '上次正在编辑的乐曲，下次访问时会自动恢复',
 		'chrome.settings.storage.consoleHistoryLabel': '控制台历史记录与别名',
@@ -1050,7 +1170,8 @@ export default {
 		'chrome.settings.storage.vmConfigLabel': 'KRSZ-VM 机器配置',
 		'chrome.settings.storage.vmConfigDetail': 'krsz-vm 配置界面上的内存 / 网络 / 启动模式设置',
 		'chrome.settings.storage.genConfigLabel': 'WEB-LM 生成配置',
-		'chrome.settings.storage.genConfigDetail': 'web-lm 配置面板中的 temperature、top_p 及其他采样设置',
+		'chrome.settings.storage.genConfigDetail':
+			'web-lm 配置面板中的 temperature、top_p 及其他采样设置',
 		'chrome.settings.storage.toursLabel': '已查看的欢迎页与引导',
 		'chrome.settings.storage.midiRoutingLabel': 'MIDI 路由',
 		'chrome.settings.storage.midiRoutingDetail': '各 MIDI 输入设备对应的音轨，以及已关闭的输入',
@@ -1060,7 +1181,8 @@ export default {
 		'chrome.settings.storage.group.lmSpace': 'LM SPACE',
 		'chrome.settings.storage.group.vm': 'KRSZ-VM',
 		'chrome.settings.storage.group.site': '站点',
-		'chrome.settings.storage.toursDetail': '欢迎页、站点导览以及每个视图各自的引导会在下次访问时重新出现',
+		'chrome.settings.storage.toursDetail':
+			'欢迎页、站点导览以及每个视图各自的引导会在下次访问时重新出现',
 
 		'chrome.sidebar.running': '运行中',
 		'chrome.sidebar.verified': '已验证',
@@ -1091,13 +1213,18 @@ export default {
 		'chrome.sidebar.tooltip1': '1：Guestbook — 通过边缘 Worker 发送消息数据包 [快捷键：Ctrl+1]',
 		'chrome.sidebar.tooltip2': '2：Synth — 8 轨模块化合成器工作站 [快捷键：Ctrl+2]',
 		'chrome.sidebar.tooltip3': '3：Utilities — 键盘 / 鼠标 / 显示器硬件测试工具 [快捷键：Ctrl+3]',
-		'chrome.sidebar.tooltip4': '4：LM.SPACE — 将 Artificial Analysis 模型表格变为可漫游的空间 [快捷键：Ctrl+4]',
-		'chrome.sidebar.tooltip5': '5：krsz-vm — 在模拟的 x86 PC（i686 或 x86-64）上运行 Alpine Linux [快捷键：Ctrl+5]',
-		'chrome.sidebar.tooltip6': '6：web-lm — 通过 WebGPU 在你自己的 GPU 上运行语言模型，无需服务器 [快捷键：Ctrl+6]',
-		'chrome.sidebar.tooltip7': '7：lifelab — 康威生命游戏，以关卡形式呈现：两条规则、静物、滑翔机、碰撞，以及滑翔机枪 [快捷键：Ctrl+7]',
+		'chrome.sidebar.tooltip4':
+			'4：LM.SPACE — 将 Artificial Analysis 模型表格变为可漫游的空间 [快捷键：Ctrl+4]',
+		'chrome.sidebar.tooltip5':
+			'5：krsz-vm — 在模拟的 x86 PC（i686 或 x86-64）上运行 Alpine Linux [快捷键：Ctrl+5]',
+		'chrome.sidebar.tooltip6':
+			'6：web-lm — 通过 WebGPU 在你自己的 GPU 上运行语言模型，无需服务器 [快捷键：Ctrl+6]',
+		'chrome.sidebar.tooltip7':
+			'7：lifelab — 康威生命游戏，以关卡形式呈现：两条规则、静物、滑翔机、碰撞，以及滑翔机枪 [快捷键：Ctrl+7]',
 
 		'chrome.tabbar.logoTitle': 'krsz.in — Kurashizu 的杂货角落',
-		'chrome.tabbar.consoleTitle': '命令控制台 — 一个带虚拟文件系统、管道和边缘追踪的小型 shell，会以下拉形式覆盖在任意视图上。[快捷键：` 反引号]',
+		'chrome.tabbar.consoleTitle':
+			'命令控制台 — 一个带虚拟文件系统、管道和边缘追踪的小型 shell，会以下拉形式覆盖在任意视图上。[快捷键：` 反引号]',
 		'chrome.tabbar.console': '控制台',
 		'chrome.tabbar.playbackTitle': '主音频与音序器播放开关 — 启动 / 停止音乐与音效引擎',
 		'chrome.tabbar.stop': '停止',
@@ -1111,13 +1238,18 @@ export default {
 		'chrome.tabbar.tab1': '视图 1：Guestbook — 分布式边缘数据包留言板 [快捷键：Ctrl+1]',
 		'chrome.tabbar.tab2': '视图 2：Synth — 8 轨 WebAudio 模块化合成器与音序器 [快捷键：Ctrl+2]',
 		'chrome.tabbar.tab3': '视图 3：Utilities — 键盘 / 鼠标 / 显示器硬件测试工具 [快捷键：Ctrl+3]',
-		'chrome.tabbar.tab4': '视图 4：LM.SPACE — 将 Artificial Analysis 模型表格变为可漫游的空间，通过 blog.krsz.in 缓存 [快捷键：Ctrl+4]',
-		'chrome.tabbar.tab5': '视图 5：krsz-vm — 在浏览器中模拟的一台真实 x86 PC，运行 Alpine Linux [快捷键：Ctrl+5]',
-		'chrome.tabbar.tab6': '视图 6：web-lm — 完全通过 WebGPU 在你的 GPU 上运行的语言模型，无需服务器 [快捷键：Ctrl+6]',
-		'chrome.tabbar.tab7': '视图 7：lifelab — 康威生命游戏，25 关战役，终点是滑翔机枪 [快捷键：Ctrl+7]',
+		'chrome.tabbar.tab4':
+			'视图 4：LM.SPACE — 将 Artificial Analysis 模型表格变为可漫游的空间，通过 blog.krsz.in 缓存 [快捷键：Ctrl+4]',
+		'chrome.tabbar.tab5':
+			'视图 5：krsz-vm — 在浏览器中模拟的一台真实 x86 PC，运行 Alpine Linux [快捷键：Ctrl+5]',
+		'chrome.tabbar.tab6':
+			'视图 6：web-lm — 完全通过 WebGPU 在你的 GPU 上运行的语言模型，无需服务器 [快捷键：Ctrl+6]',
+		'chrome.tabbar.tab7':
+			'视图 7：lifelab — 康威生命游戏，25 关战役，终点是滑翔机枪 [快捷键：Ctrl+7]',
 
 		'chrome.welcome.title': '欢迎来到 krsz.in',
-		'chrome.welcome.subtitle': 'Kurashizu 的杂货角落 — 一个边缘原生工作台中的八个真实可用工具。你看到的一切都是真实运行的，不是效果图。',
+		'chrome.welcome.subtitle':
+			'Kurashizu 的杂货角落 — 一个边缘原生工作台中的八个真实可用工具。你看到的一切都是真实运行的，不是效果图。',
 		'chrome.welcome.getStarted': '开始使用 →',
 		'chrome.welcome.getStartedPlain': '开始使用',
 		'chrome.welcome.agreeTo': '点击\"{action}\"即表示你同意我们的',
@@ -1138,7 +1270,8 @@ export default {
 		'chrome.boot.complete': '自我測試完成 — 已回答 {ok}/{total} 項檢測',
 		'chrome.boot.booting': '正在啟動工作台…',
 
-		'chrome.console.inputHint': '輸入 \"help\" — Tab 補全並循環，→ 接受補全，↑↓ 歷史記錄，Ctrl+L 清除畫面...',
+		'chrome.console.inputHint':
+			'輸入 \"help\" — Tab 補全並循環，→ 接受補全，↑↓ 歷史記錄，Ctrl+L 清除畫面...',
 		'chrome.console.exec': '執行',
 		'chrome.console.moreSuggestions': '還有 {count} 項',
 		'chrome.console.openedWalkthrough': '已開啟新手導覽。',
@@ -1195,7 +1328,8 @@ export default {
 		'chrome.console.usage.echo': '印出文字。可作為管線的輸入來源。',
 		'chrome.console.usage.history': '最近 15 筆指令。跨造訪保留。',
 		'chrome.console.usage.guide': '重新開啟新手導覽。',
-		'chrome.console.usage.keys': '開啟完整的鍵盤參考。這和在此輸入 \"?\" 不同 —— 那會印出說明；請在文字欄位外按實際的 ? 或 F1 鍵來開啟這個。',
+		'chrome.console.usage.keys':
+			'開啟完整的鍵盤參考。這和在此輸入 \"?\" 不同 —— 那會印出說明；請在文字欄位外按實際的 ? 或 F1 鍵來開啟這個。',
 		'chrome.console.usage.man': '檢視某個指令的用法。',
 		'chrome.console.usage.help': '依分類顯示的完整指令清單。',
 		'chrome.console.usage.whoami': '操作者檔案 — 姓名、地點、座右銘、技術堆疊。',
@@ -1277,7 +1411,8 @@ export default {
 		'chrome.console.run.themeStatus': '主題：{theme}',
 		'chrome.console.run.unknownTheme': '未知主題 \"{q}\"。可選：{list}',
 		'chrome.console.run.themeSet': '主題已設為 {theme}。',
-		'chrome.console.run.commandNotRecognized': '無法辨識的命令：\"{cmd}\"。輸入 \"help\" 查看命令清單。',
+		'chrome.console.run.commandNotRecognized':
+			'無法辨識的命令：\"{cmd}\"。輸入 \"help\" 查看命令清單。',
 		'chrome.console.run.entriesHeading': '{path}  —  {count} 項',
 		'chrome.console.run.noMatch': '（沒有符合 /{pattern}/ 的結果）',
 		'chrome.console.run.profileLocation': '澳洲雪梨 [UTC+10/11]',
@@ -1319,9 +1454,11 @@ export default {
 		'chrome.console.help.historyClear': '清空指令歷史',
 
 		'chrome.console.usage.lang': '切換或顯示介面語言。可用簡寫：zh、cn、tw、jp、kr。',
-		'chrome.console.usage.life1': '控制 LIFE.LAB（分頁7）：run、pause、toggle、step [n]、clear、random [密度]，',
+		'chrome.console.usage.life1':
+			'控制 LIFE.LAB（分頁7）：run、pause、toggle、step [n]、clear、random [密度]，',
 		'chrome.console.usage.life2': 'speed <代/秒>、size <寬>x<高>、load <圖樣>、patterns、info。',
-		'chrome.console.usage.sysinfo': 'neofetch 風格的真實瀏覽器與系統資訊區塊，取不到的項目顯示 n/a。',
+		'chrome.console.usage.sysinfo':
+			'neofetch 風格的真實瀏覽器與系統資訊區塊，取不到的項目顯示 n/a。',
 		'chrome.console.usage.uptime': '工作階段執行時間與導覽計時（DOMContentLoaded、load、可見性）。',
 		'chrome.console.usage.ver': '目前頁面所用的建置提交碼與建置日期。',
 		'chrome.console.usage.settings': '開啟全域組態面板。',
@@ -1340,7 +1477,8 @@ export default {
 		'chrome.console.usage.uuid': '產生一個隨機 UUID（v4）。',
 		'chrome.console.usage.random': '產生 1 到 max（預設 100）之間的隨機整數。',
 		'chrome.console.usage.roll': '擲 NdM 顆骰子，例如 roll 2d6 —— 顯示每顆骰子點數與總和。',
-		'chrome.console.usage.unix': '不帶參數時顯示目前時間；否則將 Unix 時間戳記或 ISO 字串雙向轉換。',
+		'chrome.console.usage.unix':
+			'不帶參數時顯示目前時間；否則將 Unix 時間戳記或 ISO 字串雙向轉換。',
 		'chrome.console.usage.which': '回報某個名稱是內建指令、導覽詞、外部連結，還是別名。',
 		'chrome.console.usage.fonts': '列出 document.fonts 回報已載入的字型及其狀態與 unicode 範圍。',
 		'chrome.console.usage.fortune': '從本站自己的檔案系統隨機摘一段文字，並附上來源路徑。',
@@ -1454,22 +1592,28 @@ export default {
 		'chrome.credits.nord': 'nord-terminal 主題',
 		'chrome.credits.gruvbox': 'gruvbox-dark 主題',
 		'chrome.credits.cloudflareWorkers': '執行本站，以及背後的 D1 / R2 / KV / Vectorize',
-		'chrome.credits.intro': '本站由 kurashizu 打造，站在下面這些開源專案的肩膀上。每一項都是本站實際使用或執行的東西，並附帶其授權條款。',
+		'chrome.credits.intro':
+			'本站由 kurashizu 打造，站在下面這些開源專案的肩膀上。每一項都是本站實際使用或執行的東西，並附帶其授權條款。',
 		'chrome.credits.outro': '如果這裡有署名錯誤或遺漏，歡迎告訴我。',
 
 		'chrome.dropdown.placeholder': '請選擇…',
 
 		'chrome.footer.tracingEdge': '正在追蹤邊緣節點…',
 		'chrome.footer.edgeTraceNA': '邊緣追蹤無法使用',
-		'chrome.footer.edgeTitleKnown': '由 Cloudflare 節點 {colo}{loc} 提供服務，協定為 {http}，{tls}{kex}{rtt}。資料即時讀取自 /cdn-cgi/trace；在主控台輸入 \"trace\" 檢視完整紀錄。',
+		'chrome.footer.edgeTitleKnown':
+			'由 Cloudflare 節點 {colo}{loc} 提供服務，協定為 {http}，{tls}{kex}{rtt}。資料即時讀取自 /cdn-cgi/trace；在主控台輸入 \"trace\" 檢視完整紀錄。',
 		'chrome.footer.edgeTitleRtt': ' — 追蹤往返耗時 {ms}ms',
-		'chrome.footer.edgeTitleUnknown': 'Cloudflare /cdn-cgi/trace — 在主控台輸入 \"trace\" 以探測邊緣節點。',
+		'chrome.footer.edgeTitleUnknown':
+			'Cloudflare /cdn-cgi/trace — 在主控台輸入 \"trace\" 以探測邊緣節點。',
 		'chrome.footer.linkGithub': 'GitHub 個人檔案 — 在新分頁開啟 https://github.com/kurashizu',
-		'chrome.footer.linkHuggingface': 'Hugging Face AI 模型中心 — 在新分頁開啟 https://huggingface.co/kurashizu',
-		'chrome.footer.linkOshwhub': 'OSHWHub 硬體專案與 PCB 電路圖 — 在新分頁開啟 https://oshwhub.com/Kurashizu',
+		'chrome.footer.linkHuggingface':
+			'Hugging Face AI 模型中心 — 在新分頁開啟 https://huggingface.co/kurashizu',
+		'chrome.footer.linkOshwhub':
+			'OSHWHub 硬體專案與 PCB 電路圖 — 在新分頁開啟 https://oshwhub.com/Kurashizu',
 		'chrome.footer.linkRules': 'Skill 與系統規則參考 — 在新分頁開啟 https://skill.krsz.in/rules',
 		'chrome.footer.buildTitle': '建置 {commit} — {time}（雪梨時間 {sydney}）',
-		'chrome.footer.buildTitleLinked': '建置 {commit} — {time}（雪梨時間 {sydney}）。在新分頁於 GitHub 開啟該次提交。',
+		'chrome.footer.buildTitleLinked':
+			'建置 {commit} — {time}（雪梨時間 {sydney}）。在新分頁於 GitHub 開啟該次提交。',
 		'chrome.footer.creditsTitle': '本站所基於的開源專案',
 		'chrome.footer.credits': '鳴謝',
 
@@ -1495,7 +1639,8 @@ export default {
 		'chrome.hotkeys.consoleClearLine': '清空目前輸入行',
 		'chrome.hotkeys.consolePipe': '透過管線傳給 grep / head / tail / sort / uniq / wc',
 		'chrome.hotkeys.synthTransport': 'SYNTH — 播放控制',
-		'chrome.hotkeys.synthTransportNote': '在畫面 2 上，只要沒有文字欄位、選單或設定面板取得焦點即生效',
+		'chrome.hotkeys.synthTransportNote':
+			'在畫面 2 上，只要沒有文字欄位、選單或設定面板取得焦點即生效',
 		'chrome.hotkeys.transportPlay': '就地播放 / 暫停（開啟 QWERTY 時 Space 是延音踏板）',
 		'chrome.hotkeys.transportRewind': '回到第 1 小節',
 		'chrome.hotkeys.transportStopRewind': '停止並回到第 1 小節',
@@ -1507,14 +1652,17 @@ export default {
 		'chrome.hotkeys.transportResetKnob': '將旋鈕或推桿重設為中性值；機架上的 RST 會重設整個機架',
 		'chrome.hotkeys.transportTempo': '速度 −1 / +1 BPM（按住持續變化）',
 		'chrome.hotkeys.synthPianoRoll': 'SYNTH — 鋼琴捲簾',
-		'chrome.hotkeys.synthPianoRollNote': '開啟 QWERTY 鋼琴時，字母、數字及 , . 鍵屬於它；輕按 Ctrl / Shift 可切換八度',
+		'chrome.hotkeys.synthPianoRollNote':
+			'開啟 QWERTY 鋼琴時，字母、數字及 , . 鍵屬於它；輕按 Ctrl / Shift 可切換八度',
 		'chrome.hotkeys.rollPlace': '放置音符 / 框選（Shift 追加）',
-		'chrome.hotkeys.rollSelect': '選取它（Shift 切換選取）；拖曳可移動，拖曳右端可調整長度，Alt 拖曳可複製',
+		'chrome.hotkeys.rollSelect':
+			'選取它（Shift 切換選取）；拖曳可移動，拖曳右端可調整長度，Alt 拖曳可複製',
 		'chrome.hotkeys.rollDelete': '刪除指標下的音符；拖曳可清除更多',
 		'chrome.hotkeys.rollNudge': '將選取範圍微移一個網格步長 / 半音（Shift：一個小節 / 一個八度）',
 		'chrome.hotkeys.rollDeleteSel': '刪除選取範圍 / 清除選取範圍',
 		'chrome.hotkeys.rollSelectAll': '選取本頁；再次按下選取整條軌道',
-		'chrome.hotkeys.rollCopyPaste': '在游標處（青色標尺儲存格）複製 / 剪下 / 貼上；剪貼內容可跨軌道、音色與分頁',
+		'chrome.hotkeys.rollCopyPaste':
+			'在游標處（青色標尺儲存格）複製 / 剪下 / 貼上；剪貼內容可跨軌道、音色與分頁',
 		'chrome.hotkeys.rollRepeat': '將選取範圍緊接著自身重複一次',
 		'chrome.hotkeys.rollUndoRedo': '復原 / 重做（也可用 Ctrl+Y）',
 		'chrome.hotkeys.lifelab': 'LIFELAB — 培養皿',
@@ -1539,7 +1687,8 @@ export default {
 		'chrome.layout.consoleCloseHint': '按 ` 或 Esc 關閉',
 
 		'chrome.onboarding.eightViewsTitle': '八個畫面',
-		'chrome.onboarding.eightViewsBody': '本站的一切都分布在八個畫面中。點擊某個分頁，或按住 Ctrl 再按其數字 —— 這在任何地方都有效，包括在鍵盤測試器和鋼琴中，所以你永遠不會被困住。',
+		'chrome.onboarding.eightViewsBody':
+			'本站的一切都分布在八個畫面中。點擊某個分頁，或按住 Ctrl 再按其數字 —— 這在任何地方都有效，包括在鍵盤測試器和鋼琴中，所以你永遠不會被困住。',
 		'chrome.onboarding.eightViewsModules': 'modules — 真實的線上專案，附帶真實的架構圖',
 		'chrome.onboarding.eightViewsGuestbook': 'guestbook — 發布到 blog.krsz.in',
 		'chrome.onboarding.eightViewsSynth': 'synth — 8 軌 WebAudio 工作站，輸入 .mid，輸出 WAV',
@@ -1549,9 +1698,11 @@ export default {
 		'chrome.onboarding.eightViewsWebLm': 'web-lm — 在你自己的 GPU 上執行的語言模型，不需要伺服器',
 		'chrome.onboarding.eightViewsLifelab': 'lifelab — 康威生命遊戲，以關卡形式呈現',
 		'chrome.onboarding.workbenchTitle': '工作台',
-		'chrome.onboarding.workbenchBody': '目前的畫面會填滿這個面板。這裡沒有任何裝飾性內容：你看到的每一個延遲、水準與能力數值，都是在你的瀏覽器中實測得出，或是從它所描述的服務讀取而來。當瀏覽器拒絕回答時，會印出 \"n/a\"，而不是一個看似合理的數字。',
+		'chrome.onboarding.workbenchBody':
+			'目前的畫面會填滿這個面板。這裡沒有任何裝飾性內容：你看到的每一個延遲、水準與能力數值，都是在你的瀏覽器中實測得出，或是從它所描述的服務讀取而來。當瀏覽器拒絕回答時，會印出 \"n/a\"，而不是一個看似合理的數字。',
 		'chrome.onboarding.consoleTitle': '主控台',
-		'chrome.onboarding.consoleBody': '一個小型 shell，會下拉覆蓋在你目前所在的任何畫面之上。它的檔案系統是本站自身資料的即時投影，因此永遠不會過時。',
+		'chrome.onboarding.consoleBody':
+			'一個小型 shell，會下拉覆蓋在你目前所在的任何畫面之上。它的檔案系統是本站自身資料的即時投影，因此永遠不會過時。',
 		'chrome.onboarding.consoleToggle': '從任何地方開啟或關閉它',
 		'chrome.onboarding.consoleHelp': '指令清單；man <cmd> 可檢視某個指令的說明',
 		'chrome.onboarding.consoleBrowse': '瀏覽 /projects、/operator、/synth、/edge',
@@ -1559,10 +1710,12 @@ export default {
 		'chrome.onboarding.consoleTrace': '實際為你提供服務的 Cloudflare 節點',
 		'chrome.onboarding.openIt': '開啟它',
 		'chrome.onboarding.launchpadTitle': '啟動面板',
-		'chrome.onboarding.launchpadBody': '與另外五個畫面相同的快捷方塊，外加主題切換。它上方的側邊欄是操作者檔案；頂端的橫幅只是名稱而已。',
+		'chrome.onboarding.launchpadBody':
+			'與另外五個畫面相同的快捷方塊，外加主題切換。它上方的側邊欄是操作者檔案；頂端的橫幅只是名稱而已。',
 		'chrome.onboarding.launchpadCycleTheme': '循環切換主題 — tokyo、gruvbox、nord、amber',
 		'chrome.onboarding.edgeTitle': '真實的邊緣資訊，不是徽章',
-		'chrome.onboarding.edgeBody': '每次載入都會讀取 /cdn-cgi/trace：實際為你提供服務的 Cloudflare 節點、協商的協定以及 TLS 版本。在主控台執行 \"trace\" 可檢視包含實測往返時間的完整紀錄。',
+		'chrome.onboarding.edgeBody':
+			'每次載入都會讀取 /cdn-cgi/trace：實際為你提供服務的 Cloudflare 節點、協商的協定以及 TLS 版本。在主控台執行 \"trace\" 可檢視包含實測往返時間的完整紀錄。',
 		'chrome.onboarding.tourTitle': '這就是導覽',
 		'chrome.onboarding.tourBody': '這個按鈕可以隨時重新開啟導覽 —— \"guide\" 指令也一樣。',
 		'chrome.onboarding.keymapTitle': '還有一件事 — 快捷鍵表',
@@ -1572,29 +1725,38 @@ export default {
 
 		'chrome.privacy.scope': '範圍：僅限 krsz.in —— 也就是你現在所在的這個網站。',
 		'chrome.privacy.section1Title': '1. 本站蒐集的內容',
-		'chrome.privacy.section1Body': "什麼都不蒐集。krsz.in 沒有帳號系統，沒有數據分析，也沒有任何形式的追蹤。你的主題、聲音設定、主控台紀錄，以及這個工作台記住的其他一切，都只寫入這個瀏覽器自身的本機儲存空間 —— 它們從不離開你的裝置，也沒有任何伺服器會看到它們。 工具頁裡的硬體與顯示測試同樣完全在你的瀏覽器內執行。",
+		'chrome.privacy.section1Body':
+			'什麼都不蒐集。krsz.in 沒有帳號系統，沒有數據分析，也沒有任何形式的追蹤。你的主題、聲音設定、主控台紀錄，以及這個工作台記住的其他一切，都只寫入這個瀏覽器自身的本機儲存空間 —— 它們從不離開你的裝置，也沒有任何伺服器會看到它們。 工具頁裡的硬體與顯示測試同樣完全在你的瀏覽器內執行。',
 		'chrome.privacy.section2Title': '2. 例外情況',
 		'chrome.privacy.section2Intro': '以下四件事會離開你的瀏覽器，且都只在你按下對應按鈕時發生：',
-		'chrome.privacy.section2Guestbook': '留言板訊息 —— 傳送到本站伺服器並公開顯示。表單在傳送按鈕旁附有自己的確認提示。',
-		'chrome.privacy.section2Footprint': '足跡（留言板頁）—— 請求本站伺服器記錄 Cloudflare 邊緣節點已為該請求解析出的資訊：國家、時區、服務節點，以及不含版本號的瀏覽器與作業系統類別。不存 IP、城市或精確位置；每天一枚，公開顯示在足跡牆上。 這面牆同時收錄 blog.krsz.in 的來訪，取自該站的入站存取紀錄 —— 僅國家與瀏覽器類別，每位訪客每天一條，不複製其他任何欄位。',
-		'chrome.privacy.section2Speed': '網速測試（工具頁）—— 與 speed.cloudflare.com 交換隨機位元組，那是 Cloudflare 自己的服務，適用 Cloudflare 的隱私政策；krsz.in 不保存其中任何內容。',
-		'chrome.privacy.section2Dig': '主控台的 dig 指令 —— 你輸入的網域會送到本站的 DNS 中繼並轉發到上游；除 Worker 短期的執行紀錄外不做保留。',
+		'chrome.privacy.section2Guestbook':
+			'留言板訊息 —— 傳送到本站伺服器並公開顯示。表單在傳送按鈕旁附有自己的確認提示。',
+		'chrome.privacy.section2Footprint':
+			'足跡（留言板頁）—— 請求本站伺服器記錄 Cloudflare 邊緣節點已為該請求解析出的資訊：國家、時區、服務節點，以及不含版本號的瀏覽器與作業系統類別。不存 IP、城市或精確位置；每天一枚，公開顯示在足跡牆上。 這面牆同時收錄 blog.krsz.in 的來訪，取自該站的入站存取紀錄 —— 僅國家與瀏覽器類別，每位訪客每天一條，不複製其他任何欄位。',
+		'chrome.privacy.section2Speed':
+			'網速測試（工具頁）—— 與 speed.cloudflare.com 交換隨機位元組，那是 Cloudflare 自己的服務，適用 Cloudflare 的隱私政策；krsz.in 不保存其中任何內容。',
+		'chrome.privacy.section2Dig':
+			'主控台的 dig 指令 —— 你輸入的網域會送到本站的 DNS 中繼並轉發到上游；除 Worker 短期的執行紀錄外不做保留。',
 		'chrome.privacy.section3Title': '3. 關聯專案 —— 各自獨立的政策',
-		'chrome.privacy.section3Body': 'MODULES 連結到 krsz.in 下其他獨立運作的網站 —— 每一個都是擁有自己的伺服器與隱私權規範的獨立應用程式，不在本聲明的涵蓋範圍內：',
+		'chrome.privacy.section3Body':
+			'MODULES 連結到 krsz.in 下其他獨立運作的網站 —— 每一個都是擁有自己的伺服器與隱私權規範的獨立應用程式，不在本聲明的涵蓋範圍內：',
 		'chrome.privacy.footer': 'krsz.in — 隱私聲明',
 
 		'chrome.settings.sound': '聲音',
 		'chrome.settings.soundDesc': '介面與合成器音效',
 		'chrome.settings.muted': '已靜音',
 		'chrome.settings.textSize': '文字大小',
-		'chrome.settings.textSizeDesc': '縮放整個網站。AUTO 會跟隨螢幕解析度 — 720p 為 12，1080p 為 14，2K 為 16，4K 為 20，8K 為 24。字體是依 12px 網格繪製，因此 12 與 24 完全清晰銳利，介於兩者之間的尺寸會做少量內插處理。',
+		'chrome.settings.textSizeDesc':
+			'縮放整個網站。AUTO 會跟隨螢幕解析度 — 720p 為 12，1080p 為 14，2K 為 16，4K 為 20，8K 為 24。字體是依 12px 網格繪製，因此 12 與 24 完全清晰銳利，介於兩者之間的尺寸會做少量內插處理。',
 		'chrome.settings.textSizeAutoHint': '跟隨螢幕解析度（目前為 {px}px）',
 		'chrome.settings.textSizeExact': ' — 恰好落在 12px 網格上',
 		'chrome.settings.textSizeDefault': '（預設）',
 		'chrome.settings.performance': '效能',
-		'chrome.settings.performanceDesc': '關閉背景影片、所有面板的模糊效果，以及所有懸停/按下動畫。適用於低效能裝置或省電情境，而非外觀偏好。',
+		'chrome.settings.performanceDesc':
+			'關閉背景影片、所有面板的模糊效果，以及所有懸停/按下動畫。適用於低效能裝置或省電情境，而非外觀偏好。',
 		'chrome.settings.storageTitle': '此裝置上的儲存空間',
-		'chrome.settings.storageDesc': '以下內容只保存在這個瀏覽器中 —— 從未傳送到任何地方。清除某一列會立即刪除，且無法復原。',
+		'chrome.settings.storageDesc':
+			'以下內容只保存在這個瀏覽器中 —— 從未傳送到任何地方。清除某一列會立即刪除，且無法復原。',
 		'chrome.settings.clearing': '正在清除…',
 		'chrome.settings.clearEverything': '清除全部',
 		'chrome.settings.measuring': '正在測量…',
@@ -1602,12 +1764,14 @@ export default {
 		'chrome.settings.cleared': '已清除',
 		'chrome.settings.clear': '清除',
 		'chrome.settings.storage.modelWeightsLabel': 'WEB-LM 模型權重',
-		'chrome.settings.storage.modelWeightsDetail': '{count} 個檔案 — 已下載的 GGUF 權重，下次載入時會重新取得',
+		'chrome.settings.storage.modelWeightsDetail':
+			'{count} 個檔案 — 已下載的 GGUF 權重，下次載入時會重新取得',
 		'chrome.settings.storage.notAvailable': '此瀏覽器不支援',
 		'chrome.settings.storage.conversationsLabel': 'WEB-LM 對話紀錄',
 		'chrome.settings.storage.conversationsDetail': '{count} 則已儲存的對話，包括任何附加的圖片',
 		'chrome.settings.storage.vmDisksLabel': 'KRSZ-VM 磁碟變更',
-		'chrome.settings.storage.vmDisksDetail': '寫入兩台模擬機器磁碟的所有內容（i686 與 x86-64 各自獨立保存）',
+		'chrome.settings.storage.vmDisksDetail':
+			'寫入兩台模擬機器磁碟的所有內容（i686 與 x86-64 各自獨立保存）',
 		'chrome.settings.storage.synthAutosaveLabel': 'SYNTH 自動儲存',
 		'chrome.settings.storage.synthAutosaveDetail': '上次正在編輯的曲目，下次造訪時會自動還原',
 		'chrome.settings.storage.consoleHistoryLabel': '主控台歷史紀錄與別名',
@@ -1615,7 +1779,8 @@ export default {
 		'chrome.settings.storage.vmConfigLabel': 'KRSZ-VM 機器設定',
 		'chrome.settings.storage.vmConfigDetail': 'krsz-vm 設定畫面上的記憶體 / 網路 / 開機模式選擇',
 		'chrome.settings.storage.genConfigLabel': 'WEB-LM 產生設定',
-		'chrome.settings.storage.genConfigDetail': 'web-lm 設定面板中的 temperature、top_p 及其他取樣設定',
+		'chrome.settings.storage.genConfigDetail':
+			'web-lm 設定面板中的 temperature、top_p 及其他取樣設定',
 		'chrome.settings.storage.toursLabel': '已檢視的歡迎畫面與導覽',
 		'chrome.settings.storage.midiRoutingLabel': 'MIDI 路由',
 		'chrome.settings.storage.midiRoutingDetail': '各 MIDI 輸入裝置對應的音軌，以及已關閉的輸入',
@@ -1625,7 +1790,8 @@ export default {
 		'chrome.settings.storage.group.lmSpace': 'LM SPACE',
 		'chrome.settings.storage.group.vm': 'KRSZ-VM',
 		'chrome.settings.storage.group.site': '站台',
-		'chrome.settings.storage.toursDetail': '歡迎畫面、站點導覽以及每個畫面各自的導覽會在下次造訪時重新出現',
+		'chrome.settings.storage.toursDetail':
+			'歡迎畫面、站點導覽以及每個畫面各自的導覽會在下次造訪時重新出現',
 
 		'chrome.sidebar.running': '執行中',
 		'chrome.sidebar.verified': '已驗證',
@@ -1656,13 +1822,18 @@ export default {
 		'chrome.sidebar.tooltip1': '1：Guestbook — 透過邊緣 Worker 傳送訊息封包 [快捷鍵：Ctrl+1]',
 		'chrome.sidebar.tooltip2': '2：Synth — 8 軌模組化合成器工作站 [快捷鍵：Ctrl+2]',
 		'chrome.sidebar.tooltip3': '3：Utilities — 鍵盤 / 滑鼠 / 顯示器硬體測試工具 [快捷鍵：Ctrl+3]',
-		'chrome.sidebar.tooltip4': '4：LM.SPACE — 將 Artificial Analysis 模型表格變成可漫遊的空間 [快捷鍵：Ctrl+4]',
-		'chrome.sidebar.tooltip5': '5：krsz-vm — 在模擬的 x86 PC（i686 或 x86-64）上執行 Alpine Linux [快捷鍵：Ctrl+5]',
-		'chrome.sidebar.tooltip6': '6：web-lm — 透過 WebGPU 在你自己的 GPU 上執行語言模型，不需要伺服器 [快捷鍵：Ctrl+6]',
-		'chrome.sidebar.tooltip7': '7：lifelab — 康威生命遊戲，以關卡形式呈現：兩條規則、靜物、滑翔機、碰撞，以及滑翔機槍 [快捷鍵：Ctrl+7]',
+		'chrome.sidebar.tooltip4':
+			'4：LM.SPACE — 將 Artificial Analysis 模型表格變成可漫遊的空間 [快捷鍵：Ctrl+4]',
+		'chrome.sidebar.tooltip5':
+			'5：krsz-vm — 在模擬的 x86 PC（i686 或 x86-64）上執行 Alpine Linux [快捷鍵：Ctrl+5]',
+		'chrome.sidebar.tooltip6':
+			'6：web-lm — 透過 WebGPU 在你自己的 GPU 上執行語言模型，不需要伺服器 [快捷鍵：Ctrl+6]',
+		'chrome.sidebar.tooltip7':
+			'7：lifelab — 康威生命遊戲，以關卡形式呈現：兩條規則、靜物、滑翔機、碰撞，以及滑翔機槍 [快捷鍵：Ctrl+7]',
 
 		'chrome.tabbar.logoTitle': 'krsz.in — Kurashizu 的雜貨角落',
-		'chrome.tabbar.consoleTitle': '命令主控台 — 一個帶虛擬檔案系統、管線與邊緣追蹤的小型 shell，會以下拉形式覆蓋在任意畫面上。[快捷鍵：` 反引號]',
+		'chrome.tabbar.consoleTitle':
+			'命令主控台 — 一個帶虛擬檔案系統、管線與邊緣追蹤的小型 shell，會以下拉形式覆蓋在任意畫面上。[快捷鍵：` 反引號]',
 		'chrome.tabbar.console': '主控台',
 		'chrome.tabbar.playbackTitle': '主音訊與音序器播放開關 — 啟動 / 停止音樂與音效引擎',
 		'chrome.tabbar.stop': '停止',
@@ -1676,13 +1847,18 @@ export default {
 		'chrome.tabbar.tab1': '畫面 1：Guestbook — 分散式邊緣封包留言板 [快捷鍵：Ctrl+1]',
 		'chrome.tabbar.tab2': '畫面 2：Synth — 8 軌 WebAudio 模組化合成器與音序器 [快捷鍵：Ctrl+2]',
 		'chrome.tabbar.tab3': '畫面 3：Utilities — 鍵盤 / 滑鼠 / 顯示器硬體測試工具 [快捷鍵：Ctrl+3]',
-		'chrome.tabbar.tab4': '畫面 4：LM.SPACE — 將 Artificial Analysis 模型表格變成可漫遊的空間，透過 blog.krsz.in 快取 [快捷鍵：Ctrl+4]',
-		'chrome.tabbar.tab5': '畫面 5：krsz-vm — 在瀏覽器中模擬的一台真實 x86 PC，執行 Alpine Linux [快捷鍵：Ctrl+5]',
-		'chrome.tabbar.tab6': '畫面 6：web-lm — 完全透過 WebGPU 在你的 GPU 上執行的語言模型，不需要伺服器 [快捷鍵：Ctrl+6]',
-		'chrome.tabbar.tab7': '畫面 7：lifelab — 康威生命遊戲，25 關戰役，終點是滑翔機槍 [快捷鍵：Ctrl+7]',
+		'chrome.tabbar.tab4':
+			'畫面 4：LM.SPACE — 將 Artificial Analysis 模型表格變成可漫遊的空間，透過 blog.krsz.in 快取 [快捷鍵：Ctrl+4]',
+		'chrome.tabbar.tab5':
+			'畫面 5：krsz-vm — 在瀏覽器中模擬的一台真實 x86 PC，執行 Alpine Linux [快捷鍵：Ctrl+5]',
+		'chrome.tabbar.tab6':
+			'畫面 6：web-lm — 完全透過 WebGPU 在你的 GPU 上執行的語言模型，不需要伺服器 [快捷鍵：Ctrl+6]',
+		'chrome.tabbar.tab7':
+			'畫面 7：lifelab — 康威生命遊戲，25 關戰役，終點是滑翔機槍 [快捷鍵：Ctrl+7]',
 
 		'chrome.welcome.title': '歡迎來到 krsz.in',
-		'chrome.welcome.subtitle': 'Kurashizu 的雜貨角落 — 一個邊緣原生工作台中的八個真實可用工具。你看到的一切都是真實運作的，不是效果圖。',
+		'chrome.welcome.subtitle':
+			'Kurashizu 的雜貨角落 — 一個邊緣原生工作台中的八個真實可用工具。你看到的一切都是真實運作的，不是效果圖。',
 		'chrome.welcome.getStarted': '開始使用 →',
 		'chrome.welcome.getStartedPlain': '開始使用',
 		'chrome.welcome.agreeTo': '點擊「{action}」即表示你同意我們的',
@@ -1703,12 +1879,14 @@ export default {
 		'chrome.boot.complete': 'セルフテスト完了 — {ok}/{total} 項目が応答しました',
 		'chrome.boot.booting': 'ワークベンチを起動中…',
 
-		'chrome.console.inputHint': '\"help\" と入力 — Tab で補完・巡回、→ で確定、↑↓ で履歴、Ctrl+L でクリア...',
+		'chrome.console.inputHint':
+			'\"help\" と入力 — Tab で補完・巡回、→ で確定、↑↓ で履歴、Ctrl+L でクリア...',
 		'chrome.console.exec': '実行',
 		'chrome.console.moreSuggestions': '他 {count} 件',
 		'chrome.console.openedWalkthrough': 'ガイドを開きました。',
 		'chrome.console.openedKeymap': 'キーマップを開きました。',
-		'chrome.console.noManualEntry': '\"{name}\" のマニュアルはありません。\"help\" でコマンド一覧を表示できます。',
+		'chrome.console.noManualEntry':
+			'\"{name}\" のマニュアルはありません。\"help\" でコマンド一覧を表示できます。',
 		'chrome.console.help.open': 'プロジェクトを新しいタブで開く',
 		'chrome.console.help.cat': 'ファイルを表示する',
 		'chrome.console.help.grep': '一致する行を抽出する',
@@ -1735,40 +1913,51 @@ export default {
 		'chrome.console.help.guide': 'ガイドをもう一度再生する',
 		'chrome.console.help.backquote': 'どの画面からでもこのコンソールを開閉する',
 		'chrome.console.help.keys': '完全なキーマップ（またはコンソール外で ? / F1 を押す）',
-		'chrome.console.usage.cd1': '仮想の作業ディレクトリを移動します。.. と絶対パスに対応しています。',
+		'chrome.console.usage.cd1':
+			'仮想の作業ディレクトリを移動します。.. と絶対パスに対応しています。',
 		'chrome.console.usage.cd2': '引数なしの場合は / に戻ります。',
 		'chrome.console.usage.ls': 'ディレクトリの内容を一覧表示します。-l で注記列を追加します。',
-		'chrome.console.usage.cat': 'ファイルを表示します。/synth と /edge のファイルはライブ状態から生成されます。',
+		'chrome.console.usage.cat':
+			'ファイルを表示します。/synth と /edge のファイルはライブ状態から生成されます。',
 		'chrome.console.usage.tree': 'サブツリーを再帰的に一覧表示します。',
-		'chrome.console.usage.grep1': '一致する行のみ残します。ファイル指定がない場合はパイプ入力を読み込みます。',
+		'chrome.console.usage.grep1':
+			'一致する行のみ残します。ファイル指定がない場合はパイプ入力を読み込みます。',
 		'chrome.console.usage.grep2': 'パターンは JavaScript の正規表現です。',
 		'chrome.console.usage.head': '先頭 N 行（デフォルト 10）。',
 		'chrome.console.usage.tail': '末尾 N 行（デフォルト 10）。',
 		'chrome.console.usage.wc': '行数・単語数・文字数を数えます。',
 		'chrome.console.usage.sort': '行を並べ替えます。-r で逆順になります。',
 		'chrome.console.usage.uniq': '隣接する重複行をまとめます。',
-		'chrome.console.usage.alias': 'シェルのエイリアスを定義・一覧表示します。localStorage に保存されます。',
+		'chrome.console.usage.alias':
+			'シェルのエイリアスを定義・一覧表示します。localStorage に保存されます。',
 		'chrome.console.usage.unalias': 'エイリアスを1つ削除します。',
 		'chrome.console.usage.trace1': '/cdn-cgi/trace を取得し、応答した Cloudflare PoP、',
-		'chrome.console.usage.trace2': 'ネゴシエートされたプロトコル、TLS バージョン、鍵交換グループを表示します。',
+		'chrome.console.usage.trace2':
+			'ネゴシエートされたプロトコル、TLS バージョン、鍵交換グループを表示します。',
 		'chrome.console.usage.open': 'プロジェクトを新しいタブで開きます。',
-		'chrome.console.usage.eval': '手書きのパーサーで算術式を評価します — 生の eval() は決して使いません。',
+		'chrome.console.usage.eval':
+			'手書きのパーサーで算術式を評価します — 生の eval() は決して使いません。',
 		'chrome.console.usage.bpm': 'シーケンサーのテンポを表示または設定します。',
 		'chrome.console.usage.vol': 'マスター音量を表示または設定します。',
-		'chrome.console.usage.load': '名前の一部から内蔵曲を読み込みます。\"songs\" も参照してください。',
+		'chrome.console.usage.load':
+			'名前の一部から内蔵曲を読み込みます。\"songs\" も参照してください。',
 		'chrome.console.usage.theme': '巡回、または次のいずれかに設定します：{list}',
 		'chrome.console.usage.echo': 'テキストを表示します。パイプの入力元として便利です。',
 		'chrome.console.usage.history': '直近15件のコマンド。訪問をまたいで保存されます。',
 		'chrome.console.usage.guide': 'ガイドを再度開きます。',
-		'chrome.console.usage.keys': '完全なキーボード参照を開きます。ここで \"?\" と入力するのとは異なります —— それはヘルプを表示します。これを開くには、テキスト欄の外で実際の ? キーか F1 キーを押してください。',
+		'chrome.console.usage.keys':
+			'完全なキーボード参照を開きます。ここで \"?\" と入力するのとは異なります —— それはヘルプを表示します。これを開くには、テキスト欄の外で実際の ? キーか F1 キーを押してください。',
 		'chrome.console.usage.man': '1つのコマンドの使い方です。',
 		'chrome.console.usage.help': 'セクションごとに分類された完全なコマンド一覧です。',
-		'chrome.console.usage.whoami': 'オペレーターのプロフィール — 名前、所在地、モットー、技術スタック。',
+		'chrome.console.usage.whoami':
+			'オペレーターのプロフィール — 名前、所在地、モットー、技術スタック。',
 		'chrome.console.usage.date': 'シドニーと UTC の現在時刻です。',
-		'chrome.console.usage.tracks': 'シーケンサーのトラック状態 — ミュート・ソロの有無とブレンドモード。',
+		'chrome.console.usage.tracks':
+			'シーケンサーのトラック状態 — ミュート・ソロの有無とブレンドモード。',
 		'chrome.console.usage.songs': '内蔵曲一覧（● が現在読み込み中の曲を示します）。',
 		'chrome.console.usage.midi': '接続中の MIDI デバイスの状態（あれば）。',
-		'chrome.console.usage.banner': 'KRSZ バナーを表示します — 毎回新しいブロック文字のレンダリングになります。',
+		'chrome.console.usage.banner':
+			'KRSZ バナーを表示します — 毎回新しいブロック文字のレンダリングになります。',
 		'chrome.console.usage.play': 'シーケンサーの再生を開始します。',
 		'chrome.console.usage.stop': 'シーケンサーの再生を停止します。',
 		'chrome.console.usage.seq': 'シーケンサーの再生を切り替えます。',
@@ -1777,15 +1966,18 @@ export default {
 		'chrome.console.usage.snap': 'シーケンサーのグリッドスナップを設定します。次のいずれか：{list}',
 		'chrome.console.usage.dur': 'デフォルトの音符長を設定します。次のいずれか：{list}',
 		'chrome.console.usage.meter': '拍子を設定します。次のいずれか：{list}',
-		'chrome.console.usage.blend': 'アクティブトラックのブレンドモードを設定します：layer、fm、ring、sync のいずれか。',
+		'chrome.console.usage.blend':
+			'アクティブトラックのブレンドモードを設定します：layer、fm、ring、sync のいずれか。',
 		'chrome.console.usage.clear': 'コンソールのスクロールバックをクリアします。',
 		'chrome.console.usage.pwd': '現在の仮想作業ディレクトリを表示します。',
 
-		'chrome.console.welcome': 'KRSZ-EDGE WORKBENCH READY // \"help\" と入力するか [CTRL+0-5] ホットキーを使ってください',
+		'chrome.console.welcome':
+			'KRSZ-EDGE WORKBENCH READY // \"help\" と入力するか [CTRL+0-5] ホットキーを使ってください',
 		'chrome.console.run.navigatedTo': '{path} に移動しました',
 		'chrome.console.run.unknownProject': '不明なプロジェクトです：「{key}」。候補：{list}',
 		'chrome.console.run.opened': '{url} を開きました',
-		'chrome.console.run.edgeTraceUnavailable': 'エッジトレースを利用できません — /cdn-cgi/trace が応答しませんでした。',
+		'chrome.console.run.edgeTraceUnavailable':
+			'エッジトレースを利用できません — /cdn-cgi/trace が応答しませんでした。',
 		'chrome.console.run.cdNoSuchDir': 'cd：そのディレクトリはありません：{path}',
 		'chrome.console.run.cdNotADir': 'cd：ディレクトリではありません：{path}',
 		'chrome.console.run.lsNoSuchPath': 'ls：そのパスはありません：{path}',
@@ -1813,7 +2005,8 @@ export default {
 		'chrome.console.run.seqTracksHeading': 'シーケンサートラック：',
 		'chrome.console.run.builtinSongsHeading': '内蔵曲：',
 		'chrome.console.run.usageLoad': '用法：load <曲> — まず \"songs\" で一覧を確認してください',
-		'chrome.console.run.noSongMatch': '「{q}」に一致する曲はありません。\"songs\" を試してください。',
+		'chrome.console.run.noSongMatch':
+			'「{q}」に一致する曲はありません。\"songs\" を試してください。',
 		'chrome.console.run.loadedSong': '{name} を読み込みました（{bpm} BPM、{meter}）',
 		'chrome.console.run.midiConnected': 'MIDI 接続中：{device}',
 		'chrome.console.run.midiStandby': 'MIDI：スタンバイ中 — 入力デバイス未接続',
@@ -1842,7 +2035,8 @@ export default {
 		'chrome.console.run.themeStatus': 'テーマ：{theme}',
 		'chrome.console.run.unknownTheme': '不明なテーマです「{q}」。選択肢：{list}',
 		'chrome.console.run.themeSet': 'テーマを {theme} に設定しました。',
-		'chrome.console.run.commandNotRecognized': '認識できないコマンドです：「{cmd}」。\"help\" と入力してください。',
+		'chrome.console.run.commandNotRecognized':
+			'認識できないコマンドです：「{cmd}」。\"help\" と入力してください。',
 		'chrome.console.run.entriesHeading': '{path}  —  {count} 件',
 		'chrome.console.run.noMatch': '（/{pattern}/ に一致する結果はありません）',
 		'chrome.console.run.profileLocation': 'オーストラリア・シドニー [UTC+10/11]',
@@ -1857,7 +2051,8 @@ export default {
 		'chrome.console.run.hotkeyDropdownConsole': 'ドロップダウンコンソール',
 		'chrome.console.run.hotkeyReference': 'ホットキーリファレンス',
 		'chrome.console.run.hotkeyCompleteConsole': 'コンソール内で補完 / 循環',
-		'chrome.console.run.traceIdleHint': 'trace {status} — \"trace\" と入力してエッジを調べてください',
+		'chrome.console.run.traceIdleHint':
+			'trace {status} — \"trace\" と入力してエッジを調べてください',
 
 		'chrome.console.help.lifeRun': 'ディッシュの実行 / 一時停止 / ステップ実行',
 		'chrome.console.help.lifeEdit': 'クリア、ランダム散布、速度設定',
@@ -1883,20 +2078,28 @@ export default {
 		'chrome.console.help.chain': '複数のコマンドを順番に実行する',
 		'chrome.console.help.historyClear': 'コマンド履歴を消去する',
 
-		'chrome.console.usage.lang': 'UI言語を切り替え、または表示します。短縮形 zh、cn、tw、jp、kr が使えます。',
-		'chrome.console.usage.life1': 'LIFE.LAB（タブ7）を操作: run、pause、toggle、step [n]、clear、random [密度]、',
-		'chrome.console.usage.life2': 'speed <世代/秒>、size <幅>x<高さ>、load <パターン>、patterns、info。',
-		'chrome.console.usage.sysinfo': '実際のブラウザ/システム情報を並べたneofetch風ブロック。取得できない項目はn/aと表示します。',
-		'chrome.console.usage.uptime': 'セッションの稼働時間とNavigation Timing（DOMContentLoaded、load、可視性）。',
+		'chrome.console.usage.lang':
+			'UI言語を切り替え、または表示します。短縮形 zh、cn、tw、jp、kr が使えます。',
+		'chrome.console.usage.life1':
+			'LIFE.LAB（タブ7）を操作: run、pause、toggle、step [n]、clear、random [密度]、',
+		'chrome.console.usage.life2':
+			'speed <世代/秒>、size <幅>x<高さ>、load <パターン>、patterns、info。',
+		'chrome.console.usage.sysinfo':
+			'実際のブラウザ/システム情報を並べたneofetch風ブロック。取得できない項目はn/aと表示します。',
+		'chrome.console.usage.uptime':
+			'セッションの稼働時間とNavigation Timing（DOMContentLoaded、load、可視性）。',
 		'chrome.console.usage.ver': '現在のページが配信されたビルドのコミットとビルド日。',
 		'chrome.console.usage.settings': 'グローバル構成パネルを開きます。',
 		'chrome.console.usage.credits': 'オープンソースcreditsパネルを開きます。',
 		'chrome.console.usage.privacy': 'プライバシー通知を開きます。',
 		'chrome.console.usage.exit': 'コンソールのオーバーレイを閉じます。',
-		'chrome.console.usage.scale': 'サイトの文字サイズ（ピクセル）を表示・設定、または \"auto\" で画面に追従させます。',
+		'chrome.console.usage.scale':
+			'サイトの文字サイズ（ピクセル）を表示・設定、または \"auto\" で画面に追従させます。',
 		'chrome.console.usage.rec': 'シンセ出力をファイルに録音する開始・停止・切り替え。',
-		'chrome.console.usage.patch': 'シンセパッチの管理：新規の空パッチ、保存、読み込み、共有リンクのコピー。',
-		'chrome.console.usage.dig1': '本サイト自身の /dns-query エンドポイント（RFC 8484ワイヤ形式）で<name>を解決します。',
+		'chrome.console.usage.patch':
+			'シンセパッチの管理：新規の空パッチ、保存、読み込み、共有リンクのコピー。',
+		'chrome.console.usage.dig1':
+			'本サイト自身の /dns-query エンドポイント（RFC 8484ワイヤ形式）で<name>を解決します。',
 		'chrome.console.usage.dig2': 'typeはA、AAAA、CNAME、MX、TXT、NSのいずれか（デフォルトA）。',
 		'chrome.console.usage.sha256': 'テキスト（またはパイプ入力）のSHA-256を16進数で表示。',
 		'chrome.console.usage.sha1': 'テキスト（またはパイプ入力）のSHA-1を16進数で表示。',
@@ -1904,13 +2107,20 @@ export default {
 		'chrome.console.usage.hex': 'テキストのUTF-8バイト列を16進数で表示。',
 		'chrome.console.usage.uuid': 'ランダムなUUID（v4）を生成します。',
 		'chrome.console.usage.random': '1からmax（デフォルト100）までのランダムな整数。',
-		'chrome.console.usage.roll': 'NdM個のサイコロを振ります。例：roll 2d6 —— 各サイコロの目と合計を表示。',
-		'chrome.console.usage.unix': '引数なしなら現在時刻。それ以外はUnixタイムスタンプまたはISO文字列を相互変換。',
-		'chrome.console.usage.which': '名前が組み込みコマンド、ナビゲーション語、外部リンク、エイリアスのいずれかを報告します。',
-		'chrome.console.usage.fonts': 'document.fontsが読み込み済みと報告するフォントを、状態とunicode範囲つきで一覧表示。',
-		'chrome.console.usage.fortune': '本サイト自身のファイルシステムからランダムに一段落と、その出典パスを表示。',
-		'chrome.console.usage.cowsay': '指定したテキスト（またはパイプ入力）を40列で折り返し、ASCIIの牛にしゃべらせます。',
-		'chrome.console.usage.sl': '定番の蒸気機関車アニメーション。EscまたはCtrl+Cで途中キャンセルできます。',
+		'chrome.console.usage.roll':
+			'NdM個のサイコロを振ります。例：roll 2d6 —— 各サイコロの目と合計を表示。',
+		'chrome.console.usage.unix':
+			'引数なしなら現在時刻。それ以外はUnixタイムスタンプまたはISO文字列を相互変換。',
+		'chrome.console.usage.which':
+			'名前が組み込みコマンド、ナビゲーション語、外部リンク、エイリアスのいずれかを報告します。',
+		'chrome.console.usage.fonts':
+			'document.fontsが読み込み済みと報告するフォントを、状態とunicode範囲つきで一覧表示。',
+		'chrome.console.usage.fortune':
+			'本サイト自身のファイルシステムからランダムに一段落と、その出典パスを表示。',
+		'chrome.console.usage.cowsay':
+			'指定したテキスト（またはパイプ入力）を40列で折り返し、ASCIIの牛にしゃべらせます。',
+		'chrome.console.usage.sl':
+			'定番の蒸気機関車アニメーション。EscまたはCtrl+Cで途中キャンセルできます。',
 
 		'chrome.console.run.langStatus': '言語: {locale}（{native}）— {mode}',
 		'chrome.console.run.langAuto': '自動',
@@ -1931,29 +2141,35 @@ export default {
 		'chrome.console.run.patchSaved': 'パッチを保存しました。',
 		'chrome.console.run.patchLoaded': 'パッチを読み込みました。',
 		'chrome.console.run.patchShared': '共有リンクをクリップボードにコピーしました。',
-		'chrome.console.run.lifeLoading': 'LIFE.LABを開いています —— 読み込みが終わったらこのコマンドをもう一度実行してください。',
-		'chrome.console.run.lifeNotReady': 'LIFE.LABはまだ準備できていません —— 少し待ってから再試行してください。',
+		'chrome.console.run.lifeLoading':
+			'LIFE.LABを開いています —— 読み込みが終わったらこのコマンドをもう一度実行してください。',
+		'chrome.console.run.lifeNotReady':
+			'LIFE.LABはまだ準備できていません —— 少し待ってから再試行してください。',
 		'chrome.console.run.lifeRunning': '実行中です。',
 		'chrome.console.run.lifePaused': '一時停止しました。',
 		'chrome.console.run.lifeStepped': '{n}世代分進めました。',
 		'chrome.console.run.lifeCleared': 'ディッシュをクリアしました。',
-		'chrome.console.run.lifeBadDensity': '密度は0（含まず）より大きく1以下の数値である必要があります。',
+		'chrome.console.run.lifeBadDensity':
+			'密度は0（含まず）より大きく1以下の数値である必要があります。',
 		'chrome.console.run.lifeRandomized': '密度{pct}%でディッシュに種をまきました。',
 		'chrome.console.run.lifeBadSpeed': '用法: life speed <世代/秒> —— 次のいずれか: {list}',
 		'chrome.console.run.lifeSpeedSet': '速度を{n}世代/秒に設定しました。',
 		'chrome.console.run.lifeResized': 'ディッシュを{w}x{h}にリサイズしました。',
-		'chrome.console.run.lifeNoPattern': '\"{q}\"に一致するパターンがありません。\"life patterns\"を試してください。',
+		'chrome.console.run.lifeNoPattern':
+			'\"{q}\"に一致するパターンがありません。\"life patterns\"を試してください。',
 		'chrome.console.run.lifeLoaded': 'ディッシュに{label}を配置しました。',
 		'chrome.console.run.lifePatternsHeading': 'パターンライブラリ:',
 		'chrome.console.run.lifeInfoHeading': 'LIFE.LAB:',
 		'chrome.console.run.digBadType': '不明なレコードタイプです。有効な値: {list}',
-		'chrome.console.run.digNetworkError': 'dig: ネットワークエラー —— /dns-queryに到達できませんでした。',
+		'chrome.console.run.digNetworkError':
+			'dig: ネットワークエラー —— /dns-queryに到達できませんでした。',
 		'chrome.console.run.digHttpError': 'dig: /dns-queryからHTTP {status}が返されました。',
 		'chrome.console.run.digBadResponse': 'dig: 応答の形式が不正です。',
 		'chrome.console.run.digRcode': 'dig: サーバーがRCODE {rcode}（失敗）を返しました。',
 		'chrome.console.run.digNoAnswers': 'dig: {name}に{type}レコードはありません。',
 		'chrome.console.run.digHeading': 'DIG {name} {type} —— 本サイト自身の /dns-query 経由',
-		'chrome.console.run.usageTextArg': '用法: {cmd} <テキスト> —— またはパイプでテキストを渡してください。',
+		'chrome.console.run.usageTextArg':
+			'用法: {cmd} <テキスト> —— またはパイプでテキストを渡してください。',
 		'chrome.console.run.subtleCryptoUnavailable': 'このブラウザではSubtleCryptoが利用できません。',
 		'chrome.console.run.base64Invalid': '有効なbase64ではありません。',
 		'chrome.console.run.rollResult': '{dice}: [{rolls}]  合計 {total}',
@@ -2005,7 +2221,8 @@ export default {
 		'chrome.credits.jellyPixel': 'いま読んでいるすべてのラテン文字グリフ、12px サイズ',
 		'chrome.credits.fusionPixel': '漢字・かな・ハングルのすべてのグリフ、同じ 12px グリッド',
 		'chrome.credits.groupUtils': 'ツール',
-		'chrome.credits.cfSpeedtest': '速度ツールでの speed.cloudflare.com に対する遅延・ダウンロード・アップロード測定',
+		'chrome.credits.cfSpeedtest':
+			'速度ツールでの speed.cloudflare.com に対する遅延・ダウンロード・アップロード測定',
 		'chrome.credits.threejs': 'WebGL でレンダリングされたモデルフィールド',
 		'chrome.credits.artificialAnalysis': 'すべてのモデル座標は、彼らのデータの1フィールドです',
 		'chrome.credits.v86': 'タブ内でエミュレートされた x86 PC',
@@ -2018,28 +2235,39 @@ export default {
 		'chrome.credits.mermaid': '各モジュールのアーキテクチャ図',
 		'chrome.credits.nord': 'nord-terminal テーマ',
 		'chrome.credits.gruvbox': 'gruvbox-dark テーマ',
-		'chrome.credits.cloudflareWorkers': 'このサイトと、その裏側の D1 / R2 / KV / Vectorize を実行しています',
-		'chrome.credits.intro': 'このサイトは kurashizu が、以下のオープンソースプロジェクトの上に構築しました。いずれも実際に使用・実行しているもので、ライセンスとともに掲載しています。',
-		'chrome.credits.outro': 'クレジット表記に誤りや漏れがあれば、教えていただけるとありがたいです。',
+		'chrome.credits.cloudflareWorkers':
+			'このサイトと、その裏側の D1 / R2 / KV / Vectorize を実行しています',
+		'chrome.credits.intro':
+			'このサイトは kurashizu が、以下のオープンソースプロジェクトの上に構築しました。いずれも実際に使用・実行しているもので、ライセンスとともに掲載しています。',
+		'chrome.credits.outro':
+			'クレジット表記に誤りや漏れがあれば、教えていただけるとありがたいです。',
 
 		'chrome.dropdown.placeholder': '選択…',
 
 		'chrome.footer.tracingEdge': 'エッジをトレース中…',
 		'chrome.footer.edgeTraceNA': 'エッジトレース利用不可',
-		'chrome.footer.edgeTitleKnown': 'Cloudflare PoP {colo}{loc} が {http}、{tls}{kex} で応答{rtt}。/cdn-cgi/trace からライブで取得。コンソールで \"trace\" と入力すると完全な記録を確認できます。',
+		'chrome.footer.edgeTitleKnown':
+			'Cloudflare PoP {colo}{loc} が {http}、{tls}{kex} で応答{rtt}。/cdn-cgi/trace からライブで取得。コンソールで \"trace\" と入力すると完全な記録を確認できます。',
 		'chrome.footer.edgeTitleRtt': '— トレースの往復時間 {ms}ms',
-		'chrome.footer.edgeTitleUnknown': 'Cloudflare /cdn-cgi/trace — コンソールで \"trace\" と入力するとエッジを調べられます。',
-		'chrome.footer.linkGithub': 'GitHub プロフィール — https://github.com/kurashizu を新しいタブで開く',
-		'chrome.footer.linkHuggingface': 'Hugging Face AI モデルハブ — https://huggingface.co/kurashizu を新しいタブで開く',
-		'chrome.footer.linkOshwhub': 'OSHWHub ハードウェアプロジェクトと PCB 図面 — https://oshwhub.com/Kurashizu を新しいタブで開く',
-		'chrome.footer.linkRules': 'Skill & システムルール参照 — https://skill.krsz.in/rules を新しいタブで開く',
+		'chrome.footer.edgeTitleUnknown':
+			'Cloudflare /cdn-cgi/trace — コンソールで \"trace\" と入力するとエッジを調べられます。',
+		'chrome.footer.linkGithub':
+			'GitHub プロフィール — https://github.com/kurashizu を新しいタブで開く',
+		'chrome.footer.linkHuggingface':
+			'Hugging Face AI モデルハブ — https://huggingface.co/kurashizu を新しいタブで開く',
+		'chrome.footer.linkOshwhub':
+			'OSHWHub ハードウェアプロジェクトと PCB 図面 — https://oshwhub.com/Kurashizu を新しいタブで開く',
+		'chrome.footer.linkRules':
+			'Skill & システムルール参照 — https://skill.krsz.in/rules を新しいタブで開く',
 		'chrome.footer.buildTitle': 'ビルド {commit} — {time}（シドニー時間 {sydney}）',
-		'chrome.footer.buildTitleLinked': 'ビルド {commit} — {time}（シドニー時間 {sydney}）。新しいタブで GitHub のコミットを開きます。',
+		'chrome.footer.buildTitleLinked':
+			'ビルド {commit} — {time}（シドニー時間 {sydney}）。新しいタブで GitHub のコミットを開きます。',
 		'chrome.footer.creditsTitle': 'このサイトが基づいているオープンソースプロジェクト',
 		'chrome.footer.credits': 'クレジット',
 
 		'chrome.hotkeys.global': 'グローバル',
-		'chrome.hotkeys.globalNote': 'Ctrl+0-5 はキー入力を捕捉するテスターの中も含め、どこでも機能します',
+		'chrome.hotkeys.globalNote':
+			'Ctrl+0-5 はキー入力を捕捉するテスターの中も含め、どこでも機能します',
 		'chrome.hotkeys.view0': 'ビュー 0 — modules',
 		'chrome.hotkeys.view1': 'ビュー 1 — guestbook',
 		'chrome.hotkeys.view2': 'ビュー 2 — synth',
@@ -2060,26 +2288,34 @@ export default {
 		'chrome.hotkeys.consoleClearLine': '現在の入力行をクリアする',
 		'chrome.hotkeys.consolePipe': 'grep / head / tail / sort / uniq / wc にパイプする',
 		'chrome.hotkeys.synthTransport': 'SYNTH — トランスポート',
-		'chrome.hotkeys.synthTransportNote': 'ビュー 2 で、テキスト欄・メニュー・設定パネルのいずれにもフォーカスがないとき有効',
-		'chrome.hotkeys.transportPlay': 'その場で再生 / 一時停止（QWERTY オン時、Space はサステインペダル）',
+		'chrome.hotkeys.synthTransportNote':
+			'ビュー 2 で、テキスト欄・メニュー・設定パネルのいずれにもフォーカスがないとき有効',
+		'chrome.hotkeys.transportPlay':
+			'その場で再生 / 一時停止（QWERTY オン時、Space はサステインペダル）',
 		'chrome.hotkeys.transportRewind': '1小節目まで巻き戻す',
 		'chrome.hotkeys.transportStopRewind': '停止して1小節目まで巻き戻す',
 		'chrome.hotkeys.transportPage': '前 / 次のページ（Shift：カーソルを1小節動かす）',
 		'chrome.hotkeys.transportPreset': '次 / 前の音色プリセット（アクティブトラックに適用）',
 		'chrome.hotkeys.transportTrack': 'トラック 1〜8 を選択',
-		'chrome.hotkeys.transportMuteSolo': 'アクティブトラックのミュート / ソロ；LOOP–ONCE；再生位置をページ間で追従させる',
+		'chrome.hotkeys.transportMuteSolo':
+			'アクティブトラックのミュート / ソロ；LOOP–ONCE；再生位置をページ間で追従させる',
 		'chrome.hotkeys.transportCursorBar': 'カーソルを1小節前 / 後ろへ',
-		'chrome.hotkeys.transportResetKnob': 'ノブやフェーダーを中立値にリセット；ラック上の RST でラック全体をリセット',
+		'chrome.hotkeys.transportResetKnob':
+			'ノブやフェーダーを中立値にリセット；ラック上の RST でラック全体をリセット',
 		'chrome.hotkeys.transportTempo': 'テンポ −1 / +1 BPM（長押しで連続変化）',
 		'chrome.hotkeys.synthPianoRoll': 'SYNTH — ピアノロール',
-		'chrome.hotkeys.synthPianoRollNote': 'QWERTY ピアノが有効な間、文字・数字と , . はそちらに割り当てられます。Ctrl / Shift を軽く押すとオクターブが切り替わります',
+		'chrome.hotkeys.synthPianoRollNote':
+			'QWERTY ピアノが有効な間、文字・数字と , . はそちらに割り当てられます。Ctrl / Shift を軽く押すとオクターブが切り替わります',
 		'chrome.hotkeys.rollPlace': 'ノートを配置 / 矩形選択（Shift で追加）',
-		'chrome.hotkeys.rollSelect': '選択する（Shift でトグル）；ドラッグで移動、右端をドラッグでサイズ変更、Alt ドラッグで複製',
+		'chrome.hotkeys.rollSelect':
+			'選択する（Shift でトグル）；ドラッグで移動、右端をドラッグでサイズ変更、Alt ドラッグで複製',
 		'chrome.hotkeys.rollDelete': 'ポインター下のノートを削除；ドラッグでさらに消去',
-		'chrome.hotkeys.rollNudge': '選択範囲をグリッド1ステップ / 半音動かす（Shift：1小節 / 1オクターブ）',
+		'chrome.hotkeys.rollNudge':
+			'選択範囲をグリッド1ステップ / 半音動かす（Shift：1小節 / 1オクターブ）',
 		'chrome.hotkeys.rollDeleteSel': '選択範囲を削除 / 解除する',
 		'chrome.hotkeys.rollSelectAll': 'ページを選択；もう一度でトラック全体を選択',
-		'chrome.hotkeys.rollCopyPaste': 'カーソル位置（シアンのルーラーセル）でコピー / 切り取り / 貼り付け；トラック・パッチ・タブをまたいで貼り付け可能',
+		'chrome.hotkeys.rollCopyPaste':
+			'カーソル位置（シアンのルーラーセル）でコピー / 切り取り / 貼り付け；トラック・パッチ・タブをまたいで貼り付け可能',
 		'chrome.hotkeys.rollRepeat': '選択範囲を直後に繰り返す',
 		'chrome.hotkeys.rollUndoRedo': '元に戻す / やり直す（Ctrl+Y も可）',
 		'chrome.hotkeys.lifelab': 'LIFELAB — ザ・ディッシュ',
@@ -2098,25 +2334,33 @@ export default {
 		'chrome.hotkeys.qwertyLower': '低いオクターブ、白鍵 + 黒鍵',
 		'chrome.hotkeys.qwertyUpper': '高いオクターブ',
 		'chrome.hotkeys.qwertyOctave': 'オクターブ下 / 上（[ と ] も可）',
-		'chrome.hotkeys.qwertySustain': 'サステインペダル — 押している間だけ有効、押しっぱなし = ペダル踏み込み',
+		'chrome.hotkeys.qwertySustain':
+			'サステインペダル — 押している間だけ有効、押しっぱなし = ペダル踏み込み',
 
-		'chrome.layout.pageTitle': 'KRSZ™ — Kurashizu のランダムスタッフ・ゾーン | サーバーレス エッジポータル',
+		'chrome.layout.pageTitle':
+			'KRSZ™ — Kurashizu のランダムスタッフ・ゾーン | サーバーレス エッジポータル',
 		'chrome.layout.consoleCloseHint': '` または Esc で閉じる',
 
 		'chrome.onboarding.eightViewsTitle': '8つのビュー',
-		'chrome.onboarding.eightViewsBody': 'このサイトのすべては8つのビューのいずれかにあります。タブをクリックするか、Ctrl を押しながら番号を押してください —— キーボードテスターやピアノの中も含め、どこでも機能するので、行き詰まることはありません。',
-		'chrome.onboarding.eightViewsModules': 'modules — 実際のアーキテクチャ図付きの、稼働中のプロジェクト',
+		'chrome.onboarding.eightViewsBody':
+			'このサイトのすべては8つのビューのいずれかにあります。タブをクリックするか、Ctrl を押しながら番号を押してください —— キーボードテスターやピアノの中も含め、どこでも機能するので、行き詰まることはありません。',
+		'chrome.onboarding.eightViewsModules':
+			'modules — 実際のアーキテクチャ図付きの、稼働中のプロジェクト',
 		'chrome.onboarding.eightViewsGuestbook': 'guestbook — blog.krsz.in への投稿',
-		'chrome.onboarding.eightViewsSynth': 'synth — 8トラックの WebAudio ワークステーション、.mid 入力、WAV 出力',
+		'chrome.onboarding.eightViewsSynth':
+			'synth — 8トラックの WebAudio ワークステーション、.mid 入力、WAV 出力',
 		'chrome.onboarding.eightViewsUtils': 'utils — 12種類のハードウェアテスター',
 		'chrome.onboarding.eightViewsLmSpace': 'lm-space — モデル表を移動可能な空間として表示',
 		'chrome.onboarding.eightViewsKrszVm': 'krsz-vm — タブ内でエミュレートされた本物の x86 PC',
-		'chrome.onboarding.eightViewsWebLm': 'web-lm — サーバーなしで、あなた自身の GPU 上で動く言語モデル',
+		'chrome.onboarding.eightViewsWebLm':
+			'web-lm — サーバーなしで、あなた自身の GPU 上で動く言語モデル',
 		'chrome.onboarding.eightViewsLifelab': 'lifelab — キャンペーン形式のコンウェイのライフゲーム',
 		'chrome.onboarding.workbenchTitle': 'ワークベンチ',
-		'chrome.onboarding.workbenchBody': 'アクティブなビューがこのパネルいっぱいに表示されます。ここには装飾的なものは何もありません：表示されているレイテンシ・レベル・機能はすべて、あなたのブラウザで実測されたか、それが説明しているサービスから読み取られたものです。ブラウザが答えを拒否する場合は、もっともらしい数値の代わりに \"n/a\" と表示します。',
+		'chrome.onboarding.workbenchBody':
+			'アクティブなビューがこのパネルいっぱいに表示されます。ここには装飾的なものは何もありません：表示されているレイテンシ・レベル・機能はすべて、あなたのブラウザで実測されたか、それが説明しているサービスから読み取られたものです。ブラウザが答えを拒否する場合は、もっともらしい数値の代わりに \"n/a\" と表示します。',
 		'chrome.onboarding.consoleTitle': 'コンソール',
-		'chrome.onboarding.consoleBody': '今いるどのビューの上にもドロップダウンする小さなシェルです。そのファイルシステムはこのサイト自身のデータをライブで反映したものなので、内容が古くなることはありません。',
+		'chrome.onboarding.consoleBody':
+			'今いるどのビューの上にもドロップダウンする小さなシェルです。そのファイルシステムはこのサイト自身のデータをライブで反映したものなので、内容が古くなることはありません。',
 		'chrome.onboarding.consoleToggle': 'どこからでも開閉できる',
 		'chrome.onboarding.consoleHelp': 'コマンド一覧。man <cmd> で個別の説明を表示',
 		'chrome.onboarding.consoleBrowse': '/projects、/operator、/synth、/edge を閲覧',
@@ -2124,42 +2368,56 @@ export default {
 		'chrome.onboarding.consoleTrace': '実際にあなたに応答している Cloudflare の PoP',
 		'chrome.onboarding.openIt': '開く',
 		'chrome.onboarding.launchpadTitle': 'ランチパッド',
-		'chrome.onboarding.launchpadBody': '他の5つのビューと同じパッド、それにテーマ切り替えを加えたもの。その上のサイドバーはオペレーターのプロフィール、一番上のバナーはただの名前です。',
+		'chrome.onboarding.launchpadBody':
+			'他の5つのビューと同じパッド、それにテーマ切り替えを加えたもの。その上のサイドバーはオペレーターのプロフィール、一番上のバナーはただの名前です。',
 		'chrome.onboarding.launchpadCycleTheme': 'テーマを切り替える — tokyo、gruvbox、nord、amber',
 		'chrome.onboarding.edgeTitle': 'ただのバッジではない、本物のエッジ情報',
-		'chrome.onboarding.edgeBody': '毎回のロードで /cdn-cgi/trace を読み取ります：実際にあなたに応答した Cloudflare のアクセスポイント、ネゴシエートされたプロトコル、TLS バージョンです。コンソールで \"trace\" を実行すると、実測往復時間を含む完全な記録を確認できます。',
+		'chrome.onboarding.edgeBody':
+			'毎回のロードで /cdn-cgi/trace を読み取ります：実際にあなたに応答した Cloudflare のアクセスポイント、ネゴシエートされたプロトコル、TLS バージョンです。コンソールで \"trace\" を実行すると、実測往復時間を含む完全な記録を確認できます。',
 		'chrome.onboarding.tourTitle': 'これがツアーです',
-		'chrome.onboarding.tourBody': 'このボタンでいつでもガイドを再度開けます —— \"guide\" コマンドでも同じです。',
+		'chrome.onboarding.tourBody':
+			'このボタンでいつでもガイドを再度開けます —— \"guide\" コマンドでも同じです。',
 		'chrome.onboarding.keymapTitle': 'もうひとつ — キーマップ',
-		'chrome.onboarding.keymapBody': 'このサイトのすべてのショートカットが、ここに1か所にまとまっています。',
+		'chrome.onboarding.keymapBody':
+			'このサイトのすべてのショートカットが、ここに1か所にまとまっています。',
 		'chrome.onboarding.showKeymap': 'キーマップを表示',
 		'chrome.onboarding.stepLabel': 'ステップ {n}：{title}',
 
 		'chrome.privacy.scope': '対象範囲：krsz.in のみ —— 今あなたがいる、まさにこのサイトです。',
 		'chrome.privacy.section1Title': '1. このサイトが収集するもの',
-		'chrome.privacy.section1Body': "何も収集しません。krsz.in にはアカウントシステムも、アクセス解析も、いかなる追跡もありません。テーマやサウンド設定、コンソールの履歴、そのほかこのワークベンチが覚えているものはすべて、このブラウザ自身のローカルストレージにのみ書き込まれます —— あなたの端末から出ることはなく、サーバーが見ることもありません。 ツールタブのハードウェア／ディスプレイ検査も、すべてブラウザ内だけで動きます。",
+		'chrome.privacy.section1Body':
+			'何も収集しません。krsz.in にはアカウントシステムも、アクセス解析も、いかなる追跡もありません。テーマやサウンド設定、コンソールの履歴、そのほかこのワークベンチが覚えているものはすべて、このブラウザ自身のローカルストレージにのみ書き込まれます —— あなたの端末から出ることはなく、サーバーが見ることもありません。 ツールタブのハードウェア／ディスプレイ検査も、すべてブラウザ内だけで動きます。',
 		'chrome.privacy.section2Title': '2. 例外',
-		'chrome.privacy.section2Intro': '次の 4 つだけはブラウザの外に出ます。いずれも該当のボタンを押したときに限られます：',
-		'chrome.privacy.section2Guestbook': 'ゲストブックのメッセージ —— このサイトのサーバーに送信され、公開されます。フォームには送信ボタンの横に独自の確認事項があります。',
-		'chrome.privacy.section2Footprint': '足あと（ゲストブックタブ）—— Cloudflare のエッジがそのリクエストについて既に解決している情報（国、タイムゾーン、配信拠点）と、バージョン番号を除いたブラウザ／OS の種類を、このサイトのサーバーに記録させます。IP アドレス、都市、正確な位置は保存しません。1 日 1 回まで、ウォールに公開されます。 同じウォールには blog.krsz.in への訪問も、同サイトの受信アクセスログから表示されます —— 国とブラウザの種類のみ、訪問者ごとに 1 日 1 件で、それ以外は一切コピーしません。',
-		'chrome.privacy.section2Speed': '速度テスト（ツールタブ）—— Cloudflare 自身のサービス speed.cloudflare.com とランダムなバイト列をやり取りします（Cloudflare のプライバシーポリシーが適用）。krsz.in は何も保存しません。',
-		'chrome.privacy.section2Dig': 'コンソールの dig —— 入力したドメイン名はこのサイトの DNS リレーに送られ上流へ転送されます。Worker の短期的な運用ログ以外には残りません。',
+		'chrome.privacy.section2Intro':
+			'次の 4 つだけはブラウザの外に出ます。いずれも該当のボタンを押したときに限られます：',
+		'chrome.privacy.section2Guestbook':
+			'ゲストブックのメッセージ —— このサイトのサーバーに送信され、公開されます。フォームには送信ボタンの横に独自の確認事項があります。',
+		'chrome.privacy.section2Footprint':
+			'足あと（ゲストブックタブ）—— Cloudflare のエッジがそのリクエストについて既に解決している情報（国、タイムゾーン、配信拠点）と、バージョン番号を除いたブラウザ／OS の種類を、このサイトのサーバーに記録させます。IP アドレス、都市、正確な位置は保存しません。1 日 1 回まで、ウォールに公開されます。 同じウォールには blog.krsz.in への訪問も、同サイトの受信アクセスログから表示されます —— 国とブラウザの種類のみ、訪問者ごとに 1 日 1 件で、それ以外は一切コピーしません。',
+		'chrome.privacy.section2Speed':
+			'速度テスト（ツールタブ）—— Cloudflare 自身のサービス speed.cloudflare.com とランダムなバイト列をやり取りします（Cloudflare のプライバシーポリシーが適用）。krsz.in は何も保存しません。',
+		'chrome.privacy.section2Dig':
+			'コンソールの dig —— 入力したドメイン名はこのサイトの DNS リレーに送られ上流へ転送されます。Worker の短期的な運用ログ以外には残りません。',
 		'chrome.privacy.section3Title': '3. リンク先のプロジェクト —— それぞれ別のポリシー',
-		'chrome.privacy.section3Body': 'MODULES は krsz.in 配下で独立して運用されている他のサイトへリンクしています —— それぞれが独自のサーバーと独自のプライバシー方針を持つ、独立したアプリケーションであり、この通知の対象外です。',
+		'chrome.privacy.section3Body':
+			'MODULES は krsz.in 配下で独立して運用されている他のサイトへリンクしています —— それぞれが独自のサーバーと独自のプライバシー方針を持つ、独立したアプリケーションであり、この通知の対象外です。',
 		'chrome.privacy.footer': 'krsz.in — プライバシー通知',
 
 		'chrome.settings.sound': 'サウンド',
 		'chrome.settings.soundDesc': 'UI とシンセの効果音',
 		'chrome.settings.muted': 'ミュート中',
 		'chrome.settings.textSize': '文字サイズ',
-		'chrome.settings.textSizeDesc': 'サイト全体を拡大縮小します。AUTO は画面に合わせます — 720p で 12、1080p で 14、2K で 16、4K で 20、8K で 24。書体は 12px グリッドで描かれているため、12 と 24 はきっちりシャープになり、その間のサイズは少し補間されます。',
+		'chrome.settings.textSizeDesc':
+			'サイト全体を拡大縮小します。AUTO は画面に合わせます — 720p で 12、1080p で 14、2K で 16、4K で 20、8K で 24。書体は 12px グリッドで描かれているため、12 と 24 はきっちりシャープになり、その間のサイズは少し補間されます。',
 		'chrome.settings.textSizeAutoHint': '画面の解像度に従う（現在は {px}px）',
 		'chrome.settings.textSizeExact': ' — 12px グリッドにぴったり合う',
 		'chrome.settings.textSizeDefault': '（デフォルト）',
 		'chrome.settings.performance': 'パフォーマンス',
-		'chrome.settings.performanceDesc': '背景動画、各パネルのぼかし、ホバー/押下アニメーションをすべて無効にします。見た目の好みではなく、低速なデバイスやバッテリー節約のためのものです。',
+		'chrome.settings.performanceDesc':
+			'背景動画、各パネルのぼかし、ホバー/押下アニメーションをすべて無効にします。見た目の好みではなく、低速なデバイスやバッテリー節約のためのものです。',
 		'chrome.settings.storageTitle': 'この端末上のストレージ',
-		'chrome.settings.storageDesc': '以下はすべてこのブラウザ内にのみ保存されており、どこにも送信されたことはありません。行を削除するとすぐに消え、元に戻せません。',
+		'chrome.settings.storageDesc':
+			'以下はすべてこのブラウザ内にのみ保存されており、どこにも送信されたことはありません。行を削除するとすぐに消え、元に戻せません。',
 		'chrome.settings.clearing': '削除中…',
 		'chrome.settings.clearEverything': 'すべて削除',
 		'chrome.settings.measuring': '計測中…',
@@ -2167,20 +2425,25 @@ export default {
 		'chrome.settings.cleared': '削除済み',
 		'chrome.settings.clear': '削除',
 		'chrome.settings.storage.modelWeightsLabel': 'WEB-LM モデル重み',
-		'chrome.settings.storage.modelWeightsDetail': '{count} ファイル — ダウンロード済みの GGUF 重み。次回読み込み時に再取得されます',
+		'chrome.settings.storage.modelWeightsDetail':
+			'{count} ファイル — ダウンロード済みの GGUF 重み。次回読み込み時に再取得されます',
 		'chrome.settings.storage.notAvailable': 'このブラウザでは利用できません',
 		'chrome.settings.storage.conversationsLabel': 'WEB-LM の会話',
 		'chrome.settings.storage.conversationsDetail': '{count} 件の保存済み会話（添付画像を含む）',
 		'chrome.settings.storage.vmDisksLabel': 'KRSZ-VM のディスク変更',
-		'chrome.settings.storage.vmDisksDetail': 'どちらかのエミュレートされたマシンのディスクに書き込まれたすべての内容（i686 と x86-64 はそれぞれ別々に保持）',
+		'chrome.settings.storage.vmDisksDetail':
+			'どちらかのエミュレートされたマシンのディスクに書き込まれたすべての内容（i686 と x86-64 はそれぞれ別々に保持）',
 		'chrome.settings.storage.synthAutosaveLabel': 'SYNTH の自動保存',
-		'chrome.settings.storage.synthAutosaveDetail': '編集していた最後のパッチ。次回訪問時に自動的に復元されます',
+		'chrome.settings.storage.synthAutosaveDetail':
+			'編集していた最後のパッチ。次回訪問時に自動的に復元されます',
 		'chrome.settings.storage.consoleHistoryLabel': 'コンソール履歴とエイリアス',
 		'chrome.settings.storage.consoleHistoryDetail': '↑↓ によるコマンド呼び出しと、定義した `alias`',
 		'chrome.settings.storage.vmConfigLabel': 'KRSZ-VM のマシン設定',
-		'chrome.settings.storage.vmConfigDetail': 'krsz-vm 設定画面での RAM / ネットワーク / 起動モードの選択',
+		'chrome.settings.storage.vmConfigDetail':
+			'krsz-vm 設定画面での RAM / ネットワーク / 起動モードの選択',
 		'chrome.settings.storage.genConfigLabel': 'WEB-LM の生成設定',
-		'chrome.settings.storage.genConfigDetail': 'web-lm 設定パネルの temperature、top_p などのサンプリング設定',
+		'chrome.settings.storage.genConfigDetail':
+			'web-lm 設定パネルの temperature、top_p などのサンプリング設定',
 		'chrome.settings.storage.toursLabel': '表示済みのウェルカム画面とガイドツアー',
 		'chrome.settings.storage.midiRoutingLabel': 'MIDIルーティング',
 		'chrome.settings.storage.midiRoutingDetail': '各MIDI入力が演奏するトラックと、オフにした入力',
@@ -2190,7 +2453,8 @@ export default {
 		'chrome.settings.storage.group.lmSpace': 'LM SPACE',
 		'chrome.settings.storage.group.vm': 'KRSZ-VM',
 		'chrome.settings.storage.group.site': 'サイト',
-		'chrome.settings.storage.toursDetail': 'ウェルカム画面、サイトツアー、各ビューごとのウォークスルーが次回訪問時に再度案内されます',
+		'chrome.settings.storage.toursDetail':
+			'ウェルカム画面、サイトツアー、各ビューごとのウォークスルーが次回訪問時に再度案内されます',
 
 		'chrome.sidebar.running': '稼働中',
 		'chrome.sidebar.verified': '認証済み',
@@ -2205,7 +2469,8 @@ export default {
 		'chrome.sidebar.locationValue': 'オーストラリア・シドニー [UTC+10/11]',
 		'chrome.sidebar.mottoValue': 'ベストプラクティスと KISS を守る',
 		'chrome.sidebar.runtimeValue': '100% サーバーレスなエッジアイソレート',
-		'chrome.sidebar.launchpadHint': 'CTRL+0-7 でタブに移動 · T でテーマ切り替え · ? で全ショートカット表示',
+		'chrome.sidebar.launchpadHint':
+			'CTRL+0-7 でタブに移動 · T でテーマ切り替え · ? で全ショートカット表示',
 		'chrome.sidebar.theme': 'テーマ',
 		'chrome.sidebar.padsActive': 'PADS：{count} 個のノードが稼働中',
 		'chrome.sidebar.hotkeyHint': 'ホットキー [CTRL+0-7 · T · ?]',
@@ -2217,37 +2482,58 @@ export default {
 		'chrome.sidebar.tilePcEmu': 'PC エミュ',
 		'chrome.sidebar.tileOnGpu': 'On-GPU',
 		'chrome.sidebar.tileConway': 'Conway',
-		'chrome.sidebar.tooltip0': '0：Modules — ライブプロジェクトポータル & アーキテクチャ詳解 [ホットキー：Ctrl+0]',
-		'chrome.sidebar.tooltip1': '1：Guestbook — エッジ Worker を介してメッセージパケットを送信 [ホットキー：Ctrl+1]',
-		'chrome.sidebar.tooltip2': '2：Synth — 8トラックのモジュラーシンセサイザー・ワークステーション [ホットキー：Ctrl+2]',
-		'chrome.sidebar.tooltip3': '3：Utilities — キーボード / マウス / ディスプレイのハードウェアテスター [ホットキー：Ctrl+3]',
-		'chrome.sidebar.tooltip4': '4：LM.SPACE — Artificial Analysis のモデル表を移動可能な空間として表示 [ホットキー：Ctrl+4]',
-		'chrome.sidebar.tooltip5': '5：krsz-vm — エミュレートされた x86 PC（i686 または x86-64）上の Alpine Linux [ホットキー：Ctrl+5]',
-		'chrome.sidebar.tooltip6': '6：web-lm — WebGPU 経由であなた自身の GPU 上で動く言語モデル、サーバー不要 [ホットキー：Ctrl+6]',
-		'chrome.sidebar.tooltip7': '7：lifelab — キャンペーン形式のコンウェイのライフゲーム：2つのルール、静物、グライダー、衝突、そしてグライダー銃 [ホットキー：Ctrl+7]',
+		'chrome.sidebar.tooltip0':
+			'0：Modules — ライブプロジェクトポータル & アーキテクチャ詳解 [ホットキー：Ctrl+0]',
+		'chrome.sidebar.tooltip1':
+			'1：Guestbook — エッジ Worker を介してメッセージパケットを送信 [ホットキー：Ctrl+1]',
+		'chrome.sidebar.tooltip2':
+			'2：Synth — 8トラックのモジュラーシンセサイザー・ワークステーション [ホットキー：Ctrl+2]',
+		'chrome.sidebar.tooltip3':
+			'3：Utilities — キーボード / マウス / ディスプレイのハードウェアテスター [ホットキー：Ctrl+3]',
+		'chrome.sidebar.tooltip4':
+			'4：LM.SPACE — Artificial Analysis のモデル表を移動可能な空間として表示 [ホットキー：Ctrl+4]',
+		'chrome.sidebar.tooltip5':
+			'5：krsz-vm — エミュレートされた x86 PC（i686 または x86-64）上の Alpine Linux [ホットキー：Ctrl+5]',
+		'chrome.sidebar.tooltip6':
+			'6：web-lm — WebGPU 経由であなた自身の GPU 上で動く言語モデル、サーバー不要 [ホットキー：Ctrl+6]',
+		'chrome.sidebar.tooltip7':
+			'7：lifelab — キャンペーン形式のコンウェイのライフゲーム：2つのルール、静物、グライダー、衝突、そしてグライダー銃 [ホットキー：Ctrl+7]',
 
 		'chrome.tabbar.logoTitle': 'krsz.in — Kurashizu のランダムスタッフ・ゾーン',
-		'chrome.tabbar.consoleTitle': 'コマンドコンソール — 仮想ファイルシステム、パイプ、エッジトレースを備えた小さなシェル。どのビューの上にもドロップダウンで開きます。[ホットキー：` バッククォート]',
+		'chrome.tabbar.consoleTitle':
+			'コマンドコンソール — 仮想ファイルシステム、パイプ、エッジトレースを備えた小さなシェル。どのビューの上にもドロップダウンで開きます。[ホットキー：` バッククォート]',
 		'chrome.tabbar.console': 'コンソール',
-		'chrome.tabbar.playbackTitle': 'マスターオーディオ & シーケンサー再生切り替え — 音楽とサウンドエンジンの開始 / 停止',
+		'chrome.tabbar.playbackTitle':
+			'マスターオーディオ & シーケンサー再生切り替え — 音楽とサウンドエンジンの開始 / 停止',
 		'chrome.tabbar.stop': '停止',
 		'chrome.tabbar.play': '再生',
 		'chrome.tabbar.guideTitle': 'ガイドを開く — 各ビューの機能とすべてのキーボードショートカット',
 		'chrome.tabbar.guide': 'ガイド',
-		'chrome.tabbar.settingsTitle': 'グローバル構成 — サウンド、およびこのブラウザに保存されたサイトのデータの削除',
+		'chrome.tabbar.settingsTitle':
+			'グローバル構成 — サウンド、およびこのブラウザに保存されたサイトのデータの削除',
 		'chrome.tabbar.cfg': 'CFG',
-		'chrome.tabbar.serverlessTitle': 'アーキテクチャステータス — 専用のバックエンド オリジンサーバーを持たない 100% サーバーレスエッジ実行',
-		'chrome.tabbar.tab0': 'ビュー 0：Modules — ライブプロジェクトポータル & 技術詳解 [ホットキー：Ctrl+0]',
-		'chrome.tabbar.tab1': 'ビュー 1：Guestbook — 分散エッジパケットメッセンジャー [ホットキー：Ctrl+1]',
-		'chrome.tabbar.tab2': 'ビュー 2：Synth — 8トラック WebAudio モジュラーシンセサイザー & シーケンサー [ホットキー：Ctrl+2]',
-		'chrome.tabbar.tab3': 'ビュー 3：Utilities — キーボード / マウス / ディスプレイのハードウェアテスター [ホットキー：Ctrl+3]',
-		'chrome.tabbar.tab4': 'ビュー 4：LM.SPACE — Artificial Analysis のモデル表を移動可能な空間として表示、blog.krsz.in 経由でキャッシュ [ホットキー：Ctrl+4]',
-		'chrome.tabbar.tab5': 'ビュー 5：krsz-vm — ブラウザ内でエミュレートされた本物の x86 PC、Alpine Linux を実行 [ホットキー：Ctrl+5]',
-		'chrome.tabbar.tab6': 'ビュー 6：web-lm — WebGPU 経由で完全にあなたの GPU 上で動く言語モデル、サーバー不要 [ホットキー：Ctrl+6]',
-		'chrome.tabbar.tab7': 'ビュー 7：lifelab — コンウェイのライフゲームによる25レベルのキャンペーン、グライダー銃で終了 [ホットキー：Ctrl+7]',
+		'chrome.tabbar.serverlessTitle':
+			'アーキテクチャステータス — 専用のバックエンド オリジンサーバーを持たない 100% サーバーレスエッジ実行',
+		'chrome.tabbar.tab0':
+			'ビュー 0：Modules — ライブプロジェクトポータル & 技術詳解 [ホットキー：Ctrl+0]',
+		'chrome.tabbar.tab1':
+			'ビュー 1：Guestbook — 分散エッジパケットメッセンジャー [ホットキー：Ctrl+1]',
+		'chrome.tabbar.tab2':
+			'ビュー 2：Synth — 8トラック WebAudio モジュラーシンセサイザー & シーケンサー [ホットキー：Ctrl+2]',
+		'chrome.tabbar.tab3':
+			'ビュー 3：Utilities — キーボード / マウス / ディスプレイのハードウェアテスター [ホットキー：Ctrl+3]',
+		'chrome.tabbar.tab4':
+			'ビュー 4：LM.SPACE — Artificial Analysis のモデル表を移動可能な空間として表示、blog.krsz.in 経由でキャッシュ [ホットキー：Ctrl+4]',
+		'chrome.tabbar.tab5':
+			'ビュー 5：krsz-vm — ブラウザ内でエミュレートされた本物の x86 PC、Alpine Linux を実行 [ホットキー：Ctrl+5]',
+		'chrome.tabbar.tab6':
+			'ビュー 6：web-lm — WebGPU 経由で完全にあなたの GPU 上で動く言語モデル、サーバー不要 [ホットキー：Ctrl+6]',
+		'chrome.tabbar.tab7':
+			'ビュー 7：lifelab — コンウェイのライフゲームによる25レベルのキャンペーン、グライダー銃で終了 [ホットキー：Ctrl+7]',
 
 		'chrome.welcome.title': 'krsz.in へようこそ',
-		'chrome.welcome.subtitle': 'Kurashizu のランダムスタッフ・ゾーン — エッジネイティブな1つのワークベンチに、8つの本物の動くツール。見えているものはすべて実際に動いているもので、モックアップではありません。',
+		'chrome.welcome.subtitle':
+			'Kurashizu のランダムスタッフ・ゾーン — エッジネイティブな1つのワークベンチに、8つの本物の動くツール。見えているものはすべて実際に動いているもので、モックアップではありません。',
 		'chrome.welcome.getStarted': 'はじめる →',
 		'chrome.welcome.getStartedPlain': 'はじめる',
 		'chrome.welcome.agreeTo': '「{action}」をクリックすると、以下に同意したものとみなされます：',
@@ -2268,12 +2554,14 @@ export default {
 		'chrome.boot.complete': '자가 테스트 완료 — {ok}/{total}개 항목 응답',
 		'chrome.boot.booting': '워크벤치 부팅 중…',
 
-		'chrome.console.inputHint': '\"help\" 입력 — Tab으로 자동완성/순환, →로 수락, ↑↓로 기록, Ctrl+L로 지우기...',
+		'chrome.console.inputHint':
+			'\"help\" 입력 — Tab으로 자동완성/순환, →로 수락, ↑↓로 기록, Ctrl+L로 지우기...',
 		'chrome.console.exec': '실행',
 		'chrome.console.moreSuggestions': '{count}개 더',
 		'chrome.console.openedWalkthrough': '시작 가이드를 열었습니다.',
 		'chrome.console.openedKeymap': '키맵을 열었습니다.',
-		'chrome.console.noManualEntry': '\"{name}\"에 대한 설명서가 없습니다. \"help\"로 명령어 목록을 확인하세요.',
+		'chrome.console.noManualEntry':
+			'\"{name}\"에 대한 설명서가 없습니다. \"help\"로 명령어 목록을 확인하세요.',
 		'chrome.console.help.open': '프로젝트를 새 탭에서 엽니다',
 		'chrome.console.help.cat': '파일을 출력합니다',
 		'chrome.console.help.grep': '일치하는 줄을 필터링합니다',
@@ -2303,7 +2591,8 @@ export default {
 		'chrome.console.usage.cd1': '가상 작업 디렉터리를 변경합니다. ..와 절대 경로를 지원합니다.',
 		'chrome.console.usage.cd2': '인자가 없으면 /로 돌아갑니다.',
 		'chrome.console.usage.ls': '디렉터리를 나열합니다. -l은 주석 열을 추가합니다.',
-		'chrome.console.usage.cat': '파일을 출력합니다. /synth와 /edge의 파일은 실시간 상태에서 렌더링됩니다.',
+		'chrome.console.usage.cat':
+			'파일을 출력합니다. /synth와 /edge의 파일은 실시간 상태에서 렌더링됩니다.',
 		'chrome.console.usage.tree': '하위 트리를 재귀적으로 나열합니다.',
 		'chrome.console.usage.grep1': '일치하는 줄만 남깁니다. 파일이 없으면 파이프 입력을 읽습니다.',
 		'chrome.console.usage.grep2': '패턴은 JavaScript 정규 표현식입니다.',
@@ -2317,7 +2606,8 @@ export default {
 		'chrome.console.usage.trace1': '/cdn-cgi/trace를 가져와 응답한 Cloudflare PoP,',
 		'chrome.console.usage.trace2': '협상된 프로토콜, TLS 버전, 키 교환 그룹을 출력합니다.',
 		'chrome.console.usage.open': '프로젝트를 새 탭에서 엽니다.',
-		'chrome.console.usage.eval': '직접 작성한 파서로 산술식을 계산합니다 — 원시 eval()은 절대 사용하지 않습니다.',
+		'chrome.console.usage.eval':
+			'직접 작성한 파서로 산술식을 계산합니다 — 원시 eval()은 절대 사용하지 않습니다.',
 		'chrome.console.usage.bpm': '시퀀서 템포를 표시하거나 설정합니다.',
 		'chrome.console.usage.vol': '마스터 볼륨을 표시하거나 설정합니다.',
 		'chrome.console.usage.load': '이름 일부로 내장 곡을 불러옵니다. \"songs\"를 참고하세요.',
@@ -2325,7 +2615,8 @@ export default {
 		'chrome.console.usage.echo': '텍스트를 출력합니다. 파이프 입력 소스로 유용합니다.',
 		'chrome.console.usage.history': '최근 15개 명령어. 방문 간에도 유지됩니다.',
 		'chrome.console.usage.guide': '시작 가이드를 다시 엽니다.',
-		'chrome.console.usage.keys': '전체 키보드 참조를 엽니다. 여기서 \"?\"를 입력하는 것과는 다릅니다 —— 그것은 도움말을 출력합니다. 이것을 열려면 텍스트 입력란 밖에서 실제 ? 또는 F1 키를 누르세요.',
+		'chrome.console.usage.keys':
+			'전체 키보드 참조를 엽니다. 여기서 \"?\"를 입력하는 것과는 다릅니다 —— 그것은 도움말을 출력합니다. 이것을 열려면 텍스트 입력란 밖에서 실제 ? 또는 F1 키를 누르세요.',
 		'chrome.console.usage.man': '한 명령어의 사용법입니다.',
 		'chrome.console.usage.help': '섹션별로 그룹화된 전체 명령어 목록입니다.',
 		'chrome.console.usage.whoami': '운영자 프로필 — 이름, 위치, 모토, 기술 스택.',
@@ -2342,15 +2633,19 @@ export default {
 		'chrome.console.usage.snap': '시퀀서 그리드 스냅을 설정합니다. 다음 중 하나: {list}',
 		'chrome.console.usage.dur': '기본 음표 길이를 설정합니다. 다음 중 하나: {list}',
 		'chrome.console.usage.meter': '박자를 설정합니다. 다음 중 하나: {list}',
-		'chrome.console.usage.blend': '활성 트랙의 블렌드 모드를 설정합니다: layer, fm, ring, sync 중 하나.',
+		'chrome.console.usage.blend':
+			'활성 트랙의 블렌드 모드를 설정합니다: layer, fm, ring, sync 중 하나.',
 		'chrome.console.usage.clear': '콘솔 스크롤백을 지웁니다.',
 		'chrome.console.usage.pwd': '현재 가상 작업 디렉터리를 출력합니다.',
 
-		'chrome.console.welcome': 'KRSZ-EDGE WORKBENCH READY // \"help\"를 입력하거나 [CTRL+0-5] 단축키를 사용하세요',
+		'chrome.console.welcome':
+			'KRSZ-EDGE WORKBENCH READY // \"help\"를 입력하거나 [CTRL+0-5] 단축키를 사용하세요',
 		'chrome.console.run.navigatedTo': '{path}(으)로 이동했습니다',
-		'chrome.console.run.unknownProject': '알 수 없는 프로젝트: \"{key}\". 다음을 시도해 보세요: {list}',
+		'chrome.console.run.unknownProject':
+			'알 수 없는 프로젝트: \"{key}\". 다음을 시도해 보세요: {list}',
 		'chrome.console.run.opened': '{url}을(를) 열었습니다',
-		'chrome.console.run.edgeTraceUnavailable': '엣지 추적을 사용할 수 없습니다 — /cdn-cgi/trace가 응답하지 않았습니다.',
+		'chrome.console.run.edgeTraceUnavailable':
+			'엣지 추적을 사용할 수 없습니다 — /cdn-cgi/trace가 응답하지 않았습니다.',
 		'chrome.console.run.cdNoSuchDir': 'cd: 해당 디렉터리가 없습니다: {path}',
 		'chrome.console.run.cdNotADir': 'cd: 디렉터리가 아닙니다: {path}',
 		'chrome.console.run.lsNoSuchPath': 'ls: 해당 경로가 없습니다: {path}',
@@ -2378,7 +2673,8 @@ export default {
 		'chrome.console.run.seqTracksHeading': '시퀀서 트랙:',
 		'chrome.console.run.builtinSongsHeading': '내장 곡:',
 		'chrome.console.run.usageLoad': '사용법: load <곡> — 먼저 \"songs\"로 목록을 확인하세요',
-		'chrome.console.run.noSongMatch': '\"{q}\"와(과) 일치하는 곡이 없습니다. \"songs\"를 사용해 보세요.',
+		'chrome.console.run.noSongMatch':
+			'\"{q}\"와(과) 일치하는 곡이 없습니다. \"songs\"를 사용해 보세요.',
 		'chrome.console.run.loadedSong': '{name}을(를) 불러왔습니다 ({bpm} BPM, {meter})',
 		'chrome.console.run.midiConnected': 'MIDI 연결됨: {device}',
 		'chrome.console.run.midiStandby': 'MIDI: 대기 중 — 연결된 입력 장치 없음',
@@ -2407,7 +2703,8 @@ export default {
 		'chrome.console.run.themeStatus': '테마: {theme}',
 		'chrome.console.run.unknownTheme': '알 수 없는 테마 \"{q}\". 사용 가능: {list}',
 		'chrome.console.run.themeSet': '테마를 {theme}(으)로 설정했습니다.',
-		'chrome.console.run.commandNotRecognized': '인식할 수 없는 명령어: \"{cmd}\". \"help\"를 입력하세요.',
+		'chrome.console.run.commandNotRecognized':
+			'인식할 수 없는 명령어: \"{cmd}\". \"help\"를 입력하세요.',
 		'chrome.console.run.entriesHeading': '{path}  —  {count}개 항목',
 		'chrome.console.run.noMatch': '(/{pattern}/에 일치하는 결과 없음)',
 		'chrome.console.run.profileLocation': '호주 시드니 [UTC+10/11]',
@@ -2448,20 +2745,27 @@ export default {
 		'chrome.console.help.chain': '여러 명령을 순서대로 실행',
 		'chrome.console.help.historyClear': '명령 기록 지우기',
 
-		'chrome.console.usage.lang': 'UI 언어를 전환하거나 표시합니다. 짧은 형태 zh, cn, tw, jp, kr를 지원합니다.',
-		'chrome.console.usage.life1': 'LIFE.LAB(탭 7)을 제어합니다: run, pause, toggle, step [n], clear, random [밀도],',
-		'chrome.console.usage.life2': 'speed <세대/초>, size <가로>x<세로>, load <패턴>, patterns, info.',
-		'chrome.console.usage.sysinfo': '실제 브라우저와 시스템 정보를 보여주는 neofetch 스타일 블록. 알 수 없는 항목은 n/a로 표시합니다.',
-		'chrome.console.usage.uptime': '세션 가동 시간과 Navigation Timing(DOMContentLoaded, load, 가시성).',
+		'chrome.console.usage.lang':
+			'UI 언어를 전환하거나 표시합니다. 짧은 형태 zh, cn, tw, jp, kr를 지원합니다.',
+		'chrome.console.usage.life1':
+			'LIFE.LAB(탭 7)을 제어합니다: run, pause, toggle, step [n], clear, random [밀도],',
+		'chrome.console.usage.life2':
+			'speed <세대/초>, size <가로>x<세로>, load <패턴>, patterns, info.',
+		'chrome.console.usage.sysinfo':
+			'실제 브라우저와 시스템 정보를 보여주는 neofetch 스타일 블록. 알 수 없는 항목은 n/a로 표시합니다.',
+		'chrome.console.usage.uptime':
+			'세션 가동 시간과 Navigation Timing(DOMContentLoaded, load, 가시성).',
 		'chrome.console.usage.ver': '현재 페이지가 제공된 빌드 커밋과 빌드 날짜.',
 		'chrome.console.usage.settings': '전역 구성 패널을 엽니다.',
 		'chrome.console.usage.credits': '오픈소스 credits 패널을 엽니다.',
 		'chrome.console.usage.privacy': '개인정보 처리방침을 엽니다.',
 		'chrome.console.usage.exit': '콘솔 오버레이를 닫습니다.',
-		'chrome.console.usage.scale': '사이트 글자 크기(픽셀)를 표시하거나 설정합니다. \"auto\"는 화면에 맞춥니다.',
+		'chrome.console.usage.scale':
+			'사이트 글자 크기(픽셀)를 표시하거나 설정합니다. \"auto\"는 화면에 맞춥니다.',
 		'chrome.console.usage.rec': '신스 출력을 파일로 녹음 시작/정지/전환합니다.',
 		'chrome.console.usage.patch': '신스 패치 관리: 새 빈 패치, 저장, 불러오기, 공유 링크 복사.',
-		'chrome.console.usage.dig1': '이 사이트 자체의 /dns-query 엔드포인트(RFC 8484 와이어 형식)로 <name>을 확인합니다.',
+		'chrome.console.usage.dig1':
+			'이 사이트 자체의 /dns-query 엔드포인트(RFC 8484 와이어 형식)로 <name>을 확인합니다.',
 		'chrome.console.usage.dig2': '타입은 A, AAAA, CNAME, MX, TXT, NS 중 하나입니다(기본값 A).',
 		'chrome.console.usage.sha256': '텍스트(또는 파이프 입력)의 SHA-256을 16진수로 표시합니다.',
 		'chrome.console.usage.sha1': '텍스트(또는 파이프 입력)의 SHA-1을 16진수로 표시합니다.',
@@ -2469,13 +2773,20 @@ export default {
 		'chrome.console.usage.hex': '텍스트의 UTF-8 바이트를 16진수로 표시합니다.',
 		'chrome.console.usage.uuid': '무작위 UUID(v4)를 생성합니다.',
 		'chrome.console.usage.random': '1부터 max(기본값 100) 사이의 무작위 정수.',
-		'chrome.console.usage.roll': 'NdM 주사위를 굴립니다. 예: roll 2d6 —— 각 주사위 값과 합계를 표시합니다.',
-		'chrome.console.usage.unix': '인수가 없으면 현재 시간. 그 외에는 Unix 타임스탬프나 ISO 문자열을 양방향으로 변환합니다.',
-		'chrome.console.usage.which': '이름이 내장 명령, 내비게이션 단어, 외부 링크, 별칭 중 무엇인지 알려줍니다.',
-		'chrome.console.usage.fonts': 'document.fonts가 로드됨으로 보고하는 글꼴을 상태와 유니코드 범위와 함께 나열합니다.',
-		'chrome.console.usage.fortune': '이 사이트 자체 파일시스템에서 무작위로 한 문단과 출처 경로를 표시합니다.',
-		'chrome.console.usage.cowsay': '주어진 텍스트(또는 파이프 입력)를 40열에서 줄바꿈하여 ASCII 소가 말하게 합니다.',
-		'chrome.console.usage.sl': '클래식 증기 기관차 애니메이션. Esc 또는 Ctrl+C로 조기 취소할 수 있습니다.',
+		'chrome.console.usage.roll':
+			'NdM 주사위를 굴립니다. 예: roll 2d6 —— 각 주사위 값과 합계를 표시합니다.',
+		'chrome.console.usage.unix':
+			'인수가 없으면 현재 시간. 그 외에는 Unix 타임스탬프나 ISO 문자열을 양방향으로 변환합니다.',
+		'chrome.console.usage.which':
+			'이름이 내장 명령, 내비게이션 단어, 외부 링크, 별칭 중 무엇인지 알려줍니다.',
+		'chrome.console.usage.fonts':
+			'document.fonts가 로드됨으로 보고하는 글꼴을 상태와 유니코드 범위와 함께 나열합니다.',
+		'chrome.console.usage.fortune':
+			'이 사이트 자체 파일시스템에서 무작위로 한 문단과 출처 경로를 표시합니다.',
+		'chrome.console.usage.cowsay':
+			'주어진 텍스트(또는 파이프 입력)를 40열에서 줄바꿈하여 ASCII 소가 말하게 합니다.',
+		'chrome.console.usage.sl':
+			'클래식 증기 기관차 애니메이션. Esc 또는 Ctrl+C로 조기 취소할 수 있습니다.',
 
 		'chrome.console.run.langStatus': '언어: {locale}({native}) — {mode}',
 		'chrome.console.run.langAuto': '자동',
@@ -2496,8 +2807,10 @@ export default {
 		'chrome.console.run.patchSaved': '패치를 저장했습니다.',
 		'chrome.console.run.patchLoaded': '패치를 불러왔습니다.',
 		'chrome.console.run.patchShared': '공유 링크를 클립보드에 복사했습니다.',
-		'chrome.console.run.lifeLoading': 'LIFE.LAB을 여는 중입니다 —— 로드가 끝나면 이 명령을 다시 실행하세요.',
-		'chrome.console.run.lifeNotReady': 'LIFE.LAB이 아직 준비되지 않았습니다 —— 잠시 후 다시 시도하세요.',
+		'chrome.console.run.lifeLoading':
+			'LIFE.LAB을 여는 중입니다 —— 로드가 끝나면 이 명령을 다시 실행하세요.',
+		'chrome.console.run.lifeNotReady':
+			'LIFE.LAB이 아직 준비되지 않았습니다 —— 잠시 후 다시 시도하세요.',
 		'chrome.console.run.lifeRunning': '실행 중입니다.',
 		'chrome.console.run.lifePaused': '일시정지했습니다.',
 		'chrome.console.run.lifeStepped': '{n}세대 진행했습니다.',
@@ -2507,7 +2820,8 @@ export default {
 		'chrome.console.run.lifeBadSpeed': '사용법: life speed <세대/초> —— 다음 중 하나: {list}',
 		'chrome.console.run.lifeSpeedSet': '속도가 {n}세대/초로 설정되었습니다.',
 		'chrome.console.run.lifeResized': '접시 크기가 {w}x{h}로 조절되었습니다.',
-		'chrome.console.run.lifeNoPattern': '\"{q}\"와 일치하는 패턴이 없습니다. \"life patterns\"를 시도해 보세요.',
+		'chrome.console.run.lifeNoPattern':
+			'\"{q}\"와 일치하는 패턴이 없습니다. \"life patterns\"를 시도해 보세요.',
 		'chrome.console.run.lifeLoaded': '접시에 {label}을(를) 배치했습니다.',
 		'chrome.console.run.lifePatternsHeading': '패턴 라이브러리:',
 		'chrome.console.run.lifeInfoHeading': 'LIFE.LAB:',
@@ -2518,8 +2832,10 @@ export default {
 		'chrome.console.run.digRcode': 'dig: 서버가 RCODE {rcode}(실패)를 반환했습니다.',
 		'chrome.console.run.digNoAnswers': 'dig: {name}에 대한 {type} 레코드가 없습니다.',
 		'chrome.console.run.digHeading': 'DIG {name} {type} —— 이 사이트 자체의 /dns-query를 통해',
-		'chrome.console.run.usageTextArg': '사용법: {cmd} <텍스트> —— 또는 파이프로 텍스트를 전달하세요.',
-		'chrome.console.run.subtleCryptoUnavailable': '이 브라우저에서는 SubtleCrypto를 사용할 수 없습니다.',
+		'chrome.console.run.usageTextArg':
+			'사용법: {cmd} <텍스트> —— 또는 파이프로 텍스트를 전달하세요.',
+		'chrome.console.run.subtleCryptoUnavailable':
+			'이 브라우저에서는 SubtleCrypto를 사용할 수 없습니다.',
 		'chrome.console.run.base64Invalid': '유효한 base64가 아닙니다.',
 		'chrome.console.run.rollResult': '{dice}: [{rolls}]  합계 {total}',
 		'chrome.console.run.whichAlias': '{name}: 별칭, \"{expansion}\"(으)로 확장됨',
@@ -2527,7 +2843,8 @@ export default {
 		'chrome.console.run.whichExternal': '{name}: 외부 링크 → {url}',
 		'chrome.console.run.whichBuiltin': '{name}: 셸 내장 명령',
 		'chrome.console.run.whichNotFound': '{name}: 찾을 수 없음',
-		'chrome.console.run.fontsUnavailable': '이 브라우저에서는 Font Loading API를 사용할 수 없습니다.',
+		'chrome.console.run.fontsUnavailable':
+			'이 브라우저에서는 Font Loading API를 사용할 수 없습니다.',
 		'chrome.console.run.fontsEmpty': '아직 로드된 글꼴이 없습니다.',
 		'chrome.console.run.fontsHeading': '글꼴({count}):',
 		'chrome.console.run.fortuneUnavailable': 'fortune: 지금 인용할 내용이 없습니다.',
@@ -2570,7 +2887,8 @@ export default {
 		'chrome.credits.jellyPixel': '지금 읽고 있는 모든 라틴 글리프, 12px 크기',
 		'chrome.credits.fusionPixel': '모든 한자·가나·한글 글리프, 같은 12px 그리드',
 		'chrome.credits.groupUtils': '도구',
-		'chrome.credits.cfSpeedtest': '속도 도구에서 speed.cloudflare.com 대상 지연·다운로드·업로드 측정',
+		'chrome.credits.cfSpeedtest':
+			'속도 도구에서 speed.cloudflare.com 대상 지연·다운로드·업로드 측정',
 		'chrome.credits.threejs': 'WebGL로 렌더링되는 모델 필드',
 		'chrome.credits.artificialAnalysis': '모든 모델 좌표는 그들 데이터의 한 필드입니다',
 		'chrome.credits.v86': '탭 안에서 에뮬레이트되는 x86 PC',
@@ -2584,27 +2902,35 @@ export default {
 		'chrome.credits.nord': 'nord-terminal 테마',
 		'chrome.credits.gruvbox': 'gruvbox-dark 테마',
 		'chrome.credits.cloudflareWorkers': '이 사이트와 그 뒤의 D1 / R2 / KV / Vectorize를 실행합니다',
-		'chrome.credits.intro': '이 사이트는 kurashizu가 아래 오픈소스 프로젝트들 위에 구축했습니다. 각 항목은 실제로 이 사이트가 사용하거나 실행하는 것이며, 라이선스와 함께 적었습니다.',
+		'chrome.credits.intro':
+			'이 사이트는 kurashizu가 아래 오픈소스 프로젝트들 위에 구축했습니다. 각 항목은 실제로 이 사이트가 사용하거나 실행하는 것이며, 라이선스와 함께 적었습니다.',
 		'chrome.credits.outro': '여기에 잘못 표기되었거나 빠진 것이 있다면 알려주시면 감사하겠습니다.',
 
 		'chrome.dropdown.placeholder': '선택…',
 
 		'chrome.footer.tracingEdge': '엣지 추적 중…',
 		'chrome.footer.edgeTraceNA': '엣지 추적 사용 불가',
-		'chrome.footer.edgeTitleKnown': 'Cloudflare PoP {colo}{loc}에서 {http}, {tls}{kex}로 서비스됨{rtt}. /cdn-cgi/trace에서 실시간으로 읽음; 콘솔에서 \"trace\"를 입력하면 전체 기록을 볼 수 있습니다.',
+		'chrome.footer.edgeTitleKnown':
+			'Cloudflare PoP {colo}{loc}에서 {http}, {tls}{kex}로 서비스됨{rtt}. /cdn-cgi/trace에서 실시간으로 읽음; 콘솔에서 \"trace\"를 입력하면 전체 기록을 볼 수 있습니다.',
 		'chrome.footer.edgeTitleRtt': ' — 추적 왕복 시간 {ms}ms',
-		'chrome.footer.edgeTitleUnknown': 'Cloudflare /cdn-cgi/trace — 콘솔에서 \"trace\"를 입력해 엣지를 탐색하세요.',
+		'chrome.footer.edgeTitleUnknown':
+			'Cloudflare /cdn-cgi/trace — 콘솔에서 \"trace\"를 입력해 엣지를 탐색하세요.',
 		'chrome.footer.linkGithub': 'GitHub 프로필 — https://github.com/kurashizu를 새 탭에서 열기',
-		'chrome.footer.linkHuggingface': 'Hugging Face AI 모델 허브 — https://huggingface.co/kurashizu를 새 탭에서 열기',
-		'chrome.footer.linkOshwhub': 'OSHWHub 하드웨어 프로젝트 & PCB 회로도 — https://oshwhub.com/Kurashizu를 새 탭에서 열기',
-		'chrome.footer.linkRules': 'Skill & 시스템 규칙 참조 — https://skill.krsz.in/rules를 새 탭에서 열기',
+		'chrome.footer.linkHuggingface':
+			'Hugging Face AI 모델 허브 — https://huggingface.co/kurashizu를 새 탭에서 열기',
+		'chrome.footer.linkOshwhub':
+			'OSHWHub 하드웨어 프로젝트 & PCB 회로도 — https://oshwhub.com/Kurashizu를 새 탭에서 열기',
+		'chrome.footer.linkRules':
+			'Skill & 시스템 규칙 참조 — https://skill.krsz.in/rules를 새 탭에서 열기',
 		'chrome.footer.buildTitle': '빌드 {commit} — {time} (시드니 시간 {sydney})',
-		'chrome.footer.buildTitleLinked': '빌드 {commit} — {time} (시드니 시간 {sydney}). 새 탭에서 GitHub의 커밋을 엽니다.',
+		'chrome.footer.buildTitleLinked':
+			'빌드 {commit} — {time} (시드니 시간 {sydney}). 새 탭에서 GitHub의 커밋을 엽니다.',
 		'chrome.footer.creditsTitle': '이 사이트가 기반하고 있는 오픈소스 프로젝트',
 		'chrome.footer.credits': '크레딧',
 
 		'chrome.hotkeys.global': '전역',
-		'chrome.hotkeys.globalNote': 'Ctrl+0-5는 키 입력을 가로채는 테스터 안에서도 포함해 어디서나 작동합니다',
+		'chrome.hotkeys.globalNote':
+			'Ctrl+0-5는 키 입력을 가로채는 테스터 안에서도 포함해 어디서나 작동합니다',
 		'chrome.hotkeys.view0': '화면 0 — modules',
 		'chrome.hotkeys.view1': '화면 1 — guestbook',
 		'chrome.hotkeys.view2': '화면 2 — synth',
@@ -2625,26 +2951,33 @@ export default {
 		'chrome.hotkeys.consoleClearLine': '현재 입력 줄을 지웁니다',
 		'chrome.hotkeys.consolePipe': 'grep / head / tail / sort / uniq / wc로 파이프합니다',
 		'chrome.hotkeys.synthTransport': 'SYNTH — 트랜스포트',
-		'chrome.hotkeys.synthTransportNote': '화면 2에서 텍스트 입력란, 메뉴, 설정 패널에 포커스가 없을 때 활성화',
-		'chrome.hotkeys.transportPlay': '현재 위치에서 재생 / 일시정지 (QWERTY 사용 중에는 Space가 서스테인 페달)',
+		'chrome.hotkeys.synthTransportNote':
+			'화면 2에서 텍스트 입력란, 메뉴, 설정 패널에 포커스가 없을 때 활성화',
+		'chrome.hotkeys.transportPlay':
+			'현재 위치에서 재생 / 일시정지 (QWERTY 사용 중에는 Space가 서스테인 페달)',
 		'chrome.hotkeys.transportRewind': '1마디로 되감기',
 		'chrome.hotkeys.transportStopRewind': '정지 후 1마디로 되감기',
 		'chrome.hotkeys.transportPage': '이전 / 다음 페이지 (Shift: 커서를 한 마디 이동)',
 		'chrome.hotkeys.transportPreset': '다음 / 이전 사운드 프리셋 (활성 트랙에 적용)',
 		'chrome.hotkeys.transportTrack': '트랙 1–8 선택',
-		'chrome.hotkeys.transportMuteSolo': '활성 트랙 음소거 / 솔로; LOOP–ONCE; 페이지 간 재생 위치 따라가기',
+		'chrome.hotkeys.transportMuteSolo':
+			'활성 트랙 음소거 / 솔로; LOOP–ONCE; 페이지 간 재생 위치 따라가기',
 		'chrome.hotkeys.transportCursorBar': '커서를 한 마디 뒤로 / 앞으로',
-		'chrome.hotkeys.transportResetKnob': '노브나 페이더를 중립값으로 재설정; 랙의 RST는 랙 전체를 재설정',
+		'chrome.hotkeys.transportResetKnob':
+			'노브나 페이더를 중립값으로 재설정; 랙의 RST는 랙 전체를 재설정',
 		'chrome.hotkeys.transportTempo': '템포 −1 / +1 BPM (누르고 있으면 계속 변화)',
 		'chrome.hotkeys.synthPianoRoll': 'SYNTH — 피아노 롤',
-		'chrome.hotkeys.synthPianoRollNote': 'QWERTY 피아노가 켜져 있는 동안 문자, 숫자와 , . 키는 그쪽에 할당됩니다; Ctrl / Shift를 살짝 누르면 옥타브가 바뀝니다',
+		'chrome.hotkeys.synthPianoRollNote':
+			'QWERTY 피아노가 켜져 있는 동안 문자, 숫자와 , . 키는 그쪽에 할당됩니다; Ctrl / Shift를 살짝 누르면 옥타브가 바뀝니다',
 		'chrome.hotkeys.rollPlace': '노트 배치 / 박스 선택 (Shift로 추가)',
-		'chrome.hotkeys.rollSelect': '선택 (Shift로 토글); 드래그로 이동, 오른쪽 끝을 드래그해 크기 조절, Alt 드래그로 복사',
+		'chrome.hotkeys.rollSelect':
+			'선택 (Shift로 토글); 드래그로 이동, 오른쪽 끝을 드래그해 크기 조절, Alt 드래그로 복사',
 		'chrome.hotkeys.rollDelete': '포인터 아래의 노트를 삭제; 드래그로 더 지우기',
 		'chrome.hotkeys.rollNudge': '선택 영역을 그리드 한 칸 / 반음 이동 (Shift: 한 마디 / 한 옥타브)',
 		'chrome.hotkeys.rollDeleteSel': '선택 영역 삭제 / 선택 해제',
 		'chrome.hotkeys.rollSelectAll': '페이지 선택; 다시 누르면 트랙 전체 선택',
-		'chrome.hotkeys.rollCopyPaste': '커서 위치(청록색 눈금자 셀)에서 복사 / 잘라내기 / 붙여넣기; 클립은 트랙, 패치, 탭을 넘나듭니다',
+		'chrome.hotkeys.rollCopyPaste':
+			'커서 위치(청록색 눈금자 셀)에서 복사 / 잘라내기 / 붙여넣기; 클립은 트랙, 패치, 탭을 넘나듭니다',
 		'chrome.hotkeys.rollRepeat': '선택 영역을 바로 뒤에 반복합니다',
 		'chrome.hotkeys.rollUndoRedo': '실행 취소 / 다시 실행 (Ctrl+Y도 가능)',
 		'chrome.hotkeys.lifelab': 'LIFELAB — 접시',
@@ -2669,8 +3002,10 @@ export default {
 		'chrome.layout.consoleCloseHint': '` 또는 Esc로 닫기',
 
 		'chrome.onboarding.eightViewsTitle': '여덟 개의 화면',
-		'chrome.onboarding.eightViewsBody': '이 사이트의 모든 것은 여덟 개의 화면 중 하나에 있습니다. 탭을 클릭하거나 Ctrl을 누른 채 숫자를 누르세요 —— 키보드 테스터와 피아노 안을 포함해 어디서나 작동하므로 갇힐 일이 없습니다.',
-		'chrome.onboarding.eightViewsModules': 'modules — 실제 아키텍처 다이어그램이 있는 실제 운영 중인 프로젝트',
+		'chrome.onboarding.eightViewsBody':
+			'이 사이트의 모든 것은 여덟 개의 화면 중 하나에 있습니다. 탭을 클릭하거나 Ctrl을 누른 채 숫자를 누르세요 —— 키보드 테스터와 피아노 안을 포함해 어디서나 작동하므로 갇힐 일이 없습니다.',
+		'chrome.onboarding.eightViewsModules':
+			'modules — 실제 아키텍처 다이어그램이 있는 실제 운영 중인 프로젝트',
 		'chrome.onboarding.eightViewsGuestbook': 'guestbook — blog.krsz.in에 게시',
 		'chrome.onboarding.eightViewsSynth': 'synth — 8트랙 WebAudio 워크스테이션, .mid 입력, WAV 출력',
 		'chrome.onboarding.eightViewsUtils': 'utils — 12가지 하드웨어 테스터',
@@ -2679,9 +3014,11 @@ export default {
 		'chrome.onboarding.eightViewsWebLm': 'web-lm — 서버 없이 당신의 GPU에서 동작하는 언어 모델',
 		'chrome.onboarding.eightViewsLifelab': 'lifelab — 캠페인 형태의 콘웨이 생명 게임',
 		'chrome.onboarding.workbenchTitle': '워크벤치',
-		'chrome.onboarding.workbenchBody': '활성 화면이 이 패널을 가득 채웁니다. 여기에는 장식적인 것이 하나도 없습니다: 보이는 모든 지연 시간, 레벨, 기능은 당신의 브라우저에서 실측되었거나 그것이 설명하는 서비스에서 읽어온 것입니다. 브라우저가 답을 거부하면 그럴듯한 숫자 대신 \"n/a\"를 표시합니다.',
+		'chrome.onboarding.workbenchBody':
+			'활성 화면이 이 패널을 가득 채웁니다. 여기에는 장식적인 것이 하나도 없습니다: 보이는 모든 지연 시간, 레벨, 기능은 당신의 브라우저에서 실측되었거나 그것이 설명하는 서비스에서 읽어온 것입니다. 브라우저가 답을 거부하면 그럴듯한 숫자 대신 \"n/a\"를 표시합니다.',
 		'chrome.onboarding.consoleTitle': '콘솔',
-		'chrome.onboarding.consoleBody': '지금 있는 어떤 화면 위로든 내려오는 작은 셸입니다. 그 파일 시스템은 이 사이트 자체 데이터를 실시간으로 투영한 것이라, 절대 낡은 정보가 되지 않습니다.',
+		'chrome.onboarding.consoleBody':
+			'지금 있는 어떤 화면 위로든 내려오는 작은 셸입니다. 그 파일 시스템은 이 사이트 자체 데이터를 실시간으로 투영한 것이라, 절대 낡은 정보가 되지 않습니다.',
 		'chrome.onboarding.consoleToggle': '어디서든 열고 닫을 수 있습니다',
 		'chrome.onboarding.consoleHelp': '명령어 목록; man <cmd>로 개별 설명 확인',
 		'chrome.onboarding.consoleBrowse': '/projects, /operator, /synth, /edge를 둘러보기',
@@ -2689,42 +3026,56 @@ export default {
 		'chrome.onboarding.consoleTrace': '실제로 당신에게 응답하는 Cloudflare PoP',
 		'chrome.onboarding.openIt': '열기',
 		'chrome.onboarding.launchpadTitle': '런치패드',
-		'chrome.onboarding.launchpadBody': '다른 다섯 화면과 동일한 패드에 테마 전환까지 더한 것입니다. 그 위의 사이드바는 운영자 프로필이고, 맨 위 배너는 그냥 이름입니다.',
+		'chrome.onboarding.launchpadBody':
+			'다른 다섯 화면과 동일한 패드에 테마 전환까지 더한 것입니다. 그 위의 사이드바는 운영자 프로필이고, 맨 위 배너는 그냥 이름입니다.',
 		'chrome.onboarding.launchpadCycleTheme': '테마 순환 — tokyo, gruvbox, nord, amber',
 		'chrome.onboarding.edgeTitle': '배지가 아니라 진짜 엣지 정보',
-		'chrome.onboarding.edgeBody': '로드할 때마다 /cdn-cgi/trace를 읽습니다: 실제로 당신에게 응답한 Cloudflare 접속 지점, 협상된 프로토콜, TLS 버전입니다. 콘솔에서 \"trace\"를 실행하면 실측 왕복 시간을 포함한 전체 기록을 볼 수 있습니다.',
+		'chrome.onboarding.edgeBody':
+			'로드할 때마다 /cdn-cgi/trace를 읽습니다: 실제로 당신에게 응답한 Cloudflare 접속 지점, 협상된 프로토콜, TLS 버전입니다. 콘솔에서 \"trace\"를 실행하면 실측 왕복 시간을 포함한 전체 기록을 볼 수 있습니다.',
 		'chrome.onboarding.tourTitle': '이것이 투어입니다',
-		'chrome.onboarding.tourBody': '이 버튼으로 언제든 워크스루를 다시 열 수 있습니다 —— \"guide\" 명령어도 마찬가지입니다.',
+		'chrome.onboarding.tourBody':
+			'이 버튼으로 언제든 워크스루를 다시 열 수 있습니다 —— \"guide\" 명령어도 마찬가지입니다.',
 		'chrome.onboarding.keymapTitle': '한 가지 더 — 키맵',
 		'chrome.onboarding.keymapBody': '이 사이트의 모든 단축키가 한곳에 모여 있습니다.',
 		'chrome.onboarding.showKeymap': '키맵 표시',
 		'chrome.onboarding.stepLabel': '{n}단계: {title}',
 
-		'chrome.privacy.scope': '적용 범위: krsz.in에만 해당합니다 — 지금 보고 계신 바로 이 사이트입니다.',
+		'chrome.privacy.scope':
+			'적용 범위: krsz.in에만 해당합니다 — 지금 보고 계신 바로 이 사이트입니다.',
 		'chrome.privacy.section1Title': '1. 이 사이트가 수집하는 것',
-		'chrome.privacy.section1Body': '아무것도 수집하지 않습니다. krsz.in에는 계정 시스템도, 분석 도구도, 어떤 형태의 추적도 없습니다. 테마, 사운드 설정, 콘솔 기록 등 이 워크벤치가 기억하는 모든 것은 오직 이 브라우저 자체의 로컬 스토리지에만 저장됩니다 — 여러분의 기기를 벗어나지 않으며, 어떤 서버도 이를 확인할 수 없습니다. 도구 탭의 하드웨어·디스플레이 테스트 역시 전부 브라우저 안에서만 실행됩니다.',
+		'chrome.privacy.section1Body':
+			'아무것도 수집하지 않습니다. krsz.in에는 계정 시스템도, 분석 도구도, 어떤 형태의 추적도 없습니다. 테마, 사운드 설정, 콘솔 기록 등 이 워크벤치가 기억하는 모든 것은 오직 이 브라우저 자체의 로컬 스토리지에만 저장됩니다 — 여러분의 기기를 벗어나지 않으며, 어떤 서버도 이를 확인할 수 없습니다. 도구 탭의 하드웨어·디스플레이 테스트 역시 전부 브라우저 안에서만 실행됩니다.',
 		'chrome.privacy.section2Title': '2. 예외',
-		'chrome.privacy.section2Intro': '다음 네 가지만 브라우저 밖으로 나가며, 모두 해당 버튼을 눌렀을 때만 발생합니다:',
-		'chrome.privacy.section2Guestbook': '방명록 메시지 — 이 사이트의 서버로 전송되어 공개적으로 표시됩니다. 양식의 전송 버튼 옆에 별도의 확인 문구가 있습니다.',
-		'chrome.privacy.section2Footprint': '발자국(방명록 탭) — Cloudflare 엣지가 해당 요청에 대해 이미 확인한 정보(국가, 시간대, 서비스 노드)와 버전 번호를 뺀 브라우저·OS 종류를 이 사이트 서버에 기록하도록 요청합니다. IP 주소, 도시, 정확한 위치는 저장하지 않습니다. 하루 한 번, 벽에 공개 표시됩니다. 같은 벽에는 blog.krsz.in 방문도 해당 사이트의 수신 접근 로그에서 가져와 표시합니다 — 국가와 브라우저 종류만, 방문자당 하루 한 건이며 그 외에는 아무것도 복사하지 않습니다.',
-		'chrome.privacy.section2Speed': '속도 테스트(도구 탭) — Cloudflare 자체 서비스인 speed.cloudflare.com과 무작위 바이트를 주고받습니다(Cloudflare 개인정보 정책 적용). krsz.in은 아무것도 저장하지 않습니다.',
-		'chrome.privacy.section2Dig': '콘솔의 dig 명령 — 입력한 도메인 이름이 이 사이트의 DNS 릴레이로 전송되어 상위로 전달됩니다. Worker의 단기 운영 로그 외에는 보관하지 않습니다.',
+		'chrome.privacy.section2Intro':
+			'다음 네 가지만 브라우저 밖으로 나가며, 모두 해당 버튼을 눌렀을 때만 발생합니다:',
+		'chrome.privacy.section2Guestbook':
+			'방명록 메시지 — 이 사이트의 서버로 전송되어 공개적으로 표시됩니다. 양식의 전송 버튼 옆에 별도의 확인 문구가 있습니다.',
+		'chrome.privacy.section2Footprint':
+			'발자국(방명록 탭) — Cloudflare 엣지가 해당 요청에 대해 이미 확인한 정보(국가, 시간대, 서비스 노드)와 버전 번호를 뺀 브라우저·OS 종류를 이 사이트 서버에 기록하도록 요청합니다. IP 주소, 도시, 정확한 위치는 저장하지 않습니다. 하루 한 번, 벽에 공개 표시됩니다. 같은 벽에는 blog.krsz.in 방문도 해당 사이트의 수신 접근 로그에서 가져와 표시합니다 — 국가와 브라우저 종류만, 방문자당 하루 한 건이며 그 외에는 아무것도 복사하지 않습니다.',
+		'chrome.privacy.section2Speed':
+			'속도 테스트(도구 탭) — Cloudflare 자체 서비스인 speed.cloudflare.com과 무작위 바이트를 주고받습니다(Cloudflare 개인정보 정책 적용). krsz.in은 아무것도 저장하지 않습니다.',
+		'chrome.privacy.section2Dig':
+			'콘솔의 dig 명령 — 입력한 도메인 이름이 이 사이트의 DNS 릴레이로 전송되어 상위로 전달됩니다. Worker의 단기 운영 로그 외에는 보관하지 않습니다.',
 		'chrome.privacy.section3Title': '3. 연결된 프로젝트 — 별도의 정책',
-		'chrome.privacy.section3Body': 'MODULES는 krsz.in 아래에서 독립적으로 운영되는 다른 사이트로 연결됩니다 — 각각 자체 서버와 자체 개인정보 처리방침을 가진 별개의 애플리케이션이며, 이 안내의 적용을 받지 않습니다:',
+		'chrome.privacy.section3Body':
+			'MODULES는 krsz.in 아래에서 독립적으로 운영되는 다른 사이트로 연결됩니다 — 각각 자체 서버와 자체 개인정보 처리방침을 가진 별개의 애플리케이션이며, 이 안내의 적용을 받지 않습니다:',
 		'chrome.privacy.footer': 'krsz.in — 개인정보 안내',
 
 		'chrome.settings.sound': '사운드',
 		'chrome.settings.soundDesc': 'UI 및 신스 효과음',
 		'chrome.settings.muted': '음소거됨',
 		'chrome.settings.textSize': '글자 크기',
-		'chrome.settings.textSizeDesc': '사이트 전체를 확대/축소합니다. AUTO는 화면에 맞춥니다 — 720p에서 12, 1080p에서 14, 2K에서 16, 4K에서 20, 8K에서 24. 서체는 12px 그리드로 그려져 있어 12와 24는 정확히 선명하며, 그 사이 크기는 약간 보간됩니다.',
+		'chrome.settings.textSizeDesc':
+			'사이트 전체를 확대/축소합니다. AUTO는 화면에 맞춥니다 — 720p에서 12, 1080p에서 14, 2K에서 16, 4K에서 20, 8K에서 24. 서체는 12px 그리드로 그려져 있어 12와 24는 정확히 선명하며, 그 사이 크기는 약간 보간됩니다.',
 		'chrome.settings.textSizeAutoHint': '화면 해상도를 따름 (현재 {px}px)',
 		'chrome.settings.textSizeExact': ' — 12px 그리드에 정확히 맞음',
 		'chrome.settings.textSizeDefault': '(기본값)',
 		'chrome.settings.performance': '성능',
-		'chrome.settings.performanceDesc': '배경 동영상, 모든 패널의 블러, 모든 호버/누름 애니메이션을 끕니다. 외관 취향이 아니라 저사양 기기나 배터리 절약을 위한 것입니다.',
+		'chrome.settings.performanceDesc':
+			'배경 동영상, 모든 패널의 블러, 모든 호버/누름 애니메이션을 끕니다. 외관 취향이 아니라 저사양 기기나 배터리 절약을 위한 것입니다.',
 		'chrome.settings.storageTitle': '이 기기의 저장 공간',
-		'chrome.settings.storageDesc': '아래 항목은 모두 이 브라우저에만 저장되어 있으며, 어디로도 전송된 적이 없습니다. 행을 지우면 즉시 삭제되며 되돌릴 수 없습니다.',
+		'chrome.settings.storageDesc':
+			'아래 항목은 모두 이 브라우저에만 저장되어 있으며, 어디로도 전송된 적이 없습니다. 행을 지우면 즉시 삭제되며 되돌릴 수 없습니다.',
 		'chrome.settings.clearing': '삭제 중…',
 		'chrome.settings.clearEverything': '전체 삭제',
 		'chrome.settings.measuring': '측정 중…',
@@ -2732,20 +3083,24 @@ export default {
 		'chrome.settings.cleared': '삭제됨',
 		'chrome.settings.clear': '삭제',
 		'chrome.settings.storage.modelWeightsLabel': 'WEB-LM 모델 가중치',
-		'chrome.settings.storage.modelWeightsDetail': '{count}개 파일 — 다운로드된 GGUF 가중치, 다음 로드 시 다시 받아옵니다',
+		'chrome.settings.storage.modelWeightsDetail':
+			'{count}개 파일 — 다운로드된 GGUF 가중치, 다음 로드 시 다시 받아옵니다',
 		'chrome.settings.storage.notAvailable': '이 브라우저에서는 사용할 수 없습니다',
 		'chrome.settings.storage.conversationsLabel': 'WEB-LM 대화',
 		'chrome.settings.storage.conversationsDetail': '첨부 이미지를 포함해 저장된 대화 {count}개',
 		'chrome.settings.storage.vmDisksLabel': 'KRSZ-VM 디스크 변경 사항',
-		'chrome.settings.storage.vmDisksDetail': '두 에뮬레이트된 머신 중 어느 쪽이든 디스크에 기록된 모든 내용 (i686과 x86-64는 각각 별도로 보관)',
+		'chrome.settings.storage.vmDisksDetail':
+			'두 에뮬레이트된 머신 중 어느 쪽이든 디스크에 기록된 모든 내용 (i686과 x86-64는 각각 별도로 보관)',
 		'chrome.settings.storage.synthAutosaveLabel': 'SYNTH 자동 저장',
-		'chrome.settings.storage.synthAutosaveDetail': '편집 중이던 마지막 패치, 다음 방문 시 자동으로 복원됩니다',
+		'chrome.settings.storage.synthAutosaveDetail':
+			'편집 중이던 마지막 패치, 다음 방문 시 자동으로 복원됩니다',
 		'chrome.settings.storage.consoleHistoryLabel': '콘솔 기록 및 별칭',
 		'chrome.settings.storage.consoleHistoryDetail': '↑↓ 명령어 불러오기, 그리고 정의한 `alias`',
 		'chrome.settings.storage.vmConfigLabel': 'KRSZ-VM 머신 설정',
 		'chrome.settings.storage.vmConfigDetail': 'krsz-vm 설정 화면의 RAM / 네트워크 / 부팅 모드 선택',
 		'chrome.settings.storage.genConfigLabel': 'WEB-LM 생성 설정',
-		'chrome.settings.storage.genConfigDetail': 'web-lm 설정 패널의 temperature, top_p 등 샘플링 설정',
+		'chrome.settings.storage.genConfigDetail':
+			'web-lm 설정 패널의 temperature, top_p 등 샘플링 설정',
 		'chrome.settings.storage.toursLabel': '확인한 환영 화면 및 가이드 투어',
 		'chrome.settings.storage.midiRoutingLabel': 'MIDI 라우팅',
 		'chrome.settings.storage.midiRoutingDetail': '각 MIDI 입력이 연주하는 트랙과 꺼둔 입력',
@@ -2755,7 +3110,8 @@ export default {
 		'chrome.settings.storage.group.lmSpace': 'LM SPACE',
 		'chrome.settings.storage.group.vm': 'KRSZ-VM',
 		'chrome.settings.storage.group.site': '사이트',
-		'chrome.settings.storage.toursDetail': '환영 화면, 사이트 투어, 화면별 워크스루가 다음 방문 시 다시 제안됩니다',
+		'chrome.settings.storage.toursDetail':
+			'환영 화면, 사이트 투어, 화면별 워크스루가 다음 방문 시 다시 제안됩니다',
 
 		'chrome.sidebar.running': '실행 중',
 		'chrome.sidebar.verified': '인증됨',
@@ -2782,37 +3138,55 @@ export default {
 		'chrome.sidebar.tilePcEmu': 'PC 에뮬',
 		'chrome.sidebar.tileOnGpu': 'On-GPU',
 		'chrome.sidebar.tileConway': 'Conway',
-		'chrome.sidebar.tooltip0': '0: Modules — 실시간 프로젝트 포털 및 아키텍처 심층 분석 [단축키: Ctrl+0]',
+		'chrome.sidebar.tooltip0':
+			'0: Modules — 실시간 프로젝트 포털 및 아키텍처 심층 분석 [단축키: Ctrl+0]',
 		'chrome.sidebar.tooltip1': '1: Guestbook — 엣지 워커를 통해 메시지 패킷 전송 [단축키: Ctrl+1]',
 		'chrome.sidebar.tooltip2': '2: Synth — 8트랙 모듈러 신디사이저 워크스테이션 [단축키: Ctrl+2]',
-		'chrome.sidebar.tooltip3': '3: Utilities — 키보드 / 마우스 / 디스플레이 하드웨어 테스터 [단축키: Ctrl+3]',
-		'chrome.sidebar.tooltip4': '4: LM.SPACE — Artificial Analysis 모델 표를 탐색 가능한 공간으로 [단축키: Ctrl+4]',
-		'chrome.sidebar.tooltip5': '5: krsz-vm — 에뮬레이트된 x86 PC(i686 또는 x86-64)에서 실행되는 Alpine Linux [단축키: Ctrl+5]',
-		'chrome.sidebar.tooltip6': '6: web-lm — WebGPU를 통해 당신의 GPU에서 실행되는 언어 모델, 서버 불필요 [단축키: Ctrl+6]',
-		'chrome.sidebar.tooltip7': '7: lifelab — 캠페인 형태의 콘웨이 생명 게임: 두 가지 규칙, 정물, 글라이더, 충돌, 그리고 글라이더 건 [단축키: Ctrl+7]',
+		'chrome.sidebar.tooltip3':
+			'3: Utilities — 키보드 / 마우스 / 디스플레이 하드웨어 테스터 [단축키: Ctrl+3]',
+		'chrome.sidebar.tooltip4':
+			'4: LM.SPACE — Artificial Analysis 모델 표를 탐색 가능한 공간으로 [단축키: Ctrl+4]',
+		'chrome.sidebar.tooltip5':
+			'5: krsz-vm — 에뮬레이트된 x86 PC(i686 또는 x86-64)에서 실행되는 Alpine Linux [단축키: Ctrl+5]',
+		'chrome.sidebar.tooltip6':
+			'6: web-lm — WebGPU를 통해 당신의 GPU에서 실행되는 언어 모델, 서버 불필요 [단축키: Ctrl+6]',
+		'chrome.sidebar.tooltip7':
+			'7: lifelab — 캠페인 형태의 콘웨이 생명 게임: 두 가지 규칙, 정물, 글라이더, 충돌, 그리고 글라이더 건 [단축키: Ctrl+7]',
 
 		'chrome.tabbar.logoTitle': 'krsz.in — Kurashizu의 랜덤 스터프 존',
-		'chrome.tabbar.consoleTitle': '명령 콘솔 — 가상 파일 시스템, 파이프, 엣지 추적을 갖춘 작은 셸. 어떤 화면 위로든 드롭다운으로 열립니다. [단축키: ` 백쿼트]',
+		'chrome.tabbar.consoleTitle':
+			'명령 콘솔 — 가상 파일 시스템, 파이프, 엣지 추적을 갖춘 작은 셸. 어떤 화면 위로든 드롭다운으로 열립니다. [단축키: ` 백쿼트]',
 		'chrome.tabbar.console': '콘솔',
-		'chrome.tabbar.playbackTitle': '마스터 오디오 & 시퀀서 재생 전환 — 음악 및 사운드 엔진 시작 / 정지',
+		'chrome.tabbar.playbackTitle':
+			'마스터 오디오 & 시퀀서 재생 전환 — 음악 및 사운드 엔진 시작 / 정지',
 		'chrome.tabbar.stop': '정지',
 		'chrome.tabbar.play': '재생',
 		'chrome.tabbar.guideTitle': '워크스루 열기 — 각 화면의 기능과 모든 키보드 단축키',
 		'chrome.tabbar.guide': '가이드',
-		'chrome.tabbar.settingsTitle': '전역 구성 — 사운드, 그리고 이 브라우저에 저장된 사이트 데이터 삭제',
+		'chrome.tabbar.settingsTitle':
+			'전역 구성 — 사운드, 그리고 이 브라우저에 저장된 사이트 데이터 삭제',
 		'chrome.tabbar.cfg': 'CFG',
-		'chrome.tabbar.serverlessTitle': '아키텍처 상태 — 전용 백엔드 오리진 서버 없는 100% 서버리스 엣지 실행',
-		'chrome.tabbar.tab0': '화면 0: Modules — 실시간 프로젝트 포털 및 기술 심층 분석 [단축키: Ctrl+0]',
+		'chrome.tabbar.serverlessTitle':
+			'아키텍처 상태 — 전용 백엔드 오리진 서버 없는 100% 서버리스 엣지 실행',
+		'chrome.tabbar.tab0':
+			'화면 0: Modules — 실시간 프로젝트 포털 및 기술 심층 분석 [단축키: Ctrl+0]',
 		'chrome.tabbar.tab1': '화면 1: Guestbook — 분산 엣지 패킷 메신저 [단축키: Ctrl+1]',
-		'chrome.tabbar.tab2': '화면 2: Synth — 8트랙 WebAudio 모듈러 신디사이저 & 시퀀서 [단축키: Ctrl+2]',
-		'chrome.tabbar.tab3': '화면 3: Utilities — 키보드 / 마우스 / 디스플레이 하드웨어 테스터 [단축키: Ctrl+3]',
-		'chrome.tabbar.tab4': '화면 4: LM.SPACE — Artificial Analysis 모델 표를 탐색 가능한 공간으로, blog.krsz.in을 통해 캐시됨 [단축키: Ctrl+4]',
-		'chrome.tabbar.tab5': '화면 5: krsz-vm — 브라우저에서 에뮬레이트된 실제 x86 PC, Alpine Linux 실행 [단축키: Ctrl+5]',
-		'chrome.tabbar.tab6': '화면 6: web-lm — WebGPU를 통해 완전히 당신의 GPU에서 실행되는 언어 모델, 서버 불필요 [단축키: Ctrl+6]',
-		'chrome.tabbar.tab7': '화면 7: lifelab — 콘웨이 생명 게임으로 이루어진 25단계 캠페인, 글라이더 건으로 마무리 [단축키: Ctrl+7]',
+		'chrome.tabbar.tab2':
+			'화면 2: Synth — 8트랙 WebAudio 모듈러 신디사이저 & 시퀀서 [단축키: Ctrl+2]',
+		'chrome.tabbar.tab3':
+			'화면 3: Utilities — 키보드 / 마우스 / 디스플레이 하드웨어 테스터 [단축키: Ctrl+3]',
+		'chrome.tabbar.tab4':
+			'화면 4: LM.SPACE — Artificial Analysis 모델 표를 탐색 가능한 공간으로, blog.krsz.in을 통해 캐시됨 [단축키: Ctrl+4]',
+		'chrome.tabbar.tab5':
+			'화면 5: krsz-vm — 브라우저에서 에뮬레이트된 실제 x86 PC, Alpine Linux 실행 [단축키: Ctrl+5]',
+		'chrome.tabbar.tab6':
+			'화면 6: web-lm — WebGPU를 통해 완전히 당신의 GPU에서 실행되는 언어 모델, 서버 불필요 [단축키: Ctrl+6]',
+		'chrome.tabbar.tab7':
+			'화면 7: lifelab — 콘웨이 생명 게임으로 이루어진 25단계 캠페인, 글라이더 건으로 마무리 [단축키: Ctrl+7]',
 
 		'chrome.welcome.title': 'krsz.in에 오신 것을 환영합니다',
-		'chrome.welcome.subtitle': 'Kurashizu의 랜덤 스터프 존 — 엣지 네이티브 워크벤치 하나에 담긴 여덟 개의 진짜 작동하는 도구. 보이는 모든 것이 실제로 동작하며, 목업이 아닙니다.',
+		'chrome.welcome.subtitle':
+			'Kurashizu의 랜덤 스터프 존 — 엣지 네이티브 워크벤치 하나에 담긴 여덟 개의 진짜 작동하는 도구. 보이는 모든 것이 실제로 동작하며, 목업이 아닙니다.',
 		'chrome.welcome.getStarted': '시작하기 →',
 		'chrome.welcome.getStartedPlain': '시작하기',
 		'chrome.welcome.agreeTo': '"{action}"을 클릭하면 다음에 동의하는 것으로 간주됩니다:',

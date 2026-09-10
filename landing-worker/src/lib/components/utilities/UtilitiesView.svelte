@@ -145,7 +145,11 @@
 				<!-- Section rule in the same ruled-heading idiom as the console's
 				     help sections: a short label, then a hairline to the edge. -->
 				<div class="flex items-center gap-2 mb-1">
-					<span class="text-[10px] font-bold tracking-wider {groupActive ? 'text-white/70' : 'text-white/35'}">{group.label}</span>
+					<span
+						class="text-[10px] font-bold tracking-wider {groupActive
+							? 'text-white/70'
+							: 'text-white/35'}">{group.label}</span
+					>
 					<span class="flex-1 border-t border-white/10"></span>
 					<span class="text-[9px] font-mono text-white/25">{group.tools.length}</span>
 				</div>
@@ -160,8 +164,15 @@
 								: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
 							style={isActive ? `border-color: ${tool.color}` : undefined}
 						>
-							<div class="font-bold text-xs leading-tight tracking-tight truncate w-full" style="color: {isActive ? '#fff' : tool.color}">{tool.label}</div>
-							<div class="text-[10px] sm:text-xs opacity-60 font-mono truncate w-full">{tool.desc}</div>
+							<div
+								class="font-bold text-xs leading-tight tracking-tight truncate w-full"
+								style="color: {isActive ? '#fff' : tool.color}"
+							>
+								{tool.label}
+							</div>
+							<div class="text-[10px] sm:text-xs opacity-60 font-mono truncate w-full">
+								{tool.desc}
+							</div>
 						</button>
 					{/each}
 				</div>
@@ -169,8 +180,15 @@
 		{/each}
 	</div>
 
-	<div style="border-color: {current.color}66;" class="border p-3 sm:p-4 rounded-sm space-y-2 bg-black/20">
-		<BoxHeader title={current.label} class="font-black text-xs sm:text-sm border-b border-white/10 pb-1.5" style="color: {current.color}">
+	<div
+		style="border-color: {current.color}66;"
+		class="border p-3 sm:p-4 rounded-sm space-y-2 bg-black/20"
+	>
+		<BoxHeader
+			title={current.label}
+			class="font-black text-xs sm:text-sm border-b border-white/10 pb-1.5"
+			style="color: {current.color}"
+		>
 			<span class="text-[10px] sm:text-xs text-white/40 font-mono font-normal">{current.desc}</span>
 		</BoxHeader>
 

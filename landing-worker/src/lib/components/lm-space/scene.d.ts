@@ -8,7 +8,4 @@ import type { LeaderboardPayload } from '../../stores/leaderboard';
  * would add noise without catching anything the browser does not. This
  * declaration types the one edge the rest of the app touches.
  */
-export function mountLmSpace(
-	root: HTMLElement,
-	payload: LeaderboardPayload
-): Promise<() => void>;
+export function mountLmSpace(root: HTMLElement, payload: LeaderboardPayload): Promise<() => void>;

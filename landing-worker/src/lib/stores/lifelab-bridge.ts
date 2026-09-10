@@ -33,12 +33,16 @@ export interface LifelabControl {
 	speeds(): number[];
 	resize(w: number, h: number): { w: number; h: number };
 	loadPattern(key: string): boolean;
-	patternMeta(key: string): { label: string; note?: string; credit?: string; cat?: string; custom?: boolean } | null;
+	patternMeta(
+		key: string
+	): { label: string; note?: string; credit?: string; cat?: string; custom?: boolean } | null;
 	info(): LifelabInfo;
 }
 
 /** Null while the game has never mounted, or after it has unmounted (stop() clears it). */
 export async function getLifelabControl(): Promise<LifelabControl | null> {
-	const mod = (await import('../components/lifelab/main.js')) as { consoleControl: LifelabControl | null };
+	const mod = (await import('../components/lifelab/main.js')) as {
+		consoleControl: LifelabControl | null;
+	};
 	return mod.consoleControl;
 }

@@ -9,8 +9,9 @@
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 
 	const WORDS =
-		('the of and to in is you that it he was for on are as with his they at be this have from or one had by word but not what all were we when your can said there use an each which she do how their if will up other about out many then them these so some her would make like him into time has look two more write go see number no way could people my than first water been call who oil its now find long down day did get come made may part over new sound take only little work know place year live me back give most very after thing our just name good sentence man think say great where help through much before line right too mean old any same tell boy follow came want show also around form three small set put end does another well large must big even such because turn here why ask went men read need land different home us move try kind hand picture again change off play spell air away animal house point page letter mother answer found study still learn should world high every near add food between own below country plant last school father keep tree never start city earth eye light thought head under story saw left few while along might close something seem next hard open example begin life those both paper together got group often run')
-			.split(' ');
+		'the of and to in is you that it he was for on are as with his they at be this have from or one had by word but not what all were we when your can said there use an each which she do how their if will up other about out many then them these so some her would make like him into time has look two more write go see number no way could people my than first water been call who oil its now find long down day did get come made may part over new sound take only little work know place year live me back give most very after thing our just name good sentence man think say great where help through much before line right too mean old any same tell boy follow came want show also around form three small set put end does another well large must big even such because turn here why ask went men read need land different home us move try kind hand picture again change off play spell air away animal house point page letter mother answer found study still learn should world high every near add food between own below country plant last school father keep tree never start city earth eye light thought head under story saw left few while along might close something seem next hard open example begin life those both paper together got group often run'.split(
+			' '
+		);
 
 	const DURATION = 30;
 
@@ -73,7 +74,9 @@
 	);
 	let minutes = $derived((DURATION - timeLeft) / 60 || 1 / 60);
 	let wpm = $derived(Math.round(correctChars / 5 / minutes));
-	let accuracy = $derived(keystrokes === 0 ? 100 : Math.round((correctKeystrokes / keystrokes) * 100));
+	let accuracy = $derived(
+		keystrokes === 0 ? 100 : Math.round((correctKeystrokes / keystrokes) * 100)
+	);
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -127,7 +130,8 @@
 			return t[ci] === ch ? 'text-[#98c379]' : 'text-[#e06c75]';
 		}
 		if (wi === wordIdx) {
-			if (ci < typed.length) return typed[ci] === ch ? 'text-[#98c379]' : 'text-[#e06c75] underline';
+			if (ci < typed.length)
+				return typed[ci] === ch ? 'text-[#98c379]' : 'text-[#e06c75] underline';
 			return 'text-white/70';
 		}
 		return 'text-white/35';
@@ -136,17 +140,26 @@
 
 <div class="space-y-2">
 	<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
-		<span class="px-2 py-1 border rounded-xs font-black {running ? 'border-[#e5c07b] text-[#e5c07b]' : 'border-white/15 text-white/60'}">
+		<span
+			class="px-2 py-1 border rounded-xs font-black {running
+				? 'border-[#e5c07b] text-[#e5c07b]'
+				: 'border-white/15 text-white/60'}"
+		>
 			{$t('utilities.typing.timer', { seconds: timeLeft })}
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			{$t('utilities.typing.wpm')} <span class="font-black text-[#56b6c2]">{finished || running ? wpm : '—'}</span>
+			{$t('utilities.typing.wpm')}
+			<span class="font-black text-[#56b6c2]">{finished || running ? wpm : '—'}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			{$t('utilities.typing.acc')} <span class="font-black text-[#c678dd]">{keystrokes > 0 ? `${accuracy}%` : '—'}</span>
+			{$t('utilities.typing.acc')}
+			<span class="font-black text-[#c678dd]">{keystrokes > 0 ? `${accuracy}%` : '—'}</span>
 		</span>
 		<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-			{$t('utilities.typing.words')} <span class="font-black text-[#98c379]">{correctWords}</span><span class="text-white/40">/{submitted.length}</span>
+			{$t('utilities.typing.words')}
+			<span class="font-black text-[#98c379]">{correctWords}</span><span class="text-white/40"
+				>/{submitted.length}</span
+			>
 		</span>
 		<button
 			onclick={() => {
@@ -160,21 +173,42 @@
 	</div>
 
 	{#if finished}
-		<div class="border p-4 rounded-xs text-center space-y-1.5" style="border-color: {themeStyles.cursorColor}66;" in:fade={{ duration: 200 }}>
-			<div class="text-2xl font-black font-mono value-in" style="color: {themeStyles.cursorColor}">{$t('utilities.typing.result.wpm', { wpm })}</div>
+		<div
+			class="border p-4 rounded-xs text-center space-y-1.5"
+			style="border-color: {themeStyles.cursorColor}66;"
+			in:fade={{ duration: 200 }}
+		>
+			<div class="text-2xl font-black font-mono value-in" style="color: {themeStyles.cursorColor}">
+				{$t('utilities.typing.result.wpm', { wpm })}
+			</div>
 			<div class="text-xs font-mono text-white/60">
-				{$t('utilities.typing.result.summary', { accuracy, correct: correctWords, total: submitted.length, duration: DURATION })}
+				{$t('utilities.typing.result.summary', {
+					accuracy,
+					correct: correctWords,
+					total: submitted.length,
+					duration: DURATION
+				})}
 			</div>
 			<div class="text-[10px] font-mono text-white/35">{$t('utilities.typing.result.again')}</div>
 		</div>
 	{:else}
-		<div class="border border-white/15 bg-black/50 rounded-xs p-3 font-mono text-sm sm:text-base leading-loose select-none min-h-[120px]">
+		<div
+			class="border border-white/15 bg-black/50 rounded-xs p-3 font-mono text-sm sm:text-base leading-loose select-none min-h-[120px]"
+		>
 			{#each words.slice(Math.max(0, wordIdx - 5), wordIdx + 25) as w, rel (Math.max(0, wordIdx - 5) + rel)}
 				{@const wi = Math.max(0, wordIdx - 5) + rel}
 				<!-- inline-block: Svelte trims inter-iteration whitespace, so without an
 				     atomic inline there'd be no soft-wrap opportunity between words -->
-				<span class="inline-block mr-[0.6em] {wi === wordIdx ? 'bg-white/10 rounded-xs px-0.5' : ''}">
-					{#each w.split('') as ch, ci (ci)}<span class={charClass(wi, ci, ch)}>{ch}</span>{/each}{#if wi === wordIdx && typed.length > w.length}<span class="text-[#e06c75] underline">{typed.slice(w.length)}</span>{/if}{#if wi === wordIdx}<span class="inline-block w-[2px] h-[1em] align-middle animate-pulse" style="background-color: {themeStyles.cursorColor}"></span>{/if}
+				<span
+					class="inline-block mr-[0.6em] {wi === wordIdx ? 'bg-white/10 rounded-xs px-0.5' : ''}"
+				>
+					{#each w.split('') as ch, ci (ci)}<span class={charClass(wi, ci, ch)}>{ch}</span
+						>{/each}{#if wi === wordIdx && typed.length > w.length}<span
+							class="text-[#e06c75] underline">{typed.slice(w.length)}</span
+						>{/if}{#if wi === wordIdx}<span
+							class="inline-block w-[2px] h-[1em] align-middle animate-pulse"
+							style="background-color: {themeStyles.cursorColor}"
+						></span>{/if}
 				</span>
 			{/each}
 		</div>

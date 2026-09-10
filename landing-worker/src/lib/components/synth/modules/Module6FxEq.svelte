@@ -58,7 +58,11 @@
 		for (const k of duckKeys) notes.add(k);
 		return [...notes].sort((a, b) => b - a);
 	});
-	let sourceLabel = $derived(duckSource < 0 ? 'OFF' : `T${duckSource + 1} ${($tracksState[duckSource]?.name ?? '').replace(/^TRK \d+:\s*/, '')}`);
+	let sourceLabel = $derived(
+		duckSource < 0
+			? 'OFF'
+			: `T${duckSource + 1} ${($tracksState[duckSource]?.name ?? '').replace(/^TRK \d+:\s*/, '')}`
+	);
 
 	function stepSource(dir: number) {
 		const list = [-1, ...sourceIds];
@@ -71,20 +75,27 @@
 	}
 
 	function toggleKey(n: number) {
-		const next = duckKeys.includes(n) ? duckKeys.filter((k) => k !== n) : [...duckKeys, n].sort((a, b) => b - a);
+		const next = duckKeys.includes(n)
+			? duckKeys.filter((k) => k !== n)
+			: [...duckKeys, n].sort((a, b) => b - a);
 		updateActiveTrack({ duckKeys: next });
 		playSound('click');
 	}
 </script>
 
-<div class="xl:col-span-5 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0">
-	<div class="flex justify-between items-center font-black text-xs border-b border-white/10 pb-0.5 shrink-0">
+<div
+	class="xl:col-span-5 border border-[#e06c75]/40 p-1.5 bg-black/60 rounded-xs flex flex-col justify-between min-h-[155px] shrink-0"
+>
+	<div
+		class="flex justify-between items-center font-black text-xs border-b border-white/10 pb-0.5 shrink-0"
+	>
 		<div class="flex items-center gap-1.5">
 			<span class="text-[#e06c75] font-black">6. FX</span>
 			<div class="flex items-center gap-1">
 				<button
 					onclick={() => setTab('fx')}
-					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'fx'
+					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab ===
+					'fx'
 						? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 					title={$t('synthPanels.fx.mainTabHint')}
@@ -93,7 +104,8 @@
 				</button>
 				<button
 					onclick={() => setTab('eq')}
-					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'eq'
+					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab ===
+					'eq'
 						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
 						: 'border-white/20 text-white/60 hover:text-white'}"
 					title={$t('synthPanels.fx.eqTabHint')}
@@ -102,7 +114,8 @@
 				</button>
 				<button
 					onclick={() => setTab('duck')}
-					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab === 'duck'
+					class="press px-1.5 py-0.2 text-[10px] rounded-xs border font-black cursor-pointer transition-colors {$activeFxTab ===
+					'duck'
 						? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
 						: duckOn
 							? 'border-[#e5c07b]/60 text-[#e5c07b] hover:text-white'
@@ -115,9 +128,23 @@
 		</div>
 		<div class="flex items-center gap-1.5">
 			<span class="text-white/40 flex items-center" title={$t('synthPanels.rack.flowToOut')}>
-				<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+				<svg
+					width="10"
+					height="10"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg
+				>
 			</span>
-			<button onclick={resetRack6} title={$t('synthPanels.rack.resetHint')} class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60">R</button>
+			<button
+				onclick={resetRack6}
+				title={$t('synthPanels.rack.resetHint')}
+				class="press px-1 py-0.2 text-[9px] rounded-xs font-mono font-bold cursor-pointer transition-colors border border-white/20 text-white/40 hover:text-white hover:border-white/60"
+				>R</button
+			>
 		</div>
 	</div>
 
@@ -125,22 +152,78 @@
 		<div class="flex-1 min-h-0 flex flex-col justify-around py-0.5 my-auto">
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="TIME" value={Math.round($delayTime * 1000)} min={50} max={800} step={10} unit="ms" color="#e06c75" size={40} description={$t('synthPanels.fx.delayTimeDesc')} reset={300} onChange={(v) => setDelayTime(v / 1000)} />
+					<RotaryKnob
+						label="TIME"
+						value={Math.round($delayTime * 1000)}
+						min={50}
+						max={800}
+						step={10}
+						unit="ms"
+						color="#e06c75"
+						size={40}
+						description={$t('synthPanels.fx.delayTimeDesc')}
+						reset={300}
+						onChange={(v) => setDelayTime(v / 1000)}
+					/>
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="FDBK" value={Math.round($delayFeedback * 100)} min={0} max={85} step={5} unit="%" color="#e06c75" size={40} reset={0} onChange={(v) => setDelayFeedback(v / 100)} />
+					<RotaryKnob
+						label="FDBK"
+						value={Math.round($delayFeedback * 100)}
+						min={0}
+						max={85}
+						step={5}
+						unit="%"
+						color="#e06c75"
+						size={40}
+						reset={0}
+						onChange={(v) => setDelayFeedback(v / 100)}
+					/>
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="D-MIX" value={Math.round($delayMix * 100)} min={0} max={100} step={5} unit="%" color="#e06c75" size={40} reset={0} onChange={(v) => setDelayMix(v / 100)} />
+					<RotaryKnob
+						label="D-MIX"
+						value={Math.round($delayMix * 100)}
+						min={0}
+						max={100}
+						step={5}
+						unit="%"
+						color="#e06c75"
+						size={40}
+						reset={0}
+						onChange={(v) => setDelayMix(v / 100)}
+					/>
 				</div>
 			</div>
 
 			<div class="grid grid-cols-6 gap-0.5 items-center">
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="R-MIX" value={Math.round($reverbMix * 100)} min={0} max={100} step={5} unit="%" color="#c678dd" size={40} reset={0} onChange={(v) => setReverbMix(v / 100)} />
+					<RotaryKnob
+						label="R-MIX"
+						value={Math.round($reverbMix * 100)}
+						min={0}
+						max={100}
+						step={5}
+						unit="%"
+						color="#c678dd"
+						size={40}
+						reset={0}
+						onChange={(v) => setReverbMix(v / 100)}
+					/>
 				</div>
 				<div class="col-span-2 flex justify-center">
-					<RotaryKnob label="DRIVE" value={Math.round($drive * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={40} reset={0} onChange={(v) => setDrive(v / 100)} />
+					<RotaryKnob
+						label="DRIVE"
+						value={Math.round($drive * 100)}
+						min={0}
+						max={100}
+						step={5}
+						unit="%"
+						color="#e5c07b"
+						size={40}
+						reset={0}
+						onChange={(v) => setDrive(v / 100)}
+					/>
 				</div>
 				<div class="col-span-2 flex justify-center">
 					<RotaryKnob
@@ -164,9 +247,22 @@
 			<!-- Two steppers, OCT-style, then the envelope of the dip -->
 			<div class="flex items-center gap-1 px-0.5 shrink-0" title={$t('synthPanels.fx.srcHint')}>
 				<span class="text-white/50 text-[10px] font-bold w-7 shrink-0">SRC</span>
-				<button onclick={() => stepSource(-1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title={$t('synthPanels.fx.prevSourceHint')}>◄</button>
-				<span class="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-center truncate leading-none {duckSource < 0 ? 'text-white/40' : 'text-[#e5c07b]'}">{sourceLabel}</span>
-				<button onclick={() => stepSource(1)} class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors" title={$t('synthPanels.fx.nextSourceHint')}>►</button>
+				<button
+					onclick={() => stepSource(-1)}
+					class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors"
+					title={$t('synthPanels.fx.prevSourceHint')}>◄</button
+				>
+				<span
+					class="flex-1 min-w-0 px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/10 rounded-xs text-center truncate leading-none {duckSource <
+					0
+						? 'text-white/40'
+						: 'text-[#e5c07b]'}">{sourceLabel}</span
+				>
+				<button
+					onclick={() => stepSource(1)}
+					class="press px-1.5 py-0.5 border border-white/20 rounded-xs font-bold hover:border-white/50 cursor-pointer text-[10px] leading-none transition-colors"
+					title={$t('synthPanels.fx.nextSourceHint')}>►</button
+				>
 			</div>
 			{#if sourceIsPerc}
 				<div class="flex items-start gap-1 px-0.5 shrink-0" title={$t('synthPanels.fx.keyRowHint')}>
@@ -186,7 +282,9 @@
 							{@const on = duckKeys.includes(n)}
 							<button
 								onclick={() => toggleKey(n)}
-								title={on ? $t('synthPanels.fx.dropKeyHint', { note: noteNameOf(n) }) : $t('synthPanels.fx.addKeyHint', { note: noteNameOf(n) })}
+								title={on
+									? $t('synthPanels.fx.dropKeyHint', { note: noteNameOf(n) })
+									: $t('synthPanels.fx.addKeyHint', { note: noteNameOf(n) })}
 								class="press shrink-0 px-1 py-0.5 text-[9px] font-mono font-bold rounded-xs border leading-none cursor-pointer transition-colors {on
 									? 'border-[#e5c07b] bg-[#e5c07b] text-black'
 									: 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'}"
@@ -195,30 +293,81 @@
 							</button>
 						{/each}
 						{#if !kitKeys.length}
-							<span class="text-[9px] text-white/30 font-mono pt-0.5">{$t('synthPanels.fx.noKitKeys')}</span>
+							<span class="text-[9px] text-white/30 font-mono pt-0.5"
+								>{$t('synthPanels.fx.noKitKeys')}</span
+							>
 						{/if}
 					</div>
 				</div>
 			{/if}
 			<div class="grid grid-cols-4 gap-0.5 items-center flex-1 min-h-0">
 				<div class="flex justify-center">
-					<RotaryKnob label="DEPTH" value={Math.round((activeTrack?.duckDepth ?? 0) * 100)} min={0} max={100} step={5} unit="%" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckDepthDesc')} reset={0} onChange={(v) => updateActiveTrack({ duckDepth: v / 100 })} />
+					<RotaryKnob
+						label="DEPTH"
+						value={Math.round((activeTrack?.duckDepth ?? 0) * 100)}
+						min={0}
+						max={100}
+						step={5}
+						unit="%"
+						color="#e5c07b"
+						size={32}
+						description={$t('synthPanels.fx.duckDepthDesc')}
+						reset={0}
+						onChange={(v) => updateActiveTrack({ duckDepth: v / 100 })}
+					/>
 				</div>
 				<div class="flex justify-center">
-					<RotaryKnob label="DIP" value={activeTrack?.duckDip ?? 5} min={1} max={50} step={1} unit="ms" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckDipDesc')} reset={5} onChange={(v) => updateActiveTrack({ duckDip: v })} />
+					<RotaryKnob
+						label="DIP"
+						value={activeTrack?.duckDip ?? 5}
+						min={1}
+						max={50}
+						step={1}
+						unit="ms"
+						color="#e5c07b"
+						size={32}
+						description={$t('synthPanels.fx.duckDipDesc')}
+						reset={5}
+						onChange={(v) => updateActiveTrack({ duckDip: v })}
+					/>
 				</div>
 				<div class="flex justify-center">
-					<RotaryKnob label="HOLD" value={activeTrack?.duckHold ?? 40} min={0} max={300} step={10} unit="ms" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckHoldDesc')} reset={40} onChange={(v) => updateActiveTrack({ duckHold: v })} />
+					<RotaryKnob
+						label="HOLD"
+						value={activeTrack?.duckHold ?? 40}
+						min={0}
+						max={300}
+						step={10}
+						unit="ms"
+						color="#e5c07b"
+						size={32}
+						description={$t('synthPanels.fx.duckHoldDesc')}
+						reset={40}
+						onChange={(v) => updateActiveTrack({ duckHold: v })}
+					/>
 				</div>
 				<div class="flex justify-center">
-					<RotaryKnob label="REL" value={activeTrack?.duckRelease ?? 150} min={20} max={800} step={10} unit="ms" color="#e5c07b" size={32} description={$t('synthPanels.fx.duckReleaseDesc')} reset={150} onChange={(v) => updateActiveTrack({ duckRelease: v })} />
+					<RotaryKnob
+						label="REL"
+						value={activeTrack?.duckRelease ?? 150}
+						min={20}
+						max={800}
+						step={10}
+						unit="ms"
+						color="#e5c07b"
+						size={32}
+						description={$t('synthPanels.fx.duckReleaseDesc')}
+						reset={150}
+						onChange={(v) => updateActiveTrack({ duckRelease: v })}
+					/>
 				</div>
 			</div>
 		</div>
 	{:else}
 		<div class="flex-1 min-h-0 flex flex-col justify-between py-0.5">
 			<div class="flex items-center justify-between px-1 pb-0.5 border-b border-white/10 shrink-0">
-				<span class="text-[10px] font-bold text-white/50">TRK {$activeTrackId + 1} · 6-BAND EQ</span>
+				<span class="text-[10px] font-bold text-white/50">TRK {$activeTrackId + 1} · 6-BAND EQ</span
+				>
 				<button
 					onclick={() => {
 						updateActiveTrack({ eqOn: !trackEqOn });

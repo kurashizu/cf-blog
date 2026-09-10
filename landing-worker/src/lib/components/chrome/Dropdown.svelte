@@ -68,8 +68,13 @@
 			: 'hover:bg-white/5'}"
 		style="border-color: {open ? color : `${color}66`}; color: {color}; width: {width}"
 	>
-		<span class="truncate">{selected?.label ?? placeholder ?? $t('chrome.dropdown.placeholder')}</span>
-		<span class="text-[9px] leading-none opacity-70 inline-block transition-transform duration-150" style={open ? 'transform: rotate(180deg)' : undefined}>▼</span>
+		<span class="truncate"
+			>{selected?.label ?? placeholder ?? $t('chrome.dropdown.placeholder')}</span
+		>
+		<span
+			class="text-[9px] leading-none opacity-70 inline-block transition-transform duration-150"
+			style={open ? 'transform: rotate(180deg)' : undefined}>▼</span
+		>
 	</button>
 
 	{#if open && !disabled}
@@ -94,7 +99,10 @@
 						: 'text-white/80 hover:bg-white/10'}"
 				>
 					<span class="flex items-center gap-2 min-w-0">
-						<span class="shrink-0" style="color: {option.value === value ? color : 'rgba(255,255,255,0.2)'}">
+						<span
+							class="shrink-0"
+							style="color: {option.value === value ? color : 'rgba(255,255,255,0.2)'}"
+						>
 							{option.value === value ? '●' : '○'}
 						</span>
 						<span class="truncate">{option.label}</span>

@@ -185,8 +185,14 @@
 	});
 </script>
 
-<div class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2.5 text-xs sm:text-sm min-w-0">
-	<BoxHeader title={$t('community.footprints.title')} short={$t('community.footprints.titleShort')} class="text-xs font-black text-[#61afef] border-b border-white/10 pb-1.5 shrink-0">
+<div
+	class="border border-white/10 bg-black/30 rounded-xs p-3 flex flex-col gap-2.5 text-xs sm:text-sm min-w-0"
+>
+	<BoxHeader
+		title={$t('community.footprints.title')}
+		short={$t('community.footprints.titleShort')}
+		class="text-xs font-black text-[#61afef] border-b border-white/10 pb-1.5 shrink-0"
+	>
 		<button
 			onclick={() => {
 				load();
@@ -209,22 +215,38 @@
 			{:else if summary.total === 1}
 				{$t('community.footprints.summaryOne')}
 			{:else}
-				{$t('community.footprints.summary', { total: summary.total, countries: summary.countries.length })}
+				{$t('community.footprints.summary', {
+					total: summary.total,
+					countries: summary.countries.length
+				})}
 			{/if}
 		</div>
 
 		{#if topCountries.length > 0}
 			<div class="space-y-1 min-w-0">
-				<div class="text-[10px] font-bold text-white/40 tracking-wide">{$t('community.footprints.countriesHeading')}</div>
+				<div class="text-[10px] font-bold text-white/40 tracking-wide">
+					{$t('community.footprints.countriesHeading')}
+				</div>
 				{#each topCountries as c (c.code)}
 					{@const pct = Math.max(4, Math.round((c.count / maxCount) * 100))}
 					<div class="flex items-center gap-1.5 min-w-0">
-						<span class="w-6 shrink-0 text-[10px] font-mono font-bold" style="color: {colorFor(c.code)}">{c.code}</span>
+						<span
+							class="w-6 shrink-0 text-[10px] font-mono font-bold"
+							style="color: {colorFor(c.code)}">{c.code}</span
+						>
 						<span class="flex-1 min-w-0 h-3 bg-white/5 rounded-xs overflow-hidden">
-							<span class="block h-full rounded-xs" style="width: {pct}%; background-color: {colorFor(c.code)};"></span>
+							<span
+								class="block h-full rounded-xs"
+								style="width: {pct}%; background-color: {colorFor(c.code)};"
+							></span>
 						</span>
-						<span class="w-5 shrink-0 text-right text-[10px] font-mono text-white/50">{c.count}</span>
-						<span class="hidden sm:inline w-24 shrink-0 truncate text-[10px] text-white/40" title={countryName(c.code)}>{countryName(c.code)}</span>
+						<span class="w-5 shrink-0 text-right text-[10px] font-mono text-white/50"
+							>{c.count}</span
+						>
+						<span
+							class="hidden sm:inline w-24 shrink-0 truncate text-[10px] text-white/40"
+							title={countryName(c.code)}>{countryName(c.code)}</span
+						>
 					</div>
 				{/each}
 			</div>
@@ -232,7 +254,9 @@
 
 		<div class="min-w-0">
 			<div class="flex flex-wrap items-baseline justify-between gap-x-3 mb-1">
-				<div class="text-[10px] font-bold text-white/40 tracking-wide">{$t('community.footprints.recentHeading')}</div>
+				<div class="text-[10px] font-bold text-white/40 tracking-wide">
+					{$t('community.footprints.recentHeading')}
+				</div>
 				<div class="text-[9px] text-white/30 min-w-0">{$t('community.footprints.blogNote')}</div>
 			</div>
 			{#if summary.recent.length === 0}
@@ -246,21 +270,41 @@
 							style="border-color: {mine ? colorFor(fp.country) : 'rgba(255,255,255,0.08)'};"
 							in:fade={{ duration: 160 }}
 						>
-							<span class="shrink-0 text-[9px] font-mono font-bold px-1 rounded-xs" style="color: {colorFor(fp.country)}; border: 1px solid {colorFor(fp.country)}66;">{fp.country}</span>
-							<span class="flex-1 min-w-0 truncate text-[10px] text-white/70">{countryName(fp.country)}</span>
+							<span
+								class="shrink-0 text-[9px] font-mono font-bold px-1 rounded-xs"
+								style="color: {colorFor(fp.country)}; border: 1px solid {colorFor(fp.country)}66;"
+								>{fp.country}</span
+							>
+							<span class="flex-1 min-w-0 truncate text-[10px] text-white/70"
+								>{countryName(fp.country)}</span
+							>
 							{#if fp.timezone}
-								<span class="hidden sm:inline shrink-0 truncate max-w-[80px] text-[9px] text-white/35">{tzCity(fp.timezone)}</span>
+								<span
+									class="hidden sm:inline shrink-0 truncate max-w-[80px] text-[9px] text-white/35"
+									>{tzCity(fp.timezone)}</span
+								>
 							{/if}
-							<span class="hidden md:inline shrink-0 truncate max-w-[100px] text-[9px] text-white/35">
-								{fp.browser || $t('community.footprints.unknownBrowser')} / {fp.os || $t('community.footprints.unknownOs')}
+							<span
+								class="hidden md:inline shrink-0 truncate max-w-[100px] text-[9px] text-white/35"
+							>
+								{fp.browser || $t('community.footprints.unknownBrowser')} / {fp.os ||
+									$t('community.footprints.unknownOs')}
 							</span>
 							{#if fp.source === 'blog'}
-								<span class="shrink-0 text-[8px] font-mono px-1 rounded-xs border border-white/15 text-white/35" title={$t('community.footprints.sourceBlogTitle')}>{$t('community.footprints.sourceBlog')}</span>
+								<span
+									class="shrink-0 text-[8px] font-mono px-1 rounded-xs border border-white/15 text-white/35"
+									title={$t('community.footprints.sourceBlogTitle')}
+									>{$t('community.footprints.sourceBlog')}</span
+								>
 							{/if}
 							{#if mine}
-								<span class="shrink-0 text-[9px] font-black text-[#98c379]">{$t('community.footprints.you')}</span>
+								<span class="shrink-0 text-[9px] font-black text-[#98c379]"
+									>{$t('community.footprints.you')}</span
+								>
 							{/if}
-							<span class="shrink-0 text-[9px] font-mono text-white/30">{relativeTime(fp.at, clock)}</span>
+							<span class="shrink-0 text-[9px] font-mono text-white/30"
+								>{relativeTime(fp.at, clock)}</span
+							>
 						</div>
 					{/each}
 				</div>
@@ -269,15 +313,25 @@
 
 		<div class="pt-1 border-t border-white/10 space-y-1.5">
 			{#if stampStatus === 'already' || (stampedToday && stampStatus === 'idle')}
-				<div class="text-[10px] sm:text-xs font-bold text-white/40">{$t('community.footprints.alreadyStamped')}</div>
+				<div class="text-[10px] sm:text-xs font-bold text-white/40">
+					{$t('community.footprints.alreadyStamped')}
+				</div>
 			{:else if stampStatus === 'done'}
-				<div class="text-[10px] sm:text-xs font-bold text-[#98c379]">{$t('community.footprints.stamped')}</div>
+				<div class="text-[10px] sm:text-xs font-bold text-[#98c379]">
+					{$t('community.footprints.stamped')}
+				</div>
 			{:else if stampStatus === 'rate'}
-				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorRate')}</div>
+				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">
+					{$t('community.footprints.errorRate')}
+				</div>
 			{:else if stampStatus === 'no-edge'}
-				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorNoEdge')}</div>
+				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">
+					{$t('community.footprints.errorNoEdge')}
+				</div>
 			{:else if stampStatus === 'network'}
-				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">{$t('community.footprints.errorNetwork', { reason: 'fetch failed' })}</div>
+				<div class="text-[10px] sm:text-xs font-bold text-[#e06c75]">
+					{$t('community.footprints.errorNetwork', { reason: 'fetch failed' })}
+				</div>
 			{/if}
 			<div class="flex flex-wrap items-center gap-2">
 				<button
@@ -285,7 +339,9 @@
 					disabled={stampedToday || stampStatus === 'sending'}
 					class="press border border-[#61afef] px-3 py-1.5 rounded-xs text-[#61afef] font-bold text-xs hover:bg-[#61afef] hover:text-black cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#61afef]"
 				>
-					{stampStatus === 'sending' ? $t('community.footprints.stamping') : $t('community.footprints.stamp')}
+					{stampStatus === 'sending'
+						? $t('community.footprints.stamping')
+						: $t('community.footprints.stamp')}
 				</button>
 				<p class="flex-1 min-w-[140px] text-[10px] text-white/40 leading-relaxed">
 					{$t('community.footprints.disclaimer')}

@@ -2,7 +2,12 @@
 	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
 	import { setMuted } from '../../stores/sound';
-	import { MAX_GRID_STEPS, METER_SPECS, type TimeSignature, type NoteDurationDiv } from '../../synth';
+	import {
+		MAX_GRID_STEPS,
+		METER_SPECS,
+		type TimeSignature,
+		type NoteDurationDiv
+	} from '../../synth';
 	import { isSynthSettingsOpen } from '../../stores/synth-settings';
 	import {
 		bpm,
@@ -63,7 +68,10 @@
 
 	function cycleLen() {
 		const currentIdx = LEN_PAGE_PRESETS.indexOf(lenPages);
-		const next = currentIdx >= 0 && currentIdx < LEN_PAGE_PRESETS.length - 1 ? LEN_PAGE_PRESETS[currentIdx + 1] : LEN_PAGE_PRESETS[0];
+		const next =
+			currentIdx >= 0 && currentIdx < LEN_PAGE_PRESETS.length - 1
+				? LEN_PAGE_PRESETS[currentIdx + 1]
+				: LEN_PAGE_PRESETS[0];
 		setTotalPatternSteps(next * stepsPerBarNow);
 		playSound('click');
 	}
@@ -77,11 +85,10 @@
 	}
 
 	function onLenBlur(e: Event) {
-		if (!$totalPatternSteps || $totalPatternSteps < stepsPerBarNow) setTotalPatternSteps(stepsPerBarNow);
+		if (!$totalPatternSteps || $totalPatternSteps < stepsPerBarNow)
+			setTotalPatternSteps(stepsPerBarNow);
 		(e.target as HTMLInputElement).value = String(lenPages);
 	}
-
-
 
 	/*
 	 * Transport hotkeys. The piano roll's editor listens in the capture phase
@@ -117,28 +124,57 @@
 				if (qwerty) return;
 				togglePlayback();
 				break;
-			case 'Enter': togglePlayback(); break;
-			case 'Home': rewindToStart(); playSound('click'); break;
+			case 'Enter':
+				togglePlayback();
+				break;
+			case 'Home':
+				rewindToStart();
+				playSound('click');
+				break;
 			case 'Backspace':
 				if ($isSeqPlaying) toggle();
 				rewindToStart();
 				playSound('click');
 				break;
-			case 'ArrowLeft': prevPatternPage(); break;
-			case 'ArrowRight': nextPatternPage(); break;
-			case 'ArrowUp': stepPreset(1); break;
-			case 'ArrowDown': stepPreset(-1); break;
-			case '-': setBpm(Math.max(40, $bpm - 1)); break;
-			case '=': setBpm(Math.min(240, $bpm + 1)); break;
+			case 'ArrowLeft':
+				prevPatternPage();
+				break;
+			case 'ArrowRight':
+				nextPatternPage();
+				break;
+			case 'ArrowUp':
+				stepPreset(1);
+				break;
+			case 'ArrowDown':
+				stepPreset(-1);
+				break;
+			case '-':
+				setBpm(Math.max(40, $bpm - 1));
+				break;
+			case '=':
+				setBpm(Math.min(240, $bpm + 1));
+				break;
 			default: {
 				if (qwerty) return;
 				switch (e.key.toLowerCase()) {
-					case 'm': toggleTrackMute($activeTrackId); break;
-					case 's': toggleTrackSolo($activeTrackId); break;
-					case 'l': setLoopMode(!$loopMode); break;
-					case 'f': pageFollow.update((v) => !v); break;
-					case ',': stepBar(-1); break;
-					case '.': stepBar(1); break;
+					case 'm':
+						toggleTrackMute($activeTrackId);
+						break;
+					case 's':
+						toggleTrackSolo($activeTrackId);
+						break;
+					case 'l':
+						setLoopMode(!$loopMode);
+						break;
+					case 'f':
+						pageFollow.update((v) => !v);
+						break;
+					case ',':
+						stepBar(-1);
+						break;
+					case '.':
+						stepBar(1);
+						break;
 					default: {
 						const n = Number(e.key);
 						if (!(n >= 1 && n <= 8) || !$tracksState[n - 1]) return;
@@ -170,23 +206,42 @@
 <svelte:window onkeydown={onTransportHotkey} />
 
 <!-- Row 1: logo/project management + BPM/LEN/METER -->
-<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0">
+<div
+	class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/40 px-2 py-1.5 rounded-xs shrink-0"
+>
 	<PatchManager />
 
 	<div class="flex flex-wrap items-center gap-1.5 text-xs ml-auto">
 		<div class="flex items-center gap-1">
-			<HorizontalHardwareFader label="BPM:" value={$bpm} min={40} max={240} step={1} width={74} showValue color="#98c379" reset={120} onChange={setBpm} />
+			<HorizontalHardwareFader
+				label="BPM:"
+				value={$bpm}
+				min={40}
+				max={240}
+				step={1}
+				width={74}
+				showValue
+				color="#98c379"
+				reset={120}
+				onChange={setBpm}
+			/>
 		</div>
 
 		<div class="w-px h-4 bg-white/15 mx-1"></div>
 
 		<div class="flex items-center gap-1">
 			<span class="opacity-60 font-bold" title={$t('synth.transport.lenHint')}>LEN:</span>
-			<button onclick={cycleLen} class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1" title={$t('synth.transport.lenCycleHint')}>
+			<button
+				onclick={cycleLen}
+				class="px-2 py-0.5 border border-[#98c379]/50 text-[#98c379] hover:bg-[#98c379]/20 rounded-xs font-bold font-mono cursor-pointer transition-colors flex items-center gap-1"
+				title={$t('synth.transport.lenCycleHint')}
+			>
 				<span>{LEN_PAGE_PRESETS.includes(lenPages) ? lenPages : LEN_PAGE_PRESETS[0]}</span>
 				<span class="text-[10px] opacity-70">⟳</span>
 			</button>
-			<span class="text-white/40 text-[10px] font-bold px-0.5 select-none">{$t('synth.transport.or')}</span>
+			<span class="text-white/40 text-[10px] font-bold px-0.5 select-none"
+				>{$t('synth.transport.or')}</span
+			>
 			<input
 				type="text"
 				inputmode="numeric"
@@ -196,16 +251,33 @@
 				class="w-10 px-1 py-0.5 text-center text-xs font-mono font-bold bg-black/60 border rounded-xs outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none {lenIsCustom
 					? 'border-[#98c379] text-[#98c379]'
 					: 'border-white/20 text-white/70 focus:border-white/60'}"
-				title={$t('synth.transport.lenInputHint', { pages: lenPages, steps: stepsPerBarNow, meter: $timeMeter, total: $totalPatternSteps })}
+				title={$t('synth.transport.lenInputHint', {
+					pages: lenPages,
+					steps: stepsPerBarNow,
+					meter: $timeMeter,
+					total: $totalPatternSteps
+				})}
 			/>
-			<span class="text-white/40 text-[10px] font-bold select-none" title={$t('synth.transport.lenPagesHint', { pages: lenPages, steps: stepsPerBarNow, meter: $timeMeter, total: $totalPatternSteps })}>PGS</span>
+			<span
+				class="text-white/40 text-[10px] font-bold select-none"
+				title={$t('synth.transport.lenPagesHint', {
+					pages: lenPages,
+					steps: stepsPerBarNow,
+					meter: $timeMeter,
+					total: $totalPatternSteps
+				})}>PGS</span
+			>
 		</div>
 
 		<div class="w-px h-4 bg-white/15 mx-1"></div>
 
 		<div class="flex items-center gap-1">
 			<span class="opacity-70 font-bold" title={$t('synth.transport.meterHint')}>METER:</span>
-			<button onclick={() => stepMeter(-1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title={$t('synth.transport.meterPrevHint')}>◄</button>
+			<button
+				onclick={() => stepMeter(-1)}
+				class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none"
+				title={$t('synth.transport.meterPrevHint')}>◄</button
+			>
 			<button
 				onclick={() => stepMeter(1)}
 				class="px-1.5 py-0.5 border border-[#c678dd]/50 hover:border-[#c678dd] bg-[#c678dd]/10 hover:bg-[#c678dd]/20 rounded-xs font-black text-[#c678dd] hover:text-white cursor-pointer transition-colors min-w-[3.2rem] text-center"
@@ -213,7 +285,11 @@
 			>
 				{$timeMeter}
 			</button>
-			<button onclick={() => stepMeter(1)} class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none" title={$t('synth.transport.meterNextHint')}>►</button>
+			<button
+				onclick={() => stepMeter(1)}
+				class="px-1 text-[#c678dd] hover:text-white cursor-pointer font-bold select-none"
+				title={$t('synth.transport.meterNextHint')}>►</button
+			>
 		</div>
 		<div class="w-px h-3.5 bg-white/15 mx-0.5 shrink-0"></div>
 		<button
@@ -231,7 +307,9 @@
 </div>
 
 <!-- Row 2: transport playback + track chips -->
-<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/30 px-2 py-1 rounded-xs text-xs shrink-0">
+<div
+	class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1 bg-black/30 px-2 py-1 rounded-xs text-xs shrink-0"
+>
 	<div class="flex items-center gap-1">
 		<button
 			onclick={() => {
@@ -310,8 +388,18 @@
 				playSound('click');
 			}}
 			class="h-6 px-2 border border-[#56b6c2]/40 hover:border-[#56b6c2] text-[#56b6c2] hover:bg-[#56b6c2]/10 rounded-xs font-bold transition-colors cursor-pointer text-xs flex items-center gap-1 shrink-0"
-			title={$t('synth.transport.jumpToCursorHint', { bar: cursorPosition.bar, beat: cursorPosition.beat, step: $cursorStep + 1, total: $totalPatternSteps })}
-			aria-label={$t('synth.transport.jumpToCursorHint', { bar: cursorPosition.bar, beat: cursorPosition.beat, step: $cursorStep + 1, total: $totalPatternSteps })}
+			title={$t('synth.transport.jumpToCursorHint', {
+				bar: cursorPosition.bar,
+				beat: cursorPosition.beat,
+				step: $cursorStep + 1,
+				total: $totalPatternSteps
+			})}
+			aria-label={$t('synth.transport.jumpToCursorHint', {
+				bar: cursorPosition.bar,
+				beat: cursorPosition.beat,
+				step: $cursorStep + 1,
+				total: $totalPatternSteps
+			})}
 		>
 			<!-- The glyph is the label. "CUR:" was 54px of a 128px button -- 42% of it
 			     spent on a word the arrow already says -- and the raw step number
@@ -326,7 +414,9 @@
 
 <!-- Row 3: sound presets, snap/dur, page nav — flex-wrap so the 9-division
      SNAP/DUR groups wrap instead of overlapping the page controls -->
-<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0">
+<div
+	class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-white/10 pb-1 bg-black/25 px-2 py-1 rounded-xs text-xs shrink-0"
+>
 	<PresetMenu />
 
 	<div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
@@ -338,7 +428,10 @@
 						setSnapDiv(d);
 						playSound('click');
 					}}
-					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {$snapDiv === d ? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black' : 'border-white/20 text-white/70 hover:border-white/50'}"
+					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {$snapDiv ===
+					d
+						? 'border-[#56b6c2] bg-[#56b6c2] text-black font-black'
+						: 'border-white/20 text-white/70 hover:border-white/50'}"
 				>
 					{d}
 				</button>
@@ -353,13 +446,14 @@
 						setNoteDur(d);
 						playSound('click');
 					}}
-					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {$noteDur === d ? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black' : 'border-white/20 text-white/70 hover:border-white/50'}"
+					class="px-1.5 py-0.5 border rounded-xs font-bold cursor-pointer transition-colors {$noteDur ===
+					d
+						? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
+						: 'border-white/20 text-white/70 hover:border-white/50'}"
 				>
 					{d}
 				</button>
 			{/each}
 		</div>
 	</div>
-
-
 </div>

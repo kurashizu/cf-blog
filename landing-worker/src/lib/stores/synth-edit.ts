@@ -59,8 +59,17 @@ export function allRuns(grid: number[][], total: number): NoteRun[] {
 }
 
 /** Runs that overlap the box: notes noteLo..noteHi inclusive, steps [stepLo, stepHi). */
-export function runsIn(grid: number[][], total: number, noteLo: number, noteHi: number, stepLo: number, stepHi: number): NoteRun[] {
-	return allRuns(grid, total).filter((r) => r.note >= noteLo && r.note <= noteHi && r.start < stepHi && r.start + r.len > stepLo);
+export function runsIn(
+	grid: number[][],
+	total: number,
+	noteLo: number,
+	noteHi: number,
+	stepLo: number,
+	stepHi: number
+): NoteRun[] {
+	return allRuns(grid, total).filter(
+		(r) => r.note >= noteLo && r.note <= noteHi && r.start < stepHi && r.start + r.len > stepLo
+	);
 }
 
 export function selectedRuns(grid: number[][], total: number, sel: Set<string>): NoteRun[] {
@@ -68,11 +77,21 @@ export function selectedRuns(grid: number[][], total: number, sel: Set<string>):
 	return allRuns(grid, total).filter((r) => sel.has(runKey(r.note, r.start)));
 }
 
-function activeGrid(): { trackId: number; grid: number[][]; accents: number[]; total: number } | null {
+function activeGrid(): {
+	trackId: number;
+	grid: number[][];
+	accents: number[];
+	total: number;
+} | null {
 	const trackId = get(activeTrackId);
 	const trk = modularSynth.getTrack(trackId);
 	if (!trk) return null;
-	return { trackId, grid: trk.grid, accents: trk.accents as number[], total: get(totalPatternSteps) };
+	return {
+		trackId,
+		grid: trk.grid,
+		accents: trk.accents as number[],
+		total: get(totalPatternSteps)
+	};
 }
 
 /* ---------------- undo ---------------- */
@@ -101,7 +120,8 @@ function diffRecord(trackId: number, grid0: number[][], acc0: number[]): EditRec
 	for (let s = 0; s < n; s++) {
 		const a = grid0[s] ?? [];
 		const b = trk.grid[s] ?? [];
-		if (a !== b && (a.length !== b.length || a.some((v, i) => v !== b[i]))) rec.steps.set(s, { before: a, after: b });
+		if (a !== b && (a.length !== b.length || a.some((v, i) => v !== b[i])))
+			rec.steps.set(s, { before: a, after: b });
 		const pa = Number(acc0[s] ?? 0);
 		const pb = Number(trk.accents[s] ?? 0);
 		if (pa !== pb) rec.accents.set(s, { before: pa, after: pb });
@@ -250,13 +270,19 @@ export function transformMove(
 	return { grid: g, accents: a, keys, dSteps, dNotes };
 }
 
-export function transformResize(grid: number[][], total: number, runs: NoteRun[], dLen: number): Transformed {
+export function transformResize(
+	grid: number[][],
+	total: number,
+	runs: NoteRun[],
+	dLen: number
+): Transformed {
 	const g = grid.slice();
 	const keys = new Set<string>();
 	for (const r of runs) {
 		const len = Math.max(1, Math.min(total - r.start, r.len + dLen));
 		if (len < r.len) {
-			for (let s = r.start + len; s < r.start + r.len; s++) g[s] = (g[s] ?? []).filter((n) => n !== r.note);
+			for (let s = r.start + len; s < r.start + r.len; s++)
+				g[s] = (g[s] ?? []).filter((n) => n !== r.note);
 		} else if (len > r.len) {
 			addRun(g, { note: r.note, start: r.start + r.len, len: len - r.len }, total);
 		}
@@ -266,11 +292,18 @@ export function transformResize(grid: number[][], total: number, runs: NoteRun[]
 }
 
 /** Write a transformed grid back through the engine, only where it differs. */
-function commitGrid(trackId: number, from: number[][], fromAcc: number[], to: number[][], toAcc: number[] | null) {
+function commitGrid(
+	trackId: number,
+	from: number[][],
+	fromAcc: number[],
+	to: number[][],
+	toAcc: number[] | null
+) {
 	const n = Math.max(from.length, to.length);
 	for (let s = 0; s < n; s++) {
 		if (from[s] !== to[s]) modularSynth.setTrackStepNotes(trackId, s, to[s] ?? []);
-		if (toAcc && Number(fromAcc[s] ?? 0) !== Number(toAcc[s] ?? 0)) modularSynth.setTrackAccent(trackId, s, toAcc[s] ?? 0);
+		if (toAcc && Number(fromAcc[s] ?? 0) !== Number(toAcc[s] ?? 0))
+			modularSynth.setTrackAccent(trackId, s, toAcc[s] ?? 0);
 	}
 }
 
@@ -338,7 +371,9 @@ export function moveSelection(dSteps: number, dNotes: number, copy = false): boo
 	if (!runs.length) return false;
 	const out = transformMove(t.grid, t.accents, t.total, runs, dSteps, dNotes, copy);
 	if (out.dSteps === 0 && out.dNotes === 0 && !copy) return false;
-	const done = withUndo(t.trackId, () => commitGrid(t.trackId, t.grid, t.accents, out.grid, out.accents));
+	const done = withUndo(t.trackId, () =>
+		commitGrid(t.trackId, t.grid, t.accents, out.grid, out.accents)
+	);
 	selection.set(out.keys);
 	refreshTracks();
 	return done;
@@ -391,7 +426,9 @@ function parseClip(text: string): Clip | null {
 		return {
 			format: CLIP_FORMAT,
 			v: 1,
-			notes: c.notes.filter((n: unknown) => Array.isArray(n) && n.length === 3).map((n: number[]) => [n[0] | 0, n[1] | 0, Math.max(1, n[2] | 0)]),
+			notes: c.notes
+				.filter((n: unknown) => Array.isArray(n) && n.length === 3)
+				.map((n: number[]) => [n[0] | 0, n[1] | 0, Math.max(1, n[2] | 0)]),
 			accents: Array.isArray(c.accents) ? c.accents.map((a: number[]) => [a[0] | 0, a[1] | 0]) : []
 		};
 	} catch {
@@ -409,7 +446,9 @@ export function copySelection(): number {
 		format: CLIP_FORMAT,
 		v: 1,
 		notes: runs.map((r) => [r.note, r.start - minStart, r.len]),
-		accents: runs.filter((r) => Number(t.accents[r.start] ?? 0) > 0).map((r) => [r.start - minStart, Number(t.accents[r.start])])
+		accents: runs
+			.filter((r) => Number(t.accents[r.start] ?? 0) > 0)
+			.map((r) => [r.start - minStart, Number(t.accents[r.start])])
 	};
 	clipSize.set(runs.length);
 	// The system clipboard too, so a phrase can cross tracks, patches and tabs.

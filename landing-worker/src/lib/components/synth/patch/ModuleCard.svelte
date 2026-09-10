@@ -87,10 +87,17 @@
 			const x = i / 40;
 			let y: number;
 			switch (shape) {
-				case 'sawtooth': y = 2 * x - 1; break;
-				case 'square': y = x < 0.5 ? 1 : -1; break;
-				case 'triangle': y = 1 - 4 * Math.abs(x - 0.5); break;
-				default: y = Math.sin(2 * Math.PI * x);
+				case 'sawtooth':
+					y = 2 * x - 1;
+					break;
+				case 'square':
+					y = x < 0.5 ? 1 : -1;
+					break;
+				case 'triangle':
+					y = 1 - 4 * Math.abs(x - 0.5);
+					break;
+				default:
+					y = Math.sin(2 * Math.PI * x);
 			}
 			pts.push(`${(x * 100).toFixed(1)},${(14 - y * 10).toFixed(1)}`);
 		}
@@ -104,9 +111,15 @@
      OSC's waveform row ran under its own FREQ label. The old note said they sat
      right against
      the knob names -- IN touching AMT, OUT touching BIAS. The gutter is theirs. -->
-<div class="flex flex-col gap-1 py-1" style="padding-left: {padLeft}px; padding-right: {padRight}px">
+<div
+	class="flex flex-col gap-1 py-1"
+	style="padding-left: {padLeft}px; padding-right: {padRight}px"
+>
 	{#each selectors as p (p.key)}
-		<div class="grid gap-0.5" style="grid-template-columns: repeat({p.choices?.length ?? 1}, minmax(0, 1fr))">
+		<div
+			class="grid gap-0.5"
+			style="grid-template-columns: repeat({p.choices?.length ?? 1}, minmax(0, 1fr))"
+		>
 			{#each p.choices ?? [] as choice, ci (choice)}
 				{@const stride = p.step && p.step > 1 ? p.step : 1}
 				{@const stored = ci * stride}
@@ -156,7 +169,13 @@
 	{:else if spec.viz === 'wave'}
 		<div class="bg-black/70 border border-white/15 rounded-xs">
 			<svg viewBox="0 0 100 28" class="w-full h-[24px]" preserveAspectRatio="none">
-				<path d={wavePath(Math.round(val('lfoWave', 0)))} fill="none" stroke={spec.color} stroke-width="1.5" vector-effect="non-scaling-stroke" />
+				<path
+					d={wavePath(Math.round(val('lfoWave', 0)))}
+					fill="none"
+					stroke={spec.color}
+					stroke-width="1.5"
+					vector-effect="non-scaling-stroke"
+				/>
 			</svg>
 		</div>
 	{/if}

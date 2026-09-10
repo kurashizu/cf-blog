@@ -78,7 +78,9 @@ export function parseIcmpTarget(payload: Uint8Array): string | null {
 	const colon = text.lastIndexOf(':');
 	if (colon <= 0) return null;
 	const host = text.slice(0, colon);
-	return /^[0-9a-zA-Z.:_-]+$/.test(host) && Number.isFinite(Number(text.slice(colon + 1))) ? host : null;
+	return /^[0-9a-zA-Z.:_-]+$/.test(host) && Number.isFinite(Number(text.slice(colon + 1)))
+		? host
+		: null;
 }
 
 /** Split a "host:port" target, tolerating bracketed IPv6. */

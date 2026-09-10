@@ -9,7 +9,9 @@ export type RenderPhase = 'idle' | 'rendering' | 'done' | 'error';
 
 export const renderPhase = writable<RenderPhase>('idle');
 /** 0..1 within the current stage; null when idle. */
-export const renderProgress = writable<{ stage: 'schedule' | 'render'; fraction: number } | null>(null);
+export const renderProgress = writable<{ stage: 'schedule' | 'render'; fraction: number } | null>(
+	null
+);
 /** Human-readable outcome of the last render — real measured values only. */
 export const renderReport = writable<string[] | null>(null);
 
@@ -65,16 +67,26 @@ export async function handleRenderWav(): Promise<void> {
 		renderProgress.set(null);
 		renderReport.set([
 			tr('synth.render.done', { filename: a.download }),
-			tr('synth.render.summary', { duration: formatDuration(buffer.duration), rate: buffer.sampleRate / 1000, size: (blob.size / 1024 / 1024).toFixed(1) }),
+			tr('synth.render.summary', {
+				duration: formatDuration(buffer.duration),
+				rate: buffer.sampleRate / 1000,
+				size: (blob.size / 1024 / 1024).toFixed(1)
+			}),
 			tr('synth.render.levels', { peak: peakDb.toFixed(1), rms: rmsDb.toFixed(1) }),
-			tr('synth.render.speed', { elapsed: elapsed.toFixed(1), multiple: (buffer.duration / elapsed).toFixed(1) }),
+			tr('synth.render.speed', {
+				elapsed: elapsed.toFixed(1),
+				multiple: (buffer.duration / elapsed).toFixed(1)
+			}),
 			...(peakDb > -0.1 ? [tr('synth.render.clippingWarning')] : [])
 		]);
 		playSound('ping', true);
 	} catch (e) {
 		renderPhase.set('error');
 		renderProgress.set(null);
-		renderReport.set([`✕ ${tr('synth.render.failed')}`, e instanceof Error ? e.message : String(e)]);
+		renderReport.set([
+			`✕ ${tr('synth.render.failed')}`,
+			e instanceof Error ? e.message : String(e)
+		]);
 		playSound('ping', false);
 	}
 }

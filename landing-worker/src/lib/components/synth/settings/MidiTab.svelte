@@ -13,7 +13,8 @@
 
 	/* An input with no entry follows the active track; one with an empty list is
 	   off. Both read as "not this track" for a numbered button. */
-	const plays = (bound: Record<string, number[]>, id: string, trk: number) => !!bound[id]?.includes(trk);
+	const plays = (bound: Record<string, number[]>, id: string, trk: number) =>
+		!!bound[id]?.includes(trk);
 	const isOff = (bound: Record<string, number[]>, id: string) => bound[id]?.length === 0;
 	const isAuto = (bound: Record<string, number[]>, id: string) => bound[id] === undefined;
 </script>
@@ -44,7 +45,9 @@
 						{@const off = isOff($midiDeviceTracks, dev.id)}
 						<div class="p-2 border border-white/10 bg-white/5 rounded-xs space-y-1.5">
 							<div class="flex items-center gap-2">
-								<div class="font-bold truncate text-white/80 {off ? 'opacity-40' : ''}">{dev.name}</div>
+								<div class="font-bold truncate text-white/80 {off ? 'opacity-40' : ''}">
+									{dev.name}
+								</div>
 								<button
 									onclick={() => {
 										setMidiDeviceTracks(dev.id, off ? null : []);
@@ -53,29 +56,40 @@
 									class="press ml-auto shrink-0 px-1.5 py-0.5 border rounded-xs text-[9px] cursor-pointer {off
 										? 'border-[#e06c75] bg-[#e06c75] text-black font-black'
 										: 'border-white/10 text-white/50 hover:text-white'}"
-								>{$t('synthPanels.midi.deviceOff')}</button>
+									>{$t('synthPanels.midi.deviceOff')}</button
+								>
 							</div>
 							<div class="flex items-center justify-end gap-1 {off ? 'opacity-40' : ''}">
-								<span class="text-[9px] text-white/40 mr-auto">{$t('synthPanels.midi.playsTrack')}</span>
+								<span class="text-[9px] text-white/40 mr-auto"
+									>{$t('synthPanels.midi.playsTrack')}</span
+								>
 								<button
 									onclick={() => {
 										setMidiDeviceTracks(dev.id, null);
 										playSound('click');
 									}}
-									class="press px-1.5 py-0.5 border rounded-xs text-[9px] cursor-pointer mr-2 {isAuto($midiDeviceTracks, dev.id)
+									class="press px-1.5 py-0.5 border rounded-xs text-[9px] cursor-pointer mr-2 {isAuto(
+										$midiDeviceTracks,
+										dev.id
+									)
 										? 'border-[#61afef] bg-[#61afef] text-black font-black'
 										: 'border-white/10 text-white/50 hover:text-white'}"
-								>{$t('synthPanels.midi.followsActive')}</button>
+									>{$t('synthPanels.midi.followsActive')}</button
+								>
 								{#each TRACKS as trk (trk)}
 									<button
 										onclick={() => {
 											toggleMidiDeviceTrack(dev.id, trk);
 											playSound('click');
 										}}
-										class="press w-5 py-0.5 border rounded-xs text-[9px] text-center cursor-pointer {plays($midiDeviceTracks, dev.id, trk)
+										class="press w-5 py-0.5 border rounded-xs text-[9px] text-center cursor-pointer {plays(
+											$midiDeviceTracks,
+											dev.id,
+											trk
+										)
 											? 'border-[#e5c07b] bg-[#e5c07b] text-black font-black'
-											: 'border-white/10 text-white/50 hover:text-white'}"
-									>{trk + 1}</button>
+											: 'border-white/10 text-white/50 hover:text-white'}">{trk + 1}</button
+									>
 								{/each}
 							</div>
 						</div>

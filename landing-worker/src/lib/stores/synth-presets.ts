@@ -4,7 +4,15 @@ import { playSound } from '../sound';
 import { tr } from '../i18n';
 import { KEY_TIMBRE_KEYS, BLANK_TRACK_TIMBRE, type TrackData } from '../synth';
 import { SMB1_NOISE_KEYS } from '../songs/mario1';
-import { activeKey, activeTrackRow, currentTrack, noteNameOf, updateActiveTrack, applyKitToActiveTrack, setTrackEditedHook } from './synth-tracks';
+import {
+	activeKey,
+	activeTrackRow,
+	currentTrack,
+	noteNameOf,
+	updateActiveTrack,
+	applyKitToActiveTrack,
+	setTrackEditedHook
+} from './synth-tracks';
 import { showSaveStatus, askConfirm } from './synth-confirm';
 import { ENTRY_ID, OUTPUT_ID, startingGraph, type GraphNode, type GraphCable } from './graph-model';
 
@@ -19,16 +27,7 @@ const KIT_FILE_FORMAT = 'krsz-synth-kit';
    saw through a filter or a bowed string -- so they share a heading and `kind`
    separates them within it. */
 export type PresetCategory =
-	| 'LEAD'
-	| 'PAD'
-	| 'BASS'
-	| 'PLUCK'
-	| 'KEYBOARD'
-	| 'ORGAN'
-	| 'STRING'
-	| 'MALLET'
-	| 'FX'
-	| 'DRUM';
+	'LEAD' | 'PAD' | 'BASS' | 'PLUCK' | 'KEYBOARD' | 'ORGAN' | 'STRING' | 'MALLET' | 'FX' | 'DRUM';
 
 /** E = electric, built by subtraction. AC = acoustic, built as a signal path. */
 export type PresetKind = 'E' | 'AC';
@@ -680,11 +679,26 @@ export const SOUND_PRESETS: SoundPreset[] = [
 				],
 				[
 					'entry.pitch>pf:a',
-					'pf>d16:pitch', 'pf>x2:a', 'pf>x3:a', 'pf>x4:a',
-					'x2>d8:pitch', 'x3>d5:pitch', 'x4>d4:pitch',
-					'd16>g16', 'd8>g8', 'd5>g5', 'd4>g4',
-					'g16>lo', 'g8>lo:b', 'g5>hi', 'g4>hi:b',
-					'lo>all', 'hi>all:b', 'all>lvl', 'lvl>cab', 'cab>output'
+					'pf>d16:pitch',
+					'pf>x2:a',
+					'pf>x3:a',
+					'pf>x4:a',
+					'x2>d8:pitch',
+					'x3>d5:pitch',
+					'x4>d4:pitch',
+					'd16>g16',
+					'd8>g8',
+					'd5>g5',
+					'd4>g4',
+					'g16>lo',
+					'g8>lo:b',
+					'g5>hi',
+					'g4>hi:b',
+					'lo>all',
+					'hi>all:b',
+					'all>lvl',
+					'lvl>cab',
+					'cab>output'
 				],
 				68
 			)
@@ -721,7 +735,16 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['res', 'tube', { tubeDecay: 1.6, tubeDamp: 30, tubeOdd: 1 }],
 					['mx', 'mix', { mixA: 100, mixB: 44 }]
 				],
-				['mal>ex', 'ex>bar', 'bar>trm', 'fan.cv>trm:cv', 'trm>mx', 'ex>res', 'res>mx:b', 'mx>output'],
+				[
+					'mal>ex',
+					'ex>bar',
+					'bar>trm',
+					'fan.cv>trm:cv',
+					'trm>mx',
+					'ex>res',
+					'res>mx:b',
+					'mx>output'
+				],
 				42
 			)
 		})
@@ -756,7 +779,17 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['mg', 'merge', {}],
 					['rm', 'space', { spaceSize: 44, spaceDecay: 50, spaceMix: 24 }]
 				],
-				['air>ex', 'ex>edge', 'edge>pipe', 'pipe>sp', 'sp>mg', 'sp.r>wid', 'wid>mg:r', 'mg>rm', 'rm>output'],
+				[
+					'air>ex',
+					'ex>edge',
+					'edge>pipe',
+					'pipe>sp',
+					'sp>mg',
+					'sp.r>wid',
+					'wid>mg:r',
+					'mg>rm',
+					'rm>output'
+				],
 				124
 			)
 		})
@@ -791,7 +824,18 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['smg', 'vca', { gain: 130 }],
 					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
 				],
-				['ham>ex', 'ex>c1', 'ex>c2', 'c1>rg', 'c2>rg:b', 'c1>sm', 'rg>sm:b', 'sm>smg', 'smg>bod', 'bod>output'],
+				[
+					'ham>ex',
+					'ex>c1',
+					'ex>c2',
+					'c1>rg',
+					'c2>rg:b',
+					'c1>sm',
+					'rg>sm:b',
+					'sm>smg',
+					'smg>bod',
+					'bod>output'
+				],
 				14
 			)
 		})
@@ -1391,15 +1435,23 @@ const CATEGORY_HINT_KEYS: Record<PresetCategory, string> = {
    Record; the Proxy resolves each hint through `tr()` at access time (never
    at import time), so it always reads in the current locale without either
    side needing to change shape. */
-export const CATEGORY_HINTS: Record<PresetCategory, string> = new Proxy({} as Record<PresetCategory, string>, {
-	get: (_target, prop: string) => tr(CATEGORY_HINT_KEYS[prop as PresetCategory])
-});
+export const CATEGORY_HINTS: Record<PresetCategory, string> = new Proxy(
+	{} as Record<PresetCategory, string>,
+	{
+		get: (_target, prop: string) => tr(CATEGORY_HINT_KEYS[prop as PresetCategory])
+	}
+);
 
 /* What a preset is: the sound of a track, and nothing about where it sits in
    the mix or what it plays -- the engine's KEY_TIMBRE_KEYS, plus the per-track
    EQ, which a preset carries but a percussion key cannot. An allow-list rather
    than a deny-list so an imported file can only ever set fields the synth has. */
-const TIMBRE_KEYS = [...KEY_TIMBRE_KEYS, 'eqOn', 'eqGains', 'modRoutes'] as const satisfies readonly (keyof TrackData)[];
+const TIMBRE_KEYS = [
+	...KEY_TIMBRE_KEYS,
+	'eqOn',
+	'eqGains',
+	'modRoutes'
+] as const satisfies readonly (keyof TrackData)[];
 
 interface PresetFile {
 	format: typeof FILE_FORMAT;
@@ -1411,7 +1463,13 @@ interface PresetFile {
 /* The keys whose value is a plain object rather than a scalar or an array.
    Everything else is copied by value; these are cloned, so a saved preset does
    not share a graph with the track it was saved from. */
-const OBJECT_TIMBRE_KEYS = new Set<string>(['rackGraph', 'rackParams', 'graphParams', 'waveParams', 'modRoutes']);
+const OBJECT_TIMBRE_KEYS = new Set<string>([
+	'rackGraph',
+	'rackParams',
+	'graphParams',
+	'waveParams',
+	'modRoutes'
+]);
 
 export function pickTimbre(src: Record<string, unknown>): Partial<TrackData> {
 	const out: Record<string, unknown> = {};
@@ -1613,7 +1671,11 @@ function activeTrack(): TrackData | undefined {
 
 /** "TRK 3: STEEL DRUM / MARIMBA" -> "STEEL DRUM / MARIMBA"; the slot number is not part of the sound. In percussion mode the key is. */
 function presetNameFor(track: TrackData): string {
-	const base = track.name.replace(/^TRK\s*\d+\s*:\s*/i, '').trim().toUpperCase() || 'PRESET';
+	const base =
+		track.name
+			.replace(/^TRK\s*\d+\s*:\s*/i, '')
+			.trim()
+			.toUpperCase() || 'PRESET';
 	return track.percussion ? `${base} ${noteNameOf(get(activeKey))}` : base;
 }
 
@@ -1641,7 +1703,10 @@ function upsertUserPreset(p: SoundPreset): void {
 export function saveActiveAsPreset(): void {
 	const trk = activeTrack();
 	if (!trk) return;
-	const name = uniqueName(presetNameFor(trk), get(allPresets).map((p) => p.name));
+	const name = uniqueName(
+		presetNameFor(trk),
+		get(allPresets).map((p) => p.name)
+	);
 	upsertUserPreset({ name, preset: pickTimbre(trk as unknown as Record<string, unknown>) });
 	showSaveStatus(tr('synthPanels.toast.presetSaved', { name }));
 	playSound('click');
@@ -1666,7 +1731,9 @@ export function renameUserPreset(userIdx: number, rawName: string): string | nul
 	const current = list[userIdx];
 	if (!current) return null;
 	if (name === current.name) return name;
-	const taken = get(allPresets).map((p) => p.name).filter((n) => n !== current.name);
+	const taken = get(allPresets)
+		.map((p) => p.name)
+		.filter((n) => n !== current.name);
 	const finalName = uniqueName(name, taken);
 	userPresets.update((l) => l.map((p, i) => (i === userIdx ? { ...p, name: finalName } : p)));
 	playSound('click');
@@ -1687,7 +1754,12 @@ export function exportActivePreset(): void {
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
-	a.download = `krsz-preset-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'preset'}.json`;
+	a.download = `krsz-preset-${
+		name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '') || 'preset'
+	}.json`;
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);
@@ -1703,7 +1775,10 @@ export function applyPresetFile(file: PresetFile): void {
 	// A re-import of the user's own file overwrites its entry; only a clash with
 	// a built-in name gets a suffix, since those cannot be replaced.
 	const name = SOUND_PRESETS.some((p) => p.name === base)
-		? uniqueName(base, get(allPresets).map((p) => p.name))
+		? uniqueName(
+				base,
+				get(allPresets).map((p) => p.name)
+			)
 		: base;
 	upsertUserPreset({ name, preset: timbre });
 	updateActiveTrack(timbre);
@@ -1755,136 +1830,136 @@ function keyOnly(p: Partial<TrackData>): Partial<TrackData> {
 const DRUM_VOICES: Record<string, Partial<TrackData>> = {
 	// Sine with a 2.5-octave pitch drop over 45 ms and a sub underneath it.
 	'KICK 808': hit(0.32, 0.06, {
-			osc1Waveform: 'sine',
-			osc1Gain: 1,
-			subOscGain: 0.6,
-			pitchEnvAmount: 2.5,
-			pitchAttack: 0.001,
-			pitchDecay: 0.045,
-			cutoff: 3000
-		}),
+		osc1Waveform: 'sine',
+		osc1Gain: 1,
+		subOscGain: 0.6,
+		pitchEnvAmount: 2.5,
+		pitchAttack: 0.001,
+		pitchDecay: 0.045,
+		cutoff: 3000
+	}),
 	// Shorter, harder, a triangle for some edge and a burst of noise for the beater.
 	'KICK PUNCH': hit(0.17, 0.04, {
-			osc1Waveform: 'triangle',
-			osc1Gain: 1,
-			subOscGain: 0.4,
-			noiseGain: 0.15,
-			pitchEnvAmount: 3,
-			pitchAttack: 0.001,
-			pitchDecay: 0.03,
-			cutoff: 5000,
-			filterEnvAmount: -0.6,
-			filterAttack: 0.001,
-			filterDecay: 0.05,
-			filterSustain: 0
-		}),
+		osc1Waveform: 'triangle',
+		osc1Gain: 1,
+		subOscGain: 0.4,
+		noiseGain: 0.15,
+		pitchEnvAmount: 3,
+		pitchAttack: 0.001,
+		pitchDecay: 0.03,
+		cutoff: 5000,
+		filterEnvAmount: -0.6,
+		filterAttack: 0.001,
+		filterDecay: 0.05,
+		filterSustain: 0
+	}),
 	// Body from a triangle and a sine a fifth up, rattle from the NOISE mix,
 	// a short pitch snap on the body.
-	'SNARE': hit(0.18, 0.05, {
-			osc1Waveform: 'triangle',
-			osc1Gain: 0.8,
-			osc2Waveform: 'sine',
-			osc2Gain: 0.5,
-			osc2Semitone: 7,
-			noiseGain: 0.9,
-			pitchEnvAmount: 1,
-			pitchAttack: 0.001,
-			pitchDecay: 0.02,
-			cutoff: 8000,
-			resonance: 0.5,
-			keyTracking: 0.5,
-			filterEnvAmount: 0.3,
-			filterAttack: 0.001,
-			filterDecay: 0.08,
-			filterSustain: 0,
-			airGain: 0.2
-		}),
+	SNARE: hit(0.18, 0.05, {
+		osc1Waveform: 'triangle',
+		osc1Gain: 0.8,
+		osc2Waveform: 'sine',
+		osc2Gain: 0.5,
+		osc2Semitone: 7,
+		noiseGain: 0.9,
+		pitchEnvAmount: 1,
+		pitchAttack: 0.001,
+		pitchDecay: 0.02,
+		cutoff: 8000,
+		resonance: 0.5,
+		keyTracking: 0.5,
+		filterEnvAmount: 0.3,
+		filterAttack: 0.001,
+		filterDecay: 0.08,
+		filterSustain: 0,
+		airGain: 0.2
+	}),
 	// Three noise bursts 11 ms apart, high-passed at 1 kHz with the top
 	// shelved down -- a band-pass there was 10 dB quieter than the hats.
-	'CLAP': hit(0.25, 0.08, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			noiseRetrig: 3,
-			noiseRetrigGap: 11,
-			filterType: 'highpass',
-			cutoff: 1000,
-			resonance: 0.7,
-			airGain: -0.4
-		}),
+	CLAP: hit(0.25, 0.08, {
+		osc1Waveform: 'noise',
+		osc1Gain: 1,
+		noiseRetrig: 3,
+		noiseRetrigGap: 11,
+		filterType: 'highpass',
+		cutoff: 1000,
+		resonance: 0.7,
+		airGain: -0.4
+	}),
 	'CLOSED HAT': hit(0.045, 0.02, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			filterType: 'highpass',
-			cutoff: 7000,
-			resonance: 0.5,
-			keyTracking: 0.8,
-			airGain: 0.4
-		}),
+		osc1Waveform: 'noise',
+		osc1Gain: 1,
+		filterType: 'highpass',
+		cutoff: 7000,
+		resonance: 0.5,
+		keyTracking: 0.8,
+		airGain: 0.4
+	}),
 	'OPEN HAT': hit(0.35, 0.15, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			filterType: 'highpass',
-			cutoff: 7000,
-			resonance: 0.5,
-			keyTracking: 0.8,
-			airGain: 0.4
-		}),
+		osc1Waveform: 'noise',
+		osc1Gain: 1,
+		filterType: 'highpass',
+		cutoff: 7000,
+		resonance: 0.5,
+		keyTracking: 0.8,
+		airGain: 0.4
+	}),
 	// Like the kick but a shallower drop and longer body; play it across a few keys for a rack of toms.
-	'TOM': hit(0.35, 0.08, {
-			osc1Waveform: 'sine',
-			osc1Gain: 1,
-			osc2Waveform: 'triangle',
-			osc2Gain: 0.3,
-			subOscGain: 0.3,
-			noiseGain: 0.12,
-			pitchEnvAmount: 1.2,
-			pitchAttack: 0.001,
-			pitchDecay: 0.08,
-			cutoff: 2500
-		}),
+	TOM: hit(0.35, 0.08, {
+		osc1Waveform: 'sine',
+		osc1Gain: 1,
+		osc2Waveform: 'triangle',
+		osc2Gain: 0.3,
+		subOscGain: 0.3,
+		noiseGain: 0.12,
+		pitchEnvAmount: 1.2,
+		pitchAttack: 0.001,
+		pitchDecay: 0.08,
+		cutoff: 2500
+	}),
 	// Two oscillators ring-modulated (sum and difference tones two octaves
 	// apart), 40 ms, high-passed so the ping is what is left.
-	'RIMSHOT': hit(0.04, 0.02, {
-			osc1Waveform: 'triangle',
-			osc1Gain: 1,
-			osc2Waveform: 'square',
-			osc2Gain: 1,
-			osc2Ratio: 4,
-			blendMode: 'ring',
-			filterType: 'highpass',
-			cutoff: 600,
-			resonance: 2,
-			pitchEnvAmount: 0.5,
-			pitchAttack: 0.001,
-			pitchDecay: 0.01,
-			airGain: 0.3
-		}),
+	RIMSHOT: hit(0.04, 0.02, {
+		osc1Waveform: 'triangle',
+		osc1Gain: 1,
+		osc2Waveform: 'square',
+		osc2Gain: 1,
+		osc2Ratio: 4,
+		blendMode: 'ring',
+		filterType: 'highpass',
+		cutoff: 600,
+		resonance: 2,
+		pitchEnvAmount: 0.5,
+		pitchAttack: 0.001,
+		pitchDecay: 0.01,
+		airGain: 0.3
+	}),
 	// Two squares a fifth-ish apart (the 808 uses 540 and 800 Hz), band-passed.
-	'COWBELL': hit(0.3, 0.1, {
-			osc1Waveform: 'square',
-			osc1Gain: 1,
-			osc2Waveform: 'square',
-			osc2Gain: 1,
-			osc2Ratio: 1.5,
-			filterType: 'bandpass',
-			cutoff: 1500,
-			resonance: 1
-		}),
+	COWBELL: hit(0.3, 0.1, {
+		osc1Waveform: 'square',
+		osc1Gain: 1,
+		osc2Waveform: 'square',
+		osc2Gain: 1,
+		osc2Ratio: 1.5,
+		filterType: 'bandpass',
+		cutoff: 1500,
+		resonance: 1
+	}),
 	// Noise with a soft attack and a filter that opens and closes with it.
-	'SHAKER': hit(0.08, 0.05, {
-			osc1Waveform: 'noise',
-			osc1Gain: 1,
-			ampAttack: 0.012,
-			attack: 0.012,
-			filterType: 'bandpass',
-			cutoff: 6000,
-			resonance: 2,
-			keyTracking: 0.6,
-			filterEnvAmount: 0.4,
-			filterAttack: 0.01,
-			filterDecay: 0.05,
-			filterSustain: 0
-		}),
+	SHAKER: hit(0.08, 0.05, {
+		osc1Waveform: 'noise',
+		osc1Gain: 1,
+		ampAttack: 0.012,
+		attack: 0.012,
+		filterType: 'bandpass',
+		cutoff: 6000,
+		resonance: 2,
+		keyTracking: 0.6,
+		filterEnvAmount: 0.4,
+		filterAttack: 0.01,
+		filterDecay: 0.05,
+		filterSustain: 0
+	})
 };
 
 function drum(name: string): Partial<TrackData> {
@@ -1971,7 +2046,6 @@ const wire = (from: string, to: string, toPort = 'in') => ({
 	toPort
 });
 
-
 /* Struck harder means struck brighter.
  *
  * A drum hit hard is not the same sound louder: the stick is in contact for
@@ -1992,7 +2066,6 @@ const velToTone = (target: string, lo: number, hi: number) => ({
 	],
 	params: { 'vt.inLo': 0, 'vt.inHi': 1, 'vt.outLo': Math.round(lo), 'vt.outHi': Math.round(hi) }
 });
-
 
 /**
  * One drum, built the way that kind of instrument is built.
@@ -2294,81 +2367,349 @@ export const BUILTIN_KITS: DrumKit[] = [
 		name: 'JAZZ KIT',
 		keys: {
 			// GM 35 ACOUSTIC BASS DRUM
-			73: drumPatch({ family: 'head', hz: 48, modes: [1, 1.59, 2.14], q: 5, hard: 26, len: 11, tone: 900, body: 42, bodyMix: 72, decay: 0.34 }),
+			73: drumPatch({
+				family: 'head',
+				hz: 48,
+				modes: [1, 1.59, 2.14],
+				q: 5,
+				hard: 26,
+				len: 11,
+				tone: 900,
+				body: 42,
+				bodyMix: 72,
+				decay: 0.34
+			}),
 			// GM 36 BASS DRUM 1
-			72: drumPatch({ family: 'head', hz: 58, modes: [1, 1.59, 2.14], q: 4, hard: 34, len: 9, tone: 1100, body: 36, bodyMix: 70, decay: 0.26 }),
+			72: drumPatch({
+				family: 'head',
+				hz: 58,
+				modes: [1, 1.59, 2.14],
+				q: 4,
+				hard: 34,
+				len: 9,
+				tone: 1100,
+				body: 36,
+				bodyMix: 70,
+				decay: 0.26
+			}),
 			// GM 37 SIDE STICK
 			71: drumPatch({ family: 'stick', hz: 780, hard: 92, len: 2, tone: 6000, decay: 0.07 }),
 			// GM 38 ACOUSTIC SNARE
-			70: drumPatch({ family: 'snare', hz: 185, modes: [1, 1.59, 2.14], q: 6, hard: 68, len: 3, tone: 5200, body: 20, bodyMix: 40, snare: 70, decay: 0.22 }),
+			70: drumPatch({
+				family: 'snare',
+				hz: 185,
+				modes: [1, 1.59, 2.14],
+				q: 6,
+				hard: 68,
+				len: 3,
+				tone: 5200,
+				body: 20,
+				bodyMix: 40,
+				snare: 70,
+				decay: 0.22
+			}),
 			// GM 39 HAND CLAP
 			69: drumPatch({ family: 'stick', hz: 1500, hard: 70, len: 6, tone: 4200, decay: 0.18 }),
 			// GM 40 ELECTRIC SNARE
-			68: drumPatch({ family: 'snare', hz: 210, modes: [1, 1.59, 2.14], q: 5, hard: 80, len: 2, tone: 6200, body: 16, bodyMix: 34, snare: 78, decay: 0.18 }),
+			68: drumPatch({
+				family: 'snare',
+				hz: 210,
+				modes: [1, 1.59, 2.14],
+				q: 5,
+				hard: 80,
+				len: 2,
+				tone: 6200,
+				body: 16,
+				bodyMix: 34,
+				snare: 78,
+				decay: 0.18
+			}),
 			// GM 41 LOW FLOOR TOM
-			67: drumPatch({ family: 'head', hz: 78, modes: [1, 1.59, 2.14], q: 11, hard: 42, len: 7, tone: 1500, body: 44, bodyMix: 64, decay: 0.6 }),
+			67: drumPatch({
+				family: 'head',
+				hz: 78,
+				modes: [1, 1.59, 2.14],
+				q: 11,
+				hard: 42,
+				len: 7,
+				tone: 1500,
+				body: 44,
+				bodyMix: 64,
+				decay: 0.6
+			}),
 			// GM 42 CLOSED HI-HAT
-			66: drumPatch({ family: 'cymbal', q: 4, hard: 94, len: 2, tone: 9000, decay: 0.06, group: 1 }),
+			66: drumPatch({
+				family: 'cymbal',
+				q: 4,
+				hard: 94,
+				len: 2,
+				tone: 9000,
+				decay: 0.06,
+				group: 1
+			}),
 			// GM 43 HIGH FLOOR TOM
-			65: drumPatch({ family: 'head', hz: 94, modes: [1, 1.59, 2.14], q: 10, hard: 44, len: 7, tone: 1600, body: 40, bodyMix: 62, decay: 0.54 }),
+			65: drumPatch({
+				family: 'head',
+				hz: 94,
+				modes: [1, 1.59, 2.14],
+				q: 10,
+				hard: 44,
+				len: 7,
+				tone: 1600,
+				body: 40,
+				bodyMix: 62,
+				decay: 0.54
+			}),
 			// GM 44 PEDAL HI-HAT
 			64: drumPatch({ family: 'cymbal', q: 5, hard: 88, len: 3, tone: 8200, decay: 0.1, group: 1 }),
 			// GM 45 LOW TOM
-			63: drumPatch({ family: 'head', hz: 115, modes: [1, 1.59, 2.14], q: 9, hard: 46, len: 6, tone: 1800, body: 36, bodyMix: 60, decay: 0.46 }),
+			63: drumPatch({
+				family: 'head',
+				hz: 115,
+				modes: [1, 1.59, 2.14],
+				q: 9,
+				hard: 46,
+				len: 6,
+				tone: 1800,
+				body: 36,
+				bodyMix: 60,
+				decay: 0.46
+			}),
 			// GM 46 OPEN HI-HAT
-			62: drumPatch({ family: 'cymbal', q: 12, hard: 86, len: 6, tone: 8000, decay: 0.55, group: 1 }),
+			62: drumPatch({
+				family: 'cymbal',
+				q: 12,
+				hard: 86,
+				len: 6,
+				tone: 8000,
+				decay: 0.55,
+				group: 1
+			}),
 			// GM 47 LOW-MID TOM
-			61: drumPatch({ family: 'head', hz: 142, modes: [1, 1.59, 2.14], q: 8, hard: 48, len: 6, tone: 2000, body: 32, bodyMix: 58, decay: 0.4 }),
+			61: drumPatch({
+				family: 'head',
+				hz: 142,
+				modes: [1, 1.59, 2.14],
+				q: 8,
+				hard: 48,
+				len: 6,
+				tone: 2000,
+				body: 32,
+				bodyMix: 58,
+				decay: 0.4
+			}),
 			// GM 48 HI-MID TOM
-			60: drumPatch({ family: 'head', hz: 172, modes: [1, 1.59, 2.14], q: 8, hard: 50, len: 5, tone: 2200, body: 28, bodyMix: 56, decay: 0.35 }),
+			60: drumPatch({
+				family: 'head',
+				hz: 172,
+				modes: [1, 1.59, 2.14],
+				q: 8,
+				hard: 50,
+				len: 5,
+				tone: 2200,
+				body: 28,
+				bodyMix: 56,
+				decay: 0.35
+			}),
 			// GM 49 CRASH CYMBAL 1
 			59: drumPatch({ family: 'cymbal', q: 30, hard: 72, len: 8, tone: 7000, decay: 1.6 }),
 			// GM 50 HIGH TOM
-			58: drumPatch({ family: 'head', hz: 205, modes: [1, 1.59, 2.14], q: 7, hard: 52, len: 5, tone: 2400, body: 24, bodyMix: 54, decay: 0.3 }),
+			58: drumPatch({
+				family: 'head',
+				hz: 205,
+				modes: [1, 1.59, 2.14],
+				q: 7,
+				hard: 52,
+				len: 5,
+				tone: 2400,
+				body: 24,
+				bodyMix: 54,
+				decay: 0.3
+			}),
 			// GM 51 RIDE CYMBAL 1
 			57: drumPatch({ family: 'cymbal', q: 26, hard: 90, len: 3, tone: 7600, decay: 1.4 }),
 			// GM 52 CHINESE CYMBAL
 			56: drumPatch({ family: 'cymbal', q: 24, hard: 84, len: 7, tone: 6000, decay: 1.1 }),
 			// GM 53 RIDE BELL
-			55: drumPatch({ family: 'bar', hz: 520, modes: [1, 2.0, 3.01], q: 26, hard: 94, len: 2, tone: 9000, decay: 1.1 }),
+			55: drumPatch({
+				family: 'bar',
+				hz: 520,
+				modes: [1, 2.0, 3.01],
+				q: 26,
+				hard: 94,
+				len: 2,
+				tone: 9000,
+				decay: 1.1
+			}),
 			// GM 54 TAMBOURINE
 			54: drumPatch({ family: 'cymbal', q: 8, hard: 92, len: 3, tone: 9500, decay: 0.3 }),
 			// GM 55 SPLASH CYMBAL
 			53: drumPatch({ family: 'cymbal', q: 14, hard: 80, len: 4, tone: 8600, decay: 0.55 }),
 			// GM 56 COWBELL
-			52: drumPatch({ family: 'bar', hz: 540, modes: [1, 1.52, 2.71], q: 14, hard: 88, len: 3, tone: 6800, decay: 0.35 }),
+			52: drumPatch({
+				family: 'bar',
+				hz: 540,
+				modes: [1, 1.52, 2.71],
+				q: 14,
+				hard: 88,
+				len: 3,
+				tone: 6800,
+				decay: 0.35
+			}),
 			// GM 57 CRASH CYMBAL 2
 			51: drumPatch({ family: 'cymbal', q: 32, hard: 70, len: 8, tone: 6600, decay: 1.8 }),
 			// GM 58 VIBRASLAP
-			50: drumPatch({ family: 'bar', hz: 380, modes: [1, 2.7, 4.9], q: 20, hard: 92, len: 4, tone: 5200, decay: 0.85 }),
+			50: drumPatch({
+				family: 'bar',
+				hz: 380,
+				modes: [1, 2.7, 4.9],
+				q: 20,
+				hard: 92,
+				len: 4,
+				tone: 5200,
+				decay: 0.85
+			}),
 			// GM 59 RIDE CYMBAL 2
 			49: drumPatch({ family: 'cymbal', q: 28, hard: 88, len: 3, tone: 7200, decay: 1.55 }),
 			// GM 60 HI BONGO
-			48: drumPatch({ family: 'head', hz: 330, modes: [1, 1.59, 2.14], q: 6, hard: 62, len: 4, tone: 3200, body: 16, bodyMix: 44, decay: 0.2 }),
+			48: drumPatch({
+				family: 'head',
+				hz: 330,
+				modes: [1, 1.59, 2.14],
+				q: 6,
+				hard: 62,
+				len: 4,
+				tone: 3200,
+				body: 16,
+				bodyMix: 44,
+				decay: 0.2
+			}),
 			// GM 61 LOW BONGO
-			47: drumPatch({ family: 'head', hz: 232, modes: [1, 1.59, 2.14], q: 6, hard: 60, len: 4, tone: 2800, body: 20, bodyMix: 46, decay: 0.24 }),
+			47: drumPatch({
+				family: 'head',
+				hz: 232,
+				modes: [1, 1.59, 2.14],
+				q: 6,
+				hard: 60,
+				len: 4,
+				tone: 2800,
+				body: 20,
+				bodyMix: 46,
+				decay: 0.24
+			}),
 			// GM 62 MUTE HI CONGA
-			46: drumPatch({ family: 'head', hz: 292, modes: [1, 1.59, 2.14], q: 3, hard: 66, len: 3, tone: 3000, body: 14, bodyMix: 38, decay: 0.11 }),
+			46: drumPatch({
+				family: 'head',
+				hz: 292,
+				modes: [1, 1.59, 2.14],
+				q: 3,
+				hard: 66,
+				len: 3,
+				tone: 3000,
+				body: 14,
+				bodyMix: 38,
+				decay: 0.11
+			}),
 			// GM 63 OPEN HI CONGA
-			45: drumPatch({ family: 'head', hz: 262, modes: [1, 1.59, 2.14], q: 8, hard: 58, len: 5, tone: 2600, body: 22, bodyMix: 50, decay: 0.32 }),
+			45: drumPatch({
+				family: 'head',
+				hz: 262,
+				modes: [1, 1.59, 2.14],
+				q: 8,
+				hard: 58,
+				len: 5,
+				tone: 2600,
+				body: 22,
+				bodyMix: 50,
+				decay: 0.32
+			}),
 			// GM 64 LOW CONGA
-			44: drumPatch({ family: 'head', hz: 180, modes: [1, 1.59, 2.14], q: 8, hard: 54, len: 6, tone: 2200, body: 28, bodyMix: 54, decay: 0.38 }),
+			44: drumPatch({
+				family: 'head',
+				hz: 180,
+				modes: [1, 1.59, 2.14],
+				q: 8,
+				hard: 54,
+				len: 6,
+				tone: 2200,
+				body: 28,
+				bodyMix: 54,
+				decay: 0.38
+			}),
 			// GM 65 HIGH TIMBALE
-			43: drumPatch({ family: 'head', hz: 330, modes: [1, 1.59, 2.14], q: 9, hard: 76, len: 3, tone: 4200, body: 12, bodyMix: 34, decay: 0.3 }),
+			43: drumPatch({
+				family: 'head',
+				hz: 330,
+				modes: [1, 1.59, 2.14],
+				q: 9,
+				hard: 76,
+				len: 3,
+				tone: 4200,
+				body: 12,
+				bodyMix: 34,
+				decay: 0.3
+			}),
 			// GM 66 LOW TIMBALE
-			42: drumPatch({ family: 'head', hz: 262, modes: [1, 1.59, 2.14], q: 9, hard: 74, len: 3, tone: 3800, body: 14, bodyMix: 36, decay: 0.34 }),
+			42: drumPatch({
+				family: 'head',
+				hz: 262,
+				modes: [1, 1.59, 2.14],
+				q: 9,
+				hard: 74,
+				len: 3,
+				tone: 3800,
+				body: 14,
+				bodyMix: 36,
+				decay: 0.34
+			}),
 			// GM 67 HIGH AGOGO
-			41: drumPatch({ family: 'bar', hz: 780, modes: [1, 1.55, 2.68], q: 16, hard: 90, len: 2, tone: 7400, decay: 0.32 }),
+			41: drumPatch({
+				family: 'bar',
+				hz: 780,
+				modes: [1, 1.55, 2.68],
+				q: 16,
+				hard: 90,
+				len: 2,
+				tone: 7400,
+				decay: 0.32
+			}),
 			// GM 68 LOW AGOGO
-			40: drumPatch({ family: 'bar', hz: 620, modes: [1, 1.55, 2.68], q: 16, hard: 90, len: 2, tone: 7000, decay: 0.36 }),
+			40: drumPatch({
+				family: 'bar',
+				hz: 620,
+				modes: [1, 1.55, 2.68],
+				q: 16,
+				hard: 90,
+				len: 2,
+				tone: 7000,
+				decay: 0.36
+			}),
 			// GM 69 CABASA
 			39: drumPatch({ family: 'shaker', hard: 90, len: 3, tone: 7000, decay: 0.12 }),
 			// GM 70 MARACAS
 			38: drumPatch({ family: 'shaker', hard: 92, len: 2, tone: 7800, decay: 0.1 }),
 			// GM 71 SHORT WHISTLE
-			37: drumPatch({ family: 'bar', hz: 1700, modes: [1, 2.0, 3.0], q: 30, hard: 40, len: 6, tone: 3000, decay: 0.22 }),
+			37: drumPatch({
+				family: 'bar',
+				hz: 1700,
+				modes: [1, 2.0, 3.0],
+				q: 30,
+				hard: 40,
+				len: 6,
+				tone: 3000,
+				decay: 0.22
+			}),
 			// GM 72 LONG WHISTLE
-			36: drumPatch({ family: 'bar', hz: 1500, modes: [1, 2.0, 3.0], q: 34, hard: 40, len: 14, tone: 2800, decay: 0.6 }),
+			36: drumPatch({
+				family: 'bar',
+				hz: 1500,
+				modes: [1, 2.0, 3.0],
+				q: 34,
+				hard: 40,
+				len: 14,
+				tone: 2800,
+				decay: 0.6
+			}),
 			// GM 73 SHORT GUIRO
 			35: drumPatch({ family: 'shaker', hard: 76, len: 5, tone: 4000, decay: 0.16 }),
 			// GM 74 LONG GUIRO
@@ -2380,13 +2721,49 @@ export const BUILTIN_KITS: DrumKit[] = [
 			// GM 77 LOW WOOD BLOCK
 			31: drumPatch({ family: 'stick', hz: 900, hard: 94, len: 2, tone: 7000, decay: 0.12 }),
 			// GM 78 MUTE CUICA
-			30: drumPatch({ family: 'bar', hz: 420, modes: [1, 2.0, 3.0], q: 8, hard: 44, len: 5, tone: 1800, decay: 0.16 }),
+			30: drumPatch({
+				family: 'bar',
+				hz: 420,
+				modes: [1, 2.0, 3.0],
+				q: 8,
+				hard: 44,
+				len: 5,
+				tone: 1800,
+				decay: 0.16
+			}),
 			// GM 79 OPEN CUICA
-			29: drumPatch({ family: 'bar', hz: 350, modes: [1, 2.0, 3.0], q: 14, hard: 42, len: 8, tone: 1600, decay: 0.4 }),
+			29: drumPatch({
+				family: 'bar',
+				hz: 350,
+				modes: [1, 2.0, 3.0],
+				q: 14,
+				hard: 42,
+				len: 8,
+				tone: 1600,
+				decay: 0.4
+			}),
 			// GM 80 MUTE TRIANGLE
-			28: drumPatch({ family: 'bar', hz: 4200, modes: [1, 2.14, 3.41], q: 8, hard: 96, len: 1, tone: 12000, decay: 0.1 }),
+			28: drumPatch({
+				family: 'bar',
+				hz: 4200,
+				modes: [1, 2.14, 3.41],
+				q: 8,
+				hard: 96,
+				len: 1,
+				tone: 12000,
+				decay: 0.1
+			}),
 			// GM 81 OPEN TRIANGLE
-			27: drumPatch({ family: 'bar', hz: 4200, modes: [1, 2.14, 3.41], q: 44, hard: 96, len: 1, tone: 12000, decay: 1.6 }),
+			27: drumPatch({
+				family: 'bar',
+				hz: 4200,
+				modes: [1, 2.14, 3.41],
+				q: 44,
+				hard: 96,
+				len: 1,
+				tone: 12000,
+				decay: 1.6
+			})
 		}
 	},
 	{
@@ -2473,12 +2850,18 @@ function upsertUserKit(kit: DrumKit): void {
 /** Keep the active track's key table as a kit. Needs percussion mode with at least one customised key. */
 export function saveActiveAsKit(): void {
 	const row = get(activeTrackRow);
-	const keys = row?.percussion ? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>) : {};
+	const keys = row?.percussion
+		? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>)
+		: {};
 	if (!Object.keys(keys).length) {
 		showSaveStatus(tr('synthPanels.toast.noKitYet'));
 		return;
 	}
-	const base = row!.name.replace(/^TRK\s*\d+\s*:\s*/i, '').trim().toUpperCase() || 'KIT';
+	const base =
+		row!.name
+			.replace(/^TRK\s*\d+\s*:\s*/i, '')
+			.trim()
+			.toUpperCase() || 'KIT';
 	const name = uniqueName(`${base} KIT`, kitNames());
 	upsertUserKit({ name, keys });
 	showSaveStatus(tr('synthPanels.toast.kitApplied', { name }));
@@ -2496,7 +2879,10 @@ export function renameUserKit(userIdx: number, rawName: string): string | null {
 	const current = get(userKits)[userIdx];
 	if (!current) return null;
 	if (name === current.name) return name;
-	const finalName = uniqueName(name, kitNames().filter((n) => n !== current.name));
+	const finalName = uniqueName(
+		name,
+		kitNames().filter((n) => n !== current.name)
+	);
 	userKits.update((l) => l.map((k, i) => (i === userIdx ? { ...k, name: finalName } : k)));
 	playSound('click');
 	return finalName;
@@ -2504,18 +2890,29 @@ export function renameUserKit(userIdx: number, rawName: string): string | null {
 
 export function exportActiveKit(): void {
 	const row = get(activeTrackRow);
-	const keys = row?.percussion ? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>) : {};
+	const keys = row?.percussion
+		? sanitiseKeys((row.keyTimbres ?? {}) as Record<string, unknown>)
+		: {};
 	if (!Object.keys(keys).length) {
 		showSaveStatus(tr('synthPanels.toast.noKitYet'));
 		return;
 	}
-	const name = row!.name.replace(/^TRK\s*\d+\s*:\s*/i, '').trim().toUpperCase() || 'KIT';
+	const name =
+		row!.name
+			.replace(/^TRK\s*\d+\s*:\s*/i, '')
+			.trim()
+			.toUpperCase() || 'KIT';
 	const file: KitFile = { format: KIT_FILE_FORMAT, version: 1, name, keys };
 	const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
-	a.download = `krsz-kit-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'kit'}.json`;
+	a.download = `krsz-kit-${
+		name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '') || 'kit'
+	}.json`;
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);

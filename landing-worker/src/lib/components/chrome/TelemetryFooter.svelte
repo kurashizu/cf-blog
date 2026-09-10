@@ -33,10 +33,34 @@
 	);
 
 	let LINKS = $derived([
-		{ href: 'https://github.com/kurashizu', icon: 'github', label: '1:github', title: $t('chrome.footer.linkGithub'), color: 'text-[#61afef] hover:text-[#98c379]' },
-		{ href: 'https://huggingface.co/kurashizu', icon: 'huggingface', label: '2:huggingface', title: $t('chrome.footer.linkHuggingface'), color: 'text-[#e5c07b] hover:text-[#e06c75]' },
-		{ href: 'https://oshwhub.com/Kurashizu', icon: 'hardware', label: '3:oshwhub', title: $t('chrome.footer.linkOshwhub'), color: 'text-[#e06c75] hover:text-[#56b6c2]' },
-		{ href: 'https://skill.krsz.in/rules', icon: 'rules', label: '4:rules', title: $t('chrome.footer.linkRules'), color: 'text-[#98c379] hover:text-[#56b6c2]' }
+		{
+			href: 'https://github.com/kurashizu',
+			icon: 'github',
+			label: '1:github',
+			title: $t('chrome.footer.linkGithub'),
+			color: 'text-[#61afef] hover:text-[#98c379]'
+		},
+		{
+			href: 'https://huggingface.co/kurashizu',
+			icon: 'huggingface',
+			label: '2:huggingface',
+			title: $t('chrome.footer.linkHuggingface'),
+			color: 'text-[#e5c07b] hover:text-[#e06c75]'
+		},
+		{
+			href: 'https://oshwhub.com/Kurashizu',
+			icon: 'hardware',
+			label: '3:oshwhub',
+			title: $t('chrome.footer.linkOshwhub'),
+			color: 'text-[#e06c75] hover:text-[#56b6c2]'
+		},
+		{
+			href: 'https://skill.krsz.in/rules',
+			icon: 'rules',
+			label: '4:rules',
+			title: $t('chrome.footer.linkRules'),
+			color: 'text-[#98c379] hover:text-[#56b6c2]'
+		}
 	] as const);
 
 	/** Which build this is — commit and time baked in by vite.config.ts, never computed at runtime. */
@@ -86,7 +110,10 @@
 			<span
 				data-tour="edge"
 				title={edgeTitle}
-				class="footer-edgelabel shrink-0 inline-flex items-center gap-1 transition-colors {$edgeTraceStatus === 'ok' ? 'text-[#98c379]' : 'text-white/40'}"
+				class="footer-edgelabel shrink-0 inline-flex items-center gap-1 transition-colors {$edgeTraceStatus ===
+				'ok'
+					? 'text-[#98c379]'
+					: 'text-white/40'}"
 			>
 				{#if $edgeTraceStatus === 'ok'}
 					<span class="w-1 h-1 rounded-full bg-[#98c379] blink-live"></span>
@@ -95,8 +122,14 @@
 			</span>
 		{/if}
 		<span class="footer-div opacity-40 text-white/30 shrink-0">|</span>
-		<span class="footer-copyright text-xs sm:text-sm text-white/40 shrink-0" title="© {new Date().getFullYear()} kurashizu">© kurashizu</span>
-		<span class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap shrink-0" title={BUILD_TITLE}>
+		<span
+			class="footer-copyright text-xs sm:text-sm text-white/40 shrink-0"
+			title="© {new Date().getFullYear()} kurashizu">© kurashizu</span
+		>
+		<span
+			class="text-[10px] sm:text-xs text-white/40 whitespace-nowrap shrink-0"
+			title={BUILD_TITLE}
+		>
 			{#if BUILD_URL}
 				<a
 					href={BUILD_URL}
@@ -162,18 +195,28 @@
 	   content at each stage (padding and gaps included) actually needs that
 	   much room, checked against a full-width, nothing-hidden render. */
 	@container (max-width: 1320px) {
-		.footer-buildtime { display: none; }
+		.footer-buildtime {
+			display: none;
+		}
 	}
 	@container (max-width: 1180px) {
-		.footer-copyright { display: none; }
+		.footer-copyright {
+			display: none;
+		}
 	}
 	@container (max-width: 1030px) {
-		.footer-div { display: none; }
+		.footer-div {
+			display: none;
+		}
 	}
 	@container (max-width: 990px) {
-		.footer-edgelabel { display: none; }
+		.footer-edgelabel {
+			display: none;
+		}
 	}
 	@container (max-width: 790px) {
-		.footer-linklabel { display: none; }
+		.footer-linklabel {
+			display: none;
+		}
 	}
 </style>

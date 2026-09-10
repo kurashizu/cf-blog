@@ -17,7 +17,18 @@
 		isPrimary: boolean;
 	}
 
-	const COLORS = ['#56b6c2', '#e06c75', '#98c379', '#e5c07b', '#c678dd', '#61afef', '#d19a66', '#56b6c2', '#e06c75', '#98c379'];
+	const COLORS = [
+		'#56b6c2',
+		'#e06c75',
+		'#98c379',
+		'#e5c07b',
+		'#c678dd',
+		'#61afef',
+		'#d19a66',
+		'#56b6c2',
+		'#e06c75',
+		'#98c379'
+	];
 
 	let pointers = $state<Pt[]>([]);
 	let maxSeen = $state(0);
@@ -91,15 +102,28 @@
 <div class="space-y-3">
 	<div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-mono">
 		<span class="text-white/45">
-			{$t('utilities.touch.maxPoints')} <span class="text-[#e5c07b]">{navigator.maxTouchPoints}</span>
+			{$t('utilities.touch.maxPoints')}
+			<span class="text-[#e5c07b]">{navigator.maxTouchPoints}</span>
 			<span class="text-white/30">{$t('utilities.touch.maxPoints.reported')}</span>
 		</span>
-		<span class="text-white/45">{$t('utilities.touch.concurrentSeen')} <span class="text-[#98c379]">{maxSeen}</span></span>
+		<span class="text-white/45"
+			>{$t('utilities.touch.concurrentSeen')} <span class="text-[#98c379]">{maxSeen}</span></span
+		>
 		<span class="text-white/45">
-			{$t('utilities.touch.pressure')} <span class="transition-colors {anyPressure ? 'text-[#98c379]' : 'text-white/35'}">{anyPressure ? $t('utilities.touch.pressure.variable') : $t('utilities.touch.pressure.notObserved')}</span>
+			{$t('utilities.touch.pressure')}
+			<span class="transition-colors {anyPressure ? 'text-[#98c379]' : 'text-white/35'}"
+				>{anyPressure
+					? $t('utilities.touch.pressure.variable')
+					: $t('utilities.touch.pressure.notObserved')}</span
+			>
 		</span>
 		<span class="text-white/45">
-			{$t('utilities.touch.tilt')} <span class="transition-colors {anyTilt ? 'text-[#98c379]' : 'text-white/35'}">{anyTilt ? $t('utilities.touch.tilt.reported') : $t('utilities.touch.tilt.notObserved')}</span>
+			{$t('utilities.touch.tilt')}
+			<span class="transition-colors {anyTilt ? 'text-[#98c379]' : 'text-white/35'}"
+				>{anyTilt
+					? $t('utilities.touch.tilt.reported')
+					: $t('utilities.touch.tilt.notObserved')}</span
+			>
 		</span>
 		<button
 			onclick={reset}
@@ -120,7 +144,9 @@
 		class="relative w-full h-56 sm:h-72 border border-white/20 bg-black/50 rounded-xs overflow-hidden touch-none select-none cursor-crosshair"
 	>
 		{#if pointers.length === 0}
-			<div class="absolute inset-0 flex items-center justify-center text-xs font-mono text-white/30 text-center px-4 whitespace-pre-line">
+			<div
+				class="absolute inset-0 flex items-center justify-center text-xs font-mono text-white/30 text-center px-4 whitespace-pre-line"
+			>
 				{$t('utilities.touch.surfaceHint')}
 			</div>
 		{/if}
@@ -130,7 +156,8 @@
 			{@const r = Math.max(14, Math.max(p.width, p.height) / 2 || 14) * (0.6 + p.pressure)}
 			<div
 				class="absolute rounded-full border-2 pointer-events-none flex items-center justify-center"
-				style="left: {p.x - r}px; top: {p.y - r}px; width: {r * 2}px; height: {r * 2}px; border-color: {color}; background: {color}22;"
+				style="left: {p.x - r}px; top: {p.y - r}px; width: {r * 2}px; height: {r *
+					2}px; border-color: {color}; background: {color}22;"
 			>
 				<span class="text-[10px] font-mono font-bold" style="color: {color}">{p.id}</span>
 			</div>
@@ -170,7 +197,11 @@
 							<td class="px-2 py-1 text-right text-white/60">{p.tiltX}° / {p.tiltY}°</td>
 							<td class="px-2 py-1 text-right text-white/60">{p.twist}°</td>
 							<td class="px-2 py-1 text-right text-white/60">{p.width}×{p.height}</td>
-							<td class="px-2 py-1 text-right text-white/60">{p.isPrimary ? $t('utilities.touch.table.yes') : $t('utilities.touch.table.no')}</td>
+							<td class="px-2 py-1 text-right text-white/60"
+								>{p.isPrimary
+									? $t('utilities.touch.table.yes')
+									: $t('utilities.touch.table.no')}</td
+							>
 						</tr>
 					{/each}
 				</tbody>

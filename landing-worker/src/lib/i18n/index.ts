@@ -18,7 +18,11 @@ import { MESSAGES } from './messages';
  */
 export type Locale = 'en' | 'zh-CN' | 'zh-TW' | 'ja' | 'ko';
 
-export const LOCALES: readonly { id: Locale; /** Short badge for the footer button. */ code: string; /** Its own name, never translated. */ native: string }[] = [
+export const LOCALES: readonly {
+	id: Locale;
+	/** Short badge for the footer button. */ code: string;
+	/** Its own name, never translated. */ native: string;
+}[] = [
 	{ id: 'en', code: 'EN', native: 'English (UK)' },
 	{ id: 'zh-CN', code: '简', native: '简体中文' },
 	{ id: 'zh-TW', code: '正', native: '正體中文' },
@@ -143,12 +147,20 @@ export function has(key: string): boolean {
 }
 
 /** Pick a non-string value per locale (arrays of lines, nested tables). English is required. */
-export function localized<T>(map: { en: T } & Partial<Record<Locale, T>>, l: Locale = get(locale)): T {
+export function localized<T>(
+	map: { en: T } & Partial<Record<Locale, T>>,
+	l: Locale = get(locale)
+): T {
 	return map[l] ?? map.en;
 }
 
 /** Reactive counterpart of `localized`. */
-export const pick = derived(locale, (l) => <T>(map: { en: T } & Partial<Record<Locale, T>>) => localized(map, l));
+export const pick = derived(
+	locale,
+	(l) =>
+		<T>(map: { en: T } & Partial<Record<Locale, T>>) =>
+			localized(map, l)
+);
 
 /** Intl locale tag for dates/numbers -- the site's own tag, not the browser's. */
 export const intlTag = derived(locale, (l) => l);

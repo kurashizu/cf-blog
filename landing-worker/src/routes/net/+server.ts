@@ -125,7 +125,11 @@ export const GET: RequestHandler = async ({ request, platform, url }) => {
 				// so the guest sees a clean refusal instead of a hang.
 				const shown = target.port === null ? target.host : `${target.host}:${target.port}`;
 				server.send(
-					encodeFrame(frame.streamId, TYPE_TCP_CONNECTED, encodeText(`blocked by relay policy: ${shown}`))
+					encodeFrame(
+						frame.streamId,
+						TYPE_TCP_CONNECTED,
+						encodeText(`blocked by relay policy: ${shown}`)
+					)
 				);
 				return;
 			}
@@ -162,7 +166,8 @@ export const GET: RequestHandler = async ({ request, platform, url }) => {
 
 function toBytes(data: unknown): Uint8Array | null {
 	if (data instanceof ArrayBuffer) return new Uint8Array(data);
-	if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+	if (ArrayBuffer.isView(data))
+		return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 	return null;
 }
 

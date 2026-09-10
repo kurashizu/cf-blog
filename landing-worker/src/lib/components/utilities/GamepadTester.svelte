@@ -21,7 +21,26 @@
 	let testedAxes = $state<Set<number>>(new Set());
 
 	// Standard-mapping names; non-standard pads fall back to indices.
-	const STD_NAMES = ['A/✕', 'B/○', 'X/□', 'Y/△', 'L1', 'R1', 'L2', 'R2', 'SELECT', 'START', 'L3', 'R3', 'D-UP', 'D-DOWN', 'D-LEFT', 'D-RIGHT', 'HOME', 'TOUCH'];
+	const STD_NAMES = [
+		'A/✕',
+		'B/○',
+		'X/□',
+		'Y/△',
+		'L1',
+		'R1',
+		'L2',
+		'R2',
+		'SELECT',
+		'START',
+		'L3',
+		'R3',
+		'D-UP',
+		'D-DOWN',
+		'D-LEFT',
+		'D-RIGHT',
+		'HOME',
+		'TOUCH'
+	];
 
 	/* The standard mapping is a fixed layout, so a pad reporting it can be drawn
 	   as the thing in your hands rather than as a list of indices: the face
@@ -87,8 +106,16 @@
 
 	function rumble() {
 		const gp = navigator.getGamepads()[pad?.index ?? 0];
-		const actuator = (gp as unknown as { vibrationActuator?: { playEffect: (t: string, o: object) => Promise<unknown> } })?.vibrationActuator;
-		actuator?.playEffect('dual-rumble', { duration: 400, strongMagnitude: 1.0, weakMagnitude: 0.6 });
+		const actuator = (
+			gp as unknown as {
+				vibrationActuator?: { playEffect: (t: string, o: object) => Promise<unknown> };
+			}
+		)?.vibrationActuator;
+		actuator?.playEffect('dual-rumble', {
+			duration: 400,
+			strongMagnitude: 1.0,
+			weakMagnitude: 0.6
+		});
 		playSound('click');
 	}
 
@@ -135,21 +162,38 @@
 <div class="space-y-2">
 	{#if !pad}
 		<div class="border border-white/15 bg-black/40 rounded-xs p-6 text-center space-y-2">
-			<div class="text-sm font-mono text-white/60">{everConnected ? $t('utilities.gamepad.disconnected') : $t('utilities.gamepad.none')}</div>
+			<div class="text-sm font-mono text-white/60">
+				{everConnected ? $t('utilities.gamepad.disconnected') : $t('utilities.gamepad.none')}
+			</div>
 			<div class="text-xs font-mono text-white/35">{$t('utilities.gamepad.hint')}</div>
 		</div>
 	{:else}
 		<div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
-			<span class="px-2 py-1 border border-[#98c379]/50 bg-[#98c379]/10 rounded-xs text-[#98c379] font-bold truncate max-w-[60%] flex items-center gap-1.5" title={pad.id}>
+			<span
+				class="px-2 py-1 border border-[#98c379]/50 bg-[#98c379]/10 rounded-xs text-[#98c379] font-bold truncate max-w-[60%] flex items-center gap-1.5"
+				title={pad.id}
+			>
 				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live shrink-0"></span>
 				{pad.id}
 			</span>
-			<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">{$t('utilities.gamepad.mapping')} <span class="font-bold text-white/80">{pad.mapping || $t('utilities.gamepad.mapping.custom')}</span></span>
+			<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60"
+				>{$t('utilities.gamepad.mapping')}
+				<span class="font-bold text-white/80"
+					>{pad.mapping || $t('utilities.gamepad.mapping.custom')}</span
+				></span
+			>
 			<span class="px-2 py-1 border border-white/15 bg-black/40 rounded-xs text-white/60">
-				{$t('utilities.gamepad.tested')} <span class="font-bold text-white/80">{testedButtons.size}/{pad.buttons.length}</span> {$t('utilities.gamepad.tested.btn')} <span class="font-bold text-white/80">{testedAxes.size}/{pad.axes.length}</span> {$t('utilities.gamepad.tested.axis')}
+				{$t('utilities.gamepad.tested')}
+				<span class="font-bold text-white/80">{testedButtons.size}/{pad.buttons.length}</span>
+				{$t('utilities.gamepad.tested.btn')}
+				<span class="font-bold text-white/80">{testedAxes.size}/{pad.axes.length}</span>
+				{$t('utilities.gamepad.tested.axis')}
 			</span>
 			{#if pad.canRumble}
-				<button onclick={rumble} class="press px-2 py-1 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold cursor-pointer transition-colors">
+				<button
+					onclick={rumble}
+					class="press px-2 py-1 border border-[#c678dd]/50 text-[#c678dd] hover:bg-[#c678dd]/20 rounded-xs font-bold cursor-pointer transition-colors"
+				>
 					{$t('utilities.gamepad.rumble')}
 				</button>
 			{/if}
@@ -158,7 +202,12 @@
 		{#if isStandard}
 			<!-- The pad itself. Held buttons light up where they sit on the device. -->
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5">
-				<svg viewBox="0 0 300 180" class="w-full max-h-[280px]" role="img" aria-label={$t('utilities.gamepad.svgLabel')}>
+				<svg
+					viewBox="0 0 300 180"
+					class="w-full max-h-[280px]"
+					role="img"
+					aria-label={$t('utilities.gamepad.svgLabel')}
+				>
 					<!-- Body -->
 					<path
 						d="M78 42 h144 a34 34 0 0 1 33 26 l14 62 a26 26 0 0 1 -47 20 l-20 -26 h-104 l-20 26 a26 26 0 0 1 -47 -20 l14 -62 a34 34 0 0 1 33 -26 z"
@@ -169,52 +218,203 @@
 
 					<!-- Shoulders: L1/R1 as pads, L2/R2 filling with their analogue value -->
 					{#each [{ i: 4, x: 74, label: 'L1' }, { i: 5, x: 190, label: 'R1' }] as s (s.i)}
-						<rect x={s.x} y="26" width="36" height="11" rx="4" fill={fill(s.i)} stroke={stroke(s.i)} stroke-width="1.2" />
-						<text x={s.x + 18} y="34.5" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.75)" font-family="'Jelly Pixel', ui-monospace, monospace">{s.label}</text>
+						<rect
+							x={s.x}
+							y="26"
+							width="36"
+							height="11"
+							rx="4"
+							fill={fill(s.i)}
+							stroke={stroke(s.i)}
+							stroke-width="1.2"
+						/>
+						<text
+							x={s.x + 18}
+							y="34.5"
+							text-anchor="middle"
+							font-size="7"
+							fill="rgba(255,255,255,0.75)"
+							font-family="'Jelly Pixel', ui-monospace, monospace">{s.label}</text
+						>
 					{/each}
 					{#each [{ i: 6, x: 74, label: 'L2' }, { i: 7, x: 190, label: 'R2' }] as t (t.i)}
-						<rect x={t.x} y="12" width="36" height="11" rx="4" fill="rgba(255,255,255,0.05)" stroke={stroke(t.i)} stroke-width="1.2" />
+						<rect
+							x={t.x}
+							y="12"
+							width="36"
+							height="11"
+							rx="4"
+							fill="rgba(255,255,255,0.05)"
+							stroke={stroke(t.i)}
+							stroke-width="1.2"
+						/>
 						<!-- Analogue travel, drawn as fill rather than a separate bar -->
-						<rect x={t.x} y="12" width={36 * value(t.i)} height="11" rx="4" fill={themeStyles.cursorColor} opacity="0.75" />
-						<text x={t.x + 18} y="20.5" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.75)" font-family="'Jelly Pixel', ui-monospace, monospace">{t.label}</text>
+						<rect
+							x={t.x}
+							y="12"
+							width={36 * value(t.i)}
+							height="11"
+							rx="4"
+							fill={themeStyles.cursorColor}
+							opacity="0.75"
+						/>
+						<text
+							x={t.x + 18}
+							y="20.5"
+							text-anchor="middle"
+							font-size="7"
+							fill="rgba(255,255,255,0.75)"
+							font-family="'Jelly Pixel', ui-monospace, monospace">{t.label}</text
+						>
 					{/each}
 
 					<!-- D-pad -->
 					{#each DPAD as d (d.i)}
-						<rect x={d.x} y={d.y} width={d.w} height={d.h} rx="2" fill={fill(d.i)} stroke={stroke(d.i)} stroke-width="1.2" />
-						<text x={d.x + d.w / 2} y={d.y + d.h / 2 + 3} text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.6)" font-family="'Jelly Pixel', ui-monospace, monospace">{d.glyph}</text>
+						<rect
+							x={d.x}
+							y={d.y}
+							width={d.w}
+							height={d.h}
+							rx="2"
+							fill={fill(d.i)}
+							stroke={stroke(d.i)}
+							stroke-width="1.2"
+						/>
+						<text
+							x={d.x + d.w / 2}
+							y={d.y + d.h / 2 + 3}
+							text-anchor="middle"
+							font-size="7"
+							fill="rgba(255,255,255,0.6)"
+							font-family="'Jelly Pixel', ui-monospace, monospace">{d.glyph}</text
+						>
 					{/each}
 
 					<!-- Face buttons -->
 					{#each FACE as f (f.i)}
-						<circle cx={f.cx} cy={f.cy} r="10" fill={fill(f.i)} stroke={stroke(f.i)} stroke-width="1.4" />
-						<text x={f.cx} y={f.cy + 3.5} text-anchor="middle" font-size="9" font-weight="bold" fill="rgba(255,255,255,0.8)" font-family="'Jelly Pixel', ui-monospace, monospace">{f.label}</text>
+						<circle
+							cx={f.cx}
+							cy={f.cy}
+							r="10"
+							fill={fill(f.i)}
+							stroke={stroke(f.i)}
+							stroke-width="1.4"
+						/>
+						<text
+							x={f.cx}
+							y={f.cy + 3.5}
+							text-anchor="middle"
+							font-size="9"
+							font-weight="bold"
+							fill="rgba(255,255,255,0.8)"
+							font-family="'Jelly Pixel', ui-monospace, monospace">{f.label}</text
+						>
 					{/each}
 
 					<!-- SELECT / START / HOME, in the middle between the two clusters -->
-					<rect x="126" y="62" width="18" height="7" rx="3" fill={fill(8)} stroke={stroke(8)} stroke-width="1.1" />
-					<rect x="156" y="62" width="18" height="7" rx="3" fill={fill(9)} stroke={stroke(9)} stroke-width="1.1" />
-					<text x="135" y="57" text-anchor="middle" font-size="5.5" fill="rgba(255,255,255,0.45)" font-family="'Jelly Pixel', ui-monospace, monospace">SELECT</text>
-					<text x="165" y="57" text-anchor="middle" font-size="5.5" fill="rgba(255,255,255,0.45)" font-family="'Jelly Pixel', ui-monospace, monospace">START</text>
+					<rect
+						x="126"
+						y="62"
+						width="18"
+						height="7"
+						rx="3"
+						fill={fill(8)}
+						stroke={stroke(8)}
+						stroke-width="1.1"
+					/>
+					<rect
+						x="156"
+						y="62"
+						width="18"
+						height="7"
+						rx="3"
+						fill={fill(9)}
+						stroke={stroke(9)}
+						stroke-width="1.1"
+					/>
+					<text
+						x="135"
+						y="57"
+						text-anchor="middle"
+						font-size="5.5"
+						fill="rgba(255,255,255,0.45)"
+						font-family="'Jelly Pixel', ui-monospace, monospace">SELECT</text
+					>
+					<text
+						x="165"
+						y="57"
+						text-anchor="middle"
+						font-size="5.5"
+						fill="rgba(255,255,255,0.45)"
+						font-family="'Jelly Pixel', ui-monospace, monospace">START</text
+					>
 					{#if pad.buttons.length > 16}
-						<circle cx="150" cy="84" r="6.5" fill={fill(16)} stroke={stroke(16)} stroke-width="1.2" />
-						<text x="150" y="86.5" text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.55)" font-family="'Jelly Pixel', ui-monospace, monospace">⌂</text>
+						<circle
+							cx="150"
+							cy="84"
+							r="6.5"
+							fill={fill(16)}
+							stroke={stroke(16)}
+							stroke-width="1.2"
+						/>
+						<text
+							x="150"
+							y="86.5"
+							text-anchor="middle"
+							font-size="6"
+							fill="rgba(255,255,255,0.55)"
+							font-family="'Jelly Pixel', ui-monospace, monospace">⌂</text
+						>
 					{/if}
 
 					<!-- Sticks: the well, then the cap at its axis position. L3/R3 light the ring. -->
 					{#each [{ cx: 116, cy: 112, s: leftStick, click: 10, label: 'L3' }, { cx: 184, cy: 112, s: rightStick, click: 11, label: 'R3' }] as st (st.click)}
-						<circle cx={st.cx} cy={st.cy} r="17" fill="rgba(0,0,0,0.45)" stroke={pressed(st.click) ? themeStyles.cursorColor : testedButtons.has(st.click) ? 'rgba(152,195,121,0.6)' : 'rgba(255,255,255,0.2)'} stroke-width={pressed(st.click) ? 2 : 1.2} />
-						<line x1={st.cx - 17} y1={st.cy} x2={st.cx + 17} y2={st.cy} stroke="rgba(255,255,255,0.1)" stroke-width="0.6" />
-						<line x1={st.cx} y1={st.cy - 17} x2={st.cx} y2={st.cy + 17} stroke="rgba(255,255,255,0.1)" stroke-width="0.6" />
+						<circle
+							cx={st.cx}
+							cy={st.cy}
+							r="17"
+							fill="rgba(0,0,0,0.45)"
+							stroke={pressed(st.click)
+								? themeStyles.cursorColor
+								: testedButtons.has(st.click)
+									? 'rgba(152,195,121,0.6)'
+									: 'rgba(255,255,255,0.2)'}
+							stroke-width={pressed(st.click) ? 2 : 1.2}
+						/>
+						<line
+							x1={st.cx - 17}
+							y1={st.cy}
+							x2={st.cx + 17}
+							y2={st.cy}
+							stroke="rgba(255,255,255,0.1)"
+							stroke-width="0.6"
+						/>
+						<line
+							x1={st.cx}
+							y1={st.cy - 17}
+							x2={st.cx}
+							y2={st.cy + 17}
+							stroke="rgba(255,255,255,0.1)"
+							stroke-width="0.6"
+						/>
 						<circle
 							cx={st.s.x}
 							cy={st.s.y}
 							r="7.5"
-							fill={st.s.live || pressed(st.click) ? themeStyles.cursorColor : 'rgba(255,255,255,0.28)'}
+							fill={st.s.live || pressed(st.click)
+								? themeStyles.cursorColor
+								: 'rgba(255,255,255,0.28)'}
 							stroke="rgba(0,0,0,0.5)"
 							stroke-width="1"
 						/>
-						<text x={st.cx} y={st.cy + 29} text-anchor="middle" font-size="6" fill="rgba(255,255,255,0.4)" font-family="'Jelly Pixel', ui-monospace, monospace">{st.label}</text>
+						<text
+							x={st.cx}
+							y={st.cy + 29}
+							text-anchor="middle"
+							font-size="6"
+							fill="rgba(255,255,255,0.4)"
+							font-family="'Jelly Pixel', ui-monospace, monospace">{st.label}</text
+						>
 					{/each}
 				</svg>
 			</div>
@@ -224,15 +424,34 @@
 		     and a non-standard pad has nothing but these. -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.buttonsHeading', { tested: testedButtons.size, total: pad.buttons.length })}</div>
+				<div
+					class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10"
+				>
+					{$t('utilities.gamepad.buttonsHeading', {
+						tested: testedButtons.size,
+						total: pad.buttons.length
+					})}
+				</div>
 				<div class="grid grid-cols-2 gap-x-3 gap-y-1">
 					{#each pad.buttons as b, i (i)}
 						<div class="flex items-center gap-1.5 text-[10px] font-mono">
-							<span class="w-14 shrink-0 truncate transition-colors duration-75 {b.pressed ? 'font-black' : testedButtons.has(i) ? 'text-[#98c379]' : 'text-white/40'}" style={b.pressed ? `color: ${themeStyles.cursorColor}` : ''}>
+							<span
+								class="w-14 shrink-0 truncate transition-colors duration-75 {b.pressed
+									? 'font-black'
+									: testedButtons.has(i)
+										? 'text-[#98c379]'
+										: 'text-white/40'}"
+								style={b.pressed ? `color: ${themeStyles.cursorColor}` : ''}
+							>
 								{buttonName(i)}
 							</span>
 							<div class="flex-1 h-2 bg-black/60 border border-white/10 rounded-xs overflow-hidden">
-								<div class="h-full transition-[width] duration-75" style="width: {Math.round(b.value * 100)}%; background-color: {b.pressed ? themeStyles.cursorColor : 'rgba(152,195,121,0.6)'};"></div>
+								<div
+									class="h-full transition-[width] duration-75"
+									style="width: {Math.round(b.value * 100)}%; background-color: {b.pressed
+										? themeStyles.cursorColor
+										: 'rgba(152,195,121,0.6)'};"
+								></div>
 							</div>
 						</div>
 					{/each}
@@ -240,21 +459,38 @@
 			</div>
 
 			<div class="border border-white/15 bg-black/40 rounded-xs p-2.5 space-y-1.5">
-				<div class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10">{$t('utilities.gamepad.axesHeading')}</div>
+				<div
+					class="text-[10px] font-mono font-bold text-white/45 uppercase pb-1 border-b border-white/10"
+				>
+					{$t('utilities.gamepad.axesHeading')}
+				</div>
 				{#each pad.axes as a, i (i)}
 					<div class="flex items-center gap-1.5 text-[10px] font-mono">
-						<span class="w-14 shrink-0 {testedAxes.has(i) ? 'text-[#98c379]' : 'text-white/40'}">{$t('utilities.gamepad.axisLabel', { index: i })}</span>
-						<div class="flex-1 h-2.5 bg-black/60 border border-white/10 rounded-xs relative overflow-hidden">
+						<span class="w-14 shrink-0 {testedAxes.has(i) ? 'text-[#98c379]' : 'text-white/40'}"
+							>{$t('utilities.gamepad.axisLabel', { index: i })}</span
+						>
+						<div
+							class="flex-1 h-2.5 bg-black/60 border border-white/10 rounded-xs relative overflow-hidden"
+						>
 							<div class="absolute top-0 bottom-0 left-1/2 w-px bg-white/25"></div>
 							<div
 								class="absolute top-0 bottom-0 w-1.5 rounded-xs transition-[background-color] duration-75"
-								style="left: calc({((a + 1) / 2) * 100}% - 3px); background-color: {Math.abs(a) > 0.05 ? themeStyles.cursorColor : 'rgba(255,255,255,0.35)'};"
+								style="left: calc({((a + 1) / 2) * 100}% - 3px); background-color: {Math.abs(a) >
+								0.05
+									? themeStyles.cursorColor
+									: 'rgba(255,255,255,0.35)'};"
 							></div>
 						</div>
-						<span class="w-12 text-right shrink-0 transition-colors duration-75 {Math.abs(a) > 0.05 ? 'text-[#e5c07b] font-bold' : 'text-white/35'}">{a.toFixed(2)}</span>
+						<span
+							class="w-12 text-right shrink-0 transition-colors duration-75 {Math.abs(a) > 0.05
+								? 'text-[#e5c07b] font-bold'
+								: 'text-white/35'}">{a.toFixed(2)}</span
+						>
 					</div>
 				{/each}
-				<div class="text-[10px] font-mono text-white/30 pt-1">{$t('utilities.gamepad.driftNote')}</div>
+				<div class="text-[10px] font-mono text-white/30 pt-1">
+					{$t('utilities.gamepad.driftNote')}
+				</div>
 			</div>
 		</div>
 	{/if}

@@ -6,7 +6,13 @@
 	import { page } from '$app/state';
 	import { t } from '$lib/i18n';
 	import { playSound } from '../../sound';
-	import { theme, cycleTheme, THEME_STYLES, resolvedTheme, KRSZ_LETTER_COLORS } from '../../stores/theme';
+	import {
+		theme,
+		cycleTheme,
+		THEME_STYLES,
+		resolvedTheme,
+		KRSZ_LETTER_COLORS
+	} from '../../stores/theme';
 	import { spinnerFrame } from '../../stores/clock';
 	import { tabIndexFromPath, TAB_ROUTES } from '../../routes-map';
 	import { KRSZ_MARKS } from '../../krsz-marks';
@@ -40,17 +46,83 @@
 	let themeStyles = $derived(THEME_STYLES[$resolvedTheme]);
 	/* AUTO shows the hour-driven pick, not the literal word — the point of the
 	   tile is to say what's on screen right now, and "auto" alone doesn't. */
-	let themeLabel = $derived($theme === 'auto' ? `auto·${$resolvedTheme.split('-')[0]}` : $theme.split('-')[0]);
+	let themeLabel = $derived(
+		$theme === 'auto' ? `auto·${$resolvedTheme.split('-')[0]}` : $theme.split('-')[0]
+	);
 
 	let HOTKEY_TILES = $derived([
-		{ id: 0, key: '0', title: 'MODULES', desc: $t('chrome.sidebar.tileProjects'), color: '#56b6c2', icon: '◈', tooltip: $t('chrome.sidebar.tooltip0') },
-		{ id: 1, key: '1', title: 'GUESTBOOK', desc: $t('chrome.sidebar.tilePackets'), color: '#e06c75', icon: '✉', tooltip: $t('chrome.sidebar.tooltip1') },
-		{ id: 2, key: '2', title: 'SYNTH', desc: $t('chrome.sidebar.tileWebAudio'), color: '#c678dd', icon: '♫', tooltip: $t('chrome.sidebar.tooltip2') },
-		{ id: 3, key: '3', title: 'UTILITIES', desc: $t('chrome.sidebar.tileHwTest'), color: '#e5c07b', icon: '⌨', tooltip: $t('chrome.sidebar.tooltip3') },
-		{ id: 4, key: '4', title: 'LM.SPACE', desc: $t('chrome.sidebar.tileModelVolume'), color: '#98c379', icon: '▤', tooltip: $t('chrome.sidebar.tooltip4') },
-		{ id: 5, key: '5', title: 'KRSZ-VM', desc: $t('chrome.sidebar.tilePcEmu'), color: '#d19a66', icon: '⬢', tooltip: $t('chrome.sidebar.tooltip5') },
-		{ id: 6, key: '6', title: 'WEB-LM', desc: $t('chrome.sidebar.tileOnGpu'), color: '#61afef', icon: '◑', tooltip: $t('chrome.sidebar.tooltip6') },
-		{ id: 7, key: '7', title: 'LIFE.LAB', desc: $t('chrome.sidebar.tileConway'), color: '#98c379', icon: '⬗', tooltip: $t('chrome.sidebar.tooltip7') }
+		{
+			id: 0,
+			key: '0',
+			title: 'MODULES',
+			desc: $t('chrome.sidebar.tileProjects'),
+			color: '#56b6c2',
+			icon: '◈',
+			tooltip: $t('chrome.sidebar.tooltip0')
+		},
+		{
+			id: 1,
+			key: '1',
+			title: 'GUESTBOOK',
+			desc: $t('chrome.sidebar.tilePackets'),
+			color: '#e06c75',
+			icon: '✉',
+			tooltip: $t('chrome.sidebar.tooltip1')
+		},
+		{
+			id: 2,
+			key: '2',
+			title: 'SYNTH',
+			desc: $t('chrome.sidebar.tileWebAudio'),
+			color: '#c678dd',
+			icon: '♫',
+			tooltip: $t('chrome.sidebar.tooltip2')
+		},
+		{
+			id: 3,
+			key: '3',
+			title: 'UTILITIES',
+			desc: $t('chrome.sidebar.tileHwTest'),
+			color: '#e5c07b',
+			icon: '⌨',
+			tooltip: $t('chrome.sidebar.tooltip3')
+		},
+		{
+			id: 4,
+			key: '4',
+			title: 'LM.SPACE',
+			desc: $t('chrome.sidebar.tileModelVolume'),
+			color: '#98c379',
+			icon: '▤',
+			tooltip: $t('chrome.sidebar.tooltip4')
+		},
+		{
+			id: 5,
+			key: '5',
+			title: 'KRSZ-VM',
+			desc: $t('chrome.sidebar.tilePcEmu'),
+			color: '#d19a66',
+			icon: '⬢',
+			tooltip: $t('chrome.sidebar.tooltip5')
+		},
+		{
+			id: 6,
+			key: '6',
+			title: 'WEB-LM',
+			desc: $t('chrome.sidebar.tileOnGpu'),
+			color: '#61afef',
+			icon: '◑',
+			tooltip: $t('chrome.sidebar.tooltip6')
+		},
+		{
+			id: 7,
+			key: '7',
+			title: 'LIFE.LAB',
+			desc: $t('chrome.sidebar.tileConway'),
+			color: '#98c379',
+			icon: '⬗',
+			tooltip: $t('chrome.sidebar.tooltip7')
+		}
 	]);
 
 	function nav(id: number) {
@@ -71,9 +143,17 @@
 	     margin gives back exactly that, so all three border boxes end on the
 	     same line. It has to be a margin and not padding: padding would sit
 	     inside this panel's own border, which is what is being aligned. -->
-	<div class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-[10px]">
-		<BoxHeader title="SYS_BANNER // KRSZ.IN" short={['SYS_BANNER', 'BANNER']} class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5">
-			<span class="text-[#98c379] font-mono text-xs">{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} {$t('chrome.sidebar.running')}</span>
+	<div
+		class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 space-y-1.5 max-w-full overflow-hidden mr-[10px]"
+	>
+		<BoxHeader
+			title="SYS_BANNER // KRSZ.IN"
+			short={['SYS_BANNER', 'BANNER']}
+			class="text-xs sm:text-sm font-bold text-[#56b6c2] border-b border-white/10 pb-0.5"
+		>
+			<span class="text-[#98c379] font-mono text-xs"
+				>{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[($spinnerFrame + 3) % 10]} {$t('chrome.sidebar.running')}</span
+			>
 		</BoxHeader>
 
 		{#key krszMark.font}
@@ -87,11 +167,33 @@
 		{/key}
 
 		<!-- Columns come and go with the width; a cell never splits its own two words. -->
-		<div class="grid grid-cols-[repeat(auto-fit,minmax(105px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap">
-			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.K}">[K]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.K}">urashizu's</span></div>
-			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.R}">[R]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.R}">andom-</span></div>
-			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.S}">[S]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.S}">tuff</span></div>
-			<div class="flex items-center gap-1.5"><span class="text-black px-1 py-0.2 rounded-xs font-bold text-xs" style="background: {KRSZ_LETTER_COLORS.Z}">[Z]</span><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.Z}">one.</span></div>
+		<div
+			class="grid grid-cols-[repeat(auto-fit,minmax(105px,1fr))] gap-1 text-xs border-t border-white/10 pt-1.5 font-mono whitespace-nowrap"
+		>
+			<div class="flex items-center gap-1.5">
+				<span
+					class="text-black px-1 py-0.2 rounded-xs font-bold text-xs"
+					style="background: {KRSZ_LETTER_COLORS.K}">[K]</span
+				><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.K}">urashizu's</span>
+			</div>
+			<div class="flex items-center gap-1.5">
+				<span
+					class="text-black px-1 py-0.2 rounded-xs font-bold text-xs"
+					style="background: {KRSZ_LETTER_COLORS.R}">[R]</span
+				><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.R}">andom-</span>
+			</div>
+			<div class="flex items-center gap-1.5">
+				<span
+					class="text-black px-1 py-0.2 rounded-xs font-bold text-xs"
+					style="background: {KRSZ_LETTER_COLORS.S}">[S]</span
+				><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.S}">tuff</span>
+			</div>
+			<div class="flex items-center gap-1.5">
+				<span
+					class="text-black px-1 py-0.2 rounded-xs font-bold text-xs"
+					style="background: {KRSZ_LETTER_COLORS.Z}">[Z]</span
+				><span class="font-bold" style="color: {KRSZ_LETTER_COLORS.Z}">one.</span>
+			</div>
 		</div>
 	</div>
 
@@ -103,87 +205,141 @@
 	     narrower than the pinned banner above, which is the mismatch that kept
 	     coming back. The gutter alone leaves both at the same width. -->
 	<div class="flex flex-col gap-2 min-h-0 flex-1 overflow-y-auto custom-scrollbar">
-
-	<!-- Operator profile -->
-	<div class="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden">
-		<BoxHeader title="OPERATOR_PROFILE" short={['OPERATOR', 'OP']} class="text-xs sm:text-sm font-bold text-[#61afef] border-b border-white/10 pb-1 shrink-0">
-			<span class="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs">{$t('chrome.sidebar.verified')}</span>
-		</BoxHeader>
-		<!-- Label over value, not beside it.
+		<!-- Operator profile -->
+		<div
+			class="border border-white/15 p-2.5 sm:p-3 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs sm:text-sm font-mono max-w-full overflow-hidden"
+		>
+			<BoxHeader
+				title="OPERATOR_PROFILE"
+				short={['OPERATOR', 'OP']}
+				class="text-xs sm:text-sm font-bold text-[#61afef] border-b border-white/10 pb-1 shrink-0"
+			>
+				<span
+					class="text-xs text-[#98c379] font-bold border border-[#98c379]/40 bg-[#98c379]/15 px-1.5 py-0.2 rounded-xs"
+					>{$t('chrome.sidebar.verified')}</span
+				>
+			</BoxHeader>
+			<!-- Label over value, not beside it.
 		     Side by side, the label ate a third of a sidebar this narrow and left
 		     the value in a column too thin to hold its own line, so every entry
 		     wrapped and hung under itself -- five ragged two-line blocks that read
 		     as broken rather than as a record. Stacked, each value gets the full
 		     width and most fit on one line. -->
-		<div class="space-y-2 py-1 text-xs sm:text-sm">
-			<div><div class="text-[#e5c07b] font-bold">{$t('chrome.sidebar.labelOperator')}</div><div class="text-[#eceff4] font-medium">{$t('chrome.sidebar.operatorValue')}</div></div>
-			<div><div class="text-[#61afef] font-bold">{$t('chrome.sidebar.labelLocation')}</div><div class="text-[#eceff4]">{$t('chrome.sidebar.locationValue')}</div></div>
-			<div><div class="text-[#e06c75] font-bold">{$t('chrome.sidebar.labelMotto')}</div><div class="text-[#eceff4] italic">"{$t('chrome.sidebar.mottoValue')}"</div></div>
-			<div><div class="text-[#98c379] font-bold">{$t('chrome.sidebar.labelRuntime')}</div><div class="text-[#eceff4]">{$t('chrome.sidebar.runtimeValue')}</div></div>
-			<div><div class="text-[#56b6c2] font-bold">{$t('chrome.sidebar.labelStack')}</div><div class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</div></div>
+			<div class="space-y-2 py-1 text-xs sm:text-sm">
+				<div>
+					<div class="text-[#e5c07b] font-bold">{$t('chrome.sidebar.labelOperator')}</div>
+					<div class="text-[#eceff4] font-medium">{$t('chrome.sidebar.operatorValue')}</div>
+				</div>
+				<div>
+					<div class="text-[#61afef] font-bold">{$t('chrome.sidebar.labelLocation')}</div>
+					<div class="text-[#eceff4]">{$t('chrome.sidebar.locationValue')}</div>
+				</div>
+				<div>
+					<div class="text-[#e06c75] font-bold">{$t('chrome.sidebar.labelMotto')}</div>
+					<div class="text-[#eceff4] italic">"{$t('chrome.sidebar.mottoValue')}"</div>
+				</div>
+				<div>
+					<div class="text-[#98c379] font-bold">{$t('chrome.sidebar.labelRuntime')}</div>
+					<div class="text-[#eceff4]">{$t('chrome.sidebar.runtimeValue')}</div>
+				</div>
+				<div>
+					<div class="text-[#56b6c2] font-bold">{$t('chrome.sidebar.labelStack')}</div>
+					<div class="text-[#eceff4]">SvelteKit · uv · FFmpeg · D1 · Vectorize</div>
+				</div>
+			</div>
+			<div
+				class="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1"
+			>
+				<span>{$t('chrome.sidebar.statusOpen')}</span>
+				<span class="inline-flex items-center gap-1">
+					<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live"></span>
+					{$t('chrome.sidebar.availableNow')}
+				</span>
+			</div>
 		</div>
-		<div class="border-t border-white/10 pt-1 text-[11px] sm:text-xs text-[#98c379] shrink-0 font-bold flex flex-wrap items-center justify-between gap-1">
-			<span>{$t('chrome.sidebar.statusOpen')}</span>
-			<span class="inline-flex items-center gap-1">
-				<span class="w-1.5 h-1.5 rounded-full bg-[#98c379] blink-live"></span>
-				{$t('chrome.sidebar.availableNow')}
-			</span>
-		</div>
-	</div>
 
-	<!-- Hotkey launchpad -->
-	<div data-tour="launchpad" class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono">
-		<BoxHeader title="QUICK_HOTKEYS // LAUNCHPAD" short={['HOTKEYS // LAUNCHPAD', 'LAUNCHPAD', 'PADS']} class="text-xs font-bold text-[#e5c07b] border-b border-white/10 pb-0.5 shrink-0">
-			<span class="text-white/50 text-xs" title={$t('chrome.sidebar.launchpadHint')}>[CTRL+0-7 · T · ?]</span>
-		</BoxHeader>
+		<!-- Hotkey launchpad -->
+		<div
+			data-tour="launchpad"
+			class="border border-white/15 p-2 bg-black/40 rounded-xs shrink-0 flex flex-col gap-1 text-xs font-mono"
+		>
+			<BoxHeader
+				title="QUICK_HOTKEYS // LAUNCHPAD"
+				short={['HOTKEYS // LAUNCHPAD', 'LAUNCHPAD', 'PADS']}
+				class="text-xs font-bold text-[#e5c07b] border-b border-white/10 pb-0.5 shrink-0"
+			>
+				<span class="text-white/50 text-xs" title={$t('chrome.sidebar.launchpadHint')}
+					>[CTRL+0-7 · T · ?]</span
+				>
+			</BoxHeader>
 
-		<div class="grid grid-cols-3 gap-1.5 py-1">
-			{#each HOTKEY_TILES as tab (tab.id)}
-				{@const isActive = activeTab === tab.id}
+			<div class="grid grid-cols-3 gap-1.5 py-1">
+				{#each HOTKEY_TILES as tab (tab.id)}
+					{@const isActive = activeTab === tab.id}
+					<button
+						onclick={() => nav(tab.id)}
+						title={tab.tooltip}
+						class="lift press border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all group relative overflow-hidden min-w-0 {isActive
+							? 'border-white bg-white/20 text-white shadow-md'
+							: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
+						style={isActive ? `border-color: ${tab.color}` : undefined}
+					>
+						<div class="w-full flex items-center justify-between">
+							<span
+								class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border transition-colors"
+								style="background-color: {isActive
+									? tab.color
+									: 'rgba(0,0,0,0.5)'}; color: {isActive
+									? '#000'
+									: tab.color}; border-color: {tab.color};"
+							>
+								[{tab.key}]
+							</span>
+							<span
+								class="text-base leading-none opacity-85 group-hover:opacity-100 group-hover:scale-110 transition-transform"
+								style="color: {tab.color}">{tab.icon}</span
+							>
+						</div>
+						<div class="mt-1 w-full min-w-0">
+							<div
+								class="font-bold text-xs leading-tight tracking-tight truncate"
+								style="color: {isActive ? '#fff' : tab.color}"
+							>
+								{tab.title}
+							</div>
+							<div class="text-xs opacity-60 font-mono truncate">{tab.desc}</div>
+						</div>
+					</button>
+				{/each}
+
 				<button
-					onclick={() => nav(tab.id)}
-					title={tab.tooltip}
-					class="lift press border rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all group relative overflow-hidden min-w-0 {isActive
-						? 'border-white bg-white/20 text-white shadow-md'
-						: 'border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)]'}"
-					style={isActive ? `border-color: ${tab.color}` : undefined}
+					onclick={cycleTheme}
+					class="lift press border border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)] rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all group overflow-hidden min-w-0"
 				>
 					<div class="w-full flex items-center justify-between">
 						<span
-							class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border transition-colors"
-							style="background-color: {isActive ? tab.color : 'rgba(0,0,0,0.5)'}; color: {isActive ? '#000' : tab.color}; border-color: {tab.color};"
+							class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border border-[#d8dee9]/40 bg-black/50 text-[#d8dee9]"
+							>[T]</span
 						>
-							[{tab.key}]
-						</span>
-						<span class="text-base leading-none opacity-85 group-hover:opacity-100 group-hover:scale-110 transition-transform" style="color: {tab.color}">{tab.icon}</span>
+						<span class="text-xs text-[#e5c07b] group-hover:rotate-45 transition-transform">◐</span>
 					</div>
 					<div class="mt-1 w-full min-w-0">
-						<div class="font-bold text-xs leading-tight tracking-tight truncate" style="color: {isActive ? '#fff' : tab.color}">{tab.title}</div>
-						<div class="text-xs opacity-60 font-mono truncate">{tab.desc}</div>
+						<div class="font-bold text-xs text-[#d8dee9] leading-tight truncate">
+							{$t('chrome.sidebar.theme')}
+						</div>
+						<div class="text-xs opacity-60 font-mono uppercase truncate" title={themeLabel}>
+							{themeLabel}
+						</div>
 					</div>
 				</button>
-			{/each}
+			</div>
 
-			<button
-				onclick={cycleTheme}
-				class="lift press border border-white/15 bg-black/30 hover:border-white/40 hover:bg-white/5 hover:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.6)] rounded-xs p-1.5 flex flex-col justify-between items-start text-left cursor-pointer transition-all group overflow-hidden min-w-0"
+			<div
+				class="border-t border-white/10 pt-1 text-xs text-white/50 flex flex-wrap justify-between gap-x-2 shrink-0 font-mono whitespace-nowrap"
 			>
-				<div class="w-full flex items-center justify-between">
-					<span class="px-1 py-0.2 rounded-xs font-mono font-bold text-xs border border-[#d8dee9]/40 bg-black/50 text-[#d8dee9]">[T]</span>
-					<span class="text-xs text-[#e5c07b] group-hover:rotate-45 transition-transform">◐</span>
-				</div>
-				<div class="mt-1 w-full min-w-0">
-					<div class="font-bold text-xs text-[#d8dee9] leading-tight truncate">{$t('chrome.sidebar.theme')}</div>
-					<div class="text-xs opacity-60 font-mono uppercase truncate" title={themeLabel}>{themeLabel}</div>
-				</div>
-			</button>
+				<span>{$t('chrome.sidebar.padsActive', { count: 7 })}</span>
+				<span class="ml-auto">{$t('chrome.sidebar.hotkeyHint')}</span>
+			</div>
 		</div>
-
-		<div class="border-t border-white/10 pt-1 text-xs text-white/50 flex flex-wrap justify-between gap-x-2 shrink-0 font-mono whitespace-nowrap">
-			<span>{$t('chrome.sidebar.padsActive', { count: 7 })}</span>
-			<span class="ml-auto">{$t('chrome.sidebar.hotkeyHint')}</span>
-		</div>
-	</div>
 	</div>
 </div>
-

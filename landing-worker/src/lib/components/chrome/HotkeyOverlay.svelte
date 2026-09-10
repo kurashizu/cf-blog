@@ -127,15 +127,28 @@
 		onclick={(e) => e.stopPropagation()}
 		transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
 	>
-		<BoxHeader title="KEYMAP // KRSZ.IN" short="KEYMAP" class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm" style="color: {themeStyles.cursorColor}">
-			<button onclick={onClose} class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors">[ Esc ]</button>
+		<BoxHeader
+			title="KEYMAP // KRSZ.IN"
+			short="KEYMAP"
+			class="text-xs sm:text-sm font-black px-3 py-2 border-b {themeStyles.border} {themeStyles.headerBgVideo} rounded-t-sm"
+			style="color: {themeStyles.cursorColor}"
+		>
+			<button
+				onclick={onClose}
+				class="press text-xs text-white/50 hover:text-white cursor-pointer font-normal transition-colors"
+				>[ Esc ]</button
+			>
 		</BoxHeader>
 
 		<div class="p-3 sm:p-4 space-y-3 max-h-[80vh] overflow-y-auto custom-scrollbar">
 			{#each GROUPS as group (group.title)}
 				<div class="border rounded-xs bg-black/25 p-2.5" style="border-color: {group.color}44">
-					<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-white/10 pb-1 mb-1.5">
-						<span class="text-xs sm:text-sm font-black" style="color: {group.color}">{group.title}</span>
+					<div
+						class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-white/10 pb-1 mb-1.5"
+					>
+						<span class="text-xs sm:text-sm font-black" style="color: {group.color}"
+							>{group.title}</span
+						>
 						{#if group.note}
 							<span class="text-[10px] sm:text-xs text-white/40">{group.note}</span>
 						{/if}

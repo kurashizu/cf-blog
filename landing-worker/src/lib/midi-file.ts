@@ -233,7 +233,13 @@ export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 		for (const [note, stack] of open) {
 			for (const started of stack) {
 				if (tick > started.startTick)
-					notes.push({ midi: note, startTick: started.startTick, endTick: tick, velocity: started.velocity, channel: started.channel });
+					notes.push({
+						midi: note,
+						startTick: started.startTick,
+						endTick: tick,
+						velocity: started.velocity,
+						channel: started.channel
+					});
 			}
 		}
 
@@ -246,7 +252,17 @@ export function parseMidiFile(buffer: ArrayBuffer): MidiFile {
 
 	if (tracks.length === 0) throw new MidiParseError(tr('synth.midiImport.noNoteData'));
 
-	return { format, ticksPerQuarter, bpm, bpmFromFile, tempoCount, meterCount, timeSignature, tracks, totalTicks };
+	return {
+		format,
+		ticksPerQuarter,
+		bpm,
+		bpmFromFile,
+		tempoCount,
+		meterCount,
+		timeSignature,
+		tracks,
+		totalTicks
+	};
 }
 
 /**

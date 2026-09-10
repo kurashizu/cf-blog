@@ -8,7 +8,8 @@ import type { Messages } from '../types';
 export default {
 	en: {
 		'lifelab.page.title': 'KRSZ™ // 7:lifelab — Conway Automaton Laboratory',
-		'lifelab.page.description': "Conway's Game of Life as an open dish: a 320x200 grid, a library of verified patterns from still lifes to the Gosper gun, free drawing and random soup.",
+		'lifelab.page.description':
+			"Conway's Game of Life as an open dish: a 320x200 grid, a library of verified patterns from still lifes to the Gosper gun, free drawing and random soup.",
 		'lifelab.page.subtitle': 'CONWAY AUTOMATON · B3/S23',
 		'lifelab.page.guideHint': 'Walk through the lab — the rule, the controls and what to watch',
 		'lifelab.page.clearAllHint': 'Remove every cell from the board',
@@ -19,20 +20,26 @@ export default {
 		'lifelab.page.tourHeading': 'LIFE.LAB TOUR',
 
 		'lifelab.tour.dish.title': 'THE DISH',
-		'lifelab.tour.dish.body': 'A 320x200 bounded grid running Conway’s Life. Every generation, each cell looks at its eight neighbours: a live cell with two or three stays alive, a dead cell with exactly three comes to life, and everything else dies. That single rule is the whole simulation — nothing here is scripted.',
+		'lifelab.tour.dish.body':
+			'A 320x200 bounded grid running Conway’s Life. Every generation, each cell looks at its eight neighbours: a live cell with two or three stays alive, a dead cell with exactly three comes to life, and everything else dies. That single rule is the whole simulation — nothing here is scripted.',
 		'lifelab.tour.dish.key1': 'born on 3 neighbours, survives on 2 or 3',
 		'lifelab.tour.run.title': 'RUNNING IT',
-		'lifelab.tour.run.body': 'RUN advances continuously, STEP moves exactly one generation so you can follow a pattern cell by cell, and BACK rewinds. SOUP fills the dish with noise, which is the quickest way to see what the rule does on its own. SPD cycles the rate.',
+		'lifelab.tour.run.body':
+			'RUN advances continuously, STEP moves exactly one generation so you can follow a pattern cell by cell, and BACK rewinds. SOUP fills the dish with noise, which is the quickest way to see what the rule does on its own. SPD cycles the rate.',
 		'lifelab.tour.run.key1': '2, 8, 30, 120 or 480 generations a second',
 		'lifelab.tour.run.key2': 'empty the dish and start over',
 		'lifelab.tour.draw.title': 'DRAWING',
-		'lifelab.tour.draw.body': 'PAN drags the view. DRAW paints live cells, and clears one you click on, so you can seed a shape by hand and watch what it becomes. SELECT drags a box around cells and picks them up: drag to move, R and F to turn, Delete to remove, Enter to drop. Pick a pattern from the tray instead and it follows the cursor until you click. Ctrl+Z undoes any of it.',
+		'lifelab.tour.draw.body':
+			'PAN drags the view. DRAW paints live cells, and clears one you click on, so you can seed a shape by hand and watch what it becomes. SELECT drags a box around cells and picks them up: drag to move, R and F to turn, Delete to remove, Enter to drop. Pick a pattern from the tray instead and it follows the cursor until you click. Ctrl+Z undoes any of it.',
 		'lifelab.tour.library.title': 'THE LIBRARY',
-		'lifelab.tour.library.body': 'Verified patterns, from still lifes that never change through oscillators and gliders to the Gosper gun that emits one forever. Click one to pick it up, click the dish to place it, and click the same entry again to put it down.',
+		'lifelab.tour.library.body':
+			'Verified patterns, from still lifes that never change through oscillators and gliders to the Gosper gun that emits one forever. Click one to pick it up, click the dish to place it, and click the same entry again to put it down.',
 		'lifelab.tour.stats.title': 'WHAT TO WATCH',
-		'lifelab.tour.stats.body': 'GEN counts generations elapsed and POP the cells currently alive. POP settling to a constant means the dish has reached a still life or a loop; POP falling to zero means it died out. Both are read off the board, not estimated.',
+		'lifelab.tour.stats.body':
+			'GEN counts generations elapsed and POP the cells currently alive. POP settling to a constant means the dish has reached a still life or a loop; POP falling to zero means it died out. Both are read off the board, not estimated.',
 		'lifelab.tour.log.title': 'THE LOG',
-		'lifelab.tour.log.body': 'A record of what the dish just did, floating over the bottom-left corner so it never takes room from the board. Collapse it with the button in its heading when you want the whole dish.',
+		'lifelab.tour.log.body':
+			'A record of what the dish just did, floating over the bottom-left corner so it never takes room from the board. Collapse it with the button in its heading when you want the whole dish.',
 
 		'lifelab.ui.clearAll': 'CLEAR ALL',
 		'lifelab.ui.run': 'RUN',
@@ -46,17 +53,21 @@ export default {
 		'lifelab.ui.gen': 'GEN',
 		'lifelab.ui.pop': 'POP',
 		'lifelab.ui.speed': 'SPD {rate}/s',
-		'lifelab.ui.dishHint': 'Dish size — cycles 320×200, 640×400, 1280×800, 2000×1800. Cells are kept; shrinking asks first if any would be lost.',
+		'lifelab.ui.dishHint':
+			'Dish size — cycles 320×200, 640×400, 1280×800, 2000×1800. Cells are kept; shrinking asks first if any would be lost.',
 		'lifelab.ui.showLog': 'Show the log',
 		'lifelab.ui.hideLog': 'Hide the log',
-		'lifelab.ui.drawHint': 'Paint cells — click a live cell to clear it. To clear an area, SELECT it and press Delete',
-		'lifelab.ui.selectHint': 'Drag a box around cells to pick them up: then drag to move, R / F to turn, Enter to drop, Delete to remove, Ctrl+S to save',
+		'lifelab.ui.drawHint':
+			'Paint cells — click a live cell to clear it. To clear an area, SELECT it and press Delete',
+		'lifelab.ui.selectHint':
+			'Drag a box around cells to pick them up: then drag to move, R / F to turn, Enter to drop, Delete to remove, Ctrl+S to save',
 		'lifelab.ui.searchPlaceholder': 'search patterns',
 		'lifelab.ui.customLabel': 'CUSTOM',
 		'lifelab.ui.customHint': 'yours, kept in this browser',
 		'lifelab.ui.customFallbackName': 'CUSTOM',
 		'lifelab.ui.fromSelection': 'FROM SELECTION',
-		'lifelab.ui.fromSelectionHint': 'Switch to SELECT, drag a box on the dish, then SAVE from the bar that appears',
+		'lifelab.ui.fromSelectionHint':
+			'Switch to SELECT, drag a box on the dish, then SAVE from the bar that appears',
 		'lifelab.ui.pasteRle': 'PASTE RLE',
 		'lifelab.ui.pasteRleHint': 'Paste a pattern in RLE, the format LifeWiki and Golly use',
 		'lifelab.ui.stampTooltip': '{label} — {w}×{h}, {cells} cells',
@@ -84,13 +95,17 @@ export default {
 		'lifelab.ui.delete': 'DELETE',
 		'lifelab.ui.followHint': 'click to put it down · shift-click to stamp copies',
 		'lifelab.ui.touchHint': 'drag to move · tap outside to drop',
-		'lifelab.ui.dragHintOrigin': 'drag to move · arrows nudge · click outside or Enter drops · Esc puts it back · Ctrl+Z undoes',
-		'lifelab.ui.dragHintCancel': 'drag to move · arrows nudge · click outside or Enter drops · Esc cancels · Ctrl+Z undoes',
+		'lifelab.ui.dragHintOrigin':
+			'drag to move · arrows nudge · click outside or Enter drops · Esc puts it back · Ctrl+Z undoes',
+		'lifelab.ui.dragHintCancel':
+			'drag to move · arrows nudge · click outside or Enter drops · Esc cancels · Ctrl+Z undoes',
 		'lifelab.ui.rlePlaceholder': 'x = 3, y = 3\nbob$2bo$3o!',
 
 		'lifelab.dialog.biggerThanDishTitle': 'BIGGER THAN THE DISH',
-		'lifelab.dialog.biggerThanDishBody': '{label} is {pw}×{ph} cells; the dish is {dw}×{dh}.\nEnlarge the dish to {nw}×{nh}? Everything on it is kept.',
-		'lifelab.dialog.biggerThanDishSlow': '\n\nA dish this size steps slowly — expect a few generations a second, not hundreds.',
+		'lifelab.dialog.biggerThanDishBody':
+			'{label} is {pw}×{ph} cells; the dish is {dw}×{dh}.\nEnlarge the dish to {nw}×{nh}? Everything on it is kept.',
+		'lifelab.dialog.biggerThanDishSlow':
+			'\n\nA dish this size steps slowly — expect a few generations a second, not hundreds.',
 		'lifelab.dialog.enlargeAndPlace': 'ENLARGE & PLACE',
 		'lifelab.dialog.cancel': 'CANCEL',
 		'lifelab.dialog.saveAsPatternTitle': 'SAVE AS PATTERN',
@@ -99,7 +114,8 @@ export default {
 		'lifelab.dialog.rleClipboardRefused': 'Clipboard access was refused; copy it from here:',
 		'lifelab.dialog.rleCopyFromHere': 'Copy it from here:',
 		'lifelab.dialog.pasteRleTitle': 'PASTE RLE',
-		'lifelab.dialog.pasteRleBody': 'A whole .rle file or just the body (b = dead, o = alive, $ = next row, ! = end).',
+		'lifelab.dialog.pasteRleBody':
+			'A whole .rle file or just the body (b = dead, o = alive, $ = next row, ! = end).',
 		'lifelab.dialog.namePlaceholder': 'NAME',
 		'lifelab.dialog.shrinkTitle': 'SHRINK THE DISH?',
 		'lifelab.dialog.shrinkBody': '{lost} cells lie outside {w}×{h} and would be lost.',
@@ -114,7 +130,8 @@ export default {
 		'lifelab.log.boot1': 'LIFE.LAB v0.2 — cellular automaton laboratory',
 		'lifelab.log.boot2': 'rule: B3/S23 | grid: 320x200 bounded | host: krsz.in',
 		'lifelab.log.nothingInBox': 'nothing in that box',
-		'lifelab.log.pickedUp': 'picked up {n} cells — drag to move, R/F to turn, Enter to drop, Esc to put back',
+		'lifelab.log.pickedUp':
+			'picked up {n} cells — drag to move, R/F to turn, Enter to drop, Esc to put back',
 		'lifelab.log.placed': '{label} @ ({x},{y})',
 		'lifelab.log.placedFellOff': '{label} @ ({x},{y}) — {n} cells fell off the edge',
 		'lifelab.log.deletedCells': 'deleted {n} cells',
@@ -139,7 +156,8 @@ export default {
 		'lifelab.log.cannotEditWhileRunning': 'Cannot edit while running — RESET to gen 0 first',
 		'lifelab.log.placementLaunchZone': 'Placement allowed only inside the dashed LAUNCH zone',
 		'lifelab.log.budgetExhausted': 'Cell budget exhausted (limit {n})',
-		'lifelab.log.selectHint': 'SELECT: drag a box around cells to pick them up, then SAVE from the bar',
+		'lifelab.log.selectHint':
+			'SELECT: drag a box around cells to pick them up, then SAVE from the bar',
 
 		'lifelab.cat.still.label': 'STILL LIFES',
 		'lifelab.cat.still.hint': 'never change',
@@ -161,8 +179,10 @@ export default {
 		'lifelab.cat.turing.hint': 'computation, in full — needs a bigger dish',
 
 		'lifelab.level.dish.name': 'THE DISH',
-		'lifelab.level.dish.intro': '> B3/S23 — a cell lives on 2 or 3 neighbours, and is born on exactly 3.',
-		'lifelab.level.dish.step1': 'pick a pattern and click to put it down · SELECT picks cells up to move, R / F to turn · Ctrl+Z undoes · RUN',
+		'lifelab.level.dish.intro':
+			'> B3/S23 — a cell lives on 2 or 3 neighbours, and is born on exactly 3.',
+		'lifelab.level.dish.step1':
+			'pick a pattern and click to put it down · SELECT picks cells up to move, R / F to turn · Ctrl+Z undoes · RUN',
 
 		'lifelab.note.block': '4 cells, the simplest stable shape',
 		'lifelab.note.beehive': 'stable, 6 cells',
@@ -202,37 +222,54 @@ export default {
 		'lifelab.ext.justyna': '20 cells, 26,458 generations',
 		'lifelab.ext.lidka': '13 cells, 29,055 generations',
 		'lifelab.ext.m52513': 'the longest-lived 16×16 soup known: 52,513 generations',
-		'lifelab.ext.pufferTrain': 'a B-heptomino kept alive by two LWSS escorts, leaving debris behind',
-		'lifelab.ext.piFuse': 'lays two rows of blocks that a pi-heptomino chases and eats, never catching up',
-		'lifelab.ext.linePuffer': 'a c/2 line puffer; its own debris finally kills it after 9.5 million generations',
+		'lifelab.ext.pufferTrain':
+			'a B-heptomino kept alive by two LWSS escorts, leaving debris behind',
+		'lifelab.ext.piFuse':
+			'lays two rows of blocks that a pi-heptomino chases and eats, never catching up',
+		'lifelab.ext.linePuffer':
+			'a c/2 line puffer; its own debris finally kills it after 9.5 million generations',
 		'lifelab.ext.puffer2c5': 'a dirty puffer at two cells per five generations',
-		'lifelab.ext.basicRakes': 'five c/2 rakes side by side: puffers whose debris is nothing but spaceships',
+		'lifelab.ext.basicRakes':
+			'five c/2 rakes side by side: puffers whose debris is nothing but spaceships',
 		'lifelab.ext.p52gun': 'a glider every 52 generations',
 		'lifelab.ext.vacuum': 'a double p46 gun that drags blocks and beehives toward itself',
 		'lifelab.ext.mwssGun': 'fires a middleweight spaceship every 165 generations',
 		'lifelab.ext.loaferGun': 'fires a c/7 loafer every 210 generations',
 		'lifelab.ext.p59gun': 'a period-59 gun whose stream is steered by Snark reflectors',
-		'lifelab.ext.spacefiller': 'fills the plane at c/2 in all four directions — the fastest growth possible',
+		'lifelab.ext.spacefiller':
+			'fills the plane at c/2 in all four directions — the fastest growth possible',
 		'lifelab.ext.quartermax': 'fills one quadrant with the stripes agar',
 		'lifelab.ext.quad20': 'the fewest cells known to grow quadratically',
-		'lifelab.ext.seBreeder': 'a puffer that spawns a block-laying switch engine every 80 generations',
+		'lifelab.ext.seBreeder':
+			'a puffer that spawns a block-laying switch engine every 80 generations',
 		'lifelab.ext.c4Breeder': 'two diagonal puffers and a rake conspire to breed switch engines',
 		'lifelab.ext.rakeFactory': 'a stationary gun that fires a whole rake every 90 generations',
 		'lifelab.ext.sawtooth': 'population climbs without bound yet keeps falling back to 177',
-		'lifelab.ext.advancer': 'six in-line NOT gates that push each passing glider 60 generations ahead',
-		'lifelab.ext.heisenblinker': 'a blinker that a passing glider stream toggles without being disturbed',
+		'lifelab.ext.advancer':
+			'six in-line NOT gates that push each passing glider 60 generations ahead',
+		'lifelab.ext.heisenblinker':
+			'a blinker that a passing glider stream toggles without being disturbed',
 		'lifelab.ext.heisenburpNat': 'a glider flies by; a copy is emitted, the original untouched',
-		'lifelab.ext.heisenburp30': 'photocopies three gliders as they pass: detection without disturbance',
+		'lifelab.ext.heisenburp30':
+			'photocopies three gliders as they pass: detection without disturbance',
 		'lifelab.ext.heisenburp46': 'the p46 version of the glider photocopier',
-		'lifelab.ext.stargate': 'LWSSs enter on the left and jump 30 cells in 28 generations — faster than light',
-		'lifelab.ext.racetrack': 'a 1800-generation loop: glider becomes LWSS becomes hole becomes glider',
-		'lifelab.ext.hotel': 'a new glider joins the loop every 128 generations and there is always room',
-		'lifelab.ext.reflectors': 'fast low-period glider reflectors, periods 5 to 15, each running its own loop',
+		'lifelab.ext.stargate':
+			'LWSSs enter on the left and jump 30 cells in 28 generations — faster than light',
+		'lifelab.ext.racetrack':
+			'a 1800-generation loop: glider becomes LWSS becomes hole becomes glider',
+		'lifelab.ext.hotel':
+			'a new glider joins the loop every 128 generations and there is always room',
+		'lifelab.ext.reflectors':
+			'fast low-period glider reflectors, periods 5 to 15, each running its own loop',
 		'lifelab.ext.fizzles': 'a catalogue of ways a signal can be bent, split or quietly killed',
-		'lifelab.ext.turing': "Paul Rendell's 3-state, 3-symbol Turing machine — a finite-state machine, a tape of stacks, all made of gliders",
-		'lifelab.ext.chase': 'a glider bounced along ever-longer paths, each bounce delivered just in time by LWSS convoys',
-		'lifelab.ext.unitCell': 'Life running inside Life: this 512×512 machine is one cell of a slower Game of Life',
-		'lifelab.ext.orthoShips': 'c/2 to c/6 sideways: LWSS, MWSS, HWSS, turtle, dart, weekender, spiders',
+		'lifelab.ext.turing':
+			"Paul Rendell's 3-state, 3-symbol Turing machine — a finite-state machine, a tape of stacks, all made of gliders",
+		'lifelab.ext.chase':
+			'a glider bounced along ever-longer paths, each bounce delivered just in time by LWSS convoys',
+		'lifelab.ext.unitCell':
+			'Life running inside Life: this 512×512 machine is one cell of a slower Game of Life',
+		'lifelab.ext.orthoShips':
+			'c/2 to c/6 sideways: LWSS, MWSS, HWSS, turtle, dart, weekender, spiders',
 		'lifelab.ext.diagShips': 'c/4, c/5 and c/6 diagonal ships: Orion, Canada goose, Swan',
 		'lifelab.ext.corderships': 'c/12 diagonal ships built from switch engines',
 		'lifelab.ext.lowPeriod': 'a shelf of low-period oscillators',
@@ -240,7 +277,8 @@ export default {
 	},
 	'zh-CN': {
 		'lifelab.page.title': 'KRSZ™ // 7:lifelab — 康威自动机实验室',
-		'lifelab.page.description': '康威生命游戏，作为一个开放的培养皿：320x200 的网格，从静物到高斯帕枪的已验证图案库，自由绘制与随机汤。',
+		'lifelab.page.description':
+			'康威生命游戏，作为一个开放的培养皿：320x200 的网格，从静物到高斯帕枪的已验证图案库，自由绘制与随机汤。',
 		'lifelab.page.subtitle': '康威自动机 · B3/S23',
 		'lifelab.page.guideHint': '带你走一遍实验室 — 规则、控制方式和要留意的东西',
 		'lifelab.page.clearAllHint': '清除棋盘上的所有细胞',
@@ -251,20 +289,26 @@ export default {
 		'lifelab.page.tourHeading': 'LIFE.LAB 导览',
 
 		'lifelab.tour.dish.title': '培养皿',
-		'lifelab.tour.dish.body': '一个运行康威生命游戏的 320x200 有界网格。每一代，每个细胞都会查看它的八个邻居：有两三个邻居的活细胞继续存活，恰好有三个邻居的死细胞复活，其余全部死亡。仅凭这一条规则就构成了整个模拟 — 这里没有任何脚本化的东西。',
+		'lifelab.tour.dish.body':
+			'一个运行康威生命游戏的 320x200 有界网格。每一代，每个细胞都会查看它的八个邻居：有两三个邻居的活细胞继续存活，恰好有三个邻居的死细胞复活，其余全部死亡。仅凭这一条规则就构成了整个模拟 — 这里没有任何脚本化的东西。',
 		'lifelab.tour.dish.key1': '有 3 个邻居时诞生，2 或 3 个邻居时存活',
 		'lifelab.tour.run.title': '运行它',
-		'lifelab.tour.run.body': 'RUN 持续推进，STEP 恰好推进一代，方便你逐细胞跟踪一个图案，BACK 则回退。SOUP 用随机噪声填满培养皿，是观察规则本身效果最快的方式。SPD 用来切换速率。',
+		'lifelab.tour.run.body':
+			'RUN 持续推进，STEP 恰好推进一代，方便你逐细胞跟踪一个图案，BACK 则回退。SOUP 用随机噪声填满培养皿，是观察规则本身效果最快的方式。SPD 用来切换速率。',
 		'lifelab.tour.run.key1': '每秒 2、8、30、120 或 480 代',
 		'lifelab.tour.run.key2': '清空培养皿，重新开始',
 		'lifelab.tour.draw.title': '绘制',
-		'lifelab.tour.draw.body': 'PAN 拖动视角。DRAW 绘制活细胞，点击一个已存活的细胞会将其清除，所以你可以手动种下一个形状，看它会变成什么。SELECT 拖出一个方框把细胞拾取起来：拖动移动，R 和 F 旋转，Delete 移除，Enter 放下。也可以从图案架里选一个图案，它会跟随光标，直到你点击为止。Ctrl+Z 可以撤销以上任何操作。',
+		'lifelab.tour.draw.body':
+			'PAN 拖动视角。DRAW 绘制活细胞，点击一个已存活的细胞会将其清除，所以你可以手动种下一个形状，看它会变成什么。SELECT 拖出一个方框把细胞拾取起来：拖动移动，R 和 F 旋转，Delete 移除，Enter 放下。也可以从图案架里选一个图案，它会跟随光标，直到你点击为止。Ctrl+Z 可以撤销以上任何操作。',
 		'lifelab.tour.library.title': '图案库',
-		'lifelab.tour.library.body': '已验证的图案，从永不改变的静物，到振荡器和滑翔机，再到会永远发射滑翔机的高斯帕枪。点击一个图案拾取它，点击培养皿放置它，再次点击同一项则放下手中的图案。',
+		'lifelab.tour.library.body':
+			'已验证的图案，从永不改变的静物，到振荡器和滑翔机，再到会永远发射滑翔机的高斯帕枪。点击一个图案拾取它，点击培养皿放置它，再次点击同一项则放下手中的图案。',
 		'lifelab.tour.stats.title': '要留意什么',
-		'lifelab.tour.stats.body': 'GEN 统计经过的代数，POP 统计当前存活的细胞数。POP 稳定在一个常数，说明培养皿已进入静物或循环状态；POP 降到零，说明已经灭绝。两者都是直接从棋盘上读出来的，不是估算的。',
+		'lifelab.tour.stats.body':
+			'GEN 统计经过的代数，POP 统计当前存活的细胞数。POP 稳定在一个常数，说明培养皿已进入静物或循环状态；POP 降到零，说明已经灭绝。两者都是直接从棋盘上读出来的，不是估算的。',
 		'lifelab.tour.log.title': '日志',
-		'lifelab.tour.log.body': '记录培养皿刚刚发生的事，悬浮在左下角，绝不会占用棋盘的空间。想要整块棋盘时，用日志标题里的按钮把它收起来。',
+		'lifelab.tour.log.body':
+			'记录培养皿刚刚发生的事，悬浮在左下角，绝不会占用棋盘的空间。想要整块棋盘时，用日志标题里的按钮把它收起来。',
 
 		'lifelab.ui.clearAll': '全部清除',
 		'lifelab.ui.run': '运行',
@@ -278,17 +322,21 @@ export default {
 		'lifelab.ui.gen': '代数',
 		'lifelab.ui.pop': '存活',
 		'lifelab.ui.speed': '速率 {rate}/秒',
-		'lifelab.ui.dishHint': '培养皿大小 — 在 320×200、640×400、1280×800、2000×1800 之间循环。细胞会被保留；缩小时若有细胞会丢失，会先询问。',
+		'lifelab.ui.dishHint':
+			'培养皿大小 — 在 320×200、640×400、1280×800、2000×1800 之间循环。细胞会被保留；缩小时若有细胞会丢失，会先询问。',
 		'lifelab.ui.showLog': '显示日志',
 		'lifelab.ui.hideLog': '隐藏日志',
-		'lifelab.ui.drawHint': '绘制细胞 — 点击一个已存活的细胞可将其清除。要清除一片区域，用 SELECT 选中后按 Delete',
-		'lifelab.ui.selectHint': '拖出一个方框把细胞选中：然后拖动移动，R / F 旋转，Enter 放下，Delete 移除，Ctrl+S 保存',
+		'lifelab.ui.drawHint':
+			'绘制细胞 — 点击一个已存活的细胞可将其清除。要清除一片区域，用 SELECT 选中后按 Delete',
+		'lifelab.ui.selectHint':
+			'拖出一个方框把细胞选中：然后拖动移动，R / F 旋转，Enter 放下，Delete 移除，Ctrl+S 保存',
 		'lifelab.ui.searchPlaceholder': '搜索图案',
 		'lifelab.ui.customLabel': '自定义',
 		'lifelab.ui.customHint': '你自己的图案，保存在此浏览器中',
 		'lifelab.ui.customFallbackName': '自定义',
 		'lifelab.ui.fromSelection': '来自选区',
-		'lifelab.ui.fromSelectionHint': '切换到 SELECT，在培养皿上拖出一个方框，再从出现的工具条中点 SAVE',
+		'lifelab.ui.fromSelectionHint':
+			'切换到 SELECT，在培养皿上拖出一个方框，再从出现的工具条中点 SAVE',
 		'lifelab.ui.pasteRle': '粘贴 RLE',
 		'lifelab.ui.pasteRleHint': '粘贴一个 RLE 格式的图案，这是 LifeWiki 和 Golly 使用的格式',
 		'lifelab.ui.stampTooltip': '{label} — {w}×{h}，{cells} 个细胞',
@@ -316,13 +364,17 @@ export default {
 		'lifelab.ui.delete': '删除',
 		'lifelab.ui.followHint': '点击放下 · shift+点击连续放置副本',
 		'lifelab.ui.touchHint': '拖动移动 · 点击外部放下',
-		'lifelab.ui.dragHintOrigin': '拖动移动 · 方向键微调 · 点击外部或 Enter 放下 · Esc 放回原处 · Ctrl+Z 撤销',
-		'lifelab.ui.dragHintCancel': '拖动移动 · 方向键微调 · 点击外部或 Enter 放下 · Esc 取消 · Ctrl+Z 撤销',
+		'lifelab.ui.dragHintOrigin':
+			'拖动移动 · 方向键微调 · 点击外部或 Enter 放下 · Esc 放回原处 · Ctrl+Z 撤销',
+		'lifelab.ui.dragHintCancel':
+			'拖动移动 · 方向键微调 · 点击外部或 Enter 放下 · Esc 取消 · Ctrl+Z 撤销',
 		'lifelab.ui.rlePlaceholder': 'x = 3, y = 3\nbob$2bo$3o!',
 
 		'lifelab.dialog.biggerThanDishTitle': '比培养皿更大',
-		'lifelab.dialog.biggerThanDishBody': '{label} 大小为 {pw}×{ph} 个细胞；培养皿大小为 {dw}×{dh}。\n是否将培养皿放大到 {nw}×{nh}？皿上已有的内容都会保留。',
-		'lifelab.dialog.biggerThanDishSlow': '\n\n这么大的培养皿运行较慢 — 预计每秒只有几代，而不是几百代。',
+		'lifelab.dialog.biggerThanDishBody':
+			'{label} 大小为 {pw}×{ph} 个细胞；培养皿大小为 {dw}×{dh}。\n是否将培养皿放大到 {nw}×{nh}？皿上已有的内容都会保留。',
+		'lifelab.dialog.biggerThanDishSlow':
+			'\n\n这么大的培养皿运行较慢 — 预计每秒只有几代，而不是几百代。',
 		'lifelab.dialog.enlargeAndPlace': '放大并放置',
 		'lifelab.dialog.cancel': '取消',
 		'lifelab.dialog.saveAsPatternTitle': '保存为图案',
@@ -331,7 +383,8 @@ export default {
 		'lifelab.dialog.rleClipboardRefused': '剪贴板访问被拒绝；请从这里复制：',
 		'lifelab.dialog.rleCopyFromHere': '从这里复制：',
 		'lifelab.dialog.pasteRleTitle': '粘贴 RLE',
-		'lifelab.dialog.pasteRleBody': '可以是完整的 .rle 文件，也可以只是主体部分（b = 死，o = 活，$ = 换行，! = 结束）。',
+		'lifelab.dialog.pasteRleBody':
+			'可以是完整的 .rle 文件，也可以只是主体部分（b = 死，o = 活，$ = 换行，! = 结束）。',
 		'lifelab.dialog.namePlaceholder': '名称',
 		'lifelab.dialog.shrinkTitle': '缩小培养皿？',
 		'lifelab.dialog.shrinkBody': '有 {lost} 个细胞在 {w}×{h} 范围之外，将会丢失。',
@@ -394,7 +447,8 @@ export default {
 
 		'lifelab.level.dish.name': '培养皿',
 		'lifelab.level.dish.intro': '> B3/S23 — 一个细胞有 2 或 3 个邻居时存活，恰好 3 个邻居时诞生。',
-		'lifelab.level.dish.step1': '选一个图案，点击放下 · SELECT 拾取细胞以移动，R / F 旋转 · Ctrl+Z 撤销 · RUN 运行',
+		'lifelab.level.dish.step1':
+			'选一个图案，点击放下 · SELECT 拾取细胞以移动，R / F 旋转 · Ctrl+Z 撤销 · RUN 运行',
 
 		'lifelab.note.block': '4 个细胞，最简单的稳定形状',
 		'lifelab.note.beehive': '稳定，6 个细胞',
@@ -461,9 +515,11 @@ export default {
 		'lifelab.ext.hotel': '每 128 代就有一个新滑翔机加入循环，且总有空位',
 		'lifelab.ext.reflectors': '周期 5 到 15 的快速低周期滑翔机反射器，各自独立循环',
 		'lifelab.ext.fizzles': '一份目录，收录信号被折弯、拆分或悄然消灭的各种方式',
-		'lifelab.ext.turing': 'Paul Rendell 设计的三态三符号图灵机 — 有限状态机、由堆栈组成的纸带，全部用滑翔机构成',
+		'lifelab.ext.turing':
+			'Paul Rendell 设计的三态三符号图灵机 — 有限状态机、由堆栈组成的纸带，全部用滑翔机构成',
 		'lifelab.ext.chase': '一个滑翔机沿着越来越长的路径反弹，每次反弹都由 LWSS 编队恰好及时送达',
-		'lifelab.ext.unitCell': '生命游戏中的生命游戏：这个 512×512 的机器是一台更慢的生命游戏中的一个细胞',
+		'lifelab.ext.unitCell':
+			'生命游戏中的生命游戏：这个 512×512 的机器是一台更慢的生命游戏中的一个细胞',
 		'lifelab.ext.orthoShips': 'c/2 到 c/6 的横向飞船：LWSS、MWSS、HWSS、乌龟、飞镖、周末飞船、蜘蛛',
 		'lifelab.ext.diagShips': 'c/4、c/5 和 c/6 的对角飞船：猎户座、加拿大雁、天鹅',
 		'lifelab.ext.corderships': '由开关引擎构成的 c/12 对角飞船',
@@ -472,7 +528,8 @@ export default {
 	},
 	'zh-TW': {
 		'lifelab.page.title': 'KRSZ™ // 7:lifelab — 康威自動機實驗室',
-		'lifelab.page.description': '康威生命遊戲，作為一個開放的培養皿：320x200 的網格、從靜物到高斯帕槍的已驗證圖案庫、自由繪製與隨機湯。',
+		'lifelab.page.description':
+			'康威生命遊戲，作為一個開放的培養皿：320x200 的網格、從靜物到高斯帕槍的已驗證圖案庫、自由繪製與隨機湯。',
 		'lifelab.page.subtitle': '康威自動機 · B3/S23',
 		'lifelab.page.guideHint': '帶你走一遍實驗室 — 規則、控制方式和該留意的東西',
 		'lifelab.page.clearAllHint': '清除棋盤上的所有細胞',
@@ -483,20 +540,26 @@ export default {
 		'lifelab.page.tourHeading': 'LIFE.LAB 導覽',
 
 		'lifelab.tour.dish.title': '培養皿',
-		'lifelab.tour.dish.body': '一個執行康威生命遊戲的 320x200 有界網格。每一代，每個細胞都會檢視自己的八個鄰居：有兩三個鄰居的活細胞會繼續存活，恰好有三個鄰居的死細胞會復活，其餘全部死亡。單憑這一條規則就構成了整個模擬 — 這裡沒有任何腳本化的東西。',
+		'lifelab.tour.dish.body':
+			'一個執行康威生命遊戲的 320x200 有界網格。每一代，每個細胞都會檢視自己的八個鄰居：有兩三個鄰居的活細胞會繼續存活，恰好有三個鄰居的死細胞會復活，其餘全部死亡。單憑這一條規則就構成了整個模擬 — 這裡沒有任何腳本化的東西。',
 		'lifelab.tour.dish.key1': '有 3 個鄰居時誕生，2 或 3 個鄰居時存活',
 		'lifelab.tour.run.title': '執行它',
-		'lifelab.tour.run.body': 'RUN 持續推進，STEP 恰好推進一代，方便你逐細胞追蹤某個圖案，BACK 則倒轉回去。SOUP 用隨機雜訊填滿培養皿，是觀察規則本身效果最快的方式。SPD 用來切換速率。',
+		'lifelab.tour.run.body':
+			'RUN 持續推進，STEP 恰好推進一代，方便你逐細胞追蹤某個圖案，BACK 則倒轉回去。SOUP 用隨機雜訊填滿培養皿，是觀察規則本身效果最快的方式。SPD 用來切換速率。',
 		'lifelab.tour.run.key1': '每秒 2、8、30、120 或 480 代',
 		'lifelab.tour.run.key2': '清空培養皿，重新開始',
 		'lifelab.tour.draw.title': '繪製',
-		'lifelab.tour.draw.body': 'PAN 拖曳視角。DRAW 繪製活細胞，點擊已存活的細胞會將其清除，所以你可以手動種下一個形狀，看它會變成什麼。SELECT 拖出一個方框把細胞拾取起來：拖曳移動，R 和 F 旋轉，Delete 移除，Enter 放下。也可以從圖案架中選一個圖案，它會跟隨游標，直到你點擊為止。Ctrl+Z 可以復原以上任何操作。',
+		'lifelab.tour.draw.body':
+			'PAN 拖曳視角。DRAW 繪製活細胞，點擊已存活的細胞會將其清除，所以你可以手動種下一個形狀，看它會變成什麼。SELECT 拖出一個方框把細胞拾取起來：拖曳移動，R 和 F 旋轉，Delete 移除，Enter 放下。也可以從圖案架中選一個圖案，它會跟隨游標，直到你點擊為止。Ctrl+Z 可以復原以上任何操作。',
 		'lifelab.tour.library.title': '圖案庫',
-		'lifelab.tour.library.body': '已驗證的圖案，從永不改變的靜物，到振盪器和滑翔機，再到會永遠發射滑翔機的高斯帕槍。點擊一個圖案拾取它，點擊培養皿放置它，再次點擊同一項就會放下手中的圖案。',
+		'lifelab.tour.library.body':
+			'已驗證的圖案，從永不改變的靜物，到振盪器和滑翔機，再到會永遠發射滑翔機的高斯帕槍。點擊一個圖案拾取它，點擊培養皿放置它，再次點擊同一項就會放下手中的圖案。',
 		'lifelab.tour.stats.title': '該留意什麼',
-		'lifelab.tour.stats.body': 'GEN 統計經過的代數，POP 統計目前存活的細胞數。POP 穩定在一個常數，代表培養皿已進入靜物或循環狀態；POP 降到零，代表已經滅絕。兩者都是直接從棋盤上讀出來的，不是估算的。',
+		'lifelab.tour.stats.body':
+			'GEN 統計經過的代數，POP 統計目前存活的細胞數。POP 穩定在一個常數，代表培養皿已進入靜物或循環狀態；POP 降到零，代表已經滅絕。兩者都是直接從棋盤上讀出來的，不是估算的。',
 		'lifelab.tour.log.title': '日誌',
-		'lifelab.tour.log.body': '記錄培養皿剛剛發生的事，懸浮在左下角，絕不會佔用棋盤的空間。想要整片棋盤時，用日誌標題裡的按鈕把它收起來。',
+		'lifelab.tour.log.body':
+			'記錄培養皿剛剛發生的事，懸浮在左下角，絕不會佔用棋盤的空間。想要整片棋盤時，用日誌標題裡的按鈕把它收起來。',
 
 		'lifelab.ui.clearAll': '全部清除',
 		'lifelab.ui.run': '執行',
@@ -510,17 +573,21 @@ export default {
 		'lifelab.ui.gen': '代數',
 		'lifelab.ui.pop': '存活',
 		'lifelab.ui.speed': '速率 {rate}/秒',
-		'lifelab.ui.dishHint': '培養皿大小 — 在 320×200、640×400、1280×800、2000×1800 之間循環。細胞會被保留；縮小時若有細胞會遺失，會先詢問。',
+		'lifelab.ui.dishHint':
+			'培養皿大小 — 在 320×200、640×400、1280×800、2000×1800 之間循環。細胞會被保留；縮小時若有細胞會遺失，會先詢問。',
 		'lifelab.ui.showLog': '顯示日誌',
 		'lifelab.ui.hideLog': '隱藏日誌',
-		'lifelab.ui.drawHint': '繪製細胞 — 點擊已存活的細胞可將其清除。要清除一整片區域，用 SELECT 選取後按 Delete',
-		'lifelab.ui.selectHint': '拖出一個方框把細胞選取起來：然後拖曳移動，R / F 旋轉，Enter 放下，Delete 移除，Ctrl+S 儲存',
+		'lifelab.ui.drawHint':
+			'繪製細胞 — 點擊已存活的細胞可將其清除。要清除一整片區域，用 SELECT 選取後按 Delete',
+		'lifelab.ui.selectHint':
+			'拖出一個方框把細胞選取起來：然後拖曳移動，R / F 旋轉，Enter 放下，Delete 移除，Ctrl+S 儲存',
 		'lifelab.ui.searchPlaceholder': '搜尋圖案',
 		'lifelab.ui.customLabel': '自訂',
 		'lifelab.ui.customHint': '你自己的圖案，儲存在這個瀏覽器中',
 		'lifelab.ui.customFallbackName': '自訂',
 		'lifelab.ui.fromSelection': '來自選取範圍',
-		'lifelab.ui.fromSelectionHint': '切換到 SELECT，在培養皿上拖出一個方框，再從出現的工具列中點 SAVE',
+		'lifelab.ui.fromSelectionHint':
+			'切換到 SELECT，在培養皿上拖出一個方框，再從出現的工具列中點 SAVE',
 		'lifelab.ui.pasteRle': '貼上 RLE',
 		'lifelab.ui.pasteRleHint': '貼上一個 RLE 格式的圖案，這是 LifeWiki 和 Golly 使用的格式',
 		'lifelab.ui.stampTooltip': '{label} — {w}×{h}，{cells} 個細胞',
@@ -548,13 +615,17 @@ export default {
 		'lifelab.ui.delete': '刪除',
 		'lifelab.ui.followHint': '點擊放下 · shift+點擊連續放置副本',
 		'lifelab.ui.touchHint': '拖曳移動 · 點擊外部放下',
-		'lifelab.ui.dragHintOrigin': '拖曳移動 · 方向鍵微調 · 點擊外部或 Enter 放下 · Esc 放回原處 · Ctrl+Z 復原',
-		'lifelab.ui.dragHintCancel': '拖曳移動 · 方向鍵微調 · 點擊外部或 Enter 放下 · Esc 取消 · Ctrl+Z 復原',
+		'lifelab.ui.dragHintOrigin':
+			'拖曳移動 · 方向鍵微調 · 點擊外部或 Enter 放下 · Esc 放回原處 · Ctrl+Z 復原',
+		'lifelab.ui.dragHintCancel':
+			'拖曳移動 · 方向鍵微調 · 點擊外部或 Enter 放下 · Esc 取消 · Ctrl+Z 復原',
 		'lifelab.ui.rlePlaceholder': 'x = 3, y = 3\nbob$2bo$3o!',
 
 		'lifelab.dialog.biggerThanDishTitle': '比培養皿還大',
-		'lifelab.dialog.biggerThanDishBody': '{label} 大小為 {pw}×{ph} 個細胞；培養皿大小為 {dw}×{dh}。\n是否要將培養皿放大到 {nw}×{nh}？皿上已有的內容都會保留。',
-		'lifelab.dialog.biggerThanDishSlow': '\n\n這麼大的培養皿執行較慢 — 預期每秒只有幾代，而不是數百代。',
+		'lifelab.dialog.biggerThanDishBody':
+			'{label} 大小為 {pw}×{ph} 個細胞；培養皿大小為 {dw}×{dh}。\n是否要將培養皿放大到 {nw}×{nh}？皿上已有的內容都會保留。',
+		'lifelab.dialog.biggerThanDishSlow':
+			'\n\n這麼大的培養皿執行較慢 — 預期每秒只有幾代，而不是數百代。',
 		'lifelab.dialog.enlargeAndPlace': '放大並放置',
 		'lifelab.dialog.cancel': '取消',
 		'lifelab.dialog.saveAsPatternTitle': '儲存為圖案',
@@ -563,7 +634,8 @@ export default {
 		'lifelab.dialog.rleClipboardRefused': '剪貼簿存取被拒絕；請從這裡複製：',
 		'lifelab.dialog.rleCopyFromHere': '從這裡複製：',
 		'lifelab.dialog.pasteRleTitle': '貼上 RLE',
-		'lifelab.dialog.pasteRleBody': '可以是完整的 .rle 檔案，也可以只是主體部分（b = 死，o = 活，$ = 換行，! = 結束）。',
+		'lifelab.dialog.pasteRleBody':
+			'可以是完整的 .rle 檔案，也可以只是主體部分（b = 死，o = 活，$ = 換行，! = 結束）。',
 		'lifelab.dialog.namePlaceholder': '名稱',
 		'lifelab.dialog.shrinkTitle': '縮小培養皿？',
 		'lifelab.dialog.shrinkBody': '有 {lost} 個細胞在 {w}×{h} 範圍之外，將會遺失。',
@@ -626,7 +698,8 @@ export default {
 
 		'lifelab.level.dish.name': '培養皿',
 		'lifelab.level.dish.intro': '> B3/S23 — 一個細胞有 2 或 3 個鄰居時存活，恰好 3 個鄰居時誕生。',
-		'lifelab.level.dish.step1': '選一個圖案，點擊放下 · SELECT 拾取細胞以移動，R / F 旋轉 · Ctrl+Z 復原 · RUN 執行',
+		'lifelab.level.dish.step1':
+			'選一個圖案，點擊放下 · SELECT 拾取細胞以移動，R / F 旋轉 · Ctrl+Z 復原 · RUN 執行',
 
 		'lifelab.note.block': '4 個細胞，最簡單的穩定形狀',
 		'lifelab.note.beehive': '穩定，6 個細胞',
@@ -693,9 +766,11 @@ export default {
 		'lifelab.ext.hotel': '每 128 代就有一個新滑翔機加入循環，且總有空位',
 		'lifelab.ext.reflectors': '週期 5 到 15 的快速低週期滑翔機反射器，各自獨立循環',
 		'lifelab.ext.fizzles': '一份目錄，收錄訊號被折彎、拆分或悄然消滅的各種方式',
-		'lifelab.ext.turing': 'Paul Rendell 設計的三態三符號圖靈機 — 有限狀態機、由堆疊組成的紙帶，全部用滑翔機構成',
+		'lifelab.ext.turing':
+			'Paul Rendell 設計的三態三符號圖靈機 — 有限狀態機、由堆疊組成的紙帶，全部用滑翔機構成',
 		'lifelab.ext.chase': '一個滑翔機沿著越來越長的路徑反彈，每次反彈都由 LWSS 編隊恰好即時送達',
-		'lifelab.ext.unitCell': '生命遊戲中的生命遊戲：這個 512×512 的機器是一台更慢的生命遊戲中的一個細胞',
+		'lifelab.ext.unitCell':
+			'生命遊戲中的生命遊戲：這個 512×512 的機器是一台更慢的生命遊戲中的一個細胞',
 		'lifelab.ext.orthoShips': 'c/2 到 c/6 的橫向飛船：LWSS、MWSS、HWSS、烏龜、飛鏢、週末飛船、蜘蛛',
 		'lifelab.ext.diagShips': 'c/4、c/5 和 c/6 的對角飛船：獵戶座、加拿大雁、天鵝',
 		'lifelab.ext.corderships': '由開關引擎構成的 c/12 對角飛船',
@@ -704,7 +779,8 @@ export default {
 	},
 	ja: {
 		'lifelab.page.title': 'KRSZ™ // 7:lifelab — コンウェイ・オートマトン研究所',
-		'lifelab.page.description': 'コンウェイのライフゲームを開かれたシャーレとして体験できます。320x200 のグリッド、静物からガスパーガンまでの検証済みパターンライブラリ、自由描画とランダムスープ。',
+		'lifelab.page.description':
+			'コンウェイのライフゲームを開かれたシャーレとして体験できます。320x200 のグリッド、静物からガスパーガンまでの検証済みパターンライブラリ、自由描画とランダムスープ。',
 		'lifelab.page.subtitle': 'コンウェイ・オートマトン · B3/S23',
 		'lifelab.page.guideHint': 'ラボを一通り案内します — ルール、操作方法、注目すべきポイント',
 		'lifelab.page.clearAllHint': 'ボード上のすべてのセルを消去する',
@@ -715,20 +791,26 @@ export default {
 		'lifelab.page.tourHeading': 'LIFE.LAB ツアー',
 
 		'lifelab.tour.dish.title': 'シャーレ',
-		'lifelab.tour.dish.body': 'コンウェイのライフゲームが動く 320x200 の有界グリッドです。各世代ごとに、すべてのセルは自分の周囲8つの隣接セルを調べます。2つか3つ隣接している生きたセルは生き続け、ちょうど3つ隣接している死んだセルは誕生し、それ以外はすべて死にます。このたった一つのルールがシミュレーションのすべてです — ここには台本めいたものは何もありません。',
+		'lifelab.tour.dish.body':
+			'コンウェイのライフゲームが動く 320x200 の有界グリッドです。各世代ごとに、すべてのセルは自分の周囲8つの隣接セルを調べます。2つか3つ隣接している生きたセルは生き続け、ちょうど3つ隣接している死んだセルは誕生し、それ以外はすべて死にます。このたった一つのルールがシミュレーションのすべてです — ここには台本めいたものは何もありません。',
 		'lifelab.tour.dish.key1': '隣接3つで誕生、2つか3つで存続',
 		'lifelab.tour.run.title': '実行する',
-		'lifelab.tour.run.body': 'RUN は連続して進め、STEP はちょうど1世代だけ進めるのでパターンをセル単位で追えます。BACK は巻き戻します。SOUP はシャーレをノイズで満たすもので、ルール自体の働きを最速で確認する方法です。SPD で速度を切り替えます。',
+		'lifelab.tour.run.body':
+			'RUN は連続して進め、STEP はちょうど1世代だけ進めるのでパターンをセル単位で追えます。BACK は巻き戻します。SOUP はシャーレをノイズで満たすもので、ルール自体の働きを最速で確認する方法です。SPD で速度を切り替えます。',
 		'lifelab.tour.run.key1': '毎秒 2、8、30、120、480 世代のいずれか',
 		'lifelab.tour.run.key2': 'シャーレを空にしてやり直す',
 		'lifelab.tour.draw.title': '描画',
-		'lifelab.tour.draw.body': 'PAN は表示をドラッグで動かします。DRAW は生きたセルを描き、すでに生きているセルをクリックすると消せるので、手で形を仕込んでそれがどうなるか観察できます。SELECT はセルを囲むボックスをドラッグして拾い上げます。ドラッグで移動、R と F で回転、Delete で削除、Enter で配置します。代わりにトレイからパターンを選ぶと、クリックするまでカーソルに追従します。Ctrl+Z でこれらすべてを元に戻せます。',
+		'lifelab.tour.draw.body':
+			'PAN は表示をドラッグで動かします。DRAW は生きたセルを描き、すでに生きているセルをクリックすると消せるので、手で形を仕込んでそれがどうなるか観察できます。SELECT はセルを囲むボックスをドラッグして拾い上げます。ドラッグで移動、R と F で回転、Delete で削除、Enter で配置します。代わりにトレイからパターンを選ぶと、クリックするまでカーソルに追従します。Ctrl+Z でこれらすべてを元に戻せます。',
 		'lifelab.tour.library.title': 'ライブラリ',
-		'lifelab.tour.library.body': '検証済みのパターン集です。決して変化しない静物から、振動子やグライダー、永遠にグライダーを放出し続けるガスパーガンまで揃っています。クリックして拾い上げ、シャーレをクリックして配置し、同じ項目をもう一度クリックすると手放します。',
+		'lifelab.tour.library.body':
+			'検証済みのパターン集です。決して変化しない静物から、振動子やグライダー、永遠にグライダーを放出し続けるガスパーガンまで揃っています。クリックして拾い上げ、シャーレをクリックして配置し、同じ項目をもう一度クリックすると手放します。',
 		'lifelab.tour.stats.title': '注目すべきポイント',
-		'lifelab.tour.stats.body': 'GEN は経過した世代数、POP は現在生きているセル数を数えます。POP が一定の値に落ち着けば、シャーレが静物やループに達したということです。POP がゼロになれば絶滅したということです。どちらも推定ではなく、ボードから直接読み取られています。',
+		'lifelab.tour.stats.body':
+			'GEN は経過した世代数、POP は現在生きているセル数を数えます。POP が一定の値に落ち着けば、シャーレが静物やループに達したということです。POP がゼロになれば絶滅したということです。どちらも推定ではなく、ボードから直接読み取られています。',
 		'lifelab.tour.log.title': 'ログ',
-		'lifelab.tour.log.body': 'シャーレで今起きたことの記録で、左下隅に浮かんでいるためボードのスペースを奪うことはありません。シャーレ全体を見たいときは、見出しにあるボタンで折りたたんでください。',
+		'lifelab.tour.log.body':
+			'シャーレで今起きたことの記録で、左下隅に浮かんでいるためボードのスペースを奪うことはありません。シャーレ全体を見たいときは、見出しにあるボタンで折りたたんでください。',
 
 		'lifelab.ui.clearAll': '全消去',
 		'lifelab.ui.run': '実行',
@@ -742,21 +824,27 @@ export default {
 		'lifelab.ui.gen': '世代',
 		'lifelab.ui.pop': '個体数',
 		'lifelab.ui.speed': '速度 {rate}/秒',
-		'lifelab.ui.dishHint': 'シャーレのサイズ — 320×200、640×400、1280×800、2000×1800 を順に切り替えます。セルは保持されます。縮小でセルが失われる場合は先に確認します。',
+		'lifelab.ui.dishHint':
+			'シャーレのサイズ — 320×200、640×400、1280×800、2000×1800 を順に切り替えます。セルは保持されます。縮小でセルが失われる場合は先に確認します。',
 		'lifelab.ui.showLog': 'ログを表示',
 		'lifelab.ui.hideLog': 'ログを隠す',
-		'lifelab.ui.drawHint': 'セルを描画 — 生きているセルをクリックすると消去します。範囲を消したいときは SELECT で選んで Delete を押してください',
-		'lifelab.ui.selectHint': 'セルを囲むボックスをドラッグして選択します。その後ドラッグで移動、R / F で回転、Enter で配置、Delete で削除、Ctrl+S で保存できます',
+		'lifelab.ui.drawHint':
+			'セルを描画 — 生きているセルをクリックすると消去します。範囲を消したいときは SELECT で選んで Delete を押してください',
+		'lifelab.ui.selectHint':
+			'セルを囲むボックスをドラッグして選択します。その後ドラッグで移動、R / F で回転、Enter で配置、Delete で削除、Ctrl+S で保存できます',
 		'lifelab.ui.searchPlaceholder': 'パターンを検索',
 		'lifelab.ui.customLabel': 'カスタム',
 		'lifelab.ui.customHint': 'あなた自身のパターン。このブラウザに保存されています',
 		'lifelab.ui.customFallbackName': 'カスタム',
 		'lifelab.ui.fromSelection': '選択範囲から作成',
-		'lifelab.ui.fromSelectionHint': 'SELECT に切り替えてシャーレ上でボックスをドラッグし、表示されるバーの SAVE を押してください',
+		'lifelab.ui.fromSelectionHint':
+			'SELECT に切り替えてシャーレ上でボックスをドラッグし、表示されるバーの SAVE を押してください',
 		'lifelab.ui.pasteRle': 'RLE を貼り付け',
-		'lifelab.ui.pasteRleHint': 'RLE 形式のパターンを貼り付けます。LifeWiki や Golly が使っている形式です',
+		'lifelab.ui.pasteRleHint':
+			'RLE 形式のパターンを貼り付けます。LifeWiki や Golly が使っている形式です',
 		'lifelab.ui.stampTooltip': '{label} — {w}×{h}、{cells} セル',
-		'lifelab.ui.biggerThanDish': '\nシャーレより大きいパターンです — 選択するとシャーレの拡大を提案します',
+		'lifelab.ui.biggerThanDish':
+			'\nシャーレより大きいパターンです — 選択するとシャーレの拡大を提案します',
 		'lifelab.ui.deletePattern': 'このパターンを削除',
 		'lifelab.ui.piece': 'ピース',
 		'lifelab.ui.selection': '選択範囲',
@@ -780,22 +868,28 @@ export default {
 		'lifelab.ui.delete': '削除',
 		'lifelab.ui.followHint': 'クリックで配置 · Shift+クリックでコピーを配置',
 		'lifelab.ui.touchHint': 'ドラッグで移動 · 外側をタップで配置',
-		'lifelab.ui.dragHintOrigin': 'ドラッグで移動 · 矢印キーで微調整 · 外側のクリックまたは Enter で配置 · Esc で元に戻す · Ctrl+Z で取り消し',
-		'lifelab.ui.dragHintCancel': 'ドラッグで移動 · 矢印キーで微調整 · 外側のクリックまたは Enter で配置 · Esc でキャンセル · Ctrl+Z で取り消し',
+		'lifelab.ui.dragHintOrigin':
+			'ドラッグで移動 · 矢印キーで微調整 · 外側のクリックまたは Enter で配置 · Esc で元に戻す · Ctrl+Z で取り消し',
+		'lifelab.ui.dragHintCancel':
+			'ドラッグで移動 · 矢印キーで微調整 · 外側のクリックまたは Enter で配置 · Esc でキャンセル · Ctrl+Z で取り消し',
 		'lifelab.ui.rlePlaceholder': 'x = 3, y = 3\nbob$2bo$3o!',
 
 		'lifelab.dialog.biggerThanDishTitle': 'シャーレより大きいパターンです',
-		'lifelab.dialog.biggerThanDishBody': '{label} は {pw}×{ph} セルですが、シャーレは {dw}×{dh} です。\nシャーレを {nw}×{nh} に拡大しますか？既存の内容はすべて保持されます。',
-		'lifelab.dialog.biggerThanDishSlow': '\n\nこの大きさのシャーレは動作が遅くなります — 数百世代ではなく、毎秒数世代程度を想定してください。',
+		'lifelab.dialog.biggerThanDishBody':
+			'{label} は {pw}×{ph} セルですが、シャーレは {dw}×{dh} です。\nシャーレを {nw}×{nh} に拡大しますか？既存の内容はすべて保持されます。',
+		'lifelab.dialog.biggerThanDishSlow':
+			'\n\nこの大きさのシャーレは動作が遅くなります — 数百世代ではなく、毎秒数世代程度を想定してください。',
 		'lifelab.dialog.enlargeAndPlace': '拡大して配置',
 		'lifelab.dialog.cancel': 'キャンセル',
 		'lifelab.dialog.saveAsPatternTitle': 'パターンとして保存',
 		'lifelab.dialog.saveAsPatternBody': '{w}×{h}、{cells} セル。名前を付けてください：',
 		'lifelab.dialog.rleTitle': 'RLE',
-		'lifelab.dialog.rleClipboardRefused': 'クリップボードへのアクセスが拒否されました。ここからコピーしてください：',
+		'lifelab.dialog.rleClipboardRefused':
+			'クリップボードへのアクセスが拒否されました。ここからコピーしてください：',
 		'lifelab.dialog.rleCopyFromHere': 'ここからコピーしてください：',
 		'lifelab.dialog.pasteRleTitle': 'RLE を貼り付け',
-		'lifelab.dialog.pasteRleBody': '.rle ファイル全体でも、本文部分だけでも構いません（b = 死、o = 生、$ = 改行、! = 終端）。',
+		'lifelab.dialog.pasteRleBody':
+			'.rle ファイル全体でも、本文部分だけでも構いません（b = 死、o = 生、$ = 改行、! = 終端）。',
 		'lifelab.dialog.namePlaceholder': '名前',
 		'lifelab.dialog.shrinkTitle': 'シャーレを縮小しますか？',
 		'lifelab.dialog.shrinkBody': '{lost} 個のセルが {w}×{h} の範囲外にあり、失われます。',
@@ -810,7 +904,8 @@ export default {
 		'lifelab.log.boot1': 'LIFE.LAB v0.2 — セルオートマトン研究所',
 		'lifelab.log.boot2': 'ルール: B3/S23 | グリッド: 320x200 有界 | ホスト: krsz.in',
 		'lifelab.log.nothingInBox': 'そのボックスの中には何もありません',
-		'lifelab.log.pickedUp': '{n} 個のセルを拾い上げました — ドラッグで移動、R/F で回転、Enter で配置、Esc で元に戻す',
+		'lifelab.log.pickedUp':
+			'{n} 個のセルを拾い上げました — ドラッグで移動、R/F で回転、Enter で配置、Esc で元に戻す',
 		'lifelab.log.placed': '{label} @ ({x},{y})',
 		'lifelab.log.placedFellOff': '{label} @ ({x},{y}) — {n} 個のセルが端からはみ出しました',
 		'lifelab.log.deletedCells': '{n} 個のセルを削除しました',
@@ -832,10 +927,12 @@ export default {
 		'lifelab.log.soupFill': 'SOUP — 12% ランダム充填',
 		'lifelab.log.rewindNothing': 'これ以上前の記録は保持されていません',
 		'lifelab.log.rewindTo': '第 {gen} 世代まで巻き戻しました',
-		'lifelab.log.cannotEditWhileRunning': '実行中は編集できません — まず RESET で第0世代に戻してください',
+		'lifelab.log.cannotEditWhileRunning':
+			'実行中は編集できません — まず RESET で第0世代に戻してください',
 		'lifelab.log.placementLaunchZone': '点線で示された LAUNCH ゾーンの内側にしか配置できません',
 		'lifelab.log.budgetExhausted': 'セルの上限に達しました（上限 {n}）',
-		'lifelab.log.selectHint': 'SELECT：セルを囲むボックスをドラッグして選択し、バーの SAVE を押してください',
+		'lifelab.log.selectHint':
+			'SELECT：セルを囲むボックスをドラッグして選択し、バーの SAVE を押してください',
 
 		'lifelab.cat.still.label': '静物',
 		'lifelab.cat.still.hint': '決して変化しない',
@@ -858,7 +955,8 @@ export default {
 
 		'lifelab.level.dish.name': 'シャーレ',
 		'lifelab.level.dish.intro': '> B3/S23 — セルは隣接が2つか3つで生存し、ちょうど3つで誕生する。',
-		'lifelab.level.dish.step1': 'パターンを選んでクリックで配置 · SELECT でセルを拾って移動、R / F で回転 · Ctrl+Z で取り消し · RUN で実行',
+		'lifelab.level.dish.step1':
+			'パターンを選んでクリックで配置 · SELECT でセルを拾って移動、R / F で回転 · Ctrl+Z で取り消し · RUN で実行',
 
 		'lifelab.note.block': '4セル、最も単純な安定図形',
 		'lifelab.note.beehive': '安定、6セル',
@@ -888,9 +986,11 @@ export default {
 		'lifelab.note.rabbits': '9セル、同じく',
 		'lifelab.note.switchEngine': '永遠に成長し、瓦礫を残していく',
 		'lifelab.note.gosperGun': '30世代ごとにグライダーを発射し続ける',
-		'lifelab.note.annihilate': 'グライダー同士の正面衝突 — 両方とも消滅し、何も残らない。NOTゲートに相当する',
+		'lifelab.note.annihilate':
+			'グライダー同士の正面衝突 — 両方とも消滅し、何も残らない。NOTゲートに相当する',
 		'lifelab.note.sink': 'グライダーがイーターに飛び込んで消える。イーターは自己修復する',
-		'lifelab.note.gunSink': '尽きることのない信号の流れが吸収され続ける。個体数は永遠に一定の範囲内にとどまる',
+		'lifelab.note.gunSink':
+			'尽きることのない信号の流れが吸収され続ける。個体数は永遠に一定の範囲内にとどまる',
 		'lifelab.note.custom': 'あなた自身のパターン — このブラウザに保存されています',
 
 		'lifelab.ext.blom': '13セル、23,314世代動き続ける',
@@ -899,8 +999,10 @@ export default {
 		'lifelab.ext.lidka': '13セル、29,055世代',
 		'lifelab.ext.m52513': '知られている中で最も長寿な16×16のスープ：52,513世代',
 		'lifelab.ext.pufferTrain': '2隻の LWSS に護衛されて生き続ける B-ヘプトミノで、瓦礫を残していく',
-		'lifelab.ext.piFuse': '2列の四角形を敷き、pi-ヘプトミノがそれを追いかけて食べ続けるが、決して追いつかない',
-		'lifelab.ext.linePuffer': 'c/2 のラインパファー。自分自身の瓦礫が最終的に950万世代後にこれを止める',
+		'lifelab.ext.piFuse':
+			'2列の四角形を敷き、pi-ヘプトミノがそれを追いかけて食べ続けるが、決して追いつかない',
+		'lifelab.ext.linePuffer':
+			'c/2 のラインパファー。自分自身の瓦礫が最終的に950万世代後にこれを止める',
 		'lifelab.ext.puffer2c5': '5世代ごとに2セル進む「汚れた」パファー',
 		'lifelab.ext.basicRakes': '5つの c/2 レーキが並び、瓦礫がすべてスペースシップになるパファー',
 		'lifelab.ext.p52gun': '52世代ごとにグライダーを1機発射する',
@@ -915,28 +1017,40 @@ export default {
 		'lifelab.ext.c4Breeder': '2つの斜めパファーと1つのレーキが協力してスイッチエンジンを繁殖させる',
 		'lifelab.ext.rakeFactory': '90世代ごとにレーキ一式を丸ごと発射する、動かないガン',
 		'lifelab.ext.sawtooth': '個体数は際限なく増え続けるが、常に177まで落ち込む',
-		'lifelab.ext.advancer': '直列に並んだ6個のNOTゲートが、通過するグライダーを1機ごとに60世代分前進させる',
-		'lifelab.ext.heisenblinker': '通過するグライダーの流れが状態を切り替えても、乱されることのないブリンカー',
-		'lifelab.ext.heisenburpNat': 'グライダーが通り過ぎると、コピーが1つ放出され、元のものはそのまま残る',
+		'lifelab.ext.advancer':
+			'直列に並んだ6個のNOTゲートが、通過するグライダーを1機ごとに60世代分前進させる',
+		'lifelab.ext.heisenblinker':
+			'通過するグライダーの流れが状態を切り替えても、乱されることのないブリンカー',
+		'lifelab.ext.heisenburpNat':
+			'グライダーが通り過ぎると、コピーが1つ放出され、元のものはそのまま残る',
 		'lifelab.ext.heisenburp30': '通過する3機のグライダーをコピーする：検出しても乱さない',
 		'lifelab.ext.heisenburp46': 'グライダー複写機の p46 版',
 		'lifelab.ext.stargate': 'LWSS が左から入り、28世代で30セル分ジャンプする — 光より速い',
-		'lifelab.ext.racetrack': '1800世代のループ：グライダーが LWSS になり、穴になり、またグライダーに戻る',
+		'lifelab.ext.racetrack':
+			'1800世代のループ：グライダーが LWSS になり、穴になり、またグライダーに戻る',
 		'lifelab.ext.hotel': '128世代ごとに新しいグライダーがループに加わり、常に空きがある',
-		'lifelab.ext.reflectors': '周期5から15までの高速な低周期グライダー反射器が、それぞれ独自のループで動く',
-		'lifelab.ext.fizzles': '信号を曲げたり、分岐させたり、静かに消し去ったりするさまざまな方法のカタログ',
-		'lifelab.ext.turing': 'Paul Rendell による3状態3記号のチューリングマシン — 有限状態機械もスタックのテープも、すべてグライダーで構成されている',
-		'lifelab.ext.chase': 'グライダーがどんどん長くなる経路を跳ね返っていき、跳ね返るたびに LWSS の隊列がちょうど間に合うように届ける',
-		'lifelab.ext.unitCell': 'ライフゲームの中のライフゲーム：この512×512の機械は、より低速なライフゲームの1セルにあたる',
-		'lifelab.ext.orthoShips': 'c/2 から c/6 までの横方向のスペースシップ：LWSS、MWSS、HWSS、タートル、ダート、ウィークエンダー、スパイダー',
-		'lifelab.ext.diagShips': 'c/4、c/5、c/6 の斜め方向のスペースシップ：オライオン、カナダグース、スワン',
+		'lifelab.ext.reflectors':
+			'周期5から15までの高速な低周期グライダー反射器が、それぞれ独自のループで動く',
+		'lifelab.ext.fizzles':
+			'信号を曲げたり、分岐させたり、静かに消し去ったりするさまざまな方法のカタログ',
+		'lifelab.ext.turing':
+			'Paul Rendell による3状態3記号のチューリングマシン — 有限状態機械もスタックのテープも、すべてグライダーで構成されている',
+		'lifelab.ext.chase':
+			'グライダーがどんどん長くなる経路を跳ね返っていき、跳ね返るたびに LWSS の隊列がちょうど間に合うように届ける',
+		'lifelab.ext.unitCell':
+			'ライフゲームの中のライフゲーム：この512×512の機械は、より低速なライフゲームの1セルにあたる',
+		'lifelab.ext.orthoShips':
+			'c/2 から c/6 までの横方向のスペースシップ：LWSS、MWSS、HWSS、タートル、ダート、ウィークエンダー、スパイダー',
+		'lifelab.ext.diagShips':
+			'c/4、c/5、c/6 の斜め方向のスペースシップ：オライオン、カナダグース、スワン',
 		'lifelab.ext.corderships': 'スイッチエンジンから作られた c/12 の斜め方向のスペースシップ',
 		'lifelab.ext.lowPeriod': '低周期の振動子を集めた棚',
 		'lifelab.ext.eaters': 'グライダーを飲み込む静物'
 	},
 	ko: {
 		'lifelab.page.title': 'KRSZ™ // 7:lifelab — 콘웨이 오토마톤 연구소',
-		'lifelab.page.description': '콘웨이의 생명 게임을 열린 배양 접시로 즐겨 보세요. 320x200 격자, 정물부터 고스퍼 건까지 검증된 패턴 라이브러리, 자유 드로잉과 무작위 수프.',
+		'lifelab.page.description':
+			'콘웨이의 생명 게임을 열린 배양 접시로 즐겨 보세요. 320x200 격자, 정물부터 고스퍼 건까지 검증된 패턴 라이브러리, 자유 드로잉과 무작위 수프.',
 		'lifelab.page.subtitle': '콘웨이 오토마톤 · B3/S23',
 		'lifelab.page.guideHint': '연구실을 안내합니다 — 규칙, 조작법, 지켜볼 것들',
 		'lifelab.page.clearAllHint': '보드의 모든 셀을 지웁니다',
@@ -947,20 +1061,26 @@ export default {
 		'lifelab.page.tourHeading': 'LIFE.LAB 투어',
 
 		'lifelab.tour.dish.title': '배양 접시',
-		'lifelab.tour.dish.body': '콘웨이의 생명 게임이 돌아가는 320x200 유한 격자입니다. 매 세대마다 모든 셀은 자신의 여덟 이웃을 확인합니다. 이웃이 두 개나 세 개인 살아 있는 셀은 계속 살아남고, 이웃이 정확히 세 개인 죽은 셀은 태어나며, 그 외에는 모두 죽습니다. 이 단 하나의 규칙이 시뮬레이션의 전부입니다 — 여기에 미리 정해진 각본 같은 것은 없습니다.',
+		'lifelab.tour.dish.body':
+			'콘웨이의 생명 게임이 돌아가는 320x200 유한 격자입니다. 매 세대마다 모든 셀은 자신의 여덟 이웃을 확인합니다. 이웃이 두 개나 세 개인 살아 있는 셀은 계속 살아남고, 이웃이 정확히 세 개인 죽은 셀은 태어나며, 그 외에는 모두 죽습니다. 이 단 하나의 규칙이 시뮬레이션의 전부입니다 — 여기에 미리 정해진 각본 같은 것은 없습니다.',
 		'lifelab.tour.dish.key1': '이웃 3개면 탄생, 2개 또는 3개면 생존',
 		'lifelab.tour.run.title': '실행하기',
-		'lifelab.tour.run.body': 'RUN은 계속 진행하고, STEP은 정확히 한 세대만 진행해 패턴을 셀 단위로 따라갈 수 있게 해 주며, BACK은 되감습니다. SOUP은 배양 접시를 노이즈로 채우는 기능으로, 규칙 자체가 무엇을 하는지 가장 빠르게 볼 수 있는 방법입니다. SPD로 속도를 전환합니다.',
+		'lifelab.tour.run.body':
+			'RUN은 계속 진행하고, STEP은 정확히 한 세대만 진행해 패턴을 셀 단위로 따라갈 수 있게 해 주며, BACK은 되감습니다. SOUP은 배양 접시를 노이즈로 채우는 기능으로, 규칙 자체가 무엇을 하는지 가장 빠르게 볼 수 있는 방법입니다. SPD로 속도를 전환합니다.',
 		'lifelab.tour.run.key1': '초당 2, 8, 30, 120, 480 세대 중 하나',
 		'lifelab.tour.run.key2': '배양 접시를 비우고 처음부터 다시 시작',
 		'lifelab.tour.draw.title': '그리기',
-		'lifelab.tour.draw.body': 'PAN은 화면을 드래그해 이동합니다. DRAW는 살아 있는 셀을 그리며, 이미 살아 있는 셀을 클릭하면 지워지므로 직접 모양을 만들어 어떻게 변하는지 지켜볼 수 있습니다. SELECT는 셀 주위에 상자를 드래그해서 집어 듭니다. 드래그로 이동, R과 F로 회전, Delete로 제거, Enter로 내려놓습니다. 대신 트레이에서 패턴을 고르면 클릭할 때까지 커서를 따라다닙니다. Ctrl+Z로 이 모든 작업을 실행 취소할 수 있습니다.',
+		'lifelab.tour.draw.body':
+			'PAN은 화면을 드래그해 이동합니다. DRAW는 살아 있는 셀을 그리며, 이미 살아 있는 셀을 클릭하면 지워지므로 직접 모양을 만들어 어떻게 변하는지 지켜볼 수 있습니다. SELECT는 셀 주위에 상자를 드래그해서 집어 듭니다. 드래그로 이동, R과 F로 회전, Delete로 제거, Enter로 내려놓습니다. 대신 트레이에서 패턴을 고르면 클릭할 때까지 커서를 따라다닙니다. Ctrl+Z로 이 모든 작업을 실행 취소할 수 있습니다.',
 		'lifelab.tour.library.title': '라이브러리',
-		'lifelab.tour.library.body': '검증된 패턴 모음입니다. 절대 변하지 않는 정물부터 진동자와 글라이더, 그리고 글라이더를 영원히 쏘아 내는 고스퍼 건까지 있습니다. 클릭해서 집어 들고, 배양 접시를 클릭해 배치하며, 같은 항목을 다시 클릭하면 손에서 내려놓습니다.',
+		'lifelab.tour.library.body':
+			'검증된 패턴 모음입니다. 절대 변하지 않는 정물부터 진동자와 글라이더, 그리고 글라이더를 영원히 쏘아 내는 고스퍼 건까지 있습니다. 클릭해서 집어 들고, 배양 접시를 클릭해 배치하며, 같은 항목을 다시 클릭하면 손에서 내려놓습니다.',
 		'lifelab.tour.stats.title': '지켜볼 것들',
-		'lifelab.tour.stats.body': 'GEN은 지난 세대 수를, POP은 현재 살아 있는 셀 수를 셉니다. POP이 일정한 값에 머무르면 배양 접시가 정물이나 순환 상태에 도달했다는 뜻이고, POP이 0으로 떨어지면 전부 죽었다는 뜻입니다. 둘 다 추정이 아니라 보드에서 직접 읽은 값입니다.',
+		'lifelab.tour.stats.body':
+			'GEN은 지난 세대 수를, POP은 현재 살아 있는 셀 수를 셉니다. POP이 일정한 값에 머무르면 배양 접시가 정물이나 순환 상태에 도달했다는 뜻이고, POP이 0으로 떨어지면 전부 죽었다는 뜻입니다. 둘 다 추정이 아니라 보드에서 직접 읽은 값입니다.',
 		'lifelab.tour.log.title': '로그',
-		'lifelab.tour.log.body': '배양 접시에서 방금 일어난 일의 기록으로, 왼쪽 아래 구석에 떠 있어 보드의 공간을 차지하지 않습니다. 접시 전체를 보고 싶을 때는 제목 표시줄의 버튼으로 접으세요.',
+		'lifelab.tour.log.body':
+			'배양 접시에서 방금 일어난 일의 기록으로, 왼쪽 아래 구석에 떠 있어 보드의 공간을 차지하지 않습니다. 접시 전체를 보고 싶을 때는 제목 표시줄의 버튼으로 접으세요.',
 
 		'lifelab.ui.clearAll': '전체 지우기',
 		'lifelab.ui.run': '실행',
@@ -974,19 +1094,24 @@ export default {
 		'lifelab.ui.gen': '세대',
 		'lifelab.ui.pop': '개체수',
 		'lifelab.ui.speed': '속도 {rate}/초',
-		'lifelab.ui.dishHint': '배양 접시 크기 — 320×200, 640×400, 1280×800, 2000×1800 순으로 순환합니다. 셀은 유지되며, 축소로 셀을 잃게 될 경우 먼저 확인을 구합니다.',
+		'lifelab.ui.dishHint':
+			'배양 접시 크기 — 320×200, 640×400, 1280×800, 2000×1800 순으로 순환합니다. 셀은 유지되며, 축소로 셀을 잃게 될 경우 먼저 확인을 구합니다.',
 		'lifelab.ui.showLog': '로그 표시',
 		'lifelab.ui.hideLog': '로그 숨기기',
-		'lifelab.ui.drawHint': '셀 그리기 — 살아 있는 셀을 클릭하면 지워집니다. 영역을 지우려면 SELECT로 선택한 뒤 Delete를 누르세요',
-		'lifelab.ui.selectHint': '셀 주위에 상자를 드래그해 선택합니다. 이후 드래그로 이동, R / F로 회전, Enter로 배치, Delete로 제거, Ctrl+S로 저장할 수 있습니다',
+		'lifelab.ui.drawHint':
+			'셀 그리기 — 살아 있는 셀을 클릭하면 지워집니다. 영역을 지우려면 SELECT로 선택한 뒤 Delete를 누르세요',
+		'lifelab.ui.selectHint':
+			'셀 주위에 상자를 드래그해 선택합니다. 이후 드래그로 이동, R / F로 회전, Enter로 배치, Delete로 제거, Ctrl+S로 저장할 수 있습니다',
 		'lifelab.ui.searchPlaceholder': '패턴 검색',
 		'lifelab.ui.customLabel': '커스텀',
 		'lifelab.ui.customHint': '이 브라우저에 저장된 나만의 패턴',
 		'lifelab.ui.customFallbackName': '커스텀',
 		'lifelab.ui.fromSelection': '선택 영역에서 만들기',
-		'lifelab.ui.fromSelectionHint': 'SELECT로 전환한 뒤 배양 접시 위에 상자를 드래그하고, 나타나는 바에서 SAVE를 누르세요',
+		'lifelab.ui.fromSelectionHint':
+			'SELECT로 전환한 뒤 배양 접시 위에 상자를 드래그하고, 나타나는 바에서 SAVE를 누르세요',
 		'lifelab.ui.pasteRle': 'RLE 붙여넣기',
-		'lifelab.ui.pasteRleHint': 'RLE 형식의 패턴을 붙여넣습니다. LifeWiki와 Golly가 사용하는 형식입니다',
+		'lifelab.ui.pasteRleHint':
+			'RLE 형식의 패턴을 붙여넣습니다. LifeWiki와 Golly가 사용하는 형식입니다',
 		'lifelab.ui.stampTooltip': '{label} — {w}×{h}, {cells}개 셀',
 		'lifelab.ui.biggerThanDish': '\n배양 접시보다 큽니다 — 선택하면 접시를 키울지 물어봅니다',
 		'lifelab.ui.deletePattern': '이 패턴 삭제',
@@ -1012,13 +1137,17 @@ export default {
 		'lifelab.ui.delete': '삭제',
 		'lifelab.ui.followHint': '클릭하면 내려놓기 · Shift+클릭으로 사본 배치',
 		'lifelab.ui.touchHint': '드래그로 이동 · 바깥쪽을 탭하면 내려놓기',
-		'lifelab.ui.dragHintOrigin': '드래그로 이동 · 화살표로 미세 조정 · 바깥쪽 클릭이나 Enter로 내려놓기 · Esc로 원래대로 되돌리기 · Ctrl+Z로 실행 취소',
-		'lifelab.ui.dragHintCancel': '드래그로 이동 · 화살표로 미세 조정 · 바깥쪽 클릭이나 Enter로 내려놓기 · Esc로 취소 · Ctrl+Z로 실행 취소',
+		'lifelab.ui.dragHintOrigin':
+			'드래그로 이동 · 화살표로 미세 조정 · 바깥쪽 클릭이나 Enter로 내려놓기 · Esc로 원래대로 되돌리기 · Ctrl+Z로 실행 취소',
+		'lifelab.ui.dragHintCancel':
+			'드래그로 이동 · 화살표로 미세 조정 · 바깥쪽 클릭이나 Enter로 내려놓기 · Esc로 취소 · Ctrl+Z로 실행 취소',
 		'lifelab.ui.rlePlaceholder': 'x = 3, y = 3\nbob$2bo$3o!',
 
 		'lifelab.dialog.biggerThanDishTitle': '배양 접시보다 큽니다',
-		'lifelab.dialog.biggerThanDishBody': '{label}은(는) {pw}×{ph} 셀이지만 배양 접시는 {dw}×{dh}입니다.\n접시를 {nw}×{nh}로 키울까요? 접시 위의 모든 내용은 유지됩니다.',
-		'lifelab.dialog.biggerThanDishSlow': '\n\n이 크기의 배양 접시는 느리게 진행됩니다 — 초당 수백 세대가 아니라 몇 세대 정도로 예상하세요.',
+		'lifelab.dialog.biggerThanDishBody':
+			'{label}은(는) {pw}×{ph} 셀이지만 배양 접시는 {dw}×{dh}입니다.\n접시를 {nw}×{nh}로 키울까요? 접시 위의 모든 내용은 유지됩니다.',
+		'lifelab.dialog.biggerThanDishSlow':
+			'\n\n이 크기의 배양 접시는 느리게 진행됩니다 — 초당 수백 세대가 아니라 몇 세대 정도로 예상하세요.',
 		'lifelab.dialog.enlargeAndPlace': '키우고 배치',
 		'lifelab.dialog.cancel': '취소',
 		'lifelab.dialog.saveAsPatternTitle': '패턴으로 저장',
@@ -1027,7 +1156,8 @@ export default {
 		'lifelab.dialog.rleClipboardRefused': '클립보드 접근이 거부되었습니다. 여기서 복사하세요:',
 		'lifelab.dialog.rleCopyFromHere': '여기서 복사하세요:',
 		'lifelab.dialog.pasteRleTitle': 'RLE 붙여넣기',
-		'lifelab.dialog.pasteRleBody': '.rle 파일 전체여도 되고 본문만이어도 됩니다 (b = 죽음, o = 생존, $ = 다음 줄, ! = 끝).',
+		'lifelab.dialog.pasteRleBody':
+			'.rle 파일 전체여도 되고 본문만이어도 됩니다 (b = 죽음, o = 생존, $ = 다음 줄, ! = 끝).',
 		'lifelab.dialog.namePlaceholder': '이름',
 		'lifelab.dialog.shrinkTitle': '배양 접시를 줄일까요?',
 		'lifelab.dialog.shrinkBody': '{lost}개의 셀이 {w}×{h} 범위 밖에 있어 사라지게 됩니다.',
@@ -1042,7 +1172,8 @@ export default {
 		'lifelab.log.boot1': 'LIFE.LAB v0.2 — 세포 오토마톤 연구소',
 		'lifelab.log.boot2': '규칙: B3/S23 | 격자: 320x200 유한 | 호스트: krsz.in',
 		'lifelab.log.nothingInBox': '그 상자 안에는 아무것도 없습니다',
-		'lifelab.log.pickedUp': '{n}개의 셀을 집어 들었습니다 — 드래그로 이동, R/F로 회전, Enter로 배치, Esc로 되돌리기',
+		'lifelab.log.pickedUp':
+			'{n}개의 셀을 집어 들었습니다 — 드래그로 이동, R/F로 회전, Enter로 배치, Esc로 되돌리기',
 		'lifelab.log.placed': '{label} @ ({x},{y})',
 		'lifelab.log.placedFellOff': '{label} @ ({x},{y}) — {n}개의 셀이 경계 밖으로 벗어났습니다',
 		'lifelab.log.deletedCells': '{n}개의 셀을 삭제했습니다',
@@ -1064,7 +1195,8 @@ export default {
 		'lifelab.log.soupFill': 'SOUP — 12% 무작위 채우기',
 		'lifelab.log.rewindNothing': '더 되감을 기록이 없습니다',
 		'lifelab.log.rewindTo': '{gen}세대로 되감았습니다',
-		'lifelab.log.cannotEditWhileRunning': '실행 중에는 편집할 수 없습니다 — 먼저 RESET으로 0세대로 되돌리세요',
+		'lifelab.log.cannotEditWhileRunning':
+			'실행 중에는 편집할 수 없습니다 — 먼저 RESET으로 0세대로 되돌리세요',
 		'lifelab.log.placementLaunchZone': '점선으로 표시된 LAUNCH 구역 안에만 배치할 수 있습니다',
 		'lifelab.log.budgetExhausted': '셀 한도를 모두 사용했습니다 (한도 {n})',
 		'lifelab.log.selectHint': 'SELECT: 셀 주위에 상자를 드래그해 선택한 뒤, 바에서 SAVE를 누르세요',
@@ -1089,8 +1221,10 @@ export default {
 		'lifelab.cat.turing.hint': '완전한 연산 — 더 큰 배양 접시가 필요함',
 
 		'lifelab.level.dish.name': '배양 접시',
-		'lifelab.level.dish.intro': '> B3/S23 — 셀은 이웃이 2개나 3개면 생존하고, 정확히 3개면 태어납니다.',
-		'lifelab.level.dish.step1': '패턴을 고르고 클릭해서 놓기 · SELECT로 셀을 집어 이동, R / F로 회전 · Ctrl+Z로 실행 취소 · RUN으로 실행',
+		'lifelab.level.dish.intro':
+			'> B3/S23 — 셀은 이웃이 2개나 3개면 생존하고, 정확히 3개면 태어납니다.',
+		'lifelab.level.dish.step1':
+			'패턴을 고르고 클릭해서 놓기 · SELECT로 셀을 집어 이동, R / F로 회전 · Ctrl+Z로 실행 취소 · RUN으로 실행',
 
 		'lifelab.note.block': '4개 셀, 가장 단순한 안정 형태',
 		'lifelab.note.beehive': '안정, 6개 셀',
@@ -1120,7 +1254,8 @@ export default {
 		'lifelab.note.rabbits': '9개 셀, 마찬가지',
 		'lifelab.note.switchEngine': '영원히 성장하며 뒤에 잔해를 남김',
 		'lifelab.note.gosperGun': '30세대마다 글라이더를 발사하며 영원히 멈추지 않음',
-		'lifelab.note.annihilate': '글라이더 두 개가 정면충돌 — 둘 다 소멸하고 아무것도 남지 않음. NOT 게이트에 해당함',
+		'lifelab.note.annihilate':
+			'글라이더 두 개가 정면충돌 — 둘 다 소멸하고 아무것도 남지 않음. NOT 게이트에 해당함',
 		'lifelab.note.sink': '글라이더가 이터 속으로 날아들어 사라짐; 이터는 스스로 복구됨',
 		'lifelab.note.gunSink': '끝없는 흐름이 계속 흡수됨. 개체 수는 영원히 일정 범위 안에 머무름',
 		'lifelab.note.custom': '이 브라우저에 저장된 나만의 패턴',
@@ -1131,8 +1266,10 @@ export default {
 		'lifelab.ext.lidka': '13개 셀, 29,055세대',
 		'lifelab.ext.m52513': '알려진 것 중 가장 오래 지속되는 16×16 수프: 52,513세대',
 		'lifelab.ext.pufferTrain': 'LWSS 두 대가 호위해 살아남는 B-헵토미노로, 뒤에 잔해를 남김',
-		'lifelab.ext.piFuse': '방블록 두 줄을 깔아 놓고 pi-헵토미노가 그것을 쫓아가며 먹지만 결코 따라잡지 못함',
-		'lifelab.ext.linePuffer': 'c/2 직선 퍼퍼; 자신이 남긴 잔해가 결국 950만 세대 뒤에 스스로를 멈추게 함',
+		'lifelab.ext.piFuse':
+			'방블록 두 줄을 깔아 놓고 pi-헵토미노가 그것을 쫓아가며 먹지만 결코 따라잡지 못함',
+		'lifelab.ext.linePuffer':
+			'c/2 직선 퍼퍼; 자신이 남긴 잔해가 결국 950만 세대 뒤에 스스로를 멈추게 함',
 		'lifelab.ext.puffer2c5': '5세대마다 2칸씩 이동하는 지저분한 퍼퍼',
 		'lifelab.ext.basicRakes': 'c/2 레이크 다섯 대가 나란히: 잔해가 전부 스페이스십인 퍼퍼들',
 		'lifelab.ext.p52gun': '52세대마다 글라이더 한 대를 발사',
@@ -1147,20 +1284,27 @@ export default {
 		'lifelab.ext.c4Breeder': '대각선 퍼퍼 두 대와 레이크 하나가 힘을 합쳐 스위치 엔진을 번식시킴',
 		'lifelab.ext.rakeFactory': '90세대마다 레이크 한 세트를 통째로 발사하는 고정형 건',
 		'lifelab.ext.sawtooth': '개체 수가 한없이 치솟다가도 매번 177로 다시 떨어짐',
-		'lifelab.ext.advancer': '일렬로 늘어선 NOT 게이트 6개가 지나가는 글라이더를 매번 60세대만큼 앞으로 밀어냄',
+		'lifelab.ext.advancer':
+			'일렬로 늘어선 NOT 게이트 6개가 지나가는 글라이더를 매번 60세대만큼 앞으로 밀어냄',
 		'lifelab.ext.heisenblinker': '지나가는 글라이더 흐름이 상태를 바꿔도 방해받지 않는 블링커',
 		'lifelab.ext.heisenburpNat': '글라이더가 지나가면 사본이 하나 방출되고, 원본은 그대로 남음',
 		'lifelab.ext.heisenburp30': '지나가는 글라이더 세 대를 복사함: 감지는 하되 방해하지 않음',
 		'lifelab.ext.heisenburp46': '글라이더 복사기의 p46 버전',
 		'lifelab.ext.stargate': 'LWSS가 왼쪽에서 들어와 28세대 만에 30칸을 건너뜀 — 빛보다 빠름',
-		'lifelab.ext.racetrack': '1800세대짜리 순환: 글라이더가 LWSS가 되고, 구멍이 되고, 다시 글라이더가 됨',
+		'lifelab.ext.racetrack':
+			'1800세대짜리 순환: 글라이더가 LWSS가 되고, 구멍이 되고, 다시 글라이더가 됨',
 		'lifelab.ext.hotel': '128세대마다 새 글라이더가 순환에 합류하며, 언제나 자리가 있음',
-		'lifelab.ext.reflectors': '주기 5에서 15까지의 빠른 저주기 글라이더 반사기들이 각자 독립된 순환으로 동작함',
+		'lifelab.ext.reflectors':
+			'주기 5에서 15까지의 빠른 저주기 글라이더 반사기들이 각자 독립된 순환으로 동작함',
 		'lifelab.ext.fizzles': '신호를 구부리거나, 나누거나, 조용히 없애는 다양한 방법을 모은 목록',
-		'lifelab.ext.turing': 'Paul Rendell이 만든 3상태 3기호 튜링 머신 — 유한 상태 기계도, 스택으로 이루어진 테이프도 전부 글라이더로 만들어짐',
-		'lifelab.ext.chase': '글라이더가 점점 길어지는 경로를 따라 튕겨 나가며, 튕길 때마다 LWSS 편대가 정확히 제때 도착함',
-		'lifelab.ext.unitCell': '생명 게임 속의 생명 게임: 이 512×512 기계는 더 느린 생명 게임의 셀 하나에 해당함',
-		'lifelab.ext.orthoShips': 'c/2에서 c/6까지의 가로 방향 스페이스십: LWSS, MWSS, HWSS, 터틀, 다트, 위켄더, 스파이더',
+		'lifelab.ext.turing':
+			'Paul Rendell이 만든 3상태 3기호 튜링 머신 — 유한 상태 기계도, 스택으로 이루어진 테이프도 전부 글라이더로 만들어짐',
+		'lifelab.ext.chase':
+			'글라이더가 점점 길어지는 경로를 따라 튕겨 나가며, 튕길 때마다 LWSS 편대가 정확히 제때 도착함',
+		'lifelab.ext.unitCell':
+			'생명 게임 속의 생명 게임: 이 512×512 기계는 더 느린 생명 게임의 셀 하나에 해당함',
+		'lifelab.ext.orthoShips':
+			'c/2에서 c/6까지의 가로 방향 스페이스십: LWSS, MWSS, HWSS, 터틀, 다트, 위켄더, 스파이더',
 		'lifelab.ext.diagShips': 'c/4, c/5, c/6의 대각선 방향 스페이스십: 오리온, 캐나다구스, 스완',
 		'lifelab.ext.corderships': '스위치 엔진으로 만들어진 c/12 대각선 스페이스십',
 		'lifelab.ext.lowPeriod': '저주기 진동자를 모아 놓은 선반',
