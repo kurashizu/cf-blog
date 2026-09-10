@@ -1306,8 +1306,10 @@ class ModularSynth {
            joins several cables into one inlet by summing them, so a second
            inlet would be a second sum, not a second signal.
 
-           MIX drives the balance from a CV, so an envelope can sweep a voice
-           from dark to bright across the note. */
+           CV drives the balance, so an envelope can sweep a voice from dark to
+           bright across the note. Not MIX, which this comment used to credit:
+           `blendMix` is read once at build and is marked `fixed`, so it sets
+           where the tilt starts and the cable is what moves it. */
 				const x = Math.min(1, Math.max(0, p('blendMix', 50) / 100));
 				const input = ctx.createGain();
 				const out = ctx.createGain();
