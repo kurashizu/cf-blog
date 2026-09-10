@@ -4356,6 +4356,16 @@ class ModularSynth {
     if (test === 1) return noteIndex < at; // ABOVE: the roll counts downward
     if (test === 2) return noteIndex > at;
     if (test === 3) {
+      /* "Is anything already sounding on this track?"
+      
+         Offline renders schedule every voice with explicit times and never hold
+         anything in activeVoices, so the question has no answer there. It used
+         to matter only for muting, where a false negative means one fewer
+         choke; now that execution gates *sound*, answering false would drop
+         every note behind a BUSY WHEN out of an export while the same patch
+         played live. An unanswerable test passes: a rendered patch keeps what
+         you heard. */
+      if (this.renderCtx) return true;
       for (const v of this.activeVoices.values()) if (v.trackId === trackId) return true;
       return false;
     }
@@ -4366,8 +4376,8 @@ class ModularSynth {
     track: TrackData,
     noteIndex: number,
     trackId: number
-  ): { cut: boolean; cutGroup: number; solo: boolean; glide: boolean; fadeSec: number } {
-    const none = { cut: false, cutGroup: 0, solo: false, glide: false, fadeSec: 0.006 };
+  ): { cut: boolean; cutGroup: number; solo: boolean; fadeSec: number } {
+    const none = { cut: false, cutGroup: 0, solo: false, fadeSec: 0.006 };
     const graph = track.advanced ? track.rackGraph : undefined;
     if (!graph?.nodes?.length) {
       // The old track-level fields, for a patch that has no chain.
@@ -4375,7 +4385,6 @@ class ModularSynth {
       return {
         ...none,
         cut: mode !== 'poly',
-        glide: mode === 'legato',
         fadeSec: mode === 'legato' ? 0.04 : 0.006,
         cutGroup: track.muteGroup ?? 0
       };
@@ -4430,8 +4439,6 @@ class ModularSynth {
           } else if (kind === 1) {
             out.solo = true;
             out.cutGroup = Math.round(num(node.id, 'actGroup', 0));
-          } else {
-            out.glide = true;
           }
         }
         queue.push(node.id);

@@ -228,6 +228,11 @@ export function setGraphParam(
 	param: string,
 	value: number
 ): void {
+	/* A knob holds a number, and every one of them ends up on an AudioParam.
+	   Web Audio throws on a non-finite assignment, which aborts the note
+	   mid-build -- so refuse it here, where there is one door, rather than
+	   guarding ninety-nine reads. */
+	if (!Number.isFinite(value)) return;
 	const key = `${nodeId}.${param}`;
 	const now = Date.now();
 	if (key !== lastParamKey || now - lastParamAt > PARAM_COALESCE_MS) pushUndo(get(activeTrackId));

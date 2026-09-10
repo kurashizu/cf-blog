@@ -727,7 +727,12 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [EXEC_IN],
 		outputs: [],
 		params: [
-			{ key: 'action', label: 'DO', min: 0, max: 2, step: 1, def: 0, choices: ['CUT', 'SOLO', 'GLIDE'] },
+			/* GLIDE was a third choice and did nothing: it set a field on the
+			   result that nothing read. Glide is rack 2's `glideTime`, and ADV
+			   does not answer to racks 1-7 -- so there was nowhere for it to
+			   land, and wiring it across would break the isolation on purpose.
+			   A choice the engine cannot honour is worse than a missing one. */
+			{ key: 'action', label: 'DO', min: 0, max: 1, step: 1, def: 0, choices: ['CUT', 'SOLO'] },
 			{ key: 'actGroup', label: 'GRP', min: 0, max: 4, step: 1, def: 0 },
 			{ key: 'actMs', label: 'TIME', min: 0, max: 500, step: 5, unit: 'ms', def: 6, fixed: true }
 		]

@@ -605,6 +605,65 @@ describe('regressions the string tests could not see', () => {
 		expect(pct).toContain('mod.set(key, scale)');
 	});
 
+	it('delays a source behind a SEQ, and says what it cannot do', () => {
+		/* The gap reaches sound by flowing backwards from the OUT that execution
+		   reached late -- exec inlets exist only on SEQ/WHEN/ACT/OUT, so the
+		   forward walk alone assigned delays to nothing that makes a sound. */
+		const g = (nodes: [string, string][], cables: EvalGraph['cables']): EvalGraph => ({
+			nodes: nodes.map(([id, type]) => ({ id, type })),
+			cables
+		});
+		const two = g(
+			[['e', 'in'], ['s', 'seq'], ['x1', 'excite'], ['x2', 'excite'], ['o1', 'out'], ['o2', 'out']],
+			[
+				wire('e', 'then', 'o1', 'exec'),
+				wire('e', 'then', 's', 'exec'),
+				wire('s', 'then', 'o2', 'exec'),
+				wire('x1', 'out', 'o1', 'in'),
+				wire('x2', 'out', 'o2', 'in')
+			]
+		);
+		const d = execDelays(two, { 's.gapMs': 200 }, EXEC);
+		expect(d.get('x1')).toBe(0);
+		expect(d.get('x2')).toBeCloseTo(0.2, 6);
+
+		/* One source into both OUTs takes the earlier, because a node is built
+		   once and starts once. That is a limit of the shape, not a bug: a flam
+		   is two strikes, so it takes two EXCTs. */
+		const one = g(
+			[['e', 'in'], ['s', 'seq'], ['x', 'excite'], ['o1', 'out'], ['o2', 'out']],
+			[
+				wire('e', 'then', 'o1', 'exec'),
+				wire('e', 'then', 's', 'exec'),
+				wire('s', 'then', 'o2', 'exec'),
+				wire('x', 'out', 'o1', 'in'),
+				wire('x', 'out', 'o2', 'in')
+			]
+		);
+		expect(execDelays(one, { 's.gapMs': 200 }, EXEC).get('x')).toBe(0);
+	});
+
+	it('never hands a knob a value that is not a number', () => {
+		/* Every knob ends on an AudioParam, and Web Audio throws on a non-finite
+		   assignment -- which aborts the note mid-build rather than playing it
+		   wrong. `valueOf` guarded what it computed; a value read straight off
+		   the patch went through untouched. A patch file is user data. */
+		const graph = { nodes: [{ id: 'f', type: 'filter' }], cables: [] };
+		const r = createResolver(graph, { 'f.cutoff': NaN, 'f.q': Infinity }, note);
+		expect(r.input('f', 'cutoff', 4000)).toBe(4000);
+		expect(r.input('f', 'q', 1)).toBe(1);
+	});
+
+	it('does not turn a broken SEQ gap into a start time', () => {
+		// Math.max(0, NaN) is NaN, and start(NaN) throws.
+		const graph = {
+			nodes: [{ id: 'e', type: 'in' }, { id: 's', type: 'seq' }, { id: 'o', type: 'out' }],
+			cables: [wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
+		};
+		expect(execDelays(graph, { 's.gapMs': NaN }, EXEC).get('o')).toBe(0);
+		expect(execDelays(graph, { 's.gapMs': Infinity }, EXEC).get('o')).toBe(0);
+	});
+
 	it('names every wave the same way in the catalogue and the engine', () => {
 		/* The button labels, the engine's oscillator table and the card's preview
 		   drawing were three copies of one list and disagreed: three of four

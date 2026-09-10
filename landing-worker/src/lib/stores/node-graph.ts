@@ -250,7 +250,14 @@ export function createResolver(
 	 * patch file.
 	 */
 	function read(nodeId: string, port: string, fallback: number): number {
-		const own = params[`${nodeId}.${port}`] ?? fallback;
+		/* A stored value that is not a number is not a value. `valueOf` guards
+		   what it computes, but a param read straight off the patch went through
+		   untouched -- and a NaN cutoff reaches `frequency.value`, where Web
+		   Audio throws and takes the whole note with it. A patch file is user
+		   data; the fallback is what an absent knob means, and so is a broken
+		   one. */
+		const stored = params[`${nodeId}.${port}`];
+		const own = Number.isFinite(stored) ? (stored as number) : fallback;
 		const c = feeds.get(`${nodeId}.${port}`);
 		if (c) {
 			if (entryIds.has(c.from)) return entryValue(c.fromPort, fallback);
@@ -373,7 +380,12 @@ export function execDelays(
 	const gapOf = (id: string) => {
 		const n = graph.nodes.find((m) => m.id === id);
 		if (n?.type !== 'seq') return 0;
-		return Math.max(0, params[`${id}.gapMs`] ?? 0) / 1000;
+		/* Finite, because this becomes a `start()` time. `Math.max(0, NaN)` is
+		   NaN, so the floor alone let one through -- and `start(NaN)` throws,
+		   which aborts the note mid-build rather than playing it early. JSON
+		   cannot carry a NaN, but `setGraphParam` can. */
+		const raw = params[`${id}.gapMs`];
+		return Number.isFinite(raw) ? Math.max(0, raw as number) / 1000 : 0;
 	};
 
 	const queue = graph.nodes.filter((n) => n.type === entryType).map((n) => n.id);
@@ -402,8 +414,18 @@ export function execDelays(
 	
 	   An OUT that execution reaches late means everything feeding that OUT
 	   sounds late, so the delay flows backwards along the audio cables from it.
-	   A node feeding two OUTs takes the earlier: it is one voice, and the first
-	   time it is asked for is when it has to exist. */
+	
+	   A node feeding two OUTs takes the earlier, and this is a real limit rather
+	   than a choice: the node is built once and an AudioScheduledSourceNode
+	   starts once, so it cannot be both on the beat and 200 ms behind it. One
+	   EXCT into an early OUT and a late one is therefore heard twice at the same
+	   instant -- no flam. Two EXCTs, one per OUT, gives the flam, and is also
+	   what a flam is: two strikes.
+	
+	   Duplicating the upstream nodes per delay would make the single-source
+	   patch work, at the cost of a voice whose node count multiplies with its
+	   OUTs and whose two copies drift apart the moment one is edited. Not worth
+	   it for a shape that reads as one strike and means two. */
 	const audioFeeds = graph.cables.filter((c) => !execPorts.has(c.toPort));
 	const back = [...at.keys()].filter((id) => {
 		const t = graph.nodes.find((n) => n.id === id)?.type;
