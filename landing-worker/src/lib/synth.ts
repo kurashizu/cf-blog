@@ -1546,7 +1546,12 @@ class ModularSynth {
         g.gain.linearRampToValueAtTime(0, t + Math.max(a + d, heldSec) + Math.max(0.001, r));
         dc.connect(g);
         sources.push(dc);
-        return { in: null, out: g, mod };
+        /* The catalogue names this outlet CV, and presets draw cables from
+           `cv`. It resolved only because an unrecognised port falls back to
+           `out` -- the same fallback that let BREAK's AMP ship raw audio into
+           a CV leg. Publishing the name makes the declaration true instead of
+           merely lucky. */
+        return { in: null, out: g, outs: new Map([['cv', g]]), mod };
       }
 
       case 'lfo': {
@@ -1565,7 +1570,8 @@ class ModularSynth {
         fm.gain.value = p('lfoRate', 5);
         fm.connect(osc.frequency);
         mod.set('fm', fm);
-        return { in: null, out: g, mod };
+        // Named, for the same reason ENV's is.
+        return { in: null, out: g, outs: new Map([['cv', g]]), mod };
       }
 
       case 'mix': {

@@ -129,6 +129,37 @@ describe('every knob is what the card says it is', () => {
 	});
 });
 
+describe('a declared outlet is a real outlet', () => {
+	it('resolves every declared outlet by name, not by falling back to `out`', () => {
+		/* An unrecognised port silently becomes `out`. That is deliberate -- most
+		   modules have one outlet and naming it would be noise -- but it is also
+		   how BREAK's AMP shipped: declared as a third outlet, implemented as
+		   nothing, and resolved to the mid gain, so a cable meant to carry an
+		   envelope carried raw audio into a CV leg.
+		
+		   So: an outlet whose id is not `out` has to be published, either in
+		   `outs` or as `out2` for the port named `r`. Anything else is a name the
+		   builder does not know. */
+		const unnamed: string[] = [];
+		for (const m of MODULE_SPECS) {
+			if (isPureNode(m.id) || NOT_AUDIO.has(m.id)) continue;
+			const { made } = build(m.id);
+			if (!made) continue;
+			const node = made as unknown as {
+				out2?: unknown;
+				outs?: Map<string, unknown>;
+			};
+			for (const o of m.outputs) {
+				if (o.kind === 'exec' || o.id === 'out') continue;
+				if (node.outs?.has(o.id)) continue;
+				if (o.id === 'r' && node.out2) continue;
+				unnamed.push(`${m.id}.${o.id}`);
+			}
+		}
+		expect(unnamed).toEqual([]);
+	});
+});
+
 describe('what a module builds', () => {
 	it('starts every source it makes', () => {
 		/* A source created and never started is silence with a node graph behind
