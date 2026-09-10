@@ -245,7 +245,22 @@ function patch(
 	graphCables.push({ from: TRIM_ID, fromPort: 'out', to: OUTPUT_ID, toPort: 'in' });
 	// OUT runs when the note does; without this the patch builds and stays mute.
 	graphCables.push({ from: ENTRY_ID, fromPort: 'then', to: OUTPUT_ID, toPort: 'exec' });
-	return { rackGraph: { nodes: graphNodes, cables: graphCables }, graphParams };
+	/* Held back while the catalogue is rebuilt from primitives.
+
+	   Every one of these patches is wired out of modules that no longer exist --
+	   a bowed string, a modal bank, a mid/side pair -- and the engine skips a
+	   node whose type the catalogue does not carry. Emitting the graph anyway
+	   would ship thirteen presets that load, draw nothing, and play silence,
+	   which is worse than not offering them: the patch would look intact.
+
+	   The node and cable lists above are left standing rather than deleted,
+	   because they are the description of each instrument and are what these
+	   presets get rebuilt from once the primitives they need are back. The
+	   racks-1-7 half of every preset is unaffected and still plays. */
+	void graphNodes;
+	void graphCables;
+	void graphParams;
+	return {};
 }
 
 export const SOUND_PRESETS: SoundPreset[] = [
@@ -2307,11 +2322,15 @@ function drumPatch(o: DrumSpec): Partial<TrackData> {
 	];
 	gp[`${TRIM}.gain`] = 15;
 
+	/* Held back with the melodic patches above, and for the same reason: every
+	   drum key here is wired out of primitives the catalogue no longer carries,
+	   so the graph would load, draw, and play nothing. `advanced` goes with it --
+	   a track switched to ADV with an empty patch is silent, where left on the
+	   racks it still plays the kit. */
+	void nodes;
+	void cables;
+	void gp;
 	return keyOnly({
-		advanced: true,
-		advancedView: 'rack',
-		rackGraph: { nodes, cables },
-		graphParams: gp,
 		ampAttack: 0.001,
 		/* The envelope must not close before the instrument has finished
 		   sounding: a crash written to ring 1.3 s measured 0.25 because the amp
