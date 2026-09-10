@@ -310,7 +310,13 @@ export async function handleSharePatch(): Promise<void> {
 /** On /synth mount: if the URL carries a shared patch, load it and clean the hash. */
 export async function tryLoadSharedPatch(): Promise<void> {
 	if (!browser) return;
-	const m = location.hash.match(/^#patch=([A-Za-z0-9_-]+)$/);
+	/* Take the base64url run and ignore whatever followed it.
+	
+	   Anchoring the end meant a link pasted into a markdown `[text](url)` or at
+	   the end of a sentence picked up the `)` or the `.`, failed the match, and
+	   returned before any status message -- so the user saw the default song
+	   with no explanation, where every other failure here says so. */
+	const m = location.hash.match(/^#patch=([A-Za-z0-9_-]+)/);
 	if (!m) return;
 	if (!codecSupported()) {
 		showSaveStatus(tr('synth.status.noCodec'));

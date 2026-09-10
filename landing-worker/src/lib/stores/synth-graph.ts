@@ -355,13 +355,25 @@ export function copySelection(graph: RackGraph, ids: Set<string>): number {
 }
 
 /** Paste the clipboard, carrying each node's knob settings across with it. */
+/* How many times the clipboard's current contents have been pasted, so each
+   copy lands clear of the last. Reset when the clipboard changes. */
+let pasteRun = 0;
+let lastPastedClip: unknown = null;
+
 export function pasteClipboard(graph: RackGraph, params?: Record<string, number>): number {
 	const clip = get(graphClipboard);
 	if (!clip || !clip.nodes.length) return 0;
 	pushUndo(get(activeTrackId));
 	const idFor = (type: string) => `${type}-${Date.now().toString(36)}-${seq++}`;
 	const oldIds = clip.nodes.map((n) => n.id);
-	const { graph: next, ids } = pasteNodes(graph, clip, 32, idFor);
+	/* Each paste of the same clip steps further away.
+	
+	   A fixed offset put the second copy exactly underneath the first, so
+	   pasting twice looked like pasting once -- which the docstring's "offset so
+	   it does not land exactly on the original" is only true of the first. */
+	pasteRun = get(graphClipboard) === lastPastedClip ? pasteRun + 1 : 1;
+	lastPastedClip = clip;
+	const { graph: next, ids } = pasteNodes(graph, clip, 32 * pasteRun, idFor);
 	// The knobs come too: a pasted module that lost its settings is not a copy.
 	const newIds = [...ids];
 	const gp: Record<string, number> = { ...(params ?? {}) };

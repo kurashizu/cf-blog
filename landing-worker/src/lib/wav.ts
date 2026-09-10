@@ -50,6 +50,10 @@ export function bufferLevels(buffer: AudioBuffer): { peakDb: number; rmsDb: numb
 	for (let c = 0; c < buffer.numberOfChannels; c++) {
 		const data = buffer.getChannelData(c);
 		for (let i = 0; i < data.length; i++) {
+			/* A NaN sample would make `peak` NaN, and `NaN > -0.1` is false --
+			   so a corrupt render reported no clipping warning at all. Skip
+			   what is not a number rather than letting it poison the measure. */
+			if (!Number.isFinite(data[i])) continue;
 			const v = Math.abs(data[i]);
 			if (v > peak) peak = v;
 			sum += data[i] * data[i];
@@ -57,6 +61,9 @@ export function bufferLevels(buffer: AudioBuffer): { peakDb: number; rmsDb: numb
 		}
 	}
 	const rms = count ? Math.sqrt(sum / count) : 0;
-	const db = (v: number) => (v <= 0 ? -Infinity : 20 * Math.log10(v));
+	/* A silent render is -Infinity decibels, which is true and reads as
+	   "peak -Infinity dB" in the report. Floor it at the quietest thing 16-bit
+	   audio can express, which is what the file would hold anyway. */
+	const db = (v: number) => (v <= 0 ? -96 : Math.max(-96, 20 * Math.log10(v)));
 	return { peakDb: db(peak), rmsDb: db(rms) };
 }

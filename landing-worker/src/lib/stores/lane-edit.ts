@@ -7,6 +7,7 @@ import {
 	lanesOf,
 	addLane,
 	removeLane,
+	laneSocketId,
 	drawLane,
 	drawLaneRun,
 	applyShape,
@@ -92,6 +93,20 @@ export function addTrackLane(): void {
 export function removeTrackLane(id: string): void {
 	const next = removeLane(get(trackLanes), id);
 	commit(next);
+	/* A lane's socket is named `lane:<id>` on ENTRY, so deleting the lane
+	   leaves cables pointing at a socket that no longer exists. They resolve to
+	   nothing, draw nothing, and survive every save -- an invisible remnant of
+	   a lane nobody can see. Take them with it. */
+	const trackId = get(activeTrackId);
+	const track = modularSynth.getTrack(trackId);
+	const graph = track?.rackGraph;
+	const socket = laneSocketId(id);
+	if (graph?.cables?.some((c) => c.fromPort === socket)) {
+		modularSynth.updateTrack(trackId, {
+			rackGraph: { ...graph, cables: graph.cables.filter((c) => c.fromPort !== socket) }
+		} as Partial<TrackData>);
+		refreshTracks();
+	}
 	if (get(activeLaneId) === id) activeLaneId.set(VELOCITY_LANE_ID);
 }
 
