@@ -12,9 +12,10 @@ import {
 	execDelays,
 	runs,
 	isPureNode,
-	PURE_NODES
+	PURE_NODES,
+	type NoteEvent
 } from './stores/node-graph';
-import { graphOf } from './stores/graph-model';
+import { graphOf, type GraphCable } from './stores/graph-model';
 import { tr } from './i18n';
 import { soundEngine } from './sound';
 import { UNDERWATER_TRACKS } from './songs/underwater';
@@ -1290,52 +1291,66 @@ class ModularSynth {
 			}
 
 			case 'env': {
-				/* An envelope is a source of control, not of sound: a constant of 1
-           through a gain the envelope shapes, so a cable from it carries the
-           envelope's value. */
+				/* A shape over the note, as a value.
+        
+           A constant of 1 through a gain the envelope shapes, so a cable from
+           it carries the envelope rather than any sound. That is what makes it
+           MODULATE: it emits control, and what it is *for* is being cabled into
+           somebody else's knob.
+        
+           It is a module rather than something an oscillator has because a
+           patch usually wants more than one -- the classic subtractive voice is
+           two, one on the level and one on the cutoff, at different speeds. An
+           envelope welded into every source would be one per source and never
+           the shape you wanted on the parameter you wanted it on. */
 				const dc = ctx.createConstantSource();
 				dc.offset.value = 1;
 				const g = ctx.createGain();
-				const a = p('envA', 0.005);
-				const d = p('envD', 0.2);
-				const sus = p('envS', 60) / 100;
-				const r = p('envR', 0.2);
-				g.gain.setValueAtTime(0, t);
-				g.gain.linearRampToValueAtTime(1, t + Math.max(0.001, a));
-				g.gain.linearRampToValueAtTime(
-					Math.max(0.0001, sus),
-					t + Math.max(0.001, a) + Math.max(0.001, d)
-				);
-				g.gain.setValueAtTime(Math.max(0.0001, sus), t + Math.max(a + d, heldSec));
-				g.gain.linearRampToValueAtTime(0, t + Math.max(a + d, heldSec) + Math.max(0.001, r));
+				/* A floor of a tenth of a millisecond rather than one millisecond.
+        
+           `linearRampToValueAtTime` needs two distinct times or it does
+           nothing, so a floor there must be. But a click *is* a zero-length
+           attack, and percussion lives in the first millisecond -- clamping
+           there made every drum in the catalogue share one attack and took the
+           snap out of all of them. 0.0001 s is short enough to be a click and
+           long enough for the ramp to exist. */
+				const FLOOR = 0.0001;
+				const a = Math.max(FLOOR, p('envA', 0.005));
+				const d = Math.max(FLOOR, p('envD', 0.2));
+				const sus = Math.min(1, Math.max(0, p('envS', 60) / 100));
+				const r = Math.max(FLOOR, p('envR', 0.2));
+				/* Linear or exponential, because they are not the same shape and the
+           ear only agrees with one of them.
+        
+           A linear fall to silence sounds like it stops abruptly at the end; a
+           decaying exponential is what a struck string does and what a level
+           should follow. A linear *rise* is right for an attack, though, and
+           for anything driving a frequency -- so this is a choice rather than a
+           fixed answer.
+        
+           `exponentialRampToValueAtTime` cannot reach or pass through zero, so
+           the exponential path aims at a floor just under audibility and the
+           final release still lands on a real zero. Without that the node keeps
+           a residual offset for the life of the voice. */
+				const EXP_FLOOR = 0.0001;
+				const curved = Math.round(p('envCurve', 0)) === 1;
+				const rampTo = (v: number, when: number) => {
+					if (curved) g.gain.exponentialRampToValueAtTime(Math.max(EXP_FLOOR, v), when);
+					else g.gain.linearRampToValueAtTime(v, when);
+				};
+				const peak = t + a;
+				const settled = peak + d;
+				const release = t + Math.max(a + d, heldSec);
+				g.gain.setValueAtTime(curved ? EXP_FLOOR : 0, t);
+				rampTo(1, peak);
+				rampTo(Math.max(EXP_FLOOR, sus), settled);
+				g.gain.setValueAtTime(Math.max(EXP_FLOOR, sus), release);
+				rampTo(EXP_FLOOR, release + r);
+				// Exponential cannot land on zero, so the last step is a plain set.
+				if (curved) g.gain.setValueAtTime(0, release + r);
 				dc.connect(g);
 				sources.push(dc);
-				/* The catalogue names this outlet CV, and presets draw cables from
-           `cv`. It resolved only because an unrecognised port falls back to
-           `out` -- the same fallback that let BREAK's AMP ship raw audio into
-           a CV leg. Publishing the name makes the declaration true instead of
-           merely lucky. */
-				return { in: null, out: g, outs: new Map([['cv', g]]), mod };
-			}
-
-			case 'lfo': {
-				const osc = ctx.createOscillator();
-				osc.type = WAVES[Math.round(p('lfoWave', 0))] ?? 'sine';
-				knob(osc.frequency, 'lfoRate', 5);
-				const g = ctx.createGain();
-				knobPct(g.gain, 'lfoAmt', 50);
-				osc.connect(g);
-				sources.push(osc);
-				/* The FM inlet's depth is the rate itself -- an octave of sweep per
-           unit of CV -- not a knob of its own, so it is set rather than bound:
-           binding it would register `lfoRate` a second time and overwrite the
-           oscillator's own frequency as the knob's target. */
-				const fm = ctx.createGain();
-				fm.gain.value = p('lfoRate', 5);
-				fm.connect(osc.frequency);
-				mod.set('fm', fm);
-				// Named, for the same reason ENV's is.
-				return { in: null, out: g, outs: new Map([['cv', g]]), mod };
+				return { in: null, out: g, mod };
 			}
 
 			case 'mix': {
@@ -4684,32 +4699,56 @@ class ModularSynth {
 	 * took every branch unconditionally: a WHEN muted the right notes and let
 	 * every note through, which is the two sides of one cable disagreeing.
 	 */
+	/**
+	 * Does this WHEN's test hold for this note?
+	 *
+	 * The test used to be a picker with three hardwired answers -- above a note,
+	 * below a note, is the track busy -- which meant the only questions a patch
+	 * could ask were the ones written into this method. Adding a fourth meant
+	 * editing the engine.
+	 *
+	 * It is now a cable. CMP turns any two values into a truth and LOGIC
+	 * combines them, so "above C3" is a CMP the patch can see and change, and
+	 * "above C3 and hard enough" is one more card rather than a new engine
+	 * branch. That is what the `bool` role was added for.
+	 *
+	 * BUSY stays as a knob, and is the one that could not become a cable: it
+	 * asks about the engine's own state -- which voices are sounding right now
+	 * -- and nothing in the graph publishes that. Every other test it used to
+	 * offer is arithmetic on values ENTRY already hands out.
+	 */
 	private whenHolds(
 		params: Record<string, number>,
 		id: string,
 		noteIndex: number,
-		trackId: number
+		trackId: number,
+		graph?: { nodes: { id: string; type: string }[]; cables: GraphCable[] },
+		note?: NoteEvent
 	): boolean {
 		const num = (key: string, def: number) => params[`${id}.${key}`] ?? def;
-		const test = Math.round(num('test', 0));
-		const at = Math.round(num('testNote', 48));
-		if (test === 1) return noteIndex < at; // ABOVE: the roll counts downward
-		if (test === 2) return noteIndex > at;
-		if (test === 3) {
-			/* "Is anything already sounding on this track?"
-      
-         Offline renders schedule every voice with explicit times and never hold
-         anything in activeVoices, so the question has no answer there. It used
-         to matter only for muting, where a false negative means one fewer
-         choke; now that execution gates *sound*, answering false would drop
-         every note behind a BUSY WHEN out of an export while the same patch
-         played live. An unanswerable test passes: a rendered patch keeps what
-         you heard. */
+		/* Is anything already sounding on this track?
+		
+		   Offline renders schedule every voice with explicit times and never hold
+		   anything in activeVoices, so the question has no answer there. It used
+		   to matter only for muting, where a false negative means one fewer
+		   choke; now that execution gates *sound*, answering false would drop
+		   every note behind a BUSY WHEN out of an export while the same patch
+		   played live. An unanswerable test passes: a rendered patch keeps what
+		   you heard. */
+		if (Math.round(num('busy', 0)) === 1) {
 			if (this.renderCtx) return true;
-			for (const v of this.activeVoices.values()) if (v.trackId === trackId) return true;
-			return false;
+			let sounding = false;
+			for (const v of this.activeVoices.values()) if (v.trackId === trackId) sounding = true;
+			if (!sounding) return false;
 		}
-		return true;
+		/* The IF socket. Unwired, the branch is open -- a WHEN with nothing asked
+		   of it passes execution through, which is what makes it safe to place
+		   one before deciding what it should test. */
+		if (!graph || !note) return true;
+		const wired = graph.cables.some((c) => c.to === id && c.toPort === 'cond');
+		if (!wired) return true;
+		const resolver = createResolver(graph, params, note);
+		return resolver.input(id, 'cond', 1) !== 0;
 	}
 
 	private noteActions(
@@ -4756,7 +4795,18 @@ class ModularSynth {
 			(c) => EXEC_PORT_IDS.has(c.toPort) && EXEC_PORT_IDS.has(c.fromPort)
 		);
 
-		const holds = (id: string) => this.whenHolds(p, id, noteIndex, trackId);
+		/* The note this test is being asked about. WHEN reads through the same
+		   resolver every module does, so a CMP feeding it sees the same PITCH and
+		   VEL the sound does. */
+		const noteEvent: NoteEvent = {
+			pitch: noteIndex - 69,
+			velocity: 1,
+			noteIndex,
+			gate: 0,
+			lanes: {}
+		};
+		const holds = (id: string) =>
+			this.whenHolds(p, id, noteIndex, trackId, graph as never, noteEvent);
 
 		const seen = new Set<string>([entry.id]);
 		const queue = [entry.id];

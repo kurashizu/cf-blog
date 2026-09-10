@@ -121,7 +121,7 @@ describe('a mod cable carries something', () => {
 	   rebuild has not restored yet -- skipped rather than deleted or
 	   weakened, because it is the test that has to pass before the
 	   primitive it covers can be called done. */
-	it.skip('adds an envelope to the cutoff on top of what the knob holds', () => {
+	it('adds an envelope to the cutoff on top of what the knob holds', () => {
 		/* The whole point of a mod cable, and deleting the pass that connects
 		   them left 916 tests green: every ENV -> cutoff and LFO -> pitch in the
 		   instrument stopped carrying anything and nothing noticed, because the

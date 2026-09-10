@@ -729,6 +729,92 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
+		/* A shape over the note, as a value.
+		 *
+		 * The other half of what makes a note a note: an oscillator gives it a
+		 * pitch and this gives it a contour. A constant of 1 through a gain the
+		 * envelope shapes, so what leaves is the shape itself and nothing else --
+		 * which is why it is MODULATE rather than SHAPE, and why it is a module
+		 * rather than something every source carries. A subtractive voice wants
+		 * two of these at different speeds, one on the level and one on the
+		 * cutoff; welded into the sources you would get one per source and never
+		 * the shape you wanted where you wanted it.
+		 *
+		 * A, D and R are typed in seconds. They are numbers you know -- 5 ms, 200
+		 * ms -- and the ranges span four decades, which no dial can spell out.
+		 * SUS is the one knob: it is a proportion found by ear against the other
+		 * three, and 0..100% is exactly the ordinary linear range a dial suits.
+		 *
+		 * The floor is a tenth of a millisecond rather than one. A ramp needs two
+		 * distinct times to exist at all, so some floor there must be -- but a
+		 * click *is* a zero-length attack and percussion lives in that first
+		 * millisecond. Clamping at 1 ms made every drum share one attack. */
+		id: 'env',
+		label: 'ENV',
+		group: 'MODULATE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.env',
+		inputs: [],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'mod', role: 'unit' }],
+		params: [
+			{ key: 'envA', label: 'A', min: 0, max: 10, step: 0.0001, def: 0.005, unit: 's', field: true },
+			{ key: 'envD', label: 'D', min: 0, max: 10, step: 0.0001, def: 0.2, unit: 's', field: true },
+			/* Typed like the other three, and for the same reason: it is a plain
+			   linear 0..100, which the knob rule says is a number rather than an
+			   angle. The temptation was to call it "found by ear" and keep a dial,
+			   but a sustain is read as a percentage of the peak -- 60, 0, 100 --
+			   and those are values you write. `fixed` because there is no
+			   AudioParam to reach: the level is baked into the scheduled ramp when
+			   the note is built, so a cable could only be read at note-on. */
+			{ key: 'envS', label: 'SUS', min: 0, max: 100, step: 0.1, def: 60, unit: '%', field: true, fixed: true },
+			{ key: 'envR', label: 'R', min: 0, max: 20, step: 0.0001, def: 0.2, unit: 's', field: true },
+			/* Linear or exponential, because they are different shapes and the ear
+			   only agrees with one of them per destination: a linear fall to
+			   silence sounds like it stops abruptly, while a decaying exponential
+			   is what a struck string does -- but a linear rise is right for an
+			   attack and for anything driving a frequency. */
+			{
+				key: 'envCurve',
+				label: 'CURV',
+				min: 0,
+				max: 1,
+				step: 1,
+				def: 0,
+				choices: ['LIN', 'EXP']
+			}
+		],
+		viz: 'adsr'
+	},
+	{
+		/* A branch: execution leaves it only when its test holds.
+		 *
+		 * The test is a cable now, not a picker. It used to offer three hardwired
+		 * answers -- above a note, below a note, is the track busy -- so the only
+		 * questions a patch could ask were the ones written into the engine, and
+		 * a fourth meant editing it. With CMP turning any two values into a truth
+		 * and LOGIC combining them, "above C3" is a card you can see and change,
+		 * and "above C3 and played hard" is one more card rather than a new
+		 * engine branch. This is what the `bool` role was added for.
+		 *
+		 * BUSY stays, because it is the one test that could not become a cable:
+		 * it asks about the engine's own state -- which voices are sounding right
+		 * now -- and nothing in the graph publishes that. Everything else it used
+		 * to offer is arithmetic on values ENTRY already hands out.
+		 *
+		 * An unwired IF passes, so placing a WHEN before deciding what it should
+		 * test does not silence the patch. */
+		id: 'when',
+		label: 'WHEN',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.when',
+		inputs: [EXEC_IN, { id: 'cond', label: 'IF', kind: 'mod', role: 'bool' }],
+		outputs: [EXEC_OUT],
+		params: [
+			{ key: 'busy', label: 'BUSY', min: 0, max: 1, step: 1, def: 0, choices: ['OFF', 'ON'] }
+		]
+	},
+	{
 		/* Sound read as a value, sign and all.
 		 *
 		 * The bridge FOLLOW is not. FOLLOW answers "how loud", and loudness has

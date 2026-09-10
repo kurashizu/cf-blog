@@ -472,7 +472,14 @@ describe('every parameter the engine reads is declared', () => {
 		   (PatchCanvas, where the outlet is retyped) rather than by the engine:
 		   it decides what the socket *is*, which is a question answered before
 		   any note is built. */
-		const CANVAS_READ = new Set(['const.kind']);
+		const CANVAS_READ = new Set([
+			'const.kind',
+			/* Read by `whenHolds`, which asks the engine's own state rather than
+			   the graph's -- "is a voice sounding on this track right now". It goes
+			   through that method's local `num()` rather than the builder's `p()`,
+			   because no audio node is built for a WHEN at all. */
+			'when.busy'
+		]);
 		const dead = MODULE_SPECS.flatMap((m) =>
 			m.params
 				.filter(
