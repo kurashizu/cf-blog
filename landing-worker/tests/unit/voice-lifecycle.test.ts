@@ -92,7 +92,7 @@ describe('an accented step is not just a louder one', () => {
 			const voice = S.activeVoices.get(key!) as { filter: { frequency: FakeParam; Q: FakeParam } };
 			return {
 				cutoff: voice.filter.frequency.events.find((e) => e[0] === 'set')![1],
-				q: voice.filter.Q.value
+				q: voice.filter.Q.scheduled
 			};
 		};
 		const plain = cutoffOf(0);
@@ -181,14 +181,14 @@ describe('the master limiter answers its own switch', () => {
 		const ctx = onFakeContext();
 		S.initMasterFX(ctx);
 		S.setMasterLimiterEnabled(true);
-		expect(S.masterLimiter!.ratio.value).toBeGreaterThan(1);
+		expect(S.masterLimiter!.ratio.scheduled).toBeGreaterThan(1);
 
 		S.setMasterLimiterEnabled(false);
-		expect(S.masterLimiter!.ratio.value).toBe(1);
-		expect(S.masterLimiter!.threshold.value).toBe(0);
+		expect(S.masterLimiter!.ratio.scheduled).toBe(1);
+		expect(S.masterLimiter!.threshold.scheduled).toBe(0);
 
 		S.setMasterLimiterEnabled(true);
-		expect(S.masterLimiter!.ratio.value).toBeGreaterThan(1);
+		expect(S.masterLimiter!.ratio.scheduled).toBeGreaterThan(1);
 	});
 });
 

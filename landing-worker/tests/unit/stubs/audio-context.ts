@@ -28,12 +28,20 @@ export class FakeParam {
 	) {}
 	setValueAtTime(v: number, t: number) {
 		this.events.push(['set', v, t]);
-		/* A real param takes the value immediately when the time has passed, and
-		   engine code reads `.value` back. Recording the event without moving the
-		   value made a scheduled setting invisible to anything that asked what
-		   the param currently held. */
-		this.value = v;
 		return this;
+	}
+	/**
+	 * What the param would hold at the end of what has been scheduled.
+	 *
+	 * Deliberately not `.value`. A real AudioParam does *not* move `.value` when
+	 * you schedule against it -- checked in Chrome, where `ratio.setValueAtTime(20)`
+	 * on a fresh compressor leaves `ratio.value` at its default of 12. A stub
+	 * that moved it would let a test pass on an assertion the browser answers
+	 * differently, which is the whole failure mode this directory exists to
+	 * avoid. Tests that mean the scheduled value ask for it by name.
+	 */
+	get scheduled(): number {
+		return this.events.length ? this.events[this.events.length - 1][1] : this.value;
 	}
 	linearRampToValueAtTime(v: number, t: number) {
 		this.events.push(['lin', v, t]);

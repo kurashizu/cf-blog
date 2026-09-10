@@ -29,6 +29,9 @@ const valueOut = (id: string) => spec(id).outputs.find((p) => !AUDIO_ROLES.inclu
 
 const wire = (from: string, fromPort: string, to: string, toPort: string) => ({ from, fromPort, to, toPort });
 
+
+
+
 /** Every module, so a new one is covered the day it is added. */
 const ALL = MODULE_SPECS.map((m) => m.id);
 const PLACEABLE = ALL.filter((id) => id !== 'in' && id !== 'out');

@@ -58,6 +58,7 @@
 			class="w-full max-w-2xl bg-[#121417] border border-[#e5c07b]/40 rounded-xs shadow-[0_0_24px_rgba(0,0,0,0.8),0_0_12px_rgba(229,192,123,0.15)] flex flex-col max-h-[85vh] overflow-hidden"
 			role="dialog"
 			aria-modal="true"
+			tabindex="-1"
 			aria-label={$t('synthPanels.settings.title')}
 			onclick={(e) => e.stopPropagation()}
 			transition:scale={{ duration: 180, start: 0.96, opacity: 0, easing: cubicOut }}
