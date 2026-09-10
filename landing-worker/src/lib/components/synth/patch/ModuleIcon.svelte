@@ -64,6 +64,10 @@
 		scope: 'M1 8q3-6 5 0t5 0 4-4M1 2v12',
 		fft: 'M2 13V7M5 13V4M8 13V9M11 13V6M14 13V11',
 		loud: 'M2 11h2v2H2zM6 8h2v5H6zM10 5h2v8h-2z',
+		/* The two doors between sound and value: a waveform whose outline is
+		   traced, and a level that becomes one. */
+		follow: 'M1 12q2-8 3 0t3-6 3 5 3-4M1 13h14',
+		tosig: 'M2 8h4M6 8q1.5-4 3 0t3 0M2 5v6',
 		// LOGIC: the execution chain.
 		seq: 'M2 8h4M6 5l3 3-3 3M10 8h4M12 4v8',
 		when: 'M8 2l6 6-6 6-6-6z',

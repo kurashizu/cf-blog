@@ -31,12 +31,27 @@ describe('a knob takes one cable', () => {
 	});
 
 	it('replaces the cable already on a knob rather than stacking a second', () => {
-		addCable(live(), { from: 'c1', fromPort: 'out', to: 'f', toPort: 'cutoff' }, 'mod');
-		expect(live().cables.filter((c) => c.toPort === 'cutoff')).toHaveLength(1);
-		addCable(live(), { from: 'c2', fromPort: 'out', to: 'f', toPort: 'cutoff' }, 'mod');
-		const onKnob = live().cables.filter((c) => c.toPort === 'cutoff');
+		/* A knob is not a summing inlet: the resolver reads exactly one cable per
+		   socket, so two would mean the value came from whichever was drawn
+		   first. Asserted on a knob with no socket of its own -- FILTER's TYPE --
+		   because a knob that also declares an inlet is the other case, below. */
+		addCable(live(), { from: 'c1', fromPort: 'out', to: 'f', toPort: 'type' }, 'mod');
+		expect(live().cables.filter((c) => c.toPort === 'type')).toHaveLength(1);
+		addCable(live(), { from: 'c2', fromPort: 'out', to: 'f', toPort: 'type' }, 'mod');
+		const onKnob = live().cables.filter((c) => c.toPort === 'type');
 		expect(onKnob).toHaveLength(1);
 		expect(onKnob[0].from).toBe('c2');
+	});
+
+	it('lets a declared inlet take several, because an AudioParam sums', () => {
+		/* The other half, and the reason the distinction exists. FILTER's CUTOFF
+		   is a knob *and* a socket -- the GAIN/LVL pattern -- so a cable lands on
+		   the AudioParam and adds to the knob. An envelope and an LFO both into
+		   the cutoff is the patch everybody builds first, and it needs both
+		   cables to survive. */
+		addCable(live(), { from: 'c1', fromPort: 'out', to: 'f', toPort: 'cutoff' }, 'mod');
+		addCable(live(), { from: 'c2', fromPort: 'out', to: 'f', toPort: 'cutoff' }, 'mod');
+		expect(live().cables.filter((c) => c.toPort === 'cutoff')).toHaveLength(2);
 	});
 
 	/* Waiting on the catalogue. This asserts real behaviour of modules the

@@ -236,10 +236,13 @@ describe('every knob is what the card says it is', () => {
 		const pan = build('pan', { panPos: 100 });
 		const panTarget = pan.made!.mod.get('panPos') as unknown as { gain: FakeParam };
 		expect(panTarget.gain.value).toBeCloseTo(0.01, 6);
-		// DELAY: milliseconds on the card, seconds on the node.
-		const dl = build('delay', { dlTime: 220 });
-		const dlTarget = dl.made!.mod.get('dlTime') as unknown as { gain: FakeParam };
-		expect(dlTarget.gain.value).toBeCloseTo(0.001, 9);
+		/* DELAY used to be milliseconds on the card and seconds on the node, and
+		   needed the same conversion. It no longer does: TIME is typed in seconds
+		   now, which is the unit the param holds -- a field can spell out 0.25
+		   where a dial could not, so the two-unit dance had nothing left to buy.
+		   The cable therefore lands on the AudioParam directly. */
+		const dl = build('delay');
+		expect(dl.made!.mod.get('delayTime')).toBeTruthy();
 	});
 });
 

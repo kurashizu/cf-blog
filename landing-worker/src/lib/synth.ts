@@ -5,7 +5,7 @@ import {
 	VELOCITY_LANE_ID,
 	type NoteLane
 } from './stores/note-lanes';
-import { EXEC_PORT_IDS, MODULE_SPECS, WAVE_SHAPES } from './stores/synth-modules';
+import { EXEC_PORT_IDS, FILTER_TYPES, MODULE_SPECS, WAVE_SHAPES } from './stores/synth-modules';
 import {
 	createResolver,
 	execReach,
@@ -1131,23 +1131,111 @@ class ModularSynth {
 			}
 
 			case 'filter': {
-				const TYPES: BiquadFilterType[] = ['lowpass', 'bandpass', 'highpass', 'notch'];
+				/* One biquad, all eight of its types.
+        
+           `BiquadFilterNode` computes every one of them from the same three
+           coefficients, so the shelves and the allpass cost exactly what the
+           lowpass costs -- and four of the eight used to be unreachable for no
+           reason but the length of an array. That is the argument that keeps
+           OSC one module for every periodic wave: when the node already does
+           it, splitting it into separate cards is a decision to offer less.
+        
+           GAIN is the shelving filters' amount, and it only means anything for
+           three of the eight -- the shelves and the peak. The other five ignore
+           it, which is a property of the node rather than something to hide:
+           a card cannot usefully grow and shrink its own controls as a picker
+           moves, and a knob that does nothing for the type you chose is
+           cheaper to explain than five extra modules. */
 				const f = ctx.createBiquadFilter();
-				f.type = TYPES[Math.round(p('type', 0))] ?? 'lowpass';
+				f.type = (FILTER_TYPES[Math.round(p('type', 0))]?.id as BiquadFilterType) ?? 'lowpass';
 				knob(f.frequency, 'cutoff', 4000);
 				knob(f.Q, 'q', 1);
-				/* How far the FM inlet swings the cutoff, in hertz.
-        
-           It used to be `cutoff * depth/100`, so the FREQ knob silently scaled
-           it: moving the cutoff changed how far the modulation reached, and two
-           knobs shared one meaning with no way to see it on the card. DEPTH is
-           now the swing itself, which is what its Hz unit says. Scaling a
-           control signal by a value is what MUL is for. */
-				const depth = ctx.createGain();
-				knob(depth.gain, 'depth', 2000);
-				depth.connect(f.frequency);
-				mod.set('fm', depth);
+				knob(f.gain, 'filterGain', 0);
+				/* No DEPTH. It scaled the CV on its way to the cutoff, which is a
+           second gain stage welded onto the inlet -- and scaling a control
+           signal by a value is what MUL and GAIN are. The cable lands on the
+           cutoff's own AudioParam and sums with the knob, like every other
+           modulatable knob in the catalogue. */
 				return { in: f, out: f, mod };
+			}
+
+			case 'follow': {
+				/* Sound becoming a number: the loudness of what arrives, as a value.
+
+           The crossing from the audio family into the control family, and the
+           only one -- the same structural role CMP plays for `bool`. Without it
+           nothing a patch *hears* can steer anything it does: no ducking, no
+           auto-wah, no filter that opens because the note came in loud.
+
+           A rectifier and a lowpass, which is what an envelope follower is.
+           Both are ordinary audio nodes, so no worklet is needed and the value
+           moves with the sound the way an envelope's does. Connecting audio
+           straight to a knob instead would put the waveform itself in: a cable
+           to a level would be ring modulation at the signal's own frequency
+           rather than a level that follows it.
+
+           RESP is the lowpass corner -- how fast it reacts. Low is a slow
+           average; high tracks the waveform closely enough to buzz, and where
+           that line sits depends on what is being followed. */
+				const finp = ctx.createGain();
+				const rect = ctx.createWaveShaper();
+				const curve = new Float32Array(257);
+				for (let i = 0; i < curve.length; i++) {
+					const x = (i / (curve.length - 1)) * 2 - 1;
+					curve[i] = Math.abs(x);
+				}
+				rect.curve = curve;
+				const smooth = ctx.createBiquadFilter();
+				smooth.type = 'lowpass';
+				knob(smooth.frequency, 'resp', 20);
+				/* The rectified average of a sine is 2/pi of its peak, so a signal
+           reaching 1.0 would follow out at about 0.64 and every range built for
+           0..1 downstream would arrive a third short. SENS restores the scale
+           and is a knob, so a quiet source can be brought up here rather than
+           needing a MUL after every follower. */
+				const lift = ctx.createGain();
+				knob(lift.gain, 'sens', Math.PI / 2);
+				finp.connect(rect);
+				rect.connect(smooth);
+				smooth.connect(lift);
+				return { in: finp, out: lift, mod };
+			}
+
+			case 'tosig': {
+				/* A number becoming sound: the other direction across the same line.
+
+           A ConstantSourceNode whose offset the value drives. The point is not
+           "listening to a CV" -- it is that audio-rate modulation lives on this
+           side of the line. An LFO at 30 Hz is a tremolo and the same shape at
+           300 Hz is a sideband, and only the audio family carries the second.
+
+           It is also what lets a value reach an inlet that *sums* rather than a
+           knob read once, which is the difference between a modulation that
+           moves during the note and one fixed when it starts. */
+				const dc = ctx.createConstantSource();
+				dc.offset.value = 0;
+				knob(dc.offset, 'level', 0);
+				sources.push(dc);
+				const tg = ctx.createGain();
+				dc.connect(tg);
+				return { in: null, out: tg, mod };
+			}
+
+			case 'delay': {
+				/* A delay line, which is a primitive rather than an effect: a comb
+           filter is this with its output fed back, a flanger is that with the
+           time moving, and a chorus is several at once. Feedback is a cable the
+           patch draws rather than a knob here -- the graph already refuses
+           audio cycles, so a resonating comb is built with the delay and a GAIN
+           where you can see both.
+        
+           maxDelayTime is fixed at build and cannot be a cable, so the ceiling
+           is generous rather than tight: a DelayNode whose time is set past its
+           maximum silently clamps, and a cable driving it would then hit a wall
+           nothing on the card explains. */
+				const d = ctx.createDelay(4);
+				knob(d.delayTime, 'delayTime', 0.25);
+				return { in: d, out: d, mod };
 			}
 
 			case 'vca': {
@@ -1390,39 +1478,6 @@ class ModularSynth {
 				up.connect(down);
 				down.connect(ga.gain);
 				mod.set('cv', up);
-				return { in: input, out, mod };
-			}
-
-			case 'delay': {
-				/* A tap with feedback. Rack 6 has one on the master bus; here it is a
-           module, so it can sit inside a voice -- a slapback on the string but
-           not on the body, which the fixed chain cannot do.
-
-           The feedback gain is assigned, not scheduled: setValueAtTime leaves
-           a param at its default until the given time, and a voice is built
-           slightly ahead of when it sounds, so for those milliseconds the loop
-           would run at a gain of 1 with a delay of 0. */
-				const input = ctx.createGain();
-				const out = ctx.createGain();
-				const dl = ctx.createDelay(2);
-				knobAt(dl.delayTime, 'dlTime', 220, 0.001, (v) => Math.min(2, Math.max(0.001, v)));
-				const fb = ctx.createGain();
-				// Capped below unity: a delay line at g >= 1 never stops growing.
-				knobAt(fb.gain, 'dlFeedback', 35, 0.01, (v) => Math.min(0.85, Math.max(0, v)));
-				const damp = ctx.createBiquadFilter();
-				damp.type = 'lowpass';
-				knob(damp.frequency, 'dlTone', 6000);
-				const wet = ctx.createGain();
-				const dry = ctx.createGain();
-				knobMix(wet, dry, 'dlMix', 30);
-				input.connect(dry);
-				dry.connect(out);
-				input.connect(dl);
-				dl.connect(damp);
-				damp.connect(fb);
-				fb.connect(dl);
-				dl.connect(wet);
-				wet.connect(out);
 				return { in: input, out, mod };
 			}
 

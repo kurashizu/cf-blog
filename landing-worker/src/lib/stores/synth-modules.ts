@@ -227,6 +227,36 @@ export const LOGIC_OPS: { id: string; label: string }[] = [
 	{ id: 'nor', label: 'NOR' }
 ];
 
+/**
+ * The eight things a biquad can be.
+ *
+ * All of them from one `BiquadFilterNode`, computed from the same three
+ * coefficients -- so the shelves and the allpass cost exactly what the lowpass
+ * costs. Four of these used to be unreachable for no reason but the length of
+ * an array in the engine. That is the same argument that keeps OSC one module
+ * for every periodic wave: when the node already does it, splitting it into
+ * separate cards is a decision to offer less.
+ *
+ * ALLP is worth its place even though it does not change what you hear on its
+ * own: it moves phase while leaving every magnitude alone, which is a phaser
+ * when swept and a way to align two paths when not. It is also the *real-time*
+ * counterpart to OSC's PHS, which is baked into the wave table at note start
+ * and cannot be swept -- the two are not redundant, they are the static and
+ * moving versions of the same idea.
+ *
+ * Order is the engine's, pinned by a test.
+ */
+export const FILTER_TYPES: { id: string; label: string }[] = [
+	{ id: 'lowpass', label: 'LP' },
+	{ id: 'highpass', label: 'HP' },
+	{ id: 'bandpass', label: 'BP' },
+	{ id: 'notch', label: 'NOTC' },
+	{ id: 'lowshelf', label: 'LSHF' },
+	{ id: 'highshelf', label: 'HSHF' },
+	{ id: 'peaking', label: 'PEAK' },
+	{ id: 'allpass', label: 'ALLP' }
+];
+
 /** MIDI note number for A4, the reference every pitch is counted from. */
 export const MIDI_A4 = 69;
 
@@ -549,6 +579,178 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   Negative is not an oversight: -1 is the same signal inverted, which is
 		   what makes this VCA and INV at once. */
 		params: [{ key: 'level', label: 'LVL', min: -2, max: 2, step: 0.01, def: 1, field: true }]
+	},
+	{
+		/* One biquad, all eight of its types.
+		 *
+		 * A filter is the other half of subtractive synthesis: an oscillator makes
+		 * every harmonic and this is what takes them away. All eight come from one
+		 * `BiquadFilterNode` at the same cost, so they are one card with a picker
+		 * for the same reason OSC is one card for every periodic wave.
+		 *
+		 * CUTOFF and Q are the two parameters in this catalogue that genuinely
+		 * earn knobs. A cutoff is swept by ear -- it is the gesture the whole
+		 * instrument is known for -- and its scale is logarithmic, which is the
+		 * stated exemption: on a linear 20..20000 dial, 1 kHz sits at 5% of the
+		 * travel and every note anyone plays is crushed into the first sliver.
+		 * Q is not linear in effect either; the interesting half of its range is
+		 * the top.
+		 *
+		 * Both are knobs *and* sockets, the GAIN/LVL pattern: a cable lands on the
+		 * AudioParam and sums with the knob, so the knob is where the filter rests
+		 * and the envelope opens it from there. That is the patch everybody builds
+		 * first. */
+		id: 'filter',
+		label: 'FILTER',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.filter',
+		inputs: [
+			AUDIO_IN,
+			{ id: 'cutoff', label: 'FREQ', kind: 'mod', role: 'hz' },
+			{ id: 'q', label: 'Q', kind: 'mod' }
+		],
+		outputs: [AUDIO_OUT],
+		params: [
+			{
+				key: 'type',
+				label: 'TYPE',
+				min: 0,
+				max: FILTER_TYPES.length - 1,
+				step: 1,
+				def: 0,
+				choices: FILTER_TYPES.map((f) => f.label)
+			},
+			/* Logarithmic, which is the exemption the knob rule names: halving and
+			   doubling are the same size of change to the ear, and on a linear dial
+			   the whole musical range sits in the first twentieth. */
+			{
+				key: 'cutoff',
+				label: 'FREQ',
+				min: 20,
+				max: 20000,
+				step: 1,
+				def: 4000,
+				unit: 'Hz',
+				scale: 'log'
+			},
+			{ key: 'q', label: 'Q', min: 0.0001, max: 30, step: 0.01, def: 1, scale: 'log' },
+			/* Only the shelves and the peak read this; the other five ignore it.
+			   That is a property of the node rather than something to hide -- a
+			   card cannot usefully grow and shrink as a picker moves, and one knob
+			   that is inert for some types is cheaper to explain than splitting
+			   eight filters into five cards and three. */
+			{ key: 'filterGain', label: 'GAIN', min: -40, max: 40, step: 0.1, def: 0, unit: 'dB', field: true }
+		]
+	},
+	{
+		/* Dynamics: how loud it is allowed to get, and how fast it reacts.
+		 *
+		 * Native, so all five parameters are AudioParams and every one takes a
+		 * cable without any work. Typed rather than turned throughout: a
+		 * threshold of -24 dB and an attack of 3 ms are numbers an engineer knows
+		 * before reaching for the control, which is the rule the catalogue now
+		 * follows. */
+		id: 'comp',
+		label: 'COMP',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.comp',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		/* The engine's own names and units, which are milliseconds on the card
+		   and seconds on the node -- `knobAt` does that conversion, so a cable
+		   means what the typed number means. MAKE is decibels and deliberately
+		   not modulatable: the conversion to a linear gain is exponential, so a
+		   cable would have to arrive multiplied and no scaling node can do that.
+		   Drive a GAIN instead. */
+		params: [
+			{ key: 'compThresh', label: 'THRS', min: -60, max: 0, step: 0.5, def: -18, unit: 'dB', field: true },
+			{ key: 'compRatio', label: 'RTIO', min: 1, max: 20, step: 0.1, def: 4, field: true },
+			{ key: 'compAttack', label: 'ATK', min: 0, max: 200, step: 0.1, def: 5, unit: 'ms', field: true },
+			{ key: 'compRelease', label: 'REL', min: 10, max: 1000, step: 1, def: 120, unit: 'ms', field: true },
+			{ key: 'compGain', label: 'MAKE', min: -12, max: 24, step: 0.1, def: 0, unit: 'dB', field: true, fixed: true }
+		]
+	},
+	{
+		/* A delay line, and a primitive rather than an effect.
+		 *
+		 * A comb filter is this with its output fed back, a flanger is that with
+		 * the time moving, a chorus is several at once. None of those are modules
+		 * here because all of them are this one plus a cable -- and the feedback
+		 * path is a GAIN you can see, rather than a knob that hides how much is
+		 * going round.
+		 *
+		 * TIME is a socket as well as a field, so the time can move with the note:
+		 * a delay whose length is modulated is what flanging *is*. */
+		id: 'delay',
+		label: 'DELAY',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.delay',
+		inputs: [AUDIO_IN, { id: 'delayTime', label: 'TIME', kind: 'mod', role: 'time' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'delayTime', label: 'TIME', min: 0, max: 4, step: 0.001, def: 0.25, unit: 's', field: true }
+		]
+	},
+	{
+		/* Sound becoming a number.
+		 *
+		 * The crossing from the audio family into the control family, and the only
+		 * one -- the same structural role CMP plays for `bool`. The two families
+		 * are otherwise sealed off from each other by `rolesCompatible`, which is
+		 * what keeps a waveform out of a knob; without a door in that wall nothing
+		 * a patch *hears* could steer anything it does. Ducking, auto-wah, a
+		 * filter that opens because the note came in loud: all of them are this
+		 * module and a cable.
+		 *
+		 * On MODULATE rather than SHAPE because the shelf follows what a module
+		 * emits, and this emits control. That is the grouping rule doing its job:
+		 * a module that takes audio and hands back a value has an obvious home
+		 * under it and had none before it.
+		 *
+		 * Its inverse is TO-SIG. They are not the same node with an arrow
+		 * reversed -- following is a measurement and takes time, while the other
+		 * direction is instantaneous. */
+		id: 'follow',
+		label: 'FOLLOW',
+		group: 'MODULATE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.follow',
+		inputs: [AUDIO_IN],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'mod', role: 'unit' }],
+		params: [
+			/* A knob, and it earns it: RESP is logarithmic -- 5 Hz and 50 Hz are
+			   as far apart as 50 and 500 -- and where the line between "average"
+			   and "buzz" sits depends on the source, so it is found by ear. */
+			{ key: 'resp', label: 'RESP', min: 1, max: 200, step: 0.1, def: 20, unit: 'Hz', scale: 'log' },
+			{ key: 'sens', label: 'SENS', min: 0.1, max: 10, step: 0.01, def: 1.5708, scale: 'log' }
+		]
+	},
+	{
+		/* A number becoming sound.
+		 *
+		 * The other direction across the same line, and its point is not
+		 * "listening to a value". Audio-rate modulation lives on this side: an
+		 * LFO at 30 Hz is a tremolo and the same shape at 300 Hz is a sideband,
+		 * and only the audio family carries the second.
+		 *
+		 * It is also how a value reaches an inlet that *sums* rather than a knob
+		 * that is read once -- the difference between a modulation that moves
+		 * during the note and one fixed when it starts. A CONST into a knob is
+		 * settled at note-on; the same CONST through here is a signal that can be
+		 * added to, filtered, and delayed on its way. */
+		id: 'tosig',
+		label: 'TO-SIG',
+		group: 'SOURCE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.tosig',
+		inputs: [{ id: 'level', label: 'IN', kind: 'mod' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'level', label: 'LVL', min: -10, max: 10, step: 0.001, def: 0, field: true }
+		]
 	},
 	{
 		/* A literal, in whichever type the socket it is going to expects.
