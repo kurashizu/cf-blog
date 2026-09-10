@@ -1350,6 +1350,30 @@ class ModularSynth {
       mod.set(key, target);
       return v;
     };
+    /**
+     * A knob whose stored value is not what the param holds.
+     *
+     * COMP's ATTACK is milliseconds and `attack` is seconds; PAN's POS is
+     * -100..100 and `pan` is -1..1. `scale` converts one to the other, and the
+     * cable goes through the same conversion, so a patched value means what the
+     * turned value means. Without it a CONST of 100 into PAN's POS would slam
+     * the pan param to 100 -- a hundred times hard right.
+     */
+    const knobAt = (
+      target: AudioParam,
+      key: string,
+      def: number,
+      scale: number,
+      clamp?: (v: number) => number
+    ): number => {
+      const raw = p(key, def) * scale;
+      target.value = clamp ? clamp(raw) : raw;
+      const gain = ctx.createGain();
+      gain.gain.value = scale;
+      gain.connect(target);
+      mod.set(key, gain);
+      return target.value;
+    };
     /** The same, for a knob stored 0..100 and used as a fraction. */
     const knobPct = (target: AudioParam, key: string, def: number): number => {
       const v = p(key, def) / 100;
@@ -1695,10 +1719,10 @@ class ModularSynth {
         const input = ctx.createGain();
         const out = ctx.createGain();
         const dl = ctx.createDelay(2);
-        dl.delayTime.value = Math.min(2, Math.max(0.001, p('dlTime', 220) / 1000));
+        knobAt(dl.delayTime, 'dlTime', 220, 0.001, (v) => Math.min(2, Math.max(0.001, v)));
         const fb = ctx.createGain();
         // Capped below unity: a delay line at g >= 1 never stops growing.
-        fb.gain.value = Math.min(0.85, Math.max(0, p('dlFeedback', 35) / 100));
+        knobAt(fb.gain, 'dlFeedback', 35, 0.01, (v) => Math.min(0.85, Math.max(0, v)));
         const damp = ctx.createBiquadFilter();
         damp.type = 'lowpass';
         knob(damp.frequency, 'dlTone', 6000);
@@ -1767,7 +1791,7 @@ class ModularSynth {
         const dl = ctx.createDelay(0.05);
         dl.delayTime.value = Math.min(0.05, pos / Math.max(1, cvIn(probeKey, 'pitch', 220)));
         const inv = ctx.createGain();
-        inv.gain.value = -(p('combDepth', 80) / 100);
+        knobAt(inv.gain, 'combDepth', 80, -0.01);
         input.connect(out);
         input.connect(dl);
         dl.connect(inv);
@@ -1854,7 +1878,7 @@ class ModularSynth {
            can differ per branch, so a patch can put the body somewhere the
            string is not. */
         const pn = ctx.createStereoPanner();
-        pn.pan.value = Math.max(-1, Math.min(1, p('panPos', 0) / 100));
+        knobAt(pn.pan, 'panPos', 0, 0.01, (v) => Math.max(-1, Math.min(1, v)));
         /* One knob, like VCA: DPTH was a gain stage on the control leg, which
            is a second module hiding inside this one. A CV is attenuated where
            it is made. */
@@ -1870,12 +1894,18 @@ class ModularSynth {
            above its own sustain, and something has to hold it down before the
            output does it less kindly. */
         const c = ctx.createDynamicsCompressor();
-        c.threshold.value = Math.max(-60, Math.min(0, p('compThresh', -18)));
-        c.ratio.value = Math.max(1, Math.min(20, p('compRatio', 4)));
-        c.attack.value = Math.max(0, Math.min(1, p('compAttack', 5) / 1000));
-        c.release.value = Math.max(0.01, Math.min(1, p('compRelease', 120) / 1000));
+        knobAt(c.threshold, 'compThresh', -18, 1, (v) => Math.max(-60, Math.min(0, v)));
+        knobAt(c.ratio, 'compRatio', 4, 1, (v) => Math.max(1, Math.min(20, v)));
+        knobAt(c.attack, 'compAttack', 5, 0.001, (v) => Math.max(0, Math.min(1, v)));
+        knobAt(c.release, 'compRelease', 120, 0.001, (v) => Math.max(0.01, Math.min(1, v)));
         c.knee.value = 6;
         const makeup = ctx.createGain();
+        /* Not a modulation target. The knob is decibels and the param is a
+           linear gain, and the conversion between them is exponential -- so a
+           cable would have to carry dB and arrive multiplied, which no scaling
+           node can do. Registering it anyway would make "6" mean six times
+           rather than six decibels, which is the units bug this file has
+           already been through twice. Drive a VCA instead. */
         makeup.gain.value = Math.pow(10, p('compGain', 0) / 20);
         c.connect(makeup);
         return { in: c, out: makeup, mod };

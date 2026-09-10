@@ -119,6 +119,38 @@ out of ninety-nine params were registered by hand; the other ninety-three drew a
 cable on the canvas and carried nothing. A knob cannot be modulatable in the
 catalogue and inert in the engine if the two are the same line.
 
+### A knob that cannot be driven says so
+
+Some knobs are not AudioParams and never can be. STRING's DECAY shapes a bank of
+oscillator envelopes built for this note; SPACE's SIZE is the length of a buffer
+generated at build time; REED's STIFF is the shape of a waveshaper curve. There
+is no param to connect a cable to.
+
+Mark those `fixed: true`. The canvas then stops offering them when a cable is
+dropped on the module -- it used to offer whichever knob was declared first,
+which is how SEQ's GAP and SCOPE's SPAN got suggested as places to send an
+envelope, neither of which the engine reads through a param at all.
+
+`tests/unit/knob-binding.test.ts` enforces both directions: a knob without the
+flag must be registered in `mod`, and a knob with it must *not* be. The flag has
+to cost something, or it becomes a place to hide a bug.
+
+### Convert where the knob is read, not where the cable lands
+
+PAN's POS is -100..100 and `pan` is -1..1; DELAY's TIME is milliseconds and
+`delayTime` is seconds. `knobAt(target, key, def, scale)` sets the param through
+the conversion and puts a gain of the same `scale` in front of the modulation
+target, so a CONST of 100 into POS means hard right rather than a hundred times
+hard right.
+
+`knobPct` is the common case of this: a knob stored 0..100 and used as a
+fraction. Registering the bare param let a cable bypass the divide -- MIX A at
+100 is a gain of 1, and a CONST of 100 gave 101.
+
+Not every conversion fits. COMP's GAIN is decibels and its param is a linear
+gain, which is exponential, so no scaling node can express it: it is `fixed`,
+and a patch that wants to modulate level uses a VCA.
+
 ### Both ends of a cable resolve by port name
 
 `outletOf(src, port)` is the source side of what `mod.get(port)` is on the

@@ -32,6 +32,21 @@ export interface ModuleParam {
 	   spelling that out on a 26px dial spanning four million positions is not
 	   possible at all. Numbers you know in advance are typed. */
 	field?: boolean;
+	/* Read once, when the note starts, and not modulatable.
+	
+	   Most knobs are AudioParams and a cable into one is heard immediately. Some
+	   are not: STRING's DECAY shapes a bank of oscillator envelopes built for
+	   this note, SPACE's SIZE is the length of a buffer generated at build,
+	   REED's STIFF is the shape of a waveshaper curve. There is no param to
+	   connect to, so a cable there could only be read as a number at the moment
+	   the note begins.
+	
+	   Marking them means the canvas stops offering them as modulation targets --
+	   it used to offer whichever knob happened to be declared first, which is
+	   how SEQ's GAP and SCOPE's SPAN were suggested as places to send an
+	   envelope. It is a real constraint, not an oversight, so it is written
+	   down rather than quietly wrong. */
+	fixed?: boolean;
 	/* How the knob's angle maps to its value.
 	
 	   `linear` is the default and right for most things. `log` is for the
@@ -225,8 +240,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'hardness', label: 'HARD', min: 0, max: 100, step: 1, unit: '%', def: 50 },
-			{ key: 'exLength', label: 'LEN', min: 1, max: 60, step: 1, unit: 'ms', def: 6 },
+			{ key: 'hardness', label: 'HARD', min: 0, max: 100, step: 1, unit: '%', def: 50, fixed: true },
+			{ key: 'exLength', label: 'LEN', min: 1, max: 60, step: 1, unit: 'ms', def: 6, fixed: true },
 			{ key: 'exTone', label: 'TONE', min: 200, max: 12000, step: 100, unit: 'Hz', def: 3000, scale: 'log' }
 		]
 	},
@@ -244,7 +259,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'subWave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, choices: WAVE_LABELS },
-			{ key: 'subOct', label: 'OCT', min: 1, max: 3, step: 1, def: 1 }
+			{ key: 'subOct', label: 'OCT', min: 1, max: 3, step: 1, def: 1, fixed: true }
 		]
 	},
 	{
@@ -259,7 +274,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'PITCH', kind: 'mod', role: 'hz' }, { id: 'pwm', label: 'PWM', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'pw', label: 'PW', min: 5, max: 95, step: 1, unit: '%', def: 50 }
+			{ key: 'pw', label: 'PW', min: 5, max: 95, step: 1, unit: '%', def: 50, fixed: true }
 		]
 	},
 	{
@@ -274,9 +289,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'bowPressure', label: 'PRES', min: 0, max: 100, step: 1, unit: '%', def: 50 },
-			{ key: 'bowNoise', label: 'HAIR', min: 0, max: 100, step: 1, unit: '%', def: 25 },
-			{ key: 'bowBite', label: 'BITE', min: 0, max: 100, step: 1, unit: '%', def: 40 }
+			{ key: 'bowPressure', label: 'PRES', min: 0, max: 100, step: 1, unit: '%', def: 50, fixed: true },
+			{ key: 'bowNoise', label: 'HAIR', min: 0, max: 100, step: 1, unit: '%', def: 25, fixed: true },
+			{ key: 'bowBite', label: 'BITE', min: 0, max: 100, step: 1, unit: '%', def: 40, fixed: true }
 		]
 	},
 
@@ -323,9 +338,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'driveAmt', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 25 },
-			{ key: 'driveBias', label: 'BIAS', min: 0, max: 100, step: 1, unit: '%', def: 30 },
-			{ key: 'driveTone', label: 'TONE', min: 500, max: 16000, step: 100, unit: 'Hz', def: 8000, scale: 'log' }
+			{ key: 'driveAmt', label: 'AMT', min: 0, max: 100, step: 1, unit: '%', def: 25, fixed: true },
+			{ key: 'driveBias', label: 'BIAS', min: 0, max: 100, step: 1, unit: '%', def: 30, fixed: true },
+			{ key: 'driveTone', label: 'TONE', min: 500, max: 16000, step: 100, unit: 'Hz', def: 8000, scale: 'log', fixed: true }
 		]
 	},
 	{
@@ -359,7 +374,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN, { id: 'cv', label: 'CV', kind: 'mod' }],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'blendMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 50 },
+			{ key: 'blendMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 50, fixed: true },
 			{ key: 'blendTone', label: 'TONE', min: 100, max: 8000, step: 50, unit: 'Hz', def: 800, scale: 'log' }
 		]
 	},
@@ -372,8 +387,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'reedStiff', label: 'STIF', min: 0, max: 100, step: 1, unit: '%', def: 50 },
-			{ key: 'reedBias', label: 'BIAS', min: 0, max: 100, step: 1, unit: '%', def: 40 }
+			{ key: 'reedStiff', label: 'STIF', min: 0, max: 100, step: 1, unit: '%', def: 50, fixed: true },
+			{ key: 'reedBias', label: 'BIAS', min: 0, max: 100, step: 1, unit: '%', def: 40, fixed: true }
 		]
 	},
 	{
@@ -392,7 +407,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   module: the point of holding a transient down is that the rest
 			   comes up. The engine read this all along; nothing declared it, so
 			   it sat at 0 dB and could not be reached. */
-			{ key: 'compGain', label: 'GAIN', min: 0, max: 24, step: 0.5, unit: 'dB', def: 0 },
+			{ key: 'compGain', label: 'GAIN', min: 0, max: 24, step: 0.5, unit: 'dB', def: 0, fixed: true },
 			{ key: 'compRelease', label: 'REL', min: 10, max: 1000, step: 10, unit: 'ms', def: 120 }
 		]
 	},
@@ -405,9 +420,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }, AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'decayTime', label: 'DECAY', min: 0.05, max: 12, step: 0.05, unit: 's', def: 2 },
-			{ key: 'damping', label: 'DAMP', min: 0, max: 100, step: 1, unit: '%', def: 30 },
-			{ key: 'stiffness', label: 'STIFF', min: 0, max: 100, step: 1, unit: '%', def: 10 },
+			{ key: 'decayTime', label: 'DECAY', min: 0.05, max: 12, step: 0.05, unit: 's', def: 2, fixed: true },
+			{ key: 'damping', label: 'DAMP', min: 0, max: 100, step: 1, unit: '%', def: 30, fixed: true },
+			{ key: 'stiffness', label: 'STIFF', min: 0, max: 100, step: 1, unit: '%', def: 10, fixed: true },
 			/* How much of what arrives is replaced by the string ringing.
 			
 			   The engine read this all along and nothing declared it, so it was
@@ -415,7 +430,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   which meant the AUDIO IN socket was structurally discarded. A
 			   patch heard the same sine bank whether the strike was wired in or
 			   not. Same knob MODES has, for the same reason. */
-			{ key: 'strBlend', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70 }
+			{ key: 'strBlend', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70, fixed: true }
 		]
 	},
 	{
@@ -427,15 +442,15 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'tubeDecay', label: 'DECAY', min: 0.05, max: 8, step: 0.05, unit: 's', def: 1.2 },
-			{ key: 'tubeDamp', label: 'DAMP', min: 0, max: 100, step: 1, unit: '%', def: 40 },
+			{ key: 'tubeDecay', label: 'DECAY', min: 0.05, max: 8, step: 0.05, unit: 's', def: 1.2, fixed: true },
+			{ key: 'tubeDamp', label: 'DAMP', min: 0, max: 100, step: 1, unit: '%', def: 40, fixed: true },
 			/* Which partials sound. A cylinder closed at one end has no even
 			   harmonics -- that is a clarinet -- and a knob with 101 positions
 			   and two outcomes was a switch wearing a dial. */
 			{ key: 'tubeOdd', label: 'ODD', min: 0, max: 1, step: 1, def: 1, choices: ['ALL', 'ODD'] },
 			/* See STRING's MIX: read by the engine, declared nowhere, so TUBE's
 			   AUDIO IN was discarded too. */
-			{ key: 'tubeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70 }
+			{ key: 'tubeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70, fixed: true }
 		]
 	},
 	{
@@ -447,14 +462,14 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }, AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'mode1', label: 'M1', min: 0.5, max: 12, step: 0.01, unit: '×', def: 1 },
-			{ key: 'mode2', label: 'M2', min: 0.5, max: 12, step: 0.01, unit: '×', def: 2.4 },
-			{ key: 'mode3', label: 'M3', min: 0.5, max: 12, step: 0.01, unit: '×', def: 4.6 },
-			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.5, def: 14 },
+			{ key: 'mode1', label: 'M1', min: 0.5, max: 12, step: 0.01, unit: '×', def: 1, fixed: true },
+			{ key: 'mode2', label: 'M2', min: 0.5, max: 12, step: 0.01, unit: '×', def: 2.4, fixed: true },
+			{ key: 'mode3', label: 'M3', min: 0.5, max: 12, step: 0.01, unit: '×', def: 4.6, fixed: true },
+			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.5, def: 14, fixed: true },
 			/* How much of what arrives is replaced by the body ringing. The
 			   engine read this all along and nothing declared it, so the balance
 			   between a strike and the thing it strikes had no knob. */
-			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70 },
+			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 70, fixed: true },
 			/* The pitch the ratios multiply. 0 follows the key, which is what a
 			   marimba wants; any other value pins the resonator to that frequency
 			   however it was struck, which is what a drum is -- a kick is 55 Hz
@@ -465,7 +480,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   were silently clamped to 2000 -- the knob could not reach the
 			   value the preset asked for, so those keys never sounded as
 			   written. */
-			{ key: 'modeHz', label: 'HZ', min: 0, max: 16000, step: 1, unit: 'Hz', def: 0 }
+			{ key: 'modeHz', label: 'HZ', min: 0, max: 16000, step: 1, unit: 'Hz', def: 0, fixed: true }
 		]
 	},
 	{
@@ -477,9 +492,9 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'bodySize', label: 'SIZE', min: 0, max: 100, step: 1, unit: '%', def: 50 },
-			{ key: 'bodyDepth', label: 'DEPTH', min: 0, max: 100, step: 1, unit: '%', def: 45 },
-			{ key: 'bodyMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 60 }
+			{ key: 'bodySize', label: 'SIZE', min: 0, max: 100, step: 1, unit: '%', def: 50, fixed: true },
+			{ key: 'bodyDepth', label: 'DEPTH', min: 0, max: 100, step: 1, unit: '%', def: 45, fixed: true },
+			{ key: 'bodyMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 60, fixed: true }
 		]
 	},
 
@@ -492,7 +507,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [{ id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }, AUDIO_IN],
 		outputs: [AUDIO_OUT],
 		params: [
-			{ key: 'combPos', label: 'POS', min: 2, max: 50, step: 1, unit: '%', def: 25 },
+			{ key: 'combPos', label: 'POS', min: 2, max: 50, step: 1, unit: '%', def: 25, fixed: true },
 			{ key: 'combDepth', label: 'DPTH', min: 0, max: 100, step: 1, unit: '%', def: 80 }
 		]
 	},
@@ -505,8 +520,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
 		params: [
-			{ key: 'spaceSize', label: 'SIZE', min: 0, max: 100, step: 1, unit: '%', def: 40 },
-			{ key: 'spaceDecay', label: 'DECY', min: 0, max: 100, step: 1, unit: '%', def: 60 },
+			{ key: 'spaceSize', label: 'SIZE', min: 0, max: 100, step: 1, unit: '%', def: 40, fixed: true },
+			{ key: 'spaceDecay', label: 'DECY', min: 0, max: 100, step: 1, unit: '%', def: 60, fixed: true },
 			{ key: 'spaceMix', label: 'MIX', min: 0, max: 100, step: 1, unit: '%', def: 30 }
 		]
 	},
@@ -521,10 +536,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [],
 		outputs: [{ id: 'cv', label: 'CV', kind: 'mod' }],
 		params: [
-			{ key: 'envA', label: 'A', min: 0, max: 4, step: 0.005, unit: 's', def: 0.005 },
-			{ key: 'envD', label: 'D', min: 0, max: 6, step: 0.005, unit: 's', def: 0.2 },
-			{ key: 'envS', label: 'S', min: 0, max: 100, step: 1, unit: '%', def: 60 },
-			{ key: 'envR', label: 'R', min: 0, max: 8, step: 0.005, unit: 's', def: 0.2 }
+			{ key: 'envA', label: 'A', min: 0, max: 4, step: 0.005, unit: 's', def: 0.005, fixed: true },
+			{ key: 'envD', label: 'D', min: 0, max: 6, step: 0.005, unit: 's', def: 0.2, fixed: true },
+			{ key: 'envS', label: 'S', min: 0, max: 100, step: 1, unit: '%', def: 60, fixed: true },
+			{ key: 'envR', label: 'R', min: 0, max: 8, step: 0.005, unit: 's', def: 0.2, fixed: true }
 		],
 		viz: 'adsr'
 	},
@@ -615,8 +630,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [],
 		params: [
-			{ key: 'scopeSpan', label: 'SPAN', min: 1, max: 100, step: 1, unit: 'ms', def: 20, scale: 'log' },
-			{ key: 'scopeGain', label: 'GAIN', min: 0, max: 40, step: 1, unit: 'dB', def: 0 }
+			{ key: 'scopeSpan', label: 'SPAN', min: 1, max: 100, step: 1, unit: 'ms', def: 20, scale: 'log', fixed: true },
+			{ key: 'scopeGain', label: 'GAIN', min: 0, max: 40, step: 1, unit: 'dB', def: 0, fixed: true }
 		],
 		viz: 'scope'
 	},
@@ -629,8 +644,8 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [],
 		params: [
-			{ key: 'fftFloor', label: 'FLOOR', min: -120, max: -30, step: 1, unit: 'dB', def: -90 },
-			{ key: 'fftSmooth', label: 'SMTH', min: 0, max: 95, step: 5, unit: '%', def: 20 }
+			{ key: 'fftFloor', label: 'FLOOR', min: -120, max: -30, step: 1, unit: 'dB', def: -90, fixed: true },
+			{ key: 'fftSmooth', label: 'SMTH', min: 0, max: 95, step: 5, unit: '%', def: 20, fixed: true }
 		],
 		viz: 'fft'
 	},
@@ -643,7 +658,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		inputs: [AUDIO_IN],
 		outputs: [],
 		params: [
-			{ key: 'loudSmooth', label: 'SMTH', min: 0, max: 95, step: 5, unit: '%', def: 60 }
+			{ key: 'loudSmooth', label: 'SMTH', min: 0, max: 95, step: 5, unit: '%', def: 60, fixed: true }
 		],
 		viz: 'meter'
 	},
@@ -661,7 +676,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.seq',
 		inputs: [EXEC_IN],
 		outputs: [EXEC_OUT],
-		params: [{ key: 'gapMs', label: 'GAP', min: 0, max: 200, step: 1, unit: 'ms', def: 0 }]
+		params: [{ key: 'gapMs', label: 'GAP', min: 0, max: 200, step: 1, unit: 'ms', def: 0, fixed: true }]
 	},
 	{
 		/* WHEN: the condition half of the logic chain.
@@ -692,7 +707,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 				   words were being cut to "ALW..." -- which is not a label. */
 				choices: ['ANY', 'ABV', 'BLW', 'BUSY']
 			},
-			{ key: 'testNote', label: 'NOTE', min: 0, max: 87, step: 1, def: 48 }
+			{ key: 'testNote', label: 'NOTE', min: 0, max: 87, step: 1, def: 48, fixed: true }
 		]
 	},
 	{
@@ -713,7 +728,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'action', label: 'DO', min: 0, max: 2, step: 1, def: 0, choices: ['CUT', 'SOLO', 'GLIDE'] },
 			{ key: 'actGroup', label: 'GRP', min: 0, max: 4, step: 1, def: 0 },
-			{ key: 'actMs', label: 'TIME', min: 0, max: 500, step: 5, unit: 'ms', def: 6 }
+			{ key: 'actMs', label: 'TIME', min: 0, max: 500, step: 5, unit: 'ms', def: 6, fixed: true }
 		]
 	},
 	{

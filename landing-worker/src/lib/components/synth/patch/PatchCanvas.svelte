@@ -525,7 +525,12 @@
 	function landingOn(spec: ModuleSpec, role: PortRole): { id: string; kind: PortKind } | null {
 		const inlet = spec.inputs.find((i) => rolesCompatible(role, roleOf(i)));
 		if (inlet) return { id: inlet.id, kind: inlet.kind };
-		const knob = spec.params.find((q) => !q.choices);
+		/* A knob a cable can actually drive: not a selector, not a typed literal,
+		   and not one read once when the note starts. It used to take whichever
+		   knob was declared first, so dropping a cable on SEQ offered its GAP and
+		   on SCOPE its SPAN -- neither of which the engine reads through a param
+		   at all, so the cable landed and did nothing. */
+		const knob = spec.params.find((q) => !q.choices && !q.field && !q.fixed);
 		if (knob && rolesCompatible(role, 'cv')) return { id: knob.key, kind: 'mod' };
 		return null;
 	}
