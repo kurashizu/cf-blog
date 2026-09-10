@@ -812,6 +812,8 @@ class ModularSynth {
 
   /** Which context the master chain currently belongs to. */
   private masterFXCtx: BaseAudioContext | null = null;
+  /** Catches peaks between the summed tracks and the output. */
+  private masterLimiter: DynamicsCompressorNode | null = null;
 
   private initMasterFX(ctx: AudioContext) {
     /* One chain per context, and the guard has to say *which* context.
@@ -869,11 +871,31 @@ class ModularSynth {
     this.waveShaper.oversample = '2x';
     this.shaperIn = ctx.createGain();
     this.shaperBypass = ctx.createGain();
+    /* A limiter between the sum and the output.
+    
+       Eight track buses plus the delay and reverb returns all land on
+       `masterBusIn`, and at the default drive of 0 the shaper is routed around
+       entirely -- correctly, since its curve clamps outside [-1,1]. That left
+       nothing at all between the sum and `destination`, so eight tracks past
+       unity hard-clipped, which is why the export path needs a post-hoc
+       "peak > -0.1 dB" warning: the engine detected clipping rather than
+       preventing it.
+    
+       Set transparent: a 20:1 ratio above -1 dBFS with a fast attack catches
+       peaks and does nothing at all to material that was not going to clip. */
+    this.masterLimiter = ctx.createDynamicsCompressor();
+    this.masterLimiter.threshold.setValueAtTime(-1, ctx.currentTime);
+    this.masterLimiter.knee.setValueAtTime(0, ctx.currentTime);
+    this.masterLimiter.ratio.setValueAtTime(20, ctx.currentTime);
+    this.masterLimiter.attack.setValueAtTime(0.002, ctx.currentTime);
+    this.masterLimiter.release.setValueAtTime(0.1, ctx.currentTime);
+    this.masterLimiter.connect(masterGain);
+
     this.masterBusIn.connect(this.shaperIn);
     this.shaperIn.connect(this.waveShaper);
-    this.waveShaper.connect(masterGain);
+    this.waveShaper.connect(this.masterLimiter);
     this.masterBusIn.connect(this.shaperBypass);
-    this.shaperBypass.connect(masterGain);
+    this.shaperBypass.connect(this.masterLimiter);
     this.applyDriveRouting();
 
     // Per-Track 6-Band Graphic EQ chains: voices -> input -> 80Hz -> ... -> 12kHz -> master bus.
@@ -3506,8 +3528,13 @@ class ModularSynth {
       }
     }
 
+    /* What this note does to the ones already sounding, and which group it
+       belongs to. Walked once: it was computed here and again when the voice
+       was filed, so the exec graph was traversed twice per percussion note and
+       the two answers were one divergence away from a voice being filed under a
+       group different from the one that chose its choke. */
+    const act = this.noteActions(track, noteIndex, trackId);
     if (!this.renderCtx) {
-      const act = this.noteActions(track, noteIndex, trackId);
       if (act.cut || act.solo) {
         /* Choked rather than stopped: a few milliseconds of fade is inaudible
            as a fade and audible as the absence of a click, which a hard cut on
@@ -3602,9 +3629,21 @@ class ModularSynth {
       }
     }
 
-    const phaseDelaySec = (track.phaseOffset / 360) * (1 / baseFreq);
+    /* OSC2's phase, as a delay of part of one cycle.
+    
+       Two things were wrong with `(phase/360) * period` clamped to 10 ms. 360
+       is a *whole* period, so the knob's two ends meant the same thing -- 0 and
+       360 were audibly and mathematically identical. And the clamp bit long
+       before the top of the range on high notes: at C7 both 180 and 360 gave a
+       flat 10 ms, twenty-one whole periods, so the knob was a fixed flam rather
+       than a phase.
+    
+       Wrapping at 360 keeps the ends distinct, and taking the delay modulo one
+       period means it is always a phase, whatever the note. */
+    const phaseFrac = (((track.phaseOffset ?? 0) % 360) + 360) % 360 / 360;
+    const period = 1 / Math.max(1, baseFreq);
     const startT1 = t;
-    const startT2 = t + Math.min(0.01, phaseDelaySec);
+    const startT2 = t + phaseFrac * period;
 
     const pEnvAmt = track.pitchEnvAmount ?? 0;
     const pAtt = Math.max(0.001, track.pitchAttack ?? 0.002);
@@ -4341,7 +4380,7 @@ class ModularSynth {
         /* Which group this voice belongs to, so a later CUT can find it. Read
            from the ACT that fired for it, or the track field when there is no
            chain. */
-        muteGroup: trackRow.percussion ? this.noteActions(track, noteIndex, trackId).cutGroup : 0,
+        muteGroup: trackRow.percussion ? act.cutGroup : 0,
       });
     }
 
@@ -4873,6 +4912,7 @@ class ModularSynth {
       /* Which context these nodes belong to. Held with them because that is
          what makes them valid: a node cannot connect across contexts. */
       masterFXCtx: this.masterFXCtx as BaseAudioContext | null,
+      masterLimiter: this.masterLimiter,
       noiseBuffer: this.noiseBuffer,
       metalBuffer: this.metalBuffer,
       delayNode: this.delayNode,
@@ -4889,6 +4929,7 @@ class ModularSynth {
   }
 
   private restoreGraphCache(cache: ReturnType<ModularSynth['graphCache']>) {
+    this.masterLimiter = cache.masterLimiter;
     this.noiseBuffer = cache.noiseBuffer;
     this.metalBuffer = cache.metalBuffer;
     this.delayNode = cache.delayNode;
@@ -4910,6 +4951,7 @@ class ModularSynth {
   private clearGraphCache() {
     this.restoreGraphCache({
       masterFXCtx: null,
+      masterLimiter: null,
       noiseBuffer: null,
       metalBuffer: null,
       delayNode: null,
