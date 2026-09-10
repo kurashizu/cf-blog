@@ -294,6 +294,31 @@ describe('the node contract', () => {
 		expect(clashes).toEqual([]);
 	});
 
+	it('turns a knob only where a number would not do', () => {
+		/* A dial answers "how much" by feel. That is the right control when the
+		   range is awkward or the response is not linear -- TUNING sweeps 400..480
+		   around a reference of 440, where the useful moves are a few hertz and
+		   nobody knows the number they want in advance. It is the wrong control
+		   for a value you already know: GAIN's level is 1, or 0.5, or -1, and on
+		   a linear dial those are positions to hunt for rather than numbers to
+		   write.
+		
+		   So a plain linear knob over an ordinary range has to justify itself, and
+		   the justification is one of: a non-linear response, or a range that does
+		   not start where its units do. Anything else is typed. */
+		const ORDINARY = (q: { min: number; max: number; scale?: string }) =>
+			q.scale !== 'log' && (q.min === 0 || q.min === -q.max);
+		const turned: string[] = [];
+		for (const m of MODULE_SPECS) {
+			for (const q of m.params) {
+				if (q.choices || q.field || q.wave) continue;
+				if (!ORDINARY(q)) continue;
+				turned.push(`${m.id}.${q.key}`);
+			}
+		}
+		expect(turned).toEqual([]);
+	});
+
 	it('uses a log scale only where the range is positive', () => {
 		// log of zero or a negative has no value, so the dial would break.
 		const bad = MODULE_SPECS.flatMap((m) =>

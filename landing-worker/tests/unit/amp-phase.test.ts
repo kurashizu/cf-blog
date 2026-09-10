@@ -102,13 +102,18 @@ describe('GAIN, the audio half of multiplication', () => {
 		expect(build('gain').made!.mod.has('level')).toBe(true);
 	});
 
-	it('centres silence, so the settings anyone reaches for are findable', () => {
-		/* On -4..4 unity sits at 62.5% of the travel and 12 dB of inverted boost
-		   sits at the end. On -2..2 silence is dead centre, unity is at three
-		   quarters and its mirror at a quarter. */
+	it('is typed rather than turned, because the useful levels are numbers', () => {
+		/* A dial answers "how much" by feel, which is the right control for an
+		   awkward or non-linear range -- TUNING's 400..480 around a reference of
+		   440 is one. A level is not: 1, 0.5, 2 and -1 are values you know before
+		   reaching for the control, and on a linear dial they are four positions
+		   to hunt for. */
 		const lvl = spec('gain').params.find((q) => q.key === 'level')!;
-		expect((0 - lvl.min) / (lvl.max - lvl.min)).toBe(0.5);
-		expect((lvl.def - lvl.min) / (lvl.max - lvl.min)).toBe(0.75);
+		expect(lvl.field).toBe(true);
+		// Still bounded, because the field clamps to the range it declares.
+		expect(lvl.min).toBe(-2);
+		expect(lvl.max).toBe(2);
+		expect(lvl.def).toBe(1);
 	});
 
 	it('goes negative, which is what makes a separate INV unnecessary', () => {

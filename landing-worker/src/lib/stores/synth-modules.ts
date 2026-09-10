@@ -534,16 +534,21 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   the knob stays and the socket joins it. */
 		inputs: [AUDIO_IN, { id: 'level', label: 'LVL', kind: 'mod', role: 'cv' }],
 		outputs: [AUDIO_OUT],
-		/* -2..2 rather than -4..4, and the reason is where 1 lands.
+		/* Typed rather than turned.
 
-		   A level control's most common setting is unity, and on -4..4 unity sits
-		   at 62.5% of the travel -- an arbitrary place to hunt for, with silence
-		   at the halfway mark and 12 dB of inverted boost at the end that nothing
-		   asks for. On -2..2 unity is at three quarters, its mirror -1 is at a
-		   quarter, and silence is dead centre, so the three settings anyone
-		   reaches for are the three positions findable without looking.
-		   Right-click still returns it to 1. */
-		params: [{ key: 'level', label: 'LVL', min: -2, max: 2, step: 0.01, def: 1 }]
+		   A dial answers "how much" by feel, and that is the right control for a
+		   parameter with an awkward range or a non-linear one -- TUNING's 400..480
+		   around a reference of 440 is exactly that. A level is not: the values
+		   anyone actually wants are 1, 0.5, 2, -1, and those are numbers you know
+		   before you reach for the control rather than ones you find by ear. On a
+		   linear -2..2 dial they are four positions to hunt for; typed they are
+		   four numbers.
+
+		   The range stays -2..2 because the field clamps to it, and 2 is as much
+		   boost as a level stage should offer before the answer is another GAIN.
+		   Negative is not an oversight: -1 is the same signal inverted, which is
+		   what makes this VCA and INV at once. */
+		params: [{ key: 'level', label: 'LVL', min: -2, max: 2, step: 0.01, def: 1, field: true }]
 	},
 	{
 		/* A literal, in whichever type the socket it is going to expects.
