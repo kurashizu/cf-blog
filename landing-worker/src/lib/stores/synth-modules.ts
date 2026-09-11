@@ -780,10 +780,15 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * cutoff; welded into the sources you would get one per source and never
 		 * the shape you wanted where you wanted it.
 		 *
-		 * A, D and R are typed in seconds. They are numbers you know -- 5 ms, 200
-		 * ms -- and the ranges span four decades, which no dial can spell out.
-		 * SUS is the one knob: it is a proportion found by ear against the other
-		 * three, and 0..100% is exactly the ordinary linear range a dial suits.
+		 * All four are typed. A, D and R are seconds -- numbers you know, 5 ms,
+		 * 200 ms -- over ranges spanning four decades, which no dial can spell
+		 * out. S is a percentage of the peak, and the values anyone reaches for
+		 * are 60, 0, 100: written, not dialled.
+		 *
+		 * This paragraph used to call S "the one knob, a proportion found by ear",
+		 * which the field beneath it had already stopped being. The knob rule is
+		 * special ranges and non-linear response; a plain linear 0..100 is
+		 * neither.
 		 *
 		 * The floor is a tenth of a millisecond rather than one. A ramp needs two
 		 * distinct times to exist at all, so some floor there must be -- but a
@@ -799,14 +804,18 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		params: [
 			{ key: 'envA', label: 'A', min: 0, max: 10, step: 0.0001, def: 0.005, unit: 's', field: true },
 			{ key: 'envD', label: 'D', min: 0, max: 10, step: 0.0001, def: 0.2, unit: 's', field: true },
-			/* Typed like the other three, and for the same reason: it is a plain
+			/* `S`, not `SUS`. Its neighbours are A, D and R, and ADSR reads as four
+			   letters -- the one spelled out is the one that looks like a
+			   different kind of control, which is exactly what it is not.
+			
+			   Typed like the other three, and for the same reason: it is a plain
 			   linear 0..100, which the knob rule says is a number rather than an
 			   angle. The temptation was to call it "found by ear" and keep a dial,
 			   but a sustain is read as a percentage of the peak -- 60, 0, 100 --
 			   and those are values you write. `fixed` because there is no
 			   AudioParam to reach: the level is baked into the scheduled ramp when
 			   the note is built, so a cable could only be read at note-on. */
-			{ key: 'envS', label: 'SUS', min: 0, max: 100, step: 0.1, def: 60, unit: '%', field: true, fixed: true },
+			{ key: 'envS', label: 'S', min: 0, max: 100, step: 0.1, def: 60, unit: '%', field: true, fixed: true },
 			{ key: 'envR', label: 'R', min: 0, max: 20, step: 0.0001, def: 0.2, unit: 's', field: true },
 			/* Linear or exponential, because they are different shapes and the ear
 			   only agrees with one of them per destination: a linear fall to
