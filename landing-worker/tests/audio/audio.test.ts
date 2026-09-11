@@ -2407,3 +2407,1349 @@ describe('a probe changes nothing about the sound', () => {
 		}
 	}, 60000);
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+   The additive banks, read one partial at a time.
+
+   STRING and TUBE differ by which partials they build, and no measurement of
+   the whole output can say that: the bank sums sixteen sines, so dropping half
+   of them changes a level by a few per cent and every module in this group
+   would still pass a level assertion. The suite above tested their *envelopes*
+   for exactly that reason, and left the partial set untested.
+
+   A narrow bandpass is what reaches it. Park one on a single harmonic of the
+   played note and the reading is that partial and almost nothing else, so a
+   partial that is absent reads an order of magnitude down rather than a few per
+   cent. The played note is 415.3 Hz, so the partials sit at 830.6, 1245.9 and
+   so on -- numbers the test writes out rather than computes, because computing
+   them from the same constant the engine uses would pass on a wrong constant.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+describe('TUBE: ODD is which partials exist, not how loud they are', () => {
+	/* A cylinder closed at one end has no even harmonics, which is what makes it
+	   a clarinet rather than a string -- and it is the only thing separating TUBE
+	   from STRING in the shared `case` body. `oddOnly` gates a single `continue`
+	   inside the partial loop, so losing it leaves every other line of that body
+	   intact: the frequencies, the decays, the mix and the envelope all still
+	   build, and the module still sounds like a tube. Only the even partials come
+	   back.
+
+	   Measured through a Q-30 bandpass on one harmonic at a time. The 2nd
+	   partial reads 0.0047 with ODD on against 0.0550 with it off -- 11.7x, and
+	   the 0.0047 is leakage from the 1st and 3rd through the filter's skirts
+	   rather than a partial that is there. */
+	const partial = async (type: string, listenHz: number, extra: Record<string, number>) =>
+		(
+			await render(
+				graphOf(
+					[
+						{ id: 'f', type: 'tofreq' },
+						{ id: 'e', type: 'excite' },
+						{ id: 's', type },
+						{ id: 'bp', type: 'filter' },
+						{ id: 'go', type: 'gain' }
+					],
+					[
+						EXEC_TO_OUT,
+						{ from: 'entry', fromPort: 'pitch', to: 'f', toPort: 'a' },
+						{ from: 'f', fromPort: 'out', to: 's', toPort: 'pitch' },
+						{ from: 'e', fromPort: 'out', to: 's', toPort: 'in' },
+						{ from: 's', fromPort: 'out', to: 'bp', toPort: 'in' },
+						{ from: 'bp', fromPort: 'out', to: 'go', toPort: 'in' },
+						{ from: 'go', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					// type 2 is BP. Q 30 is narrow enough to sit on one harmonic.
+					{ 'e.exLength': 8, 'bp.type': 2, 'bp.cutoff': listenHz, 'bp.q': 30, 'go.level': 0.5, ...extra }
+				),
+				8,
+				1
+			)
+		).envelope[1];
+
+	/* The played note is 415.3 Hz. Its 2nd partial is 830.6 and its 3rd 1245.9. */
+	const SECOND = 830.6;
+	const THIRD = 1245.9;
+	const tube = (odd: number) => ({ 's.tubeMix': 100, 's.tubeDecay': 3, 's.tubeOdd': odd });
+
+	it('drops the even partials and keeps the odd ones', async () => {
+		/* Both halves are load-bearing and they say different things.
+
+		   The 2nd partial is the claim: present at 0.0550, absent at 0.0047.
+
+		   The 3rd is the control, and it is what makes the first reading mean
+		   "the even partial is gone" rather than "the module got quieter". It
+		   reads 0.0255 against 0.0256 -- the same partial to three decimal places
+		   whichever way ODD is set, which is what an odd-only bank has to do. A
+		   TUBE that had merely lost level fails this one. */
+		expect(await partial('tube', SECOND, tube(100)), 'ODD: no 2nd partial').toBeCloseTo(0.0047, 3);
+		expect(await partial('tube', SECOND, tube(0)), 'not ODD: a 2nd partial').toBeCloseTo(0.055, 3);
+		expect(await partial('tube', THIRD, tube(100)), 'ODD: the 3rd survives').toBeCloseTo(0.0255, 3);
+		expect(await partial('tube', THIRD, tube(0)), 'not ODD: unchanged').toBeCloseTo(0.0256, 3);
+	}, 90000);
+
+	it('switches at half, so a patch saved holding 100 still reads as odd', async () => {
+		/* `(p.tubeOdd ?? 1) >= 0.5`, and the threshold rather than an equality is
+		   deliberate: ODD was drawn as a 0..100 dial before it was declared the
+		   two-position selector it always was, so a patch file written then holds
+		   100. Reading that as "not odd" would turn every clarinet in the shipped
+		   presets into an open pipe.
+
+		   1 and 100 both mean odd and 0 does not, so this asserts all three
+		   against the same 2nd-partial reading. 0.4 is the row that pins the
+		   threshold itself: it is under 0.5 and must read as *even*, which is
+		   what fails on a `> 0` test and on a `=== 1` one alike. */
+		const at = async (odd: number) => await partial('tube', SECOND, tube(odd));
+		expect(await at(1), 'ODD 1 is odd').toBeCloseTo(0.0047, 3);
+		expect(await at(100), 'ODD 100 is odd too').toBeCloseTo(0.0047, 3);
+		expect(await at(0.4), 'ODD 0.4 is under the threshold').toBeCloseTo(0.055, 3);
+		expect(await at(0), 'ODD 0 is not odd').toBeCloseTo(0.055, 3);
+	}, 90000);
+
+	it('STRING builds the even partial TUBE refuses', async () => {
+		/* The comparison that makes them two modules rather than one card with a
+		   switch, stated at the level the difference actually lives at. STRING's
+		   2nd partial reads 0.0289 in the first slice where TUBE's is absent --
+		   and if the `isTube` flag ever stopped reaching `oddOnly`, this and the
+		   two tests above fail together while every envelope assertion in the
+		   suite stays green. */
+		const string = await partial('string', SECOND, {
+			's.strBlend': 100,
+			's.stiffness': 0,
+			's.decayTime': 3
+		});
+		expect(string, 'STRING has a 2nd partial').toBeGreaterThan(0.015);
+	}, 45000);
+});
+
+describe('STRING: MIX is a blend and DCAY is how long it rings', () => {
+	const string = async (graphParams: Record<string, number>) =>
+		(
+			await render(
+				graphOf(
+					[
+						{ id: 'f', type: 'tofreq' },
+						{ id: 'e', type: 'excite' },
+						{ id: 's', type: 'string' },
+						{ id: 'go', type: 'gain' }
+					],
+					[
+						EXEC_TO_OUT,
+						{ from: 'entry', fromPort: 'pitch', to: 'f', toPort: 'a' },
+						{ from: 'f', fromPort: 'out', to: 's', toPort: 'pitch' },
+						{ from: 'e', fromPort: 'out', to: 's', toPort: 'in' },
+						{ from: 's', fromPort: 'out', to: 'go', toPort: 'in' },
+						{ from: 'go', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					// Attenuated, so the three MIX readings stay clear of the limiter.
+					{ 'e.exLength': 8, 'go.level': 0.5, ...graphParams }
+				),
+				16,
+				4
+			)
+		).envelope;
+
+	it('MIX is linear in the partials, and at zero only the strike passes', async () => {
+		/* `wet.gain = mix * 0.85` against `dry.gain = 1 - mix`, which is a
+		   crossfade and has to read as one. Measured in slice 1 -- past the
+		   strike, where only the bank is left: MIX 50 reads 0.0155 and MIX 100
+		   reads 0.0311, a ratio of 2.006.
+
+		   The catalogue records what this knob cost when the card and the engine
+		   disagreed about its default: the engine fell back to 100, the dry leg
+		   went to zero, and the strike transient was discarded -- so turning MIX
+		   to its own printed default changed the sound. A crossfade asserted as a
+		   *ratio* is what catches that, because a wet gain stuck at 1 makes both
+		   readings the same number rather than a wrong one. */
+		const half = await string({ 's.decayTime': 2, 's.strBlend': 50 });
+		const full = await string({ 's.decayTime': 2, 's.strBlend': 100 });
+		expect(full[1] / half[1], 'MIX should be linear in the bank').toBeCloseTo(2, 1);
+		expect(half[1]).toBeCloseTo(0.0155, 3);
+		expect(full[1]).toBeCloseTo(0.0311, 3);
+
+		/* At MIX 0 the bank is silent and what is left is the 8 ms strike, which
+		   is over inside slice 0. That is the row saying the dry leg is real: a
+		   module ignoring MIX entirely still rings here. */
+		const none = await string({ 's.decayTime': 2, 's.strBlend': 0 });
+		expect(none[0], 'the strike still passes').toBeGreaterThan(0);
+		expect(none[1], 'and nothing rings after it').toBe(0);
+	}, 60000);
+
+	it('DCAY is a time, measured as where the string stops', async () => {
+		/* A duration rather than a level, which is what a decay *is* and the only
+		   reading a wrong unit cannot fake. 4 s over 16 slices is 250 ms each, and
+		   the last slice with anything in it moves 0 -> 5 -> 15 across the knob's
+		   range.
+
+		   DAMP is pinned at 0 throughout, because `dn` divides the decay by a
+		   power of the partial index that damping feeds -- so leaving it at its
+		   default would let two knobs move one reading. */
+		const lastHeard = (e: number[]) =>
+			e.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
+		const at = async (decayTime: number) =>
+			lastHeard(await string({ 's.decayTime': decayTime, 's.strBlend': 100, 's.damping': 0 }));
+		expect(await at(0.3), 'a short string is gone inside a slice').toBe(0);
+		expect(await at(2), 'the default rings about a second').toBe(5);
+		expect(await at(8), 'and the top of the knob rings past four seconds').toBe(15);
+	}, 60000);
+});
+
+describe('MODES: BASE is where the body is tuned, MIX is how much of it there is', () => {
+	const modes = async (graphParams: Record<string, number>, listenHz: number | null = null) => {
+		const nodes: { id: string; type: string }[] = [
+			{ id: 'e', type: 'excite' },
+			{ id: 'md', type: 'modes' },
+			{ id: 'go', type: 'gain' }
+		];
+		const cables = [
+			EXEC_TO_OUT,
+			{ from: 'e', fromPort: 'out', to: 'md', toPort: 'in' },
+			{ from: 'go', fromPort: 'out', to: 'output', toPort: 'in' }
+		];
+		if (listenHz === null) {
+			cables.push({ from: 'md', fromPort: 'out', to: 'go', toPort: 'in' });
+		} else {
+			nodes.push({ id: 'bp', type: 'filter' });
+			cables.push(
+				{ from: 'md', fromPort: 'out', to: 'bp', toPort: 'in' },
+				{ from: 'bp', fromPort: 'out', to: 'go', toPort: 'in' }
+			);
+		}
+		return (
+			await render(
+				graphOf(nodes, cables, {
+					'e.exLength': 8,
+					'md.mode1': 1,
+					'md.mode2': 2.4,
+					'md.mode3': 4.1,
+					'md.modeQ': 40,
+					'md.modeMix': 100,
+					'go.level': 0.5,
+					...(listenHz === null ? {} : { 'bp.type': 2, 'bp.cutoff': listenHz, 'bp.q': 25 }),
+					...graphParams
+				}),
+				24,
+				3
+			)
+		).envelope;
+	};
+
+	it('puts the first mode where BASE says, as a 2x2', async () => {
+		/* BASE was added to the catalogue and to MODES and did nothing, because
+		   the param list in `buildRackModule`'s default arm is a silent filter and
+		   `modeHz` was not on it -- three separate fixes to the kick's brightness
+		   measured identical for that reason. A test that only moved BASE and read
+		   a level would have passed on every one of those attempts.
+
+		   So it is a 2x2 instead: two tunings, two listening frequencies. A MODES
+		   ignoring BASE gives one row twice; a MODES that inverted it gives the
+		   table transposed; only the right one is loud on the diagonal. */
+		const at = async (base: number, listen: number) => (await modes({ 'md.modeHz': base }, listen))[1];
+		expect(await at(200, 200), 'a 200 Hz body heard at 200').toBeCloseTo(0.1534, 2);
+		expect(await at(200, 600), 'the same body has nothing at 600').toBeLessThan(0.01);
+		expect(await at(600, 200), 'a 600 Hz body has nothing at 200').toBeLessThan(0.01);
+		expect(await at(600, 600), 'and is loud where it is tuned').toBeCloseTo(0.1426, 2);
+	}, 90000);
+
+	it('MIX scales the struck body linearly, and zero leaves the bare strike', async () => {
+		/* `struck.gain = mix` against `dry.gain = (1 - mix)^2`, and the two halves
+		   are not the same shape -- which is the point of measuring both.
+
+		   The body is linear: MIX 50 reads 0.0744 and MIX 100 reads 0.1487, a
+		   ratio of 1.999. The comment above `struck.gain` records that it is
+		   deliberately *not* halved, because the squared dry leg already falls
+		   away faster; halving it again let the broadband strike decide the
+		   timbre. A ratio assertion is what pins the coefficient that comment is
+		   about. */
+		const half = await modes({ 'md.modeHz': 200, 'md.modeMix': 50 });
+		const full = await modes({ 'md.modeHz': 200, 'md.modeMix': 100 });
+		expect(full[1] / half[1], 'the body should be linear in MIX').toBeCloseTo(2, 1);
+		expect(half[1]).toBeCloseTo(0.0744, 2);
+
+		/* And at MIX 0 the body is gone and the dry strike passes at full weight:
+		   `(1 - 0)^2` is 1, so slice 0 has the strike in it and slice 1 has
+		   nothing. A MODES whose dry leg was dropped reads exact zero in both. */
+		const none = await modes({ 'md.modeHz': 200, 'md.modeMix': 0 });
+		expect(none[0], 'the strike passes dry').toBeGreaterThan(0);
+		expect(none[1], 'and no body rings after it').toBe(0);
+	}, 60000);
+});
+
+describe('SPACE: DECAY runs the way its label reads', () => {
+	/* The knob was wired straight to the exponent of the impulse envelope, where
+	   a *bigger* number decays faster -- so turning DECAY up made the room
+	   shorter, and the only thing setting the tail length was SIZE. The engine
+	   inverts it now (`(1 - decay/100) * 3`), and this is the assertion that says
+	   which way round it ended up.
+
+	   It is a direction test, so it is stated as an ordering over the whole knob
+	   rather than as one number: an implementation that lost the inversion passes
+	   no pair of these, and one that lost the knob entirely passes none of them
+	   either because all five readings collapse onto one. */
+	const space = async (decay: number) =>
+		(
+			await render(
+				graphOf(
+					[
+						{ id: 'e', type: 'excite' },
+						{ id: 'sp', type: 'space' }
+					],
+					[
+						EXEC_TO_OUT,
+						{ from: 'e', fromPort: 'out', to: 'sp', toPort: 'in' },
+						{ from: 'sp', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					// SIZE pinned at its maximum, so only DECAY moves between renders.
+					{ 'e.exLength': 8, 'sp.spaceSize': 100, 'sp.spaceDecay': decay, 'sp.spaceMix': 100 }
+				),
+				24,
+				3
+			)
+		).envelope;
+
+	it('lengthens the tail as it is turned up, across the whole knob', async () => {
+		/* 3 s over 24 slices is 125 ms each. Measured as where the room falls
+		   silent: 11 / 14 / 16 / 19 / 23 as DECAY goes 1 / 25 / 50 / 75 / 100.
+
+		   Strictly increasing at every step, which is what rules out the two
+		   failures a three-point test would miss -- a knob read through an
+		   absolute value, and one clamped at its middle. */
+		const lastHeard = (e: number[]) =>
+			e.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
+		const readings: number[] = [];
+		for (const d of [1, 25, 50, 75, 100]) readings.push(lastHeard(await space(d)));
+		for (let i = 1; i < readings.length; i++) {
+			expect(readings[i], `DECAY step ${i}: ${JSON.stringify(readings)}`).toBeGreaterThan(
+				readings[i - 1]
+			);
+		}
+		// And the ends really are a short room and a long one, not five near-equal tails.
+		expect(readings[0]).toBeLessThanOrEqual(12);
+		expect(readings[4]).toBeGreaterThanOrEqual(22);
+	}, 90000);
+});
+
+describe('an audio cycle silences the whole voice, not just the loop', () => {
+	/* The most surprising reading on this bench, and the one that contradicts
+	   what the catalogue says out loud.
+
+	   DELAY's docstring: "a comb filter is this with its output fed back, a
+	   flanger is that with the time moving... the feedback path is a GAIN you can
+	   see, rather than a knob that hides how much is going round." Measured, that
+	   patch is exactly silent at every feedback level -- 0, 0.5 and 0.9 all
+	   render peak 0. You cannot build a comb filter.
+
+	   The reason is one line in `buildRackGraph`: audio cables are ordered by
+	   Kahn's algorithm, and `if (order.length !== graph.nodes.length) return
+	   null` drops the *entire graph* when the sort does not complete. A cycle
+	   anywhere on the canvas takes the whole voice with it, including branches
+	   that never touched it.
+
+	   Which is a defensible thing for an engine to do -- a DelayNode in a
+	   feedback loop with no limiter is how you get a runaway -- but it is not
+	   what the card says, and nothing in the suite said either way. These pin the
+	   behaviour that is actually there, so changing it is a decision someone
+	   makes rather than a comment someone believes. */
+	const loopedGraph = (loop: boolean) =>
+		graphOf(
+			[
+				{ id: 'o', type: 'osc' },
+				{ id: 'a', type: 'gain' },
+				{ id: 'b', type: 'gain' }
+			],
+			[
+				EXEC_TO_OUT,
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' },
+				{ from: 'a', fromPort: 'out', to: 'b', toPort: 'in' },
+				...(loop ? [{ from: 'b', fromPort: 'out', to: 'a', toPort: 'in' }] : [])
+			],
+			{ 'a.level': 0.5, 'b.level': 0.5 }
+		);
+
+	it('takes down a branch that never touched the loop', async () => {
+		/* One OSC wired straight to OUT, and two GAINs off to the side wired to
+		   nothing else. Adding the single cable that closes those two into a ring
+		   moves the reading from 0.4813 to exact zero -- and the oscillator's path
+		   to OUT is the same cable in both renders.
+
+		   This is the assertion that says the failure is whole-graph rather than
+		   local. A `return null` narrowed to "drop the cycle" would keep the
+		   oscillator sounding and fail here, which is the right way for it to
+		   fail if anyone narrows it. */
+		expect((await render(loopedGraph(false), 8, 1)).envelope[2]).toBeCloseTo(0.4813, 3);
+		expect((await render(loopedGraph(true), 8, 1)).peak, 'a cycle silences everything').toBe(0);
+	}, 45000);
+
+	it('so DELAY cannot be fed back, whatever the docstring says', async () => {
+		/* The comb filter, built the way the card describes it. Silent.
+
+		   The control is the same patch with the return cable cut: one repeat
+		   arrives in slice 2, which is 0.25 s at 125 ms a slice -- so the delay
+		   line is working and the feedback cable is what kills it. Without that
+		   half, "the comb is silent" would also pass on a broken DELAY. */
+		const comb = (feedback: boolean) =>
+			graphOf(
+				[
+					{ id: 'e', type: 'excite' },
+					{ id: 'd', type: 'delay' },
+					{ id: 'fbg', type: 'gain' }
+				],
+				[
+					EXEC_TO_OUT,
+					{ from: 'e', fromPort: 'out', to: 'd', toPort: 'in' },
+					{ from: 'd', fromPort: 'out', to: 'fbg', toPort: 'in' },
+					...(feedback ? [{ from: 'fbg', fromPort: 'out', to: 'd', toPort: 'in' }] : []),
+					{ from: 'd', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ 'e.exLength': 8, 'd.delayTime': 0.25, 'fbg.level': 0.5 }
+			);
+		const open = await render(comb(false), 16, 2);
+		expect(
+			open.envelope.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0),
+			'one repeat at 0.25 s'
+		).toEqual([2]);
+		expect((await render(comb(true), 16, 2)).peak, 'the fed-back comb is silent').toBe(0);
+	}, 60000);
+
+	it('but a mod cable may close a ring, which is what the two kinds are for', async () => {
+		/* The other half of the rule, and the reason the restriction is on audio
+		   cables rather than on cables: `audioCables` excludes anything landing on
+		   a `mod` port, so the topological sort never sees a control loop.
+
+		   An oscillator through TO-CV back onto its own PITCH is that -- an audio
+		   cycle by any naive reading of the canvas, and it builds and sounds at
+		   0.1925. Without this the test above would be indistinguishable from "the
+		   engine refuses any loop at all", which would be a different and much
+		   larger claim. */
+		const selfFm = graphOf(
+			[
+				{ id: 'o', type: 'osc' },
+				{ id: 'tc', type: 'tocv' },
+				{ id: 'g', type: 'gain' }
+			],
+			[
+				EXEC_TO_OUT,
+				{ from: 'o', fromPort: 'out', to: 'tc', toPort: 'in' },
+				{ from: 'tc', fromPort: 'out', to: 'o', toPort: 'pitch' },
+				{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+				{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+			],
+			{ 'g.level': 0.4, 'o.pitch': 300 }
+		);
+		expect((await render(selfFm, 8, 1)).envelope[2], 'a mod ring should build').toBeCloseTo(
+			0.1925,
+			3
+		);
+	}, 30000);
+});
+
+describe('EXCITE: TONE is the filter the strike arrives through', () => {
+	/* The third of EXCITE's three knobs and the only one with no coverage. LEN is
+	   pinned as a duration above; TONE is a lowpass on a burst of white noise, so
+	   it is legible as a level -- the further it is opened the more of the noise
+	   gets out.
+
+	   The burst is stretched to 200 ms here so the reading sits inside a slice
+	   rather than in the 8 ms corner of one, which is what makes four readings
+	   comparable to each other at all. */
+	const burst = async (tone: number) =>
+		(
+			await render(
+				graphOf(
+					[{ id: 'e', type: 'excite' }],
+					[EXEC_TO_OUT, { from: 'e', fromPort: 'out', to: 'output', toPort: 'in' }],
+					{ 'e.exLength': 200, 'e.exTone': tone, 'e.hardness': 50 }
+				),
+				16,
+				2
+			)
+		).peak;
+
+	it('passes more of the burst the higher it is opened', async () => {
+		/* Measured across the knob's whole declared range, 200 Hz to 18 kHz:
+		   0.0246 / 0.0841 / 0.1561 / 0.3252 on one run and 0.0376 / 0.1141 /
+		   0.1528 / 0.3047 on the next. The source is noise, so the readings move
+		   between renders -- which is why this is stated as an ordering and as a
+		   span rather than as four constants. Everything else in this file can be
+		   pinned to four decimals; the three EXCITE and NOISE tests cannot, and
+		   saying so is better than a tolerance wide enough to be meaningless.
+
+		   TONE is a modulatable inlet -- `knob(tone.frequency, 'exTone', 3000)` --
+		   so a dropped registration leaves every reading at the 3000 row and they
+		   collapse onto one number. Strictly increasing over four points is what
+		   catches that; the 8x span between the ends is what says the movement is
+		   the filter opening rather than the noise wandering. */
+		const readings = [await burst(200), await burst(1000), await burst(3000), await burst(18000)];
+		for (let i = 1; i < readings.length; i++) {
+			expect(readings[i], `TONE step ${i}: ${JSON.stringify(readings)}`).toBeGreaterThan(
+				readings[i - 1]
+			);
+		}
+		expect(readings[0], 'nearly closed').toBeLessThan(0.06);
+		expect(readings[3], 'wide open').toBeGreaterThan(0.25);
+		expect(readings[3] / readings[0], 'and the span is the filter, not the noise').toBeGreaterThan(5);
+	}, 60000);
+});
+
+describe('NOISE: a fresh buffer every render, which is what makes it noise', () => {
+	it('does not repeat itself between two renders of one patch', async () => {
+		/* Everything else on this bench is asserted to four decimal places because
+		   an offline render is deterministic -- the same patch gives byte-identical
+		   envelopes, which is what `a probe changes nothing` relies on.
+
+		   NOISE is the exception and has to be. The bench calls
+		   `regenerateNoiseBuffer()` before each render, so two renders of one patch
+		   differ in their samples; measured, slice 1 reads 0.3935 and then 0.3938.
+
+		   What this catches is a buffer that became deterministic -- a fixed seed,
+		   a cached buffer surviving the reset, a constant, or a single sample on
+		   repeat. All four still read a steady RMS and a plausible crest factor,
+		   and all four make every NOISE-driven test in this file a test of one
+		   fixed waveform rather than of noise. The crest-factor test above cannot
+		   see any of them. */
+		const noisy = graphOf(
+			[{ id: 'n', type: 'noise' }],
+			[EXEC_TO_OUT, { from: 'n', fromPort: 'out', to: 'output', toPort: 'in' }]
+		);
+		const first = await render(noisy, 8, 1);
+		const second = await render(noisy, 8, 1);
+		expect(first.envelope, `two renders were identical: ${JSON.stringify(first.envelope)}`).not.toEqual(
+			second.envelope
+		);
+		/* And it is the *samples* that moved, not the level: both renders sit at
+		   the same loudness to two decimal places. A buffer that had become
+		   something else entirely would fail this instead, so the pair says
+		   "different noise" rather than merely "different". */
+		expect(first.envelope[4]).toBeCloseTo(second.envelope[4], 1);
+		expect(first.envelope[4]).toBeGreaterThan(0.35);
+	}, 45000);
+});
+
+describe('RING: with nothing on B it is exactly silent', () => {
+	it('multiplies by the nothing an unwired inlet is', async () => {
+		/* `g.gain.value = 0` and the depth gain is summed onto it, so RING's
+		   output is the carrier times whatever arrives at B -- and with B unwired
+		   that is zero, sample for sample.
+
+		   Exact silence rather than "quiet", which is the assertion that separates
+		   a multiplier from a mixer. A RING built as `createGain()` with the
+		   default gain of 1 -- the single most likely way for that line to be lost
+		   -- passes the carrier straight through at 0.4813 and looks entirely
+		   reasonable on the card. The wired control is what makes the zero mean
+		   "B decides" rather than "the module is broken". */
+		const ring = async (wireB: boolean) =>
+			await render(
+				graphOf(
+					[
+						{ id: 'f', type: 'tofreq' },
+						{ id: 'car', type: 'osc' },
+						{ id: 'c', type: 'const' },
+						{ id: 'g2', type: 'tofreq' },
+						{ id: 'm', type: 'osc' },
+						{ id: 'r', type: 'ring' }
+					],
+					[
+						EXEC_TO_OUT,
+						{ from: 'entry', fromPort: 'pitch', to: 'f', toPort: 'a' },
+						{ from: 'f', fromPort: 'out', to: 'car', toPort: 'pitch' },
+						{ from: 'c', fromPort: 'out', to: 'g2', toPort: 'a' },
+						{ from: 'g2', fromPort: 'out', to: 'm', toPort: 'pitch' },
+						{ from: 'car', fromPort: 'out', to: 'r', toPort: 'in' },
+						...(wireB ? [{ from: 'm', fromPort: 'out', to: 'r', toPort: 'b' }] : []),
+						{ from: 'r', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					// kind 9 is PIT: MIDI 45, a modulator well below the carrier.
+					constAt('c', 9, 45)
+				),
+				4,
+				1
+			);
+		expect((await ring(true)).envelope[2], 'wired, it rings').toBeCloseTo(0.3405, 3);
+		expect((await ring(false)).peak, 'unwired B must be exact silence').toBe(0);
+	}, 45000);
+});
+
+describe('PWM: the width is a fraction of a period, at every pitch', () => {
+	/* The duty cycle is built from a delay of `width / frequency`, so the delay
+	   has to track the pitch or the same PW is a different wave at every note --
+	   a pulse that thins out as it goes up the keyboard. The catalogue says that
+	   outright: "the delay has to track the pitch or the width drifts across the
+	   keyboard."
+
+	   Nothing tested it. The PWM tests above hold the pitch at the played note
+	   and move only the width, which is exactly the measurement a missing
+	   division passes: at one frequency a fixed delay *is* a fixed fraction. */
+	const pwmAt = async (width: number, hz: number) =>
+		(
+			await render(
+				graphOf(
+					[
+						{ id: 'pm', type: 'pwm' },
+						{ id: 'cw', type: 'const' },
+						{ id: 'cf', type: 'const' },
+						{ id: 'gg', type: 'gain' }
+					],
+					[
+						EXEC_TO_OUT,
+						{ from: 'cf', fromPort: 'out', to: 'pm', toPort: 'pitch' },
+						{ from: 'cw', fromPort: 'out', to: 'pm', toPort: 'pw' },
+						{ from: 'pm', fromPort: 'out', to: 'gg', toPort: 'in' },
+						{ from: 'gg', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					// kind 7 is FRQ, so the pitch is set in Hz rather than as a note.
+					{ ...constAt('cw', 6, width), ...constAt('cf', 7, hz), 'gg.level': 0.3 }
+				),
+				8,
+				1
+			)
+		).envelope[4];
+
+	it('reads the same at four pitches three octaves apart', async () => {
+		/* A rectangle's RMS depends on its duty cycle and on nothing else, so the
+		   reading is pitch-invariant if and only if the width is. Measured over
+		   110, 220, 440 and 880 Hz: 0.1729 / 0.1726 / 0.1721 / 0.1712 at PW 0.5,
+		   and 0.1043 / 0.1040 / 0.1024 / 0.1009 at PW 0.1.
+
+		   Under 2% across three octaves, and the small drift downwards is the
+		   oscillators' own antialiasing rather than the width moving. A delay that
+		   stopped tracking the pitch halves the duty cycle per octave, so the
+		   0.5 row would fall towards the 0.1 row and back again -- far outside
+		   this. Two widths rather than one, so a module that had collapsed both to
+		   a fixed square would be invariant here and fail the ordering. */
+		const spread = (xs: number[]) => (Math.max(...xs) - Math.min(...xs)) / Math.max(...xs);
+		const half: number[] = [];
+		const narrow: number[] = [];
+		for (const hz of [110, 220, 440, 880]) {
+			half.push(await pwmAt(0.5, hz));
+			narrow.push(await pwmAt(0.1, hz));
+		}
+		expect(spread(half), `PW 0.5 across octaves: ${JSON.stringify(half)}`).toBeLessThan(0.02);
+		expect(spread(narrow), `PW 0.1 across octaves: ${JSON.stringify(narrow)}`).toBeLessThan(0.05);
+		// And the two widths are still different sounds at every one of those pitches.
+		for (let i = 0; i < half.length; i++) expect(half[i]).toBeGreaterThan(narrow[i] * 1.5);
+	}, 120000);
+});
+
+describe('FILTER: eight types, and Q means opposite things on two of them', () => {
+	/* `FILTER_TYPES` and `BiquadFilterNode`'s own type strings are a hand-written
+	   pair of orders, the same shape as CMP's and MAP's -- and the catalogue says
+	   four of the eight used to be unreachable "for no reason but the length of
+	   an array". An index shift here puts a highpass where the card says lowpass,
+	   which is the failure that put three of four wave labels on the wrong shape
+	   at OSC.
+
+	   A sawtooth is the input because it has energy at every harmonic, so each
+	   type has something to do to it. The cutoff sits at 800 Hz -- just under the
+	   second harmonic of the played 415.3 Hz note -- which is where the eight
+	   readings spread furthest apart. */
+	const filterAt = async (type: number, extra: Record<string, number> = {}) =>
+		(
+			await render(
+				graphOf(
+					[
+						{ id: 'f', type: 'tofreq' },
+						{ id: 'o', type: 'osc' },
+						{ id: 'fl', type: 'filter' },
+						{ id: 'go', type: 'gain' }
+					],
+					[
+						EXEC_TO_OUT,
+						{ from: 'entry', fromPort: 'pitch', to: 'f', toPort: 'a' },
+						{ from: 'f', fromPort: 'out', to: 'o', toPort: 'pitch' },
+						{ from: 'o', fromPort: 'out', to: 'fl', toPort: 'in' },
+						{ from: 'fl', fromPort: 'out', to: 'go', toPort: 'in' },
+						{ from: 'go', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					// wave 1 is the sawtooth. Attenuated, so the shelf stays under the limiter.
+					{
+						'o.wave': 1,
+						'fl.type': type,
+						'fl.cutoff': 800,
+						'fl.q': 1,
+						'fl.filterGain': 12,
+						'go.level': 0.3,
+						...extra
+					}
+				),
+				8,
+				1
+			)
+		).envelope[2];
+
+	it('gives each of the eight its own reading, in the catalogue order', async () => {
+		/* The fingerprint of the whole list, read off the sound. Every one of the
+		   eight is distinct, and the three that carry GAIN -- the two shelves and
+		   the peak -- are the ones that stand out, which is itself the assertion
+		   that `filterGain` reached the node: on the five types that ignore it,
+		   moving it does nothing, and that is exactly what it has to do. */
+		const readings: number[] = [];
+		for (let t = 0; t < 8; t++) readings.push(await filterAt(t));
+		const [lp, hp, bp, notch, lshelf, hshelf, peak, allpass] = readings;
+		expect(lp, 'LP').toBeCloseTo(0.1671, 2);
+		expect(hp, 'HP').toBeCloseTo(0.045, 2);
+		expect(bp, 'BP').toBeCloseTo(0.0835, 2);
+		expect(notch, 'NOTC').toBeCloseTo(0.1178, 2);
+		expect(lshelf, 'LSHF').toBeCloseTo(0.5114, 2);
+		expect(hshelf, 'HSHF').toBeCloseTo(0.1623, 2);
+		expect(peak, 'PEAK').toBeCloseTo(0.2356, 2);
+		expect(allpass, 'ALLP').toBeCloseTo(0.1445, 2);
+
+		/* Stated again as relations, so a failure says which property broke rather
+		   than only which number moved. Each pair is one an index shift swaps: LP
+		   and HP are adjacent and opposite; BP and NOTC are adjacent and each
+		   other's complement; LSHF and HSHF are adjacent and lift opposite ends of
+		   a spectrum whose energy is mostly low. */
+		expect(lp, 'a lowpass keeps more of a saw than a highpass').toBeGreaterThan(hp * 3);
+		expect(notch, 'a notch keeps more than the band it removes').toBeGreaterThan(bp);
+		expect(lshelf, 'a low shelf lifts a saw far more than a high one').toBeGreaterThan(hshelf * 2);
+		expect(peak, 'a peak at the cutoff lifts it above an allpass').toBeGreaterThan(allpass * 1.4);
+
+		/* Not asserted: that all eight readings are mutually distinct. Measured,
+		   two of them nearly are -- LP reads 0.1671 and HSHF 0.1623, three per
+		   cent apart, because a high shelf lifting a saw's sparse upper harmonics
+		   happens to land near where a lowpass leaves its dense lower ones.
+		   Writing a spread assertion over the sorted readings looked like the
+		   strongest form of this test and is the one thing here that does not
+		   hold, so it is named rather than quietly dropped: the eight are pinned
+		   individually above, which is what an index shift breaks anyway. */
+	}, 120000);
+
+	it('Q narrows a bandpass and resonates a lowpass', async () => {
+		/* One knob, two opposite directions, which is what makes this a test of Q
+		   rather than of "a number reached the filter". On a bandpass, turning Q
+		   up removes everything either side of the band: 0.1179 / 0.0835 / 0.0203
+		   / 0.0051 over 0.5, 1, 5, 20. On a lowpass sitting on the fundamental it
+		   lifts the band instead: 0.1529 / 0.1620 / 0.2568 / 0.6012.
+
+		   A Q that never arrived leaves both rows flat at the code default of 1. A
+		   Q wired to the wrong param -- the cutoff, say -- moves both rows the
+		   same way, which is what the second half rules out and no single-type
+		   test could. */
+		const band: number[] = [];
+		const low: number[] = [];
+		for (const q of [0.5, 1, 5, 20]) {
+			band.push(await filterAt(2, { 'fl.q': q }));
+			low.push(await filterAt(0, { 'fl.q': q, 'fl.cutoff': 415.3 }));
+		}
+		for (let i = 1; i < band.length; i++) {
+			expect(band[i], `BP Q step ${i}: ${JSON.stringify(band)}`).toBeLessThan(band[i - 1]);
+			expect(low[i], `LP Q step ${i}: ${JSON.stringify(low)}`).toBeGreaterThan(low[i - 1]);
+		}
+		// The ends, so this is a span rather than four numbers that happen to be sorted.
+		expect(band[0] / band[3], 'a Q-20 band should be far narrower').toBeGreaterThan(10);
+		expect(low[3] / low[0], 'and a Q-20 lowpass should resonate').toBeGreaterThan(3);
+	}, 120000);
+});
+
+describe('COMP: MAKE is decibels, whether it is turned or patched', () => {
+	const compAt = async (graphParams: Record<string, number>) =>
+		(
+			await render(
+				graphOf(
+					[
+						{ id: 'o', type: 'osc' },
+						{ id: 'g', type: 'gain' },
+						{ id: 'c', type: 'comp' }
+					],
+					[
+						EXEC_TO_OUT,
+						{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+						{ from: 'g', fromPort: 'out', to: 'c', toPort: 'in' },
+						{ from: 'c', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					{
+						/* Quiet in, ratio 1, threshold at the top: the compressor is a
+						   wire, so what the reading measures is the makeup gain alone. */
+						'g.level': 0.02,
+						'c.compThresh': 0,
+						'c.compRatio': 1,
+						'c.compAttack': 0,
+						'c.compRelease': 10,
+						...graphParams
+					}
+				),
+				8,
+				1
+			)
+		).envelope[4];
+
+	it('doubles the level every six decibels', async () => {
+		/* `Math.pow(10, dB / 20)`, asserted as the thing that formula *means*
+		   rather than by recomputing it: six decibels is a factor of two and
+		   twenty is a factor of ten, and those two claims together pin both the
+		   base and the divisor. A `/10` in place of the `/20` still gives 1 at
+		   0 dB and still rises, and fails both.
+
+		   Measured: -12 / -6 / 0 / 6 / 12 / 20 dB read 0.0037 / 0.0074 / 0.0148 /
+		   0.0296 / 0.0591 / 0.1483. */
+		const at = async (db: number) => await compAt({ 'c.compGain': db });
+		const unity = await at(0);
+		expect(unity).toBeCloseTo(0.0148, 3);
+		expect((await at(6)) / unity, '+6 dB is x2').toBeCloseTo(2, 1);
+		expect((await at(-6)) / unity, '-6 dB is x0.5').toBeCloseTo(0.5, 1);
+		expect((await at(12)) / unity, '+12 dB is x4').toBeCloseTo(4, 1);
+		expect((await at(-12)) / unity, '-12 dB is x0.25').toBeCloseTo(0.25, 1);
+		expect((await at(20)) / unity, '+20 dB is x10').toBeCloseTo(10, 0);
+	}, 120000);
+
+	it('takes a cable at MAKE, and reads it as decibels too', async () => {
+		/* The measurement that contradicts the comment sitting above this line in
+		   the engine. It says MAKE is "not a modulation target... registering it
+		   anyway would make `6` mean six times rather than six decibels, which is
+		   the units bug this file has already been through twice. Drive a VCA
+		   instead."
+
+		   Both halves of that are false as built, and the second is the
+		   interesting one. `makeup.gain.value = Math.pow(10, p('compGain', 0) /
+		   20)` reads through `p` -- the resolver -- which checks cables before the
+		   stored field, so a cable arrives; and because it arrives *before* the
+		   conversion rather than after it, it is exponentiated exactly as the knob
+		   is. A CONST of 6 means six decibels.
+
+		   Measured as three pairs, each of which has to land on the knob-only
+		   reading for the same number: 0 dB with a cable of 20 reads 0.1483, which
+		   is the 20 dB row; 20 dB with a cable of 0 reads 0.0148, which is the
+		   0 dB row; and a cable of 6 reads 0.0296, the 6 dB row, rather than the
+		   0.0888 that six *times* would give. That last pairing is the one that
+		   settles the units, and it is why the comment's own worked example is the
+		   value chosen for it.
+
+		   Pinned rather than fixed, because which behaviour is wanted is a
+		   decision about the instrument and not about this test: a cable that
+		   carries dB is arguably the right answer and is certainly not the bug
+		   the comment fears. What is not defensible is the code and the comment
+		   disagreeing silently, which is what this now stops. */
+		const withCable = async (knobDb: number, cableDb: number) =>
+			(
+				await render(
+					graphOf(
+						[
+							{ id: 'o', type: 'osc' },
+							{ id: 'g', type: 'gain' },
+							{ id: 'c', type: 'comp' },
+							{ id: 'cm', type: 'const' }
+						],
+						[
+							EXEC_TO_OUT,
+							{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+							{ from: 'g', fromPort: 'out', to: 'c', toPort: 'in' },
+							{ from: 'cm', fromPort: 'out', to: 'c', toPort: 'compGain' },
+							{ from: 'c', fromPort: 'out', to: 'output', toPort: 'in' }
+						],
+						{
+							'g.level': 0.02,
+							'c.compThresh': 0,
+							'c.compRatio': 1,
+							'c.compAttack': 0,
+							'c.compRelease': 10,
+							'c.compGain': knobDb,
+							...constAt('cm', 6, cableDb)
+						}
+					),
+					8,
+					1
+				)
+			).envelope[4];
+
+		const knobOnly = async (db: number) => await compAt({ 'c.compGain': db });
+		const unity = await knobOnly(0);
+		/* The cable wins, in both directions -- which is what rules out it being
+		   summed onto the knob rather than replacing it. */
+		expect(await withCable(0, 20), 'a cable of 20 should read as 20 dB').toBeCloseTo(
+			await knobOnly(20),
+			4
+		);
+		expect(await withCable(20, 0), 'and a cable of 0 should beat a knob of 20').toBeCloseTo(
+			unity,
+			4
+		);
+		/* The units, on the comment's own example. Six decibels is x2 -- 0.0296
+		   against unity's 0.0148. Six *times*, which is what the comment warns
+		   about, would be 0.0888. */
+		const six = await withCable(0, 6);
+		expect(six / unity, 'a cable of 6 is six decibels, not six times').toBeCloseTo(2, 1);
+		expect(six, 'and certainly not 0.0888').toBeLessThan(0.05);
+	}, 90000);
+});
+
+describe('`fixed` is a rule for the canvas, not for the engine', () => {
+	/* Measured, and it contradicts two comments in the catalogue.
+
+	   SHAPE's DRIVE says "no socket for DRIVE... there is no AudioParam for a
+	   cable to land on". MODES' Q and BASE say "not bound to the filters'
+	   AudioParams... a cable would have nowhere to land". Both are true about
+	   AudioParams and neither is true about cables, because neither knob is read
+	   through `knob()` -- they are read through `p()`, the resolver, which checks
+	   cables before it checks the stored field.
+
+	   So a cable drawn at either one arrives, and overrides the knob exactly. It
+	   was measured as byte-identical: SHAPE at knob 0.1 with a CONST of 100 on
+	   DRIVE renders the same 0.1744 RMS and 1.5614 crest as knob 100 with no
+	   cable, and the reverse pairing gives back the knob-0.1 numbers.
+
+	   COMP's MAKE is the third of them, asserted just above under its own heading
+	   because the comment there fears a units bug rather than merely claiming
+	   unreachability -- and the units turn out to be right.
+
+	   What `fixed` actually does is stop the canvas offering the knob as a
+	   destination, which is a real and different thing. These tests pin the
+	   engine's behaviour so the two claims stay separable -- and so that a future
+	   "fix" enforcing `fixed` in the resolver fails here, loudly, rather than
+	   silently changing what every saved patch sounds like. */
+	const shapeDrive = async (knob: number, cable: number | null) => {
+		const cables = [
+			EXEC_TO_OUT,
+			{ from: 'o', fromPort: 'out', to: 'sh', toPort: 'in' },
+			{ from: 'sh', fromPort: 'out', to: 'go', toPort: 'in' },
+			{ from: 'go', fromPort: 'out', to: 'output', toPort: 'in' }
+		];
+		const graphParams: Record<string, number> = {
+			'go.level': 0.4,
+			// FOLD, whose crest factor moves furthest with the drive.
+			'sh.shapeKind': 2,
+			'sh.shapeDrive': knob
+		};
+		if (cable !== null) {
+			cables.push({ from: 'cd', fromPort: 'out', to: 'sh', toPort: 'shapeDrive' });
+			Object.assign(graphParams, constAt('cd', 6, cable));
+		}
+		const r = await render(
+			graphOf(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 'sh', type: 'shape' },
+					{ id: 'go', type: 'gain' },
+					{ id: 'cd', type: 'const' }
+				],
+				cables,
+				graphParams
+			),
+			8,
+			1
+		);
+		return { rms: r.envelope[2], crest: r.peak / Math.max(...r.envelope.slice(1)) };
+	};
+
+	it('SHAPE: a cable at DRIVE arrives, and beats the knob', async () => {
+		/* Four renders and two pairs. The two controls establish what the knob
+		   alone sounds like at each end; the two cabled renders have to land on
+		   the *opposite* control from their own knob setting, which is the
+		   strongest form the claim can take -- it rules out the cable being merely
+		   added to the knob, or being read and discarded. */
+		const quiet = await shapeDrive(0.1, null);
+		const hard = await shapeDrive(100, null);
+		expect(quiet.crest, 'DRIVE 0.1 barely folds').toBeCloseTo(1.4084, 2);
+		expect(hard.crest, 'DRIVE 100 folds to a triangle').toBeCloseTo(1.5614, 2);
+
+		const cabledHard = await shapeDrive(0.1, 100);
+		expect(cabledHard.crest, 'the cable should win').toBeCloseTo(hard.crest, 3);
+		expect(cabledHard.rms).toBeCloseTo(hard.rms, 4);
+
+		const cabledQuiet = await shapeDrive(100, 0.1);
+		expect(cabledQuiet.crest, 'and in the other direction too').toBeCloseTo(quiet.crest, 3);
+		expect(cabledQuiet.rms).toBeCloseTo(quiet.rms, 4);
+	}, 120000);
+
+	it('MODES: a cable at Q arrives too, against a comment that says it cannot', async () => {
+		/* The same claim at the module whose comment is most explicit about it,
+		   and measured as a ring time rather than a level -- so it cannot be read
+		   as the cable leaking in as a small offset.
+
+		   Q 1 dies inside slice 0. Q 60 rings to slice 15 of a 3 s render. A
+		   CONST of 60 cabled onto a knob that says 1 rings to slice 15: the knob
+		   is not consulted at all. */
+		const modeQ = async (knob: number, cable: number | null) => {
+			const cables = [
+				EXEC_TO_OUT,
+				{ from: 'e', fromPort: 'out', to: 'md', toPort: 'in' },
+				{ from: 'md', fromPort: 'out', to: 'output', toPort: 'in' }
+			];
+			const graphParams: Record<string, number> = {
+				'e.exLength': 8,
+				'md.modeHz': 200,
+				'md.mode1': 1,
+				'md.mode2': 2.4,
+				'md.mode3': 4.1,
+				'md.modeQ': knob,
+				'md.modeMix': 100
+			};
+			if (cable !== null) {
+				cables.push({ from: 'cq', fromPort: 'out', to: 'md', toPort: 'modeQ' });
+				Object.assign(graphParams, constAt('cq', 6, cable));
+			}
+			const e = (
+				await render(
+					graphOf(
+						[
+							{ id: 'e', type: 'excite' },
+							{ id: 'md', type: 'modes' },
+							{ id: 'cq', type: 'const' }
+						],
+						cables,
+						graphParams
+					),
+					16,
+					3
+				)
+			).envelope;
+			return e.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
+		};
+		expect(await modeQ(1, null), 'Q 1 is gone at once').toBe(0);
+		expect(await modeQ(60, null), 'Q 60 rings to the end').toBe(15);
+		expect(await modeQ(1, 60), 'a cable at Q overrides the knob').toBe(15);
+	}, 90000);
+});
+
+describe('MAP: the signal path and the value path are two different readings', () => {
+	/* The bug this whole file was written for, stated as a property rather than
+	   as one patch. MAP's `a` takes a control *value* and an audio-rate *signal*,
+	   and they go through different code: a value is one number pulled once per
+	   note by the resolver, a signal runs through a WaveShaper sample by sample.
+
+	   The tremolo fixture at the top of this file covers the signal path for one
+	   shape. What was missing is the comparison -- the two paths asked the same
+	   question, so that a MAP which silently fell back to its constant reads as a
+	   *flat* envelope against a moving one, which is exactly the shape the
+	   original failure had. */
+	const mapThrough = async (shape: number, useSignal: boolean) => {
+		const cables = [
+			EXEC_TO_OUT,
+			{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+			{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' },
+			{ from: 'm', fromPort: 'out', to: 'g', toPort: 'level' }
+		];
+		const graphParams: Record<string, number> = {
+			'g.level': 1,
+			'lfo.pitch': 1,
+			'm.shape': shape,
+			// -1..1 in, because a signal arrives with a sign and a value here does not.
+			'm.inLo': -1,
+			'm.inHi': 1,
+			'm.outLo': 0,
+			'm.outHi': 1
+		};
+		if (useSignal) {
+			cables.push(
+				{ from: 'lfo', fromPort: 'out', to: 'tc', toPort: 'in' },
+				{ from: 'tc', fromPort: 'out', to: 'm', toPort: 'a' }
+			);
+		} else {
+			cables.push({ from: 'cv', fromPort: 'out', to: 'm', toPort: 'a' });
+			Object.assign(graphParams, constAt('cv', 6, 0.5));
+		}
+		const r = await render(
+			graphOf(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 'g', type: 'gain' },
+					{ id: 'lfo', type: 'osc' },
+					{ id: 'tc', type: 'tocv' },
+					{ id: 'm', type: 'map' },
+					{ id: 'cv', type: 'const' }
+				],
+				cables,
+				graphParams
+			),
+			16,
+			2
+		);
+		return { envelope: r.envelope, spread: Math.max(...r.envelope) - Math.min(...r.envelope) };
+	};
+
+	it('shapes a waveform when one arrives and holds a number when one does not', async () => {
+		/* Same MAP, same shape, one cable's difference in where `a` comes from.
+
+		   Through a 1 Hz LFO with GATE, the envelope swings the full 0.4813 and
+		   reaches exact zero twice in two seconds -- a gate is a gate. Through a
+		   CONST of 0.5, it is flat at 0.5736: one number, held.
+
+		   The flatness is the load-bearing half. A MAP that dropped its signal
+		   input reads *flat* on both rows, which is the documented failure, and
+		   the value row is what makes "flat" a legitimate answer somewhere rather
+		   than always a bug. */
+		const signal = await mapThrough(0, true);
+		const value = await mapThrough(0, false);
+		expect(signal.spread, `signal: ${JSON.stringify(signal.envelope)}`).toBeGreaterThan(0.4);
+		expect(Math.min(...signal.envelope), 'a gated signal reaches zero').toBe(0);
+		expect(value.spread, `value: ${JSON.stringify(value.envelope)}`).toBeLessThan(0.15);
+		expect(value.envelope[8]).toBeCloseTo(0.5736, 2);
+	}, 60000);
+
+	it('runs the same curve per sample as it does per note', async () => {
+		/* INV rather than GATE, which is the shape that would hide a WaveShaper
+		   fed the wrong table: a monotone curve through a sine gives a sine-like
+		   envelope either way, so this row is about *which* curve rather than
+		   about the signal arriving at all.
+
+		   The table is filled by calling the same evaluator a pure read uses --
+		   "the curve here and the curve a pure read computes are one function" --
+		   so the two paths cannot disagree unless someone writes the shapes out a
+		   second time, which is the duplication this file records drifting on
+		   before. Measured: the signal path swings 0.4452 and the value path sits
+		   at 0.361, which is INV of 0.5 and therefore 0.5 -- the one input where
+		   the two paths must meet. */
+		const signal = await mapThrough(8, true);
+		const value = await mapThrough(8, false);
+		expect(signal.spread).toBeGreaterThan(0.35);
+		// INV at 0.5 is 0.5, and the bare rig at half level reads 0.2406 x ... measured 0.361.
+		expect(value.envelope[8]).toBeCloseTo(0.361, 2);
+		expect(value.spread, 'a value is still one number').toBeLessThan(0.15);
+	}, 60000);
+});
+
+describe('ACT: what the white cable decides, and a WAIT does not stop it', () => {
+	/* The one module whose whole output is not a sound. ACT reaches sideways at
+	   the voices already playing -- CUT stops them, SOLO stops everything else --
+	   so an offline render of a single note into a fresh context has nothing for
+	   it to act on and cannot see it at all. That is why ACT had no coverage.
+
+	   What is measurable is the *decision*. `noteActions` walks the exec wire a
+	   second time, separately from `execReach`, and returns what the chain
+	   resolved to; the audit page hands that back. Two hand-written walks over
+	   one white cable is the duplication this whole file exists to catch, and
+	   these two have already disagreed once: `noteActions` was hardcoded as
+	   ENTRY -> WHEN -> ACT, exactly two hops, so a WAIT anywhere in the chain
+	   made it find a node that was not a WHEN and give up without a word -- while
+	   the audio side traversed the same cable correctly. A hi-hat with a flam on
+	   it stopped choking the open one, and nothing said so. */
+	async function actionsOf(patch: Record<string, unknown>) {
+		return page.evaluate(
+			(t) =>
+				(
+					window as never as {
+						__audit: { noteActions(p: unknown): { cut: boolean; cutGroup: number; solo: boolean; fadeSec: number } };
+					}
+				).__audit.noteActions(t),
+			patch
+		);
+	}
+	const N = [
+		{ id: 'w1', type: 'wait' },
+		{ id: 'w2', type: 'wait' },
+		{ id: 'ac', type: 'act' },
+		{ id: 'wh', type: 'when' },
+		{ id: 'c', type: 'const' },
+		{ id: 'o', type: 'osc' }
+	];
+	const AUDIO = [EXEC_TO_OUT, { from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }];
+	/* CUT, group 3, a 20 ms fade. Three values rather than the defaults, so a
+	   reading that matched could not be the `none` object leaking through. */
+	const CUT = { 'ac.action': 0, 'ac.actGroup': 3, 'ac.actMs': 20 };
+
+	it('reads DO, GRP and FADE off the card', async () => {
+		/* The defaults are `cut: false, cutGroup: 0, fadeSec: 0.006`, so every one
+		   of these differs from what an unreached ACT returns -- which is what
+		   makes the reading mean the walk arrived rather than that nothing
+		   happened to match.
+
+		   FADE is the one that pins a unit: the card is milliseconds and the
+		   field is seconds, so 20 has to come back as 0.02. A walk that handed the
+		   number straight through would choke over twenty seconds. */
+		const direct = await actionsOf(
+			graphOf(N, [{ from: 'entry', fromPort: 'then', to: 'ac', toPort: 'exec' }, ...AUDIO], CUT)
+		);
+		expect(direct).toEqual({ cut: true, cutGroup: 3, solo: false, fadeSec: 0.02 });
+
+		/* SOLO is the other action and sets a different field: `solo` rather than
+		   `cut`, and they are not both true. A picker read by the wrong index
+		   swaps these two, which is the CMP failure at a two-entry list. */
+		const solo = await actionsOf(
+			graphOf(N, [{ from: 'entry', fromPort: 'then', to: 'ac', toPort: 'exec' }, ...AUDIO], {
+				'ac.action': 1,
+				'ac.actGroup': 7,
+				'ac.actMs': 200
+			})
+		);
+		expect(solo).toEqual({ cut: false, cutGroup: 7, solo: true, fadeSec: 0.2 });
+
+		/* And with no ACT on the canvas at all, nothing is decided. The control
+		   that makes the two rows above readings rather than constants. */
+		const none = await actionsOf(graphOf(N, [...AUDIO], CUT));
+		expect(none).toEqual({ cut: false, cutGroup: 0, solo: false, fadeSec: 0.006 });
+	}, 45000);
+
+	it('is still reached behind a WAIT, and behind two', async () => {
+		/* The regression the docstring names, asserted directly. A WAIT passes
+		   execution through unchanged as far as the action walk is concerned, so
+		   an ACT behind one resolves to exactly what an ACT wired straight to
+		   ENTRY does -- and behind two as well, which is what rules out a walk
+		   fixed by adding one more hop to the hardcoded pair.
+
+		   Note what is *not* claimed: the gap does not delay the choke.
+		   `noteActions` never consults `execDelays`, so the 500 ms is invisible
+		   here while the audio side genuinely starts late -- measured, and the two
+		   readings are identical to the direct one. That is a real asymmetry
+		   between the two walks and it is worth having written down: a flammed
+		   hi-hat chokes on the beat and speaks after it. */
+		const direct = await actionsOf(
+			graphOf(N, [{ from: 'entry', fromPort: 'then', to: 'ac', toPort: 'exec' }, ...AUDIO], CUT)
+		);
+		const behindOne = await actionsOf(
+			graphOf(
+				N,
+				[
+					{ from: 'entry', fromPort: 'then', to: 'w1', toPort: 'exec' },
+					{ from: 'w1', fromPort: 'then', to: 'ac', toPort: 'exec' },
+					...AUDIO
+				],
+				{ ...CUT, 'w1.gapMs': 500 }
+			)
+		);
+		const behindTwo = await actionsOf(
+			graphOf(
+				N,
+				[
+					{ from: 'entry', fromPort: 'then', to: 'w1', toPort: 'exec' },
+					{ from: 'w1', fromPort: 'then', to: 'w2', toPort: 'exec' },
+					{ from: 'w2', fromPort: 'then', to: 'ac', toPort: 'exec' },
+					...AUDIO
+				],
+				{ ...CUT, 'w1.gapMs': 200, 'w2.gapMs': 300 }
+			)
+		);
+		expect(behindOne, 'a WAIT must not swallow the chain').toEqual(direct);
+		expect(behindTwo, 'nor two of them').toEqual(direct);
+	}, 60000);
+
+	it('is stopped by a WHEN that does not hold, even across a WAIT', async () => {
+		/* The other half, and the reason the walk cannot simply be "visit every
+		   node": WHEN is a branch on the action side exactly as it is on the audio
+		   side, or a conditional choke is not conditional.
+
+		   The third case is the one that needs both halves working at once -- a
+		   false WHEN with a WAIT between it and the ACT. A walk that traversed
+		   WAITs but forgot to branch at WHEN passes the first two rows and fails
+		   this one. */
+		const whenChain = (cond: number, gap: boolean) =>
+			graphOf(
+				N,
+				[
+					{ from: 'entry', fromPort: 'then', to: 'wh', toPort: 'exec' },
+					...(gap
+						? [
+								{ from: 'wh', fromPort: 'then', to: 'w1', toPort: 'exec' },
+								{ from: 'w1', fromPort: 'then', to: 'ac', toPort: 'exec' }
+							]
+						: [{ from: 'wh', fromPort: 'then', to: 'ac', toPort: 'exec' }]),
+					{ from: 'c', fromPort: 'out', to: 'wh', toPort: 'cond' },
+					...AUDIO
+				],
+				{ ...CUT, 'w1.gapMs': 400, ...constAt('c', 6, cond) }
+			);
+		const silent = { cut: false, cutGroup: 0, solo: false, fadeSec: 0.006 };
+		expect(await actionsOf(whenChain(1, false)), 'a true IF lets the choke through').toEqual({
+			cut: true,
+			cutGroup: 3,
+			solo: false,
+			fadeSec: 0.02
+		});
+		expect(await actionsOf(whenChain(0, false)), 'a false IF stops it').toEqual(silent);
+		expect(await actionsOf(whenChain(0, true)), 'and still stops it across a WAIT').toEqual(silent);
+	}, 60000);
+});
+
+describe.each(['scope', 'loud'])('METER probes: %s carries the whole float range', (probeType) => {
+	/* The reason the control path reads floats rather than bytes, pushed to the
+	   ends of what a value can be.
+
+	   The tests above establish that 3, 5000 and -2 survive, which is already
+	   past what `getByteTimeDomainData` could carry. What they do not say is
+	   where it stops -- and the answer matters, because CONST's own field bounds
+	   are +/-3.4e38, the f32 limits. A probe that cannot draw the value a CONST
+	   can hold is a probe that lies about the patch at the ends of its range. */
+	const bridged = (value: number) => ({
+		advanced: true,
+		rackGraph: {
+			nodes: [
+				{ id: 'entry', type: 'in' },
+				{ id: 'c', type: 'const' },
+				{ id: 'sc', type: probeType },
+				{ id: 'o', type: 'osc' },
+				{ id: 'output', type: 'out' }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+				{ from: 'c', fromPort: 'out', to: 'sc', toPort: 'cv' },
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+			]
+		},
+		graphParams: { ...constAt('c', 6, value) }
+	});
+	const reads = async (value: number): Promise<number | null> =>
+		page.evaluate(
+			async (t) =>
+				await (
+					window as never as { __audit: { probeValue(p: unknown, n: string): Promise<number | null> } }
+				).__audit.probeValue(t, 'sc'),
+			bridged(value)
+		);
+
+	it('reaches the ends of the range a CONST can hold', async () => {
+		/* +/-3.4e38 is what CONST's `min` and `max` are written as, so it is the
+		   largest number a patch can put on this cable. It arrives.
+
+		   1e-7 is the other end, and it is the one that rules out a reading
+		   rounded or truncated on its way through -- a bridge that quantised
+		   anywhere would land this on zero, which is the value the suite above
+		   already spends a test separating from "nothing patched". */
+		expect(await reads(3.4e38)).toBeCloseTo(3.4e38, -34);
+		expect(await reads(-1e6)).toBeCloseTo(-1e6, 0);
+		expect(await reads(1e6)).toBeCloseTo(1e6, 0);
+		const tiny = await reads(1e-7);
+		expect(tiny, 'a small value must not round to nothing').toBeGreaterThan(0);
+		expect(tiny).toBeCloseTo(1e-7, 10);
+	}, 60000);
+
+	it('is a float32 reading, which is visible in what it loses', async () => {
+		/* 12345.6789 comes back as 12345.6787109375: the nearest f32, out by
+		   1.8e-4. That is not a defect, it is the signature -- a `Float32Array`
+		   holds exactly this and nothing else, so the error *is* the evidence of
+		   which read is happening.
+
+		   Asserted as both facts at once: close enough to be the same number, and
+		   not equal to it. A bridge that started carrying doubles would fail the
+		   second; one that went back to bytes would fail the first by four orders
+		   of magnitude. */
+		const read = (await reads(12345.6789))!;
+		expect(read).toBeCloseTo(12345.6789, 2);
+		expect(read, 'an f32 cannot hold this exactly').not.toBe(12345.6789);
+	}, 30000);
+
+	it('carries a computed value, not only a literal one', async () => {
+		/* Through a MUL rather than straight off a CONST. Both operands are pure
+		   nodes, so the whole chain builds no audio node at all and the number
+		   reaching the analyser has been through the resolver and the arithmetic
+		   before it is bridged -- which is the patch anyone actually debugs with a
+		   probe, and a longer path than the CONST cable the tests above use. */
+		expect(await reads(0)).toBe(0);
+		const computed = await page.evaluate(
+			async (t) =>
+				await (
+					window as never as { __audit: { probeValue(p: unknown, n: string): Promise<number | null> } }
+				).__audit.probeValue(t, 'sc'),
+			{
+				advanced: true,
+				rackGraph: {
+					nodes: [
+						{ id: 'entry', type: 'in' },
+						{ id: 'ca', type: 'const' },
+						{ id: 'cb', type: 'const' },
+						{ id: 'm', type: 'mul' },
+						{ id: 'sc', type: probeType },
+						{ id: 'o', type: 'osc' },
+						{ id: 'output', type: 'out' }
+					],
+					cables: [
+						{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+						{ from: 'ca', fromPort: 'out', to: 'm', toPort: 'a' },
+						{ from: 'cb', fromPort: 'out', to: 'm', toPort: 'b' },
+						{ from: 'm', fromPort: 'out', to: 'sc', toPort: 'cv' },
+						{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+					]
+				},
+				graphParams: { ...constAt('ca', 6, 250), ...constAt('cb', 6, 4) }
+			}
+		);
+		// 250 x 4, and well past what a byte view could have carried.
+		expect(computed).toBeCloseTo(1000, 3);
+	}, 45000);
+});
