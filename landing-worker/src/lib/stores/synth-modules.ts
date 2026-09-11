@@ -1178,7 +1178,16 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		group: 'RESONATE',
 		color: '#e5c07b',
 		descKey: 'synthPatch.mod.modes',
-		inputs: [AUDIO_IN],
+		/* FREQ, like STRING's and TUBE's.
+		
+		   It had none, and was the only resonator that could not be tuned by
+		   patch: BASE pins the body to an absolute pitch, which is what an
+		   untuned drum wants, and there was no way to say the other case -- a
+		   marimba bar that follows the key. STRING and TUBE both take a cable
+		   here, and a modal bank is the same kind of thing.
+		
+		   Unwired it holds BASE, so every existing patch sounds as it did. */
+		inputs: [AUDIO_IN, { id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
 		outputs: [AUDIO_OUT],
 		params: [
 			/* Both read as plain numbers when the bank is built, not bound to the

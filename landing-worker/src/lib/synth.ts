@@ -1225,6 +1225,45 @@ class ModularSynth {
            the same "the amount is a cable you can see" argument the rest of the
            catalogue makes. */
 				mod.set('pitch', osc.frequency);
+
+				/* PHS, live: a delay of one period times the offset.
+        
+           The static path above rotates the wave table, which cannot move once
+           the note is built. This is the moving one, and the comment that said
+           it was impossible was half right: "a fixed delay is a different phase
+           at every frequency, so it would drift as soon as the note changed
+           pitch". A fixed delay, yes. One scaled by the note's own period is
+           not -- half a turn is `0.5 / f` seconds, and measured across five
+           octaves it cancels against an unshifted copy at every one of them
+           (0.00003 at 110 Hz through 0.00555 at 1760).
+        
+           `delayTime` is a-rate, so a cable on this sums per sample and the
+           phase slides continuously: an LFO at half a turn of depth swings a
+           summed pair between 1.4142 and 0.834, where the unmodulated control
+           sits flat at 1.4142.
+        
+           Only built when something is patched, because a delay in the signal
+           path is not free and nearly every oscillator wants neither the node
+           nor the quarter-sample of interpolation it costs. The static case
+           keeps the wave table, which is exact. */
+				if (resolver.isWired(node.id, 'phase')) {
+					/* One period of the base pitch. Read from the oscillator rather
+             than from the cable, so it is the frequency this note actually
+             plays -- and clamped, since a delay line has a maximum and 20 Hz
+             is a twentieth of a second. */
+					const hz = Math.max(20, Math.min(20000, osc.frequency.value || 220));
+					const period = 1 / hz;
+					const line = ctx.createDelay(Math.max(0.05, period * 2));
+					/* The static offset, so a value and a signal both land here and
+             the wave table above is left alone when either does. */
+					line.delayTime.value = Math.min(period, turns * period);
+					const depth = ctx.createGain();
+					depth.gain.value = period;
+					depth.connect(line.delayTime);
+					mod.set('phase', depth);
+					g.connect(line);
+					return { in: null, out: line, mod };
+				}
 				return { in: null, out: g, mod };
 			}
 
@@ -2272,7 +2311,8 @@ class ModularSynth {
 					asParams,
 					Number.isFinite(rootHz) && rootHz > 0 ? rootHz : baseFreq,
 					t,
-					heldSec
+					heldSec,
+					Number.isFinite(rootHz) && rootHz > 0
 				);
 				if (!made) return null;
 				for (const src of made.sources ?? []) sources.push(src);
@@ -2301,7 +2341,11 @@ class ModularSynth {
 		_t: number,
 		/** How long the key is held. A blown instrument sounds for as long as it is
 		 *  blown; a struck one does not care. */
-		heldSec: number
+		heldSec: number,
+		/* Whether a cable decided `baseFreq`, as opposed to it being the played
+       note. MODES needs the difference: its BASE knob pins the body to an
+       absolute pitch, and only a patch saying otherwise should override it. */
+		pitchWired = false
 	): { in: AudioNode; out: AudioNode; sources?: AudioScheduledSourceNode[] } | null {
 		/* Values are assigned, not scheduled. setValueAtTime(v, t) leaves the param
        at its default until t, and a voice is built slightly ahead of when it
@@ -2506,10 +2550,23 @@ class ModularSynth {
 				struck.gain.value = mix;
 				struck.connect(output);
 
-				/* What the ratios are relative to. 0 means the key, which is the tuned
-           case; anything else pins the body to an absolute pitch, which is what
-           an untuned drum is. */
-				const root = (p.modeHz ?? 0) > 0 ? (p.modeHz as number) : baseFreq;
+				/* What the ratios are relative to: the cable if there is one, BASE if
+           there is not.
+        
+           This used to read `modeHz > 0 ? modeHz : baseFreq`, and `modeHz`'s
+           knob stops at 20 -- so the fallback was unreachable from the UI and
+           BASE always won. A modal bank could only ever be pinned to an
+           absolute pitch, which is what an untuned drum wants and exactly wrong
+           for a marimba bar that follows the key. Measured: a FREQ cable at 800
+           read 0.0488 at 800 Hz while the same number in the knob read 0.2893.
+           The cable was inert.
+        
+           `baseFreq` is already the resolved cable where one exists -- the
+           caller passes `rootHz` through when it is finite and positive -- so
+           preferring it is the same precedence every other module uses: a cable
+           beats the field. Unwired, `rootHz` is NaN, the caller passes the
+           played note, and BASE still pins it. */
+				const root = pitchWired ? baseFreq : (p.modeHz ?? 0) > 0 ? (p.modeHz as number) : baseFreq;
 				ratios.forEach((r, i) => {
 					const f = Math.min(18000, Math.max(20, root * r));
 

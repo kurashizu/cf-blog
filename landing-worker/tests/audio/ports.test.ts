@@ -33,8 +33,8 @@ import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
  * (TO-SIG, ENV, an oscillator) is connected to the AudioParam and sums with it.
  * An inlet missing from its module's `mod` map drops the second kind silently
  * -- the cable draws, the socket lights, nothing arrives -- and that exact
- * defect has shipped five separate times. One test per route or the coverage is
- * half of what it reads as.
+ * defect has shipped seven separate times, the last three of them on FREQ. One
+ * test per route or the coverage is half of what it reads as.
  *
  * Every number below was measured against this bench before it was asserted.
  * Where a reading contradicted the prediction the reading won and the comment
@@ -2427,3 +2427,536 @@ describe('the shipped ADV presets', () => {
 		for (const [name, v] of held) expect(v, `${name} sustains`).toBeGreaterThan(0.5);
 	}, 120000);
 });
+
+/* ──────────────────────────────────────────────────────────────────────────
+   FREQ -- the three pitch inlets, and the two doors into each
+
+   The same bug has now shipped seven times: an inlet the cable draws to and
+   the socket lights for, where nothing arrives. Three of them were pitch, and
+   pitch is the one this bench could least easily see -- a note at the wrong
+   frequency is exactly as loud as one at the right frequency, so every
+   level-shaped assertion in this directory passes on an oscillator stuck at
+   its default. Each block below therefore listens through a narrow bandpass at
+   the frequency the patch should and should not produce, against a control
+   differing by one cable or one knob.
+
+   What is *not* duplicated here: `composite.test.ts` already measures OSC's FM
+   sidebands, the zero-depth ergonomics, and a CONST setting the pitch once by
+   level. This covers the rest -- the spectral form of "exactly once", the
+   TO-SIG route (a DC rather than an oscillator, which is a different thing
+   arriving at the same AudioParam), the unwired defaults, and the two inlets
+   composite does not touch at all.
+
+   One correction to record, because the measurement contradicted the plan.
+   These were to be written with orderings rather than constants, on the
+   grounds that EXCT is noise and noise moves run to run. It does not here:
+   MODES read 0.0105 / 0.0105 / 0.0105 over three passes of the same patch, to
+   four decimals, because the bench's noise buffer is regenerated from a seed
+   per render rather than sampled fresh. So these assert constants where the
+   readings support constants, and say so.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** TO-SIG's LVL stops at 10, so a DC of more than ten hertz is TO-SIG into a GAIN. */
+const dcNodes: Node[] = [
+	{ id: 'ts', type: 'tosig' },
+	{ id: 'dc', type: 'gain' }
+];
+const dcInto = (to: string): Cable[] => [
+	{ from: 'ts', fromPort: 'out', to: 'dc', toPort: 'in' },
+	{ from: 'dc', fromPort: 'out', to: to, toPort: 'pitch' }
+];
+const dcAt = (hz: number) => ({ 'ts.level': 10, 'dc.level': hz / 10 });
+
+/** A bandpass narrow enough to sit on one partial and hear nothing either side. */
+const listenAt = (hz: number, q = 28) => ({ 'bp.type': 2, 'bp.cutoff': hz, 'bp.q': q });
+
+describe('OSC FREQ: the inlet that made FM unsayable', () => {
+	/* The fifth time the bug shipped, and the one that cost the most: an
+	   oscillator patched into another's FREQ rendered byte-identical to no cable
+	   at all, 0.4813 RMS either way, so the entire FM family was undrawable
+	   while the socket lit up as though it were working.
+
+	   `composite.test.ts` measures the sidebands that fix bought. What is here
+	   is the half a sideband test cannot see -- that the *pitch itself* is
+	   right, through each door, which is a spectral question and not a loudness
+	   one. A carrier stuck at 220 makes sidebands too. */
+	const rig = (gp: Record<string, number>, nodes: Node[] = [], cables: Cable[] = []) =>
+		patch(
+			[{ id: 'o', type: 'osc' }, { id: 'bp', type: 'filter' }, ...nodes],
+			[
+				{ from: 'o', fromPort: 'out', to: 'bp', toPort: 'in' },
+				{ from: 'bp', fromPort: 'out', to: 'output', toPort: 'in' },
+				...cables
+			],
+			gp
+		);
+
+	it('unwired, holds the 220 the card prints, and nothing above it', async () => {
+		/* The default, measured as a place on the spectrum rather than as a level.
+
+		   0.4813 at 220 -- a bare oscillator through a bandpass sitting on its
+		   fundamental passes essentially all of it -- against 0.0206 at 330 and
+		   0.0115 at 440. A sine has no harmonics, so the two upper readings are
+		   the filter's own skirt and not the note, which is what makes them the
+		   control: any cable that moved this oscillator would move which of the
+		   three is the large one. */
+		expect(steady(await render(rig(listenAt(220)), 8, 1))).toBeCloseTo(0.4813, 3);
+		expect(steady(await render(rig(listenAt(330)), 8, 1))).toBeCloseTo(0.0206, 3);
+		expect(steady(await render(rig(listenAt(440)), 8, 1))).toBeCloseTo(0.0115, 3);
+	}, 60000);
+
+	it('a CONST sets the pitch exactly once, which is where doubling would show', async () => {
+		/* The failure the engine's old comment was protecting against, asserted
+		   spectrally instead of by level.
+
+		   Registering the param while a value also reached it would put the same
+		   number through twice and the note would come out an octave sharp --
+		   and an octave sharp is *the same loudness*, which is why the existing
+		   level-based version of this test in `composite.test.ts` cannot see it
+		   and this one can. A CONST of 440 has to be a 440 tone: 0.4813 at 440,
+		   and 0.0114 at 880 where a doubled cable would have put the whole note.
+
+		   330 as well as 440, because 440 is also what `masterTuningFreq` is and
+		   a pitch arriving by some other accident would most likely be that. */
+		const c = (hz: number) => [{ id: 'c', type: 'const' } as Node, constAt('c', 7, hz)] as const;
+		const at = async (hz: number, listen: number) => {
+			const [node, params] = c(hz);
+			return steady(
+				await render(
+					rig({ ...listenAt(listen), ...params }, [node], [
+						{ from: 'c', fromPort: 'out', to: 'o', toPort: 'pitch' }
+					]),
+					8,
+					1
+				)
+			);
+		};
+		expect(await at(440, 440)).toBeCloseTo(0.4813, 3);
+		expect(await at(440, 880), 'not an octave up, which is what applying it twice gives').toBeCloseTo(0.0114, 3);
+		expect(await at(440, 220), 'and not the default it would hold if the cable were dropped').toBeCloseTo(0.0115, 3);
+		expect(await at(330, 330)).toBeCloseTo(0.4817, 3);
+		expect(await at(330, 660)).toBeCloseTo(0.0114, 3);
+		expect(await at(330, 220)).toBeCloseTo(0.0206, 3);
+	}, 120000);
+
+	it('a DC signal is hertz of deviation added to the knob, not a replacement', async () => {
+		/* The signal route, by the other kind of signal.
+
+		   `composite.test.ts` drives this port with an oscillator, which is FM. A
+		   TO-SIG is the same connection carrying a constant, and it is the one
+		   that reads the port's *arithmetic* rather than its spectrum: the knob
+		   is the centre and the signal is the excursion, so a knob of 220 under
+		   a DC of 110 has to sound at 330 and not at 110, 220 or 440.
+
+		   Measured 0.4820 at 330 against 0.0206 at 220 and 0.0294 at 440. If
+		   `pitch` were missing from OSC's `mod` map the 220 reading would be the
+		   large one; if the knob were zeroed the way a claimed knob normally is,
+		   the note would sit at 110 and all three would be small.
+
+		   The second row moves both numbers so the first cannot pass by the knob
+		   alone happening to land right: 330 under a DC of 330 is an octave up at
+		   660. */
+		const at = async (knob: number, dc: number, listen: number) =>
+			steady(
+				await render(
+					rig({ ...listenAt(listen), 'o.pitch': knob, ...dcAt(dc) }, dcNodes, dcInto('o')),
+					8,
+					1
+				)
+			);
+		expect(await at(220, 110, 330), 'the knob plus the signal').toBeCloseTo(0.482, 3);
+		expect(await at(220, 110, 220), 'not the knob alone').toBeCloseTo(0.0206, 3);
+		expect(await at(220, 110, 440), 'and not the knob doubled').toBeCloseTo(0.0294, 3);
+		expect(await at(330, 330, 660)).toBeCloseTo(0.4813, 3);
+		expect(await at(330, 330, 330), 'not the knob alone').toBeCloseTo(0.0114, 3);
+	}, 120000);
+});
+
+describe('PWM FREQ: the square wave that could not be played', () => {
+	/* The sixth time, and the narrowest escape: PWM is the only square-wave
+	   source in the catalogue, its FREQ was read as a value and nothing else,
+	   and a CONST of 110 and one of 880 both rendered 0.1726 -- the same reading
+	   as no cable. An oscillator that cannot be tuned by patch is one an
+	   instrument cannot use.
+
+	   PWM has no knobs at all (`params: []`), so unlike OSC there is no centre
+	   for a signal to deviate from. That turns out to matter, and the last test
+	   in this block is where. */
+	const rig = (gp: Record<string, number>, nodes: Node[] = [], cables: Cable[] = []) =>
+		patch(
+			[
+				{ id: 'w', type: 'pwm' },
+				{ id: 'bp', type: 'filter' },
+				{ id: 'lim', type: 'gain' },
+				...nodes
+			],
+			[
+				{ from: 'w', fromPort: 'out', to: 'bp', toPort: 'in' },
+				{ from: 'bp', fromPort: 'out', to: 'lim', toPort: 'in' },
+				{ from: 'lim', fromPort: 'out', to: 'output', toPort: 'in' },
+				...cables
+			],
+			{ 'lim.level': LIM, ...gp }
+		);
+	/** No bandpass: the broadband reading, for the tests about the width. */
+	const plain = (gp: Record<string, number>, nodes: Node[] = [], cables: Cable[] = []) =>
+		patch(
+			[{ id: 'w', type: 'pwm' }, { id: 'lim', type: 'gain' }, ...nodes],
+			[
+				{ from: 'w', fromPort: 'out', to: 'lim', toPort: 'in' },
+				{ from: 'lim', fromPort: 'out', to: 'output', toPort: 'in' },
+				...cables
+			],
+			{ 'lim.level': LIM, ...gp }
+		);
+	const constRig = (hz: number, listen: number) =>
+		rig({ ...listenAt(listen, 25), ...constAt('c', 7, hz) }, [{ id: 'c', type: 'const' }], [
+			{ from: 'c', fromPort: 'out', to: 'w', toPort: 'pitch' }
+		]);
+
+	it('unwired, holds the 220 the engine falls back to', async () => {
+		/* 0.1560 at 220 against 0.0049 at both 440 and 880. A square *does* have
+		   harmonics, unlike the sine above, so the two upper readings are real
+		   partials rather than filter skirt -- and they are thirty times smaller
+		   than the fundamental, which is what makes the 220 reading identifiable
+		   as the note rather than as "some energy is present". */
+		expect(steady(await render(rig(listenAt(220, 25)), 8, 1))).toBeCloseTo(0.156, 3);
+		expect(steady(await render(rig(listenAt(440, 25)), 8, 1))).toBeCloseTo(0.0049, 3);
+		expect(steady(await render(rig(listenAt(880, 25)), 8, 1))).toBeCloseTo(0.0049, 3);
+	}, 60000);
+
+	it('a CONST tunes it, at four pitches, each heard where it belongs', async () => {
+		/* The value route and the regression in one table. Before the fix every
+		   row of this read 0.1726, because the cable was not there.
+
+		   Each pitch reads 0.1560 at its own fundamental and 0.0049 an octave up
+		   -- the same pair of numbers at every tuning, which is the strong form:
+		   the pulse is not merely louder somewhere, it is the *same wave* moved.
+		   A hundredfold either way between the diagonal and the off-diagonal.
+
+		   Four rather than two, because two could be a cable that happens to
+		   invert or to double: 275, 330, 440 and 880 are not multiples of one
+		   another in a way that a single wrong arithmetic could satisfy. */
+		for (const hz of [275, 330, 440, 880]) {
+			expect(steady(await render(constRig(hz, hz), 8, 1)), `${hz} sounds at ${hz}`).toBeCloseTo(0.156, 2);
+			expect(
+				steady(await render(constRig(hz, hz * 2), 8, 1)),
+				`${hz} does not sound at ${hz * 2}`
+			).toBeLessThan(0.02);
+		}
+		// And the cross-check the 2x2 was written for: 880 is silent where 220 sings.
+		expect(steady(await render(constRig(880, 220), 8, 1))).toBeLessThan(0.01);
+		expect(steady(await render(constRig(220, 880), 8, 1))).toBeLessThan(0.01);
+	}, 180000);
+
+	it('a DC signal moves both saws together, so the pulse stays a pulse', async () => {
+		/* The signal route. The pulse is the *difference* of two sawtooths, so a
+		   cable reaching one and not the other would not detune the note -- it
+		   would destroy the waveform, and the two saws would beat against each
+		   other instead of subtracting to a rectangle. Both take the signal for
+		   that reason, and this is the test that they do.
+
+		   PWM has no FREQ knob, so `cvIn` hands back the 220 fallback and a DC of
+		   110 sounds at 330: 0.1102 at 330 against 0.0781 at 660. That second
+		   number is much larger than the 0.0049 the value route gives an octave
+		   up, and it is not noise -- it is the duty cycle being wrong, which the
+		   next test is about. The ordering is what is asserted, plus that the
+		   fundamental landed where the sum says. */
+		const at = async (dc: number, listen: number) =>
+			steady(
+				await render(rig({ ...listenAt(listen, 25), ...dcAt(dc) }, dcNodes, dcInto('w')), 8, 1)
+			);
+		expect(await at(110, 330), 'sounds at 220 + 110').toBeCloseTo(0.1102, 2);
+		expect(await at(330, 550), 'sounds at 220 + 330').toBeCloseTo(0.1102, 2);
+		expect(await at(55, 275), 'sounds at 220 + 55').toBeCloseTo(0.1442, 2);
+		// Each is well clear of its own octave, so the fundamental is the fundamental.
+		expect(await at(110, 330)).toBeGreaterThan(await at(110, 660));
+		expect(await at(55, 275)).toBeGreaterThan(await at(55, 550));
+		// And a DC of zero is the unwired reading back again: the cable adds nothing.
+		expect(await at(0, 220), 'a DC of zero leaves the default alone').toBeCloseTo(0.156, 2);
+	}, 180000);
+
+	it('pins the duty limit the engine names: a modulated FREQ drifts the width', async () => {
+		/* The known limitation, measured rather than claimed -- and it is worse
+		   than the engine comment suggests, which is the reason this test exists
+		   in the form it does rather than as a paragraph nobody checks.
+
+		   `period` is `1 / pulseRoot` computed at build time, and `pulseRoot` is
+		   the *value* on the inlet -- 220, since PWM has no knob and a signal
+		   leaves `cvIn` on its fallback. So the delay is pinned at `0.5 / 220`
+		   seconds however far the signal moves the saws. At a DC of +220 the saws
+		   run at 440 and that delay is 1/440 s, which is one whole period: the
+		   two sawtooths line up exactly and subtract to *silence*. Measured
+		   0.0036 broadband, against 0.1721 for the same 440 Hz pulse reached as a
+		   value. That is not a drifting duty cycle, it is a null.
+
+		   Proven to be the width and not the pitch by moving PW underneath it. At
+		   a DC of +220 the sweep reads 0.1373 / 0.1721 / 0.0036 / 0.1718 / 0.1368
+		   across widths 0.1 / 0.25 / 0.5 / 0.75 / 0.9 -- a hole in the middle,
+		   where a value-tuned 440 reads 0.1024 / 0.1489 / 0.1721 / 0.1486 / 0.1018
+		   and is loudest in the middle. The curve is inverted, which is exactly
+		   what a delay of a fixed number of seconds does to a wave whose period
+		   has halved: a width of 0.5 becomes a width of 1.0.
+
+		   This is asserted, not apologised for. If someone makes `delayTime`
+		   follow the pitch -- a reciprocal is not a Web Audio node, but a
+		   `setValueCurveAtTime` over a known sweep would do it -- this test goes
+		   red and should, and the comment above says what the new numbers ought
+		   to be. An honest pinned limit is worth more than a missing test. */
+		const sweep = async (build: (w: number) => Record<string, unknown>) => {
+			const out: number[] = [];
+			for (const w of [0.1, 0.25, 0.5, 0.75, 0.9])
+				out.push(steady(await render(build(w) as Record<string, unknown>, 8, 1)));
+			return out;
+		};
+		const signalSweep = await sweep((w) =>
+			plain({ ...dcAt(220), ...constAt('cw', 6, w) }, [...dcNodes, { id: 'cw', type: 'const' }], [
+				...dcInto('w'),
+				{ from: 'cw', fromPort: 'out', to: 'w', toPort: 'pw' }
+			])
+		);
+		const valueSweep = await sweep((w) =>
+			plain(
+				{ ...constAt('c', 7, 440), ...constAt('cw', 6, w) },
+				[
+					{ id: 'c', type: 'const' },
+					{ id: 'cw', type: 'const' }
+				],
+				[
+					{ from: 'c', fromPort: 'out', to: 'w', toPort: 'pitch' },
+					{ from: 'cw', fromPort: 'out', to: 'w', toPort: 'pw' }
+				]
+			)
+		);
+		/* A value-tuned pulse is loudest at a square and quietest at the edges,
+		   which is what a duty cycle that followed its pitch would always do. */
+		expect(valueSweep[2], `value sweep ${valueSweep}`).toBeGreaterThan(valueSweep[1]);
+		expect(valueSweep[1]).toBeGreaterThan(valueSweep[0]);
+		expect(valueSweep[2]).toBeGreaterThan(valueSweep[3]);
+		expect(valueSweep[3]).toBeGreaterThan(valueSweep[4]);
+		/* The signal-tuned one is inverted: a hole where the square should be.
+		   This is the limitation. It is not subtle -- fifty times down. */
+		expect(signalSweep[2], `signal sweep ${signalSweep}`).toBeLessThan(0.01);
+		expect(signalSweep[1]).toBeGreaterThan(signalSweep[2] * 20);
+		expect(signalSweep[3]).toBeGreaterThan(signalSweep[2] * 20);
+		/* And the same 440 Hz pulse, reached the two ways, is not the same sound.
+		   The engine comment says the width moves with the pitch; this is by how
+		   much. */
+		expect(valueSweep[2] / signalSweep[2], 'a value-tuned 440 against a signal-tuned one').toBeGreaterThan(20);
+	}, 180000);
+});
+
+describe('MODES FREQ: the resonator with no way to be tuned', () => {
+	/* The seventh, and the only one of the three where the socket did not exist
+	   at all rather than being wired to nothing. MODES was the one resonator
+	   that could not be tuned by patch: STRING and TUBE both take a FREQ cable,
+	   a modal bank is the same kind of thing, and it had none.
+
+	   Underneath it was a second defect that made the inlet unreachable even
+	   once declared. The engine read `modeHz > 0 ? modeHz : baseFreq`, and
+	   BASE's minimum is 20 -- so the fallback branch could not be reached from
+	   the UI at all and the knob always won. `pitchWired` is what tells the two
+	   apart now: a cable beats the field, which is the precedence every other
+	   module uses.
+
+	   Every reading in this block is a constant to four decimals over three
+	   passes, despite EXCT being a noise burst, because the bench regenerates
+	   its noise buffer from a seed per render. */
+	const rig = (gp: Record<string, number>, nodes: Node[] = [], cables: Cable[] = []) =>
+		patch(
+			[
+				{ id: 'x', type: 'excite' },
+				{ id: 'm', type: 'modes' },
+				{ id: 'bp', type: 'filter' },
+				{ id: 'lim', type: 'gain' },
+				...nodes
+			],
+			[
+				{ from: 'x', fromPort: 'out', to: 'm', toPort: 'in' },
+				{ from: 'm', fromPort: 'out', to: 'bp', toPort: 'in' },
+				{ from: 'bp', fromPort: 'out', to: 'lim', toPort: 'in' },
+				{ from: 'lim', fromPort: 'out', to: 'output', toPort: 'in' },
+				...cables
+			],
+			{ 'lim.level': LIM, ...gp }
+		);
+	/* Slice 2 of a *one* second render, which is `steady`'s slice on a shorter
+	   note, and the choice is load-bearing rather than incidental.
+
+	   A struck modal bar is a decay, not a sustain, and this one is a fast decay:
+	   over two seconds in eight slices the envelope reads 0.0363 / 0.0077 /
+	   0.0007 / 0.0001 and then four zeroes, so slice 2 lands in the tail where
+	   BASE 200 and a cable at 800 are 0.0007 against 0.0004 and every comparison
+	   below collapses into rounding. Over one second the same slice is 0.0105
+	   against 0.0069, with the off-diagonal at 0.0001 -- a hundredfold, and
+	   stable to four decimals.
+
+	   Found by writing the whole block against a two-second render and watching
+	   five tests fail at once on numbers that were all very nearly zero. Worth
+	   the paragraph: a window that samples a decayed note is the shape of test
+	   that passes on a defect rather than the shape that fails on a fix. */
+	const heard = async (t: Record<string, unknown>) => (await render(t, 8, 1)).envelope[2];
+	const constRig = (hz: number, listen: number, base = 200) =>
+		rig({ ...listenAt(listen, 25), 'm.modeHz': base, ...constAt('c', 7, hz) }, [{ id: 'c', type: 'const' }], [
+			{ from: 'c', fromPort: 'out', to: 'm', toPort: 'pitch' }
+		]);
+
+	it('declares the FREQ inlet its two sibling resonators have', async () => {
+		/* The catalogue half, which no render can see: an inlet that is not in
+		   the spec cannot be cabled, and a test that only measures sound would
+		   pass on a MODES whose socket had been quietly removed -- it would fall
+		   back to BASE and still ring.
+
+		   Asserted against STRING and TUBE rather than as a literal, because what
+		   is being claimed is that the three resonators agree. A fourth added
+		   tomorrow is covered by the same line. */
+		const pitchOf = (id: string) =>
+			MODULE_SPECS.find((s) => s.id === id)?.inputs.find((i) => i.id === 'pitch');
+		for (const id of ['string', 'tube', 'modes']) {
+			const port = pitchOf(id);
+			expect(port, `${id} declares a FREQ inlet`).toBeTruthy();
+			expect(port?.label, `${id}'s is labelled FREQ`).toBe('FREQ');
+			expect(port?.kind, `${id}'s is a mod inlet`).toBe('mod');
+			expect(port?.role, `${id}'s carries hertz`).toBe('hz');
+		}
+	});
+
+	it('unwired, the body is pinned by BASE and follows it', async () => {
+		/* The documented default, and the behaviour every shipped patch relies
+		   on: MODES with nothing in its FREQ is an untuned drum at whatever BASE
+		   says. Adding an inlet must not change that, which is the regression a
+		   new socket most easily causes.
+
+		   Read on the diagonal at three settings -- 0.0105 at 200, 0.0079 at 400,
+		   0.0069 at 800 -- and off it at 0.0002 and 0.0001, which is fifty times
+		   down. The diagonal falls gently as BASE rises because a fixed-Q bandpass
+		   at a higher centre is a wider one and the modal peak fills less of it;
+		   that is the filter, not the bank. */
+		expect(await heard(rig({ ...listenAt(200, 25), 'm.modeHz': 200 }))).toBeCloseTo(0.0105, 4);
+		expect(await heard(rig({ ...listenAt(400, 25), 'm.modeHz': 400 }))).toBeCloseTo(0.0079, 4);
+		expect(await heard(rig({ ...listenAt(800, 25), 'm.modeHz': 800 }))).toBeCloseTo(0.0069, 4);
+		expect(await heard(rig({ ...listenAt(200, 25), 'm.modeHz': 400 }))).toBeCloseTo(0.0002, 4);
+		expect(await heard(rig({ ...listenAt(200, 25), 'm.modeHz': 800 }))).toBeCloseTo(0.0001, 4);
+	}, 120000);
+
+	it('a CONST beats BASE, in both directions, which is what was inert', async () => {
+		/* The fix, as a 2x2 in which every cell is the opposite of the one the
+		   old engine gave. Before it, the cable was inert and BASE won every
+		   time: a FREQ of 800 against a BASE of 200 read 0.0488 at 800 where the
+		   same number typed into the knob read 0.2893.
+
+		   BASE 200 with a cable at 800 reads 0.0069 at 800 and 0.0001 at 200 --
+		   which is BASE 800's own unwired reading, to four decimals, at both
+		   frequencies. The cable did not shade the knob, it replaced it.
+
+		   And the reverse, because a fix that always preferred the cable's
+		   *larger* number would pass the first half: BASE 800 with a cable at 200
+		   reads 0.0105 at 200 and 0.0001 at 800, which is BASE 200's unwired
+		   pair. Each direction lands exactly on the other's default. */
+		expect(await heard(constRig(800, 800, 200)), 'the cable wins').toBeCloseTo(0.0069, 4);
+		expect(await heard(constRig(800, 200, 200)), 'BASE does not').toBeCloseTo(0.0001, 4);
+		expect(await heard(constRig(200, 200, 800)), 'and downwards too').toBeCloseTo(0.0105, 4);
+		expect(await heard(constRig(200, 800, 800))).toBeCloseTo(0.0001, 4);
+	}, 120000);
+
+	it('moves the whole bank, not just its fundamental', async () => {
+		/* A modal bank is three biquads at ratios 1, 2.4 and 4.1 off one root, so
+		   a FREQ that only reached the first would still pass every assertion
+		   above -- and would turn a bar into a bar plus two strangers.
+
+		   Heard at the second mode. BASE 200 unwired puts it at 480 and reads
+		   0.0009 there against 0.0000 at 1920; a cable at 800 puts it at 1920 and
+		   reads 0.0007 there against 0.0002 at 480. Both readings are small,
+		   because the second mode carries far less energy than the first, so what
+		   is asserted is that each pair swaps its ordering -- which is the whole
+		   claim and is robust to the levels. */
+		const unwired480 = await heard(rig({ ...listenAt(480, 25), 'm.modeHz': 200 }));
+		const unwired1920 = await heard(rig({ ...listenAt(1920, 25), 'm.modeHz': 200 }));
+		const wired480 = await heard(constRig(800, 480, 200));
+		const wired1920 = await heard(constRig(800, 1920, 200));
+		expect(unwired480, `unwired second mode: ${unwired480} at 480, ${unwired1920} at 1920`).toBeGreaterThan(unwired1920);
+		expect(wired1920, `wired second mode: ${wired480} at 480, ${wired1920} at 1920`).toBeGreaterThan(wired480);
+		expect(unwired480).toBeGreaterThan(wired480);
+		expect(wired1920).toBeGreaterThan(unwired1920);
+	}, 120000);
+
+	it('takes any pure node, not only a CONST', async () => {
+		/* The value route is a family and not one card: ADD, MUL, CLAMP and MAP
+		   all resolve to a number before the graph is built, and a fix that
+			 special-cased CONST would pass every test above. ADD of 500 and 300 has
+		   to be indistinguishable from a CONST of 800 -- measured 0.0069 at 800
+		   and 0.0001 at 200, which is that CONST's pair exactly.
+
+		   This is also the closest thing MODES has to key-tracking, and the
+		   reason the obvious version does not work is recorded in the block
+		   below. */
+		const addRig = (listen: number) =>
+			rig({ ...listenAt(listen, 25), 'm.modeHz': 200, 'ad.a': 500, 'ad.b': 300 }, [{ id: 'ad', type: 'add' }], [
+				{ from: 'ad', fromPort: 'out', to: 'm', toPort: 'pitch' }
+			]);
+		expect(await heard(addRig(800))).toBeCloseTo(0.0069, 4);
+		expect(await heard(addRig(200))).toBeCloseTo(0.0001, 4);
+	}, 60000);
+
+	it('takes no signal, and the reason is the bank rather than a missing entry', async () => {
+		/* The honest half, and it was nearly written as a bug.
+
+		   MODES has no `mod.set('pitch', ...)` -- neither does STRING, nor TUBE
+		   -- so a TO-SIG into its FREQ does nothing whatever, which is the exact
+		   shape of the defect this whole file exists to catch. It is not that
+		   defect. A modal bank is three biquads whose frequencies are *assigned
+		   once* when the voice is built; there is no running AudioParam for a
+		   signal to sum onto, and the module's own spec says so on its knobs
+		   ("a cable would have nowhere to land"). The same is true of STRING's
+		   partials. Registering the port would make the cable legal on the canvas
+		   and still silent, which is worse than refusing it.
+
+		   So what is pinned here is that it is *consistently* value-only across
+		   the resonator family, and that a signal leaves BASE standing rather
+		   than zeroing it -- which is the bad outcome: `cvIn` returns the stored
+		   knob for a signal-driven port, MODES' BASE is a real number, and the
+		   body stays where it was. A note that still rings at its default is a
+		   patch that sounds wrong; a note that falls to 0 Hz is one that has
+		   stopped.
+
+		   Measured: a DC of 800 into MODES' FREQ with BASE at 200 reads 0.0105 at
+		   200 and 0.0001 at 800 -- BASE's own unwired pair, to four decimals. The
+		   same DC into STRING reads 0.0004 and 0.0007 against a CONST of 800's
+		   0.0002 and 0.0176, so STRING drops it the same way.
+
+		   If audio-rate modal tuning is ever built, this test goes red and the
+		   comment above is the specification for what should replace it. */
+		const sigRig = (listen: number) =>
+			rig({ ...listenAt(listen, 25), 'm.modeHz': 200, ...dcAt(800) }, dcNodes, dcInto('m'));
+		expect(await heard(sigRig(200)), 'BASE still holds the body').toBeCloseTo(0.0105, 4);
+		expect(await heard(sigRig(800)), 'the signal did not arrive').toBeCloseTo(0.0001, 4);
+		// The catalogue half: no resonator claims a signal can reach its root.
+		for (const id of ['string', 'tube', 'modes'])
+			expect(MODULE_SPECS.find((s) => s.id === id)?.params.find((p) => p.key === 'modeHz')?.fixed ?? true).toBe(true);
+	}, 60000);
+});
+
+/* ENTRY's PITCH does not key-track a FREQ inlet, and that is a unit mismatch
+   rather than one of these three bugs.
+
+   Written down here because it was the obvious fourth test in each block above
+   and every version of it measured near-silence, which looked exactly like the
+   defect this file is about. It is not. ENTRY's `pitch` outlet publishes
+   `12 * log2(baseFreq / masterTuningFreq)` -- *semitones from the master
+   tuning*, not hertz -- so at the bench's note 40 it hands out roughly 1.0,
+   confirmed by putting it on a GAIN's level and reading 0.4814, which is a
+   unity gain. Cabled into a FREQ socket it asks for a one-hertz oscillator.
+
+   Measured, an OSC key-tracked that way reads 0.0023 at 40 Hz and falls
+   monotonically to 0.0003 at 330: there is no partial anywhere, it is a DC-ish
+   rumble. MODES and PWM the same.
+
+   That is a real ergonomic gap -- both sockets are `hz`-roled and the cable
+   draws -- but it is a *conversion* missing between two working ports, not a
+   modulation that fails to arrive, and it is the same for every `hz` inlet in
+   the catalogue including FILTER's cutoff, which has shipped and been measured
+   for months. Fixing it belongs with the role lattice rather than here, and
+   pinning the broken numbers would make this file assert that it stays broken.
+   So it is reported instead. The key-tracking that *does* work is a MUL or a
+   MAP on the cable turning semitones into hertz, and `audio.test.ts` covers
+   that shape already at `entry.pitch -> f.a`. */

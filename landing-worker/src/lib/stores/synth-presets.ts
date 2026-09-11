@@ -76,7 +76,7 @@ export interface SoundPreset {
    an LFO, a noise mix, a sub, a pulse width -- over from whatever the track
    was before, so the same preset sounded different on every track. Now a
    preset is the whole sound. */
-const BASE: Partial<TrackData> = {
+export const BASE: Partial<TrackData> = {
 	/* Every preset carries its own level. Measured across all 37, onset energy
 	   spanned 18.8 dB -- a CLAV arrived 10 dB under an ORGAN -- so switching
 	   patches meant riding the fader. 1 is unchanged, and the two patches that

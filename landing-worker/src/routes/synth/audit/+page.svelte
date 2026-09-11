@@ -18,6 +18,10 @@
 	 */
 	import { onMount } from 'svelte';
 	import { modularSynth } from '$lib/synth';
+	/* The default timbre every preset is built on, used here as the reset
+	   between renders -- see `setTrack`. Same object as the catalogue's, so the
+	   bench cannot drift from what a preset actually clears. */
+	import { BASE } from '$lib/stores/synth-presets';
 	/* The editing half of the canvas, so a test can draw a cable the way a
 	   pointer does rather than by writing the cable into a literal graph.
 
@@ -218,7 +222,29 @@
 				   had set the flag, the same renders sounded fine. A defect that
 				   depends on what ran before it is the flake this reset list exists
 				   to prevent, and this was the one field missing from it. */
+				/* The list is `BASE` now rather than five names, because a hand-kept
+				   list of what to clear is a list that falls behind and this one had
+				   twice: `graphWaves`, then `advanced`, each found only when a
+				   measurement went wrong in a way that depended on test order.
+
+				   `BASE` is the catalogue's own "a preset is the whole sound"
+				   object -- the 47 subtractive fields every shipped preset sets so
+				   that a patch does not inherit the last one's LFO, noise mix or
+				   filter envelope. The bench needs exactly the same guarantee for
+				   exactly the same reason, so it uses the same object rather than a
+				   second copy that can drift from it.
+
+				   Found by the FREQ tests in `ports.test.ts`, which are the first in
+				   that file to run *after* the ADV preset block and assert tight
+				   constants. Those presets carry all 47 fields; five were cleared
+				   and 42 leaked. A bare oscillator that reads 0.4813 on a clean
+				   bench read 0.5570 after KOTO and 0.1731 by the end of the file --
+				   so ten tests failed in the suite and passed in isolation, which is
+				   the worst shape a failure can have. `presetGain` and `cutoff` are
+				   the two doing most of it, and neither could have been guessed from
+				   the five that were already here. */
 				modularSynth.updateTrack(0, {
+					...BASE,
 					graphWaves: {},
 					graphParams: {},
 					rackChain: [],
