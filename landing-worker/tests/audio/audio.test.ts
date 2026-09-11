@@ -422,3 +422,199 @@ describe('a value arrives once, whichever way it is sent', () => {
 		expect(viaSignal.peak).toBeCloseTo(turned.peak, 3);
 	}, 45000);
 });
+
+describe('knobs that existed in the sound and nowhere on the card', () => {
+	/* RING's DPTH and SPACE's MIX were read by the engine and declared by no
+	   catalogue entry. Two consequences, both real: the knob was unreachable
+	   from the instrument, and a cable addressed to it was sorted as *audio* --
+	   `portKind` finds neither an inlet nor a param, so `isMod` is false -- and
+	   summed into the module's signal input instead of controlling it.
+
+	   Declaring them is what makes the port real in both directions. These
+	   assert the sound each one is supposed to make, so a future silent
+	   undeclaring fails here rather than in a patch nobody can debug. */
+
+	/* Driven by a cable, which is how anyone would actually set it.
+	
+	   What this asserts is the *sound*: that DPTH is wired to the ring's depth
+	   and behaves linearly. It does not assert the declaration -- measured, and
+	   worth writing down: with `ringDepth` undeclared the renders are identical,
+	   because a CONST is a pure node whose cable is dropped for want of a source
+	   either way, and `cvIn` reads the value by raw key regardless. The
+	   declaration's effect is that the knob appears on the card at all, which is
+	   a catalogue fact and is pinned in tests/unit/module-params. */
+	const ringPatch = (depth: number, wired = true) => ({
+		advanced: true,
+		rackGraph: {
+			nodes: [
+				{ id: 'entry', type: 'in' },
+				{ id: 'f', type: 'tofreq' },
+				{ id: 'car', type: 'osc' },
+				{ id: 'c', type: 'const' },
+				{ id: 'g2', type: 'tofreq' },
+				{ id: 'm', type: 'osc' },
+				{ id: 'd', type: 'const' },
+				{ id: 'r', type: 'ring' },
+				{ id: 'output', type: 'out' }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+				{ from: 'entry', fromPort: 'pitch', to: 'f', toPort: 'a' },
+				{ from: 'f', fromPort: 'out', to: 'car', toPort: 'pitch' },
+				{ from: 'c', fromPort: 'out', to: 'g2', toPort: 'a' },
+				{ from: 'g2', fromPort: 'out', to: 'm', toPort: 'pitch' },
+				{ from: 'car', fromPort: 'out', to: 'r', toPort: 'in' },
+				{ from: 'm', fromPort: 'out', to: 'r', toPort: 'b' },
+				...(wired ? [{ from: 'd', fromPort: 'out', to: 'r', toPort: 'ringDepth' }] : []),
+				{ from: 'r', fromPort: 'out', to: 'output', toPort: 'in' }
+			]
+		},
+		// kind 9 is PIT (a note name stored as MIDI); kind 6 is F32.
+		graphParams: { 'c.kind': 9, 'c.value': 45, 'd.kind': 6, 'd.value': depth }
+	});
+
+	it('RING: a cable sets DPTH, and zero depth is silence', async () => {
+		const open = await render(ringPatch(0, false), 4, 1);
+		const half = await render(ringPatch(50), 4, 1);
+		const none = await render(ringPatch(0), 4, 1);
+		// Unwired the depth is its default of 100 -- the full ring.
+		expect(open.envelope[2]).toBeGreaterThan(0.2);
+		// Linear in the knob's units: half the depth is half the level.
+		expect(half.envelope[2] / open.envelope[2]).toBeCloseTo(0.5, 2);
+		/* Exactly zero, which is what says DPTH is a depth rather than a blend:
+		   a ring modulator at no depth outputs nothing, it does not pass A. And
+		   it is what fails if the cable is ever misrouted into the carrier input
+		   -- summing there would make this louder, not silent. */
+		expect(none.peak, `depth 0 must be silent, got ${none.peak}`).toBe(0);
+	}, 45000);
+
+	const spacePatch = (mix: number) => ({
+		advanced: true,
+		rackGraph: {
+			nodes: [
+				{ id: 'entry', type: 'in' },
+				{ id: 'e', type: 'excite' },
+				{ id: 'sp', type: 'space' },
+				{ id: 'output', type: 'out' }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'output', toPort: 'exec' },
+				{ from: 'e', fromPort: 'out', to: 'sp', toPort: 'in' },
+				{ from: 'sp', fromPort: 'out', to: 'output', toPort: 'in' }
+			]
+		},
+		graphParams: { 'e.exLength': 8, 'sp.spaceSize': 40, 'sp.spaceMix': mix }
+	});
+
+	it('SPACE: MIX is the difference between a burst and a tail', async () => {
+		/* An 8 ms strike into a reverb. Dry, it is over inside the first slice;
+		   wet, the convolver spreads it over the impulse's length. Measured as
+		   where the sound *stops*, which is what a reverb is, rather than as a
+		   level -- the wet leg is quieter than the dry one, so a level assertion
+		   would read backwards. */
+		const dry = await render(spacePatch(0), 8, 2);
+		const wet = await render(spacePatch(100), 8, 2);
+		const lastHeard = (e: number[]) => {
+			let last = -1;
+			for (let i = 0; i < e.length; i++) if (e[i] > 0) last = i;
+			return last;
+		};
+		expect(lastHeard(dry.envelope)).toBe(0);
+		expect(
+			lastHeard(wet.envelope),
+			`wet tail: ${JSON.stringify(wet.envelope)}`
+		).toBeGreaterThan(lastHeard(dry.envelope));
+	}, 45000);
+});
+
+describe('WHEN: the IF socket decides whether the note sounds', () => {
+	/* A WHEN whose condition is false stops execution, and a patch downstream of
+	   it is silent.
+
+	   It did not. `buildRackGraph` called `whenHolds` with four arguments where
+	   six were wanted, so `graph` and `note` arrived undefined and the function
+	   returned true before ever reading the socket: a CONST of 1 and a CONST of
+	   0 into IF both rendered peak 0.6807. The cable drew, the socket lit, and
+	   the branch was never asked -- the same shape as the MAP bug and the
+	   fourth of its kind.
+
+	   Fixed by naming the note event once and handing it to both callers, rather
+	   than by adding a second literal: two copies of "what this note is" are
+	   what let `noteActions` drift to `velocity: 1` under a comment claiming it
+	   matched the sound. */
+	const N = [
+		{ id: 'entry', type: 'in' },
+		{ id: 'wh', type: 'when' },
+		{ id: 'o', type: 'osc' },
+		{ id: 'c', type: 'const' },
+		{ id: 'k', type: 'cmp' },
+		{ id: 'cb', type: 'const' },
+		{ id: 'output', type: 'out' }
+	];
+	const CHAIN = [
+		{ from: 'entry', fromPort: 'then', to: 'wh', toPort: 'exec' },
+		{ from: 'wh', fromPort: 'then', to: 'output', toPort: 'exec' },
+		{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+	];
+	const mk = (cables: unknown[], graphParams: Record<string, number>) => ({
+		advanced: true,
+		rackGraph: { nodes: N, cables },
+		graphParams
+	});
+
+	it('passes on a true condition and stops on a false one', async () => {
+		const yes = await render(
+			mk([...CHAIN, { from: 'c', fromPort: 'out', to: 'wh', toPort: 'cond' }], {
+				'c.kind': 6,
+				'c.value': 1
+			}),
+			4,
+			1
+		);
+		const no = await render(
+			mk([...CHAIN, { from: 'c', fromPort: 'out', to: 'wh', toPort: 'cond' }], {
+				'c.kind': 6,
+				'c.value': 0
+			}),
+			4,
+			1
+		);
+		expect(yes.peak).toBeGreaterThan(0.1);
+		expect(no.peak, 'a false IF must stop the branch').toBe(0);
+	}, 45000);
+
+	it('passes when nothing is asked of it', async () => {
+		/* Unwired, the branch is open -- which is what makes it safe to drop a
+		   WHEN on the canvas before deciding what it should test. Without this,
+		   "false stops it" would also pass on a WHEN that stopped everything. */
+		const open = await render(mk([...CHAIN], {}), 4, 1);
+		expect(open.peak).toBeGreaterThan(0.1);
+	}, 30000);
+
+	it('reads the velocity the note was actually played at', async () => {
+		/* CMP on ENTRY's VEL, which is the patch anyone would build: play harder
+		   than this and the branch opens. The bench plays 110 of 127, so 0.5 is
+		   under and 0.95 is over.
+
+		   This is the assertion that pins *which* note event the condition is
+		   resolved against. `noteActions` built its own with `velocity: 1`
+		   hardcoded, so a CMP on VEL answered one way for the choke and another
+		   for the sound; both now read the event the sound is built from, and a
+		   threshold either side of the real velocity is what proves it. */
+		const cmpChain = [
+			...CHAIN,
+			{ from: 'entry', fromPort: 'vel', to: 'k', toPort: 'a' },
+			{ from: 'cb', fromPort: 'out', to: 'k', toPort: 'b' },
+			{ from: 'k', fromPort: 'out', to: 'wh', toPort: 'cond' }
+		];
+		// test 0 is `>`.
+		const louder = await render(mk(cmpChain, { 'cb.kind': 6, 'cb.value': 0.5, 'k.test': 0 }), 4, 1);
+		const softer = await render(
+			mk(cmpChain, { 'cb.kind': 6, 'cb.value': 0.95, 'k.test': 0 }),
+			4,
+			1
+		);
+		expect(louder.peak, 'vel 0.866 > 0.5 should sound').toBeGreaterThan(0.1);
+		expect(softer.peak, 'vel 0.866 > 0.95 is false, should be silent').toBe(0);
+	}, 45000);
+});

@@ -514,6 +514,25 @@ describe('every parameter the engine reads is declared', () => {
 		'kind'
 	]);
 
+	it('offers the knobs the engine reads for RING and SPACE', () => {
+		/* Two knobs that existed in the sound and nowhere on the card.
+		
+		   `knobPct(depth.gain, 'ringDepth', 100)` and
+		   `knobMix(wet, dry, 'spaceMix', 30)` were read by the engine while
+		   neither module declared the key, so the amount of ring and the amount
+		   of room were unreachable from the instrument: a reverb you cannot set
+		   the amount of, and a ring modulator stuck at full depth.
+		
+		   Named explicitly rather than left to the general scrape below, because
+		   the general test only asks that a declared key is read -- it cannot ask
+		   that a read key is declared while the catalogue rebuild is still
+		   suspending that direction. These two are the ones that were wrong. */
+		const keysOf = (id: string) =>
+			MODULE_SPECS.find((m) => m.id === id)?.params.map((q) => q.key) ?? [];
+		expect(keysOf('ring')).toContain('ringDepth');
+		expect(keysOf('space')).toContain('spaceMix');
+	});
+
 	it('declares every key read through p()', () => {
 		/* The other direction of the same contract, and the one that has to be
 		   suspended while the catalogue is rebuilt.
@@ -534,17 +553,25 @@ describe('every parameter the engine reads is declared', () => {
 		   AudioParam so a cable can land on it -- scraping only the first
 		   reported GAIN's LVL as dead when it is the one knob the module has.
 		   Both forms count, along with the two scaled variants. */
-		/* Three ways the engine reads a knob, and all three count.
+		/* Four ways the engine reads a knob, and all four count.
 		
 		   `p('key')` is the module builder's reader. `knob(param, 'key', def)`
 		   reads it *and* registers the AudioParam, so a cable can land on it.
-		   And the acoustic modules take the default branch, where the params
-		   arrive as a plain object and are read as `p.key` -- scraping only the
-		   first two reported every knob on STRING, TUBE and MODES as dead when
-		   the forwarding list carries all of them. */
+		   The acoustic modules take the default branch, where the params arrive
+		   as a plain object and are read as `p.key` -- scraping only the first
+		   two reported every knob on STRING, TUBE and MODES as dead when the
+		   forwarding list carries all of them.
+		
+		   And `knobMix(wet, dry, 'key', def)` takes *two* nodes before the key,
+		   so the single-argument pattern cannot reach it however it is spelled.
+		   SPACE's MIX is read that way and by nothing else; without this arm,
+		   declaring it on the card reports it dead. */
 		const read = new Set([
 			...[...SOURCE.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1]),
 			...[...SOURCE.matchAll(/\bknob(?:At|Pct)?\([^,]+,\s*'([a-zA-Z][a-zA-Z0-9]*)'/g)].map(
+				(m) => m[1]
+			),
+			...[...SOURCE.matchAll(/\bknobMix\([^,]+,[^,]+,\s*'([a-zA-Z][a-zA-Z0-9]*)'/g)].map(
 				(m) => m[1]
 			),
 			...[...SOURCE.matchAll(/\bp\.([a-zA-Z][a-zA-Z0-9]*)/g)].map((m) => m[1])

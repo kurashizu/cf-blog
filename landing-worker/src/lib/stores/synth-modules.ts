@@ -1130,7 +1130,13 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		outputs: [AUDIO_OUT],
 		params: [
 			{ key: 'spaceSize', label: 'SIZE', min: 1, max: 100, step: 1, def: 40, unit: '%', field: true, fixed: true },
-			{ key: 'spaceDecay', label: 'DCAY', min: 1, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true }
+			{ key: 'spaceDecay', label: 'DCAY', min: 1, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true },
+			/* Undeclared for the same reason RING's DPTH was, and with the same
+			   consequence: `knobMix(wet, dry, 'spaceMix', 30)` read it, the card
+			   never showed it, and a cable meant for it was sorted as audio and
+			   summed into the reverb's input. A space you cannot set the amount of
+			   is a space you cannot use. */
+			{ key: 'spaceMix', label: 'MIX', min: 0, max: 100, step: 1, def: 30, unit: '%', field: true }
 		]
 	},
 	{
@@ -1218,7 +1224,17 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		descKey: 'synthPatch.mod.ring',
 		inputs: [AUDIO_IN, { id: 'b', label: 'B', kind: 'audio' }],
 		outputs: [AUDIO_OUT],
-		params: []
+		/* How much of the ring reaches the output.
+		
+		   The engine has always read this (`knobPct(depth.gain, 'ringDepth', 100)`)
+		   and the catalogue never declared it, so the knob existed in the sound
+		   and nowhere on the card: unreachable by anyone using the instrument,
+		   and a cable addressed to it was classified *audio* -- `portKind` finds
+		   neither an inlet nor a param -- and summed into RING's carrier input
+		   instead. Declaring it is what makes the port real in both directions. */
+		params: [
+			{ key: 'ringDepth', label: 'DPTH', min: 0, max: 100, step: 1, def: 100, unit: '%', field: true }
+		]
 	},
 	{
 		/* One signal taken away from another.

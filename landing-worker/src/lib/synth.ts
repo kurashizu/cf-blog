@@ -612,7 +612,21 @@ class ModularSynth {
 		// Analysers for nodes this patch no longer holds are not coming back.
 		if (!this.renderCtx) this.pruneProbes(graph);
 
-		const resolver = createResolver(graph, params, {
+		/* The event this note is, named once.
+		
+		   Hoisted out of the `createResolver` call because `execReach` needs the
+		   same thing: a WHEN's IF socket is a value, and resolving a value takes
+		   the event it is resolved against. Passing four arguments where six were
+		   wanted left `note` undefined, and `whenHolds` returns true the moment
+		   it is -- so the IF socket was read by nobody and a WHEN passed
+		   execution whatever its condition said. Measured: a CONST of 1 and a
+		   CONST of 0 into IF both rendered peak 0.6807.
+		
+		   One object rather than two literals, because `noteActions` builds its
+		   own with `velocity: 1` and `pitch: noteIndex - 69` -- a different
+		   quantity under the same name -- and two copies of "what this note is"
+		   are what let the two halves of the engine disagree. */
+		const noteEvent = {
 			/* Semitones from the tuning reference, not hertz. ENTRY publishes a pitch
          and an oscillator takes a frequency, so a patch converts through FREQ --
          which is where the reference is chosen rather than assumed.
@@ -627,7 +641,8 @@ class ModularSynth {
 			noteIndex: note.noteIndex,
 			gate: heldSec,
 			lanes: laneValues
-		});
+		};
+		const resolver = createResolver(graph, params, noteEvent);
 		const cvIn = (nodeId: string, port: string, fallback: number) =>
 			resolver.input(nodeId, port, fallback);
 
@@ -641,7 +656,7 @@ class ModularSynth {
        execReach does, which is how the exemption stayed alive in the branch
        below long after it was deleted from the resolver. */
 		const reach = execReach(graph, EXEC_PORT_IDS, 'in', (id) =>
-			this.whenHolds(params, id, note.noteIndex, trackId ?? -1)
+			this.whenHolds(params, id, note.noteIndex, trackId ?? -1, graph, noteEvent)
 		);
 		const outputRuns = (id: string) => runs(reach, id);
 		/* When each node runs, in seconds after the note. Zero for everything the
@@ -1660,14 +1675,17 @@ class ModularSynth {
            can differ per branch, so a patch can put the body somewhere the
            string is not. */
 				const pn = ctx.createStereoPanner();
+				/* POS is the only inlet, and `knobAt` is what makes a patched value
+           mean what a turned one means: the knob reads -100..100 and the param
+           wants -1..1, so the cable is scaled where it lands.
+        
+           There was a second registration here, under the key `cv`, left from
+           when DPTH was a gain stage on the control leg. PAN has no port called
+           `cv` -- so nothing could address it, and anything that did would have
+           arrived at gain 1 against a param that wanted hundredths, a hundred
+           times hard over. Two registrations for one destination is one more
+           than can be right; the scaled one is the one that is. */
 				knobAt(pn.pan, 'panPos', 0, 0.01, (v) => Math.max(-1, Math.min(1, v)));
-				/* One knob, like VCA: DPTH was a gain stage on the control leg, which
-           is a second module hiding inside this one. A CV is attenuated where
-           it is made. */
-				const cv = ctx.createGain();
-				cv.gain.value = 1;
-				cv.connect(pn.pan);
-				mod.set('cv', cv);
 				return { in: pn, out: pn, mod };
 			}
 
@@ -3432,7 +3450,26 @@ class ModularSynth {
        was filed, so the exec graph was traversed twice per percussion note and
        the two answers were one divergence away from a voice being filed under a
        group different from the one that chose its choke. */
-		const act = this.noteActions(track, noteIndex, trackId);
+		const act = this.noteActions(track, noteIndex, trackId, {
+			/* The same three quantities `buildRackGraph` resolves against, computed
+			   the same way. Semitones from master tuning rather than from MIDI 69,
+			   and the velocity actually played rather than a hardcoded 1.
+			
+			   The tuning cancels: `buildRackGraph` divides `noteInfo.freq * (A4/440)`
+			   back by A4, so the pitch a patch sees is against 440 whatever A4 is.
+			   Written out rather than shortened, so it reads as the same expression
+			   as the one it has to agree with. */
+			pitch:
+				12 *
+				Math.log2(
+					Math.max(1e-6, noteInfo.freq * (this.masterTuningFreq / 440.0)) /
+						this.masterTuningFreq
+				),
+			velocity: Math.max(0, Math.min(1, (laneVelocity ?? rawVelocity ?? 100) / 127)),
+			noteIndex,
+			gate: durationSec ?? 0,
+			lanes: {}
+		});
 		if (!this.renderCtx) {
 			if (act.cut || act.solo) {
 				/* Choked rather than stopped: a few milliseconds of fade is inaudible
@@ -4641,7 +4678,16 @@ class ModularSynth {
 	private noteActions(
 		track: TrackData,
 		noteIndex: number,
-		trackId: number
+		trackId: number,
+		/* What this note actually is, for the WHENs along the way.
+		
+		   Passed in rather than reconstructed. This used to build its own event
+		   with `velocity: 1` and `pitch: noteIndex - 69` under a comment claiming
+		   a CMP here "sees the same PITCH and VEL the sound does" -- and those
+		   are not the same quantities: the audio path publishes semitones from
+		   master tuning and the real velocity, so a CMP on VEL answered one way
+		   for the choke and another for the sound. */
+		noteEvent: NoteEvent
 	): { cut: boolean; cutGroup: number; solo: boolean; fadeSec: number } {
 		const none = { cut: false, cutGroup: 0, solo: false, fadeSec: 0.006 };
 		const graph = track.advanced ? track.rackGraph : undefined;
@@ -4682,16 +4728,9 @@ class ModularSynth {
 			(c) => EXEC_PORT_IDS.has(c.toPort) && EXEC_PORT_IDS.has(c.fromPort)
 		);
 
-		/* The note this test is being asked about. WHEN reads through the same
-		   resolver every module does, so a CMP feeding it sees the same PITCH and
-		   VEL the sound does. */
-		const noteEvent: NoteEvent = {
-			pitch: noteIndex - 69,
-			velocity: 1,
-			noteIndex,
-			gate: 0,
-			lanes: {}
-		};
+		/* WHEN reads through the same resolver every module does, against the
+		   same event the sound is built from -- so a CMP feeding it sees the
+		   PITCH and VEL the sound sees. */
 		const holds = (id: string) =>
 			this.whenHolds(p, id, noteIndex, trackId, graph as never, noteEvent);
 
