@@ -434,3 +434,47 @@ the node _is_ a frequency; the hyphen reads as an arrow. Conversions live on
 their own `CONVERT` shelf rather than among the arithmetic, because changing
 what a value _is_ is not the same as changing what it equals — and the whole
 reason those nodes exist is that nothing does it implicitly.
+
+## What this instrument deliberately cannot do
+
+Two families of sound are out of reach, and both are decisions rather than
+omissions. Written down so the next person to notice the gap finds the reason
+instead of the hole.
+
+### No sample source, because a patch is its graph
+
+Nothing loads or replays recorded audio. The whole catalogue is generators and
+processors, and that is what makes a patch self-contained: export the JSON, send
+it to someone, open it on another machine, and the same sound comes out. SPACE
+already follows this rule — its reverb is a generated impulse rather than an
+impulse-response file, and its docstring says so.
+
+A sample source breaks that. The patch would stop being a complete description
+of the instrument and become a graph plus a file dependency, which every export,
+preset and share would then have to carry. Embedding the audio in the patch
+keeps self-containment at the cost of size, and that is the shape any future
+version of this should take — but the decision as it stands is not to have one.
+
+What this costs: sampling, slicing, drum machines built on recordings, and
+anything else that starts from a captured sound. Additive reconstruction is not
+a substitute and this document should not pretend otherwise.
+
+### No hard sync, because there is no AudioWorklet
+
+Hard sync resets a slave oscillator's phase every time a master completes a
+cycle. The pitch comes from the master and the timbre from the slave, so sweeping
+the slave moves a formant through the spectrum while the note stays put — the
+sound of a Prophet-5 lead, and one no filter sweep reaches, because a filter
+removes harmonics and sync *creates* them at the discontinuity.
+
+It is a genuine primitive by this project's bar: conceptually irreducible, and
+not substitutable. Ring modulation at integer ratios was measured as the nearest
+candidate and produces the inharmonic sum-and-difference family instead; a
+swept-carrier ring sweeps timbre but has no sync formant.
+
+What blocks it is that `OscillatorNode` has no writable phase, so a per-sample
+reset needs an `AudioWorklet` — and this engine has none. That is a larger
+commitment than one module: a second build artefact, a second thread, and its own
+story for offline rendering. It is also a door rather than a module. Granular,
+true phase distortion and frequency shifting all sit behind the same one, so the
+time to open it is when several of those are wanted together, not for sync alone.
