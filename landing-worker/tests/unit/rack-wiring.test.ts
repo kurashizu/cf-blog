@@ -177,7 +177,7 @@ describe('a value and a signal are not both applied', () => {
 	   rebuild has not restored yet -- skipped rather than deleted or
 	   weakened, because it is the test that has to pass before the
 	   primitive it covers can be called done. */
-	it.skip('applies a cable onto MAKE’s WIDE once, not twice', () => {
+	it('applies a cable onto MAKE’s WIDE once, not twice', () => {
 		/* MAKE was the one module that both read a declared mod inlet as a value
 		   and registered it, so a CONST of 2 gave 4. WIDE is declared, so the mod
 		   loop does not skip it -- which means the value read had to go. */
@@ -208,29 +208,33 @@ describe('a value and a signal are not both applied', () => {
 });
 
 describe('named ports go where they are named', () => {
-	it('gives each leg of a MIX its own knob', () => {
+	it('gives each leg of a two-input module its own path', () => {
 		/* Collapsing every inlet onto the first survived the suite, and "the B
 		   leg played at A's gain" is a bug this engine actually shipped -- it is
-		   what the `in2` -> `b` rename was cleaning up after. Set the two knobs
-		   to different numbers and the two paths have to carry those numbers:
-		   one leg at 1.0 and one at 0.25, not two legs at whichever knob won. */
+		   what the `in2` -> `b` rename was cleaning up after.
+
+		   Asked of DIFF, which is the clearest case left now MIX is gone: its
+		   whole function is that the two legs are *not* the same, since B
+		   arrives inverted so the shared part cancels. If the inlets collapsed,
+		   both oscillators would land on one leg and the -1 would be on both
+		   paths or on neither. */
 		const { ctx } = play(
 			{
 				nodes: [
 					node('entry', 'in'),
 					node('a', 'osc'),
 					node('b', 'osc'),
-					node('m', 'mix'),
+					node('m', 'diff'),
 					node('output', 'out')
 				],
 				cables: [
 					EXEC,
-					wire('a', 'out', 'm', 'a'),
+					wire('a', 'out', 'm', 'in'),
 					wire('b', 'out', 'm', 'b'),
 					wire('m', 'out', 'output', 'in')
 				]
 			},
-			{ 'm.mixA': 100, 'm.mixB': 25 }
+			{}
 		);
 		const oscs = advNodes(ctx).filter((n) => n.kind === 'osc');
 		expect(oscs.length).toBe(2);
@@ -255,10 +259,9 @@ describe('named ports go where they are named', () => {
 		};
 		const a = legGains(oscs[0]);
 		const b = legGains(oscs[1]);
-		/* Each knob reaches exactly one leg. If the two inlets were collapsed the
-		   0.25 would appear on both paths, or on neither. */
+		// The inverting leg is reached by exactly one of them.
 		const has = (xs: number[], v: number) => xs.some((x) => Math.abs(x - v) < 1e-6);
-		expect(has(a, 0.25) !== has(b, 0.25)).toBe(true);
+		expect(has(a, -1) !== has(b, -1)).toBe(true);
 	});
 });
 
@@ -278,9 +281,11 @@ describe('the graph the engine plays is the migrated one', () => {
 
 	it('honours the port name the editor renamed away from', () => {
 		/* `in2` became `b`. A patch saved before the rename must still play its
-		   second leg into the second inlet. */
+		   second leg into the second inlet. Asked of DIFF, since MIX -- the
+		   module this was written against -- is gone: a mixer is GAINs into a
+		   SUM, and the rule is about the port name rather than the module. */
 		const { ctx } = play({
-			nodes: [node('entry', 'in'), node('a', 'osc'), node('m', 'mix'), node('output', 'out')],
+			nodes: [node('entry', 'in'), node('a', 'osc'), node('m', 'diff'), node('output', 'out')],
 			cables: [EXEC, wire('a', 'out', 'm', 'in2'), wire('m', 'out', 'output', 'in')]
 		});
 		expect(sounds(ctx)).toBe(true);
@@ -298,7 +303,7 @@ describe('a patch reaches the destination at all', () => {
 				node('entry', 'in'),
 				node('o', 'osc'),
 				node('f', 'filter'),
-				node('v', 'vca'),
+				node('v', 'gain'),
 				node('output', 'out')
 			],
 			cables: [
@@ -344,7 +349,7 @@ describe('a knob boots at the number printed on the card', () => {
 	   rebuild has not restored yet -- skipped rather than deleted or
 	   weakened, because it is the test that has to pass before the
 	   primitive it covers can be called done. */
-	it.skip('uses the spec default when the engine falls back', () => {
+	it('uses the spec default when the engine falls back', () => {
 		/* The card and the engine each carry their own idea of an untouched
 		   knob's value, and for STRING/TUBE/MODES they disagreed: the spec says
 		   MIX 70, the engine fell back to 100. An untouched knob is *absent* from

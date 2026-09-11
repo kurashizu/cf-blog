@@ -108,11 +108,7 @@ describe('every module is reachable in a patch', () => {
 		expect(unreachable).toEqual([]);
 	});
 
-	/* Waiting on the catalogue. This asserts real behaviour of modules the
-	   rebuild has not restored yet -- skipped rather than deleted or
-	   weakened, because it is the test that has to pass before the
-	   primitive it covers can be called done. */
-	it.skip('can drive a knob from a value node', () => {
+	it('can drive a knob from a value node', () => {
 		// Every module with a knob must be reachable by a CONST, or the value
 		// half of the graph cannot touch it.
 		const constOut = roleOf(spec('const').outputs[0]);
@@ -447,11 +443,7 @@ describe('execution across a whole patch', () => {
  * MERGE round-trips, and BREAK into MAKE round-trips at unity width.
  */
 describe('what the renders proved', () => {
-	/* Waiting on the catalogue. This asserts real behaviour of modules the
-	   rebuild has not restored yet -- skipped rather than deleted or
-	   weakened, because it is the test that has to pass before the
-	   primitive it covers can be called done. */
-	it.skip('covers every module the catalogue declares', () => {
+	it('covers every module the catalogue declares', () => {
 		/* The render sweep walks MODULE_SPECS, so a module added tomorrow is
 		   covered the day it appears -- which matters because twenty-one modules
 		   appear in no shipped preset at all and would otherwise go untested. */
@@ -581,9 +573,13 @@ describe('regressions the string tests could not see', () => {
 		   one came out at the same level with the cable drawn on the canvas.
 		
 		   Asked of the graph the engine builds: a cable from ENTRY's VEL into a
-		   VCA's CV has to put a *signal* on that gain's param, and a hard hit has
-		   to differ from a soft one. Reading the source for `outs.set('vel'`
-		   proved only that the string was present. */
+		   GAIN's LVL has to put a *signal* on that gain's param, and a hard hit
+		   has to differ from a soft one. Reading the source for `outs.set('vel'`
+		   proved only that the string was present.
+		
+		   Written against VCA, which is gone -- GAIN absorbed it, since an
+		   amplifier with a negative range is a VCA and an inverter at once. The
+		   rule is about ENTRY's named outlets rather than about either module. */
 		const cvSources = (velocity: number) => {
 			const ctx = new FakeCtx();
 			const S = modularSynth as unknown as Record<string, unknown>;
@@ -601,13 +597,13 @@ describe('regressions the string tests could not see', () => {
 					nodes: [
 						{ id: 'e', type: 'in', x: 0, y: 0 },
 						{ id: 'o', type: 'osc', x: 1, y: 0 },
-						{ id: 'v', type: 'vca', x: 2, y: 0 },
+						{ id: 'v', type: 'gain', x: 2, y: 0 },
 						{ id: 'out', type: 'out', x: 3, y: 0 }
 					],
 					cables: [
 						{ from: 'e', fromPort: 'then', to: 'out', toPort: 'exec' },
 						{ from: 'o', fromPort: 'out', to: 'v', toPort: 'in' },
-						{ from: 'e', fromPort: 'vel', to: 'v', toPort: 'cv' },
+						{ from: 'e', fromPort: 'vel', to: 'v', toPort: 'level' },
 						{ from: 'v', fromPort: 'out', to: 'out', toPort: 'in' }
 					]
 				};
@@ -801,11 +797,15 @@ describe('regressions the string tests could not see', () => {
 	});
 
 	it("hands a knob its cable in the knob's own units", () => {
-		/* `knobPct` reads a 0..100 knob and divides, so MIX A at 100 is a gain of
-		   1. Registering the AudioParam directly made a cable bypass that
-		   divide: a CONST of 100 landed whole and gave a gain of 101 -- 40 dB
-		   nobody asked for. The scaling node in front is what makes "100" mean
-		   the same thing turned or patched. */
+		/* `knobAt` reads a knob in the card's units and converts, so PAN's POS of
+		   100 is a param of 1 -- hard right. Registering the AudioParam directly
+		   made a cable bypass that conversion: a CONST of 100 landed whole and
+		   meant a hundred times hard right. The scaling node in front is what
+		   makes "100" mean the same thing turned or patched.
+		
+		   Asked of the built node rather than of MIX, which is gone: a mixer is
+		   GAINs into a SUM, and the rule here is about units rather than about
+		   mixing. */
 		const ctx = new FakeCtx();
 		const S = modularSynth as unknown as {
 			noiseBuffer: unknown;
@@ -814,8 +814,8 @@ describe('regressions the string tests could not see', () => {
 		S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
 		const made = S.buildGraphNode(
 			ctx,
-			'mix',
-			(k: string, d: number) => ({ mixA: 100 })[k as 'mixA'] ?? d,
+			'pan',
+			(k: string, d: number) => ({ panPos: 100 })[k as 'panPos'] ?? d,
 			220,
 			0,
 			0.5,
@@ -827,9 +827,9 @@ describe('regressions the string tests could not see', () => {
 			0.5
 		);
 		/* The registered target is a scaling node, not the param itself, and its
-		   gain carries the same divide the knob goes through -- so a CONST of
+		   gain carries the same conversion the knob goes through -- so a CONST of
 		   100 arriving on it means 1, exactly as the knob at 100 does. */
-		const target = made!.mod.get('mixA') as {
+		const target = made!.mod.get('panPos') as {
 			gain: FakeParam;
 			outgoing: { to: unknown }[];
 		};

@@ -216,18 +216,19 @@ describe('every knob is what the card says it is', () => {
 		expect(wrong).toEqual([]);
 	});
 
-	it('scales a percentage knob so turned and patched agree', () => {
-		/* MIX A at 100 is a gain of 1. Before the scaling node, a CONST of 100
-		   into the same inlet landed on the param whole and gave 101 -- 40 dB
-		   nobody asked for. The gain in front carries the same divide the knob
-		   goes through. */
-		const { made } = build('mix', { mixA: 100 });
-		const target = made!.mod.get('mixA') as { gain: FakeParam } & { outgoing: unknown[] };
+	it('scales a knob whose units are not the param’s, so turned and patched agree', () => {
+		/* PAN's POS is -100..100 on the card and the param is -1..1. Without the
+		   scaling node in front, a CONST of 100 into the same inlet lands on the
+		   param whole -- a hundred times hard right. The gain carries the same
+		   divide the knob goes through, so a patched value means what a typed
+		   one means.
+		
+		   This was written against MIX, which is gone: a mixer is GAINs into a
+		   SUM, both of which the catalogue has. The rule it checks is not about
+		   mixing, so it moved to a module that still exists. */
+		const { made } = build('pan', { panPos: 100 });
+		const target = made!.mod.get('panPos') as { gain: FakeParam } & { outgoing: unknown[] };
 		expect(target).toBeTruthy();
-		// The knob itself landed at 1.0...
-		const leg = (made!.in as unknown as { gain: FakeParam }).gain;
-		expect(leg.value).toBeCloseTo(1, 6);
-		// ...and a cable arrives divided by the same hundred.
 		expect((target as unknown as { gain: FakeParam }).gain.value).toBeCloseTo(0.01, 6);
 	});
 

@@ -1317,29 +1317,6 @@ class ModularSynth {
 				return { in: d, out: d, mod };
 			}
 
-			case 'vca': {
-				/* An amplifier: one gain, and a CV that adds to it.
-        
-           DEPTH used to sit on the CV leg, scaling the control signal before it
-           reached the gain -- a second VCA welded onto the first, and the thing
-           OSC's LVL knob was removed for. It also made two different silences
-           with two different causes (GAIN 0 with DEPTH 100, or the other way
-           round), and the sum was unbounded despite a knob reading `%`.
-        
-           A CV that needs attenuating is attenuated at its source: LFO has AMT,
-           ENV has its own shape, and a value can go through MUL. */
-				const g = ctx.createGain();
-				knobPct(g.gain, 'gain', 100);
-				/* The inlet is a node whose output sums into the gain param, not the
-           param itself: registering `g.gain` would make a cable land on the
-           knob, which has nothing feeding it, so the destination never moved. */
-				const cv = ctx.createGain();
-				cv.gain.value = 1;
-				cv.connect(g.gain);
-				mod.set('cv', cv);
-				return { in: g, out: g, mod };
-			}
-
 			case 'env': {
 				/* A shape over the note, as a value.
         
@@ -1401,47 +1378,6 @@ class ModularSynth {
 				dc.connect(g);
 				sources.push(dc);
 				return { in: null, out: g, mod };
-			}
-
-			case 'mix': {
-				/* Two inlets with their own levels. The card has drawn A and B knobs
-           since the module was added, but this returned a single gain node as
-           both inlets and ignored both values -- so turning either knob did
-           nothing, and every patch that leaned on the balance (MARIMBA's
-           resonator against its bar, PIANO's second string) got whatever the
-           raw sum happened to be. */
-				const out = ctx.createGain();
-				const a = ctx.createGain();
-				knobPct(a.gain, 'mixA', 100);
-				a.connect(out);
-				const b = ctx.createGain();
-				knobPct(b.gain, 'mixB', 100);
-				b.connect(out);
-				return { in: a, in2: b, out, mod };
-			}
-
-			case 'eq': {
-				/* Three bands, and all three corners move. LOW and HIGH were literals
-           -- 200 and 5000 -- so a card presenting a three-band EQ had two bands
-           you could only make louder, never place: boosting LOW on a 60 Hz kick
-           lifted everything under 200 Hz equally and muddied it, with no way to
-           reach down to where the weight actually is. */
-				const low = ctx.createBiquadFilter();
-				low.type = 'lowshelf';
-				knob(low.frequency, 'lowFreq', 200);
-				knob(low.gain, 'lowGain', 0);
-				const mid = ctx.createBiquadFilter();
-				mid.type = 'peaking';
-				knob(mid.frequency, 'midFreq', 1200);
-				knob(mid.Q, 'midQ', 1);
-				knob(mid.gain, 'midGain', 0);
-				const high = ctx.createBiquadFilter();
-				high.type = 'highshelf';
-				knob(high.frequency, 'highFreq', 5000);
-				knob(high.gain, 'highGain', 0);
-				low.connect(mid);
-				mid.connect(high);
-				return { in: low, out: high, mod };
 			}
 
 			case 'excite': {
@@ -1536,44 +1472,6 @@ class ModularSynth {
 				return { in: null, out: sum, mod };
 			}
 
-			case 'blend': {
-				/* Tilt between what arrives here and a filtered copy of it: rack 2's
-           MORPH as a cable. One input, like every other module -- the graph
-           joins several cables into one inlet by summing them, so a second
-           inlet would be a second sum, not a second signal.
-
-           CV drives the balance, so an envelope can sweep a voice from dark to
-           bright across the note. Not MIX, which this comment used to credit:
-           `blendMix` is read once at build and is marked `fixed`, so it sets
-           where the tilt starts and the cable is what moves it. */
-				const x = Math.min(1, Math.max(0, p('blendMix', 50) / 100));
-				const input = ctx.createGain();
-				const out = ctx.createGain();
-				const dark = ctx.createBiquadFilter();
-				dark.type = 'lowpass';
-				knob(dark.frequency, 'blendTone', 800);
-				const ga = ctx.createGain();
-				const gb = ctx.createGain();
-				ga.gain.value = 1 - x;
-				gb.gain.value = x;
-				input.connect(dark);
-				dark.connect(ga);
-				ga.connect(out);
-				input.connect(gb);
-				gb.connect(out);
-				/* One CV moves both gains in opposite directions, so the pair stays a
-           crossfade rather than becoming a level control. */
-				const up = ctx.createGain();
-				up.gain.value = 1;
-				up.connect(gb.gain);
-				const down = ctx.createGain();
-				down.gain.value = -1;
-				up.connect(down);
-				down.connect(ga.gain);
-				mod.set('cv', up);
-				return { in: input, out, mod };
-			}
-
 			case 'space': {
 				/* A room. Every acoustic instrument is heard in one, and a bare
            resonator sounds like a recording made inside a box of cotton wool.
@@ -1610,99 +1508,6 @@ class ModularSynth {
 				cv.connect(wet);
 				wet.connect(out);
 				return { in: input, out, mod };
-			}
-
-			case 'comb': {
-				/* Where the string is struck or plucked. A comb filter notches out the
-           partials that have a node at that point, which is why a guitar
-           plucked at the bridge is thin and nasal and the same string plucked
-           over the hole is round. The fixed chain has no way to say this. */
-				const input = ctx.createGain();
-				const out = ctx.createGain();
-				const pos = Math.min(0.5, Math.max(0.02, p('combPos', 25) / 100));
-				const dl = ctx.createDelay(0.05);
-				dl.delayTime.value = Math.min(0.05, pos / Math.max(1, cvIn(probeKey, 'pitch', 220)));
-				const inv = ctx.createGain();
-				knobAt(inv.gain, 'combDepth', 80, -0.01);
-				input.connect(out);
-				input.connect(dl);
-				dl.connect(inv);
-				inv.connect(out);
-				return { in: input, out, mod };
-			}
-
-			case 'bow': {
-				/* Friction. A bow does not strike and then let go -- it grabs the
-           string, drags it, slips, and grabs again, hundreds of times a second,
-           which is why a violin sustains and a plucked string does not.
-
-           The slip-stick is a sawtooth at the note, roughened by noise: the
-           scrape is what separates a bowed string from an organ. It is a source
-           because a bow starts the sound rather than shaping one. */
-				const out = ctx.createGain();
-				const drag = ctx.createOscillator();
-				drag.type = 'sawtooth';
-				const bowRoot = cvIn(probeKey, 'pitch', 220);
-				drag.frequency.value = bowRoot;
-				const dg = ctx.createGain();
-				dg.gain.value = 1 - (p('bowNoise', 25) / 100) * 0.5;
-				drag.connect(dg);
-				dg.connect(out);
-				if (!this.noiseBuffer) this.initNoiseBuffer();
-				const scrape = ctx.createBufferSource();
-				scrape.buffer = this.noiseBuffer;
-				scrape.loop = true;
-				const sg = ctx.createGain();
-				sg.gain.value = (p('bowNoise', 25) / 100) * 0.6;
-				// Bow noise is a hiss riding the note, not a rumble under it.
-				const hp = ctx.createBiquadFilter();
-				hp.type = 'highpass';
-				hp.frequency.value = Math.max(200, bowRoot * 2);
-				scrape.connect(hp);
-				hp.connect(sg);
-				sg.connect(out);
-				/* Pressure is how hard the bow bites: more pressure, more of the
-           sawtooth's upper corner, which is the sound of digging in. */
-				const tone = ctx.createBiquadFilter();
-				tone.type = 'lowpass';
-				tone.frequency.value = 400 + (p('bowPressure', 50) / 100) * 7000;
-				const level = ctx.createGain();
-				out.connect(tone);
-				tone.connect(level);
-				/* The bow speaks rather than starting instantly: rosin has to catch.
-           BITE is that catch time -- 5 to 120 ms -- and read as a percentage
-           because that is the scale its knob is on. */
-				const att = Math.max(0.005, (p('bowBite', 40) / 100) * 0.12);
-				level.gain.setValueAtTime(0, t);
-				level.gain.linearRampToValueAtTime(1, t + att);
-				sources.push(drag, scrape);
-				return { in: null, out: level, mod };
-			}
-
-			case 'reed': {
-				/* A reed is a valve, not a tone. Blowing harder does not make a
-           clarinet louder in a straight line -- past a point the reed slams
-           shut and the waveform squares off, which is where the honk lives.
-           A tanh with an offset is that curve, and it belongs on its own so it
-           can sit between a breath source and a tube. */
-				const shaper = ctx.createWaveShaper();
-				const stiff = p('reedStiff', 50) / 100;
-				const bias = p('reedBias', 40) / 100;
-				const n = 1024;
-				const curve = new Float32Array(n);
-				const k = 1 + stiff * 25;
-				for (let i = 0; i < n; i++) {
-					const x = (i / (n - 1)) * 2 - 1;
-					// Asymmetric: a reed closes one way and cannot open past its rest.
-					const v = Math.tanh((x + bias * 0.5) * k);
-					curve[i] = Math.min(1, v) * 0.8;
-				}
-				shaper.curve = curve;
-				shaper.oversample = '2x';
-				const trim = ctx.createGain();
-				trim.gain.value = 1 / (1 + stiff);
-				shaper.connect(trim);
-				return { in: shaper, out: trim, mod };
 			}
 
 			case 'pan': {
@@ -1777,37 +1582,18 @@ class ModularSynth {
 				ls.connect(side);
 				rs.connect(side);
 
-				/* The AMP outlet: how loud what arrived is, as a control signal.
-        
-           An AnalyserNode was the wrong instrument -- nothing reads one back as
-           CV, so the socket emitted nothing at all, and because it was declared
-           on port id `out` it fell through to `mid` and connected raw audio
-           into whatever knob it reached. A cable to a VCA's CV gave ring
-           modulation at the signal's own frequency instead of an envelope.
-        
-           A rectifier and a lowpass is what an envelope follower is: square the
-           signal against itself, then smooth. Both ends are real audio nodes,
-           so the value moves with the sound the way ENV's does. */
-				const rect = ctx.createWaveShaper();
-				const curve = new Float32Array(257);
-				for (let i = 0; i < curve.length; i++) {
-					const x = (i / (curve.length - 1)) * 2 - 1;
-					curve[i] = Math.abs(x);
-				}
-				rect.curve = curve;
-				const smooth = ctx.createBiquadFilter();
-				smooth.type = 'lowpass';
-				smooth.frequency.value = 20;
-				input.connect(rect);
-				rect.connect(smooth);
+				/* Two outlets, not three. There was an AMP here -- an envelope
+           follower welded on, so a filter could track how loud the signal was
+           -- and it is FOLLOW now. Keeping it would be the follower in two
+           places, and this module is about the mid/side decomposition rather
+           than about measuring anything.
 
-				/* Named outlets, so each of the three sockets carries what its label
-           says. `mid` and `side` used to ride on `out`/`out2`, which meant the
-           port literally named `side` resolved to the mid gain. */
+           Named outlets, so each socket carries what its label says. `mid` and
+           `side` used to ride on `out`/`out2`, which meant the port literally
+           named `side` resolved to the mid gain. */
 				const outs = new Map<string, AudioNode>([
-					['mid', mid],
-					['side', side],
-					['out', smooth]
+					['out', mid],
+					['side', side]
 				]);
 
 				return { in: input, out: mid, out2: side, outs, mod };
@@ -1887,30 +1673,6 @@ class ModularSynth {
 			case 'remap':
 			case 'clamp':
 			case 'lerp':
-			case 'curve': {
-				/* The note goes with it. TO-FREQ and TO-PITCH read the master tuning
-           off the event, so omitting it silently fell back to A=440 -- the same
-           converter answered 432 through the resolver and 440 here, and a
-           filter told to track the note sat a third of a semitone sharp of the
-           oscillator it was tracking. */
-				const v = PURE_NODES[type]?.(
-					{ get: (port, fallback) => cvIn(probeKey, port, fallback) },
-					p,
-					{
-						pitch: 0,
-						velocity: note.velocity,
-						noteIndex: note.noteIndex,
-						gate: heldSec,
-						lanes: laneValues,
-						tuning: note.tuning
-					}
-				);
-				const src = ctx.createConstantSource();
-				src.offset.value = Number.isFinite(v ?? NaN) ? (v as number) : 0;
-				sources.push(src);
-				return { in: null, out: src, mod };
-			}
-
 			case 'in': {
 				/* ENTRY: the note, as an event.
         
@@ -2083,15 +1845,6 @@ class ModularSynth {
 				knobPct(depth.gain, 'ringDepth', 100);
 				depth.connect(g.gain);
 				return { in: g, in2: depth, out: g, mod };
-			}
-
-			case 'invert': {
-				/* Flips the sign. On its own it is inaudible; against a copy of itself
-           it is cancellation, which is what makes it a tool rather than a
-           curiosity. */
-				const g = ctx.createGain();
-				g.gain.value = -1;
-				return { in: g, out: g, mod };
 			}
 
 			default: {
@@ -2398,94 +2151,6 @@ class ModularSynth {
 				/* The strike gates the modes rather than passing through them: a key
            that is never struck should not ring. Same shape STRING uses. */
 				return { in: input, out: output, sources: modeSources };
-			}
-
-			case 'body': {
-				/* The instrument's body: a soundboard, a box, a shell. Two fixed
-           formant peaks whose frequency falls as the body gets bigger, which
-           is what turns a bare string into a guitar rather than a sine. */
-				const size = pct(p.bodySize, 50);
-				const input = ctx.createGain();
-				const output = ctx.createGain();
-				const mix = pct(p.bodyMix, 60);
-				const dry = ctx.createGain();
-				dry.gain.value = 1 - mix;
-				input.connect(dry);
-				dry.connect(output);
-
-				// A big body resonates low: 400Hz down to 90Hz across the range.
-				const f1 = 400 - size * 310;
-				const peaks: [number, number][] = [
-					[f1, 1.4],
-					[f1 * 2.7, 2.2]
-				];
-				const depth = pct(p.bodyDepth, 45);
-				for (const [f, q] of peaks) {
-					const bp = ctx.createBiquadFilter();
-					bp.type = 'peaking';
-					bp.frequency.value = Math.max(40, f);
-					bp.Q.value = q;
-					bp.gain.value = depth * 14;
-					input.connect(bp);
-					const g = ctx.createGain();
-					g.gain.value = mix / peaks.length;
-					bp.connect(g);
-					g.connect(output);
-				}
-				return { in: input, out: output };
-			}
-
-			case 'drive': {
-				/* Saturation. A struck or bowed body produces harmonics a clean
-           oscillator cannot; bias makes them even-order, which reads as warmth
-           rather than fuzz. */
-				const shaper = ctx.createWaveShaper();
-				const amt = pct(p.driveAmt, 25);
-				const bias = pct(p.driveBias, 30);
-				const n = 1024;
-				const curve = new Float32Array(n);
-				const k = 1 + amt * 40;
-				for (let i = 0; i < n; i++) {
-					const x = (i / (n - 1)) * 2 - 1;
-					const b = x + bias * 0.35;
-					curve[i] = Math.tanh(b * k) / Math.tanh(k) - Math.tanh(bias * 0.35 * k) / Math.tanh(k);
-				}
-				shaper.curve = curve;
-				shaper.oversample = '2x';
-
-				// Saturation makes harmonics all the way up; a shelf keeps them from
-				// reading as aliasing hiss.
-				const tone = ctx.createBiquadFilter();
-				tone.type = 'lowpass';
-				tone.frequency.value = p.driveTone ?? 8000;
-				shaper.connect(tone);
-
-				/* Saturation raises the level as well as the harmonics -- measured at
-           +4 dB into clipping at 60% -- so give the gain back. */
-				const trim = ctx.createGain();
-				trim.gain.value = 1 / (1 + amt * 1.6);
-				tone.connect(trim);
-				return { in: shaper, out: trim };
-			}
-
-			case 'resonators': {
-				const input = ctx.createGain();
-				const output = ctx.createGain();
-				const mix = pct(p.resMix, 50);
-				const dry = ctx.createGain();
-				dry.gain.value = 1 - mix;
-				input.connect(dry);
-				dry.connect(output);
-				const bp = ctx.createBiquadFilter();
-				bp.type = 'bandpass';
-				bp.frequency.value = p.resFreq ?? 700;
-				bp.Q.value = p.resQ ?? 12;
-				const wet = ctx.createGain();
-				wet.gain.value = mix;
-				input.connect(bp);
-				bp.connect(wet);
-				wet.connect(output);
-				return { in: input, out: output };
 			}
 
 			default:

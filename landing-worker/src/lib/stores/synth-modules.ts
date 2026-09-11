@@ -942,6 +942,133 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		viz: 'meter'
 	},
 	{
+		/* The strike, pluck or breath that starts an acoustic sound.
+		 *
+		 * A resonator needs something to hit it. Reachable in outline from NOISE
+		 * through ENV and FILTER, and kept anyway because the outline is not the
+		 * thing: the contact is a few milliseconds, the window is shaped by how
+		 * hard the mallet is rather than by an ADSR, and both are read at the
+		 * start of the note rather than scheduled. Building it from three cards
+		 * gets you a short noise burst; it does not get you the difference
+		 * between a felt hammer and a stick. */
+		id: 'excite',
+		label: 'EXCT',
+		group: 'SOURCE',
+		color: '#c678dd',
+		descKey: 'synthPatch.mod.excite',
+		inputs: [],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'exLength', label: 'LEN', min: 0.5, max: 200, step: 0.1, def: 8, unit: 'ms', field: true, fixed: true },
+			{ key: 'hardness', label: 'HARD', min: 0, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true },
+			{ key: 'exTone', label: 'TONE', min: 200, max: 18000, step: 10, def: 3000, unit: 'Hz', scale: 'log' }
+		]
+	},
+	{
+		/* A struck or plucked string, as a bank of decaying partials.
+		 *
+		 * The textbook way is Karplus-Strong -- a delay line one period long fed
+		 * back through a damping filter -- and it was built that way first and
+		 * measured unusable: a DelayNode in a feedback loop is stable only to
+		 * about g = 0.90 here, which buys 0.45 s of ring, and by 0.95 it runs
+		 * away. There is no setting that gives a guitar. So it is additive, and
+		 * additive has no such limit because there is no loop.
+		 *
+		 * That is also why it stays a module rather than becoming DELAY plus
+		 * GAIN plus FILTER: the patch those three make is the one that does not
+		 * work. STIFF stretches the partials sharp of the harmonic series, which
+		 * is what makes a piano sound like a piano and not an organ, and nothing
+		 * else in the catalogue can put a partial anywhere but on a harmonic. */
+		id: 'string',
+		label: 'STRING',
+		group: 'RESONATE',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.string',
+		inputs: [AUDIO_IN, { id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'decayTime', label: 'DCAY', min: 0.05, max: 12, step: 0.01, def: 2, unit: 's', field: true, fixed: true },
+			{ key: 'damping', label: 'DAMP', min: 0, max: 100, step: 1, def: 40, unit: '%', field: true, fixed: true },
+			{ key: 'stiffness', label: 'STIF', min: 0, max: 100, step: 1, def: 10, unit: '%', field: true, fixed: true },
+			/* 70, and the engine agrees. The two used to disagree -- the card said
+			   70 and the engine fell back to 100 -- and since an untouched knob is
+			   absent from the patch it was the engine's number that played: the
+			   dry leg went to zero and the strike transient was discarded, so
+			   turning MIX to its own printed default changed the sound. */
+			{ key: 'strBlend', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true, fixed: true }
+		]
+	},
+	{
+		/* The same bank with only odd partials: a cylinder closed at one end.
+		 *
+		 * A clarinet rather than a flute, and the reason it is a separate card
+		 * rather than a switch on STRING is that the partial set is what the
+		 * instrument *is* -- a tube with even partials is not a tube that has
+		 * been detuned, it is a string. */
+		id: 'tube',
+		label: 'TUBE',
+		group: 'RESONATE',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.tube',
+		inputs: [AUDIO_IN, { id: 'pitch', label: 'FREQ', kind: 'mod', role: 'hz' }],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'tubeDecay', label: 'DCAY', min: 0.05, max: 12, step: 0.01, def: 1.5, unit: 's', field: true, fixed: true },
+			{ key: 'tubeDamp', label: 'DAMP', min: 0, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true },
+			{ key: 'tubeOdd', label: 'ODD', min: 0, max: 100, step: 1, def: 100, unit: '%', field: true, fixed: true },
+			{ key: 'tubeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true, fixed: true }
+		]
+	},
+	{
+		/* Three tuned resonances at once.
+		 *
+		 * A drum head or a bell rings at several frequencies that are not a
+		 * harmonic series, which is exactly what a single filter cannot say:
+		 * FILTER's PEAK is one band, and three in series is three filters
+		 * multiplying each other rather than three modes sounding together.
+		 * BODY was this with one band and is gone for that reason -- one peak is
+		 * a FILTER. */
+		id: 'modes',
+		label: 'MODES',
+		group: 'RESONATE',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.modes',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			/* Both read as plain numbers when the bank is built, not bound to the
+			   filters' AudioParams -- three modes are three biquads whose
+			   frequencies are assigned once, so a cable would have nowhere to land.
+			   `fixed` is what stops the canvas offering them as destinations. */
+			{ key: 'modeHz', label: 'BASE', min: 20, max: 8000, step: 1, def: 200, unit: 'Hz', scale: 'log', fixed: true },
+			{ key: 'mode1', label: 'R1', min: 1, max: 8, step: 0.01, def: 1, field: true, fixed: true },
+			{ key: 'mode2', label: 'R2', min: 1, max: 8, step: 0.01, def: 2.4, field: true, fixed: true },
+			{ key: 'mode3', label: 'R3', min: 1, max: 8, step: 0.01, def: 4.1, field: true, fixed: true },
+			{ key: 'modeQ', label: 'Q', min: 1, max: 60, step: 0.1, def: 14, scale: 'log', fixed: true },
+			{ key: 'modeMix', label: 'MIX', min: 0, max: 100, step: 1, def: 70, unit: '%', field: true, fixed: true }
+		]
+	},
+	{
+		/* A room.
+		 *
+		 * Every acoustic instrument is heard in one, and a bare resonator sounds
+		 * like a recording made inside a box of cotton wool. A generated impulse
+		 * rather than a file, so a patch stays self-contained -- and a
+		 * ConvolverNode, which is its own node and reachable no other way: a
+		 * reverb built from delays is a delay network, and it sounds like one. */
+		id: 'space',
+		label: 'SPACE',
+		group: 'RESONATE',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.space',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{ key: 'spaceSize', label: 'SIZE', min: 1, max: 100, step: 1, def: 40, unit: '%', field: true, fixed: true },
+			{ key: 'spaceDecay', label: 'DCAY', min: 1, max: 100, step: 1, def: 50, unit: '%', field: true, fixed: true }
+		]
+	},
+	{
 		/* A transfer curve, applied to every sample.
 		 *
 		 * The primitive under distortion, saturation and wavefolding: all three
@@ -1084,6 +1211,55 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			{ id: 'out', label: 'L', kind: 'audio', role: 'left' },
 			{ id: 'r', label: 'R', kind: 'audio', role: 'right' }
 		],
+		params: []
+	},
+	{
+		/* A stereo pair taken apart into what describes it rather than where it
+		 * sits.
+		 *
+		 * MID is what both channels agree on, SIDE is what only one of them has
+		 * -- the sum and the difference. Not the same decomposition as SPLIT,
+		 * and not reachable from it: L and R are two places, mid and side are
+		 * two *properties*, and the operations you want on each differ. Widening
+		 * a mix is a gain on the side and nothing on the mid; making a reverb
+		 * sit behind the dry signal is the reverse. Neither is sayable in L/R
+		 * without doing the arithmetic by hand.
+		 *
+		 * There was an AMP outlet here, an envelope follower welded on so a
+		 * filter could track the level. That is FOLLOW, and having it here too
+		 * would be the same primitive in two places. */
+		id: 'break',
+		label: 'BREAK',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.break',
+		inputs: [{ id: 'in', label: 'IN', kind: 'audio', role: 'stereo' }],
+		outputs: [
+			{ id: 'out', label: 'MID', kind: 'audio', role: 'mono' },
+			{ id: 'side', label: 'SID', kind: 'audio', role: 'mono' }
+		],
+		params: []
+	},
+	{
+		/* Mid and side back into two channels: L is mid plus side, R is mid
+		 * minus it.
+		 *
+		 * WIDE scales the side on the way, which is what stereo width *is* --
+		 * more side is wider, none is mono, and past unity is wider than what
+		 * was recorded. A socket with no knob behind it: the width is either
+		 * unity or something driving it, and a knob would sum with the cable
+		 * rather than being replaced by it. */
+		id: 'make',
+		label: 'MAKE',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.make',
+		inputs: [
+			{ id: 'in', label: 'MID', kind: 'audio', role: 'mono' },
+			{ id: 'b', label: 'SID', kind: 'audio', role: 'mono' },
+			{ id: 'wide', label: 'WIDE', kind: 'mod', role: 'cv' }
+		],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
 		params: []
 	},
 	{

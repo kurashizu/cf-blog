@@ -21,40 +21,27 @@
 		osc: 'M1 8q3.5-6 7 0t7 0',
 		noise: 'M1 12l2-8 2 6 2-9 2 11 2-7 2 5 2-6',
 		excite: 'M8 2v12M4 5l-2-2M12 5l2-2M4 11l-2 2M12 11l2 2',
-		sub: 'M1 6q3.5-5 7 0t7 0M1 12h14',
-		pulse: 'M1 12V4h5v8h5V4h4',
-		bow: 'M2 13L14 3M3 4l10 9',
 		// SHAPE
 		filter: 'M1 4h7q4 0 5 8',
-		vca: 'M2 13L14 3v10z',
-		// The amplifier triangle, with the line through it that says it can go
-		// either way up: this is a VCA and an inverter at once.
+		// The amplifier triangle, with a line through it: a VCA and an inverter
+		// at once, which is why neither has a card of its own.
 		gain: 'M3 3l10 5-10 5zM1 8h2M13 8h2',
-		drive: 'M1 8q2-6 4 0t4 0 4-6',
 		// A curve that flattens at both ends: the transfer function itself.
 		shape: 'M1 13q3 0 4-5t4-5h6',
-		eq: 'M3 13V6M8 13V3M13 13V9M1 6h4M6 3h4M11 9h4',
-		blend: 'M1 4h6q3 0 3 4t3 4h2M1 12h6',
-		reed: 'M2 8h4q2 0 3-4 1 8 3 4h2',
 		comp: 'M1 3h5l3 5 3 5h3M1 13h14',
 		// RESONATE
 		string: 'M1 8q4-5 7 0t6 0M1 8h1M14 8h1',
 		tube: 'M2 4h12M2 12h12M2 4v8M14 4v8M6 8h4',
 		modes: 'M3 13V5M8 13V2M13 13V7M3 5l5-3 5 5',
-		body: 'M8 2q5 2 5 6t-5 6q-5-2-5-6t5-6M8 6v4',
-		comb: 'M1 13V3M4 13V6M7 13V3M10 13V6M13 13V3',
 		space: 'M8 8m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M8 8m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
 		// MODULATE
 		env: 'M1 13L5 3l3 6v4M8 9h3l3 4',
-		lfo: 'M1 8q2-5 4 0t4 0 4-5',
 		// UTILITY
 		delay: 'M2 4v8M6 5v6M10 7v2M14 8v0M2 8h12',
 		pan: 'M8 13V6M8 6L3 3M8 6l5-3M1 13h4M11 13h4',
 		sum: 'M8 3v10M3 8h10',
 		diff: 'M3 8h10',
 		ring: 'M8 8m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0M4 4l8 8M12 4l-8 8',
-		invert: 'M2 5h5q3 0 3 3t3 3h1M2 11h5',
-		mix: 'M2 4h4l4 4 4 4M2 12h4l4-4',
 		out: 'M4 8h9M10 5l3 3-3 3M2 3v10',
 		// STEREO: one line in, two out -- and the pair that turns sound into numbers.
 		split: 'M2 8h5l5-4M7 8l5 4',
@@ -87,9 +74,7 @@
 		const: 'M4 4h8M8 4v9M5 13h6',
 		add: 'M8 3v10M3 8h10',
 		mul: 'M4 4l8 8M12 4l-8 8',
-		remap: 'M2 12h5M9 4h5M2 12l7-8',
 		clamp: 'M2 5h12M2 11h12M8 5v6',
-		lerp: 'M2 12L14 4M2 12h2M12 4h2M7 8h2',
 		// A value bent on its way through: the shape is the module.
 		map: 'M2 13q8 0 11-10',
 		// A rectangle, because the width is the whole point of it.

@@ -470,11 +470,20 @@ describe('every parameter the engine reads is declared', () => {
 		   AudioParam so a cable can land on it -- scraping only the first
 		   reported GAIN's LVL as dead when it is the one knob the module has.
 		   Both forms count, along with the two scaled variants. */
+		/* Three ways the engine reads a knob, and all three count.
+		
+		   `p('key')` is the module builder's reader. `knob(param, 'key', def)`
+		   reads it *and* registers the AudioParam, so a cable can land on it.
+		   And the acoustic modules take the default branch, where the params
+		   arrive as a plain object and are read as `p.key` -- scraping only the
+		   first two reported every knob on STRING, TUBE and MODES as dead when
+		   the forwarding list carries all of them. */
 		const read = new Set([
 			...[...SOURCE.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1]),
 			...[...SOURCE.matchAll(/\bknob(?:At|Pct)?\([^,]+,\s*'([a-zA-Z][a-zA-Z0-9]*)'/g)].map(
 				(m) => m[1]
-			)
+			),
+			...[...SOURCE.matchAll(/\bp\.([a-zA-Z][a-zA-Z0-9]*)/g)].map((m) => m[1])
 		]);
 		const pureRead = new Set(
 			[...NODE_GRAPH.matchAll(/\bp\('([a-zA-Z][a-zA-Z0-9]*)'/g)].map((m) => m[1])
