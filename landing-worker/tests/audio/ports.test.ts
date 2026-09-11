@@ -2960,3 +2960,459 @@ describe('MODES FREQ: the resonator with no way to be tuned', () => {
    So it is reported instead. The key-tracking that *does* work is a MUL or a
    MAP on the cable turning semitones into hertz, and `audio.test.ts` covers
    that shape already at `entry.pitch -> f.a`. */
+
+/* ──────────────────────────────────────────────────────────────────────────
+   OSC PHS as a *moving* offset: two routes, exactly one of them per cable
+
+   The block above measures PHS as a value, which is what it was: a rotation
+   baked into the wave table when the note was built, so a cable carrying a
+   signal into it did nothing at all. The engine's own comment said that was
+   unavoidable -- "a delay is not one either: a fixed delay is a different phase
+   at every frequency, so it would drift as soon as the note changed pitch".
+
+   A *fixed* delay, yes. One scaled by the note's own period is not: half a turn
+   is `0.5 / f` seconds, and that is a half turn at every f. So there are now two
+   mechanisms on this inlet, the same shape FREQ already has:
+
+     a value (CONST, ADD, any pure node) keeps the wave table, which is exact;
+     a signal (TO-SIG, TO-CV, an oscillator) takes a DelayNode of `period *
+     turns`, which can move and costs a startup transient while the line fills.
+
+   What is asserted here is the *seam*. Three things can go wrong with two
+   mechanisms and only one of them is "the new path does not work":
+
+     both run, and half a turn plus half a turn is a whole turn -- no shift at
+     all, which is the bug the first draft shipped and read 0.8306 where silence
+     was expected;
+     only the delay runs, and the exact cancellation the wave table gives up
+     becomes a 0.1966 transient that no test asserting `toBeCloseTo` would
+     notice;
+     only the table runs, and the cable is inert again, which is the defect this
+     whole file exists to catch.
+
+   Every number below is a real reading from this bench. Sine throughout, and
+   that is deliberate -- see the shape note at the end of the block, which
+   records a pre-existing mismatch these tests would otherwise be blamed for.
+   ────────────────────────────────────────────────────────────────────────── */
+describe('OSC PHS: a value rotates the table, a signal delays the line', () => {
+	/* The same summed pair the block above uses, because phase is only audible
+	   relationally: one oscillator sounds identical at every offset, and it is
+	   the second one arriving early or late against the first that makes a
+	   number out of it. */
+	const twoOsc = (
+		gp: Record<string, number>,
+		nodes: Node[] = [],
+		cables: Cable[] = [],
+		waves: Record<string, string> = {}
+	) => ({
+		...patch(
+			[
+				{ id: 'o1', type: 'osc' },
+				{ id: 'o2', type: 'osc' },
+				{ id: 's', type: 'sum' },
+				...nodes
+			],
+			[
+				{ from: 'o1', fromPort: 'out', to: 's', toPort: 'in' },
+				{ from: 'o2', fromPort: 'out', to: 's', toPort: 'in' },
+				{ from: 's', fromPort: 'out', to: 'output', toPort: 'in' },
+				...cables
+			],
+			gp
+		),
+		graphWaves: waves
+	});
+
+	/** PHS driven by a number: a CONST, which resolves before the graph exists. */
+	const byValue = (turns: number) =>
+		twoOsc({ ...constAt('c', 6, turns) }, [{ id: 'c', type: 'const' }], [
+			{ from: 'c', fromPort: 'out', to: 'o2', toPort: 'phase' }
+		]);
+	/* PHS driven by a signal: a TO-SIG holding a DC level, which is the smallest
+	   thing that is genuinely a signal rather than a number. An oscillator would
+	   also do it and is used further down, but a DC isolates "this went through
+	   the delay" from "this moved", which are two separate claims. */
+	const bySignal = (turns: number) =>
+		twoOsc({ 'ts.level': turns }, [{ id: 'ts', type: 'tosig' }], [
+			{ from: 'ts', fromPort: 'out', to: 'o2', toPort: 'phase' }
+		]);
+	/** Slice 8 of sixteen over two seconds: a full second after the note starts. */
+	const tail = async (t: Record<string, unknown>) => (await render(t, 16, 2)).envelope[8];
+
+	it('a value still cancels to exact zero, which the delay cannot do', async () => {
+		/* The claim most at risk, and the reason both routes are kept rather than
+		   the obvious simplification of using the delay for everything.
+
+		   A wave table rotated half a turn is the *same samples* negated, so the
+		   pair sums to zero in exact arithmetic and the render carries no sample
+		   of any size anywhere: peak 0, not 0.0001, not a transient in slice 0. A
+		   delay line cannot make that claim -- it starts empty, so the first
+		   period of the second oscillator has nothing to cancel against, and the
+		   measured signal route leaves 0.1966 of peak behind while it fills.
+
+		   `toBe(0)` rather than a tolerance, because a tolerance is exactly what
+		   a delay-for-everything rewrite would pass: 0.1966 is a twelfth of the
+		   0.8337 the unwired pair peaks at, which reads as "very nearly silent"
+		   to any assertion written with `toBeCloseTo`. Only the equality sees the
+		   difference between the two mechanisms. */
+		const together = await render(twoOsc({}), 16, 2);
+		const cancelled = await render(byValue(0.5), 16, 2);
+		const delayed = await render(bySignal(0.5), 16, 2);
+		expect(together.peak).toBeCloseTo(0.8337, 3);
+		expect(
+			cancelled.peak,
+			`the value route must be exact, got ${JSON.stringify(cancelled.envelope)}`
+		).toBe(0);
+		// And the signal route, at the same offset, demonstrably is not.
+		expect(delayed.peak).toBeCloseTo(0.1966, 3);
+		expect(delayed.peak).toBeGreaterThan(0);
+	}, 60000);
+
+	it('a signal cancels too, after the line has filled', async () => {
+		/* The other half: the delay route is not merely "different", it arrives
+		   at the same place. A TO-SIG holding 0.5 puts the second oscillator half
+		   a period late and from the moment the line is full the sum is silent --
+		   slices 1 through 15 of a two-second render all read exactly 0.0000,
+		   against 0.5871 for the same patch at an offset of zero.
+
+		   The transient is real and is confined to the first slice: at 64 slices
+		   over one second only 19 of them carry anything at all, and the largest
+		   is 0.0530 in slice 1. That is the delay line filling at 220 Hz, which
+		   takes one period -- four and a half milliseconds, a third of a slice.
+
+		   Asserted on the tail rather than on `peak`, because `peak` is a
+		   whole-render maximum and the transient lives inside it: a test reading
+		   peak alone cannot tell a cancelling delay from one that never cancels. */
+		const moved = await render(bySignal(0.5), 16, 2);
+		const flat = await render(bySignal(0), 16, 2);
+		expect(moved.envelope.slice(1).every((v) => v === 0), `${JSON.stringify(moved.envelope)}`).toBe(true);
+		expect(flat.envelope[8]).toBeCloseTo(0.5871, 3);
+		// The cable did something: a signal of zero turns is the unwired reading.
+		expect(await tail(twoOsc({}))).toBeCloseTo(0.5871, 3);
+	}, 60000);
+
+	it('the two routes agree on a static offset, which is where doubling shows', async () => {
+		/* The specific regression this pins, and the one the first draft shipped.
+
+		   When both mechanisms ran, the table rotated by the offset *and* the
+		   delay shifted by it again -- and at half a turn each that sums to a full
+		   turn, which is no shift at all. The pair that should have been silent
+		   read 0.8306, indistinguishable from no cable. The failure is invisible
+		   at every offset except through this comparison: a doubled 0.25 is 0.5,
+		   which cancels, so a test that only checked "the quarter turn does
+		   something" would have passed on it.
+
+		   So the assertion is the whole curve, both doors, seven offsets. Measured
+		   at 220 Hz on a two-second render, slice 8:
+
+		     turns   0.1     0.25    0.4     0.5   0.6     0.75    0.9
+		     CONST   0.5848  0.5706  0.2974  0     0.2974  0.5706  0.5850
+		     TO-SIG  0.5848  0.5706  0.2974  0     0.2974  0.5706  0.5850
+
+		   Identical to four decimals at every one, and the shape is right: a
+		   cosine-shaped fall to silence at half a turn and back, symmetric about
+		   it. If either route ever applied the offset twice, its column would be
+		   the *other* column read at double the angle -- 0.25 would fall to zero
+		   and 0.5 would rise back to 0.5871 -- and the two would disagree at every
+		   entry except 0.5 and the ends.
+
+		   0.9 rather than a second reading at 0.1 because a route that had the
+		   sign of the rotation backwards would be symmetric about zero and pass
+		   everything else here. */
+		for (const [turns, expected] of [
+			[0.1, 0.5848],
+			[0.25, 0.5706],
+			[0.4, 0.2974],
+			[0.6, 0.2974],
+			[0.75, 0.5706],
+			[0.9, 0.585]
+		] as const) {
+			const v = await tail(byValue(turns));
+			const s = await tail(bySignal(turns));
+			expect(v, `CONST at ${turns} turns`).toBeCloseTo(expected, 3);
+			expect(s, `TO-SIG at ${turns} turns read ${s} against the value route's ${v}`).toBeCloseTo(
+				expected,
+				3
+			);
+		}
+		/* And half a turn, where the two routes are allowed to differ in *peak*
+		   but not in where they settle. Both tails are zero; only the value route
+		   is zero everywhere. */
+		expect(await tail(byValue(0.5))).toBe(0);
+		expect(await tail(bySignal(0.5))).toBe(0);
+	}, 180000);
+
+	it('routes by what is on the cable, not by which card is on the far end', async () => {
+		/* `wiredPorts` exists because `cvIn` cannot answer this question: it
+		   returns the fallback for a signal source, so a port an oscillator feeds
+		   looks unwired to it. "Wired, and no number came down it" is what
+		   identifies a signal, and this is the test that the two halves of that
+		   are both load-bearing.
+
+		   ADD is a pure node -- it resolves to a number before the graph is built
+		   -- so ADD of 0.25 and 0.25 has to be the CONST of 0.5 exactly: peak 0,
+		   the wave table. The value route is a family, and an implementation that
+		   special-cased `type === 'const'` would pass every other test in this
+		   block.
+
+		   TO-CV is the mirror image and the more interesting one. It sits between
+		   a signal and a value, and what matters is that it behaves as whatever
+		   it actually hands over: a TO-SIG through a TO-CV into PHS reads 0.1966
+		   peak with a zero tail, which is the *signal* route's pair of numbers to
+		   four decimals. So the routing follows the cable and not the card. */
+		const added = await render(
+			twoOsc({ 'ad.a': 0.25, 'ad.b': 0.25 }, [{ id: 'ad', type: 'add' }], [
+				{ from: 'ad', fromPort: 'out', to: 'o2', toPort: 'phase' }
+			]),
+			16,
+			2
+		);
+		expect(added.peak, 'a pure node takes the exact route').toBe(0);
+
+		const viaCv = await render(
+			twoOsc({ 'ts.level': 0.5 }, [{ id: 'ts', type: 'tosig' }, { id: 'tc', type: 'tocv' }], [
+				{ from: 'ts', fromPort: 'out', to: 'tc', toPort: 'in' },
+				{ from: 'tc', fromPort: 'out', to: 'o2', toPort: 'phase' }
+			]),
+			16,
+			2
+		);
+		expect(viaCv.peak, 'a signal takes the delay, transient and all').toBeCloseTo(0.1966, 3);
+		expect(viaCv.envelope[8]).toBe(0);
+	}, 90000);
+
+	it('holds the same offset at every pitch, which a fixed delay would not', async () => {
+		/* The claim the old comment denied, measured where it said the idea would
+		   fall over: "a fixed delay is a different phase at every frequency, so it
+		   would drift as soon as the note changed pitch".
+
+		   It is not a fixed delay. `period = 1 / osc.frequency.value` is read from
+		   the oscillator this note actually plays, so half a turn is `0.5 / f`
+		   seconds and is half a turn at all of them. Across five octaves, the tail
+		   of a half-turn pair against the same pair unshifted:
+
+		     Hz     110     220     440     880     1760
+		     half   0       0       0.0001  0.0002  0.0038
+		     flat   0.5919  0.5871  0.5833  0.5812  0.5788
+
+		   The residue climbing with frequency is the delay line's linear
+		   interpolation: `delayTime` is quantised to the sample grid, and at 1760
+		   Hz one period is twenty-five samples, so half of one is twelve and a
+		   half and the half-sample is what is left over. At 110 Hz a period is
+		   four hundred samples and there is nothing left at all. A *fixed* delay
+		   would not degrade gently like this -- it would be right at one frequency
+		   and arbitrary at the other four, which at 0.5 turns means the 110 Hz
+		   entry cancelling and the 1760 entry reading the full 0.58.
+
+		   0.02 is the tolerance rather than the readings themselves, because what
+		   is being claimed is "cancelled at every octave" and 0.0038 against
+		   0.5788 is a factor of 150. Pinning 0.0038 exactly would make this a test
+		   about the interpolator. */
+		const atPitch = (hz: number, turns: number) =>
+			({
+				...patch(
+					[
+						{ id: 'o1', type: 'osc' },
+						{ id: 'o2', type: 'osc' },
+						{ id: 's', type: 'sum' },
+						{ id: 'cp', type: 'const' },
+						{ id: 'ts', type: 'tosig' }
+					],
+					[
+						{ from: 'cp', fromPort: 'out', to: 'o1', toPort: 'pitch' },
+						{ from: 'cp', fromPort: 'out', to: 'o2', toPort: 'pitch' },
+						{ from: 'o1', fromPort: 'out', to: 's', toPort: 'in' },
+						{ from: 'o2', fromPort: 'out', to: 's', toPort: 'in' },
+						{ from: 's', fromPort: 'out', to: 'output', toPort: 'in' },
+						{ from: 'ts', fromPort: 'out', to: 'o2', toPort: 'phase' }
+					],
+					{ ...constAt('cp', 7, hz), 'ts.level': turns }
+				),
+				graphWaves: {}
+			}) as Record<string, unknown>;
+
+		for (const hz of [110, 220, 440, 880, 1760]) {
+			const half = await tail(atPitch(hz, 0.5));
+			const flat = await tail(atPitch(hz, 0));
+			expect(flat, `${hz} Hz unshifted`).toBeGreaterThan(0.55);
+			expect(half, `${hz} Hz half-turn tail ${half} against ${flat}`).toBeLessThan(0.02);
+		}
+	}, 180000);
+
+	it('an LFO sweeps it, which is the whole point of the delay route', async () => {
+		/* `delayTime` is an a-rate AudioParam, so a cable on it sums per sample
+		   rather than per block and the phase slides continuously through the
+		   note. That is what the wave table cannot do at any price: a table is
+		   chosen when the voice is built and is the same table until the key
+		   lifts.
+
+		   An oscillator at 3 Hz on the second one's PHS, through a GAIN that sets
+		   the depth in turns, against the identical patch at depth 0. Sixteen
+		   slices over two seconds, and what is read is the *spread* -- the
+		   loudest slice minus the quietest -- because a swept phase is a patch
+		   whose level moves and a patch whose level moves is one that measures
+		   differently in different slices:
+
+		     depth   0       0.25    0.5
+		     spread  0.1171  0.1623  0.3807
+		     min     0.4701  0.4254  0.2065
+
+		   The 0.1171 floor is not the LFO: it is slice 0 catching the note's
+		   attack, which every render in this file has. Every other slice at depth
+		   0 reads 0.5871 or 0.5872, so the unmodulated patch is flat to four
+		   decimals and the spread is entirely the first slice.
+
+		   At depth 0.5 the quietest slice falls to 0.2065, which is well under
+		   half the unmodulated level, and that is the assertion: the pair is
+		   being swept in and out of cancellation three times a second. Ordering
+		   rather than constants for the spreads, since the number depends on
+		   where the slice boundaries land against a 3 Hz cycle -- but each depth
+		   has to spread more than the one below it, and the deepest has to reach
+		   a slice quieter than anything an unmodulated pair produces. */
+		const lfo = (depth: number) =>
+			({
+				...patch(
+					[
+						{ id: 'o1', type: 'osc' },
+						{ id: 'o2', type: 'osc' },
+						{ id: 's', type: 'sum' },
+						{ id: 'lf', type: 'osc' },
+						{ id: 'cl', type: 'const' },
+						{ id: 'dp', type: 'gain' }
+					],
+					[
+						{ from: 'cl', fromPort: 'out', to: 'lf', toPort: 'pitch' },
+						{ from: 'lf', fromPort: 'out', to: 'dp', toPort: 'in' },
+						{ from: 'dp', fromPort: 'out', to: 'o2', toPort: 'phase' },
+						{ from: 'o1', fromPort: 'out', to: 's', toPort: 'in' },
+						{ from: 'o2', fromPort: 'out', to: 's', toPort: 'in' },
+						{ from: 's', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					{ ...constAt('cl', 7, 3), 'dp.level': depth }
+				),
+				graphWaves: {}
+			}) as Record<string, unknown>;
+		const spread = async (depth: number) => {
+			const e = (await render(lfo(depth), 16, 2)).envelope;
+			return { spread: Math.max(...e) - Math.min(...e), min: Math.min(...e), e };
+		};
+		const flat = await spread(0);
+		const quarter = await spread(0.25);
+		const half = await spread(0.5);
+		// The control is flat everywhere but the attack slice.
+		expect(flat.e.slice(1).every((v) => Math.abs(v - 0.5871) < 0.001), JSON.stringify(flat.e)).toBe(true);
+		expect(quarter.spread, `depth 0.25 spread ${quarter.spread} vs ${flat.spread}`).toBeGreaterThan(
+			flat.spread
+		);
+		expect(half.spread, `depth 0.5 spread ${half.spread} vs ${quarter.spread}`).toBeGreaterThan(
+			quarter.spread
+		);
+		// Swept into cancellation: quieter than the unmodulated pair ever gets.
+		expect(half.min).toBeLessThan(flat.min * 0.6);
+	}, 120000);
+
+	it('is not hard sync, and the pitch says which oscillator won', async () => {
+		/* The honest negative, written because this patch -- a master into a
+		   slave's PHS -- is the exact cabling a player reaches for when they want
+		   sync, and the sound it makes is close enough to be mistaken for it.
+
+		   It is not sync, and the difference is not subjective. Hard sync resets
+		   the slave's phase on the master's cycle, so the *master* sets the
+		   fundamental and sweeping the slave moves the timbre while the pitch
+		   stands still. This moves the pitch: the slave is an oscillator running
+		   at its own frequency with its phase pushed around, so the fundamental
+		   is the slave's.
+
+		   Measured through a narrow bandpass, a 110 Hz master into a slave swept
+		   220 -> 440 -> 880, reading at four places on the spectrum:
+
+		     slave    110     220     440     880
+		     220      0.2456  0.2223  0.1430  0.0785
+		     440      0.1913  0.1422  0.2837  0.1042
+		     880      0.0509  0.0764  0.1018  0.2976
+
+		   The diagonal is the answer. The loudest reading is at the slave's own
+		   frequency in every row, and the 110 Hz column -- the master's -- falls
+		   away to a fifth of itself as the slave climbs. Under real sync that
+		   column would be the largest and would not move at all.
+
+		   Asserted as orderings rather than constants because what is being
+		   claimed is which oscillator owns the fundamental, and that survives the
+		   levels shifting. Pinning the numbers would make this a test about the
+		   bandpass. */
+		const syncRig = (slaveHz: number, listen: number) =>
+			({
+				...patch(
+					[
+						{ id: 'm', type: 'osc' },
+						{ id: 'sl', type: 'osc' },
+						{ id: 'cm', type: 'const' },
+						{ id: 'cs', type: 'const' },
+						{ id: 'bp', type: 'filter' }
+					],
+					[
+						{ from: 'cm', fromPort: 'out', to: 'm', toPort: 'pitch' },
+						{ from: 'cs', fromPort: 'out', to: 'sl', toPort: 'pitch' },
+						{ from: 'm', fromPort: 'out', to: 'sl', toPort: 'phase' },
+						{ from: 'sl', fromPort: 'out', to: 'bp', toPort: 'in' },
+						{ from: 'bp', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					{
+						...constAt('cm', 7, 110),
+						...constAt('cs', 7, slaveHz),
+						...listenAt(listen, 25)
+					}
+				),
+				graphWaves: {}
+			}) as Record<string, unknown>;
+		const at = async (slave: number, listen: number) =>
+			(await render(syncRig(slave, listen), 8, 1)).envelope[2];
+
+		const master220 = await at(220, 110);
+		const own220 = await at(220, 220);
+		const master880 = await at(880, 110);
+		const own880 = await at(880, 880);
+		/* The slave owns its own fundamental at both ends of the sweep, which is
+		   the positive half of "not sync". */
+		expect(own880, `slave 880 heard at 880: ${own880}, at 110: ${master880}`).toBeGreaterThan(
+			master880
+		);
+		/* And the master's partial collapses as the slave climbs -- 0.2456 to
+		   0.0509, a factor of nearly five. Real sync holds this column still. */
+		expect(master880, `master partial ${master220} -> ${master880}`).toBeLessThan(master220 * 0.5);
+		/* At the bottom of the sweep the master is still audible, so the drop
+		   above is the sweep doing it rather than the cable never having worked:
+		   a slave one octave up leaves plenty at 110. */
+		expect(master220).toBeGreaterThan(0.15);
+		expect(own220).toBeGreaterThan(0.15);
+	}, 120000);
+});
+
+/* The four basic shapes do not all cancel, and that is `phasedWave` rather than
+   anything the PHS inlet does.
+
+   Written down because it cost an afternoon and the next person will measure it
+   too. Every test above uses a sine, and the reason is that a *rotated* OSC and
+   an unrotated one are not the same waveform: a rotated one is reconstructed
+   from 64 harmonics through `createPeriodicWave`, while an unrotated one reaches
+   `osc.type` directly and gets the browser's own band-limited table. For a sine
+   those agree to the sample. For the other three they do not, so a pair with PHS
+   on one of them is two different waves beating and cancellation is off the
+   table before phase is involved at all.
+
+   Measured with the offset on *one* oscillator, half a turn, slice 8 of 16:
+   sine 0, square 0.0198, sawtooth 0.4313 against an unwired 0.4265 -- the saw
+   pair is no quieter shifted than unshifted. Put a CONST on *both* oscillators
+   so that both take the table path, and sine, square and triangle all cancel to
+   exact zero at any pair half a turn apart (0.001/0.501, 0.25/0.75, 0.1/0.6 all
+   read 0). The saw still does not: 0.3345 at all three, which is the 64-harmonic
+   truncation -- a saw is the slowest-converging of the four and its Gibbs
+   overshoot does not negate with the rest of it.
+
+   None of that is new and none of it is the two routes disagreeing: it is the
+   same table the static PHS field has used since it shipped, and the phase-cancel
+   fixture in `audio.test.ts` is a sine for the same reason. It is recorded here
+   rather than pinned, because asserting 0.4313 would be asserting that a saw
+   never cancels, and the fix -- 64 harmonics is not enough, or route the
+   unrotated oscillator through the same table -- should make this go away rather
+   than go red. */
