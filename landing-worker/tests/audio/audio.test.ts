@@ -191,3 +191,68 @@ describe('TREMOLO GATE: 1 Hz square switching the level', () => {
 		expect(spread(through.envelope)).toBeGreaterThan(0.1);
 	}, 45000);
 });
+
+describe('PHASE CANCEL: two 500 Hz sines summed', () => {
+	/* Two oscillators at the same frequency into one SUM, and the only thing
+	   that differs between the two halves of this test is one PHS field.
+
+	   It is here because phase is the one control whose effect is *entirely*
+	   relational: a single oscillator sounds identical at every phase, so
+	   nothing about one module in isolation can tell you PHS works. Only the
+	   pair says so, and only by what comes out.
+
+	   The patch was drawn in the editor and exported, so what these render is
+	   what the canvas produces rather than a graph written out by hand. */
+	const phase = () =>
+		JSON.parse(readFileSync('tests/audio/phase-cancel.preset.json', 'utf8')).timbre as Record<
+			string,
+			unknown
+		>;
+	/* The second oscillator's PHS. The first is pinned at 1 in the fixture. */
+	const PHS2 = 'const-mtwqc25q-2.value';
+
+	const withPhase = (v: number) => {
+		const t = phase();
+		return { ...t, graphParams: { ...(t.graphParams as object), [PHS2]: v } };
+	};
+
+	it('sounds when both are in phase', async () => {
+		/* Both at 1, which is one whole turn and wraps to no rotation -- so this
+		   is two identical sines adding. Loud, and louder than one alone.
+
+		   The half that would fail if PHS ever started rotating when it should
+		   not: a test that only checked the cancelling case would pass just as
+		   well on an oscillator that had gone silent for some other reason. */
+		const r = await render(withPhase(1), 6);
+		expect(r.ok).toBe(true);
+		const body = r.envelope.slice(1);
+		expect(Math.min(...body), `envelope: ${JSON.stringify(r.envelope)}`).toBeGreaterThan(0.5);
+		// Steady: two sines at one frequency beat against nothing.
+		expect(Math.max(...body) - Math.min(...body)).toBeLessThan(0.01);
+	}, 30000);
+
+	it('is exactly silent when they are half a turn apart', async () => {
+		/* 1 and 0.5: half a turn of difference, so every sample of one is the
+		   negative of the other and the sum is nothing at all.
+
+		   Asserted as exactly zero rather than merely quiet, which is the point
+		   of using cancellation as the check -- a phase that is close but wrong
+		   leaves an audible residue, and only an exact anti-phase pair sums to
+		   silence. Nothing else in the patch changed between this and the test
+		   above. */
+		const r = await render(withPhase(0.5), 6);
+		expect(r.ok).toBe(true);
+		expect(r.peak, `expected silence, got: ${JSON.stringify(r.envelope)}`).toBe(0);
+	}, 30000);
+
+	it('lands in between at a quarter turn', async () => {
+		/* Neither adding nor cancelling. Without this, both tests above would
+		   still pass if PHS snapped to the nearest half turn -- the two cases
+		   they check are exactly the two a snapping implementation gets right. */
+		const r = await render(withPhase(0.25), 6);
+		const body = r.envelope.slice(1);
+		const peak = Math.max(...body);
+		expect(peak).toBeGreaterThan(0.5);
+		expect(peak).toBeLessThan(0.58);
+	}, 30000);
+});
