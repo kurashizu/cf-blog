@@ -22,6 +22,7 @@ import {
 	execDelays,
 	runs,
 	isPureNode,
+	isValueNode,
 	PURE_NODES,
 	type EvalGraph,
 	type NoteEvent
@@ -302,11 +303,90 @@ describe('the pure nodes', () => {
 		expect(evalPure('map', { a: 0.25 }, table)).toBeCloseTo(0.75, 6);
 	});
 
-	it('knows which types are pure', () => {
-		for (const id of ['const', 'add', 'mul', 'clamp', 'lerp', 'map']) {
-			expect(isPureNode(id)).toBe(true);
+	it('shapes a signal per sample, with the same curve it computes as a value', () => {
+		/* The reason MAP is not a pure node any more. As one, a waveform arriving
+		   at its inlet was read as the fallback and vanished -- measured, a TO-CV
+		   into MAP's A came out 0 rather than following the wave. A shaping node
+		   that cannot shape a signal is the wrong half of the module.
+		
+		   The table is filled by calling the evaluator, so the curve the engine
+		   plays, the value a pure read computes and the line the card draws are
+		   one function. Checked by comparing the two at the same points rather
+		   than by trusting that they were written the same way. */
+		const ctx = new FakeCtx();
+		const S = modularSynth as unknown as {
+			noiseBuffer: unknown;
+			buildGraphNode(...a: unknown[]): { in: unknown; out: unknown } | null;
+		};
+		S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+		const P: Record<string, number> = {
+			shape: MAP_SHAPES.findIndex((m) => m.id === 'exp'),
+			inLo: -1,
+			inHi: 1,
+			outLo: 0,
+			outHi: 1
+		};
+		const made = S.buildGraphNode(
+			ctx,
+			'map',
+			(k: string, d: number) => P[k] ?? d,
+			220,
+			0,
+			0.5,
+			[],
+			'n1',
+			{},
+			(_n: string, _p: string, f: number) => f,
+			{ velocity: 0.8, noteIndex: 48, tuning: 440 },
+			0.5
+		);
+		expect(made).not.toBe(null);
+		const shaper = ctx.nodes.find((n) => n.kind === 'shaper') as unknown as {
+			curve: Float32Array;
+			oversample: string;
+		};
+		expect(shaper, 'no waveshaper built').toBeTruthy();
+		/* 2x, because a lookup table makes harmonics above the sample rate and
+		   they fold back down as tones nobody played. */
+		expect(shaper.oversample).toBe('2x');
+
+		/* The table is indexed -1..1 and stores its result normalised to the
+		   same span, which is what the gain and offset either side undo. Read a
+		   few points back out and they have to be the evaluator's answers. */
+		const fromTable = (x: number) => {
+			const t = ((x - P.inLo) / (P.inHi - P.inLo)) * 2 - 1;
+			const i = Math.round(((t + 1) / 2) * (shaper.curve.length - 1));
+			return ((shaper.curve[i] + 1) / 2) * (P.outHi - P.outLo) + P.outLo;
+		};
+		for (const x of [-1, -0.5, 0, 0.5, 1]) {
+			expect(fromTable(x), `x=${x}`).toBeCloseTo(evalPure('map', { a: x }, P), 3);
 		}
-		for (const id of ['osc', 'out', 'filter', 'when']) expect(isPureNode(id)).toBe(false);
+
+		// And the ends still hold, which is what clamps a signal past the range.
+		expect(fromTable(-1)).toBeCloseTo(P.outLo, 3);
+		expect(fromTable(1)).toBeCloseTo(P.outHi, 3);
+	});
+
+	it('knows which types are pure, and which merely have a value', () => {
+		/* Two questions that used to be one. `isPureNode` answers the engine's --
+		   is there nothing to build -- and `isValueNode` the resolver's -- can
+		   this be pulled as a number.
+		
+		   MAP is the node that split them. Its curve is a transfer function: fed
+		   ENTRY's velocity it is one number per note, and fed a waveform it has
+		   to bend every sample or it is shaping nothing. So it is pullable and
+		   buildable at once, and which happens is decided per cable by what sits
+		   at the far end. */
+		for (const id of ['const', 'add', 'mul', 'clamp']) {
+			expect(isPureNode(id), id).toBe(true);
+			expect(isValueNode(id), id).toBe(true);
+		}
+		expect(isPureNode('map')).toBe(false);
+		expect(isValueNode('map')).toBe(true);
+		for (const id of ['osc', 'out', 'filter', 'when']) {
+			expect(isPureNode(id), id).toBe(false);
+			expect(isValueNode(id), id).toBe(false);
+		}
 	});
 });
 

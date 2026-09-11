@@ -714,8 +714,16 @@ class ModularSynth {
     
        Derived from the pure-node table rather than typed out beside it: the
        hand-written copy happened to be correct, and stayed correct only for as
-       long as whoever added a pure node remembered this list existed. */
-		const isModOnly = (type: string) => isPureNode(type) || type === 'env' || type === 'lfo';
+       long as whoever added a pure node remembered this list existed.
+
+       Three names sit beside it. ENV emits a control curve. MAP and TO-CV emit
+       a control value through real audio nodes -- MAP's curve is a
+       WaveShaperNode so it can bend a waveform sample by sample, and TO-CV is
+       the gain that carries one across the family line -- so the table cannot
+       classify them, and an unwired one would put its offset into the mix as
+       DC. What they emit decides, not how they are built. */
+		const isModOnly = (type: string) =>
+			isPureNode(type) || type === 'env' || type === 'map' || type === 'tocv';
 
 		for (const node of order) {
 			/* A knob reads its cable first, and its own setting when there is none.
@@ -1216,6 +1224,83 @@ class ModularSynth {
 				rect.connect(smooth);
 				smooth.connect(lift);
 				return { in: finp, out: lift, mod };
+			}
+
+			case 'map': {
+				/* The same transfer curve MAP always computed, applied per sample.
+        
+           It was a pure node: one number pulled once per note, which meant a
+           waveform arriving at its inlet was read as the fallback and vanished
+           -- measured, a TO-CV into MAP's A came out 0 rather than following
+           the wave. A shaping node that cannot shape a signal is the wrong
+           half of the module.
+        
+           A WaveShaperNode is the mechanism, because a lookup table *is* an
+           arbitrary function applied sample by sample. Its domain is fixed at
+           -1..1, so the ranges live in the nodes either side: a gain and an
+           offset map X.LO..X.HI onto -1..1 going in, and the reverse pair puts
+           the result into Y.LO..Y.HI coming out.
+        
+           The table is filled by calling the evaluator, so the curve here and
+           the curve a pure read computes are one function. Writing the shapes
+           out a second time is the duplication this file has drifted on before
+           -- and the card draws through the same call, so all three agree. */
+				const lo = p('inLo', 0);
+				const hi = p('inHi', 1);
+				const span = hi - lo || 1;
+
+				/* In: x -> (x - lo) / span * 2 - 1, as a gain and an offset. The
+           shaper clamps its own domain, which is what gives the ends their
+           hold: anything past X.HI reads the last entry of the table. */
+				const inGain = ctx.createGain();
+				inGain.gain.value = 2 / span;
+				const inOffset = ctx.createConstantSource();
+				inOffset.offset.value = -1 - (2 * lo) / span;
+				sources.push(inOffset);
+				const shaped = ctx.createGain();
+				inGain.connect(shaped);
+				inOffset.connect(shaped);
+
+				const shaper = ctx.createWaveShaper();
+				const N = 1024;
+				const table = new Float32Array(N);
+				const outLo = p('outLo', 0);
+				const outHi = p('outHi', 1);
+				const outSpan = outHi - outLo;
+				for (let i = 0; i < N; i++) {
+					// The table's index is -1..1; ask the evaluator in X's own units.
+					const t = (i / (N - 1)) * 2 - 1;
+					const x = lo + ((t + 1) / 2) * span;
+					const y = PURE_NODES.map(
+						{ get: (port, f) => (port === 'a' ? x : f) },
+						(key, def) => p(key, def)
+					);
+					/* Stored normalised, because the shaper's own output is read as
+             -1..1 by everything after it. The scaling back out happens in the
+             two nodes below, where Y.LO and Y.HI can be anything -- a cutoff
+             of 8000 has no business inside a lookup table. */
+					table[i] = outSpan === 0 ? 0 : ((y - outLo) / outSpan) * 2 - 1;
+				}
+				shaper.curve = table;
+				/* 2x, for the reason SHAPE oversamples: a lookup table makes
+           harmonics above the sample rate, and they fold back down as tones
+           nobody played. A gentle curve barely needs it and a steep one -- a
+           GATE, a staircase -- very much does. */
+				shaper.oversample = '2x';
+				shaped.connect(shaper);
+
+				/* Out: y = outLo + (t + 1) / 2 * outSpan, the inverse pair. */
+				const outGain = ctx.createGain();
+				outGain.gain.value = outSpan / 2;
+				const outOffset = ctx.createConstantSource();
+				outOffset.offset.value = outLo + outSpan / 2;
+				sources.push(outOffset);
+				const result = ctx.createGain();
+				shaper.connect(outGain);
+				outGain.connect(result);
+				outOffset.connect(result);
+
+				return { in: inGain, out: result, mod };
 			}
 
 			case 'shape': {

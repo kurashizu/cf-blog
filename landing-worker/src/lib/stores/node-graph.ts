@@ -268,7 +268,49 @@ export const PURE_NODES: Record<string, PureFn> = {
 	}
 };
 
+/**
+ * Nodes whose function lives in `PURE_NODES` but which are not pure.
+ *
+ * MAP is the one. Its curve is the shape of a transfer function, and a
+ * transfer function has to be applied to every sample or it cannot shape a
+ * waveform at all -- as a pure node it read a signal at its inlet as the
+ * fallback, so a wave arriving there vanished rather than being bent.
+ *
+ * It is built as a WaveShaperNode now, and the table is filled by calling the
+ * entry below: the engine, the resolver and the card's preview all run one
+ * function, which is what stops the drawn curve and the heard curve drifting
+ * apart. So the row stays and only the classification changes.
+ */
+const NOT_PURE = new Set(['map']);
+
+/**
+ * Does this node hand back a value rather than build audio?
+ *
+ * Two questions wear one name, and MAP is where they came apart.
+ *
+ * The *engine* asks it to decide whether to build anything: a node with a
+ * value has no audio to make. The *resolver* asks it to decide whether a cable
+ * carries a number to be pulled or a signal to be connected. For every other
+ * node the answers agree, because a node either computes or it sounds.
+ *
+ * MAP does both, and has to. Its curve is a transfer function: fed ENTRY's
+ * velocity it is one number per note, and fed a waveform it has to bend every
+ * sample or it is not shaping anything. Neither use is the odd one -- velocity
+ * into a cutoff is the commonest patch in the instrument, and a wave through a
+ * curve is what a shaper is.
+ *
+ * So `isPureNode` answers the engine's question and `isValueNode` the
+ * resolver's. MAP is a value node and not a pure one: it is pullable, so a
+ * chain of values through it resolves end to end, and it is buildable, so a
+ * signal through it is shaped per sample. Which happens is decided per cable by
+ * what sits at the far end, which is the rule `read` already applied.
+ */
 export function isPureNode(type: string): boolean {
+	return type in PURE_NODES && !NOT_PURE.has(type);
+}
+
+/** Can this node's output be pulled as a number? See `isPureNode`. */
+export function isValueNode(type: string): boolean {
 	return type in PURE_NODES;
 }
 
@@ -365,7 +407,7 @@ export function createResolver(
 		const node = nodeById.get(nodeId);
 		if (!node) return 0;
 		const fn = PURE_NODES[node.type];
-		// A node that is not pure has no value to pull: its output is sound, and
+		// A node with no entry has no value to pull: its output is sound, and
 		// sound is carried by the audio graph rather than computed here.
 		if (!fn) return 0;
 		/* Part of a cycle. Zero, and deliberately not memoised: this node's real
@@ -419,7 +461,7 @@ export function createResolver(
 			   Returning 0 here is what made "ENV into the cutoff" silent: the
 			   filter opened at 0 Hz and the envelope added its 0..1 on top, so a
 			   patch anyone would try first played nothing. */
-			if (!isPureNode(nodeById.get(c.from)?.type ?? '')) return own;
+			if (!isValueNode(nodeById.get(c.from)?.type ?? '')) return own;
 			return valueOf(c.from);
 		}
 		return own;

@@ -16,6 +16,7 @@ import {
 	execDelays,
 	runs,
 	isPureNode,
+	isValueNode,
 	PURE_NODES
 } from '../../src/lib/stores/node-graph';
 import type { EvalGraph } from '../../src/lib/stores/node-graph';
@@ -558,10 +559,24 @@ describe('regressions the string tests could not see', () => {
 		   and then a silent offset eating headroom. The engine decided that from
 		   a list typed out beside the pure-node table rather than derived from
 		   it, so adding a pure node without remembering this list put DC in the
-		   mix. */
+		   mix.
+		
+		   Every entry in the table is a value node; all but MAP are also pure.
+		   MAP has a curve in the table *and* builds a WaveShaperNode, because a
+		   transfer function fed a waveform has to bend every sample -- so the
+		   engine names it in `isModOnly` alongside ENV and TO-CV, the others that
+		   emit control through real audio nodes. */
 		for (const type of Object.keys(PURE_NODES)) {
-			expect(isPureNode(type), type).toBe(true);
+			expect(isValueNode(type), type).toBe(true);
+			if (type !== 'map') expect(isPureNode(type), type).toBe(true);
 		}
+		/* And the engine's own list agrees that MAP is not summed into the mix.
+		   Read from the source, because the alternative is asserting a duplicate
+		   of it here. */
+		const src = readFileSync('src/lib/synth.ts', 'utf8');
+		const modOnly = /const isModOnly = [^;]+;/.exec(src)?.[0] ?? '';
+		expect(modOnly, 'isModOnly not found').not.toBe('');
+		for (const type of ['map', 'tocv', 'env']) expect(modOnly).toContain(`'${type}'`);
 	});
 
 	it('resolves both ends of a cable by port name', () => {
