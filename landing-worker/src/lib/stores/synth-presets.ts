@@ -177,6 +177,131 @@ function synth(extra: Partial<TrackData>): Partial<TrackData> {
  * incoming cable is left for the engine to feed from the voice, which is how a
  * source with no inlet gets struck.
  */
+/**
+ * MIX, written out as the two gains and the sum it always was.
+ *
+ * A rename to SUM was not enough: MIX carried a level per leg, and SUM is a
+ * bare adder because every audio inlet already sums. Dropping the levels made
+ * four presets set `mixA`/`mixB` on a module that declares neither -- numbers a
+ * module does not declare are silently absent, so the balance each instrument
+ * was voiced with was simply gone.
+ *
+ * `<id>` keeps the original name and becomes the A leg's gain, so a cable
+ * already written into it still lands; `<id>_b` is the B leg, `<id>_o` the sum.
+ * Cables written `x>mx:b` are rewritten to the B gain, which is also why the
+ * `:b` port suffix disappears -- SUM has one inlet, and two cables into it is
+ * how addition is said here.
+ */
+function expandMix(
+	nodes: [string, string, Record<string, number>?][],
+	cables: string[]
+): { nodes: [string, string, Record<string, number>?][]; cables: string[] } {
+	if (!nodes.some(([, type]) => type === 'mix')) return { nodes, cables };
+	const out: [string, string, Record<string, number>?][] = [];
+	const extra: string[] = [];
+	const mixed = new Set<string>();
+	for (const [id, type, params] of nodes) {
+		if (type !== 'mix') {
+			out.push([id, type, params]);
+			continue;
+		}
+		out.push(
+			[id, 'gain', { level: (params?.mixA ?? 100) / 100 }],
+			[`${id}_b`, 'gain', { level: (params?.mixB ?? 100) / 100 }],
+			[`${id}_o`, 'sum']
+		);
+		extra.push(`${id}>${id}_o`, `${id}_b>${id}_o`);
+		mixed.add(id);
+	}
+	const moved = cables.map((c) => {
+		const [lhs, rest] = c.split('>');
+		const from = lhs.split('.')[0];
+		const to = rest.split(':')[0];
+		const port = rest.split(':')[1];
+		const src = mixed.has(from) ? `${from}_o` : lhs;
+		const dst = mixed.has(to) ? (port === 'b' ? `${to}_b` : to) : rest;
+		return `${src}>${dst}`;
+	});
+	return { nodes: out, cables: [...moved, ...extra] };
+}
+
+/**
+ * BODY, written out as the primitives it always was.
+ *
+ * A soundboard is not irreducible: the old module was two `peaking` biquads in
+ * parallel with a dry path, and FILTER carries `peaking` with a Q and a dB
+ * gain, while SUM and GAIN do the mixing. It came out of the catalogue for
+ * exactly that reason -- "a composite that could not be taken apart, because
+ * each carried its own welded envelope, its own welded crossfade, its own
+ * welded filter".
+ *
+ * Expanded here rather than in ten preset literals. The arithmetic is the old
+ * engine's, kept verbatim so the instruments sound as they were voiced:
+ *
+ *   f1 = 400 - size * 310   (a big body resonates low: 400 Hz down to 90)
+ *   f2 = f1 * 2.7           (the second formant)
+ *   gain = depth * 14 dB    (how far each peak lifts)
+ *   dry = 1 - mix, wet = mix / 2 per peak
+ *
+ * Doing it in one function rather than ten is the same argument the VCA and MIX
+ * migration table makes: one place to be wrong, and each preset stays readable
+ * as the instrument it describes rather than as five nodes of plumbing.
+ */
+function expandBody(
+	nodes: [string, string, Record<string, number>?][],
+	cables: string[]
+): { nodes: [string, string, Record<string, number>?][]; cables: string[] } {
+	if (!nodes.some(([, type]) => type === 'body')) return { nodes, cables };
+	const out: [string, string, Record<string, number>?][] = [];
+	const extra: string[] = [];
+	const rewritten = new Set<string>();
+	for (const [id, type, params] of nodes) {
+		if (type !== 'body') {
+			out.push([id, type, params]);
+			continue;
+		}
+		const size = (params?.bodySize ?? 50) / 100;
+		const depth = (params?.bodyDepth ?? 45) / 100;
+		const mix = (params?.bodyMix ?? 60) / 100;
+		const f1 = Math.max(40, 400 - size * 310);
+		const f2 = Math.max(40, f1 * 2.7);
+		const dB = depth * 14;
+		/* `<id>` keeps the original name so every cable already written to the
+		   BODY still lands: it becomes the input fan-out, and `<id>_o` the sum
+		   everything leaves by. Cables out of the module are rewritten below. */
+		out.push(
+			[id, 'sum'],
+			[`${id}_d`, 'gain', { level: 1 - mix }],
+			// type 6 is `peaking`. Q is the old engine's, per peak.
+			[`${id}_p1`, 'filter', { type: 6, cutoff: f1, q: 1.4, filterGain: dB }],
+			[`${id}_p2`, 'filter', { type: 6, cutoff: f2, q: 2.2, filterGain: dB }],
+			[`${id}_g1`, 'gain', { level: mix / 2 }],
+			[`${id}_g2`, 'gain', { level: mix / 2 }],
+			[`${id}_o`, 'sum']
+		);
+		extra.push(
+			`${id}>${id}_d`,
+			`${id}_d>${id}_o`,
+			`${id}>${id}_p1`,
+			`${id}>${id}_p2`,
+			`${id}_p1>${id}_g1`,
+			`${id}_p2>${id}_g2`,
+			`${id}_g1>${id}_o`,
+			`${id}_g2>${id}_o`
+		);
+		rewritten.add(id);
+	}
+	/* A cable *out of* a BODY now leaves its output sum instead. One written
+	   `bod>out` becomes `bod_o>out`; one written *into* it is untouched, which
+	   is why the input keeps the original id. */
+	const moved = cables.map((c) => {
+		const [lhs, rest] = c.split('>');
+		const from = lhs.split('.')[0];
+		return rewritten.has(from) ? `${from}_o>${rest}` : c;
+	});
+	return { nodes: out, cables: [...moved, ...extra] };
+}
+
 function patch(
 	nodes: [string, string, Record<string, number>?][],
 	cables: string[],
@@ -204,6 +329,8 @@ function patch(
 	   half again as wide. At 200 apart those overlapped their neighbours. */
 	const COL = 300;
 	const ROW = 124;
+	({ nodes, cables } = expandBody(nodes, cables));
+	({ nodes, cables } = expandMix(nodes, cables));
 	const feeders = new Map<string, string[]>();
 	for (const c of cables) {
 		const [lhs, rest] = c.split('>');
@@ -667,7 +794,11 @@ export const SOUND_PRESETS: SoundPreset[] = [
 				[
 					['mal', 'excite', { hardness: 30, exLength: 11, exTone: 2200 }],
 					['ex', 'sum'],
-					['bar', 'modes', { mode1: 1, mode2: 3.9, mode3: 9.2, modeQ: 22 }],
+					/* R3 was 9.2, which the old composite allowed and MODES does not --
+					   its ratios stop at 8. Clamped to the top of the range rather
+					   than re-voiced: 8 is still an inharmonic partial well clear of
+					   the 3.9 below it, which is what a struck bar wants. */
+					['bar', 'modes', { mode1: 1, mode2: 3.9, mode3: 8, modeQ: 22 }],
 					['tub', 'tube', { tubeDecay: 0.5, tubeDamp: 55, tubeOdd: 1 }],
 					['mx', 'mix', { mixA: 100, mixB: 38 }],
 					['bod', 'body', { bodySize: 45, bodyDepth: 50, bodyMix: 40 }]
@@ -961,7 +1092,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['ex', 'sum'],
 					['c1', 'string', { decayTime: 2.4, damping: 18, stiffness: 40 }],
 					['c2', 'string', { decayTime: 2.1, damping: 22, stiffness: 46 }],
-					['rg', 'ring', { ringDepth: 110 }],
+					/* DPTH was 110 on a knob that now stops at 100. The old composite
+					   had no ceiling; full depth is what it meant. */
+					['rg', 'ring', { ringDepth: 100 }],
 					['sm', 'sum'],
 					['smg', 'vca', { gain: 130 }],
 					['bod', 'body', { bodySize: 52, bodyDepth: 55, bodyMix: 58 }]
@@ -972,8 +1105,11 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					'ex>c2',
 					'c1>rg',
 					'c2>rg:b',
+					/* Two cables into SUM's one inlet, which is how addition is said
+					   here -- the `:b` this used to name was MIX's second leg and
+					   SUM has no such port. */
 					'c1>sm',
-					'rg>sm:b',
+					'rg>sm',
 					'sm>smg',
 					'smg>bod',
 					'bod>output'
@@ -1317,7 +1453,9 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   that makes the bore oscillate at all. */
 			...patch(
 				[
-					['air', 'noise', { colour: 1 }],
+					/* NOISE is white and has no knobs: a coloured noise is NOISE into
+					   FILTER, where the slope is a cable you can see. */
+					['air', 'noise'],
 					/* NOISE lost its LVL knob -- a level on a source is a VCA
 					   welded to it -- so the 66% it used to carry is a VCA. */
 					['ex', 'vca', { gain: 66 }],
@@ -1351,9 +1489,14 @@ export const SOUND_PRESETS: SoundPreset[] = [
 			   an audible amount of a flute is air that never became a note. */
 			...patch(
 				[
-					['air', 'noise', { colour: 2 }],
+					/* NOISE is white and has no knobs: a coloured noise is NOISE into
+					   FILTER, where the slope is a cable you can see. */
+					['air', 'noise'],
 					['ex', 'vca', { gain: 200 }],
-					['fl', 'filter', { type: 1, cutoff: 2600, q: 3, depth: 520 }],
+					/* DEPTH was the old composite's welded envelope amount. A filter
+					   that opens with the note is ENV into CUTOFF -- a patch rather
+					   than a knob, which is the whole point of the rebuild. */
+					['fl', 'filter', { type: 1, cutoff: 2600, q: 3 }],
 					['br', 'tube', { tubeDecay: 0.9, tubeDamp: 60, tubeOdd: 0 }],
 					['mx', 'mix', { mixA: 100, mixB: 12 }],
 					['bel', 'body', { bodySize: 38, bodyDepth: 30, bodyMix: 35 }]

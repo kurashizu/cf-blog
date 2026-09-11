@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 
 /**
  * The audio tests, kept apart from the unit suite on purpose.
@@ -19,6 +20,25 @@ import { defineConfig } from 'vitest/config';
  * disagreed.
  */
 export default defineConfig({
+	resolve: {
+		alias: {
+			/* SvelteKit's own aliases, which its Vite plugin would normally supply
+			   and which these tests run without.
+
+			   The audio tests drive the engine through a browser, so for most of
+			   this directory nothing on the node side imports from `src/` at all.
+			   The preset tests are the exception: they read `SOUND_PRESETS` and
+			   `HELD_BACK` directly, because a dynamic `import()` inside
+			   `page.evaluate` returns a *different* module instance from the page's
+			   own and hands back an empty catalogue with no error. Importing on
+			   this side and passing the timbre in as an argument is the only way to
+			   drive a test off the same list the app ships. */
+			$lib: fileURLToPath(new URL('./src/lib', import.meta.url)),
+			'$app/environment': fileURLToPath(
+				new URL('./tests/unit/stubs/app-environment.ts', import.meta.url)
+			)
+		}
+	},
 	test: {
 		include: ['tests/audio/**/*.test.ts'],
 		/* A render plus a browser launch; the default 5s is nowhere near enough.

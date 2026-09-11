@@ -206,11 +206,24 @@
 				   happened to run in. Worse than flaky: a leaked field is a render
 				   measuring something other than the patch under test, which is
 				   exactly what this bench exists to rule out. */
+				/* `advanced` is in that list for a reason the others are not: it
+				   decides which of the track's two instruments renders at all, so
+				   leaking it does not shade a measurement, it measures a different
+				   voice. Found by a preset test -- the ADV presets carry a
+				   `rackGraph` but not the flag, because `applyPresetAt` derives it
+				   from the graph rather than storing it, and a preset rendered
+				   without it goes through the subtractive voice instead. Measured
+				   in a file of its own, three of the eight then read peak 0.0000
+				   with a built voice and no error; in a file where any earlier test
+				   had set the flag, the same renders sounded fine. A defect that
+				   depends on what ran before it is the flake this reset list exists
+				   to prevent, and this was the one field missing from it. */
 				modularSynth.updateTrack(0, {
 					graphWaves: {},
 					graphParams: {},
 					rackChain: [],
 					rackParams: {},
+					advanced: false,
 					...patch,
 					muted: false
 				} as never);

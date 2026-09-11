@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
+/* Imported on the node side, deliberately.
+   A dynamic `import()` inside `page.evaluate` resolves to a *different* module
+   instance than the page's own bundle, so `SOUND_PRESETS` read that way comes
+   back empty with no error and every loop over it passes vacuously. The
+   catalogue is read here and each timbre passed into the browser as an
+   argument. */
+import { SOUND_PRESETS, HELD_BACK, type SoundPreset } from '../../src/lib/stores/synth-presets';
+import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
 
 /**
  * Every socket on every card, measured.
@@ -2048,4 +2056,374 @@ describe('SEND and RTN: the feedback loop the canvas cannot draw', () => {
 		expect(shared, 'one bus, the two returns add into a loop over unity').toBe(23);
 		expect(shared, 'sharing a bus is audibly different').toBeGreaterThan(apart);
 	}, 60000);
+});
+
+/* ──────────────────────────────────────────────────────────────────────────
+   The shipped ADV presets, measured as sound rather than as graphs
+
+   `tests/unit/preset-render.test.ts` asks of every preset that it "builds a
+   voice with every scheduled value finite". A preset that renders *exact
+   silence* satisfies that perfectly -- zero is finite -- which is how thirteen
+   ADV presets sat in the shipped catalogue emitting nothing at all while the
+   suite stayed green for months. Asserting the intermediate state rather than
+   the result is the failure mode this whole directory exists to correct, and
+   the presets are the last place in it that was still only checked that way.
+
+   Every test below is driven off `SOUND_PRESETS` itself rather than off a list
+   of names written out here. That is the point: the migration is ongoing, the
+   ADV presets come back one at a time as their last missing primitive lands,
+   and a list of eight would cover the ninth the day someone remembered to edit
+   it. Driven off the catalogue, a preset is covered the moment it emits a graph
+   and the same test fails if a regression empties one.
+
+   `advanced` is set on the timbre here, and it is load-bearing. Measured: the
+   presets carry a `rackGraph` but *not* the flag, because `applyPresetAt`
+   derives it -- `advanced: isChainPreset || hasGraph`. Rendering the preset
+   object raw instead sends the note through the subtractive voice, and three of
+   the eight (DRAWBAR ORGAN, PAN FLUTE, DULCIMER) then read peak 0.0000 with a
+   built voice and no error. That is the exact shape of the bug this block is
+   about, produced by the bench rather than by the engine, and it is why the
+   helper below reproduces what the app does rather than passing `p.preset`
+   straight through.
+
+   Numbers: thresholds and orderings only, never a constant. Several of these
+   patches are noise-excited -- PAN FLUTE and FLUTE are NOISE sources, KOTO,
+   PIANO, DULCIMER and UPRIGHT BASS are EXCITE -- so their peaks move run to
+   run. Measured over three passes, PAN FLUTE read 0.5655 / 0.5436 / 0.5468 and
+   DRAWBAR ORGAN 0.2458 / 0.2522 / 0.2480, while the string patches repeated to
+   four decimals. Pinning a noise-sourced reading tight is the one-in-three
+   flake this directory has already been through once.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** A preset as `applyPresetAt` hands it to the engine.
+ *
+ * The flag is derived from the preset rather than stored in it, so a bench that
+ * spreads `p.preset` alone is measuring a different instrument -- see the block
+ * comment above for what that reads as. */
+const asTimbre = (p: SoundPreset): Record<string, unknown> => ({
+	...(p.preset as Record<string, unknown>),
+	advanced: true,
+	advancedView: 'rack'
+});
+
+/** The graph a preset emits, or nothing if it is still held back. */
+const graphOf = (p: SoundPreset) =>
+	p.preset.rackGraph as { nodes: { id: string; type: string }[]; cables: unknown[] } | undefined;
+
+/** The presets that currently emit a graph -- what `patch()` let through. */
+const EMITTING = SOUND_PRESETS.filter((p) => (graphOf(p)?.nodes.length ?? 0) > 0);
+
+describe('the shipped ADV presets', () => {
+	it('is driven off a catalogue that actually has graph presets in it', () => {
+		/* The guard every loop below needs, because `it.each` over an empty list
+		   and `for (const p of [])` are both silently green. Eight emit today and
+		   five are held back; asserting "at least five" rather than "exactly
+		   eight" is what lets the ninth land without editing this file, while
+		   still failing if `patch()` goes back to returning `{}` wholesale --
+		   which is the state this whole migration is climbing out of. */
+		expect(EMITTING.length, 'presets emitting a graph').toBeGreaterThanOrEqual(5);
+		expect(EMITTING.length + HELD_BACK.size, 'every ADV preset is one or the other').toBe(13);
+	});
+
+	/* One test per preset rather than one loop over all of them, so a failure
+	   names the instrument that went silent instead of a list index. */
+	for (const preset of EMITTING) {
+		it(`${preset.name} sounds`, async () => {
+			/* The whole point of the block. Three seconds, twelve slices, which is
+			   long enough that a struck string has decayed and short enough that a
+			   sustained one is still clearly on.
+
+			   0.02 is a floor two decades below the quietest of the eight rather
+			   than a reading of any of them. Measured peaks across three passes:
+			   KOTO 0.1273, MARIMBA 0.1272, DRAWBAR ORGAN 0.2458..0.2522, PAN FLUTE
+			   0.5436..0.5655, DULCIMER 0.1150, PIANO 0.1591..0.1619, UPRIGHT BASS
+			   0.1304, FLUTE 0.3222..0.3362. The quietest has 15 dB of headroom
+			   over the threshold, so a preset has to be genuinely broken rather
+			   than merely re-voiced to fail this -- and a silent one reads exactly
+			   0.0000, which an empty graph was measured at for comparison. */
+			const r = await render(asTimbre(preset), 12, 3);
+			expect(r.ok, `${preset.name} rendered without error: ${r.error ?? ''}`).toBe(true);
+			expect(r.builtVoice, `${preset.name} built a voice`).toBe(true);
+			expect(r.peak, `${preset.name} is not silent`).toBeGreaterThan(0.02);
+
+			/* Not silent is not the same as being a sound.
+
+			   A DC offset -- a constant the graph settles at, which a stuck
+			   envelope or a CONST wired to OUT produces -- has a peak like any
+			   other signal and is inaudible. It shows as RMS equal to peak, since
+			   a constant's root-mean-square *is* its amplitude. Measured, the
+			   loudest slice of these eight reads between 0.30 and 0.56 of peak
+			   (FLUTE 0.3039 lowest, UPRIGHT BASS 0.5583 highest), which is what a
+			   waveform that crosses zero looks like. 0.9 is the threshold: well
+			   clear of the 0.56 measured and well under the 1.0 a constant gives.
+
+			   A sine reads 0.707 of peak, so this deliberately does not claim to
+			   catch every degenerate case -- it catches the constant, which is the
+			   one that renders as nothing you can hear. */
+			const loudest = Math.max(...r.envelope);
+			expect(loudest / r.peak, `${preset.name} is a waveform, not a DC offset`).toBeLessThan(0.9);
+		}, 45000);
+	}
+
+	it('holds back every preset it holds back for a reason that is still true', () => {
+		/* The other half of the migration, and the half that is invisible without
+		   a test. `patch()` suppresses a graph whose types the catalogue does not
+		   carry, which is right -- a node of an unknown type builds nothing and a
+		   cable through it is a broken chain -- but the suppression leaves no
+		   trace in the shipped preset. A preset held back after its last missing
+		   primitive landed looks exactly like one with no graph to emit, and
+		   nothing anywhere would say so.
+
+		   So: every type `HELD_BACK` names as missing must actually be missing.
+		   The moment BOW or REED lands in the catalogue and the preset waiting on
+		   it is not re-emitted, this fails and names the type.
+
+		   Today that is bow, drive, eq, lfo and reed across five presets. Not
+		   asserted as that list -- the list is meant to shrink -- but as the
+		   invariant that survives it shrinking. */
+		const ids = new Set(MODULE_SPECS.map((m) => m.id));
+		const stale: string[] = [];
+		for (const [path, missing] of HELD_BACK) {
+			expect(missing.length, `a held-back entry names what it waits on: ${path}`).toBeGreaterThan(0);
+			for (const type of missing) {
+				if (ids.has(type)) stale.push(`${type} exists now, so the preset "${path}" can be emitted`);
+			}
+		}
+		expect(stale).toEqual([]);
+	});
+
+	it('emits a graph whose every type the catalogue carries', () => {
+		/* The inverse, and the assertion the expanders need most.
+
+		   `expandBody` and `expandMix` rewrite BODY and MIX into primitives, and
+		   both run *before* `missingTypes` looks at the graph -- so an expander
+		   that emitted a type the catalogue does not carry would produce a preset
+		   that is held back rather than one that is broken, which is safe. What
+		   is not safe is the reverse: nothing else checks that what comes out of
+		   an expander is buildable at all, and a typo in `'filter'` would reach
+		   the palette. The expansion is where these types come from, so this is
+		   effectively a test of the expanders' output.
+
+		   Measured, the eight between them name 21 distinct types: comb via
+		   DELAY/SEND/RTN in KOTO, `filter` and `gain` from `expandBody` in six of
+		   them, `sum` and `gain` from `expandMix` in four. */
+		const ids = new Set(MODULE_SPECS.map((m) => m.id));
+		const unknown: string[] = [];
+		for (const p of EMITTING) {
+			for (const n of graphOf(p)!.nodes) {
+				if (n.type !== 'in' && n.type !== 'out' && !ids.has(n.type))
+					unknown.push(`${p.name}: ${n.id} is a ${n.type}, which no module declares`);
+			}
+		}
+		expect(unknown).toEqual([]);
+	});
+
+	it('emits graphs of a plausible size, with an output path in each', () => {
+		/* A cheap shape check beside the audio one, and it catches a different
+		   thing: an expander that dropped its cables would leave the node count
+		   intact and the sound gone, while one that dropped its *nodes* would
+		   leave a graph too small to be the instrument it claims.
+
+		   Measured today: 11 nodes (PAN FLUTE) to 23 (DRAWBAR ORGAN), with 11 to
+		   26 cables. The bounds are 6 and 60 -- loose on purpose, since re-voicing
+		   an instrument legitimately moves these and the failure this is for is a
+		   graph collapsing to two or three nodes rather than one growing by two.
+		   Six is ENTRY, OUT, the injected trim and three modules, which is smaller
+		   than any real patch here.
+
+		   Every graph also has to reach OUT. `patch()` routes everything addressed
+		   to `output` through the injected trim, so the cable that actually lands
+		   on OUT is the trim's -- if no cable arrives there at all the patch is a
+		   set of modules playing to nothing, which renders silent for a reason no
+		   amount of staring at the node list shows. */
+		const bad: string[] = [];
+		for (const p of EMITTING) {
+			const g = graphOf(p)!;
+			if (g.nodes.length < 6 || g.nodes.length > 60)
+				bad.push(`${p.name}: ${g.nodes.length} nodes is not a plausible patch`);
+			if (g.cables.length < g.nodes.length - 2)
+				bad.push(`${p.name}: ${g.cables.length} cables for ${g.nodes.length} nodes`);
+			const intoOut = (g.cables as { to: string; toPort: string }[]).filter(
+				(c) => c.to === 'output' && c.toPort === 'in'
+			);
+			if (!intoOut.length) bad.push(`${p.name}: nothing is cabled into OUT`);
+		}
+		expect(bad).toEqual([]);
+	});
+
+
+	it('leaves each expanded BODY by its output sum, with the crossfade it was voiced with', () => {
+		/* Two things `expandBody` can get wrong that are *audible but not silent*,
+		   which is the gap the rendering tests above leave.
+
+		   A BODY expands into seven nodes. `<id>` keeps the original name and
+		   becomes the input fan-out, so every cable already written *into* the
+		   module still lands; `<id>_o` is the sum everything leaves by, and the
+		   expander rewrites each outgoing cable onto it. Skip that rewrite and the
+		   patch still sounds -- the fan-out carries the dry signal -- it just
+		   bypasses the two peaking filters entirely and the soundboard does
+		   nothing. Measured, that costs KOTO 0.0443 -> 0.0407 and PIANO 0.0660 ->
+		   0.0566 at the loudest slice: a few percent, well inside the run-to-run
+		   spread of a noise-excited patch, so it is not assertable as a level. It
+		   is exactly assertable as a shape, which is what this does -- nothing may
+		   leave the fan-out except into the expansion's own nodes.
+
+		   The crossfade is the second. `dry = 1 - mix` and `wet = mix / 2` per
+		   peak, so the three legs sum to 1 by construction and a body that got
+		   louder or quieter than the signal it filtered would show as a sum that
+		   does not. Measured across the six presets carrying one: 0.5+0.25+0.25,
+		   0.6+0.2+0.2, 0.42+0.29+0.29, 0.45+0.275+0.275, 0.4+0.3+0.3 and
+		   0.65+0.175+0.175. Compared with a tolerance rather than exactly, because
+		   `1 - 0.58` is 0.42000000000000004 in binary floating point and two of
+		   these already read that way in the emitted params. */
+		const bad: string[] = [];
+		const params = (p: SoundPreset) => (p.preset.graphParams ?? {}) as Record<string, number>;
+		let bodies = 0;
+		for (const p of EMITTING) {
+			const g = graphOf(p)!;
+			const ids = new Set(g.nodes.map((n) => n.id));
+			for (const n of g.nodes) {
+				if (!n.id.endsWith('_o') || n.type !== 'sum') continue;
+				const base = n.id.slice(0, -2);
+				// A BODY expansion, as against a MIX one: only BODY makes the filters.
+				if (!ids.has(`${base}_p1`) || !ids.has(`${base}_p2`)) continue;
+				bodies++;
+				const own = new Set([base, `${base}_d`, `${base}_p1`, `${base}_p2`, `${base}_g1`, `${base}_g2`, `${base}_o`]);
+				for (const c of g.cables as { from: string; to: string }[]) {
+					if (c.from === base && !own.has(c.to))
+						bad.push(`${p.name}: a cable leaves ${base} for ${c.to}, bypassing the body`);
+				}
+				const legs =
+					(params(p)[`${base}_d.level`] ?? 0) +
+					(params(p)[`${base}_g1.level`] ?? 0) +
+					(params(p)[`${base}_g2.level`] ?? 0);
+				if (Math.abs(legs - 1) > 1e-9)
+					bad.push(`${p.name}: ${base}'s dry and wet legs sum to ${legs}, not 1`);
+			}
+		}
+		expect(bad).toEqual([]);
+		/* Six of the eight carry a body, so a rule that matched nothing would be
+		   green for the wrong reason. */
+		expect(bodies, 'the catalogue still has expanded bodies in it').toBeGreaterThanOrEqual(4);
+	});
+
+	it('keeps the per-leg balance each MIX was voiced with', () => {
+		/* The defect `expandMix` exists to fix, asserted rather than assumed.
+
+		   MIX carried a level per leg and SUM is a bare adder, so the rename alone
+		   dropped `mixA`/`mixB` on the floor -- numbers a module does not declare
+		   are silently absent, and every one of these instruments lost the balance
+		   it was voiced with. Since both legs then run at unity the patch still
+		   sounds, which is why nothing above catches it: MARIMBA's resonator tube
+		   under the bar, PIANO's sympathetic pair and FLUTE's breath noise all
+		   come back at full level instead of at 38, 64 and 12 percent.
+
+		   Measured, the three MIX presets emit `mx.level` 1 against `mx_b.level`
+		   0.38, 0.64 and 0.12. What is asserted is that the two legs are not all
+		   equal -- the balance is a voicing decision and will move, whereas a
+		   migration that dropped it makes every pair identical. */
+		const varied: string[] = [];
+		let mixes = 0;
+		for (const p of EMITTING) {
+			const g = graphOf(p)!;
+			const ids = new Set(g.nodes.map((n) => n.id));
+			const params = (p.preset.graphParams ?? {}) as Record<string, number>;
+			for (const n of g.nodes) {
+				if (!n.id.endsWith('_o') || n.type !== 'sum') continue;
+				const base = n.id.slice(0, -2);
+				// A MIX expansion: two gains and a sum, and no peaking filters.
+				if (!ids.has(`${base}_b`) || ids.has(`${base}_p1`)) continue;
+				mixes++;
+				const a = params[`${base}.level`];
+				const b = params[`${base}_b.level`];
+				expect(a, `${p.name}: ${base}'s A leg has a level`).toBeGreaterThan(0);
+				expect(b, `${p.name}: ${base}'s B leg has a level`).toBeGreaterThan(0);
+				if (a !== b) varied.push(`${p.name}:${base}`);
+			}
+		}
+		expect(mixes, 'the catalogue still has expanded mixes in it').toBeGreaterThanOrEqual(2);
+		expect(
+			varied.length,
+			'at least one MIX is voiced with its legs at different levels'
+		).toBeGreaterThan(0);
+	});
+
+	/* What these twelve mutations do not catch, recorded here rather than in a
+	   report someone has to find.
+
+	   Each was taken from a fresh backup of the engine, run, restored, and the
+	   diff confirmed empty before the next. Ten fail something above:
+
+	     patch() back to an unconditional `return {}`      2 fail
+	     expandBody a no-op (BODY held back again)          2 fail
+	     expandBody drops the dry leg and both wet feeds    6 fail
+	     expandMix drops the two cables into its sum        3 fail
+	     HELD_BACK never recorded                           1 fail
+	     HELD_BACK names a type the catalogue does carry    1 fail
+	     missingTypes always empty                          3 fail
+	     outgoing BODY cables not moved to the output sum   1 fail
+	     expandMix ignores mixA/mixB                        1 fail
+	     expandBody's wet legs not halved                   1 fail
+	     the bench dropping the derived `advanced` flag     3 fail
+
+	   One survives. Setting `f2 = f1`, so a body's two peaking filters land on
+	   the same formant instead of at a ratio of 2.7, changes every affected
+	   preset's timbre and nothing here fails. That is honest: the second
+	   formant's frequency is a voicing decision, and the only assertion that
+	   would catch it is the exact constant this block refuses to write -- these
+	   patches are noise-excited and a pinned reading is the one-in-three flake
+	   this directory has already been through. A spectral test could see it, but
+	   it would be a test of `expandBody`'s arithmetic rather than of the presets,
+	   and it belongs beside FILTER's own coverage rather than here.
+
+	   Two of the ten are worth reading twice, because they do not fail the way
+	   a mutation usually does. Gutting `patch()` and gutting `expandBody` both
+	   *remove* tests -- the per-preset `it` blocks are generated from the presets
+	   that emit a graph, so a preset held back has no test to fail, and the run
+	   goes green at 60 and 62 rather than red at 70. `is driven off a catalogue
+	   that actually has graph presets in it` is the whole defence against that,
+	   and it is why this block opens with a count rather than with a render. */
+
+	it('gives each instrument its own envelope rather than one shape for the set', async () => {
+		/* The test that the eight are eight instruments.
+
+		   Every assertion above is per-preset, so a bug that replaced every
+		   preset's graph with the same working one -- an expander keyed wrongly,
+		   a shared object mutated in place -- would pass all of them. What
+		   separates these is the shape of the note over time: a struck string
+		   decays to silence, a blown pipe holds.
+
+		   Measured over three seconds in twelve slices, as the ratio of the last
+		   slice to the loudest:
+
+		     KOTO         0.0443 -> 0.0000   struck, gone by slice 5
+		     DULCIMER     0.0421 -> 0.0000   struck
+		     PIANO        0.0660 -> 0.0000   struck
+		     UPRIGHT BASS 0.0728 -> 0.0000   struck
+		     MARIMBA      0.0555 -> 0.0245   struck bar over a held tube
+		     DRAWBAR ORGAN 0.1138 -> 0.1287  held
+		     PAN FLUTE    0.1679 -> 0.1956   held
+		     FLUTE        0.0876 -> 0.0988   held
+
+		   The four struck patches reach *exact* zero, which is the strong claim:
+		   a stuck envelope or a latched feedback loop is loud at the end of the
+		   render and could not. The three blown ones end within a few percent of
+		   where they peaked. MARIMBA sits between the two by construction -- the
+		   bar decays, the TUBE under it does not -- and is the reason this is two
+		   groups picked by measurement rather than one rule applied to all eight.
+
+		   Both groups have to be non-empty, or a catalogue that lost all its
+		   sustained patches would pass by having nothing to check. */
+		const tail: Record<string, number> = {};
+		for (const p of EMITTING) {
+			const r = await render(asTimbre(p), 12, 3);
+			tail[p.name] = Math.max(...r.envelope) > 0 ? r.envelope[11] / Math.max(...r.envelope) : -1;
+		}
+		const decayed = Object.entries(tail).filter(([, v]) => v < 0.05);
+		const held = Object.entries(tail).filter(([, v]) => v > 0.5);
+		expect(decayed.length, `some preset decays to silence: ${JSON.stringify(tail)}`).toBeGreaterThan(0);
+		expect(held.length, `some preset sustains: ${JSON.stringify(tail)}`).toBeGreaterThan(0);
+		for (const [name, v] of decayed) expect(v, `${name} decays`).toBeLessThan(0.05);
+		for (const [name, v] of held) expect(v, `${name} sustains`).toBeGreaterThan(0.5);
+	}, 120000);
 });
