@@ -614,10 +614,29 @@ export const SOUND_PRESETS: SoundPreset[] = [
 					['pk', 'excite', { hardness: 72, exLength: 3, exTone: 5200 }],
 					['ex', 'sum'],
 					['str', 'string', { decayTime: 1.8, damping: 26, stiffness: 55 }],
-					['brg', 'comb', { combPos: 14, combDepth: 45 }],
+					/* The bridge, as the comb it always was: a short delay fed back on
+					   itself. COMB was one card with a position and a depth; this is
+					   the same thing said in primitives, and the amount going round
+					   is a GAIN the patch can see. 1.7 ms is the 14% position on a
+					   12 ms scale, which is what COMBPOS meant. */
+					['bsum', 'sum'],
+					['bdly', 'delay', { delayTime: 0.0017 }],
+					['bsnd', 'fbsend', { bus: 0 }],
+					['brtn', 'fbrtn', { bus: 0 }],
+					['bfb', 'gain', { level: 0.45 }],
 					['bod', 'body', { bodySize: 40, bodyDepth: 45, bodyMix: 50 }]
 				],
-				['pk>ex', 'ex>str', 'str>brg', 'brg>bod', 'bod>output'],
+				[
+					'pk>ex',
+					'ex>str',
+					'str>bsum',
+					'bsum>bdly',
+					'bdly>bsnd',
+					'brtn>bfb',
+					'bfb>bsum',
+					'bdly>bod',
+					'bod>output'
+				],
 				33
 			)
 		})

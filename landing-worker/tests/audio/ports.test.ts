@@ -1532,6 +1532,23 @@ describe('TUBE: which of its knobs actually reach the sound', () => {
    is what holds those, which is the right place for a claim about the shape of
    a card.
    ────────────────────────────────────────────────────────────────────────── */
+/* Four mutations this block does NOT catch, recorded rather than left for
+   someone to rediscover:
+
+     - zeroing the internal delay line
+     - bypassing it entirely
+     - giving SEND an outlet
+     - giving RTN an inlet
+
+   The first two survive because the platform already breaks the cycle at its
+   own render quantum, so the explicit DelayNode buys legibility and a second
+   block of round trip, not the loop's existence -- verified by measurement, and
+   the engine comment says so. The last two survive because an unused port
+   changes no sound; the catalogue tests are what pin a module's shape.
+
+   None of these is a hole in what the block claims. They are the boundary of
+   what a bench that measures sound can see, which is worth writing down where
+   the next person mutating this code will find it. */
 describe('SEND and RTN: the feedback loop the canvas cannot draw', () => {
 	/**
 	 * The last slice with anything audible in it, or -1 for silence throughout.
