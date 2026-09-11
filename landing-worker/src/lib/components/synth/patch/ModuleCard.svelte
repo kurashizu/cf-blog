@@ -188,6 +188,33 @@
 	class="flex flex-col gap-1 py-1"
 	style="padding-left: {padLeft}px; padding-right: {padRight}px"
 >
+	<!-- The wave, drawn above the picker that chooses it.
+
+	     A cycle of the actual shape says what the oscillator is doing faster
+	     than the word does -- and for a drawn table the word says nothing at
+	     all, since every one abbreviates to USR while their curves are all
+	     different. Above rather than below because the picture is what the card
+	     is *about* and the control is how you change it, which is the order ENV
+	     and MAP already read in.
+
+	     Drawn through `previewSamples`, the same function racks 1-7 preview
+	     with, so a custom table shows its own curve rather than a placeholder. -->
+	{#if spec.viz === 'wavepick'}
+		{#each wavePickers as p (p.key)}
+			<div class="bg-black/70 border border-white/15 rounded-xs">
+				<svg viewBox="0 0 100 30" class="w-full h-[28px]" preserveAspectRatio="none">
+					<path
+						d={previewPath(previewSamples(waveOf(p.key), 96))}
+						fill="none"
+						stroke={spec.color}
+						stroke-width="1.5"
+						vector-effect="non-scaling-stroke"
+					/>
+				</svg>
+			</div>
+		{/each}
+	{/if}
+
 	<!-- The wave picker: what the oscillator is set to, drawn rather than named.
 
 	     A shape is quicker to read than a word, and the drawn tables have no

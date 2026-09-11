@@ -101,7 +101,10 @@ export interface ModuleSpec {
 	params: ModuleParam[];
 	/* A live picture of what the knobs are doing, like racks 1-7 carry: an
 	   envelope drawn as its own curve says more than four numbers do. */
-	viz?: 'adsr' | 'wave' | 'pulse' | 'curve' | 'scope' | 'fft' | 'meter';
+	/* `wavepick` draws one cycle of the chosen wave above the menu that chooses
+	   it, for the modules whose wave is stored as a name rather than an index --
+	   which is every one that can hold a drawn table. */
+	viz?: 'adsr' | 'wave' | 'wavepick' | 'pulse' | 'curve' | 'scope' | 'fft' | 'meter';
 }
 
 const CV_A: PortSpec = { id: 'a', label: 'A', kind: 'mod' };
@@ -431,7 +434,10 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   waves: NOISE is not one, and the ADVANCED four are other primitives
 		   wearing a waveform's name. BASIC and the drawn tables are what is
 		   left, which is exactly the set this module is the way in to. */
-		params: [{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, wave: true }]
+		params: [{ key: 'wave', label: 'WAVE', min: 0, max: 3, step: 1, def: 0, wave: true }],
+		/* The cycle it is set to, above the picker. A shape reads faster than a
+		   word, and a drawn table has no word worth reading. */
+		viz: 'wavepick'
 	},
 	{
 		/* A pitch made into the frequency it names.
