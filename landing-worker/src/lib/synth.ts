@@ -804,7 +804,10 @@ class ModularSynth {
 				{ ...note, tuning: this.masterTuningFreq },
 				heldSec,
 				waves[`${node.id}.wave`],
-				fbBuses
+				fbBuses,
+				new Set(
+					graph.cables.filter((c) => c.to === node.id).map((c) => c.toPort)
+				)
 			);
 			if (!made) continue;
 			// Whatever this node just created starts when this node runs.
@@ -1011,7 +1014,13 @@ class ModularSynth {
        once are two independent loops -- a shared bus would make one note's
        feedback arrive in the other's, which is a different instrument and not
        the one the patch describes. */
-		fbBuses?: Map<number, { send: GainNode; rtn: GainNode }>
+		fbBuses?: Map<number, { send: GainNode; rtn: GainNode }>,
+		/* Which of this node's inlets have a cable on them, whatever is on the
+       other end. `cvIn` cannot answer that: it returns the fallback for a
+       signal source, so a port fed by an oscillator looks unwired to it. OSC's
+       PHS needs the difference -- it builds a delay line only when something is
+       patched, and a signal is exactly the case that wants one. */
+		wiredPorts?: ReadonlySet<string>
 	): {
 		in: AudioNode | null;
 		/** A second audio inlet, for the modules that take two signals. */
@@ -1171,9 +1180,30 @@ class ModularSynth {
            basic shapes reach `osc.type` directly, which is cheaper and has no
            phase, so asking for one is what turns them into a table. Zero keeps
            the cheap path, which is what nearly every note wants. */
-				const phase = cvIn(probeKey, 'phase', 0);
+				/* NaN when nothing is patched or typed, which is how this tells a
+           wired PHS from an unwired one -- `cvIn` cannot return NaN from a real
+           cable, and `resolver` is not in scope here. */
+				const phaseRaw = cvIn(probeKey, 'phase', NaN);
+				/* A *signal* on PHS, as opposed to a value. `cvIn` returns the
+           fallback for a signal source, so a port an oscillator feeds looks
+           unwired to it -- `wiredPorts` says a cable is there and the NaN says
+           no number came down it, and together they mean "something is moving
+           this". A CONST keeps the wave-table path below, which is exact. */
+				const phaseMoving = !!wiredPorts?.has('phase') && !Number.isFinite(phaseRaw);
+				const phase = Number.isFinite(phaseRaw) ? phaseRaw : 0;
 				const turns = ((phase % 1) + 1) % 1;
-				if (turns !== 0 && ['sine', 'square', 'sawtooth', 'triangle'].includes(shape)) {
+				/* The wave table rotates only when nothing is patched to PHS.
+        
+           With a cable, the delay below carries the whole offset -- rotating
+           here as well would apply it twice, and at half a turn each that is a
+           full turn, which is no shift at all. Measured when this was wrong: a
+           pair that should have cancelled read 0.8306, the same as no shift.
+           Exactly one mechanism per cable, the rule the mod loop follows. */
+				if (
+					!phaseMoving &&
+					turns !== 0 &&
+					['sine', 'square', 'sawtooth', 'triangle'].includes(shape)
+				) {
 					osc.setPeriodicWave(this.phasedWave(ctx, `shape:${shape}`, this.shapeTable(shape), turns));
 				} else {
 					this.applyWaveform(osc, shape, undefined, undefined, ctx);
@@ -1246,7 +1276,7 @@ class ModularSynth {
            path is not free and nearly every oscillator wants neither the node
            nor the quarter-sample of interpolation it costs. The static case
            keeps the wave table, which is exact. */
-				if (resolver.isWired(node.id, 'phase')) {
+				if (phaseMoving) {
 					/* One period of the base pitch. Read from the oscillator rather
              than from the cable, so it is the frequency this note actually
              plays -- and clamped, since a delay line has a maximum and 20 Hz

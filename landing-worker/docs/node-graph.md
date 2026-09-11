@@ -468,19 +468,35 @@ sound of a Prophet-5 lead, and one no filter sweep reaches, because a filter
 removes harmonics and sync *creates* them at the discontinuity.
 
 OSC's `PHS` looks like the answer and is not, which is worth stating because it
-is the first thing anyone will reach for. PHS rotates the whole wave table, once,
-when the note is built -- measured, two oscillators at one pitch with PHS 0.5 on
-one of them cancel to exact silence, so it works. But an LFO patched into it
-changes nothing: the inlet is read through `cvIn` at build time and never
-registered as a modulation target, because `OscillatorNode` has no phase input
-and a delay is not one either -- a fixed delay is a different phase at every
-frequency, so it drifts the moment the note changes pitch.
+is the first thing anyone will reach for.
 
-Even if it could move, rotating a wave is not resetting it. Rotation produces the
-same waveform starting somewhere else, which is why a single oscillator sounds
-identical at every PHS; sync produces a *discontinuity*, and the discontinuity is
-the sound. Making PHS modulatable would give phase modulation -- FM's near
-relative, which this catalogue already reaches through OSC's FREQ.
+This paragraph used to say PHS could not move, "because `OscillatorNode` has no
+phase input and a delay is not one either -- a fixed delay is a different phase
+at every frequency". A *fixed* delay, yes. One scaled by the note's own period is
+not: half a turn is `0.5 / f` seconds, and measured across five octaves it
+cancels against an unshifted copy at every one of them -- 0.00003 at 110 Hz
+through 0.00555 at 1760. `delayTime` is a-rate, so a cable on it slides the phase
+per sample. PHS is live now, and the claim that it could not be was wrong.
+
+What that gives is phase modulation, which is FM's near relative and welcome. It
+is not sync, and the difference is the whole point: rotating a wave is not
+resetting one. Rotation produces the same waveform starting somewhere else --
+which is why a lone oscillator sounds identical at every PHS, and why the static
+case is only audible against a second oscillator. Sync produces a
+*discontinuity*, and the discontinuity is the sound.
+
+Measured on the live version, driving a slave's PHS from a master oscillator: the
+fundamental follows the *slave*, not the master. Sweeping the slave 220 to 880
+drops the energy at the master's 110 Hz from 0.2503 to 0.0518 while the slave's
+own partial climbs from 0.2224 to 0.2979. In real sync that first column would
+not move at all, because the pitch is the master's. Two oscillators modulating
+each other is not one resetting the other.
+
+A note on the implementation, because it is the rule the rest of the engine
+follows: a value on PHS keeps the wave table and a signal takes the delay. The
+first draft did both, and half a turn plus half a turn is a whole turn -- no
+shift at all, measured as 0.8306 where cancellation was expected. Exactly one
+mechanism per cable.
 
 It is a genuine primitive by this project's bar: conceptually irreducible, and
 not substitutable. Ring modulation at integer ratios was measured as the nearest
