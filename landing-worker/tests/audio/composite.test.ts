@@ -1718,6 +1718,44 @@ describe('FM: an oscillator modulating another one at audio rate', () => {
 		expect(lots / none, `sideband growth: ${none} -> ${lots}`).toBeGreaterThan(8);
 	}, 60000);
 
+	it('keeps the carrier audible at zero depth, which is what a base is for', async () => {
+		/* The ergonomics, and the regression the first version of this fix had.
+		
+		   `p` zeroes a knob a signal has claimed, which is right where the cable
+		   is the whole quantity -- a GAIN's level under an envelope, where a
+		   resting level underneath would be a second opinion. It is wrong on a
+		   frequency: modulation is a *deviation*, and a deviation needs something
+		   to deviate from.
+		
+		   So the most obvious FM patch -- set the carrier's FREQ to 440, cable a
+		   modulator in -- rendered exact silence at depth 0, because the carrier
+		   had no pitch left to modulate. The knob is the centre and the signal is
+		   the excursion, and both act on this port for that reason.
+		
+		   Measured: 0.4813 at depth 0, which is a bare oscillator, rising to
+		   0.4992 at 800 Hz of deviation. */
+		const carrierWithKnob = (depth: number) =>
+			graphOf(
+				[
+					{ id: 'cm', type: 'const' },
+					{ id: 'm', type: 'osc' },
+					{ id: 'g', type: 'gain' },
+					{ id: 'car', type: 'osc' }
+				],
+				[
+					EXEC_TO_OUT,
+					{ from: 'cm', fromPort: 'out', to: 'm', toPort: 'pitch' },
+					{ from: 'm', fromPort: 'out', to: 'g', toPort: 'in' },
+					{ from: 'g', fromPort: 'out', to: 'car', toPort: 'pitch' },
+					{ from: 'car', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ ...constAt('cm', 7, 220), 'car.pitch': 440, 'g.level': depth }
+			);
+		const silentDepth = (await render(carrierWithKnob(0), 8, 1)).envelope[4];
+		expect(silentDepth, 'the carrier must sound with no modulation').toBeCloseTo(BARE, 3);
+		expect((await render(carrierWithKnob(800), 8, 1)).envelope[4]).toBeGreaterThan(0.4);
+	}, 45000);
+
 	it('still lets a constant set the pitch, without applying it twice', async () => {
 		/* The other half, and the failure the old comment was protecting against:
 		   registering the param while a value also reached it put the same cable

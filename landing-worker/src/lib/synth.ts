@@ -1184,14 +1184,23 @@ class ModularSynth {
            anything was patched into it, so every OSC tracked the keyboard and a
            fixed drone was unsayable -- and, worse, the cable you could see made
            no difference to what you heard. */
-				/* The base frequency, and zero when a *signal* drives FREQ.
+				/* The base frequency the modulation deviates from.
         
-           `p` is the discriminator: it returns 0 exactly when the resolver says
-           a signal reaches this port, and the resolved value otherwise. So a
-           CONST of 440 sets the oscillator to 440 and is not also connected
-           below, while an oscillator patched into FREQ leaves the base at 0 and
-           arrives as a summed signal on the param -- which is what FM is. */
-				osc.frequency.value = p('pitch', 220);
+           Deliberately *not* `p`, which zeroes a knob a signal has claimed.
+           That rule is right where the cable is the whole quantity -- a GAIN's
+           level under an envelope -- and wrong here, because frequency
+           modulation is a deviation and a deviation needs something to deviate
+           from. Zeroing it made the most obvious FM patch silent: set the
+           carrier's FREQ to 440, cable a modulator in, and the carrier had no
+           pitch to be modulated. Measured at depth 0 it rendered exact silence.
+        
+           So the knob stays the carrier and the signal sums onto it in hertz,
+           which is what an AudioParam on `frequency` means. Both mechanisms act
+           and that is correct for this port: they are not two opinions about
+           one value, they are a centre and an excursion. A CONST still resolves
+           through `cvIn` and is skipped by the mod loop, so a patched constant
+           sets the pitch exactly once. */
+				osc.frequency.value = cvIn(probeKey, 'pitch', 220);
 				const g = ctx.createGain();
 				osc.connect(g);
 				sources.push(osc);
