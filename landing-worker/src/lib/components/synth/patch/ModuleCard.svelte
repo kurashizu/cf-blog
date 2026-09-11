@@ -37,6 +37,7 @@
 		params,
 		waves,
 		inlet,
+		claimed,
 		onParam,
 		onWave,
 		onDrawWave
@@ -51,6 +52,11 @@
 		   only knows its own id, so anything drawn from a *patched* value -- the
 		   pulse width, which has no knob -- has to be told. */
 		inlet?: (nodeId: string, port: string, def: number) => number;
+		/* Has a signal taken this knob over? A signal on an AudioParam sums with
+		   the knob, so the engine reads a claimed one as zero and lets the cable
+		   decide alone -- and a control showing a number it is not using is worse
+		   than no control. */
+		claimed?: (nodeId: string, key: string) => boolean;
 		onParam: (key: string, value: number) => void;
 		onWave?: (key: string, value: SynthWaveform) => void;
 		onDrawWave?: (key: string, editing?: CustomWave) => void;
@@ -352,7 +358,17 @@
 		     dial cannot spell out 440 -- see the `field` note in synth-modules. -->
 		<div class="flex flex-col gap-0.5">
 			{#each fields as p (p.key)}
-				<label class="flex items-center gap-1 text-[8px] font-mono font-bold leading-none">
+				<!-- A cable on this key means the engine is reading zero here and
+				     letting the signal decide, so the number is not in force. Dimmed
+				     and disabled rather than hidden: what it says is still the value
+				     the knob returns to when the cable is cut. -->
+				{@const taken = claimed?.(nodeId, p.key) ?? false}
+				<label
+					class="flex items-center gap-1 text-[8px] font-mono font-bold leading-none {taken
+						? 'opacity-40'
+						: ''}"
+					title={taken ? 'Driven by a cable' : undefined}
+				>
 					<span class="shrink-0 opacity-70" style="color: {spec.color}">{p.label}</span>
 					{#if (p as { notes?: boolean }).notes}
 						<!-- A note, typed as a name. The number underneath is MIDI, which
@@ -362,6 +378,7 @@
 						     alone rather than resetting it to something arbitrary. -->
 						<input
 							type="text"
+							disabled={taken}
 							value={noteName(Math.max(p.min, Math.min(p.max, val(p.key, p.def))))}
 							onpointerdown={(e) => e.stopPropagation()}
 							onchange={(e) => {
@@ -377,6 +394,7 @@
 						<input
 							type="number"
 							value={val(p.key, p.def)}
+							disabled={taken}
 							min={p.min}
 							max={p.max}
 							step={p.step}
@@ -408,6 +426,7 @@
 				     label and the space either side of it without turning
 				     anything. That is most of a knob cell's area, which is why
 				     modules felt immovable. -->
+				{@const taken = claimed?.(nodeId, p.key) ?? false}
 				<div
 					onpointerdown={(e) => {
 						if (e.button === 2) return;
@@ -415,6 +434,8 @@
 						if (dial) e.stopPropagation();
 					}}
 					role="presentation"
+					class={taken ? 'opacity-40 pointer-events-none' : ''}
+					title={taken ? 'Driven by a cable' : undefined}
 				>
 					<RotaryKnob
 						label={p.label}

@@ -786,6 +786,15 @@ export const KEY_TIMBRE_KEYS = [
 	'rackGraph',
 	'graphParams',
 	'graphWaves',
+	/* Which of the two instruments this sound is built on.
+	
+	   It reads like a property of the track -- it is the view the panel is in --
+	   but it decides whether the graph or the rack chain is what plays, and that
+	   is a property of the *sound*. Left out, a patch saved in ADV carried its
+	   whole graph and then played the rack chain instead, because the flag
+	   saying which to use stayed with whatever the track was already in. Every
+	   cable in the export was real and none of it was heard. */
+	'advanced',
 	'presetGain',
 	// Per key: which sounds cannot coexist is a property of the sound, not the track.
 	'muteGroup'

@@ -99,6 +99,21 @@
 		}
 	};
 
+	/* Has a signal taken this knob over?
+	
+	   A signal landing on an AudioParam sums with the knob, so the engine reads
+	   a claimed knob as zero and lets the cable decide alone. The card has to
+	   say the same thing or the number shown is a number that does nothing --
+	   which is how a GAIN reading LVL 1 under a gate cable came to sound like it
+	   was ignoring the patch. */
+	const claimedOf = (nodeId: string, key: string) => {
+		try {
+			return resolver.isDrivenBySignal(nodeId, key);
+		} catch {
+			return false;
+		}
+	};
+
 	/* The wave editor, opened from a card's picker. Keyed by node and param
 	   rather than by oscillator number, since a patch may hold any number of
 	   oscillators -- and the saved table is written back to the node that
@@ -1235,6 +1250,7 @@
 									params={graphParams}
 									waves={graphWaves}
 									inlet={inletOf}
+									claimed={claimedOf}
 									onParam={(key, value) => setGraphParam(graphParams, n.id, key, value)}
 									onWave={(key, value) => setGraphWave(graphWaves, n.id, key, value)}
 									onDrawWave={(key, editing) => openWaveDraw(n.id, key, editing)}

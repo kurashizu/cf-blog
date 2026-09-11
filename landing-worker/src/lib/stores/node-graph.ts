@@ -441,6 +441,46 @@ export function createResolver(
 	 * would hand back the code default and quietly ignore every setting in the
 	 * patch file.
 	 */
+	/**
+	 * Does a signal land on this inlet -- something connected rather than read?
+	 *
+	 * The distinction the two mechanisms turn on. A value cable is already in
+	 * the number by the time a module reads its knob, because `read` returned it
+	 * instead of the stored setting. A signal cable is not: it is connected to
+	 * the AudioParam afterwards and *sums* with whatever the knob holds.
+	 *
+	 * Recursive, because MAP made the question two-sided. MAP is a value node
+	 * and also builds audio: fed ENTRY's velocity it is a number pulled once,
+	 * fed a waveform it is a WaveShaperNode bending every sample. So what comes
+	 * *out* of it is a signal exactly when what went *in* was one, and asking
+	 * only about the node's type answered for the wrong half.
+	 *
+	 * `seen` guards the walk: a hand-edited patch can hold a cycle the editor
+	 * would refuse to draw, and a cycle here would recurse until the stack ran
+	 * out rather than returning a wrong answer.
+	 */
+	function emitsSignal(nodeId: string, port: string, seen: Set<string>): boolean {
+		const c = feeds.get(`${nodeId}.${port}`);
+		if (!c) return false;
+		// ENTRY publishes the note's data as values, never as signals.
+		if (entryIds.has(c.from)) return false;
+		const type = nodeById.get(c.from)?.type ?? '';
+		// Anything with no value to pull is sound: an OSC, a FILTER, an ENV.
+		if (!isValueNode(type)) return true;
+		// A pure node is always a number, whatever reaches it.
+		if (isPureNode(type)) return false;
+		/* What is left is the dual kind -- MAP -- which is a signal only when it
+		   is carrying one. Ask its own inlets. */
+		if (seen.has(c.from)) return false;
+		seen.add(c.from);
+		for (const [key, feed] of feeds) {
+			if (!key.startsWith(`${c.from}.`)) continue;
+			void feed;
+			if (emitsSignal(c.from, key.slice(c.from.length + 1), seen)) return true;
+		}
+		return false;
+	}
+
 	function read(nodeId: string, port: string, fallback: number): number {
 		/* A stored value that is not a number is not a value. `valueOf` guards
 		   what it computes, but a param read straight off the patch went through
@@ -478,6 +518,22 @@ export function createResolver(
 		input: (nodeId: string, port: string, fallback: number) => read(nodeId, port, fallback),
 		/** Is anything wired into this inlet? For modules that branch on it. */
 		isWired: (nodeId: string, port: string) => feeds.has(`${nodeId}.${port}`),
+		/**
+		 * Is a *signal* landing on this inlet -- something that will be connected
+		 * rather than read?
+		 *
+		 * The distinction the two mechanisms turn on. A value cable is already in
+		 * the number by the time a module reads its knob, because `read` returned
+		 * it instead of the stored setting. A signal cable is not: it is connected
+		 * to the AudioParam afterwards and *sums* with whatever the knob holds.
+		 *
+		 * That summing is right for a VCA -- the knob is the resting level and an
+		 * envelope opens it from there -- and wrong for everything a player
+		 * expects a patch cable to do, which is take over. Telling the two apart
+		 * here means the engine can hand back the operation's identity for a knob
+		 * a signal has claimed, so the cable is what is heard.
+		 */
+		isDrivenBySignal: (nodeId: string, port: string) => emitsSignal(nodeId, port, new Set()),
 		param
 	};
 }

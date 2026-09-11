@@ -743,7 +743,29 @@ class ModularSynth {
 			   and reached `frequency.value`, where Web Audio throws and takes the
 			   note -- and the scheduler tick for every other track -- with it. The
 			   lookup was redundant as well as harmful. */
-			const p = (key: string, def: number) => cvIn(node.id, key, def);
+			/* A cable takes the knob over.
+			
+			   Two mechanisms reach a knob and only one of them replaces it. A value
+			   cable is already in the number -- `cvIn` returned the cable instead
+			   of the stored setting -- but a *signal* cable is connected to the
+			   AudioParam afterwards and sums with whatever the knob holds. So a
+			   MAP swinging 0..1 into a GAIN whose LVL reads 1 gave a level moving
+			   between 1 and 2: the patch that should have gated the sound on and
+			   off never reached silence, and no setting of the knob would fix it
+			   except the one nobody thinks to try.
+			
+			   Zero is the identity for a sum, so a knob a signal has claimed reads
+			   as zero and the cable alone decides. Turning the knob then does
+			   nothing, which is the honest behaviour and what the card now shows
+			   by disabling it.
+			
+			   This is what a VCA's own knob was for, and it is not lost: the
+			   resting level a patch wants under an envelope is a GAIN before or
+			   after this one, where it is visible and can be automated separately.
+			   A knob that silently offsets a cable is not a control, it is a
+			   second opinion. */
+			const p = (key: string, def: number) =>
+				resolver.isDrivenBySignal(node.id, key) ? 0 : cvIn(node.id, key, def);
 			const runAt = t + (delays.get(node.id) ?? 0);
 			const madeBefore = sources.length;
 			const made = this.buildGraphNode(
