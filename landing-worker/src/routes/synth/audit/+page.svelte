@@ -66,7 +66,12 @@
 	 * synth has been told to use, which is exactly what the WAV export does --
 	 * so what this measures is what the file would contain.
 	 */
-	async function renderNote(seconds: number, noteIndex: number, slices: number): Promise<Result> {
+	async function renderNote(
+		seconds: number,
+		noteIndex: number,
+		slices: number,
+		holdSec?: number
+	): Promise<Result> {
 		const rate = 44100;
 		const frames = Math.ceil(seconds * rate);
 		const offline = new OfflineAudioContext(2, frames, rate);
@@ -122,7 +127,16 @@
 			   `triggerTrackVoice` drops any call that has none, so a key pressed by
 			   hand cannot be baked into an exported WAV. Held for the whole render,
 			   so a gate switching twice a second has something to switch. */
-			const key = S.triggerTrackVoice(0, noteIndex, 0, 0.01, seconds, 110, 110);
+			/* How long the key is held, which is not the same as how long the
+			   render is.
+			
+			   It used to be `seconds` unconditionally, so the note always lasted
+			   the whole render and nothing could ever reach its release. That hid
+			   a real defect: TUBE's DCAY sets the fall *after* the key lifts, so
+			   across its entire twelve-second range every render read 0.289 to
+			   four decimals -- a knob the card offers that no test on this bench
+			   could show working, because the bench never let go of the key. */
+			const key = S.triggerTrackVoice(0, noteIndex, 0, 0.01, holdSec ?? seconds, 110, 110);
 			builtVoice = key != null;
 
 			const buf = await offline.startRendering();
@@ -288,8 +302,8 @@
 					gate: 1
 				});
 			},
-			run: async (seconds = 2, noteIndex = 40, slices = 8) => {
-				result = await renderNote(seconds, noteIndex, slices);
+			run: async (seconds = 2, noteIndex = 40, slices = 8, holdSec?: number) => {
+				result = await renderNote(seconds, noteIndex, slices, holdSec);
 				return result;
 			},
 			/* The canvas's own editing functions, driven as the pointer drives

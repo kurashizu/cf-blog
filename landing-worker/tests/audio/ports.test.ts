@@ -63,20 +63,28 @@ afterAll(async () => {
 async function render(
 	timbre: Record<string, unknown>,
 	slices = 16,
-	seconds = 2
+	seconds = 2,
+	/* How long the key is held, if that is not the whole render.
+	
+	   Defaulting to the render length is right for almost everything and hides
+	   one whole class of behaviour: nothing that happens *after* the key lifts
+	   can be measured on a note that is never released. TUBE's DCAY sets exactly
+	   that, which is why it read as inert across its entire range until this
+	   argument existed. */
+	holdSec?: number
 ): Promise<Envelope> {
 	return page.evaluate(
 		async (a) => {
 			const w = window as never as {
 				__audit: {
 					setTrack(t: unknown): unknown;
-					run(s: number, n: number, sl: number): Promise<Envelope>;
+					run(s: number, n: number, sl: number, h?: number): Promise<Envelope>;
 				};
 			};
 			w.__audit.setTrack(a.t);
-			return await w.__audit.run(a.seconds, 40, a.slices);
+			return await w.__audit.run(a.seconds, 40, a.slices, a.holdSec);
 		},
-		{ t: timbre, slices, seconds }
+		{ t: timbre, slices, seconds, holdSec }
 	);
 }
 
@@ -1340,18 +1348,21 @@ describe('WHEN BUSY: the test that has no answer offline', () => {
 });
 
 /* ──────────────────────────────────────────────────────────────────────────
-   TUBE's two inert knobs
+   TUBE's four knobs, all of which now reach the sound
 
-   Found by this file rather than asserted into it. STRING and TUBE share a
-   builder and the same four-knob shape, but a tube is blown rather than struck:
-   its partials hold at full level for as long as the key is held and only fall
-   afterwards. DCAY and DAMP are used in exactly one place -- the length of that
-   fall -- and the fall is capped at 0.35 s, so neither knob can move anything a
-   held note can hear.
+   Two of them did not. This file found it: DCAY and DAMP read 0.0867 steady
+   across their entire ranges -- identical to four decimal places, not merely
+   close -- because a tube holds every partial at full level until the key
+   lifts, and both knobs fed only the length of the fall *after* that. On a note
+   held as long as it sounds there was nowhere for either to act. DAMP was worse
+   still: it divided by `n^(...)` and the fundamental has n = 1, so it cancelled
+   out of the partial carrying most of the level however it was set.
 
-   Documented here as measured rather than fixed, because the fix changes the
-   shipped sound of every TUBE preset and that is a decision about the
-   instrument rather than about its tests.
+   Fixed rather than documented, because a card offering a control that cannot
+   change the sound is a lie about the instrument. DAMP is now a spectral tilt
+   held for the whole note -- which is what a bore does -- and DCAY is the
+   release, uncapped. STRING is untouched: it is struck, its partials decay from
+   the attack, and its DAMP already worked.
    ────────────────────────────────────────────────────────────────────────── */
 describe('TUBE: which of its knobs actually reach the sound', () => {
 	const rig = (gp: Record<string, number>) =>
@@ -1372,8 +1383,8 @@ describe('TUBE: which of its knobs actually reach the sound', () => {
 	it('MIX and ODD are audible', async () => {
 		/* The two that work, and the control for the test below. MIX crossfades
 		   dry against the partials: 0 leaves 0.0000 steady -- the excitation is a
-		   few milliseconds and gone -- 70 reads 0.0867 and 100 reads 0.1238. ODD
-		   at 0 admits the even partials and reads 0.0900 against 0.0867.
+		   few milliseconds and gone -- 70 reads 0.0860 and 100 reads 0.1229. ODD
+		   at 0 admits the even partials and reads 0.0870 against 0.0860.
 
 		   Without this, the next test would be indistinguishable from a TUBE that
 		   was not sounding at all. */
@@ -1382,44 +1393,86 @@ describe('TUBE: which of its knobs actually reach the sound', () => {
 		const mix100 = await render(rig({ 't.tubeMix': 100 }), 10);
 		const odd = await render(rig({ 't.tubeOdd': 0 }), 10);
 		expect(steady(mix0)).toBeLessThan(0.001);
-		expect(steady(mix70)).toBeCloseTo(0.0867, 3);
-		expect(steady(mix100)).toBeCloseTo(0.1238, 3);
-		expect(steady(odd)).toBeCloseTo(0.09, 3);
+		expect(steady(mix70)).toBeCloseTo(0.086, 3);
+		expect(steady(mix100)).toBeCloseTo(0.1229, 3);
+		expect(steady(odd)).toBeCloseTo(0.087, 3);
 		expect(steady(odd)).toBeGreaterThan(steady(mix70));
 	}, 60000);
 
-	it('DCAY and DAMP change nothing at all on a held note', async () => {
-		/* Measured, and asserted as the defect it is rather than skipped.
+	it('DAMP tilts the spectrum for as long as the note lasts', async () => {
+		/* Measured through a highpass, because that is where DAMP acts: it leaves
+		   the fundamental alone by design -- a bore damps its upper partials --
+		   so the full-band reading barely moves while the partials above it fall
+		   by nearly half.
 
-		   DCAY across its whole range -- 0.05, 1.5, 12 -- and DAMP across its whole
-		   range -- 0, 50, 100 -- all render 0.0867 steady, identical to four
-		   decimal places. Not close: the same number.
+		   0.0429 / 0.0266 / 0.0234 across the knob. Before the fix all three read
+		   0.0867 to four decimals, and the full-band reading still moves only
+		   from 0.2890 to 0.2864, which is why this is asserted through a filter
+		   rather than on the raw output. */
+		const upper = async (damp: number) =>
+			steady(
+				await render(
+					patch(
+						[
+							{ id: 'x', type: 'excite' },
+							{ id: 't', type: 'tube' },
+							{ id: 'hp', type: 'filter' }
+						],
+						[
+							{ from: 'x', fromPort: 'out', to: 't', toPort: 'in' },
+							{ from: 't', fromPort: 'out', to: 'hp', toPort: 'in' },
+							{ from: 'hp', fromPort: 'out', to: 'output', toPort: 'in' }
+						],
+						{ 't.tubeMix': 70, 't.tubeDamp': damp, 'hp.type': 1, 'hp.cutoff': 1500, 'hp.q': 1 }
+					),
+					10
+				)
+			);
+		const open = await upper(0);
+		const half = await upper(50);
+		const shut = await upper(100);
+		expect(open).toBeGreaterThan(half);
+		expect(half).toBeGreaterThan(shut);
+		expect(shut / open, 'the bore takes nearly half the upper spectrum').toBeLessThan(0.6);
+	}, 60000);
 
-		   Why: for a tube every partial is scheduled to hold at its full level
-		   until `heldSec`, and both knobs feed only `dn`, which reaches the sound
-		   solely through `fall = Math.min(dn, 0.35)` after that hold ends. So on
-		   any note held for as long as it sounds, neither knob has anywhere to
-		   act. The fundamental is worse still: `dn = decay / n^(0.55 + damping *
-		   1.4)` and n is 1, so `n` to any power is 1 and damping cancels out of
-		   the partial that carries most of the level.
+	it('DCAY is the release, and the bench has to let go of the key to see it', async () => {
+		/* The other half of the same defect, and the reason it hid for so long:
+		   `run` held the key for the whole render, so no note ever reached its
+		   release and a knob that sets the release length could not be measured
+		   at all. The bench takes a hold time now.
 
-		   STRING, which shares this builder, does not have the problem -- its
-		   partials decay from the attack, and its DAMP measurably shortens them
-		   (peak 0.0585 at 0 against 0.0353 at 100, through a highpass that removes
-		   the fundamental). The divergence is in the `isTube` branch alone.
-
-		   This test asserts the current sound. If someone makes these knobs work
-		   it will fail, and that failure is the correct signal -- the assertion to
-		   change then is this one, not the instrument's. */
-		const dcay = await Promise.all(
-			[0.05, 1.5, 12].map((v) => render(rig({ 't.tubeDecay': v }), 10))
-		);
-		const damp = await Promise.all(
-			[0, 50, 100].map((v) => render(rig({ 't.tubeDamp': v }), 10))
-		);
-		for (const r of [...dcay, ...damp]) expect(steady(r)).toBeCloseTo(0.0867, 4);
-		// And flat for the whole render: a tube held this long never starts to fall.
-		const held = dcay[0].envelope.slice(1);
-		expect(Math.max(...held) - Math.min(...held)).toBeLessThan(0.001);
+		   Four seconds of render, one second of key. The tail then runs out at
+		   slice 4, 5, 9 and 15 as DCAY goes 0.1, 1, 3, 12 -- eleven slices of
+		   travel where before there were none, because the old `min(dn, 0.35)`
+		   pinned every setting above a third of a second to one value. */
+		const tail = async (dcay: number) => {
+			const r = await render(
+				patch(
+					[
+						{ id: 'x', type: 'excite' },
+						{ id: 't', type: 'tube' },
+						{ id: 'lim', type: 'gain' }
+					],
+					[
+						{ from: 'x', fromPort: 'out', to: 't', toPort: 'in' },
+						{ from: 't', fromPort: 'out', to: 'lim', toPort: 'in' },
+						{ from: 'lim', fromPort: 'out', to: 'output', toPort: 'in' }
+					],
+					{ 'lim.level': LIM, 't.tubeMix': 70, 't.tubeDecay': dcay }
+				),
+				16,
+				4,
+				1
+			);
+			return r.envelope.map((v, i) => (v > 0.001 ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
+		};
+		const readings = [await tail(0.1), await tail(1), await tail(3), await tail(12)];
+		for (let i = 1; i < readings.length; i++) {
+			expect(readings[i], `DCAY step ${i}: ${JSON.stringify(readings)}`).toBeGreaterThan(
+				readings[i - 1]
+			);
+		}
+		expect(readings[3] - readings[0], 'the range has real travel').toBeGreaterThan(6);
 	}, 60000);
 });

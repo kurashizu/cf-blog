@@ -2256,6 +2256,27 @@ class ModularSynth {
 					const amp = 1 / Math.pow(n, 1.9 - stiff * 0.7);
 					const dn = decay / Math.pow(n, 0.55 + damping * 1.4 + stiff * 0.5);
 					if (isTube) {
+						/* DAMP is a spectral tilt while the note sounds, not a decay rate.
+						
+						   It used to reach the sound only through `dn`, and `dn` only
+						   through the fall *after* the key is released -- so on a note
+						   held as long as it sounds, neither DAMP nor DCAY changed
+						   anything. Measured across both full ranges, every render read
+						   0.289 to four decimals: two knobs the card offers that could
+						   not move the sound.
+						
+						   Worse for DAMP specifically: `dn` divides by `n^(...)`, and the
+						   fundamental has n = 1, so the exponent cancels and damping was
+						   mathematically absent from the partial carrying most of the
+						   level however it was set.
+						
+						   A blown tube loses its upper partials to the bore, so damping
+						   belongs on the *held* amplitude where it is audible for the
+						   whole note. At 0 the spectrum is untouched; at 100 the eighth
+						   partial is about a tenth of its open level. STRING is left
+						   alone -- it is struck, its partials decay from the attack, and
+						   its DAMP already measurably shortens them. */
+						const tubeAmp = amp / Math.pow(n, damping * 1.6);
 						/* A tube is blown, not struck: the excitation continues, so the
                partials hold for as long as the key does and only then fall
                away. Letting them decay from the attack the way a string's do
@@ -2263,9 +2284,17 @@ class ModularSynth {
                chiff on every note, and nothing like a clarinet. */
 						const att = Math.max(0.01, 0.04 / (1 + (n - 1) * 0.4));
 						g.gain.setValueAtTime(0, _t);
-						g.gain.linearRampToValueAtTime(amp, _t + att);
-						g.gain.setValueAtTime(amp, _t + Math.max(att, heldSec));
-						const fall = Math.min(dn, 0.35);
+						g.gain.linearRampToValueAtTime(tubeAmp, _t + att);
+						g.gain.setValueAtTime(tubeAmp, _t + Math.max(att, heldSec));
+						/* And DCAY is the release, uncapped.
+						
+						   The old `min(dn, 0.35)` pinned every setting above about a
+						   third of a second to the same 0.35, so the top of the knob's
+						   twelve-second range was a single value repeated -- the other
+						   half of why DCAY did nothing. A tube that keeps ringing after
+						   the breath stops is a wind instrument in a room, which is a
+						   sound worth being able to say. */
+						const fall = Math.max(0.02, dn);
 						g.gain.exponentialRampToValueAtTime(0.00001, _t + Math.max(att, heldSec) + fall);
 						// To zero, for the same reason as the string's.
 						g.gain.linearRampToValueAtTime(0, _t + Math.max(att, heldSec) + fall + 0.06);

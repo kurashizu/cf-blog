@@ -2507,17 +2507,23 @@ describe('TUBE: ODD is which partials exist, not how loud they are', () => {
 	it('drops the even partials and keeps the odd ones', async () => {
 		/* Both halves are load-bearing and they say different things.
 
-		   The 2nd partial is the claim: present at 0.0550, absent at 0.0047.
+		   The 2nd partial is the claim: present at 0.0318, absent at 0.0046.
 
 		   The 3rd is the control, and it is what makes the first reading mean
 		   "the even partial is gone" rather than "the module got quieter". It
-		   reads 0.0255 against 0.0256 -- the same partial to three decimal places
+		   reads 0.0108 against 0.0109 -- the same partial to three decimal places
 		   whichever way ODD is set, which is what an odd-only bank has to do. A
-		   TUBE that had merely lost level fails this one. */
-		expect(await partial('tube', SECOND, tube(100)), 'ODD: no 2nd partial').toBeCloseTo(0.0047, 3);
-		expect(await partial('tube', SECOND, tube(0)), 'not ODD: a 2nd partial').toBeCloseTo(0.055, 3);
-		expect(await partial('tube', THIRD, tube(100)), 'ODD: the 3rd survives').toBeCloseTo(0.0255, 3);
-		expect(await partial('tube', THIRD, tube(0)), 'not ODD: unchanged').toBeCloseTo(0.0256, 3);
+		   TUBE that had merely lost level fails this one.
+
+		   These four numbers were 0.0550 / 0.0047 / 0.0255 / 0.0256 until DAMP
+		   was made audible: it tilts the spectrum for the whole held note now,
+		   so every partial above the fundamental sits lower at the default 50.
+		   The claim and the control are unchanged -- what moved is the level
+		   they are measured at, not which partial survives. */
+		expect(await partial('tube', SECOND, tube(100)), 'ODD: no 2nd partial').toBeCloseTo(0.0046, 3);
+		expect(await partial('tube', SECOND, tube(0)), 'not ODD: a 2nd partial').toBeCloseTo(0.0318, 3);
+		expect(await partial('tube', THIRD, tube(100)), 'ODD: the 3rd survives').toBeCloseTo(0.0108, 3);
+		expect(await partial('tube', THIRD, tube(0)), 'not ODD: unchanged').toBeCloseTo(0.0109, 3);
 	}, 90000);
 
 	it('switches at half, so a patch saved holding 100 still reads as odd', async () => {
@@ -2532,10 +2538,10 @@ describe('TUBE: ODD is which partials exist, not how loud they are', () => {
 		   threshold itself: it is under 0.5 and must read as *even*, which is
 		   what fails on a `> 0` test and on a `=== 1` one alike. */
 		const at = async (odd: number) => await partial('tube', SECOND, tube(odd));
-		expect(await at(1), 'ODD 1 is odd').toBeCloseTo(0.0047, 3);
-		expect(await at(100), 'ODD 100 is odd too').toBeCloseTo(0.0047, 3);
-		expect(await at(0.4), 'ODD 0.4 is under the threshold').toBeCloseTo(0.055, 3);
-		expect(await at(0), 'ODD 0 is not odd').toBeCloseTo(0.055, 3);
+		expect(await at(1), 'ODD 1 is odd').toBeCloseTo(0.0046, 3);
+		expect(await at(100), 'ODD 100 is odd too').toBeCloseTo(0.0046, 3);
+		expect(await at(0.4), 'ODD 0.4 is under the threshold').toBeCloseTo(0.0318, 3);
+		expect(await at(0), 'ODD 0 is not odd').toBeCloseTo(0.0318, 3);
 	}, 90000);
 
 	it('STRING builds the even partial TUBE refuses', async () => {
