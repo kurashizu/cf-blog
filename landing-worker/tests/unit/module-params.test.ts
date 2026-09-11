@@ -337,7 +337,13 @@ describe('the node contract', () => {
 				   wire, because what it operates on is not in this graph. */
 				const acts =
 					m.inputs.some((i) => i.kind === 'exec') && !m.inputs.some((i) => i.kind === 'audio');
-				const want = acts ? ['LOGIC'] : ['METER', 'UTILITY'];
+				/* And a fourth way, which SEND is: a module that takes sound and
+				   emits it somewhere the graph cannot see. Its outlet is real --
+				   the RTN on its bus -- it just is not a port, because a cable
+				   between the two ends is the cycle the editor refuses. It shapes
+				   the signal path, so it files with what shapes it. */
+				const sends = m.id === 'fbsend';
+				const want = sends ? ['SHAPE'] : acts ? ['LOGIC'] : ['METER', 'UTILITY'];
 				if (!want.includes(m.group)) wrong.push(`${m.id}: ${m.group}`);
 				continue;
 			}

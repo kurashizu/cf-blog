@@ -733,6 +733,67 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 *
 		 * TIME is a socket as well as a field, so the time can move with the note:
 		 * a delay whose length is modulated is what flanging *is*. */
+		/* The one loop the graph cannot draw.
+		 *
+		 * Audio cables are refused a cycle -- `addCable` walks them and returns
+		 * 'cycle' -- because a delay fed its own output was measured stable only
+		 * to about g = 0.90 and screamed past it. That refusal is right about
+		 * runaway and wrong about what it costs: a comb filter, a flanger with
+		 * resonance, a plate that is not a fixed impulse, and Karplus-Strong are
+		 * all one loop, and none of them was sayable. STRING exists as an
+		 * additive bank precisely because "it was built that way first and
+		 * measured unusable".
+		 *
+		 * So the loop is inside a module rather than on the canvas. SEND takes
+		 * the signal in; RTN hands back what SEND was given one block ago, and a
+		 * patch closes the circuit by cabling RTN onward into whatever feeds
+		 * SEND. The graph sees two separate nodes with no cycle between them, and
+		 * the delay of exactly one render block is what makes the loop bounded
+		 * rather than infinite -- the same trick a hardware effects loop plays,
+		 * for the same reason.
+		 *
+		 * Two cards for one idea, which this catalogue usually refuses. The
+		 * exception is earned by the same argument WAIT's second outlet lost on:
+		 * a send and a return are two *places* in the signal path, not two
+		 * properties of one place, and a patch has to be able to put them at
+		 * different points or the module is just DELAY with a knob welded on --
+		 * which is what the docstring below already rejected.
+		 *
+		 * GAIN on the return leg is the feedback amount, and it is a cable rather
+		 * than a knob for the reason DELAY gives: the amount going round is the
+		 * thing you most want to see. Above 1 it runs away, which is a sound and
+		 * not a bug -- SEND clamps its own output so a runaway saturates instead
+		 * of reaching the speakers as a spike.
+		 *
+		 * BUS is which loop this is, so several can coexist. Matched by number
+		 * rather than by cable because the pair is not connected in the graph: a
+		 * cable between them is exactly what would be a cycle. */
+		id: 'fbsend',
+		label: 'SEND',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.fbsend',
+		inputs: [AUDIO_IN],
+		outputs: [],
+		params: [{ key: 'bus', label: 'BUS', min: 0, max: 7, step: 1, def: 0, field: true, fixed: true }]
+	},
+	{
+		/* The other end of the loop. See SEND.
+		 *
+		 * Hands back what the SEND on the same BUS was given one block ago. With
+		 * no SEND on that bus it is silent rather than an error: half a loop is a
+		 * patch being built, and a module that threw while you were wiring it
+		 * would be unusable. */
+		id: 'fbrtn',
+		label: 'RTN',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.fbrtn',
+		inputs: [],
+		outputs: [AUDIO_OUT],
+		params: [{ key: 'bus', label: 'BUS', min: 0, max: 7, step: 1, def: 0, field: true, fixed: true }]
+	},
+	{
 		id: 'delay',
 		label: 'DELAY',
 		group: 'SHAPE',

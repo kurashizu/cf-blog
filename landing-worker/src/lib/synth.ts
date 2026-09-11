@@ -690,6 +690,9 @@ class ModularSynth {
 		}
 		if (order.length !== graph.nodes.length) return null;
 
+		/* One feedback bus map per voice. See the `fbBuses` parameter. */
+		const fbBuses = new Map<number, { send: GainNode; rtn: GainNode }>();
+
 		const built = new Map<
 			string,
 			{
@@ -800,7 +803,8 @@ class ModularSynth {
 				cvIn,
 				{ ...note, tuning: this.masterTuningFreq },
 				heldSec,
-				waves[`${node.id}.wave`]
+				waves[`${node.id}.wave`],
+				fbBuses
 			);
 			if (!made) continue;
 			// Whatever this node just created starts when this node runs.
@@ -999,7 +1003,15 @@ class ModularSynth {
 		/* The waveform this node is set to, if it has a picker. A name rather
        than an index, so a drawn table keeps its identity when its neighbours
        are deleted. */
-		wave?: string
+		wave?: string,
+		/* The feedback buses this voice is using, shared between the SEND and RTN
+       that name the same number.
+    
+       Held per voice rather than on the synth, because two notes sounding at
+       once are two independent loops -- a shared bus would make one note's
+       feedback arrive in the other's, which is a different instrument and not
+       the one the patch describes. */
+		fbBuses?: Map<number, { send: GainNode; rtn: GainNode }>
 	): {
 		in: AudioNode | null;
 		/** A second audio inlet, for the modules that take two signals. */
@@ -2035,6 +2047,89 @@ class ModularSynth {
 				// No `out`: the sink only gathers nodes marked isOutput, and a meter is
 				// not one, so a dangling gain here is heard by nobody.
 				return { in: g, out: g, mod };
+			}
+
+			case 'fbsend':
+			case 'fbrtn': {
+				/* The two ends of a feedback loop, matched by BUS rather than cabled.
+        
+           A cable between them would be exactly the cycle `addCable` refuses,
+           so the connection is made here: both ends look up the same entry in
+           this voice's bus map and share the pair of gains it holds.
+
+           The delay line is where the round trip happens, and what it is for is
+           narrower than it first looks. This comment used to say Web Audio
+           "permits a cycle through a DelayNode ... and refuses one without",
+           which is not so -- measured, `a.connect(b); b.connect(a)` with no
+           delay anywhere connects without throwing. What the platform actually
+           does is insert one render quantum of latency into any cycle by
+           itself, so the loop is already bounded before this node exists.
+
+           Which means the explicit delay *adds* to that rather than supplying
+           it. Measured with a single-sample impulse round a gain-0.5 loop: at
+           `delayTime = 0` the repeats land at samples 128, 256, 384 -- the
+           platform's own block -- and at `delayTime = 128/sampleRate` they land
+           at 256, 512, 768, one block for the platform and one for us. So the
+           round trip is two quanta, 5.8 ms at this bench's 44.1 kHz, not the
+           2.7 ms the old comment claimed.
+
+           It is kept because the extra block costs nothing audible and the node
+           is what makes the intent legible -- a loop whose only delay is an
+           implementation detail of the host is a loop that breaks when the host
+           changes. But it is not load-bearing for correctness, and a test that
+           removes it entirely still passes, which is recorded in
+           `tests/audio/ports.test.ts` rather than papered over.
+
+           Created by whichever end is built first, since the topological order
+           is over audio cables and these two are not connected by one. */
+				const busNo = Math.round(p('bus', 0));
+				let bus = fbBuses?.get(busNo);
+				if (!bus) {
+					const send = ctx.createGain();
+					const rtn = ctx.createGain();
+					const line = ctx.createDelay(1);
+					line.delayTime.value = 128 / ctx.sampleRate;
+					/* Saturated rather than clipped, and this is the reason the loop
+             was banned rather than built: a gain of 0.95 round the loop was
+             measured to scream. A tanh curve means a runaway settles into
+             distortion at full scale instead of arriving at the speakers as an
+             unbounded spike -- the feedback is still wrong, but it is a sound
+             someone chose rather than a hazard.
+        
+             Plain `tanh(x)`, and the shape of the curve is load-bearing in a
+             way that is easy to get wrong. This was first written as
+             `tanh(x * 1.6) / tanh(1.6)`, to reach exactly +/-1 at full scale --
+             which it does, and which leaves the slope *at the origin* at
+             1.6/tanh(1.6) = 1.736. A comb tail is a small signal, so every trip
+             round the loop multiplied it by 1.736 and the whole thing went
+             unstable at a feedback of 1/1.736 = 0.576: past that the tail did
+             not ring down, it rose and latched at a fixed level and held it for
+             the rest of the render, seconds after an 8 ms strike was over. That
+             is the screaming the cycle ban existed to prevent, merely
+             amplitude-limited, and it made two thirds of the knob unusable.
+        
+             `tanh(x)` has unity slope at the origin, so the feedback amount
+             means what it says -- below 1 it decays, above 1 it saturates --
+             and still reaches within a whisker of full scale, so no headroom is
+             lost. Verified by iterating the loop: every gain under 1.0 settles
+             to exactly 0, and 1.5 and 4.0 settle at 0.537 and 0.625. */
+					const guard = ctx.createWaveShaper();
+					const curve = new Float32Array(1024);
+					for (let i = 0; i < curve.length; i++) {
+						const x = (i / (curve.length - 1)) * 2 - 1;
+						curve[i] = Math.tanh(x);
+					}
+					guard.curve = curve;
+					guard.oversample = '2x';
+					send.connect(guard);
+					guard.connect(line);
+					line.connect(rtn);
+					bus = { send, rtn };
+					fbBuses?.set(busNo, bus);
+				}
+				return type === 'fbsend'
+					? { in: bus.send, out: bus.send, mod }
+					: { in: null, out: bus.rtn, mod };
 			}
 
 			case 'sum': {

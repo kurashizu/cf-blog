@@ -1476,3 +1476,559 @@ describe('TUBE: which of its knobs actually reach the sound', () => {
 		expect(readings[3] - readings[0], 'the range has real travel').toBeGreaterThan(6);
 	}, 60000);
 });
+
+/* ──────────────────────────────────────────────────────────────────────────
+   SEND and RTN -- the one loop the graph cannot draw
+
+   `addCable` refuses any audio cable that closes a loop, because a delay fed
+   its own output was measured stable only to about g = 0.90 and screamed past
+   it. That refusal cost the catalogue a comb filter, a resonant flanger and
+   Karplus-Strong all at once -- STRING is an additive bank *because* there was
+   no loop to be had. These two cards put the loop inside a module instead: they
+   are matched by a BUS number rather than by a cable, since a cable between
+   them would be exactly the cycle that is refused, and internally they share a
+   DelayNode of 128 samples (one render quantum, which is what makes Web Audio
+   permit the cycle at all) plus a tanh WaveShaper so a runaway saturates
+   instead of spiking.
+
+   The tests below were written against a *broken* engine and the break is the
+   reason several of them exist. The guard curve was first written as
+   `tanh(x * 1.6) / tanh(1.6)`, normalised so its endpoints reach exactly +/-1.
+   That leaves its slope at the *origin* at 1.6/tanh(1.6) = 1.736, and a comb
+   tail is a small signal -- so every trip round the loop multiplied it by
+   1.736, and the loop went unstable at a feedback of 1/1.736 = 0.576. Past
+   that the tail did not ring down: it rose and latched at a fixed level and
+   held it for the whole render, seconds after an 8 ms strike was over.
+   Measured on a bare loop, fb 0.85 read
+   [0.056, 0.1234, 0.1498, 0.1511, 0.1510, 0.1512, 0.1513, ...] -- flat forever.
+
+   That is the screaming the cycle ban existed to prevent, merely
+   amplitude-limited, and it made two thirds of the knob unusable. It also
+   looked like the feature working: "feedback 0.85 rings until the end of the
+   render" reads as a long tail until you notice the render is what ended, not
+   the note. `tanh(x)` has unity slope at the origin and is what ships.
+
+   So "the tail gets longer as the gain goes up" is not the strongest claim
+   available here and is not the one that would have caught it -- the broken
+   curve passed that test. The claim that bites is that a loop *below unity
+   reaches exact silence*, which is the second test below.
+
+   One thing here is deliberately not covered, found by trying to break it and
+   failing. The explicit 128-sample DelayNode can be set to zero, or unwired
+   from the path entirely, and every test below still passes -- because Web
+   Audio inserts one render quantum into any cycle on its own account, so the
+   loop is bounded with or without it. Measured with a single-sample impulse
+   round a gain-0.5 loop: `delayTime = 0` repeats at samples 128, 256, 384, and
+   `delayTime = 128/sampleRate` repeats at 256, 512, 768 -- the platform's own
+   block, plus ours. The node is legibility rather than mechanism, and there is
+   no behaviour to assert about it that is not really an assertion about the
+   host. Left untested and written down instead, rather than covered by a test
+   that would pass on an engine with the line cut out.
+
+   Two more mutations survive and are also structural rather than untested:
+   giving SEND an outlet in the engine, and giving RTN an inlet, change nothing,
+   because the catalogue declares `outputs: []` and `inputs: []` for them and no
+   cable can be drawn to a port that does not exist. `tests/unit/module-params`
+   is what holds those, which is the right place for a claim about the shape of
+   a card.
+   ────────────────────────────────────────────────────────────────────────── */
+describe('SEND and RTN: the feedback loop the canvas cannot draw', () => {
+	/**
+	 * The last slice with anything audible in it, or -1 for silence throughout.
+	 *
+	 * 0.0005 rather than 0, because the tail of a decaying comb approaches zero
+	 * asymptotically and never quite arrives -- the question worth asking is
+	 * where it stops being audible, not where the float underflows.
+	 */
+	const tailEnd = (r: Envelope) =>
+		r.envelope.map((v, i) => (v > 0.0005 ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
+
+	/**
+	 * A comb: one strike, a delay line, and the loop closed through a GAIN.
+	 *
+	 * `EXCITE -> SUM -> DELAY -> OUT`, with `DELAY -> SEND` and
+	 * `RTN -> GAIN(fb) -> SUM` closing it. This is the patch the modules exist
+	 * to make sayable, so it is the one the coverage is built on.
+	 *
+	 * An 8 ms strike, which matters: the source is over almost immediately, so
+	 * everything measured after slice 0 is the loop and not the excitation. A
+	 * sustained source would hide a loop that had stopped working.
+	 *
+	 * 50 ms of delay because it is the value that gives the tail room to show
+	 * its length. Measured at fb 0.85, the tail ends at slice 2 with a 10 ms
+	 * line, 7 with 50 ms and 17 with 150 ms -- too short and every setting
+	 * lands in the same slice, too long and the repeats are audible as separate
+	 * events rather than a decay.
+	 */
+	const comb = (fb: number, extra: Record<string, number> = {}) =>
+		patch(
+			[
+				{ id: 'e', type: 'excite' },
+				{ id: 'sum', type: 'sum' },
+				{ id: 'd', type: 'delay' },
+				{ id: 's', type: 'fbsend' },
+				{ id: 'r', type: 'fbrtn' },
+				{ id: 'fb', type: 'gain' }
+			],
+			[
+				{ from: 'e', fromPort: 'out', to: 'sum', toPort: 'in' },
+				{ from: 'sum', fromPort: 'out', to: 'd', toPort: 'in' },
+				{ from: 'd', fromPort: 'out', to: 'output', toPort: 'in' },
+				{ from: 'd', fromPort: 'out', to: 's', toPort: 'in' },
+				{ from: 'r', fromPort: 'out', to: 'fb', toPort: 'in' },
+				{ from: 'fb', fromPort: 'out', to: 'sum', toPort: 'in' }
+			],
+			{ 'e.exLength': 8, 'd.delayTime': 0.05, 'fb.level': fb, ...extra }
+		);
+
+	/**
+	 * The same loop with no DELAY module in it, so the only delay is the
+	 * module's own 128-sample line and the loop gain is exactly `fb`.
+	 *
+	 * This is the rig that makes the guard's small-signal gain measurable. With
+	 * a DELAY in the path the round trip is 50 ms and a render only holds sixty
+	 * of them, so a loop slightly over unity takes longer than the render to
+	 * become obvious. Here the round trip is 2.9 ms at this bench's 44.1 kHz,
+	 * about 1400 trips in four seconds, and a gain error of even a few percent
+	 * is unmissable.
+	 */
+	const bareLoop = (fb: number) =>
+		patch(
+			[
+				{ id: 'e', type: 'excite' },
+				{ id: 'sum', type: 'sum' },
+				{ id: 's', type: 'fbsend' },
+				{ id: 'r', type: 'fbrtn' },
+				{ id: 'fb', type: 'gain' },
+				{ id: 'o', type: 'gain' }
+			],
+			[
+				{ from: 'e', fromPort: 'out', to: 'sum', toPort: 'in' },
+				{ from: 'sum', fromPort: 'out', to: 's', toPort: 'in' },
+				{ from: 'r', fromPort: 'out', to: 'fb', toPort: 'in' },
+				{ from: 'fb', fromPort: 'out', to: 'sum', toPort: 'in' },
+				{ from: 'sum', fromPort: 'out', to: 'o', toPort: 'in' },
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+			],
+			{ 'e.exLength': 8, 'fb.level': fb, 'o.level': LIM }
+		);
+
+	it('repeats a single strike, and the tail grows with the feedback', async () => {
+		/* The comb working at all, which is the whole point of the pair.
+
+		   One 8 ms strike. At fb 0 it is gone inside slice 0 -- there is no loop,
+		   so what reaches OUT is the excitation and nothing else, and that is the
+		   control the rest of the row is read against. Every slice after 0 at a
+		   non-zero setting is sound that only exists because it went round.
+
+		   Tail ends at slice 0, 1, 2, 4, 9 and 23 for fb 0, 0.3, 0.5, 0.7, 0.85
+		   and 0.95. Asserted as an ordering rather than as those six numbers:
+		   EXCITE is noise and its level moves run to run, so the boundary slice
+		   moves by one either way at the high settings (0.85 read 9 and 10 across
+		   three passes). The ordering held identically in all three.
+
+		   Non-strict at each step, strict end to end -- adjacent settings can tie
+		   in the same slice when the noise goes the wrong way, but 0 to 0.95 is
+		   twenty-three slices of travel and cannot. */
+		const fbs = [0, 0.3, 0.5, 0.7, 0.85, 0.95];
+		const ends: number[] = [];
+		for (const fb of fbs) ends.push(tailEnd(await render(comb(fb), 24, 3)));
+
+		expect(ends[0], `fb 0 is the strike alone: ${JSON.stringify(ends)}`).toBe(0);
+		for (let i = 1; i < ends.length; i++) {
+			expect(
+				ends[i],
+				`feedback ${fbs[i]} must ring at least as long as ${fbs[i - 1]}: ${JSON.stringify(ends)}`
+			).toBeGreaterThanOrEqual(ends[i - 1]);
+		}
+		expect(
+			ends[ends.length - 1] - ends[0],
+			`the knob has real travel: ${JSON.stringify(ends)}`
+		).toBeGreaterThan(8);
+	}, 90000);
+
+	it('a loop below unity reaches exact silence, not a latched floor', async () => {
+		/* The assertion that catches the bug this module shipped with, and the
+		   one worth having above all the others here.
+
+		   A feedback gain under 1 is a decay: mathematically the tail is
+		   multiplied by g every trip and g^n goes to zero. If the saturator has
+		   any gain of its own at small signal levels the effective loop gain is
+		   not g but g*k, and for g anywhere above 1/k the tail stops decaying and
+		   latches at whatever level the curve's fixed point sits at. That is
+		   exactly what `tanh(x*1.6)/tanh(1.6)` did, with k = 1.736 and a
+		   threshold of 0.576.
+
+		   The distinction this test draws is the one a tail-length test cannot:
+		   a latched loop is *loud*, so it reads as a long tail and passes "higher
+		   feedback rings longer" with room to spare. What it cannot do is go
+		   quiet. So the claim here is exact silence -- literal zero in the
+		   envelope, not merely small.
+
+		   Four seconds through the bare loop, whose round trip is 2.9 ms, so the
+		   second half of the render is about 700 trips after the strike. Measured
+		   0 to four decimals across the whole second half at every setting from
+		   0.5 to 0.95. Against the old curve the same renders read a flat 0.0998
+		   at 0.7 and 0.1513 at 0.85 and never moved. */
+		for (const fb of [0.5, 0.7, 0.85, 0.9, 0.95]) {
+			const r = await render(bareLoop(fb), 16, 4);
+			const settled = r.envelope.slice(8);
+			expect(
+				Math.max(...settled),
+				`feedback ${fb} is below unity and must die out: ${JSON.stringify(r.envelope)}`
+			).toBe(0);
+		}
+	}, 90000);
+
+	it('stays bounded when the feedback is driven past unity', async () => {
+		/* The assertion that justifies the module existing at all.
+
+		   The loop was banned rather than built because a delay fed its own
+		   output "screamed" past about g = 0.90 -- an unbounded spike at the
+		   speakers. A tanh saturator is what makes the same patch safe to offer:
+		   above unity the loop still runs away, but it runs away into distortion
+		   at full scale instead of into an arbitrarily large number.
+
+		   Deliberately absurd settings, well past anything a patch would ask
+		   for. Peaks 0.90 at fb 2, 1.10 at fb 4 through the comb; a sustained
+		   oscillator driven at fb 16 -- the worst case, since the source never
+		   stops feeding it -- reads 1.0062.
+
+		   The bound is 1.5 rather than 1.0 because the master limiter sits after
+		   this and the saturator's ceiling is per-sample on a signal that sums
+		   with the dry path, so a peak a little over full scale is expected and
+		   fine. What is being ruled out is the unbounded case, which read in the
+		   tens and hundreds. Asserted as finite too: a runaway that reaches
+		   infinity or NaN poisons the buffer and every RMS in it reads NaN,
+		   which `toBeLessThan` alone would not catch. */
+		for (const fb of [1.5, 2, 4]) {
+			const r = await render(comb(fb), 8, 3);
+			expect(Number.isFinite(r.peak), `fb ${fb} produced ${r.peak}`).toBe(true);
+			expect(r.peak, `fb ${fb} must stay bounded`).toBeLessThan(1.5);
+			expect(r.peak, `fb ${fb} should still be making sound`).toBeGreaterThan(0.2);
+		}
+	}, 90000);
+
+	it('bounds a runaway fed by a source that never stops', async () => {
+		/* The harder half of the same claim, separated because the comb above is
+		   fed by an 8 ms strike -- the loop is running away from an input that
+		   has already ended, which is the easy case.
+
+		   Here an oscillator feeds the loop for the whole render at a feedback of
+		   16, so the saturator is being pushed continuously rather than ringing
+		   down from one impulse. Peak 1.0062, and the envelope settles flat at
+		   about 0.83 rather than climbing: [0.6535, 0.8268, 0.8407, 0.8278,
+		   0.8387, 0.8308, 0.8334, 0.8357]. Settling is the point -- that is the
+		   curve's ceiling being reached and held, which is what "saturates
+		   instead of spiking" means. */
+		const r = await render(
+			patch(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 'g0', type: 'gain' },
+					{ id: 'sum', type: 'sum' },
+					{ id: 'd', type: 'delay' },
+					{ id: 's', type: 'fbsend' },
+					{ id: 'r', type: 'fbrtn' },
+					{ id: 'fb', type: 'gain' }
+				],
+				[
+					{ from: 'o', fromPort: 'out', to: 'g0', toPort: 'in' },
+					{ from: 'g0', fromPort: 'out', to: 'sum', toPort: 'in' },
+					{ from: 'sum', fromPort: 'out', to: 'd', toPort: 'in' },
+					{ from: 'd', fromPort: 'out', to: 'output', toPort: 'in' },
+					{ from: 'd', fromPort: 'out', to: 's', toPort: 'in' },
+					{ from: 'r', fromPort: 'out', to: 'fb', toPort: 'in' },
+					{ from: 'fb', fromPort: 'out', to: 'sum', toPort: 'in' }
+				],
+				{ 'g0.level': 0.3, 'd.delayTime': 0.05, 'fb.level': 16 }
+			),
+			8,
+			3
+		);
+		expect(Number.isFinite(r.peak)).toBe(true);
+		expect(r.peak, 'a continuously driven runaway is still bounded').toBeLessThan(1.5);
+		/* The last four slices are flat to within a few percent of each other:
+		   the loop has reached the curve's ceiling and is sitting on it. A loop
+		   that was still growing would spread much wider than this. */
+		const tail = r.envelope.slice(4);
+		expect(Math.max(...tail) / Math.min(...tail), 'it settles rather than climbing').toBeLessThan(
+			1.15
+		);
+	}, 60000);
+
+	it('is silent, and does not error, when a RTN has no SEND on its bus', async () => {
+		/* Half a loop is a patch being built. Someone drops a RTN on the canvas
+		   before its SEND exists, and a module that threw -- or that built no
+		   voice -- while you were wiring would be unusable.
+
+		   Exactly 0, not merely quiet: with no SEND on the bus nothing is
+		   connected to the return's input at all. `builtVoice` is asserted
+		   separately because a graph that fails to build also renders silence,
+		   and the two would be indistinguishable otherwise -- that is the
+		   difference between "the module handled it" and "the patch never
+		   played". */
+		const r = await render(
+			patch(
+				[
+					{ id: 'r', type: 'fbrtn' },
+					{ id: 'g', type: 'gain' }
+				],
+				[
+					{ from: 'r', fromPort: 'out', to: 'g', toPort: 'in' },
+					{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ 'g.level': LIM }
+			),
+			8,
+			2
+		);
+		expect(r.ok, r.error).toBe(true);
+		expect(r.builtVoice, 'the voice still builds').toBe(true);
+		expect(r.peak).toBe(0);
+	}, 45000);
+
+	it('swallows what a SEND is given when nothing returns it', async () => {
+		/* The other half of a patch under construction, and the direction that
+		   could go wrong loudly rather than quietly: SEND has no outlet, so a
+		   source wired into one must reach OUT by no path whatever. If the send
+		   leaked to the destination -- an easy mistake, since it is a GainNode
+		   like any other -- a half-built loop would be audible when it should be
+		   silent.
+
+		   Exactly 0 against the same oscillator reading 0.2042 wired straight to
+		   OUT, which is the control that proves the source was making sound. */
+		const swallowed = await render(
+			patch(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 's', type: 'fbsend' }
+				],
+				[{ from: 'o', fromPort: 'out', to: 's', toPort: 'in' }],
+				{}
+			),
+			8,
+			2
+		);
+		const control = await render(
+			patch(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 'g', type: 'gain' }
+				],
+				[
+					{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+					{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ 'g.level': LIM }
+			),
+			8,
+			2
+		);
+		expect(swallowed.builtVoice).toBe(true);
+		expect(swallowed.peak).toBe(0);
+		expect(control.peak, 'the same source does sound when wired to OUT').toBeGreaterThan(0.1);
+	}, 45000);
+
+	it('hands back at RTN what SEND was given, one block later', async () => {
+		/* The line itself, measured open rather than closed -- an oscillator into
+		   SEND and RTN straight to OUT, with no feedback path at all.
+
+		   What comes back is the same signal: 0.1412 steady through the loop
+		   against 0.1444 straight to OUT, a 2% difference which is the 2.9 ms of
+		   delay shifting where the slice boundaries fall on a periodic wave. The
+		   claim is that the pair is a wire with a one-block delay in it and not a
+		   filter or an attenuator -- if the 128-sample line were longer, or the
+		   saturator were squashing at ordinary levels, this would not read as
+		   unity.
+
+		   It also pins the guard at small signals from the other side: a curve
+		   with 1.736 gain at the origin would have read this *louder* than the
+		   control, not equal to it. */
+		const through = await render(
+			patch(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 'g0', type: 'gain' },
+					{ id: 's', type: 'fbsend' },
+					{ id: 'r', type: 'fbrtn' },
+					{ id: 'g', type: 'gain' }
+				],
+				[
+					{ from: 'o', fromPort: 'out', to: 'g0', toPort: 'in' },
+					{ from: 'g0', fromPort: 'out', to: 's', toPort: 'in' },
+					{ from: 'r', fromPort: 'out', to: 'g', toPort: 'in' },
+					{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ 'g0.level': LIM, 'g.level': 1 }
+			),
+			8,
+			2
+		);
+		const direct = await render(
+			patch(
+				[
+					{ id: 'o', type: 'osc' },
+					{ id: 'g', type: 'gain' }
+				],
+				[
+					{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+					{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{ 'g.level': LIM }
+			),
+			8,
+			2
+		);
+		expect(steady(through)).toBeGreaterThan(0);
+		expect(
+			steady(through) / steady(direct),
+			`the loop is a wire: ${steady(through)} vs ${steady(direct)}`
+		).toBeCloseTo(1, 1);
+	}, 45000);
+
+	it('keeps one bus out of another', async () => {
+		/* BUS is what lets several loops coexist, and it is the only thing
+		   separating them -- there is no cable to get wrong, so a bus that was
+		   ignored would silently merge every loop in the patch into one.
+
+		   A running loop on bus 0, and a second RTN wired to OUT. On bus 1 it
+		   reads exactly 0: the loop is sounding, and this return is deaf to it.
+		   The control beside it is the same patch with that return moved to bus
+		   0, where it reads 0.1298 -- which is what makes the zero meaningful
+		   rather than a patch that was not playing. Note that OUT hears the loop
+		   *only* through this second return, so the first reading is the whole
+		   output. */
+		const rig = (bus: number) =>
+			patch(
+				[
+					{ id: 'e', type: 'excite' },
+					{ id: 'sum', type: 'sum' },
+					{ id: 'd', type: 'delay' },
+					{ id: 's', type: 'fbsend' },
+					{ id: 'r', type: 'fbrtn' },
+					{ id: 'fb', type: 'gain' },
+					{ id: 'r1', type: 'fbrtn' },
+					{ id: 'g1', type: 'gain' }
+				],
+				[
+					{ from: 'e', fromPort: 'out', to: 'sum', toPort: 'in' },
+					{ from: 'sum', fromPort: 'out', to: 'd', toPort: 'in' },
+					{ from: 'd', fromPort: 'out', to: 's', toPort: 'in' },
+					{ from: 'r', fromPort: 'out', to: 'fb', toPort: 'in' },
+					{ from: 'fb', fromPort: 'out', to: 'sum', toPort: 'in' },
+					{ from: 'r1', fromPort: 'out', to: 'g1', toPort: 'in' },
+					{ from: 'g1', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{
+					'e.exLength': 8,
+					'd.delayTime': 0.05,
+					'fb.level': 0.85,
+					's.bus': 0,
+					'r.bus': 0,
+					'r1.bus': bus,
+					'g1.level': LIM
+				}
+			);
+		const deaf = await render(rig(1), 24, 3);
+		const hears = await render(rig(0), 24, 3);
+		expect(deaf.peak, 'bus 1 hears nothing of bus 0').toBe(0);
+		expect(hears.peak, 'the same return on bus 0 does hear it').toBeGreaterThan(0.02);
+	}, 60000);
+
+	it('pairs the two ends at both ends of the BUS range, and only when they match', async () => {
+		/* BUS is declared 0..7, so both ends of that range have to actually pair
+		   -- an off-by-one in the map lookup, or a bus number silently clamped,
+		   would show at 7 and nowhere else.
+
+		   Bus 0 and bus 7 both ring: tail to slice 9 and 10, against slice 0 when
+		   the two ends disagree. The mismatched pair is the other half of the
+		   claim and the reason this is one test rather than two: 0/7 and 7/0 both
+		   read tail-end 0, the bare strike with no loop at all, which is what
+		   proves the pairing is by number rather than "the first SEND anywhere".
+
+		   Tail ends compared against the fb-0 control rather than to each other,
+		   since EXCITE is noise and the exact boundary slice moves by one. */
+		const matched0 = tailEnd(await render(comb(0.85, { 's.bus': 0, 'r.bus': 0 }), 24, 3));
+		const matched7 = tailEnd(await render(comb(0.85, { 's.bus': 7, 'r.bus': 7 }), 24, 3));
+		const split07 = tailEnd(await render(comb(0.85, { 's.bus': 0, 'r.bus': 7 }), 24, 3));
+		const split70 = tailEnd(await render(comb(0.85, { 's.bus': 7, 'r.bus': 0 }), 24, 3));
+
+		expect(matched0, 'bus 0 pairs').toBeGreaterThan(4);
+		expect(matched7, 'bus 7 pairs').toBeGreaterThan(4);
+		expect(split07, 'SEND 0 does not reach RTN 7').toBe(0);
+		expect(split70, 'SEND 7 does not reach RTN 0').toBe(0);
+	}, 90000);
+
+	it('runs two loops in one voice without either leaking into the other', async () => {
+		/* Two combs off one strike, with different feedback amounts, summed to
+		   OUT. On separate buses each keeps its own gain and the pair dies with
+		   the shorter-lived of them; on the same bus they become one loop whose
+		   gain is the sum of both return paths, and that is well over unity, so
+		   it saturates and rings for the whole render.
+
+		   Tail ends at slice 9 separated and 23 shared, which is the render
+		   ending rather than the note. That difference is the whole assertion:
+		   two loops that were secretly one would ring on.
+
+		   This is the per-voice `fbBuses` map tested as far as a single-note
+		   bench can test it, and the limit is worth stating plainly. The map is
+		   built once per *voice*, so the claim it actually makes is that two
+		   simultaneous notes hold two independent sets of buses. This bench
+		   renders exactly one note -- `renderNote` calls `triggerTrackVoice`
+		   once -- so the two-note case is not reachable from here at all and is
+		   not tested. What is tested is the same map's other guarantee, that two
+		   buses within one voice are distinct, which shares the lookup with it.
+		   A bug that made the map global rather than per-voice would pass this
+		   test; a bug that ignored the bus number would not. */
+		const two = (busB: number) =>
+			patch(
+				[
+					{ id: 'e', type: 'excite' },
+					{ id: 'sumA', type: 'sum' },
+					{ id: 'dA', type: 'delay' },
+					{ id: 'sA', type: 'fbsend' },
+					{ id: 'rA', type: 'fbrtn' },
+					{ id: 'fbA', type: 'gain' },
+					{ id: 'sumB', type: 'sum' },
+					{ id: 'dB', type: 'delay' },
+					{ id: 'sB', type: 'fbsend' },
+					{ id: 'rB', type: 'fbrtn' },
+					{ id: 'fbB', type: 'gain' },
+					{ id: 'mix', type: 'gain' }
+				],
+				[
+					{ from: 'e', fromPort: 'out', to: 'sumA', toPort: 'in' },
+					{ from: 'sumA', fromPort: 'out', to: 'dA', toPort: 'in' },
+					{ from: 'dA', fromPort: 'out', to: 'sA', toPort: 'in' },
+					{ from: 'rA', fromPort: 'out', to: 'fbA', toPort: 'in' },
+					{ from: 'fbA', fromPort: 'out', to: 'sumA', toPort: 'in' },
+					{ from: 'dA', fromPort: 'out', to: 'mix', toPort: 'in' },
+					{ from: 'e', fromPort: 'out', to: 'sumB', toPort: 'in' },
+					{ from: 'sumB', fromPort: 'out', to: 'dB', toPort: 'in' },
+					{ from: 'dB', fromPort: 'out', to: 'sB', toPort: 'in' },
+					{ from: 'rB', fromPort: 'out', to: 'fbB', toPort: 'in' },
+					{ from: 'fbB', fromPort: 'out', to: 'sumB', toPort: 'in' },
+					{ from: 'dB', fromPort: 'out', to: 'mix', toPort: 'in' },
+					{ from: 'mix', fromPort: 'out', to: 'output', toPort: 'in' }
+				],
+				{
+					'e.exLength': 8,
+					'dA.delayTime': 0.05,
+					'fbA.level': 0.5,
+					'sA.bus': 0,
+					'rA.bus': 0,
+					'dB.delayTime': 0.05,
+					'fbB.level': 0.9,
+					'sB.bus': busB,
+					'rB.bus': busB,
+					'mix.level': 0.5
+				}
+			);
+		const apart = tailEnd(await render(two(1), 24, 4));
+		const shared = tailEnd(await render(two(0), 24, 4));
+		expect(apart, 'two buses, each loop keeps its own gain and dies out').toBeLessThan(16);
+		expect(shared, 'one bus, the two returns add into a loop over unity').toBe(23);
+		expect(shared, 'sharing a bus is audibly different').toBeGreaterThan(apart);
+	}, 60000);
+});

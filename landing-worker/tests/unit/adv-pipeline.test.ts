@@ -475,8 +475,26 @@ describe('what the renders proved', () => {
 		const neither = ALL.filter((id) => !audioOut(id) && !valueOut(id));
 		/* ENTRY is not among them: it publishes the note as values, which is
 		   exactly what the sweep drives knobs with. The meters are: they observe
-		   a signal and hand nothing back, so they sit at the end of a branch. */
-		expect(neither.sort()).toEqual(['act', 'fft', 'loud', 'out', 'scope', 'wait', 'when']);
+		   a signal and hand nothing back, so they sit at the end of a branch.
+
+		   SEND is the odd one, and it is here for a reason unlike any of the
+		   others: it has a real outlet -- the RTN on its bus -- which is not a
+		   *port*, because a cable between the two ends is exactly the cycle the
+		   editor refuses. So the sweep, which walks ports, cannot reach past it
+		   and reads it as a dead end. It is not untested: `tests/audio/ports.ts`
+		   renders it in a closed loop and measures the tail, and separately
+		   asserts that a source wired into one reaches OUT by no path at all,
+		   which is this same dead end pinned as the behaviour it is. */
+		expect(neither.sort()).toEqual([
+			'act',
+			'fbsend',
+			'fft',
+			'loud',
+			'out',
+			'scope',
+			'wait',
+			'when'
+		]);
 		expect(measured.length).toBe(ALL.length - neither.length);
 	});
 
