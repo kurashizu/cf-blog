@@ -1322,6 +1322,14 @@ class ModularSynth {
 				outGain.connect(result);
 				outOffset.connect(result);
 
+				/* `a` is where the signal enters, and the mod loop looks that name up
+           in this map. Without it a cable into MAP was classed as a mod cable
+           -- the card declares `a` as `kind: 'mod'`, since a control value has
+           to reach it too -- found nothing to land on, and was dropped: the
+           shaper sat on the constant offset and MAP put out a flat level while
+           every one of its settings still visibly changed that level, which is
+           what made it look like it was working. */
+				mod.set('a', inGain);
 				return { in: inGain, out: result, mod };
 			}
 

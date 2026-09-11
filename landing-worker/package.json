@@ -12,6 +12,7 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"deploy:cf": "wrangler deploy",
 		"test": "svelte-kit sync && vitest run",
+		"test:audio": "vitest run --config vitest.audio.config.ts",
 		"test:watch": "vitest",
 		"test:coverage": "svelte-kit sync && vitest run --coverage",
 		"test:mutation": "stryker run",

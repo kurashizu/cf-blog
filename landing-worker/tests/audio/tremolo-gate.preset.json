@@ -1,0 +1,187 @@
+{
+  "format": "krsz-synth-preset",
+  "version": 1,
+  "name": "TEST",
+  "timbre": {
+    "osc1Waveform": "sine",
+    "osc1Gain": 1,
+    "osc2Waveform": "triangle",
+    "osc2Gain": 0.35,
+    "osc2Ratio": 1,
+    "detuneCents": 0,
+    "phaseOffset": 0,
+    "osc2Semitone": 0,
+    "pulseWidth": 50,
+    "subOscGain": 0,
+    "noiseGain": 0.05,
+    "noiseRetrig": 1,
+    "noiseRetrigGap": 12,
+    "blendMode": "layer",
+    "morphAmount": 0,
+    "glideTime": 0,
+    "xfade": 0.5,
+    "filterType": "lowpass",
+    "cutoff": 5200,
+    "resonance": 0.4,
+    "envFilterMod": 0,
+    "keyTracking": 0,
+    "attack": 0.03,
+    "decay": 0.2,
+    "sustain": 0.85,
+    "release": 0.12,
+    "ampAttack": 0.03,
+    "ampDecay": 0.2,
+    "ampSustain": 0.85,
+    "ampRelease": 0.12,
+    "filterAttack": 0.03,
+    "filterDecay": 0.2,
+    "filterSustain": 0.6,
+    "filterRelease": 0.1,
+    "filterEnvAmount": 0.15,
+    "pitchAttack": 0.001,
+    "pitchDecay": 0.03,
+    "pitchEnvAmount": 0,
+    "lfoWaveform": "sine",
+    "lfoRate": 5.5,
+    "lfoPitchAmt": 0.02,
+    "lfoCutoffAmt": 0,
+    "lfoPanAmt": 0,
+    "lfoAmpAmt": 0,
+    "lfoFadeTime": 180,
+    "airGain": 0.1,
+    "rackChain": [
+      "string",
+      "body"
+    ],
+    "rackParams": {},
+    "rackGraph": {
+      "nodes": [
+        {
+          "id": "entry",
+          "type": "in",
+          "x": 48,
+          "y": 128
+        },
+        {
+          "id": "freq-1",
+          "type": "tofreq",
+          "x": 320,
+          "y": 184
+        },
+        {
+          "id": "osc-1",
+          "type": "osc",
+          "x": 560,
+          "y": 192
+        },
+        {
+          "id": "output",
+          "type": "out",
+          "x": 1024,
+          "y": 128
+        },
+        {
+          "id": "osc-mtwfllxb-0",
+          "type": "osc",
+          "x": 192,
+          "y": 320
+        },
+        {
+          "id": "gain-mtwflybt-1",
+          "type": "gain",
+          "x": 800,
+          "y": 224
+        },
+        {
+          "id": "tocv-mtwggyve-0",
+          "type": "tocv",
+          "x": 416,
+          "y": 336
+        },
+        {
+          "id": "map-mtwghp76-1",
+          "type": "map",
+          "x": 608,
+          "y": 320
+        },
+        {
+          "id": "const-mtwgihms-2",
+          "type": "const",
+          "x": -16,
+          "y": 320
+        }
+      ],
+      "cables": [
+        {
+          "from": "entry",
+          "fromPort": "then",
+          "to": "output",
+          "toPort": "exec"
+        },
+        {
+          "from": "entry",
+          "fromPort": "pitch",
+          "to": "freq-1",
+          "toPort": "a"
+        },
+        {
+          "from": "freq-1",
+          "fromPort": "out",
+          "to": "osc-1",
+          "toPort": "pitch"
+        },
+        {
+          "from": "gain-mtwflybt-1",
+          "fromPort": "out",
+          "to": "output",
+          "toPort": "in"
+        },
+        {
+          "from": "osc-1",
+          "fromPort": "out",
+          "to": "gain-mtwflybt-1",
+          "toPort": "in"
+        },
+        {
+          "from": "osc-mtwfllxb-0",
+          "fromPort": "out",
+          "to": "tocv-mtwggyve-0",
+          "toPort": "in"
+        },
+        {
+          "from": "tocv-mtwggyve-0",
+          "fromPort": "out",
+          "to": "map-mtwghp76-1",
+          "toPort": "a"
+        },
+        {
+          "from": "const-mtwgihms-2",
+          "fromPort": "out",
+          "to": "osc-mtwfllxb-0",
+          "toPort": "pitch"
+        },
+        {
+          "from": "map-mtwghp76-1",
+          "fromPort": "out",
+          "to": "gain-mtwflybt-1",
+          "toPort": "level"
+        }
+      ]
+    },
+    "graphParams": {
+      "const-mtwgihms-2.value": 1,
+      "map-mtwghp76-1.inLo": -1,
+      "map-mtwghp76-1.shape": 0
+    },
+    "advanced": true,
+    "eqOn": false,
+    "eqGains": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+}
