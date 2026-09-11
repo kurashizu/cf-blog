@@ -18,6 +18,32 @@
 	 */
 	import { onMount } from 'svelte';
 	import { modularSynth } from '$lib/synth';
+	/* The editing half of the canvas, so a test can draw a cable the way a
+	   pointer does rather than by writing the cable into a literal graph.
+
+	   Imported statically because there is no other way in: a dynamic import
+	   inside `page.evaluate` is rewritten by Vitest's transform and arrives in
+	   the browser as an undefined helper, so a test that wants `addCable` has to
+	   find it already on the page. Same reason `probeValue` lives here. */
+	import {
+		addNode,
+		addCable,
+		removeNode,
+		removeCable,
+		setGraphParam,
+		setGraphParams,
+		undoGraph,
+		redoGraph,
+		clearGraphHistory,
+		graphOf,
+		isFixedNode,
+		deleteSelection,
+		type RackGraph,
+		type GraphCable,
+		type PortKind
+	} from '$lib/stores/synth-graph';
+	import { createResolver } from '$lib/stores/node-graph';
+	import { pickTimbre, isPresetFile } from '$lib/stores/synth-presets';
 
 	type Result = {
 		ok: boolean;
@@ -196,9 +222,127 @@
 				await new Promise((r) => setTimeout(r, 60));
 				return out;
 			},
+			/* What a patch's white cable decides to do to the notes already
+			   sounding: CUT, SOLO, which group, how fast.
+
+			   Here rather than in a render, because an action is not a sound. ACT
+			   reaches sideways at other voices, and the bench plays exactly one
+			   note into a fresh context -- so there is nothing for a choke to act
+			   on and an offline envelope cannot see it at all. What can be
+			   measured is the decision, which is what `noteActions` returns.
+
+			   It walks the exec wire a second time, separately from `execReach`,
+			   and the two have disagreed before: the walk was hardcoded as ENTRY
+			   -> WHEN -> ACT, exactly two hops, so a WAIT anywhere in the chain
+			   silently dropped the rest of it while the audio side traversed it
+			   correctly. */
+			noteActions: (patch: Record<string, unknown>, noteIndex = 40, velocity = 110 / 127) => {
+				const S = modularSynth as unknown as {
+					updateTrack(i: number, t: unknown): void;
+					getTrack(i: number): unknown;
+					noteActions(t: unknown, n: number, id: number, e: unknown): unknown;
+				};
+				S.updateTrack(0, { ...patch, muted: false });
+				/* The same event the sound is built from: semitones from the tuning
+				   reference and the real velocity, not a second literal. Two copies
+				   of "what this note is" are what let the choke and the sound answer
+				   a CMP on VEL differently. */
+				return S.noteActions(S.getTrack(0), noteIndex, 0, {
+					velocity,
+					pitch: noteIndex - 69,
+					gate: 1
+				});
+			},
 			run: async (seconds = 2, noteIndex = 40, slices = 8) => {
 				result = await renderNote(seconds, noteIndex, slices);
 				return result;
+			},
+			/* The canvas's own editing functions, driven as the pointer drives
+			   them: against the *live* track, through the undo stack, with the
+			   graph read back out afterwards.
+
+			   A test could write the finished graph into a literal instead, and
+			   the audio suite mostly does -- but then what is measured is the
+			   engine, and everything between the pointer and the patch (cable
+			   legality, MAP's inferred range, what a delete takes with it, what
+			   an undo puts back) is never executed at all. These go through the
+			   same doors the editor uses, so the graph they leave behind is the
+			   one a player would have built. */
+			edit: {
+				/** The live track's graph, as the editor reads it. */
+				graph: () => graphOf(modularSynth.getTrack(0)) as RackGraph,
+				/** The live track's knob settings. */
+				params: () =>
+					(modularSynth.getTrack(0)?.graphParams ?? {}) as Record<string, number>,
+				addNode: (type: string, x = 0, y = 0) => addNode(graphOf(modularSynth.getTrack(0)), type, x, y),
+				addCable: (cable: GraphCable, kind: PortKind) =>
+					addCable(graphOf(modularSynth.getTrack(0)), cable, kind),
+				removeCable: (i: number) => removeCable(graphOf(modularSynth.getTrack(0)), i),
+				removeNode: (id: string) =>
+					removeNode(
+						graphOf(modularSynth.getTrack(0)),
+						id,
+						modularSynth.getTrack(0)?.graphParams as Record<string, number>
+					),
+				deleteSelection: (ids: string[]) =>
+					deleteSelection(
+						graphOf(modularSynth.getTrack(0)),
+						new Set(ids),
+						modularSynth.getTrack(0)?.graphParams as Record<string, number>
+					),
+				setParam: (nodeId: string, param: string, value: number) =>
+					setGraphParam(
+						modularSynth.getTrack(0)?.graphParams as Record<string, number>,
+						nodeId,
+						param,
+						value
+					),
+				setParams: (values: Record<string, number>) =>
+					setGraphParams(
+						modularSynth.getTrack(0)?.graphParams as Record<string, number>,
+						values
+					),
+				undo: () => undoGraph(),
+				redo: () => redoGraph(),
+				clearHistory: () => clearGraphHistory(),
+				isFixedNode: (id: string) => isFixedNode(id)
+			},
+			/* Does a signal land on this inlet, asked of a whole patch?
+
+			   `isDrivenBySignal` is what decides whether a knob is taken over or
+			   added to, and its answer is a property of the patch rather than of
+			   the module -- MAP hands out a signal exactly when one went in --
+			   so it is asked here, of a resolver built the way the engine builds
+			   one. */
+			drivenBy: (patch: Record<string, unknown>, nodeId: string, port: string) => {
+				const g = graphOf(patch as { rackGraph?: RackGraph });
+				const r = createResolver(g, (patch.graphParams ?? {}) as Record<string, number>, {
+					pitch: 0,
+					velocity: 1,
+					noteIndex: 40,
+					gate: 1,
+					lanes: {}
+				});
+				return { signal: r.isDrivenBySignal(nodeId, port), wired: r.isWired(nodeId, port) };
+			},
+			/* A round trip through the preset format, in memory.
+
+			   `exportActivePreset` builds this same object and hands it to a
+			   download; the file is the only part a test cannot follow. What is
+			   worth measuring is whether the patch survives `pickTimbre` and the
+			   JSON, which is the half that has silently dropped the rack before. */
+			exportTimbre: (format = 'krsz-synth-preset') => {
+				const file = {
+					format,
+					version: 1,
+					name: 'ROUNDTRIP',
+					timbre: pickTimbre(modularSynth.getTrack(0) as unknown as Record<string, unknown>)
+				};
+				/* Through the JSON, not around it. A structured clone would carry
+				   things a file cannot -- and what is being asked is whether the
+				   patch survives being written down and read back. */
+				const text = JSON.stringify(file, null, 2);
+				return { text, valid: isPresetFile(JSON.parse(text)) };
 			}
 		};
 	});
