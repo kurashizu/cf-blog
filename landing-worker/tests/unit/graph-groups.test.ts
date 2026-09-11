@@ -5,6 +5,7 @@ import {
 	moveGroup,
 	resizeGroup,
 	refitGroup,
+	ownedNodes,
 	ungroup,
 	addGroup,
 	renameGroup,
@@ -701,4 +702,186 @@ describe('a prefab box and the cards that outgrow their estimate', () => {
 		const graph: RackGraph = { nodes, cables: [], groups: [g] };
 		expect(refitGroup(graph, 'g1', new Set(['rate', 'osc', 'cv', 'map']), atDrop)).toBe(graph);
 	});
+});
+
+/* Ownership, after the geometric version was replaced.
+
+   Membership used to be read off the rectangle, which meant a box owned
+   whatever it happened to cover: dragging a large group across the canvas
+   silently stole every node it passed over, and two overlapping boxes both
+   claimed what lay between them with nothing to say which won. A node now
+   belongs to exactly one box and only ungrouping releases it. */
+describe('a box owns what it was given, not what it covers', () => {
+	const size = () => ({ w: 176, h: 74 });
+	const nodes: GraphNode[] = [
+		{ id: 'a', type: 'gain', x: 0, y: 0 },
+		{ id: 'b', type: 'gain', x: 200, y: 0 },
+		{ id: 'c', type: 'gain', x: 400, y: 0 }
+	];
+
+	it('answers from its member list, ignoring what the rectangle covers', () => {
+		/* A box drawn over all three, but told it owns only two. */
+		const graph: RackGraph = {
+			nodes,
+			cables: [],
+			groups: [{ id: 'g1', label: 'G', x: -50, y: -50, w: 900, h: 300, members: ['a', 'b'] }]
+		};
+		expect(nodesInGroup(graph, graph.groups![0], size).sort()).toEqual(['a', 'b']);
+	});
+
+	it('drops a member that has been deleted from the graph', () => {
+		const graph: RackGraph = {
+			nodes: nodes.filter((n) => n.id !== 'b'),
+			cables: [],
+			groups: [{ id: 'g1', label: 'G', x: -50, y: -50, w: 900, h: 300, members: ['a', 'b'] }]
+		};
+		expect(nodesInGroup(graph, graph.groups![0], size)).toEqual(['a']);
+	});
+
+	it('falls back to the geometry for a box saved before ownership existed', () => {
+		/* An old patch's box has no member list, and must keep meaning what it
+		   meant when it was written rather than becoming empty. */
+		const graph: RackGraph = {
+			nodes,
+			cables: [],
+			groups: [{ id: 'g1', label: 'G', x: -50, y: -50, w: 900, h: 300 }]
+		};
+		expect(nodesInGroup(graph, graph.groups![0], size).sort()).toEqual(['a', 'b', 'c']);
+	});
+
+	it('reports every node already spoken for', () => {
+		const graph: RackGraph = {
+			nodes,
+			cables: [],
+			groups: [
+				{ id: 'g1', label: 'G', x: 0, y: 0, w: 10, h: 10, members: ['a'] },
+				{ id: 'g2', label: 'H', x: 0, y: 0, w: 10, h: 10, members: ['b'] }
+			]
+		};
+		expect([...ownedNodes(graph)].sort()).toEqual(['a', 'b']);
+		// Asking on behalf of a box excludes that box's own members.
+		expect([...ownedNodes(graph, 'g1')]).toEqual(['b']);
+	});
+});
+
+/* The bug a pasted group had: member ids were copied verbatim, so the copy
+   owned the nodes it was copied *from*. The original lost its contents and the
+   copy's own nodes were left unowned -- and because both boxes then pointed at
+   one set of nodes, dragging either moved the same cards. */
+describe('pasting a box remaps who it owns', () => {
+	it('owns its own copies rather than the originals', () => {
+		const clip: RackGraph = {
+			nodes: [
+				{ id: 'a', type: 'gain', x: 0, y: 0 },
+				{ id: 'b', type: 'gain', x: 200, y: 0 }
+			],
+			cables: [{ from: 'a', fromPort: 'out', to: 'b', toPort: 'in' }],
+			groups: [{ id: 'g1', label: 'G', x: -20, y: -40, w: 420, h: 160, members: ['a', 'b'] }]
+		};
+		let n = 0;
+		const { graph, ids, groupIds } = pasteNodes(
+			{ nodes: [], cables: [], groups: [] },
+			clip,
+			32,
+			(t) => `${t}-new-${n++}`,
+			() => 'g-new'
+		);
+		const pasted = graph.groups!.find((g) => g.id === groupIds[0])!;
+		// Every member is one of the freshly made ids, and none is an original.
+		expect(pasted.members!.sort()).toEqual([...ids].sort());
+		expect(pasted.members).not.toContain('a');
+		expect(pasted.members).not.toContain('b');
+	});
+
+	it('carries the cable between the copies, not just the nodes', () => {
+		/* The other half of the same paste path, and the bug that hid behind
+		   node-counting tests: cables were filtered *after* their ids had been
+		   remapped, so the filter asked whether a brand-new id was one of the
+		   ids being replaced. It never was, so every internal cable was dropped
+		   and a pasted fragment arrived as loose unconnected nodes. */
+		const clip: RackGraph = {
+			nodes: [
+				{ id: 'a', type: 'gain', x: 0, y: 0 },
+				{ id: 'b', type: 'gain', x: 200, y: 0 }
+			],
+			cables: [{ from: 'a', fromPort: 'out', to: 'b', toPort: 'in' }]
+		};
+		let n = 0;
+		const { graph } = pasteNodes({ nodes: [], cables: [] }, clip, 32, (t) => `${t}-new-${n++}`);
+		expect(graph.cables).toHaveLength(1);
+		expect(graph.cables[0].from).not.toBe('a');
+		expect(graph.nodes.map((x) => x.id)).toContain(graph.cables[0].from);
+		expect(graph.nodes.map((x) => x.id)).toContain(graph.cables[0].to);
+	});
+});
+
+/* The shipped prefab data, checked as data.
+
+   These are the properties a screenshot review confirms by eye and a test can
+   keep true afterwards: every terminal is wired, every terminal is explained,
+   and no two cards are stacked on top of each other. A prefab that violates any
+   of them looks broken the instant it lands on the canvas. */
+describe('every built-in prefab is laid out sanely', () => {
+	const REROUTE = new Set(['nodept', 'nodecv']);
+
+	for (const prefab of BUILTIN_PREFABS) {
+		describe(prefab.label, () => {
+			const nodes = prefab.body.nodes;
+			const cables = prefab.body.cables;
+
+			it('wires every reroute point it places', () => {
+				/* A dangling terminal is the worst outcome: it reads as a socket you
+				   can use and carries nothing at all. */
+				const touched = new Set(cables.flatMap((c) => [c.from, c.to]));
+				const dangling = nodes
+					.filter((n) => REROUTE.has(n.type) && !touched.has(n.id))
+					.map((n) => n.id);
+				expect(dangling).toEqual([]);
+			});
+
+			it('explains every reroute point with a note', () => {
+				/* A terminal says where a cable enters or leaves; the note beside it
+				   says what travels there. One without the other is half a label. */
+				const terms = nodes.filter((n) => REROUTE.has(n.type));
+				const noteText = nodes
+					.filter((n) => n.type === 'note')
+					.map((n) => prefab.labels?.[n.id] ?? '');
+				if (terms.length) {
+					expect(noteText.length, `${prefab.label} has terminals but no notes`).toBeGreaterThan(0);
+					for (const text of noteText) expect(text.trim()).not.toBe('');
+				}
+			});
+
+			it('gives every note some text', () => {
+				for (const n of nodes.filter((x) => x.type === 'note')) {
+					expect((prefab.labels?.[n.id] ?? '').trim(), `${n.id} is blank`).not.toBe('');
+				}
+			});
+
+			it('names only nodes it actually contains', () => {
+				const have = new Set(nodes.map((n) => n.id));
+				for (const id of Object.keys(prefab.labels ?? {})) expect(have.has(id)).toBe(true);
+			});
+
+			it('cables only between nodes it contains', () => {
+				const have = new Set(nodes.map((n) => n.id));
+				for (const c of cables) {
+					expect(have.has(c.from), `${prefab.label}: ${c.from}`).toBe(true);
+					expect(have.has(c.to), `${prefab.label}: ${c.to}`).toBe(true);
+				}
+			});
+
+			it('does not stack two cards in the same place', () => {
+				/* Exact coincidence only -- the full overlap check needs rendered
+				   heights, which a unit test does not have. Two nodes at one point is
+				   unambiguous regardless. */
+				const seen = new Map<string, string>();
+				for (const n of nodes) {
+					const at = `${n.x},${n.y}`;
+					expect(seen.has(at), `${n.id} sits on ${seen.get(at)}`).toBe(false);
+					seen.set(at, n.id);
+				}
+			});
+		});
+	}
 });
