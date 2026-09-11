@@ -25,6 +25,7 @@
 		removeCable,
 		setGraphParam,
 		setGraphWave,
+		setGraphLabel,
 		selectedNode,
 		selectedNodes,
 		graphClipboard,
@@ -44,8 +45,11 @@
 		roleOf,
 		rolesCompatible,
 		groupSelection,
+		ungroupSelection,
 		groupMembers,
 		moveGroupBy,
+		resizeGroupTo,
+		refitGroupTo,
 		ungroupById,
 		setGroupLabel,
 		deleteGroupAndMembers,
@@ -78,6 +82,7 @@
 	let graph = $derived(graphOf($currentTrack));
 	let graphParams = $derived($currentTrack?.graphParams);
 	let graphWaves = $derived($currentTrack?.graphWaves);
+	let graphLabels = $derived($currentTrack?.graphLabels);
 
 	/* What each inlet is actually carrying, resolved the way the engine does.
 	
@@ -252,6 +257,12 @@
 		   settings -- and the padding alone left an 8px sliver under the header
 		   with a socket floating off its edge. A knob row is what every other
 		   card is at least as tall as, so an empty one matches it. */
+		/* The two text cards draw an input where their params would be, and they
+		   have no params -- so the "nothing to show" fallback below would size
+		   them as an empty card and leave the field hanging out of the bottom.
+		   A terminal is one line; a comment is three. */
+		if (spec.id === 'nodept' || spec.id === 'nodecv') return BODY_PAD * 2 + FIELD_H;
+		if (spec.id === 'note') return BODY_PAD * 2 + FIELD_H * 3 + 4;
 		if (!parts.length) return KNOB_ROW_H;
 		return BODY_PAD * 2 + parts.reduce((a, b) => a + b, 0) + (parts.length - 1) * GAP;
 	}
@@ -304,6 +315,14 @@
 	   nobody could aim at or tell apart. Below this spacing the card grows
 	   instead. */
 	const PORT_GAP = 22;
+	/* A reroute point's frame. Big enough to hold a 12px socket with a border
+	   either side and still be grabbable, and no bigger -- it has to read as a
+	   corner on a cable rather than as a small module. */
+	const REROUTE_W = 28;
+	const REROUTE_H = 24;
+	/* How wide a comment is allowed to get before it wraps. Wide enough for a
+	   sentence, narrow enough that one never spans the canvas. */
+	const NOTE_MAX_W = 240;
 
 	/** The centre of port i, measured from the node's border-box top-left. */
 	function portOffset(node: GraphNode, spec: ModuleSpec, count: number, i: number) {
@@ -361,6 +380,13 @@
 		if (!n) return { x: 0, y: 0 };
 		const spec = moduleSpec(n.type);
 		if (!spec) return { x: 0, y: 0 };
+		/* A reroute has one dot standing for both its ports, so both ends of a
+		   cable meet at its centre. Asking the port list would put the inlet on
+		   the left edge and the outlet on the right of a 14px square, which reads
+		   as a tiny card rather than as a point on a wire. */
+		if (n.type === 'nodept' || n.type === 'nodecv') {
+			return { x: n.x + REROUTE_W / 2 - BORDER, y: n.y + REROUTE_H / 2 - BORDER };
+		}
 		// The same list the sockets are drawn from, so a cable lands on its dot.
 		const list = isOutput ? outletsOf(n, spec) : spec.inputs;
 		const i = Math.max(
@@ -516,7 +542,28 @@
 	   box drawn around a dropped prefab all have to agree: three copies of this
 	   is three chances for a node to be inside a box by one test and outside it
 	   by another. */
+	/** The text a node carries, or '' -- a reroute's name, a comment's body. */
+	const labelOf = (id: string) => graphLabels?.[id] ?? '';
+
+	/** The comment being edited inline, or null. */
+	let editingNote = $state<string | null>(null);
+
 	const sizeOf = (n: GraphNode) => {
+		/* The chrome-less nodes are not cards and must not be measured as ones.
+		   A reroute is its dot; a comment is however tall its text runs. Reporting
+		   a card's 176x74 for either would make every group box drawn around them
+		   far bigger than what it visibly encloses. */
+		if (n.type === 'nodept' || n.type === 'nodecv') {
+			return { w: REROUTE_W, h: REROUTE_H };
+		}
+		if (n.type === 'note') {
+			const text = labelOf(n.id) || ' ';
+			const lines = text.split('\n').length;
+			/* Rough, and deliberately so: the measured height replaces this as soon
+			   as the element lays out. It only has to be close enough that a box
+			   drawn in the same frame is not wildly wrong. */
+			return { w: Math.min(NOTE_MAX_W, 10 + text.length * 6), h: 8 + lines * 15 };
+		}
 		const spec = moduleSpec(n.type);
 		return { w: spec ? nodeWidth(spec) : NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
 	};
@@ -533,6 +580,21 @@
 		members: Set<string>;
 		x: number;
 		y: number;
+	} | null>(null);
+
+	/* A group box being resized by its bottom-right corner.
+
+	   No `members` here, and that is the difference from `groupBoxDrag`. A
+	   resize is *how* you change what a box owns: drag the corner past a card
+	   and the card joins the group, pull it back and the card is released. So
+	   membership must be recomputed from the new rectangle rather than captured,
+	   which is the exact opposite of what a move needs. `resizeGroup` stores
+	   only the rectangle and the nodes never move. */
+	let groupResize = $state<{
+		id: string;
+		/* Pointer offset from the corner, so the box does not jump on grab. */
+		dx: number;
+		dy: number;
 	} | null>(null);
 
 	/** The group whose title is being edited inline, or null. */
@@ -636,6 +698,20 @@
 			}
 			return;
 		}
+		if (groupResize) {
+			const p = toCanvas(e.clientX, e.clientY);
+			const box = graph.groups?.find((g) => g.id === groupResize!.id);
+			if (box) {
+				/* Only the far corner moves: x and y stay put, so the box grows and
+				   shrinks from the corner under the pointer rather than sliding. */
+				const w = Math.round((p.x - groupResize.dx - box.x) / GRID) * GRID;
+				const h = Math.round((p.y - groupResize.dy - box.y) / GRID) * GRID;
+				if (w !== box.w || h !== box.h) {
+					resizeGroupTo(graph, groupResize.id, { x: box.x, y: box.y, w, h });
+				}
+			}
+			return;
+		}
 		if (groupDrag && dragNode) {
 			const p = toCanvas(e.clientX, e.clientY);
 			const nx = Math.round((p.x - dragNode.dx) / GRID) * GRID;
@@ -671,6 +747,7 @@
 		panning = null;
 		groupDrag = null;
 		groupBoxDrag = null;
+		groupResize = null;
 		dragNode = null;
 		pullFrom = null;
 		endGraphDrag();
@@ -691,6 +768,7 @@
 		panning = null;
 		groupDrag = null;
 		groupBoxDrag = null;
+		groupResize = null;
 		dragNode = null;
 		endGraphDrag();
 		/* A cable dropped on empty canvas asks what to connect, rather than
@@ -1095,6 +1173,19 @@
 			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
 			title={$t('synthPatch.groupHint')}>GROUP</button
 		>
+		<!-- The other half of the pair. A node belongs to one box and only
+		     ungrouping releases it, so this is how you get a node out of a group
+		     as well as how you remove the box -- which makes it the more
+		     load-bearing of the two buttons, not an afterthought. -->
+		<button
+			onclick={() => {
+				const n = ungroupSelection(graph, $selectedNodes);
+				if (n) playSound('click');
+				else say($t('synthPatch.ungroupNothing'));
+			}}
+			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.ungroupHint')}>UNGRP</button
+		>
 		<button
 			onclick={() => {
 				const saved = saveSelectionAsPrefab(
@@ -1175,7 +1266,7 @@
 				   would otherwise place the module. */
 				if (type.startsWith('prefab:')) {
 					const p = toCanvas(e.clientX, e.clientY);
-					dropPrefab(
+					const dropped = dropPrefab(
 						graph,
 						type.slice(7),
 						{
@@ -1185,6 +1276,18 @@
 						graphParams,
 						sizeOf
 					);
+					/* The box was sized from `bodyHeight`'s estimate, because at the
+					   moment of the drop none of these cards existed to measure. Once
+					   they have laid out, grow it to whatever they turned out to be --
+					   MAP renders taller than its estimate, and a member that pokes
+					   out of the bottom is disowned by full containment and left
+					   behind when the box is dragged. See `refitGroup`. */
+					/* `groupId` is null for a one-node prefab, which gets no box -- and
+					   with no box there is nothing to refit. */
+					if (dropped?.groupId) {
+						const { ids, groupId } = dropped;
+						requestAnimationFrame(() => refitGroupTo(graph, groupId, ids, sizeOf));
+					}
 					dragType = null;
 					playSound('click');
 					return;
@@ -1291,6 +1394,25 @@
 								>
 							{/if}
 						</div>
+						<!-- The resize grip. Bottom-right only: one corner is enough to
+						     size a box, and four would each need their own anchor rule
+						     for a gesture nobody performs on a comment box. It is how a
+						     box's *membership* is edited too -- drag it over a card and
+						     the card joins, pull back and it is released, which is why
+						     `groupResize` deliberately does not capture members. -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="absolute bottom-0 right-0 pointer-events-auto cursor-nwse-resize"
+							style="width: 14px; height: 14px; background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, {tint} 60%, transparent) 50%)"
+							title={$t('synthPatch.resizeHint')}
+							onpointerdown={(e) => {
+								if (e.button !== 0) return;
+								e.stopPropagation();
+								const p = toCanvas(e.clientX, e.clientY);
+								beginGraphDrag();
+								groupResize = { id: g.id, dx: p.x - (g.x + g.w), dy: p.y - (g.y + g.h) };
+							}}
+						></div>
 					</div>
 				{/each}
 			</div>
@@ -1378,7 +1500,130 @@
 			>
 				{#each graph.nodes as n (n.id)}
 					{@const spec = moduleSpec(n.type)}
-					{#if spec}
+					{#if spec && (n.type === 'nodept' || n.type === 'nodecv')}
+						<!-- A reroute point: a mini card, not a bare dot.
+
+						     The frame is what makes the two gestures separable. With only
+						     a socket drawn, a press on it had to mean either "move this"
+						     or "pull a cable from here" and there was nowhere to put the
+						     other one. So the border is the handle you drag and the dot in
+						     the middle is the thing you pull from -- the same division of
+						     labour every other card already has, shrunk to fit.
+
+						     Still far smaller than a module, because that is the point: it
+						     is a corner on a wire, and a corner that looked like a filter
+						     would make a tidy patch less readable rather than more. -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="absolute border-2 bg-black/85 rounded-xs select-none pointer-events-auto cursor-grab {$selectedNode ===
+								n.id || $selectedNodes.has(n.id)
+								? 'shadow-[0_0_0_2px_#61afef,0_0_10px_rgba(97,175,239,0.5)]'
+								: ''}"
+							style="left: {n.x}px; top: {n.y}px; width: {REROUTE_W}px; height: {REROUTE_H}px; border-color: {spec.color}{$selectedNode ===
+							n.id
+								? ''
+								: '80'}"
+							onpointerdown={(e) => startDrag(e, n)}
+						>
+							<!-- The socket, centred. Inlet and outlet at one point, which is
+							     what makes this a reroute rather than a two-port module: a
+							     cable arrives and a cable leaves from the same place. -->
+							<button
+								onpointerdown={(e) => {
+									e.stopPropagation();
+									startCable(e, n.id, 'out', n.type === 'nodept' ? 'audio' : 'mod');
+								}}
+								onpointerup={(e) =>
+									endCable(
+										e,
+										n.id,
+										n.type === 'nodept' ? 'in' : 'a',
+										n.type === 'nodept' ? 'audio' : 'mod'
+									)}
+								title={labelOf(n.id) || spec.label}
+								class="absolute w-3 h-3 border cursor-crosshair pointer-events-auto transition-all {n.type ===
+								'nodept'
+									? 'rounded-full'
+									: 'rotate-45'} {pullFrom && !canLand(spec.inputs[0])
+									? 'opacity-25'
+									: ''} {pullFrom && canLand(spec.inputs[0])
+									? 'scale-125 shadow-[0_0_6px_currentColor]'
+									: ''}"
+								style="left: {REROUTE_W / 2 - 6 - BORDER}px; top: {REROUTE_H / 2 -
+									6 -
+									BORDER}px; color: {spec.color}; background: {spec.color}; border-color: {spec.color}"
+							></button>
+							<!-- The name, outside the frame so it never crowds the socket. -->
+							{#if labelOf(n.id)}
+								<span
+									class="absolute text-[8px] font-mono font-bold leading-none whitespace-nowrap pointer-events-none"
+									style="left: {REROUTE_W + 4}px; top: {REROUTE_H / 2 - 4 - BORDER}px; color: {spec.color}"
+									>{labelOf(n.id)}</span
+								>
+							{/if}
+						</div>
+					{:else if spec && n.type === 'note'}
+						<!-- A comment: a mini window, for the same reason the reroute has
+						     one. Without a frame there is nowhere to press that means
+						     "move this" as opposed to "edit this", and a label you cannot
+						     reposition is a label in the wrong place forever.
+
+						     So the frame drags and a double-click edits. It is deliberately
+						     plainer than a module -- no header, no glyph, no delete button
+						     in the corner -- because it is not in the signal path and
+						     should not compete with the cards that are. -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="absolute border bg-black/85 rounded-xs select-none pointer-events-auto {editingNote ===
+							n.id
+								? 'cursor-text'
+								: 'cursor-grab'} {$selectedNode === n.id || $selectedNodes.has(n.id)
+								? 'shadow-[0_0_0_2px_#61afef,0_0_10px_rgba(97,175,239,0.5)]'
+								: ''}"
+							style="left: {n.x}px; top: {n.y}px; max-width: {NOTE_MAX_W}px; border-color: {spec.color}80"
+							onpointerdown={(e) => {
+								if (editingNote !== n.id) startDrag(e, n);
+							}}
+							ondblclick={() => (editingNote = n.id)}
+						>
+							{#if editingNote === n.id}
+								<!-- svelte-ignore a11y_autofocus -->
+								<textarea
+									autofocus
+									value={labelOf(n.id)}
+									oninput={(e) => {
+										const el = e.target as HTMLTextAreaElement;
+										setGraphLabel(graphLabels, n.id, el.value);
+										/* Grow to fit. Reset first, or the box can only ever get
+										   taller -- the scrollHeight of an over-tall element is its
+										   own height, so deleting a line would never shrink it. */
+										el.style.height = 'auto';
+										el.style.height = `${el.scrollHeight}px`;
+									}}
+									onblur={() => (editingNote = null)}
+									onkeydown={(e) => {
+										/* Enter inserts a newline rather than committing: a comment
+										   is allowed to be several lines, and there is nothing here
+										   that a stray line break can break. Escape is how you
+										   leave. */
+										if (e.key === 'Escape') (e.target as HTMLTextAreaElement).blur();
+										e.stopPropagation();
+									}}
+									onpointerdown={(e) => e.stopPropagation()}
+									placeholder={$t('synthPatch.notePlaceholder')}
+									class="block bg-transparent px-1 py-0.5 font-mono text-[11px] leading-snug outline-none resize-none overflow-hidden"
+									style="color: {spec.color}; width: {NOTE_MAX_W}px"
+								></textarea>
+							{:else}
+								<div
+									class="px-1 py-0.5 font-mono text-[11px] leading-snug whitespace-pre-wrap break-words min-w-[40px]"
+									style="color: {spec.color}{labelOf(n.id) ? '' : '60'}"
+								>
+									{labelOf(n.id) || $t('synthPatch.notePlaceholder')}
+								</div>
+							{/if}
+						</div>
+					{:else if spec}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
 							class="absolute border-2 bg-black/85 rounded-xs select-none pointer-events-auto {$selectedNodes.has(
@@ -1482,11 +1727,13 @@
 									nodeId={n.id}
 									params={graphParams}
 									waves={graphWaves}
+									labels={graphLabels}
 									inlet={inletOf}
 									claimed={claimedOf}
 									wired={wiredOf}
 									onParam={(key, value) => setGraphParam(graphParams, n.id, key, value)}
 									onWave={(key, value) => setGraphWave(graphWaves, n.id, key, value)}
+									onLabel={(value) => setGraphLabel(graphLabels, n.id, value)}
 									onDrawWave={(key, editing) => openWaveDraw(n.id, key, editing)}
 								/>
 							</div>

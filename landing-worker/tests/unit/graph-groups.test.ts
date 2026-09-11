@@ -4,6 +4,7 @@ import {
 	nodesInGroup,
 	moveGroup,
 	resizeGroup,
+	refitGroup,
 	ungroup,
 	addGroup,
 	renameGroup,
@@ -645,5 +646,59 @@ describe('expanding a prefab: the paste path, end to end', () => {
 			// Every knob the prefab set arrived on some node of the expansion.
 			expect(Object.keys(r.params)).toHaveLength(Object.keys(p.params).length);
 		}
+	});
+});
+
+/* The bug a player hit within minutes of the feature shipping: the LFO prefab's
+   box did not cover its own MAP, so dragging the group left the MAP behind.
+
+   Nothing was wrong with the geometry. The box is sized when it is created, and
+   a dropped prefab is created before any of its cards exist -- so the only
+   heights available are the ones computed from the spec. MAP is the tallest
+   card in the catalogue (a selector, four typed fields and a curve display) and
+   renders taller than that estimate, so it hung out of the bottom of the box
+   drawn for it. Full containment then disowned it: inside the group by every
+   visual reading, outside it by the only one that counted. */
+describe('a prefab box and the cards that outgrow their estimate', () => {
+	const W = 176;
+	const nodes = [
+		{ id: 'rate', type: 'const', x: 0, y: 0 },
+		{ id: 'osc', type: 'osc', x: 176, y: 0 },
+		{ id: 'cv', type: 'tocv', x: 400, y: 0 },
+		{ id: 'map', type: 'map', x: 592, y: 0 }
+	];
+	/* What `bodyHeight` computes from the spec, which is all the canvas has at
+	   the moment of the drop. */
+	const est: Record<string, number> = { const: 84, osc: 74, tocv: 74, map: 174 };
+	const atDrop = (n: GraphNode) => ({ w: W, h: est[n.type] ?? 74 });
+	/* What the ResizeObserver reports a frame later. */
+	const afterRender = (n: GraphNode) => ({ w: W, h: n.type === 'map' ? 210 : atDrop(n).h });
+
+	it('loses the member that rendered taller than it measured', () => {
+		const g = groupAround('g1', 'LFO', nodes, atDrop);
+		expect(nodesInGroup({ nodes, cables: [] }, g, afterRender)).not.toContain('map');
+	});
+
+	it('keeps every member once the box is refitted to the real heights', () => {
+		const g = groupAround('g1', 'LFO', nodes, atDrop);
+		const graph: RackGraph = { nodes, cables: [], groups: [g] };
+		const fitted = refitGroup(graph, 'g1', new Set(['rate', 'osc', 'cv', 'map']), afterRender);
+		const box = fitted.groups!.find((x) => x.id === 'g1')!;
+		expect(nodesInGroup(fitted, box, afterRender).sort()).toEqual(['cv', 'map', 'osc', 'rate']);
+	});
+
+	it('only ever grows, so a box widened by hand is left alone', () => {
+		const graph: RackGraph = {
+			nodes,
+			cables: [],
+			groups: [{ id: 'g1', label: 'LFO', x: -24, y: -46, w: 2000, h: 1000 }]
+		};
+		expect(refitGroup(graph, 'g1', new Set(['map']), afterRender)).toBe(graph);
+	});
+
+	it('is silent when the estimate was already right', () => {
+		const g = groupAround('g1', 'LFO', nodes, atDrop);
+		const graph: RackGraph = { nodes, cables: [], groups: [g] };
+		expect(refitGroup(graph, 'g1', new Set(['rate', 'osc', 'cv', 'map']), atDrop)).toBe(graph);
 	});
 });

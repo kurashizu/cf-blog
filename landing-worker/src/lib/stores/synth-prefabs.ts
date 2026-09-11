@@ -55,6 +55,9 @@ export interface Prefab {
 	note: string;
 	body: RackGraph;
 	params: Record<string, number>;
+	/* The text its nodes carry, by node id: a terminal's socket name, a note's
+	   comment. Keyed like `graphLabels`, so expansion remaps it the same way. */
+	labels?: Record<string, string>;
 	/** Absent on user prefabs; the built-ins carry one so each reads as itself. */
 	color?: string;
 	/** True for the user's own, which can be renamed and deleted. */
@@ -125,14 +128,17 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		body: {
 			nodes: [
 				{ id: 'rate', type: 'const', x: 0, y: 0 },
-				{ id: 'osc', type: 'osc', x: 176, y: 0 },
-				{ id: 'cv', type: 'tocv', x: 400, y: 0 },
-				{ id: 'map', type: 'map', x: 592, y: 0 }
+				{ id: 'osc', type: 'osc', x: 224, y: 0 },
+				{ id: 'cv', type: 'tocv', x: 448, y: 0 },
+				{ id: 'map', type: 'map', x: 672, y: 0 },
+				{ id: 'outT', type: 'nodecv', x: 920, y: 34 },
+				{ id: 'nOut', type: 'note', x: 920, y: 64 }
 			],
 			cables: [
 				{ from: 'rate', fromPort: 'out', to: 'osc', toPort: 'pitch' },
 				{ from: 'osc', fromPort: 'out', to: 'cv', toPort: 'in' },
-				{ from: 'cv', fromPort: 'out', to: 'map', toPort: 'a' }
+				{ from: 'cv', fromPort: 'out', to: 'map', toPort: 'a' },
+				{ from: 'map', fromPort: 'out', to: 'outT', toPort: 'a' }
 			]
 		},
 		/* 5 Hz, and the MAP's X range is the sine's own -1..1 so the full swing is
@@ -145,7 +151,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 			'map.inHi': 1,
 			'map.outLo': 0,
 			'map.outHi': 1
-		}
+		},
+		labels: { nOut: 'LFO OUT\nto any knob' }
 	},
 	{
 		key: 'comb',
@@ -174,15 +181,21 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   one strike passing through against a tail that rings down. */
 		body: {
 			nodes: [
-				{ id: 'sum', type: 'sum', x: 0, y: 0 },
-				{ id: 'delay', type: 'delay', x: 200, y: 0 },
-				{ id: 'send', type: 'fbsend', x: 424, y: 0 },
-				{ id: 'rtn', type: 'fbrtn', x: 224, y: 176 },
-				{ id: 'fb', type: 'gain', x: 0, y: 176 }
+				{ id: 'inT', type: 'nodept', x: 0, y: 34 },
+				{ id: 'sum', type: 'sum', x: 96, y: 0 },
+				{ id: 'delay', type: 'delay', x: 320, y: 0 },
+				{ id: 'send', type: 'fbsend', x: 544, y: 0 },
+				{ id: 'outT', type: 'nodept', x: 792, y: 34 },
+				{ id: 'rtn', type: 'fbrtn', x: 320, y: 224 },
+				{ id: 'fb', type: 'gain', x: 96, y: 224 },
+				{ id: 'nIn', type: 'note', x: 0, y: 64 },
+				{ id: 'nOut', type: 'note', x: 792, y: 64 }
 			],
 			cables: [
+				{ from: 'inT', fromPort: 'out', to: 'sum', toPort: 'in' },
 				{ from: 'sum', fromPort: 'out', to: 'delay', toPort: 'in' },
 				{ from: 'delay', fromPort: 'out', to: 'send', toPort: 'in' },
+				{ from: 'delay', fromPort: 'out', to: 'outT', toPort: 'in' },
 				{ from: 'rtn', fromPort: 'out', to: 'fb', toPort: 'in' },
 				{ from: 'fb', fromPort: 'out', to: 'sum', toPort: 'in' }
 			]
@@ -197,7 +210,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 			'fb.level': 0.7,
 			'send.bus': 0,
 			'rtn.bus': 0
-		}
+		},
+		labels: { nIn: 'IN', nOut: 'OUT' }
 	},
 	{
 		key: 'voice',
@@ -227,21 +241,27 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   wants even motion. */
 		body: {
 			nodes: [
-				{ id: 'tofreq', type: 'tofreq', x: 0, y: 0 },
-				{ id: 'osc', type: 'osc', x: 240, y: 0 },
-				{ id: 'filter', type: 'filter', x: 464, y: 0 },
-				{ id: 'amp', type: 'gain', x: 712, y: 0 },
-				{ id: 'aenv', type: 'env', x: 712, y: 200 },
-				{ id: 'fenv', type: 'env', x: 240, y: 224 },
-				{ id: 'fmap', type: 'map', x: 464, y: 224 }
+				{ id: 'inT', type: 'nodecv', x: 0, y: 34 },
+				{ id: 'tofreq', type: 'tofreq', x: 96, y: 0 },
+				{ id: 'osc', type: 'osc', x: 320, y: 0 },
+				{ id: 'filter', type: 'filter', x: 544, y: 0 },
+				{ id: 'amp', type: 'gain', x: 768, y: 0 },
+				{ id: 'outT', type: 'nodept', x: 1016, y: 34 },
+				{ id: 'fenv', type: 'env', x: 320, y: 240 },
+				{ id: 'fmap', type: 'map', x: 544, y: 240 },
+				{ id: 'aenv', type: 'env', x: 768, y: 240 },
+				{ id: 'nIn', type: 'note', x: 0, y: 64 },
+				{ id: 'nOut', type: 'note', x: 1016, y: 64 }
 			],
 			cables: [
+				{ from: 'inT', fromPort: 'out', to: 'tofreq', toPort: 'a' },
 				{ from: 'tofreq', fromPort: 'out', to: 'osc', toPort: 'pitch' },
 				{ from: 'osc', fromPort: 'out', to: 'filter', toPort: 'in' },
 				{ from: 'filter', fromPort: 'out', to: 'amp', toPort: 'in' },
-				{ from: 'aenv', fromPort: 'out', to: 'amp', toPort: 'level' },
+				{ from: 'amp', fromPort: 'out', to: 'outT', toPort: 'in' },
 				{ from: 'fenv', fromPort: 'out', to: 'fmap', toPort: 'a' },
-				{ from: 'fmap', fromPort: 'out', to: 'filter', toPort: 'cutoff' }
+				{ from: 'fmap', fromPort: 'out', to: 'filter', toPort: 'cutoff' },
+				{ from: 'aenv', fromPort: 'out', to: 'amp', toPort: 'level' }
 			]
 		},
 		/* TO-FREQ's PITCH inlet is left unwired on purpose: it is the one cable
@@ -268,7 +288,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 			'fmap.inHi': 1,
 			'fmap.outLo': 300,
 			'fmap.outHi': 6000
-		}
+		},
+		labels: { nIn: 'PITCH IN', nOut: 'OUT' }
 	},
 	{
 		key: 'wide',
@@ -294,21 +315,28 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   that reading is the proof the widening is real. */
 		body: {
 			nodes: [
-				{ id: 'mono', type: 'mono', x: 0, y: 0 },
-				{ id: 'delay', type: 'delay', x: 200, y: 160 },
-				{ id: 'merge', type: 'merge', x: 440, y: 48 }
+				{ id: 'inT', type: 'nodept', x: 0, y: 34 },
+				{ id: 'mono', type: 'mono', x: 96, y: 0 },
+				{ id: 'delay', type: 'delay', x: 320, y: 160 },
+				{ id: 'merge', type: 'merge', x: 544, y: 64 },
+				{ id: 'outT', type: 'nodept', x: 792, y: 98 },
+				{ id: 'nIn', type: 'note', x: 0, y: 64 },
+				{ id: 'nOut', type: 'note', x: 792, y: 128 }
 			],
 			cables: [
+				{ from: 'inT', fromPort: 'out', to: 'mono', toPort: 'in' },
 				{ from: 'mono', fromPort: 'out', to: 'merge', toPort: 'in' },
 				{ from: 'mono', fromPort: 'out', to: 'delay', toPort: 'in' },
-				{ from: 'delay', fromPort: 'out', to: 'merge', toPort: 'r' }
+				{ from: 'delay', fromPort: 'out', to: 'merge', toPort: 'r' },
+				{ from: 'merge', fromPort: 'out', to: 'outT', toPort: 'in' }
 			]
 		},
 		/* 18 ms: inside the fusion window, so it widens rather than echoing, and
 		   long enough not to comb the source into a colouration. Past about 30 ms
 		   it starts being heard as a separate event, which is a different effect
 		   and a different prefab. */
-		params: { 'delay.delayTime': 0.018 }
+		params: { 'delay.delayTime': 0.018 },
+		labels: { nIn: 'IN', nOut: 'WIDE OUT' }
 	},
 	{
 		key: 'vib',
@@ -338,12 +366,15 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		body: {
 			nodes: [
 				{ id: 'rate', type: 'const', x: 0, y: 0 },
-				{ id: 'lfo', type: 'osc', x: 176, y: 0 },
-				{ id: 'depth', type: 'gain', x: 400, y: 0 }
+				{ id: 'lfo', type: 'osc', x: 224, y: 0 },
+				{ id: 'depth', type: 'gain', x: 448, y: 0 },
+				{ id: 'outT', type: 'nodept', x: 696, y: 34 },
+				{ id: 'nOut', type: 'note', x: 696, y: 64 }
 			],
 			cables: [
 				{ from: 'rate', fromPort: 'out', to: 'lfo', toPort: 'pitch' },
-				{ from: 'lfo', fromPort: 'out', to: 'depth', toPort: 'in' }
+				{ from: 'lfo', fromPort: 'out', to: 'depth', toPort: 'in' },
+				{ from: 'depth', fromPort: 'out', to: 'outT', toPort: 'in' }
 			]
 		},
 		/* 5.5 Hz is a singer's vibrato rate. A depth of 6 is +/-6 Hz, which is
@@ -351,7 +382,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   is a wider interval low down than high up. That is a property of
 		   modulating a frequency rather than a pitch, and the fix if it matters
 		   is to modulate before TO-FREQ instead. */
-		params: { 'rate.kind': FRQ, 'rate.value': 5.5, 'depth.level': 6 }
+		params: { 'rate.kind': FRQ, 'rate.value': 5.5, 'depth.level': 6 },
+		labels: { nOut: 'TO OSC FREQ' }
 	},
 	{
 		key: 'duck',
@@ -372,13 +404,22 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   duck anyone would hear rather than a hint of one. */
 		body: {
 			nodes: [
-				{ id: 'follow', type: 'follow', x: 0, y: 0 },
-				{ id: 'map', type: 'map', x: 232, y: 0 },
-				{ id: 'duck', type: 'gain', x: 456, y: 0 }
+				{ id: 'keyT', type: 'nodept', x: 0, y: 34 },
+				{ id: 'follow', type: 'follow', x: 96, y: 0 },
+				{ id: 'map', type: 'map', x: 320, y: 0 },
+				{ id: 'inT', type: 'nodept', x: 0, y: 258 },
+				{ id: 'duck', type: 'gain', x: 96, y: 224 },
+				{ id: 'outT', type: 'nodept', x: 344, y: 258 },
+				{ id: 'nKey', type: 'note', x: 0, y: 64 },
+				{ id: 'nIn', type: 'note', x: 0, y: 288 },
+				{ id: 'nOut', type: 'note', x: 344, y: 288 }
 			],
 			cables: [
+				{ from: 'keyT', fromPort: 'out', to: 'follow', toPort: 'in' },
 				{ from: 'follow', fromPort: 'out', to: 'map', toPort: 'a' },
-				{ from: 'map', fromPort: 'out', to: 'duck', toPort: 'level' }
+				{ from: 'map', fromPort: 'out', to: 'duck', toPort: 'level' },
+				{ from: 'inT', fromPort: 'out', to: 'duck', toPort: 'in' },
+				{ from: 'duck', fromPort: 'out', to: 'outT', toPort: 'in' }
 			]
 		},
 		/* INV is MAP_SHAPES index 8. The GAIN rests at 0 because the MAP's cable
@@ -394,7 +435,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 			'duck.level': 0,
 			'follow.sens': 3,
 			'follow.resp': 20
-		}
+		},
+		labels: { nKey: 'KEY\nsidechain', nIn: 'IN', nOut: 'OUT' }
 	},
 	{
 		key: 'pingpong',
@@ -424,32 +466,38 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   slice (0.0199 / 0.0117 / 0.0069) -- the gaps are the bounce. */
 		body: {
 			nodes: [
-				{ id: 'sumL', type: 'sum', x: 0, y: 0 },
-				{ id: 'delayL', type: 'delay', x: 200, y: 0 },
-				{ id: 'sendL', type: 'fbsend', x: 424, y: 0 },
-				{ id: 'rtnL', type: 'fbrtn', x: 0, y: 168 },
-				{ id: 'fbL', type: 'gain', x: 176, y: 168 },
-				{ id: 'sumR', type: 'sum', x: 0, y: 368 },
-				{ id: 'delayR', type: 'delay', x: 200, y: 368 },
-				{ id: 'sendR', type: 'fbsend', x: 424, y: 368 },
-				{ id: 'rtnR', type: 'fbrtn', x: 0, y: 536 },
-				{ id: 'fbR', type: 'gain', x: 176, y: 536 },
-				{ id: 'merge', type: 'merge', x: 648, y: 184 }
+				{ id: 'inT', type: 'nodept', x: 0, y: 146 },
+				{ id: 'split', type: 'split', x: 96, y: 112 },
+				{ id: 'sumL', type: 'sum', x: 320, y: 0 },
+				{ id: 'delayL', type: 'delay', x: 544, y: 0 },
+				{ id: 'sendL', type: 'fbsend', x: 768, y: 0 },
+				{ id: 'rtnL', type: 'fbrtn', x: 544, y: 224 },
+				{ id: 'fbL', type: 'gain', x: 320, y: 224 },
+				{ id: 'sumR', type: 'sum', x: 320, y: 448 },
+				{ id: 'delayR', type: 'delay', x: 544, y: 448 },
+				{ id: 'sendR', type: 'fbsend', x: 768, y: 448 },
+				{ id: 'rtnR', type: 'fbrtn', x: 544, y: 672 },
+				{ id: 'fbR', type: 'gain', x: 320, y: 672 },
+				{ id: 'merge', type: 'merge', x: 992, y: 224 },
+				{ id: 'outT', type: 'nodept', x: 1240, y: 258 },
+				{ id: 'nIn', type: 'note', x: 0, y: 176 },
+				{ id: 'nOut', type: 'note', x: 1240, y: 288 }
 			],
 			cables: [
+				{ from: 'inT', fromPort: 'out', to: 'split', toPort: 'in' },
+				{ from: 'split', fromPort: 'out', to: 'sumL', toPort: 'in' },
+				{ from: 'split', fromPort: 'r', to: 'sumR', toPort: 'in' },
 				{ from: 'sumL', fromPort: 'out', to: 'delayL', toPort: 'in' },
 				{ from: 'delayL', fromPort: 'out', to: 'sendL', toPort: 'in' },
 				{ from: 'sumR', fromPort: 'out', to: 'delayR', toPort: 'in' },
 				{ from: 'delayR', fromPort: 'out', to: 'sendR', toPort: 'in' },
 				{ from: 'rtnL', fromPort: 'out', to: 'fbL', toPort: 'in' },
-				{ from: 'rtnR', fromPort: 'out', to: 'fbR', toPort: 'in' },
-				/* The cross, and the whole prefab is these two lines: the left
-				   line's return feeds the *right* sum and the right line's feeds
-				   the left. Uncrossed this is two independent delays. */
 				{ from: 'fbL', fromPort: 'out', to: 'sumR', toPort: 'in' },
+				{ from: 'rtnR', fromPort: 'out', to: 'fbR', toPort: 'in' },
 				{ from: 'fbR', fromPort: 'out', to: 'sumL', toPort: 'in' },
 				{ from: 'delayL', fromPort: 'out', to: 'merge', toPort: 'in' },
-				{ from: 'delayR', fromPort: 'out', to: 'merge', toPort: 'r' }
+				{ from: 'delayR', fromPort: 'out', to: 'merge', toPort: 'r' },
+				{ from: 'merge', fromPort: 'out', to: 'outT', toPort: 'in' }
 			]
 		},
 		/* Buses 1 and 2 rather than 0, so dropping this beside a COMB -- which
@@ -467,7 +515,8 @@ export const BUILTIN_PREFABS: Prefab[] = [
 			'rtnR.bus': 2,
 			'fbL.level': 0.6,
 			'fbR.level': 0.6
-		}
+		},
+		labels: { nIn: 'IN', nOut: 'OUT' }
 	}
 ];
 

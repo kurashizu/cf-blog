@@ -230,6 +230,26 @@ export interface GraphGroup {
 	h: number;
 	/** The box's tint, as a CSS colour. Prefabs carry their own. */
 	color?: string;
+	/**
+	 * The nodes this box owns, by id.
+	 *
+	 * Ownership is *stored* rather than read off the geometry, and that is a
+	 * deliberate reversal. Purely geometric membership made a box own whatever
+	 * it happened to cover, which meant dragging a large group across the canvas
+	 * silently stole every node it passed over -- and a node could be claimed by
+	 * two overlapping boxes at once with nothing to say which won.
+	 *
+	 * So a node belongs to exactly one group, decided when the group is made and
+	 * changed only by ungrouping. A box drawn over nodes that already belong to
+	 * another leaves them where they are; to move a node between groups you
+	 * ungroup the one that holds it, which releases its members, and group again.
+	 * That is a stricter rule than Blueprint's, and it is the one that makes
+	 * "what is in this box" answerable without looking at pixels.
+	 *
+	 * Optional so that boxes saved before ownership existed still load: absent
+	 * means "ask the geometry", which is what those boxes meant when written.
+	 */
+	members?: string[];
 }
 
 export interface RackGraph {
@@ -572,13 +592,29 @@ export function copyNodes(graph: RackGraph, ids: Set<string>): RackGraph {
  * so pasting a fragment twice does not give two boxes the same name and leave
  * `moveGroup` picking whichever it found first.
  */
-function pasteGroups(clip: RackGraph, offset: number, groupId: () => string): GraphGroup[] {
-	return (clip.groups ?? []).map((g) => ({
-		...g,
-		id: groupId(),
-		x: g.x + offset,
-		y: g.y + offset
-	}));
+function pasteGroups(
+	clip: RackGraph,
+	offset: number,
+	groupId: () => string,
+	/* Old id -> new id for the nodes that were pasted alongside. */
+	remap: Map<string, string>
+): GraphGroup[] {
+	return (clip.groups ?? []).map((g) => {
+		const members = g.members
+			?.map((id) => remap.get(id))
+			.filter((id): id is string => id !== undefined);
+		return {
+			...g,
+			id: groupId(),
+			x: g.x + offset,
+			y: g.y + offset,
+			/* Remapped, not copied. A pasted box that kept the original ids would
+			   own the nodes it was copied *from* -- so pasting a group would take
+			   the first one's contents away from it and leave the copy's own nodes
+			   unowned. Members that did not come along are dropped. */
+			...(members ? { members } : {})
+		};
+	});
 }
 
 /**
@@ -619,7 +655,7 @@ export function pasteNodes(
 	const cables = clip.cables
 		.filter((c) => remap.has(c.from) || remap.has(c.to))
 		.map((c) => ({ ...c, from: remap.get(c.from) ?? c.from, to: remap.get(c.to) ?? c.to }));
-	const groups = groupId ? pasteGroups(clip, offset, groupId) : [];
+	const groups = groupId ? pasteGroups(clip, offset, groupId, remap) : [];
 	return {
 		graph: {
 			nodes: [...graph.nodes, ...nodes],
@@ -704,6 +740,15 @@ export function nodesInGroup(
 	group: GraphGroup,
 	size: (node: GraphNode) => { w: number; h: number }
 ): string[] {
+	/* A box that knows its own members answers from that list and never from the
+	   geometry. This is what stops one group stealing another's nodes by being
+	   dragged over them, and what makes a node's owner a fact rather than a
+	   question about pixels. Filtered against the graph so a member that has been
+	   deleted does not linger. */
+	if (group.members) {
+		const live = new Set(graph.nodes.map((n) => n.id));
+		return group.members.filter((id) => live.has(id));
+	}
 	const top = group.y + GROUP_HEADER;
 	const x1 = group.x + group.w;
 	const y1 = group.y + group.h;
@@ -779,9 +824,67 @@ export function ungroup(graph: RackGraph, groupId: string): RackGraph {
 	return rest.length ? { ...graph, groups: rest } : { nodes: graph.nodes, cables: graph.cables };
 }
 
+/**
+ * Which nodes already belong to some box.
+ *
+ * A node has exactly one owner, so this is what a new group checks against
+ * before claiming anything: whatever is already spoken for stays where it is.
+ */
+export function ownedNodes(graph: RackGraph, except?: string): Set<string> {
+	const out = new Set<string>();
+	for (const g of graph.groups ?? []) {
+		if (g.id === except) continue;
+		for (const id of g.members ?? []) out.add(id);
+	}
+	return out;
+}
+
 /** Add a box to the graph. */
 export function addGroup(graph: RackGraph, group: GraphGroup): RackGraph {
 	return { ...graph, groups: [...(graph.groups ?? []), group] };
+}
+
+/**
+ * Grow a box until it encloses the nodes it is supposed to own.
+ *
+ * A box is sized when it is created, from whatever the cards measured *then*.
+ * A dropped prefab is created before any of its cards exist, so the only
+ * heights available are the ones `bodyHeight` computes from the spec -- and a
+ * card that renders taller than its estimate ends up poking out of the bottom
+ * of the box drawn for it. Full containment then disowns it: the node is inside
+ * the group by every visual reading and outside it by the only one that counts,
+ * so dragging the box leaves it behind. That is exactly what happened to the
+ * LFO prefab's MAP, which is the tallest card in the catalogue.
+ *
+ * Re-fitting is preferred to relaxing containment. Membership stays "the box
+ * covers it", which is the rule the eye can check; what changes is that the box
+ * is made honest once the real heights are in. Only ever grows -- shrinking it
+ * would undo a resize the player made by hand.
+ */
+export function refitGroup(
+	graph: RackGraph,
+	groupId: string,
+	ids: Set<string>,
+	size: (node: GraphNode) => { w: number; h: number }
+): RackGraph {
+	const group = graph.groups?.find((g) => g.id === groupId);
+	if (!group || !ids.size) return graph;
+	const members = graph.nodes.filter((n) => ids.has(n.id));
+	if (!members.length) return graph;
+	let x1 = group.x + group.w;
+	let y1 = group.y + group.h;
+	for (const n of members) {
+		const s = size(n);
+		x1 = Math.max(x1, n.x + s.w + GROUP_PAD);
+		y1 = Math.max(y1, n.y + s.h + GROUP_PAD);
+	}
+	const w = x1 - group.x;
+	const h = y1 - group.y;
+	if (w === group.w && h === group.h) return graph;
+	return {
+		...graph,
+		groups: graph.groups?.map((g) => (g.id === groupId ? { ...g, w, h } : g))
+	};
 }
 
 /** Rename a box. */

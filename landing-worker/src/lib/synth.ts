@@ -738,14 +738,21 @@ class ModularSynth {
        hand-written copy happened to be correct, and stayed correct only for as
        long as whoever added a pure node remembered this list existed.
 
-       Three names sit beside it. ENV emits a control curve. MAP and TO-CV emit
+       Four names sit beside it. ENV emits a control curve. MAP and TO-CV emit
        a control value through real audio nodes -- MAP's curve is a
        WaveShaperNode so it can bend a waveform sample by sample, and TO-CV is
        the gain that carries one across the family line -- so the table cannot
        classify them, and an unwired one would put its offset into the mix as
-       DC. What they emit decides, not how they are built. */
+       DC. TERM.CV is here for exactly that reason too: it is dual like MAP, so
+       the table does not call it pure, and a terminal dropped on the canvas and
+       not yet wired anywhere must not be heard. What they emit decides, not how
+       they are built. */
 		const isModOnly = (type: string) =>
-			isPureNode(type) || type === 'env' || type === 'map' || type === 'tocv';
+			isPureNode(type) ||
+			type === 'env' ||
+			type === 'map' ||
+			type === 'tocv' ||
+			type === 'nodecv';
 
 		for (const node of order) {
 			/* A knob reads its cable first, and its own setting when there is none.
@@ -1403,6 +1410,22 @@ class ModularSynth {
 				rect.connect(smooth);
 				smooth.connect(lift);
 				return { in: finp, out: lift, mod };
+			}
+
+			case 'nodecv': {
+				/* The control-side terminal. A GainNode at unity, so whatever the
+           inlet carries leaves unchanged.
+
+           It has a build case at all because it is in NOT_PURE: pulled as a
+           value it resolves through `PURE_NODES`, but a *signal* routed through
+           one has to be passed per sample or a moving envelope would be read
+           once and held. Both halves, decided per cable, exactly as MAP does. */
+				const g = ctx.createGain();
+				/* The signal arrives at the node's input, not at its gain. Registering
+           `a` as the AudioParam would have made the cable *scale* the terminal
+           rather than pass through it -- a signal into a unity gain's gain is a
+           multiply, and a terminal that multiplies is not a terminal. */
+				return { in: g, out: g, mod };
 			}
 
 			case 'map': {
@@ -2248,6 +2271,20 @@ class ModularSynth {
 				return type === 'fbsend'
 					? { in: bus.send, out: bus.send, mod }
 					: { in: null, out: bus.rtn, mod };
+			}
+
+			case 'nodept': {
+				/* A wire with a name on it. Unity gain in, unity gain out: Web Audio
+           has no "identity node", and a GainNode left at 1 is exactly that --
+           the same thing SUM is, which is why this is three lines.
+
+           It is deliberately not free. A node in the path is a node in the
+           topological order, so a TERM can be routed around and can sit on a
+           group's edge as the one socket a bundle of cables lands on. What it
+           must never do is colour the sound, so there is no knob here to turn
+           it into a gain stage by accident. */
+				const g = ctx.createGain();
+				return { in: g, out: g, mod };
 			}
 
 			case 'sum': {

@@ -47,6 +47,9 @@
 		diff: 'M3 8h10',
 		ring: 'M8 8m-5 0a5 5 0 1 0 10 0a5 5 0 1 0-10 0M4 4l8 8M12 4l-8 8',
 		out: 'M4 8h9M10 5l3 3-3 3M2 3v10',
+		nodept: 'M2 8h3M11 8h3M8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 100-5',
+		nodecv: 'M2 8h2M6 8h1M9 8h1M12 8h2M8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 100-5',
+		note: 'M3 3h10v7H8l-3 3v-3H3z M5 6h6M5 8h4',
 		// STEREO: one line in, two out -- and the pair that turns sound into numbers.
 		split: 'M2 8h5l5-4M7 8l5 4',
 		merge: 'M2 4l5 4H2m0 0h5m0 0l5-4v8z',

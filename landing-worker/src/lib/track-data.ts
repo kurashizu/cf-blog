@@ -549,6 +549,14 @@ export interface TrackData {
 	   drawn table can be deleted without moving every other patch's oscillator
 	   onto whichever shape shuffled into its place. */
 	graphWaves?: Record<string, string>;
+	/* Text a node carries: a TERM's socket name, a NOTE's comment.
+
+	   Its own map for the same reason `graphWaves` has one -- `graphParams` is
+	   `Record<string, number>` and a string put through it passes the finite
+	   check by failing it. None of this is read by the engine: a label changes
+	   what a patch *says*, never what it does, so a patch with every label
+	   stripped renders identically. */
+	graphLabels?: Record<string, string>;
 	/* How a new note treats the one before it.
 	 *
 	 *   POLY   -- they overlap, which is what a keyboard does.
@@ -786,6 +794,7 @@ export const KEY_TIMBRE_KEYS = [
 	'rackGraph',
 	'graphParams',
 	'graphWaves',
+	'graphLabels',
 	/* Which of the two instruments this sound is built on.
 	
 	   It reads like a property of the track -- it is the view the panel is in --

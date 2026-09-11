@@ -1868,6 +1868,69 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		   primitives wearing one coat, and the duplicate controls were a second
 		   place to look when a patch came out quiet. */
 		params: []
+	},
+	/*
+	 * Two terminals and a label: the tidying set.
+	 *
+	 * None of these three touch the sound. They exist because a patch is read as
+	 * well as heard, and past a couple of dozen cards the reading is what fails
+	 * first -- a cable that crosses the canvas tells you nothing about what is
+	 * travelling along it, and a group's edge is where that question is asked
+	 * most often.
+	 *
+	 * TERM passes its input through unchanged. As a signal path that is a no-op,
+	 * which is the point: it is a *named* no-op, so a bundle of wires entering a
+	 * group can be landed on one socket with a label beside it rather than
+	 * fanning into the middle of the arrangement. It is also a corner to route
+	 * around, which is what keeps long cables off the cards they would otherwise
+	 * cross.
+	 *
+	 * Two of them rather than one, and the split is forced rather than chosen:
+	 * the role lattice seals the audio and control families apart, so a single
+	 * terminal would either need a port that accepts both -- which is the hole
+	 * the lattice exists to close -- or would silently refuse half the cables
+	 * anyone tried to route through it.
+	 */
+	{
+		id: 'nodept',
+		label: 'NODE',
+		group: 'UTILITY',
+		color: '#5c6370',
+		descKey: 'synthPatch.mod.nodept',
+		inputs: [{ id: 'in', label: 'IN', kind: 'audio', role: 'signal' }],
+		outputs: [AUDIO_OUT],
+		/* No params. The name a terminal carries is text, and text lives in
+		   `graphLabels` rather than `graphParams` -- a string cannot go through a
+		   map of numbers. The card renders an input bound to that instead. */
+		params: []
+	},
+	{
+		id: 'nodecv',
+		label: 'NODE.CV',
+		group: 'UTILITY',
+		color: '#5c6370',
+		descKey: 'synthPatch.mod.nodecv',
+		inputs: [CV_A],
+		outputs: [CV_OUT],
+		params: []
+	},
+	/*
+	 * A comment. Blueprint has one and every large graph grows them.
+	 *
+	 * No ports at all, which is what separates it from a group box: a box says
+	 * "these belong together" and is answerable to what it encloses, while a
+	 * note says something the graph cannot, and is answerable to nobody. Pinning
+	 * the name of a terminal beside it is the case this was added for.
+	 */
+	{
+		id: 'note',
+		label: 'NOTE',
+		group: 'UTILITY',
+		color: '#5c6370',
+		descKey: 'synthPatch.mod.note',
+		inputs: [],
+		outputs: [],
+		params: []
 	}
 ];
 

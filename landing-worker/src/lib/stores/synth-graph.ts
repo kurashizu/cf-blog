@@ -26,8 +26,10 @@ import {
 	isFixedNode,
 	groupAround,
 	nodesInGroup,
+	ownedNodes,
 	moveGroup,
 	resizeGroup,
+	refitGroup,
 	ungroup,
 	addGroup,
 	renameGroup,
@@ -423,6 +425,35 @@ export function setGraphWave(
 	flushHistoryBump();
 }
 
+/**
+ * Set the text a node carries: a TERM's socket name, a NOTE's comment.
+ *
+ * Keyed by node id alone rather than `node.param`, because these cards have one
+ * piece of text and no parameters -- there is nothing to disambiguate.
+ *
+ * Coalesced like a knob rather than discrete like a wave pick: typing a name is
+ * a continuous gesture, and one undo per keystroke is not an undo anyone wants.
+ * An empty string deletes the key instead of storing it, so a label cleared out
+ * leaves a patch byte-identical to one that never had it.
+ */
+export function setGraphLabel(
+	labels: Record<string, string> | undefined,
+	nodeId: string,
+	value: string
+): void {
+	const key = `label:${nodeId}`;
+	if (lastParamKey !== key) {
+		pushUndo(get(activeTrackId));
+		lastParamKey = key;
+	}
+	const next = { ...(labels ?? {}) };
+	if (value) next[nodeId] = value;
+	else delete next[nodeId];
+	modularSynth.updateTrack(get(activeTrackId), { graphLabels: next } as Partial<TrackData>);
+	refreshTracks();
+	flushHistoryBump();
+}
+
 /* The nodes a box-select or a shift-click has gathered. Separate from
    selectedNode, which is the one whose knobs the canvas is showing: a selection
    of six modules has no single one to edit. */
@@ -599,7 +630,14 @@ export function groupSelection(
 	label: string,
 	size: NodeSize
 ): string | null {
-	const members = graph.nodes.filter((n) => ids.has(n.id) && !isFixedNode(n.id));
+	/* Nodes already owned by another box are not up for grabs. Selecting across
+	   an existing group and pressing Ctrl+G builds a box around whatever is free
+	   and leaves that group's members with it -- to move them, ungroup the box
+	   that holds them first, which releases them, then group again. */
+	const owned = ownedNodes(graph);
+	const members = graph.nodes.filter(
+		(n) => ids.has(n.id) && !isFixedNode(n.id) && !owned.has(n.id)
+	);
 	/* Two is the floor, not one. A box around a single node says nothing the
 	   node does not already say, and a box around nothing is a rectangle in
 	   space that owns whatever is later dragged into it -- which is a surprise
@@ -611,7 +649,7 @@ export function groupSelection(
 		members,
 		size
 	);
-	commit(addGroup(graph, group));
+	commit(addGroup(graph, { ...group, members: members.map((n) => n.id) }));
 	return group.id;
 }
 
@@ -648,6 +686,25 @@ export function resizeGroupTo(
 }
 
 /**
+ * Grow a box to cover members that turned out taller than they measured.
+ *
+ * Called once, a frame after a prefab lands, when the cards have reported their
+ * real heights. Silent when nothing changed, so it does not push an undo entry
+ * for the common case where the estimate was right.
+ */
+export function refitGroupTo(
+	graph: RackGraph,
+	groupId: string,
+	ids: Set<string>,
+	size: NodeSize
+): void {
+	const next = refitGroup(graph, groupId, ids, size);
+	if (next === graph) return;
+	modularSynth.updateTrack(get(activeTrackId), { rackGraph: next } as Partial<TrackData>);
+	refreshTracks();
+}
+
+/**
  * Remove a box, leaving its members. Ctrl+Shift+G.
  *
  * Deliberately not a delete. The nodes were never inside the box in any sense
@@ -655,6 +712,25 @@ export function resizeGroupTo(
  */
 export function ungroupById(graph: RackGraph, groupId: string): void {
 	commit(ungroup(graph, groupId));
+}
+
+/**
+ * Ungroup every box the selection touches. Ctrl+Shift+G, and the toolbar.
+ *
+ * Selecting a member and pressing ungroup is the gesture people reach for --
+ * they are looking at the node they want to free, not at the box's title bar.
+ * Returns how many boxes were removed, so the caller can say when there were
+ * none rather than appearing to do nothing.
+ */
+export function ungroupSelection(graph: RackGraph, ids: Set<string>): number {
+	const hit = (graph.groups ?? []).filter(
+		(g) => ids.has(g.id) || (g.members ?? []).some((m) => ids.has(m))
+	);
+	if (!hit.length) return 0;
+	let next = graph;
+	for (const g of hit) next = ungroup(next, g.id);
+	commit(next);
+	return hit.length;
 }
 
 /** Delete a box *and* everything it is carrying -- the destructive one, asked for explicitly. */
@@ -743,12 +819,32 @@ export function dropPrefab(
 	   against whatever the cards measured on the day it was saved, and a card
 	   that later grows a knob would burst out of its own group. */
 	const placed = pasted.nodes.filter((n) => ids.has(n.id));
-	const group = groupAround(newGroupId(), prefab.label, placed, size, prefab.color);
+	const group = {
+		...groupAround(newGroupId(), prefab.label, placed, size, prefab.color),
+		/* A prefab's box owns exactly what it expanded into, recorded rather than
+		   measured. This is also what makes the box immune to the card-height
+		   problem: MAP renders taller than the spec estimates the box from, so a
+		   geometric box would disown it the moment it laid out. */
+		members: placed.map((n) => n.id)
+	};
 	const next = addGroup(pasted, group);
 
+	/* The terminals' names come across with the nodes. Keyed by node id alone
+	   rather than `id.param`, so the shared remapper does not fit -- but the
+	   mapping is the same one, read off the two id lists in the same order. */
+	const newIds = [...ids];
+	const labels = {
+		...((modularSynth.getTrack(get(activeTrackId))?.graphLabels as Record<string, string>) ?? {})
+	};
+	for (const [i, oldId] of oldIds.entries()) {
+		const text = prefab.labels?.[oldId];
+		const fresh = newIds[i];
+		if (text && fresh) labels[fresh] = text;
+	}
 	modularSynth.updateTrack(get(activeTrackId), {
 		rackGraph: next,
-		graphParams: remapParams(params, prefab.params, oldIds, [...ids])
+		graphParams: remapParams(params, prefab.params, oldIds, [...ids]),
+		...(Object.keys(labels).length ? { graphLabels: labels } : {})
 	} as Partial<TrackData>);
 	selectedNodes.set(ids);
 	refreshTracks();

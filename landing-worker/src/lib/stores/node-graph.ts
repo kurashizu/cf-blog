@@ -92,6 +92,17 @@ export const PURE_NODES: Record<string, PureFn> = {
 	},
 	/* Semitones onto a pitch, keeping it a pitch. */
 	trsp: (i) => i.get('a', 0) + i.get('b', 0),
+	/* A control wire with a name on it: whatever arrives, unchanged.
+
+	   Dual like MAP, and for the same reason. Pulled as a number it resolves a
+	   chain of constants straight through, so a CONST behind a terminal still
+	   reaches the knob it was aimed at; built as a node it passes a live signal
+	   per sample, so an envelope routed through one is not frozen at its value
+	   when the note began. Registered in NOT_PURE to say the second half is
+	   real -- without it a moving signal through a terminal would be read once
+	   and held, which is exactly the silent-drop class this codebase keeps
+	   finding. */
+	nodecv: (i) => i.get('a', 0),
 	/* A literal, in whichever type the socket it is going to expects.
 	
 	   PIT is the one that is not simply its own number. It is typed and stored
@@ -291,7 +302,7 @@ export const PURE_NODES: Record<string, PureFn> = {
  * function, which is what stops the drawn curve and the heard curve drifting
  * apart. So the row stays and only the classification changes.
  */
-const NOT_PURE = new Set(['map']);
+const NOT_PURE = new Set(['map', 'nodecv']);
 
 /**
  * Does this node hand back a value rather than build audio?

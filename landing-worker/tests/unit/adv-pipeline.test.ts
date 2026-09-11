@@ -485,11 +485,16 @@ describe('what the renders proved', () => {
 		   renders it in a closed loop and measures the tail, and separately
 		   asserts that a source wired into one reaches OUT by no path at all,
 		   which is this same dead end pinned as the behaviour it is. */
+		/* NOTE joins them from the other end. It is not a dead end in the sweep's
+		   sense -- it has no ports at all, so there is nothing to walk. A comment
+		   card cannot appear in a render because it is not in the signal path,
+		   which is the entire reason it exists. */
 		expect(neither.sort()).toEqual([
 			'act',
 			'fbsend',
 			'fft',
 			'loud',
+			'note',
 			'out',
 			'scope',
 			'wait',
@@ -599,14 +604,19 @@ describe('regressions the string tests could not see', () => {
 		   it, so adding a pure node without remembering this list put DC in the
 		   mix.
 		
-		   Every entry in the table is a value node; all but MAP are also pure.
+		   Every entry in the table is a value node; all but the dual ones are
+		   also pure.
 		   MAP has a curve in the table *and* builds a WaveShaperNode, because a
 		   transfer function fed a waveform has to bend every sample -- so the
 		   engine names it in `isModOnly` alongside ENV and TO-CV, the others that
 		   emit control through real audio nodes. */
+		/* MAP and TERM.CV are the dual pair: pullable as a value *and* buildable
+		   as a node, so neither is pure. Listed rather than special-cased one at
+		   a time, so a third one has somewhere obvious to go. */
+		const DUAL = new Set(['map', 'nodecv']);
 		for (const type of Object.keys(PURE_NODES)) {
 			expect(isValueNode(type), type).toBe(true);
-			if (type !== 'map') expect(isPureNode(type), type).toBe(true);
+			if (!DUAL.has(type)) expect(isPureNode(type), type).toBe(true);
 		}
 		/* And the engine's own list agrees that MAP is not summed into the mix.
 		   Read from the source, because the alternative is asserting a duplicate
@@ -614,7 +624,8 @@ describe('regressions the string tests could not see', () => {
 		const src = readFileSync('src/lib/synth.ts', 'utf8');
 		const modOnly = /const isModOnly = [^;]+;/.exec(src)?.[0] ?? '';
 		expect(modOnly, 'isModOnly not found').not.toBe('');
-		for (const type of ['map', 'tocv', 'env']) expect(modOnly).toContain(`'${type}'`);
+		for (const type of ['map', 'tocv', 'env', 'nodecv'])
+			expect(modOnly).toContain(`'${type}'`);
 	});
 
 	it('gives every pure node a card to reach it from', () => {

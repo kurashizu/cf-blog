@@ -36,11 +36,13 @@
 		nodeId,
 		params,
 		waves,
+		labels,
 		inlet,
 		claimed,
 		wired,
 		onParam,
 		onWave,
+		onLabel,
 		onDrawWave
 	}: {
 		spec: ModuleSpec;
@@ -49,6 +51,9 @@
 		/* Kept apart from `params` because a waveform is a name, not a quantity:
 		   see `graphWaves` on TrackData. */
 		waves?: Record<string, string>;
+		/* Text a node carries: a TERM's socket name, a NOTE's comment. Its own
+		   map for the same reason `waves` has one -- see `graphLabels`. */
+		labels?: Record<string, string>;
 		/* What an inlet is carrying, resolved against the whole graph. A card
 		   only knows its own id, so anything drawn from a *patched* value -- the
 		   pulse width, which has no knob -- has to be told. */
@@ -63,6 +68,7 @@
 		wired?: (nodeId: string, port: string) => boolean;
 		onParam: (key: string, value: number) => void;
 		onWave?: (key: string, value: SynthWaveform) => void;
+		onLabel?: (value: string) => void;
 		onDrawWave?: (key: string, editing?: CustomWave) => void;
 	} = $props();
 
@@ -214,6 +220,34 @@
 	class="flex flex-col gap-1 py-1"
 	style="padding-left: {padLeft}px; padding-right: {padRight}px"
 >
+	<!-- The text a terminal or a comment carries.
+
+	     An input rather than a label, because it is the only thing on these two
+	     cards and typing into it is the whole interaction. NOTE gets a taller
+	     one: a comment is a sentence and a socket name is two words. -->
+	{#if spec.id === 'nodept' || spec.id === 'nodecv' || spec.id === 'note'}
+		{#if spec.id === 'note'}
+			<textarea
+				value={labels?.[nodeId] ?? ''}
+				oninput={(e) => onLabel?.((e.target as HTMLTextAreaElement).value)}
+				onpointerdown={(e) => e.stopPropagation()}
+				placeholder={$t('synthPatch.notePlaceholder')}
+				rows="3"
+				class="w-full bg-black/60 border border-white/15 rounded-xs px-1 py-0.5 font-mono text-[10px] outline-none resize-none focus:border-white/40"
+				style="color: {spec.color}"
+			></textarea>
+		{:else}
+			<input
+				value={labels?.[nodeId] ?? ''}
+				oninput={(e) => onLabel?.((e.target as HTMLInputElement).value)}
+				onpointerdown={(e) => e.stopPropagation()}
+				placeholder={$t('synthPatch.nodePlaceholder')}
+				class="w-full bg-black/60 border border-white/15 rounded-xs px-1 py-0.5 font-mono text-[10px] text-center outline-none focus:border-white/40"
+				style="color: {spec.color}"
+			/>
+		{/if}
+	{/if}
+
 	<!-- The wave, drawn above the picker that chooses it.
 
 	     A cycle of the actual shape says what the oscillator is doing faster

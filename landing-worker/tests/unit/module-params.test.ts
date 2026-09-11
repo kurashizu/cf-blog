@@ -119,10 +119,22 @@ describe('module parameters reach the engine', () => {
 	});
 
 	it('every module declares at least one port or parameter', () => {
-		// A module with nothing at all is a palette entry that cannot do anything.
+		/* A module with nothing at all is a palette entry that cannot do anything
+		   -- with one deliberate exception. NOTE is a comment: it has no ports
+		   because it is not in the signal path and no params because its only
+		   content is text, which lives in `graphLabels` rather than
+		   `graphParams`. It is the one card whose whole purpose is to be inert. */
 		for (const m of MODULE_SPECS) {
+			if (m.id === 'note') continue;
 			expect(m.inputs.length + m.outputs.length + m.params.length).toBeGreaterThan(0);
 		}
+	});
+
+	it('NOTE is the only module with nothing in it', () => {
+		const inert = MODULE_SPECS.filter(
+			(m) => m.inputs.length + m.outputs.length + m.params.length === 0
+		);
+		expect(inert.map((m) => m.id)).toEqual(['note']);
 	});
 
 	it('parameter defaults sit inside their own range', () => {
@@ -347,6 +359,15 @@ describe('the node contract', () => {
 				if (!want.includes(m.group)) wrong.push(`${m.id}: ${m.group}`);
 				continue;
 			}
+			/* The terminals are the exception, and deliberately so. The shelf rule
+			   sorts by what a module *emits*, because that is what a player is
+			   looking for when they reach for it -- but a TERM emits exactly what
+			   it was given and exists to tidy a canvas rather than to make or
+			   shape a sound. Filing it under SHAPE would put a no-op next to the
+			   filters; it belongs with the other things that are not instruments.
+			   It is named here rather than the rule being loosened, so the next
+			   module that emits audio from UTILITY still has to justify itself. */
+			if (m.id === 'nodept' || m.id === 'nodecv') continue;
 			const emitsAudio = m.outputs.some((o) => o.kind === 'audio');
 			const emitsValue = m.outputs.some((o) => o.kind === 'mod');
 			if (emitsAudio && !AUDIO_SHELVES.has(m.group)) wrong.push(`${m.id}: ${m.group}`);

@@ -113,6 +113,16 @@ describe('every knob is what the card says it is', () => {
 					expect(made.in, 'map.a has no inlet to land on').not.toBe(null);
 					continue;
 				}
+				/* TERM.CV's A is the fourth, and it is MAP's case exactly: dual, so
+				   the cable lands on the node's own inlet rather than on a param.
+				   Registering `a` in the mod map would have been worse than
+				   leaving it out -- a signal into a unity gain's *gain* multiplies
+				   instead of passing through, so the terminal would have scaled
+				   what it was supposed to forward unchanged. */
+				if (m.id === 'nodecv' && q.id === 'a') {
+					expect(made.in, 'nodecv.a has no inlet to land on').not.toBe(null);
+					continue;
+				}
 				if (!made.mod.has(q.id)) missing.push(`${m.id}.${q.id}`);
 			}
 		}
