@@ -155,6 +155,29 @@ export function rolesCompatible(from: PortRole, to: PortRole): boolean {
 	   some amount of something and they convert into each other by arithmetic;
 	   this one does not, so it only meets its own kind. */
 	if (from === 'bool' || to === 'bool') return from === 'bool' && to === 'bool';
+	/* A count is not a proportion.
+
+	   `index` is a whole number of things -- a key, a step, a mode -- and the
+	   roles it was meeting are all continuous. Arithmetic converts between an
+	   amount and a rate; it does not turn "the 60th key" into a fraction of a
+	   turn, and the CONST types that carry an index step by 1, so an inlet
+	   wanting 0..1 could only ever be handed 0 or 1 from one.
+
+	   This was drawable and silently useless: an I32 of 1 into OSC's PHS is a
+	   whole turn, which wraps to no rotation at all, so the cable was visible,
+	   the inlet lit, and the sound identical to nothing being patched. The
+	   lattice is what says so before the cable is drawn rather than after it is
+	   not heard.
+
+	   Not walled off the way `pitch` and `bool` are: an index is still a
+	   quantity, so it meets `cv` -- the untyped real number every arithmetic
+	   node hands out -- and MAP is the conversion you can see when a count has
+	   to become an amount. What it refuses is the inlets that named a unit it
+	   cannot satisfy. */
+	if (from === 'index' || to === 'index') {
+		const other = from === 'index' ? to : from;
+		return other === 'index' || other === 'cv';
+	}
 	return true;
 }
 

@@ -183,8 +183,28 @@ describe('the type lattice', () => {
 	});
 
 	it('is symmetric within the value family', () => {
-		const values: PortRole[] = ['cv', 'hz', 'unit', 'index', 'time'];
+		const values: PortRole[] = ['cv', 'hz', 'unit', 'time'];
 		for (const a of values) for (const b of values) expect(rolesCompatible(a, b)).toBe(true);
+	});
+
+	it('keeps a count out of an inlet that wanted a proportion', () => {
+		/* An I32 of 1 into OSC's PHS is one whole turn, which wraps to no
+		   rotation: the cable drew, the inlet lit, and the sound was identical to
+		   nothing patched. A count and a fraction of a turn are not the same
+		   quantity and arithmetic does not convert them. */
+		for (const v of ['hz', 'unit', 'time'] as PortRole[]) {
+			expect(rolesCompatible('index', v)).toBe(false);
+			expect(rolesCompatible(v, 'index')).toBe(false);
+		}
+	});
+
+	it('still lets an index meet a plain number and its own kind', () => {
+		/* Not walled off the way `pitch` is: an index is a quantity, so the
+		   untyped real number arithmetic nodes hand out still reaches it, and MAP
+		   is the visible conversion when a count has to become an amount. */
+		expect(rolesCompatible('index', 'cv')).toBe(true);
+		expect(rolesCompatible('cv', 'index')).toBe(true);
+		expect(rolesCompatible('index', 'index')).toBe(true);
 	});
 });
 
