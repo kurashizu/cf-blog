@@ -1698,6 +1698,28 @@ class ModularSynth {
 				const pw = ctx.createGain();
 				pw.gain.value = period;
 				pw.connect(dl.delayTime);
+				/* FREQ, registered onto both saws so the pulse can be played.
+        
+           It was read as a value and nothing else, so a cable into it did
+           nothing at all: measured, a CONST of 110 and one of 880 both rendered
+           0.1726 -- the same reading as no cable. A pulse oscillator that
+           cannot be tuned by patch is one an instrument cannot use, and PWM is
+           the only square-wave source in the catalogue.
+        
+           Both saws take the signal, because the pulse is their difference and
+           they have to stay in step. What does *not* follow is the duty delay:
+           `period` is computed at build time from the base pitch, so a
+           modulated FREQ sweeps the pitch while the width in seconds stays put
+           -- which means the duty cycle drifts as it moves. That is a real
+           limit and it is the one Web Audio leaves: `delayTime` would have to
+           be `1/f * width` continuously, and there is no reciprocal node. Named
+           here rather than hidden, since a patch sweeping FREQ hard will hear
+           the width move with it. */
+				const fm = ctx.createGain();
+				fm.gain.value = 1;
+				fm.connect(a.frequency);
+				fm.connect(b.frequency);
+				mod.set('pitch', fm);
 				mod.set('pw', pw);
 				return { in: null, out: sum, mod };
 			}

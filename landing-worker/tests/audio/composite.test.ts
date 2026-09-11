@@ -651,29 +651,13 @@ describe('the mod inlets a signal cannot reach, and why each one is', () => {
 					{ ...constAt('cv', 6, 0.5) }
 				)
 		},
-		{
-			name: 'pwm.pitch',
-			read: slice2,
-			build: (into) =>
-				graphOf(
-					[...SRC, { id: 'pm', type: 'pwm' }, { id: 'fl', type: 'filter' }, { id: 'gg', type: 'gain' }],
-					[
-						EXEC_TO_OUT,
-						...into('pm', 'pitch'),
-						{ from: 'pm', fromPort: 'out', to: 'fl', toPort: 'in' },
-						{ from: 'fl', fromPort: 'out', to: 'gg', toPort: 'in' },
-						{ from: 'gg', fromPort: 'out', to: 'output', toPort: 'in' }
-					],
-					{
-						...constAt('cv', 7, 200),
-						'fl.type': 0,
-						'fl.cutoff': 300,
-						'fl.q': 0.7,
-						'gg.level': 0.3,
-						'pm.pitch': 4000
-					}
-				)
-		},
+		/* `pwm.pitch` was a row here and is not any more.
+		
+		   It took a value and ignored a signal -- measured, a CONST of 110 and one
+		   of 880 both rendered 0.1726, the same as no cable -- so the only
+		   square-wave source in the catalogue could not be tuned by patch. FREQ
+		   is registered onto both saws now. What still does not follow is the
+		   duty delay, which is computed at build time; see the engine comment. */
 		{
 			name: 'string.pitch',
 			read: slice2,

@@ -2756,10 +2756,22 @@ describe('SPACE: DECAY runs the way its label reads', () => {
 			e.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
 		const readings: number[] = [];
 		for (const d of [1, 25, 50, 75, 100]) readings.push(lastHeard(await space(d)));
+		/* Non-decreasing, not strictly increasing.
+		
+		   Each reading is the slice a noise tail happens to die in, and that
+		   moves by one either way between renders. Five strict steps over
+		   readings with +/-1 of jitter means two adjacent settings may tie, which
+		   they do about one run in eight -- and a tie is not the knob failing,
+		   it is two nearby settings landing in one 125 ms slice.
+		
+		   What no amount of jitter produces is a tail that gets *shorter* as the
+		   knob is turned up, which is the defect this test was written for: DECAY
+		   ran backwards once, and the comment above records it. */
 		for (let i = 1; i < readings.length; i++) {
-			expect(readings[i], `DECAY step ${i}: ${JSON.stringify(readings)}`).toBeGreaterThan(
-				readings[i - 1]
-			);
+			expect(
+				readings[i],
+				`DECAY went backwards at step ${i}: ${JSON.stringify(readings)}`
+			).toBeGreaterThanOrEqual(readings[i - 1]);
 		}
 		// And the ends really are a short room and a long one, not five near-equal tails.
 		/* The ends, with room for the jitter that is actually there.
