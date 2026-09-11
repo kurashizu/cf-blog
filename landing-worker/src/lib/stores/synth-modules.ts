@@ -84,7 +84,13 @@ export interface ModuleSpec {
 		/* Changing what a value *is* rather than what it equals. Kept apart from
 		   MATH because that is the distinction the type system exists to make:
 		   nothing converts a pitch to a frequency implicitly, so the nodes that
-		   do it should be easy to find rather than buried among the operators. */
+		   do it should be easy to find rather than buried among the operators.
+		
+		   The one shelf that spans both families, because crossing between them
+		   is a conversion too: TO-CV reads a waveform as a value and TO-SIG the
+		   reverse, and filing each by its outlet would put the two halves of one
+		   door on opposite sides of the wall it opens. Every other shelf takes
+		   its side from what a module emits. */
 		| 'CONVERT'
 		| 'METER'
 		| 'UTILITY';
@@ -1324,7 +1330,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * would be a lie about a signal that swings either way. */
 		id: 'tocv',
 		label: 'TO-CV',
-		group: 'MODULATE',
+		group: 'CONVERT',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.tocv',
 		inputs: [AUDIO_IN],
@@ -1349,7 +1355,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * added to, filtered, and delayed on its way. */
 		id: 'tosig',
 		label: 'TO-SIG',
-		group: 'SOURCE',
+		group: 'CONVERT',
 		color: '#c678dd',
 		descKey: 'synthPatch.mod.tosig',
 		inputs: [{ id: 'level', label: 'IN', kind: 'mod' }],
@@ -1628,7 +1634,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		 * knob on TO-FREQ used to be, and unlike that one it can be driven. */
 		id: 'trsp',
 		label: 'TRSP',
-		group: 'CONVERT',
+		group: 'MATH',
 		color: '#61afef',
 		descKey: 'synthPatch.mod.trsp',
 		inputs: [
@@ -1795,6 +1801,12 @@ export const PALETTE_SPECS: ModuleSpec[] = MODULE_SPECS.filter((m) => !FIXED_MOD
  *      `ctl -> ctl` and collapsing them would make one shelf of eleven. MATH
  *      is arithmetic on a quantity, LOGIC is anything whose output is a truth,
  *      CONVERT changes what a value *is* rather than what it equals.
+ *
+ *      CONVERT is the one shelf step 1 does not decide, and deliberately:
+ *      crossing between the families is itself a conversion, so TO-CV and
+ *      TO-SIG live there rather than one on each side of the wall they open.
+ *      TRSP does not -- a pitch plus semitones is a pitch, so it changes what
+ *      the value equals and belongs with the arithmetic.
  *
  * A module with no inlets and an audio outlet is SOURCE; one with no outlet is
  * METER or UTILITY. Between them these decide every module in the catalogue,

@@ -306,7 +306,12 @@ describe('the node contract', () => {
 		   audio shelf; emitting a value means a control shelf. Being CV-driven
 		   does not move anything, because nearly every audio module is
 		   CV-driven and so that criterion separates nothing. */
-		const AUDIO_SHELVES = new Set(['SOURCE', 'SHAPE', 'RESONATE', 'STEREO']);
+		/* CONVERT is on both lists, and that is what it is for: it is the shelf
+		   of nodes that change what a value *is* rather than what it equals, so
+		   the family it emits into is the thing it changed. TO-CV takes sound and
+		   hands back a value, TO-SIG does the reverse, and filing them by their
+		   outlets would put one on each side of a wall they exist to cross. */
+		const AUDIO_SHELVES = new Set(['SOURCE', 'SHAPE', 'RESONATE', 'STEREO', 'CONVERT']);
 		const CONTROL_SHELVES = new Set(['MATH', 'LOGIC', 'CONVERT', 'MODULATE']);
 		const wrong: string[] = [];
 		for (const m of MODULE_SPECS) {
