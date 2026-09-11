@@ -1288,11 +1288,37 @@ describe('FILTER: the cutoff is a frequency, and a value can reach it', () => {
 		   collapse to one number. */
 		const at = async (cutoff: number) => (await render(noiseThrough({ 'fl.cutoff': cutoff }), 4, 1)).envelope[2];
 		const readings = [await at(100), await at(1000), await at(8000), await at(20000)];
+		/* Ordering and ratios, not constants.
+		
+		   The source is noise, and a fresh buffer is generated for every render --
+		   which is correct, and which means the readings move. Measured over
+		   eight renders each: cutoff 20000 spans 4.6%, cutoff 8000 spans 1.5%,
+		   and cutoff 100 spans *30.4%* (0.0312 to 0.0407), because the less of
+		   the band a filter passes the more of what is left is luck.
+		
+		   The first version of this asserted `readings[0] < 0.05`, which that
+		   spread can cross, and `readings[3] > 0.3` against a measured 0.3161
+		   floor. It failed about one run in three -- and a test that fails one
+		   run in three is a test that passes on a broken engine one run in three,
+		   which is the same defect wearing the other face.
+		
+		   The steps are also not equal: 100 -> 1000 -> 8000 roughly triples each
+		   time, but 8000 -> 20000 gains only about 10%, because a lowpass at 8 kHz
+		   already passes most of what noise has. So a uniform per-step ratio was
+		   wrong on its own terms -- it demanded of the last step something the
+		   physics does not provide, and would have failed on a correct engine.
+		
+		   Asserted as a monotone sequence plus one ratio wide enough to be
+		   unmistakable. A cutoff that never reached the node leaves all four
+		   readings identical: the ordering fails at every step and the ratio
+		   collapses to 1. */
 		for (let i = 1; i < readings.length; i++) {
-			expect(readings[i], `cutoff step ${i}`).toBeGreaterThan(readings[i - 1] * 1.1);
+			expect(readings[i], `cutoff step ${i}: ${JSON.stringify(readings)}`).toBeGreaterThan(
+				readings[i - 1]
+			);
 		}
-		expect(readings[0]).toBeLessThan(0.05);
-		expect(readings[3]).toBeGreaterThan(0.3);
+		// Two decades of cutoff: measured between 7.8x and 10.6x, never near 1.
+		expect(readings[3] / readings[0], `${JSON.stringify(readings)}`).toBeGreaterThan(5);
 	}, 60000);
 
 	it('takes a computed value at a frequency destination', async () => {
