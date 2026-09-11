@@ -1829,7 +1829,21 @@ export function renameUserPreset(userIdx: number, rawName: string): string | nul
 export function exportActivePreset(): void {
 	const trk = activeTrack();
 	if (!trk) return;
-	const name = presetNameFor(trk);
+	/* The patch's own name, when one is loaded.
+	
+	   It was the *track's* -- `TRK 1: FLUTE` becomes FLUTE -- which is the right
+	   guess for a sound that has never been saved and the wrong one the moment
+	   it has. A patch saved as TEST and exported from track 1 came out as
+	   `krsz-preset-flute.json` and called itself FLUTE inside, so the file said
+	   nothing about what was in it and two different patches exported from one
+	   track overwrote each other in the download folder.
+	
+	   Unmodified, because the selection is only honest while it holds: editing a
+	   loaded patch and exporting it would otherwise ship the edits under the old
+	   name. Modified, the track name is the better guess again -- it is at least
+	   about the sound rather than about a patch this no longer is. */
+	const sel = get(allPresets)[get(soundPresetIdx)];
+	const name = sel && !get(presetModified) ? sel.name : presetNameFor(trk);
 	const file: PresetFile = {
 		format: FILE_FORMAT,
 		version: 1,
@@ -2987,11 +3001,16 @@ export function exportActiveKit(): void {
 		showSaveStatus(tr('synthPanels.toast.noKitYet'));
 		return;
 	}
+	/* The kit's own name when one is loaded, the track's otherwise -- the same
+	   reasoning the preset export follows. `activeKitName` is cleared whenever a
+	   patch is applied, so it is only set while a kit really is what is loaded. */
 	const name =
+		get(activeKitName) ||
 		row!.name
 			.replace(/^TRK\s*\d+\s*:\s*/i, '')
 			.trim()
-			.toUpperCase() || 'KIT';
+			.toUpperCase() ||
+		'KIT';
 	const file: KitFile = { format: KIT_FILE_FORMAT, version: 1, name, keys };
 	const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
 	const url = URL.createObjectURL(blob);
