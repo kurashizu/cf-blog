@@ -43,11 +43,21 @@
 		isFixedNode,
 		roleOf,
 		rolesCompatible,
+		groupSelection,
+		groupMembers,
+		moveGroupBy,
+		ungroupById,
+		setGroupLabel,
+		deleteGroupAndMembers,
+		dropPrefab,
+		saveSelectionAsPrefab,
+		GROUP_HEADER,
 		type GraphNode,
 		type GraphCable,
 		type PortKind,
 		type PortRole
 	} from '../../../stores/synth-graph';
+	import { allPrefabs, deletePrefab } from '../../../stores/synth-prefabs';
 	import {
 		PALETTE_SPECS,
 		MODULE_GROUPS,
@@ -434,6 +444,34 @@
 			const n = pasteClipboard(graph, graphParams);
 			if (n) playSound('click');
 			e.preventDefault();
+		} else if (k === 'g') {
+			/* Blueprint's pair, and the shift key is the whole difference:
+			   Ctrl+G draws a box around the selection, Ctrl+Shift+G takes the box
+			   away and leaves every node where it stands. Neither moves anything,
+			   because a group is scenery. */
+			if (e.shiftKey) {
+				/* Ungroup whichever boxes the selection is sitting in. Nothing
+				   selected means nothing to ungroup -- the alternative, clearing
+				   every box on the canvas, is not something anyone means by a
+				   keystroke. */
+				const inside = (graph.groups ?? []).filter((g) => {
+					const members = groupMembers(graph, g.id, sizeOf);
+					return [...members].some((id) => sel.has(id));
+				});
+				for (const g of inside) ungroupById(graph, g.id);
+				if (inside.length) playSound('click');
+			} else if (sel.size >= 2) {
+				const id = groupSelection(graph, sel, $t('synthPatch.groupNamePrompt'), sizeOf);
+				if (id) {
+					// Straight into the title, so a new box is named rather than
+					// left reading GROUP until someone thinks to rename it.
+					renamingGroup = id;
+					playSound('click');
+				}
+			} else {
+				say($t('synthPatch.groupNeedsTwo'));
+			}
+			e.preventDefault();
 		}
 	}
 
@@ -472,6 +510,33 @@
 	let marquee = $state<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
 	/* Where a multi-node drag started, so the whole selection moves together. */
 	let groupDrag = $state<{ x: number; y: number } | null>(null);
+
+	/* How a node measures, which is the question every geometric test on this
+	   canvas asks. Written once because the marquee, the group catchment and the
+	   box drawn around a dropped prefab all have to agree: three copies of this
+	   is three chances for a node to be inside a box by one test and outside it
+	   by another. */
+	const sizeOf = (n: GraphNode) => {
+		const spec = moduleSpec(n.type);
+		return { w: spec ? nodeWidth(spec) : NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
+	};
+
+	/* A group box being dragged by its title bar.
+
+	   `members` is captured here, on pointer-down, and held for the whole
+	   gesture. Recomputing it per frame is the bug this shape exists to prevent:
+	   a node stops being enclosed the moment the moving edge passes it, so the
+	   box would shed its contents one at a time as it travelled and arrive
+	   empty. See `moveGroup`. */
+	let groupBoxDrag = $state<{
+		id: string;
+		members: Set<string>;
+		x: number;
+		y: number;
+	} | null>(null);
+
+	/** The group whose title is being edited inline, or null. */
+	let renamingGroup = $state<string | null>(null);
 
 	/* The box as a rectangle. Shared so the live hit test, the commit and the
 	   drawn outline cannot disagree about what is inside it. */
@@ -555,11 +620,20 @@
 			   way to tell what you were about to get until you had already got
 			   it. Recomputed from the base each move rather than accumulated, so
 			   shrinking the box drops what it no longer covers. */
-			const hit = nodesInRect(graph, rectOf(marquee), (n) => {
-				const spec = moduleSpec(n.type);
-				return { w: spec ? nodeWidth(spec) : NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
-			});
+			const hit = nodesInRect(graph, rectOf(marquee), sizeOf);
 			selectedNodes.set(new Set([...marqueeBase, ...hit]));
+			return;
+		}
+		if (groupBoxDrag) {
+			const p = toCanvas(e.clientX, e.clientY);
+			const nx = Math.round((p.x - groupBoxDrag.x) / GRID) * GRID;
+			const ny = Math.round((p.y - groupBoxDrag.y) / GRID) * GRID;
+			const box = graph.groups?.find((g) => g.id === groupBoxDrag!.id);
+			if (box && (nx !== box.x || ny !== box.y)) {
+				/* The members captured on press, not a fresh lookup -- the box must
+				   arrive carrying what it set out with. */
+				moveGroupBy(graph, groupBoxDrag.id, groupBoxDrag.members, nx - box.x, ny - box.y);
+			}
 			return;
 		}
 		if (groupDrag && dragNode) {
@@ -596,6 +670,7 @@
 		marquee = null;
 		panning = null;
 		groupDrag = null;
+		groupBoxDrag = null;
 		dragNode = null;
 		pullFrom = null;
 		endGraphDrag();
@@ -608,16 +683,14 @@
 			   single-module case, so its knobs show without a second click. */
 			const rect = rectOf(marquee);
 			if (rect.w > 3 || rect.h > 3) {
-				const hit = nodesInRect(graph, rect, (n) => {
-					const spec = moduleSpec(n.type);
-					return { w: spec ? nodeWidth(spec) : NODE_W, h: spec ? nodeHeight(n, spec) : 74 };
-				});
+				const hit = nodesInRect(graph, rect, sizeOf);
 				if (hit.length === 1) selectedNode.set(hit[0]);
 			}
 			marquee = null;
 		}
 		panning = null;
 		groupDrag = null;
+		groupBoxDrag = null;
 		dragNode = null;
 		endGraphDrag();
 		/* A cable dropped on empty canvas asks what to connect, rather than
@@ -1004,6 +1077,43 @@
 
 		<div class="w-px h-3.5 bg-white/15 mx-0.5"></div>
 
+		<!-- Grouping and saving, the two halves of this feature.
+
+		     GROUP draws a box around what is selected; PREFAB saves the same
+		     selection to the shelf so it can be dropped into another patch. They
+		     sit together because they are the same question asked at two
+		     timescales -- "these belong together here" and "these belong
+		     together always". -->
+		<button
+			onclick={() => {
+				const id = groupSelection(graph, $selectedNodes, $t('synthPatch.groupNamePrompt'), sizeOf);
+				if (id) {
+					renamingGroup = id;
+					playSound('click');
+				} else say($t('synthPatch.groupNeedsTwo'));
+			}}
+			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.groupHint')}>GROUP</button
+		>
+		<button
+			onclick={() => {
+				const saved = saveSelectionAsPrefab(
+					graph,
+					$selectedNodes,
+					$t('synthPatch.prefabNamePrompt'),
+					graphParams
+				);
+				if (saved) {
+					say($t('synthPatch.prefabSaved'));
+					playSound('click');
+				} else say($t('synthPatch.groupNeedsTwo'));
+			}}
+			class="press px-1.5 py-0.5 border border-white/25 text-white/70 hover:text-white hover:border-white/60 rounded-xs font-bold cursor-pointer transition-colors"
+			title={$t('synthPatch.savePrefabHint')}>PREFAB</button
+		>
+
+		<div class="w-px h-3.5 bg-white/15 mx-0.5"></div>
+
 		<button
 			onclick={() => {
 				selectedNodes.set(new Set(graph.nodes.map((n) => n.id)));
@@ -1059,6 +1169,26 @@
 				e.preventDefault();
 				const type = e.dataTransfer?.getData('text/plain') || dragType;
 				if (!type) return;
+				/* A prefab and a module both arrive as a string on the same drag,
+				   so the payload says which it is. Prefixed rather than guessed
+				   from the id: a prefab key the player named the same as a module
+				   would otherwise place the module. */
+				if (type.startsWith('prefab:')) {
+					const p = toCanvas(e.clientX, e.clientY);
+					dropPrefab(
+						graph,
+						type.slice(7),
+						{
+							x: Math.round((p.x - NODE_W / 2) / GRID) * GRID,
+							y: Math.round((p.y - 40) / GRID) * GRID
+						},
+						graphParams,
+						sizeOf
+					);
+					dragType = null;
+					playSound('click');
+					return;
+				}
 				// Where it was dropped, snapped -- so a patch stays legible.
 				const p = toCanvas(e.clientX, e.clientY);
 				selectedNode.set(
@@ -1076,6 +1206,95 @@
 			style="background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px); background-size: {GRID *
 				cam.s}px {GRID * cam.s}px; background-position: {cam.x}px {cam.y}px"
 		>
+			<!-- Group boxes, under everything.
+
+		     Behind the cables as well as the cards, which is the only stacking
+		     that works: a box is a region of the canvas, so anything drawn on
+		     that region has to sit on top of it or the box hides the patch it is
+		     describing. Blueprint draws comment boxes the same way.
+
+		     Only the title bar takes pointer events. The body stays transparent
+		     to them, so clicking inside a box still reaches the canvas
+		     underneath -- a marquee started in the middle of a group must select
+		     nodes rather than drag the box. -->
+			<div
+				class="absolute inset-0 pointer-events-none"
+				style="transform: translate({cam.x}px, {cam.y}px) scale({cam.s}); transform-origin: 0 0"
+			>
+				{#each graph.groups ?? [] as g (g.id)}
+					{@const tint = g.color ?? '#61afef'}
+					<div
+						class="absolute rounded-xs border-2"
+						style="left: {g.x}px; top: {g.y}px; width: {g.w}px; height: {g.h}px; border-color: color-mix(in srgb, {tint} 45%, transparent); background: color-mix(in srgb, {tint} 7%, transparent)"
+					>
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="absolute left-0 right-0 top-0 flex items-center px-1.5 font-black text-[10px] font-mono truncate pointer-events-auto cursor-move select-none"
+							style="height: {GROUP_HEADER}px; background: color-mix(in srgb, {tint} 22%, transparent); color: {tint}"
+							onpointerdown={(e) => {
+								if (e.button !== 0) return;
+								e.stopPropagation();
+								const p = toCanvas(e.clientX, e.clientY);
+								beginGraphDrag();
+								/* Membership read once, here. See groupBoxDrag. */
+								groupBoxDrag = {
+									id: g.id,
+									members: groupMembers(graph, g.id, sizeOf),
+									x: p.x - g.x,
+									y: p.y - g.y
+								};
+							}}
+							ondblclick={() => (renamingGroup = g.id)}
+						>
+							{#if renamingGroup === g.id}
+								<!-- svelte-ignore a11y_autofocus -->
+								<input
+									autofocus
+									value={g.label}
+									onblur={(e) => {
+										setGroupLabel(graph, g.id, (e.target as HTMLInputElement).value);
+										renamingGroup = null;
+									}}
+									onkeydown={(e) => {
+										if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+										if (e.key === 'Escape') renamingGroup = null;
+										e.stopPropagation();
+									}}
+									onpointerdown={(e) => e.stopPropagation()}
+									class="flex-1 min-w-0 bg-black/60 outline-none font-black text-[10px] px-0.5"
+									style="color: {tint}"
+								/>
+							{:else}
+								<span class="flex-1 truncate">{g.label}</span>
+								<!-- Two buttons, and the difference between them is the
+								     whole design: one removes the box, the other removes
+								     the box and what it holds. Separating them is why
+								     deleting a group cannot silently take a patch with
+								     it. -->
+								<button
+									onpointerdown={(e) => e.stopPropagation()}
+									onclick={() => {
+										ungroupById(graph, g.id);
+										playSound('click');
+									}}
+									title={$t('synthPatch.ungroupHint')}
+									class="press px-1 hover:text-white cursor-pointer">⊘</button
+								>
+								<button
+									onpointerdown={(e) => e.stopPropagation()}
+									onclick={() => {
+										deleteGroupAndMembers(graph, g.id, sizeOf, graphParams);
+										playSound('click');
+									}}
+									title={$t('synthPatch.deleteHint')}
+									class="press px-1 text-[#e06c75] hover:text-white cursor-pointer">×</button
+								>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+
 			<!-- Cables sit under the modules: a cable must never cover a knob. -->
 			<svg class="absolute inset-0 w-full h-full pointer-events-none" style="overflow: visible">
 				<g transform="translate({cam.x} {cam.y}) scale({cam.s})">
@@ -1395,6 +1614,77 @@
 			>
 			{#if paletteOpen}
 				<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-1.5 pr-0.5">
+					<!-- The prefab shelf, above the primitives.
+
+					     First in the column on purpose. A prefab is where most
+					     patches actually start -- it is the shape you wanted, and the
+					     primitives below are what you reach for to change it. Putting
+					     it under thirty modules would make it the thing you find
+					     after rebuilding it by hand.
+
+					     Listed apart from MODULE_GROUPS rather than as another group
+					     in it, because these are not modules. A prefab has no ports,
+					     no spec, and nothing in the graph after it lands. -->
+					{#if $allPrefabs.length}
+						<div>
+							<div
+								class="text-[8px] uppercase tracking-wider text-white/30 border-b border-white/10 pb-0.5 mb-1"
+							>
+								{$t('synthPatch.prefabsTitle')}
+							</div>
+							<div class="space-y-0.5">
+								{#each $allPrefabs as p (p.key)}
+									{@const tint = p.color ?? '#abb2bf'}
+									<div class="flex items-center gap-0.5">
+										<button
+											draggable="true"
+											ondragstart={(e) => {
+												e.dataTransfer?.setData('text/plain', `prefab:${p.key}`);
+												dragType = `prefab:${p.key}`;
+											}}
+											ondragend={() => (dragType = null)}
+											onclick={() => {
+												/* Placed in the middle of the view when clicked
+												   rather than dragged -- the same shortcut the
+												   module buttons offer, for when you do not care
+												   where it lands yet. */
+												const r = canvasEl?.getBoundingClientRect();
+												const p0 = toCanvas(
+													(r?.left ?? 0) + (r?.width ?? 400) / 2,
+													(r?.top ?? 0) + (r?.height ?? 400) / 2
+												);
+												dropPrefab(
+													graph,
+													p.key,
+													{
+														x: Math.round(p0.x / GRID) * GRID,
+														y: Math.round(p0.y / GRID) * GRID
+													},
+													graphParams,
+													sizeOf
+												);
+												playSound('click');
+											}}
+											title={p.note ? $t(p.note) : $t('synthPatch.prefabDropHint')}
+											class="press flex-1 min-w-0 px-1.5 py-0.5 border rounded-xs text-[10px] font-black cursor-grab active:cursor-grabbing bg-black/40 hover:bg-white/10 text-left truncate"
+											style="border-color: {tint}55; color: {tint}">{p.label}</button
+										>
+										{#if p.custom}
+											<button
+												onclick={() => {
+													deletePrefab(p.key);
+													playSound('click');
+												}}
+												title={$t('synthPatch.prefabDeleteHint')}
+												class="press px-1 text-[#e06c75]/70 hover:text-[#e06c75] cursor-pointer text-[10px]"
+												>×</button
+											>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
 					{#each MODULE_GROUPS as g (g)}
 						{@const mods = PALETTE_SPECS.filter((m) => m.group === g)}
 						{#if mods.length}

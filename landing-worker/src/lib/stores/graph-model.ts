@@ -197,9 +197,49 @@ export interface GraphCable {
 	toPort: string;
 }
 
+/**
+ * A labelled rectangle drawn behind the nodes it encloses.
+ *
+ * Blueprint's comment box, and deliberately only that. It is a *view* over the
+ * graph rather than a container in it: the nodes it covers stay top-level, stay
+ * individually selectable, and the voice the engine builds is byte-identical
+ * whether the box is there or not -- `buildGraphNode` never sees one, and
+ * nothing in `topoOrder` or the cable rules knows the type exists.
+ *
+ * That is what keeps a group from becoming a module by the back door. The
+ * catalogue's rule is that a module must be irreducible; a group is a saved
+ * *arrangement* of irreducible things, so it must not acquire ports, an id that
+ * a cable can name, or a place in the build order. A rectangle with a title has
+ * none of those, which is exactly why it is the right shape for this.
+ *
+ * Membership is geometric rather than stored. A list of member ids has to be
+ * maintained on every delete, paste and undo, and the moment it disagrees with
+ * what is on screen the box owns nodes that are not in it -- whereas "what does
+ * this rectangle enclose" cannot go stale because it is recomputed from the
+ * only thing that was ever true. It is also what makes dragging a node in or
+ * out of a box change its membership, which is what Blueprint does and what
+ * anyone who has used one expects.
+ */
+export interface GraphGroup {
+	id: string;
+	/** Shown in the title bar. Uppercased by the editor, like every other name. */
+	label: string;
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	/** The box's tint, as a CSS colour. Prefabs carry their own. */
+	color?: string;
+}
+
 export interface RackGraph {
 	nodes: GraphNode[];
 	cables: GraphCable[];
+	/* Absent in every patch saved before groups existed, and absent in most
+	   after -- a box is optional scenery. Readers must treat undefined as
+	   "none" rather than defaulting it, so that loading an old patch does not
+	   rewrite it. */
+	groups?: GraphGroup[];
 }
 
 export const EMPTY_GRAPH: RackGraph = { nodes: [], cables: [] };
@@ -306,7 +346,12 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 	   and two ENTRYs both publish a full set of event pins. */
 	const hasEntry = g.nodes.some((n) => n.id === ENTRY_ID || n.type === 'in');
 	const hasOutput = g.nodes.some((n) => n.id === OUTPUT_ID || n.type === 'out');
-	if (hasEntry && hasOutput) return cables === g.cables ? g : { nodes: g.nodes, cables };
+	/* `...g` rather than the two named fields: every reader of a graph comes
+	   through here, so a field this rebuild forgets is a field that vanishes on
+	   load. `groups` was exactly that -- a patch with boxes saved and reopened
+	   came back with none, because the port-rename branch listed the two fields
+	   it knew about. Spreading keeps whatever else a patch carries. */
+	if (hasEntry && hasOutput) return cables === g.cables ? g : { ...g, cables };
 
 	/* Nothing on the canvas at all: this is a new patch, so it becomes the seed
 	   rather than a bare pair of endpoints with the seed's cables pointing at an
@@ -364,6 +409,7 @@ export function graphOf(track: { rackGraph?: RackGraph } | undefined): RackGraph
 	}
 
 	return {
+		...g,
 		nodes,
 		// A patch that already has modules keeps its own wiring: the seed's
 		// cables name nodes it does not have.
@@ -470,7 +516,13 @@ export function hasCable(graph: RackGraph, cable: GraphCable): boolean {
 
 /** A node's cables go with it; a cable to nothing is not a patch. */
 export function withoutNode(graph: RackGraph, id: string): RackGraph {
+	/* Spread, so the boxes survive. A group is scenery drawn *around* nodes
+	   rather than a container holding them, so removing one of its members
+	   leaves the rectangle exactly where it was -- and rebuilding the graph from
+	   two named fields instead of spreading it would have deleted every box in
+	   the patch on the first node anyone removed. */
 	return {
+		...graph,
 		nodes: graph.nodes.filter((n) => n.id !== id),
 		cables: graph.cables.filter((c) => c.from !== id && c.to !== id)
 	};
@@ -488,7 +540,9 @@ export function moveNodes(graph: RackGraph, ids: Set<string>, dx: number, dy: nu
 export function withoutNodes(graph: RackGraph, ids: Set<string>): RackGraph {
 	const gone = new Set([...ids].filter((id) => !isFixedNode(id)));
 	if (!gone.size) return graph;
+	// Spread for the reason withoutNode does: a box outlives its members.
 	return {
+		...graph,
 		nodes: graph.nodes.filter((n) => !gone.has(n.id)),
 		cables: graph.cables.filter((c) => !gone.has(c.from) && !gone.has(c.to))
 	};
@@ -510,6 +564,24 @@ export function copyNodes(graph: RackGraph, ids: Set<string>): RackGraph {
 }
 
 /**
+ * Paste a fragment's groups alongside its nodes.
+ *
+ * Split out of `pasteNodes` because the two have different id rules: a node's
+ * id is minted by the caller's `newId`, which keys it to a module type, while a
+ * box has no type and nothing ever refers to it by id. Fresh ids all the same,
+ * so pasting a fragment twice does not give two boxes the same name and leave
+ * `moveGroup` picking whichever it found first.
+ */
+function pasteGroups(clip: RackGraph, offset: number, groupId: () => string): GraphGroup[] {
+	return (clip.groups ?? []).map((g) => ({
+		...g,
+		id: groupId(),
+		x: g.x + offset,
+		y: g.y + offset
+	}));
+}
+
+/**
  * Paste a copied fragment, offset so it does not land exactly on the original.
  * Every node gets a fresh id, and the cables are rewritten to match, so a
  * fragment can be pasted any number of times.
@@ -518,20 +590,205 @@ export function pasteNodes(
 	graph: RackGraph,
 	clip: RackGraph,
 	offset: number,
-	newId: (type: string) => string
-): { graph: RackGraph; ids: Set<string> } {
+	newId: (type: string) => string,
+	/* Only supplied when the fragment is expected to carry boxes -- a prefab
+	   does, an ordinary Ctrl+V of loose nodes does not. Absent, any groups on
+	   the clipboard are dropped rather than pasted under their original ids,
+	   which would give two boxes one name. */
+	groupId?: () => string
+): { graph: RackGraph; ids: Set<string>; groupIds: string[] } {
 	const remap = new Map<string, string>();
 	const nodes = clip.nodes.map((n) => {
 		const id = newId(n.type);
 		remap.set(n.id, id);
 		return { ...n, id, x: n.x + offset, y: n.y + offset };
 	});
+	/* Filtered on the *original* ids, then remapped.
+
+	   This was the other way round, and the order is not cosmetic: after the map
+	   step `c.from` is already the fresh id, and `remap` is keyed by the old
+	   ones, so `remap.has(c.from)` asked whether a brand-new id was one of the
+	   ids being replaced. It never was, so every internal cable was dropped and
+	   a pasted fragment arrived as loose unconnected nodes.
+
+	   It went unnoticed because nothing measured it: copy and paste were covered
+	   by tests that counted nodes, and a wire missing from a pasted copy is
+	   exactly the kind of quiet wrongness this codebase's audio tests exist
+	   because of. A prefab is a paste, so it surfaced here -- COMB expanded to
+	   five cards with no cables between them. */
 	const cables = clip.cables
-		.map((c) => ({ ...c, from: remap.get(c.from) ?? c.from, to: remap.get(c.to) ?? c.to }))
-		.filter((c) => remap.has(c.from) || remap.has(c.to));
+		.filter((c) => remap.has(c.from) || remap.has(c.to))
+		.map((c) => ({ ...c, from: remap.get(c.from) ?? c.from, to: remap.get(c.to) ?? c.to }));
+	const groups = groupId ? pasteGroups(clip, offset, groupId) : [];
 	return {
-		graph: { nodes: [...graph.nodes, ...nodes], cables: [...graph.cables, ...cables] },
-		ids: new Set(remap.values())
+		graph: {
+			nodes: [...graph.nodes, ...nodes],
+			cables: [...graph.cables, ...cables],
+			/* Left off entirely when there is nothing to carry and nothing was
+			   there, so an ordinary paste into a group-free patch does not add an
+			   empty array to every saved file. */
+			...(groups.length || graph.groups ? { groups: [...(graph.groups ?? []), ...groups] } : {})
+		},
+		ids: new Set(remap.values()),
+		groupIds: groups.map((g) => g.id)
+	};
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Groups: the box, and what it owns
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** How much clear space a group leaves around the nodes it was drawn around. */
+export const GROUP_PAD = 24;
+/** The title bar's height, which the box grows upward by so it does not cover a node. */
+export const GROUP_HEADER = 22;
+
+/**
+ * A box drawn around a set of nodes.
+ *
+ * Sized from where the nodes actually are, with room for the title above them.
+ * A box exactly the bounding box would sit under its own members' top edge and
+ * the label would be written across the first card in the group.
+ */
+export function groupAround(
+	id: string,
+	label: string,
+	nodes: GraphNode[],
+	size: (node: GraphNode) => { w: number; h: number },
+	color?: string
+): GraphGroup {
+	/* An empty set has no bounding box, and `Math.min()` of nothing is Infinity
+	   -- which would serialise as `null` and come back as a box covering the
+	   whole canvas. A degenerate box at the origin is at least finite and the
+	   caller can see it is wrong. */
+	if (!nodes.length) return { id, label, x: 0, y: 0, w: 0, h: 0, ...(color ? { color } : {}) };
+	let x0 = Infinity;
+	let y0 = Infinity;
+	let x1 = -Infinity;
+	let y1 = -Infinity;
+	for (const n of nodes) {
+		const s = size(n);
+		x0 = Math.min(x0, n.x);
+		y0 = Math.min(y0, n.y);
+		x1 = Math.max(x1, n.x + s.w);
+		y1 = Math.max(y1, n.y + s.h);
+	}
+	return {
+		id,
+		label,
+		x: x0 - GROUP_PAD,
+		y: y0 - GROUP_PAD - GROUP_HEADER,
+		w: x1 - x0 + GROUP_PAD * 2,
+		h: y1 - y0 + GROUP_PAD * 2 + GROUP_HEADER,
+		...(color ? { color } : {})
+	};
+}
+
+/**
+ * Which nodes a group owns: the ones it fully encloses.
+ *
+ * *Fully*, unlike a marquee, and the difference is the point. A marquee is a
+ * gesture -- it is over the instant you release it, so "anything I touched"
+ * is the generous reading and the right one. A group is standing state that
+ * gets asked this question again on every drag, and under the touching rule a
+ * node merely overlapping the edge of a box would be dragged by it while
+ * looking as though it sat outside, and two adjacent boxes would both claim
+ * whatever lay on the border between them.
+ *
+ * The title bar is excluded from the catchment. It is drawn above the nodes,
+ * so a card that happens to sit level with the label is not inside the box in
+ * any sense the eye agrees with.
+ */
+export function nodesInGroup(
+	graph: RackGraph,
+	group: GraphGroup,
+	size: (node: GraphNode) => { w: number; h: number }
+): string[] {
+	const top = group.y + GROUP_HEADER;
+	const x1 = group.x + group.w;
+	const y1 = group.y + group.h;
+	return graph.nodes
+		.filter((n) => {
+			/* ENTRY and OUTPUT are never owned. They cannot be deleted and a patch
+			   has exactly one of each, so a box that happened to be drawn over the
+			   output would drag the end of the patch around with it. */
+			if (isFixedNode(n.id)) return false;
+			const s = size(n);
+			return n.x >= group.x && n.y >= top && n.x + s.w <= x1 && n.y + s.h <= y1;
+		})
+		.map((n) => n.id);
+}
+
+/**
+ * Move a group's box and the nodes it is carrying by the same delta.
+ *
+ * The members are passed in rather than looked up, and that is the whole
+ * correctness argument. A drag is many calls, not one: if each frame asked
+ * "what does this box enclose *now*", a node would stop being a member the
+ * instant the moving edge passed it and be left standing while the rest of the
+ * group walked away. The caller reads membership once, on pointer-down, and
+ * hands the same set to every frame of the gesture -- capture on press, release
+ * on drop, which is what Blueprint does and the only rule under which a box
+ * arrives with everything it set out with.
+ */
+export function moveGroup(
+	graph: RackGraph,
+	groupId: string,
+	members: Set<string>,
+	dx: number,
+	dy: number
+): RackGraph {
+	if (!graph.groups?.some((g) => g.id === groupId)) return graph;
+	return {
+		...moveNodes(graph, members, dx, dy),
+		groups: graph.groups.map((g) => (g.id === groupId ? { ...g, x: g.x + dx, y: g.y + dy } : g))
+	};
+}
+
+/** Resize a group's box, which re-computes what it owns; the nodes do not move. */
+export function resizeGroup(
+	graph: RackGraph,
+	groupId: string,
+	box: { x: number; y: number; w: number; h: number }
+): RackGraph {
+	/* A box cannot be smaller than its own title, and a negative width would
+	   invert it -- so a drag past the opposite corner stops rather than turning
+	   the rectangle inside out. */
+	const w = Math.max(GROUP_PAD * 2, box.w);
+	const h = Math.max(GROUP_HEADER + GROUP_PAD, box.h);
+	return {
+		...graph,
+		groups: graph.groups?.map((g) => (g.id === groupId ? { ...g, x: box.x, y: box.y, w, h } : g))
+	};
+}
+
+/**
+ * Drop a group's box, leaving every node it held exactly where it is.
+ *
+ * Blueprint's Ctrl+Shift+G. Ungrouping is not a deletion -- the box was
+ * scenery, and removing scenery does not remove what it was drawn around. A
+ * version of this that also took the members would make the box a container,
+ * which is the thing a group is specifically not.
+ */
+export function ungroup(graph: RackGraph, groupId: string): RackGraph {
+	if (!graph.groups?.some((g) => g.id === groupId)) return graph;
+	const rest = graph.groups.filter((g) => g.id !== groupId);
+	/* The key goes away entirely when the last box does, so a patch that never
+	   had a group and one whose only group was removed serialise identically --
+	   and an old patch round-trips unchanged. */
+	return rest.length ? { ...graph, groups: rest } : { nodes: graph.nodes, cables: graph.cables };
+}
+
+/** Add a box to the graph. */
+export function addGroup(graph: RackGraph, group: GraphGroup): RackGraph {
+	return { ...graph, groups: [...(graph.groups ?? []), group] };
+}
+
+/** Rename a box. */
+export function renameGroup(graph: RackGraph, groupId: string, label: string): RackGraph {
+	return {
+		...graph,
+		groups: graph.groups?.map((g) => (g.id === groupId ? { ...g, label } : g))
 	};
 }
 

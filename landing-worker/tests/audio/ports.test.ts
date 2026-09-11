@@ -8,6 +8,7 @@ import { chromium, type Browser, type Page } from 'playwright';
    argument. */
 import { SOUND_PRESETS, HELD_BACK, type SoundPreset } from '../../src/lib/stores/synth-presets';
 import { MODULE_SPECS } from '../../src/lib/stores/synth-modules';
+import { BUILTIN_PREFABS } from '../../src/lib/stores/synth-prefabs';
 
 /**
  * Every socket on every card, measured.
@@ -3416,3 +3417,86 @@ describe('OSC PHS: a value rotates the table, a signal delays the line', () => {
    never cancels, and the fix -- 64 harmonics is not enough, or route the
    unrotated oscillator through the same table -- should make this go away rather
    than go red. */
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Prefabs -- that a shipped arrangement still makes a sound
+
+   A prefab is a recording of a patch someone built once and measured. Nothing
+   about that survives on its own: the bodies name module types and port ids as
+   plain strings, so renaming a port or retyping a knob leaves a prefab that
+   loads, draws, expands into cards, and is silent. The unit tests check the
+   names against MODULE_SPECS, which catches a rename; they cannot catch a
+   module whose *behaviour* moved out from under the arrangement.
+
+   So one of them is rendered. LFO, because it is the one whose failure is
+   least visible -- a tremolo that has stopped modulating is still a sound, so
+   nothing about the patch looks wrong -- and because it exercises the two
+   mechanisms most likely to drift apart: a CONST resolving into an OSC's FREQ
+   as a value, and an oscillator reaching a GAIN's level as a *signal* through
+   TO-CV and MAP. The second of those is the one that has shipped broken seven
+   times on other ports.
+
+   Read from BUILTIN_PREFABS rather than restated here. A copy of the body in
+   the test would keep passing after the shipped table broke, which is the
+   failure this test exists to prevent rather than one to reproduce.
+   ────────────────────────────────────────────────────────────────────────── */
+describe('prefabs: the LFO still modulates', () => {
+	const lfo = BUILTIN_PREFABS.find((p) => p.key === 'lfo')!;
+
+	/** The prefab's own body, wired to a carrier it is meant to open and close. */
+	const rig = (wired: boolean) =>
+		patch(
+			[...lfo.body.nodes, { id: 'car', type: 'osc' }, { id: 'g', type: 'gain' }],
+			[
+				...lfo.body.cables,
+				...(wired ? [{ from: 'map', fromPort: 'out', to: 'g', toPort: 'level' } as Cable] : []),
+				{ from: 'car', fromPort: 'out', to: 'g', toPort: 'in' },
+				{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+			],
+			/* The carrier's own level is 0 when the LFO is patched, because a knob
+			   a signal has claimed reads as zero -- so everything heard arrived
+			   through the prefab. Unwired it needs a level of its own or the
+			   control would be silence, which would prove nothing. */
+			{ ...lfo.params, 'g.level': wired ? 0 : 0.5 }
+		);
+
+	it('opens and closes a level, where the same patch unwired sits still', async () => {
+		/* The assertion is about *movement*, not loudness, and that is deliberate.
+		   Every way this prefab can break -- the CONST no longer reaching FREQ, so
+		   the LFO runs at 220 Hz and the slices average out; MAP no longer passing
+		   a signal, so it resolves to one number at note-on; TO-CV losing the
+		   crossing -- produces a level that is constant rather than one that is
+		   wrong. A patch that does not move is the failure.
+
+		   Measured: the wired envelope runs between 0.2151 and 0.4304 at 5 Hz,
+		   while the unwired one is flat at 0.2407 to four places across every
+		   slice. The bound of 0.1 is well under the 0.2153 measured and well over
+		   anything a steady render produces.
+
+		   What this does and does not catch, from mutating the prefab table and
+		   re-running it. It fails when the rate CONST is retyped so the LFO runs
+		   at audio rate, and when MAP's output range is collapsed so the depth
+		   goes to nothing -- the two ways the prefab stops being an LFO. It keeps
+		   *passing* if TO-CV is swapped for a GAIN, or if the oscillator is
+		   cabled straight into MAP past TO-CV, because MAP builds a WaveShaper
+		   and carries a signal either way, so those rearrangements still
+		   modulate. That is a real limit rather than an oversight: this test
+		   asserts the prefab still modulates, not that it is built the way it is
+		   written, and the structure is pinned by the unit tests next door. */
+		const on = await render(rig(true), 16);
+		expect(on.ok).toBe(true);
+		const moving = Math.max(...on.envelope) - Math.min(...on.envelope);
+		expect(moving, `expected modulation, got ${JSON.stringify(on.envelope)}`).toBeGreaterThan(0.1);
+
+		const off = await render(rig(false), 16);
+		expect(off.ok).toBe(true);
+		/* Slice 0 holds the note's attack and always reads low, so the control's
+		   steadiness is measured from slice 1 on -- the same reason `steady`
+		   ignores it. */
+		const rest = off.envelope.slice(1);
+		const still = Math.max(...rest) - Math.min(...rest);
+		expect(still, `expected a steady control, got ${JSON.stringify(off.envelope)}`).toBeLessThan(
+			0.01
+		);
+	}, 60000);
+});

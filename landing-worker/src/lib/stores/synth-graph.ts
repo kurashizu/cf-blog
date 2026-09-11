@@ -23,11 +23,20 @@ import {
 	withoutNodes,
 	copyNodes,
 	pasteNodes,
+	isFixedNode,
+	groupAround,
+	nodesInGroup,
+	moveGroup,
+	resizeGroup,
+	ungroup,
+	addGroup,
+	renameGroup,
 	type RackGraph,
 	type GraphCable,
 	type GraphNode,
 	type PortKind
 } from './graph-model';
+import { findPrefab, savePrefab, type Prefab } from './synth-prefabs';
 
 /* The graph's own rules live in graph-model, which has no Web Audio in it and
    so can be unit tested; this module is the half that edits the active track. */
@@ -47,6 +56,11 @@ export {
 	copyNodes,
 	pasteNodes,
 	nodesInRect,
+	groupAround,
+	nodesInGroup,
+	ungroup,
+	GROUP_PAD,
+	GROUP_HEADER,
 	ENTRY_ID,
 	OUTPUT_ID,
 	EMPTY_GRAPH,
@@ -501,6 +515,37 @@ export function copySelection(graph: RackGraph, ids: Set<string>): number {
 let pasteRun = 0;
 let lastPastedClip: unknown = null;
 
+/**
+ * Rewrite a fragment's knob values onto the ids its copy was given.
+ *
+ * `pasteNodes` mints a fresh id per node in the order the fragment lists them
+ * and hands the new ids back in that same order, which is what makes the
+ * positional pairing here sound. Every key of the form `<oldId>.<knob>` is
+ * re-emitted as `<newId>.<knob>`, so a pasted module arrives with its settings
+ * -- one that lost them is not a copy of anything.
+ *
+ * Shared by paste and by prefab expansion rather than written twice. They are
+ * the same operation: a prefab *is* a clipboard fragment that was saved to a
+ * shelf instead of held in memory, and the second copy of this loop would be
+ * the one that fell behind when the key format changed.
+ */
+function remapParams(
+	into: Record<string, number> | undefined,
+	from: Record<string, number> | undefined,
+	oldIds: string[],
+	newIds: string[]
+): Record<string, number> {
+	const out: Record<string, number> = { ...(into ?? {}) };
+	oldIds.forEach((oldId, i) => {
+		const fresh = newIds[i];
+		if (!fresh) return;
+		for (const [k, v] of Object.entries(from ?? {})) {
+			if (k.startsWith(`${oldId}.`)) out[`${fresh}.${k.slice(oldId.length + 1)}`] = v;
+		}
+	});
+	return out;
+}
+
 export function pasteClipboard(graph: RackGraph, params?: Record<string, number>): number {
 	const clip = get(graphClipboard);
 	if (!clip || !clip.nodes.length) return 0;
@@ -508,7 +553,7 @@ export function pasteClipboard(graph: RackGraph, params?: Record<string, number>
 	const idFor = (type: string) => `${type}-${Date.now().toString(36)}-${seq++}`;
 	const oldIds = clip.nodes.map((n) => n.id);
 	/* Each paste of the same clip steps further away.
-	
+
 	   A fixed offset put the second copy exactly underneath the first, so
 	   pasting twice looked like pasting once -- which the docstring's "offset so
 	   it does not land exactly on the original" is only true of the first. */
@@ -516,15 +561,7 @@ export function pasteClipboard(graph: RackGraph, params?: Record<string, number>
 	lastPastedClip = clip;
 	const { graph: next, ids } = pasteNodes(graph, clip, 32 * pasteRun, idFor);
 	// The knobs come too: a pasted module that lost its settings is not a copy.
-	const newIds = [...ids];
-	const gp: Record<string, number> = { ...(params ?? {}) };
-	oldIds.forEach((oldId, i) => {
-		const newIdStr = newIds[i];
-		if (!newIdStr) return;
-		for (const [k, v] of Object.entries(params ?? {})) {
-			if (k.startsWith(`${oldId}.`)) gp[`${newIdStr}.${k.slice(oldId.length + 1)}`] = v;
-		}
-	});
+	const gp = remapParams(params, params, oldIds, [...ids]);
 	modularSynth.updateTrack(get(activeTrackId), {
 		rackGraph: next,
 		graphParams: gp
@@ -533,4 +570,209 @@ export function pasteClipboard(graph: RackGraph, params?: Record<string, number>
 	refreshTracks();
 	flushHistoryBump();
 	return ids.size;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Groups: Blueprint's comment box, over this graph
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** How a node's box is measured. The canvas knows; the store is handed the answer. */
+export type NodeSize = (node: GraphNode) => { w: number; h: number };
+
+let groupSeq = 0;
+
+function newGroupId(): string {
+	return `grp-${Date.now().toString(36)}-${groupSeq++}`;
+}
+
+/**
+ * Draw a box around the current selection. Ctrl+G.
+ *
+ * The nodes are not moved, not reparented and not altered in any way -- the
+ * only thing that changes is that a rectangle now exists behind them. That is
+ * the whole of what grouping is here, and keeping it to that is what lets the
+ * engine stay ignorant of the feature.
+ */
+export function groupSelection(
+	graph: RackGraph,
+	ids: Set<string>,
+	label: string,
+	size: NodeSize
+): string | null {
+	const members = graph.nodes.filter((n) => ids.has(n.id) && !isFixedNode(n.id));
+	/* Two is the floor, not one. A box around a single node says nothing the
+	   node does not already say, and a box around nothing is a rectangle in
+	   space that owns whatever is later dragged into it -- which is a surprise
+	   rather than a feature. */
+	if (members.length < 2) return null;
+	const group = groupAround(
+		newGroupId(),
+		label.trim().slice(0, 24).toUpperCase() || 'GROUP',
+		members,
+		size
+	);
+	commit(addGroup(graph, group));
+	return group.id;
+}
+
+/** Which nodes a box is currently carrying. Read on pointer-down and held. */
+export function groupMembers(graph: RackGraph, groupId: string, size: NodeSize): Set<string> {
+	const group = graph.groups?.find((g) => g.id === groupId);
+	return new Set(group ? nodesInGroup(graph, group, size) : []);
+}
+
+/**
+ * Drag a box and what it is carrying.
+ *
+ * `members` is the set captured when the drag began, not one recomputed here --
+ * see `moveGroup`. Committed through the drag path, so the whole gesture is one
+ * undo step rather than one per frame.
+ */
+export function moveGroupBy(
+	graph: RackGraph,
+	groupId: string,
+	members: Set<string>,
+	dx: number,
+	dy: number
+): void {
+	commitDuringDrag(moveGroup(graph, groupId, members, dx, dy));
+}
+
+/** Resize a box. The nodes stay put; what the box *owns* is recomputed from the new rect. */
+export function resizeGroupTo(
+	graph: RackGraph,
+	groupId: string,
+	box: { x: number; y: number; w: number; h: number }
+): void {
+	commitDuringDrag(resizeGroup(graph, groupId, box));
+}
+
+/**
+ * Remove a box, leaving its members. Ctrl+Shift+G.
+ *
+ * Deliberately not a delete. The nodes were never inside the box in any sense
+ * the graph knows about, so there is nothing to take out of it.
+ */
+export function ungroupById(graph: RackGraph, groupId: string): void {
+	commit(ungroup(graph, groupId));
+}
+
+/** Delete a box *and* everything it is carrying -- the destructive one, asked for explicitly. */
+export function deleteGroupAndMembers(
+	graph: RackGraph,
+	groupId: string,
+	size: NodeSize,
+	params?: Record<string, number>
+): void {
+	const members = groupMembers(graph, groupId, size);
+	pushUndo(get(activeTrackId));
+	let next = params ?? {};
+	for (const id of members) next = pruneGraphParams(next, id);
+	modularSynth.updateTrack(get(activeTrackId), {
+		rackGraph: ungroup(withoutNodes(graph, members), groupId),
+		graphParams: next
+	} as Partial<TrackData>);
+	selectedNodes.set(new Set());
+	refreshTracks();
+	flushHistoryBump();
+}
+
+export function setGroupLabel(graph: RackGraph, groupId: string, label: string): void {
+	const clean = label.trim().slice(0, 24).toUpperCase();
+	if (!clean) return;
+	commit(renameGroup(graph, groupId, clean));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Prefabs: a saved arrangement, expanded into loose primitives
+   ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Drop a prefab onto the canvas at a point.
+ *
+ * Expansion, not instantiation: what lands is the prefab's primitives with
+ * fresh ids, its internal cables, and its knob values -- and then nothing. No
+ * node in the resulting patch records where it came from, because there is no
+ * such node; a prefab is not a type. Everything that arrives is immediately as
+ * editable as anything placed by hand, which is the property the whole feature
+ * is arranged around.
+ *
+ * It goes through `pasteNodes`, the same path Ctrl+V takes, for the same reason
+ * `remapParams` is shared: a second expander would be a second place for the id
+ * rewriting to be got wrong, and this one is already proven by every paste.
+ *
+ * The box comes with it. Five loose cards that happen to be a comb filter read
+ * as five loose cards; the same five inside a rectangle labelled COMB read as
+ * what they are. The box is scenery over them either way -- deleting it leaves
+ * a working comb filter behind.
+ */
+export function dropPrefab(
+	graph: RackGraph,
+	key: string,
+	at: { x: number; y: number },
+	params: Record<string, number> | undefined,
+	size: NodeSize
+): { ids: Set<string>; groupId: string | null } | null {
+	const prefab = findPrefab(key);
+	if (!prefab?.body?.nodes?.length) return null;
+	pushUndo(get(activeTrackId));
+
+	/* Placed where it was dropped rather than at the body's own coordinates.
+	   A prefab's nodes are authored around the origin, so pasting them raw would
+	   pile every drop in the top-left corner whatever the pointer said. */
+	let x0 = Infinity;
+	let y0 = Infinity;
+	for (const n of prefab.body.nodes) {
+		x0 = Math.min(x0, n.x);
+		y0 = Math.min(y0, n.y);
+	}
+	const body: RackGraph = {
+		nodes: prefab.body.nodes.map((n) => ({ ...n, x: n.x - x0 + at.x, y: n.y - y0 + at.y })),
+		cables: prefab.body.cables.map((c) => ({ ...c }))
+	};
+
+	const idFor = (type: string) => `${type}-${Date.now().toString(36)}-${seq++}`;
+	const oldIds = body.nodes.map((n) => n.id);
+	/* Offset 0: the drop point is already the position asked for, and a paste
+	   offset on top of it would put the prefab somewhere other than where the
+	   pointer was released. */
+	const { graph: pasted, ids } = pasteNodes(graph, body, 0, idFor);
+
+	/* The box is drawn around the nodes *after* they land, from their real sizes
+	   -- not carried in the prefab as a rectangle. A stored box would be authored
+	   against whatever the cards measured on the day it was saved, and a card
+	   that later grows a knob would burst out of its own group. */
+	const placed = pasted.nodes.filter((n) => ids.has(n.id));
+	const group = groupAround(newGroupId(), prefab.label, placed, size, prefab.color);
+	const next = addGroup(pasted, group);
+
+	modularSynth.updateTrack(get(activeTrackId), {
+		rackGraph: next,
+		graphParams: remapParams(params, prefab.params, oldIds, [...ids])
+	} as Partial<TrackData>);
+	selectedNodes.set(ids);
+	refreshTracks();
+	flushHistoryBump();
+	return { ids: ids, groupId: group.id };
+}
+
+/**
+ * Save the current selection to the prefab shelf.
+ *
+ * Extracted with `copyNodes`, so what is saved is exactly what Ctrl+C would
+ * have copied: cables leaving the selection are dropped rather than saved
+ * dangling, and ENTRY and OUTPUT are never included -- a prefab that carried
+ * the ends of a patch would bring a second pair to whatever it was dropped
+ * into.
+ */
+export function saveSelectionAsPrefab(
+	graph: RackGraph,
+	ids: Set<string>,
+	label: string,
+	params?: Record<string, number>,
+	note = ''
+): Prefab | null {
+	const body = copyNodes(graph, ids);
+	if (body.nodes.length < 2) return null;
+	return savePrefab(label, body, params, note);
 }
