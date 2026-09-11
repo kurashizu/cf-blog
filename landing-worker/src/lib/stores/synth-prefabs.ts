@@ -127,12 +127,12 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   between 0.2151 and 0.4304 against the unwired control's flat 0.2407. */
 		body: {
 			nodes: [
-				{ id: 'rate', type: 'const', x: 0, y: 0 },
-				{ id: 'osc', type: 'osc', x: 224, y: 0 },
-				{ id: 'cv', type: 'tocv', x: 448, y: 0 },
+				{ id: 'rate', type: 'const', x: 0, y: 49 },
+				{ id: 'osc', type: 'osc', x: 224, y: 38 },
+				{ id: 'cv', type: 'tocv', x: 448, y: 58 },
 				{ id: 'map', type: 'map', x: 672, y: 0 },
-				{ id: 'outT', type: 'nodecv', x: 920, y: 34 },
-				{ id: 'nOut', type: 'note', x: 920, y: 64 }
+				{ id: 'outT', type: 'nodecv', x: 896, y: 89 },
+				{ id: 'nOut', type: 'note', x: 872, y: 121 }
 			],
 			cables: [
 				{ from: 'rate', fromPort: 'out', to: 'osc', toPort: 'pitch' },
@@ -181,15 +181,15 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   one strike passing through against a tail that rings down. */
 		body: {
 			nodes: [
-				{ id: 'inT', type: 'nodept', x: 0, y: 34 },
-				{ id: 'sum', type: 'sum', x: 96, y: 0 },
-				{ id: 'delay', type: 'delay', x: 320, y: 0 },
-				{ id: 'send', type: 'fbsend', x: 544, y: 0 },
-				{ id: 'outT', type: 'nodept', x: 792, y: 34 },
-				{ id: 'rtn', type: 'fbrtn', x: 320, y: 224 },
-				{ id: 'fb', type: 'gain', x: 96, y: 224 },
-				{ id: 'nIn', type: 'note', x: 0, y: 64 },
-				{ id: 'nOut', type: 'note', x: 792, y: 64 }
+				{ id: 'inT', type: 'nodept', x: 0, y: 31 },
+				{ id: 'sum', type: 'sum', x: 72, y: 0 },
+				{ id: 'delay', type: 'delay', x: 296, y: -10 },
+				{ id: 'send', type: 'fbsend', x: 520, y: -7 },
+				{ id: 'outT', type: 'nodept', x: 720, y: 22 },
+				{ id: 'rtn', type: 'fbrtn', x: 72, y: 160 },
+				{ id: 'fb', type: 'gain', x: 296, y: 152 },
+				{ id: 'nIn', type: 'note', x: 0, y: 63 },
+				{ id: 'nOut', type: 'note', x: 712, y: 54 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'sum', toPort: 'in' },
@@ -241,17 +241,17 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   wants even motion. */
 		body: {
 			nodes: [
-				{ id: 'inT', type: 'nodecv', x: 0, y: 34 },
-				{ id: 'tofreq', type: 'tofreq', x: 96, y: 0 },
-				{ id: 'osc', type: 'osc', x: 320, y: 0 },
-				{ id: 'filter', type: 'filter', x: 544, y: 0 },
-				{ id: 'amp', type: 'gain', x: 768, y: 0 },
-				{ id: 'outT', type: 'nodept', x: 1016, y: 34 },
-				{ id: 'fenv', type: 'env', x: 320, y: 240 },
-				{ id: 'fmap', type: 'map', x: 544, y: 240 },
-				{ id: 'aenv', type: 'env', x: 768, y: 240 },
-				{ id: 'nIn', type: 'note', x: 0, y: 64 },
-				{ id: 'nOut', type: 'note', x: 1016, y: 64 }
+				{ id: 'inT', type: 'nodecv', x: 0, y: 63 },
+				{ id: 'tofreq', type: 'tofreq', x: 72, y: 28 },
+				{ id: 'osc', type: 'osc', x: 296, y: 26 },
+				{ id: 'filter', type: 'filter', x: 520, y: 0 },
+				{ id: 'amp', type: 'gain', x: 744, y: 42 },
+				{ id: 'outT', type: 'nodept', x: 968, y: 74 },
+				{ id: 'fenv', type: 'env', x: 96, y: 186 },
+				{ id: 'fmap', type: 'map', x: 320, y: 198 },
+				{ id: 'aenv', type: 'env', x: 544, y: 186 },
+				{ id: 'nIn', type: 'note', x: 0, y: 95 },
+				{ id: 'nOut', type: 'note', x: 960, y: 106 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'tofreq', toPort: 'a' },
@@ -315,13 +315,13 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   that reading is the proof the widening is real. */
 		body: {
 			nodes: [
-				{ id: 'inT', type: 'nodept', x: 0, y: 34 },
-				{ id: 'mono', type: 'mono', x: 96, y: 0 },
-				{ id: 'delay', type: 'delay', x: 320, y: 160 },
-				{ id: 'merge', type: 'merge', x: 544, y: 64 },
-				{ id: 'outT', type: 'nodept', x: 792, y: 98 },
-				{ id: 'nIn', type: 'note', x: 0, y: 64 },
-				{ id: 'nOut', type: 'note', x: 792, y: 128 }
+				{ id: 'inT', type: 'nodept', x: 0, y: 31 },
+				{ id: 'mono', type: 'mono', x: 72, y: 0 },
+				{ id: 'delay', type: 'delay', x: 296, y: 108 },
+				{ id: 'merge', type: 'merge', x: 520, y: 43 },
+				{ id: 'outT', type: 'nodept', x: 744, y: 75 },
+				{ id: 'nIn', type: 'note', x: 0, y: 63 },
+				{ id: 'nOut', type: 'note', x: 720, y: 107 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'mono', toPort: 'in' },
@@ -365,11 +365,11 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   0.2779 at 5.5 Hz, against a flat 0.2229 with the depth cable removed. */
 		body: {
 			nodes: [
-				{ id: 'rate', type: 'const', x: 0, y: 0 },
+				{ id: 'rate', type: 'const', x: 0, y: 11 },
 				{ id: 'lfo', type: 'osc', x: 224, y: 0 },
-				{ id: 'depth', type: 'gain', x: 448, y: 0 },
-				{ id: 'outT', type: 'nodept', x: 696, y: 34 },
-				{ id: 'nOut', type: 'note', x: 696, y: 64 }
+				{ id: 'depth', type: 'gain', x: 448, y: 29 },
+				{ id: 'outT', type: 'nodept', x: 672, y: 61 },
+				{ id: 'nOut', type: 'note', x: 648, y: 93 }
 			],
 			cables: [
 				{ from: 'rate', fromPort: 'out', to: 'lfo', toPort: 'pitch' },
@@ -404,15 +404,15 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   duck anyone would hear rather than a hint of one. */
 		body: {
 			nodes: [
-				{ id: 'keyT', type: 'nodept', x: 0, y: 34 },
-				{ id: 'follow', type: 'follow', x: 96, y: 0 },
-				{ id: 'map', type: 'map', x: 320, y: 0 },
-				{ id: 'inT', type: 'nodept', x: 0, y: 258 },
-				{ id: 'duck', type: 'gain', x: 96, y: 224 },
-				{ id: 'outT', type: 'nodept', x: 344, y: 258 },
-				{ id: 'nKey', type: 'note', x: 0, y: 64 },
-				{ id: 'nIn', type: 'note', x: 0, y: 288 },
-				{ id: 'nOut', type: 'note', x: 344, y: 288 }
+				{ id: 'keyT', type: 'nodept', x: 0, y: 89 },
+				{ id: 'follow', type: 'follow', x: 72, y: 54 },
+				{ id: 'map', type: 'map', x: 296, y: 0 },
+				{ id: 'inT', type: 'nodept', x: 0, y: 233 },
+				{ id: 'duck', type: 'gain', x: 520, y: 222 },
+				{ id: 'outT', type: 'nodept', x: 744, y: 244 },
+				{ id: 'nKey', type: 'note', x: 0, y: 121 },
+				{ id: 'nIn', type: 'note', x: 0, y: 265 },
+				{ id: 'nOut', type: 'note', x: 736, y: 276 }
 			],
 			cables: [
 				{ from: 'keyT', fromPort: 'out', to: 'follow', toPort: 'in' },
@@ -466,22 +466,22 @@ export const BUILTIN_PREFABS: Prefab[] = [
 		   slice (0.0199 / 0.0117 / 0.0069) -- the gaps are the bounce. */
 		body: {
 			nodes: [
-				{ id: 'inT', type: 'nodept', x: 0, y: 146 },
-				{ id: 'split', type: 'split', x: 96, y: 112 },
-				{ id: 'sumL', type: 'sum', x: 320, y: 0 },
-				{ id: 'delayL', type: 'delay', x: 544, y: 0 },
-				{ id: 'sendL', type: 'fbsend', x: 768, y: 0 },
-				{ id: 'rtnL', type: 'fbrtn', x: 544, y: 224 },
-				{ id: 'fbL', type: 'gain', x: 320, y: 224 },
-				{ id: 'sumR', type: 'sum', x: 320, y: 448 },
-				{ id: 'delayR', type: 'delay', x: 544, y: 448 },
-				{ id: 'sendR', type: 'fbsend', x: 768, y: 448 },
-				{ id: 'rtnR', type: 'fbrtn', x: 544, y: 672 },
-				{ id: 'fbR', type: 'gain', x: 320, y: 672 },
-				{ id: 'merge', type: 'merge', x: 992, y: 224 },
-				{ id: 'outT', type: 'nodept', x: 1240, y: 258 },
-				{ id: 'nIn', type: 'note', x: 0, y: 176 },
-				{ id: 'nOut', type: 'note', x: 1240, y: 288 }
+				{ id: 'inT', type: 'nodept', x: 0, y: 275 },
+				{ id: 'split', type: 'split', x: 72, y: 243 },
+				{ id: 'sumL', type: 'sum', x: 296, y: 0 },
+				{ id: 'delayL', type: 'delay', x: 520, y: -10 },
+				{ id: 'sendL', type: 'fbsend', x: 744, y: -7 },
+				{ id: 'rtnL', type: 'fbrtn', x: 72, y: 130 },
+				{ id: 'fbL', type: 'gain', x: 296, y: 122 },
+				{ id: 'sumR', type: 'sum', x: 296, y: 520 },
+				{ id: 'delayR', type: 'delay', x: 520, y: 510 },
+				{ id: 'sendR', type: 'fbsend', x: 744, y: 513 },
+				{ id: 'rtnR', type: 'fbrtn', x: 72, y: 390 },
+				{ id: 'fbR', type: 'gain', x: 296, y: 382 },
+				{ id: 'merge', type: 'merge', x: 944, y: 254 },
+				{ id: 'outT', type: 'nodept', x: 1168, y: 286 },
+				{ id: 'nIn', type: 'note', x: 0, y: 307 },
+				{ id: 'nOut', type: 'note', x: 1160, y: 318 }
 			],
 			cables: [
 				{ from: 'inT', fromPort: 'out', to: 'split', toPort: 'in' },
