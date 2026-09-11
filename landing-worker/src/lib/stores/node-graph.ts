@@ -211,7 +211,8 @@ export const PURE_NODES: Record<string, PureFn> = {
 		const hi = p('inHi', 1);
 		const span = hi - lo;
 		// A zero-width input range means "always the low end" rather than NaN.
-		const x = span === 0 ? 0 : Math.max(0, Math.min(1, (i.get('a', 0) - lo) / span));
+		const raw = span === 0 ? 0 : (i.get('a', 0) - lo) / span;
+		const x = span === 0 ? 0 : Math.max(0, Math.min(1, raw));
 		const outLo = p('outLo', 0);
 		const outHi = p('outHi', 1);
 		const out = (y: number) => outLo + Math.max(0, Math.min(1, y)) * (outHi - outLo);
@@ -251,6 +252,21 @@ export const PURE_NODES: Record<string, PureFn> = {
 				const f = x * (n - 1);
 				const k0 = Math.floor(f);
 				return out(at(k0) + (at(k0 + 1) - at(k0)) * (f - k0));
+			}
+			case 10: {
+				/* WRAP: out the top and back in at the bottom.
+				
+				   The one shape that reads `raw` rather than `x`, because it is
+				   defined by what happens *outside* the range -- every other case
+				   here is handed an already-clamped value, and clamping is exactly
+				   what this does not do. An input of 2.5 comes out at 0.5, and one
+				   of -0.25 at 0.75.
+				
+				   `((v % 1) + 1) % 1` rather than `v % 1`, since JavaScript's
+				   remainder keeps the sign of the dividend: -0.25 % 1 is -0.25, and
+				   a phase of minus a quarter turn is three quarters of one. OSC's
+				   PHS does the same arithmetic for the same reason. */
+				return out(((raw % 1) + 1) % 1);
 			}
 			default:
 				/* GATE: one step at the halfway point. It sits where a straight line

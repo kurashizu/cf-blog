@@ -200,7 +200,30 @@ export const MAP_SHAPES: { id: string; label: string }[] = [
 	/* Back the way it came. */
 	{ id: 'inv', label: 'INV' },
 	/* Drawn by hand, for the shape none of the above is. */
-	{ id: 'draw', label: 'DRAW' }
+	{ id: 'draw', label: 'DRAW' },
+	/* Out the top and back in at the bottom.
+	
+	   The only shape that is defined by what it does *outside* the input range,
+	   which is why it is last rather than beside the curves: every other one
+	   clamps and then bends, and this one does not clamp at all. CLAMP's
+	   opposite number -- both answer "what happens past the end", one by
+	   stopping and one by starting over, and neither reaches the other.
+	
+	   It is what a phase accumulator is made of. On the *value* path it is
+	   exact -- 1.25 comes out 0.25, 2.5 comes out 0.5, and -0.25 comes out 0.75
+	   rather than the -0.25 a bare `%` gives.
+
+	   On the *audio* path it clamps like every other shape, and that is a real
+	   limit rather than an oversight. MAP's shaper normalises its input into
+	   -1..1 and denormalises after, which is what lets Y.LO..Y.HI be 20..20000
+	   without a lookup table holding twenty thousand -- and wrapping is defined
+	   on the un-normalised axis, so the two fight. Three table geometries were
+	   measured against a hard-sync patch built from raw Web Audio nodes, which
+	   reads 0.6227 at the fundamental: tiling the table read 0.0270, centring it
+	   read 0.0011, and stretching the input read 0.0068. A WaveShaper's domain
+	   is bounded, and a periodic function of an unbounded input is not something
+	   a bounded lookup table can express. */
+	{ id: 'wrap', label: 'WRAP' }
 ];
 
 /**

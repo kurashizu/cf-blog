@@ -259,16 +259,43 @@ describe('the pure nodes', () => {
 	it('keeps both ends wherever the shape bends', () => {
 		/* Every shape maps 0..1 onto 0..1, so swapping one for another moves how
 		   a sweep travels and never where it starts or stops. INV is the one
-		   exception and swaps them on purpose. */
+		   exception and swaps them on purpose.
+		
+		   WRAP is the other, and for a different reason: it does not clamp at
+		   all, so the top of the range is the bottom of the next one and an input
+		   of 1 comes out 0. That is the whole of what it is for -- a value that
+		   runs past the end and starts over, which is what a phase accumulator
+		   does -- and asserting it holds both ends would assert it is not a
+		   wrap. Its own behaviour is pinned below. */
 		for (let i = 0; i < MAP_SHAPES.length; i++) {
 			const m = MAP_SHAPES[i];
-			if (m.id === 'draw') continue;
+			if (m.id === 'draw' || m.id === 'wrap') continue;
 			const ends = [
 				evalPure('map', { a: 0 }, { shape: i }),
 				evalPure('map', { a: 1 }, { shape: i })
 			];
 			expect(ends.map((v) => Math.round(v)).sort(), m.label).toEqual([0, 1]);
 		}
+	});
+
+	it('wraps past the end instead of holding there', () => {
+		/* The one shape defined by what happens outside the range. CLAMP's
+		   opposite number: both answer "what now", one by stopping and one by
+		   starting over, and neither reaches the other.
+		
+		   The negative row is the one that matters. JavaScript's remainder keeps
+		   the sign of its dividend, so a bare `x % 1` gives -0.25 for -0.25 --
+		   and a quarter turn back from zero is three quarters of a turn, not
+		   minus a quarter. OSC's PHS does the same arithmetic for the same
+		   reason. */
+		const wrap = MAP_SHAPES.findIndex((m) => m.id === 'wrap');
+		const at = (a: number) => evalPure('map', { a }, { shape: wrap });
+		expect(at(0.25)).toBeCloseTo(0.25, 6);
+		expect(at(1.25), 'past the top comes back at the bottom').toBeCloseTo(0.25, 6);
+		expect(at(2.5), 'and again, however far past').toBeCloseTo(0.5, 6);
+		expect(at(-0.25), 'and below zero counts back from the top').toBeCloseTo(0.75, 6);
+		// Exactly the end is the start of the next range, not the end of this one.
+		expect(at(1)).toBeCloseTo(0, 6);
 	});
 
 	it('turns a sweep into steps, reaching both ends', () => {
