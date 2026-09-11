@@ -71,7 +71,7 @@
 		// The same door the other way: a wave arriving, a value leaving.
 		tocv: 'M1 8q1.5-4 3 0t3 0M7 8h4M11 5v6M13 5v6',
 		// LOGIC: the execution chain.
-		seq: 'M2 8h4M6 5l3 3-3 3M10 8h4M12 4v8',
+		wait: 'M4 3h8M4 13h8M4 3l8 10M12 3L4 13',
 		when: 'M8 2l6 6-6 6-6-6z',
 		act: 'M4 2v12l9-6z',
 		/* A pair of scales: two quantities weighed against each other, which is

@@ -359,7 +359,7 @@ describe('execution flow', () => {
 		   The roster named nine modules and had to be edited every time one was
 		   added or removed, which during a rebuild is every commit -- and a name
 		   that no longer resolves reads the same as a module with no exec pin. */
-		const LOGIC = new Set(['in', 'out', 'seq', 'when', 'act']);
+		const LOGIC = new Set(['in', 'out', 'wait', 'when', 'act']);
 		const sound = MODULE_SPECS.filter((m) => !LOGIC.has(m.id));
 		for (const m of sound) {
 			expect(

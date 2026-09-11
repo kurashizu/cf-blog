@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { execReach, createResolver, type EvalGraph } from '../../src/lib/stores/node-graph';
+import {
+	execReach,
+	execDelays,
+	createResolver,
+	type EvalGraph
+} from '../../src/lib/stores/node-graph';
 import { MODULE_SPECS, CMP_TESTS, EXEC_PORT_IDS } from '../../src/lib/stores/synth-modules';
 import { roleOf, rolesCompatible } from '../../src/lib/stores/graph-model';
 
@@ -175,5 +180,71 @@ describe('ENV, the shape over a note', () => {
 		   the only answer. */
 		const c = spec('env').params.find((q) => q.key === 'envCurve')!;
 		expect(c.choices).toEqual(['LIN', 'EXP']);
+	});
+});
+
+describe('WAIT, which is a delay and says so', () => {
+	it('holds back everything past it', () => {
+		const g: EvalGraph = {
+			nodes: [
+				{ id: 'entry', type: 'in' },
+				{ id: 'w', type: 'wait' },
+				{ id: 'out', type: 'out' }
+			],
+			cables: [
+				{ from: 'entry', fromPort: 'then', to: 'w', toPort: 'exec' },
+				{ from: 'w', fromPort: 'then', to: 'out', toPort: 'exec' }
+			]
+		};
+		const at = execDelays(g, { 'w.gapMs': 50 }, EXEC_PORT_IDS);
+		// The gap applies downstream, not to the WAIT itself.
+		expect(at.get('w')).toBe(0);
+		expect(at.get('out')).toBeCloseTo(0.05, 6);
+	});
+
+	it('has one outlet, because there is no order to express', () => {
+		/* The name was SEQ, after Blueprint's Sequence, and Sequence orders
+		   several branches. This holds one back. A second outlet firing at once
+		   beside the late one was tried so a flam would be one card, and dropped:
+		   ENTRY already fans out, so the pin bought one fewer cable and nothing
+		   new to say. */
+		expect(spec('wait').outputs).toHaveLength(1);
+		expect(spec('wait').outputs[0].kind).toBe('exec');
+	});
+
+	it('is not the delay line, which is a different module and a different word', () => {
+		/* One holds audio and hands it back later with the original still in
+		   place; the other moves when a node starts and duplicates nothing. */
+		expect(spec('delay').inputs.some((q) => q.kind === 'audio')).toBe(true);
+		expect(spec('wait').inputs.every((q) => q.kind === 'exec')).toBe(true);
+		expect(spec('delay').group).toBe('SHAPE');
+		expect(spec('wait').group).toBe('LOGIC');
+	});
+});
+
+describe('ACT, which reaches sideways', () => {
+	it('produces nothing, because what it does is not a value', () => {
+		/* Every other module describes the note being built. This one stops the
+		   notes already playing, which is a statement about a different voice --
+		   so it has an exec inlet and no outlet of any kind. */
+		expect(spec('act').outputs).toEqual([]);
+		expect(spec('act').inputs.every((q) => q.kind === 'exec')).toBe(true);
+	});
+
+	it('is the module a hi-hat needs', () => {
+		/* A closed hat has to stop the open one or both ring together, and
+		   nothing inside a voice can say that. CUT stops the group; SOLO stops
+		   everything but this one. */
+		const act = spec('act').params.find((q) => q.key === 'action')!;
+		expect(act.choices).toEqual(['CUT', 'SOLO']);
+		// A group, so a kit can hold several chokes that ignore each other.
+		expect(spec('act').params.some((q) => q.key === 'actGroup')).toBe(true);
+	});
+
+	it('fades rather than cutting to silence in one sample', () => {
+		// Stopping a sounding oscillator instantly is a click.
+		const fade = spec('act').params.find((q) => q.key === 'actMs')!;
+		expect(fade.min).toBeGreaterThan(0);
+		expect(fade.def).toBe(6);
 	});
 });

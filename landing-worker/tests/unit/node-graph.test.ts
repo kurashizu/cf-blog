@@ -508,8 +508,8 @@ describe('execution flow', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['a', 'seq'],
-				['b', 'seq']
+				['a', 'wait'],
+				['b', 'wait']
 			],
 			[
 				wire('e', 'then', 'a', 'exec'),
@@ -863,7 +863,7 @@ describe('execution timing', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['o', 'out']
 			],
 			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
@@ -878,8 +878,8 @@ describe('execution timing', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['a', 'seq'],
-				['b', 'seq'],
+				['a', 'wait'],
+				['b', 'wait'],
 				['o', 'out']
 			],
 			[
@@ -899,7 +899,7 @@ describe('execution timing', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['o', 'out']
 			],
 			[
@@ -915,8 +915,8 @@ describe('execution timing', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['a', 'seq'],
-				['b', 'seq']
+				['a', 'wait'],
+				['b', 'wait']
 			],
 			[
 				wire('e', 'then', 'a', 'exec'),
@@ -932,7 +932,7 @@ describe('execution timing', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['o', 'out']
 			],
 			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]
@@ -997,7 +997,7 @@ describe('the logic chain', () => {
 		const viaSeq = actionsFor(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['a', 'act']
 			],
 			[wire('e', 'then', 's', 'exec'), wire('s', 'then', 'a', 'exec')],
@@ -1094,7 +1094,7 @@ describe('the logic chain', () => {
 				track.rackGraph = {
 					nodes: [
 						{ id: 'e', type: 'in', x: 0, y: 0 },
-						{ id: 's', type: 'seq', x: 1, y: 0 },
+						{ id: 's', type: 'wait', x: 1, y: 0 },
 						{ id: 'o', type: 'osc', x: 2, y: 0 },
 						{ id: 'out', type: 'out', x: 3, y: 0 }
 					],

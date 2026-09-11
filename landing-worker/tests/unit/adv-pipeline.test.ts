@@ -362,7 +362,7 @@ describe('execution across a whole patch', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['w', 'when'],
 				['a', 'act'],
 				['o', 'out']
@@ -409,7 +409,7 @@ describe('execution across a whole patch', () => {
 		const graph = g(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['w', 'when'],
 				['a', 'act']
 			],
@@ -463,7 +463,7 @@ describe('what the renders proved', () => {
 		/* ENTRY is not among them: it publishes the note as values, which is
 		   exactly what the sweep drives knobs with. The meters are: they observe
 		   a signal and hand nothing back, so they sit at the end of a branch. */
-		expect(neither.sort()).toEqual(['act', 'fft', 'loud', 'out', 'scope', 'seq', 'when']);
+		expect(neither.sort()).toEqual(['act', 'fft', 'loud', 'out', 'scope', 'wait', 'when']);
 		expect(measured.length).toBe(ALL.length - neither.length);
 	});
 
@@ -848,7 +848,7 @@ describe('regressions the string tests could not see', () => {
 		const two = g(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['x1', 'excite'],
 				['x2', 'excite'],
 				['o1', 'out'],
@@ -872,7 +872,7 @@ describe('regressions the string tests could not see', () => {
 		const one = g(
 			[
 				['e', 'in'],
-				['s', 'seq'],
+				['s', 'wait'],
 				['x', 'excite'],
 				['o1', 'out'],
 				['o2', 'out']
@@ -904,7 +904,7 @@ describe('regressions the string tests could not see', () => {
 		const graph = {
 			nodes: [
 				{ id: 'e', type: 'in' },
-				{ id: 's', type: 'seq' },
+				{ id: 's', type: 'wait' },
 				{ id: 'o', type: 'out' }
 			],
 			cables: [wire('e', 'then', 's', 'exec'), wire('s', 'then', 'o', 'exec')]

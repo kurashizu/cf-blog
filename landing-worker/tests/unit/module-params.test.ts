@@ -82,7 +82,7 @@ function forwardedParams(): Set<string> {
    SEQ is the same shape: it makes no sound and holds no audio node. Its GAP is
    read while execution flow is resolved, which happens before any module is
    built, because the gap is *when* the modules downstream of it run. */
-const NOT_AUDIO_MODULES = new Set(['when', 'act', 'seq']);
+const NOT_AUDIO_MODULES = new Set(['when', 'act', 'wait']);
 
 /** Modules the builder has no case for, so they take the default branch. */
 function fallthroughModules(): string[] {
@@ -238,7 +238,7 @@ describe('the node contract', () => {
 		   out here, which meant every module added to the catalogue had to be
 		   added to a second place -- and while the catalogue is being rebuilt
 		   from primitives the roster would be wrong on every commit. */
-		const LOGIC = new Set(['act', 'in', 'out', 'seq', 'when']);
+		const LOGIC = new Set(['act', 'in', 'out', 'wait', 'when']);
 		const withExec = MODULE_SPECS.filter(
 			(m) => m.inputs.some((p) => p.kind === 'exec') || m.outputs.some((p) => p.kind === 'exec')
 		).map((m) => m.id);
@@ -248,7 +248,7 @@ describe('the node contract', () => {
 	it('gives an exec outlet only where there is an afterwards', () => {
 		// THEN means "and then this", so it needs a moment to point at. An
 		// oscillator runs for as long as the note does and never finishes.
-		const HAS_AFTERWARDS = new Set(['in', 'seq', 'when']);
+		const HAS_AFTERWARDS = new Set(['in', 'wait', 'when']);
 		const withThen = MODULE_SPECS.filter((m) => m.outputs.some((p) => p.kind === 'exec')).map(
 			(m) => m.id
 		);
@@ -316,9 +316,24 @@ describe('the node contract', () => {
 			   arithmetic would put "the key you pressed" on the same shelf as ADD.
 			   It sits with the sources because that is what it is a source of. */
 			if (m.id === 'in') continue;
-			// No outlet at all: it observes or it terminates.
+			/* No outlet at all. Three ways that happens, and the exec pin tells
+			   them apart: a module that *acts* when execution reaches it belongs
+			   with the execution chain, while one with no pins at all is either
+			   watching the signal or ending it.
+			
+			   ACT is the case that needed this. It produces nothing -- it reaches
+			   sideways at the voices already sounding and stops them -- so by
+			   outlets alone it looked like a meter. What it is is the far end of
+			   a white wire. */
 			if (!m.outputs.length) {
-				if (m.group !== 'METER' && m.group !== 'UTILITY') wrong.push(`${m.id}: ${m.group}`);
+				/* OUT has an exec pin too, so the pin alone does not separate them:
+				   what does is whether any sound arrives. OUT and the meters take
+				   audio and are the end of a signal path; ACT takes only the white
+				   wire, because what it operates on is not in this graph. */
+				const acts =
+					m.inputs.some((i) => i.kind === 'exec') && !m.inputs.some((i) => i.kind === 'audio');
+				const want = acts ? ['LOGIC'] : ['METER', 'UTILITY'];
+				if (!want.includes(m.group)) wrong.push(`${m.id}: ${m.group}`);
 				continue;
 			}
 			const emitsAudio = m.outputs.some((o) => o.kind === 'audio');
@@ -474,11 +489,21 @@ describe('every parameter the engine reads is declared', () => {
 		   any note is built. */
 		const CANVAS_READ = new Set([
 			'const.kind',
-			/* Read by `whenHolds`, which asks the engine's own state rather than
-			   the graph's -- "is a voice sounding on this track right now". It goes
-			   through that method's local `num()` rather than the builder's `p()`,
-			   because no audio node is built for a WHEN at all. */
-			'when.busy'
+			/* The execution chain, read where execution is resolved rather than
+			   where audio is built -- none of the three makes a sound, so none of
+			   them passes through the module builder and its `p()` at all.
+			
+			   WHEN's BUSY goes through `whenHolds`, which asks the engine's own
+			   state: is a voice sounding on this track right now. ACT's three are
+			   read by `noteActions`, which walks the white wire to find what
+			   should be choked. WAIT's GAP is read by `execDelays`, before any
+			   module is built, because the gap decides *when* the ones downstream
+			   of it run. */
+			'when.busy',
+			'act.action',
+			'act.actGroup',
+			'act.actMs',
+			'wait.gapMs'
 		]);
 		const dead = MODULE_SPECS.flatMap((m) =>
 			m.params

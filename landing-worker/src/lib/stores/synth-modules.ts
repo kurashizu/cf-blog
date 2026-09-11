@@ -53,7 +53,7 @@ export interface ModuleParam {
 	
 	   Marking them means the canvas stops offering them as modulation targets --
 	   it used to offer whichever knob happened to be declared first, which is
-	   how SEQ's GAP and SCOPE's SPAN were suggested as places to send an
+	   how WAIT's GAP and SCOPE's SPAN were suggested as places to send an
 	   envelope. It is a real constraint, not an oversight, so it is written
 	   down rather than quietly wrong. */
 	fixed?: boolean;
@@ -290,7 +290,7 @@ const AUDIO_IN: PortSpec = { id: 'in', label: 'IN', kind: 'audio' };
  * when execution reaches it and not otherwise, which is what makes a cable
  * carry meaning.
  *
- * EXEC_OUT is the narrower one: ENTRY, SEQ and WHEN, and nothing else. A THEN
+ * EXEC_OUT is the narrower one: ENTRY, WAIT and WHEN, and nothing else. A THEN
  * pin says "and afterwards, this", and only those three have an afterwards to
  * hand on -- the event fires, the sequence steps, the branch answers.
  *
@@ -784,6 +784,78 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			}
 		],
 		viz: 'adsr'
+	},
+	{
+		/* Everything past this point starts late.
+		 *
+		 * It was called SEQ, after Blueprint's Sequence, and that was a claim it
+		 * could not meet. Sequence orders several branches -- Then 0 before Then
+		 * 1 -- and this holds one branch back. With a single outlet there is no
+		 * order to speak of, so the name described a shape the module did not
+		 * have. What it can say is "this part starts late", which is what it is
+		 * called now.
+		 *
+		 * A second outlet was tried, firing at once beside the late one, so a
+		 * flam would be one card. It was dropped: fanning out is what ENTRY
+		 * already does, so the pin bought one less cable and no new thing to say
+		 * -- and convenience is not a reason for a primitive.
+		 *
+		 * Not SHAPE's DELAY, which is a delay *line*: that holds audio and hands
+		 * it back later with the original still in place. This moves when a node
+		 * starts, and duplicates nothing. Two names for one word, so they are two
+		 * words.
+		 *
+		 * Typed in milliseconds, because a flam is 30 ms and a grace note is 80 --
+		 * numbers you know, at a resolution no dial spanning two seconds could
+		 * reach. */
+		id: 'wait',
+		label: 'WAIT',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.wait',
+		inputs: [EXEC_IN],
+		outputs: [EXEC_OUT],
+		params: [
+			{ key: 'gapMs', label: 'GAP', min: 0, max: 2000, step: 1, def: 30, unit: 'ms', field: true, fixed: true }
+		]
+	},
+	{
+		/* What execution reaching here *does* to the voices already sounding.
+		 *
+		 * Every other module in the catalogue describes the note being built.
+		 * This one reaches sideways, at the notes already playing: CUT stops them
+		 * and SOLO stops everything except this one. That is why it has an exec
+		 * inlet and no outlet of any other kind -- it produces nothing, it acts.
+		 *
+		 * It is the module a hi-hat needs. A closed hat has to stop the open one
+		 * or both ring together, and no amount of wiring inside a voice can say
+		 * that, because it is a statement about a *different* voice. GRP is which
+		 * set it applies to, so a kit can have several choke groups that ignore
+		 * each other -- 0 means the whole track.
+		 *
+		 * FADE is how fast the stop happens. Not zero: cutting a sounding
+		 * oscillator to silence in one sample is a click, and 6 ms is short
+		 * enough to read as immediate and long enough not to snap. */
+		id: 'act',
+		label: 'ACT',
+		group: 'LOGIC',
+		color: '#e5c07b',
+		descKey: 'synthPatch.mod.act',
+		inputs: [EXEC_IN],
+		outputs: [],
+		params: [
+			{
+				key: 'action',
+				label: 'DO',
+				min: 0,
+				max: 1,
+				step: 1,
+				def: 0,
+				choices: ['CUT', 'SOLO']
+			},
+			{ key: 'actGroup', label: 'GRP', min: 0, max: 16, step: 1, def: 0, field: true, fixed: true },
+			{ key: 'actMs', label: 'FADE', min: 1, max: 500, step: 1, def: 6, unit: 'ms', field: true, fixed: true }
+		]
 	},
 	{
 		/* A branch: execution leaves it only when its test holds.

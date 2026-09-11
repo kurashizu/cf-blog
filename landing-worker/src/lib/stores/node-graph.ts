@@ -507,10 +507,21 @@ export function runs(reach: { gated: boolean; reached: Set<string> }, id: string
 /**
  * How long after the note each node runs, following the exec cables.
  *
- * Blueprint's Sequence runs Then 0 before Then 1. Audio has no "afterwards" --
- * two strikes at the same instant are one strike -- so SEQ expresses the order
- * as a gap in milliseconds instead, which is the thing anyone actually wants
- * it for: a flam, a grace note, the two layers a sampled kick is built from.
+ * WAIT is the only node that moves this, and it is a delay rather than a
+ * sequence. The name was SEQ, after Blueprint's Sequence, and that was a claim
+ * the module could not meet: Sequence orders several branches, and this holds
+ * one of them back. With a single outlet there is no order to speak of -- what
+ * you can say is "this part starts late", which is what the module does and
+ * what it is now called.
+ *
+ * The thing it is for is a flam, a grace note, or the two layers a sampled kick
+ * is built from: some of the patch starting behind the rest. Note that it
+ * cannot make one source sound twice -- see the note below on why the delay
+ * flows back along the audio cables, and why two strikes need two sources.
+ *
+ * Not to be confused with SHAPE's DELAY, which is a delay *line*: that one
+ * holds audio and hands it back later, leaving the original in place. This one
+ * moves when a node starts, and nothing is duplicated.
  *
  * The earliest arrival wins, as it would in Blueprint: a node reached by two
  * paths runs at the first of them.
@@ -529,7 +540,7 @@ export function execDelays(
 
 	const gapOf = (id: string) => {
 		const n = graph.nodes.find((m) => m.id === id);
-		if (n?.type !== 'seq') return 0;
+		if (n?.type !== 'wait') return 0;
 		/* Finite, because this becomes a `start()` time. `Math.max(0, NaN)` is
 		   NaN, so the floor alone let one through -- and `start(NaN)` throws,
 		   which aborts the note mid-build rather than playing it early. JSON
@@ -555,10 +566,10 @@ export function execDelays(
 
 	/* Now carry it back up the audio graph.
 	
-	   Only SEQ, WHEN, ACT and OUT have exec inlets -- sound modules deliberately
+	   Only WAIT, WHEN, ACT and OUT have exec inlets -- sound modules deliberately
 	   have none, because THEN is logic and not part of the signal path -- so the
 	   walk above assigns a delay to nodes that make no sound and to nothing that
-	   does. Every source started at the note however the gap was set, and SEQ,
+	   does. Every source started at the note however the gap was set, and WAIT,
 	   whose whole purpose is the flam, produced a byte-identical render at 0 ms
 	   and at 200 ms.
 	

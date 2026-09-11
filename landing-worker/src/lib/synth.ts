@@ -559,7 +559,7 @@ class ModularSynth {
 	): {
 		out: AudioNode;
 		sources: AudioScheduledSourceNode[];
-		/** When each source starts, so a SEQ gap reaches the sound and not only
+		/** When each source starts, so a WAIT gap reaches the sound and not only
         the modules that happen to schedule against the note time. */
 		startAt: Map<AudioScheduledSourceNode, number>;
 	} | null {
@@ -645,7 +645,7 @@ class ModularSynth {
 		);
 		const outputRuns = (id: string) => runs(reach, id);
 		/* When each node runs, in seconds after the note. Zero for everything the
-       event reaches directly; SEQ adds its gap as execution passes through, so
+       event reaches directly; WAIT adds its gap as execution passes through, so
        a strike wired downstream of one lands late -- which is a flam. */
 		const delays = execDelays(graph, params, EXEC_PORT_IDS);
 
@@ -699,9 +699,9 @@ class ModularSynth {
 		const sources: AudioScheduledSourceNode[] = [];
 		/* When each source starts, keyed by the node that made it.
     
-       SEQ's gap reaches a module that schedules against `t` -- an envelope, a
+       WAIT's gap reaches a module that schedules against `t` -- an envelope, a
        strike -- but every AudioScheduledSourceNode was started at the note
-       regardless, so an oscillator behind a SEQ played on the beat and the flam
+       regardless, so an oscillator behind a WAIT played on the beat and the flam
        the module exists for did not happen. */
 		const startAt = new Map<AudioScheduledSourceNode, number>();
 		const typeById = new Map(graph.nodes.map((n) => [n.id, n.type]));
@@ -4782,7 +4782,7 @@ class ModularSynth {
 		/* Follow the execution wire wherever it goes.
     
        This used to be hardcoded as ENTRY -> WHEN -> ACT, exactly two hops, so a
-       SEQ anywhere in the chain silently dropped the rest of it: the walk found
+       a WAIT anywhere in the chain silently dropped the rest of it: the walk found
        a node that was not a WHEN and gave up without a word. Worse, it
        disagreed with execReach, which traverses correctly -- so the audio side
        and the action side of the same patch reached different conclusions about

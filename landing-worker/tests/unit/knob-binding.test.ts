@@ -30,7 +30,7 @@ const S = modularSynth as unknown as {
 };
 
 /** Modules that hold no audio node: their values are read elsewhere entirely. */
-const NOT_AUDIO = new Set(['in', 'out', 'when', 'act', 'seq']);
+const NOT_AUDIO = new Set(['in', 'out', 'when', 'act', 'wait']);
 
 function build(type: string, params: Record<string, number> = {}) {
 	const ctx = new FakeCtx();
