@@ -165,12 +165,14 @@ describe('a value and a signal are not both applied', () => {
 		const bq = advNodes(ctx).filter((n) => n.kind === 'biquad');
 		expect(bq.length).toBe(1);
 		const freq = (bq[0] as unknown as { frequency: FakeParam }).frequency;
-		/* The knob is replaced -- the CONST's 800 is the cutoff -- and nothing
-		   extra is summing in. The one source is the filter's own keytrack gain,
-		   which is there with or without this cable; a second would be the CONST
-		   applied again as a signal. */
+		/* The knob is replaced -- the CONST's 800 is the cutoff -- and nothing is
+		   summing in. It was one source rather than none while FILTER carried a
+		   keytrack gain on its cutoff; that stage went when DEPTH did, because
+		   scaling a control signal is what MUL and GAIN are for. Zero is the
+		   stronger reading of the same rule: a pure node's value replaces the
+		   knob and connects nothing at all. */
 		expect(freq.value).toBe(800);
-		expect(freq.sources.length).toBe(1);
+		expect(freq.sources.length).toBe(0);
 	});
 
 	/* Waiting on the catalogue. This asserts real behaviour of modules the
@@ -199,11 +201,18 @@ describe('a value and a signal are not both applied', () => {
 			},
 			{ 'c.value': 2 }
 		);
-		/* The gain the cable lands on must hold unity and take the 2 as a summed
-		   source: 1 * 2, not 2 * 2. */
-		const fed = modulated(ctx).map((n) => (n as unknown as { gain: FakeParam }).gain);
-		expect(fed.length).toBeGreaterThan(0);
-		for (const p of fed) expect(p.value).toBe(1);
+		/* Once, and as a value: a CONST of 2 makes WIDE 2, not 4 and not 1.
+		
+		   This used to assert the other half of the same rule -- the gain holding
+		   unity while the 2 arrived as a summed source -- because a CONST built a
+		   ConstantSourceNode to connect. Pure nodes build nothing now, so the
+		   resolver hands the number over and there is nothing to sum; applying it
+		   twice would show up as 4 here rather than as a second connection. */
+		const gains = ctx.nodes
+			.map((n) => (n as unknown as { gain?: FakeParam }).gain)
+			.filter((g): g is FakeParam => g instanceof FakeParam);
+		expect(gains.some((g) => g.value === 2)).toBe(true);
+		expect(gains.some((g) => g.value === 4)).toBe(false);
 	});
 });
 

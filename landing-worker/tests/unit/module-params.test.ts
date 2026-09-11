@@ -358,6 +358,65 @@ describe('the node contract', () => {
 		}
 	});
 
+	it('builds no audio node for a pure node', () => {
+		/* A pure node's whole output is a number, pulled by whoever reads it, so
+		   there is nothing to build.
+		
+		   This was a hand-written run of case labels falling into ENTRY's body,
+		   and the list had gone stale twice over: it still named REMAP and LERP,
+		   which MAP absorbed, and had never gained MAP, CMP, LOGIC, NOT or TRSP.
+		   The ones it did name fell *through* -- a CONST came back holding
+		   ENTRY's silent gain and its four note outlets, which is what this
+		   caught.
+		
+		   The early `isPureNode` return in the builder makes this explicit, but
+		   it is not what this test pins: with the stale labels deleted, a pure
+		   node falls to `default` and comes back null there too, so removing the
+		   guard keeps this green. What the test actually guards against is the
+		   labels coming back -- any case body a pure node can reach will either
+		   hand back a node or leave one behind in the context, and both are
+		   checked. */
+		const S = modularSynth as unknown as {
+			noiseBuffer: unknown;
+			buildGraphNode(...a: unknown[]): unknown;
+		};
+		const built: string[] = [];
+		for (const m of MODULE_SPECS) {
+			if (!isPureNode(m.id)) continue;
+			const ctx = new FakeCtx();
+			S.noiseBuffer = ctx.createBuffer(1, 1024, 48000);
+			const made = S.buildGraphNode(
+				ctx,
+				m.id,
+				(_k: string, d: number) => d,
+				220,
+				0,
+				0.5,
+				[],
+				'n1',
+				{},
+				(_n: string, _p: string, f: number) => f,
+				{ velocity: 0.8, noteIndex: 48, tuning: 440 },
+				0.5
+			);
+			if (made !== null) built.push(`${m.id} built a node`);
+			// And it got that far without making anything.
+			if (ctx.nodes.length > 1) built.push(`${m.id} created ${ctx.nodes.length} nodes`);
+		}
+		expect(built).toEqual([]);
+	});
+
+	it('leaves no engine case without a module', () => {
+		/* A case for a module the catalogue no longer declares is unreachable,
+		   and unreachable code is where a stale idea hides -- fourteen of them
+		   survived the teardown, including the VCA and MIX that GAIN and SUM
+		   replaced. */
+		const cases = [...SOURCE.matchAll(/^\t\t\tcase '([a-z]+)':/gm)].map((m) => m[1]);
+		expect(cases.length, 'case scrape came back empty').toBeGreaterThan(10);
+		const ids = new Set(MODULE_SPECS.map((m) => m.id));
+		expect([...new Set(cases.filter((c) => !ids.has(c)))]).toEqual([]);
+	});
+
 	it('turns a knob only where a number would not do', () => {
 		/* A dial answers "how much" by feel. That is the right control when the
 		   range is awkward or the response is not linear -- TUNING sweeps 400..480

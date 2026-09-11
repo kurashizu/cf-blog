@@ -1041,6 +1041,22 @@ class ModularSynth {
        four labels named the wrong shape. */
 		const WAVES: OscillatorType[] = WAVE_SHAPES.map((w) => w.type as OscillatorType);
 
+		/* A pure node builds nothing.
+		
+		   Its whole output is a number, pulled through the resolver by whoever
+		   reads it -- there is no audio node to make, and the arithmetic lives in
+		   one table in stores/node-graph shared with the resolver rather than
+		   being written a second time here.
+		
+		   This used to be a hand-written run of case labels falling into ENTRY's
+		   body, and the list had gone stale: it still named REMAP and LERP, which
+		   MAP absorbed, and had never gained MAP, CMP, LOGIC, NOT or TRSP. The
+		   ones it did name fell through and built *ENTRY* -- a CONST came back
+		   with ENTRY's silent gain and its four note outlets, because that is the
+		   next case body down. Saying it once here cannot drift the way a second
+		   copy of the list does. */
+		if (isPureNode(type)) return null;
+
 		switch (type) {
 			case 'osc': {
 				const osc = ctx.createOscillator();
@@ -1605,19 +1621,20 @@ class ModularSynth {
 				const midIn = ctx.createGain();
 				const sideIn = ctx.createGain();
 				const wide = ctx.createGain();
-				/* WIDE is a declared `mod` inlet on the card, so a cable has to be able
-           to land on it. It was read as a value and never registered, and since
-           MAKE deliberately carries no WIDE knob the resolver fell through to
-           the caller's fallback of 1 -- the width was pinned at unity and the
-           socket did nothing at all.
+				/* WIDE is read *and* registered, which is the ordinary pair now rather
+           than the double application it once was.
 
-           Registered only, not also read. A declared inlet is not a knob, so
-           the mod loop does not skip it: it connects the source to `wide.gain`
-           on top of whatever was assigned here. Reading the cable as a value as
-           well applied it twice -- a CONST of 2 gave 4 -- which is the one
-           mechanism-per-cable rule this module was breaking alone. The gain
-           starts at unity so an unpatched MAKE is the identity it was. */
-				wide.gain.value = 1;
+           `cvIn` resolves a pure node to its number and hands back the fallback
+           for anything that carries a signal -- so a CONST of 2 arrives as 2
+           here and connects nothing, while an ENV arrives as the unity fallback
+           and connects as a source that sums on top. Exactly one mechanism per
+           cable, decided by what is at the other end.
+
+           Registering alone was right only while a CONST also built a
+           ConstantSourceNode to connect. Pure nodes build nothing now -- their
+           value is pulled through the resolver -- so a registered-only inlet
+           would leave the socket dead: no connection, and no value either. */
+				wide.gain.value = cvIn(probeKey, 'wide', 1);
 				mod.set('wide', wide.gain);
 				sideIn.connect(wide);
 
@@ -1654,25 +1671,6 @@ class ModularSynth {
 				return { in: input, out, mod };
 			}
 
-			/* The pure value nodes.
-      
-         The arithmetic itself lives in stores/node-graph, in one table, and is
-         shared with the resolver -- it was written twice before, once to build
-         the node and once to pull a value through it, which is exactly the kind
-         of duplication that drifts apart.
-      
-         The result is a ConstantSourceNode so that a cable from one of these
-         lands on a knob the same way an envelope does. Resolved at build time,
-         because the graph is rebuilt per note and the value is known before
-         anything is created. */
-			case 'tofreq':
-			case 'topitch':
-			case 'const':
-			case 'add':
-			case 'mul':
-			case 'remap':
-			case 'clamp':
-			case 'lerp':
 			case 'in': {
 				/* ENTRY: the note, as an event.
         
