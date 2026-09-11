@@ -467,6 +467,21 @@ the slave moves a formant through the spectrum while the note stays put — the
 sound of a Prophet-5 lead, and one no filter sweep reaches, because a filter
 removes harmonics and sync *creates* them at the discontinuity.
 
+OSC's `PHS` looks like the answer and is not, which is worth stating because it
+is the first thing anyone will reach for. PHS rotates the whole wave table, once,
+when the note is built -- measured, two oscillators at one pitch with PHS 0.5 on
+one of them cancel to exact silence, so it works. But an LFO patched into it
+changes nothing: the inlet is read through `cvIn` at build time and never
+registered as a modulation target, because `OscillatorNode` has no phase input
+and a delay is not one either -- a fixed delay is a different phase at every
+frequency, so it drifts the moment the note changes pitch.
+
+Even if it could move, rotating a wave is not resetting it. Rotation produces the
+same waveform starting somewhere else, which is why a single oscillator sounds
+identical at every PHS; sync produces a *discontinuity*, and the discontinuity is
+the sound. Making PHS modulatable would give phase modulation -- FM's near
+relative, which this catalogue already reaches through OSC's FREQ.
+
 It is a genuine primitive by this project's bar: conceptually irreducible, and
 not substitutable. Ring modulation at integer ratios was measured as the nearest
 candidate and produces the inharmonic sum-and-difference family instead; a
