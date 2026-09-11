@@ -885,7 +885,9 @@ class ModularSynth {
 			   number. A MAP that is itself carrying a signal still has to connect,
 			   which is what `carriesSignal` preserves -- so a waveform through MAP
 			   is shaped per sample, and a value through MAP is read once. */
-			if (hasValuePath && (isPureNode(fromType) || fromType === 'in')) continue;
+			const carriesSignal = isValueNode(fromType) && resolver.isDrivenBySignal(c.from, 'a');
+			if (hasValuePath && !carriesSignal && (isValueNode(fromType) || fromType === 'in'))
+				continue;
 			const from = outletOf(src, c.fromPort);
 			/* An AudioParam and an AudioNode are both legitimate destinations, and
 			   TypeScript needs telling which overload applies. A param destination
