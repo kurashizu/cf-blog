@@ -229,7 +229,14 @@
 					releaseTrackVoice?(k: unknown): void;
 					graphProbes: Map<string, AnalyserNode>;
 				};
-				S.updateTrack(0, { ...patch, muted: false });
+				/* The same clearing `setTrack` does, for the same reason: `updateTrack`
+				   merges, so a field this patch omits would keep whatever the last
+				   one set. Not known to have bitten here -- a bare oscillator
+				   measures 0.4813 either side of a patch carrying a waveform -- but
+				   it is the identical unguarded merge on the same shared track, and
+				   the version in `setTrack` was not known to have bitten either
+				   until it made a third of the suite fail. */
+				S.updateTrack(0, { graphWaves: {}, graphParams: {}, ...patch, muted: false });
 				const key = S.triggerTrackVoice(0, 48, 0);
 				await new Promise((r) => setTimeout(r, holdMs));
 				const an = S.graphProbes.get(nodeId);
@@ -263,7 +270,14 @@
 					getTrack(i: number): unknown;
 					noteActions(t: unknown, n: number, id: number, e: unknown): unknown;
 				};
-				S.updateTrack(0, { ...patch, muted: false });
+				/* The same clearing `setTrack` does, for the same reason: `updateTrack`
+				   merges, so a field this patch omits would keep whatever the last
+				   one set. Not known to have bitten here -- a bare oscillator
+				   measures 0.4813 either side of a patch carrying a waveform -- but
+				   it is the identical unguarded merge on the same shared track, and
+				   the version in `setTrack` was not known to have bitten either
+				   until it made a third of the suite fail. */
+				S.updateTrack(0, { graphWaves: {}, graphParams: {}, ...patch, muted: false });
 				/* The same event the sound is built from: semitones from the tuning
 				   reference and the real velocity, not a second literal. Two copies
 				   of "what this note is" are what let the choke and the sound answer

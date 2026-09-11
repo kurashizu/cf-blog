@@ -1114,6 +1114,22 @@ export const MODULE_SPECS: ModuleSpec[] = [
 			   filters' AudioParams -- three modes are three biquads whose
 			   frequencies are assigned once, so a cable would have nowhere to land.
 			   `fixed` is what stops the canvas offering them as destinations. */
+			/* 200 is the *shown* default and not the engine's, and that is the one
+			   place in this catalogue where the two are allowed to differ.
+
+			   The engine reads `(p.modeHz ?? 0) > 0 ? p.modeHz : baseFreq`: an
+			   absent BASE means "follow the key", which is the tuned case, and any
+			   number pins the body to an absolute pitch, which is an untuned drum.
+			   The field cannot say 0 -- `min` is 20, because a resonance at zero
+			   hertz is not one -- so "follow the key" has no number to print, and
+			   200 is what a body pinned deliberately would most likely be.
+
+			   Aligning the engine to 200 was the obvious fix and is wrong: two
+			   shipped bars set every other mode knob and leave BASE alone
+			   precisely to track the keyboard, and pinning them to 200 Hz would
+			   turn both into one note. Aligning the card to 0 is worse -- it would
+			   print a frequency that is not one. So the difference stays, said out
+			   loud here rather than left for the next reader to find as drift. */
 			{ key: 'modeHz', label: 'BASE', min: 20, max: 8000, step: 1, def: 200, unit: 'Hz', scale: 'log', fixed: true },
 			{ key: 'mode1', label: 'R1', min: 1, max: 8, step: 0.01, def: 1, field: true, fixed: true },
 			{ key: 'mode2', label: 'R2', min: 1, max: 8, step: 0.01, def: 2.4, field: true, fixed: true },

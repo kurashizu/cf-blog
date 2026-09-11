@@ -474,8 +474,11 @@ class ModularSynth {
 					return p.decayTime ?? 2;
 				// A tube's partials hold with the key and then fall away quickly, so
 				// its ring-out is that fall, not the full decay setting.
+				// 1.5 is TUBE's own printed default, and this has to agree with the
+				// builder's fallback or the voice is reaped on a different clock
+				// from the one its partials decay on.
 				case 'tube':
-					return Math.min(p.tubeDecay ?? 1.2, 0.35);
+					return Math.min(p.tubeDecay ?? 1.5, 0.35);
 				/* A delay line's tail is how long its echoes stay audible: each lap
            loses (1 - feedback), so the time to fall 60 dB is time * 3 /
            -log10(g). Capped, because g near 1 diverges. */
@@ -1580,7 +1583,14 @@ class ModularSynth {
 				tone.Q.value = 0.7 + (p('hardness', 50) / 100) * 3;
 
 				const g = ctx.createGain();
-				const len = Math.max(0.001, p('exLength', 6) / 1000);
+				/* 8, which is what the card prints. The fallback said 6, so an EXCT
+           dragged out of the palette and left alone struck for six
+           milliseconds while its own LEN field read 8 -- and typing 8 into it,
+           the value already shown, lengthened the contact. Same shape as
+           STRING's MIX: an untouched knob is absent from the patch, so the
+           engine's number is the one that plays and the card's is the one that
+           is read. */
+				const len = Math.max(0.001, p('exLength', 8) / 1000);
 				/* A burst, not a tone: up in well under a millisecond and gone by LEN.
            Ending on an exponential leaves a step to silence, so it finishes on
            a short linear ramp to zero. */
@@ -1662,8 +1672,12 @@ class ModularSynth {
            number decays faster -- the knob was wired straight to it and ran
            backwards, and the only thing setting the actual tail length was
            SIZE. Invert it, and floor the exponent so the top of the knob is a
-           slow room rather than an undefined one. */
-				const decay = Math.max(0.1, (1 - p('spaceDecay', 60) / 100) * 3);
+           slow room rather than an undefined one.
+
+           50, which is what the card prints. The fallback said 60, so an
+           untouched SPACE decayed faster than its own DECAY field claimed, and
+           typing 50 -- the number already on screen -- lengthened the tail. */
+				const decay = Math.max(0.1, (1 - p('spaceDecay', 50) / 100) * 3);
 				const rate = ctx.sampleRate;
 				const len = Math.max(1, Math.floor(seconds * rate));
 				const buf = ctx.createBuffer(2, len, rate);
@@ -2165,8 +2179,16 @@ class ModularSynth {
 				 * one end has no even harmonics, which is a clarinet.
 				 */
 				const isTube = id === 'tube';
-				const decay = Math.max(0.05, (isTube ? p.tubeDecay : p.decayTime) ?? (isTube ? 1.2 : 2));
-				const damping = pct(isTube ? p.tubeDamp : p.damping, isTube ? 40 : 30);
+				/* Every fallback here is the number the card prints, because an
+           untouched knob is absent from the patch and so the fallback is what
+           plays while the field shows something else. Three of the four had
+           drifted apart: TUBE's DCAY printed 1.5 and fell back to 1.2, its DAMP
+           printed 50 and fell back to 40, and STRING's DAMP printed 40 and fell
+           back to 30. The same defect STRING's MIX already carries a comment
+           about -- turning a knob to the number already written on it changed
+           the sound, which is the one thing a default must never do. */
+				const decay = Math.max(0.05, (isTube ? p.tubeDecay : p.decayTime) ?? (isTube ? 1.5 : 2));
+				const damping = pct(isTube ? p.tubeDamp : p.damping, isTube ? 50 : 40);
 				const stiff = isTube ? 0 : pct(p.stiffness, 10);
 				const mix = pct(isTube ? p.tubeMix : p.strBlend, 70);
 				/* A switch, not a percentage: it chose between two outcomes and was
@@ -2286,7 +2308,9 @@ class ModularSynth {
 				input.connect(dry);
 				dry.connect(output);
 
-				const ratios = [p.mode1 ?? 1, p.mode2 ?? 2.4, p.mode3 ?? 4.6];
+				// The card's own numbers. R3 printed 4.1 and fell back to 4.6, so an
+				// untouched MODES rang a third mode the card said it did not have.
+				const ratios = [p.mode1 ?? 1, p.mode2 ?? 2.4, p.mode3 ?? 4.1];
 				const q = Math.max(1, p.modeQ ?? 14);
 				/* Q is the ring: a mode at Q 40 rings for about a second, one at Q 2
            for a few tens of milliseconds. Roughly q/40 seconds, scaled down as

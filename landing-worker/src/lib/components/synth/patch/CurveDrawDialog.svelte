@@ -13,6 +13,7 @@
 	 * node that drew it. Sharing the component would mean bending both toward a
 	 * shape neither wants.
 	 */
+	import { onMount } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { playSound } from '../../../sound';
@@ -69,6 +70,24 @@
 			}
 		};
 	}
+
+	/* Escape closes it, as it does every other modal in this tree -- the wave
+	   editor, the settings panel and the confirm dialog all bind it the same
+	   way. This one was the exception, and it is the one opened from a card on
+	   the patch canvas: the canvas has its own Escape (clear the selection), so
+	   without this the key reached straight past an open dialog and cleared the
+	   selection underneath it while the dialog stayed up. Captured and stopped
+	   for that reason, which is what WaveDrawDialog does. */
+	onMount(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				e.stopPropagation();
+				onClose();
+			}
+		};
+		window.addEventListener('keydown', onKey, true);
+		return () => window.removeEventListener('keydown', onKey, true);
+	});
 
 	/* A stroke sets every point it passes, not just the one under the pointer:
 	   a quick drag would otherwise leave gaps wherever the pointer jumped more
@@ -155,6 +174,11 @@
 					vector-effect="non-scaling-stroke"
 				/>
 			</svg>
+			<!-- Ends the stroke on cancel as well as on up. The browser can take the
+			     pointer away mid-stroke -- a touch claimed by scroll, a palm
+			     rejected -- and `pointerup` never arrives when it does, so `drawing`
+			     stayed true and the curve kept following the pointer with nothing
+			     held down. The wave editor beside this one already handles both. -->
 			<canvas
 				bind:this={canvas}
 				class="absolute inset-0 w-full h-full cursor-crosshair"
@@ -166,6 +190,10 @@
 				}}
 				onpointermove={(e) => drawing && paint(e)}
 				onpointerup={() => {
+					drawing = false;
+					last = null;
+				}}
+				onpointercancel={() => {
 					drawing = false;
 					last = null;
 				}}

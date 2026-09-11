@@ -59,7 +59,14 @@
 		if (a >= 1e4 || (a < 0.01 && a > 0)) return v.toExponential(0).replace('e+', 'e');
 		if (a >= 100) return v.toFixed(0);
 		if (a >= 10) return v.toFixed(1).replace(/\.0$/, '');
-		return v.toFixed(2).replace(/0$/, '').replace(/\.$/, '');
+		/* Both trailing zeros, not one.
+
+		   `/0$/` strips a single character, so 1.00 came back as "1.0" while the
+		   branch above turned 10.0 into "10" -- the same axis reading 1.0 at one
+		   end and 10 at the other. Every audio probe hits it: the fixed -1..1
+		   scale is drawn as "1.0 / 0 / -1.0", one tick with a decimal place and
+		   its own midpoint without. Strip the zeros, then the dot they left. */
+		return v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 	}
 
 	let canvas = $state<HTMLCanvasElement | null>(null);

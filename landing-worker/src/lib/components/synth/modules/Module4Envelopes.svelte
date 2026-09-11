@@ -167,12 +167,26 @@
 		<div
 			class="w-32 shrink-0 flex items-center justify-around gap-0.5 border-l border-white/10 pl-1 h-full py-0.5"
 		>
+			<!-- A, D and R are times in seconds, so they say so.
+
+			     Without a unit `formatDisplay` falls through to `v <= 1 && max <= 1`
+			     and prints a percentage: a 0.4 s attack read "40%", and D the same,
+			     while S -- a real 0..1 proportion, the one control in the row a
+			     percentage is right for -- read "60%" beside them. Three faders
+			     claiming the same units for two different quantities.
+
+			     R escaped only because its max is 1.5, which put it on the decimal
+			     branch reading "0.40" -- the same quantity as A in a third format.
+			     `ms` is what the rest of the synth already shows a time in (REL on
+			     FX, GLIDE on FUSION, FADE on LFO), and it is display-only: the
+			     stored value stays in seconds and the drag is untouched. -->
 			<HardwareFader
 				label="A"
 				value={attackVal}
 				min={0}
 				max={0.8}
 				step={0.001}
+				unit="ms"
 				color={envColor}
 				height={46}
 				description={attackDesc}
@@ -185,6 +199,7 @@
 				min={0.01}
 				max={1.0}
 				step={0.01}
+				unit="ms"
 				color={envColor}
 				height={46}
 				description={decayDesc}
@@ -212,6 +227,7 @@
 					min={0}
 					max={1.5}
 					step={0.02}
+					unit="ms"
 					color={envColor}
 					height={46}
 					description={releaseDesc}

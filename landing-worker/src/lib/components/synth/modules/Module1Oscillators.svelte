@@ -248,7 +248,17 @@
 				onChange={(v) => updateActiveTrack({ noiseGain: v / 100 })}
 			/>
 			<!-- Burst count and spacing for the noise sources -- the 808 clap's
-			     stutter. At 1 the GAP does nothing, which is what its dimmed value says. -->
+			     stutter. At RPT 1 the GAP does nothing: `gateNoiseBursts` returns on
+			     `bursts <= 1` before it reads `noiseRetrigGap` at all.
+
+			     Nothing says so in the panel. This comment used to claim the value
+			     was dimmed to show it, and no such dimming exists here or anywhere
+			     else in racks 1-7 -- a comment describing a feature the code beneath
+			     it does not have. Left as it is rather than invented: the racks have
+			     no dim idiom to follow (Module4 hides an inert fader outright), and
+			     giving one knob its own would be a new convention in the middle of a
+			     fixed grid. Said plainly instead, so the next reader is not looking
+			     for styling that was never written. -->
 			<RotaryKnob
 				label="RPT"
 				value={$currentTrack.noiseRetrig ?? 1}
