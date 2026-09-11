@@ -18,11 +18,13 @@
 		noteName,
 		noteNumber,
 		WAVE_SHAPES,
+		MAP_SHAPES,
 		labelGutter,
 		type ModuleSpec
 	} from '../../../stores/synth-modules';
 	import WaveMenu from '../WaveMenu.svelte';
 	import PickMenu from './PickMenu.svelte';
+	import CurveDrawDialog from './CurveDrawDialog.svelte';
 	import { previewSamples, previewPath, findCustomWave } from '../../../stores/synth-waves';
 	import { getWaveformAbbr, type SynthWaveform, type CustomWave } from '../../../track-data';
 	import AdsrVisualizer from '../AdsrVisualizer.svelte';
@@ -98,6 +100,8 @@
 				return { ...p, min: k.min, max: k.max, step: k.step, unit: k.unit ?? '', notes: !!k.notes };
 			})
 	);
+	let drawingCurve = $state(false);
+
 	let knobs = $derived(spec.params.filter((p) => !p.choices && !p.field && !p.wave));
 
 	/* The LFO's shape, drawn over one cycle. A picture of the wave says which
@@ -267,6 +271,19 @@
 				/>
 			</svg>
 		</div>
+		<!-- DRAW is the one shape that cannot be described by picking it: the
+		     evaluator has always read `drawN` and `d0..dN`, and until now nothing
+		     wrote them, so the menu entry did nothing. The button only appears on
+		     that shape, because on any other there is no table to edit. -->
+		{#if MAP_SHAPES[Math.round(val('shape', 0))]?.id === 'draw'}
+			<button
+				onpointerdown={(e) => e.stopPropagation()}
+				onclick={() => (drawingCurve = true)}
+				class="press w-full px-1.5 py-0.5 border rounded-xs font-black text-[10px] cursor-pointer transition-colors bg-white/5 hover:bg-white/15"
+				style="border-color: color-mix(in srgb, {spec.color} 55%, transparent); color: {spec.color}"
+				>EDIT</button
+			>
+		{/if}
 	{:else if spec.viz === 'pulse'}
 		<!-- Drawn from what PW is actually carrying, so the card shows the wave
 		     the note will play. Unpatched it resolves to 0.5, which is the square
@@ -385,6 +402,24 @@
 		</div>
 	{/if}
 </div>
+
+{#if drawingCurve}
+	<!-- Saved as the params the evaluator already reads: `drawN` and one key per
+	     point. Stored inline rather than in the wave library because the curve
+	     belongs to this node -- two MAPs drawn differently are two curves, and a
+	     shared name would make editing one change the other. -->
+	<CurveDrawDialog
+		initial={val('drawN', 0)
+			? Array.from({ length: Math.round(val('drawN', 0)) }, (_, i) => val(`d${i}`, i / Math.max(1, Math.round(val('drawN', 0)) - 1)))
+			: null}
+		onSave={(pts) => {
+			onParam('drawN', pts.length);
+			pts.forEach((v, i) => onParam(`d${i}`, v));
+			drawingCurve = false;
+		}}
+		onClose={() => (drawingCurve = false)}
+	/>
+{/if}
 
 <style>
 	/* No stepper. The arrows are a browser default on `type="number"`, and at

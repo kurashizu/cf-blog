@@ -194,6 +194,25 @@ describe('the pure nodes', () => {
 		expect(evalPure('map', { a: -1 }, p)).toBe(200);
 	});
 
+	it('reads a drawn table, and is a line until one is drawn', () => {
+		/* DRAW was a menu entry that did nothing: the evaluator has always read
+		   `drawN` and `d0..dN`, and nothing wrote them until the curve editor.
+		   Undrawn it has to pass its input through rather than flatten it -- a
+		   shape nobody has touched should do nothing. */
+		const draw = MAP_SHAPES.findIndex((m) => m.id === 'draw');
+		const plain = { shape: draw, inLo: 0, inHi: 1, outLo: 0, outHi: 1 };
+		expect(evalPure('map', { a: 0.25 }, plain)).toBeCloseTo(0.25, 6);
+		expect(evalPure('map', { a: 0.75 }, plain)).toBeCloseTo(0.75, 6);
+
+		/* Drawn, it follows the table and interpolates between the points, so a
+		   curve drawn at four resolution does not arrive as four steps. */
+		const table = { ...plain, drawN: 3, d0: 0, d1: 1, d2: 1 };
+		expect(evalPure('map', { a: 0 }, table)).toBeCloseTo(0, 6);
+		expect(evalPure('map', { a: 0.25 }, table)).toBeCloseTo(0.5, 6);
+		expect(evalPure('map', { a: 0.5 }, table)).toBeCloseTo(1, 6);
+		expect(evalPure('map', { a: 1 }, table)).toBeCloseTo(1, 6);
+	});
+
 	it('survives a zero-width input range', () => {
 		// Dividing by the span would be NaN; "always the low end" is the sane
 		// reading of a range that has not been set.

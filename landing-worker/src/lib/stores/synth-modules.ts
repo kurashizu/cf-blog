@@ -887,6 +887,240 @@ export const MODULE_SPECS: ModuleSpec[] = [
 		]
 	},
 	{
+		/* The waveform at this point, drawn.
+		 *
+		 * Debugging a patch by ear alone means guessing which of six modules
+		 * turned the signal to mud. A probe tapped off the point in question says
+		 * where it happened.
+		 *
+		 * It has no outlet, because observing is not a stage in making a sound:
+		 * run a second cable to it from wherever you want to look and it sits at
+		 * the end of that branch. Placing one therefore cannot change the patch,
+		 * which is the only way a debugging tool is worth having. */
+		id: 'scope',
+		label: 'SCOPE',
+		group: 'METER',
+		color: '#98c379',
+		descKey: 'synthPatch.mod.scope',
+		inputs: [AUDIO_IN],
+		outputs: [],
+		params: [
+			{ key: 'scopeSpan', label: 'SPAN', min: 1, max: 200, step: 1, def: 20, unit: 'ms', field: true, fixed: true }
+		],
+		viz: 'scope'
+	},
+	{
+		/* The same signal by frequency rather than by time.
+		 *
+		 * A scope says a filter did something; a spectrum says what. The two are
+		 * one measurement viewed two ways and both are worth having on the canvas
+		 * at once, which is why they are separate cards rather than a picker: you
+		 * want to see both, not choose. */
+		id: 'fft',
+		label: 'FFT',
+		group: 'METER',
+		color: '#98c379',
+		descKey: 'synthPatch.mod.fft',
+		inputs: [AUDIO_IN],
+		outputs: [],
+		params: [],
+		viz: 'fft'
+	},
+	{
+		/* How loud, as a number you can read.
+		 *
+		 * The question a scope answers badly -- a trace shows shape, not level --
+		 * and the one that matters when a patch is clipping or inaudible. */
+		id: 'loud',
+		label: 'LOUD',
+		group: 'METER',
+		color: '#98c379',
+		descKey: 'synthPatch.mod.loud',
+		inputs: [AUDIO_IN],
+		outputs: [],
+		params: [],
+		viz: 'meter'
+	},
+	{
+		/* A transfer curve, applied to every sample.
+		 *
+		 * The primitive under distortion, saturation and wavefolding: all three
+		 * are one function run sample by sample, differing only in which
+		 * function. One card with a picker, for the reason FILTER carries eight
+		 * types and OSC every periodic wave.
+		 *
+		 * Not MAP, though the shapes look alike and the temptation to merge them
+		 * was real. MAP is a pure node -- its whole output is one number pulled
+		 * once per note. This is a lookup per sample, which is what *generates
+		 * harmonics*, the thing a distortion exists for and the thing a per-note
+		 * value cannot do at any curve. Same maths, different mechanism, so two
+		 * modules -- exactly as MUL and GAIN are two.
+		 *
+		 * DRIVE is a knob and earns it: how hard to push is the one thing here
+		 * found by ear, and the interesting part of its range is not where the
+		 * numbers are evenly spaced. The tone filter and makeup gain the old
+		 * DRIVE module welded on are not here: those are FILTER and GAIN, and a
+		 * patch that wants them should be able to see and move them. */
+		id: 'shape',
+		label: 'SHAPE',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.shape',
+		/* No socket for DRIVE. The curve is a table computed when the note is
+		   built, so there is no AudioParam for a cable to land on -- driving it
+		   would mean rebuilding the lookup per sample, which is what an
+		   AudioWorklet is for and not what this is. `fixed` says so on the knob,
+		   which is what stops the canvas offering it as a destination. */
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: [
+			{
+				key: 'shapeKind',
+				label: 'CURV',
+				min: 0,
+				max: 2,
+				step: 1,
+				def: 0,
+				choices: ['SOFT', 'HARD', 'FOLD']
+			},
+			{ key: 'shapeDrive', label: 'DRV', min: 0.1, max: 100, step: 0.1, def: 25, unit: '%', scale: 'log', fixed: true }
+		]
+	},
+	{
+		/* Signals added together, in a place you can see.
+		 *
+		 * Web Audio sums anything that shares a destination, so three cables into
+		 * one inlet already add -- this is a named node for it, and the reason to
+		 * have one is legibility rather than capability. A patch where the mixing
+		 * happens at a card reads as a mix; the same patch with three cables
+		 * converging on a filter's inlet reads as a mistake.
+		 *
+		 * No knobs: the level of each leg is a GAIN on that leg, where it belongs
+		 * and where it can be automated separately. A mixer with four level knobs
+		 * would be four GAINs welded on. */
+		id: 'sum',
+		label: 'SUM',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.sum',
+		inputs: [AUDIO_IN],
+		outputs: [AUDIO_OUT],
+		params: []
+	},
+	{
+		/* Two signals multiplied, which is ring modulation.
+		 *
+		 * A gain node whose gain is driven by audio *is* a multiplication, and
+		 * the sum and difference tones it makes are inharmonic -- bells, gongs,
+		 * the metallic half of a drum kit. That is a different sound from
+		 * anything a filter reaches, which is why it is a module and not a
+		 * special case of GAIN: GAIN's level is a control value, and this one is
+		 * a signal at audio rate.
+		 *
+		 * Both legs are audio, and it is symmetric -- A times B is B times A --
+		 * so the two inlets are not labelled differently. */
+		id: 'ring',
+		label: 'RING',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.ring',
+		inputs: [AUDIO_IN, { id: 'b', label: 'B', kind: 'audio' }],
+		outputs: [AUDIO_OUT],
+		params: []
+	},
+	{
+		/* One signal taken away from another.
+		 *
+		 * B arrives inverted and both are summed, which cancels whatever the two
+		 * share and leaves what differs. That is how a phase-flipped copy becomes
+		 * a filter no biquad reaches, and it is the operation mid/side is built
+		 * from. Reachable as GAIN at -1 into SUM, and kept because the cancelling
+		 * is the point rather than an incidental: a card named for it says what
+		 * the patch is doing. */
+		id: 'diff',
+		label: 'DIFF',
+		group: 'SHAPE',
+		color: '#61afef',
+		descKey: 'synthPatch.mod.diff',
+		inputs: [AUDIO_IN, { id: 'b', label: 'B', kind: 'audio' }],
+		outputs: [AUDIO_OUT],
+		params: []
+	},
+	{
+		/* Placing the sound between the speakers.
+		 *
+		 * A module rather than a knob on the output, so a patch can put the body
+		 * somewhere the string is not -- which is the whole difference between an
+		 * instrument in a room and two instruments panned apart.
+		 *
+		 * POS is typed, not turned. The temptation was to call a pan position
+		 * "found by ear" and keep a dial, but the values anyone reaches for are
+		 * 0, -100, 100 and the odd 30 -- numbers, on a plain symmetric range,
+		 * which is exactly what the knob rule says is a field. */
+		id: 'pan',
+		label: 'PAN',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.pan',
+		inputs: [AUDIO_IN, { id: 'panPos', label: 'POS', kind: 'mod', role: 'cv' }],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
+		params: [{ key: 'panPos', label: 'POS', min: -100, max: 100, step: 1, def: 0, field: true }]
+	},
+	{
+		/* A stereo signal taken apart, so the two sides can differ.
+		 *
+		 * A patch that filters the left and saturates the right is not reachable
+		 * any other way: every other module treats what it is given as one thing.
+		 * The outlets are `left` and `right` rather than two plain signals, so
+		 * the lattice knows each is one channel -- which is what makes MERGE the
+		 * visible step back rather than something Web Audio does quietly. */
+		id: 'split',
+		label: 'SPLIT',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.split',
+		inputs: [{ id: 'in', label: 'IN', kind: 'audio', role: 'stereo' }],
+		outputs: [
+			{ id: 'out', label: 'L', kind: 'audio', role: 'left' },
+			{ id: 'r', label: 'R', kind: 'audio', role: 'right' }
+		],
+		params: []
+	},
+	{
+		/* Two mono paths back into one stereo signal.
+		 *
+		 * The other half of SPLIT, and the only way a divided patch becomes one
+		 * output again. */
+		id: 'merge',
+		label: 'MERGE',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.merge',
+		inputs: [
+			{ id: 'in', label: 'L', kind: 'audio', role: 'mono' },
+			{ id: 'r', label: 'R', kind: 'audio', role: 'mono' }
+		],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'stereo' }],
+		params: []
+	},
+	{
+		/* Both channels summed to one, halved so a centred signal keeps its level
+		 * rather than doubling.
+		 *
+		 * The conversion the lattice refuses to do quietly: Web Audio would fold
+		 * a pair into a mono inlet without saying so, and a patch that sounds
+		 * narrow would give no hint that a stereo stage was collapsed three
+		 * modules upstream. This is that fold, on the canvas. */
+		id: 'mono',
+		label: 'MONO',
+		group: 'STEREO',
+		color: '#56b6c2',
+		descKey: 'synthPatch.mod.mono',
+		inputs: [{ id: 'in', label: 'IN', kind: 'audio', role: 'stereo' }],
+		outputs: [{ id: 'out', label: 'OUT', kind: 'audio', role: 'mono' }],
+		params: []
+	},
+	{
 		/* Sound read as a value, sign and all.
 		 *
 		 * The bridge FOLLOW is not. FOLLOW answers "how loud", and loudness has

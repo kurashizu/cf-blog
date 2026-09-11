@@ -489,6 +489,10 @@ describe('every parameter the engine reads is declared', () => {
 		   any note is built. */
 		const CANVAS_READ = new Set([
 			'const.kind',
+			/* Read by ProbeDisplay while it draws, not by the engine: how much of
+			   the trace to show is a property of the picture rather than of the
+			   sound, and a probe deliberately changes nothing about the patch. */
+			'scope.scopeSpan',
 			/* The execution chain, read where execution is resolved rather than
 			   where audio is built -- none of the three makes a sound, so none of
 			   them passes through the module builder and its `p()` at all.

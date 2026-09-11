@@ -31,6 +31,8 @@
 		// either way up: this is a VCA and an inverter at once.
 		gain: 'M3 3l10 5-10 5zM1 8h2M13 8h2',
 		drive: 'M1 8q2-6 4 0t4 0 4-6',
+		// A curve that flattens at both ends: the transfer function itself.
+		shape: 'M1 13q3 0 4-5t4-5h6',
 		eq: 'M3 13V6M8 13V3M13 13V9M1 6h4M6 3h4M11 9h4',
 		blend: 'M1 4h6q3 0 3 4t3 4h2M1 12h6',
 		reed: 'M2 8h4q2 0 3-4 1 8 3 4h2',

@@ -1202,6 +1202,56 @@ class ModularSynth {
 				return { in: finp, out: lift, mod };
 			}
 
+			case 'shape': {
+				/* A transfer curve: every sample looked up in a table.
+        
+           The primitive under distortion, saturation and wavefolding -- all
+           three are one function applied sample by sample, differing only in
+           which function. That is why it is one module with a picker rather
+           than three cards, the same argument FILTER's eight types and OSC's
+           waveforms rest on.
+        
+           Not MAP, though the shapes look alike. MAP is a pure node: its whole
+           output is one number pulled once per note. This is a `WaveShaperNode`
+           doing a lookup per sample, which is what generates harmonics -- the
+           thing a distortion is *for* and the thing a per-note value cannot do.
+           Same curve, different mechanism, so two modules, exactly as MUL and
+           GAIN are two.
+        
+           The tone filter and the makeup gain the old DRIVE welded on are gone:
+           those are FILTER and GAIN, and a patch that wants them can see them.
+           What is left is the curve. */
+				const shaper = ctx.createWaveShaper();
+				const drive = Math.max(0, p('shapeDrive', 25) / 100);
+				const n = 1024;
+				const curve = new Float32Array(n);
+				const kind = Math.round(p('shapeKind', 0));
+				const k = 1 + drive * 40;
+				for (let i = 0; i < n; i++) {
+					const x = (i / (n - 1)) * 2 - 1;
+					if (kind === 1) {
+						// HARD: flat above the threshold. The knee a limiter has.
+						const lim = 1 - drive * 0.9;
+						curve[i] = Math.max(-lim, Math.min(lim, x)) / (lim || 1);
+					} else if (kind === 2) {
+						/* FOLD: past the limit it turns back rather than flattening.
+						   A triangle through it becomes a different waveform at every
+						   setting, which is the sound nothing else here makes. */
+						const g = x * (1 + drive * 4);
+						curve[i] = Math.asin(Math.sin(g * Math.PI * 0.5)) / (Math.PI * 0.5);
+					} else {
+						// SOFT: tanh, the saturation curve. Normalised so the ends stay
+						// at the ends whatever the drive.
+						curve[i] = Math.tanh(x * k) / Math.tanh(k);
+					}
+				}
+				shaper.curve = curve;
+				/* 2x, because a lookup table makes harmonics above the sample rate
+           and they fold back down as tones that were never played. */
+				shaper.oversample = '2x';
+				return { in: shaper, out: shaper, mod };
+			}
+
 			case 'tocv': {
 				/* Sound read as a value, with its sign intact.
         
