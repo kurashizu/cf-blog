@@ -225,7 +225,12 @@
 	     One button, whatever the wave, because the list grows: four shapes plus
 	     however many have been drawn. A segmented row would set the card's width
 	     from the number of waves, so a player who drew twenty would get a card
-	     twenty buttons wide. The menu itself is the one racks 1-7 use. -->
+	     twenty buttons wide. The menu itself is the one racks 1-7 use.
+
+	     `compact` puts a 34px copy of the curve inside the trigger, which is
+	     what a card with no preview above wants. Where the full-width one is
+	     drawn it would be the same shape twice on one card, so the button keeps
+	     the name and the caret and drops the picture. -->
 	{#each wavePickers as p (p.key)}
 		{@const w = waveOf(p.key)}
 		<WaveMenu
@@ -233,7 +238,7 @@
 			value={w}
 			color={spec.color}
 			sections={['BASIC', 'CUSTOM']}
-			compact
+			compact={spec.viz !== 'wavepick'}
 			onPick={(nw) => onWave?.(p.key, nw)}
 			onParam={() => {}}
 			onDraw={() => onDrawWave?.(p.key)}
