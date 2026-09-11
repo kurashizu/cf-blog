@@ -806,11 +806,25 @@ describe('regressions the string tests could not see', () => {
 		expect(SYNTH).toContain('const knob = (');
 		expect(SYNTH.length).toBeGreaterThan(10000);
 		const raw = [...SYNTH.matchAll(/(\w+)\.(?:gain|frequency|Q|pan)\.value = p\('(\w+)'/g)];
-		/* One exception, and it is not a knob: LFO's FM inlet takes its depth
-		   from the rate, so binding it would register `lfoRate` twice and
-		   overwrite the oscillator's own frequency as that knob's target. */
-		const unbound = raw.filter((m) => !(m[1] === 'fm' && m[2] === 'lfoRate'));
+		/* Two exceptions, neither of them an unbound knob.
+		
+		   LFO's FM inlet takes its depth from the rate, so binding it would
+		   register `lfoRate` twice and overwrite the oscillator's own frequency
+		   as that knob's target.
+		
+		   OSC's FREQ is registered, just not through `knob`: FM needs the base to
+		   be *zero* when a signal drives the port, and `knob` writes the resolved
+		   value unconditionally. So it assigns through `p` -- which returns 0 for
+		   a signal-driven port -- and registers the param itself. The rule here
+		   is "a param a knob writes must also be reachable by a cable", and OSC
+		   meets it by the second route rather than escaping it. */
+		const unbound = raw.filter(
+			(m) => !(m[1] === 'fm' && m[2] === 'lfoRate') && !(m[1] === 'osc' && m[2] === 'pitch')
+		);
 		expect(unbound.map((m) => m[0])).toEqual([]);
+		/* Checked rather than trusted: without this the exemption above would be
+		   a hole in the rule it is written into. */
+		expect(SYNTH).toContain("mod.set('pitch', osc.frequency)");
 	});
 
 	it('applies a value once, not once per mechanism', () => {

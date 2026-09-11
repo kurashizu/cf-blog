@@ -1184,20 +1184,38 @@ class ModularSynth {
            anything was patched into it, so every OSC tracked the keyboard and a
            fixed drone was unsayable -- and, worse, the cable you could see made
            no difference to what you heard. */
-				osc.frequency.value = cvIn(probeKey, 'pitch', 220);
+				/* The base frequency, and zero when a *signal* drives FREQ.
+        
+           `p` is the discriminator: it returns 0 exactly when the resolver says
+           a signal reaches this port, and the resolved value otherwise. So a
+           CONST of 440 sets the oscillator to 440 and is not also connected
+           below, while an oscillator patched into FREQ leaves the base at 0 and
+           arrives as a summed signal on the param -- which is what FM is. */
+				osc.frequency.value = p('pitch', 220);
 				const g = ctx.createGain();
 				osc.connect(g);
 				sources.push(osc);
-				/* PITCH is read as a value, above, and not also registered as a
-           modulation destination.
+				/* FREQ is registered, which is what makes FM sayable.
         
-           Doing both put the same cable through twice: FREQ's 440 became the
-           oscillator's base frequency *and* was connected to that frequency as a
-           signal, so the note came out an octave sharp. Audio-rate FM would need
-           the param registered here, but then a constant would have to be
-           excluded from it -- and the two cannot be told apart at this point,
-           because a resolved value and a connected signal look identical to the
-           inlet. Value wins: it is what every other pitched module does. */
+           This used to be value-only, under a comment saying audio-rate FM
+           "would need the param registered here, but then a constant would have
+           to be excluded from it -- and the two cannot be told apart at this
+           point". They can, and the tool for it was already in the file: `p`
+           asks `resolver.isDrivenBySignal`, which is the same question that
+           stops a GAIN's knob fighting the cable that claimed it.
+        
+           So both mechanisms are wired and exactly one acts per cable. A value
+           sets `frequency.value` and is skipped by the mod loop; a signal leaves
+           the base at 0 and sums onto the param. Measured before this: an
+           oscillator patched into FREQ rendered byte-identical to no cable at
+           all -- 0.4813 RMS either way -- so the entire FM family was
+           undrawable while the socket lit up as though it were working.
+        
+           A modulator arrives in hertz of deviation, which is what an AudioParam
+           on `frequency` means, so the depth is a GAIN on the way in. That is
+           the same "the amount is a cable you can see" argument the rest of the
+           catalogue makes. */
+				mod.set('pitch', osc.frequency);
 				return { in: null, out: g, mod };
 			}
 

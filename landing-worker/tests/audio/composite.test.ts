@@ -616,21 +616,14 @@ describe('the mod inlets a signal cannot reach, and why each one is', () => {
 	   not. That turns "which frequency" into "how loud", which is what the bench
 	   can read. */
 	const rows: Row[] = [
-		{
-			name: 'osc.pitch',
-			read: slice2,
-			build: (into) =>
-				graphOf(
-					[...SRC, { id: 'o', type: 'osc' }, { id: 'fl', type: 'filter' }],
-					[
-						EXEC_TO_OUT,
-						...into('o', 'pitch'),
-						{ from: 'o', fromPort: 'out', to: 'fl', toPort: 'in' },
-						{ from: 'fl', fromPort: 'out', to: 'output', toPort: 'in' }
-					],
-					{ ...constAt('cv', 7, 200), 'fl.type': 0, 'fl.cutoff': 300, 'fl.q': 0.7, 'o.pitch': 4000 }
-				)
-		},
+		/* `osc.pitch` was the first row of this table and is not here any more.
+		
+		   It took a value and ignored a signal, and the engine comment said the
+		   two "cannot be told apart at this point". They can -- `p` already asks
+		   `resolver.isDrivenBySignal`, the same question that stops a claimed
+		   knob fighting its cable -- so FREQ is registered now and a signal into
+		   it is frequency modulation. See the FM test below; this row would
+		   assert the absence of a whole synthesis family. */
 		{
 			/* Cancellation rather than a filter: two oscillators at one frequency
 			   summed, and half a turn of phase on one of them is silence. */
@@ -1658,5 +1651,92 @@ describe('WAIT on one branch and not the other, in one render', () => {
 		const none = (await render(twoBranches(0), 16, 2)).envelope;
 		expect(none[1]).toBeCloseTo(BARE * 0.5, 3);
 		expect(none[8]).toBeCloseTo(BARE * 0.5, 3);
+	}, 30000);
+});
+
+describe('FM: an oscillator modulating another one at audio rate', () => {
+	/* The synthesis family the catalogue could not reach, and the reason it
+	   could not is worth stating: OSC's FREQ was read as a value and never
+	   registered as a modulation destination, under a comment arguing that a
+	   resolved constant and a connected signal "cannot be told apart at this
+	   point". They can. `p` asks `resolver.isDrivenBySignal` -- the same
+	   question that stops a claimed knob fighting the cable that claimed it --
+	   so the base frequency is 0 exactly when a signal drives the port, and the
+	   two mechanisms never both act.
+
+	   Measured before the fix: a modulator patched into FREQ rendered
+	   byte-identical to no cable at all, 0.4813 RMS either way. The cable drew
+	   and the socket lit, which is the fifth time that shape of bug has
+	   shipped. */
+	const fmRig = (depthHz: number, listenHz: number) =>
+		graphOf(
+			[
+				{ id: 'cm', type: 'const' },
+				{ id: 'm', type: 'osc' },
+				{ id: 'g', type: 'gain' },
+				{ id: 'cc', type: 'const' },
+				{ id: 'car', type: 'osc' },
+				{ id: 'bp', type: 'filter' }
+			],
+			[
+				EXEC_TO_OUT,
+				{ from: 'cc', fromPort: 'out', to: 'car', toPort: 'pitch' },
+				{ from: 'cm', fromPort: 'out', to: 'm', toPort: 'pitch' },
+				{ from: 'm', fromPort: 'out', to: 'g', toPort: 'in' },
+				{ from: 'g', fromPort: 'out', to: 'car', toPort: 'pitch' },
+				{ from: 'car', fromPort: 'out', to: 'bp', toPort: 'in' },
+				{ from: 'bp', fromPort: 'out', to: 'output', toPort: 'in' }
+			],
+			{
+				// kind 7 is FRQ. Carrier 440, modulator 220: sidebands at 220 and 660.
+				...constAt('cm', 7, 220),
+				...constAt('cc', 7, 440),
+				'g.level': depthHz,
+				// type 2 is BP, narrow enough to sit on one partial.
+				'bp.type': 2,
+				'bp.cutoff': listenHz,
+				'bp.q': 28
+			}
+		);
+
+	it('creates sidebands, which is what makes it FM and not tremolo', async () => {
+		/* Heard at 880 Hz, where a plain 440 carrier has almost nothing. The
+		   modulator's depth is a GAIN on the way in because an AudioParam on
+		   `frequency` takes hertz of deviation -- the amount is a cable you can
+		   see, which is the argument the rest of this catalogue makes.
+
+		   Measured 0.0114 / 0.0176 / 0.1507 / 0.1814 at 0, 100, 400 and 900 Hz of
+		   deviation: sixteen times the energy at full depth. A level assertion
+		   would not do here -- FM changes the spectrum, not the loudness, and the
+		   broadband reading barely moves. */
+		const at = async (depth: number) => (await render(fmRig(depth, 880), 8, 1)).envelope[4];
+		const none = await at(0);
+		const some = await at(400);
+		const lots = await at(900);
+		expect(some).toBeGreaterThan(none * 4);
+		expect(lots).toBeGreaterThan(some);
+		expect(lots / none, `sideband growth: ${none} -> ${lots}`).toBeGreaterThan(8);
+	}, 60000);
+
+	it('still lets a constant set the pitch, without applying it twice', async () => {
+		/* The other half, and the failure the old comment was protecting against:
+		   registering the param while a value also reached it put the same cable
+		   through twice and the note came out an octave sharp.
+
+		   A CONST of 440 into FREQ must be a plain 440 tone -- full level, and
+		   the same reading as an oscillator with nothing patched at all. */
+		const plain = graphOf(
+			[
+				{ id: 'cc', type: 'const' },
+				{ id: 'o', type: 'osc' }
+			],
+			[
+				EXEC_TO_OUT,
+				{ from: 'cc', fromPort: 'out', to: 'o', toPort: 'pitch' },
+				{ from: 'o', fromPort: 'out', to: 'output', toPort: 'in' }
+			],
+			constAt('cc', 7, 440)
+		);
+		expect((await render(plain, 8, 1)).envelope[4]).toBeCloseTo(BARE, 3);
 	}, 30000);
 });

@@ -2869,10 +2869,22 @@ describe('an audio cycle silences the whole voice, not just the loop', () => {
 		   a `mod` port, so the topological sort never sees a control loop.
 
 		   An oscillator through TO-CV back onto its own PITCH is that -- an audio
-		   cycle by any naive reading of the canvas, and it builds and sounds at
-		   0.1925. Without this the test above would be indistinguishable from "the
-		   engine refuses any loop at all", which would be a different and much
-		   larger claim. */
+		   cycle by any naive reading of the canvas, and it builds without error.
+		   Without this the test above would be indistinguishable from "the engine
+		   refuses any loop at all", which would be a different and much larger
+		   claim.
+
+		   It renders *silence*, and the reason is worth stating because it looks
+		   like a defect and is not. FREQ is registered now, so a signal driving
+		   it leaves the base frequency at 0 -- and the only thing reaching this
+		   oscillator's frequency is its own output, which starts at 0. Zero hertz
+		   produces no movement, so it stays there: a DC latch rather than a tone.
+
+		   Self-FM needs a base to start from, and a patch can say so -- a TO-SIG
+		   carrying 300 alongside the feedback gives 0.1925 at no depth and moves
+		   to 0.1847 and 0.1954 at 200 and 800 of deviation. What this test pins
+		   is the narrower claim it was written for: the ring *builds*, where an
+		   audio ring does not. */
 		const selfFm = graphOf(
 			[
 				{ id: 'o', type: 'osc' },
@@ -2888,7 +2900,26 @@ describe('an audio cycle silences the whole voice, not just the loop', () => {
 			],
 			{ 'g.level': 0.4, 'o.pitch': 300 }
 		);
-		expect((await render(selfFm, 8, 1)).envelope[2], 'a mod ring should build').toBeCloseTo(
+		const ringed = await render(selfFm, 8, 1);
+		expect(ringed.ok, 'a mod ring should build').toBe(true);
+		expect(ringed.builtVoice, 'a mod ring should make a voice').toBe(true);
+		/* And the audio ring it resembles does not build at all -- that contrast
+		   is the whole point of the pair. */
+		const openRing = graphOf(
+			[
+				{ id: 'o', type: 'osc' },
+				{ id: 'tc', type: 'tocv' },
+				{ id: 'g', type: 'gain' }
+			],
+			[
+				EXEC_TO_OUT,
+				{ from: 'o', fromPort: 'out', to: 'tc', toPort: 'in' },
+				{ from: 'o', fromPort: 'out', to: 'g', toPort: 'in' },
+				{ from: 'g', fromPort: 'out', to: 'output', toPort: 'in' }
+			],
+			{ 'g.level': 0.4, 'o.pitch': 300 }
+		);
+		expect((await render(openRing, 8, 1)).envelope[2], 'the same patch unlooped').toBeCloseTo(
 			0.1925,
 			3
 		);
