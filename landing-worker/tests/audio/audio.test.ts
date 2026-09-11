@@ -2756,8 +2756,22 @@ describe('SPACE: DECAY runs the way its label reads', () => {
 			);
 		}
 		// And the ends really are a short room and a long one, not five near-equal tails.
-		expect(readings[0]).toBeLessThanOrEqual(12);
-		expect(readings[4]).toBeGreaterThanOrEqual(22);
+		/* The ends, with room for the jitter that is actually there.
+		
+		   Measured over six sweeps: the shortest tail lands on slice 11 or 12 and
+		   the longest on 22 or 23. The source is an 8 ms noise burst, so where
+		   the tail crosses a slice boundary moves by one either way -- and the
+		   first version of these two asserted `<= 12` and `>= 22`, which is to
+		   say exactly the measured extremes with nothing to spare. They failed
+		   about one run in eight.
+		
+		   The span is what carries the claim anyway: eleven slices between the
+		   ends of the knob, against a tolerance of one. A DECAY that did nothing
+		   would put all five readings on the same slice and fail the ordering
+		   above long before these. */
+		expect(readings[0], `short end: ${JSON.stringify(readings)}`).toBeLessThanOrEqual(14);
+		expect(readings[4], `long end: ${JSON.stringify(readings)}`).toBeGreaterThanOrEqual(20);
+		expect(readings[4] - readings[0], `span: ${JSON.stringify(readings)}`).toBeGreaterThan(6);
 	}, 90000);
 });
 

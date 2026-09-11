@@ -21,9 +21,22 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
 	test: {
 		include: ['tests/audio/**/*.test.ts'],
-		// A render plus a browser launch; the default 5s is not enough.
+		/* A render plus a browser launch; the default 5s is nowhere near enough.
+		
+		   The per-test default is generous because the truth-table tests are
+		   loops: LOGIC's is twenty renders (four operand rows by five ops) and
+		   CMP's is twelve, each a real offline render of a held note. Individual
+		   tests raise it further where they need to.
+		
+		   `hookTimeout` covers `beforeAll`, which launches Chrome and waits for
+		   the bench to come up -- on a cold start that is seconds, not
+		   milliseconds, and a machine under load from three test files at once
+		   made a 60s ceiling close enough to matter. One file alone measures
+		   108s of test time; when all three run the whole suite is minutes, and a
+		   hook that times out fails the *file* rather than any assertion in it,
+		   which is how this showed up: a FAIL with no test named. */
 		testTimeout: 45000,
-		hookTimeout: 60000,
+		hookTimeout: 120000,
 		// One browser, one page, shared: launching Chrome per file costs more
 		// than every render in the file put together.
 		fileParallelism: false
