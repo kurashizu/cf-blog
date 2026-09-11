@@ -13,6 +13,9 @@
 		activeKitName,
 		applyPresetAt,
 		saveActiveAsPreset,
+		saveActivePreset,
+		canOverwritePreset,
+		presetSaveAsRequest,
 		newPreset,
 		newAdvancedPreset,
 		presetModified,
@@ -143,9 +146,55 @@
 		applyKit(kit);
 	}
 
+	/* Two saves, because they answer different questions.
+	
+	   SAVE writes the live sound back over the patch it came from, keeping its
+	   name. SAVE AS makes a new one. Every save used to be the second: the name
+	   went through `uniqueName` whether or not a patch was open, so editing a
+	   sound you had already saved and saving again left SOUND and SOUND 2 with
+	   no way to say "no, that one".
+	
+	   A built-in cannot be written over -- it is what every other patch was
+	   compared against while it was built, and overwriting one would lose the
+	   original with nothing to go back to -- so SAVE is inert there and SAVE AS
+	   is the way out. */
 	function save() {
+		if (!$canOverwritePreset) {
+			startSaveAs();
+			return;
+		}
 		close();
-		saveActiveAsPreset();
+		saveActivePreset();
+	}
+
+	/* Named in the menu rather than in a dialog, using the row editor that
+	   renaming already uses: one way to type a patch name, in the place the
+	   names are. */
+	let savingAs = $state(false);
+	let saveAsName = $state('');
+
+	function startSaveAs() {
+		saveAsName = '';
+		savingAs = true;
+		open = true;
+	}
+
+	/* Ctrl/Cmd+Shift+S arrives as a bump on this store, because the shortcut is
+	   bound on the window and the row it opens lives in here. Skipped on the
+	   first run, or the menu would spring open the moment the page loaded. */
+	let seenSaveAs = $state(0);
+	$effect(() => {
+		const n = $presetSaveAsRequest;
+		if (n !== seenSaveAs) {
+			seenSaveAs = n;
+			if (n > 0) startSaveAs();
+		}
+	});
+
+	function commitSaveAs() {
+		savingAs = false;
+		close();
+		saveActiveAsPreset(saveAsName);
 	}
 
 	function startNew() {
@@ -622,18 +671,59 @@
 
 				<!-- These act on what is loaded now, not on the library, so they
 				     sit apart from the browsing above them. -->
+				{#if savingAs}
+					<!-- The name, typed where the names are. Enter commits, Escape
+					     backs out; the same row editor renaming uses. -->
+					<div class="border-t border-white/10 shrink-0 flex items-center gap-1 px-1 py-1">
+						<!-- svelte-ignore a11y_autofocus -->
+						<input
+							autofocus
+							bind:value={saveAsName}
+							placeholder="NAME"
+							onkeydown={(e) => {
+								e.stopPropagation();
+								if (e.key === 'Enter') commitSaveAs();
+								else if (e.key === 'Escape') savingAs = false;
+							}}
+							class="flex-1 min-w-0 bg-black/60 border border-[#98c379]/50 rounded-xs px-1.5 py-1 text-xs font-mono text-white focus:border-[#98c379] focus:outline-none"
+						/>
+						<button
+							onclick={commitSaveAs}
+							class="press px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors text-[#98c379] hover:bg-[#98c379]/20"
+							>OK</button
+						>
+						<button
+							onclick={() => (savingAs = false)}
+							class="press px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors text-white/50 hover:bg-white/10"
+							>✕</button
+						>
+					</div>
+				{/if}
 				<div class="border-t border-white/10 shrink-0 flex items-center gap-1 px-1 py-1">
 					<button
 						onclick={save}
+						disabled={!$canOverwritePreset}
+						class="press flex-1 min-w-0 px-2 py-1 rounded-xs font-bold transition-colors flex items-center gap-1.5 {$canOverwritePreset
+							? 'cursor-pointer text-[#98c379] hover:bg-[#98c379]/20'
+							: 'cursor-not-allowed text-white/25'}"
+						title={$canOverwritePreset
+							? $t('synth.preset.saveActiveHint', {
+									targetPossessive: percussion
+										? $t('synth.preset.targetKeyPossessive')
+										: $t('synth.preset.targetTrackPossessive')
+								})
+							: $t('synth.preset.saveBuiltinHint')}
+					>
+						<span class="shrink-0">▣</span>
+						<span>{$t('synth.preset.saveShort')}</span>
+					</button>
+					<button
+						onclick={startSaveAs}
 						class="press flex-1 min-w-0 px-2 py-1 rounded-xs cursor-pointer font-bold transition-colors flex items-center gap-1.5 text-[#98c379] hover:bg-[#98c379]/20"
-						title={$t('synth.preset.saveActiveHint', {
-							targetPossessive: percussion
-								? $t('synth.preset.targetKeyPossessive')
-								: $t('synth.preset.targetTrackPossessive')
-						})}
+						title={$t('synth.preset.saveAsHint')}
 					>
 						<span class="shrink-0">＋</span>
-						<span>{$t('synth.preset.saveShort')}</span>
+						<span>{$t('synth.preset.saveAsShort')}</span>
 					</button>
 					<button
 						onclick={importPreset}

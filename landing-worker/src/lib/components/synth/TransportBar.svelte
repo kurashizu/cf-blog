@@ -9,6 +9,12 @@
 		type NoteDurationDiv
 	} from '../../synth';
 	import { isSynthSettingsOpen } from '../../stores/synth-settings';
+	import { get } from 'svelte/store';
+	import {
+		canOverwritePreset,
+		openPresetSaveAs,
+		saveActivePreset
+	} from '../../stores/synth-presets';
 	import {
 		bpm,
 		setBpm,
@@ -99,6 +105,32 @@
 	 * Space (sustain) and , . -- those keys are transport keys only when it is
 	 * off, which `suspendNavHotkeys` reports.
 	 */
+	/**
+	 * Ctrl/Cmd+S saves the patch, and Shift saves it as a new one.
+	 *
+	 * A separate handler because the transport's own bails out on Ctrl and Cmd
+	 * -- those belong to the editor and to the site's Ctrl+digit navigation --
+	 * and this is the one exception.
+	 *
+	 * `preventDefault` is the point of it: without that the browser offers to
+	 * save the page as a file, which is never what Ctrl+S means inside an
+	 * instrument. Taken even when the shortcut cannot act, so a built-in patch
+	 * does not fall through to the download dialog; SAVE AS opens instead,
+	 * which is the way out the menu offers too.
+	 */
+	function onSaveHotkey(e: KeyboardEvent) {
+		if (e.defaultPrevented || e.altKey) return;
+		if (!(e.ctrlKey || e.metaKey)) return;
+		if (e.key !== 's' && e.key !== 'S') return;
+		const target = e.target as HTMLElement | null;
+		const tag = target?.tagName?.toLowerCase() ?? '';
+		// A field being typed into keeps its own Ctrl+S, if it has one.
+		if (['input', 'textarea', 'select'].includes(tag) || target?.isContentEditable) return;
+		e.preventDefault();
+		if (e.shiftKey || !get(canOverwritePreset)) openPresetSaveAs();
+		else saveActivePreset();
+	}
+
 	function onTransportHotkey(e: KeyboardEvent) {
 		if (e.defaultPrevented) return;
 		if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -203,7 +235,12 @@
 	});
 </script>
 
-<svelte:window onkeydown={onTransportHotkey} />
+<svelte:window
+	onkeydown={(e) => {
+		onSaveHotkey(e);
+		onTransportHotkey(e);
+	}}
+/>
 
 <!-- Row 1: logo/project management + BPM/LEN/METER -->
 <div

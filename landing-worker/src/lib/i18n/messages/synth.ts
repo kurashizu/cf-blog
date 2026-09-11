@@ -157,6 +157,11 @@ export default {
 		'synth.preset.saveActiveHint':
 			'Keep the active {targetPossessive} current sound (racks 1-6 and AIR; not volume, pan or notes) as a patch in this browser',
 		'synth.preset.saveShort': 'SAVE',
+		'synth.preset.saveAsShort': 'SAVE AS',
+		'synth.preset.saveAsHint':
+			'Save the current sound as a new patch under a name you type (Ctrl/Cmd+Shift+S)',
+		'synth.preset.saveBuiltinHint':
+			'A built-in patch cannot be overwritten -- use SAVE AS to keep this sound as your own',
 		'synth.preset.importShort': 'IMPORT',
 		'synth.preset.exportShort': 'EXPORT',
 		'synth.preset.myPresetsShort': 'MINE',
@@ -636,6 +641,9 @@ export default {
 		'synth.preset.saveActiveHint':
 			'将当前{targetPossessive}音色（机架 1-6 与 AIR；不含音量、声像或音符）保存为浏览器本地的一个音色',
 		'synth.preset.saveShort': '保存',
+		'synth.preset.saveAsShort': '另存为',
+		'synth.preset.saveAsHint': '把当前音色另存为一个新的 patch,名字自己取(Ctrl/Cmd+Shift+S)',
+		'synth.preset.saveBuiltinHint': '内置 patch 不能覆盖 —— 用「另存为」把这个音色存成你自己的',
 		'synth.preset.importShort': '导入',
 		'synth.preset.exportShort': '导出',
 		'synth.preset.myPresetsShort': '我的',
@@ -1075,6 +1083,9 @@ export default {
 		'synth.preset.saveActiveHint':
 			'將目前{targetPossessive}音色（機架 1-6 與 AIR；不含音量、聲像或音符）儲存為瀏覽器本機的一個音色',
 		'synth.preset.saveShort': '儲存',
+		'synth.preset.saveAsShort': '另存新檔',
+		'synth.preset.saveAsHint': '把目前音色另存為新的 patch,名稱自訂(Ctrl/Cmd+Shift+S)',
+		'synth.preset.saveBuiltinHint': '內建 patch 無法覆寫 —— 用「另存新檔」把這個音色存成你自己的',
 		'synth.preset.importShort': '匯入',
 		'synth.preset.exportShort': '匯出',
 		'synth.preset.myPresetsShort': '我的',
@@ -1533,6 +1544,10 @@ export default {
 		'synth.preset.saveActiveHint':
 			'アクティブな{targetPossessive}現在のサウンド（ラック1-6と AIR。音量・パン・ノートは含みません）をこのブラウザにパッチとして保存します',
 		'synth.preset.saveShort': '保存',
+		'synth.preset.saveAsShort': '名前を付けて',
+		'synth.preset.saveAsHint': '現在のサウンドを入力した名前で新しいパッチとして保存します（Ctrl/Cmd+Shift+S）',
+		'synth.preset.saveBuiltinHint':
+			'内蔵パッチは上書きできません -- SAVE AS で自分のパッチとして保存してください',
 		'synth.preset.importShort': '読込',
 		'synth.preset.exportShort': '書出',
 		'synth.preset.myPresetsShort': 'マイ',
@@ -2024,6 +2039,10 @@ export default {
 		'synth.preset.saveActiveHint':
 			'활성 {targetPossessive} 현재 사운드(랙 1-6과 AIR, 볼륨·팬·노트는 제외)를 이 브라우저에 패치로 저장합니다',
 		'synth.preset.saveShort': '저장',
+		'synth.preset.saveAsShort': '다른 이름으로',
+		'synth.preset.saveAsHint': '현재 사운드를 입력한 이름의 새 패치로 저장합니다 (Ctrl/Cmd+Shift+S)',
+		'synth.preset.saveBuiltinHint':
+			'내장 패치는 덮어쓸 수 없습니다 -- SAVE AS로 자신의 패치로 저장하세요',
 		'synth.preset.importShort': '가져오기',
 		'synth.preset.exportShort': '내보내기',
 		'synth.preset.myPresetsShort': '내 것',

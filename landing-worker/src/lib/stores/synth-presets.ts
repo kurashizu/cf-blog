@@ -1715,15 +1715,86 @@ function upsertUserPreset(p: SoundPreset): void {
 	soundPresetIdx.set(get(allPresets).findIndex((q) => q.name === p.name));
 }
 
-export function saveActiveAsPreset(): void {
+/**
+ * Can the patch that is selected be written over?
+ *
+ * Only a user patch can. A built-in is shipped with the instrument and is
+ * what every other patch was compared against while it was being built -- if
+ * it could be overwritten, a preset the player had never deliberately edited
+ * would quietly become something else, with no copy left to go back to.
+ *
+ * Derived rather than stored, so it cannot disagree with the selection.
+ */
+/**
+ * Asks the patch menu to open its Save As row.
+ *
+ * A store rather than a call, because the row lives inside PresetMenu and the
+ * shortcut is bound on the window: the two never meet directly. Incremented
+ * rather than set true, so pressing the shortcut twice reopens it -- a boolean
+ * would already be true the second time and nothing would happen.
+ */
+export const presetSaveAsRequest = writable(0);
+
+/** Open the patch menu's Save As row, from wherever. */
+export function openPresetSaveAs(): void {
+	presetSaveAsRequest.update((n) => n + 1);
+}
+
+export const canOverwritePreset = derived(
+	[soundPresetIdx, userPresets],
+	([$idx, $user]) => $idx >= SOUND_PRESETS.length && $idx < SOUND_PRESETS.length + $user.length
+);
+
+/** The user patch currently selected, or null for a built-in. */
+function selectedUserPreset(): { index: number; preset: SoundPreset } | null {
+	const idx = get(soundPresetIdx) - SOUND_PRESETS.length;
+	const list = get(userPresets);
+	if (idx < 0 || idx >= list.length) return null;
+	return { index: idx, preset: list[idx] };
+}
+
+/**
+ * Write the live sound back over the patch it came from.
+ *
+ * The half that was missing: every save made a *new* patch, because the name
+ * went through `uniqueName` whether or not you had one open. Editing a sound
+ * you had already saved and saving again left you with SOUND and SOUND 2, and
+ * no way to say "no, that one".
+ *
+ * Keeps the name it had rather than re-deriving one from the track, so a patch
+ * called BELL stays BELL after its oscillator changes.
+ */
+export function saveActivePreset(): void {
+	const trk = activeTrack();
+	const target = selectedUserPreset();
+	// A built-in has nothing to write over; the caller should offer Save As.
+	if (!trk || !target) return;
+	upsertUserPreset({
+		name: target.preset.name,
+		preset: pickTimbre(trk as unknown as Record<string, unknown>)
+	});
+	showSaveStatus(tr('synthPanels.toast.presetSaved', { name: target.preset.name }));
+	playSound('click');
+}
+
+/**
+ * Save the live sound as a new patch.
+ *
+ * `name` is what the player typed; left out, a name is derived from the track
+ * the way it always was. Either way it goes through `uniqueName`, so saving
+ * twice under one name gives two patches rather than silently merging them --
+ * which is the whole difference between this and the function above.
+ */
+export function saveActiveAsPreset(name?: string): void {
 	const trk = activeTrack();
 	if (!trk) return;
-	const name = uniqueName(
-		presetNameFor(trk),
+	const wanted = (name ?? '').trim().toUpperCase().slice(0, 40) || presetNameFor(trk);
+	const unique = uniqueName(
+		wanted,
 		get(allPresets).map((p) => p.name)
 	);
-	upsertUserPreset({ name, preset: pickTimbre(trk as unknown as Record<string, unknown>) });
-	showSaveStatus(tr('synthPanels.toast.presetSaved', { name }));
+	upsertUserPreset({ name: unique, preset: pickTimbre(trk as unknown as Record<string, unknown>) });
+	showSaveStatus(tr('synthPanels.toast.presetSaved', { name: unique }));
 	playSound('click');
 }
 
