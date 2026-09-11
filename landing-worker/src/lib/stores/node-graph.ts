@@ -191,12 +191,6 @@ export const PURE_NODES: Record<string, PureFn> = {
 		const hi = i.get('hi', p('hi', 1));
 		return Math.min(Math.max(i.get('a', 0), Math.min(lo, hi)), Math.max(lo, hi));
 	},
-	lerp: (i, p) => {
-		const a = i.get('a', 0);
-		const b = i.get('b', 0);
-		const alpha = Math.max(0, Math.min(1, i.get('alpha', p('lerpAlpha', 50) / 100)));
-		return a + (b - a) * alpha;
-	},
 	/* A value bent on its way through.
 	
 	   Every shape maps 0..1 to 0..1 and leaves both ends alone, so changing one

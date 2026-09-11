@@ -715,11 +715,21 @@ export const MODULE_SPECS: ModuleSpec[] = [
 	{
 		/* A delay line, and a primitive rather than an effect.
 		 *
-		 * A comb filter is this with its output fed back, a flanger is that with
-		 * the time moving, a chorus is several at once. None of those are modules
-		 * here because all of them are this one plus a cable -- and the feedback
-		 * path is a GAIN you can see, rather than a knob that hides how much is
-		 * going round.
+		 * A flanger is this with the time moving, and a chorus is several at once.
+		 * Both are this module plus a cable, which is why neither is a card.
+		 *
+		 * A comb filter is not, and this docstring used to claim it was: "its
+		 * output fed back... the feedback path is a GAIN you can see". That patch
+		 * cannot be drawn. `addCable` walks the audio cables and refuses any
+		 * cable that closes a loop -- measured, a delay loop was stable only to
+		 * about g = 0.90 and screamed past it -- so there is no arrangement of
+		 * the catalogue that feeds a delay its own output. STRING's docstring
+		 * records the consequence from the other side: Karplus-Strong "was built
+		 * that way first and measured unusable", and additive was chosen because
+		 * there is no loop to be had.
+		 *
+		 * So: feedback is a real gap, not a patch. Saying otherwise here sent
+		 * anyone who believed it to an editor that rejects the cable.
 		 *
 		 * TIME is a socket as well as a field, so the time can move with the note:
 		 * a delay whose length is modulated is what flanging *is*. */

@@ -234,13 +234,6 @@ describe('the pure nodes', () => {
 		expect(evalPure('clamp', { a: 99, lo: 8, hi: 2 })).toBe(8);
 	});
 
-	it('blends with lerp', () => {
-		expect(evalPure('lerp', { a: 0, b: 10, alpha: 0 })).toBe(0);
-		expect(evalPure('lerp', { a: 0, b: 10, alpha: 1 })).toBe(10);
-		expect(evalPure('lerp', { a: 0, b: 10, alpha: 0.5 })).toBe(5);
-		// Alpha outside 0..1 would extrapolate; it holds instead.
-		expect(evalPure('lerp', { a: 0, b: 10, alpha: 4 })).toBe(10);
-	});
 
 	it('bends a unit value with map', () => {
 		const shape = (label: string) => MAP_SHAPES.findIndex((m) => m.label === label);

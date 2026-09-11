@@ -599,6 +599,25 @@ describe('regressions the string tests could not see', () => {
 		for (const type of ['map', 'tocv', 'env']) expect(modOnly).toContain(`'${type}'`);
 	});
 
+	it('gives every pure node a card to reach it from', () => {
+		/* A row in the evaluator that no module declares is a function nobody can
+		   call. `lerp` was exactly that: implemented here, unit-tested here, and
+		   translated into all five locales -- with no entry in MODULE_SPECS, so
+		   it was unreachable from the palette for as long as it existed.
+		
+		   It drifted silently because the test above walks `PURE_NODES` and asks
+		   what each row *is*, never whether anything can reach it. This is the
+		   other direction, and it is the one that catches an orphan.
+		
+		   `in` is the exception and the only one: ENTRY is a pure node for the
+		   resolver's purposes -- its pins resolve to note values -- but it is a
+		   fixed part of every graph rather than something you drop from a
+		   palette. */
+		const palette = new Set(MODULE_SPECS.map((m) => m.id));
+		const orphans = Object.keys(PURE_NODES).filter((t) => t !== 'in' && !palette.has(t));
+		expect(orphans, 'pure nodes with no catalogue entry').toEqual([]);
+	});
+
 	it('resolves both ends of a cable by port name', () => {
 		/* The destination end was always looked up by name, in `mod`. The source
 		   end took `out`, or `out2` for the single port literally called `r`, and

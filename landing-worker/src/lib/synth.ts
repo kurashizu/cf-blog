@@ -1482,11 +1482,15 @@ class ModularSynth {
 
 			case 'delay': {
 				/* A delay line, which is a primitive rather than an effect: a comb
-           filter is this with its output fed back, a flanger is that with the
-           time moving, and a chorus is several at once. Feedback is a cable the
-           patch draws rather than a knob here -- the graph already refuses
-           audio cycles, so a resonating comb is built with the delay and a GAIN
-           where you can see both.
+           flanger is this with the time moving, and a chorus is several at
+           once -- both are this module plus a cable.
+        
+           A resonating comb is not. This comment used to say feedback was "a
+           cable the patch draws rather than a knob here -- the graph already
+           refuses audio cycles, so a resonating comb is built with the delay
+           and a GAIN", which does not follow from its own premise: the refusal
+           is exactly what prevents the patch. `addCable` returns 'cycle' for
+           any audio cable closing a loop, so the comb cannot be drawn at all.
         
            maxDelayTime is fixed at build and cannot be a cable, so the ceiling
            is generous rather than tight: a DelayNode whose time is set past its
@@ -2070,13 +2074,21 @@ class ModularSynth {
 
 			default: {
 				/* The acoustic modules are the same ones the linear chain builds.
-        
+
            This list is a silent filter -- a param not named here never reaches
            the module, with no error and no clue. modeHz was added to the
            catalogue and to MODES and did nothing for exactly that reason: three
            separate fixes to the kick's brightness all measured identical
            because the value was being dropped here. Adding a param to a module
-           means adding it here too. */
+           means adding it here too.
+
+           It filters in one direction only, so a name that stops being read
+           costs nothing and says nothing -- which is how `exNoise` sat here
+           after EXCT's own `case` took over from this fallthrough, naming a
+           param no module declares and no builder reads. Removed rather than
+           left: the list's whole job is to be the answer to "does this param
+           reach the module", and a name that reaches nothing makes it lie in
+           the direction that is expensive to check. */
 				const asParams: Record<string, number> = {};
 				for (const k of [
 					'decayTime',
@@ -2101,8 +2113,7 @@ class ModularSynth {
 					'driveTone',
 					'hardness',
 					'exLength',
-					'exTone',
-					'exNoise'
+					'exTone'
 				])
 					asParams[k] = p(k, NaN);
 				for (const k of Object.keys(asParams)) if (Number.isNaN(asParams[k])) delete asParams[k];

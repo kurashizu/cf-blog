@@ -268,13 +268,12 @@ export default {
 		'synthPatch.mod.remap':
 			'Takes a value from one range to another, clamped. Velocity 0-1 into a cutoff 200-8000.',
 		'synthPatch.mod.clamp': 'Holds a value between MIN and MAX.',
-		'synthPatch.mod.lerp': 'Blends A and B by ALPHA.',
 		'synthPatch.mod.curve': 'Bends a 0-1 value. Above 1 is slow to start, below 1 is quick.',
 		'synthPatch.mod.seq':
 			'Runs what follows a moment later. GAP apart makes a flam rather than one strike.',
 		'synthPatch.mod.when': 'A branch. Execution carries on out of TRUE only when the test passes.',
 		'synthPatch.mod.act':
-			'What to do when the WHEN before it says yes: CUT stops the others, SOLO stops everything but this group, GLIDE slides in from the last pitch.',
+			'What to do when the WHEN before it says yes: CUT stops the others, SOLO stops everything but this group.',
 		'synthPatch.mod.split': 'Takes a stereo signal apart so L and R can be processed separately.',
 		'synthPatch.mod.merge': 'Puts two mono paths back into one stereo signal.',
 		'synthPatch.mod.scope': 'The waveform at this point. Takes audio or a control value; a value is drawn against LO..HI.',
@@ -284,6 +283,47 @@ export default {
 		'synthPatch.mod.subtract': 'A minus B. Cancels what the two share and leaves the difference.',
 		'synthPatch.mod.ring': 'One signal multiplies the other. Inharmonic: bells, gongs, metal.',
 		'synthPatch.mod.invert': 'Flips the sign. Silent alone; against a copy of itself it cancels.',
+		/* Fifteen modules that had a `descKey` and no line to go with it.
+
+		   `translate` returns the key when it misses, so the palette tooltip for
+		   PWM read "synthPatch.mod.pwm" -- and the same for GAIN, MAP, TO-CV and
+		   eleven others, in all five locales. Not a wrong description: the
+		   internal string itself, shown to the player on hover.
+
+		   They arrived as the catalogue was rebuilt from primitives and the
+		   commits that added each module never came back here. The keys above
+		   still carry the descriptions of the modules they replaced -- `vca` for
+		   GAIN, `pulse` for PWM, `subtract` for DIFF, `remap` and `lerp` for MAP,
+		   `seq` for WAIT, `mix` for SUM -- which is why nothing looked missing:
+		   the block was full, just of the previous generation's names. Those are
+		   left where they are rather than renamed, being unreferenced either way,
+		   and the wording below is taken from each module's own comment in
+		   stores/synth-modules so the two cannot say different things. */
+		'synthPatch.mod.pwm':
+			'A square whose width you can set and sweep. PW takes a cable, so velocity into it is a pulse that opens with the key.',
+		'synthPatch.mod.gain':
+			'Sound times a number. LVL is the resting level and a cable on it adds, which is what makes this a VCA; -1 inverts.',
+		'synthPatch.mod.follow':
+			'How loud the signal is, as a value. Rectified, so it has no negative half -- for ducking rather than tremolo.',
+		'synthPatch.mod.wait':
+			'Holds up execution by GAP. Downstream of one, a strike lands late, which is a flam.',
+		'synthPatch.mod.shape':
+			'Bends the waveform through a curve: soft, hard or folded. Saturation, and past that, fold.',
+		'synthPatch.mod.diff': 'A minus B. Cancels what the two share and leaves the difference.',
+		'synthPatch.mod.break': 'Takes a stereo signal apart into mid and side.',
+		'synthPatch.mod.make':
+			'Mid and side back into stereo. WIDE scales the side: more is wider, none is mono.',
+		'synthPatch.mod.mono': 'Folds a stereo signal down to one channel.',
+		'synthPatch.mod.tocv':
+			'Sound read as a value, sign and all. The door from the audio side to the control side.',
+		'synthPatch.mod.tosig':
+			'A number becoming sound. The other direction, and what lets a value reach an inlet that sums.',
+		'synthPatch.mod.cmp':
+			'Compares A and B and hands back a truth. No knobs: a fixed operand is a CONST.',
+		'synthPatch.mod.logic': 'Two truths combined: AND, OR, XOR, NAND, NOR.',
+		'synthPatch.mod.not': 'Flips a truth. Its own card because it takes one operand.',
+		'synthPatch.mod.map':
+			'Takes a value from one range to another through a curve. Fed a waveform it shapes every sample instead.',
 		'synthPatch.builtInParams':
 			'This stage is edited on racks 1-7; its controls are not duplicated here.',
 		'synth.preset.percussionOffHint':
@@ -735,12 +775,11 @@ export default {
 		'synthPatch.mod.remap':
 			'把数值从一个范围映射到另一个范围并限幅。力度 0-1 映射到截止频率 200-8000。',
 		'synthPatch.mod.clamp': '把数值限制在 MIN 和 MAX 之间。',
-		'synthPatch.mod.lerp': '按 ALPHA 在 A 和 B 之间插值。',
 		'synthPatch.mod.curve': '弯曲一个 0-1 的值。大于 1 起步慢,小于 1 起步快。',
 		'synthPatch.mod.seq': '让后面的模块晚一点执行。间隔 GAP 毫秒，两次击打就成了装饰音而不是一下。',
 		'synthPatch.mod.when': '一个分支。判断成立时，执行流才会从 TRUE 继续往下走。',
 		'synthPatch.mod.act':
-			'前面的 WHEN 成立时要做的事：CUT 掐断其他音，SOLO 只留下本组，GLIDE 从上一个音高滑进来。',
+			'前面的 WHEN 成立时要做的事：CUT 掐断其他音，SOLO 只留下本组。',
 		'synthPatch.mod.split': '把立体声拆开，左右两路可以各自处理。',
 		'synthPatch.mod.merge': '把两路单声道合回立体声。',
 		'synthPatch.mod.scope': '这一点的波形。可接音频或调制值；调制值按 LO..HI 范围绘制。',
@@ -750,6 +789,21 @@ export default {
 		'synthPatch.mod.subtract': 'A 减 B。抵消两者相同的部分，留下差异。',
 		'synthPatch.mod.ring': '一路信号乘以另一路。产生非谐音：钟、锣、金属声。',
 		'synthPatch.mod.invert': '反相。单独听不出来；和自己的副本相加就会抵消。',
+		'synthPatch.mod.pwm': '脉宽可调可扫的方波。PW 是插孔，把力度接进去，按键越重脉冲开得越宽。',
+		'synthPatch.mod.gain': '声音乘以一个数。LVL 是静态电平，接上线是相加，这就是 VCA；-1 则是反相。',
+		'synthPatch.mod.follow': '信号有多响，输出为调制值。经过整流，没有负半周——适合闪避，不适合颤音。',
+		'synthPatch.mod.wait': '把执行流延后 GAP。接在它后面的敲击会晚到，这就是装饰音。',
+		'synthPatch.mod.shape': '让波形穿过一条曲线：柔和、硬削或折返。先是饱和，再往上就是折叠。',
+		'synthPatch.mod.diff': 'A 减 B。抵消两者相同的部分，留下差异。',
+		'synthPatch.mod.break': '把立体声拆成中置和侧向两路。',
+		'synthPatch.mod.make': '中置和侧向合回立体声。WIDE 缩放侧向：越多越宽，为零就是单声道。',
+		'synthPatch.mod.mono': '把立体声并成一个声道。',
+		'synthPatch.mod.tocv': '把声音读成数值，连正负一起。从音频这侧通往控制那侧的门。',
+		'synthPatch.mod.tosig': '数值变成声音。反方向的那扇门，也是数值抵达相加型输入端的办法。',
+		'synthPatch.mod.cmp': '比较 A 和 B，给出一个真假值。没有旋钮：固定的操作数交给 CONST。',
+		'synthPatch.mod.logic': '两个真假值相合：AND、OR、XOR、NAND、NOR。',
+		'synthPatch.mod.not': '真假取反。单独成卡，因为它只吃一个操作数。',
+		'synthPatch.mod.map': '把数值从一个范围经曲线映射到另一个范围。若送进波形，则逐样本整形。',
 		'synthPatch.builtInParams': '这一级在机架 1-7 里编辑，控件不在此处重复。',
 		'synth.preset.percussionOffHint': '为{track}开启 K.MAP — 像鼓机一样让每个按键拥有自己的音色',
 		'synth.preset.thisTrack': '此音轨',
@@ -1176,12 +1230,11 @@ export default {
 		'synthPatch.mod.remap':
 			'把數值從一個範圍映射到另一個範圍並限幅。力度 0-1 映射到截止頻率 200-8000。',
 		'synthPatch.mod.clamp': '把數值限制在 MIN 和 MAX 之間。',
-		'synthPatch.mod.lerp': '按 ALPHA 在 A 和 B 之間插值。',
 		'synthPatch.mod.curve': '彎曲一個 0-1 的值。大於 1 起步慢,小於 1 起步快。',
 		'synthPatch.mod.seq': '讓後面的模組晚一點執行。間隔 GAP 毫秒，兩次擊打就成了裝飾音而不是一下。',
 		'synthPatch.mod.when': '一個分支。判斷成立時，執行流才會從 TRUE 繼續往下走。',
 		'synthPatch.mod.act':
-			'前面的 WHEN 成立時要做的事：CUT 掐斷其他音，SOLO 只留下本組，GLIDE 從上一個音高滑進來。',
+			'前面的 WHEN 成立時要做的事：CUT 掐斷其他音，SOLO 只留下本組。',
 		'synthPatch.mod.split': '把立體聲拆開，左右兩路可以各自處理。',
 		'synthPatch.mod.merge': '把兩路單聲道合回立體聲。',
 		'synthPatch.mod.scope': '這一點的波形。可接音訊或調制值；調制值按 LO..HI 範圍繪製。',
@@ -1191,6 +1244,21 @@ export default {
 		'synthPatch.mod.subtract': 'A 減 B。抵消兩者相同的部分，留下差異。',
 		'synthPatch.mod.ring': '一路訊號乘以另一路。產生非諧音：鐘、鑼、金屬聲。',
 		'synthPatch.mod.invert': '反相。單獨聽不出來；和自己的副本相加就會抵消。',
+		'synthPatch.mod.pwm': '脈寬可調可掃的方波。PW 是插孔，把力度接進去，按鍵越重脈衝開得越寬。',
+		'synthPatch.mod.gain': '聲音乘以一個數。LVL 是靜態電平，接上線是相加，這就是 VCA；-1 則是反相。',
+		'synthPatch.mod.follow': '訊號有多響，輸出為調制值。經過整流，沒有負半週——適合閃避，不適合顫音。',
+		'synthPatch.mod.wait': '把執行流延後 GAP。接在它後面的敲擊會晚到，這就是裝飾音。',
+		'synthPatch.mod.shape': '讓波形穿過一條曲線：柔和、硬削或折返。先是飽和，再往上就是折疊。',
+		'synthPatch.mod.diff': 'A 減 B。抵消兩者相同的部分，留下差異。',
+		'synthPatch.mod.break': '把立體聲拆成中置和側向兩路。',
+		'synthPatch.mod.make': '中置和側向合回立體聲。WIDE 縮放側向：越多越寬，為零就是單聲道。',
+		'synthPatch.mod.mono': '把立體聲併成一個聲道。',
+		'synthPatch.mod.tocv': '把聲音讀成數值，連正負一起。從音訊這側通往控制那側的門。',
+		'synthPatch.mod.tosig': '數值變成聲音。反方向的那扇門，也是數值抵達相加型輸入端的辦法。',
+		'synthPatch.mod.cmp': '比較 A 和 B，給出一個真假值。沒有旋鈕：固定的運算元交給 CONST。',
+		'synthPatch.mod.logic': '兩個真假值相合：AND、OR、XOR、NAND、NOR。',
+		'synthPatch.mod.not': '真假取反。單獨成卡，因為它只吃一個運算元。',
+		'synthPatch.mod.map': '把數值從一個範圍經曲線映射到另一個範圍。若送進波形，則逐樣本整形。',
 		'synthPatch.builtInParams': '這一級在機架 1-7 裡編輯，控制項不在此處重複。',
 		'synth.preset.percussionOffHint': '為{track}開啟 K.MAP — 像鼓機一樣讓每個按鍵擁有自己的音色',
 		'synth.preset.thisTrack': '此音軌',
@@ -1648,13 +1716,12 @@ export default {
 		'synthPatch.mod.remap':
 			'値を別の範囲へ変換しクランプします。ベロシティ 0-1 をカットオフ 200-8000 へ。',
 		'synthPatch.mod.clamp': '値を MIN と MAX の間に収めます。',
-		'synthPatch.mod.lerp': 'ALPHA で A と B を補間します。',
 		'synthPatch.mod.curve': '0-1 の値を曲げます。1 より大きいと立ち上がりが遅くなります。',
 		'synthPatch.mod.seq':
 			'続くモジュールを少し遅らせて実行します。GAP だけずらすと一打ではなくフラムになります。',
 		'synthPatch.mod.when': '分岐です。条件を満たしたときだけ TRUE から実行が続きます。',
 		'synthPatch.mod.act':
-			'手前の WHEN が成立したときの動作：CUT は他の音を止め、SOLO はこのグループ以外を止め、GLIDE は前の音程から滑り込みます。',
+			'手前の WHEN が成立したときの動作：CUT は他の音を止め、SOLO はこのグループ以外を止めます。',
 		'synthPatch.mod.split': 'ステレオ信号を分け、LとRを別々に処理できるようにします。',
 		'synthPatch.mod.merge': '2つのモノ経路を1つのステレオ信号に戻します。',
 		'synthPatch.mod.scope': 'この地点の波形。音声も制御値も接続でき、制御値は LO..HI で描画します。',
@@ -1665,6 +1732,30 @@ export default {
 		'synthPatch.mod.ring': '一方の信号がもう一方を掛け合わせます。非整数次倍音：鐘、ゴング、金属。',
 		'synthPatch.mod.invert':
 			'位相を反転します。単体では聞こえず、自身の複製と合わせると打ち消し合います。',
+		'synthPatch.mod.pwm':
+			'パルス幅を設定・スイープできる矩形波。PW はソケットなので、ベロシティを挿せば強く弾くほど幅が開きます。',
+		'synthPatch.mod.gain':
+			'音に数を掛けます。LVL は基準レベルで、ケーブルは加算される——それが VCA です。-1 で反転。',
+		'synthPatch.mod.follow':
+			'信号の大きさを値として出します。整流済みで負の半周期がなく、ダッキング向き、トレモロ向きではありません。',
+		'synthPatch.mod.wait': '実行を GAP だけ遅らせます。その先の打撃は遅れて届き、フラムになります。',
+		'synthPatch.mod.shape':
+			'波形をカーブに通します：ソフト、ハード、フォールド。まず飽和、その先が折り返しです。',
+		'synthPatch.mod.diff': 'AからBを引きます。共通部分が打ち消され、差だけが残ります。',
+		'synthPatch.mod.break': 'ステレオ信号をミッドとサイドに分解します。',
+		'synthPatch.mod.make':
+			'ミッドとサイドをステレオに戻します。WIDE はサイドの量：多いほど広く、ゼロならモノです。',
+		'synthPatch.mod.mono': 'ステレオ信号を1チャンネルにまとめます。',
+		'synthPatch.mod.tocv':
+			'音を符号ごと値として読みます。オーディオ側から制御側へ渡る扉です。',
+		'synthPatch.mod.tosig':
+			'値が音になります。逆向きの扉であり、値が加算される入力に届く手段でもあります。',
+		'synthPatch.mod.cmp':
+			'AとBを比べて真偽を返します。ノブはありません：固定値は CONST の仕事です。',
+		'synthPatch.mod.logic': '2つの真偽を組み合わせます：AND、OR、XOR、NAND、NOR。',
+		'synthPatch.mod.not': '真偽を反転します。オペランドが1つなので独立したカードです。',
+		'synthPatch.mod.map':
+			'値をカーブを通して別の範囲へ移します。波形を送れば1サンプルずつ整形します。',
 		'synthPatch.builtInParams': 'この段はラック1-7で編集します。ここには重複させていません。',
 		'synth.preset.percussionOffHint':
 			'{track} の K.MAP — ドラムマシンのように各キーに個別のサウンドを持たせます',
@@ -2140,13 +2231,12 @@ export default {
 		'synthPatch.mod.mul': 'A 곱하기 B. 연결되지 않은 쪽은 1입니다. 고정하려면 CONST를 쓰세요.',
 		'synthPatch.mod.remap': '값을 다른 범위로 옮기고 제한합니다. 세기 0-1을 컷오프 200-8000으로.',
 		'synthPatch.mod.clamp': '값을 MIN과 MAX 사이로 유지합니다.',
-		'synthPatch.mod.lerp': 'ALPHA로 A와 B를 섞습니다.',
 		'synthPatch.mod.curve': '0-1 값을 구부립니다. 1보다 크면 천천히 시작합니다.',
 		'synthPatch.mod.seq':
 			'이어지는 모듈을 조금 늦게 실행합니다. GAP 만큼 벌리면 한 번이 아니라 플램이 됩니다.',
 		'synthPatch.mod.when': '분기입니다. 조건이 맞을 때만 TRUE로 실행이 이어집니다.',
 		'synthPatch.mod.act':
-			'앞의 WHEN이 참일 때 할 일: CUT은 다른 음을 끊고, SOLO는 이 그룹만 남기며, GLIDE는 이전 음정에서 미끄러져 들어옵니다.',
+			'앞의 WHEN이 참일 때 할 일: CUT은 다른 음을 끊고, SOLO는 이 그룹만 남깁니다.',
 		'synthPatch.mod.split': '스테레오 신호를 나눠 L과 R을 따로 처리합니다.',
 		'synthPatch.mod.merge': '두 모노 경로를 하나의 스테레오 신호로 되돌립니다.',
 		'synthPatch.mod.scope': '이 지점의 파형. 오디오나 제어 값을 받으며, 제어 값은 LO..HI로 그립니다.',
@@ -2157,6 +2247,28 @@ export default {
 		'synthPatch.mod.ring': '한 신호가 다른 신호를 곱합니다. 비조화음: 종, 징, 금속.',
 		'synthPatch.mod.invert':
 			'위상을 뒤집습니다. 혼자서는 들리지 않고, 자기 복사본과 만나면 상쇄됩니다.',
+		'synthPatch.mod.pwm':
+			'펄스 폭을 정하고 훑을 수 있는 사각파. PW는 소켓이라 벨로시티를 꽂으면 세게 칠수록 폭이 열립니다.',
+		'synthPatch.mod.gain':
+			'소리에 숫자를 곱합니다. LVL은 기준 레벨이고 케이블은 더해집니다 — 그것이 VCA입니다. -1은 반전.',
+		'synthPatch.mod.follow':
+			'신호가 얼마나 큰지를 값으로 냅니다. 정류되어 음의 반주기가 없으니 더킹용이지 트레몰로용은 아닙니다.',
+		'synthPatch.mod.wait': '실행을 GAP만큼 늦춥니다. 뒤에 달린 타격은 늦게 도착하고, 그것이 플램입니다.',
+		'synthPatch.mod.shape':
+			'파형을 곡선에 통과시킵니다: 소프트, 하드, 폴드. 먼저 새츄레이션, 그 위는 접힘입니다.',
+		'synthPatch.mod.diff': 'A 빼기 B. 공통 부분이 상쇄되고 차이만 남습니다.',
+		'synthPatch.mod.break': '스테레오 신호를 미드와 사이드로 나눕니다.',
+		'synthPatch.mod.make':
+			'미드와 사이드를 스테레오로 되돌립니다. WIDE는 사이드의 양: 많을수록 넓고, 0이면 모노입니다.',
+		'synthPatch.mod.mono': '스테레오 신호를 한 채널로 접습니다.',
+		'synthPatch.mod.tocv': '소리를 부호까지 포함해 값으로 읽습니다. 오디오 쪽에서 제어 쪽으로 가는 문입니다.',
+		'synthPatch.mod.tosig':
+			'값이 소리가 됩니다. 반대 방향의 문이자, 값이 더해지는 입력에 닿는 방법입니다.',
+		'synthPatch.mod.cmp': 'A와 B를 비교해 참거짓을 냅니다. 노브는 없습니다: 고정 피연산자는 CONST의 몫입니다.',
+		'synthPatch.mod.logic': '두 참거짓을 결합합니다: AND, OR, XOR, NAND, NOR.',
+		'synthPatch.mod.not': '참거짓을 뒤집습니다. 피연산자가 하나라서 독립된 카드입니다.',
+		'synthPatch.mod.map':
+			'값을 곡선을 거쳐 다른 범위로 옮깁니다. 파형을 넣으면 샘플마다 성형합니다.',
 		'synthPatch.builtInParams': '이 단계는 랙 1-7에서 편집하며 여기에 중복하지 않습니다.',
 		'synth.preset.percussionOffHint':
 			'{track}의 K.MAP — 드럼머신처럼 각 건반에 고유한 사운드를 부여합니다',
